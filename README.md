@@ -6,7 +6,7 @@ Pythonで構築された、シンプルで直感的な分子構造エディタ�
 ライセンス: Apache-2.0
 リポジトリ: [https://github.com/HiroYokoyama/python_molecular_editor](https://github.com/HiroYokoyama/python_molecular_editor)
 
-![](img/screensdhot.png)
+![](img/screenshot.png)
 
 ---
 
