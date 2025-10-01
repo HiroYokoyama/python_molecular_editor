@@ -38,7 +38,7 @@ from pyvistaqt import QtInteractor
 # --- Constants ---
 ATOM_RADIUS = 18
 BOND_OFFSET = 3.5
-DEFAULT_BOND_LENGTH = 50.0 # テンプレートで使用する標準結合長
+DEFAULT_BOND_LENGTH = 75.0 # テンプレートで使用する標準結合長
 CPK_COLORS = {
     'H': QColor("white"), 'C': QColor("#333333"), 'N': QColor("#0000FF"),
     'O': QColor("#FF0000"), 'F': QColor("#00FF00"), 'S': QColor("#FFC000"),
@@ -100,7 +100,7 @@ class AtomItem(QGraphicsItem):
         self.atom_id, self.symbol, self.bonds = atom_id, symbol, []
         self.setPos(pos)
         self.setFlags(QGraphicsItem.GraphicsItemFlag.ItemIsMovable | QGraphicsItem.GraphicsItemFlag.ItemIsSelectable)
-        self.setZValue(1); self.font = QFont("Arial", 16, QFont.Weight.Bold); self.update_style()
+        self.setZValue(1); self.font = QFont("Arial", 20, QFont.Weight.Bold); self.update_style()
     def boundingRect(self):
         # 原子の表示半径（クラス属性かグローバル定義を参照、なければ 10 を使う）
         r = getattr(self, 'radius', None)
@@ -356,7 +356,10 @@ class MoleculeScene(QGraphicsScene):
         released_item = self.itemAt(end_pos, self.views()[0].transform())
 
         if self.mode.startswith('atom') and is_click and isinstance(released_item, BondItem):
-            b=released_item; new_order=(b.order%3)+1; id1,id2=b.atom1.atom_id,b.atom2.atom_id
+            b=released_item; new_order = b.order + 1
+            if new_order > 3: 
+                new_order = 1
+            id1,id2=b.atom1.atom_id,b.atom2.atom_id
             if id1>id2: id1,id2=id2,id1
             self.data.bonds[(id1,id2)]['order']=new_order; b.order=new_order; b.update()
             self.data_changed_in_event = True
@@ -430,6 +433,11 @@ class MoleculeScene(QGraphicsScene):
 
     def create_bond(self, start_atom, end_atom, bond_order=None):
         order = bond_order if bond_order is not None else self.bond_order
+        # ★ 以前の回答で提案した修正 ★
+        exist_b = self.find_bond_between(start_atom, end_atom)
+        if exist_b and bond_order is None: 
+            return # 既存結合があり、かつ次数指定なしの追加の場合は何もしない
+        # ★ 修正終わり ★
         key, status = self.data.add_bond(start_atom.atom_id, end_atom.atom_id, order)
         if status == 'created':
             bond_item=BondItem(start_atom, end_atom, order); self.data.bonds[key]['item']=bond_item
@@ -439,29 +447,186 @@ class MoleculeScene(QGraphicsScene):
             bond_item.order=order; bond_item.update()
         start_atom.update_style(); end_atom.update_style()
 
-    def add_molecule_fragment(self, points, bonds_info, existing_items, symbol='C'):
+    def add_molecule_fragment(self, points, bonds_info, existing_items=None, symbol='C'):
+        """
+        add_molecule_fragment の最小修正版（単独関数）。
+    
+        - 既存原子の列挙に self.data.atoms を使う（self.data_atom_items_list は存在しない環境向け）。
+        - 6員環（ベンゼン）テンプレートは、テンプレート自身が二重結合を含む場合のみ回転合わせを行う。
+        - 6員環テンプレートは既存結合の次数を変更しない（誤ってシクロヘキサン->ベンゼンに変わるのを防ぐ）。
+    
+        既存の create_atom/create_bond/find_bond_between 等のメソッド呼び出しは
+        元ファイル側の実装に合わせて利用します。
+        """
+        import math
+    
         num_points = len(points)
         atom_items = [None] * num_points
-
-        # Step 1: 既存のアイテム（基準となる原子や結合）を新しい原子リストに配置する
-        if len(existing_items) == 2 and all(isinstance(i, AtomItem) for i in existing_items):
-            # 基準が結合の場合
-            atom_items[0] = existing_items[0]
-            atom_items[1] = existing_items[1]
-        elif len(existing_items) == 1 and isinstance(existing_items[0], AtomItem):
-            # 基準が原子の場合
-            atom_items[0] = existing_items[0]
-        
-        # Step 2: まだ配置されていない頂点に対して新しい原子を作成する
-        for i, pos in enumerate(points):
+    
+        def coords(p):
+            if hasattr(p, 'x') and hasattr(p, 'y'):
+                return (p.x(), p.y())
+            try:
+                return (p[0], p[1])
+            except Exception:
+                raise ValueError("point has no x/y")
+    
+        def dist_pts(a, b):
+            ax, ay = coords(a); bx, by = coords(b)
+            return math.hypot(ax - bx, ay - by)
+    
+        # --- 1) 既にクリックされた existing_items をテンプレート頂点にマップ ---
+        existing_items = existing_items or []
+        used_indices = set()
+        # 近接閾値はテンプレートの辺長の平均を使って決める
+        ref_lengths = [dist_pts(points[i], points[j]) for i, j, _ in bonds_info if i < num_points and j < num_points]
+        avg_len = (sum(ref_lengths) / len(ref_lengths)) if ref_lengths else 20.0
+        map_threshold = max(0.5 * avg_len, 8.0)
+    
+        for ex_item in existing_items:
+            try:
+                ex_pos = ex_item.pos()
+                best_idx, best_d = -1, float('inf')
+                for i, p in enumerate(points):
+                    if i in used_indices: continue
+                    d = dist_pts(p, ex_pos)
+                    if d < best_d:
+                        best_d, best_idx = d, i
+                if best_idx != -1 and best_d <= max(map_threshold, 1.5 * avg_len):
+                    atom_items[best_idx] = ex_item
+                    used_indices.add(best_idx)
+            except Exception:
+                pass
+    
+        # --- 2) シーン内既存原子を self.data.atoms から列挙してマップ ---
+        mapped_atoms = {it for it in atom_items if it is not None}
+        for i, p in enumerate(points):
+            if atom_items[i] is not None: continue
+            nearby = None
+            best_d = float('inf')
+            for atom_data in self.data.atoms.values():
+                a_item = atom_data.get('item')
+                if not a_item: continue
+                if a_item in mapped_atoms: continue
+                try:
+                    d = dist_pts(p, a_item.pos())
+                except Exception:
+                    continue
+                if d < best_d:
+                    best_d, nearby = d, a_item
+            if nearby and best_d <= map_threshold:
+                atom_items[i] = nearby
+                mapped_atoms.add(nearby)
+    
+        # --- 3) 足りない頂点は新規作成 ---
+        for i, p in enumerate(points):
             if atom_items[i] is None:
-                atom_id = self.create_atom(symbol, pos)
+                # create_atom は元ファイルの実装に依存
+                atom_id = self.create_atom(symbol, p)
                 atom_items[i] = self.data.atoms[atom_id]['item']
+    
+        # --- 4) テンプレートのボンド配列を決定（ベンゼン回転合わせの処理） ---
+        template_bonds_to_use = list(bonds_info)
+        is_6ring = (num_points == 6 and len(bonds_info) == 6)
+        template_has_double = any(o == 2 for (_, _, o) in bonds_info)
+    
+        if is_6ring and template_has_double:
+            # 既存でマップされた辺について、実際の結合次数を集める
+            existing_orders = {}
+            for k, (i_idx, j_idx, _) in enumerate(bonds_info):
+                if i_idx < len(atom_items) and j_idx < len(atom_items):
+                    a, b = atom_items[i_idx], atom_items[j_idx]
+                    if a is None or b is None: continue
+                    eb = self.find_bond_between(a, b)
+                    if eb:
+                        existing_orders[k] = getattr(eb, 'order', None)
+    
+            if existing_orders:
+                orig_orders = [o for (_, _, o) in bonds_info]
+                best_rot = 0
+                best_matches = -1
+                for rot in range(num_points):
+                    matches = 0
+                    for k, exist_order in existing_orders.items():
+                        if exist_order is None: continue
+                        if orig_orders[(k + rot) % num_points] == exist_order:
+                            matches += 1
+                    if matches > best_matches:
+                        best_matches = matches
+                        best_rot = rot
+    
+                # 回転を反映
+                new_tb = []
+                for m in range(num_points):
+                    i_idx, j_idx, _ = bonds_info[m]
+                    new_order = orig_orders[(m + best_rot) % num_points]
+                    new_tb.append((i_idx, j_idx, new_order))
+                template_bonds_to_use = new_tb
+    
+        # --- 5) ボンド作成／更新 ---
+        for id1_idx, id2_idx, order in template_bonds_to_use:
+            if id1_idx < len(atom_items) and id2_idx < len(atom_items):
+                a_item, b_item = atom_items[id1_idx], atom_items[id2_idx]
+                if not a_item or not b_item or a_item is b_item: continue
+    
+                # 順序正規化（data.bonds のキーは (min,max) になっているはず）
+                id1, id2 = a_item.atom_id, b_item.atom_id
+                if id1 > id2: id1, id2 = id2, id1
+    
+                exist_b = self.find_bond_between(a_item, b_item)
+                if exist_b:
+                    # --- 重要: 既存ボンドがあれば「加算」しない（これが三重結合化の原因） ---
+                    # 直感ルール：
+                    #  - 既存ボンドが存在する場合は、その既存の次数を優先（変更しない）。
+                    #  - 存在しない場合のみテンプレートの order を使って新規に設定する。
+                    #  - これによりシクロヘキサンは元の状態が保たれ、ベンゼンで既存が単結合なら単結合のまま、
+                    #    既存が二重結合なら二重結合のままとなります。
 
-        # Step 3: 原子間に結合を作成する
-        for id1_idx, id2_idx, order in bonds_info:
-            if atom_items[id1_idx] and atom_items[id2_idx]:
-                self.create_bond(atom_items[id1_idx], atom_items[id2_idx], bond_order=order)
+                    # 既存表示オブジェクトから現在の次数を得る（ない場合は None）
+                    existing_order = getattr(exist_b, 'order', None)
+                    if existing_order is not None:
+                        # 既にあるボンドの次数をそのまま使う（上書き・加算しない）
+                        chosen_order = existing_order
+                    else:
+                        # 既存ボンド情報が無ければテンプレート次数を使用
+                        chosen_order = order
+
+                    # データモデルにも反映（存在すれば）
+                    if (id1, id2) in self.data.bonds:
+                        self.data.bonds[(id1, id2)]['order'] = chosen_order
+
+                    # 表示オブジェクトにも反映（加算ではなく代入）
+                    exist_b.order = chosen_order
+                    if hasattr(exist_b, 'update'):
+                        exist_b.update()
+
+                    # 既存ボンドは処理済みなので次へ
+                    continue
+
+
+                else:
+                    # 新規ボンド作成
+                    self.create_bond(a_item, b_item, bond_order=order)
+    
+        # --- 6) 表示更新（必要なら） ---
+        for at in atom_items:
+            try:
+                if at: at.update()
+            except Exception:
+                pass
+    
+        # Undo / data-changed フラグ等は元コード側で処理される想定
+        return atom_items
+
+ 
+
+    def find_bond_between(self, atom1, atom2):
+        """ atom1 と atom2 の間にある BondItem を返す（なければ None）"""
+        for b in atom1.bonds:
+            other = b.atom1 if b.atom2 is atom1 else b.atom2
+            if other is atom2:
+                return b
+        return None
 
 
     def update_template_preview(self, pos):
@@ -679,8 +844,23 @@ class MoleculeScene(QGraphicsScene):
                         new_direction_line.setLength(l)
                         new_pos_offset = new_direction_line.p2()
 
+                # 追加：スナップ判定（配置予定位置に近い既存原子があればそこと結合する）
+                SNAP_DISTANCE = 14.0  # 誤差許容ピクセル（必要なら微調整、画面スケールに合わせて）
+                target_pos = start_pos + new_pos_offset
+                near_atom = self.find_atom_near(target_pos, tol=SNAP_DISTANCE)
+                if near_atom and near_atom is not start_atom:
+                    # 近傍原子が見つかった -> 既存原子へ結合を作るだけ
+                    self.create_bond(start_atom, near_atom, bond_order=1)
+                    self.clearSelection()
+                    self.window.push_undo_state()
+                    event.accept()
+                    return
+
+                # なければ従来通り新規原子を作成して結合する（元の処理）
                 new_atom_id = self.create_atom('C', start_pos + new_pos_offset)
                 new_atom_item = self.data.atoms[new_atom_id]['item']
+                self.create_bond(start_atom, new_atom_item, bond_order=1)
+
                 self.create_bond(start_atom, new_atom_item, bond_order=1)
 
                 self.clearSelection()
@@ -731,14 +911,93 @@ class MoleculeScene(QGraphicsScene):
             # undo スタックに追加
             self.window.push_undo_state()
 
-            # 表示の残り（描画のほんのわずかなゴミ）を消すために強制再描画
             if self.views():
                 self.views()[0].viewport().update()
-                # さらにシーン自体も update() しておく（安全措置）
-                self.update()
+            # シーン自身（self は QGraphicsScene のサブクラス）を更新
+            self.update()
+            # かつ、もしビューがあればビューポートも再描画（より確実）
+            if self.views():
+                self.views()[0].viewport().update()
+
 
         else:
             super().keyPressEvent(event)
+    # --- 追加: 近傍原子を探す（スナップ用） ---
+    def find_atom_near(self, pos, tol=14.0):
+        """
+        pos: QPointF  (シーン座標)
+        tol: ピクセル許容距離（デフォルト 14）
+        近傍にある最初の AtomItem を返す。見つからなければ None。
+        """
+        for it in self.items():  # items() は Z-order だが全 Atom を調べる
+            if isinstance(it, AtomItem):
+                dx = it.pos().x() - pos.x()
+                dy = it.pos().y() - pos.y()
+                d = math.hypot(dx, dy)
+                if d <= tol:
+                    return it
+        return None
+
+    def find_bond_between(self, atom1, atom2):
+        """ atom1 と atom2 の間にある既存の Bond オブジェクトを返す（なければ None） """
+        for b in atom1.bonds:
+            other = b.atom1 if b.atom2 is atom1 else b.atom2
+            if other is atom2:
+                return b
+        return None
+
+
+    # --- 追加: 結合に対する「くぼみ（角度 < threshold_deg）」の第3原子を探す ---
+    def find_third_atom_for_concave(self, atomA, atomB, template_point=None, threshold_deg=125.0):
+        """
+        改良版：template_point（QPointF or (x,y)）が与えられたら、その点に近い側の端点を
+        中心として隣接原子を探す。これによりプレビュー方向（ユーザーが見ている向き）に合わせた選択になる。
+        - atomA/atomB: AtomItem（既存の結合両端）
+        - template_point: QPointF（テンプレート上の該当頂点のシーン座標）または None
+        - threshold_deg: 角度閾値（度）
+        戻り値: 見つかった third AtomItem または None
+        """
+        # どちらの端を基準に探索するかを決める
+        centers = (atomA, atomB)
+        # デフォルト：両端どちらでも良い（ただし優先順を付ける）
+        check_order = centers
+
+        if template_point is not None:
+            # template_point が QPointF でない場合は想定変換
+            try:
+                tx = template_point.x()
+                ty = template_point.y()
+            except Exception:
+                tx, ty = template_point
+            d0 = math.hypot(atomA.pos().x() - tx, atomA.pos().y() - ty)
+            d1 = math.hypot(atomB.pos().x() - tx, atomB.pos().y() - ty)
+            # template_point に近い端を優先して調べる
+            if d0 <= d1:
+                check_order = (atomA, atomB)
+            else:
+                check_order = (atomB, atomA)
+
+        # check_order の先頭（優先端）を中心に隣接原子を探す。見つからなければ反対側も試す。
+        for center, other in (check_order, check_order[::-1]):
+            for bond in list(center.bonds):
+                neighbor = bond.atom1 if bond.atom2 is center else bond.atom2
+                if neighbor is other:
+                    continue
+                v1x = other.pos().x() - center.pos().x()
+                v1y = other.pos().y() - center.pos().y()
+                v2x = neighbor.pos().x() - center.pos().x()
+                v2y = neighbor.pos().y() - center.pos().y()
+                len1 = math.hypot(v1x, v1y)
+                len2 = math.hypot(v2x, v2y)
+                if len1 < 1e-8 or len2 < 1e-8:
+                    continue
+                cosang = (v1x * v2x + v1y * v2y) / (len1 * len2)
+                cosang = max(-1.0, min(1.0, cosang))
+                angle = math.degrees(math.acos(cosang))
+                if angle > threshold_deg:
+                    return neighbor
+        return None
+
 
 
 
@@ -815,7 +1074,7 @@ class MainWindow(QMainWindow):
         left_layout.setContentsMargins(0,0,0,0)
 
         self.scene=MoleculeScene(self.data,self)
-        self.scene.setSceneRect(-800,-800,1600,1600)
+        self.scene.setSceneRect(-400,-400,800,800)
         self.scene.setBackgroundBrush(QColor("#FFFFFF"))
 
         self.view_2d=QGraphicsView(self.scene)
@@ -842,6 +1101,7 @@ class MainWindow(QMainWindow):
         right_layout.addWidget(self.convert_button)
         splitter.addWidget(right_pane)
         splitter.setSizes([800, 800])
+        self.view_2d.fitInView(self.scene.sceneRect(), Qt.AspectRatioMode.KeepAspectRatio)
 
         toolbar = QToolBar("Main Toolbar")
         self.addToolBar(toolbar)
