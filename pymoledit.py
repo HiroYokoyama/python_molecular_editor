@@ -19,7 +19,7 @@ from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout,
     QPushButton, QSplitter, QGraphicsView, QGraphicsScene, QGraphicsItem,
     QToolBar, QStatusBar, QGraphicsTextItem, QGraphicsLineItem, QDialog, QGridLayout,
-    QFileDialog
+    QFileDialog, QSizePolicy 
 )
 from PyQt6.QtGui import (
     QPen, QBrush, QColor, QPainter, QAction, QActionGroup, QFont, QPolygonF,
@@ -446,17 +446,13 @@ class MoleculeScene(QGraphicsScene):
             bond_item = self.data.bonds[key]['item']
             bond_item.order=order; bond_item.update()
         start_atom.update_style(); end_atom.update_style()
-
+    
     def add_molecule_fragment(self, points, bonds_info, existing_items=None, symbol='C'):
         """
-        add_molecule_fragment の最小修正版（単独関数）。
-    
-        - 既存原子の列挙に self.data.atoms を使う（self.data_atom_items_list は存在しない環境向け）。
-        - 6員環（ベンゼン）テンプレートは、テンプレート自身が二重結合を含む場合のみ回転合わせを行う。
-        - 6員環テンプレートは既存結合の次数を変更しない（誤ってシクロヘキサン->ベンゼンに変わるのを防ぐ）。
-    
-        既存の create_atom/create_bond/find_bond_between 等のメソッド呼び出しは
-        元ファイル側の実装に合わせて利用します。
+        add_molecule_fragment の最終確定版。
+        - 既存の結合次数を変更しないポリシーを徹底（最重要）。
+        - ベンゼン環テンプレートは、フューズされる既存結合の次数に基づき、
+          「新規に作られる二重結合が2本になるように」回転を決定するロジックを適用（条件分岐あり）。
         """
         import math
     
@@ -475,10 +471,9 @@ class MoleculeScene(QGraphicsScene):
             ax, ay = coords(a); bx, by = coords(b)
             return math.hypot(ax - bx, ay - by)
     
-        # --- 1) 既にクリックされた existing_items をテンプレート頂点にマップ ---
+        # --- 1) 既にクリックされた existing_items をテンプレート頂点にマップ (変更なし) ---
         existing_items = existing_items or []
         used_indices = set()
-        # 近接閾値はテンプレートの辺長の平均を使って決める
         ref_lengths = [dist_pts(points[i], points[j]) for i, j, _ in bonds_info if i < num_points and j < num_points]
         avg_len = (sum(ref_lengths) / len(ref_lengths)) if ref_lengths else 20.0
         map_threshold = max(0.5 * avg_len, 8.0)
@@ -490,7 +485,7 @@ class MoleculeScene(QGraphicsScene):
                 for i, p in enumerate(points):
                     if i in used_indices: continue
                     d = dist_pts(p, ex_pos)
-                    if d < best_d:
+                    if best_d is None or d < best_d:
                         best_d, best_idx = d, i
                 if best_idx != -1 and best_d <= max(map_threshold, 1.5 * avg_len):
                     atom_items[best_idx] = ex_item
@@ -498,30 +493,31 @@ class MoleculeScene(QGraphicsScene):
             except Exception:
                 pass
     
-        # --- 2) シーン内既存原子を self.data.atoms から列挙してマップ ---
+        # --- 2) シーン内既存原子を self.data.atoms から列挙してマップ (変更なし) ---
         mapped_atoms = {it for it in atom_items if it is not None}
         for i, p in enumerate(points):
             if atom_items[i] is not None: continue
+            
             nearby = None
             best_d = float('inf')
+            
             for atom_data in self.data.atoms.values():
                 a_item = atom_data.get('item')
-                if not a_item: continue
-                if a_item in mapped_atoms: continue
+                if not a_item or a_item in mapped_atoms: continue
                 try:
                     d = dist_pts(p, a_item.pos())
                 except Exception:
                     continue
                 if d < best_d:
                     best_d, nearby = d, a_item
+
             if nearby and best_d <= map_threshold:
                 atom_items[i] = nearby
                 mapped_atoms.add(nearby)
     
-        # --- 3) 足りない頂点は新規作成 ---
+        # --- 3) 足りない頂点は新規作成 (変更なし) ---
         for i, p in enumerate(points):
             if atom_items[i] is None:
-                # create_atom は元ファイルの実装に依存
                 atom_id = self.create_atom(symbol, p)
                 atom_items[i] = self.data.atoms[atom_id]['item']
     
@@ -531,31 +527,83 @@ class MoleculeScene(QGraphicsScene):
         template_has_double = any(o == 2 for (_, _, o) in bonds_info)
     
         if is_6ring and template_has_double:
-            # 既存でマップされた辺について、実際の結合次数を集める
-            existing_orders = {}
+            existing_orders = {} # key: bonds_infoのインデックス, value: 既存の結合次数
             for k, (i_idx, j_idx, _) in enumerate(bonds_info):
                 if i_idx < len(atom_items) and j_idx < len(atom_items):
                     a, b = atom_items[i_idx], atom_items[j_idx]
                     if a is None or b is None: continue
                     eb = self.find_bond_between(a, b)
                     if eb:
-                        existing_orders[k] = getattr(eb, 'order', None)
-    
+                        existing_orders[k] = getattr(eb, 'order', 1) 
+
             if existing_orders:
                 orig_orders = [o for (_, _, o) in bonds_info]
                 best_rot = 0
-                best_matches = -1
-                for rot in range(num_points):
-                    matches = 0
-                    for k, exist_order in existing_orders.items():
-                        if exist_order is None: continue
-                        if orig_orders[(k + rot) % num_points] == exist_order:
-                            matches += 1
-                    if matches > best_matches:
-                        best_matches = matches
-                        best_rot = rot
-    
-                # 回転を反映
+                max_score = -999 # スコアは「適合度」を意味する
+
+                # --- ★フューズされた辺の数による条件分岐★ ---
+                if len(existing_orders) >= 2:
+                    # 2辺以上フューズ: 単純に既存の辺の次数とテンプレートの辺の次数が一致するものを最優先する
+                    # (この場合、新しい環を交互配置にするのは難しく、単に既存の構造を壊さないことを優先)
+                    for rot in range(num_points):
+                        current_score = sum(100 for k, exist_order in existing_orders.items() 
+                                            if orig_orders[(k + rot) % num_points] == exist_order)
+                        if current_score > max_score:
+                            max_score = current_score
+                            best_rot = rot
+
+                elif len(existing_orders) == 1:
+                    # 1辺フューズ: 既存の辺を維持しつつ、その両隣で「反転一致」を達成し、新しい環を交互配置にする
+                    
+                    # フューズされた辺のインデックスと次数を取得
+                    k_fuse = next(iter(existing_orders.keys()))
+                    exist_order = existing_orders[k_fuse]
+                    
+                    # 目標: フューズされた辺の両隣（k-1とk+1）に来るテンプレートの次数が、既存の辺の次数と逆であること
+                    # k_adj_1 -> (k_fuse - 1) % 6
+                    # k_adj_2 -> (k_fuse + 1) % 6
+                    
+                    for rot in range(num_points):
+                        current_score = 0
+                        rotated_template_order = orig_orders[(k_fuse + rot) % num_points]
+
+                        # 1. まず、フューズされた辺自体が次数を反転させられる位置にあるかチェック（必須ではないが、回転を絞る）
+                        if (exist_order == 1 and rotated_template_order == 2) or \
+                           (exist_order == 2 and rotated_template_order == 1):
+                            current_score += 100 # 大幅ボーナス: 理想的な回転
+
+                        # 2. 次に、両隣の辺の次数をチェック（交互配置維持の主目的）
+                        # 既存辺の両隣は、新規に作成されるため、テンプレートの次数でボンドが作成されます。
+                        # ここで、テンプレートの次数が既存辺の次数と逆になる回転を選ぶ必要があります。
+                        
+                        # テンプレートの辺は、回転後のk_fuseの両隣（m_adj1, m_adj2）
+                        m_adj1 = (k_fuse - 1 + rot) % num_points 
+                        m_adj2 = (k_fuse + 1 + rot) % num_points
+                        
+                        neighbor_order_1 = orig_orders[m_adj1]
+                        neighbor_order_2 = orig_orders[m_adj2]
+
+                        # 既存が単結合(1)の場合、両隣は二重結合(2)であってほしい
+                        if exist_order == 1:
+                            if neighbor_order_1 == 2: current_score += 50
+                            if neighbor_order_2 == 2: current_score += 50
+                        
+                        # 既存が二重結合(2)の場合、両隣は単結合(1)であってほしい
+                        elif exist_order == 2:
+                            if neighbor_order_1 == 1: current_score += 50
+                            if neighbor_order_2 == 1: current_score += 50
+                            
+                        # 3. タイブレーク: その他の既存結合（フューズ辺ではない）との次数一致度も加味
+                        for k, e_order in existing_orders.items():
+                             if k != k_fuse:
+                                r_t_order = orig_orders[(k + rot) % num_points]
+                                if r_t_order == e_order: current_score += 10 # 既存構造維持のボーナス
+                        
+                        if current_score > max_score:
+                            max_score = current_score
+                            best_rot = rot
+                
+                # 最終的な回転を反映
                 new_tb = []
                 for m in range(num_points):
                     i_idx, j_idx, _ = bonds_info[m]
@@ -563,70 +611,32 @@ class MoleculeScene(QGraphicsScene):
                     new_tb.append((i_idx, j_idx, new_order))
                 template_bonds_to_use = new_tb
     
-        # --- 5) ボンド作成／更新 ---
+        # --- 5) ボンド作成／更新 (変更なし) ---
         for id1_idx, id2_idx, order in template_bonds_to_use:
             if id1_idx < len(atom_items) and id2_idx < len(atom_items):
                 a_item, b_item = atom_items[id1_idx], atom_items[id2_idx]
                 if not a_item or not b_item or a_item is b_item: continue
     
-                # 順序正規化（data.bonds のキーは (min,max) になっているはず）
+                # 順序正規化
                 id1, id2 = a_item.atom_id, b_item.atom_id
                 if id1 > id2: id1, id2 = id2, id1
     
                 exist_b = self.find_bond_between(a_item, b_item)
                 if exist_b:
-                    # --- 重要: 既存ボンドがあれば「加算」しない（これが三重結合化の原因） ---
-                    # 直感ルール：
-                    #  - 既存ボンドが存在する場合は、その既存の次数を優先（変更しない）。
-                    #  - 存在しない場合のみテンプレートの order を使って新規に設定する。
-                    #  - これによりシクロヘキサンは元の状態が保たれ、ベンゼンで既存が単結合なら単結合のまま、
-                    #    既存が二重結合なら二重結合のままとなります。
-
-                    # 既存表示オブジェクトから現在の次数を得る（ない場合は None）
-                    existing_order = getattr(exist_b, 'order', None)
-                    if existing_order is not None:
-                        # 既にあるボンドの次数をそのまま使う（上書き・加算しない）
-                        chosen_order = existing_order
-                    else:
-                        # 既存ボンド情報が無ければテンプレート次数を使用
-                        chosen_order = order
-
-                    # データモデルにも反映（存在すれば）
-                    if (id1, id2) in self.data.bonds:
-                        self.data.bonds[(id1, id2)]['order'] = chosen_order
-
-                    # 表示オブジェクトにも反映（加算ではなく代入）
-                    exist_b.order = chosen_order
-                    if hasattr(exist_b, 'update'):
-                        exist_b.update()
-
-                    # 既存ボンドは処理済みなので次へ
-                    continue
-
-
+                    # ★最重要ポリシー（フューズ辺は次数を変更しない）★
+                    continue 
                 else:
                     # 新規ボンド作成
                     self.create_bond(a_item, b_item, bond_order=order)
     
-        # --- 6) 表示更新（必要なら） ---
+        # --- 6) 表示更新（必要なら） (変更なし) ---
         for at in atom_items:
             try:
-                if at: at.update()
+                if at: at.update_style() 
             except Exception:
                 pass
     
-        # Undo / data-changed フラグ等は元コード側で処理される想定
         return atom_items
-
- 
-
-    def find_bond_between(self, atom1, atom2):
-        """ atom1 と atom2 の間にある BondItem を返す（なければ None）"""
-        for b in atom1.bonds:
-            other = b.atom1 if b.atom2 is atom1 else b.atom2
-            if other is atom2:
-                return b
-        return None
 
 
     def update_template_preview(self, pos):
@@ -861,8 +871,6 @@ class MoleculeScene(QGraphicsScene):
                 new_atom_item = self.data.atoms[new_atom_id]['item']
                 self.create_bond(start_atom, new_atom_item, bond_order=1)
 
-                self.create_bond(start_atom, new_atom_item, bond_order=1)
-
                 self.clearSelection()
                 self.window.push_undo_state()
                 event.accept()
@@ -1054,7 +1062,7 @@ class MainWindow(QMainWindow):
     start_calculation = pyqtSignal(str)
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Python Molecular Editor by HY"); self.setGeometry(100, 100, 1600, 900)
+        self.setWindowTitle("Python Molecular Editor by HY"); self.setGeometry(100, 100, 1200, 800)
         self.data = MolecularData(); self.current_mol = None
         self.undo_stack = []
         self.redo_stack = []
@@ -1071,7 +1079,7 @@ class MainWindow(QMainWindow):
 
         left_pane=QWidget()
         left_layout=QVBoxLayout(left_pane)
-        left_layout.setContentsMargins(0,0,0,0)
+        #left_layout.setContentsMargins(0,0,0,0)
 
         self.scene=MoleculeScene(self.data,self)
         self.scene.setSceneRect(-400,-400,800,800)
@@ -1079,7 +1087,13 @@ class MainWindow(QMainWindow):
 
         self.view_2d=QGraphicsView(self.scene)
         self.view_2d.setRenderHint(QPainter.RenderHint.Antialiasing)
+        # ★追加: サイズポリシーを「柔軟に拡大」に設定
+        self.view_2d.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
+        )
         left_layout.addWidget(self.view_2d)
+
+
 
         self.cleanup_button=QPushButton("Optimize 2D")
         self.cleanup_button.clicked.connect(self.clean_up_2d_structure)
@@ -1089,18 +1103,30 @@ class MainWindow(QMainWindow):
         right_pane=QWidget()
         right_layout=QVBoxLayout(right_pane)
         self.plotter=QtInteractor(right_pane)
+        # ★追加: サイズポリシーを「柔軟に拡大」に設定
+        self.plotter.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
+        )
         right_layout.addWidget(self.plotter)
 
         # --- ▼▼▼ ここから追加 ▼▼▼ ---
         # 3D画面(plotter)にイベントフィルターを設定
         self.plotter.installEventFilter(self)
         # --- ▲▲▲ ここまで追加 ▲▲▲ ---
-
+        
         self.convert_button=QPushButton("Convert to 3D")
         self.convert_button.clicked.connect(self.trigger_conversion)
         right_layout.addWidget(self.convert_button)
         splitter.addWidget(right_pane)
-        splitter.setSizes([800, 800])
+        splitter.setSizes([600, 600])
+
+        # ★★★ ここに以下の2行を追加してください ★★★
+        splitter.setStretchFactor(0, 1) # 左ペイン（2Dビュー側）の伸縮率を1に設定
+        splitter.setStretchFactor(1, 1) # 右ペイン（3Dビュー側）の伸縮率を1に設定
+        # ★★★★★★★★★★★★★★★★★★★★★★★
+
+        
+
         self.view_2d.fitInView(self.scene.sceneRect(), Qt.AspectRatioMode.KeepAspectRatio)
 
         toolbar = QToolBar("Main Toolbar")
