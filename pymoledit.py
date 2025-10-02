@@ -19,7 +19,7 @@ from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout,
     QPushButton, QSplitter, QGraphicsView, QGraphicsScene, QGraphicsItem,
     QToolBar, QStatusBar, QGraphicsTextItem, QGraphicsLineItem, QDialog, QGridLayout,
-    QFileDialog, QSizePolicy, QLabel, QLineEdit
+    QFileDialog, QSizePolicy, QLabel, QLineEdit, QToolButton, QMenu 
 )
 from PyQt6.QtGui import (
     QPen, QBrush, QColor, QPainter, QAction, QActionGroup, QFont, QPolygonF,
@@ -345,8 +345,9 @@ class MoleculeScene(QGraphicsScene):
         self.key_to_symbol_map = {
             Qt.Key.Key_C: 'C', Qt.Key.Key_N: 'N', Qt.Key.Key_O: 'O', Qt.Key.Key_S: 'S',
             Qt.Key.Key_F: 'F', Qt.Key.Key_B: 'B', Qt.Key.Key_I: 'I', Qt.Key.Key_H: 'H',
+            Qt.Key.Key_P: 'P',
         }
-        self.key_to_symbol_map_shift = { Qt.Key.Key_C: 'Cl', Qt.Key.Key_B: 'Br', }
+        self.key_to_symbol_map_shift = { Qt.Key.Key_C: 'Cl', Qt.Key.Key_B: 'Br', Qt.Key.Key_S: 'Si',}
 
         self.key_to_bond_mode_map = {
             Qt.Key.Key_1: 'bond_1_0',
@@ -808,7 +809,7 @@ class MoleculeScene(QGraphicsScene):
                 id1, id2 = bond.atom1.atom_id, bond.atom2.atom_id
                 if id1 > id2: id1, id2 = id2, id1
 
-                if key == Qt.Key.Key_1 and bond.order != 1:
+                if key == Qt.Key.Key_1 and (bond.order != 1 or bond.stereo != 0):
                     bond.order = 1; bond.stereo = 0; needs_update = True
                 elif key == Qt.Key.Key_2 and bond.order != 2:
                     bond.order = 2; bond.stereo = 0; needs_update = True
@@ -1105,6 +1106,7 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.setWindowTitle("Python Molecular Editor by HY"); self.setGeometry(100, 100, 1200, 800)
         self.data = MolecularData(); self.current_mol = None
+        self.current_3d_style = 'ball_and_stick'
         self.undo_stack = []
         self.redo_stack = []
         self.mode_actions = {} 
@@ -1165,8 +1167,8 @@ class MainWindow(QMainWindow):
 
         actions_data = [
             ("Select", 'select', 'Space'), ("C", 'atom_C', 'c'), ("H", 'atom_H', 'h'), ("B", 'atom_B', 'b'),
-            ("N", 'atom_N', 'n'), ("O", 'atom_O', 'o'), ("S", 'atom_S', 's'), ("F", 'atom_F', 'f'),
-            ("Cl", 'atom_Cl', 'Shift+C'), ("Br", 'atom_Br', 'Shift+B'), ("I", 'atom_I', 'i'), 
+            ("N", 'atom_N', 'n'), ("O", 'atom_O', 'o'), ("S", 'atom_S', 's'), ("Si", 'atom_Si', 'Shift+S'), ("P", 'atom_P', 'p'), 
+            ("F", 'atom_F', 'f'), ("Cl", 'atom_Cl', 'Shift+C'), ("Br", 'atom_Br', 'Shift+B'), ("I", 'atom_I', 'i'), 
             ("Other...", 'atom_other', '')
         ]
 
@@ -1277,6 +1279,37 @@ class MainWindow(QMainWindow):
         select_action.setChecked(True)
         self.set_mode('select')
 
+        # スペーサーを追加して、次のウィジェットを右端に配置する
+        spacer = QWidget()
+        spacer.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        toolbar.addWidget(spacer)
+
+        # 3Dスタイル変更ボタンとメニューを作成
+
+        self.style_button = QToolButton()
+        self.style_button.setText("3D Style")
+        self.style_button.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
+        toolbar.addWidget(self.style_button)
+
+        style_menu = QMenu(self)
+        self.style_button.setMenu(style_menu)
+
+        style_group = QActionGroup(self)
+        style_group.setExclusive(True)
+
+        # Ball & Stick アクション
+        bs_action = QAction("Ball & Stick", self, checkable=True)
+        bs_action.setChecked(True)
+        bs_action.triggered.connect(lambda: self.set_3d_style('ball_and_stick'))
+        style_menu.addAction(bs_action)
+        style_group.addAction(bs_action)
+
+        # CPK アクション
+        cpk_action = QAction("CPK (Space-filling)", self, checkable=True)
+        cpk_action.triggered.connect(lambda: self.set_3d_style('cpk'))
+        style_menu.addAction(cpk_action)
+        style_group.addAction(cpk_action)
+
     def init_menu_bar(self):
         menu_bar = self.menuBar()
         
@@ -1365,6 +1398,18 @@ class MainWindow(QMainWindow):
         self.set_mode(mode_str)
         if mode_str in self.mode_actions:
             self.mode_actions[mode_str].setChecked(True)
+
+    def set_3d_style(self, style_name):
+        """3D表示スタイルを設定し、ビューを更新する"""
+        if self.current_3d_style == style_name:
+            return # スタイルが変更されていない場合は何もしない
+
+        self.current_3d_style = style_name
+        self.statusBar().showMessage(f"3D style set to: {style_name}")
+        
+        # 現在表示中の分子があれば、新しいスタイルで再描画する
+        if self.current_mol:
+            self.draw_molecule_3d(self.current_mol)
 
     def activate_select_mode(self):
         self.set_mode('select')
@@ -1684,39 +1729,69 @@ class MainWindow(QMainWindow):
             self.view_2d.setFocus()
 
     def draw_molecule_3d(self, mol):
-        self.plotter.clear(); conf = mol.GetConformer()
-        pos=np.array([list(conf.GetAtomPosition(i)) for i in range(mol.GetNumAtoms())])
-        sym=[a.GetSymbol() for a in mol.GetAtoms()]
-        rad=np.array([VDW_RADII.get(s,0.4) for s in sym]); col=np.array([CPK_COLORS_PV.get(s,[0.5,0.5,0.5]) for s in sym])
-        poly=pv.PolyData(pos); poly['colors']=col; poly['radii']=rad
-        glyphs=poly.glyph(scale='radii',geom=pv.Sphere(radius=1.0),orient=False)
+        self.plotter.clear()
+        conf = mol.GetConformer()
+        pos = np.array([list(conf.GetAtomPosition(i)) for i in range(mol.GetNumAtoms())])
+        sym = [a.GetSymbol() for a in mol.GetAtoms()]
+        col = np.array([CPK_COLORS_PV.get(s, [0.5, 0.5, 0.5]) for s in sym])
+        
+        # --- ここからが修正箇所です ---
+        
+        # スタイルに応じて原子半径を決定
+        if self.current_3d_style == 'cpk':
+            # CPKモデル: Van der Waals半径をそのまま使う（見栄えのため少しだけ縮小なら0.8くらい）
+            rad = np.array([pt.GetRvdw(pt.GetAtomicNumber(s)) * 1.0 for s in sym])
+        else: # ball_and_stick (デフォルト)
+            # Ball & Stickモデル: 元のコード通り半径を小さくする
+            rad = np.array([VDW_RADII.get(s, 0.4) for s in sym])
+
+        poly = pv.PolyData(pos)
+        poly['colors'] = col
+        poly['radii'] = rad
+        glyphs = poly.glyph(scale='radii', geom=pv.Sphere(radius=1.0), orient=False)
         
         edge_color = '#505050'
         self.plotter.add_mesh(glyphs, scalars='colors', rgb=True, smooth_shading=True, show_edges=True, edge_color=edge_color, edge_opacity=0.3, line_width=0.1)
         
-        for bond in mol.GetBonds():
-            sp=np.array(conf.GetAtomPosition(bond.GetBeginAtomIdx())); ep=np.array(conf.GetAtomPosition(bond.GetEndAtomIdx()))
-            bt=bond.GetBondType(); c=(sp+ep)/2; d=ep-sp; h=np.linalg.norm(d)
-            if h==0: continue
-            color=[0.5, 0.5, 0.5]
-            if bt==Chem.rdchem.BondType.SINGLE or bt==Chem.rdchem.BondType.AROMATIC:
-                cyl=pv.Cylinder(center=c,direction=d,radius=0.1,height=h)
-                self.plotter.add_mesh(cyl, color=color, smooth_shading=True, show_edges=True, edge_color=edge_color, edge_opacity=0.3)
-            else:
-                v1=d/h; v_arb=np.array([0,0,1])
-                if np.allclose(np.abs(np.dot(v1,v_arb)),1.0): v_arb=np.array([0,1,0])
-                off_dir=np.cross(v1,v_arb); off_dir/=np.linalg.norm(off_dir)
-                if bt==Chem.rdchem.BondType.DOUBLE:
-                    r=0.09; s=0.15; c1=c+off_dir*(s/2); c2=c-off_dir*(s/2)
-                    cyl1=pv.Cylinder(center=c1,direction=d,radius=r,height=h); cyl2=pv.Cylinder(center=c2,direction=d,radius=r,height=h)
-                    self.plotter.add_mesh(cyl1,color=color,smooth_shading=True, show_edges=True, edge_color=edge_color, edge_opacity=0.3)
-                    self.plotter.add_mesh(cyl2,color=color,smooth_shading=True, show_edges=True, edge_color=edge_color, edge_opacity=0.3)
-                elif bt==Chem.rdchem.BondType.TRIPLE:
-                    r=0.08; s=0.18; cc=pv.Cylinder(center=c,direction=d,radius=r,height=h)
-                    c1=pv.Cylinder(center=c+off_dir*s,direction=d,radius=r,height=h); c2=pv.Cylinder(center=c-off_dir*s,direction=d,radius=r,height=h)
-                    self.plotter.add_mesh(cc,color=color,smooth_shading=True, show_edges=True, edge_color=edge_color, edge_opacity=0.3)
-                    self.plotter.add_mesh(c1,color=color,smooth_shading=True, show_edges=True, edge_color=edge_color, edge_opacity=0.3)
-                    self.plotter.add_mesh(c2,color=color,smooth_shading=True, show_edges=True, edge_color=edge_color, edge_opacity=0.3)
+        # Ball & Stick スタイルの時のみ結合を描画
+        if self.current_3d_style == 'ball_and_stick':
+            for bond in mol.GetBonds():
+                sp = np.array(conf.GetAtomPosition(bond.GetBeginAtomIdx()))
+                ep = np.array(conf.GetAtomPosition(bond.GetEndAtomIdx()))
+                bt = bond.GetBondType()
+                c = (sp + ep) / 2
+                d = ep - sp
+                h = np.linalg.norm(d)
+                if h == 0: continue
+                color = [0.5, 0.5, 0.5]
+                if bt == Chem.rdchem.BondType.SINGLE or bt == Chem.rdchem.BondType.AROMATIC:
+                    cyl = pv.Cylinder(center=c, direction=d, radius=0.1, height=h)
+                    self.plotter.add_mesh(cyl, color=color, smooth_shading=True, show_edges=True, edge_color=edge_color, edge_opacity=0.3)
+                else:
+                    v1 = d / h
+                    v_arb = np.array([0, 0, 1])
+                    if np.allclose(np.abs(np.dot(v1, v_arb)), 1.0): v_arb = np.array([0, 1, 0])
+                    off_dir = np.cross(v1, v_arb)
+                    off_dir /= np.linalg.norm(off_dir)
+                    if bt == Chem.rdchem.BondType.DOUBLE:
+                        r = 0.09
+                        s = 0.15
+                        c1 = c + off_dir * (s / 2)
+                        c2 = c - off_dir * (s / 2)
+                        cyl1 = pv.Cylinder(center=c1, direction=d, radius=r, height=h)
+                        cyl2 = pv.Cylinder(center=c2, direction=d, radius=r, height=h)
+                        self.plotter.add_mesh(cyl1, color=color, smooth_shading=True, show_edges=True, edge_color=edge_color, edge_opacity=0.3)
+                        self.plotter.add_mesh(cyl2, color=color, smooth_shading=True, show_edges=True, edge_color=edge_color, edge_opacity=0.3)
+                    elif bt == Chem.rdchem.BondType.TRIPLE:
+                        r = 0.08
+                        s = 0.18
+                        cc = pv.Cylinder(center=c, direction=d, radius=r, height=h)
+                        c1 = pv.Cylinder(center=c + off_dir * s, direction=d, radius=r, height=h)
+                        c2 = pv.Cylinder(center=c - off_dir * s, direction=d, radius=r, height=h)
+                        self.plotter.add_mesh(cc, color=color, smooth_shading=True, show_edges=True, edge_color=edge_color, edge_opacity=0.3)
+                        self.plotter.add_mesh(c1, color=color, smooth_shading=True, show_edges=True, edge_color=edge_color, edge_opacity=0.3)
+                        self.plotter.add_mesh(c2, color=color, smooth_shading=True, show_edges=True, edge_color=edge_color, edge_opacity=0.3)
+        
         self.plotter.reset_camera()
 
     def open_analysis_window(self):
