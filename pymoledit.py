@@ -13,6 +13,7 @@ import numpy as np
 import pickle
 import copy
 import math
+import io
 
 # PyQt6 Modules
 from PyQt6.QtWidgets import (
@@ -25,7 +26,8 @@ from PyQt6.QtGui import (
     QPen, QBrush, QColor, QPainter, QAction, QActionGroup, QFont, QPolygonF,
     QPainterPath, QFontMetrics, QKeySequence, QTransform, QCursor, QPixmap, QIcon
 )
-from PyQt6.QtCore import Qt, QPointF, QRectF, QLineF, QObject, QThread, pyqtSignal, QEvent
+from PyQt6.QtCore import Qt, QPointF, QRectF, QLineF, QObject, QThread, pyqtSignal, QEvent, QMimeData, QByteArray
+
 
 # RDKit
 from rdkit import Chem
@@ -41,8 +43,8 @@ from pyvistaqt import QtInteractor
 ATOM_RADIUS = 18
 BOND_OFFSET = 3.5
 DEFAULT_BOND_LENGTH = 75.0 # テンプレートで使用する標準結合長
+CLIPBOARD_MIME_TYPE = "application/x-pymoledit-fragment"
 
-# ★★★ 修正点 ★★★ 原子カラーを大幅に拡充
 CPK_COLORS = {
     'H': QColor('#FFFFFF'), 'C': QColor('#222222'), 'N': QColor('#3377FF'), 'O': QColor('#FF3333'), 'F': QColor('#33FF33'),
     'Cl': QColor('#33FF33'), 'Br': QColor('#A52A2A'), 'I': QColor('#9400D3'), 'S': QColor('#FFC000'), 'P': QColor('#FFA500'),
@@ -77,11 +79,11 @@ VDW_RADII = {pt.GetElementSymbol(i): pt.GetRvdw(i) * 0.3 for i in range(1, 119)}
 class MolecularData:
     def __init__(self):
         self.atoms = {}; self.bonds = {}; self._next_atom_id = 0
-    def add_atom(self, symbol, pos):
+    def add_atom(self, symbol, pos, charge=0, radical=0):
         atom_id = self._next_atom_id
-        self.atoms[atom_id] = {'symbol': symbol, 'pos': pos, 'item': None}
+        self.atoms[atom_id] = {'symbol': symbol, 'pos': pos, 'item': None, 'charge': charge, 'radical': radical} 
         self._next_atom_id += 1; return atom_id
-    def add_bond(self, id1, id2, order=1, stereo=0): # ★★★ stereo引数を追加
+    def add_bond(self, id1, id2, order=1, stereo=0): 
         if id1 > id2: id1, id2 = id2, id1
         bond_data = {'order': order, 'stereo': stereo, 'item': None}
         if (id1, id2) in self.bonds:
@@ -97,15 +99,13 @@ class MolecularData:
         if id1 > id2: id1, id2 = id2, id1
         if (id1, id2) in self.bonds: del self.bonds[(id1, id2)]
     def to_mol_block(self):
-        # ★★★ 修正点 ★★★ 立体化学を反映させるため、内部でto_rdkit_molを呼び出す
+        # (このメソッドは変更なし)
         try:
             mol = self.to_rdkit_mol()
             if mol:
                 return Chem.MolToMolBlock(mol, includeStereo=True)
         except Exception:
-            pass # fallback to old method if fails
-        
-        # --- Fallback for cases where RDKit fails ---
+            pass
         if not self.atoms: return None
         atom_map = {old_id: new_id for new_id, old_id in enumerate(self.atoms.keys())}
         num_atoms, num_bonds = len(self.atoms), len(self.bonds)
@@ -113,29 +113,33 @@ class MolecularData:
         mol_block += f"{num_atoms:3d}{num_bonds:3d}  0  0  0  0  0  0  0  0999 V2000\n"
         for old_id, atom in self.atoms.items():
             x, y, z, symbol = atom['item'].pos().x(), -atom['item'].pos().y(), 0.0, atom['symbol']
-            mol_block += f"{x:10.4f}{y:10.4f}{z:10.4f} {symbol:<3} 0  0  0  0  0  0  0  0  0  0  0  0\n"
+            charge = atom.get('charge', 0)
+            chg_str = f"  3{charge:3d}" if charge != 0 else ""
+            mol_block += f"{x:10.4f}{y:10.4f}{z:10.4f} {symbol:<3} 0  0  0  0  0  0{chg_str}  0  0  0  0  0\n"
+
         for (id1, id2), bond in self.bonds.items():
             idx1, idx2, order = atom_map[id1] + 1, atom_map[id2] + 1, bond['order']
             mol_block += f"{idx1:3d}{idx2:3d}{order:3d}  0  0  0  0\n"
         mol_block += "M  END\n"
         return mol_block
-        
-# ★★★ 新機能 ★★★ データから立体化学情報を含むRDKit Molオブジェクトを生成
+
     def to_rdkit_mol(self):
         if not self.atoms: return None
         mol = Chem.RWMol()
         rdkit_atom_map = {}
         for atom_id, atom_data in self.atoms.items():
             atom = Chem.Atom(atom_data['symbol'])
+            # This line ensures the charge is transferred
+            atom.SetFormalCharge(atom_data.get('charge', 0))
+            # ラジカル電子数を設定
+            atom.SetNumRadicalElectrons(atom_data.get('radical', 0))
             idx = mol.AddAtom(atom)
             rdkit_atom_map[atom_id] = idx
 
-        # ▼▼▼ このブロックを修正 ▼▼▼
         for (id1, id2), bond_data in self.bonds.items():
             idx1 = rdkit_atom_map[id1]
             idx2 = rdkit_atom_map[id2]
 
-            # BondType.from_doubleの代替処理
             order_val = float(bond_data['order'])
             if order_val == 1.5:
                 order = Chem.BondType.AROMATIC
@@ -143,39 +147,39 @@ class MolecularData:
                 order = Chem.BondType.DOUBLE
             elif order_val == 3.0:
                 order = Chem.BondType.TRIPLE
-            else: # 1.0 およびその他の場合は単結合とする
+            else:
                 order = Chem.BondType.SINGLE
 
             mol.AddBond(idx1, idx2, order)
             
-            # 立体化学の設定
             if bond_data.get('stereo', 0) != 0 and order == Chem.BondType.SINGLE:
                 bond = mol.GetBondBetweenAtoms(idx1, idx2)
                 if bond_data['stereo'] == 1: # Wedge
                     bond.SetBondDir(Chem.BondDir.BEGINWEDGE)
                 elif bond_data['stereo'] == 2: # Dash
                     bond.SetBondDir(Chem.BondDir.BEGINDASH)
-        # ▲▲▲ 修正ブロックここまで ▲▲▲
 
         mol = mol.GetMol()
         try:
             Chem.SanitizeMol(mol)
         except Exception:
-             pass # Sanitization may fail for intermediate drawings
+             pass
         return mol
-
-
-# --- Custom 2D Graphics Items ---
+ # --- Custom 2D Graphics Items ---
 class AtomItem(QGraphicsItem):
-    def __init__(self, atom_id, symbol, pos):
+    def __init__(self, atom_id, symbol, pos, charge=0, radical=0):
         super().__init__()
-        self.atom_id, self.symbol, self.bonds = atom_id, symbol, []
+        self.atom_id, self.symbol, self.charge, self.radical, self.bonds = atom_id, symbol, charge, radical, [] 
         self.setPos(pos)
         self.setFlags(QGraphicsItem.GraphicsItemFlag.ItemIsMovable | QGraphicsItem.GraphicsItemFlag.ItemIsSelectable)
         self.setZValue(1); self.font = QFont("Arial", 20, QFont.Weight.Bold); self.update_style()
+    
+    # ### 修正箇所 ###
+    # 電荷記号やラジカル点が描画領域の外にはみ出さないように、
+    # extra の値を増やして領域を十分に確保します。
     def boundingRect(self):
-        r = globals().get('ATOM_RADIUS', 10)
-        extra = 4.0
+        r = globals().get('ATOM_RADIUS', 18)
+        extra = 18.0 # 元の値(15.0)から拡大し、電荷・ラジカル表示領域を確保
         return QRectF(-r - extra, -r - extra, (r + extra) * 2.0, (r + extra) * 2.0)
 
     def shape(self):
@@ -196,28 +200,56 @@ class AtomItem(QGraphicsItem):
             path = QPainterPath()
             path.addText(text_rect.left(), text_rect.bottom(), self.font, self.symbol)
             painter.setPen(QPen(Qt.GlobalColor.black, 1)); 
-            if self.symbol == 'H':
-                 painter.setBrush(QBrush(color))
-            else:
-                painter.setBrush(Qt.BrushStyle.NoBrush)
-                painter.setPen(QPen(color))
-
+            if self.symbol == 'H': painter.setBrush(QBrush(color))
+            else: painter.setBrush(Qt.BrushStyle.NoBrush); painter.setPen(QPen(color))
             painter.drawText(text_rect, Qt.AlignmentFlag.AlignCenter, self.symbol)
+            
+            # 電荷の描画
+            if self.charge != 0:
+                if self.charge == 1: charge_str = "+"
+                elif self.charge == -1: charge_str = "-"
+                else: charge_str = f"{self.charge:+}"
+                
+                charge_font = QFont("Arial", 12, QFont.Weight.Bold)
+                painter.setFont(charge_font)
+                charge_fm = QFontMetrics(charge_font)
+                
+                # 原子記号の右上に配置
+                charge_rect = charge_fm.boundingRect(charge_str)
+                charge_pos_x = text_rect.right() + 2
+                charge_pos_y = text_rect.top() + charge_rect.height() - 2
+                painter.setPen(Qt.GlobalColor.black)
+                painter.drawText(QPointF(charge_pos_x, charge_pos_y), charge_str)
+            
+            # ラジカルの描画 (大きな黒点)
+            if self.radical > 0:
+                painter.setBrush(QBrush(Qt.GlobalColor.black))
+                painter.setPen(Qt.PenStyle.NoPen)
+                # 原子記号の真上に配置
+                radical_pos_x = text_rect.center().x()
+                radical_pos_y = text_rect.top() - 5 # 5px上に
+                # ラジカルの数に応じて点を描画
+                if self.radical == 1: # Monoradical
+                     painter.drawEllipse(QPointF(radical_pos_x, radical_pos_y), 3, 3)
+                elif self.radical == 2: # Diradical
+                     painter.drawEllipse(QPointF(radical_pos_x - 5, radical_pos_y), 3, 3)
+                     painter.drawEllipse(QPointF(radical_pos_x + 5, radical_pos_y), 3, 3)
 
         if self.isSelected():
             painter.setBrush(Qt.BrushStyle.NoBrush); painter.setPen(QPen(QColor(0, 100, 255), 3))
             painter.drawRect(self.boundingRect())
+
     def update_style(self):
-        self.is_visible = not (self.symbol == 'C' and len(self.bonds) > 0); self.update()
+        self.is_visible = not (self.symbol == 'C' and len(self.bonds) > 0 and self.charge == 0 and self.radical == 0)
+        self.update()
+
     def itemChange(self, change, value):
         res = super().itemChange(change, value)
         if change == QGraphicsItem.GraphicsItemChange.ItemPositionHasChanged:
-            for bond in self.bonds:
-                bond.update_position()
+            for bond in self.bonds: bond.update_position()
         return res
 
 class BondItem(QGraphicsItem):
-    # ★★★ 修正点 ★★★ stereo引数を追加
     def __init__(self, atom1_item, atom2_item, order=1, stereo=0):
         super().__init__()
         self.atom1, self.atom2, self.order, self.stereo = atom1_item, atom2_item, order, stereo
@@ -249,7 +281,6 @@ class BondItem(QGraphicsItem):
         path.addPolygon(poly)
         return path
 
-    # ★★★ 修正点 ★★★ 立体化学を描画するようpaintメソッドを大幅に修正
     def paint(self, painter, option, widget):
         line = self.get_line_in_local_coords()
         if line.length() == 0: return
@@ -336,7 +367,6 @@ class MoleculeScene(QGraphicsScene):
         super().__init__()
         self.data, self.window = data, window
         self.mode, self.current_atom_symbol = 'select', 'C'
-        # ★★★ 修正点 ★★★ 結合の次数と立体化学を分離して管理
         self.bond_order, self.bond_stereo = 1, 0
         self.start_atom, self.temp_line, self.start_pos = None, None, None; self.press_pos = None
         self.mouse_moved_since_press = False
@@ -399,6 +429,10 @@ class MoleculeScene(QGraphicsScene):
         end_pos = event.scenePos()
         is_click = self.press_pos and (end_pos - self.press_pos).manhattanLength() < QApplication.startDragDistance()
 
+        if self.temp_line:
+            self.removeItem(self.temp_line)
+            self.temp_line = None
+
         if self.mode.startswith('template') and is_click:
             if self.template_context and self.template_context.get('points'):
                 context = self.template_context
@@ -406,9 +440,21 @@ class MoleculeScene(QGraphicsScene):
                 self.data_changed_in_event = True
 
         released_item = self.itemAt(end_pos, self.views()[0].transform())
-
-        # ★★★ 修正点 ★★★ 既存結合のクリックで次数/ステレオを変更するロジック
-        if self.mode.startswith('bond') and is_click and isinstance(released_item, BondItem):
+        if (self.mode == 'radical') and is_click and isinstance(released_item, AtomItem):
+            atom = released_item
+            # ラジカルの状態をトグル (0 -> 1 -> 2 -> 0)
+            atom.radical = (atom.radical + 1) % 3 
+            self.data.atoms[atom.atom_id]['radical'] = atom.radical
+            atom.update_style()
+            self.data_changed_in_event = True
+        elif (self.mode == 'charge_plus' or self.mode == 'charge_minus') and is_click and isinstance(released_item, AtomItem):
+            atom = released_item
+            delta = 1 if self.mode == 'charge_plus' else -1
+            atom.charge += delta
+            self.data.atoms[atom.atom_id]['charge'] = atom.charge
+            atom.update_style()
+            self.data_changed_in_event = True
+        elif self.mode.startswith('bond') and is_click and isinstance(released_item, BondItem):
             b = released_item
             b.order = self.bond_order
             b.stereo = self.bond_stereo
@@ -418,8 +464,7 @@ class MoleculeScene(QGraphicsScene):
             self.data.bonds[(id1,id2)]['stereo'] = self.bond_stereo
             b.update()
             self.data_changed_in_event = True
-        elif self.start_atom and self.temp_line:
-            self.removeItem(self.temp_line); self.temp_line = None
+        elif self.start_atom:
             line = QLineF(self.start_atom.pos(), end_pos); end_item = self.itemAt(end_pos, self.views()[0].transform())
             if line.length() < 10:
                 if self.mode.startswith('atom') and self.start_atom.symbol != self.current_atom_symbol:
@@ -432,7 +477,6 @@ class MoleculeScene(QGraphicsScene):
                     self.create_bond(self.start_atom, new_item)
                 self.data_changed_in_event = True
         elif self.start_pos:
-            if self.temp_line: self.removeItem(self.temp_line); self.temp_line = None
             line = QLineF(self.start_pos, end_pos)
             if line.length() < 10:
                 self.create_atom(self.current_atom_symbol, end_pos); self.data_changed_in_event = True
@@ -456,9 +500,11 @@ class MoleculeScene(QGraphicsScene):
         self.template_context = {}
         if self.data_changed_in_event: self.window.push_undo_state()
 
-    def create_atom(self, symbol, pos):
-        atom_id = self.data.add_atom(symbol, pos); atom_item = AtomItem(atom_id, symbol, pos)
+    def create_atom(self, symbol, pos, charge=0, radical=0):
+        atom_id = self.data.add_atom(symbol, pos, charge=charge, radical=radical)
+        atom_item = AtomItem(atom_id, symbol, pos, charge=charge, radical=radical)
         self.data.atoms[atom_id]['item'] = atom_item; self.addItem(atom_item); return atom_id
+
 
     def create_bond(self, start_atom, end_atom, bond_order=None, bond_stereo=None):
         exist_b = self.find_bond_between(start_atom, end_atom)
@@ -770,15 +816,50 @@ class MoleculeScene(QGraphicsScene):
     def leaveEvent(self, event):
         self.template_preview.hide(); super().leaveEvent(event)
 
-
-# MoleculeSceneクラスの既存のkeyPressEventメソッドを、以下のコードで置き換えてください
-
     def keyPressEvent(self, event):
         view = self.views()[0]
         cursor_pos = view.mapToScene(view.mapFromGlobal(QCursor.pos()))
         item_at_cursor = self.itemAt(cursor_pos, view.transform())
         key = event.key()
         modifiers = event.modifiers()
+
+        # --- 0a. ラジカルの変更 (.) ---
+        if key == Qt.Key.Key_Period:
+            target_atoms = []
+            selected = self.selectedItems()
+            if selected:
+                target_atoms = [item for item in selected if isinstance(item, AtomItem)]
+            elif isinstance(item_at_cursor, AtomItem):
+                target_atoms = [item_at_cursor]
+
+            if target_atoms:
+                for atom in target_atoms:
+                    # ラジカルの状態をトグル (0 -> 1 -> 2 -> 0)
+                    atom.radical = (atom.radical + 1) % 3
+                    self.data.atoms[atom.atom_id]['radical'] = atom.radical
+                    atom.update_style()
+                self.window.push_undo_state()
+                event.accept()
+                return
+
+        # --- 0b. 電荷の変更 (+/-キー) ---
+        if key == Qt.Key.Key_Plus or key == Qt.Key.Key_Minus:
+            target_atoms = []
+            selected = self.selectedItems()
+            if selected:
+                target_atoms = [item for item in selected if isinstance(item, AtomItem)]
+            elif isinstance(item_at_cursor, AtomItem):
+                target_atoms = [item_at_cursor]
+
+            if target_atoms:
+                delta = 1 if key == Qt.Key.Key_Plus else -1
+                for atom in target_atoms:
+                    atom.charge += delta
+                    self.data.atoms[atom.atom_id]['charge'] = atom.charge
+                    atom.update_style()
+                self.window.push_undo_state()
+                event.accept()
+                return
 
         # --- 1. Atomに対する操作 (元素記号の変更) ---
         if isinstance(item_at_cursor, AtomItem):
@@ -887,6 +968,17 @@ class MoleculeScene(QGraphicsScene):
 
         # --- 4. 全体に対する操作 (削除、モード切替など) ---
         if key == Qt.Key.Key_Delete or key == Qt.Key.Key_Backspace:
+            # ### ここからが修正箇所 ###
+            # 描画操作がキー入力で中断された場合に備え、関連する一時的な状態をすべてクリアする
+            if self.temp_line:
+                self.removeItem(self.temp_line)
+                self.temp_line = None
+                self.start_atom = None
+                self.start_pos = None
+                # クラッシュを防ぐため、マウスプレス時に記録した位置情報もクリアする
+                self.initial_positions_in_event = {}
+            # ### 修正ここまで ###
+
             items_to_process = set(self.selectedItems())
             if item_at_cursor and isinstance(item_at_cursor, (AtomItem, BondItem)):
                 items_to_process.add(item_at_cursor)
@@ -906,9 +998,18 @@ class MoleculeScene(QGraphicsScene):
                 if bond.atom2 not in atoms_to_delete: atoms_to_update.add(bond.atom2)
 
             for bond in list(bonds_to_delete):
-                if bond.atom1 in atoms_to_update and bond in bond.atom1.bonds: bond.atom1.bonds.remove(bond)
-                if bond.atom2 in atoms_to_update and bond in bond.atom2.bonds: bond.atom2.bonds.remove(bond)
-                self.data.remove_bond(bond.atom1.atom_id, bond.atom2.atom_id); self.removeItem(bond)
+                # 結合先の原子アイテムから結合への参照を安全に削除
+                if bond.atom1 and bond in bond.atom1.bonds:
+                    bond.atom1.bonds.remove(bond)
+                if bond.atom2 and bond in bond.atom2.bonds:
+                    bond.atom2.bonds.remove(bond)
+                
+                # データモデルから削除する前に、結合が両端の原子を参照しているかを確認
+                if bond.atom1 and bond.atom2:
+                    self.data.remove_bond(bond.atom1.atom_id, bond.atom2.atom_id)
+                    
+                # シーンから結合アイテムを削除
+                self.removeItem(bond)
 
             for atom in list(atoms_to_delete):
                 self.data.remove_atom(atom.atom_id); self.removeItem(atom)
@@ -928,8 +1029,7 @@ class MoleculeScene(QGraphicsScene):
             event.accept()
             return
 
-        # ★★★ 修正箇所: グローバルな描画モード切替 ★★★
-        # 他のどのキー操作にも該当しなかった場合に実行される
+        # グローバルな描画モード切替
         mode_to_set = None
 
         # 1. 原子描画モードへの切り替え
@@ -970,6 +1070,7 @@ class MoleculeScene(QGraphicsScene):
                (b.atom1 is atom2 and b.atom2 is atom1):
                 return b
         return None
+    
 
 
 class CalculationWorker(QObject):
@@ -1104,7 +1205,7 @@ class MainWindow(QMainWindow):
     start_calculation = pyqtSignal(str)
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Python Molecular Editor by HY"); self.setGeometry(100, 100, 1200, 800)
+        self.setWindowTitle("Python Molecular Editor by HY"); self.setGeometry(100, 100, 1400, 800)
         self.data = MolecularData(); self.current_mol = None
         self.current_3d_style = 'ball_and_stick'
         self.undo_stack = []
@@ -1113,6 +1214,9 @@ class MainWindow(QMainWindow):
         self.init_ui()
         self.init_worker_thread()
         self.reset_undo_stack()
+        self.scene.selectionChanged.connect(self.update_edit_menu_actions)
+        QApplication.clipboard().dataChanged.connect(self.update_edit_menu_actions)
+        self.update_edit_menu_actions()
 
     def init_ui(self):
         self.init_menu_bar()
@@ -1265,6 +1369,29 @@ class MainWindow(QMainWindow):
             self.tool_group.addAction(action)
         
         toolbar.addSeparator()
+
+        charge_plus_action = QAction("+ Charge", self, checkable=True)
+        charge_plus_action.setToolTip("Increase Atom Charge (+)")
+        charge_plus_action.triggered.connect(lambda c, m='charge_plus': self.set_mode(m))
+        self.mode_actions['charge_plus'] = charge_plus_action
+        toolbar.addAction(charge_plus_action)
+        self.tool_group.addAction(charge_plus_action)
+
+        charge_minus_action = QAction("- Charge", self, checkable=True)
+        charge_minus_action.setToolTip("Decrease Atom Charge (-)")
+        charge_minus_action.triggered.connect(lambda c, m='charge_minus': self.set_mode(m))
+        self.mode_actions['charge_minus'] = charge_minus_action
+        toolbar.addAction(charge_minus_action)
+        self.tool_group.addAction(charge_minus_action)
+
+        radical_action = QAction("Radical", self, checkable=True)
+        radical_action.setToolTip("Toggle Radical (0/1/2) (.)")
+        radical_action.triggered.connect(lambda c, m='radical': self.set_mode(m))
+        self.mode_actions['radical'] = radical_action
+        toolbar.addAction(radical_action)
+        self.tool_group.addAction(radical_action)
+
+        toolbar.addSeparator()
         toolbar.addWidget(QLabel(" Templates:"))
         
         templates = [("Benzene", "template_benzene")] + [(f"{i}-Ring", f"template_{i}") for i in range(3, 10)]
@@ -1275,7 +1402,8 @@ class MainWindow(QMainWindow):
             self.mode_actions[mode] = action
             toolbar.addAction(action)
             self.tool_group.addAction(action)
-        
+    
+
         select_action.setChecked(True)
         self.set_mode('select')
 
@@ -1310,6 +1438,8 @@ class MainWindow(QMainWindow):
         style_menu.addAction(cpk_action)
         style_group.addAction(cpk_action)
 
+        self.view_2d.setFocus()
+
     def init_menu_bar(self):
         menu_bar = self.menuBar()
         
@@ -1327,17 +1457,16 @@ class MainWindow(QMainWindow):
         file_menu.addAction(save_xyz_action)
         file_menu.addSeparator()
         save_raw_action = QAction("Save Project...", self); save_raw_action.triggered.connect(self.save_raw_data)
+        save_raw_action.setShortcut(QKeySequence.StandardKey.Save) 
         file_menu.addAction(save_raw_action)
         load_raw_action = QAction("Open Project...", self); load_raw_action.triggered.connect(self.load_raw_data)
         file_menu.addAction(load_raw_action)
         
-        # ★★★ ここから追加 ★★★
         file_menu.addSeparator()
         quit_action = QAction("Quit", self)
         quit_action.setShortcut(QKeySequence.StandardKey.Quit) # Ctrl+Q ショートカット
         quit_action.triggered.connect(self.close)
         file_menu.addAction(quit_action)
-        # ★★★ 追加ここまで ★★★
         
         edit_menu = menu_bar.addMenu("&Edit")
         self.undo_action = QAction("Undo", self); self.undo_action.setShortcut(QKeySequence.StandardKey.Undo)
@@ -1346,6 +1475,25 @@ class MainWindow(QMainWindow):
         self.redo_action = QAction("Redo", self); self.redo_action.setShortcut(QKeySequence.StandardKey.Redo)
         self.redo_action.triggered.connect(self.redo); edit_menu.addAction(self.redo_action)
         
+        edit_menu.addSeparator()
+
+        # ### ここからが変更箇所 ###
+        self.cut_action = QAction("Cut", self)
+        self.cut_action.setShortcut(QKeySequence.StandardKey.Cut)
+        self.cut_action.triggered.connect(self.cut_selection)
+        edit_menu.addAction(self.cut_action)
+
+        self.copy_action = QAction("Copy", self)
+        self.copy_action.setShortcut(QKeySequence.StandardKey.Copy)
+        self.copy_action.triggered.connect(self.copy_selection)
+        edit_menu.addAction(self.copy_action)
+        
+        self.paste_action = QAction("Paste", self)
+        self.paste_action.setShortcut(QKeySequence.StandardKey.Paste)
+        self.paste_action.triggered.connect(self.paste_from_clipboard)
+        edit_menu.addAction(self.paste_action)
+        # ### 変更はここまで ###
+
         edit_menu.addSeparator()
         
         select_all_action = QAction("Select All", self); select_all_action.setShortcut(QKeySequence.StandardKey.SelectAll)
@@ -1359,7 +1507,6 @@ class MainWindow(QMainWindow):
         self.analysis_action.triggered.connect(self.open_analysis_window)
         self.analysis_action.setEnabled(False)
         analysis_menu.addAction(self.analysis_action)
-        
         
     def init_worker_thread(self):
         self.thread=QThread();self.worker=CalculationWorker();self.worker.moveToThread(self.thread)
@@ -1390,6 +1537,12 @@ class MainWindow(QMainWindow):
         elif mode_str.startswith('template'):
             self.statusBar().showMessage(f"Mode: {mode_str.split('_')[1].capitalize()} Template")
             self.view_2d.setDragMode(QGraphicsView.DragMode.NoDrag)
+        elif mode_str == 'charge_plus':
+            self.statusBar().showMessage("Mode: Increase Charge (Click on Atom)")
+            self.view_2d.setDragMode(QGraphicsView.DragMode.NoDrag)
+        elif mode_str == 'charge_minus':
+            self.statusBar().showMessage("Mode: Decrease Charge (Click on Atom)")
+            self.view_2d.setDragMode(QGraphicsView.DragMode.NoDrag)
         else: # Select mode
             self.statusBar().showMessage("Mode: Select")
             self.view_2d.setDragMode(QGraphicsView.DragMode.RubberBandDrag)
@@ -1410,6 +1563,171 @@ class MainWindow(QMainWindow):
         # 現在表示中の分子があれば、新しいスタイルで再描画する
         if self.current_mol:
             self.draw_molecule_3d(self.current_mol)
+
+    def copy_selection(self):
+        """選択された原子と結合をクリップボードにコピーする"""
+        selected_atoms = [item for item in self.scene.selectedItems() if isinstance(item, AtomItem)]
+        if not selected_atoms:
+            return
+
+        # 選択された原子のIDセットを作成
+        selected_atom_ids = {atom.atom_id for atom in selected_atoms}
+        
+        # 選択された原子の幾何学的中心を計算
+        center = QPointF(
+            sum(atom.pos().x() for atom in selected_atoms) / len(selected_atoms),
+            sum(atom.pos().y() for atom in selected_atoms) / len(selected_atoms)
+        )
+        
+        # コピー対象の原子データをリストに格納（位置は中心からの相対座標）
+        # 同時に、元のatom_idから新しいインデックス(0, 1, 2...)へのマッピングを作成
+        atom_id_to_idx_map = {}
+        fragment_atoms = []
+        for i, atom in enumerate(selected_atoms):
+            atom_id_to_idx_map[atom.atom_id] = i
+            fragment_atoms.append({
+                'symbol': atom.symbol,
+                'rel_pos': atom.pos() - center,
+                'charge': atom.charge,
+                'radical': atom.radical,
+            })
+            
+        # 選択された原子同士を結ぶ結合のみをリストに格納
+        fragment_bonds = []
+        for (id1, id2), bond_data in self.data.bonds.items():
+            if id1 in selected_atom_ids and id2 in selected_atom_ids:
+                fragment_bonds.append({
+                    'idx1': atom_id_to_idx_map[id1],
+                    'idx2': atom_id_to_idx_map[id2],
+                    'order': bond_data['order'],
+                    'stereo': bond_data['stereo'],
+                })
+
+        # pickleを使ってデータをバイト配列にシリアライズ
+        data_to_pickle = {'atoms': fragment_atoms, 'bonds': fragment_bonds}
+        byte_array = QByteArray()
+        buffer = io.BytesIO()
+        pickle.dump(data_to_pickle, buffer)
+        byte_array.append(buffer.getvalue())
+
+        # カスタムMIMEタイプでクリップボードに設定
+        mime_data = QMimeData()
+        mime_data.setData(CLIPBOARD_MIME_TYPE, byte_array)
+        QApplication.clipboard().setMimeData(mime_data)
+        self.statusBar().showMessage(f"Copied {len(fragment_atoms)} atoms and {len(fragment_bonds)} bonds.", 2000)
+
+    def cut_selection(self):
+        """選択されたアイテムを切り取り（コピーしてから削除） - 堅牢版"""
+        # 最初にコピー処理を実行
+        self.copy_selection()
+        
+        # 次に削除処理を実行
+        items_to_delete = self.scene.selectedItems()
+        if not items_to_delete:
+            return
+        
+        atoms_to_delete = {item for item in items_to_delete if isinstance(item, AtomItem)}
+        bonds_to_delete = {item for item in items_to_delete if isinstance(item, BondItem)}
+
+        # 選択された原子に接続している結合もすべて削除対象に加える
+        for atom in atoms_to_delete:
+            bonds_to_delete.update(atom.bonds)
+            
+        # 削除はされないが、結合が消えることで影響を受ける原子を特定
+        atoms_to_update = set()
+        for bond in bonds_to_delete:
+            if bond.atom1 and bond.atom1 not in atoms_to_delete:
+                atoms_to_update.add(bond.atom1)
+            if bond.atom2 and bond.atom2 not in atoms_to_delete:
+                atoms_to_update.add(bond.atom2)
+
+        # --- 削除プロセス ---
+        # 1. 先に結合を削除する
+        for bond in list(bonds_to_delete):
+            # 安全確認：アイテムがまだシーンに存在するか確認
+            if not bond.scene():
+                continue
+            
+            # 接続している原子の内部リストから、この結合への参照を削除
+            if bond.atom1 and bond in bond.atom1.bonds:
+                bond.atom1.bonds.remove(bond)
+            if bond.atom2 and bond in bond.atom2.bonds:
+                bond.atom2.bonds.remove(bond)
+            
+            # データモデルから削除（両端の原子が存在することを念のため確認）
+            if bond.atom1 and bond.atom2:
+                self.data.remove_bond(bond.atom1.atom_id, bond.atom2.atom_id)
+            
+            # グラフィックシーンから削除
+            self.scene.removeItem(bond)
+
+        # 2. 次に原子を削除する
+        for atom in list(atoms_to_delete):
+            if not atom.scene():
+                continue
+            # データモデルからの削除（この中で関連する結合もデータモデルから消える）
+            self.data.remove_atom(atom.atom_id)
+            # グラフィックシーンから削除
+            self.scene.removeItem(atom)
+
+        # 3. 影響を受けた原子の表示を更新
+        for atom in atoms_to_update:
+            atom.update_style()
+        
+        self.push_undo_state()
+        self.statusBar().showMessage("Cut selection.", 2000)
+        
+    def paste_from_clipboard(self):
+        """クリップボードから分子フラグメントを貼り付け"""
+        clipboard = QApplication.clipboard()
+        mime_data = clipboard.mimeData()
+        if not mime_data.hasFormat(CLIPBOARD_MIME_TYPE):
+            return
+
+        byte_array = mime_data.data(CLIPBOARD_MIME_TYPE)
+        buffer = io.BytesIO(byte_array)
+        try:
+            fragment_data = pickle.load(buffer)
+        except pickle.UnpicklingError:
+            return
+        
+        paste_center_pos = self.view_2d.mapToScene(self.view_2d.mapFromGlobal(QCursor.pos()))
+        self.scene.clearSelection()
+
+        new_atoms = []
+        for atom_data in fragment_data['atoms']:
+            pos = paste_center_pos + atom_data['rel_pos']
+            new_id = self.scene.create_atom(
+                atom_data['symbol'], pos,
+                charge=atom_data.get('charge', 0),
+                radical=atom_data.get('radical', 0)
+            )
+            new_item = self.data.atoms[new_id]['item']
+            new_atoms.append(new_item)
+            new_item.setSelected(True)
+
+        for bond_data in fragment_data['bonds']:
+            atom1 = new_atoms[bond_data['idx1']]
+            atom2 = new_atoms[bond_data['idx2']]
+            self.scene.create_bond(
+                atom1, atom2,
+                bond_order=bond_data.get('order', 1),
+                bond_stereo=bond_data.get('stereo', 0)
+            )
+        
+        self.push_undo_state()
+        self.statusBar().showMessage(f"Pasted {len(new_atoms)} atoms.", 2000)
+
+    def update_edit_menu_actions(self):
+        """選択状態やクリップボードの状態に応じて編集メニューを更新"""
+        has_selection = len(self.scene.selectedItems()) > 0
+        self.cut_action.setEnabled(has_selection)
+        self.copy_action.setEnabled(has_selection)
+        
+        clipboard = QApplication.clipboard()
+        mime_data = clipboard.mimeData()
+        self.paste_action.setEnabled(mime_data is not None and mime_data.hasFormat(CLIPBOARD_MIME_TYPE))
+
 
     def activate_select_mode(self):
         self.set_mode('select')
@@ -1435,6 +1753,8 @@ class MainWindow(QMainWindow):
         self.convert_button.setEnabled(False)
         self.statusBar().showMessage("Calculating 3D structure...")
         self.start_calculation.emit(mol_block)
+        
+        self.view_2d.setFocus()
 
     def on_calculation_finished(self, mol):
         self.current_mol=mol
@@ -1455,13 +1775,15 @@ class MainWindow(QMainWindow):
         return super().eventFilter(obj, event)
 
     def get_current_state(self):
-        atoms = {atom_id: {'symbol': data['symbol'], 'pos': (data['item'].pos().x(), data['item'].pos().y())}
+        atoms = {atom_id: {'symbol': data['symbol'],
+                           'pos': (data['item'].pos().x(), data['item'].pos().y()),
+                           'charge': data.get('charge', 0),
+                           'radical': data.get('radical', 0)}  # <-- この行を追加
                  for atom_id, data in self.data.atoms.items()}
         bonds = {key: {'order': data['order'], 'stereo': data.get('stereo', 0)} for key, data in self.data.bonds.items()}
         state = {'atoms': atoms, 'bonds': bonds, '_next_atom_id': self.data._next_atom_id}
         
-        if self.current_mol:
-            state['mol_3d'] = self.current_mol.ToBinary()
+        if self.current_mol: state['mol_3d'] = self.current_mol.ToBinary()
             
         return state
 
@@ -1474,8 +1796,12 @@ class MainWindow(QMainWindow):
 
         for atom_id, data in raw_atoms.items():
             pos = QPointF(data['pos'][0], data['pos'][1])
-            atom_item = AtomItem(atom_id, data['symbol'], pos)
-            self.data.atoms[atom_id] = {'symbol': data['symbol'], 'pos': pos, 'item': atom_item}
+            charge = data.get('charge', 0)
+            radical = data.get('radical', 0)  # <-- ラジカル情報を取得
+            # AtomItem生成時にradicalを渡す
+            atom_item = AtomItem(atom_id, data['symbol'], pos, charge=charge, radical=radical)
+            # self.data.atomsにもradical情報を格納する
+            self.data.atoms[atom_id] = {'symbol': data['symbol'], 'pos': pos, 'item': atom_item, 'charge': charge, 'radical': radical}
             self.scene.addItem(atom_item)
         
         self.data._next_atom_id = loaded_data.get('_next_atom_id', max(self.data.atoms.keys()) + 1 if self.data.atoms else 0)
@@ -1483,18 +1809,14 @@ class MainWindow(QMainWindow):
         for key_tuple, data in raw_bonds.items():
             id1, id2 = key_tuple
             if id1 in self.data.atoms and id2 in self.data.atoms:
-                atom1_item = self.data.atoms[id1]['item']
-                atom2_item = self.data.atoms[id2]['item']
-                
+                atom1_item = self.data.atoms[id1]['item']; atom2_item = self.data.atoms[id2]['item']
                 bond_item = BondItem(atom1_item, atom2_item, data.get('order', 1), data.get('stereo', 0))
                 self.data.bonds[key_tuple] = {'order': data.get('order', 1), 'stereo': data.get('stereo', 0), 'item': bond_item}
-                atom1_item.bonds.append(bond_item)
-                atom2_item.bonds.append(bond_item)
+                atom1_item.bonds.append(bond_item); atom2_item.bonds.append(bond_item)
                 self.scene.addItem(bond_item)
 
         for atom_data in self.data.atoms.values():
-            if atom_data['item']:
-                atom_data['item'].update_style()
+            if atom_data['item']: atom_data['item'].update_style()
         self.scene.update()
 
         if 'mol_3d' in loaded_data:
@@ -1504,16 +1826,25 @@ class MainWindow(QMainWindow):
                 self.analysis_action.setEnabled(True)
             except Exception as e:
                 self.statusBar().showMessage(f"Could not load 3D model from project: {e}")
-                self.current_mol = None
-                self.analysis_action.setEnabled(False)
+                self.current_mol = None; self.analysis_action.setEnabled(False)
         else:
-            self.current_mol = None
-            self.plotter.clear()
-            self.analysis_action.setEnabled(False)
+            self.current_mol = None; self.plotter.clear(); self.analysis_action.setEnabled(False)
+
+
+        if 'mol_3d' in loaded_data:
+            try:
+                self.current_mol = Chem.Mol(loaded_data['mol_3d'])
+                self.draw_molecule_3d(self.current_mol)
+                self.analysis_action.setEnabled(True)
+            except Exception as e:
+                self.statusBar().showMessage(f"Could not load 3D model from project: {e}")
+                self.current_mol = None; self.analysis_action.setEnabled(False)
+        else:
+            self.current_mol = None; self.plotter.clear(); self.analysis_action.setEnabled(False)
 
     def push_undo_state(self):
         current_state_for_comparison = {
-            'atoms': {k: (v['symbol'], v['item'].pos().x(), v['item'].pos().y()) for k, v in self.data.atoms.items()},
+            'atoms': {k: (v['symbol'], v['item'].pos().x(), v['item'].pos().y(), v.get('charge', 0), v.get('radical', 0)) for k, v in self.data.atoms.items()},
             'bonds': {k: (v['order'], v.get('stereo', 0)) for k, v in self.data.bonds.items()},
             '_next_atom_id': self.data._next_atom_id
         }
@@ -1523,7 +1854,7 @@ class MainWindow(QMainWindow):
             last_atoms = self.undo_stack[-1].get('atoms', {})
             last_bonds = self.undo_stack[-1].get('bonds', {})
             last_state_for_comparison = {
-                'atoms': {k: (v['symbol'], v['pos'][0], v['pos'][1]) for k, v in last_atoms.items()},
+                'atoms': {k: (v['symbol'], v['pos'][0], v['pos'][1], v.get('charge', 0), v.get('radical', 0)) for k, v in last_atoms.items()},
                 'bonds': {k: (v['order'], v.get('stereo', 0)) for k, v in last_bonds.items()},
                 '_next_atom_id': self.undo_stack[-1].get('_next_atom_id')
             }
@@ -1534,7 +1865,7 @@ class MainWindow(QMainWindow):
             self.redo_stack.clear()
         
         self.update_undo_redo_actions()
-
+        
     def reset_undo_stack(self):
         self.undo_stack.clear()
         self.redo_stack.clear()
@@ -1579,6 +1910,7 @@ class MainWindow(QMainWindow):
         if push_to_undo:
             self.push_undo_state()
 
+
     def load_mol_file(self):
         options = QFileDialog.Option.DontUseNativeDialog
         file_path, _ = QFileDialog.getOpenFileName(self, "Open MOL/SDF File", "", "Chemical Files (*.mol *.sdf);;All Files (*)", options=options)
@@ -1588,12 +1920,9 @@ class MainWindow(QMainWindow):
             mol = next(suppl, None)
             if mol is None: raise ValueError("Failed to read molecule from file.")
             self.clear_2d_editor(push_to_undo=False)
-            self.current_mol = None
-            self.plotter.clear()
-            self.analysis_action.setEnabled(False)
+            self.current_mol = None; self.plotter.clear(); self.analysis_action.setEnabled(False)
             
-            if mol.GetNumConformers() == 0:
-                AllChem.Compute2DCoords(mol)
+            if mol.GetNumConformers() == 0: AllChem.Compute2DCoords(mol)
 
             conf = mol.GetConformer(); SCALE_FACTOR = 50.0
             rdkit_idx_to_my_id = {}
@@ -1602,21 +1931,19 @@ class MainWindow(QMainWindow):
             center_y = sum(p.y for p in positions)/len(positions) if positions else 0
             for i in range(mol.GetNumAtoms()):
                 atom = mol.GetAtomWithIdx(i); pos = conf.GetAtomPosition(i)
+                charge = atom.GetFormalCharge()
                 scene_x=(pos.x-center_x)*SCALE_FACTOR; scene_y=-(pos.y-center_y)*SCALE_FACTOR
-                atom_id = self.scene.create_atom(atom.GetSymbol(), QPointF(scene_x, scene_y))
+                atom_id = self.scene.create_atom(atom.GetSymbol(), QPointF(scene_x, scene_y), charge=charge)
                 rdkit_idx_to_my_id[i] = atom_id
             for bond in mol.GetBonds():
+                # (以降のBond読み込み部分は変更なし)
                 b_idx,e_idx=bond.GetBeginAtomIdx(),bond.GetEndAtomIdx()
-                b_type = bond.GetBondTypeAsDouble()
-                b_dir = bond.GetBondDir()
-                
+                b_type = bond.GetBondTypeAsDouble(); b_dir = bond.GetBondDir()
                 stereo = 0
                 if b_dir == Chem.BondDir.BEGINWEDGE: stereo = 1
                 elif b_dir == Chem.BondDir.BEGINDASH: stereo = 2
-
                 a1_id, a2_id = rdkit_idx_to_my_id[b_idx], rdkit_idx_to_my_id[e_idx]
                 a1_item,a2_item=self.data.atoms[a1_id]['item'],self.data.atoms[a2_id]['item']
-                
                 self.scene.bond_order = int(b_type)
                 self.scene.bond_stereo = stereo
                 self.scene.create_bond(a1_item, a2_item)
@@ -1724,7 +2051,6 @@ class MainWindow(QMainWindow):
             self.push_undo_state()
         except Exception as e: self.statusBar().showMessage(f"Error during 2D optimization: {e}")
         finally:
-            # ★★★ 修正箇所 ★★★
             # 処理の最後に必ずフォーカスを描画エリアに戻す
             self.view_2d.setFocus()
 
