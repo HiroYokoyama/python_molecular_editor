@@ -42,7 +42,7 @@ from pyvistaqt import QtInteractor
 # --- Constants ---
 ATOM_RADIUS = 18
 BOND_OFFSET = 3.5
-DEFAULT_BOND_LENGTH = 75.0 # テンプレートで使用する標準結合長
+DEFAULT_BOND_LENGTH = 75 # テンプレートで使用する標準結合長
 CLIPBOARD_MIME_TYPE = "application/x-moleditpy-fragment"
 
 CPK_COLORS = {
@@ -1348,7 +1348,7 @@ class MainWindow(QMainWindow):
         left_layout=QVBoxLayout(left_pane)
 
         self.scene=MoleculeScene(self.data,self)
-        self.scene.setSceneRect(-400,-400,800,800)
+        self.scene.setSceneRect(-4000,-4000,4000,4000)
         self.scene.setBackgroundBrush(QColor("#FFFFFF"))
 
         self.view_2d=QGraphicsView(self.scene)
@@ -1357,6 +1357,8 @@ class MainWindow(QMainWindow):
             QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
         )
         left_layout.addWidget(self.view_2d)
+
+        self.view_2d.scale(0.5, 0.5)
 
         self.cleanup_button=QPushButton("Optimize 2D")
         self.cleanup_button.clicked.connect(self.clean_up_2d_structure)
@@ -1382,7 +1384,7 @@ class MainWindow(QMainWindow):
         splitter.setStretchFactor(0, 1)
         splitter.setStretchFactor(1, 1)
         
-        self.view_2d.fitInView(self.scene.sceneRect(), Qt.AspectRatioMode.KeepAspectRatio)
+        #self.view_2d.fitInView(self.scene.sceneRect(), Qt.AspectRatioMode.KeepAspectRatio)
 
         toolbar = QToolBar("Main Toolbar")
         self.addToolBar(toolbar)
@@ -2029,12 +2031,35 @@ class MainWindow(QMainWindow):
                 item.setSelected(True)
 
     def clear_all(self):
-        if not self.data.atoms and self.current_mol is None: return
+        # データが存在しない場合は何もしない
+        if not self.data.atoms and self.current_mol is None:
+            return
+            
+        # 2Dエディタをクリアする（Undoスタックにはプッシュしない）
         self.clear_2d_editor(push_to_undo=False)
+        
+        # 3Dモデルをクリアする
         self.current_mol = None
         self.plotter.clear()
+        
+        # 解析メニューを無効化する
         self.analysis_action.setEnabled(False)
+        
+        # Undo/Redoスタックをリセットする
         self.reset_undo_stack()
+        
+        # シーンとビューの明示的な更新
+        self.scene.update()
+        if self.view_2d:
+            self.view_2d.viewport().update()
+        
+        # 3Dプロッターの再描画
+        self.plotter.render()
+        
+        # アプリケーションのイベントループを強制的に処理し、画面の再描画を確実に行う
+        QApplication.processEvents()
+        
+        self.statusBar().showMessage("Cleared all data.")
         
     def clear_2d_editor(self, push_to_undo=True):
         self.data = MolecularData()
@@ -2164,46 +2189,68 @@ class MainWindow(QMainWindow):
 
     def clean_up_2d_structure(self):
         self.statusBar().showMessage("Optimizing 2D structure.")
-        mol = self.data.to_rdkit_mol() # <--- to_rdkit_mol() を使用する方が簡潔
+        mol = self.data.to_rdkit_mol()
         if mol is None or mol.GetNumAtoms() == 0: 
             self.statusBar().showMessage("Error: No atoms to optimize."); return
         
         try:
-            # RDKitのインデックスから原子IDへのマッピングを再構築
-            # to_rdkit_mol() の実装では Atom.SetProp() などで元のIDを保持していないため、
-            # to_mol_block() で使用されているのと同じ順序依存のロジックを再利用する。
-            
-            # (1) RDKitの原子インデックス (i) とオリジナルの原子ID (atom_id) のマッピングを作成
-            # to_mol_block() と同じ順序、つまり self.data.atoms.keys() の順序が
-            # RDKitのインデックス順 (0, 1, 2, ...) となることを利用する。
+            # RDKit's atom index (i) will correspond to the order in self.data.atoms
             original_ids = list(self.data.atoms.keys())
+            if not original_ids:
+                self.statusBar().showMessage("No atoms found in data."); return
+
+            # --- START OF CORRECTION ---
+            # 1. Calculate the geometric center of the original items in the scene
+            original_atom_items = [self.data.atoms[atom_id]['item'] for atom_id in original_ids if atom_id in self.data.atoms and self.data.atoms[atom_id].get('item')]
+            if not original_atom_items:
+                self.statusBar().showMessage("Error: Atom items not found."); return
+
+            original_center_x = sum(item.pos().x() for item in original_atom_items) / len(original_atom_items)
+            original_center_y = sum(item.pos().y() for item in original_atom_items) / len(original_atom_items)
+            # --- END OF CORRECTION ---
+
             idx_to_atom_id = {i: original_ids[i] for i in range(mol.GetNumAtoms())}
             
-            # 2D座標の計算と中心化
-            AllChem.Compute2DCoords(mol); conf=mol.GetConformer(); SCALE=50.0
-            positions=[conf.GetAtomPosition(i) for i in range(mol.GetNumAtoms())]
-            if not positions: self.statusBar().showMessage("Optimization complete."); return
-            cx=sum(p.x for p in positions)/len(positions); cy=sum(p.y for p in positions)/len(positions)
+            # 2. Compute 2D coordinates with RDKit
+            AllChem.Compute2DCoords(mol)
+            conf = mol.GetConformer()
+            SCALE = 50.0
+            
+            positions = [conf.GetAtomPosition(i) for i in range(mol.GetNumAtoms())]
+            if not positions:
+                self.statusBar().showMessage("Optimization complete."); return
 
-            # (2) マッピングを使用して正しい原子IDに対応する位置を更新
+            # 3. Find the center of the *newly generated* coordinates
+            rdkit_cx = sum(p.x for p in positions) / len(positions)
+            rdkit_cy = sum(p.y for p in positions) / len(positions)
+
+            # 4. Apply new positions, translating them to the original center
             for i in range(mol.GetNumAtoms()):
                 atom_id = idx_to_atom_id.get(i)
                 if atom_id is not None and atom_id in self.data.atoms:
-                    item=self.data.atoms[atom_id]['item']
-                    new_pos=conf.GetAtomPosition(i)
-                    sx=(new_pos.x-cx)*SCALE; sy=-(new_pos.y-cy)*SCALE
+                    item = self.data.atoms[atom_id]['item']
+                    new_pos = conf.GetAtomPosition(i)
                     
-                    # QPointFで位置を設定し、データモデルとItemを更新
-                    item.setPos(sx,sy)
-                    self.data.atoms[atom_id]['pos'] = QPointF(sx, sy) 
+                    # --- START OF CORRECTION ---
+                    # Calculate new position relative to RDKit's center, then add original center
+                    sx = ((new_pos.x - rdkit_cx) * SCALE) + original_center_x
+                    sy = (-(new_pos.y - rdkit_cy) * SCALE) + original_center_y # Y is inverted for scene coordinates
+                    # --- END OF CORRECTION ---
+                    
+                    new_scene_pos = QPointF(sx, sy)
+                    item.setPos(new_scene_pos)
+                    self.data.atoms[atom_id]['pos'] = new_scene_pos
             
-            # ... (以下、結合の更新などは変更なし)
+            # Update bond graphics
             for bond_data in self.data.bonds.values():
-                if bond_data.get('item'): bond_data['item'].update_position()
+                if bond_data.get('item'):
+                    bond_data['item'].update_position()
+            
             self.statusBar().showMessage("2D structure optimization successful.")
             self.push_undo_state()
-            self.view_2d.setFocus() 
-        except Exception as e: self.statusBar().showMessage(f"Error during 2D optimization: {e}")
+            
+        except Exception as e:
+            self.statusBar().showMessage(f"Error during 2D optimization: {e}")
         finally:
             self.view_2d.setFocus()
             
