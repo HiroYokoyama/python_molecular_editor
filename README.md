@@ -1,4 +1,4 @@
-# Python Molecular Editor
+# moleditpy -- Python Molecular Editor
 
 Pythonで構築された、シンプルで直感的な分子構造エディターです。2Dでの分子描画と、3D構造可視化をサポートします。
 
@@ -67,22 +67,16 @@ Pythonで構築された、シンプルで直感的な分子構造エディタ�
 **pip を使う場合:**
 
 ```bash
-pip install PyQt6 rdkit numpy pyvista pyvistaqt
+pip install moleditpy
 ```
 
 > **Note**
 > RDKit は `conda` を使ってインストールすることが推奨されます。
 
-**conda を使う場合:**
-
-```bash
-conda install -c conda-forge rdkit
-```
-
 #### アプリの起動
 
 ```bash
-python pymoledit.py
+moleditpy
 ```
 
 -----
