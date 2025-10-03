@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-moledit.py — simple molecule editor
-Short: Atom/bond edit, template preview, keyboard shortcuts (space, 1/2/3, Del etc.).
+moleditpy — simple molecule editor
+Short: Atom/bond edit, template preview, keyboard shortcuts).
 Author: HiroYokoyama
 License: Apache-2.0 license
 Repo: https://github.com/HiroYokoyama/python_molecular_editor
@@ -14,17 +14,22 @@ import pickle
 import copy
 import math
 import io
+import os
+import ctypes
+import itertools
+
+from collections import deque
 
 # PyQt6 Modules
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout,
     QPushButton, QSplitter, QGraphicsView, QGraphicsScene, QGraphicsItem,
     QToolBar, QStatusBar, QGraphicsTextItem, QGraphicsLineItem, QDialog, QGridLayout,
-    QFileDialog, QSizePolicy, QLabel, QLineEdit, QToolButton, QMenu 
+    QFileDialog, QSizePolicy, QLabel, QLineEdit, QToolButton, QMenu, QMessageBox
 )
 from PyQt6.QtGui import (
     QPen, QBrush, QColor, QPainter, QAction, QActionGroup, QFont, QPolygonF,
-    QPainterPath, QFontMetrics, QKeySequence, QTransform, QCursor, QPixmap, QIcon
+    QPainterPath, QFontMetrics, QKeySequence, QTransform, QCursor, QPixmap, QIcon, QShortcut
 )
 from PyQt6.QtCore import Qt, QPointF, QRectF, QLineF, QObject, QThread, pyqtSignal, QEvent, QMimeData, QByteArray
 
@@ -75,6 +80,11 @@ pt = Chem.GetPeriodicTable()
 VDW_RADII = {pt.GetElementSymbol(i): pt.GetRvdw(i) * 0.3 for i in range(1, 119)}
 
 def main():
+    # --- Windows タスクバーアイコンのための追加処理 ---
+    if sys.platform == 'win32':
+        myappid = 'hyoko.moleditpy.0.2' # アプリケーション固有のID（任意）
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
+
     app = QApplication(sys.argv)
     window = MainWindow() 
     window.show()
@@ -82,30 +92,63 @@ def main():
 
 
 # --- Data Model ---
+# --- Data Model ---
 class MolecularData:
     def __init__(self):
-        self.atoms = {}; self.bonds = {}; self._next_atom_id = 0
+        self.atoms = {}
+        self.bonds = {}
+        self._next_atom_id = 0
+        self.adjacency_list = {} # <--- 追加: 隣接リストを初期化
+
     def add_atom(self, symbol, pos, charge=0, radical=0):
         atom_id = self._next_atom_id
-        self.atoms[atom_id] = {'symbol': symbol, 'pos': pos, 'item': None, 'charge': charge, 'radical': radical} 
-        self._next_atom_id += 1; return atom_id
-    def add_bond(self, id1, id2, order=1, stereo=0): 
+        self.atoms[atom_id] = {'symbol': symbol, 'pos': pos, 'item': None, 'charge': charge, 'radical': radical}
+        self.adjacency_list[atom_id] = [] # <--- 追加: 新しい原子のエントリを作成
+        self._next_atom_id += 1
+        return atom_id
+
+    def add_bond(self, id1, id2, order=1, stereo=0):
         if id1 > id2: id1, id2 = id2, id1
         bond_data = {'order': order, 'stereo': stereo, 'item': None}
+        
+        is_new_bond = (id1, id2) not in self.bonds
+        if is_new_bond:
+            if id1 in self.adjacency_list and id2 in self.adjacency_list:
+                self.adjacency_list[id1].append(id2)
+                self.adjacency_list[id2].append(id1)
+
         if (id1, id2) in self.bonds:
-            self.bonds[(id1, id2)].update(bond_data); return (id1, id2), 'updated'
+            self.bonds[(id1, id2)].update(bond_data)
+            return (id1, id2), 'updated'
         else:
-            self.bonds[(id1, id2)] = bond_data; return (id1, id2), 'created'
+            self.bonds[(id1, id2)] = bond_data
+            return (id1, id2), 'created'
+
     def remove_atom(self, atom_id):
         if atom_id in self.atoms:
+            # この原子に接続していた他の原子のリストからも、この原子IDを削除
+            if atom_id in self.adjacency_list:
+                for neighbor_id in self.adjacency_list[atom_id]:
+                    if neighbor_id in self.adjacency_list and atom_id in self.adjacency_list[neighbor_id]:
+                        self.adjacency_list[neighbor_id].remove(atom_id)
+                # この原子自身のエントリを削除
+                del self.adjacency_list[atom_id]
+
             del self.atoms[atom_id]
             bonds_to_remove = [key for key in self.bonds if atom_id in key]
-            for key in bonds_to_remove: del self.bonds[key]
+            for key in bonds_to_remove:
+                del self.bonds[key]
+
     def remove_bond(self, id1, id2):
         if id1 > id2: id1, id2 = id2, id1
-        if (id1, id2) in self.bonds: del self.bonds[(id1, id2)]
+        if (id1, id2) in self.bonds:
+            if id1 in self.adjacency_list and id2 in self.adjacency_list[id1]:
+                self.adjacency_list[id1].remove(id2)
+            if id2 in self.adjacency_list and id1 in self.adjacency_list[id2]:
+                self.adjacency_list[id2].remove(id1)
+            del self.bonds[(id1, id2)]
+
     def to_mol_block(self):
-        # (このメソッドは変更なし)
         try:
             mol = self.to_rdkit_mol()
             if mol:
@@ -137,22 +180,27 @@ class MolecularData:
         mol_block += "M  END\n"
         return mol_block
 
+    # main.py の MolecularDataクラス内 (約193行目あたり)
+# 既存の to_rdkit_mol メソッドを、以下のコードで完全に置き換えてください。
+
     def to_rdkit_mol(self):
         if not self.atoms: return None
         mol = Chem.RWMol()
-        rdkit_atom_map = {}
+
         for atom_id, atom_data in self.atoms.items():
             atom = Chem.Atom(atom_data['symbol'])
-            # This line ensures the charge is transferred
             atom.SetFormalCharge(atom_data.get('charge', 0))
-            # ラジカル電子数を設定
             atom.SetNumRadicalElectrons(atom_data.get('radical', 0))
-            idx = mol.AddAtom(atom)
-            rdkit_atom_map[atom_id] = idx
+            atom.SetIntProp("_original_atom_id", atom_id)
+            mol.AddAtom(atom)
+
+        atom_id_to_idx_map = {a.GetIntProp("_original_atom_id"): a.GetIdx() for a in mol.GetAtoms()}
 
         for (id1, id2), bond_data in self.bonds.items():
-            idx1 = rdkit_atom_map[id1]
-            idx2 = rdkit_atom_map[id2]
+            if id1 not in atom_id_to_idx_map or id2 not in atom_id_to_idx_map:
+                continue
+            idx1 = atom_id_to_idx_map[id1]
+            idx2 = atom_id_to_idx_map[id2]
 
             order_val = float(bond_data['order'])
             if order_val == 1.5:
@@ -164,10 +212,11 @@ class MolecularData:
             else:
                 order = Chem.BondType.SINGLE
 
-            mol.AddBond(idx1, idx2, order)
-            
+            # 結合を追加し、そのインデックスを直接取得する、より確実な方法に変更しました。
+            bond_idx = mol.AddBond(idx1, idx2, order)
+            bond = mol.GetBondWithIdx(bond_idx - 1)
+
             if bond_data.get('stereo', 0) != 0 and order == Chem.BondType.SINGLE:
-                bond = mol.GetBondBetweenAtoms(idx1, idx2)
                 if bond_data['stereo'] == 1: # Wedge
                     bond.SetBondDir(Chem.BondDir.BEGINWEDGE)
                 elif bond_data['stereo'] == 2: # Dash
@@ -179,11 +228,12 @@ class MolecularData:
         except Exception:
              pass
         return mol
+
  # --- Custom 2D Graphics Items ---
 class AtomItem(QGraphicsItem):
     def __init__(self, atom_id, symbol, pos, charge=0, radical=0):
         super().__init__()
-        self.atom_id, self.symbol, self.charge, self.radical, self.bonds = atom_id, symbol, charge, radical, [] 
+        self.atom_id, self.symbol, self.charge, self.radical, self.bonds, self.chiral_label = atom_id, symbol, charge, radical, [], None
         self.setPos(pos)
         self.setFlags(QGraphicsItem.GraphicsItemFlag.ItemIsMovable | QGraphicsItem.GraphicsItemFlag.ItemIsSelectable)
         self.setZValue(1); self.font = QFont("Arial", 20, QFont.Weight.Bold); self.update_style()
@@ -195,59 +245,61 @@ class AtomItem(QGraphicsItem):
 
     def shape(self):
         path = QPainterPath()
-        hit_r = max(4.0, ATOM_RADIUS - 6.0)
+        hit_r = max(4.0, ATOM_RADIUS - 6.0) * 2
         path.addEllipse(QRectF(-hit_r, -hit_r, hit_r * 2.0, hit_r * 2.0))
         return path
 
+    # AtomItem クラス内
     def paint(self, painter, option, widget):
         color = CPK_COLORS.get(self.symbol, CPK_COLORS['DEFAULT'])
         if self.is_visible:
-            painter.setFont(self.font); fm = painter.fontMetrics()
-            text_rect = fm.boundingRect(self.symbol); text_rect.moveCenter(QPointF(0, 0).toPoint())
-            if self.scene():
-                bg_brush = self.scene().backgroundBrush(); bg_rect = text_rect.adjusted(-3, -3, 3, 3)
-                painter.setBrush(bg_brush); painter.setPen(Qt.PenStyle.NoPen); painter.drawRect(bg_rect)
+            # 1. 原子記号（C, Nなど）を描画するための準備
+            painter.setFont(self.font)
+            fm = painter.fontMetrics()
+            text_rect = fm.boundingRect(self.symbol)
+            text_rect.moveCenter(QPointF(0, 0).toPoint())
             
-            path = QPainterPath()
-            path.addText(text_rect.left(), text_rect.bottom(), self.font, self.symbol)
-            painter.setPen(QPen(Qt.GlobalColor.black, 1)); 
-            if self.symbol == 'H': painter.setBrush(QBrush(color))
-            else: painter.setBrush(Qt.BrushStyle.NoBrush); painter.setPen(QPen(color))
+            # 2. 原子記号の背景を白で塗りつぶす（結合線と重なっても見やすくするため）
+            if self.scene():
+                bg_brush = self.scene().backgroundBrush()
+                bg_rect = text_rect.adjusted(-3, -3, 3, 3)
+                painter.setBrush(bg_brush)
+                painter.setPen(Qt.PenStyle.NoPen)
+                painter.drawRect(bg_rect)
+
+            # 3. 原子記号自体を描画
+            painter.setPen(QPen(color)) # <-- 修正：常に元素カラーで描画
             painter.drawText(text_rect, Qt.AlignmentFlag.AlignCenter, self.symbol)
             
+            
+            # --- ここから電荷とラジカルの描画 ---
             # 電荷の描画
             if self.charge != 0:
                 if self.charge == 1: charge_str = "+"
                 elif self.charge == -1: charge_str = "-"
                 else: charge_str = f"{self.charge:+}"
-                
                 charge_font = QFont("Arial", 12, QFont.Weight.Bold)
                 painter.setFont(charge_font)
-                charge_fm = QFontMetrics(charge_font)
-                
-                # 原子記号の右上に配置
-                charge_rect = charge_fm.boundingRect(charge_str)
-                charge_pos_x = text_rect.right() + 2
-                charge_pos_y = text_rect.top() + charge_rect.height() - 2
+                charge_rect = painter.fontMetrics().boundingRect(charge_str)
+                charge_pos = QPointF(text_rect.right() + 2, text_rect.top() + charge_rect.height() - 2)
                 painter.setPen(Qt.GlobalColor.black)
-                painter.drawText(QPointF(charge_pos_x, charge_pos_y), charge_str)
+                painter.drawText(charge_pos, charge_str)
             
-            # ラジカルの描画 (大きな黒点)
+            # ラジカルの描画
             if self.radical > 0:
                 painter.setBrush(QBrush(Qt.GlobalColor.black))
                 painter.setPen(Qt.PenStyle.NoPen)
-                # 原子記号の真上に配置
-                radical_pos_x = text_rect.center().x()
-                radical_pos_y = text_rect.top() - 5 # 5px上に
-                # ラジカルの数に応じて点を描画
-                if self.radical == 1: # Monoradical
-                     painter.drawEllipse(QPointF(radical_pos_x, radical_pos_y), 3, 3)
-                elif self.radical == 2: # Diradical
-                     painter.drawEllipse(QPointF(radical_pos_x - 5, radical_pos_y), 3, 3)
-                     painter.drawEllipse(QPointF(radical_pos_x + 5, radical_pos_y), 3, 3)
+                radical_pos_y = text_rect.top() - 5
+                if self.radical == 1:
+                    painter.drawEllipse(QPointF(text_rect.center().x(), radical_pos_y), 3, 3)
+                elif self.radical == 2:
+                    painter.drawEllipse(QPointF(text_rect.center().x() - 5, radical_pos_y), 3, 3)
+                    painter.drawEllipse(QPointF(text_rect.center().x() + 5, radical_pos_y), 3, 3)
 
+        # 選択時のハイライト
         if self.isSelected():
-            painter.setBrush(Qt.BrushStyle.NoBrush); painter.setPen(QPen(QColor(0, 100, 255), 3))
+            painter.setBrush(Qt.BrushStyle.NoBrush)
+            painter.setPen(QPen(QColor(0, 100, 255), 3))
             painter.drawRect(self.boundingRect())
 
     def update_style(self):
@@ -414,7 +466,8 @@ class MoleculeScene(QGraphicsScene):
         self.initial_positions_in_event = {item: item.pos() for item in self.items() if isinstance(item, AtomItem)}
 
         if self.mode.startswith('template'):
-            super().mousePressEvent(event); return
+            event.accept()
+            return
         
         item = self.itemAt(self.press_pos, self.views()[0].transform())
         if isinstance(item, AtomItem):
@@ -437,8 +490,30 @@ class MoleculeScene(QGraphicsScene):
         
         if self.temp_line:
             start_point = self.start_atom.pos() if self.start_atom else self.start_pos
-            if start_point: self.temp_line.setLine(QLineF(start_point, event.scenePos()))
-        else: super().mouseMoveEvent(event)
+            if not start_point:
+                super().mouseMoveEvent(event)
+                return
+
+            current_pos = event.scenePos()
+            end_point = current_pos
+
+            target_atom = None
+            for item in self.items(current_pos):
+                if isinstance(item, AtomItem):
+                    target_atom = item
+                    break
+            
+            is_valid_snap_target = (
+                target_atom is not None and
+                (self.start_atom is None or target_atom is not self.start_atom)
+            )
+
+            if is_valid_snap_target:
+                end_point = target_atom.pos()
+            
+            self.temp_line.setLine(QLineF(start_point, end_point))
+        else: 
+            super().mouseMoveEvent(event)
 
     def mouseReleaseEvent(self, event):
         end_pos = event.scenePos()
@@ -515,22 +590,29 @@ class MoleculeScene(QGraphicsScene):
             line = QLineF(self.start_pos, end_pos)
 
             # 使用する結合様式を決定
-            order_to_use = self.bond_order if self.mode.startswith('bond') else None # ★変更点★
-            stereo_to_use = self.bond_stereo if self.mode.startswith('bond') else None # ★変更点★
+            order_to_use = self.bond_order if self.mode.startswith('bond') else None
+            stereo_to_use = self.bond_stereo if self.mode.startswith('bond') else None
     
             if line.length() < 10:
-                # 短いクリック: 新規原子を1つ作成
                 self.create_atom(self.current_atom_symbol, end_pos); self.data_changed_in_event = True
             else:
-                # ドラッグ: 2つの新規原子と結合を作成
-                start_id = self.create_atom(self.current_atom_symbol, self.start_pos)
-                end_id = self.create_atom(self.current_atom_symbol, end_pos)
-                self.create_bond(
-                    self.data.atoms[start_id]['item'], 
-                    self.data.atoms[end_id]['item'], 
-                    bond_order=order_to_use, 
-                    bond_stereo=stereo_to_use
-                ); self.data_changed_in_event = True 
+                end_item = self.itemAt(end_pos, self.views()[0].transform())
+
+                if isinstance(end_item, AtomItem):
+                    start_id = self.create_atom(self.current_atom_symbol, self.start_pos)
+                    start_item = self.data.atoms[start_id]['item']
+                    self.create_bond(start_item, end_item, bond_order=order_to_use, bond_stereo=stereo_to_use)
+                
+                else:
+                    start_id = self.create_atom(self.current_atom_symbol, self.start_pos)
+                    end_id = self.create_atom(self.current_atom_symbol, end_pos)
+                    self.create_bond(
+                        self.data.atoms[start_id]['item'], 
+                        self.data.atoms[end_id]['item'], 
+                        bond_order=order_to_use, 
+                        bond_stereo=stereo_to_use
+                    )
+                self.data_changed_in_event = True 
         
         # 5. それ以外の処理 (Selectモードなど)
         else: super().mouseReleaseEvent(event)
@@ -801,7 +883,7 @@ class MoleculeScene(QGraphicsScene):
         elif isinstance(item, BondItem):
             # 結合にスナップ
             p0, p1 = item.atom1.pos(), item.atom2.pos()
-            points = self._calculate_polygon_from_edge(p0, p1, n, cursor_pos=pos)
+            points = self._calculate_polygon_from_edge(p0, p1, n, cursor_pos=pos, use_existing_length=True)
             self.template_context['items'] = [item.atom1, item.atom2]
 
         else: # 空白領域に配置
@@ -830,14 +912,18 @@ class MoleculeScene(QGraphicsScene):
             if self.views():
                 self.views()[0].viewport().update()
 
-    def _calculate_polygon_from_edge(self, p0, p1, n, cursor_pos=None):
+    def _calculate_polygon_from_edge(self, p0, p1, n, cursor_pos=None, use_existing_length=False):
         if n < 3: return []
         v_edge = p1 - p0
         edge_length = math.sqrt(v_edge.x()**2 + v_edge.y()**2)
         if edge_length == 0: return []
         
-        v_edge = (v_edge / edge_length) * DEFAULT_BOND_LENGTH
-        p1 = p0 + v_edge
+        target_length = edge_length if use_existing_length else DEFAULT_BOND_LENGTH
+        
+        v_edge = (v_edge / edge_length) * target_length
+        
+        if not use_existing_length:
+             p1 = p0 + v_edge
 
         points = [p0, p1]
         
@@ -862,6 +948,47 @@ class MoleculeScene(QGraphicsScene):
             points.append(current_p)
         return points
 
+    def delete_items(self, items_to_delete):
+        """指定されたアイテムセット（原子・結合）を安全に削除する共通メソッド"""
+        if not items_to_delete:
+            return False
+
+        atoms_to_delete = {item for item in items_to_delete if isinstance(item, AtomItem)}
+        bonds_to_delete = {item for item in items_to_delete if isinstance(item, BondItem)}
+
+        # 削除対象の原子に接続している結合も、すべて削除対象に加える
+        for atom in atoms_to_delete:
+            bonds_to_delete.update(atom.bonds)
+
+        # 影響を受ける（が削除はされない）原子を特定する
+        atoms_to_update = set()
+        for bond in bonds_to_delete:
+            if bond.atom1 and bond.atom1 not in atoms_to_delete:
+                atoms_to_update.add(bond.atom1)
+            if bond.atom2 and bond.atom2 not in atoms_to_delete:
+                atoms_to_update.add(bond.atom2)
+
+        # --- データモデルからの削除 ---
+        # 最初に原子をデータモデルから削除（関連する結合も内部で削除される）
+        for atom in atoms_to_delete:
+            self.data.remove_atom(atom.atom_id)
+        # 次に、明示的に選択された結合（まだ残っているもの）を削除
+        for bond in bonds_to_delete:
+            if bond.atom1 and bond.atom2:
+                self.data.remove_bond(bond.atom1.atom_id, bond.atom2.atom_id)
+        
+        # --- シーンからのグラフィックアイテム削除（必ず結合を先に）---
+        for bond in bonds_to_delete:
+            if bond.scene(): self.removeItem(bond)
+        for atom in atoms_to_delete:
+            if atom.scene(): self.removeItem(atom)
+
+        # --- 生き残った原子の内部参照とスタイルを更新 ---
+        for atom in atoms_to_update:
+            atom.bonds = [b for b in atom.bonds if b not in bonds_to_delete]
+            atom.update_style()
+            
+        return True
 
     def leaveEvent(self, event):
         self.template_preview.hide(); super().leaveEvent(event)
@@ -872,6 +999,42 @@ class MoleculeScene(QGraphicsScene):
         item_at_cursor = self.itemAt(cursor_pos, view.transform())
         key = event.key()
         modifiers = event.modifiers()
+        
+        if key == Qt.Key.Key_4:
+            # --- 動作1: カーソルが原子/結合上にある場合 (ワンショットでテンプレート配置) ---
+            if isinstance(item_at_cursor, (AtomItem, BondItem)):
+                
+                # ベンゼンテンプレートのパラメータを設定
+                n, is_aromatic = 6, True
+                points, bonds_info, existing_items = [], [], []
+                
+                # update_template_preview と同様のロジックで配置情報を計算
+                if isinstance(item_at_cursor, AtomItem):
+                    p0 = item_at_cursor.pos()
+                    l = DEFAULT_BOND_LENGTH
+                    direction = QLineF(p0, cursor_pos).unitVector()
+                    p1 = p0 + direction.p2() * l if direction.length() > 0 else p0 + QPointF(l, 0)
+                    points = self._calculate_polygon_from_edge(p0, p1, n)
+                    existing_items = [item_at_cursor]
+
+                elif isinstance(item_at_cursor, BondItem):
+                    p0, p1 = item_at_cursor.atom1.pos(), item_at_cursor.atom2.pos()
+                    points = self._calculate_polygon_from_edge(p0, p1, n, cursor_pos=cursor_pos, use_existing_length=True)
+                    existing_items = [item_at_cursor.atom1, item_at_cursor.atom2]
+                
+                if points:
+                    bonds_info = [(i, (i + 1) % n, 2 if i % 2 == 0 else 1) for i in range(n)]
+                    
+                    # 計算した情報を使って、その場にフラグメントを追加
+                    self.add_molecule_fragment(points, bonds_info, existing_items=existing_items)
+                    self.window.push_undo_state()
+
+            # --- 動作2: カーソルが空白領域にある場合 (モード切替) ---
+            else:
+                self.window.set_mode_and_update_toolbar('template_benzene')
+
+            event.accept()
+            return
 
         # --- 0a. ラジカルの変更 (.) ---
         if key == Qt.Key.Key_Period:
@@ -1006,8 +1169,7 @@ class MoleculeScene(QGraphicsScene):
                     new_pos_offset = line.p2()
 
                 elif num_non_H_neighbors == 3:
-                    # ★修正箇所：結合3本 (四面体の4番目の位置を推定)★
-                    
+
                     bond_vectors_sum = QPointF(0, 0)
                     for pos in neighbor_positions:
                         # start_pos から neighbor_pos へのベクトル
@@ -1026,7 +1188,6 @@ class MoleculeScene(QGraphicsScene):
                         new_pos_offset = new_direction_line.p2()
                     else:
                         new_pos_offset = QPointF(l * 0.7071, -l * 0.7071) 
-                    # --- 修正 終わり ---
 
 
                 else: # 2本または4本以上の場合 (一般的な骨格の継続、または過結合)
@@ -1081,58 +1242,28 @@ class MoleculeScene(QGraphicsScene):
             if item_at_cursor and isinstance(item_at_cursor, (AtomItem, BondItem)):
                 items_to_process.add(item_at_cursor)
 
-            if not items_to_process:
+            if self.delete_items(items_to_process):
+                self.window.push_undo_state()
+
+            # もしデータモデル内の原子が全て無くなっていたら、シーンをクリアして初期状態に戻す
+            if not self.data.atoms:
+                # 1. シーン上の全グラフィックアイテムを削除する
+                self.clear() 
+
+                # 2. テンプレートプレビューなど、初期状態で必要なアイテムを再生成する
+                self.reinitialize_items()
+                
+                # 3. 結合描画中などの一時的な状態も完全にリセットする
+                self.temp_line = None
+                self.start_atom = None
+                self.start_pos = None
+                self.initial_positions_in_event = {}
+                
+                # このイベントはここで処理完了とする
+                event.accept()
                 return
-
-            # --- 安定した削除ロジック (改) ---
-            
-            atoms_to_delete = {item for item in items_to_process if isinstance(item, AtomItem)}
-            bonds_to_delete = {item for item in items_to_process if isinstance(item, BondItem)}
     
-            # 削除対象の原子に接続している結合も、すべて削除対象に加える
-            for atom in atoms_to_delete:
-                bonds_to_delete.update(atom.bonds)
-    
-            # 影響を受ける（が削除はされない）原子を特定する
-            atoms_to_update = set()
-            for bond in bonds_to_delete:
-                if bond.atom1 and bond.atom1 not in atoms_to_delete:
-                    atoms_to_update.add(bond.atom1)
-                if bond.atom2 and bond.atom2 not in atoms_to_delete:
-                    atoms_to_update.add(bond.atom2)
-    
-            # --- 処理のフェーズ分離 ---
-
-            # Phase 1: データモデルから原子を削除する
-            # (MolecularData.remove_atomは、関連する結合もデータモデルから削除してくれる)
-            for atom in atoms_to_delete:
-                self.data.remove_atom(atom.atom_id)
-
-            # Phase 2: 明示的に選択された結合（かつ原子削除でまだ消えていないもの）をデータモデルから削除する
-            for bond in bonds_to_delete:
-                if bond.atom1 and bond.atom2:
-                    # remove_bondは存在チェックを行うので、二重削除の心配はない
-                    self.data.remove_bond(bond.atom1.atom_id, bond.atom2.atom_id)
-            
-            # Phase 3: シーンからグラフィックアイテムを削除する（必ず結合を先に）
-            for bond in bonds_to_delete:
-                if bond.scene():
-                    self.removeItem(bond)
-            for atom in atoms_to_delete:
-                if atom.scene():
-                    self.removeItem(atom)
-
-            # Phase 4: 生き残った原子の内部参照リストをクリーンアップする
-            for atom in atoms_to_update:
-                # 削除されたBondItemへの参照をリストから取り除く
-                atom.bonds = [b for b in atom.bonds if b in bonds_to_delete and b.scene() is not None]
-                atom.update_style()
-            
-            self.window.push_undo_state()
-    
-            # ... (後略) ...
-    
-                # 描画の強制更新
+            # 描画の強制更新
             if self.views():
                 self.views()[0].viewport().update() 
                 QApplication.processEvents()
@@ -1192,24 +1323,48 @@ class MoleculeScene(QGraphicsScene):
         return None
     
 
-
 class CalculationWorker(QObject):
+    # --- 変更点1: 新しいシグナルを追加 ---
+    status_update = pyqtSignal(str) 
+    
     finished=pyqtSignal(object); error=pyqtSignal(str)
     def run_calculation(self, mol_block):
         try:
             if not mol_block: raise ValueError("No atoms to convert.")
             mol=Chem.MolFromMolBlock(mol_block, removeHs=False)
             if mol is None: raise ValueError("Failed to create molecule from MOL block.")
-            mol=Chem.AddHs(mol); AllChem.EmbedMolecule(mol, randomSeed=42); AllChem.MMFFOptimizeMolecule(mol)
+            
+            mol = Chem.AddHs(mol)
+            
+            params = AllChem.ETKDGv2()
+            params.randomSeed = 42
+            conf_id = AllChem.EmbedMolecule(mol, params)
+            
+            if conf_id == -1:
+                self.status_update.emit("Initial embedding failed, retrying with a random seed...")
+                params.randomSeed = -1
+                conf_id = AllChem.EmbedMolecule(mol, params)
+
+            if conf_id == -1:
+                self.status_update.emit("Random seed retry failed, attempting with random coordinates...")
+                conf_id = AllChem.EmbedMolecule(mol, useRandomCoords=True)
+            
+            if conf_id == -1:
+                raise ValueError("Failed to generate a 3D conformer after multiple attempts.")
+            
+            AllChem.MMFFOptimizeMolecule(mol)
+            
             self.finished.emit(mol)
         except Exception as e: self.error.emit(str(e))
-
 
 class PeriodicTableDialog(QDialog):
     element_selected = pyqtSignal(str)
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("Select an Element"); layout = QGridLayout(self); self.setLayout(layout)
+        self.setWindowTitle("Select an Element")
+        layout = QGridLayout(self)
+        self.setLayout(layout)
+
         elements = [
             ('H',1,1), ('He',1,18),
             ('Li',2,1), ('Be',2,2), ('B',2,13), ('C',2,14), ('N',2,15), ('O',2,16), ('F',2,17), ('Ne',2,18),
@@ -1234,9 +1389,32 @@ class PeriodicTableDialog(QDialog):
             ('Cf',9,12), ('Es',9,13), ('Fm',9,14), ('Md',9,15), ('No',9,16), ('Lr',9,17),
         ]
         for symbol, row, col in elements:
-            b=QPushButton(symbol); b.setFixedSize(40,40); b.clicked.connect(self.on_button_clicked); layout.addWidget(b, row, col)
+            b = QPushButton(symbol)
+            b.setFixedSize(40,40)
+
+            # CPK_COLORSから色を取得。見つからない場合はデフォルト色を使用
+            q_color = CPK_COLORS.get(symbol, CPK_COLORS['DEFAULT'])
+
+            # 背景色の輝度を計算して、文字色を黒か白に決定
+            # 輝度 = (R*299 + G*587 + B*114) / 1000
+            brightness = (q_color.red() * 299 + q_color.green() * 587 + q_color.blue() * 114) / 1000
+            text_color = "white" if brightness < 128 else "black"
+
+            # ボタンのスタイルシートを設定
+            b.setStyleSheet(
+                f"background-color: {q_color.name()};"
+                f"color: {text_color};"
+                "border: 1px solid #555;"
+                "font-weight: bold;"
+            )
+
+            b.clicked.connect(self.on_button_clicked)
+            layout.addWidget(b, row, col)
+
     def on_button_clicked(self):
-        b=self.sender(); self.element_selected.emit(b.text()); self.accept()
+        b=self.sender()
+        self.element_selected.emit(b.text())
+        self.accept()
 
 # --- 最終版 AnalysisWindow クラス ---
 class AnalysisWindow(QDialog):
@@ -1328,6 +1506,7 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("moleditpy -- Python Molecular Editor by HY"); self.setGeometry(100, 100, 1400, 800)
         self.data = MolecularData(); self.current_mol = None
         self.current_3d_style = 'ball_and_stick'
+        self.show_chiral_labels = False
         self.undo_stack = []
         self.redo_stack = []
         self.mode_actions = {} 
@@ -1339,6 +1518,21 @@ class MainWindow(QMainWindow):
         self.update_edit_menu_actions()
 
     def init_ui(self):
+        # 1. 現在のスクリプトがあるディレクトリのパスを取得
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        
+        # 2. 'assets'フォルダ内のアイコンファイルへのフルパスを構築
+        icon_path = os.path.join(script_dir, 'assets', 'icon.png')
+        
+        # 3. ファイルパスから直接QIconオブジェクトを作成
+        if os.path.exists(icon_path): # ファイルが存在するか確認
+            app_icon = QIcon(icon_path)
+            
+            # 4. ウィンドウにアイコンを設定
+            self.setWindowIcon(app_icon)
+        else:
+            print(f"警告: アイコンファイルが見つかりません: {icon_path}")
+
         self.init_menu_bar()
 
         splitter=QSplitter(Qt.Orientation.Horizontal)
@@ -1512,18 +1706,67 @@ class MainWindow(QMainWindow):
         toolbar.addSeparator()
         toolbar.addWidget(QLabel(" Templates:"))
         
-        templates = [("Benzene", "template_benzene")] + [(f"{i}-Ring", f"template_{i}") for i in range(3, 10)]
-        for text, mode in templates:
-            action = QAction(text, self, checkable=True)
-            action.setToolTip(f"{text} Template")
+        # --- アイコンを生成するヘルパー関数 ---
+        def create_template_icon(n, is_benzene=False):
+            size = 32
+            pixmap = QPixmap(size, size)
+            pixmap.fill(Qt.GlobalColor.transparent)
+            painter = QPainter(pixmap)
+            painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+            painter.setPen(QPen(Qt.GlobalColor.black, 2))
+
+            center = QPointF(size / 2, size / 2)
+            radius = size / 2 - 4 # アイコンの余白
+
+            points = []
+            angle_step = 2 * math.pi / n
+            # ポリゴンが直立するように開始角度を調整
+            start_angle = -math.pi / 2 if n % 2 != 0 else -math.pi / 2 - angle_step / 2
+
+            for i in range(n):
+                angle = start_angle + i * angle_step
+                x = center.x() + radius * math.cos(angle)
+                y = center.y() + radius * math.sin(angle)
+                points.append(QPointF(x, y))
+
+            painter.drawPolygon(QPolygonF(points))
+
+            if is_benzene:
+                painter.drawEllipse(center, radius * 0.6, radius * 0.6)
+
+            if n in [8, 9]:
+                font = QFont("Arial", 10, QFont.Weight.Bold)
+                painter.setFont(font)
+                painter.drawText(QRectF(0, 0, size, size), Qt.AlignmentFlag.AlignCenter, str(n))
+
+            painter.end()
+            return QIcon(pixmap)
+
+        # --- ヘルパー関数を使ってアイコン付きボタンを作成 ---
+        templates = [("Benzene", "template_benzene", 6)] + [(f"{i}-Ring", f"template_{i}", i) for i in range(3, 10)]
+        for text, mode, n in templates:
+            action = QAction(self) # テキストなしでアクションを作成
+            action.setCheckable(True)
+
+            is_benzene = (text == "Benzene")
+            icon = create_template_icon(n, is_benzene=is_benzene)
+            action.setIcon(icon) # アイコンを設定
+
+            if text == "Benzene":
+                action.setToolTip(f"{text} Template (4)")
+            else:
+                action.setToolTip(f"{text} Template")
+
             action.triggered.connect(lambda c, m=mode: self.set_mode(m))
             self.mode_actions[mode] = action
             toolbar.addAction(action)
             self.tool_group.addAction(action)
-    
 
-        select_action.setChecked(True)
-        self.set_mode('select')
+        # 初期モードを'select'から'atom_C'（炭素原子描画モード）に変更
+        self.set_mode('atom_C')
+        # 対応するツールバーの'C'ボタンを選択状態にする
+        if 'atom_C' in self.mode_actions:
+            self.mode_actions['atom_C'].setChecked(True)
 
         # スペーサーを追加して、次のウィジェットを右端に配置する
         spacer = QWidget()
@@ -1556,6 +1799,9 @@ class MainWindow(QMainWindow):
         style_menu.addAction(cpk_action)
         style_group.addAction(cpk_action)
 
+        quit_shortcut = QShortcut(QKeySequence("Ctrl+Q"), self)
+        quit_shortcut.activated.connect(self.close)
+
         self.view_2d.setFocus()
 
     def init_menu_bar(self):
@@ -1578,11 +1824,11 @@ class MainWindow(QMainWindow):
         save_raw_action.setShortcut(QKeySequence.StandardKey.Save) 
         file_menu.addAction(save_raw_action)
         load_raw_action = QAction("Open Project...", self); load_raw_action.triggered.connect(self.load_raw_data)
+        load_raw_action.setShortcut(QKeySequence.StandardKey.Open) 
         file_menu.addAction(load_raw_action)
         
         file_menu.addSeparator()
         quit_action = QAction("Quit", self)
-        quit_action.setShortcut(QKeySequence.StandardKey.Quit) # Ctrl+Q ショートカット
         quit_action.triggered.connect(self.close)
         file_menu.addAction(quit_action)
         
@@ -1611,11 +1857,24 @@ class MainWindow(QMainWindow):
         edit_menu.addAction(self.paste_action)
 
         edit_menu.addSeparator()
+
+        optimize_2d_action = QAction("Optimize 2D", self)
+        optimize_2d_action.setShortcut(QKeySequence("Ctrl+K"))
+        optimize_2d_action.triggered.connect(self.clean_up_2d_structure)
+        edit_menu.addAction(optimize_2d_action)
+        
+        convert_3d_action = QAction("Convert to 3D", self)
+        convert_3d_action.setShortcut(QKeySequence("Ctrl+L"))
+        convert_3d_action.triggered.connect(self.trigger_conversion)
+        edit_menu.addAction(convert_3d_action)
+
+        edit_menu.addSeparator()
         
         select_all_action = QAction("Select All", self); select_all_action.setShortcut(QKeySequence.StandardKey.SelectAll)
         select_all_action.triggered.connect(self.select_all); edit_menu.addAction(select_all_action)
         
         clear_all_action = QAction("Clear All", self)
+        clear_all_action.setShortcut(QKeySequence("Ctrl+Shift+C"))
         clear_all_action.triggered.connect(self.clear_all); edit_menu.addAction(clear_all_action)
 
         analysis_menu = menu_bar.addMenu("&Analysis")
@@ -1628,7 +1887,12 @@ class MainWindow(QMainWindow):
         self.thread=QThread();self.worker=CalculationWorker();self.worker.moveToThread(self.thread)
         self.start_calculation.connect(self.worker.run_calculation)
         self.worker.finished.connect(self.on_calculation_finished); self.worker.error.connect(self.on_calculation_error)
+        self.worker.status_update.connect(self.update_status_bar)
         self.thread.start()
+
+    def update_status_bar(self, message):
+        """ワーカースレッドからのメッセージでステータスバーを更新するスロット"""
+        self.statusBar().showMessage(message)
 
     def set_mode(self, mode_str):
         self.scene.mode = mode_str
@@ -1643,10 +1907,8 @@ class MainWindow(QMainWindow):
             self.scene.current_atom_symbol = mode_str.split('_')[1]
             self.statusBar().showMessage(f"Mode: Draw Atom ({self.scene.current_atom_symbol})")
             self.view_2d.setDragMode(QGraphicsView.DragMode.NoDrag)
-            # ★追加: atomモードに切り替わったら結合様式をデフォルトにリセット★
             self.scene.bond_order = 1
             self.scene.bond_stereo = 0
-            # ★追加 終わり★
         elif mode_str.startswith('bond'):
             self.scene.current_atom_symbol = 'C'
             parts = mode_str.split('_')
@@ -1745,70 +2007,18 @@ class MainWindow(QMainWindow):
         self.statusBar().showMessage(f"Copied {len(fragment_atoms)} atoms and {len(fragment_bonds)} bonds.", 2000)
 
     def cut_selection(self):
-        """選択されたアイテムを切り取り（コピーしてから削除） - 堅牢版"""
+        """選択されたアイテムを切り取り（コピーしてから削除）"""
+        selected_items = self.scene.selectedItems()
+        if not selected_items:
+            return
+        
         # 最初にコピー処理を実行
         self.copy_selection()
         
-        # 次に削除処理を実行
-        items_to_delete = self.scene.selectedItems()
-        if not items_to_delete:
-            return
-        
-        atoms_to_delete = {item for item in items_to_delete if isinstance(item, AtomItem)}
-        bonds_to_delete = {item for item in items_to_delete if isinstance(item, BondItem)}
+        if self.scene.delete_items(set(selected_items)):
+            self.push_undo_state()
+            self.statusBar().showMessage("Cut selection.", 2000)
 
-        # 選択された原子に接続している結合もすべて削除対象に加える
-        for atom in atoms_to_delete:
-            bonds_to_delete.update(atom.bonds)
-            
-        # 削除はされないが、結合が消えることで影響を受ける原子を特定
-        atoms_to_update = set()
-        for bond in bonds_to_delete:
-            if bond.atom1 and bond.atom1 not in atoms_to_delete:
-                atoms_to_update.add(bond.atom1)
-            if bond.atom2 and bond.atom2 not in atoms_to_delete:
-                atoms_to_update.add(bond.atom2)
-
-
-        # --- 削除プロセス ---
-        # 1. 先に結合を削除する（グラフィック、内部参照、データモデル）
-        for bond in list(bonds_to_delete):
-            if not bond.scene():
-                continue
-            
-            # --- ▼ 修正箇所 ▼ ---
-            # 接続している原子の内部リストから、この結合への参照を安全に削除する
-            if bond.atom1 and bond in bond.atom1.bonds:
-                # 古いコード: bond.atom1.bonds.remove(bond)
-                bond.atom1.bonds = [b for b in bond.atom1.bonds if b is not bond]
-            if bond.atom2 and bond in bond.atom2.bonds:
-                # 古いコード: bond.atom2.bonds.remove(bond)
-                bond.atom2.bonds = [b for b in bond.atom2.bonds if b is not bond]
-            # --- ▲ 修正箇所 ▲ ---
-
-            # データモデルから削除（原子IDが必要）
-            if bond.atom1 and bond.atom2:
-                self.data.remove_bond(bond.atom1.atom_id, bond.atom2.atom_id)
-            
-            # グラフィックシーンから削除
-            self.scene.removeItem(bond)
-
-        # 2. 次に原子を削除する（データモデルとシーン）
-        for atom in list(atoms_to_delete):
-            if not atom.scene():
-                continue
-            # データモデルからの削除
-            self.data.remove_atom(atom.atom_id)
-            # グラフィックシーンから削除
-            self.scene.removeItem(atom)
-
-        # 3. 影響を受けた原子の表示を更新
-        for atom in atoms_to_update:
-            atom.update_style()
-        
-        self.push_undo_state()
-        self.statusBar().showMessage("Cut selection.", 2000)
-    
     def paste_from_clipboard(self):
         """クリップボードから分子フラグメントを貼り付け"""
         clipboard = QApplication.clipboard()
@@ -1849,16 +2059,20 @@ class MainWindow(QMainWindow):
         
         self.push_undo_state()
         self.statusBar().showMessage(f"Pasted {len(new_atoms)} atoms.", 2000)
+        self.activate_select_mode()
 
     def update_edit_menu_actions(self):
         """選択状態やクリップボードの状態に応じて編集メニューを更新"""
-        has_selection = len(self.scene.selectedItems()) > 0
-        self.cut_action.setEnabled(has_selection)
-        self.copy_action.setEnabled(has_selection)
-        
-        clipboard = QApplication.clipboard()
-        mime_data = clipboard.mimeData()
-        self.paste_action.setEnabled(mime_data is not None and mime_data.hasFormat(CLIPBOARD_MIME_TYPE))
+        try:
+            has_selection = len(self.scene.selectedItems()) > 0
+            self.cut_action.setEnabled(has_selection)
+            self.copy_action.setEnabled(has_selection)
+            
+            clipboard = QApplication.clipboard()
+            mime_data = clipboard.mimeData()
+            self.paste_action.setEnabled(mime_data is not None and mime_data.hasFormat(CLIPBOARD_MIME_TYPE))
+        except RuntimeError:
+            pass
 
 
     def activate_select_mode(self):
@@ -1868,17 +2082,24 @@ class MainWindow(QMainWindow):
     def trigger_conversion(self):
         mol = self.data.to_rdkit_mol()
         if not mol or mol.GetNumAtoms() == 0:
-            self.statusBar().showMessage("Error: No atoms to convert.")
+            # 3Dビューと関連データをクリア
+            self.plotter.clear()
+            self.current_mol = None
+            self.analysis_action.setEnabled(False)
+            self.statusBar().showMessage("3D view cleared.")
+            self.view_2d.setFocus() 
             return
 
         try:
             Chem.SanitizeMol(mol)
         except Exception:
             self.statusBar().showMessage("Error: Invalid chemical structure (sanitization failed).")
+            self.view_2d.setFocus() 
             return
 
         if len(Chem.GetMolFrags(mol)) > 1:
             self.statusBar().showMessage("Error: 3D conversion not supported for multiple molecules.")
+            self.view_2d.setFocus() 
             return
             
         mol_block = Chem.MolToMolBlock(mol, includeStereo=True)
@@ -1975,12 +2196,14 @@ class MainWindow(QMainWindow):
                 self.current_mol = None; self.analysis_action.setEnabled(False)
         else:
             self.current_mol = None; self.plotter.clear(); self.analysis_action.setEnabled(False)
+        
 
     def push_undo_state(self):
         current_state_for_comparison = {
             'atoms': {k: (v['symbol'], v['item'].pos().x(), v['item'].pos().y(), v.get('charge', 0), v.get('radical', 0)) for k, v in self.data.atoms.items()},
             'bonds': {k: (v['order'], v.get('stereo', 0)) for k, v in self.data.bonds.items()},
-            '_next_atom_id': self.data._next_atom_id
+            '_next_atom_id': self.data._next_atom_id,
+            'has_3d': self.current_mol is not None
         }
         
         last_state_for_comparison = None
@@ -1990,14 +2213,15 @@ class MainWindow(QMainWindow):
             last_state_for_comparison = {
                 'atoms': {k: (v['symbol'], v['pos'][0], v['pos'][1], v.get('charge', 0), v.get('radical', 0)) for k, v in last_atoms.items()},
                 'bonds': {k: (v['order'], v.get('stereo', 0)) for k, v in last_bonds.items()},
-                '_next_atom_id': self.undo_stack[-1].get('_next_atom_id')
+                '_next_atom_id': self.undo_stack[-1].get('_next_atom_id'),
+                'has_3d': 'mol_3d' in self.undo_stack[-1] 
             }
 
         if not last_state_for_comparison or current_state_for_comparison != last_state_for_comparison:
             state = self.get_current_state()
             self.undo_stack.append(state)
             self.redo_stack.clear()
-        
+
         self.update_undo_redo_actions()
         
     def reset_undo_stack(self):
@@ -2187,82 +2411,224 @@ class MainWindow(QMainWindow):
     def set_atom_from_periodic_table(self, symbol): 
         self.set_mode(f'atom_{symbol}')
 
+   
     def clean_up_2d_structure(self):
-        self.statusBar().showMessage("Optimizing 2D structure.")
+        self.statusBar().showMessage("Optimizing 2D structure...")
         mol = self.data.to_rdkit_mol()
-        if mol is None or mol.GetNumAtoms() == 0: 
+        if mol is None or mol.GetNumAtoms() == 0:
             self.statusBar().showMessage("Error: No atoms to optimize."); return
-        
+
         try:
-            # RDKit's atom index (i) will correspond to the order in self.data.atoms
-            original_ids = list(self.data.atoms.keys())
-            if not original_ids:
-                self.statusBar().showMessage("No atoms found in data."); return
-
-            # --- START OF CORRECTION ---
-            # 1. Calculate the geometric center of the original items in the scene
-            original_atom_items = [self.data.atoms[atom_id]['item'] for atom_id in original_ids if atom_id in self.data.atoms and self.data.atoms[atom_id].get('item')]
-            if not original_atom_items:
-                self.statusBar().showMessage("Error: Atom items not found."); return
-
-            original_center_x = sum(item.pos().x() for item in original_atom_items) / len(original_atom_items)
-            original_center_y = sum(item.pos().y() for item in original_atom_items) / len(original_atom_items)
-            # --- END OF CORRECTION ---
-
-            idx_to_atom_id = {i: original_ids[i] for i in range(mol.GetNumAtoms())}
-            
-            # 2. Compute 2D coordinates with RDKit
+            # 安定版：原子IDとRDKit座標の確実なマッピング
+            new_positions_map = {}
             AllChem.Compute2DCoords(mol)
             conf = mol.GetConformer()
-            SCALE = 50.0
-            
-            positions = [conf.GetAtomPosition(i) for i in range(mol.GetNumAtoms())]
-            if not positions:
-                self.statusBar().showMessage("Optimization complete."); return
+            for rdkit_atom in mol.GetAtoms():
+                original_id = rdkit_atom.GetIntProp("_original_atom_id")
+                new_positions_map[original_id] = conf.GetAtomPosition(rdkit_atom.GetIdx())
 
-            # 3. Find the center of the *newly generated* coordinates
+            if not new_positions_map:
+                self.statusBar().showMessage("Optimization failed to generate coordinates."); return
+
+            target_atom_items = [self.data.atoms[atom_id]['item'] for atom_id in new_positions_map.keys() if atom_id in self.data.atoms and 'item' in self.data.atoms[atom_id]]
+            if not target_atom_items:
+                self.statusBar().showMessage("Error: Atom items not found for optimized atoms."); return
+
+            # 元の図形の中心を維持
+            original_center_x = sum(item.pos().x() for item in target_atom_items) / len(target_atom_items)
+            original_center_y = sum(item.pos().y() for item in target_atom_items) / len(target_atom_items)
+
+            positions = list(new_positions_map.values())
             rdkit_cx = sum(p.x for p in positions) / len(positions)
             rdkit_cy = sum(p.y for p in positions) / len(positions)
 
-            # 4. Apply new positions, translating them to the original center
-            for i in range(mol.GetNumAtoms()):
-                atom_id = idx_to_atom_id.get(i)
-                if atom_id is not None and atom_id in self.data.atoms:
+            SCALE = 50.0
+
+            # 新しい座標を適用
+            for atom_id, rdkit_pos in new_positions_map.items():
+                if atom_id in self.data.atoms:
                     item = self.data.atoms[atom_id]['item']
-                    new_pos = conf.GetAtomPosition(i)
-                    
-                    # --- START OF CORRECTION ---
-                    # Calculate new position relative to RDKit's center, then add original center
-                    sx = ((new_pos.x - rdkit_cx) * SCALE) + original_center_x
-                    sy = (-(new_pos.y - rdkit_cy) * SCALE) + original_center_y # Y is inverted for scene coordinates
-                    # --- END OF CORRECTION ---
-                    
+                    sx = ((rdkit_pos.x - rdkit_cx) * SCALE) + original_center_x
+                    sy = (-(rdkit_pos.y - rdkit_cy) * SCALE) + original_center_y
                     new_scene_pos = QPointF(sx, sy)
                     item.setPos(new_scene_pos)
                     self.data.atoms[atom_id]['pos'] = new_scene_pos
-            
-            # Update bond graphics
+
+            # 最終的な座標に基づき、全ての結合表示を一度に更新
             for bond_data in self.data.bonds.values():
                 if bond_data.get('item'):
                     bond_data['item'].update_position()
+
+            # 重なり解消ロジックを実行
+            self. resolve_overlapping_groups()
             
+            # シーン全体の再描画を要求
+            self.scene.update()
+
             self.statusBar().showMessage("2D structure optimization successful.")
             self.push_undo_state()
-            
+
         except Exception as e:
             self.statusBar().showMessage(f"Error during 2D optimization: {e}")
         finally:
             self.view_2d.setFocus()
-            
+
+    def resolve_overlapping_groups(self):
+        """
+        誤差範囲で完全に重なっている原子のグループを検出し、
+        IDが大きい方のフラグメントを左下に平行移動して解消する。
+        """
+
+        # --- パラメータ設定 ---
+        # 重なっているとみなす距離の閾値。構造に合わせて調整してください。
+        OVERLAP_THRESHOLD = 0.5  
+        # 左下へ移動させる距離。
+        MOVE_DISTANCE = 20
+
+        # self.data.atoms.values() から item を安全に取得
+        all_atom_items = [
+            data['item'] for data in self.data.atoms.values() 
+            if data and 'item' in data
+        ]
+
+        if len(all_atom_items) < 2:
+            return
+
+        # --- ステップ1: 重なっている原子ペアを全てリストアップ ---
+        overlapping_pairs = []
+        for item1, item2 in itertools.combinations(all_atom_items, 2):
+            # 結合で直接結ばれているペアは重なりと見なさない
+            if self.scene.find_bond_between(item1, item2):
+                continue
+
+            dist = QLineF(item1.pos(), item2.pos()).length()
+            if dist < OVERLAP_THRESHOLD:
+                overlapping_pairs.append((item1, item2))
+
+        if not overlapping_pairs:
+            self.statusBar().showMessage("No overlapping atoms found.", 2000)
+            return
+
+        # --- ステップ2: Union-Findアルゴリズムで重なりグループを構築 ---
+        # 各原子がどのグループに属するかを管理する
+        parent = {item.atom_id: item.atom_id for item in all_atom_items}
+
+        def find_set(atom_id):
+            # atom_idが属するグループの代表（ルート）を見つける
+            if parent[atom_id] == atom_id:
+                return atom_id
+            parent[atom_id] = find_set(parent[atom_id])  # 経路圧縮による最適化
+            return parent[atom_id]
+
+        def unite_sets(id1, id2):
+            # 2つの原子が属するグループを統合する
+            root1 = find_set(id1)
+            root2 = find_set(id2)
+            if root1 != root2:
+                parent[root2] = root1
+
+        for item1, item2 in overlapping_pairs:
+            unite_sets(item1.atom_id, item2.atom_id)
+
+        # --- ステップ3: グループごとに移動計画を立てる ---
+        # 同じ代表を持つ原子でグループを辞書にまとめる
+        groups_by_root = {}
+        for item in all_atom_items:
+            root_id = find_set(item.atom_id)
+            if root_id not in groups_by_root:
+                groups_by_root[root_id] = []
+            groups_by_root[root_id].append(item.atom_id)
+
+        move_operations = []
+        processed_roots = set()
+
+        for root_id, group_atom_ids in groups_by_root.items():
+            # 処理済みのグループや、メンバーが1つしかないグループはスキップ
+            if root_id in processed_roots or len(group_atom_ids) < 2:
+                continue
+            processed_roots.add(root_id)
+
+            # 3a: グループを、結合に基づいたフラグメントに分割する (BFSを使用)
+            fragments = []
+            visited_in_group = set()
+            group_atom_ids_set = set(group_atom_ids)
+
+            for atom_id in group_atom_ids:
+                if atom_id not in visited_in_group:
+                    current_fragment = set()
+                    q = deque([atom_id])
+                    visited_in_group.add(atom_id)
+                    current_fragment.add(atom_id)
+
+                    while q:
+                        current_id = q.popleft()
+                        # 隣接リスト self.adjacency_list があれば、ここでの探索が高速になります
+                        for neighbor_id in self.data.adjacency_list.get(current_id, []):
+                            if neighbor_id in group_atom_ids_set and neighbor_id not in visited_in_group:
+                                visited_in_group.add(neighbor_id)
+                                current_fragment.add(neighbor_id)
+                                q.append(neighbor_id)
+                    fragments.append(current_fragment)
+
+            if len(fragments) < 2:
+                continue  # 複数のフラグメントが重なっていない場合
+
+            # 3b: 移動するフラグメントを決定する
+            # このグループの重なりの原因となった代表ペアを一つ探す
+            rep_item1, rep_item2 = None, None
+            for i1, i2 in overlapping_pairs:
+                if find_set(i1.atom_id) == root_id:
+                    rep_item1, rep_item2 = i1, i2
+                    break
+
+            if not rep_item1: continue
+
+            # 代表ペアがそれぞれどのフラグメントに属するかを見つける
+            frag1 = next((f for f in fragments if rep_item1.atom_id in f), None)
+            frag2 = next((f for f in fragments if rep_item2.atom_id in f), None)
+
+            # 同一フラグメント内の重なりなどはスキップ
+            if not frag1 or not frag2 or frag1 == frag2:
+                continue
+
+            # 仕様: IDが大きい方の原子が含まれるフラグメントを動かす
+            if rep_item1.atom_id > rep_item2.atom_id:
+                ids_to_move = frag1
+            else:
+                ids_to_move = frag2
+
+            # 3c: 移動計画を作成
+            translation_vector = QPointF(-MOVE_DISTANCE, MOVE_DISTANCE)  # 左下方向へのベクトル
+            move_operations.append((ids_to_move, translation_vector))
+
+        # --- ステップ4: 計画された移動を一度に実行 ---
+        if not move_operations:
+            self.statusBar().showMessage("No actionable overlaps found.", 2000)
+            return
+
+        for group_ids, vector in move_operations:
+            for atom_id in group_ids:
+                item = self.data.atoms[atom_id]['item']
+                new_pos = item.pos() + vector
+                item.setPos(new_pos)
+                self.data.atoms[atom_id]['pos'] = new_pos
+
+        # --- ステップ5: 表示と状態を更新 ---
+        for bond_data in self.data.bonds.values():
+            if bond_data and 'item' in bond_data:
+                bond_data['item'].update_position()
+        self.scene.update()
+        self.push_undo_state()
+        self.statusBar().showMessage("Resolved overlapping groups.", 2000)
+
+
     def draw_molecule_3d(self, mol):
         self.plotter.clear()
         conf = mol.GetConformer()
         pos = np.array([list(conf.GetAtomPosition(i)) for i in range(mol.GetNumAtoms())])
         sym = [a.GetSymbol() for a in mol.GetAtoms()]
         col = np.array([CPK_COLORS_PV.get(s, [0.5, 0.5, 0.5]) for s in sym])
-        
-        # --- ここからが修正箇所です ---
-        
+                
         # スタイルに応じて原子半径を決定
         if self.current_3d_style == 'cpk':
             # CPKモデル: Van der Waals半径をそのまま使う（見栄えのため少しだけ縮小なら0.8くらい）
@@ -2300,8 +2666,8 @@ class MainWindow(QMainWindow):
                     off_dir = np.cross(v1, v_arb)
                     off_dir /= np.linalg.norm(off_dir)
                     if bt == Chem.rdchem.BondType.DOUBLE:
-                        r = 0.09
-                        s = 0.15
+                        r = 0.08
+                        s = 0.20
                         c1 = c + off_dir * (s / 2)
                         c2 = c - off_dir * (s / 2)
                         cyl1 = pv.Cylinder(center=c1, direction=d, radius=r, height=h)
@@ -2310,7 +2676,7 @@ class MainWindow(QMainWindow):
                         self.plotter.add_mesh(cyl2, color=color, smooth_shading=True, show_edges=True, edge_color=edge_color, edge_opacity=0.3)
                     elif bt == Chem.rdchem.BondType.TRIPLE:
                         r = 0.08
-                        s = 0.18
+                        s = 0.20
                         cc = pv.Cylinder(center=c, direction=d, radius=r, height=h)
                         c1 = pv.Cylinder(center=c + off_dir * s, direction=d, radius=r, height=h)
                         c2 = pv.Cylinder(center=c - off_dir * s, direction=d, radius=r, height=h)
@@ -2320,6 +2686,10 @@ class MainWindow(QMainWindow):
         
         self.plotter.reset_camera()
 
+    def toggle_chiral_labels_display(self, checked):
+        """Viewメニューのアクションに応じてキラルラベル表示を切り替える"""
+        self.show_chiral_labels = checked
+
     def open_analysis_window(self):
         if self.current_mol:
             dialog = AnalysisWindow(self.current_mol, self)
@@ -2327,9 +2697,22 @@ class MainWindow(QMainWindow):
         else:
             self.statusBar().showMessage("Please generate a 3D structure first to show analysis.")
 
-        
     def closeEvent(self, event):
-        self.thread.quit(); self.thread.wait(); super().closeEvent(event)
+        reply = QMessageBox.question(self, 'Confirm Exit', 
+                                     "Are you sure you want to exit?", 
+                                     QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No, 
+                                     QMessageBox.StandardButton.No)
+
+        if reply == QMessageBox.StandardButton.Yes:
+            if self.scene and self.scene.template_preview:
+                self.scene.template_preview.hide()
+
+            self.thread.quit()
+            self.thread.wait()
+            
+            event.accept()
+        else:
+            event.ignore()
 
 # --- Application Execution ---
 if __name__ == '__main__':
