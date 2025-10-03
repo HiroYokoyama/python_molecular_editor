@@ -1,0 +1,45 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "moleditpy"
+
+version = "0.1.3"
+
+authors = [
+  { name="HiroYokoyama", email="titech.yoko.hiro@gmail.com" },
+]
+
+description = "A program to edit molecular structures using Python."
+
+readme = "README.md"
+
+requires-python = ">=3.8"
+
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Chemistry",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "License :: OSI Approved :: Apache Software License"
+]
+
+dependencies = [
+    "PyQt6",
+    "rdkit",
+    "numpy",
+    "pyvista",
+    "pyvistaqt",
+]
+
+[project.urls]
+Homepage = "https://github.com/HiroYokoyama/python_molecular_editor"
+Issues = "https://github.com/HiroYokoyama/python_molecular_editor/issues"
+
+[project.scripts]
+moleditpy = "moleditpy.main:main"

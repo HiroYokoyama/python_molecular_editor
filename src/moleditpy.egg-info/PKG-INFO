@@ -1,0 +1,23 @@
+Metadata-Version: 2.4
+Name: moleditpy
+Version: 0.1.3
+Summary: A program to edit molecular structures using Python.
+Author-email: HiroYokoyama <titech.yoko.hiro@gmail.com>
+Project-URL: Homepage, https://github.com/HiroYokoyama/python_molecular_editor
+Project-URL: Issues, https://github.com/HiroYokoyama/python_molecular_editor/issues
+Classifier: Programming Language :: Python :: 3
+Classifier: Operating System :: OS Independent
+Classifier: Intended Audience :: Science/Research
+Classifier: Topic :: Scientific/Engineering :: Chemistry
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: License :: OSI Approved :: Apache Software License
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+Requires-Dist: PyQt6
+Requires-Dist: rdkit
+Requires-Dist: numpy
+Requires-Dist: pyvista
+Requires-Dist: pyvistaqt
