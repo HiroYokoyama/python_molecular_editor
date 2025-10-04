@@ -1332,7 +1332,79 @@ class MoleculeScene(QGraphicsScene):
                (b.atom1 is atom2 and b.atom2 is atom1):
                 return b
         return None
-    
+
+
+class ZoomableView(QGraphicsView):
+    """ マウスホイールでのズームと中ボタンでのパン機能を追加したQGraphicsView """
+    def __init__(self, scene, parent=None):
+        super().__init__(scene, parent)
+        self.setTransformationAnchor(QGraphicsView.ViewportAnchor.AnchorUnderMouse)
+        self.setResizeAnchor(QGraphicsView.ViewportAnchor.AnchorViewCenter)
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
+        self.setDragMode(QGraphicsView.DragMode.NoDrag) # デフォルトはドラッグなし
+
+        self._is_panning = False
+        self._pan_start_pos = QPointF()
+
+    def wheelEvent(self, event):
+        """ マウスホイールを回した際のイベント """
+        if event.modifiers() & Qt.KeyboardModifier.ControlModifier:
+            zoom_in_factor = 1.1
+            zoom_out_factor = 1 / zoom_in_factor
+
+            transform = self.transform()
+            current_scale = transform.m11()
+            min_scale, max_scale = 0.05, 20.0
+
+            if event.angleDelta().y() > 0:
+                if max_scale > current_scale:
+                    self.scale(zoom_in_factor, zoom_in_factor)
+            else:
+                if min_scale < current_scale:
+                    self.scale(zoom_out_factor, zoom_out_factor)
+            
+            event.accept() 
+        else:
+            super().wheelEvent(event)
+
+    def mousePressEvent(self, event):
+        """ 中ボタンが押されたらパン（視点移動）モードを開始 """
+        if event.button() == Qt.MouseButton.MiddleButton:
+            self._is_panning = True
+            self._pan_start_pos = event.pos()
+            self.setCursor(Qt.CursorShape.SizeAllCursor)
+            event.accept()
+        else:
+            super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event):
+        """ パンモード中にマウスを動かしたら、その分だけ視点を移動させる """
+        if self._is_panning:
+            delta = self.mapToScene(event.pos()) - self.mapToScene(self._pan_start_pos)
+            self.translate(delta.x(), delta.y())
+            self._pan_start_pos = event.pos()
+            event.accept()
+        else:
+            super().mouseMoveEvent(event)
+
+    def mouseReleaseEvent(self, event):
+        """ 中ボタンを離したらパンモードを終了 """
+        if event.button() == Qt.MouseButton.MiddleButton:
+            self._is_panning = False
+            # 現在の描画モードに応じたカーソルに戻す
+            current_mode = self.scene().mode if self.scene() else 'select'
+            if current_mode == 'select':
+                self.setCursor(Qt.CursorShape.ArrowCursor)
+            elif current_mode.startswith(('atom', 'bond', 'template')):
+                self.setCursor(Qt.CursorShape.CrossCursor)
+            elif current_mode.startswith(('charge', 'radical')):
+                self.setCursor(Qt.CursorShape.PointingHandCursor)
+            else:
+                self.setCursor(Qt.CursorShape.ArrowCursor)
+            event.accept()
+        else:
+            super().mouseReleaseEvent(event)
 
 class CalculationWorker(QObject):
     # --- 変更点1: 新しいシグナルを追加 ---
@@ -1559,7 +1631,7 @@ class MainWindow(QMainWindow):
         self.scene.setSceneRect(-4000,-4000,4000,4000)
         self.scene.setBackgroundBrush(QColor("#FFFFFF"))
 
-        self.view_2d=QGraphicsView(self.scene)
+        self.view_2d=ZoomableView(self.scene)
         self.view_2d.setRenderHint(QPainter.RenderHint.Antialiasing)
         self.view_2d.setSizePolicy(
             QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
@@ -1830,7 +1902,7 @@ class MainWindow(QMainWindow):
         menu_bar = self.menuBar()
         
         file_menu = menu_bar.addMenu("&File")
-        load_mol_action = QAction("Open MOL/SDF...", self); load_mol_action.triggered.connect(self.load_mol_file)
+        load_mol_action = QAction("Import MOL...", self); load_mol_action.triggered.connect(self.load_mol_file)
         file_menu.addAction(load_mol_action)
         file_menu.addSeparator()
         save_mol_action = QAction("Save 2D as MOL...", self); save_mol_action.triggered.connect(self.save_as_mol)
@@ -1900,6 +1972,29 @@ class MainWindow(QMainWindow):
         clear_all_action.triggered.connect(self.clear_all); edit_menu.addAction(clear_all_action)
 
         view_menu = menu_bar.addMenu("&View")
+
+        zoom_in_action = QAction("Zoom In", self)
+        zoom_in_action.setShortcut(QKeySequence.StandardKey.ZoomIn) # Ctrl +
+        zoom_in_action.triggered.connect(self.zoom_in)
+        view_menu.addAction(zoom_in_action)
+
+        zoom_out_action = QAction("Zoom Out", self)
+        zoom_out_action.setShortcut(QKeySequence.StandardKey.ZoomOut) # Ctrl -
+        zoom_out_action.triggered.connect(self.zoom_out)
+        view_menu.addAction(zoom_out_action)
+
+        reset_zoom_action = QAction("Reset Zoom", self)
+        reset_zoom_action.setShortcut(QKeySequence("Ctrl+0"))
+        reset_zoom_action.triggered.connect(self.reset_zoom)
+        view_menu.addAction(reset_zoom_action)
+        
+        fit_action = QAction("Fit to View", self)
+        fit_action.setShortcut(QKeySequence("Ctrl+9"))
+        fit_action.triggered.connect(self.fit_to_view)
+        view_menu.addAction(fit_action)
+
+        view_menu.addSeparator()
+
         self.toggle_chiral_action = QAction("Show Chiral Labels", self, checkable=True)
         self.toggle_chiral_action.setChecked(self.show_chiral_labels)
         self.toggle_chiral_action.triggered.connect(self.toggle_chiral_labels_display)
@@ -2362,33 +2457,50 @@ class MainWindow(QMainWindow):
         if push_to_undo:
             self.push_undo_state()
 
-
     def load_mol_file(self):
         options = QFileDialog.Option.DontUseNativeDialog
-        file_path, _ = QFileDialog.getOpenFileName(self, "Open MOL/SDF File", "", "Chemical Files (*.mol *.sdf);;All Files (*)", options=options)
+        file_path, _ = QFileDialog.getOpenFileName(self, "Import MOL File", "", "Chemical Files (*.mol *.sdf);;All Files (*)", options=options)
         if not file_path: return
         try:
-            suppl = Chem.SDMolSupplier(file_path, removeHs=False)
+            suppl = Chem.SDMolSupplier(file_path, removeHs=True)
             mol = next(suppl, None)
             if mol is None: raise ValueError("Failed to read molecule from file.")
+
+            Chem.Kekulize(mol)
+            
             self.clear_2d_editor(push_to_undo=False)
             self.current_mol = None; self.plotter.clear(); self.analysis_action.setEnabled(False)
             
-            if mol.GetNumConformers() == 0: AllChem.Compute2DCoords(mol)
+            if mol.GetNumConformers() == 0: 
+                AllChem.Compute2DCoords(mol)
 
             conf = mol.GetConformer(); SCALE_FACTOR = 50.0
-            rdkit_idx_to_my_id = {}
+            
+            view_center = self.view_2d.mapToScene(self.view_2d.viewport().rect().center())
+
             positions = [conf.GetAtomPosition(i) for i in range(mol.GetNumAtoms())]
-            center_x = sum(p.x for p in positions)/len(positions) if positions else 0
-            center_y = sum(p.y for p in positions)/len(positions) if positions else 0
+            if positions:
+                mol_center_x = sum(p.x for p in positions) / len(positions)
+                mol_center_y = sum(p.y for p in positions) / len(positions)
+            else:
+                mol_center_x, mol_center_y = 0.0, 0.0
+
+            rdkit_idx_to_my_id = {}
             for i in range(mol.GetNumAtoms()):
-                atom = mol.GetAtomWithIdx(i); pos = conf.GetAtomPosition(i)
+                atom = mol.GetAtomWithIdx(i)
+                pos = conf.GetAtomPosition(i)
                 charge = atom.GetFormalCharge()
-                scene_x=(pos.x-center_x)*SCALE_FACTOR; scene_y=-(pos.y-center_y)*SCALE_FACTOR
+                
+                relative_x = pos.x - mol_center_x
+                relative_y = pos.y - mol_center_y
+                
+                scene_x = (relative_x * SCALE_FACTOR) + view_center.x()
+                scene_y = (-relative_y * SCALE_FACTOR) + view_center.y()
+                
                 atom_id = self.scene.create_atom(atom.GetSymbol(), QPointF(scene_x, scene_y), charge=charge)
                 rdkit_idx_to_my_id[i] = atom_id
+                        
             for bond in mol.GetBonds():
-                # (以降のBond読み込み部分は変更なし)
                 b_idx,e_idx=bond.GetBeginAtomIdx(),bond.GetEndAtomIdx()
                 b_type = bond.GetBondTypeAsDouble(); b_dir = bond.GetBondDir()
                 stereo = 0
@@ -2896,6 +3008,43 @@ class MainWindow(QMainWindow):
         else:
             event.ignore()
 
+    def zoom_in(self):
+        """ ビューを 20% 拡大する """
+        self.view_2d.scale(1.2, 1.2)
+
+    def zoom_out(self):
+        """ ビューを 20% 縮小する """
+        self.view_2d.scale(1/1.2, 1/1.2)
+        
+    def reset_zoom(self):
+        """ ビューの拡大率をデフォルト (50%) にリセットする """
+        transform = QTransform()
+        transform.scale(0.5, 0.5)
+        self.view_2d.setTransform(transform)
+
+    def fit_to_view(self):
+        """ シーン上のすべてのアイテムがビューに収まるように調整する """
+        if not self.scene.items():
+            self.reset_zoom()
+            return
+            
+        bounds = self.scene.itemsBoundingRect()
+        visible_items_rect = QRectF()
+        for item in self.scene.items():
+            if item.isVisible() and not isinstance(item, TemplatePreviewItem):
+                 if visible_items_rect.isEmpty():
+                     visible_items_rect = item.sceneBoundingRect()
+                 else:
+                     visible_items_rect = visible_items_rect.united(item.sceneBoundingRect())
+        
+        if not visible_items_rect.isEmpty():
+             self.view_2d.fitInView(visible_items_rect, Qt.AspectRatioMode.KeepAspectRatio)
+             self.view_2d.scale(0.6, 0.6)
+        else:
+             self.reset_zoom()
+
+
 # --- Application Execution ---
 if __name__ == '__main__':
     main()
+
