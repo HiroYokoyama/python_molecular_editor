@@ -2284,7 +2284,6 @@ class MainWindow(QMainWindow):
             self.redo_stack.clear()
 
         self.update_realtime_info()
-        self.update_chiral_labels()
         self.update_undo_redo_actions()
 
     def reset_undo_stack(self):
@@ -2299,7 +2298,6 @@ class MainWindow(QMainWindow):
             self.set_state_from_data(state)
         self.update_undo_redo_actions()
         self.update_realtime_info()
-        self.update_chiral_labels()
         self.view_2d.setFocus() 
 
     def redo(self):
@@ -2809,14 +2807,14 @@ class MainWindow(QMainWindow):
             except Exception as e: 
                 self.statusBar().showMessage(f"3D chiral label drawing error: {e}")
 
-        self.plotter.reset_camera()
-
 
     def toggle_chiral_labels_display(self, checked):
         """Viewメニューのアクションに応じてキラルラベル表示を切り替える"""
         self.show_chiral_labels = checked
-
-        self.update_chiral_labels()
+        if checked:
+            self.statusBar().showMessage("Chiral labels: will be (re)computed after Convert→3D.")
+        else:
+            self.statusBar().showMessage("Chiral labels disabled.")
 
 
     def update_chiral_labels(self):
