@@ -1,55 +1,119 @@
-# Macでのシェルスクリプトショートカットファイル（.command）の作り方
+# macOSでPython CLIアプリをAutomator経由で.app化する方法（moleditpy）
 
-Macで、ターミナルで実行するコマンドを**ダブルクリックで実行できるファイル**として作成するには、拡張子に **`.command`** を付けて保存し、実行権限を付与します。
+この手順では、`pip install moleditpy` でインストールしたPythonアプリをmacOS上で`.app`アプリケーションとして使えるようにし、独自アイコンを設定します。
 
-## 1. ショートカットファイル（.command）の作成手順
+---
 
-### ステップ 1: スクリプトの記述
+## 1. バイナリの場所を確認
 
-テキストエディタを開き、実行したいコマンドを記述します。
+以下のようなパスに実行ファイル（バイナリ）が生成されます：
 
-**例 (汎用的な構造):**
+```
 
+/Users/<username>/Library/Python/<python_version>/bin/moleditpy
+
+````
+
+---
+
+## 2. Automatorで新規アプリケーションを作成
+
+1. **Automator** を開く  
+2. 「新規書類」→「アプリケーション」を選択  
+3. 左の一覧から「ユーティリティ」→「シェルスクリプトを実行」を追加  
+
+---
+
+## 3. スクリプトを設定
+
+スクリプト欄に以下を入力します：
 
 ```bash
 #!/bin/bash
-
-# ここに実行したいプログラムのフルパスを記述します
-/Users/ユーザー名/Library/Python/X.X/bin/moleditpy
-exit
+/Users/<username>/Library/Python/<python_version>/bin/moleditpy "$@"
 ````
 
-  * **`#!/bin/bash`**: このファイルが **bash** というシェルで実行されるべきことをシステムに伝えます（シバン）。
-  * **`/Users/ユーザー名/Library/Python/Pythonバージョン/bin/プログラム名`**:
-      * `ユーザー名`：あなたのMacのユーザー名に置き換えます。
-      * `X.X`：使用しているPythonのバージョン（例: `3.9`）に置き換えます。
-      * `プログラム名`：実行したいプログラムのファイル名（例: `moleditpy`）に置き換えます。
-  * **`exit`**: スクリプトの実行が完了した後、ターミナルウィンドウを自動的に閉じるためのコマンドです。
+> `"$@"` は、ドラッグ＆ドロップされたファイルなどを引数として渡すためのものです。
 
-### ステップ 2: ファイルの保存
+---
 
-この内容を記述したファイルを、任意の場所（例: デスクトップ）に **`.command`** 拡張子を付けて保存します。
+## 4. アプリとして保存
 
-**ファイル名:** `実行したい名前.command`
+1. メニューから「ファイル」→「保存」
+2. 名前を `moleditpy.app` にする
+3. 保存場所は一時的にデスクトップなど任意でOKです
 
-### ステップ 3: 実行権限の付与 (初回のみ必須)
+---
 
-作成した `.command` ファイルをダブルクリックで実行できるようにするには、**実行権限**を付与する必要があります。
+## 5. アプリケーションフォルダーへ移動
 
-1.  **ターミナルを起動**します。
+保存後、作成したアプリをシステム標準のアプリケーションフォルダーへコピーします。
 
-2.  以下のコマンドを実行します。
+### Finderからコピーする場合
 
-    ```bash
-    chmod +x /パス/to/実行したい名前.command
-    ```
+1. Finderで `moleditpy.app` を選択
+2. `⌘ + C` でコピー
+3. Finderメニューの「移動」→「アプリケーション」を開く
+4. `⌘ + V` で貼り付け
 
-      * **`chmod +x`** は、ファイルのパーミッションに「実行可能 (e**x**ecutable)」の権限を追加します。
-      * **ヒント**: ターミナルに **` chmod +x  `** と入力した後、作成した `.command` ファイルをドラッグ＆ドロップすると、自動でパスが入力されます。
+### ターミナルからコピーする場合
 
-## 2\. ショートカットファイルの実行方法
+```bash
+sudo cp -R ~/Desktop/moleditpy.app /Applications/
+```
 
-実行権限を付与した後、この **`.command`** ファイルを**ダブルクリック**するだけで、ターミナルが開いてスクリプトが実行されます。
+> `sudo` 実行時にパスワード入力を求められる場合があります。
+
+---
+
+## 6. アイコンを設定
+
+アイコン画像の場所：
 
 ```
+/Users/<username>/Library/Python/<python_version>/lib/python<python_version>/site-packages/moleditpy/assets/icon.png
 ```
+
+### アイコン設定手順（コピペ方式）
+
+1. Finderで上記の`icon.png`を開く
+2. 「プレビュー」で画像を開いた状態で
+
+   * `⌘ + A` で全選択
+   * `⌘ + C` でコピー
+3. Finderで `/Applications` フォルダー内の `moleditpy.app` を選択 → `⌘ + I`（情報を見る）
+4. 左上の小さいアイコンをクリック（枠が出る） → `⌘ + V` で貼り付け
+
+これでアプリのアイコンが変更されます。
+
+
+### PNGをICNS形式に変換して設定する場合：
+```
+# PNG → ICNS 変換
+iconutil -c icns /path/to/icon.iconset
+
+# アプリに適用
+cp /path/to/icon.icns /Applications/MyTool.app/Contents/Resources/app.icns
+備考: iconutil は macOS 標準コマンドです。icon.iconset は以下のように作成できます：
+mkdir icon.iconset
+cp icon.png icon.iconset/icon_512x512.png
+iconutil -c icns icon.iconset
+```
+---
+
+## 7. 実行権限を確認（必要な場合）
+
+起動できない場合は、以下を実行：
+
+```bash
+chmod +x /Users/<username>/Library/Python/<python_version>/bin/moleditpy
+```
+
+---
+
+## 8. 完了
+
+これで `/Applications` にインストールされた `moleditpy.app` をダブルクリックするだけでPythonアプリが実行できます。
+
+
+---
