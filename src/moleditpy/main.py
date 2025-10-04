@@ -2244,18 +2244,6 @@ class MainWindow(QMainWindow):
         else:
             self.current_mol = None; self.plotter.clear(); self.analysis_action.setEnabled(False)
 
-
-        if 'mol_3d' in loaded_data:
-            try:
-                self.current_mol = Chem.Mol(loaded_data['mol_3d'])
-                self.draw_molecule_3d(self.current_mol)
-                self.analysis_action.setEnabled(True)
-            except Exception as e:
-                self.statusBar().showMessage(f"Could not load 3D model from project: {e}")
-                self.current_mol = None; self.analysis_action.setEnabled(False)
-        else:
-            self.current_mol = None; self.plotter.clear(); self.analysis_action.setEnabled(False)
-
         self.update_chiral_labels()
         
 
@@ -2812,8 +2800,10 @@ class MainWindow(QMainWindow):
         """Viewメニューのアクションに応じてキラルラベル表示を切り替える"""
         self.show_chiral_labels = checked
         if checked:
+            draw_molecule_3d()
             self.statusBar().showMessage("Chiral labels: will be (re)computed after Convert→3D.")
         else:
+            draw_molecule_3d()
             self.statusBar().showMessage("Chiral labels disabled.")
 
 

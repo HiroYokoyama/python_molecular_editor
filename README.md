@@ -1,18 +1,19 @@
 # moleditpy -- Python Molecular Editor
 
-Pythonで構築された、シンプルで直感的な分子構造エディターです。2Dでの分子描画と、3D構造可視化をサポートします。
+Pythonで構築された、クロスプラットフォームかつシンプルで直感的な分子構造エディターです。2Dでの分子描画と、3D構造可視化ができます。DFT計算ソフト用のインプット用に構造ファイルのエクスポートをサポートします。
+
+A cross-platform, simple, and intuitive molecular structure editor built in Python. It allows 2D molecular drawing and 3D structure visualization. It supports exporting structure files for input to DFT calculation software.
+
 
 作者: HiroYokoyama
 ライセンス: Apache-2.0
 リポジトリ: [https://github.com/HiroYokoyama/python\_molecular\_editor](https://github.com/HiroYokoyama/python_molecular_editor)
 
-![](img/screenshot.png)
-
 -----
 
 ## 概要
 
-このアプリケーションは、化学者や学生が分子構造を容易に描き、その3次元的な形状を視覚的に確認するためのツールです。PyQt6によるモダンなGUI、RDKitによる強力な化学計算、PyVistaによる高性能な3Dレンダリングを組み合わせています。
+このアプリケーションは、分子構造を容易に描き、その3次元的な形状を視覚的に確認するためのツールです。**PyQt6**によるモダンなGUI、**RDKit**による強力な化学計算、**PyVista**による高性能な3Dレンダリングを組み合わせています。
 
 -----
 
@@ -51,7 +52,7 @@ Pythonで構築された、シンプルで直感的な分子構造エディタ�
 
   * **3D変換:** RDKit で 3D 座標を生成し MMFF94 ベースで最適化（**Convert to 3D**）します。
   * **インタラクティブ表示:** PyVista / pyvistaqt によるインタラクティブな3D表示（Ball & Stick / CPK スタイル）を提供します。
-  * **キラルラベル表示:** 3D変換後、キラル中心に R/S ラベルを自動で付与し、2Dおよび3Dビューに表示します。
+  * **キラルラベル表示:** 3D変換後、キラル中心に R/S ラベルを自動で付与し、**3Dビュー**に表示します。
   * **分子分析ウィンドウ:** 分子量、SMILES、LogP、TPSAなど、RDKitベースの**主要な分子特性を一覧表示**する専用ウィンドウがあります。
 
 ### 5\. ファイル入出力
@@ -138,26 +139,99 @@ Windows環境でプロジェクトファイル（`.pmeraw`）をダブルクリ�
 
 -----
 
+## macOS向け：Python CLIアプリをAutomator経由で.app化する方法（moleditpy）
+
+この手順では、`pip install moleditpy` でインストールしたPythonアプリをmacOS上で\*\*.appアプリケーション\*\*として使えるようにし、独自アイコンを設定します。
+
+### 1\. バイナリの場所を確認
+
+以下のようなパスに実行ファイル（バイナリ）が生成されます：
+
+```
+/Users/<username>/Library/Python/<python_version>/bin/moleditpy
+```
+
+### 2\. Automatorで新規アプリケーションを作成
+
+1.  **Automator** を開きます。
+2.  **「新規書類」** → **「アプリケーション」** を選択します。
+3.  左の一覧から「ユーティリティ」→\*\*「シェルスクリプトを実行」\*\* を追加します。
+
+### 3\. スクリプトを設定
+
+スクリプト欄に以下を入力します。`"$@"` は、ドラッグ＆ドロップされたファイルを引数として渡すためのものです。
+
+```bash
+#!/bin/bash
+/Users/<username>/Library/Python/<python_version>/bin/moleditpy "$@"
+```
+
+### 4\. アプリとして保存
+
+1.  メニューから\*\*「ファイル」\*\* → **「保存」** を選択します。
+2.  名前を **`moleditpy.app`** にします。
+3.  保存場所は一時的にデスクトップなど任意で構いません。
+
+### 5\. アプリケーションフォルダーへ移動
+
+保存後、作成したアプリをシステム標準のアプリケーションフォルダーへコピーします。
+
+**Finderからコピーする場合**
+
+1.  Finderで `moleditpy.app` を選択し、`⌘ + C` でコピーします。
+2.  Finderメニューの「移動」→\*\*「アプリケーション」\*\* を開きます。
+3.  `⌘ + V` で貼り付けます。
+
+**ターミナルからコピーする場合**
+
+```bash
+sudo cp -R ~/Desktop/moleditpy.app /Applications/
+```
+
+### 6\. アイコンを設定
+
+アイコン画像の場所：
+
+```
+/Users/<username>/Library/Python/<python_version>/lib/python<python_version>/site-packages/moleditpy/assets/icon.png
+```
+
+**アイコン設定手順（コピペ方式）**
+
+1.  Finderで上記の `icon.png` を開きます。
+2.  「プレビュー」で画像を開いた状態で `⌘ + A` で**全選択**、`⌘ + C` で**コピー**します。
+3.  Finderで `/Applications` フォルダー内の `moleditpy.app` を選択 → `⌘ + I`（情報を見る）を押します。
+4.  左上の小さいアイコンをクリック（枠が出る） → `⌘ + V` で**貼り付け**ます。
+    これでアプリのアイコンが変更されます。
+
+### 7\. 実行権限を確認（必要な場合）
+
+起動できない場合は、以下を実行してください。
+
+```bash
+chmod +x /Users/<username>/Library/Python/<python_version>/bin/moleditpy
+```
+
+### 8\. 完了
+
+これで `/Applications` にインストールされた **`moleditpy.app`** をダブルクリックするだけでPythonアプリが実行できます。
+
+-----
+
 ## 技術的な仕組み
 
   * **GUI と 2D 描画 (PyQt6):**
-
       * `QGraphicsScene` 上にカスタムの `AtomItem`（原子）と `BondItem`（結合）を配置し、対話的に操作します。
       * Undo/Redo機能は、アプリケーションの状態を丸ごと `pickle` でシリアライズしてスタックに保存することで実現しています。
-
   * **化学計算 (RDKit):**
-
       * 2D データから RDKit 分子オブジェクトを生成し、3D 座標生成（`AllChem.EmbedMolecule`）や分子特性計算を実行します。
       * 計算は別スレッド（`QThread`）で行い、GUI の応答性を維持しています。
-
   * **3D 可視化 (PyVista / pyvistaqt):**
-
       * RDKit のコンフォーマ座標から PyVista のメッシュ（球や円柱）を生成して描画します。CPKカラーや3D結合のマルチレンダリングに対応しています。
 
 -----
 
 ## ライセンス
 
-このプロジェクトは Apache-2.0 License のもとで公開されています。詳細は `LICENSE` ファイルを参照してください。
-
+このプロジェクトは **Apache-2.0 License** のもとで公開されています。詳細は `LICENSE` ファイルを参照してください。
 
