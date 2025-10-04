@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "moleditpy"
 
-version = "0.3.0"
+version = "0.3.1"
 
 authors = [
   { name="HiroYokoyama", email="titech.yoko.hiro@gmail.com" },
@@ -45,4 +45,4 @@ Issues = "https://github.com/HiroYokoyama/python_molecular_editor/issues"
 moleditpy = "moleditpy.main:main"
 
 [tool.setuptools.package-data]
-"moleditpy" = ["assets/icon.png"]
+"moleditpy" = ["assets/*"]

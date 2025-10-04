@@ -87,7 +87,8 @@ def main():
         ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
 
     app = QApplication(sys.argv)
-    window = MainWindow() 
+    file_path = sys.argv[1] if len(sys.argv) > 1 else None
+    window = MainWindow(initial_file=file_path)
     window.show()
     sys.exit(app.exec())
 
@@ -1511,7 +1512,7 @@ class AnalysisWindow(QDialog):
 class MainWindow(QMainWindow):
 
     start_calculation = pyqtSignal(str)
-    def __init__(self):
+    def __init__(self, initial_file=None):
         super().__init__()
         self.setWindowTitle("moleditpy -- Python Molecular Editor by HY"); self.setGeometry(100, 100, 1400, 800)
         self.data = MolecularData(); self.current_mol = None
@@ -1527,12 +1528,15 @@ class MainWindow(QMainWindow):
         QApplication.clipboard().dataChanged.connect(self.update_edit_menu_actions)
         self.update_edit_menu_actions()
 
+        if initial_file:
+            self.load_raw_data(file_path=initial_file)
+
     def init_ui(self):
         # 1. 現在のスクリプトがあるディレクトリのパスを取得
         script_dir = os.path.dirname(os.path.abspath(__file__))
         
         # 2. 'assets'フォルダ内のアイコンファイルへのフルパスを構築
-        icon_path = os.path.join(script_dir, 'assets', 'icon.png')
+        icon_path = os.path.join(script_dir, 'assets', 'icon.ico')
         
         # 3. ファイルパスから直接QIconオブジェクトを作成
         if os.path.exists(icon_path): # ファイルが存在するか確認
@@ -2425,10 +2429,12 @@ class MainWindow(QMainWindow):
                 self.statusBar().showMessage(f"Project saved to {file_path}")
             except Exception as e: self.statusBar().showMessage(f"Error saving project file: {e}")
 
-    def load_raw_data(self):
-        options = QFileDialog.Option.DontUseNativeDialog
-        file_path, _ = QFileDialog.getOpenFileName(self, "Open Project File", "", "Project Files (*.pmeraw);;All Files (*)", options=options)
-        if not file_path: return
+    def load_raw_data(self, file_path=None):
+        if not file_path:
+            options = QFileDialog.Option.DontUseNativeDialog
+            file_path, _ = QFileDialog.getOpenFileName(self, "Open Project File", "", "Project Files (*.pmeraw);;All Files (*)", options=options)
+            if not file_path: return
+        
         try:
             with open(file_path, 'rb') as f: loaded_data = pickle.load(f)
             self.set_state_from_data(loaded_data)
