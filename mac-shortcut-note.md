@@ -87,7 +87,7 @@ sudo cp -R ~/Desktop/moleditpy.app /Applications/
 これでアプリのアイコンが変更されます。
 
 
-### PNGをICNS形式に変換して設定する場合：
+### 別の方法：PNGをICNS形式に変換して設定する場合：
 ```
 # PNG → ICNS 変換
 iconutil -c icns /path/to/icon.iconset
