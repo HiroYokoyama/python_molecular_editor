@@ -8,3 +8,4 @@ src/moleditpy.egg-info/dependency_links.txt
 src/moleditpy.egg-info/entry_points.txt
 src/moleditpy.egg-info/requires.txt
 src/moleditpy.egg-info/top_level.txt
+src/moleditpy/assets/icon.png

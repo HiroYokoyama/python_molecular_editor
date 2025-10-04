@@ -51,8 +51,8 @@ DEFAULT_BOND_LENGTH = 75 # テンプレートで使用する標準結合長
 CLIPBOARD_MIME_TYPE = "application/x-moleditpy-fragment"
 
 CPK_COLORS = {
-    'H': QColor('#FFFFFF'), 'C': QColor('#222222'), 'N': QColor('#3377FF'), 'O': QColor('#FF3333'), 'F': QColor('#33FF33'),
-    'Cl': QColor('#33FF33'), 'Br': QColor('#A52A2A'), 'I': QColor('#9400D3'), 'S': QColor('#FFC000'), 'P': QColor('#FFA500'),
+    'H': QColor('#FFFFFF'), 'C': QColor('#222222'), 'N': QColor('#3377FF'), 'O': QColor('#FF3333'), 'F': QColor('#99E6E6'),
+    'Cl': QColor('#33FF33'), 'Br': QColor('#A52A2A'), 'I': QColor('#9400D3'), 'S': QColor('#FFC000'), 'P': QColor('#FF8000'),
     'Si': QColor('#DAA520'), 'B': QColor('#FA8072'), 'He': QColor('#D9FFFF'), 'Ne': QColor('#B3E3F5'), 'Ar': QColor('#80D1E3'),
     'Kr': QColor('#5CACC8'), 'Xe': QColor('#429EB0'), 'Rn': QColor('#298FA2'), 'Li': QColor('#CC80FF'), 'Na': QColor('#AB5CF2'),
     'K': QColor('#8F44D7'), 'Rb': QColor('#702EBC'), 'Cs': QColor('#561B9E'), 'Fr': QColor('#421384'), 'Be': QColor('#C2FF00'),
@@ -70,7 +70,8 @@ CPK_COLORS = {
     'Bi': QColor('#9E4FB5'), 'Po': QColor('#AB5C00'), 'At': QColor('#754F45'), 'Ac': QColor('#70ABFA'), 'Th': QColor('#00BAFF'),
     'Pa': QColor('#00A1FF'), 'U': QColor('#008FFF'), 'Np': QColor('#0080FF'), 'Pu': QColor('#006BFF'), 'Am': QColor('#545CF2'),
     'Cm': QColor('#785CE3'), 'Bk': QColor('#8A4FE3'), 'Cf': QColor('#A136D4'), 'Es': QColor('#B31FD4'), 'Fm': QColor('#B31FBA'),
-    'Md': QColor('#B30DA6'), 'No': QColor('#BD0D87'), 'Lr': QColor('#C70066'), 'DEFAULT': QColor('#FF1493') # Pink fallback
+    'Md': QColor('#B30DA6'), 'No': QColor('#BD0D87'), 'Lr': QColor('#C70066'), 'Al': QColor('#B3A68F'), 'Y': QColor('#99FFFF'), 
+    'Zr': QColor('#7EE7E7'), 'Nb': QColor('#68CFCE'), 'Mo': QColor('#52B7B7'), 'DEFAULT': QColor('#FF1493') # Pink fallback
 }
 CPK_COLORS_PV = {
     k: [c.redF(), c.greenF(), c.blueF()] for k, c in CPK_COLORS.items()
@@ -92,18 +93,17 @@ def main():
 
 
 # --- Data Model ---
-# --- Data Model ---
 class MolecularData:
     def __init__(self):
         self.atoms = {}
         self.bonds = {}
         self._next_atom_id = 0
-        self.adjacency_list = {} # <--- 追加: 隣接リストを初期化
+        self.adjacency_list = {} 
 
     def add_atom(self, symbol, pos, charge=0, radical=0):
         atom_id = self._next_atom_id
         self.atoms[atom_id] = {'symbol': symbol, 'pos': pos, 'item': None, 'charge': charge, 'radical': radical}
-        self.adjacency_list[atom_id] = [] # <--- 追加: 新しい原子のエントリを作成
+        self.adjacency_list[atom_id] = [] 
         self._next_atom_id += 1
         return atom_id
 
@@ -124,14 +124,17 @@ class MolecularData:
             self.bonds[(id1, id2)] = bond_data
             return (id1, id2), 'created'
 
+
     def remove_atom(self, atom_id):
         if atom_id in self.atoms:
-            # この原子に接続していた他の原子のリストからも、この原子IDを削除
+            # Safely get neighbors before deleting the atom's own entry
+            neighbors = self.adjacency_list.get(atom_id, [])
+            for neighbor_id in neighbors:
+                if neighbor_id in self.adjacency_list and atom_id in self.adjacency_list[neighbor_id]:
+                    self.adjacency_list[neighbor_id].remove(atom_id)
+
+            # Now, safely delete the atom's own entry from the adjacency list
             if atom_id in self.adjacency_list:
-                for neighbor_id in self.adjacency_list[atom_id]:
-                    if neighbor_id in self.adjacency_list and atom_id in self.adjacency_list[neighbor_id]:
-                        self.adjacency_list[neighbor_id].remove(atom_id)
-                # この原子自身のエントリを削除
                 del self.adjacency_list[atom_id]
 
             del self.atoms[atom_id]
@@ -180,8 +183,6 @@ class MolecularData:
         mol_block += "M  END\n"
         return mol_block
 
-    # main.py の MolecularDataクラス内 (約193行目あたり)
-# 既存の to_rdkit_mol メソッドを、以下のコードで完全に置き換えてください。
 
     def to_rdkit_mol(self):
         if not self.atoms: return None
@@ -212,7 +213,6 @@ class MolecularData:
             else:
                 order = Chem.BondType.SINGLE
 
-            # 結合を追加し、そのインデックスを直接取得する、より確実な方法に変更しました。
             bond_idx = mol.AddBond(idx1, idx2, order)
             bond = mol.GetBondWithIdx(bond_idx - 1)
 
@@ -229,7 +229,6 @@ class MolecularData:
              pass
         return mol
 
- # --- Custom 2D Graphics Items ---
 class AtomItem(QGraphicsItem):
     def __init__(self, atom_id, symbol, pos, charge=0, radical=0):
         super().__init__()
@@ -249,7 +248,6 @@ class AtomItem(QGraphicsItem):
         path.addEllipse(QRectF(-hit_r, -hit_r, hit_r * 2.0, hit_r * 2.0))
         return path
 
-    # AtomItem クラス内
     def paint(self, painter, option, widget):
         color = CPK_COLORS.get(self.symbol, CPK_COLORS['DEFAULT'])
         if self.is_visible:
@@ -266,9 +264,13 @@ class AtomItem(QGraphicsItem):
                 painter.setBrush(bg_brush)
                 painter.setPen(Qt.PenStyle.NoPen)
                 painter.drawRect(bg_rect)
-
+            
             # 3. 原子記号自体を描画
-            painter.setPen(QPen(color)) # <-- 修正：常に元素カラーで描画
+            # 水素だけ黒文字、それ以外は CPK カラー
+            if self.symbol == 'H':
+                painter.setPen(QPen(Qt.GlobalColor.black))
+            else:
+                painter.setPen(QPen(color))
             painter.drawText(text_rect, Qt.AlignmentFlag.AlignCenter, self.symbol)
             
             
@@ -473,7 +475,9 @@ class MoleculeScene(QGraphicsScene):
         if isinstance(item, AtomItem):
             self.start_atom = item
             if self.mode != 'select':
-                self.temp_line=QGraphicsLineItem(QLineF(self.start_atom.pos(),self.press_pos)); self.temp_line.setPen(QPen(Qt.GlobalColor.red,2,Qt.PenStyle.DotLine)); self.addItem(self.temp_line)
+                self.temp_line = QGraphicsLineItem(QLineF(self.start_atom.pos(), self.press_pos))
+                self.temp_line.setPen(QPen(Qt.GlobalColor.red, 2, Qt.PenStyle.DotLine))
+                self.addItem(self.temp_line)
             else: super().mousePressEvent(event)
         elif item is None and self.mode.startswith('atom'):
             self.start_pos = self.press_pos
@@ -1308,10 +1312,16 @@ class MoleculeScene(QGraphicsScene):
         super().keyPressEvent(event)
         
 
+    # In MoleculeScene class
     def find_atom_near(self, pos, tol=14.0):
-        for it in self.items():
+        # Create a small search rectangle around the position
+        search_rect = QRectF(pos.x() - tol, pos.y() - tol, 2 * tol, 2 * tol)
+        nearby_items = self.items(search_rect)
+
+        for it in nearby_items:
             if isinstance(it, AtomItem):
-                if math.hypot(it.pos().x() - pos.x(), it.pos().y() - pos.y()) <= tol:
+                # Check the precise distance only for candidate items
+                if QLineF(it.pos(), pos).length() <= tol:
                     return it
         return None
 
@@ -1382,10 +1392,10 @@ class PeriodicTableDialog(QDialog):
             ('Mt',7,9), ('Ds',7,10), ('Rg',7,11), ('Cn',7,12), ('Nh',7,13), ('Fl',7,14), ('Mc',7,15), ('Lv',7,16),
             ('Ts',7,17), ('Og',7,18),
             # Lanthanides (placed on a separate row)
-            ('Ce',8,4), ('Pr',8,5), ('Nd',8,6), ('Pm',8,7), ('Sm',8,8), ('Eu',8,9), ('Gd',8,10), ('Tb',8,11),
+            ('La',8,3), ('Ce',8,4), ('Pr',8,5), ('Nd',8,6), ('Pm',8,7), ('Sm',8,8), ('Eu',8,9), ('Gd',8,10), ('Tb',8,11),
             ('Dy',8,12), ('Ho',8,13), ('Er',8,14), ('Tm',8,15), ('Yb',8,16), ('Lu',8,17),
             # Actinides (separate row)
-            ('Th',9,4), ('Pa',9,5), ('U',9,6), ('Np',9,7), ('Pu',9,8), ('Am',9,9), ('Cm',9,10), ('Bk',9,11),
+            ('Ac',9,3), ('Th',9,4), ('Pa',9,5), ('U',9,6), ('Np',9,7), ('Pu',9,8), ('Am',9,9), ('Cm',9,10), ('Bk',9,11),
             ('Cf',9,12), ('Es',9,13), ('Fm',9,14), ('Md',9,15), ('No',9,16), ('Lr',9,17),
         ]
         for symbol, row, col in elements:
@@ -1578,6 +1588,14 @@ class MainWindow(QMainWindow):
         splitter.setStretchFactor(0, 1)
         splitter.setStretchFactor(1, 1)
         
+        # ステータスバーを左右に分離するための設定
+        self.status_bar = self.statusBar()
+        self.formula_label = QLabel("")  # 右側に表示するラベルを作成
+        # 右端に余白を追加して見栄えを調整
+        self.formula_label.setStyleSheet("padding-right: 8px;")
+        # ラベルを右側に常時表示ウィジェットとして追加
+        self.status_bar.addPermanentWidget(self.formula_label)
+
         #self.view_2d.fitInView(self.scene.sceneRect(), Qt.AspectRatioMode.KeepAspectRatio)
 
         toolbar = QToolBar("Main Toolbar")
@@ -1877,6 +1895,12 @@ class MainWindow(QMainWindow):
         clear_all_action.setShortcut(QKeySequence("Ctrl+Shift+C"))
         clear_all_action.triggered.connect(self.clear_all); edit_menu.addAction(clear_all_action)
 
+        view_menu = menu_bar.addMenu("&View")
+        self.toggle_chiral_action = QAction("Show Chiral Labels", self, checkable=True)
+        self.toggle_chiral_action.setChecked(self.show_chiral_labels)
+        self.toggle_chiral_action.triggered.connect(self.toggle_chiral_labels_display)
+        view_menu.addAction(self.toggle_chiral_action)
+
         analysis_menu = menu_bar.addMenu("&Analysis")
         self.analysis_action = QAction("Show Analysis...", self)
         self.analysis_action.triggered.connect(self.open_analysis_window)
@@ -1902,6 +1926,16 @@ class MainWindow(QMainWindow):
         else:
             self.view_2d.setMouseTracking(False)
             self.scene.template_preview.hide()
+
+        # カーソル形状の設定
+        if mode_str == 'select':
+            self.view_2d.setCursor(Qt.CursorShape.ArrowCursor)
+        elif mode_str.startswith(('atom', 'bond', 'template')):
+            self.view_2d.setCursor(Qt.CursorShape.CrossCursor)
+        elif mode_str.startswith(('charge', 'radical')):
+            self.view_2d.setCursor(Qt.CursorShape.PointingHandCursor)
+        else:
+            self.view_2d.setCursor(Qt.CursorShape.ArrowCursor)
 
         if mode_str.startswith('atom'): 
             self.scene.current_atom_symbol = mode_str.split('_')[1]
@@ -1932,10 +1966,8 @@ class MainWindow(QMainWindow):
         else: # Select mode
             self.statusBar().showMessage("Mode: Select")
             self.view_2d.setDragMode(QGraphicsView.DragMode.RubberBandDrag)
-            # ★追加: selectモードに切り替わったら結合様式をデフォルトにリセット★
             self.scene.bond_order = 1
             self.scene.bond_stereo = 0
-            # ★追加 終わり★
 
     def set_mode_and_update_toolbar(self, mode_str):
         self.set_mode(mode_str)
@@ -2090,10 +2122,26 @@ class MainWindow(QMainWindow):
             self.view_2d.setFocus() 
             return
 
+        problems = Chem.DetectChemistryProblems(mol)
+        if problems:
+            self.statusBar().showMessage(f"Error: {len(problems)} chemistry problem(s) found.")
+            self.scene.clearSelection()
+            
+            # 問題のある原子をハイライト
+            for prob in problems:
+                atom_idx = prob.GetAtomIdx()
+                rdkit_atom = mol.GetAtomWithIdx(atom_idx)
+                original_id = rdkit_atom.GetIntProp("_original_atom_id")
+                if original_id in self.data.atoms:
+                    item = self.data.atoms[original_id]['item']
+                    item.setSelected(True)
+                self.view_2d.setFocus()
+            return
+
         try:
             Chem.SanitizeMol(mol)
         except Exception:
-            self.statusBar().showMessage("Error: Invalid chemical structure (sanitization failed).")
+            self.statusBar().showMessage("Error: Invalid chemical structure.")
             self.view_2d.setFocus() 
             return
 
@@ -2110,13 +2158,20 @@ class MainWindow(QMainWindow):
         self.view_2d.setFocus()
 
     def on_calculation_finished(self, mol):
-        self.current_mol=mol
+        self.current_mol = mol
         self.draw_molecule_3d(mol)
+        # ここで最適化済みの current_mol を用いて R/S を再解析して表示を更新
+        try:
+            self.update_chiral_labels()
+        except Exception:
+            # 念のためエラーを握り潰して UI を壊さない
+            pass
+    
         self.statusBar().showMessage("3D conversion successful.")
         self.convert_button.setEnabled(True)
         self.analysis_action.setEnabled(True)
         self.push_undo_state()
-        self.view_2d.setFocus() 
+        self.view_2d.setFocus()
         
     def on_calculation_error(self, error_message):
         self.statusBar().showMessage(f"Error: {error_message}")
@@ -2196,6 +2251,8 @@ class MainWindow(QMainWindow):
                 self.current_mol = None; self.analysis_action.setEnabled(False)
         else:
             self.current_mol = None; self.plotter.clear(); self.analysis_action.setEnabled(False)
+
+        self.update_chiral_labels()
         
 
     def push_undo_state(self):
@@ -2222,8 +2279,10 @@ class MainWindow(QMainWindow):
             self.undo_stack.append(state)
             self.redo_stack.clear()
 
+        self.update_realtime_info()
+        self.update_chiral_labels()
         self.update_undo_redo_actions()
-        
+
     def reset_undo_stack(self):
         self.undo_stack.clear()
         self.redo_stack.clear()
@@ -2235,6 +2294,8 @@ class MainWindow(QMainWindow):
             state = self.undo_stack[-1]
             self.set_state_from_data(state)
         self.update_undo_redo_actions()
+        self.update_realtime_info()
+        self.update_chiral_labels()
         self.view_2d.setFocus() 
 
     def redo(self):
@@ -2243,11 +2304,29 @@ class MainWindow(QMainWindow):
             self.undo_stack.append(state)
             self.set_state_from_data(state)
         self.update_undo_redo_actions()
+        self.update_realtime_info()
         self.view_2d.setFocus() 
         
     def update_undo_redo_actions(self):
         self.undo_action.setEnabled(len(self.undo_stack) > 1)
         self.redo_action.setEnabled(len(self.redo_stack) > 0)
+
+    def update_realtime_info(self):
+        """ステータスバーの右側に現在の分子情報を表示する"""
+        if not self.data.atoms:
+            self.formula_label.setText("")  # 原子がなければ右側のラベルをクリア
+            return
+
+        try:
+            mol = self.data.to_rdkit_mol()
+            if mol:
+                mol_formula = rdMolDescriptors.CalcMolFormula(mol)
+                num_atoms = mol.GetNumAtoms()
+                # 右側のラベルのテキストを更新
+                self.formula_label.setText(f"Formula: {mol_formula}   |   Atoms: {num_atoms}")
+        except Exception:
+            # 計算に失敗してもアプリは継続
+            self.formula_label.setText("Invalid structure")
 
     def select_all(self):
         for item in self.scene.items():
@@ -2683,12 +2762,117 @@ class MainWindow(QMainWindow):
                         self.plotter.add_mesh(cc, color=color, smooth_shading=True, show_edges=True, edge_color=edge_color, edge_opacity=0.3)
                         self.plotter.add_mesh(c1, color=color, smooth_shading=True, show_edges=True, edge_color=edge_color, edge_opacity=0.3)
                         self.plotter.add_mesh(c2, color=color, smooth_shading=True, show_edges=True, edge_color=edge_color, edge_opacity=0.3)
-        
+
+        # chiral labels: 3D コンフォマーを持つ場合はここで R/S を表示
+        if getattr(self, 'show_chiral_labels', False):
+            try:
+                # RDKit 側でキラル中心を取得（3D コンフォマーがあればそれを使う）
+                chiral_centers = Chem.FindMolChiralCenters(mol, includeUnassigned=True)
+                if chiral_centers:
+                    # ラベル描画用の点配列と文字列リストを作成
+                    # pos は numpy array (N,3) なので、index で取れば座標が得られる
+                    pts = []
+                    labels = []
+                    # 少しラベルが球と重ならないよう z 方向にオフセット（全体のサイズに合わせて調整）
+                    z_off = 0
+                    for idx, lbl in chiral_centers:
+                        coord = pos[idx].copy()
+                        coord[2] += z_off
+                        pts.append(coord)
+                        labels.append(lbl if lbl is not None else '?')
+
+                    # 既存のラベルを削除し（存在すれば）、再描画する
+                    try:
+                        # actor 名 'chiral_labels' をキーとして remove を試みる（無ければ ignore）
+                        self.plotter.remove_actor('chiral_labels')
+                    except Exception:
+                        pass
+
+                    # PyVista のラベル描画（font_size 等はお好みで調整）
+                    self.plotter.add_point_labels(
+                        np.array(pts),
+                        labels,
+                        font_size=20,
+                        point_size=0,
+                        text_color='k',
+                        name='chiral_labels',
+                        always_visible=True,   # ← ここを追加（ラベルの可視性フィルタをスキップ）
+                        tolerance=0.01,        # ← 必要なら少し大きめにして消えにくくする（デフォルトは 0.001）
+                        show_points=False      # ← ポイント自体の小さなドット表示が不要ならオフに（任意）
+                    )
+            except Exception as e: 
+                self.statusBar().showMessage(f"3D chiral label drawing error: {e}")
+
         self.plotter.reset_camera()
+
 
     def toggle_chiral_labels_display(self, checked):
         """Viewメニューのアクションに応じてキラルラベル表示を切り替える"""
         self.show_chiral_labels = checked
+
+        self.update_chiral_labels()
+
+
+    def update_chiral_labels(self):
+        """分子のキラル中心を計算し、2Dビューの原子アイテムにR/Sラベルを設定/解除する
+        ※ 可能なら 3D（self.current_mol）を優先して計算し、なければ 2D から作った RDKit 分子を使う。
+        """
+        # まず全てのアイテムからラベルをクリア
+        for atom_data in self.data.atoms.values():
+            if atom_data.get('item'):
+                atom_data['item'].chiral_label = None
+
+        if not self.show_chiral_labels:
+            self.scene.update()
+            return
+
+        # 3D の RDKit Mol（コンフォマーを持つもの）を使う
+        mol_for_chirality = None
+        if getattr(self, 'current_mol', None) is not None:
+            mol_for_chirality = self.current_mol
+        else:
+            return
+
+        if mol_for_chirality is None or mol_for_chirality.GetNumAtoms() == 0:
+            self.scene.update()
+            return
+
+        try:
+            # --- 重要：3D コンフォマーがあるなら、それを使って原子のキラルタグを割り当てる ---
+            if mol_for_chirality.GetNumConformers() > 0:
+                # confId=0（最初のコンフォマー）を指定して、原子のキラリティータグを3D座標由来で設定
+                try:
+                    Chem.AssignAtomChiralTagsFromStructure(mol_for_chirality, confId=0)
+                except Exception:
+                    # 古い RDKit では関数が無い場合があるので（念のため保護）
+                    pass
+
+            # RDKit の通常の stereochemistry 割当（念のため）
+            Chem.AssignStereochemistry(mol_for_chirality, cleanIt=True, force=True, flagPossibleStereoCenters=True)
+
+            # キラル中心の取得（(idx, 'R'/'S'/'?') のリスト）
+            chiral_centers = Chem.FindMolChiralCenters(mol_for_chirality, includeUnassigned=True)
+
+            # RDKit atom index -> エディタ側 atom_id へのマッピング
+            rdkit_idx_to_my_id = {}
+            for atom in mol_for_chirality.GetAtoms():
+                if atom.HasProp("_original_atom_id"):
+                    rdkit_idx_to_my_id[atom.GetIdx()] = atom.GetIntProp("_original_atom_id")
+
+            # 見つかったキラル中心を対応する AtomItem に設定
+            for idx, label in chiral_centers:
+                if idx in rdkit_idx_to_my_id:
+                    atom_id = rdkit_idx_to_my_id[idx]
+                    if atom_id in self.data.atoms and self.data.atoms[atom_id].get('item'):
+                        # 'R' / 'S' / '?'
+                        self.data.atoms[atom_id]['item'].chiral_label = label
+
+        except Exception as e:
+            self.statusBar().showMessage(f"Update chiral labels error: {e}")
+
+        # 最後に 2D シーンを再描画
+        self.scene.update()
+
 
     def open_analysis_window(self):
         if self.current_mol:
