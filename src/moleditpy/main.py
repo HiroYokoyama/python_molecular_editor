@@ -1536,7 +1536,7 @@ class MainWindow(QMainWindow):
         script_dir = os.path.dirname(os.path.abspath(__file__))
         
         # 2. 'assets'フォルダ内のアイコンファイルへのフルパスを構築
-        icon_path = os.path.join(script_dir, 'assets', 'icon.ico')
+        icon_path = os.path.join(script_dir, 'assets', 'icon.png')
         
         # 3. ファイルパスから直接QIconオブジェクトを作成
         if os.path.exists(icon_path): # ファイルが存在するか確認
