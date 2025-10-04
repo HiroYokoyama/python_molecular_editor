@@ -2796,14 +2796,18 @@ class MainWindow(QMainWindow):
                 self.statusBar().showMessage(f"3D chiral label drawing error: {e}")
 
 
+    # MainWindow クラス内 (約2800行目付近)
+
     def toggle_chiral_labels_display(self, checked):
         """Viewメニューのアクションに応じてキラルラベル表示を切り替える"""
         self.show_chiral_labels = checked
+        
+        if self.current_mol:
+            self.draw_molecule_3d(self.current_mol) 
+        
         if checked:
-            draw_molecule_3d()
             self.statusBar().showMessage("Chiral labels: will be (re)computed after Convert→3D.")
         else:
-            draw_molecule_3d()
             self.statusBar().showMessage("Chiral labels disabled.")
 
 

@@ -1,6 +1,6 @@
 Metadata-Version: 2.4
 Name: moleditpy
-Version: 0.3.4
+Version: 0.3.5
 Summary: A program to edit molecular structures using Python.
 Author-email: HiroYokoyama <titech.yoko.hiro@gmail.com>
 Project-URL: Homepage, https://github.com/HiroYokoyama/python_molecular_editor
@@ -32,6 +32,8 @@ A cross-platform, simple, and intuitive molecular structure editor built in Pyth
 作者: HiroYokoyama
 ライセンス: Apache-2.0
 リポジトリ: [https://github.com/HiroYokoyama/python\_molecular\_editor](https://github.com/HiroYokoyama/python_molecular_editor)
+
+![](img/screenshot.png)
 
 -----
 
