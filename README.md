@@ -9,6 +9,8 @@ A cross-platform, simple, and intuitive molecular structure editor built in Pyth
 ライセンス: Apache-2.0
 リポジトリ: [https://github.com/HiroYokoyama/python\_molecular\_editor](https://github.com/HiroYokoyama/python_molecular_editor)
 
+![](img/screenshot.png)
+
 -----
 
 ## 概要
