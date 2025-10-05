@@ -1,0 +1,9 @@
+cff-version: 1.1.0
+message: "Cite as"
+authors:
+  - family-names: Yokoyama
+    given-names: Hiromichi
+    orcid: https://orcid.org/0000-0002-2798-1203
+title: "Moleditpy"
+doi: 10.5281/zenodo.17268532
+  
