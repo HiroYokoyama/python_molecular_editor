@@ -11,7 +11,7 @@ DOI 10.5281/zenodo.17268532
 """
 
 #Version
-VERSION = "0.3.7"
+VERSION = "0.3.8"
 
 import sys
 import numpy as np
