@@ -1,7 +1,7 @@
 Metadata-Version: 2.4
 Name: moleditpy
-Version: 0.3.6
-Summary: A program to edit molecular structures using Python.
+Version: 0.3.7
+Summary: A cross-platform, simple, and intuitive molecular structure editor built in Python. It allows 2D molecular drawing and 3D structure visualization. It supports exporting structure files for input to DFT calculation software.
 Author-email: HiroYokoyama <titech.yoko.hiro@gmail.com>
 Project-URL: Homepage, https://github.com/HiroYokoyama/python_molecular_editor
 Project-URL: Issues, https://github.com/HiroYokoyama/python_molecular_editor/issues
@@ -22,7 +22,11 @@ Requires-Dist: numpy
 Requires-Dist: pyvista
 Requires-Dist: pyvistaqt
 
-# moleditpy -- Python Molecular Editor
+# MoleditPy -- Python Molecular Editor
+
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.17268533.svg)](https://doi.org/10.5281/zenodo.17268533)
+[![Powered by RDKit](https://img.shields.io/badge/Powered%20by-RDKit-3838ff.svg?logo=data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQBAMAAADt3eJSAAAABGdBTUEAALGPC/xhBQAAACBjSFJNAAB6JgAAgIQAAPoAAACA6AAAdTAAAOpgAAA6mAAAF3CculE8AAAAFVBMVEXc3NwUFP8UPP9kZP+MjP+0tP////9ZXZotAAAAAXRSTlMAQObYZgAAAAFiS0dEBmFmuH0AAAAHdElNRQfmAwsPGi+MyC9RAAAAQElEQVQI12NgQABGQUEBMENISUkRLKBsbGwEEhIyBgJFsICLC0iIUdnExcUZwnANQWfApKCK4doRBsKtQFgKAQC5Ww1JEHSEkAAAACV0RVh0ZGF0ZTpjcmVhdGUAMjAyMi0wMy0xMVQxNToyNjo0NyswMDowMDzr2J4AAAAldEVYdGRhdGU6bW9kaWZ5ADIwMjItMDMtMTFUMTU6MjY6NDcrMDA6MDBNtmAiAAAAAElFTkSuQmCC)](https://www.rdkit.org/)
+
 
 Pythonで構築された、クロスプラットフォームかつシンプルで直感的な分子構造エディターです。2Dでの分子描画と、3D構造可視化ができます。DFT計算ソフト用のインプット用に構造ファイルのエクスポートをサポートします。
 
@@ -115,7 +119,7 @@ moleditpy
 
 -----
 
-## Windows ショートカットとファイル関連付けガイド
+## Windows: ショートカットとファイル関連付けガイド
 
 Windows環境でプロジェクトファイル（`.pmeraw`）をダブルクリックで開いたり、アイコン付きのショートカットからアプリケーションを起動したりするための詳細な設定手順です。
 
@@ -146,7 +150,7 @@ Windows環境でプロジェクトファイル（`.pmeraw`）をダブルクリ�
 
 1.  **新規ショートカットの作成:** デスクトップなどの任意の場所を右クリックし、「新規作成」→\*\*「ショートカット」\*\*を選択します。
 2.  **実行ファイルのパスを入力:** 「項目の場所を入力してください」に、上記の実行ファイルのパスを入力し、「次へ」をクリックします。
-3.  **名前を指定:** ショートカットに任意の名前（例: `moleditpy`）を付けて、「完了」をクリックします。
+3.  **名前を指定:** ショートカットに任意の名前（例: `MoleditPy`）を付けて、「完了」をクリックします。
 4.  **アイコンの変更:**
       * 作成されたショートカットを右クリックし、\*\*「プロパティ」\*\*を選択します。
       * 「ショートカット」タブの\*\*「アイコンの変更...」\*\*ボタンをクリックします。
@@ -160,12 +164,12 @@ Windows環境でプロジェクトファイル（`.pmeraw`）をダブルクリ�
 1.  **スタートメニューフォルダのパスを確認:** エクスプローラーのアドレスバーに以下のいずれかのパスを入力し、Enterキーを押します。
       * **現在のユーザー専用 (推奨):** `%APPDATA%\Microsoft\Windows\Start Menu\Programs`
       * **すべてのユーザー共通 (管理者権限が必要):** `%ALLUSERSPROFILE%\Microsoft\Windows\Start Menu\Programs`
-2.  **ショートカットのコピーまたは移動:** 上記で開いたスタートメニューフォルダに、作成したショートカット（例: デスクトップ上の `moleditpy` ショートカット）を**コピーまたは移動**します。（Ctrlキーを押しながらドラッグするとコピーされます。）
+2.  **ショートカットのコピーまたは移動:** 上記で開いたスタートメニューフォルダに、作成したショートカット（例: デスクトップ上の `MoleditPy` ショートカット）を**コピーまたは移動**します。（Ctrlキーを押しながらドラッグするとコピーされます。）
 3.  **確認:** スタートボタンをクリックし、プログラム一覧からショートカットに付けた名前が追加されていることを確認してください。
 
 -----
 
-## macOS向け：Python CLIアプリをAutomator経由で.app化する方法（moleditpy）
+## macOS: Python CLIアプリをAutomator経由で.app化する方法
 
 この手順では、`pip install moleditpy` でインストールしたPythonアプリをmacOS上で\*\*.appアプリケーション\*\*として使えるようにし、独自アイコンを設定します。
 
@@ -195,7 +199,7 @@ Windows環境でプロジェクトファイル（`.pmeraw`）をダブルクリ�
 ### 4\. アプリとして保存
 
 1.  メニューから\*\*「ファイル」\*\* → **「保存」** を選択します。
-2.  名前を **`moleditpy.app`** にします。
+2.  名前を **`MoleditPy.app`** にします。
 3.  保存場所は一時的にデスクトップなど任意で構いません。
 
 ### 5\. アプリケーションフォルダーへ移動
@@ -204,14 +208,14 @@ Windows環境でプロジェクトファイル（`.pmeraw`）をダブルクリ�
 
 **Finderからコピーする場合**
 
-1.  Finderで `moleditpy.app` を選択し、`⌘ + C` でコピーします。
+1.  Finderで `MoleditPy.app` を選択し、`⌘ + C` でコピーします。
 2.  Finderメニューの「移動」→\*\*「アプリケーション」\*\* を開きます。
 3.  `⌘ + V` で貼り付けます。
 
 **ターミナルからコピーする場合**
 
 ```bash
-sudo cp -R ~/Desktop/moleditpy.app /Applications/
+sudo cp -R ~/Desktop/MoleditPy.app /Applications/
 ```
 
 ### 6\. アイコンを設定
@@ -226,7 +230,7 @@ sudo cp -R ~/Desktop/moleditpy.app /Applications/
 
 1.  Finderで上記の `icon.png` を開きます。
 2.  「プレビュー」で画像を開いた状態で `⌘ + A` で**全選択**、`⌘ + C` で**コピー**します。
-3.  Finderで `/Applications` フォルダー内の `moleditpy.app` を選択 → `⌘ + I`（情報を見る）を押します。
+3.  Finderで `/Applications` フォルダー内の `MoleditPy.app` を選択 → `⌘ + I`（情報を見る）を押します。
 4.  左上の小さいアイコンをクリック（枠が出る） → `⌘ + V` で**貼り付け**ます。
     これでアプリのアイコンが変更されます。
 
@@ -240,7 +244,7 @@ chmod +x /Users/<username>/Library/Python/<python_version>/bin/moleditpy
 
 ### 8\. 完了
 
-これで `/Applications` にインストールされた **`moleditpy.app`** をダブルクリックするだけでPythonアプリが実行できます。
+これで `/Applications` にインストールされた **`MoleditPy.app`** をダブルクリックするだけでPythonアプリが実行できます。
 
 -----
 
