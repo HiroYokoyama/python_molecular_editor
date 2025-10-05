@@ -5,13 +5,13 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "moleditpy"
 
-version = "0.3.6"
+version = "0.3.7"
 
 authors = [
   { name="HiroYokoyama", email="titech.yoko.hiro@gmail.com" },
 ]
 
-description = "A program to edit molecular structures using Python."
+description = "A cross-platform, simple, and intuitive molecular structure editor built in Python. It allows 2D molecular drawing and 3D structure visualization. It supports exporting structure files for input to DFT calculation software."
 
 readme = "README.md"
 
