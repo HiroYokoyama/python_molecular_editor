@@ -11,7 +11,7 @@ DOI 10.5281/zenodo.17268532
 """
 
 #Version
-VERSION = "0.3.8"
+VERSION = "1.1.0"
 
 import sys
 import numpy as np
@@ -22,28 +22,33 @@ import io
 import os
 import ctypes
 import itertools
+import vtk
 
 from collections import deque
 
 # PyQt6 Modules
 from PyQt6.QtWidgets import (
-    QApplication, QMainWindow, QWidget, QVBoxLayout,
+    QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QPushButton, QSplitter, QGraphicsView, QGraphicsScene, QGraphicsItem,
     QToolBar, QStatusBar, QGraphicsTextItem, QGraphicsLineItem, QDialog, QGridLayout,
     QFileDialog, QSizePolicy, QLabel, QLineEdit, QToolButton, QMenu, QMessageBox
 )
 from PyQt6.QtGui import (
     QPen, QBrush, QColor, QPainter, QAction, QActionGroup, QFont, QPolygonF,
-    QPainterPath, QFontMetrics, QKeySequence, QTransform, QCursor, QPixmap, QIcon, QShortcut
+    QPainterPath, QFontMetrics, QKeySequence, QTransform, QCursor, QPixmap, QIcon, QShortcut, QDesktopServices
 )
-from PyQt6.QtCore import Qt, QPointF, QRectF, QLineF, QObject, QThread, pyqtSignal, QEvent, QMimeData, QByteArray
+from PyQt6.QtCore import Qt, QPointF, QRectF, QLineF, QObject, QThread, pyqtSignal, QEvent, QMimeData, QByteArray, QUrl
 
+from vtkmodules.vtkInteractionStyle import vtkInteractorStyleTrackballCamera
 
 # RDKit
 from rdkit import Chem
 from rdkit.Chem import AllChem
 from rdkit.Chem import Descriptors
 from rdkit.Chem import rdMolDescriptors
+
+# Open Babel Python binding (optional; required for fallback)
+from openbabel import pybel
 
 # PyVista
 import pyvista as pv
@@ -242,6 +247,9 @@ class AtomItem(QGraphicsItem):
         self.setPos(pos)
         self.setFlags(QGraphicsItem.GraphicsItemFlag.ItemIsMovable | QGraphicsItem.GraphicsItemFlag.ItemIsSelectable)
         self.setZValue(1); self.font = QFont("Arial", 20, QFont.Weight.Bold); self.update_style()
+        self.setAcceptHoverEvents(True)
+        self.hovered = False
+        self.has_problem = False 
     
     def boundingRect(self):
         r = globals().get('ATOM_RADIUS', 18)
@@ -305,9 +313,22 @@ class AtomItem(QGraphicsItem):
                     painter.drawEllipse(QPointF(text_rect.center().x() + 5, radical_pos_y), 3, 3)
 
         # 選択時のハイライト
-        if self.isSelected():
+        if self.has_problem:
+            # 優先度1: 化学的な問題がある場合は赤枠で強制的にハイライト
+            painter.setBrush(Qt.BrushStyle.NoBrush)
+            painter.setPen(QPen(QColor(255, 0, 0, 200), 4)) # 赤色で太めの枠
+            painter.drawRect(self.boundingRect())
+
+        elif self.isSelected():
             painter.setBrush(Qt.BrushStyle.NoBrush)
             painter.setPen(QPen(QColor(0, 100, 255), 3))
+            painter.drawRect(self.boundingRect())
+
+        if (not self.isSelected()) and getattr(self, 'hovered', False):
+            pen = QPen(QColor(144, 238, 144, 200), 3)  # lightgreen, 少し透過
+            pen.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
+            painter.setBrush(Qt.BrushStyle.NoBrush)
+            painter.setPen(pen)
             painter.drawRect(self.boundingRect())
 
     def update_style(self):
@@ -324,6 +345,22 @@ class AtomItem(QGraphicsItem):
             
         return res
 
+    def hoverEnterEvent(self, event):
+        # シーンのモードによって制御したい場合は下の if を編集
+        scene = self.scene()
+        mode = getattr(scene, 'mode', '')
+        # デフォルト: select以外のモードならハイライト（必要なら特定モードに限定）
+        if mode != 'select':
+            self.hovered = True
+            self.update()
+        super().hoverEnterEvent(event)
+
+    def hoverLeaveEvent(self, event):
+        if self.hovered:
+            self.hovered = False
+            self.update()
+        super().hoverLeaveEvent(event)
+
 class BondItem(QGraphicsItem):
     def __init__(self, atom1_item, atom2_item, order=1, stereo=0):
         super().__init__()
@@ -332,6 +369,9 @@ class BondItem(QGraphicsItem):
         self.pen = QPen(Qt.GlobalColor.black, 2)
         self.setZValue(0)
         self.update_position()
+        self.setAcceptHoverEvents(True)
+        self.hovered = False
+
 
     def get_line_in_local_coords(self):
         p2 = self.mapFromItem(self.atom2, 0, 0)
@@ -403,11 +443,44 @@ class BondItem(QGraphicsItem):
                 painter.drawLine(line.translated(offset))
                 painter.drawLine(line.translated(-offset))
 
+        # ホバー時は中央の線に太めの薄い緑を重ねて「枠っぽく」見せる
+        if (not self.isSelected()) and getattr(self, 'hovered', False):
+            try:
+                line = self.get_line_in_local_coords()
+                if line.length() > 0:
+                    hover_pen = QPen(QColor(144, 238, 144, 180), 6)  # 太めで透過
+                    hover_pen.setCapStyle(Qt.PenCapStyle.RoundCap)
+                    hover_pen.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
+                    painter.setPen(hover_pen)
+                    # 中心をなぞる一本線で十分視認できる（複数本線の結合も中心線で可）
+                    painter.drawLine(line)
+            except Exception:
+                pass
+
+
     def update_position(self):
         self.prepareGeometryChange()
         if self.atom1:
             self.setPos(self.atom1.pos())
         self.update()
+
+    def hoverEnterEvent(self, event):
+        scene = self.scene()
+        mode = getattr(scene, 'mode', '')
+        # 例: 2/3 結合モードのときだけハイライトにしたいなら下を使う:
+        # if mode.startswith('bond_2') or mode.startswith('bond_3'):
+        #   ...
+        # デフォルト: select以外でハイライト
+        if mode != 'select':
+            self.hovered = True
+            self.update()
+        super().hoverEnterEvent(event)
+
+    def hoverLeaveEvent(self, event):
+        if self.hovered:
+            self.hovered = False
+            self.update()
+        super().hoverLeaveEvent(event)
 
 
 class TemplatePreviewItem(QGraphicsItem):
@@ -467,11 +540,28 @@ class MoleculeScene(QGraphicsScene):
         self.template_preview = TemplatePreviewItem(); self.addItem(self.template_preview)
         self.template_preview.hide(); self.template_preview_points = []; self.template_context = {}
 
+    def clear_all_problem_flags(self):
+        """全ての AtomItem の has_problem フラグをリセットし、再描画する"""
+        needs_update = False
+        for atom_data in self.data.atoms.values():
+            item = atom_data.get('item')
+            # hasattr は安全性のためのチェック
+            if item and hasattr(item, 'has_problem') and item.has_problem: 
+                item.has_problem = False
+                item.update()
+                needs_update = True
+        return needs_update
+
     def mousePressEvent(self, event):
+        self.clear_all_problem_flags()
         self.press_pos = event.scenePos()
         self.mouse_moved_since_press = False
         self.data_changed_in_event = False
         self.initial_positions_in_event = {item: item.pos() for item in self.items() if isinstance(item, AtomItem)}
+
+        if getattr(self, "mode", "") != "select":
+            self.clearSelection()
+            event.accept()
 
         if self.mode.startswith('template'):
             event.accept()
@@ -481,6 +571,7 @@ class MoleculeScene(QGraphicsScene):
         if isinstance(item, AtomItem):
             self.start_atom = item
             if self.mode != 'select':
+                self.clearSelection()
                 self.temp_line = QGraphicsLineItem(QLineF(self.start_atom.pos(), self.press_pos))
                 self.temp_line.setPen(QPen(Qt.GlobalColor.red, 2, Qt.PenStyle.DotLine))
                 self.addItem(self.temp_line)
@@ -568,6 +659,7 @@ class MoleculeScene(QGraphicsScene):
             self.data.bonds[(id1,id2)]['order'] = self.bond_order
             self.data.bonds[(id1,id2)]['stereo'] = self.bond_stereo
             b.update()
+            self.clearSelection()
             self.data_changed_in_event = True
 
         # 3. 新規原子・結合の作成処理 (atom_* モード および すべての bond_* モードで許可)
@@ -876,7 +968,6 @@ class MoleculeScene(QGraphicsScene):
             if isinstance(it, (AtomItem, BondItem)):
                 item = it
                 break
-        # -------------------------------------------------------------
 
         points, bonds_info = [], []
         l = DEFAULT_BOND_LENGTH
@@ -1412,38 +1503,106 @@ class ZoomableView(QGraphicsView):
             super().mouseReleaseEvent(event)
 
 class CalculationWorker(QObject):
-    # --- 変更点1: 新しいシグナルを追加 ---
     status_update = pyqtSignal(str) 
     
     finished=pyqtSignal(object); error=pyqtSignal(str)
     def run_calculation(self, mol_block):
         try:
-            if not mol_block: raise ValueError("No atoms to convert.")
-            mol=Chem.MolFromMolBlock(mol_block, removeHs=False)
-            if mol is None: raise ValueError("Failed to create molecule from MOL block.")
-            
+            if not mol_block:
+                raise ValueError("No atoms to convert.")
+            mol = Chem.MolFromMolBlock(mol_block, removeHs=False)
+            if mol is None:
+                raise ValueError("Failed to create molecule from MOL block.")
+
             mol = Chem.AddHs(mol)
-            
+
             params = AllChem.ETKDGv2()
             params.randomSeed = 42
             conf_id = AllChem.EmbedMolecule(mol, params)
-            
+            '''
             if conf_id == -1:
-                self.status_update.emit("Initial embedding failed, retrying with a random seed...")
-                params.randomSeed = -1
+                self.status_update.emit("Initial embedding failed, retrying with ignoreSmoothingFailures=True...")
+                # Try again with ignoreSmoothingFailures instead of random-seed retries
+                params.ignoreSmoothingFailures = True
+                # Use a deterministic seed to avoid random-coordinate behavior here
+                params.randomSeed = 0
                 conf_id = AllChem.EmbedMolecule(mol, params)
 
             if conf_id == -1:
-                self.status_update.emit("Random seed retry failed, attempting with random coordinates...")
-                conf_id = AllChem.EmbedMolecule(mol, useRandomCoords=True)
-            
-            if conf_id == -1:
-                raise ValueError("Failed to generate a 3D conformer after multiple attempts.")
-            
-            AllChem.MMFFOptimizeMolecule(mol)
-            
-            self.finished.emit(mol)
-        except Exception as e: self.error.emit(str(e))
+                self.status_update.emit("Random-seed retry failed, attempting with random coordinates...")
+                try:
+                    conf_id = AllChem.EmbedMolecule(mol, useRandomCoords=True, ignoreSmoothingFailures=True)
+                except TypeError:
+                    # Some RDKit versions expect useRandomCoords in params
+                    params.useRandomCoords = True
+                    conf_id = AllChem.EmbedMolecule(mol, params)
+            '''
+
+            if conf_id != -1:
+                # Success with RDKit: optimize and finish
+                try:
+                    AllChem.MMFFOptimizeMolecule(mol)
+                except Exception:
+                    # fallback to UFF if MMFF fails
+                    try:
+                        AllChem.UFFOptimizeMolecule(mol)
+                    except Exception:
+                        pass
+                self.finished.emit(mol)
+                self.status_update.emit("RDKit 3D conversion succeeded.")
+                return
+
+            # ---------- RDKit failed: try Open Babel via pybel only (no CLI fallback) ----------
+            self.status_update.emit("RDKit embedding failed. Attempting Open Babel fallback...")
+
+            try:
+                # pybel expects an input format; provide mol block
+                # pybel.readstring accepts format strings like "mol" or "smi"
+                ob_mol = pybel.readstring("mol", mol_block)
+                # ensure hydrogens
+                try:
+                    ob_mol.addh()
+                except Exception:
+                    pass
+                # build 3D coordinates
+                ob_mol.make3D()
+                try:
+                    # まず第一候補であるMMFF94で最適化を試みる
+                    self.status_update.emit("Optimizing with Open Babel (MMFF94)...")
+                    ob_mol.localopt(forcefield='mmff94', steps=500)
+                except Exception:
+                    # MMFF94が失敗した場合、UFFにフォールバックして再試行
+                    try:
+                        self.status_update.emit("MMFF94 failed, falling back to UFF...")
+                        ob_mol.localopt(forcefield='uff', steps=500)
+                    except Exception:
+                        # UFFも失敗した場合はスキップ
+                        self.status_update.emit("UFF optimization also failed.")
+                        pass
+                # get molblock and convert to RDKit
+                molblock_ob = ob_mol.write("mol")
+                rd_mol = Chem.MolFromMolBlock(molblock_ob, removeHs=False)
+                if rd_mol is None:
+                    raise ValueError("Open Babel produced invalid MOL block.")
+                # optimize in RDKit as a final step if possible
+                rd_mol = Chem.AddHs(rd_mol)
+                try:
+                    AllChem.MMFFOptimizeMolecule(rd_mol)
+                except Exception:
+                    try:
+                        AllChem.UFFOptimizeMolecule(rd_mol)
+                    except Exception:
+                        pass
+                self.status_update.emit("Open Babel embedding succeeded. Warning: Conformation accuracy may be limited.")
+                self.finished.emit(rd_mol)
+                return
+            except Exception as ob_err:
+                # pybel was available but failed
+                raise RuntimeError(f"Open Babel 3D conversion failed: {ob_err}")
+
+        except Exception as e:
+            self.error.emit(str(e))
+
 
 class PeriodicTableDialog(QDialog):
     element_selected = pyqtSignal(str)
@@ -1586,6 +1745,113 @@ class AnalysisWindow(QDialog):
         if self.parent() and hasattr(self.parent(), 'statusBar'):
             self.parent().statusBar().showMessage(f"Copied '{text}' to clipboard.", 2000)
 
+# --- 3Dインタラクションを管理する専用クラス ---
+class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
+    def __init__(self, main_window):
+        super().__init__()
+        self.main_window = main_window
+        self._custom_state = None # 'dragging_atom' または 'rotating' に変更
+        self.is_dragging = False
+
+        self.AddObserver("LeftButtonPressEvent", self.on_left_button_down)
+        self.AddObserver("MouseMoveEvent", self.on_mouse_move)
+        self.AddObserver("LeftButtonReleaseEvent", self.on_left_button_up)
+
+    def on_left_button_down(self, obj, event):
+        """左クリックが押された時の処理"""
+        
+        is_temp_mode = bool(QApplication.keyboardModifiers() & Qt.KeyboardModifier.AltModifier)
+        if not self.main_window.is_3d_edit_mode and not is_temp_mode:
+            self._custom_state = 'rotating'
+            super().OnLeftButtonDown() # 親クラスのカメラ操作を呼び出す
+            return
+
+        click_pos = self.GetInteractor().GetEventPosition()
+        picker = self.main_window.plotter.picker
+        picker.Pick(click_pos[0], click_pos[1], 0, self.main_window.plotter.renderer)
+
+        atom_picked = False
+        if picker.GetActor() is not None:
+            picked_position = np.array(picker.GetPickPosition())
+            distances = np.linalg.norm(self.main_window.atom_positions_3d - picked_position, axis=1)
+            closest_atom_idx = np.argmin(distances)
+            
+            atomic_num = self.main_window.current_mol.GetAtomWithIdx(int(closest_atom_idx)).GetAtomicNum()
+            vdw_radius = pt.GetRvdw(atomic_num)
+            click_threshold = vdw_radius * 1.5
+
+            if distances[closest_atom_idx] < click_threshold:
+                self._custom_state = 'dragging_atom'
+                self.main_window.dragged_atom_info = {'id': int(closest_atom_idx)}
+                atom_picked = True
+
+        if not atom_picked:
+            self._custom_state = 'rotating'
+            super().OnLeftButtonDown()
+
+    def on_mouse_move(self, obj, event):
+        """マウスが移動した時の処理"""
+        if self._custom_state == 'dragging_atom':
+            self.is_dragging = True
+            mw = self.main_window
+            if mw.dragged_atom_info is None: return
+
+            atom_id = mw.dragged_atom_info['id']
+            conf = mw.current_mol.GetConformer()
+            renderer = mw.plotter.renderer
+            interactor = self.GetInteractor()
+            current_display_pos = interactor.GetEventPosition()
+            pos_3d = conf.GetAtomPosition(atom_id)
+
+            # Step 1: 3D World座標 -> 2D Display座標
+            renderer.SetWorldPoint(pos_3d.x, pos_3d.y, pos_3d.z, 1.0)
+            renderer.WorldToDisplay()
+            display_coords = renderer.GetDisplayPoint()
+
+            # Step 2: マウスのXY座標と、元のZ深度を組み合わせる
+            new_display_pos = (current_display_pos[0], current_display_pos[1], display_coords[2])
+
+            # Step 3: 新しい2D Display座標 -> 3D World座標
+            renderer.SetDisplayPoint(new_display_pos[0], new_display_pos[1], new_display_pos[2])
+            renderer.DisplayToWorld()
+            # 【重要】ここで new_world_coords_tuple を定義します
+            new_world_coords_tuple = renderer.GetWorldPoint()
+
+            # Step 4: 座標の更新と再描画
+            new_world_coords = list(new_world_coords_tuple)[:3]
+
+            mw.atom_positions_3d[atom_id] = new_world_coords
+            mw.glyph_source.points = mw.atom_positions_3d
+            mw.glyph_source.Modified()  # ジオメトリ変更を通知
+            
+            conf.SetAtomPosition(atom_id, new_world_coords)
+
+            interactor.Render()
+
+        elif self._custom_state == 'rotating':
+            super().OnMouseMove() # 親クラスのカメラ操作を呼び出す
+
+    def on_left_button_up(self, obj, event):
+        """左クリックが離された時の処理"""
+        
+        # 3D編集（原子のドラッグ）が終了した場合
+        if self._custom_state == 'dragging_atom':
+            if self.is_dragging:
+                if self.main_window.current_mol:
+                    self.main_window.draw_molecule_3d(self.main_window.current_mol)
+                self.main_window.push_undo_state()
+            self.main_window.dragged_atom_info = None
+        
+        # 3D回転が終了した場合（CustomInteractorStyle.on_left_button_downで_custom_stateが'rotating'に設定されている場合を含む）
+        elif self._custom_state == 'rotating':
+            super().OnLeftButtonUp()
+            
+        # 3D操作が完了したタイミングで、2Dビューにフォーカスを戻す
+        self.main_window.view_2d.setFocus()
+            
+        self._custom_state = None
+        self.is_dragging = False
+
 class MainWindow(QMainWindow):
 
     start_calculation = pyqtSignal(str)
@@ -1595,11 +1861,15 @@ class MainWindow(QMainWindow):
         self.data = MolecularData(); self.current_mol = None
         self.current_3d_style = 'ball_and_stick'
         self.show_chiral_labels = False
+        self.is_3d_edit_mode = False
+        self.dragged_atom_info = None
+        self.atom_actor = None 
         self.undo_stack = []
         self.redo_stack = []
         self.mode_actions = {} 
         self.init_ui()
         self.init_worker_thread()
+        self._setup_3d_picker() 
         self.reset_undo_stack()
         self.scene.selectionChanged.connect(self.update_edit_menu_actions)
         QApplication.clipboard().dataChanged.connect(self.update_edit_menu_actions)
@@ -1641,34 +1911,70 @@ class MainWindow(QMainWindow):
         self.view_2d.setSizePolicy(
             QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
         )
-        left_layout.addWidget(self.view_2d)
+        left_layout.addWidget(self.view_2d, 1)
 
         self.view_2d.scale(0.5, 0.5)
 
-        self.cleanup_button=QPushButton("Optimize 2D")
+        # --- 左パネルのボタンレイアウト ---
+        left_buttons_layout = QHBoxLayout()
+        self.cleanup_button = QPushButton("Optimize 2D")
         self.cleanup_button.clicked.connect(self.clean_up_2d_structure)
-        left_layout.addWidget(self.cleanup_button)
+        left_buttons_layout.addWidget(self.cleanup_button)
+
+        self.convert_button = QPushButton("Convert to 3D")
+        self.convert_button.clicked.connect(self.trigger_conversion)
+        left_buttons_layout.addWidget(self.convert_button)
+        
+        left_layout.addLayout(left_buttons_layout)
         splitter.addWidget(left_pane)
 
-        right_pane=QWidget()
-        right_layout=QVBoxLayout(right_pane)
-        self.plotter=QtInteractor(right_pane)
+        # --- 右パネルとボタンレイアウト ---
+        right_pane = QWidget()
+        # 1. 右パネル全体は「垂直」レイアウトにする
+        right_layout = QVBoxLayout(right_pane)
+        self.plotter = QtInteractor(right_pane)
         self.plotter.setSizePolicy(
             QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
         )
-        right_layout.addWidget(self.plotter)
+        # 2. 垂直レイアウトに3Dビューを追加
+        right_layout.addWidget(self.plotter, 1)
+        #self.plotter.installEventFilter(self)
 
-        self.plotter.installEventFilter(self)
-        
-        self.convert_button=QPushButton("Convert to 3D")
-        self.convert_button.clicked.connect(self.trigger_conversion)
-        right_layout.addWidget(self.convert_button)
+        # 3. ボタンをまとめるための「水平」レイアウトを作成
+        right_buttons_layout = QHBoxLayout()
+
+        # 3D最適化ボタン
+        self.optimize_3d_button = QPushButton("Optimize 3D")
+        self.optimize_3d_button.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        self.optimize_3d_button.clicked.connect(self.optimize_3d_structure)
+        self.optimize_3d_button.setEnabled(False) # 初期状態は無効
+        right_buttons_layout.addWidget(self.optimize_3d_button)
+
+        # エクスポートボタン (メニュー付き)
+        self.export_button = QToolButton()
+        self.export_button.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        self.export_button.setText("Export")
+        self.export_button.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
+        self.export_button.setEnabled(False) # 初期状態は無効
+
+        export_menu = QMenu(self)
+        export_mol_action = QAction("Export as MOL...", self)
+        export_mol_action.triggered.connect(self.save_3d_as_mol)
+        export_menu.addAction(export_mol_action)
+
+        export_xyz_action = QAction("Export as XYZ...", self)
+        export_xyz_action.triggered.connect(self.save_as_xyz)
+        export_menu.addAction(export_xyz_action)
+
+        self.export_button.setMenu(export_menu)
+        right_buttons_layout.addWidget(self.export_button)
+
+        # 4. 水平のボタンレイアウトを、全体の垂直レイアウトに追加
+        right_layout.addLayout(right_buttons_layout)
         splitter.addWidget(right_pane)
+        
         splitter.setSizes([600, 600])
 
-        splitter.setStretchFactor(0, 1)
-        splitter.setStretchFactor(1, 1)
-        
         # ステータスバーを左右に分離するための設定
         self.status_bar = self.statusBar()
         self.formula_label = QLabel("")  # 右側に表示するラベルを作成
@@ -1872,6 +2178,12 @@ class MainWindow(QMainWindow):
         spacer.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         toolbar.addWidget(spacer)
 
+        self.edit_3d_action = QAction("3D Edit", self, checkable=True)
+        self.edit_3d_action.setToolTip("Toggle 3D atom editing mode (Hold Alt for temporary mode)")
+        self.edit_3d_action.setEnabled(False)
+        self.edit_3d_action.toggled.connect(self.toggle_3d_edit_mode)
+        toolbar.addAction(self.edit_3d_action)
+
         # 3Dスタイル変更ボタンとメニューを作成
 
         self.style_button = QToolButton()
@@ -1958,14 +2270,19 @@ class MainWindow(QMainWindow):
         edit_menu.addSeparator()
 
         optimize_2d_action = QAction("Optimize 2D", self)
-        optimize_2d_action.setShortcut(QKeySequence("Ctrl+K"))
+        optimize_2d_action.setShortcut(QKeySequence("Ctrl+J"))
         optimize_2d_action.triggered.connect(self.clean_up_2d_structure)
         edit_menu.addAction(optimize_2d_action)
         
         convert_3d_action = QAction("Convert to 3D", self)
-        convert_3d_action.setShortcut(QKeySequence("Ctrl+L"))
+        convert_3d_action.setShortcut(QKeySequence("Ctrl+K"))
         convert_3d_action.triggered.connect(self.trigger_conversion)
         edit_menu.addAction(convert_3d_action)
+
+        optimize_3d_action = QAction("Optimize 3D", self)
+        optimize_3d_action.setShortcut(QKeySequence("Ctrl+L")) 
+        optimize_3d_action.triggered.connect(self.optimize_3d_structure)
+        edit_menu.addAction(optimize_3d_action)
 
         edit_menu.addSeparator()
         
@@ -2010,6 +2327,21 @@ class MainWindow(QMainWindow):
         self.analysis_action.triggered.connect(self.open_analysis_window)
         self.analysis_action.setEnabled(False)
         analysis_menu.addAction(self.analysis_action)
+
+        help_menu = menu_bar.addMenu("&Help")
+        about_action = QAction("About", self)
+        about_action.triggered.connect(lambda: QMessageBox.about(
+            self,
+            "About MoleditPy",
+            f"MoleditPy Ver. {VERSION}\nAuthor: HiroYokoyama\nLicense: Apache-2.0"
+        ))
+        help_menu.addAction(about_action)
+
+        github_action = QAction("GitHub", self)
+        github_action.triggered.connect(
+            lambda: QDesktopServices.openUrl(QUrl("https://github.com/HiroYokoyama/python_molecular_editor"))
+        )
+        help_menu.addAction(github_action)
         
     def init_worker_thread(self):
         self.thread=QThread();self.worker=CalculationWorker();self.worker.moveToThread(self.thread)
@@ -2045,6 +2377,7 @@ class MainWindow(QMainWindow):
             self.scene.current_atom_symbol = mode_str.split('_')[1]
             self.statusBar().showMessage(f"Mode: Draw Atom ({self.scene.current_atom_symbol})")
             self.view_2d.setDragMode(QGraphicsView.DragMode.NoDrag)
+            self.view_2d.setMouseTracking(True) 
             self.scene.bond_order = 1
             self.scene.bond_stereo = 0
         elif mode_str.startswith('bond'):
@@ -2055,6 +2388,7 @@ class MainWindow(QMainWindow):
             stereo_text = {0: "", 1: " (Wedge)", 2: " (Dash)"}.get(self.scene.bond_stereo, "")
             self.statusBar().showMessage(f"Mode: Draw Bond (Order: {self.scene.bond_order}{stereo_text})")
             self.view_2d.setDragMode(QGraphicsView.DragMode.NoDrag)
+            self.view_2d.setMouseTracking(True)
         elif mode_str.startswith('template'):
             self.statusBar().showMessage(f"Mode: {mode_str.split('_')[1].capitalize()} Template")
             self.view_2d.setDragMode(QGraphicsView.DragMode.NoDrag)
@@ -2216,6 +2550,7 @@ class MainWindow(QMainWindow):
         if 'select' in self.mode_actions:
             self.mode_actions['select'].setChecked(True)
     def trigger_conversion(self):
+        self.scene.clear_all_problem_flags()
         mol = self.data.to_rdkit_mol()
         if not mol or mol.GetNumAtoms() == 0:
             # 3Dビューと関連データをクリア
@@ -2229,17 +2564,23 @@ class MainWindow(QMainWindow):
         problems = Chem.DetectChemistryProblems(mol)
         if problems:
             self.statusBar().showMessage(f"Error: {len(problems)} chemistry problem(s) found.")
-            self.scene.clearSelection()
+            # 既存の選択状態をクリア
+            self.scene.clearSelection() 
             
-            # 問題のある原子をハイライト
+            # 問題のある原子に赤枠フラグを立てる
             for prob in problems:
                 atom_idx = prob.GetAtomIdx()
                 rdkit_atom = mol.GetAtomWithIdx(atom_idx)
-                original_id = rdkit_atom.GetIntProp("_original_atom_id")
-                if original_id in self.data.atoms:
-                    item = self.data.atoms[original_id]['item']
-                    item.setSelected(True)
-                self.view_2d.setFocus()
+                # エディタ側での原子IDの取得と存在確認
+                if rdkit_atom.HasProp("_original_atom_id"):
+                    original_id = rdkit_atom.GetIntProp("_original_atom_id")
+                    if original_id in self.data.atoms and self.data.atoms[original_id]['item']:
+                        item = self.data.atoms[original_id]['item']
+                        # ★ MOD: has_problem フラグを立て、再描画を要求 ★
+                        item.has_problem = True 
+                        item.update()
+                
+            self.view_2d.setFocus()
             return
 
         try:
@@ -2261,7 +2602,36 @@ class MainWindow(QMainWindow):
         
         self.view_2d.setFocus()
 
+    def optimize_3d_structure(self):
+        """現在の3D分子構造を力場で最適化する"""
+        if not self.current_mol:
+            self.statusBar().showMessage("No 3D molecule to optimize.")
+            return
+
+        self.statusBar().showMessage("Optimizing 3D structure...")
+        QApplication.processEvents() # UIの更新を確実に行う
+
+        try:
+            # MMFF力場での最適化を試みる
+            AllChem.MMFFOptimizeMolecule(self.current_mol)
+        except Exception:
+            # MMFFが失敗した場合、UFF力場でフォールバック
+            try:
+                AllChem.UFFOptimizeMolecule(self.current_mol)
+            except Exception as e:
+                self.statusBar().showMessage(f"3D optimization failed: {e}")
+                return
+        
+        # 最適化後の構造で3Dビューを再描画
+        self.draw_molecule_3d(self.current_mol)
+        self.update_chiral_labels() # キラル中心のラベルも更新
+        
+        self.statusBar().showMessage("3D structure optimization successful.")
+        self.push_undo_state() # Undo履歴に保存
+        self.view_2d.setFocus()
+
     def on_calculation_finished(self, mol):
+        self.dragged_atom_info = None
         self.current_mol = mol
         self.draw_molecule_3d(mol)
         # ここで最適化済みの current_mol を用いて R/S を再解析して表示を更新
@@ -2271,16 +2641,21 @@ class MainWindow(QMainWindow):
             # 念のためエラーを握り潰して UI を壊さない
             pass
     
-        self.statusBar().showMessage("3D conversion successful.")
+        #self.statusBar().showMessage("3D conversion successful.")
         self.convert_button.setEnabled(True)
         self.analysis_action.setEnabled(True)
         self.push_undo_state()
         self.view_2d.setFocus()
+        self.optimize_3d_button.setEnabled(True)
+        self.export_button.setEnabled(True)
+        self.edit_3d_action.setEnabled(True)
         
     def on_calculation_error(self, error_message):
+        self.dragged_atom_info = None
         self.statusBar().showMessage(f"Error: {error_message}")
         self.convert_button.setEnabled(True)
         self.analysis_action.setEnabled(False)
+        self.edit_3d_action.setEnabled(False) 
         self.view_2d.setFocus() 
 
     def eventFilter(self, obj, event):
@@ -2292,7 +2667,7 @@ class MainWindow(QMainWindow):
         atoms = {atom_id: {'symbol': data['symbol'],
                            'pos': (data['item'].pos().x(), data['item'].pos().y()),
                            'charge': data.get('charge', 0),
-                           'radical': data.get('radical', 0)}  # <-- この行を追加
+                           'radical': data.get('radical', 0)} 
                  for atom_id, data in self.data.atoms.items()}
         bonds = {key: {'order': data['order'], 'stereo': data.get('stereo', 0)} for key, data in self.data.bonds.items()}
         state = {'atoms': atoms, 'bonds': bonds, '_next_atom_id': self.data._next_atom_id}
@@ -2304,6 +2679,7 @@ class MainWindow(QMainWindow):
         return state
 
     def set_state_from_data(self, state_data):
+        self.dragged_atom_info = None
         self.clear_2d_editor(push_to_undo=False)
         
         loaded_data = copy.deepcopy(state_data)
@@ -2360,11 +2736,17 @@ class MainWindow(QMainWindow):
                 self.current_mol = Chem.Mol(loaded_data['mol_3d'])
                 self.draw_molecule_3d(self.current_mol)
                 self.analysis_action.setEnabled(True)
+                self.optimize_3d_button.setEnabled(True)
+                self.export_button.setEnabled(True)
+                self.edit_3d_action.setEnabled(True)
             except Exception as e:
                 self.statusBar().showMessage(f"Could not load 3D model from project: {e}")
                 self.current_mol = None; self.analysis_action.setEnabled(False)
         else:
             self.current_mol = None; self.plotter.clear(); self.analysis_action.setEnabled(False)
+            self.optimize_3d_button.setEnabled(False)
+            self.export_button.setEnabled(False) 
+            self.edit_3d_action.setEnabled(False)
 
         self.update_chiral_labels()
         
@@ -2374,18 +2756,19 @@ class MainWindow(QMainWindow):
             'atoms': {k: (v['symbol'], v['item'].pos().x(), v['item'].pos().y(), v.get('charge', 0), v.get('radical', 0)) for k, v in self.data.atoms.items()},
             'bonds': {k: (v['order'], v.get('stereo', 0)) for k, v in self.data.bonds.items()},
             '_next_atom_id': self.data._next_atom_id,
-            'has_3d': self.current_mol is not None
+            'mol_3d': self.current_mol.ToBinary() if self.current_mol else None
         }
         
         last_state_for_comparison = None
         if self.undo_stack:
-            last_atoms = self.undo_stack[-1].get('atoms', {})
-            last_bonds = self.undo_stack[-1].get('bonds', {})
+            last_state = self.undo_stack[-1]
+            last_atoms = last_state.get('atoms', {})
+            last_bonds = last_state.get('bonds', {})
             last_state_for_comparison = {
                 'atoms': {k: (v['symbol'], v['pos'][0], v['pos'][1], v.get('charge', 0), v.get('radical', 0)) for k, v in last_atoms.items()},
                 'bonds': {k: (v['order'], v.get('stereo', 0)) for k, v in last_bonds.items()},
-                '_next_atom_id': self.undo_stack[-1].get('_next_atom_id'),
-                'has_3d': 'mol_3d' in self.undo_stack[-1] 
+                '_next_atom_id': last_state.get('_next_atom_id'),
+                'mol_3d': last_state.get('mol_3d', None)
             }
 
         if not last_state_for_comparison or current_state_for_comparison != last_state_for_comparison:
@@ -2449,6 +2832,8 @@ class MainWindow(QMainWindow):
         # データが存在しない場合は何もしない
         if not self.data.atoms and self.current_mol is None:
             return
+
+        self.dragged_atom_info = None
             
         # 2Dエディタをクリアする（Undoスタックにはプッシュしない）
         self.clear_2d_editor(push_to_undo=False)
@@ -2459,6 +2844,9 @@ class MainWindow(QMainWindow):
         
         # 解析メニューを無効化する
         self.analysis_action.setEnabled(False)
+
+        self.optimize_3d_button.setEnabled(False) 
+        self.export_button.setEnabled(False)
         
         # Undo/Redoスタックをリセットする
         self.reset_undo_stack()
@@ -2467,6 +2855,10 @@ class MainWindow(QMainWindow):
         self.scene.update()
         if self.view_2d:
             self.view_2d.viewport().update()
+
+        self.optimize_3d_button.setEnabled(False) 
+        self.export_button.setEnabled(False)
+        self.edit_3d_action.setEnabled(False)
         
         # 3Dプロッターの再描画
         self.plotter.render()
@@ -2489,6 +2881,7 @@ class MainWindow(QMainWindow):
         file_path, _ = QFileDialog.getOpenFileName(self, "Import MOL File", "", "Chemical Files (*.mol *.sdf);;All Files (*)", options=options)
         if not file_path: return
         try:
+            self.dragged_atom_info = None
             suppl = Chem.SDMolSupplier(file_path, removeHs=True)
             mol = next(suppl, None)
             if mol is None: raise ValueError("Failed to read molecule from file.")
@@ -2835,31 +3228,31 @@ class MainWindow(QMainWindow):
     def draw_molecule_3d(self, mol):
         self.plotter.clear()
         conf = mol.GetConformer()
-        pos = np.array([list(conf.GetAtomPosition(i)) for i in range(mol.GetNumAtoms())])
+        
+        # 3D原子座標をNumPy配列としてクラス変数に保持し、効率的な更新を可能にする
+        self.atom_positions_3d = np.array([list(conf.GetAtomPosition(i)) for i in range(mol.GetNumAtoms())])
+        
         sym = [a.GetSymbol() for a in mol.GetAtoms()]
         col = np.array([CPK_COLORS_PV.get(s, [0.5, 0.5, 0.5]) for s in sym])
                 
-        # スタイルに応じて原子半径を決定
         if self.current_3d_style == 'cpk':
-            # CPKモデル: Van der Waals半径をそのまま使う（見栄えのため少しだけ縮小なら0.8くらい）
             rad = np.array([pt.GetRvdw(pt.GetAtomicNumber(s)) * 1.0 for s in sym])
-        else: # ball_and_stick (デフォルト)
-            # Ball & Stickモデル: 元のコード通り半径を小さくする
+        else: # ball_and_stick (default)
             rad = np.array([VDW_RADII.get(s, 0.4) for s in sym])
 
-        poly = pv.PolyData(pos)
-        poly['colors'] = col
-        poly['radii'] = rad
-        glyphs = poly.glyph(scale='radii', geom=pv.Sphere(radius=1.0), orient=False)
+        # 原子球（グリフ）の元となるPolyDataをクラス変数として保持
+        self.glyph_source = pv.PolyData(self.atom_positions_3d)
+        self.glyph_source['colors'] = col
+        self.glyph_source['radii'] = rad
+        
+        glyphs = self.glyph_source.glyph(scale='radii', geom=pv.Sphere(radius=1.0), orient=False)
         
         edge_color = '#505050'
-        self.plotter.add_mesh(glyphs, scalars='colors', rgb=True, smooth_shading=True, show_edges=True, edge_color=edge_color, edge_opacity=0.3, line_width=0.1)
-        
+        # ピック（選択）対象となる原子のアクターをクラス変数として保持
+        self.atom_actor = self.plotter.add_mesh(glyphs, scalars='colors', rgb=True, smooth_shading=True, show_edges=True, edge_color=edge_color, edge_opacity=0.3, line_width=0.1)        
 
         if self.current_3d_style == 'ball_and_stick':
-            # 結合メッシュを一時的に格納するリストを作成
             bond_meshes = []
-
             for bond in mol.GetBonds():
                 sp = np.array(conf.GetAtomPosition(bond.GetBeginAtomIdx()))
                 ep = np.array(conf.GetAtomPosition(bond.GetEndAtomIdx()))
@@ -2869,87 +3262,44 @@ class MainWindow(QMainWindow):
                 h = np.linalg.norm(d)
                 if h == 0: continue
 
-                # この時点では add_mesh しない
                 if bt == Chem.rdchem.BondType.SINGLE or bt == Chem.rdchem.BondType.AROMATIC:
                     cyl = pv.Cylinder(center=c, direction=d, radius=0.1, height=h)
                     bond_meshes.append(cyl)
                 else:
-                    # (二重結合・三重結合のロジックも同様に、生成したメッシュをリストに追加する)
                     v1 = d / h
                     v_arb = np.array([0, 0, 1])
                     if np.allclose(np.abs(np.dot(v1, v_arb)), 1.0): v_arb = np.array([0, 1, 0])
                     off_dir = np.cross(v1, v_arb)
                     off_dir /= np.linalg.norm(off_dir)
                     if bt == Chem.rdchem.BondType.DOUBLE:
-                        r = 0.08
-                        s = 0.20
-                        c1 = c + off_dir * (s / 2)
-                        c2 = c - off_dir * (s / 2)
+                        r, s = 0.08, 0.20
+                        c1, c2 = c + off_dir * (s / 2), c - off_dir * (s / 2)
                         bond_meshes.append(pv.Cylinder(center=c1, direction=d, radius=r, height=h))
                         bond_meshes.append(pv.Cylinder(center=c2, direction=d, radius=r, height=h))
                     elif bt == Chem.rdchem.BondType.TRIPLE:
-                        r = 0.08
-                        s = 0.20
+                        r, s = 0.08, 0.20
                         bond_meshes.append(pv.Cylinder(center=c, direction=d, radius=r, height=h))
                         bond_meshes.append(pv.Cylinder(center=c + off_dir * s, direction=d, radius=r, height=h))
                         bond_meshes.append(pv.Cylinder(center=c - off_dir * s, direction=d, radius=r, height=h))
 
-            # ループが終わった後、リストに溜めた全メッシュを1つに統合
             if bond_meshes:
                 combined_bonds = pv.merge(bond_meshes)
-                # 最後に一度だけ add_mesh を呼び出す
-                self.plotter.add_meshedge_color = '#505050'
-                self.plotter.add_mesh(
-                    combined_bonds, 
-                    color=[0.5, 0.5, 0.5], 
-                    smooth_shading=True, 
-                    show_edges=True, 
-                    edge_color=edge_color, 
-                    edge_opacity=0.3
-                )
+                self.plotter.add_mesh(combined_bonds, color=[0.5, 0.5, 0.5], smooth_shading=True, show_edges=True, edge_color=edge_color, edge_opacity=0.3)
 
-        # chiral labels: 3D コンフォマーを持つ場合はここで R/S を表示
         if getattr(self, 'show_chiral_labels', False):
             try:
-                # RDKit 側でキラル中心を取得（3D コンフォマーがあればそれを使う）
                 chiral_centers = Chem.FindMolChiralCenters(mol, includeUnassigned=True)
                 if chiral_centers:
-                    # ラベル描画用の点配列と文字列リストを作成
-                    # pos は numpy array (N,3) なので、index で取れば座標が得られる
-                    pts = []
-                    labels = []
-                    # 少しラベルが球と重ならないよう z 方向にオフセット（全体のサイズに合わせて調整）
+                    pts, labels = [], []
                     z_off = 0
                     for idx, lbl in chiral_centers:
-                        coord = pos[idx].copy()
-                        coord[2] += z_off
-                        pts.append(coord)
-                        labels.append(lbl if lbl is not None else '?')
+                        coord = self.atom_positions_3d[idx].copy(); coord[2] += z_off
+                        pts.append(coord); labels.append(lbl if lbl is not None else '?')
+                    try: self.plotter.remove_actor('chiral_labels')
+                    except Exception: pass
+                    self.plotter.add_point_labels(np.array(pts), labels, font_size=20, point_size=0, text_color='k', name='chiral_labels', always_visible=True, tolerance=0.01, show_points=False)
+            except Exception as e: self.statusBar().showMessage(f"3D chiral label drawing error: {e}")
 
-                    # 既存のラベルを削除し（存在すれば）、再描画する
-                    try:
-                        # actor 名 'chiral_labels' をキーとして remove を試みる（無ければ ignore）
-                        self.plotter.remove_actor('chiral_labels')
-                    except Exception:
-                        pass
-
-                    # PyVista のラベル描画（font_size 等はお好みで調整）
-                    self.plotter.add_point_labels(
-                        np.array(pts),
-                        labels,
-                        font_size=20,
-                        point_size=0,
-                        text_color='k',
-                        name='chiral_labels',
-                        always_visible=True,   # ← ここを追加（ラベルの可視性フィルタをスキップ）
-                        tolerance=0.01,        # ← 必要なら少し大きめにして消えにくくする（デフォルトは 0.001）
-                        show_points=False      # ← ポイント自体の小さなドット表示が不要ならオフに（任意）
-                    )
-            except Exception as e: 
-                self.statusBar().showMessage(f"3D chiral label drawing error: {e}")
-
-
-    # MainWindow クラス内 (約2800行目付近)
 
     def toggle_chiral_labels_display(self, checked):
         """Viewメニューのアクションに応じてキラルラベル表示を切り替える"""
@@ -3083,6 +3433,28 @@ class MainWindow(QMainWindow):
              self.view_2d.scale(0.6, 0.6)
         else:
              self.reset_zoom()
+
+    def toggle_3d_edit_mode(self, checked):
+        """「3D Edit」ボタンの状態に応じて編集モードを切り替える"""
+        self.is_3d_edit_mode = checked
+        if checked:
+            self.statusBar().showMessage("3D Edit Mode: ON. Click and drag an atom to move.")
+        else:
+            self.statusBar().showMessage("3D Edit Mode: OFF. Drag empty space to rotate.")
+        self.view_2d.setFocus()
+
+    def _setup_3d_picker(self):
+        self.plotter.picker = vtk.vtkCellPicker()
+        self.plotter.picker.SetTolerance(0.025)
+
+        # 新しいカスタムスタイル（原子移動用）のインスタンスを作成
+        style = CustomInteractorStyle(self)
+        
+        # 調査の結果、'style' プロパティへの代入が正しい設定方法と判明
+        self.plotter.iren.style = style
+        
+        # 新しいスタイルを確実に読み込ませるためにインタラクタを初期化
+        self.plotter.iren.initialize()
 
 
 # --- Application Execution ---
