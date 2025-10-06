@@ -3,11 +3,9 @@
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.17268532.svg)](https://doi.org/10.5281/zenodo.17268532)
 [![Powered by RDKit](https://img.shields.io/badge/Powered%20by-RDKit-3838ff.svg?logo=data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQBAMAAADt3eJSAAAABGdBTUEAALGPC/xhBQAAACBjSFJNAAB6JgAAgIQAAPoAAACA6AAAdTAAAOpgAAA6mAAAF3CculE8AAAAFVBMVEXc3NwUFP8UPP9kZP+MjP+0tP////9ZXZotAAAAAXRSTlMAQObYZgAAAAFiS0dEBmFmuH0AAAAHdElNRQfmAwsPGi+MyC9RAAAAQElEQVQI12NgQABGQUEBMENISUkRLKBsbGwEEhIyBgJFsICLC0iIUdnExcUZwnANQWfApKCK4doRBsKtQFgKAQC5Ww1JEHSEkAAAACV0RVh0ZGF0ZTpjcmVhdGUAMjAyMi0wMy0xMVQxNToyNjo0NyswMDowMDzr2J4AAAAldEVYdGRhdGU6bW9kaWZ5ADIwMjItMDMtMTFUMTU6MjY6NDcrMDA6MDBNtmAiAAAAAElFTkSuQmCC)](https://www.rdkit.org/)
 
-
 Pythonで構築された、クロスプラットフォームかつシンプルで直感的な分子構造エディターです。2Dでの分子描画と、3D構造可視化ができます。DFT計算ソフト用のインプット用に構造ファイルのエクスポートをサポートします。
 
 A cross-platform, simple, and intuitive molecular structure editor built in Python. It allows 2D molecular drawing and 3D structure visualization. It supports exporting structure files for input to DFT calculation software.
-
 
 作者: HiroYokoyama
 ライセンス: Apache-2.0
@@ -46,8 +44,9 @@ A cross-platform, simple, and intuitive molecular structure editor built in Pyth
 | `+`/`-` | 電荷を増減 | 形式電荷の変更 |
 | `C`, `N`, `O` など | 原子記号を変更 | カーソル下または選択中の原子に適用 |
 | `4` | ベンゼン環の配置 | カーソル下の原子/結合にワンショットで配置 |
-| `Ctrl+K` | 2D最適化を実行 | |
-| `Ctrl+L` | 3D変換を実行 | |
+| `Ctrl+J` | 2D最適化を実行 | |
+| `Ctrl+K` | 3D変換を実行 | |
+| `Ctrl+L` | 3D最適化を実行 | |
 
 ### 3\. 2D構造の最適化
 
@@ -56,10 +55,11 @@ A cross-platform, simple, and intuitive molecular structure editor built in Pyth
 
 ### 4\. 高品質な3D可視化と分析
 
-  * **3D変換:** RDKit で 3D 座標を生成し MMFF94 ベースで最適化（**Convert to 3D**）します。
+  * **3D変換:** RDKit で 3D 座標を生成し MMFF94 ベースで最適化（**Convert to 3D**）します。RDKitでの生成に失敗した場合、**Open Babelによるフォールバック**を実行し、堅牢性を高めています。
   * **インタラクティブ表示:** PyVista / pyvistaqt によるインタラクティブな3D表示（Ball & Stick / CPK スタイル）を提供します。
+  * **インタラクティブ3D編集:** 3D編集モードを有効にすると、3Dビュー内の原子を**マウスで直接ドラッグして位置を微調整**できます。
   * **キラルラベル表示:** 3D変換後、キラル中心に R/S ラベルを自動で付与し、**3Dビュー**に表示します。
-  * **分子分析ウィンドウ:** 分子量、SMILES、LogP、TPSAなど、RDKitベースの**主要な分子特性を一覧表示**する専用ウィンドウがあります。
+  * **分子分析ウィンドウ:** 分子式、分子量、SMILES、LogP、TPSAなど、RDKitベースの**主要な分子特性を一覧表示**する専用ウィンドウがあります。
 
 ### 5\. ファイル入出力
 
@@ -74,7 +74,7 @@ A cross-platform, simple, and intuitive molecular structure editor built in Pyth
 
 #### 必要ライブラリ
 
-`PyQt6`, `RDKit`, `NumPy`, `PyVista`, `pyvistaqt`
+`PyQt6`, `RDKit`, `NumPy`, `PyVista`, `pyvistaqt`, `openbabel`
 
 #### インストール例
 
@@ -85,13 +85,30 @@ pip install moleditpy
 ```
 
 > **Note**
-> RDKit は特に科学計算ディストリビューションである `conda` を使ってインストールすることが推奨されます。
+> RDKit と Open Babel は、科学計算ディストリビューションである `conda` を使ってインストールすることが推奨されます。Open Babelは3D構造変換のフォールバック機能に必要です。
 
 #### アプリの起動
 
 ```bash
 moleditpy
 ```
+ご要望に応じて、READMEから**開発環境**の表セクションのみを抽出して表示します。
+
+## 開発環境
+
+MoleditPyの動作確認および推奨される開発・実行環境は以下の通りです。
+
+| コンポーネント | バージョン |
+| :--- | :--- |
+| **Python** | `3.13.7` |
+| **numpy** | `2.3.3` |
+| **openbabel-wheel** | `3.1.1.22` |
+| **PyQt6** | `6.9.1` |
+| **QtPy** | `2.4.3` |
+| **rdkit** | `2025.3.6` |
+| **vtk** | `9.5.2` |
+| **pyvista** | `0.46.3` |
+| **pyvistaqt** | `0.11.3` |
 
 -----
 
@@ -107,7 +124,7 @@ Windows環境でプロジェクトファイル（`.pmeraw`）をダブルクリ�
 | **関連付けたい拡張子** | `.pmeraw` |
 | **アイコンファイルのパス (Icon)** | `C:\Users\%USERNAME%\AppData\Local\Programs\Python\PythonXX\Lib\site-packages\moleditpy\assets\icon.ico` |
 
-> **注意:** `%USERNAME%` はお使いのユーザー名、`PythonXX` はインストールされているPythonのバージョンディレクトリ名（例: `Python313`）に置き換えてください。
+> **注意:** `%USERNAME%` はお使いのユーザー名、`PythonXX` はインストールされているPythonのバージョンディレクトリ名（例: `Python311`）に置き換えてください。
 
 ### 2\. ファイルの関連付け手順 (.pmeraw をダブルクリックで開く)
 
@@ -229,11 +246,13 @@ chmod +x /Users/<username>/Library/Python/<python_version>/bin/moleditpy
   * **GUI と 2D 描画 (PyQt6):**
       * `QGraphicsScene` 上にカスタムの `AtomItem`（原子）と `BondItem`（結合）を配置し、対話的に操作します。
       * Undo/Redo機能は、アプリケーションの状態を丸ごと `pickle` でシリアライズしてスタックに保存することで実現しています。
-  * **化学計算 (RDKit):**
+  * **化学計算 (RDKit / Open Babel):**
       * 2D データから RDKit 分子オブジェクトを生成し、3D 座標生成（`AllChem.EmbedMolecule`）や分子特性計算を実行します。
+      * RDKitでの3D座標生成が失敗した際は、**Open Babel**にフォールバックして計算を試みます。
       * 計算は別スレッド（`QThread`）で行い、GUI の応答性を維持しています。
   * **3D 可視化 (PyVista / pyvistaqt):**
-      * RDKit のコンフォーマ座標から PyVista のメッシュ（球や円柱）を生成して描画します。CPKカラーや3D結合のマルチレンダリングに対応しています。
+      * RDKit のコンフォーマ座標から PyVista のメッシュ（球や円柱）を生成して描画します。
+      * カスタムの`vtkInteractorStyle`を実装し、3Dビュー内での原子の直接的なドラッグ＆ドロップ編集を可能にしています。
 
 -----
 

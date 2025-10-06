@@ -3,3 +3,4 @@ rdkit
 numpy
 pyvista
 pyvistaqt
+openbabel-wheel
