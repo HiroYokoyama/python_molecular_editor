@@ -92,7 +92,6 @@ pip install moleditpy
 ```bash
 moleditpy
 ```
-ご要望に応じて、READMEから**開発環境**の表セクションのみを抽出して表示します。
 
 ## 開発環境
 
