@@ -11,7 +11,7 @@ DOI 10.5281/zenodo.17268532
 """
 
 #Version
-VERSION = "1.1.1"
+VERSION = "1.1.2"
 
 import sys
 import numpy as np
@@ -35,7 +35,7 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtGui import (
     QPen, QBrush, QColor, QPainter, QAction, QActionGroup, QFont, QPolygonF,
-    QPainterPath, QFontMetrics, QKeySequence, QTransform, QCursor, QPixmap, QIcon, QShortcut, QDesktopServices
+    QPainterPath, QPainterPathStroker, QFontMetrics, QKeySequence, QTransform, QCursor, QPixmap, QIcon, QShortcut, QDesktopServices
 )
 from PyQt6.QtCore import Qt, QPointF, QRectF, QLineF, QObject, QThread, pyqtSignal, QEvent, QMimeData, QByteArray, QUrl
 
@@ -257,9 +257,22 @@ class AtomItem(QGraphicsItem):
         return QRectF(-r - extra, -r - extra, (r + extra) * 2.0, (r + extra) * 2.0)
 
     def shape(self):
+        scene = self.scene()
+        if not scene or not scene.views():
+            path = QPainterPath()
+            hit_r = max(4.0, ATOM_RADIUS - 6.0) * 2
+            path.addEllipse(QRectF(-hit_r, -hit_r, hit_r * 2.0, hit_r * 2.0))
+            return path
+
+        view = scene.views()[0]
+        scale = view.transform().m11() 
+
+        DESIRED_PIXEL_RADIUS = 15.0
+        
+        scene_radius = DESIRED_PIXEL_RADIUS / scale
+
         path = QPainterPath()
-        hit_r = max(4.0, ATOM_RADIUS - 6.0) * 2
-        path.addEllipse(QRectF(-hit_r, -hit_r, hit_r * 2.0, hit_r * 2.0))
+        path.addEllipse(QPointF(0, 0), scene_radius, scene_radius)
         return path
 
     def paint(self, painter, option, widget):
@@ -382,40 +395,61 @@ class BondItem(QGraphicsItem):
 
     def shape(self):
         path = QPainterPath()
-        try: line = self.get_line_in_local_coords()
-        except Exception: return path
-        if line.length() == 0: return path
+        try:
+            line = self.get_line_in_local_coords()
+        except Exception:
+            return path 
+        if line.length() == 0:
+            return path
 
-        normal = line.normalVector()
-        offset = QPointF(normal.dx(), normal.dy()) * 12.0 # 当たり判定を拡大
-        poly = QPolygonF([line.p1() - offset, line.p1() + offset, line.p2() + offset, line.p2() - offset])
-        path.addPolygon(poly)
-        return path
+        scene = self.scene()
+        if not scene or not scene.views():
+            return super().shape()
+
+        view = scene.views()[0]
+        scale = view.transform().m11()
+
+        DESIRED_PIXEL_WIDTH = 18.0
+        
+        scene_width = DESIRED_PIXEL_WIDTH / scale
+
+        stroker = QPainterPathStroker()
+        stroker.setWidth(scene_width)
+        stroker.setCapStyle(Qt.PenCapStyle.RoundCap)  
+        stroker.setJoinStyle(Qt.PenJoinStyle.RoundJoin) 
+
+        center_line_path = QPainterPath(line.p1())
+        center_line_path.lineTo(line.p2())
+        
+        return stroker.createStroke(center_line_path)
 
     def paint(self, painter, option, widget):
         line = self.get_line_in_local_coords()
         if line.length() == 0: return
 
+        # --- 1. 結合の種類に応じて本体を描画 ---
         current_pen = self.pen
         if self.isSelected():
             current_pen = QPen(QColor("blue"), 3)
+        
         painter.setPen(current_pen)
         painter.setBrush(QBrush(Qt.GlobalColor.black))
 
-        # --- Stereo (Wedge/Dash) Drawing ---
+        # --- 立体化学 (Wedge/Dash) の描画 ---
         if self.order == 1 and self.stereo in [1, 2]:
             vec = line.unitVector()
             normal = vec.normalVector()
-            
-            p1 = line.p1() + vec.p2() * 5 # 少し原子から離す
+            p1 = line.p1() + vec.p2() * 5
             p2 = line.p2() - vec.p2() * 5
 
-            if self.stereo == 1: # Wedge
+            if self.stereo == 1: # Wedge (くさび形)
+                if self.isSelected():
+                    painter.setBrush(Qt.BrushStyle.NoBrush) # 選択時は塗りつぶさず枠線にする
                 offset = QPointF(normal.dx(), normal.dy()) * 6.0
                 poly = QPolygonF([p1, p2 + offset, p2 - offset])
                 painter.drawPolygon(poly)
             
-            elif self.stereo == 2: # Dash
+            elif self.stereo == 2: # Dash (破線)
                 num_dashes = 8
                 for i in range(num_dashes + 1):
                     t = i / num_dashes
@@ -423,9 +457,32 @@ class BondItem(QGraphicsItem):
                     width = 5.0 * (1 - t)
                     offset = QPointF(normal.dx(), normal.dy()) * width / 2.0
                     painter.drawLine(start_pt - offset, start_pt + offset)
-            return
+        
+        # --- 通常の結合 (単/二重/三重) の描画 ---
+        else:
+            if self.order == 1:
+                painter.drawLine(line)
+            else:
+                v = line.unitVector().normalVector()
+                offset = QPointF(v.dx(), v.dy()) * BOND_OFFSET
+                if self.order == 2:
+                    painter.drawLine(line.translated(offset))
+                    painter.drawLine(line.translated(-offset))
+                elif self.order == 3:
+                    painter.drawLine(line)
+                    painter.drawLine(line.translated(offset))
+                    painter.drawLine(line.translated(-offset))
 
-        # --- Default (Multi-order) Drawing ---
+        # --- 2. ホバー時のエフェクトを上から重ねて描画 ---
+        if (not self.isSelected()) and getattr(self, 'hovered', False):
+            try:
+                hover_pen = QPen(QColor(144, 238, 144, 180), 8) # 少し太くして見やすく
+                hover_pen.setCapStyle(Qt.PenCapStyle.RoundCap)
+                painter.setPen(hover_pen)
+                painter.drawLine(line) # 中心線をなぞる
+            except Exception:
+                pass
+
         if self.order == 1:
             painter.drawLine(line)
         else:
