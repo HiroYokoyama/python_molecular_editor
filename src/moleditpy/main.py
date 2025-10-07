@@ -4,14 +4,14 @@
 """
 MoleditPy — A Python-based molecular editing software
 
-Author: HiroYokoyama
+Author: Hiromichi Yokoyama
 License: Apache-2.0 license
 Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI 10.5281/zenodo.17268532
 """
 
 #Version
-VERSION = "1.1.5"
+VERSION = "1.1.6"
 
 import sys
 import numpy as np
@@ -457,7 +457,7 @@ class BondItem(QGraphicsItem):
                 for i in range(num_dashes + 1):
                     t = i / num_dashes
                     start_pt = p1 * (1 - t) + p2 * t
-                    width = 12.0 * (1 - t)
+                    width = 12.0 * t
                     offset = QPointF(normal.dx(), normal.dy()) * width / 2.0
                     painter.drawLine(start_pt - offset, start_pt + offset)
         
@@ -586,6 +586,11 @@ class MoleculeScene(QGraphicsScene):
         self.data_changed_in_event = False
         self.initial_positions_in_event = {item: item.pos() for item in self.items() if isinstance(item, AtomItem)}
 
+        if self.mode.startswith('template'):
+            self.clearSelection()
+            # テンプレートモードでは選択処理を一切行わず、クリック位置の記録のみ行う
+            return
+
         if getattr(self, "mode", "") != "select":
             self.clearSelection()
             event.accept()
@@ -599,9 +604,11 @@ class MoleculeScene(QGraphicsScene):
                 self.temp_line.setPen(QPen(Qt.GlobalColor.red, 2, Qt.PenStyle.DotLine))
                 self.addItem(self.temp_line)
             else: super().mousePressEvent(event)
-        elif item is None and self.mode.startswith('atom'):
+
+        elif item is None and (self.mode.startswith('atom') or self.mode.startswith('bond')):
             self.start_pos = self.press_pos
             self.temp_line = QGraphicsLineItem(QLineF(self.start_pos, self.press_pos)); self.temp_line.setPen(QPen(Qt.GlobalColor.red, 2, Qt.PenStyle.DotLine)); self.addItem(self.temp_line)
+        
         else: super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event):
@@ -653,6 +660,11 @@ class MoleculeScene(QGraphicsScene):
                 context = self.template_context
                 self.add_molecule_fragment(context['points'], context['bonds_info'], existing_items=context.get('items', []))
                 self.data_changed_in_event = True
+                
+                # イベント処理をここで完了させ、下のアイテムが選択されるのを防ぐ
+                self.start_atom=None; self.start_pos = None; self.press_pos = None
+                if self.data_changed_in_event: self.window.push_undo_state()
+                return
 
         released_item = self.itemAt(end_pos, self.views()[0].transform())
         
@@ -996,8 +1008,8 @@ class MoleculeScene(QGraphicsScene):
                         continue
                 else:
                     # 新規ボンド作成
-                    self.create_bond(a_item, b_item, bond_order=order)
-
+                    self.create_bond(a_item, b_item, bond_order=order, bond_stereo=0)
+        
         # --- 6) 表示更新　---
         for at in atom_items:
             try:
@@ -1488,19 +1500,20 @@ class MoleculeScene(QGraphicsScene):
                 return b
         return None
 
-
 class ZoomableView(QGraphicsView):
-    """ マウスホイールでのズームと中ボタンでのパン機能を追加したQGraphicsView """
+    """ マウスホイールでのズームと、中ボタン or Shift+左ドラッグでのパン機能を追加したQGraphicsView """
     def __init__(self, scene, parent=None):
         super().__init__(scene, parent)
         self.setTransformationAnchor(QGraphicsView.ViewportAnchor.AnchorUnderMouse)
         self.setResizeAnchor(QGraphicsView.ViewportAnchor.AnchorViewCenter)
         self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
-        self.setDragMode(QGraphicsView.DragMode.NoDrag) # デフォルトはドラッグなし
+        self.setDragMode(QGraphicsView.DragMode.NoDrag)
 
         self._is_panning = False
         self._pan_start_pos = QPointF()
+        self._pan_start_scroll_h = 0
+        self._pan_start_scroll_v = 0
 
     def wheelEvent(self, event):
         """ マウスホイールを回した際のイベント """
@@ -1524,28 +1537,40 @@ class ZoomableView(QGraphicsView):
             super().wheelEvent(event)
 
     def mousePressEvent(self, event):
-        """ 中ボタンが押されたらパン（視点移動）モードを開始 """
-        if event.button() == Qt.MouseButton.MiddleButton:
+        """ 中ボタン or Shift+左ボタンが押されたらパン（視点移動）モードを開始 """
+        is_middle_button = event.button() == Qt.MouseButton.MiddleButton
+        is_shift_left_button = (event.button() == Qt.MouseButton.LeftButton and
+                                event.modifiers() & Qt.KeyboardModifier.ShiftModifier)
+
+        if is_middle_button or is_shift_left_button:
             self._is_panning = True
-            self._pan_start_pos = event.pos()
-            self.setCursor(Qt.CursorShape.SizeAllCursor)
+            self._pan_start_pos = event.pos() # ビューポート座標で開始点を記録
+            # 現在のスクロールバーの位置を記録
+            self._pan_start_scroll_h = self.horizontalScrollBar().value()
+            self._pan_start_scroll_v = self.verticalScrollBar().value()
+            self.setCursor(Qt.CursorShape.ClosedHandCursor)
             event.accept()
         else:
             super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event):
-        """ パンモード中にマウスを動かしたら、その分だけ視点を移動させる """
+        """ パンモード中にマウスを動かしたら、スクロールバーを操作して視点を移動させる """
         if self._is_panning:
-            delta = self.mapToScene(event.pos()) - self.mapToScene(self._pan_start_pos)
-            self.translate(delta.x(), delta.y())
-            self._pan_start_pos = event.pos()
+            delta = event.pos() - self._pan_start_pos # マウスの移動量を計算
+            # 開始時のスクロール位置から移動量を引いた値を新しいスクロール位置に設定
+            self.horizontalScrollBar().setValue(self._pan_start_scroll_h - delta.x())
+            self.verticalScrollBar().setValue(self._pan_start_scroll_v - delta.y())
             event.accept()
         else:
             super().mouseMoveEvent(event)
 
     def mouseReleaseEvent(self, event):
-        """ 中ボタンを離したらパンモードを終了 """
-        if event.button() == Qt.MouseButton.MiddleButton:
+        """ パンに使用したボタンが離されたらパンモードを終了 """
+        # パンを開始したボタン（中 or 左）のどちらかが離されたかをチェック
+        is_middle_button_release = event.button() == Qt.MouseButton.MiddleButton
+        is_left_button_release = event.button() == Qt.MouseButton.LeftButton
+
+        if self._is_panning and (is_middle_button_release or is_left_button_release):
             self._is_panning = False
             # 現在の描画モードに応じたカーソルに戻す
             current_mode = self.scene().mode if self.scene() else 'select'
@@ -1554,7 +1579,7 @@ class ZoomableView(QGraphicsView):
             elif current_mode.startswith(('atom', 'bond', 'template')):
                 self.setCursor(Qt.CursorShape.CrossCursor)
             elif current_mode.startswith(('charge', 'radical')):
-                self.setCursor(Qt.CursorShape.PointingHandCursor)
+                self.setCursor(Qt.CursorShape.CrossCursor)
             else:
                 self.setCursor(Qt.CursorShape.ArrowCursor)
             event.accept()
@@ -1809,7 +1834,9 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
     def __init__(self, main_window):
         super().__init__()
         self.main_window = main_window
-        self._custom_state = None # 'dragging_atom' または 'rotating' に変更
+        # カスタム状態を管理するフラグを一つに絞ります
+        self._is_dragging_atom = False
+        # undoスタックのためのフラグ
         self.is_dragging = False
 
         self.AddObserver("LeftButtonPressEvent", self.on_left_button_down)
@@ -1817,99 +1844,113 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
         self.AddObserver("LeftButtonReleaseEvent", self.on_left_button_up)
 
     def on_left_button_down(self, obj, event):
-        """左クリックが押された時の処理"""
-        
+        """
+        クリック時の処理を振り分けます。
+        原子を掴めた場合のみカスタム動作に入り、それ以外は親クラス（カメラ回転）に任せます。
+        """
+        mw = self.main_window
         is_temp_mode = bool(QApplication.keyboardModifiers() & Qt.KeyboardModifier.AltModifier)
-        if not self.main_window.is_3d_edit_mode and not is_temp_mode:
-            self._custom_state = 'rotating'
-            super().OnLeftButtonDown() # 親クラスのカメラ操作を呼び出す
-            return
+        is_edit_active = mw.is_3d_edit_mode or is_temp_mode
 
-        click_pos = self.GetInteractor().GetEventPosition()
-        picker = self.main_window.plotter.picker
-        picker.Pick(click_pos[0], click_pos[1], 0, self.main_window.plotter.renderer)
+        if is_edit_active:
+            click_pos = self.GetInteractor().GetEventPosition()
+            picker = mw.plotter.picker
+            picker.Pick(click_pos[0], click_pos[1], 0, mw.plotter.renderer)
 
-        atom_picked = False
-        if picker.GetActor() is not None:
-            picked_position = np.array(picker.GetPickPosition())
-            distances = np.linalg.norm(self.main_window.atom_positions_3d - picked_position, axis=1)
-            closest_atom_idx = np.argmin(distances)
-            
-            atomic_num = self.main_window.current_mol.GetAtomWithIdx(int(closest_atom_idx)).GetAtomicNum()
-            vdw_radius = pt.GetRvdw(atomic_num)
-            click_threshold = vdw_radius * 1.5
+            if picker.GetActor() is mw.atom_actor:
+                picked_position = np.array(picker.GetPickPosition())
+                distances = np.linalg.norm(mw.atom_positions_3d - picked_position, axis=1)
+                closest_atom_idx = np.argmin(distances)
 
-            if distances[closest_atom_idx] < click_threshold:
-                self._custom_state = 'dragging_atom'
-                self.main_window.dragged_atom_info = {'id': int(closest_atom_idx)}
-                atom_picked = True
+                atomic_num = mw.current_mol.GetAtomWithIdx(int(closest_atom_idx)).GetAtomicNum()
+                vdw_radius = pt.GetRvdw(atomic_num)
+                click_threshold = vdw_radius * 1.5
 
-        if not atom_picked:
-            self._custom_state = 'rotating'
-            super().OnLeftButtonDown()
+                if distances[closest_atom_idx] < click_threshold:
+                    # 原子を掴むことに成功した場合
+                    self._is_dragging_atom = True
+                    self.is_dragging = False 
+                    mw.dragged_atom_info = {'id': int(closest_atom_idx)}
+                    mw.plotter.setCursor(Qt.CursorShape.ClosedHandCursor)
+                    return  # 親クラスのカメラ回転を呼ばないように、ここで処理を終了します
+
+        self._is_dragging_atom = False
+        super().OnLeftButtonDown()
 
     def on_mouse_move(self, obj, event):
-        """マウスが移動した時の処理"""
-        if self._custom_state == 'dragging_atom':
-            self.is_dragging = True
-            mw = self.main_window
-            if mw.dragged_atom_info is None: return
+        """
+        マウス移動時の処理。原子ドラッグ中か、それ以外（カメラ回転＋ホバー）かをハンドリングします。
+        """
+        mw = self.main_window
+        interactor = self.GetInteractor()
 
+        if self._is_dragging_atom:
+            # カスタムの原子ドラッグ処理
+            self.is_dragging = True
             atom_id = mw.dragged_atom_info['id']
             conf = mw.current_mol.GetConformer()
             renderer = mw.plotter.renderer
-            interactor = self.GetInteractor()
             current_display_pos = interactor.GetEventPosition()
             pos_3d = conf.GetAtomPosition(atom_id)
-
-            # Step 1: 3D World座標 -> 2D Display座標
             renderer.SetWorldPoint(pos_3d.x, pos_3d.y, pos_3d.z, 1.0)
             renderer.WorldToDisplay()
             display_coords = renderer.GetDisplayPoint()
-
-            # Step 2: マウスのXY座標と、元のZ深度を組み合わせる
             new_display_pos = (current_display_pos[0], current_display_pos[1], display_coords[2])
-
-            # Step 3: 新しい2D Display座標 -> 3D World座標
             renderer.SetDisplayPoint(new_display_pos[0], new_display_pos[1], new_display_pos[2])
             renderer.DisplayToWorld()
-            # 【重要】ここで new_world_coords_tuple を定義します
             new_world_coords_tuple = renderer.GetWorldPoint()
-
-            # Step 4: 座標の更新と再描画
             new_world_coords = list(new_world_coords_tuple)[:3]
-
             mw.atom_positions_3d[atom_id] = new_world_coords
             mw.glyph_source.points = mw.atom_positions_3d
             mw.glyph_source.Modified()
-            
             conf.SetAtomPosition(atom_id, new_world_coords)
-
             interactor.Render()
+        else:
+            # カメラ回転処理を親クラスに任せます
+            super().OnMouseMove()
 
-        elif self._custom_state == 'rotating':
-            super().OnMouseMove() # 親クラスのカメラ操作を呼び出す
+            # その後、カーソルの表示を更新します
+            is_edit_active = mw.is_3d_edit_mode or interactor.GetAltKey()
+            if is_edit_active:
+                atom_under_cursor = False
+                click_pos = interactor.GetEventPosition()
+                picker = mw.plotter.picker
+                picker.Pick(click_pos[0], click_pos[1], 0, mw.plotter.renderer)
+                if picker.GetActor() is mw.atom_actor:
+                    atom_under_cursor = True
+
+                if atom_under_cursor:
+                    mw.plotter.setCursor(Qt.CursorShape.OpenHandCursor)
+                else:
+                    mw.plotter.setCursor(Qt.CursorShape.ArrowCursor)
+            else:
+                mw.plotter.setCursor(Qt.CursorShape.ArrowCursor)
 
     def on_left_button_up(self, obj, event):
-        """左クリックが離された時の処理"""
-        
-        # 3D編集（原子のドラッグ）が終了した場合
-        if self._custom_state == 'dragging_atom':
+        """
+        クリック終了時の処理。状態をリセットします。
+        """
+        mw = self.main_window
+
+        if self._is_dragging_atom:
+            # カスタムドラッグの後始末
             if self.is_dragging:
-                if self.main_window.current_mol:
-                    self.main_window.draw_molecule_3d(self.main_window.current_mol)
-                self.main_window.push_undo_state()
-            self.main_window.dragged_atom_info = None
-        
-        # 3D回転が終了した場合（CustomInteractorStyle.on_left_button_downで_custom_stateが'rotating'に設定されている場合を含む）
-        elif self._custom_state == 'rotating':
+                if mw.current_mol:
+                    mw.draw_molecule_3d(mw.current_mol)
+                mw.push_undo_state()
+            mw.dragged_atom_info = None
+        else:
+            # カメラ回転の後始末を親クラスに任せます
             super().OnLeftButtonUp()
-            
-        # 3D操作が完了したタイミングで、2Dビューにフォーカスを戻す
-        self.main_window.view_2d.setFocus()
-            
-        self._custom_state = None
-        self.is_dragging = False
+
+        # 状態をリセット
+        self._is_dragging_atom = False
+        
+        # ボタンを離した後のカーソル表示を最新の状態に更新するため、
+        # on_mouse_moveを一度呼び出します
+        self.on_mouse_move(obj, event)
+
+        mw.view_2d.setFocus()
 
 class MainWindow(QMainWindow):
 
@@ -1972,7 +2013,7 @@ class MainWindow(QMainWindow):
         )
         left_layout.addWidget(self.view_2d, 1)
 
-        self.view_2d.scale(0.5, 0.5)
+        self.view_2d.scale(0.75, 0.75)
 
         # --- 左パネルのボタンレイアウト ---
         left_buttons_layout = QHBoxLayout()
@@ -2106,7 +2147,7 @@ class MainWindow(QMainWindow):
             elif bond_type == 'wedge':
                 vec = line.unitVector()
                 normal = vec.normalVector()
-                offset = QPointF(normal.dx(), normal.dy()) * 6.0
+                offset = QPointF(normal.dx(), normal.dy()) * 5.0
                 poly = QPolygonF([p1, p2 + offset, p2 - offset])
                 painter.drawPolygon(poly)
             elif bond_type == 'dash':
@@ -2117,7 +2158,7 @@ class MainWindow(QMainWindow):
                 for i in range(num_dashes + 1):
                     t = i / num_dashes
                     start_pt = p1 * (1 - t) + p2 * t
-                    width = 5.0 * (1 - t)
+                    width = 10 * t
                     offset = QPointF(normal.dx(), normal.dy()) * width / 2.0
                     painter.setPen(QPen(Qt.GlobalColor.black, 1.5))
                     painter.drawLine(start_pt - offset, start_pt + offset)
@@ -2198,7 +2239,7 @@ class MainWindow(QMainWindow):
             if is_benzene:
                 painter.drawEllipse(center, radius * 0.6, radius * 0.6)
 
-            if n in [8, 9]:
+            if n in [7, 8, 9]:
                 font = QFont("Arial", 10, QFont.Weight.Bold)
                 painter.setFont(font)
                 painter.drawText(QRectF(0, 0, size, size), Qt.AlignmentFlag.AlignCenter, str(n))
@@ -2426,7 +2467,7 @@ class MainWindow(QMainWindow):
         elif mode_str.startswith(('atom', 'bond', 'template')):
             self.view_2d.setCursor(Qt.CursorShape.CrossCursor)
         elif mode_str.startswith(('charge', 'radical')):
-            self.view_2d.setCursor(Qt.CursorShape.PointingHandCursor)
+            self.view_2d.setCursor(Qt.CursorShape.CrossCursor)
         else:
             self.view_2d.setCursor(Qt.CursorShape.ArrowCursor)
 
@@ -3466,9 +3507,9 @@ class MainWindow(QMainWindow):
         self.view_2d.scale(1/1.2, 1/1.2)
         
     def reset_zoom(self):
-        """ ビューの拡大率をデフォルト (50%) にリセットする """
+        """ ビューの拡大率をデフォルト (75%) にリセットする """
         transform = QTransform()
-        transform.scale(0.5, 0.5)
+        transform.scale(0.75, 0.75)
         self.view_2d.setTransform(transform)
 
     def fit_to_view(self):
