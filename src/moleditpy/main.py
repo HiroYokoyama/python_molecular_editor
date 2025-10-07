@@ -11,7 +11,7 @@ DOI 10.5281/zenodo.17268532
 """
 
 #Version
-VERSION = "1.1.0"
+VERSION = "1.1.1"
 
 import sys
 import numpy as np
@@ -346,13 +346,9 @@ class AtomItem(QGraphicsItem):
         return res
 
     def hoverEnterEvent(self, event):
-        # シーンのモードによって制御したい場合は下の if を編集
-        scene = self.scene()
-        mode = getattr(scene, 'mode', '')
-        # デフォルト: select以外のモードならハイライト（必要なら特定モードに限定）
-        if mode != 'select':
-            self.hovered = True
-            self.update()
+        # シーンのモードにかかわらず、ホバー時にハイライトを有効にする
+        self.hovered = True
+        self.update()
         super().hoverEnterEvent(event)
 
     def hoverLeaveEvent(self, event):
@@ -467,13 +463,8 @@ class BondItem(QGraphicsItem):
     def hoverEnterEvent(self, event):
         scene = self.scene()
         mode = getattr(scene, 'mode', '')
-        # 例: 2/3 結合モードのときだけハイライトにしたいなら下を使う:
-        # if mode.startswith('bond_2') or mode.startswith('bond_3'):
-        #   ...
-        # デフォルト: select以外でハイライト
-        if mode != 'select':
-            self.hovered = True
-            self.update()
+        self.hovered = True
+        self.update()
         super().hoverEnterEvent(event)
 
     def hoverLeaveEvent(self, event):
@@ -669,8 +660,8 @@ class MoleculeScene(QGraphicsScene):
             # 使用する結合様式を決定
             # atomモードの場合は bond_order/stereo を None にして create_bond にデフォルト値(1, 0)を適用
             # bond_* モードの場合は現在の設定 (self.bond_order/stereo) を使用
-            order_to_use = self.bond_order if self.mode.startswith('bond') else None # ★変更点★
-            stereo_to_use = self.bond_stereo if self.mode.startswith('bond') else None # ★変更点★
+            order_to_use = self.bond_order if self.mode.startswith('bond') else None
+            stereo_to_use = self.bond_stereo if self.mode.startswith('bond') else None
     
             
             if line.length() < 10:
@@ -784,7 +775,7 @@ class MoleculeScene(QGraphicsScene):
             ax, ay = coords(a); bx, by = coords(b)
             return math.hypot(ax - bx, ay - by)
     
-        # --- 1) 既にクリックされた existing_items をテンプレート頂点にマップ (変更なし) ---
+        # --- 1) 既にクリックされた existing_items をテンプレート頂点にマップ ---
         existing_items = existing_items or []
         used_indices = set()
         ref_lengths = [dist_pts(points[i], points[j]) for i, j, _ in bonds_info if i < num_points and j < num_points]
@@ -806,7 +797,7 @@ class MoleculeScene(QGraphicsScene):
             except Exception:
                 pass
     
-        # --- 2) シーン内既存原子を self.data.atoms から列挙してマップ (変更なし) ---
+        # --- 2) シーン内既存原子を self.data.atoms から列挙してマップ ---
         mapped_atoms = {it for it in atom_items if it is not None}
         for i, p in enumerate(points):
             if atom_items[i] is not None: continue
@@ -828,7 +819,7 @@ class MoleculeScene(QGraphicsScene):
                 atom_items[i] = nearby
                 mapped_atoms.add(nearby)
     
-        # --- 3) 足りない頂点は新規作成 (変更なし) ---
+        # --- 3) 足りない頂点は新規作成　---
         for i, p in enumerate(points):
             if atom_items[i] is None:
                 atom_id = self.create_atom(symbol, p)
@@ -854,7 +845,7 @@ class MoleculeScene(QGraphicsScene):
                 best_rot = 0
                 max_score = -999 # スコアは「適合度」を意味する
 
-                # --- ★フューズされた辺の数による条件分岐★ ---
+                # --- フューズされた辺の数による条件分岐 ---
                 if len(existing_orders) >= 2:
                     # 2辺以上フューズ: 単純に既存の辺の次数とテンプレートの辺の次数が一致するものを最優先する
                     # (この場合、新しい環を交互配置にするのは難しく、単に既存の構造を壊さないことを優先)
@@ -924,7 +915,7 @@ class MoleculeScene(QGraphicsScene):
                     new_tb.append((i_idx, j_idx, new_order))
                 template_bonds_to_use = new_tb
     
-        # --- 5) ボンド作成／更新 (変更なし) ---
+        # --- 5) ボンド作成／更新---
         for id1_idx, id2_idx, order in template_bonds_to_use:
             if id1_idx < len(atom_items) and id2_idx < len(atom_items):
                 a_item, b_item = atom_items[id1_idx], atom_items[id2_idx]
@@ -936,13 +927,13 @@ class MoleculeScene(QGraphicsScene):
     
                 exist_b = self.find_bond_between(a_item, b_item)
                 if exist_b:
-                    # ★最重要ポリシー（フューズ辺は次数を変更しない）★
+                    # フューズ辺は次数を変更しない
                     continue 
                 else:
                     # 新規ボンド作成
                     self.create_bond(a_item, b_item, bond_order=order)
     
-        # --- 6) 表示更新（必要なら） (変更なし) ---
+        # --- 6) 表示更新　---
         for at in atom_items:
             try:
                 if at: at.update_style() 
@@ -1822,7 +1813,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
 
             mw.atom_positions_3d[atom_id] = new_world_coords
             mw.glyph_source.points = mw.atom_positions_3d
-            mw.glyph_source.Modified()  # ジオメトリ変更を通知
+            mw.glyph_source.Modified()
             
             conf.SetAtomPosition(atom_id, new_world_coords)
 
@@ -2333,7 +2324,7 @@ class MainWindow(QMainWindow):
         about_action.triggered.connect(lambda: QMessageBox.about(
             self,
             "About MoleditPy",
-            f"MoleditPy Ver. {VERSION}\nAuthor: HiroYokoyama\nLicense: Apache-2.0"
+            f"MoleditPy Ver. {VERSION}\nAuthor: Hiromichi Yokoyama\nLicense: Apache-2.0"
         ))
         help_menu.addAction(about_action)
 
@@ -2357,10 +2348,8 @@ class MainWindow(QMainWindow):
     def set_mode(self, mode_str):
         self.scene.mode = mode_str
         
-        if mode_str.startswith('template'):
-            self.view_2d.setMouseTracking(True)
-        else:
-            self.view_2d.setMouseTracking(False)
+        self.view_2d.setMouseTracking(True) 
+        if not mode_str.startswith('template'):
             self.scene.template_preview.hide()
 
         # カーソル形状の設定
@@ -2415,7 +2404,7 @@ class MainWindow(QMainWindow):
     def set_3d_style(self, style_name):
         """3D表示スタイルを設定し、ビューを更新する"""
         if self.current_3d_style == style_name:
-            return # スタイルが変更されていない場合は何もしない
+            return
 
         self.current_3d_style = style_name
         self.statusBar().showMessage(f"3D style set to: {style_name}")
@@ -2576,7 +2565,6 @@ class MainWindow(QMainWindow):
                     original_id = rdkit_atom.GetIntProp("_original_atom_id")
                     if original_id in self.data.atoms and self.data.atoms[original_id]['item']:
                         item = self.data.atoms[original_id]['item']
-                        # ★ MOD: has_problem フラグを立て、再描画を要求 ★
                         item.has_problem = True 
                         item.update()
                 
@@ -2623,8 +2611,8 @@ class MainWindow(QMainWindow):
                 return
         
         # 最適化後の構造で3Dビューを再描画
-        self.draw_molecule_3d(self.current_mol)
         self.update_chiral_labels() # キラル中心のラベルも更新
+        self.draw_molecule_3d(self.current_mol)
         
         self.statusBar().showMessage("3D structure optimization successful.")
         self.push_undo_state() # Undo履歴に保存
@@ -2633,14 +2621,16 @@ class MainWindow(QMainWindow):
     def on_calculation_finished(self, mol):
         self.dragged_atom_info = None
         self.current_mol = mol
-        self.draw_molecule_3d(mol)
+        
         # ここで最適化済みの current_mol を用いて R/S を再解析して表示を更新
         try:
             self.update_chiral_labels()
         except Exception:
             # 念のためエラーを握り潰して UI を壊さない
             pass
-    
+
+        self.draw_molecule_3d(mol)
+
         #self.statusBar().showMessage("3D conversion successful.")
         self.convert_button.setEnabled(True)
         self.analysis_action.setEnabled(True)
@@ -3349,7 +3339,7 @@ class MainWindow(QMainWindow):
                     pass
 
             # RDKit の通常の stereochemistry 割当（念のため）
-            Chem.AssignStereochemistry(mol_for_chirality, cleanIt=True, force=True, flagPossibleStereoCenters=True)
+            #Chem.AssignStereochemistry(mol_for_chirality, cleanIt=True, force=True, flagPossibleStereoCenters=True)
 
             # キラル中心の取得（(idx, 'R'/'S'/'?') のリスト）
             chiral_centers = Chem.FindMolChiralCenters(mol_for_chirality, includeUnassigned=True)
@@ -3438,9 +3428,9 @@ class MainWindow(QMainWindow):
         """「3D Edit」ボタンの状態に応じて編集モードを切り替える"""
         self.is_3d_edit_mode = checked
         if checked:
-            self.statusBar().showMessage("3D Edit Mode: ON. Click and drag an atom to move.")
+            self.statusBar().showMessage("3D Edit Mode: ON.")
         else:
-            self.statusBar().showMessage("3D Edit Mode: OFF. Drag empty space to rotate.")
+            self.statusBar().showMessage("3D Edit Mode: OFF.")
         self.view_2d.setFocus()
 
     def _setup_3d_picker(self):
