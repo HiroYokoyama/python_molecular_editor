@@ -11,7 +11,7 @@ DOI 10.5281/zenodo.17268532
 """
 
 #Version
-VERSION = "1.1.2"
+VERSION = "1.1.3"
 
 import sys
 import numpy as np
@@ -450,11 +450,14 @@ class BondItem(QGraphicsItem):
                 painter.drawPolygon(poly)
             
             elif self.stereo == 2: # Dash (破線)
+                pen = painter.pen()
+                pen.setWidthF(2.5) # デフォルトの太さ(2)から少し太くする
+                painter.setPen(pen)
                 num_dashes = 8
                 for i in range(num_dashes + 1):
                     t = i / num_dashes
                     start_pt = p1 * (1 - t) + p2 * t
-                    width = 5.0 * (1 - t)
+                    width = 12.0 * (1 - t)
                     offset = QPointF(normal.dx(), normal.dy()) * width / 2.0
                     painter.drawLine(start_pt - offset, start_pt + offset)
         
@@ -476,39 +479,14 @@ class BondItem(QGraphicsItem):
         # --- 2. ホバー時のエフェクトを上から重ねて描画 ---
         if (not self.isSelected()) and getattr(self, 'hovered', False):
             try:
-                hover_pen = QPen(QColor(144, 238, 144, 180), 8) # 少し太くして見やすく
+                # ホバー時のハイライトを太めの半透明な線で描画
+                hover_pen = QPen(QColor(144, 238, 144, 180), 8) # LightGreen, 半透明
                 hover_pen.setCapStyle(Qt.PenCapStyle.RoundCap)
                 painter.setPen(hover_pen)
-                painter.drawLine(line) # 中心線をなぞる
+                painter.drawLine(line) 
             except Exception:
                 pass
 
-        if self.order == 1:
-            painter.drawLine(line)
-        else:
-            v = line.unitVector().normalVector()
-            offset = QPointF(v.dx(), v.dy()) * BOND_OFFSET
-            if self.order == 2:
-                painter.drawLine(line.translated(offset))
-                painter.drawLine(line.translated(-offset))
-            elif self.order == 3:
-                painter.drawLine(line)
-                painter.drawLine(line.translated(offset))
-                painter.drawLine(line.translated(-offset))
-
-        # ホバー時は中央の線に太めの薄い緑を重ねて「枠っぽく」見せる
-        if (not self.isSelected()) and getattr(self, 'hovered', False):
-            try:
-                line = self.get_line_in_local_coords()
-                if line.length() > 0:
-                    hover_pen = QPen(QColor(144, 238, 144, 180), 6)  # 太めで透過
-                    hover_pen.setCapStyle(Qt.PenCapStyle.RoundCap)
-                    hover_pen.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
-                    painter.setPen(hover_pen)
-                    # 中心をなぞる一本線で十分視認できる（複数本線の結合も中心線で可）
-                    painter.drawLine(line)
-            except Exception:
-                pass
 
 
     def update_position(self):
