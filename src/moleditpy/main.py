@@ -11,7 +11,7 @@ DOI 10.5281/zenodo.17268532
 """
 
 #Version
-VERSION = "1.1.4"
+VERSION = "1.1.5"
 
 import sys
 import numpy as np
@@ -253,7 +253,7 @@ class AtomItem(QGraphicsItem):
     
     def boundingRect(self):
         r = globals().get('ATOM_RADIUS', 18)
-        extra = 18.0 # 元の値(15.0)から拡大し、電荷・ラジカル表示領域を確保
+        extra = 15.0
         return QRectF(-r - extra, -r - extra, (r + extra) * 2.0, (r + extra) * 2.0)
 
     def shape(self):
@@ -527,6 +527,7 @@ class TemplatePreviewItem(QGraphicsItem):
         return self.polygon.boundingRect().adjusted(-5, -5, 5, 5)
 
     def paint(self, painter, option, widget):
+            
         painter.setPen(self.pen)
         painter.setBrush(Qt.BrushStyle.NoBrush)
         if not self.polygon.isEmpty():
@@ -588,10 +589,6 @@ class MoleculeScene(QGraphicsScene):
         if getattr(self, "mode", "") != "select":
             self.clearSelection()
             event.accept()
-
-        if self.mode.startswith('template'):
-            event.accept()
-            return
         
         item = self.itemAt(self.press_pos, self.views()[0].transform())
         if isinstance(item, AtomItem):
@@ -609,13 +606,13 @@ class MoleculeScene(QGraphicsScene):
 
     def mouseMoveEvent(self, event):
         if self.mode.startswith('template'):
-            self.update_template_preview(event.scenePos()); return
-
+            self.update_template_preview(event.scenePos())
+        
         if not self.mouse_moved_since_press and self.press_pos:
             if (event.scenePos() - self.press_pos).manhattanLength() > QApplication.startDragDistance():
                 self.mouse_moved_since_press = True
         
-        if self.temp_line:
+        if self.temp_line and not self.mode.startswith('template'):
             start_point = self.start_atom.pos() if self.start_atom else self.start_pos
             if not start_point:
                 super().mouseMoveEvent(event)
@@ -640,6 +637,7 @@ class MoleculeScene(QGraphicsScene):
             
             self.temp_line.setLine(QLineF(start_point, end_point))
         else: 
+            # テンプレートモードであっても、ホバーイベントはここで伝播する
             super().mouseMoveEvent(event)
 
     def mouseReleaseEvent(self, event):
@@ -793,10 +791,12 @@ class MoleculeScene(QGraphicsScene):
         - ベンゼン環テンプレートは、フューズされる既存結合の次数に基づき、
           「新規に作られる二重結合が2本になるように」回転を決定するロジックを適用（条件分岐あり）。
         """
-        import math
     
         num_points = len(points)
         atom_items = [None] * num_points
+
+        is_benzene_template = (num_points == 6 and any(o == 2 for _, _, o in bonds_info))
+
     
         def coords(p):
             if hasattr(p, 'x') and hasattr(p, 'y'):
@@ -955,19 +955,49 @@ class MoleculeScene(QGraphicsScene):
             if id1_idx < len(atom_items) and id2_idx < len(atom_items):
                 a_item, b_item = atom_items[id1_idx], atom_items[id2_idx]
                 if not a_item or not b_item or a_item is b_item: continue
-    
-                # 順序正規化
+
                 id1, id2 = a_item.atom_id, b_item.atom_id
                 if id1 > id2: id1, id2 = id2, id1
-    
+
                 exist_b = self.find_bond_between(a_item, b_item)
+
                 if exist_b:
-                    # フューズ辺は次数を変更しない
-                    continue 
+                    # デフォルトでは既存の結合を維持する
+                    should_overwrite = False
+
+                    # 条件1: ベンゼン環テンプレートであること
+                    # 条件2: 接続先が単結合であること
+                    if is_benzene_template and exist_b.order == 1:
+
+                        # 条件3: 接続先の単結合が共役系の一部ではないこと
+                        # (つまり、両端の原子が他に二重結合を持たないこと)
+                        atom1 = exist_b.atom1
+                        atom2 = exist_b.atom2
+
+                        # atom1が他に二重結合を持つかチェック
+                        atom1_has_other_double_bond = any(b.order == 2 for b in atom1.bonds if b is not exist_b)
+
+                        # atom2が他に二重結合を持つかチェック
+                        atom2_has_other_double_bond = any(b.order == 2 for b in atom2.bonds if b is not exist_b)
+
+                        # 両方の原子が他に二重結合を持たない「孤立した単結合」の場合のみ上書きフラグを立てる
+                        if not atom1_has_other_double_bond and not atom2_has_other_double_bond:
+                            should_overwrite = True
+
+                    if should_overwrite:
+                        # 上書き条件が全て満たされた場合にのみ、結合次数を更新
+                        exist_b.order = order
+                        exist_b.stereo = 0
+                        self.data.bonds[(id1, id2)]['order'] = order
+                        self.data.bonds[(id1, id2)]['stereo'] = 0
+                        exist_b.update()
+                    else:
+                        # 上書き条件を満たさない場合は、既存の結合を維持する
+                        continue
                 else:
                     # 新規ボンド作成
                     self.create_bond(a_item, b_item, bond_order=order)
-    
+
         # --- 6) 表示更新　---
         for at in atom_items:
             try:
@@ -999,6 +1029,7 @@ class MoleculeScene(QGraphicsScene):
         l = DEFAULT_BOND_LENGTH
         self.template_context = {}
 
+
         if isinstance(item, AtomItem):
             p0 = item.pos()
             continuous_angle = math.atan2(pos.y() - p0.y(), pos.x() - p0.x())
@@ -1014,7 +1045,7 @@ class MoleculeScene(QGraphicsScene):
             points = self._calculate_polygon_from_edge(p0, p1, n, cursor_pos=pos, use_existing_length=True)
             self.template_context['items'] = [item.atom1, item.atom2]
 
-        else: # 空白領域に配置
+        else:
             angle_step = 2 * math.pi / n
             start_angle = -math.pi / 2 if n % 2 != 0 else -math.pi / 2 - angle_step / 2
             points = [
@@ -1032,6 +1063,7 @@ class MoleculeScene(QGraphicsScene):
             self.template_context['bonds_info'] = bonds_info
 
             self.template_preview.set_geometry(points, is_aromatic)
+
             self.template_preview.show()
             if self.views():
                 self.views()[0].viewport().update()
