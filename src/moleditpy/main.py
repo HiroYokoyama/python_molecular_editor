@@ -11,7 +11,7 @@ DOI 10.5281/zenodo.17268532
 """
 
 #Version
-VERSION = "1.1.3"
+VERSION = "1.1.4"
 
 import sys
 import numpy as np
@@ -1000,10 +1000,11 @@ class MoleculeScene(QGraphicsScene):
         self.template_context = {}
 
         if isinstance(item, AtomItem):
-            # 原子にスナップ
             p0 = item.pos()
-            direction = QLineF(p0, pos).unitVector()
-            p1 = p0 + direction.p2() * l if direction.length() > 0 else p0 + QPointF(l, 0)
+            continuous_angle = math.atan2(pos.y() - p0.y(), pos.x() - p0.x())
+            snap_angle_rad = math.radians(15)
+            snapped_angle = round(continuous_angle / snap_angle_rad) * snap_angle_rad
+            p1 = p0 + QPointF(l * math.cos(snapped_angle), l * math.sin(snapped_angle))
             points = self._calculate_polygon_from_edge(p0, p1, n)
             self.template_context['items'] = [item]
 
@@ -1061,7 +1062,7 @@ class MoleculeScene(QGraphicsScene):
             # Note: v_edgeは正規化済みだが、方向は同じなので判定には問題ない
             v_cursor = cursor_pos - p0
             cross_product_z = (p1 - p0).x() * v_cursor.y() - (p1 - p0).y() * v_cursor.x()
-            if cross_product_z > 0:
+            if cross_product_z < 0:
                 rotation_angle = -rotation_angle
 
         cos_a, sin_a = math.cos(rotation_angle), math.sin(rotation_angle)
