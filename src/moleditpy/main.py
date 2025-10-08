@@ -11,7 +11,11 @@ DOI 10.5281/zenodo.17268532
 """
 
 #Version
-VERSION = '1.1.8'
+VERSION = '1.2.0'
+
+print("-----------------------------------------------------")
+print("MoleditPy — A Python-based molecular editing software")
+print("-----------------------------------------------------\n")
 
 import sys
 import numpy as np
@@ -31,7 +35,7 @@ from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QPushButton, QSplitter, QGraphicsView, QGraphicsScene, QGraphicsItem,
     QToolBar, QStatusBar, QGraphicsTextItem, QGraphicsLineItem, QDialog, QGridLayout,
-    QFileDialog, QSizePolicy, QLabel, QLineEdit, QToolButton, QMenu, QMessageBox
+    QFileDialog, QSizePolicy, QLabel, QLineEdit, QToolButton, QMenu, QMessageBox, QInputDialog
 )
 from PyQt6.QtGui import (
     QPen, QBrush, QColor, QPainter, QAction, QActionGroup, QFont, QPolygonF,
@@ -190,7 +194,15 @@ class MolecularData:
 
         for (id1, id2), bond in self.bonds.items():
             idx1, idx2, order = atom_map[id1] + 1, atom_map[id2] + 1, bond['order']
-            mol_block += f"{idx1:3d}{idx2:3d}{order:3d}  0  0  0  0\n"
+            stereo_code = 0
+            bond_stereo = bond.get('stereo', 0)
+            if bond_stereo == 1:
+                stereo_code = 1
+            elif bond_stereo == 2:
+                stereo_code = 6
+
+            mol_block += f"{idx1:3d}{idx2:3d}{order:3d}{stereo_code:3d}  0  0  0\n"
+            
         mol_block += "M  END\n"
         return mol_block
 
@@ -2364,6 +2376,9 @@ class MainWindow(QMainWindow):
         menu_bar = self.menuBar()
         
         file_menu = menu_bar.addMenu("&File")
+        import_smiles_action = QAction("Import SMILES...", self)
+        import_smiles_action.triggered.connect(self.import_smiles_dialog)
+        file_menu.addAction(import_smiles_action)
         load_mol_action = QAction("Import MOL...", self); load_mol_action.triggered.connect(self.load_mol_file)
         file_menu.addAction(load_mol_action)
         file_menu.addSeparator()
@@ -3020,13 +3035,84 @@ class MainWindow(QMainWindow):
         if push_to_undo:
             self.push_undo_state()
 
+    def import_smiles_dialog(self):
+        """ユーザーにSMILES文字列の入力を促すダイアログを表示する"""
+        smiles, ok = QInputDialog.getText(self, "Import SMILES", "Enter SMILES string:")
+        if ok and smiles:
+            self.load_from_smiles(smiles)
+
+    def load_from_smiles(self, smiles_string):
+        """SMILES文字列から分子を読み込み、2Dエディタに表示する"""
+        try:
+            mol = Chem.MolFromSmiles(smiles_string)
+            if mol is None:
+                raise ValueError("Invalid SMILES string.")
+
+            AllChem.Compute2DCoords(mol)
+            Chem.Kekulize(mol)
+
+            AllChem.AssignStereochemistry(mol, cleanIt=True, force=True)
+            conf = mol.GetConformer()
+            AllChem.WedgeMolBonds(mol, conf)
+            
+            self.clear_2d_editor(push_to_undo=False)
+            self.current_mol = None
+            self.plotter.clear()
+            self.analysis_action.setEnabled(False)
+
+            conf = mol.GetConformer()
+            SCALE_FACTOR = 50.0
+            
+            view_center = self.view_2d.mapToScene(self.view_2d.viewport().rect().center())
+            positions = [conf.GetAtomPosition(i) for i in range(mol.GetNumAtoms())]
+            mol_center_x = sum(p.x for p in positions) / len(positions) if positions else 0.0
+            mol_center_y = sum(p.y for p in positions) / len(positions) if positions else 0.0
+
+            rdkit_idx_to_my_id = {}
+            for i in range(mol.GetNumAtoms()):
+                atom = mol.GetAtomWithIdx(i)
+                pos = conf.GetAtomPosition(i)
+                charge = atom.GetFormalCharge()
+                
+                relative_x = pos.x - mol_center_x
+                relative_y = pos.y - mol_center_y
+                
+                scene_x = (relative_x * SCALE_FACTOR) + view_center.x()
+                scene_y = (-relative_y * SCALE_FACTOR) + view_center.y()
+                
+                atom_id = self.scene.create_atom(atom.GetSymbol(), QPointF(scene_x, scene_y), charge=charge)
+                rdkit_idx_to_my_id[i] = atom_id
+            
+            for bond in mol.GetBonds():
+                b_idx, e_idx = bond.GetBeginAtomIdx(), bond.GetEndAtomIdx()
+                b_type = bond.GetBondTypeAsDouble()
+                b_dir = bond.GetBondDir()
+                stereo = 0
+                if b_dir == Chem.BondDir.BEGINWEDGE:
+                    stereo = 1 # Wedge
+                elif b_dir == Chem.BondDir.BEGINDASH:
+                    stereo = 2 # Dash
+
+                if b_idx in rdkit_idx_to_my_id and e_idx in rdkit_idx_to_my_id:
+                    a1_id, a2_id = rdkit_idx_to_my_id[b_idx], rdkit_idx_to_my_id[e_idx]
+                    a1_item = self.data.atoms[a1_id]['item']
+                    a2_item = self.data.atoms[a2_id]['item']
+                    
+                    self.scene.create_bond(a1_item, a2_item, bond_order=int(b_type), bond_stereo=stereo)
+
+            self.statusBar().showMessage(f"Successfully loaded from SMILES.")
+            self.reset_undo_stack()
+            self.fit_to_view()
+        except Exception as e:
+            self.statusBar().showMessage(f"Error loading from SMILES: {e}")
+
     def load_mol_file(self):
         options = QFileDialog.Option.DontUseNativeDialog
         file_path, _ = QFileDialog.getOpenFileName(self, "Import MOL File", "", "Chemical Files (*.mol *.sdf);;All Files (*)", options=options)
         if not file_path: return
         try:
             self.dragged_atom_info = None
-            suppl = Chem.SDMolSupplier(file_path, removeHs=True)
+            suppl = Chem.SDMolSupplier(file_path, removeHs=False)
             mol = next(suppl, None)
             if mol is None: raise ValueError("Failed to read molecule from file.")
 
@@ -3036,9 +3122,16 @@ class MainWindow(QMainWindow):
             self.current_mol = None; self.plotter.clear(); self.analysis_action.setEnabled(False)
             
             if mol.GetNumConformers() == 0: 
+                # 座標情報がないMOLファイルの場合、座標を生成し、
+                # ファイルから読み取った立体情報を元に、くさび結合を再設定する
                 AllChem.Compute2DCoords(mol)
+                AllChem.AssignStereochemistry(mol, cleanIt=True, force=True)
+                conf_for_wedge = mol.GetConformer()
+                AllChem.WedgeMolBonds(mol, conf_for_wedge)
 
-            conf = mol.GetConformer(); SCALE_FACTOR = 50.0
+            conf = mol.GetConformer()
+
+            SCALE_FACTOR = 50.0
             
             view_center = self.view_2d.mapToScene(self.view_2d.viewport().rect().center())
 
@@ -3076,6 +3169,7 @@ class MainWindow(QMainWindow):
                 self.scene.create_bond(a1_item, a2_item, bond_order=int(b_type), bond_stereo=stereo)
 
             self.statusBar().showMessage(f"Successfully loaded {file_path}")
+            self.fit_to_view()
             self.reset_undo_stack()
         except Exception as e: self.statusBar().showMessage(f"Error loading file: {e}")
 
