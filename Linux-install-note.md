@@ -46,7 +46,7 @@ PyQt6, PyVista, RDKit, Open Babelなど、C++ライブラリに依存する複�
 
 ## 詳細: Linux環境におけるSegmentation Faultの調査経緯と原因
 
-### TL;DR (要約)
+### 要約
 
 PyQt6, PyVista, RDKit, Open Babel を使用したPython GUIアプリケーションが、Linux環境で起動時に `Segmentation fault` でクラッシュした。調査の結果、原因は **`pip`でインストールされた`openbabel-wheel`が、PyQt6と互換性のない共有ライブラリ (`libxcb.so`) を独自に同梱しており**、ライブラリのバージョン競合を引き起こしていたことであった。
 
