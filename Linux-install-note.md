@@ -1,7 +1,7 @@
 # Linux環境でmoleditpyアプリを安定動作させるための開発検討（まだ動きません）
 
 
-# `moleditpy` のインストール時に発生したQtプラットフォームプラグインエラーのメモ
+## `moleditpy` のインストール時に発生したQtプラットフォームプラグインエラーのメモ
 
 ## 1\. 発生した問題
 
@@ -57,6 +57,8 @@ This application failed to start because no Qt platform plugin could be initiali
 PyQt6, PyVista, RDKit, Open Babelなど、C++ライブラリに依存する複雑なPythonスタックをLinux環境で安定して動作させるための、推奨される環境構築手順です。
 
 `pip`によるインストールは、ライブラリが独自に同梱する共有ライブラリ間の競合（`Segmentation fault`の原因）を引き起こす可能性があるため、以下の`conda`を用いた方法を強く推奨します。
+
+## メモ2
 
 ### 前提条件
 
