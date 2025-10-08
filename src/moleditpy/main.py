@@ -11,7 +11,7 @@ DOI 10.5281/zenodo.17268532
 """
 
 #Version
-VERSION = '1.1.7'
+VERSION = '1.1.8'
 
 import sys
 import numpy as np
@@ -2077,6 +2077,7 @@ class MainWindow(QMainWindow):
         # 1. 右パネル全体は「垂直」レイアウトにする
         right_layout = QVBoxLayout(right_pane)
         self.plotter = QtInteractor(right_pane)
+        self.plotter.setAcceptDrops(False)
         self.plotter.setSizePolicy(
             QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
         )
@@ -3152,7 +3153,7 @@ class MainWindow(QMainWindow):
                 for i in range(num_atoms):
                     pos=conf.GetAtomPosition(i); symbol=self.current_mol.GetAtomWithIdx(i).GetSymbol()
                     xyz_lines.append(f"{symbol} {pos.x:.6f} {pos.y:.6f} {pos.z:.6f}")
-                with open(file_path,'w') as f: f.write("\n".join(xyz_lines))
+                with open(file_path,'w') as f: f.write("\n".join(xyz_lines) + "\n")
                 self.statusBar().showMessage(f"Successfully saved to {file_path}")
             except Exception as e: self.statusBar().showMessage(f"Error saving file: {e}")
 
