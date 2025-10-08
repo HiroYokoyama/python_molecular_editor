@@ -1,4 +1,4 @@
-# Linux環境でmoleditpyアプリを安定動作させるための環境構築手順
+# Linux環境でmoleditpyアプリを安定動作させるための開発検討（まだ動きません）
 
 PyQt6, PyVista, RDKit, Open Babelなど、C++ライブラリに依存する複雑なPythonスタックをLinux環境で安定して動作させるための、推奨される環境構築手順です。
 
