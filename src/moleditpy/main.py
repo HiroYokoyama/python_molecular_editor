@@ -11,7 +11,7 @@ DOI 10.5281/zenodo.17268532
 """
 
 #Version
-VERSION = '1.2.0'
+VERSION = '1.2.1'
 
 print("-----------------------------------------------------")
 print("MoleditPy — A Python-based molecular editing software")
@@ -597,6 +597,42 @@ class MoleculeScene(QGraphicsScene):
         self.mouse_moved_since_press = False
         self.data_changed_in_event = False
         self.initial_positions_in_event = {item: item.pos() for item in self.items() if isinstance(item, AtomItem)}
+
+        if event.button() == Qt.MouseButton.RightButton:
+            item = self.itemAt(event.scenePos(), self.views()[0].transform())
+            if not isinstance(item, (AtomItem, BondItem)):
+                return # 対象外のものをクリックした場合は何もしない
+
+            data_changed = False
+            # --- モードに応じた処理 ---
+            if isinstance(item, AtomItem):
+                # ラジカルモードの場合、ラジカルを0にする
+                if self.mode == 'radical' and item.radical != 0:
+                    item.radical = 0
+                    self.data.atoms[item.atom_id]['radical'] = 0
+                    item.update_style()
+                    data_changed = True
+                # 電荷モードの場合、電荷を0にする
+                elif self.mode in ['charge_plus', 'charge_minus'] and item.charge != 0:
+                    item.charge = 0
+                    self.data.atoms[item.atom_id]['charge'] = 0
+                    item.update_style()
+                    data_changed = True
+                # 上記以外のモード（テンプレートを除く）では原子を削除
+                elif not self.mode.startswith('template'):
+                    data_changed = self.delete_items({item})
+            
+            elif isinstance(item, BondItem):
+                # テンプレート、電荷、ラジカルモード以外で結合を削除
+                if not self.mode.startswith(('template', 'charge', 'radical')):
+                    data_changed = self.delete_items({item})
+
+            if data_changed:
+                self.window.push_undo_state()
+            
+            self.press_pos = None
+            event.accept()
+            return # 右クリック処理を完了し、左クリックの処理へ進ませない
 
         if self.mode.startswith('template'):
             self.clearSelection()
