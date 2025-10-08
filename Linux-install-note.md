@@ -37,7 +37,8 @@ PyQt6, PyVista, RDKit, Open Babelなど、C++ライブラリに依存する複�
     全ての準備が整いました。このクリーンな環境でアプリケーションを実行します。
 
     ```bash
-    python3 main.py
+    pip install moleditpy
+    moleditpy
     ```
 
 上記の手順に従うことで、本ドキュメント下部に詳述するような共有ライブラリの競合問題を未然に防ぎ、安定した動作が期待できます。
