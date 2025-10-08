@@ -11,7 +11,7 @@ DOI 10.5281/zenodo.17268532
 """
 
 #Version
-VERSION = "1.1.6"
+VERSION = '1.1.7'
 
 import sys
 import numpy as np
@@ -93,7 +93,7 @@ VDW_RADII = {pt.GetElementSymbol(i): pt.GetRvdw(i) * 0.3 for i in range(1, 119)}
 def main():
     # --- Windows タスクバーアイコンのための追加処理 ---
     if sys.platform == 'win32':
-        myappid = 'hyoko.moleditpy.0.3' # アプリケーション固有のID（任意）
+        myappid = 'hyoko.moleditpy.1.0' # アプリケーション固有のID（任意）
         ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
 
     app = QApplication(sys.argv)
@@ -172,7 +172,7 @@ class MolecularData:
         if not self.atoms: return None
         atom_map = {old_id: new_id for new_id, old_id in enumerate(self.atoms.keys())}
         num_atoms, num_bonds = len(self.atoms), len(self.bonds)
-        mol_block = "\n  PyQtEditor\n\n"
+        mol_block = "\n  MoleditPy\n\n"
         mol_block += f"{num_atoms:3d}{num_bonds:3d}  0  0  0  0  0  0  0  0999 V2000\n"
         for old_id, atom in self.atoms.items():
             x, y, z, symbol = atom['item'].pos().x(), -atom['item'].pos().y(), 0.0, atom['symbol']
@@ -1510,6 +1510,9 @@ class ZoomableView(QGraphicsView):
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
         self.setDragMode(QGraphicsView.DragMode.NoDrag)
 
+        self.main_window = parent
+        self.setAcceptDrops(True)
+
         self._is_panning = False
         self._pan_start_pos = QPointF()
         self._pan_start_scroll_h = 0
@@ -1585,6 +1588,45 @@ class ZoomableView(QGraphicsView):
             event.accept()
         else:
             super().mouseReleaseEvent(event)
+
+# ZoomableView クラス内 (約1691行目あたりから)
+
+    def dragEnterEvent(self, event):
+        """ファイルがこのウィジェット上にドラッグされたときに呼び出される"""
+        # ドラッグされたデータにファイルパスが含まれている場合のみ受け入れる
+        if event.mimeData().hasUrls():
+            event.acceptProposedAction()
+        else:
+            event.ignore()
+
+    def dragMoveEvent(self, event):
+        """
+        ウィジェット上でドラッグが移動したときに呼び出される。
+        """
+        if event.mimeData().hasUrls():
+            event.acceptProposedAction()
+        else:
+            super().dragMoveEvent(event)
+
+    def dropEvent(self, event):
+        """ファイルがこのウィジェット上でドロップされたときに呼び出される"""
+        urls = event.mimeData().urls()
+        if urls and urls[0].isLocalFile():
+            file_path = urls[0].toLocalFile()
+            
+            # MainWindowのファイル読み込みメソッドを呼び出す
+            if self.main_window:
+                # 拡張子によって適切な読み込み処理を呼び出す
+                if file_path.lower().endswith('.pmeraw'):
+                    self.main_window.load_raw_data(file_path=file_path)
+                elif file_path.lower().endswith(('.mol', '.sdf')):
+                    self.main_window.load_mol_file(file_path=file_path)
+                
+                event.acceptProposedAction()
+            else:
+                event.ignore()
+        else:
+            event.ignore()
 
 class CalculationWorker(QObject):
     status_update = pyqtSignal(str) 
@@ -1957,7 +1999,8 @@ class MainWindow(QMainWindow):
     start_calculation = pyqtSignal(str)
     def __init__(self, initial_file=None):
         super().__init__()
-        self.setWindowTitle("MoleditPy -- Python Molecular Editor Ver. " + VERSION); self.setGeometry(100, 100, 1400, 800)
+        self.setAcceptDrops(True)
+        self.setWindowTitle("MoleditPy -- Python Molecular Editor  Ver. " + VERSION); self.setGeometry(100, 100, 1400, 800)
         self.data = MolecularData(); self.current_mol = None
         self.current_3d_style = 'ball_and_stick'
         self.show_chiral_labels = False
@@ -2000,13 +2043,14 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(splitter)
 
         left_pane=QWidget()
+        left_pane.setAcceptDrops(True)
         left_layout=QVBoxLayout(left_pane)
 
         self.scene=MoleculeScene(self.data,self)
         self.scene.setSceneRect(-4000,-4000,4000,4000)
         self.scene.setBackgroundBrush(QColor("#FFFFFF"))
 
-        self.view_2d=ZoomableView(self.scene)
+        self.view_2d=ZoomableView(self.scene, self)
         self.view_2d.setRenderHint(QPainter.RenderHint.Antialiasing)
         self.view_2d.setSizePolicy(
             QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
@@ -2021,7 +2065,7 @@ class MainWindow(QMainWindow):
         self.cleanup_button.clicked.connect(self.clean_up_2d_structure)
         left_buttons_layout.addWidget(self.cleanup_button)
 
-        self.convert_button = QPushButton("Convert to 3D")
+        self.convert_button = QPushButton("Convert 2D to 3D")
         self.convert_button.clicked.connect(self.trigger_conversion)
         left_buttons_layout.addWidget(self.convert_button)
         
@@ -2053,7 +2097,7 @@ class MainWindow(QMainWindow):
         # エクスポートボタン (メニュー付き)
         self.export_button = QToolButton()
         self.export_button.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-        self.export_button.setText("Export")
+        self.export_button.setText("Export 3D")
         self.export_button.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
         self.export_button.setEnabled(False) # 初期状態は無効
 
@@ -2374,7 +2418,7 @@ class MainWindow(QMainWindow):
         optimize_2d_action.triggered.connect(self.clean_up_2d_structure)
         edit_menu.addAction(optimize_2d_action)
         
-        convert_3d_action = QAction("Convert to 3D", self)
+        convert_3d_action = QAction("Convert 2D to 3D", self)
         convert_3d_action.setShortcut(QKeySequence("Ctrl+K"))
         convert_3d_action.triggered.connect(self.trigger_conversion)
         edit_menu.addAction(convert_3d_action)
@@ -3062,12 +3106,16 @@ class MainWindow(QMainWindow):
     def save_as_mol(self):
         mol_block = self.data.to_mol_block()
         if not mol_block: self.statusBar().showMessage("Error: No 2D data to save."); return
+        lines = mol_block.split('\n')
+        if len(lines) > 1 and 'RDKit' in lines[1]:
+            lines[1] = '  MoleditPy Ver. ' + VERSION + '  2D'
+        modified_mol_block = '\n'.join(lines)
         options=QFileDialog.Option.DontUseNativeDialog
         file_path,_=QFileDialog.getSaveFileName(self,"Save 2D MOL File","","MOL Files (*.mol);;All Files (*)",options=options)
         if file_path:
             if not file_path.lower().endswith('.mol'): file_path += '.mol'
             try:
-                with open(file_path,'w') as f: f.write(mol_block)
+                with open(file_path,'w') as f: f.write(modified_mol_block)
                 self.statusBar().showMessage(f"2D data saved to {file_path}")
             except Exception as e: self.statusBar().showMessage(f"Error saving file: {e}")
             
@@ -3082,8 +3130,12 @@ class MainWindow(QMainWindow):
                 file_path += '.mol'
             try:
                 mol_block = Chem.MolToMolBlock(self.current_mol, includeStereo=True)
+                lines = mol_block.split('\n')
+                if len(lines) > 1 and 'RDKit' in lines[1]:
+                    lines[1] = '  MoleditPy Ver. ' + VERSION + '  3D'
+                modified_mol_block = '\n'.join(lines)
                 with open(file_path, 'w') as f:
-                    f.write(mol_block)
+                    f.write(modified_mol_block)
                 self.statusBar().showMessage(f"3D data saved to {file_path}")
             except Exception as e: self.statusBar().showMessage(f"Error saving 3D MOL file: {e}")
 
@@ -3096,7 +3148,7 @@ class MainWindow(QMainWindow):
             try:
                 conf=self.current_mol.GetConformer(); num_atoms=self.current_mol.GetNumAtoms()
                 xyz_lines=[str(num_atoms)]; smiles=Chem.MolToSmiles(Chem.RemoveHs(self.current_mol))
-                xyz_lines.append(f"Generated by MoleditPy Ver. {VERSION}. SMILES: {smiles}")
+                xyz_lines.append(f"Generated by MoleditPy Ver. {VERSION}  SMILES: {smiles}")
                 for i in range(num_atoms):
                     pos=conf.GetAtomPosition(i); symbol=self.current_mol.GetAtomWithIdx(i).GetSymbol()
                     xyz_lines.append(f"{symbol} {pos.x:.6f} {pos.y:.6f} {pos.z:.6f}")
@@ -3554,6 +3606,31 @@ class MainWindow(QMainWindow):
         
         # 新しいスタイルを確実に読み込ませるためにインタラクタを初期化
         self.plotter.iren.initialize()
+
+    def dragEnterEvent(self, event):
+        """ファイルがウィンドウ上にドラッグされたときに呼び出される"""
+        # ドラッグされたデータにファイルパスが含まれているかチェック
+        if event.mimeData().hasUrls():
+            event.acceptProposedAction()  # 受け入れ可能であることをカーソルで示す
+        else:
+            event.ignore()
+
+    def dropEvent(self, event):
+        """ファイルがウィンドウ上でドロップされたときに呼び出される"""
+        urls = event.mimeData().urls()
+        # ドロップされたのがローカルファイルの場合
+        if urls and urls[0].isLocalFile():
+            file_path = urls[0].toLocalFile()
+            
+            # ファイルの拡張子が .pmeraw であることを確認
+            if file_path.lower().endswith('.pmeraw'):
+                # 既存のファイル読み込み関数を呼び出す
+                self.load_raw_data(file_path=file_path)
+                event.acceptProposedAction()
+            else:
+                event.ignore()
+        else:
+            event.ignore()
 
 
 # --- Application Execution ---
