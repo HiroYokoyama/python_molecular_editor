@@ -37,6 +37,7 @@ PyQt6, PyVista, RDKit, Open Babelなど、C++ライブラリに依存する複�
     全ての準備が整いました。このクリーンな環境でアプリケーションを実行します。
 
     ```bash
+    sudo apt install libxcb-cursor0
     pip install moleditpy
     moleditpy
     ```
