@@ -51,12 +51,12 @@ This application failed to start because no Qt platform plugin could be initiali
 2.  **二次エラー (`undefined symbol`)**: より深刻な問題を示唆。これはOSライブラリの不足ではなく、**Conda環境内にインストールされたQt関連ライブラリ同士のバージョンやビルドに不整合が生じている**ことが原因。`conda`でインストールした`pyqt`と、`pip`経由で構築された環境との間でABI（Application Binary Interface）の互換性が崩れた可能性が高い。
 
 
------
-
-
 PyQt6, PyVista, RDKit, Open Babelなど、C++ライブラリに依存する複雑なPythonスタックをLinux環境で安定して動作させるための、推奨される環境構築手順です。
 
 `pip`によるインストールは、ライブラリが独自に同梱する共有ライブラリ間の競合（`Segmentation fault`の原因）を引き起こす可能性があるため、以下の`conda`を用いた方法を強く推奨します。
+
+
+-----
 
 ## メモ2
 
