@@ -1,5 +1,59 @@
 # Linux環境でmoleditpyアプリを安定動作させるための開発検討（まだ動きません）
 
+
+# `moleditpy` のインストール時に発生したQtプラットフォームプラグインエラーのメモ
+
+## 1\. 発生した問題
+
+Condaで新しい環境を作成し、`moleditpy`をインストールして実行しようとしたところ、GUIが起動せずエラーが発生した。
+
+### 1.1. 初期インストール手順
+
+以下のコマンドで環境を構築した。
+
+```bash
+# 1. 新しい環境を作成
+conda create -n moledit_env python=3.11 -c conda-forge
+
+# 2. 環境を有効化
+conda activate moledit_env
+
+# 3. 必要なライブラリをCondaでインストール
+conda install -c conda-forge pyqt rdkit numpy pyvista pyvistaqt openbabel
+
+# 4. moleditpyをpipでインストール
+pip install moleditpy
+
+# 5. 実行
+moleditpy
+```
+
+### 1.2. 最初に発生したエラー
+
+```
+qt.qpa.plugin: From 6.5.0, xcb-cursor0 or libxcb-cursor0 is needed to load the Qt xcb platform plugin.
+qt.qpa.plugin: Could not load the Qt platform plugin "xcb" in "" even though it was found.
+This application failed to start because no Qt platform plugin could be initialized. Reinstalling the application may fix this problem.
+```
+
+### 1.3. 発生したエラー詳細（QT_DEBUG_PLUGINS=1）
+
+
+```
+/.../libQt6XcbQpa.so.6: undefined symbol: _ZN20QSpiAccessibleBridgeC1Ev, version Qt_6_PRIVATE_API
+qt.qpa.plugin: Could not load the Qt platform plugin "xcb" in "" even though it was found.
+This application failed to start because no Qt platform plugin could be initialized.
+```
+
+## 2\. 原因の分析
+
+1.  **初期エラー (`libxcb-cursor0 is needed`)**: QtがLinux上でGUIを描画するために必要な、OSレベルの共有ライブラリが不足していることが原因。
+2.  **二次エラー (`undefined symbol`)**: より深刻な問題を示唆。これはOSライブラリの不足ではなく、**Conda環境内にインストールされたQt関連ライブラリ同士のバージョンやビルドに不整合が生じている**ことが原因。`conda`でインストールした`pyqt`と、`pip`経由で構築された環境との間でABI（Application Binary Interface）の互換性が崩れた可能性が高い。
+
+
+-----
+
+
 PyQt6, PyVista, RDKit, Open Babelなど、C++ライブラリに依存する複雑なPythonスタックをLinux環境で安定して動作させるための、推奨される環境構築手順です。
 
 `pip`によるインストールは、ライブラリが独自に同梱する共有ライブラリ間の競合（`Segmentation fault`の原因）を引き起こす可能性があるため、以下の`conda`を用いた方法を強く推奨します。
