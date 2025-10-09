@@ -11,7 +11,7 @@ DOI 10.5281/zenodo.17268532
 """
 
 #Version
-VERSION = '1.2.1'
+VERSION = '1.2.2'
 
 print("-----------------------------------------------------")
 print("MoleditPy — A Python-based molecular editing software")
@@ -39,7 +39,7 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtGui import (
     QPen, QBrush, QColor, QPainter, QAction, QActionGroup, QFont, QPolygonF,
-    QPainterPath, QPainterPathStroker, QFontMetrics, QKeySequence, QTransform, QCursor, QPixmap, QIcon, QShortcut, QDesktopServices
+    QPainterPath, QPainterPathStroker, QFontMetrics, QFontMetricsF, QKeySequence, QTransform, QCursor, QPixmap, QIcon, QShortcut, QDesktopServices
 )
 from PyQt6.QtCore import Qt, QPointF, QRectF, QLineF, QObject, QThread, pyqtSignal, QEvent, QMimeData, QByteArray, QUrl
 
@@ -257,16 +257,81 @@ class AtomItem(QGraphicsItem):
         super().__init__()
         self.atom_id, self.symbol, self.charge, self.radical, self.bonds, self.chiral_label = atom_id, symbol, charge, radical, [], None
         self.setPos(pos)
+        self.implicit_h_count = 0 
         self.setFlags(QGraphicsItem.GraphicsItemFlag.ItemIsMovable | QGraphicsItem.GraphicsItemFlag.ItemIsSelectable)
         self.setZValue(1); self.font = QFont("Arial", 20, QFont.Weight.Bold); self.update_style()
         self.setAcceptHoverEvents(True)
         self.hovered = False
         self.has_problem = False 
-    
+
     def boundingRect(self):
-        r = globals().get('ATOM_RADIUS', 18)
-        extra = 15.0
-        return QRectF(-r - extra, -r - extra, (r + extra) * 2.0, (r + extra) * 2.0)
+        # --- paint()メソッドと完全に同じロジックでテキストの位置とサイズを計算 ---
+        font = QFont("Arial", 20, QFont.Weight.Bold)
+        fm = QFontMetricsF(font)
+
+        hydrogen_part = ""
+        if self.implicit_h_count > 0:
+            is_skeletal_carbon = (self.symbol == 'C' and len(self.bonds) > 0)
+            if not is_skeletal_carbon:
+                hydrogen_part = "H"
+                if self.implicit_h_count > 1:
+                    subscript_map = str.maketrans("0123456789", "₀₁₂₃₄₅₆₇₈₉")
+                    hydrogen_part += str(self.implicit_h_count).translate(subscript_map)
+
+        flip_text = False
+        if hydrogen_part and self.bonds:
+            my_pos_x = self.pos().x()
+            total_dx = sum((b.atom2.pos().x() if b.atom1 is self else b.atom1.pos().x()) - my_pos_x for b in self.bonds)
+            if total_dx > 0:
+                flip_text = True
+        
+        if flip_text:
+            display_text = hydrogen_part + self.symbol
+        else:
+            display_text = self.symbol + hydrogen_part
+
+        text_rect = fm.boundingRect(display_text)
+        text_rect.adjust(-2, -2, 2, 2)
+        if hydrogen_part:
+            symbol_rect = fm.boundingRect(self.symbol)
+            if flip_text:
+                offset_x = symbol_rect.width() // 2
+                text_rect.moveTo(offset_x - text_rect.width(), -text_rect.height() / 2)
+            else:
+                offset_x = -symbol_rect.width() // 2
+                text_rect.moveTo(offset_x, -text_rect.height() / 2)
+        else:
+            text_rect.moveCenter(QPointF(0, 0))
+
+        # 1. paint()で描画される背景の矩形(bg_rect)を計算する
+        bg_rect = text_rect.adjusted(-5, -8, 5, 8)
+        
+        # 2. このbg_rectを基準として全体の描画領域を構築する
+        full_visual_rect = QRectF(bg_rect)
+
+        # 電荷記号の領域を計算に含める
+        if self.charge != 0:
+            if self.charge == 1: charge_str = "+"
+            elif self.charge == -1: charge_str = "-"
+            else: charge_str = f"{self.charge:+}"
+            charge_font = QFont("Arial", 12, QFont.Weight.Bold)
+            charge_fm = QFontMetricsF(charge_font)
+            charge_rect = charge_fm.boundingRect(charge_str)
+            
+            if flip_text:
+                charge_pos = QPointF(text_rect.left() - charge_rect.width() - 2, text_rect.top())
+            else:
+                charge_pos = QPointF(text_rect.right() + 2, text_rect.top())
+            charge_rect.moveTopLeft(charge_pos)
+            full_visual_rect = full_visual_rect.united(charge_rect)
+
+        # ラジカル記号の領域を計算に含める
+        if self.radical > 0:
+            radical_area = QRectF(text_rect.center().x() - 8, text_rect.top() - 8, 16, 8)
+            full_visual_rect = full_visual_rect.united(radical_area)
+
+        # 3. 選択ハイライト等のための最終的なマージンを追加する
+        return full_visual_rect.adjusted(-3, -3, 3, 3)
 
     def shape(self):
         scene = self.scene()
@@ -287,34 +352,85 @@ class AtomItem(QGraphicsItem):
         path.addEllipse(QPointF(0, 0), scene_radius, scene_radius)
         return path
 
+    # In class AtomItem:
+
     def paint(self, painter, option, widget):
         color = CPK_COLORS.get(self.symbol, CPK_COLORS['DEFAULT'])
         if self.is_visible:
-            # 1. 原子記号（C, Nなど）を描画するための準備
+            # 1. 描画の準備
             painter.setFont(self.font)
             fm = painter.fontMetrics()
-            text_rect = fm.boundingRect(self.symbol)
-            text_rect.moveCenter(QPointF(0, 0).toPoint())
-            
-            # 2. 原子記号の背景を白で塗りつぶす（結合線と重なっても見やすくするため）
+
+            # --- 水素部分のテキストを作成 ---
+            hydrogen_part = ""
+            if self.implicit_h_count > 0:
+                is_skeletal_carbon = (self.symbol == 'C' and len(self.bonds) > 0)
+                if not is_skeletal_carbon:
+                    hydrogen_part = "H"
+                    if self.implicit_h_count > 1:
+                        subscript_map = str.maketrans("0123456789", "₀₁₂₃₄₅₆₇₈₉")
+                        hydrogen_part += str(self.implicit_h_count).translate(subscript_map)
+
+            # --- テキストを反転させるか決定 ---
+            flip_text = False
+            # 水素ラベルがあり、結合が1本以上ある場合のみ反転を考慮
+            if hydrogen_part and self.bonds:
+
+                # 相対的なX座標で、結合が左右どちらに偏っているか判定
+                my_pos_x = self.pos().x()
+                total_dx = 0
+                for bond in self.bonds:
+                    other_atom = bond.atom1 if bond.atom2 is self else bond.atom2
+                    total_dx += (other_atom.pos().x() - my_pos_x)
+
+                # 結合が主に右側にある場合はテキストを反転させる
+                if total_dx > 0:
+                    flip_text = True
+
+            # --- 表示テキストとアライメントを最終決定 ---
+            if flip_text:
+                display_text = hydrogen_part + self.symbol
+                alignment_flag = Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
+            else:
+                display_text = self.symbol + hydrogen_part
+                alignment_flag = Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter
+
+            text_rect = fm.boundingRect(display_text)
+            text_rect.adjust(-2, -2, 2, 2)
+            symbol_rect = fm.boundingRect(self.symbol) # 主元素のみの幅を計算
+
+            # --- テキストの描画位置を決定 ---
+            # 水素ラベルがない場合 (従来通り中央揃え)
+            if not hydrogen_part:
+                alignment_flag = Qt.AlignmentFlag.AlignCenter
+                text_rect.moveCenter(QPointF(0, 0).toPoint())
+            # 水素ラベルがあり、反転する場合 (右揃え)
+            elif flip_text:
+                # 主元素の中心が原子の中心に来るように、矩形の右端を調整
+                offset_x = symbol_rect.width() // 2
+                text_rect.moveTo(offset_x - text_rect.width(), -text_rect.height() // 2)
+            # 水素ラベルがあり、反転しない場合 (左揃え)
+            else:
+                # 主元素の中心が原子の中心に来るように、矩形の左端を調整
+                offset_x = -symbol_rect.width() // 2
+                text_rect.moveTo(offset_x, -text_rect.height() // 2)
+
+            # 2. 原子記号の背景を白で塗りつぶす
             if self.scene():
                 bg_brush = self.scene().backgroundBrush()
-                bg_rect = text_rect.adjusted(-3, -3, 3, 3)
+                bg_rect = text_rect.adjusted(-5, -8, 5, 8)
                 painter.setBrush(bg_brush)
                 painter.setPen(Qt.PenStyle.NoPen)
-                painter.drawRect(bg_rect)
+                painter.drawEllipse(bg_rect)
             
             # 3. 原子記号自体を描画
-            # 水素だけ黒文字、それ以外は CPK カラー
             if self.symbol == 'H':
                 painter.setPen(QPen(Qt.GlobalColor.black))
             else:
                 painter.setPen(QPen(color))
-            painter.drawText(text_rect, Qt.AlignmentFlag.AlignCenter, self.symbol)
+            painter.drawText(text_rect, int(alignment_flag), display_text)
             
-            
-            # --- ここから電荷とラジカルの描画 ---
-            # 電荷の描画
+            # --- 電荷とラジカルの描画  ---
             if self.charge != 0:
                 if self.charge == 1: charge_str = "+"
                 elif self.charge == -1: charge_str = "-"
@@ -322,11 +438,14 @@ class AtomItem(QGraphicsItem):
                 charge_font = QFont("Arial", 12, QFont.Weight.Bold)
                 painter.setFont(charge_font)
                 charge_rect = painter.fontMetrics().boundingRect(charge_str)
-                charge_pos = QPointF(text_rect.right() + 2, text_rect.top() + charge_rect.height() - 2)
+                # 電荷の位置も反転に対応
+                if flip_text:
+                    charge_pos = QPointF(text_rect.left() - charge_rect.width() -2, text_rect.top() + charge_rect.height() - 2)
+                else:
+                    charge_pos = QPointF(text_rect.right() + 2, text_rect.top() + charge_rect.height() - 2)
                 painter.setPen(Qt.GlobalColor.black)
                 painter.drawText(charge_pos, charge_str)
             
-            # ラジカルの描画
             if self.radical > 0:
                 painter.setBrush(QBrush(Qt.GlobalColor.black))
                 painter.setPen(Qt.PenStyle.NoPen)
@@ -337,20 +456,18 @@ class AtomItem(QGraphicsItem):
                     painter.drawEllipse(QPointF(text_rect.center().x() - 5, radical_pos_y), 3, 3)
                     painter.drawEllipse(QPointF(text_rect.center().x() + 5, radical_pos_y), 3, 3)
 
-        # 選択時のハイライト
-        if self.has_problem:
-            # 優先度1: 化学的な問題がある場合は赤枠で強制的にハイライト
-            painter.setBrush(Qt.BrushStyle.NoBrush)
-            painter.setPen(QPen(QColor(255, 0, 0, 200), 4)) # 赤色で太めの枠
-            painter.drawRect(self.boundingRect())
 
+        # --- 選択時のハイライトなど ---
+        if self.has_problem:
+            painter.setBrush(Qt.BrushStyle.NoBrush)
+            painter.setPen(QPen(QColor(255, 0, 0, 200), 4))
+            painter.drawRect(self.boundingRect())
         elif self.isSelected():
             painter.setBrush(Qt.BrushStyle.NoBrush)
             painter.setPen(QPen(QColor(0, 100, 255), 3))
             painter.drawRect(self.boundingRect())
-
         if (not self.isSelected()) and getattr(self, 'hovered', False):
-            pen = QPen(QColor(144, 238, 144, 200), 3)  # lightgreen, 少し透過
+            pen = QPen(QColor(144, 238, 144, 200), 3)
             pen.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
             painter.setBrush(Qt.BrushStyle.NoBrush)
             painter.setPen(pen)
@@ -402,7 +519,7 @@ class BondItem(QGraphicsItem):
         try: line = self.get_line_in_local_coords()
         except Exception: line = QLineF(0, 0, 0, 0)
         bond_offset = globals().get('BOND_OFFSET', 2)
-        extra = (getattr(self, 'order', 1) - 1) * bond_offset + 15 # extraを拡大
+        extra = (getattr(self, 'order', 1) - 1) * bond_offset + 20 # extraを拡大
         return QRectF(line.p1(), line.p2()).normalized().adjusted(-extra, -extra, extra, extra)
 
     def shape(self):
@@ -439,13 +556,14 @@ class BondItem(QGraphicsItem):
         line = self.get_line_in_local_coords()
         if line.length() == 0: return
 
-        # --- 1. 結合の種類に応じて本体を描画 ---
-        current_pen = self.pen
+        # --- 1. 選択状態に応じてペンとブラシを準備 ---
         if self.isSelected():
-            current_pen = QPen(QColor("blue"), 3)
-        
-        painter.setPen(current_pen)
-        painter.setBrush(QBrush(Qt.GlobalColor.black))
+            selection_color = QColor("blue")
+            painter.setPen(QPen(selection_color, 3))
+            painter.setBrush(QBrush(selection_color))
+        else:
+            painter.setPen(self.pen)
+            painter.setBrush(QBrush(Qt.GlobalColor.black))
 
         # --- 立体化学 (Wedge/Dash) の描画 ---
         if self.order == 1 and self.stereo in [1, 2]:
@@ -455,16 +573,16 @@ class BondItem(QGraphicsItem):
             p2 = line.p2() - vec.p2() * 5
 
             if self.stereo == 1: # Wedge (くさび形)
-                if self.isSelected():
-                    painter.setBrush(Qt.BrushStyle.NoBrush) # 選択時は塗りつぶさず枠線にする
                 offset = QPointF(normal.dx(), normal.dy()) * 6.0
                 poly = QPolygonF([p1, p2 + offset, p2 - offset])
                 painter.drawPolygon(poly)
             
             elif self.stereo == 2: # Dash (破線)
-                pen = painter.pen()
-                pen.setWidthF(2.5) # デフォルトの太さ(2)から少し太くする
-                painter.setPen(pen)
+                if not self.isSelected():
+                    pen = painter.pen()
+                    pen.setWidthF(2.5) 
+                    painter.setPen(pen)
+                
                 num_dashes = 8
                 for i in range(num_dashes + 1):
                     t = i / num_dashes
@@ -608,12 +726,14 @@ class MoleculeScene(QGraphicsScene):
             if isinstance(item, AtomItem):
                 # ラジカルモードの場合、ラジカルを0にする
                 if self.mode == 'radical' and item.radical != 0:
+                    item.prepareGeometryChange()
                     item.radical = 0
                     self.data.atoms[item.atom_id]['radical'] = 0
                     item.update_style()
                     data_changed = True
                 # 電荷モードの場合、電荷を0にする
                 elif self.mode in ['charge_plus', 'charge_minus'] and item.charge != 0:
+                    item.prepareGeometryChange()
                     item.charge = 0
                     self.data.atoms[item.atom_id]['charge'] = 0
                     item.update_style()
@@ -719,6 +839,7 @@ class MoleculeScene(QGraphicsScene):
         # 1. 特殊モード（ラジカル/電荷）の処理
         if (self.mode == 'radical') and is_click and isinstance(released_item, AtomItem):
             atom = released_item
+            atom.prepareGeometryChange()
             # ラジカルの状態をトグル (0 -> 1 -> 2 -> 0)
             atom.radical = (atom.radical + 1) % 3 
             self.data.atoms[atom.atom_id]['radical'] = atom.radical
@@ -726,6 +847,7 @@ class MoleculeScene(QGraphicsScene):
             self.data_changed_in_event = True
         elif (self.mode == 'charge_plus' or self.mode == 'charge_minus') and is_click and isinstance(released_item, AtomItem):
             atom = released_item
+            atom.prepareGeometryChange()
             delta = 1 if self.mode == 'charge_plus' else -1
             atom.charge += delta
             self.data.atoms[atom.atom_id]['charge'] = atom.charge
@@ -1268,6 +1390,7 @@ class MoleculeScene(QGraphicsScene):
             if target_atoms:
                 for atom in target_atoms:
                     # ラジカルの状態をトグル (0 -> 1 -> 2 -> 0)
+                    atom.prepareGeometryChange()
                     atom.radical = (atom.radical + 1) % 3
                     self.data.atoms[atom.atom_id]['radical'] = atom.radical
                     atom.update_style()
@@ -1287,6 +1410,7 @@ class MoleculeScene(QGraphicsScene):
             if target_atoms:
                 delta = 1 if key == Qt.Key.Key_Plus else -1
                 for atom in target_atoms:
+                    atom.prepareGeometryChange()
                     atom.charge += delta
                     self.data.atoms[atom.atom_id]['charge'] = atom.charge
                     atom.update_style()
@@ -1303,9 +1427,22 @@ class MoleculeScene(QGraphicsScene):
                 new_symbol = self.key_to_symbol_map_shift[key]
 
             if new_symbol and item_at_cursor.symbol != new_symbol:
+                item_at_cursor.prepareGeometryChange() # <<<<<< この行を追加
+                
                 item_at_cursor.symbol = new_symbol
                 self.data.atoms[item_at_cursor.atom_id]['symbol'] = new_symbol
                 item_at_cursor.update_style()
+
+
+                atoms_to_update = {item_at_cursor}
+                for bond in item_at_cursor.bonds:
+                    bond.update()
+                    other_atom = bond.atom1 if bond.atom2 is item_at_cursor else bond.atom2
+                    atoms_to_update.add(other_atom)
+
+                for atom in atoms_to_update:
+                    atom.update_style()
+
                 self.window.push_undo_state()
                 event.accept()
                 return
@@ -2743,6 +2880,7 @@ class MainWindow(QMainWindow):
         self.set_mode('select')
         if 'select' in self.mode_actions:
             self.mode_actions['select'].setChecked(True)
+
     def trigger_conversion(self):
         self.scene.clear_all_problem_flags()
         mol = self.data.to_rdkit_mol()
@@ -2943,6 +3081,7 @@ class MainWindow(QMainWindow):
             self.export_button.setEnabled(False) 
             self.edit_3d_action.setEnabled(False)
 
+        self.update_implicit_hydrogens()
         self.update_chiral_labels()
         
 
@@ -2970,7 +3109,8 @@ class MainWindow(QMainWindow):
             state = self.get_current_state()
             self.undo_stack.append(state)
             self.redo_stack.clear()
-
+        
+        self.update_implicit_hydrogens()
         self.update_realtime_info()
         self.update_undo_redo_actions()
 
@@ -3070,6 +3210,44 @@ class MainWindow(QMainWindow):
         self.scene.reinitialize_items()
         if push_to_undo:
             self.push_undo_state()
+
+    def update_implicit_hydrogens(self):
+        """現在の2D構造に基づいて各原子の暗黙の水素数を計算し、AtomItemに反映する"""
+        if not self.data.atoms:
+            return
+
+        try:
+            mol = self.data.to_rdkit_mol()
+            if mol is None:
+                # 構造が不正な場合、全原子の水素カウントを0に戻して再描画
+                for atom_data in self.data.atoms.values():
+                    if atom_data.get('item') and atom_data['item'].implicit_h_count != 0:
+                        atom_data['item'].implicit_h_count = 0
+                        atom_data['item'].update()
+                return
+
+            mol.UpdatePropertyCache(strict=False)
+            
+            items_to_update = []
+            for atom in mol.GetAtoms():
+                if atom.HasProp("_original_atom_id"):
+                    original_id = atom.GetIntProp("_original_atom_id")
+                    if original_id in self.data.atoms:
+                        item = self.data.atoms[original_id].get('item')
+                        if item:
+                            h_count = atom.GetNumImplicitHs()
+                            if item.implicit_h_count != h_count:
+                                item.prepareGeometryChange()
+                                item.implicit_h_count = h_count
+                                items_to_update.append(item)
+            
+            # カウントが変更されたアイテムのみ再描画をトリガー
+            for item in items_to_update:
+                item.update()
+        except Exception:
+            # 編集中に一時的に発生するエラーなどで計算が失敗してもアプリは継続
+            pass
+
 
     def import_smiles_dialog(self):
         """ユーザーにSMILES文字列の入力を促すダイアログを表示する"""
