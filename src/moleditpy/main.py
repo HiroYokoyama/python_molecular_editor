@@ -11,7 +11,7 @@ DOI 10.5281/zenodo.17268532
 """
 
 #Version
-VERSION = '1.2.2'
+VERSION = '1.2.3'
 
 print("-----------------------------------------------------")
 print("MoleditPy — A Python-based molecular editing software")
@@ -879,7 +879,7 @@ class MoleculeScene(QGraphicsScene):
             stereo_to_use = self.bond_stereo if self.mode.startswith('bond') else None
     
             
-            if line.length() < 10:
+            if is_click:
                 # 短いクリック: 既存原子のシンボル更新 (atomモードのみ)
                 if self.mode.startswith('atom') and self.start_atom.symbol != self.current_atom_symbol:
                     self.start_atom.symbol=self.current_atom_symbol; self.data.atoms[self.start_atom.atom_id]['symbol']=self.current_atom_symbol; self.start_atom.update_style()
@@ -3150,8 +3150,11 @@ class MainWindow(QMainWindow):
         try:
             mol = self.data.to_rdkit_mol()
             if mol:
+                # 水素原子を明示的に追加した分子オブジェクトを生成
+                mol_with_hs = Chem.AddHs(mol)
                 mol_formula = rdMolDescriptors.CalcMolFormula(mol)
-                num_atoms = mol.GetNumAtoms()
+                # 水素を含む分子オブジェクトから原子数を取得
+                num_atoms = mol_with_hs.GetNumAtoms()
                 # 右側のラベルのテキストを更新
                 self.formula_label.setText(f"Formula: {mol_formula}   |   Atoms: {num_atoms}")
         except Exception:
