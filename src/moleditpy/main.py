@@ -11,7 +11,7 @@ DOI 10.5281/zenodo.17268532
 """
 
 #Version
-VERSION = '1.2.4'
+VERSION = '1.2.5'
 
 print("-----------------------------------------------------")
 print("MoleditPy — A Python-based molecular editing software")
@@ -3070,6 +3070,7 @@ class MainWindow(QMainWindow):
             try:
                 self.current_mol = Chem.Mol(loaded_data['mol_3d'])
                 self.draw_molecule_3d(self.current_mol)
+                self.plotter.reset_camera()
                 self.analysis_action.setEnabled(True)
                 self.optimize_3d_button.setEnabled(True)
                 self.export_button.setEnabled(True)
@@ -3415,6 +3416,7 @@ class MainWindow(QMainWindow):
             self.set_state_from_data(loaded_data)
             self.statusBar().showMessage(f"Project loaded from {file_path}")
             self.reset_undo_stack()
+            self.fit_to_view()
         except Exception as e: self.statusBar().showMessage(f"Error loading project file: {e}")
 
     def save_as_mol(self):
