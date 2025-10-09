@@ -11,7 +11,7 @@ DOI 10.5281/zenodo.17268532
 """
 
 #Version
-VERSION = '1.2.5'
+VERSION = '1.2.6'
 
 print("-----------------------------------------------------")
 print("MoleditPy — A Python-based molecular editing software")
@@ -41,7 +41,7 @@ from PyQt6.QtGui import (
     QPen, QBrush, QColor, QPainter, QAction, QActionGroup, QFont, QPolygonF,
     QPainterPath, QPainterPathStroker, QFontMetrics, QFontMetricsF, QKeySequence, QTransform, QCursor, QPixmap, QIcon, QShortcut, QDesktopServices
 )
-from PyQt6.QtCore import Qt, QPointF, QRectF, QLineF, QObject, QThread, pyqtSignal, QEvent, QMimeData, QByteArray, QUrl
+from PyQt6.QtCore import Qt, QPointF, QRectF, QLineF, QObject, QThread, pyqtSignal, QEvent, QMimeData, QByteArray, QUrl, QTimer
 
 from vtkmodules.vtkInteractionStyle import vtkInteractorStyleTrackballCamera
 
@@ -3322,7 +3322,7 @@ class MainWindow(QMainWindow):
 
             self.statusBar().showMessage(f"Successfully loaded from SMILES.")
             self.reset_undo_stack()
-            self.fit_to_view()
+            QTimer.singleShot(0, self.fit_to_view)
         except Exception as e:
             self.statusBar().showMessage(f"Error loading from SMILES: {e}")
 
@@ -3389,8 +3389,8 @@ class MainWindow(QMainWindow):
                 self.scene.create_bond(a1_item, a2_item, bond_order=int(b_type), bond_stereo=stereo)
 
             self.statusBar().showMessage(f"Successfully loaded {file_path}")
-            self.fit_to_view()
             self.reset_undo_stack()
+            QTimer.singleShot(0, self.fit_to_view)
         except Exception as e: self.statusBar().showMessage(f"Error loading file: {e}")
 
     def save_raw_data(self):
@@ -3416,7 +3416,7 @@ class MainWindow(QMainWindow):
             self.set_state_from_data(loaded_data)
             self.statusBar().showMessage(f"Project loaded from {file_path}")
             self.reset_undo_stack()
-            self.fit_to_view()
+            QTimer.singleShot(0, self.fit_to_view)
         except Exception as e: self.statusBar().showMessage(f"Error loading project file: {e}")
 
     def save_as_mol(self):
