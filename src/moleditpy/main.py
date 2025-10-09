@@ -11,7 +11,7 @@ DOI 10.5281/zenodo.17268532
 """
 
 #Version
-VERSION = '1.2.3'
+VERSION = '1.2.4'
 
 print("-----------------------------------------------------")
 print("MoleditPy — A Python-based molecular editing software")
@@ -2139,6 +2139,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
             # その後、カーソルの表示を更新します
             is_edit_active = mw.is_3d_edit_mode or interactor.GetAltKey()
             if is_edit_active:
+                # 編集がアクティブな場合のみ、原子のホバーチェックを行う
                 atom_under_cursor = False
                 click_pos = interactor.GetEventPosition()
                 picker = mw.plotter.picker
@@ -2982,6 +2983,7 @@ class MainWindow(QMainWindow):
         self.optimize_3d_button.setEnabled(True)
         self.export_button.setEnabled(True)
         self.edit_3d_action.setEnabled(True)
+        self.plotter.reset_camera()
         
     def on_calculation_error(self, error_message):
         self.dragged_atom_info = None
@@ -3486,6 +3488,7 @@ class MainWindow(QMainWindow):
 
         try:
             # 安定版：原子IDとRDKit座標の確実なマッピング
+            view_center = self.view_2d.mapToScene(self.view_2d.viewport().rect().center())
             new_positions_map = {}
             AllChem.Compute2DCoords(mol)
             conf = mol.GetConformer()
@@ -3501,8 +3504,8 @@ class MainWindow(QMainWindow):
                 self.statusBar().showMessage("Error: Atom items not found for optimized atoms."); return
 
             # 元の図形の中心を維持
-            original_center_x = sum(item.pos().x() for item in target_atom_items) / len(target_atom_items)
-            original_center_y = sum(item.pos().y() for item in target_atom_items) / len(target_atom_items)
+            #original_center_x = sum(item.pos().x() for item in target_atom_items) / len(target_atom_items)
+            #original_center_y = sum(item.pos().y() for item in target_atom_items) / len(target_atom_items)
 
             positions = list(new_positions_map.values())
             rdkit_cx = sum(p.x for p in positions) / len(positions)
@@ -3514,8 +3517,8 @@ class MainWindow(QMainWindow):
             for atom_id, rdkit_pos in new_positions_map.items():
                 if atom_id in self.data.atoms:
                     item = self.data.atoms[atom_id]['item']
-                    sx = ((rdkit_pos.x - rdkit_cx) * SCALE) + original_center_x
-                    sy = (-(rdkit_pos.y - rdkit_cy) * SCALE) + original_center_y
+                    sx = ((rdkit_pos.x - rdkit_cx) * SCALE) + view_center.x()
+                    sy = (-(rdkit_pos.y - rdkit_cy) * SCALE) + view_center.y()
                     new_scene_pos = QPointF(sx, sy)
                     item.setPos(new_scene_pos)
                     self.data.atoms[atom_id]['pos'] = new_scene_pos
@@ -3689,6 +3692,7 @@ class MainWindow(QMainWindow):
 
 
     def draw_molecule_3d(self, mol):
+        camera_state = self.plotter.camera.copy()
         self.plotter.clear()
         conf = mol.GetConformer()
         
@@ -3762,6 +3766,8 @@ class MainWindow(QMainWindow):
                     except Exception: pass
                     self.plotter.add_point_labels(np.array(pts), labels, font_size=20, point_size=0, text_color='k', name='chiral_labels', always_visible=True, tolerance=0.01, show_points=False)
             except Exception as e: self.statusBar().showMessage(f"3D chiral label drawing error: {e}")
+        
+        self.plotter.camera = camera_state
 
 
     def toggle_chiral_labels_display(self, checked):
