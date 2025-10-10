@@ -46,7 +46,7 @@
     `conda`で有効化した環境の中で、以下のコマンドを実行します。
 
     ```bash
-    pip install moleditpy
+    pip install numpy==2.3.3 openbabel-wheel==3.1.1.22 PyQt6==6.9.1 QtPy==2.4.3 rdkit==2025.3.6 vtk==9.5.2 pyvista==0.46.3 pyvistaqt==0.11.3 moleditpy==1.2.6
     ```
 
 -----
