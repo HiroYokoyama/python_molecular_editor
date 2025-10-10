@@ -7,7 +7,7 @@ pip install moleditpy-linux
 
 NVIDIA Driverが動いているPCなら、本ソフトは動いた。入っていないPCでは、OpenGL周りのエラー。
 
-### Step 1
+### 具体的な方法
 
 ```bash
 python3 -m venv moleditpy
