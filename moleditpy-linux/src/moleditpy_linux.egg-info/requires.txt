@@ -1,0 +1,7 @@
+PyQt6
+rdkit
+numpy
+pyvista
+pyvistaqt
+openbabel-wheel
+pyopengl
