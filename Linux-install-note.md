@@ -1,11 +1,9 @@
-## Linux向けインストール
+# Linux向けインストール
 
 ```bash
 pip install moleditpy-linux
 ```
-ライブラリの競合により、Segmentation faultが起こるので、OpenBabelを無効にしたバージョン。アプリの立ち上がりまで行くことがあるが、OpenGL周りのエラーを生じる可能性がある。
-
-NVIDIA Driverが動いているPCなら、本ソフトは動いた。入っていないPCでは、OpenGL周りのエラー。
+ライブラリの競合により、Segmentation faultが起こるので、OpenBabelを無効にしたバージョン。
 
 ### 具体的な方法
 
@@ -18,6 +16,8 @@ moleditpy
 ```
 
 -----
+
+# 検討メモ
 
 ### Issue: Linux環境における起動時クラッシュ問題の調査と対応
 
