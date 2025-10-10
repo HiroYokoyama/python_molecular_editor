@@ -3,6 +3,8 @@
 ```bash
 pip install moleditpy-linux
 ```
+ライブラリの競合により、Segmentation faultが起こるので、OpenBabelを無効にしたバージョン。アプリの立ち上がりまで行くことがあるが、OpenGL周りのエラーを生じる可能性がある。
+
 NVIDIA Driverが動いているPCなら、本ソフトは動いた。入っていないPCでは、OpenGL周りのエラー。
 
 -----
