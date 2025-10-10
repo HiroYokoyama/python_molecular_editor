@@ -1,2 +1,2 @@
 [console_scripts]
-moleditpy = moleditpy.main:main
+moleditpy = moleditpy_linux.main:main
