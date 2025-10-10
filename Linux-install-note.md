@@ -5,6 +5,7 @@ pip install moleditpy-linux
 ```
 NVIDIA Driverが動いているPCなら、本ソフトは動いた。入っていないPCでは、OpenGL周りのエラー。
 
+-----
 
 ### Issue: Linux環境における起動時クラッシュ問題の調査と対応
 
