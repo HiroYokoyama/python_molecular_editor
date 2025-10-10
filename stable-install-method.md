@@ -21,7 +21,7 @@
     互換性が高い**Python 3.12**を指定して、`moleditpy-env`という名前の環境を作成します。
 
     ```bash
-    conda create -n moleditpy-env -c conda-forge python pyqt=6 rdkit openbabel pyvista matplotlib numpy pyvistaqt vtk
+    conda create -n moleditpy-env -c conda-forge python pyqt=6 rdkit openbabel pyvista matplotlib numpy pyvistaqt "vtk=9.3"
     ```
 
       * 実行中に `Proceed ([y]/n)?` と聞かれたら、`y` を入力してEnterキーを押します。
