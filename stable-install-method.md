@@ -45,7 +45,7 @@
     以下のコマンドを実行してください。`conda`は賢いので、依存関係を考慮しながら最適なパッケージをインストールしてくれます。
 
     ```bash
-    conda install -c conda-forge numpy=2.3.3 matplotlib=3.10.7 rdkit=2025.9.1 openbabel=3.1.1
+    conda install -c conda-forge numpy=2.3.3 matplotlib=3.10 rdkit=2025.9.1 openbabel=3.1.1
     ```
     
       * `openbabel-wheel`は`pip`用の名前なので、`conda`では`openbabel`となります。バージョン`3.1.1`まで指定します。
