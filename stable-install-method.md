@@ -49,7 +49,7 @@
     ```
 
     ```bash
-    conda install -c conda-forge matplotlib=3.10.7
+    conda install -c conda-forge matplotlib=3.10
     ```
 
     ```bash
