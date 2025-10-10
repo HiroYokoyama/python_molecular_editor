@@ -18,10 +18,10 @@
     Windowsのスタートメニューから「Anaconda Prompt」または「Miniconda Prompt」を探して起動します。
 
 2.  **新しい環境を作成する**
-    `moleditpy-env`という名前の環境を作成します。
+    互換性が高い**Python 3.13**を指定して、`moleditpy-env`という名前の環境を作成します。
 
     ```bash
-    conda create -n moleditpy-env -c conda-forge python pyqt rdkit openbabel pyvista matplotlib numpy pyvistaqt "vtk=9.4"
+    conda create -n moleditpy-env python=3.13
     ```
 
       * 実行中に `Proceed ([y]/n)?` と聞かれたら、`y` を入力してEnterキーを押します。
@@ -37,8 +37,33 @@
 
 -----
 
+### ステップ2: 厳密なバージョン指定による依存パッケージのインストール
 
-### ステップ2: `moleditpy`のインストール
+`conda-forge`チャンネルを使い、最初のログで示されたバージョンを正確に指定して、`moleditpy`が依存するライブラリをインストールします。
+
+1.  **主要な依存パッケージをバージョン指定でインストール**
+    以下のコマンドを実行してください。`conda`は賢いので、依存関係を考慮しながら最適なパッケージをインストールしてくれます。
+
+    ```bash
+    conda install -c conda-forge numpy=2.3.3　matplotlib=3.10.7　rdkit=2025.9.1　openbabel=3.1.1
+    ```
+    
+      * `openbabel-wheel`は`pip`用の名前なので、`conda`では`openbabel`となります。バージョン`3.1.1`まで指定します。
+
+2.  **GUI関連のライブラリ（PyQt, PyVista）をインストール**
+    ここがGUIソフトウェアで最も重要な部分です。関連ライブラリをまとめてインストールすることで、`conda`に互換性のある組み合わせを選択させます。
+
+    ```bash
+    conda install -c conda-forge pyqt=6.9 pyvista=0.46.3 pyvistaqt=0.11.3
+    ```
+
+      * **解説**:
+          * `PyQt6`は`6.9.1`のように細かいバージョンを指定するより、`6.9`とすることで`conda`が解決しやすくなります。
+          * `pyvista`と`pyvistaqt`は密接に関連しているため、同時にインストールするのが最も安全です。これにより、これらが依存する`VTK`や`Qt`ライブラリも、互換性のあるバージョンが自動的に選択・インストールされます。
+
+-----
+
+### ステップ3: `moleditpy`のインストール
 
 必要な依存関係がすべて整いましたので、最後に`moleditpy`本体を`pip`でインストールします。
 
@@ -51,7 +76,7 @@
 
 -----
 
-### ステップ3: `moleditpy`の起動
+### ステップ4: `moleditpy`の起動
 
 インストールが完了したら、`moleditpy`をGUIアプリケーションとして起動します。
 
