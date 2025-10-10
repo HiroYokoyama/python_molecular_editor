@@ -1,0 +1,112 @@
+### Condaを使ったGUIソフト`moleditpy`の環境構築・実行手順書
+
+この手順書は、GUIソフトウェアである`moleditpy`を、パッケージマネージャー`Conda`を用いて安定した実行環境にインストールし、起動するためのものです。
+
+最初のログで示されたバージョンを可能な限り再現し、GUIアプリケーションで特に問題となりやすいライブラリ間の互換性を重視した手順となっています。
+
+#### 前提条件
+
+  * Anaconda または Miniconda がPCにインストールされていること。
+
+-----
+
+### ステップ1: Conda環境の新規作成と有効化
+
+まず、`moleditpy`専用のクリーンな仮想環境を作成します。
+
+1.  **Condaプロンプトを開く**
+    Windowsのスタートメニューから「Anaconda Prompt」または「Miniconda Prompt」を探して起動します。
+
+2.  **新しい環境を作成する**
+    互換性が高い**Python 3.13**を指定して、`moleditpy-env`という名前の環境を作成します。
+
+    ```bash
+    conda create -n moleditpy-env python=3.13
+    ```
+
+      * 実行中に `Proceed ([y]/n)?` と聞かれたら、`y` を入力してEnterキーを押します。
+
+3.  **作成した環境を有効化する**
+    これからの作業は、すべてこの新しい環境内で行います。
+
+    ```bash
+    conda activate moleditpy-env
+    ```
+
+    コマンドプロンプトの行の先頭が `(moleditpy-env)` に変わったことを確認してください。
+
+-----
+
+### ステップ2: 厳密なバージョン指定による依存パッケージのインストール
+
+`conda-forge`チャンネルを使い、最初のログで示されたバージョンを正確に指定して、`moleditpy`が依存するライブラリをインストールします。
+
+1.  **主要な依存パッケージをバージョン指定でインストール**
+    以下のコマンドを**一行ずつ順番に**実行してください。`conda`は賢いので、依存関係を考慮しながら最適なパッケージをインストールしてくれます。
+
+    ```bash
+    conda install -c conda-forge numpy=2.3.3
+    ```
+
+    ```bash
+    conda install -c conda-forge matplotlib=3.10.7
+    ```
+
+    ```bash
+    conda install -c conda-forge rdkit=2025.9.1
+    ```
+
+    ```bash
+    conda install -c conda-forge openbabel=3.1.1
+    ```
+
+      * `openbabel-wheel`は`pip`用の名前なので、`conda`では`openbabel`となります。バージョン`3.1.1`まで指定します。
+
+2.  **GUI関連のライブラリ（PyQt, PyVista）をインストール**
+    ここがGUIソフトウェアで最も重要な部分です。関連ライブラリをまとめてインストールすることで、`conda`に互換性のある組み合わせを選択させます。
+
+    ```bash
+    conda install -c conda-forge pyqt=6.9 pyvista=0.46.3 pyvistaqt=0.11.3
+    ```
+
+      * **解説**:
+          * `PyQt6`は`6.9.1`のように細かいバージョンを指定するより、`6.9`とすることで`conda`が解決しやすくなります。
+          * `pyvista`と`pyvistaqt`は密接に関連しているため、同時にインストールするのが最も安全です。これにより、これらが依存する`VTK`や`Qt`ライブラリも、互換性のあるバージョンが自動的に選択・インストールされます。
+
+-----
+
+### ステップ3: `moleditpy`のインストール
+
+必要な依存関係がすべて整いましたので、最後に`moleditpy`本体を`pip`でインストールします。
+
+1.  **pipで`moleditpy`をインストール**
+    `conda`で有効化した環境の中で、以下のコマンドを実行します。
+
+    ```bash
+    pip install moleditpy
+    ```
+
+-----
+
+### ステップ4: `moleditpy`の起動
+
+インストールが完了したら、`moleditpy`をGUIアプリケーションとして起動します。
+
+1.  **起動コマンドの実行**
+    コマンドプロンプト（`moleditpy-env`が有効化された状態）で以下を実行してみてください。
+
+    ```bash
+    moleditpy
+    ```
+
+    `moleditpy`のGUIウィンドウが立ち上がれば、環境構築はすべて成功です。
+
+
+-----
+
+### トラブルシューティング
+
+  * **コマンドが見つからない(`command not found`)と表示された場合**: ステップ3で`moleditpy`のインストールが正しく完了しているか確認してください。
+  * **起動時にエラーが出る場合**: 表示されたエラーメッセージを元に、どのライブラリで問題が起きているかを確認します。Conda環境を一度削除 (`conda env remove -n moleditpy-env`) して、手順を最初からやり直すと解決することも多いです。
+
+今後は、`moleditpy`を使用する際に、必ず `conda activate moleditpy-env` コマンドでこの環境を有効化してから起動コマンドを実行してください。
