@@ -18,10 +18,10 @@
     Windowsのスタートメニューから「Anaconda Prompt」または「Miniconda Prompt」を探して起動します。
 
 2.  **新しい環境を作成する**
-    互換性が高い**Python 3.13**を指定して、`moleditpy-env`という名前の環境を作成します。
+    互換性が高い**Python 3.12**を指定して、`moleditpy-env`という名前の環境を作成します。
 
     ```bash
-    conda create -n moleditpy-env python=3.13
+    conda create -n moleditpy-env python=3.12
     ```
 
       * 実行中に `Proceed ([y]/n)?` と聞かれたら、`y` を入力してEnterキーを押します。
