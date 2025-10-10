@@ -7,6 +7,16 @@ pip install moleditpy-linux
 
 NVIDIA Driverが動いているPCなら、本ソフトは動いた。入っていないPCでは、OpenGL周りのエラー。
 
+### Step 1
+
+```bash
+python3 -m venv moleditpy
+source moleditpy/bin/activate
+pip install moleditpy-linux
+sudo apt install libxcb-cursor0
+moleditpy
+```
+
 -----
 
 ### Issue: Linux環境における起動時クラッシュ問題の調査と対応
