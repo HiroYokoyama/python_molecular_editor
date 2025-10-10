@@ -22,6 +22,7 @@
 
     ```bash
     conda create -n moleditpy-env -c conda-forge python pyqt=6 rdkit openbabel pyvista matplotlib numpy pyvistaqt "vtk=9.4"
+    conda install -c conda-forge pyqt=6
     ```
 
       * 実行中に `Proceed ([y]/n)?` と聞かれたら、`y` を入力してEnterキーを押します。
