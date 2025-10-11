@@ -11,7 +11,7 @@ DOI 10.5281/zenodo.17268532
 """
 
 #Version
-VERSION = '1.3.0'
+VERSION = '1.3.1'
 
 print("-----------------------------------------------------")
 print("MoleditPy — A Python-based molecular editing software")
@@ -3015,6 +3015,11 @@ class MainWindow(QMainWindow):
             
         mol_block = Chem.MolToMolBlock(mol, includeStereo=True)
         self.convert_button.setEnabled(False)
+        self.cleanup_button.setEnabled(False)
+        self.optimize_3d_button.setEnabled(False)
+        self.export_button.setEnabled(False)
+        self.analysis_action.setEnabled(False)
+        self.edit_3d_action.setEnabled(False)
         self.statusBar().showMessage("Calculating 3D structure...")
         self.plotter.clear() 
         text_actor = self.plotter.add_text(
@@ -3076,6 +3081,7 @@ class MainWindow(QMainWindow):
         self.analysis_action.setEnabled(True)
         self.push_undo_state()
         self.view_2d.setFocus()
+        self.cleanup_button.setEnabled(True)
         self.optimize_3d_button.setEnabled(True)
         self.export_button.setEnabled(True)
         self.edit_3d_action.setEnabled(True)
@@ -3085,6 +3091,7 @@ class MainWindow(QMainWindow):
         self.plotter.clear()
         self.dragged_atom_info = None
         self.statusBar().showMessage(f"Error: {error_message}")
+        self.cleanup_button.setEnabled(True)
         self.convert_button.setEnabled(True)
         self.analysis_action.setEnabled(False)
         self.edit_3d_action.setEnabled(False) 
