@@ -11,7 +11,7 @@ DOI 10.5281/zenodo.17268532
 """
 
 #Version
-VERSION = '1.3.1'
+VERSION = '1.3.2'
 
 print("-----------------------------------------------------")
 print("MoleditPy — A Python-based molecular editing software")
@@ -1522,32 +1522,78 @@ class MoleculeScene(QGraphicsScene):
             target_bonds = [it for it in self.selectedItems() if isinstance(it, BondItem)]
 
         if target_bonds:
-            needs_update = False
+            any_bond_changed = False
             for bond in target_bonds:
+                # 1. 結合の向きを考慮して、データ辞書内の現在のキーを正しく特定する
                 id1, id2 = bond.atom1.atom_id, bond.atom2.atom_id
-                if id1 > id2: id1, id2 = id2, id1
+                current_key = None
+                if (id1, id2) in self.data.bonds:
+                    current_key = (id1, id2)
+                elif (id2, id1) in self.data.bonds:
+                    current_key = (id2, id1)
+                
+                if not current_key: continue
 
-                if key == Qt.Key.Key_1 and (bond.order != 1 or bond.stereo != 0):
-                    bond.order = 1; bond.stereo = 0; needs_update = True
+                # 2. 変更前の状態を保存
+                old_order, old_stereo = bond.order, bond.stereo
+
+                # 3. キー入力に応じてBondItemのプロパティを変更
+                if key == Qt.Key.Key_W:
+                    if bond.stereo == 1:
+                        bond_data = self.data.bonds.pop(current_key)
+                        new_key = (current_key[1], current_key[0])
+                        self.data.bonds[new_key] = bond_data
+                        bond.atom1, bond.atom2 = bond.atom2, bond.atom1
+                        bond.update_position()
+                        was_reversed = True
+                    else:
+                        bond.order = 1; bond.stereo = 1
+
+                elif key == Qt.Key.Key_D:
+                    if bond.stereo == 2:
+                        bond_data = self.data.bonds.pop(current_key)
+                        new_key = (current_key[1], current_key[0])
+                        self.data.bonds[new_key] = bond_data
+                        bond.atom1, bond.atom2 = bond.atom2, bond.atom1
+                        bond.update_position()
+                        was_reversed = True
+                    else:
+                        bond.order = 1; bond.stereo = 2
+
+                elif key == Qt.Key.Key_1 and (bond.order != 1 or bond.stereo != 0):
+                    bond.order = 1; bond.stereo = 0
                 elif key == Qt.Key.Key_2 and bond.order != 2:
                     bond.order = 2; bond.stereo = 0; needs_update = True
                 elif key == Qt.Key.Key_3 and bond.order != 3:
                     bond.order = 3; bond.stereo = 0; needs_update = True
-                elif key == Qt.Key.Key_W and bond.stereo != 1: # Wedge
-                    bond.order = 1; bond.stereo = 1; needs_update = True
-                elif key == Qt.Key.Key_D and bond.stereo != 2: # Dash
-                    bond.order = 1; bond.stereo = 2; needs_update = True
 
-                if needs_update:
-                    self.data.bonds[(id1, id2)]['order'] = bond.order
-                    self.data.bonds[(id1, id2)]['stereo'] = bond.stereo
+                # 4. 実際に変更があった場合のみデータモデルを更新
+                if old_order != bond.order or old_stereo != bond.stereo:
+                    any_bond_changed = True
+                    
+                    # 5. 古いキーでデータを辞書から一度削除
+                    bond_data = self.data.bonds.pop(current_key)
+                    bond_data['order'] = bond.order
+                    bond_data['stereo'] = bond.stereo
+
+                    # 6. 変更後の種類に応じて新しいキーを決定し、再登録する
+                    new_key_id1, new_key_id2 = bond.atom1.atom_id, bond.atom2.atom_id
+                    if bond.stereo == 0:
+                        if new_key_id1 > new_key_id2:
+                            new_key_id1, new_key_id2 = new_key_id2, new_key_id1
+                    
+                    new_key = (new_key_id1, new_key_id2)
+                    self.data.bonds[new_key] = bond_data
+                    
                     bond.update()
 
-            if needs_update:
+            if any_bond_changed:
                 self.window.push_undo_state()
+            
+            if key in [Qt.Key.Key_1, Qt.Key.Key_2, Qt.Key.Key_3, Qt.Key.Key_W, Qt.Key.Key_D]:
                 event.accept()
                 return
-
+                    
         # --- 3. Atomに対する操作 (原子の追加 - マージされた機能) ---
         if key == Qt.Key.Key_1:
             start_atom = None
@@ -3505,9 +3551,12 @@ class MainWindow(QMainWindow):
         except Exception as e:
             self.statusBar().showMessage(f"Error loading from InChI: {e}")
 
-    def load_mol_file(self):
-        options = QFileDialog.Option.DontUseNativeDialog
-        file_path, _ = QFileDialog.getOpenFileName(self, "Import MOL File", "", "Chemical Files (*.mol *.sdf);;All Files (*)", options=options)
+    def load_mol_file(self, file_path=None):
+        if not file_path:
+            options = QFileDialog.Option.DontUseNativeDialog
+            file_path, _ = QFileDialog.getOpenFileName(self, "Import MOL File", "", "Chemical Files (*.mol *.sdf);;All Files (*)", options=options)
+            if not file_path: return
+
         if not file_path: return
         try:
             self.dragged_atom_info = None
