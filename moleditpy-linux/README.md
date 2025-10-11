@@ -16,7 +16,6 @@ A cross-platform, simple, and intuitive molecular structure editor built in Pyth
 **License**: Apache-2.0
 **Repository**: [https://github.com/HiroYokoyama/python\_molecular\_editor](https://github.com/HiroYokoyama/python_molecular_editor)
 
------
 
 Pythonで構築された、クロスプラットフォームかつシンプルで直感的な分子構造エディターです。2Dでの分子描画と3D構造可視化ができます。構造ファイルのエクスポートをサポートし、さらにインタラクティブな3D編集機能で目的の配座を直感的に作成できるため、**DFT計算のインプット作成に最適です**。
 
@@ -151,6 +150,10 @@ This application is a tool for easily drawing molecular structures and visually 
 
 ## Execution and Installation
 
+For more details, please refer to the [Wiki](https://github.com/HiroYokoyama/python_molecular_editor/wiki).
+
+The [Docker version](https://github.com/HiroYokoyama/python_molecular_editor_docker) is also available.
+
 #### Requirements
 
 `PyQt6`, `RDKit`, `NumPy`, `PyVista`, `pyvistaqt`, `openbabel`
@@ -174,6 +177,10 @@ moleditpy
 
 
 ## 実行とインストール
+
+詳細については、[Wiki](https://github.com/HiroYokoyama/python_molecular_editor/wiki)を確認してください。
+
+[Docker版](https://github.com/HiroYokoyama/python_molecular_editor_docker)もあります。
 
 #### 必要ライブラリ
 

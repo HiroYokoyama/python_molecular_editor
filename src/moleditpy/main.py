@@ -11,7 +11,7 @@ DOI 10.5281/zenodo.17268532
 """
 
 #Version
-VERSION = '1.2.6'
+VERSION = '1.3.0'
 
 print("-----------------------------------------------------")
 print("MoleditPy — A Python-based molecular editing software")
@@ -123,10 +123,15 @@ class MolecularData:
         return atom_id
 
     def add_bond(self, id1, id2, order=1, stereo=0):
-        if id1 > id2: id1, id2 = id2, id1
+        # 立体結合の場合、IDの順序は方向性を意味するため、ソートしない。
+        # 非立体結合の場合は、キーを正規化するためにソートする。
+        if stereo == 0:
+            if id1 > id2: id1, id2 = id2, id1
+
         bond_data = {'order': order, 'stereo': stereo, 'item': None}
         
-        is_new_bond = (id1, id2) not in self.bonds
+        # 逆方向のキーも考慮して、新規結合かどうかをチェック
+        is_new_bond = (id1, id2) not in self.bonds and (id2, id1) not in self.bonds
         if is_new_bond:
             if id1 in self.adjacency_list and id2 in self.adjacency_list:
                 self.adjacency_list[id1].append(id2)
@@ -138,7 +143,6 @@ class MolecularData:
         else:
             self.bonds[(id1, id2)] = bond_data
             return (id1, id2), 'created'
-
 
     def remove_atom(self, atom_id):
         if atom_id in self.atoms:
@@ -158,13 +162,19 @@ class MolecularData:
                 del self.bonds[key]
 
     def remove_bond(self, id1, id2):
-        if id1 > id2: id1, id2 = id2, id1
+        # 方向性のある立体結合(順方向/逆方向)と、正規化された非立体結合のキーを探す
+        key_to_remove = None
         if (id1, id2) in self.bonds:
+            key_to_remove = (id1, id2)
+        elif (id2, id1) in self.bonds:
+            key_to_remove = (id2, id1)
+
+        if key_to_remove:
             if id1 in self.adjacency_list and id2 in self.adjacency_list[id1]:
                 self.adjacency_list[id1].remove(id2)
             if id2 in self.adjacency_list and id1 in self.adjacency_list[id2]:
                 self.adjacency_list[id2].remove(id1)
-            del self.bonds[(id1, id2)]
+            del self.bonds[key_to_remove]
 
     def to_mol_block(self):
         try:
@@ -245,11 +255,9 @@ class MolecularData:
                 elif bond_data['stereo'] == 2: # Dash
                     bond.SetBondDir(Chem.BondDir.BEGINDASH)
 
+        mol.UpdatePropertyCache(strict=False)
+
         mol = mol.GetMol()
-        try:
-            Chem.SanitizeMol(mol)
-        except Exception:
-             pass
         return mol
 
 class AtomItem(QGraphicsItem):
@@ -271,7 +279,10 @@ class AtomItem(QGraphicsItem):
 
         hydrogen_part = ""
         if self.implicit_h_count > 0:
-            is_skeletal_carbon = (self.symbol == 'C' and len(self.bonds) > 0)
+            is_skeletal_carbon = (self.symbol == 'C' and 
+                                      self.charge == 0 and 
+                                      self.radical == 0 and 
+                                      len(self.bonds) > 0)
             if not is_skeletal_carbon:
                 hydrogen_part = "H"
                 if self.implicit_h_count > 1:
@@ -364,7 +375,10 @@ class AtomItem(QGraphicsItem):
             # --- 水素部分のテキストを作成 ---
             hydrogen_part = ""
             if self.implicit_h_count > 0:
-                is_skeletal_carbon = (self.symbol == 'C' and len(self.bonds) > 0)
+                is_skeletal_carbon = (self.symbol == 'C' and 
+                                      self.charge == 0 and 
+                                      self.radical == 0 and 
+                                      len(self.bonds) > 0)
                 if not is_skeletal_carbon:
                     hydrogen_part = "H"
                     if self.implicit_h_count > 1:
@@ -738,8 +752,8 @@ class MoleculeScene(QGraphicsScene):
                     self.data.atoms[item.atom_id]['charge'] = 0
                     item.update_style()
                     data_changed = True
-                # 上記以外のモード（テンプレートを除く）では原子を削除
-                elif not self.mode.startswith('template'):
+                # 上記以外のモード（テンプレート、電荷、ラジカルを除く）では原子を削除
+                elif not self.mode.startswith(('template', 'charge', 'radical')):
                     data_changed = self.delete_items({item})
             
             elif isinstance(item, BondItem):
@@ -845,6 +859,9 @@ class MoleculeScene(QGraphicsScene):
             self.data.atoms[atom.atom_id]['radical'] = atom.radical
             atom.update_style()
             self.data_changed_in_event = True
+            self.start_atom=None; self.start_pos = None; self.press_pos = None
+            if self.data_changed_in_event: self.window.push_undo_state()
+            return
         elif (self.mode == 'charge_plus' or self.mode == 'charge_minus') and is_click and isinstance(released_item, AtomItem):
             atom = released_item
             atom.prepareGeometryChange()
@@ -853,18 +870,44 @@ class MoleculeScene(QGraphicsScene):
             self.data.atoms[atom.atom_id]['charge'] = atom.charge
             atom.update_style()
             self.data_changed_in_event = True
+            self.start_atom=None; self.start_pos = None; self.press_pos = None
+            if self.data_changed_in_event: self.window.push_undo_state()
+            return
 
-        # 2. 既存結合の様式更新処理 (全ての結合モードで動作)
         elif self.mode.startswith('bond') and is_click and isinstance(released_item, BondItem):
-            b = released_item
-            # 既存結合をクリックした場合は、現在のモードの結合様式に更新する
-            b.order = self.bond_order
-            b.stereo = self.bond_stereo
-            id1, id2 = b.atom1.atom_id, b.atom2.atom_id
-            if id1 > id2: id1, id2 = id2, id1
-            self.data.bonds[(id1,id2)]['order'] = self.bond_order
-            self.data.bonds[(id1,id2)]['stereo'] = self.bond_stereo
-            b.update()
+            b = released_item 
+            
+            if self.bond_stereo != 0 and b.order == self.bond_order and b.stereo == self.bond_stereo:
+                # 方向性を反転させる
+                old_id1, old_id2 = b.atom1.atom_id, b.atom2.atom_id
+                
+                # 1. 古い方向の結合をデータから削除
+                self.data.remove_bond(old_id1, old_id2)
+                
+                # 2. 逆方向で結合をデータに再追加
+                new_key, _ = self.data.add_bond(old_id2, old_id1, self.bond_order, self.bond_stereo)
+                
+                # 3. BondItemの原子参照を入れ替え、新しいデータと関連付ける
+                b.atom1, b.atom2 = b.atom2, b.atom1
+                self.data.bonds[new_key]['item'] = b
+                
+                # 4. 見た目を更新
+                b.update_position()
+
+            else:
+                # 既存の結合を一度削除
+                self.data.remove_bond(b.atom1.atom_id, b.atom2.atom_id)
+
+                # BondItemが記憶している方向(b.atom1 -> b.atom2)で、新しい結合様式を再作成
+                # これにより、修正済みのadd_bondが呼ばれ、正しい方向で保存される
+                new_key, _ = self.data.add_bond(b.atom1.atom_id, b.atom2.atom_id, self.bond_order, self.bond_stereo)
+
+                # BondItemの見た目とデータ参照を更新
+                b.order = self.bond_order
+                b.stereo = self.bond_stereo
+                self.data.bonds[new_key]['item'] = b
+                b.update()
+
             self.clearSelection()
             self.data_changed_in_event = True
 
@@ -939,6 +982,30 @@ class MoleculeScene(QGraphicsScene):
         self.start_atom=None; self.start_pos = None; self.press_pos = None; self.temp_line = None
         self.template_context = {}
         if self.data_changed_in_event: self.window.push_undo_state()
+
+    def mouseDoubleClickEvent(self, event):
+        """ダブルクリックイベントを処理する"""
+        item = self.itemAt(event.scenePos(), self.views()[0].transform())
+
+        if self.mode in ['charge_plus', 'charge_minus', 'radical'] and isinstance(item, AtomItem):
+            if self.mode == 'radical':
+                item.prepareGeometryChange()
+                item.radical = (item.radical + 1) % 3
+                self.data.atoms[item.atom_id]['radical'] = item.radical
+                item.update_style()
+            else:
+                item.prepareGeometryChange()
+                delta = 1 if self.mode == 'charge_plus' else -1
+                item.charge += delta
+                self.data.atoms[item.atom_id]['charge'] = item.charge
+                item.update_style()
+
+            self.window.push_undo_state()
+
+            event.accept()
+            return
+
+        super().mouseDoubleClickEvent(event)
 
     def create_atom(self, symbol, pos, charge=0, radical=0):
         atom_id = self.data.add_atom(symbol, pos, charge=charge, radical=radical)
@@ -2199,9 +2266,23 @@ class MainWindow(QMainWindow):
         self.init_ui()
         self.init_worker_thread()
         self._setup_3d_picker() 
+
+        # --- RDKit初回実行コストの事前読み込み（ウォームアップ）---
+        try:
+            # Create a molecule with a variety of common atoms to ensure
+            # the valence/H-count machinery is fully initialized.
+            warmup_smiles = "OC(N)C(S)P"
+            warmup_mol = Chem.MolFromSmiles(warmup_smiles)
+            if warmup_mol:
+                for atom in warmup_mol.GetAtoms():
+                    atom.GetNumImplicitHs()
+        except Exception as e:
+            print(f"RDKit warm-up failed: {e}")
+
         self.reset_undo_stack()
         self.scene.selectionChanged.connect(self.update_edit_menu_actions)
         QApplication.clipboard().dataChanged.connect(self.update_edit_menu_actions)
+
         self.update_edit_menu_actions()
 
         if initial_file:
@@ -2550,11 +2631,14 @@ class MainWindow(QMainWindow):
         menu_bar = self.menuBar()
         
         file_menu = menu_bar.addMenu("&File")
+        load_mol_action = QAction("Import MOL...", self); load_mol_action.triggered.connect(self.load_mol_file)
+        file_menu.addAction(load_mol_action)
         import_smiles_action = QAction("Import SMILES...", self)
         import_smiles_action.triggered.connect(self.import_smiles_dialog)
         file_menu.addAction(import_smiles_action)
-        load_mol_action = QAction("Import MOL...", self); load_mol_action.triggered.connect(self.load_mol_file)
-        file_menu.addAction(load_mol_action)
+        import_inchi_action = QAction("Import InChI...", self)
+        import_inchi_action.triggered.connect(self.import_inchi_dialog)
+        file_menu.addAction(import_inchi_action)
         file_menu.addSeparator()
         save_mol_action = QAction("Save 2D as MOL...", self); save_mol_action.triggered.connect(self.save_as_mol)
         file_menu.addAction(save_mol_action)
@@ -2930,6 +3014,16 @@ class MainWindow(QMainWindow):
         mol_block = Chem.MolToMolBlock(mol, includeStereo=True)
         self.convert_button.setEnabled(False)
         self.statusBar().showMessage("Calculating 3D structure...")
+        self.plotter.clear() 
+        text_actor = self.plotter.add_text(
+            "Calculating...",
+            position='lower_left',
+            font_size=15,
+            color='gray',
+            name='calculating_text'
+        )
+        text_actor.GetTextProperty().SetOpacity(0.5)
+        self.plotter.render()
         self.start_calculation.emit(mol_block)
         
         self.view_2d.setFocus()
@@ -2986,6 +3080,7 @@ class MainWindow(QMainWindow):
         self.plotter.reset_camera()
         
     def on_calculation_error(self, error_message):
+        self.plotter.clear()
         self.dragged_atom_info = None
         self.statusBar().showMessage(f"Error: {error_message}")
         self.convert_button.setEnabled(True)
@@ -3231,8 +3326,6 @@ class MainWindow(QMainWindow):
                         atom_data['item'].implicit_h_count = 0
                         atom_data['item'].update()
                 return
-
-            mol.UpdatePropertyCache(strict=False)
             
             items_to_update = []
             for atom in mol.GetAtoms():
@@ -3261,11 +3354,21 @@ class MainWindow(QMainWindow):
         if ok and smiles:
             self.load_from_smiles(smiles)
 
+    def import_inchi_dialog(self):
+        """ユーザーにInChI文字列の入力を促すダイアログを表示する"""
+        inchi, ok = QInputDialog.getText(self, "Import InChI", "Enter InChI string:")
+        if ok and inchi:
+            self.load_from_inchi(inchi)
+
     def load_from_smiles(self, smiles_string):
         """SMILES文字列から分子を読み込み、2Dエディタに表示する"""
         try:
-            mol = Chem.MolFromSmiles(smiles_string)
+            cleaned_smiles = smiles_string.strip()
+            
+            mol = Chem.MolFromSmiles(cleaned_smiles)
             if mol is None:
+                if not cleaned_smiles:
+                    raise ValueError("SMILES string was empty.")
                 raise ValueError("Invalid SMILES string.")
 
             AllChem.Compute2DCoords(mol)
@@ -3326,6 +3429,75 @@ class MainWindow(QMainWindow):
         except Exception as e:
             self.statusBar().showMessage(f"Error loading from SMILES: {e}")
 
+    def load_from_inchi(self, inchi_string):
+        """InChI文字列から分子を読み込み、2Dエディタに表示する"""
+        try:
+            cleaned_inchi = inchi_string.strip()
+            
+            mol = Chem.MolFromInchi(cleaned_inchi)
+            if mol is None:
+                if not cleaned_inchi:
+                    raise ValueError("InChI string was empty.")
+                raise ValueError("Invalid InChI string.")
+
+            AllChem.Compute2DCoords(mol)
+            Chem.Kekulize(mol)
+
+            AllChem.AssignStereochemistry(mol, cleanIt=True, force=True)
+            conf = mol.GetConformer()
+            AllChem.WedgeMolBonds(mol, conf)
+            
+            self.clear_2d_editor(push_to_undo=False)
+            self.current_mol = None
+            self.plotter.clear()
+            self.analysis_action.setEnabled(False)
+
+            conf = mol.GetConformer()
+            SCALE_FACTOR = 50.0
+            
+            view_center = self.view_2d.mapToScene(self.view_2d.viewport().rect().center())
+            positions = [conf.GetAtomPosition(i) for i in range(mol.GetNumAtoms())]
+            mol_center_x = sum(p.x for p in positions) / len(positions) if positions else 0.0
+            mol_center_y = sum(p.y for p in positions) / len(positions) if positions else 0.0
+
+            rdkit_idx_to_my_id = {}
+            for i in range(mol.GetNumAtoms()):
+                atom = mol.GetAtomWithIdx(i)
+                pos = conf.GetAtomPosition(i)
+                charge = atom.GetFormalCharge()
+                
+                relative_x = pos.x - mol_center_x
+                relative_y = pos.y - mol_center_y
+                
+                scene_x = (relative_x * SCALE_FACTOR) + view_center.x()
+                scene_y = (-relative_y * SCALE_FACTOR) + view_center.y()
+                
+                atom_id = self.scene.create_atom(atom.GetSymbol(), QPointF(scene_x, scene_y), charge=charge)
+                rdkit_idx_to_my_id[i] = atom_id
+            
+            for bond in mol.GetBonds():
+                b_idx, e_idx = bond.GetBeginAtomIdx(), bond.GetEndAtomIdx()
+                b_type = bond.GetBondTypeAsDouble()
+                b_dir = bond.GetBondDir()
+                stereo = 0
+                if b_dir == Chem.BondDir.BEGINWEDGE:
+                    stereo = 1 # Wedge
+                elif b_dir == Chem.BondDir.BEGINDASH:
+                    stereo = 2 # Dash
+
+                if b_idx in rdkit_idx_to_my_id and e_idx in rdkit_idx_to_my_id:
+                    a1_id, a2_id = rdkit_idx_to_my_id[b_idx], rdkit_idx_to_my_id[e_idx]
+                    a1_item = self.data.atoms[a1_id]['item']
+                    a2_item = self.data.atoms[a2_id]['item']
+                    
+                    self.scene.create_bond(a1_item, a2_item, bond_order=int(b_type), bond_stereo=stereo)
+
+            self.statusBar().showMessage(f"Successfully loaded from InChI.")
+            self.reset_undo_stack()
+            QTimer.singleShot(0, self.fit_to_view)
+        except Exception as e:
+            self.statusBar().showMessage(f"Error loading from InChI: {e}")
+
     def load_mol_file(self):
         options = QFileDialog.Option.DontUseNativeDialog
         file_path, _ = QFileDialog.getOpenFileName(self, "Import MOL File", "", "Chemical Files (*.mol *.sdf);;All Files (*)", options=options)
@@ -3341,13 +3513,15 @@ class MainWindow(QMainWindow):
             self.clear_2d_editor(push_to_undo=False)
             self.current_mol = None; self.plotter.clear(); self.analysis_action.setEnabled(False)
             
+            # 1. 座標がなければ2D座標を生成する
             if mol.GetNumConformers() == 0: 
-                # 座標情報がないMOLファイルの場合、座標を生成し、
-                # ファイルから読み取った立体情報を元に、くさび結合を再設定する
                 AllChem.Compute2DCoords(mol)
-                AllChem.AssignStereochemistry(mol, cleanIt=True, force=True)
-                conf_for_wedge = mol.GetConformer()
-                AllChem.WedgeMolBonds(mol, conf_for_wedge)
+            
+            # 2. 座標の有無にかかわらず、常に立体化学を割り当て、2D表示用にくさび結合を設定する
+            # これにより、3D座標を持つMOLファイルからでも正しく2Dの立体表現が生成される
+            AllChem.AssignStereochemistry(mol, cleanIt=True, force=True)
+            conf = mol.GetConformer()
+            AllChem.WedgeMolBonds(mol, conf)
 
             conf = mol.GetConformer()
 
@@ -3464,7 +3638,7 @@ class MainWindow(QMainWindow):
             try:
                 conf=self.current_mol.GetConformer(); num_atoms=self.current_mol.GetNumAtoms()
                 xyz_lines=[str(num_atoms)]; smiles=Chem.MolToSmiles(Chem.RemoveHs(self.current_mol))
-                xyz_lines.append(f"Generated by MoleditPy Ver. {VERSION}  SMILES: {smiles}")
+                xyz_lines.append(f"Generated by MoleditPy Ver. {VERSION}")
                 for i in range(num_atoms):
                     pos=conf.GetAtomPosition(i); symbol=self.current_mol.GetAtomWithIdx(i).GetSymbol()
                     xyz_lines.append(f"{symbol} {pos.x:.6f} {pos.y:.6f} {pos.z:.6f}")
