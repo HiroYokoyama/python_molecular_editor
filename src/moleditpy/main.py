@@ -11,7 +11,7 @@ DOI 10.5281/zenodo.17268532
 """
 
 #Version
-VERSION = '1.3.2'
+VERSION = '1.4.0'
 
 print("-----------------------------------------------------")
 print("MoleditPy — A Python-based molecular editing software")
@@ -26,6 +26,7 @@ import io
 import os
 import ctypes
 import itertools
+import json 
 import vtk
 
 from collections import deque
@@ -35,12 +36,16 @@ from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QPushButton, QSplitter, QGraphicsView, QGraphicsScene, QGraphicsItem,
     QToolBar, QStatusBar, QGraphicsTextItem, QGraphicsLineItem, QDialog, QGridLayout,
-    QFileDialog, QSizePolicy, QLabel, QLineEdit, QToolButton, QMenu, QMessageBox, QInputDialog
+    QFileDialog, QSizePolicy, QLabel, QLineEdit, QToolButton, QMenu, QMessageBox, QInputDialog,
+    QColorDialog, QCheckBox, QSlider, QFormLayout
 )
+
 from PyQt6.QtGui import (
     QPen, QBrush, QColor, QPainter, QAction, QActionGroup, QFont, QPolygonF,
-    QPainterPath, QPainterPathStroker, QFontMetrics, QFontMetricsF, QKeySequence, QTransform, QCursor, QPixmap, QIcon, QShortcut, QDesktopServices
+    QPainterPath, QPainterPathStroker, QFontMetrics, QFontMetricsF, QKeySequence, QTransform, QCursor, QPixmap, QIcon, QShortcut, QDesktopServices, QImage
 )
+
+
 from PyQt6.QtCore import Qt, QPointF, QRectF, QLineF, QObject, QThread, pyqtSignal, QEvent, QMimeData, QByteArray, QUrl, QTimer
 
 from vtkmodules.vtkInteractionStyle import vtkInteractorStyleTrackballCamera
@@ -362,8 +367,6 @@ class AtomItem(QGraphicsItem):
         path = QPainterPath()
         path.addEllipse(QPointF(0, 0), scene_radius, scene_radius)
         return path
-
-    # In class AtomItem:
 
     def paint(self, painter, option, widget):
         color = CPK_COLORS.get(self.symbol, CPK_COLORS['DEFAULT'])
@@ -730,6 +733,9 @@ class MoleculeScene(QGraphicsScene):
         self.data_changed_in_event = False
         self.initial_positions_in_event = {item: item.pos() for item in self.items() if isinstance(item, AtomItem)}
 
+        if not self.window.is_2d_editable:
+            return
+
         if event.button() == Qt.MouseButton.RightButton:
             item = self.itemAt(event.scenePos(), self.views()[0].transform())
             if not isinstance(item, (AtomItem, BondItem)):
@@ -794,6 +800,9 @@ class MoleculeScene(QGraphicsScene):
         else: super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event):
+        if not self.window.is_2d_editable:
+            return 
+
         if self.mode.startswith('template'):
             self.update_template_preview(event.scenePos())
         
@@ -830,6 +839,10 @@ class MoleculeScene(QGraphicsScene):
             super().mouseMoveEvent(event)
 
     def mouseReleaseEvent(self, event):
+        
+        if not self.window.is_2d_editable:
+            return 
+
         end_pos = event.scenePos()
         is_click = self.press_pos and (end_pos - self.press_pos).manhattanLength() < QApplication.startDragDistance()
 
@@ -1409,6 +1422,9 @@ class MoleculeScene(QGraphicsScene):
         key = event.key()
         modifiers = event.modifiers()
         
+        if not self.window.is_2d_editable:
+            return    
+
         if key == Qt.Key.Key_4:
             # --- 動作1: カーソルが原子/結合上にある場合 (ワンショットでテンプレート配置) ---
             if isinstance(item_at_cursor, (AtomItem, BondItem)):
@@ -1777,8 +1793,6 @@ class MoleculeScene(QGraphicsScene):
         # --- どの操作にも当てはまらない場合 ---
         super().keyPressEvent(event)
         
-
-    # In MoleculeScene class
     def find_atom_near(self, pos, tol=14.0):
         # Create a small search rectangle around the position
         search_rect = QRectF(pos.x() - tol, pos.y() - tol, 2 * tol, 2 * tol)
@@ -1809,7 +1823,7 @@ class ZoomableView(QGraphicsView):
         self.setDragMode(QGraphicsView.DragMode.NoDrag)
 
         self.main_window = parent
-        self.setAcceptDrops(True)
+        self.setAcceptDrops(False)
 
         self._is_panning = False
         self._pan_start_pos = QPointF()
@@ -1887,44 +1901,7 @@ class ZoomableView(QGraphicsView):
         else:
             super().mouseReleaseEvent(event)
 
-# ZoomableView クラス内 (約1691行目あたりから)
 
-    def dragEnterEvent(self, event):
-        """ファイルがこのウィジェット上にドラッグされたときに呼び出される"""
-        # ドラッグされたデータにファイルパスが含まれている場合のみ受け入れる
-        if event.mimeData().hasUrls():
-            event.acceptProposedAction()
-        else:
-            event.ignore()
-
-    def dragMoveEvent(self, event):
-        """
-        ウィジェット上でドラッグが移動したときに呼び出される。
-        """
-        if event.mimeData().hasUrls():
-            event.acceptProposedAction()
-        else:
-            super().dragMoveEvent(event)
-
-    def dropEvent(self, event):
-        """ファイルがこのウィジェット上でドロップされたときに呼び出される"""
-        urls = event.mimeData().urls()
-        if urls and urls[0].isLocalFile():
-            file_path = urls[0].toLocalFile()
-            
-            # MainWindowのファイル読み込みメソッドを呼び出す
-            if self.main_window:
-                # 拡張子によって適切な読み込み処理を呼び出す
-                if file_path.lower().endswith('.pmeraw'):
-                    self.main_window.load_raw_data(file_path=file_path)
-                elif file_path.lower().endswith(('.mol', '.sdf')):
-                    self.main_window.load_mol_file(file_path=file_path)
-                
-                event.acceptProposedAction()
-            else:
-                event.ignore()
-        else:
-            event.ignore()
 
 class CalculationWorker(QObject):
     status_update = pyqtSignal(str) 
@@ -2169,6 +2146,143 @@ class AnalysisWindow(QDialog):
         if self.parent() and hasattr(self.parent(), 'statusBar'):
             self.parent().statusBar().showMessage(f"Copied '{text}' to clipboard.", 2000)
 
+
+class SettingsDialog(QDialog):
+    def __init__(self, current_settings, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("3D View Settings")
+        
+        # デフォルト設定をクラス内で定義
+        self.default_settings = {
+            'background_color': '#919191',
+            'lighting_enabled': True,
+            'specular': 0.20,
+            'specular_power': 20,
+            'light_intensity': 1.0,
+            'show_3d_axes': True,
+        }
+        
+        # --- 選択された色を管理する専用のインスタンス変数 ---
+        self.current_bg_color = None
+
+        # --- UI要素の作成 ---
+        layout = QVBoxLayout(self)
+        form_layout = QFormLayout()
+
+        # 1. 背景色
+        self.bg_button = QPushButton()
+        self.bg_button.setToolTip("Click to select a color")
+        self.bg_button.clicked.connect(self.select_color)
+        form_layout.addRow("Background Color:", self.bg_button)
+
+        # 1a. 軸の表示/非表示
+        self.axes_checkbox = QCheckBox()
+        form_layout.addRow("Show 3D Axes:", self.axes_checkbox)
+
+        # 2. ライトの有効/無効
+        self.light_checkbox = QCheckBox()
+        form_layout.addRow("Enable Lighting:", self.light_checkbox)
+
+        # 光の強さスライダーを追加
+        self.intensity_slider = QSlider(Qt.Orientation.Horizontal)
+        self.intensity_slider.setRange(0, 200) # 0.0 ~ 2.0 の範囲
+        form_layout.addRow("Light Intensity:", self.intensity_slider)
+
+        # 3. 光沢 (Specular)
+        self.specular_slider = QSlider(Qt.Orientation.Horizontal)
+        self.specular_slider.setRange(0, 100)
+        form_layout.addRow("Shininess (Specular):", self.specular_slider)
+        
+        # 4. 光沢の強さ (Specular Power)
+        self.spec_power_slider = QSlider(Qt.Orientation.Horizontal)
+        self.spec_power_slider.setRange(0, 100)
+        form_layout.addRow("Shininess Power:", self.spec_power_slider)
+
+        # 渡された設定でUIと内部変数を初期化
+        self.update_ui_from_settings(current_settings)
+
+        layout.addLayout(form_layout)
+
+        # --- ボタンの配置 ---
+        buttons = QHBoxLayout()
+        reset_button = QPushButton("Reset to Defaults")
+        reset_button.clicked.connect(self.reset_to_defaults)
+        
+        ok_button = QPushButton("OK")
+        cancel_button = QPushButton("Cancel")
+        ok_button.clicked.connect(self.accept)
+        cancel_button.clicked.connect(self.reject)
+
+        buttons.addWidget(reset_button)
+        buttons.addStretch(1)
+        buttons.addWidget(ok_button)
+        buttons.addWidget(cancel_button)
+        layout.addLayout(buttons)
+
+    def reset_to_defaults(self):
+        """UIをデフォルト設定に戻す"""
+        self.update_ui_from_settings(self.default_settings)
+
+    def update_ui_from_settings(self, settings_dict):
+        self.current_bg_color = settings_dict.get('background_color', self.default_settings['background_color'])
+        self.update_color_button(self.current_bg_color)
+        self.axes_checkbox.setChecked(settings_dict.get('show_3d_axes', self.default_settings['show_3d_axes']))
+        self.light_checkbox.setChecked(settings_dict.get('lighting_enabled', self.default_settings['lighting_enabled']))
+        self.intensity_slider.setValue(int(settings_dict.get('light_intensity', self.default_settings['light_intensity']) * 100))
+        self.specular_slider.setValue(int(settings_dict.get('specular', self.default_settings['specular']) * 100))
+        self.spec_power_slider.setValue(settings_dict.get('specular_power', self.default_settings['specular_power']))
+      
+    def select_color(self):
+        """カラーピッカーを開き、選択された色を内部変数とUIに反映させる"""
+        # 内部変数から現在の色を取得してカラーピッカーを初期化
+        color = QColorDialog.getColor(QColor(self.current_bg_color), self)
+        if color.isValid():
+            # 内部変数を更新
+            self.current_bg_color = color.name()
+            # UIの見た目を更新
+            self.update_color_button(self.current_bg_color)
+
+    def update_color_button(self, color_hex):
+        """ボタンの背景色と境界線を設定する"""
+        self.bg_button.setStyleSheet(f"background-color: {color_hex}; border: 1px solid #888;")
+
+    def get_settings(self):
+        return {
+            'background_color': self.current_bg_color,
+            'show_3d_axes': self.axes_checkbox.isChecked(),
+            'lighting_enabled': self.light_checkbox.isChecked(),
+            'light_intensity': self.intensity_slider.value() / 100.0,
+            'specular': self.specular_slider.value() / 100.0,
+            'specular_power': self.spec_power_slider.value()
+        }
+
+
+class CustomQtInteractor(QtInteractor):
+    def __init__(self, parent=None, main_window=None, **kwargs):
+        super().__init__(parent, **kwargs)
+        self.main_window = main_window
+
+    def wheelEvent(self, event):
+        """
+        マウスホイールイベントをオーバーライドする。
+        """
+        # 最初に親クラスのイベントを呼び、通常のズーム処理を実行させる
+        super().wheelEvent(event)
+        
+        # ズーム処理の完了後、2Dビューにフォーカスを強制的に戻す
+        if self.main_window and hasattr(self.main_window, 'view_2d'):
+            self.main_window.view_2d.setFocus()
+
+
+    def mouseReleaseEvent(self, event):
+        """
+        Qtのマウスリリースイベントをオーバーライドし、
+        3Dビューでの全ての操作完了後に2Dビューへフォーカスを戻す。
+        """
+        super().mouseReleaseEvent(event) # 親クラスのイベントを先に処理
+        if self.main_window and hasattr(self.main_window, 'view_2d'):
+            self.main_window.view_2d.setFocus()
+
 # --- 3Dインタラクションを管理する専用クラス ---
 class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
     def __init__(self, main_window):
@@ -2192,7 +2306,8 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
         is_temp_mode = bool(QApplication.keyboardModifiers() & Qt.KeyboardModifier.AltModifier)
         is_edit_active = mw.is_3d_edit_mode or is_temp_mode
 
-        if is_edit_active:
+        # 3D分子(mw.current_mol)が存在する場合のみ、原子の選択処理を実行
+        if is_edit_active and mw.current_mol:
             click_pos = self.GetInteractor().GetEventPosition()
             picker = mw.plotter.picker
             picker.Pick(click_pos[0], click_pos[1], 0, mw.plotter.renderer)
@@ -2202,17 +2317,20 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                 distances = np.linalg.norm(mw.atom_positions_3d - picked_position, axis=1)
                 closest_atom_idx = np.argmin(distances)
 
-                atomic_num = mw.current_mol.GetAtomWithIdx(int(closest_atom_idx)).GetAtomicNum()
-                vdw_radius = pt.GetRvdw(atomic_num)
-                click_threshold = vdw_radius * 1.5
+                # RDKitのMolオブジェクトから原子を安全に取得
+                atom = mw.current_mol.GetAtomWithIdx(int(closest_atom_idx))
+                if atom:
+                    atomic_num = atom.GetAtomicNum()
+                    vdw_radius = pt.GetRvdw(atomic_num)
+                    click_threshold = vdw_radius * 1.5
 
-                if distances[closest_atom_idx] < click_threshold:
-                    # 原子を掴むことに成功した場合
-                    self._is_dragging_atom = True
-                    self.is_dragging = False 
-                    mw.dragged_atom_info = {'id': int(closest_atom_idx)}
-                    mw.plotter.setCursor(Qt.CursorShape.ClosedHandCursor)
-                    return  # 親クラスのカメラ回転を呼ばないように、ここで処理を終了します
+                    if distances[closest_atom_idx] < click_threshold:
+                        # 原子を掴むことに成功した場合
+                        self._is_dragging_atom = True
+                        self.is_dragging = False 
+                        mw.dragged_atom_info = {'id': int(closest_atom_idx)}
+                        mw.plotter.setCursor(Qt.CursorShape.ClosedHandCursor)
+                        return  # 親クラスのカメラ回転を呼ばない
 
         self._is_dragging_atom = False
         super().OnLeftButtonDown()
@@ -2286,12 +2404,14 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
 
         # 状態をリセット
         self._is_dragging_atom = False
+        self.is_dragging = False # is_draggingもリセット
         
-        # ボタンを離した後のカーソル表示を最新の状態に更新するため、
-        # on_mouse_moveを一度呼び出します
+        # ボタンを離した後のカーソル表示を最新の状態に更新
         self.on_mouse_move(obj, event)
 
-        mw.view_2d.setFocus()
+        # 2Dビューにフォーカスを戻し、ショートカットキーなどが使えるようにする
+        if mw and mw.view_2d:
+            mw.view_2d.setFocus()
 
 class MainWindow(QMainWindow):
 
@@ -2299,6 +2419,11 @@ class MainWindow(QMainWindow):
     def __init__(self, initial_file=None):
         super().__init__()
         self.setAcceptDrops(True)
+        self.settings_dir = os.path.join(os.path.expanduser('~'), '.moleditpy')
+        self.settings_file = os.path.join(self.settings_dir, 'settings.json')
+        self.settings = {}
+        self.load_settings()
+        self.initial_settings = self.settings.copy()
         self.setWindowTitle("MoleditPy -- Python Molecular Editor  Ver. " + VERSION); self.setGeometry(100, 100, 1400, 800)
         self.data = MolecularData(); self.current_mol = None
         self.current_3d_style = 'ball_and_stick'
@@ -2306,6 +2431,9 @@ class MainWindow(QMainWindow):
         self.is_3d_edit_mode = False
         self.dragged_atom_info = None
         self.atom_actor = None 
+        self.is_2d_editable = True
+        self.axes_actor = None
+        self.axes_widget = None
         self.undo_stack = []
         self.redo_stack = []
         self.mode_actions = {} 
@@ -2333,6 +2461,8 @@ class MainWindow(QMainWindow):
 
         if initial_file:
             self.load_raw_data(file_path=initial_file)
+        
+        QTimer.singleShot(0, self.apply_initial_settings)
 
     def init_ui(self):
         # 1. 現在のスクリプトがあるディレクトリのパスを取得
@@ -2352,8 +2482,8 @@ class MainWindow(QMainWindow):
 
         self.init_menu_bar()
 
-        splitter=QSplitter(Qt.Orientation.Horizontal)
-        self.setCentralWidget(splitter)
+        self.splitter = QSplitter(Qt.Orientation.Horizontal)
+        self.setCentralWidget(self.splitter)
 
         left_pane=QWidget()
         left_pane.setAcceptDrops(True)
@@ -2383,13 +2513,13 @@ class MainWindow(QMainWindow):
         left_buttons_layout.addWidget(self.convert_button)
         
         left_layout.addLayout(left_buttons_layout)
-        splitter.addWidget(left_pane)
+        self.splitter.addWidget(left_pane)
 
         # --- 右パネルとボタンレイアウト ---
         right_pane = QWidget()
         # 1. 右パネル全体は「垂直」レイアウトにする
         right_layout = QVBoxLayout(right_pane)
-        self.plotter = QtInteractor(right_pane)
+        self.plotter = CustomQtInteractor(right_pane, main_window=self, lighting='none')
         self.plotter.setAcceptDrops(False)
         self.plotter.setSizePolicy(
             QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
@@ -2429,9 +2559,9 @@ class MainWindow(QMainWindow):
 
         # 4. 水平のボタンレイアウトを、全体の垂直レイアウトに追加
         right_layout.addLayout(right_buttons_layout)
-        splitter.addWidget(right_pane)
+        self.splitter.addWidget(right_pane)
         
-        splitter.setSizes([600, 600])
+        self.splitter.setSizes([600, 600])
 
         # ステータスバーを左右に分離するための設定
         self.status_bar = self.statusBar()
@@ -2463,6 +2593,7 @@ class MainWindow(QMainWindow):
 
             if mode == 'atom_other':
                 action.triggered.connect(self.open_periodic_table_dialog)
+                self.other_atom_action = action
             else:
                 action.triggered.connect(lambda c, m=mode: self.set_mode(m))
                 self.mode_actions[mode] = action
@@ -2685,6 +2816,12 @@ class MainWindow(QMainWindow):
         import_inchi_action = QAction("Import InChI...", self)
         import_inchi_action.triggered.connect(self.import_inchi_dialog)
         file_menu.addAction(import_inchi_action)
+
+        file_menu.addSeparator()
+        load_3d_mol_action = QAction("Load 3D MOL (3D Only)...", self)
+        load_3d_mol_action.triggered.connect(self.load_mol_for_3d_viewing)
+        file_menu.addAction(load_3d_mol_action)
+
         file_menu.addSeparator()
         save_mol_action = QAction("Save 2D as MOL...", self); save_mol_action.triggered.connect(self.save_as_mol)
         file_menu.addAction(save_mol_action)
@@ -2701,6 +2838,16 @@ class MainWindow(QMainWindow):
         load_raw_action = QAction("Open Project...", self); load_raw_action.triggered.connect(self.load_raw_data)
         load_raw_action.setShortcut(QKeySequence.StandardKey.Open) 
         file_menu.addAction(load_raw_action)
+        
+        file_menu.addSeparator()
+        
+        export_2d_png_action = QAction("Export 2D as PNG...", self)
+        export_2d_png_action.triggered.connect(self.export_2d_png)
+        file_menu.addAction(export_2d_png_action)
+
+        export_3d_png_action = QAction("Export 3D as PNG...", self)
+        export_3d_png_action.triggered.connect(self.export_3d_png)
+        file_menu.addAction(export_3d_png_action)
         
         file_menu.addSeparator()
         quit_action = QAction("Quit", self)
@@ -2781,6 +2928,13 @@ class MainWindow(QMainWindow):
 
         view_menu.addSeparator()
 
+        reset_3d_view_action = QAction("Reset 3D View", self)
+        reset_3d_view_action.triggered.connect(lambda: self.plotter.reset_camera() if hasattr(self, 'plotter') else None)
+        reset_3d_view_action.setShortcut(QKeySequence("Ctrl+R"))
+        view_menu.addAction(reset_3d_view_action)
+        
+        view_menu.addSeparator()
+
         self.toggle_chiral_action = QAction("Show Chiral Labels", self, checkable=True)
         self.toggle_chiral_action.setChecked(self.show_chiral_labels)
         self.toggle_chiral_action.triggered.connect(self.toggle_chiral_labels_display)
@@ -2791,6 +2945,11 @@ class MainWindow(QMainWindow):
         self.analysis_action.triggered.connect(self.open_analysis_window)
         self.analysis_action.setEnabled(False)
         analysis_menu.addAction(self.analysis_action)
+
+        settings_menu = menu_bar.addMenu("&Settings")
+        view_settings_action = QAction("3D View Settings...", self)
+        view_settings_action.triggered.connect(self.open_settings_dialog)
+        settings_menu.addAction(view_settings_action)
 
         help_menu = menu_bar.addMenu("&Help")
         about_action = QAction("About", self)
@@ -2820,7 +2979,6 @@ class MainWindow(QMainWindow):
 
     def set_mode(self, mode_str):
         self.scene.mode = mode_str
-        
         self.view_2d.setMouseTracking(True) 
         if not mode_str.startswith('template'):
             self.scene.template_preview.hide()
@@ -3066,14 +3224,23 @@ class MainWindow(QMainWindow):
         self.edit_3d_action.setEnabled(False)
         self.statusBar().showMessage("Calculating 3D structure...")
         self.plotter.clear() 
+        bg_color_hex = self.settings.get('background_color', '#919191')
+        bg_qcolor = QColor(bg_color_hex)
+        
+        if bg_qcolor.isValid():
+            luminance = bg_qcolor.toHsl().lightness()
+            text_color = 'black' if luminance > 128 else 'white'
+        else:
+            text_color = 'white'
+        
         text_actor = self.plotter.add_text(
             "Calculating...",
-            position='lower_left',
+            position='lower_right',
             font_size=15,
-            color='gray',
+            color=text_color,
             name='calculating_text'
         )
-        text_actor.GetTextProperty().SetOpacity(0.5)
+        text_actor.GetTextProperty().SetOpacity(1)
         self.plotter.render()
         self.start_calculation.emit(mol_block)
         
@@ -3158,6 +3325,8 @@ class MainWindow(QMainWindow):
         state['version'] = VERSION 
         
         if self.current_mol: state['mol_3d'] = self.current_mol.ToBinary()
+
+        state['is_3d_viewer_mode'] = not self.is_2d_editable
             
         return state
 
@@ -3234,6 +3403,12 @@ class MainWindow(QMainWindow):
 
         self.update_implicit_hydrogens()
         self.update_chiral_labels()
+
+        if loaded_data.get('is_3d_viewer_mode', False):
+            self._enter_3d_viewer_ui_mode()
+            self.statusBar().showMessage("Project loaded in 3D Viewer Mode.")
+        else:
+            self.restore_ui_for_editing()
         
 
     def push_undo_state(self):
@@ -3318,10 +3493,13 @@ class MainWindow(QMainWindow):
                 item.setSelected(True)
 
     def clear_all(self):
+
+        self.restore_ui_for_editing()
+
         # データが存在しない場合は何もしない
         if not self.data.atoms and self.current_mol is None:
             return
-
+        
         self.dragged_atom_info = None
             
         # 2Dエディタをクリアする（Undoスタックにはプッシュしない）
@@ -3430,7 +3608,8 @@ class MainWindow(QMainWindow):
             AllChem.AssignStereochemistry(mol, cleanIt=True, force=True)
             conf = mol.GetConformer()
             AllChem.WedgeMolBonds(mol, conf)
-            
+
+            self.restore_ui_for_editing()
             self.clear_2d_editor(push_to_undo=False)
             self.current_mol = None
             self.plotter.clear()
@@ -3499,7 +3678,8 @@ class MainWindow(QMainWindow):
             AllChem.AssignStereochemistry(mol, cleanIt=True, force=True)
             conf = mol.GetConformer()
             AllChem.WedgeMolBonds(mol, conf)
-            
+
+            self.restore_ui_for_editing()
             self.clear_2d_editor(push_to_undo=False)
             self.current_mol = None
             self.plotter.clear()
@@ -3565,7 +3745,8 @@ class MainWindow(QMainWindow):
             if mol is None: raise ValueError("Failed to read molecule from file.")
 
             Chem.Kekulize(mol)
-            
+
+            self.restore_ui_for_editing()
             self.clear_2d_editor(push_to_undo=False)
             self.current_mol = None; self.plotter.clear(); self.analysis_action.setEnabled(False)
             
@@ -3622,9 +3803,44 @@ class MainWindow(QMainWindow):
             self.reset_undo_stack()
             QTimer.singleShot(0, self.fit_to_view)
         except Exception as e: self.statusBar().showMessage(f"Error loading file: {e}")
+    
+    def load_mol_for_3d_viewing(self):
+        options = QFileDialog.Option.DontUseNativeDialog
+        file_path, _ = QFileDialog.getOpenFileName(self, "Load 3D MOL (View Only)", "", "Chemical Files (*.mol *.sdf);;All Files (*)", options=options)
+        if not file_path:
+            return
+
+        try:
+            suppl = Chem.SDMolSupplier(file_path, removeHs=False)
+            mol = next(suppl, None)
+            if mol is None:
+                raise ValueError("Failed to read molecule.")
+            if mol.GetNumConformers() == 0:
+                raise ValueError("MOL file has no 3D coordinates.")
+
+            # 2Dエディタをクリア
+            self.clear_2d_editor(push_to_undo=False)
+            
+            # 3D構造をセットして描画
+            self.current_mol = mol
+            self.draw_molecule_3d(self.current_mol)
+            self.plotter.reset_camera()
+
+            # UIを3Dビューアモードに設定
+            self._enter_3d_viewer_ui_mode()
+            
+            self.statusBar().showMessage(f"3D Viewer Mode: Loaded {os.path.basename(file_path)}")
+            self.reset_undo_stack()
+
+        except Exception as e:
+            self.statusBar().showMessage(f"Error loading 3D file: {e}", 5000)
+            self.restore_ui_for_editing()
+
 
     def save_raw_data(self):
-        if not self.data.atoms: self.statusBar().showMessage("Error: Nothing to save."); return
+        if not self.data.atoms and not self.current_mol: 
+            self.statusBar().showMessage("Error: Nothing to save.")
+            return
         save_data = self.get_current_state()
         options = QFileDialog.Option.DontUseNativeDialog
         file_path, _ = QFileDialog.getSaveFileName(self, "Save Project File", "", "Project Files (*.pmeraw);;All Files (*)", options=options)
@@ -3635,6 +3851,7 @@ class MainWindow(QMainWindow):
                 self.statusBar().showMessage(f"Project saved to {file_path}")
             except Exception as e: self.statusBar().showMessage(f"Error saving project file: {e}")
 
+
     def load_raw_data(self, file_path=None):
         if not file_path:
             options = QFileDialog.Option.DontUseNativeDialog
@@ -3643,6 +3860,7 @@ class MainWindow(QMainWindow):
         
         try:
             with open(file_path, 'rb') as f: loaded_data = pickle.load(f)
+            self.restore_ui_for_editing()
             self.set_state_from_data(loaded_data)
             self.statusBar().showMessage(f"Project loaded from {file_path}")
             self.reset_undo_stack()
@@ -3675,7 +3893,13 @@ class MainWindow(QMainWindow):
             if not file_path.lower().endswith('.mol'):
                 file_path += '.mol'
             try:
-                mol_block = Chem.MolToMolBlock(self.current_mol, includeStereo=True)
+
+                mol_to_save = Chem.Mol(self.current_mol)
+
+                if mol_to_save.HasProp("_2D"):
+                    mol_to_save.ClearProp("_2D")
+
+                mol_block = Chem.MolToMolBlock(mol_to_save, includeStereo=True)
                 lines = mol_block.split('\n')
                 if len(lines) > 1 and 'RDKit' in lines[1]:
                     lines[1] = '  MoleditPy Ver. ' + VERSION + '  3D'
@@ -3701,6 +3925,133 @@ class MainWindow(QMainWindow):
                 with open(file_path,'w') as f: f.write("\n".join(xyz_lines) + "\n")
                 self.statusBar().showMessage(f"Successfully saved to {file_path}")
             except Exception as e: self.statusBar().showMessage(f"Error saving file: {e}")
+
+    def export_2d_png(self):
+        if not self.data.atoms:
+            self.statusBar().showMessage("Nothing to export.", 2000)
+            return
+
+        options = QFileDialog.Option.DontUseNativeDialog
+        filePath, _ = QFileDialog.getSaveFileName(self, "Export 2D as PNG", "", "PNG Files (*.png)", options=options)
+        if not filePath:
+            return
+
+        if not (filePath.lower().endswith(".png")):
+            filePath += ".png"
+
+        reply = QMessageBox.question(self, 'Choose Background',
+                                     'Do you want a transparent background?\n(Choose "No" for a white background)',
+                                     QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No | QMessageBox.StandardButton.Cancel,
+                                     QMessageBox.StandardButton.No)
+
+        if reply == QMessageBox.StandardButton.Cancel:
+            self.statusBar().showMessage("Export cancelled.", 2000)
+            return
+
+        is_transparent = (reply == QMessageBox.StandardButton.Yes)
+
+        QApplication.processEvents()
+
+        items_to_restore = {}
+        original_background = self.scene.backgroundBrush()
+
+        try:
+            all_items = list(self.scene.items())
+            for item in all_items:
+                is_mol_part = isinstance(item, (AtomItem, BondItem))
+                if not (is_mol_part and item.isVisible()):
+                    items_to_restore[item] = item.isVisible()
+                    item.hide()
+
+            molecule_bounds = QRectF()
+            for item in self.scene.items():
+                if isinstance(item, (AtomItem, BondItem)) and item.isVisible():
+                    molecule_bounds = molecule_bounds.united(item.sceneBoundingRect())
+
+            if molecule_bounds.isEmpty() or not molecule_bounds.isValid():
+                self.statusBar().showMessage("Error: Could not determine molecule bounds for export.", 5000)
+                return
+
+            if is_transparent:
+                self.scene.setBackgroundBrush(QBrush(Qt.BrushStyle.NoBrush))
+            else:
+                self.scene.setBackgroundBrush(QBrush(QColor("#FFFFFF")))
+
+            rect_to_render = molecule_bounds.adjusted(-20, -20, 20, 20)
+
+            w = max(1, int(math.ceil(rect_to_render.width())))
+            h = max(1, int(math.ceil(rect_to_render.height())))
+
+            if w <= 0 or h <= 0:
+                self.statusBar().showMessage("Error: Invalid image size calculated.", 5000)
+                return
+
+            image = QImage(w, h, QImage.Format.Format_ARGB32_Premultiplied)
+            if is_transparent:
+                image.fill(Qt.GlobalColor.transparent)
+            else:
+                image.fill(Qt.GlobalColor.white)
+
+            painter = QPainter()
+            ok = painter.begin(image)
+            if not ok or not painter.isActive():
+                self.statusBar().showMessage("Failed to start QPainter for image rendering.", 5000)
+                return
+
+            try:
+                painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+                target_rect = QRectF(0, 0, w, h)
+                source_rect = rect_to_render
+                self.scene.render(painter, target_rect, source_rect)
+            finally:
+                painter.end()
+
+            saved = image.save(filePath, "PNG")
+            if saved:
+                self.statusBar().showMessage(f"2D view exported to {filePath}", 3000)
+            else:
+                self.statusBar().showMessage(f"Failed to save image. Check file path or permissions.", 5000)
+
+        except Exception as e:
+            self.statusBar().showMessage(f"An unexpected error occurred during 2D export: {e}", 5000)
+
+        finally:
+            for item, was_visible in items_to_restore.items():
+                item.setVisible(was_visible)
+            self.scene.setBackgroundBrush(original_background)
+            if self.view_2d:
+                self.view_2d.viewport().update()
+
+    def export_3d_png(self):
+        if not self.current_mol:
+            self.statusBar().showMessage("No 3D molecule to export.", 2000)
+            return
+
+        options = QFileDialog.Option.DontUseNativeDialog
+        filePath, _ = QFileDialog.getSaveFileName(self, "Export 3D as PNG", "", "PNG Files (*.png)", options=options)
+        if not filePath:
+            return
+
+        if not (filePath.lower().endswith(".png")):
+            filePath += ".png"
+
+        reply = QMessageBox.question(self, 'Choose Background',
+                                     'Do you want a transparent background?\n(Choose "No" for current background)',
+                                     QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No | QMessageBox.StandardButton.Cancel,
+                                     QMessageBox.StandardButton.No)
+
+        if reply == QMessageBox.StandardButton.Cancel:
+            self.statusBar().showMessage("Export cancelled.", 2000)
+            return
+
+        is_transparent = (reply == QMessageBox.StandardButton.Yes)
+
+        try:
+            self.plotter.screenshot(filePath, transparent_background=is_transparent)
+            self.statusBar().showMessage(f"3D view exported to {filePath}", 3000)
+        except Exception as e:
+            self.statusBar().showMessage(f"Error exporting 3D PNG: {e}", 3000)
+
 
     def open_periodic_table_dialog(self):
         dialog=PeriodicTableDialog(self); dialog.element_selected.connect(self.set_atom_from_periodic_table)
@@ -3923,32 +4274,80 @@ class MainWindow(QMainWindow):
         self.statusBar().showMessage("Resolved overlapping groups.", 2000)
 
 
+
     def draw_molecule_3d(self, mol):
+        """3D 分子を描画し、軸アクターの参照をクリアする（軸の再制御は apply_3d_settings に任せる）"""
+        
+        # 1. カメラ状態とクリア
         camera_state = self.plotter.camera.copy()
+
+        # **残留防止のための強制削除**
+        if self.axes_actor is not None:
+            try:
+                self.plotter.remove_actor(self.axes_actor)
+            except Exception:
+                pass 
+            self.axes_actor = None
+
         self.plotter.clear()
+            
+        # 2. 背景色の設定
+        self.plotter.set_background(self.settings.get('background_color', '#4f4f4f'))
+
+        # 3. mol が None または原子数ゼロの場合は、背景と軸のみで終了
+        if mol is None or mol.GetNumAtoms() == 0:
+            self.atom_actor = None
+            self.current_mol = None
+            self.plotter.render()
+            return
+            
+        # 4. ライティングの設定
+        is_lighting_enabled = self.settings.get('lighting_enabled', True)
+
+        if is_lighting_enabled:
+            light = pv.Light(
+                position=(1, 1, 2),
+                light_type='cameralight',
+                intensity=self.settings.get('light_intensity', 1.2)
+            )
+            self.plotter.add_light(light)
+            
+        # 5. 分子描画ロジック
         conf = mol.GetConformer()
-        
-        # 3D原子座標をNumPy配列としてクラス変数に保持し、効率的な更新を可能にする
+
         self.atom_positions_3d = np.array([list(conf.GetAtomPosition(i)) for i in range(mol.GetNumAtoms())])
-        
+
         sym = [a.GetSymbol() for a in mol.GetAtoms()]
         col = np.array([CPK_COLORS_PV.get(s, [0.5, 0.5, 0.5]) for s in sym])
-                
+
         if self.current_3d_style == 'cpk':
             rad = np.array([pt.GetRvdw(pt.GetAtomicNumber(s)) * 1.0 for s in sym])
-        else: # ball_and_stick (default)
+        else:
             rad = np.array([VDW_RADII.get(s, 0.4) for s in sym])
 
-        # 原子球（グリフ）の元となるPolyDataをクラス変数として保持
         self.glyph_source = pv.PolyData(self.atom_positions_3d)
         self.glyph_source['colors'] = col
         self.glyph_source['radii'] = rad
-        
-        glyphs = self.glyph_source.glyph(scale='radii', geom=pv.Sphere(radius=1.0), orient=False)
-        
-        edge_color = '#505050'
-        # ピック（選択）対象となる原子のアクターをクラス変数として保持
-        self.atom_actor = self.plotter.add_mesh(glyphs, scalars='colors', rgb=True, smooth_shading=True, show_edges=True, edge_color=edge_color, edge_opacity=0.3, line_width=0.1)        
+
+        glyphs = self.glyph_source.glyph(scale='radii', geom=pv.Sphere(radius=1.0, theta_resolution=32, phi_resolution=32), orient=False)
+
+        mesh_props = dict(
+            smooth_shading=True,
+            specular=self.settings.get('specular', 0.2),
+            specular_power=self.settings.get('specular_power', 20),
+            lighting=is_lighting_enabled,
+        )
+
+        if is_lighting_enabled:
+            self.atom_actor = self.plotter.add_mesh(glyphs, scalars='colors', rgb=True, **mesh_props)
+        else:
+            self.atom_actor = self.plotter.add_mesh(
+                glyphs, scalars='colors', rgb=True, 
+                style='surface', show_edges=True, edge_color='grey',
+                **mesh_props
+            )
+            self.atom_actor.GetProperty().SetEdgeOpacity(0.3)
+
 
         if self.current_3d_style == 'ball_and_stick':
             bond_meshes = []
@@ -3961,8 +4360,9 @@ class MainWindow(QMainWindow):
                 h = np.linalg.norm(d)
                 if h == 0: continue
 
+                cyl_radius = 0.1
                 if bt == Chem.rdchem.BondType.SINGLE or bt == Chem.rdchem.BondType.AROMATIC:
-                    cyl = pv.Cylinder(center=c, direction=d, radius=0.1, height=h)
+                    cyl = pv.Cylinder(center=c, direction=d, radius=cyl_radius, height=h, resolution=16)
                     bond_meshes.append(cyl)
                 else:
                     v1 = d / h
@@ -3970,20 +4370,19 @@ class MainWindow(QMainWindow):
                     if np.allclose(np.abs(np.dot(v1, v_arb)), 1.0): v_arb = np.array([0, 1, 0])
                     off_dir = np.cross(v1, v_arb)
                     off_dir /= np.linalg.norm(off_dir)
+                    r, s = cyl_radius * 0.8, cyl_radius * 2.0
                     if bt == Chem.rdchem.BondType.DOUBLE:
-                        r, s = 0.08, 0.20
                         c1, c2 = c + off_dir * (s / 2), c - off_dir * (s / 2)
-                        bond_meshes.append(pv.Cylinder(center=c1, direction=d, radius=r, height=h))
-                        bond_meshes.append(pv.Cylinder(center=c2, direction=d, radius=r, height=h))
+                        bond_meshes.append(pv.Cylinder(center=c1, direction=d, radius=r, height=h, resolution=16))
+                        bond_meshes.append(pv.Cylinder(center=c2, direction=d, radius=r, height=h, resolution=16))
                     elif bt == Chem.rdchem.BondType.TRIPLE:
-                        r, s = 0.08, 0.20
-                        bond_meshes.append(pv.Cylinder(center=c, direction=d, radius=r, height=h))
-                        bond_meshes.append(pv.Cylinder(center=c + off_dir * s, direction=d, radius=r, height=h))
-                        bond_meshes.append(pv.Cylinder(center=c - off_dir * s, direction=d, radius=r, height=h))
+                        bond_meshes.append(pv.Cylinder(center=c, direction=d, radius=r, height=h, resolution=16))
+                        bond_meshes.append(pv.Cylinder(center=c + off_dir * s, direction=d, radius=r, height=h, resolution=16))
+                        bond_meshes.append(pv.Cylinder(center=c - off_dir * s, direction=d, radius=r, height=h, resolution=16))
 
             if bond_meshes:
                 combined_bonds = pv.merge(bond_meshes)
-                self.plotter.add_mesh(combined_bonds, color=[0.5, 0.5, 0.5], smooth_shading=True, show_edges=True, edge_color=edge_color, edge_opacity=0.3)
+                self.plotter.add_mesh(combined_bonds, color='grey', **mesh_props)
 
         if getattr(self, 'show_chiral_labels', False):
             try:
@@ -3998,7 +4397,7 @@ class MainWindow(QMainWindow):
                     except Exception: pass
                     self.plotter.add_point_labels(np.array(pts), labels, font_size=20, point_size=0, text_color='k', name='chiral_labels', always_visible=True, tolerance=0.01, show_points=False)
             except Exception as e: self.statusBar().showMessage(f"3D chiral label drawing error: {e}")
-        
+
         self.plotter.camera = camera_state
 
 
@@ -4084,6 +4483,8 @@ class MainWindow(QMainWindow):
             self.statusBar().showMessage("Please generate a 3D structure first to show analysis.")
 
     def closeEvent(self, event):
+        if self.settings != self.initial_settings:
+            self.save_settings()
         reply = QMessageBox.question(self, 'Confirm Exit', 
                                      "Are you sure you want to exit?", 
                                      QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No, 
@@ -4152,35 +4553,169 @@ class MainWindow(QMainWindow):
         style = CustomInteractorStyle(self)
         
         # 調査の結果、'style' プロパティへの代入が正しい設定方法と判明
-        self.plotter.iren.style = style
+        self.plotter.interactor.SetInteractorStyle(style)
+        self.plotter.interactor.Initialize()
         
-        # 新しいスタイルを確実に読み込ませるためにインタラクタを初期化
-        self.plotter.iren.initialize()
-
     def dragEnterEvent(self, event):
-        """ファイルがウィンドウ上にドラッグされたときに呼び出される"""
-        # ドラッグされたデータにファイルパスが含まれているかチェック
+        """ウィンドウ全体で .pmeraw ファイルのドラッグのみを受け入れる"""
         if event.mimeData().hasUrls():
-            event.acceptProposedAction()  # 受け入れ可能であることをカーソルで示す
-        else:
-            event.ignore()
+            urls = event.mimeData().urls()
+            if urls and urls[0].isLocalFile():
+                file_path = urls[0].toLocalFile()
+                if file_path.lower().endswith(('.pmeraw', '.mol', '.sdf')):
+                    event.acceptProposedAction()
+                    return
+        event.ignore()
 
     def dropEvent(self, event):
         """ファイルがウィンドウ上でドロップされたときに呼び出される"""
         urls = event.mimeData().urls()
-        # ドロップされたのがローカルファイルの場合
         if urls and urls[0].isLocalFile():
             file_path = urls[0].toLocalFile()
             
-            # ファイルの拡張子が .pmeraw であることを確認
+            # 拡張子に応じて適切な読み込みメソッドを呼び出す
             if file_path.lower().endswith('.pmeraw'):
-                # 既存のファイル読み込み関数を呼び出す
                 self.load_raw_data(file_path=file_path)
                 event.acceptProposedAction()
+            elif file_path.lower().endswith(('.mol', '.sdf')):
+                # .mol/.sdfファイルを開くメソッドを呼び出す（メソッドが存在する場合）
+                if hasattr(self, 'load_mol_file'):
+                    self.load_mol_file(file_path=file_path)
+                    event.acceptProposedAction()
+                else:
+                    self.statusBar().showMessage(f"'{file_path.lower().split('.')[-1]}' file import is not implemented.")
+                    event.ignore()
             else:
                 event.ignore()
         else:
             event.ignore()
+
+    def _enter_3d_viewer_ui_mode(self):
+        """3DビューアモードのUI状態に設定する"""
+        self.is_2d_editable = False
+        self.cleanup_button.setEnabled(False)
+        self.convert_button.setEnabled(False)
+        for action in self.tool_group.actions():
+            action.setEnabled(False)
+        if hasattr(self, 'other_atom_action'):
+            self.other_atom_action.setEnabled(False)
+        
+        self.minimize_2d_panel()
+
+        self.optimize_3d_button.setEnabled(True)
+        self.export_button.setEnabled(True)
+        self.edit_3d_action.setEnabled(True)
+        self.analysis_action.setEnabled(True)
+
+    def restore_ui_for_editing(self):
+        """Enables all 2D editing UI elements."""
+        self.is_2d_editable = True
+        self.restore_2d_panel()
+        self.cleanup_button.setEnabled(True)
+        self.convert_button.setEnabled(True)
+
+        for action in self.tool_group.actions():
+            action.setEnabled(True)
+        
+        if hasattr(self, 'other_atom_action'):
+            self.other_atom_action.setEnabled(True)
+
+    def minimize_2d_panel(self):
+        """2Dパネルを最小化（非表示に）する"""
+        sizes = self.splitter.sizes()
+        # すでに最小化されていなければ実行
+        if sizes[0] > 0:
+            total_width = sum(sizes)
+            self.splitter.setSizes([0, total_width])
+
+    def restore_2d_panel(self):
+        """最小化された2Dパネルを元のサイズに戻す"""
+        sizes = self.splitter.sizes()
+        
+        # sizesリストが空でないことを確認してからアクセスする
+        if sizes and sizes[0] == 0:
+            self.splitter.setSizes([600, 600])
+
+            
+    def apply_initial_settings(self):
+        """UIの初期化が完了した後に、保存された設定を3Dビューに適用する"""
+        if self.plotter and self.plotter.renderer:
+            bg_color = self.settings.get('background_color', '#919191')
+            self.plotter.set_background(bg_color)
+            self.apply_3d_settings()
+
+
+    def apply_3d_settings(self):
+        """3Dビューの視覚設定を適用する"""
+        if not hasattr(self, 'plotter'):
+            return  
+
+        # --- 3D軸ウィジェットの設定 ---
+        show_axes = self.settings.get('show_3d_axes', True) 
+
+        # ウィジェットがまだ作成されていない場合は作成する
+        if self.axes_widget is None and hasattr(self.plotter, 'interactor'):
+            axes = vtk.vtkAxesActor()
+            self.axes_widget = vtk.vtkOrientationMarkerWidget()
+            self.axes_widget.SetOrientationMarker(axes)
+            self.axes_widget.SetInteractor(self.plotter.interactor)
+            # 左下隅に設定 (幅・高さ20%)
+            self.axes_widget.SetViewport(0.0, 0.0, 0.2, 0.2)
+
+        # 設定に応じてウィジェットを有効化/無効化
+        if self.axes_widget:
+            if show_axes:
+                self.axes_widget.On()
+                self.axes_widget.SetInteractive(False)  
+            else:
+                self.axes_widget.Off()  
+
+        self.draw_molecule_3d(self.current_mol)
+        self.plotter.reset_camera()
+
+
+
+    def open_settings_dialog(self):
+        dialog = SettingsDialog(self.settings, self)
+        if dialog.exec():
+            self.settings = dialog.get_settings()
+            self.save_settings()
+            self.apply_3d_settings()
+
+    def load_settings(self):
+        default_settings = {
+            'background_color': '#919191',
+            'lighting_enabled': True,
+            'specular': 0.2,
+            'specular_power': 20,
+            'light_intensity': 1.0,
+            'show_3d_axes': True,
+        }
+
+        try:
+            if os.path.exists(self.settings_file):
+                with open(self.settings_file, 'r') as f:
+                    loaded_settings = json.load(f)
+                
+                for key, value in default_settings.items():
+                    loaded_settings.setdefault(key, value)
+                self.settings = loaded_settings
+            
+            else:
+                self.settings = default_settings
+        
+        except Exception:
+            self.settings = default_settings
+
+    def save_settings(self):
+        try:
+            if not os.path.exists(self.settings_dir):
+                os.makedirs(self.settings_dir)
+            with open(self.settings_file, 'w') as f:
+                json.dump(self.settings, f, indent=4)
+        except Exception as e:
+            print(f"Error saving settings: {e}")
+  
 
 
 # --- Application Execution ---
