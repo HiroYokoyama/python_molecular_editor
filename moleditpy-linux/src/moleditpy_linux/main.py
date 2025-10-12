@@ -11,7 +11,7 @@ DOI 10.5281/zenodo.17268532
 """
 
 #Version
-VERSION = '1.5.0'
+VERSION = '1.7.0'
 
 print("-----------------------------------------------------")
 print("MoleditPy — A Python-based molecular editing software")
@@ -37,7 +37,7 @@ from PyQt6.QtWidgets import (
     QPushButton, QSplitter, QGraphicsView, QGraphicsScene, QGraphicsItem,
     QToolBar, QStatusBar, QGraphicsTextItem, QGraphicsLineItem, QDialog, QGridLayout,
     QFileDialog, QSizePolicy, QLabel, QLineEdit, QToolButton, QMenu, QMessageBox, QInputDialog,
-    QColorDialog, QCheckBox, QSlider, QFormLayout
+    QColorDialog, QCheckBox, QSlider, QFormLayout, QRadioButton, QComboBox, QListWidget, QListWidgetItem
 )
 
 from PyQt6.QtGui import (
@@ -69,6 +69,13 @@ ATOM_RADIUS = 18
 BOND_OFFSET = 3.5
 DEFAULT_BOND_LENGTH = 75 # テンプレートで使用する標準結合長
 CLIPBOARD_MIME_TYPE = "application/x-moleditpy-fragment"
+
+# Physical bond length (approximate) used to convert scene pixels to angstroms.
+# DEFAULT_BOND_LENGTH is the length in pixels used in the editor UI for a typical bond.
+# Many molecular file formats expect coordinates in angstroms; use ~1.5 Å as a typical single-bond length.
+DEFAULT_BOND_LENGTH_ANGSTROM = 1.5
+# Multiply pixel coordinates by this to get angstroms: ANGSTROM_PER_PIXEL = 1.5Å / DEFAULT_BOND_LENGTH(px)
+ANGSTROM_PER_PIXEL = DEFAULT_BOND_LENGTH_ANGSTROM / DEFAULT_BOND_LENGTH
 
 # UI / drawing / behavior constants (centralized for maintainability)
 FONT_FAMILY = "Arial"
@@ -123,6 +130,1905 @@ CPK_COLORS_PV = {
 pt = Chem.GetPeriodicTable()
 VDW_RADII = {pt.GetElementSymbol(i): pt.GetRvdw(i) * 0.3 for i in range(1, 119)}
 
+class Dialog3DPickingMixin:
+    """3D原子選択のための共通機能を提供するMixin"""
+    
+    def __init__(self):
+        """Mixinの初期化"""
+        self.picking_enabled = False
+    
+    def eventFilter(self, obj, event):
+        """3Dビューでのマウスクリックをキャプチャする（元の3D editロジックを正確に再現）"""
+        if (obj == self.main_window.plotter.interactor and 
+            event.type() == QEvent.Type.MouseButtonPress and 
+            event.button() == Qt.MouseButton.LeftButton):
+            
+            try:
+                # VTKイベント座標を取得（元のロジックと同じ）
+                interactor = self.main_window.plotter.interactor
+                click_pos = interactor.GetEventPosition()
+                picker = self.main_window.plotter.picker
+                picker.Pick(click_pos[0], click_pos[1], 0, self.main_window.plotter.renderer)
+
+                if picker.GetActor() is self.main_window.atom_actor:
+                    picked_position = np.array(picker.GetPickPosition())
+                    distances = np.linalg.norm(self.main_window.atom_positions_3d - picked_position, axis=1)
+                    closest_atom_idx = np.argmin(distances)
+
+                    # 範囲チェックを追加
+                    if 0 <= closest_atom_idx < self.mol.GetNumAtoms():
+                        # クリック閾値チェック（元のロジックと同じ）
+                        atom = self.mol.GetAtomWithIdx(int(closest_atom_idx))
+                        if atom:
+                            atomic_num = atom.GetAtomicNum()
+                            vdw_radius = pt.GetRvdw(atomic_num)
+                            click_threshold = vdw_radius * 1.5
+
+                            if distances[closest_atom_idx] < click_threshold:
+                                self.on_atom_picked(int(closest_atom_idx))
+                                return True  # Consume event
+                
+                # 原子以外をクリックした場合は選択をクリア（Measurementモードと同じロジック）
+                if hasattr(self, 'clear_selection'):
+                    self.clear_selection()
+                return True  # Consume event
+                    
+            except Exception as e:
+                print(f"Error in eventFilter: {e}")
+                
+        return super().eventFilter(obj, event)
+    
+    def enable_picking(self):
+        """3Dビューでの原子選択を有効にする"""
+        self.main_window.plotter.interactor.installEventFilter(self)
+        self.picking_enabled = True
+    
+    def disable_picking(self):
+        """3Dビューでの原子選択を無効にする"""
+        if hasattr(self, 'picking_enabled') and self.picking_enabled:
+            self.main_window.plotter.interactor.removeEventFilter(self)
+            self.picking_enabled = False
+    
+    def try_alternative_picking(self, x, y):
+        """代替のピッキング方法（使用しない）"""
+        pass
+
+class TranslationDialog(Dialog3DPickingMixin, QDialog):
+    def __init__(self, mol, main_window, parent=None):
+        QDialog.__init__(self, parent)
+        Dialog3DPickingMixin.__init__(self)
+        self.mol = mol
+        self.main_window = main_window
+        self.reference_atom_idx = None
+        self.init_ui()
+    
+    def init_ui(self):
+        self.setWindowTitle("Translation")
+        self.setModal(False)  # モードレスにしてクリックを阻害しない
+        self.setWindowFlags(Qt.WindowType.Window | Qt.WindowType.WindowStaysOnTopHint)  # 常に前面表示
+        layout = QVBoxLayout(self)
+        
+        # Instructions
+        instruction_label = QLabel("Click an atom as reference point, then enter target coordinates.")
+        instruction_label.setWordWrap(True)
+        layout.addWidget(instruction_label)
+        
+        # Selected atom display
+        self.selection_label = QLabel("No atom selected")
+        layout.addWidget(self.selection_label)
+        
+        # Coordinate inputs
+        coord_layout = QGridLayout()
+        coord_layout.addWidget(QLabel("Target X:"), 0, 0)
+        self.x_input = QLineEdit("0.0")
+        coord_layout.addWidget(self.x_input, 0, 1)
+        
+        coord_layout.addWidget(QLabel("Target Y:"), 1, 0)
+        self.y_input = QLineEdit("0.0")
+        coord_layout.addWidget(self.y_input, 1, 1)
+        
+        coord_layout.addWidget(QLabel("Target Z:"), 2, 0)
+        self.z_input = QLineEdit("0.0")
+        coord_layout.addWidget(self.z_input, 2, 1)
+        
+        layout.addLayout(coord_layout)
+        
+        # Buttons
+        button_layout = QHBoxLayout()
+        self.clear_button = QPushButton("Clear Selection")
+        self.clear_button.clicked.connect(self.clear_selection)
+        button_layout.addWidget(self.clear_button)
+        
+        button_layout.addStretch()
+        
+        self.apply_button = QPushButton("Apply Translation")
+        self.apply_button.clicked.connect(self.apply_translation)
+        self.apply_button.setEnabled(False)
+        button_layout.addWidget(self.apply_button)
+        
+        cancel_button = QPushButton("Cancel")
+        cancel_button.clicked.connect(self.reject)
+        button_layout.addWidget(cancel_button)
+        
+        layout.addLayout(button_layout)
+        
+        # Connect to main window's picker
+        self.picker_connection = None
+        self.enable_picking()
+    
+    def on_atom_picked(self, atom_idx):
+        """原子がピックされたときの処理"""
+        self.reference_atom_idx = atom_idx
+        self.show_atom_labels()
+        self.update_display()
+    
+    def keyPressEvent(self, event):
+        """キーボードイベントを処理"""
+        if event.key() == Qt.Key.Key_Return or event.key() == Qt.Key.Key_Enter:
+            if self.apply_button.isEnabled():
+                self.apply_translation()
+            event.accept()
+        else:
+            super().keyPressEvent(event)
+    
+    def update_display(self):
+        """表示を更新"""
+        if self.reference_atom_idx is None:
+            self.selection_label.setText("No atom selected")
+            self.apply_button.setEnabled(False)
+        else:
+            symbol = self.mol.GetAtomWithIdx(self.reference_atom_idx).GetSymbol()
+            conf = self.mol.GetConformer()
+            pos = conf.GetAtomPosition(self.reference_atom_idx)
+            self.selection_label.setText(f"Reference: {symbol}({self.reference_atom_idx}) at ({pos.x:.2f}, {pos.y:.2f}, {pos.z:.2f})")
+            self.apply_button.setEnabled(True)
+    
+    def apply_translation(self):
+        """平行移動を適用"""
+        if self.reference_atom_idx is None:
+            QMessageBox.warning(self, "Warning", "Please select a reference atom.")
+            return
+        
+        try:
+            target_x = float(self.x_input.text())
+            target_y = float(self.y_input.text())
+            target_z = float(self.z_input.text())
+        except ValueError:
+            QMessageBox.warning(self, "Warning", "Please enter valid coordinates.")
+            return
+        
+        try:
+            # 参照原子の現在位置を取得
+            conf = self.mol.GetConformer()
+            current_pos = np.array(conf.GetAtomPosition(self.reference_atom_idx))
+            target_pos = np.array([target_x, target_y, target_z])
+            
+            # 移動ベクトルを計算
+            translation_vector = target_pos - current_pos
+            
+            # Undo状態を保存
+            self.main_window.push_undo_state()
+            
+            # 全原子を平行移動
+            for i in range(self.mol.GetNumAtoms()):
+                atom_pos = np.array(conf.GetAtomPosition(i))
+                new_pos = atom_pos + translation_vector
+                conf.SetAtomPosition(i, new_pos.tolist())
+                self.main_window.atom_positions_3d[i] = new_pos
+            
+            # 3D表示を更新
+            self.main_window.draw_molecule_3d(self.mol)
+            
+            self.accept()
+            
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to apply translation: {str(e)}")
+    
+    def clear_selection(self):
+        """選択をクリア"""
+        self.reference_atom_idx = None
+        self.clear_atom_labels()
+        self.update_display()
+    
+    def show_atom_labels(self):
+        """選択された原子にラベルを表示"""
+        # 既存のラベルをクリア
+        self.clear_atom_labels()
+        
+        # 新しいラベルを表示
+        if not hasattr(self, 'selection_labels'):
+            self.selection_labels = []
+        
+        if self.reference_atom_idx is not None:
+            pos = self.main_window.atom_positions_3d[self.reference_atom_idx]
+            label_text = "Ref"
+            
+            # ラベルを追加
+            label_actor = self.main_window.plotter.add_point_labels(
+                [pos], [label_text], 
+                point_size=20, 
+                font_size=12,
+                text_color='cyan',
+                always_visible=True
+            )
+            self.selection_labels.append(label_actor)
+    
+    def clear_atom_labels(self):
+        """原子ラベルをクリア"""
+        if hasattr(self, 'selection_labels'):
+            for label_actor in self.selection_labels:
+                try:
+                    self.main_window.plotter.remove_actor(label_actor)
+                except:
+                    pass
+            self.selection_labels = []
+    
+    def closeEvent(self, event):
+        """ダイアログが閉じられる時の処理"""
+        self.clear_atom_labels()
+        self.disable_picking()
+        super().closeEvent(event)
+    
+    def reject(self):
+        """キャンセル時の処理"""
+        self.clear_atom_labels()
+        self.disable_picking()
+        super().reject()
+    
+    def accept(self):
+        """OK時の処理"""
+        self.clear_atom_labels()
+        self.disable_picking()
+        super().accept()
+
+class SymmetrizeDialog(QDialog):
+    """分子構造の対称化機能を提供するダイアログ"""
+
+    # 黄金比 (正二十面体群の記述に使用)
+    PHI = (1 + np.sqrt(5)) / 2
+
+    POINT_GROUPS = {
+        # ===============================================================
+        # 1. 低対称性群 (Low Symmetry Groups)
+        # ===============================================================
+        "C1": {
+            "name": "C1 (No symmetry)", 
+            "operations": [np.eye(3)] # E
+        },
+        "Ci": {
+            "name": "Ci (Inversion center)", 
+            "operations": [
+                np.eye(3),      # E
+                -np.eye(3)      # i
+            ]
+        },
+        "Cs": {
+            "name": "Cs (Mirror plane)", 
+            "operations": [
+                np.eye(3),      # E
+                np.array([[1, 0, 0], [0, 1, 0], [0, 0, -1]])  # σh (xy)
+            ]
+        },
+
+        # ===============================================================
+        # 2. 単一軸を持つ群 (Groups with a single axis)
+        # ===============================================================
+        # Cn 群 (カイラル)
+        "C2": {
+            "name": "C2 (Rotation)", 
+            "operations": [
+                np.eye(3), 
+                np.array([[-1, 0, 0], [0, -1, 0], [0, 0, 1]])  # C2(z)
+            ]
+        },
+        "C3": {
+            "name": "C3 (Rotation)", 
+            "operations": [
+                np.eye(3),
+                np.array([[-0.5, -np.sqrt(3)/2, 0], [np.sqrt(3)/2, -0.5, 0], [0, 0, 1]]), # C3
+                np.array([[-0.5,  np.sqrt(3)/2, 0], [-np.sqrt(3)/2, -0.5, 0], [0, 0, 1]])  # C3^2
+            ]
+        },
+        # Cnh 群
+        "C2h": {
+            "name": "C2h", 
+            "operations": [
+                np.eye(3),                                      # E
+                np.array([[-1, 0, 0], [0, -1, 0], [0, 0, 1]]),  # C2(z)
+                np.array([[1, 0, 0], [0, 1, 0], [0, 0, -1]]),  # σh
+                -np.eye(3)                                      # i
+            ]
+        },
+        "C3h": {
+            "name": "C3h",
+            "operations": [
+                np.array([[-0.5, -np.sqrt(3)/2, 0], [np.sqrt(3)/2, -0.5, 0], [0, 0, 1]]), # C3
+                np.array([[1, 0, 0], [0, 1, 0], [0, 0, -1]]),                          # σh
+            ]
+        },
+        # Cnv 群
+        "C2v": {
+            "name": "C2v", 
+            "operations": [
+                np.eye(3),
+                np.array([[-1, 0, 0], [0, -1, 0], [0, 0, 1]]),  # C2(z)
+                np.array([[1, 0, 0], [0, -1, 0], [0, 0, 1]]),  # σv(xz)
+                np.array([[-1, 0, 0], [0, 1, 0], [0, 0, 1]])   # σv(yz)
+            ]
+        },
+        "C3v": {
+            "name": "C3v", 
+            "operations": [
+                 np.array([[-0.5, -np.sqrt(3)/2, 0], [np.sqrt(3)/2, -0.5, 0], [0, 0, 1]]), # C3
+                 np.array([[1, 0, 0], [0, -1, 0], [0, 0, 1]])                           # σv(xz)
+            ]
+        },
+
+        # ===============================================================
+        # 3. 二面体群 (Dihedral Groups)
+        # ===============================================================
+        # Dn 群 (カイラル)
+        "D2": {
+            "name": "D2", 
+            "operations": [
+                np.eye(3),
+                np.array([[1, 0, 0], [0, -1, 0], [0, 0, -1]]),  # C2(x)
+                np.array([[-1, 0, 0], [0, 1, 0], [0, 0, -1]]),  # C2(y)
+                np.array([[-1, 0, 0], [0, -1, 0], [0, 0, 1]])   # C2(z)
+            ]
+        },
+        "D3": {
+            "name": "D3", 
+            "operations": [
+                np.array([[-0.5, -np.sqrt(3)/2, 0], [np.sqrt(3)/2, -0.5, 0], [0, 0, 1]]), # C3(z)
+                np.array([[1, 0, 0], [0, -1, 0], [0, 0, -1]])                           # C2(x)
+            ]
+        },
+        # Dnh 群
+        "D2h": {
+            "name": "D2h", 
+            "operations": [
+                np.array([[1, 0, 0], [0, -1, 0], [0, 0, -1]]),  # C2(x)
+                np.array([[-1, 0, 0], [0, 1, 0], [0, 0, -1]]),  # C2(y)
+                -np.eye(3)                                      # i
+            ]
+        },
+        "D3h": {
+            "name": "D3h", 
+            "operations": [
+                np.array([[-0.5, -np.sqrt(3)/2, 0], [np.sqrt(3)/2, -0.5, 0], [0, 0, 1]]), # C3(z)
+                np.array([[1, 0, 0], [0, -1, 0], [0, 0, -1]]),                           # C2(x)
+                np.array([[1, 0, 0], [0, 1, 0], [0, 0, -1]])                            # σh
+            ]
+        },
+        "D4h": {
+            "name": "D4h",
+            "operations": [
+                np.array([[0, -1, 0], [1, 0, 0], [0, 0, 1]]),    # C4(z)
+                np.array([[1, 0, 0], [0, -1, 0], [0, 0, -1]]),  # C2(x)
+                -np.eye(3)                                      # i
+            ]
+        },
+        "D5h": {
+            "name": "D5h",
+            "operations": [
+                # C5(z)
+                np.array([[np.cos(2*np.pi/5), -np.sin(2*np.pi/5), 0], 
+                          [np.sin(2*np.pi/5), np.cos(2*np.pi/5), 0], 
+                          [0, 0, 1]]),
+                np.array([[1, 0, 0], [0, -1, 0], [0, 0, -1]]),  # C2(x)
+                np.array([[1, 0, 0], [0, 1, 0], [0, 0, -1]]),  # σh
+            ]
+        },
+        "D6h": {
+            "name": "D6h",
+            "operations": [
+                np.array([[0.5, -np.sqrt(3)/2, 0], [np.sqrt(3)/2, 0.5, 0], [0, 0, 1]]), # C6(z)
+                np.array([[1, 0, 0], [0, -1, 0], [0, 0, -1]]),                        # C2(x)
+                -np.eye(3)                                                            # i
+            ]
+        },
+        # Dnd 群
+        "D2d": {
+            "name": "D2d",
+            "operations": [
+                np.array([[0, -1, 0], [1, 0, 0], [0, 0, -1]]),   # S4(z)
+                np.array([[1, 0, 0], [0, -1, 0], [0, 0, -1]])   # C2(x)
+            ]
+        },
+        "D3d": {
+            "name": "D3d",
+            "operations": [
+                np.array([[0.5, -np.sqrt(3)/2, 0], [np.sqrt(3)/2, 0.5, 0], [0, 0, -1]]), # S6(z)
+                np.array([[1, 0, 0], [0, -1, 0], [0, 0, -1]])                          # C2(x)
+            ]
+        },
+
+        # ===============================================================
+        # 4. 高対称性群 (Cubic and Icosahedral Groups)
+        # ===============================================================
+        # Td 群 (正四面体)
+        "Td": {
+            "name": "Td (Tetrahedral)", 
+            "operations": [
+                np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]]),    # E (恒等操作)
+                np.array([[0, 1, 0], [0, 0, 1], [1, 0, 0]]),    # C3(111)
+                np.array([[0, 0, 1], [1, 0, 0], [0, 1, 0]]),    # C3(111)^2
+                np.array([[0, 1, 0], [1, 0, 0], [0, 0, -1]]),   # S4(z)
+                np.array([[0, -1, 0], [1, 0, 0], [0, 0, 1]]),   # S4(z)^2 = C2(z)
+                np.array([[0, 1, 0], [-1, 0, 0], [0, 0, -1]]),  # S4(z)^3
+                np.array([[1, 0, 0], [0, 0, 1], [0, -1, 0]]),   # S4(y)
+                np.array([[1, 0, 0], [0, 0, -1], [0, 1, 0]]),   # S4(y)^3
+                np.array([[0, 0, 1], [0, 1, 0], [-1, 0, 0]]),   # S4(x)
+                np.array([[0, 0, -1], [0, 1, 0], [1, 0, 0]]),   # S4(x)^3
+                np.array([[-1, 0, 0], [0, -1, 0], [0, 0, 1]]),  # C2(z)
+                np.array([[-1, 0, 0], [0, 1, 0], [0, 0, -1]]),  # C2(y)
+                np.array([[1, 0, 0], [0, -1, 0], [0, 0, -1]]),  # C2(x)
+            ]
+        },
+        # Oh 群 (正八面体 / 立方体)
+        "Oh": {
+            "name": "Oh (Octahedral)",
+            "operations": [
+                np.array([[0, 0, 1], [1, 0, 0], [0, 1, 0]]),    # C3(111)
+                np.array([[0, 1, 0], [-1, 0, 0], [0, 0, 1]]),   # C4(z, inv)
+                -np.eye(3)                                      # i
+            ]
+        },
+        # Ih 群 (正二十面体)
+        "Ih": {
+            "name": "Ih (Icosahedral)",
+            "operations": [
+                # C5 z-phi plane
+                np.array([[ (PHI-1)/2, -PHI/2,  0.5],
+                          [      PHI/2,  (PHI-1)/2, -0.5],
+                          [       -0.5,      0.5,  PHI/2]]),
+                # C3 111
+                 np.array([[0, 1, 0], [0, 0, 1], [1, 0, 0]]),
+                 -np.eye(3) # i
+            ]
+        }
+    }
+    
+    def __init__(self, mol, main_window, parent=None):
+        super().__init__(parent)
+        self.mol = mol
+        self.main_window = main_window
+        self.init_ui()
+    
+    def init_ui(self):
+        self.setWindowTitle("Symmetrize Molecule")
+        self.setModal(True)
+        self.setFixedSize(450, 350)
+        layout = QVBoxLayout(self)
+        
+        # Instructions
+        instruction_label = QLabel(
+            "Select a point group and tolerance to automatically symmetrize the molecular structure. "
+            "The algorithm will adjust atomic positions to enforce the selected symmetry."
+        )
+        instruction_label.setWordWrap(True)
+        layout.addWidget(instruction_label)
+        
+        layout.addWidget(QLabel(""))  # Spacer
+        
+        # Point group selection
+        point_group_layout = QFormLayout()
+        
+        # Point group selection with auto-detect button
+        pg_selection_layout = QHBoxLayout()
+        self.point_group_combo = QComboBox()
+        for key, value in self.POINT_GROUPS.items():
+            self.point_group_combo.addItem(value["name"], key)
+        self.point_group_combo.setCurrentIndex(0)  # Default to C1
+        pg_selection_layout.addWidget(self.point_group_combo)
+        
+        self.auto_detect_button = QPushButton("Auto-Detect")
+        self.auto_detect_button.clicked.connect(self.auto_detect_symmetry)
+        self.auto_detect_button.setToolTip("Automatically detect the most suitable point group for current structure")
+        pg_selection_layout.addWidget(self.auto_detect_button)
+        
+        point_group_layout.addRow("Point Group:", pg_selection_layout)
+        
+        # Tolerance input
+        self.tolerance_input = QLineEdit("0.1")
+        self.tolerance_input.setToolTip("Maximum allowed displacement (Angstroms) when applying symmetry operations")
+        point_group_layout.addRow("Tolerance (Å):", self.tolerance_input)
+        
+        layout.addLayout(point_group_layout)
+        
+        layout.addWidget(QLabel(""))  # Spacer
+        
+        # Preview information
+        self.info_label = QLabel("Select parameters and click Apply to symmetrize the structure.")
+        self.info_label.setWordWrap(True)
+        self.info_label.setStyleSheet("QLabel { color: #666; font-style: italic; }")
+        layout.addWidget(self.info_label)
+        
+        layout.addStretch()
+        
+        # Buttons
+        button_layout = QHBoxLayout()
+        
+        self.preview_button = QPushButton("Preview Symmetry")
+        self.preview_button.clicked.connect(self.preview_symmetry)
+        self.preview_button.setToolTip("Analyze current structure and show symmetry information")
+        button_layout.addWidget(self.preview_button)
+        
+        button_layout.addStretch()
+        
+        self.apply_button = QPushButton("Apply Symmetrization")
+        self.apply_button.clicked.connect(self.apply_symmetrization)
+        self.apply_button.setDefault(True)
+        button_layout.addWidget(self.apply_button)
+        
+        cancel_button = QPushButton("Cancel")
+        cancel_button.clicked.connect(self.reject)
+        button_layout.addWidget(cancel_button)
+        
+        layout.addLayout(button_layout)
+    
+    def get_selected_point_group(self):
+        """選択されたポイントグループの情報を取得"""
+        key = self.point_group_combo.currentData()
+        return key, self.POINT_GROUPS[key]
+    
+    def get_tolerance(self):
+        """入力されたトレランス値を取得"""
+        try:
+            return float(self.tolerance_input.text())
+        except ValueError:
+            QMessageBox.warning(self, "Warning", "Please enter a valid tolerance value.")
+            return None
+    
+    def preview_symmetry(self):
+        """現在の構造の対称性を分析してプレビュー表示（高度な解析付き）"""
+        tolerance = self.get_tolerance()
+        if tolerance is None:
+            return
+        
+        key, point_group = self.get_selected_point_group()
+        
+        try:
+            # 現在の分子の座標を取得
+            conf = self.mol.GetConformer()
+            positions = np.array([conf.GetAtomPosition(i) for i in range(self.mol.GetNumAtoms())])
+            
+            # 高度な対称性分析を実行
+            analysis_result = self.analyze_symmetry(positions, point_group["operations"], tolerance)
+            
+            # 等価原子グループ情報を取得
+            try:
+                symmetry_classes = self.get_molecular_symmetry_classes()
+                equivalent_groups = self.group_equivalent_atoms(symmetry_classes)
+                
+                # グループ情報を整理
+                group_info = []
+                equivalent_count = 0
+                
+                for i, group in enumerate(equivalent_groups):
+                    if len(group) > 1:
+                        equivalent_count += 1
+                        symbols = [self.mol.GetAtomWithIdx(idx).GetSymbol() for idx in group]
+                        group_info.append(f"Group {equivalent_count}: {len(group)} {symbols[0]} atoms (indices: {group})")
+                    else:
+                        symbols = [self.mol.GetAtomWithIdx(idx).GetSymbol() for idx in group]
+                        group_info.append(f"Single: {symbols[0]} atom (index: {group[0]})")
+                
+                if equivalent_count > 0:
+                    group_text = f"Found {equivalent_count} equivalent atom groups:\n" + "\n".join(group_info)
+                else:
+                    group_text = "No equivalent atom groups found.\nAll atoms are chemically unique.\n" + "\n".join(group_info)
+                
+            except Exception as e:
+                group_text = f"Symmetry analysis error: {str(e)}\nUsing fallback simple method."
+            
+            # 結果をダイアログに表示
+            info_text = f"Point Group: {point_group['name']}\n"
+            info_text += f"Tolerance: {tolerance} Å\n"
+            info_text += f"Atoms to be moved: {analysis_result['atoms_to_move']}\n"
+            info_text += f"Max displacement: {analysis_result['max_displacement']:.3f} Å\n\n"
+            info_text += "Equivalent Atom Groups:\n" + group_text + "\n\n"
+            
+            if analysis_result['atoms_to_move'] == 0:
+                info_text += "Structure already satisfies the selected symmetry."
+            else:
+                info_text += "Ready to apply symmetrization."
+            
+            self.info_label.setText(info_text)
+            
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to analyze symmetry: {str(e)}")
+            print(f"Symmetry analysis error: {e}")
+            import traceback
+            traceback.print_exc()
+    
+    def keyPressEvent(self, event):
+        """キーボードイベントを処理"""
+        if event.key() == Qt.Key.Key_Return or event.key() == Qt.Key.Key_Enter:
+            self.apply_symmetrization()
+            event.accept()
+        else:
+            super().keyPressEvent(event)
+    
+    def apply_symmetrization(self):
+        """対称化を適用"""
+        tolerance = self.get_tolerance()
+        if tolerance is None:
+            return
+        
+        key, point_group = self.get_selected_point_group()
+        
+        try:
+            # Undo状態を保存（操作前の状態のみ）
+            self.main_window.push_undo_state()
+            
+            # 現在の分子の座標を取得
+            conf = self.mol.GetConformer()
+            original_positions = np.array([conf.GetAtomPosition(i) for i in range(self.mol.GetNumAtoms())])
+            
+            print(f"Debug: Applying symmetry with point group: {point_group.get('name', 'Unknown')}")
+            print(f"Debug: Original positions:")
+            for i, pos in enumerate(original_positions):
+                print(f"  Atom {i}: {pos}")
+            
+            # 対称化を適用
+            new_positions = self.apply_symmetry_operations(
+                original_positions, point_group["operations"], tolerance
+            )
+            
+            # 新しい座標を分子に適用（3D座標のみ）
+            for i, new_pos in enumerate(new_positions):
+                conf.SetAtomPosition(i, new_pos.tolist())
+                self.main_window.atom_positions_3d[i] = new_pos
+            
+            # 3D表示のみを更新
+            self.main_window.draw_molecule_3d(self.mol)
+            
+            # 成功メッセージ（ダイアログを閉じる前に表示）
+            QMessageBox.information(
+                self, "Success", 
+                f"Molecular structure has been symmetrized according to {point_group['name']} point group."
+            )
+            
+            self.accept()
+            
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to apply symmetrization: {str(e)}")
+            print(f"Symmetrization error: {e}")
+            import traceback
+            traceback.print_exc()
+    
+    def analyze_symmetry(self, positions, operations, tolerance):
+        """対称性を分析し、必要な変更を計算（高度なアルゴリズム）"""
+        atoms_to_move = 0
+        max_displacement = 0.0
+        
+        # RDKitを使用して分子の対称性と等価原子グループを取得
+        try:
+            # 分子の対称性解析
+            symmetry_classes = self.get_molecular_symmetry_classes()
+            equivalent_atom_groups = self.group_equivalent_atoms(symmetry_classes)
+            
+            # 各等価原子グループに対して対称化を適用
+            centroid = np.mean(positions, axis=0)
+            centered_positions = positions - centroid
+            
+            for group_atoms in equivalent_atom_groups:
+                group_positions = centered_positions[group_atoms]
+                
+                # グループ内での理想的な対称位置を計算
+                ideal_positions = self.calculate_ideal_symmetric_positions(
+                    group_positions, operations, tolerance
+                )
+                
+                # 各原子の移動距離を計算
+                for i, atom_idx in enumerate(group_atoms):
+                    displacement = np.linalg.norm(ideal_positions[i] - centered_positions[atom_idx])
+                    if displacement > tolerance:
+                        atoms_to_move += 1
+                        max_displacement = max(max_displacement, displacement)
+        
+        except Exception as e:
+            print(f"Advanced symmetry analysis failed, falling back to simple method: {e}")
+            # フォールバック: 従来の単純な方法
+            return self.analyze_symmetry_simple(positions, operations, tolerance)
+        
+        return {
+            'atoms_to_move': atoms_to_move,
+            'max_displacement': max_displacement
+        }
+    
+    def get_molecular_symmetry_classes(self):
+        """RDKitを使用して分子の対称性クラスを取得"""
+        try:
+            from rdkit.Chem import rdMolDescriptors
+            
+            # RDKitの正しいAPI名を試行
+            try:
+                # 新しいバージョンのRDKit
+                canonical_ranks = list(rdMolDescriptors.GetAtomSymmetryClasses(self.mol))
+                print(f"Debug: Using GetAtomSymmetryClasses - Symmetry classes: {canonical_ranks}")
+                return canonical_ranks
+            except AttributeError:
+                # 代替手法: Canonical SMILES順序を利用
+                try:
+                    from rdkit.Chem import Descriptors
+                    
+                    # 分子のcanonical atom orderingを取得
+                    mol_copy = Chem.Mol(self.mol)
+                    canonical_order = tuple(mol_copy.GetPropsAsDict().get('_smilesAtomOutputOrder', range(mol_copy.GetNumAtoms())))
+                    
+                    # Morgan fingerprintを使用して原子の環境を比較
+                    from rdkit.Chem import rdMolDescriptors
+                    atom_invariants = []
+                    
+                    for atom in mol_copy.GetAtoms():
+                        # 原子の化学環境を記述する不変量を計算
+                        invariant = (
+                            atom.GetAtomicNum(),
+                            atom.GetDegree(),
+                            atom.GetFormalCharge(),
+                            atom.GetHybridization(),
+                            atom.GetTotalNumHs(),
+                            atom.IsInRing()
+                        )
+                        atom_invariants.append(invariant)
+                    
+                    # 同じ不変量を持つ原子に同じクラス番号を割り当て
+                    unique_invariants = list(set(atom_invariants))
+                    symmetry_classes = []
+                    
+                    for invariant in atom_invariants:
+                        class_id = unique_invariants.index(invariant)
+                        symmetry_classes.append(class_id)
+                    
+                    print(f"Debug: Using Morgan-based approach - Symmetry classes: {symmetry_classes}")
+                    return symmetry_classes
+                    
+                except Exception as e2:
+                    print(f"Morgan-based approach also failed: {e2}")
+                    raise e
+            
+        except Exception as e:
+            print(f"Failed to get molecular symmetry classes: {e}")
+            print("Debug: Falling back to chemical-based symmetry analysis")
+            
+            # 手動でよくある分子パターンをチェック
+            if self.is_methane_like():
+                print("Debug: Detected methane-like molecule, applying manual grouping")
+                return self.get_methane_symmetry_classes()
+            elif self.is_water_like():
+                print("Debug: Detected water-like molecule, applying manual grouping")
+                return self.get_water_symmetry_classes()
+            elif self.is_ammonia_like():
+                print("Debug: Detected ammonia-like molecule, applying manual grouping")
+                return self.get_ammonia_symmetry_classes()
+            
+            # フォールバック: 化学的知識に基づく推定
+            return self.get_chemical_symmetry_classes()
+    
+    def is_methane_like(self):
+        """メタン様分子（CH4, CCl4など）かどうか判定"""
+        if self.mol.GetNumAtoms() != 5:
+            return False
+        
+        # 中心原子（通常は炭素）と4つの等価な原子
+        atoms = list(self.mol.GetAtoms())
+        center_candidates = [atom for atom in atoms if atom.GetDegree() == 4]
+        
+        if len(center_candidates) != 1:
+            return False
+            
+        center_atom = center_candidates[0]
+        neighbors = [atom.GetSymbol() for atom in center_atom.GetNeighbors()]
+        
+        # 4つの隣接原子がすべて同じ元素かチェック
+        return len(set(neighbors)) == 1 and len(neighbors) == 4
+    
+    def is_water_like(self):
+        """水様分子（H2O）かどうか判定"""
+        if self.mol.GetNumAtoms() != 3:
+            return False
+        
+        atoms = list(self.mol.GetAtoms())
+        center_candidates = [atom for atom in atoms if atom.GetDegree() == 2]
+        
+        if len(center_candidates) != 1:
+            return False
+            
+        center_atom = center_candidates[0]
+        neighbors = [atom.GetSymbol() for atom in center_atom.GetNeighbors()]
+        
+        return len(set(neighbors)) == 1 and len(neighbors) == 2
+    
+    def is_ammonia_like(self):
+        """アンモニア様分子（NH3）かどうか判定"""
+        if self.mol.GetNumAtoms() != 4:
+            return False
+        
+        atoms = list(self.mol.GetAtoms())
+        center_candidates = [atom for atom in atoms if atom.GetDegree() == 3]
+        
+        if len(center_candidates) != 1:
+            return False
+            
+        center_atom = center_candidates[0]
+        neighbors = [atom.GetSymbol() for atom in center_atom.GetNeighbors()]
+        
+        return len(set(neighbors)) == 1 and len(neighbors) == 3
+    
+    def get_methane_symmetry_classes(self):
+        """メタン様分子の対称性クラス"""
+        # 中心原子のインデックスを見つける
+        center_idx = None
+        for i, atom in enumerate(self.mol.GetAtoms()):
+            if atom.GetDegree() == 4:
+                center_idx = i
+                break
+        
+        # 中心原子は独自のクラス、4つの隣接原子は同じクラス
+        symmetry_classes = [1] * self.mol.GetNumAtoms()  # 隣接原子のクラス
+        if center_idx is not None:
+            symmetry_classes[center_idx] = 0  # 中心原子のクラス
+        
+        return symmetry_classes
+    
+    def get_water_symmetry_classes(self):
+        """水様分子の対称性クラス"""
+        center_idx = None
+        for i, atom in enumerate(self.mol.GetAtoms()):
+            if atom.GetDegree() == 2:
+                center_idx = i
+                break
+        
+        symmetry_classes = [1] * self.mol.GetNumAtoms()  # 隣接原子のクラス
+        if center_idx is not None:
+            symmetry_classes[center_idx] = 0  # 中心原子のクラス
+        
+        return symmetry_classes
+    
+    def get_ammonia_symmetry_classes(self):
+        """アンモニア様分子の対称性クラス"""
+        center_idx = None
+        for i, atom in enumerate(self.mol.GetAtoms()):
+            if atom.GetDegree() == 3:
+                center_idx = i
+                break
+        
+        symmetry_classes = [1] * self.mol.GetNumAtoms()  # 隣接原子のクラス
+        if center_idx is not None:
+            symmetry_classes[center_idx] = 0  # 中心原子のクラス
+        
+        return symmetry_classes
+    
+    def get_chemical_symmetry_classes(self):
+        """化学的知識に基づく対称性クラス推定"""
+        num_atoms = self.mol.GetNumAtoms()
+        
+        # 分子の3D座標を使用してより精密な解析
+        try:
+            conf = self.mol.GetConformer()
+            positions = np.array([list(conf.GetAtomPosition(i)) for i in range(num_atoms)])
+            
+            # 距離行列ベースの解析
+            symmetry_classes = self.analyze_by_distance_matrix(positions)
+            if symmetry_classes:
+                print(f"Debug: Distance-matrix-based symmetry classes: {symmetry_classes}")
+                return symmetry_classes
+        except Exception as e:
+            print(f"Debug: Distance matrix analysis failed: {e}")
+        
+        # フォールバック: 各原子を元素と結合数で分類
+        atom_signatures = []
+        for atom in self.mol.GetAtoms():
+            # より詳細な原子環境の記述
+            neighbors = atom.GetNeighbors()
+            neighbor_symbols = sorted([n.GetSymbol() for n in neighbors])
+            
+            signature = (
+                atom.GetSymbol(),           # 元素記号
+                atom.GetDegree(),          # 結合数
+                atom.GetFormalCharge(),    # 電荷
+                tuple(neighbor_symbols)    # 隣接原子の元素記号（ソート済み）
+            )
+            atom_signatures.append(signature)
+        
+        # 同じsignatureの原子に同じクラス番号を割り当て
+        unique_signatures = list(set(atom_signatures))
+        symmetry_classes = []
+        
+        for signature in atom_signatures:
+            class_id = unique_signatures.index(signature)
+            symmetry_classes.append(class_id)
+        
+        print(f"Debug: Chemical-based symmetry classes: {symmetry_classes}")
+        print(f"Debug: Unique signatures: {unique_signatures}")
+        return symmetry_classes
+    
+    def analyze_by_distance_matrix(self, positions):
+        """距離行列を使用した対称性解析"""
+        num_atoms = len(positions)
+        
+        # 各原子から他の全原子への距離ベクトルを計算
+        distance_patterns = []
+        
+        for i in range(num_atoms):
+            # 原子iから他の全原子への距離を計算
+            distances = []
+            for j in range(num_atoms):
+                if i != j:
+                    dist = np.linalg.norm(positions[i] - positions[j])
+                    distances.append(round(dist, 3))  # 丸めて比較可能にする
+            
+            # 距離をソートして標準化
+            distances.sort()
+            
+            # 元素記号と組み合わせて特徴ベクトルを作成
+            atom_symbol = self.mol.GetAtomWithIdx(i).GetSymbol()
+            pattern = (atom_symbol, tuple(distances))
+            distance_patterns.append(pattern)
+        
+        # 同じパターンを持つ原子をグループ化
+        unique_patterns = []
+        symmetry_classes = []
+        
+        for pattern in distance_patterns:
+            # 既存パターンとの近似比較
+            matched_class = None
+            for idx, unique_pattern in enumerate(unique_patterns):
+                if self.patterns_are_similar(pattern, unique_pattern):
+                    matched_class = idx
+                    break
+            
+            if matched_class is not None:
+                symmetry_classes.append(matched_class)
+            else:
+                unique_patterns.append(pattern)
+                symmetry_classes.append(len(unique_patterns) - 1)
+        
+        return symmetry_classes
+    
+    def patterns_are_similar(self, pattern1, pattern2, tolerance=0.05):
+        """2つの距離パターンが類似しているかチェック"""
+        symbol1, distances1 = pattern1
+        symbol2, distances2 = pattern2
+        
+        # 元素記号が違えば類似ではない
+        if symbol1 != symbol2:
+            return False
+        
+        # 距離数が違えば類似ではない
+        if len(distances1) != len(distances2):
+            return False
+        
+        # 各距離の差をチェック
+        for d1, d2 in zip(distances1, distances2):
+            if abs(d1 - d2) > tolerance:
+                return False
+        
+        return True
+    
+    def auto_detect_symmetry(self):
+        """分子構造から最適な点群を自動検出（複数候補を表示）"""
+        try:
+            conf = self.mol.GetConformer()
+            positions = np.array([conf.GetAtomPosition(i) for i in range(self.mol.GetNumAtoms())])
+            
+            # 各点群に対する適合度を計算
+            candidates = self.find_all_point_group_candidates(positions)
+            
+            if candidates:
+                # 候補選択ダイアログを表示
+                selected = self.show_symmetry_candidates_dialog(candidates)
+                
+                if selected:
+                    # 選択された点群をコンボボックスで設定
+                    for i in range(self.point_group_combo.count()):
+                        if self.point_group_combo.itemData(i) == selected['key']:
+                            self.point_group_combo.setCurrentIndex(i)
+                            break
+                    
+                    # 結果を表示
+                    info_text = f"Selected Point Group: {selected['name']}\n"
+                    info_text += f"Confidence: {selected['confidence']:.1%}\n"
+                    info_text += f"Reason: {selected['reason']}\n\n"
+                    info_text += "Click 'Preview Symmetry' to see detailed analysis."
+                    
+                    self.info_label.setText(info_text)
+            else:
+                self.info_label.setText("Could not automatically detect suitable point group.\nManual selection recommended.")
+                
+        except Exception as e:
+            QMessageBox.warning(self, "Auto-Detection Error", f"Failed to auto-detect symmetry: {str(e)}")
+    
+    def show_symmetry_candidates_dialog(self, candidates):
+        """対称性候補選択ダイアログを表示"""
+        dialog = SymmetryCandidatesDialog(candidates, self)
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            return dialog.get_selected_candidate()
+        return None
+    
+    def find_all_point_group_candidates(self, positions):
+        """分子構造に適した点群候補をすべて検索"""
+        tolerance = 0.2  # Auto-detection用の比較的緩い許容値
+        
+        # 候補点群のリスト
+        candidates = []
+        
+        # 分子の基本情報を取得
+        num_atoms = len(positions)
+        atom_symbols = [self.mol.GetAtomWithIdx(i).GetSymbol() for i in range(num_atoms)]
+        
+        # 1. 特殊な分子パターンを直接検出
+        special_match = self.detect_special_molecules(positions, atom_symbols)
+        if special_match:
+            candidates.append(special_match)
+        
+        # 2. 各点群の対称操作に対する適合度を計算
+        for key, point_group in self.POINT_GROUPS.items():
+            try:
+                # 既に特殊検出で追加済みの場合はスキップ
+                if special_match and key == special_match['key']:
+                    continue
+                
+                # 対称性適合度を計算
+                fit_score = self.calculate_symmetry_fit(positions, point_group["operations"], tolerance)
+                
+                # 最低閾値をクリアした候補のみ追加
+                if fit_score >= 0.3:  # 30%以上の適合度
+                    reason = f"Symmetry operations fit: {fit_score:.1%}"
+                    if fit_score >= 0.8:
+                        reason += " (Excellent match)"
+                    elif fit_score >= 0.6:
+                        reason += " (Good match)"
+                    elif fit_score >= 0.4:
+                        reason += " (Fair match)"
+                    else:
+                        reason += " (Poor match)"
+                    
+                    candidates.append({
+                        'key': key,
+                        'name': point_group['name'],
+                        'confidence': fit_score,
+                        'reason': reason,
+                        'operations_count': len(point_group["operations"])
+                    })
+                
+            except Exception as e:
+                print(f"Error evaluating {key}: {e}")
+                continue
+        
+        # 3. スコアでソート（高い方が良い）
+        try:
+            candidates.sort(key=lambda x: (-x['confidence'], -x.get('operations_count', 0)))
+        except KeyError as e:
+            print(f"Warning: Missing key in candidate sorting: {e}")
+            # フォールバック: confidenceのみでソート
+            candidates.sort(key=lambda x: -x['confidence'])
+        
+        # 4. 上位5候補まで
+        return candidates[:5]
+    
+    def find_best_point_group(self, positions):
+        """分子構造に最も適した点群を検索"""
+        tolerance = 0.2  # Auto-detection用の比較的緩い許容値
+        
+        # 候補点群のリスト（優先度順）
+        candidates = []
+        
+        # 分子の基本情報を取得
+        num_atoms = len(positions)
+        atom_symbols = [self.mol.GetAtomWithIdx(i).GetSymbol() for i in range(num_atoms)]
+        
+        # 1. 特殊な分子パターンを直接検出
+        special_match = self.detect_special_molecules(positions, atom_symbols)
+        if special_match:
+            return special_match
+        
+        # 2. 各点群の対称操作に対する適合度を計算
+        for key, point_group in self.POINT_GROUPS.items():
+            try:
+                # 対称性適合度を計算
+                fit_score = self.calculate_symmetry_fit(positions, point_group["operations"], tolerance)
+                
+                candidates.append({
+                    'key': key,
+                    'name': point_group['name'],
+                    'score': fit_score,
+                    'operations_count': len(point_group["operations"])
+                })
+                
+            except Exception as e:
+                print(f"Error evaluating {key}: {e}")
+                continue
+        
+        # 3. 最適な候補を選択
+        if not candidates:
+            return None
+        
+        # スコアでソート（高い方が良い）
+        candidates.sort(key=lambda x: (-x['score'], -x['operations_count']))
+        best = candidates[0]
+        
+        # 最低限の閾値をチェック
+        if best['score'] < 0.5:  # 50%未満の適合度は却下
+            return {
+                'key': 'C1',
+                'name': 'C1 (No symmetry)',
+                'confidence': 0.9,
+                'reason': 'Low symmetry detected, suggesting C1'
+            }
+        
+        return {
+            'key': best['key'],
+            'name': best['name'],
+            'confidence': best['score'],
+            'reason': f'Best fit among {len(candidates)} point groups tested'
+        }
+    
+    def detect_special_molecules(self, positions, atom_symbols):
+        """特殊な分子パターンを直接検出"""
+        num_atoms = len(positions)
+        
+        # メタン様分子 (AX4)
+        if self.is_methane_like():
+            return {
+                'key': 'Td',
+                'name': 'Td (Tetrahedral)',
+                'confidence': 0.95,
+                'reason': 'Tetrahedral molecule detected (e.g., CH4, CCl4)',
+                'operations_count': len(self.POINT_GROUPS['Td']['operations'])
+            }
+        
+        # 水様分子 (AX2)
+        if self.is_water_like():
+            return {
+                'key': 'C2v',
+                'name': 'C2v (C2 + 2 vertical mirrors)',
+                'confidence': 0.9,
+                'reason': 'Bent molecule detected (e.g., H2O)',
+                'operations_count': len(self.POINT_GROUPS['C2v']['operations'])
+            }
+        
+        # アンモニア様分子 (AX3)
+        if self.is_ammonia_like():
+            return {
+                'key': 'C3v',
+                'name': 'C3v (C3 + 3 vertical mirrors)',
+                'confidence': 0.9,
+                'reason': 'Trigonal pyramidal molecule detected (e.g., NH3)',
+                'operations_count': len(self.POINT_GROUPS['C3v']['operations'])
+            }
+        
+        # 直線分子 (2原子または3原子直線)
+        if num_atoms == 2:
+            return {
+                'key': 'Ci',
+                'name': 'Ci (Inversion center)',
+                'confidence': 0.85,
+                'reason': 'Diatomic molecule detected',
+                'operations_count': len(self.POINT_GROUPS['Ci']['operations'])
+            }
+        
+        # 平面分子の検出
+        if self.is_planar_molecule(positions):
+            if self.has_triangular_symmetry(positions, atom_symbols):
+                return {
+                    'key': 'D3h',
+                    'name': 'D3h (Trigonal planar)',
+                    'confidence': 0.85,
+                    'reason': 'Triangular planar molecule detected (e.g., BF3)',
+                    'operations_count': len(self.POINT_GROUPS['D3h']['operations'])
+                }
+            else:
+                return {
+                    'key': 'Cs',
+                    'name': 'Cs (Mirror plane xy)',
+                    'confidence': 0.75,
+                    'reason': 'Planar molecule detected',
+                    'operations_count': len(self.POINT_GROUPS['Cs']['operations'])
+                }
+        
+        return None
+    
+    def calculate_symmetry_fit(self, positions, operations, tolerance):
+        """対称操作に対する構造の適合度を計算（0-1のスコア）"""
+        if len(operations) <= 1:  # 恒等操作のみ
+            return 0.1
+        
+        centroid = np.mean(positions, axis=0)
+        centered_positions = positions - centroid
+        
+        total_score = 0.0
+        valid_operations = 0
+        
+        for operation in operations[1:]:  # 恒等操作を除く
+            operation_score = 0.0
+            
+            for pos in centered_positions:
+                transformed_pos = operation @ pos
+                
+                # 変換された位置に最も近い実際の原子を探す
+                distances = [np.linalg.norm(transformed_pos - other_pos) 
+                           for other_pos in centered_positions]
+                min_distance = min(distances)
+                
+                # 距離に基づくスコア（近いほど高スコア）
+                if min_distance < tolerance:
+                    operation_score += 1.0 - (min_distance / tolerance)
+                
+            # 正規化（原子数で割る）
+            operation_score /= len(positions)
+            total_score += operation_score
+            valid_operations += 1
+        
+        # 全対称操作での平均スコア
+        if valid_operations > 0:
+            return total_score / valid_operations
+        else:
+            return 0.0
+    
+    def is_planar_molecule(self, positions, tolerance=0.1):
+        """分子が平面構造かどうか判定"""
+        if len(positions) < 4:
+            return True  # 3原子以下は常に平面
+        
+        # 主成分分析で平面性をチェック
+        centroid = np.mean(positions, axis=0)
+        centered = positions - centroid
+        
+        # 共分散行列の固有値を計算
+        cov_matrix = np.cov(centered.T)
+        eigenvalues = np.linalg.eigvals(cov_matrix)
+        eigenvalues = np.sort(eigenvalues)
+        
+        # 最小固有値が小さければ平面的
+        return eigenvalues[0] < tolerance
+    
+    def has_triangular_symmetry(self, positions, atom_symbols):
+        """三角対称性を持つかどうか判定"""
+        if len(positions) < 3:
+            return False
+        
+        # 中心原子を特定
+        center_candidates = []
+        for i, atom in enumerate(self.mol.GetAtoms()):
+            if atom.GetDegree() >= 3:
+                center_candidates.append(i)
+        
+        if len(center_candidates) != 1:
+            return False
+        
+        center_idx = center_candidates[0]
+        center_atom = self.mol.GetAtomWithIdx(center_idx)
+        
+        # 隣接原子が3個で、すべて同じ元素かチェック
+        neighbors = list(center_atom.GetNeighbors())
+        if len(neighbors) != 3:
+            return False
+        
+        neighbor_symbols = [atom.GetSymbol() for atom in neighbors]
+        return len(set(neighbor_symbols)) == 1
+    
+    def group_equivalent_atoms(self, symmetry_classes):
+        """対称性クラスから等価原子グループを作成"""
+        from collections import defaultdict
+        
+        groups = defaultdict(list)
+        for atom_idx, sym_class in enumerate(symmetry_classes):
+            groups[sym_class].append(atom_idx)
+        
+        print(f"Debug: Raw groups from symmetry classes: {dict(groups)}")
+        
+        # 等価原子グループ（2個以上）と単独原子を分離
+        equivalent_groups = []
+        single_atoms = []
+        
+        for sym_class, atom_indices in groups.items():
+            if len(atom_indices) > 1:
+                equivalent_groups.append(atom_indices)
+                print(f"Debug: Equivalent group found - Class {sym_class}: {atom_indices}")
+            else:
+                single_atoms.extend([[idx] for idx in atom_indices])
+        
+        # 結果を組み合わせ
+        all_groups = equivalent_groups + single_atoms
+        
+        print(f"Debug: Final atom groups: {all_groups}")
+        print(f"Debug: Number of equivalent groups (>1 atom): {len(equivalent_groups)}")
+        
+        return all_groups
+    
+    def calculate_ideal_symmetric_positions(self, group_positions, operations, tolerance):
+        """等価原子グループの理想的な対称位置を計算"""
+        if len(group_positions) == 1:
+            # 単独原子の場合、全対称操作の平均位置を計算
+            pos = group_positions[0]
+            equivalent_positions = [op @ pos for op in operations]
+            return [np.mean(equivalent_positions, axis=0)]
+        
+        # 複数原子グループの場合、グループ全体の対称性を考慮
+        group_centroid = np.mean(group_positions, axis=0)
+        ideal_positions = []
+        
+        for pos in group_positions:
+            # 各原子に対して対称操作を適用し、理想位置を計算
+            relative_pos = pos - group_centroid
+            equivalent_relatives = [op @ relative_pos for op in operations]
+            ideal_relative = np.mean(equivalent_relatives, axis=0)
+            ideal_positions.append(group_centroid + ideal_relative)
+        
+        return ideal_positions
+    
+    def analyze_symmetry_simple(self, positions, operations, tolerance):
+        """従来の単純な対称性分析（フォールバック）"""
+        atoms_to_move = 0
+        max_displacement = 0.0
+        
+        centroid = np.mean(positions, axis=0)
+        centered_positions = positions - centroid
+        
+        for i, pos in enumerate(centered_positions):
+            # 各対称操作を適用した等価位置を計算
+            equivalent_positions = []
+            for operation in operations:
+                equivalent_positions.append(operation @ pos)
+            
+            # 等価位置の重心を計算（理想的な対称位置）
+            ideal_pos = np.mean(equivalent_positions, axis=0)
+            
+            # 現在位置と理想位置の距離を計算
+            displacement = np.linalg.norm(ideal_pos - pos)
+            
+            if displacement > tolerance:
+                atoms_to_move += 1
+                max_displacement = max(max_displacement, displacement)
+        
+        return {
+            'atoms_to_move': atoms_to_move,
+            'max_displacement': max_displacement
+        }
+    
+    def apply_symmetry_operations(self, positions, operations, tolerance):
+        """対称操作を適用して構造を対称化（安全なバージョン）"""
+        try:
+            # シンプルで直接的な方法を使用
+            return self.apply_symmetry_direct(positions, operations, tolerance)
+        except Exception as e:
+            print(f"Symmetrization failed: {e}")
+            return positions.copy()
+    
+    def apply_symmetry_direct(self, positions, operations, tolerance):
+        """直接的で安全な対称化（分子タイプを考慮）"""
+        # 対称操作の妥当性をチェック
+        valid_operations = []
+        for op in operations:
+            try:
+                if op.shape == (3, 3) and not np.any(np.isnan(op)) and not np.any(np.isinf(op)):
+                    det = np.linalg.det(op)
+                    if abs(abs(det) - 1.0) < 0.1:
+                        valid_operations.append(op)
+            except:
+                continue
+        
+        print(f"Debug: Total operations: {len(operations)}, Valid operations: {len(valid_operations)}")
+        
+        if not valid_operations:
+            print("警告: 有効な対称操作がありません。元の座標を返します。")
+            return positions.copy()
+        
+        # 分子の中心を計算
+        centroid = np.mean(positions, axis=0)
+        print(f"Debug: Molecular centroid: {centroid}")
+        
+        # 等価原子グループを取得
+        symmetry_classes = self.get_molecular_symmetry_classes()
+        equivalent_atom_groups = self.group_equivalent_atoms(symmetry_classes)
+        
+        new_positions = positions.copy()
+        
+        # メタン分子の特別処理
+        if len(positions) == 5 and len(equivalent_atom_groups) == 2:
+            print("Debug: Detected methane-like molecule")
+            
+            # 中心原子（通常は炭素）を原点に移動
+            center_atom_group = [group for group in equivalent_atom_groups if len(group) == 1][0]
+            center_atom_idx = center_atom_group[0]
+            
+            # 周辺原子グループ（通常は水素）
+            peripheral_atoms = [group for group in equivalent_atom_groups if len(group) > 1][0]
+            
+            print(f"Debug: Center atom: {center_atom_idx}, Peripheral atoms: {peripheral_atoms}")
+            
+            # 中心原子を分子の重心に配置（保守的なアプローチ）
+            current_center = positions[center_atom_idx]
+            if np.linalg.norm(current_center - centroid) > tolerance:
+                new_positions[center_atom_idx] = centroid
+                print(f"Debug: Moved center atom to centroid")
+            
+            # 周辺原子を中心からの相対位置で対称化（距離を保持）
+            for atom_idx in peripheral_atoms:
+                current_pos = positions[atom_idx]
+                relative_pos = current_pos - centroid
+                original_distance = np.linalg.norm(relative_pos)
+                
+                # 対称操作を適用（中心からの相対座標で）
+                equivalent_relative_positions = []
+                for op in valid_operations:
+                    try:
+                        transformed_relative = op @ relative_pos
+                        equivalent_relative_positions.append(transformed_relative)
+                    except:
+                        continue
+                
+                if len(equivalent_relative_positions) > 1:
+                    # 等価相対位置の平均
+                    average_relative = np.mean(equivalent_relative_positions, axis=0)
+                    
+                    # 元の距離を保持
+                    if np.linalg.norm(average_relative) > 1e-10:
+                        average_relative = average_relative / np.linalg.norm(average_relative) * original_distance
+                    
+                    average_pos = centroid + average_relative
+                    displacement = np.linalg.norm(average_pos - current_pos)
+                    
+                    print(f"Debug: Atom {atom_idx} - Original distance: {original_distance:.6f}, Displacement: {displacement:.6f}")
+                    
+                    # より保守的な条件：大きな変位は避ける
+                    if displacement > tolerance and displacement < 2.0:  # 最大2Å未満の変位のみ許可
+                        new_positions[atom_idx] = average_pos
+                        print(f"Debug: Applied symmetrization to atom {atom_idx}")
+                    elif displacement >= 2.0:
+                        print(f"Debug: Skipped atom {atom_idx} - displacement too large: {displacement:.6f}")
+        else:
+            # 一般的な分子の処理
+            for i, pos in enumerate(positions):
+                # すべての対称操作を適用して等価位置を取得
+                equivalent_positions = []
+                for op in valid_operations:
+                    try:
+                        transformed_pos = op @ pos
+                        equivalent_positions.append(transformed_pos)
+                    except:
+                        continue
+                
+                if len(equivalent_positions) > 1:
+                    # 等価位置の重心を新しい位置とする
+                    average_pos = np.mean(equivalent_positions, axis=0)
+                    displacement = np.linalg.norm(average_pos - pos)
+                    
+                    print(f"Debug: Atom {i} - Displacement: {displacement}")
+                    
+                    # 保守的な条件：大きな変位は避ける
+                    if displacement > tolerance and displacement < 2.0:  # 最大2Å未満の変位のみ許可
+                        new_positions[i] = average_pos
+                        print(f"Debug: Applied symmetrization to atom {i}")
+                    elif displacement >= 2.0:
+                        print(f"Debug: Skipped atom {i} - displacement too large: {displacement:.6f}")
+        
+        return new_positions
+    
+    def apply_symmetry_advanced(self, positions, operations, tolerance):
+        """等価原子グループを考慮した高度な対称化"""
+        # 対称操作の妥当性をチェック
+        valid_operations = []
+        for op in operations:
+            try:
+                # 3x3の行列であることを確認
+                if op.shape == (3, 3) and not np.any(np.isnan(op)) and not np.any(np.isinf(op)):
+                    # 行列式が±1に近いことを確認（回転・反射行列の条件）
+                    det = np.linalg.det(op)
+                    if abs(abs(det) - 1.0) < 0.1:  # より緩い条件
+                        valid_operations.append(op)
+            except:
+                continue
+        
+        print(f"Debug: Total operations: {len(operations)}, Valid operations: {len(valid_operations)}")
+        
+        if not valid_operations:
+            print("警告: 有効な対称操作がありません。元の座標を返します。")
+            return positions.copy()
+        
+        # 分子の対称性クラスを取得
+        symmetry_classes = self.get_molecular_symmetry_classes()
+        equivalent_atom_groups = self.group_equivalent_atoms(symmetry_classes)
+        
+        centroid = np.mean(positions, axis=0)
+        centered_positions = positions - centroid
+        new_positions = centered_positions.copy()
+        
+        print(f"Debug: Original centroid: {centroid}")
+        print(f"Debug: Original positions shape: {positions.shape}")
+        print(f"Debug: Valid operations count: {len(valid_operations)}")
+        
+        # 各等価原子グループを個別に対称化
+        max_iterations = 5  # 反復回数を制限
+        for iteration in range(max_iterations):
+            print(f"Debug: Iteration {iteration + 1}")
+            moved_any = False
+            
+            for group_atoms in equivalent_atom_groups:
+                if len(group_atoms) == 1:
+                    # 単独原子の場合
+                    atom_idx = group_atoms[0]
+                    pos = new_positions[atom_idx]
+                    
+                    print(f"Debug: Processing single atom {atom_idx}")
+                    
+                    # 全ての対称操作で得られる等価位置の平均
+                    equivalent_positions = []
+                    for op in valid_operations:
+                        try:
+                            transformed_pos = op @ pos
+                            equivalent_positions.append(transformed_pos)
+                        except:
+                            continue
+                    
+                        if equivalent_positions:
+                            average_pos = np.mean(equivalent_positions, axis=0)
+                            displacement = np.linalg.norm(average_pos - pos)
+                            
+                            print(f"Debug: Atom {atom_idx} - Displacement: {displacement}")
+                            
+                            # 数値精度を考慮したより緩い条件
+                            if displacement > max(tolerance / 100, 1e-10):
+                                new_positions[atom_idx] = average_pos
+                                moved_any = True
+                        
+                else:
+                    # 等価原子グループの場合、グループ全体の対称性を保持
+                    group_positions = new_positions[group_atoms]
+                    group_centroid = np.mean(group_positions, axis=0)
+                    
+                    print(f"Debug: Processing group {group_atoms}")
+                    
+                    # グループの重心を対称化
+                    equivalent_centroids = []
+                    for op in valid_operations:
+                        try:
+                            transformed_centroid = op @ group_centroid
+                            equivalent_centroids.append(transformed_centroid)
+                        except:
+                            continue
+                    
+                    if equivalent_centroids:
+                        ideal_centroid = np.mean(equivalent_centroids, axis=0)
+                        centroid_shift = ideal_centroid - group_centroid
+                        
+                        print(f"Debug: Group centroid shift magnitude: {np.linalg.norm(centroid_shift)}")
+                        
+                        # グループ内の相対位置を保持しながら重心を移動
+                        if np.linalg.norm(centroid_shift) > max(tolerance / 100, 1e-10):
+                            for atom_idx in group_atoms:
+                                new_positions[atom_idx] += centroid_shift
+                            moved_any = True
+                    
+                    # グループ内の原子間の相対位置も対称化
+                    for atom_idx in group_atoms:
+                        pos = new_positions[atom_idx]
+                        
+                        # 全ての対称操作で得られる等価位置の平均
+                        equivalent_positions = []
+                        for op in valid_operations:
+                            try:
+                                transformed_pos = op @ pos
+                                equivalent_positions.append(transformed_pos)
+                            except:
+                                continue
+                        
+                            if equivalent_positions:
+                                average_pos = np.mean(equivalent_positions, axis=0)
+                                displacement = np.linalg.norm(average_pos - pos)
+                                
+                                if displacement > max(tolerance / 100, 1e-10):
+                                    new_positions[atom_idx] = average_pos
+                                    moved_any = True
+            
+            if not moved_any:
+                break
+        
+        # 重心を元に戻す
+        final_positions = new_positions + centroid
+        
+        print(f"Debug: Final positions before return:")
+        for i, pos in enumerate(final_positions):
+            print(f"  Atom {i}: {pos}")
+        
+        # デバッグ: 座標チェック
+        if np.any(np.isnan(final_positions)) or np.any(np.isinf(final_positions)):
+            print("警告: 無効な座標が検出されました。元の座標を返します。")
+            return positions.copy()
+        
+        return final_positions
+    
+    def apply_symmetry_simple(self, positions, operations, tolerance):
+        """従来の単純な対称化（フォールバック）"""
+        # 対称操作の妥当性をチェック
+        valid_operations = []
+        for op in operations:
+            try:
+                # 3x3の行列であることを確認
+                if op.shape == (3, 3) and not np.any(np.isnan(op)) and not np.any(np.isinf(op)):
+                    # 行列式が±1に近いことを確認（回転・反射行列の条件）
+                    det = np.linalg.det(op)
+                    if abs(abs(det) - 1.0) < 0.1:  # より緩い条件
+                        valid_operations.append(op)
+            except:
+                continue
+        
+        if not valid_operations:
+            print("警告: 有効な対称操作がありません。元の座標を返します。")
+            return positions.copy()
+        
+        centroid = np.mean(positions, axis=0)
+        centered_positions = positions - centroid
+        new_positions = centered_positions.copy()
+        
+        # 反復的に対称化を適用
+        max_iterations = 5  # 反復回数を制限
+        for iteration in range(max_iterations):
+            moved_any = False
+            
+            for i, pos in enumerate(new_positions):
+                # 全ての対称操作で得られる等価位置の平均を計算
+                equivalent_positions = []
+                for operation in valid_operations:
+                    try:
+                        equivalent_positions.append(operation @ pos)
+                    except:
+                        continue
+                
+                if equivalent_positions:
+                    # 等価位置の重心を新しい位置とする
+                    average_pos = np.mean(equivalent_positions, axis=0)
+                    displacement = np.linalg.norm(average_pos - pos)
+                    
+                    if displacement > max(tolerance / 100, 1e-10):  # 数値精度を考慮
+                        new_positions[i] = average_pos
+                        moved_any = True
+            
+            if not moved_any:
+                break
+        
+        # 重心を元に戻す
+        final_positions = new_positions + centroid
+        
+        # デバッグ: 座標チェック
+        if np.any(np.isnan(final_positions)) or np.any(np.isinf(final_positions)):
+            print("警告: 無効な座標が検出されました。元の座標を返します。")
+            return positions.copy()
+        
+        return final_positions
+
+class PlanarizationDialog(Dialog3DPickingMixin, QDialog):
+    def __init__(self, mol, main_window, plane, parent=None):
+        QDialog.__init__(self, parent)
+        Dialog3DPickingMixin.__init__(self)
+        self.mol = mol
+        self.main_window = main_window
+        self.plane = plane
+        self.selected_atoms = set()
+        self.init_ui()
+    
+    def init_ui(self):
+        plane_names = {'xy': 'XY', 'xz': 'XZ', 'yz': 'YZ'}
+        self.setWindowTitle(f"Planarize to {plane_names[self.plane]} Plane")
+        self.setModal(False)  # モードレスにしてクリックを阻害しない
+        self.setWindowFlags(Qt.WindowType.Window | Qt.WindowType.WindowStaysOnTopHint)  # 常に前面表示
+        layout = QVBoxLayout(self)
+        
+        # Instructions
+        instruction_label = QLabel(f"Click atoms in the 3D view to select them for planarization to the {plane_names[self.plane]} plane. At least 3 atoms are required.")
+        instruction_label.setWordWrap(True)
+        layout.addWidget(instruction_label)
+        
+        # Selected atoms display
+        self.selection_label = QLabel("No atoms selected")
+        layout.addWidget(self.selection_label)
+        
+        # Buttons
+        button_layout = QHBoxLayout()
+        self.clear_button = QPushButton("Clear Selection")
+        self.clear_button.clicked.connect(self.clear_selection)
+        button_layout.addWidget(self.clear_button)
+        
+        button_layout.addStretch()
+        
+        self.apply_button = QPushButton("Apply Planarization")
+        self.apply_button.clicked.connect(self.apply_planarization)
+        self.apply_button.setEnabled(False)
+        button_layout.addWidget(self.apply_button)
+        
+        cancel_button = QPushButton("Cancel")
+        cancel_button.clicked.connect(self.reject)
+        button_layout.addWidget(cancel_button)
+        
+        layout.addLayout(button_layout)
+        
+        # Connect to main window's picker
+        self.picker_connection = None
+        self.enable_picking()
+    
+    def enable_picking(self):
+        """3Dビューでの原子選択を有効にする"""
+        self.main_window.plotter.interactor.installEventFilter(self)
+        self.picking_enabled = True
+    
+    def disable_picking(self):
+        """3Dビューでの原子選択を無効にする"""
+        if hasattr(self, 'picking_enabled') and self.picking_enabled:
+            self.main_window.plotter.interactor.removeEventFilter(self)
+            self.picking_enabled = False
+    
+    def on_atom_picked(self, atom_idx):
+        """原子がピックされたときの処理"""
+        if atom_idx in self.selected_atoms:
+            self.selected_atoms.remove(atom_idx)
+        else:
+            self.selected_atoms.add(atom_idx)
+        
+        # 原子ラベルを表示
+        self.show_atom_labels()
+        self.update_display()
+    
+    def keyPressEvent(self, event):
+        """キーボードイベントを処理"""
+        if event.key() == Qt.Key.Key_Return or event.key() == Qt.Key.Key_Enter:
+            if self.apply_button.isEnabled():
+                self.apply_planarization()
+            event.accept()
+        else:
+            super().keyPressEvent(event)
+    
+    def clear_selection(self):
+        """選択をクリア"""
+        self.selected_atoms.clear()
+        self.clear_atom_labels()
+        self.update_display()
+    
+    def update_display(self):
+        """表示を更新"""
+        count = len(self.selected_atoms)
+        if count == 0:
+            self.selection_label.setText("Click atoms to select for planarization (minimum 3 required)")
+            self.apply_button.setEnabled(False)
+        else:
+            atom_list = sorted(self.selected_atoms)
+            atom_display = []
+            for i, atom_idx in enumerate(atom_list):
+                symbol = self.mol.GetAtomWithIdx(atom_idx).GetSymbol()
+                atom_display.append(f"#{i+1}: {symbol}({atom_idx})")
+            
+            self.selection_label.setText(f"Selected {count} atoms: {', '.join(atom_display)}")
+            self.apply_button.setEnabled(count >= 3)
+    
+    def show_atom_labels(self):
+        """選択された原子にラベルを表示"""
+        # 既存のラベルをクリア
+        self.clear_atom_labels()
+        
+        # 新しいラベルを表示
+        if not hasattr(self, 'selection_labels'):
+            self.selection_labels = []
+            
+        if self.selected_atoms:
+            sorted_atoms = sorted(self.selected_atoms)
+            
+            for i, atom_idx in enumerate(sorted_atoms):
+                pos = self.main_window.atom_positions_3d[atom_idx]
+                label_text = f"#{i+1}"
+                
+                # ラベルを追加
+                label_actor = self.main_window.plotter.add_point_labels(
+                    [pos], [label_text], 
+                    point_size=20, 
+                    font_size=12,
+                    text_color='blue',
+                    always_visible=True
+                )
+                self.selection_labels.append(label_actor)
+    
+    def clear_atom_labels(self):
+        """原子ラベルをクリア"""
+        if hasattr(self, 'selection_labels'):
+            for label_actor in self.selection_labels:
+                try:
+                    self.main_window.plotter.remove_actor(label_actor)
+                except:
+                    pass
+            self.selection_labels = []
+    
+    def apply_planarization(self):
+        """平面化を適用（回転ベース）"""
+        if len(self.selected_atoms) < 3:
+            QMessageBox.warning(self, "Warning", "Please select at least 3 atoms for planarization.")
+            return
+        
+        try:
+            # 選択された原子の位置を取得
+            selected_indices = list(self.selected_atoms)
+            selected_positions = self.main_window.atom_positions_3d[selected_indices].copy()
+            
+            # 重心を計算
+            centroid = np.mean(selected_positions, axis=0)
+            
+            # 重心を原点に移動
+            centered_positions = selected_positions - centroid
+            
+            # 主成分分析で最適な平面を見つける
+            # 選択された原子の座標の共分散行列を計算
+            cov_matrix = np.cov(centered_positions.T)
+            eigenvalues, eigenvectors = np.linalg.eigh(cov_matrix)
+            
+            # 固有値が最も小さい固有ベクトルが平面の法線方向
+            normal_vector = eigenvectors[:, 0]  # 最小固有値に対応する固有ベクトル
+            
+            # 目標の平面の法線ベクトルを定義
+            if self.plane == 'xy':
+                target_normal = np.array([0, 0, 1])  # Z軸方向
+            elif self.plane == 'xz':
+                target_normal = np.array([0, 1, 0])  # Y軸方向
+            elif self.plane == 'yz':
+                target_normal = np.array([1, 0, 0])  # X軸方向
+            
+            # 法線ベクトルの向きを調整（内積が正になるように）
+            if np.dot(normal_vector, target_normal) < 0:
+                normal_vector = -normal_vector
+            
+            # 回転軸と回転角度を計算
+            rotation_axis = np.cross(normal_vector, target_normal)
+            rotation_axis_norm = np.linalg.norm(rotation_axis)
+            
+            if rotation_axis_norm > 1e-10:  # 回転が必要な場合
+                rotation_axis = rotation_axis / rotation_axis_norm
+                cos_angle = np.dot(normal_vector, target_normal)
+                cos_angle = np.clip(cos_angle, -1.0, 1.0)
+                rotation_angle = np.arccos(cos_angle)
+                
+                # Rodrigues回転公式を使用して全分子を回転
+                def rodrigues_rotation(v, axis, angle):
+                    cos_a = np.cos(angle)
+                    sin_a = np.sin(angle)
+                    return v * cos_a + np.cross(axis, v) * sin_a + axis * np.dot(axis, v) * (1 - cos_a)
+                
+                # 分子全体を回転させる
+                conf = self.mol.GetConformer()
+                for i in range(self.mol.GetNumAtoms()):
+                    current_pos = np.array(conf.GetAtomPosition(i))
+                    # 重心基準で回転
+                    centered_pos = current_pos - centroid
+                    rotated_pos = rodrigues_rotation(centered_pos, rotation_axis, rotation_angle)
+                    new_pos = rotated_pos + centroid
+                    conf.SetAtomPosition(i, new_pos.tolist())
+                    self.main_window.atom_positions_3d[i] = new_pos
+            
+            # 3D表示を更新
+            self.main_window.draw_molecule_3d(self.mol)
+            
+            self.accept()
+            
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to apply planarization: {str(e)}")
+    
+    def closeEvent(self, event):
+        """ダイアログが閉じられる時の処理"""
+        self.clear_atom_labels()
+        self.disable_picking()
+        super().closeEvent(event)
+    
+    def reject(self):
+        """キャンセル時の処理"""
+        self.clear_atom_labels()
+        self.disable_picking()
+        super().reject()
+    
+    def accept(self):
+        """OK時の処理"""
+        self.clear_atom_labels()
+        self.disable_picking()
+        super().accept()
+
 def main():
     # --- Windows タスクバーアイコンのための追加処理 ---
     if sys.platform == 'win32':
@@ -175,35 +2081,49 @@ class MolecularData:
 
     def remove_atom(self, atom_id):
         if atom_id in self.atoms:
-            # Safely get neighbors before deleting the atom's own entry
-            neighbors = self.adjacency_list.get(atom_id, [])
-            for neighbor_id in neighbors:
-                if neighbor_id in self.adjacency_list and atom_id in self.adjacency_list[neighbor_id]:
-                    self.adjacency_list[neighbor_id].remove(atom_id)
+            try:
+                # Safely get neighbors before deleting the atom's own entry
+                neighbors = self.adjacency_list.get(atom_id, [])
+                for neighbor_id in neighbors:
+                    if neighbor_id in self.adjacency_list and atom_id in self.adjacency_list[neighbor_id]:
+                        self.adjacency_list[neighbor_id].remove(atom_id)
 
-            # Now, safely delete the atom's own entry from the adjacency list
-            if atom_id in self.adjacency_list:
-                del self.adjacency_list[atom_id]
+                # Now, safely delete the atom's own entry from the adjacency list
+                if atom_id in self.adjacency_list:
+                    del self.adjacency_list[atom_id]
 
-            del self.atoms[atom_id]
-            bonds_to_remove = [key for key in self.bonds if atom_id in key]
-            for key in bonds_to_remove:
-                del self.bonds[key]
+                del self.atoms[atom_id]
+                
+                # Remove bonds involving this atom
+                bonds_to_remove = [key for key in self.bonds if atom_id in key]
+                for key in bonds_to_remove:
+                    del self.bonds[key]
+                    
+            except Exception as e:
+                print(f"Error removing atom {atom_id}: {e}")
+                import traceback
+                traceback.print_exc()
 
     def remove_bond(self, id1, id2):
-        # 方向性のある立体結合(順方向/逆方向)と、正規化された非立体結合のキーを探す
-        key_to_remove = None
-        if (id1, id2) in self.bonds:
-            key_to_remove = (id1, id2)
-        elif (id2, id1) in self.bonds:
-            key_to_remove = (id2, id1)
+        try:
+            # 方向性のある立体結合(順方向/逆方向)と、正規化された非立体結合のキーを探す
+            key_to_remove = None
+            if (id1, id2) in self.bonds:
+                key_to_remove = (id1, id2)
+            elif (id2, id1) in self.bonds:
+                key_to_remove = (id2, id1)
 
-        if key_to_remove:
-            if id1 in self.adjacency_list and id2 in self.adjacency_list[id1]:
-                self.adjacency_list[id1].remove(id2)
-            if id2 in self.adjacency_list and id1 in self.adjacency_list[id2]:
-                self.adjacency_list[id2].remove(id1)
-            del self.bonds[key_to_remove]
+            if key_to_remove:
+                if id1 in self.adjacency_list and id2 in self.adjacency_list[id1]:
+                    self.adjacency_list[id1].remove(id2)
+                if id2 in self.adjacency_list and id1 in self.adjacency_list[id2]:
+                    self.adjacency_list[id2].remove(id1)
+                del self.bonds[key_to_remove]
+                
+        except Exception as e:
+            print(f"Error removing bond {id1}-{id2}: {e}")
+            import traceback
+            traceback.print_exc()
 
 
     def to_rdkit_mol(self, use_2d_stereo=True):
@@ -254,6 +2174,7 @@ class MolecularData:
             return None
 
         # --- Step 4: add 2D conformer ---
+        # Convert from scene pixels to angstroms when creating RDKit conformer.
         conf = Chem.Conformer(final_mol.GetNumAtoms())
         conf.Set3D(False)
         for atom_id, data in self.atoms.items():
@@ -261,7 +2182,9 @@ class MolecularData:
                 idx = atom_id_to_idx_map[atom_id]
                 pos = data.get('pos')
                 if pos:
-                    conf.SetAtomPosition(idx, (pos.x(), pos.y(), 0.0))
+                    ax = pos.x() * ANGSTROM_PER_PIXEL
+                    ay = pos.y() * ANGSTROM_PER_PIXEL
+                    conf.SetAtomPosition(idx, (ax, ay, 0.0))
         final_mol.AddConformer(conf)
 
         # --- Step 5: E/Zラベル優先の立体設定 ---
@@ -275,34 +2198,13 @@ class MolecularData:
         if use_2d_stereo:
             Chem.SetDoubleBondNeighborDirections(final_mol, final_mol.GetConformer(0))
         else:
-            # 3D変換時: E/Zラベルがないbondのみ2D座標から推定
+            # 3D変換時: E/Zラベルがある場合は座標ベースの推定を完全に無効化
             if ez_labeled_bonds:
-                # To avoid SetDoubleBondNeighborDirections from influencing bonds that have explicit E/Z labels,
-                # run the neighbor-direction assignment on a temporary copy where labeled double bonds are
-                # temporarily changed to single. Then copy resulting BondDir for unlabeled bonds back to final_mol.
-                try:
-                    temp_mol = Chem.Mol(final_mol)
-                    temp_conf = temp_mol.GetConformer(0)
-                    # Temporarily set labeled double bonds to single in temp_mol
-                    for tb in temp_mol.GetBonds():
-                        if tb.GetIdx() in ez_labeled_bonds and tb.GetBondType() == Chem.BondType.DOUBLE:
-                            tb.SetBondType(Chem.BondType.SINGLE)
-
-                    Chem.SetDoubleBondNeighborDirections(temp_mol, temp_conf)
-
-                    # Copy BondDir for unlabeled bonds back to final_mol; clear BondDir for labeled bonds
-                    for tb in temp_mol.GetBonds():
-                        idx = tb.GetIdx()
-                        if idx in ez_labeled_bonds:
-                            final_mol.GetBondWithIdx(idx).SetBondDir(Chem.BondDir.NONE)
-                        else:
-                            final_mol.GetBondWithIdx(idx).SetBondDir(tb.GetBondDir())
-                except Exception:
-                    # Fallback: if anything fails, fall back to assigning using the real molecule
-                    for b in final_mol.GetBonds():
-                        b.SetBondDir(Chem.BondDir.NONE)
-                    Chem.SetDoubleBondNeighborDirections(final_mol, final_mol.GetConformer(0))
+                # E/Zラベルがある場合は、すべての結合のBondDirをクリアして座標ベースの推定を無効化
+                for b in final_mol.GetBonds():
+                    b.SetBondDir(Chem.BondDir.NONE)
             else:
+                # E/Zラベルがない場合のみ座標ベースの推定を実行
                 Chem.SetDoubleBondNeighborDirections(final_mol, final_mol.GetConformer(0))
 
         # ヘルパー: 重原子優先で近傍を選ぶ
@@ -373,8 +2275,56 @@ class MolecularData:
         # Step 7: 最終化（キャッシュ更新 + 立体割当の再実行）
         final_mol.UpdatePropertyCache(strict=False)
         
-        Chem.AssignStereochemistry(final_mol, cleanIt=False, force=False)
+        # 3D変換時（use_2d_stereo=False）でE/Zラベルがある場合は、force=Trueで強制適用
+        if not use_2d_stereo and ez_labeled_bonds:
+            Chem.AssignStereochemistry(final_mol, cleanIt=False, force=True)
+        else:
+            Chem.AssignStereochemistry(final_mol, cleanIt=False, force=False)
         return final_mol
+
+    def to_mol_block(self):
+        try:
+            mol = self.to_rdkit_mol()
+            if mol:
+                return Chem.MolToMolBlock(mol, includeStereo=True)
+        except Exception:
+            pass
+        if not self.atoms: return None
+        atom_map = {old_id: new_id for new_id, old_id in enumerate(self.atoms.keys())}
+        num_atoms, num_bonds = len(self.atoms), len(self.bonds)
+        mol_block = "\n  MoleditPy\n\n"
+        mol_block += f"{num_atoms:3d}{num_bonds:3d}  0  0  0  0  0  0  0  0999 V2000\n"
+        for old_id, atom in self.atoms.items():
+            # Convert scene pixel coordinates to angstroms when emitting MOL block
+            x_px = atom['item'].pos().x()
+            y_px = -atom['item'].pos().y()
+            x, y = x_px * ANGSTROM_PER_PIXEL, y_px * ANGSTROM_PER_PIXEL
+            z, symbol = 0.0, atom['symbol']
+            charge = atom.get('charge', 0)
+
+            chg_code = 0
+            if charge == 3: chg_code = 1
+            elif charge == 2: chg_code = 2
+            elif charge == 1: chg_code = 3
+            elif charge == -1: chg_code = 5
+            elif charge == -2: chg_code = 6
+            elif charge == -3: chg_code = 7
+
+            mol_block += f"{x:10.4f}{y:10.4f}{z:10.4f} {symbol:<3} 0  0  0{chg_code:3d}  0  0  0  0  0  0  0\n"
+
+        for (id1, id2), bond in self.bonds.items():
+            idx1, idx2, order = atom_map[id1] + 1, atom_map[id2] + 1, bond['order']
+            stereo_code = 0
+            bond_stereo = bond.get('stereo', 0)
+            if bond_stereo == 1:
+                stereo_code = 1
+            elif bond_stereo == 2:
+                stereo_code = 6
+
+            mol_block += f"{idx1:3d}{idx2:3d}{order:3d}{stereo_code:3d}  0  0  0\n"
+            
+        mol_block += "M  END\n"
+        return mol_block
 
 
 class AtomItem(QGraphicsItem):
@@ -610,7 +2560,11 @@ class AtomItem(QGraphicsItem):
         res = super().itemChange(change, value)
         if change == QGraphicsItem.GraphicsItemChange.ItemPositionHasChanged:
             if self.flags() & QGraphicsItem.GraphicsItemFlag.ItemIsMovable:
-                 for bond in self.bonds: bond.update_position()
+                # Prevent cascading updates during batch operations
+                if not getattr(self, '_updating_position', False):
+                    for bond in self.bonds: 
+                        if bond.scene():  # Only update if bond is still in scene
+                            bond.update_position()
             
         return res
 
@@ -640,16 +2594,28 @@ class BondItem(QGraphicsItem):
         # シーン座標に変換
         return self.mapToScene(label_rect).boundingRect()
     def set_stereo(self, new_stereo):
-        # ラベルを消す場合は、消す前のboundingRectをscene().invalidateで強制的に無効化
-        if new_stereo == 0 and self.stereo in [3, 4] and self.scene():
-            from PyQt6.QtWidgets import QGraphicsScene
-            rect = self.mapToScene(self.boundingRect()).boundingRect()
-            self.scene().invalidate(rect, QGraphicsScene.SceneLayer.BackgroundLayer | QGraphicsScene.SceneLayer.ForegroundLayer)
-        self.prepareGeometryChange()
-        self.stereo = new_stereo
-        self.update()
-        if self.scene() and self.scene().views():
-            self.scene().views()[0].viewport().update()
+        try:
+            # ラベルを消す場合は、消す前のboundingRectをscene().invalidateで強制的に無効化
+            if new_stereo == 0 and self.stereo in [3, 4] and self.scene():
+                from PyQt6.QtWidgets import QGraphicsScene
+                rect = self.mapToScene(self.boundingRect()).boundingRect()
+                self.scene().invalidate(rect, QGraphicsScene.SceneLayer.BackgroundLayer | QGraphicsScene.SceneLayer.ForegroundLayer)
+            
+            self.prepareGeometryChange()
+            self.stereo = new_stereo
+            self.update()
+            
+            if self.scene() and self.scene().views():
+                try:
+                    self.scene().views()[0].viewport().update()
+                except (IndexError, RuntimeError):
+                    # Handle case where views are being destroyed
+                    pass
+                    
+        except Exception as e:
+            print(f"Error in BondItem.set_stereo: {e}")
+            # Continue without crashing
+            self.stereo = new_stereo
 
     def set_order(self, new_order):
         self.prepareGeometryChange()
@@ -659,6 +2625,9 @@ class BondItem(QGraphicsItem):
             self.scene().views()[0].viewport().update()
     def __init__(self, atom1_item, atom2_item, order=1, stereo=0):
         super().__init__()
+        # Validate input parameters
+        if atom1_item is None or atom2_item is None:
+            raise ValueError("BondItem requires non-None atom items")
         self.atom1, self.atom2, self.order, self.stereo = atom1_item, atom2_item, order, stereo
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable)
         self.pen = QPen(Qt.GlobalColor.black, 2)
@@ -671,8 +2640,12 @@ class BondItem(QGraphicsItem):
     def get_line_in_local_coords(self):
         if self.atom1 is None or self.atom2 is None:
             return QLineF(0, 0, 0, 0)
-        p2 = self.mapFromItem(self.atom2, 0, 0)
-        return QLineF(QPointF(0, 0), p2)
+        try:
+            p2 = self.mapFromItem(self.atom2, 0, 0)
+            return QLineF(QPointF(0, 0), p2)
+        except (RuntimeError, TypeError):
+            # Handle case where atoms are deleted from scene
+            return QLineF(0, 0, 0, 0)
 
     def boundingRect(self):
         try:
@@ -756,6 +2729,7 @@ class BondItem(QGraphicsItem):
                 painter.drawPolygon(poly)
             
             elif self.stereo == 2: # Dash (破線)
+                painter.save()
                 if not self.isSelected():
                     pen = painter.pen()
                     pen.setWidthF(2.5) 
@@ -768,6 +2742,7 @@ class BondItem(QGraphicsItem):
                     width = 12.0 * t
                     offset = QPointF(normal.dx(), normal.dy()) * width / 2.0
                     painter.drawLine(start_pt - offset, start_pt + offset)
+                painter.restore()
         
         # --- 通常の結合 (単/二重/三重) の描画 ---
         else:
@@ -849,10 +2824,14 @@ class BondItem(QGraphicsItem):
 
 
     def update_position(self):
-        self.prepareGeometryChange()
-        if self.atom1:
-            self.setPos(self.atom1.pos())
-        self.update()
+        try:
+            self.prepareGeometryChange()
+            if self.atom1:
+                self.setPos(self.atom1.pos())
+            self.update()
+        except Exception as e:
+            print(f"Error updating bond position: {e}")
+            # Continue without crashing
 
 
     def hoverEnterEvent(self, event):
@@ -963,15 +2942,23 @@ class MoleculeScene(QGraphicsScene):
             # --- E/Zモード専用処理 ---
             if self.mode == 'bond_2_5':
                 if isinstance(item, BondItem):
-                    # E/Zラベルを消す（ノーマルに戻す）
-                    if item.stereo in [3, 4]:
-                        item.set_stereo(0)
-                        # データモデルも更新
-                        for (id1, id2), bdata in self.data.bonds.items():
-                            if bdata.get('item') is item:
-                                bdata['stereo'] = 0
-                        self.window.push_undo_state()
-                        data_changed = False  # ここでundo済みなので以降で積まない
+                    try:
+                        # E/Zラベルを消す（ノーマルに戻す）
+                        if item.stereo in [3, 4]:
+                            item.set_stereo(0)
+                            # データモデルも更新
+                            for (id1, id2), bdata in self.data.bonds.items():
+                                if bdata.get('item') is item:
+                                    bdata['stereo'] = 0
+                                    break
+                            self.window.push_undo_state()
+                            data_changed = False  # ここでundo済みなので以降で積まない
+                    except Exception as e:
+                        print(f"Error clearing E/Z label: {e}")
+                        import traceback
+                        traceback.print_exc()
+                        if hasattr(self.window, 'statusBar'):
+                            self.window.statusBar().showMessage(f"Error clearing E/Z label: {e}", 5000)
                 # AtomItemは何もしない
             # --- 通常の処理 ---
             elif isinstance(item, AtomItem):
@@ -1126,16 +3113,23 @@ class MoleculeScene(QGraphicsScene):
             b = released_item 
             
             if self.mode == 'bond_2_5':
-                if b.order == 2:
-                    current_stereo = b.stereo
-                    if current_stereo not in [3, 4]:
-                        new_stereo = 3  # None -> Z
-                    elif current_stereo == 3:
-                        new_stereo = 4  # Z -> E
-                    else:  # current_stereo == 4
-                        new_stereo = 0  # E -> None
-                    self.update_bond_stereo(b, new_stereo)
-                    self.window.push_undo_state()  # ここでUndo stackに積む
+                try:
+                    if b.order == 2:
+                        current_stereo = b.stereo
+                        if current_stereo not in [3, 4]:
+                            new_stereo = 3  # None -> Z
+                        elif current_stereo == 3:
+                            new_stereo = 4  # Z -> E
+                        else:  # current_stereo == 4
+                            new_stereo = 0  # E -> None
+                        self.update_bond_stereo(b, new_stereo)
+                        self.window.push_undo_state()  # ここでUndo stackに積む
+                except Exception as e:
+                    print(f"Error in E/Z stereo toggle: {e}")
+                    import traceback
+                    traceback.print_exc()
+                    if hasattr(self.window, 'statusBar'):
+                        self.window.statusBar().showMessage(f"Error changing E/Z stereochemistry: {e}", 5000)
                 return # この後の処理は行わない
             
             elif self.bond_stereo != 0 and b.order == self.bond_order and b.stereo == self.bond_stereo:
@@ -1280,24 +3274,38 @@ class MoleculeScene(QGraphicsScene):
 
 
     def create_bond(self, start_atom, end_atom, bond_order=None, bond_stereo=None):
-        exist_b = self.find_bond_between(start_atom, end_atom)
-        if exist_b:
-            return
+        try:
+            if start_atom is None or end_atom is None:
+                print("Error: Cannot create bond with None atoms")
+                return
+                
+            exist_b = self.find_bond_between(start_atom, end_atom)
+            if exist_b:
+                return
 
-        # 引数で次数が指定されていればそれを使用し、なければ現在のモードの値を使用する
-        order_to_use = self.bond_order if bond_order is None else bond_order
-        stereo_to_use = self.bond_stereo if bond_stereo is None else bond_stereo
+            # 引数で次数が指定されていればそれを使用し、なければ現在のモードの値を使用する
+            order_to_use = self.bond_order if bond_order is None else bond_order
+            stereo_to_use = self.bond_stereo if bond_stereo is None else bond_stereo
 
-        key, status = self.data.add_bond(start_atom.atom_id, end_atom.atom_id, order_to_use, stereo_to_use)
-        if status == 'created':
-            bond_item = BondItem(start_atom, end_atom, order_to_use, stereo_to_use)
-            self.data.bonds[key]['item'] = bond_item
-            start_atom.bonds.append(bond_item)
-            end_atom.bonds.append(bond_item)
-            self.addItem(bond_item)
-        
-        start_atom.update_style()
-        end_atom.update_style()
+            key, status = self.data.add_bond(start_atom.atom_id, end_atom.atom_id, order_to_use, stereo_to_use)
+            if status == 'created':
+                bond_item = BondItem(start_atom, end_atom, order_to_use, stereo_to_use)
+                self.data.bonds[key]['item'] = bond_item
+                if hasattr(start_atom, 'bonds'):
+                    start_atom.bonds.append(bond_item)
+                if hasattr(end_atom, 'bonds'):
+                    end_atom.bonds.append(bond_item)
+                self.addItem(bond_item)
+            
+            if hasattr(start_atom, 'update_style'):
+                start_atom.update_style()
+            if hasattr(end_atom, 'update_style'):
+                end_atom.update_style()
+                
+        except Exception as e:
+            print(f"Error creating bond: {e}")
+            import traceback
+            traceback.print_exc()
 
     def add_molecule_fragment(self, points, bonds_info, existing_items=None, symbol='C'):
         """
@@ -1625,58 +3633,86 @@ class MoleculeScene(QGraphicsScene):
 
     def delete_items(self, items_to_delete):
         """指定されたアイテムセット（原子・結合）を安全に削除する共通メソッド"""
-        if not items_to_delete:
-            return False
+        try:
+            if not items_to_delete:
+                return False
 
-        atoms_to_delete = {item for item in items_to_delete if isinstance(item, AtomItem)}
-        bonds_to_delete = {item for item in items_to_delete if isinstance(item, BondItem)}
+            atoms_to_delete = {item for item in items_to_delete if isinstance(item, AtomItem)}
+            bonds_to_delete = {item for item in items_to_delete if isinstance(item, BondItem)}
 
-        # 削除対象の原子に接続している結合も、すべて削除対象に加える
-        for atom in atoms_to_delete:
-            bonds_to_delete.update(atom.bonds)
+            # 削除対象の原子に接続している結合も、すべて削除対象に加える
+            for atom in atoms_to_delete:
+                if hasattr(atom, 'bonds'):
+                    bonds_to_delete.update(atom.bonds)
 
-        # 影響を受ける（が削除はされない）原子を特定する
-        atoms_to_update = set()
-        for bond in bonds_to_delete:
-            if bond.atom1 and bond.atom1 not in atoms_to_delete:
-                atoms_to_update.add(bond.atom1)
-            if bond.atom2 and bond.atom2 not in atoms_to_delete:
-                atoms_to_update.add(bond.atom2)
+            # 影響を受ける（が削除はされない）原子を特定する
+            atoms_to_update = set()
+            for bond in bonds_to_delete:
+                if bond.atom1 and bond.atom1 not in atoms_to_delete:
+                    atoms_to_update.add(bond.atom1)
+                if bond.atom2 and bond.atom2 not in atoms_to_delete:
+                    atoms_to_update.add(bond.atom2)
 
-        # --- データモデルからの削除 ---
-        # 最初に原子をデータモデルから削除（関連する結合も内部で削除される）
-        for atom in atoms_to_delete:
-            self.data.remove_atom(atom.atom_id)
-        # 次に、明示的に選択された結合（まだ残っているもの）を削除
-        for bond in bonds_to_delete:
-            if bond.atom1 and bond.atom2:
-                self.data.remove_bond(bond.atom1.atom_id, bond.atom2.atom_id)
-        
-        # --- シーンからのグラフィックアイテム削除（必ず結合を先に）---
-        # まずremoveItem
-        for bond in bonds_to_delete:
-            if bond.scene(): self.removeItem(bond)
-        for atom in atoms_to_delete:
-            if atom.scene(): self.removeItem(atom)
-        # その後BondItem/AtomItemの参照をクリア
-        for bond in bonds_to_delete:
-            # atom1/atom2のbondsリストからこのbondを除去
-            if bond.atom1 and bond in getattr(bond.atom1, 'bonds', []):
-                bond.atom1.bonds = [b for b in bond.atom1.bonds if b is not bond and b.scene()]
-            if bond.atom2 and bond in getattr(bond.atom2, 'bonds', []):
-                bond.atom2.bonds = [b for b in bond.atom2.bonds if b is not bond and b.scene()]
-            bond.atom1 = None
-            bond.atom2 = None
-        for atom in atoms_to_delete:
-            # sceneに残っていないBondItemも除去
-            atom.bonds = [b for b in atom.bonds if b.scene()]
-
-        # --- 生き残った原子の内部参照とスタイルを更新 ---
-        for atom in atoms_to_update:
-            atom.bonds = [b for b in atom.bonds if b not in bonds_to_delete]
-            atom.update_style()
+            # --- データモデルからの削除 ---
+            # 最初に原子をデータモデルから削除（関連する結合も内部で削除される）
+            for atom in atoms_to_delete:
+                if hasattr(atom, 'atom_id'):
+                    self.data.remove_atom(atom.atom_id)
+                    
+            # 次に、明示的に選択された結合（まだ残っているもの）を削除
+            for bond in bonds_to_delete:
+                if bond.atom1 and bond.atom2 and hasattr(bond.atom1, 'atom_id') and hasattr(bond.atom2, 'atom_id'):
+                    self.data.remove_bond(bond.atom1.atom_id, bond.atom2.atom_id)
             
-        return True
+            # --- シーンからのグラフィックアイテム削除（必ず結合を先に）---
+            # まずremoveItem
+            for bond in bonds_to_delete:
+                if bond.scene(): 
+                    self.removeItem(bond)
+                    
+            for atom in atoms_to_delete:
+                if atom.scene(): 
+                    self.removeItem(atom)
+            
+            # その後BondItem/AtomItemの参照をクリア
+            for bond in bonds_to_delete:
+                # atom1/atom2のbondsリストからこのbondを除去
+                try:
+                    if bond.atom1 and hasattr(bond.atom1, 'bonds') and bond in bond.atom1.bonds:
+                        bond.atom1.bonds = [b for b in bond.atom1.bonds if b is not bond]
+                    if bond.atom2 and hasattr(bond.atom2, 'bonds') and bond in bond.atom2.bonds:
+                        bond.atom2.bonds = [b for b in bond.atom2.bonds if b is not bond]
+                    # Clear bond references to prevent dangling pointers
+                    bond.atom1 = None
+                    bond.atom2 = None
+                except Exception as bond_cleanup_error:
+                    print(f"Error cleaning up bond references: {bond_cleanup_error}")
+            
+            for atom in atoms_to_delete:
+                # Clear all bond references from deleted atoms
+                try:
+                    if hasattr(atom, 'bonds'):
+                        atom.bonds.clear()
+                except Exception as atom_cleanup_error:
+                    print(f"Error cleaning up atom references: {atom_cleanup_error}")
+
+            # --- 生き残った原子の内部参照とスタイルを更新 ---
+            for atom in atoms_to_update:
+                try:
+                    if hasattr(atom, 'bonds'):
+                        atom.bonds = [b for b in atom.bonds if b not in bonds_to_delete]
+                    if hasattr(atom, 'update_style'):
+                        atom.update_style()
+                except Exception as update_error:
+                    print(f"Error updating atom style: {update_error}")
+                    
+            return True
+            
+        except Exception as e:
+            print(f"Error during delete_items operation: {e}")
+            import traceback
+            traceback.print_exc()
+            return False
 
     def leaveEvent(self, event):
         self.template_preview.hide(); super().leaveEvent(event)
@@ -2097,24 +4133,54 @@ class MoleculeScene(QGraphicsScene):
 
     def update_bond_stereo(self, bond_item, new_stereo):
         """結合の立体化学を更新する共通メソッド"""
-        if bond_item.order != 2 or bond_item.stereo == new_stereo:
-            return
-
-        id1, id2 = bond_item.atom1.atom_id, bond_item.atom2.atom_id
-
-        # E/Z結合は方向性を持つため、キーは(id1, id2)のまま探す
-        key_to_update = (id1, id2)
-        if key_to_update not in self.data.bonds:
-            # Wedge/Dashなど、逆順で登録されている可能性も考慮
-            key_to_update = (id2, id1)
-            if key_to_update not in self.data.bonds:
-                print(f"Error: Bond between {id1} and {id2} not found.")
+        try:
+            if bond_item is None:
+                print("Error: bond_item is None in update_bond_stereo")
+                return
+                
+            if bond_item.order != 2 or bond_item.stereo == new_stereo:
                 return
 
-        self.data.bonds[key_to_update]['stereo'] = new_stereo
-        bond_item.stereo = new_stereo
-        bond_item.update()
-        self.data_changed_in_event = True
+            if not hasattr(bond_item, 'atom1') or not hasattr(bond_item, 'atom2'):
+                print("Error: bond_item missing atom references")
+                return
+                
+            if bond_item.atom1 is None or bond_item.atom2 is None:
+                print("Error: bond_item has None atom references")
+                return
+                
+            if not hasattr(bond_item.atom1, 'atom_id') or not hasattr(bond_item.atom2, 'atom_id'):
+                print("Error: bond atoms missing atom_id")
+                return
+
+            id1, id2 = bond_item.atom1.atom_id, bond_item.atom2.atom_id
+
+            # E/Z結合は方向性を持つため、キーは(id1, id2)のまま探す
+            key_to_update = (id1, id2)
+            if key_to_update not in self.data.bonds:
+                # Wedge/Dashなど、逆順で登録されている可能性も考慮
+                key_to_update = (id2, id1)
+                if key_to_update not in self.data.bonds:
+                    # Log error instead of printing to console
+                    if hasattr(self.window, 'statusBar'):
+                        self.window.statusBar().showMessage(f"Warning: Bond between atoms {id1} and {id2} not found in data model.", 3000)
+                    print(f"Error: Bond key not found: {id1}-{id2} or {id2}-{id1}")
+                    return
+                    
+            # Update data model
+            self.data.bonds[key_to_update]['stereo'] = new_stereo
+            
+            # Update visual representation
+            bond_item.set_stereo(new_stereo)
+            
+            self.data_changed_in_event = True
+            
+        except Exception as e:
+            print(f"Error in update_bond_stereo: {e}")
+            import traceback
+            traceback.print_exc()
+            if hasattr(self.window, 'statusBar'):
+                self.window.statusBar().showMessage(f"Error updating bond stereochemistry: {e}", 5000)
 
 class ZoomableView(QGraphicsView):
     """ マウスホイールでのズームと、中ボタン or Shift+左ドラッグでのパン機能を追加したQGraphicsView """
@@ -2209,27 +4275,167 @@ class ZoomableView(QGraphicsView):
 
 class CalculationWorker(QObject):
     status_update = pyqtSignal(str) 
-    
     finished=pyqtSignal(object); error=pyqtSignal(str)
+    
     def run_calculation(self, mol_block):
         try:
             if not mol_block:
                 raise ValueError("No atoms to convert.")
+            
+            self.status_update.emit("Creating 3D structure...")
             mol = Chem.MolFromMolBlock(mol_block, removeHs=False)
             if mol is None:
                 raise ValueError("Failed to create molecule from MOL block.")
 
-            # Ensure stereochemistry (E/Z, wedge/dash) from the mol block is assigned and respected
-            try:
-                Chem.AssignStereochemistry(mol, cleanIt=True, force=True)
-            except Exception:
-                pass
+            # CRITICAL FIX: Extract and restore explicit E/Z labels from MOL block
+            # Parse M CFG lines to get explicit stereo labels
+            explicit_stereo = {}
+            mol_lines = mol_block.split('\n')
+            for line in mol_lines:
+                if line.startswith('M  CFG'):
+                    parts = line.split()
+                    if len(parts) >= 4:
+                        try:
+                            bond_idx = int(parts[3]) - 1  # MOL format is 1-indexed
+                            cfg_value = int(parts[4])
+                            # cfg_value: 1=Z, 2=E in MOL format
+                            if cfg_value == 1:
+                                explicit_stereo[bond_idx] = Chem.BondStereo.STEREOZ
+                            elif cfg_value == 2:
+                                explicit_stereo[bond_idx] = Chem.BondStereo.STEREOE
+                        except (ValueError, IndexError):
+                            continue
+
+            # Force explicit stereo labels regardless of coordinates
+            for bond_idx, stereo_type in explicit_stereo.items():
+                if bond_idx < mol.GetNumBonds():
+                    bond = mol.GetBondWithIdx(bond_idx)
+                    if bond.GetBondType() == Chem.BondType.DOUBLE:
+                        # Find suitable stereo atoms
+                        begin_atom = bond.GetBeginAtom()
+                        end_atom = bond.GetEndAtom()
+                        
+                        # Pick heavy atom neighbors preferentially
+                        begin_neighbors = [nbr for nbr in begin_atom.GetNeighbors() if nbr.GetIdx() != end_atom.GetIdx()]
+                        end_neighbors = [nbr for nbr in end_atom.GetNeighbors() if nbr.GetIdx() != begin_atom.GetIdx()]
+                        
+                        if begin_neighbors and end_neighbors:
+                            # Prefer heavy atoms
+                            begin_heavy = [n for n in begin_neighbors if n.GetAtomicNum() > 1]
+                            end_heavy = [n for n in end_neighbors if n.GetAtomicNum() > 1]
+                            
+                            stereo_atom1 = (begin_heavy[0] if begin_heavy else begin_neighbors[0]).GetIdx()
+                            stereo_atom2 = (end_heavy[0] if end_heavy else end_neighbors[0]).GetIdx()
+                            
+                            bond.SetStereoAtoms(stereo_atom1, stereo_atom2)
+                            bond.SetStereo(stereo_type)
+
+            # Do NOT call AssignStereochemistry here as it overrides our explicit labels
 
             mol = Chem.AddHs(mol)
+            
+            # CRITICAL: Re-apply explicit stereo after AddHs which may renumber atoms
+            for bond_idx, stereo_type in explicit_stereo.items():
+                if bond_idx < mol.GetNumBonds():
+                    bond = mol.GetBondWithIdx(bond_idx)
+                    if bond.GetBondType() == Chem.BondType.DOUBLE:
+                        # Re-find suitable stereo atoms after hydrogen addition
+                        begin_atom = bond.GetBeginAtom()
+                        end_atom = bond.GetEndAtom()
+                        
+                        # Pick heavy atom neighbors preferentially
+                        begin_neighbors = [nbr for nbr in begin_atom.GetNeighbors() if nbr.GetIdx() != end_atom.GetIdx()]
+                        end_neighbors = [nbr for nbr in end_atom.GetNeighbors() if nbr.GetIdx() != begin_atom.GetIdx()]
+                        
+                        if begin_neighbors and end_neighbors:
+                            # Prefer heavy atoms
+                            begin_heavy = [n for n in begin_neighbors if n.GetAtomicNum() > 1]
+                            end_heavy = [n for n in end_neighbors if n.GetAtomicNum() > 1]
+                            
+                            stereo_atom1 = (begin_heavy[0] if begin_heavy else begin_neighbors[0]).GetIdx()
+                            stereo_atom2 = (end_heavy[0] if end_heavy else end_neighbors[0]).GetIdx()
+                            
+                            bond.SetStereoAtoms(stereo_atom1, stereo_atom2)
+                            bond.SetStereo(stereo_type)
 
             params = AllChem.ETKDGv2()
             params.randomSeed = 42
-            conf_id = AllChem.EmbedMolecule(mol, params)
+            # CRITICAL: Force ETKDG to respect the existing stereochemistry
+            params.useExpTorsionAnglePrefs = True
+            params.useBasicKnowledge = True
+            params.enforceChirality = True  # This is critical for stereo preservation
+            
+            # Store original stereochemistry before embedding (prioritizing explicit labels)
+            original_stereo_info = []
+            for bond_idx, stereo_type in explicit_stereo.items():
+                if bond_idx < mol.GetNumBonds():
+                    bond = mol.GetBondWithIdx(bond_idx)
+                    if bond.GetBondType() == Chem.BondType.DOUBLE:
+                        stereo_atoms = bond.GetStereoAtoms()
+                        original_stereo_info.append((bond.GetIdx(), stereo_type, stereo_atoms))
+            
+            # Also store any other stereo bonds not in explicit_stereo
+            for bond in mol.GetBonds():
+                if (bond.GetBondType() == Chem.BondType.DOUBLE and 
+                    bond.GetStereo() != Chem.BondStereo.STEREONONE and
+                    bond.GetIdx() not in explicit_stereo):
+                    stereo_atoms = bond.GetStereoAtoms()
+                    original_stereo_info.append((bond.GetIdx(), bond.GetStereo(), stereo_atoms))
+            
+            self.status_update.emit("Embedding 3D coordinates...")
+            
+            # Try multiple times with different approaches if needed
+            conf_id = -1
+            
+            # First attempt: Standard ETKDG with stereo enforcement
+            try:
+                conf_id = AllChem.EmbedMolecule(mol, params)
+            except Exception as e:
+                self.status_update.emit(f"Standard embedding failed: {e}")
+            
+            # Second attempt: Use constraint embedding if available
+            if conf_id == -1:
+                try:
+                    # Create distance constraints for double bonds to enforce E/Z geometry
+                    from rdkit.DistanceGeometry import DoTriangleSmoothing
+                    bounds_matrix = AllChem.GetMoleculeBoundsMatrix(mol)
+                    
+                    # Add constraints for E/Z bonds
+                    for bond_idx, stereo, stereo_atoms in original_stereo_info:
+                        bond = mol.GetBondWithIdx(bond_idx)
+                        if len(stereo_atoms) == 2:
+                            atom1_idx = bond.GetBeginAtomIdx()
+                            atom2_idx = bond.GetEndAtomIdx()
+                            neighbor1_idx = stereo_atoms[0]
+                            neighbor2_idx = stereo_atoms[1]
+                            
+                            # For Z (cis): neighbors should be closer
+                            # For E (trans): neighbors should be farther
+                            if stereo == Chem.BondStereo.STEREOZ:
+                                # Z configuration: set shorter distance constraint
+                                target_dist = 3.0  # Angstroms
+                                bounds_matrix[neighbor1_idx][neighbor2_idx] = min(bounds_matrix[neighbor1_idx][neighbor2_idx], target_dist)
+                                bounds_matrix[neighbor2_idx][neighbor1_idx] = min(bounds_matrix[neighbor2_idx][neighbor1_idx], target_dist)
+                            elif stereo == Chem.BondStereo.STEREOE:
+                                # E configuration: set longer distance constraint  
+                                target_dist = 5.0  # Angstroms
+                                bounds_matrix[neighbor1_idx][neighbor2_idx] = max(bounds_matrix[neighbor1_idx][neighbor2_idx], target_dist)
+                                bounds_matrix[neighbor2_idx][neighbor1_idx] = max(bounds_matrix[neighbor2_idx][neighbor1_idx], target_dist)
+                    
+                    DoTriangleSmoothing(bounds_matrix)
+                    conf_id = AllChem.EmbedMolecule(mol, bounds_matrix, params)
+                    self.status_update.emit("Constraint-based embedding succeeded")
+                except Exception as e:
+                    self.status_update.emit(f"Constraint embedding failed: {e}")
+                    
+            # Fallback: Try basic embedding
+            if conf_id == -1:
+                try:
+                    basic_params = AllChem.ETKDGv2()
+                    basic_params.randomSeed = 42
+                    conf_id = AllChem.EmbedMolecule(mol, basic_params)
+                except Exception:
+                    pass
             '''
             if conf_id == -1:
                 self.status_update.emit("Initial embedding failed, retrying with ignoreSmoothingFailures=True...")
@@ -2251,6 +4457,13 @@ class CalculationWorker(QObject):
 
             if conf_id != -1:
                 # Success with RDKit: optimize and finish
+                # CRITICAL: Restore original stereochemistry after embedding (explicit labels first)
+                for bond_idx, stereo, stereo_atoms in original_stereo_info:
+                    bond = mol.GetBondWithIdx(bond_idx)
+                    if len(stereo_atoms) == 2:
+                        bond.SetStereoAtoms(stereo_atoms[0], stereo_atoms[1])
+                    bond.SetStereo(stereo)
+                
                 try:
                     AllChem.MMFFOptimizeMolecule(mol)
                 except Exception:
@@ -2259,11 +4472,15 @@ class CalculationWorker(QObject):
                         AllChem.UFFOptimizeMolecule(mol)
                     except Exception:
                         pass
-                # Re-assign stereochemistry after embedding/optimization to ensure labels persist
-                try:
-                    Chem.AssignStereochemistry(mol, cleanIt=True, force=True)
-                except Exception:
-                    pass
+                
+                # CRITICAL: Restore stereochemistry again after optimization (explicit labels priority)
+                for bond_idx, stereo, stereo_atoms in original_stereo_info:
+                    bond = mol.GetBondWithIdx(bond_idx)
+                    if len(stereo_atoms) == 2:
+                        bond.SetStereoAtoms(stereo_atoms[0], stereo_atoms[1])
+                    bond.SetStereo(stereo)
+                
+                # Do NOT call AssignStereochemistry here as it would override our explicit labels
                 self.finished.emit(mol)
                 self.status_update.emit("RDKit 3D conversion succeeded.")
                 return
@@ -2303,10 +4520,7 @@ class CalculationWorker(QObject):
                     raise ValueError("Open Babel produced invalid MOL block.")
                 # optimize in RDKit as a final step if possible
                 rd_mol = Chem.AddHs(rd_mol)
-                try:
-                    Chem.AssignStereochemistry(rd_mol, cleanIt=True, force=True)
-                except Exception:
-                    pass
+                # Do NOT call AssignStereochemistry here to preserve original stereo info
                 try:
                     AllChem.MMFFOptimizeMolecule(rd_mol)
                 except Exception:
@@ -2314,10 +4528,7 @@ class CalculationWorker(QObject):
                         AllChem.UFFOptimizeMolecule(rd_mol)
                     except Exception:
                         pass
-                try:
-                    Chem.AssignStereochemistry(rd_mol, cleanIt=True, force=True)
-                except Exception:
-                    pass
+                # Do NOT call AssignStereochemistry after optimization either
                 self.status_update.emit("Open Babel embedding succeeded. Warning: Conformation accuracy may be limited.")
                 self.finished.emit(rd_mol)
                 return
@@ -2391,9 +4602,10 @@ class PeriodicTableDialog(QDialog):
 
 # --- 最終版 AnalysisWindow クラス ---
 class AnalysisWindow(QDialog):
-    def __init__(self, mol, parent=None):
+    def __init__(self, mol, parent=None, is_xyz_derived=False):
         super().__init__(parent)
         self.mol = mol
+        self.is_xyz_derived = is_xyz_derived  # XYZ由来かどうかのフラグ
         self.setWindowTitle("Molecule Analysis")
         self.setMinimumWidth(400)
         self.init_ui()
@@ -2408,35 +4620,119 @@ class AnalysisWindow(QDialog):
             from rdkit import Chem
             from rdkit.Chem import Descriptors, rdMolDescriptors
 
-            # SMILES生成用に、一時的に水素原子を取り除いた分子オブジェクトを作成
-            mol_for_smiles = Chem.RemoveHs(self.mol)
-            # 水素を取り除いた分子からSMILESを生成（常に簡潔な表記になる）
-            smiles = Chem.MolToSmiles(mol_for_smiles, isomericSmiles=True)
+            if self.is_xyz_derived:
+                # XYZ由来の場合：元のXYZファイルの原子情報から直接計算
+                # （結合推定の影響を受けない）
+                
+                # XYZファイルから読み込んだ元の原子情報を取得
+                if hasattr(self.mol, '_xyz_atom_data'):
+                    xyz_atoms = self.mol._xyz_atom_data
+                else:
+                    # フォールバック: RDKitオブジェクトから取得
+                    xyz_atoms = [(atom.GetSymbol(), 0, 0, 0) for atom in self.mol.GetAtoms()]
+                
+                # 原子数と元素種を集計
+                atom_counts = {}
+                total_atoms = len(xyz_atoms)
+                num_heavy_atoms = 0
+                
+                for symbol, x, y, z in xyz_atoms:
+                    atom_counts[symbol] = atom_counts.get(symbol, 0) + 1
+                    if symbol != 'H':  # 水素以外
+                        num_heavy_atoms += 1
+                
+                # 化学式を手動で構築（元素順序を考慮）
+                element_order = ['C', 'H', 'N', 'O', 'P', 'S', 'F', 'Cl', 'Br', 'I']
+                formula_parts = []
+                
+                # 定義された順序で元素を追加
+                remaining_counts = atom_counts.copy()
+                for element in element_order:
+                    if element in remaining_counts:
+                        count = remaining_counts[element]
+                        if count == 1:
+                            formula_parts.append(element)
+                        else:
+                            formula_parts.append(f"{element}{count}")
+                        del remaining_counts[element]
+                
+                # 残りの元素をアルファベット順で追加
+                for element in sorted(remaining_counts.keys()):
+                    count = remaining_counts[element]
+                    if count == 1:
+                        formula_parts.append(element)
+                    else:
+                        formula_parts.append(f"{element}{count}")
+                
+                mol_formula = ''.join(formula_parts)
+                
+                # 分子量と精密質量をRDKitから取得
+                from rdkit import Chem
+                
+                mol_wt = 0.0
+                exact_mw = 0.0
+                pt = Chem.GetPeriodicTable()
+                
+                for symbol, count in atom_counts.items():
+                    try:
+                        # RDKitの周期表から原子量と精密質量を取得
+                        atomic_num = pt.GetAtomicNumber(symbol)
+                        atomic_weight = pt.GetAtomicWeight(atomic_num)
+                        exact_mass = pt.GetMostCommonIsotopeMass(atomic_num)
+                        
+                        mol_wt += atomic_weight * count
+                        exact_mw += exact_mass * count
+                    except (ValueError, RuntimeError):
+                        # 認識されない元素の場合はスキップ
+                        print(f"Warning: Unknown element {symbol}, skipping in mass calculation")
+                        continue
+                
+                # 表示するプロパティを辞書にまとめる（XYZ元データから計算）
+                properties = {
+                    "Molecular Formula:": mol_formula,
+                    "Molecular Weight:": f"{mol_wt:.4f}",
+                    "Exact Mass:": f"{exact_mw:.4f}",
+                    "Heavy Atoms:": str(num_heavy_atoms),
+                    "Total Atoms:": str(total_atoms),
+                }
+                
+                # 注意メッセージを追加
+                note_label = QLabel("<i>Note: SMILES and structure-dependent properties are not available for XYZ-derived structures due to potential bond estimation inaccuracies.</i>")
+                note_label.setWordWrap(True)
+                main_layout.addWidget(note_label)
+                
+            else:
+                # 通常の分子（MOLファイルや2Dエディタ由来）の場合：全てのプロパティを計算
+                
+                # SMILES生成用に、一時的に水素原子を取り除いた分子オブジェクトを作成
+                mol_for_smiles = Chem.RemoveHs(self.mol)
+                # 水素を取り除いた分子からSMILESを生成（常に簡潔な表記になる）
+                smiles = Chem.MolToSmiles(mol_for_smiles, isomericSmiles=True)
 
-            # 各種プロパティを計算
-            mol_formula = rdMolDescriptors.CalcMolFormula(self.mol)
-            mol_wt = Descriptors.MolWt(self.mol)
-            exact_mw = Descriptors.ExactMolWt(self.mol)
-            num_heavy_atoms = self.mol.GetNumHeavyAtoms()
-            num_rings = rdMolDescriptors.CalcNumRings(self.mol)
-            log_p = Descriptors.MolLogP(self.mol)
-            tpsa = Descriptors.TPSA(self.mol)
-            num_h_donors = rdMolDescriptors.CalcNumHBD(self.mol)
-            num_h_acceptors = rdMolDescriptors.CalcNumHBA(self.mol)
-            
-            # 表示するプロパティを辞書にまとめる
-            properties = {
-                "SMILES:": smiles,
-                "Molecular Formula:": mol_formula,
-                "Molecular Weight:": f"{mol_wt:.4f}",
-                "Exact Mass:": f"{exact_mw:.4f}",
-                "Heavy Atoms:": str(num_heavy_atoms),
-                "Ring Count:": str(num_rings),
-                "LogP (o/w):": f"{log_p:.3f}",
-                "TPSA (Å²):": f"{tpsa:.2f}",
-                "H-Bond Donors:": str(num_h_donors),
-                "H-Bond Acceptors:": str(num_h_acceptors),
-            }
+                # 各種プロパティを計算
+                mol_formula = rdMolDescriptors.CalcMolFormula(self.mol)
+                mol_wt = Descriptors.MolWt(self.mol)
+                exact_mw = Descriptors.ExactMolWt(self.mol)
+                num_heavy_atoms = self.mol.GetNumHeavyAtoms()
+                num_rings = rdMolDescriptors.CalcNumRings(self.mol)
+                log_p = Descriptors.MolLogP(self.mol)
+                tpsa = Descriptors.TPSA(self.mol)
+                num_h_donors = rdMolDescriptors.CalcNumHBD(self.mol)
+                num_h_acceptors = rdMolDescriptors.CalcNumHBA(self.mol)
+                
+                # 表示するプロパティを辞書にまとめる
+                properties = {
+                    "SMILES:": smiles,
+                    "Molecular Formula:": mol_formula,
+                    "Molecular Weight:": f"{mol_wt:.4f}",
+                    "Exact Mass:": f"{exact_mw:.4f}",
+                    "Heavy Atoms:": str(num_heavy_atoms),
+                    "Ring Count:": str(num_rings),
+                    "LogP (o/w):": f"{log_p:.3f}",
+                    "TPSA (Å²):": f"{tpsa:.2f}",
+                    "H-Bond Donors:": str(num_h_donors),
+                    "H-Bond Acceptors:": str(num_h_acceptors),
+                }
         except Exception as e:
             main_layout.addWidget(QLabel(f"Error calculating properties: {e}"))
             return
@@ -2617,6 +4913,9 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
         self._is_dragging_atom = False
         # undoスタックのためのフラグ
         self.is_dragging = False
+        # 回転操作を検出するためのフラグ
+        self._mouse_moved_during_drag = False
+        self._mouse_press_pos = None
 
         self.AddObserver("LeftButtonPressEvent", self.on_left_button_down)
         self.AddObserver("MouseMoveEvent", self.on_mouse_move)
@@ -2630,6 +4929,70 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
         mw = self.main_window
         is_temp_mode = bool(QApplication.keyboardModifiers() & Qt.KeyboardModifier.AltModifier)
         is_edit_active = mw.is_3d_edit_mode or is_temp_mode
+        
+        # Ctrl+クリックで原子選択（3D編集用）
+        is_ctrl_click = bool(QApplication.keyboardModifiers() & Qt.KeyboardModifier.ControlModifier)
+
+        # 測定モードが有効な場合の処理
+        if mw.measurement_mode and mw.current_mol:
+            click_pos = self.GetInteractor().GetEventPosition()
+            self._mouse_press_pos = click_pos  # マウスプレス位置を記録
+            self._mouse_moved_during_drag = False  # 移動フラグをリセット
+            
+            picker = mw.plotter.picker
+            
+            # 通常のピック処理を実行
+            picker.Pick(click_pos[0], click_pos[1], 0, mw.plotter.renderer)
+
+            # 原子がクリックされた場合のみ特別処理
+            if picker.GetActor() is mw.atom_actor:
+                picked_position = np.array(picker.GetPickPosition())
+                distances = np.linalg.norm(mw.atom_positions_3d - picked_position, axis=1)
+                closest_atom_idx = np.argmin(distances)
+
+                # 範囲チェックを追加
+                if 0 <= closest_atom_idx < mw.current_mol.GetNumAtoms():
+                    # クリック閾値チェック
+                    atom = mw.current_mol.GetAtomWithIdx(int(closest_atom_idx))
+                    if atom:
+                        atomic_num = atom.GetAtomicNum()
+                        vdw_radius = pt.GetRvdw(atomic_num)
+                        click_threshold = vdw_radius * 1.5
+
+                        if distances[closest_atom_idx] < click_threshold:
+                            mw.handle_measurement_atom_selection(int(closest_atom_idx))
+                            return  # 原子選択処理完了、カメラ回転は無効
+            
+            # 測定モードで原子以外をクリックした場合は計測選択をクリア
+            # ただし、これは通常のカメラ回転も許可する
+            self._is_dragging_atom = False
+            super().OnLeftButtonDown()
+            return
+        
+        # Ctrl+クリックでの原子選択（3D編集用）
+        if is_ctrl_click and mw.current_mol:
+            click_pos = self.GetInteractor().GetEventPosition()
+            picker = mw.plotter.picker
+            picker.Pick(click_pos[0], click_pos[1], 0, mw.plotter.renderer)
+
+            if picker.GetActor() is mw.atom_actor:
+                picked_position = np.array(picker.GetPickPosition())
+                distances = np.linalg.norm(mw.atom_positions_3d - picked_position, axis=1)
+                closest_atom_idx = np.argmin(distances)
+
+                # 範囲チェックを追加
+                if 0 <= closest_atom_idx < mw.current_mol.GetNumAtoms():
+                    # クリック閾値チェック
+                    atom = mw.current_mol.GetAtomWithIdx(int(closest_atom_idx))
+                    if atom:
+                        atomic_num = atom.GetAtomicNum()
+                        vdw_radius = pt.GetRvdw(atomic_num)
+                        click_threshold = vdw_radius * 1.5
+
+                        if distances[closest_atom_idx] < click_threshold:
+                            # 3D編集用の原子選択をトグル
+                            mw.toggle_atom_selection_3d(int(closest_atom_idx))
+                            return  # カメラ回転は無効
 
         # 3D分子(mw.current_mol)が存在する場合のみ、原子の選択処理を実行
         if is_edit_active and mw.current_mol:
@@ -2642,16 +5005,18 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                 distances = np.linalg.norm(mw.atom_positions_3d - picked_position, axis=1)
                 closest_atom_idx = np.argmin(distances)
 
-                # RDKitのMolオブジェクトから原子を安全に取得
-                atom = mw.current_mol.GetAtomWithIdx(int(closest_atom_idx))
-                if atom:
-                    atomic_num = atom.GetAtomicNum()
-                    vdw_radius = pt.GetRvdw(atomic_num)
-                    click_threshold = vdw_radius * 1.5
+                # 範囲チェックを追加
+                if 0 <= closest_atom_idx < mw.current_mol.GetNumAtoms():
+                    # RDKitのMolオブジェクトから原子を安全に取得
+                    atom = mw.current_mol.GetAtomWithIdx(int(closest_atom_idx))
+                    if atom:
+                        atomic_num = atom.GetAtomicNum()
+                        vdw_radius = pt.GetRvdw(atomic_num)
+                        click_threshold = vdw_radius * 1.5
 
-                    if distances[closest_atom_idx] < click_threshold:
-                        # 原子を掴むことに成功した場合
-                        self._is_dragging_atom = True
+                        if distances[closest_atom_idx] < click_threshold:
+                            # 原子を掴むことに成功した場合
+                            self._is_dragging_atom = True
                         self.is_dragging = False 
                         mw.dragged_atom_info = {'id': int(closest_atom_idx)}
                         mw.plotter.setCursor(Qt.CursorShape.ClosedHandCursor)
@@ -2666,6 +5031,12 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
         """
         mw = self.main_window
         interactor = self.GetInteractor()
+
+        # マウス移動があったことを記録
+        if self._mouse_press_pos is not None:
+            current_pos = interactor.GetEventPosition()
+            if abs(current_pos[0] - self._mouse_press_pos[0]) > 3 or abs(current_pos[1] - self._mouse_press_pos[1]) > 3:
+                self._mouse_moved_during_drag = True
 
         if self._is_dragging_atom:
             # カスタムの原子ドラッグ処理
@@ -2716,6 +5087,16 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
         """
         mw = self.main_window
 
+        # 計測モードで、マウスが動いていない場合（つまりクリック）の処理
+        if mw.measurement_mode and not self._mouse_moved_during_drag and self._mouse_press_pos is not None:
+            click_pos = self.GetInteractor().GetEventPosition()
+            picker = mw.plotter.picker
+            picker.Pick(click_pos[0], click_pos[1], 0, mw.plotter.renderer)
+            
+            # 原子がクリックされていない場合は測定選択をクリア
+            if picker.GetActor() is not mw.atom_actor:
+                mw.clear_measurement_selection()
+
         if self._is_dragging_atom:
             # カスタムドラッグの後始末
             if self.is_dragging:
@@ -2730,6 +5111,10 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
         # 状態をリセット
         self._is_dragging_atom = False
         self.is_dragging = False # is_draggingもリセット
+        self._mouse_press_pos = None  # マウスプレス位置もリセット
+        
+        # ピックリセットは測定モードで実際に問題が発生した場合のみ行う
+        # （通常のドラッグ回転では行わない）
         
         # ボタンを離した後のカーソル表示を最新の状態に更新
         self.on_mouse_move(obj, event)
@@ -2753,15 +5138,36 @@ class MainWindow(QMainWindow):
         self.data = MolecularData(); self.current_mol = None
         self.current_3d_style = 'ball_and_stick'
         self.show_chiral_labels = False
+        self.atom_info_display_mode = None  # 'id', 'coords', 'symbol', or None
+        self.current_atom_info_labels = None  # 現在の原子情報ラベル
         self.is_3d_edit_mode = False
         self.dragged_atom_info = None
         self.atom_actor = None 
         self.is_2d_editable = True
+        self.is_xyz_derived = False  # XYZ由来の分子かどうかのフラグ
         self.axes_actor = None
         self.axes_widget = None
         self.undo_stack = []
         self.redo_stack = []
         self.mode_actions = {} 
+        
+        # 測定機能用の変数
+        self.measurement_mode = False
+        self.selected_atoms_for_measurement = []
+        self.measurement_labels = []  # (atom_idx, label_text) のタプルのリスト
+        self.measurement_text_actor = None
+        
+        # 3D原子選択用の変数
+        self.selected_atoms_3d = set()
+        self.atom_selection_mode = False
+        self.selected_atom_actors = []
+        
+        # 3D編集用の原子選択状態
+        self.selected_atoms_3d = set()  # 3Dビューで選択された原子のインデックス
+        
+        # 3D編集ダイアログの参照を保持
+        self.active_3d_dialogs = []
+        
         self.init_ui()
         self.init_worker_thread()
         self._setup_3d_picker() 
@@ -2785,11 +5191,14 @@ class MainWindow(QMainWindow):
         self.update_edit_menu_actions()
 
         if initial_file:
-            self.load_raw_data(file_path=initial_file)
+            self.load_command_line_file(initial_file)
         
         QTimer.singleShot(0, self.apply_initial_settings)
         # カメラ初期化フラグ（初回描画時のみリセットを許可する）
         self._camera_initialized = False
+        
+        # 初期メニューテキストを設定
+        self.update_atom_id_menu_text()
 
     def init_ui(self):
         # 1. 現在のスクリプトがあるディレクトリのパスを取得
@@ -2810,6 +5219,23 @@ class MainWindow(QMainWindow):
         self.init_menu_bar()
 
         self.splitter = QSplitter(Qt.Orientation.Horizontal)
+        # スプリッターハンドルを太くして視認性を向上
+        self.splitter.setHandleWidth(8)
+        # スプリッターハンドルのスタイルを改善
+        self.splitter.setStyleSheet("""
+            QSplitter::handle {
+                background-color: #ccc;
+                border: 1px solid #999;
+                border-radius: 4px;
+                margin: 2px;
+            }
+            QSplitter::handle:hover {
+                background-color: #aaa;
+            }
+            QSplitter::handle:pressed {
+                background-color: #888;
+            }
+        """)
         self.setCentralWidget(self.splitter)
 
         left_pane=QWidget()
@@ -2888,7 +5314,13 @@ class MainWindow(QMainWindow):
         right_layout.addLayout(right_buttons_layout)
         self.splitter.addWidget(right_pane)
         
+        # スプリッターのサイズ変更をモニターして、フィードバックを提供
+        self.splitter.splitterMoved.connect(self.on_splitter_moved)
+        
         self.splitter.setSizes([600, 600])
+        
+        # スプリッターハンドルにツールチップを設定
+        QTimer.singleShot(100, self.setup_splitter_tooltip)
 
         # ステータスバーを左右に分離するための設定
         self.status_bar = self.statusBar()
@@ -3115,6 +5547,13 @@ class MainWindow(QMainWindow):
         spacer.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         toolbar.addWidget(spacer)
 
+        # 測定機能ボタンを追加
+        self.measurement_action = QAction("Measure", self, checkable=True)
+        self.measurement_action.setToolTip("Enable distance, angle, and dihedral measurement in 3D view")
+        self.measurement_action.setEnabled(False)  # 初期状態では無効
+        self.measurement_action.triggered.connect(self.toggle_measurement_mode)
+        toolbar.addAction(self.measurement_action)
+
         self.edit_3d_action = QAction("3D Edit", self, checkable=True)
         self.edit_3d_action.setToolTip("Toggle 3D atom editing mode (Hold Alt for temporary mode)")
         self.edit_3d_action.setEnabled(False)
@@ -3156,7 +5595,7 @@ class MainWindow(QMainWindow):
         menu_bar = self.menuBar()
         
         file_menu = menu_bar.addMenu("&File")
-        load_mol_action = QAction("Import MOL...", self); load_mol_action.triggered.connect(self.load_mol_file)
+        load_mol_action = QAction("Import MOL/SDF...", self); load_mol_action.triggered.connect(self.load_mol_file)
         file_menu.addAction(load_mol_action)
         import_smiles_action = QAction("Import SMILES...", self)
         import_smiles_action.triggered.connect(self.import_smiles_dialog)
@@ -3166,9 +5605,13 @@ class MainWindow(QMainWindow):
         file_menu.addAction(import_inchi_action)
 
         file_menu.addSeparator()
-        load_3d_mol_action = QAction("Load 3D MOL (3D Only)...", self)
-        load_3d_mol_action.triggered.connect(self.load_mol_for_3d_viewing)
+        load_3d_mol_action = QAction("Load 3D MOL/SDF (3D Only)...", self)
+        load_3d_mol_action.triggered.connect(self.load_mol_file_for_3d_viewing)
         file_menu.addAction(load_3d_mol_action)
+        
+        load_3d_xyz_action = QAction("Load 3D XYZ (3D Only)...", self)
+        load_3d_xyz_action.triggered.connect(self.load_xyz_for_3d_viewing)
+        file_menu.addAction(load_3d_xyz_action)
 
         file_menu.addSeparator()
         save_mol_action = QAction("Save 2D as MOL...", self); save_mol_action.triggered.connect(self.save_as_mol)
@@ -3225,6 +5668,10 @@ class MainWindow(QMainWindow):
         self.paste_action.setShortcut(QKeySequence.StandardKey.Paste)
         self.paste_action.triggered.connect(self.paste_from_clipboard)
         edit_menu.addAction(self.paste_action)
+
+        remove_hydrogen_action = QAction("Remove Hydrogen", self)
+        remove_hydrogen_action.triggered.connect(self.remove_hydrogen_atoms)
+        edit_menu.addAction(remove_hydrogen_action)
 
         edit_menu.addSeparator()
 
@@ -3283,10 +5730,119 @@ class MainWindow(QMainWindow):
         
         view_menu.addSeparator()
 
+        # Panel Layout submenu
+        layout_menu = view_menu.addMenu("Panel Layout")
+        
+        equal_panels_action = QAction("Equal Panels (50:50)", self)
+        equal_panels_action.setShortcut(QKeySequence("Ctrl+1"))
+        equal_panels_action.triggered.connect(lambda: self.set_panel_layout(50, 50))
+        layout_menu.addAction(equal_panels_action)
+        
+        layout_2d_focus_action = QAction("2D Focus (70:30)", self)
+        layout_2d_focus_action.setShortcut(QKeySequence("Ctrl+2"))
+        layout_2d_focus_action.triggered.connect(lambda: self.set_panel_layout(70, 30))
+        layout_menu.addAction(layout_2d_focus_action)
+        
+        layout_3d_focus_action = QAction("3D Focus (30:70)", self)
+        layout_3d_focus_action.setShortcut(QKeySequence("Ctrl+3"))
+        layout_3d_focus_action.triggered.connect(lambda: self.set_panel_layout(30, 70))
+        layout_menu.addAction(layout_3d_focus_action)
+        
+        layout_menu.addSeparator()
+        
+        toggle_2d_panel_action = QAction("Toggle 2D Panel", self)
+        toggle_2d_panel_action.setShortcut(QKeySequence("Ctrl+H"))
+        toggle_2d_panel_action.triggered.connect(self.toggle_2d_panel)
+        layout_menu.addAction(toggle_2d_panel_action)
+
+        view_menu.addSeparator()
+
         self.toggle_chiral_action = QAction("Show Chiral Labels", self, checkable=True)
         self.toggle_chiral_action.setChecked(self.show_chiral_labels)
         self.toggle_chiral_action.triggered.connect(self.toggle_chiral_labels_display)
         view_menu.addAction(self.toggle_chiral_action)
+
+        view_menu.addSeparator()
+
+        # 3D Atom Info submenu
+        atom_info_menu = view_menu.addMenu("3D Atom Info Display")
+        
+        self.show_atom_id_action = QAction("Show Atom ID", self, checkable=True)
+        self.show_atom_id_action.triggered.connect(lambda: self.toggle_atom_info_display('id'))
+        atom_info_menu.addAction(self.show_atom_id_action)
+        
+        self.show_atom_coords_action = QAction("Show Coordinates (X,Y,Z)", self, checkable=True)
+        self.show_atom_coords_action.triggered.connect(lambda: self.toggle_atom_info_display('coords'))
+        atom_info_menu.addAction(self.show_atom_coords_action)
+        
+        self.show_atom_symbol_action = QAction("Show Element Symbol", self, checkable=True)
+        self.show_atom_symbol_action.triggered.connect(lambda: self.toggle_atom_info_display('symbol'))
+        atom_info_menu.addAction(self.show_atom_symbol_action)
+
+        # 3D Edit menu
+        edit_3d_menu = menu_bar.addMenu("3D &Edit")
+        
+        # Translation action
+        translation_action = QAction("Translation...", self)
+        translation_action.triggered.connect(self.open_translation_dialog)
+        translation_action.setEnabled(False)
+        edit_3d_menu.addAction(translation_action)
+        self.translation_action = translation_action
+        
+        edit_3d_menu.addSeparator()
+        
+        # Planarization submenu
+        planar_menu = edit_3d_menu.addMenu("Planarize to...")
+        
+        planar_xy_action = QAction("XY Plane", self)
+        planar_xy_action.triggered.connect(lambda: self.open_planarization_dialog('xy'))
+        planar_xy_action.setEnabled(False)
+        planar_menu.addAction(planar_xy_action)
+        self.planar_xy_action = planar_xy_action
+        
+        planar_xz_action = QAction("XZ Plane", self)
+        planar_xz_action.triggered.connect(lambda: self.open_planarization_dialog('xz'))
+        planar_xz_action.setEnabled(False)
+        planar_menu.addAction(planar_xz_action)
+        self.planar_xz_action = planar_xz_action
+        
+        planar_yz_action = QAction("YZ Plane", self)
+        planar_yz_action.triggered.connect(lambda: self.open_planarization_dialog('yz'))
+        planar_yz_action.setEnabled(False)
+        planar_menu.addAction(planar_yz_action)
+        self.planar_yz_action = planar_yz_action
+        
+        edit_3d_menu.addSeparator()
+        
+        # Bond length conversion
+        bond_length_action = QAction("Adjust Bond Length...", self)
+        bond_length_action.triggered.connect(self.open_bond_length_dialog)
+        bond_length_action.setEnabled(False)
+        edit_3d_menu.addAction(bond_length_action)
+        self.bond_length_action = bond_length_action
+        
+        # Angle conversion
+        angle_action = QAction("Adjust Angle...", self)
+        angle_action.triggered.connect(self.open_angle_dialog)
+        angle_action.setEnabled(False)
+        edit_3d_menu.addAction(angle_action)
+        self.angle_action = angle_action
+        
+        # Dihedral angle conversion
+        dihedral_action = QAction("Adjust Dihedral Angle...", self)
+        dihedral_action.triggered.connect(self.open_dihedral_dialog)
+        dihedral_action.setEnabled(False)
+        edit_3d_menu.addAction(dihedral_action)
+        self.dihedral_action = dihedral_action
+        
+        edit_3d_menu.addSeparator()
+        
+        # Symmetrize action
+        symmetrize_action = QAction("Symmetrize...", self)
+        symmetrize_action.triggered.connect(self.open_symmetrize_dialog)
+        symmetrize_action.setEnabled(False)
+        edit_3d_menu.addAction(symmetrize_action)
+        self.symmetrize_action = symmetrize_action
 
         analysis_menu = menu_bar.addMenu("&Analysis")
         self.analysis_action = QAction("Show Analysis...", self)
@@ -3395,110 +5951,160 @@ class MainWindow(QMainWindow):
 
     def copy_selection(self):
         """選択された原子と結合をクリップボードにコピーする"""
-        selected_atoms = [item for item in self.scene.selectedItems() if isinstance(item, AtomItem)]
-        if not selected_atoms:
-            return
+        try:
+            selected_atoms = [item for item in self.scene.selectedItems() if isinstance(item, AtomItem)]
+            if not selected_atoms:
+                return
 
-        # 選択された原子のIDセットを作成
-        selected_atom_ids = {atom.atom_id for atom in selected_atoms}
-        
-        # 選択された原子の幾何学的中心を計算
-        center = QPointF(
-            sum(atom.pos().x() for atom in selected_atoms) / len(selected_atoms),
-            sum(atom.pos().y() for atom in selected_atoms) / len(selected_atoms)
-        )
-        
-        # コピー対象の原子データをリストに格納（位置は中心からの相対座標）
-        # 同時に、元のatom_idから新しいインデックス(0, 1, 2...)へのマッピングを作成
-        atom_id_to_idx_map = {}
-        fragment_atoms = []
-        for i, atom in enumerate(selected_atoms):
-            atom_id_to_idx_map[atom.atom_id] = i
-            fragment_atoms.append({
-                'symbol': atom.symbol,
-                'rel_pos': atom.pos() - center,
-                'charge': atom.charge,
-                'radical': atom.radical,
-            })
+            # 選択された原子のIDセットを作成
+            selected_atom_ids = {atom.atom_id for atom in selected_atoms}
             
-        # 選択された原子同士を結ぶ結合のみをリストに格納
-        fragment_bonds = []
-        for (id1, id2), bond_data in self.data.bonds.items():
-            if id1 in selected_atom_ids and id2 in selected_atom_ids:
-                fragment_bonds.append({
-                    'idx1': atom_id_to_idx_map[id1],
-                    'idx2': atom_id_to_idx_map[id2],
-                    'order': bond_data['order'],
-                    'stereo': bond_data['stereo'],
+            # 選択された原子の幾何学的中心を計算
+            center = QPointF(
+                sum(atom.pos().x() for atom in selected_atoms) / len(selected_atoms),
+                sum(atom.pos().y() for atom in selected_atoms) / len(selected_atoms)
+            )
+            
+            # コピー対象の原子データをリストに格納（位置は中心からの相対座標）
+            # 同時に、元のatom_idから新しいインデックス(0, 1, 2...)へのマッピングを作成
+            atom_id_to_idx_map = {}
+            fragment_atoms = []
+            for i, atom in enumerate(selected_atoms):
+                atom_id_to_idx_map[atom.atom_id] = i
+                fragment_atoms.append({
+                    'symbol': atom.symbol,
+                    'rel_pos': atom.pos() - center,
+                    'charge': atom.charge,
+                    'radical': atom.radical,
                 })
+                
+            # 選択された原子同士を結ぶ結合のみをリストに格納
+            fragment_bonds = []
+            for (id1, id2), bond_data in self.data.bonds.items():
+                if id1 in selected_atom_ids and id2 in selected_atom_ids:
+                    fragment_bonds.append({
+                        'idx1': atom_id_to_idx_map[id1],
+                        'idx2': atom_id_to_idx_map[id2],
+                        'order': bond_data['order'],
+                        'stereo': bond_data.get('stereo', 0),  # E/Z立体化学情報も保存
+                    })
 
-        # pickleを使ってデータをバイト配列にシリアライズ
-        data_to_pickle = {'atoms': fragment_atoms, 'bonds': fragment_bonds}
-        byte_array = QByteArray()
-        buffer = io.BytesIO()
-        pickle.dump(data_to_pickle, buffer)
-        byte_array.append(buffer.getvalue())
+            # pickleを使ってデータをバイト配列にシリアライズ
+            data_to_pickle = {'atoms': fragment_atoms, 'bonds': fragment_bonds}
+            byte_array = QByteArray()
+            buffer = io.BytesIO()
+            pickle.dump(data_to_pickle, buffer)
+            byte_array.append(buffer.getvalue())
 
-        # カスタムMIMEタイプでクリップボードに設定
-        mime_data = QMimeData()
-        mime_data.setData(CLIPBOARD_MIME_TYPE, byte_array)
-        QApplication.clipboard().setMimeData(mime_data)
-        self.statusBar().showMessage(f"Copied {len(fragment_atoms)} atoms and {len(fragment_bonds)} bonds.", 2000)
+            # カスタムMIMEタイプでクリップボードに設定
+            mime_data = QMimeData()
+            mime_data.setData(CLIPBOARD_MIME_TYPE, byte_array)
+            QApplication.clipboard().setMimeData(mime_data)
+            self.statusBar().showMessage(f"Copied {len(fragment_atoms)} atoms and {len(fragment_bonds)} bonds.", 2000)
+            
+        except Exception as e:
+            print(f"Error during copy operation: {e}")
+            import traceback
+            traceback.print_exc()
+            self.statusBar().showMessage(f"Error during copy operation: {e}", 5000)
 
     def cut_selection(self):
         """選択されたアイテムを切り取り（コピーしてから削除）"""
-        selected_items = self.scene.selectedItems()
-        if not selected_items:
-            return
-        
-        # 最初にコピー処理を実行
-        self.copy_selection()
-        
-        if self.scene.delete_items(set(selected_items)):
-            self.push_undo_state()
-            self.statusBar().showMessage("Cut selection.", 2000)
+        try:
+            selected_items = self.scene.selectedItems()
+            if not selected_items:
+                return
+            
+            # 最初にコピー処理を実行
+            self.copy_selection()
+            
+            if self.scene.delete_items(set(selected_items)):
+                self.push_undo_state()
+                self.statusBar().showMessage("Cut selection.", 2000)
+                
+        except Exception as e:
+            print(f"Error during cut operation: {e}")
+            import traceback
+            traceback.print_exc()
+            self.statusBar().showMessage(f"Error during cut operation: {e}", 5000)
 
     def paste_from_clipboard(self):
         """クリップボードから分子フラグメントを貼り付け"""
-        clipboard = QApplication.clipboard()
-        mime_data = clipboard.mimeData()
-        if not mime_data.hasFormat(CLIPBOARD_MIME_TYPE):
-            return
-
-        byte_array = mime_data.data(CLIPBOARD_MIME_TYPE)
-        buffer = io.BytesIO(byte_array)
         try:
-            fragment_data = pickle.load(buffer)
-        except pickle.UnpicklingError:
-            return
-        
-        paste_center_pos = self.view_2d.mapToScene(self.view_2d.mapFromGlobal(QCursor.pos()))
-        self.scene.clearSelection()
+            clipboard = QApplication.clipboard()
+            mime_data = clipboard.mimeData()
+            if not mime_data.hasFormat(CLIPBOARD_MIME_TYPE):
+                return
 
-        new_atoms = []
-        for atom_data in fragment_data['atoms']:
-            pos = paste_center_pos + atom_data['rel_pos']
-            new_id = self.scene.create_atom(
-                atom_data['symbol'], pos,
-                charge=atom_data.get('charge', 0),
-                radical=atom_data.get('radical', 0)
-            )
-            new_item = self.data.atoms[new_id]['item']
-            new_atoms.append(new_item)
-            new_item.setSelected(True)
+            byte_array = mime_data.data(CLIPBOARD_MIME_TYPE)
+            buffer = io.BytesIO(byte_array)
+            try:
+                fragment_data = pickle.load(buffer)
+            except pickle.UnpicklingError:
+                self.statusBar().showMessage("Error: Invalid clipboard data format", 3000)
+                return
+            
+            paste_center_pos = self.view_2d.mapToScene(self.view_2d.mapFromGlobal(QCursor.pos()))
+            self.scene.clearSelection()
 
-        for bond_data in fragment_data['bonds']:
-            atom1 = new_atoms[bond_data['idx1']]
-            atom2 = new_atoms[bond_data['idx2']]
-            self.scene.create_bond(
-                atom1, atom2,
-                bond_order=bond_data.get('order', 1),
-                bond_stereo=bond_data.get('stereo', 0)
-            )
-        
-        self.push_undo_state()
+            new_atoms = []
+            for atom_data in fragment_data['atoms']:
+                pos = paste_center_pos + atom_data['rel_pos']
+                new_id = self.scene.create_atom(
+                    atom_data['symbol'], pos,
+                    charge=atom_data.get('charge', 0),
+                    radical=atom_data.get('radical', 0)
+                )
+                new_item = self.data.atoms[new_id]['item']
+                new_atoms.append(new_item)
+                new_item.setSelected(True)
+
+            for bond_data in fragment_data['bonds']:
+                atom1 = new_atoms[bond_data['idx1']]
+                atom2 = new_atoms[bond_data['idx2']]
+                self.scene.create_bond(
+                    atom1, atom2,
+                    bond_order=bond_data.get('order', 1),
+                    bond_stereo=bond_data.get('stereo', 0)  # E/Z立体化学情報も復元
+                )
+            
+            self.push_undo_state()
+            self.statusBar().showMessage(f"Pasted {len(fragment_data['atoms'])} atoms and {len(fragment_data['bonds'])} bonds.", 2000)
+            
+        except Exception as e:
+            print(f"Error during paste operation: {e}")
+            import traceback
+            traceback.print_exc()
+            self.statusBar().showMessage(f"Error during paste operation: {e}", 5000)
         self.statusBar().showMessage(f"Pasted {len(new_atoms)} atoms.", 2000)
         self.activate_select_mode()
+
+    def remove_hydrogen_atoms(self):
+        """2Dビューで水素原子とその結合を削除する"""
+        try:
+            hydrogen_atoms = []
+            
+            # 水素原子を特定
+            for atom_id, atom_data in self.data.atoms.items():
+                if atom_data['symbol'] == 'H':
+                    hydrogen_atoms.append(atom_data['item'])
+            
+            if not hydrogen_atoms:
+                self.statusBar().showMessage("No hydrogen atoms found to remove.", 2000)
+                return
+            
+            # 削除を実行
+            if self.scene.delete_items(set(hydrogen_atoms)):
+                self.push_undo_state()
+                self.statusBar().showMessage(f"Removed {len(hydrogen_atoms)} hydrogen atoms.", 2000)
+            else:
+                self.statusBar().showMessage("Failed to remove hydrogen atoms.", 3000)
+                
+        except Exception as e:
+            print(f"Error during hydrogen removal: {e}")
+            import traceback
+            traceback.print_exc()
+            self.statusBar().showMessage(f"Error removing hydrogen atoms: {e}", 5000)
 
     def update_edit_menu_actions(self):
         """選択状態やクリップボードの状態に応じて編集メニューを更新"""
@@ -3565,12 +6171,54 @@ class MainWindow(QMainWindow):
             return
             
         mol_block = Chem.MolToMolBlock(mol, includeStereo=True)
+        
+        # CRITICAL FIX: Manually add stereo information to MOL block for E/Z bonds
+        # This ensures the stereo info survives the MOL block round-trip
+        mol_lines = mol_block.split('\n')
+        
+        # Find bonds with explicit E/Z labels from our data and map to RDKit bond indices
+        ez_bond_info = {}
+        for (id1, id2), bond_data in self.data.bonds.items():
+            if bond_data.get('stereo') in [3, 4]:  # E/Z labels
+                # Find corresponding atoms in RDKit molecule by _original_atom_id property
+                rdkit_idx1 = None
+                rdkit_idx2 = None
+                for atom in mol.GetAtoms():
+                    if atom.HasProp("_original_atom_id"):
+                        orig_id = atom.GetIntProp("_original_atom_id")
+                        if orig_id == id1:
+                            rdkit_idx1 = atom.GetIdx()
+                        elif orig_id == id2:
+                            rdkit_idx2 = atom.GetIdx()
+                
+                if rdkit_idx1 is not None and rdkit_idx2 is not None:
+                    rdkit_bond = mol.GetBondBetweenAtoms(rdkit_idx1, rdkit_idx2)
+                    if rdkit_bond and rdkit_bond.GetBondType() == Chem.BondType.DOUBLE:
+                        ez_bond_info[rdkit_bond.GetIdx()] = bond_data['stereo']
+        
+        # Add M  CFG lines for E/Z stereo if needed
+        if ez_bond_info:
+            insert_idx = len(mol_lines) - 1  # Before M  END
+            for bond_idx, stereo_type in ez_bond_info.items():
+                cfg_value = 1 if stereo_type == 3 else 2  # 1=Z, 2=E in MOL format
+                cfg_line = f"M  CFG  1 {bond_idx + 1:3d}   {cfg_value}"
+                mol_lines.insert(insert_idx, cfg_line)
+                insert_idx += 1
+            mol_block = '\n'.join(mol_lines)
+        
         self.convert_button.setEnabled(False)
         self.cleanup_button.setEnabled(False)
         self.optimize_3d_button.setEnabled(False)
         self.export_button.setEnabled(False)
         self.analysis_action.setEnabled(False)
         self.edit_3d_action.setEnabled(False)
+        # Disable 3D editing menu items
+        self.planar_xy_action.setEnabled(False)
+        self.planar_xz_action.setEnabled(False)
+        self.planar_yz_action.setEnabled(False)
+        self.bond_length_action.setEnabled(False)
+        self.angle_action.setEnabled(False)
+        self.dihedral_action.setEnabled(False)
         self.statusBar().showMessage("Calculating 3D structure...")
         self.plotter.clear() 
         bg_color_hex = self.settings.get('background_color', '#919191')
@@ -3616,7 +6264,15 @@ class MainWindow(QMainWindow):
                 return
         
         # 最適化後の構造で3Dビューを再描画
-        self.update_chiral_labels() # キラル中心のラベルも更新
+        try:
+            # キラル中心を3D座標から再計算（R/Sのみ）
+            if self.current_mol.GetNumConformers() > 0:
+                Chem.AssignAtomChiralTagsFromStructure(self.current_mol, confId=0)
+            
+            self.update_chiral_labels() # キラル中心のラベルも更新
+        except Exception:
+            pass
+            
         self.draw_molecule_3d(self.current_mol)
         
         self.statusBar().showMessage("3D structure optimization successful.")
@@ -3626,9 +6282,13 @@ class MainWindow(QMainWindow):
     def on_calculation_finished(self, mol):
         self.dragged_atom_info = None
         self.current_mol = mol
+        self.is_xyz_derived = False  # 2Dから生成した3D構造はXYZ由来ではない
         
-        # ここで最適化済みの current_mol を用いて R/S を再解析して表示を更新
+        # キラル中心を3D座標から再計算（R/Sのみ）
         try:
+            if mol.GetNumConformers() > 0:
+                Chem.AssignAtomChiralTagsFromStructure(mol, confId=0)
+            
             self.update_chiral_labels()
         except Exception:
             # 念のためエラーを握り潰して UI を壊さない
@@ -3639,13 +6299,21 @@ class MainWindow(QMainWindow):
         #self.statusBar().showMessage("3D conversion successful.")
         self.convert_button.setEnabled(True)
         self.analysis_action.setEnabled(True)
+        self.measurement_action.setEnabled(True) 
         self.push_undo_state()
         self.view_2d.setFocus()
         self.cleanup_button.setEnabled(True)
         self.optimize_3d_button.setEnabled(True)
         self.export_button.setEnabled(True)
         self.edit_3d_action.setEnabled(True)
+        
+        # 3D編集機能を統一的に有効化
+        self._enable_3d_edit_actions(True)
+            
         self.plotter.reset_camera()
+        
+        # 3D原子情報ホバー表示を再設定
+        self.setup_3d_hover()
         
     def on_calculation_error(self, error_message):
         self.plotter.clear()
@@ -3654,7 +6322,14 @@ class MainWindow(QMainWindow):
         self.cleanup_button.setEnabled(True)
         self.convert_button.setEnabled(True)
         self.analysis_action.setEnabled(False)
-        self.edit_3d_action.setEnabled(False) 
+        self.edit_3d_action.setEnabled(False)
+        # Disable 3D editing menu items
+        self.planar_xy_action.setEnabled(False)
+        self.planar_xz_action.setEnabled(False)
+        self.planar_yz_action.setEnabled(False)
+        self.bond_length_action.setEnabled(False)
+        self.angle_action.setEnabled(False)
+        self.dihedral_action.setEnabled(False) 
         self.view_2d.setFocus() 
 
     def eventFilter(self, obj, event):
@@ -3732,23 +6407,51 @@ class MainWindow(QMainWindow):
             if atom_data['item']: atom_data['item'].update_style()
         self.scene.update()
 
-        if 'mol_3d' in loaded_data:
+        if 'mol_3d' in loaded_data and loaded_data['mol_3d'] is not None:
             try:
                 self.current_mol = Chem.Mol(loaded_data['mol_3d'])
-                self.draw_molecule_3d(self.current_mol)
-                self.plotter.reset_camera()
-                self.analysis_action.setEnabled(True)
-                self.optimize_3d_button.setEnabled(True)
-                self.export_button.setEnabled(True)
-                self.edit_3d_action.setEnabled(True)
+                # デバッグ：3D構造が有効かチェック
+                if self.current_mol and self.current_mol.GetNumAtoms() > 0:
+                    self.draw_molecule_3d(self.current_mol)
+                    self.plotter.reset_camera()
+                    self.analysis_action.setEnabled(True)
+                    self.optimize_3d_button.setEnabled(True)
+                    self.export_button.setEnabled(True)
+                    self.edit_3d_action.setEnabled(True)
+                    self.measurement_action.setEnabled(True)  # 測定機能を有効化
+                    # 3D編集機能を統一的に有効化
+                    self._enable_3d_edit_actions(True)
+                    
+                    # 3D原子情報ホバー表示を再設定
+                    self.setup_3d_hover()
+                else:
+                    # 無効な3D構造の場合
+                    self.current_mol = None
+                    self.plotter.clear()
+                    self.analysis_action.setEnabled(False)
+                    self.optimize_3d_button.setEnabled(False)
+                    self.export_button.setEnabled(False) 
+                    self.edit_3d_action.setEnabled(False)
+                    self.measurement_action.setEnabled(False)
+                    # 3D編集機能を統一的に無効化
+                    self._enable_3d_edit_actions(False)
             except Exception as e:
                 self.statusBar().showMessage(f"Could not load 3D model from project: {e}")
                 self.current_mol = None; self.analysis_action.setEnabled(False)
+                self.optimize_3d_button.setEnabled(False)
+                self.export_button.setEnabled(False) 
+                self.edit_3d_action.setEnabled(False)
+                self.measurement_action.setEnabled(False)
+                # 3D編集機能を統一的に無効化
+                self._enable_3d_edit_actions(False)
         else:
             self.current_mol = None; self.plotter.clear(); self.analysis_action.setEnabled(False)
             self.optimize_3d_button.setEnabled(False)
             self.export_button.setEnabled(False) 
             self.edit_3d_action.setEnabled(False)
+            self.measurement_action.setEnabled(False)  # 測定機能を無効化
+            # 3D編集機能を統一的に無効化
+            self._enable_3d_edit_actions(False)
 
         self.update_implicit_hydrogens()
         self.update_chiral_labels()
@@ -3758,6 +6461,9 @@ class MainWindow(QMainWindow):
             self.statusBar().showMessage("Project loaded in 3D Viewer Mode.")
         else:
             self.restore_ui_for_editing()
+            # 3D分子がある場合は、2Dエディタモードでも3D編集機能を有効化
+            if self.current_mol and self.current_mol.GetNumAtoms() > 0:
+                self._enable_3d_edit_actions(True)
         
 
     def push_undo_state(self):
@@ -3799,6 +6505,15 @@ class MainWindow(QMainWindow):
             self.redo_stack.append(self.undo_stack.pop())
             state = self.undo_stack[-1]
             self.set_state_from_data(state)
+            
+            # Undo後に3D構造の状態に基づいてメニューを再評価
+            if self.current_mol and self.current_mol.GetNumAtoms() > 0:
+                # 3D構造がある場合は3D編集機能を有効化
+                self._enable_3d_edit_actions(True)
+            else:
+                # 3D構造がない場合は3D編集機能を無効化
+                self._enable_3d_edit_actions(False)
+                    
         self.update_undo_redo_actions()
         self.update_realtime_info()
         self.view_2d.setFocus() 
@@ -3808,6 +6523,15 @@ class MainWindow(QMainWindow):
             state = self.redo_stack.pop()
             self.undo_stack.append(state)
             self.set_state_from_data(state)
+            
+            # Redo後に3D構造の状態に基づいてメニューを再評価
+            if self.current_mol and self.current_mol.GetNumAtoms() > 0:
+                # 3D構造がある場合は3D編集機能を有効化
+                self._enable_3d_edit_actions(True)
+            else:
+                # 3D構造がない場合は3D編集機能を無効化
+                self._enable_3d_edit_actions(False)
+                    
         self.update_undo_redo_actions()
         self.update_realtime_info()
         self.view_2d.setFocus() 
@@ -3860,6 +6584,7 @@ class MainWindow(QMainWindow):
         
         # 解析メニューを無効化する
         self.analysis_action.setEnabled(False)
+        self.measurement_action.setEnabled(False)  # 測定機能も無効化
 
         self.optimize_3d_button.setEnabled(False) 
         self.export_button.setEnabled(False)
@@ -3875,9 +6600,19 @@ class MainWindow(QMainWindow):
         self.optimize_3d_button.setEnabled(False) 
         self.export_button.setEnabled(False)
         self.edit_3d_action.setEnabled(False)
+        # Disable 3D editing menu items
+        self.planar_xy_action.setEnabled(False)
+        self.planar_xz_action.setEnabled(False)
+        self.planar_yz_action.setEnabled(False)
+        self.bond_length_action.setEnabled(False)
+        self.angle_action.setEnabled(False)
+        self.dihedral_action.setEnabled(False)
         
         # 3Dプロッターの再描画
         self.plotter.render()
+        
+        # メニューテキストを更新（分子がクリアされたので通常の表示に戻す）
+        self.update_atom_id_menu_text()
         
         # アプリケーションのイベントループを強制的に処理し、画面の再描画を確実に行う
         QApplication.processEvents()
@@ -3889,6 +6624,20 @@ class MainWindow(QMainWindow):
         self.scene.data = self.data
         self.scene.clear()
         self.scene.reinitialize_items()
+        self.is_xyz_derived = False  # 2Dエディタをクリアする際にXYZ由来フラグもリセット
+        
+        # Clear 3D data and disable 3D-related menus
+        self.current_mol = None
+        self.plotter.clear()
+        self.analysis_action.setEnabled(False)
+        self.optimize_3d_button.setEnabled(False)
+        self.export_button.setEnabled(False) 
+        self.edit_3d_action.setEnabled(False)
+        self.measurement_action.setEnabled(False)
+        
+        # 3D編集機能を統一的に無効化
+        self._enable_3d_edit_actions(False)
+        
         if push_to_undo:
             self.push_undo_state()
 
@@ -4014,8 +6763,13 @@ class MainWindow(QMainWindow):
             self.statusBar().showMessage(f"Successfully loaded from SMILES.")
             self.reset_undo_stack()
             QTimer.singleShot(0, self.fit_to_view)
+            
+        except ValueError as e:
+            self.statusBar().showMessage(f"Invalid SMILES: {e}")
         except Exception as e:
             self.statusBar().showMessage(f"Error loading from SMILES: {e}")
+            import traceback
+            traceback.print_exc()
 
     def load_from_inchi(self, inchi_string):
         """InChI文字列から分子を読み込み、2Dエディタに表示する"""
@@ -4090,16 +6844,21 @@ class MainWindow(QMainWindow):
             self.statusBar().showMessage(f"Successfully loaded from InChI.")
             self.reset_undo_stack()
             QTimer.singleShot(0, self.fit_to_view)
+            
+        except ValueError as e:
+            self.statusBar().showMessage(f"Invalid InChI: {e}")
         except Exception as e:
             self.statusBar().showMessage(f"Error loading from InChI: {e}")
+            import traceback
+            traceback.print_exc()
 
     def load_mol_file(self, file_path=None):
         if not file_path:
             options = QFileDialog.Option.DontUseNativeDialog
             file_path, _ = QFileDialog.getOpenFileName(self, "Import MOL File", "", "Chemical Files (*.mol *.sdf);;All Files (*)", options=options)
-            if not file_path: return
+            if not file_path: 
+                return
 
-        if not file_path: return
         try:
             self.dragged_atom_info = None
             suppl = Chem.SDMolSupplier(file_path, removeHs=False)
@@ -4156,8 +6915,18 @@ class MainWindow(QMainWindow):
                 b_idx,e_idx=bond.GetBeginAtomIdx(),bond.GetEndAtomIdx()
                 b_type = bond.GetBondTypeAsDouble(); b_dir = bond.GetBondDir()
                 stereo = 0
-                if b_dir == Chem.BondDir.BEGINWEDGE: stereo = 1
-                elif b_dir == Chem.BondDir.BEGINDASH: stereo = 2
+                # Check for single bond Wedge/Dash
+                if b_dir == Chem.BondDir.BEGINWEDGE:
+                    stereo = 1
+                elif b_dir == Chem.BondDir.BEGINDASH:
+                    stereo = 2
+                # ADDED: Check for double bond E/Z stereochemistry
+                if bond.GetBondType() == Chem.BondType.DOUBLE:
+                    if bond.GetStereo() == Chem.BondStereo.STEREOZ:
+                        stereo = 3 # Z
+                    elif bond.GetStereo() == Chem.BondStereo.STEREOE:
+                        stereo = 4 # E
+
                 a1_id, a2_id = rdkit_idx_to_my_id[b_idx], rdkit_idx_to_my_id[e_idx]
                 a1_item,a2_item=self.data.atoms[a1_id]['item'],self.data.atoms[a2_id]['item']
 
@@ -4166,7 +6935,15 @@ class MainWindow(QMainWindow):
             self.statusBar().showMessage(f"Successfully loaded {file_path}")
             self.reset_undo_stack()
             QTimer.singleShot(0, self.fit_to_view)
-        except Exception as e: self.statusBar().showMessage(f"Error loading file: {e}")
+            
+        except FileNotFoundError:
+            self.statusBar().showMessage(f"File not found: {file_path}")
+        except ValueError as e:
+            self.statusBar().showMessage(f"Invalid MOL file format: {e}")
+        except Exception as e: 
+            self.statusBar().showMessage(f"Error loading file: {e}")
+            import traceback
+            traceback.print_exc()
     
     def load_mol_for_3d_viewing(self):
         options = QFileDialog.Option.DontUseNativeDialog
@@ -4193,85 +6970,374 @@ class MainWindow(QMainWindow):
             # UIを3Dビューアモードに設定
             self._enter_3d_viewer_ui_mode()
             
+            # 測定機能を有効化
+            self.measurement_action.setEnabled(True)
+            
             self.statusBar().showMessage(f"3D Viewer Mode: Loaded {os.path.basename(file_path)}")
             self.reset_undo_stack()
 
+        except FileNotFoundError:
+            self.statusBar().showMessage(f"File not found: {file_path}", 5000)
+            self.restore_ui_for_editing()
+        except ValueError as e:
+            self.statusBar().showMessage(f"Invalid 3D MOL file: {e}", 5000)
+            self.restore_ui_for_editing()
         except Exception as e:
             self.statusBar().showMessage(f"Error loading 3D file: {e}", 5000)
             self.restore_ui_for_editing()
+            import traceback
+            traceback.print_exc()
+
+    def load_xyz_for_3d_viewing(self, file_path=None):
+        """XYZファイルを読み込んで3Dビューアで表示する"""
+        if not file_path:
+            options = QFileDialog.Option.DontUseNativeDialog
+            file_path, _ = QFileDialog.getOpenFileName(self, "Load 3D XYZ (View Only)", "", "XYZ Files (*.xyz);;All Files (*)", options=options)
+            if not file_path:
+                return
+
+        try:
+            mol = self.load_xyz_file(file_path)
+            if mol is None:
+                raise ValueError("Failed to create molecule from XYZ file.")
+            if mol.GetNumConformers() == 0:
+                raise ValueError("XYZ file has no 3D coordinates.")
+
+            # 2Dエディタをクリア
+            self.clear_2d_editor(push_to_undo=False)
+            
+            # 3D構造をセットして描画
+            self.current_mol = mol
+            self.is_xyz_derived = True  # XYZ由来であることを記録
+            self.draw_molecule_3d(self.current_mol)
+            self.plotter.reset_camera()
+
+            # UIを3Dビューアモードに設定
+            self._enter_3d_viewer_ui_mode()
+            
+            # 測定機能を有効化
+            self.measurement_action.setEnabled(True)
+            
+            self.statusBar().showMessage(f"3D Viewer Mode: Loaded {os.path.basename(file_path)}")
+            self.reset_undo_stack()
+
+        except FileNotFoundError:
+            self.statusBar().showMessage(f"File not found: {file_path}", 5000)
+            self.restore_ui_for_editing()
+        except ValueError as e:
+            self.statusBar().showMessage(f"Invalid XYZ file: {e}", 5000)
+            self.restore_ui_for_editing()
+        except Exception as e:
+            self.statusBar().showMessage(f"Error loading XYZ file: {e}", 5000)
+            self.restore_ui_for_editing()
+            import traceback
+            traceback.print_exc()
+
+    def load_xyz_file(self, file_path):
+        """XYZファイルを読み込んでRDKitのMolオブジェクトを作成する"""
+        import math
+        from rdkit.Chem import rdGeometry
+        
+        try:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                lines = f.readlines()
+            
+            # 空行とコメント行を除去（但し、先頭2行は保持）
+            non_empty_lines = []
+            for i, line in enumerate(lines):
+                stripped = line.strip()
+                if i < 2:  # 最初の2行は原子数とコメント行なので保持
+                    non_empty_lines.append(stripped)
+                elif stripped and not stripped.startswith('#'):  # 空行とコメント行をスキップ
+                    non_empty_lines.append(stripped)
+            
+            if len(non_empty_lines) < 2:
+                raise ValueError("XYZ file format error: too few lines")
+            
+            # 原子数を読み取り
+            try:
+                num_atoms = int(non_empty_lines[0])
+            except ValueError:
+                raise ValueError("XYZ file format error: invalid atom count")
+            
+            if num_atoms <= 0:
+                raise ValueError("XYZ file format error: atom count must be positive")
+            
+            # コメント行（2行目）
+            comment = non_empty_lines[1] if len(non_empty_lines) > 1 else ""
+            
+            # 原子データを読み取り
+            atoms_data = []
+            data_lines = non_empty_lines[2:]
+            
+            if len(data_lines) < num_atoms:
+                raise ValueError(f"XYZ file format error: expected {num_atoms} atom lines, found {len(data_lines)}")
+            
+            for i, line in enumerate(data_lines[:num_atoms]):
+                parts = line.split()
+                if len(parts) < 4:
+                    raise ValueError(f"XYZ file format error: invalid atom data at line {i+3}")
+                
+                symbol = parts[0].strip()
+                
+                # 元素記号の妥当性をチェック
+                try:
+                    # RDKitで認識される元素かどうかをチェック
+                    test_atom = Chem.Atom(symbol)
+                except:
+                    # 認識されない場合、最初の文字を大文字にして再試行
+                    symbol = symbol.capitalize()
+                    try:
+                        test_atom = Chem.Atom(symbol)
+                    except:
+                        raise ValueError(f"Unrecognized element symbol: {parts[0]} at line {i+3}")
+                
+                try:
+                    x, y, z = float(parts[1]), float(parts[2]), float(parts[3])
+                except ValueError:
+                    raise ValueError(f"XYZ file format error: invalid coordinates at line {i+3}")
+                
+                atoms_data.append((symbol, x, y, z))
+            
+            if len(atoms_data) == 0:
+                raise ValueError("XYZ file format error: no atoms found")
+            
+            # RDKitのMolオブジェクトを作成
+            mol = Chem.RWMol()
+            
+            # 原子を追加
+            for i, (symbol, x, y, z) in enumerate(atoms_data):
+                atom = Chem.Atom(symbol)
+                # XYZファイルでの原子のUniqueID（0ベースのインデックス）を保存
+                atom.SetIntProp("xyz_unique_id", i)
+                mol.AddAtom(atom)
+            
+            # 3D座標を設定
+            conf = Chem.Conformer(len(atoms_data))
+            for i, (symbol, x, y, z) in enumerate(atoms_data):
+                conf.SetAtomPosition(i, rdGeometry.Point3D(x, y, z))
+            mol.AddConformer(conf)
+            
+            # 結合を推定（距離ベース）
+            self.estimate_bonds_from_distances(mol)
+            
+            # 分子を最終化
+            try:
+                mol = mol.GetMol()
+                # 基本的な妥当性チェック
+                if mol is None:
+                    raise ValueError("Failed to create valid molecule object")
+                Chem.SanitizeMol(mol)
+            except Exception as e:
+                # 化学的に不正な構造でも表示は可能にする
+                mol = mol.GetMol()
+                if mol is None:
+                    raise ValueError("Failed to create molecule object")
+            
+            # 元のXYZ原子データを分子オブジェクトに保存（分析用）
+            mol._xyz_atom_data = atoms_data
+            
+            return mol
+            
+        except (OSError, IOError) as e:
+            raise ValueError(f"File I/O error: {e}")
+        except Exception as e:
+            if "XYZ file format error" in str(e) or "Unrecognized element" in str(e):
+                raise e
+            else:
+                raise ValueError(f"Error parsing XYZ file: {e}")
+
+    def estimate_bonds_from_distances(self, mol):
+        """原子間距離に基づいて結合を推定する"""
+        from rdkit.Chem import rdMolTransforms
+        
+        # 一般的な共有結合半径（Ångström）- より正確な値
+        covalent_radii = {
+            'H': 0.31, 'He': 0.28, 'Li': 1.28, 'Be': 0.96, 'B': 0.84, 'C': 0.76,
+            'N': 0.71, 'O': 0.66, 'F': 0.57, 'Ne': 0.58, 'Na': 1.66, 'Mg': 1.41,
+            'Al': 1.21, 'Si': 1.11, 'P': 1.07, 'S': 1.05, 'Cl': 1.02, 'Ar': 1.06,
+            'K': 2.03, 'Ca': 1.76, 'Sc': 1.70, 'Ti': 1.60, 'V': 1.53, 'Cr': 1.39,
+            'Mn': 1.39, 'Fe': 1.32, 'Co': 1.26, 'Ni': 1.24, 'Cu': 1.32, 'Zn': 1.22,
+            'Ga': 1.22, 'Ge': 1.20, 'As': 1.19, 'Se': 1.20, 'Br': 1.20, 'Kr': 1.16,
+            'Rb': 2.20, 'Sr': 1.95, 'Y': 1.90, 'Zr': 1.75, 'Nb': 1.64, 'Mo': 1.54,
+            'Tc': 1.47, 'Ru': 1.46, 'Rh': 1.42, 'Pd': 1.39, 'Ag': 1.45, 'Cd': 1.44,
+            'In': 1.42, 'Sn': 1.39, 'Sb': 1.39, 'Te': 1.38, 'I': 1.39, 'Xe': 1.40
+        }
+        
+        conf = mol.GetConformer()
+        num_atoms = mol.GetNumAtoms()
+        
+        # 追加された結合をトラッキング
+        bonds_added = []
+        
+        for i in range(num_atoms):
+            for j in range(i + 1, num_atoms):
+                atom_i = mol.GetAtomWithIdx(i)
+                atom_j = mol.GetAtomWithIdx(j)
+                
+                # 原子間距離を計算
+                distance = rdMolTransforms.GetBondLength(conf, i, j)
+                
+                # 期待される結合距離を計算
+                symbol_i = atom_i.GetSymbol()
+                symbol_j = atom_j.GetSymbol()
+                
+                radius_i = covalent_radii.get(symbol_i, 1.0)  # デフォルト半径
+                radius_j = covalent_radii.get(symbol_j, 1.0)
+                
+                expected_bond_length = radius_i + radius_j
+                
+                # 結合タイプによる許容範囲を調整
+                # 水素結合は通常の共有結合より短い
+                if symbol_i == 'H' or symbol_j == 'H':
+                    tolerance_factor = 1.2  # 水素は結合が短くなりがち
+                else:
+                    tolerance_factor = 1.3  # 他の原子は少し余裕を持たせる
+                
+                max_bond_length = expected_bond_length * tolerance_factor
+                min_bond_length = expected_bond_length * 0.5  # 最小距離も設定
+                
+                # 距離が期待値の範囲内なら結合を追加
+                if min_bond_length <= distance <= max_bond_length:
+                    try:
+                        mol.AddBond(i, j, Chem.BondType.SINGLE)
+                        bonds_added.append((i, j, distance))
+                    except:
+                        # 既に結合が存在する場合はスキップ
+                        pass
+        
+        # デバッグ情報（オプション）
+        # print(f"Added {len(bonds_added)} bonds based on distance analysis")
+        
+        return len(bonds_added)
 
 
     def save_raw_data(self):
         if not self.data.atoms and not self.current_mol: 
             self.statusBar().showMessage("Error: Nothing to save.")
             return
-        save_data = self.get_current_state()
-        options = QFileDialog.Option.DontUseNativeDialog
-        file_path, _ = QFileDialog.getSaveFileName(self, "Save Project File", "", "Project Files (*.pmeraw);;All Files (*)", options=options)
-        if file_path:
-            if not file_path.lower().endswith('.pmeraw'): file_path += '.pmeraw'
-            try:
-                with open(file_path, 'wb') as f: pickle.dump(save_data, f)
-                self.statusBar().showMessage(f"Project saved to {file_path}")
-            except Exception as e: self.statusBar().showMessage(f"Error saving project file: {e}")
+            
+        try:
+            save_data = self.get_current_state()
+            options = QFileDialog.Option.DontUseNativeDialog
+            file_path, _ = QFileDialog.getSaveFileName(self, "Save Project File", "", "Project Files (*.pmeraw);;All Files (*)", options=options)
+            if not file_path:
+                return
+                
+            if not file_path.lower().endswith('.pmeraw'): 
+                file_path += '.pmeraw'
+                
+            with open(file_path, 'wb') as f: 
+                pickle.dump(save_data, f)
+            self.statusBar().showMessage(f"Project saved to {file_path}")
+            
+        except (OSError, IOError) as e:
+            self.statusBar().showMessage(f"File I/O error: {e}")
+        except pickle.PicklingError as e:
+            self.statusBar().showMessage(f"Data serialization error: {e}")
+        except Exception as e: 
+            self.statusBar().showMessage(f"Error saving project file: {e}")
+            import traceback
+            traceback.print_exc()
 
 
     def load_raw_data(self, file_path=None):
         if not file_path:
             options = QFileDialog.Option.DontUseNativeDialog
             file_path, _ = QFileDialog.getOpenFileName(self, "Open Project File", "", "Project Files (*.pmeraw);;All Files (*)", options=options)
-            if not file_path: return
+            if not file_path: 
+                return
         
         try:
-            with open(file_path, 'rb') as f: loaded_data = pickle.load(f)
+            with open(file_path, 'rb') as f: 
+                loaded_data = pickle.load(f)
             self.restore_ui_for_editing()
             self.set_state_from_data(loaded_data)
             self.statusBar().showMessage(f"Project loaded from {file_path}")
             self.reset_undo_stack()
             QTimer.singleShot(0, self.fit_to_view)
-        except Exception as e: self.statusBar().showMessage(f"Error loading project file: {e}")
+            
+        except FileNotFoundError:
+            self.statusBar().showMessage(f"File not found: {file_path}")
+        except (OSError, IOError) as e:
+            self.statusBar().showMessage(f"File I/O error: {e}")
+        except pickle.UnpicklingError as e:
+            self.statusBar().showMessage(f"Invalid project file format: {e}")
+        except Exception as e: 
+            self.statusBar().showMessage(f"Error loading project file: {e}")
+            import traceback
+            traceback.print_exc()
 
     def save_as_mol(self):
-        mol_block = self.data.to_mol_block()
-        if not mol_block: self.statusBar().showMessage("Error: No 2D data to save."); return
-        lines = mol_block.split('\n')
-        if len(lines) > 1 and 'RDKit' in lines[1]:
-            lines[1] = '  MoleditPy Ver. ' + VERSION + '  2D'
-        modified_mol_block = '\n'.join(lines)
-        options=QFileDialog.Option.DontUseNativeDialog
-        file_path,_=QFileDialog.getSaveFileName(self,"Save 2D MOL File","","MOL Files (*.mol);;All Files (*)",options=options)
-        if file_path:
-            if not file_path.lower().endswith('.mol'): file_path += '.mol'
-            try:
-                with open(file_path,'w') as f: f.write(modified_mol_block)
-                self.statusBar().showMessage(f"2D data saved to {file_path}")
-            except Exception as e: self.statusBar().showMessage(f"Error saving file: {e}")
+        try:
+            mol_block = self.data.to_mol_block()
+            if not mol_block: 
+                self.statusBar().showMessage("Error: No 2D data to save."); 
+                return
+                
+            lines = mol_block.split('\n')
+            if len(lines) > 1 and 'RDKit' in lines[1]:
+                lines[1] = '  MoleditPy Ver. ' + VERSION + '  2D'
+            modified_mol_block = '\n'.join(lines)
+            
+            options = QFileDialog.Option.DontUseNativeDialog
+            file_path, _ = QFileDialog.getSaveFileName(self, "Save 2D MOL File", "", "MOL Files (*.mol);;All Files (*)", options=options)
+            if not file_path:
+                return
+                
+            if not file_path.lower().endswith('.mol'): 
+                file_path += '.mol'
+                
+            with open(file_path, 'w', encoding='utf-8') as f: 
+                f.write(modified_mol_block)
+            self.statusBar().showMessage(f"2D data saved to {file_path}")
+            
+        except (OSError, IOError) as e:
+            self.statusBar().showMessage(f"File I/O error: {e}")
+        except UnicodeEncodeError as e:
+            self.statusBar().showMessage(f"Text encoding error: {e}")
+        except Exception as e: 
+            self.statusBar().showMessage(f"Error saving file: {e}")
+            import traceback
+            traceback.print_exc()
             
     def save_3d_as_mol(self):
         if not self.current_mol:
             self.statusBar().showMessage("Error: Please generate a 3D structure first.")
             return
-        options = QFileDialog.Option.DontUseNativeDialog
-        file_path, _ = QFileDialog.getSaveFileName(self, "Save 3D MOL File", "", "MOL Files (*.mol);;All Files (*)", options=options)
-        if file_path:
+            
+        try:
+            options = QFileDialog.Option.DontUseNativeDialog
+            file_path, _ = QFileDialog.getSaveFileName(self, "Save 3D MOL File", "", "MOL Files (*.mol);;All Files (*)", options=options)
+            if not file_path:
+                return
+                
             if not file_path.lower().endswith('.mol'):
                 file_path += '.mol'
-            try:
 
-                mol_to_save = Chem.Mol(self.current_mol)
+            mol_to_save = Chem.Mol(self.current_mol)
 
-                if mol_to_save.HasProp("_2D"):
-                    mol_to_save.ClearProp("_2D")
+            if mol_to_save.HasProp("_2D"):
+                mol_to_save.ClearProp("_2D")
 
-                mol_block = Chem.MolToMolBlock(mol_to_save, includeStereo=True)
-                lines = mol_block.split('\n')
-                if len(lines) > 1 and 'RDKit' in lines[1]:
-                    lines[1] = '  MoleditPy Ver. ' + VERSION + '  3D'
-                modified_mol_block = '\n'.join(lines)
-                with open(file_path, 'w') as f:
-                    f.write(modified_mol_block)
-                self.statusBar().showMessage(f"3D data saved to {file_path}")
-            except Exception as e: self.statusBar().showMessage(f"Error saving 3D MOL file: {e}")
+            mol_block = Chem.MolToMolBlock(mol_to_save, includeStereo=True)
+            lines = mol_block.split('\n')
+            if len(lines) > 1 and 'RDKit' in lines[1]:
+                lines[1] = '  MoleditPy Ver. ' + VERSION + '  3D'
+            modified_mol_block = '\n'.join(lines)
+            
+            with open(file_path, 'w', encoding='utf-8') as f:
+                f.write(modified_mol_block)
+            self.statusBar().showMessage(f"3D data saved to {file_path}")
+            
+        except (OSError, IOError) as e:
+            self.statusBar().showMessage(f"File I/O error: {e}")
+        except UnicodeEncodeError as e:
+            self.statusBar().showMessage(f"Text encoding error: {e}")
+        except Exception as e: 
+            self.statusBar().showMessage(f"Error saving 3D MOL file: {e}")
+            import traceback
+            traceback.print_exc()
 
     def save_as_xyz(self):
         if not self.current_mol: self.statusBar().showMessage("Error: Please generate a 3D structure first."); return
@@ -4642,6 +7708,10 @@ class MainWindow(QMainWindow):
     def draw_molecule_3d(self, mol):
         """3D 分子を描画し、軸アクターの参照をクリアする（軸の再制御は apply_3d_settings に任せる）"""
         
+        # 測定選択をクリア（分子が変更されたため）
+        if hasattr(self, 'measurement_mode'):
+            self.clear_measurement_selection()
+        
         # 1. カメラ状態とクリア
         camera_state = self.plotter.camera.copy()
 
@@ -4730,16 +7800,20 @@ class MainWindow(QMainWindow):
                     bond_meshes.append(cyl)
                 else:
                     v1 = d / h
-                    v_arb = np.array([0, 0, 1])
-                    if np.allclose(np.abs(np.dot(v1, v_arb)), 1.0): v_arb = np.array([0, 1, 0])
-                    off_dir = np.cross(v1, v_arb)
-                    off_dir /= np.linalg.norm(off_dir)
                     r, s = cyl_radius * 0.8, cyl_radius * 2.0
+                    
                     if bt == Chem.rdchem.BondType.DOUBLE:
+                        # 二重結合の場合、結合している原子の他の結合を考慮してオフセット方向を決定
+                        off_dir = self._calculate_double_bond_offset(mol, bond, conf)
                         c1, c2 = c + off_dir * (s / 2), c - off_dir * (s / 2)
                         bond_meshes.append(pv.Cylinder(center=c1, direction=d, radius=r, height=h, resolution=16))
                         bond_meshes.append(pv.Cylinder(center=c2, direction=d, radius=r, height=h, resolution=16))
                     elif bt == Chem.rdchem.BondType.TRIPLE:
+                        # 三重結合は従来通り
+                        v_arb = np.array([0, 0, 1])
+                        if np.allclose(np.abs(np.dot(v1, v_arb)), 1.0): v_arb = np.array([0, 1, 0])
+                        off_dir = np.cross(v1, v_arb)
+                        off_dir /= np.linalg.norm(off_dir)
                         bond_meshes.append(pv.Cylinder(center=c, direction=d, radius=r, height=h, resolution=16))
                         bond_meshes.append(pv.Cylinder(center=c + off_dir * s, direction=d, radius=r, height=h, resolution=16))
                         bond_meshes.append(pv.Cylinder(center=c - off_dir * s, direction=d, radius=r, height=h, resolution=16))
@@ -4750,6 +7824,7 @@ class MainWindow(QMainWindow):
 
         if getattr(self, 'show_chiral_labels', False):
             try:
+                # 3D座標からキラル中心を計算
                 chiral_centers = Chem.FindMolChiralCenters(mol, includeUnassigned=True)
                 if chiral_centers:
                     pts, labels = [], []
@@ -4759,10 +7834,167 @@ class MainWindow(QMainWindow):
                         pts.append(coord); labels.append(lbl if lbl is not None else '?')
                     try: self.plotter.remove_actor('chiral_labels')
                     except Exception: pass
-                    self.plotter.add_point_labels(np.array(pts), labels, font_size=20, point_size=0, text_color='k', name='chiral_labels', always_visible=True, tolerance=0.01, show_points=False)
+                    self.plotter.add_point_labels(np.array(pts), labels, font_size=20, point_size=0, text_color='blue', name='chiral_labels', always_visible=True, tolerance=0.01, show_points=False)
             except Exception as e: self.statusBar().showMessage(f"3D chiral label drawing error: {e}")
 
+        # E/Zラベルも表示
+        if getattr(self, 'show_chiral_labels', False):
+            try:
+                self.show_ez_labels_3d(mol)
+            except Exception as e: 
+                self.statusBar().showMessage(f"3D E/Z label drawing error: {e}")
+
         self.plotter.camera = camera_state
+        
+        # AtomIDまたは他の原子情報が表示されている場合は再表示
+        if hasattr(self, 'atom_info_display_mode') and self.atom_info_display_mode is not None:
+            self.show_all_atom_info()
+        
+        # メニューテキストを現在の分子の種類に応じて更新
+        self.update_atom_id_menu_text()
+
+    def _calculate_double_bond_offset(self, mol, bond, conf):
+        """
+        二重結合のオフセット方向を計算する。
+        結合している原子の他の結合を考慮して、平面的になるようにする。
+        """
+        begin_atom = mol.GetAtomWithIdx(bond.GetBeginAtomIdx())
+        end_atom = mol.GetAtomWithIdx(bond.GetEndAtomIdx())
+        
+        begin_pos = np.array(conf.GetAtomPosition(bond.GetBeginAtomIdx()))
+        end_pos = np.array(conf.GetAtomPosition(bond.GetEndAtomIdx()))
+        
+        bond_vec = end_pos - begin_pos
+        bond_length = np.linalg.norm(bond_vec)
+        if bond_length == 0:
+            # フォールバック: Z軸基準
+            return np.array([0, 0, 1])
+        
+        bond_unit = bond_vec / bond_length
+        
+        # 両端の原子の隣接原子を調べる
+        begin_neighbors = []
+        end_neighbors = []
+        
+        for neighbor in begin_atom.GetNeighbors():
+            if neighbor.GetIdx() != bond.GetEndAtomIdx():
+                neighbor_pos = np.array(conf.GetAtomPosition(neighbor.GetIdx()))
+                begin_neighbors.append(neighbor_pos)
+        
+        for neighbor in end_atom.GetNeighbors():
+            if neighbor.GetIdx() != bond.GetBeginAtomIdx():
+                neighbor_pos = np.array(conf.GetAtomPosition(neighbor.GetIdx()))
+                end_neighbors.append(neighbor_pos)
+        
+        # 平面の法線ベクトルを計算
+        normal_candidates = []
+        
+        # 開始原子の隣接原子から平面を推定
+        if len(begin_neighbors) >= 1:
+            for neighbor_pos in begin_neighbors:
+                vec_to_neighbor = neighbor_pos - begin_pos
+                if np.linalg.norm(vec_to_neighbor) > 1e-6:
+                    # bond_vec と neighbor_vec の外積が平面の法線
+                    normal = np.cross(bond_vec, vec_to_neighbor)
+                    norm_length = np.linalg.norm(normal)
+                    if norm_length > 1e-6:
+                        normal_candidates.append(normal / norm_length)
+        
+        # 終了原子の隣接原子から平面を推定
+        if len(end_neighbors) >= 1:
+            for neighbor_pos in end_neighbors:
+                vec_to_neighbor = neighbor_pos - end_pos
+                if np.linalg.norm(vec_to_neighbor) > 1e-6:
+                    # bond_vec と neighbor_vec の外積が平面の法線
+                    normal = np.cross(bond_vec, vec_to_neighbor)
+                    norm_length = np.linalg.norm(normal)
+                    if norm_length > 1e-6:
+                        normal_candidates.append(normal / norm_length)
+        
+        # 複数の法線ベクトルがある場合は平均を取る
+        if normal_candidates:
+            # 方向を統一するため、最初のベクトルとの内積が正になるように調整
+            reference_normal = normal_candidates[0]
+            aligned_normals = []
+            
+            for normal in normal_candidates:
+                if np.dot(normal, reference_normal) < 0:
+                    normal = -normal
+                aligned_normals.append(normal)
+            
+            avg_normal = np.mean(aligned_normals, axis=0)
+            norm_length = np.linalg.norm(avg_normal)
+            if norm_length > 1e-6:
+                avg_normal /= norm_length
+                
+                # 法線ベクトルと結合ベクトルに垂直な方向を二重結合のオフセット方向とする
+                offset_dir = np.cross(bond_unit, avg_normal)
+                offset_length = np.linalg.norm(offset_dir)
+                if offset_length > 1e-6:
+                    return offset_dir / offset_length
+        
+        # フォールバック: 結合ベクトルに垂直な任意の方向
+        v_arb = np.array([0, 0, 1])
+        if np.allclose(np.abs(np.dot(bond_unit, v_arb)), 1.0):
+            v_arb = np.array([0, 1, 0])
+        
+        off_dir = np.cross(bond_unit, v_arb)
+        off_dir /= np.linalg.norm(off_dir)
+        return off_dir
+
+    def show_ez_labels_3d(self, mol):
+        """3DビューでE/Zラベルを表示する（RDKitのステレオ化学判定を使用）"""
+        if not mol:
+            return
+        
+        try:
+            # 既存のE/Zラベルを削除
+            self.plotter.remove_actor('ez_labels')
+        except:
+            pass
+        
+        pts, labels = [], []
+        
+        # 3D座標が存在するかチェック
+        if mol.GetNumConformers() == 0:
+            return
+            
+        conf = mol.GetConformer()
+        
+        # RDKitに3D座標からステレオ化学を計算させる
+        try:
+            # 3D座標からステレオ化学を再計算
+            Chem.AssignStereochemistry(mol, cleanIt=True, force=True, flagPossibleStereoCenters=True)
+        except:
+            pass
+        
+        # 二重結合でRDKitが判定したE/Z立体化学を表示
+        for bond in mol.GetBonds():
+            if bond.GetBondType() == Chem.BondType.DOUBLE:
+                stereo = bond.GetStereo()
+                if stereo in [Chem.BondStereo.STEREOE, Chem.BondStereo.STEREOZ]:
+                    # 結合の中心座標を計算
+                    begin_pos = np.array(conf.GetAtomPosition(bond.GetBeginAtomIdx()))
+                    end_pos = np.array(conf.GetAtomPosition(bond.GetEndAtomIdx()))
+                    center_pos = (begin_pos + end_pos) / 2
+                    
+                    # RDKitの判定結果を使用
+                    label = 'E' if stereo == Chem.BondStereo.STEREOE else 'Z'
+                    pts.append(center_pos)
+                    labels.append(label)
+        
+        if pts and labels:
+            self.plotter.add_point_labels(
+                np.array(pts), 
+                labels, 
+                font_size=18,
+                point_size=0,
+                text_color='darkgreen',  # 暗い緑色
+                name='ez_labels',
+                always_visible=True,
+                tolerance=0.01,
+                show_points=False
+            )
 
 
     def toggle_chiral_labels_display(self, checked):
@@ -4838,10 +8070,125 @@ class MainWindow(QMainWindow):
         # 最後に 2D シーンを再描画
         self.scene.update()
 
+    def toggle_atom_info_display(self, mode):
+        """原子情報表示モードを切り替える"""
+        # 現在の表示をクリア
+        self.clear_all_atom_info_labels()
+        
+        # 同じモードが選択された場合はOFFにする
+        if self.atom_info_display_mode == mode:
+            self.atom_info_display_mode = None
+            # 全てのアクションのチェックを外す
+            self.show_atom_id_action.setChecked(False)
+            self.show_atom_coords_action.setChecked(False)
+            self.show_atom_symbol_action.setChecked(False)
+            self.statusBar().showMessage("Atom info display disabled.")
+        else:
+            # 新しいモードを設定
+            self.atom_info_display_mode = mode
+            # 該当するアクションのみチェック
+            self.show_atom_id_action.setChecked(mode == 'id')
+            self.show_atom_coords_action.setChecked(mode == 'coords')
+            self.show_atom_symbol_action.setChecked(mode == 'symbol')
+            
+            mode_names = {'id': 'Atom ID', 'coords': 'Coordinates', 'symbol': 'Element Symbol'}
+            self.statusBar().showMessage(f"Displaying: {mode_names[mode]}")
+            
+            # すべての原子に情報を表示
+            self.show_all_atom_info()
+
+    def is_xyz_derived_molecule(self):
+        """現在の分子がXYZファイル由来かどうかを判定"""
+        if not self.current_mol:
+            return False
+        try:
+            # 最初の原子がxyz_unique_idプロパティを持っているかチェック
+            if self.current_mol.GetNumAtoms() > 0:
+                return self.current_mol.GetAtomWithIdx(0).HasProp("xyz_unique_id")
+        except Exception:
+            pass
+        return False
+
+    def update_atom_id_menu_text(self):
+        """原子IDメニューのテキストを現在の分子の種類に応じて更新"""
+        if hasattr(self, 'show_atom_id_action'):
+            if self.is_xyz_derived_molecule():
+                self.show_atom_id_action.setText("Show XYZ Unique ID")
+            else:
+                self.show_atom_id_action.setText("Show Atom ID")
+
+    def show_all_atom_info(self):
+        """すべての原子に情報を表示"""
+        if self.atom_info_display_mode is None or not hasattr(self, 'atom_positions_3d') or self.atom_positions_3d is None:
+            return
+        
+        # 既存のラベルをクリア
+        self.clear_all_atom_info_labels()
+        
+        # 各原子に対してラベルを作成
+        texts = []
+        positions = []
+        
+        for atom_idx in range(len(self.atom_positions_3d)):
+            pos = self.atom_positions_3d[atom_idx]
+            
+            if self.atom_info_display_mode == 'id':
+                # XYZファイルから読み込んだ分子の場合はUniqueIDを表示
+                try:
+                    if self.current_mol and self.current_mol.GetAtomWithIdx(atom_idx).HasProp("xyz_unique_id"):
+                        unique_id = self.current_mol.GetAtomWithIdx(atom_idx).GetIntProp("xyz_unique_id")
+                        text = f"{unique_id}"
+                    else:
+                        text = f"{atom_idx}"
+                except Exception:
+                    text = f"{atom_idx}"
+            elif self.atom_info_display_mode == 'coords':
+                text = f"({pos[0]:.2f},{pos[1]:.2f},{pos[2]:.2f})"
+            elif self.atom_info_display_mode == 'symbol':
+                if self.current_mol:
+                    symbol = self.current_mol.GetAtomWithIdx(atom_idx).GetSymbol()
+                    text = f"{symbol}"
+                else:
+                    text = "?"
+            else:
+                continue
+            
+            texts.append(text)
+            positions.append(pos)
+        
+        # すべてのラベルを一度に表示
+        if texts and positions:
+            try:
+                label_actor = self.plotter.add_point_labels(
+                    positions, texts,
+                    point_size=12,
+                    font_size=18,
+                    text_color='black',
+                    always_visible=True,
+                    tolerance=0.01,
+                    show_points=False
+                )
+                self.current_atom_info_labels = label_actor
+            except Exception as e:
+                print(f"Error adding atom info labels: {e}")
+
+    def clear_all_atom_info_labels(self):
+        """すべての原子情報ラベルをクリア"""
+        if self.current_atom_info_labels is not None:
+            try:
+                self.plotter.remove_actor(self.current_atom_info_labels)
+            except:
+                pass
+            self.current_atom_info_labels = None
+
+    def setup_3d_hover(self):
+        """3Dビューでの表示を設定（常時表示に変更）"""
+        if self.atom_info_display_mode is not None:
+            self.show_all_atom_info()
 
     def open_analysis_window(self):
         if self.current_mol:
-            dialog = AnalysisWindow(self.current_mol, self)
+            dialog = AnalysisWindow(self.current_mol, self, is_xyz_derived=self.is_xyz_derived)
             dialog.exec()
         else:
             self.statusBar().showMessage("Please generate a 3D structure first to show analysis.")
@@ -4902,6 +8249,12 @@ class MainWindow(QMainWindow):
 
     def toggle_3d_edit_mode(self, checked):
         """「3D Edit」ボタンの状態に応じて編集モードを切り替える"""
+        if checked:
+            # 3D Editモードをオンにする時は、Measurementモードを無効化
+            if self.measurement_mode:
+                self.measurement_action.setChecked(False)
+                self.toggle_measurement_mode(False)
+        
         self.is_3d_edit_mode = checked
         if checked:
             self.statusBar().showMessage("3D Edit Mode: ON.")
@@ -4920,13 +8273,76 @@ class MainWindow(QMainWindow):
         self.plotter.interactor.SetInteractorStyle(style)
         self.plotter.interactor.Initialize()
         
+    def load_mol_file_for_3d_viewing(self, file_path=None):
+        """MOL/SDFファイルを3Dビューアーで開く"""
+        if not file_path:
+            file_path, _ = QFileDialog.getOpenFileName(
+                self, "Open MOL/SDF File", "", 
+                "MOL/SDF Files (*.mol *.sdf);;All Files (*)"
+            )
+            if not file_path:
+                return
+        
+        try:
+            # RDKitでMOL/SDFファイルを読み込み
+            if file_path.lower().endswith('.sdf'):
+                suppl = Chem.SDMolSupplier(file_path)
+                mol = next(suppl, None)
+            else:
+                mol = Chem.MolFromMolFile(file_path)
+            
+            if mol is None:
+                self.statusBar().showMessage(f"Failed to load molecule from {file_path}")
+                return
+            
+            # 3D座標がない場合は2Dから3D変換（最適化なし）
+            if mol.GetNumConformers() == 0:
+                self.statusBar().showMessage("No 3D coordinates found. Converting to 3D...")
+                try:
+                    AllChem.EmbedMolecule(mol)
+                    # 最適化は実行しない
+                except:
+                    self.statusBar().showMessage("Failed to generate 3D coordinates")
+                    return
+            
+            # 3Dビューアーに表示
+            self.current_mol = mol
+            self.draw_molecule_3d(mol)
+            
+            # カメラをリセット
+            self.plotter.reset_camera()
+            
+            # UIを3Dビューアーモードに設定
+            self._enter_3d_viewer_ui_mode()
+            
+            self.statusBar().showMessage(f"Loaded {file_path} in 3D viewer")
+            
+        except Exception as e:
+            self.statusBar().showMessage(f"Error loading MOL/SDF file: {e}")
+    
+    def load_command_line_file(self, file_path):
+        """コマンドライン引数で指定されたファイルを開く"""
+        if not file_path or not os.path.exists(file_path):
+            return
+        
+        file_ext = file_path.lower().split('.')[-1]
+        
+        if file_ext in ['mol', 'sdf']:
+            self.load_mol_file_for_3d_viewing(file_path)
+        elif file_ext == 'xyz':
+            self.load_xyz_for_3d_viewing(file_path)
+        elif file_ext == 'pmeraw':
+            self.load_raw_data(file_path=file_path)
+        else:
+            self.statusBar().showMessage(f"Unsupported file type: {file_ext}")
+        
     def dragEnterEvent(self, event):
-        """ウィンドウ全体で .pmeraw ファイルのドラッグのみを受け入れる"""
+        """ウィンドウ全体で .pmeraw、.mol、.sdf、.xyz ファイルのドラッグを受け入れる"""
         if event.mimeData().hasUrls():
             urls = event.mimeData().urls()
             if urls and urls[0].isLocalFile():
                 file_path = urls[0].toLocalFile()
-                if file_path.lower().endswith(('.pmeraw', '.mol', '.sdf')):
+                if file_path.lower().endswith(('.pmeraw', '.mol', '.sdf', '.xyz')):
                     event.acceptProposedAction()
                     return
         event.ignore()
@@ -4937,22 +8353,54 @@ class MainWindow(QMainWindow):
         if urls and urls[0].isLocalFile():
             file_path = urls[0].toLocalFile()
             
+            # ドロップ位置を取得
+            drop_pos = event.position().toPoint()
+            
             # 拡張子に応じて適切な読み込みメソッドを呼び出す
             if file_path.lower().endswith('.pmeraw'):
                 self.load_raw_data(file_path=file_path)
                 event.acceptProposedAction()
             elif file_path.lower().endswith(('.mol', '.sdf')):
-                # .mol/.sdfファイルを開くメソッドを呼び出す（メソッドが存在する場合）
-                if hasattr(self, 'load_mol_file'):
-                    self.load_mol_file(file_path=file_path)
-                    event.acceptProposedAction()
+                # MOL/SDFファイルは3Dビューアー領域にドロップされたかを判定
+                plotter_widget = self.splitter.widget(1)  # 3Dビューアーウィジェット
+                plotter_rect = plotter_widget.geometry()
+                
+                if plotter_rect.contains(drop_pos):
+                    # 3Dビューアー領域にドロップ → 3Dビューアーで開く
+                    self.load_mol_file_for_3d_viewing(file_path=file_path)
                 else:
-                    self.statusBar().showMessage(f"'{file_path.lower().split('.')[-1]}' file import is not implemented.")
-                    event.ignore()
+                    # 2D領域にドロップ → 従来の2D読み込み
+                    if hasattr(self, 'load_mol_file'):
+                        self.load_mol_file(file_path=file_path)
+                    else:
+                        self.statusBar().showMessage("MOL file import not implemented for 2D editor.")
+                event.acceptProposedAction()
+            elif file_path.lower().endswith('.xyz'):
+                # XYZファイルは常に3Dビューアーで開く
+                self.load_xyz_for_3d_viewing(file_path=file_path)
+                event.acceptProposedAction()
             else:
+                self.statusBar().showMessage(f"Unsupported file type: {file_path}")
                 event.ignore()
         else:
             event.ignore()
+
+    def _enable_3d_edit_actions(self, enabled=True):
+        """3D編集機能のアクションを統一的に有効/無効化する"""
+        actions = [
+            'translation_action',
+            'planar_xy_action', 
+            'planar_xz_action',
+            'planar_yz_action',
+            'bond_length_action',
+            'angle_action',
+            'dihedral_action',
+            'symmetrize_action'
+        ]
+        
+        for action_name in actions:
+            if hasattr(self, action_name):
+                getattr(self, action_name).setEnabled(enabled)
 
     def _enter_3d_viewer_ui_mode(self):
         """3DビューアモードのUI状態に設定する"""
@@ -4970,6 +8418,10 @@ class MainWindow(QMainWindow):
         self.export_button.setEnabled(True)
         self.edit_3d_action.setEnabled(True)
         self.analysis_action.setEnabled(True)
+        self.measurement_action.setEnabled(True)  # 測定機能を有効化
+        
+        # 3D編集機能を統一的に有効化
+        self._enable_3d_edit_actions(True)
 
     def restore_ui_for_editing(self):
         """Enables all 2D editing UI elements."""
@@ -4983,6 +8435,9 @@ class MainWindow(QMainWindow):
         
         if hasattr(self, 'other_atom_action'):
             self.other_atom_action.setEnabled(True)
+            
+        # 2Dモードに戻る時は3D編集機能を統一的に無効化
+        self._enable_3d_edit_actions(False)
 
     def minimize_2d_panel(self):
         """2Dパネルを最小化（非表示に）する"""
@@ -5000,6 +8455,64 @@ class MainWindow(QMainWindow):
         if sizes and sizes[0] == 0:
             self.splitter.setSizes([600, 600])
 
+    def set_panel_layout(self, left_percent, right_percent):
+        """パネルレイアウトを指定した比率に設定する"""
+        if left_percent + right_percent != 100:
+            return
+        
+        total_width = self.splitter.width()
+        if total_width <= 0:
+            total_width = 1200  # デフォルト幅
+        
+        left_width = int(total_width * left_percent / 100)
+        right_width = int(total_width * right_percent / 100)
+        
+        self.splitter.setSizes([left_width, right_width])
+        
+        # ユーザーにフィードバック表示
+        self.statusBar().showMessage(
+            f"Panel layout set to {left_percent}% : {right_percent}%", 
+            2000
+        )
+
+    def toggle_2d_panel(self):
+        """2Dパネルの表示/非表示を切り替える"""
+        sizes = self.splitter.sizes()
+        if not sizes:
+            return
+            
+        if sizes[0] == 0:
+            # 2Dパネルが非表示の場合は表示
+            self.restore_2d_panel()
+            self.statusBar().showMessage("2D panel restored", 1500)
+        else:
+            # 2Dパネルが表示されている場合は非表示
+            self.minimize_2d_panel()
+            self.statusBar().showMessage("2D panel minimized", 1500)
+
+    def on_splitter_moved(self, pos, index):
+        """スプリッターが移動された時のフィードバック表示"""
+        sizes = self.splitter.sizes()
+        if len(sizes) >= 2:
+            total = sum(sizes)
+            if total > 0:
+                left_percent = round(sizes[0] * 100 / total)
+                right_percent = round(sizes[1] * 100 / total)
+                
+                # 現在の比率をツールチップで表示
+                if hasattr(self.splitter, 'handle'):
+                    handle = self.splitter.handle(1)
+                    if handle:
+                        handle.setToolTip(f"2D: {left_percent}% | 3D: {right_percent}%")
+
+    def setup_splitter_tooltip(self):
+        """スプリッターハンドルの初期ツールチップを設定"""
+        handle = self.splitter.handle(1)
+        if handle:
+            handle.setToolTip("Drag to resize panels | Ctrl+1/2/3 for presets | Ctrl+H to toggle 2D panel")
+            # 初期サイズ比率も表示
+            self.on_splitter_moved(0, 0)
+
             
     def apply_initial_settings(self):
         """UIの初期化が完了した後に、保存された設定を3Dビューに適用する"""
@@ -5013,6 +8526,14 @@ class MainWindow(QMainWindow):
         """3Dビューの視覚設定を適用する"""
         if not hasattr(self, 'plotter'):
             return  
+        
+        # レンダラーのレイヤー設定を有効化（テキストオーバーレイ用）
+        renderer = self.plotter.renderer
+        if renderer and hasattr(renderer, 'SetNumberOfLayers'):
+            try:
+                renderer.SetNumberOfLayers(2)  # レイヤー0:3Dオブジェクト、レイヤー1:2Dオーバーレイ
+            except:
+                pass  # PyVistaのバージョンによってはサポートされていない場合がある  
 
         # --- 3D軸ウィジェットの設定 ---
         show_axes = self.settings.get('show_3d_axes', True) 
@@ -5085,6 +8606,1626 @@ class MainWindow(QMainWindow):
                 json.dump(self.settings, f, indent=4)
         except Exception as e:
             print(f"Error saving settings: {e}")
+
+    def toggle_measurement_mode(self, checked):
+        """測定モードのオン/オフを切り替える"""
+        if checked:
+            # 測定モードをオンにする時は、3D Editモードを無効化
+            if self.is_3d_edit_mode:
+                self.edit_3d_action.setChecked(False)
+                self.toggle_3d_edit_mode(False)
+            
+            # アクティブな3D編集ダイアログを閉じる
+            self.close_all_3d_edit_dialogs()
+        
+        self.measurement_mode = checked
+        
+        if not checked:
+            self.clear_measurement_selection()
+        
+        # ボタンのテキストとステータスメッセージを更新
+        if checked:
+            self.statusBar().showMessage("Measurement mode enabled. Click atoms to measure distances/angles/dihedrals.")
+        else:
+            self.statusBar().showMessage("Measurement mode disabled.")
+    
+    def close_all_3d_edit_dialogs(self):
+        """すべてのアクティブな3D編集ダイアログを閉じる"""
+        dialogs_to_close = self.active_3d_dialogs.copy()
+        for dialog in dialogs_to_close:
+            try:
+                dialog.close()
+            except:
+                pass
+        self.active_3d_dialogs.clear()
+
+    def handle_measurement_atom_selection(self, atom_idx):
+        """測定用の原子選択を処理する"""
+        # 既に選択されている原子の場合は除外
+        if atom_idx in self.selected_atoms_for_measurement:
+            return
+        
+        self.selected_atoms_for_measurement.append(atom_idx)
+        
+        # 4つ以上選択された場合はクリア
+        if len(self.selected_atoms_for_measurement) > 4:
+            self.clear_measurement_selection()
+            self.selected_atoms_for_measurement.append(atom_idx)
+        
+        # 原子にラベルを追加
+        self.add_measurement_label(atom_idx, len(self.selected_atoms_for_measurement))
+        
+        # 測定値を計算して表示
+        self.calculate_and_display_measurements()
+
+    def add_measurement_label(self, atom_idx, label_number):
+        """原子に数字ラベルを追加する"""
+        if not self.current_mol or atom_idx >= self.current_mol.GetNumAtoms():
+            return
+        
+        # 測定ラベルリストを更新
+        self.measurement_labels.append((atom_idx, str(label_number)))
+        
+        # すべての測定ラベルを再描画
+        self.update_measurement_labels_display()
+
+    def update_measurement_labels_display(self):
+        """測定ラベルを3D表示に描画する（キラルラベルと同じ方法）"""
+        try:
+            # 既存の測定ラベルを削除
+            self.plotter.remove_actor('measurement_labels')
+        except:
+            pass
+        
+        if not self.measurement_labels or not self.current_mol:
+            return
+        
+        # ラベル位置とテキストを準備
+        pts, labels = [], []
+        for atom_idx, label_text in self.measurement_labels:
+            if atom_idx < len(self.atom_positions_3d):
+                coord = self.atom_positions_3d[atom_idx].copy()
+                coord[2] += 0.3  # 少し上にオフセット
+                pts.append(coord)
+                labels.append(label_text)
+        
+        if pts and labels:
+            # PyVistaのpoint_labelsを使用（小さなフォント、等幅、左上寄せ）
+            self.plotter.add_point_labels(
+                np.array(pts), 
+                labels, 
+                font_size=16,  # より小さく
+                point_size=0,
+                text_color='red',  # 測定値は赤色で
+                name='measurement_labels',
+                always_visible=True,
+                tolerance=0.01,
+                show_points=False
+            )
+
+    def clear_measurement_selection(self):
+        """測定選択をクリアする"""
+        self.selected_atoms_for_measurement.clear()
+        
+        # ラベルを削除
+        self.measurement_labels.clear()
+        try:
+            self.plotter.remove_actor('measurement_labels')
+        except:
+            pass
+        
+        # 測定結果のテキストを削除
+        if self.measurement_text_actor:
+            try:
+                self.plotter.remove_actor(self.measurement_text_actor)
+                self.measurement_text_actor = None
+            except:
+                pass
+        
+        self.plotter.render()
+
+    def calculate_and_display_measurements(self):
+        """選択された原子に基づいて測定値を計算し表示する"""
+        num_selected = len(self.selected_atoms_for_measurement)
+        if num_selected < 2:
+            return
+        
+        measurement_text = []
+        
+        if num_selected >= 2:
+            # 距離の計算
+            atom1_idx = self.selected_atoms_for_measurement[0]
+            atom2_idx = self.selected_atoms_for_measurement[1]
+            distance = self.calculate_distance(atom1_idx, atom2_idx)
+            measurement_text.append(f"Distance 1-2: {distance:.3f} Å")
+        
+        if num_selected >= 3:
+            # 角度の計算
+            atom1_idx = self.selected_atoms_for_measurement[0]
+            atom2_idx = self.selected_atoms_for_measurement[1] 
+            atom3_idx = self.selected_atoms_for_measurement[2]
+            angle = self.calculate_angle(atom1_idx, atom2_idx, atom3_idx)
+            measurement_text.append(f"Angle 1-2-3: {angle:.2f}°")
+        
+        if num_selected >= 4:
+            # 二面角の計算
+            atom1_idx = self.selected_atoms_for_measurement[0]
+            atom2_idx = self.selected_atoms_for_measurement[1]
+            atom3_idx = self.selected_atoms_for_measurement[2]
+            atom4_idx = self.selected_atoms_for_measurement[3]
+            dihedral = self.calculate_dihedral(atom1_idx, atom2_idx, atom3_idx, atom4_idx)
+            measurement_text.append(f"Dihedral 1-2-3-4: {dihedral:.2f}°")
+        
+        # 測定結果を3D画面の右上に表示
+        self.display_measurement_text(measurement_text)
+
+    def calculate_distance(self, atom1_idx, atom2_idx):
+        """2原子間の距離を計算する"""
+        pos1 = np.array(self.atom_positions_3d[atom1_idx])
+        pos2 = np.array(self.atom_positions_3d[atom2_idx])
+        return np.linalg.norm(pos2 - pos1)
+
+    def calculate_angle(self, atom1_idx, atom2_idx, atom3_idx):
+        """3原子の角度を計算する（中央が頂点）"""
+        pos1 = np.array(self.atom_positions_3d[atom1_idx])
+        pos2 = np.array(self.atom_positions_3d[atom2_idx])  # 頂点
+        pos3 = np.array(self.atom_positions_3d[atom3_idx])
+        
+        # ベクトルを計算
+        vec1 = pos1 - pos2
+        vec2 = pos3 - pos2
+        
+        # 角度を計算（ラジアンから度に変換）
+        cos_angle = np.dot(vec1, vec2) / (np.linalg.norm(vec1) * np.linalg.norm(vec2))
+        # 数値誤差による範囲外の値をクリップ
+        cos_angle = np.clip(cos_angle, -1.0, 1.0)
+        angle_rad = np.arccos(cos_angle)
+        return np.degrees(angle_rad)
+
+    def calculate_dihedral(self, atom1_idx, atom2_idx, atom3_idx, atom4_idx):
+        """4原子の二面角を計算する"""
+        pos1 = np.array(self.atom_positions_3d[atom1_idx])
+        pos2 = np.array(self.atom_positions_3d[atom2_idx])
+        pos3 = np.array(self.atom_positions_3d[atom3_idx])
+        pos4 = np.array(self.atom_positions_3d[atom4_idx])
+        
+        # ベクトルを計算
+        b1 = pos2 - pos1
+        b2 = pos3 - pos2
+        b3 = pos4 - pos3
+        
+        # 法線ベクトルを計算
+        n1 = np.cross(b1, b2)
+        n2 = np.cross(b2, b3)
+        
+        # 二面角を計算
+        cos_angle = np.dot(n1, n2) / (np.linalg.norm(n1) * np.linalg.norm(n2))
+        cos_angle = np.clip(cos_angle, -1.0, 1.0)
+        
+        # 符号を決定するための計算
+        m1 = np.cross(n1, b2 / np.linalg.norm(b2))
+        sign = np.sign(np.dot(m1, n2))
+        
+        angle_rad = np.arccos(cos_angle) * sign
+        return np.degrees(angle_rad)
+
+    def display_measurement_text(self, measurement_lines):
+        """測定結果のテキストを3D画面の左上に表示する（小さな等幅フォント）"""
+        # 既存のテキストを削除
+        if self.measurement_text_actor:
+            try:
+                self.plotter.remove_actor(self.measurement_text_actor)
+            except:
+                pass
+        
+        if not measurement_lines:
+            self.measurement_text_actor = None
+            return
+        
+        # テキストを結合
+        text = '\n'.join(measurement_lines)
+        
+        # 背景色から適切なテキスト色を決定
+        try:
+            bg_color_hex = self.settings.get('background_color', '#919191')
+            bg_qcolor = QColor(bg_color_hex)
+            if bg_qcolor.isValid():
+                luminance = bg_qcolor.toHsl().lightness()
+                text_color = 'black' if luminance > 128 else 'white'
+            else:
+                text_color = 'white'
+        except:
+            text_color = 'white'
+        
+        # 左上に表示（小さな等幅フォント）
+        self.measurement_text_actor = self.plotter.add_text(
+            text,
+            position='upper_left',
+            font_size=10,  # より小さく
+            color=text_color,  # 背景に合わせた色
+            font='courier',  # 等幅フォント
+            name='measurement_display'
+        )
+        
+        self.plotter.render()
+
+    # --- 3D Edit functionality ---
+    
+    def toggle_atom_selection_3d(self, atom_idx):
+        """3Dビューで原子の選択状態をトグルする"""
+        if atom_idx in self.selected_atoms_3d:
+            self.selected_atoms_3d.remove(atom_idx)
+        else:
+            self.selected_atoms_3d.add(atom_idx)
+        
+        # 選択状態のビジュアルフィードバックを更新
+        self.update_3d_selection_display()
+    
+    def clear_3d_selection(self):
+        """3Dビューでの原子選択をクリア"""
+        self.selected_atoms_3d.clear()
+        self.update_3d_selection_display()
+    
+    def update_3d_selection_display(self):
+        """3Dビューでの選択原子のハイライト表示を更新"""
+        try:
+            # 既存の選択ハイライトを削除
+            self.plotter.remove_actor('selection_highlight')
+        except:
+            pass
+        
+        if not self.selected_atoms_3d or not self.current_mol:
+            self.plotter.render()
+            return
+        
+        # 選択された原子のインデックスリストを作成
+        selected_indices = list(self.selected_atoms_3d)
+        
+        # 選択された原子の位置を取得
+        selected_positions = self.atom_positions_3d[selected_indices]
+        
+        # 原子の半径を少し大きくしてハイライト表示
+        selected_radii = np.array([VDW_RADII.get(
+            self.current_mol.GetAtomWithIdx(i).GetSymbol(), 0.4) * 1.3 
+            for i in selected_indices])
+        
+        # ハイライト用のデータセットを作成
+        highlight_source = pv.PolyData(selected_positions)
+        highlight_source['radii'] = selected_radii
+        
+        # 黄色の半透明球でハイライト
+        highlight_glyphs = highlight_source.glyph(
+            scale='radii', 
+            geom=pv.Sphere(radius=1.0, theta_resolution=16, phi_resolution=16), 
+            orient=False
+        )
+        
+        self.plotter.add_mesh(
+            highlight_glyphs, 
+            color='yellow', 
+            opacity=0.3, 
+            name='selection_highlight'
+        )
+        
+        self.plotter.render()
+    
+    def planarize_selection(self, plane):
+        """選択された原子群を指定された平面に平面化する"""
+        if not self.selected_atoms_3d or not self.current_mol:
+            self.statusBar().showMessage("No atoms selected for planarization.")
+            return
+        
+        if len(self.selected_atoms_3d) < 3:
+            self.statusBar().showMessage("Please select at least 3 atoms for planarization.")
+            return
+        
+        try:
+            # 選択された原子の位置を取得
+            selected_indices = list(self.selected_atoms_3d)
+            selected_positions = self.atom_positions_3d[selected_indices].copy()
+            
+            # 重心を計算
+            centroid = np.mean(selected_positions, axis=0)
+            
+            # 重心を原点に移動
+            centered_positions = selected_positions - centroid
+            
+            if plane == 'xy':
+                # XY平面に平面化（Z座標を0にする）
+                centered_positions[:, 2] = 0
+                plane_name = "XY"
+            elif plane == 'xz':
+                # XZ平面に平面化（Y座標を0にする）
+                centered_positions[:, 1] = 0
+                plane_name = "XZ"
+            elif plane == 'yz':
+                # YZ平面に平面化（X座標を0にする）
+                centered_positions[:, 0] = 0
+                plane_name = "YZ"
+            else:
+                self.statusBar().showMessage("Invalid plane specified.")
+                return
+            
+            # 重心の位置に戻す
+            new_positions = centered_positions + centroid
+            
+            # 分子の座標を更新
+            conf = self.current_mol.GetConformer()
+            for i, new_pos in zip(selected_indices, new_positions):
+                conf.SetAtomPosition(i, new_pos.tolist())
+                self.atom_positions_3d[i] = new_pos
+            
+            # 3Dビューを更新
+            self.draw_molecule_3d(self.current_mol)
+            
+            # 選択状態を維持
+            temp_selection = self.selected_atoms_3d.copy()
+            self.selected_atoms_3d = temp_selection
+            self.update_3d_selection_display()
+            
+            self.statusBar().showMessage(f"Planarized {len(selected_indices)} atoms to {plane_name} plane.")
+            self.push_undo_state()
+            
+        except Exception as e:
+            self.statusBar().showMessage(f"Error during planarization: {e}")
+    
+    def open_translation_dialog(self):
+        """平行移動ダイアログを開く"""
+        # 測定モードを無効化
+        if self.measurement_mode:
+            self.measurement_action.setChecked(False)
+            self.toggle_measurement_mode(False)
+        
+        dialog = TranslationDialog(self.current_mol, self)
+        self.active_3d_dialogs.append(dialog)  # 参照を保持
+        dialog.show()  # execではなくshowを使用してモードレス表示
+        dialog.accepted.connect(lambda: self.statusBar().showMessage("Translation applied."))
+        dialog.accepted.connect(self.push_undo_state)
+        dialog.finished.connect(lambda: self.remove_dialog_from_list(dialog))  # ダイアログが閉じられた時にリストから削除
+    
+    def open_planarization_dialog(self, plane):
+        """平面化ダイアログを開く"""
+        # 測定モードを無効化
+        if self.measurement_mode:
+            self.measurement_action.setChecked(False)
+            self.toggle_measurement_mode(False)
+        
+        dialog = PlanarizationDialog(self.current_mol, self, plane)
+        self.active_3d_dialogs.append(dialog)  # 参照を保持
+        dialog.show()  # execではなくshowを使用してモードレス表示
+        dialog.accepted.connect(lambda: self.statusBar().showMessage(f"Atoms planarized to {plane.upper()} plane."))
+        dialog.accepted.connect(self.push_undo_state)
+        dialog.finished.connect(lambda: self.remove_dialog_from_list(dialog))  # ダイアログが閉じられた時にリストから削除
+    
+    def open_bond_length_dialog(self):
+        """結合長変換ダイアログを開く"""
+        # 測定モードを無効化
+        if self.measurement_mode:
+            self.measurement_action.setChecked(False)
+            self.toggle_measurement_mode(False)
+        
+        dialog = BondLengthDialog(self.current_mol, self)
+        self.active_3d_dialogs.append(dialog)  # 参照を保持
+        dialog.show()  # execではなくshowを使用してモードレス表示
+        dialog.accepted.connect(lambda: self.statusBar().showMessage("Bond length adjusted."))
+        dialog.accepted.connect(self.push_undo_state)
+        dialog.finished.connect(lambda: self.remove_dialog_from_list(dialog))  # ダイアログが閉じられた時にリストから削除
+    
+    def open_angle_dialog(self):
+        """角度変換ダイアログを開く"""
+        # 測定モードを無効化
+        if self.measurement_mode:
+            self.measurement_action.setChecked(False)
+            self.toggle_measurement_mode(False)
+        
+        dialog = AngleDialog(self.current_mol, self)
+        self.active_3d_dialogs.append(dialog)  # 参照を保持
+        dialog.show()  # execではなくshowを使用してモードレス表示
+        dialog.accepted.connect(lambda: self.statusBar().showMessage("Angle adjusted."))
+        dialog.accepted.connect(self.push_undo_state)
+        dialog.finished.connect(lambda: self.remove_dialog_from_list(dialog))  # ダイアログが閉じられた時にリストから削除
+    
+    def open_dihedral_dialog(self):
+        """二面角変換ダイアログを開く"""
+        # 測定モードを無効化
+        if self.measurement_mode:
+            self.measurement_action.setChecked(False)
+            self.toggle_measurement_mode(False)
+        
+        dialog = DihedralDialog(self.current_mol, self)
+        self.active_3d_dialogs.append(dialog)  # 参照を保持
+        dialog.show()  # execではなくshowを使用してモードレス表示
+        dialog.accepted.connect(lambda: self.statusBar().showMessage("Dihedral angle adjusted."))
+        dialog.accepted.connect(self.push_undo_state)
+        dialog.finished.connect(lambda: self.remove_dialog_from_list(dialog))  # ダイアログが閉じられた時にリストから削除
+    
+    def open_symmetrize_dialog(self):
+        """対称化ダイアログを開く"""
+        # Under Development メッセージを表示
+        from PyQt6.QtWidgets import QMessageBox
+        
+        msg = QMessageBox()
+        msg.setIcon(QMessageBox.Icon.Information)
+        msg.setWindowTitle("Symmetrize Function")
+        msg.setText("Symmetrize Function - Under Development")
+        msg.setInformativeText(
+            "This function is under development and will be available in a future release."
+        )
+        msg.setStandardButtons(QMessageBox.StandardButton.Ok)
+        msg.exec()
+        
+        # 元のコードは残しておく（コメントアウト）
+        # # 測定モードを無効化
+        # if self.measurement_mode:
+        #     self.measurement_action.setChecked(False)
+        #     self.toggle_measurement_mode(False)
+        # 
+        # dialog = SymmetrizeDialog(self.current_mol, self)
+        # dialog.exec()  # モーダルダイアログとして表示
+        # # 結果はダイアログ内で直接適用される
+    
+    def remove_dialog_from_list(self, dialog):
+        """ダイアログをアクティブリストから削除"""
+        if dialog in self.active_3d_dialogs:
+            self.active_3d_dialogs.remove(dialog)
+
+
+# --- 3D Editing Dialog Classes ---
+
+class BondLengthDialog(Dialog3DPickingMixin, QDialog):
+    def __init__(self, mol, main_window, parent=None):
+        QDialog.__init__(self, parent)
+        Dialog3DPickingMixin.__init__(self)
+        self.mol = mol
+        self.main_window = main_window
+        self.atom1_idx = None
+        self.atom2_idx = None
+        self.init_ui()
+    
+    def init_ui(self):
+        self.setWindowTitle("Adjust Bond Length")
+        self.setModal(False)  # モードレスにしてクリックを阻害しない
+        self.setWindowFlags(Qt.WindowType.Window | Qt.WindowType.WindowStaysOnTopHint)  # 常に前面表示
+        layout = QVBoxLayout(self)
+        
+        # Instructions
+        instruction_label = QLabel("Click two atoms in the 3D view to select a bond, then specify the new length.")
+        instruction_label.setWordWrap(True)
+        layout.addWidget(instruction_label)
+        
+        # Selected atoms display
+        self.selection_label = QLabel("No atoms selected")
+        layout.addWidget(self.selection_label)
+        
+        # Current distance display
+        self.distance_label = QLabel("")
+        layout.addWidget(self.distance_label)
+        
+        # New distance input
+        distance_layout = QHBoxLayout()
+        distance_layout.addWidget(QLabel("New distance (Å):"))
+        self.distance_input = QLineEdit()
+        self.distance_input.setPlaceholderText("1.54")
+        distance_layout.addWidget(self.distance_input)
+        layout.addLayout(distance_layout)
+        
+        # Movement options
+        group_box = QWidget()
+        group_layout = QVBoxLayout(group_box)
+        group_layout.addWidget(QLabel("Movement Options:"))
+        
+        self.atom1_fix_group_radio = QRadioButton("Atom 1: Fixed, Atom 2: Move connected group")
+        self.atom1_fix_group_radio.setChecked(True)
+        group_layout.addWidget(self.atom1_fix_group_radio)
+
+        self.atom1_fix_radio = QRadioButton("Atom 1: Fixed, Atom 2: Move atom only")
+        group_layout.addWidget(self.atom1_fix_radio)
+        
+        layout.addWidget(group_box)
+        
+        # Buttons
+        button_layout = QHBoxLayout()
+        self.clear_button = QPushButton("Clear Selection")
+        self.clear_button.clicked.connect(self.clear_selection)
+        button_layout.addWidget(self.clear_button)
+        
+        button_layout.addStretch()
+        
+        self.apply_button = QPushButton("Apply")
+        self.apply_button.clicked.connect(self.apply_changes)
+        self.apply_button.setEnabled(False)
+        button_layout.addWidget(self.apply_button)
+        
+        cancel_button = QPushButton("Cancel")
+        cancel_button.clicked.connect(self.reject)
+        button_layout.addWidget(cancel_button)
+        
+        layout.addLayout(button_layout)
+        
+        # Connect to main window's picker
+        self.picker_connection = None
+        self.enable_picking()
+    
+    def on_atom_picked(self, atom_idx):
+        """原子がピックされたときの処理"""
+        if self.atom1_idx is None:
+            self.atom1_idx = atom_idx
+        elif self.atom2_idx is None:
+            self.atom2_idx = atom_idx
+        else:
+            # Reset and start over
+            self.atom1_idx = atom_idx
+            self.atom2_idx = None
+        
+        # 原子ラベルを表示
+        self.show_atom_labels()
+        self.update_display()
+    
+    def keyPressEvent(self, event):
+        """キーボードイベントを処理"""
+        if event.key() == Qt.Key.Key_Return or event.key() == Qt.Key.Key_Enter:
+            if self.apply_button.isEnabled():
+                self.apply_changes()
+            event.accept()
+        else:
+            super().keyPressEvent(event)
+    
+    def closeEvent(self, event):
+        """ダイアログが閉じられる時の処理"""
+        self.clear_atom_labels()
+        self.disable_picking()
+        super().closeEvent(event)
+    
+    def reject(self):
+        """キャンセル時の処理"""
+        self.clear_atom_labels()
+        self.disable_picking()
+        super().reject()
+    
+    def accept(self):
+        """OK時の処理"""
+        self.clear_atom_labels()
+        self.disable_picking()
+        super().accept()
+    
+    def clear_selection(self):
+        """選択をクリア"""
+        self.atom1_idx = None
+        self.atom2_idx = None
+        self.clear_selection_labels()
+        self.update_display()
+    
+    def show_atom_labels(self):
+        """選択された原子にラベルを表示"""
+        # 既存のラベルをクリア
+        self.clear_atom_labels()
+        
+        # 新しいラベルを表示
+        if not hasattr(self, 'selection_labels'):
+            self.selection_labels = []
+        
+        selected_atoms = [self.atom1_idx, self.atom2_idx]
+        labels = ["1st", "2nd"]
+        colors = ["yellow", "yellow"]
+        
+        for i, atom_idx in enumerate(selected_atoms):
+            if atom_idx is not None:
+                pos = self.main_window.atom_positions_3d[atom_idx]
+                label_text = f"{labels[i]}"
+                
+                # ラベルを追加
+                label_actor = self.main_window.plotter.add_point_labels(
+                    [pos], [label_text], 
+                    point_size=20, 
+                    font_size=12,
+                    text_color=colors[i],
+                    always_visible=True
+                )
+                self.selection_labels.append(label_actor)
+    
+    def clear_atom_labels(self):
+        """原子ラベルをクリア"""
+        if hasattr(self, 'selection_labels'):
+            for label_actor in self.selection_labels:
+                try:
+                    self.main_window.plotter.remove_actor(label_actor)
+                except:
+                    pass
+            self.selection_labels = []
+    
+    def clear_selection_labels(self):
+        """選択ラベルをクリア"""
+        if hasattr(self, 'selection_labels'):
+            for label_actor in self.selection_labels:
+                try:
+                    self.main_window.plotter.remove_actor(label_actor)
+                except:
+                    pass
+            self.selection_labels = []
+    
+    def add_selection_label(self, atom_idx, label_text):
+        """選択された原子にラベルを追加"""
+        if not hasattr(self, 'selection_labels'):
+            self.selection_labels = []
+        
+        # 原子の位置を取得
+        pos = self.main_window.atom_positions_3d[atom_idx]
+        
+        # ラベルを追加
+        label_actor = self.main_window.plotter.add_point_labels(
+            [pos], [label_text], 
+            point_size=20, 
+            font_size=12,
+            text_color='red',
+            always_visible=True
+        )
+        self.selection_labels.append(label_actor)
+    
+    def update_display(self):
+        """表示を更新"""
+        # 既存のラベルをクリア
+        self.clear_selection_labels()
+        
+        if self.atom1_idx is None:
+            self.selection_label.setText("No atoms selected")
+            self.distance_label.setText("")
+            self.apply_button.setEnabled(False)
+        elif self.atom2_idx is None:
+            symbol1 = self.mol.GetAtomWithIdx(self.atom1_idx).GetSymbol()
+            self.selection_label.setText(f"First atom: {symbol1} (index {self.atom1_idx})")
+            self.distance_label.setText("")
+            self.apply_button.setEnabled(False)
+            # ラベル追加
+            self.add_selection_label(self.atom1_idx, "1")
+        else:
+            symbol1 = self.mol.GetAtomWithIdx(self.atom1_idx).GetSymbol()
+            symbol2 = self.mol.GetAtomWithIdx(self.atom2_idx).GetSymbol()
+            self.selection_label.setText(f"Bond: {symbol1}({self.atom1_idx}) - {symbol2}({self.atom2_idx})")
+            
+            # Calculate current distance
+            conf = self.mol.GetConformer()
+            pos1 = np.array(conf.GetAtomPosition(self.atom1_idx))
+            pos2 = np.array(conf.GetAtomPosition(self.atom2_idx))
+            current_distance = np.linalg.norm(pos2 - pos1)
+            self.distance_label.setText(f"Current distance: {current_distance:.3f} Å")
+            self.apply_button.setEnabled(True)
+            # ラベル追加
+            self.add_selection_label(self.atom1_idx, "1")
+            self.add_selection_label(self.atom2_idx, "2")
+    
+    def apply_changes(self):
+        """変更を適用"""
+        if self.atom1_idx is None or self.atom2_idx is None:
+            return
+        
+        try:
+            new_distance = float(self.distance_input.text())
+            if new_distance <= 0:
+                QMessageBox.warning(self, "Invalid Input", "Distance must be positive.")
+                return
+        except ValueError:
+            QMessageBox.warning(self, "Invalid Input", "Please enter a valid number.")
+            return
+        
+        # Undo状態を保存
+        self.main_window.push_undo_state()
+        
+        # Apply the bond length change
+        self.adjust_bond_length(new_distance)
+        self.accept()
+    
+    def adjust_bond_length(self, new_distance):
+        """結合長を調整"""
+        conf = self.mol.GetConformer()
+        pos1 = np.array(conf.GetAtomPosition(self.atom1_idx))
+        pos2 = np.array(conf.GetAtomPosition(self.atom2_idx))
+        
+        # Direction vector from atom1 to atom2
+        direction = pos2 - pos1
+        current_distance = np.linalg.norm(direction)
+        
+        if current_distance == 0:
+            return
+        
+        direction = direction / current_distance
+        new_pos2 = pos1 + direction * new_distance
+        
+        if self.atom1_fix_radio.isChecked():
+            # Move only the second atom
+            conf.SetAtomPosition(self.atom2_idx, new_pos2.tolist())
+            self.main_window.atom_positions_3d[self.atom2_idx] = new_pos2
+        else:
+            # Move the connected group
+            atoms_to_move = self.get_connected_group(self.atom2_idx, exclude=self.atom1_idx)
+            displacement = new_pos2 - pos2
+            
+            for atom_idx in atoms_to_move:
+                current_pos = np.array(conf.GetAtomPosition(atom_idx))
+                new_pos = current_pos + displacement
+                conf.SetAtomPosition(atom_idx, new_pos.tolist())
+                self.main_window.atom_positions_3d[atom_idx] = new_pos
+        
+        # Update the 3D view
+        self.main_window.draw_molecule_3d(self.mol)
+    
+    def get_connected_group(self, start_atom, exclude=None):
+        """指定された原子から連結されているグループを取得"""
+        visited = set()
+        to_visit = [start_atom]
+        
+        while to_visit:
+            current = to_visit.pop()
+            if current in visited or current == exclude:
+                continue
+            
+            visited.add(current)
+            
+            # Get neighboring atoms
+            atom = self.mol.GetAtomWithIdx(current)
+            for bond in atom.GetBonds():
+                other_idx = bond.GetOtherAtomIdx(current)
+                if other_idx not in visited and other_idx != exclude:
+                    to_visit.append(other_idx)
+        
+        return visited
+
+
+class AngleDialog(Dialog3DPickingMixin, QDialog):
+    def __init__(self, mol, main_window, parent=None):
+        QDialog.__init__(self, parent)
+        Dialog3DPickingMixin.__init__(self)
+        self.mol = mol
+        self.main_window = main_window
+        self.atom1_idx = None
+        self.atom2_idx = None  # vertex atom
+        self.atom3_idx = None
+        self.init_ui()
+    
+    def init_ui(self):
+        self.setWindowTitle("Adjust Angle")
+        self.setModal(False)  # モードレスにしてクリックを阻害しない
+        self.setWindowFlags(Qt.WindowType.Window | Qt.WindowType.WindowStaysOnTopHint)  # 常に前面表示
+        layout = QVBoxLayout(self)
+        
+        # Instructions
+        instruction_label = QLabel("Click three atoms in order: first-vertex-third. The angle around the vertex atom will be adjusted.")
+        instruction_label.setWordWrap(True)
+        layout.addWidget(instruction_label)
+        
+        # Selected atoms display
+        self.selection_label = QLabel("No atoms selected")
+        layout.addWidget(self.selection_label)
+        
+        # Current angle display
+        self.angle_label = QLabel("")
+        layout.addWidget(self.angle_label)
+        
+        # New angle input
+        angle_layout = QHBoxLayout()
+        angle_layout.addWidget(QLabel("New angle (degrees):"))
+        self.angle_input = QLineEdit()
+        self.angle_input.setPlaceholderText("109.5")
+        angle_layout.addWidget(self.angle_input)
+        layout.addLayout(angle_layout)
+        
+        # Movement options
+        group_box = QWidget()
+        group_layout = QVBoxLayout(group_box)
+        group_layout.addWidget(QLabel("Rotation Options:"))
+        
+        self.rotate_group_radio = QRadioButton("Atom 1,2: Fixed, Atom 3: Rotate connected group")
+        self.rotate_group_radio.setChecked(True)
+        group_layout.addWidget(self.rotate_group_radio)
+
+        self.rotate_atom_radio = QRadioButton("Atom 1,2: Fixed, Atom 3: Rotate atom only")
+        group_layout.addWidget(self.rotate_atom_radio)
+    
+        
+        layout.addWidget(group_box)
+        
+        # Buttons
+        button_layout = QHBoxLayout()
+        self.clear_button = QPushButton("Clear Selection")
+        self.clear_button.clicked.connect(self.clear_selection)
+        button_layout.addWidget(self.clear_button)
+        
+        button_layout.addStretch()
+        
+        self.apply_button = QPushButton("Apply")
+        self.apply_button.clicked.connect(self.apply_changes)
+        self.apply_button.setEnabled(False)
+        button_layout.addWidget(self.apply_button)
+        
+        cancel_button = QPushButton("Cancel")
+        cancel_button.clicked.connect(self.reject)
+        button_layout.addWidget(cancel_button)
+        
+        layout.addLayout(button_layout)
+        
+        # Connect to main window's picker for AngleDialog
+        self.picker_connection = None
+        self.enable_picking()
+    
+    def on_atom_picked(self, atom_idx):
+        """原子がピックされたときの処理"""
+        if self.atom1_idx is None:
+            self.atom1_idx = atom_idx
+        elif self.atom2_idx is None:
+            self.atom2_idx = atom_idx
+        elif self.atom3_idx is None:
+            self.atom3_idx = atom_idx
+        else:
+            # Reset and start over
+            self.atom1_idx = atom_idx
+            self.atom2_idx = None
+            self.atom3_idx = None
+        
+        # 原子ラベルを表示
+        self.show_atom_labels()
+        self.update_display()
+    
+    def keyPressEvent(self, event):
+        """キーボードイベントを処理"""
+        if event.key() == Qt.Key.Key_Return or event.key() == Qt.Key.Key_Enter:
+            if self.apply_button.isEnabled():
+                self.apply_changes()
+            event.accept()
+        else:
+            super().keyPressEvent(event)
+    
+    def closeEvent(self, event):
+        """ダイアログが閉じられる時の処理"""
+        self.clear_atom_labels()
+        self.disable_picking()
+        super().closeEvent(event)
+    
+    def reject(self):
+        """キャンセル時の処理"""
+        self.clear_atom_labels()
+        self.disable_picking()
+        super().reject()
+    
+    def accept(self):
+        """OK時の処理"""
+        self.clear_atom_labels()
+        self.disable_picking()
+        super().accept()
+    
+    def clear_selection(self):
+        """選択をクリア"""
+        self.atom1_idx = None
+        self.atom2_idx = None  # vertex atom
+        self.atom3_idx = None
+        self.clear_selection_labels()
+        self.update_display()
+    
+    def show_atom_labels(self):
+        """選択された原子にラベルを表示"""
+        # 既存のラベルをクリア
+        self.clear_atom_labels()
+        
+        # 新しいラベルを表示
+        if not hasattr(self, 'selection_labels'):
+            self.selection_labels = []
+        
+        selected_atoms = [self.atom1_idx, self.atom2_idx, self.atom3_idx]
+        labels = ["1st", "2nd (vertex)", "3rd"]
+        colors = ["yellow", "red", "yellow"]  # 頂点原子を赤で強調
+        
+        for i, atom_idx in enumerate(selected_atoms):
+            if atom_idx is not None:
+                pos = self.main_window.atom_positions_3d[atom_idx]
+                label_text = f"{labels[i]}"
+                
+                # ラベルを追加
+                label_actor = self.main_window.plotter.add_point_labels(
+                    [pos], [label_text], 
+                    point_size=20, 
+                    font_size=12,
+                    text_color=colors[i],
+                    always_visible=True
+                )
+                self.selection_labels.append(label_actor)
+    
+    def clear_atom_labels(self):
+        """原子ラベルをクリア"""
+        if hasattr(self, 'selection_labels'):
+            for label_actor in self.selection_labels:
+                try:
+                    self.main_window.plotter.remove_actor(label_actor)
+                except:
+                    pass
+            self.selection_labels = []
+    
+    def clear_selection_labels(self):
+        """選択ラベルをクリア"""
+        if hasattr(self, 'selection_labels'):
+            for label_actor in self.selection_labels:
+                try:
+                    self.main_window.plotter.remove_actor(label_actor)
+                except:
+                    pass
+            self.selection_labels = []
+    
+    def add_selection_label(self, atom_idx, label_text):
+        """選択された原子にラベルを追加"""
+        if not hasattr(self, 'selection_labels'):
+            self.selection_labels = []
+        
+        # 原子の位置を取得
+        pos = self.main_window.atom_positions_3d[atom_idx]
+        
+        # ラベルを追加
+        label_actor = self.main_window.plotter.add_point_labels(
+            [pos], [label_text], 
+            point_size=20, 
+            font_size=12,
+            text_color='red',
+            always_visible=True
+        )
+        self.selection_labels.append(label_actor)
+    
+    def update_display(self):
+        """表示を更新"""
+        # 既存のラベルをクリア
+        self.clear_selection_labels()
+        
+        if self.atom1_idx is None:
+            self.selection_label.setText("No atoms selected")
+            self.angle_label.setText("")
+            self.apply_button.setEnabled(False)
+        elif self.atom2_idx is None:
+            symbol1 = self.mol.GetAtomWithIdx(self.atom1_idx).GetSymbol()
+            self.selection_label.setText(f"First atom: {symbol1} (index {self.atom1_idx})")
+            self.angle_label.setText("")
+            self.apply_button.setEnabled(False)
+            # ラベル追加
+            self.add_selection_label(self.atom1_idx, "1")
+        elif self.atom3_idx is None:
+            symbol1 = self.mol.GetAtomWithIdx(self.atom1_idx).GetSymbol()
+            symbol2 = self.mol.GetAtomWithIdx(self.atom2_idx).GetSymbol()
+            self.selection_label.setText(f"Selected: {symbol1}({self.atom1_idx}) - {symbol2}({self.atom2_idx}) - ?")
+            self.angle_label.setText("")
+            self.apply_button.setEnabled(False)
+            # ラベル追加
+            self.add_selection_label(self.atom1_idx, "1")
+            self.add_selection_label(self.atom2_idx, "2(vertex)")
+        else:
+            symbol1 = self.mol.GetAtomWithIdx(self.atom1_idx).GetSymbol()
+            symbol2 = self.mol.GetAtomWithIdx(self.atom2_idx).GetSymbol()
+            symbol3 = self.mol.GetAtomWithIdx(self.atom3_idx).GetSymbol()
+            self.selection_label.setText(f"Angle: {symbol1}({self.atom1_idx}) - {symbol2}({self.atom2_idx}) - {symbol3}({self.atom3_idx})")
+            
+            # Calculate current angle
+            current_angle = self.calculate_angle()
+            self.angle_label.setText(f"Current angle: {current_angle:.2f}°")
+            self.apply_button.setEnabled(True)
+            # ラベル追加
+            self.add_selection_label(self.atom1_idx, "1")
+            self.add_selection_label(self.atom2_idx, "2(vertex)")
+            self.add_selection_label(self.atom3_idx, "3")
+    
+    def calculate_angle(self):
+        """現在の角度を計算"""
+        conf = self.mol.GetConformer()
+        pos1 = np.array(conf.GetAtomPosition(self.atom1_idx))
+        pos2 = np.array(conf.GetAtomPosition(self.atom2_idx))  # vertex
+        pos3 = np.array(conf.GetAtomPosition(self.atom3_idx))
+        
+        vec1 = pos1 - pos2
+        vec2 = pos3 - pos2
+        
+        cos_angle = np.dot(vec1, vec2) / (np.linalg.norm(vec1) * np.linalg.norm(vec2))
+        cos_angle = np.clip(cos_angle, -1.0, 1.0)
+        angle_rad = np.arccos(cos_angle)
+        return np.degrees(angle_rad)
+    
+    def apply_changes(self):
+        """変更を適用"""
+        if self.atom1_idx is None or self.atom2_idx is None or self.atom3_idx is None:
+            return
+        
+        try:
+            new_angle = float(self.angle_input.text())
+            if new_angle <= 0 or new_angle >= 180:
+                QMessageBox.warning(self, "Invalid Input", "Angle must be between 0 and 180 degrees.")
+                return
+        except ValueError:
+            QMessageBox.warning(self, "Invalid Input", "Please enter a valid number.")
+            return
+        
+        # Undo状態を保存
+        self.main_window.push_undo_state()
+        
+        # Apply the angle change
+        self.adjust_angle(new_angle)
+        self.accept()
+    
+    def adjust_angle(self, new_angle_deg):
+        """角度を調整"""
+        conf = self.mol.GetConformer()
+        pos1 = np.array(conf.GetAtomPosition(self.atom1_idx))
+        pos2 = np.array(conf.GetAtomPosition(self.atom2_idx))  # vertex
+        pos3 = np.array(conf.GetAtomPosition(self.atom3_idx))
+        
+        vec1 = pos1 - pos2
+        vec2 = pos3 - pos2
+        
+        # Current angle
+        current_angle_rad = np.arccos(np.clip(
+            np.dot(vec1, vec2) / (np.linalg.norm(vec1) * np.linalg.norm(vec2)), -1.0, 1.0))
+        
+        # Target angle
+        target_angle_rad = np.radians(new_angle_deg)
+        
+        # Rotation axis (perpendicular to the plane containing vec1 and vec2)
+        rotation_axis = np.cross(vec1, vec2)
+        rotation_axis_norm = np.linalg.norm(rotation_axis)
+        
+        if rotation_axis_norm == 0:
+            # Vectors are parallel, cannot rotate
+            return
+        
+        rotation_axis = rotation_axis / rotation_axis_norm
+        
+        # Rotation angle
+        rotation_angle = target_angle_rad - current_angle_rad
+        
+        # Rodrigues' rotation formula
+        def rotate_vector(v, axis, angle):
+            cos_a = np.cos(angle)
+            sin_a = np.sin(angle)
+            return v * cos_a + np.cross(axis, v) * sin_a + axis * np.dot(axis, v) * (1 - cos_a)
+        
+        # Rotate vec2 to achieve the target angle
+        new_vec2 = rotate_vector(vec2, rotation_axis, rotation_angle)
+        new_pos3 = pos2 + new_vec2
+        
+        if self.rotate_atom_radio.isChecked():
+            # Move only the third atom
+            conf.SetAtomPosition(self.atom3_idx, new_pos3.tolist())
+            self.main_window.atom_positions_3d[self.atom3_idx] = new_pos3
+        else:
+            # Rotate the connected group around atom2 (vertex)
+            atoms_to_move = self.get_connected_group(self.atom3_idx, exclude=self.atom2_idx)
+            
+            for atom_idx in atoms_to_move:
+                current_pos = np.array(conf.GetAtomPosition(atom_idx))
+                # Transform to coordinate system centered at atom2
+                relative_pos = current_pos - pos2
+                # Rotate around the rotation axis
+                rotated_pos = rotate_vector(relative_pos, rotation_axis, rotation_angle)
+                # Transform back to world coordinates
+                new_pos = pos2 + rotated_pos
+                conf.SetAtomPosition(atom_idx, new_pos.tolist())
+                self.main_window.atom_positions_3d[atom_idx] = new_pos
+        
+        # Update the 3D view
+        self.main_window.draw_molecule_3d(self.mol)
+    
+    def get_connected_group(self, start_atom, exclude=None):
+        """指定された原子から連結されているグループを取得"""
+        visited = set()
+        to_visit = [start_atom]
+        
+        while to_visit:
+            current = to_visit.pop()
+            if current in visited or current == exclude:
+                continue
+            
+            visited.add(current)
+            
+            # Get neighboring atoms
+            atom = self.mol.GetAtomWithIdx(current)
+            for bond in atom.GetBonds():
+                other_idx = bond.GetOtherAtomIdx(current)
+                if other_idx not in visited and other_idx != exclude:
+                    to_visit.append(other_idx)
+        
+        return visited
+
+
+class DihedralDialog(Dialog3DPickingMixin, QDialog):
+    def __init__(self, mol, main_window, parent=None):
+        QDialog.__init__(self, parent)
+        Dialog3DPickingMixin.__init__(self)
+        self.mol = mol
+        self.main_window = main_window
+        self.atom1_idx = None
+        self.atom2_idx = None  # central bond start
+        self.atom3_idx = None  # central bond end
+        self.atom4_idx = None
+        self.init_ui()
+    
+    def init_ui(self):
+        self.setWindowTitle("Adjust Dihedral Angle")
+        self.setModal(False)  # モードレスにしてクリックを阻害しない
+        self.setWindowFlags(Qt.WindowType.Window | Qt.WindowType.WindowStaysOnTopHint)  # 常に前面表示
+        layout = QVBoxLayout(self)
+        
+        # Instructions
+        instruction_label = QLabel("Click four atoms in order to define a dihedral angle. The rotation will be around the bond between the 2nd and 3rd atoms.")
+        instruction_label.setWordWrap(True)
+        layout.addWidget(instruction_label)
+        
+        # Selected atoms display
+        self.selection_label = QLabel("No atoms selected")
+        layout.addWidget(self.selection_label)
+        
+        # Current dihedral angle display
+        self.dihedral_label = QLabel("")
+        layout.addWidget(self.dihedral_label)
+        
+        # New dihedral angle input
+        dihedral_layout = QHBoxLayout()
+        dihedral_layout.addWidget(QLabel("New dihedral angle (degrees):"))
+        self.dihedral_input = QLineEdit()
+        self.dihedral_input.setPlaceholderText("180.0")
+        dihedral_layout.addWidget(self.dihedral_input)
+        layout.addLayout(dihedral_layout)
+        
+        # Movement options
+        group_box = QWidget()
+        group_layout = QVBoxLayout(group_box)
+        group_layout.addWidget(QLabel("Move:"))
+        
+        self.move_group_radio = QRadioButton("Atom 1,2,3: Fixed, Atom 4 group: Rotate")
+        self.move_group_radio.setChecked(True)
+        group_layout.addWidget(self.move_group_radio)
+        
+        self.move_atom_radio = QRadioButton("Atom 1,2,3: Fixed, Atom 4: Rotate atom only")
+        group_layout.addWidget(self.move_atom_radio)
+        
+        layout.addWidget(group_box)
+        
+        # Buttons
+        button_layout = QHBoxLayout()
+        self.clear_button = QPushButton("Clear Selection")
+        self.clear_button.clicked.connect(self.clear_selection)
+        button_layout.addWidget(self.clear_button)
+        
+        button_layout.addStretch()
+        
+        self.apply_button = QPushButton("Apply")
+        self.apply_button.clicked.connect(self.apply_changes)
+        self.apply_button.setEnabled(False)
+        button_layout.addWidget(self.apply_button)
+        
+        cancel_button = QPushButton("Cancel")
+        cancel_button.clicked.connect(self.reject)
+        button_layout.addWidget(cancel_button)
+        
+        layout.addLayout(button_layout)
+        
+        # Connect to main window's picker for DihedralDialog
+        self.picker_connection = None
+        self.enable_picking()
+    
+    def on_atom_picked(self, atom_idx):
+        """原子がピックされたときの処理"""
+        if self.atom1_idx is None:
+            self.atom1_idx = atom_idx
+        elif self.atom2_idx is None:
+            self.atom2_idx = atom_idx
+        elif self.atom3_idx is None:
+            self.atom3_idx = atom_idx
+        elif self.atom4_idx is None:
+            self.atom4_idx = atom_idx
+        else:
+            # Reset and start over
+            self.atom1_idx = atom_idx
+            self.atom2_idx = None
+            self.atom3_idx = None
+            self.atom4_idx = None
+        
+        # 原子ラベルを表示
+        self.show_atom_labels()
+        self.update_display()
+    
+    def keyPressEvent(self, event):
+        """キーボードイベントを処理"""
+        if event.key() == Qt.Key.Key_Return or event.key() == Qt.Key.Key_Enter:
+            if self.apply_button.isEnabled():
+                self.apply_changes()
+            event.accept()
+        else:
+            super().keyPressEvent(event)
+    
+    def closeEvent(self, event):
+        """ダイアログが閉じられる時の処理"""
+        self.clear_atom_labels()
+        self.disable_picking()
+        super().closeEvent(event)
+    
+    def reject(self):
+        """キャンセル時の処理"""
+        self.clear_atom_labels()
+        self.disable_picking()
+        super().reject()
+    
+    def accept(self):
+        """OK時の処理"""
+        self.clear_atom_labels()
+        self.disable_picking()
+        super().accept()
+    
+    def clear_selection(self):
+        """選択をクリア"""
+        self.atom1_idx = None
+        self.atom2_idx = None  # central bond start
+        self.atom3_idx = None  # central bond end
+        self.atom4_idx = None
+        self.clear_atom_labels()
+        self.update_display()
+    
+    def show_atom_labels(self):
+        """選択された原子にラベルを表示"""
+        # 既存のラベルをクリア
+        self.clear_atom_labels()
+        
+        # 新しいラベルを表示
+        if not hasattr(self, 'selection_labels'):
+            self.selection_labels = []
+        
+        selected_atoms = [self.atom1_idx, self.atom2_idx, self.atom3_idx, self.atom4_idx]
+        labels = ["1st", "2nd (bond start)", "3rd (bond end)", "4th"]
+        colors = ["yellow", "green", "green", "yellow"]  # 中央結合を緑で強調
+        
+        for i, atom_idx in enumerate(selected_atoms):
+            if atom_idx is not None:
+                pos = self.main_window.atom_positions_3d[atom_idx]
+                label_text = f"{labels[i]}"
+                
+                # ラベルを追加
+                label_actor = self.main_window.plotter.add_point_labels(
+                    [pos], [label_text], 
+                    point_size=20, 
+                    font_size=12,
+                    text_color=colors[i],
+                    always_visible=True
+                )
+                self.selection_labels.append(label_actor)
+    
+    def clear_atom_labels(self):
+        """原子ラベルをクリア"""
+        if hasattr(self, 'selection_labels'):
+            for label_actor in self.selection_labels:
+                try:
+                    self.main_window.plotter.remove_actor(label_actor)
+                except:
+                    pass
+            self.selection_labels = []
+    
+    def update_display(self):
+        """表示を更新"""
+        selected_count = sum(x is not None for x in [self.atom1_idx, self.atom2_idx, self.atom3_idx, self.atom4_idx])
+        
+        if selected_count == 0:
+            self.selection_label.setText("No atoms selected")
+            self.dihedral_label.setText("")
+            self.apply_button.setEnabled(False)
+        elif selected_count < 4:
+            selected_atoms = [self.atom1_idx, self.atom2_idx, self.atom3_idx, self.atom4_idx]
+            
+            display_parts = []
+            for atom_idx in selected_atoms:
+                if atom_idx is not None:
+                    symbol = self.mol.GetAtomWithIdx(atom_idx).GetSymbol()
+                    display_parts.append(f"{symbol}({atom_idx})")
+                else:
+                    display_parts.append("?")
+            
+            self.selection_label.setText(" - ".join(display_parts))
+            self.dihedral_label.setText("")
+            self.apply_button.setEnabled(False)
+        else:
+            selected_atoms = [self.atom1_idx, self.atom2_idx, self.atom3_idx, self.atom4_idx]
+            
+            display_parts = []
+            for atom_idx in selected_atoms:
+                symbol = self.mol.GetAtomWithIdx(atom_idx).GetSymbol()
+                display_parts.append(f"{symbol}({atom_idx})")
+            
+            self.selection_label.setText(" - ".join(display_parts))
+            
+            # Calculate current dihedral angle
+            current_dihedral = self.calculate_dihedral()
+            self.dihedral_label.setText(f"Current dihedral: {current_dihedral:.2f}°")
+            self.apply_button.setEnabled(True)
+    
+    def calculate_dihedral(self):
+        """現在の二面角を計算"""
+        conf = self.mol.GetConformer()
+        pos1 = np.array(conf.GetAtomPosition(self.atom1_idx))
+        pos2 = np.array(conf.GetAtomPosition(self.atom2_idx))
+        pos3 = np.array(conf.GetAtomPosition(self.atom3_idx))
+        pos4 = np.array(conf.GetAtomPosition(self.atom4_idx))
+        
+        # Vectors
+        b1 = pos2 - pos1
+        b2 = pos3 - pos2
+        b3 = pos4 - pos3
+        
+        # Normal vectors
+        n1 = np.cross(b1, b2)
+        n2 = np.cross(b2, b3)
+        
+        # Dihedral angle
+        cos_angle = np.dot(n1, n2) / (np.linalg.norm(n1) * np.linalg.norm(n2))
+        cos_angle = np.clip(cos_angle, -1.0, 1.0)
+        
+        # Sign determination
+        m1 = np.cross(n1, b2 / np.linalg.norm(b2))
+        sign = np.sign(np.dot(m1, n2))
+        
+        angle_rad = np.arccos(cos_angle) * sign
+        return np.degrees(angle_rad)
+    
+    def apply_changes(self):
+        """変更を適用"""
+        if any(idx is None for idx in [self.atom1_idx, self.atom2_idx, self.atom3_idx, self.atom4_idx]):
+            return
+        
+        try:
+            new_dihedral = float(self.dihedral_input.text())
+            if new_dihedral < -180 or new_dihedral > 180:
+                QMessageBox.warning(self, "Invalid Input", "Dihedral angle must be between -180 and 180 degrees.")
+                return
+        except ValueError:
+            QMessageBox.warning(self, "Invalid Input", "Please enter a valid number.")
+            return
+        
+        # Undo状態を保存
+        self.main_window.push_undo_state()
+        
+        # Apply the dihedral angle change
+        self.adjust_dihedral(new_dihedral)
+        self.accept()
+    
+    def adjust_dihedral(self, new_dihedral_deg):
+        """二面角を調整"""
+        conf = self.mol.GetConformer()
+        pos1 = np.array(conf.GetAtomPosition(self.atom1_idx))
+        pos2 = np.array(conf.GetAtomPosition(self.atom2_idx))
+        pos3 = np.array(conf.GetAtomPosition(self.atom3_idx))
+        pos4 = np.array(conf.GetAtomPosition(self.atom4_idx))
+        
+        # Current dihedral
+        current_dihedral = self.calculate_dihedral()
+        
+        # Rotation angle
+        rotation_angle_deg = new_dihedral_deg - current_dihedral
+        rotation_angle_rad = np.radians(rotation_angle_deg)
+        
+        # Rotation axis (bond between atom2 and atom3)
+        rotation_axis = pos3 - pos2
+        rotation_axis = rotation_axis / np.linalg.norm(rotation_axis)
+        
+        # Rodrigues' rotation formula
+        def rotate_point_around_axis(point, axis_point, axis_direction, angle):
+            # Translate so axis passes through origin
+            translated_point = point - axis_point
+            
+            # Rotate using Rodrigues' formula
+            cos_a = np.cos(angle)
+            sin_a = np.sin(angle)
+            
+            rotated = (translated_point * cos_a + 
+                      np.cross(axis_direction, translated_point) * sin_a + 
+                      axis_direction * np.dot(axis_direction, translated_point) * (1 - cos_a))
+            
+            # Translate back
+            return rotated + axis_point
+        
+        # Rotate the fourth atom (and potentially connected group)
+        new_pos4 = rotate_point_around_axis(pos4, pos2, rotation_axis, rotation_angle_rad)
+        
+        if self.move_group_radio.isChecked():
+            # Option 1: Rotate groups around bond 2-3 (proper dihedral rotation)
+            # 分子を2-3結合を境界として二つのグループに分割
+            
+            # atom1側のグループ（atom2から atom3を除外して探索）
+            group1_atoms = self.get_connected_group(self.atom2_idx, exclude=self.atom3_idx)
+            
+            # atom4側のグループ（atom3から atom2を除外して探索）
+            group4_atoms = self.get_connected_group(self.atom3_idx, exclude=self.atom2_idx)
+            
+            # atom4側のグループを回転（atom1側は固定）
+            # 通常の二面角回転では、一方のグループのみを回転させる
+            for atom_idx in group4_atoms:
+                current_pos = np.array(conf.GetAtomPosition(atom_idx))
+                new_pos = rotate_point_around_axis(current_pos, pos2, rotation_axis, rotation_angle_rad)
+                conf.SetAtomPosition(atom_idx, new_pos.tolist())
+                self.main_window.atom_positions_3d[atom_idx] = new_pos
+        else:
+            # Option 2: Move only the fourth atom (1,2,3 fixed)
+            conf.SetAtomPosition(self.atom4_idx, new_pos4.tolist())
+            self.main_window.atom_positions_3d[self.atom4_idx] = new_pos4
+        
+        # Update the 3D view
+        self.main_window.draw_molecule_3d(self.mol)
+    
+    def get_connected_group(self, start_atom, exclude=None):
+        """指定された原子から連結されているグループを取得"""
+        visited = set()
+        to_visit = [start_atom]
+        
+        while to_visit:
+            current = to_visit.pop()
+            if current in visited or current == exclude:
+                continue
+            
+            visited.add(current)
+            
+            # Get neighboring atoms
+            atom = self.mol.GetAtomWithIdx(current)
+            for bond in atom.GetBonds():
+                other_idx = bond.GetOtherAtomIdx(current)
+                if other_idx not in visited and other_idx != exclude:
+                    to_visit.append(other_idx)
+        
+        return visited
+
+
+class SymmetryCandidatesDialog(QDialog):
+    """対称性候補選択ダイアログ"""
+    
+    def __init__(self, candidates, parent=None):
+        super().__init__(parent)
+        self.candidates = candidates
+        self.selected_candidate = None
+        self.init_ui()
+    
+    def init_ui(self):
+        self.setWindowTitle("Symmetry Detection Results")
+        self.setModal(True)
+        self.setFixedSize(500, 400)
+        layout = QVBoxLayout(self)
+        
+        # 説明ラベル
+        instruction_label = QLabel(
+            "Multiple point groups detected for your molecule. "
+            "Select the most appropriate one based on confidence and chemical knowledge:"
+        )
+        instruction_label.setWordWrap(True)
+        layout.addWidget(instruction_label)
+        
+        # 候補リスト
+        self.candidates_list = QListWidget()
+        self.candidates_list.setSelectionMode(QListWidget.SelectionMode.SingleSelection)
+        
+        for i, candidate in enumerate(self.candidates):
+            # リストアイテムのテキストを作成
+            confidence_bar = "★" * int(candidate['confidence'] * 5)  # 5段階評価
+            item_text = f"{candidate['name']}\n"
+            item_text += f"Confidence: {candidate['confidence']:.1%} {confidence_bar}\n"
+            item_text += f"Reason: {candidate['reason']}"
+            
+            item = QListWidgetItem(item_text)
+            item.setData(Qt.ItemDataRole.UserRole, candidate)
+            
+            # 信頼度に基づく色分け
+            if candidate['confidence'] >= 0.8:
+                item.setBackground(QColor(200, 255, 200))  # 淡い緑
+            elif candidate['confidence'] >= 0.6:
+                item.setBackground(QColor(255, 255, 200))  # 淡い黄色
+            elif candidate['confidence'] >= 0.4:
+                item.setBackground(QColor(255, 230, 200))  # 淡いオレンジ
+            else:
+                item.setBackground(QColor(255, 200, 200))  # 淡い赤
+            
+            self.candidates_list.addItem(item)
+        
+        # 最初の候補を選択
+        if self.candidates:
+            self.candidates_list.setCurrentRow(0)
+        
+        layout.addWidget(self.candidates_list)
+        
+        # 詳細情報表示エリア
+        self.detail_label = QLabel()
+        self.detail_label.setWordWrap(True)
+        self.detail_label.setStyleSheet("QLabel { background-color: #f0f0f0; padding: 10px; border: 1px solid #ccc; }")
+        self.detail_label.setMaximumHeight(80)
+        layout.addWidget(self.detail_label)
+        
+        # 選択が変更されたときの処理
+        self.candidates_list.currentItemChanged.connect(self.on_selection_changed)
+        
+        # 初期表示
+        self.on_selection_changed()
+        
+        # ボタン
+        button_layout = QHBoxLayout()
+        
+        info_button = QPushButton("More Info")
+        info_button.clicked.connect(self.show_more_info)
+        button_layout.addWidget(info_button)
+        
+        button_layout.addStretch()
+        
+        self.select_button = QPushButton("Select This Point Group")
+        self.select_button.clicked.connect(self.accept)
+        self.select_button.setDefault(True)
+        button_layout.addWidget(self.select_button)
+        
+        cancel_button = QPushButton("Cancel")
+        cancel_button.clicked.connect(self.reject)
+        button_layout.addWidget(cancel_button)
+        
+        layout.addLayout(button_layout)
+    
+    def keyPressEvent(self, event):
+        """キーボードイベントを処理"""
+        if event.key() == Qt.Key.Key_Return or event.key() == Qt.Key.Key_Enter:
+            if self.select_button.isEnabled():
+                self.accept()
+            event.accept()
+        else:
+            super().keyPressEvent(event)
+    
+    def on_selection_changed(self):
+        """選択が変更されたときの処理"""
+        current_item = self.candidates_list.currentItem()
+        if current_item:
+            candidate = current_item.data(Qt.ItemDataRole.UserRole)
+            self.selected_candidate = candidate
+            
+            # 詳細情報を表示
+            detail_text = f"Point Group: {candidate['name']}\n"
+            
+            # operations_countを安全に取得
+            ops_count = candidate.get('operations_count', 'Unknown')
+            if ops_count != 'Unknown':
+                detail_text += f"Operations: {ops_count} symmetry operations\n"
+            else:
+                detail_text += "Operations: Computing...\n"
+            
+            # 化学的推奨情報
+            recommendations = self.get_chemical_recommendations(candidate['key'])
+            if recommendations:
+                detail_text += f"Common molecules: {recommendations}"
+            
+            self.detail_label.setText(detail_text)
+    
+    def get_chemical_recommendations(self, point_group_key):
+        """点群に対応する代表的な分子例を返す"""
+        examples = {
+            'Td': 'CH₄, CCl₄, SiF₄',
+            'C3v': 'NH₃, PCl₃, SO₃²⁻',
+            'C2v': 'H₂O, SO₂, NO₂⁻',
+            'D3h': 'BF₃, CO₃²⁻, NO₃⁻',
+            'D2h': 'C₂H₄, benzene (planar)',
+            'Oh': 'SF₆, [Co(NH₃)₆]³⁺',
+            'Cs': 'HOCl, planar molecules',
+            'Ci': 'trans-compounds',
+            'C2h': 'trans-N₂F₂',
+            'C1': 'CHFClBr, most organic molecules'
+        }
+        return examples.get(point_group_key, '')
+    
+    def show_more_info(self):
+        """詳細情報ダイアログを表示"""
+        if not self.selected_candidate:
+            return
+        
+        info_text = f"Point Group: {self.selected_candidate['name']}\n\n"
+        info_text += f"Confidence Score: {self.selected_candidate['confidence']:.3f}\n"
+        info_text += f"Detection Method: {self.selected_candidate['reason']}\n"
+        info_text += f"Symmetry Operations: {self.selected_candidate.get('operations_count', 'N/A')}\n\n"
+        
+        examples = self.get_chemical_recommendations(self.selected_candidate['key'])
+        if examples:
+            info_text += f"Example Molecules:\n{examples}\n\n"
+        
+        info_text += "This point group describes the molecular symmetry and will be used to "
+        info_text += "adjust atomic positions to achieve ideal symmetric geometry."
+        
+        QMessageBox.information(self, "Point Group Information", info_text)
+    
+    def get_selected_candidate(self):
+        """選択された候補を返す"""
+        return self.selected_candidate
 
 
 # --- Application Execution ---
