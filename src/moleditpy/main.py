@@ -11,7 +11,7 @@ DOI 10.5281/zenodo.17268532
 """
 
 #Version
-VERSION = '1.4.0'
+VERSION = '1.5.0a'
 
 print("-----------------------------------------------------")
 print("MoleditPy — A Python-based molecular editing software")
@@ -181,89 +181,147 @@ class MolecularData:
                 self.adjacency_list[id2].remove(id1)
             del self.bonds[key_to_remove]
 
-    def to_mol_block(self):
-        try:
-            mol = self.to_rdkit_mol()
-            if mol:
-                return Chem.MolToMolBlock(mol, includeStereo=True)
-        except Exception:
-            pass
-        if not self.atoms: return None
-        atom_map = {old_id: new_id for new_id, old_id in enumerate(self.atoms.keys())}
-        num_atoms, num_bonds = len(self.atoms), len(self.bonds)
-        mol_block = "\n  MoleditPy\n\n"
-        mol_block += f"{num_atoms:3d}{num_bonds:3d}  0  0  0  0  0  0  0  0999 V2000\n"
-        for old_id, atom in self.atoms.items():
-            x, y, z, symbol = atom['item'].pos().x(), -atom['item'].pos().y(), 0.0, atom['symbol']
-            charge = atom.get('charge', 0)
-
-            chg_code = 0
-            if charge == 3: chg_code = 1
-            elif charge == 2: chg_code = 2
-            elif charge == 1: chg_code = 3
-            elif charge == -1: chg_code = 5
-            elif charge == -2: chg_code = 6
-            elif charge == -3: chg_code = 7
-
-            mol_block += f"{x:10.4f}{y:10.4f}{z:10.4f} {symbol:<3} 0  0  0{chg_code:3d}  0  0  0  0  0  0  0\n"
-
-        for (id1, id2), bond in self.bonds.items():
-            idx1, idx2, order = atom_map[id1] + 1, atom_map[id2] + 1, bond['order']
-            stereo_code = 0
-            bond_stereo = bond.get('stereo', 0)
-            if bond_stereo == 1:
-                stereo_code = 1
-            elif bond_stereo == 2:
-                stereo_code = 6
-
-            mol_block += f"{idx1:3d}{idx2:3d}{order:3d}{stereo_code:3d}  0  0  0\n"
-            
-        mol_block += "M  END\n"
-        return mol_block
-
-
     def to_rdkit_mol(self):
         if not self.atoms: return None
         mol = Chem.RWMol()
 
-        for atom_id, atom_data in self.atoms.items():
-            atom = Chem.Atom(atom_data['symbol'])
-            atom.SetFormalCharge(atom_data.get('charge', 0))
-            atom.SetNumRadicalElectrons(atom_data.get('radical', 0))
+        # --- Step 1: atoms ---
+        atom_id_to_idx_map = {}
+        for atom_id, data in self.atoms.items():
+            atom = Chem.Atom(data['symbol'])
+            atom.SetFormalCharge(data.get('charge', 0))
+            atom.SetNumRadicalElectrons(data.get('radical', 0))
             atom.SetIntProp("_original_atom_id", atom_id)
-            mol.AddAtom(atom)
+            idx = mol.AddAtom(atom)
+            atom_id_to_idx_map[atom_id] = idx
 
-        atom_id_to_idx_map = {a.GetIntProp("_original_atom_id"): a.GetIdx() for a in mol.GetAtoms()}
-
+        # --- Step 2: bonds & stereo info保存（ラベル情報はここで保持） ---
+        bond_stereo_info = {}  # bond_idx -> {'type': int, 'atom_ids': (id1,id2), 'bond_data': bond_data}
         for (id1, id2), bond_data in self.bonds.items():
             if id1 not in atom_id_to_idx_map or id2 not in atom_id_to_idx_map:
                 continue
-            idx1 = atom_id_to_idx_map[id1]
-            idx2 = atom_id_to_idx_map[id2]
+            idx1, idx2 = atom_id_to_idx_map[id1], atom_id_to_idx_map[id2]
 
             order_val = float(bond_data['order'])
-            if order_val == 1.5:
-                order = Chem.BondType.AROMATIC
-            elif order_val == 2.0:
-                order = Chem.BondType.DOUBLE
-            elif order_val == 3.0:
-                order = Chem.BondType.TRIPLE
-            else:
-                order = Chem.BondType.SINGLE
+            order = {1.0: Chem.BondType.SINGLE, 1.5: Chem.BondType.AROMATIC,
+                     2.0: Chem.BondType.DOUBLE, 3.0: Chem.BondType.TRIPLE}.get(order_val, Chem.BondType.SINGLE)
 
-            bond_idx = mol.AddBond(idx1, idx2, order)
-            bond = mol.GetBondWithIdx(bond_idx - 1)
+            bond_idx = mol.AddBond(idx1, idx2, order) - 1
 
-            if bond_data.get('stereo', 0) != 0 and order == Chem.BondType.SINGLE:
-                if bond_data['stereo'] == 1: # Wedge
+            # stereoラベルがあれば、bond_idxに対して詳細を保持（あとで使う）
+            if 'stereo' in bond_data and bond_data['stereo'] in [1, 2, 3, 4]:
+                bond_stereo_info[bond_idx] = {
+                    'type': int(bond_data['stereo']),
+                    'atom_ids': (id1, id2),
+                    'bond_data': bond_data
+                }
+
+        # --- Step 3: sanitize ---
+        final_mol = mol.GetMol()
+        try:
+            Chem.SanitizeMol(final_mol)
+        except Exception as e:
+            return None
+
+        # --- Step 4: add 2D conformer ---
+        conf = Chem.Conformer(final_mol.GetNumAtoms())
+        conf.Set3D(False)
+        for atom_id, data in self.atoms.items():
+            if atom_id in atom_id_to_idx_map:
+                idx = atom_id_to_idx_map[atom_id]
+                pos = data.get('pos')
+                if pos:
+                    conf.SetAtomPosition(idx, (pos.x(), pos.y(), 0.0))
+        final_mol.AddConformer(conf)
+
+
+        # --- Step 5: 座標ベースの立体設定（ただしラベルつき二重結合の見かけ上の影響は後で消す） ---
+        Chem.SetDoubleBondNeighborDirections(final_mol, final_mol.GetConformer(0))
+
+        # ヘルパー: 重原子優先で近傍を選ぶ
+        def pick_preferred_neighbor(atom, exclude_idx):
+            # 非水素（atomic num > 1）を優先、それがなければ最初の neighbor
+            for nbr in atom.GetNeighbors():
+                if nbr.GetIdx() == exclude_idx:
+                    continue
+                if nbr.GetAtomicNum() > 1:
+                    return nbr.GetIdx()
+            # fallback
+            for nbr in atom.GetNeighbors():
+                if nbr.GetIdx() != exclude_idx:
+                    return nbr.GetIdx()
+            return None
+
+        # --- Step 6: ラベルベースで上書き（E/Z を最優先） ---
+        for bond_idx, info in bond_stereo_info.items():
+            stereo_type = info['type']
+            bond = final_mol.GetBondWithIdx(bond_idx)
+
+
+            # 単結合の wedge/dash ラベル（1/2）がある場合（もし使っているなら）
+            if stereo_type in [1, 2]:
+                if stereo_type == 1:
                     bond.SetBondDir(Chem.BondDir.BEGINWEDGE)
-                elif bond_data['stereo'] == 2: # Dash
+                elif stereo_type == 2:
                     bond.SetBondDir(Chem.BondDir.BEGINDASH)
+                continue
 
-        mol.UpdatePropertyCache(strict=False)
+            # 二重結合の E/Z ラベル（3/4）
+            if stereo_type in [3, 4]:
+                if bond.GetBondType() != Chem.BondType.DOUBLE:
+                    continue
 
-        mol = mol.GetMol()
-        return mol
+                begin_atom_idx = bond.GetBeginAtomIdx()
+                end_atom_idx = bond.GetEndAtomIdx()
+
+                # まず、可能なら bond_data に指定の stereo atoms があるか確認（外部情報があれば使う）
+                bond_data = info.get('bond_data', {}) or {}
+                stereo_atoms_specified = bond_data.get('stereo_atoms')  # 例: [atom_id_a, atom_id_b] のような外部指定があれば使う
+
+                # neighbors を安全に選ぶ（非Hを優先）
+                if stereo_atoms_specified:
+                    # ユーザデータが原子IDで与えられている想定 -> idx に変換
+                    try:
+                        a1_id, a2_id = stereo_atoms_specified
+                        neigh1_idx = atom_id_to_idx_map.get(a1_id)
+                        neigh2_idx = atom_id_to_idx_map.get(a2_id)
+                    except Exception:
+                        neigh1_idx = None
+                        neigh2_idx = None
+                else:
+                    neigh1_idx = pick_preferred_neighbor(final_mol.GetAtomWithIdx(begin_atom_idx), end_atom_idx)
+                    neigh2_idx = pick_preferred_neighbor(final_mol.GetAtomWithIdx(end_atom_idx), begin_atom_idx)
+
+
+                if neigh1_idx is None or neigh2_idx is None:
+                    continue
+
+                # 手動で stereo atoms と E/Z を設定（ラベルを最優先）
+                bond.SetStereoAtoms(neigh1_idx, neigh2_idx)
+                if stereo_type == 3:
+                    bond.SetStereo(Chem.BondStereo.STEREOZ)
+                    print("  - Set to STEREOZ (Z)")
+                elif stereo_type == 4:
+                    bond.SetStereo(Chem.BondStereo.STEREOE)
+                    print("  - Set to STEREOE (E)")
+
+                # **重要**: 座標ベースでつけられた隣接単結合の BondDir（wedge/dash）が
+                # ラベルと矛盾する可能性があるので、それらを明示的に消す
+                # begin_atom_idx - neigh1_idx の結合, end_atom_idx - neigh2_idx の結合
+                b1 = final_mol.GetBondBetweenAtoms(begin_atom_idx, neigh1_idx)
+                b2 = final_mol.GetBondBetweenAtoms(end_atom_idx, neigh2_idx)
+                if b1 is not None:
+                    b1.SetBondDir(Chem.BondDir.NONE)
+                if b2 is not None:
+                    b2.SetBondDir(Chem.BondDir.NONE)
+
+        # Step 7: 最終化（キャッシュ更新 + 立体割当の再実行）
+        final_mol.UpdatePropertyCache(strict=False)
+
+        Chem.AssignStereochemistry(final_mol, cleanIt=False, force=False)
+
+        return final_mol
+
 
 class AtomItem(QGraphicsItem):
     def __init__(self, atom_id, symbol, pos, charge=0, radical=0):
@@ -615,9 +673,51 @@ class BondItem(QGraphicsItem):
             else:
                 v = line.unitVector().normalVector()
                 offset = QPointF(v.dx(), v.dy()) * BOND_OFFSET
+
                 if self.order == 2:
-                    painter.drawLine(line.translated(offset))
-                    painter.drawLine(line.translated(-offset))
+                    # -------------------- ここから差し替え --------------------)
+                    line1 = line.translated(offset)
+                    line2 = line.translated(-offset)
+                    painter.drawLine(line1)
+                    painter.drawLine(line2)
+
+                    # E/Z ラベルの描画処理
+                    if self.stereo in [3, 4]:
+                        painter.save() # 現在の描画設定を保存
+
+                        # --- ラベルの設定 ---
+                        font = QFont("Arial", 20, QFont.Weight.Bold)
+                        font.setItalic(True)
+                        text_color = QColor("gray")
+                        # 輪郭の色を背景色と同じにする
+                        outline_color = self.scene().backgroundBrush().color()
+
+                        # --- 描画パスの作成 ---
+                        text = "Z" if self.stereo == 3 else "E"
+                        path = QPainterPath()
+                        
+                        # テキストが正確に中央に来るように位置を計算
+                        fm = QFontMetricsF(font)
+                        text_rect = fm.boundingRect(text)
+                        text_rect.moveCenter(line.center())
+                        path.addText(text_rect.topLeft(), font, text)
+
+                        # --- 輪郭の描画 ---
+                        stroker = QPainterPathStroker()
+                        stroker.setWidth(2.5) # 輪郭の太さ
+                        outline_path = stroker.createStroke(path)
+                        
+                        painter.setBrush(outline_color)
+                        painter.setPen(Qt.PenStyle.NoPen)
+                        painter.drawPath(outline_path)
+
+                        # --- 文字本体の描画 ---
+                        painter.setBrush(text_color)
+                        painter.setPen(text_color)
+                        painter.drawPath(path)
+
+                        painter.restore() # 描画設定を元に戻す
+
                 elif self.order == 3:
                     painter.drawLine(line)
                     painter.drawLine(line.translated(offset))
@@ -642,17 +742,22 @@ class BondItem(QGraphicsItem):
             self.setPos(self.atom1.pos())
         self.update()
 
+
     def hoverEnterEvent(self, event):
         scene = self.scene()
         mode = getattr(scene, 'mode', '')
         self.hovered = True
         self.update()
+        if self.scene():
+            self.scene().set_hovered_item(self)
         super().hoverEnterEvent(event)
 
     def hoverLeaveEvent(self, event):
         if self.hovered:
             self.hovered = False
             self.update()
+        if self.scene():
+            self.scene().set_hovered_item(None)
         super().hoverLeaveEvent(event)
 
 
@@ -693,6 +798,7 @@ class MoleculeScene(QGraphicsScene):
         self.start_atom, self.temp_line, self.start_pos = None, None, None; self.press_pos = None
         self.mouse_moved_since_press = False
         self.data_changed_in_event = False
+        self.hovered_item = None
         
         self.key_to_symbol_map = {
             Qt.Key.Key_C: 'C', Qt.Key.Key_N: 'N', Qt.Key.Key_O: 'O', Qt.Key.Key_S: 'S',
@@ -740,7 +846,7 @@ class MoleculeScene(QGraphicsScene):
             item = self.itemAt(event.scenePos(), self.views()[0].transform())
             if not isinstance(item, (AtomItem, BondItem)):
                 return # 対象外のものをクリックした場合は何もしない
-
+            
             data_changed = False
             # --- モードに応じた処理 ---
             if isinstance(item, AtomItem):
@@ -761,7 +867,6 @@ class MoleculeScene(QGraphicsScene):
                 # 上記以外のモード（テンプレート、電荷、ラジカルを除く）では原子を削除
                 elif not self.mode.startswith(('template', 'charge', 'radical')):
                     data_changed = self.delete_items({item})
-            
             elif isinstance(item, BondItem):
                 # テンプレート、電荷、ラジカルモード以外で結合を削除
                 if not self.mode.startswith(('template', 'charge', 'radical')):
@@ -769,21 +874,26 @@ class MoleculeScene(QGraphicsScene):
 
             if data_changed:
                 self.window.push_undo_state()
-            
             self.press_pos = None
             event.accept()
             return # 右クリック処理を完了し、左クリックの処理へ進ませない
 
         if self.mode.startswith('template'):
+            self.clearSelection() # テンプレートモードでは選択処理を一切行わず、クリック位置の記録のみ行う
+            return
+
+        # Z,Eモードの時は選択処理を行わないようにする
+        if self.mode in ['bond_2_5']:
             self.clearSelection()
-            # テンプレートモードでは選択処理を一切行わず、クリック位置の記録のみ行う
+            event.accept()
             return
 
         if getattr(self, "mode", "") != "select":
             self.clearSelection()
             event.accept()
-        
+
         item = self.itemAt(self.press_pos, self.views()[0].transform())
+
         if isinstance(item, AtomItem):
             self.start_atom = item
             if self.mode != 'select':
@@ -791,13 +901,13 @@ class MoleculeScene(QGraphicsScene):
                 self.temp_line = QGraphicsLineItem(QLineF(self.start_atom.pos(), self.press_pos))
                 self.temp_line.setPen(QPen(Qt.GlobalColor.red, 2, Qt.PenStyle.DotLine))
                 self.addItem(self.temp_line)
-            else: super().mousePressEvent(event)
-
+            else:
+                super().mousePressEvent(event)
         elif item is None and (self.mode.startswith('atom') or self.mode.startswith('bond')):
             self.start_pos = self.press_pos
             self.temp_line = QGraphicsLineItem(QLineF(self.start_pos, self.press_pos)); self.temp_line.setPen(QPen(Qt.GlobalColor.red, 2, Qt.PenStyle.DotLine)); self.addItem(self.temp_line)
-        
-        else: super().mousePressEvent(event)
+        else:
+            super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event):
         if not self.window.is_2d_editable:
@@ -890,7 +1000,19 @@ class MoleculeScene(QGraphicsScene):
         elif self.mode.startswith('bond') and is_click and isinstance(released_item, BondItem):
             b = released_item 
             
-            if self.bond_stereo != 0 and b.order == self.bond_order and b.stereo == self.bond_stereo:
+            if self.mode == 'bond_2_5':
+                if b.order == 2:
+                    current_stereo = b.stereo
+                    if current_stereo not in [3, 4]:
+                        new_stereo = 3  # None -> Z
+                    elif current_stereo == 3:
+                        new_stereo = 4  # Z -> E
+                    else:  # current_stereo == 4
+                        new_stereo = 0  # E -> None
+                    self.update_bond_stereo(b, new_stereo)
+                return # この後の処理は行わない
+            
+            elif self.bond_stereo != 0 and b.order == self.bond_order and b.stereo == self.bond_stereo:
                 # 方向性を反転させる
                 old_id1, old_id2 = b.atom1.atom_id, b.atom2.atom_id
                 
@@ -1017,6 +1139,10 @@ class MoleculeScene(QGraphicsScene):
 
             event.accept()
             return
+        
+        elif self.mode in ['bond_2_5']:
+                event.accept()
+                return
 
         super().mouseDoubleClickEvent(event)
 
@@ -1415,6 +1541,10 @@ class MoleculeScene(QGraphicsScene):
     def leaveEvent(self, event):
         self.template_preview.hide(); super().leaveEvent(event)
 
+    def set_hovered_item(self, item):
+        """BondItemから呼ばれ、ホバー中のアイテムを記録する"""
+        self.hovered_item = item
+
     def keyPressEvent(self, event):
         view = self.views()[0]
         cursor_pos = view.mapToScene(view.mapFromGlobal(QCursor.pos()))
@@ -1424,6 +1554,7 @@ class MoleculeScene(QGraphicsScene):
         
         if not self.window.is_2d_editable:
             return    
+
 
         if key == Qt.Key.Key_4:
             # --- 動作1: カーソルが原子/結合上にある場合 (ワンショットでテンプレート配置) ---
@@ -1510,7 +1641,7 @@ class MoleculeScene(QGraphicsScene):
                 new_symbol = self.key_to_symbol_map_shift[key]
 
             if new_symbol and item_at_cursor.symbol != new_symbol:
-                item_at_cursor.prepareGeometryChange() # <<<<<< この行を追加
+                item_at_cursor.prepareGeometryChange()
                 
                 item_at_cursor.symbol = new_symbol
                 self.data.atoms[item_at_cursor.atom_id]['symbol'] = new_symbol
@@ -1578,7 +1709,7 @@ class MoleculeScene(QGraphicsScene):
 
                 elif key == Qt.Key.Key_1 and (bond.order != 1 or bond.stereo != 0):
                     bond.order = 1; bond.stereo = 0
-                elif key == Qt.Key.Key_2 and bond.order != 2:
+                elif key == Qt.Key.Key_2 and (bond.order != 2 or bond.stereo != 0):
                     bond.order = 2; bond.stereo = 0; needs_update = True
                 elif key == Qt.Key.Key_3 and bond.order != 3:
                     bond.order = 3; bond.stereo = 0; needs_update = True
@@ -1607,6 +1738,16 @@ class MoleculeScene(QGraphicsScene):
                 self.window.push_undo_state()
             
             if key in [Qt.Key.Key_1, Qt.Key.Key_2, Qt.Key.Key_3, Qt.Key.Key_W, Qt.Key.Key_D]:
+                event.accept()
+                return
+
+        if isinstance(self.hovered_item, BondItem) and self.hovered_item.order == 2:
+            if event.key() == Qt.Key.Key_Z:
+                self.update_bond_stereo(self.hovered_item, 3)  # Z-isomer
+                event.accept()
+                return
+            elif event.key() == Qt.Key.Key_E:
+                self.update_bond_stereo(self.hovered_item, 4)  # E-isomer
                 event.accept()
                 return
                     
@@ -1811,6 +1952,27 @@ class MoleculeScene(QGraphicsScene):
                (b.atom1 is atom2 and b.atom2 is atom1):
                 return b
         return None
+
+    def update_bond_stereo(self, bond_item, new_stereo):
+        """結合の立体化学を更新する共通メソッド"""
+        if bond_item.order != 2 or bond_item.stereo == new_stereo:
+            return
+
+        id1, id2 = bond_item.atom1.atom_id, bond_item.atom2.atom_id
+
+        # E/Z結合は方向性を持つため、キーは(id1, id2)のまま探す
+        key_to_update = (id1, id2)
+        if key_to_update not in self.data.bonds:
+            # Wedge/Dashなど、逆順で登録されている可能性も考慮
+            key_to_update = (id2, id1)
+            if key_to_update not in self.data.bonds:
+                print(f"Error: Bond between {id1} and {id2} not found.")
+                return
+
+        self.data.bonds[key_to_update]['stereo'] = new_stereo
+        bond_item.stereo = new_stereo
+        bond_item.update()
+        self.data_changed_in_event = True
 
 class ZoomableView(QGraphicsView):
     """ マウスホイールでのズームと、中ボタン or Shift+左ドラッグでのパン機能を追加したQGraphicsView """
@@ -2652,6 +2814,26 @@ class MainWindow(QMainWindow):
                     painter.setPen(QPen(Qt.GlobalColor.black, 1.5))
                     painter.drawLine(start_pt - offset, start_pt + offset)
 
+            elif bond_type == 'ez_toggle':
+                # アイコン下部に二重結合を描画
+                p1 = QPointF(6, size * 0.75)
+                p2 = QPointF(size - 6, size * 0.75)
+                line = QLineF(p1, p2)
+                v = line.unitVector().normalVector()
+                offset = QPointF(v.dx(), v.dy()) * 2.0
+                painter.setPen(QPen(Qt.GlobalColor.black, 2))
+                painter.drawLine(line.translated(offset))
+                painter.drawLine(line.translated(-offset))
+                # 上部に "Z⇌E" のテキストを描画
+                painter.setPen(QPen(Qt.GlobalColor.black, 1))
+                font = painter.font()
+                font.setPointSize(10)
+                font.setBold(True)
+                painter.setFont(font)
+                text_rect = QRectF(0, 0, size, size * 0.6)
+                # U+21CC は右向きと左向きのハープーンが重なった記号 (⇌)
+                painter.drawText(text_rect, Qt.AlignmentFlag.AlignCenter, "Z⇌E")
+
             painter.end()
             return QIcon(pixmap)
 
@@ -2662,6 +2844,7 @@ class MainWindow(QMainWindow):
             ("Triple Bond", 'bond_3_0', '3', 'triple'),
             ("Wedge Bond", 'bond_1_1', 'W', 'wedge'),
             ("Dash Bond", 'bond_1_2', 'D', 'dash'),
+            ("Toggle E/Z", 'bond_2_5', 'E/Z', 'ez_toggle'),
         ]
 
         for text, mode, shortcut_text, icon_type in bond_actions_data:
