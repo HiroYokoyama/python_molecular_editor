@@ -1,6 +1,6 @@
 Metadata-Version: 2.4
 Name: moleditpy
-Version: 1.8.0
+Version: 1.8.1
 Summary: A cross-platform, simple, and intuitive molecular structure editor built in Python. It allows 2D molecular drawing and 3D structure visualization. It supports exporting structure files for input to DFT calculation software.
 Author-email: HiroYokoyama <titech.yoko.hiro@gmail.com>
 Project-URL: Homepage, https://github.com/HiroYokoyama/python_molecular_editor

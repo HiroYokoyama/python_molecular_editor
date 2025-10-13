@@ -11,7 +11,7 @@ DOI 10.5281/zenodo.17268532
 """
 
 #Version
-VERSION = '1.8.0'
+VERSION = '1.8.1'
 
 print("-----------------------------------------------------")
 print("MoleditPy — A Python-based molecular editing software")
@@ -9434,6 +9434,10 @@ class MainWindow(QMainWindow):
             
             bond_counter = 0  # 結合の個別識別用
             
+            # Ball and Stick用のシリンダーリストを準備（高速化のため）
+            if self.current_3d_style == 'ball_and_stick':
+                bond_cylinders = []
+            
             for bond in mol.GetBonds():
                 begin_atom_idx = bond.GetBeginAtomIdx()
                 end_atom_idx = bond.GetEndAtomIdx()
@@ -9455,9 +9459,9 @@ class MainWindow(QMainWindow):
 
                 if bt == Chem.rdchem.BondType.SINGLE or bt == Chem.rdchem.BondType.AROMATIC:
                     if self.current_3d_style == 'ball_and_stick':
-                        # Ball and stickはグレー
+                        # Ball and stickは全結合をまとめて処理（高速化）
                         cyl = pv.Cylinder(center=c, direction=d, radius=cyl_radius, height=h, resolution=bond_resolution)
-                        actor = self.plotter.add_mesh(cyl, color='grey', **mesh_props)
+                        bond_cylinders.append(cyl)
                         self._3d_color_map[f'bond_{bond_counter}'] = [127, 127, 127]  # グレー
                     else:
                         # その他（stick, wireframe）は中央で色が変わる2つの円柱
@@ -9488,11 +9492,10 @@ class MainWindow(QMainWindow):
                         c1, c2 = c + off_dir * (s_double / 2), c - off_dir * (s_double / 2)
                         
                         if self.current_3d_style == 'ball_and_stick':
-                            # Ball and stickはグレー
+                            # Ball and stickは全結合をまとめて処理（高速化）
                             cyl1 = pv.Cylinder(center=c1, direction=d, radius=r, height=h, resolution=bond_resolution)
                             cyl2 = pv.Cylinder(center=c2, direction=d, radius=r, height=h, resolution=bond_resolution)
-                            self.plotter.add_mesh(cyl1, color='grey', **mesh_props)
-                            self.plotter.add_mesh(cyl2, color='grey', **mesh_props)
+                            bond_cylinders.extend([cyl1, cyl2])
                             self._3d_color_map[f'bond_{bond_counter}_1'] = [127, 127, 127]
                             self._3d_color_map[f'bond_{bond_counter}_2'] = [127, 127, 127]
                         else:
@@ -9525,13 +9528,11 @@ class MainWindow(QMainWindow):
                         s_triple = cyl_radius * triple_offset_factor
                         
                         if self.current_3d_style == 'ball_and_stick':
-                            # Ball and stickはグレー
+                            # Ball and stickは全結合をまとめて処理（高速化）
                             cyl1 = pv.Cylinder(center=c, direction=d, radius=r, height=h, resolution=bond_resolution)
                             cyl2 = pv.Cylinder(center=c + off_dir * s_triple, direction=d, radius=r, height=h, resolution=bond_resolution)
                             cyl3 = pv.Cylinder(center=c - off_dir * s_triple, direction=d, radius=r, height=h, resolution=bond_resolution)
-                            self.plotter.add_mesh(cyl1, color='grey', **mesh_props)
-                            self.plotter.add_mesh(cyl2, color='grey', **mesh_props)
-                            self.plotter.add_mesh(cyl3, color='grey', **mesh_props)
+                            bond_cylinders.extend([cyl1, cyl2, cyl3])
                             self._3d_color_map[f'bond_{bond_counter}_1'] = [127, 127, 127]
                             self._3d_color_map[f'bond_{bond_counter}_2'] = [127, 127, 127]
                             self._3d_color_map[f'bond_{bond_counter}_3'] = [127, 127, 127]
@@ -9564,6 +9565,18 @@ class MainWindow(QMainWindow):
                             self._3d_color_map[f'bond_{bond_counter}_3_end'] = end_color_rgb
 
                 bond_counter += 1
+            
+            # Ball and Stick用：全結合をまとめて一括描画（高速化）
+            if self.current_3d_style == 'ball_and_stick' and bond_cylinders:
+                # 全シリンダーを結合してMultiBlockを作成
+                combined_bonds = pv.MultiBlock(bond_cylinders)
+                combined_mesh = combined_bonds.combine()
+                
+                # 一括でグレーで描画
+                bond_actor = self.plotter.add_mesh(combined_mesh, color='grey', **mesh_props)
+                
+                # まとめて色情報を記録
+                self._3d_color_map['bonds_combined'] = [127, 127, 127]
 
         if getattr(self, 'show_chiral_labels', False):
             try:
