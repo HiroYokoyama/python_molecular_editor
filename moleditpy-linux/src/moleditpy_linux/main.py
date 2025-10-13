@@ -11,7 +11,7 @@ DOI 10.5281/zenodo.17268532
 """
 
 #Version
-VERSION = '1.8.4'
+VERSION = '1.8.5'
 
 print("-----------------------------------------------------")
 print("MoleditPy — A Python-based molecular editing software")
@@ -2565,7 +2565,7 @@ class MolecularData:
                 pos = data.get('pos')
                 if pos:
                     ax = pos.x() * ANGSTROM_PER_PIXEL
-                    ay = pos.y() * ANGSTROM_PER_PIXEL
+                    ay = -pos.y() * ANGSTROM_PER_PIXEL  # Y座標を反転（画面座標系→化学座標系）
                     conf.SetAtomPosition(idx, (ax, ay, 0.0))
         final_mol.AddConformer(conf)
 
@@ -6047,6 +6047,11 @@ class MainWindow(QMainWindow):
         self.redo_stack = []
         self.mode_actions = {} 
         
+        # 保存状態を追跡する変数
+        self.has_unsaved_changes = False
+        self.current_file_path = None  # 現在開いているファイルのパス
+        self.initialization_complete = False  # 初期化完了フラグ
+        
         # 測定機能用の変数
         self.measurement_mode = False
         self.selected_atoms_for_measurement = []
@@ -6098,6 +6103,10 @@ class MainWindow(QMainWindow):
         # 初期メニューテキストと状態を設定
         self.update_atom_id_menu_text()
         self.update_atom_id_menu_state()
+        
+        # 初期化完了を設定
+        self.initialization_complete = True
+        self.update_window_title()  # 初期化完了後にタイトルを更新
 
     def init_ui(self):
         # 1. 現在のスクリプトがあるディレクトリのパスを取得
@@ -6446,16 +6455,16 @@ class MainWindow(QMainWindow):
         spacer.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         toolbar.addWidget(spacer)
 
-        # 測定機能ボタンを追加
-        self.measurement_action = QAction("Measure", self, checkable=True)
+        # 測定機能ボタンを追加（"3D Select"に変更）
+        self.measurement_action = QAction("3D Select", self, checkable=True)
         self.measurement_action.setToolTip("Enable distance, angle, and dihedral measurement in 3D view")
-        # 初期状態は_enable_3d_features(False)で統一的に設定
+        # 初期状態でも有効にする
         self.measurement_action.triggered.connect(self.toggle_measurement_mode)
         toolbar.addAction(self.measurement_action)
 
         self.edit_3d_action = QAction("3D Edit", self, checkable=True)
         self.edit_3d_action.setToolTip("Toggle 3D atom editing mode (Hold Alt for temporary mode)")
-        self.edit_3d_action.setEnabled(False)
+        # 初期状態でも有効にする
         self.edit_3d_action.toggled.connect(self.toggle_3d_edit_mode)
         toolbar.addAction(self.edit_3d_action)
 
@@ -6507,77 +6516,88 @@ class MainWindow(QMainWindow):
         
         file_menu = menu_bar.addMenu("&File")
         
-        # NEW メニュー（Clear allと同じ機能）
+        # === プロジェクト操作 ===
         new_action = QAction("&New", self)
         new_action.setShortcut("Ctrl+N")
         new_action.triggered.connect(self.clear_all)
         file_menu.addAction(new_action)
         
-        file_menu.addSeparator()
-        
-        load_mol_action = QAction("Import MOL/SDF...", self); load_mol_action.triggered.connect(self.load_mol_file)
-        file_menu.addAction(load_mol_action)
-        import_smiles_action = QAction("Import SMILES...", self)
-        import_smiles_action.triggered.connect(self.import_smiles_dialog)
-        file_menu.addAction(import_smiles_action)
-        import_inchi_action = QAction("Import InChI...", self)
-        import_inchi_action.triggered.connect(self.import_inchi_dialog)
-        file_menu.addAction(import_inchi_action)
-
-        file_menu.addSeparator()
-        load_3d_mol_action = QAction("Load 3D MOL/SDF (3D Only)...", self)
-        load_3d_mol_action.triggered.connect(self.load_mol_file_for_3d_viewing)
-        file_menu.addAction(load_3d_mol_action)
-        
-        load_3d_xyz_action = QAction("Load 3D XYZ (3D Only)...", self)
-        load_3d_xyz_action.triggered.connect(self.load_xyz_for_3d_viewing)
-        file_menu.addAction(load_3d_xyz_action)
-
-        file_menu.addSeparator()
-        save_mol_action = QAction("Save 2D as MOL...", self); save_mol_action.triggered.connect(self.save_as_mol)
-        file_menu.addAction(save_mol_action)
-        
-        save_3d_mol_action = QAction("Save 3D as MOL...", self); save_3d_mol_action.triggered.connect(self.save_3d_as_mol)
-        file_menu.addAction(save_3d_mol_action)
-        
-        save_xyz_action = QAction("Save 3D as XYZ...", self); save_xyz_action.triggered.connect(self.save_as_xyz)
-        file_menu.addAction(save_xyz_action)
-        file_menu.addSeparator()
-        save_raw_action = QAction("Save Project...", self); save_raw_action.triggered.connect(self.save_raw_data)
-        save_raw_action.setShortcut(QKeySequence.StandardKey.Save) 
-        file_menu.addAction(save_raw_action)
-        load_raw_action = QAction("Open Project...", self); load_raw_action.triggered.connect(self.load_raw_data)
-        load_raw_action.setShortcut(QKeySequence.StandardKey.Open) 
+        load_raw_action = QAction("&Open Project...", self)
+        load_raw_action.setShortcut("Ctrl+O")
+        load_raw_action.triggered.connect(self.load_raw_data)
         file_menu.addAction(load_raw_action)
         
+        save_action = QAction("&Save Project", self)
+        save_action.setShortcut("Ctrl+S")
+        save_action.triggered.connect(self.save_project)
+        file_menu.addAction(save_action)
+        
+        save_as_action = QAction("Save Project &As...", self)
+        save_as_action.setShortcut("Ctrl+Shift+S")
+        save_as_action.triggered.connect(self.save_project_as)
+        file_menu.addAction(save_as_action)
+        
         file_menu.addSeparator()
         
-        export_2d_png_action = QAction("Export 2D as PNG...", self)
+        # === インポート ===
+        import_menu = file_menu.addMenu("Import")
+        
+        load_mol_action = QAction("MOL/SDF File...", self)
+        load_mol_action.triggered.connect(self.load_mol_file)
+        import_menu.addAction(load_mol_action)
+        
+        import_smiles_action = QAction("SMILES...", self)
+        import_smiles_action.triggered.connect(self.import_smiles_dialog)
+        import_menu.addAction(import_smiles_action)
+        
+        import_inchi_action = QAction("InChI...", self)
+        import_inchi_action.triggered.connect(self.import_inchi_dialog)
+        import_menu.addAction(import_inchi_action)
+        
+        import_menu.addSeparator()
+        
+        load_3d_mol_action = QAction("3D MOL/SDF (3D View Only)...", self)
+        load_3d_mol_action.triggered.connect(self.load_mol_file_for_3d_viewing)
+        import_menu.addAction(load_3d_mol_action)
+        
+        load_3d_xyz_action = QAction("3D XYZ (3D View Only)...", self)
+        load_3d_xyz_action.triggered.connect(self.load_xyz_for_3d_viewing)
+        import_menu.addAction(load_3d_xyz_action)
+        
+        # === エクスポート ===
+        export_menu = file_menu.addMenu("Export")
+        
+        # 2D エクスポート
+        export_2d_menu = export_menu.addMenu("2D Formats")
+        save_mol_action = QAction("MOL File...", self)
+        save_mol_action.triggered.connect(self.save_as_mol)
+        export_2d_menu.addAction(save_mol_action)
+        
+        export_2d_png_action = QAction("PNG Image...", self)
         export_2d_png_action.triggered.connect(self.export_2d_png)
-        file_menu.addAction(export_2d_png_action)
-
-        export_3d_png_action = QAction("Export 3D as PNG...", self)
+        export_2d_menu.addAction(export_2d_png_action)
+        
+        # 3D エクスポート
+        export_3d_menu = export_menu.addMenu("3D Formats")
+        save_3d_mol_action = QAction("MOL File...", self)
+        save_3d_mol_action.triggered.connect(self.save_3d_as_mol)
+        export_3d_menu.addAction(save_3d_mol_action)
+        
+        save_xyz_action = QAction("XYZ File...", self)
+        save_xyz_action.triggered.connect(self.save_as_xyz)
+        export_3d_menu.addAction(save_xyz_action)
+        
+        export_3d_png_action = QAction("PNG Image...", self)
         export_3d_png_action.triggered.connect(self.export_3d_png)
-        file_menu.addAction(export_3d_png_action)
-        
-        # 3Dエクスポートサブメニュー
-        export_3d_menu = file_menu.addMenu("Export 3D Files")
-        
-        export_mol_action = QAction("Export as MOL...", self)
-        export_mol_action.triggered.connect(self.save_3d_as_mol)
-        export_3d_menu.addAction(export_mol_action)
-
-        export_xyz_action = QAction("Export as XYZ...", self)
-        export_xyz_action.triggered.connect(self.save_as_xyz)
-        export_3d_menu.addAction(export_xyz_action)
+        export_3d_menu.addAction(export_3d_png_action)
         
         export_3d_menu.addSeparator()
         
-        export_stl_action = QAction("Export as STL...", self)
+        export_stl_action = QAction("STL File...", self)
         export_stl_action.triggered.connect(self.export_stl)
         export_3d_menu.addAction(export_stl_action)
         
-        export_obj_action = QAction("Export as OBJ/MTL (with colors)...", self)
+        export_obj_action = QAction("OBJ/MTL (with colors)...", self)
         export_obj_action.triggered.connect(self.export_obj_mtl)
         export_3d_menu.addAction(export_obj_action)
         
@@ -6724,6 +6744,12 @@ class MainWindow(QMainWindow):
         self.show_atom_symbol_action.triggered.connect(lambda: self.toggle_atom_info_display('symbol'))
         atom_info_menu.addAction(self.show_atom_symbol_action)
 
+        analysis_menu = menu_bar.addMenu("&Analysis")
+        self.analysis_action = QAction("Show Analysis...", self)
+        self.analysis_action.triggered.connect(self.open_analysis_window)
+        self.analysis_action.setEnabled(False)
+        analysis_menu.addAction(self.analysis_action)
+
         # 3D Edit menu
         edit_3d_menu = menu_bar.addMenu("3D &Edit")
         
@@ -6824,13 +6850,6 @@ class MainWindow(QMainWindow):
         #edit_3d_menu.addAction(symmetrize_action)
         #self.symmetrize_action = symmetrize_action
         
-        
-
-        analysis_menu = menu_bar.addMenu("&Analysis")
-        self.analysis_action = QAction("Show Analysis...", self)
-        self.analysis_action.triggered.connect(self.open_analysis_window)
-        self.analysis_action.setEnabled(False)
-        analysis_menu.addAction(self.analysis_action)
 
         settings_menu = menu_bar.addMenu("&Settings")
         view_settings_action = QAction("3D View Settings...", self)
@@ -6851,6 +6870,13 @@ class MainWindow(QMainWindow):
             lambda: QDesktopServices.openUrl(QUrl("https://github.com/HiroYokoyama/python_molecular_editor"))
         )
         help_menu.addAction(github_action)
+
+        github_wiki_action = QAction("GitHub Wiki", self)
+        github_wiki_action.triggered.connect(
+            lambda: QDesktopServices.openUrl(QUrl("https://github.com/HiroYokoyama/python_molecular_editor/wiki"))
+        )
+        help_menu.addAction(github_wiki_action)
+        
         
         # 3D関連機能の初期状態を統一的に設定
         self._enable_3d_features(False)
@@ -7331,7 +7357,7 @@ class MainWindow(QMainWindow):
         
         # 最適化後の構造で3Dビューを再描画
         try:
-            # キラル中心を3D座標から再計算（R/Sのみ）
+            # 3D最適化後は3D座標から立体化学を再計算（2回目以降は3D優先）
             if self.current_mol.GetNumConformers() > 0:
                 Chem.AssignAtomChiralTagsFromStructure(self.current_mol, confId=0)
             
@@ -7360,10 +7386,12 @@ class MainWindow(QMainWindow):
         # 原子IDマッピングを作成
         self.create_atom_id_mapping()
         
-        # キラル中心を3D座標から再計算（R/Sのみ）
+        # キラル中心を初回変換時は2Dの立体情報を考慮して設定
         try:
             if mol.GetNumConformers() > 0:
-                Chem.AssignAtomChiralTagsFromStructure(mol, confId=0)
+                # 初回変換では、2Dで設定したwedge/dashボンドの立体情報を保持
+                # 立体化学の割り当てを行うが、既存の2D立体情報を尊重
+                Chem.AssignStereochemistry(mol, cleanIt=False, force=True)
             
             self.update_chiral_labels()
         except Exception:
@@ -7563,10 +7591,60 @@ class MainWindow(QMainWindow):
             state = self.get_current_state()
             self.undo_stack.append(state)
             self.redo_stack.clear()
+            # 初期化完了後のみ変更があったことを記録
+            if self.initialization_complete:
+                self.has_unsaved_changes = True
+                self.update_window_title()
         
         self.update_implicit_hydrogens()
         self.update_realtime_info()
         self.update_undo_redo_actions()
+
+    def update_window_title(self):
+        """ウィンドウタイトルを更新（保存状態を反映）"""
+        base_title = f"MoleditPy Ver. {VERSION}"
+        
+        if self.current_file_path:
+            filename = os.path.basename(self.current_file_path)
+            title = f"{filename} - {base_title}"
+        else:
+            # ファイルが開かれていない場合はUntitledを表示
+            if self.has_unsaved_changes:
+                title = f"Untitled - {base_title}"
+            else:
+                title = base_title
+        
+        if self.has_unsaved_changes and self.current_file_path:
+            title = f"*{title}"
+        elif self.has_unsaved_changes and not self.current_file_path:
+            title = f"*{title}"
+        
+        self.setWindowTitle(title)
+
+    def check_unsaved_changes(self):
+        """未保存の変更があるかチェックし、警告ダイアログを表示"""
+        if not self.has_unsaved_changes:
+            return True  # 保存済みまたは変更なし
+        
+        if not self.data.atoms and self.current_mol is None:
+            return True  # 空のドキュメント
+        
+        reply = QMessageBox.question(
+            self,
+            "Unsaved Changes",
+            "You have unsaved changes. Do you want to save them?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No | QMessageBox.StandardButton.Cancel,
+            QMessageBox.StandardButton.Yes
+        )
+        
+        if reply == QMessageBox.StandardButton.Yes:
+            # 保存してから続行
+            self.save_project()
+            return not self.has_unsaved_changes  # 保存に成功した場合のみTrueを返す
+        elif reply == QMessageBox.StandardButton.No:
+            return True  # 保存せずに続行
+        else:
+            return False  # キャンセル
 
     def reset_undo_stack(self):
         self.undo_stack.clear()
@@ -7639,6 +7717,9 @@ class MainWindow(QMainWindow):
                 item.setSelected(True)
 
     def clear_all(self):
+        # 未保存の変更があるかチェック
+        if not self.check_unsaved_changes():
+            return  # ユーザーがキャンセルした場合は何もしない
 
         self.restore_ui_for_editing()
 
@@ -7672,6 +7753,14 @@ class MainWindow(QMainWindow):
         
         # Undo/Redoスタックをリセットする
         self.reset_undo_stack()
+        
+        # ファイル状態をリセット（新規ファイル状態に）
+        self.has_unsaved_changes = False
+        self.current_file_path = None
+        self.update_window_title()
+        
+        # 2Dビューのズームをリセット
+        self.reset_zoom()
         
         # シーンとビューの明示的な更新
         self.scene.update()
@@ -8298,6 +8387,71 @@ class MainWindow(QMainWindow):
         
         return len(bonds_added)
 
+    def save_project(self):
+        """上書き保存（Ctrl+S）"""
+        if not self.data.atoms and not self.current_mol: 
+            self.statusBar().showMessage("Error: Nothing to save.")
+            return
+            
+        if self.current_file_path:
+            # 既存のファイルに上書き保存
+            try:
+                save_data = self.get_current_state()
+                with open(self.current_file_path, 'wb') as f: 
+                    pickle.dump(save_data, f)
+                
+                # 保存成功時に状態をリセット
+                self.has_unsaved_changes = False
+                self.update_window_title()
+                
+                self.statusBar().showMessage(f"Project saved to {self.current_file_path}")
+                
+            except (OSError, IOError) as e:
+                self.statusBar().showMessage(f"File I/O error: {e}")
+            except pickle.PicklingError as e:
+                self.statusBar().showMessage(f"Data serialization error: {e}")
+            except Exception as e: 
+                self.statusBar().showMessage(f"Error saving project file: {e}")
+                import traceback
+                traceback.print_exc()
+        else:
+            # ファイルパスがない場合は名前を付けて保存
+            self.save_project_as()
+
+    def save_project_as(self):
+        """名前を付けて保存（Ctrl+Shift+S）"""
+        if not self.data.atoms and not self.current_mol: 
+            self.statusBar().showMessage("Error: Nothing to save.")
+            return
+            
+        try:
+            save_data = self.get_current_state()
+            options = QFileDialog.Option.DontUseNativeDialog
+            file_path, _ = QFileDialog.getSaveFileName(self, "Save Project As", "", "Project Files (*.pmeraw);;All Files (*)", options=options)
+            if not file_path:
+                return
+                
+            if not file_path.lower().endswith('.pmeraw'): 
+                file_path += '.pmeraw'
+                
+            with open(file_path, 'wb') as f: 
+                pickle.dump(save_data, f)
+            
+            # 保存成功時に状態をリセット
+            self.has_unsaved_changes = False
+            self.current_file_path = file_path
+            self.update_window_title()
+            
+            self.statusBar().showMessage(f"Project saved to {file_path}")
+            
+        except (OSError, IOError) as e:
+            self.statusBar().showMessage(f"File I/O error: {e}")
+        except pickle.PicklingError as e:
+            self.statusBar().showMessage(f"Data serialization error: {e}")
+        except Exception as e: 
+            self.statusBar().showMessage(f"Error saving project file: {e}")
+            import traceback
+            traceback.print_exc()
 
     def save_raw_data(self):
         if not self.data.atoms and not self.current_mol: 
@@ -8316,6 +8470,12 @@ class MainWindow(QMainWindow):
                 
             with open(file_path, 'wb') as f: 
                 pickle.dump(save_data, f)
+            
+            # 保存成功時に状態をリセット
+            self.has_unsaved_changes = False
+            self.current_file_path = file_path
+            self.update_window_title()
+            
             self.statusBar().showMessage(f"Project saved to {file_path}")
             
         except (OSError, IOError) as e:
@@ -8340,6 +8500,12 @@ class MainWindow(QMainWindow):
                 loaded_data = pickle.load(f)
             self.restore_ui_for_editing()
             self.set_state_from_data(loaded_data)
+            
+            # ファイル読み込み時に状態をリセット
+            self.has_unsaved_changes = False
+            self.current_file_path = file_path
+            self.update_window_title()
+            
             self.statusBar().showMessage(f"Project loaded from {file_path}")
             self.reset_undo_stack()
             QTimer.singleShot(0, self.fit_to_view)
@@ -10065,21 +10231,38 @@ class MainWindow(QMainWindow):
     def closeEvent(self, event):
         if self.settings != self.initial_settings:
             self.save_settings()
-        reply = QMessageBox.question(self, 'Confirm Exit', 
-                                     "Are you sure you want to exit?", 
-                                     QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No, 
-                                     QMessageBox.StandardButton.No)
-
-        if reply == QMessageBox.StandardButton.Yes:
-            if self.scene and self.scene.template_preview:
-                self.scene.template_preview.hide()
-
-            self.thread.quit()
-            self.thread.wait()
+        
+        # 未保存の変更がある場合の処理
+        if self.has_unsaved_changes:
+            reply = QMessageBox.question(
+                self, "Unsaved Changes",
+                "You have unsaved changes. Do you want to save them?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No | QMessageBox.StandardButton.Cancel,
+                QMessageBox.StandardButton.Yes
+            )
             
-            event.accept()
-        else:
-            event.ignore()
+            if reply == QMessageBox.StandardButton.Yes:
+                # 保存処理
+                self.save_project()
+                
+                # 保存がキャンセルされた場合は終了もキャンセル
+                if self.has_unsaved_changes:
+                    event.ignore()
+                    return
+                    
+            elif reply == QMessageBox.StandardButton.Cancel:
+                event.ignore()
+                return
+            # No の場合はそのまま終了処理へ
+        
+        # 終了処理
+        if self.scene and self.scene.template_preview:
+            self.scene.template_preview.hide()
+
+        self.thread.quit()
+        self.thread.wait()
+        
+        event.accept()
 
     def zoom_in(self):
         """ ビューを 20% 拡大する """
@@ -10290,18 +10473,24 @@ class MainWindow(QMainWindow):
 
     def _enable_3d_features(self, enabled=True):
         """3D関連機能を統一的に有効/無効化する"""
-        # 基本的な3D機能
+        # 基本的な3D機能（3D SelectとEditは除外して常に有効にする）
         basic_3d_actions = [
             'optimize_3d_button',
             'export_button', 
-            'edit_3d_action',
-            'analysis_action',
-            'measurement_action'
+            'analysis_action'
         ]
         
         for action_name in basic_3d_actions:
             if hasattr(self, action_name):
                 getattr(self, action_name).setEnabled(enabled)
+        
+        # 3D Selectボタンは常に有効にする
+        if hasattr(self, 'measurement_action'):
+            self.measurement_action.setEnabled(True)
+        
+        # 3D Editボタンも常に有効にする
+        if hasattr(self, 'edit_3d_action'):
+            self.edit_3d_action.setEnabled(True)
         
         # 3D編集機能も含める
         if enabled:
