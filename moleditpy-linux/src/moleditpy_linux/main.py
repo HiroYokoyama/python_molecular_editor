@@ -11,7 +11,7 @@ DOI 10.5281/zenodo.17268532
 """
 
 #Version
-VERSION = '1.7.0'
+VERSION = '1.8.0'
 
 print("-----------------------------------------------------")
 print("MoleditPy — A Python-based molecular editing software")
@@ -37,7 +37,7 @@ from PyQt6.QtWidgets import (
     QPushButton, QSplitter, QGraphicsView, QGraphicsScene, QGraphicsItem,
     QToolBar, QStatusBar, QGraphicsTextItem, QGraphicsLineItem, QDialog, QGridLayout,
     QFileDialog, QSizePolicy, QLabel, QLineEdit, QToolButton, QMenu, QMessageBox, QInputDialog,
-    QColorDialog, QCheckBox, QSlider, QFormLayout, QRadioButton, QComboBox, QListWidget, QListWidgetItem
+    QColorDialog, QCheckBox, QSlider, QFormLayout, QRadioButton, QComboBox, QListWidget, QListWidgetItem, QButtonGroup, QTabWidget
 )
 
 from PyQt6.QtGui import (
@@ -277,16 +277,31 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog):
             self.selection_label.setText("No atom selected")
             self.apply_button.setEnabled(False)
         else:
-            symbol = self.mol.GetAtomWithIdx(self.reference_atom_idx).GetSymbol()
-            conf = self.mol.GetConformer()
-            pos = conf.GetAtomPosition(self.reference_atom_idx)
-            self.selection_label.setText(f"Reference: {symbol}({self.reference_atom_idx}) at ({pos.x:.2f}, {pos.y:.2f}, {pos.z:.2f})")
-            self.apply_button.setEnabled(True)
+            # 分子の有効性チェック
+            if not self.mol or self.mol.GetNumConformers() == 0:
+                self.selection_label.setText("Error: No valid molecule or conformer")
+                self.apply_button.setEnabled(False)
+                return
+            
+            try:
+                symbol = self.mol.GetAtomWithIdx(self.reference_atom_idx).GetSymbol()
+                conf = self.mol.GetConformer()
+                pos = conf.GetAtomPosition(self.reference_atom_idx)
+                self.selection_label.setText(f"Reference: {symbol}({self.reference_atom_idx}) at ({pos.x:.2f}, {pos.y:.2f}, {pos.z:.2f})")
+                self.apply_button.setEnabled(True)
+            except Exception as e:
+                self.selection_label.setText(f"Error accessing atom data: {str(e)}")
+                self.apply_button.setEnabled(False)
     
     def apply_translation(self):
         """平行移動を適用"""
         if self.reference_atom_idx is None:
             QMessageBox.warning(self, "Warning", "Please select a reference atom.")
+            return
+        
+        # 分子の有効性チェック
+        if not self.mol or self.mol.GetNumConformers() == 0:
+            QMessageBox.warning(self, "Warning", "No valid molecule or conformer available.")
             return
         
         try:
@@ -318,6 +333,9 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog):
             
             # 3D表示を更新
             self.main_window.draw_molecule_3d(self.mol)
+            
+            # キラルラベルを更新
+            self.main_window.update_chiral_labels()
             
             self.accept()
             
@@ -383,6 +401,7 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog):
 
 class SymmetrizeDialog(QDialog):
     """分子構造の対称化機能を提供するダイアログ"""
+    """ The parameters have not been checked for accuracy. Temporary measure. Under Development"""
 
     # 黄金比 (正二十面体群の記述に使用)
     PHI = (1 + np.sqrt(5)) / 2
@@ -687,6 +706,11 @@ class SymmetrizeDialog(QDialog):
         if tolerance is None:
             return
         
+        # 分子の有効性チェック
+        if not self.mol or self.mol.GetNumConformers() == 0:
+            QMessageBox.warning(self, "Warning", "No valid molecule or conformer available.")
+            return
+        
         key, point_group = self.get_selected_point_group()
         
         try:
@@ -767,8 +791,6 @@ class SymmetrizeDialog(QDialog):
             conf = self.mol.GetConformer()
             original_positions = np.array([conf.GetAtomPosition(i) for i in range(self.mol.GetNumAtoms())])
             
-            print(f"Debug: Applying symmetry with point group: {point_group.get('name', 'Unknown')}")
-            print(f"Debug: Original positions:")
             for i, pos in enumerate(original_positions):
                 print(f"  Atom {i}: {pos}")
             
@@ -1801,15 +1823,131 @@ class SymmetrizeDialog(QDialog):
         
         return final_positions
 
+class MirrorDialog(QDialog):
+    """分子の鏡像を作成するダイアログ"""
+    
+    def __init__(self, mol, main_window, parent=None):
+        super().__init__(parent)
+        self.mol = mol
+        self.main_window = main_window
+        self.init_ui()
+    
+    def init_ui(self):
+        self.setWindowTitle("Mirror Molecule")
+        self.setMinimumSize(300, 200)
+        
+        layout = QVBoxLayout(self)
+        
+        # 説明テキスト
+        info_label = QLabel("Select the mirror plane to create molecular mirror image:")
+        layout.addWidget(info_label)
+        
+        # ミラー平面選択のラジオボタン
+        self.plane_group = QButtonGroup(self)
+        
+        self.xy_radio = QRadioButton("XY plane (Z = 0)")
+        self.xz_radio = QRadioButton("XZ plane (Y = 0)")
+        self.yz_radio = QRadioButton("YZ plane (X = 0)")
+        
+        self.xy_radio.setChecked(True)  # デフォルト選択
+        
+        self.plane_group.addButton(self.xy_radio, 0)
+        self.plane_group.addButton(self.xz_radio, 1)
+        self.plane_group.addButton(self.yz_radio, 2)
+        
+        layout.addWidget(self.xy_radio)
+        layout.addWidget(self.xz_radio)
+        layout.addWidget(self.yz_radio)
+        
+        layout.addSpacing(20)
+        
+        # ボタン
+        button_layout = QHBoxLayout()
+        
+        apply_button = QPushButton("Apply Mirror")
+        apply_button.clicked.connect(self.apply_mirror)
+        
+        cancel_button = QPushButton("Cancel")
+        cancel_button.clicked.connect(self.reject)
+        
+        button_layout.addWidget(apply_button)
+        button_layout.addWidget(cancel_button)
+        
+        layout.addLayout(button_layout)
+    
+    def apply_mirror(self):
+        """選択された平面に対してミラー変換を適用"""
+        if not self.mol or self.mol.GetNumConformers() == 0:
+            QMessageBox.warning(self, "Error", "No 3D coordinates available.")
+            return
+        
+        # 選択された平面を取得
+        plane_id = self.plane_group.checkedId()
+        
+        try:
+            conf = self.mol.GetConformer()
+            
+            # 各原子の座標を変換
+            for atom_idx in range(self.mol.GetNumAtoms()):
+                pos = conf.GetAtomPosition(atom_idx)
+                
+                if plane_id == 0:  # XY平面（Z軸に対してミラー）
+                    new_pos = [pos.x, pos.y, -pos.z]
+                elif plane_id == 1:  # XZ平面（Y軸に対してミラー）
+                    new_pos = [pos.x, -pos.y, pos.z]
+                elif plane_id == 2:  # YZ平面（X軸に対してミラー）
+                    new_pos = [-pos.x, pos.y, pos.z]
+                
+                # 新しい座標を設定
+                from rdkit.Geometry import Point3D
+                conf.SetAtomPosition(atom_idx, Point3D(new_pos[0], new_pos[1], new_pos[2]))
+            
+            # 3Dビューを更新
+            self.main_window.draw_molecule_3d(self.mol)
+            
+            # ミラー変換後にキラルタグを強制的に再計算
+            try:
+                if self.mol.GetNumConformers() > 0:
+                    # 既存のキラルタグをクリア
+                    for atom in self.mol.GetAtoms():
+                        atom.SetChiralTag(Chem.rdchem.ChiralType.CHI_UNSPECIFIED)
+                    # 3D座標から新しいキラルタグを計算
+                    Chem.AssignAtomChiralTagsFromStructure(self.mol, confId=0)
+            except Exception as e:
+                print(f"Error updating chiral tags: {e}")
+            
+            # キラルラベルを更新（鏡像変換でキラリティが変わる可能性があるため）
+            self.main_window.update_chiral_labels()
+            
+            self.main_window.push_undo_state()
+            
+            plane_names = ["XY", "XZ", "YZ"]
+            self.main_window.statusBar().showMessage(f"Molecule mirrored across {plane_names[plane_id]} plane.")
+            
+            self.accept()
+            
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to apply mirror transformation: {str(e)}")
+
 class PlanarizationDialog(Dialog3DPickingMixin, QDialog):
-    def __init__(self, mol, main_window, plane, parent=None):
+    def __init__(self, mol, main_window, plane, preselected_atoms=None, parent=None):
         QDialog.__init__(self, parent)
         Dialog3DPickingMixin.__init__(self)
         self.mol = mol
         self.main_window = main_window
         self.plane = plane
         self.selected_atoms = set()
+        
+        # 事前選択された原子を追加
+        if preselected_atoms:
+            self.selected_atoms.update(preselected_atoms)
+        
         self.init_ui()
+        
+        # 事前選択された原子にラベルを追加
+        if self.selected_atoms:
+            self.show_atom_labels()
+            self.update_display()
     
     def init_ui(self):
         plane_names = {'xy': 'XY', 'xz': 'XZ', 'yz': 'YZ'}
@@ -2006,6 +2144,9 @@ class PlanarizationDialog(Dialog3DPickingMixin, QDialog):
             # 3D表示を更新
             self.main_window.draw_molecule_3d(self.mol)
             
+            # キラルラベルを更新
+            self.main_window.update_chiral_labels()
+            
             self.accept()
             
         except Exception as e:
@@ -2028,6 +2169,256 @@ class PlanarizationDialog(Dialog3DPickingMixin, QDialog):
         self.clear_atom_labels()
         self.disable_picking()
         super().accept()
+
+
+class AlignmentDialog(Dialog3DPickingMixin, QDialog):
+    def __init__(self, mol, main_window, axis, preselected_atoms=None, parent=None):
+        QDialog.__init__(self, parent)
+        Dialog3DPickingMixin.__init__(self)
+        self.mol = mol
+        self.main_window = main_window
+        self.axis = axis
+        self.selected_atoms = set()
+        
+        # 事前選択された原子を追加（最大2個まで）
+        if preselected_atoms:
+            self.selected_atoms.update(preselected_atoms[:2])
+        
+        self.init_ui()
+        
+        # 事前選択された原子にラベルを追加
+        if self.selected_atoms:
+            for i, atom_idx in enumerate(sorted(self.selected_atoms), 1):
+                self.add_selection_label(atom_idx, f"Atom {i}")
+            self.update_display()
+    
+    def init_ui(self):
+        axis_names = {'x': 'X-axis', 'y': 'Y-axis', 'z': 'Z-axis'}
+        self.setWindowTitle(f"Align to {axis_names[self.axis]}")
+        self.setModal(False)  # モードレスにしてクリックを阻害しない
+        self.setWindowFlags(Qt.WindowType.Window | Qt.WindowType.WindowStaysOnTopHint)  # 常に前面表示
+        layout = QVBoxLayout(self)
+        
+        # Instructions
+        instruction_label = QLabel(f"Click atoms in the 3D view to select them for alignment to the {axis_names[self.axis]}. Exactly 2 atoms are required. The first atom will be moved to the origin, and the second atom will be positioned on the {axis_names[self.axis]}.")
+        instruction_label.setWordWrap(True)
+        layout.addWidget(instruction_label)
+        
+        # Selected atoms display
+        self.selection_label = QLabel("No atoms selected")
+        layout.addWidget(self.selection_label)
+        
+        # Buttons
+        button_layout = QHBoxLayout()
+        self.clear_button = QPushButton("Clear Selection")
+        self.clear_button.clicked.connect(self.clear_selection)
+        button_layout.addWidget(self.clear_button)
+        
+        button_layout.addStretch()
+        
+        self.apply_button = QPushButton("Apply Alignment")
+        self.apply_button.clicked.connect(self.apply_alignment)
+        self.apply_button.setEnabled(False)
+        button_layout.addWidget(self.apply_button)
+        
+        cancel_button = QPushButton("Cancel")
+        cancel_button.clicked.connect(self.reject)
+        button_layout.addWidget(cancel_button)
+        
+        layout.addLayout(button_layout)
+        
+        # Connect to main window's picker
+        self.picker_connection = None
+        self.enable_picking()
+    
+    def enable_picking(self):
+        """3Dビューでの原子選択を有効にする"""
+        # Dialog3DPickingMixinの機能を使用
+        super().enable_picking()
+    
+    def disable_picking(self):
+        """3Dビューでの原子選択を無効にする"""
+        # Dialog3DPickingMixinの機能を使用
+        super().disable_picking()
+    
+    def on_atom_picked(self, atom_idx):
+        """原子がクリックされた時の処理"""
+        if self.main_window.current_mol is None:
+            return
+            
+        if atom_idx in self.selected_atoms:
+            # 既に選択されている場合は選択解除
+            self.selected_atoms.remove(atom_idx)
+            self.remove_atom_label(atom_idx)
+        else:
+            # 2つまでしか選択できない
+            if len(self.selected_atoms) < 2:
+                self.selected_atoms.add(atom_idx)
+                # ラベルの順番を示す
+                label_text = f"Atom {len(self.selected_atoms)}"
+                self.add_selection_label(atom_idx, label_text)
+        
+        self.update_display()
+    
+    def update_display(self):
+        """選択状態の表示を更新"""
+        if len(self.selected_atoms) == 0:
+            self.selection_label.setText("Click atoms to select for alignment (exactly 2 required)")
+            self.apply_button.setEnabled(False)
+        elif len(self.selected_atoms) == 1:
+            selected_list = list(self.selected_atoms)
+            atom = self.mol.GetAtomWithIdx(selected_list[0])
+            self.selection_label.setText(f"Selected 1 atom: {atom.GetSymbol()}{selected_list[0]+1}")
+            self.apply_button.setEnabled(False)
+        elif len(self.selected_atoms) == 2:
+            selected_list = sorted(list(self.selected_atoms))
+            atom1 = self.mol.GetAtomWithIdx(selected_list[0])
+            atom2 = self.mol.GetAtomWithIdx(selected_list[1])
+            self.selection_label.setText(f"Selected 2 atoms: {atom1.GetSymbol()}{selected_list[0]+1}, {atom2.GetSymbol()}{selected_list[1]+1}")
+            self.apply_button.setEnabled(True)
+    
+    def clear_selection(self):
+        """選択をクリア"""
+        self.clear_selection_labels()
+        self.selected_atoms.clear()
+        self.update_display()
+    
+    def add_selection_label(self, atom_idx, label_text):
+        """選択された原子にラベルを追加"""
+        if not hasattr(self, 'selection_labels'):
+            self.selection_labels = []
+        
+        # 原子の位置を取得
+        pos = self.main_window.atom_positions_3d[atom_idx]
+        
+        # ラベルを追加
+        label_actor = self.main_window.plotter.add_point_labels(
+            [pos], [label_text], 
+            point_size=20, 
+            font_size=12,
+            text_color='yellow',
+            always_visible=True
+        )
+        self.selection_labels.append(label_actor)
+    
+    def remove_atom_label(self, atom_idx):
+        """特定の原子のラベルを削除"""
+        # 簡単化のため、全ラベルをクリアして再描画
+        self.clear_selection_labels()
+        for i, idx in enumerate(sorted(self.selected_atoms), 1):
+            if idx != atom_idx:
+                self.add_selection_label(idx, f"Atom {i}")
+    
+    def clear_selection_labels(self):
+        """選択ラベルをクリア"""
+        if hasattr(self, 'selection_labels'):
+            for label_actor in self.selection_labels:
+                try:
+                    self.main_window.plotter.remove_actor(label_actor)
+                except:
+                    pass
+            self.selection_labels = []
+    
+    def apply_alignment(self):
+        """アライメントを適用"""
+        if len(self.selected_atoms) != 2:
+            QMessageBox.warning(self, "Warning", "Please select exactly 2 atoms for alignment.")
+            return
+        
+        try:
+            selected_list = sorted(list(self.selected_atoms))
+            atom1_idx, atom2_idx = selected_list[0], selected_list[1]
+            
+            conf = self.mol.GetConformer()
+            
+            # 原子の現在位置を取得
+            pos1 = np.array(conf.GetAtomPosition(atom1_idx))
+            pos2 = np.array(conf.GetAtomPosition(atom2_idx))
+            
+            # 最初に全分子を移動して、atom1を原点に配置
+            translation = -pos1
+            for i in range(self.mol.GetNumAtoms()):
+                current_pos = np.array(conf.GetAtomPosition(i))
+                new_pos = current_pos + translation
+                conf.SetAtomPosition(i, new_pos.tolist())
+            
+            # atom2の新しい位置を取得（移動後）
+            pos2_translated = pos2 + translation
+            
+            # atom2を選択した軸上に配置するための回転を計算
+            axis_vectors = {
+                'x': np.array([1.0, 0.0, 0.0]),
+                'y': np.array([0.0, 1.0, 0.0]),
+                'z': np.array([0.0, 0.0, 1.0])
+            }
+            target_axis = axis_vectors[self.axis]
+            
+            # atom2から原点への方向ベクトル
+            current_vector = pos2_translated
+            current_length = np.linalg.norm(current_vector)
+            
+            if current_length > 1e-10:  # ゼロベクトルでない場合
+                current_vector_normalized = current_vector / current_length
+                
+                # 回転軸と角度を計算
+                rotation_axis = np.cross(current_vector_normalized, target_axis)
+                rotation_axis_length = np.linalg.norm(rotation_axis)
+                
+                if rotation_axis_length > 1e-10:  # 回転が必要
+                    rotation_axis = rotation_axis / rotation_axis_length
+                    cos_angle = np.dot(current_vector_normalized, target_axis)
+                    cos_angle = np.clip(cos_angle, -1.0, 1.0)
+                    rotation_angle = np.arccos(cos_angle)
+                    
+                    # ロドリゲスの回転公式を使用
+                    def rodrigues_rotation(v, k, theta):
+                        cos_theta = np.cos(theta)
+                        sin_theta = np.sin(theta)
+                        return (v * cos_theta + 
+                               np.cross(k, v) * sin_theta + 
+                               k * np.dot(k, v) * (1 - cos_theta))
+                    
+                    # 全ての原子に回転を適用
+                    for i in range(self.mol.GetNumAtoms()):
+                        current_pos = np.array(conf.GetAtomPosition(i))
+                        rotated_pos = rodrigues_rotation(current_pos, rotation_axis, rotation_angle)
+                        conf.SetAtomPosition(i, rotated_pos.tolist())
+            
+            # 3D座標を更新
+            self.main_window.atom_positions_3d = np.array([
+                list(conf.GetAtomPosition(i)) for i in range(self.mol.GetNumAtoms())
+            ])
+            
+            # 3Dビューを更新
+            self.main_window.draw_molecule_3d(self.mol)
+            
+            # キラルラベルを更新
+            self.main_window.update_chiral_labels()
+            
+            QMessageBox.information(self, "Success", f"Alignment to {self.axis.upper()}-axis completed.")
+            self.accept()
+            
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to apply alignment: {str(e)}")
+    
+    def closeEvent(self, event):
+        """ダイアログが閉じられる時の処理"""
+        self.clear_selection_labels()
+        self.disable_picking()
+        super().closeEvent(event)
+    
+    def reject(self):
+        """キャンセル時の処理"""
+        self.clear_selection_labels()
+        self.disable_picking()
+        super().reject()
+    
+    def accept(self):
+        """OK時の処理"""
+        self.clear_selection_labels()
+        self.disable_picking()
+        super().accept()
+
 
 def main():
     # --- Windows タスクバーアイコンのための追加処理 ---
@@ -2928,7 +3319,16 @@ class MoleculeScene(QGraphicsScene):
         self.press_pos = event.scenePos()
         self.mouse_moved_since_press = False
         self.data_changed_in_event = False
-        self.initial_positions_in_event = {item: item.pos() for item in self.items() if isinstance(item, AtomItem)}
+        
+        # 削除されたオブジェクトを安全にチェックして初期位置を記録
+        self.initial_positions_in_event = {}
+        for item in self.items():
+            if isinstance(item, AtomItem):
+                try:
+                    self.initial_positions_in_event[item] = item.pos()
+                except RuntimeError:
+                    # オブジェクトが削除されている場合はスキップ
+                    continue
 
         if not self.window.is_2d_editable:
             return
@@ -3225,14 +3625,32 @@ class MoleculeScene(QGraphicsScene):
         else: super().mouseReleaseEvent(event)
 
 
-        moved_atoms = [item for item, old_pos in self.initial_positions_in_event.items() if item.scene() and item.pos() != old_pos]
+        # 削除されたオブジェクトを安全にチェック
+        moved_atoms = []
+        for item, old_pos in self.initial_positions_in_event.items():
+            try:
+                # オブジェクトが有効で、シーンに存在し、位置が変更されているかチェック
+                if item.scene() and item.pos() != old_pos:
+                    moved_atoms.append(item)
+            except RuntimeError:
+                # オブジェクトが削除されている場合はスキップ
+                continue
+                
         if moved_atoms:
             self.data_changed_in_event = True
             bonds_to_update = set()
             for atom in moved_atoms:
-                self.data.atoms[atom.atom_id]['pos'] = atom.pos()
-                bonds_to_update.update(atom.bonds)
+                try:
+                    self.data.atoms[atom.atom_id]['pos'] = atom.pos()
+                    bonds_to_update.update(atom.bonds)
+                except RuntimeError:
+                    # オブジェクトが削除されている場合はスキップ
+                    continue
             for bond in bonds_to_update: bond.update_position()
+            
+            # 原子移動後に測定ラベルの位置を更新
+            self.window.update_2d_measurement_labels()
+            
             if self.views(): self.views()[0].viewport().update()
         
         self.start_atom=None; self.start_pos = None; self.press_pos = None; self.temp_line = None
@@ -4535,7 +4953,7 @@ class CalculationWorker(QObject):
             except Exception as ob_err:
                 # pybel was available but failed
                 raise RuntimeError(f"Open Babel 3D conversion failed: {ob_err}")
-            '''
+        '''
 
         except Exception as e:
             self.error.emit(str(e))
@@ -4720,9 +5138,16 @@ class AnalysisWindow(QDialog):
                 num_h_donors = rdMolDescriptors.CalcNumHBD(self.mol)
                 num_h_acceptors = rdMolDescriptors.CalcNumHBA(self.mol)
                 
+                # InChIを生成
+                try:
+                    inchi = Chem.MolToInchi(self.mol)
+                except:
+                    inchi = "N/A"
+                
                 # 表示するプロパティを辞書にまとめる
                 properties = {
                     "SMILES:": smiles,
+                    "InChI:": inchi,
                     "Molecular Formula:": mol_formula,
                     "Molecular Weight:": f"{mol_wt:.4f}",
                     "Exact Mass:": f"{exact_mw:.4f}",
@@ -4772,6 +5197,10 @@ class SettingsDialog(QDialog):
     def __init__(self, current_settings, parent=None):
         super().__init__(parent)
         self.setWindowTitle("3D View Settings")
+        self.setMinimumSize(500, 600)
+        
+        # 親ウィンドウの参照を保存（Apply機能のため）
+        self.parent_window = parent
         
         # デフォルト設定をクラス内で定義
         self.default_settings = {
@@ -4781,6 +5210,25 @@ class SettingsDialog(QDialog):
             'specular_power': 20,
             'light_intensity': 1.0,
             'show_3d_axes': True,
+            # Ball and Stick model parameters
+            'ball_stick_atom_scale': 1.0,
+            'ball_stick_bond_radius': 0.1,
+            'ball_stick_resolution': 16,
+            # CPK (Space-filling) model parameters
+            'cpk_atom_scale': 1.0,
+            'cpk_resolution': 32,
+            # Wireframe model parameters
+            'wireframe_bond_radius': 0.01,
+            'wireframe_resolution': 6,
+            # Stick model parameters
+            'stick_atom_radius': 0.15,
+            'stick_bond_radius': 0.15,
+            'stick_resolution': 16,
+            # Multiple bond offset parameters
+            'double_bond_offset_factor': 2.0,
+            'triple_bond_offset_factor': 2.0,
+            'double_bond_radius_factor': 0.8,
+            'triple_bond_radius_factor': 0.7,
         }
         
         # --- 選択された色を管理する専用のインスタンス変数 ---
@@ -4788,7 +5236,68 @@ class SettingsDialog(QDialog):
 
         # --- UI要素の作成 ---
         layout = QVBoxLayout(self)
-        form_layout = QFormLayout()
+        
+        # タブウィジェットを作成
+        self.tab_widget = QTabWidget()
+        layout.addWidget(self.tab_widget)
+        
+        # 基本設定タブ
+        self.create_general_tab()
+        
+        # Common設定タブ
+        self.create_common_tab()
+        
+        # Ball and Stick設定タブ
+        self.create_ball_stick_tab()
+        
+        # CPK設定タブ
+        self.create_cpk_tab()
+        
+        # Wireframe設定タブ
+        self.create_wireframe_tab()
+        
+        # Stick設定タブ
+        self.create_stick_tab()
+
+        # 渡された設定でUIと内部変数を初期化
+        self.update_ui_from_settings(current_settings)
+
+        # --- ボタンの配置 ---
+        buttons = QHBoxLayout()
+        
+        # タブごとのリセットボタン
+        reset_tab_button = QPushButton("Reset Current Tab")
+        reset_tab_button.clicked.connect(self.reset_current_tab)
+        reset_tab_button.setToolTip("Reset settings for the currently selected tab only")
+        buttons.addWidget(reset_tab_button)
+        
+        # 全体リセットボタン
+        reset_all_button = QPushButton("Reset All")
+        reset_all_button.clicked.connect(self.reset_all_settings)
+        reset_all_button.setToolTip("Reset all settings to defaults")
+        buttons.addWidget(reset_all_button)
+        
+        buttons.addStretch(1)
+        
+        # Applyボタンを追加
+        apply_button = QPushButton("Apply")
+        apply_button.clicked.connect(self.apply_settings)
+        apply_button.setToolTip("Apply settings without closing dialog")
+        buttons.addWidget(apply_button)
+        
+        ok_button = QPushButton("OK")
+        cancel_button = QPushButton("Cancel")
+        ok_button.clicked.connect(self.accept)
+        cancel_button.clicked.connect(self.reject)
+
+        buttons.addWidget(ok_button)
+        buttons.addWidget(cancel_button)
+        layout.addLayout(buttons)
+    
+    def create_general_tab(self):
+        """基本設定タブを作成"""
+        general_widget = QWidget()
+        form_layout = QFormLayout(general_widget)
 
         # 1. 背景色
         self.bg_button = QPushButton()
@@ -4807,51 +5316,408 @@ class SettingsDialog(QDialog):
         # 光の強さスライダーを追加
         self.intensity_slider = QSlider(Qt.Orientation.Horizontal)
         self.intensity_slider.setRange(0, 200) # 0.0 ~ 2.0 の範囲
-        form_layout.addRow("Light Intensity:", self.intensity_slider)
+        self.intensity_label = QLabel("1.0")
+        self.intensity_slider.valueChanged.connect(lambda v: self.intensity_label.setText(f"{v/100:.2f}"))
+        intensity_layout = QHBoxLayout()
+        intensity_layout.addWidget(self.intensity_slider)
+        intensity_layout.addWidget(self.intensity_label)
+        form_layout.addRow("Light Intensity:", intensity_layout)
 
         # 3. 光沢 (Specular)
         self.specular_slider = QSlider(Qt.Orientation.Horizontal)
         self.specular_slider.setRange(0, 100)
-        form_layout.addRow("Shininess (Specular):", self.specular_slider)
+        self.specular_label = QLabel("0.20")
+        self.specular_slider.valueChanged.connect(lambda v: self.specular_label.setText(f"{v/100:.2f}"))
+        specular_layout = QHBoxLayout()
+        specular_layout.addWidget(self.specular_slider)
+        specular_layout.addWidget(self.specular_label)
+        form_layout.addRow("Shininess (Specular):", specular_layout)
         
         # 4. 光沢の強さ (Specular Power)
         self.spec_power_slider = QSlider(Qt.Orientation.Horizontal)
         self.spec_power_slider.setRange(0, 100)
-        form_layout.addRow("Shininess Power:", self.spec_power_slider)
-
-        # 渡された設定でUIと内部変数を初期化
-        self.update_ui_from_settings(current_settings)
-
-        layout.addLayout(form_layout)
-
-        # --- ボタンの配置 ---
-        buttons = QHBoxLayout()
-        reset_button = QPushButton("Reset to Defaults")
-        reset_button.clicked.connect(self.reset_to_defaults)
+        self.spec_power_label = QLabel("20")
+        self.spec_power_slider.valueChanged.connect(lambda v: self.spec_power_label.setText(str(v)))
+        spec_power_layout = QHBoxLayout()
+        spec_power_layout.addWidget(self.spec_power_slider)
+        spec_power_layout.addWidget(self.spec_power_label)
+        form_layout.addRow("Shininess Power:", spec_power_layout)
         
-        ok_button = QPushButton("OK")
-        cancel_button = QPushButton("Cancel")
-        ok_button.clicked.connect(self.accept)
-        cancel_button.clicked.connect(self.reject)
+        self.tab_widget.addTab(general_widget, "Scene")
+    
+    def create_common_tab(self):
+        """Common設定タブを作成"""
+        common_widget = QWidget()
+        form_layout = QFormLayout(common_widget)
+        
+        # 二重結合オフセット倍率
+        self.double_offset_slider = QSlider(Qt.Orientation.Horizontal)
+        self.double_offset_slider.setRange(100, 400)  # 1.0 ~ 4.0
+        self.double_offset_label = QLabel("1.50")
+        self.double_offset_slider.valueChanged.connect(lambda v: self.double_offset_label.setText(f"{v/100:.2f}"))
+        double_offset_layout = QHBoxLayout()
+        double_offset_layout.addWidget(self.double_offset_slider)
+        double_offset_layout.addWidget(self.double_offset_label)
+        form_layout.addRow("Double Bond Offset:", double_offset_layout)
+        
+        # 三重結合オフセット倍率
+        self.triple_offset_slider = QSlider(Qt.Orientation.Horizontal)
+        self.triple_offset_slider.setRange(100, 400)  # 1.0 ~ 4.0
+        self.triple_offset_label = QLabel("1.20")
+        self.triple_offset_slider.valueChanged.connect(lambda v: self.triple_offset_label.setText(f"{v/100:.2f}"))
+        triple_offset_layout = QHBoxLayout()
+        triple_offset_layout.addWidget(self.triple_offset_slider)
+        triple_offset_layout.addWidget(self.triple_offset_label)
+        form_layout.addRow("Triple Bond Offset:", triple_offset_layout)
+        
+        # 二重結合半径倍率
+        self.double_radius_slider = QSlider(Qt.Orientation.Horizontal)
+        self.double_radius_slider.setRange(50, 100)  # 0.5 ~ 1.0
+        self.double_radius_label = QLabel("0.80")
+        self.double_radius_slider.valueChanged.connect(lambda v: self.double_radius_label.setText(f"{v/100:.2f}"))
+        double_radius_layout = QHBoxLayout()
+        double_radius_layout.addWidget(self.double_radius_slider)
+        double_radius_layout.addWidget(self.double_radius_label)
+        form_layout.addRow("Double Bond Thickness:", double_radius_layout)
+        
+        # 三重結合半径倍率
+        self.triple_radius_slider = QSlider(Qt.Orientation.Horizontal)
+        self.triple_radius_slider.setRange(50, 100)  # 0.5 ~ 1.0
+        self.triple_radius_label = QLabel("0.70")
+        self.triple_radius_slider.valueChanged.connect(lambda v: self.triple_radius_label.setText(f"{v/100:.2f}"))
+        triple_radius_layout = QHBoxLayout()
+        triple_radius_layout.addWidget(self.triple_radius_slider)
+        triple_radius_layout.addWidget(self.triple_radius_label)
+        form_layout.addRow("Triple Bond Thickness:", triple_radius_layout)
+        
+        self.tab_widget.addTab(common_widget, "Common")
+    
+    def create_ball_stick_tab(self):
+        """Ball and Stick設定タブを作成"""
+        ball_stick_widget = QWidget()
+        form_layout = QFormLayout(ball_stick_widget)
+        
+        # 原子サイズスケール
+        self.bs_atom_scale_slider = QSlider(Qt.Orientation.Horizontal)
+        self.bs_atom_scale_slider.setRange(10, 200)  # 0.1 ~ 2.0
+        self.bs_atom_scale_label = QLabel("1.00")
+        self.bs_atom_scale_slider.valueChanged.connect(lambda v: self.bs_atom_scale_label.setText(f"{v/100:.2f}"))
+        atom_scale_layout = QHBoxLayout()
+        atom_scale_layout.addWidget(self.bs_atom_scale_slider)
+        atom_scale_layout.addWidget(self.bs_atom_scale_label)
+        form_layout.addRow("Atom Size Scale:", atom_scale_layout)
+        
+        # ボンド半径
+        self.bs_bond_radius_slider = QSlider(Qt.Orientation.Horizontal)
+        self.bs_bond_radius_slider.setRange(1, 50)  # 0.01 ~ 0.5
+        self.bs_bond_radius_label = QLabel("0.10")
+        self.bs_bond_radius_slider.valueChanged.connect(lambda v: self.bs_bond_radius_label.setText(f"{v/100:.2f}"))
+        bond_radius_layout = QHBoxLayout()
+        bond_radius_layout.addWidget(self.bs_bond_radius_slider)
+        bond_radius_layout.addWidget(self.bs_bond_radius_label)
+        form_layout.addRow("Bond Radius:", bond_radius_layout)
+        
+        # 解像度
+        self.bs_resolution_slider = QSlider(Qt.Orientation.Horizontal)
+        self.bs_resolution_slider.setRange(6, 32)
+        self.bs_resolution_label = QLabel("16")
+        self.bs_resolution_slider.valueChanged.connect(lambda v: self.bs_resolution_label.setText(str(v)))
+        resolution_layout = QHBoxLayout()
+        resolution_layout.addWidget(self.bs_resolution_slider)
+        resolution_layout.addWidget(self.bs_resolution_label)
+        form_layout.addRow("Resolution (Quality):", resolution_layout)
+        
+        self.tab_widget.addTab(ball_stick_widget, "Ball & Stick")
+    
+    def create_cpk_tab(self):
+        """CPK設定タブを作成"""
+        cpk_widget = QWidget()
+        form_layout = QFormLayout(cpk_widget)
+        
+        # 原子サイズスケール
+        self.cpk_atom_scale_slider = QSlider(Qt.Orientation.Horizontal)
+        self.cpk_atom_scale_slider.setRange(50, 200)  # 0.5 ~ 2.0
+        self.cpk_atom_scale_label = QLabel("1.00")
+        self.cpk_atom_scale_slider.valueChanged.connect(lambda v: self.cpk_atom_scale_label.setText(f"{v/100:.2f}"))
+        atom_scale_layout = QHBoxLayout()
+        atom_scale_layout.addWidget(self.cpk_atom_scale_slider)
+        atom_scale_layout.addWidget(self.cpk_atom_scale_label)
+        form_layout.addRow("Atom Size Scale:", atom_scale_layout)
+        
+        # 解像度
+        self.cpk_resolution_slider = QSlider(Qt.Orientation.Horizontal)
+        self.cpk_resolution_slider.setRange(8, 64)
+        self.cpk_resolution_label = QLabel("32")
+        self.cpk_resolution_slider.valueChanged.connect(lambda v: self.cpk_resolution_label.setText(str(v)))
+        resolution_layout = QHBoxLayout()
+        resolution_layout.addWidget(self.cpk_resolution_slider)
+        resolution_layout.addWidget(self.cpk_resolution_label)
+        form_layout.addRow("Resolution (Quality):", resolution_layout)
+        
+        info_label = QLabel("CPK model shows atoms as space-filling spheres using van der Waals radii.")
+        info_label.setWordWrap(True)
+        info_label.setStyleSheet("color: #666; font-style: italic; margin-top: 10px;")
+        form_layout.addRow("", info_label)
+        
+        self.tab_widget.addTab(cpk_widget, "CPK (Space-filling)")
+    
+    def create_wireframe_tab(self):
+        """Wireframe設定タブを作成"""
+        wireframe_widget = QWidget()
+        form_layout = QFormLayout(wireframe_widget)
+        
+        # ボンド半径
+        self.wf_bond_radius_slider = QSlider(Qt.Orientation.Horizontal)
+        self.wf_bond_radius_slider.setRange(1, 10)  # 0.01 ~ 0.1
+        self.wf_bond_radius_label = QLabel("0.01")
+        self.wf_bond_radius_slider.valueChanged.connect(lambda v: self.wf_bond_radius_label.setText(f"{v/100:.2f}"))
+        bond_radius_layout = QHBoxLayout()
+        bond_radius_layout.addWidget(self.wf_bond_radius_slider)
+        bond_radius_layout.addWidget(self.wf_bond_radius_label)
+        form_layout.addRow("Bond Radius:", bond_radius_layout)
+        
+        # 解像度
+        self.wf_resolution_slider = QSlider(Qt.Orientation.Horizontal)
+        self.wf_resolution_slider.setRange(4, 16)
+        self.wf_resolution_label = QLabel("6")
+        self.wf_resolution_slider.valueChanged.connect(lambda v: self.wf_resolution_label.setText(str(v)))
+        resolution_layout = QHBoxLayout()
+        resolution_layout.addWidget(self.wf_resolution_slider)
+        resolution_layout.addWidget(self.wf_resolution_label)
+        form_layout.addRow("Resolution (Quality):", resolution_layout)
+        
+        info_label = QLabel("Wireframe model shows molecular structure with thin lines only (no atoms displayed).")
+        info_label.setWordWrap(True)
+        info_label.setStyleSheet("color: #666; font-style: italic; margin-top: 10px;")
+        form_layout.addRow("", info_label)
+        
+        self.tab_widget.addTab(wireframe_widget, "Wireframe")
+    
+    def create_stick_tab(self):
+        """Stick設定タブを作成"""
+        stick_widget = QWidget()
+        form_layout = QFormLayout(stick_widget)
+        
+        # 原子半径
+        self.stick_atom_radius_slider = QSlider(Qt.Orientation.Horizontal)
+        self.stick_atom_radius_slider.setRange(5, 50)  # 0.05 ~ 0.5
+        self.stick_atom_radius_label = QLabel("0.15")
+        self.stick_atom_radius_slider.valueChanged.connect(lambda v: self.stick_atom_radius_label.setText(f"{v/100:.2f}"))
+        atom_radius_layout = QHBoxLayout()
+        atom_radius_layout.addWidget(self.stick_atom_radius_slider)
+        atom_radius_layout.addWidget(self.stick_atom_radius_label)
+        form_layout.addRow("Atom Radius:", atom_radius_layout)
+        
+        # ボンド半径
+        self.stick_bond_radius_slider = QSlider(Qt.Orientation.Horizontal)
+        self.stick_bond_radius_slider.setRange(5, 50)  # 0.05 ~ 0.5
+        self.stick_bond_radius_label = QLabel("0.15")
+        self.stick_bond_radius_slider.valueChanged.connect(lambda v: self.stick_bond_radius_label.setText(f"{v/100:.2f}"))
+        bond_radius_layout = QHBoxLayout()
+        bond_radius_layout.addWidget(self.stick_bond_radius_slider)
+        bond_radius_layout.addWidget(self.stick_bond_radius_label)
+        form_layout.addRow("Bond Radius:", bond_radius_layout)
+        
+        # 解像度
+        self.stick_resolution_slider = QSlider(Qt.Orientation.Horizontal)
+        self.stick_resolution_slider.setRange(6, 32)
+        self.stick_resolution_label = QLabel("16")
+        self.stick_resolution_slider.valueChanged.connect(lambda v: self.stick_resolution_label.setText(str(v)))
+        resolution_layout = QHBoxLayout()
+        resolution_layout.addWidget(self.stick_resolution_slider)
+        resolution_layout.addWidget(self.stick_resolution_label)
+        form_layout.addRow("Resolution (Quality):", resolution_layout)
+        
+        info_label = QLabel("Stick model shows bonds as thick cylinders with atoms as small spheres.")
+        info_label.setWordWrap(True)
+        info_label.setStyleSheet("color: #666; font-style: italic; margin-top: 10px;")
+        form_layout.addRow("", info_label)
+        
+        self.tab_widget.addTab(stick_widget, "Stick")
 
-        buttons.addWidget(reset_button)
-        buttons.addStretch(1)
-        buttons.addWidget(ok_button)
-        buttons.addWidget(cancel_button)
-        layout.addLayout(buttons)
+    def reset_current_tab(self):
+        """現在選択されているタブの設定のみをデフォルトに戻す"""
+        current_tab_index = self.tab_widget.currentIndex()
+        tab_name = self.tab_widget.tabText(current_tab_index)
+        
+        # 各タブの設定項目を定義
+        tab_settings = {
+            "Scene": {
+                'background_color': self.default_settings['background_color'],
+                'show_3d_axes': self.default_settings['show_3d_axes'],
+                'lighting_enabled': self.default_settings['lighting_enabled'],
+                'light_intensity': self.default_settings['light_intensity'],
+                'specular': self.default_settings['specular'],
+                'specular_power': self.default_settings['specular_power']
+            },
+            "Common": {
+                'double_bond_offset_factor': self.default_settings['double_bond_offset_factor'],
+                'triple_bond_offset_factor': self.default_settings['triple_bond_offset_factor'],
+                'double_bond_radius_factor': self.default_settings['double_bond_radius_factor'],
+                'triple_bond_radius_factor': self.default_settings['triple_bond_radius_factor']
+            },
+            "Ball & Stick": {
+                'ball_stick_atom_scale': self.default_settings['ball_stick_atom_scale'],
+                'ball_stick_bond_radius': self.default_settings['ball_stick_bond_radius'],
+                'ball_stick_resolution': self.default_settings['ball_stick_resolution']
+            },
+            "CPK (Space-filling)": {
+                'cpk_atom_scale': self.default_settings['cpk_atom_scale'],
+                'cpk_resolution': self.default_settings['cpk_resolution']
+            },
+            "Wireframe": {
+                'wireframe_bond_radius': self.default_settings['wireframe_bond_radius'],
+                'wireframe_resolution': self.default_settings['wireframe_resolution']
+            },
+            "Stick": {
+                'stick_atom_radius': self.default_settings['stick_atom_radius'],
+                'stick_bond_radius': self.default_settings['stick_bond_radius'],
+                'stick_resolution': self.default_settings['stick_resolution']
+            }
+        }
+        
+        # 選択されたタブの設定のみを適用
+        if tab_name in tab_settings:
+            tab_defaults = tab_settings[tab_name]
+            
+            # 現在の設定を取得
+            current_settings = self.get_current_ui_settings()
+            
+            # 選択されたタブの項目のみをデフォルト値で更新
+            updated_settings = current_settings.copy()
+            updated_settings.update(tab_defaults)
+            
+            # UIを更新
+            self.update_ui_from_settings(updated_settings)
+            
+            # ユーザーへのフィードバック
+            QMessageBox.information(self, "Reset Complete", f"Settings for '{tab_name}' tab have been reset to defaults.")
+        else:
+            QMessageBox.warning(self, "Error", f"Unknown tab: {tab_name}")
+    
+    def reset_all_settings(self):
+        """すべての設定をデフォルトに戻す"""
+        reply = QMessageBox.question(
+            self, 
+            "Reset All Settings", 
+            "Are you sure you want to reset all settings to defaults?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No
+        )
+        
+        if reply == QMessageBox.StandardButton.Yes:
+            self.update_ui_from_settings(self.default_settings)
+            QMessageBox.information(self, "Reset Complete", "All settings have been reset to defaults.")
 
+    def get_current_ui_settings(self):
+        """現在のUIから設定値を取得"""
+        return {
+            'background_color': self.current_bg_color,
+            'show_3d_axes': self.axes_checkbox.isChecked(),
+            'lighting_enabled': self.light_checkbox.isChecked(),
+            'light_intensity': self.intensity_slider.value() / 100.0,
+            'specular': self.specular_slider.value() / 100.0,
+            'specular_power': self.spec_power_slider.value(),
+            # Ball and Stick settings
+            'ball_stick_atom_scale': self.bs_atom_scale_slider.value() / 100.0,
+            'ball_stick_bond_radius': self.bs_bond_radius_slider.value() / 100.0,
+            'ball_stick_resolution': self.bs_resolution_slider.value(),
+            # CPK settings
+            'cpk_atom_scale': self.cpk_atom_scale_slider.value() / 100.0,
+            'cpk_resolution': self.cpk_resolution_slider.value(),
+            # Wireframe settings
+            'wireframe_bond_radius': self.wf_bond_radius_slider.value() / 100.0,
+            'wireframe_resolution': self.wf_resolution_slider.value(),
+            # Stick settings
+            'stick_atom_radius': self.stick_atom_radius_slider.value() / 100.0,
+            'stick_bond_radius': self.stick_bond_radius_slider.value() / 100.0,
+            'stick_resolution': self.stick_resolution_slider.value(),
+            # Multi-bond settings
+            'double_bond_offset_factor': self.double_offset_slider.value() / 100.0,
+            'triple_bond_offset_factor': self.triple_offset_slider.value() / 100.0,
+            'double_bond_radius_factor': self.double_radius_slider.value() / 100.0,
+            'triple_bond_radius_factor': self.triple_radius_slider.value() / 100.0,
+        }
+    
     def reset_to_defaults(self):
-        """UIをデフォルト設定に戻す"""
-        self.update_ui_from_settings(self.default_settings)
+        """UIをデフォルト設定に戻す（後方互換性のため残存）"""
+        self.reset_all_settings()
 
     def update_ui_from_settings(self, settings_dict):
+        # 基本設定
         self.current_bg_color = settings_dict.get('background_color', self.default_settings['background_color'])
         self.update_color_button(self.current_bg_color)
         self.axes_checkbox.setChecked(settings_dict.get('show_3d_axes', self.default_settings['show_3d_axes']))
         self.light_checkbox.setChecked(settings_dict.get('lighting_enabled', self.default_settings['lighting_enabled']))
-        self.intensity_slider.setValue(int(settings_dict.get('light_intensity', self.default_settings['light_intensity']) * 100))
-        self.specular_slider.setValue(int(settings_dict.get('specular', self.default_settings['specular']) * 100))
+        
+        # スライダーの値を設定
+        intensity_val = int(settings_dict.get('light_intensity', self.default_settings['light_intensity']) * 100)
+        self.intensity_slider.setValue(intensity_val)
+        self.intensity_label.setText(f"{intensity_val/100:.2f}")
+        
+        specular_val = int(settings_dict.get('specular', self.default_settings['specular']) * 100)
+        self.specular_slider.setValue(specular_val)
+        self.specular_label.setText(f"{specular_val/100:.2f}")
+        
         self.spec_power_slider.setValue(settings_dict.get('specular_power', self.default_settings['specular_power']))
+        self.spec_power_label.setText(str(settings_dict.get('specular_power', self.default_settings['specular_power'])))
+        
+        # Ball and Stick設定
+        bs_atom_scale = int(settings_dict.get('ball_stick_atom_scale', self.default_settings['ball_stick_atom_scale']) * 100)
+        self.bs_atom_scale_slider.setValue(bs_atom_scale)
+        self.bs_atom_scale_label.setText(f"{bs_atom_scale/100:.2f}")
+        
+        bs_bond_radius = int(settings_dict.get('ball_stick_bond_radius', self.default_settings['ball_stick_bond_radius']) * 100)
+        self.bs_bond_radius_slider.setValue(bs_bond_radius)
+        self.bs_bond_radius_label.setText(f"{bs_bond_radius/100:.2f}")
+        
+        self.bs_resolution_slider.setValue(settings_dict.get('ball_stick_resolution', self.default_settings['ball_stick_resolution']))
+        self.bs_resolution_label.setText(str(settings_dict.get('ball_stick_resolution', self.default_settings['ball_stick_resolution'])))
+        
+        # CPK設定
+        cpk_atom_scale = int(settings_dict.get('cpk_atom_scale', self.default_settings['cpk_atom_scale']) * 100)
+        self.cpk_atom_scale_slider.setValue(cpk_atom_scale)
+        self.cpk_atom_scale_label.setText(f"{cpk_atom_scale/100:.2f}")
+        
+        self.cpk_resolution_slider.setValue(settings_dict.get('cpk_resolution', self.default_settings['cpk_resolution']))
+        self.cpk_resolution_label.setText(str(settings_dict.get('cpk_resolution', self.default_settings['cpk_resolution'])))
+        
+        # Wireframe設定
+        wf_bond_radius = int(settings_dict.get('wireframe_bond_radius', self.default_settings['wireframe_bond_radius']) * 100)
+        self.wf_bond_radius_slider.setValue(wf_bond_radius)
+        self.wf_bond_radius_label.setText(f"{wf_bond_radius/100:.2f}")
+        
+        self.wf_resolution_slider.setValue(settings_dict.get('wireframe_resolution', self.default_settings['wireframe_resolution']))
+        self.wf_resolution_label.setText(str(settings_dict.get('wireframe_resolution', self.default_settings['wireframe_resolution'])))
+        
+        # Stick設定
+        stick_atom_radius = int(settings_dict.get('stick_atom_radius', self.default_settings['stick_atom_radius']) * 100)
+        self.stick_atom_radius_slider.setValue(stick_atom_radius)
+        self.stick_atom_radius_label.setText(f"{stick_atom_radius/100:.2f}")
+        
+        stick_bond_radius = int(settings_dict.get('stick_bond_radius', self.default_settings['stick_bond_radius']) * 100)
+        self.stick_bond_radius_slider.setValue(stick_bond_radius)
+        self.stick_bond_radius_label.setText(f"{stick_bond_radius/100:.2f}")
+        
+        self.stick_resolution_slider.setValue(settings_dict.get('stick_resolution', self.default_settings['stick_resolution']))
+        self.stick_resolution_label.setText(str(settings_dict.get('stick_resolution', self.default_settings['stick_resolution'])))
+        
+        # 多重結合設定
+        double_offset = int(settings_dict.get('double_bond_offset_factor', self.default_settings['double_bond_offset_factor']) * 100)
+        self.double_offset_slider.setValue(double_offset)
+        self.double_offset_label.setText(f"{double_offset/100:.2f}")
+        
+        triple_offset = int(settings_dict.get('triple_bond_offset_factor', self.default_settings['triple_bond_offset_factor']) * 100)
+        self.triple_offset_slider.setValue(triple_offset)
+        self.triple_offset_label.setText(f"{triple_offset/100:.2f}")
+        
+        double_radius = int(settings_dict.get('double_bond_radius_factor', self.default_settings['double_bond_radius_factor']) * 100)
+        self.double_radius_slider.setValue(double_radius)
+        self.double_radius_label.setText(f"{double_radius/100:.2f}")
+        
+        triple_radius = int(settings_dict.get('triple_bond_radius_factor', self.default_settings['triple_bond_radius_factor']) * 100)
+        self.triple_radius_slider.setValue(triple_radius)
+        self.triple_radius_label.setText(f"{triple_radius/100:.2f}")
       
     def select_color(self):
         """カラーピッカーを開き、選択された色を内部変数とUIに反映させる"""
@@ -4874,8 +5740,48 @@ class SettingsDialog(QDialog):
             'lighting_enabled': self.light_checkbox.isChecked(),
             'light_intensity': self.intensity_slider.value() / 100.0,
             'specular': self.specular_slider.value() / 100.0,
-            'specular_power': self.spec_power_slider.value()
+            'specular_power': self.spec_power_slider.value(),
+            # Ball and Stick settings
+            'ball_stick_atom_scale': self.bs_atom_scale_slider.value() / 100.0,
+            'ball_stick_bond_radius': self.bs_bond_radius_slider.value() / 100.0,
+            'ball_stick_resolution': self.bs_resolution_slider.value(),
+            # CPK settings
+            'cpk_atom_scale': self.cpk_atom_scale_slider.value() / 100.0,
+            'cpk_resolution': self.cpk_resolution_slider.value(),
+            # Wireframe settings
+            'wireframe_bond_radius': self.wf_bond_radius_slider.value() / 100.0,
+            'wireframe_resolution': self.wf_resolution_slider.value(),
+            # Stick settings
+            'stick_atom_radius': self.stick_atom_radius_slider.value() / 100.0,
+            'stick_bond_radius': self.stick_bond_radius_slider.value() / 100.0,
+            'stick_resolution': self.stick_resolution_slider.value(),
+            # Multiple bond offset settings
+            'double_bond_offset_factor': self.double_offset_slider.value() / 100.0,
+            'triple_bond_offset_factor': self.triple_offset_slider.value() / 100.0,
+            'double_bond_radius_factor': self.double_radius_slider.value() / 100.0,
+            'triple_bond_radius_factor': self.triple_radius_slider.value() / 100.0,
         }
+
+    def apply_settings(self):
+        """設定を適用（ダイアログは開いたまま）"""
+        # 親ウィンドウの設定を更新
+        if self.parent_window:
+            settings = self.get_settings()
+            self.parent_window.settings.update(settings)
+            self.parent_window.save_settings()
+            # 3Dビューの設定を適用
+            self.parent_window.apply_3d_settings()
+            # 現在の分子を再描画（設定変更を反映）
+            if hasattr(self.parent_window, 'current_mol') and self.parent_window.current_mol:
+                self.parent_window.draw_molecule_3d(self.parent_window.current_mol)
+            # ステータスバーに適用完了を表示
+            self.parent_window.statusBar().showMessage("Settings applied successfully", 2000)
+
+    def accept(self):
+        """ダイアログの設定を適用してから閉じる"""
+        # apply_settingsを呼び出して設定を適用
+        self.apply_settings()
+        super().accept()
 
 
 class CustomQtInteractor(QtInteractor):
@@ -5134,7 +6040,7 @@ class MainWindow(QMainWindow):
         self.settings = {}
         self.load_settings()
         self.initial_settings = self.settings.copy()
-        self.setWindowTitle("MoleditPy -- Python Molecular Editor  Ver. " + VERSION); self.setGeometry(100, 100, 1400, 800)
+        self.setWindowTitle("MoleditPy Ver. " + VERSION); self.setGeometry(100, 100, 1400, 800)
         self.data = MolecularData(); self.current_mol = None
         self.current_3d_style = 'ball_and_stick'
         self.show_chiral_labels = False
@@ -5156,6 +6062,8 @@ class MainWindow(QMainWindow):
         self.selected_atoms_for_measurement = []
         self.measurement_labels = []  # (atom_idx, label_text) のタプルのリスト
         self.measurement_text_actor = None
+        self.measurement_label_items_2d = []  # 2Dビューの測定ラベルアイテム
+        self.atom_id_to_rdkit_idx_map = {}  # 2D原子IDから3D RDKit原子インデックスへのマッピング
         
         # 3D原子選択用の変数
         self.selected_atoms_3d = set()
@@ -5197,8 +6105,9 @@ class MainWindow(QMainWindow):
         # カメラ初期化フラグ（初回描画時のみリセットを許可する）
         self._camera_initialized = False
         
-        # 初期メニューテキストを設定
+        # 初期メニューテキストと状態を設定
         self.update_atom_id_menu_text()
+        self.update_atom_id_menu_state()
 
     def init_ui(self):
         # 1. 現在のスクリプトがあるディレクトリのパスを取得
@@ -5288,7 +6197,7 @@ class MainWindow(QMainWindow):
         self.optimize_3d_button = QPushButton("Optimize 3D")
         self.optimize_3d_button.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         self.optimize_3d_button.clicked.connect(self.optimize_3d_structure)
-        self.optimize_3d_button.setEnabled(False) # 初期状態は無効
+        # 初期状態は_enable_3d_features(False)で統一的に設定
         right_buttons_layout.addWidget(self.optimize_3d_button)
 
         # エクスポートボタン (メニュー付き)
@@ -5550,7 +6459,7 @@ class MainWindow(QMainWindow):
         # 測定機能ボタンを追加
         self.measurement_action = QAction("Measure", self, checkable=True)
         self.measurement_action.setToolTip("Enable distance, angle, and dihedral measurement in 3D view")
-        self.measurement_action.setEnabled(False)  # 初期状態では無効
+        # 初期状態は_enable_3d_features(False)で統一的に設定
         self.measurement_action.triggered.connect(self.toggle_measurement_mode)
         toolbar.addAction(self.measurement_action)
 
@@ -5586,6 +6495,18 @@ class MainWindow(QMainWindow):
         style_menu.addAction(cpk_action)
         style_group.addAction(cpk_action)
 
+        # Wireframe アクション
+        wireframe_action = QAction("Wireframe", self, checkable=True)
+        wireframe_action.triggered.connect(lambda: self.set_3d_style('wireframe'))
+        style_menu.addAction(wireframe_action)
+        style_group.addAction(wireframe_action)
+
+        # Stick アクション
+        stick_action = QAction("Stick", self, checkable=True)
+        stick_action.triggered.connect(lambda: self.set_3d_style('stick'))
+        style_menu.addAction(stick_action)
+        style_group.addAction(stick_action)
+
         quit_shortcut = QShortcut(QKeySequence("Ctrl+Q"), self)
         quit_shortcut.activated.connect(self.close)
 
@@ -5595,6 +6516,15 @@ class MainWindow(QMainWindow):
         menu_bar = self.menuBar()
         
         file_menu = menu_bar.addMenu("&File")
+        
+        # NEW メニュー（Clear allと同じ機能）
+        new_action = QAction("&New", self)
+        new_action.setShortcut("Ctrl+N")
+        new_action.triggered.connect(self.clear_all)
+        file_menu.addAction(new_action)
+        
+        file_menu.addSeparator()
+        
         load_mol_action = QAction("Import MOL/SDF...", self); load_mol_action.triggered.connect(self.load_mol_file)
         file_menu.addAction(load_mol_action)
         import_smiles_action = QAction("Import SMILES...", self)
@@ -5639,6 +6569,27 @@ class MainWindow(QMainWindow):
         export_3d_png_action = QAction("Export 3D as PNG...", self)
         export_3d_png_action.triggered.connect(self.export_3d_png)
         file_menu.addAction(export_3d_png_action)
+        
+        # 3Dエクスポートサブメニュー
+        export_3d_menu = file_menu.addMenu("Export 3D Files")
+        
+        export_mol_action = QAction("Export as MOL...", self)
+        export_mol_action.triggered.connect(self.save_3d_as_mol)
+        export_3d_menu.addAction(export_mol_action)
+
+        export_xyz_action = QAction("Export as XYZ...", self)
+        export_xyz_action.triggered.connect(self.save_as_xyz)
+        export_3d_menu.addAction(export_xyz_action)
+        
+        export_3d_menu.addSeparator()
+        
+        export_stl_action = QAction("Export as STL...", self)
+        export_stl_action.triggered.connect(self.export_stl)
+        export_3d_menu.addAction(export_stl_action)
+        
+        export_obj_action = QAction("Export as OBJ/MTL (with colors)...", self)
+        export_obj_action.triggered.connect(self.export_obj_mtl)
+        export_3d_menu.addAction(export_obj_action)
         
         file_menu.addSeparator()
         quit_action = QAction("Quit", self)
@@ -5767,9 +6718,13 @@ class MainWindow(QMainWindow):
         # 3D Atom Info submenu
         atom_info_menu = view_menu.addMenu("3D Atom Info Display")
         
-        self.show_atom_id_action = QAction("Show Atom ID", self, checkable=True)
+        self.show_atom_id_action = QAction("Show Original ID / Index", self, checkable=True)
         self.show_atom_id_action.triggered.connect(lambda: self.toggle_atom_info_display('id'))
         atom_info_menu.addAction(self.show_atom_id_action)
+        
+        self.show_rdkit_id_action = QAction("Show RDKit Index", self, checkable=True)
+        self.show_rdkit_id_action.triggered.connect(lambda: self.toggle_atom_info_display('rdkit_id'))
+        atom_info_menu.addAction(self.show_rdkit_id_action)
         
         self.show_atom_coords_action = QAction("Show Coordinates (X,Y,Z)", self, checkable=True)
         self.show_atom_coords_action.triggered.connect(lambda: self.toggle_atom_info_display('coords'))
@@ -5791,26 +6746,61 @@ class MainWindow(QMainWindow):
         
         edit_3d_menu.addSeparator()
         
-        # Planarization submenu
-        planar_menu = edit_3d_menu.addMenu("Planarize to...")
+        # Alignment submenu (統合)
+        align_menu = edit_3d_menu.addMenu("Align to")
+        align_menu.setEnabled(False)
+        self.align_menu = align_menu
         
-        planar_xy_action = QAction("XY Plane", self)
+        # Axis alignment submenu
+        axis_align_menu = align_menu.addMenu("Axis")
+        
+        align_x_action = QAction("X-axis", self)
+        align_x_action.triggered.connect(lambda: self.open_alignment_dialog('x'))
+        align_x_action.setEnabled(False)
+        axis_align_menu.addAction(align_x_action)
+        self.align_x_action = align_x_action
+        
+        align_y_action = QAction("Y-axis", self)
+        align_y_action.triggered.connect(lambda: self.open_alignment_dialog('y'))
+        align_y_action.setEnabled(False)
+        axis_align_menu.addAction(align_y_action)
+        self.align_y_action = align_y_action
+        
+        align_z_action = QAction("Z-axis", self)
+        align_z_action.triggered.connect(lambda: self.open_alignment_dialog('z'))
+        align_z_action.setEnabled(False)
+        axis_align_menu.addAction(align_z_action)
+        self.align_z_action = align_z_action
+        
+        # Plane alignment submenu (旧Planarization)
+        plane_align_menu = align_menu.addMenu("Plane")
+        
+        planar_xy_action = QAction("XY-plane", self)
         planar_xy_action.triggered.connect(lambda: self.open_planarization_dialog('xy'))
         planar_xy_action.setEnabled(False)
-        planar_menu.addAction(planar_xy_action)
+        plane_align_menu.addAction(planar_xy_action)
         self.planar_xy_action = planar_xy_action
         
-        planar_xz_action = QAction("XZ Plane", self)
+        planar_xz_action = QAction("XZ-plane", self)
         planar_xz_action.triggered.connect(lambda: self.open_planarization_dialog('xz'))
         planar_xz_action.setEnabled(False)
-        planar_menu.addAction(planar_xz_action)
+        plane_align_menu.addAction(planar_xz_action)
         self.planar_xz_action = planar_xz_action
         
-        planar_yz_action = QAction("YZ Plane", self)
+        planar_yz_action = QAction("YZ-plane", self)
         planar_yz_action.triggered.connect(lambda: self.open_planarization_dialog('yz'))
         planar_yz_action.setEnabled(False)
-        planar_menu.addAction(planar_yz_action)
+        plane_align_menu.addAction(planar_yz_action)
         self.planar_yz_action = planar_yz_action
+
+        edit_3d_menu.addSeparator()
+
+        # Mirror action
+        mirror_action = QAction("Mirror...", self)
+        mirror_action.triggered.connect(self.open_mirror_dialog)
+        mirror_action.setEnabled(False)
+        edit_3d_menu.addAction(mirror_action)
+        self.mirror_action = mirror_action
         
         edit_3d_menu.addSeparator()
         
@@ -5835,14 +6825,16 @@ class MainWindow(QMainWindow):
         edit_3d_menu.addAction(dihedral_action)
         self.dihedral_action = dihedral_action
         
-        edit_3d_menu.addSeparator()
+        #edit_3d_menu.addSeparator()
         
         # Symmetrize action
-        symmetrize_action = QAction("Symmetrize...", self)
-        symmetrize_action.triggered.connect(self.open_symmetrize_dialog)
-        symmetrize_action.setEnabled(False)
-        edit_3d_menu.addAction(symmetrize_action)
-        self.symmetrize_action = symmetrize_action
+        #symmetrize_action = QAction("Symmetrize...", self)
+        #symmetrize_action.triggered.connect(self.open_symmetrize_dialog)
+        #symmetrize_action.setEnabled(False)
+        #edit_3d_menu.addAction(symmetrize_action)
+        #self.symmetrize_action = symmetrize_action
+        
+        
 
         analysis_menu = menu_bar.addMenu("&Analysis")
         self.analysis_action = QAction("Show Analysis...", self)
@@ -5869,6 +6861,9 @@ class MainWindow(QMainWindow):
             lambda: QDesktopServices.openUrl(QUrl("https://github.com/HiroYokoyama/python_molecular_editor"))
         )
         help_menu.addAction(github_action)
+        
+        # 3D関連機能の初期状態を統一的に設定
+        self._enable_3d_features(False)
         
     def init_worker_thread(self):
         self.thread=QThread();self.worker=CalculationWorker();self.worker.moveToThread(self.thread)
@@ -5941,6 +6936,18 @@ class MainWindow(QMainWindow):
         """3D表示スタイルを設定し、ビューを更新する"""
         if self.current_3d_style == style_name:
             return
+
+        # 描画モード変更時に測定モードと3D編集モードをリセット
+        if self.measurement_mode:
+            self.measurement_action.setChecked(False)
+            self.toggle_measurement_mode(False)  # 測定モードを無効化
+        
+        if self.is_3d_edit_mode:
+            self.edit_3d_action.setChecked(False)
+            self.toggle_3d_edit_mode(False)  # 3D編集モードを無効化
+        
+        # 3D原子選択をクリア
+        self.clear_3d_selection()
 
         self.current_3d_style = style_name
         self.statusBar().showMessage(f"3D style set to: {style_name}")
@@ -6137,6 +7144,16 @@ class MainWindow(QMainWindow):
             self.view_2d.setFocus() 
             return
 
+        # 原子プロパティを保存（ワーカープロセスで失われるため）
+        self.original_atom_properties = {}
+        for i in range(mol.GetNumAtoms()):
+            atom = mol.GetAtomWithIdx(i)
+            try:
+                original_id = atom.GetIntProp("_original_atom_id")
+                self.original_atom_properties[i] = original_id
+            except KeyError:
+                pass
+
         problems = Chem.DetectChemistryProblems(mol)
         if problems:
             self.statusBar().showMessage(f"Error: {len(problems)} chemistry problem(s) found.")
@@ -6208,17 +7225,8 @@ class MainWindow(QMainWindow):
         
         self.convert_button.setEnabled(False)
         self.cleanup_button.setEnabled(False)
-        self.optimize_3d_button.setEnabled(False)
-        self.export_button.setEnabled(False)
-        self.analysis_action.setEnabled(False)
-        self.edit_3d_action.setEnabled(False)
-        # Disable 3D editing menu items
-        self.planar_xy_action.setEnabled(False)
-        self.planar_xz_action.setEnabled(False)
-        self.planar_yz_action.setEnabled(False)
-        self.bond_length_action.setEnabled(False)
-        self.angle_action.setEnabled(False)
-        self.dihedral_action.setEnabled(False)
+        # Disable 3D features during calculation
+        self._enable_3d_features(False)
         self.statusBar().showMessage("Calculating 3D structure...")
         self.plotter.clear() 
         bg_color_hex = self.settings.get('background_color', '#919191')
@@ -6284,6 +7292,16 @@ class MainWindow(QMainWindow):
         self.current_mol = mol
         self.is_xyz_derived = False  # 2Dから生成した3D構造はXYZ由来ではない
         
+        # 原子プロパティを復元（ワーカープロセスで失われたため）
+        if hasattr(self, 'original_atom_properties'):
+            for i, original_id in self.original_atom_properties.items():
+                if i < mol.GetNumAtoms():
+                    atom = mol.GetAtomWithIdx(i)
+                    atom.SetIntProp("_original_atom_id", original_id)
+        
+        # 原子IDマッピングを作成
+        self.create_atom_id_mapping()
+        
         # キラル中心を3D座標から再計算（R/Sのみ）
         try:
             if mol.GetNumConformers() > 0:
@@ -6298,23 +7316,39 @@ class MainWindow(QMainWindow):
 
         #self.statusBar().showMessage("3D conversion successful.")
         self.convert_button.setEnabled(True)
-        self.analysis_action.setEnabled(True)
-        self.measurement_action.setEnabled(True) 
         self.push_undo_state()
         self.view_2d.setFocus()
         self.cleanup_button.setEnabled(True)
-        self.optimize_3d_button.setEnabled(True)
-        self.export_button.setEnabled(True)
-        self.edit_3d_action.setEnabled(True)
         
-        # 3D編集機能を統一的に有効化
-        self._enable_3d_edit_actions(True)
+        # 3D関連機能を統一的に有効化
+        self._enable_3d_features(True)
             
         self.plotter.reset_camera()
         
         # 3D原子情報ホバー表示を再設定
         self.setup_3d_hover()
         
+        # メニューテキストと状態を更新
+        self.update_atom_id_menu_text()
+        self.update_atom_id_menu_state()
+
+    def create_atom_id_mapping(self):
+        """2D原子IDから3D RDKit原子インデックスへのマッピングを作成する（RDKitの原子プロパティ使用）"""
+        if not self.current_mol:
+            return
+            
+        self.atom_id_to_rdkit_idx_map = {}
+        
+        # RDKitの原子プロパティから直接マッピングを作成
+        for i in range(self.current_mol.GetNumAtoms()):
+            rdkit_atom = self.current_mol.GetAtomWithIdx(i)
+            try:
+                original_atom_id = rdkit_atom.GetIntProp("_original_atom_id")
+                self.atom_id_to_rdkit_idx_map[original_atom_id] = i
+            except KeyError:
+                # プロパティが設定されていない場合（外部ファイル読み込み時など）
+                continue
+
     def on_calculation_error(self, error_message):
         self.plotter.clear()
         self.dragged_atom_info = None
@@ -6324,12 +7358,7 @@ class MainWindow(QMainWindow):
         self.analysis_action.setEnabled(False)
         self.edit_3d_action.setEnabled(False)
         # Disable 3D editing menu items
-        self.planar_xy_action.setEnabled(False)
-        self.planar_xz_action.setEnabled(False)
-        self.planar_yz_action.setEnabled(False)
-        self.bond_length_action.setEnabled(False)
-        self.angle_action.setEnabled(False)
-        self.dihedral_action.setEnabled(False) 
+        self._enable_3d_edit_actions(False)
         self.view_2d.setFocus() 
 
     def eventFilter(self, obj, event):
@@ -6414,13 +7443,8 @@ class MainWindow(QMainWindow):
                 if self.current_mol and self.current_mol.GetNumAtoms() > 0:
                     self.draw_molecule_3d(self.current_mol)
                     self.plotter.reset_camera()
-                    self.analysis_action.setEnabled(True)
-                    self.optimize_3d_button.setEnabled(True)
-                    self.export_button.setEnabled(True)
-                    self.edit_3d_action.setEnabled(True)
-                    self.measurement_action.setEnabled(True)  # 測定機能を有効化
-                    # 3D編集機能を統一的に有効化
-                    self._enable_3d_edit_actions(True)
+                    # 3D関連機能を統一的に有効化
+                    self._enable_3d_features(True)
                     
                     # 3D原子情報ホバー表示を再設定
                     self.setup_3d_hover()
@@ -6428,30 +7452,18 @@ class MainWindow(QMainWindow):
                     # 無効な3D構造の場合
                     self.current_mol = None
                     self.plotter.clear()
-                    self.analysis_action.setEnabled(False)
-                    self.optimize_3d_button.setEnabled(False)
-                    self.export_button.setEnabled(False) 
-                    self.edit_3d_action.setEnabled(False)
-                    self.measurement_action.setEnabled(False)
-                    # 3D編集機能を統一的に無効化
-                    self._enable_3d_edit_actions(False)
+                    # 3D関連機能を統一的に無効化
+                    self._enable_3d_features(False)
             except Exception as e:
                 self.statusBar().showMessage(f"Could not load 3D model from project: {e}")
-                self.current_mol = None; self.analysis_action.setEnabled(False)
-                self.optimize_3d_button.setEnabled(False)
-                self.export_button.setEnabled(False) 
-                self.edit_3d_action.setEnabled(False)
-                self.measurement_action.setEnabled(False)
-                # 3D編集機能を統一的に無効化
-                self._enable_3d_edit_actions(False)
+                self.current_mol = None
+                # 3D関連機能を統一的に無効化
+                self._enable_3d_features(False)
         else:
             self.current_mol = None; self.plotter.clear(); self.analysis_action.setEnabled(False)
             self.optimize_3d_button.setEnabled(False)
-            self.export_button.setEnabled(False) 
-            self.edit_3d_action.setEnabled(False)
-            self.measurement_action.setEnabled(False)  # 測定機能を無効化
-            # 3D編集機能を統一的に無効化
-            self._enable_3d_edit_actions(False)
+            # 3D関連機能を統一的に無効化
+            self._enable_3d_features(False)
 
         self.update_implicit_hydrogens()
         self.update_chiral_labels()
@@ -6464,6 +7476,9 @@ class MainWindow(QMainWindow):
             # 3D分子がある場合は、2Dエディタモードでも3D編集機能を有効化
             if self.current_mol and self.current_mol.GetNumAtoms() > 0:
                 self._enable_3d_edit_actions(True)
+        
+        # undo/redo後に測定ラベルの位置を更新
+        self.update_2d_measurement_labels()
         
 
     def push_undo_state(self):
@@ -6573,6 +7588,18 @@ class MainWindow(QMainWindow):
         if not self.data.atoms and self.current_mol is None:
             return
         
+        # 3Dモードをリセット
+        if self.measurement_mode:
+            self.measurement_action.setChecked(False)
+            self.toggle_measurement_mode(False)  # 測定モードを無効化
+        
+        if self.is_3d_edit_mode:
+            self.edit_3d_action.setChecked(False)
+            self.toggle_3d_edit_mode(False)  # 3D編集モードを無効化
+        
+        # 3D原子選択をクリア
+        self.clear_3d_selection()
+        
         self.dragged_atom_info = None
             
         # 2Dエディタをクリアする（Undoスタックにはプッシュしない）
@@ -6582,12 +7609,8 @@ class MainWindow(QMainWindow):
         self.current_mol = None
         self.plotter.clear()
         
-        # 解析メニューを無効化する
-        self.analysis_action.setEnabled(False)
-        self.measurement_action.setEnabled(False)  # 測定機能も無効化
-
-        self.optimize_3d_button.setEnabled(False) 
-        self.export_button.setEnabled(False)
+        # 3D関連機能を統一的に無効化
+        self._enable_3d_features(False)
         
         # Undo/Redoスタックをリセットする
         self.reset_undo_stack()
@@ -6597,22 +7620,15 @@ class MainWindow(QMainWindow):
         if self.view_2d:
             self.view_2d.viewport().update()
 
-        self.optimize_3d_button.setEnabled(False) 
-        self.export_button.setEnabled(False)
-        self.edit_3d_action.setEnabled(False)
-        # Disable 3D editing menu items
-        self.planar_xy_action.setEnabled(False)
-        self.planar_xz_action.setEnabled(False)
-        self.planar_yz_action.setEnabled(False)
-        self.bond_length_action.setEnabled(False)
-        self.angle_action.setEnabled(False)
-        self.dihedral_action.setEnabled(False)
+        # 3D関連機能を統一的に無効化
+        self._enable_3d_features(False)
         
         # 3Dプロッターの再描画
         self.plotter.render()
         
-        # メニューテキストを更新（分子がクリアされたので通常の表示に戻す）
+        # メニューテキストと状態を更新（分子がクリアされたので通常の表示に戻す）
         self.update_atom_id_menu_text()
+        self.update_atom_id_menu_state()
         
         # アプリケーションのイベントループを強制的に処理し、画面の再描画を確実に行う
         QApplication.processEvents()
@@ -6626,17 +7642,14 @@ class MainWindow(QMainWindow):
         self.scene.reinitialize_items()
         self.is_xyz_derived = False  # 2Dエディタをクリアする際にXYZ由来フラグもリセット
         
+        # 測定ラベルもクリア
+        self.clear_2d_measurement_labels()
+        
         # Clear 3D data and disable 3D-related menus
         self.current_mol = None
         self.plotter.clear()
-        self.analysis_action.setEnabled(False)
-        self.optimize_3d_button.setEnabled(False)
-        self.export_button.setEnabled(False) 
-        self.edit_3d_action.setEnabled(False)
-        self.measurement_action.setEnabled(False)
-        
-        # 3D編集機能を統一的に無効化
-        self._enable_3d_edit_actions(False)
+        # 3D関連機能を統一的に無効化
+        self._enable_3d_features(False)
         
         if push_to_undo:
             self.push_undo_state()
@@ -6964,14 +7977,22 @@ class MainWindow(QMainWindow):
             
             # 3D構造をセットして描画
             self.current_mol = mol
+            
+            # 3Dファイル読み込み時はマッピングをクリア（2D構造がないため）
+            self.atom_id_to_rdkit_idx_map = {}
+            
             self.draw_molecule_3d(self.current_mol)
             self.plotter.reset_camera()
 
             # UIを3Dビューアモードに設定
             self._enter_3d_viewer_ui_mode()
             
-            # 測定機能を有効化
-            self.measurement_action.setEnabled(True)
+            # 3D関連機能を統一的に有効化
+            self._enable_3d_features(True)
+            
+            # メニューテキストと状態を更新
+            self.update_atom_id_menu_text()
+            self.update_atom_id_menu_state()
             
             self.statusBar().showMessage(f"3D Viewer Mode: Loaded {os.path.basename(file_path)}")
             self.reset_undo_stack()
@@ -7009,14 +8030,22 @@ class MainWindow(QMainWindow):
             # 3D構造をセットして描画
             self.current_mol = mol
             self.is_xyz_derived = True  # XYZ由来であることを記録
+            
+            # XYZファイル読み込み時はマッピングをクリア（2D構造がないため）
+            self.atom_id_to_rdkit_idx_map = {}
+            
             self.draw_molecule_3d(self.current_mol)
             self.plotter.reset_camera()
 
             # UIを3Dビューアモードに設定
             self._enter_3d_viewer_ui_mode()
             
-            # 測定機能を有効化
-            self.measurement_action.setEnabled(True)
+            # 3D関連機能を統一的に有効化
+            self._enable_3d_features(True)
+            
+            # メニューテキストと状態を更新
+            self.update_atom_id_menu_text()
+            self.update_atom_id_menu_state()
             
             self.statusBar().showMessage(f"3D Viewer Mode: Loaded {os.path.basename(file_path)}")
             self.reset_undo_stack()
@@ -7356,6 +8385,582 @@ class MainWindow(QMainWindow):
                 self.statusBar().showMessage(f"Successfully saved to {file_path}")
             except Exception as e: self.statusBar().showMessage(f"Error saving file: {e}")
 
+    def export_stl(self):
+        """STLファイルとしてエクスポート（色なし）"""
+        if not self.current_mol:
+            self.statusBar().showMessage("Error: Please generate a 3D structure first.")
+            return
+            
+        options = QFileDialog.Option.DontUseNativeDialog
+        file_path, _ = QFileDialog.getSaveFileName(
+            self, "Export as STL", "", "STL Files (*.stl);;All Files (*)", options=options
+        )
+        
+        if not file_path:
+            return
+            
+        try:
+            import pyvista as pv
+            
+            # 3Dビューから直接データを取得（色情報なし）
+            combined_mesh = self.export_from_3d_view_no_color()
+            
+            if combined_mesh is None or combined_mesh.n_points == 0:
+                self.statusBar().showMessage("No 3D geometry to export.")
+                return
+            
+            if not file_path.lower().endswith('.stl'):
+                file_path += '.stl'
+            
+            combined_mesh.save(file_path, binary=True)
+            self.statusBar().showMessage(f"STL exported to {file_path}")
+                
+        except Exception as e:
+            self.statusBar().showMessage(f"Error exporting STL: {e}")
+
+    def export_obj_mtl(self):
+        """OBJ/MTLファイルとしてエクスポート（個別色付き）"""
+        if not self.current_mol:
+            self.statusBar().showMessage("Error: Please generate a 3D structure first.")
+            return
+            
+        options = QFileDialog.Option.DontUseNativeDialog
+        file_path, _ = QFileDialog.getSaveFileName(
+            self, "Export as OBJ/MTL (with colors)", "", "OBJ Files (*.obj);;All Files (*)", options=options
+        )
+        
+        if not file_path:
+            return
+            
+        try:
+            import pyvista as pv
+            
+            # 3Dビューから個別のメッシュデータを取得（オブジェクトごとに分離）
+            meshes_with_colors = self.export_individual_meshes_from_3d_view()
+            
+            if not meshes_with_colors:
+                self.statusBar().showMessage("No 3D geometry to export.")
+                return
+            
+            # ファイル拡張子を確認・追加
+            if not file_path.lower().endswith('.obj'):
+                file_path += '.obj'
+            
+            # OBJ+MTL形式で保存（オブジェクトごとに色分け）
+            mtl_path = file_path.replace('.obj', '.mtl')
+            
+            self.create_multi_material_obj(meshes_with_colors, file_path, mtl_path)
+            
+            self.statusBar().showMessage(f"OBJ+MTL files with individual colors exported to {file_path} and {mtl_path}")
+                
+        except Exception as e:
+            self.statusBar().showMessage(f"Error exporting OBJ/MTL: {e}")
+
+    def export_individual_meshes_from_3d_view(self):
+        """3Dビューから個別のメッシュデータを色情報とともに取得（分子データベース）"""
+        try:
+            import pyvista as pv
+            import numpy as np
+            import vtk
+            
+            meshes_with_colors = []
+            
+            # 分子データから直接色情報を取得
+            if self.current_mol is None:
+                return []
+            
+            mol = self.current_mol
+            conf = mol.GetConformer()
+            
+            # 原子ごとに個別のメッシュを作成
+            for i in range(mol.GetNumAtoms()):
+                atom = mol.GetAtomWithIdx(i)
+                symbol = atom.GetSymbol()
+                position = np.array(conf.GetAtomPosition(i))
+                
+                # CPKカラーから色を取得
+                color_rgb = CPK_COLORS_PV.get(symbol, [0.5, 0.5, 0.5])
+                color = [int(c * 255) for c in color_rgb]
+                
+                # 原子の半径を取得（設定値を反映）
+                if self.current_3d_style == 'cpk':
+                    base_radius = pt.GetRvdw(pt.GetAtomicNumber(symbol))
+                    radius = base_radius * self.settings.get('cpk_atom_scale', 1.0)
+                elif self.current_3d_style == 'wireframe':
+                    radius = 0.1  # Wireframeでは固定
+                elif self.current_3d_style == 'stick':
+                    radius = self.settings.get('stick_atom_radius', 0.15)
+                else:  # ball_and_stick
+                    base_radius = VDW_RADII.get(symbol, 0.4)
+                    radius = base_radius * self.settings.get('ball_stick_atom_scale', 1.0)
+                
+                # Wireframeモードでは原子を描画しない
+                if self.current_3d_style != 'wireframe':
+                    # 原子球体の解像度を設定値に基づいて決定
+                    if self.current_3d_style == 'cpk':
+                        atom_resolution = self.settings.get('cpk_resolution', 32)
+                    elif self.current_3d_style == 'stick':
+                        atom_resolution = self.settings.get('stick_resolution', 16)
+                    else:  # ball_and_stick
+                        atom_resolution = self.settings.get('ball_stick_resolution', 16)
+                    
+                    # 個別の原子球体を作成
+                    sphere = pv.Sphere(radius=radius, center=position, theta_resolution=atom_resolution, phi_resolution=atom_resolution)
+                    
+                    meshes_with_colors.append({
+                        'mesh': sphere,
+                        'color': color,
+                        'name': f'atom_{i}_{symbol}',
+                        'type': 'atom',
+                        'atom_index': i
+                    })
+            
+            # 結合ごとに個別のメッシュを作成
+            if self.current_3d_style in ['ball_and_stick', 'wireframe', 'stick']:
+                # スタイルに応じてボンドの太さを設定（設定値を反映）
+                if self.current_3d_style == 'wireframe':
+                    cyl_radius = self.settings.get('wireframe_bond_radius', 0.01)
+                    bond_resolution = self.settings.get('wireframe_resolution', 6)
+                elif self.current_3d_style == 'stick':
+                    cyl_radius = self.settings.get('stick_bond_radius', 0.15)
+                    bond_resolution = self.settings.get('stick_resolution', 16)
+                else:  # ball_and_stick
+                    cyl_radius = self.settings.get('ball_stick_bond_radius', 0.1)
+                    bond_resolution = self.settings.get('ball_stick_resolution', 16)
+                
+                bond_counter = 0
+                
+                for bond in mol.GetBonds():
+                    begin_atom_idx = bond.GetBeginAtomIdx()
+                    end_atom_idx = bond.GetEndAtomIdx()
+                    sp = np.array(conf.GetAtomPosition(begin_atom_idx))
+                    ep = np.array(conf.GetAtomPosition(end_atom_idx))
+                    bt = bond.GetBondType()
+                    
+                    # 結合の色を原子の色から決定
+                    begin_symbol = mol.GetAtomWithIdx(begin_atom_idx).GetSymbol()
+                    end_symbol = mol.GetAtomWithIdx(end_atom_idx).GetSymbol()
+                    begin_color = CPK_COLORS_PV.get(begin_symbol, [0.5, 0.5, 0.5])
+                    end_color = CPK_COLORS_PV.get(end_symbol, [0.5, 0.5, 0.5])
+                    begin_color_rgb = [int(c * 255) for c in begin_color]
+                    end_color_rgb = [int(c * 255) for c in end_color]
+                    
+                    c = (sp + ep) / 2
+                    d = ep - sp
+                    h = np.linalg.norm(d)
+                    if h == 0: 
+                        continue
+                    
+                    # 結合タイプに応じて描画
+                    if bt == Chem.rdchem.BondType.SINGLE or bt == Chem.rdchem.BondType.AROMATIC:
+                        # 単結合・芳香族結合の処理
+                        if self.current_3d_style == 'ball_and_stick':
+                            # Ball and stickはグレー（単一の円柱）
+                            cyl = pv.Cylinder(center=c, direction=d, radius=cyl_radius, height=h, resolution=bond_resolution)
+                            meshes_with_colors.append({
+                                'mesh': cyl,
+                                'color': [127, 127, 127],
+                                'name': f'bond_{bond_counter}_{begin_symbol}{begin_atom_idx}-{end_symbol}{end_atom_idx}',
+                                'type': 'bond'
+                            })
+                        else:
+                            # その他（stick, wireframe）は中央で色が変わる2つの円柱
+                            mid_point = (sp + ep) / 2
+                            
+                            # 前半（開始原子の色）
+                            cyl1 = pv.Cylinder(center=(sp + mid_point) / 2, direction=d, radius=cyl_radius, height=h/2, resolution=bond_resolution)
+                            meshes_with_colors.append({
+                                'mesh': cyl1,
+                                'color': begin_color_rgb,
+                                'name': f'bond_{bond_counter}_start_{begin_symbol}{begin_atom_idx}',
+                                'type': 'bond_segment'
+                            })
+                            
+                            # 後半（終了原子の色）
+                            cyl2 = pv.Cylinder(center=(mid_point + ep) / 2, direction=d, radius=cyl_radius, height=h/2, resolution=bond_resolution)
+                            meshes_with_colors.append({
+                                'mesh': cyl2,
+                                'color': end_color_rgb,
+                                'name': f'bond_{bond_counter}_end_{end_symbol}{end_atom_idx}',
+                                'type': 'bond_segment'
+                            })
+                    
+                    elif bt == Chem.rdchem.BondType.DOUBLE:
+                        # 二重結合の処理
+                        # 結合ベクトルに垂直な方向を求める
+                        d_norm = d / h
+                        # 適当な方向ベクトルとの外積で垂直ベクトルを作成
+                        if abs(d_norm[0]) < 0.9:
+                            perp = np.cross(d_norm, [1, 0, 0])
+                        else:
+                            perp = np.cross(d_norm, [0, 1, 0])
+                        perp = perp / np.linalg.norm(perp)
+                        
+                        # 2本の平行な円柱を作成（オフセット距離を設定値に基づいて調整）
+                        offset_factor = self.settings.get('double_bond_offset_factor', 2.0)
+                        offset_distance = cyl_radius * offset_factor
+                        offset1 = c + perp * offset_distance
+                        offset2 = c - perp * offset_distance
+                        
+                        # 各円柱の半径を設定値に基づいて調整
+                        radius_factor = self.settings.get('double_bond_radius_factor', 0.8)
+                        double_radius = cyl_radius * radius_factor
+                        
+                        if self.current_3d_style == 'ball_and_stick':
+                            # Ball and stickはグレー
+                            cyl1 = pv.Cylinder(center=offset1, direction=d, radius=double_radius, height=h, resolution=bond_resolution)
+                            cyl2 = pv.Cylinder(center=offset2, direction=d, radius=double_radius, height=h, resolution=bond_resolution)
+                            
+                            meshes_with_colors.append({
+                                'mesh': cyl1,
+                                'color': [127, 127, 127],
+                                'name': f'bond_{bond_counter}_double1_{begin_symbol}{begin_atom_idx}-{end_symbol}{end_atom_idx}',
+                                'type': 'double_bond'
+                            })
+                            meshes_with_colors.append({
+                                'mesh': cyl2,
+                                'color': [127, 127, 127],
+                                'name': f'bond_{bond_counter}_double2_{begin_symbol}{begin_atom_idx}-{end_symbol}{end_atom_idx}',
+                                'type': 'double_bond'
+                            })
+                        else:
+                            # その他は色分け
+                            mid_point = (sp + ep) / 2
+                            
+                            # 第1本目
+                            cyl1_start = pv.Cylinder(center=(sp + mid_point) / 2 + perp * offset_distance, direction=d, radius=double_radius, height=h/2, resolution=bond_resolution)
+                            cyl1_end = pv.Cylinder(center=(mid_point + ep) / 2 + perp * offset_distance, direction=d, radius=double_radius, height=h/2, resolution=bond_resolution)
+                            
+                            # 第2本目
+                            cyl2_start = pv.Cylinder(center=(sp + mid_point) / 2 - perp * offset_distance, direction=d, radius=double_radius, height=h/2, resolution=bond_resolution)
+                            cyl2_end = pv.Cylinder(center=(mid_point + ep) / 2 - perp * offset_distance, direction=d, radius=double_radius, height=h/2, resolution=bond_resolution)
+                            
+                            meshes_with_colors.extend([
+                                {'mesh': cyl1_start, 'color': begin_color_rgb, 'name': f'bond_{bond_counter}_double1_start_{begin_symbol}{begin_atom_idx}', 'type': 'double_bond_segment'},
+                                {'mesh': cyl1_end, 'color': end_color_rgb, 'name': f'bond_{bond_counter}_double1_end_{end_symbol}{end_atom_idx}', 'type': 'double_bond_segment'},
+                                {'mesh': cyl2_start, 'color': begin_color_rgb, 'name': f'bond_{bond_counter}_double2_start_{begin_symbol}{begin_atom_idx}', 'type': 'double_bond_segment'},
+                                {'mesh': cyl2_end, 'color': end_color_rgb, 'name': f'bond_{bond_counter}_double2_end_{end_symbol}{end_atom_idx}', 'type': 'double_bond_segment'}
+                            ])
+                    
+                    elif bt == Chem.rdchem.BondType.TRIPLE:
+                        # 三重結合の処理
+                        # 結合ベクトルに垂直な2つの方向を求める
+                        d_norm = d / h
+                        if abs(d_norm[0]) < 0.9:
+                            perp1 = np.cross(d_norm, [1, 0, 0])
+                        else:
+                            perp1 = np.cross(d_norm, [0, 1, 0])
+                        perp1 = perp1 / np.linalg.norm(perp1)
+                        perp2 = np.cross(d_norm, perp1)
+                        perp2 = perp2 / np.linalg.norm(perp2)
+                        
+                        # 3本の円柱を120度間隔で配置（オフセット距離を設定値に基づいて調整）
+                        offset_factor = self.settings.get('triple_bond_offset_factor', 2.0)
+                        offset_distance = cyl_radius * offset_factor
+                        angle_step = 2 * np.pi / 3  # 120度
+                        
+                        # 各円柱の半径を設定値に基づいて調整
+                        radius_factor = self.settings.get('triple_bond_radius_factor', 0.7)
+                        triple_radius = cyl_radius * radius_factor
+                        
+                        for i in range(3):
+                            angle = i * angle_step
+                            offset = perp1 * np.cos(angle) * offset_distance + perp2 * np.sin(angle) * offset_distance
+                            
+                            if self.current_3d_style == 'ball_and_stick':
+                                # Ball and stickはグレー
+                                cyl = pv.Cylinder(center=c + offset, direction=d, radius=triple_radius, height=h, resolution=bond_resolution)
+                                meshes_with_colors.append({
+                                    'mesh': cyl,
+                                    'color': [127, 127, 127],
+                                    'name': f'bond_{bond_counter}_triple{i+1}_{begin_symbol}{begin_atom_idx}-{end_symbol}{end_atom_idx}',
+                                    'type': 'triple_bond'
+                                })
+                            else:
+                                # その他は色分け
+                                mid_point = (sp + ep) / 2
+                                
+                                cyl_start = pv.Cylinder(center=(sp + mid_point) / 2 + offset, direction=d, radius=triple_radius, height=h/2, resolution=bond_resolution)
+                                cyl_end = pv.Cylinder(center=(mid_point + ep) / 2 + offset, direction=d, radius=triple_radius, height=h/2, resolution=bond_resolution)
+                                
+                                meshes_with_colors.extend([
+                                    {'mesh': cyl_start, 'color': begin_color_rgb, 'name': f'bond_{bond_counter}_triple{i+1}_start_{begin_symbol}{begin_atom_idx}', 'type': 'triple_bond_segment'},
+                                    {'mesh': cyl_end, 'color': end_color_rgb, 'name': f'bond_{bond_counter}_triple{i+1}_end_{end_symbol}{end_atom_idx}', 'type': 'triple_bond_segment'}
+                                ])
+                    
+                    else:
+                        # その他の結合タイプ（単結合として処理）
+                        if self.current_3d_style == 'ball_and_stick':
+                            cyl = pv.Cylinder(center=c, direction=d, radius=cyl_radius, height=h, resolution=bond_resolution)
+                            meshes_with_colors.append({
+                                'mesh': cyl,
+                                'color': [127, 127, 127],
+                                'name': f'bond_{bond_counter}_other_{begin_symbol}{begin_atom_idx}-{end_symbol}{end_atom_idx}',
+                                'type': 'bond'
+                            })
+                        else:
+                            mid_point = (sp + ep) / 2
+                            
+                            cyl1 = pv.Cylinder(center=(sp + mid_point) / 2, direction=d, radius=cyl_radius, height=h/2, resolution=bond_resolution)
+                            cyl2 = pv.Cylinder(center=(mid_point + ep) / 2, direction=d, radius=cyl_radius, height=h/2, resolution=bond_resolution)
+                            
+                            meshes_with_colors.extend([
+                                {'mesh': cyl1, 'color': begin_color_rgb, 'name': f'bond_{bond_counter}_other_start_{begin_symbol}{begin_atom_idx}', 'type': 'bond_segment'},
+                                {'mesh': cyl2, 'color': end_color_rgb, 'name': f'bond_{bond_counter}_other_end_{end_symbol}{end_atom_idx}', 'type': 'bond_segment'}
+                            ])
+                    
+                    bond_counter += 1
+            
+            return meshes_with_colors
+            
+        except Exception as e:
+            return []
+
+    def create_multi_material_obj(self, meshes_with_colors, obj_path, mtl_path):
+        """複数のマテリアルを持つOBJファイルとMTLファイルを作成（改良版）"""
+        try:
+            import os
+            
+            # MTLファイルを作成
+            with open(mtl_path, 'w') as mtl_file:
+                mtl_file.write(f"# Material file for {os.path.basename(obj_path)}\n")
+                mtl_file.write(f"# Generated with individual object colors\n\n")
+                
+                for i, mesh_data in enumerate(meshes_with_colors):
+                    color = mesh_data['color']
+                    material_name = f"material_{i}_{mesh_data['name'].replace(' ', '_')}"
+                    
+                    mtl_file.write(f"newmtl {material_name}\n")
+                    mtl_file.write("Ka 0.2 0.2 0.2\n")  # Ambient
+                    mtl_file.write(f"Kd {color[0]/255.0:.3f} {color[1]/255.0:.3f} {color[2]/255.0:.3f}\n")  # Diffuse
+                    mtl_file.write("Ks 0.5 0.5 0.5\n")  # Specular
+                    mtl_file.write("Ns 32.0\n")          # Specular exponent
+                    mtl_file.write("illum 2\n")          # Illumination model
+                    mtl_file.write("\n")
+            
+            # OBJファイルを作成
+            with open(obj_path, 'w') as obj_file:
+                obj_file.write(f"# OBJ file with multiple materials\n")
+                obj_file.write(f"# Generated with individual object colors\n")
+                obj_file.write(f"mtllib {os.path.basename(mtl_path)}\n\n")
+                
+                vertex_offset = 1  # OBJファイルの頂点インデックスは1から始まる
+                
+                for i, mesh_data in enumerate(meshes_with_colors):
+                    mesh = mesh_data['mesh']
+                    material_name = f"material_{i}_{mesh_data['name'].replace(' ', '_')}"
+                    
+                    obj_file.write(f"# Object {i}: {mesh_data['name']}\n")
+                    obj_file.write(f"# Color: RGB({mesh_data['color'][0]}, {mesh_data['color'][1]}, {mesh_data['color'][2]})\n")
+                    obj_file.write(f"o object_{i}\n")
+                    obj_file.write(f"usemtl {material_name}\n")
+                    
+                    # 頂点を書き込み
+                    points = mesh.points
+                    for point in points:
+                        obj_file.write(f"v {point[0]:.6f} {point[1]:.6f} {point[2]:.6f}\n")
+                    
+                    # 面を書き込み
+                    for j in range(mesh.n_cells):
+                        cell = mesh.get_cell(j)
+                        if cell.type == 5:  # VTK_TRIANGLE
+                            points_in_cell = cell.point_ids
+                            v1 = points_in_cell[0] + vertex_offset
+                            v2 = points_in_cell[1] + vertex_offset
+                            v3 = points_in_cell[2] + vertex_offset
+                            obj_file.write(f"f {v1} {v2} {v3}\n")
+                        elif cell.type == 9:  # VTK_QUAD
+                            points_in_cell = cell.point_ids
+                            v1 = points_in_cell[0] + vertex_offset
+                            v2 = points_in_cell[1] + vertex_offset
+                            v3 = points_in_cell[2] + vertex_offset
+                            v4 = points_in_cell[3] + vertex_offset
+                            obj_file.write(f"f {v1} {v2} {v3} {v4}\n")
+                    
+                    vertex_offset += mesh.n_points
+                    obj_file.write("\n")
+                    
+        except Exception as e:
+            raise Exception(f"Failed to create multi-material OBJ: {e}")
+
+    def export_color_stl(self):
+        """カラーSTLファイルとしてエクスポート"""
+        if not self.current_mol:
+            self.statusBar().showMessage("Error: Please generate a 3D structure first.")
+            return
+            
+        options = QFileDialog.Option.DontUseNativeDialog
+        file_path, _ = QFileDialog.getSaveFileName(
+            self, "Export as Color STL", "", "STL Files (*.stl);;All Files (*)", options=options
+        )
+        
+        if not file_path:
+            return
+            
+        try:
+            import pyvista as pv
+            import numpy as np
+            
+            # 3Dビューから直接データを取得
+            combined_mesh = self.export_from_3d_view()
+            
+            if combined_mesh is None or combined_mesh.n_points == 0:
+                self.statusBar().showMessage("No 3D geometry to export.")
+                return
+            
+            # STL形式で保存
+            if not file_path.lower().endswith('.stl'):
+                file_path += '.stl'
+            combined_mesh.save(file_path, binary=True)
+            self.statusBar().showMessage(f"STL exported to {file_path}")
+                
+        except Exception as e:
+            self.statusBar().showMessage(f"Error exporting STL: {e}")
+    
+    def export_from_3d_view(self):
+        """現在の3Dビューから直接メッシュデータを取得"""
+        try:
+            import pyvista as pv
+            import numpy as np
+            import vtk
+            
+            # PyVistaプロッターから全てのアクターを取得
+            combined_mesh = pv.PolyData()
+            
+            # プロッターのレンダラーからアクターを取得
+            renderer = self.plotter.renderer
+            actors = renderer.actors
+            
+            for actor_name, actor in actors.items():
+                try:
+                    # VTKアクターからポリデータを取得する複数の方法を試行
+                    mesh = None
+                    
+                    # 方法1: mapperのinputから取得
+                    if hasattr(actor, 'mapper') and actor.mapper is not None:
+                        if hasattr(actor.mapper, 'input') and actor.mapper.input is not None:
+                            mesh = actor.mapper.input
+                        elif hasattr(actor.mapper, 'GetInput') and actor.mapper.GetInput() is not None:
+                            mesh = actor.mapper.GetInput()
+                    
+                    # 方法2: PyVistaプロッターの内部データから取得
+                    if mesh is None and actor_name in self.plotter.mesh:
+                        mesh = self.plotter.mesh[actor_name]
+                    
+                    # 方法3: PyVistaのメッシュデータベースから検索
+                    if mesh is None:
+                        for mesh_name, mesh_data in self.plotter.mesh.items():
+                            if mesh_data is not None and mesh_data.n_points > 0:
+                                mesh = mesh_data
+                                break
+                    
+                    if mesh is not None and hasattr(mesh, 'n_points') and mesh.n_points > 0:
+                        # PyVistaメッシュに変換（必要な場合）
+                        if not isinstance(mesh, pv.PolyData):
+                            if hasattr(mesh, 'extract_surface'):
+                                mesh = mesh.extract_surface()
+                            else:
+                                mesh = pv.wrap(mesh)
+                        
+                        # 元のメッシュを変更しないようにコピーを作成
+                        mesh_copy = mesh.copy()
+                        
+                        # コピーしたメッシュにカラー情報を追加
+                        if hasattr(actor, 'prop') and hasattr(actor.prop, 'color'):
+                            color = actor.prop.color
+                            # RGB値を0-255の範囲に変換
+                            rgb = np.array([int(c * 255) for c in color], dtype=np.uint8)
+                            
+                            # Blender対応のPLY形式用カラー属性を設定
+                            mesh_copy.point_data['diffuse_red'] = np.full(mesh_copy.n_points, rgb[0], dtype=np.uint8)
+                            mesh_copy.point_data['diffuse_green'] = np.full(mesh_copy.n_points, rgb[1], dtype=np.uint8) 
+                            mesh_copy.point_data['diffuse_blue'] = np.full(mesh_copy.n_points, rgb[2], dtype=np.uint8)
+                            
+                            # 標準的なPLY形式もサポート
+                            mesh_copy.point_data['red'] = np.full(mesh_copy.n_points, rgb[0], dtype=np.uint8)
+                            mesh_copy.point_data['green'] = np.full(mesh_copy.n_points, rgb[1], dtype=np.uint8) 
+                            mesh_copy.point_data['blue'] = np.full(mesh_copy.n_points, rgb[2], dtype=np.uint8)
+                            
+                            # 従来の colors 配列も保持（STL用）
+                            mesh_colors = np.tile(rgb, (mesh_copy.n_points, 1))
+                            mesh_copy.point_data['colors'] = mesh_colors
+                        
+                        # メッシュを結合
+                        if combined_mesh.n_points == 0:
+                            combined_mesh = mesh_copy.copy()
+                        else:
+                            combined_mesh = combined_mesh.merge(mesh_copy)
+                            
+                except Exception:
+                    continue
+            
+            return combined_mesh
+            
+        except Exception:
+            return None
+
+    def export_from_3d_view_no_color(self):
+        """現在の3Dビューから直接メッシュデータを取得（色情報なし）"""
+        try:
+            import pyvista as pv
+            import numpy as np
+            import vtk
+            
+            # PyVistaプロッターから全てのアクターを取得
+            combined_mesh = pv.PolyData()
+            
+            # プロッターのレンダラーからアクターを取得
+            renderer = self.plotter.renderer
+            actors = renderer.actors
+            
+            for actor_name, actor in actors.items():
+                try:
+                    # VTKアクターからポリデータを取得する複数の方法を試行
+                    mesh = None
+                    
+                    # 方法1: mapperのinputから取得
+                    if hasattr(actor, 'mapper') and actor.mapper is not None:
+                        if hasattr(actor.mapper, 'input') and actor.mapper.input is not None:
+                            mesh = actor.mapper.input
+                        elif hasattr(actor.mapper, 'GetInput') and actor.mapper.GetInput() is not None:
+                            mesh = actor.mapper.GetInput()
+                    
+                    # 方法2: PyVistaプロッターの内部データから取得
+                    if mesh is None and actor_name in self.plotter.mesh:
+                        mesh = self.plotter.mesh[actor_name]
+                    
+                    # 方法3: PyVistaのメッシュデータベースから検索
+                    if mesh is None:
+                        for mesh_name, mesh_data in self.plotter.mesh.items():
+                            if mesh_data is not None and mesh_data.n_points > 0:
+                                mesh = mesh_data
+                                break
+                    
+                    if mesh is not None and hasattr(mesh, 'n_points') and mesh.n_points > 0:
+                        # PyVistaメッシュに変換（必要な場合）
+                        if not isinstance(mesh, pv.PolyData):
+                            if hasattr(mesh, 'extract_surface'):
+                                mesh = mesh.extract_surface()
+                            else:
+                                mesh = pv.wrap(mesh)
+                        
+                        # 元のメッシュを変更しないようにコピーを作成（色情報は追加しない）
+                        mesh_copy = mesh.copy()
+                        
+                        # メッシュを結合
+                        if combined_mesh.n_points == 0:
+                            combined_mesh = mesh_copy.copy()
+                        else:
+                            combined_mesh = combined_mesh.merge(mesh_copy)
+                            
+                except Exception:
+                    continue
+            
+            return combined_mesh
+            
+        except Exception:
+            return None
+
     def export_2d_png(self):
         if not self.data.atoms:
             self.statusBar().showMessage("Nothing to export.", 2000)
@@ -7544,6 +9149,9 @@ class MainWindow(QMainWindow):
             # 重なり解消ロジックを実行
             self. resolve_overlapping_groups()
             
+            # 測定ラベルの位置を更新
+            self.update_2d_measurement_labels()
+            
             # シーン全体の再描画を要求
             self.scene.update()
 
@@ -7699,6 +9307,10 @@ class MainWindow(QMainWindow):
         for bond_data in self.data.bonds.values():
             if bond_data and 'item' in bond_data:
                 bond_data['item'].update_position()
+        
+        # 重なり解消後に測定ラベルの位置を更新
+        self.update_2d_measurement_labels()
+        
         self.scene.update()
         self.push_undo_state()
         self.statusBar().showMessage("Resolved overlapping groups.", 2000)
@@ -7711,6 +9323,11 @@ class MainWindow(QMainWindow):
         # 測定選択をクリア（分子が変更されたため）
         if hasattr(self, 'measurement_mode'):
             self.clear_measurement_selection()
+        
+        # 色情報追跡のための辞書を初期化
+        if not hasattr(self, '_3d_color_map'):
+            self._3d_color_map = {}
+        self._3d_color_map.clear()
         
         # 1. カメラ状態とクリア
         camera_state = self.plotter.camera.copy()
@@ -7754,17 +9371,29 @@ class MainWindow(QMainWindow):
         sym = [a.GetSymbol() for a in mol.GetAtoms()]
         col = np.array([CPK_COLORS_PV.get(s, [0.5, 0.5, 0.5]) for s in sym])
 
+        # スタイルに応じて原子の半径を設定（設定から読み込み）
         if self.current_3d_style == 'cpk':
-            rad = np.array([pt.GetRvdw(pt.GetAtomicNumber(s)) * 1.0 for s in sym])
-        else:
-            rad = np.array([VDW_RADII.get(s, 0.4) for s in sym])
+            atom_scale = self.settings.get('cpk_atom_scale', 1.0)
+            resolution = self.settings.get('cpk_resolution', 32)
+            rad = np.array([pt.GetRvdw(pt.GetAtomicNumber(s)) * atom_scale for s in sym])
+        elif self.current_3d_style == 'wireframe':
+            # Wireframeでは原子を描画しないので、この設定は実際には使用されない
+            resolution = self.settings.get('wireframe_resolution', 6)
+            rad = np.array([0.01 for s in sym])  # 極小値（使用されない）
+        elif self.current_3d_style == 'stick':
+            atom_radius = self.settings.get('stick_atom_radius', 0.15)
+            resolution = self.settings.get('stick_resolution', 16)
+            rad = np.array([atom_radius for s in sym])
+        else:  # ball_and_stick
+            atom_scale = self.settings.get('ball_stick_atom_scale', 1.0)
+            resolution = self.settings.get('ball_stick_resolution', 16)
+            rad = np.array([VDW_RADII.get(s, 0.4) * atom_scale for s in sym])
 
         self.glyph_source = pv.PolyData(self.atom_positions_3d)
         self.glyph_source['colors'] = col
         self.glyph_source['radii'] = rad
 
-        glyphs = self.glyph_source.glyph(scale='radii', geom=pv.Sphere(radius=1.0, theta_resolution=32, phi_resolution=32), orient=False)
-
+        # メッシュプロパティを共通で定義
         mesh_props = dict(
             smooth_shading=True,
             specular=self.settings.get('specular', 0.2),
@@ -7772,55 +9401,171 @@ class MainWindow(QMainWindow):
             lighting=is_lighting_enabled,
         )
 
-        if is_lighting_enabled:
-            self.atom_actor = self.plotter.add_mesh(glyphs, scalars='colors', rgb=True, **mesh_props)
-        else:
-            self.atom_actor = self.plotter.add_mesh(
-                glyphs, scalars='colors', rgb=True, 
-                style='surface', show_edges=True, edge_color='grey',
-                **mesh_props
-            )
-            self.atom_actor.GetProperty().SetEdgeOpacity(0.3)
+        # Wireframeスタイルの場合は原子を描画しない
+        if self.current_3d_style != 'wireframe':
+            glyphs = self.glyph_source.glyph(scale='radii', geom=pv.Sphere(radius=1.0, theta_resolution=resolution, phi_resolution=resolution), orient=False)
+
+            if is_lighting_enabled:
+                self.atom_actor = self.plotter.add_mesh(glyphs, scalars='colors', rgb=True, **mesh_props)
+            else:
+                self.atom_actor = self.plotter.add_mesh(
+                    glyphs, scalars='colors', rgb=True, 
+                    style='surface', show_edges=True, edge_color='grey',
+                    **mesh_props
+                )
+                self.atom_actor.GetProperty().SetEdgeOpacity(0.3)
+            
+            # 原子の色情報を記録
+            for i, atom_color in enumerate(col):
+                atom_rgb = [int(c * 255) for c in atom_color]
+                self._3d_color_map[f'atom_{i}'] = atom_rgb
 
 
-        if self.current_3d_style == 'ball_and_stick':
-            bond_meshes = []
+        # ボンドの描画（ball_and_stick、wireframe、stickで描画）
+        if self.current_3d_style in ['ball_and_stick', 'wireframe', 'stick']:
+            # スタイルに応じてボンドの太さと解像度を設定（設定から読み込み）
+            if self.current_3d_style == 'wireframe':
+                cyl_radius = self.settings.get('wireframe_bond_radius', 0.01)
+                bond_resolution = self.settings.get('wireframe_resolution', 6)
+            elif self.current_3d_style == 'stick':
+                cyl_radius = self.settings.get('stick_bond_radius', 0.15)
+                bond_resolution = self.settings.get('stick_resolution', 16)
+            else:  # ball_and_stick
+                cyl_radius = self.settings.get('ball_stick_bond_radius', 0.1)
+                bond_resolution = self.settings.get('ball_stick_resolution', 16)
+            
+            bond_counter = 0  # 結合の個別識別用
+            
             for bond in mol.GetBonds():
-                sp = np.array(conf.GetAtomPosition(bond.GetBeginAtomIdx()))
-                ep = np.array(conf.GetAtomPosition(bond.GetEndAtomIdx()))
+                begin_atom_idx = bond.GetBeginAtomIdx()
+                end_atom_idx = bond.GetEndAtomIdx()
+                sp = np.array(conf.GetAtomPosition(begin_atom_idx))
+                ep = np.array(conf.GetAtomPosition(end_atom_idx))
                 bt = bond.GetBondType()
                 c = (sp + ep) / 2
                 d = ep - sp
                 h = np.linalg.norm(d)
                 if h == 0: continue
 
-                cyl_radius = 0.1
+                # ボンドの色を原子の色から決定（各半分で異なる色）
+                begin_color = col[begin_atom_idx]
+                end_color = col[end_atom_idx]
+                
+                # 結合の色情報を記録
+                begin_color_rgb = [int(c * 255) for c in begin_color]
+                end_color_rgb = [int(c * 255) for c in end_color]
+
                 if bt == Chem.rdchem.BondType.SINGLE or bt == Chem.rdchem.BondType.AROMATIC:
-                    cyl = pv.Cylinder(center=c, direction=d, radius=cyl_radius, height=h, resolution=16)
-                    bond_meshes.append(cyl)
+                    if self.current_3d_style == 'ball_and_stick':
+                        # Ball and stickはグレー
+                        cyl = pv.Cylinder(center=c, direction=d, radius=cyl_radius, height=h, resolution=bond_resolution)
+                        actor = self.plotter.add_mesh(cyl, color='grey', **mesh_props)
+                        self._3d_color_map[f'bond_{bond_counter}'] = [127, 127, 127]  # グレー
+                    else:
+                        # その他（stick, wireframe）は中央で色が変わる2つの円柱
+                        mid_point = (sp + ep) / 2
+                        
+                        # 前半（開始原子の色）
+                        cyl1 = pv.Cylinder(center=(sp + mid_point) / 2, direction=d, radius=cyl_radius, height=h/2, resolution=bond_resolution)
+                        actor1 = self.plotter.add_mesh(cyl1, color=begin_color, **mesh_props)
+                        self._3d_color_map[f'bond_{bond_counter}_start'] = begin_color_rgb
+                        
+                        # 後半（終了原子の色）
+                        cyl2 = pv.Cylinder(center=(mid_point + ep) / 2, direction=d, radius=cyl_radius, height=h/2, resolution=bond_resolution)
+                        actor2 = self.plotter.add_mesh(cyl2, color=end_color, **mesh_props)
+                        self._3d_color_map[f'bond_{bond_counter}_end'] = end_color_rgb
                 else:
                     v1 = d / h
-                    r, s = cyl_radius * 0.8, cyl_radius * 2.0
+                    r = cyl_radius * 0.8
+                    # 設定からオフセットファクターを取得
+                    double_offset_factor = self.settings.get('double_bond_offset_factor', 2.0)
+                    triple_offset_factor = self.settings.get('triple_bond_offset_factor', 2.0)
+                    s = cyl_radius * 2.0  # デフォルト値
                     
                     if bt == Chem.rdchem.BondType.DOUBLE:
                         # 二重結合の場合、結合している原子の他の結合を考慮してオフセット方向を決定
                         off_dir = self._calculate_double_bond_offset(mol, bond, conf)
-                        c1, c2 = c + off_dir * (s / 2), c - off_dir * (s / 2)
-                        bond_meshes.append(pv.Cylinder(center=c1, direction=d, radius=r, height=h, resolution=16))
-                        bond_meshes.append(pv.Cylinder(center=c2, direction=d, radius=r, height=h, resolution=16))
+                        # 設定から二重結合のオフセットファクターを適用
+                        s_double = cyl_radius * double_offset_factor
+                        c1, c2 = c + off_dir * (s_double / 2), c - off_dir * (s_double / 2)
+                        
+                        if self.current_3d_style == 'ball_and_stick':
+                            # Ball and stickはグレー
+                            cyl1 = pv.Cylinder(center=c1, direction=d, radius=r, height=h, resolution=bond_resolution)
+                            cyl2 = pv.Cylinder(center=c2, direction=d, radius=r, height=h, resolution=bond_resolution)
+                            self.plotter.add_mesh(cyl1, color='grey', **mesh_props)
+                            self.plotter.add_mesh(cyl2, color='grey', **mesh_props)
+                            self._3d_color_map[f'bond_{bond_counter}_1'] = [127, 127, 127]
+                            self._3d_color_map[f'bond_{bond_counter}_2'] = [127, 127, 127]
+                        else:
+                            # その他（stick, wireframe）は中央で色が変わる
+                            mid_point = (sp + ep) / 2
+                            
+                            # 第一の結合線（前半・後半）
+                            cyl1_1 = pv.Cylinder(center=(sp + mid_point) / 2 + off_dir * (s_double / 2), direction=d, radius=r, height=h/2, resolution=bond_resolution)
+                            cyl1_2 = pv.Cylinder(center=(mid_point + ep) / 2 + off_dir * (s_double / 2), direction=d, radius=r, height=h/2, resolution=bond_resolution)
+                            self.plotter.add_mesh(cyl1_1, color=begin_color, **mesh_props)
+                            self.plotter.add_mesh(cyl1_2, color=end_color, **mesh_props)
+                            self._3d_color_map[f'bond_{bond_counter}_1_start'] = begin_color_rgb
+                            self._3d_color_map[f'bond_{bond_counter}_1_end'] = end_color_rgb
+                            
+                            # 第二の結合線（前半・後半）
+                            cyl2_1 = pv.Cylinder(center=(sp + mid_point) / 2 - off_dir * (s_double / 2), direction=d, radius=r, height=h/2, resolution=bond_resolution)
+                            cyl2_2 = pv.Cylinder(center=(mid_point + ep) / 2 - off_dir * (s_double / 2), direction=d, radius=r, height=h/2, resolution=bond_resolution)
+                            self.plotter.add_mesh(cyl2_1, color=begin_color, **mesh_props)
+                            self.plotter.add_mesh(cyl2_2, color=end_color, **mesh_props)
+                            self._3d_color_map[f'bond_{bond_counter}_2_start'] = begin_color_rgb
+                            self._3d_color_map[f'bond_{bond_counter}_2_end'] = end_color_rgb
                     elif bt == Chem.rdchem.BondType.TRIPLE:
-                        # 三重結合は従来通り
+                        # 三重結合
                         v_arb = np.array([0, 0, 1])
                         if np.allclose(np.abs(np.dot(v1, v_arb)), 1.0): v_arb = np.array([0, 1, 0])
                         off_dir = np.cross(v1, v_arb)
                         off_dir /= np.linalg.norm(off_dir)
-                        bond_meshes.append(pv.Cylinder(center=c, direction=d, radius=r, height=h, resolution=16))
-                        bond_meshes.append(pv.Cylinder(center=c + off_dir * s, direction=d, radius=r, height=h, resolution=16))
-                        bond_meshes.append(pv.Cylinder(center=c - off_dir * s, direction=d, radius=r, height=h, resolution=16))
+                        
+                        # 設定から三重結合のオフセットファクターを適用
+                        s_triple = cyl_radius * triple_offset_factor
+                        
+                        if self.current_3d_style == 'ball_and_stick':
+                            # Ball and stickはグレー
+                            cyl1 = pv.Cylinder(center=c, direction=d, radius=r, height=h, resolution=bond_resolution)
+                            cyl2 = pv.Cylinder(center=c + off_dir * s_triple, direction=d, radius=r, height=h, resolution=bond_resolution)
+                            cyl3 = pv.Cylinder(center=c - off_dir * s_triple, direction=d, radius=r, height=h, resolution=bond_resolution)
+                            self.plotter.add_mesh(cyl1, color='grey', **mesh_props)
+                            self.plotter.add_mesh(cyl2, color='grey', **mesh_props)
+                            self.plotter.add_mesh(cyl3, color='grey', **mesh_props)
+                            self._3d_color_map[f'bond_{bond_counter}_1'] = [127, 127, 127]
+                            self._3d_color_map[f'bond_{bond_counter}_2'] = [127, 127, 127]
+                            self._3d_color_map[f'bond_{bond_counter}_3'] = [127, 127, 127]
+                        else:
+                            # その他（stick, wireframe）は中央で色が変わる
+                            mid_point = (sp + ep) / 2
+                            
+                            # 中央の結合線（前半・後半）
+                            cyl1_1 = pv.Cylinder(center=(sp + mid_point) / 2, direction=d, radius=r, height=h/2, resolution=bond_resolution)
+                            cyl1_2 = pv.Cylinder(center=(mid_point + ep) / 2, direction=d, radius=r, height=h/2, resolution=bond_resolution)
+                            self.plotter.add_mesh(cyl1_1, color=begin_color, **mesh_props)
+                            self.plotter.add_mesh(cyl1_2, color=end_color, **mesh_props)
+                            self._3d_color_map[f'bond_{bond_counter}_1_start'] = begin_color_rgb
+                            self._3d_color_map[f'bond_{bond_counter}_1_end'] = end_color_rgb
+                            
+                            # 上側の結合線（前半・後半）
+                            cyl2_1 = pv.Cylinder(center=(sp + mid_point) / 2 + off_dir * s_triple, direction=d, radius=r, height=h/2, resolution=bond_resolution)
+                            cyl2_2 = pv.Cylinder(center=(mid_point + ep) / 2 + off_dir * s_triple, direction=d, radius=r, height=h/2, resolution=bond_resolution)
+                            self.plotter.add_mesh(cyl2_1, color=begin_color, **mesh_props)
+                            self.plotter.add_mesh(cyl2_2, color=end_color, **mesh_props)
+                            self._3d_color_map[f'bond_{bond_counter}_2_start'] = begin_color_rgb
+                            self._3d_color_map[f'bond_{bond_counter}_2_end'] = end_color_rgb
+                            
+                            # 下側の結合線（前半・後半）
+                            cyl3_1 = pv.Cylinder(center=(sp + mid_point) / 2 - off_dir * s_triple, direction=d, radius=r, height=h/2, resolution=bond_resolution)
+                            cyl3_2 = pv.Cylinder(center=(mid_point + ep) / 2 - off_dir * s_triple, direction=d, radius=r, height=h/2, resolution=bond_resolution)
+                            self.plotter.add_mesh(cyl3_1, color=begin_color, **mesh_props)
+                            self.plotter.add_mesh(cyl3_2, color=end_color, **mesh_props)
+                            self._3d_color_map[f'bond_{bond_counter}_3_start'] = begin_color_rgb
+                            self._3d_color_map[f'bond_{bond_counter}_3_end'] = end_color_rgb
 
-            if bond_meshes:
-                combined_bonds = pv.merge(bond_meshes)
-                self.plotter.add_mesh(combined_bonds, color='grey', **mesh_props)
+                bond_counter += 1
 
         if getattr(self, 'show_chiral_labels', False):
             try:
@@ -7850,8 +9595,9 @@ class MainWindow(QMainWindow):
         if hasattr(self, 'atom_info_display_mode') and self.atom_info_display_mode is not None:
             self.show_all_atom_info()
         
-        # メニューテキストを現在の分子の種類に応じて更新
+        # メニューテキストと状態を現在の分子の種類に応じて更新
         self.update_atom_id_menu_text()
+        self.update_atom_id_menu_state()
 
     def _calculate_double_bond_offset(self, mol, bond, conf):
         """
@@ -8080,6 +9826,7 @@ class MainWindow(QMainWindow):
             self.atom_info_display_mode = None
             # 全てのアクションのチェックを外す
             self.show_atom_id_action.setChecked(False)
+            self.show_rdkit_id_action.setChecked(False)
             self.show_atom_coords_action.setChecked(False)
             self.show_atom_symbol_action.setChecked(False)
             self.statusBar().showMessage("Atom info display disabled.")
@@ -8088,10 +9835,11 @@ class MainWindow(QMainWindow):
             self.atom_info_display_mode = mode
             # 該当するアクションのみチェック
             self.show_atom_id_action.setChecked(mode == 'id')
+            self.show_rdkit_id_action.setChecked(mode == 'rdkit_id')
             self.show_atom_coords_action.setChecked(mode == 'coords')
             self.show_atom_symbol_action.setChecked(mode == 'symbol')
             
-            mode_names = {'id': 'Atom ID', 'coords': 'Coordinates', 'symbol': 'Element Symbol'}
+            mode_names = {'id': 'Atom ID', 'rdkit_id': 'RDKit Index', 'coords': 'Coordinates', 'symbol': 'Element Symbol'}
             self.statusBar().showMessage(f"Displaying: {mode_names[mode]}")
             
             # すべての原子に情報を表示
@@ -8109,13 +9857,42 @@ class MainWindow(QMainWindow):
             pass
         return False
 
+    def has_original_atom_ids(self):
+        """現在の分子がOriginal Atom IDsを持っているかどうかを判定"""
+        if not self.current_mol:
+            return False
+        try:
+            # いずれかの原子が_original_atom_idプロパティを持っているかチェック
+            for atom_idx in range(self.current_mol.GetNumAtoms()):
+                atom = self.current_mol.GetAtomWithIdx(atom_idx)
+                if atom.HasProp("_original_atom_id"):
+                    return True
+        except Exception:
+            pass
+        return False
+
     def update_atom_id_menu_text(self):
         """原子IDメニューのテキストを現在の分子の種類に応じて更新"""
         if hasattr(self, 'show_atom_id_action'):
             if self.is_xyz_derived_molecule():
                 self.show_atom_id_action.setText("Show XYZ Unique ID")
             else:
-                self.show_atom_id_action.setText("Show Atom ID")
+                self.show_atom_id_action.setText("Show Original ID / Index")
+
+    def update_atom_id_menu_state(self):
+        """原子IDメニューの有効/無効状態を更新"""
+        if hasattr(self, 'show_atom_id_action'):
+            has_original_ids = self.has_original_atom_ids()
+            has_xyz_ids = self.is_xyz_derived_molecule()
+            
+            # Original IDまたはXYZ IDがある場合のみ有効化
+            self.show_atom_id_action.setEnabled(has_original_ids or has_xyz_ids)
+            
+            # 現在選択されているモードが無効化される場合は解除
+            if not (has_original_ids or has_xyz_ids) and self.atom_info_display_mode == 'id':
+                self.atom_info_display_mode = None
+                self.show_atom_id_action.setChecked(False)
+                self.clear_all_atom_info_labels()
 
     def show_all_atom_info(self):
         """すべての原子に情報を表示"""
@@ -8133,15 +9910,25 @@ class MainWindow(QMainWindow):
             pos = self.atom_positions_3d[atom_idx]
             
             if self.atom_info_display_mode == 'id':
-                # XYZファイルから読み込んだ分子の場合はUniqueIDを表示
+                # Original IDがある場合は優先表示、なければRDKitインデックス
                 try:
-                    if self.current_mol and self.current_mol.GetAtomWithIdx(atom_idx).HasProp("xyz_unique_id"):
-                        unique_id = self.current_mol.GetAtomWithIdx(atom_idx).GetIntProp("xyz_unique_id")
-                        text = f"{unique_id}"
+                    if self.current_mol:
+                        atom = self.current_mol.GetAtomWithIdx(atom_idx)
+                        if atom.HasProp("_original_atom_id"):
+                            original_id = atom.GetIntProp("_original_atom_id")
+                            text = f"ID:{original_id}"
+                        elif atom.HasProp("xyz_unique_id"):
+                            unique_id = atom.GetIntProp("xyz_unique_id")
+                            text = f"XYZ:{unique_id}"
+                        else:
+                            text = f"RDKit:{atom_idx}"
                     else:
-                        text = f"{atom_idx}"
+                        text = f"RDKit:{atom_idx}"
                 except Exception:
-                    text = f"{atom_idx}"
+                    text = f"RDKit:{atom_idx}"
+            elif self.atom_info_display_mode == 'rdkit_id':
+                # RDKitで再生成された原子インデックスのみを表示
+                text = f"RDKit:{atom_idx}"
             elif self.atom_info_display_mode == 'coords':
                 text = f"({pos[0]:.2f},{pos[1]:.2f},{pos[2]:.2f})"
             elif self.atom_info_display_mode == 'symbol':
@@ -8315,6 +10102,10 @@ class MainWindow(QMainWindow):
             # UIを3Dビューアーモードに設定
             self._enter_3d_viewer_ui_mode()
             
+            # メニューテキストと状態を更新
+            self.update_atom_id_menu_text()
+            self.update_atom_id_menu_state()
+            
             self.statusBar().showMessage(f"Loaded {file_path} in 3D viewer")
             
         except Exception as e:
@@ -8392,15 +10183,49 @@ class MainWindow(QMainWindow):
             'planar_xy_action', 
             'planar_xz_action',
             'planar_yz_action',
+            'align_x_action',
+            'align_y_action', 
+            'align_z_action',
             'bond_length_action',
             'angle_action',
             'dihedral_action',
-            'symmetrize_action'
+            'symmetrize_action',
+            'mirror_action'
+        ]
+        
+        # メニューとサブメニューも有効/無効化
+        menus = [
+            'align_menu'
         ]
         
         for action_name in actions:
             if hasattr(self, action_name):
                 getattr(self, action_name).setEnabled(enabled)
+        
+        for menu_name in menus:
+            if hasattr(self, menu_name):
+                getattr(self, menu_name).setEnabled(enabled)
+
+    def _enable_3d_features(self, enabled=True):
+        """3D関連機能を統一的に有効/無効化する"""
+        # 基本的な3D機能
+        basic_3d_actions = [
+            'optimize_3d_button',
+            'export_button', 
+            'edit_3d_action',
+            'analysis_action',
+            'measurement_action'
+        ]
+        
+        for action_name in basic_3d_actions:
+            if hasattr(self, action_name):
+                getattr(self, action_name).setEnabled(enabled)
+        
+        # 3D編集機能も含める
+        if enabled:
+            self._enable_3d_edit_actions(True)
+        else:
+            self._enable_3d_edit_actions(False)
 
     def _enter_3d_viewer_ui_mode(self):
         """3DビューアモードのUI状態に設定する"""
@@ -8414,14 +10239,8 @@ class MainWindow(QMainWindow):
         
         self.minimize_2d_panel()
 
-        self.optimize_3d_button.setEnabled(True)
-        self.export_button.setEnabled(True)
-        self.edit_3d_action.setEnabled(True)
-        self.analysis_action.setEnabled(True)
-        self.measurement_action.setEnabled(True)  # 測定機能を有効化
-        
-        # 3D編集機能を統一的に有効化
-        self._enable_3d_edit_actions(True)
+        # 3D関連機能を統一的に有効化
+        self._enable_3d_features(True)
 
     def restore_ui_for_editing(self):
         """Enables all 2D editing UI elements."""
@@ -8563,15 +10382,21 @@ class MainWindow(QMainWindow):
             except Exception:
                 pass
             self._camera_initialized = True
+        
+        # 強制的にプロッターを更新
+        try:
+            self.plotter.render()
+            if hasattr(self.plotter, 'update'):
+                self.plotter.update()
+        except Exception:
+            pass
 
 
 
     def open_settings_dialog(self):
         dialog = SettingsDialog(self.settings, self)
-        if dialog.exec():
-            self.settings = dialog.get_settings()
-            self.save_settings()
-            self.apply_3d_settings()
+        # accept()メソッドで設定の適用と3Dビューの更新を行うため、ここでは不要
+        dialog.exec()
 
     def load_settings(self):
         default_settings = {
@@ -8581,6 +10406,25 @@ class MainWindow(QMainWindow):
             'specular_power': 20,
             'light_intensity': 1.0,
             'show_3d_axes': True,
+            # Ball and Stick model parameters
+            'ball_stick_atom_scale': 1.0,
+            'ball_stick_bond_radius': 0.1,
+            'ball_stick_resolution': 16,
+            # CPK (Space-filling) model parameters
+            'cpk_atom_scale': 1.0,
+            'cpk_resolution': 32,
+            # Wireframe model parameters
+            'wireframe_bond_radius': 0.01,
+            'wireframe_resolution': 6,
+            # Stick model parameters
+            'stick_atom_radius': 0.15,
+            'stick_bond_radius': 0.15,
+            'stick_resolution': 16,
+            # Multiple bond offset parameters
+            'double_bond_offset_factor': 2.0,
+            'triple_bond_offset_factor': 2.0,
+            'double_bond_radius_factor': 0.8,
+            'triple_bond_radius_factor': 0.7,
         }
 
         try:
@@ -8666,11 +10510,14 @@ class MainWindow(QMainWindow):
         # 測定ラベルリストを更新
         self.measurement_labels.append((atom_idx, str(label_number)))
         
-        # すべての測定ラベルを再描画
+        # 3Dビューの測定ラベルを再描画
         self.update_measurement_labels_display()
+        
+        # 2Dビューの測定ラベルも更新
+        self.update_2d_measurement_labels()
 
     def update_measurement_labels_display(self):
-        """測定ラベルを3D表示に描画する（キラルラベルと同じ方法）"""
+        """測定ラベルを3D表示に描画する（原子中心配置）"""
         try:
             # 既存の測定ラベルを削除
             self.plotter.remove_actor('measurement_labels')
@@ -8685,18 +10532,18 @@ class MainWindow(QMainWindow):
         for atom_idx, label_text in self.measurement_labels:
             if atom_idx < len(self.atom_positions_3d):
                 coord = self.atom_positions_3d[atom_idx].copy()
-                coord[2] += 0.3  # 少し上にオフセット
+                # オフセットを削除して原子中心に配置
                 pts.append(coord)
                 labels.append(label_text)
         
         if pts and labels:
-            # PyVistaのpoint_labelsを使用（小さなフォント、等幅、左上寄せ）
+            # PyVistaのpoint_labelsを使用（赤色固定）
             self.plotter.add_point_labels(
                 np.array(pts), 
                 labels, 
-                font_size=16,  # より小さく
+                font_size=16,
                 point_size=0,
-                text_color='red',  # 測定値は赤色で
+                text_color='red',  # 測定時は常に赤色
                 name='measurement_labels',
                 always_visible=True,
                 tolerance=0.01,
@@ -8707,12 +10554,15 @@ class MainWindow(QMainWindow):
         """測定選択をクリアする"""
         self.selected_atoms_for_measurement.clear()
         
-        # ラベルを削除
+        # 3Dビューのラベルを削除
         self.measurement_labels.clear()
         try:
             self.plotter.remove_actor('measurement_labels')
         except:
             pass
+        
+        # 2Dビューの測定ラベルも削除
+        self.clear_2d_measurement_labels()
         
         # 測定結果のテキストを削除
         if self.measurement_text_actor:
@@ -8723,6 +10573,83 @@ class MainWindow(QMainWindow):
                 pass
         
         self.plotter.render()
+
+    def update_2d_measurement_labels(self):
+        """2Dビューで測定ラベルを更新表示する"""
+        # 既存の2D測定ラベルを削除
+        self.clear_2d_measurement_labels()
+        
+        # 現在の分子から原子-AtomItemマッピングを作成
+        if not self.current_mol or not hasattr(self, 'data') or not self.data.atoms:
+            return
+            
+        # RDKit原子インデックスから2D AtomItemへのマッピングを作成
+        atom_idx_to_item = {}
+        
+        # シーンからAtomItemを取得してマッピング
+        if hasattr(self, 'scene'):
+            for item in self.scene.items():
+                if hasattr(item, 'atom_id') and hasattr(item, 'symbol'):  # AtomItemかチェック
+                    # 原子IDから対応するRDKit原子インデックスを見つける
+                    rdkit_idx = self.find_rdkit_atom_index(item)
+                    if rdkit_idx is not None:
+                        atom_idx_to_item[rdkit_idx] = item
+        
+        # 測定ラベルを2Dビューに追加
+        if not hasattr(self, 'measurement_label_items_2d'):
+            self.measurement_label_items_2d = []
+            
+        for atom_idx, label_text in self.measurement_labels:
+            if atom_idx in atom_idx_to_item:
+                atom_item = atom_idx_to_item[atom_idx]
+                self.add_2d_measurement_label(atom_item, label_text)
+
+    def add_2d_measurement_label(self, atom_item, label_text):
+        """特定のAtomItemに測定ラベルを追加する"""
+        # ラベルアイテムを作成
+        label_item = QGraphicsTextItem(label_text)
+        label_item.setDefaultTextColor(QColor(255, 0, 0))  # 赤色
+        label_item.setFont(QFont("Arial", 12, QFont.Weight.Bold))
+        
+        # Z値を設定して最前面に表示（原子ラベルより上）
+        label_item.setZValue(2000)  # より高い値で確実に最前面に配置
+        
+        # 原子の右上により近く配置
+        atom_pos = atom_item.pos()
+        atom_rect = atom_item.boundingRect()
+        label_pos = QPointF(
+            atom_pos.x() + atom_rect.width() / 4 + 2,
+            atom_pos.y() - atom_rect.height() / 4 - 8
+        )
+        label_item.setPos(label_pos)
+        
+        # シーンに追加
+        self.scene.addItem(label_item)
+        self.measurement_label_items_2d.append(label_item)
+
+    def clear_2d_measurement_labels(self):
+        """2Dビューの測定ラベルを全て削除する"""
+        if hasattr(self, 'measurement_label_items_2d'):
+            for label_item in self.measurement_label_items_2d:
+                try:
+                    if label_item.scene():
+                        self.scene.removeItem(label_item)
+                except RuntimeError:
+                    # オブジェクトが削除されている場合はスキップ
+                    continue
+            self.measurement_label_items_2d.clear()
+
+    def find_rdkit_atom_index(self, atom_item):
+        """AtomItemから対応するRDKit原子インデックスを見つける"""
+        if not self.current_mol or not atom_item:
+            return None
+        
+        # マッピング辞書を使用（最も確実）
+        if hasattr(self, 'atom_id_to_rdkit_idx_map') and atom_item.atom_id in self.atom_id_to_rdkit_idx_map:
+            return self.atom_id_to_rdkit_idx_map[atom_item.atom_id]
+        
+        # マッピングが存在しない場合はNone（外部ファイル読み込み時など）
+        return None
 
     def calculate_and_display_measurements(self):
         """選択された原子に基づいて測定値を計算し表示する"""
@@ -8783,30 +10710,43 @@ class MainWindow(QMainWindow):
         return np.degrees(angle_rad)
 
     def calculate_dihedral(self, atom1_idx, atom2_idx, atom3_idx, atom4_idx):
-        """4原子の二面角を計算する"""
+        """4原子の二面角を計算する（正しい公式を使用）"""
         pos1 = np.array(self.atom_positions_3d[atom1_idx])
         pos2 = np.array(self.atom_positions_3d[atom2_idx])
         pos3 = np.array(self.atom_positions_3d[atom3_idx])
         pos4 = np.array(self.atom_positions_3d[atom4_idx])
         
-        # ベクトルを計算
-        b1 = pos2 - pos1
-        b2 = pos3 - pos2
-        b3 = pos4 - pos3
+        # Vectors between consecutive atoms
+        v1 = pos2 - pos1  # 1->2
+        v2 = pos3 - pos2  # 2->3 (central bond)
+        v3 = pos4 - pos3  # 3->4
         
-        # 法線ベクトルを計算
-        n1 = np.cross(b1, b2)
-        n2 = np.cross(b2, b3)
+        # Normalize the central bond vector
+        v2_norm = v2 / np.linalg.norm(v2)
         
-        # 二面角を計算
-        cos_angle = np.dot(n1, n2) / (np.linalg.norm(n1) * np.linalg.norm(n2))
+        # Calculate plane normal vectors
+        n1 = np.cross(v1, v2)  # Normal to plane 1-2-3
+        n2 = np.cross(v2, v3)  # Normal to plane 2-3-4
+        
+        # Normalize the normal vectors
+        n1_norm = np.linalg.norm(n1)
+        n2_norm = np.linalg.norm(n2)
+        
+        if n1_norm == 0 or n2_norm == 0:
+            return 0.0  # Atoms are collinear
+        
+        n1 = n1 / n1_norm
+        n2 = n2 / n2_norm
+        
+        # Calculate the cosine of the dihedral angle
+        cos_angle = np.dot(n1, n2)
         cos_angle = np.clip(cos_angle, -1.0, 1.0)
         
-        # 符号を決定するための計算
-        m1 = np.cross(n1, b2 / np.linalg.norm(b2))
-        sign = np.sign(np.dot(m1, n2))
+        # Calculate the sine for proper sign determination
+        sin_angle = np.dot(np.cross(n1, n2), v2_norm)
         
-        angle_rad = np.arccos(cos_angle) * sign
+        # Calculate the dihedral angle with correct sign
+        angle_rad = np.arctan2(sin_angle, cos_angle)
         return np.degrees(angle_rad)
 
     def display_measurement_text(self, measurement_lines):
@@ -8985,26 +10925,61 @@ class MainWindow(QMainWindow):
     
     def open_planarization_dialog(self, plane):
         """平面化ダイアログを開く"""
+        # 事前選択された原子を取得（測定モード無効化前に）
+        preselected_atoms = []
+        if hasattr(self, 'selected_atoms_3d') and self.selected_atoms_3d:
+            preselected_atoms = list(self.selected_atoms_3d)
+        elif hasattr(self, 'selected_atoms_for_measurement') and self.selected_atoms_for_measurement:
+            preselected_atoms = list(self.selected_atoms_for_measurement)
+        
         # 測定モードを無効化
         if self.measurement_mode:
             self.measurement_action.setChecked(False)
             self.toggle_measurement_mode(False)
         
-        dialog = PlanarizationDialog(self.current_mol, self, plane)
+        dialog = PlanarizationDialog(self.current_mol, self, plane, preselected_atoms)
         self.active_3d_dialogs.append(dialog)  # 参照を保持
         dialog.show()  # execではなくshowを使用してモードレス表示
         dialog.accepted.connect(lambda: self.statusBar().showMessage(f"Atoms planarized to {plane.upper()} plane."))
         dialog.accepted.connect(self.push_undo_state)
         dialog.finished.connect(lambda: self.remove_dialog_from_list(dialog))  # ダイアログが閉じられた時にリストから削除
     
-    def open_bond_length_dialog(self):
-        """結合長変換ダイアログを開く"""
+    def open_alignment_dialog(self, axis):
+        """アライメントダイアログを開く"""
+        # 事前選択された原子を取得（測定モード無効化前に）
+        preselected_atoms = []
+        if hasattr(self, 'selected_atoms_3d') and self.selected_atoms_3d:
+            preselected_atoms = list(self.selected_atoms_3d)
+        elif hasattr(self, 'selected_atoms_for_measurement') and self.selected_atoms_for_measurement:
+            preselected_atoms = list(self.selected_atoms_for_measurement)
+        
         # 測定モードを無効化
         if self.measurement_mode:
             self.measurement_action.setChecked(False)
             self.toggle_measurement_mode(False)
         
-        dialog = BondLengthDialog(self.current_mol, self)
+        dialog = AlignmentDialog(self.current_mol, self, axis, preselected_atoms)
+        self.active_3d_dialogs.append(dialog)  # 参照を保持
+        dialog.show()  # execではなくshowを使用してモードレス表示
+        dialog.accepted.connect(lambda: self.statusBar().showMessage(f"Atoms aligned to {axis.upper()}-axis."))
+        dialog.accepted.connect(self.push_undo_state)
+        dialog.finished.connect(lambda: self.remove_dialog_from_list(dialog))  # ダイアログが閉じられた時にリストから削除
+    
+    def open_bond_length_dialog(self):
+        """結合長変換ダイアログを開く"""
+        # 事前選択された原子を取得（測定モード無効化前に）
+        preselected_atoms = []
+        if hasattr(self, 'selected_atoms_3d') and self.selected_atoms_3d:
+            preselected_atoms = list(self.selected_atoms_3d)
+        elif hasattr(self, 'selected_atoms_for_measurement') and self.selected_atoms_for_measurement:
+            preselected_atoms = list(self.selected_atoms_for_measurement)
+        
+        # 測定モードを無効化
+        if self.measurement_mode:
+            self.measurement_action.setChecked(False)
+            self.toggle_measurement_mode(False)
+        
+        dialog = BondLengthDialog(self.current_mol, self, preselected_atoms)
         self.active_3d_dialogs.append(dialog)  # 参照を保持
         dialog.show()  # execではなくshowを使用してモードレス表示
         dialog.accepted.connect(lambda: self.statusBar().showMessage("Bond length adjusted."))
@@ -9013,12 +10988,19 @@ class MainWindow(QMainWindow):
     
     def open_angle_dialog(self):
         """角度変換ダイアログを開く"""
+        # 事前選択された原子を取得（測定モード無効化前に）
+        preselected_atoms = []
+        if hasattr(self, 'selected_atoms_3d') and self.selected_atoms_3d:
+            preselected_atoms = list(self.selected_atoms_3d)
+        elif hasattr(self, 'selected_atoms_for_measurement') and self.selected_atoms_for_measurement:
+            preselected_atoms = list(self.selected_atoms_for_measurement)
+        
         # 測定モードを無効化
         if self.measurement_mode:
             self.measurement_action.setChecked(False)
             self.toggle_measurement_mode(False)
         
-        dialog = AngleDialog(self.current_mol, self)
+        dialog = AngleDialog(self.current_mol, self, preselected_atoms)
         self.active_3d_dialogs.append(dialog)  # 参照を保持
         dialog.show()  # execではなくshowを使用してモードレス表示
         dialog.accepted.connect(lambda: self.statusBar().showMessage("Angle adjusted."))
@@ -9027,12 +11009,19 @@ class MainWindow(QMainWindow):
     
     def open_dihedral_dialog(self):
         """二面角変換ダイアログを開く"""
+        # 事前選択された原子を取得（測定モード無効化前に）
+        preselected_atoms = []
+        if hasattr(self, 'selected_atoms_3d') and self.selected_atoms_3d:
+            preselected_atoms = list(self.selected_atoms_3d)
+        elif hasattr(self, 'selected_atoms_for_measurement') and self.selected_atoms_for_measurement:
+            preselected_atoms = list(self.selected_atoms_for_measurement)
+        
         # 測定モードを無効化
         if self.measurement_mode:
             self.measurement_action.setChecked(False)
             self.toggle_measurement_mode(False)
         
-        dialog = DihedralDialog(self.current_mol, self)
+        dialog = DihedralDialog(self.current_mol, self, preselected_atoms)
         self.active_3d_dialogs.append(dialog)  # 参照を保持
         dialog.show()  # execではなくshowを使用してモードレス表示
         dialog.accepted.connect(lambda: self.statusBar().showMessage("Dihedral angle adjusted."))
@@ -9063,6 +11052,20 @@ class MainWindow(QMainWindow):
         # dialog = SymmetrizeDialog(self.current_mol, self)
         # dialog.exec()  # モーダルダイアログとして表示
         # # 結果はダイアログ内で直接適用される
+
+    def open_mirror_dialog(self):
+        """ミラー機能ダイアログを開く"""
+        if not self.current_mol:
+            self.statusBar().showMessage("No 3D molecule loaded.")
+            return
+        
+        # 測定モードを無効化
+        if self.measurement_mode:
+            self.measurement_action.setChecked(False)
+            self.toggle_measurement_mode(False)
+        
+        dialog = MirrorDialog(self.current_mol, self)
+        dialog.exec()  # モーダルダイアログとして表示
     
     def remove_dialog_from_list(self, dialog):
         """ダイアログをアクティブリストから削除"""
@@ -9073,13 +11076,19 @@ class MainWindow(QMainWindow):
 # --- 3D Editing Dialog Classes ---
 
 class BondLengthDialog(Dialog3DPickingMixin, QDialog):
-    def __init__(self, mol, main_window, parent=None):
+    def __init__(self, mol, main_window, preselected_atoms=None, parent=None):
         QDialog.__init__(self, parent)
         Dialog3DPickingMixin.__init__(self)
         self.mol = mol
         self.main_window = main_window
         self.atom1_idx = None
         self.atom2_idx = None
+        
+        # 事前選択された原子を設定
+        if preselected_atoms and len(preselected_atoms) >= 2:
+            self.atom1_idx = preselected_atoms[0]
+            self.atom2_idx = preselected_atoms[1]
+        
         self.init_ui()
     
     def init_ui(self):
@@ -9121,6 +11130,9 @@ class BondLengthDialog(Dialog3DPickingMixin, QDialog):
         self.atom1_fix_radio = QRadioButton("Atom 1: Fixed, Atom 2: Move atom only")
         group_layout.addWidget(self.atom1_fix_radio)
         
+        self.both_groups_radio = QRadioButton("Both groups: Move towards center equally")
+        group_layout.addWidget(self.both_groups_radio)
+        
         layout.addWidget(group_box)
         
         # Buttons
@@ -9145,6 +11157,11 @@ class BondLengthDialog(Dialog3DPickingMixin, QDialog):
         # Connect to main window's picker
         self.picker_connection = None
         self.enable_picking()
+        
+        # 事前選択された原子がある場合は初期表示を更新
+        if self.atom1_idx is not None:
+            self.show_atom_labels()
+            self.update_display()
     
     def on_atom_picked(self, atom_idx):
         """原子がピックされたときの処理"""
@@ -9256,7 +11273,7 @@ class BondLengthDialog(Dialog3DPickingMixin, QDialog):
             [pos], [label_text], 
             point_size=20, 
             font_size=12,
-            text_color='red',
+            text_color='yellow',
             always_visible=True
         )
         self.selection_labels.append(label_actor)
@@ -9312,6 +11329,10 @@ class BondLengthDialog(Dialog3DPickingMixin, QDialog):
         
         # Apply the bond length change
         self.adjust_bond_length(new_distance)
+        
+        # キラルラベルを更新
+        self.main_window.update_chiral_labels()
+        
         self.accept()
     
     def adjust_bond_length(self, new_distance):
@@ -9328,14 +11349,46 @@ class BondLengthDialog(Dialog3DPickingMixin, QDialog):
             return
         
         direction = direction / current_distance
-        new_pos2 = pos1 + direction * new_distance
         
-        if self.atom1_fix_radio.isChecked():
+        if self.both_groups_radio.isChecked():
+            # Both groups move towards center equally
+            bond_center = (pos1 + pos2) / 2
+            half_distance = new_distance / 2
+            
+            # New positions for both atoms
+            new_pos1 = bond_center - direction * half_distance
+            new_pos2 = bond_center + direction * half_distance
+            
+            # Get both connected groups
+            group1_atoms = self.get_connected_group(self.atom1_idx, exclude=self.atom2_idx)
+            group2_atoms = self.get_connected_group(self.atom2_idx, exclude=self.atom1_idx)
+            
+            # Calculate displacements
+            displacement1 = new_pos1 - pos1
+            displacement2 = new_pos2 - pos2
+            
+            # Move group 1
+            for atom_idx in group1_atoms:
+                current_pos = np.array(conf.GetAtomPosition(atom_idx))
+                new_pos = current_pos + displacement1
+                conf.SetAtomPosition(atom_idx, new_pos.tolist())
+                self.main_window.atom_positions_3d[atom_idx] = new_pos
+            
+            # Move group 2
+            for atom_idx in group2_atoms:
+                current_pos = np.array(conf.GetAtomPosition(atom_idx))
+                new_pos = current_pos + displacement2
+                conf.SetAtomPosition(atom_idx, new_pos.tolist())
+                self.main_window.atom_positions_3d[atom_idx] = new_pos
+                
+        elif self.atom1_fix_radio.isChecked():
             # Move only the second atom
+            new_pos2 = pos1 + direction * new_distance
             conf.SetAtomPosition(self.atom2_idx, new_pos2.tolist())
             self.main_window.atom_positions_3d[self.atom2_idx] = new_pos2
         else:
-            # Move the connected group
+            # Move the connected group (default behavior)
+            new_pos2 = pos1 + direction * new_distance
             atoms_to_move = self.get_connected_group(self.atom2_idx, exclude=self.atom1_idx)
             displacement = new_pos2 - pos2
             
@@ -9371,7 +11424,7 @@ class BondLengthDialog(Dialog3DPickingMixin, QDialog):
 
 
 class AngleDialog(Dialog3DPickingMixin, QDialog):
-    def __init__(self, mol, main_window, parent=None):
+    def __init__(self, mol, main_window, preselected_atoms=None, parent=None):
         QDialog.__init__(self, parent)
         Dialog3DPickingMixin.__init__(self)
         self.mol = mol
@@ -9379,6 +11432,13 @@ class AngleDialog(Dialog3DPickingMixin, QDialog):
         self.atom1_idx = None
         self.atom2_idx = None  # vertex atom
         self.atom3_idx = None
+        
+        # 事前選択された原子を設定
+        if preselected_atoms and len(preselected_atoms) >= 3:
+            self.atom1_idx = preselected_atoms[0]
+            self.atom2_idx = preselected_atoms[1]  # vertex
+            self.atom3_idx = preselected_atoms[2]
+        
         self.init_ui()
     
     def init_ui(self):
@@ -9419,6 +11479,9 @@ class AngleDialog(Dialog3DPickingMixin, QDialog):
 
         self.rotate_atom_radio = QRadioButton("Atom 1,2: Fixed, Atom 3: Rotate atom only")
         group_layout.addWidget(self.rotate_atom_radio)
+        
+        self.both_groups_radio = QRadioButton("Vertex fixed: Both arms rotate equally")
+        group_layout.addWidget(self.both_groups_radio)
     
         
         layout.addWidget(group_box)
@@ -9445,6 +11508,11 @@ class AngleDialog(Dialog3DPickingMixin, QDialog):
         # Connect to main window's picker for AngleDialog
         self.picker_connection = None
         self.enable_picking()
+        
+        # 事前選択された原子がある場合は初期表示を更新
+        if self.atom1_idx is not None:
+            self.show_atom_labels()
+            self.update_display()
     
     def on_atom_picked(self, atom_idx):
         """原子がピックされたときの処理"""
@@ -9510,7 +11578,7 @@ class AngleDialog(Dialog3DPickingMixin, QDialog):
         
         selected_atoms = [self.atom1_idx, self.atom2_idx, self.atom3_idx]
         labels = ["1st", "2nd (vertex)", "3rd"]
-        colors = ["yellow", "red", "yellow"]  # 頂点原子を赤で強調
+        colors = ["yellow", "yellow", "yellow"]  # 全て黄色に統一
         
         for i, atom_idx in enumerate(selected_atoms):
             if atom_idx is not None:
@@ -9560,7 +11628,7 @@ class AngleDialog(Dialog3DPickingMixin, QDialog):
             [pos], [label_text], 
             point_size=20, 
             font_size=12,
-            text_color='red',
+            text_color='yellow',
             always_visible=True
         )
         self.selection_labels.append(label_actor)
@@ -9639,10 +11707,14 @@ class AngleDialog(Dialog3DPickingMixin, QDialog):
         
         # Apply the angle change
         self.adjust_angle(new_angle)
+        
+        # キラルラベルを更新
+        self.main_window.update_chiral_labels()
+        
         self.accept()
     
     def adjust_angle(self, new_angle_deg):
-        """角度を調整"""
+        """角度を調整（均等回転オプション付き）"""
         conf = self.mol.GetConformer()
         pos1 = np.array(conf.GetAtomPosition(self.atom1_idx))
         pos2 = np.array(conf.GetAtomPosition(self.atom2_idx))  # vertex
@@ -9668,8 +11740,8 @@ class AngleDialog(Dialog3DPickingMixin, QDialog):
         
         rotation_axis = rotation_axis / rotation_axis_norm
         
-        # Rotation angle
-        rotation_angle = target_angle_rad - current_angle_rad
+        # Total rotation angle needed
+        total_rotation_angle = target_angle_rad - current_angle_rad
         
         # Rodrigues' rotation formula
         def rotate_vector(v, axis, angle):
@@ -9677,16 +11749,40 @@ class AngleDialog(Dialog3DPickingMixin, QDialog):
             sin_a = np.sin(angle)
             return v * cos_a + np.cross(axis, v) * sin_a + axis * np.dot(axis, v) * (1 - cos_a)
         
-        # Rotate vec2 to achieve the target angle
-        new_vec2 = rotate_vector(vec2, rotation_axis, rotation_angle)
-        new_pos3 = pos2 + new_vec2
-        
-        if self.rotate_atom_radio.isChecked():
+        if self.both_groups_radio.isChecked():
+            # Both arms rotate equally (half angle each in opposite directions)
+            half_rotation = total_rotation_angle / 2
+            
+            # Get both connected groups
+            group1_atoms = self.get_connected_group(self.atom1_idx, exclude=self.atom2_idx)
+            group3_atoms = self.get_connected_group(self.atom3_idx, exclude=self.atom2_idx)
+            
+            # Rotate group 1 by -half_rotation
+            for atom_idx in group1_atoms:
+                current_pos = np.array(conf.GetAtomPosition(atom_idx))
+                relative_pos = current_pos - pos2
+                rotated_pos = rotate_vector(relative_pos, rotation_axis, -half_rotation)
+                new_pos = pos2 + rotated_pos
+                conf.SetAtomPosition(atom_idx, new_pos.tolist())
+                self.main_window.atom_positions_3d[atom_idx] = new_pos
+            
+            # Rotate group 3 by +half_rotation
+            for atom_idx in group3_atoms:
+                current_pos = np.array(conf.GetAtomPosition(atom_idx))
+                relative_pos = current_pos - pos2
+                rotated_pos = rotate_vector(relative_pos, rotation_axis, half_rotation)
+                new_pos = pos2 + rotated_pos
+                conf.SetAtomPosition(atom_idx, new_pos.tolist())
+                self.main_window.atom_positions_3d[atom_idx] = new_pos
+                
+        elif self.rotate_atom_radio.isChecked():
             # Move only the third atom
+            new_vec2 = rotate_vector(vec2, rotation_axis, total_rotation_angle)
+            new_pos3 = pos2 + new_vec2
             conf.SetAtomPosition(self.atom3_idx, new_pos3.tolist())
             self.main_window.atom_positions_3d[self.atom3_idx] = new_pos3
         else:
-            # Rotate the connected group around atom2 (vertex)
+            # Rotate the connected group around atom2 (vertex) - default behavior
             atoms_to_move = self.get_connected_group(self.atom3_idx, exclude=self.atom2_idx)
             
             for atom_idx in atoms_to_move:
@@ -9694,7 +11790,7 @@ class AngleDialog(Dialog3DPickingMixin, QDialog):
                 # Transform to coordinate system centered at atom2
                 relative_pos = current_pos - pos2
                 # Rotate around the rotation axis
-                rotated_pos = rotate_vector(relative_pos, rotation_axis, rotation_angle)
+                rotated_pos = rotate_vector(relative_pos, rotation_axis, total_rotation_angle)
                 # Transform back to world coordinates
                 new_pos = pos2 + rotated_pos
                 conf.SetAtomPosition(atom_idx, new_pos.tolist())
@@ -9726,7 +11822,7 @@ class AngleDialog(Dialog3DPickingMixin, QDialog):
 
 
 class DihedralDialog(Dialog3DPickingMixin, QDialog):
-    def __init__(self, mol, main_window, parent=None):
+    def __init__(self, mol, main_window, preselected_atoms=None, parent=None):
         QDialog.__init__(self, parent)
         Dialog3DPickingMixin.__init__(self)
         self.mol = mol
@@ -9735,6 +11831,14 @@ class DihedralDialog(Dialog3DPickingMixin, QDialog):
         self.atom2_idx = None  # central bond start
         self.atom3_idx = None  # central bond end
         self.atom4_idx = None
+        
+        # 事前選択された原子を設定
+        if preselected_atoms and len(preselected_atoms) >= 4:
+            self.atom1_idx = preselected_atoms[0]
+            self.atom2_idx = preselected_atoms[1]  # central bond start
+            self.atom3_idx = preselected_atoms[2]  # central bond end
+            self.atom4_idx = preselected_atoms[3]
+        
         self.init_ui()
     
     def init_ui(self):
@@ -9776,6 +11880,9 @@ class DihedralDialog(Dialog3DPickingMixin, QDialog):
         self.move_atom_radio = QRadioButton("Atom 1,2,3: Fixed, Atom 4: Rotate atom only")
         group_layout.addWidget(self.move_atom_radio)
         
+        self.both_groups_radio = QRadioButton("Central bond fixed: Both groups rotate equally")
+        group_layout.addWidget(self.both_groups_radio)
+        
         layout.addWidget(group_box)
         
         # Buttons
@@ -9800,6 +11907,11 @@ class DihedralDialog(Dialog3DPickingMixin, QDialog):
         # Connect to main window's picker for DihedralDialog
         self.picker_connection = None
         self.enable_picking()
+        
+        # 事前選択された原子がある場合は初期表示を更新
+        if self.atom1_idx is not None:
+            self.show_atom_labels()
+            self.update_display()
     
     def on_atom_picked(self, atom_idx):
         """原子がピックされたときの処理"""
@@ -9869,7 +11981,7 @@ class DihedralDialog(Dialog3DPickingMixin, QDialog):
         
         selected_atoms = [self.atom1_idx, self.atom2_idx, self.atom3_idx, self.atom4_idx]
         labels = ["1st", "2nd (bond start)", "3rd (bond end)", "4th"]
-        colors = ["yellow", "green", "green", "yellow"]  # 中央結合を緑で強調
+        colors = ["yellow", "yellow", "yellow", "yellow"]  # 全て黄色に統一
         
         for i, atom_idx in enumerate(selected_atoms):
             if atom_idx is not None:
@@ -9934,31 +12046,44 @@ class DihedralDialog(Dialog3DPickingMixin, QDialog):
             self.apply_button.setEnabled(True)
     
     def calculate_dihedral(self):
-        """現在の二面角を計算"""
+        """現在の二面角を計算（正しい公式を使用）"""
         conf = self.mol.GetConformer()
         pos1 = np.array(conf.GetAtomPosition(self.atom1_idx))
         pos2 = np.array(conf.GetAtomPosition(self.atom2_idx))
         pos3 = np.array(conf.GetAtomPosition(self.atom3_idx))
         pos4 = np.array(conf.GetAtomPosition(self.atom4_idx))
         
-        # Vectors
-        b1 = pos2 - pos1
-        b2 = pos3 - pos2
-        b3 = pos4 - pos3
+        # Vectors between consecutive atoms
+        v1 = pos2 - pos1  # 1->2
+        v2 = pos3 - pos2  # 2->3 (central bond)
+        v3 = pos4 - pos3  # 3->4
         
-        # Normal vectors
-        n1 = np.cross(b1, b2)
-        n2 = np.cross(b2, b3)
+        # Normalize the central bond vector
+        v2_norm = v2 / np.linalg.norm(v2)
         
-        # Dihedral angle
-        cos_angle = np.dot(n1, n2) / (np.linalg.norm(n1) * np.linalg.norm(n2))
+        # Calculate plane normal vectors
+        n1 = np.cross(v1, v2)  # Normal to plane 1-2-3
+        n2 = np.cross(v2, v3)  # Normal to plane 2-3-4
+        
+        # Normalize the normal vectors
+        n1_norm = np.linalg.norm(n1)
+        n2_norm = np.linalg.norm(n2)
+        
+        if n1_norm == 0 or n2_norm == 0:
+            return 0.0  # Atoms are collinear
+        
+        n1 = n1 / n1_norm
+        n2 = n2 / n2_norm
+        
+        # Calculate the cosine of the dihedral angle
+        cos_angle = np.dot(n1, n2)
         cos_angle = np.clip(cos_angle, -1.0, 1.0)
         
-        # Sign determination
-        m1 = np.cross(n1, b2 / np.linalg.norm(b2))
-        sign = np.sign(np.dot(m1, n2))
+        # Calculate the sine for proper sign determination
+        sin_angle = np.dot(np.cross(n1, n2), v2_norm)
         
-        angle_rad = np.arccos(cos_angle) * sign
+        # Calculate the dihedral angle with correct sign
+        angle_rad = np.arctan2(sin_angle, cos_angle)
         return np.degrees(angle_rad)
     
     def apply_changes(self):
@@ -9980,33 +12105,54 @@ class DihedralDialog(Dialog3DPickingMixin, QDialog):
         
         # Apply the dihedral angle change
         self.adjust_dihedral(new_dihedral)
+        
+        # キラルラベルを更新
+        self.main_window.update_chiral_labels()
+        
         self.accept()
     
     def adjust_dihedral(self, new_dihedral_deg):
-        """二面角を調整"""
+        """二面角を調整（改善されたアルゴリズム）"""
         conf = self.mol.GetConformer()
         pos1 = np.array(conf.GetAtomPosition(self.atom1_idx))
         pos2 = np.array(conf.GetAtomPosition(self.atom2_idx))
         pos3 = np.array(conf.GetAtomPosition(self.atom3_idx))
         pos4 = np.array(conf.GetAtomPosition(self.atom4_idx))
         
-        # Current dihedral
+        # Current dihedral angle
         current_dihedral = self.calculate_dihedral()
         
-        # Rotation angle
+        # Calculate rotation angle needed
         rotation_angle_deg = new_dihedral_deg - current_dihedral
+        
+        # Handle angle wrapping for shortest rotation
+        if rotation_angle_deg > 180:
+            rotation_angle_deg -= 360
+        elif rotation_angle_deg < -180:
+            rotation_angle_deg += 360
+        
         rotation_angle_rad = np.radians(rotation_angle_deg)
         
-        # Rotation axis (bond between atom2 and atom3)
-        rotation_axis = pos3 - pos2
-        rotation_axis = rotation_axis / np.linalg.norm(rotation_axis)
+        # Skip if no rotation needed
+        if abs(rotation_angle_rad) < 1e-6:
+            return
         
-        # Rodrigues' rotation formula
+        # Rotation axis is the bond between atom2 and atom3
+        rotation_axis = pos3 - pos2
+        axis_length = np.linalg.norm(rotation_axis)
+        
+        if axis_length == 0:
+            return  # Atoms are at the same position
+        
+        rotation_axis = rotation_axis / axis_length
+        
+        # Rodrigues' rotation formula implementation
         def rotate_point_around_axis(point, axis_point, axis_direction, angle):
-            # Translate so axis passes through origin
+            """Rotate a point around an axis using Rodrigues' formula"""
+            # Translate point so axis passes through origin
             translated_point = point - axis_point
             
-            # Rotate using Rodrigues' formula
+            # Apply Rodrigues' rotation formula
             cos_a = np.cos(angle)
             sin_a = np.sin(angle)
             
@@ -10014,31 +12160,45 @@ class DihedralDialog(Dialog3DPickingMixin, QDialog):
                       np.cross(axis_direction, translated_point) * sin_a + 
                       axis_direction * np.dot(axis_direction, translated_point) * (1 - cos_a))
             
-            # Translate back
+            # Translate back to original coordinate system
             return rotated + axis_point
         
-        # Rotate the fourth atom (and potentially connected group)
-        new_pos4 = rotate_point_around_axis(pos4, pos2, rotation_axis, rotation_angle_rad)
-        
-        if self.move_group_radio.isChecked():
-            # Option 1: Rotate groups around bond 2-3 (proper dihedral rotation)
-            # 分子を2-3結合を境界として二つのグループに分割
+        if self.both_groups_radio.isChecked():
+            # Both groups rotate equally around the central bond (half angle each in opposite directions)
+            half_rotation = rotation_angle_rad / 2
             
-            # atom1側のグループ（atom2から atom3を除外して探索）
+            # Get both connected groups
             group1_atoms = self.get_connected_group(self.atom2_idx, exclude=self.atom3_idx)
-            
-            # atom4側のグループ（atom3から atom2を除外して探索）
             group4_atoms = self.get_connected_group(self.atom3_idx, exclude=self.atom2_idx)
             
-            # atom4側のグループを回転（atom1側は固定）
-            # 通常の二面角回転では、一方のグループのみを回転させる
+            # Rotate group1 (atom1 side) by -half_rotation
+            for atom_idx in group1_atoms:
+                current_pos = np.array(conf.GetAtomPosition(atom_idx))
+                new_pos = rotate_point_around_axis(current_pos, pos2, rotation_axis, -half_rotation)
+                conf.SetAtomPosition(atom_idx, new_pos.tolist())
+                self.main_window.atom_positions_3d[atom_idx] = new_pos
+            
+            # Rotate group4 (atom4 side) by +half_rotation
             for atom_idx in group4_atoms:
+                current_pos = np.array(conf.GetAtomPosition(atom_idx))
+                new_pos = rotate_point_around_axis(current_pos, pos2, rotation_axis, half_rotation)
+                conf.SetAtomPosition(atom_idx, new_pos.tolist())
+                self.main_window.atom_positions_3d[atom_idx] = new_pos
+                
+        elif self.move_group_radio.isChecked():
+            # Move the connected group containing atom4
+            # Find all atoms connected to atom3 (excluding atom2 side)
+            atoms_to_rotate = self.get_connected_group(self.atom3_idx, exclude=self.atom2_idx)
+            
+            # Rotate all atoms in the group
+            for atom_idx in atoms_to_rotate:
                 current_pos = np.array(conf.GetAtomPosition(atom_idx))
                 new_pos = rotate_point_around_axis(current_pos, pos2, rotation_axis, rotation_angle_rad)
                 conf.SetAtomPosition(atom_idx, new_pos.tolist())
                 self.main_window.atom_positions_3d[atom_idx] = new_pos
         else:
-            # Option 2: Move only the fourth atom (1,2,3 fixed)
+            # Move only atom4
+            new_pos4 = rotate_point_around_axis(pos4, pos2, rotation_axis, rotation_angle_rad)
             conf.SetAtomPosition(self.atom4_idx, new_pos4.tolist())
             self.main_window.atom_positions_3d[self.atom4_idx] = new_pos4
         
