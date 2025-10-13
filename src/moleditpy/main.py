@@ -11,7 +11,7 @@ DOI 10.5281/zenodo.17268532
 """
 
 #Version
-VERSION = '1.8.1'
+VERSION = '1.8.3'
 
 print("-----------------------------------------------------")
 print("MoleditPy — A Python-based molecular editing software")
@@ -3315,7 +3315,6 @@ class MoleculeScene(QGraphicsScene):
         return needs_update
 
     def mousePressEvent(self, event):
-        self.clear_all_problem_flags()
         self.press_pos = event.scenePos()
         self.mouse_moved_since_press = False
         self.data_changed_in_event = False
@@ -7131,15 +7130,21 @@ class MainWindow(QMainWindow):
             self.mode_actions['select'].setChecked(True)
 
     def trigger_conversion(self):
-        self.scene.clear_all_problem_flags()
-        mol = self.data.to_rdkit_mol(use_2d_stereo=False)
-        if not mol or mol.GetNumAtoms() == 0:
-            # 3Dビューと関連データをクリア
+        # 2Dエディタに原子が存在しない場合は3Dビューをクリア
+        if not self.data.atoms:
             self.plotter.clear()
             self.current_mol = None
             self.analysis_action.setEnabled(False)
             self.statusBar().showMessage("3D view cleared.")
             self.view_2d.setFocus() 
+            return
+
+        mol = self.data.to_rdkit_mol(use_2d_stereo=False)
+        
+        # 分子オブジェクトが作成できない場合でも化学的問題をチェック
+        if not mol or mol.GetNumAtoms() == 0:
+            # RDKitでの変換に失敗した場合は、独自の化学的問題チェックを実行
+            self.check_chemistry_problems_fallback()
             return
 
         # 原子プロパティを保存（ワーカープロセスで失われるため）
@@ -7154,6 +7159,8 @@ class MainWindow(QMainWindow):
 
         problems = Chem.DetectChemistryProblems(mol)
         if problems:
+            # 化学的問題が見つかった場合は既存のフラグをクリアしてから新しい問題を表示
+            self.scene.clear_all_problem_flags()
             self.statusBar().showMessage(f"Error: {len(problems)} chemistry problem(s) found.")
             # 既存の選択状態をクリア
             self.scene.clearSelection() 
@@ -7172,6 +7179,9 @@ class MainWindow(QMainWindow):
                 
             self.view_2d.setFocus()
             return
+
+        # 化学的問題がない場合のみフラグをクリアして3D変換を実行
+        self.scene.clear_all_problem_flags()
 
         try:
             Chem.SanitizeMol(mol)
@@ -7248,6 +7258,63 @@ class MainWindow(QMainWindow):
         self.start_calculation.emit(mol_block)
         
         self.view_2d.setFocus()
+
+    def check_chemistry_problems_fallback(self):
+        """RDKit変換が失敗した場合の化学的問題チェック（独自実装）"""
+        try:
+            # 既存のフラグをクリア
+            self.scene.clear_all_problem_flags()
+            
+            # 簡易的な化学的問題チェック
+            problem_atoms = []
+            
+            for atom_id, atom_data in self.data.atoms.items():
+                atom_item = atom_data.get('item')
+                if not atom_item:
+                    continue
+                
+                symbol = atom_data['symbol']
+                charge = atom_data.get('charge', 0)
+                
+                # 結合数を計算
+                bond_count = 0
+                for (id1, id2), bond_data in self.data.bonds.items():
+                    if id1 == atom_id or id2 == atom_id:
+                        bond_count += bond_data.get('order', 1)
+                
+                # 基本的な価数チェック
+                is_problematic = False
+                if symbol == 'C' and bond_count > 4:
+                    is_problematic = True
+                elif symbol == 'N' and bond_count > 3 and charge == 0:
+                    is_problematic = True
+                elif symbol == 'O' and bond_count > 2 and charge == 0:
+                    is_problematic = True
+                elif symbol == 'H' and bond_count > 1:
+                    is_problematic = True
+                elif symbol in ['F', 'Cl', 'Br', 'I'] and bond_count > 1 and charge == 0:
+                    is_problematic = True
+                
+                if is_problematic:
+                    problem_atoms.append(atom_item)
+            
+            if problem_atoms:
+                # 問題のある原子に赤枠を設定
+                for atom_item in problem_atoms:
+                    atom_item.has_problem = True
+                    atom_item.update()
+                
+                self.statusBar().showMessage(f"Error: {len(problem_atoms)} chemistry problem(s) found (valence issues).")
+            else:
+                self.statusBar().showMessage("Error: Invalid chemical structure (RDKit conversion failed).")
+            
+            self.scene.clearSelection()
+            self.view_2d.setFocus()
+            
+        except Exception as e:
+            print(f"Error in fallback chemistry check: {e}")
+            self.statusBar().showMessage("Error: Invalid chemical structure.")
+            self.view_2d.setFocus()
 
     def optimize_3d_structure(self):
         """現在の3D分子構造を力場で最適化する"""
@@ -9098,9 +9165,20 @@ class MainWindow(QMainWindow):
    
     def clean_up_2d_structure(self):
         self.statusBar().showMessage("Optimizing 2D structure...")
+        
+        # 最初に既存の化学的問題フラグをクリア
+        self.scene.clear_all_problem_flags()
+        
+        # 2Dエディタに原子が存在しない場合
+        if not self.data.atoms:
+            self.statusBar().showMessage("Error: No atoms to optimize.")
+            return
+        
         mol = self.data.to_rdkit_mol()
         if mol is None or mol.GetNumAtoms() == 0:
-            self.statusBar().showMessage("Error: No atoms to optimize."); return
+            # RDKit変換が失敗した場合は化学的問題をチェック
+            self.check_chemistry_problems_fallback()
+            return
 
         try:
             # 安定版：原子IDとRDKit座標の確実なマッピング
