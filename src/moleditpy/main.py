@@ -11,7 +11,7 @@ DOI 10.5281/zenodo.17268532
 """
 
 #Version
-VERSION = '1.8.3'
+VERSION = '1.8.4'
 
 print("-----------------------------------------------------")
 print("MoleditPy — A Python-based molecular editing software")
@@ -245,10 +245,10 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog):
         self.apply_button.clicked.connect(self.apply_translation)
         self.apply_button.setEnabled(False)
         button_layout.addWidget(self.apply_button)
-        
-        cancel_button = QPushButton("Cancel")
-        cancel_button.clicked.connect(self.reject)
-        button_layout.addWidget(cancel_button)
+
+        close_button = QPushButton("Close")
+        close_button.clicked.connect(self.reject)
+        button_layout.addWidget(close_button)
         
         layout.addLayout(button_layout)
         
@@ -336,8 +336,6 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog):
             
             # キラルラベルを更新
             self.main_window.update_chiral_labels()
-            
-            self.accept()
             
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to apply translation: {str(e)}")
@@ -680,10 +678,10 @@ class SymmetrizeDialog(QDialog):
         self.apply_button.clicked.connect(self.apply_symmetrization)
         self.apply_button.setDefault(True)
         button_layout.addWidget(self.apply_button)
-        
-        cancel_button = QPushButton("Cancel")
-        cancel_button.clicked.connect(self.reject)
-        button_layout.addWidget(cancel_button)
+
+        close_button = QPushButton("Close")
+        close_button.clicked.connect(self.reject)
+        button_layout.addWidget(close_button)
         
         layout.addLayout(button_layout)
     
@@ -812,8 +810,6 @@ class SymmetrizeDialog(QDialog):
                 self, "Success", 
                 f"Molecular structure has been symmetrized according to {point_group['name']} point group."
             )
-            
-            self.accept()
             
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to apply symmetrization: {str(e)}")
@@ -1866,12 +1862,12 @@ class MirrorDialog(QDialog):
         
         apply_button = QPushButton("Apply Mirror")
         apply_button.clicked.connect(self.apply_mirror)
-        
-        cancel_button = QPushButton("Cancel")
-        cancel_button.clicked.connect(self.reject)
-        
+
+        close_button = QPushButton("Close")
+        close_button.clicked.connect(self.reject)
+
         button_layout.addWidget(apply_button)
-        button_layout.addWidget(cancel_button)
+        button_layout.addWidget(close_button)
         
         layout.addLayout(button_layout)
     
@@ -1924,8 +1920,6 @@ class MirrorDialog(QDialog):
             plane_names = ["XY", "XZ", "YZ"]
             self.main_window.statusBar().showMessage(f"Molecule mirrored across {plane_names[plane_id]} plane.")
             
-            self.accept()
-            
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to apply mirror transformation: {str(e)}")
 
@@ -1977,10 +1971,10 @@ class PlanarizationDialog(Dialog3DPickingMixin, QDialog):
         self.apply_button.clicked.connect(self.apply_planarization)
         self.apply_button.setEnabled(False)
         button_layout.addWidget(self.apply_button)
-        
-        cancel_button = QPushButton("Cancel")
-        cancel_button.clicked.connect(self.reject)
-        button_layout.addWidget(cancel_button)
+
+        close_button = QPushButton("Close")
+        close_button.clicked.connect(self.reject)
+        button_layout.addWidget(close_button)
         
         layout.addLayout(button_layout)
         
@@ -2147,8 +2141,6 @@ class PlanarizationDialog(Dialog3DPickingMixin, QDialog):
             # キラルラベルを更新
             self.main_window.update_chiral_labels()
             
-            self.accept()
-            
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to apply planarization: {str(e)}")
     
@@ -2221,9 +2213,9 @@ class AlignmentDialog(Dialog3DPickingMixin, QDialog):
         self.apply_button.setEnabled(False)
         button_layout.addWidget(self.apply_button)
         
-        cancel_button = QPushButton("Cancel")
-        cancel_button.clicked.connect(self.reject)
-        button_layout.addWidget(cancel_button)
+        close_button = QPushButton("Close")
+        close_button.clicked.connect(self.reject)
+        button_layout.addWidget(close_button)
         
         layout.addLayout(button_layout)
         
@@ -2396,7 +2388,6 @@ class AlignmentDialog(Dialog3DPickingMixin, QDialog):
             self.main_window.update_chiral_labels()
             
             QMessageBox.information(self, "Success", f"Alignment to {self.axis.upper()}-axis completed.")
-            self.accept()
             
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to apply alignment: {str(e)}")
@@ -11237,9 +11228,9 @@ class BondLengthDialog(Dialog3DPickingMixin, QDialog):
         self.apply_button.setEnabled(False)
         button_layout.addWidget(self.apply_button)
         
-        cancel_button = QPushButton("Cancel")
-        cancel_button.clicked.connect(self.reject)
-        button_layout.addWidget(cancel_button)
+        close_button = QPushButton("Close")
+        close_button.clicked.connect(self.reject)
+        button_layout.addWidget(close_button)
         
         layout.addLayout(button_layout)
         
@@ -11421,8 +11412,6 @@ class BondLengthDialog(Dialog3DPickingMixin, QDialog):
         
         # キラルラベルを更新
         self.main_window.update_chiral_labels()
-        
-        self.accept()
     
     def adjust_bond_length(self, new_distance):
         """結合長を調整"""
@@ -11588,9 +11577,9 @@ class AngleDialog(Dialog3DPickingMixin, QDialog):
         self.apply_button.setEnabled(False)
         button_layout.addWidget(self.apply_button)
         
-        cancel_button = QPushButton("Cancel")
-        cancel_button.clicked.connect(self.reject)
-        button_layout.addWidget(cancel_button)
+        close_button = QPushButton("Close")
+        close_button.clicked.connect(self.reject)
+        button_layout.addWidget(close_button)
         
         layout.addLayout(button_layout)
         
@@ -11799,8 +11788,6 @@ class AngleDialog(Dialog3DPickingMixin, QDialog):
         
         # キラルラベルを更新
         self.main_window.update_chiral_labels()
-        
-        self.accept()
     
     def adjust_angle(self, new_angle_deg):
         """角度を調整（均等回転オプション付き）"""
@@ -11987,9 +11974,9 @@ class DihedralDialog(Dialog3DPickingMixin, QDialog):
         self.apply_button.setEnabled(False)
         button_layout.addWidget(self.apply_button)
         
-        cancel_button = QPushButton("Cancel")
-        cancel_button.clicked.connect(self.reject)
-        button_layout.addWidget(cancel_button)
+        close_button = QPushButton("Close")
+        close_button.clicked.connect(self.reject)
+        button_layout.addWidget(close_button)
         
         layout.addLayout(button_layout)
         
@@ -12197,8 +12184,6 @@ class DihedralDialog(Dialog3DPickingMixin, QDialog):
         
         # キラルラベルを更新
         self.main_window.update_chiral_labels()
-        
-        self.accept()
     
     def adjust_dihedral(self, new_dihedral_deg):
         """二面角を調整（改善されたアルゴリズム）"""
