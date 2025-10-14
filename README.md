@@ -52,7 +52,7 @@ This application combines a modern GUI built with **PyQt6**, powerful cheminform
   * **Molecular Properties Analysis:** A dedicated window displays key molecular properties calculated by RDKit, such as molecular formula, weight, SMILES, LogP, and TPSA.
   * **Stereochemistry Display:** Automatically identifies and displays R/S labels for chiral centers in the 3D view after conversion.
   * **File I/O:**
-      * Save and load entire sessions, including 2D/3D data, with the native `.pmeraw` project file.
+      * Save and load entire sessions, including 2D/3D data, with the native `.pmeprj` project file.
       * Import structures from **MOL/SDF** files or **SMILES** strings.
       * Export 3D structures to **MOL** or **XYZ** formats, which are compatible with most DFT calculation software.
       * Export 2D and 3D views as high-resolution PNG images.
@@ -154,7 +154,7 @@ This project is licensed under the **Apache-2.0 License**. See the `LICENSE` fil
   * **分子特性解析:** 専用ウィンドウに、分子式、分子量、SMILES、LogP、TPSAなど、RDKitによって計算された主要な分子特性を一覧表示します。
   * **立体化学表示:** 3D変換後、キラル中心を自動的に認識し、R/Sラベルを3Dビューに表示します。
   * **ファイル入出力:**
-      * 2D/3Dデータを含むセッション全体を、独自のプロジェクトファイル (`.pmeraw`) として保存・読み込みできます。
+      * 2D/3Dデータを含むセッション全体を、独自のプロジェクトファイル (`.pmeprj`) として保存・読み込みできます。
       * **MOL/SDF**ファイルや**SMILES**文字列から構造をインポートできます。
       * 3D構造を**MOL**または**XYZ**形式でエクスポートでき、これらは多くのDFT計算ソフトウェアと互換性があります。
       * 2Dおよび3Dビューを高解像度のPNG画像としてエクスポートできます。

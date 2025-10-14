@@ -11,7 +11,7 @@ DOI 10.5281/zenodo.17268532
 """
 
 #Version
-VERSION = '1.8.5'
+VERSION = '1.9.0'
 
 print("-----------------------------------------------------")
 print("MoleditPy — A Python-based molecular editing software")
@@ -37,7 +37,7 @@ from PyQt6.QtWidgets import (
     QPushButton, QSplitter, QGraphicsView, QGraphicsScene, QGraphicsItem,
     QToolBar, QStatusBar, QGraphicsTextItem, QGraphicsLineItem, QDialog, QGridLayout,
     QFileDialog, QSizePolicy, QLabel, QLineEdit, QToolButton, QMenu, QMessageBox, QInputDialog,
-    QColorDialog, QCheckBox, QSlider, QFormLayout, QRadioButton, QComboBox, QListWidget, QListWidgetItem, QButtonGroup, QTabWidget
+    QColorDialog, QCheckBox, QSlider, QFormLayout, QRadioButton, QComboBox, QListWidget, QListWidgetItem, QButtonGroup, QTabWidget, QScrollArea
 )
 
 from PyQt6.QtGui import (
@@ -46,7 +46,7 @@ from PyQt6.QtGui import (
 )
 
 
-from PyQt6.QtCore import Qt, QPointF, QRectF, QLineF, QObject, QThread, pyqtSignal, QEvent, QMimeData, QByteArray, QUrl, QTimer
+from PyQt6.QtCore import Qt, QPointF, QRectF, QLineF, QObject, QThread, pyqtSignal, QEvent, QMimeData, QByteArray, QUrl, QTimer, QDateTime
 
 from vtkmodules.vtkInteractionStyle import vtkInteractorStyleTrackballCamera
 
@@ -193,13 +193,692 @@ class Dialog3DPickingMixin:
         """代替のピッキング方法（使用しない）"""
         pass
 
+class TemplatePreviewView(QGraphicsView):
+    """テンプレートプレビュー用のカスタムビュークラス"""
+    
+    def __init__(self, scene):
+        super().__init__(scene)
+        self.original_scene_rect = None
+        self.template_data = None  # Store template data for dynamic redrawing
+        self.parent_dialog = None  # Reference to parent dialog for redraw access
+    
+    def set_template_data(self, template_data, parent_dialog):
+        """テンプレートデータと親ダイアログの参照を設定"""
+        self.template_data = template_data
+        self.parent_dialog = parent_dialog
+    
+    def resizeEvent(self, event):
+        """リサイズイベントを処理してプレビューを再フィット"""
+        super().resizeEvent(event)
+        if self.original_scene_rect and not self.original_scene_rect.isEmpty():
+            # Delay the fitInView call to ensure proper widget sizing
+            QTimer.singleShot(10, self.refit_view)
+    
+    def refit_view(self):
+        """ビューを再フィット"""
+        try:
+            if self.original_scene_rect and not self.original_scene_rect.isEmpty():
+                self.fitInView(self.original_scene_rect, Qt.AspectRatioMode.KeepAspectRatio)
+        except Exception as e:
+            print(f"Warning: Failed to refit template preview: {e}")
+    
+    def showEvent(self, event):
+        """表示イベントを処理"""
+        super().showEvent(event)
+        # Ensure proper fitting when widget becomes visible
+        if self.original_scene_rect:
+            QTimer.singleShot(50, self.refit_view)
+    
+    def redraw_with_current_size(self):
+        """現在のサイズに合わせてテンプレートを再描画"""
+        if self.template_data and self.parent_dialog:
+            try:
+                # Clear current scene
+                self.scene().clear()
+                
+                # Redraw with current view size for proper fit-based scaling
+                view_size = (self.width(), self.height())
+                self.parent_dialog.draw_template_preview(self.scene(), self.template_data, view_size)
+                
+                # Refit the view
+                bounding_rect = self.scene().itemsBoundingRect()
+                if not bounding_rect.isEmpty() and bounding_rect.width() > 0 and bounding_rect.height() > 0:
+                    content_size = max(bounding_rect.width(), bounding_rect.height())
+                    padding = max(20, content_size * 0.2)
+                    padded_rect = bounding_rect.adjusted(-padding, -padding, padding, padding)
+                    self.scene().setSceneRect(padded_rect)
+                    self.original_scene_rect = padded_rect
+                    QTimer.singleShot(10, lambda: self.fitInView(padded_rect, Qt.AspectRatioMode.KeepAspectRatio))
+            except Exception as e:
+                print(f"Warning: Failed to redraw template preview: {e}")
+
+class UserTemplateDialog(QDialog):
+    """ユーザーテンプレート管理ダイアログ"""
+    
+    def __init__(self, main_window, parent=None):
+        super().__init__(parent)
+        self.main_window = main_window
+        self.user_templates = []
+        self.selected_template = None
+        self.init_ui()
+        self.load_user_templates()
+    
+    def init_ui(self):
+        self.setWindowTitle("User Templates")
+        self.setModal(False)  # モードレスに変更
+        self.resize(800, 600)
+        
+        # ウィンドウを右上に配置
+        if self.parent():
+            parent_geometry = self.parent().geometry()
+            x = parent_geometry.right() - self.width() - 20
+            y = parent_geometry.top() + 50
+            self.move(x, y)
+        
+        layout = QVBoxLayout(self)
+        
+        # Instructions
+        instruction_label = QLabel("Create and manage your custom molecular templates. Double-click a template to use it in the editor.")
+        instruction_label.setWordWrap(True)
+        layout.addWidget(instruction_label)
+        
+        # Template grid
+        self.template_widget = QWidget()
+        self.template_layout = QGridLayout(self.template_widget)
+        self.template_layout.setSpacing(10)
+        
+        scroll_area = QScrollArea()
+        scroll_area.setWidget(self.template_widget)
+        scroll_area.setWidgetResizable(True)
+        scroll_area.setMinimumHeight(400)
+        layout.addWidget(scroll_area)
+        
+        # Buttons
+        button_layout = QHBoxLayout()
+        
+        self.save_current_button = QPushButton("Save Current 2D as Template")
+        self.save_current_button.clicked.connect(self.save_current_as_template)
+        button_layout.addWidget(self.save_current_button)
+        
+        button_layout.addStretch()
+        
+        self.delete_button = QPushButton("Delete Selected")
+        self.delete_button.clicked.connect(self.delete_selected_template)
+        self.delete_button.setEnabled(False)
+        button_layout.addWidget(self.delete_button)
+        
+        close_button = QPushButton("Close")
+        close_button.clicked.connect(self.accept)
+        button_layout.addWidget(close_button)
+        
+        layout.addLayout(button_layout)
+    
+    def resizeEvent(self, event):
+        """ダイアログリサイズ時にテンプレートプレビューを再フィット"""
+        super().resizeEvent(event)
+        # Delay the refit to ensure proper widget sizing
+        QTimer.singleShot(100, self.refit_all_previews)
+    
+    def refit_all_previews(self):
+        """すべてのテンプレートプレビューを再フィット"""
+        try:
+            for i in range(self.template_layout.count()):
+                item = self.template_layout.itemAt(i)
+                if item and item.widget():
+                    widget = item.widget()
+                    # Find the TemplatePreviewView within this widget
+                    for child in widget.findChildren(TemplatePreviewView):
+                        if hasattr(child, 'redraw_with_current_size'):
+                            # Use redraw for better scaling adaptation
+                            child.redraw_with_current_size()
+                        elif hasattr(child, 'refit_view'):
+                            child.refit_view()
+        except Exception as e:
+            print(f"Warning: Failed to refit template previews: {e}")
+    
+    def showEvent(self, event):
+        """ダイアログ表示時にプレビューを適切にフィット"""
+        super().showEvent(event)
+        # Ensure all previews are properly fitted when dialog becomes visible
+        QTimer.singleShot(300, self.refit_all_previews)
+    
+    def get_template_directory(self):
+        """テンプレートディレクトリのパスを取得"""
+        template_dir = os.path.join(self.main_window.settings_dir, 'user-templates')
+        if not os.path.exists(template_dir):
+            os.makedirs(template_dir)
+        return template_dir
+    
+    def load_user_templates(self):
+        """ユーザーテンプレートを読み込み"""
+        template_dir = self.get_template_directory()
+        self.user_templates.clear()
+        
+        try:
+            for filename in os.listdir(template_dir):
+                if filename.endswith('.pmetmplt'):
+                    filepath = os.path.join(template_dir, filename)
+                    template_data = self.load_template_file(filepath)
+                    if template_data:
+                        template_data['filename'] = filename
+                        template_data['filepath'] = filepath
+                        self.user_templates.append(template_data)
+        except Exception as e:
+            print(f"Error loading user templates: {e}")
+        
+        self.update_template_grid()
+    
+    def load_template_file(self, filepath):
+        """テンプレートファイルを読み込み"""
+        try:
+            with open(filepath, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except Exception as e:
+            print(f"Error loading template file {filepath}: {e}")
+            return None
+    
+    def save_template_file(self, filepath, template_data):
+        """テンプレートファイルを保存"""
+        try:
+            with open(filepath, 'w', encoding='utf-8') as f:
+                json.dump(template_data, f, indent=2, ensure_ascii=False)
+            return True
+        except Exception as e:
+            print(f"Error saving template file {filepath}: {e}")
+            return False
+    
+    def update_template_grid(self):
+        """テンプレートグリッドを更新"""
+        # Clear existing widgets
+        for i in reversed(range(self.template_layout.count())):
+            self.template_layout.itemAt(i).widget().setParent(None)
+        
+        # Add template previews (left-to-right, top-to-bottom ordering)
+        cols = 4
+        for i, template in enumerate(self.user_templates):
+            row = i // cols
+            col = i % cols  # Left-to-right ordering
+            
+            preview_widget = self.create_template_preview(template)
+            self.template_layout.addWidget(preview_widget, row, col)
+        
+        # Ensure all previews are properly fitted after grid update
+        QTimer.singleShot(200, self.refit_all_previews)
+    
+    def create_template_preview(self, template_data):
+        """テンプレートプレビューウィジェットを作成"""
+        widget = QWidget()
+        widget.setFixedSize(180, 200)
+        widget.setStyleSheet("""
+            QWidget {
+                border: 2px solid #ccc;
+                border-radius: 8px;
+                background-color: white;
+            }
+            QWidget:hover {
+                border-color: #007acc;
+                background-color: #f0f8ff;
+            }
+        """)
+        
+        layout = QVBoxLayout(widget)
+        
+        # Preview graphics - use custom view class for better resize handling
+        preview_scene = QGraphicsScene()
+        preview_view = TemplatePreviewView(preview_scene)
+        preview_view.setFixedSize(160, 140)
+        preview_view.setRenderHint(QPainter.RenderHint.Antialiasing)
+        preview_view.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        preview_view.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        
+        # Set template data for dynamic redrawing
+        preview_view.set_template_data(template_data, self)
+        
+        # Draw template structure with view size for proper scaling
+        view_size = (preview_view.width(), preview_view.height())
+        self.draw_template_preview(preview_scene, template_data, view_size)
+        
+        # Improved fitting approach with better error handling
+        bounding_rect = preview_scene.itemsBoundingRect()
+        if not bounding_rect.isEmpty() and bounding_rect.width() > 0 and bounding_rect.height() > 0:
+            # Calculate appropriate padding based on content size
+            content_size = max(bounding_rect.width(), bounding_rect.height())
+            padding = max(20, content_size * 0.2)  # At least 20 units or 20% of content
+            
+            padded_rect = bounding_rect.adjusted(-padding, -padding, padding, padding)
+            preview_scene.setSceneRect(padded_rect)
+            
+            # Store original scene rect for proper fitting on resize
+            preview_view.original_scene_rect = padded_rect
+            
+            # Use QTimer to ensure fitInView happens after widget is fully initialized
+            QTimer.singleShot(0, lambda: self.fit_preview_view_safely(preview_view, padded_rect))
+        else:
+            # Default view for empty or invalid content
+            default_rect = QRectF(-50, -50, 100, 100)
+            preview_scene.setSceneRect(default_rect)
+            preview_view.original_scene_rect = default_rect
+            QTimer.singleShot(0, lambda: self.fit_preview_view_safely(preview_view, default_rect))
+        
+        layout.addWidget(preview_view)
+        
+        # Template name
+        name = template_data.get('name', 'Unnamed Template')
+        name_label = QLabel(name)
+        name_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        name_label.setWordWrap(True)
+        layout.addWidget(name_label)
+        
+        # Mouse events
+        widget.mousePressEvent = lambda event: self.select_template(template_data, widget)
+        widget.mouseDoubleClickEvent = lambda event: self.use_template(template_data)
+        
+        return widget
+    
+    def fit_preview_view_safely(self, view, rect):
+        """プレビュービューを安全にフィット"""
+        try:
+            if view and not rect.isEmpty():
+                view.fitInView(rect, Qt.AspectRatioMode.KeepAspectRatio)
+        except Exception as e:
+            print(f"Warning: Failed to fit preview view: {e}")
+    
+    def draw_template_preview(self, scene, template_data, view_size=None):
+        """テンプレートプレビューを描画 - fitInView縮小率に基づく動的スケーリング"""
+        atoms = template_data.get('atoms', [])
+        bonds = template_data.get('bonds', [])
+        
+        if not atoms:
+            # Add placeholder text when no atoms
+            text = scene.addText("No structure", QFont('Arial', 12))
+            text.setDefaultTextColor(QColor('gray'))
+            return
+        
+        # Calculate molecular dimensions
+        positions = [QPointF(atom['x'], atom['y']) for atom in atoms]
+        min_x = min(pos.x() for pos in positions)
+        max_x = max(pos.x() for pos in positions)
+        min_y = min(pos.y() for pos in positions)
+        max_y = max(pos.y() for pos in positions)
+        
+        mol_width = max_x - min_x
+        mol_height = max_y - min_y
+        mol_size = max(mol_width, mol_height)
+        
+        # Calculate fit scale factor (how much fitInView will shrink the content)
+        if view_size is None:
+            view_size = (160, 140)  # Default preview view size
+        
+        view_width, view_height = view_size
+        
+        if mol_size > 0 and mol_width > 0 and mol_height > 0:
+            # Calculate the padding that will be added
+            padding = max(20, mol_size * 0.2)
+            padded_width = mol_width + 2 * padding
+            padded_height = mol_height + 2 * padding
+            
+            # Calculate how much fitInView will scale down the content
+            # fitInView fits the padded rectangle into the view while maintaining aspect ratio
+            fit_scale_x = view_width / padded_width
+            fit_scale_y = view_height / padded_height
+            fit_scale = min(fit_scale_x, fit_scale_y)  # fitInView uses the smaller scale
+            
+            # Compensate for the fit scaling to maintain visual thickness
+            # When fit_scale is small (content heavily shrunk), we need thicker lines/fonts
+            if fit_scale > 0:
+                scale_factor = max(0.4, min(4.0, 1.0 / fit_scale))
+            else:
+                scale_factor = 4.0
+            
+            # Debug info (can be removed in production)
+            # print(f"Mol size: {mol_size:.1f}, Fit scale: {fit_scale:.3f}, Scale factor: {scale_factor:.2f}")
+        else:
+            scale_factor = 1.0
+        
+        # Base sizes that look good at 1:1 scale
+        base_bond_width = 1.8
+        base_font_size = 11
+        base_ellipse_width = 18
+        base_ellipse_height = 14
+        base_double_bond_offset = 3.5
+        base_triple_bond_offset = 2.5
+        
+        # Apply inverse fit scaling to maintain visual consistency
+        bond_width = max(1.0, min(8.0, base_bond_width * scale_factor))
+        font_size = max(8, min(24, int(base_font_size * scale_factor)))
+        ellipse_width = max(10, min(40, base_ellipse_width * scale_factor))
+        ellipse_height = max(8, min(30, base_ellipse_height * scale_factor))
+        double_bond_offset = max(2.0, min(10.0, base_double_bond_offset * scale_factor))
+        triple_bond_offset = max(1.5, min(8.0, base_triple_bond_offset * scale_factor))
+        
+        # Create atom ID to index mapping for bond drawing
+        atom_id_to_index = {}
+        for i, atom in enumerate(atoms):
+            atom_id = atom.get('id', i)  # Use id if available, otherwise use index
+            atom_id_to_index[atom_id] = i
+        
+        # Draw bonds first using original coordinates with dynamic sizing
+        for bond in bonds:
+            atom1_id, atom2_id = bond['atom1'], bond['atom2']
+            
+            # Get atom indices from IDs
+            atom1_idx = atom_id_to_index.get(atom1_id)
+            atom2_idx = atom_id_to_index.get(atom2_id)
+            
+            if atom1_idx is not None and atom2_idx is not None and atom1_idx < len(atoms) and atom2_idx < len(atoms):
+                pos1 = QPointF(atoms[atom1_idx]['x'], atoms[atom1_idx]['y'])
+                pos2 = QPointF(atoms[atom2_idx]['x'], atoms[atom2_idx]['y'])
+                
+                # Draw bonds with proper order - dynamic thickness
+                bond_order = bond.get('order', 1)
+                pen = QPen(QColor('black'), bond_width)
+                
+                if bond_order == 2:
+                    # Double bond - draw two parallel lines
+                    line = QLineF(pos1, pos2)
+                    if line.length() > 0:
+                        normal = line.normalVector()
+                        normal.setLength(double_bond_offset)
+                        
+                        line1 = QLineF(pos1 + normal.p2() - normal.p1(), pos2 + normal.p2() - normal.p1())
+                        line2 = QLineF(pos1 - normal.p2() + normal.p1(), pos2 - normal.p2() + normal.p1())
+                        
+                        scene.addLine(line1, pen)
+                        scene.addLine(line2, pen)
+                    else:
+                        scene.addLine(line, pen)
+                elif bond_order == 3:
+                    # Triple bond - draw three parallel lines
+                    line = QLineF(pos1, pos2)
+                    if line.length() > 0:
+                        normal = line.normalVector()
+                        normal.setLength(triple_bond_offset)
+                        
+                        # Center line
+                        scene.addLine(line, pen)
+                        # Side lines
+                        line1 = QLineF(pos1 + normal.p2() - normal.p1(), pos2 + normal.p2() - normal.p1())
+                        line2 = QLineF(pos1 - normal.p2() + normal.p1(), pos2 - normal.p2() + normal.p1())
+                        
+                        scene.addLine(line1, pen)
+                        scene.addLine(line2, pen)
+                    else:
+                        scene.addLine(line, pen)
+                else:
+                    # Single bond
+                    scene.addLine(QLineF(pos1, pos2), pen)
+        
+        # Draw only non-carbon atom labels with dynamic sizing
+        for i, atom in enumerate(atoms):
+            try:
+                pos = QPointF(atom['x'], atom['y'])
+                symbol = atom.get('symbol', 'C')
+                
+                # Draw atoms - white ellipse background to hide bonds, then CPK colored text
+                if symbol != 'C':
+                    # All non-carbon atoms including hydrogen: white background ellipse + CPK colored text
+                    color = CPK_COLORS.get(symbol, CPK_COLORS.get('DEFAULT', QColor('#FF1493')))
+                    
+                    # Add white background ellipse to hide bonds - dynamic size
+                    pen = QPen(Qt.GlobalColor.white, 0)  # No border
+                    brush = QBrush(Qt.GlobalColor.white)
+                    ellipse_x = pos.x() - ellipse_width/2
+                    ellipse_y = pos.y() - ellipse_height/2
+                    ellipse = scene.addEllipse(ellipse_x, ellipse_y, ellipse_width, ellipse_height, pen, brush)
+                    
+                    # Add CPK colored text label on top - dynamic font size
+                    font = QFont("Arial", font_size, QFont.Weight.Bold)
+                    text = scene.addText(symbol, font)
+                    text.setDefaultTextColor(color)  # CPK colored text
+                    text_rect = text.boundingRect()
+                    text.setPos(pos.x() - text_rect.width()/2, pos.y() - text_rect.height()/2)
+                    
+            except Exception as e:
+                continue
+    
+    def select_template(self, template_data, widget):
+        """テンプレートを選択してテンプレートモードに切り替え"""
+        # Clear previous selection styling
+        for i in range(self.template_layout.count()):
+            item = self.template_layout.itemAt(i)
+            if item and item.widget():
+                item.widget().setStyleSheet("""
+                    QWidget {
+                        border: 2px solid #ccc;
+                        border-radius: 8px;
+                        background-color: white;
+                    }
+                    QWidget:hover {
+                        border-color: #007acc;
+                        background-color: #f0f8ff;
+                    }
+                """)
+        
+        # Highlight selected widget - only border, no background change
+        widget.setStyleSheet("""
+            QWidget {
+                border: 3px solid #007acc;
+                border-radius: 8px;
+                background-color: white;
+            }
+        """)
+        
+        self.selected_template = template_data
+        self.delete_button.setEnabled(True)
+        
+        # Automatically switch to template mode when template is selected
+        template_name = template_data.get('name', 'user_template')
+        mode_name = f"template_user_{template_name}"
+        
+        # Store template data for the scene to use
+        self.main_window.scene.user_template_data = template_data
+        self.main_window.set_mode(mode_name)
+        
+        # Update UI
+        self.main_window.statusBar().showMessage(f"Template mode: {template_name}")
+        
+        # Update toolbar to reflect the template mode
+        if hasattr(self.main_window, 'mode_actions') and f"template_user_{template_name}" in self.main_window.mode_actions:
+            self.main_window.mode_actions[f"template_user_{template_name}"].setChecked(True)
+    
+    def use_template(self, template_data):
+        """テンプレートを使用（エディタに適用）"""
+        try:
+            # Switch to template mode
+            template_name = template_data.get('name', 'user_template')
+            mode_name = f"template_user_{template_name}"
+            
+            # Store template data for the scene to use
+            self.main_window.scene.user_template_data = template_data
+            self.main_window.set_mode(mode_name)
+            
+            # Update UI
+            self.main_window.statusBar().showMessage(f"Template mode: {template_name}")
+            
+            # Store selected template for later use
+            self.selected_template = template_data
+            
+            # Don't close dialog - keep it open for easy template switching
+            # self.accept()
+            
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to apply template: {str(e)}")
+    
+    def save_current_as_template(self):
+        """現在の2D構造をテンプレートとして保存"""
+        if not self.main_window.data.atoms:
+            QMessageBox.warning(self, "Warning", "No structure to save as template.")
+            return
+        
+        # Get template name
+        name, ok = QInputDialog.getText(self, "Save Template", "Enter template name:")
+        if not ok or not name.strip():
+            return
+        
+        name = name.strip()
+        
+        try:
+            # Convert current structure to template format
+            template_data = self.convert_structure_to_template(name)
+            
+            # Save to file
+            filename = f"{name.replace(' ', '_')}.pmetmplt"
+            filepath = os.path.join(self.get_template_directory(), filename)
+            
+            if os.path.exists(filepath):
+                reply = QMessageBox.question(
+                    self, "Overwrite Template",
+                    f"Template '{name}' already exists. Overwrite?",
+                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+                )
+                if reply != QMessageBox.StandardButton.Yes:
+                    return
+            
+            if self.save_template_file(filepath, template_data):
+                # Mark main window as saved
+                self.main_window.has_unsaved_changes = False
+                self.main_window.update_window_title()
+                
+                QMessageBox.information(self, "Success", f"Template '{name}' saved successfully.")
+                self.load_user_templates()  # Refresh the display
+            else:
+                QMessageBox.critical(self, "Error", "Failed to save template.")
+                
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to save template: {str(e)}")
+    
+    def convert_structure_to_template(self, name):
+        """現在の構造をテンプレート形式に変換"""
+        atoms_data = []
+        bonds_data = []
+        
+        # Convert atoms
+        for atom_id, atom_info in self.main_window.data.atoms.items():
+            pos = atom_info['pos']
+            atoms_data.append({
+                'id': atom_id,
+                'symbol': atom_info['symbol'],
+                'x': pos.x(),
+                'y': pos.y(),
+                'charge': atom_info.get('charge', 0),
+                'radical': atom_info.get('radical', 0)
+            })
+        
+        # Convert bonds
+        for (atom1_id, atom2_id), bond_info in self.main_window.data.bonds.items():
+            bonds_data.append({
+                'atom1': atom1_id,
+                'atom2': atom2_id,
+                'order': bond_info['order'],
+                'stereo': bond_info.get('stereo', 0)
+            })
+        
+        # Create template data
+        template_data = {
+            'name': name,
+            'version': '1.0',
+            'created': str(QDateTime.currentDateTime().toString()),
+            'atoms': atoms_data,
+            'bonds': bonds_data
+        }
+        
+        return template_data
+    
+    def delete_selected_template(self):
+        """選択されたテンプレートを削除"""
+        if not self.selected_template:
+            return
+        
+        name = self.selected_template.get('name', 'Unknown')
+        reply = QMessageBox.question(
+            self, "Delete Template",
+            f"Are you sure you want to delete template '{name}'?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+        )
+        
+        if reply == QMessageBox.StandardButton.Yes:
+            try:
+                filepath = self.selected_template['filepath']
+                os.remove(filepath)
+                QMessageBox.information(self, "Success", f"Template '{name}' deleted successfully.")
+                self.load_user_templates()  # Refresh the display
+                self.selected_template = None
+                self.delete_button.setEnabled(False)
+            except Exception as e:
+                QMessageBox.critical(self, "Error", f"Failed to delete template: {str(e)}")
+
+class AboutDialog(QDialog):
+    def __init__(self, main_window, parent=None):
+        super().__init__(parent)
+        self.main_window = main_window
+        self.setWindowTitle("About MoleditPy")
+        self.setFixedSize(200, 300)
+        self.init_ui()
+    
+    def init_ui(self):
+        layout = QVBoxLayout(self)
+        
+        # Create a clickable image label
+        self.image_label = QLabel()
+        self.image_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        
+        # Load the original icon image
+        icon_path = os.path.join(os.path.dirname(__file__), 'assets', 'icon.png')
+        if os.path.exists(icon_path):
+            original_pixmap = QPixmap(icon_path)
+            # Scale to 2x size (160x160)
+            pixmap = original_pixmap.scaled(160, 160, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+        else:
+            # Fallback: create a simple placeholder if icon.png not found
+            pixmap = QPixmap(160, 160)
+            pixmap.fill(Qt.GlobalColor.lightGray)
+            painter = QPainter(pixmap)
+            painter.setPen(QPen(Qt.GlobalColor.black, 2))
+            painter.drawText(pixmap.rect(), Qt.AlignmentFlag.AlignCenter, "MoleditPy")
+            painter.end()
+        
+        self.image_label.setPixmap(pixmap)
+        self.image_label.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        self.image_label.mousePressEvent = self.image_clicked
+        
+        layout.addWidget(self.image_label)
+        
+        # Add text information
+        info_text = f"MoleditPy Ver. {VERSION}\nAuthor: Hiromichi Yokoyama\nLicense: Apache-2.0"
+        info_label = QLabel(info_text)
+        info_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(info_label)
+        
+        # Add OK button
+        ok_button = QPushButton("OK")
+        ok_button.setFixedSize(80, 30)  # 小さいサイズに固定
+        ok_button.clicked.connect(self.accept)
+        
+        # Center the button
+        button_layout = QHBoxLayout()
+        button_layout.addStretch()
+        button_layout.addWidget(ok_button)
+        button_layout.addStretch()
+        layout.addLayout(button_layout)
+    
+    def image_clicked(self, event):
+        """Easter egg: Clear all and load bipyrimidine from SMILES"""
+        # Clear the current scene
+        self.main_window.clear_all()
+
+        bipyrimidine_smiles = "C1=CN=C(N=C1)C2=NC=CC=N2"
+        self.main_window.load_from_smiles(bipyrimidine_smiles)
+
+        # Close the dialog
+        self.accept()
+
 class TranslationDialog(Dialog3DPickingMixin, QDialog):
     def __init__(self, mol, main_window, parent=None):
         QDialog.__init__(self, parent)
         Dialog3DPickingMixin.__init__(self)
         self.mol = mol
         self.main_window = main_window
-        self.reference_atom_idx = None
+        self.selected_atoms = set()  # 複数原子選択用
         self.init_ui()
     
     def init_ui(self):
@@ -209,12 +888,12 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog):
         layout = QVBoxLayout(self)
         
         # Instructions
-        instruction_label = QLabel("Click an atom as reference point, then enter target coordinates.")
+        instruction_label = QLabel("Click atoms in the 3D view to select them. The centroid of selected atoms will be moved to the target coordinates, translating the entire molecule.")
         instruction_label.setWordWrap(True)
         layout.addWidget(instruction_label)
         
-        # Selected atom display
-        self.selection_label = QLabel("No atom selected")
+        # Selected atoms display
+        self.selection_label = QLabel("No atoms selected")
         layout.addWidget(self.selection_label)
         
         # Coordinate inputs
@@ -258,7 +937,10 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog):
     
     def on_atom_picked(self, atom_idx):
         """原子がピックされたときの処理"""
-        self.reference_atom_idx = atom_idx
+        if atom_idx in self.selected_atoms:
+            self.selected_atoms.remove(atom_idx)
+        else:
+            self.selected_atoms.add(atom_idx)
         self.show_atom_labels()
         self.update_display()
     
@@ -273,8 +955,8 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog):
     
     def update_display(self):
         """表示を更新"""
-        if self.reference_atom_idx is None:
-            self.selection_label.setText("No atom selected")
+        if not self.selected_atoms:
+            self.selection_label.setText("No atoms selected")
             self.apply_button.setEnabled(False)
         else:
             # 分子の有効性チェック
@@ -284,26 +966,49 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog):
                 return
             
             try:
-                symbol = self.mol.GetAtomWithIdx(self.reference_atom_idx).GetSymbol()
                 conf = self.mol.GetConformer()
-                pos = conf.GetAtomPosition(self.reference_atom_idx)
-                self.selection_label.setText(f"Reference: {symbol}({self.reference_atom_idx}) at ({pos.x:.2f}, {pos.y:.2f}, {pos.z:.2f})")
+                # 選択原子の重心を計算
+                centroid = self.calculate_centroid()
+                
+                # 選択原子の情報を表示
+                atom_info = []
+                for atom_idx in sorted(self.selected_atoms):
+                    symbol = self.mol.GetAtomWithIdx(atom_idx).GetSymbol()
+                    atom_info.append(f"{symbol}({atom_idx})")
+                
+                self.selection_label.setText(
+                    f"Selected atoms: {', '.join(atom_info)}\n"
+                    f"Centroid: ({centroid[0]:.2f}, {centroid[1]:.2f}, {centroid[2]:.2f})"
+                )
                 self.apply_button.setEnabled(True)
             except Exception as e:
                 self.selection_label.setText(f"Error accessing atom data: {str(e)}")
                 self.apply_button.setEnabled(False)
     
+    def calculate_centroid(self):
+        """選択原子の重心を計算"""
+        if not self.selected_atoms:
+            return np.array([0.0, 0.0, 0.0])
+        
+        conf = self.mol.GetConformer()
+        positions = []
+        for atom_idx in self.selected_atoms:
+            pos = conf.GetAtomPosition(atom_idx)
+            positions.append([pos.x, pos.y, pos.z])
+        
+        return np.mean(positions, axis=0)
+    
     def apply_translation(self):
         """平行移動を適用"""
-        if self.reference_atom_idx is None:
-            QMessageBox.warning(self, "Warning", "Please select a reference atom.")
+        if not self.selected_atoms:
+            QMessageBox.warning(self, "Warning", "Please select at least one atom.")
             return
-        
+
         # 分子の有効性チェック
         if not self.mol or self.mol.GetNumConformers() == 0:
             QMessageBox.warning(self, "Warning", "No valid molecule or conformer available.")
             return
-        
+
         try:
             target_x = float(self.x_input.text())
             target_y = float(self.y_input.text())
@@ -311,38 +1016,41 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog):
         except ValueError:
             QMessageBox.warning(self, "Warning", "Please enter valid coordinates.")
             return
-        
+
         try:
-            # 参照原子の現在位置を取得
-            conf = self.mol.GetConformer()
-            current_pos = np.array(conf.GetAtomPosition(self.reference_atom_idx))
+            # 選択原子の重心を計算
+            current_centroid = self.calculate_centroid()
             target_pos = np.array([target_x, target_y, target_z])
-            
+
             # 移動ベクトルを計算
-            translation_vector = target_pos - current_pos
-            
+            translation_vector = target_pos - current_centroid
+
             # Undo状態を保存
             self.main_window.push_undo_state()
-            
+
             # 全原子を平行移動
+            conf = self.mol.GetConformer()
             for i in range(self.mol.GetNumAtoms()):
                 atom_pos = np.array(conf.GetAtomPosition(i))
                 new_pos = atom_pos + translation_vector
                 conf.SetAtomPosition(i, new_pos.tolist())
                 self.main_window.atom_positions_3d[i] = new_pos
-            
+
             # 3D表示を更新
             self.main_window.draw_molecule_3d(self.mol)
-            
+
             # キラルラベルを更新
             self.main_window.update_chiral_labels()
-            
+
+            # Apply後に選択解除
+            self.clear_selection()
+
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to apply translation: {str(e)}")
     
     def clear_selection(self):
         """選択をクリア"""
-        self.reference_atom_idx = None
+        self.selected_atoms.clear()
         self.clear_atom_labels()
         self.update_display()
     
@@ -350,24 +1058,39 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog):
         """選択された原子にラベルを表示"""
         # 既存のラベルをクリア
         self.clear_atom_labels()
-        
-        # 新しいラベルを表示
+
         if not hasattr(self, 'selection_labels'):
             self.selection_labels = []
-        
-        if self.reference_atom_idx is not None:
-            pos = self.main_window.atom_positions_3d[self.reference_atom_idx]
-            label_text = "Ref"
-            
+
+        if self.selected_atoms:
+            positions = []
+            labels = []
+
+            for i, atom_idx in enumerate(sorted(self.selected_atoms)):
+                pos = self.main_window.atom_positions_3d[atom_idx]
+                positions.append(pos)
+                labels.append(f"S{i+1}")
+
+            # 重心位置も表示
+            if len(self.selected_atoms) > 1:
+                centroid = self.calculate_centroid()
+                positions.append(centroid)
+                labels.append("CEN")
+
             # ラベルを追加
-            label_actor = self.main_window.plotter.add_point_labels(
-                [pos], [label_text], 
-                point_size=20, 
-                font_size=12,
-                text_color='cyan',
-                always_visible=True
-            )
-            self.selection_labels.append(label_actor)
+            if positions:
+                label_actor = self.main_window.plotter.add_point_labels(
+                    positions, labels,
+                    point_size=20,
+                    font_size=12,
+                    text_color='cyan',
+                    always_visible=True
+                )
+                # add_point_labelsがリストを返す場合も考慮
+                if isinstance(label_actor, list):
+                    self.selection_labels.extend(label_actor)
+                else:
+                    self.selection_labels.append(label_actor)
     
     def clear_atom_labels(self):
         """原子ラベルをクリア"""
@@ -375,26 +1098,43 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog):
             for label_actor in self.selection_labels:
                 try:
                     self.main_window.plotter.remove_actor(label_actor)
-                except:
+                except Exception:
                     pass
             self.selection_labels = []
+        # ラベル消去後に再描画を強制
+        try:
+            self.main_window.plotter.render()
+        except Exception:
+            pass
     
     def closeEvent(self, event):
         """ダイアログが閉じられる時の処理"""
         self.clear_atom_labels()
         self.disable_picking()
+        try:
+            self.main_window.draw_molecule_3d(self.mol)
+        except Exception:
+            pass
         super().closeEvent(event)
     
     def reject(self):
         """キャンセル時の処理"""
         self.clear_atom_labels()
         self.disable_picking()
+        try:
+            self.main_window.draw_molecule_3d(self.mol)
+        except Exception:
+            pass
         super().reject()
     
     def accept(self):
         """OK時の処理"""
         self.clear_atom_labels()
         self.disable_picking()
+        try:
+            self.main_window.draw_molecule_3d(self.mol)
+        except Exception:
+            pass
         super().accept()
 
 class SymmetrizeDialog(QDialog):
@@ -2936,6 +3676,7 @@ class AtomItem(QGraphicsItem):
         self.is_visible = not (self.symbol == 'C' and len(self.bonds) > 0 and self.charge == 0 and self.radical == 0)
         self.update()
 
+
     # 約203行目 AtomItem クラス内
 
     def itemChange(self, change, value):
@@ -3241,18 +3982,45 @@ class TemplatePreviewItem(QGraphicsItem):
         self.pen = QPen(QColor(80, 80, 80, 180), 2)
         self.polygon = QPolygonF()
         self.is_aromatic = False
+        self.user_template_points = []
+        self.user_template_bonds = []
+        self.user_template_atoms = []
+        self.is_user_template = False
 
     def set_geometry(self, points, is_aromatic=False):
         self.prepareGeometryChange()
         self.polygon = QPolygonF(points)
         self.is_aromatic = is_aromatic
+        self.is_user_template = False
+        self.update()
+    
+    def set_user_template_geometry(self, points, bonds_info, atoms_data):
+        self.prepareGeometryChange()
+        self.user_template_points = points
+        self.user_template_bonds = bonds_info
+        self.user_template_atoms = atoms_data
+        self.is_user_template = True
+        self.is_aromatic = False
+        self.polygon = QPolygonF()
         self.update()
 
     def boundingRect(self):
+        if self.is_user_template and self.user_template_points:
+            # Calculate bounding rect for user template
+            min_x = min(p.x() for p in self.user_template_points)
+            max_x = max(p.x() for p in self.user_template_points)
+            min_y = min(p.y() for p in self.user_template_points)
+            max_y = max(p.y() for p in self.user_template_points)
+            return QRectF(min_x - 20, min_y - 20, max_x - min_x + 40, max_y - min_y + 40)
         return self.polygon.boundingRect().adjusted(-5, -5, 5, 5)
 
     def paint(self, painter, option, widget):
-            
+        if self.is_user_template:
+            self.paint_user_template(painter)
+        else:
+            self.paint_regular_template(painter)
+    
+    def paint_regular_template(self, painter):
         painter.setPen(self.pen)
         painter.setBrush(Qt.BrushStyle.NoBrush)
         if not self.polygon.isEmpty():
@@ -3261,8 +4029,88 @@ class TemplatePreviewItem(QGraphicsItem):
                 center = self.polygon.boundingRect().center()
                 radius = QLineF(center, self.polygon.first()).length() * 0.6
                 painter.drawEllipse(center, radius, radius)
+    
+    def paint_user_template(self, painter):
+        if not self.user_template_points:
+            return
+        
+        # Draw bonds first with better visibility
+        bond_pen = QPen(QColor(100, 100, 100, 200), 2.5)
+        painter.setPen(bond_pen)
+        
+        for bond_info in self.user_template_bonds:
+            if len(bond_info) >= 3:
+                atom1_idx, atom2_idx, order = bond_info[:3]
+            else:
+                atom1_idx, atom2_idx = bond_info[:2]
+                order = 1
+                
+            if atom1_idx < len(self.user_template_points) and atom2_idx < len(self.user_template_points):
+                pos1 = self.user_template_points[atom1_idx]
+                pos2 = self.user_template_points[atom2_idx]
+                
+                if order == 2:
+                    # Double bond - draw two parallel lines
+                    line = QLineF(pos1, pos2)
+                    normal = line.normalVector()
+                    normal.setLength(4)
+                    
+                    line1 = QLineF(pos1 + normal.p2() - normal.p1(), pos2 + normal.p2() - normal.p1())
+                    line2 = QLineF(pos1 - normal.p2() + normal.p1(), pos2 - normal.p2() + normal.p1())
+                    
+                    painter.drawLine(line1)
+                    painter.drawLine(line2)
+                elif order == 3:
+                    # Triple bond - draw three parallel lines
+                    line = QLineF(pos1, pos2)
+                    normal = line.normalVector()
+                    normal.setLength(6)
+                    
+                    painter.drawLine(line)
+                    line1 = QLineF(pos1 + normal.p2() - normal.p1(), pos2 + normal.p2() - normal.p1())
+                    line2 = QLineF(pos1 - normal.p2() + normal.p1(), pos2 - normal.p2() + normal.p1())
+                    
+                    painter.drawLine(line1)
+                    painter.drawLine(line2)
+                else:
+                    # Single bond
+                    painter.drawLine(QLineF(pos1, pos2))
+        
+        # Draw atoms - white ellipse background to hide bonds, then CPK colored text
+        for i, pos in enumerate(self.user_template_points):
+            if i < len(self.user_template_atoms):
+                atom_data = self.user_template_atoms[i]
+                symbol = atom_data.get('symbol', 'C')
+                
+                # Draw all non-carbon atoms including hydrogen with white background ellipse + CPK colored text
+                if symbol != 'C':
+                    # Get CPK color for text
+                    color = CPK_COLORS.get(symbol, CPK_COLORS.get('DEFAULT', QColor('#FF1493')))
+                    
+                    # Draw white background ellipse to hide bonds
+                    painter.setPen(QPen(Qt.GlobalColor.white, 0))  # No border
+                    painter.setBrush(QBrush(Qt.GlobalColor.white))
+                    painter.drawEllipse(int(pos.x() - 12), int(pos.y() - 8), 24, 16)
+                    
+                    # Draw CPK colored text on top
+                    painter.setPen(QPen(color))
+                    font = QFont("Arial", 12, QFont.Weight.Bold)  # Larger font
+                    painter.setFont(font)
+                    metrics = painter.fontMetrics()
+                    text_rect = metrics.boundingRect(symbol)
+                    text_pos = QPointF(pos.x() - text_rect.width()/2, pos.y() + text_rect.height()/3)
+                    painter.drawText(text_pos, symbol)
 
 class MoleculeScene(QGraphicsScene):
+    def clear_template_preview(self):
+        """テンプレートプレビュー用のゴースト線を全て消す"""
+        for item in list(self.items()):
+            if isinstance(item, QGraphicsLineItem) and getattr(item, '_is_template_preview', False):
+                self.removeItem(item)
+        self.template_context = {}
+        if hasattr(self, 'template_preview'):
+            self.template_preview.hide()
+
     def __init__(self, data, window):
         super().__init__()
         self.data, self.window = data, window
@@ -3465,7 +4313,13 @@ class MoleculeScene(QGraphicsScene):
         if self.mode.startswith('template') and is_click:
             if self.template_context and self.template_context.get('points'):
                 context = self.template_context
-                self.add_molecule_fragment(context['points'], context['bonds_info'], existing_items=context.get('items', []))
+                
+                # Check if this is a user template
+                if self.mode.startswith('template_user'):
+                    self.add_user_template_fragment(context)
+                else:
+                    self.add_molecule_fragment(context['points'], context['bonds_info'], existing_items=context.get('items', []))
+                
                 self.data_changed_in_event = True
                 
                 # イベント処理をここで完了させ、下のアイテムが選択されるのを防ぐ
@@ -3645,6 +4499,9 @@ class MoleculeScene(QGraphicsScene):
         
         self.start_atom=None; self.start_pos = None; self.press_pos = None; self.temp_line = None
         self.template_context = {}
+        # Clear user template data when switching modes
+        if hasattr(self, 'user_template_data'):
+            self.user_template_data = None
         if self.data_changed_in_event: self.window.push_undo_state()
 
     def mouseDoubleClickEvent(self, event):
@@ -3941,6 +4798,12 @@ class MoleculeScene(QGraphicsScene):
 
     def update_template_preview(self, pos):
         mode_parts = self.mode.split('_')
+        
+        # Check if this is a user template
+        if len(mode_parts) >= 3 and mode_parts[1] == 'user':
+            self.update_user_template_preview(pos)
+            return
+        
         is_aromatic = False
         if mode_parts[1] == 'benzene':
             n = 6
@@ -4121,6 +4984,172 @@ class MoleculeScene(QGraphicsScene):
             import traceback
             traceback.print_exc()
             return False
+    
+    def add_user_template_fragment(self, context):
+        """ユーザーテンプレートフラグメントを配置"""
+        points = context.get('points', [])
+        bonds_info = context.get('bonds_info', [])
+        atoms_data = context.get('atoms_data', [])
+        attachment_atom = context.get('attachment_atom')
+        
+        if not points or not atoms_data:
+            return
+        
+        # Create atoms
+        atom_id_map = {}  # template id -> scene atom id
+        
+        for i, (pos, atom_data) in enumerate(zip(points, atoms_data)):
+            # Skip first atom if attaching to existing atom
+            if i == 0 and attachment_atom:
+                atom_id_map[atom_data['id']] = attachment_atom.atom_id
+                continue
+            
+            symbol = atom_data.get('symbol', 'C')
+            charge = atom_data.get('charge', 0)
+            radical = atom_data.get('radical', 0)
+            
+            atom_id = self.data.add_atom(symbol, pos, charge, radical)
+            atom_id_map[atom_data['id']] = atom_id
+            
+            # Create visual atom item
+            atom_item = AtomItem(atom_id, symbol, pos, charge, radical)
+            self.data.atoms[atom_id]['item'] = atom_item
+            self.addItem(atom_item)
+        
+        # Create bonds (bonds_infoは必ずidベースで扱う)
+        # まずindex→id変換テーブルを作る
+        index_to_id = [atom_data.get('id', i) for i, atom_data in enumerate(atoms_data)]
+        for bond_info in bonds_info:
+            if isinstance(bond_info, (list, tuple)) and len(bond_info) >= 2:
+                # bonds_infoの0,1番目がindexならidに変換
+                atom1_idx = bond_info[0]
+                atom2_idx = bond_info[1]
+                order = bond_info[2] if len(bond_info) > 2 else 1
+                stereo = bond_info[3] if len(bond_info) > 3 else 0
+
+                # index→id変換（すでにidならそのまま）
+                if isinstance(atom1_idx, int) and atom1_idx < len(index_to_id):
+                    template_atom1_id = index_to_id[atom1_idx]
+                else:
+                    template_atom1_id = atom1_idx
+                if isinstance(atom2_idx, int) and atom2_idx < len(index_to_id):
+                    template_atom2_id = index_to_id[atom2_idx]
+                else:
+                    template_atom2_id = atom2_idx
+
+                atom1_id = atom_id_map.get(template_atom1_id)
+                atom2_id = atom_id_map.get(template_atom2_id)
+
+                if atom1_id is not None and atom2_id is not None:
+                    # Skip if bond already exists
+                    existing_bond = None
+                    if (atom1_id, atom2_id) in self.data.bonds:
+                        existing_bond = (atom1_id, atom2_id)
+                    elif (atom2_id, atom1_id) in self.data.bonds:
+                        existing_bond = (atom2_id, atom1_id)
+
+                    if not existing_bond:
+                        bond_key, _ = self.data.add_bond(atom1_id, atom2_id, order, stereo)
+                        # Create visual bond item
+                        atom1_item = self.data.atoms[atom1_id]['item']
+                        atom2_item = self.data.atoms[atom2_id]['item']
+                        if atom1_item and atom2_item:
+                            bond_item = BondItem(atom1_item, atom2_item, order, stereo)
+                            self.data.bonds[bond_key]['item'] = bond_item
+                            self.addItem(bond_item)
+                            atom1_item.bonds.append(bond_item)
+                            atom2_item.bonds.append(bond_item)
+        
+        # Update atom visuals
+        for atom_id in atom_id_map.values():
+            if atom_id in self.data.atoms and self.data.atoms[atom_id]['item']:
+                self.data.atoms[atom_id]['item'].update_style()
+    
+    def update_user_template_preview(self, pos):
+        """ユーザーテンプレートのプレビューを更新"""
+        # Robust user template preview: do not access self.data.atoms for preview-only atoms
+        if not hasattr(self, 'user_template_data') or not self.user_template_data:
+            return
+
+        template_data = self.user_template_data
+        atoms = template_data.get('atoms', [])
+        bonds = template_data.get('bonds', [])
+
+        if not atoms:
+            return
+
+        # Find attachment point (first atom or clicked item)
+        items_under = self.items(pos)
+        attachment_atom = None
+        for item in items_under:
+            if isinstance(item, AtomItem):
+                attachment_atom = item
+                break
+
+        # Calculate template positions
+        points = []
+        # Find template bounds for centering
+        if atoms:
+            min_x = min(atom['x'] for atom in atoms)
+            max_x = max(atom['x'] for atom in atoms)
+            min_y = min(atom['y'] for atom in atoms)
+            max_y = max(atom['y'] for atom in atoms)
+            center_x = (min_x + max_x) / 2
+            center_y = (min_y + max_y) / 2
+        # Position template
+        if attachment_atom:
+            # Attach to existing atom
+            attach_pos = attachment_atom.pos()
+            offset_x = attach_pos.x() - atoms[0]['x']
+            offset_y = attach_pos.y() - atoms[0]['y']
+        else:
+            # Center at cursor position
+            offset_x = pos.x() - center_x
+            offset_y = pos.y() - center_y
+        # Calculate atom positions
+        for atom in atoms:
+            new_pos = QPointF(atom['x'] + offset_x, atom['y'] + offset_y)
+            points.append(new_pos)
+        # Create atom ID to index mapping (for preview only)
+        atom_id_to_index = {}
+        for i, atom in enumerate(atoms):
+            atom_id = atom.get('id', i)
+            atom_id_to_index[atom_id] = i
+        # bonds_info をテンプレートの bonds から生成
+        bonds_info = []
+        for bond in bonds:
+            atom1_idx = atom_id_to_index.get(bond['atom1'])
+            atom2_idx = atom_id_to_index.get(bond['atom2'])
+            if atom1_idx is not None and atom2_idx is not None:
+                order = bond.get('order', 1)
+                stereo = bond.get('stereo', 0)
+                bonds_info.append((atom1_idx, atom2_idx, order, stereo))
+        # プレビュー用: points, bonds_info から線を描画
+        # 設置用 context を保存
+        self.template_context = {
+            'points': points,
+            'bonds_info': bonds_info,
+            'atoms_data': atoms,
+            'attachment_atom': attachment_atom,
+        }
+        # 既存のプレビューアイテムを一旦クリア
+        for item in list(self.items()):
+            if isinstance(item, QGraphicsLineItem) and getattr(item, '_is_template_preview', False):
+                self.removeItem(item)
+
+        # Draw preview lines only using calculated points (do not access self.data.atoms)
+        for bond_info in bonds_info:
+            if isinstance(bond_info, (list, tuple)) and len(bond_info) >= 2:
+                i, j = bond_info[0], bond_info[1]
+                order = bond_info[2] if len(bond_info) > 2 else 1
+                # stereo = bond_info[3] if len(bond_info) > 3 else 0
+                if i < len(points) and j < len(points):
+                    line = QGraphicsLineItem(QLineF(points[i], points[j]))
+                    pen = QPen(Qt.black, 2 if order == 2 else 1)
+                    line.setPen(pen)
+                    line._is_template_preview = True  # フラグで区別
+                    self.addItem(line)
+        # Never access self.data.atoms here for preview-only atoms
 
     def leaveEvent(self, event):
         self.template_preview.hide(); super().leaveEvent(event)
@@ -6041,6 +7070,7 @@ class MainWindow(QMainWindow):
         self.is_xyz_derived = False  # XYZ由来の分子かどうかのフラグ
         self.axes_actor = None
         self.axes_widget = None
+        self._template_dialog = None  # テンプレートダイアログの参照
         self.undo_stack = []
         self.redo_stack = []
         self.mode_actions = {} 
@@ -6442,6 +7472,15 @@ class MainWindow(QMainWindow):
             toolbar.addAction(action)
             self.tool_group.addAction(action)
 
+        # Add USER button for user templates
+        user_template_action = QAction("USER", self)
+        user_template_action.setCheckable(True)
+        user_template_action.setToolTip("Open User Templates Dialog")
+        user_template_action.triggered.connect(self.open_template_dialog_and_activate)
+        self.mode_actions['template_user'] = user_template_action
+        toolbar.addAction(user_template_action)
+        self.tool_group.addAction(user_template_action)
+
         # 初期モードを'select'から'atom_C'（炭素原子描画モード）に変更
         self.set_mode('atom_C')
         # 対応するツールバーの'C'ボタンを選択状態にする
@@ -6520,10 +7559,10 @@ class MainWindow(QMainWindow):
         new_action.triggered.connect(self.clear_all)
         file_menu.addAction(new_action)
         
-        load_raw_action = QAction("&Open Project...", self)
-        load_raw_action.setShortcut("Ctrl+O")
-        load_raw_action.triggered.connect(self.load_raw_data)
-        file_menu.addAction(load_raw_action)
+        load_project_action = QAction("&Open Project...", self)
+        load_project_action.setShortcut("Ctrl+O")
+        load_project_action.triggered.connect(self.open_project_file)
+        file_menu.addAction(load_project_action)
         
         save_action = QAction("&Save Project", self)
         save_action.setShortcut("Ctrl+S")
@@ -6534,6 +7573,10 @@ class MainWindow(QMainWindow):
         save_as_action.setShortcut("Ctrl+Shift+S")
         save_as_action.triggered.connect(self.save_project_as)
         file_menu.addAction(save_as_action)
+        
+        save_template_action = QAction("Save 2D as Template...", self)
+        save_template_action.triggered.connect(self.save_2d_as_template)
+        file_menu.addAction(save_template_action)
         
         file_menu.addSeparator()
         
@@ -6564,6 +7607,13 @@ class MainWindow(QMainWindow):
         
         # === エクスポート ===
         export_menu = file_menu.addMenu("Export")
+        
+        # プロジェクト形式エクスポート
+        export_pmeraw_action = QAction("PME Raw Format...", self)
+        export_pmeraw_action.triggered.connect(self.save_raw_data)
+        export_menu.addAction(export_pmeraw_action)
+        
+        export_menu.addSeparator()
         
         # 2D エクスポート
         export_2d_menu = export_menu.addMenu("2D Formats")
@@ -6649,6 +7699,14 @@ class MainWindow(QMainWindow):
         optimize_3d_action.triggered.connect(self.optimize_3d_structure)
         edit_menu.addAction(optimize_3d_action)
 
+        edit_menu.addSeparator()
+        
+        # Templates
+        template_action = QAction("Templates...", self)
+        template_action.setShortcut(QKeySequence("Ctrl+T"))
+        template_action.triggered.connect(self.open_template_dialog)
+        edit_menu.addAction(template_action)
+        
         edit_menu.addSeparator()
         
         select_all_action = QAction("Select All", self); select_all_action.setShortcut(QKeySequence.StandardKey.SelectAll)
@@ -6856,11 +7914,7 @@ class MainWindow(QMainWindow):
 
         help_menu = menu_bar.addMenu("&Help")
         about_action = QAction("About", self)
-        about_action.triggered.connect(lambda: QMessageBox.about(
-            self,
-            "About MoleditPy",
-            f"MoleditPy Ver. {VERSION}\nAuthor: Hiromichi Yokoyama\nLicense: Apache-2.0"
-        ))
+        about_action.triggered.connect(self.show_about_dialog)
         help_menu.addAction(about_action)
 
         github_action = QAction("GitHub", self)
@@ -6890,9 +7944,13 @@ class MainWindow(QMainWindow):
         self.statusBar().showMessage(message)
 
     def set_mode(self, mode_str):
+        prev_mode = getattr(self.scene, 'mode', None)
         self.scene.mode = mode_str
-        self.view_2d.setMouseTracking(True) 
-        if not mode_str.startswith('template'):
+        self.view_2d.setMouseTracking(True)
+        # テンプレートモードから離れる場合はゴーストを消す
+        if prev_mode and prev_mode.startswith('template') and not mode_str.startswith('template'):
+            self.scene.clear_template_preview()
+        elif not mode_str.startswith('template'):
             self.scene.template_preview.hide()
 
         # カーソル形状の設定
@@ -6922,7 +7980,13 @@ class MainWindow(QMainWindow):
             self.view_2d.setDragMode(QGraphicsView.DragMode.NoDrag)
             self.view_2d.setMouseTracking(True)
         elif mode_str.startswith('template'):
-            self.statusBar().showMessage(f"Mode: {mode_str.split('_')[1].capitalize()} Template")
+            if mode_str.startswith('template_user'):
+                # User template mode
+                template_name = mode_str.replace('template_user_', '')
+                self.statusBar().showMessage(f"Mode: User Template ({template_name})")
+            else:
+                # Built-in template mode
+                self.statusBar().showMessage(f"Mode: {mode_str.split('_')[1].capitalize()} Template")
             self.view_2d.setDragMode(QGraphicsView.DragMode.NoDrag)
         elif mode_str == 'charge_plus':
             self.statusBar().showMessage("Mode: Increase Charge (Click on Atom)")
@@ -6942,8 +8006,33 @@ class MainWindow(QMainWindow):
 
     def set_mode_and_update_toolbar(self, mode_str):
         self.set_mode(mode_str)
+        # QAction→QToolButtonのマッピングを取得
+        toolbar = getattr(self, 'toolbar', None)
+        action_to_button = {}
+        if toolbar:
+            for key, action in self.mode_actions.items():
+                btn = toolbar.widgetForAction(action)
+                if btn:
+                    action_to_button[action] = btn
+
+        # すべてのモードボタンの選択解除＆色リセット
+        for key, action in self.mode_actions.items():
+            action.setChecked(False)
+            btn = action_to_button.get(action)
+            if btn:
+                btn.setStyleSheet("")
+
+        # テンプレート系（User含む）は全て同じスタイル適用
         if mode_str in self.mode_actions:
-            self.mode_actions[mode_str].setChecked(True)
+            action = self.mode_actions[mode_str]
+            action.setChecked(True)
+            btn = action_to_button.get(action)
+            if btn:
+                # テンプレート系は青、それ以外はクリア
+                if mode_str.startswith('template'):
+                    btn.setStyleSheet("background-color: #2196F3; color: white;")
+                else:
+                    btn.setStyleSheet("")
 
     def set_3d_style(self, style_name):
         """3D表示スタイルを設定し、ビューを更新する"""
@@ -7600,22 +8689,16 @@ class MainWindow(QMainWindow):
     def update_window_title(self):
         """ウィンドウタイトルを更新（保存状態を反映）"""
         base_title = f"MoleditPy Ver. {VERSION}"
-        
         if self.current_file_path:
             filename = os.path.basename(self.current_file_path)
             title = f"{filename} - {base_title}"
-        else:
-            # ファイルが開かれていない場合はUntitledを表示
             if self.has_unsaved_changes:
-                title = f"Untitled - {base_title}"
-            else:
-                title = base_title
-        
-        if self.has_unsaved_changes and self.current_file_path:
-            title = f"*{title}"
-        elif self.has_unsaved_changes and not self.current_file_path:
-            title = f"*{title}"
-        
+                title = f"*{title}"
+        else:
+            # Untitledファイルとして扱う
+            title = f"Untitled - {base_title}"
+            if self.has_unsaved_changes:
+                title = f"*{title}"
         self.setWindowTitle(title)
 
     def check_unsaved_changes(self):
@@ -7635,8 +8718,12 @@ class MainWindow(QMainWindow):
         )
         
         if reply == QMessageBox.StandardButton.Yes:
-            # 保存してから続行
-            self.save_project()
+            # 拡張子がPMEPRJでなければ「名前を付けて保存」
+            file_path = self.current_file_path
+            if not file_path or not file_path.lower().endswith('.pmeprj'):
+                self.save_project_as()
+            else:
+                self.save_project()
             return not self.has_unsaved_changes  # 保存に成功した場合のみTrueを返す
         elif reply == QMessageBox.StandardButton.No:
             return True  # 保存せずに続行
@@ -7712,6 +8799,11 @@ class MainWindow(QMainWindow):
         for item in self.scene.items():
             if isinstance(item, (AtomItem, BondItem)):
                 item.setSelected(True)
+
+    def show_about_dialog(self):
+        """Show the custom About dialog with Easter egg functionality"""
+        dialog = AboutDialog(self, self)
+        dialog.exec()
 
     def clear_all(self):
         # 未保存の変更があるかチェック
@@ -7849,6 +8941,9 @@ class MainWindow(QMainWindow):
     def load_from_smiles(self, smiles_string):
         """SMILES文字列から分子を読み込み、2Dエディタに表示する"""
         try:
+            if not self.check_unsaved_changes():
+                return  # ユーザーがキャンセルした場合は何もしない
+
             cleaned_smiles = smiles_string.strip()
             
             mol = Chem.MolFromSmiles(cleaned_smiles)
@@ -7919,6 +9014,8 @@ class MainWindow(QMainWindow):
 
             self.statusBar().showMessage(f"Successfully loaded from SMILES.")
             self.reset_undo_stack()
+            self.has_unsaved_changes = False
+            self.update_window_title()
             QTimer.singleShot(0, self.fit_to_view)
             
         except ValueError as e:
@@ -7931,6 +9028,8 @@ class MainWindow(QMainWindow):
     def load_from_inchi(self, inchi_string):
         """InChI文字列から分子を読み込み、2Dエディタに表示する"""
         try:
+            if not self.check_unsaved_changes():
+                return  # ユーザーがキャンセルした場合は何もしない
             cleaned_inchi = inchi_string.strip()
             
             mol = Chem.MolFromInchi(cleaned_inchi)
@@ -8000,6 +9099,8 @@ class MainWindow(QMainWindow):
 
             self.statusBar().showMessage(f"Successfully loaded from InChI.")
             self.reset_undo_stack()
+            self.has_unsaved_changes = False
+            self.update_window_title()
             QTimer.singleShot(0, self.fit_to_view)
             
         except ValueError as e:
@@ -8010,6 +9111,8 @@ class MainWindow(QMainWindow):
             traceback.print_exc()
 
     def load_mol_file(self, file_path=None):
+        if not self.check_unsaved_changes():
+                return  # ユーザーがキャンセルした場合は何もしない
         if not file_path:
             options = QFileDialog.Option.DontUseNativeDialog
             file_path, _ = QFileDialog.getOpenFileName(self, "Import MOL File", "", "Chemical Files (*.mol *.sdf);;All Files (*)", options=options)
@@ -8091,6 +9194,10 @@ class MainWindow(QMainWindow):
 
             self.statusBar().showMessage(f"Successfully loaded {file_path}")
             self.reset_undo_stack()
+            # NEWファイル扱い: ファイルパスをクリアし未保存状態はFalse（変更なければ保存警告なし）
+            self.current_file_path = file_path
+            self.has_unsaved_changes = False
+            self.update_window_title()
             QTimer.singleShot(0, self.fit_to_view)
             
         except FileNotFoundError:
@@ -8140,6 +9247,10 @@ class MainWindow(QMainWindow):
             
             self.statusBar().showMessage(f"3D Viewer Mode: Loaded {os.path.basename(file_path)}")
             self.reset_undo_stack()
+            # NEWファイル扱い: ファイルパスをクリアし未保存状態はFalse（変更なければ保存警告なし）
+            self.current_file_path = None
+            self.has_unsaved_changes = False
+            self.update_window_title()
 
         except FileNotFoundError:
             self.statusBar().showMessage(f"File not found: {file_path}", 5000)
@@ -8193,6 +9304,10 @@ class MainWindow(QMainWindow):
             
             self.statusBar().showMessage(f"3D Viewer Mode: Loaded {os.path.basename(file_path)}")
             self.reset_undo_stack()
+            # XYZファイル名をcurrent_file_pathにセットし、未保存状態はFalse
+            self.current_file_path = file_path
+            self.has_unsaved_changes = False
+            self.update_window_title()
 
         except FileNotFoundError:
             self.statusBar().showMessage(f"File not found: {file_path}", 5000)
@@ -8208,8 +9323,10 @@ class MainWindow(QMainWindow):
 
     def load_xyz_file(self, file_path):
         """XYZファイルを読み込んでRDKitのMolオブジェクトを作成する"""
-        import math
         from rdkit.Chem import rdGeometry
+            
+        if not self.check_unsaved_changes():
+            return  # ユーザーがキャンセルした場合は何もしない
         
         try:
             with open(file_path, 'r', encoding='utf-8') as f:
@@ -8385,7 +9502,7 @@ class MainWindow(QMainWindow):
         return len(bonds_added)
 
     def save_project(self):
-        """上書き保存（Ctrl+S）"""
+        """上書き保存（Ctrl+S）- デフォルトでPMEPRJ形式"""
         if not self.data.atoms and not self.current_mol: 
             self.statusBar().showMessage("Error: Nothing to save.")
             return
@@ -8393,9 +9510,16 @@ class MainWindow(QMainWindow):
         if self.current_file_path:
             # 既存のファイルに上書き保存
             try:
-                save_data = self.get_current_state()
-                with open(self.current_file_path, 'wb') as f: 
-                    pickle.dump(save_data, f)
+                if self.current_file_path.lower().endswith('.pmeraw'):
+                    # 既存のPMERAWファイルの場合はPMERAW形式で保存
+                    save_data = self.get_current_state()
+                    with open(self.current_file_path, 'wb') as f: 
+                        pickle.dump(save_data, f)
+                else:
+                    # PMEPRJ形式で保存
+                    json_data = self.create_json_data()
+                    with open(self.current_file_path, 'w', encoding='utf-8') as f: 
+                        json.dump(json_data, f, indent=2, ensure_ascii=False)
                 
                 # 保存成功時に状態をリセット
                 self.has_unsaved_changes = False
@@ -8405,7 +9529,7 @@ class MainWindow(QMainWindow):
                 
             except (OSError, IOError) as e:
                 self.statusBar().showMessage(f"File I/O error: {e}")
-            except pickle.PicklingError as e:
+            except (pickle.PicklingError, TypeError, ValueError) as e:
                 self.statusBar().showMessage(f"Data serialization error: {e}")
             except Exception as e: 
                 self.statusBar().showMessage(f"Error saving project file: {e}")
@@ -8416,23 +9540,28 @@ class MainWindow(QMainWindow):
             self.save_project_as()
 
     def save_project_as(self):
-        """名前を付けて保存（Ctrl+Shift+S）"""
+        """名前を付けて保存（Ctrl+Shift+S）- デフォルトでPMEPRJ形式"""
         if not self.data.atoms and not self.current_mol: 
             self.statusBar().showMessage("Error: Nothing to save.")
             return
             
         try:
-            save_data = self.get_current_state()
             options = QFileDialog.Option.DontUseNativeDialog
-            file_path, _ = QFileDialog.getSaveFileName(self, "Save Project As", "", "Project Files (*.pmeraw);;All Files (*)", options=options)
+            file_path, _ = QFileDialog.getSaveFileName(
+                self, "Save Project As", "", 
+                "PME Project Files (*.pmeprj);;All Files (*)", 
+                options=options
+            )
             if not file_path:
                 return
                 
-            if not file_path.lower().endswith('.pmeraw'): 
-                file_path += '.pmeraw'
-                
-            with open(file_path, 'wb') as f: 
-                pickle.dump(save_data, f)
+            if not file_path.lower().endswith('.pmeprj'): 
+                file_path += '.pmeprj'
+            
+            # JSONデータを保存
+            json_data = self.create_json_data()
+            with open(file_path, 'w', encoding='utf-8') as f: 
+                json.dump(json_data, f, indent=2, ensure_ascii=False)
             
             # 保存成功時に状態をリセット
             self.has_unsaved_changes = False
@@ -8499,12 +9628,13 @@ class MainWindow(QMainWindow):
             self.set_state_from_data(loaded_data)
             
             # ファイル読み込み時に状態をリセット
+            self.reset_undo_stack()
             self.has_unsaved_changes = False
             self.current_file_path = file_path
             self.update_window_title()
             
             self.statusBar().showMessage(f"Project loaded from {file_path}")
-            self.reset_undo_stack()
+            
             QTimer.singleShot(0, self.fit_to_view)
             
         except FileNotFoundError:
@@ -8517,6 +9647,358 @@ class MainWindow(QMainWindow):
             self.statusBar().showMessage(f"Error loading project file: {e}")
             import traceback
             traceback.print_exc()
+
+    def save_as_json(self):
+        """PMEJSONファイル形式で保存 (3D MOL情報含む)"""
+        if not self.data.atoms and not self.current_mol: 
+            self.statusBar().showMessage("Error: Nothing to save.")
+            return
+            
+        try:
+            options = QFileDialog.Option.DontUseNativeDialog
+            file_path, _ = QFileDialog.getSaveFileName(
+                self, "Save as PME Project", "", 
+                "PME Project Files (*.pmeprj);;All Files (*)", 
+                options=options
+            )
+            if not file_path:
+                return
+                
+            if not file_path.lower().endswith('.pmeprj'): 
+                file_path += '.pmeprj'
+            
+            # JSONデータを作成
+            json_data = self.create_json_data()
+            
+            # JSON形式で保存（美しい整形付き）
+            with open(file_path, 'w', encoding='utf-8') as f: 
+                json.dump(json_data, f, indent=2, ensure_ascii=False)
+            
+            # 保存成功時に状態をリセット
+            self.has_unsaved_changes = False
+            self.current_file_path = file_path
+            self.update_window_title()
+            
+            self.statusBar().showMessage(f"PME Project saved to {file_path}")
+            
+        except (OSError, IOError) as e:
+            self.statusBar().showMessage(f"File I/O error: {e}")
+        except (TypeError, ValueError) as e:
+            self.statusBar().showMessage(f"JSON serialization error: {e}")
+        except Exception as e: 
+            self.statusBar().showMessage(f"Error saving PME Project file: {e}")
+            import traceback
+            traceback.print_exc()
+
+    def create_json_data(self):
+        """現在の状態をPMEJSON形式のデータに変換"""
+        # 基本的なメタデータ
+        json_data = {
+            "format": "PME Project",
+            "version": "1.0",
+            "application": "MoleditPy",
+            "application_version": VERSION,
+            "created": str(QDateTime.currentDateTime().toString(Qt.DateFormat.ISODate)),
+            "is_3d_viewer_mode": not self.is_2d_editable
+        }
+        
+        # 2D構造データ
+        if self.data.atoms:
+            atoms_2d = []
+            for atom_id, data in self.data.atoms.items():
+                pos = data['item'].pos()
+                atom_data = {
+                    "id": atom_id,
+                    "symbol": data['symbol'],
+                    "x": pos.x(),
+                    "y": pos.y(),
+                    "charge": data.get('charge', 0),
+                    "radical": data.get('radical', 0)
+                }
+                atoms_2d.append(atom_data)
+            
+            bonds_2d = []
+            for (atom1_id, atom2_id), bond_data in self.data.bonds.items():
+                bond_info = {
+                    "atom1": atom1_id,
+                    "atom2": atom2_id,
+                    "order": bond_data['order'],
+                    "stereo": bond_data.get('stereo', 0)
+                }
+                bonds_2d.append(bond_info)
+            
+            json_data["2d_structure"] = {
+                "atoms": atoms_2d,
+                "bonds": bonds_2d,
+                "next_atom_id": self.data._next_atom_id
+            }
+        
+        # 3D分子データ
+        if self.current_mol and self.current_mol.GetNumConformers() > 0:
+            try:
+                # MOLデータをBase64エンコードで保存（バイナリデータの安全な保存）
+                import base64
+                mol_binary = self.current_mol.ToBinary()
+                mol_base64 = base64.b64encode(mol_binary).decode('ascii')
+                
+                # 3D座標を抽出
+                atoms_3d = []
+                if self.current_mol.GetNumConformers() > 0:
+                    conf = self.current_mol.GetConformer()
+                    for i in range(self.current_mol.GetNumAtoms()):
+                        atom = self.current_mol.GetAtomWithIdx(i)
+                        pos = conf.GetAtomPosition(i)
+                        atom_3d = {
+                            "index": i,
+                            "symbol": atom.GetSymbol(),
+                            "atomic_number": atom.GetAtomicNum(),
+                            "x": pos.x,
+                            "y": pos.y,
+                            "z": pos.z,
+                            "formal_charge": atom.GetFormalCharge(),
+                            "num_explicit_hs": atom.GetNumExplicitHs(),
+                            "num_implicit_hs": atom.GetNumImplicitHs()
+                        }
+                        atoms_3d.append(atom_3d)
+                
+                # 結合情報を抽出
+                bonds_3d = []
+                for bond in self.current_mol.GetBonds():
+                    bond_3d = {
+                        "atom1": bond.GetBeginAtomIdx(),
+                        "atom2": bond.GetEndAtomIdx(),
+                        "order": int(bond.GetBondType()),
+                        "is_aromatic": bond.GetIsAromatic(),
+                        "stereo": int(bond.GetStereo())
+                    }
+                    bonds_3d.append(bond_3d)
+                
+                json_data["3d_structure"] = {
+                    "mol_binary_base64": mol_base64,
+                    "atoms": atoms_3d,
+                    "bonds": bonds_3d,
+                    "num_conformers": self.current_mol.GetNumConformers()
+                }
+                
+                # 分子の基本情報
+                json_data["molecular_info"] = {
+                    "num_atoms": self.current_mol.GetNumAtoms(),
+                    "num_bonds": self.current_mol.GetNumBonds(),
+                    "molecular_weight": Descriptors.MolWt(self.current_mol),
+                    "formula": rdMolDescriptors.CalcMolFormula(self.current_mol)
+                }
+                
+                # SMILESとInChI（可能であれば）
+                try:
+                    json_data["identifiers"] = {
+                        "smiles": Chem.MolToSmiles(self.current_mol),
+                        "canonical_smiles": Chem.MolToSmiles(self.current_mol, canonical=True)
+                    }
+                    
+                    # InChI生成を試行
+                    try:
+                        inchi = Chem.MolToInchi(self.current_mol)
+                        inchi_key = Chem.MolToInchiKey(self.current_mol)
+                        json_data["identifiers"]["inchi"] = inchi
+                        json_data["identifiers"]["inchi_key"] = inchi_key
+                    except:
+                        pass  # InChI生成に失敗した場合は無視
+                        
+                except Exception as e:
+                    print(f"Warning: Could not generate molecular identifiers: {e}")
+                    
+            except Exception as e:
+                print(f"Warning: Could not process 3D molecular data: {e}")
+        else:
+            # 3D情報がない場合の記録
+            json_data["3d_structure"] = None
+            json_data["note"] = "No 3D structure available. Generate 3D coordinates first."
+        
+        return json_data
+
+    def load_json_data(self, file_path=None):
+        """PME Projectファイル形式を読み込み"""
+        if not file_path:
+            options = QFileDialog.Option.DontUseNativeDialog
+            file_path, _ = QFileDialog.getOpenFileName(
+                self, "Open PME Project File", "", 
+                "PME Project Files (*.pmeprj);;All Files (*)", 
+                options=options
+            )
+            if not file_path: 
+                return
+        
+        try:
+            with open(file_path, 'r', encoding='utf-8') as f: 
+                json_data = json.load(f)
+            
+            # フォーマット検証
+            if json_data.get("format") != "PME Project":
+                QMessageBox.warning(
+                    self, "Invalid Format", 
+                    "This file is not a valid PME Project format."
+                )
+                return
+            
+            # バージョン確認
+            file_version = json_data.get("version", "1.0")
+            if file_version != "1.0":
+                QMessageBox.information(
+                    self, "Version Notice", 
+                    f"This file was created with PME Project version {file_version}.\n"
+                    "Loading will be attempted but some features may not work correctly."
+                )
+            
+            self.restore_ui_for_editing()
+            self.load_from_json_data(json_data)
+            # ファイル読み込み時に状態をリセット
+            self.reset_undo_stack()
+            self.has_unsaved_changes = False
+            self.current_file_path = file_path
+            self.update_window_title()
+            
+            self.statusBar().showMessage(f"PME Project loaded from {file_path}")
+            
+            QTimer.singleShot(0, self.fit_to_view)
+            
+        except FileNotFoundError:
+            self.statusBar().showMessage(f"File not found: {file_path}")
+        except json.JSONDecodeError as e:
+            self.statusBar().showMessage(f"Invalid JSON format: {e}")
+        except (OSError, IOError) as e:
+            self.statusBar().showMessage(f"File I/O error: {e}")
+        except Exception as e: 
+            self.statusBar().showMessage(f"Error loading PME Project file: {e}")
+            import traceback
+            traceback.print_exc()
+
+    def open_project_file(self, file_path=None):
+        """プロジェクトファイルを開く（.pmeprjと.pmerawの両方に対応）"""
+        if not file_path:
+            options = QFileDialog.Option.DontUseNativeDialog
+            file_path, _ = QFileDialog.getOpenFileName(
+                self, "Open Project File", "", 
+                "PME Project Files (*.pmeprj);;PME Raw Files (*.pmeraw);;All Files (*)", 
+                options=options
+            )
+            if not file_path: 
+                return
+        
+        # 拡張子に応じて適切な読み込み関数を呼び出し
+        if file_path.lower().endswith('.pmeprj'):
+            self.load_json_data(file_path)
+        elif file_path.lower().endswith('.pmeraw'):
+            self.load_raw_data(file_path)
+        else:
+            # 拡張子不明の場合はJSONとして試行
+            try:
+                self.load_json_data(file_path)
+            except:
+                try:
+                    self.load_raw_data(file_path)
+                except:
+                    self.statusBar().showMessage("Error: Unable to determine file format.")
+
+    def load_from_json_data(self, json_data):
+        """JSONデータから状態を復元"""
+        self.dragged_atom_info = None
+        self.clear_2d_editor(push_to_undo=False)
+
+        # 3Dビューアーモードの設定
+        is_3d_mode = json_data.get("is_3d_viewer_mode", False)
+
+
+        # 2D構造データの復元
+        if "2d_structure" in json_data:
+            structure_2d = json_data["2d_structure"]
+            atoms_2d = structure_2d.get("atoms", [])
+            bonds_2d = structure_2d.get("bonds", [])
+
+            # 原子の復元
+            for atom_data in atoms_2d:
+                atom_id = atom_data["id"]
+                symbol = atom_data["symbol"]
+                pos = QPointF(atom_data["x"], atom_data["y"])
+                charge = atom_data.get("charge", 0)
+                radical = atom_data.get("radical", 0)
+
+                atom_item = AtomItem(atom_id, symbol, pos, charge=charge, radical=radical)
+                self.data.atoms[atom_id] = {
+                    'symbol': symbol,
+                    'pos': pos,
+                    'item': atom_item,
+                    'charge': charge,
+                    'radical': radical
+                }
+                self.scene.addItem(atom_item)
+
+            # next_atom_idの復元
+            self.data._next_atom_id = structure_2d.get(
+                "next_atom_id",
+                max([atom["id"] for atom in atoms_2d]) + 1 if atoms_2d else 0
+            )
+
+            # 結合の復元
+            for bond_data in bonds_2d:
+                atom1_id = bond_data["atom1"]
+                atom2_id = bond_data["atom2"]
+
+                if atom1_id in self.data.atoms and atom2_id in self.data.atoms:
+                    atom1_item = self.data.atoms[atom1_id]['item']
+                    atom2_item = self.data.atoms[atom2_id]['item']
+
+                    bond_order = bond_data["order"]
+                    stereo = bond_data.get("stereo", 0)
+
+                    bond_item = BondItem(atom1_item, atom2_item, bond_order, stereo=stereo)
+                    # 原子の結合リストに追加（重要：炭素原子の可視性判定で使用）
+                    atom1_item.bonds.append(bond_item)
+                    atom2_item.bonds.append(bond_item)
+
+                    self.data.bonds[(atom1_id, atom2_id)] = {
+                        'order': bond_order,
+                        'item': bond_item,
+                        'stereo': stereo
+                    }
+                    self.scene.addItem(bond_item)
+
+            # --- ここで全AtomItemのスタイルを更新（炭素原子の可視性を正しく反映） ---
+            for atom in self.data.atoms.values():
+                atom['item'].update_style()
+        # 3D構造データの復元
+        if "3d_structure" in json_data:
+            structure_3d = json_data["3d_structure"]
+            try:
+                # バイナリデータの復元
+                import base64
+                mol_base64 = structure_3d.get("mol_binary_base64")
+                if mol_base64:
+                    mol_binary = base64.b64decode(mol_base64.encode('ascii'))
+                    self.current_mol = Chem.Mol(mol_binary)
+                    if self.current_mol:
+                        # 3D座標の設定
+                        if self.current_mol.GetNumConformers() > 0:
+                            conf = self.current_mol.GetConformer()
+                            atoms_3d = structure_3d.get("atoms", [])
+                            self.atom_positions_3d = np.zeros((len(atoms_3d), 3))
+                            for atom_data in atoms_3d:
+                                idx = atom_data["index"]
+                                if idx < len(self.atom_positions_3d):
+                                    self.atom_positions_3d[idx] = [
+                                        atom_data["x"], 
+                                        atom_data["y"], 
+                                        atom_data["z"]
+                                    ]
+                        # 3D分子があれば必ず3D表示
+                        self.draw_molecule_3d(self.current_mol)
+                        # ViewerモードならUIも切り替え
+                        if is_3d_mode:
+                            self._enter_3d_viewer_ui_mode()
+                        else:
+                            self.is_2d_editable = True
+            except Exception as e:
+                print(f"Warning: Could not restore 3D molecular data: {e}")
+                self.current_mol = None
 
     def save_as_mol(self):
         try:
@@ -8640,7 +10122,7 @@ class MainWindow(QMainWindow):
             self.statusBar().showMessage(f"Error exporting STL: {e}")
 
     def export_obj_mtl(self):
-        """OBJ/MTLファイルとしてエクスポート（個別色付き）"""
+        """OBJ/MTLファイルとしてエクスポート（表示中のモデルベース、色付き）"""
         if not self.current_mol:
             self.statusBar().showMessage("Error: Please generate a 3D structure first.")
             return
@@ -8656,8 +10138,8 @@ class MainWindow(QMainWindow):
         try:
             import pyvista as pv
             
-            # 3Dビューから個別のメッシュデータを取得（オブジェクトごとに分離）
-            meshes_with_colors = self.export_individual_meshes_from_3d_view()
+            # 3Dビューから表示中のメッシュデータを色情報とともに取得
+            meshes_with_colors = self.export_from_3d_view_with_colors()
             
             if not meshes_with_colors:
                 self.statusBar().showMessage("No 3D geometry to export.")
@@ -8677,261 +10159,6 @@ class MainWindow(QMainWindow):
         except Exception as e:
             self.statusBar().showMessage(f"Error exporting OBJ/MTL: {e}")
 
-    def export_individual_meshes_from_3d_view(self):
-        """3Dビューから個別のメッシュデータを色情報とともに取得（分子データベース）"""
-        try:
-            import pyvista as pv
-            import numpy as np
-            import vtk
-            
-            meshes_with_colors = []
-            
-            # 分子データから直接色情報を取得
-            if self.current_mol is None:
-                return []
-            
-            mol = self.current_mol
-            conf = mol.GetConformer()
-            
-            # 原子ごとに個別のメッシュを作成
-            for i in range(mol.GetNumAtoms()):
-                atom = mol.GetAtomWithIdx(i)
-                symbol = atom.GetSymbol()
-                position = np.array(conf.GetAtomPosition(i))
-                
-                # CPKカラーから色を取得
-                color_rgb = CPK_COLORS_PV.get(symbol, [0.5, 0.5, 0.5])
-                color = [int(c * 255) for c in color_rgb]
-                
-                # 原子の半径を取得（設定値を反映）
-                if self.current_3d_style == 'cpk':
-                    base_radius = pt.GetRvdw(pt.GetAtomicNumber(symbol))
-                    radius = base_radius * self.settings.get('cpk_atom_scale', 1.0)
-                elif self.current_3d_style == 'wireframe':
-                    radius = 0.1  # Wireframeでは固定
-                elif self.current_3d_style == 'stick':
-                    radius = self.settings.get('stick_atom_radius', 0.15)
-                else:  # ball_and_stick
-                    base_radius = VDW_RADII.get(symbol, 0.4)
-                    radius = base_radius * self.settings.get('ball_stick_atom_scale', 1.0)
-                
-                # Wireframeモードでは原子を描画しない
-                if self.current_3d_style != 'wireframe':
-                    # 原子球体の解像度を設定値に基づいて決定
-                    if self.current_3d_style == 'cpk':
-                        atom_resolution = self.settings.get('cpk_resolution', 32)
-                    elif self.current_3d_style == 'stick':
-                        atom_resolution = self.settings.get('stick_resolution', 16)
-                    else:  # ball_and_stick
-                        atom_resolution = self.settings.get('ball_stick_resolution', 16)
-                    
-                    # 個別の原子球体を作成
-                    sphere = pv.Sphere(radius=radius, center=position, theta_resolution=atom_resolution, phi_resolution=atom_resolution)
-                    
-                    meshes_with_colors.append({
-                        'mesh': sphere,
-                        'color': color,
-                        'name': f'atom_{i}_{symbol}',
-                        'type': 'atom',
-                        'atom_index': i
-                    })
-            
-            # 結合ごとに個別のメッシュを作成
-            if self.current_3d_style in ['ball_and_stick', 'wireframe', 'stick']:
-                # スタイルに応じてボンドの太さを設定（設定値を反映）
-                if self.current_3d_style == 'wireframe':
-                    cyl_radius = self.settings.get('wireframe_bond_radius', 0.01)
-                    bond_resolution = self.settings.get('wireframe_resolution', 6)
-                elif self.current_3d_style == 'stick':
-                    cyl_radius = self.settings.get('stick_bond_radius', 0.15)
-                    bond_resolution = self.settings.get('stick_resolution', 16)
-                else:  # ball_and_stick
-                    cyl_radius = self.settings.get('ball_stick_bond_radius', 0.1)
-                    bond_resolution = self.settings.get('ball_stick_resolution', 16)
-                
-                bond_counter = 0
-                
-                for bond in mol.GetBonds():
-                    begin_atom_idx = bond.GetBeginAtomIdx()
-                    end_atom_idx = bond.GetEndAtomIdx()
-                    sp = np.array(conf.GetAtomPosition(begin_atom_idx))
-                    ep = np.array(conf.GetAtomPosition(end_atom_idx))
-                    bt = bond.GetBondType()
-                    
-                    # 結合の色を原子の色から決定
-                    begin_symbol = mol.GetAtomWithIdx(begin_atom_idx).GetSymbol()
-                    end_symbol = mol.GetAtomWithIdx(end_atom_idx).GetSymbol()
-                    begin_color = CPK_COLORS_PV.get(begin_symbol, [0.5, 0.5, 0.5])
-                    end_color = CPK_COLORS_PV.get(end_symbol, [0.5, 0.5, 0.5])
-                    begin_color_rgb = [int(c * 255) for c in begin_color]
-                    end_color_rgb = [int(c * 255) for c in end_color]
-                    
-                    c = (sp + ep) / 2
-                    d = ep - sp
-                    h = np.linalg.norm(d)
-                    if h == 0: 
-                        continue
-                    
-                    # 結合タイプに応じて描画
-                    if bt == Chem.rdchem.BondType.SINGLE or bt == Chem.rdchem.BondType.AROMATIC:
-                        # 単結合・芳香族結合の処理
-                        if self.current_3d_style == 'ball_and_stick':
-                            # Ball and stickはグレー（単一の円柱）
-                            cyl = pv.Cylinder(center=c, direction=d, radius=cyl_radius, height=h, resolution=bond_resolution)
-                            meshes_with_colors.append({
-                                'mesh': cyl,
-                                'color': [127, 127, 127],
-                                'name': f'bond_{bond_counter}_{begin_symbol}{begin_atom_idx}-{end_symbol}{end_atom_idx}',
-                                'type': 'bond'
-                            })
-                        else:
-                            # その他（stick, wireframe）は中央で色が変わる2つの円柱
-                            mid_point = (sp + ep) / 2
-                            
-                            # 前半（開始原子の色）
-                            cyl1 = pv.Cylinder(center=(sp + mid_point) / 2, direction=d, radius=cyl_radius, height=h/2, resolution=bond_resolution)
-                            meshes_with_colors.append({
-                                'mesh': cyl1,
-                                'color': begin_color_rgb,
-                                'name': f'bond_{bond_counter}_start_{begin_symbol}{begin_atom_idx}',
-                                'type': 'bond_segment'
-                            })
-                            
-                            # 後半（終了原子の色）
-                            cyl2 = pv.Cylinder(center=(mid_point + ep) / 2, direction=d, radius=cyl_radius, height=h/2, resolution=bond_resolution)
-                            meshes_with_colors.append({
-                                'mesh': cyl2,
-                                'color': end_color_rgb,
-                                'name': f'bond_{bond_counter}_end_{end_symbol}{end_atom_idx}',
-                                'type': 'bond_segment'
-                            })
-                    
-                    elif bt == Chem.rdchem.BondType.DOUBLE:
-                        # 二重結合の処理
-                        # 結合ベクトルに垂直な方向を求める
-                        d_norm = d / h
-                        # 適当な方向ベクトルとの外積で垂直ベクトルを作成
-                        if abs(d_norm[0]) < 0.9:
-                            perp = np.cross(d_norm, [1, 0, 0])
-                        else:
-                            perp = np.cross(d_norm, [0, 1, 0])
-                        perp = perp / np.linalg.norm(perp)
-                        
-                        # 2本の平行な円柱を作成（オフセット距離を設定値に基づいて調整）
-                        offset_factor = self.settings.get('double_bond_offset_factor', 2.0)
-                        offset_distance = cyl_radius * offset_factor
-                        offset1 = c + perp * offset_distance
-                        offset2 = c - perp * offset_distance
-                        
-                        # 各円柱の半径を設定値に基づいて調整
-                        radius_factor = self.settings.get('double_bond_radius_factor', 0.8)
-                        double_radius = cyl_radius * radius_factor
-                        
-                        if self.current_3d_style == 'ball_and_stick':
-                            # Ball and stickはグレー
-                            cyl1 = pv.Cylinder(center=offset1, direction=d, radius=double_radius, height=h, resolution=bond_resolution)
-                            cyl2 = pv.Cylinder(center=offset2, direction=d, radius=double_radius, height=h, resolution=bond_resolution)
-                            
-                            meshes_with_colors.append({
-                                'mesh': cyl1,
-                                'color': [127, 127, 127],
-                                'name': f'bond_{bond_counter}_double1_{begin_symbol}{begin_atom_idx}-{end_symbol}{end_atom_idx}',
-                                'type': 'double_bond'
-                            })
-                            meshes_with_colors.append({
-                                'mesh': cyl2,
-                                'color': [127, 127, 127],
-                                'name': f'bond_{bond_counter}_double2_{begin_symbol}{begin_atom_idx}-{end_symbol}{end_atom_idx}',
-                                'type': 'double_bond'
-                            })
-                        else:
-                            # その他は色分け
-                            mid_point = (sp + ep) / 2
-                            
-                            # 第1本目
-                            cyl1_start = pv.Cylinder(center=(sp + mid_point) / 2 + perp * offset_distance, direction=d, radius=double_radius, height=h/2, resolution=bond_resolution)
-                            cyl1_end = pv.Cylinder(center=(mid_point + ep) / 2 + perp * offset_distance, direction=d, radius=double_radius, height=h/2, resolution=bond_resolution)
-                            
-                            # 第2本目
-                            cyl2_start = pv.Cylinder(center=(sp + mid_point) / 2 - perp * offset_distance, direction=d, radius=double_radius, height=h/2, resolution=bond_resolution)
-                            cyl2_end = pv.Cylinder(center=(mid_point + ep) / 2 - perp * offset_distance, direction=d, radius=double_radius, height=h/2, resolution=bond_resolution)
-                            
-                            meshes_with_colors.extend([
-                                {'mesh': cyl1_start, 'color': begin_color_rgb, 'name': f'bond_{bond_counter}_double1_start_{begin_symbol}{begin_atom_idx}', 'type': 'double_bond_segment'},
-                                {'mesh': cyl1_end, 'color': end_color_rgb, 'name': f'bond_{bond_counter}_double1_end_{end_symbol}{end_atom_idx}', 'type': 'double_bond_segment'},
-                                {'mesh': cyl2_start, 'color': begin_color_rgb, 'name': f'bond_{bond_counter}_double2_start_{begin_symbol}{begin_atom_idx}', 'type': 'double_bond_segment'},
-                                {'mesh': cyl2_end, 'color': end_color_rgb, 'name': f'bond_{bond_counter}_double2_end_{end_symbol}{end_atom_idx}', 'type': 'double_bond_segment'}
-                            ])
-                    
-                    elif bt == Chem.rdchem.BondType.TRIPLE:
-                        # 三重結合の処理
-                        # 結合ベクトルに垂直な2つの方向を求める
-                        d_norm = d / h
-                        if abs(d_norm[0]) < 0.9:
-                            perp1 = np.cross(d_norm, [1, 0, 0])
-                        else:
-                            perp1 = np.cross(d_norm, [0, 1, 0])
-                        perp1 = perp1 / np.linalg.norm(perp1)
-                        perp2 = np.cross(d_norm, perp1)
-                        perp2 = perp2 / np.linalg.norm(perp2)
-                        
-                        # 3本の円柱を120度間隔で配置（オフセット距離を設定値に基づいて調整）
-                        offset_factor = self.settings.get('triple_bond_offset_factor', 2.0)
-                        offset_distance = cyl_radius * offset_factor
-                        angle_step = 2 * np.pi / 3  # 120度
-                        
-                        # 各円柱の半径を設定値に基づいて調整
-                        radius_factor = self.settings.get('triple_bond_radius_factor', 0.7)
-                        triple_radius = cyl_radius * radius_factor
-                        
-                        for i in range(3):
-                            angle = i * angle_step
-                            offset = perp1 * np.cos(angle) * offset_distance + perp2 * np.sin(angle) * offset_distance
-                            
-                            if self.current_3d_style == 'ball_and_stick':
-                                # Ball and stickはグレー
-                                cyl = pv.Cylinder(center=c + offset, direction=d, radius=triple_radius, height=h, resolution=bond_resolution)
-                                meshes_with_colors.append({
-                                    'mesh': cyl,
-                                    'color': [127, 127, 127],
-                                    'name': f'bond_{bond_counter}_triple{i+1}_{begin_symbol}{begin_atom_idx}-{end_symbol}{end_atom_idx}',
-                                    'type': 'triple_bond'
-                                })
-                            else:
-                                # その他は色分け
-                                mid_point = (sp + ep) / 2
-                                
-                                cyl_start = pv.Cylinder(center=(sp + mid_point) / 2 + offset, direction=d, radius=triple_radius, height=h/2, resolution=bond_resolution)
-                                cyl_end = pv.Cylinder(center=(mid_point + ep) / 2 + offset, direction=d, radius=triple_radius, height=h/2, resolution=bond_resolution)
-                                
-                                meshes_with_colors.extend([
-                                    {'mesh': cyl_start, 'color': begin_color_rgb, 'name': f'bond_{bond_counter}_triple{i+1}_start_{begin_symbol}{begin_atom_idx}', 'type': 'triple_bond_segment'},
-                                    {'mesh': cyl_end, 'color': end_color_rgb, 'name': f'bond_{bond_counter}_triple{i+1}_end_{end_symbol}{end_atom_idx}', 'type': 'triple_bond_segment'}
-                                ])
-                    
-                    else:
-                        # その他の結合タイプ（単結合として処理）
-                        if self.current_3d_style == 'ball_and_stick':
-                            cyl = pv.Cylinder(center=c, direction=d, radius=cyl_radius, height=h, resolution=bond_resolution)
-                            meshes_with_colors.append({
-                                'mesh': cyl,
-                                'color': [127, 127, 127],
-                                'name': f'bond_{bond_counter}_other_{begin_symbol}{begin_atom_idx}-{end_symbol}{end_atom_idx}',
-                                'type': 'bond'
-                            })
-                        else:
-                            mid_point = (sp + ep) / 2
-                            
-                            cyl1 = pv.Cylinder(center=(sp + mid_point) / 2, direction=d, radius=cyl_radius, height=h/2, resolution=bond_resolution)
-                            cyl2 = pv.Cylinder(center=(mid_point + ep) / 2, direction=d, radius=cyl_radius, height=h/2, resolution=bond_resolution)
-                            
-                            meshes_with_colors.extend([
-                                {'mesh': cyl1, 'color': begin_color_rgb, 'name': f'bond_{bond_counter}_other_start_{begin_symbol}{begin_atom_idx}', 'type': 'bond_segment'},
-                                {'mesh': cyl2, 'color': end_color_rgb, 'name': f'bond_{bond_counter}_other_end_{end_symbol}{end_atom_idx}', 'type': 'bond_segment'}
-                            ])
-                    
-                    bond_counter += 1
-            
             return meshes_with_colors
             
         except Exception as e:
@@ -9181,6 +10408,159 @@ class MainWindow(QMainWindow):
             
         except Exception:
             return None
+
+    def export_from_3d_view_with_colors(self):
+        """現在の3Dビューから直接メッシュデータを色情報とともに取得"""
+        try:
+            import pyvista as pv
+            import numpy as np
+            import vtk
+            
+            meshes_with_colors = []
+            
+            # PyVistaプロッターから全てのアクターを取得
+            renderer = self.plotter.renderer
+            actors = renderer.actors
+            
+            actor_count = 0
+            for actor_name, actor in actors.items():
+                try:
+                    # VTKアクターからポリデータを取得
+                    mesh = None
+                    
+                    # 方法1: mapperのinputから取得
+                    if hasattr(actor, 'mapper') and actor.mapper is not None:
+                        if hasattr(actor.mapper, 'input') and actor.mapper.input is not None:
+                            mesh = actor.mapper.input
+                        elif hasattr(actor.mapper, 'GetInput') and actor.mapper.GetInput() is not None:
+                            mesh = actor.mapper.GetInput()
+                    
+                    # 方法2: PyVistaプロッターの内部データから取得
+                    if mesh is None and actor_name in self.plotter.mesh:
+                        mesh = self.plotter.mesh[actor_name]
+                    
+                    if mesh is not None and hasattr(mesh, 'n_points') and mesh.n_points > 0:
+                        # PyVistaメッシュに変換（必要な場合）
+                        if not isinstance(mesh, pv.PolyData):
+                            if hasattr(mesh, 'extract_surface'):
+                                mesh = mesh.extract_surface()
+                            else:
+                                mesh = pv.wrap(mesh)
+                        
+                        # アクターから色情報を取得
+                        color = [128, 128, 128]  # デフォルト色（グレー）
+                        
+                        try:
+                            # VTKアクターのプロパティから色を取得
+                            if hasattr(actor, 'prop') and actor.prop is not None:
+                                vtk_color = actor.prop.GetColor()
+                                color = [int(c * 255) for c in vtk_color]
+                            elif hasattr(actor, 'GetProperty'):
+                                prop = actor.GetProperty()
+                                if prop is not None:
+                                    vtk_color = prop.GetColor()
+                                    color = [int(c * 255) for c in vtk_color]
+                        except:
+                            # 色取得に失敗した場合はデフォルト色をそのまま使用
+                            pass
+                        
+                        # メッシュのコピーを作成
+                        mesh_copy = mesh.copy()
+
+                        # もしメッシュに頂点ごとの色情報が含まれている場合、
+                        # それぞれの色ごとにサブメッシュに分割して個別マテリアルを作る。
+                        # これにより、glyphs（すべての原子が一つのメッシュにまとめられる場合）でも
+                        # 各原子の色を保持してOBJ/MTLへ出力できる。
+                        try:
+                            colors = None
+                            pd = mesh_copy.point_data
+                            # 優先的にred/green/blue配列を使用
+                            if 'red' in pd and 'green' in pd and 'blue' in pd:
+                                r = np.asarray(pd['red']).reshape(-1)
+                                g = np.asarray(pd['green']).reshape(-1)
+                                b = np.asarray(pd['blue']).reshape(-1)
+                                colors = np.vstack([r, g, b]).T
+                            # diffuse_* のキーもサポート
+                            elif 'diffuse_red' in pd and 'diffuse_green' in pd and 'diffuse_blue' in pd:
+                                r = np.asarray(pd['diffuse_red']).reshape(-1)
+                                g = np.asarray(pd['diffuse_green']).reshape(-1)
+                                b = np.asarray(pd['diffuse_blue']).reshape(-1)
+                                colors = np.vstack([r, g, b]).T
+                            # 単一の colors 配列があればそれを使う
+                            elif 'colors' in pd:
+                                colors = np.asarray(pd['colors'])
+
+                            if colors is not None and colors.size > 0:
+                                # 整数に変換。colors が 0-1 の float の場合は 255 倍して正規化する。
+                                colors_arr = np.asarray(colors)
+                                # 期待形状に整形
+                                if colors_arr.ndim == 1:
+                                    # 1次元の場合は単一チャンネルとして扱う
+                                    colors_arr = colors_arr.reshape(-1, 1)
+
+                                # float かどうか判定して正規化
+                                if np.issubdtype(colors_arr.dtype, np.floating):
+                                    # 値の最大が1付近なら0-1レンジとみなして255倍
+                                    if colors_arr.max() <= 1.01:
+                                        colors_int = np.clip((colors_arr * 255.0).round(), 0, 255).astype(np.int32)
+                                    else:
+                                        # 既に0-255レンジのfloatならそのまま丸める
+                                        colors_int = np.clip(colors_arr.round(), 0, 255).astype(np.int32)
+                                else:
+                                    colors_int = np.clip(colors_arr, 0, 255).astype(np.int32)
+                                # Ensure shape is (n_points, 3)
+                                if colors_int.ndim == 1:
+                                    # 単一値が入っている場合は同一RGBとして扱う
+                                    colors_int = np.vstack([colors_int, colors_int, colors_int]).T
+
+                                # 一意な色ごとにサブメッシュを抽出して追加
+                                unique_colors, inverse = np.unique(colors_int, axis=0, return_inverse=True)
+                                if unique_colors.shape[0] > 1:
+                                    for uc_idx, uc in enumerate(unique_colors):
+                                        point_inds = np.where(inverse == uc_idx)[0]
+                                        if point_inds.size == 0:
+                                            continue
+                                        try:
+                                            submesh = mesh_copy.extract_points(point_inds, adjacent_cells=True)
+                                        except Exception:
+                                            # extract_points が利用できない場合はスキップ
+                                            continue
+                                        if submesh is None or getattr(submesh, 'n_points', 0) == 0:
+                                            continue
+                                        color_rgb = [int(uc[0]), int(uc[1]), int(uc[2])]
+                                        meshes_with_colors.append({
+                                            'mesh': submesh,
+                                            'color': color_rgb,
+                                            'name': f'{actor_name}_color_{uc_idx}',
+                                            'type': 'display_actor',
+                                            'actor_name': actor_name
+                                        })
+                                    actor_count += 1
+                                    # 分割したので以下の通常追加は行わない
+                                    continue
+                        except Exception:
+                            # 分割処理に失敗した場合はフォールバックで単体メッシュを追加
+                            pass
+
+                        meshes_with_colors.append({
+                            'mesh': mesh_copy,
+                            'color': color,
+                            'name': f'actor_{actor_count}_{actor_name}',
+                            'type': 'display_actor',
+                            'actor_name': actor_name
+                        })
+                        
+                        actor_count += 1
+                            
+                except Exception as e:
+                    print(f"Error processing actor {actor_name}: {e}")
+                    continue
+            
+            return meshes_with_colors
+            
+        except Exception as e:
+            print(f"Error in export_from_3d_view_with_colors: {e}")
+            return []
 
     def export_2d_png(self):
         if not self.data.atoms:
@@ -10139,6 +11519,7 @@ class MainWindow(QMainWindow):
                 self.show_atom_id_action.setChecked(False)
                 self.clear_all_atom_info_labels()
 
+
     def show_all_atom_info(self):
         """すべての原子に情報を表示"""
         if self.atom_info_display_mode is None or not hasattr(self, 'atom_positions_3d') or self.atom_positions_3d is None:
@@ -10150,10 +11531,7 @@ class MainWindow(QMainWindow):
         # 各原子に対してラベルを作成
         texts = []
         positions = []
-        
-        for atom_idx in range(len(self.atom_positions_3d)):
-            pos = self.atom_positions_3d[atom_idx]
-            
+        for atom_idx, pos in enumerate(self.atom_positions_3d):
             if self.atom_info_display_mode == 'id':
                 # Original IDがある場合は優先表示、なければRDKitインデックス
                 try:
@@ -10184,7 +11562,6 @@ class MainWindow(QMainWindow):
                     text = "?"
             else:
                 continue
-            
             texts.append(text)
             positions.append(pos)
         
@@ -10281,20 +11658,48 @@ class MainWindow(QMainWindow):
             self.reset_zoom()
             return
             
-        bounds = self.scene.itemsBoundingRect()
+        # 合計の表示矩形（目に見えるアイテムのみ）を計算
         visible_items_rect = QRectF()
         for item in self.scene.items():
             if item.isVisible() and not isinstance(item, TemplatePreviewItem):
-                 if visible_items_rect.isEmpty():
-                     visible_items_rect = item.sceneBoundingRect()
-                 else:
-                     visible_items_rect = visible_items_rect.united(item.sceneBoundingRect())
-        
-        if not visible_items_rect.isEmpty():
-             self.view_2d.fitInView(visible_items_rect, Qt.AspectRatioMode.KeepAspectRatio)
-             self.view_2d.scale(0.6, 0.6)
-        else:
-             self.reset_zoom()
+                if visible_items_rect.isEmpty():
+                    visible_items_rect = item.sceneBoundingRect()
+                else:
+                    visible_items_rect = visible_items_rect.united(item.sceneBoundingRect())
+
+        if visible_items_rect.isEmpty():
+            self.reset_zoom()
+            return
+
+        # 少し余白を持たせる（パディング）
+        padding_factor = 1.10  # 10% の余裕
+        cx = visible_items_rect.center().x()
+        cy = visible_items_rect.center().y()
+        w = visible_items_rect.width() * padding_factor
+        h = visible_items_rect.height() * padding_factor
+        padded = QRectF(cx - w / 2.0, cy - h / 2.0, w, h)
+
+        # フィット時にマウス位置に依存するアンカーが原因でジャンプすることがあるため
+        # 一時的にトランスフォームアンカーをビュー中心にしてから fitInView を呼ぶ
+        try:
+            old_ta = self.view_2d.transformationAnchor()
+            old_ra = self.view_2d.resizeAnchor()
+        except Exception:
+            old_ta = old_ra = None
+
+        try:
+            self.view_2d.setTransformationAnchor(QGraphicsView.ViewportAnchor.AnchorViewCenter)
+            self.view_2d.setResizeAnchor(QGraphicsView.ViewportAnchor.AnchorViewCenter)
+            self.view_2d.fitInView(padded, Qt.AspectRatioMode.KeepAspectRatio)
+        finally:
+            # 元のアンカーを復元
+            try:
+                if old_ta is not None:
+                    self.view_2d.setTransformationAnchor(old_ta)
+                if old_ra is not None:
+                    self.view_2d.setResizeAnchor(old_ra)
+            except Exception:
+                pass
 
     def toggle_3d_edit_mode(self, checked):
         """「3D Edit」ボタンの状態に応じて編集モードを切り替える"""
@@ -10324,6 +11729,8 @@ class MainWindow(QMainWindow):
         
     def load_mol_file_for_3d_viewing(self, file_path=None):
         """MOL/SDFファイルを3Dビューアーで開く"""
+        if not self.check_unsaved_changes():
+                return  # ユーザーがキャンセルした場合は何もしない
         if not file_path:
             file_path, _ = QFileDialog.getOpenFileName(
                 self, "Open MOL/SDF File", "", 
@@ -10333,12 +11740,12 @@ class MainWindow(QMainWindow):
                 return
         
         try:
-            # RDKitでMOL/SDFファイルを読み込み
+            # RDKitでMOL/SDFファイルを読み込み（水素を除去しない）
             if file_path.lower().endswith('.sdf'):
-                suppl = Chem.SDMolSupplier(file_path)
+                suppl = Chem.SDMolSupplier(file_path, removeHs=False)
                 mol = next(suppl, None)
             else:
-                mol = Chem.MolFromMolFile(file_path)
+                mol = Chem.MolFromMolFile(file_path, removeHs=False)
             
             if mol is None:
                 self.statusBar().showMessage(f"Failed to load molecule from {file_path}")
@@ -10370,6 +11777,12 @@ class MainWindow(QMainWindow):
             
             self.statusBar().showMessage(f"Loaded {file_path} in 3D viewer")
             
+            self.reset_undo_stack()
+            self.has_unsaved_changes = False  # ファイル読込直後は未変更扱い
+            self.current_file_path = file_path
+            self.update_window_title()
+            
+
         except Exception as e:
             self.statusBar().showMessage(f"Error loading MOL/SDF file: {e}")
     
@@ -10384,18 +11797,18 @@ class MainWindow(QMainWindow):
             self.load_mol_file_for_3d_viewing(file_path)
         elif file_ext == 'xyz':
             self.load_xyz_for_3d_viewing(file_path)
-        elif file_ext == 'pmeraw':
-            self.load_raw_data(file_path=file_path)
+        elif file_ext in ['pmeraw', 'pmeprj']:
+            self.open_project_file(file_path=file_path)
         else:
             self.statusBar().showMessage(f"Unsupported file type: {file_ext}")
         
     def dragEnterEvent(self, event):
-        """ウィンドウ全体で .pmeraw、.mol、.sdf、.xyz ファイルのドラッグを受け入れる"""
+        """ウィンドウ全体で .pmeraw、.pmeprj、.mol、.sdf、.xyz ファイルのドラッグを受け入れる"""
         if event.mimeData().hasUrls():
             urls = event.mimeData().urls()
             if urls and urls[0].isLocalFile():
                 file_path = urls[0].toLocalFile()
-                if file_path.lower().endswith(('.pmeraw', '.mol', '.sdf', '.xyz')):
+                if file_path.lower().endswith(('.pmeraw', '.pmeprj', '.mol', '.sdf', '.xyz')):
                     event.acceptProposedAction()
                     return
         event.ignore()
@@ -10405,32 +11818,28 @@ class MainWindow(QMainWindow):
         urls = event.mimeData().urls()
         if urls and urls[0].isLocalFile():
             file_path = urls[0].toLocalFile()
-            
             # ドロップ位置を取得
             drop_pos = event.position().toPoint()
-            
             # 拡張子に応じて適切な読み込みメソッドを呼び出す
-            if file_path.lower().endswith('.pmeraw'):
-                self.load_raw_data(file_path=file_path)
+            if file_path.lower().endswith((".pmeraw", ".pmeprj")):
+                self.open_project_file(file_path=file_path)
+                QTimer.singleShot(100, self.fit_to_view)  # 遅延でFit
                 event.acceptProposedAction()
-            elif file_path.lower().endswith(('.mol', '.sdf')):
-                # MOL/SDFファイルは3Dビューアー領域にドロップされたかを判定
+            elif file_path.lower().endswith((".mol", ".sdf")):
                 plotter_widget = self.splitter.widget(1)  # 3Dビューアーウィジェット
                 plotter_rect = plotter_widget.geometry()
-                
                 if plotter_rect.contains(drop_pos):
-                    # 3Dビューアー領域にドロップ → 3Dビューアーで開く
                     self.load_mol_file_for_3d_viewing(file_path=file_path)
                 else:
-                    # 2D領域にドロップ → 従来の2D読み込み
-                    if hasattr(self, 'load_mol_file'):
+                    if hasattr(self, "load_mol_file"):
                         self.load_mol_file(file_path=file_path)
                     else:
                         self.statusBar().showMessage("MOL file import not implemented for 2D editor.")
+                QTimer.singleShot(100, self.fit_to_view)  # 遅延でFit
                 event.acceptProposedAction()
-            elif file_path.lower().endswith('.xyz'):
-                # XYZファイルは常に3Dビューアーで開く
+            elif file_path.lower().endswith(".xyz"):
                 self.load_xyz_for_3d_viewing(file_path=file_path)
+                QTimer.singleShot(100, self.fit_to_view)  # 遅延でFit
                 event.acceptProposedAction()
             else:
                 self.statusBar().showMessage(f"Unsupported file type: {file_path}")
@@ -10591,6 +12000,117 @@ class MainWindow(QMainWindow):
                     handle = self.splitter.handle(1)
                     if handle:
                         handle.setToolTip(f"2D: {left_percent}% | 3D: {right_percent}%")
+
+    def open_template_dialog(self):
+        """テンプレートダイアログを開く"""
+        dialog = UserTemplateDialog(self, self)
+        dialog.exec()
+    
+    def open_template_dialog_and_activate(self):
+        """テンプレートダイアログを開き、テンプレートがメイン画面で使用できるようにする"""
+        # 既存のダイアログがあるかチェック
+        if hasattr(self, '_template_dialog') and self._template_dialog and not self._template_dialog.isHidden():
+            # 既存のダイアログを前面に表示
+            self._template_dialog.raise_()
+            self._template_dialog.activateWindow()
+            return
+        
+        # 新しいダイアログを作成
+        self._template_dialog = UserTemplateDialog(self, self)
+        self._template_dialog.show()  # モードレスで表示
+        
+        # ダイアログが閉じられた後、テンプレートが選択されていればアクティブ化
+        def on_dialog_finished():
+            if hasattr(self._template_dialog, 'selected_template') and self._template_dialog.selected_template:
+                template_name = self._template_dialog.selected_template.get('name', 'user_template')
+                mode_name = f"template_user_{template_name}"
+                
+                # Store template data for the scene to use
+                self.scene.user_template_data = self._template_dialog.selected_template
+                self.set_mode(mode_name)
+                
+                # Update status
+                self.statusBar().showMessage(f"Template mode: {template_name}")
+        
+        self._template_dialog.finished.connect(on_dialog_finished)
+    
+    def save_2d_as_template(self):
+        """現在の2D構造をテンプレートとして保存"""
+        if not self.data.atoms:
+            QMessageBox.warning(self, "Warning", "No structure to save as template.")
+            return
+        
+        # Get template name
+        name, ok = QInputDialog.getText(self, "Save Template", "Enter template name:")
+        if not ok or not name.strip():
+            return
+        
+        name = name.strip()
+        
+        try:
+            # Template directory
+            template_dir = os.path.join(self.settings_dir, 'user-templates')
+            if not os.path.exists(template_dir):
+                os.makedirs(template_dir)
+            
+            # Convert current structure to template format
+            atoms_data = []
+            bonds_data = []
+            
+            # Convert atoms
+            for atom_id, atom_info in self.data.atoms.items():
+                pos = atom_info['pos']
+                atoms_data.append({
+                    'id': atom_id,
+                    'symbol': atom_info['symbol'],
+                    'x': pos.x(),
+                    'y': pos.y(),
+                    'charge': atom_info.get('charge', 0),
+                    'radical': atom_info.get('radical', 0)
+                })
+            
+            # Convert bonds
+            for (atom1_id, atom2_id), bond_info in self.data.bonds.items():
+                bonds_data.append({
+                    'atom1': atom1_id,
+                    'atom2': atom2_id,
+                    'order': bond_info['order'],
+                    'stereo': bond_info.get('stereo', 0)
+                })
+            
+            # Create template data
+            template_data = {
+                'name': name,
+                'version': '1.0',
+                'created': str(QDateTime.currentDateTime().toString()),
+                'atoms': atoms_data,
+                'bonds': bonds_data
+            }
+            
+            # Save to file
+            filename = f"{name.replace(' ', '_')}.pmetmplt"
+            filepath = os.path.join(template_dir, filename)
+            
+            if os.path.exists(filepath):
+                reply = QMessageBox.question(
+                    self, "Overwrite Template",
+                    f"Template '{name}' already exists. Overwrite?",
+                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+                )
+                if reply != QMessageBox.StandardButton.Yes:
+                    return
+            
+            with open(filepath, 'w', encoding='utf-8') as f:
+                json.dump(template_data, f, indent=2, ensure_ascii=False)
+            
+            # Mark as saved (no unsaved changes for this operation)
+            self.has_unsaved_changes = False
+            self.update_window_title()
+            
+            QMessageBox.information(self, "Success", f"Template '{name}' saved successfully.")
+            
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to save template: {str(e)}")
 
     def setup_splitter_tooltip(self):
         """スプリッターハンドルの初期ツールチップを設定"""
