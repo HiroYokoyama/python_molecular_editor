@@ -11,7 +11,7 @@ DOI 10.5281/zenodo.17268532
 """
 
 #Version
-VERSION = '1.9.0'
+VERSION = '1.9.1'
 
 print("-----------------------------------------------------")
 print("MoleditPy — A Python-based molecular editing software")
@@ -1025,9 +1025,6 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog):
             # 移動ベクトルを計算
             translation_vector = target_pos - current_centroid
 
-            # Undo状態を保存
-            self.main_window.push_undo_state()
-
             # 全原子を平行移動
             conf = self.mol.GetConformer()
             for i in range(self.mol.GetNumAtoms()):
@@ -1035,6 +1032,7 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog):
                 new_pos = atom_pos + translation_vector
                 conf.SetAtomPosition(i, new_pos.tolist())
                 self.main_window.atom_positions_3d[i] = new_pos
+
 
             # 3D表示を更新
             self.main_window.draw_molecule_3d(self.mol)
@@ -1044,6 +1042,9 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog):
 
             # Apply後に選択解除
             self.clear_selection()
+
+            # Undo状態を保存
+            self.main_window.push_undo_state()
 
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to apply translation: {str(e)}")
@@ -1522,8 +1523,6 @@ class SymmetrizeDialog(QDialog):
         key, point_group = self.get_selected_point_group()
         
         try:
-            # Undo状態を保存（操作前の状態のみ）
-            self.main_window.push_undo_state()
             
             # 現在の分子の座標を取得
             conf = self.mol.GetConformer()
@@ -1544,6 +1543,9 @@ class SymmetrizeDialog(QDialog):
             
             # 3D表示のみを更新
             self.main_window.draw_molecule_3d(self.mol)
+
+            # Undo状態を保存（操作前の状態のみ）
+            self.main_window.push_undo_state()
             
             # 成功メッセージ（ダイアログを閉じる前に表示）
             QMessageBox.information(
@@ -2659,7 +2661,8 @@ class MirrorDialog(QDialog):
             
             plane_names = ["XY", "XZ", "YZ"]
             self.main_window.statusBar().showMessage(f"Molecule mirrored across {plane_names[plane_id]} plane.")
-            
+        
+
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to apply mirror transformation: {str(e)}")
 
@@ -2816,26 +2819,26 @@ class PlanarizationDialog(Dialog3DPickingMixin, QDialog):
         if len(self.selected_atoms) < 3:
             QMessageBox.warning(self, "Warning", "Please select at least 3 atoms for planarization.")
             return
-        
         try:
+
             # 選択された原子の位置を取得
             selected_indices = list(self.selected_atoms)
             selected_positions = self.main_window.atom_positions_3d[selected_indices].copy()
-            
+
             # 重心を計算
             centroid = np.mean(selected_positions, axis=0)
-            
+
             # 重心を原点に移動
             centered_positions = selected_positions - centroid
-            
+
             # 主成分分析で最適な平面を見つける
             # 選択された原子の座標の共分散行列を計算
             cov_matrix = np.cov(centered_positions.T)
             eigenvalues, eigenvectors = np.linalg.eigh(cov_matrix)
-            
+
             # 固有値が最も小さい固有ベクトルが平面の法線方向
             normal_vector = eigenvectors[:, 0]  # 最小固有値に対応する固有ベクトル
-            
+
             # 目標の平面の法線ベクトルを定義
             if self.plane == 'xy':
                 target_normal = np.array([0, 0, 1])  # Z軸方向
@@ -2843,27 +2846,27 @@ class PlanarizationDialog(Dialog3DPickingMixin, QDialog):
                 target_normal = np.array([0, 1, 0])  # Y軸方向
             elif self.plane == 'yz':
                 target_normal = np.array([1, 0, 0])  # X軸方向
-            
+
             # 法線ベクトルの向きを調整（内積が正になるように）
             if np.dot(normal_vector, target_normal) < 0:
                 normal_vector = -normal_vector
-            
+
             # 回転軸と回転角度を計算
             rotation_axis = np.cross(normal_vector, target_normal)
             rotation_axis_norm = np.linalg.norm(rotation_axis)
-            
+
             if rotation_axis_norm > 1e-10:  # 回転が必要な場合
                 rotation_axis = rotation_axis / rotation_axis_norm
                 cos_angle = np.dot(normal_vector, target_normal)
                 cos_angle = np.clip(cos_angle, -1.0, 1.0)
                 rotation_angle = np.arccos(cos_angle)
-                
+
                 # Rodrigues回転公式を使用して全分子を回転
                 def rodrigues_rotation(v, axis, angle):
                     cos_a = np.cos(angle)
                     sin_a = np.sin(angle)
                     return v * cos_a + np.cross(axis, v) * sin_a + axis * np.dot(axis, v) * (1 - cos_a)
-                
+
                 # 分子全体を回転させる
                 conf = self.mol.GetConformer()
                 for i in range(self.mol.GetNumAtoms()):
@@ -2874,13 +2877,16 @@ class PlanarizationDialog(Dialog3DPickingMixin, QDialog):
                     new_pos = rotated_pos + centroid
                     conf.SetAtomPosition(i, new_pos.tolist())
                     self.main_window.atom_positions_3d[i] = new_pos
-            
+
             # 3D表示を更新
             self.main_window.draw_molecule_3d(self.mol)
-            
+
             # キラルラベルを更新
             self.main_window.update_chiral_labels()
-            
+
+            # Undo状態を保存
+            self.main_window.push_undo_state()
+
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to apply planarization: {str(e)}")
     
@@ -3056,27 +3062,27 @@ class AlignmentDialog(Dialog3DPickingMixin, QDialog):
         if len(self.selected_atoms) != 2:
             QMessageBox.warning(self, "Warning", "Please select exactly 2 atoms for alignment.")
             return
-        
         try:
+
             selected_list = sorted(list(self.selected_atoms))
             atom1_idx, atom2_idx = selected_list[0], selected_list[1]
-            
+
             conf = self.mol.GetConformer()
-            
+
             # 原子の現在位置を取得
             pos1 = np.array(conf.GetAtomPosition(atom1_idx))
             pos2 = np.array(conf.GetAtomPosition(atom2_idx))
-            
+
             # 最初に全分子を移動して、atom1を原点に配置
             translation = -pos1
             for i in range(self.mol.GetNumAtoms()):
                 current_pos = np.array(conf.GetAtomPosition(i))
                 new_pos = current_pos + translation
                 conf.SetAtomPosition(i, new_pos.tolist())
-            
+
             # atom2の新しい位置を取得（移動後）
             pos2_translated = pos2 + translation
-            
+
             # atom2を選択した軸上に配置するための回転を計算
             axis_vectors = {
                 'x': np.array([1.0, 0.0, 0.0]),
@@ -3126,6 +3132,9 @@ class AlignmentDialog(Dialog3DPickingMixin, QDialog):
             
             # キラルラベルを更新
             self.main_window.update_chiral_labels()
+
+            # Undo状態を保存
+            self.main_window.push_undo_state()
             
             QMessageBox.information(self, "Success", f"Alignment to {self.axis.upper()}-axis completed.")
             
@@ -4903,7 +4912,7 @@ class MoleculeScene(QGraphicsScene):
         return points
 
     def delete_items(self, items_to_delete):
-        """指定されたアイテムセット（原子・結合）を安全に削除する共通メソッド"""
+        """指定されたアイテムセット（原子・結合）を安全な順序で削除する修正版"""
         try:
             if not items_to_delete:
                 return False
@@ -4916,7 +4925,7 @@ class MoleculeScene(QGraphicsScene):
                 if hasattr(atom, 'bonds'):
                     bonds_to_delete.update(atom.bonds)
 
-            # 影響を受ける（が削除はされない）原子を特定する
+            # 削除はされないが、影響を受ける原子（結合リストの更新が必要）を特定する
             atoms_to_update = set()
             for bond in bonds_to_delete:
                 if bond.atom1 and bond.atom1 not in atoms_to_delete:
@@ -4924,62 +4933,49 @@ class MoleculeScene(QGraphicsScene):
                 if bond.atom2 and bond.atom2 not in atoms_to_delete:
                     atoms_to_update.add(bond.atom2)
 
-            # --- データモデルからの削除 ---
-            # 最初に原子をデータモデルから削除（関連する結合も内部で削除される）
-            for atom in atoms_to_delete:
-                if hasattr(atom, 'atom_id'):
-                    self.data.remove_atom(atom.atom_id)
-                    
-            # 次に、明示的に選択された結合（まだ残っているもの）を削除
-            for bond in bonds_to_delete:
-                if bond.atom1 and bond.atom2 and hasattr(bond.atom1, 'atom_id') and hasattr(bond.atom2, 'atom_id'):
-                    self.data.remove_bond(bond.atom1.atom_id, bond.atom2.atom_id)
-            
-            # --- シーンからのグラフィックアイテム削除（必ず結合を先に）---
-            # まずremoveItem
+            # --- 安全な順序で削除処理を実行 ---
+
+            # 1. まず、生き残る原子の内部状態を更新する
+            for atom in atoms_to_update:
+                if hasattr(atom, 'bonds'):
+                    # これから削除される結合を自身の結合リストから除去する
+                    atom.bonds = [b for b in atom.bonds if b not in bonds_to_delete]
+
+            # 2. 次に、グラフィックシーンからアイテムを削除する（必ず結合を先に）
             for bond in bonds_to_delete:
                 if bond.scene(): 
                     self.removeItem(bond)
-                    
             for atom in atoms_to_delete:
                 if atom.scene(): 
                     self.removeItem(atom)
             
-            # その後BondItem/AtomItemの参照をクリア
+            # 3. データモデル（MolecularData）からデータを削除する
+            # ここでは安全なIDを使って操作する
             for bond in bonds_to_delete:
-                # atom1/atom2のbondsリストからこのbondを除去
-                try:
-                    if bond.atom1 and hasattr(bond.atom1, 'bonds') and bond in bond.atom1.bonds:
-                        bond.atom1.bonds = [b for b in bond.atom1.bonds if b is not bond]
-                    if bond.atom2 and hasattr(bond.atom2, 'bonds') and bond in bond.atom2.bonds:
-                        bond.atom2.bonds = [b for b in bond.atom2.bonds if b is not bond]
-                    # Clear bond references to prevent dangling pointers
-                    bond.atom1 = None
-                    bond.atom2 = None
-                except Exception as bond_cleanup_error:
-                    print(f"Error cleaning up bond references: {bond_cleanup_error}")
-            
+                # 参照が既にクリアされている可能性を考慮
+                if bond.atom1 and bond.atom2:
+                    self.data.remove_bond(bond.atom1.atom_id, bond.atom2.atom_id)
             for atom in atoms_to_delete:
-                # Clear all bond references from deleted atoms
-                try:
-                    if hasattr(atom, 'bonds'):
-                        atom.bonds.clear()
-                except Exception as atom_cleanup_error:
-                    print(f"Error cleaning up atom references: {atom_cleanup_error}")
+                if hasattr(atom, 'atom_id'):
+                    self.data.remove_atom(atom.atom_id)
 
-            # --- 生き残った原子の内部参照とスタイルを更新 ---
+            # 4. 削除されたオブジェクト間の参照をクリアし、メモリ解放を助ける
+            for bond in bonds_to_delete:
+                bond.atom1 = None
+                bond.atom2 = None
+            for atom in atoms_to_delete:
+                if hasattr(atom, 'bonds'):
+                    atom.bonds.clear()
+
+            # 5. 最後に、生き残った原子の表示スタイルを更新する
             for atom in atoms_to_update:
-                try:
-                    if hasattr(atom, 'bonds'):
-                        atom.bonds = [b for b in atom.bonds if b not in bonds_to_delete]
-                    if hasattr(atom, 'update_style'):
-                        atom.update_style()
-                except Exception as update_error:
-                    print(f"Error updating atom style: {update_error}")
+                if hasattr(atom, 'update_style'):
+                    atom.update_style()
                     
-            return True
+            return True # 変更が行われたことを示す
             
         except Exception as e:
+            # 予期せぬエラーが発生した場合でもクラッシュを防ぐ
             print(f"Error during delete_items operation: {e}")
             import traceback
             traceback.print_exc()
@@ -8245,7 +8241,7 @@ class MainWindow(QMainWindow):
             return
 
         mol = self.data.to_rdkit_mol(use_2d_stereo=False)
-        
+
         # 分子オブジェクトが作成できない場合でも化学的問題をチェック
         if not mol or mol.GetNumAtoms() == 0:
             # RDKitでの変換に失敗した場合は、独自の化学的問題チェックを実行
@@ -8269,7 +8265,7 @@ class MainWindow(QMainWindow):
             self.statusBar().showMessage(f"Error: {len(problems)} chemistry problem(s) found.")
             # 既存の選択状態をクリア
             self.scene.clearSelection() 
-            
+
             # 問題のある原子に赤枠フラグを立てる
             for prob in problems:
                 atom_idx = prob.GetAtomIdx()
@@ -8281,7 +8277,7 @@ class MainWindow(QMainWindow):
                         item = self.data.atoms[original_id]['item']
                         item.has_problem = True 
                         item.update()
-                
+
             self.view_2d.setFocus()
             return
 
@@ -8361,6 +8357,9 @@ class MainWindow(QMainWindow):
         text_actor.GetTextProperty().SetOpacity(1)
         self.plotter.render()
         self.start_calculation.emit(mol_block)
+
+        # 状態をUndo履歴に保存
+        self.push_undo_state()
         
         self.view_2d.setFocus()
 
@@ -11757,6 +11756,9 @@ class MainWindow(QMainWindow):
                 try:
                     AllChem.EmbedMolecule(mol)
                     # 最適化は実行しない
+                    # 3D変換直後にUndoスタックに積む
+                    self.current_mol = mol
+                    self.push_undo_state()
                 except:
                     self.statusBar().showMessage("Failed to generate 3D coordinates")
                     return
@@ -13884,14 +13886,14 @@ class DihedralDialog(Dialog3DPickingMixin, QDialog):
             QMessageBox.warning(self, "Invalid Input", "Please enter a valid number.")
             return
         
-        # Undo状態を保存
-        self.main_window.push_undo_state()
-        
         # Apply the dihedral angle change
         self.adjust_dihedral(new_dihedral)
         
         # キラルラベルを更新
         self.main_window.update_chiral_labels()
+
+        # Undo状態を保存
+        self.main_window.push_undo_state()
     
     def adjust_dihedral(self, new_dihedral_deg):
         """二面角を調整（改善されたアルゴリズム）"""
