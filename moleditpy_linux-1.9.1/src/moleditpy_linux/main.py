@@ -58,14 +58,8 @@ from rdkit.Chem import rdMolDescriptors
 
 
 # Open Babel Python binding (optional; required for fallback)
-try:
-    from openbabel import pybel
-    OBABEL_AVAILABLE = True
-except Exception:
-    # pybel (Open Babel Python bindings) is optional. If not present, disable OBabel features.
-    pybel = None
-    OBABEL_AVAILABLE = False
-    print("Warning: openbabel.pybel not available. Open Babel fallback and OBabel-based options will be disabled.")
+pybel = None
+OBABEL_AVAILABLE = False
 
 # PyVista
 import pyvista as pv
@@ -851,7 +845,7 @@ class AboutDialog(QDialog):
         layout.addWidget(self.image_label)
         
         # Add text information
-        info_text = f"MoleditPy Ver. {VERSION}\nAuthor: Hiromichi Yokoyama\nLicense: Apache-2.0"
+        info_text = f"MoleditPy for Linux Ver. {VERSION}\nAuthor: Hiromichi Yokoyama\nLicense: Apache-2.0"
         info_label = QLabel(info_text)
         info_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(info_label)
