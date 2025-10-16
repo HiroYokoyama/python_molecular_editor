@@ -11,7 +11,7 @@ DOI 10.5281/zenodo.17268532
 """
 
 #Version
-VERSION = '1.9.3'
+VERSION = '1.9.4'
 
 print("-----------------------------------------------------")
 print("MoleditPy — A Python-based molecular editing software")
@@ -7849,14 +7849,6 @@ class MainWindow(QMainWindow):
 
         edit_menu.addSeparator()
         
-        # Templates
-        template_action = QAction("Templates...", self)
-        template_action.setShortcut(QKeySequence("Ctrl+T"))
-        template_action.triggered.connect(self.open_template_dialog)
-        edit_menu.addAction(template_action)
-        
-        edit_menu.addSeparator()
-        
         select_all_action = QAction("Select All", self); select_all_action.setShortcut(QKeySequence.StandardKey.SelectAll)
         select_all_action.triggered.connect(self.select_all); edit_menu.addAction(select_all_action)
         
@@ -8438,6 +8430,15 @@ class MainWindow(QMainWindow):
             self.statusBar().showMessage("3D view cleared.")
             self.view_2d.setFocus() 
             return
+
+        # 描画モード変更時に測定モードと3D編集モードをリセット
+        if self.measurement_mode:
+            self.measurement_action.setChecked(False)
+            self.toggle_measurement_mode(False)  # 測定モードを無効化
+        
+        if self.is_3d_edit_mode:
+            self.edit_3d_action.setChecked(False)
+            self.toggle_3d_edit_mode(False)  # 3D編集モードを無効化
 
         mol = self.data.to_rdkit_mol(use_2d_stereo=False)
 
@@ -10012,6 +10013,18 @@ class MainWindow(QMainWindow):
                     for i in range(self.current_mol.GetNumAtoms()):
                         atom = self.current_mol.GetAtomWithIdx(i)
                         pos = conf.GetAtomPosition(i)
+
+                        # Try to preserve original editor atom ID (if present) so it can be
+                        # restored when loading PMEPRJ files. RDKit atom properties may
+                        # contain _original_atom_id when the molecule was created from
+                        # the editor's 2D structure.
+                        original_id = None
+                        try:
+                            if atom.HasProp("_original_atom_id"):
+                                original_id = atom.GetIntProp("_original_atom_id")
+                        except Exception:
+                            original_id = None
+
                         atom_3d = {
                             "index": i,
                             "symbol": atom.GetSymbol(),
@@ -10021,7 +10034,9 @@ class MainWindow(QMainWindow):
                             "z": pos.z,
                             "formal_charge": atom.GetFormalCharge(),
                             "num_explicit_hs": atom.GetNumExplicitHs(),
-                            "num_implicit_hs": atom.GetNumImplicitHs()
+                            "num_implicit_hs": atom.GetNumImplicitHs(),
+                            # include original editor atom id when available for round-trip
+                            "original_id": original_id
                         }
                         atoms_3d.append(atom_3d)
                 
@@ -10167,6 +10182,8 @@ class MainWindow(QMainWindow):
         """JSONデータから状態を復元"""
         self.dragged_atom_info = None
         self.clear_2d_editor(push_to_undo=False)
+        self._enable_3d_edit_actions(False)
+        self._enable_3d_features(False)
 
         # 3Dビューアーモードの設定
         is_3d_mode = json_data.get("is_3d_viewer_mode", False)
@@ -10253,6 +10270,18 @@ class MainWindow(QMainWindow):
                                         atom_data["y"], 
                                         atom_data["z"]
                                     ]
+                                # Restore original editor atom id into RDKit atom property
+                                try:
+                                    original_id = atom_data.get("original_id", None)
+                                    if original_id is not None and idx < self.current_mol.GetNumAtoms():
+                                        rd_atom = self.current_mol.GetAtomWithIdx(idx)
+                                        # set as int prop so other code expecting _original_atom_id works
+                                        rd_atom.SetIntProp("_original_atom_id", int(original_id))
+                                except Exception:
+                                    pass
+                                self._enable_3d_edit_actions(True)
+                                self._enable_3d_features(True)
+
                         # 3D分子があれば必ず3D表示
                         self.draw_molecule_3d(self.current_mol)
                         # ViewerモードならUIも切り替え
@@ -10260,6 +10289,8 @@ class MainWindow(QMainWindow):
                             self._enter_3d_viewer_ui_mode()
                         else:
                             self.is_2d_editable = True
+                        self.plotter.reset_camera()
+                            
             except Exception as e:
                 print(f"Warning: Could not restore 3D molecular data: {e}")
                 self.current_mol = None
