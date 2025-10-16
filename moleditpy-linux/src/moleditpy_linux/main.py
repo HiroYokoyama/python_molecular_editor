@@ -11,7 +11,7 @@ DOI 10.5281/zenodo.17268532
 """
 
 #Version
-VERSION = '1.9.1'
+VERSION = '1.9.3'
 
 print("-----------------------------------------------------")
 print("MoleditPy — A Python-based molecular editing software")
@@ -37,7 +37,7 @@ from PyQt6.QtWidgets import (
     QPushButton, QSplitter, QGraphicsView, QGraphicsScene, QGraphicsItem,
     QToolBar, QStatusBar, QGraphicsTextItem, QGraphicsLineItem, QDialog, QGridLayout,
     QFileDialog, QSizePolicy, QLabel, QLineEdit, QToolButton, QMenu, QMessageBox, QInputDialog,
-    QColorDialog, QCheckBox, QSlider, QFormLayout, QRadioButton, QComboBox, QListWidget, QListWidgetItem, QButtonGroup, QTabWidget, QScrollArea
+    QColorDialog, QCheckBox, QSlider, QFormLayout, QRadioButton, QComboBox, QListWidget, QListWidgetItem, QButtonGroup, QTabWidget, QScrollArea, QFrame
 )
 
 from PyQt6.QtGui import (
@@ -58,7 +58,8 @@ from rdkit.Chem import rdMolDescriptors
 
 
 # Open Babel Python binding (optional; required for fallback)
-#from openbabel import pybel
+pybel = None
+OBABEL_AVAILABLE = False
 
 # PyVista
 import pyvista as pv
@@ -4308,7 +4309,6 @@ class MoleculeScene(QGraphicsScene):
             super().mouseMoveEvent(event)
 
     def mouseReleaseEvent(self, event):
-        
         if not self.window.is_2d_editable:
             return 
 
@@ -4322,22 +4322,19 @@ class MoleculeScene(QGraphicsScene):
         if self.mode.startswith('template') and is_click:
             if self.template_context and self.template_context.get('points'):
                 context = self.template_context
-                
                 # Check if this is a user template
                 if self.mode.startswith('template_user'):
                     self.add_user_template_fragment(context)
                 else:
                     self.add_molecule_fragment(context['points'], context['bonds_info'], existing_items=context.get('items', []))
-                
                 self.data_changed_in_event = True
-                
                 # イベント処理をここで完了させ、下のアイテムが選択されるのを防ぐ
                 self.start_atom=None; self.start_pos = None; self.press_pos = None
                 if self.data_changed_in_event: self.window.push_undo_state()
                 return
 
         released_item = self.itemAt(end_pos, self.views()[0].transform())
-        
+
         # 1. 特殊モード（ラジカル/電荷）の処理
         if (self.mode == 'radical') and is_click and isinstance(released_item, AtomItem):
             atom = released_item
@@ -4364,7 +4361,6 @@ class MoleculeScene(QGraphicsScene):
 
         elif self.mode.startswith('bond') and is_click and isinstance(released_item, BondItem):
             b = released_item 
-            
             if self.mode == 'bond_2_5':
                 try:
                     if b.order == 2:
@@ -4384,53 +4380,40 @@ class MoleculeScene(QGraphicsScene):
                     if hasattr(self.window, 'statusBar'):
                         self.window.statusBar().showMessage(f"Error changing E/Z stereochemistry: {e}", 5000)
                 return # この後の処理は行わない
-            
             elif self.bond_stereo != 0 and b.order == self.bond_order and b.stereo == self.bond_stereo:
                 # 方向性を反転させる
                 old_id1, old_id2 = b.atom1.atom_id, b.atom2.atom_id
-                
                 # 1. 古い方向の結合をデータから削除
                 self.data.remove_bond(old_id1, old_id2)
-                
                 # 2. 逆方向で結合をデータに再追加
                 new_key, _ = self.data.add_bond(old_id2, old_id1, self.bond_order, self.bond_stereo)
-                
                 # 3. BondItemの原子参照を入れ替え、新しいデータと関連付ける
                 b.atom1, b.atom2 = b.atom2, b.atom1
                 self.data.bonds[new_key]['item'] = b
-                
                 # 4. 見た目を更新
                 b.update_position()
-
             else:
                 # 既存の結合を一度削除
                 self.data.remove_bond(b.atom1.atom_id, b.atom2.atom_id)
-
                 # BondItemが記憶している方向(b.atom1 -> b.atom2)で、新しい結合様式を再作成
                 # これにより、修正済みのadd_bondが呼ばれ、正しい方向で保存される
                 new_key, _ = self.data.add_bond(b.atom1.atom_id, b.atom2.atom_id, self.bond_order, self.bond_stereo)
-
                 # BondItemの見た目とデータ参照を更新
                 b.prepareGeometryChange()
                 b.order = self.bond_order
                 b.stereo = self.bond_stereo
                 self.data.bonds[new_key]['item'] = b
                 b.update()
-
             self.clearSelection()
             self.data_changed_in_event = True
-
         # 3. 新規原子・結合の作成処理 (atom_* モード および すべての bond_* モードで許可)
         elif self.start_atom and (self.mode.startswith('atom') or self.mode.startswith('bond')):
             line = QLineF(self.start_atom.pos(), end_pos); end_item = self.itemAt(end_pos, self.views()[0].transform())
-
             # 使用する結合様式を決定
             # atomモードの場合は bond_order/stereo を None にして create_bond にデフォルト値(1, 0)を適用
             # bond_* モードの場合は現在の設定 (self.bond_order/stereo) を使用
             order_to_use = self.bond_order if self.mode.startswith('bond') else None
             stereo_to_use = self.bond_stereo if self.mode.startswith('bond') else None
-    
-            
             if is_click:
                 # 短いクリック: 既存原子のシンボル更新 (atomモードのみ)
                 if self.mode.startswith('atom') and self.start_atom.symbol != self.current_atom_symbol:
@@ -4444,25 +4427,20 @@ class MoleculeScene(QGraphicsScene):
                     new_id = self.create_atom(self.current_atom_symbol, end_pos); new_item = self.data.atoms[new_id]['item']
                     self.create_bond(self.start_atom, new_item, bond_order=order_to_use, bond_stereo=stereo_to_use)
                 self.data_changed_in_event = True
-                
         # 4. 空白領域からの新規作成処理 (atom_* モード および すべての bond_* モードで許可)
         elif self.start_pos and (self.mode.startswith('atom') or self.mode.startswith('bond')):
             line = QLineF(self.start_pos, end_pos)
-
             # 使用する結合様式を決定
             order_to_use = self.bond_order if self.mode.startswith('bond') else None
             stereo_to_use = self.bond_stereo if self.mode.startswith('bond') else None
-    
             if line.length() < 10:
                 self.create_atom(self.current_atom_symbol, end_pos); self.data_changed_in_event = True
             else:
                 end_item = self.itemAt(end_pos, self.views()[0].transform())
-
                 if isinstance(end_item, AtomItem):
                     start_id = self.create_atom(self.current_atom_symbol, self.start_pos)
                     start_item = self.data.atoms[start_id]['item']
                     self.create_bond(start_item, end_item, bond_order=order_to_use, bond_stereo=stereo_to_use)
-                
                 else:
                     start_id = self.create_atom(self.current_atom_symbol, self.start_pos)
                     end_id = self.create_atom(self.current_atom_symbol, end_pos)
@@ -4473,10 +4451,8 @@ class MoleculeScene(QGraphicsScene):
                         bond_stereo=stereo_to_use
                     )
                 self.data_changed_in_event = True 
-        
         # 5. それ以外の処理 (Selectモードなど)
         else: super().mouseReleaseEvent(event)
-
 
         # 削除されたオブジェクトを安全にチェック
         moved_atoms = []
@@ -4488,7 +4464,6 @@ class MoleculeScene(QGraphicsScene):
             except RuntimeError:
                 # オブジェクトが削除されている場合はスキップ
                 continue
-                
         if moved_atoms:
             self.data_changed_in_event = True
             bonds_to_update = set()
@@ -4500,12 +4475,9 @@ class MoleculeScene(QGraphicsScene):
                     # オブジェクトが削除されている場合はスキップ
                     continue
             for bond in bonds_to_update: bond.update_position()
-            
             # 原子移動後に測定ラベルの位置を更新
             self.window.update_2d_measurement_labels()
-            
             if self.views(): self.views()[0].viewport().update()
-        
         self.start_atom=None; self.start_pos = None; self.press_pos = None; self.temp_line = None
         self.template_context = {}
         # Clear user template data when switching modes
@@ -5716,6 +5688,7 @@ class CalculationWorker(QObject):
                 raise ValueError("No atoms to convert.")
             
             self.status_update.emit("Creating 3D structure...")
+
             mol = Chem.MolFromMolBlock(mol_block, removeHs=False)
             if mol is None:
                 raise ValueError("Failed to create molecule from MOL block.")
@@ -5919,10 +5892,12 @@ class CalculationWorker(QObject):
                 return
 
             # ---------- RDKit failed: try Open Babel via pybel only (no CLI fallback) ----------
-            '''
             self.status_update.emit("RDKit embedding failed. Attempting Open Babel fallback...")
 
             try:
+                # Check availability first
+                if not OBABEL_AVAILABLE:
+                    raise RuntimeError("Open Babel (pybel) is not available in this Python environment.")
                 # pybel expects an input format; provide mol block
                 # pybel.readstring accepts format strings like "mol" or "smi"
                 ob_mol = pybel.readstring("mol", mol_block)
@@ -5968,7 +5943,6 @@ class CalculationWorker(QObject):
             except Exception as ob_err:
                 # pybel was available but failed
                 raise RuntimeError(f"Open Babel 3D conversion failed: {ob_err}")
-            '''
 
         except Exception as e:
             self.error.emit(str(e))
@@ -6244,6 +6218,11 @@ class SettingsDialog(QDialog):
             'triple_bond_offset_factor': 2.0,
             'double_bond_radius_factor': 0.8,
             'triple_bond_radius_factor': 0.7,
+            # If True, attempts to be permissive when RDKit raises chemical/sanitization errors
+            # during file import (useful for viewing malformed XYZ/MOL files). When enabled,
+            # element symbol recognition will be coerced where possible and Chem.SanitizeMol
+            # failures will be ignored so the 3D viewer can still display the structure.
+            'skip_chemistry_checks': True,
         }
         
         # --- 選択された色を管理する専用のインスタンス変数 ---
@@ -6255,9 +6234,6 @@ class SettingsDialog(QDialog):
         # タブウィジェットを作成
         self.tab_widget = QTabWidget()
         layout.addWidget(self.tab_widget)
-        
-        # 基本設定タブ
-        self.create_general_tab()
         
         # Common設定タブ
         self.create_common_tab()
@@ -6273,6 +6249,9 @@ class SettingsDialog(QDialog):
         
         # Stick設定タブ
         self.create_stick_tab()
+
+        # 基本設定タブ
+        self.create_general_tab()
 
         # 渡された設定でUIと内部変数を初期化
         self.update_ui_from_settings(current_settings)
@@ -6364,7 +6343,23 @@ class SettingsDialog(QDialog):
         """Common設定タブを作成"""
         common_widget = QWidget()
         form_layout = QFormLayout(common_widget)
+
+        # 化学チェックスキップオプション（Commonタブに移動）
+        self.skip_chem_checks_checkbox = QCheckBox()
+        self.skip_chem_checks_checkbox.setToolTip("When enabled, file import will try to ignore chemical/sanitization errors and allow viewing malformed files.")
+        # Immediately persist change to settings when user toggles the checkbox
+        try:
+            self.skip_chem_checks_checkbox.stateChanged.connect(lambda s: self._on_skip_chem_checks_changed(s))
+        except Exception:
+            pass
+        form_layout.addRow("Skip chemistry checks on import:", self.skip_chem_checks_checkbox)
         
+        # --- 区切り線（水平ライン） ---
+        line = QFrame()
+        line.setFrameShape(QFrame.Shape.HLine)
+        line.setFrameShadow(QFrame.Shadow.Sunken)
+        form_layout.addRow(line)
+
         # 二重結合オフセット倍率
         self.double_offset_slider = QSlider(Qt.Orientation.Horizontal)
         self.double_offset_slider.setRange(100, 400)  # 1.0 ~ 4.0
@@ -6404,6 +6399,8 @@ class SettingsDialog(QDialog):
         triple_radius_layout.addWidget(self.triple_radius_slider)
         triple_radius_layout.addWidget(self.triple_radius_label)
         form_layout.addRow("Triple Bond Thickness:", triple_radius_layout)
+
+
         
         self.tab_widget.addTab(common_widget, "Common")
     
@@ -6733,6 +6730,9 @@ class SettingsDialog(QDialog):
         triple_radius = int(settings_dict.get('triple_bond_radius_factor', self.default_settings['triple_bond_radius_factor']) * 100)
         self.triple_radius_slider.setValue(triple_radius)
         self.triple_radius_label.setText(f"{triple_radius/100:.2f}")
+        
+        # skip chemistry checks
+        self.skip_chem_checks_checkbox.setChecked(settings_dict.get('skip_chemistry_checks', self.default_settings.get('skip_chemistry_checks', False)))
       
     def select_color(self):
         """カラーピッカーを開き、選択された色を内部変数とUIに反映させる"""
@@ -6775,6 +6775,7 @@ class SettingsDialog(QDialog):
             'triple_bond_offset_factor': self.triple_offset_slider.value() / 100.0,
             'double_bond_radius_factor': self.double_radius_slider.value() / 100.0,
             'triple_bond_radius_factor': self.triple_radius_slider.value() / 100.0,
+            'skip_chemistry_checks': self.skip_chem_checks_checkbox.isChecked(),
         }
 
     def apply_settings(self):
@@ -6790,7 +6791,21 @@ class SettingsDialog(QDialog):
             if hasattr(self.parent_window, 'current_mol') and self.parent_window.current_mol:
                 self.parent_window.draw_molecule_3d(self.parent_window.current_mol)
             # ステータスバーに適用完了を表示
-            self.parent_window.statusBar().showMessage("Settings applied successfully", 2000)
+            self.parent_window.statusBar().showMessage("Settings applied successfully")
+
+    def _on_skip_chem_checks_changed(self, state):
+        """Handle user toggling of skip chemistry checks: persist and update UI.
+
+        state: Qt.Checked (2) or Qt.Unchecked (0)
+        """
+        try:
+            enabled = bool(state)
+            self.settings['skip_chemistry_checks'] = enabled
+            self.save_settings()
+            # If skip is enabled, allow Optimize button; otherwise, respect chem_check flags
+
+        except Exception:
+            pass
 
     def accept(self):
         """ダイアログの設定を適用してから閉じる"""
@@ -6959,7 +6974,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
             if abs(current_pos[0] - self._mouse_press_pos[0]) > 3 or abs(current_pos[1] - self._mouse_press_pos[1]) > 3:
                 self._mouse_moved_during_drag = True
 
-        if self._is_dragging_atom:
+        if self._is_dragging_atom and mw.dragged_atom_info is not None:
             # カスタムの原子ドラッグ処理
             self.is_dragging = True
             atom_id = mw.dragged_atom_info['id']
@@ -7025,6 +7040,72 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                     mw.draw_molecule_3d(mw.current_mol)
                 mw.push_undo_state()
             mw.dragged_atom_info = None
+            # Always ensure the visual representation matches the actual
+            # RDKit conformer coordinates when the mouse is released.
+            try:
+                if mw.current_mol and mw.current_mol.GetNumConformers() > 0:
+                    conf = mw.current_mol.GetConformer()
+                    # Rebuild the authoritative atom_positions_3d from the conformer
+                    mw.atom_positions_3d = np.array([list(conf.GetAtomPosition(i)) for i in range(mw.current_mol.GetNumAtoms())])
+
+                    # If a glyph_source exists (typical), update its points and mark modified
+                    if hasattr(mw, 'glyph_source') and mw.glyph_source is not None:
+                        try:
+                            mw.glyph_source.points = mw.atom_positions_3d
+                            mw.glyph_source.Modified()
+                        except Exception:
+                            # Fallback to a full redraw if updating glyph_source fails
+                            try:
+                                mw.draw_molecule_3d(mw.current_mol)
+                            except Exception:
+                                pass
+
+                    # Refresh overlays and labels that depend on atom_positions_3d
+                    try:
+                        mw.update_3d_selection_display()
+                    except Exception:
+                        pass
+                    try:
+                        mw.update_measurement_labels_display()
+                    except Exception:
+                        pass
+                    try:
+                        mw.update_2d_measurement_labels()
+                    except Exception:
+                        pass
+                    try:
+                        mw.show_all_atom_info()
+                    except Exception:
+                        pass
+
+                    # Final render to make sure everything is consistent
+                    try:
+                        if hasattr(mw, 'plotter') and mw.plotter:
+                            mw.plotter.render()
+                    except Exception:
+                        pass
+                    # As a final safety-net, ensure the visual scene exactly matches
+                    # the authoritative RDKit conformer coordinates. This forces a
+                    # full redraw if any lower-level updates failed to sync.
+                    try:
+                        if mw.current_mol and mw.current_mol.GetNumConformers() > 0:
+                            # Redraw the molecule and render to guarantee consistency
+                            try:
+                                mw.draw_molecule_3d(mw.current_mol)
+                            except Exception:
+                                # If a full redraw fails, at least attempt a render
+                                pass
+                            try:
+                                if hasattr(mw, 'plotter') and mw.plotter:
+                                    mw.plotter.render()
+                            except Exception:
+                                pass
+                    except Exception:
+                        # Silently ignore any errors during this final sync step
+                        pass
+            except Exception:
+                # Do not allow a failure here to interrupt release flow
+                pass
         else:
             # カメラ回転の後始末を親クラスに任せます
             super().OnLeftButtonUp()
@@ -7046,7 +7127,8 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
 
 class MainWindow(QMainWindow):
 
-    start_calculation = pyqtSignal(str)
+    # start_calculation carries the MOL block and a boolean skip_chemistry_checks flag
+    start_calculation = pyqtSignal(str, bool)
     def __init__(self, initial_file=None):
         super().__init__()
         self.setAcceptDrops(True)
@@ -7066,6 +7148,11 @@ class MainWindow(QMainWindow):
         self.atom_actor = None 
         self.is_2d_editable = True
         self.is_xyz_derived = False  # XYZ由来の分子かどうかのフラグ
+        # Chemical check flags: whether a chemical/sanitization check was attempted and whether it failed
+        self.chem_check_tried = False
+        self.chem_check_failed = False
+        # 3D最適化のデフォルト手法
+        self.optimization_method = self.settings.get('optimization_method', 'MMFF_RDKIT')
         self.axes_actor = None
         self.axes_widget = None
         self._template_dialog = None  # テンプレートダイアログの参照
@@ -7697,6 +7784,63 @@ class MainWindow(QMainWindow):
         optimize_3d_action.triggered.connect(self.optimize_3d_structure)
         edit_menu.addAction(optimize_3d_action)
 
+        # --- 3D Optimization Settings submenu (below Optimize 3D) ---
+        opt3d_settings_menu = edit_menu.addMenu("3D Optimization Settings")
+        opt3d_group = QActionGroup(self)
+        opt3d_group.setExclusive(True)
+
+        # Only RDKit-backed optimization methods are offered here.
+        # Open Babel-based optimization options have been removed; Open Babel is
+        # retained only as a conversion fallback when RDKit embedding fails.
+        opt_methods = [
+            ("MMFF", "MMFF_RDKIT"),
+            ("UFF", "UFF_RDKIT"),
+        ]
+
+        # Map key -> human-readable label for status messages and later lookups
+        try:
+            self.opt3d_method_labels = {key.upper(): label for (label, key) in opt_methods}
+        except Exception:
+            self.opt3d_method_labels = {}
+
+        opt_actions = {}
+        for label, key in opt_methods:
+            action = QAction(label, self)
+            action.setCheckable(True)
+            # Ensure explicit association with the action group so exclusive checking works reliably
+            try:
+                action.setActionGroup(opt3d_group)
+            except Exception:
+                # Older PyQt variants may not have setActionGroup; adding to group below still helps
+                pass
+            action.triggered.connect(lambda checked, m=key: self.set_optimization_method(m))
+            opt3d_settings_menu.addAction(action)
+            opt3d_group.addAction(action)
+            opt_actions[key] = action
+
+        # Persist the actions mapping so other methods can update the checked state
+        self.opt3d_actions = opt_actions
+
+        # Determine the initial checked menu item from saved settings (fall back to MMFF_RDKIT)
+        try:
+            saved = (self.settings.get('optimization_method') or self.optimization_method or 'MMFF_RDKIT').upper()
+        except Exception:
+            saved = 'MMFF_RDKIT'
+
+        if saved in self.opt3d_actions and self.opt3d_actions[saved].isEnabled():
+            self.opt3d_actions[saved].setChecked(True)
+            # Ensure internal state matches
+            self.optimization_method = saved
+        else:
+            # fallback
+            if 'MMFF_RDKIT' in self.opt3d_actions:
+                self.opt3d_actions['MMFF_RDKIT'].setChecked(True)
+                self.optimization_method = 'MMFF_RDKIT'
+
+        # Note: Open Babel-based optimization menu entries were intentionally
+        # removed above. Open Babel (pybel) is still available for conversion
+        # fallback elsewhere in the code, so we don't disable menu items here.
+
         edit_menu.addSeparator()
         
         # Templates
@@ -8056,6 +8200,53 @@ class MainWindow(QMainWindow):
         if self.current_mol:
             self.draw_molecule_3d(self.current_mol)
 
+    def set_optimization_method(self, method_name):
+        """Set preferred 3D optimization method and persist to settings.
+
+        Supported values: 'GAFF', 'MMFF'
+        """
+        # Normalize input and validate
+        if not method_name:
+            return
+        method = str(method_name).strip().upper()
+        valid_methods = (
+            'MMFF_RDKIT', 'UFF_RDKIT',
+            'UFF_OBABEL', 'GAFF_OBABEL', 'MMFF94_OBABEL', 'GHEMICAL_OBABEL'
+        )
+        if method not in valid_methods:
+            # Unknown method: ignore but notify
+            self.statusBar().showMessage(f"Unknown 3D optimization method: {method_name}")
+            return
+
+        # Update internal state (store canonical uppercase key)
+        self.optimization_method = method
+
+        # Persist to settings
+        try:
+            self.settings['optimization_method'] = self.optimization_method
+            self.save_settings()
+        except Exception:
+            pass
+
+        # Update menu checked state if actions mapping exists
+        try:
+            if hasattr(self, 'opt3d_actions') and self.opt3d_actions:
+                for k, act in self.opt3d_actions.items():
+                    try:
+                        # keys in opt3d_actions may be mixed-case; compare uppercased
+                        act.setChecked(k.upper() == method)
+                    except Exception:
+                        pass
+        except Exception:
+            pass
+
+        # Also show user-friendly label if available
+        try:
+            label = self.opt3d_method_labels.get(self.optimization_method, self.optimization_method)
+        except Exception:
+            label = self.optimization_method
+        self.statusBar().showMessage(f"3D optimization method set to: {label}")
+
     def copy_selection(self):
         """選択された原子と結合をクリップボードにコピーする"""
         try:
@@ -8107,13 +8298,13 @@ class MainWindow(QMainWindow):
             mime_data = QMimeData()
             mime_data.setData(CLIPBOARD_MIME_TYPE, byte_array)
             QApplication.clipboard().setMimeData(mime_data)
-            self.statusBar().showMessage(f"Copied {len(fragment_atoms)} atoms and {len(fragment_bonds)} bonds.", 2000)
+            self.statusBar().showMessage(f"Copied {len(fragment_atoms)} atoms and {len(fragment_bonds)} bonds.")
             
         except Exception as e:
             print(f"Error during copy operation: {e}")
             import traceback
             traceback.print_exc()
-            self.statusBar().showMessage(f"Error during copy operation: {e}", 5000)
+            self.statusBar().showMessage(f"Error during copy operation: {e}")
 
     def cut_selection(self):
         """選択されたアイテムを切り取り（コピーしてから削除）"""
@@ -8133,7 +8324,7 @@ class MainWindow(QMainWindow):
             print(f"Error during cut operation: {e}")
             import traceback
             traceback.print_exc()
-            self.statusBar().showMessage(f"Error during cut operation: {e}", 5000)
+            self.statusBar().showMessage(f"Error during cut operation: {e}")
 
     def paste_from_clipboard(self):
         """クリップボードから分子フラグメントを貼り付け"""
@@ -8148,7 +8339,7 @@ class MainWindow(QMainWindow):
             try:
                 fragment_data = pickle.load(buffer)
             except pickle.UnpicklingError:
-                self.statusBar().showMessage("Error: Invalid clipboard data format", 3000)
+                self.statusBar().showMessage("Error: Invalid clipboard data format")
                 return
             
             paste_center_pos = self.view_2d.mapToScene(self.view_2d.mapFromGlobal(QCursor.pos()))
@@ -8182,7 +8373,7 @@ class MainWindow(QMainWindow):
             print(f"Error during paste operation: {e}")
             import traceback
             traceback.print_exc()
-            self.statusBar().showMessage(f"Error during paste operation: {e}", 5000)
+            self.statusBar().showMessage(f"Error during paste operation: {e}")
         self.statusBar().showMessage(f"Pasted {len(new_atoms)} atoms.", 2000)
         self.activate_select_mode()
 
@@ -8205,13 +8396,13 @@ class MainWindow(QMainWindow):
                 self.push_undo_state()
                 self.statusBar().showMessage(f"Removed {len(hydrogen_atoms)} hydrogen atoms.", 2000)
             else:
-                self.statusBar().showMessage("Failed to remove hydrogen atoms.", 3000)
+                self.statusBar().showMessage("Failed to remove hydrogen atoms.")
                 
         except Exception as e:
             print(f"Error during hydrogen removal: {e}")
             import traceback
             traceback.print_exc()
-            self.statusBar().showMessage(f"Error removing hydrogen atoms: {e}", 5000)
+            self.statusBar().showMessage(f"Error removing hydrogen atoms: {e}")
 
     def update_edit_menu_actions(self):
         """選択状態やクリップボードの状態に応じて編集メニューを更新"""
@@ -8358,10 +8549,12 @@ class MainWindow(QMainWindow):
         )
         text_actor.GetTextProperty().SetOpacity(1)
         self.plotter.render()
-        self.start_calculation.emit(mol_block)
+        # Emit skip flag so the worker can ignore sanitization errors if user requested
+        self.start_calculation.emit(mol_block, False)
 
         # 状態をUndo履歴に保存
         self.push_undo_state()
+        self.update_chiral_labels()
         
         self.view_2d.setFocus()
 
@@ -8428,33 +8621,91 @@ class MainWindow(QMainWindow):
             self.statusBar().showMessage("No 3D molecule to optimize.")
             return
 
+        # If a prior chemical/sanitization check was attempted and failed, do not run optimization
+        if getattr(self, 'chem_check_tried', False) and getattr(self, 'chem_check_failed', False):
+            self.statusBar().showMessage("3D optimization disabled: molecule failed chemical sanitization.")
+            # Ensure the Optimize 3D button is disabled to reflect this
+            if hasattr(self, 'optimize_3d_button'):
+                try:
+                    self.optimize_3d_button.setEnabled(False)
+                except Exception:
+                    pass
+            return
+
         self.statusBar().showMessage("Optimizing 3D structure...")
         QApplication.processEvents() # UIの更新を確実に行う
 
         try:
-            # MMFF力場での最適化を試みる
-            AllChem.MMFFOptimizeMolecule(self.current_mol)
-        except Exception:
-            # MMFFが失敗した場合、UFF力場でフォールバック
-            try:
-                AllChem.UFFOptimizeMolecule(self.current_mol)
-            except Exception as e:
-                self.statusBar().showMessage(f"3D optimization failed: {e}")
+            method = getattr(self, 'optimization_method', 'MMFF_RDKIT')
+            method = method.upper() if method else 'MMFF_RDKIT'
+            # 事前チェック：コンフォーマがあるか
+            if self.current_mol.GetNumConformers() == 0:
+                self.statusBar().showMessage("No conformer found: cannot optimize. Embed molecule first.")
                 return
+            if method == 'MMFF_RDKIT':
+                try:
+                    res = AllChem.MMFFOptimizeMolecule(self.current_mol, maxIters=2000)
+                    if res != 0:
+                        # 非収束や何らかの問題が起きた可能性 -> ForceField API で詳細に試す
+                        try:
+                            mmff_props = AllChem.MMFFGetMoleculeProperties(self.current_mol)
+                            ff = AllChem.MMFFGetMoleculeForceField(self.current_mol, mmff_props, confId=0)
+                            ff_ret = ff.Minimize(maxIts=2000)
+                            if ff_ret != 0:
+                                self.statusBar().showMessage(f"MMFF minimize returned non-zero status: {ff_ret}")
+                                return
+                        except Exception as e:
+                            self.statusBar().showMessage(f"MMFF parameterization/minimize failed: {e}")
+                            return
+                except Exception as e:
+                    self.statusBar().showMessage(f"MMFF (RDKit) optimization error: {e}")
+                    return
+            elif method == 'UFF_RDKIT':
+                try:
+                    res = AllChem.UFFOptimizeMolecule(self.current_mol, maxIters=2000)
+                    if res != 0:
+                        try:
+                            ff = AllChem.UFFGetMoleculeForceField(self.current_mol, confId=0)
+                            ff_ret = ff.Minimize(maxIts=2000)
+                            if ff_ret != 0:
+                                self.statusBar().showMessage(f"UFF minimize returned non-zero status: {ff_ret}")
+                                return
+                        except Exception as e:
+                            self.statusBar().showMessage(f"UFF parameterization/minimize failed: {e}")
+                            return
+                except Exception as e:
+                    self.statusBar().showMessage(f"UFF (RDKit) optimization error: {e}")
+                    return
+            else:
+                self.statusBar().showMessage("Selected optimization method is not available. Use MMFF (RDKit) or UFF (RDKit).")
+                return
+        except Exception as e:
+            self.statusBar().showMessage(f"3D optimization error: {e}")
         
         # 最適化後の構造で3Dビューを再描画
         try:
             # 3D最適化後は3D座標から立体化学を再計算（2回目以降は3D優先）
             if self.current_mol.GetNumConformers() > 0:
                 Chem.AssignAtomChiralTagsFromStructure(self.current_mol, confId=0)
-            
             self.update_chiral_labels() # キラル中心のラベルも更新
         except Exception:
             pass
             
         self.draw_molecule_3d(self.current_mol)
         
-        self.statusBar().showMessage("3D structure optimization successful.")
+        # Show which method was used in the status bar (prefer human-readable label)
+        try:
+            used_method = getattr(self, 'optimization_method', None)
+            used_label = None
+            if used_method:
+                used_label = (getattr(self, 'opt3d_method_labels', {}) or {}).get(used_method.upper(), used_method)
+        except Exception:
+            used_label = None
+
+        if used_label:
+            self.statusBar().showMessage(f"3D structure optimization successful. Method: {used_label}")
+        else:
+            self.statusBar().showMessage("3D structure optimization successful.")
         self.push_undo_state() # Undo履歴に保存
         self.view_2d.setFocus()
 
@@ -9254,13 +9505,13 @@ class MainWindow(QMainWindow):
             self.update_window_title()
 
         except FileNotFoundError:
-            self.statusBar().showMessage(f"File not found: {file_path}", 5000)
+            self.statusBar().showMessage(f"File not found: {file_path}")
             self.restore_ui_for_editing()
         except ValueError as e:
-            self.statusBar().showMessage(f"Invalid 3D MOL file: {e}", 5000)
+            self.statusBar().showMessage(f"Invalid 3D MOL file: {e}")
             self.restore_ui_for_editing()
         except Exception as e:
-            self.statusBar().showMessage(f"Error loading 3D file: {e}", 5000)
+            self.statusBar().showMessage(f"Error loading 3D file: {e}")
             self.restore_ui_for_editing()
             import traceback
             traceback.print_exc()
@@ -9311,13 +9562,13 @@ class MainWindow(QMainWindow):
             self.update_window_title()
 
         except FileNotFoundError:
-            self.statusBar().showMessage(f"File not found: {file_path}", 5000)
+            self.statusBar().showMessage(f"File not found: {file_path}")
             self.restore_ui_for_editing()
         except ValueError as e:
-            self.statusBar().showMessage(f"Invalid XYZ file: {e}", 5000)
+            self.statusBar().showMessage(f"Invalid XYZ file: {e}")
             self.restore_ui_for_editing()
         except Exception as e:
-            self.statusBar().showMessage(f"Error loading XYZ file: {e}", 5000)
+            self.statusBar().showMessage(f"Error loading XYZ file: {e}")
             self.restore_ui_for_editing()
             import traceback
             traceback.print_exc()
@@ -9375,13 +9626,17 @@ class MainWindow(QMainWindow):
                 try:
                     # RDKitで認識される元素かどうかをチェック
                     test_atom = Chem.Atom(symbol)
-                except:
+                except Exception:
                     # 認識されない場合、最初の文字を大文字にして再試行
                     symbol = symbol.capitalize()
                     try:
                         test_atom = Chem.Atom(symbol)
-                    except:
-                        raise ValueError(f"Unrecognized element symbol: {parts[0]} at line {i+3}")
+                    except Exception:
+                        # If user requested to skip chemistry checks, coerce unknown symbols to C
+                        if self.settings.get('skip_chemistry_checks', False):
+                            symbol = 'C'
+                        else:
+                            raise ValueError(f"Unrecognized element symbol: {parts[0]} at line {i+3}")
                 
                 try:
                     x, y, z = float(parts[1]), float(parts[2]), float(parts[3])
@@ -9412,13 +9667,14 @@ class MainWindow(QMainWindow):
             # 結合を推定（距離ベース）
             self.estimate_bonds_from_distances(mol)
             
-            # 分子を最終化
+                # 分子を最終化
             try:
                 mol = mol.GetMol()
                 # 基本的な妥当性チェック
                 if mol is None:
                     raise ValueError("Failed to create valid molecule object")
-                Chem.SanitizeMol(mol)
+                # Centralized chemical/sanitization handling
+                self._apply_chem_check_and_set_flags(mol, source_desc='XYZ')
             except Exception as e:
                 # 化学的に不正な構造でも表示は可能にする
                 mol = mol.GetMol()
@@ -9507,9 +9763,10 @@ class MainWindow(QMainWindow):
         if not self.data.atoms and not self.current_mol: 
             self.statusBar().showMessage("Error: Nothing to save.")
             return
-            
-        if self.current_file_path:
-            # 既存のファイルに上書き保存
+        # 非ネイティブ形式（.mol, .sdf, .xyz など）は上書き保存せず、必ず「名前を付けて保存」にする
+        native_exts = ['.pmeprj', '.pmeraw']
+        if self.current_file_path and any(self.current_file_path.lower().endswith(ext) for ext in native_exts):
+            # 既存のPMEPRJ/PMERAWファイルの場合は上書き保存
             try:
                 if self.current_file_path.lower().endswith('.pmeraw'):
                     # 既存のPMERAWファイルの場合はPMERAW形式で保存
@@ -9537,7 +9794,7 @@ class MainWindow(QMainWindow):
                 import traceback
                 traceback.print_exc()
         else:
-            # ファイルパスがない場合は名前を付けて保存
+            # MOL/SDF/XYZなどは上書き保存せず、必ず「名前を付けて保存」にする
             self.save_project_as()
 
     def save_project_as(self):
@@ -10565,7 +10822,7 @@ class MainWindow(QMainWindow):
 
     def export_2d_png(self):
         if not self.data.atoms:
-            self.statusBar().showMessage("Nothing to export.", 2000)
+            self.statusBar().showMessage("Nothing to export.")
             return
 
         options = QFileDialog.Option.DontUseNativeDialog
@@ -10606,7 +10863,7 @@ class MainWindow(QMainWindow):
                     molecule_bounds = molecule_bounds.united(item.sceneBoundingRect())
 
             if molecule_bounds.isEmpty() or not molecule_bounds.isValid():
-                self.statusBar().showMessage("Error: Could not determine molecule bounds for export.", 5000)
+                self.statusBar().showMessage("Error: Could not determine molecule bounds for export.")
                 return
 
             if is_transparent:
@@ -10620,7 +10877,7 @@ class MainWindow(QMainWindow):
             h = max(1, int(math.ceil(rect_to_render.height())))
 
             if w <= 0 or h <= 0:
-                self.statusBar().showMessage("Error: Invalid image size calculated.", 5000)
+                self.statusBar().showMessage("Error: Invalid image size calculated.")
                 return
 
             image = QImage(w, h, QImage.Format.Format_ARGB32_Premultiplied)
@@ -10632,7 +10889,7 @@ class MainWindow(QMainWindow):
             painter = QPainter()
             ok = painter.begin(image)
             if not ok or not painter.isActive():
-                self.statusBar().showMessage("Failed to start QPainter for image rendering.", 5000)
+                self.statusBar().showMessage("Failed to start QPainter for image rendering.")
                 return
 
             try:
@@ -10645,12 +10902,12 @@ class MainWindow(QMainWindow):
 
             saved = image.save(filePath, "PNG")
             if saved:
-                self.statusBar().showMessage(f"2D view exported to {filePath}", 3000)
+                self.statusBar().showMessage(f"2D view exported to {filePath}")
             else:
-                self.statusBar().showMessage(f"Failed to save image. Check file path or permissions.", 5000)
+                self.statusBar().showMessage(f"Failed to save image. Check file path or permissions.")
 
         except Exception as e:
-            self.statusBar().showMessage(f"An unexpected error occurred during 2D export: {e}", 5000)
+            self.statusBar().showMessage(f"An unexpected error occurred during 2D export: {e}")
 
         finally:
             for item, was_visible in items_to_restore.items():
@@ -10687,7 +10944,7 @@ class MainWindow(QMainWindow):
             self.plotter.screenshot(filePath, transparent_background=is_transparent)
             self.statusBar().showMessage(f"3D view exported to {filePath}", 3000)
         except Exception as e:
-            self.statusBar().showMessage(f"Error exporting 3D PNG: {e}", 3000)
+            self.statusBar().showMessage(f"Error exporting 3D PNG: {e}")
 
 
     def open_periodic_table_dialog(self):
@@ -11072,6 +11329,8 @@ class MainWindow(QMainWindow):
                 begin_color_rgb = [int(c * 255) for c in begin_color]
                 end_color_rgb = [int(c * 255) for c in end_color]
 
+                # UI応答性維持のためイベント処理
+                QApplication.processEvents()
                 if bt == Chem.rdchem.BondType.SINGLE or bt == Chem.rdchem.BondType.AROMATIC:
                     if self.current_3d_style == 'ball_and_stick':
                         # Ball and stickは全結合をまとめて処理（高速化）
@@ -11727,6 +11986,46 @@ class MainWindow(QMainWindow):
         # 調査の結果、'style' プロパティへの代入が正しい設定方法と判明
         self.plotter.interactor.SetInteractorStyle(style)
         self.plotter.interactor.Initialize()
+
+    def _apply_chem_check_and_set_flags(self, mol, source_desc=None):
+        """Central helper to apply chemical sanitization (or skip it) and set
+        chem_check_tried / chem_check_failed flags consistently.
+
+        When sanitization fails, a warning is shown and the Optimize 3D button
+        is disabled. If the user setting 'skip_chemistry_checks' is True, no
+        sanitization is attempted and both flags remain False.
+        """
+        try:
+            self.chem_check_tried = False
+            self.chem_check_failed = False
+        except Exception:
+            # Ensure attributes exist even if called very early
+            self.chem_check_tried = False
+            self.chem_check_failed = False
+
+        if self.settings.get('skip_chemistry_checks', False):
+            # User asked to skip chemistry checks entirely
+            return
+
+        try:
+            Chem.SanitizeMol(mol)
+            self.chem_check_tried = True
+            self.chem_check_failed = False
+        except Exception:
+            # Mark that we tried sanitization and it failed
+            self.chem_check_tried = True
+            self.chem_check_failed = True
+            try:
+                desc = f" ({source_desc})" if source_desc else ''
+                self.statusBar().showMessage(f"Molecule sanitization failed{desc}; file may be malformed.")
+            except Exception:
+                pass
+            # Disable 3D optimization UI to prevent running on invalid molecules
+            if hasattr(self, 'optimize_3d_button'):
+                try:
+                    self.optimize_3d_button.setEnabled(False)
+                except Exception:
+                    pass
         
     def load_mol_file_for_3d_viewing(self, file_path=None):
         """MOL/SDFファイルを3Dビューアーで開く"""
@@ -11756,16 +12055,28 @@ class MainWindow(QMainWindow):
             if mol.GetNumConformers() == 0:
                 self.statusBar().showMessage("No 3D coordinates found. Converting to 3D...")
                 try:
-                    AllChem.EmbedMolecule(mol)
-                    # 最適化は実行しない
-                    # 3D変換直後にUndoスタックに積む
-                    self.current_mol = mol
-                    self.push_undo_state()
+                    try:
+                        AllChem.EmbedMolecule(mol)
+                        # 最適化は実行しない
+                        # 3D変換直後にUndoスタックに積む
+                        self.current_mol = mol
+                        self.push_undo_state()
+                    except Exception as e_embed:
+                        # If skipping chemistry checks, allow molecule to be displayed without 3D embedding
+                        if self.settings.get('skip_chemistry_checks', False):
+                            self.statusBar().showMessage("Warning: failed to generate 3D coordinates but skip_chemistry_checks is enabled; continuing.")
+                            # Keep mol as-is (may lack conformer); downstream code checks for conformers
+                        else:
+                            raise
                 except:
                     self.statusBar().showMessage("Failed to generate 3D coordinates")
                     return
             
             # 3Dビューアーに表示
+            # Centralized chemical/sanitization handling
+            # Ensure the skip_chemistry_checks setting is respected and flags are set
+            self._apply_chem_check_and_set_flags(mol, source_desc='MOL/SDF')
+
             self.current_mol = mol
             self.draw_molecule_3d(mol)
             
@@ -11892,7 +12203,14 @@ class MainWindow(QMainWindow):
         
         for action_name in basic_3d_actions:
             if hasattr(self, action_name):
-                getattr(self, action_name).setEnabled(enabled)
+                # If enabling globally but chemical sanitization failed earlier, keep Optimize 3D disabled
+                if enabled and action_name == 'optimize_3d_button' and getattr(self, 'chem_check_tried', False) and getattr(self, 'chem_check_failed', False):
+                    try:
+                        getattr(self, action_name).setEnabled(False)
+                    except Exception:
+                        pass
+                else:
+                    getattr(self, action_name).setEnabled(enabled)
         
         # 3D Selectボタンは常に有効にする
         if hasattr(self, 'measurement_action'):
