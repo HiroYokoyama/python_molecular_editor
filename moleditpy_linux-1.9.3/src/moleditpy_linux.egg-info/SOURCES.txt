@@ -1,0 +1,12 @@
+README.md
+pyproject.toml
+src/moleditpy_linux/__init__.py
+src/moleditpy_linux/main.py
+src/moleditpy_linux.egg-info/PKG-INFO
+src/moleditpy_linux.egg-info/SOURCES.txt
+src/moleditpy_linux.egg-info/dependency_links.txt
+src/moleditpy_linux.egg-info/entry_points.txt
+src/moleditpy_linux.egg-info/requires.txt
+src/moleditpy_linux.egg-info/top_level.txt
+src/moleditpy_linux/assets/icon.ico
+src/moleditpy_linux/assets/icon.png
