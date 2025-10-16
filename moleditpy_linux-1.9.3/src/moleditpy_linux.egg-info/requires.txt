@@ -1,6 +1,0 @@
-PyQt6
-rdkit
-numpy
-pyvista
-pyvistaqt
-pyopengl
