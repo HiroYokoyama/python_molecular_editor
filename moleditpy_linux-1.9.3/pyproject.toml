@@ -3,7 +3,7 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "moleditpy"
+name = "moleditpy-linux"
 
 version = "1.9.3"
 
@@ -37,7 +37,7 @@ dependencies = [
     "numpy",
     "pyvista",
     "pyvistaqt",
-    "openbabel-wheel",
+    "pyopengl",
 ]
 
 [project.urls]
@@ -45,7 +45,7 @@ Homepage = "https://github.com/HiroYokoyama/python_molecular_editor"
 Issues = "https://github.com/HiroYokoyama/python_molecular_editor/issues"
 
 [project.scripts]
-moleditpy = "moleditpy.main:main"
+moleditpy = "moleditpy_linux.main:main"
 
 [tool.setuptools.package-data]
-"moleditpy" = ["assets/*"]
+"moleditpy_linux" = ["assets/*"]
