@@ -11,7 +11,7 @@ DOI 10.5281/zenodo.17268532
 """
 
 #Version
-VERSION = '1.9.4'
+VERSION = '1.9.5'
 
 print("-----------------------------------------------------")
 print("MoleditPy — A Python-based molecular editing software")
@@ -46,7 +46,7 @@ from PyQt6.QtGui import (
 )
 
 
-from PyQt6.QtCore import Qt, QPointF, QRectF, QLineF, QObject, QThread, pyqtSignal, QEvent, QMimeData, QByteArray, QUrl, QTimer, QDateTime
+from PyQt6.QtCore import Qt, QPointF, QRectF, QLineF, QObject, QThread, pyqtSignal, pyqtSlot, QEvent, QMimeData, QByteArray, QUrl, QTimer, QDateTime
 
 from vtkmodules.vtkInteractionStyle import vtkInteractorStyleTrackballCamera
 
@@ -172,17 +172,26 @@ class Dialog3DPickingMixin:
                             click_threshold = vdw_radius * 1.5
 
                             if distances[closest_atom_idx] < click_threshold:
+                                # We handled the pick (atom clicked) -> consume the event so
+                                # other UI elements don't also process it.
                                 self.on_atom_picked(int(closest_atom_idx))
-                                return True  # Consume event
+                                return True
                 
                 # 原子以外をクリックした場合は選択をクリア（Measurementモードと同じロジック）
                 if hasattr(self, 'clear_selection'):
                     self.clear_selection()
-                return True  # Consume event
+                # We did not actually pick an atom; do NOT consume the event here so
+                # the interactor and CustomInteractorStyle can handle camera rotation
+                # and other behaviors. Returning False (or calling the base
+                # implementation) allows normal processing to continue.
+                return False
                     
             except Exception as e:
                 print(f"Error in eventFilter: {e}")
-                
+                # On exception, don't swallow the event either — let the normal
+                # event pipeline continue so the UI remains responsive.
+                return False
+
         return super().eventFilter(obj, event)
     
     def enable_picking(self):
@@ -285,7 +294,7 @@ class UserTemplateDialog(QDialog):
         layout = QVBoxLayout(self)
         
         # Instructions
-        instruction_label = QLabel("Create and manage your custom molecular templates. Double-click a template to use it in the editor.")
+        instruction_label = QLabel("Create and manage your custom molecular templates. Click a template to use it in the editor.")
         instruction_label.setWordWrap(True)
         layout.addWidget(instruction_label)
         
@@ -672,21 +681,50 @@ class UserTemplateDialog(QDialog):
         
         self.selected_template = template_data
         self.delete_button.setEnabled(True)
-        
+
         # Automatically switch to template mode when template is selected
         template_name = template_data.get('name', 'user_template')
         mode_name = f"template_user_{template_name}"
-        
+
         # Store template data for the scene to use
-        self.main_window.scene.user_template_data = template_data
-        self.main_window.set_mode(mode_name)
-        
-        # Update UI
-        self.main_window.statusBar().showMessage(f"Template mode: {template_name}")
-        
-        # Update toolbar to reflect the template mode
-        if hasattr(self.main_window, 'mode_actions') and f"template_user_{template_name}" in self.main_window.mode_actions:
-            self.main_window.mode_actions[f"template_user_{template_name}"].setChecked(True)
+        try:
+            self.main_window.scene.user_template_data = template_data
+        except Exception:
+            # Best-effort: ignore if scene or attribute missing
+            pass
+
+        # Force the main window into the template mode.
+        # Clear or uncheck any existing mode actions if present to avoid staying in another mode.
+        try:
+            # Uncheck all mode actions first (if a dict of QAction exists)
+            if hasattr(self.main_window, 'mode_actions') and isinstance(self.main_window.mode_actions, dict):
+                for act in self.main_window.mode_actions.values():
+                    try:
+                        act.setChecked(False)
+                    except Exception:
+                        continue
+
+            # If main_window has a set_mode method, call it. Otherwise, try to set a mode attribute.
+            if hasattr(self.main_window, 'set_mode') and callable(self.main_window.set_mode):
+                self.main_window.set_mode(mode_name)
+            else:
+                # Fallback: set an attribute and try to update UI
+                setattr(self.main_window, 'mode', mode_name)
+
+            # Update UI
+            try:
+                self.main_window.statusBar().showMessage(f"Template mode: {template_name}")
+            except Exception:
+                pass
+
+            # If there is a matching QAction in mode_actions, check it
+            try:
+                if hasattr(self.main_window, 'mode_actions') and f"template_user_{template_name}" in self.main_window.mode_actions:
+                    self.main_window.mode_actions[f"template_user_{template_name}"].setChecked(True)
+            except Exception:
+                pass
+        except Exception as e:
+            print(f"Warning: Failed to switch main window to template mode: {e}")
     
     def use_template(self, template_data):
         """テンプレートを使用（エディタに適用）"""
@@ -696,15 +734,35 @@ class UserTemplateDialog(QDialog):
             mode_name = f"template_user_{template_name}"
             
             # Store template data for the scene to use
-            self.main_window.scene.user_template_data = template_data
-            self.main_window.set_mode(mode_name)
-            
-            # Update UI
-            self.main_window.statusBar().showMessage(f"Template mode: {template_name}")
-            
-            # Store selected template for later use
-            self.selected_template = template_data
-            
+            try:
+                self.main_window.scene.user_template_data = template_data
+            except Exception:
+                pass
+
+            # Force the main window into the template mode (same approach as select_template)
+            try:
+                if hasattr(self.main_window, 'mode_actions') and isinstance(self.main_window.mode_actions, dict):
+                    for act in self.main_window.mode_actions.values():
+                        try:
+                            act.setChecked(False)
+                        except Exception:
+                            continue
+
+                if hasattr(self.main_window, 'set_mode') and callable(self.main_window.set_mode):
+                    self.main_window.set_mode(mode_name)
+                else:
+                    setattr(self.main_window, 'mode', mode_name)
+
+                try:
+                    self.main_window.statusBar().showMessage(f"Template mode: {template_name}")
+                except Exception:
+                    pass
+
+                # Mark selected and keep dialog open
+                self.selected_template = template_data
+            except Exception as e:
+                print(f"Warning: Failed to switch main window to template mode: {e}")
+
             # Don't close dialog - keep it open for easy template switching
             # self.accept()
             
@@ -918,6 +976,15 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog):
         coord_layout.addWidget(self.z_input, 2, 1)
         
         layout.addLayout(coord_layout)
+
+        # Translation target toggle: Entire molecule (default) or Selected atoms only
+        self.translate_selected_only_checkbox = QCheckBox("Translate selected atoms only")
+        self.translate_selected_only_checkbox.setToolTip(
+            "When checked, only the atoms you selected will be moved so their centroid matches the target.\n"
+            "When unchecked (default), the entire molecule will be translated so the selected atoms' centroid moves to the target."
+        )
+        self.translate_selected_only_checkbox.setChecked(False)  # default: entire molecule
+        layout.addWidget(self.translate_selected_only_checkbox)
         
         # Buttons
         button_layout = QHBoxLayout()
@@ -1032,13 +1099,30 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog):
             # 移動ベクトルを計算
             translation_vector = target_pos - current_centroid
 
-            # 全原子を平行移動
             conf = self.mol.GetConformer()
-            for i in range(self.mol.GetNumAtoms()):
-                atom_pos = np.array(conf.GetAtomPosition(i))
-                new_pos = atom_pos + translation_vector
-                conf.SetAtomPosition(i, new_pos.tolist())
-                self.main_window.atom_positions_3d[i] = new_pos
+
+            if self.translate_selected_only_checkbox.isChecked():
+                # Move only the selected atoms: shift selected atoms by translation_vector
+                for i in range(self.mol.GetNumAtoms()):
+                    if i in self.selected_atoms:
+                        atom_pos = np.array(conf.GetAtomPosition(i))
+                        new_pos = atom_pos + translation_vector
+                        conf.SetAtomPosition(i, new_pos.tolist())
+                        # Update 3d positions for this atom only
+                        try:
+                            self.main_window.atom_positions_3d[i] = new_pos
+                        except Exception:
+                            pass
+                    else:
+                        # leave other atoms unchanged
+                        continue
+            else:
+                # Default: translate entire molecule so centroid moves to target
+                for i in range(self.mol.GetNumAtoms()):
+                    atom_pos = np.array(conf.GetAtomPosition(i))
+                    new_pos = atom_pos + translation_vector
+                    conf.SetAtomPosition(i, new_pos.tolist())
+                    self.main_window.atom_positions_3d[i] = new_pos
 
 
             # 3D表示を更新
@@ -5684,12 +5768,17 @@ class ZoomableView(QGraphicsView):
 
 
 
+
 class CalculationWorker(QObject):
     status_update = pyqtSignal(str) 
     finished=pyqtSignal(object); error=pyqtSignal(str)
     
-    def run_calculation(self, mol_block):
+    def run_calculation(self, mol_block, options=None):
         try:
+            # options: dict-like with keys: 'conversion_mode' -> 'fallback'|'rdkit'|'obabel'
+            if options is None:
+                options = {}
+            conversion_mode = options.get('conversion_mode', 'fallback')
             if not mol_block:
                 raise ValueError("No atoms to convert.")
             
@@ -5745,7 +5834,7 @@ class CalculationWorker(QObject):
             # Do NOT call AssignStereochemistry here as it overrides our explicit labels
 
             mol = Chem.AddHs(mol)
-            
+
             # CRITICAL: Re-apply explicit stereo after AddHs which may renumber atoms
             for bond_idx, stereo_type in explicit_stereo.items():
                 if bond_idx < mol.GetNumBonds():
@@ -5794,24 +5883,28 @@ class CalculationWorker(QObject):
                     stereo_atoms = bond.GetStereoAtoms()
                     original_stereo_info.append((bond.GetIdx(), bond.GetStereo(), stereo_atoms))
             
-            self.status_update.emit("Embedding 3D coordinates...")
+            self.status_update.emit("RDKit: Embedding 3D coordinates...")
             
             # Try multiple times with different approaches if needed
             conf_id = -1
             
             # First attempt: Standard ETKDG with stereo enforcement
             try:
-                conf_id = AllChem.EmbedMolecule(mol, params)
+                # Only attempt RDKit embedding if mode allows
+                if conversion_mode in ('fallback', 'rdkit'):
+                    conf_id = AllChem.EmbedMolecule(mol, params)
+                else:
+                    conf_id = -1
             except Exception as e:
                 self.status_update.emit(f"Standard embedding failed: {e}")
             
-            # Second attempt: Use constraint embedding if available
-            if conf_id == -1:
+            # Second attempt: Use constraint embedding if available (only when RDKit is allowed)
+            if conf_id == -1 and conversion_mode in ('fallback', 'rdkit'):
                 try:
                     # Create distance constraints for double bonds to enforce E/Z geometry
                     from rdkit.DistanceGeometry import DoTriangleSmoothing
                     bounds_matrix = AllChem.GetMoleculeBoundsMatrix(mol)
-                    
+
                     # Add constraints for E/Z bonds
                     for bond_idx, stereo, stereo_atoms in original_stereo_info:
                         bond = mol.GetBondWithIdx(bond_idx)
@@ -5820,7 +5913,7 @@ class CalculationWorker(QObject):
                             atom2_idx = bond.GetEndAtomIdx()
                             neighbor1_idx = stereo_atoms[0]
                             neighbor2_idx = stereo_atoms[1]
-                            
+
                             # For Z (cis): neighbors should be closer
                             # For E (trans): neighbors should be farther
                             if stereo == Chem.BondStereo.STEREOZ:
@@ -5833,19 +5926,26 @@ class CalculationWorker(QObject):
                                 target_dist = 5.0  # Angstroms
                                 bounds_matrix[neighbor1_idx][neighbor2_idx] = max(bounds_matrix[neighbor1_idx][neighbor2_idx], target_dist)
                                 bounds_matrix[neighbor2_idx][neighbor1_idx] = max(bounds_matrix[neighbor2_idx][neighbor1_idx], target_dist)
-                    
+
                     DoTriangleSmoothing(bounds_matrix)
                     conf_id = AllChem.EmbedMolecule(mol, bounds_matrix, params)
                     self.status_update.emit("Constraint-based embedding succeeded")
-                except Exception as e:
-                    self.status_update.emit(f"Constraint embedding failed: {e}")
+                except Exception:
+                    # Constraint embedding failed: only raise error if mode is 'rdkit', otherwise allow fallback
+                    self.status_update.emit("RDKit: Constraint embedding failed")
+                    if conversion_mode == 'rdkit':
+                        raise RuntimeError("RDKit: Constraint embedding failed")
+                    conf_id = -1
                     
             # Fallback: Try basic embedding
             if conf_id == -1:
                 try:
-                    basic_params = AllChem.ETKDGv2()
-                    basic_params.randomSeed = 42
-                    conf_id = AllChem.EmbedMolecule(mol, basic_params)
+                    if conversion_mode in ('fallback', 'rdkit'):
+                        basic_params = AllChem.ETKDGv2()
+                        basic_params.randomSeed = 42
+                        conf_id = AllChem.EmbedMolecule(mol, basic_params)
+                    else:
+                        conf_id = -1
                 except Exception:
                     pass
             '''
@@ -5897,58 +5997,45 @@ class CalculationWorker(QObject):
                 self.status_update.emit("RDKit 3D conversion succeeded.")
                 return
 
-            # ---------- RDKit failed: try Open Babel via pybel only (no CLI fallback) ----------
-            self.status_update.emit("RDKit embedding failed. Attempting Open Babel fallback...")
-
-            try:
-                # Check availability first
-                if not OBABEL_AVAILABLE:
-                    raise RuntimeError("Open Babel (pybel) is not available in this Python environment.")
-                # pybel expects an input format; provide mol block
-                # pybel.readstring accepts format strings like "mol" or "smi"
-                ob_mol = pybel.readstring("mol", mol_block)
-                # ensure hydrogens
+            # If RDKit did not produce a conf and OBabel is allowed, try Open Babel
+            if conf_id == -1 and conversion_mode in ('fallback', 'obabel'):
+                self.status_update.emit("RDKit embedding failed or disabled. Attempting Open Babel...")
                 try:
-                    ob_mol.addh()
-                except Exception:
-                    pass
-                # build 3D coordinates
-                ob_mol.make3D()
-                try:
-                    # まず第一候補であるMMFF94で最適化を試みる
-                    self.status_update.emit("Optimizing with Open Babel (MMFF94)...")
-                    ob_mol.localopt(forcefield='mmff94', steps=500)
-                except Exception:
-                    # MMFF94が失敗した場合、UFFにフォールバックして再試行
+                    if not OBABEL_AVAILABLE:
+                        raise RuntimeError("Open Babel (pybel) is not available in this Python environment.")
+                    ob_mol = pybel.readstring("mol", mol_block)
                     try:
-                        self.status_update.emit("MMFF94 failed, falling back to UFF...")
-                        ob_mol.localopt(forcefield='uff', steps=500)
-                    except Exception:
-                        # UFFも失敗した場合はスキップ
-                        self.status_update.emit("UFF optimization also failed.")
-                        pass
-                # get molblock and convert to RDKit
-                molblock_ob = ob_mol.write("mol")
-                rd_mol = Chem.MolFromMolBlock(molblock_ob, removeHs=False)
-                if rd_mol is None:
-                    raise ValueError("Open Babel produced invalid MOL block.")
-                # optimize in RDKit as a final step if possible
-                rd_mol = Chem.AddHs(rd_mol)
-                # Do NOT call AssignStereochemistry here to preserve original stereo info
-                try:
-                    AllChem.MMFFOptimizeMolecule(rd_mol)
-                except Exception:
-                    try:
-                        AllChem.UFFOptimizeMolecule(rd_mol)
+                        ob_mol.addh()
                     except Exception:
                         pass
-                # Do NOT call AssignStereochemistry after optimization either
-                self.status_update.emit("Open Babel embedding succeeded. Warning: Conformation accuracy may be limited.")
-                self.finished.emit(rd_mol)
-                return
-            except Exception as ob_err:
-                # pybel was available but failed
-                raise RuntimeError(f"Open Babel 3D conversion failed: {ob_err}")
+                    ob_mol.make3D()
+                    try:
+                        self.status_update.emit("Optimizing with Open Babel (MMFF94)...")
+                        ob_mol.localopt(forcefield='mmff94', steps=500)
+                    except Exception:
+                        try:
+                            self.status_update.emit("MMFF94 failed, falling back to UFF...")
+                            ob_mol.localopt(forcefield='uff', steps=500)
+                        except Exception:
+                            self.status_update.emit("UFF optimization also failed.")
+                            pass
+                    molblock_ob = ob_mol.write("mol")
+                    rd_mol = Chem.MolFromMolBlock(molblock_ob, removeHs=False)
+                    if rd_mol is None:
+                        raise ValueError("Open Babel produced invalid MOL block.")
+                    rd_mol = Chem.AddHs(rd_mol)
+                    try:
+                        AllChem.MMFFOptimizeMolecule(rd_mol)
+                    except Exception:
+                        try:
+                            AllChem.UFFOptimizeMolecule(rd_mol)
+                        except Exception:
+                            pass
+                    self.status_update.emit("Open Babel embedding succeeded. Warning: Conformation accuracy may be limited.")
+                    self.finished.emit(rd_mol)
+                    return
+                except Exception as ob_err:
+                    raise RuntimeError(f"Open Babel 3D conversion failed: {ob_err}")
 
         except Exception as e:
             self.error.emit(str(e))
@@ -6200,6 +6287,7 @@ class SettingsDialog(QDialog):
         # デフォルト設定をクラス内で定義
         self.default_settings = {
             'background_color': '#919191',
+            'projection_mode': 'Perspective',
             'lighting_enabled': True,
             'specular': 0.20,
             'specular_power': 20,
@@ -6229,6 +6317,9 @@ class SettingsDialog(QDialog):
             # element symbol recognition will be coerced where possible and Chem.SanitizeMol
             # failures will be ignored so the 3D viewer can still display the structure.
             'skip_chemistry_checks': True,
+            # 3D conversion/optimization defaults
+            '3d_conversion_mode': 'fallback',
+            'optimization_method': 'MMFF_RDKIT',
         }
         
         # --- 選択された色を管理する専用のインスタンス変数 ---
@@ -6240,6 +6331,9 @@ class SettingsDialog(QDialog):
         # タブウィジェットを作成
         self.tab_widget = QTabWidget()
         layout.addWidget(self.tab_widget)
+
+        # Scene設定タブ
+        self.create_general_tab()
         
         # Common設定タブ
         self.create_common_tab()
@@ -6255,9 +6349,6 @@ class SettingsDialog(QDialog):
         
         # Stick設定タブ
         self.create_stick_tab()
-
-        # 基本設定タブ
-        self.create_general_tab()
 
         # 渡された設定でUIと内部変数を初期化
         self.update_ui_from_settings(current_settings)
@@ -6343,6 +6434,13 @@ class SettingsDialog(QDialog):
         spec_power_layout.addWidget(self.spec_power_label)
         form_layout.addRow("Shininess Power:", spec_power_layout)
         
+        # Projection mode (Perspective / Orthographic)
+        self.projection_combo = QComboBox()
+        self.projection_combo.addItem("Perspective")
+        self.projection_combo.addItem("Orthographic")
+        self.projection_combo.setToolTip("Choose camera projection mode: Perspective (default) or Orthographic")
+        form_layout.addRow("Projection Mode:", self.projection_combo)
+        
         self.tab_widget.addTab(general_widget, "Scene")
     
     def create_common_tab(self):
@@ -6358,13 +6456,6 @@ class SettingsDialog(QDialog):
             self.skip_chem_checks_checkbox.stateChanged.connect(lambda s: self._on_skip_chem_checks_changed(s))
         except Exception:
             pass
-        form_layout.addRow("Skip chemistry checks on import:", self.skip_chem_checks_checkbox)
-        
-        # --- 区切り線（水平ライン） ---
-        line = QFrame()
-        line.setFrameShape(QFrame.Shape.HLine)
-        line.setFrameShadow(QFrame.Shadow.Sunken)
-        form_layout.addRow(line)
 
         # 二重結合オフセット倍率
         self.double_offset_slider = QSlider(Qt.Orientation.Horizontal)
@@ -6375,7 +6466,7 @@ class SettingsDialog(QDialog):
         double_offset_layout.addWidget(self.double_offset_slider)
         double_offset_layout.addWidget(self.double_offset_label)
         form_layout.addRow("Double Bond Offset:", double_offset_layout)
-        
+
         # 三重結合オフセット倍率
         self.triple_offset_slider = QSlider(Qt.Orientation.Horizontal)
         self.triple_offset_slider.setRange(100, 400)  # 1.0 ~ 4.0
@@ -6385,7 +6476,7 @@ class SettingsDialog(QDialog):
         triple_offset_layout.addWidget(self.triple_offset_slider)
         triple_offset_layout.addWidget(self.triple_offset_label)
         form_layout.addRow("Triple Bond Offset:", triple_offset_layout)
-        
+
         # 二重結合半径倍率
         self.double_radius_slider = QSlider(Qt.Orientation.Horizontal)
         self.double_radius_slider.setRange(50, 100)  # 0.5 ~ 1.0
@@ -6395,7 +6486,7 @@ class SettingsDialog(QDialog):
         double_radius_layout.addWidget(self.double_radius_slider)
         double_radius_layout.addWidget(self.double_radius_label)
         form_layout.addRow("Double Bond Thickness:", double_radius_layout)
-        
+
         # 三重結合半径倍率
         self.triple_radius_slider = QSlider(Qt.Orientation.Horizontal)
         self.triple_radius_slider.setRange(50, 100)  # 0.5 ~ 1.0
@@ -6406,8 +6497,16 @@ class SettingsDialog(QDialog):
         triple_radius_layout.addWidget(self.triple_radius_label)
         form_layout.addRow("Triple Bond Thickness:", triple_radius_layout)
 
+        # --- 区切り線（水平ライン） ---
+        line = QFrame()
+        line.setFrameShape(QFrame.Shape.HLine)
+        line.setFrameShadow(QFrame.Shadow.Sunken)
+        form_layout.addRow(line)
+                
+        # Add the checkbox to the form
+        form_layout.addRow("Skip chemistry checks on import xyz file:", self.skip_chem_checks_checkbox)
 
-        
+    
         self.tab_widget.addTab(common_widget, "Common")
     
     def create_ball_stick_tab(self):
@@ -6562,6 +6661,7 @@ class SettingsDialog(QDialog):
         tab_settings = {
             "Scene": {
                 'background_color': self.default_settings['background_color'],
+                'projection_mode': self.default_settings['projection_mode'],
                 'show_3d_axes': self.default_settings['show_3d_axes'],
                 'lighting_enabled': self.default_settings['lighting_enabled'],
                 'light_intensity': self.default_settings['light_intensity'],
@@ -6624,7 +6724,45 @@ class SettingsDialog(QDialog):
         )
         
         if reply == QMessageBox.StandardButton.Yes:
+            # Update the dialog UI
             self.update_ui_from_settings(self.default_settings)
+
+            # Also persist defaults to the application-level settings if parent is available
+            try:
+                if self.parent_window and hasattr(self.parent_window, 'settings'):
+                    # Update parent settings and save
+                    self.parent_window.settings.update(self.default_settings)
+                    # defer writing to disk; mark dirty so closeEvent will persist
+                    try:
+                        self.parent_window.settings_dirty = True
+                    except Exception:
+                        pass
+
+                    # Refresh parent's optimization and conversion menu/action states
+                    try:
+                        # Optimization method
+                        if hasattr(self.parent_window, 'optimization_method'):
+                            self.parent_window.optimization_method = self.parent_window.settings.get('optimization_method', 'MMFF_RDKIT')
+                        if hasattr(self.parent_window, 'opt3d_actions'):
+                            for k, act in self.parent_window.opt3d_actions.items():
+                                try:
+                                    act.setChecked(k.upper() == (self.parent_window.optimization_method or '').upper())
+                                except Exception:
+                                    pass
+
+                        # Conversion mode
+                        conv_mode = self.parent_window.settings.get('3d_conversion_mode', 'fallback')
+                        if hasattr(self.parent_window, 'conv_actions'):
+                            for k, act in self.parent_window.conv_actions.items():
+                                try:
+                                    act.setChecked(k == conv_mode)
+                                except Exception:
+                                    pass
+                    except Exception:
+                        pass
+            except Exception:
+                pass
+
             QMessageBox.information(self, "Reset Complete", "All settings have been reset to defaults.")
 
     def get_current_ui_settings(self):
@@ -6737,6 +6875,10 @@ class SettingsDialog(QDialog):
         self.triple_radius_slider.setValue(triple_radius)
         self.triple_radius_label.setText(f"{triple_radius/100:.2f}")
         
+        # Projection mode
+        proj_mode = settings_dict.get('projection_mode', self.default_settings.get('projection_mode', 'Perspective'))
+        idx = self.projection_combo.findText(proj_mode)
+        self.projection_combo.setCurrentIndex(idx if idx != -1 else 0)
         # skip chemistry checks
         self.skip_chem_checks_checkbox.setChecked(settings_dict.get('skip_chemistry_checks', self.default_settings.get('skip_chemistry_checks', False)))
       
@@ -6757,6 +6899,7 @@ class SettingsDialog(QDialog):
     def get_settings(self):
         return {
             'background_color': self.current_bg_color,
+            'projection_mode': self.projection_combo.currentText(),
             'show_3d_axes': self.axes_checkbox.isChecked(),
             'lighting_enabled': self.light_checkbox.isChecked(),
             'light_intensity': self.intensity_slider.value() / 100.0,
@@ -6790,7 +6933,11 @@ class SettingsDialog(QDialog):
         if self.parent_window:
             settings = self.get_settings()
             self.parent_window.settings.update(settings)
-            self.parent_window.save_settings()
+            # Mark settings dirty; persist on exit to avoid frequent disk writes
+            try:
+                self.parent_window.settings_dirty = True
+            except Exception:
+                pass
             # 3Dビューの設定を適用
             self.parent_window.apply_3d_settings()
             # 現在の分子を再描画（設定変更を反映）
@@ -6807,7 +6954,11 @@ class SettingsDialog(QDialog):
         try:
             enabled = bool(state)
             self.settings['skip_chemistry_checks'] = enabled
-            self.save_settings()
+            # mark dirty instead of immediate save
+            try:
+                self.settings_dirty = True
+            except Exception:
+                pass
             # If skip is enabled, allow Optimize button; otherwise, respect chem_check flags
 
         except Exception:
@@ -6824,6 +6975,13 @@ class CustomQtInteractor(QtInteractor):
     def __init__(self, parent=None, main_window=None, **kwargs):
         super().__init__(parent, **kwargs)
         self.main_window = main_window
+        # Track recent clicks so we can detect and swallow triple-clicks
+        # Triple-clicks are not a distinct Qt event on all platforms, so we
+        # implement a small timing-based counter here and accept the event
+        # when 3 rapid clicks are detected to prevent them from reaching
+        # the VTK interactor and causing unexpected behaviour in the 3D view.
+        self._last_click_time = 0.0
+        self._click_count = 0
 
     def wheelEvent(self, event):
         """
@@ -6845,6 +7003,19 @@ class CustomQtInteractor(QtInteractor):
         super().mouseReleaseEvent(event) # 親クラスのイベントを先に処理
         if self.main_window and hasattr(self.main_window, 'view_2d'):
             self.main_window.view_2d.setFocus()
+
+    def mouseDoubleClickEvent(self, event):
+        """Ignore mouse double-clicks on the 3D widget to avoid accidental actions.
+
+        Swallow the double-click event so it doesn't trigger selection, editing,
+        or camera jumps. We intentionally do not call the superclass handler.
+        """
+        try:
+            # Accept the event to mark it handled and prevent further processing.
+            event.accept()
+        except Exception:
+            # If event doesn't support accept for some reason, just return.
+            return
 
 # --- 3Dインタラクションを管理する専用クラス ---
 class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
@@ -7000,7 +7171,6 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
             mw.glyph_source.points = mw.atom_positions_3d
             mw.glyph_source.Modified()
             conf.SetAtomPosition(atom_id, new_world_coords)
-            interactor.Render()
         else:
             # カメラ回転処理を親クラスに任せます
             super().OnMouseMove()
@@ -7054,18 +7224,6 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                     # Rebuild the authoritative atom_positions_3d from the conformer
                     mw.atom_positions_3d = np.array([list(conf.GetAtomPosition(i)) for i in range(mw.current_mol.GetNumAtoms())])
 
-                    # If a glyph_source exists (typical), update its points and mark modified
-                    if hasattr(mw, 'glyph_source') and mw.glyph_source is not None:
-                        try:
-                            mw.glyph_source.points = mw.atom_positions_3d
-                            mw.glyph_source.Modified()
-                        except Exception:
-                            # Fallback to a full redraw if updating glyph_source fails
-                            try:
-                                mw.draw_molecule_3d(mw.current_mol)
-                            except Exception:
-                                pass
-
                     # Refresh overlays and labels that depend on atom_positions_3d
                     try:
                         mw.update_3d_selection_display()
@@ -7083,13 +7241,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                         mw.show_all_atom_info()
                     except Exception:
                         pass
-
-                    # Final render to make sure everything is consistent
-                    try:
-                        if hasattr(mw, 'plotter') and mw.plotter:
-                            mw.plotter.render()
-                    except Exception:
-                        pass
+                    
                     # As a final safety-net, ensure the visual scene exactly matches
                     # the authoritative RDKit conformer coordinates. This forces a
                     # full redraw if any lower-level updates failed to sync.
@@ -7099,12 +7251,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                             try:
                                 mw.draw_molecule_3d(mw.current_mol)
                             except Exception:
-                                # If a full redraw fails, at least attempt a render
-                                pass
-                            try:
-                                if hasattr(mw, 'plotter') and mw.plotter:
-                                    mw.plotter.render()
-                            except Exception:
+                                # If a full redraw fails, skip rendering here
                                 pass
                     except Exception:
                         # Silently ignore any errors during this final sync step
@@ -7133,8 +7280,8 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
 
 class MainWindow(QMainWindow):
 
-    # start_calculation carries the MOL block and a boolean skip_chemistry_checks flag
-    start_calculation = pyqtSignal(str, bool)
+    # start_calculation carries the MOL block and an options object (second arg)
+    start_calculation = pyqtSignal(str, object)
     def __init__(self, initial_file=None):
         super().__init__()
         self.setAcceptDrops(True)
@@ -7168,6 +7315,9 @@ class MainWindow(QMainWindow):
         
         # 保存状態を追跡する変数
         self.has_unsaved_changes = False
+        # 設定ファイルのディスク書き込みを遅延するフラグ
+        # True に設定された場合、設定はメモリ上で更新され、アプリ終了時にまとめて保存されます。
+        self.settings_dirty = True
         self.current_file_path = None  # 現在開いているファイルのパス
         self.initialization_complete = False  # 初期化完了フラグ
         
@@ -7359,8 +7509,25 @@ class MainWindow(QMainWindow):
 
         #self.view_2d.fitInView(self.scene.sceneRect(), Qt.AspectRatioMode.KeepAspectRatio)
 
+        # Top/main toolbar (keep 3D Edit controls on the right end of this toolbar)
         toolbar = QToolBar("Main Toolbar")
         self.addToolBar(toolbar)
+        # Keep a reference to the main toolbar for later updates
+        self.toolbar = toolbar
+
+        # Templates toolbar: place it directly below the main toolbar (second row at the top)
+        # Use addToolBarBreak to ensure this toolbar appears on the next row under the main toolbar.
+        # Some older PyQt/PySide versions may not have addToolBarBreak; fall back silently in that case.
+        try:
+            # Insert a toolbar break in the Top toolbar area to force the next toolbar onto a new row
+            self.addToolBarBreak(Qt.ToolBarArea.TopToolBarArea)
+        except Exception:
+            # If addToolBarBreak isn't available, continue without raising; placement may still work depending on the platform.
+            pass
+
+        toolbar_bottom = QToolBar("Templates Toolbar")
+        self.addToolBar(Qt.ToolBarArea.TopToolBarArea, toolbar_bottom)
+        self.toolbar_bottom = toolbar_bottom
         self.tool_group = QActionGroup(self)
         self.tool_group.setExclusive(True)
 
@@ -7392,8 +7559,43 @@ class MainWindow(QMainWindow):
         
         toolbar.addSeparator()
 
+        # --- アイコン前景色を決めるヘルパー（ダーク/ライトモード対応） ---
+        def _icon_foreground_color():
+            """Return a QColor for icon foreground (black on light backgrounds, white on dark backgrounds).
+
+            Priority: explicit setting 'icon_foreground' in settings -> infer from configured background color -> infer from application palette.
+            """
+            try:
+                fg_hex = self.settings.get('icon_foreground')
+                if fg_hex:
+                    c = QColor(fg_hex)
+                    if c.isValid():
+                        return c
+            except Exception:
+                pass
+
+            try:
+                bg_hex = self.settings.get('background_color')
+                if bg_hex:
+                    bg = QColor(bg_hex)
+                    if bg.isValid():
+                        lum = 0.2126 * bg.redF() + 0.7152 * bg.greenF() + 0.0722 * bg.blueF()
+                        return QColor('#FFFFFF') if lum < 0.5 else QColor('#000000')
+            except Exception:
+                pass
+
+            try:
+                pal = QApplication.palette()
+                # palette.window() returns a QBrush; call color()
+                window_bg = pal.window().color()
+                lum = 0.2126 * window_bg.redF() + 0.7152 * window_bg.greenF() + 0.0722 * window_bg.blueF()
+                return QColor('#FFFFFF') if lum < 0.5 else QColor('#000000')
+            except Exception:
+                return QColor('#000000')
+
         # --- 結合ボタンのアイコンを生成するヘルパー関数 ---
         def create_bond_icon(bond_type, size=32):
+            fg = _icon_foreground_color()
             pixmap = QPixmap(size, size)
             pixmap.fill(Qt.GlobalColor.transparent)
             painter = QPainter(pixmap)
@@ -7403,8 +7605,9 @@ class MainWindow(QMainWindow):
             p2 = QPointF(size - 6, size / 2)
             line = QLineF(p1, p2)
 
-            painter.setPen(QPen(Qt.GlobalColor.black, 2))
-            painter.setBrush(QBrush(Qt.GlobalColor.black))
+            pen = QPen(fg, 2)
+            painter.setPen(pen)
+            painter.setBrush(QBrush(fg))
 
             if bond_type == 'single':
                 painter.drawLine(line)
@@ -7435,7 +7638,7 @@ class MainWindow(QMainWindow):
                     start_pt = p1 * (1 - t) + p2 * t
                     width = 10 * t
                     offset = QPointF(normal.dx(), normal.dy()) * width / 2.0
-                    painter.setPen(QPen(Qt.GlobalColor.black, 1.5))
+                    painter.setPen(QPen(fg, 1.5))
                     painter.drawLine(start_pt - offset, start_pt + offset)
 
             elif bond_type == 'ez_toggle':
@@ -7445,11 +7648,11 @@ class MainWindow(QMainWindow):
                 line = QLineF(p1, p2)
                 v = line.unitVector().normalVector()
                 offset = QPointF(v.dx(), v.dy()) * 2.0
-                painter.setPen(QPen(Qt.GlobalColor.black, 2))
+                painter.setPen(QPen(fg, 2))
                 painter.drawLine(line.translated(offset))
                 painter.drawLine(line.translated(-offset))
                 # 上部に "Z⇌E" のテキストを描画
-                painter.setPen(QPen(Qt.GlobalColor.black, 1))
+                painter.setPen(QPen(fg, 1))
                 font = painter.font()
                 font.setPointSize(10)
                 font.setBold(True)
@@ -7504,17 +7707,19 @@ class MainWindow(QMainWindow):
         toolbar.addAction(radical_action)
         self.tool_group.addAction(radical_action)
 
-        toolbar.addSeparator()
-        toolbar.addWidget(QLabel(" Templates:"))
+        # We will show template controls in the bottom toolbar to improve layout.
+        # Add a small label to the bottom toolbar instead of the main toolbar.
+        toolbar_bottom.addWidget(QLabel(" Templates:"))
         
         # --- アイコンを生成するヘルパー関数 ---
         def create_template_icon(n, is_benzene=False):
             size = 32
+            fg = _icon_foreground_color()
             pixmap = QPixmap(size, size)
             pixmap.fill(Qt.GlobalColor.transparent)
             painter = QPainter(pixmap)
             painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-            painter.setPen(QPen(Qt.GlobalColor.black, 2))
+            painter.setPen(QPen(fg, 2))
 
             center = QPointF(size / 2, size / 2)
             radius = size / 2 - 4 # アイコンの余白
@@ -7538,6 +7743,7 @@ class MainWindow(QMainWindow):
             if n in [7, 8, 9]:
                 font = QFont("Arial", 10, QFont.Weight.Bold)
                 painter.setFont(font)
+                painter.setPen(QPen(fg, 1))
                 painter.drawText(QRectF(0, 0, size, size), Qt.AlignmentFlag.AlignCenter, str(n))
 
             painter.end()
@@ -7560,16 +7766,17 @@ class MainWindow(QMainWindow):
 
             action.triggered.connect(lambda c, m=mode: self.set_mode(m))
             self.mode_actions[mode] = action
-            toolbar.addAction(action)
+            # Add template actions to the bottom toolbar so templates are on the second line
+            toolbar_bottom.addAction(action)
             self.tool_group.addAction(action)
 
-        # Add USER button for user templates
+        # Add USER button for user templates (placed in bottom toolbar)
         user_template_action = QAction("USER", self)
         user_template_action.setCheckable(True)
         user_template_action.setToolTip("Open User Templates Dialog")
         user_template_action.triggered.connect(self.open_template_dialog_and_activate)
         self.mode_actions['template_user'] = user_template_action
-        toolbar.addAction(user_template_action)
+        toolbar_bottom.addAction(user_template_action)
         self.tool_group.addAction(user_template_action)
 
         # 初期モードを'select'から'atom_C'（炭素原子描画モード）に変更
@@ -7578,7 +7785,7 @@ class MainWindow(QMainWindow):
         if 'atom_C' in self.mode_actions:
             self.mode_actions['atom_C'].setChecked(True)
 
-        # スペーサーを追加して、次のウィジェットを右端に配置する
+        # スペーサーを追加して、次のウィジェットを右端に配置する (keep on top toolbar)
         spacer = QWidget()
         spacer.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         toolbar.addWidget(spacer)
@@ -7590,8 +7797,8 @@ class MainWindow(QMainWindow):
         self.measurement_action.triggered.connect(self.toggle_measurement_mode)
         toolbar.addAction(self.measurement_action)
 
-        self.edit_3d_action = QAction("3D Edit", self, checkable=True)
-        self.edit_3d_action.setToolTip("Toggle 3D atom editing mode (Hold Alt for temporary mode)")
+        self.edit_3d_action = QAction("3D Drag", self, checkable=True)
+        self.edit_3d_action.setToolTip("Toggle 3D atom dragging mode (Hold Alt for temporary mode)")
         # 初期状態でも有効にする
         self.edit_3d_action.toggled.connect(self.toggle_3d_edit_mode)
         toolbar.addAction(self.edit_3d_action)
@@ -8048,9 +8255,116 @@ class MainWindow(QMainWindow):
         
 
         settings_menu = menu_bar.addMenu("&Settings")
+        # 1) 3D View settings (existing)
         view_settings_action = QAction("3D View Settings...", self)
         view_settings_action.triggered.connect(self.open_settings_dialog)
         settings_menu.addAction(view_settings_action)
+    
+        # 2) 3D Conversion settings — submenu with radio/check actions
+        conversion_menu = settings_menu.addMenu("3D Conversion")
+        conv_group = QActionGroup(self)
+        conv_group.setExclusive(True)
+        # helper to set conversion mode and persist
+        def _set_conv_mode(mode):
+            try:
+                self.settings['3d_conversion_mode'] = mode
+                # defer disk write
+                try:
+                    self.settings_dirty = True
+                except Exception:
+                    pass
+                self.statusBar().showMessage(f"3D conversion mode set to: {mode}")
+            except Exception:
+                pass
+
+        conv_options = [
+            ("RDKit -> Open Babel (fallback)", 'fallback'),
+            ("RDKit only", 'rdkit'),
+            ("Open Babel only", 'obabel')
+        ]
+        self.conv_actions = {}
+        for label, key in conv_options:
+            a = QAction(label, self)
+            a.setCheckable(True)
+            # If Open Babel isn't available, disable the Open Babel-only option
+            # and also disable the fallback option since it depends on Open Babel.
+            if not OBABEL_AVAILABLE:
+                if key == 'obabel' or key == 'fallback':
+                    a.setEnabled(False)
+            a.triggered.connect(lambda checked, m=key: _set_conv_mode(m))
+            conversion_menu.addAction(a)
+            conv_group.addAction(a)
+            self.conv_actions[key] = a
+
+        # Initialize checked state from settings (fallback default)
+        # Determine saved conversion mode. If Open Babel is not available,
+        # prefer 'rdkit' as the default rather than 'fallback'. Also ensure
+        # the settings reflect the actual enabled choice.
+        try:
+            default_mode = 'rdkit' if not OBABEL_AVAILABLE else 'fallback'
+            saved_conv = self.settings.get('3d_conversion_mode', default_mode)
+        except Exception:
+            saved_conv = 'rdkit' if not OBABEL_AVAILABLE else 'fallback'
+
+        # If the saved mode is disabled/unavailable, fall back to an enabled option.
+        if saved_conv not in self.conv_actions or not self.conv_actions[saved_conv].isEnabled():
+            # Prefer 'rdkit' if available, else pick whichever action is enabled
+            preferred = 'rdkit' if 'rdkit' in self.conv_actions and self.conv_actions['rdkit'].isEnabled() else None
+            if not preferred:
+                for k, act in self.conv_actions.items():
+                    if act.isEnabled():
+                        preferred = k
+                        break
+            saved_conv = preferred or 'rdkit'
+
+        # Set the checked state and persist the chosen conversion mode
+        try:
+            if saved_conv in self.conv_actions:
+                try:
+                    self.conv_actions[saved_conv].setChecked(True)
+                except Exception:
+                    pass
+            self.settings['3d_conversion_mode'] = saved_conv
+            try:
+                self.settings_dirty = True
+            except Exception:
+                pass
+        except Exception:
+            pass
+
+        # 3) 3D Optimization Settings (mirror Edit->3D Optimization Settings submenu)
+        optimization_menu = settings_menu.addMenu("3D Optimization Settings")
+        try:
+            # Use existing actions created in the Edit menu so state stays in sync
+            for k, act in self.opt3d_actions.items():
+                optimization_menu.addAction(act)
+        except Exception:
+            # Fallback: create a small local group
+            opt_group = QActionGroup(self)
+            opt_group.setExclusive(True)
+            mmff_act = QAction("MMFF (RDKit)", self); mmff_act.setCheckable(True)
+            mmff_act.triggered.connect(lambda checked: self.set_optimization_method('MMFF_RDKIT'))
+            uff_act = QAction("UFF (RDKit)", self); uff_act.setCheckable(True)
+            uff_act.triggered.connect(lambda checked: self.set_optimization_method('UFF_RDKIT'))
+            optimization_menu.addAction(mmff_act); optimization_menu.addAction(uff_act)
+            self.opt3d_actions = {'MMFF_RDKIT': mmff_act, 'UFF_RDKIT': uff_act}
+
+        # Ensure optimization checked state matches settings
+        try:
+            saved_opt = (self.settings.get('optimization_method') or self.optimization_method or 'MMFF_RDKIT').upper()
+        except Exception:
+            saved_opt = 'MMFF_RDKIT'
+        try:
+            if saved_opt in self.opt3d_actions:
+                self.opt3d_actions[saved_opt].setChecked(True)
+        except Exception:
+            pass
+    
+        # 4) Reset all settings to defaults
+        settings_menu.addSeparator()
+        reset_settings_action = QAction("Reset All Settings", self)
+        reset_settings_action.triggered.connect(self.reset_all_settings_menu)
+        settings_menu.addAction(reset_settings_action)
 
         help_menu = menu_bar.addMenu("&Help")
         about_action = QAction("About", self)
@@ -8078,6 +8392,7 @@ class MainWindow(QMainWindow):
         self.worker.finished.connect(self.on_calculation_finished); self.worker.error.connect(self.on_calculation_error)
         self.worker.status_update.connect(self.update_status_bar)
         self.thread.start()
+
 
     def update_status_bar(self, message):
         """ワーカースレッドからのメッセージでステータスバーを更新するスロット"""
@@ -8221,8 +8536,11 @@ class MainWindow(QMainWindow):
 
         # Persist to settings
         try:
-            self.settings['optimization_method'] = self.optimization_method
-            self.save_settings()
+                self.settings['optimization_method'] = self.optimization_method
+                try:
+                    self.settings_dirty = True
+                except Exception:
+                    pass
         except Exception:
             pass
 
@@ -8554,10 +8872,19 @@ class MainWindow(QMainWindow):
             color=text_color,
             name='calculating_text'
         )
+        # Keep a reference so we can reliably remove the text actor later
+        try:
+            self._calculating_text_actor = text_actor
+        except Exception:
+            # Best-effort: if storing fails, ignore — cleanup will still attempt renderer removal
+            pass
         text_actor.GetTextProperty().SetOpacity(1)
         self.plotter.render()
         # Emit skip flag so the worker can ignore sanitization errors if user requested
-        self.start_calculation.emit(mol_block, False)
+        # Determine conversion_mode from settings (default: 'fallback')
+        conv_mode = self.settings.get('3d_conversion_mode', 'fallback')
+        options = {'conversion_mode': conv_mode}
+        self.start_calculation.emit(mol_block, options)
 
         # 状態をUndo履歴に保存
         self.push_undo_state()
@@ -8745,6 +9072,44 @@ class MainWindow(QMainWindow):
 
         self.draw_molecule_3d(mol)
 
+        # Ensure any 'Calculating...' text is removed and the plotter is refreshed
+        try:
+            actor = getattr(self, '_calculating_text_actor', None)
+            if actor is not None:
+                try:
+                    # Prefer plotter API if available
+                    if hasattr(self.plotter, 'remove_actor'):
+                        try:
+                            self.plotter.remove_actor(actor)
+                        except Exception:
+                            # Some pyvista versions use renderer.RemoveActor
+                            if hasattr(self.plotter, 'renderer') and self.plotter.renderer:
+                                try:
+                                    self.plotter.renderer.RemoveActor(actor)
+                                except Exception:
+                                    pass
+                    else:
+                        if hasattr(self.plotter, 'renderer') and self.plotter.renderer:
+                            try:
+                                self.plotter.renderer.RemoveActor(actor)
+                            except Exception:
+                                pass
+                finally:
+                    try:
+                        delattr(self, '_calculating_text_actor')
+                    except Exception:
+                        try:
+                            del self._calculating_text_actor
+                        except Exception:
+                            pass
+            # Re-render to ensure the UI updates immediately
+            try:
+                self.plotter.render()
+            except Exception:
+                pass
+        except Exception:
+            pass
+
         #self.statusBar().showMessage("3D conversion successful.")
         self.convert_button.setEnabled(True)
         self.push_undo_state()
@@ -8781,16 +9146,100 @@ class MainWindow(QMainWindow):
                 continue
 
     def on_calculation_error(self, error_message):
-        self.plotter.clear()
+        # Clear temporary plotter content and remove calculating text if present
+        try:
+            self.plotter.clear()
+        except Exception:
+            pass
+
+        # Also attempt to explicitly remove the calculating text actor if it was stored
+        try:
+            actor = getattr(self, '_calculating_text_actor', None)
+            if actor is not None:
+                try:
+                    if hasattr(self.plotter, 'remove_actor'):
+                        try:
+                            self.plotter.remove_actor(actor)
+                        except Exception:
+                            if hasattr(self.plotter, 'renderer') and self.plotter.renderer:
+                                try:
+                                    self.plotter.renderer.RemoveActor(actor)
+                                except Exception:
+                                    pass
+                    else:
+                        if hasattr(self.plotter, 'renderer') and self.plotter.renderer:
+                            try:
+                                self.plotter.renderer.RemoveActor(actor)
+                            except Exception:
+                                pass
+                finally:
+                    try:
+                        delattr(self, '_calculating_text_actor')
+                    except Exception:
+                        try:
+                            del self._calculating_text_actor
+                        except Exception:
+                            pass
+        except Exception:
+            pass
+
         self.dragged_atom_info = None
         self.statusBar().showMessage(f"Error: {error_message}")
-        self.cleanup_button.setEnabled(True)
-        self.convert_button.setEnabled(True)
-        self.analysis_action.setEnabled(False)
-        self.edit_3d_action.setEnabled(False)
-        # Disable 3D editing menu items
-        self._enable_3d_edit_actions(False)
-        self.view_2d.setFocus() 
+        # Always allow the user to edit/convert/cleanup in 2D after an error
+        try:
+            self.cleanup_button.setEnabled(True)
+        except Exception:
+            pass
+        try:
+            self.convert_button.setEnabled(True)
+        except Exception:
+            pass
+
+        # On calculation error we should NOT enable 3D-only features.
+        # Explicitly disable Optimize and Export so the user can't try to operate
+        # on an invalid or missing 3D molecule.
+        try:
+            if hasattr(self, 'optimize_3d_button'):
+                self.optimize_3d_button.setEnabled(False)
+        except Exception:
+            pass
+        try:
+            if hasattr(self, 'export_button'):
+                self.export_button.setEnabled(False)
+        except Exception:
+            pass
+
+        # Keep 3D feature buttons disabled to avoid inconsistent UI state
+        try:
+            self._enable_3d_features(False)
+        except Exception:
+            pass
+
+        # Keep 3D edit actions disabled (no molecule to edit)
+        try:
+            self._enable_3d_edit_actions(False)
+        except Exception:
+            pass
+        # Some menu items are explicitly disabled on error
+        try:
+            if hasattr(self, 'analysis_action'):
+                self.analysis_action.setEnabled(False)
+        except Exception:
+            pass
+        try:
+            if hasattr(self, 'edit_3d_action'):
+                self.edit_3d_action.setEnabled(False)
+        except Exception:
+            pass
+
+        # Force a UI refresh
+        try:
+            self.plotter.render()
+        except Exception:
+            pass
+
+        # Ensure focus returns to 2D editor
+        self.view_2d.setFocus()
 
     def eventFilter(self, obj, event):
         if obj is self.plotter and event.type() == QEvent.Type.MouseButtonPress:
@@ -9151,37 +9600,131 @@ class MainWindow(QMainWindow):
 
     def update_implicit_hydrogens(self):
         """現在の2D構造に基づいて各原子の暗黙の水素数を計算し、AtomItemに反映する"""
+        # Quick guards: nothing to do if no atoms or no QApplication
         if not self.data.atoms:
             return
 
+        # If called from non-GUI thread, schedule the heavy RDKit work here but
+        # always perform UI mutations on the main thread via QTimer.singleShot.
         try:
-            mol = self.data.to_rdkit_mol()
+            mol = None
+            try:
+                mol = self.data.to_rdkit_mol()
+            except Exception:
+                mol = None
+
+            # Build a mapping of original_id -> hydrogen count without touching Qt items
+            h_count_map = {}
+
             if mol is None:
-                # 構造が不正な場合、全原子の水素カウントを0に戻して再描画
-                for atom_data in self.data.atoms.values():
-                    if atom_data.get('item') and atom_data['item'].implicit_h_count != 0:
-                        atom_data['item'].implicit_h_count = 0
-                        atom_data['item'].update()
-                return
-            
-            items_to_update = []
-            for atom in mol.GetAtoms():
-                if atom.HasProp("_original_atom_id"):
-                    original_id = atom.GetIntProp("_original_atom_id")
-                    if original_id in self.data.atoms:
-                        item = self.data.atoms[original_id].get('item')
-                        if item:
-                            h_count = atom.GetNumImplicitHs()
-                            if item.implicit_h_count != h_count:
-                                item.prepareGeometryChange()
-                                item.implicit_h_count = h_count
-                                items_to_update.append(item)
-            
-            # カウントが変更されたアイテムのみ再描画をトリガー
-            for item in items_to_update:
-                item.update()
+                # Invalid/unsanitizable structure: reset all counts to 0
+                for atom_id in list(self.data.atoms.keys()):
+                    h_count_map[atom_id] = 0
+            else:
+                for atom in mol.GetAtoms():
+                    try:
+                        if not atom.HasProp("_original_atom_id"):
+                            continue
+                        original_id = atom.GetIntProp("_original_atom_id")
+
+                        # Robust retrieval of H counts: prefer implicit, fallback to total or 0
+                        try:
+                            h_count = int(atom.GetNumImplicitHs())
+                        except Exception:
+                            try:
+                                h_count = int(atom.GetTotalNumHs())
+                            except Exception:
+                                h_count = 0
+
+                        h_count_map[int(original_id)] = h_count
+                    except Exception:
+                        # Skip problematic RDKit atoms
+                        continue
+
+            # Schedule UI updates on the main thread to avoid calling Qt methods from
+            # background threads or during teardown (which can crash the C++ layer).
+            def _apply_ui_updates():
+                # Try to import sip.isdeleted if available (PyQt6 uses 'sip')
+                is_deleted_func = None
+                try:
+                    import sip
+                    is_deleted_func = getattr(sip, 'isdeleted', None)
+                except Exception:
+                    is_deleted_func = None
+
+                items_to_update = []
+                for atom_id, atom_data in list(self.data.atoms.items()):
+                    try:
+                        item = atom_data.get('item')
+                        if not item:
+                            continue
+
+                        # If sip.isdeleted is available, skip deleted C++ wrappers
+                        try:
+                            if is_deleted_func and is_deleted_func(item):
+                                continue
+                        except Exception:
+                            # If sip check itself fails, continue with other lightweight guards
+                            pass
+
+                        # If the item is no longer in a scene, skip updating it to avoid
+                        # touching partially-deleted objects during scene teardown.
+                        try:
+                            sc = item.scene() if hasattr(item, 'scene') else None
+                            if sc is None:
+                                continue
+                        except Exception:
+                            # Accessing scene() might fail for a damaged object; skip it
+                            continue
+
+                        # Desired new count (default to 0 if not computed)
+                        new_count = h_count_map.get(atom_id, 0)
+
+                        current = getattr(item, 'implicit_h_count', None)
+                        if current == new_count:
+                            continue
+
+                        # Prepare geometry change if possible, then set attribute
+                        try:
+                            if hasattr(item, 'prepareGeometryChange'):
+                                try:
+                                    item.prepareGeometryChange()
+                                except Exception:
+                                    pass
+                            # Setting attribute may still raise for broken wrappers; guard it
+                            try:
+                                item.implicit_h_count = new_count
+                            except Exception:
+                                continue
+                            items_to_update.append(item)
+                        except Exception:
+                            # Non-fatal: skip problematic items
+                            continue
+
+                    except Exception:
+                        continue
+
+                # Trigger updates once for unique items; wrap in try/except to avoid crashes
+                for it in set(items_to_update):
+                    try:
+                        if hasattr(it, 'update'):
+                            it.update()
+                    except Exception:
+                        # ignore update errors for robustness
+                        pass
+
+            # Always schedule on main thread asynchronously
+            try:
+                QTimer.singleShot(0, _apply_ui_updates)
+            except Exception:
+                # Fallback: try to call directly (best-effort)
+                try:
+                    _apply_ui_updates()
+                except Exception:
+                    pass
+
         except Exception:
-            # 編集中に一時的に発生するエラーなどで計算が失敗してもアプリは継続
+            # Make sure update failures never crash the application
             pass
 
 
@@ -10279,8 +10822,19 @@ class MainWindow(QMainWindow):
                                         rd_atom.SetIntProp("_original_atom_id", int(original_id))
                                 except Exception:
                                     pass
-                                self._enable_3d_edit_actions(True)
-                                self._enable_3d_features(True)
+                            # Build mapping from original 2D atom IDs to RDKit indices so
+                            # 3D picks can be synchronized back to 2D AtomItems.
+                            try:
+                                self.create_atom_id_mapping()
+                                # update menu and UI states that depend on original IDs
+                                try:
+                                    self.update_atom_id_menu_text()
+                                    self.update_atom_id_menu_state()
+                                except Exception:
+                                    pass
+                            except Exception:
+                                # non-fatal if mapping creation fails
+                                pass
 
                         # 3D分子があれば必ず3D表示
                         self.draw_molecule_3d(self.current_mol)
@@ -10290,6 +10844,13 @@ class MainWindow(QMainWindow):
                         else:
                             self.is_2d_editable = True
                         self.plotter.reset_camera()
+
+                        # 成功的に3D分子が復元されたので、3D関連UIを有効にする
+                        try:
+                            self._enable_3d_edit_actions(True)
+                            self._enable_3d_features(True)
+                        except Exception:
+                            pass
                             
             except Exception as e:
                 print(f"Warning: Could not restore 3D molecular data: {e}")
@@ -11512,6 +12073,28 @@ class MainWindow(QMainWindow):
                 self.statusBar().showMessage(f"3D E/Z label drawing error: {e}")
 
         self.plotter.camera = camera_state
+
+        # Ensure the underlying VTK camera's parallel/projection flag matches
+        # the saved application setting. draw_molecule_3d restores a PyVista
+        # camera object which may not propagate the ParallelProjection flag
+        # to the VTK renderer camera; enforce it here to guarantee the
+        # projection mode selected in settings actually takes effect.
+        try:
+            proj_mode = self.settings.get('projection_mode', 'Perspective')
+            if hasattr(self.plotter, 'renderer') and hasattr(self.plotter.renderer, 'GetActiveCamera'):
+                vcam = self.plotter.renderer.GetActiveCamera()
+                if vcam:
+                    if proj_mode == 'Orthographic':
+                        vcam.SetParallelProjection(True)
+                    else:
+                        vcam.SetParallelProjection(False)
+                    try:
+                        # Force a render so the change is visible immediately
+                        self.plotter.render()
+                    except Exception:
+                        pass
+        except Exception:
+            pass
         
         # AtomIDまたは他の原子情報が表示されている場合は再表示
         if hasattr(self, 'atom_info_display_mode') and self.atom_info_display_mode is not None:
@@ -11900,8 +12483,13 @@ class MainWindow(QMainWindow):
             self.statusBar().showMessage("Please generate a 3D structure first to show analysis.")
 
     def closeEvent(self, event):
-        if self.settings != self.initial_settings:
-            self.save_settings()
+        # Persist settings on exit only when explicitly modified (deferred save)
+        try:
+            if getattr(self, 'settings_dirty', False) or self.settings != self.initial_settings:
+                self.save_settings()
+                self.settings_dirty = False
+        except Exception:
+            pass
         
         # 未保存の変更がある場合の処理
         if self.has_unsaved_changes:
@@ -11999,7 +12587,7 @@ class MainWindow(QMainWindow):
                 pass
 
     def toggle_3d_edit_mode(self, checked):
-        """「3D Edit」ボタンの状態に応じて編集モードを切り替える"""
+        """「3D Drag」ボタンの状態に応じて編集モードを切り替える"""
         if checked:
             # 3D Editモードをオンにする時は、Measurementモードを無効化
             if self.measurement_mode:
@@ -12008,9 +12596,9 @@ class MainWindow(QMainWindow):
         
         self.is_3d_edit_mode = checked
         if checked:
-            self.statusBar().showMessage("3D Edit Mode: ON.")
+            self.statusBar().showMessage("3D Drag Mode: ON.")
         else:
-            self.statusBar().showMessage("3D Edit Mode: OFF.")
+            self.statusBar().showMessage("3D Drag Mode: OFF.")
         self.view_2d.setFocus()
 
     def _setup_3d_picker(self):
@@ -12253,7 +12841,7 @@ class MainWindow(QMainWindow):
         if hasattr(self, 'measurement_action'):
             self.measurement_action.setEnabled(True)
         
-        # 3D Editボタンも常に有効にする
+        # 3D Dragボタンも常に有効にする
         if hasattr(self, 'edit_3d_action'):
             self.edit_3d_action.setEnabled(True)
         
@@ -12489,6 +13077,15 @@ class MainWindow(QMainWindow):
 
 
     def apply_3d_settings(self):
+        # Projection mode
+        proj_mode = self.settings.get('projection_mode', 'Perspective')
+        if hasattr(self.plotter, 'renderer') and hasattr(self.plotter.renderer, 'GetActiveCamera'):
+            cam = self.plotter.renderer.GetActiveCamera()
+            if cam:
+                if proj_mode == 'Orthographic':
+                    cam.SetParallelProjection(True)
+                else:
+                    cam.SetParallelProjection(False)
         """3Dビューの視覚設定を適用する"""
         if not hasattr(self, 'plotter'):
             return  
@@ -12545,9 +13142,60 @@ class MainWindow(QMainWindow):
         # accept()メソッドで設定の適用と3Dビューの更新を行うため、ここでは不要
         dialog.exec()
 
+
+    def reset_all_settings_menu(self):
+        # Expose the same functionality as SettingsDialog.reset_all_settings
+        dlg = QMessageBox(self)
+        dlg.setIcon(QMessageBox.Icon.Warning)
+        dlg.setWindowTitle("Reset All Settings")
+        dlg.setText("Are you sure you want to reset all settings to defaults?")
+        dlg.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+        res = dlg.exec()
+        if res == QMessageBox.StandardButton.Yes:
+            try:
+                # Remove settings file and reload defaults
+                if os.path.exists(self.settings_file):
+                    os.remove(self.settings_file)
+                self.load_settings()
+                # Do not write to disk immediately; mark dirty so settings will be saved on exit
+                try:
+                    self.settings_dirty = True
+                except Exception:
+                    pass
+                # Refresh UI/menu state for conversion and optimization
+                try:
+                    # update optimization method
+                    self.optimization_method = self.settings.get('optimization_method', 'MMFF_RDKIT')
+                    if hasattr(self, 'opt3d_actions') and self.optimization_method:
+                        key = (self.optimization_method or '').upper()
+                        if key in self.opt3d_actions:
+                            # uncheck all then check the saved one
+                            for act in self.opt3d_actions.values():
+                                act.setChecked(False)
+                            try:
+                                self.opt3d_actions[key].setChecked(True)
+                            except Exception:
+                                pass
+
+                    # update conversion mode
+                    conv_mode = self.settings.get('3d_conversion_mode', 'fallback')
+                    if hasattr(self, 'conv_actions') and conv_mode in self.conv_actions:
+                        try:
+                            for act in self.conv_actions.values():
+                                act.setChecked(False)
+                            self.conv_actions[conv_mode].setChecked(True)
+                        except Exception:
+                            pass
+                except Exception:
+                    pass
+                QMessageBox.information(self, "Reset Complete", "All settings have been reset to defaults.")
+            except Exception as e:
+                QMessageBox.warning(self, "Reset Failed", f"Could not reset settings: {e}")
+
     def load_settings(self):
         default_settings = {
             'background_color': '#919191',
+            'projection_mode': 'Perspective',
             'lighting_enabled': True,
             'specular': 0.2,
             'specular_power': 20,
@@ -12572,19 +13220,44 @@ class MainWindow(QMainWindow):
             'triple_bond_offset_factor': 2.0,
             'double_bond_radius_factor': 0.8,
             'triple_bond_radius_factor': 0.7,
+            # Ensure conversion/optimization defaults are present
+            # If True, attempts to be permissive when RDKit raises chemical/sanitization errors
+            # during file import (useful for viewing malformed XYZ/MOL files).
+            'skip_chemistry_checks': True,
+            '3d_conversion_mode': 'fallback',
+            'optimization_method': 'MMFF_RDKIT',
         }
 
         try:
             if os.path.exists(self.settings_file):
                 with open(self.settings_file, 'r') as f:
                     loaded_settings = json.load(f)
-                
+                # Ensure any missing default keys are inserted and persisted.
+                changed = False
                 for key, value in default_settings.items():
-                    loaded_settings.setdefault(key, value)
+                    if key not in loaded_settings:
+                        loaded_settings[key] = value
+                        changed = True
+
                 self.settings = loaded_settings
+
+                # If we added any defaults (e.g. skip_chemistry_checks), write them back so
+                # the configuration file reflects the effective defaults without requiring
+                # the user to edit the file manually.
+                if changed:
+                    # Don't write immediately; mark dirty and let closeEvent persist
+                    try:
+                        self.settings_dirty = True
+                    except Exception:
+                        pass
             
             else:
+                # No settings file - use defaults. Mark dirty so defaults will be written on exit.
                 self.settings = default_settings
+                try:
+                    self.settings_dirty = True
+                except Exception:
+                    pass
         
         except Exception:
             self.settings = default_settings
@@ -12601,7 +13274,7 @@ class MainWindow(QMainWindow):
     def toggle_measurement_mode(self, checked):
         """測定モードのオン/オフを切り替える"""
         if checked:
-            # 測定モードをオンにする時は、3D Editモードを無効化
+            # 測定モードをオンにする時は、3D Dragモードを無効化
             if self.is_3d_edit_mode:
                 self.edit_3d_action.setChecked(False)
                 self.toggle_3d_edit_mode(False)
@@ -12936,7 +13609,7 @@ class MainWindow(QMainWindow):
         
         self.plotter.render()
 
-    # --- 3D Edit functionality ---
+    # --- 3D Drag functionality ---
     
     def toggle_atom_selection_3d(self, atom_idx):
         """3Dビューで原子の選択状態をトグルする"""

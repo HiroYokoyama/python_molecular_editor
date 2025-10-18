@@ -79,6 +79,8 @@ It is recommended to first install RDKit and Open Babel using `conda`. Open Babe
 pip install moleditpy
 ```
 
+Please note that Linux users must use `moleditpy-linux` to resolve OpenBabel's library conflicts issues. OpenBabel is disabled for this version.
+
 #### Running the Application
 
 ```bash
