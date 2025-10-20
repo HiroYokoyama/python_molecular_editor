@@ -11,7 +11,7 @@ DOI 10.5281/zenodo.17268532
 """
 
 #Version
-VERSION = '1.9.5'
+VERSION = '1.9.6'
 
 print("-----------------------------------------------------")
 print("MoleditPy — A Python-based molecular editing software")
@@ -173,7 +173,14 @@ class Dialog3DPickingMixin:
 
                             if distances[closest_atom_idx] < click_threshold:
                                 # We handled the pick (atom clicked) -> consume the event so
-                                # other UI elements don't also process it.
+                                # other UI elements (including the VTK interactor observers)
+                                # don't also process it. Set a flag on the main window so
+                                # the VTK-based handlers can ignore the same logical click
+                                # when it arrives via the VTK event pipeline.
+                                try:
+                                    self.main_window._picking_consumed = True
+                                except Exception:
+                                    pass
                                 self.on_atom_picked(int(closest_atom_idx))
                                 return True
                 
@@ -198,12 +205,23 @@ class Dialog3DPickingMixin:
         """3Dビューでの原子選択を有効にする"""
         self.main_window.plotter.interactor.installEventFilter(self)
         self.picking_enabled = True
+        # Ensure the main window flag exists
+        try:
+            self.main_window._picking_consumed = False
+        except Exception:
+            pass
     
     def disable_picking(self):
         """3Dビューでの原子選択を無効にする"""
         if hasattr(self, 'picking_enabled') and self.picking_enabled:
             self.main_window.plotter.interactor.removeEventFilter(self)
             self.picking_enabled = False
+        try:
+            # Clear any leftover flag when picking is disabled
+            if hasattr(self.main_window, '_picking_consumed'):
+                self.main_window._picking_consumed = False
+        except Exception:
+            pass
     
     def try_alternative_picking(self, x, y):
         """代替のピッキング方法（使用しない）"""
@@ -903,8 +921,12 @@ class AboutDialog(QDialog):
             painter.end()
         
         self.image_label.setPixmap(pixmap)
-        self.image_label.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-        self.image_label.mousePressEvent = self.image_clicked
+        try:
+            self.image_label.setCursor(QCursor(Qt.CursorShape.ArrowCursor))
+        except Exception:
+            pass
+
+        self.image_label.mousePressEvent = self.image_mouse_press_event
         
         layout.addWidget(self.image_label)
         
@@ -936,6 +958,19 @@ class AboutDialog(QDialog):
 
         # Close the dialog
         self.accept()
+
+    def image_mouse_press_event(self, event):
+        """Handle mouse press on the image: trigger easter egg only for right-click."""
+        try:
+            if event.button() == Qt.MouseButton.RightButton:
+                self.image_clicked(event)
+            else:
+                event.ignore()
+        except Exception:
+            try:
+                event.ignore()
+            except Exception:
+                pass
 
 class TranslationDialog(Dialog3DPickingMixin, QDialog):
     def __init__(self, mol, main_window, parent=None):
@@ -7040,6 +7075,14 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
         原子を掴めた場合のみカスタム動作に入り、それ以外は親クラス（カメラ回転）に任せます。
         """
         mw = self.main_window
+        # If the Qt eventFilter already processed this pick, skip to avoid duplicate handling.
+        try:
+            if getattr(mw, '_picking_consumed', False):
+                # Reset the flag and ignore this VTK event
+                mw._picking_consumed = False
+                return
+        except Exception:
+            pass
         is_temp_mode = bool(QApplication.keyboardModifiers() & Qt.KeyboardModifier.AltModifier)
         is_edit_active = mw.is_3d_edit_mode or is_temp_mode
         
@@ -7155,22 +7198,14 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
             # カスタムの原子ドラッグ処理
             self.is_dragging = True
             atom_id = mw.dragged_atom_info['id']
-            conf = mw.current_mol.GetConformer()
-            renderer = mw.plotter.renderer
-            current_display_pos = interactor.GetEventPosition()
-            pos_3d = conf.GetAtomPosition(atom_id)
-            renderer.SetWorldPoint(pos_3d.x, pos_3d.y, pos_3d.z, 1.0)
-            renderer.WorldToDisplay()
-            display_coords = renderer.GetDisplayPoint()
-            new_display_pos = (current_display_pos[0], current_display_pos[1], display_coords[2])
-            renderer.SetDisplayPoint(new_display_pos[0], new_display_pos[1], new_display_pos[2])
-            renderer.DisplayToWorld()
-            new_world_coords_tuple = renderer.GetWorldPoint()
-            new_world_coords = list(new_world_coords_tuple)[:3]
-            mw.atom_positions_3d[atom_id] = new_world_coords
-            mw.glyph_source.points = mw.atom_positions_3d
-            mw.glyph_source.Modified()
-            conf.SetAtomPosition(atom_id, new_world_coords)
+            # We intentionally do NOT update visible coordinates or the
+            # authoritative atom position during mouse-move while dragging.
+            # The UX requirement here is that atoms need not visibly move
+            # while the mouse is being dragged. Compute and apply the final
+            # world-coordinate only once on mouse release (on_left_button_up).
+            # Keep minimal state: mark that a drag occurred (is_dragging)
+            # and allow the release handler to compute the final position.
+            # This avoids duplicate updates and simplifies event ordering.
         else:
             # カメラ回転処理を親クラスに任せます
             super().OnMouseMove()
@@ -7198,6 +7233,13 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
         クリック終了時の処理。状態をリセットします。
         """
         mw = self.main_window
+        # If the Qt eventFilter already processed this click/release, clear flag and ignore
+        try:
+            if getattr(mw, '_picking_consumed', False):
+                mw._picking_consumed = False
+                return
+        except Exception:
+            pass
 
         # 計測モードで、マウスが動いていない場合（つまりクリック）の処理
         if mw.measurement_mode and not self._mouse_moved_during_drag and self._mouse_press_pos is not None:
@@ -7212,50 +7254,100 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
         if self._is_dragging_atom:
             # カスタムドラッグの後始末
             if self.is_dragging:
-                if mw.current_mol:
-                    mw.draw_molecule_3d(mw.current_mol)
-                mw.push_undo_state()
-            mw.dragged_atom_info = None
-            # Always ensure the visual representation matches the actual
-            # RDKit conformer coordinates when the mouse is released.
-            try:
                 if mw.current_mol and mw.current_mol.GetNumConformers() > 0:
-                    conf = mw.current_mol.GetConformer()
-                    # Rebuild the authoritative atom_positions_3d from the conformer
-                    mw.atom_positions_3d = np.array([list(conf.GetAtomPosition(i)) for i in range(mw.current_mol.GetNumAtoms())])
+                    try:
+                        # Before applying conformer updates, compute the final
+                        # world coordinates for the dragged atom based on the
+                        # release pointer position. During the drag we did not
+                        # update mw.atom_positions_3d (to keep the visuals
+                        # static). Now compute the final position for the
+                        # dragged atom and store it into mw.atom_positions_3d
+                        # so the conformer update loop below will pick it up.
+                        atom_id = None
+                        try:
+                            atom_id = mw.dragged_atom_info.get('id') if mw.dragged_atom_info else None
+                        except Exception:
+                            atom_id = None
 
-                    # Refresh overlays and labels that depend on atom_positions_3d
-                    try:
-                        mw.update_3d_selection_display()
-                    except Exception:
-                        pass
-                    try:
-                        mw.update_measurement_labels_display()
-                    except Exception:
-                        pass
-                    try:
-                        mw.update_2d_measurement_labels()
-                    except Exception:
-                        pass
-                    try:
-                        mw.show_all_atom_info()
-                    except Exception:
-                        pass
-                    
-                    # As a final safety-net, ensure the visual scene exactly matches
-                    # the authoritative RDKit conformer coordinates. This forces a
-                    # full redraw if any lower-level updates failed to sync.
-                    try:
-                        if mw.current_mol and mw.current_mol.GetNumConformers() > 0:
-                            # Redraw the molecule and render to guarantee consistency
+                        if atom_id is not None:
                             try:
-                                mw.draw_molecule_3d(mw.current_mol)
+                                interactor = self.GetInteractor()
+                                renderer = mw.plotter.renderer
+                                current_display_pos = interactor.GetEventPosition()
+                                conf = mw.current_mol.GetConformer()
+                                # Use the atom's current 3D position to obtain a
+                                # display-space depth (z) value, then replace the
+                                # x/y with the pointer position to project back to
+                                # world coordinates at that depth.
+                                pos_3d = conf.GetAtomPosition(atom_id)
+                                renderer.SetWorldPoint(pos_3d.x, pos_3d.y, pos_3d.z, 1.0)
+                                renderer.WorldToDisplay()
+                                display_coords = renderer.GetDisplayPoint()
+                                new_display_pos = (current_display_pos[0], current_display_pos[1], display_coords[2])
+                                renderer.SetDisplayPoint(new_display_pos[0], new_display_pos[1], new_display_pos[2])
+                                renderer.DisplayToWorld()
+                                new_world_coords_tuple = renderer.GetWorldPoint()
+                                new_world_coords = list(new_world_coords_tuple)[:3]
+                                # Ensure the container supports assignment
+                                try:
+                                    mw.atom_positions_3d[atom_id] = new_world_coords
+                                except Exception:
+                                    # If atom_positions_3d is immutable or shaped
+                                    # differently, attempt a safe conversion.
+                                    try:
+                                        ap = list(mw.atom_positions_3d)
+                                        ap[atom_id] = new_world_coords
+                                        mw.atom_positions_3d = ap
+                                    except Exception:
+                                        pass
                             except Exception:
-                                # If a full redraw fails, skip rendering here
+                                # If final-position computation fails, continue
+                                # and apply whatever state is available.
+                                pass
+
+                        # Apply the (now updated) positions to the RDKit conformer
+                        # exactly once. This ensures the conformer is
+                        # authoritative and avoids double-moves.
+                        conf = mw.current_mol.GetConformer()
+                        for i in range(mw.current_mol.GetNumAtoms()):
+                            try:
+                                pos = mw.atom_positions_3d[i]
+                                conf.SetAtomPosition(i, pos.tolist())
+                            except Exception:
+                                # Skip individual failures but continue applying
+                                # other atom positions.
                                 pass
                     except Exception:
-                        # Silently ignore any errors during this final sync step
+                        # If applying positions fails, continue to redraw from
+                        # whatever authoritative state is available.
                         pass
+
+                    # Redraw once and push undo state
+                    try:
+                        mw.draw_molecule_3d(mw.current_mol)
+                    except Exception:
+                        pass
+                    mw.push_undo_state()
+            mw.dragged_atom_info = None
+            # Refresh overlays and labels that depend on atom_positions_3d. Do
+            # not overwrite mw.atom_positions_3d here — it already reflects the
+            # positions the user dragged to. Only update dependent displays.
+            try:
+                mw.update_3d_selection_display()
+            except Exception:
+                pass
+            try:
+                mw.update_measurement_labels_display()
+            except Exception:
+                pass
+            try:
+                mw.update_2d_measurement_labels()
+            except Exception:
+                pass
+            try:
+                mw.show_all_atom_info()
+            except Exception:
+                pass
             except Exception:
                 # Do not allow a failure here to interrupt release flow
                 pass
