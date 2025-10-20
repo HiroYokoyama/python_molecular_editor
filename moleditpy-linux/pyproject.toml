@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "moleditpy-linux"
 
-version = "1.9.6"
+version = "1.9.7"
 
 authors = [
   { name="HiroYokoyama", email="titech.yoko.hiro@gmail.com" },
