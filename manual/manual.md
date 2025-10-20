@@ -218,7 +218,7 @@ You can select the display style from the **3D Style** dropdown menu on the righ
       * **3 atoms selected:** Distance (1-2) and Angle (1-2-3) (°)
       * **4 atoms selected:** Distance (1-2), Angle (1-2-3), and Dihedral Angle (1-2-3-4) (°)
 
-4.  Clicking anywhere other than an atom, clicking the **Clear Selection** button (if visible), or clicking the **3D Select** button again to exit the mode will clear the selection and measurements.
+4.  Clicking anywhere other than an atom, or clicking the **3D Select** button again to exit the mode will clear the selection and measurements.
 
  ![](img/measurement.png)
 
@@ -373,4 +373,5 @@ Click the **Apply** button to immediately apply the settings, and the **OK** but
 You can check the version information from the `Help` \> `About` menu.
 
 -----
+
 
