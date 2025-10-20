@@ -11,7 +11,7 @@ DOI 10.5281/zenodo.17268532
 """
 
 #Version
-VERSION = '1.9.6'
+VERSION = '1.9.7'
 
 print("-----------------------------------------------------")
 print("MoleditPy — A Python-based molecular editing software")
@@ -858,13 +858,16 @@ class UserTemplateDialog(QDialog):
         
         # Create template data
         template_data = {
+            'format': "PME Template",
+            'version': "1.0",
+            'application': "MoleditPy",
+            'application_version': VERSION,
             'name': name,
-            'version': '1.0',
             'created': str(QDateTime.currentDateTime().toString()),
             'atoms': atoms_data,
             'bonds': bonds_data
         }
-        
+
         return template_data
     
     def delete_selected_template(self):
@@ -895,7 +898,7 @@ class AboutDialog(QDialog):
         super().__init__(parent)
         self.main_window = main_window
         self.setWindowTitle("About MoleditPy")
-        self.setFixedSize(200, 300)
+        self.setFixedSize(250, 300)
         self.init_ui()
     
     def init_ui(self):
@@ -6258,13 +6261,33 @@ class AnalysisWindow(QDialog):
                 # InChIを生成
                 try:
                     inchi = Chem.MolToInchi(self.mol)
-                except:
+                except Exception:
                     inchi = "N/A"
-                
+
+                # InChIKeyを生成（RDKitのinchi APIが無い場合に備えてフォールバック）
+                try:
+                    # Prefer Chem.MolToInchiKey when available
+                    inchi_key = None
+                    try:
+                        inchi_key = Chem.MolToInchiKey(self.mol)
+                    except Exception:
+                        # Fallback to rdkit.Chem.inchi if present
+                        try:
+                            from rdkit.Chem import inchi as rd_inchi
+                            inchi_key = rd_inchi.MolToInchiKey(self.mol)
+                        except Exception:
+                            inchi_key = None
+
+                    if not inchi_key:
+                        inchi_key = "N/A"
+                except Exception:
+                    inchi_key = "N/A"
+
                 # 表示するプロパティを辞書にまとめる
                 properties = {
                     "SMILES:": smiles,
                     "InChI:": inchi,
+                    "InChIKey:": inchi_key,
                     "Molecular Formula:": mol_formula,
                     "Molecular Weight:": f"{mol_wt:.4f}",
                     "Exact Mass:": f"{exact_mw:.4f}",
@@ -13119,8 +13142,11 @@ class MainWindow(QMainWindow):
             
             # Create template data
             template_data = {
+                'format': "PME Template",
+                'version': "1.0",
+                'application': "MoleditPy",
+                'application_version': VERSION,
                 'name': name,
-                'version': '1.0',
                 'created': str(QDateTime.currentDateTime().toString()),
                 'atoms': atoms_data,
                 'bonds': bonds_data
