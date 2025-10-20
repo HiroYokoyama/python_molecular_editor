@@ -341,7 +341,6 @@ MoleditPy は、描画した 2D 構造から 3D 構造を生成し、表示、�
 | `Ctrl`+`3`     | Panel Layout 30:70 (3D Focus)                      | Panel Layout 30:70 (3D Focus)                             |
 | `Ctrl`+`H`     | Toggle 2D Panel Visibility                         | Toggle 2D Panel Visibility                                |
 | `Alt`+`Drag`   | (3D View) 一時的に 3D Drag モード                     | (3D View) 一時的に 3D Drag モード                        |
-| `Ctrl`+`Click` | (3D View) 3D編集用に原子を選択/選択解除             | (3D View) 3D編集用に原子を選択/選択解除                |
 | `Ctrl`+`Q`     | Quit                                               | Quit                                                      |
 
 -----
@@ -357,5 +356,6 @@ MoleditPy は、描画した 2D 構造から 3D 構造を生成し、表示、�
 メニューの `Help` \> `About` からバージョン情報を確認できます。
 
 -----
+
 
 
