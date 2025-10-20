@@ -357,7 +357,6 @@ Click the **Apply** button to immediately apply the settings, and the **OK** but
 | `Ctrl`+`3` | Panel Layout 30:70 (3D Focus) | Panel Layout 30:70 (3D Focus) |
 | `Ctrl`+`H` | Toggle 2D Panel Visibility | Toggle 2D Panel Visibility |
 | `Alt`+`Drag` | (3D View) Temporarily enter 3D Drag mode | (3D View) Temporarily enter 3D Drag mode |
-| `Ctrl`+`Click` | (3D View) Select/deselect atom for 3D editing | (3D View) Select/deselect atom for 3D editing |
 | `Ctrl`+`Q` | Quit | Quit |
 
 -----
@@ -373,5 +372,6 @@ Click the **Apply** button to immediately apply the settings, and the **OK** but
 You can check the version information from the `Help` \> `About` menu.
 
 -----
+
 
 
