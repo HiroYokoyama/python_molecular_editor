@@ -11,7 +11,7 @@ DOI 10.5281/zenodo.17268532
 """
 
 #Version
-VERSION = '1.9.7'
+VERSION = '1.9.8'
 
 print("-----------------------------------------------------")
 print("MoleditPy — A Python-based molecular editing software")
@@ -10470,8 +10470,17 @@ class MainWindow(QMainWindow):
             
         try:
             options = QFileDialog.Option.DontUseNativeDialog
+            # Determine a sensible default filename based on current file (strip extension)
+            default_name = "untitled"
+            try:
+                if self.current_file_path:
+                    base = os.path.basename(self.current_file_path)
+                    default_name = os.path.splitext(base)[0]
+            except Exception:
+                default_name = "untitled"
+
             file_path, _ = QFileDialog.getSaveFileName(
-                self, "Save Project As", "", 
+                self, "Save Project As", default_name, 
                 "PME Project Files (*.pmeprj);;All Files (*)", 
                 options=options
             )
@@ -10488,6 +10497,7 @@ class MainWindow(QMainWindow):
             
             # 保存成功時に状態をリセット
             self.has_unsaved_changes = False
+            # Replace current file with the newly saved file so subsequent saves go to this path
             self.current_file_path = file_path
             self.update_window_title()
             
@@ -10510,7 +10520,16 @@ class MainWindow(QMainWindow):
         try:
             save_data = self.get_current_state()
             options = QFileDialog.Option.DontUseNativeDialog
-            file_path, _ = QFileDialog.getSaveFileName(self, "Save Project File", "", "Project Files (*.pmeraw);;All Files (*)", options=options)
+            # default filename based on current file
+            default_name = "untitled"
+            try:
+                if self.current_file_path:
+                    base = os.path.basename(self.current_file_path)
+                    default_name = os.path.splitext(base)[0]
+            except Exception:
+                default_name = "untitled"
+
+            file_path, _ = QFileDialog.getSaveFileName(self, "Save Project File", default_name, "Project Files (*.pmeraw);;All Files (*)", options=options)
             if not file_path:
                 return
                 
@@ -10522,6 +10541,7 @@ class MainWindow(QMainWindow):
             
             # 保存成功時に状態をリセット
             self.has_unsaved_changes = False
+            # Update current file to the newly saved raw file
             self.current_file_path = file_path
             self.update_window_title()
             
@@ -10579,8 +10599,17 @@ class MainWindow(QMainWindow):
             
         try:
             options = QFileDialog.Option.DontUseNativeDialog
+            # default filename based on current file
+            default_name = "untitled"
+            try:
+                if self.current_file_path:
+                    base = os.path.basename(self.current_file_path)
+                    default_name = os.path.splitext(base)[0]
+            except Exception:
+                default_name = "untitled"
+
             file_path, _ = QFileDialog.getSaveFileName(
-                self, "Save as PME Project", "", 
+                self, "Save as PME Project", default_name, 
                 "PME Project Files (*.pmeprj);;All Files (*)", 
                 options=options
             )
@@ -10599,6 +10628,7 @@ class MainWindow(QMainWindow):
             
             # 保存成功時に状態をリセット
             self.has_unsaved_changes = False
+            # Replace current file with the newly saved PME Project
             self.current_file_path = file_path
             self.update_window_title()
             
@@ -10984,7 +11014,17 @@ class MainWindow(QMainWindow):
             modified_mol_block = '\n'.join(lines)
             
             options = QFileDialog.Option.DontUseNativeDialog
-            file_path, _ = QFileDialog.getSaveFileName(self, "Save 2D MOL File", "", "MOL Files (*.mol);;All Files (*)", options=options)
+            # default filename: based on current_file_path, append -2d for 2D mol
+            default_name = "untitled-2d"
+            try:
+                if self.current_file_path:
+                    base = os.path.basename(self.current_file_path)
+                    name = os.path.splitext(base)[0]
+                    default_name = f"{name}-2d"
+            except Exception:
+                default_name = "untitled-2d"
+
+            file_path, _ = QFileDialog.getSaveFileName(self, "Save 2D MOL File", default_name, "MOL Files (*.mol);;All Files (*)", options=options)
             if not file_path:
                 return
                 
@@ -11011,7 +11051,17 @@ class MainWindow(QMainWindow):
             
         try:
             options = QFileDialog.Option.DontUseNativeDialog
-            file_path, _ = QFileDialog.getSaveFileName(self, "Save 3D MOL File", "", "MOL Files (*.mol);;All Files (*)", options=options)
+            # default filename based on current file
+            default_name = "untitled"
+            try:
+                if self.current_file_path:
+                    base = os.path.basename(self.current_file_path)
+                    name = os.path.splitext(base)[0]
+                    default_name = f"{name}"
+            except Exception:
+                default_name = "untitled"
+
+            file_path, _ = QFileDialog.getSaveFileName(self, "Save 3D MOL File", default_name, "MOL Files (*.mol);;All Files (*)", options=options)
             if not file_path:
                 return
                 
@@ -11045,7 +11095,17 @@ class MainWindow(QMainWindow):
     def save_as_xyz(self):
         if not self.current_mol: self.statusBar().showMessage("Error: Please generate a 3D structure first."); return
         options=QFileDialog.Option.DontUseNativeDialog
-        file_path,_=QFileDialog.getSaveFileName(self,"Save 3D XYZ File","","XYZ Files (*.xyz);;All Files (*)",options=options)
+        # default filename based on current file
+        default_name = "untitled"
+        try:
+            if self.current_file_path:
+                base = os.path.basename(self.current_file_path)
+                name = os.path.splitext(base)[0]
+                default_name = f"{name}"
+        except Exception:
+            default_name = "untitled"
+
+        file_path,_=QFileDialog.getSaveFileName(self,"Save 3D XYZ File",default_name,"XYZ Files (*.xyz);;All Files (*)",options=options)
         if file_path:
             if not file_path.lower().endswith('.xyz'): file_path += '.xyz'
             try:
