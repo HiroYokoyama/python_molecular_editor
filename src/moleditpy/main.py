@@ -11,7 +11,7 @@ DOI 10.5281/zenodo.17268532
 """
 
 #Version
-VERSION = '1.9.10'
+VERSION = '1.9.11'
 
 print("-----------------------------------------------------")
 print("MoleditPy — A Python-based molecular editing software")
@@ -8895,8 +8895,13 @@ class MainWindow(QMainWindow):
             self._enter_3d_viewer_ui_mode()
             
             # 3D関連機能を統一的に有効化
-            self._enable_3d_features(False)
-
+            self._enable_3d_features(True)
+            
+            if hasattr(self, 'optimize_3d_button'):
+                try:
+                    self.optimize_3d_button.setEnabled(False)
+                except Exception:
+                    pass
             
             # メニューテキストと状態を更新
             self.update_atom_id_menu_text()
