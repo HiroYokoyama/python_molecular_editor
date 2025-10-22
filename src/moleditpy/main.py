@@ -1685,40 +1685,95 @@ class SymmetrizeDialog(Dialog3DPickingMixin, QDialog):
                 centroid = np.mean(positions, axis=0)
             centered_positions = positions - centroid
 
+            # Instead of averaging per-atom independently, build symmetry-equivalent
+            # groups and average positions group-wise. This ensures that atoms that
+            # are mapped to each other by the symmetry operations are moved to a
+            # consistent common position.
             new_centered = centered_positions.copy()
-            for i, pos in enumerate(centered_positions):
-                transformed_positions = []
+
+            # Build equivalent atom groups using the symmetry operations
+            n_atoms = len(centered_positions)
+            used = set()
+            equivalent_groups = []
+            match_tol = max(1e-3, tol)
+
+            for i in range(n_atoms):
+                if i in used:
+                    continue
+                group = set([i])
                 for op in symm_ops:
                     try:
                         try:
-                            transformed = np.asarray(op.operate(pos))
+                            transformed = np.asarray(op.operate(centered_positions[i]))
                         except Exception:
                             if hasattr(op, 'apply_operation'):
-                                transformed = np.asarray(op.apply_operation(pos))
+                                transformed = np.asarray(op.apply_operation(centered_positions[i]))
                             elif hasattr(op, 'rotation_matrix'):
                                 rot = np.asarray(op.rotation_matrix)
                                 trans = np.asarray(getattr(op, 'translation_vector', [0, 0, 0]))
-                                transformed = rot.dot(pos) + trans
+                                transformed = rot.dot(centered_positions[i]) + trans
                             else:
                                 continue
 
-                        transformed_positions.append(transformed)
+                        dists = np.linalg.norm(centered_positions - transformed, axis=1)
+                        j = int(np.argmin(dists))
+                        if dists[j] < match_tol:
+                            group.add(j)
                     except Exception:
-                        # skip failing ops for this site
                         continue
 
-                # If we have any transformed positions, include the original
-                # position as an anchor so averaging doesn't collapse atoms
-                # toward an unintended common point.
-                if transformed_positions:
-                    transformed_positions.append(pos)
-                    avg = np.mean(np.asarray(transformed_positions), axis=0)
-                    if not np.isfinite(avg).all():
-                        continue
-                    disp = np.linalg.norm(avg - pos)
-                    # Only accept reasonable displacements (avoid wild moves)
-                    if disp > tol and disp < 2.0:
-                        new_centered[i] = avg
+                for idx in group:
+                    used.add(idx)
+                equivalent_groups.append(sorted(list(group)))
+
+            # For each group compute the averaged position from all images of
+            # the group's atoms under all symmetry operations and apply if the
+            # movement is significant (greater than tol) but reasonable.
+            for grp in equivalent_groups:
+                if not grp:
+                    continue
+
+                coords_to_avg = []
+                for idx in grp:
+                    pos = centered_positions[idx]
+                    # include the original position as an anchor
+                    coords_to_avg.append(pos)
+                    for op in symm_ops:
+                        try:
+                            try:
+                                transformed = np.asarray(op.operate(pos))
+                            except Exception:
+                                if hasattr(op, 'apply_operation'):
+                                    transformed = np.asarray(op.apply_operation(pos))
+                                elif hasattr(op, 'rotation_matrix'):
+                                    rot = np.asarray(op.rotation_matrix)
+                                    trans = np.asarray(getattr(op, 'translation_vector', [0, 0, 0]))
+                                    transformed = rot.dot(pos) + trans
+                                else:
+                                    continue
+                            coords_to_avg.append(transformed)
+                        except Exception:
+                            continue
+
+                if not coords_to_avg:
+                    continue
+
+                avg = np.mean(np.asarray(coords_to_avg), axis=0)
+                if not np.isfinite(avg).all():
+                    continue
+
+                # Determine whether to move the group: use the maximum displacement
+                # among group members as the indicator so small internal jitter
+                # doesn't trigger unnecessary moves.
+                max_disp = 0.0
+                for idx in grp:
+                    disp = np.linalg.norm(avg - centered_positions[idx])
+                    max_disp = max(max_disp, disp)
+
+                # Apply only reasonable displacements
+                if max_disp > tol and max_disp < 2.0:
+                    for idx in grp:
+                        new_centered[idx] = avg
 
             # Shift back to original coordinate frame before writing
             new_positions = new_centered + centroid
