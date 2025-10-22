@@ -11,7 +11,7 @@ DOI 10.5281/zenodo.17268532
 """
 
 #Version
-VERSION = '1.9.8'
+VERSION = '1.10.0-alpha'
 
 print("-----------------------------------------------------")
 print("MoleditPy — A Python-based molecular editing software")
@@ -226,6 +226,7 @@ class Dialog3DPickingMixin:
     def try_alternative_picking(self, x, y):
         """代替のピッキング方法（使用しない）"""
         pass
+    
 
 class TemplatePreviewView(QGraphicsView):
     """テンプレートプレビュー用のカスタムビュークラス"""
@@ -1274,208 +1275,9 @@ class SymmetrizeDialog(QDialog):
     # 黄金比 (正二十面体群の記述に使用)
     PHI = (1 + np.sqrt(5)) / 2
 
-    POINT_GROUPS = {
-        # ===============================================================
-        # 1. 低対称性群 (Low Symmetry Groups)
-        # ===============================================================
-        "C1": {
-            "name": "C1 (No symmetry)", 
-            "operations": [np.eye(3)] # E
-        },
-        "Ci": {
-            "name": "Ci (Inversion center)", 
-            "operations": [
-                np.eye(3),      # E
-                -np.eye(3)      # i
-            ]
-        },
-        "Cs": {
-            "name": "Cs (Mirror plane)", 
-            "operations": [
-                np.eye(3),      # E
-                np.array([[1, 0, 0], [0, 1, 0], [0, 0, -1]])  # σh (xy)
-            ]
-        },
-
-        # ===============================================================
-        # 2. 単一軸を持つ群 (Groups with a single axis)
-        # ===============================================================
-        # Cn 群 (カイラル)
-        "C2": {
-            "name": "C2 (Rotation)", 
-            "operations": [
-                np.eye(3), 
-                np.array([[-1, 0, 0], [0, -1, 0], [0, 0, 1]])  # C2(z)
-            ]
-        },
-        "C3": {
-            "name": "C3 (Rotation)", 
-            "operations": [
-                np.eye(3),
-                np.array([[-0.5, -np.sqrt(3)/2, 0], [np.sqrt(3)/2, -0.5, 0], [0, 0, 1]]), # C3
-                np.array([[-0.5,  np.sqrt(3)/2, 0], [-np.sqrt(3)/2, -0.5, 0], [0, 0, 1]])  # C3^2
-            ]
-        },
-        # Cnh 群
-        "C2h": {
-            "name": "C2h", 
-            "operations": [
-                np.eye(3),                                      # E
-                np.array([[-1, 0, 0], [0, -1, 0], [0, 0, 1]]),  # C2(z)
-                np.array([[1, 0, 0], [0, 1, 0], [0, 0, -1]]),  # σh
-                -np.eye(3)                                      # i
-            ]
-        },
-        "C3h": {
-            "name": "C3h",
-            "operations": [
-                np.array([[-0.5, -np.sqrt(3)/2, 0], [np.sqrt(3)/2, -0.5, 0], [0, 0, 1]]), # C3
-                np.array([[1, 0, 0], [0, 1, 0], [0, 0, -1]]),                          # σh
-            ]
-        },
-        # Cnv 群
-        "C2v": {
-            "name": "C2v", 
-            "operations": [
-                np.eye(3),
-                np.array([[-1, 0, 0], [0, -1, 0], [0, 0, 1]]),  # C2(z)
-                np.array([[1, 0, 0], [0, -1, 0], [0, 0, 1]]),  # σv(xz)
-                np.array([[-1, 0, 0], [0, 1, 0], [0, 0, 1]])   # σv(yz)
-            ]
-        },
-        "C3v": {
-            "name": "C3v", 
-            "operations": [
-                 np.array([[-0.5, -np.sqrt(3)/2, 0], [np.sqrt(3)/2, -0.5, 0], [0, 0, 1]]), # C3
-                 np.array([[1, 0, 0], [0, -1, 0], [0, 0, 1]])                           # σv(xz)
-            ]
-        },
-
-        # ===============================================================
-        # 3. 二面体群 (Dihedral Groups)
-        # ===============================================================
-        # Dn 群 (カイラル)
-        "D2": {
-            "name": "D2", 
-            "operations": [
-                np.eye(3),
-                np.array([[1, 0, 0], [0, -1, 0], [0, 0, -1]]),  # C2(x)
-                np.array([[-1, 0, 0], [0, 1, 0], [0, 0, -1]]),  # C2(y)
-                np.array([[-1, 0, 0], [0, -1, 0], [0, 0, 1]])   # C2(z)
-            ]
-        },
-        "D3": {
-            "name": "D3", 
-            "operations": [
-                np.array([[-0.5, -np.sqrt(3)/2, 0], [np.sqrt(3)/2, -0.5, 0], [0, 0, 1]]), # C3(z)
-                np.array([[1, 0, 0], [0, -1, 0], [0, 0, -1]])                           # C2(x)
-            ]
-        },
-        # Dnh 群
-        "D2h": {
-            "name": "D2h", 
-            "operations": [
-                np.array([[1, 0, 0], [0, -1, 0], [0, 0, -1]]),  # C2(x)
-                np.array([[-1, 0, 0], [0, 1, 0], [0, 0, -1]]),  # C2(y)
-                -np.eye(3)                                      # i
-            ]
-        },
-        "D3h": {
-            "name": "D3h", 
-            "operations": [
-                np.array([[-0.5, -np.sqrt(3)/2, 0], [np.sqrt(3)/2, -0.5, 0], [0, 0, 1]]), # C3(z)
-                np.array([[1, 0, 0], [0, -1, 0], [0, 0, -1]]),                           # C2(x)
-                np.array([[1, 0, 0], [0, 1, 0], [0, 0, -1]])                            # σh
-            ]
-        },
-        "D4h": {
-            "name": "D4h",
-            "operations": [
-                np.array([[0, -1, 0], [1, 0, 0], [0, 0, 1]]),    # C4(z)
-                np.array([[1, 0, 0], [0, -1, 0], [0, 0, -1]]),  # C2(x)
-                -np.eye(3)                                      # i
-            ]
-        },
-        "D5h": {
-            "name": "D5h",
-            "operations": [
-                # C5(z)
-                np.array([[np.cos(2*np.pi/5), -np.sin(2*np.pi/5), 0], 
-                          [np.sin(2*np.pi/5), np.cos(2*np.pi/5), 0], 
-                          [0, 0, 1]]),
-                np.array([[1, 0, 0], [0, -1, 0], [0, 0, -1]]),  # C2(x)
-                np.array([[1, 0, 0], [0, 1, 0], [0, 0, -1]]),  # σh
-            ]
-        },
-        "D6h": {
-            "name": "D6h",
-            "operations": [
-                np.array([[0.5, -np.sqrt(3)/2, 0], [np.sqrt(3)/2, 0.5, 0], [0, 0, 1]]), # C6(z)
-                np.array([[1, 0, 0], [0, -1, 0], [0, 0, -1]]),                        # C2(x)
-                -np.eye(3)                                                            # i
-            ]
-        },
-        # Dnd 群
-        "D2d": {
-            "name": "D2d",
-            "operations": [
-                np.array([[0, -1, 0], [1, 0, 0], [0, 0, -1]]),   # S4(z)
-                np.array([[1, 0, 0], [0, -1, 0], [0, 0, -1]])   # C2(x)
-            ]
-        },
-        "D3d": {
-            "name": "D3d",
-            "operations": [
-                np.array([[0.5, -np.sqrt(3)/2, 0], [np.sqrt(3)/2, 0.5, 0], [0, 0, -1]]), # S6(z)
-                np.array([[1, 0, 0], [0, -1, 0], [0, 0, -1]])                          # C2(x)
-            ]
-        },
-
-        # ===============================================================
-        # 4. 高対称性群 (Cubic and Icosahedral Groups)
-        # ===============================================================
-        # Td 群 (正四面体)
-        "Td": {
-            "name": "Td (Tetrahedral)", 
-            "operations": [
-                np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]]),    # E (恒等操作)
-                np.array([[0, 1, 0], [0, 0, 1], [1, 0, 0]]),    # C3(111)
-                np.array([[0, 0, 1], [1, 0, 0], [0, 1, 0]]),    # C3(111)^2
-                np.array([[0, 1, 0], [1, 0, 0], [0, 0, -1]]),   # S4(z)
-                np.array([[0, -1, 0], [1, 0, 0], [0, 0, 1]]),   # S4(z)^2 = C2(z)
-                np.array([[0, 1, 0], [-1, 0, 0], [0, 0, -1]]),  # S4(z)^3
-                np.array([[1, 0, 0], [0, 0, 1], [0, -1, 0]]),   # S4(y)
-                np.array([[1, 0, 0], [0, 0, -1], [0, 1, 0]]),   # S4(y)^3
-                np.array([[0, 0, 1], [0, 1, 0], [-1, 0, 0]]),   # S4(x)
-                np.array([[0, 0, -1], [0, 1, 0], [1, 0, 0]]),   # S4(x)^3
-                np.array([[-1, 0, 0], [0, -1, 0], [0, 0, 1]]),  # C2(z)
-                np.array([[-1, 0, 0], [0, 1, 0], [0, 0, -1]]),  # C2(y)
-                np.array([[1, 0, 0], [0, -1, 0], [0, 0, -1]]),  # C2(x)
-            ]
-        },
-        # Oh 群 (正八面体 / 立方体)
-        "Oh": {
-            "name": "Oh (Octahedral)",
-            "operations": [
-                np.array([[0, 0, 1], [1, 0, 0], [0, 1, 0]]),    # C3(111)
-                np.array([[0, 1, 0], [-1, 0, 0], [0, 0, 1]]),   # C4(z, inv)
-                -np.eye(3)                                      # i
-            ]
-        },
-        # Ih 群 (正二十面体)
-        "Ih": {
-            "name": "Ih (Icosahedral)",
-            "operations": [
-                # C5 z-phi plane
-                np.array([[ (PHI-1)/2, -PHI/2,  0.5],
-                          [      PHI/2,  (PHI-1)/2, -0.5],
-                          [       -0.5,      0.5,  PHI/2]]),
-                # C3 111
-                 np.array([[0, 1, 0], [0, 0, 1], [1, 0, 0]]),
-                 -np.eye(3) # i
-            ]
-        }
-    }
+    # Manual POINT_GROUPS list removed in favor of pymsym automatic detection/enforcement.
+    # Keeping a small stub for backward-compatibility with code that does lookups via .get()
+    POINT_GROUPS = {}
     
     def __init__(self, mol, main_window, parent=None):
         super().__init__(parent)
@@ -1486,7 +1288,7 @@ class SymmetrizeDialog(QDialog):
     def init_ui(self):
         self.setWindowTitle("Symmetrize Molecule")
         self.setModal(True)
-        self.setFixedSize(450, 350)
+        self.resize(800, 600)
         layout = QVBoxLayout(self)
         
         # Instructions
@@ -1501,20 +1303,27 @@ class SymmetrizeDialog(QDialog):
         
         # Point group selection
         point_group_layout = QFormLayout()
-        
+
         # Point group selection with auto-detect button
         pg_selection_layout = QHBoxLayout()
         self.point_group_combo = QComboBox()
-        for key, value in self.POINT_GROUPS.items():
-            self.point_group_combo.addItem(value["name"], key)
-        self.point_group_combo.setCurrentIndex(0)  # Default to C1
+
+        # If manual POINT_GROUPS is empty (we rely on pymsym), show a placeholder and rely on auto-detect
+        if self.POINT_GROUPS:
+            for key, value in self.POINT_GROUPS.items():
+                self.point_group_combo.addItem(value.get("name", key), key)
+            self.point_group_combo.setCurrentIndex(0)  # Default to first entry
+        else:
+            # Placeholder entry; actual candidates will be provided by pymsym auto-detection
+            self.point_group_combo.addItem("(use pymsym Auto-Detect)", None)
+
         pg_selection_layout.addWidget(self.point_group_combo)
-        
+
         self.auto_detect_button = QPushButton("Auto-Detect")
         self.auto_detect_button.clicked.connect(self.auto_detect_symmetry)
         self.auto_detect_button.setToolTip("Automatically detect the most suitable point group for current structure")
         pg_selection_layout.addWidget(self.auto_detect_button)
-        
+
         point_group_layout.addRow("Point Group:", pg_selection_layout)
         
         # Tolerance input
@@ -1558,7 +1367,35 @@ class SymmetrizeDialog(QDialog):
     def get_selected_point_group(self):
         """選択されたポイントグループの情報を取得"""
         key = self.point_group_combo.currentData()
-        return key, self.POINT_GROUPS[key]
+        # If manual list is empty or combo holds None, attempt to auto-detect using pymsym
+        if not self.POINT_GROUPS or key is None:
+            try:
+                # auto-detect a best candidate; fall back to 'C1' if detection fails
+                if hasattr(pymsym, 'find_point_groups'):
+                    cand = pymsym.find_point_groups(self.mol, tolerance=0.2)
+                    if cand:
+                        # cand may be a list of keys or (key, score) tuples
+                        if isinstance(cand, dict):
+                            # Some pymsym versions return dict of {pg: score}
+                            best = max(cand.items(), key=lambda x: x[1])[0]
+                        elif isinstance(cand, (list, tuple)) and len(cand) > 0:
+                            first = cand[0]
+                            if isinstance(first, (list, tuple)):
+                                best = first[0]
+                            else:
+                                best = first
+                        else:
+                            best = 'C1'
+                        return best, self.POINT_GROUPS.get(best, {'name': best, 'operations': []})
+            except Exception:
+                pass
+
+        # Normal path: return manual entry if available
+        if key in self.POINT_GROUPS:
+            return key, self.POINT_GROUPS[key]
+
+        # Fallback: return C1 stub
+        return 'C1', {'name': 'C1 (No symmetry)', 'operations': [np.eye(3)]}
     
     def get_tolerance(self):
         """入力されたトレランス値を取得"""
@@ -1585,19 +1422,17 @@ class SymmetrizeDialog(QDialog):
             # 現在の分子の座標を取得
             conf = self.mol.GetConformer()
             positions = np.array([conf.GetAtomPosition(i) for i in range(self.mol.GetNumAtoms())])
-            
-            # 高度な対称性分析を実行
-            analysis_result = self.analyze_symmetry(positions, point_group["operations"], tolerance)
-            
-            # 等価原子グループ情報を取得
+
+            # Delegate analysis to pymsym (analyze_symmetry wraps pymsym)
+            analysis_result = self.analyze_symmetry(positions, point_group.get("operations", []), tolerance)
+
+            # Try to obtain equivalent atom groups via pymsym-backed API
             try:
                 symmetry_classes = self.get_molecular_symmetry_classes()
                 equivalent_groups = self.group_equivalent_atoms(symmetry_classes)
-                
-                # グループ情報を整理
+
                 group_info = []
                 equivalent_count = 0
-                
                 for i, group in enumerate(equivalent_groups):
                     if len(group) > 1:
                         equivalent_count += 1
@@ -1606,27 +1441,30 @@ class SymmetrizeDialog(QDialog):
                     else:
                         symbols = [self.mol.GetAtomWithIdx(idx).GetSymbol() for idx in group]
                         group_info.append(f"Single: {symbols[0]} atom (index: {group[0]})")
-                
+
                 if equivalent_count > 0:
                     group_text = f"Found {equivalent_count} equivalent atom groups:\n" + "\n".join(group_info)
                 else:
                     group_text = "No equivalent atom groups found.\nAll atoms are chemically unique.\n" + "\n".join(group_info)
-                
-            except Exception as e:
-                group_text = f"Symmetry analysis error: {str(e)}\nUsing fallback simple method."
-            
-            # 結果をダイアログに表示
+
+            except Exception:
+                group_text = "Equivalent atom grouping not available."
+
+            # Display results safely using .get() to avoid KeyError
+            atoms_to_move = int(analysis_result.get('atoms_to_move', 0))
+            max_disp = float(analysis_result.get('max_displacement', 0.0))
+
             info_text = f"Point Group: {point_group['name']}\n"
             info_text += f"Tolerance: {tolerance} Å\n"
-            info_text += f"Atoms to be moved: {analysis_result['atoms_to_move']}\n"
-            info_text += f"Max displacement: {analysis_result['max_displacement']:.3f} Å\n\n"
+            info_text += f"Atoms to be moved: {atoms_to_move}\n"
+            info_text += f"Max displacement: {max_disp:.3f} Å\n\n"
             info_text += "Equivalent Atom Groups:\n" + group_text + "\n\n"
-            
-            if analysis_result['atoms_to_move'] == 0:
+
+            if atoms_to_move == 0:
                 info_text += "Structure already satisfies the selected symmetry."
             else:
                 info_text += "Ready to apply symmetrization."
-            
+
             self.info_label.setText(info_text)
             
         except Exception as e:
@@ -1660,10 +1498,37 @@ class SymmetrizeDialog(QDialog):
             for i, pos in enumerate(original_positions):
                 print(f"  Atom {i}: {pos}")
             
-            # 対称化を適用
-            new_positions = self.apply_symmetry_operations(
-                original_positions, point_group["operations"], tolerance
-            )
+            # Use pymsym exclusively to perform symmetrization
+            try:
+                out = None
+                if hasattr(pymsym, 'symmetrize'):
+                    out = pymsym.symmetrize(self.mol, pointgroup=key, tolerance=tolerance)
+                elif hasattr(pymsym, 'apply_symmetry'):
+                    out = pymsym.apply_symmetry(self.mol, key, tolerance=tolerance)
+                elif hasattr(pymsym, 'enforce_symmetry'):
+                    out = pymsym.enforce_symmetry(self.mol, point_group=key, tol=tolerance)
+                else:
+                    raise RuntimeError('pymsym API not found on pymsym module')
+
+                # Normalize pymsym output to Nx3 numpy array of positions
+                new_positions = None
+                if isinstance(out, Chem.Mol):
+                    conf_out = out.GetConformer()
+                    new_positions = np.array([conf_out.GetAtomPosition(i) for i in range(out.GetNumAtoms())])
+                else:
+                    arr = np.array(out)
+                    if arr.shape == (self.mol.GetNumAtoms(), 3):
+                        new_positions = arr
+
+                if new_positions is None:
+                    raise RuntimeError('pymsym did not return valid coordinate array')
+
+            except Exception as e:
+                QMessageBox.critical(self, 'Error', f'pymsym symmetrization failed: {e}')
+                print(f'pymsym symmetrize failed: {e}')
+                import traceback
+                traceback.print_exc()
+                return
             
             # 新しい座標を分子に適用（3D座標のみ）
             for i, new_pos in enumerate(new_positions):
@@ -1690,112 +1555,67 @@ class SymmetrizeDialog(QDialog):
     
     def analyze_symmetry(self, positions, operations, tolerance):
         """対称性を分析し、必要な変更を計算（高度なアルゴリズム）"""
-        atoms_to_move = 0
-        max_displacement = 0.0
-        
-        # RDKitを使用して分子の対称性と等価原子グループを取得
+        # Delegate to pymsym and normalize common return formats.
         try:
-            # 分子の対称性解析
-            symmetry_classes = self.get_molecular_symmetry_classes()
-            equivalent_atom_groups = self.group_equivalent_atoms(symmetry_classes)
-            
-            # 各等価原子グループに対して対称化を適用
-            centroid = np.mean(positions, axis=0)
-            centered_positions = positions - centroid
-            
-            for group_atoms in equivalent_atom_groups:
-                group_positions = centered_positions[group_atoms]
-                
-                # グループ内での理想的な対称位置を計算
-                ideal_positions = self.calculate_ideal_symmetric_positions(
-                    group_positions, operations, tolerance
-                )
-                
-                # 各原子の移動距離を計算
-                for i, atom_idx in enumerate(group_atoms):
-                    displacement = np.linalg.norm(ideal_positions[i] - centered_positions[atom_idx])
-                    if displacement > tolerance:
-                        atoms_to_move += 1
-                        max_displacement = max(max_displacement, displacement)
-        
+            if hasattr(pymsym, 'analyze_symmetry'):
+                res = pymsym.analyze_symmetry(self.mol, tolerance=tolerance)
+            elif hasattr(pymsym, 'analyze'):
+                res = pymsym.analyze(self.mol, tol=tolerance)
+            elif hasattr(pymsym, 'symmetry_info'):
+                res = pymsym.symmetry_info(self.mol, tol=tolerance)
+            else:
+                raise RuntimeError('pymsym analysis API not available')
+
+            # If a dict-like result returned, normalize keys
+            if isinstance(res, dict):
+                atoms_to_move = res.get('atoms_to_move', res.get('moved_atoms', res.get('n_moved', 0)))
+                max_disp = res.get('max_displacement', res.get('max_disp', res.get('max_move', 0.0)))
+                return {'atoms_to_move': int(atoms_to_move), 'max_displacement': float(max_disp), 'raw': res}
+
+            # If pymsym returns an RDKit Mol (symmetrized), assume zero moves reported
+            if isinstance(res, Chem.Mol):
+                return {'atoms_to_move': 0, 'max_displacement': 0.0, 'raw': res}
+
+            # If array-like coordinates returned, derive simple stats
+            arr = np.array(res)
+            if arr.ndim == 2 and arr.shape[1] == 3:
+                # compute max displacement from current positions
+                conf = self.mol.GetConformer()
+                orig = np.array([conf.GetAtomPosition(i) for i in range(self.mol.GetNumAtoms())])
+                if arr.shape[0] == orig.shape[0]:
+                    max_disp = float(np.max(np.linalg.norm(arr - orig, axis=1)))
+                    atoms_to_move = int(np.sum(np.linalg.norm(arr - orig, axis=1) > 1e-8))
+                    return {'atoms_to_move': atoms_to_move, 'max_displacement': max_disp, 'raw': arr}
+
+            raise RuntimeError('pymsym returned unexpected result from analysis')
+
         except Exception as e:
-            print(f"Advanced symmetry analysis failed, falling back to simple method: {e}")
-            # フォールバック: 従来の単純な方法
-            return self.analyze_symmetry_simple(positions, operations, tolerance)
-        
-        return {
-            'atoms_to_move': atoms_to_move,
-            'max_displacement': max_displacement
-        }
+            raise RuntimeError(f'pymsym analysis failed: {e}')
     
     def get_molecular_symmetry_classes(self):
-        """RDKitを使用して分子の対称性クラスを取得"""
+        """Obtain atom symmetry classes (delegates to pymsym).
+
+        Returns a list of integers, one per atom, indicating symmetry class.
+        """
         try:
-            from rdkit.Chem import rdMolDescriptors
-            
-            # RDKitの正しいAPI名を試行
-            try:
-                # 新しいバージョンのRDKit
-                canonical_ranks = list(rdMolDescriptors.GetAtomSymmetryClasses(self.mol))
-                print(f"Debug: Using GetAtomSymmetryClasses - Symmetry classes: {canonical_ranks}")
-                return canonical_ranks
-            except AttributeError:
-                # 代替手法: Canonical SMILES順序を利用
-                try:
-                    from rdkit.Chem import Descriptors
-                    
-                    # 分子のcanonical atom orderingを取得
-                    mol_copy = Chem.Mol(self.mol)
-                    canonical_order = tuple(mol_copy.GetPropsAsDict().get('_smilesAtomOutputOrder', range(mol_copy.GetNumAtoms())))
-                    
-                    # Morgan fingerprintを使用して原子の環境を比較
-                    from rdkit.Chem import rdMolDescriptors
-                    atom_invariants = []
-                    
-                    for atom in mol_copy.GetAtoms():
-                        # 原子の化学環境を記述する不変量を計算
-                        invariant = (
-                            atom.GetAtomicNum(),
-                            atom.GetDegree(),
-                            atom.GetFormalCharge(),
-                            atom.GetHybridization(),
-                            atom.GetTotalNumHs(),
-                            atom.IsInRing()
-                        )
-                        atom_invariants.append(invariant)
-                    
-                    # 同じ不変量を持つ原子に同じクラス番号を割り当て
-                    unique_invariants = list(set(atom_invariants))
-                    symmetry_classes = []
-                    
-                    for invariant in atom_invariants:
-                        class_id = unique_invariants.index(invariant)
-                        symmetry_classes.append(class_id)
-                    
-                    print(f"Debug: Using Morgan-based approach - Symmetry classes: {symmetry_classes}")
-                    return symmetry_classes
-                    
-                except Exception as e2:
-                    print(f"Morgan-based approach also failed: {e2}")
-                    raise e
-            
+            # Prefer pymsym APIs
+            if hasattr(pymsym, 'get_atom_symmetry_classes'):
+                return list(pymsym.get_atom_symmetry_classes(self.mol))
+            if hasattr(pymsym, 'atom_symmetry_classes'):
+                return list(pymsym.atom_symmetry_classes(self.mol))
+            if hasattr(pymsym, 'symmetry_classes'):
+                return list(pymsym.symmetry_classes(self.mol))
+
+            # Some pymsym versions include classes in analyze_symmetry result
+            if hasattr(pymsym, 'analyze_symmetry'):
+                res = pymsym.analyze_symmetry(self.mol)
+                if isinstance(res, dict) and 'symmetry_classes' in res:
+                    return list(res['symmetry_classes'])
+
+            raise RuntimeError('No pymsym API found to obtain atom symmetry classes')
+
         except Exception as e:
-            print(f"Failed to get molecular symmetry classes: {e}")
-            print("Debug: Falling back to chemical-based symmetry analysis")
-            
-            # 手動でよくある分子パターンをチェック
-            if self.is_methane_like():
-                print("Debug: Detected methane-like molecule, applying manual grouping")
-                return self.get_methane_symmetry_classes()
-            elif self.is_water_like():
-                print("Debug: Detected water-like molecule, applying manual grouping")
-                return self.get_water_symmetry_classes()
-            elif self.is_ammonia_like():
-                print("Debug: Detected ammonia-like molecule, applying manual grouping")
-                return self.get_ammonia_symmetry_classes()
-            
-            # フォールバック: 化学的知識に基づく推定
-            return self.get_chemical_symmetry_classes()
+            raise RuntimeError(f'Failed to obtain molecular symmetry classes via pymsym: {e}')
     
     def is_methane_like(self):
         """メタン様分子（CH4, CCl4など）かどうか判定"""
@@ -2003,30 +1823,25 @@ class SymmetrizeDialog(QDialog):
         try:
             conf = self.mol.GetConformer()
             positions = np.array([conf.GetAtomPosition(i) for i in range(self.mol.GetNumAtoms())])
-            
-            # 各点群に対する適合度を計算
-            candidates = self.find_all_point_group_candidates(positions)
-            
-            if candidates:
-                # 候補選択ダイアログを表示
-                selected = self.show_symmetry_candidates_dialog(candidates)
-                
-                if selected:
-                    # 選択された点群をコンボボックスで設定
-                    for i in range(self.point_group_combo.count()):
-                        if self.point_group_combo.itemData(i) == selected['key']:
-                            self.point_group_combo.setCurrentIndex(i)
-                            break
-                    
-                    # 結果を表示
-                    info_text = f"Selected Point Group: {selected['name']}\n"
-                    info_text += f"Confidence: {selected['confidence']:.1%}\n"
-                    info_text += f"Reason: {selected['reason']}\n\n"
-                    info_text += "Click 'Preview Symmetry' to see detailed analysis."
-                    
-                    self.info_label.setText(info_text)
-            else:
-                self.info_label.setText("Could not automatically detect suitable point group.\nManual selection recommended.")
+            # Use existing helper to pick the best point group via pymsym
+            best = self.find_best_point_group(positions)
+            if best and isinstance(best, dict):
+                name = best.get('name', best.get('key', 'Unknown'))
+                conf_score = best.get('confidence', 1.0)
+                reason = best.get('reason', 'pymsym')
+                info_text = f"Auto-detected Point Group: {name}\n"
+                info_text += f"Confidence: {conf_score:.1%}\n"
+                info_text += f"Reason: {reason}\n\n"
+                info_text += "Click 'Preview Symmetry' to see detailed analysis."
+                self.info_label.setText(info_text)
+                # Try to set combo selection if a matching entry exists
+                for i in range(self.point_group_combo.count()):
+                    if self.point_group_combo.itemData(i) == best.get('key'):
+                        self.point_group_combo.setCurrentIndex(i)
+                        break
+                return
+
+            self.info_label.setText("Could not automatically detect suitable point group via pymsym.")
                 
         except Exception as e:
             QMessageBox.warning(self, "Auto-Detection Error", f"Failed to auto-detect symmetry: {str(e)}")
@@ -2039,122 +1854,61 @@ class SymmetrizeDialog(QDialog):
         return None
     
     def find_all_point_group_candidates(self, positions):
-        """分子構造に適した点群候補をすべて検索"""
-        tolerance = 0.2  # Auto-detection用の比較的緩い許容値
-        
-        # 候補点群のリスト
-        candidates = []
-        
-        # 分子の基本情報を取得
-        num_atoms = len(positions)
-        atom_symbols = [self.mol.GetAtomWithIdx(i).GetSymbol() for i in range(num_atoms)]
-        
-        # 1. 特殊な分子パターンを直接検出
-        special_match = self.detect_special_molecules(positions, atom_symbols)
-        if special_match:
-            candidates.append(special_match)
-        
-        # 2. 各点群の対称操作に対する適合度を計算
-        for key, point_group in self.POINT_GROUPS.items():
-            try:
-                # 既に特殊検出で追加済みの場合はスキップ
-                if special_match and key == special_match['key']:
-                    continue
-                
-                # 対称性適合度を計算
-                fit_score = self.calculate_symmetry_fit(positions, point_group["operations"], tolerance)
-                
-                # 最低閾値をクリアした候補のみ追加
-                if fit_score >= 0.3:  # 30%以上の適合度
-                    reason = f"Symmetry operations fit: {fit_score:.1%}"
-                    if fit_score >= 0.8:
-                        reason += " (Excellent match)"
-                    elif fit_score >= 0.6:
-                        reason += " (Good match)"
-                    elif fit_score >= 0.4:
-                        reason += " (Fair match)"
-                    else:
-                        reason += " (Poor match)"
-                    
-                    candidates.append({
-                        'key': key,
-                        'name': point_group['name'],
-                        'confidence': fit_score,
-                        'reason': reason,
-                        'operations_count': len(point_group["operations"])
-                    })
-                
-            except Exception as e:
-                print(f"Error evaluating {key}: {e}")
-                continue
-        
-        # 3. スコアでソート（高い方が良い）
+        """Delegate point-group candidate determination to pymsym when possible."""
         try:
+            if hasattr(pymsym, 'find_point_groups'):
+                raw = pymsym.find_point_groups(self.mol, tolerance=0.2)
+            elif hasattr(pymsym, 'candidates'):
+                raw = pymsym.candidates(self.mol)
+            else:
+                return []
+
+            candidates = []
+            for item in (raw or []):
+                if isinstance(item, str):
+                    key = item
+                    name = self.POINT_GROUPS.get(key, {'name': key})['name']
+                    candidates.append({'key': key, 'name': name, 'confidence': 1.0, 'reason': 'pymsym candidate', 'operations_count': len(self.POINT_GROUPS.get(key, {}).get('operations', []))})
+                elif isinstance(item, dict):
+                    key = item.get('key') or item.get('name')
+                    name = item.get('name', key)
+                    confidence = item.get('confidence', item.get('score', 1.0))
+                    reason = item.get('reason', 'pymsym candidate')
+                    ops = self.POINT_GROUPS.get(key, {}).get('operations', [])
+                    candidates.append({'key': key, 'name': name, 'confidence': confidence, 'reason': reason, 'operations_count': len(ops)})
+
             candidates.sort(key=lambda x: (-x['confidence'], -x.get('operations_count', 0)))
-        except KeyError as e:
-            print(f"Warning: Missing key in candidate sorting: {e}")
-            # フォールバック: confidenceのみでソート
-            candidates.sort(key=lambda x: -x['confidence'])
-        
-        # 4. 上位5候補まで
-        return candidates[:5]
+            return candidates[:5]
+
+        except Exception as e:
+            print(f"pymsym candidate lookup failed: {e}")
+            return []
     
     def find_best_point_group(self, positions):
-        """分子構造に最も適した点群を検索"""
-        tolerance = 0.2  # Auto-detection用の比較的緩い許容値
-        
-        # 候補点群のリスト（優先度順）
-        candidates = []
-        
-        # 分子の基本情報を取得
-        num_atoms = len(positions)
-        atom_symbols = [self.mol.GetAtomWithIdx(i).GetSymbol() for i in range(num_atoms)]
-        
-        # 1. 特殊な分子パターンを直接検出
-        special_match = self.detect_special_molecules(positions, atom_symbols)
-        if special_match:
-            return special_match
-        
-        # 2. 各点群の対称操作に対する適合度を計算
-        for key, point_group in self.POINT_GROUPS.items():
-            try:
-                # 対称性適合度を計算
-                fit_score = self.calculate_symmetry_fit(positions, point_group["operations"], tolerance)
-                
-                candidates.append({
-                    'key': key,
-                    'name': point_group['name'],
-                    'score': fit_score,
-                    'operations_count': len(point_group["operations"])
-                })
-                
-            except Exception as e:
-                print(f"Error evaluating {key}: {e}")
-                continue
-        
-        # 3. 最適な候補を選択
-        if not candidates:
-            return None
-        
-        # スコアでソート（高い方が良い）
-        candidates.sort(key=lambda x: (-x['score'], -x['operations_count']))
-        best = candidates[0]
-        
-        # 最低限の閾値をチェック
-        if best['score'] < 0.5:  # 50%未満の適合度は却下
-            return {
-                'key': 'C1',
-                'name': 'C1 (No symmetry)',
-                'confidence': 0.9,
-                'reason': 'Low symmetry detected, suggesting C1'
-            }
-        
-        return {
-            'key': best['key'],
-            'name': best['name'],
-            'confidence': best['score'],
-            'reason': f'Best fit among {len(candidates)} point groups tested'
-        }
+        """Use pymsym to determine the best point group for the molecule."""
+        try:
+            if hasattr(pymsym, 'detect_point_group'):
+                detected = pymsym.detect_point_group(self.mol, tolerance=0.2)
+                if detected:
+                    if isinstance(detected, str):
+                        key = detected
+                        return {'key': key, 'name': self.POINT_GROUPS.get(key, {'name': key})['name'], 'confidence': 1.0, 'reason': 'detected by pymsym'}
+                    elif isinstance(detected, dict):
+                        return detected
+            # Fallback: try candidates list
+            if hasattr(pymsym, 'find_point_groups'):
+                cand = pymsym.find_point_groups(self.mol, tolerance=0.2)
+                if cand:
+                    item = cand[0]
+                    if isinstance(item, dict):
+                        return item
+                    elif isinstance(item, str):
+                        return {'key': item, 'name': self.POINT_GROUPS.get(item, {'name': item})['name'], 'confidence': 1.0, 'reason': 'candidate from pymsym'}
+        except Exception as e:
+            print(f"pymsym detect/find point group failed: {e}")
+
+        # If pymsym is not able to determine, return C1 as safe default
+        return {'key': 'C1', 'name': 'C1 (No symmetry)', 'confidence': 0.0, 'reason': 'pymsym detection unavailable'}
     
     def detect_special_molecules(self, positions, atom_symbols):
         """特殊な分子パターンを直接検出"""
@@ -2167,7 +1921,7 @@ class SymmetrizeDialog(QDialog):
                 'name': 'Td (Tetrahedral)',
                 'confidence': 0.95,
                 'reason': 'Tetrahedral molecule detected (e.g., CH4, CCl4)',
-                'operations_count': len(self.POINT_GROUPS['Td']['operations'])
+                'operations_count': len(self.POINT_GROUPS.get('Td', {}).get('operations', []))
             }
         
         # 水様分子 (AX2)
@@ -2177,7 +1931,7 @@ class SymmetrizeDialog(QDialog):
                 'name': 'C2v (C2 + 2 vertical mirrors)',
                 'confidence': 0.9,
                 'reason': 'Bent molecule detected (e.g., H2O)',
-                'operations_count': len(self.POINT_GROUPS['C2v']['operations'])
+                'operations_count': len(self.POINT_GROUPS.get('C2v', {}).get('operations', []))
             }
         
         # アンモニア様分子 (AX3)
@@ -2187,7 +1941,7 @@ class SymmetrizeDialog(QDialog):
                 'name': 'C3v (C3 + 3 vertical mirrors)',
                 'confidence': 0.9,
                 'reason': 'Trigonal pyramidal molecule detected (e.g., NH3)',
-                'operations_count': len(self.POINT_GROUPS['C3v']['operations'])
+                'operations_count': len(self.POINT_GROUPS.get('C3v', {}).get('operations', []))
             }
         
         # 直線分子 (2原子または3原子直線)
@@ -2197,7 +1951,7 @@ class SymmetrizeDialog(QDialog):
                 'name': 'Ci (Inversion center)',
                 'confidence': 0.85,
                 'reason': 'Diatomic molecule detected',
-                'operations_count': len(self.POINT_GROUPS['Ci']['operations'])
+                'operations_count': len(self.POINT_GROUPS.get('Ci', {}).get('operations', []))
             }
         
         # 平面分子の検出
@@ -2208,7 +1962,7 @@ class SymmetrizeDialog(QDialog):
                     'name': 'D3h (Trigonal planar)',
                     'confidence': 0.85,
                     'reason': 'Triangular planar molecule detected (e.g., BF3)',
-                    'operations_count': len(self.POINT_GROUPS['D3h']['operations'])
+                    'operations_count': len(self.POINT_GROUPS.get('D3h', {}).get('operations', []))
                 }
             else:
                 return {
@@ -2216,47 +1970,25 @@ class SymmetrizeDialog(QDialog):
                     'name': 'Cs (Mirror plane xy)',
                     'confidence': 0.75,
                     'reason': 'Planar molecule detected',
-                    'operations_count': len(self.POINT_GROUPS['Cs']['operations'])
+                    'operations_count': len(self.POINT_GROUPS.get('Cs', {}).get('operations', []))
                 }
         
         return None
     
     def calculate_symmetry_fit(self, positions, operations, tolerance):
         """対称操作に対する構造の適合度を計算（0-1のスコア）"""
-        if len(operations) <= 1:  # 恒等操作のみ
-            return 0.1
-        
-        centroid = np.mean(positions, axis=0)
-        centered_positions = positions - centroid
-        
-        total_score = 0.0
-        valid_operations = 0
-        
-        for operation in operations[1:]:  # 恒等操作を除く
-            operation_score = 0.0
-            
-            for pos in centered_positions:
-                transformed_pos = operation @ pos
-                
-                # 変換された位置に最も近い実際の原子を探す
-                distances = [np.linalg.norm(transformed_pos - other_pos) 
-                           for other_pos in centered_positions]
-                min_distance = min(distances)
-                
-                # 距離に基づくスコア（近いほど高スコア）
-                if min_distance < tolerance:
-                    operation_score += 1.0 - (min_distance / tolerance)
-                
-            # 正規化（原子数で割る）
-            operation_score /= len(positions)
-            total_score += operation_score
-            valid_operations += 1
-        
-        # 全対称操作での平均スコア
-        if valid_operations > 0:
-            return total_score / valid_operations
-        else:
+        # Delegate symmetry-fit scoring to pymsym if available; otherwise return 0.0
+        try:
+            if hasattr(pymsym, 'score_point_group'):
+                # Try to infer a point-group key by exact operations match
+                for k, pg in self.POINT_GROUPS.items():
+                    if pg.get('operations') == operations:
+                        return float(pymsym.score_point_group(self.mol, k, tolerance=tolerance))
             return 0.0
+        except Exception as e:
+            print(f"pymsym scoring failed: {e}")
+            return 0.0
+
     
     def is_planar_molecule(self, positions, tolerance=0.1):
         """分子が平面構造かどうか判定"""
@@ -2330,365 +2062,57 @@ class SymmetrizeDialog(QDialog):
         return all_groups
     
     def calculate_ideal_symmetric_positions(self, group_positions, operations, tolerance):
-        """等価原子グループの理想的な対称位置を計算"""
-        if len(group_positions) == 1:
-            # 単独原子の場合、全対称操作の平均位置を計算
-            pos = group_positions[0]
-            equivalent_positions = [op @ pos for op in operations]
-            return [np.mean(equivalent_positions, axis=0)]
-        
-        # 複数原子グループの場合、グループ全体の対称性を考慮
-        group_centroid = np.mean(group_positions, axis=0)
-        ideal_positions = []
-        
-        for pos in group_positions:
-            # 各原子に対して対称操作を適用し、理想位置を計算
-            relative_pos = pos - group_centroid
-            equivalent_relatives = [op @ relative_pos for op in operations]
-            ideal_relative = np.mean(equivalent_relatives, axis=0)
-            ideal_positions.append(group_centroid + ideal_relative)
-        
-        return ideal_positions
+        raise RuntimeError('calculate_ideal_symmetric_positions removed: use pymsym APIs')
     
     def analyze_symmetry_simple(self, positions, operations, tolerance):
-        """従来の単純な対称性分析（フォールバック）"""
-        atoms_to_move = 0
-        max_displacement = 0.0
-        
-        centroid = np.mean(positions, axis=0)
-        centered_positions = positions - centroid
-        
-        for i, pos in enumerate(centered_positions):
-            # 各対称操作を適用した等価位置を計算
-            equivalent_positions = []
-            for operation in operations:
-                equivalent_positions.append(operation @ pos)
-            
-            # 等価位置の重心を計算（理想的な対称位置）
-            ideal_pos = np.mean(equivalent_positions, axis=0)
-            
-            # 現在位置と理想位置の距離を計算
-            displacement = np.linalg.norm(ideal_pos - pos)
-            
-            if displacement > tolerance:
-                atoms_to_move += 1
-                max_displacement = max(max_displacement, displacement)
-        
-        return {
-            'atoms_to_move': atoms_to_move,
-            'max_displacement': max_displacement
-        }
+        """Fallback symmetry analysis has been removed.
+
+        pymsym is required; this simple fallback has been disabled to avoid
+        inconsistent results. If you see this error, ensure pymsym is
+        installed and functioning correctly.
+        """
+        raise RuntimeError('analyze_symmetry_simple disabled: pymsym is required')
     
     def apply_symmetry_operations(self, positions, operations, tolerance):
         """対称操作を適用して構造を対称化（安全なバージョン）"""
+        # This function now only delegates to pymsym. Local fallback removed.
         try:
-            # シンプルで直接的な方法を使用
-            return self.apply_symmetry_direct(positions, operations, tolerance)
+            if hasattr(pymsym, 'symmetrize'):
+                out = pymsym.symmetrize(self.mol, tolerance=tolerance)
+            elif hasattr(pymsym, 'apply_symmetry'):
+                out = pymsym.apply_symmetry(self.mol, tolerance=tolerance)
+            elif hasattr(pymsym, 'enforce_symmetry'):
+                out = pymsym.enforce_symmetry(self.mol, tol=tolerance)
+            else:
+                raise RuntimeError('pymsym symmetry enforcement API not available')
+
+            if isinstance(out, Chem.Mol):
+                conf = out.GetConformer()
+                return np.array([conf.GetAtomPosition(i) for i in range(out.GetNumAtoms())])
+            else:
+                arr = np.array(out)
+                if arr.shape == (self.mol.GetNumAtoms(), 3):
+                    return arr
+                raise RuntimeError('pymsym returned invalid coordinate array')
         except Exception as e:
-            print(f"Symmetrization failed: {e}")
-            return positions.copy()
+            raise RuntimeError(f'pymsym symmetry enforcement failed: {e}')
     
     def apply_symmetry_direct(self, positions, operations, tolerance):
-        """直接的で安全な対称化（分子タイプを考慮）"""
-        # 対称操作の妥当性をチェック
-        valid_operations = []
-        for op in operations:
-            try:
-                if op.shape == (3, 3) and not np.any(np.isnan(op)) and not np.any(np.isinf(op)):
-                    det = np.linalg.det(op)
-                    if abs(abs(det) - 1.0) < 0.1:
-                        valid_operations.append(op)
-            except:
-                continue
-        
-        print(f"Debug: Total operations: {len(operations)}, Valid operations: {len(valid_operations)}")
-        
-        if not valid_operations:
-            print("警告: 有効な対称操作がありません。元の座標を返します。")
-            return positions.copy()
-        
-        # 分子の中心を計算
-        centroid = np.mean(positions, axis=0)
-        print(f"Debug: Molecular centroid: {centroid}")
-        
-        # 等価原子グループを取得
-        symmetry_classes = self.get_molecular_symmetry_classes()
-        equivalent_atom_groups = self.group_equivalent_atoms(symmetry_classes)
-        
-        new_positions = positions.copy()
-        
-        # メタン分子の特別処理
-        if len(positions) == 5 and len(equivalent_atom_groups) == 2:
-            print("Debug: Detected methane-like molecule")
-            
-            # 中心原子（通常は炭素）を原点に移動
-            center_atom_group = [group for group in equivalent_atom_groups if len(group) == 1][0]
-            center_atom_idx = center_atom_group[0]
-            
-            # 周辺原子グループ（通常は水素）
-            peripheral_atoms = [group for group in equivalent_atom_groups if len(group) > 1][0]
-            
-            print(f"Debug: Center atom: {center_atom_idx}, Peripheral atoms: {peripheral_atoms}")
-            
-            # 中心原子を分子の重心に配置（保守的なアプローチ）
-            current_center = positions[center_atom_idx]
-            if np.linalg.norm(current_center - centroid) > tolerance:
-                new_positions[center_atom_idx] = centroid
-                print(f"Debug: Moved center atom to centroid")
-            
-            # 周辺原子を中心からの相対位置で対称化（距離を保持）
-            for atom_idx in peripheral_atoms:
-                current_pos = positions[atom_idx]
-                relative_pos = current_pos - centroid
-                original_distance = np.linalg.norm(relative_pos)
-                
-                # 対称操作を適用（中心からの相対座標で）
-                equivalent_relative_positions = []
-                for op in valid_operations:
-                    try:
-                        transformed_relative = op @ relative_pos
-                        equivalent_relative_positions.append(transformed_relative)
-                    except:
-                        continue
-                
-                if len(equivalent_relative_positions) > 1:
-                    # 等価相対位置の平均
-                    average_relative = np.mean(equivalent_relative_positions, axis=0)
-                    
-                    # 元の距離を保持
-                    if np.linalg.norm(average_relative) > 1e-10:
-                        average_relative = average_relative / np.linalg.norm(average_relative) * original_distance
-                    
-                    average_pos = centroid + average_relative
-                    displacement = np.linalg.norm(average_pos - current_pos)
-                    
-                    print(f"Debug: Atom {atom_idx} - Original distance: {original_distance:.6f}, Displacement: {displacement:.6f}")
-                    
-                    # より保守的な条件：大きな変位は避ける
-                    if displacement > tolerance and displacement < 2.0:  # 最大2Å未満の変位のみ許可
-                        new_positions[atom_idx] = average_pos
-                        print(f"Debug: Applied symmetrization to atom {atom_idx}")
-                    elif displacement >= 2.0:
-                        print(f"Debug: Skipped atom {atom_idx} - displacement too large: {displacement:.6f}")
-        else:
-            # 一般的な分子の処理
-            for i, pos in enumerate(positions):
-                # すべての対称操作を適用して等価位置を取得
-                equivalent_positions = []
-                for op in valid_operations:
-                    try:
-                        transformed_pos = op @ pos
-                        equivalent_positions.append(transformed_pos)
-                    except:
-                        continue
-                
-                if len(equivalent_positions) > 1:
-                    # 等価位置の重心を新しい位置とする
-                    average_pos = np.mean(equivalent_positions, axis=0)
-                    displacement = np.linalg.norm(average_pos - pos)
-                    
-                    print(f"Debug: Atom {i} - Displacement: {displacement}")
-                    
-                    # 保守的な条件：大きな変位は避ける
-                    if displacement > tolerance and displacement < 2.0:  # 最大2Å未満の変位のみ許可
-                        new_positions[i] = average_pos
-                        print(f"Debug: Applied symmetrization to atom {i}")
-                    elif displacement >= 2.0:
-                        print(f"Debug: Skipped atom {i} - displacement too large: {displacement:.6f}")
-        
-        return new_positions
+        """Direct symmetrization disabled.
+
+        This local implementation has been removed in favor of pymsym. If
+        this function is reached, raise an error to signal missing
+        pymsym-based result.
+        """
+        raise RuntimeError('apply_symmetry_direct disabled: pymsym is required')
     
     def apply_symmetry_advanced(self, positions, operations, tolerance):
         """等価原子グループを考慮した高度な対称化"""
-        # 対称操作の妥当性をチェック
-        valid_operations = []
-        for op in operations:
-            try:
-                # 3x3の行列であることを確認
-                if op.shape == (3, 3) and not np.any(np.isnan(op)) and not np.any(np.isinf(op)):
-                    # 行列式が±1に近いことを確認（回転・反射行列の条件）
-                    det = np.linalg.det(op)
-                    if abs(abs(det) - 1.0) < 0.1:  # より緩い条件
-                        valid_operations.append(op)
-            except:
-                continue
-        
-        print(f"Debug: Total operations: {len(operations)}, Valid operations: {len(valid_operations)}")
-        
-        if not valid_operations:
-            print("警告: 有効な対称操作がありません。元の座標を返します。")
-            return positions.copy()
-        
-        # 分子の対称性クラスを取得
-        symmetry_classes = self.get_molecular_symmetry_classes()
-        equivalent_atom_groups = self.group_equivalent_atoms(symmetry_classes)
-        
-        centroid = np.mean(positions, axis=0)
-        centered_positions = positions - centroid
-        new_positions = centered_positions.copy()
-        
-        print(f"Debug: Original centroid: {centroid}")
-        print(f"Debug: Original positions shape: {positions.shape}")
-        print(f"Debug: Valid operations count: {len(valid_operations)}")
-        
-        # 各等価原子グループを個別に対称化
-        max_iterations = 5  # 反復回数を制限
-        for iteration in range(max_iterations):
-            print(f"Debug: Iteration {iteration + 1}")
-            moved_any = False
-            
-            for group_atoms in equivalent_atom_groups:
-                if len(group_atoms) == 1:
-                    # 単独原子の場合
-                    atom_idx = group_atoms[0]
-                    pos = new_positions[atom_idx]
-                    
-                    print(f"Debug: Processing single atom {atom_idx}")
-                    
-                    # 全ての対称操作で得られる等価位置の平均
-                    equivalent_positions = []
-                    for op in valid_operations:
-                        try:
-                            transformed_pos = op @ pos
-                            equivalent_positions.append(transformed_pos)
-                        except:
-                            continue
-                    
-                        if equivalent_positions:
-                            average_pos = np.mean(equivalent_positions, axis=0)
-                            displacement = np.linalg.norm(average_pos - pos)
-                            
-                            print(f"Debug: Atom {atom_idx} - Displacement: {displacement}")
-                            
-                            # 数値精度を考慮したより緩い条件
-                            if displacement > max(tolerance / 100, 1e-10):
-                                new_positions[atom_idx] = average_pos
-                                moved_any = True
-                        
-                else:
-                    # 等価原子グループの場合、グループ全体の対称性を保持
-                    group_positions = new_positions[group_atoms]
-                    group_centroid = np.mean(group_positions, axis=0)
-                    
-                    print(f"Debug: Processing group {group_atoms}")
-                    
-                    # グループの重心を対称化
-                    equivalent_centroids = []
-                    for op in valid_operations:
-                        try:
-                            transformed_centroid = op @ group_centroid
-                            equivalent_centroids.append(transformed_centroid)
-                        except:
-                            continue
-                    
-                    if equivalent_centroids:
-                        ideal_centroid = np.mean(equivalent_centroids, axis=0)
-                        centroid_shift = ideal_centroid - group_centroid
-                        
-                        print(f"Debug: Group centroid shift magnitude: {np.linalg.norm(centroid_shift)}")
-                        
-                        # グループ内の相対位置を保持しながら重心を移動
-                        if np.linalg.norm(centroid_shift) > max(tolerance / 100, 1e-10):
-                            for atom_idx in group_atoms:
-                                new_positions[atom_idx] += centroid_shift
-                            moved_any = True
-                    
-                    # グループ内の原子間の相対位置も対称化
-                    for atom_idx in group_atoms:
-                        pos = new_positions[atom_idx]
-                        
-                        # 全ての対称操作で得られる等価位置の平均
-                        equivalent_positions = []
-                        for op in valid_operations:
-                            try:
-                                transformed_pos = op @ pos
-                                equivalent_positions.append(transformed_pos)
-                            except:
-                                continue
-                        
-                            if equivalent_positions:
-                                average_pos = np.mean(equivalent_positions, axis=0)
-                                displacement = np.linalg.norm(average_pos - pos)
-                                
-                                if displacement > max(tolerance / 100, 1e-10):
-                                    new_positions[atom_idx] = average_pos
-                                    moved_any = True
-            
-            if not moved_any:
-                break
-        
-        # 重心を元に戻す
-        final_positions = new_positions + centroid
-        
-        print(f"Debug: Final positions before return:")
-        for i, pos in enumerate(final_positions):
-            print(f"  Atom {i}: {pos}")
-        
-        # デバッグ: 座標チェック
-        if np.any(np.isnan(final_positions)) or np.any(np.isinf(final_positions)):
-            print("警告: 無効な座標が検出されました。元の座標を返します。")
-            return positions.copy()
-        
-        return final_positions
+        raise RuntimeError('apply_symmetry_advanced removed: use pymsym.symmetrize or similar API')
     
     def apply_symmetry_simple(self, positions, operations, tolerance):
         """従来の単純な対称化（フォールバック）"""
-        # 対称操作の妥当性をチェック
-        valid_operations = []
-        for op in operations:
-            try:
-                # 3x3の行列であることを確認
-                if op.shape == (3, 3) and not np.any(np.isnan(op)) and not np.any(np.isinf(op)):
-                    # 行列式が±1に近いことを確認（回転・反射行列の条件）
-                    det = np.linalg.det(op)
-                    if abs(abs(det) - 1.0) < 0.1:  # より緩い条件
-                        valid_operations.append(op)
-            except:
-                continue
-        
-        if not valid_operations:
-            print("警告: 有効な対称操作がありません。元の座標を返します。")
-            return positions.copy()
-        
-        centroid = np.mean(positions, axis=0)
-        centered_positions = positions - centroid
-        new_positions = centered_positions.copy()
-        
-        # 反復的に対称化を適用
-        max_iterations = 5  # 反復回数を制限
-        for iteration in range(max_iterations):
-            moved_any = False
-            
-            for i, pos in enumerate(new_positions):
-                # 全ての対称操作で得られる等価位置の平均を計算
-                equivalent_positions = []
-                for operation in valid_operations:
-                    try:
-                        equivalent_positions.append(operation @ pos)
-                    except:
-                        continue
-                
-                if equivalent_positions:
-                    # 等価位置の重心を新しい位置とする
-                    average_pos = np.mean(equivalent_positions, axis=0)
-                    displacement = np.linalg.norm(average_pos - pos)
-                    
-                    if displacement > max(tolerance / 100, 1e-10):  # 数値精度を考慮
-                        new_positions[i] = average_pos
-                        moved_any = True
-            
-            if not moved_any:
-                break
-        
-        # 重心を元に戻す
-        final_positions = new_positions + centroid
-        
-        # デバッグ: 座標チェック
-        if np.any(np.isnan(final_positions)) or np.any(np.isinf(final_positions)):
-            print("警告: 無効な座標が検出されました。元の座標を返します。")
-            return positions.copy()
-        
-        return final_positions
+        raise RuntimeError('apply_symmetry_simple removed: pymsym is required')
 
 class MirrorDialog(QDialog):
     """分子の鏡像を作成するダイアログ"""
@@ -8359,14 +7783,14 @@ class MainWindow(QMainWindow):
         edit_3d_menu.addAction(dihedral_action)
         self.dihedral_action = dihedral_action
         
-        #edit_3d_menu.addSeparator()
+        edit_3d_menu.addSeparator()
         
         # Symmetrize action
-        #symmetrize_action = QAction("Symmetrize...", self)
-        #symmetrize_action.triggered.connect(self.open_symmetrize_dialog)
-        #symmetrize_action.setEnabled(False)
-        #edit_3d_menu.addAction(symmetrize_action)
-        #self.symmetrize_action = symmetrize_action
+        symmetrize_action = QAction("Symmetrize...", self)
+        symmetrize_action.triggered.connect(self.open_symmetrize_dialog)
+        symmetrize_action.setEnabled(False)
+        edit_3d_menu.addAction(symmetrize_action)
+        self.symmetrize_action = symmetrize_action
         
 
         settings_menu = menu_bar.addMenu("&Settings")
