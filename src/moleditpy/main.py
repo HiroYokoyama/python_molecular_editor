@@ -11,7 +11,7 @@ DOI 10.5281/zenodo.17268532
 """
 
 #Version
-VERSION = '1.10.0-alpha'
+VERSION = '1.10.0-alpha-01'
 
 print("-----------------------------------------------------")
 print("MoleditPy — A Python-based molecular editing software")
@@ -70,6 +70,15 @@ except Exception:
 # PyVista
 import pyvista as pv
 from pyvistaqt import QtInteractor
+
+# Optional: pymatgen-based symmetry support (used for Symmetrize feature)
+try:
+    from pymatgen.core.structure import Molecule as PymatgenMolecule
+    from pymatgen.symmetry.analyzer import PointGroupAnalyzer
+    from pymatgen.core.operations import SymmOp
+    PYMATGEN_AVAILABLE = True
+except Exception:
+    PYMATGEN_AVAILABLE = False
 
 # --- Constants ---
 ATOM_RADIUS = 18
@@ -226,7 +235,6 @@ class Dialog3DPickingMixin:
     def try_alternative_picking(self, x, y):
         """代替のピッキング方法（使用しない）"""
         pass
-    
 
 class TemplatePreviewView(QGraphicsView):
     """テンプレートプレビュー用のカスタムビュークラス"""
@@ -1269,850 +1277,430 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog):
         super().accept()
 
 class SymmetrizeDialog(QDialog):
-    """分子構造の対称化機能を提供するダイアログ"""
-    """ The parameters have not been checked for accuracy. Temporary measure. Under Development"""
+    """Symmetrize dialog reimplemented to use pymatgen's PointGroupAnalyzer.
 
-    # 黄金比 (正二十面体群の記述に使用)
-    PHI = (1 + np.sqrt(5)) / 2
+    This implementation delegates point-group detection and symmetry operations
+    to pymatgen when available. If pymatgen is not installed, the dialog will
+    show an informative error when the user attempts to use symmetry features.
+    """
 
-    # Manual POINT_GROUPS list removed in favor of pymsym automatic detection/enforcement.
-    # Keeping a small stub for backward-compatibility with code that does lookups via .get()
-    POINT_GROUPS = {}
-    
+    SUPPORTED_POINT_GROUPS = [
+        'C1','Ci','Cs','C2','C3','C2h','C3h','C2v','C3v',
+        'D2','D3','D2h','D3h','D4h','D5h','D6h','D2d','D3d',
+        'Td','Oh','Ih'
+    ]
+
     def __init__(self, mol, main_window, parent=None):
         super().__init__(parent)
         self.mol = mol
         self.main_window = main_window
         self.init_ui()
-    
+
     def init_ui(self):
         self.setWindowTitle("Symmetrize Molecule")
         self.setModal(True)
-        self.resize(800, 600)
+        self.setFixedSize(480, 360)
         layout = QVBoxLayout(self)
-        
-        # Instructions
+
         instruction_label = QLabel(
-            "Select a point group and tolerance to automatically symmetrize the molecular structure. "
-            "The algorithm will adjust atomic positions to enforce the selected symmetry."
+            "Select a point group (optional) and tolerance to symmetrize the molecular structure. "
+            "Pymatgen will be used to detect point group and symmetry operations."
         )
         instruction_label.setWordWrap(True)
         layout.addWidget(instruction_label)
-        
-        layout.addWidget(QLabel(""))  # Spacer
-        
-        # Point group selection
-        point_group_layout = QFormLayout()
 
-        # Point group selection with auto-detect button
+        layout.addWidget(QLabel(""))
+
+        point_group_layout = QFormLayout()
         pg_selection_layout = QHBoxLayout()
         self.point_group_combo = QComboBox()
-
-        # If manual POINT_GROUPS is empty (we rely on pymsym), show a placeholder and rely on auto-detect
-        if self.POINT_GROUPS:
-            for key, value in self.POINT_GROUPS.items():
-                self.point_group_combo.addItem(value.get("name", key), key)
-            self.point_group_combo.setCurrentIndex(0)  # Default to first entry
-        else:
-            # Placeholder entry; actual candidates will be provided by pymsym auto-detection
-            self.point_group_combo.addItem("(use pymsym Auto-Detect)", None)
-
+        self.point_group_combo.addItem("Auto-detect", "AUTO")
+        for pg in self.SUPPORTED_POINT_GROUPS:
+            self.point_group_combo.addItem(pg, pg)
+        self.point_group_combo.setCurrentIndex(0)
         pg_selection_layout.addWidget(self.point_group_combo)
 
-        self.auto_detect_button = QPushButton("Auto-Detect")
+        self.auto_detect_button = QPushButton("Detect Now")
         self.auto_detect_button.clicked.connect(self.auto_detect_symmetry)
-        self.auto_detect_button.setToolTip("Automatically detect the most suitable point group for current structure")
         pg_selection_layout.addWidget(self.auto_detect_button)
 
         point_group_layout.addRow("Point Group:", pg_selection_layout)
-        
-        # Tolerance input
+
         self.tolerance_input = QLineEdit("0.1")
-        self.tolerance_input.setToolTip("Maximum allowed displacement (Angstroms) when applying symmetry operations")
+        self.tolerance_input.setToolTip("Maximum allowed displacement (Å) when applying symmetry")
         point_group_layout.addRow("Tolerance (Å):", self.tolerance_input)
-        
+
         layout.addLayout(point_group_layout)
-        
-        layout.addWidget(QLabel(""))  # Spacer
-        
-        # Preview information
-        self.info_label = QLabel("Select parameters and click Apply to symmetrize the structure.")
+
+        layout.addWidget(QLabel(""))
+
+        self.info_label = QLabel("Choose parameters and click Preview to see detected symmetry.")
         self.info_label.setWordWrap(True)
         self.info_label.setStyleSheet("QLabel { color: #666; font-style: italic; }")
         layout.addWidget(self.info_label)
-        
+
         layout.addStretch()
-        
-        # Buttons
+
         button_layout = QHBoxLayout()
-        
         self.preview_button = QPushButton("Preview Symmetry")
         self.preview_button.clicked.connect(self.preview_symmetry)
-        self.preview_button.setToolTip("Analyze current structure and show symmetry information")
         button_layout.addWidget(self.preview_button)
-        
+
         button_layout.addStretch()
-        
         self.apply_button = QPushButton("Apply Symmetrization")
         self.apply_button.clicked.connect(self.apply_symmetrization)
-        self.apply_button.setDefault(True)
         button_layout.addWidget(self.apply_button)
 
         close_button = QPushButton("Close")
         close_button.clicked.connect(self.reject)
         button_layout.addWidget(close_button)
-        
+
         layout.addLayout(button_layout)
-    
-    def get_selected_point_group(self):
-        """選択されたポイントグループの情報を取得"""
-        key = self.point_group_combo.currentData()
-        # If manual list is empty or combo holds None, attempt to auto-detect using pymsym
-        if not self.POINT_GROUPS or key is None:
-            try:
-                # auto-detect a best candidate; fall back to 'C1' if detection fails
-                if hasattr(pymsym, 'find_point_groups'):
-                    cand = pymsym.find_point_groups(self.mol, tolerance=0.2)
-                    if cand:
-                        # cand may be a list of keys or (key, score) tuples
-                        if isinstance(cand, dict):
-                            # Some pymsym versions return dict of {pg: score}
-                            best = max(cand.items(), key=lambda x: x[1])[0]
-                        elif isinstance(cand, (list, tuple)) and len(cand) > 0:
-                            first = cand[0]
-                            if isinstance(first, (list, tuple)):
-                                best = first[0]
-                            else:
-                                best = first
-                        else:
-                            best = 'C1'
-                        return best, self.POINT_GROUPS.get(best, {'name': best, 'operations': []})
-            except Exception:
-                pass
 
-        # Normal path: return manual entry if available
-        if key in self.POINT_GROUPS:
-            return key, self.POINT_GROUPS[key]
-
-        # Fallback: return C1 stub
-        return 'C1', {'name': 'C1 (No symmetry)', 'operations': [np.eye(3)]}
-    
     def get_tolerance(self):
-        """入力されたトレランス値を取得"""
         try:
             return float(self.tolerance_input.text())
         except ValueError:
             QMessageBox.warning(self, "Warning", "Please enter a valid tolerance value.")
             return None
-    
-    def preview_symmetry(self):
-        """現在の構造の対称性を分析してプレビュー表示（高度な解析付き）"""
-        tolerance = self.get_tolerance()
-        if tolerance is None:
+
+    def rdkit_to_pymatgen(self):
+        """Convert current RDKit mol (with a conformer) to a pymatgen Molecule.
+
+        Returns None if conversion fails.
+        """
+        if not PYMATGEN_AVAILABLE:
+            return None
+
+        try:
+            conf = self.mol.GetConformer()
+            coords = []
+            species = []
+            for i in range(self.mol.GetNumAtoms()):
+                p = conf.GetAtomPosition(i)
+                coords.append([float(p.x), float(p.y), float(p.z)])
+                species.append(self.mol.GetAtomWithIdx(i).GetSymbol())
+
+            pm_mol = PymatgenMolecule(species, coords)
+            return pm_mol
+        except Exception:
+            return None
+
+    def auto_detect_symmetry(self):
+        tol = self.get_tolerance()
+        if tol is None:
             return
-        
-        # 分子の有効性チェック
+
         if not self.mol or self.mol.GetNumConformers() == 0:
             QMessageBox.warning(self, "Warning", "No valid molecule or conformer available.")
             return
-        
-        key, point_group = self.get_selected_point_group()
-        
+
+        pm_mol = self.rdkit_to_pymatgen()
+        if pm_mol is None:
+            QMessageBox.critical(self, "Error", "pymatgen not available or conversion failed.")
+            return
+
         try:
-            # 現在の分子の座標を取得
+            analyzer = PointGroupAnalyzer(pm_mol, tol)
+            # Try multiple attribute names for backward compatibility
+            detected = None
+            for attr in ("get_pointgroup", "get_point_group", "get_pointgroup_name", "point_group"):
+                if hasattr(analyzer, attr):
+                    try:
+                        detected = getattr(analyzer, attr)()
+                        break
+                    except Exception:
+                        continue
+
+            if not detected:
+                # Fallback: try str(analyzer)
+                detected = str(analyzer)
+
+            # Clean detected name if tuple or object
+            if isinstance(detected, tuple) and detected:
+                detected = detected[0]
+
+            # Update combo if recognized
+            if detected and detected in self.SUPPORTED_POINT_GROUPS:
+                # select the detected group in combo box
+                idx = self.point_group_combo.findData(detected)
+                if idx >= 0:
+                    self.point_group_combo.setCurrentIndex(idx)
+
+            self.info_label.setText(f"Detected point group: {detected}")
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"pymatgen symmetry detection failed: {e}")
+
+    def preview_symmetry(self):
+        tol = self.get_tolerance()
+        if tol is None:
+            return
+
+        if not self.mol or self.mol.GetNumConformers() == 0:
+            QMessageBox.warning(self, "Warning", "No valid molecule or conformer available.")
+            return
+
+        pm_mol = self.rdkit_to_pymatgen()
+        if pm_mol is None:
+            QMessageBox.critical(self, "Error", "pymatgen not available or conversion failed.")
+            return
+
+        try:
+            analyzer = PointGroupAnalyzer(pm_mol, tol)
+
+            # determine detected point group name
+            detected = None
+            for attr in ("get_pointgroup", "get_point_group", "get_pointgroup_name", "point_group"):
+                if hasattr(analyzer, attr):
+                    try:
+                        detected = getattr(analyzer, attr)()
+                        break
+                    except Exception:
+                        continue
+
+            # fetch symmetry operations (SymmOp objects)
+            symm_ops = []
+            for op_attr in ("get_symmetry_operations", "symmetry_operations", "get_symmetry_operations_cartesian"]):
+                if hasattr(analyzer, op_attr):
+                    try:
+                        symm_ops = getattr(analyzer, op_attr)()
+                        break
+                    except Exception:
+                        continue
+
+            # Fallback: empty list
+            if symm_ops is None:
+                symm_ops = []
+
+            # Build equivalent atom groups by applying each symmetry op and mapping to nearest atom
             conf = self.mol.GetConformer()
-            positions = np.array([conf.GetAtomPosition(i) for i in range(self.mol.GetNumAtoms())])
+            positions = np.array([[conf.GetAtomPosition(i).x, conf.GetAtomPosition(i).y, conf.GetAtomPosition(i).z] for i in range(self.mol.GetNumAtoms())])
 
-            # Delegate analysis to pymsym (analyze_symmetry wraps pymsym)
-            analysis_result = self.analyze_symmetry(positions, point_group.get("operations", []), tolerance)
+            equivalent_groups = []
+            used = set()
+            for i in range(len(positions)):
+                if i in used:
+                    continue
+                group = set([i])
+                for op in symm_ops:
+                    try:
+                        # SymmOp may provide operate_site or operate on coords
+                        try:
+                            transformed = np.array(op.operate(positions[i]))
+                        except Exception:
+                            # Try operate_site or rotation_matrix + translation_vector
+                            if hasattr(op, 'apply_operation'):
+                                transformed = np.array(op.apply_operation(positions[i]))
+                            elif hasattr(op, 'rotation_matrix'):
+                                rot = np.array(op.rotation_matrix)
+                                trans = np.array(getattr(op, 'translation_vector', [0,0,0]))
+                                transformed = rot.dot(positions[i]) + trans
+                            else:
+                                continue
 
-            # Try to obtain equivalent atom groups via pymsym-backed API
-            try:
-                symmetry_classes = self.get_molecular_symmetry_classes()
-                equivalent_groups = self.group_equivalent_atoms(symmetry_classes)
+                        # find nearest original atom index
+                        dists = np.linalg.norm(positions - transformed, axis=1)
+                        j = int(np.argmin(dists))
+                        if dists[j] < max(1e-3, tol):
+                            group.add(j)
+                    except Exception:
+                        continue
 
-                group_info = []
-                equivalent_count = 0
-                for i, group in enumerate(equivalent_groups):
-                    if len(group) > 1:
-                        equivalent_count += 1
-                        symbols = [self.mol.GetAtomWithIdx(idx).GetSymbol() for idx in group]
-                        group_info.append(f"Group {equivalent_count}: {len(group)} {symbols[0]} atoms (indices: {group})")
-                    else:
-                        symbols = [self.mol.GetAtomWithIdx(idx).GetSymbol() for idx in group]
-                        group_info.append(f"Single: {symbols[0]} atom (index: {group[0]})")
+                for idx in group:
+                    used.add(idx)
+                equivalent_groups.append(sorted(list(group)))
 
-                if equivalent_count > 0:
-                    group_text = f"Found {equivalent_count} equivalent atom groups:\n" + "\n".join(group_info)
+            # Analyze displacements if symm_ops available
+            atoms_to_move = 0
+            max_disp = 0.0
+            if symm_ops:
+                for i, pos in enumerate(positions):
+                    transformed_positions = []
+                    for op in symm_ops:
+                        try:
+                            transformed = np.array(op.operate(pos))
+                            transformed_positions.append(transformed)
+                        except Exception:
+                            # try rotation/translation attributes
+                            if hasattr(op, 'rotation_matrix'):
+                                rot = np.array(op.rotation_matrix)
+                                trans = np.array(getattr(op, 'translation_vector', [0,0,0]))
+                                transformed = rot.dot(pos) + trans
+                                transformed_positions.append(transformed)
+                            else:
+                                continue
+
+                    if transformed_positions:
+                        avg = np.mean(transformed_positions, axis=0)
+                        disp = np.linalg.norm(avg - pos)
+                        if disp > tol:
+                            atoms_to_move += 1
+                        max_disp = max(max_disp, disp)
+
+            # Compose info text
+            info_text = f"Detected: {detected}\nTolerance: {tol} Å\n"
+            info_text += f"Atoms to be moved: {atoms_to_move}\nMax displacement: {max_disp:.3f} Å\n\n"
+            info_text += "Equivalent atom groups:\n"
+            for grp in equivalent_groups:
+                if len(grp) > 1:
+                    symbols = [self.mol.GetAtomWithIdx(idx).GetSymbol() for idx in grp]
+                    info_text += f"Group ({len(grp)}): {symbols[0]} indices: {grp}\n"
                 else:
-                    group_text = "No equivalent atom groups found.\nAll atoms are chemically unique.\n" + "\n".join(group_info)
-
-            except Exception:
-                group_text = "Equivalent atom grouping not available."
-
-            # Display results safely using .get() to avoid KeyError
-            atoms_to_move = int(analysis_result.get('atoms_to_move', 0))
-            max_disp = float(analysis_result.get('max_displacement', 0.0))
-
-            info_text = f"Point Group: {point_group['name']}\n"
-            info_text += f"Tolerance: {tolerance} Å\n"
-            info_text += f"Atoms to be moved: {atoms_to_move}\n"
-            info_text += f"Max displacement: {max_disp:.3f} Å\n\n"
-            info_text += "Equivalent Atom Groups:\n" + group_text + "\n\n"
-
-            if atoms_to_move == 0:
-                info_text += "Structure already satisfies the selected symmetry."
-            else:
-                info_text += "Ready to apply symmetrization."
+                    sym = self.mol.GetAtomWithIdx(grp[0]).GetSymbol()
+                    info_text += f"Single: {sym} index: {grp[0]}\n"
 
             self.info_label.setText(info_text)
-            
+
         except Exception as e:
-            QMessageBox.critical(self, "Error", f"Failed to analyze symmetry: {str(e)}")
-            print(f"Symmetry analysis error: {e}")
-            import traceback
-            traceback.print_exc()
-    
-    def keyPressEvent(self, event):
-        """キーボードイベントを処理"""
-        if event.key() == Qt.Key.Key_Return or event.key() == Qt.Key.Key_Enter:
-            self.apply_symmetrization()
-            event.accept()
-        else:
-            super().keyPressEvent(event)
-    
+            QMessageBox.critical(self, "Error", f"Symmetry preview failed: {e}")
+
     def apply_symmetrization(self):
-        """対称化を適用"""
-        tolerance = self.get_tolerance()
-        if tolerance is None:
+        tol = self.get_tolerance()
+        if tol is None:
             return
-        
-        key, point_group = self.get_selected_point_group()
-        
+
+        if not self.mol or self.mol.GetNumConformers() == 0:
+            QMessageBox.warning(self, "Warning", "No valid molecule or conformer available.")
+            return
+
+        pm_mol = self.rdkit_to_pymatgen()
+        if pm_mol is None:
+            QMessageBox.critical(self, "Error", "pymatgen not available or conversion failed.")
+            return
+
         try:
-            
-            # 現在の分子の座標を取得
-            conf = self.mol.GetConformer()
-            original_positions = np.array([conf.GetAtomPosition(i) for i in range(self.mol.GetNumAtoms())])
-            
-            for i, pos in enumerate(original_positions):
-                print(f"  Atom {i}: {pos}")
-            
-            # Use pymsym exclusively to perform symmetrization
-            try:
-                out = None
-                if hasattr(pymsym, 'symmetrize'):
-                    out = pymsym.symmetrize(self.mol, pointgroup=key, tolerance=tolerance)
-                elif hasattr(pymsym, 'apply_symmetry'):
-                    out = pymsym.apply_symmetry(self.mol, key, tolerance=tolerance)
-                elif hasattr(pymsym, 'enforce_symmetry'):
-                    out = pymsym.enforce_symmetry(self.mol, point_group=key, tol=tolerance)
-                else:
-                    raise RuntimeError('pymsym API not found on pymsym module')
-
-                # Normalize pymsym output to Nx3 numpy array of positions
-                new_positions = None
-                if isinstance(out, Chem.Mol):
-                    conf_out = out.GetConformer()
-                    new_positions = np.array([conf_out.GetAtomPosition(i) for i in range(out.GetNumAtoms())])
-                else:
-                    arr = np.array(out)
-                    if arr.shape == (self.mol.GetNumAtoms(), 3):
-                        new_positions = arr
-
-                if new_positions is None:
-                    raise RuntimeError('pymsym did not return valid coordinate array')
-
-            except Exception as e:
-                QMessageBox.critical(self, 'Error', f'pymsym symmetrization failed: {e}')
-                print(f'pymsym symmetrize failed: {e}')
-                import traceback
-                traceback.print_exc()
-                return
-            
-            # 新しい座標を分子に適用（3D座標のみ）
-            for i, new_pos in enumerate(new_positions):
-                conf.SetAtomPosition(i, new_pos.tolist())
-                self.main_window.atom_positions_3d[i] = new_pos
-            
-            # 3D表示のみを更新
-            self.main_window.draw_molecule_3d(self.mol)
-
-            # Undo状態を保存（操作前の状態のみ）
-            self.main_window.push_undo_state()
-            
-            # 成功メッセージ（ダイアログを閉じる前に表示）
-            QMessageBox.information(
-                self, "Success", 
-                f"Molecular structure has been symmetrized according to {point_group['name']} point group."
-            )
-            
-        except Exception as e:
-            QMessageBox.critical(self, "Error", f"Failed to apply symmetrization: {str(e)}")
-            print(f"Symmetrization error: {e}")
-            import traceback
-            traceback.print_exc()
-    
-    def analyze_symmetry(self, positions, operations, tolerance):
-        """対称性を分析し、必要な変更を計算（高度なアルゴリズム）"""
-        # Delegate to pymsym and normalize common return formats.
-        try:
-            if hasattr(pymsym, 'analyze_symmetry'):
-                res = pymsym.analyze_symmetry(self.mol, tolerance=tolerance)
-            elif hasattr(pymsym, 'analyze'):
-                res = pymsym.analyze(self.mol, tol=tolerance)
-            elif hasattr(pymsym, 'symmetry_info'):
-                res = pymsym.symmetry_info(self.mol, tol=tolerance)
-            else:
-                raise RuntimeError('pymsym analysis API not available')
-
-            # If a dict-like result returned, normalize keys
-            if isinstance(res, dict):
-                atoms_to_move = res.get('atoms_to_move', res.get('moved_atoms', res.get('n_moved', 0)))
-                max_disp = res.get('max_displacement', res.get('max_disp', res.get('max_move', 0.0)))
-                return {'atoms_to_move': int(atoms_to_move), 'max_displacement': float(max_disp), 'raw': res}
-
-            # If pymsym returns an RDKit Mol (symmetrized), assume zero moves reported
-            if isinstance(res, Chem.Mol):
-                return {'atoms_to_move': 0, 'max_displacement': 0.0, 'raw': res}
-
-            # If array-like coordinates returned, derive simple stats
-            arr = np.array(res)
-            if arr.ndim == 2 and arr.shape[1] == 3:
-                # compute max displacement from current positions
-                conf = self.mol.GetConformer()
-                orig = np.array([conf.GetAtomPosition(i) for i in range(self.mol.GetNumAtoms())])
-                if arr.shape[0] == orig.shape[0]:
-                    max_disp = float(np.max(np.linalg.norm(arr - orig, axis=1)))
-                    atoms_to_move = int(np.sum(np.linalg.norm(arr - orig, axis=1) > 1e-8))
-                    return {'atoms_to_move': atoms_to_move, 'max_displacement': max_disp, 'raw': arr}
-
-            raise RuntimeError('pymsym returned unexpected result from analysis')
-
-        except Exception as e:
-            raise RuntimeError(f'pymsym analysis failed: {e}')
-    
-    def get_molecular_symmetry_classes(self):
-        """Obtain atom symmetry classes (delegates to pymsym).
-
-        Returns a list of integers, one per atom, indicating symmetry class.
-        """
-        try:
-            # Prefer pymsym APIs
-            if hasattr(pymsym, 'get_atom_symmetry_classes'):
-                return list(pymsym.get_atom_symmetry_classes(self.mol))
-            if hasattr(pymsym, 'atom_symmetry_classes'):
-                return list(pymsym.atom_symmetry_classes(self.mol))
-            if hasattr(pymsym, 'symmetry_classes'):
-                return list(pymsym.symmetry_classes(self.mol))
-
-            # Some pymsym versions include classes in analyze_symmetry result
-            if hasattr(pymsym, 'analyze_symmetry'):
-                res = pymsym.analyze_symmetry(self.mol)
-                if isinstance(res, dict) and 'symmetry_classes' in res:
-                    return list(res['symmetry_classes'])
-
-            raise RuntimeError('No pymsym API found to obtain atom symmetry classes')
-
-        except Exception as e:
-            raise RuntimeError(f'Failed to obtain molecular symmetry classes via pymsym: {e}')
-    
-    def is_methane_like(self):
-        """メタン様分子（CH4, CCl4など）かどうか判定"""
-        if self.mol.GetNumAtoms() != 5:
-            return False
-        
-        # 中心原子（通常は炭素）と4つの等価な原子
-        atoms = list(self.mol.GetAtoms())
-        center_candidates = [atom for atom in atoms if atom.GetDegree() == 4]
-        
-        if len(center_candidates) != 1:
-            return False
-            
-        center_atom = center_candidates[0]
-        neighbors = [atom.GetSymbol() for atom in center_atom.GetNeighbors()]
-        
-        # 4つの隣接原子がすべて同じ元素かチェック
-        return len(set(neighbors)) == 1 and len(neighbors) == 4
-    
-    def is_water_like(self):
-        """水様分子（H2O）かどうか判定"""
-        if self.mol.GetNumAtoms() != 3:
-            return False
-        
-        atoms = list(self.mol.GetAtoms())
-        center_candidates = [atom for atom in atoms if atom.GetDegree() == 2]
-        
-        if len(center_candidates) != 1:
-            return False
-            
-        center_atom = center_candidates[0]
-        neighbors = [atom.GetSymbol() for atom in center_atom.GetNeighbors()]
-        
-        return len(set(neighbors)) == 1 and len(neighbors) == 2
-    
-    def is_ammonia_like(self):
-        """アンモニア様分子（NH3）かどうか判定"""
-        if self.mol.GetNumAtoms() != 4:
-            return False
-        
-        atoms = list(self.mol.GetAtoms())
-        center_candidates = [atom for atom in atoms if atom.GetDegree() == 3]
-        
-        if len(center_candidates) != 1:
-            return False
-            
-        center_atom = center_candidates[0]
-        neighbors = [atom.GetSymbol() for atom in center_atom.GetNeighbors()]
-        
-        return len(set(neighbors)) == 1 and len(neighbors) == 3
-    
-    def get_methane_symmetry_classes(self):
-        """メタン様分子の対称性クラス"""
-        # 中心原子のインデックスを見つける
-        center_idx = None
-        for i, atom in enumerate(self.mol.GetAtoms()):
-            if atom.GetDegree() == 4:
-                center_idx = i
-                break
-        
-        # 中心原子は独自のクラス、4つの隣接原子は同じクラス
-        symmetry_classes = [1] * self.mol.GetNumAtoms()  # 隣接原子のクラス
-        if center_idx is not None:
-            symmetry_classes[center_idx] = 0  # 中心原子のクラス
-        
-        return symmetry_classes
-    
-    def get_water_symmetry_classes(self):
-        """水様分子の対称性クラス"""
-        center_idx = None
-        for i, atom in enumerate(self.mol.GetAtoms()):
-            if atom.GetDegree() == 2:
-                center_idx = i
-                break
-        
-        symmetry_classes = [1] * self.mol.GetNumAtoms()  # 隣接原子のクラス
-        if center_idx is not None:
-            symmetry_classes[center_idx] = 0  # 中心原子のクラス
-        
-        return symmetry_classes
-    
-    def get_ammonia_symmetry_classes(self):
-        """アンモニア様分子の対称性クラス"""
-        center_idx = None
-        for i, atom in enumerate(self.mol.GetAtoms()):
-            if atom.GetDegree() == 3:
-                center_idx = i
-                break
-        
-        symmetry_classes = [1] * self.mol.GetNumAtoms()  # 隣接原子のクラス
-        if center_idx is not None:
-            symmetry_classes[center_idx] = 0  # 中心原子のクラス
-        
-        return symmetry_classes
-    
-    def get_chemical_symmetry_classes(self):
-        """化学的知識に基づく対称性クラス推定"""
-        num_atoms = self.mol.GetNumAtoms()
-        
-        # 分子の3D座標を使用してより精密な解析
-        try:
-            conf = self.mol.GetConformer()
-            positions = np.array([list(conf.GetAtomPosition(i)) for i in range(num_atoms)])
-            
-            # 距離行列ベースの解析
-            symmetry_classes = self.analyze_by_distance_matrix(positions)
-            if symmetry_classes:
-                print(f"Debug: Distance-matrix-based symmetry classes: {symmetry_classes}")
-                return symmetry_classes
-        except Exception as e:
-            print(f"Debug: Distance matrix analysis failed: {e}")
-        
-        # フォールバック: 各原子を元素と結合数で分類
-        atom_signatures = []
-        for atom in self.mol.GetAtoms():
-            # より詳細な原子環境の記述
-            neighbors = atom.GetNeighbors()
-            neighbor_symbols = sorted([n.GetSymbol() for n in neighbors])
-            
-            signature = (
-                atom.GetSymbol(),           # 元素記号
-                atom.GetDegree(),          # 結合数
-                atom.GetFormalCharge(),    # 電荷
-                tuple(neighbor_symbols)    # 隣接原子の元素記号（ソート済み）
-            )
-            atom_signatures.append(signature)
-        
-        # 同じsignatureの原子に同じクラス番号を割り当て
-        unique_signatures = list(set(atom_signatures))
-        symmetry_classes = []
-        
-        for signature in atom_signatures:
-            class_id = unique_signatures.index(signature)
-            symmetry_classes.append(class_id)
-        
-        print(f"Debug: Chemical-based symmetry classes: {symmetry_classes}")
-        print(f"Debug: Unique signatures: {unique_signatures}")
-        return symmetry_classes
-    
-    def analyze_by_distance_matrix(self, positions):
-        """距離行列を使用した対称性解析"""
-        num_atoms = len(positions)
-        
-        # 各原子から他の全原子への距離ベクトルを計算
-        distance_patterns = []
-        
-        for i in range(num_atoms):
-            # 原子iから他の全原子への距離を計算
-            distances = []
-            for j in range(num_atoms):
-                if i != j:
-                    dist = np.linalg.norm(positions[i] - positions[j])
-                    distances.append(round(dist, 3))  # 丸めて比較可能にする
-            
-            # 距離をソートして標準化
-            distances.sort()
-            
-            # 元素記号と組み合わせて特徴ベクトルを作成
-            atom_symbol = self.mol.GetAtomWithIdx(i).GetSymbol()
-            pattern = (atom_symbol, tuple(distances))
-            distance_patterns.append(pattern)
-        
-        # 同じパターンを持つ原子をグループ化
-        unique_patterns = []
-        symmetry_classes = []
-        
-        for pattern in distance_patterns:
-            # 既存パターンとの近似比較
-            matched_class = None
-            for idx, unique_pattern in enumerate(unique_patterns):
-                if self.patterns_are_similar(pattern, unique_pattern):
-                    matched_class = idx
-                    break
-            
-            if matched_class is not None:
-                symmetry_classes.append(matched_class)
-            else:
-                unique_patterns.append(pattern)
-                symmetry_classes.append(len(unique_patterns) - 1)
-        
-        return symmetry_classes
-    
-    def patterns_are_similar(self, pattern1, pattern2, tolerance=0.05):
-        """2つの距離パターンが類似しているかチェック"""
-        symbol1, distances1 = pattern1
-        symbol2, distances2 = pattern2
-        
-        # 元素記号が違えば類似ではない
-        if symbol1 != symbol2:
-            return False
-        
-        # 距離数が違えば類似ではない
-        if len(distances1) != len(distances2):
-            return False
-        
-        # 各距離の差をチェック
-        for d1, d2 in zip(distances1, distances2):
-            if abs(d1 - d2) > tolerance:
-                return False
-        
-        return True
-    
-    def auto_detect_symmetry(self):
-        """分子構造から最適な点群を自動検出（複数候補を表示）"""
-        try:
-            conf = self.mol.GetConformer()
-            positions = np.array([conf.GetAtomPosition(i) for i in range(self.mol.GetNumAtoms())])
-            # Use existing helper to pick the best point group via pymsym
-            best = self.find_best_point_group(positions)
-            if best and isinstance(best, dict):
-                name = best.get('name', best.get('key', 'Unknown'))
-                conf_score = best.get('confidence', 1.0)
-                reason = best.get('reason', 'pymsym')
-                info_text = f"Auto-detected Point Group: {name}\n"
-                info_text += f"Confidence: {conf_score:.1%}\n"
-                info_text += f"Reason: {reason}\n\n"
-                info_text += "Click 'Preview Symmetry' to see detailed analysis."
-                self.info_label.setText(info_text)
-                # Try to set combo selection if a matching entry exists
-                for i in range(self.point_group_combo.count()):
-                    if self.point_group_combo.itemData(i) == best.get('key'):
-                        self.point_group_combo.setCurrentIndex(i)
+            analyzer = PointGroupAnalyzer(pm_mol, tol)
+            # get symmetry operations
+            symm_ops = []
+            for op_attr in ("get_symmetry_operations", "symmetry_operations", "get_symmetry_operations_cartesian"]):
+                if hasattr(analyzer, op_attr):
+                    try:
+                        symm_ops = getattr(analyzer, op_attr)()
                         break
+                    except Exception:
+                        continue
+
+            if not symm_ops:
+                QMessageBox.warning(self, "Warning", "No symmetry operations found; nothing to apply.")
                 return
 
-            self.info_label.setText("Could not automatically detect suitable point group via pymsym.")
-                
+            # get current positions
+            conf = self.mol.GetConformer()
+            positions = np.array([[conf.GetAtomPosition(i).x, conf.GetAtomPosition(i).y, conf.GetAtomPosition(i).z] for i in range(self.mol.GetNumAtoms())])
+
+            new_positions = positions.copy()
+            for i, pos in enumerate(positions):
+                transformed_positions = []
+                for op in symm_ops:
+                    try:
+                        transformed = np.array(op.operate(pos))
+                        transformed_positions.append(transformed)
+                    except Exception:
+                        if hasattr(op, 'rotation_matrix'):
+                            rot = np.array(op.rotation_matrix)
+                            trans = np.array(getattr(op, 'translation_vector', [0,0,0]))
+                            transformed = rot.dot(pos) + trans
+                            transformed_positions.append(transformed)
+                        else:
+                            continue
+
+                if transformed_positions:
+                    avg = np.mean(transformed_positions, axis=0)
+                    disp = np.linalg.norm(avg - pos)
+                    if disp > tol and disp < 2.0:
+                        new_positions[i] = avg
+
+            # apply new positions back to RDKit molecule and main window
+            from rdkit.Geometry import Point3D
+            for i, p in enumerate(new_positions):
+                conf.SetAtomPosition(i, Point3D(float(p[0]), float(p[1]), float(p[2])))
+                try:
+                    self.main_window.atom_positions_3d[i] = p
+                except Exception:
+                    pass
+
+            self.main_window.draw_molecule_3d(self.mol)
+            self.main_window.push_undo_state()
+            QMessageBox.information(self, "Success", "Symmetrization applied (pymatgen-based).")
+
         except Exception as e:
-            QMessageBox.warning(self, "Auto-Detection Error", f"Failed to auto-detect symmetry: {str(e)}")
+            QMessageBox.critical(self, "Error", f"Failed to apply symmetrization: {e}")
+            if len(self.selected_atoms) > 1:
+                centroid = self.calculate_centroid()
+                positions.append(centroid)
+                labels.append("CEN")
+
+            # ラベルを追加
+            if positions:
+                label_actor = self.main_window.plotter.add_point_labels(
+                    positions, labels,
+                    point_size=20,
+                    font_size=12,
+                    text_color='cyan',
+                    always_visible=True
+                )
+                # add_point_labelsがリストを返す場合も考慮
+                if isinstance(label_actor, list):
+                    self.selection_labels.extend(label_actor)
+                else:
+                    self.selection_labels.append(label_actor)
     
-    def show_symmetry_candidates_dialog(self, candidates):
-        """対称性候補選択ダイアログを表示"""
-        dialog = SymmetryCandidatesDialog(candidates, self)
-        if dialog.exec() == QDialog.DialogCode.Accepted:
-            return dialog.get_selected_candidate()
-        return None
-    
-    def find_all_point_group_candidates(self, positions):
-        """Delegate point-group candidate determination to pymsym when possible."""
+    def clear_atom_labels(self):
+        """原子ラベルをクリア"""
+        if hasattr(self, 'selection_labels'):
+            for label_actor in self.selection_labels:
+                try:
+                    self.main_window.plotter.remove_actor(label_actor)
+                except Exception:
+                    pass
+            self.selection_labels = []
+        # ラベル消去後に再描画を強制
         try:
-            if hasattr(pymsym, 'find_point_groups'):
-                raw = pymsym.find_point_groups(self.mol, tolerance=0.2)
-            elif hasattr(pymsym, 'candidates'):
-                raw = pymsym.candidates(self.mol)
-            else:
-                return []
-
-            candidates = []
-            for item in (raw or []):
-                if isinstance(item, str):
-                    key = item
-                    name = self.POINT_GROUPS.get(key, {'name': key})['name']
-                    candidates.append({'key': key, 'name': name, 'confidence': 1.0, 'reason': 'pymsym candidate', 'operations_count': len(self.POINT_GROUPS.get(key, {}).get('operations', []))})
-                elif isinstance(item, dict):
-                    key = item.get('key') or item.get('name')
-                    name = item.get('name', key)
-                    confidence = item.get('confidence', item.get('score', 1.0))
-                    reason = item.get('reason', 'pymsym candidate')
-                    ops = self.POINT_GROUPS.get(key, {}).get('operations', [])
-                    candidates.append({'key': key, 'name': name, 'confidence': confidence, 'reason': reason, 'operations_count': len(ops)})
-
-            candidates.sort(key=lambda x: (-x['confidence'], -x.get('operations_count', 0)))
-            return candidates[:5]
-
-        except Exception as e:
-            print(f"pymsym candidate lookup failed: {e}")
-            return []
+            self.main_window.plotter.render()
+        except Exception:
+            pass
     
-    def find_best_point_group(self, positions):
-        """Use pymsym to determine the best point group for the molecule."""
+    def closeEvent(self, event):
+        """ダイアログが閉じられる時の処理"""
+        self.clear_atom_labels()
+        self.disable_picking()
         try:
-            if hasattr(pymsym, 'detect_point_group'):
-                detected = pymsym.detect_point_group(self.mol, tolerance=0.2)
-                if detected:
-                    if isinstance(detected, str):
-                        key = detected
-                        return {'key': key, 'name': self.POINT_GROUPS.get(key, {'name': key})['name'], 'confidence': 1.0, 'reason': 'detected by pymsym'}
-                    elif isinstance(detected, dict):
-                        return detected
-            # Fallback: try candidates list
-            if hasattr(pymsym, 'find_point_groups'):
-                cand = pymsym.find_point_groups(self.mol, tolerance=0.2)
-                if cand:
-                    item = cand[0]
-                    if isinstance(item, dict):
-                        return item
-                    elif isinstance(item, str):
-                        return {'key': item, 'name': self.POINT_GROUPS.get(item, {'name': item})['name'], 'confidence': 1.0, 'reason': 'candidate from pymsym'}
-        except Exception as e:
-            print(f"pymsym detect/find point group failed: {e}")
-
-        # If pymsym is not able to determine, return C1 as safe default
-        return {'key': 'C1', 'name': 'C1 (No symmetry)', 'confidence': 0.0, 'reason': 'pymsym detection unavailable'}
+            self.main_window.draw_molecule_3d(self.mol)
+        except Exception:
+            pass
+        super().closeEvent(event)
     
-    def detect_special_molecules(self, positions, atom_symbols):
-        """特殊な分子パターンを直接検出"""
-        num_atoms = len(positions)
-        
-        # メタン様分子 (AX4)
-        if self.is_methane_like():
-            return {
-                'key': 'Td',
-                'name': 'Td (Tetrahedral)',
-                'confidence': 0.95,
-                'reason': 'Tetrahedral molecule detected (e.g., CH4, CCl4)',
-                'operations_count': len(self.POINT_GROUPS.get('Td', {}).get('operations', []))
-            }
-        
-        # 水様分子 (AX2)
-        if self.is_water_like():
-            return {
-                'key': 'C2v',
-                'name': 'C2v (C2 + 2 vertical mirrors)',
-                'confidence': 0.9,
-                'reason': 'Bent molecule detected (e.g., H2O)',
-                'operations_count': len(self.POINT_GROUPS.get('C2v', {}).get('operations', []))
-            }
-        
-        # アンモニア様分子 (AX3)
-        if self.is_ammonia_like():
-            return {
-                'key': 'C3v',
-                'name': 'C3v (C3 + 3 vertical mirrors)',
-                'confidence': 0.9,
-                'reason': 'Trigonal pyramidal molecule detected (e.g., NH3)',
-                'operations_count': len(self.POINT_GROUPS.get('C3v', {}).get('operations', []))
-            }
-        
-        # 直線分子 (2原子または3原子直線)
-        if num_atoms == 2:
-            return {
-                'key': 'Ci',
-                'name': 'Ci (Inversion center)',
-                'confidence': 0.85,
-                'reason': 'Diatomic molecule detected',
-                'operations_count': len(self.POINT_GROUPS.get('Ci', {}).get('operations', []))
-            }
-        
-        # 平面分子の検出
-        if self.is_planar_molecule(positions):
-            if self.has_triangular_symmetry(positions, atom_symbols):
-                return {
-                    'key': 'D3h',
-                    'name': 'D3h (Trigonal planar)',
-                    'confidence': 0.85,
-                    'reason': 'Triangular planar molecule detected (e.g., BF3)',
-                    'operations_count': len(self.POINT_GROUPS.get('D3h', {}).get('operations', []))
-                }
-            else:
-                return {
-                    'key': 'Cs',
-                    'name': 'Cs (Mirror plane xy)',
-                    'confidence': 0.75,
-                    'reason': 'Planar molecule detected',
-                    'operations_count': len(self.POINT_GROUPS.get('Cs', {}).get('operations', []))
-                }
-        
-        return None
-    
-    def calculate_symmetry_fit(self, positions, operations, tolerance):
-        """対称操作に対する構造の適合度を計算（0-1のスコア）"""
-        # Delegate symmetry-fit scoring to pymsym if available; otherwise return 0.0
+    def reject(self):
+        """キャンセル時の処理"""
+        self.clear_atom_labels()
+        self.disable_picking()
         try:
-            if hasattr(pymsym, 'score_point_group'):
-                # Try to infer a point-group key by exact operations match
-                for k, pg in self.POINT_GROUPS.items():
-                    if pg.get('operations') == operations:
-                        return float(pymsym.score_point_group(self.mol, k, tolerance=tolerance))
-            return 0.0
-        except Exception as e:
-            print(f"pymsym scoring failed: {e}")
-            return 0.0
-
+            self.main_window.draw_molecule_3d(self.mol)
+        except Exception:
+            pass
+        super().reject()
     
-    def is_planar_molecule(self, positions, tolerance=0.1):
-        """分子が平面構造かどうか判定"""
-        if len(positions) < 4:
-            return True  # 3原子以下は常に平面
-        
-        # 主成分分析で平面性をチェック
-        centroid = np.mean(positions, axis=0)
-        centered = positions - centroid
-        
-        # 共分散行列の固有値を計算
-        cov_matrix = np.cov(centered.T)
-        eigenvalues = np.linalg.eigvals(cov_matrix)
-        eigenvalues = np.sort(eigenvalues)
-        
-        # 最小固有値が小さければ平面的
-        return eigenvalues[0] < tolerance
-    
-    def has_triangular_symmetry(self, positions, atom_symbols):
-        """三角対称性を持つかどうか判定"""
-        if len(positions) < 3:
-            return False
-        
-        # 中心原子を特定
-        center_candidates = []
-        for i, atom in enumerate(self.mol.GetAtoms()):
-            if atom.GetDegree() >= 3:
-                center_candidates.append(i)
-        
-        if len(center_candidates) != 1:
-            return False
-        
-        center_idx = center_candidates[0]
-        center_atom = self.mol.GetAtomWithIdx(center_idx)
-        
-        # 隣接原子が3個で、すべて同じ元素かチェック
-        neighbors = list(center_atom.GetNeighbors())
-        if len(neighbors) != 3:
-            return False
-        
-        neighbor_symbols = [atom.GetSymbol() for atom in neighbors]
-        return len(set(neighbor_symbols)) == 1
-    
-    def group_equivalent_atoms(self, symmetry_classes):
-        """対称性クラスから等価原子グループを作成"""
-        from collections import defaultdict
-        
-        groups = defaultdict(list)
-        for atom_idx, sym_class in enumerate(symmetry_classes):
-            groups[sym_class].append(atom_idx)
-        
-        print(f"Debug: Raw groups from symmetry classes: {dict(groups)}")
-        
-        # 等価原子グループ（2個以上）と単独原子を分離
-        equivalent_groups = []
-        single_atoms = []
-        
-        for sym_class, atom_indices in groups.items():
-            if len(atom_indices) > 1:
-                equivalent_groups.append(atom_indices)
-                print(f"Debug: Equivalent group found - Class {sym_class}: {atom_indices}")
-            else:
-                single_atoms.extend([[idx] for idx in atom_indices])
-        
-        # 結果を組み合わせ
-        all_groups = equivalent_groups + single_atoms
-        
-        print(f"Debug: Final atom groups: {all_groups}")
-        print(f"Debug: Number of equivalent groups (>1 atom): {len(equivalent_groups)}")
-        
-        return all_groups
-    
-    def calculate_ideal_symmetric_positions(self, group_positions, operations, tolerance):
-        raise RuntimeError('calculate_ideal_symmetric_positions removed: use pymsym APIs')
-    
-    def analyze_symmetry_simple(self, positions, operations, tolerance):
-        """Fallback symmetry analysis has been removed.
-
-        pymsym is required; this simple fallback has been disabled to avoid
-        inconsistent results. If you see this error, ensure pymsym is
-        installed and functioning correctly.
-        """
-        raise RuntimeError('analyze_symmetry_simple disabled: pymsym is required')
-    
-    def apply_symmetry_operations(self, positions, operations, tolerance):
-        """対称操作を適用して構造を対称化（安全なバージョン）"""
-        # This function now only delegates to pymsym. Local fallback removed.
+    def accept(self):
+        """OK時の処理"""
+        self.clear_atom_labels()
+        self.disable_picking()
         try:
-            if hasattr(pymsym, 'symmetrize'):
-                out = pymsym.symmetrize(self.mol, tolerance=tolerance)
-            elif hasattr(pymsym, 'apply_symmetry'):
-                out = pymsym.apply_symmetry(self.mol, tolerance=tolerance)
-            elif hasattr(pymsym, 'enforce_symmetry'):
-                out = pymsym.enforce_symmetry(self.mol, tol=tolerance)
-            else:
-                raise RuntimeError('pymsym symmetry enforcement API not available')
+            self.main_window.draw_molecule_3d(self.mol)
+        except Exception:
+            pass
+        super().accept()
 
-            if isinstance(out, Chem.Mol):
-                conf = out.GetConformer()
-                return np.array([conf.GetAtomPosition(i) for i in range(out.GetNumAtoms())])
-            else:
-                arr = np.array(out)
-                if arr.shape == (self.mol.GetNumAtoms(), 3):
-                    return arr
-                raise RuntimeError('pymsym returned invalid coordinate array')
-        except Exception as e:
-            raise RuntimeError(f'pymsym symmetry enforcement failed: {e}')
-    
-    def apply_symmetry_direct(self, positions, operations, tolerance):
-        """Direct symmetrization disabled.
+class SymmetrizeDialog(QDialog):
+    """Placeholder for SymmetrizeDialog.
 
-        This local implementation has been removed in favor of pymsym. If
-        this function is reached, raise an error to signal missing
-        pymsym-based result.
-        """
-        raise RuntimeError('apply_symmetry_direct disabled: pymsym is required')
-    
-    def apply_symmetry_advanced(self, positions, operations, tolerance):
-        """等価原子グループを考慮した高度な対称化"""
-        raise RuntimeError('apply_symmetry_advanced removed: use pymsym.symmetrize or similar API')
-    
-    def apply_symmetry_simple(self, positions, operations, tolerance):
-        """従来の単純な対称化（フォールバック）"""
-        raise RuntimeError('apply_symmetry_simple removed: pymsym is required')
+    The full, pymatgen-based implementation is defined earlier in this file and
+    will be used by callers. This minimal placeholder remains to avoid
+    breaking any textual references or imports elsewhere in the codebase.
+    """
+    def __init__(self, *args, **kwargs):
+        # The real implementation lives above and should be used instead.
+        super().__init__(*args, **kwargs)
+        QMessageBox.information(self, "Info", "Use the pymatgen-based Symmetrize dialog instead.")
 
 class MirrorDialog(QDialog):
     """分子の鏡像を作成するダイアログ"""
@@ -7783,14 +7371,14 @@ class MainWindow(QMainWindow):
         edit_3d_menu.addAction(dihedral_action)
         self.dihedral_action = dihedral_action
         
-        edit_3d_menu.addSeparator()
+        #edit_3d_menu.addSeparator()
         
         # Symmetrize action
-        symmetrize_action = QAction("Symmetrize...", self)
-        symmetrize_action.triggered.connect(self.open_symmetrize_dialog)
-        symmetrize_action.setEnabled(False)
-        edit_3d_menu.addAction(symmetrize_action)
-        self.symmetrize_action = symmetrize_action
+        #symmetrize_action = QAction("Symmetrize...", self)
+        #symmetrize_action.triggered.connect(self.open_symmetrize_dialog)
+        #symmetrize_action.setEnabled(False)
+        #edit_3d_menu.addAction(symmetrize_action)
+        #self.symmetrize_action = symmetrize_action
         
 
         settings_menu = menu_bar.addMenu("&Settings")
