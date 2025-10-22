@@ -11,7 +11,7 @@ DOI 10.5281/zenodo.17268532
 """
 
 #Version
-VERSION = '1.10.0-alpha-01'
+VERSION = '1.10.0-alpha.1'
 
 print("-----------------------------------------------------")
 print("MoleditPy — A Python-based molecular editing software")
@@ -1276,7 +1276,7 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog):
             pass
         super().accept()
 
-class SymmetrizeDialog(QDialog):
+class SymmetrizeDialog(Dialog3DPickingMixin, QDialog):
     """Symmetrize dialog reimplemented to use pymatgen's PointGroupAnalyzer.
 
     This implementation delegates point-group detection and symmetry operations
@@ -1291,7 +1291,10 @@ class SymmetrizeDialog(QDialog):
     ]
 
     def __init__(self, mol, main_window, parent=None):
-        super().__init__(parent)
+        # Initialize QDialog and the 3D picking mixin so methods like
+        # disable_picking()/enable_picking() are available.
+        QDialog.__init__(self, parent)
+        Dialog3DPickingMixin.__init__(self)
         self.mol = mol
         self.main_window = main_window
         self.init_ui()
@@ -1460,7 +1463,7 @@ class SymmetrizeDialog(QDialog):
 
             # fetch symmetry operations (SymmOp objects)
             symm_ops = []
-            for op_attr in ("get_symmetry_operations", "symmetry_operations", "get_symmetry_operations_cartesian"]):
+            for op_attr in (["get_symmetry_operations", "symmetry_operations", "get_symmetry_operations_cartesian"]):
                 if hasattr(analyzer, op_attr):
                     try:
                         symm_ops = getattr(analyzer, op_attr)()
@@ -1572,7 +1575,7 @@ class SymmetrizeDialog(QDialog):
             analyzer = PointGroupAnalyzer(pm_mol, tol)
             # get symmetry operations
             symm_ops = []
-            for op_attr in ("get_symmetry_operations", "symmetry_operations", "get_symmetry_operations_cartesian"]):
+            for op_attr in (["get_symmetry_operations", "symmetry_operations", "get_symmetry_operations_cartesian"]):
                 if hasattr(analyzer, op_attr):
                     try:
                         symm_ops = getattr(analyzer, op_attr)()
@@ -1690,17 +1693,6 @@ class SymmetrizeDialog(QDialog):
             pass
         super().accept()
 
-class SymmetrizeDialog(QDialog):
-    """Placeholder for SymmetrizeDialog.
-
-    The full, pymatgen-based implementation is defined earlier in this file and
-    will be used by callers. This minimal placeholder remains to avoid
-    breaking any textual references or imports elsewhere in the codebase.
-    """
-    def __init__(self, *args, **kwargs):
-        # The real implementation lives above and should be used instead.
-        super().__init__(*args, **kwargs)
-        QMessageBox.information(self, "Info", "Use the pymatgen-based Symmetrize dialog instead.")
 
 class MirrorDialog(QDialog):
     """分子の鏡像を作成するダイアログ"""
@@ -7374,11 +7366,11 @@ class MainWindow(QMainWindow):
         #edit_3d_menu.addSeparator()
         
         # Symmetrize action
-        #symmetrize_action = QAction("Symmetrize...", self)
-        #symmetrize_action.triggered.connect(self.open_symmetrize_dialog)
-        #symmetrize_action.setEnabled(False)
-        #edit_3d_menu.addAction(symmetrize_action)
-        #self.symmetrize_action = symmetrize_action
+        symmetrize_action = QAction("Symmetrize...", self)
+        symmetrize_action.triggered.connect(self.open_symmetrize_dialog)
+        symmetrize_action.setEnabled(False)
+        edit_3d_menu.addAction(symmetrize_action)
+        self.symmetrize_action = symmetrize_action
         
 
         settings_menu = menu_bar.addMenu("&Settings")
@@ -13041,26 +13033,26 @@ class MainWindow(QMainWindow):
     def open_symmetrize_dialog(self):
         """対称化ダイアログを開く"""
         # Under Development メッセージを表示
-        from PyQt6.QtWidgets import QMessageBox
-        
-        msg = QMessageBox()
-        msg.setIcon(QMessageBox.Icon.Information)
-        msg.setWindowTitle("Symmetrize Function")
-        msg.setText("Symmetrize Function - Under Development")
-        msg.setInformativeText(
-            "This function is under development and will be available in a future release."
-        )
-        msg.setStandardButtons(QMessageBox.StandardButton.Ok)
-        msg.exec()
+        # from PyQt6.QtWidgets import QMessageBox
+        # 
+        # msg = QMessageBox()
+        # msg.setIcon(QMessageBox.Icon.Information)
+        # msg.setWindowTitle("Symmetrize Function")
+        # msg.setText("Symmetrize Function - Under Development")
+        # msg.setInformativeText(
+        #     "This function is under development and will be available in a future release."
+        # )
+        # msg.setStandardButtons(QMessageBox.StandardButton.Ok)
+        # msg.exec()
         
         # 元のコードは残しておく（コメントアウト）
-        # # 測定モードを無効化
-        # if self.measurement_mode:
-        #     self.measurement_action.setChecked(False)
-        #     self.toggle_measurement_mode(False)
-        # 
-        # dialog = SymmetrizeDialog(self.current_mol, self)
-        # dialog.exec()  # モーダルダイアログとして表示
+        # 測定モードを無効化
+        if self.measurement_mode:
+            self.measurement_action.setChecked(False)
+            self.toggle_measurement_mode(False)
+        
+        dialog = SymmetrizeDialog(self.current_mol, self)
+        dialog.exec()  # モーダルダイアログとして表示
         # # 結果はダイアログ内で直接適用される
 
     def open_mirror_dialog(self):
