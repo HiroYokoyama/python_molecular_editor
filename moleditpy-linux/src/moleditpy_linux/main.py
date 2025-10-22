@@ -11,7 +11,7 @@ DOI 10.5281/zenodo.17268532
 """
 
 #Version
-VERSION = '1.9.8'
+VERSION = '1.9.10'
 
 print("-----------------------------------------------------")
 print("MoleditPy — A Python-based molecular editing software")
@@ -57,7 +57,7 @@ from rdkit.Chem import Descriptors
 from rdkit.Chem import rdMolDescriptors
 
 
-# Open Babel is disabled for linux version
+# Open Babel is disabled for Linux version.
 pybel = None
 OBABEL_AVAILABLE = False
 
@@ -1261,1428 +1261,6 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog):
             pass
         super().accept()
 
-class SymmetrizeDialog(QDialog):
-    """分子構造の対称化機能を提供するダイアログ"""
-    """ The parameters have not been checked for accuracy. Temporary measure. Under Development"""
-
-    # 黄金比 (正二十面体群の記述に使用)
-    PHI = (1 + np.sqrt(5)) / 2
-
-    POINT_GROUPS = {
-        # ===============================================================
-        # 1. 低対称性群 (Low Symmetry Groups)
-        # ===============================================================
-        "C1": {
-            "name": "C1 (No symmetry)", 
-            "operations": [np.eye(3)] # E
-        },
-        "Ci": {
-            "name": "Ci (Inversion center)", 
-            "operations": [
-                np.eye(3),      # E
-                -np.eye(3)      # i
-            ]
-        },
-        "Cs": {
-            "name": "Cs (Mirror plane)", 
-            "operations": [
-                np.eye(3),      # E
-                np.array([[1, 0, 0], [0, 1, 0], [0, 0, -1]])  # σh (xy)
-            ]
-        },
-
-        # ===============================================================
-        # 2. 単一軸を持つ群 (Groups with a single axis)
-        # ===============================================================
-        # Cn 群 (カイラル)
-        "C2": {
-            "name": "C2 (Rotation)", 
-            "operations": [
-                np.eye(3), 
-                np.array([[-1, 0, 0], [0, -1, 0], [0, 0, 1]])  # C2(z)
-            ]
-        },
-        "C3": {
-            "name": "C3 (Rotation)", 
-            "operations": [
-                np.eye(3),
-                np.array([[-0.5, -np.sqrt(3)/2, 0], [np.sqrt(3)/2, -0.5, 0], [0, 0, 1]]), # C3
-                np.array([[-0.5,  np.sqrt(3)/2, 0], [-np.sqrt(3)/2, -0.5, 0], [0, 0, 1]])  # C3^2
-            ]
-        },
-        # Cnh 群
-        "C2h": {
-            "name": "C2h", 
-            "operations": [
-                np.eye(3),                                      # E
-                np.array([[-1, 0, 0], [0, -1, 0], [0, 0, 1]]),  # C2(z)
-                np.array([[1, 0, 0], [0, 1, 0], [0, 0, -1]]),  # σh
-                -np.eye(3)                                      # i
-            ]
-        },
-        "C3h": {
-            "name": "C3h",
-            "operations": [
-                np.array([[-0.5, -np.sqrt(3)/2, 0], [np.sqrt(3)/2, -0.5, 0], [0, 0, 1]]), # C3
-                np.array([[1, 0, 0], [0, 1, 0], [0, 0, -1]]),                          # σh
-            ]
-        },
-        # Cnv 群
-        "C2v": {
-            "name": "C2v", 
-            "operations": [
-                np.eye(3),
-                np.array([[-1, 0, 0], [0, -1, 0], [0, 0, 1]]),  # C2(z)
-                np.array([[1, 0, 0], [0, -1, 0], [0, 0, 1]]),  # σv(xz)
-                np.array([[-1, 0, 0], [0, 1, 0], [0, 0, 1]])   # σv(yz)
-            ]
-        },
-        "C3v": {
-            "name": "C3v", 
-            "operations": [
-                 np.array([[-0.5, -np.sqrt(3)/2, 0], [np.sqrt(3)/2, -0.5, 0], [0, 0, 1]]), # C3
-                 np.array([[1, 0, 0], [0, -1, 0], [0, 0, 1]])                           # σv(xz)
-            ]
-        },
-
-        # ===============================================================
-        # 3. 二面体群 (Dihedral Groups)
-        # ===============================================================
-        # Dn 群 (カイラル)
-        "D2": {
-            "name": "D2", 
-            "operations": [
-                np.eye(3),
-                np.array([[1, 0, 0], [0, -1, 0], [0, 0, -1]]),  # C2(x)
-                np.array([[-1, 0, 0], [0, 1, 0], [0, 0, -1]]),  # C2(y)
-                np.array([[-1, 0, 0], [0, -1, 0], [0, 0, 1]])   # C2(z)
-            ]
-        },
-        "D3": {
-            "name": "D3", 
-            "operations": [
-                np.array([[-0.5, -np.sqrt(3)/2, 0], [np.sqrt(3)/2, -0.5, 0], [0, 0, 1]]), # C3(z)
-                np.array([[1, 0, 0], [0, -1, 0], [0, 0, -1]])                           # C2(x)
-            ]
-        },
-        # Dnh 群
-        "D2h": {
-            "name": "D2h", 
-            "operations": [
-                np.array([[1, 0, 0], [0, -1, 0], [0, 0, -1]]),  # C2(x)
-                np.array([[-1, 0, 0], [0, 1, 0], [0, 0, -1]]),  # C2(y)
-                -np.eye(3)                                      # i
-            ]
-        },
-        "D3h": {
-            "name": "D3h", 
-            "operations": [
-                np.array([[-0.5, -np.sqrt(3)/2, 0], [np.sqrt(3)/2, -0.5, 0], [0, 0, 1]]), # C3(z)
-                np.array([[1, 0, 0], [0, -1, 0], [0, 0, -1]]),                           # C2(x)
-                np.array([[1, 0, 0], [0, 1, 0], [0, 0, -1]])                            # σh
-            ]
-        },
-        "D4h": {
-            "name": "D4h",
-            "operations": [
-                np.array([[0, -1, 0], [1, 0, 0], [0, 0, 1]]),    # C4(z)
-                np.array([[1, 0, 0], [0, -1, 0], [0, 0, -1]]),  # C2(x)
-                -np.eye(3)                                      # i
-            ]
-        },
-        "D5h": {
-            "name": "D5h",
-            "operations": [
-                # C5(z)
-                np.array([[np.cos(2*np.pi/5), -np.sin(2*np.pi/5), 0], 
-                          [np.sin(2*np.pi/5), np.cos(2*np.pi/5), 0], 
-                          [0, 0, 1]]),
-                np.array([[1, 0, 0], [0, -1, 0], [0, 0, -1]]),  # C2(x)
-                np.array([[1, 0, 0], [0, 1, 0], [0, 0, -1]]),  # σh
-            ]
-        },
-        "D6h": {
-            "name": "D6h",
-            "operations": [
-                np.array([[0.5, -np.sqrt(3)/2, 0], [np.sqrt(3)/2, 0.5, 0], [0, 0, 1]]), # C6(z)
-                np.array([[1, 0, 0], [0, -1, 0], [0, 0, -1]]),                        # C2(x)
-                -np.eye(3)                                                            # i
-            ]
-        },
-        # Dnd 群
-        "D2d": {
-            "name": "D2d",
-            "operations": [
-                np.array([[0, -1, 0], [1, 0, 0], [0, 0, -1]]),   # S4(z)
-                np.array([[1, 0, 0], [0, -1, 0], [0, 0, -1]])   # C2(x)
-            ]
-        },
-        "D3d": {
-            "name": "D3d",
-            "operations": [
-                np.array([[0.5, -np.sqrt(3)/2, 0], [np.sqrt(3)/2, 0.5, 0], [0, 0, -1]]), # S6(z)
-                np.array([[1, 0, 0], [0, -1, 0], [0, 0, -1]])                          # C2(x)
-            ]
-        },
-
-        # ===============================================================
-        # 4. 高対称性群 (Cubic and Icosahedral Groups)
-        # ===============================================================
-        # Td 群 (正四面体)
-        "Td": {
-            "name": "Td (Tetrahedral)", 
-            "operations": [
-                np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]]),    # E (恒等操作)
-                np.array([[0, 1, 0], [0, 0, 1], [1, 0, 0]]),    # C3(111)
-                np.array([[0, 0, 1], [1, 0, 0], [0, 1, 0]]),    # C3(111)^2
-                np.array([[0, 1, 0], [1, 0, 0], [0, 0, -1]]),   # S4(z)
-                np.array([[0, -1, 0], [1, 0, 0], [0, 0, 1]]),   # S4(z)^2 = C2(z)
-                np.array([[0, 1, 0], [-1, 0, 0], [0, 0, -1]]),  # S4(z)^3
-                np.array([[1, 0, 0], [0, 0, 1], [0, -1, 0]]),   # S4(y)
-                np.array([[1, 0, 0], [0, 0, -1], [0, 1, 0]]),   # S4(y)^3
-                np.array([[0, 0, 1], [0, 1, 0], [-1, 0, 0]]),   # S4(x)
-                np.array([[0, 0, -1], [0, 1, 0], [1, 0, 0]]),   # S4(x)^3
-                np.array([[-1, 0, 0], [0, -1, 0], [0, 0, 1]]),  # C2(z)
-                np.array([[-1, 0, 0], [0, 1, 0], [0, 0, -1]]),  # C2(y)
-                np.array([[1, 0, 0], [0, -1, 0], [0, 0, -1]]),  # C2(x)
-            ]
-        },
-        # Oh 群 (正八面体 / 立方体)
-        "Oh": {
-            "name": "Oh (Octahedral)",
-            "operations": [
-                np.array([[0, 0, 1], [1, 0, 0], [0, 1, 0]]),    # C3(111)
-                np.array([[0, 1, 0], [-1, 0, 0], [0, 0, 1]]),   # C4(z, inv)
-                -np.eye(3)                                      # i
-            ]
-        },
-        # Ih 群 (正二十面体)
-        "Ih": {
-            "name": "Ih (Icosahedral)",
-            "operations": [
-                # C5 z-phi plane
-                np.array([[ (PHI-1)/2, -PHI/2,  0.5],
-                          [      PHI/2,  (PHI-1)/2, -0.5],
-                          [       -0.5,      0.5,  PHI/2]]),
-                # C3 111
-                 np.array([[0, 1, 0], [0, 0, 1], [1, 0, 0]]),
-                 -np.eye(3) # i
-            ]
-        }
-    }
-    
-    def __init__(self, mol, main_window, parent=None):
-        super().__init__(parent)
-        self.mol = mol
-        self.main_window = main_window
-        self.init_ui()
-    
-    def init_ui(self):
-        self.setWindowTitle("Symmetrize Molecule")
-        self.setModal(True)
-        self.setFixedSize(450, 350)
-        layout = QVBoxLayout(self)
-        
-        # Instructions
-        instruction_label = QLabel(
-            "Select a point group and tolerance to automatically symmetrize the molecular structure. "
-            "The algorithm will adjust atomic positions to enforce the selected symmetry."
-        )
-        instruction_label.setWordWrap(True)
-        layout.addWidget(instruction_label)
-        
-        layout.addWidget(QLabel(""))  # Spacer
-        
-        # Point group selection
-        point_group_layout = QFormLayout()
-        
-        # Point group selection with auto-detect button
-        pg_selection_layout = QHBoxLayout()
-        self.point_group_combo = QComboBox()
-        for key, value in self.POINT_GROUPS.items():
-            self.point_group_combo.addItem(value["name"], key)
-        self.point_group_combo.setCurrentIndex(0)  # Default to C1
-        pg_selection_layout.addWidget(self.point_group_combo)
-        
-        self.auto_detect_button = QPushButton("Auto-Detect")
-        self.auto_detect_button.clicked.connect(self.auto_detect_symmetry)
-        self.auto_detect_button.setToolTip("Automatically detect the most suitable point group for current structure")
-        pg_selection_layout.addWidget(self.auto_detect_button)
-        
-        point_group_layout.addRow("Point Group:", pg_selection_layout)
-        
-        # Tolerance input
-        self.tolerance_input = QLineEdit("0.1")
-        self.tolerance_input.setToolTip("Maximum allowed displacement (Angstroms) when applying symmetry operations")
-        point_group_layout.addRow("Tolerance (Å):", self.tolerance_input)
-        
-        layout.addLayout(point_group_layout)
-        
-        layout.addWidget(QLabel(""))  # Spacer
-        
-        # Preview information
-        self.info_label = QLabel("Select parameters and click Apply to symmetrize the structure.")
-        self.info_label.setWordWrap(True)
-        self.info_label.setStyleSheet("QLabel { color: #666; font-style: italic; }")
-        layout.addWidget(self.info_label)
-        
-        layout.addStretch()
-        
-        # Buttons
-        button_layout = QHBoxLayout()
-        
-        self.preview_button = QPushButton("Preview Symmetry")
-        self.preview_button.clicked.connect(self.preview_symmetry)
-        self.preview_button.setToolTip("Analyze current structure and show symmetry information")
-        button_layout.addWidget(self.preview_button)
-        
-        button_layout.addStretch()
-        
-        self.apply_button = QPushButton("Apply Symmetrization")
-        self.apply_button.clicked.connect(self.apply_symmetrization)
-        self.apply_button.setDefault(True)
-        button_layout.addWidget(self.apply_button)
-
-        close_button = QPushButton("Close")
-        close_button.clicked.connect(self.reject)
-        button_layout.addWidget(close_button)
-        
-        layout.addLayout(button_layout)
-    
-    def get_selected_point_group(self):
-        """選択されたポイントグループの情報を取得"""
-        key = self.point_group_combo.currentData()
-        return key, self.POINT_GROUPS[key]
-    
-    def get_tolerance(self):
-        """入力されたトレランス値を取得"""
-        try:
-            return float(self.tolerance_input.text())
-        except ValueError:
-            QMessageBox.warning(self, "Warning", "Please enter a valid tolerance value.")
-            return None
-    
-    def preview_symmetry(self):
-        """現在の構造の対称性を分析してプレビュー表示（高度な解析付き）"""
-        tolerance = self.get_tolerance()
-        if tolerance is None:
-            return
-        
-        # 分子の有効性チェック
-        if not self.mol or self.mol.GetNumConformers() == 0:
-            QMessageBox.warning(self, "Warning", "No valid molecule or conformer available.")
-            return
-        
-        key, point_group = self.get_selected_point_group()
-        
-        try:
-            # 現在の分子の座標を取得
-            conf = self.mol.GetConformer()
-            positions = np.array([conf.GetAtomPosition(i) for i in range(self.mol.GetNumAtoms())])
-            
-            # 高度な対称性分析を実行
-            analysis_result = self.analyze_symmetry(positions, point_group["operations"], tolerance)
-            
-            # 等価原子グループ情報を取得
-            try:
-                symmetry_classes = self.get_molecular_symmetry_classes()
-                equivalent_groups = self.group_equivalent_atoms(symmetry_classes)
-                
-                # グループ情報を整理
-                group_info = []
-                equivalent_count = 0
-                
-                for i, group in enumerate(equivalent_groups):
-                    if len(group) > 1:
-                        equivalent_count += 1
-                        symbols = [self.mol.GetAtomWithIdx(idx).GetSymbol() for idx in group]
-                        group_info.append(f"Group {equivalent_count}: {len(group)} {symbols[0]} atoms (indices: {group})")
-                    else:
-                        symbols = [self.mol.GetAtomWithIdx(idx).GetSymbol() for idx in group]
-                        group_info.append(f"Single: {symbols[0]} atom (index: {group[0]})")
-                
-                if equivalent_count > 0:
-                    group_text = f"Found {equivalent_count} equivalent atom groups:\n" + "\n".join(group_info)
-                else:
-                    group_text = "No equivalent atom groups found.\nAll atoms are chemically unique.\n" + "\n".join(group_info)
-                
-            except Exception as e:
-                group_text = f"Symmetry analysis error: {str(e)}\nUsing fallback simple method."
-            
-            # 結果をダイアログに表示
-            info_text = f"Point Group: {point_group['name']}\n"
-            info_text += f"Tolerance: {tolerance} Å\n"
-            info_text += f"Atoms to be moved: {analysis_result['atoms_to_move']}\n"
-            info_text += f"Max displacement: {analysis_result['max_displacement']:.3f} Å\n\n"
-            info_text += "Equivalent Atom Groups:\n" + group_text + "\n\n"
-            
-            if analysis_result['atoms_to_move'] == 0:
-                info_text += "Structure already satisfies the selected symmetry."
-            else:
-                info_text += "Ready to apply symmetrization."
-            
-            self.info_label.setText(info_text)
-            
-        except Exception as e:
-            QMessageBox.critical(self, "Error", f"Failed to analyze symmetry: {str(e)}")
-            print(f"Symmetry analysis error: {e}")
-            import traceback
-            traceback.print_exc()
-    
-    def keyPressEvent(self, event):
-        """キーボードイベントを処理"""
-        if event.key() == Qt.Key.Key_Return or event.key() == Qt.Key.Key_Enter:
-            self.apply_symmetrization()
-            event.accept()
-        else:
-            super().keyPressEvent(event)
-    
-    def apply_symmetrization(self):
-        """対称化を適用"""
-        tolerance = self.get_tolerance()
-        if tolerance is None:
-            return
-        
-        key, point_group = self.get_selected_point_group()
-        
-        try:
-            
-            # 現在の分子の座標を取得
-            conf = self.mol.GetConformer()
-            original_positions = np.array([conf.GetAtomPosition(i) for i in range(self.mol.GetNumAtoms())])
-            
-            for i, pos in enumerate(original_positions):
-                print(f"  Atom {i}: {pos}")
-            
-            # 対称化を適用
-            new_positions = self.apply_symmetry_operations(
-                original_positions, point_group["operations"], tolerance
-            )
-            
-            # 新しい座標を分子に適用（3D座標のみ）
-            for i, new_pos in enumerate(new_positions):
-                conf.SetAtomPosition(i, new_pos.tolist())
-                self.main_window.atom_positions_3d[i] = new_pos
-            
-            # 3D表示のみを更新
-            self.main_window.draw_molecule_3d(self.mol)
-
-            # Undo状態を保存（操作前の状態のみ）
-            self.main_window.push_undo_state()
-            
-            # 成功メッセージ（ダイアログを閉じる前に表示）
-            QMessageBox.information(
-                self, "Success", 
-                f"Molecular structure has been symmetrized according to {point_group['name']} point group."
-            )
-            
-        except Exception as e:
-            QMessageBox.critical(self, "Error", f"Failed to apply symmetrization: {str(e)}")
-            print(f"Symmetrization error: {e}")
-            import traceback
-            traceback.print_exc()
-    
-    def analyze_symmetry(self, positions, operations, tolerance):
-        """対称性を分析し、必要な変更を計算（高度なアルゴリズム）"""
-        atoms_to_move = 0
-        max_displacement = 0.0
-        
-        # RDKitを使用して分子の対称性と等価原子グループを取得
-        try:
-            # 分子の対称性解析
-            symmetry_classes = self.get_molecular_symmetry_classes()
-            equivalent_atom_groups = self.group_equivalent_atoms(symmetry_classes)
-            
-            # 各等価原子グループに対して対称化を適用
-            centroid = np.mean(positions, axis=0)
-            centered_positions = positions - centroid
-            
-            for group_atoms in equivalent_atom_groups:
-                group_positions = centered_positions[group_atoms]
-                
-                # グループ内での理想的な対称位置を計算
-                ideal_positions = self.calculate_ideal_symmetric_positions(
-                    group_positions, operations, tolerance
-                )
-                
-                # 各原子の移動距離を計算
-                for i, atom_idx in enumerate(group_atoms):
-                    displacement = np.linalg.norm(ideal_positions[i] - centered_positions[atom_idx])
-                    if displacement > tolerance:
-                        atoms_to_move += 1
-                        max_displacement = max(max_displacement, displacement)
-        
-        except Exception as e:
-            print(f"Advanced symmetry analysis failed, falling back to simple method: {e}")
-            # フォールバック: 従来の単純な方法
-            return self.analyze_symmetry_simple(positions, operations, tolerance)
-        
-        return {
-            'atoms_to_move': atoms_to_move,
-            'max_displacement': max_displacement
-        }
-    
-    def get_molecular_symmetry_classes(self):
-        """RDKitを使用して分子の対称性クラスを取得"""
-        try:
-            from rdkit.Chem import rdMolDescriptors
-            
-            # RDKitの正しいAPI名を試行
-            try:
-                # 新しいバージョンのRDKit
-                canonical_ranks = list(rdMolDescriptors.GetAtomSymmetryClasses(self.mol))
-                print(f"Debug: Using GetAtomSymmetryClasses - Symmetry classes: {canonical_ranks}")
-                return canonical_ranks
-            except AttributeError:
-                # 代替手法: Canonical SMILES順序を利用
-                try:
-                    from rdkit.Chem import Descriptors
-                    
-                    # 分子のcanonical atom orderingを取得
-                    mol_copy = Chem.Mol(self.mol)
-                    canonical_order = tuple(mol_copy.GetPropsAsDict().get('_smilesAtomOutputOrder', range(mol_copy.GetNumAtoms())))
-                    
-                    # Morgan fingerprintを使用して原子の環境を比較
-                    from rdkit.Chem import rdMolDescriptors
-                    atom_invariants = []
-                    
-                    for atom in mol_copy.GetAtoms():
-                        # 原子の化学環境を記述する不変量を計算
-                        invariant = (
-                            atom.GetAtomicNum(),
-                            atom.GetDegree(),
-                            atom.GetFormalCharge(),
-                            atom.GetHybridization(),
-                            atom.GetTotalNumHs(),
-                            atom.IsInRing()
-                        )
-                        atom_invariants.append(invariant)
-                    
-                    # 同じ不変量を持つ原子に同じクラス番号を割り当て
-                    unique_invariants = list(set(atom_invariants))
-                    symmetry_classes = []
-                    
-                    for invariant in atom_invariants:
-                        class_id = unique_invariants.index(invariant)
-                        symmetry_classes.append(class_id)
-                    
-                    print(f"Debug: Using Morgan-based approach - Symmetry classes: {symmetry_classes}")
-                    return symmetry_classes
-                    
-                except Exception as e2:
-                    print(f"Morgan-based approach also failed: {e2}")
-                    raise e
-            
-        except Exception as e:
-            print(f"Failed to get molecular symmetry classes: {e}")
-            print("Debug: Falling back to chemical-based symmetry analysis")
-            
-            # 手動でよくある分子パターンをチェック
-            if self.is_methane_like():
-                print("Debug: Detected methane-like molecule, applying manual grouping")
-                return self.get_methane_symmetry_classes()
-            elif self.is_water_like():
-                print("Debug: Detected water-like molecule, applying manual grouping")
-                return self.get_water_symmetry_classes()
-            elif self.is_ammonia_like():
-                print("Debug: Detected ammonia-like molecule, applying manual grouping")
-                return self.get_ammonia_symmetry_classes()
-            
-            # フォールバック: 化学的知識に基づく推定
-            return self.get_chemical_symmetry_classes()
-    
-    def is_methane_like(self):
-        """メタン様分子（CH4, CCl4など）かどうか判定"""
-        if self.mol.GetNumAtoms() != 5:
-            return False
-        
-        # 中心原子（通常は炭素）と4つの等価な原子
-        atoms = list(self.mol.GetAtoms())
-        center_candidates = [atom for atom in atoms if atom.GetDegree() == 4]
-        
-        if len(center_candidates) != 1:
-            return False
-            
-        center_atom = center_candidates[0]
-        neighbors = [atom.GetSymbol() for atom in center_atom.GetNeighbors()]
-        
-        # 4つの隣接原子がすべて同じ元素かチェック
-        return len(set(neighbors)) == 1 and len(neighbors) == 4
-    
-    def is_water_like(self):
-        """水様分子（H2O）かどうか判定"""
-        if self.mol.GetNumAtoms() != 3:
-            return False
-        
-        atoms = list(self.mol.GetAtoms())
-        center_candidates = [atom for atom in atoms if atom.GetDegree() == 2]
-        
-        if len(center_candidates) != 1:
-            return False
-            
-        center_atom = center_candidates[0]
-        neighbors = [atom.GetSymbol() for atom in center_atom.GetNeighbors()]
-        
-        return len(set(neighbors)) == 1 and len(neighbors) == 2
-    
-    def is_ammonia_like(self):
-        """アンモニア様分子（NH3）かどうか判定"""
-        if self.mol.GetNumAtoms() != 4:
-            return False
-        
-        atoms = list(self.mol.GetAtoms())
-        center_candidates = [atom for atom in atoms if atom.GetDegree() == 3]
-        
-        if len(center_candidates) != 1:
-            return False
-            
-        center_atom = center_candidates[0]
-        neighbors = [atom.GetSymbol() for atom in center_atom.GetNeighbors()]
-        
-        return len(set(neighbors)) == 1 and len(neighbors) == 3
-    
-    def get_methane_symmetry_classes(self):
-        """メタン様分子の対称性クラス"""
-        # 中心原子のインデックスを見つける
-        center_idx = None
-        for i, atom in enumerate(self.mol.GetAtoms()):
-            if atom.GetDegree() == 4:
-                center_idx = i
-                break
-        
-        # 中心原子は独自のクラス、4つの隣接原子は同じクラス
-        symmetry_classes = [1] * self.mol.GetNumAtoms()  # 隣接原子のクラス
-        if center_idx is not None:
-            symmetry_classes[center_idx] = 0  # 中心原子のクラス
-        
-        return symmetry_classes
-    
-    def get_water_symmetry_classes(self):
-        """水様分子の対称性クラス"""
-        center_idx = None
-        for i, atom in enumerate(self.mol.GetAtoms()):
-            if atom.GetDegree() == 2:
-                center_idx = i
-                break
-        
-        symmetry_classes = [1] * self.mol.GetNumAtoms()  # 隣接原子のクラス
-        if center_idx is not None:
-            symmetry_classes[center_idx] = 0  # 中心原子のクラス
-        
-        return symmetry_classes
-    
-    def get_ammonia_symmetry_classes(self):
-        """アンモニア様分子の対称性クラス"""
-        center_idx = None
-        for i, atom in enumerate(self.mol.GetAtoms()):
-            if atom.GetDegree() == 3:
-                center_idx = i
-                break
-        
-        symmetry_classes = [1] * self.mol.GetNumAtoms()  # 隣接原子のクラス
-        if center_idx is not None:
-            symmetry_classes[center_idx] = 0  # 中心原子のクラス
-        
-        return symmetry_classes
-    
-    def get_chemical_symmetry_classes(self):
-        """化学的知識に基づく対称性クラス推定"""
-        num_atoms = self.mol.GetNumAtoms()
-        
-        # 分子の3D座標を使用してより精密な解析
-        try:
-            conf = self.mol.GetConformer()
-            positions = np.array([list(conf.GetAtomPosition(i)) for i in range(num_atoms)])
-            
-            # 距離行列ベースの解析
-            symmetry_classes = self.analyze_by_distance_matrix(positions)
-            if symmetry_classes:
-                print(f"Debug: Distance-matrix-based symmetry classes: {symmetry_classes}")
-                return symmetry_classes
-        except Exception as e:
-            print(f"Debug: Distance matrix analysis failed: {e}")
-        
-        # フォールバック: 各原子を元素と結合数で分類
-        atom_signatures = []
-        for atom in self.mol.GetAtoms():
-            # より詳細な原子環境の記述
-            neighbors = atom.GetNeighbors()
-            neighbor_symbols = sorted([n.GetSymbol() for n in neighbors])
-            
-            signature = (
-                atom.GetSymbol(),           # 元素記号
-                atom.GetDegree(),          # 結合数
-                atom.GetFormalCharge(),    # 電荷
-                tuple(neighbor_symbols)    # 隣接原子の元素記号（ソート済み）
-            )
-            atom_signatures.append(signature)
-        
-        # 同じsignatureの原子に同じクラス番号を割り当て
-        unique_signatures = list(set(atom_signatures))
-        symmetry_classes = []
-        
-        for signature in atom_signatures:
-            class_id = unique_signatures.index(signature)
-            symmetry_classes.append(class_id)
-        
-        print(f"Debug: Chemical-based symmetry classes: {symmetry_classes}")
-        print(f"Debug: Unique signatures: {unique_signatures}")
-        return symmetry_classes
-    
-    def analyze_by_distance_matrix(self, positions):
-        """距離行列を使用した対称性解析"""
-        num_atoms = len(positions)
-        
-        # 各原子から他の全原子への距離ベクトルを計算
-        distance_patterns = []
-        
-        for i in range(num_atoms):
-            # 原子iから他の全原子への距離を計算
-            distances = []
-            for j in range(num_atoms):
-                if i != j:
-                    dist = np.linalg.norm(positions[i] - positions[j])
-                    distances.append(round(dist, 3))  # 丸めて比較可能にする
-            
-            # 距離をソートして標準化
-            distances.sort()
-            
-            # 元素記号と組み合わせて特徴ベクトルを作成
-            atom_symbol = self.mol.GetAtomWithIdx(i).GetSymbol()
-            pattern = (atom_symbol, tuple(distances))
-            distance_patterns.append(pattern)
-        
-        # 同じパターンを持つ原子をグループ化
-        unique_patterns = []
-        symmetry_classes = []
-        
-        for pattern in distance_patterns:
-            # 既存パターンとの近似比較
-            matched_class = None
-            for idx, unique_pattern in enumerate(unique_patterns):
-                if self.patterns_are_similar(pattern, unique_pattern):
-                    matched_class = idx
-                    break
-            
-            if matched_class is not None:
-                symmetry_classes.append(matched_class)
-            else:
-                unique_patterns.append(pattern)
-                symmetry_classes.append(len(unique_patterns) - 1)
-        
-        return symmetry_classes
-    
-    def patterns_are_similar(self, pattern1, pattern2, tolerance=0.05):
-        """2つの距離パターンが類似しているかチェック"""
-        symbol1, distances1 = pattern1
-        symbol2, distances2 = pattern2
-        
-        # 元素記号が違えば類似ではない
-        if symbol1 != symbol2:
-            return False
-        
-        # 距離数が違えば類似ではない
-        if len(distances1) != len(distances2):
-            return False
-        
-        # 各距離の差をチェック
-        for d1, d2 in zip(distances1, distances2):
-            if abs(d1 - d2) > tolerance:
-                return False
-        
-        return True
-    
-    def auto_detect_symmetry(self):
-        """分子構造から最適な点群を自動検出（複数候補を表示）"""
-        try:
-            conf = self.mol.GetConformer()
-            positions = np.array([conf.GetAtomPosition(i) for i in range(self.mol.GetNumAtoms())])
-            
-            # 各点群に対する適合度を計算
-            candidates = self.find_all_point_group_candidates(positions)
-            
-            if candidates:
-                # 候補選択ダイアログを表示
-                selected = self.show_symmetry_candidates_dialog(candidates)
-                
-                if selected:
-                    # 選択された点群をコンボボックスで設定
-                    for i in range(self.point_group_combo.count()):
-                        if self.point_group_combo.itemData(i) == selected['key']:
-                            self.point_group_combo.setCurrentIndex(i)
-                            break
-                    
-                    # 結果を表示
-                    info_text = f"Selected Point Group: {selected['name']}\n"
-                    info_text += f"Confidence: {selected['confidence']:.1%}\n"
-                    info_text += f"Reason: {selected['reason']}\n\n"
-                    info_text += "Click 'Preview Symmetry' to see detailed analysis."
-                    
-                    self.info_label.setText(info_text)
-            else:
-                self.info_label.setText("Could not automatically detect suitable point group.\nManual selection recommended.")
-                
-        except Exception as e:
-            QMessageBox.warning(self, "Auto-Detection Error", f"Failed to auto-detect symmetry: {str(e)}")
-    
-    def show_symmetry_candidates_dialog(self, candidates):
-        """対称性候補選択ダイアログを表示"""
-        dialog = SymmetryCandidatesDialog(candidates, self)
-        if dialog.exec() == QDialog.DialogCode.Accepted:
-            return dialog.get_selected_candidate()
-        return None
-    
-    def find_all_point_group_candidates(self, positions):
-        """分子構造に適した点群候補をすべて検索"""
-        tolerance = 0.2  # Auto-detection用の比較的緩い許容値
-        
-        # 候補点群のリスト
-        candidates = []
-        
-        # 分子の基本情報を取得
-        num_atoms = len(positions)
-        atom_symbols = [self.mol.GetAtomWithIdx(i).GetSymbol() for i in range(num_atoms)]
-        
-        # 1. 特殊な分子パターンを直接検出
-        special_match = self.detect_special_molecules(positions, atom_symbols)
-        if special_match:
-            candidates.append(special_match)
-        
-        # 2. 各点群の対称操作に対する適合度を計算
-        for key, point_group in self.POINT_GROUPS.items():
-            try:
-                # 既に特殊検出で追加済みの場合はスキップ
-                if special_match and key == special_match['key']:
-                    continue
-                
-                # 対称性適合度を計算
-                fit_score = self.calculate_symmetry_fit(positions, point_group["operations"], tolerance)
-                
-                # 最低閾値をクリアした候補のみ追加
-                if fit_score >= 0.3:  # 30%以上の適合度
-                    reason = f"Symmetry operations fit: {fit_score:.1%}"
-                    if fit_score >= 0.8:
-                        reason += " (Excellent match)"
-                    elif fit_score >= 0.6:
-                        reason += " (Good match)"
-                    elif fit_score >= 0.4:
-                        reason += " (Fair match)"
-                    else:
-                        reason += " (Poor match)"
-                    
-                    candidates.append({
-                        'key': key,
-                        'name': point_group['name'],
-                        'confidence': fit_score,
-                        'reason': reason,
-                        'operations_count': len(point_group["operations"])
-                    })
-                
-            except Exception as e:
-                print(f"Error evaluating {key}: {e}")
-                continue
-        
-        # 3. スコアでソート（高い方が良い）
-        try:
-            candidates.sort(key=lambda x: (-x['confidence'], -x.get('operations_count', 0)))
-        except KeyError as e:
-            print(f"Warning: Missing key in candidate sorting: {e}")
-            # フォールバック: confidenceのみでソート
-            candidates.sort(key=lambda x: -x['confidence'])
-        
-        # 4. 上位5候補まで
-        return candidates[:5]
-    
-    def find_best_point_group(self, positions):
-        """分子構造に最も適した点群を検索"""
-        tolerance = 0.2  # Auto-detection用の比較的緩い許容値
-        
-        # 候補点群のリスト（優先度順）
-        candidates = []
-        
-        # 分子の基本情報を取得
-        num_atoms = len(positions)
-        atom_symbols = [self.mol.GetAtomWithIdx(i).GetSymbol() for i in range(num_atoms)]
-        
-        # 1. 特殊な分子パターンを直接検出
-        special_match = self.detect_special_molecules(positions, atom_symbols)
-        if special_match:
-            return special_match
-        
-        # 2. 各点群の対称操作に対する適合度を計算
-        for key, point_group in self.POINT_GROUPS.items():
-            try:
-                # 対称性適合度を計算
-                fit_score = self.calculate_symmetry_fit(positions, point_group["operations"], tolerance)
-                
-                candidates.append({
-                    'key': key,
-                    'name': point_group['name'],
-                    'score': fit_score,
-                    'operations_count': len(point_group["operations"])
-                })
-                
-            except Exception as e:
-                print(f"Error evaluating {key}: {e}")
-                continue
-        
-        # 3. 最適な候補を選択
-        if not candidates:
-            return None
-        
-        # スコアでソート（高い方が良い）
-        candidates.sort(key=lambda x: (-x['score'], -x['operations_count']))
-        best = candidates[0]
-        
-        # 最低限の閾値をチェック
-        if best['score'] < 0.5:  # 50%未満の適合度は却下
-            return {
-                'key': 'C1',
-                'name': 'C1 (No symmetry)',
-                'confidence': 0.9,
-                'reason': 'Low symmetry detected, suggesting C1'
-            }
-        
-        return {
-            'key': best['key'],
-            'name': best['name'],
-            'confidence': best['score'],
-            'reason': f'Best fit among {len(candidates)} point groups tested'
-        }
-    
-    def detect_special_molecules(self, positions, atom_symbols):
-        """特殊な分子パターンを直接検出"""
-        num_atoms = len(positions)
-        
-        # メタン様分子 (AX4)
-        if self.is_methane_like():
-            return {
-                'key': 'Td',
-                'name': 'Td (Tetrahedral)',
-                'confidence': 0.95,
-                'reason': 'Tetrahedral molecule detected (e.g., CH4, CCl4)',
-                'operations_count': len(self.POINT_GROUPS['Td']['operations'])
-            }
-        
-        # 水様分子 (AX2)
-        if self.is_water_like():
-            return {
-                'key': 'C2v',
-                'name': 'C2v (C2 + 2 vertical mirrors)',
-                'confidence': 0.9,
-                'reason': 'Bent molecule detected (e.g., H2O)',
-                'operations_count': len(self.POINT_GROUPS['C2v']['operations'])
-            }
-        
-        # アンモニア様分子 (AX3)
-        if self.is_ammonia_like():
-            return {
-                'key': 'C3v',
-                'name': 'C3v (C3 + 3 vertical mirrors)',
-                'confidence': 0.9,
-                'reason': 'Trigonal pyramidal molecule detected (e.g., NH3)',
-                'operations_count': len(self.POINT_GROUPS['C3v']['operations'])
-            }
-        
-        # 直線分子 (2原子または3原子直線)
-        if num_atoms == 2:
-            return {
-                'key': 'Ci',
-                'name': 'Ci (Inversion center)',
-                'confidence': 0.85,
-                'reason': 'Diatomic molecule detected',
-                'operations_count': len(self.POINT_GROUPS['Ci']['operations'])
-            }
-        
-        # 平面分子の検出
-        if self.is_planar_molecule(positions):
-            if self.has_triangular_symmetry(positions, atom_symbols):
-                return {
-                    'key': 'D3h',
-                    'name': 'D3h (Trigonal planar)',
-                    'confidence': 0.85,
-                    'reason': 'Triangular planar molecule detected (e.g., BF3)',
-                    'operations_count': len(self.POINT_GROUPS['D3h']['operations'])
-                }
-            else:
-                return {
-                    'key': 'Cs',
-                    'name': 'Cs (Mirror plane xy)',
-                    'confidence': 0.75,
-                    'reason': 'Planar molecule detected',
-                    'operations_count': len(self.POINT_GROUPS['Cs']['operations'])
-                }
-        
-        return None
-    
-    def calculate_symmetry_fit(self, positions, operations, tolerance):
-        """対称操作に対する構造の適合度を計算（0-1のスコア）"""
-        if len(operations) <= 1:  # 恒等操作のみ
-            return 0.1
-        
-        centroid = np.mean(positions, axis=0)
-        centered_positions = positions - centroid
-        
-        total_score = 0.0
-        valid_operations = 0
-        
-        for operation in operations[1:]:  # 恒等操作を除く
-            operation_score = 0.0
-            
-            for pos in centered_positions:
-                transformed_pos = operation @ pos
-                
-                # 変換された位置に最も近い実際の原子を探す
-                distances = [np.linalg.norm(transformed_pos - other_pos) 
-                           for other_pos in centered_positions]
-                min_distance = min(distances)
-                
-                # 距離に基づくスコア（近いほど高スコア）
-                if min_distance < tolerance:
-                    operation_score += 1.0 - (min_distance / tolerance)
-                
-            # 正規化（原子数で割る）
-            operation_score /= len(positions)
-            total_score += operation_score
-            valid_operations += 1
-        
-        # 全対称操作での平均スコア
-        if valid_operations > 0:
-            return total_score / valid_operations
-        else:
-            return 0.0
-    
-    def is_planar_molecule(self, positions, tolerance=0.1):
-        """分子が平面構造かどうか判定"""
-        if len(positions) < 4:
-            return True  # 3原子以下は常に平面
-        
-        # 主成分分析で平面性をチェック
-        centroid = np.mean(positions, axis=0)
-        centered = positions - centroid
-        
-        # 共分散行列の固有値を計算
-        cov_matrix = np.cov(centered.T)
-        eigenvalues = np.linalg.eigvals(cov_matrix)
-        eigenvalues = np.sort(eigenvalues)
-        
-        # 最小固有値が小さければ平面的
-        return eigenvalues[0] < tolerance
-    
-    def has_triangular_symmetry(self, positions, atom_symbols):
-        """三角対称性を持つかどうか判定"""
-        if len(positions) < 3:
-            return False
-        
-        # 中心原子を特定
-        center_candidates = []
-        for i, atom in enumerate(self.mol.GetAtoms()):
-            if atom.GetDegree() >= 3:
-                center_candidates.append(i)
-        
-        if len(center_candidates) != 1:
-            return False
-        
-        center_idx = center_candidates[0]
-        center_atom = self.mol.GetAtomWithIdx(center_idx)
-        
-        # 隣接原子が3個で、すべて同じ元素かチェック
-        neighbors = list(center_atom.GetNeighbors())
-        if len(neighbors) != 3:
-            return False
-        
-        neighbor_symbols = [atom.GetSymbol() for atom in neighbors]
-        return len(set(neighbor_symbols)) == 1
-    
-    def group_equivalent_atoms(self, symmetry_classes):
-        """対称性クラスから等価原子グループを作成"""
-        from collections import defaultdict
-        
-        groups = defaultdict(list)
-        for atom_idx, sym_class in enumerate(symmetry_classes):
-            groups[sym_class].append(atom_idx)
-        
-        print(f"Debug: Raw groups from symmetry classes: {dict(groups)}")
-        
-        # 等価原子グループ（2個以上）と単独原子を分離
-        equivalent_groups = []
-        single_atoms = []
-        
-        for sym_class, atom_indices in groups.items():
-            if len(atom_indices) > 1:
-                equivalent_groups.append(atom_indices)
-                print(f"Debug: Equivalent group found - Class {sym_class}: {atom_indices}")
-            else:
-                single_atoms.extend([[idx] for idx in atom_indices])
-        
-        # 結果を組み合わせ
-        all_groups = equivalent_groups + single_atoms
-        
-        print(f"Debug: Final atom groups: {all_groups}")
-        print(f"Debug: Number of equivalent groups (>1 atom): {len(equivalent_groups)}")
-        
-        return all_groups
-    
-    def calculate_ideal_symmetric_positions(self, group_positions, operations, tolerance):
-        """等価原子グループの理想的な対称位置を計算"""
-        if len(group_positions) == 1:
-            # 単独原子の場合、全対称操作の平均位置を計算
-            pos = group_positions[0]
-            equivalent_positions = [op @ pos for op in operations]
-            return [np.mean(equivalent_positions, axis=0)]
-        
-        # 複数原子グループの場合、グループ全体の対称性を考慮
-        group_centroid = np.mean(group_positions, axis=0)
-        ideal_positions = []
-        
-        for pos in group_positions:
-            # 各原子に対して対称操作を適用し、理想位置を計算
-            relative_pos = pos - group_centroid
-            equivalent_relatives = [op @ relative_pos for op in operations]
-            ideal_relative = np.mean(equivalent_relatives, axis=0)
-            ideal_positions.append(group_centroid + ideal_relative)
-        
-        return ideal_positions
-    
-    def analyze_symmetry_simple(self, positions, operations, tolerance):
-        """従来の単純な対称性分析（フォールバック）"""
-        atoms_to_move = 0
-        max_displacement = 0.0
-        
-        centroid = np.mean(positions, axis=0)
-        centered_positions = positions - centroid
-        
-        for i, pos in enumerate(centered_positions):
-            # 各対称操作を適用した等価位置を計算
-            equivalent_positions = []
-            for operation in operations:
-                equivalent_positions.append(operation @ pos)
-            
-            # 等価位置の重心を計算（理想的な対称位置）
-            ideal_pos = np.mean(equivalent_positions, axis=0)
-            
-            # 現在位置と理想位置の距離を計算
-            displacement = np.linalg.norm(ideal_pos - pos)
-            
-            if displacement > tolerance:
-                atoms_to_move += 1
-                max_displacement = max(max_displacement, displacement)
-        
-        return {
-            'atoms_to_move': atoms_to_move,
-            'max_displacement': max_displacement
-        }
-    
-    def apply_symmetry_operations(self, positions, operations, tolerance):
-        """対称操作を適用して構造を対称化（安全なバージョン）"""
-        try:
-            # シンプルで直接的な方法を使用
-            return self.apply_symmetry_direct(positions, operations, tolerance)
-        except Exception as e:
-            print(f"Symmetrization failed: {e}")
-            return positions.copy()
-    
-    def apply_symmetry_direct(self, positions, operations, tolerance):
-        """直接的で安全な対称化（分子タイプを考慮）"""
-        # 対称操作の妥当性をチェック
-        valid_operations = []
-        for op in operations:
-            try:
-                if op.shape == (3, 3) and not np.any(np.isnan(op)) and not np.any(np.isinf(op)):
-                    det = np.linalg.det(op)
-                    if abs(abs(det) - 1.0) < 0.1:
-                        valid_operations.append(op)
-            except:
-                continue
-        
-        print(f"Debug: Total operations: {len(operations)}, Valid operations: {len(valid_operations)}")
-        
-        if not valid_operations:
-            print("警告: 有効な対称操作がありません。元の座標を返します。")
-            return positions.copy()
-        
-        # 分子の中心を計算
-        centroid = np.mean(positions, axis=0)
-        print(f"Debug: Molecular centroid: {centroid}")
-        
-        # 等価原子グループを取得
-        symmetry_classes = self.get_molecular_symmetry_classes()
-        equivalent_atom_groups = self.group_equivalent_atoms(symmetry_classes)
-        
-        new_positions = positions.copy()
-        
-        # メタン分子の特別処理
-        if len(positions) == 5 and len(equivalent_atom_groups) == 2:
-            print("Debug: Detected methane-like molecule")
-            
-            # 中心原子（通常は炭素）を原点に移動
-            center_atom_group = [group for group in equivalent_atom_groups if len(group) == 1][0]
-            center_atom_idx = center_atom_group[0]
-            
-            # 周辺原子グループ（通常は水素）
-            peripheral_atoms = [group for group in equivalent_atom_groups if len(group) > 1][0]
-            
-            print(f"Debug: Center atom: {center_atom_idx}, Peripheral atoms: {peripheral_atoms}")
-            
-            # 中心原子を分子の重心に配置（保守的なアプローチ）
-            current_center = positions[center_atom_idx]
-            if np.linalg.norm(current_center - centroid) > tolerance:
-                new_positions[center_atom_idx] = centroid
-                print(f"Debug: Moved center atom to centroid")
-            
-            # 周辺原子を中心からの相対位置で対称化（距離を保持）
-            for atom_idx in peripheral_atoms:
-                current_pos = positions[atom_idx]
-                relative_pos = current_pos - centroid
-                original_distance = np.linalg.norm(relative_pos)
-                
-                # 対称操作を適用（中心からの相対座標で）
-                equivalent_relative_positions = []
-                for op in valid_operations:
-                    try:
-                        transformed_relative = op @ relative_pos
-                        equivalent_relative_positions.append(transformed_relative)
-                    except:
-                        continue
-                
-                if len(equivalent_relative_positions) > 1:
-                    # 等価相対位置の平均
-                    average_relative = np.mean(equivalent_relative_positions, axis=0)
-                    
-                    # 元の距離を保持
-                    if np.linalg.norm(average_relative) > 1e-10:
-                        average_relative = average_relative / np.linalg.norm(average_relative) * original_distance
-                    
-                    average_pos = centroid + average_relative
-                    displacement = np.linalg.norm(average_pos - current_pos)
-                    
-                    print(f"Debug: Atom {atom_idx} - Original distance: {original_distance:.6f}, Displacement: {displacement:.6f}")
-                    
-                    # より保守的な条件：大きな変位は避ける
-                    if displacement > tolerance and displacement < 2.0:  # 最大2Å未満の変位のみ許可
-                        new_positions[atom_idx] = average_pos
-                        print(f"Debug: Applied symmetrization to atom {atom_idx}")
-                    elif displacement >= 2.0:
-                        print(f"Debug: Skipped atom {atom_idx} - displacement too large: {displacement:.6f}")
-        else:
-            # 一般的な分子の処理
-            for i, pos in enumerate(positions):
-                # すべての対称操作を適用して等価位置を取得
-                equivalent_positions = []
-                for op in valid_operations:
-                    try:
-                        transformed_pos = op @ pos
-                        equivalent_positions.append(transformed_pos)
-                    except:
-                        continue
-                
-                if len(equivalent_positions) > 1:
-                    # 等価位置の重心を新しい位置とする
-                    average_pos = np.mean(equivalent_positions, axis=0)
-                    displacement = np.linalg.norm(average_pos - pos)
-                    
-                    print(f"Debug: Atom {i} - Displacement: {displacement}")
-                    
-                    # 保守的な条件：大きな変位は避ける
-                    if displacement > tolerance and displacement < 2.0:  # 最大2Å未満の変位のみ許可
-                        new_positions[i] = average_pos
-                        print(f"Debug: Applied symmetrization to atom {i}")
-                    elif displacement >= 2.0:
-                        print(f"Debug: Skipped atom {i} - displacement too large: {displacement:.6f}")
-        
-        return new_positions
-    
-    def apply_symmetry_advanced(self, positions, operations, tolerance):
-        """等価原子グループを考慮した高度な対称化"""
-        # 対称操作の妥当性をチェック
-        valid_operations = []
-        for op in operations:
-            try:
-                # 3x3の行列であることを確認
-                if op.shape == (3, 3) and not np.any(np.isnan(op)) and not np.any(np.isinf(op)):
-                    # 行列式が±1に近いことを確認（回転・反射行列の条件）
-                    det = np.linalg.det(op)
-                    if abs(abs(det) - 1.0) < 0.1:  # より緩い条件
-                        valid_operations.append(op)
-            except:
-                continue
-        
-        print(f"Debug: Total operations: {len(operations)}, Valid operations: {len(valid_operations)}")
-        
-        if not valid_operations:
-            print("警告: 有効な対称操作がありません。元の座標を返します。")
-            return positions.copy()
-        
-        # 分子の対称性クラスを取得
-        symmetry_classes = self.get_molecular_symmetry_classes()
-        equivalent_atom_groups = self.group_equivalent_atoms(symmetry_classes)
-        
-        centroid = np.mean(positions, axis=0)
-        centered_positions = positions - centroid
-        new_positions = centered_positions.copy()
-        
-        print(f"Debug: Original centroid: {centroid}")
-        print(f"Debug: Original positions shape: {positions.shape}")
-        print(f"Debug: Valid operations count: {len(valid_operations)}")
-        
-        # 各等価原子グループを個別に対称化
-        max_iterations = 5  # 反復回数を制限
-        for iteration in range(max_iterations):
-            print(f"Debug: Iteration {iteration + 1}")
-            moved_any = False
-            
-            for group_atoms in equivalent_atom_groups:
-                if len(group_atoms) == 1:
-                    # 単独原子の場合
-                    atom_idx = group_atoms[0]
-                    pos = new_positions[atom_idx]
-                    
-                    print(f"Debug: Processing single atom {atom_idx}")
-                    
-                    # 全ての対称操作で得られる等価位置の平均
-                    equivalent_positions = []
-                    for op in valid_operations:
-                        try:
-                            transformed_pos = op @ pos
-                            equivalent_positions.append(transformed_pos)
-                        except:
-                            continue
-                    
-                        if equivalent_positions:
-                            average_pos = np.mean(equivalent_positions, axis=0)
-                            displacement = np.linalg.norm(average_pos - pos)
-                            
-                            print(f"Debug: Atom {atom_idx} - Displacement: {displacement}")
-                            
-                            # 数値精度を考慮したより緩い条件
-                            if displacement > max(tolerance / 100, 1e-10):
-                                new_positions[atom_idx] = average_pos
-                                moved_any = True
-                        
-                else:
-                    # 等価原子グループの場合、グループ全体の対称性を保持
-                    group_positions = new_positions[group_atoms]
-                    group_centroid = np.mean(group_positions, axis=0)
-                    
-                    print(f"Debug: Processing group {group_atoms}")
-                    
-                    # グループの重心を対称化
-                    equivalent_centroids = []
-                    for op in valid_operations:
-                        try:
-                            transformed_centroid = op @ group_centroid
-                            equivalent_centroids.append(transformed_centroid)
-                        except:
-                            continue
-                    
-                    if equivalent_centroids:
-                        ideal_centroid = np.mean(equivalent_centroids, axis=0)
-                        centroid_shift = ideal_centroid - group_centroid
-                        
-                        print(f"Debug: Group centroid shift magnitude: {np.linalg.norm(centroid_shift)}")
-                        
-                        # グループ内の相対位置を保持しながら重心を移動
-                        if np.linalg.norm(centroid_shift) > max(tolerance / 100, 1e-10):
-                            for atom_idx in group_atoms:
-                                new_positions[atom_idx] += centroid_shift
-                            moved_any = True
-                    
-                    # グループ内の原子間の相対位置も対称化
-                    for atom_idx in group_atoms:
-                        pos = new_positions[atom_idx]
-                        
-                        # 全ての対称操作で得られる等価位置の平均
-                        equivalent_positions = []
-                        for op in valid_operations:
-                            try:
-                                transformed_pos = op @ pos
-                                equivalent_positions.append(transformed_pos)
-                            except:
-                                continue
-                        
-                            if equivalent_positions:
-                                average_pos = np.mean(equivalent_positions, axis=0)
-                                displacement = np.linalg.norm(average_pos - pos)
-                                
-                                if displacement > max(tolerance / 100, 1e-10):
-                                    new_positions[atom_idx] = average_pos
-                                    moved_any = True
-            
-            if not moved_any:
-                break
-        
-        # 重心を元に戻す
-        final_positions = new_positions + centroid
-        
-        print(f"Debug: Final positions before return:")
-        for i, pos in enumerate(final_positions):
-            print(f"  Atom {i}: {pos}")
-        
-        # デバッグ: 座標チェック
-        if np.any(np.isnan(final_positions)) or np.any(np.isinf(final_positions)):
-            print("警告: 無効な座標が検出されました。元の座標を返します。")
-            return positions.copy()
-        
-        return final_positions
-    
-    def apply_symmetry_simple(self, positions, operations, tolerance):
-        """従来の単純な対称化（フォールバック）"""
-        # 対称操作の妥当性をチェック
-        valid_operations = []
-        for op in operations:
-            try:
-                # 3x3の行列であることを確認
-                if op.shape == (3, 3) and not np.any(np.isnan(op)) and not np.any(np.isinf(op)):
-                    # 行列式が±1に近いことを確認（回転・反射行列の条件）
-                    det = np.linalg.det(op)
-                    if abs(abs(det) - 1.0) < 0.1:  # より緩い条件
-                        valid_operations.append(op)
-            except:
-                continue
-        
-        if not valid_operations:
-            print("警告: 有効な対称操作がありません。元の座標を返します。")
-            return positions.copy()
-        
-        centroid = np.mean(positions, axis=0)
-        centered_positions = positions - centroid
-        new_positions = centered_positions.copy()
-        
-        # 反復的に対称化を適用
-        max_iterations = 5  # 反復回数を制限
-        for iteration in range(max_iterations):
-            moved_any = False
-            
-            for i, pos in enumerate(new_positions):
-                # 全ての対称操作で得られる等価位置の平均を計算
-                equivalent_positions = []
-                for operation in valid_operations:
-                    try:
-                        equivalent_positions.append(operation @ pos)
-                    except:
-                        continue
-                
-                if equivalent_positions:
-                    # 等価位置の重心を新しい位置とする
-                    average_pos = np.mean(equivalent_positions, axis=0)
-                    displacement = np.linalg.norm(average_pos - pos)
-                    
-                    if displacement > max(tolerance / 100, 1e-10):  # 数値精度を考慮
-                        new_positions[i] = average_pos
-                        moved_any = True
-            
-            if not moved_any:
-                break
-        
-        # 重心を元に戻す
-        final_positions = new_positions + centroid
-        
-        # デバッグ: 座標チェック
-        if np.any(np.isnan(final_positions)) or np.any(np.isinf(final_positions)):
-            print("警告: 無効な座標が検出されました。元の座標を返します。")
-            return positions.copy()
-        
-        return final_positions
 
 class MirrorDialog(QDialog):
     """分子の鏡像を作成するダイアログ"""
@@ -4307,8 +2885,22 @@ class MoleculeScene(QGraphicsScene):
             item = self.itemAt(event.scenePos(), self.views()[0].transform())
             if not isinstance(item, (AtomItem, BondItem)):
                 return # 対象外のものをクリックした場合は何もしない
-
             data_changed = False
+            # If the user has a rectangular multi-selection and the clicked item
+            # is part of that selection, delete all selected items (atoms/bonds).
+            try:
+                selected_items = [it for it in self.selectedItems() if isinstance(it, (AtomItem, BondItem))]
+            except Exception:
+                selected_items = []
+
+            if len(selected_items) > 1 and item in selected_items and not self.mode.startswith(('template', 'charge', 'radical')):
+                # Delete the entire rectangular selection
+                data_changed = self.delete_items(set(selected_items))
+                if data_changed:
+                    self.window.push_undo_state()
+                self.press_pos = None
+                event.accept()
+                return
             # --- E/Zモード専用処理 ---
             if self.mode == 'bond_2_5':
                 if isinstance(item, BondItem):
@@ -5007,69 +3599,135 @@ class MoleculeScene(QGraphicsScene):
 
     def delete_items(self, items_to_delete):
         """指定されたアイテムセット（原子・結合）を安全な順序で削除する修正版"""
-        try:
-            if not items_to_delete:
-                return False
+        # Hardened deletion: perform data-model removals first, then scene removals,
+        # and always defensively check attributes to avoid accessing partially-deleted objects.
+        if not items_to_delete:
+            return False
 
+        try:
             atoms_to_delete = {item for item in items_to_delete if isinstance(item, AtomItem)}
             bonds_to_delete = {item for item in items_to_delete if isinstance(item, BondItem)}
 
-            # 削除対象の原子に接続している結合も、すべて削除対象に加える
-            for atom in atoms_to_delete:
-                if hasattr(atom, 'bonds'):
-                    bonds_to_delete.update(atom.bonds)
+            # Include bonds attached to atoms being deleted
+            for atom in list(atoms_to_delete):
+                try:
+                    if hasattr(atom, 'bonds') and atom.bonds:
+                        for b in list(atom.bonds):
+                            bonds_to_delete.add(b)
+                except Exception:
+                    # If accessing bonds raises (item partially deleted), skip
+                    continue
 
-            # 削除はされないが、影響を受ける原子（結合リストの更新が必要）を特定する
+            # Determine atoms that will remain but whose bond lists must be updated
             atoms_to_update = set()
-            for bond in bonds_to_delete:
-                if bond.atom1 and bond.atom1 not in atoms_to_delete:
-                    atoms_to_update.add(bond.atom1)
-                if bond.atom2 and bond.atom2 not in atoms_to_delete:
-                    atoms_to_update.add(bond.atom2)
+            for bond in list(bonds_to_delete):
+                try:
+                    a1 = getattr(bond, 'atom1', None)
+                    a2 = getattr(bond, 'atom2', None)
+                    if a1 and a1 not in atoms_to_delete:
+                        atoms_to_update.add(a1)
+                    if a2 and a2 not in atoms_to_delete:
+                        atoms_to_update.add(a2)
+                except Exception:
+                    continue
 
-            # --- 安全な順序で削除処理を実行 ---
+            # 1) Update surviving atoms' bond lists to remove references to bonds_to_delete
+            for atom in list(atoms_to_update):
+                try:
+                    if hasattr(atom, 'bonds') and atom.bonds:
+                        atom.bonds = [b for b in atom.bonds if b not in bonds_to_delete]
+                except Exception:
+                    # best-effort: if this fails, skip to avoid crash
+                    continue
 
-            # 1. まず、生き残る原子の内部状態を更新する
-            for atom in atoms_to_update:
-                if hasattr(atom, 'bonds'):
-                    # これから削除される結合を自身の結合リストから除去する
-                    atom.bonds = [b for b in atom.bonds if b not in bonds_to_delete]
+            # 2) Remove bonds/atoms from the data model first (so other code reading the model
+            #    doesn't encounter stale entries while we are removing graphics)
+            for bond in list(bonds_to_delete):
+                try:
+                    a1 = getattr(bond, 'atom1', None)
+                    a2 = getattr(bond, 'atom2', None)
+                    if a1 and a2 and hasattr(self, 'data'):
+                        try:
+                            self.data.remove_bond(a1.atom_id, a2.atom_id)
+                        except Exception:
+                            # try reverse order if remove_bond expects ordered tuple
+                            try:
+                                self.data.remove_bond(a2.atom_id, a1.atom_id)
+                            except Exception:
+                                pass
+                except Exception:
+                    continue
 
-            # 2. 次に、グラフィックシーンからアイテムを削除する（必ず結合を先に）
-            for bond in bonds_to_delete:
-                if bond.scene(): 
-                    self.removeItem(bond)
-            for atom in atoms_to_delete:
-                if atom.scene(): 
-                    self.removeItem(atom)
-            
-            # 3. データモデル（MolecularData）からデータを削除する
-            # ここでは安全なIDを使って操作する
-            for bond in bonds_to_delete:
-                # 参照が既にクリアされている可能性を考慮
-                if bond.atom1 and bond.atom2:
-                    self.data.remove_bond(bond.atom1.atom_id, bond.atom2.atom_id)
-            for atom in atoms_to_delete:
-                if hasattr(atom, 'atom_id'):
-                    self.data.remove_atom(atom.atom_id)
+            for atom in list(atoms_to_delete):
+                try:
+                    if hasattr(atom, 'atom_id') and hasattr(self, 'data'):
+                        try:
+                            self.data.remove_atom(atom.atom_id)
+                        except Exception:
+                            pass
+                except Exception:
+                    continue
 
-            # 4. 削除されたオブジェクト間の参照をクリアし、メモリ解放を助ける
-            for bond in bonds_to_delete:
-                bond.atom1 = None
-                bond.atom2 = None
-            for atom in atoms_to_delete:
-                if hasattr(atom, 'bonds'):
-                    atom.bonds.clear()
+            # Invalidate any pending implicit-hydrogen UI updates because the
+            # underlying data model changed. This prevents a scheduled
+            # update_implicit_hydrogens closure from touching atoms/bonds that
+            # were just removed. Do a single increment rather than one per-atom.
+            try:
+                self._ih_update_counter += 1
+            except Exception:
+                try:
+                    self._ih_update_counter = 0
+                except Exception:
+                    pass
 
-            # 5. 最後に、生き残った原子の表示スタイルを更新する
-            for atom in atoms_to_update:
-                if hasattr(atom, 'update_style'):
-                    atom.update_style()
-                    
-            return True # 変更が行われたことを示す
-            
+            # 3) Remove graphic items from the scene (bonds first)
+            for bond in list(bonds_to_delete):
+                try:
+                    if getattr(bond, 'scene', None) and bond.scene():
+                        try:
+                            self.removeItem(bond)
+                        except Exception:
+                            pass
+                except Exception:
+                    continue
+
+            for atom in list(atoms_to_delete):
+                try:
+                    if getattr(atom, 'scene', None) and atom.scene():
+                        try:
+                            self.removeItem(atom)
+                        except Exception:
+                            pass
+                except Exception:
+                    continue
+
+            # 4) Clear object references to help GC and prevent accidental use
+            for bond in list(bonds_to_delete):
+                try:
+                    bond.atom1 = None
+                    bond.atom2 = None
+                except Exception:
+                    continue
+
+            for atom in list(atoms_to_delete):
+                try:
+                    if hasattr(atom, 'bonds'):
+                        atom.bonds.clear()
+                except Exception:
+                    continue
+
+            # 5) Final visual updates for surviving atoms
+            for atom in list(atoms_to_update):
+                try:
+                    if hasattr(atom, 'update_style'):
+                        atom.update_style()
+                except Exception:
+                    continue
+
+            return True
+
         except Exception as e:
-            # 予期せぬエラーが発生した場合でもクラッシュを防ぐ
+            # Keep the application alive on unexpected errors
             print(f"Error during delete_items operation: {e}")
             import traceback
             traceback.print_exc()
@@ -5536,7 +4194,7 @@ class MoleculeScene(QGraphicsScene):
                         new_pos_offset = new_direction_line.p2()
                     else:
                         # 総和がゼロの場合は、デフォルト（上）
-                         new_pos_offset = QPointF(0, -l)
+                        new_pos_offset = QPointF(0, -l)
 
 
                 # SNAP_DISTANCE is a module-level constant
@@ -5999,6 +4657,13 @@ class CalculationWorker(QObject):
                     conf_id = AllChem.EmbedMolecule(mol, params)
             '''
 
+            # Determine requested MMFF variant from options (fall back to MMFF94s)
+            opt_method = None
+            try:
+                opt_method = options.get('optimization_method') if options else None
+            except Exception:
+                opt_method = None
+
             if conf_id != -1:
                 # Success with RDKit: optimize and finish
                 # CRITICAL: Restore original stereochemistry after embedding (explicit labels first)
@@ -6009,7 +4674,10 @@ class CalculationWorker(QObject):
                     bond.SetStereo(stereo)
                 
                 try:
-                    AllChem.MMFFOptimizeMolecule(mol)
+                    mmff_variant = "MMFF94s"
+                    if opt_method and str(opt_method).upper() == 'MMFF94_RDKIT':
+                        mmff_variant = "MMFF94"
+                    AllChem.MMFFOptimizeMolecule(mol, mmffVariant=mmff_variant)
                 except Exception:
                     # fallback to UFF if MMFF fails
                     try:
@@ -6057,7 +4725,10 @@ class CalculationWorker(QObject):
                         raise ValueError("Open Babel produced invalid MOL block.")
                     rd_mol = Chem.AddHs(rd_mol)
                     try:
-                        AllChem.MMFFOptimizeMolecule(rd_mol)
+                        mmff_variant = "MMFF94s"
+                        if opt_method and str(opt_method).upper() == 'MMFF94_RDKIT':
+                            mmff_variant = "MMFF94"
+                        AllChem.MMFFOptimizeMolecule(rd_mol, mmffVariant=mmff_variant)
                     except Exception:
                         try:
                             AllChem.UFFOptimizeMolecule(rd_mol)
@@ -7429,6 +6100,8 @@ class MainWindow(QMainWindow):
         self.settings_dirty = True
         self.current_file_path = None  # 現在開いているファイルのパス
         self.initialization_complete = False  # 初期化完了フラグ
+        # Token to invalidate pending implicit-hydrogen UI updates
+        self._ih_update_counter = 0
         
         # 測定機能用の変数
         self.measurement_mode = False
@@ -7574,6 +6247,7 @@ class MainWindow(QMainWindow):
         self.optimize_3d_button = QPushButton("Optimize 3D")
         self.optimize_3d_button.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         self.optimize_3d_button.clicked.connect(self.optimize_3d_structure)
+        self.optimize_3d_button.setEnabled(False)
         # 初期状態は_enable_3d_features(False)で統一的に設定
         right_buttons_layout.addWidget(self.optimize_3d_button)
 
@@ -8106,58 +6780,8 @@ class MainWindow(QMainWindow):
         optimize_3d_action.triggered.connect(self.optimize_3d_structure)
         edit_menu.addAction(optimize_3d_action)
 
-        # --- 3D Optimization Settings submenu (below Optimize 3D) ---
-        opt3d_settings_menu = edit_menu.addMenu("3D Optimization Settings")
-        opt3d_group = QActionGroup(self)
-        opt3d_group.setExclusive(True)
-
-        # Only RDKit-backed optimization methods are offered here.
-        # Open Babel-based optimization options have been removed; Open Babel is
-        # retained only as a conversion fallback when RDKit embedding fails.
-        opt_methods = [
-            ("MMFF", "MMFF_RDKIT"),
-            ("UFF", "UFF_RDKIT"),
-        ]
-
-        # Map key -> human-readable label for status messages and later lookups
-        try:
-            self.opt3d_method_labels = {key.upper(): label for (label, key) in opt_methods}
-        except Exception:
-            self.opt3d_method_labels = {}
-
-        opt_actions = {}
-        for label, key in opt_methods:
-            action = QAction(label, self)
-            action.setCheckable(True)
-            # Ensure explicit association with the action group so exclusive checking works reliably
-            try:
-                action.setActionGroup(opt3d_group)
-            except Exception:
-                # Older PyQt variants may not have setActionGroup; adding to group below still helps
-                pass
-            action.triggered.connect(lambda checked, m=key: self.set_optimization_method(m))
-            opt3d_settings_menu.addAction(action)
-            opt3d_group.addAction(action)
-            opt_actions[key] = action
-
-        # Persist the actions mapping so other methods can update the checked state
-        self.opt3d_actions = opt_actions
-
-        # Determine the initial checked menu item from saved settings (fall back to MMFF_RDKIT)
-        try:
-            saved = (self.settings.get('optimization_method') or self.optimization_method or 'MMFF_RDKIT').upper()
-        except Exception:
-            saved = 'MMFF_RDKIT'
-
-        if saved in self.opt3d_actions and self.opt3d_actions[saved].isEnabled():
-            self.opt3d_actions[saved].setChecked(True)
-            # Ensure internal state matches
-            self.optimization_method = saved
-        else:
-            # fallback
-            if 'MMFF_RDKIT' in self.opt3d_actions:
-                self.opt3d_actions['MMFF_RDKIT'].setChecked(True)
-                self.optimization_method = 'MMFF_RDKIT'
+        # Note: 3D Optimization Settings moved to Settings -> "3D Optimization Settings"
+        # to avoid duplicating the same submenu in both Edit and Settings.
 
         # Note: Open Babel-based optimization menu entries were intentionally
         # removed above. Open Babel (pybel) is still available for conversion
@@ -8352,16 +6976,6 @@ class MainWindow(QMainWindow):
         dihedral_action.setEnabled(False)
         edit_3d_menu.addAction(dihedral_action)
         self.dihedral_action = dihedral_action
-        
-        #edit_3d_menu.addSeparator()
-        
-        # Symmetrize action
-        #symmetrize_action = QAction("Symmetrize...", self)
-        #symmetrize_action.triggered.connect(self.open_symmetrize_dialog)
-        #symmetrize_action.setEnabled(False)
-        #edit_3d_menu.addAction(symmetrize_action)
-        #self.symmetrize_action = symmetrize_action
-        
 
         settings_menu = menu_bar.addMenu("&Settings")
         # 1) 3D View settings (existing)
@@ -8441,31 +7055,54 @@ class MainWindow(QMainWindow):
         except Exception:
             pass
 
-        # 3) 3D Optimization Settings (mirror Edit->3D Optimization Settings submenu)
+        # 3) 3D Optimization Settings (single location under Settings menu)
         optimization_menu = settings_menu.addMenu("3D Optimization Settings")
-        try:
-            # Use existing actions created in the Edit menu so state stays in sync
-            for k, act in self.opt3d_actions.items():
-                optimization_menu.addAction(act)
-        except Exception:
-            # Fallback: create a small local group
-            opt_group = QActionGroup(self)
-            opt_group.setExclusive(True)
-            mmff_act = QAction("MMFF (RDKit)", self); mmff_act.setCheckable(True)
-            mmff_act.triggered.connect(lambda checked: self.set_optimization_method('MMFF_RDKIT'))
-            uff_act = QAction("UFF (RDKit)", self); uff_act.setCheckable(True)
-            uff_act.triggered.connect(lambda checked: self.set_optimization_method('UFF_RDKIT'))
-            optimization_menu.addAction(mmff_act); optimization_menu.addAction(uff_act)
-            self.opt3d_actions = {'MMFF_RDKIT': mmff_act, 'UFF_RDKIT': uff_act}
 
-        # Ensure optimization checked state matches settings
+        # Only RDKit-backed optimization methods are offered here.
+        opt_methods = [
+            ("MMFF94s", "MMFF_RDKIT"),
+            ("MMFF94", "MMFF94_RDKIT"),
+            ("UFF", "UFF_RDKIT"),
+        ]
+
+        # Map key -> human-readable label for status messages and later lookups
+        try:
+            self.opt3d_method_labels = {key.upper(): label for (label, key) in opt_methods}
+        except Exception:
+            self.opt3d_method_labels = {}
+
+        opt_group = QActionGroup(self)
+        opt_group.setExclusive(True)
+        opt_actions = {}
+        for label, key in opt_methods:
+            action = QAction(label, self)
+            action.setCheckable(True)
+            try:
+                action.setActionGroup(opt_group)
+            except Exception:
+                pass
+            action.triggered.connect(lambda checked, m=key: self.set_optimization_method(m))
+            optimization_menu.addAction(action)
+            opt_group.addAction(action)
+            opt_actions[key] = action
+
+        # Persist the actions mapping so other methods can update the checked state
+        self.opt3d_actions = opt_actions
+
+        # Determine the initial checked menu item from saved settings (fall back to MMFF_RDKIT)
         try:
             saved_opt = (self.settings.get('optimization_method') or self.optimization_method or 'MMFF_RDKIT').upper()
         except Exception:
             saved_opt = 'MMFF_RDKIT'
+
         try:
-            if saved_opt in self.opt3d_actions:
+            if saved_opt in self.opt3d_actions and self.opt3d_actions[saved_opt].isEnabled():
                 self.opt3d_actions[saved_opt].setChecked(True)
+                self.optimization_method = saved_opt
+            else:
+                if 'MMFF_RDKIT' in self.opt3d_actions:
+                    self.opt3d_actions['MMFF_RDKIT'].setChecked(True)
+                    self.optimization_method = 'MMFF_RDKIT'
         except Exception:
             pass
     
@@ -8632,7 +7269,7 @@ class MainWindow(QMainWindow):
             return
         method = str(method_name).strip().upper()
         valid_methods = (
-            'MMFF_RDKIT', 'UFF_RDKIT',
+            'MMFF_RDKIT', 'MMFF94_RDKIT', 'UFF_RDKIT',
             'UFF_OBABEL', 'GAFF_OBABEL', 'MMFF94_OBABEL', 'GHEMICAL_OBABEL'
         )
         if method not in valid_methods:
@@ -8992,7 +7629,7 @@ class MainWindow(QMainWindow):
         # Emit skip flag so the worker can ignore sanitization errors if user requested
         # Determine conversion_mode from settings (default: 'fallback')
         conv_mode = self.settings.get('3d_conversion_mode', 'fallback')
-        options = {'conversion_mode': conv_mode}
+        options = {'conversion_mode': conv_mode, 'optimization_method': self.optimization_method}
         self.start_calculation.emit(mol_block, options)
 
         # 状態をUndo履歴に保存
@@ -9085,31 +7722,33 @@ class MainWindow(QMainWindow):
             if self.current_mol.GetNumConformers() == 0:
                 self.statusBar().showMessage("No conformer found: cannot optimize. Embed molecule first.")
                 return
-            if method == 'MMFF_RDKIT':
+            if method in ('MMFF_RDKIT', 'MMFF94_RDKIT'):
                 try:
-                    res = AllChem.MMFFOptimizeMolecule(self.current_mol, maxIters=2000)
+                    # Choose concrete mmffVariant string
+                    mmff_variant = "MMFF94s" if method == 'MMFF_RDKIT' else "MMFF94"
+                    res = AllChem.MMFFOptimizeMolecule(self.current_mol, maxIters=200, mmffVariant=mmff_variant)
                     if res != 0:
                         # 非収束や何らかの問題が起きた可能性 -> ForceField API で詳細に試す
                         try:
                             mmff_props = AllChem.MMFFGetMoleculeProperties(self.current_mol)
                             ff = AllChem.MMFFGetMoleculeForceField(self.current_mol, mmff_props, confId=0)
-                            ff_ret = ff.Minimize(maxIts=2000)
+                            ff_ret = ff.Minimize(maxIts=200)
                             if ff_ret != 0:
-                                self.statusBar().showMessage(f"MMFF minimize returned non-zero status: {ff_ret}")
+                                self.statusBar().showMessage(f"{mmff_variant} minimize returned non-zero status: {ff_ret}")
                                 return
                         except Exception as e:
-                            self.statusBar().showMessage(f"MMFF parameterization/minimize failed: {e}")
+                            self.statusBar().showMessage(f"{mmff_variant} parameterization/minimize failed: {e}")
                             return
                 except Exception as e:
-                    self.statusBar().showMessage(f"MMFF (RDKit) optimization error: {e}")
+                    self.statusBar().showMessage(f"{mmff_variant} (RDKit) optimization error: {e}")
                     return
             elif method == 'UFF_RDKIT':
                 try:
-                    res = AllChem.UFFOptimizeMolecule(self.current_mol, maxIters=2000)
+                    res = AllChem.UFFOptimizeMolecule(self.current_mol, maxIters=200)
                     if res != 0:
                         try:
                             ff = AllChem.UFFGetMoleculeForceField(self.current_mol, confId=0)
-                            ff_ret = ff.Minimize(maxIts=2000)
+                            ff_ret = ff.Minimize(maxIts=200)
                             if ff_ret != 0:
                                 self.statusBar().showMessage(f"UFF minimize returned non-zero status: {ff_ret}")
                                 return
@@ -9120,7 +7759,7 @@ class MainWindow(QMainWindow):
                     self.statusBar().showMessage(f"UFF (RDKit) optimization error: {e}")
                     return
             else:
-                self.statusBar().showMessage("Selected optimization method is not available. Use MMFF (RDKit) or UFF (RDKit).")
+                self.statusBar().showMessage("Selected optimization method is not available. Use MMFF94 (RDKit) or UFF (RDKit).")
                 return
         except Exception as e:
             self.statusBar().showMessage(f"3D optimization error: {e}")
@@ -9716,6 +8355,17 @@ class MainWindow(QMainWindow):
         # If called from non-GUI thread, schedule the heavy RDKit work here but
         # always perform UI mutations on the main thread via QTimer.singleShot.
         try:
+            # Bump a local token to identify this request. The closure we
+            # schedule below will capture `my_token` and will only apply UI
+            # changes if the token still matches the most recent global
+            # counter. This avoids applying stale updates after deletions or
+            # teardown.
+            try:
+                self._ih_update_counter += 1
+            except Exception:
+                self._ih_update_counter = getattr(self, '_ih_update_counter', 0) or 1
+            my_token = self._ih_update_counter
+
             mol = None
             try:
                 mol = self.data.to_rdkit_mol()
@@ -9753,6 +8403,24 @@ class MainWindow(QMainWindow):
             # Schedule UI updates on the main thread to avoid calling Qt methods from
             # background threads or during teardown (which can crash the C++ layer).
             def _apply_ui_updates():
+                # If the global counter changed since this closure was
+                # created, bail out — the update is stale.
+                try:
+                    if my_token != getattr(self, '_ih_update_counter', None):
+                        return
+                except Exception:
+                    # If anything goes wrong checking the token, be conservative
+                    # and skip the update to avoid touching possibly-damaged
+                    # Qt wrappers.
+                    return
+
+                # Work on a shallow copy/snapshot of the data.atoms mapping so
+                # that concurrent mutations won't raise KeyError during
+                # iteration. We still defensively check each item below.
+                try:
+                    atoms_snapshot = dict(self.data.atoms)
+                except Exception:
+                    atoms_snapshot = {}
                 # Try to import sip.isdeleted if available (PyQt6 uses 'sip')
                 is_deleted_func = None
                 try:
@@ -9762,7 +8430,7 @@ class MainWindow(QMainWindow):
                     is_deleted_func = None
 
                 items_to_update = []
-                for atom_id, atom_data in list(self.data.atoms.items()):
+                for atom_id, atom_data in atoms_snapshot.items():
                     try:
                         item = atom_data.get('item')
                         if not item:
@@ -9814,13 +8482,27 @@ class MainWindow(QMainWindow):
                         continue
 
                 # Trigger updates once for unique items; wrap in try/except to avoid crashes
-                for it in set(items_to_update):
+                # Trigger updates once for unique items; dedupe by object id so
+                # we don't attempt to hash QGraphicsItem wrappers which may
+                # behave oddly when partially deleted.
+                seen = set()
+                for it in items_to_update:
                     try:
+                        if it is None:
+                            continue
+                        oid = id(it)
+                        if oid in seen:
+                            continue
+                        seen.add(oid)
                         if hasattr(it, 'update'):
-                            it.update()
+                            try:
+                                it.update()
+                            except Exception:
+                                # ignore update errors for robustness
+                                pass
                     except Exception:
-                        # ignore update errors for robustness
-                        pass
+                        # Ignore any unexpected errors when touching the item
+                        continue
 
             # Always schedule on main thread asynchronously
             try:
@@ -10207,7 +8889,8 @@ class MainWindow(QMainWindow):
             self._enter_3d_viewer_ui_mode()
             
             # 3D関連機能を統一的に有効化
-            self._enable_3d_features(True)
+            self._enable_3d_features(False)
+
             
             # メニューテキストと状態を更新
             self.update_atom_id_menu_text()
@@ -10360,14 +9043,14 @@ class MainWindow(QMainWindow):
         # 一般的な共有結合半径（Ångström）- より正確な値
         covalent_radii = {
             'H': 0.31, 'He': 0.28, 'Li': 1.28, 'Be': 0.96, 'B': 0.84, 'C': 0.76,
-            'N': 0.71, 'O': 0.66, 'F': 0.57, 'Ne': 0.58, 'Na': 1.66, 'Mg': 1.41,
+            'N': 0.75, 'O': 0.73, 'F': 0.71, 'Ne': 0.58, 'Na': 1.66, 'Mg': 1.41,
             'Al': 1.21, 'Si': 1.11, 'P': 1.07, 'S': 1.05, 'Cl': 1.02, 'Ar': 1.06,
             'K': 2.03, 'Ca': 1.76, 'Sc': 1.70, 'Ti': 1.60, 'V': 1.53, 'Cr': 1.39,
             'Mn': 1.39, 'Fe': 1.32, 'Co': 1.26, 'Ni': 1.24, 'Cu': 1.32, 'Zn': 1.22,
-            'Ga': 1.22, 'Ge': 1.20, 'As': 1.19, 'Se': 1.20, 'Br': 1.20, 'Kr': 1.16,
+            'Ga': 1.22, 'Ge': 1.20, 'As': 1.19, 'Se': 1.20, 'Br': 1.14, 'Kr': 1.16,
             'Rb': 2.20, 'Sr': 1.95, 'Y': 1.90, 'Zr': 1.75, 'Nb': 1.64, 'Mo': 1.54,
             'Tc': 1.47, 'Ru': 1.46, 'Rh': 1.42, 'Pd': 1.39, 'Ag': 1.45, 'Cd': 1.44,
-            'In': 1.42, 'Sn': 1.39, 'Sb': 1.39, 'Te': 1.38, 'I': 1.39, 'Xe': 1.40
+            'In': 1.42, 'Sn': 1.39, 'Sb': 1.39, 'Te': 1.38, 'I': 1.33, 'Xe': 1.40
         }
         
         conf = mol.GetConformer()
@@ -12576,68 +11259,208 @@ class MainWindow(QMainWindow):
         
         # 既存のラベルをクリア
         self.clear_all_atom_info_labels()
-        
-        # 各原子に対してラベルを作成
-        texts = []
-        positions = []
+
+        # ラベルを表示するためにタイプ別に分けてリストを作る
+        rdkit_positions = []
+        rdkit_texts = []
+        id_positions = []
+        id_texts = []
+        xyz_positions = []
+        xyz_texts = []
+        other_positions = []
+        other_texts = []
+
         for atom_idx, pos in enumerate(self.atom_positions_3d):
+            # default: skip if no display mode
+            if self.atom_info_display_mode is None:
+                continue
+
             if self.atom_info_display_mode == 'id':
-                # Original IDがある場合は優先表示、なければRDKitインデックス
+                # Original IDがある場合は優先表示、なければXYZのユニークID、最後にRDKitインデックス
                 try:
                     if self.current_mol:
                         atom = self.current_mol.GetAtomWithIdx(atom_idx)
                         if atom.HasProp("_original_atom_id"):
                             original_id = atom.GetIntProp("_original_atom_id")
-                            text = f"ID:{original_id}"
+                            # プレフィックスを削除して数値だけ表示
+                            id_positions.append(pos)
+                            id_texts.append(str(original_id))
                         elif atom.HasProp("xyz_unique_id"):
                             unique_id = atom.GetIntProp("xyz_unique_id")
-                            text = f"XYZ:{unique_id}"
+                            xyz_positions.append(pos)
+                            xyz_texts.append(str(unique_id))
                         else:
-                            text = f"RDKit:{atom_idx}"
+                            rdkit_positions.append(pos)
+                            rdkit_texts.append(str(atom_idx))
                     else:
-                        text = f"RDKit:{atom_idx}"
+                        rdkit_positions.append(pos)
+                        rdkit_texts.append(str(atom_idx))
                 except Exception:
-                    text = f"RDKit:{atom_idx}"
+                    rdkit_positions.append(pos)
+                    rdkit_texts.append(str(atom_idx))
+
             elif self.atom_info_display_mode == 'rdkit_id':
-                # RDKitで再生成された原子インデックスのみを表示
-                text = f"RDKit:{atom_idx}"
+                rdkit_positions.append(pos)
+                rdkit_texts.append(str(atom_idx))
+
             elif self.atom_info_display_mode == 'coords':
-                text = f"({pos[0]:.2f},{pos[1]:.2f},{pos[2]:.2f})"
+                other_positions.append(pos)
+                other_texts.append(f"({pos[0]:.2f},{pos[1]:.2f},{pos[2]:.2f})")
+
             elif self.atom_info_display_mode == 'symbol':
                 if self.current_mol:
                     symbol = self.current_mol.GetAtomWithIdx(atom_idx).GetSymbol()
-                    text = f"{symbol}"
+                    other_positions.append(pos)
+                    other_texts.append(symbol)
                 else:
-                    text = "?"
+                    other_positions.append(pos)
+                    other_texts.append("?")
+
             else:
                 continue
-            texts.append(text)
-            positions.append(pos)
-        
-        # すべてのラベルを一度に表示
-        if texts and positions:
-            try:
-                label_actor = self.plotter.add_point_labels(
-                    positions, texts,
-                    point_size=12,
-                    font_size=18,
-                    text_color='black',
-                    always_visible=True,
-                    tolerance=0.01,
-                    show_points=False
+
+        # 色の定義（暗めの青/緑/赤）
+        rdkit_color = '#003366'   # 暗めの青
+        id_color = '#006400'      # 暗めの緑
+        xyz_color = '#8B0000'     # 暗めの赤
+        other_color = 'black'
+
+        # それぞれのグループごとにラベルを追加し、参照をリストで保持する
+        self.current_atom_info_labels = []
+        try:
+            if rdkit_positions:
+                a = self.plotter.add_point_labels(
+                    np.array(rdkit_positions), rdkit_texts,
+                    point_size=12, font_size=18, text_color=rdkit_color,
+                    always_visible=True, tolerance=0.01, show_points=False,
+                    name='atom_labels_rdkit'
                 )
-                self.current_atom_info_labels = label_actor
-            except Exception as e:
-                print(f"Error adding atom info labels: {e}")
+                self.current_atom_info_labels.append(a)
+
+            if id_positions:
+                a = self.plotter.add_point_labels(
+                    np.array(id_positions), id_texts,
+                    point_size=12, font_size=18, text_color=id_color,
+                    always_visible=True, tolerance=0.01, show_points=False,
+                    name='atom_labels_id'
+                )
+                self.current_atom_info_labels.append(a)
+
+            if xyz_positions:
+                a = self.plotter.add_point_labels(
+                    np.array(xyz_positions), xyz_texts,
+                    point_size=12, font_size=18, text_color=xyz_color,
+                    always_visible=True, tolerance=0.01, show_points=False,
+                    name='atom_labels_xyz'
+                )
+                self.current_atom_info_labels.append(a)
+
+            if other_positions:
+                a = self.plotter.add_point_labels(
+                    np.array(other_positions), other_texts,
+                    point_size=12, font_size=18, text_color=other_color,
+                    always_visible=True, tolerance=0.01, show_points=False,
+                    name='atom_labels_other'
+                )
+                self.current_atom_info_labels.append(a)
+        except Exception as e:
+            print(f"Error adding atom info labels: {e}")
+
+        # 右上に凡例を表示（既存の凡例は消す）
+        try:
+            # 古い凡例削除
+            if hasattr(self, 'atom_label_legend_names') and self.atom_label_legend_names:
+                for nm in self.atom_label_legend_names:
+                    try:
+                        self.plotter.remove_actor(nm)
+                    except:
+                        pass
+            self.atom_label_legend_names = []
+
+            # 凡例テキストを右上に縦並びで追加（背景なし、太字のみ）
+            legend_entries = []
+            if rdkit_positions:
+                legend_entries.append(('RDKit', rdkit_color, 'legend_rdkit'))
+            if id_positions:
+                legend_entries.append(('ID', id_color, 'legend_id'))
+            if xyz_positions:
+                legend_entries.append(('XYZ', xyz_color, 'legend_xyz'))
+            # Do not show 'Other' in the legend per UI requirement
+            # (other_positions are still labeled in-scene but not listed in the legend)
+
+            # 左下に凡例ラベルを追加（背景なし、太字のみ）
+            # Increase spacing to avoid overlapping when short labels like 'RDKit' and 'ID' appear
+            spacing = 30
+            for i, (label_text, label_color, label_name) in enumerate(legend_entries):
+                # 左下基準でy座標を上げる
+                # Add a small horizontal offset for very short adjacent labels so they don't visually collide
+                y = 0.0 + i * spacing
+                x_offset = 0.0
+                # If both RDKit and ID are present, nudge the second entry slightly to the right to avoid overlap
+                try:
+                    if label_text == 'ID' and any(e[0] == 'RDKit' for e in legend_entries):
+                        x_offset = 0.06
+                except Exception:
+                    x_offset = 0.0
+                try:
+                    actor = self.plotter.add_text(
+                        label_text,
+                        position=(0.0 + x_offset, y),
+                        font_size=12,
+                        color=label_color,
+                        name=label_name,
+                        font='arial'
+                    )
+                    self.atom_label_legend_names.append(label_name)
+                    # 太字のみ設定（背景は設定しない）
+                    try:
+                        if hasattr(actor, 'GetTextProperty'):
+                            tp = actor.GetTextProperty()
+                            try:
+                                tp.SetBold(True)
+                            except Exception:
+                                pass
+                    except Exception:
+                        pass
+                except Exception:
+                    continue
+
+        except Exception:
+            pass
 
     def clear_all_atom_info_labels(self):
         """すべての原子情報ラベルをクリア"""
-        if self.current_atom_info_labels is not None:
-            try:
-                self.plotter.remove_actor(self.current_atom_info_labels)
-            except:
-                pass
+        # Remove label actors (may be a single actor, a list, or None)
+        try:
+            if hasattr(self, 'current_atom_info_labels') and self.current_atom_info_labels:
+                if isinstance(self.current_atom_info_labels, (list, tuple)):
+                    for a in list(self.current_atom_info_labels):
+                        try:
+                            self.plotter.remove_actor(a)
+                        except:
+                            pass
+                else:
+                    try:
+                        self.plotter.remove_actor(self.current_atom_info_labels)
+                    except:
+                        pass
+        except Exception:
+            pass
+        finally:
             self.current_atom_info_labels = None
+
+        # Remove legend text actors if present
+        try:
+            if hasattr(self, 'atom_label_legend_names') and self.atom_label_legend_names:
+                for nm in list(self.atom_label_legend_names):
+                    try:
+                        self.plotter.remove_actor(nm)
+                    except:
+                        pass
+        except Exception:
+            pass
+        finally:
+            self.atom_label_legend_names = []
 
     def setup_3d_hover(self):
         """3Dビューでの表示を設定（常時表示に変更）"""
@@ -12969,7 +11792,6 @@ class MainWindow(QMainWindow):
             'bond_length_action',
             'angle_action',
             'dihedral_action',
-            'symmetrize_action',
             'mirror_action'
         ]
         
@@ -14020,31 +12842,6 @@ class MainWindow(QMainWindow):
         dialog.accepted.connect(self.push_undo_state)
         dialog.finished.connect(lambda: self.remove_dialog_from_list(dialog))  # ダイアログが閉じられた時にリストから削除
     
-    def open_symmetrize_dialog(self):
-        """対称化ダイアログを開く"""
-        # Under Development メッセージを表示
-        from PyQt6.QtWidgets import QMessageBox
-        
-        msg = QMessageBox()
-        msg.setIcon(QMessageBox.Icon.Information)
-        msg.setWindowTitle("Symmetrize Function")
-        msg.setText("Symmetrize Function - Under Development")
-        msg.setInformativeText(
-            "This function is under development and will be available in a future release."
-        )
-        msg.setStandardButtons(QMessageBox.StandardButton.Ok)
-        msg.exec()
-        
-        # 元のコードは残しておく（コメントアウト）
-        # # 測定モードを無効化
-        # if self.measurement_mode:
-        #     self.measurement_action.setChecked(False)
-        #     self.toggle_measurement_mode(False)
-        # 
-        # dialog = SymmetrizeDialog(self.current_mol, self)
-        # dialog.exec()  # モーダルダイアログとして表示
-        # # 結果はダイアログ内で直接適用される
-
     def open_mirror_dialog(self):
         """ミラー機能ダイアログを開く"""
         if not self.current_mol:
@@ -15211,167 +14008,6 @@ class DihedralDialog(Dialog3DPickingMixin, QDialog):
                     to_visit.append(other_idx)
         
         return visited
-
-
-class SymmetryCandidatesDialog(QDialog):
-    """対称性候補選択ダイアログ"""
-    
-    def __init__(self, candidates, parent=None):
-        super().__init__(parent)
-        self.candidates = candidates
-        self.selected_candidate = None
-        self.init_ui()
-    
-    def init_ui(self):
-        self.setWindowTitle("Symmetry Detection Results")
-        self.setModal(True)
-        self.setFixedSize(500, 400)
-        layout = QVBoxLayout(self)
-        
-        # 説明ラベル
-        instruction_label = QLabel(
-            "Multiple point groups detected for your molecule. "
-            "Select the most appropriate one based on confidence and chemical knowledge:"
-        )
-        instruction_label.setWordWrap(True)
-        layout.addWidget(instruction_label)
-        
-        # 候補リスト
-        self.candidates_list = QListWidget()
-        self.candidates_list.setSelectionMode(QListWidget.SelectionMode.SingleSelection)
-        
-        for i, candidate in enumerate(self.candidates):
-            # リストアイテムのテキストを作成
-            confidence_bar = "★" * int(candidate['confidence'] * 5)  # 5段階評価
-            item_text = f"{candidate['name']}\n"
-            item_text += f"Confidence: {candidate['confidence']:.1%} {confidence_bar}\n"
-            item_text += f"Reason: {candidate['reason']}"
-            
-            item = QListWidgetItem(item_text)
-            item.setData(Qt.ItemDataRole.UserRole, candidate)
-            
-            # 信頼度に基づく色分け
-            if candidate['confidence'] >= 0.8:
-                item.setBackground(QColor(200, 255, 200))  # 淡い緑
-            elif candidate['confidence'] >= 0.6:
-                item.setBackground(QColor(255, 255, 200))  # 淡い黄色
-            elif candidate['confidence'] >= 0.4:
-                item.setBackground(QColor(255, 230, 200))  # 淡いオレンジ
-            else:
-                item.setBackground(QColor(255, 200, 200))  # 淡い赤
-            
-            self.candidates_list.addItem(item)
-        
-        # 最初の候補を選択
-        if self.candidates:
-            self.candidates_list.setCurrentRow(0)
-        
-        layout.addWidget(self.candidates_list)
-        
-        # 詳細情報表示エリア
-        self.detail_label = QLabel()
-        self.detail_label.setWordWrap(True)
-        self.detail_label.setStyleSheet("QLabel { background-color: #f0f0f0; padding: 10px; border: 1px solid #ccc; }")
-        self.detail_label.setMaximumHeight(80)
-        layout.addWidget(self.detail_label)
-        
-        # 選択が変更されたときの処理
-        self.candidates_list.currentItemChanged.connect(self.on_selection_changed)
-        
-        # 初期表示
-        self.on_selection_changed()
-        
-        # ボタン
-        button_layout = QHBoxLayout()
-        
-        info_button = QPushButton("More Info")
-        info_button.clicked.connect(self.show_more_info)
-        button_layout.addWidget(info_button)
-        
-        button_layout.addStretch()
-        
-        self.select_button = QPushButton("Select This Point Group")
-        self.select_button.clicked.connect(self.accept)
-        self.select_button.setDefault(True)
-        button_layout.addWidget(self.select_button)
-        
-        cancel_button = QPushButton("Cancel")
-        cancel_button.clicked.connect(self.reject)
-        button_layout.addWidget(cancel_button)
-        
-        layout.addLayout(button_layout)
-    
-    def keyPressEvent(self, event):
-        """キーボードイベントを処理"""
-        if event.key() == Qt.Key.Key_Return or event.key() == Qt.Key.Key_Enter:
-            if self.select_button.isEnabled():
-                self.accept()
-            event.accept()
-        else:
-            super().keyPressEvent(event)
-    
-    def on_selection_changed(self):
-        """選択が変更されたときの処理"""
-        current_item = self.candidates_list.currentItem()
-        if current_item:
-            candidate = current_item.data(Qt.ItemDataRole.UserRole)
-            self.selected_candidate = candidate
-            
-            # 詳細情報を表示
-            detail_text = f"Point Group: {candidate['name']}\n"
-            
-            # operations_countを安全に取得
-            ops_count = candidate.get('operations_count', 'Unknown')
-            if ops_count != 'Unknown':
-                detail_text += f"Operations: {ops_count} symmetry operations\n"
-            else:
-                detail_text += "Operations: Computing...\n"
-            
-            # 化学的推奨情報
-            recommendations = self.get_chemical_recommendations(candidate['key'])
-            if recommendations:
-                detail_text += f"Common molecules: {recommendations}"
-            
-            self.detail_label.setText(detail_text)
-    
-    def get_chemical_recommendations(self, point_group_key):
-        """点群に対応する代表的な分子例を返す"""
-        examples = {
-            'Td': 'CH₄, CCl₄, SiF₄',
-            'C3v': 'NH₃, PCl₃, SO₃²⁻',
-            'C2v': 'H₂O, SO₂, NO₂⁻',
-            'D3h': 'BF₃, CO₃²⁻, NO₃⁻',
-            'D2h': 'C₂H₄, benzene (planar)',
-            'Oh': 'SF₆, [Co(NH₃)₆]³⁺',
-            'Cs': 'HOCl, planar molecules',
-            'Ci': 'trans-compounds',
-            'C2h': 'trans-N₂F₂',
-            'C1': 'CHFClBr, most organic molecules'
-        }
-        return examples.get(point_group_key, '')
-    
-    def show_more_info(self):
-        """詳細情報ダイアログを表示"""
-        if not self.selected_candidate:
-            return
-        
-        info_text = f"Point Group: {self.selected_candidate['name']}\n\n"
-        info_text += f"Confidence Score: {self.selected_candidate['confidence']:.3f}\n"
-        info_text += f"Detection Method: {self.selected_candidate['reason']}\n"
-        info_text += f"Symmetry Operations: {self.selected_candidate.get('operations_count', 'N/A')}\n\n"
-        
-        examples = self.get_chemical_recommendations(self.selected_candidate['key'])
-        if examples:
-            info_text += f"Example Molecules:\n{examples}\n\n"
-        
-        info_text += "This point group describes the molecular symmetry and will be used to "
-        info_text += "adjust atomic positions to achieve ideal symmetric geometry."
-        
-        QMessageBox.information(self, "Point Group Information", info_text)
-    
-    def get_selected_candidate(self):
-        """選択された候補を返す"""
-        return self.selected_candidate
 
 
 # --- Application Execution ---
