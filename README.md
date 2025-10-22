@@ -22,6 +22,7 @@
 This application combines a modern GUI built with **PyQt6**, powerful cheminformatics capabilities from **RDKit**, and high-performance 3D rendering by **PyVista** to provide an easy-to-use tool for drawing and visually inspecting molecular structures.
 
 ## Key Features
+　Please refer to the [user manual](https://hiroyokoyama.github.io/python_molecular_editor/manual/manual) for details.
 
 ### 1\. 2D Drawing and Editing
 
@@ -111,7 +112,7 @@ This project is licensed under the **Apache-2.0 License**. See the `LICENSE` fil
 
 # MoleditPy — A Python Molecular Editor
 
-**MoleditPy**は、Pythonで構築されたクロスプラットフォームかつ直感的な分子エディターです。2Dでの分子描画から3D構造の可視化、さらにはインタラクティブな幾何学的操作まで、シームレスなワークフローを提供します。その強力な編集機能とエクスポート機能により、**DFT計算ソフトウェアのインプット作成に最適なツール**です。
+**MoleditPy**は、Pythonで構築されたクロスプラットフォームかつ直感的な分子エディターです。2Dでの分子描画から3D構造の可視化・編集、さらにはインタラクティブな幾何学的操作まで、シームレスなワークフローを提供します。その強力な編集機能とエクスポート機能により、**DFT計算ソフトウェアのインプット作成に最適なツール**です。
 
 **作者**: HiroYokoyama
 **ライセンス**: Apache-2.0
@@ -126,6 +127,7 @@ This project is licensed under the **Apache-2.0 License**. See the `LICENSE` fil
 このアプリケーションは、**PyQt6**によるモダンなGUI、**RDKit**による強力な化学計算、**PyVista**による高性能な3Dレンダリングを組み合わせ、分子構造の描画と視覚的な確認を容易にするツールです。
 
 ## 主な機能
+ 詳細は、[ユーザーマニュアル](https://hiroyokoyama.github.io/python_molecular_editor/manual/manual-JP)を参照してください。
 
 ### 1\. 2D描画と編集
 
