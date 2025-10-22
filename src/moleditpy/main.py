@@ -1285,10 +1285,31 @@ class SymmetrizeDialog(Dialog3DPickingMixin, QDialog):
     """
 
     SUPPORTED_POINT_GROUPS = [
-        'C1','Ci','Cs','C2','C3','C2h','C3h','C2v','C3v',
-        'D2','D3','D2h','D3h','D4h','D5h','D6h','D2d','D3d',
-        'Td','Oh','Ih'
-    ]
+            # 低対称性
+            'C1','Ci','Cs',
+
+            # Cn グループ (n=2-6)
+            'C2','C3','C4','C5','C6',
+            'C2h','C3h','C4h','C5h','C6h',
+            'C2v','C3v','C4v','C5v','C6v',
+
+            # Dn グループ (n=2-6)
+            'D2','D3','D4','D5','D6',
+            'D2h','D3h','D4h','D5h','D6h',
+            'D2d','D3d','D4d','D5d','D6d',
+
+            # Sn グループ
+            'S4','S6',
+
+            # 高対称性 (立方晶・正二十面体)
+            'T','Th','Td',
+            'O','Oh',
+            'I','Ih',
+
+            # 線形 (Pymatgen表記)
+            'Cinfv', # C-infinity-v
+            'Dinfh'  # D-infinity-h
+        ]
 
     def __init__(self, mol, main_window, parent=None):
         # Initialize QDialog and the 3D picking mixin so methods like
@@ -1297,6 +1318,9 @@ class SymmetrizeDialog(Dialog3DPickingMixin, QDialog):
         Dialog3DPickingMixin.__init__(self)
         self.mol = mol
         self.main_window = main_window
+        # Ensure attribute exists to avoid accidental AttributeError in
+        # error-handling paths that may reference selection state.
+        self.selected_atoms = set()
         self.init_ui()
 
     def init_ui(self):
@@ -1384,7 +1408,25 @@ class SymmetrizeDialog(Dialog3DPickingMixin, QDialog):
                 coords.append([float(p.x), float(p.y), float(p.z)])
                 species.append(self.mol.GetAtomWithIdx(i).GetSymbol())
 
-            pm_mol = PymatgenMolecule(species, coords)
+            # Center coordinates on the molecular centroid before creating the
+            # pymatgen Molecule. PointGroupAnalyzer and the SymmOp objects
+            # returned by it typically operate around the origin. If we feed
+            # in un-centered coordinates then applying operations and
+            # averaging transformed positions can pull atoms toward the
+            # global origin. By centering here and remembering the centroid
+            # we can apply symmetry in a centered coordinate system and then
+            # shift coordinates back.
+            coords_arr = np.array(coords, dtype=float)
+            centroid = np.mean(coords_arr, axis=0)
+            centered_coords = (coords_arr - centroid).tolist()
+
+            # Store the centroid so other methods (preview/apply) can reuse it.
+            try:
+                self._symmetry_centroid = centroid
+            except Exception:
+                self._symmetry_centroid = centroid
+
+            pm_mol = PymatgenMolecule(species, centered_coords)
             return pm_mol
         except Exception:
             return None
@@ -1404,7 +1446,16 @@ class SymmetrizeDialog(Dialog3DPickingMixin, QDialog):
             return
 
         try:
-            analyzer = PointGroupAnalyzer(pm_mol, tol)
+            try:
+                analyzer = PointGroupAnalyzer(pm_mol, tol)
+            except ValueError as ve:
+                # Known failure mode in some pymatgen versions when symmetry
+                # cannot be determined (e.g. min() on empty iterable). Surface
+                # a clear message to the user instead of an unhandled traceback.
+                QMessageBox.critical(self, "Error",
+                                     f"pymatgen failed to detect symmetry (invalid molecule or tolerance).\nDetails: {ve}")
+                return
+
             # Try multiple attribute names for backward compatibility
             detected = None
             for attr in ("get_pointgroup", "get_point_group", "get_pointgroup_name", "point_group"):
@@ -1417,7 +1468,10 @@ class SymmetrizeDialog(Dialog3DPickingMixin, QDialog):
 
             if not detected:
                 # Fallback: try str(analyzer)
-                detected = str(analyzer)
+                try:
+                    detected = str(analyzer)
+                except Exception:
+                    detected = None
 
             # Clean detected name if tuple or object
             if isinstance(detected, tuple) and detected:
@@ -1449,7 +1503,12 @@ class SymmetrizeDialog(Dialog3DPickingMixin, QDialog):
             return
 
         try:
-            analyzer = PointGroupAnalyzer(pm_mol, tol)
+            try:
+                analyzer = PointGroupAnalyzer(pm_mol, tol)
+            except ValueError as ve:
+                QMessageBox.critical(self, "Error",
+                                     f"pymatgen failed to analyze symmetry (invalid molecule or tolerance).\nDetails: {ve}")
+                return
 
             # determine detected point group name
             detected = None
@@ -1463,10 +1522,16 @@ class SymmetrizeDialog(Dialog3DPickingMixin, QDialog):
 
             # fetch symmetry operations (SymmOp objects)
             symm_ops = []
-            for op_attr in (["get_symmetry_operations", "symmetry_operations", "get_symmetry_operations_cartesian"]):
+            for op_attr in ["get_symmetry_operations", "symmetry_operations", "get_symmetry_operations_cartesian"]:
                 if hasattr(analyzer, op_attr):
                     try:
-                        symm_ops = getattr(analyzer, op_attr)()
+                        attr = getattr(analyzer, op_attr)
+                        # Attribute may be either a callable returning a list or
+                        # a property/list itself depending on pymatgen version.
+                        if callable(attr):
+                            symm_ops = attr()
+                        else:
+                            symm_ops = attr
                         break
                     except Exception:
                         continue
@@ -1479,30 +1544,40 @@ class SymmetrizeDialog(Dialog3DPickingMixin, QDialog):
             conf = self.mol.GetConformer()
             positions = np.array([[conf.GetAtomPosition(i).x, conf.GetAtomPosition(i).y, conf.GetAtomPosition(i).z] for i in range(self.mol.GetNumAtoms())])
 
+            # Use coordinates centered at the molecular centroid when
+            # applying symmetry operations. rdkit_to_pymatgen stores the
+            # centroid used for creating the pymatgen molecule in
+            # self._symmetry_centroid; fall back to the numeric centroid if
+            # missing.
+            centroid = getattr(self, '_symmetry_centroid', None)
+            if centroid is None:
+                centroid = np.mean(positions, axis=0)
+            centered_positions = positions - centroid
+
             equivalent_groups = []
             used = set()
-            for i in range(len(positions)):
+            for i in range(len(centered_positions)):
                 if i in used:
                     continue
                 group = set([i])
                 for op in symm_ops:
+                    # SymmOp may provide several APIs depending on pymatgen version.
                     try:
-                        # SymmOp may provide operate_site or operate on coords
                         try:
-                            transformed = np.array(op.operate(positions[i]))
+                            transformed = np.asarray(op.operate(centered_positions[i]))
                         except Exception:
-                            # Try operate_site or rotation_matrix + translation_vector
                             if hasattr(op, 'apply_operation'):
-                                transformed = np.array(op.apply_operation(positions[i]))
+                                transformed = np.asarray(op.apply_operation(centered_positions[i]))
                             elif hasattr(op, 'rotation_matrix'):
-                                rot = np.array(op.rotation_matrix)
-                                trans = np.array(getattr(op, 'translation_vector', [0,0,0]))
-                                transformed = rot.dot(positions[i]) + trans
+                                rot = np.asarray(op.rotation_matrix)
+                                trans = np.asarray(getattr(op, 'translation_vector', [0, 0, 0]))
+                                transformed = rot.dot(centered_positions[i]) + trans
                             else:
                                 continue
 
                         # find nearest original atom index
-                        dists = np.linalg.norm(positions - transformed, axis=1)
+                        # Compare in centered coordinate frame
+                        dists = np.linalg.norm(centered_positions - transformed, axis=1)
                         j = int(np.argmin(dists))
                         if dists[j] < max(1e-3, tol):
                             group.add(j)
@@ -1517,7 +1592,7 @@ class SymmetrizeDialog(Dialog3DPickingMixin, QDialog):
             atoms_to_move = 0
             max_disp = 0.0
             if symm_ops:
-                for i, pos in enumerate(positions):
+                for i, pos in enumerate(centered_positions):
                     transformed_positions = []
                     for op in symm_ops:
                         try:
@@ -1572,13 +1647,22 @@ class SymmetrizeDialog(Dialog3DPickingMixin, QDialog):
             return
 
         try:
-            analyzer = PointGroupAnalyzer(pm_mol, tol)
+            try:
+                analyzer = PointGroupAnalyzer(pm_mol, tol)
+            except ValueError as ve:
+                QMessageBox.critical(self, "Error",
+                                     f"pymatgen failed to analyze symmetry (invalid molecule or tolerance).\nDetails: {ve}")
+                return
             # get symmetry operations
             symm_ops = []
-            for op_attr in (["get_symmetry_operations", "symmetry_operations", "get_symmetry_operations_cartesian"]):
+            for op_attr in ["get_symmetry_operations", "symmetry_operations", "get_symmetry_operations_cartesian"]:
                 if hasattr(analyzer, op_attr):
                     try:
-                        symm_ops = getattr(analyzer, op_attr)()
+                        attr = getattr(analyzer, op_attr)
+                        if callable(attr):
+                            symm_ops = attr()
+                        else:
+                            symm_ops = attr
                         break
                     except Exception:
                         continue
@@ -1587,31 +1671,57 @@ class SymmetrizeDialog(Dialog3DPickingMixin, QDialog):
                 QMessageBox.warning(self, "Warning", "No symmetry operations found; nothing to apply.")
                 return
 
-            # get current positions
+
+            # get current positions (raw coordinates)
             conf = self.mol.GetConformer()
             positions = np.array([[conf.GetAtomPosition(i).x, conf.GetAtomPosition(i).y, conf.GetAtomPosition(i).z] for i in range(self.mol.GetNumAtoms())])
 
-            new_positions = positions.copy()
-            for i, pos in enumerate(positions):
+            # Work in the centered coordinate frame that was used to create the
+            # pymatgen molecule. This prevents averaging transformed positions
+            # toward the global origin. Fall back to computed centroid if we
+            # don't have one stored.
+            centroid = getattr(self, '_symmetry_centroid', None)
+            if centroid is None:
+                centroid = np.mean(positions, axis=0)
+            centered_positions = positions - centroid
+
+            new_centered = centered_positions.copy()
+            for i, pos in enumerate(centered_positions):
                 transformed_positions = []
                 for op in symm_ops:
                     try:
-                        transformed = np.array(op.operate(pos))
+                        try:
+                            transformed = np.asarray(op.operate(pos))
+                        except Exception:
+                            if hasattr(op, 'apply_operation'):
+                                transformed = np.asarray(op.apply_operation(pos))
+                            elif hasattr(op, 'rotation_matrix'):
+                                rot = np.asarray(op.rotation_matrix)
+                                trans = np.asarray(getattr(op, 'translation_vector', [0, 0, 0]))
+                                transformed = rot.dot(pos) + trans
+                            else:
+                                continue
+
                         transformed_positions.append(transformed)
                     except Exception:
-                        if hasattr(op, 'rotation_matrix'):
-                            rot = np.array(op.rotation_matrix)
-                            trans = np.array(getattr(op, 'translation_vector', [0,0,0]))
-                            transformed = rot.dot(pos) + trans
-                            transformed_positions.append(transformed)
-                        else:
-                            continue
+                        # skip failing ops for this site
+                        continue
 
+                # If we have any transformed positions, include the original
+                # position as an anchor so averaging doesn't collapse atoms
+                # toward an unintended common point.
                 if transformed_positions:
-                    avg = np.mean(transformed_positions, axis=0)
+                    transformed_positions.append(pos)
+                    avg = np.mean(np.asarray(transformed_positions), axis=0)
+                    if not np.isfinite(avg).all():
+                        continue
                     disp = np.linalg.norm(avg - pos)
+                    # Only accept reasonable displacements (avoid wild moves)
                     if disp > tol and disp < 2.0:
-                        new_positions[i] = avg
+                        new_centered[i] = avg
+
+            # Shift back to original coordinate frame before writing
+            new_positions = new_centered + centroid
 
             # apply new positions back to RDKit molecule and main window
             from rdkit.Geometry import Point3D
@@ -1624,29 +1734,11 @@ class SymmetrizeDialog(Dialog3DPickingMixin, QDialog):
 
             self.main_window.draw_molecule_3d(self.mol)
             self.main_window.push_undo_state()
-            QMessageBox.information(self, "Success", "Symmetrization applied (pymatgen-based).")
+            QMessageBox.information(self, "Success", "Symmetrization applied.")
 
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to apply symmetrization: {e}")
-            if len(self.selected_atoms) > 1:
-                centroid = self.calculate_centroid()
-                positions.append(centroid)
-                labels.append("CEN")
-
-            # ラベルを追加
-            if positions:
-                label_actor = self.main_window.plotter.add_point_labels(
-                    positions, labels,
-                    point_size=20,
-                    font_size=12,
-                    text_color='cyan',
-                    always_visible=True
-                )
-                # add_point_labelsがリストを返す場合も考慮
-                if isinstance(label_actor, list):
-                    self.selection_labels.extend(label_actor)
-                else:
-                    self.selection_labels.append(label_actor)
+            # Error handling block referencing self.selected_atoms removed (not used in this dialog)
     
     def clear_atom_labels(self):
         """原子ラベルをクリア"""
