@@ -11,7 +11,7 @@ DOI 10.5281/zenodo.17268532
 """
 
 #Version
-VERSION = '1.9.12'
+VERSION = '1.9.13'
 
 print("-----------------------------------------------------")
 print("MoleditPy — A Python-based molecular editing software")
@@ -5045,7 +5045,7 @@ class SettingsDialog(QDialog):
             # during file import (useful for viewing malformed XYZ/MOL files). When enabled,
             # element symbol recognition will be coerced where possible and Chem.SanitizeMol
             # failures will be ignored so the 3D viewer can still display the structure.
-            'skip_chemistry_checks': True,
+            'skip_chemistry_checks': False,
             # 3D conversion/optimization defaults
             '3d_conversion_mode': 'fallback',
             'optimization_method': 'MMFF_RDKIT',
@@ -12281,7 +12281,7 @@ class MainWindow(QMainWindow):
             # Ensure conversion/optimization defaults are present
             # If True, attempts to be permissive when RDKit raises chemical/sanitization errors
             # during file import (useful for viewing malformed XYZ/MOL files).
-            'skip_chemistry_checks': True,
+            'skip_chemistry_checks': False,
             '3d_conversion_mode': 'fallback',
             'optimization_method': 'MMFF_RDKIT',
         }
