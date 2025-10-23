@@ -11,7 +11,7 @@ DOI 10.5281/zenodo.17268532
 """
 
 #Version
-VERSION = '1.9.11'
+VERSION = '1.9.12-alpha.1'
 
 print("-----------------------------------------------------")
 print("MoleditPy — A Python-based molecular editing software")
@@ -8882,26 +8882,47 @@ class MainWindow(QMainWindow):
             self.clear_2d_editor(push_to_undo=False)
             
             # 3D構造をセットして描画
+            # Set the molecule. If bonds were determined (mol has bonds),
+            # treat this the same as loading a MOL file: clear the XYZ-derived
+            # flag and enable 3D optimization. Only mark as XYZ-derived and
+            # disable 3D optimization when the molecule has no bond information.
             self.current_mol = mol
-            self.is_xyz_derived = True  # XYZ由来であることを記録
-            
+
             # XYZファイル読み込み時はマッピングをクリア（2D構造がないため）
             self.atom_id_to_rdkit_idx_map = {}
-            
+
+            # If mol has no bonds, consider it a pure-XYZ delivery and restrict
+            # some 3D operations. If bonds exist (either from the file or from
+            # DetermineBonds), clear the flag and enable optimization just like
+            # for MOL files.
+            try:
+                has_bonds = (self.current_mol.GetNumBonds() > 0)
+            except Exception:
+                has_bonds = False
+
+            if has_bonds:
+                self.is_xyz_derived = False
+                if hasattr(self, 'optimize_3d_button'):
+                    try:
+                        self.optimize_3d_button.setEnabled(True)
+                    except Exception:
+                        pass
+            else:
+                self.is_xyz_derived = True
+                if hasattr(self, 'optimize_3d_button'):
+                    try:
+                        self.optimize_3d_button.setEnabled(False)
+                    except Exception:
+                        pass
+
             self.draw_molecule_3d(self.current_mol)
             self.plotter.reset_camera()
 
             # UIを3Dビューアモードに設定
             self._enter_3d_viewer_ui_mode()
-            
+
             # 3D関連機能を統一的に有効化
             self._enable_3d_features(True)
-            
-            if hasattr(self, 'optimize_3d_button'):
-                try:
-                    self.optimize_3d_button.setEnabled(False)
-                except Exception:
-                    pass
             
             # メニューテキストと状態を更新
             self.update_atom_id_menu_text()
@@ -9017,8 +9038,23 @@ class MainWindow(QMainWindow):
                 conf.SetAtomPosition(i, rdGeometry.Point3D(x, y, z))
             mol.AddConformer(conf)
             
-            # 結合を推定（距離ベース）
-            self.estimate_bonds_from_distances(mol)
+            # Try to determine bonds using RDKit's DetermineBonds first (preferred).
+            # If that fails for any reason, fall back to the distance-based estimator.
+            used_rd_determine = False
+            try:
+                from rdkit.Chem import rdDetermineBonds
+                try:
+                    # rdDetermineBonds mutates the molecule in-place
+                    rdDetermineBonds.DetermineBonds(mol, charge=0)
+                    used_rd_determine = True
+                except Exception:
+                    used_rd_determine = False
+            except Exception:
+                used_rd_determine = False
+
+            if not used_rd_determine:
+                # 結合を推定（距離ベース）
+                self.estimate_bonds_from_distances(mol)
             
                 # 分子を最終化
             try:
@@ -9028,6 +9064,23 @@ class MainWindow(QMainWindow):
                     raise ValueError("Failed to create valid molecule object")
                 # Centralized chemical/sanitization handling
                 self._apply_chem_check_and_set_flags(mol, source_desc='XYZ')
+
+                # If sanitization/chem check succeeded, set as current 3D molecule
+                # and clear the 'derived from XYZ' flag so downstream UI allows
+                # 3D optimization. Enable the 3D optimize button if present.
+                try:
+                    self.current_mol = mol
+                    # Delivered-from-XYZ flagを無効にする
+                    self.is_xyz_derived = False
+                    if hasattr(self, 'optimize_3d_button'):
+                        try:
+                            self.optimize_3d_button.setEnabled(True)
+                        except Exception:
+                            # If enabling the button fails for any reason, ignore.
+                            pass
+                except Exception:
+                    # Non-fatal UI state update failure; continue returning the mol.
+                    pass
             except Exception as e:
                 # 化学的に不正な構造でも表示は可能にする
                 mol = mol.GetMol()
