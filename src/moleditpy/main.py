@@ -11,7 +11,7 @@ DOI 10.5281/zenodo.17268532
 """
 
 #Version
-VERSION = '1.9.13'
+VERSION = '1.9.14'
 
 print("-----------------------------------------------------")
 print("MoleditPy — A Python-based molecular editing software")
@@ -7505,7 +7505,6 @@ class MainWindow(QMainWindow):
         if self.measurement_mode:
             self.measurement_action.setChecked(False)
             self.toggle_measurement_mode(False)  # 測定モードを無効化
-        
         if self.is_3d_edit_mode:
             self.edit_3d_action.setChecked(False)
             self.toggle_3d_edit_mode(False)  # 3D編集モードを無効化
@@ -8830,6 +8829,13 @@ class MainWindow(QMainWindow):
             
             # 3Dファイル読み込み時はマッピングをクリア（2D構造がないため）
             self.atom_id_to_rdkit_idx_map = {}
+
+            # Clear any leftover XYZ-derived flags on this molecule to ensure
+            # Optimize 3D and related UI reflects the true source format.
+            try:
+                self._clear_xyz_flags(self.current_mol)
+            except Exception:
+                pass
             
             self.draw_molecule_3d(self.current_mol)
             self.plotter.reset_camera()
@@ -8891,29 +8897,50 @@ class MainWindow(QMainWindow):
             # XYZファイル読み込み時はマッピングをクリア（2D構造がないため）
             self.atom_id_to_rdkit_idx_map = {}
 
-            # If mol has no bonds, consider it a pure-XYZ delivery and restrict
-            # some 3D operations. If bonds exist (either from the file or from
-            # DetermineBonds), clear the flag and enable optimization just like
-            # for MOL files.
+            # If the loader marked the molecule as produced under skip_chemistry_checks,
+            # always treat it as XYZ-derived and disable optimization. Otherwise
+            # fall back to the existing behavior based on bond presence.
+            skip_flag = False
             try:
-                has_bonds = (self.current_mol.GetNumBonds() > 0)
+                # Prefer RDKit int prop
+                skip_flag = bool(self.current_mol.GetIntProp("_xyz_skip_checks"))
             except Exception:
-                has_bonds = False
+                try:
+                    skip_flag = bool(getattr(self.current_mol, '_xyz_skip_checks', False))
+                except Exception:
+                    skip_flag = False
 
-            if has_bonds:
-                self.is_xyz_derived = False
-                if hasattr(self, 'optimize_3d_button'):
-                    try:
-                        self.optimize_3d_button.setEnabled(True)
-                    except Exception:
-                        pass
-            else:
+            if skip_flag:
                 self.is_xyz_derived = True
                 if hasattr(self, 'optimize_3d_button'):
                     try:
                         self.optimize_3d_button.setEnabled(False)
                     except Exception:
                         pass
+            else:
+                try:
+                    has_bonds = (self.current_mol.GetNumBonds() > 0)
+                except Exception:
+                    has_bonds = False
+
+                if has_bonds:
+                    self.is_xyz_derived = False
+                    if hasattr(self, 'optimize_3d_button'):
+                        try:
+                            # Only enable optimize if the molecule is not considered XYZ-derived
+                            if not getattr(self, 'is_xyz_derived', False):
+                                self.optimize_3d_button.setEnabled(True)
+                            else:
+                                self.optimize_3d_button.setEnabled(False)
+                        except Exception:
+                            pass
+                else:
+                    self.is_xyz_derived = True
+                    if hasattr(self, 'optimize_3d_button'):
+                        try:
+                            self.optimize_3d_button.setEnabled(False)
+                        except Exception:
+                            pass
 
             self.draw_molecule_3d(self.current_mol)
             self.plotter.reset_camera()
@@ -8950,11 +8977,33 @@ class MainWindow(QMainWindow):
     def load_xyz_file(self, file_path):
         """XYZファイルを読み込んでRDKitのMolオブジェクトを作成する"""
         from rdkit.Chem import rdGeometry
-            
         if not self.check_unsaved_changes():
             return  # ユーザーがキャンセルした場合は何もしない
-        
+
         try:
+            # We will attempt one silent load with default charge=0 (no dialog).
+            # If RDKit emits chemistry warnings (for example "Explicit valence ..."),
+            # prompt the user once for an overall charge and retry. Only one retry is allowed.
+            import io
+            import contextlib
+            import re
+
+            # Helper: prompt for charge once when needed
+            def prompt_for_charge():
+                try:
+                    charge_text, ok = QInputDialog.getText(self, "Import XYZ Charge", "Enter total molecular charge:", text="0")
+                except Exception:
+                    return 0, True
+                if not ok:
+                    return None, False
+                try:
+                    return int(str(charge_text).strip()), True
+                except Exception:
+                    try:
+                        return int(float(str(charge_text).strip())), True
+                    except Exception:
+                        return 0, True
+
             with open(file_path, 'r', encoding='utf-8') as f:
                 lines = f.readlines()
             
@@ -9037,55 +9086,306 @@ class MainWindow(QMainWindow):
             for i, (symbol, x, y, z) in enumerate(atoms_data):
                 conf.SetAtomPosition(i, rdGeometry.Point3D(x, y, z))
             mol.AddConformer(conf)
-            
-            # Try to determine bonds using RDKit's DetermineBonds first (preferred).
-            # If that fails for any reason, fall back to the distance-based estimator.
-            used_rd_determine = False
+            # If user requested to skip chemistry checks, bypass RDKit's
+            # DetermineBonds/sanitization flow entirely and use only the
+            # distance-based bond estimation. Treat the resulting molecule
+            # as "XYZ-derived" (disable 3D optimization) and return it.
             try:
-                from rdkit.Chem import rdDetermineBonds
-                try:
-                    # rdDetermineBonds mutates the molecule in-place
-                    rdDetermineBonds.DetermineBonds(mol, charge=0)
-                    used_rd_determine = True
-                except Exception:
-                    used_rd_determine = False
+                skip_checks = bool(self.settings.get('skip_chemistry_checks', False))
             except Exception:
+                skip_checks = False
+
+            if skip_checks:
                 used_rd_determine = False
-
-            if not used_rd_determine:
-                # 結合を推定（距離ベース）
-                self.estimate_bonds_from_distances(mol)
-            
-                # 分子を最終化
-            try:
-                mol = mol.GetMol()
-                # 基本的な妥当性チェック
-                if mol is None:
-                    raise ValueError("Failed to create valid molecule object")
-                # Centralized chemical/sanitization handling
-                self._apply_chem_check_and_set_flags(mol, source_desc='XYZ')
-
-                # If sanitization/chem check succeeded, set as current 3D molecule
-                # and clear the 'derived from XYZ' flag so downstream UI allows
-                # 3D optimization. Enable the 3D optimize button if present.
                 try:
-                    self.current_mol = mol
-                    # Delivered-from-XYZ flagを無効にする
-                    self.is_xyz_derived = False
+                    # Use the conservative distance-based heuristic to add bonds
+                    self.estimate_bonds_from_distances(mol)
+                except Exception:
+                    # Non-fatal: continue even if distance-based estimation fails
+                    pass
+
+                # Finalize and return a plain Mol object
+                try:
+                    candidate_mol = mol.GetMol()
+                except Exception:
+                    try:
+                        candidate_mol = Chem.Mol(mol)
+                    except Exception:
+                        candidate_mol = None
+
+                if candidate_mol is None:
+                    raise ValueError("Failed to create valid molecule object when skip_chemistry_checks=True")
+
+                # Attach a default charge property
+                try:
+                    candidate_mol.SetIntProp("_xyz_charge", 0)
+                except Exception:
+                    try:
+                        candidate_mol._xyz_charge = 0
+                    except Exception:
+                        pass
+
+                # Mark that this molecule was produced via the skip-chemistry path
+                try:
+                    candidate_mol.SetIntProp("_xyz_skip_checks", 1)
+                except Exception:
+                    try:
+                        candidate_mol._xyz_skip_checks = True
+                    except Exception:
+                        pass
+
+                # Set UI flags consistently: mark as XYZ-derived and disable optimize
+                try:
+                    self.current_mol = candidate_mol
+                    self.is_xyz_derived = True
                     if hasattr(self, 'optimize_3d_button'):
                         try:
-                            self.optimize_3d_button.setEnabled(True)
+                            self.optimize_3d_button.setEnabled(False)
                         except Exception:
-                            # If enabling the button fails for any reason, ignore.
                             pass
                 except Exception:
-                    # Non-fatal UI state update failure; continue returning the mol.
                     pass
-            except Exception as e:
-                # 化学的に不正な構造でも表示は可能にする
-                mol = mol.GetMol()
-                if mol is None:
-                    raise ValueError("Failed to create molecule object")
+
+                # Store atom data for later analysis and return
+                candidate_mol._xyz_atom_data = atoms_data
+                return candidate_mol
+            # We'll attempt silently first with charge=0 and only prompt the user
+            # for a charge when the RDKit processing block fails (raises an
+            # exception). If the user provides a charge, retry; allow repeated
+            # prompts until the user cancels. This preserves the previous
+            # fallback behaviors (skip_chemistry_checks, distance-based bond
+            # estimation) and property attachments.
+            used_rd_determine = False
+            final_mol = None
+
+            # First, try silently with charge=0. If that raises an exception we
+            # will enter a loop prompting the user for a charge and retrying as
+            # long as the user provides values. If the user cancels, return None.
+            def _process_with_charge(charge_val):
+                """Inner helper: attempt to build/finalize molecule with given charge.
+
+                Returns the finalized RDKit Mol on success. May raise exceptions
+                which will be propagated to the caller.
+                """
+                nonlocal used_rd_determine
+                # Capture RDKit stderr while we run the processing to avoid
+                # spamming the console. We won't treat warnings specially here;
+                # only exceptions will trigger a prompt/retry. We also want to
+                # distinguish failures originating from DetermineBonds so the
+                # outer logic can decide whether to prompt the user repeatedly
+                # for different charge values.
+                buf = io.StringIO()
+                determine_failed = False
+                with contextlib.redirect_stderr(buf):
+                    # Try DetermineBonds if available
+                    try:
+                        from rdkit.Chem import rdDetermineBonds
+                        try:
+                            try:
+                                mol_candidate = Chem.RWMol(Chem.Mol(mol))
+                            except Exception:
+                                mol_candidate = Chem.RWMol(mol)
+
+                            # This call may raise. If it does, mark determine_failed
+                            # so the caller can prompt for a different charge.
+                            rdDetermineBonds.DetermineBonds(mol_candidate, charge=charge_val)
+                            mol_to_finalize = mol_candidate
+                            used_rd_determine = True
+                        except Exception:
+                            # DetermineBonds failed for this charge value. We
+                            # should allow the caller to prompt for another
+                            # charge (or cancel). Mark the flag and re-raise a
+                            # dedicated exception to be handled by the outer
+                            # loop.
+                            determine_failed = True
+                            used_rd_determine = False
+                            mol_to_finalize = mol
+                            # Raise a sentinel exception to indicate DetermineBonds failure
+                            raise RuntimeError("DetermineBondsFailed")
+                    except RuntimeError:
+                        # Propagate our sentinel so outer code can catch it.
+                        raise
+                    except Exception:
+                        # rdDetermineBonds not available or import failed; use
+                        # distance-based fallback below.
+                        used_rd_determine = False
+                        mol_to_finalize = mol
+
+                    if not used_rd_determine:
+                        # distance-based fallback
+                        self.estimate_bonds_from_distances(mol_to_finalize)
+
+                    # Finalize molecule
+                    try:
+                        candidate_mol = mol_to_finalize.GetMol()
+                    except Exception:
+                        candidate_mol = None
+
+                    if candidate_mol is None:
+                        # Try salvage path
+                        try:
+                            candidate_mol = mol.GetMol()
+                        except Exception:
+                            candidate_mol = None
+
+                    if candidate_mol is None:
+                        raise ValueError("Failed to create valid molecule object")
+
+                    # Attach charge property if possible
+                    try:
+                        try:
+                            candidate_mol.SetIntProp("_xyz_charge", int(charge_val))
+                        except Exception:
+                            try:
+                                candidate_mol._xyz_charge = int(charge_val)
+                            except Exception:
+                                pass
+                    except Exception:
+                        pass
+
+                    # Preserve whether the user requested skip_chemistry_checks
+                    try:
+                        if bool(self.settings.get('skip_chemistry_checks', False)):
+                            try:
+                                candidate_mol.SetIntProp("_xyz_skip_checks", 1)
+                            except Exception:
+                                try:
+                                    candidate_mol._xyz_skip_checks = True
+                                except Exception:
+                                    pass
+                    except Exception:
+                        pass
+
+                    # Run chemistry checks which may emit warnings to stderr
+                    self._apply_chem_check_and_set_flags(candidate_mol, source_desc='XYZ')
+
+                    # Accept the candidate
+                    return candidate_mol
+
+            # Silent first attempt
+            try:
+                final_mol = _process_with_charge(0)
+            except RuntimeError as e_sentinel:
+                # DetermineBonds explicitly failed for charge=0. In this
+                # situation, repeatedly prompt the user for charges until
+                # DetermineBonds succeeds or the user cancels.
+                while True:
+                    charge_val, ok = prompt_for_charge()
+                    if not ok:
+                        # user cancelled the prompt -> abort
+                        return None
+                    try:
+                        final_mol = _process_with_charge(charge_val)
+                        # success -> break out of prompt loop
+                        break
+                    except RuntimeError:
+                        # DetermineBonds still failing for this charge -> loop again
+                        try:
+                            self.statusBar().showMessage("DetermineBonds failed for that charge; please try a different total charge or cancel.")
+                        except Exception:
+                            pass
+                        continue
+                    except Exception as e_prompt:
+                        # Some other failure occurred after DetermineBonds or in
+                        # finalization. If skip_chemistry_checks is enabled we
+                        # try the salvaged mol once; otherwise prompt again.
+                        try:
+                            skip_checks = bool(self.settings.get('skip_chemistry_checks', False))
+                        except Exception:
+                            skip_checks = False
+
+                        salvaged = None
+                        try:
+                            salvaged = mol.GetMol()
+                        except Exception:
+                            salvaged = None
+
+                        if skip_checks and salvaged is not None:
+                            final_mol = salvaged
+                            # mark salvaged molecule as produced under skip_checks
+                            try:
+                                final_mol.SetIntProp("_xyz_skip_checks", 1)
+                            except Exception:
+                                try:
+                                    final_mol._xyz_skip_checks = True
+                                except Exception:
+                                    pass
+                            break
+                        else:
+                            try:
+                                self.statusBar().showMessage(f"Retry failed: {e_prompt}")
+                            except Exception:
+                                pass
+                            # Continue prompting
+                            continue
+            except Exception as e_silent:
+                # If the silent attempt failed for reasons other than
+                # DetermineBonds failing (e.g., finalization errors), fall
+                # back to salvaging or prompting depending on settings.
+                salvaged = None
+                try:
+                    salvaged = mol.GetMol()
+                except Exception:
+                    salvaged = None
+
+                try:
+                    skip_checks = bool(self.settings.get('skip_chemistry_checks', False))
+                except Exception:
+                    skip_checks = False
+
+                if skip_checks and salvaged is not None:
+                    final_mol = salvaged
+                else:
+                    # Repeatedly prompt until the user cancels or processing
+                    # succeeds.
+                    while True:
+                        charge_val, ok = prompt_for_charge()
+                        if not ok:
+                            # user cancelled the prompt -> abort
+                            return None
+                        try:
+                            final_mol = _process_with_charge(charge_val)
+                            # success -> break out of prompt loop
+                            break
+                        except RuntimeError:
+                            # DetermineBonds failed for this charge -> let the
+                            # user try another
+                            try:
+                                self.statusBar().showMessage("DetermineBonds failed for that charge; please try a different total charge or cancel.")
+                            except Exception:
+                                pass
+                            continue
+                        except Exception as e_prompt:
+                            try:
+                                self.statusBar().showMessage(f"Retry failed: {e_prompt}")
+                            except Exception:
+                                pass
+                            continue
+
+            # If we have a finalized molecule, apply the same UI flags and return
+            if final_mol is not None:
+                mol = final_mol
+                try:
+                    self.current_mol = mol
+
+                    self.is_xyz_derived = not used_rd_determine
+                    if hasattr(self, 'optimize_3d_button'):
+                        try:
+                            has_bonds = mol.GetNumBonds() > 0
+                            # Respect the XYZ-derived flag: if the molecule is XYZ-derived,
+                            # keep Optimize disabled regardless of bond detection.
+                            if getattr(self, 'is_xyz_derived', False):
+                                self.optimize_3d_button.setEnabled(False)
+                            else:
+                                self.optimize_3d_button.setEnabled(bool(has_bonds))
+                        except Exception:
+                            pass
+                except Exception:
+                    pass
+
+                # Store original atom data for analysis
+                mol._xyz_atom_data = atoms_data
+                return mol
             
             # 元のXYZ原子データを分子オブジェクトに保存（分析用）
             mol._xyz_atom_data = atoms_data
@@ -11708,6 +12008,89 @@ class MainWindow(QMainWindow):
                 except Exception:
                     pass
         
+    def _clear_xyz_flags(self, mol=None):
+        """Clear XYZ-derived markers from a molecule (or current_mol) and
+        reset UI flags accordingly.
+
+        This is a best-effort cleanup to remove properties like
+        _xyz_skip_checks and _xyz_atom_data that may have been attached when
+        an XYZ file was previously loaded. After clearing molecule-level
+        markers, the UI flag self.is_xyz_derived is set to False and the
+        Optimize 3D button is re-evaluated (enabled unless chem_check_failed
+        is True).
+        """
+        target = mol if mol is not None else getattr(self, 'current_mol', None)
+        try:
+            if target is not None:
+                # Remove RDKit property if present
+                try:
+                    if hasattr(target, 'HasProp') and target.HasProp('_xyz_skip_checks'):
+                        try:
+                            target.ClearProp('_xyz_skip_checks')
+                        except Exception:
+                            try:
+                                target.SetIntProp('_xyz_skip_checks', 0)
+                            except Exception:
+                                pass
+                except Exception:
+                    pass
+
+                # Remove attribute-style markers if present
+                try:
+                    if hasattr(target, '_xyz_skip_checks'):
+                        try:
+                            delattr(target, '_xyz_skip_checks')
+                        except Exception:
+                            try:
+                                del target._xyz_skip_checks
+                            except Exception:
+                                try:
+                                    target._xyz_skip_checks = False
+                                except Exception:
+                                    pass
+                except Exception:
+                    pass
+
+                try:
+                    if hasattr(target, '_xyz_atom_data'):
+                        try:
+                            delattr(target, '_xyz_atom_data')
+                        except Exception:
+                            try:
+                                del target._xyz_atom_data
+                            except Exception:
+                                try:
+                                    target._xyz_atom_data = None
+                                except Exception:
+                                    pass
+                except Exception:
+                    pass
+
+        except Exception:
+            # best-effort only
+            pass
+
+        # Reset UI flags
+        try:
+            self.is_xyz_derived = False
+        except Exception:
+            pass
+
+        # Enable Optimize 3D unless sanitization failed
+        try:
+            if hasattr(self, 'optimize_3d_button'):
+                if getattr(self, 'chem_check_failed', False):
+                    try:
+                        self.optimize_3d_button.setEnabled(False)
+                    except Exception:
+                        pass
+                else:
+                    try:
+                        self.optimize_3d_button.setEnabled(True)
+                    except Exception:
+                        pass
+        except Exception:
+            pass
     def load_mol_file_for_3d_viewing(self, file_path=None):
         """MOL/SDFファイルを3Dビューアーで開く"""
         if not self.check_unsaved_changes():
@@ -11753,6 +12136,13 @@ class MainWindow(QMainWindow):
                     self.statusBar().showMessage("Failed to generate 3D coordinates")
                     return
             
+            # Clear XYZ markers on the newly loaded MOL/SDF so Optimize 3D is
+            # correctly enabled when appropriate.
+            try:
+                self._clear_xyz_flags(mol)
+            except Exception:
+                pass
+
             # 3Dビューアーに表示
             # Centralized chemical/sanitization handling
             # Ensure the skip_chemistry_checks setting is respected and flags are set
@@ -11884,13 +12274,36 @@ class MainWindow(QMainWindow):
         for action_name in basic_3d_actions:
             if hasattr(self, action_name):
                 # If enabling globally but chemical sanitization failed earlier, keep Optimize 3D disabled
-                if enabled and action_name == 'optimize_3d_button' and getattr(self, 'chem_check_tried', False) and getattr(self, 'chem_check_failed', False):
+                # Keep Optimize disabled when any of these conditions are true:
+                # - we're globally disabling 3D features (enabled==False)
+                # - the current molecule was created via the "skip chemistry checks" XYZ path
+                # - a prior chemistry check was attempted and failed
+                if action_name == 'optimize_3d_button':
                     try:
-                        getattr(self, action_name).setEnabled(False)
+                        # If we're disabling all 3D features, ensure Optimize is disabled
+                        if not enabled:
+                            getattr(self, action_name).setEnabled(False)
+                            continue
+
+                        # If the current molecule was marked as XYZ-derived (skip path), keep Optimize disabled
+                        if getattr(self, 'is_xyz_derived', False):
+                            getattr(self, action_name).setEnabled(False)
+                            continue
+
+                        # If a chemistry check was tried and failed, keep Optimize disabled
+                        if getattr(self, 'chem_check_tried', False) and getattr(self, 'chem_check_failed', False):
+                            getattr(self, action_name).setEnabled(False)
+                            continue
+
+                        # Otherwise enable/disable according to the requested global flag
+                        getattr(self, action_name).setEnabled(bool(enabled))
                     except Exception:
                         pass
                 else:
-                    getattr(self, action_name).setEnabled(enabled)
+                    try:
+                        getattr(self, action_name).setEnabled(enabled)
+                    except Exception:
+                        pass
         
         # 3D Selectボタンは常に有効にする
         if hasattr(self, 'measurement_action'):
