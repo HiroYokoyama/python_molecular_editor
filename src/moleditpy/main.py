@@ -11,7 +11,7 @@ DOI 10.5281/zenodo.17268532
 """
 
 #Version
-VERSION = '1.10.0-alpha.1'
+VERSION = '1.11.0-alpha.1'
 
 print("-----------------------------------------------------")
 print("MoleditPy — A Python-based molecular editing software")
