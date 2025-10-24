@@ -11,7 +11,7 @@ DOI 10.5281/zenodo.17268532
 """
 
 #Version
-VERSION = '1.9.14'
+VERSION = '1.10.1'
 
 print("-----------------------------------------------------")
 print("MoleditPy — A Python-based molecular editing software")
@@ -57,7 +57,7 @@ from rdkit.Chem import Descriptors
 from rdkit.Chem import rdMolDescriptors
 
 
-# Open Babel is disabled for Linux version
+# Open Babel is disabled for Linux ver
 pybel = None
 OBABEL_AVAILABLE = False
 
@@ -8701,6 +8701,37 @@ class MainWindow(QMainWindow):
             self.statusBar().showMessage(f"Error loading from InChI: {e}")
             import traceback
             traceback.print_exc()
+    
+    def fix_mol_counts_line(self, line: str) -> str:
+        """
+        Check and fix the CTAB counts line in a MOL file.
+        If the line already contains 'V3000' or 'V2000' it is left unchanged.
+        Otherwise the line is treated as V2000 and the proper 39-character
+        format (33 chars of counts + ' V2000') is returned.
+        """
+        # If already V3000 or V2000, leave as-is
+        if 'V3000' in line or 'V2000' in line:
+            return line
+
+        # Prepare prefix (first 33 characters for the 11 * I3 fields)
+        prefix = line.rstrip().ljust(33)[0:33]
+        version_str = ' V2000'
+        return prefix + version_str
+
+    def fix_mol_block(self, mol_block: str) -> str:
+        """
+        Given an entire MOL block as a string, ensure the 4th line (CTAB counts
+        line) is valid. If the file has fewer than 4 lines, return as-is.
+        """
+        lines = mol_block.splitlines()
+        if len(lines) < 4:
+            # Not a valid MOL block — return unchanged
+            return mol_block
+
+        counts_line = lines[3]
+        fixed_counts_line = self.fix_mol_counts_line(counts_line)
+        lines[3] = fixed_counts_line
+        return "\n".join(lines)
 
     def load_mol_file(self, file_path=None):
         if not self.check_unsaved_changes():
@@ -8713,9 +8744,23 @@ class MainWindow(QMainWindow):
 
         try:
             self.dragged_atom_info = None
-            suppl = Chem.SDMolSupplier(file_path, removeHs=False)
-            mol = next(suppl, None)
-            if mol is None: raise ValueError("Failed to read molecule from file.")
+            # If this is a single-record .mol file, read & fix the counts line
+            # before parsing. For multi-record .sdf files, keep using SDMolSupplier.
+            _, ext = os.path.splitext(file_path)
+            ext = ext.lower() if ext else ''
+            if ext == '.mol':
+                # Read file text, fix CTAB counts line if needed, then parse
+                with open(file_path, 'r', encoding='utf-8', errors='replace') as fh:
+                    raw = fh.read()
+                fixed_block = self.fix_mol_block(raw)
+                mol = Chem.MolFromMolBlock(fixed_block, sanitize=True, removeHs=False)
+                if mol is None:
+                    raise ValueError("Failed to read molecule from .mol file after fixing counts line.")
+            else:
+                suppl = Chem.SDMolSupplier(file_path, removeHs=False)
+                mol = next(suppl, None)
+                if mol is None:
+                    raise ValueError("Failed to read molecule from file.")
 
             Chem.Kekulize(mol)
 
@@ -8802,16 +8847,31 @@ class MainWindow(QMainWindow):
             traceback.print_exc()
     
     def load_mol_for_3d_viewing(self):
+        # moved to load_mol_file_for_3d_viewing
+        pass
+        '''
         options = QFileDialog.Option.DontUseNativeDialog
         file_path, _ = QFileDialog.getOpenFileName(self, "Load 3D MOL (View Only)", "", "Chemical Files (*.mol *.sdf);;All Files (*)", options=options)
         if not file_path:
             return
 
         try:
-            suppl = Chem.SDMolSupplier(file_path, removeHs=False)
-            mol = next(suppl, None)
-            if mol is None:
-                raise ValueError("Failed to read molecule.")
+            # For single-record .mol files, read & fix counts line before parsing.
+            _, ext = os.path.splitext(file_path)
+            ext = ext.lower() if ext else ''
+            if ext == '.mol':
+                with open(file_path, 'r', encoding='utf-8', errors='replace') as fh:
+                    raw = fh.read()
+                fixed_block = self.fix_mol_block(raw)
+                mol = Chem.MolFromMolBlock(fixed_block, sanitize=True, removeHs=False)
+                if mol is None:
+                    raise ValueError("Failed to read .mol molecule after fixing counts line.")
+            else:
+                suppl = Chem.SDMolSupplier(file_path, removeHs=False)
+                mol = next(suppl, None)
+                if mol is None:
+                    raise ValueError("Failed to read molecule.")
+
             if mol.GetNumConformers() == 0:
                 raise ValueError("MOL file has no 3D coordinates.")
 
@@ -8862,6 +8922,7 @@ class MainWindow(QMainWindow):
             self.restore_ui_for_editing()
             import traceback
             traceback.print_exc()
+            '''
 
     def load_xyz_for_3d_viewing(self, file_path=None):
         """XYZファイルを読み込んで3Dビューアで表示する"""
@@ -12085,6 +12146,7 @@ class MainWindow(QMainWindow):
                         pass
         except Exception:
             pass
+            
     def load_mol_file_for_3d_viewing(self, file_path=None):
         """MOL/SDFファイルを3Dビューアーで開く"""
         if not self.check_unsaved_changes():
@@ -12098,17 +12160,47 @@ class MainWindow(QMainWindow):
                 return
         
         try:
-            # RDKitでMOL/SDFファイルを読み込み（水素を除去しない）
-            if file_path.lower().endswith('.sdf'):
+            
+            # Determine extension early and handle .mol specially by reading the
+            # raw block and running it through fix_mol_block before parsing.
+            _, ext = os.path.splitext(file_path)
+            ext = ext.lower() if ext else ''
+
+            if ext == '.sdf':
                 suppl = Chem.SDMolSupplier(file_path, removeHs=False)
                 mol = next(suppl, None)
+
+            elif ext == '.mol':
+                # Read the file contents and attempt to fix malformed counts lines
+                with open(file_path, 'r', encoding='utf-8', errors='replace') as fh:
+                    raw = fh.read()
+                fixed_block = self.fix_mol_block(raw)
+                mol = Chem.MolFromMolBlock(fixed_block, sanitize=True, removeHs=False)
+
+                # If parsing the fixed block fails, fall back to RDKit's file reader
+                # as a last resort (keeps behavior conservative).
+                if mol is None:
+                    try:
+                        mol = Chem.MolFromMolFile(file_path, removeHs=False)
+                    except Exception:
+                        mol = None
+
+                if mol is None:
+                    self.statusBar().showMessage(f"Failed to load molecule from {file_path}")
+                    return
+
             else:
-                mol = Chem.MolFromMolFile(file_path, removeHs=False)
-            
-            if mol is None:
-                self.statusBar().showMessage(f"Failed to load molecule from {file_path}")
-                return
-            
+                # Default: let RDKit try to read the file (most common case)
+                if file_path.lower().endswith('.sdf'):
+                    suppl = Chem.SDMolSupplier(file_path, removeHs=False)
+                    mol = next(suppl, None)
+                else:
+                    mol = Chem.MolFromMolFile(file_path, removeHs=False)
+
+                if mol is None:
+                    self.statusBar().showMessage(f"Failed to load molecule from {file_path}")
+                    return
+
             # 3D座標がない場合は2Dから3D変換（最適化なし）
             if mol.GetNumConformers() == 0:
                 self.statusBar().showMessage("No 3D coordinates found. Converting to 3D...")
