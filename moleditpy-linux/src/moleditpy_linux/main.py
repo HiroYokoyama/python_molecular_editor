@@ -11,7 +11,7 @@ DOI 10.5281/zenodo.17268532
 """
 
 #Version
-VERSION = '1.10.1'
+VERSION = '1.10.2'
 
 print("-----------------------------------------------------")
 print("MoleditPy — A Python-based molecular editing software")
@@ -57,7 +57,7 @@ from rdkit.Chem import Descriptors
 from rdkit.Chem import rdMolDescriptors
 
 
-# Open Babel is disabled for Linux ver
+# Open Babel is disabled for linux version.
 pybel = None
 OBABEL_AVAILABLE = False
 
@@ -5008,6 +5008,7 @@ class SettingsDialog(QDialog):
         self.parent_window = parent
         
         # デフォルト設定をクラス内で定義
+        # Multi-bond settings are model-specific now (ball_stick, cpk, wireframe, stick)
         self.default_settings = {
             'background_color': '#919191',
             'projection_mode': 'Perspective',
@@ -5030,11 +5031,19 @@ class SettingsDialog(QDialog):
             'stick_atom_radius': 0.15,
             'stick_bond_radius': 0.15,
             'stick_resolution': 16,
-            # Multiple bond offset parameters
-            'double_bond_offset_factor': 2.0,
-            'triple_bond_offset_factor': 2.0,
-            'double_bond_radius_factor': 0.8,
-            'triple_bond_radius_factor': 0.7,
+            # Multiple bond offset parameters (per-model)
+            'ball_stick_double_bond_offset_factor': 2.0,
+            'ball_stick_triple_bond_offset_factor': 2.0,
+            'ball_stick_double_bond_radius_factor': 0.8,
+            'ball_stick_triple_bond_radius_factor': 0.75,
+            'wireframe_double_bond_offset_factor': 3.0,
+            'wireframe_triple_bond_offset_factor': 3.0,
+            'wireframe_double_bond_radius_factor': 0.8,
+            'wireframe_triple_bond_radius_factor': 0.75,
+            'stick_double_bond_offset_factor': 1.5,
+            'stick_triple_bond_offset_factor': 1.0,
+            'stick_double_bond_radius_factor': 0.6,
+            'stick_triple_bond_radius_factor': 0.4,
             # If True, attempts to be permissive when RDKit raises chemical/sanitization errors
             # during file import (useful for viewing malformed XYZ/MOL files). When enabled,
             # element symbol recognition will be coerced where possible and Chem.SanitizeMol
@@ -5058,9 +5067,6 @@ class SettingsDialog(QDialog):
         # Scene設定タブ
         self.create_general_tab()
         
-        # Common設定タブ
-        self.create_common_tab()
-        
         # Ball and Stick設定タブ
         self.create_ball_stick_tab()
         
@@ -5072,6 +5078,9 @@ class SettingsDialog(QDialog):
         
         # Stick設定タブ
         self.create_stick_tab()
+
+        # Other設定タブ
+        self.create_common_tab()
 
         # 渡された設定でUIと内部変数を初期化
         self.update_ui_from_settings(current_settings)
@@ -5180,62 +5189,24 @@ class SettingsDialog(QDialog):
         except Exception:
             pass
 
-        # 二重結合オフセット倍率
-        self.double_offset_slider = QSlider(Qt.Orientation.Horizontal)
-        self.double_offset_slider.setRange(100, 400)  # 1.0 ~ 4.0
-        self.double_offset_label = QLabel("1.50")
-        self.double_offset_slider.valueChanged.connect(lambda v: self.double_offset_label.setText(f"{v/100:.2f}"))
-        double_offset_layout = QHBoxLayout()
-        double_offset_layout.addWidget(self.double_offset_slider)
-        double_offset_layout.addWidget(self.double_offset_label)
-        form_layout.addRow("Double Bond Offset:", double_offset_layout)
-
-        # 三重結合オフセット倍率
-        self.triple_offset_slider = QSlider(Qt.Orientation.Horizontal)
-        self.triple_offset_slider.setRange(100, 400)  # 1.0 ~ 4.0
-        self.triple_offset_label = QLabel("1.20")
-        self.triple_offset_slider.valueChanged.connect(lambda v: self.triple_offset_label.setText(f"{v/100:.2f}"))
-        triple_offset_layout = QHBoxLayout()
-        triple_offset_layout.addWidget(self.triple_offset_slider)
-        triple_offset_layout.addWidget(self.triple_offset_label)
-        form_layout.addRow("Triple Bond Offset:", triple_offset_layout)
-
-        # 二重結合半径倍率
-        self.double_radius_slider = QSlider(Qt.Orientation.Horizontal)
-        self.double_radius_slider.setRange(50, 100)  # 0.5 ~ 1.0
-        self.double_radius_label = QLabel("0.80")
-        self.double_radius_slider.valueChanged.connect(lambda v: self.double_radius_label.setText(f"{v/100:.2f}"))
-        double_radius_layout = QHBoxLayout()
-        double_radius_layout.addWidget(self.double_radius_slider)
-        double_radius_layout.addWidget(self.double_radius_label)
-        form_layout.addRow("Double Bond Thickness:", double_radius_layout)
-
-        # 三重結合半径倍率
-        self.triple_radius_slider = QSlider(Qt.Orientation.Horizontal)
-        self.triple_radius_slider.setRange(50, 100)  # 0.5 ~ 1.0
-        self.triple_radius_label = QLabel("0.70")
-        self.triple_radius_slider.valueChanged.connect(lambda v: self.triple_radius_label.setText(f"{v/100:.2f}"))
-        triple_radius_layout = QHBoxLayout()
-        triple_radius_layout.addWidget(self.triple_radius_slider)
-        triple_radius_layout.addWidget(self.triple_radius_label)
-        form_layout.addRow("Triple Bond Thickness:", triple_radius_layout)
-
-        # --- 区切り線（水平ライン） ---
-        line = QFrame()
-        line.setFrameShape(QFrame.Shape.HLine)
-        line.setFrameShadow(QFrame.Shadow.Sunken)
-        form_layout.addRow(line)
+        # NOTE: Multi-bond offset/thickness settings moved to per-model tabs to allow
+        # independent configuration for Ball&Stick/CPK/Wireframe/Stick.
                 
         # Add the checkbox to the form
         form_layout.addRow("Skip chemistry checks on import xyz file:", self.skip_chem_checks_checkbox)
 
     
-        self.tab_widget.addTab(common_widget, "Common")
+        self.tab_widget.addTab(common_widget, "Other")
     
     def create_ball_stick_tab(self):
         """Ball and Stick設定タブを作成"""
         ball_stick_widget = QWidget()
         form_layout = QFormLayout(ball_stick_widget)
+
+        info_label = QLabel("Ball & Stick model shows atoms as spheres and bonds as cylinders.")
+        info_label.setWordWrap(True)
+        info_label.setStyleSheet("color: #666; font-style: italic; margin-top: 10px;")
+        form_layout.addRow(info_label)
         
         # 原子サイズスケール
         self.bs_atom_scale_slider = QSlider(Qt.Orientation.Horizontal)
@@ -5256,7 +5227,58 @@ class SettingsDialog(QDialog):
         bond_radius_layout.addWidget(self.bs_bond_radius_slider)
         bond_radius_layout.addWidget(self.bs_bond_radius_label)
         form_layout.addRow("Bond Radius:", bond_radius_layout)
-        
+
+        # --- 区切り線（水平ライン） ---
+        line = QFrame()
+        line.setFrameShape(QFrame.Shape.HLine)
+        line.setFrameShadow(QFrame.Shadow.Sunken)
+        form_layout.addRow(line)
+
+        # --- Per-model multi-bond controls (Ball & Stick) ---
+        # 二重/三重結合のオフセット倍率（Ball & Stick）
+        self.bs_double_offset_slider = QSlider(Qt.Orientation.Horizontal)
+        self.bs_double_offset_slider.setRange(100, 400)
+        self.bs_double_offset_label = QLabel("2.00")
+        self.bs_double_offset_slider.valueChanged.connect(lambda v: self.bs_double_offset_label.setText(f"{v/100:.2f}"))
+        bs_double_offset_layout = QHBoxLayout()
+        bs_double_offset_layout.addWidget(self.bs_double_offset_slider)
+        bs_double_offset_layout.addWidget(self.bs_double_offset_label)
+        form_layout.addRow("Double Bond Offset (Ball & Stick):", bs_double_offset_layout)
+
+        self.bs_triple_offset_slider = QSlider(Qt.Orientation.Horizontal)
+        self.bs_triple_offset_slider.setRange(100, 400)
+        self.bs_triple_offset_label = QLabel("2.00")
+        self.bs_triple_offset_slider.valueChanged.connect(lambda v: self.bs_triple_offset_label.setText(f"{v/100:.2f}"))
+        bs_triple_offset_layout = QHBoxLayout()
+        bs_triple_offset_layout.addWidget(self.bs_triple_offset_slider)
+        bs_triple_offset_layout.addWidget(self.bs_triple_offset_label)
+        form_layout.addRow("Triple Bond Offset (Ball & Stick):", bs_triple_offset_layout)
+
+        # 半径倍率
+        self.bs_double_radius_slider = QSlider(Qt.Orientation.Horizontal)
+        self.bs_double_radius_slider.setRange(50, 100)
+        self.bs_double_radius_label = QLabel("0.80")
+        self.bs_double_radius_slider.valueChanged.connect(lambda v: self.bs_double_radius_label.setText(f"{v/100:.2f}"))
+        bs_double_radius_layout = QHBoxLayout()
+        bs_double_radius_layout.addWidget(self.bs_double_radius_slider)
+        bs_double_radius_layout.addWidget(self.bs_double_radius_label)
+        form_layout.addRow("Double Bond Thickness (Ball & Stick):", bs_double_radius_layout)
+
+        self.bs_triple_radius_slider = QSlider(Qt.Orientation.Horizontal)
+        self.bs_triple_radius_slider.setRange(50, 100)
+        self.bs_triple_radius_label = QLabel("0.70")
+        self.bs_triple_radius_slider.valueChanged.connect(lambda v: self.bs_triple_radius_label.setText(f"{v/100:.2f}"))
+        bs_triple_radius_layout = QHBoxLayout()
+        bs_triple_radius_layout.addWidget(self.bs_triple_radius_slider)
+        bs_triple_radius_layout.addWidget(self.bs_triple_radius_label)
+        form_layout.addRow("Triple Bond Thickness (Ball & Stick):", bs_triple_radius_layout)
+
+        # --- 区切り線（水平ライン） ---
+        line = QFrame()
+        line.setFrameShape(QFrame.Shape.HLine)
+        line.setFrameShadow(QFrame.Shadow.Sunken)
+        form_layout.addRow(line)
+
         # 解像度
         self.bs_resolution_slider = QSlider(Qt.Orientation.Horizontal)
         self.bs_resolution_slider.setRange(6, 32)
@@ -5266,13 +5288,18 @@ class SettingsDialog(QDialog):
         resolution_layout.addWidget(self.bs_resolution_slider)
         resolution_layout.addWidget(self.bs_resolution_label)
         form_layout.addRow("Resolution (Quality):", resolution_layout)
-        
+
         self.tab_widget.addTab(ball_stick_widget, "Ball & Stick")
     
     def create_cpk_tab(self):
         """CPK設定タブを作成"""
         cpk_widget = QWidget()
         form_layout = QFormLayout(cpk_widget)
+
+        info_label = QLabel("CPK model shows atoms as space-filling spheres using van der Waals radii.")
+        info_label.setWordWrap(True)
+        info_label.setStyleSheet("color: #666; font-style: italic; margin-top: 10px;")
+        form_layout.addRow(info_label)
         
         # 原子サイズスケール
         self.cpk_atom_scale_slider = QSlider(Qt.Orientation.Horizontal)
@@ -5293,18 +5320,18 @@ class SettingsDialog(QDialog):
         resolution_layout.addWidget(self.cpk_resolution_slider)
         resolution_layout.addWidget(self.cpk_resolution_label)
         form_layout.addRow("Resolution (Quality):", resolution_layout)
-        
-        info_label = QLabel("CPK model shows atoms as space-filling spheres using van der Waals radii.")
-        info_label.setWordWrap(True)
-        info_label.setStyleSheet("color: #666; font-style: italic; margin-top: 10px;")
-        form_layout.addRow("", info_label)
-        
+
         self.tab_widget.addTab(cpk_widget, "CPK (Space-filling)")
     
     def create_wireframe_tab(self):
         """Wireframe設定タブを作成"""
         wireframe_widget = QWidget()
         form_layout = QFormLayout(wireframe_widget)
+
+        info_label = QLabel("Wireframe model shows molecular structure with thin lines only.")
+        info_label.setWordWrap(True)
+        info_label.setStyleSheet("color: #666; font-style: italic; margin-top: 10px;")
+        form_layout.addRow(info_label)
         
         # ボンド半径
         self.wf_bond_radius_slider = QSlider(Qt.Orientation.Horizontal)
@@ -5315,7 +5342,57 @@ class SettingsDialog(QDialog):
         bond_radius_layout.addWidget(self.wf_bond_radius_slider)
         bond_radius_layout.addWidget(self.wf_bond_radius_label)
         form_layout.addRow("Bond Radius:", bond_radius_layout)
-        
+
+
+        # --- 区切り線（水平ライン） ---
+        line = QFrame()
+        line.setFrameShape(QFrame.Shape.HLine)
+        line.setFrameShadow(QFrame.Shadow.Sunken)
+        form_layout.addRow(line)
+            
+        # --- Per-model multi-bond controls (Wireframe) ---
+        self.wf_double_offset_slider = QSlider(Qt.Orientation.Horizontal)
+        self.wf_double_offset_slider.setRange(100, 400)
+        self.wf_double_offset_label = QLabel("2.00")
+        self.wf_double_offset_slider.valueChanged.connect(lambda v: self.wf_double_offset_label.setText(f"{v/100:.2f}"))
+        wf_double_offset_layout = QHBoxLayout()
+        wf_double_offset_layout.addWidget(self.wf_double_offset_slider)
+        wf_double_offset_layout.addWidget(self.wf_double_offset_label)
+        form_layout.addRow("Double Bond Offset (Wireframe):", wf_double_offset_layout)
+    
+        self.wf_triple_offset_slider = QSlider(Qt.Orientation.Horizontal)
+        self.wf_triple_offset_slider.setRange(100, 400)
+        self.wf_triple_offset_label = QLabel("2.00")
+        self.wf_triple_offset_slider.valueChanged.connect(lambda v: self.wf_triple_offset_label.setText(f"{v/100:.2f}"))
+        wf_triple_offset_layout = QHBoxLayout()
+        wf_triple_offset_layout.addWidget(self.wf_triple_offset_slider)
+        wf_triple_offset_layout.addWidget(self.wf_triple_offset_label)
+        form_layout.addRow("Triple Bond Offset (Wireframe):", wf_triple_offset_layout)
+    
+        self.wf_double_radius_slider = QSlider(Qt.Orientation.Horizontal)
+        self.wf_double_radius_slider.setRange(50, 100)
+        self.wf_double_radius_label = QLabel("0.80")
+        self.wf_double_radius_slider.valueChanged.connect(lambda v: self.wf_double_radius_label.setText(f"{v/100:.2f}"))
+        wf_double_radius_layout = QHBoxLayout()
+        wf_double_radius_layout.addWidget(self.wf_double_radius_slider)
+        wf_double_radius_layout.addWidget(self.wf_double_radius_label)
+        form_layout.addRow("Double Bond Thickness (Wireframe):", wf_double_radius_layout)
+    
+        self.wf_triple_radius_slider = QSlider(Qt.Orientation.Horizontal)
+        self.wf_triple_radius_slider.setRange(50, 100)
+        self.wf_triple_radius_label = QLabel("0.70")
+        self.wf_triple_radius_slider.valueChanged.connect(lambda v: self.wf_triple_radius_label.setText(f"{v/100:.2f}"))
+        wf_triple_radius_layout = QHBoxLayout()
+        wf_triple_radius_layout.addWidget(self.wf_triple_radius_slider)
+        wf_triple_radius_layout.addWidget(self.wf_triple_radius_label)
+        form_layout.addRow("Triple Bond Thickness (Wireframe):", wf_triple_radius_layout)
+
+        # --- 区切り線（水平ライン） ---
+        line = QFrame()
+        line.setFrameShape(QFrame.Shape.HLine)
+        line.setFrameShadow(QFrame.Shadow.Sunken)
+        form_layout.addRow(line)
+
         # 解像度
         self.wf_resolution_slider = QSlider(Qt.Orientation.Horizontal)
         self.wf_resolution_slider.setRange(4, 16)
@@ -5325,18 +5402,18 @@ class SettingsDialog(QDialog):
         resolution_layout.addWidget(self.wf_resolution_slider)
         resolution_layout.addWidget(self.wf_resolution_label)
         form_layout.addRow("Resolution (Quality):", resolution_layout)
-        
-        info_label = QLabel("Wireframe model shows molecular structure with thin lines only (no atoms displayed).")
-        info_label.setWordWrap(True)
-        info_label.setStyleSheet("color: #666; font-style: italic; margin-top: 10px;")
-        form_layout.addRow("", info_label)
-        
+    
         self.tab_widget.addTab(wireframe_widget, "Wireframe")
     
     def create_stick_tab(self):
         """Stick設定タブを作成"""
         stick_widget = QWidget()
         form_layout = QFormLayout(stick_widget)
+
+        info_label = QLabel("Stick model shows bonds as thick cylinders with atoms as small spheres.")
+        info_label.setWordWrap(True)
+        info_label.setStyleSheet("color: #666; font-style: italic; margin-top: 10px;")
+        form_layout.addRow(info_label)
         
         # 原子半径
         self.stick_atom_radius_slider = QSlider(Qt.Orientation.Horizontal)
@@ -5358,6 +5435,55 @@ class SettingsDialog(QDialog):
         bond_radius_layout.addWidget(self.stick_bond_radius_label)
         form_layout.addRow("Bond Radius:", bond_radius_layout)
         
+        # --- 区切り線（水平ライン） ---
+        line = QFrame()
+        line.setFrameShape(QFrame.Shape.HLine)
+        line.setFrameShadow(QFrame.Shadow.Sunken)
+        form_layout.addRow(line)
+
+        # --- Per-model multi-bond controls (Stick) ---
+        self.stick_double_offset_slider = QSlider(Qt.Orientation.Horizontal)
+        self.stick_double_offset_slider.setRange(50, 400)
+        self.stick_double_offset_label = QLabel("2.00")
+        self.stick_double_offset_slider.valueChanged.connect(lambda v: self.stick_double_offset_label.setText(f"{v/100:.2f}"))
+        stick_double_offset_layout = QHBoxLayout()
+        stick_double_offset_layout.addWidget(self.stick_double_offset_slider)
+        stick_double_offset_layout.addWidget(self.stick_double_offset_label)
+        form_layout.addRow("Double Bond Offset (Stick):", stick_double_offset_layout)
+
+        self.stick_triple_offset_slider = QSlider(Qt.Orientation.Horizontal)
+        self.stick_triple_offset_slider.setRange(50, 400)
+        self.stick_triple_offset_label = QLabel("2.00")
+        self.stick_triple_offset_slider.valueChanged.connect(lambda v: self.stick_triple_offset_label.setText(f"{v/100:.2f}"))
+        stick_triple_offset_layout = QHBoxLayout()
+        stick_triple_offset_layout.addWidget(self.stick_triple_offset_slider)
+        stick_triple_offset_layout.addWidget(self.stick_triple_offset_label)
+        form_layout.addRow("Triple Bond Offset (Stick):", stick_triple_offset_layout)
+
+        self.stick_double_radius_slider = QSlider(Qt.Orientation.Horizontal)
+        self.stick_double_radius_slider.setRange(20, 100)
+        self.stick_double_radius_label = QLabel("0.80")
+        self.stick_double_radius_slider.valueChanged.connect(lambda v: self.stick_double_radius_label.setText(f"{v/100:.2f}"))
+        stick_double_radius_layout = QHBoxLayout()
+        stick_double_radius_layout.addWidget(self.stick_double_radius_slider)
+        stick_double_radius_layout.addWidget(self.stick_double_radius_label)
+        form_layout.addRow("Double Bond Thickness (Stick):", stick_double_radius_layout)
+
+        self.stick_triple_radius_slider = QSlider(Qt.Orientation.Horizontal)
+        self.stick_triple_radius_slider.setRange(20, 100)
+        self.stick_triple_radius_label = QLabel("0.70")
+        self.stick_triple_radius_slider.valueChanged.connect(lambda v: self.stick_triple_radius_label.setText(f"{v/100:.2f}"))
+        stick_triple_radius_layout = QHBoxLayout()
+        stick_triple_radius_layout.addWidget(self.stick_triple_radius_slider)
+        stick_triple_radius_layout.addWidget(self.stick_triple_radius_label)
+        form_layout.addRow("Triple Bond Thickness (Stick):", stick_triple_radius_layout)
+
+        # --- 区切り線（水平ライン） ---
+        line = QFrame()
+        line.setFrameShape(QFrame.Shape.HLine)
+        line.setFrameShadow(QFrame.Shadow.Sunken)
+        form_layout.addRow(line)
+        
         # 解像度
         self.stick_resolution_slider = QSlider(Qt.Orientation.Horizontal)
         self.stick_resolution_slider.setRange(6, 32)
@@ -5367,12 +5493,10 @@ class SettingsDialog(QDialog):
         resolution_layout.addWidget(self.stick_resolution_slider)
         resolution_layout.addWidget(self.stick_resolution_label)
         form_layout.addRow("Resolution (Quality):", resolution_layout)
-        
-        info_label = QLabel("Stick model shows bonds as thick cylinders with atoms as small spheres.")
-        info_label.setWordWrap(True)
-        info_label.setStyleSheet("color: #666; font-style: italic; margin-top: 10px;")
-        form_layout.addRow("", info_label)
-        
+
+
+
+
         self.tab_widget.addTab(stick_widget, "Stick")
 
     def reset_current_tab(self):
@@ -5381,6 +5505,9 @@ class SettingsDialog(QDialog):
         tab_name = self.tab_widget.tabText(current_tab_index)
         
         # 各タブの設定項目を定義
+        # Note: tab labels must match those added to the QTabWidget ("Scene", "Ball & Stick",
+        # "CPK (Space-filling)", "Wireframe", "Stick", "Other"). Use the per-model
+        # multi-bond keys present in self.default_settings.
         tab_settings = {
             "Scene": {
                 'background_color': self.default_settings['background_color'],
@@ -5391,29 +5518,39 @@ class SettingsDialog(QDialog):
                 'specular': self.default_settings['specular'],
                 'specular_power': self.default_settings['specular_power']
             },
-            "Common": {
-                'double_bond_offset_factor': self.default_settings['double_bond_offset_factor'],
-                'triple_bond_offset_factor': self.default_settings['triple_bond_offset_factor'],
-                'double_bond_radius_factor': self.default_settings['double_bond_radius_factor'],
-                'triple_bond_radius_factor': self.default_settings['triple_bond_radius_factor']
+            "Other": {
+                # general/common options
+                'skip_chemistry_checks': self.default_settings.get('skip_chemistry_checks', False),
             },
             "Ball & Stick": {
                 'ball_stick_atom_scale': self.default_settings['ball_stick_atom_scale'],
                 'ball_stick_bond_radius': self.default_settings['ball_stick_bond_radius'],
-                'ball_stick_resolution': self.default_settings['ball_stick_resolution']
+                'ball_stick_resolution': self.default_settings['ball_stick_resolution'],
+                'ball_stick_double_bond_offset_factor': self.default_settings.get('ball_stick_double_bond_offset_factor', 2.0),
+                'ball_stick_triple_bond_offset_factor': self.default_settings.get('ball_stick_triple_bond_offset_factor', 2.0),
+                'ball_stick_double_bond_radius_factor': self.default_settings.get('ball_stick_double_bond_radius_factor', 0.8),
+                'ball_stick_triple_bond_radius_factor': self.default_settings.get('ball_stick_triple_bond_radius_factor', 0.75)
             },
             "CPK (Space-filling)": {
                 'cpk_atom_scale': self.default_settings['cpk_atom_scale'],
-                'cpk_resolution': self.default_settings['cpk_resolution']
+                'cpk_resolution': self.default_settings['cpk_resolution'],
             },
             "Wireframe": {
                 'wireframe_bond_radius': self.default_settings['wireframe_bond_radius'],
-                'wireframe_resolution': self.default_settings['wireframe_resolution']
+                'wireframe_resolution': self.default_settings['wireframe_resolution'],
+                'wireframe_double_bond_offset_factor': self.default_settings.get('wireframe_double_bond_offset_factor', 3.0),
+                'wireframe_triple_bond_offset_factor': self.default_settings.get('wireframe_triple_bond_offset_factor', 3.0),
+                'wireframe_double_bond_radius_factor': self.default_settings.get('wireframe_double_bond_radius_factor', 0.8),
+                'wireframe_triple_bond_radius_factor': self.default_settings.get('wireframe_triple_bond_radius_factor', 0.75)
             },
             "Stick": {
                 'stick_atom_radius': self.default_settings['stick_atom_radius'],
                 'stick_bond_radius': self.default_settings['stick_bond_radius'],
-                'stick_resolution': self.default_settings['stick_resolution']
+                'stick_resolution': self.default_settings['stick_resolution'],
+                'stick_double_bond_offset_factor': self.default_settings.get('stick_double_bond_offset_factor', 1.5),
+                'stick_triple_bond_offset_factor': self.default_settings.get('stick_triple_bond_offset_factor', 1.0),
+                'stick_double_bond_radius_factor': self.default_settings.get('stick_double_bond_radius_factor', 0.6),
+                'stick_triple_bond_radius_factor': self.default_settings.get('stick_triple_bond_radius_factor', 0.4)
             }
         }
         
@@ -5511,11 +5648,19 @@ class SettingsDialog(QDialog):
             'stick_atom_radius': self.stick_atom_radius_slider.value() / 100.0,
             'stick_bond_radius': self.stick_bond_radius_slider.value() / 100.0,
             'stick_resolution': self.stick_resolution_slider.value(),
-            # Multi-bond settings
-            'double_bond_offset_factor': self.double_offset_slider.value() / 100.0,
-            'triple_bond_offset_factor': self.triple_offset_slider.value() / 100.0,
-            'double_bond_radius_factor': self.double_radius_slider.value() / 100.0,
-            'triple_bond_radius_factor': self.triple_radius_slider.value() / 100.0,
+            # Multi-bond settings (per-model)
+            'ball_stick_double_bond_offset_factor': self.bs_double_offset_slider.value() / 100.0,
+            'ball_stick_triple_bond_offset_factor': self.bs_triple_offset_slider.value() / 100.0,
+            'ball_stick_double_bond_radius_factor': self.bs_double_radius_slider.value() / 100.0,
+            'ball_stick_triple_bond_radius_factor': self.bs_triple_radius_slider.value() / 100.0,
+            'wireframe_double_bond_offset_factor': self.wf_double_offset_slider.value() / 100.0,
+            'wireframe_triple_bond_offset_factor': self.wf_triple_offset_slider.value() / 100.0,
+            'wireframe_double_bond_radius_factor': self.wf_double_radius_slider.value() / 100.0,
+            'wireframe_triple_bond_radius_factor': self.wf_triple_radius_slider.value() / 100.0,
+            'stick_double_bond_offset_factor': self.stick_double_offset_slider.value() / 100.0,
+            'stick_triple_bond_offset_factor': self.stick_triple_offset_slider.value() / 100.0,
+            'stick_double_bond_radius_factor': self.stick_double_radius_slider.value() / 100.0,
+            'stick_triple_bond_radius_factor': self.stick_triple_radius_slider.value() / 100.0,
         }
     
     def reset_to_defaults(self):
@@ -5581,22 +5726,57 @@ class SettingsDialog(QDialog):
         self.stick_resolution_slider.setValue(settings_dict.get('stick_resolution', self.default_settings['stick_resolution']))
         self.stick_resolution_label.setText(str(settings_dict.get('stick_resolution', self.default_settings['stick_resolution'])))
         
-        # 多重結合設定
-        double_offset = int(settings_dict.get('double_bond_offset_factor', self.default_settings['double_bond_offset_factor']) * 100)
-        self.double_offset_slider.setValue(double_offset)
-        self.double_offset_label.setText(f"{double_offset/100:.2f}")
-        
-        triple_offset = int(settings_dict.get('triple_bond_offset_factor', self.default_settings['triple_bond_offset_factor']) * 100)
-        self.triple_offset_slider.setValue(triple_offset)
-        self.triple_offset_label.setText(f"{triple_offset/100:.2f}")
-        
-        double_radius = int(settings_dict.get('double_bond_radius_factor', self.default_settings['double_bond_radius_factor']) * 100)
-        self.double_radius_slider.setValue(double_radius)
-        self.double_radius_label.setText(f"{double_radius/100:.2f}")
-        
-        triple_radius = int(settings_dict.get('triple_bond_radius_factor', self.default_settings['triple_bond_radius_factor']) * 100)
-        self.triple_radius_slider.setValue(triple_radius)
-        self.triple_radius_label.setText(f"{triple_radius/100:.2f}")
+        # 多重結合設定（モデル毎） — 後方互換のため既存のグローバルキーがあればフォールバック
+        # Ball & Stick
+        bs_double_offset = int(settings_dict.get('ball_stick_double_bond_offset_factor', settings_dict.get('double_bond_offset_factor', self.default_settings.get('ball_stick_double_bond_offset_factor', 2.0))) * 100)
+        self.bs_double_offset_slider.setValue(bs_double_offset)
+        self.bs_double_offset_label.setText(f"{bs_double_offset/100:.2f}")
+    
+        bs_triple_offset = int(settings_dict.get('ball_stick_triple_bond_offset_factor', settings_dict.get('triple_bond_offset_factor', self.default_settings.get('ball_stick_triple_bond_offset_factor', 2.0))) * 100)
+        self.bs_triple_offset_slider.setValue(bs_triple_offset)
+        self.bs_triple_offset_label.setText(f"{bs_triple_offset/100:.2f}")
+    
+        bs_double_radius = int(settings_dict.get('ball_stick_double_bond_radius_factor', settings_dict.get('double_bond_radius_factor', self.default_settings.get('ball_stick_double_bond_radius_factor', 1.0))) * 100)
+        self.bs_double_radius_slider.setValue(bs_double_radius)
+        self.bs_double_radius_label.setText(f"{bs_double_radius/100:.2f}")
+    
+        bs_triple_radius = int(settings_dict.get('ball_stick_triple_bond_radius_factor', settings_dict.get('triple_bond_radius_factor', self.default_settings.get('ball_stick_triple_bond_radius_factor', 0.75))) * 100)
+        self.bs_triple_radius_slider.setValue(bs_triple_radius)
+        self.bs_triple_radius_label.setText(f"{bs_triple_radius/100:.2f}")
+    
+        # Wireframe
+        wf_double_offset = int(settings_dict.get('wireframe_double_bond_offset_factor', settings_dict.get('double_bond_offset_factor', self.default_settings.get('wireframe_double_bond_offset_factor', 3.0))) * 100)
+        self.wf_double_offset_slider.setValue(wf_double_offset)
+        self.wf_double_offset_label.setText(f"{wf_double_offset/100:.2f}")
+    
+        wf_triple_offset = int(settings_dict.get('wireframe_triple_bond_offset_factor', settings_dict.get('triple_bond_offset_factor', self.default_settings.get('wireframe_triple_bond_offset_factor', 3.0))) * 100)
+        self.wf_triple_offset_slider.setValue(wf_triple_offset)
+        self.wf_triple_offset_label.setText(f"{wf_triple_offset/100:.2f}")
+    
+        wf_double_radius = int(settings_dict.get('wireframe_double_bond_radius_factor', settings_dict.get('double_bond_radius_factor', self.default_settings.get('wireframe_double_bond_radius_factor', 1.0))) * 100)
+        self.wf_double_radius_slider.setValue(wf_double_radius)
+        self.wf_double_radius_label.setText(f"{wf_double_radius/100:.2f}")
+    
+        wf_triple_radius = int(settings_dict.get('wireframe_triple_bond_radius_factor', settings_dict.get('triple_bond_radius_factor', self.default_settings.get('wireframe_triple_bond_radius_factor', 0.75))) * 100)
+        self.wf_triple_radius_slider.setValue(wf_triple_radius)
+        self.wf_triple_radius_label.setText(f"{wf_triple_radius/100:.2f}")
+    
+        # Stick
+        stick_double_offset = int(settings_dict.get('stick_double_bond_offset_factor', settings_dict.get('double_bond_offset_factor', self.default_settings.get('stick_double_bond_offset_factor', 1.5))) * 100)
+        self.stick_double_offset_slider.setValue(stick_double_offset)
+        self.stick_double_offset_label.setText(f"{stick_double_offset/100:.2f}")
+    
+        stick_triple_offset = int(settings_dict.get('stick_triple_bond_offset_factor', settings_dict.get('triple_bond_offset_factor', self.default_settings.get('stick_triple_bond_offset_factor', 1.0))) * 100)
+        self.stick_triple_offset_slider.setValue(stick_triple_offset)
+        self.stick_triple_offset_label.setText(f"{stick_triple_offset/100:.2f}")
+    
+        stick_double_radius = int(settings_dict.get('stick_double_bond_radius_factor', settings_dict.get('double_bond_radius_factor', self.default_settings.get('stick_double_bond_radius_factor', 0.60))) * 100)
+        self.stick_double_radius_slider.setValue(stick_double_radius)
+        self.stick_double_radius_label.setText(f"{stick_double_radius/100:.2f}")
+    
+        stick_triple_radius = int(settings_dict.get('stick_triple_bond_radius_factor', settings_dict.get('triple_bond_radius_factor', self.default_settings.get('stick_triple_bond_radius_factor', 0.40))) * 100)
+        self.stick_triple_radius_slider.setValue(stick_triple_radius)
+        self.stick_triple_radius_label.setText(f"{stick_triple_radius/100:.2f}")
         
         # Projection mode
         proj_mode = settings_dict.get('projection_mode', self.default_settings.get('projection_mode', 'Perspective'))
@@ -5642,11 +5822,19 @@ class SettingsDialog(QDialog):
             'stick_atom_radius': self.stick_atom_radius_slider.value() / 100.0,
             'stick_bond_radius': self.stick_bond_radius_slider.value() / 100.0,
             'stick_resolution': self.stick_resolution_slider.value(),
-            # Multiple bond offset settings
-            'double_bond_offset_factor': self.double_offset_slider.value() / 100.0,
-            'triple_bond_offset_factor': self.triple_offset_slider.value() / 100.0,
-            'double_bond_radius_factor': self.double_radius_slider.value() / 100.0,
-            'triple_bond_radius_factor': self.triple_radius_slider.value() / 100.0,
+            # Multiple bond offset settings (per-model)
+            'ball_stick_double_bond_offset_factor': self.bs_double_offset_slider.value() / 100.0,
+            'ball_stick_triple_bond_offset_factor': self.bs_triple_offset_slider.value() / 100.0,
+            'ball_stick_double_bond_radius_factor': self.bs_double_radius_slider.value() / 100.0,
+            'ball_stick_triple_bond_radius_factor': self.bs_triple_radius_slider.value() / 100.0,
+            'wireframe_double_bond_offset_factor': self.wf_double_offset_slider.value() / 100.0,
+            'wireframe_triple_bond_offset_factor': self.wf_triple_offset_slider.value() / 100.0,
+            'wireframe_double_bond_radius_factor': self.wf_double_radius_slider.value() / 100.0,
+            'wireframe_triple_bond_radius_factor': self.wf_triple_radius_slider.value() / 100.0,
+            'stick_double_bond_offset_factor': self.stick_double_offset_slider.value() / 100.0,
+            'stick_triple_bond_offset_factor': self.stick_triple_offset_slider.value() / 100.0,
+            'stick_double_bond_radius_factor': self.stick_double_radius_slider.value() / 100.0,
+            'stick_triple_bond_radius_factor': self.stick_triple_radius_slider.value() / 100.0,
             'skip_chemistry_checks': self.skip_chem_checks_checkbox.isChecked(),
         }
 
@@ -6266,6 +6454,10 @@ class MainWindow(QMainWindow):
         export_xyz_action = QAction("Export as XYZ...", self)
         export_xyz_action.triggered.connect(self.save_as_xyz)
         export_menu.addAction(export_xyz_action)
+
+        export_png_action = QAction("Export as PNG...", self)
+        export_png_action.triggered.connect(self.export_3d_png)
+        export_menu.addAction(export_png_action)
 
         self.export_button.setMenu(export_menu)
         right_buttons_layout.addWidget(self.export_button)
@@ -7128,7 +7320,13 @@ class MainWindow(QMainWindow):
             lambda: QDesktopServices.openUrl(QUrl("https://github.com/HiroYokoyama/python_molecular_editor/wiki"))
         )
         help_menu.addAction(github_wiki_action)
-        
+
+        manual_action = QAction("User Manual", self)
+        manual_action.triggered.connect(
+            lambda: QDesktopServices.openUrl(QUrl("https://hiroyokoyama.github.io/python_molecular_editor/manual/manual"))
+        )
+        help_menu.addAction(manual_action)
+
         # 3D関連機能の初期状態を統一的に設定
         self._enable_3d_features(False)
         
@@ -8737,8 +8935,7 @@ class MainWindow(QMainWindow):
         if not self.check_unsaved_changes():
                 return  # ユーザーがキャンセルした場合は何もしない
         if not file_path:
-            options = QFileDialog.Option.DontUseNativeDialog
-            file_path, _ = QFileDialog.getOpenFileName(self, "Import MOL File", "", "Chemical Files (*.mol *.sdf);;All Files (*)", options=options)
+            file_path, _ = QFileDialog.getOpenFileName(self, "Import MOL File", "", "Chemical Files (*.mol *.sdf);;All Files (*)")
             if not file_path: 
                 return
 
@@ -8850,8 +9047,7 @@ class MainWindow(QMainWindow):
         # moved to load_mol_file_for_3d_viewing
         pass
         '''
-        options = QFileDialog.Option.DontUseNativeDialog
-        file_path, _ = QFileDialog.getOpenFileName(self, "Load 3D MOL (View Only)", "", "Chemical Files (*.mol *.sdf);;All Files (*)", options=options)
+        file_path, _ = QFileDialog.getOpenFileName(self, "Load 3D MOL (View Only)", "", "Chemical Files (*.mol *.sdf);;All Files (*)")
         if not file_path:
             return
 
@@ -8927,8 +9123,7 @@ class MainWindow(QMainWindow):
     def load_xyz_for_3d_viewing(self, file_path=None):
         """XYZファイルを読み込んで3Dビューアで表示する"""
         if not file_path:
-            options = QFileDialog.Option.DontUseNativeDialog
-            file_path, _ = QFileDialog.getOpenFileName(self, "Load 3D XYZ (View Only)", "", "XYZ Files (*.xyz);;All Files (*)", options=options)
+            file_path, _ = QFileDialog.getOpenFileName(self, "Load 3D XYZ (View Only)", "", "XYZ Files (*.xyz);;All Files (*)")
             if not file_path:
                 return
 
@@ -9032,6 +9227,8 @@ class MainWindow(QMainWindow):
     def load_xyz_file(self, file_path):
         """XYZファイルを読み込んでRDKitのMolオブジェクトを作成する"""
         from rdkit.Chem import rdGeometry
+        # Ensure PyQt dialog widgets are available for the custom charge dialog
+        from PyQt6.QtWidgets import QDialog, QVBoxLayout, QLineEdit, QPushButton, QLabel, QDialogButtonBox, QHBoxLayout
         if not self.check_unsaved_changes():
             return  # ユーザーがキャンセルした場合は何もしない
 
@@ -9044,20 +9241,95 @@ class MainWindow(QMainWindow):
             import re
 
             # Helper: prompt for charge once when needed
+            # Returns a tuple: (charge_value_or_0, accepted:bool, skip_chemistry:bool)
             def prompt_for_charge():
                 try:
-                    charge_text, ok = QInputDialog.getText(self, "Import XYZ Charge", "Enter total molecular charge:", text="0")
+                    # Create a custom dialog so we can provide a "Skip chemistry" button
+                    dialog = QDialog(self)
+                    dialog.setWindowTitle("Import XYZ Charge")
+                    layout = QVBoxLayout(dialog)
+
+                    label = QLabel("Enter total molecular charge:")
+                    line_edit = QLineEdit(dialog)
+                    line_edit.setText("")
+
+                    # Standard OK/Cancel buttons
+                    btn_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel, parent=dialog)
+
+                    # Additional Skip chemistry button
+                    skip_btn = QPushButton("Skip chemistry", dialog)
+
+                    # Horizontal layout for buttons
+                    hl = QHBoxLayout()
+                    hl.addWidget(btn_box)
+                    hl.addWidget(skip_btn)
+
+                    layout.addWidget(label)
+                    layout.addWidget(line_edit)
+                    layout.addLayout(hl)
+
+                    result = {"accepted": False, "skip": False}
+
+                    def on_ok():
+                        result["accepted"] = True
+                        dialog.accept()
+
+                    def on_cancel():
+                        dialog.reject()
+
+                    def on_skip():
+                        # Mark skip and accept so caller can proceed with skip behavior
+                        result["skip"] = True
+                        dialog.accept()
+
+                    try:
+                        btn_box.button(QDialogButtonBox.Ok).clicked.connect(on_ok)
+                        btn_box.button(QDialogButtonBox.Cancel).clicked.connect(on_cancel)
+                    except Exception:
+                        # Fallback if button lookup fails
+                        btn_box.accepted.connect(on_ok)
+                        btn_box.rejected.connect(on_cancel)
+
+                    skip_btn.clicked.connect(on_skip)
+
+                    # Execute dialog modally
+                    if dialog.exec_() != QDialog.Accepted:
+                        return None, False, False
+
+                    if result["skip"]:
+                        # User chose to skip chemistry checks; return skip flag
+                        return 0, True, True
+
+                    if not result["accepted"]:
+                        return None, False, False
+
+                    charge_text = line_edit.text()
                 except Exception:
-                    return 0, True
-                if not ok:
-                    return None, False
+                    # On any dialog creation error, fall back to simple input dialog
+                    try:
+                        charge_text, ok = QInputDialog.getText(self, "Import XYZ Charge", "Enter total molecular charge:", text="0")
+                    except Exception:
+                        return 0, True, False
+                    if not ok:
+                        return None, False, False
+                    try:
+                        return int(str(charge_text).strip()), True, False
+                    except Exception:
+                        try:
+                            return int(float(str(charge_text).strip())), True, False
+                        except Exception:
+                            return 0, True, False
+
+                if charge_text is None:
+                    return None, False, False
+
                 try:
-                    return int(str(charge_text).strip()), True
+                    return int(str(charge_text).strip()), True, False
                 except Exception:
                     try:
-                        return int(float(str(charge_text).strip())), True
+                        return int(float(str(charge_text).strip())), True, False
                     except Exception:
-                        return 0, True
+                        return 0, True, False
 
             with open(file_path, 'r', encoding='utf-8') as f:
                 lines = f.readlines()
@@ -9325,10 +9597,40 @@ class MainWindow(QMainWindow):
                 # situation, repeatedly prompt the user for charges until
                 # DetermineBonds succeeds or the user cancels.
                 while True:
-                    charge_val, ok = prompt_for_charge()
+                    charge_val, ok, skip_flag = prompt_for_charge()
                     if not ok:
                         # user cancelled the prompt -> abort
                         return None
+                    if skip_flag:
+                        # User selected Skip chemistry: attempt distance-based salvage
+                        try:
+                            self.estimate_bonds_from_distances(mol)
+                        except Exception:
+                            pass
+                        salvaged = None
+                        try:
+                            salvaged = mol.GetMol()
+                        except Exception:
+                            salvaged = None
+
+                        if salvaged is not None:
+                            try:
+                                salvaged.SetIntProp("_xyz_skip_checks", 1)
+                            except Exception:
+                                try:
+                                    salvaged._xyz_skip_checks = True
+                                except Exception:
+                                    pass
+                            final_mol = salvaged
+                            break
+                        else:
+                            # Could not salvage; abort
+                            try:
+                                self.statusBar().showMessage("Skip chemistry selected but failed to create salvaged molecule.")
+                            except Exception:
+                                pass
+                            return None
+
                     try:
                         final_mol = _process_with_charge(charge_val)
                         # success -> break out of prompt loop
@@ -9394,10 +9696,39 @@ class MainWindow(QMainWindow):
                     # Repeatedly prompt until the user cancels or processing
                     # succeeds.
                     while True:
-                        charge_val, ok = prompt_for_charge()
+                        charge_val, ok, skip_flag = prompt_for_charge()
                         if not ok:
                             # user cancelled the prompt -> abort
                             return None
+                        if skip_flag:
+                            # User selected Skip chemistry: attempt distance-based salvage
+                            try:
+                                self.estimate_bonds_from_distances(mol)
+                            except Exception:
+                                pass
+                            salvaged = None
+                            try:
+                                salvaged = mol.GetMol()
+                            except Exception:
+                                salvaged = None
+
+                            if salvaged is not None:
+                                try:
+                                    salvaged.SetIntProp("_xyz_skip_checks", 1)
+                                except Exception:
+                                    try:
+                                        salvaged._xyz_skip_checks = True
+                                    except Exception:
+                                        pass
+                                final_mol = salvaged
+                                break
+                            else:
+                                try:
+                                    self.statusBar().showMessage("Skip chemistry selected but failed to create salvaged molecule.")
+                                except Exception:
+                                    pass
+                                return None
+
                         try:
                             final_mol = _process_with_charge(charge_val)
                             # success -> break out of prompt loop
@@ -9565,7 +9896,6 @@ class MainWindow(QMainWindow):
             return
             
         try:
-            options = QFileDialog.Option.DontUseNativeDialog
             # Determine a sensible default filename based on current file (strip extension)
             default_name = "untitled"
             try:
@@ -9578,7 +9908,6 @@ class MainWindow(QMainWindow):
             file_path, _ = QFileDialog.getSaveFileName(
                 self, "Save Project As", default_name, 
                 "PME Project Files (*.pmeprj);;All Files (*)", 
-                options=options
             )
             if not file_path:
                 return
@@ -9615,7 +9944,6 @@ class MainWindow(QMainWindow):
             
         try:
             save_data = self.get_current_state()
-            options = QFileDialog.Option.DontUseNativeDialog
             # default filename based on current file
             default_name = "untitled"
             try:
@@ -9625,7 +9953,7 @@ class MainWindow(QMainWindow):
             except Exception:
                 default_name = "untitled"
 
-            file_path, _ = QFileDialog.getSaveFileName(self, "Save Project File", default_name, "Project Files (*.pmeraw);;All Files (*)", options=options)
+            file_path, _ = QFileDialog.getSaveFileName(self, "Save Project File", default_name, "Project Files (*.pmeraw);;All Files (*)")
             if not file_path:
                 return
                 
@@ -9655,8 +9983,7 @@ class MainWindow(QMainWindow):
 
     def load_raw_data(self, file_path=None):
         if not file_path:
-            options = QFileDialog.Option.DontUseNativeDialog
-            file_path, _ = QFileDialog.getOpenFileName(self, "Open Project File", "", "Project Files (*.pmeraw);;All Files (*)", options=options)
+            file_path, _ = QFileDialog.getOpenFileName(self, "Open Project File", "", "Project Files (*.pmeraw);;All Files (*)")
             if not file_path: 
                 return
         
@@ -9694,7 +10021,6 @@ class MainWindow(QMainWindow):
             return
             
         try:
-            options = QFileDialog.Option.DontUseNativeDialog
             # default filename based on current file
             default_name = "untitled"
             try:
@@ -9707,7 +10033,6 @@ class MainWindow(QMainWindow):
             file_path, _ = QFileDialog.getSaveFileName(
                 self, "Save as PME Project", default_name, 
                 "PME Project Files (*.pmeprj);;All Files (*)", 
-                options=options
             )
             if not file_path:
                 return
@@ -9882,11 +10207,9 @@ class MainWindow(QMainWindow):
     def load_json_data(self, file_path=None):
         """PME Projectファイル形式を読み込み"""
         if not file_path:
-            options = QFileDialog.Option.DontUseNativeDialog
             file_path, _ = QFileDialog.getOpenFileName(
                 self, "Open PME Project File", "", 
                 "PME Project Files (*.pmeprj);;All Files (*)", 
-                options=options
             )
             if not file_path: 
                 return
@@ -9938,11 +10261,9 @@ class MainWindow(QMainWindow):
     def open_project_file(self, file_path=None):
         """プロジェクトファイルを開く（.pmeprjと.pmerawの両方に対応）"""
         if not file_path:
-            options = QFileDialog.Option.DontUseNativeDialog
             file_path, _ = QFileDialog.getOpenFileName(
                 self, "Open Project File", "", 
                 "PME Project Files (*.pmeprj);;PME Raw Files (*.pmeraw);;All Files (*)", 
-                options=options
             )
             if not file_path: 
                 return
@@ -10109,7 +10430,6 @@ class MainWindow(QMainWindow):
                 lines[1] = '  MoleditPy Ver. ' + VERSION + '  2D'
             modified_mol_block = '\n'.join(lines)
             
-            options = QFileDialog.Option.DontUseNativeDialog
             # default filename: based on current_file_path, append -2d for 2D mol
             default_name = "untitled-2d"
             try:
@@ -10120,7 +10440,7 @@ class MainWindow(QMainWindow):
             except Exception:
                 default_name = "untitled-2d"
 
-            file_path, _ = QFileDialog.getSaveFileName(self, "Save 2D MOL File", default_name, "MOL Files (*.mol);;All Files (*)", options=options)
+            file_path, _ = QFileDialog.getSaveFileName(self, "Save 2D MOL File", default_name, "MOL Files (*.mol);;All Files (*)")
             if not file_path:
                 return
                 
@@ -10146,7 +10466,6 @@ class MainWindow(QMainWindow):
             return
             
         try:
-            options = QFileDialog.Option.DontUseNativeDialog
             # default filename based on current file
             default_name = "untitled"
             try:
@@ -10157,7 +10476,7 @@ class MainWindow(QMainWindow):
             except Exception:
                 default_name = "untitled"
 
-            file_path, _ = QFileDialog.getSaveFileName(self, "Save 3D MOL File", default_name, "MOL Files (*.mol);;All Files (*)", options=options)
+            file_path, _ = QFileDialog.getSaveFileName(self, "Save 3D MOL File", default_name, "MOL Files (*.mol);;All Files (*)")
             if not file_path:
                 return
                 
@@ -10190,7 +10509,6 @@ class MainWindow(QMainWindow):
 
     def save_as_xyz(self):
         if not self.current_mol: self.statusBar().showMessage("Error: Please generate a 3D structure first."); return
-        options=QFileDialog.Option.DontUseNativeDialog
         # default filename based on current file
         default_name = "untitled"
         try:
@@ -10201,7 +10519,7 @@ class MainWindow(QMainWindow):
         except Exception:
             default_name = "untitled"
 
-        file_path,_=QFileDialog.getSaveFileName(self,"Save 3D XYZ File",default_name,"XYZ Files (*.xyz);;All Files (*)",options=options)
+        file_path,_=QFileDialog.getSaveFileName(self,"Save 3D XYZ File",default_name,"XYZ Files (*.xyz);;All Files (*)")
         if file_path:
             if not file_path.lower().endswith('.xyz'): file_path += '.xyz'
             try:
@@ -10221,9 +10539,8 @@ class MainWindow(QMainWindow):
             self.statusBar().showMessage("Error: Please generate a 3D structure first.")
             return
             
-        options = QFileDialog.Option.DontUseNativeDialog
         file_path, _ = QFileDialog.getSaveFileName(
-            self, "Export as STL", "", "STL Files (*.stl);;All Files (*)", options=options
+            self, "Export as STL", "", "STL Files (*.stl);;All Files (*)"
         )
         
         if not file_path:
@@ -10254,9 +10571,8 @@ class MainWindow(QMainWindow):
             self.statusBar().showMessage("Error: Please generate a 3D structure first.")
             return
             
-        options = QFileDialog.Option.DontUseNativeDialog
         file_path, _ = QFileDialog.getSaveFileName(
-            self, "Export as OBJ/MTL (with colors)", "", "OBJ Files (*.obj);;All Files (*)", options=options
+            self, "Export as OBJ/MTL (with colors)", "", "OBJ Files (*.obj);;All Files (*)"
         )
         
         if not file_path:
@@ -10364,9 +10680,8 @@ class MainWindow(QMainWindow):
             self.statusBar().showMessage("Error: Please generate a 3D structure first.")
             return
             
-        options = QFileDialog.Option.DontUseNativeDialog
         file_path, _ = QFileDialog.getSaveFileName(
-            self, "Export as Color STL", "", "STL Files (*.stl);;All Files (*)", options=options
+            self, "Export as Color STL", "", "STL Files (*.stl);;All Files (*)"
         )
         
         if not file_path:
@@ -10694,8 +11009,7 @@ class MainWindow(QMainWindow):
             self.statusBar().showMessage("Nothing to export.")
             return
 
-        options = QFileDialog.Option.DontUseNativeDialog
-        filePath, _ = QFileDialog.getSaveFileName(self, "Export 2D as PNG", "", "PNG Files (*.png)", options=options)
+        filePath, _ = QFileDialog.getSaveFileName(self, "Export 2D as PNG", "", "PNG Files (*.png)")
         if not filePath:
             return
 
@@ -10705,7 +11019,7 @@ class MainWindow(QMainWindow):
         reply = QMessageBox.question(self, 'Choose Background',
                                      'Do you want a transparent background?\n(Choose "No" for a white background)',
                                      QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No | QMessageBox.StandardButton.Cancel,
-                                     QMessageBox.StandardButton.No)
+                                     QMessageBox.StandardButton.Yes)
 
         if reply == QMessageBox.StandardButton.Cancel:
             self.statusBar().showMessage("Export cancelled.", 2000)
@@ -10790,8 +11104,7 @@ class MainWindow(QMainWindow):
             self.statusBar().showMessage("No 3D molecule to export.", 2000)
             return
 
-        options = QFileDialog.Option.DontUseNativeDialog
-        filePath, _ = QFileDialog.getSaveFileName(self, "Export 3D as PNG", "", "PNG Files (*.png)", options=options)
+        filePath, _ = QFileDialog.getSaveFileName(self, "Export 3D as PNG", "", "PNG Files (*.png)")
         if not filePath:
             return
 
@@ -10801,7 +11114,7 @@ class MainWindow(QMainWindow):
         reply = QMessageBox.question(self, 'Choose Background',
                                      'Do you want a transparent background?\n(Choose "No" for current background)',
                                      QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No | QMessageBox.StandardButton.Cancel,
-                                     QMessageBox.StandardButton.No)
+                                     QMessageBox.StandardButton.Yes)
 
         if reply == QMessageBox.StandardButton.Cancel:
             self.statusBar().showMessage("Export cancelled.", 2000)
@@ -11221,13 +11534,37 @@ class MainWindow(QMainWindow):
                         self._3d_color_map[f'bond_{bond_counter}_end'] = end_color_rgb
                 else:
                     v1 = d / h
-                    r = cyl_radius * 0.8
-                    # 設定からオフセットファクターを取得
-                    double_offset_factor = self.settings.get('double_bond_offset_factor', 2.0)
-                    triple_offset_factor = self.settings.get('triple_bond_offset_factor', 2.0)
+                    # モデルごとの半径ファクターを適用
+                    if self.current_3d_style == 'ball_and_stick':
+                        double_radius_factor = self.settings.get('ball_stick_double_bond_radius_factor', 0.8)
+                        triple_radius_factor = self.settings.get('ball_stick_triple_bond_radius_factor', 0.75)
+                    elif self.current_3d_style == 'wireframe':
+                        double_radius_factor = self.settings.get('wireframe_double_bond_radius_factor', 1.0)
+                        triple_radius_factor = self.settings.get('wireframe_triple_bond_radius_factor', 0.75)
+                    elif self.current_3d_style == 'stick':
+                        double_radius_factor = self.settings.get('stick_double_bond_radius_factor', 0.60)
+                        triple_radius_factor = self.settings.get('stick_triple_bond_radius_factor', 0.40)
+                    else:
+                        double_radius_factor = 1.0
+                        triple_radius_factor = 0.75
+                    r = cyl_radius * 0.8  # fallback, will be overridden below
+                    # 設定からオフセットファクターを取得（モデルごと）
+                    if self.current_3d_style == 'ball_and_stick':
+                        double_offset_factor = self.settings.get('ball_stick_double_bond_offset_factor', 2.0)
+                        triple_offset_factor = self.settings.get('ball_stick_triple_bond_offset_factor', 2.0)
+                    elif self.current_3d_style == 'wireframe':
+                        double_offset_factor = self.settings.get('wireframe_double_bond_offset_factor', 3.0)
+                        triple_offset_factor = self.settings.get('wireframe_triple_bond_offset_factor', 3.0)
+                    elif self.current_3d_style == 'stick':
+                        double_offset_factor = self.settings.get('stick_double_bond_offset_factor', 1.5)
+                        triple_offset_factor = self.settings.get('stick_triple_bond_offset_factor', 1.0)
+                    else:
+                        double_offset_factor = 2.0
+                        triple_offset_factor = 2.0
                     s = cyl_radius * 2.0  # デフォルト値
-                    
+
                     if bt == Chem.rdchem.BondType.DOUBLE:
+                        r = cyl_radius * double_radius_factor
                         # 二重結合の場合、結合している原子の他の結合を考慮してオフセット方向を決定
                         off_dir = self._calculate_double_bond_offset(mol, bond, conf)
                         # 設定から二重結合のオフセットファクターを適用
@@ -11261,6 +11598,7 @@ class MainWindow(QMainWindow):
                             self._3d_color_map[f'bond_{bond_counter}_2_start'] = begin_color_rgb
                             self._3d_color_map[f'bond_{bond_counter}_2_end'] = end_color_rgb
                     elif bt == Chem.rdchem.BondType.TRIPLE:
+                        r = cyl_radius * triple_radius_factor
                         # 三重結合
                         v_arb = np.array([0, 0, 1])
                         if np.allclose(np.abs(np.dot(v1, v_arb)), 1.0): v_arb = np.array([0, 1, 0])
@@ -12276,20 +12614,52 @@ class MainWindow(QMainWindow):
         
     def dragEnterEvent(self, event):
         """ウィンドウ全体で .pmeraw、.pmeprj、.mol、.sdf、.xyz ファイルのドラッグを受け入れる"""
+        # Accept if any dragged local file has a supported extension
         if event.mimeData().hasUrls():
             urls = event.mimeData().urls()
-            if urls and urls[0].isLocalFile():
-                file_path = urls[0].toLocalFile()
-                if file_path.lower().endswith(('.pmeraw', '.pmeprj', '.mol', '.sdf', '.xyz')):
-                    event.acceptProposedAction()
-                    return
+            for url in urls:
+                try:
+                    if url.isLocalFile():
+                        file_path = url.toLocalFile()
+                        if file_path.lower().endswith(('.pmeraw', '.pmeprj', '.mol', '.sdf', '.xyz')):
+                            event.acceptProposedAction()
+                            return
+                except Exception:
+                    continue
         event.ignore()
 
     def dropEvent(self, event):
         """ファイルがウィンドウ上でドロップされたときに呼び出される"""
         urls = event.mimeData().urls()
-        if urls and urls[0].isLocalFile():
-            file_path = urls[0].toLocalFile()
+        # Find the first local file from the dropped URLs
+        file_path = None
+        if urls:
+            for url in urls:
+                try:
+                    if url.isLocalFile():
+                        file_path = url.toLocalFile()
+                        break
+                except Exception:
+                    continue
+
+        if file_path:
+            # Set the process current directory to the dropped file's parent
+            try:
+                parent_dir = os.path.dirname(file_path)
+                if parent_dir and os.path.exists(parent_dir):
+                    os.chdir(parent_dir)
+                    self.statusBar().showMessage(f"Current directory set to: {parent_dir}")
+                    # Persist this change to settings (best-effort)
+                    try:
+                        self.settings['last_open_dir'] = parent_dir
+                        self.settings_dirty = True
+                    except Exception:
+                        pass
+
+            except Exception:
+                # Non-fatal if chdir fails; continue to open the file
+                pass
+
             # ドロップ位置を取得
             drop_pos = event.position().toPoint()
             # 拡張子に応じて適切な読み込みメソッドを呼び出す
@@ -12772,11 +13142,19 @@ class MainWindow(QMainWindow):
             'stick_atom_radius': 0.15,
             'stick_bond_radius': 0.15,
             'stick_resolution': 16,
-            # Multiple bond offset parameters
-            'double_bond_offset_factor': 2.0,
-            'triple_bond_offset_factor': 2.0,
-            'double_bond_radius_factor': 0.8,
-            'triple_bond_radius_factor': 0.7,
+            # Multiple bond offset parameters (per-model)
+            'ball_stick_double_bond_offset_factor': 2.0,
+            'ball_stick_triple_bond_offset_factor': 2.0,
+            'ball_stick_double_bond_radius_factor': 0.8,
+            'ball_stick_triple_bond_radius_factor': 0.75,
+            'wireframe_double_bond_offset_factor': 3.0,
+            'wireframe_triple_bond_offset_factor': 3.0,
+            'wireframe_double_bond_radius_factor': 1.0,
+            'wireframe_triple_bond_radius_factor': 0.75,
+            'stick_double_bond_offset_factor': 1.5,
+            'stick_triple_bond_offset_factor': 1.0,
+            'stick_double_bond_radius_factor': 0.60,
+            'stick_triple_bond_radius_factor': 0.40,
             # Ensure conversion/optimization defaults are present
             # If True, attempts to be permissive when RDKit raises chemical/sanitization errors
             # during file import (useful for viewing malformed XYZ/MOL files).
@@ -12798,7 +13176,44 @@ class MainWindow(QMainWindow):
 
                 self.settings = loaded_settings
 
-                # If we added any defaults (e.g. skip_chemistry_checks), write them back so
+                # Migration: if older global multi-bond keys exist, copy them to per-model keys
+                legacy_keys = ['double_bond_offset_factor', 'triple_bond_offset_factor', 'double_bond_radius_factor', 'triple_bond_radius_factor']
+                migrated = False
+                # If legacy keys exist, propagate to per-model keys when per-model keys missing
+                if any(k in self.settings for k in legacy_keys):
+                    # For each per-model key, if missing, set from legacy fallback
+                    def copy_if_missing(new_key, legacy_key, default_val):
+                        nonlocal migrated
+                        if new_key not in self.settings:
+                            if legacy_key in self.settings:
+                                self.settings[new_key] = self.settings[legacy_key]
+                                migrated = True
+                            else:
+                                self.settings[new_key] = default_val
+                                migrated = True
+
+                    per_model_map = [
+                        ('ball_stick_double_bond_offset_factor', 'double_bond_offset_factor', 2.0),
+                        ('ball_stick_triple_bond_offset_factor', 'triple_bond_offset_factor', 2.0),
+                        ('ball_stick_double_bond_radius_factor', 'double_bond_radius_factor', 0.8),
+                        ('ball_stick_triple_bond_radius_factor', 'triple_bond_radius_factor', 0.75),
+                        ('wireframe_double_bond_offset_factor', 'double_bond_offset_factor', 3.0),
+                        ('wireframe_triple_bond_offset_factor', 'triple_bond_offset_factor', 3.0),
+                        ('wireframe_double_bond_radius_factor', 'double_bond_radius_factor', 1.0),
+                        ('wireframe_triple_bond_radius_factor', 'triple_bond_radius_factor', 0.75),
+                        ('stick_double_bond_offset_factor', 'double_bond_offset_factor', 1.5),
+                        ('stick_triple_bond_offset_factor', 'triple_bond_offset_factor', 1.0),
+                        ('stick_double_bond_radius_factor', 'double_bond_radius_factor', 0.60),
+                        ('stick_triple_bond_radius_factor', 'triple_bond_radius_factor', 0.40),
+                    ]
+                    for new_k, legacy_k, default_v in per_model_map:
+                        copy_if_missing(new_k, legacy_k, default_v)
+
+                    # Optionally remove legacy keys to avoid confusion (keep them for now but mark dirty)
+                    if migrated:
+                        changed = True
+
+                # If we added any defaults (e.g. skip_chemistry_checks) or migrated keys, write them back so
                 # the configuration file reflects the effective defaults without requiring
                 # the user to edit the file manually.
                 if changed:
