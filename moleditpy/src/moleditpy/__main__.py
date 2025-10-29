@@ -1,3 +1,4 @@
+
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
@@ -11,7 +12,7 @@ DOI 10.5281/zenodo.17268532
 """
 
 #Version
-VERSION = '1.10.3'
+VERSION = '1.10.4'
 
 print("-----------------------------------------------------")
 print("MoleditPy — A Python-based molecular editing software")
@@ -1402,7 +1403,7 @@ class MirrorDialog(QDialog):
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to apply mirror transformation: {str(e)}")
 
-class PlaneAlignDialog(Dialog3DPickingMixin, QDialog):
+class AlignPlaneDialog(Dialog3DPickingMixin, QDialog):
     def __init__(self, mol, main_window, plane, preselected_atoms=None, parent=None):
         QDialog.__init__(self, parent)
         Dialog3DPickingMixin.__init__(self)
@@ -1668,7 +1669,7 @@ class PlanarizeDialog(Dialog3DPickingMixin, QDialog):
             self.update_display()
 
     def init_ui(self):
-        self.setWindowTitle("Planarize Selection (best-fit)")
+        self.setWindowTitle("Planarize")
         self.setModal(False)
         self.setWindowFlags(Qt.WindowType.Window | Qt.WindowType.WindowStaysOnTopHint)
         layout = QVBoxLayout(self)
@@ -1824,7 +1825,7 @@ class PlanarizeDialog(Dialog3DPickingMixin, QDialog):
             QMessageBox.information(self, "Success", f"Planarized {len(selected_indices)} atoms to best-fit plane.")
 
         except Exception as e:
-            QMessageBox.critical(self, "Error", f"Failed to planarize selection: {e}")
+            QMessageBox.critical(self, "Error", f"Failed to planarize: {e}")
 
     def closeEvent(self, event):
         """ダイアログが閉じられる時の処理"""
@@ -5301,7 +5302,7 @@ class SettingsDialog(QDialog):
         layout.addWidget(self.tab_widget)
 
         # Scene設定タブ
-        self.create_general_tab()
+        self.create_scene_tab()
         
         # Ball and Stick設定タブ
         self.create_ball_stick_tab()
@@ -5316,7 +5317,7 @@ class SettingsDialog(QDialog):
         self.create_stick_tab()
 
         # Other設定タブ
-        self.create_common_tab()
+        self.create_other_tab()
 
         # 渡された設定でUIと内部変数を初期化
         self.update_ui_from_settings(current_settings)
@@ -5353,10 +5354,10 @@ class SettingsDialog(QDialog):
         buttons.addWidget(cancel_button)
         layout.addLayout(buttons)
     
-    def create_general_tab(self):
+    def create_scene_tab(self):
         """基本設定タブを作成"""
-        general_widget = QWidget()
-        form_layout = QFormLayout(general_widget)
+        scene_widget = QWidget()
+        form_layout = QFormLayout(scene_widget)
 
         # 1. 背景色
         self.bg_button = QPushButton()
@@ -5409,14 +5410,14 @@ class SettingsDialog(QDialog):
         self.projection_combo.setToolTip("Choose camera projection mode: Perspective (default) or Orthographic")
         form_layout.addRow("Projection Mode:", self.projection_combo)
         
-        self.tab_widget.addTab(general_widget, "Scene")
+        self.tab_widget.addTab(scene_widget, "Scene")
     
-    def create_common_tab(self):
-        """Common設定タブを作成"""
-        common_widget = QWidget()
-        form_layout = QFormLayout(common_widget)
+    def create_other_tab(self):
+        """other設定タブを作成"""
+        other_widget = QWidget()
+        form_layout = QFormLayout(other_widget)
 
-        # 化学チェックスキップオプション（Commonタブに移動）
+        # 化学チェックスキップオプション（otherタブに移動）
         self.skip_chem_checks_checkbox = QCheckBox()
         self.skip_chem_checks_checkbox.setToolTip("When enabled, file import will try to ignore chemical/sanitization errors and allow viewing malformed files.")
         # Immediately persist change to settings when user toggles the checkbox
@@ -5432,7 +5433,7 @@ class SettingsDialog(QDialog):
         form_layout.addRow("Skip chemistry checks on import xyz file:", self.skip_chem_checks_checkbox)
 
     
-        self.tab_widget.addTab(common_widget, "Other")
+        self.tab_widget.addTab(other_widget, "Other")
     
     def create_ball_stick_tab(self):
         """Ball and Stick設定タブを作成"""
@@ -5755,7 +5756,7 @@ class SettingsDialog(QDialog):
                 'specular_power': self.default_settings['specular_power']
             },
             "Other": {
-                # general/common options
+                # other options
                 'skip_chemistry_checks': self.default_settings.get('skip_chemistry_checks', False),
             },
             "Ball & Stick": {
@@ -7356,19 +7357,19 @@ class MainWindow(QMainWindow):
         plane_align_menu = align_menu.addMenu("Plane")
         
         alignplane_xy_action = QAction("XY-plane", self)
-        alignplane_xy_action.triggered.connect(lambda: self.open_PlaneAlignDialog_dialog('xy'))
+        alignplane_xy_action.triggered.connect(lambda: self.open_align_plane_dialog('xy'))
         alignplane_xy_action.setEnabled(False)
         plane_align_menu.addAction(alignplane_xy_action)
         self.alignplane_xy_action = alignplane_xy_action
 
         alignplane_xz_action = QAction("XZ-plane", self)
-        alignplane_xz_action.triggered.connect(lambda: self.open_PlaneAlignDialog_dialog('xz'))
+        alignplane_xz_action.triggered.connect(lambda: self.open_align_plane_dialog('xz'))
         alignplane_xz_action.setEnabled(False)
         plane_align_menu.addAction(alignplane_xz_action)
         self.alignplane_xz_action = alignplane_xz_action
 
         alignplane_yz_action = QAction("YZ-plane", self)
-        alignplane_yz_action.triggered.connect(lambda: self.open_PlaneAlignDialog_dialog('yz'))
+        alignplane_yz_action.triggered.connect(lambda: self.open_align_plane_dialog('yz'))
         alignplane_yz_action.setEnabled(False)
         plane_align_menu.addAction(alignplane_yz_action)
         self.alignplane_yz_action = alignplane_yz_action
@@ -7408,8 +7409,8 @@ class MainWindow(QMainWindow):
         edit_3d_menu.addSeparator()
         
         # Planarize selection (best-fit plane)
-        planarize_action = QAction("Planarize Selection...", self)
-        planarize_action.triggered.connect(lambda: self.open_PlanarizeDialog_dialog(None))
+        planarize_action = QAction("Planarize...", self)
+        planarize_action.triggered.connect(lambda: self.open_planarize_dialog(None))
         planarize_action.setEnabled(False)
         edit_3d_menu.addAction(planarize_action)
         self.planarize_action = planarize_action
@@ -13982,7 +13983,7 @@ class MainWindow(QMainWindow):
         dialog.accepted.connect(self.push_undo_state)
         dialog.finished.connect(lambda: self.remove_dialog_from_list(dialog))  # ダイアログが閉じられた時にリストから削除
     
-    def open_PlaneAlignDialog_dialog(self, plane):
+    def open_align_plane_dialog(self, plane):
         """alignダイアログを開く"""
         # 事前選択された原子を取得（測定モード無効化前に）
         preselected_atoms = []
@@ -13996,14 +13997,14 @@ class MainWindow(QMainWindow):
             self.measurement_action.setChecked(False)
             self.toggle_measurement_mode(False)
         
-        dialog = PlaneAlignDialog(self.current_mol, self, plane, preselected_atoms)
+        dialog = AlignPlaneDialog(self.current_mol, self, plane, preselected_atoms)
         self.active_3d_dialogs.append(dialog)  # 参照を保持
         dialog.show()  # execではなくshowを使用してモードレス表示
         dialog.accepted.connect(lambda: self.statusBar().showMessage(f"Atoms alignd to {plane.upper()} plane."))
         dialog.accepted.connect(self.push_undo_state)
         dialog.finished.connect(lambda: self.remove_dialog_from_list(dialog))  # ダイアログが閉じられた時にリストから削除
         
-    def open_PlanarizeDialog_dialog(self, plane=None):
+    def open_planarize_dialog(self, plane=None):
         """選択原子群を最適平面へ投影するダイアログを開く"""
         # 事前選択された原子を取得（測定モード無効化前に）
         preselected_atoms = []
