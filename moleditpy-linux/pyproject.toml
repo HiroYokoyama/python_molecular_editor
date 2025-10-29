@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "moleditpy-linux"
 
-version = "1.10.3"
+version = "1.10.4"
 
 authors = [
   { name="HiroYokoyama", email="titech.yoko.hiro@gmail.com" },
@@ -45,7 +45,7 @@ Homepage = "https://github.com/HiroYokoyama/python_molecular_editor"
 Issues = "https://github.com/HiroYokoyama/python_molecular_editor/issues"
 
 [project.scripts]
-moleditpy = "moleditpy_linux.main:main"
+moleditpy = "moleditpy_linux.__main__:main"
 
 [tool.setuptools.package-data]
 "moleditpy_linux" = ["assets/*"]

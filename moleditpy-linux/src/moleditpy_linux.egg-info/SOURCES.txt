@@ -1,7 +1,7 @@
 README.md
 pyproject.toml
 src/moleditpy_linux/__init__.py
-src/moleditpy_linux/main.py
+src/moleditpy_linux/__main__.py
 src/moleditpy_linux.egg-info/PKG-INFO
 src/moleditpy_linux.egg-info/SOURCES.txt
 src/moleditpy_linux.egg-info/dependency_links.txt
