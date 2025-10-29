@@ -11,7 +11,7 @@ DOI 10.5281/zenodo.17268532
 """
 
 #Version
-VERSION = '1.10.2'
+VERSION = '1.10.3'
 
 print("-----------------------------------------------------")
 print("MoleditPy — A Python-based molecular editing software")
@@ -1029,6 +1029,11 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog):
         self.clear_button = QPushButton("Clear Selection")
         self.clear_button.clicked.connect(self.clear_selection)
         button_layout.addWidget(self.clear_button)
+    
+        # Select all atoms button
+        self.select_all_button = QPushButton("Select All Atoms")
+        self.select_all_button.setToolTip("Select all atoms in the molecule for planarization")
+        button_layout.addWidget(self.select_all_button)
         
         button_layout.addStretch()
         
@@ -1096,6 +1101,30 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog):
             except Exception as e:
                 self.selection_label.setText(f"Error accessing atom data: {str(e)}")
                 self.apply_button.setEnabled(False)
+
+        # Update the coordinate input fields when selection changes
+        # If there are selected atoms, fill the inputs with the computed centroid (or single atom pos).
+        # If no atoms selected, clear or reset to 0.0.
+        try:
+            if self.selected_atoms:
+                # Use the centroid we just computed if available; otherwise compute now.
+                try:
+                    coords = centroid
+                except NameError:
+                    coords = self.calculate_centroid()
+
+                # Format with reasonable precision
+                self.x_input.setText(f"{coords[0]:.4f}")
+                self.y_input.setText(f"{coords[1]:.4f}")
+                self.z_input.setText(f"{coords[2]:.4f}")
+            else:
+                # No selection: reset fields to default
+                self.x_input.setText("0.0")
+                self.y_input.setText("0.0")
+                self.z_input.setText("0.0")
+        except Exception:
+            # Be tolerant: do not crash the UI if inputs cannot be updated
+            pass
     
     def calculate_centroid(self):
         """選択原子の重心を計算"""
@@ -1373,7 +1402,7 @@ class MirrorDialog(QDialog):
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to apply mirror transformation: {str(e)}")
 
-class PlanarizationDialog(Dialog3DPickingMixin, QDialog):
+class PlaneAlignDialog(Dialog3DPickingMixin, QDialog):
     def __init__(self, mol, main_window, plane, preselected_atoms=None, parent=None):
         QDialog.__init__(self, parent)
         Dialog3DPickingMixin.__init__(self)
@@ -1395,13 +1424,13 @@ class PlanarizationDialog(Dialog3DPickingMixin, QDialog):
     
     def init_ui(self):
         plane_names = {'xy': 'XY', 'xz': 'XZ', 'yz': 'YZ'}
-        self.setWindowTitle(f"Planarize to {plane_names[self.plane]} Plane")
+        self.setWindowTitle(f"Align to {plane_names[self.plane]} Plane")
         self.setModal(False)  # モードレスにしてクリックを阻害しない
         self.setWindowFlags(Qt.WindowType.Window | Qt.WindowType.WindowStaysOnTopHint)  # 常に前面表示
         layout = QVBoxLayout(self)
         
         # Instructions
-        instruction_label = QLabel(f"Click atoms in the 3D view to select them for planarization to the {plane_names[self.plane]} plane. At least 3 atoms are required.")
+        instruction_label = QLabel(f"Click atoms in the 3D view to select them for align to the {plane_names[self.plane]} plane. At least 3 atoms are required.")
         instruction_label.setWordWrap(True)
         layout.addWidget(instruction_label)
         
@@ -1417,8 +1446,8 @@ class PlanarizationDialog(Dialog3DPickingMixin, QDialog):
         
         button_layout.addStretch()
         
-        self.apply_button = QPushButton("Apply Planarization")
-        self.apply_button.clicked.connect(self.apply_planarization)
+        self.apply_button = QPushButton("Apply align")
+        self.apply_button.clicked.connect(self.apply_PlaneAlign)
         self.apply_button.setEnabled(False)
         button_layout.addWidget(self.apply_button)
 
@@ -1458,7 +1487,7 @@ class PlanarizationDialog(Dialog3DPickingMixin, QDialog):
         """キーボードイベントを処理"""
         if event.key() == Qt.Key.Key_Return or event.key() == Qt.Key.Key_Enter:
             if self.apply_button.isEnabled():
-                self.apply_planarization()
+                self.apply_PlaneAlign()
             event.accept()
         else:
             super().keyPressEvent(event)
@@ -1473,7 +1502,7 @@ class PlanarizationDialog(Dialog3DPickingMixin, QDialog):
         """表示を更新"""
         count = len(self.selected_atoms)
         if count == 0:
-            self.selection_label.setText("Click atoms to select for planarization (minimum 3 required)")
+            self.selection_label.setText("Click atoms to select for align (minimum 3 required)")
             self.apply_button.setEnabled(False)
         else:
             atom_list = sorted(self.selected_atoms)
@@ -1521,10 +1550,10 @@ class PlanarizationDialog(Dialog3DPickingMixin, QDialog):
                     pass
             self.selection_labels = []
     
-    def apply_planarization(self):
-        """平面化を適用（回転ベース）"""
+    def apply_PlaneAlign(self):
+        """alignを適用（回転ベース）"""
         if len(self.selected_atoms) < 3:
-            QMessageBox.warning(self, "Warning", "Please select at least 3 atoms for planarization.")
+            QMessageBox.warning(self, "Warning", "Please select at least 3 atoms for align.")
             return
         try:
 
@@ -1595,7 +1624,7 @@ class PlanarizationDialog(Dialog3DPickingMixin, QDialog):
             self.main_window.push_undo_state()
 
         except Exception as e:
-            QMessageBox.critical(self, "Error", f"Failed to apply planarization: {str(e)}")
+            QMessageBox.critical(self, "Error", f"Failed to apply align: {str(e)}")
     
     def closeEvent(self, event):
         """ダイアログが閉じられる時の処理"""
@@ -1614,6 +1643,207 @@ class PlanarizationDialog(Dialog3DPickingMixin, QDialog):
         self.clear_atom_labels()
         self.disable_picking()
         super().accept()
+
+
+class PlanarizeDialog(Dialog3DPickingMixin, QDialog):
+
+    """選択原子群を最適フィット平面へ投影して planarize するダイアログ
+    AlignPlane を参考にした選択UIを持ち、Apply ボタンで選択原子を平面へ直交射影する。
+    """
+    def __init__(self, mol, main_window, preselected_atoms=None, parent=None):
+        QDialog.__init__(self, parent)
+        Dialog3DPickingMixin.__init__(self)
+        self.mol = mol
+        self.main_window = main_window
+        self.selected_atoms = set()
+
+        if preselected_atoms:
+            # 事前選択された原子を追加
+            self.selected_atoms.update(preselected_atoms)
+
+        self.init_ui()
+
+        if self.selected_atoms:
+            self.show_atom_labels()
+            self.update_display()
+
+    def init_ui(self):
+        self.setWindowTitle("Planarize Selection (best-fit)")
+        self.setModal(False)
+        self.setWindowFlags(Qt.WindowType.Window | Qt.WindowType.WindowStaysOnTopHint)
+        layout = QVBoxLayout(self)
+
+        instruction_label = QLabel("Click atoms in the 3D view to select them for planarization (minimum 3 required).")
+        instruction_label.setWordWrap(True)
+        layout.addWidget(instruction_label)
+
+        self.selection_label = QLabel("No atoms selected")
+        layout.addWidget(self.selection_label)
+
+
+        button_layout = QHBoxLayout()
+        self.clear_button = QPushButton("Clear Selection")
+        self.clear_button.clicked.connect(self.clear_selection)
+        button_layout.addWidget(self.clear_button)
+    
+        # Select All Atoms ボタンを追加
+        self.select_all_button = QPushButton("Select All Atoms")
+        self.select_all_button.setToolTip("Select all atoms in the molecule for planarization")
+        self.select_all_button.clicked.connect(self.select_all_atoms)
+        button_layout.addWidget(self.select_all_button)
+
+        self.apply_button = QPushButton("Apply planarize")
+        self.apply_button.clicked.connect(self.apply_planarize)
+        self.apply_button.setEnabled(False)
+        button_layout.addWidget(self.apply_button)
+    
+        close_button = QPushButton("Close")
+        close_button.clicked.connect(self.reject)
+        button_layout.addWidget(close_button)
+
+        button_layout.addStretch()
+    
+        layout.addLayout(button_layout)
+
+        # enable picking
+        self.picker_connection = None
+        self.enable_picking()
+
+    def on_atom_picked(self, atom_idx):
+        if atom_idx in self.selected_atoms:
+            self.selected_atoms.remove(atom_idx)
+        else:
+            self.selected_atoms.add(atom_idx)
+        self.show_atom_labels()
+        self.update_display()
+
+    def clear_selection(self):
+        self.selected_atoms.clear()
+        self.clear_atom_labels()
+        self.update_display()
+
+    def update_display(self):
+        count = len(self.selected_atoms)
+        if count == 0:
+            self.selection_label.setText("Click atoms to select for planarize (minimum 3 required)")
+            self.apply_button.setEnabled(False)
+        else:
+            atom_list = sorted(self.selected_atoms)
+            atom_display = []
+            for i, atom_idx in enumerate(atom_list):
+                symbol = self.mol.GetAtomWithIdx(atom_idx).GetSymbol()
+                atom_display.append(f"#{i+1}: {symbol}({atom_idx})")
+            self.selection_label.setText(f"Selected {count} atoms: {', '.join(atom_display)}")
+            self.apply_button.setEnabled(count >= 3)
+
+    def select_all_atoms(self):
+        """Select all atoms in the current molecule (or fallback) and update labels/UI."""
+        try:
+            # Prefer RDKit molecule if available
+            if hasattr(self, 'mol') and self.mol is not None:
+                try:
+                    n = self.mol.GetNumAtoms()
+                    # create a set of indices [0..n-1]
+                    self.selected_atoms = set(range(n))
+                except Exception:
+                    # fallback to main_window data map
+                    self.selected_atoms = set(self.main_window.data.atoms.keys()) if hasattr(self.main_window, 'data') else set()
+            else:
+                # fallback to main_window data map
+                self.selected_atoms = set(self.main_window.data.atoms.keys()) if hasattr(self.main_window, 'data') else set()
+
+            # Update labels and display
+            self.show_atom_labels()
+            self.update_display()
+
+        except Exception as e:
+            QMessageBox.warning(self, "Warning", f"Failed to select all atoms: {e}")
+
+    def show_atom_labels(self):
+        self.clear_atom_labels()
+        if not hasattr(self, 'selection_labels'):
+            self.selection_labels = []
+        if self.selected_atoms:
+            for i, atom_idx in enumerate(sorted(self.selected_atoms)):
+                pos = self.main_window.atom_positions_3d[atom_idx]
+                label_text = f"#{i+1}"
+                label_actor = self.main_window.plotter.add_point_labels(
+                    [pos], [label_text],
+                    point_size=20,
+                    font_size=12,
+                    text_color='cyan',
+                    always_visible=True
+                )
+                self.selection_labels.append(label_actor)
+
+    def clear_atom_labels(self):
+        if hasattr(self, 'selection_labels'):
+            for label_actor in self.selection_labels:
+                try:
+                    self.main_window.plotter.remove_actor(label_actor)
+                except:
+                    pass
+            self.selection_labels = []
+
+    def apply_planarize(self):
+        if not self.selected_atoms or len(self.selected_atoms) < 3:
+            QMessageBox.warning(self, "Warning", "Please select at least 3 atoms for planarize.")
+            return
+
+        try:
+            selected_indices = list(sorted(self.selected_atoms))
+            selected_positions = self.main_window.atom_positions_3d[selected_indices].copy()
+
+            centroid = np.mean(selected_positions, axis=0)
+            centered_positions = selected_positions - centroid
+
+            # SVDによる最小二乗平面の法線取得
+            u, s, vh = np.linalg.svd(centered_positions, full_matrices=False)
+            normal = vh[-1]
+            norm = np.linalg.norm(normal)
+            if norm == 0:
+                QMessageBox.warning(self, "Warning", "Cannot determine fit plane (degenerate positions).")
+                return
+            normal = normal / norm
+
+            # 各点を重心を通る平面へ直交射影
+            projections = centered_positions - np.outer(np.dot(centered_positions, normal), normal)
+            new_positions = projections + centroid
+
+            # 分子座標を更新
+            conf = self.mol.GetConformer()
+            for i, new_pos in zip(selected_indices, new_positions):
+                conf.SetAtomPosition(int(i), new_pos.tolist())
+                self.main_window.atom_positions_3d[int(i)] = new_pos
+
+            # 3Dビュー更新
+            self.main_window.draw_molecule_3d(self.mol)
+            self.main_window.update_chiral_labels()
+            self.main_window.push_undo_state()
+
+            QMessageBox.information(self, "Success", f"Planarized {len(selected_indices)} atoms to best-fit plane.")
+
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to planarize selection: {e}")
+
+    def closeEvent(self, event):
+        """ダイアログが閉じられる時の処理"""
+        self.clear_atom_labels()
+        self.disable_picking()
+        super().closeEvent(event)
+
+    def reject(self):
+        """キャンセル時の処理"""
+        self.clear_atom_labels()
+        self.disable_picking()
+        super().reject()
+
+    def accept(self):
+        """OK時の処理"""
+        self.clear_atom_labels()
+        self.disable_picking()
+        super().accept()
+
 
 
 class AlignmentDialog(Dialog3DPickingMixin, QDialog):
@@ -7122,26 +7352,26 @@ class MainWindow(QMainWindow):
         axis_align_menu.addAction(align_z_action)
         self.align_z_action = align_z_action
         
-        # Plane alignment submenu (旧Planarization)
+        # Plane alignment submenu (旧align)
         plane_align_menu = align_menu.addMenu("Plane")
         
-        planar_xy_action = QAction("XY-plane", self)
-        planar_xy_action.triggered.connect(lambda: self.open_planarization_dialog('xy'))
-        planar_xy_action.setEnabled(False)
-        plane_align_menu.addAction(planar_xy_action)
-        self.planar_xy_action = planar_xy_action
-        
-        planar_xz_action = QAction("XZ-plane", self)
-        planar_xz_action.triggered.connect(lambda: self.open_planarization_dialog('xz'))
-        planar_xz_action.setEnabled(False)
-        plane_align_menu.addAction(planar_xz_action)
-        self.planar_xz_action = planar_xz_action
-        
-        planar_yz_action = QAction("YZ-plane", self)
-        planar_yz_action.triggered.connect(lambda: self.open_planarization_dialog('yz'))
-        planar_yz_action.setEnabled(False)
-        plane_align_menu.addAction(planar_yz_action)
-        self.planar_yz_action = planar_yz_action
+        alignplane_xy_action = QAction("XY-plane", self)
+        alignplane_xy_action.triggered.connect(lambda: self.open_PlaneAlignDialog_dialog('xy'))
+        alignplane_xy_action.setEnabled(False)
+        plane_align_menu.addAction(alignplane_xy_action)
+        self.alignplane_xy_action = alignplane_xy_action
+
+        alignplane_xz_action = QAction("XZ-plane", self)
+        alignplane_xz_action.triggered.connect(lambda: self.open_PlaneAlignDialog_dialog('xz'))
+        alignplane_xz_action.setEnabled(False)
+        plane_align_menu.addAction(alignplane_xz_action)
+        self.alignplane_xz_action = alignplane_xz_action
+
+        alignplane_yz_action = QAction("YZ-plane", self)
+        alignplane_yz_action.triggered.connect(lambda: self.open_PlaneAlignDialog_dialog('yz'))
+        alignplane_yz_action.setEnabled(False)
+        plane_align_menu.addAction(alignplane_yz_action)
+        self.alignplane_yz_action = alignplane_yz_action
 
         edit_3d_menu.addSeparator()
 
@@ -7174,6 +7404,15 @@ class MainWindow(QMainWindow):
         dihedral_action.setEnabled(False)
         edit_3d_menu.addAction(dihedral_action)
         self.dihedral_action = dihedral_action
+
+        edit_3d_menu.addSeparator()
+        
+        # Planarize selection (best-fit plane)
+        planarize_action = QAction("Planarize Selection...", self)
+        planarize_action.triggered.connect(lambda: self.open_PlanarizeDialog_dialog(None))
+        planarize_action.setEnabled(False)
+        edit_3d_menu.addAction(planarize_action)
+        self.planarize_action = planarize_action
 
         settings_menu = menu_bar.addMenu("&Settings")
         # 1) 3D View settings (existing)
@@ -11015,7 +11254,17 @@ class MainWindow(QMainWindow):
             self.statusBar().showMessage("Nothing to export.")
             return
 
-        filePath, _ = QFileDialog.getSaveFileName(self, "Export 2D as PNG", "", "PNG Files (*.png)")
+        # default filename: based on current file, append -2d for 2D exports
+        default_name = "untitled-2d"
+        try:
+            if self.current_file_path:
+                base = os.path.basename(self.current_file_path)
+                name = os.path.splitext(base)[0]
+                default_name = f"{name}-2d"
+        except Exception:
+            default_name = "untitled-2d"
+
+        filePath, _ = QFileDialog.getSaveFileName(self, "Export 2D as PNG", default_name, "PNG Files (*.png)")
         if not filePath:
             return
 
@@ -11110,7 +11359,17 @@ class MainWindow(QMainWindow):
             self.statusBar().showMessage("No 3D molecule to export.", 2000)
             return
 
-        filePath, _ = QFileDialog.getSaveFileName(self, "Export 3D as PNG", "", "PNG Files (*.png)")
+        # default filename: match XYZ/MOL naming (use base name without suffix)
+        default_name = "untitled"
+        try:
+            if self.current_file_path:
+                base = os.path.basename(self.current_file_path)
+                name = os.path.splitext(base)[0]
+                default_name = f"{name}"
+        except Exception:
+            default_name = "untitled"
+
+        filePath, _ = QFileDialog.getSaveFileName(self, "Export 3D as PNG", default_name, "PNG Files (*.png)")
         if not filePath:
             return
 
@@ -12699,16 +12958,17 @@ class MainWindow(QMainWindow):
         """3D編集機能のアクションを統一的に有効/無効化する"""
         actions = [
             'translation_action',
-            'planar_xy_action', 
-            'planar_xz_action',
-            'planar_yz_action',
+            'alignplane_xy_action',
+            'alignplane_xz_action',
+            'alignplane_yz_action',
             'align_x_action',
             'align_y_action', 
             'align_z_action',
             'bond_length_action',
             'angle_action',
             'dihedral_action',
-            'mirror_action'
+            'mirror_action',
+            'planarize_action'
         ]
         
         # メニューとサブメニューも有効/無効化
@@ -13647,45 +13907,45 @@ class MainWindow(QMainWindow):
         
         self.plotter.render()
     
+    '''
     def planarize_selection(self, plane):
-        """選択された原子群を指定された平面に平面化する"""
+        """選択された原子群を指定された平面にPlanarizeする"""
         if not self.selected_atoms_3d or not self.current_mol:
-            self.statusBar().showMessage("No atoms selected for planarization.")
+            self.statusBar().showMessage("No atoms selected for align.")
             return
-        
+
         if len(self.selected_atoms_3d) < 3:
-            self.statusBar().showMessage("Please select at least 3 atoms for planarization.")
+            self.statusBar().showMessage("Please select at least 3 atoms for align.")
             return
-        
+
         try:
             # 選択された原子の位置を取得
             selected_indices = list(self.selected_atoms_3d)
             selected_positions = self.atom_positions_3d[selected_indices].copy()
-            
+
             # 重心を計算
             centroid = np.mean(selected_positions, axis=0)
-            
+
             # 重心を原点に移動
             centered_positions = selected_positions - centroid
-            
-            if plane == 'xy':
-                # XY平面に平面化（Z座標を0にする）
-                centered_positions[:, 2] = 0
-                plane_name = "XY"
-            elif plane == 'xz':
-                # XZ平面に平面化（Y座標を0にする）
-                centered_positions[:, 1] = 0
-                plane_name = "XZ"
-            elif plane == 'yz':
-                # YZ平面に平面化（X座標を0にする）
-                centered_positions[:, 0] = 0
-                plane_name = "YZ"
-            else:
-                self.statusBar().showMessage("Invalid plane specified.")
+
+            # SVDで法線を取得
+            u, s, vh = np.linalg.svd(centered_positions, full_matrices=False)
+            normal = vh[-1]
+            # 法線を正規化
+            norm = np.linalg.norm(normal)
+            if norm == 0:
+                self.statusBar().showMessage("Cannot determine fit plane (degenerate positions).")
                 return
-            
-            # 重心の位置に戻す
-            new_positions = centered_positions + centroid
+            normal = normal / norm
+
+            # 各点を重心を通る平面へ直交射影する
+            projections = centered_positions - np.outer(np.dot(centered_positions, normal), normal)
+            new_positions = projections + centroid
+            plane_name = "best-fit"
+        except Exception as e:
+            self.statusBar().showMessage(f"Error computing fit plane: {e}")
+            return
             
             # 分子の座標を更新
             conf = self.current_mol.GetConformer()
@@ -13700,12 +13960,13 @@ class MainWindow(QMainWindow):
             temp_selection = self.selected_atoms_3d.copy()
             self.selected_atoms_3d = temp_selection
             self.update_3d_selection_display()
-            
+
             self.statusBar().showMessage(f"Planarized {len(selected_indices)} atoms to {plane_name} plane.")
             self.push_undo_state()
             
         except Exception as e:
             self.statusBar().showMessage(f"Error during planarization: {e}")
+        '''
     
     def open_translation_dialog(self):
         """平行移動ダイアログを開く"""
@@ -13721,8 +13982,8 @@ class MainWindow(QMainWindow):
         dialog.accepted.connect(self.push_undo_state)
         dialog.finished.connect(lambda: self.remove_dialog_from_list(dialog))  # ダイアログが閉じられた時にリストから削除
     
-    def open_planarization_dialog(self, plane):
-        """平面化ダイアログを開く"""
+    def open_PlaneAlignDialog_dialog(self, plane):
+        """alignダイアログを開く"""
         # 事前選択された原子を取得（測定モード無効化前に）
         preselected_atoms = []
         if hasattr(self, 'selected_atoms_3d') and self.selected_atoms_3d:
@@ -13735,12 +13996,33 @@ class MainWindow(QMainWindow):
             self.measurement_action.setChecked(False)
             self.toggle_measurement_mode(False)
         
-        dialog = PlanarizationDialog(self.current_mol, self, plane, preselected_atoms)
+        dialog = PlaneAlignDialog(self.current_mol, self, plane, preselected_atoms)
         self.active_3d_dialogs.append(dialog)  # 参照を保持
         dialog.show()  # execではなくshowを使用してモードレス表示
-        dialog.accepted.connect(lambda: self.statusBar().showMessage(f"Atoms planarized to {plane.upper()} plane."))
+        dialog.accepted.connect(lambda: self.statusBar().showMessage(f"Atoms alignd to {plane.upper()} plane."))
         dialog.accepted.connect(self.push_undo_state)
         dialog.finished.connect(lambda: self.remove_dialog_from_list(dialog))  # ダイアログが閉じられた時にリストから削除
+        
+    def open_PlanarizeDialog_dialog(self, plane=None):
+        """選択原子群を最適平面へ投影するダイアログを開く"""
+        # 事前選択された原子を取得（測定モード無効化前に）
+        preselected_atoms = []
+        if hasattr(self, 'selected_atoms_3d') and self.selected_atoms_3d:
+            preselected_atoms = list(self.selected_atoms_3d)
+        elif hasattr(self, 'selected_atoms_for_measurement') and self.selected_atoms_for_measurement:
+            preselected_atoms = list(self.selected_atoms_for_measurement)
+
+        # 測定モードを無効化
+        if self.measurement_mode:
+            self.measurement_action.setChecked(False)
+            self.toggle_measurement_mode(False)
+
+        dialog = PlanarizeDialog(self.current_mol, self, preselected_atoms)
+        self.active_3d_dialogs.append(dialog)
+        dialog.show()
+        dialog.accepted.connect(lambda: self.statusBar().showMessage("Selection planarized to best-fit plane."))
+        dialog.accepted.connect(self.push_undo_state)
+        dialog.finished.connect(lambda: self.remove_dialog_from_list(dialog))
     
     def open_alignment_dialog(self, axis):
         """アライメントダイアログを開く"""
@@ -14060,6 +14342,11 @@ class BondLengthDialog(Dialog3DPickingMixin, QDialog):
             self.selection_label.setText("No atoms selected")
             self.distance_label.setText("")
             self.apply_button.setEnabled(False)
+            # Clear distance input when no selection
+            try:
+                self.distance_input.clear()
+            except Exception:
+                pass
         elif self.atom2_idx is None:
             symbol1 = self.mol.GetAtomWithIdx(self.atom1_idx).GetSymbol()
             self.selection_label.setText(f"First atom: {symbol1} (index {self.atom1_idx})")
@@ -14067,6 +14354,11 @@ class BondLengthDialog(Dialog3DPickingMixin, QDialog):
             self.apply_button.setEnabled(False)
             # ラベル追加
             self.add_selection_label(self.atom1_idx, "1")
+            # Clear distance input while selection is incomplete
+            try:
+                self.distance_input.clear()
+            except Exception:
+                pass
         else:
             symbol1 = self.mol.GetAtomWithIdx(self.atom1_idx).GetSymbol()
             symbol2 = self.mol.GetAtomWithIdx(self.atom2_idx).GetSymbol()
@@ -14079,6 +14371,11 @@ class BondLengthDialog(Dialog3DPickingMixin, QDialog):
             current_distance = np.linalg.norm(pos2 - pos1)
             self.distance_label.setText(f"Current distance: {current_distance:.3f} Å")
             self.apply_button.setEnabled(True)
+            # Update the distance input box to show current distance
+            try:
+                self.distance_input.setText(f"{current_distance:.3f}")
+            except Exception:
+                pass
             # ラベル追加
             self.add_selection_label(self.atom1_idx, "1")
             self.add_selection_label(self.atom2_idx, "2")
@@ -14413,6 +14710,11 @@ class AngleDialog(Dialog3DPickingMixin, QDialog):
             self.selection_label.setText("No atoms selected")
             self.angle_label.setText("")
             self.apply_button.setEnabled(False)
+            # Clear angle input when no selection
+            try:
+                self.angle_input.clear()
+            except Exception:
+                pass
         elif self.atom2_idx is None:
             symbol1 = self.mol.GetAtomWithIdx(self.atom1_idx).GetSymbol()
             self.selection_label.setText(f"First atom: {symbol1} (index {self.atom1_idx})")
@@ -14420,6 +14722,11 @@ class AngleDialog(Dialog3DPickingMixin, QDialog):
             self.apply_button.setEnabled(False)
             # ラベル追加
             self.add_selection_label(self.atom1_idx, "1")
+            # Clear angle input while selection is incomplete
+            try:
+                self.angle_input.clear()
+            except Exception:
+                pass
         elif self.atom3_idx is None:
             symbol1 = self.mol.GetAtomWithIdx(self.atom1_idx).GetSymbol()
             symbol2 = self.mol.GetAtomWithIdx(self.atom2_idx).GetSymbol()
@@ -14429,6 +14736,11 @@ class AngleDialog(Dialog3DPickingMixin, QDialog):
             # ラベル追加
             self.add_selection_label(self.atom1_idx, "1")
             self.add_selection_label(self.atom2_idx, "2(vertex)")
+            # Clear angle input while selection is incomplete
+            try:
+                self.angle_input.clear()
+            except Exception:
+                pass
         else:
             symbol1 = self.mol.GetAtomWithIdx(self.atom1_idx).GetSymbol()
             symbol2 = self.mol.GetAtomWithIdx(self.atom2_idx).GetSymbol()
@@ -14439,6 +14751,11 @@ class AngleDialog(Dialog3DPickingMixin, QDialog):
             current_angle = self.calculate_angle()
             self.angle_label.setText(f"Current angle: {current_angle:.2f}°")
             self.apply_button.setEnabled(True)
+            # Update angle input box with current angle
+            try:
+                self.angle_input.setText(f"{current_angle:.2f}")
+            except Exception:
+                pass
             # ラベル追加
             self.add_selection_label(self.atom1_idx, "1")
             self.add_selection_label(self.atom2_idx, "2(vertex)")
@@ -14785,6 +15102,11 @@ class DihedralDialog(Dialog3DPickingMixin, QDialog):
             self.selection_label.setText("No atoms selected")
             self.dihedral_label.setText("")
             self.apply_button.setEnabled(False)
+            # Clear dihedral input when no selection
+            try:
+                self.dihedral_input.clear()
+            except Exception:
+                pass
         elif selected_count < 4:
             selected_atoms = [self.atom1_idx, self.atom2_idx, self.atom3_idx, self.atom4_idx]
             
@@ -14799,6 +15121,11 @@ class DihedralDialog(Dialog3DPickingMixin, QDialog):
             self.selection_label.setText(" - ".join(display_parts))
             self.dihedral_label.setText("")
             self.apply_button.setEnabled(False)
+            # Clear dihedral input while selection is incomplete
+            try:
+                self.dihedral_input.clear()
+            except Exception:
+                pass
         else:
             selected_atoms = [self.atom1_idx, self.atom2_idx, self.atom3_idx, self.atom4_idx]
             
@@ -14813,6 +15140,11 @@ class DihedralDialog(Dialog3DPickingMixin, QDialog):
             current_dihedral = self.calculate_dihedral()
             self.dihedral_label.setText(f"Current dihedral: {current_dihedral:.2f}°")
             self.apply_button.setEnabled(True)
+            # Update dihedral input box with current dihedral
+            try:
+                self.dihedral_input.setText(f"{current_dihedral:.2f}")
+            except Exception:
+                pass
     
     def calculate_dihedral(self):
         """現在の二面角を計算（正しい公式を使用）"""
