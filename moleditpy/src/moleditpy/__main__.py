@@ -12,7 +12,7 @@ DOI 10.5281/zenodo.17268532
 """
 
 #Version
-VERSION = '1.10.6'
+VERSION = '1.10.7'
 
 print("-----------------------------------------------------")
 print("MoleditPy — A Python-based molecular editing software")
@@ -2465,7 +2465,26 @@ class AtomItem(QGraphicsItem):
         flip_text = False
         if hydrogen_part and self.bonds:
             my_pos_x = self.pos().x()
-            total_dx = sum((b.atom2.pos().x() if b.atom1 is self else b.atom1.pos().x()) - my_pos_x for b in self.bonds)
+            total_dx = 0.0
+            # Defensive: some bonds may have missing atom references (None) or C++ wrappers
+            # that have been deleted. Iterate and accumulate only valid partner positions.
+            for b in self.bonds:
+                # partner is the atom at the other end of the bond
+                partner = b.atom2 if b.atom1 is self else b.atom1
+                try:
+                    if partner is None:
+                        continue
+                    # If SIP reports the wrapper as deleted, skip it
+                    if sip_isdeleted_safe(partner):
+                        continue
+                    partner_pos = partner.pos()
+                    if partner_pos is None:
+                        continue
+                    total_dx += partner_pos.x() - my_pos_x
+                except Exception:
+                    # Skip any bond that raises while inspecting; keep UI tolerant
+                    continue
+
             if total_dx > 0:
                 flip_text = True
         
@@ -2559,16 +2578,42 @@ class AtomItem(QGraphicsItem):
             # 水素ラベルがあり、結合が1本以上ある場合のみ反転を考慮
             if hydrogen_part and self.bonds:
 
-                # 相対的なX座標で、結合が左右どちらに偏っているか判定
-                my_pos_x = self.pos().x()
-                total_dx = 0
-                for bond in self.bonds:
-                    other_atom = bond.atom1 if bond.atom2 is self else bond.atom2
-                    total_dx += (other_atom.pos().x() - my_pos_x)
+                    # 相対的なX座標で、結合が左右どちらに偏っているか判定
+                    my_pos_x = self.pos().x()
+                    total_dx = 0.0
+                    # Defensive: some bonds may have missing atom references (None) or
+                    # wrappers that were deleted by SIP. Only accumulate valid partner positions.
+                    for bond in self.bonds:
+                        try:
+                            other_atom = bond.atom1 if bond.atom2 is self else bond.atom2
+                            if other_atom is None:
+                                continue
+                            # If SIP reports the wrapper as deleted, skip it
+                            try:
+                                if sip_isdeleted_safe(other_atom):
+                                    continue
+                            except Exception:
+                                # If sip check fails, continue defensively
+                                pass
 
-                # 結合が主に右側にある場合はテキストを反転させる
-                if total_dx > 0:
-                    flip_text = True
+                            other_pos = None
+                            try:
+                                other_pos = other_atom.pos()
+                            except Exception:
+                                # Accessing .pos() may raise if the C++ object was destroyed
+                                other_pos = None
+
+                            if other_pos is None:
+                                continue
+
+                            total_dx += (other_pos.x() - my_pos_x)
+                        except Exception:
+                            # Skip any problematic bond/partner rather than crashing the paint
+                            continue
+
+                    # 結合が主に右側にある場合はテキストを反転させる
+                    if total_dx > 0:
+                        flip_text = True
 
             # --- 表示テキストとアライメントを最終決定 ---
             if flip_text:
