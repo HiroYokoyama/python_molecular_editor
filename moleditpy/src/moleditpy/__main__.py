@@ -12,7 +12,7 @@ DOI 10.5281/zenodo.17268532
 """
 
 #Version
-VERSION = '1.10.4'
+VERSION = '1.10.6'
 
 print("-----------------------------------------------------")
 print("MoleditPy — A Python-based molecular editing software")
@@ -29,6 +29,10 @@ import ctypes
 import itertools
 import json 
 import vtk
+import base64
+import contextlib
+import re
+import traceback
 
 from collections import deque
 
@@ -37,7 +41,7 @@ from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QPushButton, QSplitter, QGraphicsView, QGraphicsScene, QGraphicsItem,
     QToolBar, QStatusBar, QGraphicsTextItem, QGraphicsLineItem, QDialog, QGridLayout,
-    QFileDialog, QSizePolicy, QLabel, QLineEdit, QToolButton, QMenu, QMessageBox, QInputDialog,
+    QFileDialog, QSizePolicy, QLabel, QLineEdit, QToolButton, QMenu, QMessageBox, QInputDialog, QDialogButtonBox,
     QColorDialog, QCheckBox, QSlider, QFormLayout, QRadioButton, QComboBox, QListWidget, QListWidgetItem, QButtonGroup, QTabWidget, QScrollArea, QFrame
 )
 
@@ -49,6 +53,19 @@ from PyQt6.QtGui import (
 
 from PyQt6.QtCore import Qt, QPointF, QRectF, QLineF, QObject, QThread, pyqtSignal, pyqtSlot, QEvent, QMimeData, QByteArray, QUrl, QTimer, QDateTime
 
+# Optional SIP helper: on some PyQt6 builds sip.isdeleted is available and
+# allows safely detecting C++ wrapper objects that have been deleted. Import
+# it once at module import time and expose a small, robust wrapper so callers
+# can avoid re-importing sip repeatedly and so we centralize exception
+# handling (this reduces crash risk during teardown and deletion operations).
+try:
+    import sip as _sip  # type: ignore
+    _sip_isdeleted = getattr(_sip, 'isdeleted', None)
+except Exception:
+    _sip = None
+    _sip_isdeleted = None
+
+
 from vtkmodules.vtkInteractionStyle import vtkInteractorStyleTrackballCamera
 
 # RDKit
@@ -56,6 +73,11 @@ from rdkit import Chem
 from rdkit.Chem import AllChem
 from rdkit.Chem import Descriptors
 from rdkit.Chem import rdMolDescriptors
+from rdkit.Chem import inchi as rd_inchi
+from rdkit.Chem import rdGeometry
+from rdkit.Chem import rdDetermineBonds
+from rdkit.Chem import rdMolTransforms
+from rdkit.DistanceGeometry import DoTriangleSmoothing
 
 
 # Open Babel Python binding (optional; required for fallback)
@@ -137,6 +159,21 @@ CPK_COLORS_PV = {
 
 pt = Chem.GetPeriodicTable()
 VDW_RADII = {pt.GetElementSymbol(i): pt.GetRvdw(i) * 0.3 for i in range(1, 119)}
+
+
+def sip_isdeleted_safe(obj) -> bool:
+    """Return True if sip reports the given wrapper object as deleted.
+
+    This function is conservative: if SIP isn't available or any error
+    occurs while checking, it returns False (i.e. not deleted) so that the
+    caller can continue other lightweight guards (like checking scene()).
+    """
+    try:
+        if _sip_isdeleted is None:
+            return False
+        return bool(_sip_isdeleted(obj))
+    except Exception:
+        return False
 
 class Dialog3DPickingMixin:
     """3D原子選択のための共通機能を提供するMixin"""
@@ -2170,7 +2207,7 @@ class MolecularData:
                     
             except Exception as e:
                 print(f"Error removing atom {atom_id}: {e}")
-                import traceback
+                
                 traceback.print_exc()
 
     def remove_bond(self, id1, id2):
@@ -2191,7 +2228,7 @@ class MolecularData:
                 
         except Exception as e:
             print(f"Error removing bond {id1}-{id2}: {e}")
-            import traceback
+            
             traceback.print_exc()
 
 
@@ -2667,7 +2704,6 @@ class BondItem(QGraphicsItem):
         try:
             # ラベルを消す場合は、消す前のboundingRectをscene().invalidateで強制的に無効化
             if new_stereo == 0 and self.stereo in [3, 4] and self.scene():
-                from PyQt6.QtWidgets import QGraphicsScene
                 rect = self.mapToScene(self.boundingRect()).boundingRect()
                 self.scene().invalidate(rect, QGraphicsScene.SceneLayer.BackgroundLayer | QGraphicsScene.SceneLayer.ForegroundLayer)
             
@@ -3053,7 +3089,26 @@ class MoleculeScene(QGraphicsScene):
         """テンプレートプレビュー用のゴースト線を全て消す"""
         for item in list(self.items()):
             if isinstance(item, QGraphicsLineItem) and getattr(item, '_is_template_preview', False):
-                self.removeItem(item)
+                try:
+                    # If SIP reports the wrapper as deleted, skip it. Otherwise
+                    # ensure it is still in a scene before attempting removal.
+                    if sip_isdeleted_safe(item):
+                        continue
+                    sc = None
+                    try:
+                        sc = item.scene() if hasattr(item, 'scene') else None
+                    except Exception:
+                        sc = None
+                    if sc is None:
+                        continue
+                    try:
+                        self.removeItem(item)
+                    except Exception:
+                        # Best-effort: ignore removal errors to avoid crashes during teardown
+                        pass
+                except Exception:
+                    # Non-fatal: continue with other items
+                    continue
         self.template_context = {}
         if hasattr(self, 'template_preview'):
             self.template_preview.hide()
@@ -3154,7 +3209,7 @@ class MoleculeScene(QGraphicsScene):
                             data_changed = False  # ここでundo済みなので以降で積まない
                     except Exception as e:
                         print(f"Error clearing E/Z label: {e}")
-                        import traceback
+                        
                         traceback.print_exc()
                         if hasattr(self.window, 'statusBar'):
                             self.window.statusBar().showMessage(f"Error clearing E/Z label: {e}", 5000)
@@ -3267,8 +3322,20 @@ class MoleculeScene(QGraphicsScene):
         is_click = self.press_pos and (end_pos - self.press_pos).manhattanLength() < QApplication.startDragDistance()
 
         if self.temp_line:
-            self.removeItem(self.temp_line)
-            self.temp_line = None
+            try:
+                if not sip_isdeleted_safe(self.temp_line):
+                    try:
+                        if getattr(self.temp_line, 'scene', None) and self.temp_line.scene():
+                            self.removeItem(self.temp_line)
+                    except Exception:
+                        pass
+            except Exception:
+                try:
+                    self.removeItem(self.temp_line)
+                except Exception:
+                    pass
+            finally:
+                self.temp_line = None
 
         if self.mode.startswith('template') and is_click:
             if self.template_context and self.template_context.get('points'):
@@ -3326,7 +3393,7 @@ class MoleculeScene(QGraphicsScene):
                         self.window.push_undo_state()  # ここでUndo stackに積む
                 except Exception as e:
                     print(f"Error in E/Z stereo toggle: {e}")
-                    import traceback
+                    
                     traceback.print_exc()
                     if hasattr(self.window, 'statusBar'):
                         self.window.statusBar().showMessage(f"Error changing E/Z stereochemistry: {e}", 5000)
@@ -3501,7 +3568,7 @@ class MoleculeScene(QGraphicsScene):
                 
         except Exception as e:
             print(f"Error creating bond: {e}")
-            import traceback
+            
             traceback.print_exc()
 
     def add_molecule_fragment(self, points, bonds_info, existing_items=None, symbol='C'):
@@ -3841,6 +3908,27 @@ class MoleculeScene(QGraphicsScene):
         if not items_to_delete:
             return False
 
+        # First sanitize the incoming collection: only keep live, expected QGraphics wrappers
+        try:
+            sanitized = set()
+            for it in items_to_delete:
+                try:
+                    if it is None:
+                        continue
+                    # Skip SIP-deleted wrappers early to avoid native crashes
+                    if sip_isdeleted_safe(it):
+                        continue
+                    # Only accept AtomItem/BondItem or other QGraphicsItem subclasses
+                    if isinstance(it, (AtomItem, BondItem, QGraphicsItem)):
+                        sanitized.add(it)
+                except Exception:
+                    # If isinstance or sip check raises, skip this entry
+                    continue
+            items_to_delete = sanitized
+        except Exception:
+            # If sanitization fails, fall back to original input and proceed defensively
+            pass
+
         try:
             atoms_to_delete = {item for item in items_to_delete if isinstance(item, AtomItem)}
             bonds_to_delete = {item for item in items_to_delete if isinstance(item, BondItem)}
@@ -3871,10 +3959,11 @@ class MoleculeScene(QGraphicsScene):
             # 1) Update surviving atoms' bond lists to remove references to bonds_to_delete
             for atom in list(atoms_to_update):
                 try:
-                    if hasattr(atom, 'bonds') and atom.bonds:
-                        atom.bonds = [b for b in atom.bonds if b not in bonds_to_delete]
+                    if sip_isdeleted_safe(atom):
+                        continue
+                    if hasattr(atom, 'update_style'):
+                        atom.update_style()
                 except Exception:
-                    # best-effort: if this fails, skip to avoid crash
                     continue
 
             # 2) Remove bonds/atoms from the data model first (so other code reading the model
@@ -3918,9 +4007,25 @@ class MoleculeScene(QGraphicsScene):
                     pass
 
             # 3) Remove graphic items from the scene (bonds first)
+            # To avoid calling into methods on wrappers that may refer to
+            # already-deleted C++ objects (which can cause a native crash when
+            # SIP is not available), take a snapshot of the current scene's
+            # items and use membership tests instead of calling item.scene().
+            try:
+                current_scene_items = set(self.items())
+            except Exception:
+                # If for any reason items() fails, fall back to an empty set
+                current_scene_items = set()
+
             for bond in list(bonds_to_delete):
                 try:
-                    if getattr(bond, 'scene', None) and bond.scene():
+                    # If the SIP wrapper is already deleted, skip it.
+                    if sip_isdeleted_safe(bond):
+                        continue
+                    # Only attempt to remove the bond if it is present in the
+                    # scene snapshot. This avoids calling bond.scene() which
+                    # may invoke C++ on a deleted object.
+                    if bond in current_scene_items:
                         try:
                             self.removeItem(bond)
                         except Exception:
@@ -3930,7 +4035,10 @@ class MoleculeScene(QGraphicsScene):
 
             for atom in list(atoms_to_delete):
                 try:
-                    if getattr(atom, 'scene', None) and atom.scene():
+                    # Skip if wrapper is reported deleted by SIP
+                    if sip_isdeleted_safe(atom):
+                        continue
+                    if atom in current_scene_items:
                         try:
                             self.removeItem(atom)
                         except Exception:
@@ -3966,7 +4074,7 @@ class MoleculeScene(QGraphicsScene):
         except Exception as e:
             # Keep the application alive on unexpected errors
             print(f"Error during delete_items operation: {e}")
-            import traceback
+            
             traceback.print_exc()
             return False
     
@@ -4457,7 +4565,18 @@ class MoleculeScene(QGraphicsScene):
         # --- 4. 全体に対する操作 (削除、モード切替など) ---
         if key == Qt.Key.Key_Delete or key == Qt.Key.Key_Backspace:
             if self.temp_line:
-                self.removeItem(self.temp_line)
+                try:
+                    if not sip_isdeleted_safe(self.temp_line):
+                        try:
+                            if getattr(self.temp_line, 'scene', None) and self.temp_line.scene():
+                                self.removeItem(self.temp_line)
+                        except Exception:
+                            pass
+                except Exception:
+                    try:
+                        self.removeItem(self.temp_line)
+                    except Exception:
+                        pass
                 self.temp_line = None; self.start_atom = None; self.start_pos = None
                 self.initial_positions_in_event = {}
                 event.accept()
@@ -4599,7 +4718,7 @@ class MoleculeScene(QGraphicsScene):
             
         except Exception as e:
             print(f"Error in update_bond_stereo: {e}")
-            import traceback
+            
             traceback.print_exc()
             if hasattr(self.window, 'statusBar'):
                 self.window.statusBar().showMessage(f"Error updating bond stereochemistry: {e}", 5000)
@@ -4829,7 +4948,6 @@ class CalculationWorker(QObject):
             if conf_id == -1 and conversion_mode in ('fallback', 'rdkit'):
                 try:
                     # Create distance constraints for double bonds to enforce E/Z geometry
-                    from rdkit.DistanceGeometry import DoTriangleSmoothing
                     bounds_matrix = AllChem.GetMoleculeBoundsMatrix(mol)
 
                     # Add constraints for E/Z bonds
@@ -5057,8 +5175,7 @@ class AnalysisWindow(QDialog):
         # --- 分子特性を計算 ---
         try:
             # RDKitのモジュールをインポート
-            from rdkit import Chem
-            from rdkit.Chem import Descriptors, rdMolDescriptors
+
 
             if self.is_xyz_derived:
                 # XYZ由来の場合：元のXYZファイルの原子情報から直接計算
@@ -5107,7 +5224,6 @@ class AnalysisWindow(QDialog):
                 mol_formula = ''.join(formula_parts)
                 
                 # 分子量と精密質量をRDKitから取得
-                from rdkit import Chem
                 
                 mol_wt = 0.0
                 exact_mw = 0.0
@@ -5175,7 +5291,6 @@ class AnalysisWindow(QDialog):
                     except Exception:
                         # Fallback to rdkit.Chem.inchi if present
                         try:
-                            from rdkit.Chem import inchi as rd_inchi
                             inchi_key = rd_inchi.MolToInchiKey(self.mol)
                         except Exception:
                             inchi_key = None
@@ -7188,7 +7303,14 @@ class MainWindow(QMainWindow):
         self.paste_action.triggered.connect(self.paste_from_clipboard)
         edit_menu.addAction(self.paste_action)
 
-        remove_hydrogen_action = QAction("Remove Hydrogen", self)
+        edit_menu.addSeparator()
+
+        add_hydrogen_action = QAction("Add Hydrogens", self)
+        add_hydrogen_action.setToolTip("Add explicit hydrogens based on RDKit implicit counts")
+        add_hydrogen_action.triggered.connect(self.add_hydrogen_atoms)
+        edit_menu.addAction(add_hydrogen_action)
+    
+        remove_hydrogen_action = QAction("Remove Hydrogens", self)
         remove_hydrogen_action.triggered.connect(self.remove_hydrogen_atoms)
         edit_menu.addAction(remove_hydrogen_action)
 
@@ -7808,7 +7930,7 @@ class MainWindow(QMainWindow):
             
         except Exception as e:
             print(f"Error during copy operation: {e}")
-            import traceback
+            
             traceback.print_exc()
             self.statusBar().showMessage(f"Error during copy operation: {e}")
 
@@ -7828,7 +7950,7 @@ class MainWindow(QMainWindow):
                 
         except Exception as e:
             print(f"Error during cut operation: {e}")
-            import traceback
+            
             traceback.print_exc()
             self.statusBar().showMessage(f"Error during cut operation: {e}")
 
@@ -7877,7 +7999,7 @@ class MainWindow(QMainWindow):
             
         except Exception as e:
             print(f"Error during paste operation: {e}")
-            import traceback
+            
             traceback.print_exc()
             self.statusBar().showMessage(f"Error during paste operation: {e}")
         self.statusBar().showMessage(f"Pasted {len(new_atoms)} atoms.", 2000)
@@ -7886,29 +8008,240 @@ class MainWindow(QMainWindow):
     def remove_hydrogen_atoms(self):
         """2Dビューで水素原子とその結合を削除する"""
         try:
-            hydrogen_atoms = []
-            
-            # 水素原子を特定
-            for atom_id, atom_data in self.data.atoms.items():
-                if atom_data['symbol'] == 'H':
-                    hydrogen_atoms.append(atom_data['item'])
-            
-            if not hydrogen_atoms:
+            # Collect hydrogen atom items robustly (store atom_id -> item)
+            hydrogen_map = {}
+
+            # Iterate over a snapshot of atoms to avoid "dictionary changed size"
+            for atom_id, atom_data in list(self.data.atoms.items()):
+                try:
+                    if atom_data.get('symbol') != 'H':
+                        continue
+                    item = atom_data.get('item')
+                    # Only collect live AtomItem wrappers
+                    if item is None:
+                        continue
+                    if sip_isdeleted_safe(item):
+                        continue
+                    if not isinstance(item, AtomItem):
+                        continue
+                    # Prefer storing by original atom id to detect actual removals later
+                    hydrogen_map[atom_id] = item
+                except Exception:
+                    # Ignore problematic entries and continue scanning
+                    continue
+
+            if not hydrogen_map:
                 self.statusBar().showMessage("No hydrogen atoms found to remove.", 2000)
                 return
-            
-            # 削除を実行
-            if self.scene.delete_items(set(hydrogen_atoms)):
-                self.push_undo_state()
-                self.statusBar().showMessage(f"Removed {len(hydrogen_atoms)} hydrogen atoms.", 2000)
+
+            # To avoid blocking the UI or causing large, monolithic deletions that may
+            # trigger internal re-entrancy issues, delete in batches and process UI events
+            items = list(hydrogen_map.values())
+            total = len(items)
+            batch_size = 200  # tuned conservative batch size
+            deleted_any = False
+
+            for start in range(0, total, batch_size):
+                end = min(start + batch_size, total)
+                batch = set()
+                # Filter out items that are already deleted or invalid just before deletion
+                for it in items[start:end]:
+                    try:
+                        if it is None:
+                            continue
+                        if sip_isdeleted_safe(it):
+                            continue
+                        if not isinstance(it, AtomItem):
+                            continue
+                        batch.add(it)
+                    except Exception:
+                        continue
+
+                if not batch:
+                    # Nothing valid to delete in this batch
+                    continue
+
+                try:
+                    # scene.delete_items is expected to handle bond cleanup; call it per-batch
+                    success = False
+                    try:
+                        success = bool(self.scene.delete_items(batch))
+                    except Exception:
+                        # If scene.delete_items raises for a batch, attempt a safe per-item fallback
+                        success = False
+
+                    if not success:
+                        # Fallback: try deleting items one-by-one to isolate problematic items
+                        for it in list(batch):
+                            try:
+                                # Use scene.delete_items for single-item as well
+                                ok = bool(self.scene.delete_items({it}))
+                                if ok:
+                                    deleted_any = True
+                            except Exception:
+                                # If single deletion also fails, skip that item
+                                continue
+                    else:
+                        deleted_any = True
+
+                except Exception:
+                    # Continue with next batch on unexpected errors
+                    continue
+
+                # Allow the GUI to process events between batches to remain responsive
+                try:
+                    QApplication.processEvents()
+                except Exception:
+                    pass
+
+            # Determine how many hydrogens actually were removed by re-scanning data
+            remaining_h = 0
+            try:
+                for _, atom_data in list(self.data.atoms.items()):
+                    try:
+                        if atom_data.get('symbol') == 'H':
+                            remaining_h += 1
+                    except Exception:
+                        continue
+            except Exception:
+                remaining_h = 0
+
+            removed_count = max(0, len(hydrogen_map) - remaining_h)
+
+            if removed_count > 0:
+                # Only push a single undo state once for the whole operation
+                try:
+                    self.push_undo_state()
+                except Exception:
+                    # Do not allow undo stack problems to crash the app
+                    pass
+                self.statusBar().showMessage(f"Removed {removed_count} hydrogen atoms.", 2000)
             else:
-                self.statusBar().showMessage("Failed to remove hydrogen atoms.")
-                
+                # If nothing removed but we attempted, show an informative message
+                if deleted_any:
+                    # Deleted something but couldn't determine count reliably
+                    self.statusBar().showMessage("Removed hydrogen atoms (count unknown).", 2000)
+                else:
+                    self.statusBar().showMessage("Failed to remove hydrogen atoms or none found.")
+
         except Exception as e:
+            # Capture and log unexpected errors but don't let them crash the UI
             print(f"Error during hydrogen removal: {e}")
-            import traceback
             traceback.print_exc()
-            self.statusBar().showMessage(f"Error removing hydrogen atoms: {e}")
+            try:
+                self.statusBar().showMessage(f"Error removing hydrogen atoms: {e}")
+            except Exception:
+                pass
+
+    def add_hydrogen_atoms(self):
+        """RDKitで各原子の暗黙の水素数を調べ、その数だけ明示的な水素原子と単結合を作成する（2Dビュー）。
+
+        実装上の仮定:
+        - `self.data.to_rdkit_mol()` は各RDKit原子に `_original_atom_id` プロパティを設定している。
+        - 原子の2D座標は `self.data.atoms[orig_id]['item'].pos()` で得られる。
+        - 新しい原子は `self.scene.create_atom(symbol, pos, ...)` で追加し、
+          結合は `self.scene.create_bond(atom_item, hydrogen_item, bond_order=1)` で作成する。
+        """
+        try:
+            
+
+            mol = self.data.to_rdkit_mol(use_2d_stereo=False)
+            if not mol or mol.GetNumAtoms() == 0:
+                self.statusBar().showMessage("No molecule available to compute hydrogens.", 2000)
+                return
+
+            added_count = 0
+            added_items = []
+
+            # すべてのRDKit原子について暗黙水素数を確認
+            for idx in range(mol.GetNumAtoms()):
+                rd_atom = mol.GetAtomWithIdx(idx)
+                try:
+                    orig_id = rd_atom.GetIntProp("_original_atom_id")
+                except Exception:
+                    # 元のエディタ側のIDがない場合はスキップ
+                    continue
+
+                if orig_id not in self.data.atoms:
+                    continue
+
+                # 暗黙水素数を優先して取得。存在しない場合は総水素数 - 明示水素数を使用
+                implicit_h = int(rd_atom.GetNumImplicitHs()) if hasattr(rd_atom, 'GetNumImplicitHs') else 0
+                if implicit_h is None or implicit_h < 0:
+                    implicit_h = 0
+                if implicit_h == 0:
+                    # フォールバック
+                    try:
+                        total_h = int(rd_atom.GetTotalNumHs())
+                        explicit_h = int(rd_atom.GetNumExplicitHs()) if hasattr(rd_atom, 'GetNumExplicitHs') else 0
+                        implicit_h = max(0, total_h - explicit_h)
+                    except Exception:
+                        implicit_h = 0
+
+                if implicit_h <= 0:
+                    continue
+
+                parent_item = self.data.atoms[orig_id]['item']
+                parent_pos = parent_item.pos()
+
+                # 周囲の近接原子の方向を取得して、水素を邪魔しないように角度を決定
+                neighbor_angles = []
+                try:
+                    for (a1, a2), bdata in self.data.bonds.items():
+                        if a1 == orig_id and a2 in self.data.atoms:
+                            vec = self.data.atoms[a2]['item'].pos() - parent_pos
+                            neighbor_angles.append(math.atan2(vec.y(), vec.x()))
+                        elif a2 == orig_id and a1 in self.data.atoms:
+                            vec = self.data.atoms[a1]['item'].pos() - parent_pos
+                            neighbor_angles.append(math.atan2(vec.y(), vec.x()))
+                except Exception:
+                    neighbor_angles = []
+
+                # 基本的な配置方針: 既存の結合方向の平均からオフセットして等間隔に配置
+                if neighbor_angles:
+                    avg_angle = sum(neighbor_angles) / len(neighbor_angles)
+                    start_angle = avg_angle + math.pi / 2.0
+                else:
+                    start_angle = 0.0
+
+                # 画面上の適当な結合長（ピクセル）を使用
+                bond_length = 40.0
+
+                for h_idx in range(implicit_h):
+                    angle = start_angle + h_idx * (2.0 * math.pi / implicit_h)
+                    dx = bond_length * math.cos(angle)
+                    dy = bond_length * math.sin(angle)
+                    pos = QPointF(parent_pos.x() + dx, parent_pos.y() + dy)
+
+                    # 新しい水素原子を作成
+                    try:
+                        new_id = self.scene.create_atom('H', pos)
+                        new_item = self.data.atoms[new_id]['item']
+                        # 単結合を作成
+                        self.scene.create_bond(parent_item, new_item, bond_order=1, bond_stereo=0)
+                        added_items.append(new_item)
+                        added_count += 1
+                    except Exception as e:
+                        # 個々の追加失敗はログに残して続行
+                        print(f"Failed to add H for atom {orig_id}: {e}")
+
+            if added_count > 0:
+                self.push_undo_state()
+                self.statusBar().showMessage(f"Added {added_count} hydrogen atoms.", 2000)
+                # 選択を有効化して追加した原子を選択状態にする
+                try:
+                    self.scene.clearSelection()
+                    for it in added_items:
+                        it.setSelected(True)
+                except Exception:
+                    pass
+            else:
+                self.statusBar().showMessage("No implicit hydrogens found to add.", 2000)
+
+        except Exception as e:
+            print(f"Error during hydrogen addition: {e}")
+            traceback.print_exc()
+            self.statusBar().showMessage(f"Error adding hydrogen atoms: {e}")
 
     def update_edit_menu_actions(self):
         """選択状態やクリップボードの状態に応じて編集メニューを更新"""
@@ -8843,6 +9176,60 @@ class MainWindow(QMainWindow):
                         # Skip problematic RDKit atoms
                         continue
 
+            # Compute a per-atom problem map (original_id -> bool) so the
+            # UI closure can safely set AtomItem.has_problem on the main thread.
+            problem_map = {}
+            try:
+                if mol is not None:
+                    try:
+                        problems = Chem.DetectChemistryProblems(mol)
+                    except Exception:
+                        problems = None
+
+                    if problems:
+                        for prob in problems:
+                            try:
+                                atom_idx = prob.GetAtomIdx()
+                                rd_atom = mol.GetAtomWithIdx(atom_idx)
+                                if rd_atom and rd_atom.HasProp("_original_atom_id"):
+                                    orig = int(rd_atom.GetIntProp("_original_atom_id"))
+                                    problem_map[orig] = True
+                            except Exception:
+                                continue
+                else:
+                    # Fallback: use a lightweight valence heuristic similar to
+                    # check_chemistry_problems_fallback() so we still flag atoms
+                    # when RDKit conversion wasn't possible.
+                    for atom_id, atom_data in self.data.atoms.items():
+                        try:
+                            symbol = atom_data.get('symbol')
+                            charge = atom_data.get('charge', 0)
+                            bond_count = 0
+                            for (id1, id2), bond_data in self.data.bonds.items():
+                                if id1 == atom_id or id2 == atom_id:
+                                    bond_count += bond_data.get('order', 1)
+
+                            is_problematic = False
+                            if symbol == 'C' and bond_count > 4:
+                                is_problematic = True
+                            elif symbol == 'N' and bond_count > 3 and charge == 0:
+                                is_problematic = True
+                            elif symbol == 'O' and bond_count > 2 and charge == 0:
+                                is_problematic = True
+                            elif symbol == 'H' and bond_count > 1:
+                                is_problematic = True
+                            elif symbol in ['F', 'Cl', 'Br', 'I'] and bond_count > 1 and charge == 0:
+                                is_problematic = True
+
+                            if is_problematic:
+                                problem_map[atom_id] = True
+                        except Exception:
+                            continue
+            except Exception:
+                # If any unexpected error occurs while building the map, fall back
+                # to an empty map so we don't accidentally crash the UI.
+                problem_map = {}
+
             # Schedule UI updates on the main thread to avoid calling Qt methods from
             # background threads or during teardown (which can crash the C++ layer).
             def _apply_ui_updates():
@@ -8864,13 +9251,10 @@ class MainWindow(QMainWindow):
                     atoms_snapshot = dict(self.data.atoms)
                 except Exception:
                     atoms_snapshot = {}
-                # Try to import sip.isdeleted if available (PyQt6 uses 'sip')
-                is_deleted_func = None
-                try:
-                    import sip
-                    is_deleted_func = getattr(sip, 'isdeleted', None)
-                except Exception:
-                    is_deleted_func = None
+                # Prefer the module-level SIP helper to avoid repeated imports
+                # and centralize exception handling. _sip_isdeleted is set at
+                # import time above; fall back to None if unavailable.
+                is_deleted_func = _sip_isdeleted if _sip_isdeleted is not None else None
 
                 items_to_update = []
                 for atom_id, atom_data in atoms_snapshot.items():
@@ -8901,21 +9285,40 @@ class MainWindow(QMainWindow):
                         new_count = h_count_map.get(atom_id, 0)
 
                         current = getattr(item, 'implicit_h_count', None)
-                        if current == new_count:
+                        current_prob = getattr(item, 'has_problem', False)
+                        desired_prob = problem_map.get(atom_id, False)
+
+                        # If neither the implicit-H count nor the problem flag
+                        # changed, skip this item.
+                        if current == new_count and current_prob == desired_prob:
                             continue
 
-                        # Prepare geometry change if possible, then set attribute
+                        # Only prepare a geometry change if the implicit H count
+                        # changes (this may affect the item's bounding rect).
+                        need_geometry = (current != new_count)
                         try:
-                            if hasattr(item, 'prepareGeometryChange'):
+                            if need_geometry and hasattr(item, 'prepareGeometryChange'):
                                 try:
                                     item.prepareGeometryChange()
                                 except Exception:
                                     pass
-                            # Setting attribute may still raise for broken wrappers; guard it
+
+                            # Apply implicit hydrogen count (guarded)
                             try:
                                 item.implicit_h_count = new_count
                             except Exception:
-                                continue
+                                # If setting the count fails, continue but still
+                                # attempt to set the problem flag below.
+                                pass
+
+                            # Apply problem flag (visual red-outline)
+                            try:
+                                item.has_problem = bool(desired_prob)
+                            except Exception:
+                                pass
+
+                            # Ensure the item is updated in the scene so paint() runs
+                            # when either geometry or problem-flag changed.
                             items_to_update.append(item)
                         except Exception:
                             # Non-fatal: skip problematic items
@@ -9058,7 +9461,7 @@ class MainWindow(QMainWindow):
             self.statusBar().showMessage(f"Invalid SMILES: {e}")
         except Exception as e:
             self.statusBar().showMessage(f"Error loading from SMILES: {e}")
-            import traceback
+            
             traceback.print_exc()
 
     def load_from_inchi(self, inchi_string):
@@ -9143,7 +9546,7 @@ class MainWindow(QMainWindow):
             self.statusBar().showMessage(f"Invalid InChI: {e}")
         except Exception as e:
             self.statusBar().showMessage(f"Error loading from InChI: {e}")
-            import traceback
+            
             traceback.print_exc()
     
     def fix_mol_counts_line(self, line: str) -> str:
@@ -9286,7 +9689,7 @@ class MainWindow(QMainWindow):
             self.statusBar().showMessage(f"Invalid MOL file format: {e}")
         except Exception as e: 
             self.statusBar().showMessage(f"Error loading file: {e}")
-            import traceback
+            
             traceback.print_exc()
     
     def load_mol_for_3d_viewing(self):
@@ -9362,7 +9765,7 @@ class MainWindow(QMainWindow):
         except Exception as e:
             self.statusBar().showMessage(f"Error loading 3D file: {e}")
             self.restore_ui_for_editing()
-            import traceback
+            
             traceback.print_exc()
             '''
 
@@ -9467,14 +9870,12 @@ class MainWindow(QMainWindow):
         except Exception as e:
             self.statusBar().showMessage(f"Error loading XYZ file: {e}")
             self.restore_ui_for_editing()
-            import traceback
+            
             traceback.print_exc()
 
     def load_xyz_file(self, file_path):
         """XYZファイルを読み込んでRDKitのMolオブジェクトを作成する"""
-        from rdkit.Chem import rdGeometry
-        # Ensure PyQt dialog widgets are available for the custom charge dialog
-        from PyQt6.QtWidgets import QDialog, QVBoxLayout, QLineEdit, QPushButton, QLabel, QDialogButtonBox, QHBoxLayout
+        
         if not self.check_unsaved_changes():
             return  # ユーザーがキャンセルした場合は何もしない
 
@@ -9482,9 +9883,7 @@ class MainWindow(QMainWindow):
             # We will attempt one silent load with default charge=0 (no dialog).
             # If RDKit emits chemistry warnings (for example "Explicit valence ..."),
             # prompt the user once for an overall charge and retry. Only one retry is allowed.
-            import io
-            import contextlib
-            import re
+
 
             # Helper: prompt for charge once when needed
             # Returns a tuple: (charge_value_or_0, accepted:bool, skip_chemistry:bool)
@@ -10034,7 +10433,6 @@ class MainWindow(QMainWindow):
 
     def estimate_bonds_from_distances(self, mol):
         """原子間距離に基づいて結合を推定する"""
-        from rdkit.Chem import rdMolTransforms
         
         # 一般的な共有結合半径（Ångström）- より正確な値
         covalent_radii = {
@@ -10129,7 +10527,7 @@ class MainWindow(QMainWindow):
                 self.statusBar().showMessage(f"Data serialization error: {e}")
             except Exception as e: 
                 self.statusBar().showMessage(f"Error saving project file: {e}")
-                import traceback
+                
                 traceback.print_exc()
         else:
             # MOL/SDF/XYZなどは上書き保存せず、必ず「名前を付けて保存」にする
@@ -10180,7 +10578,7 @@ class MainWindow(QMainWindow):
             self.statusBar().showMessage(f"Data serialization error: {e}")
         except Exception as e: 
             self.statusBar().showMessage(f"Error saving project file: {e}")
-            import traceback
+            
             traceback.print_exc()
 
     def save_raw_data(self):
@@ -10223,7 +10621,7 @@ class MainWindow(QMainWindow):
             self.statusBar().showMessage(f"Data serialization error: {e}")
         except Exception as e: 
             self.statusBar().showMessage(f"Error saving project file: {e}")
-            import traceback
+            
             traceback.print_exc()
 
 
@@ -10257,7 +10655,7 @@ class MainWindow(QMainWindow):
             self.statusBar().showMessage(f"Invalid project file format: {e}")
         except Exception as e: 
             self.statusBar().showMessage(f"Error loading project file: {e}")
-            import traceback
+            
             traceback.print_exc()
 
     def save_as_json(self):
@@ -10307,7 +10705,7 @@ class MainWindow(QMainWindow):
             self.statusBar().showMessage(f"JSON serialization error: {e}")
         except Exception as e: 
             self.statusBar().showMessage(f"Error saving PME Project file: {e}")
-            import traceback
+            
             traceback.print_exc()
 
     def create_json_data(self):
@@ -10357,7 +10755,6 @@ class MainWindow(QMainWindow):
         if self.current_mol and self.current_mol.GetNumConformers() > 0:
             try:
                 # MOLデータをBase64エンコードで保存（バイナリデータの安全な保存）
-                import base64
                 mol_binary = self.current_mol.ToBinary()
                 mol_base64 = base64.b64encode(mol_binary).decode('ascii')
                 
@@ -10501,7 +10898,7 @@ class MainWindow(QMainWindow):
             self.statusBar().showMessage(f"File I/O error: {e}")
         except Exception as e: 
             self.statusBar().showMessage(f"Error loading PME Project file: {e}")
-            import traceback
+            
             traceback.print_exc()
 
     def open_project_file(self, file_path=None):
@@ -10602,7 +10999,6 @@ class MainWindow(QMainWindow):
             structure_3d = json_data["3d_structure"]
             try:
                 # バイナリデータの復元
-                import base64
                 mol_base64 = structure_3d.get("mol_binary_base64")
                 if mol_base64:
                     mol_binary = base64.b64decode(mol_base64.encode('ascii'))
@@ -10703,7 +11099,7 @@ class MainWindow(QMainWindow):
             self.statusBar().showMessage(f"Text encoding error: {e}")
         except Exception as e: 
             self.statusBar().showMessage(f"Error saving file: {e}")
-            import traceback
+            
             traceback.print_exc()
             
     def save_3d_as_mol(self):
@@ -10750,7 +11146,7 @@ class MainWindow(QMainWindow):
             self.statusBar().showMessage(f"Text encoding error: {e}")
         except Exception as e: 
             self.statusBar().showMessage(f"Error saving 3D MOL file: {e}")
-            import traceback
+            
             traceback.print_exc()
 
     def save_as_xyz(self):
@@ -10793,7 +11189,6 @@ class MainWindow(QMainWindow):
             return
             
         try:
-            import pyvista as pv
             
             # 3Dビューから直接データを取得（色情報なし）
             combined_mesh = self.export_from_3d_view_no_color()
@@ -10825,7 +11220,6 @@ class MainWindow(QMainWindow):
             return
             
         try:
-            import pyvista as pv
             
             # 3Dビューから表示中のメッシュデータを色情報とともに取得
             meshes_with_colors = self.export_from_3d_view_with_colors()
@@ -10856,7 +11250,6 @@ class MainWindow(QMainWindow):
     def create_multi_material_obj(self, meshes_with_colors, obj_path, mtl_path):
         """複数のマテリアルを持つOBJファイルとMTLファイルを作成（改良版）"""
         try:
-            import os
             
             # MTLファイルを作成
             with open(mtl_path, 'w') as mtl_file:
@@ -10934,8 +11327,6 @@ class MainWindow(QMainWindow):
             return
             
         try:
-            import pyvista as pv
-            import numpy as np
             
             # 3Dビューから直接データを取得
             combined_mesh = self.export_from_3d_view()
@@ -10956,9 +11347,6 @@ class MainWindow(QMainWindow):
     def export_from_3d_view(self):
         """現在の3Dビューから直接メッシュデータを取得"""
         try:
-            import pyvista as pv
-            import numpy as np
-            import vtk
             
             # PyVistaプロッターから全てのアクターを取得
             combined_mesh = pv.PolyData()
@@ -11038,9 +11426,6 @@ class MainWindow(QMainWindow):
     def export_from_3d_view_no_color(self):
         """現在の3Dビューから直接メッシュデータを取得（色情報なし）"""
         try:
-            import pyvista as pv
-            import numpy as np
-            import vtk
             
             # PyVistaプロッターから全てのアクターを取得
             combined_mesh = pv.PolyData()
@@ -11100,9 +11485,6 @@ class MainWindow(QMainWindow):
     def export_from_3d_view_with_colors(self):
         """現在の3Dビューから直接メッシュデータを色情報とともに取得"""
         try:
-            import pyvista as pv
-            import numpy as np
-            import vtk
             
             meshes_with_colors = []
             
@@ -11460,9 +11842,34 @@ class MainWindow(QMainWindow):
                     self.data.atoms[atom_id]['pos'] = new_scene_pos
 
             # 最終的な座標に基づき、全ての結合表示を一度に更新
+            # Guard against partially-deleted Qt wrappers: skip items that
+            # SIP reports as deleted or which are no longer in a scene.
             for bond_data in self.data.bonds.values():
-                if bond_data.get('item'):
-                    bond_data['item'].update_position()
+                item = bond_data.get('item') if bond_data else None
+                if not item:
+                    continue
+                try:
+                    # If SIP is available, skip wrappers whose C++ object is gone
+                    if sip_isdeleted_safe(item):
+                        continue
+                except Exception:
+                    # If the sip check fails, continue with other lightweight guards
+                    pass
+                try:
+                    sc = None
+                    try:
+                        sc = item.scene() if hasattr(item, 'scene') else None
+                    except Exception:
+                        sc = None
+                    if sc is None:
+                        continue
+                    try:
+                        item.update_position()
+                    except Exception:
+                        # Best-effort: skip any bond items that raise when updating
+                        continue
+                except Exception:
+                    continue
 
             # 重なり解消ロジックを実行
             self. resolve_overlapping_groups()
@@ -11623,8 +12030,28 @@ class MainWindow(QMainWindow):
 
         # --- ステップ5: 表示と状態を更新 ---
         for bond_data in self.data.bonds.values():
-            if bond_data and 'item' in bond_data:
-                bond_data['item'].update_position()
+            item = bond_data.get('item') if bond_data else None
+            if not item:
+                continue
+            try:
+                if sip_isdeleted_safe(item):
+                    continue
+            except Exception:
+                pass
+            try:
+                sc = None
+                try:
+                    sc = item.scene() if hasattr(item, 'scene') else None
+                except Exception:
+                    sc = None
+                if sc is None:
+                    continue
+                try:
+                    item.update_position()
+                except Exception:
+                    continue
+            except Exception:
+                continue
         
         # 重なり解消後に測定ラベルの位置を更新
         self.update_2d_measurement_labels()
@@ -12909,23 +13336,6 @@ class MainWindow(QMainWindow):
                     continue
 
         if file_path:
-            # Set the process current directory to the dropped file's parent
-            try:
-                parent_dir = os.path.dirname(file_path)
-                if parent_dir and os.path.exists(parent_dir):
-                    os.chdir(parent_dir)
-                    self.statusBar().showMessage(f"Current directory set to: {parent_dir}")
-                    # Persist this change to settings (best-effort)
-                    try:
-                        self.settings['last_open_dir'] = parent_dir
-                        self.settings_dirty = True
-                    except Exception:
-                        pass
-
-            except Exception:
-                # Non-fatal if chdir fails; continue to open the file
-                pass
-
             # ドロップ位置を取得
             drop_pos = event.position().toPoint()
             # 拡張子に応じて適切な読み込みメソッドを呼び出す
@@ -13380,11 +13790,20 @@ class MainWindow(QMainWindow):
                             self.conv_actions[conv_mode].setChecked(True)
                         except Exception:
                             pass
+
+                    # 3Dビューの設定を適用
+                    self.apply_3d_settings()
+                    # 現在の分子を再描画（設定変更を反映）
+                    if hasattr(self, 'current_mol') and self.current_mol:
+                        self.draw_molecule_3d(self.current_mol)
+                    
+                    QMessageBox.information(self, "Reset Complete", "All settings have been reset to defaults.")
+                    
                 except Exception:
                     pass
-                QMessageBox.information(self, "Reset Complete", "All settings have been reset to defaults.")
             except Exception as e:
                 QMessageBox.warning(self, "Reset Failed", f"Could not reset settings: {e}")
+            
 
     def load_settings(self):
         default_settings = {
@@ -13550,10 +13969,12 @@ class MainWindow(QMainWindow):
         
         self.selected_atoms_for_measurement.append(atom_idx)
         
+        '''
         # 4つ以上選択された場合はクリア
         if len(self.selected_atoms_for_measurement) > 4:
             self.clear_measurement_selection()
             self.selected_atoms_for_measurement.append(atom_idx)
+        '''
         
         # 原子にラベルを追加
         self.add_measurement_label(atom_idx, len(self.selected_atoms_for_measurement))
@@ -13691,11 +14112,22 @@ class MainWindow(QMainWindow):
         if hasattr(self, 'measurement_label_items_2d'):
             for label_item in self.measurement_label_items_2d:
                 try:
-                    if label_item.scene():
-                        self.scene.removeItem(label_item)
-                except RuntimeError:
-                    # オブジェクトが削除されている場合はスキップ
-                    continue
+                    # Avoid touching partially-deleted wrappers
+                    if sip_isdeleted_safe(label_item):
+                        continue
+                    try:
+                        if label_item.scene():
+                            self.scene.removeItem(label_item)
+                    except Exception:
+                        # Scene access or removal failed; skip
+                        continue
+                except Exception:
+                    # If sip check itself fails, fall back to best-effort removal
+                    try:
+                        if label_item.scene():
+                            self.scene.removeItem(label_item)
+                    except Exception:
+                        continue
             self.measurement_label_items_2d.clear()
 
     def find_rdkit_atom_index(self, atom_item):
