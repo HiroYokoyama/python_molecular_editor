@@ -11,7 +11,7 @@ DOI 10.5281/zenodo.17268532
 """
 
 #Version
-VERSION = '1.11.0'
+VERSION = '1.11.1'
 
 print("-----------------------------------------------------")
 print("MoleditPy — A Python-based molecular editing software")
@@ -2513,13 +2513,18 @@ class AtomItem(QGraphicsItem):
 
         # 電荷記号の領域を計算に含める
         if self.charge != 0:
-            if self.charge == 1: charge_str = "+"
-            elif self.charge == -1: charge_str = "-"
-            else: charge_str = f"{self.charge:+}"
+            # Chemical convention: single charge as "+"/"-", multiple as "2+"/"2-"
+            if self.charge == 1:
+                charge_str = "+"
+            elif self.charge == -1:
+                charge_str = "-"
+            else:
+                sign = '+' if self.charge > 0 else '-'
+                charge_str = f"{abs(self.charge)}{sign}"
             charge_font = QFont("Arial", 12, QFont.Weight.Bold)
             charge_fm = QFontMetricsF(charge_font)
             charge_rect = charge_fm.boundingRect(charge_str)
-            
+
             if flip_text:
                 charge_pos = QPointF(text_rect.left() - charge_rect.width() - 2, text_rect.top())
             else:
@@ -2659,9 +2664,14 @@ class AtomItem(QGraphicsItem):
             
             # --- 電荷とラジカルの描画  ---
             if self.charge != 0:
-                if self.charge == 1: charge_str = "+"
-                elif self.charge == -1: charge_str = "-"
-                else: charge_str = f"{self.charge:+}"
+                # Chemical convention: single charge as "+"/"-", multiple as "2+"/"2-"
+                if self.charge == 1:
+                    charge_str = "+"
+                elif self.charge == -1:
+                    charge_str = "-"
+                else:
+                    sign = '+' if self.charge > 0 else '-'
+                    charge_str = f"{abs(self.charge)}{sign}"
                 charge_font = QFont("Arial", 12, QFont.Weight.Bold)
                 painter.setFont(charge_font)
                 charge_rect = painter.fontMetrics().boundingRect(charge_str)
