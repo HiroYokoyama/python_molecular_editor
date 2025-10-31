@@ -1,4 +1,3 @@
-
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
@@ -12,7 +11,7 @@ DOI 10.5281/zenodo.17268532
 """
 
 #Version
-VERSION = '1.10.8'
+VERSION = '1.10.9'
 
 print("-----------------------------------------------------")
 print("MoleditPy — A Python-based molecular editing software")
@@ -80,7 +79,7 @@ from rdkit.Chem import rdMolTransforms
 from rdkit.DistanceGeometry import DoTriangleSmoothing
 
 
-# Open Babel is disabled for Linux
+# Open Babel is disabled for linux version.
 pybel = None
 OBABEL_AVAILABLE = False
 
@@ -3181,6 +3180,26 @@ class MoleculeScene(QGraphicsScene):
     def reinitialize_items(self):
         self.template_preview = TemplatePreviewItem(); self.addItem(self.template_preview)
         self.template_preview.hide(); self.template_preview_points = []; self.template_context = {}
+        # Hold strong references to deleted wrappers for the lifetime of the scene
+        # to avoid SIP/C++ finalization causing segfaults when Python still
+        # briefly touches those objects elsewhere in the app. Items collected
+        # here are hidden and never accessed again by normal code paths.
+        self._deleted_items = []
+        # Ensure we purge any held deleted-wrapper references when the
+        # application is shutting down. Connecting here is safe even if
+        # multiple scenes exist; the slot is defensive and idempotent.
+        try:
+            app = QApplication.instance()
+            if app is not None:
+                try:
+                    app.aboutToQuit.connect(self.purge_deleted_items)
+                except Exception:
+                    # If connecting fails for any reason, continue without
+                    # the connection — at worst holders will be freed by
+                    # process teardown.
+                    pass
+        except Exception:
+            pass
 
     def clear_all_problem_flags(self):
         """全ての AtomItem の has_problem フラグをリセットし、再描画する"""
@@ -4114,18 +4133,44 @@ class MoleculeScene(QGraphicsScene):
                 except Exception:
                     continue
 
-            # 4) Clear object references to help GC and prevent accidental use
+            # 4) Instead of aggressively nullling object attributes (which can
+            #    lead to C++/SIP finalization races and segfaults), keep a
+            #    strong reference to the deleted wrappers for the lifetime of
+            #    the scene. This prevents their underlying SIP wrappers from
+            #    being finalized while other code may still touch them.
+            try:
+                if not hasattr(self, '_deleted_items') or self._deleted_items is None:
+                    self._deleted_items = []
+            except Exception:
+                self._deleted_items = []
+
             for bond in list(bonds_to_delete):
                 try:
-                    bond.atom1 = None
-                    bond.atom2 = None
+                    # Hide the graphics item if possible and stash it
+                    if not sip_isdeleted_safe(bond):
+                        try:
+                            bond.hide()
+                        except Exception:
+                            pass
+                        try:
+                            self._deleted_items.append(bond)
+                        except Exception:
+                            # Swallow any error while stashing
+                            pass
                 except Exception:
                     continue
 
             for atom in list(atoms_to_delete):
                 try:
-                    if hasattr(atom, 'bonds'):
-                        atom.bonds.clear()
+                    if not sip_isdeleted_safe(atom):
+                        try:
+                            atom.hide()
+                        except Exception:
+                            pass
+                        try:
+                            self._deleted_items.append(atom)
+                        except Exception:
+                            pass
                 except Exception:
                     continue
 
@@ -4145,6 +4190,64 @@ class MoleculeScene(QGraphicsScene):
             
             traceback.print_exc()
             return False
+    def purge_deleted_items(self):
+        """Purge and release any held deleted-wrapper references.
+
+        This is intended to be invoked on application shutdown to allow
+        the process to release references to SIP/C++ wrappers that were
+        kept around to avoid finalization races during normal runtime.
+        The method is defensive: it tolerates partially-deleted wrappers
+        and any SIP unavailability.
+        """
+        try:
+            if not hasattr(self, '_deleted_items') or not self._deleted_items:
+                return
+
+            # Iterate a copy since we will clear the list.
+            for obj in list(self._deleted_items):
+                try:
+                    # If the wrapper is still alive, attempt to hide it so
+                    # the graphics subsystem isn't holding on to resources.
+                    if not sip_isdeleted_safe(obj):
+                        try:
+                            obj.hide()
+                        except Exception:
+                            pass
+
+                    # Try to clear container attributes that may hold refs
+                    # to other scene objects (bonds, etc.) to help GC.
+                    try:
+                        if hasattr(obj, 'bonds') and getattr(obj, 'bonds') is not None:
+                            try:
+                                obj.bonds.clear()
+                            except Exception:
+                                # Try assignment fallback
+                                try:
+                                    obj.bonds = []
+                                except Exception:
+                                    pass
+                    except Exception:
+                        pass
+
+                except Exception:
+                    # Continue purging remaining items even if one fails.
+                    continue
+
+            # Finally, drop our references.
+            try:
+                self._deleted_items.clear()
+            except Exception:
+                try:
+                    self._deleted_items = []
+                except Exception:
+                    pass
+
+        except Exception as e:
+            # Never raise during shutdown
+            try:
+                print(f"Error purging deleted items: {e}")
+            except Exception:
+                pass
     
     def add_user_template_fragment(self, context):
         """ユーザーテンプレートフラグメントを配置"""
