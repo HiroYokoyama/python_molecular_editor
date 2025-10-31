@@ -12,7 +12,7 @@ DOI 10.5281/zenodo.17268532
 """
 
 #Version
-VERSION = '1.10.7'
+VERSION = '1.10.8'
 
 print("-----------------------------------------------------")
 print("MoleditPy — A Python-based molecular editing software")
@@ -4002,10 +4002,39 @@ class MoleculeScene(QGraphicsScene):
                     continue
 
             # 1) Update surviving atoms' bond lists to remove references to bonds_to_delete
+            #    (Important: remove BondItem references so atoms properly reflect
+            #     that they have no remaining bonds and update visibility accordingly.)
             for atom in list(atoms_to_update):
                 try:
                     if sip_isdeleted_safe(atom):
                         continue
+                    # Defensive: if the atom has a bonds list, filter out bonds being deleted
+                    if hasattr(atom, 'bonds') and atom.bonds:
+                        try:
+                            # Replace in-place to preserve any other references.
+                            # Avoid touching SIP-deleted bond wrappers: build a set
+                            # of live bonds-to-delete and also prune any SIP-deleted
+                            # entries that may exist in atom.bonds.
+                            live_btd = {b for b in bonds_to_delete if not sip_isdeleted_safe(b)}
+
+                            # First, remove any SIP-deleted bond wrappers from atom.bonds
+                            atom.bonds[:] = [b for b in atom.bonds if not sip_isdeleted_safe(b)]
+
+                            # Then remove bonds which are in the live_btd set
+                            if live_btd:
+                                atom.bonds[:] = [b for b in atom.bonds if b not in live_btd]
+                        except Exception:
+                            # Fall back to iterative removal if list comprehension fails
+                            try:
+                                live_btd = [b for b in list(bonds_to_delete) if not sip_isdeleted_safe(b)]
+                                for b in live_btd:
+                                    if b in atom.bonds:
+                                        atom.bonds.remove(b)
+                            except Exception:
+                                pass
+
+                    # After pruning bond references, update visual style so carbons without
+                    # bonds become visible again.
                     if hasattr(atom, 'update_style'):
                         atom.update_style()
                 except Exception:
