@@ -11,7 +11,7 @@ DOI 10.5281/zenodo.17268532
 """
 
 #Version
-VERSION = '1.10.9'
+VERSION = '1.11.0'
 
 print("-----------------------------------------------------")
 print("MoleditPy — A Python-based molecular editing software")
@@ -11080,6 +11080,12 @@ class MainWindow(QMainWindow):
 
     def open_project_file(self, file_path=None):
         """プロジェクトファイルを開く（.pmeprjと.pmerawの両方に対応）"""
+        # Check for unsaved changes before opening a new project file.
+        # Previously this function opened .pmeprj/.pmeraw without prompting the
+        # user to save current unsaved work. Ensure we honor the global
+        # unsaved-change check like other loaders (SMILES/MOL/etc.).
+        if not self.check_unsaved_changes():
+            return
         if not file_path:
             file_path, _ = QFileDialog.getOpenFileName(
                 self, "Open Project File", "", 
