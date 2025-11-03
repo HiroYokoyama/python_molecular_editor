@@ -11,7 +11,7 @@ DOI 10.5281/zenodo.17268532
 """
 
 #Version
-VERSION = '1.11.1'
+VERSION = '1.11.2'
 
 print("-----------------------------------------------------")
 print("MoleditPy — A Python-based molecular editing software")
@@ -8392,7 +8392,7 @@ class MainWindow(QMainWindow):
                     start_angle = 0.0
 
                 # 画面上の適当な結合長（ピクセル）を使用
-                bond_length = 40.0
+                bond_length = 75
 
                 for h_idx in range(implicit_h):
                     angle = start_angle + h_idx * (2.0 * math.pi / implicit_h)
@@ -8689,13 +8689,13 @@ class MainWindow(QMainWindow):
                 try:
                     # Choose concrete mmffVariant string
                     mmff_variant = "MMFF94s" if method == 'MMFF_RDKIT' else "MMFF94"
-                    res = AllChem.MMFFOptimizeMolecule(self.current_mol, maxIters=200, mmffVariant=mmff_variant)
+                    res = AllChem.MMFFOptimizeMolecule(self.current_mol, maxIters=4000, mmffVariant=mmff_variant)
                     if res != 0:
                         # 非収束や何らかの問題が起きた可能性 -> ForceField API で詳細に試す
                         try:
                             mmff_props = AllChem.MMFFGetMoleculeProperties(self.current_mol)
                             ff = AllChem.MMFFGetMoleculeForceField(self.current_mol, mmff_props, confId=0)
-                            ff_ret = ff.Minimize(maxIts=200)
+                            ff_ret = ff.Minimize(maxIts=4000)
                             if ff_ret != 0:
                                 self.statusBar().showMessage(f"{mmff_variant} minimize returned non-zero status: {ff_ret}")
                                 return
@@ -8707,11 +8707,11 @@ class MainWindow(QMainWindow):
                     return
             elif method == 'UFF_RDKIT':
                 try:
-                    res = AllChem.UFFOptimizeMolecule(self.current_mol, maxIters=200)
+                    res = AllChem.UFFOptimizeMolecule(self.current_mol, maxIters=4000)
                     if res != 0:
                         try:
                             ff = AllChem.UFFGetMoleculeForceField(self.current_mol, confId=0)
-                            ff_ret = ff.Minimize(maxIts=200)
+                            ff_ret = ff.Minimize(maxIts=4000)
                             if ff_ret != 0:
                                 self.statusBar().showMessage(f"UFF minimize returned non-zero status: {ff_ret}")
                                 return
