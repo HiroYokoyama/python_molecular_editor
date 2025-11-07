@@ -11,7 +11,7 @@ DOI 10.5281/zenodo.17268532
 """
 
 #Version
-VERSION = '1.11.2'
+VERSION = '1.11.3'
 
 print("-----------------------------------------------------")
 print("MoleditPy — A Python-based molecular editing software")
@@ -79,7 +79,7 @@ from rdkit.Chem import rdMolTransforms
 from rdkit.DistanceGeometry import DoTriangleSmoothing
 
 
-# Open Babel is disabled for Linux
+# Open Babel is disabled for Linux version
 pybel = None
 OBABEL_AVAILABLE = False
 
@@ -3593,6 +3593,81 @@ class MoleculeScene(QGraphicsScene):
             event.accept()
             return
         
+        # Select-mode: double-click should select the clicked atom/bond and
+        # only the atoms/bonds connected to it (the connected component).
+        if self.mode == 'select' and isinstance(item, (AtomItem, BondItem)):
+            try:
+                start_atoms = set()
+                if isinstance(item, AtomItem):
+                    start_atoms.add(item)
+                else:
+                    # BondItem: start from both ends if available
+                    a1 = getattr(item, 'atom1', None)
+                    a2 = getattr(item, 'atom2', None)
+                    if a1 is not None:
+                        start_atoms.add(a1)
+                    if a2 is not None:
+                        start_atoms.add(a2)
+
+                # BFS/DFS over atoms via bond references (defensive checks)
+                atoms_to_visit = list(start_atoms)
+                connected_atoms = set()
+                connected_bonds = set()
+
+                while atoms_to_visit:
+                    a = atoms_to_visit.pop()
+                    if a is None:
+                        continue
+                    if a in connected_atoms:
+                        continue
+                    connected_atoms.add(a)
+                    # iterate bonds attached to atom
+                    for b in getattr(a, 'bonds', []) or []:
+                        if b is None:
+                            continue
+                        connected_bonds.add(b)
+                        # find the other atom at the bond
+                        other = None
+                        try:
+                            if getattr(b, 'atom1', None) is a:
+                                other = getattr(b, 'atom2', None)
+                            else:
+                                other = getattr(b, 'atom1', None)
+                        except Exception:
+                            other = None
+                        if other is not None and other not in connected_atoms:
+                            atoms_to_visit.append(other)
+
+                # Apply selection: clear previous and select only these
+                try:
+                    self.clearSelection()
+                except Exception:
+                    pass
+
+                for a in connected_atoms:
+                    try:
+                        a.setSelected(True)
+                    except Exception:
+                        try:
+                            # fallback: set selected attribute if exists
+                            setattr(a, 'selected', True)
+                        except Exception:
+                            pass
+                for b in connected_bonds:
+                    try:
+                        b.setSelected(True)
+                    except Exception:
+                        try:
+                            setattr(b, 'selected', True)
+                        except Exception:
+                            pass
+
+                event.accept()
+                return
+            except Exception:
+                # On any unexpected error, fall back to default handling
+                pass
+
         elif self.mode in ['bond_2_5']:
                 event.accept()
                 return
@@ -6438,7 +6513,6 @@ class CustomQtInteractor(QtInteractor):
         if self.main_window and hasattr(self.main_window, 'view_2d'):
             self.main_window.view_2d.setFocus()
 
-
     def mouseReleaseEvent(self, event):
         """
         Qtのマウスリリースイベントをオーバーライドし、
@@ -6879,6 +6953,13 @@ class MainWindow(QMainWindow):
         # 初期化完了を設定
         self.initialization_complete = True
         self.update_window_title()  # 初期化完了後にタイトルを更新
+        # Ensure initial keyboard/mouse focus is placed on the 2D view
+        # when opening a file or starting the application. This avoids
+        # accidental focus landing on toolbar/buttons (e.g. Optimize 2D).
+        try:
+            QTimer.singleShot(0, self.view_2d.setFocus)
+        except Exception:
+            pass
 
     def init_ui(self):
         # 1. 現在のスクリプトがあるディレクトリのパスを取得
@@ -10730,8 +10811,16 @@ class MainWindow(QMainWindow):
             except Exception:
                 default_name = "untitled"
 
+            # Prefer the directory of the currently opened file as default
+            default_path = default_name
+            try:
+                if self.current_file_path:
+                    default_path = os.path.join(os.path.dirname(self.current_file_path), default_name)
+            except Exception:
+                default_path = default_name
+
             file_path, _ = QFileDialog.getSaveFileName(
-                self, "Save Project As", default_name, 
+                self, "Save Project As", default_path, 
                 "PME Project Files (*.pmeprj);;All Files (*)", 
             )
             if not file_path:
@@ -10778,7 +10867,15 @@ class MainWindow(QMainWindow):
             except Exception:
                 default_name = "untitled"
 
-            file_path, _ = QFileDialog.getSaveFileName(self, "Save Project File", default_name, "Project Files (*.pmeraw);;All Files (*)")
+            # prefer same directory as current file when available
+            default_path = default_name
+            try:
+                if self.current_file_path:
+                    default_path = os.path.join(os.path.dirname(self.current_file_path), default_name)
+            except Exception:
+                default_path = default_name
+
+            file_path, _ = QFileDialog.getSaveFileName(self, "Save Project File", default_path, "Project Files (*.pmeraw);;All Files (*)")
             if not file_path:
                 return
                 
@@ -10855,8 +10952,16 @@ class MainWindow(QMainWindow):
             except Exception:
                 default_name = "untitled"
 
+            # prefer same directory as current file when available
+            default_path = default_name
+            try:
+                if self.current_file_path:
+                    default_path = os.path.join(os.path.dirname(self.current_file_path), default_name)
+            except Exception:
+                default_path = default_name
+
             file_path, _ = QFileDialog.getSaveFileName(
-                self, "Save as PME Project", default_name, 
+                self, "Save as PME Project", default_path, 
                 "PME Project Files (*.pmeprj);;All Files (*)", 
             )
             if not file_path:
@@ -11269,7 +11374,15 @@ class MainWindow(QMainWindow):
             except Exception:
                 default_name = "untitled-2d"
 
-            file_path, _ = QFileDialog.getSaveFileName(self, "Save 2D MOL File", default_name, "MOL Files (*.mol);;All Files (*)")
+            # prefer same directory as current file when available
+            default_path = default_name
+            try:
+                if self.current_file_path:
+                    default_path = os.path.join(os.path.dirname(self.current_file_path), default_name)
+            except Exception:
+                default_path = default_name
+
+            file_path, _ = QFileDialog.getSaveFileName(self, "Save 2D MOL File", default_path, "MOL Files (*.mol);;All Files (*)")
             if not file_path:
                 return
                 
@@ -11305,7 +11418,15 @@ class MainWindow(QMainWindow):
             except Exception:
                 default_name = "untitled"
 
-            file_path, _ = QFileDialog.getSaveFileName(self, "Save 3D MOL File", default_name, "MOL Files (*.mol);;All Files (*)")
+            # prefer same directory as current file when available
+            default_path = default_name
+            try:
+                if self.current_file_path:
+                    default_path = os.path.join(os.path.dirname(self.current_file_path), default_name)
+            except Exception:
+                default_path = default_name
+
+            file_path, _ = QFileDialog.getSaveFileName(self, "Save 3D MOL File", default_path, "MOL Files (*.mol);;All Files (*)")
             if not file_path:
                 return
                 
@@ -11348,7 +11469,15 @@ class MainWindow(QMainWindow):
         except Exception:
             default_name = "untitled"
 
-        file_path,_=QFileDialog.getSaveFileName(self,"Save 3D XYZ File",default_name,"XYZ Files (*.xyz);;All Files (*)")
+        # prefer same directory as current file when available
+        default_path = default_name
+        try:
+            if self.current_file_path:
+                default_path = os.path.join(os.path.dirname(self.current_file_path), default_name)
+        except Exception:
+            default_path = default_name
+
+        file_path,_=QFileDialog.getSaveFileName(self,"Save 3D XYZ File",default_path,"XYZ Files (*.xyz);;All Files (*)")
         if file_path:
             if not file_path.lower().endswith('.xyz'): file_path += '.xyz'
             try:
@@ -11368,8 +11497,16 @@ class MainWindow(QMainWindow):
             self.statusBar().showMessage("Error: Please generate a 3D structure first.")
             return
             
+        # prefer same directory as current file when available
+        default_dir = ""
+        try:
+            if self.current_file_path:
+                default_dir = os.path.dirname(self.current_file_path)
+        except Exception:
+            default_dir = ""
+
         file_path, _ = QFileDialog.getSaveFileName(
-            self, "Export as STL", "", "STL Files (*.stl);;All Files (*)"
+            self, "Export as STL", default_dir, "STL Files (*.stl);;All Files (*)"
         )
         
         if not file_path:
@@ -11399,8 +11536,16 @@ class MainWindow(QMainWindow):
             self.statusBar().showMessage("Error: Please generate a 3D structure first.")
             return
             
+        # prefer same directory as current file when available
+        default_dir = ""
+        try:
+            if self.current_file_path:
+                default_dir = os.path.dirname(self.current_file_path)
+        except Exception:
+            default_dir = ""
+
         file_path, _ = QFileDialog.getSaveFileName(
-            self, "Export as OBJ/MTL (with colors)", "", "OBJ Files (*.obj);;All Files (*)"
+            self, "Export as OBJ/MTL (with colors)", default_dir, "OBJ Files (*.obj);;All Files (*)"
         )
         
         if not file_path:
@@ -11506,8 +11651,16 @@ class MainWindow(QMainWindow):
             self.statusBar().showMessage("Error: Please generate a 3D structure first.")
             return
             
+        # prefer same directory as current file when available
+        default_dir = ""
+        try:
+            if self.current_file_path:
+                default_dir = os.path.dirname(self.current_file_path)
+        except Exception:
+            default_dir = ""
+
         file_path, _ = QFileDialog.getSaveFileName(
-            self, "Export as Color STL", "", "STL Files (*.stl);;All Files (*)"
+            self, "Export as Color STL", default_dir, "STL Files (*.stl);;All Files (*)"
         )
         
         if not file_path:
@@ -11834,7 +11987,15 @@ class MainWindow(QMainWindow):
         except Exception:
             default_name = "untitled-2d"
 
-        filePath, _ = QFileDialog.getSaveFileName(self, "Export 2D as PNG", default_name, "PNG Files (*.png)")
+        # prefer same directory as current file when available
+        default_path = default_name
+        try:
+            if self.current_file_path:
+                default_path = os.path.join(os.path.dirname(self.current_file_path), default_name)
+        except Exception:
+            default_path = default_name
+
+        filePath, _ = QFileDialog.getSaveFileName(self, "Export 2D as PNG", default_path, "PNG Files (*.png)")
         if not filePath:
             return
 
@@ -11939,7 +12100,15 @@ class MainWindow(QMainWindow):
         except Exception:
             default_name = "untitled"
 
-        filePath, _ = QFileDialog.getSaveFileName(self, "Export 3D as PNG", default_name, "PNG Files (*.png)")
+        # prefer same directory as current file when available
+        default_path = default_name
+        try:
+            if self.current_file_path:
+                default_path = os.path.join(os.path.dirname(self.current_file_path), default_name)
+        except Exception:
+            default_path = default_name
+
+        filePath, _ = QFileDialog.getSaveFileName(self, "Export 3D as PNG", default_path, "PNG Files (*.png)")
         if not filePath:
             return
 
@@ -15403,8 +15572,8 @@ class AngleDialog(Dialog3DPickingMixin, QDialog):
         
         try:
             new_angle = float(self.angle_input.text())
-            if new_angle <= 0 or new_angle >= 180:
-                QMessageBox.warning(self, "Invalid Input", "Angle must be between 0 and 180 degrees.")
+            if new_angle < 0 or new_angle >= 360:
+                QMessageBox.warning(self, "Invalid Input", "Angle must be between 0 and 360 degrees.")
                 return
         except ValueError:
             QMessageBox.warning(self, "Invalid Input", "Please enter a valid number.")

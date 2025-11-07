@@ -3,9 +3,9 @@
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.17268532.svg)](https://doi.org/10.5281/zenodo.17268532)
 [![Powered by RDKit](https://img.shields.io/badge/Powered%20by-RDKit-3838ff.svg?logo=data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQBAMAAADt3eJSAAAABGdBTUEAALGPC/xhBQAAACBjSFJNAAB6JgAAgIQAAPoAAACA6AAAdTAAAOpgAAA6mAAAF3CculE8AAAAFVBMVEXc3NwUFP8UPP9kZP+MjP+0tP////9ZXZotAAAAAXRSTlMAQObYZgAAAAFiS0dEBmFmuH0AAAAHdElNRQfmAwsPGi+MyC9RAAAAQElEQVQI12NgQABGQUEBMENISUkRLKBsbGwEEhIyBgJFsICLC0iIUdnExcUZwnANQWfApKCK4doRBsKtQFgKAQC5Ww1JEHSEkAAAACV0RVh0ZGF0ZTpjcmVhdGUAMjAyMi0wMy0xMVQxNToyNjo0NyswMDowMDzr2J4AAAAldEVYdGRhdGU6bW9kaWZ5ADIwMjItMDMtMTFUMTU6MjY6NDcrMDA6MDBNtmAiAAAAAElFTkSuQmCC)](https://www.rdkit.org/)
 
-This is the Linux version of MoleditPy. The Openbabel fallback is disabled due to compatibility reasons.
+This is the Linux version of MoleditPy. The Open Babel fallback is disabled due to compatibility reasons.
 
-これはMoleditPyのLinux版です。互換性の理由により、Openbabelのフォールバック機能は無効になっています。
+これはMoleditPyのLinux版です。互換性の理由により、Open Babelのフォールバック機能は無効になっています。
 
 **MoleditPy** is a cross-platform, intuitive molecular editor built in Python. It provides a seamless workflow for drawing 2D molecular structures, visualizing them in 3D, and performing interactive geometric manipulations. Its powerful editing and export capabilities make it an ideal tool for preparing input files for DFT calculation software.
 
@@ -78,7 +78,7 @@ It is recommended to first install RDKit and Open Babel using `conda`. Open Babe
 pip install moleditpy
 ```
 
-Please note that Linux users must use `moleditpy-linux` to resolve OpenBabel's library conflicts issues. OpenBabel is disabled for this version.
+Please note that Linux users must use `moleditpy-linux` to resolve Open Babel's library conflicts issues. Open Babel is disabled for this version.
 
 #### Running the Application
 
