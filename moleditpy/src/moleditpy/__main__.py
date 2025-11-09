@@ -11,7 +11,7 @@ DOI 10.5281/zenodo.17268532
 """
 
 #Version
-VERSION = '1.12.0'
+VERSION = '1.12.1'
 
 print("-----------------------------------------------------")
 print("MoleditPy — A Python-based molecular editing software")
@@ -5075,9 +5075,27 @@ class ZoomableView(QGraphicsView):
             super().mouseReleaseEvent(event)
 
 class CalculationWorker(QObject):
-    status_update = pyqtSignal(str) 
-    finished=pyqtSignal(object); error=pyqtSignal(str)
-    
+    status_update = pyqtSignal(str)
+    finished = pyqtSignal(object)
+    error = pyqtSignal(object)  # emit (worker_id, msg) tuples for robustness
+    # Per-worker start signal to avoid sharing a single MainWindow signal
+    # among many worker instances (which causes race conditions and stale
+    # workers being started on a single emission).
+    start_work = pyqtSignal(str, object)
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        # Connect the worker's own start signal to its run slot. This
+        # guarantees that only this worker will respond when start_work
+        # is emitted (prevents cross-talk between workers).
+        try:
+            self.start_work.connect(self.run_calculation)
+        except Exception:
+            # Be defensive: if connection fails, continue; the caller may
+            # fallback to emitting directly.
+            pass
+
+    @pyqtSlot(str, object)
     def run_calculation(self, mol_block, options=None):
         try:
             # The worker may be asked to halt via a shared set `halt_ids` and
@@ -5133,8 +5151,6 @@ class CalculationWorker(QObject):
 
             def _safe_finished(payload):
                 try:
-                    if _check_halted():
-                        return
                     # Attempt to emit the payload; preserve existing fallback behavior
                     try:
                         self.finished.emit(payload)
@@ -5153,9 +5169,15 @@ class CalculationWorker(QObject):
 
             def _safe_error(msg):
                 try:
-                    if _check_halted():
-                        return
-                    self.error.emit(msg)
+                    # Emit a tuple containing the worker_id (may be None) and the message
+                    try:
+                        self.error.emit((worker_id, msg))
+                    except Exception:
+                        # Fallback to emitting the raw message if tuple emission fails for any reason
+                        try:
+                            self.error.emit(msg)
+                        except Exception:
+                            pass
                 except Exception:
                     pass
 
@@ -5637,6 +5659,9 @@ class CalculationWorker(QObject):
                     mol.AddConformer(conf, assignId=True)
 
                     # Emit the finished result including the worker id when possible
+                    # CRITICAL: Check for halt *before* emitting finished signal
+                    if _check_halted():
+                        raise RuntimeError("Halted (after optimization)")
                     try:
                         _safe_finished((worker_id, mol))
                     except Exception:
@@ -5811,6 +5836,9 @@ class CalculationWorker(QObject):
                 
                 # Do NOT call AssignStereochemistry here as it would override our explicit labels
                 # Include worker_id so the main thread can ignore stale results
+                # CRITICAL: Check for halt *before* emitting finished signal
+                if _check_halted():
+                    raise RuntimeError("Halted (after optimization)")
                 try:
                     _safe_finished((worker_id, mol))
                 except Exception:
@@ -5865,6 +5893,9 @@ class CalculationWorker(QObject):
                         except Exception:
                             pass
                     _safe_status("Open Babel embedding succeeded. Warning: Conformation accuracy may be limited.")
+                    # CRITICAL: Check for halt *before* emitting finished signal
+                    if _check_halted():
+                        raise RuntimeError("Halted (after optimization)")
                     try:
                         _safe_finished((worker_id, rd_mol))
                     except Exception:
@@ -8492,7 +8523,10 @@ class MainWindow(QMainWindow):
         self.halt_ids = set()
         # IDs used to correlate start/halt/finish
         self.next_conversion_id = 1
-        self.waiting_worker_id = None
+        # Track currently-active conversion worker IDs so Halt can target all
+        # running conversions. Use a set because multiple conversions may run
+        # concurrently.
+        self.active_worker_ids = set()
         # Track active threads for diagnostics/cleanup (weak references ok)
         try:
             self._active_calc_threads = []
@@ -9255,8 +9289,13 @@ class MainWindow(QMainWindow):
         except Exception:
             self.next_conversion_id = getattr(self, 'next_conversion_id', 1) + 1
 
-        # Record the currently-waiting worker id; a Halt request will clear this
-        self.waiting_worker_id = run_id
+        # Record this run as active. Use a set to track all active worker ids
+        # so a Halt request can target every running conversion.
+        try:
+            self.active_worker_ids.add(run_id)
+        except Exception:
+            # Ensure attribute exists in case of weird states
+            self.active_worker_ids = set([run_id])
 
         # Change the convert button to a Halt button so user can cancel
         try:
@@ -9306,7 +9345,8 @@ class MainWindow(QMainWindow):
         options = {'conversion_mode': conv_mode, 'optimization_method': self.optimization_method}
         # Attach the run id so the worker and main thread can correlate
         try:
-            options['worker_id'] = self.waiting_worker_id
+            # Attach the concrete run id rather than the single waiting id
+            options['worker_id'] = run_id
         except Exception:
             pass
 
@@ -9324,13 +9364,9 @@ class MainWindow(QMainWindow):
 
             worker.moveToThread(thread)
 
-            # Forward status and error signals to main window handlers
+            # Forward status signals to main window handlers
             try:
                 worker.status_update.connect(self.update_status_bar)
-            except Exception:
-                pass
-            try:
-                worker.error.connect(self.on_calculation_error)
             except Exception:
                 pass
 
@@ -9341,10 +9377,8 @@ class MainWindow(QMainWindow):
                     self.on_calculation_finished(result)
                 finally:
                     # Clean up signal connections to avoid stale references
-                    try:
-                        self.start_calculation.disconnect(w.run_calculation)
-                    except Exception:
-                        pass
+                    # worker used its own start_work signal; no shared-signal
+                    # disconnect necessary here.
                     # Remove thread from active threads list
                     try:
                         self._active_calc_threads.remove(t)
@@ -9366,20 +9400,53 @@ class MainWindow(QMainWindow):
                     except Exception:
                         pass
 
-            worker.finished.connect(_on_worker_finished)
+            # When the worker errors (or halts), call existing handler and then clean up
+            def _on_worker_error(error_msg, w=worker, t=thread):
+                try:
+                    # deliver error to existing handler
+                    self.on_calculation_error(error_msg)
+                finally:
+                    # Clean up signal connections to avoid stale references
+                    # worker used its own start_work signal; no shared-signal
+                    # disconnect necessary here.
+                    # Remove thread from active threads list
+                    try:
+                        self._active_calc_threads.remove(t)
+                    except Exception:
+                        pass
+                    try:
+                        # ask thread to quit; it will finish as worker returns
+                        t.quit()
+                    except Exception:
+                        pass
+                    try:
+                        # ensure thread object is deleted when finished
+                        t.finished.connect(t.deleteLater)
+                    except Exception:
+                        pass
+                    try:
+                        # schedule worker deletion
+                        w.deleteLater()
+                    except Exception:
+                        pass
 
-            # Connect signal to worker slot for queued execution in worker thread
             try:
-                self.start_calculation.connect(worker.run_calculation)
+                worker.error.connect(_on_worker_error)
+            except Exception:
+                pass
+
+            try:
+                worker.finished.connect(_on_worker_finished)
             except Exception:
                 pass
 
             # Start the thread
             thread.start()
-            
-            # Start the worker calculation via signal emission (queued to worker thread)
-            # This ensures the worker.run_calculation runs in the worker thread, not main thread
-            QTimer.singleShot(10, lambda: self.start_calculation.emit(mol_block, options))
+
+            # Start the worker calculation via the worker's own start_work signal
+            # (queued to the worker thread). Capture variables into lambda defaults
+            # to avoid late-binding issues.
+            QTimer.singleShot(10, lambda w=worker, m=mol_block, o=options: w.start_work.emit(m, o))
 
             # Track the thread so it isn't immediately garbage-collected (diagnostics)
             try:
@@ -9387,11 +9454,14 @@ class MainWindow(QMainWindow):
             except Exception:
                 pass
         except Exception as e:
-            # Fall back to emitting via legacy signal if something goes wrong
+            # Fall back: if thread/worker creation failed, create a local
+            # worker and start it (runs in main thread). This preserves
+            # functionality without relying on the shared MainWindow signal.
             try:
-                self.start_calculation.emit(mol_block, options)
+                fallback_worker = CalculationWorker()
+                QTimer.singleShot(10, lambda w=fallback_worker, m=mol_block, o=options: w.start_work.emit(m, o))
             except Exception:
-                # surface the error via existing UI path
+                # surface the original error via existing UI path
                 self.on_calculation_error(str(e))
 
         # 状態をUndo履歴に保存
@@ -9408,16 +9478,20 @@ class MainWindow(QMainWindow):
         and handlers). The worker thread will observe halt_ids and should stop.
         """
         try:
-            wid = getattr(self, 'waiting_worker_id', None)
-            if wid is not None:
+            # Halt all currently-active workers by adding their ids to halt_ids
+            wids_to_halt = set(getattr(self, 'active_worker_ids', set()))
+            if wids_to_halt:
                 try:
-                    # add to shared halt set so the worker can stop
-                    self.halt_ids.add(wid)
+                    self.halt_ids.update(wids_to_halt)
                 except Exception:
                     pass
 
-            # Clear waiting flag as per spec
-            self.waiting_worker_id = None
+            # Clear the active set immediately so UI reflects cancellation
+            try:
+                if hasattr(self, 'active_worker_ids'):
+                    self.active_worker_ids.clear()
+            except Exception:
+                pass
 
             # Restore UI immediately
             try:
@@ -9654,8 +9728,8 @@ class MainWindow(QMainWindow):
         # If this finished result is from a stale/halting run, discard it
         try:
             if worker_id is not None:
-                # If waiting_worker_id doesn't match, this result is stale
-                if getattr(self, 'waiting_worker_id', None) != worker_id:
+                # If this worker_id is not in the active set, it's stale/halting
+                if worker_id not in getattr(self, 'active_worker_ids', set()):
                     # Cleanup calculating UI and ignore
                     try:
                         actor = getattr(self, '_calculating_text_actor', None)
@@ -9691,16 +9765,22 @@ class MainWindow(QMainWindow):
                         self.convert_button.setEnabled(True)
                     except Exception:
                         pass
-                    # Clear any waiting id (spec says halt sets waiting id to None)
-                    self.waiting_worker_id = None
+                    try:
+                        self.cleanup_button.setEnabled(True)
+                    except Exception:
+                        pass
                     self.statusBar().showMessage("Ignored result from stale conversion.")
                     return
         except Exception:
             pass
 
-        # Clear waiting id for a successful completion
+        # Remove the finished worker id from the active set and any halt set
         try:
-            self.waiting_worker_id = None
+            if worker_id is not None:
+                try:
+                    self.active_worker_ids.discard(worker_id)
+                except Exception:
+                    pass
             # Also remove id from halt set if present
             if worker_id is not None:
                 try:
@@ -9856,7 +9936,25 @@ class MainWindow(QMainWindow):
                 # プロパティが設定されていない場合（外部ファイル読み込み時など）
                 continue
 
-    def on_calculation_error(self, error_message):
+    @pyqtSlot(object)
+    def on_calculation_error(self, result):
+        """ワーカースレッドからのエラー（またはHalt）を処理する"""
+        worker_id = None
+        error_message = ""
+        try:
+            if isinstance(result, tuple) and len(result) == 2:
+                worker_id, error_message = result
+            else:
+                error_message = str(result)
+        except Exception:
+            error_message = str(result)
+
+        # If this error is from a stale/previous worker (not in active set), ignore it.
+        if worker_id is not None and worker_id not in getattr(self, 'active_worker_ids', set()):
+            # Stale/late error from a previously-halted worker; ignore to avoid clobbering newer runs
+            print(f"Ignored stale error from worker {worker_id}: {error_message}")
+            return
+
         # Clear temporary plotter content and remove calculating text if present
         try:
             self.plotter.clear()
@@ -9895,23 +9993,41 @@ class MainWindow(QMainWindow):
             pass
 
         self.dragged_atom_info = None
+        # Remove this worker id from active set (error belongs to this worker)
+        try:
+            if worker_id is not None:
+                try:
+                    self.active_worker_ids.discard(worker_id)
+                except Exception:
+                    pass
+        except Exception:
+            pass
+
         # If this error was caused by an intentional halt and the main thread
-        # already cleared waiting_worker_id, suppress the error noise.
+        # already cleared waiting_worker_id earlier for other reasons, suppress the error noise.
         try:
             low = (error_message or '').lower()
-            if 'halt' in low and getattr(self, 'waiting_worker_id', None) is None:
-                # The user already saw the "3D conversion halted." message.
+            # If a halt message and there are no active workers left, the user
+            # already saw the halt message — suppress duplicate noise.
+            if 'halt' in low and not getattr(self, 'active_worker_ids', set()):
                 return
         except Exception:
             pass
 
         self.statusBar().showMessage(f"Error: {error_message}")
-        # Always allow the user to edit/convert/cleanup in 2D after an error
+        
         try:
             self.cleanup_button.setEnabled(True)
         except Exception:
             pass
         try:
+            # Restore Convert button text/handler
+            try:
+                self.convert_button.clicked.disconnect()
+            except Exception:
+                pass
+            self.convert_button.setText("Convert 2D to 3D")
+            self.convert_button.clicked.connect(self.trigger_conversion)
             self.convert_button.setEnabled(True)
         except Exception:
             pass
