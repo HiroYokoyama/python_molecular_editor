@@ -12,7 +12,7 @@ MoleditPy is a molecular editing software developed in Python. Through an intuit
   * **File Operations:** Save and load projects in a proprietary format (.pmeprj). Supports import and export of standard chemical file formats (MOL, SDF, XYZ) and SMILES, InChI strings. Exported files can be used for DFT calculations. Also supports exporting as images (PNG) or 3D models (STL, OBJ) for 3D printing.
   * **Molecular Analysis:** Display basic molecular properties such as SMILES, InChI, Molecular Formula, Molecular Weight, LogP, and TPSA.
   * **3D Measurement:** Measure distances between atoms, angles between three atoms, and dihedral angles between four atoms in the 3D view.
-  * **3D Editing:** Translate the entire molecule, flatten selected atoms, align to specific axes, adjust bond lengths, angles, and dihedral angles, and create mirror images.
+  * **3D Editing:** Translate the entire molecule, **planarize selected atoms**, align to specific axes, adjust bond lengths, angles, and dihedral angles, and create mirror images.
   * **Customization:** Configure 3D display settings such as background color, lighting, and detailed display styles.
 
   ![](img/icon.png)
@@ -166,7 +166,6 @@ Perform various file operations from the `File` menu in the menu bar.
   * **Export \> 3D Formats \> OBJ/MTL (with colors)...:** Saves the current 3D model as an OBJ file and an MTL file (with color information).
 
 -----
-
 ## 6\. 3D Functions
 
 MoleditPy provides functions to generate, display, measure, and edit 3D structures from the drawn 2D structure.
@@ -178,7 +177,7 @@ MoleditPy provides functions to generate, display, measure, and edit 3D structur
 3.  The calculation begins, and progress is displayed in the status bar. 3D coordinates are generated using RDKit (ETKDGv2 algorithm), and a simple structure optimization is performed using a force field (MMFF94 or UFF).
 4.  Upon success, the generated 3D structure is displayed in the 3D View.
 
-**(Settings):** You can set the priority of libraries (RDKit, Open Babel) used for conversion from the menu `Settings` \> `3D Conversion`. If Open Babel is not installed, related options will be disabled.
+**(Settings):** You can set the priority of libraries (RDKit, Open Babel) used for conversion, **or select the "Direct" mode (use 2D coords + add H)**, from the menu `Settings` \> `3D Conversion`. If Open Babel is not installed, related options will be disabled.
 
 ### 6.2. 3D Structure Optimization
 
@@ -186,7 +185,7 @@ MoleditPy provides functions to generate, display, measure, and edit 3D structur
   * A more detailed structure optimization calculation is performed using the selected force field (MMFF or UFF).
   * When completed, the optimized structure is redrawn in the 3D view.
 
-**(Settings):** You can select the force field calculation library and method (RDKit MMFF/UFF) from the menu `Edit` \> `3D Optimization Settings` or `Settings` \> `3D Optimization Settings`.
+**(Settings):** You can select the force field calculation library and method (RDKit MMFF/UFF) from the menu `Settings` \> `3D Optimization Settings`.
 
 ### 6.3. Changing 3D Display Style
 
@@ -197,7 +196,7 @@ You can select the display style from the **3D Style** dropdown menu on the righ
   * **Wireframe:** Displays only bonds as thin lines. Atoms are not displayed.
   * **Stick:** Displays bonds as thick sticks and atoms as small spheres.
 
-**(Settings):** Details for each display style (atom size, bond radius, rendering quality, etc.) can be adjusted from the menu `Settings` \> `3D View Settings...`.
+**(Settings):** Details for each display style (atom size, bond radius, **multiple bond offsets**, rendering quality, etc.) can be adjusted from the menu `Settings` \> `3D View Settings...`.
 
 ### 6.4. 3D View Operations
 
@@ -228,17 +227,19 @@ You can directly edit the atomic coordinates of the 3D structure. Turn on the **
 
   * **Atom Drag:** In 3D Drag mode, clicking and dragging an atom allows you to move it in 3D space. The position is confirmed when you release the mouse button.
 
-  ![](img/atom-drag.png)
+   ![](img/atom-drag.png)
 
 **Other 3D Editing Functions (Menu `3D Edit`):**
 
 These functions are available from the menu when a 3D structure is displayed. Many open a dedicated dialog where you can select atoms or input parameters.
 
-  * **Translation...:** Translates the entire molecule or a selected group of atoms by specified coordinates.
+  * **Translation...:** Translates the entire molecule or a selected group of atoms by specified coordinates. **An option to translate only the selected atoms is also available.**
 
   * **Align to \> Axis \> (X/Y/Z)-axis...:** Rotates and moves the entire molecule so that the line connecting two selected atoms aligns with the specified coordinate axis (X, Y, or Z) (the first atom is placed at the origin, the second on the axis).
 
   * **Align to \> Plane \> (XY/XZ/YZ)-plane...:** Rotates the entire molecule so that the plane containing three or more selected atoms becomes parallel to the specified coordinate plane (XY, XZ, or YZ).
+
+  * **Planarize...:** Calculates the best-fit plane for three or more selected atoms and projects those atoms onto that plane.
 
   * **Mirror...:** Creates a mirror image of the entire molecule with respect to a specified plane (XY, XZ, YZ).
 
@@ -290,6 +291,8 @@ You can copy each value to the clipboard using the **Copy** button next to it.
 
 ## 8\. Settings
 
+### 8\. Settings
+
 You can change various settings related to the 3D display from the menu `Settings` \> `3D View Settings...`.
 
 Configurable items:
@@ -300,13 +303,13 @@ Configurable items:
       * Enable/Disable lighting
       * Light intensity
       * Surface shininess (Specular) and its strength (Specular Power)
-      * Camera projection mode (Perspective / Orthographic)
-  * **Common Tab:**
-      * Display offset and thickness for multiple bonds
+      * **Camera projection mode (Perspective / Orthographic)**
+  * **Other Tab:**
       * Whether to skip chemical validity checks during XYZ file import
   * **Tabs for each display style (Ball & Stick, CPK, Wireframe, Stick):**
       * Atom size/radius scale
       * Bond radius
+      * **Multiple bond display offset and thickness (except for CPK)**
       * Rendering quality (Resolution)
 
 Click the **Apply** button to immediately apply the settings, and the **OK** button to apply and close the dialog. You can also revert settings to default with **Reset Current Tab** / **Reset All**. Settings are retained for the next launch.
@@ -328,42 +331,43 @@ Click the **Apply** button to immediately apply the settings, and the **OK** but
 | `1` | Single bond draw mode / Change selected or hovered bond to single bond / Add atom to atom | Single bond draw mode |
 | `2` | Double bond draw mode / Change selected or hovered bond to double bond | Double bond draw mode |
 | `3` | Triple bond draw mode / Change selected or hovered bond to triple bond | Triple bond draw mode |
+| `4` | (In empty space) Switch to Benzene mode / (On atom/bond) Place Benzene | (In empty space) Switch to Benzene mode / (On atom/bond) Place Benzene |
 | `W` | Wedge bond draw mode / Change selected or hovered bond to Wedge (click to reverse) | Wedge bond draw mode |
 | `D` | Dash bond draw mode / Change selected or hovered bond to Dash (click to reverse) | Dash bond draw mode |
 | `Z` / `E` | (On hovered double bond) Set Z / E configuration | (On hovered double bond) Set Z / E configuration |
 | `.` (Period) | Toggle radical on selected or hovered atom (0-\>1-\>2-\>0) | Toggle radical on selected or hovered atom (0-\>1-\>2-\>0) |
 | `+` / `-` | Increase/Decrease charge on selected or hovered atom | Increase/Decrease charge on selected or hovered atom |
 | `Delete` / `Backspace` | Delete selected or hovered item | Cancel operation (during drawing) / Delete selected or hovered item |
-| `Ctrl`+`Z` | Undo | Undo |
-| `Ctrl`+`Y` / `Ctrl`+`Shift`+`Z` | Redo | Redo |
-| `Ctrl`+`C` | Copy Selection | Copy Selection |
-| `Ctrl`+`X` | Cut Selection | Cut Selection |
-| `Ctrl`+`V` | Paste | Paste |
-| `Ctrl`+`A` | Select All | Select All |
-| `Ctrl`+`N` | New | New |
-| `Ctrl`+`O` | Open Project... | Open Project... |
-| `Ctrl`+`S` | Save Project | Save Project |
-| `Ctrl`+`Shift`+`S` | Save Project As... | Save Project As... |
-| `Ctrl`+`J` | Optimize 2D | Optimize 2D |
-| `Ctrl`+`K` | Convert 2D to 3D | Convert 2D to 3D |
-| `Ctrl`+`L` | Optimize 3D | Optimize 3D |
-| `Ctrl`+`+` | Zoom In (2D View) | Zoom In (2D View) |
-| `Ctrl`+`-` | Zoom Out (2D View) | Zoom Out (2D View) |
-| `Ctrl`+`0` | Reset Zoom (2D View) | Reset Zoom (2D View) |
-| `Ctrl`+`9` | Fit to View (2D View) | Fit to View (2D View) |
-| `Ctrl`+`R` | Reset 3D View | Reset 3D View |
-| `Ctrl`+`1` | Panel Layout 50:50 | Panel Layout 50:50 |
-| `Ctrl`+`2` | Panel Layout 70:30 (2D Focus) | Panel Layout 70:30 (2D Focus) |
-| `Ctrl`+`3` | Panel Layout 30:70 (3D Focus) | Panel Layout 30:70 (3D Focus) |
-| `Ctrl`+`H` | Toggle 2D Panel Visibility | Toggle 2D Panel Visibility |
-| `Alt`+`Drag` | (3D View) Temporarily enter 3D Drag mode | (3D View) Temporarily enter 3D Drag mode |
-| `Ctrl`+`Q` | Quit | Quit |
+| `Ctrl`+`Z` | Undo | 
+| `Ctrl`+`Y` / `Ctrl`+`Shift`+`Z` | Redo | 
+| `Ctrl`+`C` | Copy Selection | 
+| `Ctrl`+`X` | Cut Selection | 
+| `Ctrl`+`V` | Paste | 
+| `Ctrl`+`A` | Select All | 
+| `Ctrl`+`N` | New | 
+| `Ctrl`+`O` | Open Project... | 
+| `Ctrl`+`S` | Save Project |
+| `Ctrl`+`Shift`+`S` | Save Project As... |
+| `Ctrl`+`J` | Optimize 2D | 
+| `Ctrl`+`K` | Convert 2D to 3D | 
+| `Ctrl`+`L` | Optimize 3D | 
+| `Ctrl`+`+` | Zoom In (2D View) |
+| `Ctrl`+`-` | Zoom Out (2D View) | 
+| `Ctrl`+`0` | Reset Zoom (2D View) | 
+| `Ctrl`+`9` | Fit to View (2D View) | 
+| `Ctrl`+`R` | Reset 3D View |
+| `Ctrl`+`1` | Panel Layout 50:50 |
+| `Ctrl`+`2` | Panel Layout 70:30 (2D Focus) |
+| `Ctrl`+`3` | Panel Layout 30:70 (3D Focus) |
+| `Ctrl`+`H` | Toggle 2D Panel Visibility | 
+| `Alt`+`Drag` | (3D View) Temporarily enter 3D Drag mode | 
+| `Ctrl`+`Q` | Quit |
 
 -----
 
 ## 10\. Version / License
 
-  * **Version:** 1.9.7
+  * **Version:** 1.12.1
   * **Author:** Hiromichi Yokoyama
   * **License:** Apache-2.0 license
   * **Repository:** [https://github.com/HiroYokoyama/python\_molecular\_editor](https://github.com/HiroYokoyama/python_molecular_editor)
