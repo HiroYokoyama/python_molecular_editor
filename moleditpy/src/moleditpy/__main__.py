@@ -11,7 +11,7 @@ DOI 10.5281/zenodo.17268532
 """
 
 #Version
-VERSION = '1.11.3'
+VERSION = '1.12.0'
 
 print("-----------------------------------------------------")
 print("MoleditPy — A Python-based molecular editing software")
@@ -5074,27 +5074,112 @@ class ZoomableView(QGraphicsView):
         else:
             super().mouseReleaseEvent(event)
 
-
-
-
 class CalculationWorker(QObject):
     status_update = pyqtSignal(str) 
     finished=pyqtSignal(object); error=pyqtSignal(str)
     
     def run_calculation(self, mol_block, options=None):
         try:
-            # options: dict-like with keys: 'conversion_mode' -> 'fallback'|'rdkit'|'obabel'
+            # The worker may be asked to halt via a shared set `halt_ids` and
+            # identifies its own run by options['worker_id'] (int).
+            worker_id = None
+            try:
+                worker_id = options.get('worker_id') if options else None
+            except Exception:
+                worker_id = None
+
+            # If a caller starts a worker without providing a worker_id, treat
+            # it as a "global" worker that can still be halted via a global
+            # halt flag. Emit a single status warning so callers know that
+            # the worker was started without an identifier.
+            _warned_no_worker_id = False
+            if worker_id is None:
+                try:
+                    # best-effort, swallow any errors (signals may not be connected)
+                    self.status_update.emit("Warning: worker started without 'worker_id'; will listen for global halt signals.")
+                except Exception:
+                    pass
+                _warned_no_worker_id = True
+
+            def _check_halted():
+                try:
+                    halt_ids = getattr(self, 'halt_ids', None)
+                    # If worker_id is None, allow halting via a global mechanism:
+                    #  - an explicit attribute `halt_all` set to True on the worker
+                    #  - the shared `halt_ids` set containing None or the sentinel 'ALL'
+                    if worker_id is None:
+                        if getattr(self, 'halt_all', False):
+                            return True
+                        if halt_ids is None:
+                            return False
+                        # Support both None-in-set and string sentinel for compatibility
+                        return (None in halt_ids) or ('ALL' in halt_ids)
+
+                    if halt_ids is None:
+                        return False
+                    return (worker_id in halt_ids)
+                except Exception:
+                    return False
+
+            # Safe-emission helpers: do nothing if this worker has been halted.
+            def _safe_status(msg):
+                try:
+                    if _check_halted():
+                        return
+                    self.status_update.emit(msg)
+                except Exception:
+                    # Swallow any signal-emission errors to avoid crashing the worker
+                    pass
+
+            def _safe_finished(payload):
+                try:
+                    if _check_halted():
+                        return
+                    # Attempt to emit the payload; preserve existing fallback behavior
+                    try:
+                        self.finished.emit(payload)
+                    except TypeError:
+                        # Some slots/old code may expect a single-molecule arg; try that too
+                        try:
+                            # If payload was a tuple like (worker_id, mol), try sending the second element
+                            if isinstance(payload, (list, tuple)) and len(payload) >= 2:
+                                self.finished.emit(payload[1])
+                            else:
+                                self.finished.emit(payload)
+                        except Exception:
+                            pass
+                except Exception:
+                    pass
+
+            def _safe_error(msg):
+                try:
+                    if _check_halted():
+                        return
+                    self.error.emit(msg)
+                except Exception:
+                    pass
+
+            # options: dict-like with keys: 'conversion_mode' -> 'fallback'|'rdkit'|'obabel'|'direct'
             if options is None:
                 options = {}
             conversion_mode = options.get('conversion_mode', 'fallback')
+            # Ensure params exists in all code paths (some RDKit calls below
+            # reference `params` and earlier editing introduced a path where
+            # it might not be defined). Initialize to None here and assign
+            # a proper ETKDG params object later where needed.
+            params = None
             if not mol_block:
                 raise ValueError("No atoms to convert.")
             
-            self.status_update.emit("Creating 3D structure...")
+            _safe_status("Creating 3D structure...")
 
             mol = Chem.MolFromMolBlock(mol_block, removeHs=False)
             if mol is None:
                 raise ValueError("Failed to create molecule from MOL block.")
+
+            # Check early whether this run has been requested to halt
+            if _check_halted():
+                raise RuntimeError("Halted")
 
             # CRITICAL FIX: Extract and restore explicit E/Z labels from MOL block
             # Parse M CFG lines to get explicit stereo labels
@@ -5143,6 +5228,10 @@ class CalculationWorker(QObject):
 
             mol = Chem.AddHs(mol)
 
+            # Check after adding Hs (may be a long operation)
+            if _check_halted():
+                raise RuntimeError("Halted")
+
             # CRITICAL: Re-apply explicit stereo after AddHs which may renumber atoms
             for bond_idx, stereo_type in explicit_stereo.items():
                 if bond_idx < mol.GetNumBonds():
@@ -5166,6 +5255,397 @@ class CalculationWorker(QObject):
                             
                             bond.SetStereoAtoms(stereo_atom1, stereo_atom2)
                             bond.SetStereo(stereo_type)
+
+            # Direct mode: construct a 3D conformer without embedding by using
+            # the 2D coordinates from the MOL block (z=0) and placing added
+            # hydrogens close to their parent heavy atoms with a small z offset.
+            # This avoids 3D embedding entirely and is useful for quick viewing
+            # when stereochemistry/geometry refinement is not desired.
+            if conversion_mode == 'direct':
+                _safe_status("Direct conversion: using 2D coordinates and adding hydrogens (no embedding).")
+                try:
+                    # Robust direct conversion:
+                    # 1) Prefer heavy-atom 2D coordinates (removeHs=True) so we place Hs after AddHs
+                    # 2) Record any wedge/dash bond directions from the MOL block (so we don't rely on
+                    #    RDKit to preserve BondDir across AddHs) and re-apply a small Z offset.
+                    parsed_coords = []  # heavy-atom coordinates (x, y, z)
+                    stereo_dirs = []    # list of (begin_idx, end_idx, stereo_flag) extracted from MOL bond stereo (V2000: 1=up,6=down)
+                    try:
+                        # Get coordinates for heavy atoms only from a quick 2D parse (prefer heavy atoms)
+                        # Try to allow RDKit to parse bond-direction flags by sanitizing the molecule.
+                        base2d_heavy = None
+                        try:
+                            base2d_heavy = Chem.MolFromMolBlock(mol_block, removeHs=True, sanitize=True)
+                        except Exception:
+                            # Fall back to a non-sanitized parse if sanitization fails for some inputs
+                            try:
+                                base2d_heavy = Chem.MolFromMolBlock(mol_block, removeHs=True, sanitize=False)
+                            except Exception:
+                                base2d_heavy = None
+
+                        if base2d_heavy is not None and base2d_heavy.GetNumConformers() > 0:
+                            oconf = base2d_heavy.GetConformer()
+                            for i in range(base2d_heavy.GetNumAtoms()):
+                                p = oconf.GetAtomPosition(i)
+                                parsed_coords.append((float(p.x), float(p.y), 0.0))
+
+                        # Parse wedge/dash bond information directly from MOL block bond section
+                        stereo_dirs = []  # list of (begin_heavy_idx, end_heavy_idx, stereo_flag)
+                        try:
+                            lines = mol_block.splitlines()
+                            counts_idx = None
+                            
+                            # Find the counts line (contains atom/bond counts)
+                            for i, ln in enumerate(lines[:40]):
+                                if re.match(r"^\s*\d+\s+\d+", ln):
+                                    counts_idx = i
+                                    break
+                            
+                            if counts_idx is not None:
+                                parts = lines[counts_idx].split()
+                                try:
+                                    natoms = int(parts[0])
+                                    nbonds = int(parts[1])
+                                except Exception:
+                                    natoms = nbonds = 0
+                                
+                                # Build heavy-atom index mapping (MOL index -> heavy-only index)
+                                heavy_atom_map = {}  # MOL 1-based index -> heavy-only 0-based index
+                                heavy_count = 0
+                                atom_start = counts_idx + 1
+                                
+                                for j in range(min(natoms, max(0, len(lines) - atom_start))):
+                                    atom_line = lines[atom_start + j]
+                                    try:
+                                        # Parse element symbol from V2000 format (columns 30-34)
+                                        try:
+                                            symbol = atom_line[30:34].strip()
+                                        except Exception:
+                                            # Fallback: whitespace-split method
+                                            fields = atom_line.split()
+                                            symbol = fields[3] if len(fields) >= 4 else ''
+                                        
+                                        # Skip hydrogen atoms
+                                        if symbol and symbol.upper() != 'H':
+                                            heavy_atom_map[j + 1] = heavy_count  # MOL is 1-indexed
+                                            heavy_count += 1
+                                    except Exception:
+                                        continue
+                                
+                                # Parse bond block for wedge/dash information
+                                # We'll record the raw V2000 stereo flag (integer) and rely
+                                # solely on this information to decide Z offsets later.
+                                bond_start = atom_start + natoms
+                                for j in range(min(nbonds, max(0, len(lines) - bond_start))):
+                                    bond_line = lines[bond_start + j]
+                                    try:
+                                        # V2000 bond format (flexibly parsed): atom1 atom2 bond_type stereo
+                                        # Try a flexible regex first to capture the first four integer fields
+                                        # (atom1, atom2, bond_type, stereo_flag). Some MOL writers
+                                        # use fixed-column output so splitting can miss the stereo
+                                        # field in pathological cases; a regex is more robust.
+                                        m = re.match(r"^\s*(\d+)\s+(\d+)\s+(\d+)(?:\s+(-?\d+))?", bond_line)
+                                        if m:
+                                            try:
+                                                atom1_mol = int(m.group(1))  # 1-based MOL index
+                                                atom2_mol = int(m.group(2))  # 1-based MOL index
+                                                bond_type = int(m.group(3))
+                                            except Exception:
+                                                continue
+                                            try:
+                                                stereo_raw = int(m.group(4)) if m.group(4) is not None else 0
+                                            except Exception:
+                                                stereo_raw = 0
+                                        else:
+                                            # Fallback to whitespace split if regex fails
+                                            fields = bond_line.split()
+                                            if len(fields) >= 4:
+                                                try:
+                                                    atom1_mol = int(fields[0])  # 1-based MOL index
+                                                    atom2_mol = int(fields[1])  # 1-based MOL index
+                                                    bond_type = int(fields[2])
+                                                except Exception:
+                                                    continue
+                                                try:
+                                                    stereo_raw = int(fields[3]) if len(fields) > 3 else 0
+                                                except Exception:
+                                                    stereo_raw = 0
+                                            else:
+                                                continue
+
+                                        # Normalize non-standard encodings: 1 -> up (1), 2 -> dash (6)
+                                        if stereo_raw == 1:
+                                            stereo_flag = 1
+                                        elif stereo_raw == 2:
+                                            # map '2' (dash in some exporters) to V2000's '6' (down)
+                                            stereo_flag = 6
+                                        else:
+                                            stereo_flag = stereo_raw
+
+                                        # Check if both atoms are heavy atoms in our heavy-atom map
+                                        if atom1_mol in heavy_atom_map and atom2_mol in heavy_atom_map:
+                                            heavy_idx1 = heavy_atom_map[atom1_mol]
+                                            heavy_idx2 = heavy_atom_map[atom2_mol]
+
+                                            # Record only recognized wedge/dash flags (1=up,6=down)
+                                            if stereo_flag in (1, 6):
+                                                stereo_dirs.append((heavy_idx1, heavy_idx2, stereo_flag))
+                                    except Exception:
+                                        continue
+                        except Exception:
+                            stereo_dirs = []
+                    except Exception:
+                        parsed_coords = []
+                        stereo_dirs = []
+
+                    if not parsed_coords:
+                        # Fallback: parse V2000-style atom lines, but try to skip explicit H lines
+                        try:
+                            import re
+                            lines = mol_block.splitlines()
+                            counts_idx = None
+                            for i, ln in enumerate(lines[:40]):
+                                if re.match(r"^\s*\d+\s+\d+", ln):
+                                    counts_idx = i
+                                    break
+                            if counts_idx is not None:
+                                parts = lines[counts_idx].split()
+                                try:
+                                    natoms = int(parts[0])
+                                except Exception:
+                                    natoms = 0
+                                atom_start = counts_idx + 1
+                                for j in range(min(natoms, max(0, len(lines) - atom_start))):
+                                    atom_line = lines[atom_start + j]
+                                    # try fixed-column parse first (V2000)
+                                    try:
+                                        x = float(atom_line[0:10].strip()); y = float(atom_line[10:20].strip()); z = float(atom_line[20:30].strip())
+                                        # element symbol in V2000 is in columns ~31:34 (0-based indices 30:34)
+                                        try:
+                                            symbol = atom_line[30:34].strip()
+                                        except Exception:
+                                            symbol = ''
+                                    except Exception:
+                                        # whitespace-split fallback
+                                        fields = atom_line.split()
+                                        if len(fields) >= 4:
+                                            try:
+                                                x = float(fields[0]); y = float(fields[1]); z = float(fields[2])
+                                                symbol = fields[3]
+                                            except Exception:
+                                                continue
+                                        else:
+                                            continue
+                                    # Prefer non-hydrogen atoms for base positions so H placement is deterministic
+                                    if symbol and symbol.upper() == 'H':
+                                        continue
+                                    parsed_coords.append((x, y, z))
+                        except Exception:
+                            parsed_coords = []
+
+                    # Build conformer and set positions for heavy atoms (z=0).
+                    # IMPORTANT: do not assume heavy atoms occupy the first N indices in
+                    # `mol` (AddHs may have changed ordering). Assign parsed_coords
+                    # to the heavy-atom indices in `mol` in their appearance order so
+                    # hydrogens get proper neighbour references and are placed later.
+                    conf = Chem.Conformer(mol.GetNumAtoms())
+
+                    # Assign parsed 2D coords to heavy atoms in `mol` as best-effort.
+                    # We'll build a robust mapping from parsed heavy-atom index -> actual
+                    # mol atom index so stereo offsets can be applied reliably even when
+                    # Atom ordering differs or SetAtomPosition partially fails.
+                    temp_heavy_index_to_mol_idx = []
+                    heavy_assigned = 0
+                    for atom in mol.GetAtoms():
+                        if atom.GetAtomicNum() <= 1:
+                            continue
+                        if heavy_assigned >= len(parsed_coords):
+                            # No more parsed heavy coords to assign
+                            break
+                        x, y, z = parsed_coords[heavy_assigned]
+                        try:
+                            conf.SetAtomPosition(atom.GetIdx(), rdGeometry.Point3D(float(x), float(y), 0.0))
+                        except Exception:
+                            # Best-effort: continue even if setting fails for any atom
+                            pass
+                        # Record the atom index in the same order we consumed parsed_coords
+                        temp_heavy_index_to_mol_idx.append(atom.GetIdx())
+                        heavy_assigned += 1
+
+                    n_heavy = heavy_assigned
+
+                    # Build a robust mapping (list) from parsed heavy-index -> mol atom idx.
+                    # Attempt positional matching (preferred) with a slightly relaxed tolerance,
+                    # then fall back to the sequential list we built above.
+                    heavy_index_to_mol_idx = [None] * len(parsed_coords)
+                    try:
+                        tol = 1e-2  # relaxed tolerance for coordinate matching (in Angstroms)
+                        heavy_atoms = [a for a in mol.GetAtoms() if a.GetAtomicNum() > 1]
+                        # Try to match each parsed coord to the nearest heavy atom position
+                        for i, (px, py, pz) in enumerate(parsed_coords):
+                            best_idx = None
+                            best_d2 = None
+                            for a in heavy_atoms:
+                                try:
+                                    pos = conf.GetAtomPosition(a.GetIdx())
+                                except Exception:
+                                    continue
+                                dx = float(pos.x) - float(px)
+                                dy = float(pos.y) - float(py)
+                                d2 = dx * dx + dy * dy
+                                if best_d2 is None or d2 < best_d2:
+                                    best_d2 = d2
+                                    best_idx = a.GetIdx()
+                            if best_d2 is not None and best_d2 <= (tol * tol):
+                                heavy_index_to_mol_idx[i] = best_idx
+
+                        # Fill any None entries with the sequential mapping we built earlier
+                        seq_fill = 0
+                        for i in range(len(heavy_index_to_mol_idx)):
+                            if heavy_index_to_mol_idx[i] is None:
+                                if seq_fill < len(temp_heavy_index_to_mol_idx):
+                                    heavy_index_to_mol_idx[i] = temp_heavy_index_to_mol_idx[seq_fill]
+                                    seq_fill += 1
+                                else:
+                                    # As a last resort, pick any heavy atom not already used
+                                    for a in heavy_atoms:
+                                        if a.GetIdx() not in heavy_index_to_mol_idx:
+                                            heavy_index_to_mol_idx[i] = a.GetIdx()
+                                            break
+                    except Exception:
+                        # Fall back to the best-effort sequential mapping
+                        heavy_index_to_mol_idx = temp_heavy_index_to_mol_idx[:]
+
+                    # Place remaining atoms (likely hydrogens added by AddHs) near a heavy neighbor.
+                    # Use the actual heavy atom indices present in `mol` rather than assuming contiguous indices.
+                    for atom in mol.GetAtoms():
+                        idx = atom.GetIdx()
+                        # Skip atoms we already placed (heavy atoms)
+                        if atom.GetAtomicNum() > 1:
+                            continue
+                        # Find any heavy neighbour that has been assigned coordinates
+                        heavy_neigh = [n for n in atom.GetNeighbors() if n.GetAtomicNum() > 1]
+                        # Place hydrogen near the first heavy neighbor found
+                        heavy_pos_found = False
+                        for nb in heavy_neigh:
+                            try:
+                                nbpos = conf.GetAtomPosition(nb.GetIdx())
+                                # Place hydrogen slightly offset from the heavy atom position
+                                offset_x = 0.5 if (idx % 2 == 0) else -0.5  # Alternate x offset
+                                offset_y = 0.5 if (idx % 3 == 0) else -0.5  # Alternate y offset
+                                conf.SetAtomPosition(idx, rdGeometry.Point3D(
+                                    float(nbpos.x) + offset_x, 
+                                    float(nbpos.y) + offset_y, 
+                                    0.3
+                                ))
+                                heavy_pos_found = True
+                                break
+                            except Exception:
+                                continue
+                        if not heavy_pos_found:
+                            # Fallback: place hydrogen at a small positive z above origin
+                            try:
+                                conf.SetAtomPosition(idx, rdGeometry.Point3D(0.0, 0.0, 0.10))
+                            except Exception:
+                                pass
+
+                    # Apply small Z offsets for wedge/dash bonds recorded from the input MOL
+                    # We must translate the stereo indices (which refer to the heavy-atom
+                    # ordering from the parsed 2D molecule) to the actual atom indices in
+                    # `mol` (which may have been renumbered by AddHs). Build a mapped
+                    # stereo list and then apply offsets.
+                    try:
+                        stereo_z_offset = 1.0  # wedge -> +1, dash -> -1
+
+                        # Build mapped stereo list: (mol_begin_idx, mol_end_idx, b_dir)
+                        stereo_mapped = []
+                        if heavy_index_to_mol_idx:
+                            # Direct mapping when we recorded the heavy-index -> mol-idx list
+                            for begin_idx, end_idx, b_dir in stereo_dirs:
+                                try:
+                                    if begin_idx < len(heavy_index_to_mol_idx) and end_idx < len(heavy_index_to_mol_idx):
+                                        mapped_begin = heavy_index_to_mol_idx[begin_idx]
+                                        mapped_end = heavy_index_to_mol_idx[end_idx]
+                                        stereo_mapped.append((mapped_begin, mapped_end, b_dir))
+                                except Exception:
+                                    continue
+                        else:
+                            # Fallback: try positional matching between parsed_coords and assigned conformer
+                            # (use a small tolerance for float rounding)
+                            try:
+                                tol = 1e-3
+                                for begin_idx, end_idx, b_dir in stereo_dirs:
+                                    if begin_idx < len(parsed_coords) and end_idx < len(parsed_coords):
+                                        bx, by, bz = parsed_coords[begin_idx]
+                                        ex, ey, ez = parsed_coords[end_idx]
+                                        mapped_begin = None
+                                        mapped_end = None
+                                        for atom in mol.GetAtoms():
+                                            if atom.GetAtomicNum() <= 1:
+                                                continue
+                                            try:
+                                                pos = conf.GetAtomPosition(atom.GetIdx())
+                                            except Exception:
+                                                continue
+                                            if mapped_begin is None and abs(float(pos.x) - float(bx)) <= tol and abs(float(pos.y) - float(by)) <= tol:
+                                                mapped_begin = atom.GetIdx()
+                                            if mapped_end is None and abs(float(pos.x) - float(ex)) <= tol and abs(float(pos.y) - float(ey)) <= tol:
+                                                mapped_end = atom.GetIdx()
+                                            if mapped_begin is not None and mapped_end is not None:
+                                                break
+                                        if mapped_begin is not None and mapped_end is not None:
+                                            stereo_mapped.append((mapped_begin, mapped_end, b_dir))
+                            except Exception:
+                                stereo_mapped = []
+
+                        # Apply offsets using mapped indices. Use ONLY the raw V2000
+                        # stereo flag recorded earlier: 1 => up/wedge, 6 => down/dash.
+                        # Wedge will push the target atom to +Z, dash to -Z.
+                        for mol_begin_idx, mol_end_idx, stereo_flag in stereo_mapped:
+                            try:
+                                # Only handle known flags; otherwise skip
+                                if stereo_flag not in (1, 6):
+                                    continue
+
+                                # Decide offset sign: wedge (1) => +, dash (6) => -
+                                sign = 1.0 if stereo_flag == 1 else -1.0
+
+                                # Prefer adjusting the end atom; fall back to begin atom
+                                if mol_end_idx < conf.GetNumAtoms():
+                                    pos = conf.GetAtomPosition(mol_end_idx)
+                                    z = float(pos.z)
+                                    newz = z + (stereo_z_offset * sign)
+                                    conf.SetAtomPosition(mol_end_idx, rdGeometry.Point3D(float(pos.x), float(pos.y), float(newz)))
+                                elif mol_begin_idx < conf.GetNumAtoms():
+                                    pos2 = conf.GetAtomPosition(mol_begin_idx)
+                                    z2 = float(pos2.z)
+                                    # When falling back to begin atom, reverse sign so visual
+                                    # direction remains consistent with original wedge/dash.
+                                    newz2 = z2 - (stereo_z_offset * sign)
+                                    conf.SetAtomPosition(mol_begin_idx, rdGeometry.Point3D(float(pos2.x), float(pos2.y), float(newz2)))
+                            except Exception:
+                                # non-fatal; continue with other stereo placements
+                                continue
+                    except Exception:
+                        pass
+
+                    # Replace any existing conformers with our constructed one and emit result
+                    try:
+                        mol.RemoveAllConformers()
+                    except Exception:
+                        pass
+                    mol.AddConformer(conf, assignId=True)
+
+                    # Emit the finished result including the worker id when possible
+                    try:
+                        _safe_finished((worker_id, mol))
+                    except Exception:
+                        _safe_finished(mol)
+                    _safe_status("Direct conversion completed.")
+                    return
+                except Exception as e:
+                    # If direct conversion fails, report and fall through to other fallbacks
+                    _safe_status(f"Direct conversion failed: {e}")
 
             params = AllChem.ETKDGv2()
             params.randomSeed = 42
@@ -5191,7 +5671,19 @@ class CalculationWorker(QObject):
                     stereo_atoms = bond.GetStereoAtoms()
                     original_stereo_info.append((bond.GetIdx(), bond.GetStereo(), stereo_atoms))
             
-            self.status_update.emit("RDKit: Embedding 3D coordinates...")
+            # Only report RDKit-specific messages when RDKit embedding will be
+            # attempted. For other conversion modes, emit clearer, non-misleading
+            # status messages so the UI doesn't show "RDKit" when e.g. direct
+            # coordinates or Open Babel will be used.
+            if conversion_mode in ('fallback', 'rdkit'):
+                _safe_status("RDKit: Embedding 3D coordinates...")
+            elif conversion_mode == 'obabel':
+                pass
+            else:
+                # direct mode (or any other explicit non-RDKit mode)
+                pass
+            if _check_halted():
+                raise RuntimeError("Halted")
             
             # Try multiple times with different approaches if needed
             conf_id = -1
@@ -5203,46 +5695,50 @@ class CalculationWorker(QObject):
                     conf_id = AllChem.EmbedMolecule(mol, params)
                 else:
                     conf_id = -1
+                # Final check before returning success
+                if _check_halted():
+                    raise RuntimeError("Halted")
             except Exception as e:
-                self.status_update.emit(f"Standard embedding failed: {e}")
-            
-            # Second attempt: Use constraint embedding if available (only when RDKit is allowed)
-            if conf_id == -1 and conversion_mode in ('fallback', 'rdkit'):
-                try:
-                    # Create distance constraints for double bonds to enforce E/Z geometry
-                    bounds_matrix = AllChem.GetMoleculeBoundsMatrix(mol)
+                # Standard embedding failed; report and continue to fallback attempts
+                _safe_status(f"Standard embedding failed: {e}")
 
-                    # Add constraints for E/Z bonds
-                    for bond_idx, stereo, stereo_atoms in original_stereo_info:
-                        bond = mol.GetBondWithIdx(bond_idx)
-                        if len(stereo_atoms) == 2:
-                            atom1_idx = bond.GetBeginAtomIdx()
-                            atom2_idx = bond.GetEndAtomIdx()
-                            neighbor1_idx = stereo_atoms[0]
-                            neighbor2_idx = stereo_atoms[1]
+                # Second attempt: Use constraint embedding if available (only when RDKit is allowed)
+                if conf_id == -1 and conversion_mode in ('fallback', 'rdkit'):
+                    try:
+                        # Create distance constraints for double bonds to enforce E/Z geometry
+                        bounds_matrix = AllChem.GetMoleculeBoundsMatrix(mol)
 
-                            # For Z (cis): neighbors should be closer
-                            # For E (trans): neighbors should be farther
-                            if stereo == Chem.BondStereo.STEREOZ:
-                                # Z configuration: set shorter distance constraint
-                                target_dist = 3.0  # Angstroms
-                                bounds_matrix[neighbor1_idx][neighbor2_idx] = min(bounds_matrix[neighbor1_idx][neighbor2_idx], target_dist)
-                                bounds_matrix[neighbor2_idx][neighbor1_idx] = min(bounds_matrix[neighbor2_idx][neighbor1_idx], target_dist)
-                            elif stereo == Chem.BondStereo.STEREOE:
-                                # E configuration: set longer distance constraint  
-                                target_dist = 5.0  # Angstroms
-                                bounds_matrix[neighbor1_idx][neighbor2_idx] = max(bounds_matrix[neighbor1_idx][neighbor2_idx], target_dist)
-                                bounds_matrix[neighbor2_idx][neighbor1_idx] = max(bounds_matrix[neighbor2_idx][neighbor1_idx], target_dist)
+                        # Add constraints for E/Z bonds
+                        for bond_idx, stereo, stereo_atoms in original_stereo_info:
+                            bond = mol.GetBondWithIdx(bond_idx)
+                            if len(stereo_atoms) == 2:
+                                atom1_idx = bond.GetBeginAtomIdx()
+                                atom2_idx = bond.GetEndAtomIdx()
+                                neighbor1_idx = stereo_atoms[0]
+                                neighbor2_idx = stereo_atoms[1]
 
-                    DoTriangleSmoothing(bounds_matrix)
-                    conf_id = AllChem.EmbedMolecule(mol, bounds_matrix, params)
-                    self.status_update.emit("Constraint-based embedding succeeded")
-                except Exception:
-                    # Constraint embedding failed: only raise error if mode is 'rdkit', otherwise allow fallback
-                    self.status_update.emit("RDKit: Constraint embedding failed")
-                    if conversion_mode == 'rdkit':
-                        raise RuntimeError("RDKit: Constraint embedding failed")
-                    conf_id = -1
+                                # For Z (cis): neighbors should be closer
+                                # For E (trans): neighbors should be farther
+                                if stereo == Chem.BondStereo.STEREOZ:
+                                    # Z configuration: set shorter distance constraint
+                                    target_dist = 3.0  # Angstroms
+                                    bounds_matrix[neighbor1_idx][neighbor2_idx] = min(bounds_matrix[neighbor1_idx][neighbor2_idx], target_dist)
+                                    bounds_matrix[neighbor2_idx][neighbor1_idx] = min(bounds_matrix[neighbor2_idx][neighbor1_idx], target_dist)
+                                elif stereo == Chem.BondStereo.STEREOE:
+                                    # E configuration: set longer distance constraint  
+                                    target_dist = 5.0  # Angstroms
+                                    bounds_matrix[neighbor1_idx][neighbor2_idx] = max(bounds_matrix[neighbor1_idx][neighbor2_idx], target_dist)
+                                    bounds_matrix[neighbor2_idx][neighbor1_idx] = max(bounds_matrix[neighbor2_idx][neighbor1_idx], target_dist)
+
+                        DoTriangleSmoothing(bounds_matrix)
+                        conf_id = AllChem.EmbedMolecule(mol, bounds_matrix, params)
+                        _safe_status("Constraint-based embedding succeeded")
+                    except Exception:
+                        # Constraint embedding failed: only raise error if mode is 'rdkit', otherwise allow fallback
+                        _safe_status("RDKit: Constraint embedding failed")
+                        if conversion_mode == 'rdkit':
+                            raise RuntimeError("RDKit: Constraint embedding failed")
+                        conf_id = -1
                     
             # Fallback: Try basic embedding
             if conf_id == -1:
@@ -5257,7 +5753,7 @@ class CalculationWorker(QObject):
                     pass
             '''
             if conf_id == -1:
-                self.status_update.emit("Initial embedding failed, retrying with ignoreSmoothingFailures=True...")
+                        _safe_status("Initial embedding failed, retrying with ignoreSmoothingFailures=True...")
                 # Try again with ignoreSmoothingFailures instead of random-seed retries
                 params.ignoreSmoothingFailures = True
                 # Use a deterministic seed to avoid random-coordinate behavior here
@@ -5294,10 +5790,14 @@ class CalculationWorker(QObject):
                     mmff_variant = "MMFF94s"
                     if opt_method and str(opt_method).upper() == 'MMFF94_RDKIT':
                         mmff_variant = "MMFF94"
+                    if _check_halted():
+                        raise RuntimeError("Halted")
                     AllChem.MMFFOptimizeMolecule(mol, mmffVariant=mmff_variant)
                 except Exception:
                     # fallback to UFF if MMFF fails
                     try:
+                        if _check_halted():
+                            raise RuntimeError("Halted")
                         AllChem.UFFOptimizeMolecule(mol)
                     except Exception:
                         pass
@@ -5310,13 +5810,18 @@ class CalculationWorker(QObject):
                     bond.SetStereo(stereo)
                 
                 # Do NOT call AssignStereochemistry here as it would override our explicit labels
-                self.finished.emit(mol)
-                self.status_update.emit("RDKit 3D conversion succeeded.")
+                # Include worker_id so the main thread can ignore stale results
+                try:
+                    _safe_finished((worker_id, mol))
+                except Exception:
+                    # Fallback to legacy single-arg emit
+                    _safe_finished(mol)
+                _safe_status("RDKit 3D conversion succeeded.")
                 return
 
             # If RDKit did not produce a conf and OBabel is allowed, try Open Babel
             if conf_id == -1 and conversion_mode in ('fallback', 'obabel'):
-                self.status_update.emit("RDKit embedding failed or disabled. Attempting Open Babel...")
+                _safe_status("RDKit embedding failed or disabled. Attempting Open Babel...")
                 try:
                     if not OBABEL_AVAILABLE:
                         raise RuntimeError("Open Babel (pybel) is not available in this Python environment.")
@@ -5327,14 +5832,18 @@ class CalculationWorker(QObject):
                         pass
                     ob_mol.make3D()
                     try:
-                        self.status_update.emit("Optimizing with Open Babel (MMFF94)...")
+                        _safe_status("Optimizing with Open Babel (MMFF94)...")
+                        if _check_halted():
+                            raise RuntimeError("Halted")
                         ob_mol.localopt(forcefield='mmff94', steps=500)
                     except Exception:
                         try:
-                            self.status_update.emit("MMFF94 failed, falling back to UFF...")
+                            _safe_status("MMFF94 failed, falling back to UFF...")
+                            if _check_halted():
+                                raise RuntimeError("Halted")
                             ob_mol.localopt(forcefield='uff', steps=500)
                         except Exception:
-                            self.status_update.emit("UFF optimization also failed.")
+                            _safe_status("UFF optimization also failed.")
                             pass
                     molblock_ob = ob_mol.write("mol")
                     rd_mol = Chem.MolFromMolBlock(molblock_ob, removeHs=False)
@@ -5345,20 +5854,27 @@ class CalculationWorker(QObject):
                         mmff_variant = "MMFF94s"
                         if opt_method and str(opt_method).upper() == 'MMFF94_RDKIT':
                             mmff_variant = "MMFF94"
+                        if _check_halted():
+                            raise RuntimeError("Halted")
                         AllChem.MMFFOptimizeMolecule(rd_mol, mmffVariant=mmff_variant)
                     except Exception:
                         try:
+                            if _check_halted():
+                                raise RuntimeError("Halted")
                             AllChem.UFFOptimizeMolecule(rd_mol)
                         except Exception:
                             pass
-                    self.status_update.emit("Open Babel embedding succeeded. Warning: Conformation accuracy may be limited.")
-                    self.finished.emit(rd_mol)
+                    _safe_status("Open Babel embedding succeeded. Warning: Conformation accuracy may be limited.")
+                    try:
+                        _safe_finished((worker_id, rd_mol))
+                    except Exception:
+                        _safe_finished(rd_mol)
                     return
                 except Exception as ob_err:
                     raise RuntimeError(f"Open Babel 3D conversion failed: {ob_err}")
 
         except Exception as e:
-            self.error.emit(str(e))
+            _safe_error(str(e))
 
 
 class PeriodicTableDialog(QDialog):
@@ -7831,7 +8347,8 @@ class MainWindow(QMainWindow):
         conv_options = [
             ("RDKit -> Open Babel (fallback)", 'fallback'),
             ("RDKit only", 'rdkit'),
-            ("Open Babel only", 'obabel')
+            ("Open Babel only", 'obabel'),
+            ("Direct (use 2D coords + add H)", 'direct')
         ]
         self.conv_actions = {}
         for label, key in conv_options:
@@ -7967,11 +8484,20 @@ class MainWindow(QMainWindow):
         self._enable_3d_features(False)
         
     def init_worker_thread(self):
-        self.thread=QThread();self.worker=CalculationWorker();self.worker.moveToThread(self.thread)
-        self.start_calculation.connect(self.worker.run_calculation)
-        self.worker.finished.connect(self.on_calculation_finished); self.worker.error.connect(self.on_calculation_error)
-        self.worker.status_update.connect(self.update_status_bar)
-        self.thread.start()
+        # Initialize shared state for calculation runs.
+        # NOTE: we no longer create a persistent worker/thread here. Instead,
+        # each conversion run will create its own CalculationWorker + QThread
+        # so multiple conversions may run in parallel.
+        # Shared halt id set used to request early termination of specific worker runs
+        self.halt_ids = set()
+        # IDs used to correlate start/halt/finish
+        self.next_conversion_id = 1
+        self.waiting_worker_id = None
+        # Track active threads for diagnostics/cleanup (weak references ok)
+        try:
+            self._active_calc_threads = []
+        except Exception:
+            self._active_calc_threads = []
 
 
     def update_status_bar(self, message):
@@ -8456,27 +8982,98 @@ class MainWindow(QMainWindow):
                 neighbor_angles = []
                 try:
                     for (a1, a2), bdata in self.data.bonds.items():
-                        if a1 == orig_id and a2 in self.data.atoms:
-                            vec = self.data.atoms[a2]['item'].pos() - parent_pos
-                            neighbor_angles.append(math.atan2(vec.y(), vec.x()))
-                        elif a2 == orig_id and a1 in self.data.atoms:
-                            vec = self.data.atoms[a1]['item'].pos() - parent_pos
-                            neighbor_angles.append(math.atan2(vec.y(), vec.x()))
+                        # 対象原子に結合している近傍の原子角度を収集する。
+                        # ただし既存の水素は配置に影響させない（すでにあるHで埋めない）。
+                        try:
+                            if a1 == orig_id and a2 in self.data.atoms:
+                                neigh = self.data.atoms[a2]
+                                if neigh.get('symbol') == 'H':
+                                    continue
+                                if neigh.get('item') is None:
+                                    continue
+                                if sip_isdeleted_safe(neigh.get('item')):
+                                    continue
+                                vec = neigh['item'].pos() - parent_pos
+                                neighbor_angles.append(math.atan2(vec.y(), vec.x()))
+                            elif a2 == orig_id and a1 in self.data.atoms:
+                                neigh = self.data.atoms[a1]
+                                if neigh.get('symbol') == 'H':
+                                    continue
+                                if neigh.get('item') is None:
+                                    continue
+                                if sip_isdeleted_safe(neigh.get('item')):
+                                    continue
+                                vec = neigh['item'].pos() - parent_pos
+                                neighbor_angles.append(math.atan2(vec.y(), vec.x()))
+                        except Exception:
+                            # 個々の近傍読み取りの問題は無視して続行
+                            continue
                 except Exception:
                     neighbor_angles = []
-
-                # 基本的な配置方針: 既存の結合方向の平均からオフセットして等間隔に配置
-                if neighbor_angles:
-                    avg_angle = sum(neighbor_angles) / len(neighbor_angles)
-                    start_angle = avg_angle + math.pi / 2.0
-                else:
-                    start_angle = 0.0
 
                 # 画面上の適当な結合長（ピクセル）を使用
                 bond_length = 75
 
-                for h_idx in range(implicit_h):
-                    angle = start_angle + h_idx * (2.0 * math.pi / implicit_h)
+                # ヘルパー: 指定インデックスの水素に使うbond_stereoを決定
+                def _choose_stereo(i):
+                    # 0: plain, 1: wedge, 2: dash, 3: plain, 4+: all plain
+                    if i == 0:
+                        return 0
+                    if i == 1:
+                        return 1
+                    if i == 2:
+                        return 2
+                    return 0  #4th+ hydrogens are all plain
+
+                # 角度配置を改善: 既存の結合角度の最大ギャップを見つけ、
+                # そこに水素を均等配置する。既存結合が無ければ全周に均等配置。
+                target_angles = []
+                try:
+                    if not neighbor_angles:
+                        # 既存結合が無い -> 全円周に均等配置
+                        for h_idx in range(implicit_h):
+                            angle = (2.0 * math.pi * h_idx) / implicit_h
+                            target_angles.append(angle)
+                    else:
+                        # 正規化してソート
+                        angs = [((a + 2.0 * math.pi) if a < 0 else a) for a in neighbor_angles]
+                        angs = sorted(angs)
+                        # ギャップを計算（循環含む）
+                        gaps = []  # list of (gap_size, start_angle, end_angle)
+                        for i in range(len(angs)):
+                            a1 = angs[i]
+                            a2 = angs[(i + 1) % len(angs)]
+                            if i == len(angs) - 1:
+                                # wrap-around gap
+                                gap = (a2 + 2.0 * math.pi) - a1
+                                start = a1
+                                end = a2 + 2.0 * math.pi
+                            else:
+                                gap = a2 - a1
+                                start = a1
+                                end = a2
+                            gaps.append((gap, start, end))
+
+                        # 最大ギャップを選ぶ
+                        gaps.sort(key=lambda x: x[0], reverse=True)
+                        max_gap, gstart, gend = gaps[0]
+                        # もし最大ギャップが小さい（つまり周りに均等に原子がある）でも
+                        # そのギャップ内に均等配置することで既存結合と重ならないようにする
+                        # ギャップ内に implicit_h 個を等間隔で配置（分割数 = implicit_h + 1）
+                        for i in range(implicit_h):
+                            seg = max_gap / (implicit_h + 1)
+                            angle = gstart + (i + 1) * seg
+                            # 折り返しを戻して 0..2pi に正規化
+                            angle = angle % (2.0 * math.pi)
+                            target_angles.append(angle)
+                except Exception:
+                    # フォールバック: 単純な等間隔配置
+                    for h_idx in range(implicit_h):
+                        angle = (2.0 * math.pi * h_idx) / implicit_h
+                        target_angles.append(angle)
+
+                # 角度から位置を計算して原子と結合を追加
+                for h_idx, angle in enumerate(target_angles):
                     dx = bond_length * math.cos(angle)
                     dy = bond_length * math.sin(angle)
                     pos = QPointF(parent_pos.x() + dx, parent_pos.y() + dy)
@@ -8485,8 +9082,9 @@ class MainWindow(QMainWindow):
                     try:
                         new_id = self.scene.create_atom('H', pos)
                         new_item = self.data.atoms[new_id]['item']
-                        # 単結合を作成
-                        self.scene.create_bond(parent_item, new_item, bond_order=1, bond_stereo=0)
+                        # bond_stereo を指定（最初は plain=0, 次に wedge/dash）
+                        stereo = _choose_stereo(h_idx)
+                        self.scene.create_bond(parent_item, new_item, bond_order=1, bond_stereo=stereo)
                         added_items.append(new_item)
                         added_count += 1
                     except Exception as e:
@@ -8531,6 +9129,9 @@ class MainWindow(QMainWindow):
             self.mode_actions['select'].setChecked(True)
 
     def trigger_conversion(self):
+        # Reset last successful optimization method at start of new conversion
+        self.last_successful_optimization_method = None
+        
         # 2Dエディタに原子が存在しない場合は3Dビューをクリア
         if not self.data.atoms:
             self.plotter.clear()
@@ -8604,10 +9205,14 @@ class MainWindow(QMainWindow):
             self.view_2d.setFocus() 
             return
             
-        mol_block = Chem.MolToMolBlock(mol, includeStereo=True)
+        # CRITICAL FIX: Use the 2D editor's MOL block instead of RDKit's to preserve
+        # wedge/dash stereo information that is stored in the 2D editor data.
+        # RDKit's MolToMolBlock() doesn't preserve this information.
+        mol_block = self.data.to_mol_block()
+        if not mol_block:
+            mol_block = Chem.MolToMolBlock(mol, includeStereo=True)
         
-        # CRITICAL FIX: Manually add stereo information to MOL block for E/Z bonds
-        # This ensures the stereo info survives the MOL block round-trip
+        # Additional E/Z stereo enhancement: add M CFG lines for explicit E/Z bonds
         mol_lines = mol_block.split('\n')
         
         # Find bonds with explicit E/Z labels from our data and map to RDKit bond indices
@@ -8640,7 +9245,32 @@ class MainWindow(QMainWindow):
                 insert_idx += 1
             mol_block = '\n'.join(mol_lines)
         
-        self.convert_button.setEnabled(False)
+        # Assign a unique ID for this conversion run so it can be halted/validated
+        try:
+            run_id = int(self.next_conversion_id)
+        except Exception:
+            run_id = 1
+        try:
+            self.next_conversion_id = run_id + 1
+        except Exception:
+            self.next_conversion_id = getattr(self, 'next_conversion_id', 1) + 1
+
+        # Record the currently-waiting worker id; a Halt request will clear this
+        self.waiting_worker_id = run_id
+
+        # Change the convert button to a Halt button so user can cancel
+        try:
+            # keep it enabled so the user can click Halt
+            self.convert_button.setText("Halt conversion")
+            try:
+                self.convert_button.clicked.disconnect()
+            except Exception:
+                pass
+            self.convert_button.clicked.connect(self.halt_conversion)
+        except Exception:
+            pass
+
+        # Keep cleanup disabled while conversion is in progress
         self.cleanup_button.setEnabled(False)
         # Disable 3D features during calculation
         self._enable_3d_features(False)
@@ -8674,13 +9304,167 @@ class MainWindow(QMainWindow):
         # Determine conversion_mode from settings (default: 'fallback')
         conv_mode = self.settings.get('3d_conversion_mode', 'fallback')
         options = {'conversion_mode': conv_mode, 'optimization_method': self.optimization_method}
-        self.start_calculation.emit(mol_block, options)
+        # Attach the run id so the worker and main thread can correlate
+        try:
+            options['worker_id'] = self.waiting_worker_id
+        except Exception:
+            pass
+
+        # Create a fresh CalculationWorker + QThread for this run so multiple
+        # conversions can execute in parallel. The worker will be cleaned up
+        # automatically after it finishes/errors.
+        try:
+            thread = QThread()
+            worker = CalculationWorker()
+            # Share the halt_ids set so user can request cancellation
+            try:
+                worker.halt_ids = self.halt_ids
+            except Exception:
+                pass
+
+            worker.moveToThread(thread)
+
+            # Forward status and error signals to main window handlers
+            try:
+                worker.status_update.connect(self.update_status_bar)
+            except Exception:
+                pass
+            try:
+                worker.error.connect(self.on_calculation_error)
+            except Exception:
+                pass
+
+            # When the worker finishes, call existing handler and then clean up
+            def _on_worker_finished(result, w=worker, t=thread):
+                try:
+                    # deliver result to existing handler
+                    self.on_calculation_finished(result)
+                finally:
+                    # Clean up signal connections to avoid stale references
+                    try:
+                        self.start_calculation.disconnect(w.run_calculation)
+                    except Exception:
+                        pass
+                    # Remove thread from active threads list
+                    try:
+                        self._active_calc_threads.remove(t)
+                    except Exception:
+                        pass
+                    try:
+                        # ask thread to quit; it will finish as worker returns
+                        t.quit()
+                    except Exception:
+                        pass
+                    try:
+                        # ensure thread object is deleted when finished
+                        t.finished.connect(t.deleteLater)
+                    except Exception:
+                        pass
+                    try:
+                        # schedule worker deletion
+                        w.deleteLater()
+                    except Exception:
+                        pass
+
+            worker.finished.connect(_on_worker_finished)
+
+            # Connect signal to worker slot for queued execution in worker thread
+            try:
+                self.start_calculation.connect(worker.run_calculation)
+            except Exception:
+                pass
+
+            # Start the thread
+            thread.start()
+            
+            # Start the worker calculation via signal emission (queued to worker thread)
+            # This ensures the worker.run_calculation runs in the worker thread, not main thread
+            QTimer.singleShot(10, lambda: self.start_calculation.emit(mol_block, options))
+
+            # Track the thread so it isn't immediately garbage-collected (diagnostics)
+            try:
+                self._active_calc_threads.append(thread)
+            except Exception:
+                pass
+        except Exception as e:
+            # Fall back to emitting via legacy signal if something goes wrong
+            try:
+                self.start_calculation.emit(mol_block, options)
+            except Exception:
+                # surface the error via existing UI path
+                self.on_calculation_error(str(e))
 
         # 状態をUndo履歴に保存
         self.push_undo_state()
         self.update_chiral_labels()
         
         self.view_2d.setFocus()
+
+    def halt_conversion(self):
+        """User requested to halt the in-progress conversion.
+
+        This will mark the current waiting_worker_id as halted (added to halt_ids),
+        clear the waiting_worker_id, and immediately restore the UI (button text
+        and handlers). The worker thread will observe halt_ids and should stop.
+        """
+        try:
+            wid = getattr(self, 'waiting_worker_id', None)
+            if wid is not None:
+                try:
+                    # add to shared halt set so the worker can stop
+                    self.halt_ids.add(wid)
+                except Exception:
+                    pass
+
+            # Clear waiting flag as per spec
+            self.waiting_worker_id = None
+
+            # Restore UI immediately
+            try:
+                try:
+                    self.convert_button.clicked.disconnect()
+                except Exception:
+                    pass
+                self.convert_button.setText("Convert 2D to 3D")
+                self.convert_button.clicked.connect(self.trigger_conversion)
+                self.convert_button.setEnabled(True)
+            except Exception:
+                pass
+
+            try:
+                self.cleanup_button.setEnabled(True)
+            except Exception:
+                pass
+
+            # Remove any calculating text actor if present
+            try:
+                actor = getattr(self, '_calculating_text_actor', None)
+                if actor is not None:
+                    if hasattr(self.plotter, 'remove_actor'):
+                        try:
+                            self.plotter.remove_actor(actor)
+                        except Exception:
+                            pass
+                    else:
+                        if hasattr(self.plotter, 'renderer') and self.plotter.renderer:
+                            try:
+                                self.plotter.renderer.RemoveActor(actor)
+                            except Exception:
+                                pass
+                    try:
+                        delattr(self, '_calculating_text_actor')
+                    except Exception:
+                        try:
+                            del self._calculating_text_actor
+                        except Exception:
+                            pass
+            except Exception:
+                pass
+
+            # Give immediate feedback
+            self.statusBar().showMessage("3D conversion halted. Waiting for the thread to finish")
+        except Exception:
+            pass
 
     def check_chemistry_problems_fallback(self):
         """RDKit変換が失敗した場合の化学的問題チェック（独自実装）"""
@@ -8810,6 +9594,26 @@ class MainWindow(QMainWindow):
         
         # 最適化後の構造で3Dビューを再描画
         try:
+            # Remember which concrete optimizer variant succeeded so it
+            # can be saved with the project. Normalize internal flags to
+            # a human-friendly label: MMFF94s, MMFF94, or UFF.
+            try:
+                norm_method = None
+                m = method.upper() if method else None
+                if m in ('MMFF_RDKIT', 'MMFF94_RDKIT'):
+                    # The code above uses mmffVariant="MMFF94s" when
+                    # method == 'MMFF_RDKIT' and "MMFF94" otherwise.
+                    norm_method = 'MMFF94s' if m == 'MMFF_RDKIT' else 'MMFF94'
+                elif m == 'UFF_RDKIT' or m == 'UFF':
+                    norm_method = 'UFF'
+                else:
+                    norm_method = getattr(self, 'optimization_method', None)
+
+                # store for later serialization
+                if norm_method:
+                    self.last_successful_optimization_method = norm_method
+            except Exception:
+                pass
             # 3D最適化後は3D座標から立体化学を再計算（2回目以降は3D優先）
             if self.current_mol.GetNumConformers() > 0:
                 Chem.AssignAtomChiralTagsFromStructure(self.current_mol, confId=0)
@@ -8835,10 +9639,115 @@ class MainWindow(QMainWindow):
         self.push_undo_state() # Undo履歴に保存
         self.view_2d.setFocus()
 
-    def on_calculation_finished(self, mol):
+    def on_calculation_finished(self, result):
+        # Accept either (worker_id, mol) tuple or legacy single mol arg
+        worker_id = None
+        mol = None
+        try:
+            if isinstance(result, tuple) and len(result) == 2:
+                worker_id, mol = result
+            else:
+                mol = result
+        except Exception:
+            mol = result
+
+        # If this finished result is from a stale/halting run, discard it
+        try:
+            if worker_id is not None:
+                # If waiting_worker_id doesn't match, this result is stale
+                if getattr(self, 'waiting_worker_id', None) != worker_id:
+                    # Cleanup calculating UI and ignore
+                    try:
+                        actor = getattr(self, '_calculating_text_actor', None)
+                        if actor is not None:
+                            if hasattr(self.plotter, 'remove_actor'):
+                                try:
+                                    self.plotter.remove_actor(actor)
+                                except Exception:
+                                    pass
+                            else:
+                                if hasattr(self.plotter, 'renderer') and self.plotter.renderer:
+                                    try:
+                                        self.plotter.renderer.RemoveActor(actor)
+                                    except Exception:
+                                        pass
+                            try:
+                                delattr(self, '_calculating_text_actor')
+                            except Exception:
+                                try:
+                                    del self._calculating_text_actor
+                                except Exception:
+                                    pass
+                    except Exception:
+                        pass
+                    # Ensure Convert button is restored
+                    try:
+                        try:
+                            self.convert_button.clicked.disconnect()
+                        except Exception:
+                            pass
+                        self.convert_button.setText("Convert 2D to 3D")
+                        self.convert_button.clicked.connect(self.trigger_conversion)
+                        self.convert_button.setEnabled(True)
+                    except Exception:
+                        pass
+                    # Clear any waiting id (spec says halt sets waiting id to None)
+                    self.waiting_worker_id = None
+                    self.statusBar().showMessage("Ignored result from stale conversion.")
+                    return
+        except Exception:
+            pass
+
+        # Clear waiting id for a successful completion
+        try:
+            self.waiting_worker_id = None
+            # Also remove id from halt set if present
+            if worker_id is not None:
+                try:
+                    if worker_id in getattr(self, 'halt_ids', set()):
+                        try:
+                            self.halt_ids.discard(worker_id)
+                        except Exception:
+                            pass
+                except Exception:
+                    pass
+        except Exception:
+            pass
+
         self.dragged_atom_info = None
         self.current_mol = mol
         self.is_xyz_derived = False  # 2Dから生成した3D構造はXYZ由来ではない
+        # Record the optimization method used for this conversion if available.
+        try:
+            opt_method = None
+            try:
+                # Worker or molecule may have attached a prop with the used method
+                if hasattr(mol, 'HasProp') and mol is not None:
+                    try:
+                        if mol.HasProp('_pme_optimization_method'):
+                            opt_method = mol.GetProp('_pme_optimization_method')
+                    except Exception:
+                        # not all Mol objects support HasProp/GetProp safely
+                        pass
+            except Exception:
+                pass
+            if not opt_method:
+                opt_method = getattr(self, 'optimization_method', None)
+            # normalize common forms
+            if opt_method:
+                om = str(opt_method).upper()
+                if 'MMFF94S' in om or 'MMFF_RDKIT' in om:
+                    self.last_successful_optimization_method = 'MMFF94s'
+                elif 'MMFF94' in om:
+                    self.last_successful_optimization_method = 'MMFF94'
+                elif 'UFF' in om:
+                    self.last_successful_optimization_method = 'UFF'
+                else:
+                    # store raw value otherwise
+                    self.last_successful_optimization_method = opt_method
+        except Exception:
+            # non-fatal
+            pass
         
         # 原子プロパティを復元（ワーカープロセスで失われたため）
         if hasattr(self, 'original_atom_properties'):
@@ -8904,6 +9813,16 @@ class MainWindow(QMainWindow):
 
         #self.statusBar().showMessage("3D conversion successful.")
         self.convert_button.setEnabled(True)
+        # Restore Convert button text/handler in case it was changed to Halt
+        try:
+            try:
+                self.convert_button.clicked.disconnect()
+            except Exception:
+                pass
+            self.convert_button.setText("Convert 2D to 3D")
+            self.convert_button.clicked.connect(self.trigger_conversion)
+        except Exception:
+            pass
         self.push_undo_state()
         self.view_2d.setFocus()
         self.cleanup_button.setEnabled(True)
@@ -8976,6 +9895,16 @@ class MainWindow(QMainWindow):
             pass
 
         self.dragged_atom_info = None
+        # If this error was caused by an intentional halt and the main thread
+        # already cleared waiting_worker_id, suppress the error noise.
+        try:
+            low = (error_message or '').lower()
+            if 'halt' in low and getattr(self, 'waiting_worker_id', None) is None:
+                # The user already saw the "3D conversion halted." message.
+                return
+        except Exception:
+            pass
+
         self.statusBar().showMessage(f"Error: {error_message}")
         # Always allow the user to edit/convert/cleanup in 2D after an error
         try:
@@ -11136,6 +12065,14 @@ class MainWindow(QMainWindow):
             # 3D情報がない場合の記録
             json_data["3d_structure"] = None
             json_data["note"] = "No 3D structure available. Generate 3D coordinates first."
+
+        # Record the last-successful optimization method (if any)
+        # This is a convenience field so saved projects remember which
+        # optimizer variant was last used (e.g. "MMFF94s", "MMFF94", "UFF").
+        try:
+            json_data["last_successful_optimization_method"] = getattr(self, 'last_successful_optimization_method', None)
+        except Exception:
+            json_data["last_successful_optimization_method"] = None
         
         return json_data
 
@@ -11233,6 +12170,11 @@ class MainWindow(QMainWindow):
 
         # 3Dビューアーモードの設定
         is_3d_mode = json_data.get("is_3d_viewer_mode", False)
+        # Restore last successful optimization method if present in file
+        try:
+            self.last_successful_optimization_method = json_data.get("last_successful_optimization_method", None)
+        except Exception:
+            self.last_successful_optimization_method = None
 
 
         # 2D構造データの復元
@@ -13322,8 +14264,19 @@ class MainWindow(QMainWindow):
         if self.scene and self.scene.template_preview:
             self.scene.template_preview.hide()
 
-        self.thread.quit()
-        self.thread.wait()
+        # Clean up any active per-run calculation threads we spawned.
+        try:
+            for thr in list(getattr(self, '_active_calc_threads', []) or []):
+                try:
+                    thr.quit()
+                except Exception:
+                    pass
+                try:
+                    thr.wait(200)
+                except Exception:
+                    pass
+        except Exception:
+            pass
         
         event.accept()
 
