@@ -229,11 +229,11 @@ MoleditPy は、描画した 2D 構造から 3D 構造を生成し、表示、�
   * **Translation...:** 分子全体または選択した原子群を、指定した座標に平行移動します。選択した原子のみを平行移動するオプションもあります。
   * **Align to \> Axis \> (X/Y/Z)-axis...:** 選択した 2 原子を結ぶ線が、指定した座標軸 (X, Y, または Z) に沿うように、分子全体を回転・移動します (1 番目の原子が原点に、2 番目の原子が軸上に配置されます)。
   * **Align to \> Plane \> (XY/XZ/YZ)-plane...:** 選択した 3 原子以上を含む平面が、指定した座標平面 (XY, XZ, または YZ) と平行になるように、分子全体を回転します。
-  * **Planarize...:** 選択した 3 個以上の原子について最小二乗法で最適平面を計算し、それらの原子をその平面に射影（平面化）します。
   * **Mirror...:** 分子全体の鏡像を指定した平面 (XY, XZ, YZ) に対して作成します。
   * **Adjust Bond Length...:** 選択した 2 原子間の距離を指定した値に変更します。片方の原子（または接続グループ）を固定するか、両方を動かすか選択できます。
   * **Adjust Angle...:** 選択した 3 原子 (1-2-3) がなす角度を指定した値に変更します。原子 3 側（または接続グループ）を回転させるか、両腕を均等に回転させるか選択できます。
   * **Adjust Dihedral Angle...:** 選択した 4 原子 (1-2-3-4) がなす二面角を指定した値に変更します。原子 4 側（または接続グループ）を回転させるか、両グループを均等に回転させるか選択できます。
+  * **Planarize...:** 選択した 3 個以上の原子について最小二乗法で最適平面を計算し、それらの原子をその平面に射影（平面化）します。
 
   ![](img/3d-edit-menu.png)
   
@@ -288,13 +288,12 @@ MoleditPy は、描画した 2D 構造から 3D 構造を生成し、表示、�
       * 光の強度
       * 表面の光沢 (Specular) とその強さ (Specular Power)
       * カメラの投影モード (Perspective / Orthographic)
-  * **Other タブ:**
-    * 多重結合の表示オフセットと太さ
-    * XYZ ファイルインポート時に化学的妥当性チェックをスキップするかどうか
   * **各表示スタイル (Ball & Stick, CPK, Wireframe, Stick) タブ:**
       * 原子サイズ/半径のスケール
       * 結合半径
       * 描画品質 (Resolution)
+  * **Other タブ:**
+    * XYZ ファイルインポート時に化学的妥当性チェックをスキップするかどうか
 
 **Apply** ボタンで設定を即座に反映し、**OK** ボタンで適用してダイアログを閉じます。**Reset Current Tab** / **Reset All** で設定をデフォルトに戻すこともできます。設定は次回起動時にも保持されます。
 
@@ -320,30 +319,34 @@ MoleditPy は、描画した 2D 構造から 3D 構造を生成し、表示、�
 | `.` (ピリオド) | 選択原子 or カーソル下原子のラジカルをトグル (0-\>1-\>2-\>0) | 選択原子 or カーソル下原子のラジカルをトグル (0-\>1-\>2-\>0) |
 | `+` / `-`      | 選択原子 or カーソル下原子の電荷を増減               | 選択原子 or カーソル下原子の電荷を増減                  |
 | `Delete` / `Backspace` | 選択アイテム or カーソル下のアイテムを削除              | (描画操作中に) 操作をキャンセル / 選択アイテム or カーソル下のアイテムを削除 |
-| `Ctrl`+`Z`     | Undo                                               | Undo                                                      |
-| `Ctrl`+`Y` / `Ctrl`+`Shift`+`Z` | Redo | Redo |
-| `Ctrl`+`C`     | Copy Selection                                     | Copy Selection                                            |
-| `Ctrl`+`X`     | Cut Selection                                      | Cut Selection                                             |
-| `Ctrl`+`V`     | Paste                                              | Paste                                                     |
-| `Ctrl`+`A`     | Select All                                         | Select All                                                |
-| `Ctrl`+`N`     | New                                                | New                                                       |
-| `Ctrl`+`O`     | Open Project...                                    | Open Project...                                           |
-| `Ctrl`+`S`     | Save Project                                       | Save Project                                              |
-| `Ctrl`+`Shift`+`S` | Save Project As...                             | Save Project As...                                        |
-| `Ctrl`+`J`     | Optimize 2D                                        | Optimize 2D                                               |
-| `Ctrl`+`K`     | Convert 2D to 3D                                   | Convert 2D to 3D                                          |
-| `Ctrl`+`L`     | Optimize 3D                                        | Optimize 3D                                               |
-| `Ctrl`+`+`     | Zoom In (2D View)                                  | Zoom In (2D View)                                         |
-| `Ctrl`+`-`     | Zoom Out (2D View)                                 | Zoom Out (2D View)                                        |
-| `Ctrl`+`0`     | Reset Zoom (2D View)                               | Reset Zoom (2D View)                                      |
-| `Ctrl`+`9`     | Fit to View (2D View)                              | Fit to View (2D View)                                     |
-| `Ctrl`+`R`     | Reset 3D View                                      | Reset 3D View                                             |
-| `Ctrl`+`1`     | Panel Layout 50:50                                 | Panel Layout 50:50                                        |
-| `Ctrl`+`2`     | Panel Layout 70:30 (2D Focus)                      | Panel Layout 70:30 (2D Focus)                             |
-| `Ctrl`+`3`     | Panel Layout 30:70 (3D Focus)                      | Panel Layout 30:70 (3D Focus)                             |
-| `Ctrl`+`H`     | Toggle 2D Panel Visibility                         | Toggle 2D Panel Visibility                                |
-| `Alt`+`Drag`   | (3D View) 一時的に 3D Drag モード                     | (3D View) 一時的に 3D Drag モード                        |
-| `Ctrl`+`Q`     | Quit                                               | Quit                                                      |
+
+
+| Key | Function |
+| :--- | :--- |
+| `Ctrl`+`Z` | Undo | 
+| `Ctrl`+`Y` / `Ctrl`+`Shift`+`Z` | Redo | 
+| `Ctrl`+`C` | Copy Selection | 
+| `Ctrl`+`X` | Cut Selection | 
+| `Ctrl`+`V` | Paste | 
+| `Ctrl`+`A` | Select All | 
+| `Ctrl`+`N` | New | 
+| `Ctrl`+`O` | Open Project... | 
+| `Ctrl`+`S` | Save Project |
+| `Ctrl`+`Shift`+`S` | Save Project As... |
+| `Ctrl`+`J` | Optimize 2D | 
+| `Ctrl`+`K` | Convert 2D to 3D | 
+| `Ctrl`+`L` | Optimize 3D | 
+| `Ctrl`+`+` | Zoom In (2D View) |
+| `Ctrl`+`-` | Zoom Out (2D View) | 
+| `Ctrl`+`0` | Reset Zoom (2D View) | 
+| `Ctrl`+`9` | Fit to View (2D View) | 
+| `Ctrl`+`R` | Reset 3D View |
+| `Ctrl`+`1` | Panel Layout 50:50 |
+| `Ctrl`+`2` | Panel Layout 70:30 (2D Focus) |
+| `Ctrl`+`3` | Panel Layout 30:70 (3D Focus) |
+| `Ctrl`+`H` | Toggle 2D Panel Visibility | 
+| `Ctrl`+`Q` | Quit |
+
 
 -----
 
@@ -358,6 +361,7 @@ MoleditPy は、描画した 2D 構造から 3D 構造を生成し、表示、�
 メニューの `Help` \> `About` からバージョン情報を確認できます。
 
 -----
+
 
 
 
