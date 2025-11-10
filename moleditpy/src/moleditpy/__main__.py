@@ -11,7 +11,7 @@ DOI 10.5281/zenodo.17268532
 """
 
 #Version
-VERSION = '1.12.1'
+VERSION = '1.12.2'
 
 print("-----------------------------------------------------")
 print("MoleditPy — A Python-based molecular editing software")
@@ -5284,146 +5284,102 @@ class CalculationWorker(QObject):
             # This avoids 3D embedding entirely and is useful for quick viewing
             # when stereochemistry/geometry refinement is not desired.
             if conversion_mode == 'direct':
-                _safe_status("Direct conversion: using 2D coordinates and adding hydrogens (no embedding).")
+                _safe_status("Direct conversion: using 2D coordinates + adding missing H (no embedding).")
                 try:
-                    # Robust direct conversion:
-                    # 1) Prefer heavy-atom 2D coordinates (removeHs=True) so we place Hs after AddHs
-                    # 2) Record any wedge/dash bond directions from the MOL block (so we don't rely on
-                    #    RDKit to preserve BondDir across AddHs) and re-apply a small Z offset.
-                    parsed_coords = []  # heavy-atom coordinates (x, y, z)
-                    stereo_dirs = []    # list of (begin_idx, end_idx, stereo_flag) extracted from MOL bond stereo (V2000: 1=up,6=down)
+                    # 1) Parse MOL block *with* existing hydrogens (removeHs=False)
+                    #    to get coordinates for *all existing* atoms.
+                    parsed_coords = []  # all-atom coordinates (x, y, z)
+                    stereo_dirs = []    # list of (begin_idx, end_idx, stereo_flag)
+                    
+                    base2d_all = None
                     try:
-                        # Get coordinates for heavy atoms only from a quick 2D parse (prefer heavy atoms)
-                        # Try to allow RDKit to parse bond-direction flags by sanitizing the molecule.
-                        base2d_heavy = None
+                        # H原子を含めてパース
+                        base2d_all = Chem.MolFromMolBlock(mol_block, removeHs=False, sanitize=True)
+                    except Exception:
                         try:
-                            base2d_heavy = Chem.MolFromMolBlock(mol_block, removeHs=True, sanitize=True)
+                            base2d_all = Chem.MolFromMolBlock(mol_block, removeHs=False, sanitize=False)
                         except Exception:
-                            # Fall back to a non-sanitized parse if sanitization fails for some inputs
+                            base2d_all = None
+
+                    if base2d_all is not None and base2d_all.GetNumConformers() > 0:
+                        oconf = base2d_all.GetConformer()
+                        for i in range(base2d_all.GetNumAtoms()):
+                            p = oconf.GetAtomPosition(i)
+                            parsed_coords.append((float(p.x), float(p.y), 0.0))
+                    
+                    # 2) Parse wedge/dash bond information (using all atoms)
+                    try:
+                        lines = mol_block.splitlines()
+                        counts_idx = None
+                        
+                        for i, ln in enumerate(lines[:40]):
+                            if re.match(r"^\s*\d+\s+\d+", ln):
+                                counts_idx = i
+                                break
+                        
+                        if counts_idx is not None:
+                            parts = lines[counts_idx].split()
                             try:
-                                base2d_heavy = Chem.MolFromMolBlock(mol_block, removeHs=True, sanitize=False)
+                                natoms = int(parts[0])
+                                nbonds = int(parts[1])
                             except Exception:
-                                base2d_heavy = None
-
-                        if base2d_heavy is not None and base2d_heavy.GetNumConformers() > 0:
-                            oconf = base2d_heavy.GetConformer()
-                            for i in range(base2d_heavy.GetNumAtoms()):
-                                p = oconf.GetAtomPosition(i)
-                                parsed_coords.append((float(p.x), float(p.y), 0.0))
-
-                        # Parse wedge/dash bond information directly from MOL block bond section
-                        stereo_dirs = []  # list of (begin_heavy_idx, end_heavy_idx, stereo_flag)
-                        try:
-                            lines = mol_block.splitlines()
-                            counts_idx = None
+                                natoms = nbonds = 0
                             
-                            # Find the counts line (contains atom/bond counts)
-                            for i, ln in enumerate(lines[:40]):
-                                if re.match(r"^\s*\d+\s+\d+", ln):
-                                    counts_idx = i
-                                    break
+                            # 全原子マップ (MOL 1-based index -> 0-based index)
+                            atom_map = {i + 1: i for i in range(natoms)}
                             
-                            if counts_idx is not None:
-                                parts = lines[counts_idx].split()
+                            bond_start = counts_idx + 1 + natoms
+                            for j in range(min(nbonds, max(0, len(lines) - bond_start))):
+                                bond_line = lines[bond_start + j]
                                 try:
-                                    natoms = int(parts[0])
-                                    nbonds = int(parts[1])
-                                except Exception:
-                                    natoms = nbonds = 0
-                                
-                                # Build heavy-atom index mapping (MOL index -> heavy-only index)
-                                heavy_atom_map = {}  # MOL 1-based index -> heavy-only 0-based index
-                                heavy_count = 0
-                                atom_start = counts_idx + 1
-                                
-                                for j in range(min(natoms, max(0, len(lines) - atom_start))):
-                                    atom_line = lines[atom_start + j]
-                                    try:
-                                        # Parse element symbol from V2000 format (columns 30-34)
+                                    m = re.match(r"^\s*(\d+)\s+(\d+)\s+(\d+)(?:\s+(-?\d+))?", bond_line)
+                                    if m:
                                         try:
-                                            symbol = atom_line[30:34].strip()
+                                            atom1_mol = int(m.group(1))  # 1-based MOL index
+                                            atom2_mol = int(m.group(2))  # 1-based MOL index
                                         except Exception:
-                                            # Fallback: whitespace-split method
-                                            fields = atom_line.split()
-                                            symbol = fields[3] if len(fields) >= 4 else ''
-                                        
-                                        # Skip hydrogen atoms
-                                        if symbol and symbol.upper() != 'H':
-                                            heavy_atom_map[j + 1] = heavy_count  # MOL is 1-indexed
-                                            heavy_count += 1
-                                    except Exception:
-                                        continue
-                                
-                                # Parse bond block for wedge/dash information
-                                # We'll record the raw V2000 stereo flag (integer) and rely
-                                # solely on this information to decide Z offsets later.
-                                bond_start = atom_start + natoms
-                                for j in range(min(nbonds, max(0, len(lines) - bond_start))):
-                                    bond_line = lines[bond_start + j]
-                                    try:
-                                        # V2000 bond format (flexibly parsed): atom1 atom2 bond_type stereo
-                                        # Try a flexible regex first to capture the first four integer fields
-                                        # (atom1, atom2, bond_type, stereo_flag). Some MOL writers
-                                        # use fixed-column output so splitting can miss the stereo
-                                        # field in pathological cases; a regex is more robust.
-                                        m = re.match(r"^\s*(\d+)\s+(\d+)\s+(\d+)(?:\s+(-?\d+))?", bond_line)
-                                        if m:
+                                            continue
+                                        try:
+                                            stereo_raw = int(m.group(4)) if m.group(4) is not None else 0
+                                        except Exception:
+                                            stereo_raw = 0
+                                    else:
+                                        fields = bond_line.split()
+                                        if len(fields) >= 4:
                                             try:
-                                                atom1_mol = int(m.group(1))  # 1-based MOL index
-                                                atom2_mol = int(m.group(2))  # 1-based MOL index
-                                                bond_type = int(m.group(3))
+                                                atom1_mol = int(fields[0])  # 1-based MOL index
+                                                atom2_mol = int(fields[1])  # 1-based MOL index
                                             except Exception:
                                                 continue
                                             try:
-                                                stereo_raw = int(m.group(4)) if m.group(4) is not None else 0
+                                                stereo_raw = int(fields[3]) if len(fields) > 3 else 0
                                             except Exception:
                                                 stereo_raw = 0
                                         else:
-                                            # Fallback to whitespace split if regex fails
-                                            fields = bond_line.split()
-                                            if len(fields) >= 4:
-                                                try:
-                                                    atom1_mol = int(fields[0])  # 1-based MOL index
-                                                    atom2_mol = int(fields[1])  # 1-based MOL index
-                                                    bond_type = int(fields[2])
-                                                except Exception:
-                                                    continue
-                                                try:
-                                                    stereo_raw = int(fields[3]) if len(fields) > 3 else 0
-                                                except Exception:
-                                                    stereo_raw = 0
-                                            else:
-                                                continue
+                                            continue
 
-                                        # Normalize non-standard encodings: 1 -> up (1), 2 -> dash (6)
-                                        if stereo_raw == 1:
-                                            stereo_flag = 1
-                                        elif stereo_raw == 2:
-                                            # map '2' (dash in some exporters) to V2000's '6' (down)
-                                            stereo_flag = 6
-                                        else:
-                                            stereo_flag = stereo_raw
+                                    # V2000の立体表記を正規化
+                                    if stereo_raw == 1:
+                                        stereo_flag = 1 # Wedge
+                                    elif stereo_raw == 2:
+                                        stereo_flag = 6 # Dash (V2000では 6 がDash)
+                                    else:
+                                        stereo_flag = stereo_raw
 
-                                        # Check if both atoms are heavy atoms in our heavy-atom map
-                                        if atom1_mol in heavy_atom_map and atom2_mol in heavy_atom_map:
-                                            heavy_idx1 = heavy_atom_map[atom1_mol]
-                                            heavy_idx2 = heavy_atom_map[atom2_mol]
-
-                                            # Record only recognized wedge/dash flags (1=up,6=down)
-                                            if stereo_flag in (1, 6):
-                                                stereo_dirs.append((heavy_idx1, heavy_idx2, stereo_flag))
-                                    except Exception:
-                                        continue
-                        except Exception:
-                            stereo_dirs = []
+                                    # 全原子マップでチェック
+                                    if atom1_mol in atom_map and atom2_mol in atom_map:
+                                        idx1 = atom_map[atom1_mol]
+                                        idx2 = atom_map[atom2_mol]
+                                        if stereo_flag in (1, 6): # Wedge (1) or Dash (6)
+                                            stereo_dirs.append((idx1, idx2, stereo_flag))
+                                except Exception:
+                                    continue
                     except Exception:
-                        parsed_coords = []
                         stereo_dirs = []
-
+                
+                    # Fallback for parsed_coords (if RDKit parse failed)
                     if not parsed_coords:
-                        # Fallback: parse V2000-style atom lines, but try to skip explicit H lines
                         try:
-                            import re
                             lines = mol_block.splitlines()
                             counts_idx = None
                             for i, ln in enumerate(lines[:40]):
@@ -5439,227 +5395,158 @@ class CalculationWorker(QObject):
                                 atom_start = counts_idx + 1
                                 for j in range(min(natoms, max(0, len(lines) - atom_start))):
                                     atom_line = lines[atom_start + j]
-                                    # try fixed-column parse first (V2000)
                                     try:
                                         x = float(atom_line[0:10].strip()); y = float(atom_line[10:20].strip()); z = float(atom_line[20:30].strip())
-                                        # element symbol in V2000 is in columns ~31:34 (0-based indices 30:34)
-                                        try:
-                                            symbol = atom_line[30:34].strip()
-                                        except Exception:
-                                            symbol = ''
                                     except Exception:
-                                        # whitespace-split fallback
                                         fields = atom_line.split()
                                         if len(fields) >= 4:
                                             try:
                                                 x = float(fields[0]); y = float(fields[1]); z = float(fields[2])
-                                                symbol = fields[3]
                                             except Exception:
                                                 continue
                                         else:
                                             continue
-                                    # Prefer non-hydrogen atoms for base positions so H placement is deterministic
-                                    if symbol and symbol.upper() == 'H':
-                                        continue
+                                    # H原子もスキップしない
                                     parsed_coords.append((x, y, z))
                         except Exception:
                             parsed_coords = []
+                    
+                    if not parsed_coords:
+                        raise ValueError("Failed to parse coordinates from MOL block for direct conversion.")
 
-                    # Build conformer and set positions for heavy atoms (z=0).
-                    # IMPORTANT: do not assume heavy atoms occupy the first N indices in
-                    # `mol` (AddHs may have changed ordering). Assign parsed_coords
-                    # to the heavy-atom indices in `mol` in their appearance order so
-                    # hydrogens get proper neighbour references and are placed later.
+                    # 3) `mol` は既に AddHs された状態
+                    #    元の原子数 (H含む) を parsed_coords の長さから取得
+                    num_existing_atoms = len(parsed_coords)
+
+                    # 4) コンフォーマを作成
                     conf = Chem.Conformer(mol.GetNumAtoms())
 
-                    # Assign parsed 2D coords to heavy atoms in `mol` as best-effort.
-                    # We'll build a robust mapping from parsed heavy-atom index -> actual
-                    # mol atom index so stereo offsets can be applied reliably even when
-                    # Atom ordering differs or SetAtomPosition partially fails.
-                    temp_heavy_index_to_mol_idx = []
-                    heavy_assigned = 0
-                    for atom in mol.GetAtoms():
-                        if atom.GetAtomicNum() <= 1:
-                            continue
-                        if heavy_assigned >= len(parsed_coords):
-                            # No more parsed heavy coords to assign
-                            break
-                        x, y, z = parsed_coords[heavy_assigned]
-                        try:
-                            conf.SetAtomPosition(atom.GetIdx(), rdGeometry.Point3D(float(x), float(y), 0.0))
-                        except Exception:
-                            # Best-effort: continue even if setting fails for any atom
-                            pass
-                        # Record the atom index in the same order we consumed parsed_coords
-                        temp_heavy_index_to_mol_idx.append(atom.GetIdx())
-                        heavy_assigned += 1
-
-                    n_heavy = heavy_assigned
-
-                    # Build a robust mapping (list) from parsed heavy-index -> mol atom idx.
-                    # Attempt positional matching (preferred) with a slightly relaxed tolerance,
-                    # then fall back to the sequential list we built above.
-                    heavy_index_to_mol_idx = [None] * len(parsed_coords)
-                    try:
-                        tol = 1e-2  # relaxed tolerance for coordinate matching (in Angstroms)
-                        heavy_atoms = [a for a in mol.GetAtoms() if a.GetAtomicNum() > 1]
-                        # Try to match each parsed coord to the nearest heavy atom position
-                        for i, (px, py, pz) in enumerate(parsed_coords):
-                            best_idx = None
-                            best_d2 = None
-                            for a in heavy_atoms:
-                                try:
-                                    pos = conf.GetAtomPosition(a.GetIdx())
-                                except Exception:
-                                    continue
-                                dx = float(pos.x) - float(px)
-                                dy = float(pos.y) - float(py)
-                                d2 = dx * dx + dy * dy
-                                if best_d2 is None or d2 < best_d2:
-                                    best_d2 = d2
-                                    best_idx = a.GetIdx()
-                            if best_d2 is not None and best_d2 <= (tol * tol):
-                                heavy_index_to_mol_idx[i] = best_idx
-
-                        # Fill any None entries with the sequential mapping we built earlier
-                        seq_fill = 0
-                        for i in range(len(heavy_index_to_mol_idx)):
-                            if heavy_index_to_mol_idx[i] is None:
-                                if seq_fill < len(temp_heavy_index_to_mol_idx):
-                                    heavy_index_to_mol_idx[i] = temp_heavy_index_to_mol_idx[seq_fill]
-                                    seq_fill += 1
-                                else:
-                                    # As a last resort, pick any heavy atom not already used
-                                    for a in heavy_atoms:
-                                        if a.GetIdx() not in heavy_index_to_mol_idx:
-                                            heavy_index_to_mol_idx[i] = a.GetIdx()
-                                            break
-                    except Exception:
-                        # Fall back to the best-effort sequential mapping
-                        heavy_index_to_mol_idx = temp_heavy_index_to_mol_idx[:]
-
-                    # Place remaining atoms (likely hydrogens added by AddHs) near a heavy neighbor.
-                    # Use the actual heavy atom indices present in `mol` rather than assuming contiguous indices.
-                    for atom in mol.GetAtoms():
-                        idx = atom.GetIdx()
-                        # Skip atoms we already placed (heavy atoms)
-                        if atom.GetAtomicNum() > 1:
-                            continue
-                        # Find any heavy neighbour that has been assigned coordinates
-                        heavy_neigh = [n for n in atom.GetNeighbors() if n.GetAtomicNum() > 1]
-                        # Place hydrogen near the first heavy neighbor found
-                        heavy_pos_found = False
-                        for nb in heavy_neigh:
+                    for i in range(mol.GetNumAtoms()):
+                        if i < num_existing_atoms:
+                            # 既存原子 (H含む): 2D座標 (z=0) を設定
+                            x, y, z_ignored = parsed_coords[i]
                             try:
-                                nbpos = conf.GetAtomPosition(nb.GetIdx())
-                                # Place hydrogen slightly offset from the heavy atom position
-                                offset_x = 0.5 if (idx % 2 == 0) else -0.5  # Alternate x offset
-                                offset_y = 0.5 if (idx % 3 == 0) else -0.5  # Alternate y offset
-                                conf.SetAtomPosition(idx, rdGeometry.Point3D(
-                                    float(nbpos.x) + offset_x, 
-                                    float(nbpos.y) + offset_y, 
-                                    0.3
-                                ))
-                                heavy_pos_found = True
-                                break
-                            except Exception:
-                                continue
-                        if not heavy_pos_found:
-                            # Fallback: place hydrogen at a small positive z above origin
-                            try:
-                                conf.SetAtomPosition(idx, rdGeometry.Point3D(0.0, 0.0, 0.10))
+                                conf.SetAtomPosition(i, rdGeometry.Point3D(float(x), float(y), 0.0))
                             except Exception:
                                 pass
-
-                    # Apply small Z offsets for wedge/dash bonds recorded from the input MOL
-                    # We must translate the stereo indices (which refer to the heavy-atom
-                    # ordering from the parsed 2D molecule) to the actual atom indices in
-                    # `mol` (which may have been renumbered by AddHs). Build a mapped
-                    # stereo list and then apply offsets.
-                    try:
-                        stereo_z_offset = 1.0  # wedge -> +1, dash -> -1
-
-                        # Build mapped stereo list: (mol_begin_idx, mol_end_idx, b_dir)
-                        stereo_mapped = []
-                        if heavy_index_to_mol_idx:
-                            # Direct mapping when we recorded the heavy-index -> mol-idx list
-                            for begin_idx, end_idx, b_dir in stereo_dirs:
-                                try:
-                                    if begin_idx < len(heavy_index_to_mol_idx) and end_idx < len(heavy_index_to_mol_idx):
-                                        mapped_begin = heavy_index_to_mol_idx[begin_idx]
-                                        mapped_end = heavy_index_to_mol_idx[end_idx]
-                                        stereo_mapped.append((mapped_begin, mapped_end, b_dir))
-                                except Exception:
-                                    continue
                         else:
-                            # Fallback: try positional matching between parsed_coords and assigned conformer
-                            # (use a small tolerance for float rounding)
-                            try:
-                                tol = 1e-3
-                                for begin_idx, end_idx, b_dir in stereo_dirs:
-                                    if begin_idx < len(parsed_coords) and end_idx < len(parsed_coords):
-                                        bx, by, bz = parsed_coords[begin_idx]
-                                        ex, ey, ez = parsed_coords[end_idx]
-                                        mapped_begin = None
-                                        mapped_end = None
-                                        for atom in mol.GetAtoms():
-                                            if atom.GetAtomicNum() <= 1:
-                                                continue
-                                            try:
-                                                pos = conf.GetAtomPosition(atom.GetIdx())
-                                            except Exception:
-                                                continue
-                                            if mapped_begin is None and abs(float(pos.x) - float(bx)) <= tol and abs(float(pos.y) - float(by)) <= tol:
-                                                mapped_begin = atom.GetIdx()
-                                            if mapped_end is None and abs(float(pos.x) - float(ex)) <= tol and abs(float(pos.y) - float(ey)) <= tol:
-                                                mapped_end = atom.GetIdx()
-                                            if mapped_begin is not None and mapped_end is not None:
-                                                break
-                                        if mapped_begin is not None and mapped_end is not None:
-                                            stereo_mapped.append((mapped_begin, mapped_end, b_dir))
-                            except Exception:
-                                stereo_mapped = []
+                            # 新規追加されたH原子: 親原子の近くに配置
+                            atom = mol.GetAtomWithIdx(i)
+                            if atom.GetAtomicNum() == 1:
+                                neighs = [n for n in atom.GetNeighbors() if n.GetIdx() < num_existing_atoms]
+                                heavy_pos_found = False
+                                for nb in neighs: # 親原子 (重原子または既存H)
+                                    try:
+                                        nb_idx = nb.GetIdx()
+                                        # if nb_idx < num_existing_atoms: # チェックは不要 (neighs で既にフィルタ済み)
+                                        nbpos = conf.GetAtomPosition(nb_idx)
+                                        # Geometry-based placement:
+                                        # Compute an "empty" direction around the parent atom by
+                                        # summing existing bond unit vectors and taking the
+                                        # opposite. If degenerate, pick a perpendicular or
+                                        # fallback vector. Rotate slightly if multiple Hs already
+                                        # attached to avoid overlap.
+                                        parent_idx = nb_idx
+                                        try:
+                                            parent_pos = conf.GetAtomPosition(parent_idx)
+                                            parent_atom = mol.GetAtomWithIdx(parent_idx)
+                                            # collect unit vectors to already-placed neighbors (idx < i)
+                                            vecs = []
+                                            for nbr in parent_atom.GetNeighbors():
+                                                nidx = nbr.GetIdx()
+                                                if nidx == i:
+                                                    continue
+                                                # only consider neighbors whose positions are already set
+                                                if nidx < i:
+                                                    try:
+                                                        p = conf.GetAtomPosition(nidx)
+                                                        vx = float(p.x) - float(parent_pos.x)
+                                                        vy = float(p.y) - float(parent_pos.y)
+                                                        nrm = math.hypot(vx, vy)
+                                                        if nrm > 1e-6:
+                                                            vecs.append((vx / nrm, vy / nrm))
+                                                    except Exception:
+                                                        continue
 
-                        # Apply offsets using mapped indices. Use ONLY the raw V2000
-                        # stereo flag recorded earlier: 1 => up/wedge, 6 => down/dash.
-                        # Wedge will push the target atom to +Z, dash to -Z.
-                        for mol_begin_idx, mol_end_idx, stereo_flag in stereo_mapped:
+                                            if vecs:
+                                                sx = sum(v[0] for v in vecs)
+                                                sy = sum(v[1] for v in vecs)
+                                                fx = -sx
+                                                fy = -sy
+                                                fn = math.hypot(fx, fy)
+                                                if fn < 1e-6:
+                                                    # degenerate: pick a perpendicular to first bond
+                                                    fx = -vecs[0][1]
+                                                    fy = vecs[0][0]
+                                                    fn = math.hypot(fx, fy)
+                                                fx /= fn; fy /= fn
+
+                                                # Avoid placing multiple Hs at identical directions
+                                                existing_h_count = sum(1 for nbr in parent_atom.GetNeighbors()
+                                                                       if nbr.GetIdx() < i and nbr.GetAtomicNum() == 1)
+                                                angle = existing_h_count * (math.pi / 6.0)  # 30deg steps
+                                                cos_a = math.cos(angle); sin_a = math.sin(angle)
+                                                rx = fx * cos_a - fy * sin_a
+                                                ry = fx * sin_a + fy * cos_a
+
+                                                bond_length = 1.0
+                                                conf.SetAtomPosition(i, rdGeometry.Point3D(
+                                                    float(parent_pos.x) + rx * bond_length,
+                                                    float(parent_pos.y) + ry * bond_length,
+                                                    0.3
+                                                ))
+                                            else:
+                                                # No existing placed neighbors: fallback to small offset
+                                                conf.SetAtomPosition(i, rdGeometry.Point3D(
+                                                    float(parent_pos.x) + 0.5,
+                                                    float(parent_pos.y) + 0.5,
+                                                    0.3
+                                                ))
+
+                                            heavy_pos_found = True
+                                            break
+                                        except Exception:
+                                            # fall back to trying the next neighbor if any
+                                            continue
+                                    except Exception:
+                                        continue
+                                if not heavy_pos_found:
+                                    # フォールバック (原点近く)
+                                    try:
+                                        conf.SetAtomPosition(i, rdGeometry.Point3D(0.0, 0.0, 0.10))
+                                    except Exception:
+                                        pass
+                    
+                    # 5) Wedge/Dash の Zオフセットを適用
+                    try:
+                        stereo_z_offset = 1.5  # wedge -> +1.5, dash -> -1.5
+                        for begin_idx, end_idx, stereo_flag in stereo_dirs:
                             try:
-                                # Only handle known flags; otherwise skip
+                                # インデックスは既存原子内のはず
+                                if begin_idx >= num_existing_atoms or end_idx >= num_existing_atoms:
+                                    continue
+                                    
                                 if stereo_flag not in (1, 6):
                                     continue
-
-                                # Decide offset sign: wedge (1) => +, dash (6) => -
+                                
                                 sign = 1.0 if stereo_flag == 1 else -1.0
-
-                                # Prefer adjusting the end atom; fall back to begin atom
-                                if mol_end_idx < conf.GetNumAtoms():
-                                    pos = conf.GetAtomPosition(mol_end_idx)
-                                    z = float(pos.z)
-                                    newz = z + (stereo_z_offset * sign)
-                                    conf.SetAtomPosition(mol_end_idx, rdGeometry.Point3D(float(pos.x), float(pos.y), float(newz)))
-                                elif mol_begin_idx < conf.GetNumAtoms():
-                                    pos2 = conf.GetAtomPosition(mol_begin_idx)
-                                    z2 = float(pos2.z)
-                                    # When falling back to begin atom, reverse sign so visual
-                                    # direction remains consistent with original wedge/dash.
-                                    newz2 = z2 - (stereo_z_offset * sign)
-                                    conf.SetAtomPosition(mol_begin_idx, rdGeometry.Point3D(float(pos2.x), float(pos2.y), float(newz2)))
+                                
+                                # end_idx (立体表記の終点側原子) にZオフセットを適用
+                                pos = conf.GetAtomPosition(end_idx)
+                                newz = float(pos.z) + (stereo_z_offset * sign) # 既存のZ=0にオフセットを加算
+                                conf.SetAtomPosition(end_idx, rdGeometry.Point3D(float(pos.x), float(pos.y), float(newz)))
                             except Exception:
-                                # non-fatal; continue with other stereo placements
                                 continue
                     except Exception:
                         pass
-
-                    # Replace any existing conformers with our constructed one and emit result
+                    
+                    # コンフォーマを入れ替えて終了
                     try:
                         mol.RemoveAllConformers()
                     except Exception:
                         pass
                     mol.AddConformer(conf, assignId=True)
-
-                    # Emit the finished result including the worker id when possible
-                    # CRITICAL: Check for halt *before* emitting finished signal
+                    
                     if _check_halted():
                         raise RuntimeError("Halted (after optimization)")
                     try:
@@ -5669,7 +5556,6 @@ class CalculationWorker(QObject):
                     _safe_status("Direct conversion completed.")
                     return
                 except Exception as e:
-                    # If direct conversion fails, report and fall through to other fallbacks
                     _safe_status(f"Direct conversion failed: {e}")
 
             params = AllChem.ETKDGv2()
@@ -7577,6 +7463,12 @@ class MainWindow(QMainWindow):
 
         self.convert_button = QPushButton("Convert 2D to 3D")
         self.convert_button.clicked.connect(self.trigger_conversion)
+        # Allow right-click to open a temporary conversion-mode menu
+        try:
+            self.convert_button.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+            self.convert_button.customContextMenuRequested.connect(self.show_convert_menu)
+        except Exception:
+            pass
         left_buttons_layout.addWidget(self.convert_button)
         
         left_layout.addLayout(left_buttons_layout)
@@ -7604,6 +7496,12 @@ class MainWindow(QMainWindow):
         self.optimize_3d_button.clicked.connect(self.optimize_3d_structure)
         self.optimize_3d_button.setEnabled(False)
         # 初期状態は_enable_3d_features(False)で統一的に設定
+        # Allow right-click to open a temporary optimization-method menu
+        try:
+            self.optimize_3d_button.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+            self.optimize_3d_button.customContextMenuRequested.connect(self.show_optimize_menu)
+        except Exception:
+            pass
         right_buttons_layout.addWidget(self.optimize_3d_button)
 
         # エクスポートボタン (メニュー付き)
@@ -9157,10 +9055,83 @@ class MainWindow(QMainWindow):
             pass
 
 
+    def show_convert_menu(self, pos):
+        """右クリックで表示する一時的な3D変換メニュー。
+        選択したモードは一時フラグとして保持され、その後の変換で使用されます（永続化しません）。
+        """
+        try:
+            menu = QMenu(self)
+            conv_options = [
+                ("RDKit -> Open Babel (fallback)", 'fallback'),
+                ("RDKit only", 'rdkit'),
+                ("Open Babel only", 'obabel'),
+                ("Direct (use 2D coords + add H)", 'direct')
+            ]
+            for label, key in conv_options:
+                a = QAction(label, self)
+                # If Open Babel is not available, disable actions that depend on it
+                if key in ('obabel', 'fallback') and not globals().get('OBABEL_AVAILABLE', False):
+                    a.setEnabled(False)
+                a.triggered.connect(lambda checked=False, k=key: self._trigger_conversion_with_temp_mode(k))
+                menu.addAction(a)
+
+            # Show menu at button position
+            menu.exec_(self.convert_button.mapToGlobal(pos))
+        except Exception as e:
+            print(f"Error showing convert menu: {e}")
+
+
     def activate_select_mode(self):
         self.set_mode('select')
         if 'select' in self.mode_actions:
             self.mode_actions['select'].setChecked(True)
+
+
+    def _trigger_conversion_with_temp_mode(self, mode_key):
+        try:
+            # store temporary override and invoke conversion
+            self._temp_conv_mode = mode_key
+            # Call the normal conversion entry point (it will consume the temp)
+            QTimer.singleShot(0, self.trigger_conversion)
+        except Exception as e:
+            print(f"Failed to start conversion with temp mode {mode_key}: {e}")
+
+
+    def show_optimize_menu(self, pos):
+        """右クリックで表示する一時的な3D最適化メニュー。
+        選択したメソッドは一時フラグとして保持され、その後の最適化で使用されます（永続化しません）。
+        """
+        try:
+            menu = QMenu(self)
+            opt_list = [
+                ("MMFF94s", 'MMFF_RDKIT'),
+                ("MMFF94", 'MMFF94_RDKIT'),
+                ("UFF", 'UFF_RDKIT')
+            ]
+            for label, key in opt_list:
+                a = QAction(label, self)
+                # If opt3d_actions exist, reflect their enabled state
+                try:
+                    if hasattr(self, 'opt3d_actions') and key in self.opt3d_actions:
+                        a.setEnabled(self.opt3d_actions[key].isEnabled())
+                except Exception:
+                    pass
+                a.triggered.connect(lambda checked=False, k=key: self._trigger_optimize_with_temp_method(k))
+                menu.addAction(a)
+
+            menu.exec_(self.optimize_3d_button.mapToGlobal(pos))
+        except Exception as e:
+            print(f"Error showing optimize menu: {e}")
+
+
+    def _trigger_optimize_with_temp_method(self, method_key):
+        try:
+            # store temporary override and invoke optimization
+            self._temp_optimization_method = method_key
+            # Run optimize on next event loop turn so UI updates first
+            QTimer.singleShot(0, self.optimize_3d_structure)
+        except Exception as e:
+            print(f"Failed to start optimization with temp method {method_key}: {e}")
 
     def trigger_conversion(self):
         # Reset last successful optimization method at start of new conversion
@@ -9340,9 +9311,34 @@ class MainWindow(QMainWindow):
         text_actor.GetTextProperty().SetOpacity(1)
         self.plotter.render()
         # Emit skip flag so the worker can ignore sanitization errors if user requested
-        # Determine conversion_mode from settings (default: 'fallback')
-        conv_mode = self.settings.get('3d_conversion_mode', 'fallback')
-        options = {'conversion_mode': conv_mode, 'optimization_method': self.optimization_method}
+        # Determine conversion_mode from settings (default: 'fallback').
+        # If the user invoked conversion via the right-click menu, a temporary
+        # override may be set on self._temp_conv_mode and should be used once.
+        conv_mode = getattr(self, '_temp_conv_mode', None)
+        if conv_mode:
+            try:
+                del self._temp_conv_mode
+            except Exception:
+                try:
+                    delattr(self, '_temp_conv_mode')
+                except Exception:
+                    pass
+        else:
+            conv_mode = self.settings.get('3d_conversion_mode', 'fallback')
+
+        # Allow a temporary optimization method override as well (used when
+        # Optimize 3D is invoked via right-click menu). Do not persist here.
+        opt_method = getattr(self, '_temp_optimization_method', None) or self.optimization_method
+        if hasattr(self, '_temp_optimization_method'):
+            try:
+                del self._temp_optimization_method
+            except Exception:
+                try:
+                    delattr(self, '_temp_optimization_method')
+                except Exception:
+                    pass
+
+        options = {'conversion_mode': conv_mode, 'optimization_method': opt_method}
         # Attach the run id so the worker and main thread can correlate
         try:
             # Attach the concrete run id rather than the single waiting id
@@ -9618,7 +9614,17 @@ class MainWindow(QMainWindow):
         QApplication.processEvents() # UIの更新を確実に行う
 
         try:
-            method = getattr(self, 'optimization_method', 'MMFF_RDKIT')
+            # Allow a temporary optimization method override (right-click menu)
+            method = getattr(self, '_temp_optimization_method', None) or getattr(self, 'optimization_method', 'MMFF_RDKIT')
+            # Clear temporary override if present
+            if hasattr(self, '_temp_optimization_method'):
+                try:
+                    del self._temp_optimization_method
+                except Exception:
+                    try:
+                        delattr(self, '_temp_optimization_method')
+                    except Exception:
+                        pass
             method = method.upper() if method else 'MMFF_RDKIT'
             # 事前チェック：コンフォーマがあるか
             if self.current_mol.GetNumConformers() == 0:
