@@ -367,7 +367,7 @@ Click the **Apply** button to immediately apply the settings, and the **OK** but
 
 ## 10\. Version / License
 
-  * **Version:** 1.12.1
+  * **Version:** 1.12
   * **Author:** Hiromichi Yokoyama
   * **License:** Apache-2.0 license
   * **Repository:** [https://github.com/HiroYokoyama/python\_molecular\_editor](https://github.com/HiroYokoyama/python_molecular_editor)
@@ -376,6 +376,7 @@ Click the **Apply** button to immediately apply the settings, and the **OK** but
 You can check the version information from the `Help` \> `About` menu.
 
 -----
+
 
 
 
