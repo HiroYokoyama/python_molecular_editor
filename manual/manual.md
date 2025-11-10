@@ -332,7 +332,7 @@ Click the **Apply** button to immediately apply the settings, and the **OK** but
 | `1` | Single bond draw mode / Change selected or hovered bond to single bond / Add atom to atom | Single bond draw mode |
 | `2` | Double bond draw mode / Change selected or hovered bond to double bond | Double bond draw mode |
 | `3` | Triple bond draw mode / Change selected or hovered bond to triple bond | Triple bond draw mode |
-| `4` | (In empty space) Switch to Benzene mode / (On atom/bond) Place Benzene | (In empty space) Switch to Benzene mode / (On atom/bond) Place Benzene |
+| `4` | (In empty space) Switch to Benzene mode / (On atom/bond) Place Benzene | Benzene mode |
 | `W` | Wedge bond draw mode / Change selected or hovered bond to Wedge (click to reverse) | Wedge bond draw mode |
 | `D` | Dash bond draw mode / Change selected or hovered bond to Dash (click to reverse) | Dash bond draw mode |
 | `Z` / `E` | (On hovered double bond) Set Z / E configuration | (On hovered double bond) Set Z / E configuration |
@@ -380,6 +380,7 @@ Click the **Apply** button to immediately apply the settings, and the **OK** but
 You can check the version information from the `Help` \> `About` menu.
 
 -----
+
 
 
 
