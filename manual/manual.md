@@ -2,7 +2,7 @@
 
 ## 1\. Introduction
 
-MoleditPy is a molecular editing software developed in Python. Through an intuitive interface, it allows for the drawing and editing of molecular structures in 2D, as well as the generation, display, and simple editing of 3D structures.
+MoleditPy is a molecular editing software developed in Python. Through an intuitive interface, it allows for the drawing and editing of molecular structures in 2D, as well as the generation, display, and editing of 3D structures.
 
 **Main Features:**
 
@@ -239,8 +239,6 @@ These functions are available from the menu when a 3D structure is displayed. Ma
 
   * **Align to \> Plane \> (XY/XZ/YZ)-plane...:** Rotates the entire molecule so that the plane containing three or more selected atoms becomes parallel to the specified coordinate plane (XY, XZ, or YZ).
 
-  * **Planarize...:** Calculates the best-fit plane for three or more selected atoms and projects those atoms onto that plane.
-
   * **Mirror...:** Creates a mirror image of the entire molecule with respect to a specified plane (XY, XZ, YZ).
 
   * **Adjust Bond Length...:** Changes the distance between two selected atoms to a specified value. You can choose to fix one atom (or its connected group) or move both.
@@ -248,6 +246,9 @@ These functions are available from the menu when a 3D structure is displayed. Ma
   * **Adjust Angle...:** Changes the angle formed by three selected atoms (1-2-3) to a specified value. You can choose to rotate the atom 3 side (or its connected group) or rotate both arms equally.
 
   * **Adjust Dihedral Angle...:** Changes the dihedral angle formed by four selected atoms (1-2-3-4) to a specified value. You can choose to rotate the atom 4 side (or its connected group) or rotate both groups equally.
+
+  * **Planarize...:** Calculates the best-fit plane for three or more selected atoms and projects those atoms onto that plane.
+
 
   ![](img/3d-edit-menu.png)
   
@@ -304,13 +305,13 @@ Configurable items:
       * Light intensity
       * Surface shininess (Specular) and its strength (Specular Power)
       * **Camera projection mode (Perspective / Orthographic)**
-  * **Other Tab:**
-      * Whether to skip chemical validity checks during XYZ file import
   * **Tabs for each display style (Ball & Stick, CPK, Wireframe, Stick):**
       * Atom size/radius scale
       * Bond radius
       * **Multiple bond display offset and thickness (except for CPK)**
       * Rendering quality (Resolution)
+  * **Other Tab:**
+      * Whether to skip chemical validity checks during XYZ file import
 
 Click the **Apply** button to immediately apply the settings, and the **OK** button to apply and close the dialog. You can also revert settings to default with **Reset Current Tab** / **Reset All**. Settings are retained for the next launch.
 
@@ -338,6 +339,10 @@ Click the **Apply** button to immediately apply the settings, and the **OK** but
 | `.` (Period) | Toggle radical on selected or hovered atom (0-\>1-\>2-\>0) | Toggle radical on selected or hovered atom (0-\>1-\>2-\>0) |
 | `+` / `-` | Increase/Decrease charge on selected or hovered atom | Increase/Decrease charge on selected or hovered atom |
 | `Delete` / `Backspace` | Delete selected or hovered item | Cancel operation (during drawing) / Delete selected or hovered item |
+
+
+| Key | Function |
+| :--- | :--- |
 | `Ctrl`+`Z` | Undo | 
 | `Ctrl`+`Y` / `Ctrl`+`Shift`+`Z` | Redo | 
 | `Ctrl`+`C` | Copy Selection | 
@@ -376,6 +381,7 @@ Click the **Apply** button to immediately apply the settings, and the **OK** but
 You can check the version information from the `Help` \> `About` menu.
 
 -----
+
 
 
 
