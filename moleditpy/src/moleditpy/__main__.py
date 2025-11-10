@@ -11,7 +11,7 @@ DOI 10.5281/zenodo.17268532
 """
 
 #Version
-VERSION = '1.12.2'
+VERSION = '1.12.3'
 
 print("-----------------------------------------------------")
 print("MoleditPy — A Python-based molecular editing software")
@@ -9703,12 +9703,20 @@ class MainWindow(QMainWindow):
             
         self.draw_molecule_3d(self.current_mol)
         
-        # Show which method was used in the status bar (prefer human-readable label)
+        # Show which method was used in the status bar (prefer human-readable label).
+        # Prefer the actual method used during this run (last_successful_optimization_method
+        # set earlier), then any temporary/local override used for this call (method),
+        # and finally the persisted preference (self.optimization_method).
         try:
-            used_method = getattr(self, 'optimization_method', None)
+            used_method = (
+                getattr(self, 'last_successful_optimization_method', None)
+                or locals().get('method', None)
+                or getattr(self, 'optimization_method', None)
+            )
             used_label = None
             if used_method:
-                used_label = (getattr(self, 'opt3d_method_labels', {}) or {}).get(used_method.upper(), used_method)
+                # opt3d_method_labels keys are stored upper-case; normalize for lookup
+                used_label = (getattr(self, 'opt3d_method_labels', {}) or {}).get(str(used_method).upper(), used_method)
         except Exception:
             used_label = None
 
