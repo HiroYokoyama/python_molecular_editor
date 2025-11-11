@@ -68,10 +68,12 @@ For detailed instructions, please refer to the project [Wiki](https://github.com
 
 #### Installation
 
-It is recommended to first install RDKit and Open Babel using `conda`. Open Babel is required for the 3D conversion fallback feature.
+:warning: **CRITICAL INSTALLATION NOTE** :warning:
+
+A new issue was found between PyVista and the most recent releases of PyQt (6.10.0+). Please follow the guide at this [link](/requirements/) to install.
 
 ```bash
-pip install moleditpy
+pip install -r requirements
 ```
 
 Please note that Linux users must use `moleditpy-linux` to resolve OpenBabel's library conflicts issues. OpenBabel is disabled for this version.
@@ -210,3 +212,4 @@ moleditpy
 ## ライセンス
 
 このプロジェクトは **Apache-2.0 License** のもとで公開されています。詳細は `LICENSE` ファイルを参照してください。
+
