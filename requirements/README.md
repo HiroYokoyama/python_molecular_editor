@@ -16,7 +16,7 @@ Please follow these steps to ensure a stable environment.
     source venv/bin/activate  # On Windows: venv\Scripts\activate
 
     # Or for Conda
-    # conda create -n moleditpy python=3.10
+    # conda create -n moleditpy python=3.13
     # conda activate moleditpy
     ```
 
