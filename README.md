@@ -80,6 +80,10 @@ pip install -r requirements
 
 Please note that Linux users must use `moleditpy-linux` to resolve OpenBabel's library conflicts issues. OpenBabel is disabled for this version.
 
+```bash
+pip install -r requirements-linux
+```
+
 #### Running the Application
 
 ```bash
@@ -177,10 +181,14 @@ This project is licensed under the **Apache-2.0 License**. See the `LICENSE` fil
 
 #### インストール
 
+:warning: **重要なインストールに関する注意** :warning:
+
+PyVistaと最新のPyQtリリース（6.10.0以降）との間で新たな問題が発見されました。インストールにはこちらの[リンク](https://github.com/HiroYokoyama/python_molecular_editor/tree/main/requirements)の手順に従ってください。
+
 RDKitとOpen Babelは、先に`conda`を使用してインストールすることが推奨されます。Open Babelは3D変換のフォールバック機能に必要です。
 
 ```bash
-pip install moleditpy
+pip install -r requirements
 ```
 
 #### アプリケーションの起動
@@ -214,6 +222,7 @@ moleditpy
 ## ライセンス
 
 このプロジェクトは **Apache-2.0 License** のもとで公開されています。詳細は `LICENSE` ファイルを参照してください。
+
 
 
 
