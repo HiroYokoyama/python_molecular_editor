@@ -26,9 +26,9 @@ Please follow these steps to ensure a stable environment.
     pip install -r requirements.txt
     ```
 
-This file locks `pyqt6` to a stable version (like `6.9.1`) that avoids this critical bug.
+    This file locks `pyqt6` to a stable version (like `6.9.1`) that avoids this critical bug.
 
-For Linux users, please use `requirements-linux.txt` file:
+    For Linux users, please use `requirements-linux.txt` file:
 
     ```bash
     pip install -r requirements-linux.txt
