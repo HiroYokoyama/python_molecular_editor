@@ -78,10 +78,22 @@ A new issue was found between PyVista and the most recent releases of PyQt (6.10
 pip install -r requirements
 ```
 
+Or one-liner command:
+
+```bash
+pip install --no-cache-dir matplotlib==3.10.7 moleditpy==1.12.3 numpy==2.3.4 openbabel-wheel==3.1.1.22 PyQt6==6.9.1 PyQt6-Qt6==6.9.2 PyQt6_sip==13.10.2 pyvista==0.46.4 pyvistaqt==0.11.3 QtPy==2.4.3 rdkit==2025.9.1 vtk==9.5.2
+```
+
 Please note that Linux users must use `moleditpy-linux` to resolve OpenBabel's library conflicts issues. OpenBabel is disabled for this version.
 
 ```bash
 pip install -r requirements-linux
+```
+
+Or one-liner command for Linux:
+
+```bash
+pip install --no-cache-dir matplotlib==3.10.7 moleditpy-linux==1.12.3 numpy==2.3.4 PyQt6==6.9.1 PyQt6-Qt6==6.9.2 PyQt6_sip==13.10.2 pyvista==0.46.4 pyvistaqt==0.11.3 QtPy==2.4.3 rdkit==2025.9.1 vtk==9.5.2
 ```
 
 #### Running the Application
@@ -191,6 +203,13 @@ RDKitとOpen Babelは、先に`conda`を使用してインストールするこ�
 pip install -r requirements
 ```
 
+もしくは、一行のコマンドで：
+
+```bash
+pip install --no-cache-dir matplotlib==3.10.7 moleditpy==1.12.3 numpy==2.3.4 openbabel-wheel==3.1.1.22 PyQt6==6.9.1 PyQt6-Qt6==6.9.2 PyQt6_sip==13.10.2 pyvista==0.46.4 pyvistaqt==0.11.3 QtPy==2.4.3 rdkit==2025.9.1 vtk==9.5.2
+```
+
+
 #### アプリケーションの起動
 
 ```bash
@@ -222,6 +241,7 @@ moleditpy
 ## ライセンス
 
 このプロジェクトは **Apache-2.0 License** のもとで公開されています。詳細は `LICENSE` ファイルを参照してください。
+
 
 
 
