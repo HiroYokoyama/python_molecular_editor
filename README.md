@@ -10,7 +10,7 @@
 **Repository**: [https://github.com/HiroYokoyama/python\_molecular\_editor](https://github.com/HiroYokoyama/python_molecular_editor/tree/main/requirements)
 
 :warning: **CRITICAL INSTALLATION NOTE** :warning:
-: A new issue was found between PyVista and the most recent releases of PyQt (6.10.0+). Please follow the guide at this [link]([https://github.com/HiroYokoyama/python_molecular_editor/requirements]) to install.
+: A new issue was found between PyVista and the most recent releases of PyQt (6.10.0+). Please follow the guide at this [link](https://github.com/HiroYokoyama/python_molecular_editor/requirements) to install.
 
 -----
 ![](img/icon.png)
@@ -214,6 +214,7 @@ moleditpy
 ## ライセンス
 
 このプロジェクトは **Apache-2.0 License** のもとで公開されています。詳細は `LICENSE` ファイルを参照してください。
+
 
 
 
