@@ -28,6 +28,12 @@ Please follow these steps to ensure a stable environment.
 
 This file locks `pyqt6` to a stable version (like `6.9.1`) that avoids this critical bug.
 
+For Linux users, please use `requirements-linux.txt` file:
+
+    ```bash
+    pip install -r requirements-linux.txt
+    ```
+
 ### :warning: Avoid Manual Installation
 
 **Do not** install packages manually (e.g., `pip install pyvista pyqt6`). This will likely fetch the latest, incompatible versions and cause the application to crash.
