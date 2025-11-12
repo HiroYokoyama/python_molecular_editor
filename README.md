@@ -7,15 +7,13 @@
 
 **Author**: HiroYokoyama
 **License**: Apache-2.0
-**Repository**: [https://github.com/HiroYokoyama/python\_molecular\_editor](https://github.com/HiroYokoyama/python_molecular_editor/)
-
-:warning: **CRITICAL INSTALLATION NOTE** :warning:
-: A new issue was found between PyVista and the most recent releases of PyQt (6.10.0+). Please follow the guide at this [link](https://github.com/HiroYokoyama/python_molecular_editor/tree/main/requirements) to install.
+**Repository**: [https://github.com/HiroYokoyama/python\_molecular\_editor](https://github.com/HiroYokoyama/python_molecular_editor)
 
 -----
 ![](img/icon.png)
 ![](img/screenshot.png)
 -----
+
 
 ## 
 
@@ -70,31 +68,13 @@ For detailed instructions, please refer to the project [Wiki](https://github.com
 
 #### Installation
 
-:warning: **CRITICAL INSTALLATION NOTE** :warning:
-
-A new issue was found between PyVista and the most recent releases of PyQt (6.10.0+). Please follow the guide at this [link](https://github.com/HiroYokoyama/python_molecular_editor/tree/main/requirements) to install.
+It is recommended to first install RDKit and Open Babel using `conda`. Open Babel is required for the 3D conversion fallback feature.
 
 ```bash
-pip install -r requirements
+pip install moleditpy
 ```
 
-Or one-liner command:
-
-```bash
-pip install matplotlib==3.10.7 moleditpy==1.12.3 numpy==2.3.4 openbabel-wheel==3.1.1.22 PyQt6==6.9.1 PyQt6-Qt6==6.9.2 PyQt6_sip==13.10.2 pyvista==0.46.4 pyvistaqt==0.11.3 QtPy==2.4.3 rdkit==2025.9.1 vtk==9.5.2
-```
-
-Please note that Linux users must use `moleditpy-linux` to resolve OpenBabel's library conflicts issues. OpenBabel is disabled for this version.
-
-```bash
-pip install -r requirements-linux
-```
-
-Or one-liner command for Linux:
-
-```bash
-pip install matplotlib==3.10.7 moleditpy-linux==1.12.3 numpy==2.3.4 PyQt6==6.9.1 PyQt6-Qt6==6.9.2 PyQt6_sip==13.10.2 pyvista==0.46.4 pyvistaqt==0.11.3 QtPy==2.4.3 rdkit==2025.9.1 vtk==9.5.2
-```
+Please note that Linux users must use `moleditpy-linux` to resolve Open Babel's library conflicts issues. Open Babel is disabled for this version.
 
 #### Running the Application
 
@@ -193,22 +173,11 @@ This project is licensed under the **Apache-2.0 License**. See the `LICENSE` fil
 
 #### インストール
 
-:warning: **重要なインストールに関する注意** :warning:
-
-PyVistaと最新のPyQtリリース（6.10.0以降）との間で新たな問題が発見されました。インストールにはこちらの[リンク](https://github.com/HiroYokoyama/python_molecular_editor/tree/main/requirements)の手順に従ってください。
-
 RDKitとOpen Babelは、先に`conda`を使用してインストールすることが推奨されます。Open Babelは3D変換のフォールバック機能に必要です。
 
 ```bash
-pip install -r requirements
+pip install moleditpy
 ```
-
-もしくは、一行のコマンドで：
-
-```bash
-pip install matplotlib==3.10.7 moleditpy==1.12.3 numpy==2.3.4 openbabel-wheel==3.1.1.22 PyQt6==6.9.1 PyQt6-Qt6==6.9.2 PyQt6_sip==13.10.2 pyvista==0.46.4 pyvistaqt==0.11.3 QtPy==2.4.3 rdkit==2025.9.1 vtk==9.5.2
-```
-
 
 #### アプリケーションの起動
 
@@ -241,12 +210,3 @@ moleditpy
 ## ライセンス
 
 このプロジェクトは **Apache-2.0 License** のもとで公開されています。詳細は `LICENSE` ファイルを参照してください。
-
-
-
-
-
-
-
-
-
