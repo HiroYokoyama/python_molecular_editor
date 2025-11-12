@@ -1,6 +1,6 @@
 Metadata-Version: 2.4
 Name: moleditpy
-Version: 1.12.3
+Version: 1.12.5
 Summary: A cross-platform, simple, and intuitive molecular structure editor built in Python. It allows 2D molecular drawing and 3D structure visualization. It supports exporting structure files for input to DFT calculation software.
 Author-email: HiroYokoyama <titech.yoko.hiro@gmail.com>
 Project-URL: Homepage, https://github.com/HiroYokoyama/python_molecular_editor
@@ -16,14 +16,14 @@ Classifier: Programming Language :: Python :: 3.11
 Classifier: Programming Language :: Python :: 3.12
 Classifier: Programming Language :: Python :: 3.13
 Classifier: License :: OSI Approved :: Apache Software License
-Requires-Python: >=3.8
+Requires-Python: <3.14,>=3.9
 Description-Content-Type: text/markdown
-Requires-Dist: PyQt6
-Requires-Dist: rdkit
 Requires-Dist: numpy
-Requires-Dist: pyvista
-Requires-Dist: pyvistaqt
-Requires-Dist: openbabel-wheel
+Requires-Dist: openbabel-wheel<3.2
+Requires-Dist: pyqt6<6.10
+Requires-Dist: pyvista<0.47
+Requires-Dist: pyvistaqt<0.12
+Requires-Dist: rdkit<2025.10
 
 # MoleditPy — A Python Molecular Editor
 

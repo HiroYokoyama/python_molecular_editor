@@ -5,17 +5,17 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "moleditpy-linux"
 
-version = "1.12.3"
+version = "1.12.5"
 
 authors = [
   { name="HiroYokoyama", email="titech.yoko.hiro@gmail.com" },
 ]
 
-description = "A cross-platform, simple, and intuitive molecular structure editor buiSlt in Python. It allows 2D molecular drawing and 3D structure visualization. It supports exporting structure files for input to DFT calculation software."
+description = "A cross-platform, simple, and intuitive molecular structure editor built in Python. It allows 2D molecular drawing and 3D structure visualization. It supports exporting structure files for input to DFT calculation software."
 
 readme = "README.md"
 
-requires-python = ">=3.8"
+requires-python = ">=3.9, <3.14"
 
 classifiers = [
     "Programming Language :: Python :: 3",
@@ -32,12 +32,11 @@ classifiers = [
 ]
 
 dependencies = [
-    "PyQt6",
-    "rdkit",
     "numpy",
-    "pyvista",
-    "pyvistaqt",
-    "pyopengl",
+    "pyqt6 < 6.10",
+    "pyvista < 0.47",
+    "pyvistaqt < 0.12",
+    "rdkit < 2025.10",
 ]
 
 [project.urls]
