@@ -247,7 +247,7 @@ This is an advanced feature that performs a molecular structure optimization (fo
 
   ![](img/constrained-opt.png)
 
-**Other 3D Editing Functions (Menu `3D Edit`):**
+### 6.8. Other 3D Editing Functions (Menu `3D Edit`)
 
 These functions are available from the menu when a 3D structure is displayed. Many open a dedicated dialog where you can select atoms or input parameters.
 
@@ -271,7 +271,7 @@ These functions are available from the menu when a 3D structure is displayed. Ma
   
   ![](img/dihedral.png)
 
-### 6.8. Displaying Atom Information
+### 6.9. Displaying Atom Information
 
 From the menu `View` \> `3D Atom Info Display`, you can select the information to be displayed above each atom in the 3D view.
 
@@ -397,6 +397,7 @@ Click the **Apply** button to immediately apply the settings, and the **OK** but
 You can check the version information from the `Help` \> `About` menu.
 
 -----
+
 
 
 
