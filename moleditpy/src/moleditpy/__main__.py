@@ -11,7 +11,7 @@ DOI 10.5281/zenodo.17268532
 """
 
 #Version
-VERSION = '1.13.0'
+VERSION = '1.13.1'
 
 print("-----------------------------------------------------")
 print("MoleditPy — A Python-based molecular editing software")
@@ -9155,6 +9155,9 @@ class MainWindow(QMainWindow):
         # Reset last successful optimization method at start of new conversion
         self.last_successful_optimization_method = None
         
+        # 3D変換時に既存の3D制約をクリア
+        self.constraints_3d = []
+
         # 2Dエディタに原子が存在しない場合は3Dビューをクリア
         if not self.data.atoms:
             self.plotter.clear()
@@ -17322,15 +17325,18 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
                     # カラム 0 (Type)
                     item_type = QTableWidgetItem(const_type)
                     item_type.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
+                    item_type.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
                     self.constraint_table.setItem(row_count, 0, item_type)
 
                     # カラム 1 (Atom Indices)
                     item_indices = QTableWidgetItem(str(atom_indices))
                     item_indices.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
+                    item_indices.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
                     self.constraint_table.setItem(row_count, 1, item_indices)
 
                     # カラム 2 (Value)
                     item_value = QTableWidgetItem(value_str)
+                    item_value.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
                     self.constraint_table.setItem(row_count, 2, item_value)
             finally:
                 self.constraint_table.blockSignals(False)
@@ -17373,7 +17379,7 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
     def init_ui(self):
         self.setWindowTitle("Constrained Optimization")
         self.setModal(False)
-        self.resize(400, 400)
+        self.resize(330, 450)
         self.setWindowFlags(Qt.WindowType.Window | Qt.WindowType.WindowStaysOnTopHint)
         layout = QVBoxLayout(self)
 
@@ -17425,6 +17431,10 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
         self.remove_button.setEnabled(False)
         button_layout.addWidget(self.remove_button)
         layout.addLayout(button_layout)
+
+        self.remove_all_button = QPushButton("Remove All")
+        self.remove_all_button.clicked.connect(self.remove_all_constraints)
+        button_layout.addWidget(self.remove_all_button)
         
         # 6. メインボタン (Optimize / Close)
         main_buttons = QHBoxLayout()
@@ -17452,26 +17462,38 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
     def update_selection_display(self):
         self.show_selection_labels()
         n = len(self.selected_atoms)
-        if n == 0:
-            self.selection_label.setText("Selected atoms: None")
-            self.add_button.setEnabled(False)
-            return
 
         atom_str = ", ".join(map(str, self.selected_atoms))
-        self.selection_label.setText(f"Selected atoms: [{atom_str}]")
-        
-        if n == 2:
-            self.add_button.setText("Add Distance Constraint")
-            self.add_button.setEnabled(True)
+        prefix = ""
+        can_add = False
+
+        if n == 0:
+            prefix = "Selected atoms: None"
+            atom_str = ""  # atom_str を空にする
+        elif n == 1:
+            prefix = "Selected atoms: "
+        elif n == 2:
+            prefix = "Selected atoms: <b>Distance</b> "
+            can_add = True
         elif n == 3:
-            self.add_button.setText("Add Angle Constraint")
-            self.add_button.setEnabled(True)
+            prefix = "Selected atoms: <b>Angle</b> "
+            can_add = True
         elif n == 4:
-            self.add_button.setText("Add Torsion Constraint")
-            self.add_button.setEnabled(True)
+            prefix = "Selected atoms: <b>Torsion</b> "
+            can_add = True
+        else: # n > 4
+            prefix = "Selected atoms (max 4): "
+
+        # ラベルテキストを設定
+        if n == 0:
+            self.selection_label.setText(prefix)
         else:
-            self.add_button.setText("Add Constraint")
-            self.add_button.setEnabled(False)
+            self.selection_label.setText(f"{prefix}[{atom_str}]")
+
+        # ボタンのテキストは常に固定
+        self.add_button.setText("Add Constraint")
+        # ボタンの有効状態を設定
+        self.add_button.setEnabled(can_add)
 
     def add_constraint(self):
         n = len(self.selected_atoms)
@@ -17511,16 +17533,19 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
         item_type = QTableWidgetItem(constraint_type)
         # 編集不可フラグを設定 (ItemIsEnabled | ItemIsSelectable)
         item_type.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
+        item_type.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
         self.constraint_table.setItem(row_count, 0, item_type)
 
         # --- カラム 1 (Atom Indices) ---
         item_indices = QTableWidgetItem(str(atom_indices))
         # 編集不可フラグを設定
         item_indices.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
+        item_indices.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
         self.constraint_table.setItem(row_count, 1, item_indices)
 
         # --- カラム 2 (Value) ---
         item_value = QTableWidgetItem(value_str)
+        item_value.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
         # 編集可能フラグはデフォルトで有効 (ItemIsEnabled | ItemIsSelectable | ItemIsEditable)
         self.constraint_table.setItem(row_count, 2, item_value)
 
@@ -17542,6 +17567,25 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
         self.constraint_table.blockSignals(False) 
             
         self.clear_constraint_labels()
+
+    def remove_all_constraints(self):
+        """全ての制約をクリアする"""
+        if not self.constraints:
+            return
+            
+        # 内部リストをクリア
+        self.constraints.clear()
+        
+        # テーブルの行を全て削除
+        self.constraint_table.blockSignals(True) 
+        self.constraint_table.setRowCount(0)
+        self.constraint_table.blockSignals(False) 
+            
+        # 3Dラベルをクリア
+        self.clear_constraint_labels()
+        
+        # 選択ボタンを無効化
+        self.remove_button.setEnabled(False)
 
     def show_constraint_labels(self):
         self.clear_constraint_labels()
@@ -17740,11 +17784,20 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
         if not hasattr(self, 'selection_labels'):
             self.selection_labels = []
         
+        if not hasattr(self.main_window, 'atom_positions_3d') or self.main_window.atom_positions_3d is None:
+            return  # 3D座標データがない場合は何もしない
+            
+        max_idx = len(self.main_window.atom_positions_3d) - 1
         positions = []
         texts = []
+        
         for i, atom_idx in enumerate(self.selected_atoms):
-            positions.append(self.main_window.atom_positions_3d[atom_idx])
-            texts.append(f"A{i+1}")
+            if atom_idx is not None and 0 <= atom_idx <= max_idx:
+                positions.append(self.main_window.atom_positions_3d[atom_idx])
+                texts.append(f"A{i+1}")
+            elif atom_idx is not None:
+                # インデックスが無効な場合はログ（デバッグ用）
+                print(f"Warning: Invalid atom index {atom_idx} in show_selection_labels")
         
         if positions:
             label_actor = self.main_window.plotter.add_point_labels(
@@ -17802,7 +17855,7 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
             else:
                 item.setText(f"{old_value:.2f}")
             # アライメントを再設定
-            item.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+            item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
             self.constraint_table.blockSignals(False)
             
             QMessageBox.warning(self, "Invalid Value", "Please enter a valid floating-point number.")
