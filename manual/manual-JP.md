@@ -222,7 +222,7 @@ MoleditPy は、描画した 2D 構造から 3D 構造を生成し、表示、�
 
   ![](img/atom-drag.png)
 
-## 6.7.  制約付き最適化 (Constrained Optimization)
+### 6.7.  制約付き最適化 (Constrained Optimization)
 
 特定の原子間の距離、角度、または二面角の値を固定（制約）したまま、分子全体の構造最適化（力場計算）を実行する高度な機能です。
 
@@ -240,7 +240,7 @@ MoleditPy は、描画した 2D 構造から 3D 構造を生成し、表示、�
    
    ![](img/constrained-opt.png)
 
-**その他の 3D 編集機能 (メニュー `3D Edit`):**
+### 6.8. その他の 3D 編集機能 (メニュー `3D Edit`)
 
 これらの機能は、3D 構造が表示されている場合にメニューから利用できます。多くは専用のダイアログが開き、そこで原子を選択したり、パラメータを入力したりします。
 
@@ -257,7 +257,7 @@ MoleditPy は、描画した 2D 構造から 3D 構造を生成し、表示、�
   
   ![](img/dihedral.png)
 
-### 6.7. 原子情報の表示
+### 6.9. 原子情報の表示
 
 メニューの `View` \> `3D Atom Info Display` から、3D ビューの各原子の上に表示する情報を選択できます。
 
@@ -371,7 +371,7 @@ MoleditPy は、描画した 2D 構造から 3D 構造を生成し、表示、�
 
 ## 10\. バージョン情報 / ライセンス
 
-  * **バージョン:** 1.12
+  * **バージョン:** 1.13
   * **作者:** Hiromichi Yokoyama
   * **ライセンス:** Apache-2.0 license
   * **リポジトリ:** [https://github.com/HiroYokoyama/python\_molecular\_editor](https://github.com/HiroYokoyama/python_molecular_editor)
@@ -380,6 +380,7 @@ MoleditPy は、描画した 2D 構造から 3D 構造を生成し、表示、�
 メニューの `Help` \> `About` からバージョン情報を確認できます。
 
 -----
+
 
 
 
