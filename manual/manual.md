@@ -229,6 +229,24 @@ You can directly edit the atomic coordinates of the 3D structure. Turn on the **
 
    ![](img/atom-drag.png)
 
+### 6.7. Constrained Optimization
+
+This is an advanced feature that performs a molecular structure optimization (force field calculation) while keeping the values of specific atomic distances, angles, or dihedral angles fixed (constrained).
+
+  * **Adding Constraints:**
+    1.  Select `3D Edit` \> `Constrained Optimization...` to open the dialog.
+    2.  In the 3D view, click 2 atoms (for distance), 3 atoms (for angle), or 4 atoms (for dihedral) to select them. The selected atoms are highlighted with yellow labels (A1, A2...).
+    3.  Press the "Add Constraint" button (e.g., "Add Distance Constraint"), and the current structural value will be added to the table.
+  * **Editing and Deleting Constraints:**
+      * **Edit:** Double-click (or select and press Enter) the "Value" column in the table to edit the constraint value directly.
+      * **Delete:** Select the constraint row(s) you wish to remove in the table and press the "Remove Selected" button or the `Delete` / `Backspace` key.
+      * **Verify:** Selecting a row in the table highlights the corresponding atoms in the 3D view in cyan.
+  * **Running the Optimization:**
+    1.  Select the desired force field (MMFF94s, MMFF94, or UFF) from the "Force Field" dropdown. (The default value is loaded from the `Settings` menu.)
+    2.  Press the "Optimize" button (or the `Enter` key) to run the optimization while preserving all constraints listed in the table.
+
+  ![](img/constrained-opt.png)
+
 **Other 3D Editing Functions (Menu `3D Edit`):**
 
 These functions are available from the menu when a 3D structure is displayed. Many open a dedicated dialog where you can select atoms or input parameters.
@@ -249,28 +267,9 @@ These functions are available from the menu when a 3D structure is displayed. Ma
 
   * **Planarize...:** Calculates the best-fit plane for three or more selected atoms and projects those atoms onto that plane.
 
-
   ![](img/3d-edit-menu.png)
   
   ![](img/dihedral.png)
-
-## 6.7. Constrained Optimization
-
-This is an advanced feature that performs a molecular structure optimization (force field calculation) while keeping the values of specific atomic distances, angles, or dihedral angles fixed (constrained).
-
-  * **Adding Constraints:**
-    1.  Select `3D Edit` \> `Constrained Optimization...` to open the dialog.
-    2.  In the 3D view, click 2 atoms (for distance), 3 atoms (for angle), or 4 atoms (for dihedral) to select them. The selected atoms are highlighted with yellow labels (A1, A2...).
-    3.  Press the "Add Constraint" button (e.g., "Add Distance Constraint"), and the current structural value will be added to the table.
-  * **Editing and Deleting Constraints:**
-      * **Edit:** Double-click (or select and press Enter) the "Value" column in the table to edit the constraint value directly.
-      * **Delete:** Select the constraint row(s) you wish to remove in the table and press the "Remove Selected" button or the `Delete` / `Backspace` key.
-      * **Verify:** Selecting a row in the table highlights the corresponding atoms in the 3D view in cyan.
-  * **Running the Optimization:**
-    1.  Select the desired force field (MMFF94s, MMFF94, or UFF) from the "Force Field" dropdown. (The default value is loaded from the `Settings` menu.)
-    2.  Press the "Optimize" button (or the `Enter` key) to run the optimization while preserving all constraints listed in the table.
-
-  ![](img/constrained-opt.png)
 
 ### 6.8. Displaying Atom Information
 
@@ -398,6 +397,7 @@ Click the **Apply** button to immediately apply the settings, and the **OK** but
 You can check the version information from the `Help` \> `About` menu.
 
 -----
+
 
 
 
