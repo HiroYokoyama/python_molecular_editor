@@ -11,7 +11,7 @@ DOI 10.5281/zenodo.17268532
 """
 
 #Version
-VERSION = '1.12.5'
+VERSION = '1.13.0'
 
 print("-----------------------------------------------------")
 print("MoleditPy — A Python-based molecular editing software")
@@ -40,17 +40,23 @@ from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QPushButton, QSplitter, QGraphicsView, QGraphicsScene, QGraphicsItem,
     QToolBar, QStatusBar, QGraphicsTextItem, QGraphicsLineItem, QDialog, QGridLayout,
-    QFileDialog, QSizePolicy, QLabel, QLineEdit, QToolButton, QMenu, QMessageBox, QInputDialog, QDialogButtonBox,
-    QColorDialog, QCheckBox, QSlider, QFormLayout, QRadioButton, QComboBox, QListWidget, QListWidgetItem, QButtonGroup, QTabWidget, QScrollArea, QFrame
+    QFileDialog, QSizePolicy, QLabel, QLineEdit, QToolButton, QMenu, QMessageBox, 
+    QInputDialog, QDialogButtonBox, QColorDialog, QCheckBox, QSlider, QFormLayout, 
+    QRadioButton, QComboBox, QListWidget, QListWidgetItem, QButtonGroup, QTabWidget, 
+    QScrollArea, QFrame, QTableWidget, QTableWidgetItem
 )
 
 from PyQt6.QtGui import (
     QPen, QBrush, QColor, QPainter, QAction, QActionGroup, QFont, QPolygonF,
-    QPainterPath, QPainterPathStroker, QFontMetrics, QFontMetricsF, QKeySequence, QTransform, QCursor, QPixmap, QIcon, QShortcut, QDesktopServices, QImage
+    QPainterPath, QPainterPathStroker, QFontMetrics, QFontMetricsF, QKeySequence, 
+    QTransform, QCursor, QPixmap, QIcon, QShortcut, QDesktopServices, QImage
 )
 
 
-from PyQt6.QtCore import Qt, QPointF, QRectF, QLineF, QObject, QThread, pyqtSignal, pyqtSlot, QEvent, QMimeData, QByteArray, QUrl, QTimer, QDateTime
+from PyQt6.QtCore import (
+    Qt, QPointF, QRectF, QLineF, QObject, QThread, pyqtSignal, pyqtSlot, QEvent, 
+    QMimeData, QByteArray, QUrl, QTimer, QDateTime
+)
 
 # Optional SIP helper: on some PyQt6 builds sip.isdeleted is available and
 # allows safely detecting C++ wrapper objects that have been deleted. Import
@@ -5790,6 +5796,9 @@ class CalculationWorker(QObject):
                 except Exception as ob_err:
                     raise RuntimeError(f"Open Babel 3D conversion failed: {ob_err}")
 
+            if conf_id == -1 and conversion_mode == 'rdkit':
+                raise RuntimeError("RDKit 3D conversion failed (rdkit-only mode)")
+
         except Exception as e:
             _safe_error(str(e))
 
@@ -7325,6 +7334,7 @@ class MainWindow(QMainWindow):
         self._template_dialog = None  # テンプレートダイアログの参照
         self.undo_stack = []
         self.redo_stack = []
+        self.constraints_3d = []
         self.mode_actions = {} 
         
         # 保存状態を追跡する変数
@@ -8249,6 +8259,14 @@ class MainWindow(QMainWindow):
         planarize_action.setEnabled(False)
         edit_3d_menu.addAction(planarize_action)
         self.planarize_action = planarize_action
+
+        edit_3d_menu.addSeparator()
+        # Constrained Optimization action
+        constrained_opt_action = QAction("Constrained Optimization...", self)
+        constrained_opt_action.triggered.connect(self.open_constrained_optimization_dialog)
+        constrained_opt_action.setEnabled(False)  # 3Dモデルロード時に有効化
+        edit_3d_menu.addAction(constrained_opt_action)
+        self.constrained_opt_action = constrained_opt_action
 
         settings_menu = menu_bar.addMenu("&Settings")
         # 1) 3D View settings (existing)
@@ -10111,6 +10129,15 @@ class MainWindow(QMainWindow):
         if self.current_mol: state['mol_3d'] = self.current_mol.ToBinary()
 
         state['is_3d_viewer_mode'] = not self.is_2d_editable
+
+        json_safe_constraints = []
+        try:
+            for const in self.constraints_3d:
+                # (Type, (Idx...), Value) -> [Type, [Idx...], Value]
+                json_safe_constraints.append([const[0], list(const[1]), const[2]])
+        except Exception:
+            pass # 失敗したら空リスト
+        state['constraints_3d'] = json_safe_constraints
             
         return state
 
@@ -10141,6 +10168,18 @@ class MainWindow(QMainWindow):
 
         raw_atoms = loaded_data.get('atoms', {})
         raw_bonds = loaded_data.get('bonds', {})
+
+        # 制約データの復元 (pmeraw)
+        try:
+            loaded_constraints = loaded_data.get("constraints_3d", [])
+            # pmerawもJSON互換形式 [Type, [Idx...], Value] で保存されている想定
+            self.constraints_3d = []
+            for const in loaded_constraints:
+                if isinstance(const, list) and len(const) == 3:
+                    # [Type, [Idx...], Value] -> (Type, (Idx...), Value)
+                    self.constraints_3d.append((const[0], tuple(const[1]), const[2]))
+        except Exception:
+            self.constraints_3d = [] # 読み込み失敗時はリセット
 
         for atom_id, data in raw_atoms.items():
             pos = QPointF(data['pos'][0], data['pos'][1])
@@ -10395,6 +10434,7 @@ class MainWindow(QMainWindow):
         # 3Dモデルをクリアする
         self.current_mol = None
         self.plotter.clear()
+        self.constraints_3d = []
         
         # 3D関連機能を統一的に無効化
         self._enable_3d_features(False)
@@ -12159,7 +12199,8 @@ class MainWindow(QMainWindow):
                     "mol_binary_base64": mol_base64,
                     "atoms": atoms_3d,
                     "bonds": bonds_3d,
-                    "num_conformers": self.current_mol.GetNumConformers()
+                    "num_conformers": self.current_mol.GetNumConformers(),
+                    "constraints_3d": self.constraints_3d
                 }
                 
                 # 分子の基本情報
@@ -12367,6 +12408,18 @@ class MainWindow(QMainWindow):
         # 3D構造データの復元
         if "3d_structure" in json_data:
             structure_3d = json_data["3d_structure"]
+
+            # 制約データの復元 (JSONはタプルをリストとして保存するので、タプルに再変換)
+            try:
+                loaded_constraints = structure_3d.get("constraints_3d", [])
+                self.constraints_3d = []
+                for const in loaded_constraints:
+                    if isinstance(const, list) and len(const) == 3:
+                        # [Type, [Idx...], Value] -> (Type, (Idx...), Value)
+                        self.constraints_3d.append((const[0], tuple(const[1]), const[2]))
+            except Exception:
+                self.constraints_3d = [] # 読み込み失敗時はリセット
+
             try:
                 # バイナリデータの復元
                 mol_base64 = structure_3d.get("mol_binary_base64")
@@ -12560,8 +12613,23 @@ class MainWindow(QMainWindow):
             if not file_path.lower().endswith('.xyz'): file_path += '.xyz'
             try:
                 conf=self.current_mol.GetConformer(); num_atoms=self.current_mol.GetNumAtoms()
-                xyz_lines=[str(num_atoms)]; smiles=Chem.MolToSmiles(Chem.RemoveHs(self.current_mol))
-                xyz_lines.append(f"Generated by MoleditPy Ver. {VERSION}")
+                xyz_lines=[str(num_atoms)]
+                # 電荷と多重度を計算
+                try:
+                    charge = Chem.GetFormalCharge(self.current_mol)
+                except Exception:
+                    charge = 0 # 取得失敗時は0
+                
+                try:
+                    # 全原子のラジカル電子の合計を取得
+                    num_radicals = Descriptors.NumRadicalElectrons(self.current_mol)
+                    # スピン多重度を計算 (M = N + 1, N=ラジカル電子数)
+                    multiplicity = num_radicals + 1
+                except Exception:
+                    multiplicity = 1 # 取得失敗時は 1 (singlet)
+
+                smiles=Chem.MolToSmiles(Chem.RemoveHs(self.current_mol))
+                xyz_lines.append(f"chrg = {charge}  mult = {multiplicity} | Generated by MoleditPy Ver. {VERSION}")
                 for i in range(num_atoms):
                     pos=conf.GetAtomPosition(i); symbol=self.current_mol.GetAtomWithIdx(i).GetSymbol()
                     xyz_lines.append(f"{symbol} {pos.x:.6f} {pos.y:.6f} {pos.z:.6f}")
@@ -14824,7 +14892,8 @@ class MainWindow(QMainWindow):
             'angle_action',
             'dihedral_action',
             'mirror_action',
-            'planarize_action'
+            'planarize_action',
+            'constrained_opt_action'
         ]
         
         # メニューとサブメニューも有効/無効化
@@ -15999,6 +16068,22 @@ class MainWindow(QMainWindow):
         
         dialog = MirrorDialog(self.current_mol, self)
         dialog.exec()  # モーダルダイアログとして表示
+
+    def open_constrained_optimization_dialog(self):
+        """制約付き最適化ダイアログを開く"""
+        if not self.current_mol:
+            self.statusBar().showMessage("No 3D molecule loaded.")
+            return
+        
+        # 測定モードを無効化
+        if self.measurement_mode:
+            self.measurement_action.setChecked(False)
+            self.toggle_measurement_mode(False)
+        
+        dialog = ConstrainedOptimizationDialog(self.current_mol, self)
+        self.active_3d_dialogs.append(dialog)  # 参照を保持
+        dialog.show()  # モードレス表示
+        dialog.finished.connect(lambda: self.remove_dialog_from_list(dialog))
     
     def remove_dialog_from_list(self, dialog):
         """ダイアログをアクティブリストから削除"""
@@ -17202,6 +17287,552 @@ class DihedralDialog(Dialog3DPickingMixin, QDialog):
                     to_visit.append(other_idx)
         
         return visited
+
+class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
+    """制約付き最適化ダイアログ"""
+    
+    def __init__(self, mol, main_window, parent=None):
+        QDialog.__init__(self, parent)
+        Dialog3DPickingMixin.__init__(self)
+        self.mol = mol
+        self.main_window = main_window
+        self.selected_atoms = []  # 順序が重要なのでリストを使用
+        self.constraints = []  # (type, atoms_indices, value)
+        self.constraint_labels = [] # 3Dラベルアクター
+        self.init_ui()
+        self.enable_picking()
+
+        # MainWindowから既存の制約を読み込む
+        if self.main_window.constraints_3d:
+            self.constraint_table.blockSignals(True) # 読み込み中のシグナルをブロック
+            try:
+                # self.constraints には (Type, (Idx...), Value) のタプル形式で読み込む
+                self.constraints = list(self.main_window.constraints_3d) 
+                
+                for const_type, atom_indices, value in self.constraints:
+                    row_count = self.constraint_table.rowCount()
+                    self.constraint_table.insertRow(row_count)
+                    
+                    value_str = ""
+                    if const_type == "Distance":
+                        value_str = f"{value:.3f}"
+                    else:
+                        value_str = f"{value:.2f}"
+
+                    # カラム 0 (Type)
+                    item_type = QTableWidgetItem(const_type)
+                    item_type.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
+                    self.constraint_table.setItem(row_count, 0, item_type)
+
+                    # カラム 1 (Atom Indices)
+                    item_indices = QTableWidgetItem(str(atom_indices))
+                    item_indices.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
+                    self.constraint_table.setItem(row_count, 1, item_indices)
+
+                    # カラム 2 (Value)
+                    item_value = QTableWidgetItem(value_str)
+                    self.constraint_table.setItem(row_count, 2, item_value)
+            finally:
+                self.constraint_table.blockSignals(False)
+
+            # <<< MainWindowの現在の最適化設定を読み込み、デフォルトにする >>>
+        try:
+            # (修正) None の場合に備えてフォールバックを追加
+            current_method_str = self.main_window.optimization_method or "MMFF_RDKIT"
+            current_method = current_method_str.upper()
+            
+            # (修正) 比較順序を厳密化
+            
+            # 1. UFF_RDKIT
+            if current_method == "UFF_RDKIT":
+                self.ff_combo.setCurrentText("UFF")
+            
+            # 2. MMFF94_RDKIT (MMFF94)
+            elif current_method == "MMFF94_RDKIT":
+                self.ff_combo.setCurrentText("MMFF94")
+
+            # 3. MMFF_RDKIT (MMFF94s) - これがデフォルトでもある
+            elif current_method == "MMFF_RDKIT":
+                self.ff_combo.setCurrentText("MMFF94s")
+
+            # 4. (古い設定ファイルなどからのフォールバック)
+            elif "UFF" in current_method:
+                self.ff_combo.setCurrentText("UFF")
+            elif "MMFF94S" in current_method:
+                self.ff_combo.setCurrentText("MMFF94s")
+            elif "MMFF94" in current_method: # MMFF94_RDKITも含むが、先で処理済み
+                 self.ff_combo.setCurrentText("MMFF94")
+
+            # 5. デフォルト
+            else:
+                self.ff_combo.setCurrentText("MMFF94s")
+                
+        except Exception as e:
+            print(f"Could not set default force field: {e}")
+
+    def init_ui(self):
+        self.setWindowTitle("Constrained Optimization")
+        self.setModal(False)
+        self.resize(400, 400)
+        self.setWindowFlags(Qt.WindowType.Window | Qt.WindowType.WindowStaysOnTopHint)
+        layout = QVBoxLayout(self)
+
+        # 1. 説明
+        instruction_label = QLabel("Select 2-4 atoms to add a constraint. Select constraints in the table to remove them.")
+        instruction_label.setWordWrap(True)
+        layout.addWidget(instruction_label)
+
+        # 2. 最適化方法
+        form_layout = QFormLayout()
+        self.ff_combo = QComboBox()
+        self.ff_combo.addItems(["MMFF94s", "MMFF94", "UFF"])
+        form_layout.addRow("Force Field:", self.ff_combo)
+        layout.addLayout(form_layout)
+        
+        # 3. 選択中の原子
+        self.selection_label = QLabel("Selected atoms: None")
+        layout.addWidget(self.selection_label)
+
+        # 4. 制約の表
+        self.constraint_table = QTableWidget()
+        self.constraint_table.setColumnCount(3)
+        self.constraint_table.setHorizontalHeaderLabels(["Type", "Atom Indices", "Value (Å or °)"])
+        self.constraint_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        # 編集トリガーをダブルクリックなどに変更
+        self.constraint_table.setEditTriggers(QTableWidget.EditTrigger.DoubleClicked | QTableWidget.EditTrigger.SelectedClicked | QTableWidget.EditTrigger.EditKeyPressed)
+        self.constraint_table.itemSelectionChanged.connect(self.show_constraint_labels)
+        self.constraint_table.cellChanged.connect(self.on_cell_changed)
+
+        self.constraint_table.setStyleSheet("""
+            QTableWidget QLineEdit {
+                background-color: white;
+                color: black;
+                border: none;
+            }
+        """)
+
+        layout.addWidget(self.constraint_table)
+
+        # 5. ボタン (Add / Remove)
+        button_layout = QHBoxLayout()
+        self.add_button = QPushButton("Add Constraint")
+        self.add_button.clicked.connect(self.add_constraint)
+        self.add_button.setEnabled(False)
+        button_layout.addWidget(self.add_button)
+        
+        self.remove_button = QPushButton("Remove Selected")
+        self.remove_button.clicked.connect(self.remove_constraint)
+        self.remove_button.setEnabled(False)
+        button_layout.addWidget(self.remove_button)
+        layout.addLayout(button_layout)
+        
+        # 6. メインボタン (Optimize / Close)
+        main_buttons = QHBoxLayout()
+        main_buttons.addStretch()
+        self.optimize_button = QPushButton("Optimize")
+        self.optimize_button.clicked.connect(self.apply_optimization)
+        main_buttons.addWidget(self.optimize_button)
+        
+        close_button = QPushButton("Close")
+        close_button.clicked.connect(self.reject)
+        main_buttons.addWidget(close_button)
+        layout.addLayout(main_buttons)
+
+    def on_atom_picked(self, atom_idx):
+        if atom_idx in self.selected_atoms:
+            self.selected_atoms.remove(atom_idx)
+        else:
+            if len(self.selected_atoms) >= 4:
+                self.selected_atoms.pop(0)  # 4つまで
+            self.selected_atoms.append(atom_idx)
+        
+        self.show_selection_labels()
+        self.update_selection_display()
+
+    def update_selection_display(self):
+        self.show_selection_labels()
+        n = len(self.selected_atoms)
+        if n == 0:
+            self.selection_label.setText("Selected atoms: None")
+            self.add_button.setEnabled(False)
+            return
+
+        atom_str = ", ".join(map(str, self.selected_atoms))
+        self.selection_label.setText(f"Selected atoms: [{atom_str}]")
+        
+        if n == 2:
+            self.add_button.setText("Add Distance Constraint")
+            self.add_button.setEnabled(True)
+        elif n == 3:
+            self.add_button.setText("Add Angle Constraint")
+            self.add_button.setEnabled(True)
+        elif n == 4:
+            self.add_button.setText("Add Torsion Constraint")
+            self.add_button.setEnabled(True)
+        else:
+            self.add_button.setText("Add Constraint")
+            self.add_button.setEnabled(False)
+
+    def add_constraint(self):
+        n = len(self.selected_atoms)
+        conf = self.mol.GetConformer()
+        
+        if n == 2:
+            constraint_type = "Distance"
+            value = conf.GetAtomPosition(self.selected_atoms[0]).Distance(conf.GetAtomPosition(self.selected_atoms[1]))
+            value_str = f"{value:.3f}"
+        elif n == 3:
+            constraint_type = "Angle"
+            value = rdMolTransforms.GetAngleDeg(conf, *self.selected_atoms)
+            value_str = f"{value:.2f}"
+        elif n == 4:
+            constraint_type = "Torsion"
+            value = rdMolTransforms.GetDihedralDeg(conf, *self.selected_atoms)
+            value_str = f"{value:.2f}"
+        else:
+            return
+
+        atom_indices = tuple(self.selected_atoms)
+        
+        # 既存の制約と重複チェック (原子インデックスが同じもの)
+        for const in self.constraints:
+            if const[0] == constraint_type and const[1] == atom_indices:
+                QMessageBox.warning(self, "Warning", "This exact constraint already exists.")
+                return
+
+        self.constraints.append((constraint_type, atom_indices, value))
+        
+        # 表を更新
+        # 表を更新
+        row_count = self.constraint_table.rowCount()
+        self.constraint_table.insertRow(row_count)
+
+        # --- カラム 0 (Type) ---
+        item_type = QTableWidgetItem(constraint_type)
+        # 編集不可フラグを設定 (ItemIsEnabled | ItemIsSelectable)
+        item_type.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
+        self.constraint_table.setItem(row_count, 0, item_type)
+
+        # --- カラム 1 (Atom Indices) ---
+        item_indices = QTableWidgetItem(str(atom_indices))
+        # 編集不可フラグを設定
+        item_indices.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
+        self.constraint_table.setItem(row_count, 1, item_indices)
+
+        # --- カラム 2 (Value) ---
+        item_value = QTableWidgetItem(value_str)
+        # 編集可能フラグはデフォルトで有効 (ItemIsEnabled | ItemIsSelectable | ItemIsEditable)
+        self.constraint_table.setItem(row_count, 2, item_value)
+
+        # 選択をクリア
+        self.selected_atoms.clear()
+        self.update_selection_display()
+
+    def remove_constraint(self):
+        selected_rows = sorted(list(set(index.row() for index in self.constraint_table.selectedIndexes())), reverse=True)
+        if not selected_rows:
+            return
+
+        self.constraint_table.blockSignals(True) 
+        
+        for row in selected_rows:
+            self.constraints.pop(row)
+            self.constraint_table.removeRow(row)
+            
+        self.constraint_table.blockSignals(False) 
+            
+        self.clear_constraint_labels()
+
+    def show_constraint_labels(self):
+        self.clear_constraint_labels()
+        selected_items = self.constraint_table.selectedItems()
+        if not selected_items:
+            self.remove_button.setEnabled(False)
+            return
+            
+        self.remove_button.setEnabled(True)
+        
+        # 選択された行の制約を取得 (最初の選択行のみ)
+        try:
+            row = selected_items[0].row()
+            constraint_type, atom_indices, value = self.constraints[row]
+        except (IndexError, TypeError):
+            return
+        
+        labels = []
+        if constraint_type == "Distance":
+            labels = ["A1", "A2"]
+        elif constraint_type == "Angle":
+            labels = ["A1", "A2 (V)", "A3"]
+        elif constraint_type == "Torsion":
+            labels = ["A1", "A2", "A3", "A4"]
+        
+        positions = []
+        texts = []
+        for i, atom_idx in enumerate(atom_indices):
+            positions.append(self.main_window.atom_positions_3d[atom_idx])
+            texts.append(labels[i])
+        
+        if positions:
+            label_actor = self.main_window.plotter.add_point_labels(
+                positions, texts,
+                point_size=20, font_size=12, text_color='cyan', always_visible=True
+            )
+            self.constraint_labels.append(label_actor)
+
+    def clear_constraint_labels(self):
+        for label_actor in self.constraint_labels:
+            try:
+                self.main_window.plotter.remove_actor(label_actor)
+            except:
+                pass
+        self.constraint_labels = []
+
+    def apply_optimization(self):
+        if not self.mol or self.mol.GetNumConformers() == 0:
+            QMessageBox.warning(self, "Error", "No valid 3D molecule found.")
+            return
+
+        ff_name = self.ff_combo.currentText()
+        conf = self.mol.GetConformer()
+        
+        try:
+            if ff_name.startswith("MMFF"):
+                props = AllChem.MMFFGetMoleculeProperties(self.mol, mmffVariant=ff_name)
+                ff = AllChem.MMFFGetMoleculeForceField(self.mol, props, confId=0)
+                add_dist_constraint = ff.MMFFAddDistanceConstraint
+                add_angle_constraint = ff.MMFFAddAngleConstraint
+                add_torsion_constraint = ff.MMFFAddTorsionConstraint
+            else: # UFF
+                ff = AllChem.UFFGetMoleculeForceField(self.mol, confId=0)
+                add_dist_constraint = ff.UFFAddDistanceConstraint
+                add_angle_constraint = ff.UFFAddAngleConstraint
+                add_torsion_constraint = ff.UFFAddTorsionConstraint
+
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to initialize force field {ff_name}: {e}")
+            return
+
+        # 制約を追加
+        try:
+            force_const = 1.0e5 # 高い力定数で事実上固定
+            
+            for const_type, atoms, value in self.constraints:
+                
+                if const_type == "Distance":
+                    # C++ signature: (self, idx1, idx2, bool relative, minLen, maxLen, forceConst)
+                    add_dist_constraint(
+                        int(atoms[0]), 
+                        int(atoms[1]), 
+                        False, 
+                        float(value), 
+                        float(value), 
+                        float(force_const)
+                    )
+                elif const_type == "Angle":
+                    # C++ signature: (self, idx1, idx2, idx3, bool relative, minDeg, maxDeg, forceConst)
+                    add_angle_constraint(
+                        int(atoms[0]), 
+                        int(atoms[1]), 
+                        int(atoms[2]),
+                        False,  
+                        float(value), 
+                        float(value), 
+                        float(force_const)
+                    )
+                elif const_type == "Torsion":
+                    # C++ signature: (self, idx1, idx2, idx3, idx4, bool relative, minDeg, maxDeg, forceConst)
+                    add_torsion_constraint(
+                        int(atoms[0]), 
+                        int(atoms[1]), 
+                        int(atoms[2]), 
+                        int(atoms[3]),
+                        False, 
+                        float(value), 
+                        float(value), 
+                        float(force_const)
+                    )
+        
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to add constraints: {e}")
+            print(e)
+            return
+
+        # 最適化の実行
+        try:
+            self.main_window.statusBar().showMessage(f"Running constrained {ff_name} optimization...")
+            ff.Minimize(maxIts=20000)
+            
+            # 最適化後の座標をメインウィンドウの numpy 配列に反映
+            for i in range(self.mol.GetNumAtoms()):
+                pos = conf.GetAtomPosition(i)
+                self.main_window.atom_positions_3d[i] = [pos.x, pos.y, pos.z]
+            
+            # 3Dビューを更新
+            self.main_window.draw_molecule_3d(self.mol)
+            self.main_window.update_chiral_labels()
+            self.main_window.push_undo_state()
+            self.main_window.statusBar().showMessage("Constrained optimization finished.")
+
+            try:
+                constrained_method_name = f"Constrained_{ff_name}"
+                self.main_window.last_successful_optimization_method = constrained_method_name
+            except Exception as e:
+                print(f"Failed to set last_successful_optimization_method: {e}")
+
+            # (修正) 最適化成功時にも制約リストをMainWindowに保存 (reject と同じロジック)
+            try:
+                # JSON互換のため、タプルをリストに変換して保存
+                json_safe_constraints = []
+                for const in self.constraints:
+                    json_safe_constraints.append([const[0], list(const[1]), const[2]])
+                
+                # 変更があった場合のみ MainWindow を更新
+                if self.main_window.constraints_3d != json_safe_constraints:
+                    self.main_window.constraints_3d = json_safe_constraints
+                    self.main_window.has_unsaved_changes = True # 制約の変更も「未保存」扱い
+                    self.main_window.update_window_title()
+                    
+            except Exception as e:
+                print(f"Failed to save constraints post-optimization: {e}")
+            
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Optimization failed: {e}")
+
+    def closeEvent(self, event):
+        self.reject()
+        event.accept()
+    
+    def reject(self):
+        self.clear_constraint_labels()
+        self.clear_selection_labels()
+        self.disable_picking()
+
+        # ダイアログを閉じる際に現在の制約リストをMainWindowに保存
+        try:
+            # JSON互換のため、タプルをリストに変換して保存
+            json_safe_constraints = []
+            for const in self.constraints:
+                # (Type, (Idx...), Value) -> [Type, [Idx...], Value]
+                json_safe_constraints.append([const[0], list(const[1]), const[2]])
+            
+            # 変更があった場合のみ MainWindow を更新
+            if self.main_window.constraints_3d != json_safe_constraints:
+                self.main_window.constraints_3d = json_safe_constraints
+                self.main_window.has_unsaved_changes = True # 制約の変更も「未保存」扱い
+                self.main_window.update_window_title()
+                
+        except Exception as e:
+            print(f"Failed to save constraints to main window: {e}")
+
+        super().reject()
+
+    def clear_selection(self):
+        """選択をクリア (原子以外をクリックした時にMixinから呼ばれる)"""
+        self.selected_atoms.clear()
+        self.clear_selection_labels()
+        self.update_selection_display()
+
+    def show_selection_labels(self):
+        """選択された原子にラベルを表示"""
+        self.clear_selection_labels()
+        
+        if not hasattr(self, 'selection_labels'):
+            self.selection_labels = []
+        
+        positions = []
+        texts = []
+        for i, atom_idx in enumerate(self.selected_atoms):
+            positions.append(self.main_window.atom_positions_3d[atom_idx])
+            texts.append(f"A{i+1}")
+        
+        if positions:
+            label_actor = self.main_window.plotter.add_point_labels(
+                positions, texts,
+                point_size=20, font_size=12, text_color='yellow', always_visible=True
+            )
+            # add_point_labelsがリストを返す場合も考慮
+            if isinstance(label_actor, list):
+                self.selection_labels.extend(label_actor)
+            else:
+                self.selection_labels.append(label_actor)
+
+    def clear_selection_labels(self):
+        """選択ラベル(A1, A2...)をクリア"""
+        if hasattr(self, 'selection_labels'):
+            for label_actor in self.selection_labels:
+                try:
+                    self.main_window.plotter.remove_actor(label_actor)
+                except:
+                    pass
+            self.selection_labels = []
+
+    def on_cell_changed(self, row, column):
+        """テーブルのセルが編集されたときに内部データを更新する"""
+        
+        # "Value" 列 (カラムインデックス 2) 以外は無視
+        if column != 2:
+            return
+
+        try:
+            # 変更されたアイテムからテキストを取得
+            item = self.constraint_table.item(row, column)
+            if not item:
+                return
+            
+            new_value_str = item.text()
+            new_value = float(new_value_str)
+            
+            # 内部の constraints リストを更新
+            # (constraint_type, atom_indices, value)
+            old_constraint = self.constraints[row]
+            self.constraints[row] = (old_constraint[0], old_constraint[1], new_value)
+            
+            # self.main_window.statusBar().showMessage(f"Constraint {row} value updated to {new_value:.3f}")
+
+        except (ValueError, TypeError):
+            # 不正な値（数値以外）が入力された場合
+            # 元の値をテーブルに戻す
+            old_value = self.constraints[row][2]
+            
+            # 変更シグナルを一時的にブロックして、元に戻す際の無限ループを防ぐ
+            self.constraint_table.blockSignals(True)
+            if self.constraints[row][0] == "Distance":
+                item.setText(f"{old_value:.3f}")
+            else:
+                item.setText(f"{old_value:.2f}")
+            # アライメントを再設定
+            item.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+            self.constraint_table.blockSignals(False)
+            
+            QMessageBox.warning(self, "Invalid Value", "Please enter a valid floating-point number.")
+        except IndexError:
+            # constraints リストとテーブルが同期していない場合（通常発生しない）
+            pass
+    
+    def keyPressEvent(self, event):
+        """キーボードイベントを処理 (Delete/Backspaceで制約を削除, Enterで最適化)"""
+        key = event.key()
+        
+        # DeleteキーまたはBackspaceキーが押されたかチェック
+        if key == Qt.Key.Key_Delete or key == Qt.Key.Key_Backspace:
+            # テーブルがフォーカスを持っているか、またはアイテムが選択されているか確認
+            if self.constraint_table.hasFocus() or len(self.constraint_table.selectedIndexes()) > 0:
+                self.remove_constraint()
+                event.accept()
+                return
+
+        # Enter/Returnキーが押されたかチェック (最適化を実行)
+        if key == Qt.Key.Key_Return or key == Qt.Key.Key_Enter:
+            # テーブルが編集中でないことを確認（セルの編集中にEnterを押した場合）
+            if self.constraint_table.state() != QTableWidget.EditState.EditingState:
+                if self.optimize_button.isEnabled():
+                    self.apply_optimization()
+                event.accept()
+                return
+            
+        # それ以外のキーはデフォルトの処理
+        super().keyPressEvent(event)
 
 
 # --- Application Execution ---
