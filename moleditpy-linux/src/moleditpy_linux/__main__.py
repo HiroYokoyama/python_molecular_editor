@@ -11,7 +11,7 @@ DOI 10.5281/zenodo.17268532
 """
 
 #Version
-VERSION = '1.14.0'
+VERSION = '1.14.1'
 
 print("-----------------------------------------------------")
 print("MoleditPy — A Python-based molecular editing software")
@@ -85,7 +85,7 @@ from rdkit.Chem import rdMolTransforms
 from rdkit.DistanceGeometry import DoTriangleSmoothing
 
 
-# Open Babel is disabled for linux version
+# Open Babel is disabled for linux
 pybel = None
 OBABEL_AVAILABLE = False
 
@@ -14634,29 +14634,46 @@ class MainWindow(QMainWindow):
 
 
     def adjust_molecule_positions_to_avoid_collisions(self, mol, frags):
-        """複数分子の位置を調整して、ファンデルワールス半径による衝突を回避する"""
+        """
+        複数分子の位置を調整して、衝突を回避する（バウンディングボックス最適化版）
+        """
         if len(frags) <= 1:
             return
         
         conf = mol.GetConformer()
         pt = Chem.GetPeriodicTable()
         
-        # 各フラグメントの重心と原子インデックスを計算
+        # --- 1. 各フラグメントの情報（原子インデックス、VDW半径）を事前計算 ---
         frag_info = []
         for frag_indices in frags:
             positions = []
+            vdw_radii = []
             for idx in frag_indices:
                 pos = conf.GetAtomPosition(idx)
                 positions.append(np.array([pos.x, pos.y, pos.z]))
-            centroid = np.mean(positions, axis=0)
+                
+                atom = mol.GetAtomWithIdx(idx)
+                # GetRvdw() はファンデルワールス半径を返す
+                vdw_radii.append(pt.GetRvdw(atom.GetAtomicNum()))
+
+            positions_np = np.array(positions)
+            vdw_radii_np = np.array(vdw_radii)
+            
+            # このフラグメントで最大のVDW半径を計算（ボックスのマージンとして使用）
+            max_vdw = np.max(vdw_radii_np) if len(vdw_radii_np) > 0 else 0.0
+
             frag_info.append({
                 'indices': frag_indices,
-                'centroid': centroid,
-                'positions': positions
+                'centroid': np.mean(positions_np, axis=0),
+                'positions_np': positions_np, # Numpy配列として保持
+                'vdw_radii_np': vdw_radii_np,  # Numpy配列として保持
+                'max_vdw_radius': max_vdw,
+                'bbox_min': np.zeros(3), # 後で計算
+                'bbox_max': np.zeros(3)  # 後で計算
             })
         
-        # 衝突を検出して移動ベクトルを計算
-        collision_scale = 1.2  # ファンデルワールス半径の120%を最小距離とする
+        # --- 2. 衝突判定のパラメータ ---
+        collision_scale = 1.2  # VDW半径の120%
         max_iterations = 100
         moved = True
         iteration = 0
@@ -14665,34 +14682,70 @@ class MainWindow(QMainWindow):
             moved = False
             iteration += 1
             
-            # すべてのフラグメントペアについて衝突をチェック
+            # --- 3. フラグメントのバウンディングボックスを毎イテレーション更新 ---
+            for i in range(len(frag_info)):
+                # 現在の座標からボックスを再計算
+                current_positions = []
+                for idx in frag_info[i]['indices']:
+                    pos = conf.GetAtomPosition(idx)
+                    current_positions.append([pos.x, pos.y, pos.z])
+                
+                positions_np = np.array(current_positions)
+                frag_info[i]['positions_np'] = positions_np # 座標情報を更新
+                
+                # VDW半径とスケールを考慮したマージンを計算
+                # (最大VDW半径 * スケール) をマージンとして使う
+                margin = frag_info[i]['max_vdw_radius'] * collision_scale
+                
+                frag_info[i]['bbox_min'] = np.min(positions_np, axis=0) - margin
+                frag_info[i]['bbox_max'] = np.max(positions_np, axis=0) + margin
+
+            # --- 4. 衝突判定ループ ---
             for i in range(len(frag_info)):
                 for j in range(i + 1, len(frag_info)):
                     frag_i = frag_info[i]
                     frag_j = frag_info[j]
                     
-                    # フラグメント間のすべての原子ペアについて衝突をチェック
+                    # === バウンディングボックス判定 ===
+                    # 2つのボックスが重なっているかチェック (AABB交差判定)
+                    # X, Y, Zの各軸で重なりをチェック
+                    overlap_x = (frag_i['bbox_min'][0] <= frag_j['bbox_max'][0] and frag_i['bbox_max'][0] >= frag_j['bbox_min'][0])
+                    overlap_y = (frag_i['bbox_min'][1] <= frag_j['bbox_max'][1] and frag_i['bbox_max'][1] >= frag_j['bbox_min'][1])
+                    overlap_z = (frag_i['bbox_min'][2] <= frag_j['bbox_max'][2] and frag_i['bbox_max'][2] >= frag_j['bbox_min'][2])
+                    
+                    # ボックスがX, Y, Zのいずれかの軸で離れている場合、原子間の詳細なチェックをスキップ
+                    if not (overlap_x and overlap_y and overlap_z):
+                        continue
+                    # =================================
+
+                    # ボックスが重なっている場合のみ、高コストな原子間の総当たりチェックを実行
                     total_push_vector = np.zeros(3)
                     collision_count = 0
                     
-                    for idx_i in frag_i['indices']:
-                        pos_i = np.array(conf.GetAtomPosition(idx_i))
-                        atom_i = mol.GetAtomWithIdx(idx_i)
-                        vdw_i = pt.GetRvdw(atom_i.GetAtomicNum())
+                    # 事前計算したNumpy配列を使用
+                    positions_i = frag_i['positions_np']
+                    positions_j = frag_j['positions_np']
+                    vdw_i_all = frag_i['vdw_radii_np']
+                    vdw_j_all = frag_j['vdw_radii_np']
+
+                    for k, idx_i in enumerate(frag_i['indices']):
+                        pos_i = positions_i[k]
+                        vdw_i = vdw_i_all[k]
                         
-                        for idx_j in frag_j['indices']:
-                            pos_j = np.array(conf.GetAtomPosition(idx_j))
-                            atom_j = mol.GetAtomWithIdx(idx_j)
-                            vdw_j = pt.GetRvdw(atom_j.GetAtomicNum())
+                        for l, idx_j in enumerate(frag_j['indices']):
+                            pos_j = positions_j[l]
+                            vdw_j = vdw_j_all[l]
                             
-                            # 距離と最小許容距離を計算
-                            distance = np.linalg.norm(pos_i - pos_j)
+                            distance_vec = pos_i - pos_j
+                            distance_sq = np.dot(distance_vec, distance_vec) # 平方根を避けて高速化
+                            
                             min_distance = (vdw_i + vdw_j) * collision_scale
+                            min_distance_sq = min_distance * min_distance
                             
-                            if distance < min_distance and distance > 0.01:
-                                # 衝突が検出された - 押し出しベクトルを計算
-                                push_direction = (pos_i - pos_j) / distance
-                                push_magnitude = (min_distance - distance) / 2
+                            if distance_sq < min_distance_sq and distance_sq > 0.0001:
+                                distance = np.sqrt(distance_sq)
+                                push_direction = distance_vec / distance
+                                push_magnitude = (min_distance - distance) / 2 # 押し出し量は半分ずつ
                                 total_push_vector += push_direction * push_magnitude
                                 collision_count += 1
                     
@@ -14700,7 +14753,7 @@ class MainWindow(QMainWindow):
                         # 平均的な押し出しベクトルを適用
                         avg_push_vector = total_push_vector / collision_count
                         
-                        # フラグメントiを正方向に、フラグメントjを負方向に移動
+                        # Conformerの座標を更新
                         for idx in frag_i['indices']:
                             pos = np.array(conf.GetAtomPosition(idx))
                             new_pos = pos + avg_push_vector
@@ -14712,10 +14765,8 @@ class MainWindow(QMainWindow):
                             conf.SetAtomPosition(idx, new_pos.tolist())
                         
                         moved = True
-                        
-                        # 重心を更新
-                        frag_i['centroid'] += avg_push_vector
-                        frag_j['centroid'] -= avg_push_vector
+                        # (この移動により、このイテレーションで使う frag_info の座標キャッシュが古くなりますが、
+                        #  次のイテレーションの最初でボックスと共に再計算されるため問題ありません)
 
     def draw_molecule_3d(self, mol):
         """3D 分子を描画し、軸アクターの参照をクリアする（軸の再制御は apply_3d_settings に任せる）"""
