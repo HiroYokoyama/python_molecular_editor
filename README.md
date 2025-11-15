@@ -136,8 +136,6 @@ This project is licensed under the **Apache-2.0 License**. See the `LICENSE` fil
 
 -----
 
-## 
-
 ## 概要
 
 このアプリケーションは、**PyQt6**によるモダンなGUI、**RDKit**による強力な化学計算、**PyVista**による高性能な3Dレンダリングを組み合わせ、分子構造の描画と視覚的な確認を容易にするツールです。
@@ -205,7 +203,6 @@ This project is licensed under the **Apache-2.0 License**. See the `LICENSE` fil
     ```bash
     moleditpy-installer
     ```
-```
 
 #### アプリケーションの起動
 
