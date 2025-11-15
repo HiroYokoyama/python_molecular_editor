@@ -11,7 +11,7 @@ DOI 10.5281/zenodo.17268532
 """
 
 #Version
-VERSION = '1.13.1'
+VERSION = '1.14.0'
 
 print("-----------------------------------------------------")
 print("MoleditPy — A Python-based molecular editing software")
@@ -43,7 +43,7 @@ from PyQt6.QtWidgets import (
     QFileDialog, QSizePolicy, QLabel, QLineEdit, QToolButton, QMenu, QMessageBox, 
     QInputDialog, QDialogButtonBox, QColorDialog, QCheckBox, QSlider, QFormLayout, 
     QRadioButton, QComboBox, QListWidget, QListWidgetItem, QButtonGroup, QTabWidget, 
-    QScrollArea, QFrame, QTableWidget, QTableWidgetItem
+    QScrollArea, QFrame, QTableWidget, QTableWidgetItem, QAbstractItemView
 )
 
 from PyQt6.QtGui import (
@@ -1075,7 +1075,8 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog):
     
         # Select all atoms button
         self.select_all_button = QPushButton("Select All Atoms")
-        self.select_all_button.setToolTip("Select all atoms in the molecule for planarization")
+        self.select_all_button.setToolTip("Select all atoms in the molecule for translation")
+        self.select_all_button.clicked.connect(self.select_all_atoms)
         button_layout.addWidget(self.select_all_button)
         
         button_layout.addStretch()
@@ -1255,6 +1256,29 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog):
         self.selected_atoms.clear()
         self.clear_atom_labels()
         self.update_display()
+    
+    def select_all_atoms(self):
+        """Select all atoms in the current molecule and update labels/UI."""
+        try:
+            # Prefer RDKit molecule if available
+            if hasattr(self, 'mol') and self.mol is not None:
+                try:
+                    n = self.mol.GetNumAtoms()
+                    # create a set of indices [0..n-1]
+                    self.selected_atoms = set(range(n))
+                except Exception:
+                    # fallback to main_window data map
+                    self.selected_atoms = set(self.main_window.data.atoms.keys()) if hasattr(self.main_window, 'data') else set()
+            else:
+                # fallback to main_window data map
+                self.selected_atoms = set(self.main_window.data.atoms.keys()) if hasattr(self.main_window, 'data') else set()
+
+            # Update labels and display
+            self.show_atom_labels()
+            self.update_display()
+
+        except Exception as e:
+            QMessageBox.warning(self, "Warning", f"Failed to select all atoms: {e}")
     
     def show_atom_labels(self):
         """選択された原子にラベルを表示"""
@@ -1445,6 +1469,577 @@ class MirrorDialog(QDialog):
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to apply mirror transformation: {str(e)}")
 
+class MoveGroupDialog(Dialog3DPickingMixin, QDialog):
+    """結合している分子グループを選択して並行移動・回転するダイアログ"""
+    
+    def __init__(self, mol, main_window, parent=None):
+        QDialog.__init__(self, parent)
+        Dialog3DPickingMixin.__init__(self)
+        self.mol = mol
+        self.main_window = main_window
+        self.selected_atoms = set()
+        self.group_atoms = set()  # 選択原子に結合している全原子
+        self.init_ui()
+    
+    def init_ui(self):
+        self.setWindowTitle("Move Group")
+        self.setModal(False)
+        self.setWindowFlags(Qt.WindowType.Window | Qt.WindowType.WindowStaysOnTopHint)
+        self.resize(300,400)  # ウィンドウサイズを設定
+        layout = QVBoxLayout(self)
+        
+        # ドラッグ状態管理
+        self.is_dragging_group = False
+        self.drag_start_pos = None
+        self.mouse_moved_during_drag = False  # ドラッグ中にマウスが動いたかを追跡
+        
+        # Instructions
+        instruction_label = QLabel("Click an atom in the 3D view to select its connected molecule group.\n"
+                                   "Left-drag: Move the group\n"
+                                   "Right-drag: Rotate the group around its center")
+        instruction_label.setWordWrap(True)
+        layout.addWidget(instruction_label)
+        
+        # Selected group display
+        self.selection_label = QLabel("No group selected")
+        layout.addWidget(self.selection_label)
+        
+        # Translation controls
+        trans_group = QLabel("Translation (Å):")
+        trans_group.setStyleSheet("font-weight: bold;")
+        layout.addWidget(trans_group)
+        
+        trans_layout = QGridLayout()
+        self.x_trans_input = QLineEdit("0.0")
+        self.y_trans_input = QLineEdit("0.0")
+        self.z_trans_input = QLineEdit("0.0")
+        
+        # Enterキーでapply_translationを実行
+        self.x_trans_input.returnPressed.connect(self.apply_translation)
+        self.y_trans_input.returnPressed.connect(self.apply_translation)
+        self.z_trans_input.returnPressed.connect(self.apply_translation)
+        
+        trans_layout.addWidget(QLabel("X:"), 0, 0)
+        trans_layout.addWidget(self.x_trans_input, 0, 1)
+        trans_layout.addWidget(QLabel("Y:"), 1, 0)
+        trans_layout.addWidget(self.y_trans_input, 1, 1)
+        trans_layout.addWidget(QLabel("Z:"), 2, 0)
+        trans_layout.addWidget(self.z_trans_input, 2, 1)
+        
+        trans_button_layout = QHBoxLayout()
+        reset_trans_button = QPushButton("Reset")
+        reset_trans_button.clicked.connect(self.reset_translation_inputs)
+        trans_button_layout.addWidget(reset_trans_button)
+        
+        apply_trans_button = QPushButton("Apply Translation")
+        apply_trans_button.clicked.connect(self.apply_translation)
+        trans_button_layout.addWidget(apply_trans_button)
+        
+        trans_layout.addLayout(trans_button_layout, 3, 0, 1, 2)
+        
+        layout.addLayout(trans_layout)
+        
+        layout.addSpacing(10)
+        
+        # Rotation controls
+        rot_group = QLabel("Rotation (degrees):")
+        rot_group.setStyleSheet("font-weight: bold;")
+        layout.addWidget(rot_group)
+        
+        rot_layout = QGridLayout()
+        self.x_rot_input = QLineEdit("0.0")
+        self.y_rot_input = QLineEdit("0.0")
+        self.z_rot_input = QLineEdit("0.0")
+        
+        # Enterキーでapply_rotationを実行
+        self.x_rot_input.returnPressed.connect(self.apply_rotation)
+        self.y_rot_input.returnPressed.connect(self.apply_rotation)
+        self.z_rot_input.returnPressed.connect(self.apply_rotation)
+        
+        rot_layout.addWidget(QLabel("Around X:"), 0, 0)
+        rot_layout.addWidget(self.x_rot_input, 0, 1)
+        rot_layout.addWidget(QLabel("Around Y:"), 1, 0)
+        rot_layout.addWidget(self.y_rot_input, 1, 1)
+        rot_layout.addWidget(QLabel("Around Z:"), 2, 0)
+        rot_layout.addWidget(self.z_rot_input, 2, 1)
+        
+        rot_button_layout = QHBoxLayout()
+        reset_rot_button = QPushButton("Reset")
+        reset_rot_button.clicked.connect(self.reset_rotation_inputs)
+        rot_button_layout.addWidget(reset_rot_button)
+        
+        apply_rot_button = QPushButton("Apply Rotation")
+        apply_rot_button.clicked.connect(self.apply_rotation)
+        rot_button_layout.addWidget(apply_rot_button)
+        
+        rot_layout.addLayout(rot_button_layout, 3, 0, 1, 2)
+        
+        layout.addLayout(rot_layout)
+        
+        # Buttons
+        button_layout = QHBoxLayout()
+        self.clear_button = QPushButton("Clear Selection")
+        self.clear_button.clicked.connect(self.clear_selection)
+        button_layout.addWidget(self.clear_button)
+        
+        button_layout.addStretch()
+        
+        close_button = QPushButton("Close")
+        close_button.clicked.connect(self.reject)
+        button_layout.addWidget(close_button)
+        
+        layout.addLayout(button_layout)
+        
+        # Enable picking to handle atom selection
+        self.enable_picking()
+    
+    def eventFilter(self, obj, event):
+        """3Dビューでのマウスイベント処理 - グループが選択されている場合はCustomInteractorStyleに任せる"""
+        if obj == self.main_window.plotter.interactor:
+            # ダブルクリック/トリプルクリックで状態が混乱するのを防ぐ
+            if event.type() == QEvent.Type.MouseButtonDblClick:
+                # ダブルクリックは無視し、状態をリセット
+                self.is_dragging_group = False
+                self.drag_start_pos = None
+                self.mouse_moved_during_drag = False
+                self.potential_drag = False
+                if hasattr(self, 'clicked_atom_for_toggle'):
+                    delattr(self, 'clicked_atom_for_toggle')
+                return False
+            
+            if event.type() == QEvent.Type.MouseButtonPress and event.button() == Qt.MouseButton.LeftButton:
+                # 前回の状態をクリーンアップ（トリプルクリック対策）
+                self.is_dragging_group = False
+                self.potential_drag = False
+                if hasattr(self, 'clicked_atom_for_toggle'):
+                    delattr(self, 'clicked_atom_for_toggle')
+                # グループが既に選択されている場合は、CustomInteractorStyleに処理を任せる
+                if self.group_atoms:
+                    return False
+                
+                # マウスプレス時の処理
+                # マウスプレス時の処理
+                try:
+                    interactor = self.main_window.plotter.interactor
+                    click_pos = interactor.GetEventPosition()
+                    
+                    # まずピッキングしてどの原子がクリックされたか確認
+                    picker = self.main_window.plotter.picker
+                    picker.Pick(click_pos[0], click_pos[1], 0, self.main_window.plotter.renderer)
+                    
+                    clicked_atom_idx = None
+                    if picker.GetActor() is self.main_window.atom_actor:
+                        picked_position = np.array(picker.GetPickPosition())
+                        distances = np.linalg.norm(self.main_window.atom_positions_3d - picked_position, axis=1)
+                        closest_atom_idx = np.argmin(distances)
+                        
+                        # 閾値チェック
+                        if 0 <= closest_atom_idx < self.mol.GetNumAtoms():
+                            atom = self.mol.GetAtomWithIdx(int(closest_atom_idx))
+                            if atom:
+                                atomic_num = atom.GetAtomicNum()
+                                pt = Chem.GetPeriodicTable()
+                                vdw_radius = pt.GetRvdw(atomic_num)
+                                click_threshold = vdw_radius * 1.5
+                                
+                                if distances[closest_atom_idx] < click_threshold:
+                                    clicked_atom_idx = int(closest_atom_idx)
+                    
+                    
+                    # クリックされた原子の処理
+                    if clicked_atom_idx is not None:
+                        if self.group_atoms and clicked_atom_idx in self.group_atoms:
+                            # 既存のグループ内の原子 - ドラッグ準備（まだドラッグとは確定しない）
+                            self.is_dragging_group = False  # まだドラッグ中ではない
+                            self.drag_start_pos = click_pos
+                            self.drag_atom_idx = clicked_atom_idx
+                            self.mouse_moved_during_drag = False
+                            self.potential_drag = True  # ドラッグの可能性がある
+                            self.clicked_atom_for_toggle = clicked_atom_idx  # トグル用に保存
+                            # イベントを消費せず、カメラ操作を許可（閾値超えたらドラッグ開始）
+                            return False
+                        else:
+                            # グループ外の原子 - 新しいグループを選択
+                            # 親クラス（Mixin）のon_atom_pickedを手動で呼ぶ
+                            self.on_atom_picked(clicked_atom_idx)
+                            return True
+                    else:
+                        # 原子以外をクリック
+                        # グループがあっても通常のカメラ操作を許可
+                        return False
+                    
+                except Exception as e:
+                    print(f"Error in mouse press: {e}")
+                    return False
+            
+            elif event.type() == QEvent.Type.MouseMove:
+                # マウス移動時の処理
+                if getattr(self, 'potential_drag', False) and self.drag_start_pos and not self.is_dragging_group:
+                    # potential_drag状態：閾値チェック
+                    try:
+                        interactor = self.main_window.plotter.interactor
+                        current_pos = interactor.GetEventPosition()
+                        dx = current_pos[0] - self.drag_start_pos[0]
+                        dy = current_pos[1] - self.drag_start_pos[1]
+                        
+                        # 閾値を超えたらドラッグ開始
+                        drag_threshold = 5  # ピクセル
+                        if abs(dx) > drag_threshold or abs(dy) > drag_threshold:
+                            # ドラッグ開始を確定
+                            self.is_dragging_group = True
+                            self.potential_drag = False
+                            try:
+                                self.main_window.plotter.setCursor(Qt.CursorShape.ClosedHandCursor)
+                            except Exception:
+                                pass
+                    except Exception:
+                        pass
+                    
+                    # 閾値以下の場合はカメラ操作を許可
+                    if not self.is_dragging_group:
+                        return False
+                
+                if self.is_dragging_group and self.drag_start_pos:
+                    # ドラッグモード中 - 移動距離を記録するのみ（リアルタイム更新なし）
+                    try:
+                        interactor = self.main_window.plotter.interactor
+                        current_pos = interactor.GetEventPosition()
+                        
+                        dx = current_pos[0] - self.drag_start_pos[0]
+                        dy = current_pos[1] - self.drag_start_pos[1]
+                        
+                        if abs(dx) > 2 or abs(dy) > 2:
+                            self.mouse_moved_during_drag = True
+                    except Exception:
+                        pass
+                    
+                    # ドラッグ中はイベントを消費してカメラ回転を防ぐ
+                    return True
+                
+                # ホバー処理（ドラッグ中でない場合）
+                if self.group_atoms:
+                    try:
+                        interactor = self.main_window.plotter.interactor
+                        current_pos = interactor.GetEventPosition()
+                        picker = self.main_window.plotter.picker
+                        picker.Pick(current_pos[0], current_pos[1], 0, self.main_window.plotter.renderer)
+                        
+                        if picker.GetActor() is self.main_window.atom_actor:
+                            picked_position = np.array(picker.GetPickPosition())
+                            distances = np.linalg.norm(self.main_window.atom_positions_3d - picked_position, axis=1)
+                            closest_atom_idx = np.argmin(distances)
+                            
+                            if closest_atom_idx in self.group_atoms:
+                                self.main_window.plotter.setCursor(Qt.CursorShape.OpenHandCursor)
+                            else:
+                                self.main_window.plotter.setCursor(Qt.CursorShape.ArrowCursor)
+                        else:
+                            self.main_window.plotter.setCursor(Qt.CursorShape.ArrowCursor)
+                    except Exception:
+                        pass
+                
+                # ドラッグ中でない場合はカメラ回転を許可
+                return False
+            
+            elif event.type() == QEvent.Type.MouseButtonRelease and event.button() == Qt.MouseButton.LeftButton:
+                # マウスリリース時の処理
+                if getattr(self, 'potential_drag', False) or (self.is_dragging_group and self.drag_start_pos):
+                    try:
+                        if self.is_dragging_group and self.mouse_moved_during_drag:
+                            # ドラッグが実行された - CustomInteractorStyleに任せる（何もしない）
+                            pass
+                        else:
+                            # マウスが閾値以下の移動 = 単なるクリック
+                            # グループ内の原子をクリックした場合は選択/解除をトグル
+                            if hasattr(self, 'clicked_atom_for_toggle'):
+                                clicked_atom = self.clicked_atom_for_toggle
+                                delattr(self, 'clicked_atom_for_toggle')
+                                # ドラッグ状態をリセットしてからトグル処理
+                                self.is_dragging_group = False
+                                self.drag_start_pos = None
+                                self.mouse_moved_during_drag = False
+                                self.potential_drag = False
+                                if hasattr(self, 'last_drag_positions'):
+                                    delattr(self, 'last_drag_positions')
+                                # トグル処理を実行
+                                self.on_atom_picked(clicked_atom)
+                                try:
+                                    self.main_window.plotter.setCursor(Qt.CursorShape.ArrowCursor)
+                                except Exception:
+                                    pass
+                                return True
+                        
+                    except Exception:
+                        pass
+                    finally:
+                        # ドラッグ状態をリセット
+                        self.is_dragging_group = False
+                        self.drag_start_pos = None
+                        self.mouse_moved_during_drag = False
+                        self.potential_drag = False
+                        # 保存していた位置情報をクリア
+                        if hasattr(self, 'last_drag_positions'):
+                            delattr(self, 'last_drag_positions')
+                        try:
+                            self.main_window.plotter.setCursor(Qt.CursorShape.ArrowCursor)
+                        except Exception:
+                            pass
+                    
+                    return True  # イベントを消費
+                
+                # ドラッグ中でない場合は通常のリリース処理
+                return False
+        
+        # その他のイベントは親クラスに渡す
+        return False
+    
+    def on_atom_picked(self, atom_idx):
+        """原子がピックされたときに、その原子が属する連結成分全体を選択（複数グループ対応）"""
+        # ドラッグ中は選択を変更しない（ただしリリース時のトグルは許可）
+        if getattr(self, 'is_dragging_group', False):
+            return
+        
+        # BFS/DFSで連結成分を探索
+        visited = set()
+        queue = [atom_idx]
+        visited.add(atom_idx)
+        
+        while queue:
+            current_idx = queue.pop(0)
+            for bond_idx in range(self.mol.GetNumBonds()):
+                bond = self.mol.GetBondWithIdx(bond_idx)
+                begin_idx = bond.GetBeginAtomIdx()
+                end_idx = bond.GetEndAtomIdx()
+                
+                if begin_idx == current_idx and end_idx not in visited:
+                    visited.add(end_idx)
+                    queue.append(end_idx)
+                elif end_idx == current_idx and begin_idx not in visited:
+                    visited.add(begin_idx)
+                    queue.append(begin_idx)
+        
+        # 新しいグループとして追加または解除
+        if visited.issubset(self.group_atoms):
+            # すでに選択されている - 解除
+            self.group_atoms -= visited
+        else:
+            # 新しいグループを追加
+            self.group_atoms |= visited
+        
+        self.selected_atoms.add(atom_idx)
+        self.show_atom_labels()
+        self.update_display()
+    
+    def update_display(self):
+        if not self.group_atoms:
+            self.selection_label.setText("No group selected")
+        else:
+            atom_info = []
+            for atom_idx in sorted(self.group_atoms):
+                symbol = self.mol.GetAtomWithIdx(atom_idx).GetSymbol()
+                atom_info.append(f"{symbol}({atom_idx})")
+            
+            self.selection_label.setText(f"Selected group: {len(self.group_atoms)} atoms - {', '.join(atom_info[:5])}{' ...' if len(atom_info) > 5 else ''}")
+    
+    def show_atom_labels(self):
+        """選択されたグループの原子をハイライト表示（Ctrlクリックと同じスタイル）"""
+        self.clear_atom_labels()
+        
+        if not self.group_atoms:
+            return
+        
+        # 選択された原子のインデックスリストを作成
+        selected_indices = list(self.group_atoms)
+        
+        # 選択された原子の位置を取得
+        selected_positions = self.main_window.atom_positions_3d[selected_indices]
+        
+        # 原子の半径を少し大きくしてハイライト表示
+        selected_radii = np.array([VDW_RADII.get(
+            self.mol.GetAtomWithIdx(i).GetSymbol(), 0.4) * 1.3 
+            for i in selected_indices])
+        
+        # ハイライト用のデータセットを作成
+        highlight_source = pv.PolyData(selected_positions)
+        highlight_source['radii'] = selected_radii
+        
+        # 黄色の半透明球でハイライト
+        highlight_glyphs = highlight_source.glyph(
+            scale='radii', 
+            geom=pv.Sphere(radius=1.0, theta_resolution=16, phi_resolution=16), 
+            orient=False
+        )
+        
+        # ハイライトアクターを追加して保存（ピッキング不可に設定）
+        self.highlight_actor = self.main_window.plotter.add_mesh(
+            highlight_glyphs, 
+            color='yellow', 
+            opacity=0.3, 
+            name='move_group_highlight',
+            pickable=False  # ピッキングを無効化
+        )
+        
+        self.main_window.plotter.render()
+    
+    def clear_atom_labels(self):
+        """原子ハイライトをクリア"""
+        try:
+            self.main_window.plotter.remove_actor('move_group_highlight')
+        except Exception:
+            pass
+        
+        if hasattr(self, 'highlight_actor'):
+            try:
+                self.main_window.plotter.remove_actor(self.highlight_actor)
+            except Exception:
+                pass
+            self.highlight_actor = None
+        
+        try:
+            self.main_window.plotter.render()
+        except Exception:
+            pass
+    
+    def reset_translation_inputs(self):
+        """Translation入力フィールドをリセット"""
+        self.x_trans_input.setText("0.0")
+        self.y_trans_input.setText("0.0")
+        self.z_trans_input.setText("0.0")
+    
+    def apply_translation(self):
+        """選択したグループを並行移動"""
+        if not self.group_atoms:
+            QMessageBox.warning(self, "Warning", "Please select a group first.")
+            return
+        
+        try:
+            dx = float(self.x_trans_input.text())
+            dy = float(self.y_trans_input.text())
+            dz = float(self.z_trans_input.text())
+        except ValueError:
+            QMessageBox.warning(self, "Warning", "Please enter valid translation values.")
+            return
+        
+        translation_vector = np.array([dx, dy, dz])
+        
+        conf = self.mol.GetConformer()
+        for atom_idx in self.group_atoms:
+            atom_pos = np.array(conf.GetAtomPosition(atom_idx))
+            new_pos = atom_pos + translation_vector
+            conf.SetAtomPosition(atom_idx, new_pos.tolist())
+            self.main_window.atom_positions_3d[atom_idx] = new_pos
+        
+        self.main_window.draw_molecule_3d(self.mol)
+        self.main_window.update_chiral_labels()
+        self.show_atom_labels()  # ラベルを再描画
+        self.main_window.push_undo_state()
+    
+    def reset_rotation_inputs(self):
+        """Rotation入力フィールドをリセット"""
+        self.x_rot_input.setText("0.0")
+        self.y_rot_input.setText("0.0")
+        self.z_rot_input.setText("0.0")
+    
+    def apply_rotation(self):
+        """選択したグループを回転"""
+        if not self.group_atoms:
+            QMessageBox.warning(self, "Warning", "Please select a group first.")
+            return
+        
+        try:
+            rx = float(self.x_rot_input.text())
+            ry = float(self.y_rot_input.text())
+            rz = float(self.z_rot_input.text())
+        except ValueError:
+            QMessageBox.warning(self, "Warning", "Please enter valid rotation values.")
+            return
+        
+        # 度をラジアンに変換
+        rx_rad = np.radians(rx)
+        ry_rad = np.radians(ry)
+        rz_rad = np.radians(rz)
+        
+        # グループの重心を計算
+        conf = self.mol.GetConformer()
+        positions = []
+        for atom_idx in self.group_atoms:
+            pos = conf.GetAtomPosition(atom_idx)
+            positions.append([pos.x, pos.y, pos.z])
+        centroid = np.mean(positions, axis=0)
+        
+        # 回転行列を作成
+        # X軸周り
+        Rx = np.array([
+            [1, 0, 0],
+            [0, np.cos(rx_rad), -np.sin(rx_rad)],
+            [0, np.sin(rx_rad), np.cos(rx_rad)]
+        ])
+        # Y軸周り
+        Ry = np.array([
+            [np.cos(ry_rad), 0, np.sin(ry_rad)],
+            [0, 1, 0],
+            [-np.sin(ry_rad), 0, np.cos(ry_rad)]
+        ])
+        # Z軸周り
+        Rz = np.array([
+            [np.cos(rz_rad), -np.sin(rz_rad), 0],
+            [np.sin(rz_rad), np.cos(rz_rad), 0],
+            [0, 0, 1]
+        ])
+        
+        # 合成回転行列 (Z * Y * X)
+        R = Rz @ Ry @ Rx
+        
+        # 各原子を回転
+        for atom_idx in self.group_atoms:
+            atom_pos = np.array(conf.GetAtomPosition(atom_idx))
+            # 重心を原点に移動
+            centered_pos = atom_pos - centroid
+            # 回転
+            rotated_pos = R @ centered_pos
+            # 重心を元に戻す
+            new_pos = rotated_pos + centroid
+            conf.SetAtomPosition(atom_idx, new_pos.tolist())
+            self.main_window.atom_positions_3d[atom_idx] = new_pos
+        
+        self.main_window.draw_molecule_3d(self.mol)
+        self.main_window.update_chiral_labels()
+        self.show_atom_labels()  # ラベルを再描画
+        self.main_window.push_undo_state()
+    
+    def clear_selection(self):
+        """選択をクリア"""
+        self.selected_atoms.clear()
+        self.group_atoms.clear()
+        self.clear_atom_labels()
+        self.update_display()
+        # ドラッグ関連のフラグもリセット
+        self.is_dragging_group = False
+        self.drag_start_pos = None
+        if hasattr(self, 'last_drag_positions'):
+            delattr(self, 'last_drag_positions')
+    
+    def closeEvent(self, event):
+        """ダイアログが閉じられる時の処理"""
+        self.clear_atom_labels()
+        self.disable_picking()
+        try:
+            self.main_window.draw_molecule_3d(self.mol)
+        except Exception:
+            pass
+        super().closeEvent(event)
+    
+    def reject(self):
+        """キャンセル時の処理"""
+        self.clear_atom_labels()
+        self.disable_picking()
+        try:
+            self.main_window.draw_molecule_3d(self.mol)
+        except Exception:
+            pass
+        super().reject()
+
+
 class AlignPlaneDialog(Dialog3DPickingMixin, QDialog):
     def __init__(self, mol, main_window, plane, preselected_atoms=None, parent=None):
         QDialog.__init__(self, parent)
@@ -1486,6 +2081,12 @@ class AlignPlaneDialog(Dialog3DPickingMixin, QDialog):
         self.clear_button = QPushButton("Clear Selection")
         self.clear_button.clicked.connect(self.clear_selection)
         button_layout.addWidget(self.clear_button)
+        
+        # Select all atoms button
+        self.select_all_button = QPushButton("Select All Atoms")
+        self.select_all_button.setToolTip("Select all atoms in the molecule for alignment")
+        self.select_all_button.clicked.connect(self.select_all_atoms)
+        button_layout.addWidget(self.select_all_button)
         
         button_layout.addStretch()
         
@@ -1540,6 +2141,29 @@ class AlignPlaneDialog(Dialog3DPickingMixin, QDialog):
         self.selected_atoms.clear()
         self.clear_atom_labels()
         self.update_display()
+    
+    def select_all_atoms(self):
+        """Select all atoms in the current molecule and update labels/UI."""
+        try:
+            # Prefer RDKit molecule if available
+            if hasattr(self, 'mol') and self.mol is not None:
+                try:
+                    n = self.mol.GetNumAtoms()
+                    # create a set of indices [0..n-1]
+                    self.selected_atoms = set(range(n))
+                except Exception:
+                    # fallback to main_window data map
+                    self.selected_atoms = set(self.main_window.data.atoms.keys()) if hasattr(self.main_window, 'data') else set()
+            else:
+                # fallback to main_window data map
+                self.selected_atoms = set(self.main_window.data.atoms.keys()) if hasattr(self.main_window, 'data') else set()
+
+            # Update labels and display
+            self.show_atom_labels()
+            self.update_display()
+
+        except Exception as e:
+            QMessageBox.warning(self, "Warning", f"Failed to select all atoms: {e}")
     
     def update_display(self):
         """表示を更新"""
@@ -6997,8 +7621,10 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
         self._mouse_press_pos = None
 
         self.AddObserver("LeftButtonPressEvent", self.on_left_button_down)
+        self.AddObserver("RightButtonPressEvent", self.on_right_button_down)
         self.AddObserver("MouseMoveEvent", self.on_mouse_move)
         self.AddObserver("LeftButtonReleaseEvent", self.on_left_button_up)
+        self.AddObserver("RightButtonReleaseEvent", self.on_right_button_up)
 
     def on_left_button_down(self, obj, event):
         """
@@ -7006,14 +7632,110 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
         原子を掴めた場合のみカスタム動作に入り、それ以外は親クラス（カメラ回転）に任せます。
         """
         mw = self.main_window
-        # If the Qt eventFilter already processed this pick, skip to avoid duplicate handling.
+        
+        # 前回のドラッグ状態をクリア（トリプルクリック/ダブルクリック対策）
+        self._is_dragging_atom = False
+        self.is_dragging = False
+        self._mouse_moved_during_drag = False
+        self._mouse_press_pos = None
+        
+        # Move Groupダイアログが開いている場合の処理
+        move_group_dialog = None
         try:
-            if getattr(mw, '_picking_consumed', False):
-                # Reset the flag and ignore this VTK event
-                mw._picking_consumed = False
-                return
+            for widget in QApplication.topLevelWidgets():
+                if isinstance(widget, MoveGroupDialog) and widget.isVisible():
+                    move_group_dialog = widget
+                    break
         except Exception:
             pass
+        
+        if move_group_dialog and move_group_dialog.group_atoms:
+            # グループが選択されている場合、グループドラッグ処理
+            click_pos = self.GetInteractor().GetEventPosition()
+            picker = mw.plotter.picker
+            picker.Pick(click_pos[0], click_pos[1], 0, mw.plotter.renderer)
+            
+            clicked_atom_idx = None
+            if picker.GetActor() is mw.atom_actor:
+                picked_position = np.array(picker.GetPickPosition())
+                distances = np.linalg.norm(mw.atom_positions_3d - picked_position, axis=1)
+                closest_atom_idx = np.argmin(distances)
+                
+                if 0 <= closest_atom_idx < mw.current_mol.GetNumAtoms():
+                    atom = mw.current_mol.GetAtomWithIdx(int(closest_atom_idx))
+                    if atom:
+                        atomic_num = atom.GetAtomicNum()
+                        vdw_radius = pt.GetRvdw(atomic_num)
+                        click_threshold = vdw_radius * 1.5
+                        
+                        if distances[closest_atom_idx] < click_threshold:
+                            clicked_atom_idx = int(closest_atom_idx)
+            
+            # グループ内の原子がクリックされた場合
+            if clicked_atom_idx is not None:
+                if clicked_atom_idx in move_group_dialog.group_atoms:
+                    # 既存グループ内の原子 - ドラッグ準備
+                    move_group_dialog._is_dragging_group_vtk = True
+                    move_group_dialog._drag_atom_idx = clicked_atom_idx
+                    move_group_dialog._drag_start_pos = click_pos
+                    move_group_dialog._mouse_moved = False
+                    # 初期位置を保存
+                    move_group_dialog._initial_positions = {}
+                    conf = mw.current_mol.GetConformer()
+                    for atom_idx in move_group_dialog.group_atoms:
+                        pos = conf.GetAtomPosition(atom_idx)
+                        move_group_dialog._initial_positions[atom_idx] = np.array([pos.x, pos.y, pos.z])
+                    mw.plotter.setCursor(Qt.CursorShape.ClosedHandCursor)
+                    return  # カメラ回転を無効化
+                else:
+                    # グループ外の原子をクリック - BFS/DFSで連結成分を探索
+                    visited = set()
+                    queue = [clicked_atom_idx]
+                    visited.add(clicked_atom_idx)
+                    
+                    while queue:
+                        current_idx = queue.pop(0)
+                        for bond_idx in range(mw.current_mol.GetNumBonds()):
+                            bond = mw.current_mol.GetBondWithIdx(bond_idx)
+                            begin_idx = bond.GetBeginAtomIdx()
+                            end_idx = bond.GetEndAtomIdx()
+                            
+                            if begin_idx == current_idx and end_idx not in visited:
+                                visited.add(end_idx)
+                                queue.append(end_idx)
+                            elif end_idx == current_idx and begin_idx not in visited:
+                                visited.add(begin_idx)
+                                queue.append(begin_idx)
+                    
+                    # Ctrlキーが押されている場合のみ複数グループ選択
+                    is_ctrl_pressed = bool(QApplication.keyboardModifiers() & Qt.KeyboardModifier.ControlModifier)
+                    
+                    if is_ctrl_pressed:
+                        # Ctrl + クリック: 追加または解除
+                        if visited.issubset(move_group_dialog.group_atoms):
+                            # すでに選択されている - 解除
+                            move_group_dialog.group_atoms -= visited
+                        else:
+                            # 新しいグループを追加
+                            move_group_dialog.group_atoms |= visited
+                    else:
+                        # 通常のクリック: 既存の選択を置き換え
+                        move_group_dialog.group_atoms = visited.copy()
+                    
+                    move_group_dialog.selected_atoms.add(clicked_atom_idx)
+                    move_group_dialog.show_atom_labels()
+                    move_group_dialog.update_display()
+                    return
+            else:
+                # 原子以外をクリック - 全選択を解除
+                move_group_dialog.group_atoms.clear()
+                move_group_dialog.selected_atoms.clear()
+                move_group_dialog.clear_atom_labels()
+                move_group_dialog.update_display()
+                # カメラ回転を許可
+                super(CustomInteractorStyle, self).OnLeftButtonDown()
+                return
+        
         is_temp_mode = bool(QApplication.keyboardModifiers() & Qt.KeyboardModifier.AltModifier)
         is_edit_active = mw.is_3d_edit_mode or is_temp_mode
         
@@ -7056,30 +7778,9 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
             super().OnLeftButtonDown()
             return
         
-        # Ctrl+クリックでの原子選択（3D編集用）
-        if is_ctrl_click and mw.current_mol:
-            click_pos = self.GetInteractor().GetEventPosition()
-            picker = mw.plotter.picker
-            picker.Pick(click_pos[0], click_pos[1], 0, mw.plotter.renderer)
-
-            if picker.GetActor() is mw.atom_actor:
-                picked_position = np.array(picker.GetPickPosition())
-                distances = np.linalg.norm(mw.atom_positions_3d - picked_position, axis=1)
-                closest_atom_idx = np.argmin(distances)
-
-                # 範囲チェックを追加
-                if 0 <= closest_atom_idx < mw.current_mol.GetNumAtoms():
-                    # クリック閾値チェック
-                    atom = mw.current_mol.GetAtomWithIdx(int(closest_atom_idx))
-                    if atom:
-                        atomic_num = atom.GetAtomicNum()
-                        vdw_radius = pt.GetRvdw(atomic_num)
-                        click_threshold = vdw_radius * 1.5
-
-                        if distances[closest_atom_idx] < click_threshold:
-                            # 3D編集用の原子選択をトグル
-                            mw.toggle_atom_selection_3d(int(closest_atom_idx))
-                            return  # カメラ回転は無効
+        # Ctrl+クリックの原子選択機能は無効化（Move Group機能で代替）
+        # if is_ctrl_click and mw.current_mol:
+        #     ... (無効化)
 
         # 3D分子(mw.current_mol)が存在する場合のみ、原子の選択処理を実行
         if is_edit_active and mw.current_mol:
@@ -7112,11 +7813,111 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
         self._is_dragging_atom = False
         super().OnLeftButtonDown()
 
+    def on_right_button_down(self, obj, event):
+        """
+        右クリック時の処理。Move Groupダイアログが開いている場合はグループ回転を開始。
+        """
+        mw = self.main_window
+        
+        # Move Groupダイアログが開いているか確認
+        move_group_dialog = None
+        try:
+            for widget in QApplication.topLevelWidgets():
+                if isinstance(widget, MoveGroupDialog) and widget.isVisible():
+                    move_group_dialog = widget
+                    break
+        except Exception:
+            pass
+        
+        if move_group_dialog and move_group_dialog.group_atoms:
+            # グループが選択されている場合、回転ドラッグを開始
+            click_pos = self.GetInteractor().GetEventPosition()
+            picker = mw.plotter.picker
+            picker.Pick(click_pos[0], click_pos[1], 0, mw.plotter.renderer)
+            
+            clicked_atom_idx = None
+            if picker.GetActor() is mw.atom_actor:
+                picked_position = np.array(picker.GetPickPosition())
+                distances = np.linalg.norm(mw.atom_positions_3d - picked_position, axis=1)
+                closest_atom_idx = np.argmin(distances)
+                
+                if 0 <= closest_atom_idx < mw.current_mol.GetNumAtoms():
+                    atom = mw.current_mol.GetAtomWithIdx(int(closest_atom_idx))
+                    if atom:
+                        atomic_num = atom.GetAtomicNum()
+                        vdw_radius = pt.GetRvdw(atomic_num)
+                        click_threshold = vdw_radius * 1.5
+                        
+                        if distances[closest_atom_idx] < click_threshold:
+                            clicked_atom_idx = int(closest_atom_idx)
+            
+            # グループ内の原子がクリックされた場合、回転ドラッグを開始
+            if clicked_atom_idx is not None and clicked_atom_idx in move_group_dialog.group_atoms:
+                move_group_dialog._is_rotating_group_vtk = True
+                move_group_dialog._rotation_start_pos = click_pos
+                move_group_dialog._rotation_mouse_moved = False
+                move_group_dialog._rotation_atom_idx = clicked_atom_idx  # 掴んだ原子を記録
+                
+                # 初期位置と重心を保存
+                move_group_dialog._initial_positions = {}
+                conf = mw.current_mol.GetConformer()
+                centroid = np.zeros(3)
+                for atom_idx in move_group_dialog.group_atoms:
+                    pos = conf.GetAtomPosition(atom_idx)
+                    pos_array = np.array([pos.x, pos.y, pos.z])
+                    move_group_dialog._initial_positions[atom_idx] = pos_array
+                    centroid += pos_array
+                centroid /= len(move_group_dialog.group_atoms)
+                move_group_dialog._group_centroid = centroid
+                
+                mw.plotter.setCursor(Qt.CursorShape.ClosedHandCursor)
+                return  # カメラ回転を無効化
+        
+        # 通常の右クリック処理
+        super().OnRightButtonDown()
+
     def on_mouse_move(self, obj, event):
         """
         マウス移動時の処理。原子ドラッグ中か、それ以外（カメラ回転＋ホバー）かをハンドリングします。
         """
         mw = self.main_window
+        
+        # Move Groupダイアログのドラッグ処理
+        move_group_dialog = None
+        try:
+            for widget in QApplication.topLevelWidgets():
+                if isinstance(widget, MoveGroupDialog) and widget.isVisible():
+                    move_group_dialog = widget
+                    break
+        except Exception:
+            pass
+        
+        if move_group_dialog and getattr(move_group_dialog, '_is_dragging_group_vtk', False):
+            # グループをドラッグ中 - 移動距離を記録するのみ
+            interactor = self.GetInteractor()
+            current_pos = interactor.GetEventPosition()
+            
+            dx = current_pos[0] - move_group_dialog._drag_start_pos[0]
+            dy = current_pos[1] - move_group_dialog._drag_start_pos[1]
+            
+            if abs(dx) > 2 or abs(dy) > 2:
+                move_group_dialog._mouse_moved = True
+            
+            return  # カメラ回転を無効化
+        
+        # グループ回転中の処理
+        if move_group_dialog and getattr(move_group_dialog, '_is_rotating_group_vtk', False):
+            interactor = self.GetInteractor()
+            current_pos = interactor.GetEventPosition()
+            
+            dx = current_pos[0] - move_group_dialog._rotation_start_pos[0]
+            dy = current_pos[1] - move_group_dialog._rotation_start_pos[1]
+            
+            if abs(dx) > 2 or abs(dy) > 2:
+                move_group_dialog._rotation_mouse_moved = True
+            
+            return  # カメラ回転を無効化
+        
         interactor = self.GetInteractor()
 
         # マウス移動があったことを記録
@@ -7164,13 +7965,99 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
         クリック終了時の処理。状態をリセットします。
         """
         mw = self.main_window
-        # If the Qt eventFilter already processed this click/release, clear flag and ignore
+        
+        # Move Groupダイアログのドラッグ終了処理
+        move_group_dialog = None
         try:
-            if getattr(mw, '_picking_consumed', False):
-                mw._picking_consumed = False
-                return
+            for widget in QApplication.topLevelWidgets():
+                if isinstance(widget, MoveGroupDialog) and widget.isVisible():
+                    move_group_dialog = widget
+                    break
         except Exception:
             pass
+        
+        # ダブルクリック/トリプルクリックで状態が混乱するのを防ぐ（Move Group用）
+        if move_group_dialog:
+            if getattr(move_group_dialog, '_is_dragging_group_vtk', False) and not getattr(move_group_dialog, '_mouse_moved', False):
+                # ドラッグしていない状態で複数クリックされた場合は状態をリセット
+                move_group_dialog._is_dragging_group_vtk = False
+                move_group_dialog._drag_start_pos = None
+                move_group_dialog._mouse_moved = False
+                if hasattr(move_group_dialog, '_initial_positions'):
+                    delattr(move_group_dialog, '_initial_positions')
+        
+        if move_group_dialog and getattr(move_group_dialog, '_is_dragging_group_vtk', False):
+            if getattr(move_group_dialog, '_mouse_moved', False):
+                # ドラッグが実行された - リリース時に座標を更新
+                try:
+                    interactor = self.GetInteractor()
+                    renderer = mw.plotter.renderer
+                    current_pos = interactor.GetEventPosition()
+                    conf = mw.current_mol.GetConformer()
+                    
+                    # ドラッグ原子の初期位置
+                    drag_atom_initial_pos = move_group_dialog._initial_positions[move_group_dialog._drag_atom_idx]
+                    
+                    # スクリーン座標からワールド座標への変換
+                    renderer.SetWorldPoint(drag_atom_initial_pos[0], drag_atom_initial_pos[1], drag_atom_initial_pos[2], 1.0)
+                    renderer.WorldToDisplay()
+                    display_coords = renderer.GetDisplayPoint()
+                    
+                    new_display_pos = (current_pos[0], current_pos[1], display_coords[2])
+                    renderer.SetDisplayPoint(new_display_pos[0], new_display_pos[1], new_display_pos[2])
+                    renderer.DisplayToWorld()
+                    new_world_coords = renderer.GetWorldPoint()
+                    
+                    # 移動ベクトル
+                    translation_vector = np.array([
+                        new_world_coords[0] - drag_atom_initial_pos[0],
+                        new_world_coords[1] - drag_atom_initial_pos[1],
+                        new_world_coords[2] - drag_atom_initial_pos[2]
+                    ])
+                    
+                    # グループ全体を移動
+                    for atom_idx in move_group_dialog.group_atoms:
+                        initial_pos = move_group_dialog._initial_positions[atom_idx]
+                        new_pos = initial_pos + translation_vector
+                        conf.SetAtomPosition(atom_idx, new_pos.tolist())
+                        mw.atom_positions_3d[atom_idx] = new_pos
+                    
+                    # 3D表示を更新
+                    mw.draw_molecule_3d(mw.current_mol)
+                    mw.update_chiral_labels()
+                    move_group_dialog.show_atom_labels()
+                    mw.push_undo_state()
+                except Exception as e:
+                    print(f"Error finalizing group drag: {e}")
+            else:
+                # ドラッグがなかった = クリックのみ → トグル処理
+                if hasattr(move_group_dialog, '_drag_atom_idx'):
+                    clicked_atom = move_group_dialog._drag_atom_idx
+                    try:
+                        move_group_dialog.on_atom_picked(clicked_atom)
+                    except Exception as e:
+                        print(f"Error in toggle: {e}")
+            
+            # 状態をリセット（完全なクリーンアップ）
+            move_group_dialog._is_dragging_group_vtk = False
+            move_group_dialog._drag_start_pos = None
+            move_group_dialog._mouse_moved = False
+            if hasattr(move_group_dialog, '_initial_positions'):
+                delattr(move_group_dialog, '_initial_positions')
+            if hasattr(move_group_dialog, '_drag_atom_idx'):
+                delattr(move_group_dialog, '_drag_atom_idx')
+            
+            # CustomInteractorStyleの状態もクリア
+            self._is_dragging_atom = False
+            self.is_dragging = False
+            self._mouse_moved_during_drag = False
+            self._mouse_press_pos = None
+            
+            try:
+                mw.plotter.setCursor(Qt.CursorShape.ArrowCursor)
+            except Exception:
+                pass
+            return
 
         # 計測モードで、マウスが動いていない場合（つまりクリック）の処理
         if mw.measurement_mode and not self._mouse_moved_during_drag and self._mouse_press_pos is not None:
@@ -7286,10 +8173,30 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
             # カメラ回転の後始末を親クラスに任せます
             super().OnLeftButtonUp()
 
-        # 状態をリセット
+        # 状態をリセット（完全なクリーンアップ）
         self._is_dragging_atom = False
-        self.is_dragging = False # is_draggingもリセット
-        self._mouse_press_pos = None  # マウスプレス位置もリセット
+        self.is_dragging = False
+        self._mouse_press_pos = None
+        self._mouse_moved_during_drag = False
+        
+        # Move Group関連の状態もクリア
+        try:
+            move_group_dialog = None
+            for widget in QApplication.topLevelWidgets():
+                if isinstance(widget, MoveGroupDialog) and widget.isVisible():
+                    move_group_dialog = widget
+                    break
+            
+            if move_group_dialog:
+                move_group_dialog._is_dragging_group_vtk = False
+                move_group_dialog._drag_start_pos = None
+                move_group_dialog._mouse_moved = False
+                if hasattr(move_group_dialog, '_initial_positions'):
+                    delattr(move_group_dialog, '_initial_positions')
+                if hasattr(move_group_dialog, '_drag_atom_idx'):
+                    delattr(move_group_dialog, '_drag_atom_idx')
+        except Exception:
+            pass
         
         # ピックリセットは測定モードで実際に問題が発生した場合のみ行う
         # （通常のドラッグ回転では行わない）
@@ -7300,6 +8207,125 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
         # 2Dビューにフォーカスを戻し、ショートカットキーなどが使えるようにする
         if mw and mw.view_2d:
             mw.view_2d.setFocus()
+
+    def on_right_button_up(self, obj, event):
+        """
+        右クリック終了時の処理。グループ回転を確定。
+        """
+        mw = self.main_window
+        
+        # Move Groupダイアログの回転終了処理
+        move_group_dialog = None
+        try:
+            for widget in QApplication.topLevelWidgets():
+                if isinstance(widget, MoveGroupDialog) and widget.isVisible():
+                    move_group_dialog = widget
+                    break
+        except Exception:
+            pass
+        
+        if move_group_dialog and getattr(move_group_dialog, '_is_rotating_group_vtk', False):
+            # 回転モードで右クリックリリース - 選択を保持
+            if getattr(move_group_dialog, '_rotation_mouse_moved', False):
+                # 回転が実行された - リリース時に回転を適用
+                try:
+                    interactor = self.GetInteractor()
+                    renderer = mw.plotter.renderer
+                    current_pos = interactor.GetEventPosition()
+                    conf = mw.current_mol.GetConformer()
+                    centroid = move_group_dialog._group_centroid
+                    
+                    # 掴んだ原子の初期位置
+                    if not hasattr(move_group_dialog, '_rotation_atom_idx'):
+                        # 最初に掴んだ原子のインデックスを保存
+                        move_group_dialog._rotation_atom_idx = next(iter(move_group_dialog.group_atoms))
+                    
+                    grabbed_atom_idx = move_group_dialog._rotation_atom_idx
+                    grabbed_initial_pos = move_group_dialog._initial_positions[grabbed_atom_idx]
+                    
+                    # 開始位置のスクリーン座標を取得
+                    renderer.SetWorldPoint(grabbed_initial_pos[0], grabbed_initial_pos[1], grabbed_initial_pos[2], 1.0)
+                    renderer.WorldToDisplay()
+                    start_display = renderer.GetDisplayPoint()
+                    
+                    # 現在のマウス位置をワールド座標に変換（同じ深度で）
+                    renderer.SetDisplayPoint(current_pos[0], current_pos[1], start_display[2])
+                    renderer.DisplayToWorld()
+                    target_world = renderer.GetWorldPoint()
+                    target_pos = np.array([target_world[0], target_world[1], target_world[2]])
+                    
+                    # 重心から見た、掴んだ原子の初期ベクトルと目標ベクトル
+                    v1 = grabbed_initial_pos - centroid
+                    v2 = target_pos - centroid
+                    
+                    # ベクトルを正規化
+                    v1_norm = np.linalg.norm(v1)
+                    v2_norm = np.linalg.norm(v2)
+                    
+                    if v1_norm > 1e-6 and v2_norm > 1e-6:
+                        v1_normalized = v1 / v1_norm
+                        v2_normalized = v2 / v2_norm
+                        
+                        # 回転軸（外積）
+                        rotation_axis = np.cross(v1_normalized, v2_normalized)
+                        axis_norm = np.linalg.norm(rotation_axis)
+                        
+                        if axis_norm > 1e-6:
+                            rotation_axis = rotation_axis / axis_norm
+                            
+                            # 回転角（内積）
+                            cos_angle = np.clip(np.dot(v1_normalized, v2_normalized), -1.0, 1.0)
+                            angle = np.arccos(cos_angle)
+                            
+                            # Rodriguesの回転公式で回転行列を作成
+                            K = np.array([
+                                [0, -rotation_axis[2], rotation_axis[1]],
+                                [rotation_axis[2], 0, -rotation_axis[0]],
+                                [-rotation_axis[1], rotation_axis[0], 0]
+                            ])
+                            
+                            rot_matrix = np.eye(3) + np.sin(angle) * K + (1 - np.cos(angle)) * (K @ K)
+                            
+                            # グループ全体を重心周りに回転
+                            for atom_idx in move_group_dialog.group_atoms:
+                                initial_pos = move_group_dialog._initial_positions[atom_idx]
+                                # 重心からの相対座標
+                                relative_pos = initial_pos - centroid
+                                # 回転を適用
+                                rotated_pos = rot_matrix @ relative_pos
+                                # 絶対座標に戻す
+                                new_pos = rotated_pos + centroid
+                                
+                                conf.SetAtomPosition(atom_idx, new_pos.tolist())
+                                mw.atom_positions_3d[atom_idx] = new_pos
+                            
+                            # 3D表示を更新
+                            mw.draw_molecule_3d(mw.current_mol)
+                            mw.update_chiral_labels()
+                            move_group_dialog.show_atom_labels()
+                            mw.push_undo_state()
+                except Exception as e:
+                    print(f"Error finalizing group rotation: {e}")
+            
+            # 状態をリセット
+            move_group_dialog._is_rotating_group_vtk = False
+            move_group_dialog._rotation_start_pos = None
+            move_group_dialog._rotation_mouse_moved = False
+            if hasattr(move_group_dialog, '_initial_positions'):
+                delattr(move_group_dialog, '_initial_positions')
+            if hasattr(move_group_dialog, '_group_centroid'):
+                delattr(move_group_dialog, '_group_centroid')
+            if hasattr(move_group_dialog, '_rotation_atom_idx'):
+                delattr(move_group_dialog, '_rotation_atom_idx')
+            
+            try:
+                mw.plotter.setCursor(Qt.CursorShape.ArrowCursor)
+            except Exception:
+                pass
+            return
+        
+        # 通常の右クリックリリース処理
+        super().OnRightButtonUp()
 
 class MainWindow(QMainWindow):
 
@@ -8170,6 +9196,13 @@ class MainWindow(QMainWindow):
         edit_3d_menu.addAction(translation_action)
         self.translation_action = translation_action
         
+        # Move Group action
+        move_group_action = QAction("Move Group...", self)
+        move_group_action.triggered.connect(self.open_move_group_dialog)
+        move_group_action.setEnabled(False)
+        edit_3d_menu.addAction(move_group_action)
+        self.move_group_action = move_group_action
+        
         edit_3d_menu.addSeparator()
         
         # Alignment submenu (統合)
@@ -8227,6 +9260,15 @@ class MainWindow(QMainWindow):
         mirror_action.setEnabled(False)
         edit_3d_menu.addAction(mirror_action)
         self.mirror_action = mirror_action
+
+        edit_3d_menu.addSeparator()
+        
+        # Planarize selection (best-fit plane)
+        planarize_action = QAction("Planarize...", self)
+        planarize_action.triggered.connect(lambda: self.open_planarize_dialog(None))
+        planarize_action.setEnabled(False)
+        edit_3d_menu.addAction(planarize_action)
+        self.planarize_action = planarize_action
         
         edit_3d_menu.addSeparator()
         
@@ -8253,14 +9295,6 @@ class MainWindow(QMainWindow):
 
         edit_3d_menu.addSeparator()
         
-        # Planarize selection (best-fit plane)
-        planarize_action = QAction("Planarize...", self)
-        planarize_action.triggered.connect(lambda: self.open_planarize_dialog(None))
-        planarize_action.setEnabled(False)
-        edit_3d_menu.addAction(planarize_action)
-        self.planarize_action = planarize_action
-
-        edit_3d_menu.addSeparator()
         # Constrained Optimization action
         constrained_opt_action = QAction("Constrained Optimization...", self)
         constrained_opt_action.triggered.connect(self.open_constrained_optimization_dialog)
@@ -9226,10 +10260,12 @@ class MainWindow(QMainWindow):
             self.view_2d.setFocus() 
             return
 
-        if len(Chem.GetMolFrags(mol)) > 1:
-            self.statusBar().showMessage("Error: 3D conversion not supported for multiple molecules.")
-            self.view_2d.setFocus() 
-            return
+        # 複数分子の処理に対応
+        num_frags = len(Chem.GetMolFrags(mol))
+        if num_frags > 1:
+            self.statusBar().showMessage(f"Converting {num_frags} molecules to 3D with collision detection...")
+        else:
+            self.statusBar().showMessage("Calculating 3D structure...")
             
         # CRITICAL FIX: Use the 2D editor's MOL block instead of RDKit's to preserve
         # wedge/dash stereo information that is stored in the 2D editor data.
@@ -9887,6 +10923,20 @@ class MainWindow(QMainWindow):
             pass
 
         self.draw_molecule_3d(mol)
+        
+        # 複数分子の場合、衝突検出と配置調整を実行
+        try:
+            frags = Chem.GetMolFrags(mol, asMols=False, sanitizeFrags=False)
+            if len(frags) > 1:
+                self.statusBar().showMessage(f"Detecting collisions among {len(frags)} molecules...")
+                QApplication.processEvents()
+                self.adjust_molecule_positions_to_avoid_collisions(mol, frags)
+                self.draw_molecule_3d(mol)
+                self.update_chiral_labels()
+                self.statusBar().showMessage(f"{len(frags)} molecules converted with collision avoidance.")
+        except Exception as e:
+            print(f"Warning: Collision detection failed: {e}")
+            # 衝突検出に失敗してもエラーにはしない
 
         # Ensure any 'Calculating...' text is removed and the plotter is refreshed
         try:
@@ -10136,8 +11186,12 @@ class MainWindow(QMainWindow):
         json_safe_constraints = []
         try:
             for const in self.constraints_3d:
-                # (Type, (Idx...), Value) -> [Type, [Idx...], Value]
-                json_safe_constraints.append([const[0], list(const[1]), const[2]])
+                # (Type, (Idx...), Value, Force) -> [Type, [Idx...], Value, Force]
+                if len(const) == 4:
+                    json_safe_constraints.append([const[0], list(const[1]), const[2], const[3]])
+                else:
+                    # 後方互換性: 3要素の場合はデフォルトForceを追加
+                    json_safe_constraints.append([const[0], list(const[1]), const[2], 1.0e5])
         except Exception:
             pass # 失敗したら空リスト
         state['constraints_3d'] = json_safe_constraints
@@ -10175,12 +11229,16 @@ class MainWindow(QMainWindow):
         # 制約データの復元 (pmeraw)
         try:
             loaded_constraints = loaded_data.get("constraints_3d", [])
-            # pmerawもJSON互換形式 [Type, [Idx...], Value] で保存されている想定
+            # pmerawもJSON互換形式 [Type, [Idx...], Value, Force] で保存されている想定
             self.constraints_3d = []
             for const in loaded_constraints:
-                if isinstance(const, list) and len(const) == 3:
-                    # [Type, [Idx...], Value] -> (Type, (Idx...), Value)
-                    self.constraints_3d.append((const[0], tuple(const[1]), const[2]))
+                if isinstance(const, list):
+                    if len(const) == 4:
+                        # [Type, [Idx...], Value, Force] -> (Type, (Idx...), Value, Force)
+                        self.constraints_3d.append((const[0], tuple(const[1]), const[2], const[3]))
+                    elif len(const) == 3:
+                        # 後方互換性: [Type, [Idx...], Value] -> (Type, (Idx...), Value, 1.0e5)
+                        self.constraints_3d.append((const[0], tuple(const[1]), const[2], 1.0e5))
         except Exception:
             self.constraints_3d = [] # 読み込み失敗時はリセット
 
@@ -12198,12 +13256,23 @@ class MainWindow(QMainWindow):
                     }
                     bonds_3d.append(bond_3d)
                 
+                # constraints_3dをJSON互換形式に変換
+                json_safe_constraints = []
+                try:
+                    for const in self.constraints_3d:
+                        if len(const) == 4:
+                            json_safe_constraints.append([const[0], list(const[1]), const[2], const[3]])
+                        else:
+                            json_safe_constraints.append([const[0], list(const[1]), const[2], 1.0e5])
+                except Exception:
+                    json_safe_constraints = []
+                
                 json_data["3d_structure"] = {
                     "mol_binary_base64": mol_base64,
                     "atoms": atoms_3d,
                     "bonds": bonds_3d,
                     "num_conformers": self.current_mol.GetNumConformers(),
-                    "constraints_3d": self.constraints_3d
+                    "constraints_3d": json_safe_constraints
                 }
                 
                 # 分子の基本情報
@@ -12417,9 +13486,13 @@ class MainWindow(QMainWindow):
                 loaded_constraints = structure_3d.get("constraints_3d", [])
                 self.constraints_3d = []
                 for const in loaded_constraints:
-                    if isinstance(const, list) and len(const) == 3:
-                        # [Type, [Idx...], Value] -> (Type, (Idx...), Value)
-                        self.constraints_3d.append((const[0], tuple(const[1]), const[2]))
+                    if isinstance(const, list):
+                        if len(const) == 4:
+                            # [Type, [Idx...], Value, Force] -> (Type, (Idx...), Value, Force)
+                            self.constraints_3d.append((const[0], tuple(const[1]), const[2], const[3]))
+                        elif len(const) == 3:
+                            # 後方互換性: [Type, [Idx...], Value] -> (Type, (Idx...), Value, 1.0e5)
+                            self.constraints_3d.append((const[0], tuple(const[1]), const[2], 1.0e5))
             except Exception:
                 self.constraints_3d = [] # 読み込み失敗時はリセット
 
@@ -13566,6 +14639,89 @@ class MainWindow(QMainWindow):
         self.statusBar().showMessage("Resolved overlapping groups.", 2000)
 
 
+    def adjust_molecule_positions_to_avoid_collisions(self, mol, frags):
+        """複数分子の位置を調整して、ファンデルワールス半径による衝突を回避する"""
+        if len(frags) <= 1:
+            return
+        
+        conf = mol.GetConformer()
+        pt = Chem.GetPeriodicTable()
+        
+        # 各フラグメントの重心と原子インデックスを計算
+        frag_info = []
+        for frag_indices in frags:
+            positions = []
+            for idx in frag_indices:
+                pos = conf.GetAtomPosition(idx)
+                positions.append(np.array([pos.x, pos.y, pos.z]))
+            centroid = np.mean(positions, axis=0)
+            frag_info.append({
+                'indices': frag_indices,
+                'centroid': centroid,
+                'positions': positions
+            })
+        
+        # 衝突を検出して移動ベクトルを計算
+        collision_scale = 1.2  # ファンデルワールス半径の120%を最小距離とする
+        max_iterations = 100
+        moved = True
+        iteration = 0
+        
+        while moved and iteration < max_iterations:
+            moved = False
+            iteration += 1
+            
+            # すべてのフラグメントペアについて衝突をチェック
+            for i in range(len(frag_info)):
+                for j in range(i + 1, len(frag_info)):
+                    frag_i = frag_info[i]
+                    frag_j = frag_info[j]
+                    
+                    # フラグメント間のすべての原子ペアについて衝突をチェック
+                    total_push_vector = np.zeros(3)
+                    collision_count = 0
+                    
+                    for idx_i in frag_i['indices']:
+                        pos_i = np.array(conf.GetAtomPosition(idx_i))
+                        atom_i = mol.GetAtomWithIdx(idx_i)
+                        vdw_i = pt.GetRvdw(atom_i.GetAtomicNum())
+                        
+                        for idx_j in frag_j['indices']:
+                            pos_j = np.array(conf.GetAtomPosition(idx_j))
+                            atom_j = mol.GetAtomWithIdx(idx_j)
+                            vdw_j = pt.GetRvdw(atom_j.GetAtomicNum())
+                            
+                            # 距離と最小許容距離を計算
+                            distance = np.linalg.norm(pos_i - pos_j)
+                            min_distance = (vdw_i + vdw_j) * collision_scale
+                            
+                            if distance < min_distance and distance > 0.01:
+                                # 衝突が検出された - 押し出しベクトルを計算
+                                push_direction = (pos_i - pos_j) / distance
+                                push_magnitude = (min_distance - distance) / 2
+                                total_push_vector += push_direction * push_magnitude
+                                collision_count += 1
+                    
+                    if collision_count > 0:
+                        # 平均的な押し出しベクトルを適用
+                        avg_push_vector = total_push_vector / collision_count
+                        
+                        # フラグメントiを正方向に、フラグメントjを負方向に移動
+                        for idx in frag_i['indices']:
+                            pos = np.array(conf.GetAtomPosition(idx))
+                            new_pos = pos + avg_push_vector
+                            conf.SetAtomPosition(idx, new_pos.tolist())
+                        
+                        for idx in frag_j['indices']:
+                            pos = np.array(conf.GetAtomPosition(idx))
+                            new_pos = pos - avg_push_vector
+                            conf.SetAtomPosition(idx, new_pos.tolist())
+                        
+                        moved = True
+                        
+                        # 重心を更新
+                        frag_i['centroid'] += avg_push_vector
+                        frag_j['centroid'] -= avg_push_vector
 
     def draw_molecule_3d(self, mol):
         """3D 分子を描画し、軸アクターの参照をクリアする（軸の再制御は apply_3d_settings に任せる）"""
@@ -14461,6 +15617,17 @@ class MainWindow(QMainWindow):
                 return
             # No の場合はそのまま終了処理へ
         
+        # 開いているすべてのダイアログウィンドウを閉じる
+        try:
+            for widget in QApplication.topLevelWidgets():
+                if widget != self and isinstance(widget, (QDialog, QMainWindow)):
+                    try:
+                        widget.close()
+                    except Exception:
+                        pass
+        except Exception:
+            pass
+        
         # 終了処理
         if self.scene and self.scene.template_preview:
             self.scene.template_preview.hide()
@@ -14885,6 +16052,7 @@ class MainWindow(QMainWindow):
         """3D編集機能のアクションを統一的に有効/無効化する"""
         actions = [
             'translation_action',
+            'move_group_action',
             'alignplane_xy_action',
             'alignplane_xz_action',
             'alignplane_yz_action',
@@ -15931,6 +17099,20 @@ class MainWindow(QMainWindow):
         dialog.accepted.connect(lambda: self.statusBar().showMessage("Translation applied."))
         dialog.accepted.connect(self.push_undo_state)
         dialog.finished.connect(lambda: self.remove_dialog_from_list(dialog))  # ダイアログが閉じられた時にリストから削除
+    
+    def open_move_group_dialog(self):
+        """Move Groupダイアログを開く"""
+        # 測定モードを無効化
+        if self.measurement_mode:
+            self.measurement_action.setChecked(False)
+            self.toggle_measurement_mode(False)
+        
+        dialog = MoveGroupDialog(self.current_mol, self)
+        self.active_3d_dialogs.append(dialog)
+        dialog.show()
+        dialog.accepted.connect(lambda: self.statusBar().showMessage("Group transformation applied."))
+        dialog.accepted.connect(self.push_undo_state)
+        dialog.finished.connect(lambda: self.remove_dialog_from_list(dialog))
     
     def open_align_plane_dialog(self, plane):
         """alignダイアログを開く"""
@@ -17309,10 +18491,18 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
         if self.main_window.constraints_3d:
             self.constraint_table.blockSignals(True) # 読み込み中のシグナルをブロック
             try:
-                # self.constraints には (Type, (Idx...), Value) のタプル形式で読み込む
-                self.constraints = list(self.main_window.constraints_3d) 
-                
-                for const_type, atom_indices, value in self.constraints:
+                # self.constraints には (Type, (Idx...), Value, Force) のタプル形式で読み込む
+                for const_data in self.main_window.constraints_3d:
+                    # 後方互換性のため、3要素または4要素の制約に対応
+                    if len(const_data) == 4:
+                        const_type, atom_indices, value, force_const = const_data
+                    else:
+                        const_type, atom_indices, value = const_data
+                        force_const = 1.0e5  # デフォルト値
+                    
+                    # タプル化して内部リストに追加
+                    self.constraints.append((const_type, tuple(atom_indices), value, force_const))
+                    
                     row_count = self.constraint_table.rowCount()
                     self.constraint_table.insertRow(row_count)
                     
@@ -17338,6 +18528,11 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
                     item_value = QTableWidgetItem(value_str)
                     item_value.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
                     self.constraint_table.setItem(row_count, 2, item_value)
+                    
+                    # カラム 3 (Force)
+                    item_force = QTableWidgetItem(f"{force_const:.2e}")
+                    item_force.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+                    self.constraint_table.setItem(row_count, 3, item_force)
             finally:
                 self.constraint_table.blockSignals(False)
 
@@ -17379,7 +18574,7 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
     def init_ui(self):
         self.setWindowTitle("Constrained Optimization")
         self.setModal(False)
-        self.resize(330, 450)
+        self.resize(450, 500)
         self.setWindowFlags(Qt.WindowType.Window | Qt.WindowType.WindowStaysOnTopHint)
         layout = QVBoxLayout(self)
 
@@ -17388,11 +18583,17 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
         instruction_label.setWordWrap(True)
         layout.addWidget(instruction_label)
 
-        # 2. 最適化方法
+        # 2. 最適化方法とForce Constant
         form_layout = QFormLayout()
         self.ff_combo = QComboBox()
         self.ff_combo.addItems(["MMFF94s", "MMFF94", "UFF"])
         form_layout.addRow("Force Field:", self.ff_combo)
+        
+        # Force Constant設定
+        self.force_const_input = QLineEdit("1.0e5")
+        self.force_const_input.setToolTip("Force constant for constraints (default: 1.0e5)")
+        form_layout.addRow("Force Constant:", self.force_const_input)
+        
         layout.addLayout(form_layout)
         
         # 3. 選択中の原子
@@ -17401,8 +18602,8 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
 
         # 4. 制約の表
         self.constraint_table = QTableWidget()
-        self.constraint_table.setColumnCount(3)
-        self.constraint_table.setHorizontalHeaderLabels(["Type", "Atom Indices", "Value (Å or °)"])
+        self.constraint_table.setColumnCount(4)
+        self.constraint_table.setHorizontalHeaderLabels(["Type", "Atom Indices", "Value (Å or °)", "Force"])
         self.constraint_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         # 編集トリガーをダブルクリックなどに変更
         self.constraint_table.setEditTriggers(QTableWidget.EditTrigger.DoubleClicked | QTableWidget.EditTrigger.SelectedClicked | QTableWidget.EditTrigger.EditKeyPressed)
@@ -17499,6 +18700,13 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
         n = len(self.selected_atoms)
         conf = self.mol.GetConformer()
         
+        # Force Constantを取得
+        try:
+            force_const = float(self.force_const_input.text())
+        except ValueError:
+            QMessageBox.warning(self, "Warning", "Invalid Force Constant. Using default 1.0e5.")
+            force_const = 1.0e5
+        
         if n == 2:
             constraint_type = "Distance"
             value = conf.GetAtomPosition(self.selected_atoms[0]).Distance(conf.GetAtomPosition(self.selected_atoms[1]))
@@ -17522,7 +18730,7 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
                 QMessageBox.warning(self, "Warning", "This exact constraint already exists.")
                 return
 
-        self.constraints.append((constraint_type, atom_indices, value))
+        self.constraints.append((constraint_type, atom_indices, value, force_const))
         
         # 表を更新
         # 表を更新
@@ -17548,6 +18756,12 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
         item_value.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
         # 編集可能フラグはデフォルトで有効 (ItemIsEnabled | ItemIsSelectable | ItemIsEditable)
         self.constraint_table.setItem(row_count, 2, item_value)
+        
+        # --- カラム 3 (Force) ---
+        item_force = QTableWidgetItem(f"{force_const:.2e}")
+        item_force.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+        # 編集可能
+        self.constraint_table.setItem(row_count, 3, item_force)
 
         # 選択をクリア
         self.selected_atoms.clear()
@@ -17599,9 +18813,13 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
         # 選択された行の制約を取得 (最初の選択行のみ)
         try:
             row = selected_items[0].row()
-            constraint_type, atom_indices, value = self.constraints[row]
-        except (IndexError, TypeError):
-            return
+            constraint_type, atom_indices, value, force_const = self.constraints[row]
+        except (IndexError, TypeError, ValueError):
+            # 古い形式の制約の場合は3要素でunpack
+            try:
+                constraint_type, atom_indices, value = self.constraints[row]
+            except (IndexError, TypeError):
+                return
         
         labels = []
         if constraint_type == "Distance":
@@ -17659,9 +18877,13 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
 
         # 制約を追加
         try:
-            force_const = 1.0e5 # 高い力定数で事実上固定
-            
-            for const_type, atoms, value in self.constraints:
+            for constraint in self.constraints:
+                # 後方互換性のため、4要素または3要素の制約に対応
+                if len(constraint) == 4:
+                    const_type, atoms, value, force_const = constraint
+                else:
+                    const_type, atoms, value = constraint
+                    force_const = 1.0e5  # デフォルト値
                 
                 if const_type == "Distance":
                     # C++ signature: (self, idx1, idx2, bool relative, minLen, maxLen, forceConst)
@@ -17729,7 +18951,12 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
                 # JSON互換のため、タプルをリストに変換して保存
                 json_safe_constraints = []
                 for const in self.constraints:
-                    json_safe_constraints.append([const[0], list(const[1]), const[2]])
+                    # 4要素の制約（Type, Indices, Value, Force）
+                    if len(const) == 4:
+                        json_safe_constraints.append([const[0], list(const[1]), const[2], const[3]])
+                    else:
+                        # 古い形式の場合は3要素にデフォルトのForceを追加
+                        json_safe_constraints.append([const[0], list(const[1]), const[2], 1.0e5])
                 
                 # 変更があった場合のみ MainWindow を更新
                 if self.main_window.constraints_3d != json_safe_constraints:
@@ -17757,8 +18984,12 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
             # JSON互換のため、タプルをリストに変換して保存
             json_safe_constraints = []
             for const in self.constraints:
-                # (Type, (Idx...), Value) -> [Type, [Idx...], Value]
-                json_safe_constraints.append([const[0], list(const[1]), const[2]])
+                # (Type, (Idx...), Value, Force) -> [Type, [Idx...], Value, Force]
+                if len(const) == 4:
+                    json_safe_constraints.append([const[0], list(const[1]), const[2], const[3]])
+                else:
+                    # 古い形式の場合は3要素にデフォルトのForceを追加
+                    json_safe_constraints.append([const[0], list(const[1]), const[2], 1.0e5])
             
             # 変更があった場合のみ MainWindow を更新
             if self.main_window.constraints_3d != json_safe_constraints:
@@ -17823,8 +19054,8 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
     def on_cell_changed(self, row, column):
         """テーブルのセルが編集されたときに内部データを更新する"""
         
-        # "Value" 列 (カラムインデックス 2) 以外は無視
-        if column != 2:
+        # "Value" 列 (カラムインデックス 2) と "Force" 列 (カラムインデックス 3) のみ対応
+        if column not in [2, 3]:
             return
 
         try:
@@ -17837,24 +19068,36 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
             new_value = float(new_value_str)
             
             # 内部の constraints リストを更新
-            # (constraint_type, atom_indices, value)
             old_constraint = self.constraints[row]
-            self.constraints[row] = (old_constraint[0], old_constraint[1], new_value)
             
-            # self.main_window.statusBar().showMessage(f"Constraint {row} value updated to {new_value:.3f}")
+            # 後方互換性のため、3要素または4要素の制約に対応
+            if len(old_constraint) == 4:
+                if column == 2:  # Value列
+                    self.constraints[row] = (old_constraint[0], old_constraint[1], new_value, old_constraint[3])
+                elif column == 3:  # Force列
+                    self.constraints[row] = (old_constraint[0], old_constraint[1], old_constraint[2], new_value)
+            else:
+                # 古い3要素形式の場合
+                if column == 2:  # Value列
+                    self.constraints[row] = (old_constraint[0], old_constraint[1], new_value, 1.0e5)
+                elif column == 3:  # Force列（新規追加）
+                    self.constraints[row] = (old_constraint[0], old_constraint[1], old_constraint[2], new_value)
 
         except (ValueError, TypeError):
             # 不正な値（数値以外）が入力された場合
             # 元の値をテーブルに戻す
-            old_value = self.constraints[row][2]
-            
-            # 変更シグナルを一時的にブロックして、元に戻す際の無限ループを防ぐ
             self.constraint_table.blockSignals(True)
-            if self.constraints[row][0] == "Distance":
-                item.setText(f"{old_value:.3f}")
-            else:
-                item.setText(f"{old_value:.2f}")
-            # アライメントを再設定
+            
+            if column == 2:  # Value列
+                old_value = self.constraints[row][2]
+                if self.constraints[row][0] == "Distance":
+                    item.setText(f"{old_value:.3f}")
+                else:
+                    item.setText(f"{old_value:.2f}")
+            elif column == 3:  # Force列
+                old_force = self.constraints[row][3] if len(self.constraints[row]) == 4 else 1.0e5
+                item.setText(f"{old_force:.2e}")
+            
             item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
             self.constraint_table.blockSignals(False)
             
@@ -17878,7 +19121,7 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
         # Enter/Returnキーが押されたかチェック (最適化を実行)
         if key == Qt.Key.Key_Return or key == Qt.Key.Key_Enter:
             # テーブルが編集中でないことを確認（セルの編集中にEnterを押した場合）
-            if self.constraint_table.state() != QTableWidget.EditState.EditingState:
+            if self.constraint_table.state() != QAbstractItemView.State.EditingState:
                 if self.optimize_button.isEnabled():
                     self.apply_optimization()
                 event.accept()
