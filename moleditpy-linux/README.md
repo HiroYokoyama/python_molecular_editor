@@ -132,7 +132,7 @@ This project is licensed under the **Apache-2.0 License**. See the `LICENSE` fil
 
 ## 主な機能
 
-詳細は、[ユーザーマニュアル](https://www.google.com/search?q=https://hiroyokoyama.github.io/python_molecular_editor/manual/manual-JP)を参照してください。
+詳細は、[ユーザーマニュアル](https://hiroyokoyama.github.io/python_molecular_editor/manual/manual-JP)を参照してください。
 
 ### 1\. 2D描画と編集
 
