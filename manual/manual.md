@@ -235,6 +235,13 @@ These functions are available from the menu when a 3D structure is displayed. Ma
 
   * **Translation...:** Translates the entire molecule or a selected group of atoms by specified coordinates. **An option to translate only the selected atoms is also available.**
 
+  * **Move Group...:** Allows for the selection and manipulation of connected molecular fragments (groups).
+
+      * **Selection:** In the 3D view, **left-click** an atom to select its entire connected group (highlighted in yellow). **Ctrl + left-click** allows for adding/removing groups from the selection.
+      * **Interactive Move:** **Left-drag** a highlighted atom to move all selected groups.
+      * **Interactive Rotate:** **Right-drag** a highlighted atom to rotate all selected groups around their combined center of mass.
+      * **Numeric Input:** Use the dialog to apply precise translation (Å) or rotation (degrees) to all selected groups.
+
   * **Align to \> Axis \> (X/Y/Z)-axis...:** Rotates and moves the entire molecule so that the line connecting two selected atoms aligns with the specified coordinate axis (X, Y, or Z) (the first atom is placed at the origin, the second on the axis).
 
   * **Align to \> Plane \> (XY/XZ/YZ)-plane...:** Rotates the entire molecule so that the plane containing three or more selected atoms becomes parallel to the specified coordinate plane (XY, XZ, or YZ).
@@ -252,6 +259,8 @@ These functions are available from the menu when a 3D structure is displayed. Ma
   ![](img/3d-edit-menu.png)
   
   ![](img/dihedral.png)
+
+  ![](img/multiple-molecules-edit.png)
 
 ### 6.8. Constrained Optimization
 
@@ -388,7 +397,7 @@ Click the **Apply** button to immediately apply the settings, and the **OK** but
 
 ## 10\. Version / License
 
-  * **Version:** 1.13
+  * **Version:** 1.14
   * **Author:** Hiromichi Yokoyama
   * **License:** Apache-2.0 license
   * **Repository:** [https://github.com/HiroYokoyama/python\_molecular\_editor](https://github.com/HiroYokoyama/python_molecular_editor)
@@ -397,6 +406,7 @@ Click the **Apply** button to immediately apply the settings, and the **OK** but
 You can check the version information from the `Help` \> `About` menu.
 
 -----
+
 
 
 
