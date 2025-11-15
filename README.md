@@ -66,12 +66,6 @@ For detailed instructions, please refer to the project [Wiki](https://github.com
 
 `PyQt6`, `RDKit`, `NumPy`, `PyVista`, `pyvistaqt`, `openbabel`
 
-Yes, that's exactly right. Those are the two commands the user needs to run.
-
-That text is perfect for the `README.md` file. If you want to make it slightly clearer for the user, you could expand it a little to explain *what* each step does, like this:
-
------
-
 #### Installation
 
 1.  **Install the Package**
