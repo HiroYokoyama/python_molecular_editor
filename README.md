@@ -66,15 +66,29 @@ For detailed instructions, please refer to the project [Wiki](https://github.com
 
 `PyQt6`, `RDKit`, `NumPy`, `PyVista`, `pyvistaqt`, `openbabel`
 
+Yes, that's exactly right. Those are the two commands the user needs to run.
+
+That text is perfect for the `README.md` file. If you want to make it slightly clearer for the user, you could expand it a little to explain *what* each step does, like this:
+
+-----
+
 #### Installation
 
-It is recommended to first install RDKit and Open Babel using `conda`. Open Babel is required for the 3D conversion fallback feature.
+1.  **Install the Package**
+    This will automatically install the correct `moleditpy` (for Win/Mac) or `moleditpy-linux` (for Linux) as a dependency.
 
-```bash
-pip install moleditpy
-```
+    ```bash
+    pip install moleditpy-installer
+    ```
 
-Please note that Linux users must use `moleditpy-linux` to resolve Open Babel's library conflicts issues. Open Babel is disabled for this version.
+2.  **Create the Shortcut**
+    After installation, run this command to create the shortcut in your application menu (e.g., Start Menu or Applications folder).
+
+    ```bash
+    moleditpy-installer
+    ```
+
+-----
 
 #### Running the Application
 
@@ -178,10 +192,19 @@ This project is licensed under the **Apache-2.0 License**. See the `LICENSE` fil
 
 #### インストール
 
-RDKitとOpen Babelは、先に`conda`を使用してインストールすることが推奨されます。Open Babelは3D変換のフォールバック機能に必要です。
+1.  **パッケージのインストール**
+    このコマンドを実行すると、お使いのOS（Windows/macOSまたはLinux）に適した `moleditpy` 本体が自動的にインストールされます。
 
-```bash
-pip install moleditpy
+    ```bash
+    pip install moleditpy-installer
+    ```
+
+2.  **ショートカットの作成**
+    インストール後、このコマンドを実行すると、アプリケーションメニュー（スタートメニューやアプリケーションフォルダなど）にショートカットが作成されます。
+
+    ```bash
+    moleditpy-installer
+    ```
 ```
 
 #### アプリケーションの起動
