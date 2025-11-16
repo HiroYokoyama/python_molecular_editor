@@ -1,5 +1,5 @@
 matplotlib==3.10.7
-moleditpy-linux==1.14.0
+moleditpy-linux==1.15.0
 numpy==2.3.4
 PyQt6==6.9.1
 PyQt6-Qt6==6.9.2
