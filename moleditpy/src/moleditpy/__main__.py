@@ -11,7 +11,7 @@ DOI 10.5281/zenodo.17268532
 """
 
 #Version
-VERSION = '1.14.1'
+VERSION = '1.15.0'
 
 print("-----------------------------------------------------")
 print("MoleditPy — A Python-based molecular editing software")
@@ -161,6 +161,9 @@ CPK_COLORS = {
 CPK_COLORS_PV = {
     k: [c.redF(), c.greenF(), c.blueF()] for k, c in CPK_COLORS.items()
 }
+
+# Keep a copy of the original default map so we can restore it when user resets
+DEFAULT_CPK_COLORS = {k: QColor(v) if not isinstance(v, QColor) else v for k, v in CPK_COLORS.items()}
 
 pt = Chem.GetPeriodicTable()
 VDW_RADII = {pt.GetElementSymbol(i): pt.GetRvdw(i) * 0.3 for i in range(1, 119)}
@@ -776,6 +779,7 @@ class UserTemplateDialog(QDialog):
             try:
                 self.main_window.statusBar().showMessage(f"Template mode: {template_name}")
             except Exception:
+                # ignore status bar failures
                 pass
 
             # If there is a matching QAction in mode_actions, check it
@@ -3503,7 +3507,17 @@ class BondItem(QGraphicsItem):
             painter.setPen(QPen(selection_color, 3))
             painter.setBrush(QBrush(selection_color))
         else:
-            painter.setPen(self.pen)
+            # Allow bond color override from app settings (2D color)
+            try:
+                sc = self.scene()
+                if sc is not None and hasattr(sc, 'window') and sc.window is not None:
+                    bond_hex = sc.window.settings.get('bond_color', '#222222')
+                    bond_color = QColor(bond_hex)
+                    painter.setPen(QPen(bond_color, 2))
+                else:
+                    painter.setPen(self.pen)
+            except Exception:
+                painter.setPen(self.pen)
             painter.setBrush(QBrush(Qt.GlobalColor.black))
 
         # --- 立体化学 (Wedge/Dash) の描画 ---
@@ -3702,7 +3716,12 @@ class TemplatePreviewItem(QGraphicsItem):
             return
         
         # Draw bonds first with better visibility
-        bond_pen = QPen(QColor(100, 100, 100, 200), 2.5)
+        # Bond preview color may also follow the configured bond color
+        try:
+            bond_hex = self.scene().window.settings.get('bond_color', '#222222')
+            bond_pen = QPen(QColor(bond_hex), 2.5)
+        except Exception:
+            bond_pen = QPen(QColor(100, 100, 100, 200), 2.5)
         painter.setPen(bond_pen)
         
         for bond_info in self.user_template_bonds:
@@ -6445,10 +6464,10 @@ class PeriodicTableDialog(QDialog):
             ('Rb',5,1), ('Sr',5,2), ('Y',5,3), ('Zr',5,4), ('Nb',5,5), ('Mo',5,6), ('Tc',5,7), ('Ru',5,8),
             ('Rh',5,9), ('Pd',5,10), ('Ag',5,11), ('Cd',5,12), ('In',5,13), ('Sn',5,14), ('Sb',5,15), ('Te',5,16),
             ('I',5,17), ('Xe',5,18),
-            ('Cs',6,1), ('Ba',6,2), ('La',6,3), ('Hf',6,4), ('Ta',6,5), ('W',6,6), ('Re',6,7), ('Os',6,8),
+            ('Cs',6,1), ('Ba',6,2), ('Hf',6,4), ('Ta',6,5), ('W',6,6), ('Re',6,7), ('Os',6,8),
             ('Ir',6,9), ('Pt',6,10), ('Au',6,11), ('Hg',6,12), ('Tl',6,13), ('Pb',6,14), ('Bi',6,15), ('Po',6,16),
             ('At',6,17), ('Rn',6,18),
-            ('Fr',7,1), ('Ra',7,2), ('Ac',7,3), ('Rf',7,4), ('Db',7,5), ('Sg',7,6), ('Bh',7,7), ('Hs',7,8),
+            ('Fr',7,1), ('Ra',7,2), ('Rf',7,4), ('Db',7,5), ('Sg',7,6), ('Bh',7,7), ('Hs',7,8),
             ('Mt',7,9), ('Ds',7,10), ('Rg',7,11), ('Cn',7,12), ('Nh',7,13), ('Fl',7,14), ('Mc',7,15), ('Lv',7,16),
             ('Ts',7,17), ('Og',7,18),
             # Lanthanides (placed on a separate row)
@@ -6462,8 +6481,13 @@ class PeriodicTableDialog(QDialog):
             b = QPushButton(symbol)
             b.setFixedSize(40,40)
 
-            # CPK_COLORSから色を取得。見つからない場合はデフォルト色を使用
-            q_color = CPK_COLORS.get(symbol, CPK_COLORS['DEFAULT'])
+            # Prefer saved user override (from parent.settings), otherwise use CPK_COLORS
+            try:
+                overrides = parent.settings.get('cpk_colors', {}) if parent and hasattr(parent, 'settings') else {}
+                override = overrides.get(symbol)
+            except Exception:
+                override = None
+            q_color = QColor(override) if override else CPK_COLORS.get(symbol, CPK_COLORS['DEFAULT'])
 
             # 背景色の輝度を計算して、文字色を黒か白に決定
             # 輝度 = (R*299 + G*587 + B*114) / 1000
@@ -6485,6 +6509,301 @@ class PeriodicTableDialog(QDialog):
         b=self.sender()
         self.element_selected.emit(b.text())
         self.accept()
+
+
+class ColorSettingsDialog(QDialog):
+    """Dialog to customize CPK element colors.
+
+    - Click an element to pick a new color for the element (CPK colors).
+    - Reset All button to restore defaults for everything.
+    """
+    def __init__(self, current_settings, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("CPK Colors")
+        self.parent_window = parent
+        self.current_settings = current_settings or {}
+
+        self.changed_cpk = {}  # symbol -> hex
+        self._reset_all_flag = False
+
+        layout = QVBoxLayout(self)
+
+        # Color picking for CPK is available in the periodic table and CPK dialog
+
+        # Periodic table grid (buttons like PeriodicTableDialog)
+        grid = QGridLayout()
+        self.element_buttons = {}
+        elements = [
+            ('H',1,1), ('He',1,18),
+            ('Li',2,1), ('Be',2,2), ('B',2,13), ('C',2,14), ('N',2,15), ('O',2,16), ('F',2,17), ('Ne',2,18),
+            ('Na',3,1), ('Mg',3,2), ('Al',3,13), ('Si',3,14), ('P',3,15), ('S',3,16), ('Cl',3,17), ('Ar',3,18),
+            ('K',4,1), ('Ca',4,2), ('Sc',4,3), ('Ti',4,4), ('V',4,5), ('Cr',4,6), ('Mn',4,7), ('Fe',4,8),
+            ('Co',4,9), ('Ni',4,10), ('Cu',4,11), ('Zn',4,12), ('Ga',4,13), ('Ge',4,14), ('As',4,15), ('Se',4,16),
+            ('Br',4,17), ('Kr',4,18),
+            ('Rb',5,1), ('Sr',5,2), ('Y',5,3), ('Zr',5,4), ('Nb',5,5), ('Mo',5,6), ('Tc',5,7), ('Ru',5,8),
+            ('Rh',5,9), ('Pd',5,10), ('Ag',5,11), ('Cd',5,12), ('In',5,13), ('Sn',5,14), ('Sb',5,15), ('Te',5,16),
+            ('I',5,17), ('Xe',5,18),
+            ('Cs',6,1), ('Ba',6,2), ('Hf',6,4), ('Ta',6,5), ('W',6,6), ('Re',6,7), ('Os',6,8),
+            ('Ir',6,9), ('Pt',6,10), ('Au',6,11), ('Hg',6,12), ('Tl',6,13), ('Pb',6,14), ('Bi',6,15), ('Po',6,16),
+            ('At',6,17), ('Rn',6,18),
+            ('Fr',7,1), ('Ra',7,2), ('Rf',7,4), ('Db',7,5), ('Sg',7,6), ('Bh',7,7), ('Hs',7,8),
+            ('Mt',7,9), ('Ds',7,10), ('Rg',7,11), ('Cn',7,12), ('Nh',7,13), ('Fl',7,14), ('Mc',7,15), ('Lv',7,16),
+            ('Ts',7,17), ('Og',7,18),
+            ('La',8,3), ('Ce',8,4), ('Pr',8,5), ('Nd',8,6), ('Pm',8,7), ('Sm',8,8), ('Eu',8,9), ('Gd',8,10), ('Tb',8,11),
+            ('Dy',8,12), ('Ho',8,13), ('Er',8,14), ('Tm',8,15), ('Yb',8,16), ('Lu',8,17),
+            ('Ac',9,3), ('Th',9,4), ('Pa',9,5), ('U',9,6), ('Np',9,7), ('Pu',9,8), ('Am',9,9), ('Cm',9,10), ('Bk',9,11),
+            ('Cf',9,12), ('Es',9,13), ('Fm',9,14), ('Md',9,15), ('No',9,16), ('Lr',9,17),
+        ]
+
+        for symbol, row, col in elements:
+            b = QPushButton(symbol)
+            b.setFixedSize(40, 40)
+            # Choose override color (if present) else default CPK color
+            override = self.current_settings.get('cpk_colors', {}).get(symbol)
+            if override:
+                q_color = QColor(override)
+            else:
+                q_color = CPK_COLORS.get(symbol, CPK_COLORS['DEFAULT'])
+
+            brightness = (q_color.red() * 299 + q_color.green() * 587 + q_color.blue() * 114) / 1000
+            text_color = 'white' if brightness < 128 else 'black'
+            b.setStyleSheet(f"background-color: {q_color.name()}; color: {text_color}; border: 1px solid #555; font-weight: bold;")
+            b.clicked.connect(self.on_element_clicked)
+            grid.addWidget(b, row, col)
+            self.element_buttons[symbol] = b
+
+        layout.addLayout(grid)
+
+        # Ball & Stick bond color (3D) picker - placed near the periodic table for CPK settings
+        self.changed_bs_color = None
+        try:
+            bs_h = QHBoxLayout()
+            bs_label = QLabel("Ball & Stick bond color:")
+            self.bs_button = QPushButton()
+            self.bs_button.setFixedSize(36, 24)
+            # initialize from current settings (if provided)
+            try:
+                cur_bs = self.current_settings.get('ball_stick_bond_color') if self.current_settings else None
+            except Exception:
+                cur_bs = None
+            if not cur_bs and self.parent_window and hasattr(self.parent_window, 'settings'):
+                cur_bs = self.parent_window.settings.get('ball_stick_bond_color', '#7F7F7F')
+            try:
+                self.bs_button.setStyleSheet(f"background-color: {cur_bs}; border: 1px solid #888;")
+                self.bs_button.setToolTip(cur_bs)
+            except Exception:
+                pass
+            self.bs_button.clicked.connect(self.pick_bs_bond_color)
+            bs_h.addWidget(bs_label)
+            bs_h.addWidget(self.bs_button)
+            bs_h.addStretch(1)
+            layout.addLayout(bs_h)
+        except Exception:
+            pass
+
+        # Reset button and action buttons
+        h = QHBoxLayout()
+        reset_button = QPushButton("Reset All")
+        reset_button.clicked.connect(self.reset_all)
+        h.addWidget(reset_button)
+        h.addStretch(1)
+        apply_button = QPushButton("Apply")
+        apply_button.clicked.connect(self.apply_changes)
+        ok_button = QPushButton("OK")
+        ok_button.clicked.connect(self.accept)
+        cancel_button = QPushButton("Cancel")
+        cancel_button.clicked.connect(self.reject)
+
+        h.addWidget(apply_button); h.addWidget(ok_button); h.addWidget(cancel_button)
+        layout.addLayout(h)
+
+        # initialize
+        # No 2D bond color control here
+
+    # 2D bond color picker removed — 2D bond color is fixed and not configurable here
+
+    def on_element_clicked(self):
+        b = self.sender()
+        symbol = b.text()
+        # get current color (override if exists else default)
+        cur = self.current_settings.get('cpk_colors', {}).get(symbol)
+        if not cur:
+            cur = CPK_COLORS.get(symbol, CPK_COLORS['DEFAULT']).name()
+        color = QColorDialog.getColor(QColor(cur), self)
+        if color.isValid():
+            self.changed_cpk[symbol] = color.name()
+            # Update button appearance
+            brightness = (color.red() * 299 + color.green() * 587 + color.blue() * 114) / 1000
+            text_color = 'white' if brightness < 128 else 'black'
+            b.setStyleSheet(f"background-color: {color.name()}; color: {text_color}; border: 1px solid #555; font-weight: bold;")
+
+    def reset_all(self):
+        # Clear overrides
+        self.changed_cpk = {}
+        self._reset_all_flag = True
+        
+        # 1. B&S結合色もリセット対象（デフォルト値）に設定
+        try:
+            self.changed_bs_color = self.parent_window.default_settings.get('ball_stick_bond_color', '#7F7F7F') if hasattr(self.parent_window, 'default_settings') else '#7F7F7F'
+        except Exception:
+            self.changed_bs_color = '#7F7F7F'
+            
+        # 2. ダイアログ内のCPKボタンの表示をデフォルトに戻す
+        for s, btn in self.element_buttons.items():
+            q_color = DEFAULT_CPK_COLORS.get(s, DEFAULT_CPK_COLORS['DEFAULT'])
+            brightness = (q_color.red() * 299 + q_color.green() * 587 + q_color.blue() * 114) / 1000
+            text_color = 'white' if brightness < 128 else 'black'
+            btn.setStyleSheet(f"background-color: {q_color.name()}; color: {text_color}; border: 1px solid #555; font-weight: bold;")
+        
+        # 3. 3Dプレビューを更新する L.3337〜L.3386 の try...finally ブロックは削除
+
+        # 4. ダイアログ内のB&S結合色ボタンの表示をデフォルトに戻す
+        try:
+            if hasattr(self, 'bs_button'):
+                # self.changed_bs_color に設定したデフォルト値を反映
+                hexv = self.changed_bs_color
+                self.bs_button.setStyleSheet(f"background-color: {hexv}; border: 1px solid #888;")
+                self.bs_button.setToolTip(hexv)
+        except Exception:
+            pass
+
+    def apply_changes(self):
+        # Persist only changed keys
+        if self.parent_window:
+            if self._reset_all_flag:
+                # Remove any cpk overrides
+                try:
+                    if 'cpk_colors' in self.parent_window.settings:
+                        del self.parent_window.settings['cpk_colors']
+                except Exception:
+                    pass
+            if self.changed_cpk:
+                # Merge with existing overrides
+                cdict = self.parent_window.settings.get('cpk_colors', {}).copy()
+                cdict.update(self.changed_cpk)
+                self.parent_window.settings['cpk_colors'] = cdict
+                self.parent_window.settings_dirty = True
+            # After changing settings, update global CPK color map and refresh views
+            try:
+                self.parent_window.update_cpk_colors_from_settings()
+            except Exception:
+                pass
+            try:
+                self.parent_window.apply_3d_settings()
+            except Exception:
+                pass
+            try:
+                if hasattr(self.parent_window, 'current_mol') and self.parent_window.current_mol:
+                    self.parent_window.draw_molecule_3d(self.parent_window.current_mol)
+            except Exception:
+                pass
+            # update 2D scene objects
+            try:
+                if hasattr(self.parent_window, 'scene'):
+                    for it in self.parent_window.scene.items():
+                        try:
+                            if hasattr(it, 'update_style'):
+                                it.update_style()
+                        except Exception:
+                            pass
+            except Exception:
+                pass
+            # update periodic table button styles in the dialog to reflect any overrides
+            try:
+                for s, btn in self.element_buttons.items():
+                    try:
+                        q_color = QColor(self.parent_window.settings.get('cpk_colors', {}).get(s, CPK_COLORS.get(s, CPK_COLORS['DEFAULT']).name()))
+                        brightness = (q_color.red() * 299 + q_color.green() * 587 + q_color.blue() * 114) / 1000
+                        text_color = 'white' if brightness < 128 else 'black'
+                        btn.setStyleSheet(f"background-color: {q_color.name()}; color: {text_color}; border: 1px solid #555; font-weight: bold;")
+                    except Exception:
+                        pass
+            except Exception:
+                pass
+            # Refresh any open SettingsDialog instances so the ball & stick color preview updates
+            try:
+                for w in QApplication.topLevelWidgets():
+                    try:
+                        if isinstance(w, SettingsDialog):
+                            try:
+                                w.update_ui_from_settings(self.parent_window.settings)
+                            except Exception:
+                                pass
+                    except Exception:
+                        pass
+            except Exception:
+                pass
+            # Persist changed Ball & Stick color if the user changed it from the CPK dialog
+            if getattr(self, 'changed_bs_color', None):
+                try:
+                    self.parent_window.settings['ball_stick_bond_color'] = self.changed_bs_color
+                    try:
+                        self.parent_window.settings_dirty = True
+                    except Exception:
+                        pass
+                    # After changing ball-stick color, ensure 3D view updates
+                    try:
+                        self.parent_window.apply_3d_settings()
+                    except Exception:
+                        pass
+                    try:
+                        if hasattr(self.parent_window, 'current_mol') and self.parent_window.current_mol:
+                            self.parent_window.draw_molecule_3d(self.parent_window.current_mol)
+                    except Exception:
+                        pass
+                except Exception:
+                    pass
+            # Removed 2D bond color control — nothing to persist here
+            elif self._reset_all_flag:
+                # Reset Ball & Stick 3D bond color to default
+                try:
+                    # Use a stable default instead of relying on parent_window.default_settings
+                    self.parent_window.settings['ball_stick_bond_color'] = '#7F7F7F'
+                    try:
+                        self.parent_window.settings_dirty = True
+                    except Exception:
+                        pass
+                except Exception:
+                    pass
+                self.parent_window.update_cpk_colors_from_settings()
+                self.parent_window.apply_3d_settings()
+                if hasattr(self.parent_window, 'current_mol') and self.parent_window.current_mol:
+                    self.parent_window.draw_molecule_3d(self.parent_window.current_mol)
+
+            # update 2D scene
+            try:
+                if hasattr(self.parent_window, 'scene'):
+                    for it in self.parent_window.scene.items():
+                        try:
+                            # AtomItem.update_style uses CPK_COLORS map
+                            if hasattr(it, 'update_style'):
+                                it.update_style()
+                        except Exception:
+                            pass
+            except Exception:
+                pass
+
+    def accept(self):
+        self.apply_changes()
+        super().accept()
+
+    def pick_bs_bond_color(self):
+        """Pick Ball & Stick 3D bond color from the CPK dialog and update preview immediately."""
+        try:
+            cur = getattr(self, 'changed_bs_color', None) or (self.current_settings.get('ball_stick_bond_color') if self.current_settings else None)
+        except Exception:
+            cur = None
+        if not cur and self.parent_window and hasattr(self.parent_window, 'settings'):
+            cur = self.parent_window.settings.get('ball_stick_bond_color', '#7F7F7F')
+        color = QColorDialog.getColor(QColor(cur), self)
+        if color.isValid():
+            hexv = color.name()
+            self.changed_bs_color = hexv
+            try:
+                self.bs_button.setStyleSheet(f"background-color: {hexv}; border: 1px solid #888;")
+                self.bs_button.setToolTip(hexv)
+            except Exception:
+                pass
 
 # --- 最終版 AnalysisWindow クラス ---
 class AnalysisWindow(QDialog):
@@ -6732,6 +7051,8 @@ class SettingsDialog(QDialog):
             # 3D conversion/optimization defaults
             '3d_conversion_mode': 'fallback',
             'optimization_method': 'MMFF_RDKIT',
+            'ball_stick_bond_color': '#7F7F7F',
+            'cpk_colors': {},
         }
         
         # --- 選択された色を管理する専用のインスタンス変数 ---
@@ -6869,6 +7190,35 @@ class SettingsDialog(QDialog):
         except Exception:
             pass
 
+    def refresh_ui(self):
+        """Refresh periodic table / BS button visuals using current settings.
+
+        Called when settings change externally (e.g., Reset All in main settings) so
+        the dialog reflects the current stored overrides.
+        """
+        try:
+            # Update element button colors from parent.settings cpks
+            overrides = self.parent_window.settings.get('cpk_colors', {}) if self.parent_window and hasattr(self.parent_window, 'settings') else {}
+            for s, btn in self.element_buttons.items():
+                try:
+                    override = overrides.get(s)
+                    q_color = QColor(override) if override else CPK_COLORS.get(s, CPK_COLORS['DEFAULT'])
+                    brightness = (q_color.red() * 299 + q_color.green() * 587 + q_color.blue() * 114) / 1000
+                    text_color = 'white' if brightness < 128 else 'black'
+                    btn.setStyleSheet(f"background-color: {q_color.name()}; color: {text_color}; border: 1px solid #555; font-weight: bold;")
+                except Exception:
+                    pass
+            # Update BS color button from parent settings
+            try:
+                if hasattr(self, 'bs_button') and self.parent_window and hasattr(self.parent_window, 'settings'):
+                    bs_hex = self.parent_window.settings.get('ball_stick_bond_color', self.parent_window.default_settings.get('ball_stick_bond_color', '#7F7F7F'))
+                    self.bs_button.setStyleSheet(f"background-color: {bs_hex}; border: 1px solid #888;")
+                    self.bs_button.setToolTip(bs_hex)
+            except Exception:
+                pass
+        except Exception:
+            pass
+
         # NOTE: Multi-bond offset/thickness settings moved to per-model tabs to allow
         # independent configuration for Ball&Stick/CPK/Wireframe/Stick.
                 
@@ -6968,6 +7318,13 @@ class SettingsDialog(QDialog):
         resolution_layout.addWidget(self.bs_resolution_slider)
         resolution_layout.addWidget(self.bs_resolution_label)
         form_layout.addRow("Resolution (Quality):", resolution_layout)
+
+        # --- Ball & Stick bond color ---
+        self.bs_bond_color_button = QPushButton()
+        self.bs_bond_color_button.setFixedSize(36, 24)
+        self.bs_bond_color_button.clicked.connect(self.pick_bs_bond_color)
+        self.bs_bond_color_button.setToolTip("Choose the uniform bond color for Ball & Stick model (3D)")
+        form_layout.addRow("Ball & Stick bond color:", self.bs_bond_color_button)
 
         self.tab_widget.addTab(ball_stick_widget, "Ball & Stick")
     
@@ -7277,6 +7634,48 @@ class SettingsDialog(QDialog):
                         self.parent_window.settings_dirty = True
                     except Exception:
                         pass
+                    # Also ensure color settings return to defaults and UI reflects them
+                    try:
+                        # Remove any CPK overrides to restore defaults
+                        if 'cpk_colors' in self.parent_window.settings:
+                            # Reset to defaults (empty override dict)
+                            self.parent_window.settings['cpk_colors'] = {}
+                        # 2D bond color is fixed and not part of the settings; do not modify it here
+                        # Reset 3D Ball & Stick uniform bond color to default
+                        self.parent_window.settings['ball_stick_bond_color'] = self.default_settings.get('ball_stick_bond_color', '#7F7F7F')
+                        # Update global CPK colors and reapply 3D settings immediately
+                        try:
+                            self.parent_window.update_cpk_colors_from_settings()
+                        except Exception:
+                            pass
+                        try:
+                            self.parent_window.apply_3d_settings()
+                        except Exception:
+                            pass
+                        # Re-draw current 3D molecule if any
+                        try:
+                            if hasattr(self.parent_window, 'current_mol') and self.parent_window.current_mol:
+                                self.parent_window.draw_molecule_3d(self.parent_window.current_mol)
+                        except Exception:
+                            pass
+                        # Update 2D scene items to reflect color reset
+                        try:
+                            if hasattr(self.parent_window, 'scene'):
+                                for it in self.parent_window.scene.items():
+                                    try:
+                                        if hasattr(it, 'update_style'):
+                                            it.update_style()
+                                    except Exception:
+                                        pass
+                        except Exception:
+                            pass
+                        # Mark settings dirty so they'll be saved on exit
+                        try:
+                            self.parent_window.settings_dirty = True
+                        except Exception:
+                            pass
+                    except Exception:
+                        pass
 
                     # Refresh parent's optimization and conversion menu/action states
                     try:
@@ -7377,6 +7776,22 @@ class SettingsDialog(QDialog):
         
         self.bs_resolution_slider.setValue(settings_dict.get('ball_stick_resolution', self.default_settings['ball_stick_resolution']))
         self.bs_resolution_label.setText(str(settings_dict.get('ball_stick_resolution', self.default_settings['ball_stick_resolution'])))
+        # Ball & Stick bond color (uniform gray color for ball-and-stick)
+        bs_bond_color = settings_dict.get('ball_stick_bond_color', self.default_settings.get('ball_stick_bond_color', '#7F7F7F'))
+        try:
+            self.bs_bond_color = QColor(bs_bond_color).name()
+        except Exception:
+            self.bs_bond_color = self.default_settings.get('ball_stick_bond_color', '#7F7F7F')
+        # Ensure color button exists and update its appearance
+        try:
+            if hasattr(self, 'bs_bond_color_button'):
+                self.bs_bond_color_button.setStyleSheet(f"background-color: {self.bs_bond_color}; border: 1px solid #888;")
+                try:
+                    self.bs_bond_color_button.setToolTip(self.bs_bond_color)
+                except Exception:
+                    pass
+        except Exception:
+            pass
         
         # CPK設定
         cpk_atom_scale = int(settings_dict.get('cpk_atom_scale', self.default_settings['cpk_atom_scale']) * 100)
@@ -7516,7 +7931,21 @@ class SettingsDialog(QDialog):
             'stick_double_bond_radius_factor': self.stick_double_radius_slider.value() / 100.0,
             'stick_triple_bond_radius_factor': self.stick_triple_radius_slider.value() / 100.0,
             'skip_chemistry_checks': self.skip_chem_checks_checkbox.isChecked(),
+            # Ball & Stick bond color (3D grey/uniform color)
+            'ball_stick_bond_color': getattr(self, 'bs_bond_color', self.default_settings.get('ball_stick_bond_color', '#7F7F7F')),
         }
+
+    def pick_bs_bond_color(self):
+        """Open QColorDialog to pick Ball & Stick bond color (3D)."""
+        cur = getattr(self, 'bs_bond_color', self.default_settings.get('ball_stick_bond_color', '#7F7F7F'))
+        color = QColorDialog.getColor(QColor(cur), self)
+        if color.isValid():
+            self.bs_bond_color = color.name()
+            try:
+                self.bs_bond_color_button.setStyleSheet(f"background-color: {self.bs_bond_color}; border: 1px solid #888;")
+                self.bs_bond_color_button.setToolTip(self.bs_bond_color)
+            except Exception:
+                pass
 
     def apply_settings(self):
         """設定を適用（ダイアログは開いたまま）"""
@@ -7531,6 +7960,24 @@ class SettingsDialog(QDialog):
                 pass
             # 3Dビューの設定を適用
             self.parent_window.apply_3d_settings()
+            # Update CPK colors from settings if present (no-op otherwise)
+            try:
+                self.parent_window.update_cpk_colors_from_settings()
+            except Exception:
+                pass
+            # Refresh any open CPK color dialogs so they update their UI
+            try:
+                for w in QApplication.topLevelWidgets():
+                    try:
+                        if isinstance(w, ColorSettingsDialog):
+                            try:
+                                w.refresh_ui()
+                            except Exception:
+                                pass
+                    except Exception:
+                        pass
+            except Exception:
+                pass
             # 現在の分子を再描画（設定変更を反映）
             if hasattr(self.parent_window, 'current_mol') and self.parent_window.current_mol:
                 self.parent_window.draw_molecule_3d(self.parent_window.current_mol)
@@ -9307,6 +9754,11 @@ class MainWindow(QMainWindow):
         view_settings_action = QAction("3D View Settings...", self)
         view_settings_action.triggered.connect(self.open_settings_dialog)
         settings_menu.addAction(view_settings_action)
+        
+        # Color settings (CPK/Bond) — keep with other settings
+        color_action = QAction("CPK Colors...", self)
+        color_action.triggered.connect(lambda: ColorSettingsDialog(self.settings, parent=self).exec_())
+        settings_menu.addAction(color_action)
     
         # 2) 3D Conversion settings — submenu with radio/check actions
         conversion_menu = settings_menu.addMenu("3D Conversion")
@@ -14896,6 +15348,13 @@ class MainWindow(QMainWindow):
             # Ball and Stick用のシリンダーリストを準備（高速化のため）
             if self.current_3d_style == 'ball_and_stick':
                 bond_cylinders = []
+                # Compute the configured grey/uniform bond color for Ball & Stick
+                try:
+                    bs_hex = self.settings.get('ball_stick_bond_color', '#7F7F7F')
+                    q = QColor(bs_hex)
+                    bs_bond_rgb = [q.red(), q.green(), q.blue()]
+                except Exception:
+                    bs_bond_rgb = [127, 127, 127]
             
             for bond in mol.GetBonds():
                 begin_atom_idx = bond.GetBeginAtomIdx()
@@ -14923,7 +15382,7 @@ class MainWindow(QMainWindow):
                         # Ball and stickは全結合をまとめて処理（高速化）
                         cyl = pv.Cylinder(center=c, direction=d, radius=cyl_radius, height=h, resolution=bond_resolution)
                         bond_cylinders.append(cyl)
-                        self._3d_color_map[f'bond_{bond_counter}'] = [127, 127, 127]  # グレー
+                        self._3d_color_map[f'bond_{bond_counter}'] = bs_bond_rgb  # グレー (configurable)
                     else:
                         # その他（stick, wireframe）は中央で色が変わる2つの円柱
                         mid_point = (sp + ep) / 2
@@ -14981,8 +15440,8 @@ class MainWindow(QMainWindow):
                             cyl1 = pv.Cylinder(center=c1, direction=d, radius=r, height=h, resolution=bond_resolution)
                             cyl2 = pv.Cylinder(center=c2, direction=d, radius=r, height=h, resolution=bond_resolution)
                             bond_cylinders.extend([cyl1, cyl2])
-                            self._3d_color_map[f'bond_{bond_counter}_1'] = [127, 127, 127]
-                            self._3d_color_map[f'bond_{bond_counter}_2'] = [127, 127, 127]
+                            self._3d_color_map[f'bond_{bond_counter}_1'] = bs_bond_rgb
+                            self._3d_color_map[f'bond_{bond_counter}_2'] = bs_bond_rgb
                         else:
                             # その他（stick, wireframe）は中央で色が変わる
                             mid_point = (sp + ep) / 2
@@ -15019,9 +15478,9 @@ class MainWindow(QMainWindow):
                             cyl2 = pv.Cylinder(center=c + off_dir * s_triple, direction=d, radius=r, height=h, resolution=bond_resolution)
                             cyl3 = pv.Cylinder(center=c - off_dir * s_triple, direction=d, radius=r, height=h, resolution=bond_resolution)
                             bond_cylinders.extend([cyl1, cyl2, cyl3])
-                            self._3d_color_map[f'bond_{bond_counter}_1'] = [127, 127, 127]
-                            self._3d_color_map[f'bond_{bond_counter}_2'] = [127, 127, 127]
-                            self._3d_color_map[f'bond_{bond_counter}_3'] = [127, 127, 127]
+                            self._3d_color_map[f'bond_{bond_counter}_1'] = bs_bond_rgb
+                            self._3d_color_map[f'bond_{bond_counter}_2'] = bs_bond_rgb
+                            self._3d_color_map[f'bond_{bond_counter}_3'] = bs_bond_rgb
                         else:
                             # その他（stick, wireframe）は中央で色が変わる
                             mid_point = (sp + ep) / 2
@@ -15059,10 +15518,18 @@ class MainWindow(QMainWindow):
                 combined_mesh = combined_bonds.combine()
                 
                 # 一括でグレーで描画
-                bond_actor = self.plotter.add_mesh(combined_mesh, color='grey', **mesh_props)
+                # Use the configured Ball & Stick bond color (hex) for the combined bonds
+                try:
+                    bs_hex = self.settings.get('ball_stick_bond_color', '#7F7F7F')
+                    q = QColor(bs_hex)
+                    # Use normalized RGB for pyvista (r,g,b) floats in [0,1]
+                    bond_color = (q.redF(), q.greenF(), q.blueF())
+                    bond_actor = self.plotter.add_mesh(combined_mesh, color=bond_color, **mesh_props)
+                except Exception:
+                    bond_actor = self.plotter.add_mesh(combined_mesh, color='grey', **mesh_props)
                 
                 # まとめて色情報を記録
-                self._3d_color_map['bonds_combined'] = [127, 127, 127]
+                self._3d_color_map['bonds_combined'] = bs_bond_rgb
 
         if getattr(self, 'show_chiral_labels', False):
             try:
@@ -16414,6 +16881,30 @@ class MainWindow(QMainWindow):
             bg_color = self.settings.get('background_color', '#919191')
             self.plotter.set_background(bg_color)
             self.apply_3d_settings()
+        # Apply any CPK overrides here so both 2D and 3D use the configured colors
+        try:
+            self.update_cpk_colors_from_settings()
+        except Exception:
+            pass
+
+    def update_cpk_colors_from_settings(self):
+        """Update global CPK_COLORS and CPK_COLORS_PV from saved settings overrides.
+
+        This modifies the in-memory CPK_COLORS mapping (not persisted until settings are saved).
+        Only keys present in self.settings['cpk_colors'] are changed; other elements keep the defaults.
+        """
+        try:
+            overrides = self.settings.get('cpk_colors', {}) or {}
+            # Start from a clean copy of the defaults
+            global CPK_COLORS, CPK_COLORS_PV
+            CPK_COLORS = {k: QColor(v) if not isinstance(v, QColor) else QColor(v) for k, v in DEFAULT_CPK_COLORS.items()}
+            for k, hexv in overrides.items():
+                if isinstance(hexv, str) and hexv:
+                    CPK_COLORS[k] = QColor(hexv)
+            # Rebuild PV version
+            CPK_COLORS_PV = {k: [c.redF(), c.greenF(), c.blueF()] for k, c in CPK_COLORS.items()}
+        except Exception as e:
+            print(f"Failed to update CPK colors from settings: {e}")
 
 
     def apply_3d_settings(self):
@@ -16502,6 +16993,24 @@ class MainWindow(QMainWindow):
                     self.settings_dirty = True
                 except Exception:
                     pass
+                # If ColorSettingsDialog is open, refresh its UI to reflect the reset
+                try:
+                    for w in QApplication.topLevelWidgets():
+                        try:
+                            if isinstance(w, ColorSettingsDialog):
+                                try:
+                                    w.refresh_ui()
+                                except Exception:
+                                    pass
+                        except Exception:
+                            pass
+                except Exception:
+                    pass
+                # Ensure global CPK mapping is rebuilt from defaults and UI is updated
+                try:
+                    self.update_cpk_colors_from_settings()
+                except Exception:
+                    pass
                 # Refresh UI/menu state for conversion and optimization
                 try:
                     # update optimization method
@@ -16535,6 +17044,40 @@ class MainWindow(QMainWindow):
                     
                     QMessageBox.information(self, "Reset Complete", "All settings have been reset to defaults.")
                     
+                except Exception:
+                    pass
+                # Update 2D scene styling to reflect default CPK colors
+                try:
+                    if hasattr(self, 'scene') and self.scene:
+                        for it in list(self.scene.items()):
+                            try:
+                                if hasattr(it, 'update_style'):
+                                    it.update_style()
+                            except Exception:
+                                pass
+                        try:
+                            # Force a full scene update and viewport repaint for all views
+                            self.scene.update()
+                            for v in list(self.scene.views()):
+                                try:
+                                    v.viewport().update()
+                                except Exception:
+                                    pass
+                        except Exception:
+                            pass
+                except Exception:
+                    pass
+                # Also refresh any open SettingsDialog instances so their UI matches
+                try:
+                    for w in QApplication.topLevelWidgets():
+                        try:
+                            if isinstance(w, SettingsDialog):
+                                try:
+                                    w.update_ui_from_settings(self.settings)
+                                except Exception:
+                                    pass
+                        except Exception:
+                            pass
                 except Exception:
                     pass
             except Exception as e:
@@ -16583,6 +17126,9 @@ class MainWindow(QMainWindow):
             'skip_chemistry_checks': False,
             '3d_conversion_mode': 'fallback',
             'optimization_method': 'MMFF_RDKIT',
+            # Color overrides
+            'ball_stick_bond_color': '#7F7F7F',
+            'cpk_colors': {},  # symbol->hex overrides
         }
 
         try:
