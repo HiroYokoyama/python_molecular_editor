@@ -23,16 +23,20 @@ MoleditPy は、Python で開発された分子編集ソフトウェアです。
 
 ## 2\. インストールと起動
 
-インストールはpipを用いて行えます。
+1.  **パッケージのインストール**
+    このコマンドを実行すると、お使いのOS（Windows/macOSまたはLinux）に適した `moleditpy` 本体が自動的にインストールされます。
 
-Windows/MacOS
-```bash
-pip install moleditpy
-```
-Linux
-```bash
-pip install moleditpy-linux
-```
+    ```bash
+    pip install moleditpy-installer
+    ```
+
+2.  **ショートカットの作成**
+    インストール後、このコマンドを実行すると、アプリケーションメニュー（スタートメニューやアプリケーションフォルダなど）にショートカットが作成されます。
+
+    ```bash
+    moleditpy-installer
+    ```
+
 
 **起動:**
 
@@ -389,6 +393,7 @@ MoleditPy は、描画した 2D 構造から 3D 構造を生成し、表示、�
 メニューの `Help` \> `About` からバージョン情報を確認できます。
 
 -----
+
 
 
 
