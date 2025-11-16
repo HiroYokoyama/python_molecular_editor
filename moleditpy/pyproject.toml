@@ -3,9 +3,9 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "moleditpy"
+name = "MoleditPy"
 
-version = "1.15.0"
+version = "1.15.1"
 
 authors = [
   { name="HiroYokoyama", email="titech.yoko.hiro@gmail.com" },
