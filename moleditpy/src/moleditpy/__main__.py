@@ -11,7 +11,7 @@ DOI 10.5281/zenodo.17268532
 """
 
 #Version
-VERSION = '1.15.0'
+VERSION = '1.15.1'
 
 print("-----------------------------------------------------")
 print("MoleditPy — A Python-based molecular editing software")
@@ -6689,7 +6689,7 @@ class ColorSettingsDialog(QDialog):
             except Exception:
                 pass
             try:
-                self.parent_window.apply_3d_settings()
+                self.parent_window.apply_3d_settings(redraw=False)
             except Exception:
                 pass
             try:
@@ -16877,13 +16877,25 @@ class MainWindow(QMainWindow):
             
     def apply_initial_settings(self):
         """UIの初期化が完了した後に、保存された設定を3Dビューに適用する"""
+        
+        try:
+            self.update_cpk_colors_from_settings()
+        except Exception:
+            pass
+
         if self.plotter and self.plotter.renderer:
             bg_color = self.settings.get('background_color', '#919191')
             self.plotter.set_background(bg_color)
             self.apply_3d_settings()
-        # Apply any CPK overrides here so both 2D and 3D use the configured colors
+        
         try:
-            self.update_cpk_colors_from_settings()
+            if hasattr(self, 'scene') and self.scene:
+                for it in list(self.scene.items()):
+                    if hasattr(it, 'update_style'):
+                        it.update_style()
+                self.scene.update()
+                for v in list(self.scene.views()):
+                    v.viewport().update()
         except Exception:
             pass
 
@@ -16907,7 +16919,7 @@ class MainWindow(QMainWindow):
             print(f"Failed to update CPK colors from settings: {e}")
 
 
-    def apply_3d_settings(self):
+    def apply_3d_settings(self, redraw=True):
         # Projection mode
         proj_mode = self.settings.get('projection_mode', 'Perspective')
         if hasattr(self.plotter, 'renderer') and hasattr(self.plotter.renderer, 'GetActiveCamera'):
@@ -16949,7 +16961,9 @@ class MainWindow(QMainWindow):
             else:
                 self.axes_widget.Off()  
 
-        self.draw_molecule_3d(self.current_mol)
+        if redraw:
+            self.draw_molecule_3d(self.current_mol)
+
         # 設定変更時にカメラ位置をリセットしない（初回のみリセット）
         if not getattr(self, '_camera_initialized', False):
             try:

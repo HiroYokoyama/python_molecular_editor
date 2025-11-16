@@ -1,5 +1,11 @@
 README.md
 pyproject.toml
+src/MoleditPy.egg-info/PKG-INFO
+src/MoleditPy.egg-info/SOURCES.txt
+src/MoleditPy.egg-info/dependency_links.txt
+src/MoleditPy.egg-info/entry_points.txt
+src/MoleditPy.egg-info/requires.txt
+src/MoleditPy.egg-info/top_level.txt
 src/moleditpy/__init__.py
 src/moleditpy/__main__.py
 src/moleditpy.egg-info/PKG-INFO
