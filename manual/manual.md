@@ -23,19 +23,20 @@ MoleditPy is a molecular editing software developed in Python. Through an intuit
 
 ## 2\. Installation and Launch
 
-Installation can be done using pip.
 
-Windows/MacOS
+1.  **Install the Package**
+    This will automatically install the correct `moleditpy` (for Win/Mac) or `moleditpy-linux` (for Linux) as a dependency.
 
-```bash
-pip install moleditpy
-```
+    ```bash
+    pip install moleditpy-installer
+    ```
 
-Linux
+2.  **Create the Shortcut**
+    After installation, run this command to create the shortcut in your application menu (e.g., Start Menu or Applications folder).
 
-```bash
-pip install moleditpy-linux
-```
+    ```bash
+    moleditpy-installer
+    ```
 
 **Launch:**
 
@@ -406,6 +407,7 @@ Click the **Apply** button to immediately apply the settings, and the **OK** but
 You can check the version information from the `Help` \> `About` menu.
 
 -----
+
 
 
 
