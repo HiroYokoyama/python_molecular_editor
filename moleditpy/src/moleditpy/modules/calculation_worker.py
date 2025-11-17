@@ -11,15 +11,26 @@ import math
 import re
 
 
-# Open Babel Python binding (optional; required for fallback)
+# Use centralized Open Babel availability from package-level __init__
+# Use per-package modules availability (local __init__).
+# Prefer package-relative import when running as `python -m moleditpy` and
+# fall back to a top-level import when running as a script. This mirrors the
+# import style used in other modules and keeps the package robust.
 try:
-    from openbabel import pybel
-    OBABEL_AVAILABLE = True
+    from . import OBABEL_AVAILABLE
 except Exception:
-    # pybel (Open Babel Python bindings) is optional. If not present, disable OBabel features.
+    from modules import OBABEL_AVAILABLE
+# Only import pybel on demand — `moleditpy` itself doesn't expose `pybel`.
+if OBABEL_AVAILABLE:
+    try:
+        from openbabel import pybel
+    except Exception:
+        # If import fails here, disable OBABEL locally; avoid raising
+        pybel = None
+        OBABEL_AVAILABLE = False
+        print("Warning: openbabel.pybel not available. Open Babel fallback and OBabel-based options will be disabled.")
+else:
     pybel = None
-    OBABEL_AVAILABLE = False
-    print("Warning: openbabel.pybel not available. Open Babel fallback and OBabel-based options will be disabled.")
 
 class CalculationWorker(QObject):
     status_update = pyqtSignal(str)
