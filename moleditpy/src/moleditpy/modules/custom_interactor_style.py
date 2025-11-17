@@ -9,7 +9,10 @@ from PyQt6.QtCore import (
     QMimeData, QByteArray, QUrl, QTimer, QDateTime
 )
 
-from modules.constants import *
+try:
+    from .constants import pt
+except Exception:
+    from modules.constants import pt
 
 class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
     def __init__(self, main_window):

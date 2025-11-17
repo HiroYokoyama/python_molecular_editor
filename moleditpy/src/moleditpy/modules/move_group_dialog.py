@@ -1,6 +1,19 @@
-from PyQt6.QtWidgets import QDialog
+from PyQt6.QtWidgets import (
+    QDialog, QVBoxLayout, QLabel, QGridLayout, QHBoxLayout, QPushButton, QLineEdit, QMessageBox
+)
+from PyQt6.QtCore import Qt, QEvent
+import numpy as np
+import pyvista as pv
+from rdkit import Chem
+try:
+    from .constants import VDW_RADII
+except Exception:
+    from modules.constants import VDW_RADII
 
-from modules.dialog3_d_picking_mixin import Dialog3DPickingMixin
+try:
+    from .dialog3_d_picking_mixin import Dialog3DPickingMixin
+except Exception:
+    from modules.dialog3_d_picking_mixin import Dialog3DPickingMixin
 
 class MoveGroupDialog(Dialog3DPickingMixin, QDialog):
     """結合している分子グループを選択して並行移動・回転するダイアログ"""

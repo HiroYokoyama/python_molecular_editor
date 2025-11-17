@@ -1,4 +1,13 @@
-from PyQt6.QtWidgets import QDialog
+from PyQt6.QtWidgets import (
+    QDialog, QVBoxLayout, QLabel, QPushButton, QHBoxLayout
+)
+from PyQt6.QtGui import QPixmap, QPainter, QPen, QCursor
+from PyQt6.QtCore import Qt
+import os
+try:
+    from .constants import VERSION
+except Exception:
+    from modules.constants import VERSION
 
 class AboutDialog(QDialog):
     def __init__(self, main_window, parent=None):

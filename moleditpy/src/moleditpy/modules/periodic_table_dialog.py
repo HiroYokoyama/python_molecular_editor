@@ -1,4 +1,9 @@
-from PyQt6.QtWidgets import QDialog
+from PyQt6.QtWidgets import QDialog, QGridLayout, QPushButton
+from PyQt6.QtGui import QColor
+try:
+    from .constants import CPK_COLORS
+except Exception:
+    from modules.constants import CPK_COLORS
 
 from PyQt6.QtCore import pyqtSignal
 

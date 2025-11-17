@@ -22,9 +22,19 @@ from PyQt6.QtCore import (
     QMimeData, QByteArray, QUrl, QTimer, QDateTime
 )
 
-from modules.template_preview_item import TemplatePreviewItem
-from modules.atom_item import AtomItem
-from modules.bond_item import BondItem
+try:
+    from .template_preview_item import TemplatePreviewItem
+    from .atom_item import AtomItem
+    from .bond_item import BondItem
+except Exception:
+    from modules.template_preview_item import TemplatePreviewItem
+    from modules.atom_item import AtomItem
+    from modules.bond_item import BondItem
+
+try:
+    from .constants import DEFAULT_BOND_LENGTH, SNAP_DISTANCE, SUM_TOLERANCE
+except Exception:
+    from modules.constants import DEFAULT_BOND_LENGTH, SNAP_DISTANCE, SUM_TOLERANCE
 
 # Optional SIP helper: on some PyQt6 builds sip.isdeleted is available and
 # allows safely detecting C++ wrapper objects that have been deleted. Import

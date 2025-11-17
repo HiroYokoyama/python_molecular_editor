@@ -1,4 +1,8 @@
-from PyQt6.QtWidgets import QDialog
+from PyQt6.QtWidgets import (
+    QDialog, QVBoxLayout, QLabel, QButtonGroup, QRadioButton,
+    QHBoxLayout, QPushButton, QMessageBox
+)
+from rdkit import Chem
 
 class MirrorDialog(QDialog):
     """分子の鏡像を作成するダイアログ"""

@@ -1,4 +1,13 @@
-from PyQt6.QtWidgets import QDialog
+from PyQt6.QtWidgets import (
+    QDialog, QVBoxLayout, QTabWidget, QWidget, QFormLayout, QPushButton, QHBoxLayout,
+    QCheckBox, QComboBox, QSpinBox, QLabel, QColorDialog, QLineEdit, QSlider, QFrame, QMessageBox
+)
+from PyQt6.QtGui import QFont
+from PyQt6.QtCore import Qt
+try:
+    from .constants import CPK_COLORS, DEFAULT_CPK_COLORS
+except Exception:
+    from modules.constants import CPK_COLORS, DEFAULT_CPK_COLORS
 
 
 class SettingsDialog(QDialog):

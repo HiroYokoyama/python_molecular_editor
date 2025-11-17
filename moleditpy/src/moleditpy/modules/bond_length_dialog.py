@@ -1,8 +1,11 @@
-from PyQt6.QtWidgets import QDialog
+from PyQt6.QtWidgets import (
+    QDialog, QVBoxLayout, QLabel, QHBoxLayout, QPushButton, QLineEdit, QWidget, QRadioButton, QMessageBox
+)
 
-from modules.dialog3_d_picking_mixin import Dialog3DPickingMixin
+from .dialog3_d_picking_mixin import Dialog3DPickingMixin
 
 from PyQt6.QtCore import Qt
+import numpy as np
 
 class BondLengthDialog(Dialog3DPickingMixin, QDialog):
     def __init__(self, mol, main_window, preselected_atoms=None, parent=None):

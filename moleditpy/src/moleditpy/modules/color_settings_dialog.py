@@ -1,4 +1,12 @@
-from PyQt6.QtWidgets import QDialog
+from PyQt6.QtWidgets import (
+    QDialog, QVBoxLayout, QGridLayout, QPushButton, QHBoxLayout, QLabel,
+    QApplication, QColorDialog
+)
+from PyQt6.QtGui import QColor
+try:
+    from .constants import CPK_COLORS, DEFAULT_CPK_COLORS
+except Exception:
+    from modules.constants import CPK_COLORS, DEFAULT_CPK_COLORS
 
 class ColorSettingsDialog(QDialog):
     """Dialog to customize CPK element colors.

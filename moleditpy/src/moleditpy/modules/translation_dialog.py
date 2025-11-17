@@ -1,6 +1,10 @@
-from PyQt6.QtWidgets import QDialog
+from PyQt6.QtWidgets import (
+    QDialog, QVBoxLayout, QLabel, QGridLayout, QLineEdit, QCheckBox, QPushButton, QHBoxLayout
+)
+from PyQt6.QtCore import Qt
+import numpy as np
 
-from modules.dialog3_d_picking_mixin import Dialog3DPickingMixin
+from .dialog3_d_picking_mixin import Dialog3DPickingMixin
 
 class TranslationDialog(Dialog3DPickingMixin, QDialog):
     def __init__(self, mol, main_window, parent=None):

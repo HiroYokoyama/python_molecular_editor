@@ -1,4 +1,16 @@
-from PyQt6.QtWidgets import QDialog
+from PyQt6.QtWidgets import (
+    QDialog, QVBoxLayout, QLabel, QWidget, QGridLayout, QScrollArea,
+    QHBoxLayout, QPushButton, QGraphicsScene, QInputDialog, QMessageBox
+)
+from PyQt6.QtGui import QPainter, QFont, QColor, QPen, QBrush
+from PyQt6.QtCore import Qt, QPointF, QRectF, QTimer, QDateTime, QLineF
+from .template_preview_view import TemplatePreviewView
+try:
+    from .constants import VERSION, CPK_COLORS
+except Exception:
+    from modules.constants import VERSION, CPK_COLORS
+import os
+import json
 
 class UserTemplateDialog(QDialog):
     """ユーザーテンプレート管理ダイアログ"""

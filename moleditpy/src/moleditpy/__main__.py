@@ -15,7 +15,13 @@ print("-----------------------------------------------------")
 print("MoleditPy — A Python-based molecular editing software")
 print("-----------------------------------------------------\n")
 
-from main import main
+try:
+    # Preferred when running as a package: python -m moleditpy
+    from .main import main
+except Exception:
+    # Fallback when running the file directly: python __main__.py
+    # This will import the top-level `main` module in the same folder.
+    from main import main
 
 # --- Application Execution ---
 if __name__ == '__main__':
