@@ -1,0 +1,2 @@
+[console_scripts]
+moleditpy = moleditpy.__main__:main
