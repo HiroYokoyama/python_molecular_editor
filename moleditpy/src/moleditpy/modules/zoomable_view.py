@@ -1,23 +1,11 @@
 from PyQt6.QtWidgets import (
-    QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-    QPushButton, QSplitter, QGraphicsView, QGraphicsScene, QGraphicsItem,
-    QToolBar, QStatusBar, QGraphicsTextItem, QGraphicsLineItem, QDialog, QGridLayout,
-    QFileDialog, QSizePolicy, QLabel, QLineEdit, QToolButton, QMenu, QMessageBox, 
-    QInputDialog, QDialogButtonBox, QColorDialog, QCheckBox, QSlider, QFormLayout, 
-    QRadioButton, QComboBox, QListWidget, QListWidgetItem, QButtonGroup, QTabWidget, 
-    QScrollArea, QFrame, QTableWidget, QTableWidgetItem, QAbstractItemView
+    QGraphicsView
 )
 
-from PyQt6.QtGui import (
-    QPen, QBrush, QColor, QPainter, QAction, QActionGroup, QFont, QPolygonF,
-    QPainterPath, QPainterPathStroker, QFontMetrics, QFontMetricsF, QKeySequence, 
-    QTransform, QCursor, QPixmap, QIcon, QShortcut, QDesktopServices, QImage
-)
 
 
 from PyQt6.QtCore import (
-    Qt, QPointF, QRectF, QLineF, QObject, QThread, pyqtSignal, pyqtSlot, QEvent, 
-    QMimeData, QByteArray, QUrl, QTimer, QDateTime
+    Qt, QPointF
 )
 
 class ZoomableView(QGraphicsView):

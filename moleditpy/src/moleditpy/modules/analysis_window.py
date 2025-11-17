@@ -1,6 +1,7 @@
 from PyQt6.QtWidgets import (
     QDialog, QVBoxLayout, QGridLayout, QLabel, QLineEdit, QPushButton, QApplication
 )
+from PyQt6.QtCore import Qt
 from rdkit import Chem
 from rdkit.Chem import Descriptors, rdMolDescriptors
 from rdkit.Chem import inchi as rd_inchi

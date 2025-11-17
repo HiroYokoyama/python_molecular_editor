@@ -5,14 +5,17 @@ from vtkmodules.vtkInteractionStyle import vtkInteractorStyleTrackballCamera
 from PyQt6.QtWidgets import QApplication
 
 from PyQt6.QtCore import (
-    Qt, QPointF, QRectF, QLineF, QObject, QThread, pyqtSignal, pyqtSlot, QEvent, 
-    QMimeData, QByteArray, QUrl, QTimer, QDateTime
+    Qt
 )
 
 try:
     from .constants import pt
 except Exception:
     from modules.constants import pt
+try:
+    from .move_group_dialog import MoveGroupDialog
+except Exception:
+    from modules.move_group_dialog import MoveGroupDialog
 
 class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
     def __init__(self, main_window):

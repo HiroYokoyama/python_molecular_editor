@@ -133,7 +133,7 @@ class MolecularData:
         final_mol = mol.GetMol()
         try:
             Chem.SanitizeMol(final_mol)
-        except Exception as e:
+        except Exception:
             return None
 
         # --- Step 4: add 2D conformer ---

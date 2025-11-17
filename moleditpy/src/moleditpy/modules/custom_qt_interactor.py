@@ -1,10 +1,6 @@
 from pyvistaqt import QtInteractor
 
 
-from PyQt6.QtCore import (
-    Qt, QPointF, QRectF, QLineF, QObject, QThread, pyqtSignal, pyqtSlot, QEvent, 
-    QMimeData, QByteArray, QUrl, QTimer, QDateTime
-)
 
 
 class CustomQtInteractor(QtInteractor):

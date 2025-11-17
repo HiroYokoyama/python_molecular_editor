@@ -1,3 +1,11 @@
+from PyQt6.QtCore import Qt, QEvent
+import numpy as np
+try:
+    from .constants import pt
+except Exception:
+    from modules.constants import pt
+
+
 class Dialog3DPickingMixin:
     """3D原子選択のための共通機能を提供するMixin"""
     
@@ -86,4 +94,3 @@ class Dialog3DPickingMixin:
     
     def try_alternative_picking(self, x, y):
         """代替のピッキング方法（使用しない）"""
-        pass
