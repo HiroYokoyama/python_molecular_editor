@@ -1,93 +1,92 @@
-# **MoleditPy Test Suite Analysis Report**
+# MoleditPy Test Suite
 
-This report explains the purpose and function of the provided test\_main\_app.py, conftest.py, and pytest.ini files.
+## 1\. Overview
 
-## **1\. Purpose of the Tests**
+This directory contains the automated test suite for the **MoleditPy** molecular editor. These tests are designed to verify the application's core logic (unit tests) and its graphical user interface interactions (GUI tests).
 
-These files are used to automatically validate (test) the behavior of the **MoleditPy (MainWindow)** application, defined in \_\_main\_\_.py, using the pytest framework (specifically the pytest-qt plugin).
+The suite uses the `pytest` framework, leveraging `pytest-qt` for GUI testing and `pytest-mock` (or the built-in `unittest.mock`) for isolating components.
 
-Instead of a human tester manually clicking buttons to verify functionality each time, this program automatically "launches the app, presses buttons, and checks if the result is as expected."
+## 2\. Technologies & Frameworks
 
-## **2\. Role of Each File**
+  * **Testing Framework**: `pytest`
+  * **GUI Testing**: `pytest-qt`
+  * **Mocking**: `pytest-mock` (and `unittest.mock`)
+  * **Core Application**: `PyQt6`
+  * **Mocked Dependencies**: `RDKit` (for 3D generation), `PyVista` (for 3D rendering), and various `PyQt6` dialogs (`QMessageBox`, `QFileDialog`) to ensure non-blocking test execution.
 
-* **pytest.ini**:  
-  * This is the configuration file for pytest.  
-  * It defines two "markers": @pytest.mark.unit (for tests that do not require a GUI) and @pytest.mark.gui (for tests that do require a GUI).  
-* **conftest.py**:  
-  * This is one of the most important files for pytest, as it defines "fixtures" (setups) used across all tests.  
-  * **① Application Startup (app, window):**  
-    * It prepares to launch QApplication and MainWindow (imported as moleditpy) before the tests run and automatically close them afterward.  
-  * **② Mocking:**  
-    * This is its most critical role.  
-    * It replaces heavy or time-consuming processes from external libraries (like RDKit's 3D calculations via start\_calculation or PyVista's 3D rendering via CustomQtInteractor) with "mock objects."  
-    * It also mocks pop-up windows (like QDialog and QFileDialog) to prevent them from appearing and halting the automated tests.  
-* **test\_main\_app.py**:  
-  * This file contains the actual test cases (verification items).  
-  * It uses the window (the app) and qtbot (the control robot) prepared by conftest.py to simulate various user operations.
+## 3\. Test Structure
 
-## **3\. Key Functions Verified by test\_main\_app.py**
+The suite is organized into the following key files:
 
-This test suite covers a wide range of the application's functionality.
+### `pytest.ini`
 
-### **Category 1: Internal Data Model (Unit Tests)**
+This file configures the `pytest` runner:
 
-Tests marked with @pytest.mark.unit.
+  * **Markers**: Defines custom markers to separate test types:
+      * `unit`: For unit tests that do not require a GUI.
+      * `gui`: For tests that interact with the PyQt6 GUI.
+  * **Configuration**: Sets options like `norecursedirs` to avoid external packages and `addopts` to enforce strict marker usage.
 
-* Whether the MolecularData class correctly adds/removes atoms and bonds (including stereobonds).  
-* Whether the internal data can be correctly converted to RDKit-recognizable formats (including Wedge/Dash and E/Z stereochemistry).
+### `conftest.py`
 
-### **Category 2: 2D Drawing and Editing (GUI Tests)**
+This fixture file sets up the test environment for `pytest`.
 
-Tests marked with @pytest.mark.gui.
+  * **`app` fixture**: Provides a session-scoped `QApplication` instance.
+  * **`window` fixture**: The primary setup fixture. It runs for each test, creating a fresh `MainWindow` instance.
+  * **Mocking**: This fixture is responsible for heavily mocking external or slow components to ensure stable and fast tests:
+      * **3D Conversion**: Mocks the `CalculationWorker` thread. When a 2D-to-3D conversion is triggered, it immediately calls the `on_calculation_finished` slot with a dummy RDKit molecule, bypassing the actual computation.
+      * **PyVista/VTK**: Replaces the `CustomQtInteractor` (the 3D viewport) with a `DummyPlotter` (a simple `QWidget`) to prevent an actual 3D window from launching.
+      * **Dialogs**: Mocks all blocking dialogs (`QMessageBox`, `QFileDialog`, `QInputDialog`, `QDialog.exec`) to return default "success" values (e.g., "Yes" to questions, a fake path for file dialogs).
 
-* **Mode Change:** Whether drawing modes switch correctly when toolbar buttons (C, N, single bond, double bond, etc.) are pressed.  
-* **Basic Drawing:** Whether atoms can be placed by clicking the scene and bonds created by dragging.  
-* **Editing:** Whether existing atoms' element symbols can be changed by clicking, or bond orders changed by clicking.  
-* **Deletion:** Whether atoms and bonds can be deleted via right-click or the Delete key.  
-* **Special Modes:** Whether charge modes (+/-) and radical mode work correctly.  
-* **Templates:** Whether the benzene ring template can be placed.
+### `test_main_app.py`
 
-### **Category 3: 3D View and Conversion (GUI Tests)**
+This is the main test file, containing all unit and GUI test cases.
 
-* **2D-\>3D Conversion:** Whether pressing the "Convert 2D to 3D" button triggers the 3D conversion process (via mock) and the UI recognizes the 3D view update.  
-* **3D Optimization:** Whether the "Optimize 3D" button is pressable after 3D model generation.  
-* **UI Toggles:** Whether the "3D Select (Measure)" and "3D Drag" mode buttons toggle correctly (on/off).  
-* **3D Info Display:** Whether the 3D view's atom info (ID, coords, etc.) display can be toggled from the menu.
+  * **Test Helpers**:
 
-### **Category 4: Basic Application Functions (GUI Tests)**
+      * `get_action(toolbar, tooltip_text)`: Finds a `QAction` on a toolbar.
+      * `click_scene(...)`: Simulates a mouse click at a specific `QPointF` in the 2D scene.
+      * `drag_scene(...)`: Simulates a mouse drag between two points in the 2D scene.
 
-* **Startup:** Whether the app launches without errors.  
-* **Undo/Redo:** Whether "Undo" and "Redo" for operations (like adding an atom) function correctly.  
-* **Clear All:** Whether data is correctly initialized (cleared).  
-* **Copy & Paste:** Whether 2D molecular fragments can be copied and pasted.
+  * **Unit Tests (`@pytest.mark.unit`)**:
 
-### **Category 5: File Operations and Advanced Features (GUI Tests)**
+      * Focus on the `MolecularData` class.
+      * Test adding/removing atoms and bonds.
+      * Verify correct handling of bond sorting (normal vs. stereo bonds).
+      * Test RDKit conversion logic, including 2D stereochemistry (Wedge/Dash) and E/Z bond stereo.
 
-* **Import/Export:** Whether SMILES import and project saving/loading (via mock) work.  
-* **Hydrogen Operations:** Whether the "Add/Remove Hydrogens" menus function.  
-* **User Templates:** Whether a template can be saved and then used (placed).  
-* **D\&D (Drag & Drop):** Whether the correct import function is called when a file (e.g., .mol) is hypothetically dropped onto the 2D/3D area.  
-* **Implicit Hydrogens:** Whether the implicit hydrogen count (H4, H3...) on atoms updates automatically after drawing operations.
+  * **GUI Tests (`@pytest.mark.gui`)**:
 
-## **4\. Is There Any Problem with This Approach?**
+      * Cover all major application features by simulating user interaction via `qtbot`.
+      * **2D Editor**: Drawing atoms, bonds, templates (Benzene); changing modes (charge, radical); Undo/Redo; Copy/Paste; Clear All; 2D Cleanup.
+      * **3D Conversion**: Clicking the "Convert 2D -\> 3D" button and verifying the UI state change.
+      * **3D View**: Toggling 3D styles (CPK), measurement mode, 3D drag mode, and atom info labels.
+      * **File I/O**: Importing SMILES, saving/loading projects (`.pmeprj`), loading `.mol` files in viewer mode, and drag-and-drop file handling.
+      * **Keyboard Shortcuts**: Testing key presses ('O' for Oxygen, '2' for double bond, 'Delete' for deletion).
 
-**Conclusion: No, this is not a problem. This is a very common and excellent approach for testing GUI applications.**
+## 4\. Setup & Running
 
-The key is **"Mocking,"** as implemented in conftest.py.
+### Installation
 
-### **Benefits of Mocking (Why this is fine)**
+Before running the tests, install the required `pytest` plugins:
 
-1. **Speed:** Tests complete instantly without waiting for RDKit calculations or heavy PyVista 3D rendering.  
-2. **Independence:** The MoleditPy UI logic can be verified even in environments without RDKit or PyVista installed (like automated test servers).  
-3. **Stability:** Mocking pop-up dialogs prevents automated tests from halting unexpectedly.
+```bash
+pip install pytest pytest-qt pytest-mock
+```
 
-### **Limitations of Mocking (What this does NOT test)**
+You will also need the application's main dependencies, such as `PyQt6`.
 
-Due to mocking, this test suite **does NOT** verify the following:
+### Running Tests
 
-* Whether the 3D structure calculated by RDKit is **chemically correct**.  
-* Whether PyVista is **actually rendering the 3D model beautifully**.
+To run the test suite, execute `pytest` from the root directory:
 
-What this test suite does guarantee is:  
-"That the MoleditPy UI logic (e.g., 'when a button is pressed, this function is called, this data is updated, and this UI element is enabled') works as expected."  
-This is crucial for continuously checking that the application logic has not broken (i.e., for regression testing) and is a standard methodology used in CI/CD (Continuous Integration / Continuous Delivery).
+```bash
+# Run all tests
+pytest
+
+# Run only unit tests
+pytest -m unit
+
+# Run only GUI tests
+pytest -m gui
+```

@@ -10,35 +10,7 @@ import os
 import importlib.util
 project_main = os.path.join(os.path.dirname(__file__), '__main__.py')
 
-# Some environments accidentally include a local test shim `mocker_shim_test.py`
-# that replaces builtin `open` during test collection; this breaks pytest's
-# assertion rewriting step which needs to open .pyc files. If such a shim has
-# already run and replaced `builtins.open`, restore it to `io.open` so pytest
-# can open files normally.
-try:
-    import io as _io
-    import builtins as _builtins
-    # If a shim replaced builtins.open with a custom object, ensure open is
-    # callable; if not, restore to a reasonable default implementation.
-    if not callable(_builtins.open):
-        _builtins.open = _io.open
-except Exception:
-    pass
 
-
-def pytest_ignore_collect(path, config):
-    """
-    Ignore accidental shim test file names that end with `_test.py` but
-    are not intended to be executed by pytest, such as `mocker_shim_test.py`.
-    This prevents those shims from running during collection and altering the
-    runtime (e.g., replacing builtins.open).
-    """
-    try:
-        if path.basename == 'mocker_shim_test.py':
-            return True
-    except Exception:
-        pass
-    return False
 
 moleditpy = None
 if os.path.exists(project_main):
