@@ -10,44 +10,45 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI 10.5281/zenodo.17268532
 """
 
-import sys
 import numpy as np
 import pickle
 import copy
 import math
 import io
 import os
-import ctypes
 import itertools
 import json 
 import vtk
 import base64
 import contextlib
-import re
 import traceback
 
 from collections import deque
 
+# RDKit imports (explicit to satisfy flake8 and used features)
+from rdkit import Chem
+from rdkit.Chem import AllChem, Descriptors, rdMolDescriptors, rdMolTransforms, rdGeometry
+try:
+    from . import sip_isdeleted_safe
+except Exception:
+    from modules import sip_isdeleted_safe
+
 # PyQt6 Modules
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-    QPushButton, QSplitter, QGraphicsView, QGraphicsScene, QGraphicsItem,
-    QToolBar, QStatusBar, QGraphicsTextItem, QGraphicsLineItem, QDialog, QGridLayout,
-    QFileDialog, QSizePolicy, QLabel, QLineEdit, QToolButton, QMenu, QMessageBox, 
-    QInputDialog, QDialogButtonBox, QColorDialog, QCheckBox, QSlider, QFormLayout, 
-    QRadioButton, QComboBox, QListWidget, QListWidgetItem, QButtonGroup, QTabWidget, 
-    QScrollArea, QFrame, QTableWidget, QTableWidgetItem, QAbstractItemView
+    QPushButton, QSplitter, QGraphicsView, QToolBar, QGraphicsTextItem, QDialog, QFileDialog, QSizePolicy, QLabel, QLineEdit, QToolButton, QMenu, QMessageBox, 
+    QInputDialog, QDialogButtonBox
 )
 
 from PyQt6.QtGui import (
     QPen, QBrush, QColor, QPainter, QAction, QActionGroup, QFont, QPolygonF,
-    QPainterPath, QPainterPathStroker, QFontMetrics, QFontMetricsF, QKeySequence, 
+    QKeySequence, 
     QTransform, QCursor, QPixmap, QIcon, QShortcut, QDesktopServices, QImage
 )
 
 
 from PyQt6.QtCore import (
-    Qt, QPointF, QRectF, QLineF, QObject, QThread, pyqtSignal, pyqtSlot, QEvent, 
+    Qt, QPointF, QRectF, QLineF, QThread, pyqtSignal, pyqtSlot, QEvent, 
     QMimeData, QByteArray, QUrl, QTimer, QDateTime
 )
 
@@ -77,9 +78,7 @@ except Exception:
 
 try:
     # package relative imports (preferred when running as `python -m moleditpy`)
-    from .constants import *
-    from .dialog3_d_picking_mixin import Dialog3DPickingMixin
-    from .template_preview_view import TemplatePreviewView
+    from .constants import CLIPBOARD_MIME_TYPE, CPK_COLORS_PV, DEFAULT_CPK_COLORS, NUM_DASHES, VDW_RADII, VERSION, pt
     from .user_template_dialog import UserTemplateDialog
     from .about_dialog import AboutDialog
     from .translation_dialog import TranslationDialog
@@ -107,9 +106,7 @@ try:
     from .constrained_optimization_dialog import ConstrainedOptimizationDialog
 except Exception:
     # Fallback to absolute imports for script-style execution
-    from modules.constants import *
-    from modules.dialog3_d_picking_mixin import Dialog3DPickingMixin
-    from modules.template_preview_view import TemplatePreviewView
+    from modules.constants import CLIPBOARD_MIME_TYPE, CPK_COLORS_PV, DEFAULT_CPK_COLORS, NUM_DASHES, VDW_RADII, VERSION, pt
     from modules.user_template_dialog import UserTemplateDialog
     from modules.about_dialog import AboutDialog
     from modules.translation_dialog import TranslationDialog
@@ -3693,7 +3690,7 @@ class MainWindow(QMainWindow):
                     a2_item = self.data.atoms[a2_id]['item']
                     self.scene.create_bond(a1_item, a2_item, bond_order=int(b_type), bond_stereo=stereo)
 
-            self.statusBar().showMessage(f"Successfully loaded from SMILES.")
+            self.statusBar().showMessage("Successfully loaded from SMILES.")
             self.reset_undo_stack()
             self.has_unsaved_changes = False
             self.update_window_title()
@@ -3778,7 +3775,7 @@ class MainWindow(QMainWindow):
                     a2_item = self.data.atoms[a2_id]['item']
                     self.scene.create_bond(a1_item, a2_item, bond_order=int(b_type), bond_stereo=stereo)
 
-            self.statusBar().showMessage(f"Successfully loaded from InChI.")
+            self.statusBar().showMessage("Successfully loaded from InChI.")
             self.reset_undo_stack()
             self.has_unsaved_changes = False
             self.update_window_title()
@@ -3936,7 +3933,6 @@ class MainWindow(QMainWindow):
     
     def load_mol_for_3d_viewing(self):
         # moved to load_mol_file_for_3d_viewing
-        pass
         '''
         file_path, _ = QFileDialog.getOpenFileName(self, "Load 3D MOL (View Only)", "", "Chemical Files (*.mol *.sdf);;All Files (*)")
         if not file_path:
@@ -4479,7 +4475,7 @@ class MainWindow(QMainWindow):
             # Silent first attempt
             try:
                 final_mol = _process_with_charge(0)
-            except RuntimeError as e_sentinel:
+            except RuntimeError:
                 # DetermineBonds explicitly failed for charge=0. In this
                 # situation, repeatedly prompt the user for charges until
                 # DetermineBonds succeeds or the user cancels.
@@ -4562,7 +4558,7 @@ class MainWindow(QMainWindow):
                                 pass
                             # Continue prompting
                             continue
-            except Exception as e_silent:
+            except Exception:
                 # If the silent attempt failed for reasons other than
                 # DetermineBonds failing (e.g., finalization errors), fall
                 # back to salvaging or prompting depending on settings.
@@ -5377,7 +5373,7 @@ class MainWindow(QMainWindow):
         try:
             mol_block = self.data.to_mol_block()
             if not mol_block: 
-                self.statusBar().showMessage("Error: No 2D data to save."); 
+                self.statusBar().showMessage("Error: No 2D data to save.") 
                 return
                 
             lines = mol_block.split('\n')
@@ -5612,7 +5608,7 @@ class MainWindow(QMainWindow):
 
             return meshes_with_colors
             
-        except Exception as e:
+        except Exception:
             return []
 
     def create_multi_material_obj(self, meshes_with_colors, obj_path, mtl_path):
@@ -5622,7 +5618,7 @@ class MainWindow(QMainWindow):
             # MTLファイルを作成
             with open(mtl_path, 'w') as mtl_file:
                 mtl_file.write(f"# Material file for {os.path.basename(obj_path)}\n")
-                mtl_file.write(f"# Generated with individual object colors\n\n")
+                mtl_file.write("# Generated with individual object colors\n\n")
                 
                 for i, mesh_data in enumerate(meshes_with_colors):
                     color = mesh_data['color']
@@ -5638,8 +5634,8 @@ class MainWindow(QMainWindow):
             
             # OBJファイルを作成
             with open(obj_path, 'w') as obj_file:
-                obj_file.write(f"# OBJ file with multiple materials\n")
-                obj_file.write(f"# Generated with individual object colors\n")
+                obj_file.write("# OBJ file with multiple materials\n")
+                obj_file.write("# Generated with individual object colors\n")
                 obj_file.write(f"mtllib {os.path.basename(mtl_path)}\n\n")
                 
                 vertex_offset = 1  # OBJファイルの頂点インデックスは1から始まる
@@ -6109,7 +6105,7 @@ class MainWindow(QMainWindow):
             if saved:
                 self.statusBar().showMessage(f"2D view exported to {filePath}")
             else:
-                self.statusBar().showMessage(f"Failed to save image. Check file path or permissions.")
+                self.statusBar().showMessage("Failed to save image. Check file path or permissions.")
 
         except Exception as e:
             self.statusBar().showMessage(f"An unexpected error occurred during 2D export: {e}")
@@ -7805,7 +7801,7 @@ class MainWindow(QMainWindow):
                         # 3D変換直後にUndoスタックに積む
                         self.current_mol = mol
                         self.push_undo_state()
-                    except Exception as e_embed:
+                    except Exception:
                         # If skipping chemistry checks, allow molecule to be displayed without 3D embedding
                         if self.settings.get('skip_chemistry_checks', False):
                             self.statusBar().showMessage("Warning: failed to generate 3D coordinates but skip_chemistry_checks is enabled; continuing.")

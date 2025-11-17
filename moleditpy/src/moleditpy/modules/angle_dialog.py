@@ -8,6 +8,7 @@ except Exception:
     from modules.dialog3_d_picking_mixin import Dialog3DPickingMixin
 
 from PyQt6.QtCore import Qt
+from PyQt6.QtWidgets import QMessageBox
 import numpy as np
 
 

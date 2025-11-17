@@ -393,7 +393,7 @@ class UserTemplateDialog(QDialog):
                     text_rect = text.boundingRect()
                     text.setPos(pos.x() - text_rect.width()/2, pos.y() - text_rect.height()/2)
                     
-            except Exception as e:
+            except Exception:
                 continue
     
     def select_template(self, template_data, widget):

@@ -1,14 +1,12 @@
-from PyQt6.QtWidgets import QGraphicsItem
+from PyQt6.QtWidgets import QGraphicsItem, QGraphicsScene
 
 from PyQt6.QtGui import (
-    QPen, QBrush, QColor, QPainter, QAction, QActionGroup, QFont, QPolygonF,
-    QPainterPath, QPainterPathStroker, QFontMetrics, QFontMetricsF, QKeySequence, 
-    QTransform, QCursor, QPixmap, QIcon, QShortcut, QDesktopServices, QImage
+    QPen, QBrush, QColor, QFont, QPolygonF,
+    QPainterPath, QPainterPathStroker, QFontMetricsF
 )
 
 from PyQt6.QtCore import (
-    Qt, QPointF, QRectF, QLineF, QObject, QThread, pyqtSignal, pyqtSlot, QEvent, 
-    QMimeData, QByteArray, QUrl, QTimer, QDateTime
+    Qt, QPointF, QRectF, QLineF
 )
 
 try:

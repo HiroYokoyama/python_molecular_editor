@@ -2,6 +2,7 @@ from PyQt6.QtWidgets import (
     QDialog, QVBoxLayout, QLabel, QHBoxLayout, QPushButton
 )
 from PyQt6.QtCore import Qt
+from PyQt6.QtWidgets import QMessageBox
 import numpy as np
 
 try:

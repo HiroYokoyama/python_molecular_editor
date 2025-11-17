@@ -9,6 +9,7 @@ except Exception:
 
 from PyQt6.QtCore import Qt
 import numpy as np
+from PyQt6.QtWidgets import QMessageBox
 
 
 class DihedralDialog(Dialog3DPickingMixin, QDialog):

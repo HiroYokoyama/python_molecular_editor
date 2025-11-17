@@ -1,14 +1,11 @@
 from PyQt6.QtWidgets import QGraphicsItem
 
 from PyQt6.QtGui import (
-    QPen, QBrush, QColor, QPainter, QAction, QActionGroup, QFont, QPolygonF,
-    QPainterPath, QPainterPathStroker, QFontMetrics, QFontMetricsF, QKeySequence, 
-    QTransform, QCursor, QPixmap, QIcon, QShortcut, QDesktopServices, QImage
+    QPen, QBrush, QColor, QFont, QPainterPath, QFontMetricsF
 )
 
 from PyQt6.QtCore import (
-    Qt, QPointF, QRectF, QLineF, QObject, QThread, pyqtSignal, pyqtSlot, QEvent, 
-    QMimeData, QByteArray, QUrl, QTimer, QDateTime
+    Qt, QPointF, QRectF
 )
 
 try:
@@ -23,6 +20,10 @@ except Exception:
         FONT_FAMILY, FONT_SIZE_LARGE, FONT_WEIGHT_BOLD,
         CPK_COLORS,
     )
+    try:
+        from . import sip_isdeleted_safe
+    except Exception:
+        from modules import sip_isdeleted_safe
 
 class AtomItem(QGraphicsItem):
     def __init__(self, atom_id, symbol, pos, charge=0, radical=0):

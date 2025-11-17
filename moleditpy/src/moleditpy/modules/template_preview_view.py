@@ -1,6 +1,6 @@
 from PyQt6.QtWidgets import QGraphicsView
 
-from PyQt6.QtCore import Qt, QPointF, QRectF, QTimer, QDateTime, QLineF
+from PyQt6.QtCore import Qt, QTimer
 
 class TemplatePreviewView(QGraphicsView):
     """テンプレートプレビュー用のカスタムビュークラス"""

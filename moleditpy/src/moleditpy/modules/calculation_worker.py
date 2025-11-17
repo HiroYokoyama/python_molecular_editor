@@ -5,13 +5,10 @@ from PyQt6.QtCore import pyqtSignal, pyqtSlot
 # RDKit
 from rdkit import Chem
 from rdkit.Chem import AllChem
-from rdkit.Chem import Descriptors
-from rdkit.Chem import rdMolDescriptors
-from rdkit.Chem import inchi as rd_inchi
 from rdkit.Chem import rdGeometry
-from rdkit.Chem import rdDetermineBonds
-from rdkit.Chem import rdMolTransforms
 from rdkit.DistanceGeometry import DoTriangleSmoothing
+import math
+import re
 
 
 # Open Babel Python binding (optional; required for fallback)
@@ -708,7 +705,6 @@ class CalculationWorker(QObject):
                             ob_mol.localopt(forcefield='uff', steps=500)
                         except Exception:
                             _safe_status("UFF optimization also failed.")
-                            pass
                     molblock_ob = ob_mol.write("mol")
                     rd_mol = Chem.MolFromMolBlock(molblock_ob, removeHs=False)
                     if rd_mol is None:

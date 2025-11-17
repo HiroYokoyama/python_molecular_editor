@@ -1,26 +1,19 @@
 import traceback
 
 from PyQt6.QtWidgets import (
-    QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-    QPushButton, QSplitter, QGraphicsView, QGraphicsScene, QGraphicsItem,
-    QToolBar, QStatusBar, QGraphicsTextItem, QGraphicsLineItem, QDialog, QGridLayout,
-    QFileDialog, QSizePolicy, QLabel, QLineEdit, QToolButton, QMenu, QMessageBox, 
-    QInputDialog, QDialogButtonBox, QColorDialog, QCheckBox, QSlider, QFormLayout, 
-    QRadioButton, QComboBox, QListWidget, QListWidgetItem, QButtonGroup, QTabWidget, 
-    QScrollArea, QFrame, QTableWidget, QTableWidgetItem, QAbstractItemView
+    QApplication, QGraphicsScene, QGraphicsItem,
+    QGraphicsLineItem
 )
 
 from PyQt6.QtGui import (
-    QPen, QBrush, QColor, QPainter, QAction, QActionGroup, QFont, QPolygonF,
-    QPainterPath, QPainterPathStroker, QFontMetrics, QFontMetricsF, QKeySequence, 
-    QTransform, QCursor, QPixmap, QIcon, QShortcut, QDesktopServices, QImage
+    QPen, QCursor
 )
 
 
 from PyQt6.QtCore import (
-    Qt, QPointF, QRectF, QLineF, QObject, QThread, pyqtSignal, pyqtSlot, QEvent, 
-    QMimeData, QByteArray, QUrl, QTimer, QDateTime
+    Qt, QPointF, QRectF, QLineF
 )
+import math
 
 try:
     from .template_preview_item import TemplatePreviewItem
@@ -47,6 +40,11 @@ try:
 except Exception:
     _sip = None
     _sip_isdeleted = None
+
+try:
+    from . import sip_isdeleted_safe
+except Exception:
+    from modules import sip_isdeleted_safe
 
 
 class MoleculeScene(QGraphicsScene):

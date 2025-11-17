@@ -1,13 +1,14 @@
 from PyQt6.QtWidgets import (
     QDialog, QVBoxLayout, QTabWidget, QWidget, QFormLayout, QPushButton, QHBoxLayout,
-    QCheckBox, QComboBox, QSpinBox, QLabel, QColorDialog, QLineEdit, QSlider, QFrame, QMessageBox
+    QCheckBox, QComboBox, QLabel, QColorDialog, QSlider, QFrame, QMessageBox
 )
-from PyQt6.QtGui import QFont
+from PyQt6.QtWidgets import QApplication
 from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QColor
 try:
-    from .constants import CPK_COLORS, DEFAULT_CPK_COLORS
+    from .constants import CPK_COLORS
 except Exception:
-    from modules.constants import CPK_COLORS, DEFAULT_CPK_COLORS
+    from modules.constants import CPK_COLORS
 
 
 class SettingsDialog(QDialog):
@@ -191,8 +192,8 @@ class SettingsDialog(QDialog):
     
     def create_other_tab(self):
         """other設定タブを作成"""
-        other_widget = QWidget()
-        form_layout = QFormLayout(other_widget)
+        self.other_widget = QWidget()
+        self.other_form_layout = QFormLayout(self.other_widget)
 
         # 化学チェックスキップオプション（otherタブに移動）
         self.skip_chem_checks_checkbox = QCheckBox()
@@ -202,6 +203,15 @@ class SettingsDialog(QDialog):
             self.skip_chem_checks_checkbox.stateChanged.connect(lambda s: self._on_skip_chem_checks_changed(s))
         except Exception:
             pass
+
+        # Add the checkbox to the other tab's form
+        try:
+            self.other_form_layout.addRow("Skip chemistry checks on import xyz file:", self.skip_chem_checks_checkbox)
+        except Exception:
+            pass
+
+        # Add Other tab to the tab widget
+        self.tab_widget.addTab(self.other_widget, "Other")
 
     def refresh_ui(self):
         """Refresh periodic table / BS button visuals using current settings.
@@ -231,15 +241,12 @@ class SettingsDialog(QDialog):
                 pass
         except Exception:
             pass
+        # Avoid circular import: import ColorSettingsDialog only inside method using it
 
         # NOTE: Multi-bond offset/thickness settings moved to per-model tabs to allow
         # independent configuration for Ball&Stick/CPK/Wireframe/Stick.
                 
-        # Add the checkbox to the form
-        form_layout.addRow("Skip chemistry checks on import xyz file:", self.skip_chem_checks_checkbox)
-
-    
-        self.tab_widget.addTab(other_widget, "Other")
+        # 'Other' tab is created in create_other_tab; nothing to do here.
     
     def create_ball_stick_tab(self):
         """Ball and Stick設定タブを作成"""
@@ -982,6 +989,11 @@ class SettingsDialog(QDialog):
             try:
                 for w in QApplication.topLevelWidgets():
                     try:
+                        # import locally to avoid circular import
+                        try:
+                            from .color_settings_dialog import ColorSettingsDialog
+                        except Exception:
+                            from modules.color_settings_dialog import ColorSettingsDialog
                         if isinstance(w, ColorSettingsDialog):
                             try:
                                 w.refresh_ui()
