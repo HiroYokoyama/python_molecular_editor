@@ -75,34 +75,66 @@ except Exception:
     _sip = None
     _sip_isdeleted = None
 
-from modules.constants import *
-from modules.dialog3_d_picking_mixin import Dialog3DPickingMixin
-from modules.template_preview_view import TemplatePreviewView
-from modules.user_template_dialog import UserTemplateDialog
-from modules.about_dialog import AboutDialog
-from modules.translation_dialog import TranslationDialog
-from modules.mirror_dialog import MirrorDialog
-from modules.move_group_dialog import MoveGroupDialog
-from modules.align_plane_dialog import AlignPlaneDialog
-from modules.planarize_dialog import PlanarizeDialog
-from modules.alignment_dialog import AlignmentDialog
-from modules.molecular_data import MolecularData
-from modules.atom_item import AtomItem
-from modules.bond_item import BondItem
-from modules.template_preview_item import TemplatePreviewItem
-from modules.molecule_scene import MoleculeScene
-from modules.zoomable_view import ZoomableView
-from modules.calculation_worker import CalculationWorker
-from modules.periodic_table_dialog import PeriodicTableDialog
-from modules.color_settings_dialog import ColorSettingsDialog
-from modules.analysis_window import AnalysisWindow
-from modules.settings_dialog import SettingsDialog
-from modules.custom_qt_interactor import CustomQtInteractor
-from modules.custom_interactor_style import CustomInteractorStyle
-from modules.bond_length_dialog import BondLengthDialog
-from modules.angle_dialog import AngleDialog
-from modules.dihedral_dialog import DihedralDialog
-from modules.constrained_optimization_dialog import ConstrainedOptimizationDialog
+try:
+    # package relative imports (preferred when running as `python -m moleditpy`)
+    from .constants import *
+    from .dialog3_d_picking_mixin import Dialog3DPickingMixin
+    from .template_preview_view import TemplatePreviewView
+    from .user_template_dialog import UserTemplateDialog
+    from .about_dialog import AboutDialog
+    from .translation_dialog import TranslationDialog
+    from .mirror_dialog import MirrorDialog
+    from .move_group_dialog import MoveGroupDialog
+    from .align_plane_dialog import AlignPlaneDialog
+    from .planarize_dialog import PlanarizeDialog
+    from .alignment_dialog import AlignmentDialog
+    from .molecular_data import MolecularData
+    from .atom_item import AtomItem
+    from .bond_item import BondItem
+    from .template_preview_item import TemplatePreviewItem
+    from .molecule_scene import MoleculeScene
+    from .zoomable_view import ZoomableView
+    from .calculation_worker import CalculationWorker
+    from .periodic_table_dialog import PeriodicTableDialog
+    from .color_settings_dialog import ColorSettingsDialog
+    from .analysis_window import AnalysisWindow
+    from .settings_dialog import SettingsDialog
+    from .custom_qt_interactor import CustomQtInteractor
+    from .custom_interactor_style import CustomInteractorStyle
+    from .bond_length_dialog import BondLengthDialog
+    from .angle_dialog import AngleDialog
+    from .dihedral_dialog import DihedralDialog
+    from .constrained_optimization_dialog import ConstrainedOptimizationDialog
+except Exception:
+    # Fallback to absolute imports for script-style execution
+    from modules.constants import *
+    from modules.dialog3_d_picking_mixin import Dialog3DPickingMixin
+    from modules.template_preview_view import TemplatePreviewView
+    from modules.user_template_dialog import UserTemplateDialog
+    from modules.about_dialog import AboutDialog
+    from modules.translation_dialog import TranslationDialog
+    from modules.mirror_dialog import MirrorDialog
+    from modules.move_group_dialog import MoveGroupDialog
+    from modules.align_plane_dialog import AlignPlaneDialog
+    from modules.planarize_dialog import PlanarizeDialog
+    from modules.alignment_dialog import AlignmentDialog
+    from modules.molecular_data import MolecularData
+    from modules.atom_item import AtomItem
+    from modules.bond_item import BondItem
+    from modules.template_preview_item import TemplatePreviewItem
+    from modules.molecule_scene import MoleculeScene
+    from modules.zoomable_view import ZoomableView
+    from modules.calculation_worker import CalculationWorker
+    from modules.periodic_table_dialog import PeriodicTableDialog
+    from modules.color_settings_dialog import ColorSettingsDialog
+    from modules.analysis_window import AnalysisWindow
+    from modules.settings_dialog import SettingsDialog
+    from modules.custom_qt_interactor import CustomQtInteractor
+    from modules.custom_interactor_style import CustomInteractorStyle
+    from modules.bond_length_dialog import BondLengthDialog
+    from modules.angle_dialog import AngleDialog
+    from modules.dihedral_dialog import DihedralDialog
+    from modules.constrained_optimization_dialog import ConstrainedOptimizationDialog
 
 class MainWindow(QMainWindow):
 

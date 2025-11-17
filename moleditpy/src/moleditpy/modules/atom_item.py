@@ -11,7 +11,18 @@ from PyQt6.QtCore import (
     QMimeData, QByteArray, QUrl, QTimer, QDateTime
 )
 
-from modules.constants import *
+try:
+    from .constants import (
+        ATOM_RADIUS, DESIRED_ATOM_PIXEL_RADIUS,
+        FONT_FAMILY, FONT_SIZE_LARGE, FONT_WEIGHT_BOLD,
+        CPK_COLORS,
+    )
+except Exception:
+    from modules.constants import (
+        ATOM_RADIUS, DESIRED_ATOM_PIXEL_RADIUS,
+        FONT_FAMILY, FONT_SIZE_LARGE, FONT_WEIGHT_BOLD,
+        CPK_COLORS,
+    )
 
 class AtomItem(QGraphicsItem):
     def __init__(self, atom_id, symbol, pos, charge=0, radical=0):

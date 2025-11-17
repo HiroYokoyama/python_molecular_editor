@@ -11,7 +11,18 @@ from PyQt6.QtCore import (
     QMimeData, QByteArray, QUrl, QTimer, QDateTime
 )
 
-from modules.constants import *
+try:
+    from .constants import (
+        EZ_LABEL_BOX_SIZE, EZ_LABEL_TEXT_OUTLINE, EZ_LABEL_MARGIN,
+        BOND_OFFSET, FONT_FAMILY, FONT_SIZE_LARGE, FONT_WEIGHT_BOLD,
+        HOVER_PEN_WIDTH, DESIRED_BOND_PIXEL_WIDTH,
+    )
+except Exception:
+    from modules.constants import (
+        EZ_LABEL_BOX_SIZE, EZ_LABEL_TEXT_OUTLINE, EZ_LABEL_MARGIN,
+        BOND_OFFSET, FONT_FAMILY, FONT_SIZE_LARGE, FONT_WEIGHT_BOLD,
+        HOVER_PEN_WIDTH, DESIRED_BOND_PIXEL_WIDTH,
+    )
 
 class BondItem(QGraphicsItem):
 

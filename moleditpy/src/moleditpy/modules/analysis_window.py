@@ -1,4 +1,9 @@
-from PyQt6.QtWidgets import QDialog
+from PyQt6.QtWidgets import (
+    QDialog, QVBoxLayout, QGridLayout, QLabel, QLineEdit, QPushButton, QApplication
+)
+from rdkit import Chem
+from rdkit.Chem import Descriptors, rdMolDescriptors
+from rdkit.Chem import inchi as rd_inchi
 
 class AnalysisWindow(QDialog):
     def __init__(self, mol, parent=None, is_xyz_derived=False):

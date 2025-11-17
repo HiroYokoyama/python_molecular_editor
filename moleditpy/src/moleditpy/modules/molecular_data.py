@@ -1,5 +1,10 @@
 from rdkit import Chem
-from modules.constants import *
+import traceback
+
+try:
+    from .constants import ANGSTROM_PER_PIXEL
+except Exception:
+    from modules.constants import ANGSTROM_PER_PIXEL
 
 class MolecularData:
     def __init__(self):

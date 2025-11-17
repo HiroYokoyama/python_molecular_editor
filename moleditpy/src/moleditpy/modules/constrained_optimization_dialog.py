@@ -1,8 +1,12 @@
-from PyQt6.QtWidgets import QDialog
+from PyQt6.QtWidgets import (
+    QDialog, QVBoxLayout, QLabel, QFormLayout, QComboBox, QLineEdit, QTableWidget, QTableWidgetItem, QHBoxLayout,
+    QPushButton, QMessageBox, QAbstractItemView
+)
 
-from modules.dialog3_d_picking_mixin import Dialog3DPickingMixin
+from .dialog3_d_picking_mixin import Dialog3DPickingMixin
 
 from PyQt6.QtCore import Qt
+from rdkit.Chem import AllChem, rdMolTransforms
 
 
 class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):

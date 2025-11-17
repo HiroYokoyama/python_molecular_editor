@@ -16,7 +16,16 @@ import ctypes
 
 from PyQt6.QtWidgets import QApplication
 
-from modules.main_window import MainWindow
+try:
+    # When executed as part of the package (python -m moleditpy)
+    from .modules.main_window import MainWindow
+except Exception:
+    # When executed as a standalone script (python main.py) the package-relative
+    # import won't work; fall back to absolute import that works with sys.path
+    try:
+        from .modules.main_window import MainWindow
+    except Exception:
+        from modules.main_window import MainWindow
 
 def main():
     # --- Windows タスクバーアイコンのための追加処理 ---

@@ -20,6 +20,11 @@ from PyQt6.QtCore import (
     QMimeData, QByteArray, QUrl, QTimer, QDateTime
 )
 
+try:
+    from .constants import CPK_COLORS
+except Exception:
+    from modules.constants import CPK_COLORS
+
 class TemplatePreviewItem(QGraphicsItem):
     def __init__(self):
         super().__init__()
