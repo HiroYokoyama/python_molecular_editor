@@ -20,10 +20,11 @@ except Exception:
         FONT_FAMILY, FONT_SIZE_LARGE, FONT_WEIGHT_BOLD,
         CPK_COLORS,
     )
-    try:
-        from . import sip_isdeleted_safe
-    except Exception:
-        from modules import sip_isdeleted_safe
+    
+try:
+    from . import sip_isdeleted_safe
+except Exception:
+    from modules import sip_isdeleted_safe
 
 class AtomItem(QGraphicsItem):
     def __init__(self, atom_id, symbol, pos, charge=0, radical=0):

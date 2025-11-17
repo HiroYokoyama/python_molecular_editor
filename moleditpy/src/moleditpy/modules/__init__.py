@@ -10,8 +10,6 @@ except Exception:
     _sip = None
     _sip_isdeleted = None
 
-
-
 def sip_isdeleted_safe(obj) -> bool:
     """Return True if sip reports the given wrapper object as deleted.
 
