@@ -109,6 +109,9 @@ class MainWindow(QMainWindow):
         # create a small proxy (BoundFeature) that will forward call to
         # the helper class with the MainWindow instance as the first
         # argument.
+        # Undo/Redo操作中に状態復元中であることを示すフラグ
+        # 他のモジュールが呼び出される前に初期化する
+        self._is_restoring_state = False
 
         class BoundFeature:
             """Bind a feature-class method calls to the MainWindow.

@@ -80,13 +80,13 @@ except Exception:
 class MainWindowAppState(object):
     """ main_window.py から分離された機能クラス """
 
-    def __init__(self, main_window):
-        """ クラスの初期化 """
-        self.mw = main_window
-        # DEBUG flag for undo stack introspection. Set to True at runtime
-        # if you want simple console tracing of push/undo/redo events.
-        # Example: `mw.DEBUG_UNDO = True` in debugger.
+    def __init__(self):
+        """
+        クラスの初期化
+        BoundFeature経由で呼ばれるため、'self' には MainWindow インスタンスが渡されます。
+        """
         self.DEBUG_UNDO = False
+
 
 
     def get_current_state(self):
@@ -238,6 +238,9 @@ class MainWindowAppState(object):
 
 
     def push_undo_state(self):
+        if self._is_restoring_state:
+            return
+            
         current_state_for_comparison = {
             'atoms': {k: (v['symbol'], v['item'].pos().x(), v['item'].pos().y(), v.get('charge', 0), v.get('radical', 0)) for k, v in self.data.atoms.items()},
             'bonds': {k: (v['order'], v.get('stereo', 0)) for k, v in self.data.bonds.items()},
@@ -343,7 +346,12 @@ class MainWindowAppState(object):
         if len(self.undo_stack) > 1:
             self.redo_stack.append(self.undo_stack.pop())
             state = self.undo_stack[-1]
-            self.set_state_from_data(state)
+            self._is_restoring_state = True
+            try:
+                self.set_state_from_data(state)
+            finally:
+                self._is_restoring_state = False
+
             
             # Undo後に3D構造の状態に基づいてメニューを再評価
             if self.current_mol and self.current_mol.GetNumAtoms() > 0:
@@ -368,7 +376,11 @@ class MainWindowAppState(object):
         if self.redo_stack:
             state = self.redo_stack.pop()
             self.undo_stack.append(state)
-            self.set_state_from_data(state)
+            self._is_restoring_state = True
+            try:
+                self.set_state_from_data(state)
+            finally:
+                self._is_restoring_state = False
             
             # Redo後に3D構造の状態に基づいてメニューを再評価
             if self.current_mol and self.current_mol.GetNumAtoms() > 0:
