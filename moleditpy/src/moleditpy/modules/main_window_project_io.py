@@ -164,6 +164,11 @@ class MainWindowProjectIo(object):
             # Replace current file with the newly saved file so subsequent saves go to this path
             self.current_file_path = file_path
             self.update_window_title()
+            # Mark this state as the last saved state for undo tracking
+            try:
+                self._saved_state = copy.deepcopy(self.get_current_state())
+            except Exception:
+                pass
             
             self.statusBar().showMessage(f"Project saved to {file_path}")
             
@@ -217,6 +222,10 @@ class MainWindowProjectIo(object):
             # Update current file to the newly saved raw file
             self.current_file_path = file_path
             self.update_window_title()
+            try:
+                self._saved_state = copy.deepcopy(self.get_current_state())
+            except Exception:
+                pass
             
             self.statusBar().showMessage(f"Project saved to {file_path}")
             
@@ -249,8 +258,12 @@ class MainWindowProjectIo(object):
             self.has_unsaved_changes = False
             self.current_file_path = file_path
             self.update_window_title()
-            
-            self.statusBar().showMessage(f"Project loaded from {file_path}")
+            try:
+                self._saved_state= copy.deepcopy(self.et_current_state())
+            except Exception:
+                pass
+         
+            self.statusBar.showMessage(f"Project loaded from {file_path}")
             
             QTimer.singleShot(0, self.fit_to_view)
             

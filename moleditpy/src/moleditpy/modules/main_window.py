@@ -395,7 +395,7 @@ class MainWindow(QMainWindow):
 
     def load_mol_file(self, file_path=None):
         # --- MOVED TO main_window_molecular_parsers.py ---
-        return self.main_window_molecular_parsers.load_mol_file(file_path=None)
+        return self.main_window_molecular_parsers.load_mol_file(file_path)
 
     def load_mol_for_3d_viewing(self):
         # --- MOVED TO main_window_view_loaders.py ---
@@ -403,9 +403,9 @@ class MainWindow(QMainWindow):
 
     def load_xyz_for_3d_viewing(self, file_path=None):
         # --- MOVED TO main_window_view_loaders.py ---
-        return self.main_window_view_loaders.load_xyz_for_3d_viewing(file_path=None)
+        return self.main_window_view_loaders.load_xyz_for_3d_viewing(file_path)
 
-    def load_xyz_file(self, file_path):
+    def load_xyz_file(self, file_path=None):
         # --- MOVED TO main_window_molecular_parsers.py ---
         return self.main_window_molecular_parsers.load_xyz_file(file_path)
 
@@ -427,7 +427,7 @@ class MainWindow(QMainWindow):
 
     def load_raw_data(self, file_path=None):
         # --- MOVED TO main_window_project_io.py ---
-        return self.main_window_project_io.load_raw_data(file_path=None)
+        return self.main_window_project_io.load_raw_data(file_path)
 
     def save_as_json(self):
         # --- MOVED TO main_window_project_io.py ---
@@ -439,11 +439,11 @@ class MainWindow(QMainWindow):
 
     def load_json_data(self, file_path=None):
         # --- MOVED TO main_window_project_io.py ---
-        return self.main_window_project_io.load_json_data(file_path=None)
+        return self.main_window_project_io.load_json_data(file_path)
 
     def open_project_file(self, file_path=None):
         # --- MOVED TO main_window_project_io.py ---
-        return self.main_window_project_io.open_project_file(file_path=None)
+        return self.main_window_project_io.open_project_file(file_path)
 
     def load_from_json_data(self, json_data):
         # --- MOVED TO main_window_app_state.py ---
@@ -611,7 +611,7 @@ class MainWindow(QMainWindow):
 
     def load_mol_file_for_3d_viewing(self, file_path=None):
         # --- MOVED TO main_window_view_loaders.py ---
-        return self.main_window_view_loaders.load_mol_file_for_3d_viewing(file_path=None)
+        return self.main_window_view_loaders.load_mol_file_for_3d_viewing(file_path)
 
     def load_command_line_file(self, file_path):
         # --- MOVED TO main_window_main_init.py ---
