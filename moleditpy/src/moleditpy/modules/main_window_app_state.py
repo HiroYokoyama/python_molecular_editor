@@ -83,6 +83,10 @@ class MainWindowAppState(object):
     def __init__(self, main_window):
         """ クラスの初期化 """
         self.mw = main_window
+        # DEBUG flag for undo stack introspection. Set to True at runtime
+        # if you want simple console tracing of push/undo/redo events.
+        # Example: `mw.DEBUG_UNDO = True` in debugger.
+        self.DEBUG_UNDO = False
 
 
     def get_current_state(self):
@@ -254,8 +258,15 @@ class MainWindowAppState(object):
             }
 
         if not last_state_for_comparison or current_state_for_comparison != last_state_for_comparison:
-            state = self.get_current_state()
+            # Deepcopy state to ensure saved states are immutable and not affected
+            # by later modifications to objects referenced from the state.
+            state = copy.deepcopy(self.get_current_state())
             self.undo_stack.append(state)
+            if getattr(self, 'DEBUG_UNDO', False):
+                try:
+                    print(f"DEBUG_UNDO: push_undo_state -> new stack size: {len(self.undo_stack)}")
+                except Exception:
+                    pass
             self.redo_stack.clear()
             # 初期化完了後のみ変更があったことを記録
             if self.initialization_complete:
@@ -320,6 +331,11 @@ class MainWindowAppState(object):
         self.undo_stack.clear()
         self.redo_stack.clear()
         self.push_undo_state()
+        if getattr(self, 'DEBUG_UNDO', False):
+            try:
+                print(f"DEBUG_UNDO: reset_undo_stack -> undo={len(self.undo_stack)} redo={len(self.redo_stack)}")
+            except Exception:
+                pass
 
 
 
@@ -337,6 +353,11 @@ class MainWindowAppState(object):
                 # 3D構造がない場合は3D編集機能を無効化
                 self._enable_3d_edit_actions(False)
                     
+        if getattr(self, 'DEBUG_UNDO', False):
+            try:
+                print(f"DEBUG_UNDO: undo -> undo_stack size: {len(self.undo_stack)}, redo_stack size: {len(self.redo_stack)}")
+            except Exception:
+                pass
         self.update_undo_redo_actions()
         self.update_realtime_info()
         self.view_2d.setFocus() 
@@ -357,6 +378,11 @@ class MainWindowAppState(object):
                 # 3D構造がない場合は3D編集機能を無効化
                 self._enable_3d_edit_actions(False)
                     
+        if getattr(self, 'DEBUG_UNDO', False):
+            try:
+                print(f"DEBUG_UNDO: redo -> undo_stack size: {len(self.undo_stack)}, redo_stack size: {len(self.redo_stack)}")
+            except Exception:
+                pass
         self.update_undo_redo_actions()
         self.update_realtime_info()
         self.view_2d.setFocus() 
