@@ -61,4 +61,3 @@ src/moleditpy/modules/zoomable_view.py
 src/moleditpy/modules/assets/icon.icns
 src/moleditpy/modules/assets/icon.ico
 src/moleditpy/modules/assets/icon.png
-tests/test_project_io_wrappers.py

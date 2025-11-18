@@ -51,27 +51,52 @@ def detect_system_dark_mode():
     macOS (defaults read), and GNOME/GTK-based Linux (gsettings). Return
     None if no reliable information is available.
     """
+    # Delegate detailed OS detection to `detect_system_theme` and map
+    # 'dark' -> True, 'light' -> False. This avoids duplicating the
+    # registry and subprocess calls in two places.
+    theme = detect_system_theme()
+    if theme == 'dark':
+        return True
+    if theme == 'light':
+        return False
+    return None
+
+def detect_system_theme():
+    """OSの優先テーマ設定を 'dark', 'light', または None として返す。
+
+    This is a best-effort, cross-platform check.
+    """
     try:
-        # Windows: read registry AppsUseLightTheme (0 = dark, 1 = light)
+        # Windows: AppsUseLightTheme (0 = dark, 1 = light)
         if platform.system() == 'Windows' and winreg is not None:
             try:
                 with winreg.OpenKey(winreg.HKEY_CURRENT_USER,
                                     r'Software\Microsoft\Windows\CurrentVersion\Themes\Personalize') as k:
                     val, _ = winreg.QueryValueEx(k, 'AppsUseLightTheme')
-                    return False if int(val) == 0 else True
+                    return 'dark' if int(val) == 0 else 'light'
             except Exception:
                 pass
 
-        # macOS: 'defaults read -g AppleInterfaceStyle' returns 'Dark' in dark mode
+        # macOS: 'defaults read -g AppleInterfaceStyle'
         if platform.system() == 'Darwin':
+            return 'light'
+            '''
             try:
-                p = subprocess.run(['defaults', 'read', '-g', 'AppleInterfaceStyle'], capture_output=True, text=True)
-                if p.returncode == 0 and p.stdout.strip().lower() == 'dark':
-                    return True
-                # Key absence implies light mode
-                return False
+                # 'defaults read ...' が成功すればダークモード
+                p = subprocess.run(
+                    ['defaults', 'read', '-g', 'AppleInterfaceStyle'],
+                    capture_output=True, text=True, check=True, encoding='utf-8'
+                )
+                if p.stdout.strip().lower() == 'dark':
+                    return 'dark'
+                
+            except subprocess.CalledProcessError:
+                # コマンド失敗 (キーが存在しない) = ライトモード
+                return 'light'
             except Exception:
+                # その他のエラー
                 pass
+            '''
 
         # Linux / GNOME: try color-scheme gsetting; fallback to gtk-theme detection
         if platform.system() == 'Linux':
@@ -80,16 +105,16 @@ def detect_system_dark_mode():
                 if p.returncode == 0:
                     out = p.stdout.strip().strip("'\n ")
                     if 'dark' in out.lower():
-                        return True
+                        return 'dark'
                     if 'light' in out.lower():
-                        return False
+                        return 'light'
             except Exception:
                 pass
 
             try:
                 p = subprocess.run(['gsettings', 'get', 'org.gnome.desktop.interface', 'gtk-theme'], capture_output=True, text=True)
                 if p.returncode == 0 and '-dark' in p.stdout.lower():
-                    return True
+                    return 'dark'
             except Exception:
                 pass
     except Exception:
@@ -213,8 +238,8 @@ class MainWindowMainInit(object):
         self.atom_selection_mode = False
         self.selected_atom_actors = []
         
-        # 3D編集用の原子選択状態
-        self.selected_atoms_3d = set()  # 3Dビューで選択された原子のインデックス
+        # 3D編集用の原子選択状態 (3Dビューで選択された原子のインデックス)
+        self.selected_atoms_3d = set()
         
         # 3D編集ダイアログの参照を保持
         self.active_3d_dialogs = []
@@ -472,11 +497,10 @@ class MainWindowMainInit(object):
         def _icon_foreground_color():
             """Return a QColor for icon foreground.
 
-            NOTE: this application inverts the usual foreground mapping so icons
-            will be the *opposite* color to the background (i.e., black on dark
-            backgrounds, white on light backgrounds). This intentionally reverses
-            the previous behavior so button icons don't blend into the 3D-view
-            background. Priority: explicit setting in 'icon_foreground' -> OS
+            NOTE: choose icon foreground to contrast against the background
+            (i.e., white on dark backgrounds, black on light backgrounds). This
+            matches common conventions. Priority: explicit setting in
+            'icon_foreground' -> OS theme preference -> configured 3D
             theme preference -> configured 3D background -> application palette.
             """
             try:
@@ -491,9 +515,9 @@ class MainWindowMainInit(object):
             # 1) Prefer the system/OS dark-mode preference if available.
             try:
                 os_pref = detect_system_dark_mode()
-                # Invert the color so in dark-pref OS we return black, in light we return white
+                # Standard mapping: dark -> white, light -> black
                 if os_pref is not None:
-                    return QColor('#000000') if os_pref else QColor('#FFFFFF')
+                    return QColor('#FFFFFF') if os_pref else QColor('#000000')
             except Exception:
                 pass
 
@@ -505,8 +529,8 @@ class MainWindowMainInit(object):
                     bg = QColor(bg_hex)
                     if bg.isValid():
                         lum = 0.2126 * bg.redF() + 0.7152 * bg.greenF() + 0.0722 * bg.blueF()
-                        # Inverted: return black on dark (lum<0.5), white on light
-                        return QColor('#000000') if lum < 0.5 else QColor('#FFFFFF')
+                        # Return white on dark (lum<0.5), black on light
+                        return QColor('#FFFFFF') if lum < 0.5 else QColor('#000000')
             except Exception:
                 pass
 
@@ -515,8 +539,8 @@ class MainWindowMainInit(object):
                 # palette.window() returns a QBrush; call color()
                 window_bg = pal.window().color()
                 lum = 0.2126 * window_bg.redF() + 0.7152 * window_bg.greenF() + 0.0722 * window_bg.blueF()
-                # Inverted mapping for palette fallback
-                return QColor('#000000') if lum < 0.5 else QColor('#FFFFFF')
+                # Palette-based mapping: white on dark palette background
+                return QColor('#FFFFFF') if lum < 0.5 else QColor('#000000')
             except Exception:
                 return QColor('#000000')
 
