@@ -1,1 +1,1 @@
-moleditpy
+moleditpy_linux
