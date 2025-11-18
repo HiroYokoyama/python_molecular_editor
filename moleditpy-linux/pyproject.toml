@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "MoleditPy-linux"
 
-version = "1.16.0"
+version = "1.16.1"
 
 authors = [
   { name="HiroYokoyama", email="titech.yoko.hiro@gmail.com" },
@@ -28,7 +28,6 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
-    "License :: OSI Approved :: Apache Software License"
 ]
 
 dependencies = [
@@ -39,6 +38,7 @@ dependencies = [
     "rdkit < 2025.10",
 ]
 
+
 [project.urls]
 Homepage = "https://github.com/HiroYokoyama/python_molecular_editor"
 Issues = "https://github.com/HiroYokoyama/python_molecular_editor/issues"
@@ -47,4 +47,5 @@ Issues = "https://github.com/HiroYokoyama/python_molecular_editor/issues"
 moleditpy = "moleditpy_linux.__main__:main"
 
 [tool.setuptools.package-data]
-"moleditpy_linux" = ["assets/*"]
+"moleditpy_linux" = ["modules/assets/*"]
+
