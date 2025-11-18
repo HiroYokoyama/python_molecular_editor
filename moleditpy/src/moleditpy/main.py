@@ -22,10 +22,7 @@ try:
 except Exception:
     # When executed as a standalone script (python main.py) the package-relative
     # import won't work; fall back to absolute import that works with sys.path
-    try:
-        from .modules.main_window import MainWindow
-    except Exception:
-        from modules.main_window import MainWindow
+    from modules.main_window import MainWindow
 
 def main():
     # --- Windows タスクバーアイコンのための追加処理 ---
