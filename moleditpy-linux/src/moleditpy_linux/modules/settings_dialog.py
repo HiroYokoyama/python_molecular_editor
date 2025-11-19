@@ -62,11 +62,18 @@ class SettingsDialog(QDialog):
             # element symbol recognition will be coerced where possible and Chem.SanitizeMol
             # failures will be ignored so the 3D viewer can still display the structure.
             'skip_chemistry_checks': False,
+            # When True, always prompt the user for molecular charge on XYZ import
+            # instead of silently trying charge=0 first. Default True to disable
+            # the silent 'charge=0' test.
+            'always_ask_charge': False,
             # 3D conversion/optimization defaults
             '3d_conversion_mode': 'fallback',
             'optimization_method': 'MMFF_RDKIT',
             'ball_stick_bond_color': '#7F7F7F',
             'cpk_colors': {},
+            # If True, RDKit will attempt to kekulize aromatic systems for 3D display
+            # (shows alternating single/double bonds rather than aromatic circles)
+            'display_kekule_3d': False,
         }
         
         # --- 選択された色を管理する専用のインスタンス変数 ---
@@ -207,6 +214,26 @@ class SettingsDialog(QDialog):
         # Add the checkbox to the other tab's form
         try:
             self.other_form_layout.addRow("Skip chemistry checks on import xyz file:", self.skip_chem_checks_checkbox)
+        except Exception:
+            pass
+
+        # 3D Kekule display option (under Other) will be added below the
+        # 'Always ask molecular charge on import' option so ordering is clear
+        # in the UI.
+        self.kekule_3d_checkbox = QCheckBox()
+        self.kekule_3d_checkbox.setToolTip("When enabled, aromatic bonds will be kekulized in the 3D view (show alternating single/double bonds).")
+        # Don't persist kekule state immediately; Apply/OK should commit setting.
+        # Always ask charge on XYZ import (skip silent charge=0 test)
+        self.always_ask_charge_checkbox = QCheckBox()
+        self.always_ask_charge_checkbox.setToolTip("Prompt for overall molecular charge when importing XYZ files instead of silently trying charge=0 first.")
+        try:
+            self.other_form_layout.addRow("Always ask molecular charge on import:", self.always_ask_charge_checkbox)
+        except Exception:
+            pass
+
+        # Place the Kekulé option after the always-ask-charge option
+        try:
+            self.other_form_layout.addRow("Display Kekulé bonds in 3D:", self.kekule_3d_checkbox)
         except Exception:
             pass
 
@@ -578,6 +605,8 @@ class SettingsDialog(QDialog):
             "Other": {
                 # other options
                 'skip_chemistry_checks': self.default_settings.get('skip_chemistry_checks', False),
+                'display_kekule_3d': self.default_settings.get('display_kekule_3d', False),
+                'always_ask_charge': self.default_settings.get('always_ask_charge', False),
             },
             "Ball & Stick": {
                 'ball_stick_atom_scale': self.default_settings['ball_stick_atom_scale'],
@@ -899,6 +928,10 @@ class SettingsDialog(QDialog):
         self.projection_combo.setCurrentIndex(idx if idx != -1 else 0)
         # skip chemistry checks
         self.skip_chem_checks_checkbox.setChecked(settings_dict.get('skip_chemistry_checks', self.default_settings.get('skip_chemistry_checks', False)))
+        # kekule setting
+        self.kekule_3d_checkbox.setChecked(settings_dict.get('display_kekule_3d', self.default_settings.get('display_kekule_3d', False)))
+        # always ask for charge on XYZ imports
+        self.always_ask_charge_checkbox.setChecked(settings_dict.get('always_ask_charge', self.default_settings.get('always_ask_charge', False)))
       
     def select_color(self):
         """カラーピッカーを開き、選択された色を内部変数とUIに反映させる"""
@@ -950,7 +983,9 @@ class SettingsDialog(QDialog):
             'stick_triple_bond_offset_factor': self.stick_triple_offset_slider.value() / 100.0,
             'stick_double_bond_radius_factor': self.stick_double_radius_slider.value() / 100.0,
             'stick_triple_bond_radius_factor': self.stick_triple_radius_slider.value() / 100.0,
+            'display_kekule_3d': self.kekule_3d_checkbox.isChecked(),
             'skip_chemistry_checks': self.skip_chem_checks_checkbox.isChecked(),
+            'always_ask_charge': self.always_ask_charge_checkbox.isChecked(),
             # Ball & Stick bond color (3D grey/uniform color)
             'ball_stick_bond_color': getattr(self, 'bs_bond_color', self.default_settings.get('ball_stick_bond_color', '#7F7F7F')),
         }
@@ -1026,6 +1061,8 @@ class SettingsDialog(QDialog):
 
         except Exception:
             pass
+
+    # Note: Kekule display is applied only when user clicks Apply/OK.
 
     def accept(self):
         """ダイアログの設定を適用してから閉じる"""
