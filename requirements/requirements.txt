@@ -1,5 +1,5 @@
 matplotlib==3.10.7
-moleditpy==1.16.1
+moleditpy==1.16.2
 numpy==2.3.4
 openbabel-wheel==3.1.1.22
 PyQt6==6.9.1
