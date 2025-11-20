@@ -1,7 +1,6 @@
 matplotlib==3.10.7
 moleditpy==1.16.2
 numpy==2.3.4
-openbabel-wheel==3.1.1.22
 PyQt6==6.9.1
 PyQt6-Qt6==6.9.2
 PyQt6_sip==13.10.2
