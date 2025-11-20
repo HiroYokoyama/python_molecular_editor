@@ -204,7 +204,7 @@ class SettingsDialog(QDialog):
 
         # 化学チェックスキップオプション（otherタブに移動）
         self.skip_chem_checks_checkbox = QCheckBox()
-        self.skip_chem_checks_checkbox.setToolTip("When enabled, file import will try to ignore chemical/sanitization errors and allow viewing malformed files.")
+        self.skip_chem_checks_checkbox.setToolTip("When enabled, XYZ file import will try to ignore chemical/sanitization errors and allow viewing malformed files.")
         # Immediately persist change to settings when user toggles the checkbox
         try:
             self.skip_chem_checks_checkbox.stateChanged.connect(lambda s: self._on_skip_chem_checks_changed(s))
@@ -213,7 +213,7 @@ class SettingsDialog(QDialog):
 
         # Add the checkbox to the other tab's form
         try:
-            self.other_form_layout.addRow("Skip chemistry checks on import xyz file:", self.skip_chem_checks_checkbox)
+            self.other_form_layout.addRow("Skip chemistry checks on import XYZ file:", self.skip_chem_checks_checkbox)
         except Exception:
             pass
 
@@ -227,7 +227,7 @@ class SettingsDialog(QDialog):
         self.always_ask_charge_checkbox = QCheckBox()
         self.always_ask_charge_checkbox.setToolTip("Prompt for overall molecular charge when importing XYZ files instead of silently trying charge=0 first.")
         try:
-            self.other_form_layout.addRow("Always ask molecular charge on import:", self.always_ask_charge_checkbox)
+            self.other_form_layout.addRow("Always ask molecular charge on import XYZ file:", self.always_ask_charge_checkbox)
         except Exception:
             pass
 

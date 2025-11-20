@@ -84,7 +84,14 @@ For detailed instructions, please refer to the project [Wiki](https://github.com
     moleditpy-installer
     ```
 
------
+
+To enable Open Babel features (e.g., alternative 3D structure generation), please install the package manually.
+**Note:** Open Babel is licensed under **GPL v2**. Installing this package combines GPL code with this software.
+
+
+```bash
+pip install "moleditpy[openbabel]"
+```
 
 #### Running the Application
 
@@ -199,6 +206,13 @@ This project is licensed under the **Apache-2.0 License**. See the `LICENSE` fil
     ```bash
     moleditpy-installer
     ```
+
+Open Babel 機能（代替的な3D構造生成など）を有効にする場合は、以下のコマンドで個別にインストールしてください。
+**注意:** Open Babel は **GPL v2** ライセンスです。このパッケージをインストールすると、GPLの条項が適用される可能性があります。
+
+```bash
+pip install "moleditpy[openbabel]"
+```
 
 #### アプリケーションの起動
 
