@@ -1,0 +1,50 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "MoleditPy"
+
+version = "1.16.4"
+
+authors = [
+  { name="HiroYokoyama", email="titech.yoko.hiro@gmail.com" },
+]
+
+description = "A cross-platform, simple, and intuitive molecular structure editor built in Python. It allows 2D molecular drawing and 3D structure visualization. It supports exporting structure files for input to DFT calculation software."
+
+readme = "README.md"
+
+requires-python = ">=3.9, <3.14"
+
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Chemistry",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+]
+
+dependencies = [
+  "numpy",
+  "pyqt6 < 6.10",
+  "pyvista < 0.47",
+  "pyvistaqt < 0.12",
+  "rdkit < 2025.10",
+  "openbabel-wheel < 3.2"
+]
+
+[project.urls]
+Homepage = "https://github.com/HiroYokoyama/python_molecular_editor"
+Issues = "https://github.com/HiroYokoyama/python_molecular_editor/issues"
+
+[project.scripts]
+moleditpy = "moleditpy.__main__:main"
+
+[tool.setuptools.package-data]
+"moleditpy" = ["modules/assets/*"]
