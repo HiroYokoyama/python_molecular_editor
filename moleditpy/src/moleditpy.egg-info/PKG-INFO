@@ -1,6 +1,6 @@
 Metadata-Version: 2.4
 Name: MoleditPy
-Version: 1.16.1
+Version: 1.16.3
 Summary: A cross-platform, simple, and intuitive molecular structure editor built in Python. It allows 2D molecular drawing and 3D structure visualization. It supports exporting structure files for input to DFT calculation software.
 Author-email: HiroYokoyama <titech.yoko.hiro@gmail.com>
 Project-URL: Homepage, https://github.com/HiroYokoyama/python_molecular_editor
@@ -18,11 +18,12 @@ Classifier: Programming Language :: Python :: 3.13
 Requires-Python: <3.14,>=3.9
 Description-Content-Type: text/markdown
 Requires-Dist: numpy
-Requires-Dist: openbabel-wheel<3.2
 Requires-Dist: pyqt6<6.10
 Requires-Dist: pyvista<0.47
 Requires-Dist: pyvistaqt<0.12
 Requires-Dist: rdkit<2025.10
+Provides-Extra: openbabel
+Requires-Dist: openbabel-wheel<3.2; extra == "openbabel"
 
 # MoleditPy — A Python Molecular Editor
 
@@ -108,7 +109,14 @@ For detailed instructions, please refer to the project [Wiki](https://github.com
     moleditpy-installer
     ```
 
------
+
+To enable Open Babel features (e.g., alternative 3D structure generation), please install the package manually.
+**Note:** Open Babel is licensed under **GPL v2**. Installing this package combines GPL code with this software.
+
+
+```bash
+pip install "moleditpy[openbabel]"
+```
 
 #### Running the Application
 
@@ -223,6 +231,13 @@ This project is licensed under the **Apache-2.0 License**. See the `LICENSE` fil
     ```bash
     moleditpy-installer
     ```
+
+Open Babel 機能（代替的な3D構造生成など）を有効にする場合は、以下のコマンドで個別にインストールしてください。
+**注意:** Open Babel は **GPL v2** ライセンスです。このパッケージをインストールすると、GPLの条項が適用される可能性があります。
+
+```bash
+pip install "moleditpy[openbabel]"
+```
 
 #### アプリケーションの起動
 

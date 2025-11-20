@@ -557,92 +557,173 @@ class MainWindowMolecularParsers(object):
                     # Accept the candidate
                     return candidate_mol
 
-            # Silent first attempt
+            # Decide whether to silently try charge=0 first, or prompt user first.
+            always_ask = bool(self.settings.get('always_ask_charge', False))
+
             try:
-                final_mol = _process_with_charge(0)
-            except RuntimeError:
-                # DetermineBonds explicitly failed for charge=0. In this
-                # situation, repeatedly prompt the user for charges until
-                # DetermineBonds succeeds or the user cancels.
-                while True:
-                    charge_val, ok, skip_flag = prompt_for_charge()
-                    if not ok:
-                        # user cancelled the prompt -> abort
-                        return None
-                    if skip_flag:
-                        # User selected Skip chemistry: attempt distance-based salvage
-                        try:
-                            self.estimate_bonds_from_distances(mol)
-                        except Exception:
-                            pass
-                        salvaged = None
-                        try:
-                            salvaged = mol.GetMol()
-                        except Exception:
-                            salvaged = None
-
-                        if salvaged is not None:
-                            try:
-                                salvaged.SetIntProp("_xyz_skip_checks", 1)
-                            except Exception:
-                                try:
-                                    salvaged._xyz_skip_checks = True
-                                except Exception:
-                                    pass
-                            final_mol = salvaged
-                            break
-                        else:
-                            # Could not salvage; abort
-                            try:
-                                self.statusBar().showMessage("Skip chemistry selected but failed to create salvaged molecule.")
-                            except Exception:
-                                pass
-                            return None
-
+                if not always_ask:
+                    # Silent first attempt (existing behavior)
                     try:
-                        final_mol = _process_with_charge(charge_val)
-                        # success -> break out of prompt loop
-                        break
+                        final_mol = _process_with_charge(0)
                     except RuntimeError:
-                        # DetermineBonds still failing for this charge -> loop again
-                        try:
-                            self.statusBar().showMessage("DetermineBonds failed for that charge; please try a different total charge or cancel.")
-                        except Exception:
-                            pass
-                        continue
-                    except Exception as e_prompt:
-                        # Some other failure occurred after DetermineBonds or in
-                        # finalization. If skip_chemistry_checks is enabled we
-                        # try the salvaged mol once; otherwise prompt again.
-                        try:
-                            skip_checks = bool(self.settings.get('skip_chemistry_checks', False))
-                        except Exception:
-                            skip_checks = False
-
-                        salvaged = None
-                        try:
-                            salvaged = mol.GetMol()
-                        except Exception:
-                            salvaged = None
-
-                        if skip_checks and salvaged is not None:
-                            final_mol = salvaged
-                            # mark salvaged molecule as produced under skip_checks
-                            try:
-                                final_mol.SetIntProp("_xyz_skip_checks", 1)
-                            except Exception:
+                        # DetermineBonds explicitly failed for charge=0. In this
+                        # situation, repeatedly prompt the user for charges until
+                        # DetermineBonds succeeds or the user cancels.
+                        while True:
+                            charge_val, ok, skip_flag = prompt_for_charge()
+                            if not ok:
+                                # user cancelled the prompt -> abort
+                                return None
+                            if skip_flag:
+                                # User selected Skip chemistry: attempt distance-based salvage
                                 try:
-                                    final_mol._xyz_skip_checks = True
+                                    self.estimate_bonds_from_distances(mol)
                                 except Exception:
                                     pass
-                            break
-                        else:
+                                salvaged = None
+                                try:
+                                    salvaged = mol.GetMol()
+                                except Exception:
+                                    salvaged = None
+
+                                if salvaged is not None:
+                                    try:
+                                        salvaged.SetIntProp("_xyz_skip_checks", 1)
+                                    except Exception:
+                                        try:
+                                            salvaged._xyz_skip_checks = True
+                                        except Exception:
+                                            pass
+                                    final_mol = salvaged
+                                    break
+                                else:
+                                    # Could not salvage; abort
+                                    try:
+                                        self.statusBar().showMessage("Skip chemistry selected but failed to create salvaged molecule.")
+                                    except Exception:
+                                        pass
+                                    return None
+
                             try:
-                                self.statusBar().showMessage(f"Retry failed: {e_prompt}")
+                                final_mol = _process_with_charge(charge_val)
+                                # success -> break out of prompt loop
+                                break
+                            except RuntimeError:
+                                # DetermineBonds still failing for this charge -> loop again
+                                try:
+                                    self.statusBar().showMessage("DetermineBonds failed for that charge; please try a different total charge or cancel.")
+                                except Exception:
+                                    pass
+                                continue
+                            except Exception as e_prompt:
+                                # Some other failure occurred after DetermineBonds or in
+                                # finalization. If skip_chemistry_checks is enabled we
+                                # try the salvaged mol once; otherwise prompt again.
+                                try:
+                                    skip_checks = bool(self.settings.get('skip_chemistry_checks', False))
+                                except Exception:
+                                    skip_checks = False
+
+                                salvaged = None
+                                try:
+                                    salvaged = mol.GetMol()
+                                except Exception:
+                                    salvaged = None
+
+                                if skip_checks and salvaged is not None:
+                                    final_mol = salvaged
+                                    # mark salvaged molecule as produced under skip_checks
+                                    try:
+                                        final_mol.SetIntProp("_xyz_skip_checks", 1)
+                                    except Exception:
+                                        try:
+                                            final_mol._xyz_skip_checks = True
+                                        except Exception:
+                                            pass
+                                    break
+                                else:
+                                    try:
+                                        self.statusBar().showMessage(f"Retry failed: {e_prompt}")
+                                    except Exception:
+                                        pass
+                                    # Continue prompting
+                                    continue
+                else:
+                    # User has requested to always be asked for charge — prompt before any silent try
+                    while True:
+                        charge_val, ok, skip_flag = prompt_for_charge()
+                        if not ok:
+                            # user cancelled the prompt -> abort
+                            return None
+                        if skip_flag:
+                            # User selected Skip chemistry: attempt distance-based salvage
+                            try:
+                                self.estimate_bonds_from_distances(mol)
                             except Exception:
                                 pass
-                            # Continue prompting
+                            salvaged = None
+                            try:
+                                salvaged = mol.GetMol()
+                            except Exception:
+                                salvaged = None
+    
+                            if salvaged is not None:
+                                try:
+                                    salvaged.SetIntProp("_xyz_skip_checks", 1)
+                                except Exception:
+                                    try:
+                                        salvaged._xyz_skip_checks = True
+                                    except Exception:
+                                        pass
+                                final_mol = salvaged
+                                break
+                            else:
+                                try:
+                                    self.statusBar().showMessage("Skip chemistry selected but failed to create salvaged molecule.")
+                                except Exception:
+                                    pass
+                                return None
+    
+                        try:
+                            final_mol = _process_with_charge(charge_val)
+                            # success -> break out of prompt loop
+                            break
+                        except RuntimeError:
+                            # DetermineBonds still failing for this charge -> loop again
+                            try:
+                                self.statusBar().showMessage("DetermineBonds failed for that charge; please try a different total charge or cancel.")
+                            except Exception:
+                                pass
                             continue
+                        except Exception as e_prompt:
+                            try:
+                                skip_checks = bool(self.settings.get('skip_chemistry_checks', False))
+                            except Exception:
+                                skip_checks = False
+    
+                            salvaged = None
+                            try:
+                                salvaged = mol.GetMol()
+                            except Exception:
+                                salvaged = None
+    
+                            if skip_checks and salvaged is not None:
+                                final_mol = salvaged
+                                try:
+                                    final_mol.SetIntProp("_xyz_skip_checks", 1)
+                                except Exception:
+                                    try:
+                                        final_mol._xyz_skip_checks = True
+                                    except Exception:
+                                        pass
+                                break
+                            else:
+                                try:
+                                    self.statusBar().showMessage(f"Retry failed: {e_prompt}")
+                                except Exception:
+                                    pass
+                                continue
+                
             except Exception:
                 # If the silent attempt failed for reasons other than
                 # DetermineBonds failing (e.g., finalization errors), fall
