@@ -1579,6 +1579,9 @@ class MainWindowMainInit(object):
             # Color overrides
             'ball_stick_bond_color': '#7F7F7F',
             'cpk_colors': {},  # symbol->hex overrides
+            # Whether to kekulize aromatic systems for 3D display
+            'display_kekule_3d': False,
+            'always_ask_charge': False,
         }
 
         try:

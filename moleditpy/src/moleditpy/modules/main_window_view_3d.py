@@ -156,11 +156,30 @@ class MainWindowView3d(object):
             self.plotter.add_light(light)
             
         # 5. 分子描画ロジック
+        # Optionally kekulize aromatic systems for 3D visualization.
+        mol_to_draw = mol
+        if self.settings.get('display_kekule_3d', False):
+            try:
+                # Operate on a copy to avoid mutating the original molecule
+                mol_to_draw = Chem.Mol(mol)
+                Chem.Kekulize(mol_to_draw, clearAromaticFlags=True)
+            except Exception as e:
+                # Kekulize failed; keep original and warn user
+                try:
+                    self.statusBar().showMessage(f"Kekulize failed: {e}")
+                except Exception:
+                    pass
+                mol_to_draw = mol
+
+        # Use the original molecule's conformer (positions) to ensure coordinates
+        # are preserved even when we create a kekulized copy for bond types.
         conf = mol.GetConformer()
 
-        self.atom_positions_3d = np.array([list(conf.GetAtomPosition(i)) for i in range(mol.GetNumAtoms())])
+        # Use the kekulized molecule's atom ordering for color/size decisions
+        self.atom_positions_3d = np.array([list(conf.GetAtomPosition(i)) for i in range(mol_to_draw.GetNumAtoms())])
 
-        sym = [a.GetSymbol() for a in mol.GetAtoms()]
+        # Use the possibly-kekulized molecule for symbol/bond types
+        sym = [a.GetSymbol() for a in mol_to_draw.GetAtoms()]
         col = np.array([CPK_COLORS_PV.get(s, [0.5, 0.5, 0.5]) for s in sym])
 
         # スタイルに応じて原子の半径を設定（設定から読み込み）
@@ -239,7 +258,7 @@ class MainWindowView3d(object):
                 except Exception:
                     bs_bond_rgb = [127, 127, 127]
             
-            for bond in mol.GetBonds():
+            for bond in mol_to_draw.GetBonds():
                 begin_atom_idx = bond.GetBeginAtomIdx()
                 end_atom_idx = bond.GetEndAtomIdx()
                 sp = np.array(conf.GetAtomPosition(begin_atom_idx))
@@ -313,7 +332,7 @@ class MainWindowView3d(object):
                     if bt == Chem.rdchem.BondType.DOUBLE:
                         r = cyl_radius * double_radius_factor
                         # 二重結合の場合、結合している原子の他の結合を考慮してオフセット方向を決定
-                        off_dir = self._calculate_double_bond_offset(mol, bond, conf)
+                        off_dir = self._calculate_double_bond_offset(mol_to_draw, bond, conf)
                         # 設定から二重結合のオフセットファクターを適用
                         s_double = cyl_radius * double_offset_factor
                         c1, c2 = c + off_dir * (s_double / 2), c - off_dir * (s_double / 2)
@@ -432,7 +451,10 @@ class MainWindowView3d(object):
         # E/Zラベルも表示
         if getattr(self, 'show_chiral_labels', False):
             try:
-                self.show_ez_labels_3d(mol)
+                # If we drew a kekulized molecule use it for E/Z detection so
+                # E/Z labels reflect Kekulé rendering; pass mol_to_draw as the
+                # molecule to scan for bond stereochemistry.
+                self.show_ez_labels_3d(mol, scan_mol=mol_to_draw)
             except Exception as e: 
                 self.statusBar().showMessage(f"3D E/Z label drawing error: {e}")
 
@@ -561,7 +583,7 @@ class MainWindowView3d(object):
 
 
 
-    def show_ez_labels_3d(self, mol):
+    def show_ez_labels_3d(self, mol, scan_mol=None):
         """3DビューでE/Zラベルを表示する（RDKitのステレオ化学判定を使用）"""
         if not mol:
             return
@@ -588,11 +610,19 @@ class MainWindowView3d(object):
             pass
         
         # 二重結合でRDKitが判定したE/Z立体化学を表示
-        for bond in mol.GetBonds():
+        # `scan_mol` is used for stereochemistry detection (bond types); default
+        # to the provided molecule if not supplied.
+        if scan_mol is None:
+            scan_mol = mol
+
+        for bond in scan_mol.GetBonds():
             if bond.GetBondType() == Chem.BondType.DOUBLE:
                 stereo = bond.GetStereo()
                 if stereo in [Chem.BondStereo.STEREOE, Chem.BondStereo.STEREOZ]:
                     # 結合の中心座標を計算
+                    # Use positions from the original molecule's conformer; `bond` may
+                    # come from `scan_mol` which can be kekulized but position indices
+                    # correspond to the original `mol`.
                     begin_pos = np.array(conf.GetAtomPosition(bond.GetBeginAtomIdx()))
                     end_pos = np.array(conf.GetAtomPosition(bond.GetEndAtomIdx()))
                     center_pos = (begin_pos + end_pos) / 2
@@ -1083,15 +1113,33 @@ class MainWindowView3d(object):
         Only keys present in self.settings['cpk_colors'] are changed; other elements keep the defaults.
         """
         try:
+            # Overridden CPK settings are stored in self.settings['cpk_colors'].
+            # To ensure that 2D modules (e.g., atom_item.py) which imported the
+            # `CPK_COLORS` mapping from `modules.constants` at import time see
+            # updates, mutate the mapping in-place on the constants module
+            # instead of rebinding a new local variable here.
             overrides = self.settings.get('cpk_colors', {}) or {}
-            # Start from a clean copy of the defaults
-            global CPK_COLORS, CPK_COLORS_PV
-            CPK_COLORS = {k: QColor(v) if not isinstance(v, QColor) else QColor(v) for k, v in DEFAULT_CPK_COLORS.items()}
+
+            # Import the constants module so we can update mappings directly
+            try:
+                from . import constants as constants_mod
+            except Exception:
+                import modules.constants as constants_mod
+
+            # Reset constants.CPK_COLORS to defaults but keep the same dict
+            constants_mod.CPK_COLORS.clear()
+            for k, v in DEFAULT_CPK_COLORS.items():
+                constants_mod.CPK_COLORS[k] = QColor(v) if not isinstance(v, QColor) else v
+
+            # Apply overrides from settings
             for k, hexv in overrides.items():
                 if isinstance(hexv, str) and hexv:
-                    CPK_COLORS[k] = QColor(hexv)
-            # Rebuild PV version
-            CPK_COLORS_PV = {k: [c.redF(), c.greenF(), c.blueF()] for k, c in CPK_COLORS.items()}
+                    constants_mod.CPK_COLORS[k] = QColor(hexv)
+
+            # Rebuild the PV representation in-place too
+            constants_mod.CPK_COLORS_PV.clear()
+            for k, c in constants_mod.CPK_COLORS.items():
+                constants_mod.CPK_COLORS_PV[k] = [c.redF(), c.greenF(), c.blueF()]
         except Exception as e:
             print(f"Failed to update CPK colors from settings: {e}")
 

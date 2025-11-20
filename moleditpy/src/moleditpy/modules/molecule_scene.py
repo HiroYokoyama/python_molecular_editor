@@ -727,61 +727,130 @@ class MoleculeScene(QGraphicsScene):
 
                 # --- フューズされた辺の数による条件分岐 ---
                 if len(existing_orders) >= 2:
-                    # 2辺以上フューズ: 単純に既存の辺の次数とテンプレートの辺の次数が一致するものを最優先する
-                    # (この場合、新しい環を交互配置にするのは難しく、単に既存の構造を壊さないことを優先)
+                    
                     for rot in range(num_points):
-                        current_score = sum(100 for k, exist_order in existing_orders.items() 
-                                            if orig_orders[(k + rot) % num_points] == exist_order)
+                        match_double_count = 0
+                        match_bonus = 0
+                        mismatch_penalty = 0
+                        
+                        # 【新規追加】接続部（Legs）の安全性チェック
+                        # フューズ領域の両隣（テンプレート側）が「単結合(1)」であることを強く推奨する
+                        # これにより、既存構造との接続点での原子価オーバー（手が5本になる）を防ぐ
+                        safe_connection_score = 0
+                        
+                        # フューズ領域の開始と終了を探す（インデックス集合から判定）
+                        fused_indices = sorted(list(existing_orders.keys()))
+                        # 連続領域と仮定して、端のインデックスを取得
+                        # (0と5がつながっている環状のケースも考慮すべきだが、簡易的に最小/最大で判定し、
+                        #  もし飛び地なら不整合ペナルティで自然と落ちる)
+                        
+                        # 簡易的な隣接チェック: 
+                        # フューズに使われる辺集合に含まれない「その隣」の辺を見る
+                        for k in existing_orders:
+                            # 左隣を見る
+                            prev_idx = (k - 1 + rot) % num_points
+                            # 右隣を見る
+                            next_idx = (k + 1 + rot) % num_points
+                            
+                            # もし隣がフューズ領域外（＝接続部）なら、その次数をチェック
+                            # 注意: existing_ordersのキーは「配置位置(k)」
+                            # rotはテンプレートのズレ。
+                            # テンプレート上の該当エッジの次数は orig_orders[(neighbor_k + rot)] ではなく
+                            # orig_orders[neighbor_template_index]
+                            
+                            # 正確なロジック:
+                            # 今、配置位置 k にテンプレートの bond (k+rot) が来ている。
+                            # 配置位置 k の「隣のボンド」ではなく、
+                            # 「テンプレート上で」そのボンドの両隣にあるボンドが、今回のフューズに使われていないか確認する。
+                            pass 
+
+                        # --- シンプルな実装: 全ての非フューズ辺（外周になる辺）をチェック ---
+                        # 「フューズに使われていない辺」が単結合か二重結合かで加点
+                        # ピレンの場合(3辺フューズ)、残り3辺が外周。
+                        # ベンゼン(D-S-D-S-D-S)において、D-S-Dでフューズすると、残りはS-D-S。
+                        # 接合部(Legs)にあたるのは、残りのS-D-Sの両端のS。これが重要。
+                        
+                        # テンプレートの結合次数配列
+                        current_template_orders = [orig_orders[(i + rot) % num_points] for i in range(num_points)]
+                        
+                        # フューズ領域の両端を特定するために、
+                        # 「フューズしているk」に対応するテンプレート側のインデックスを集める
+                        used_template_indices = set((k + rot) % num_points for k in existing_orders)
+                        
+                        # テンプレート上で「使われている領域」の両隣（接続部）が「1(単結合)」なら超高得点
+                        for t_idx in used_template_indices:
+                            # そのボンドのテンプレート上の左隣
+                            adj_l = (t_idx - 1) % num_points
+                            # そのボンドのテンプレート上の右隣
+                            adj_r = (t_idx + 1) % num_points
+                            
+                            # もし隣が「使われていない」なら、それは接続部である
+                            if adj_l not in used_template_indices:
+                                if orig_orders[adj_l] == 1: safe_connection_score += 5000
+                            
+                            if adj_r not in used_template_indices:
+                                if orig_orders[adj_r] == 1: safe_connection_score += 5000
+
+                        # 既存のスコア計算
+                        for k, exist_order in existing_orders.items():
+                            template_ord = orig_orders[(k + rot) % num_points]
+                            if template_ord == exist_order:
+                                match_bonus += 100
+                                if exist_order == 2: match_double_count += 1
+                            else:
+                                # 不一致でも、Legsが安全なら許容したいのでペナルティは控えめに、
+                                # または safe_connection_score が圧倒的に勝つようにする
+                                mismatch_penalty += 50
+                        
+                        # 最終スコア: 接続部の安全性を最優先
+                        current_score = safe_connection_score + (match_double_count * 1000) + match_bonus - mismatch_penalty
+
                         if current_score > max_score:
                             max_score = current_score
                             best_rot = rot
 
                 elif len(existing_orders) == 1:
-                    # 1辺フューズ: 既存の辺を維持しつつ、その両隣で「反転一致」を達成し、新しい環を交互配置にする
-                    
-                    # フューズされた辺のインデックスと次数を取得
+                    # 1辺フューズ
                     k_fuse = next(iter(existing_orders.keys()))
                     exist_order = existing_orders[k_fuse]
-                    
-                    # 目標: フューズされた辺の両隣（k-1とk+1）に来るテンプレートの次数が、既存の辺の次数と逆であること
-                    # k_adj_1 -> (k_fuse - 1) % 6
-                    # k_adj_2 -> (k_fuse + 1) % 6
                     
                     for rot in range(num_points):
                         current_score = 0
                         rotated_template_order = orig_orders[(k_fuse + rot) % num_points]
 
-                        # 1. まず、フューズされた辺自体が次数を反転させられる位置にあるかチェック（必須ではないが、回転を絞る）
+                        # 1. 接合部の次数マッチング
+                        
+                        # パターンA: 交互配置（既存と逆）
                         if (exist_order == 1 and rotated_template_order == 2) or \
                            (exist_order == 2 and rotated_template_order == 1):
-                            current_score += 100 # 大幅ボーナス: 理想的な回転
+                            current_score += 100 
 
-                        # 2. 次に、両隣の辺の次数をチェック（交互配置維持の主目的）
-                        # 既存辺の両隣は、新規に作成されるため、テンプレートの次数でボンドが作成されます。
-                        # ここで、テンプレートの次数が既存辺の次数と逆になる回転を選ぶ必要があります。
-                        
-                        # テンプレートの辺は、回転後のk_fuseの両隣（m_adj1, m_adj2）
+                        # 【追加変更点2】二重結合の重ね合わせ（共役維持）
+                        # 既存が二重結合で、テンプレートも二重結合なら、ここで1つ消費される
+                        elif (exist_order == 2 and rotated_template_order == 2):
+                            current_score += 100
+
+                        # 2. 両隣の辺の次数チェック（交互配置の維持を確認）
                         m_adj1 = (k_fuse - 1 + rot) % num_points 
                         m_adj2 = (k_fuse + 1 + rot) % num_points
-                        
                         neighbor_order_1 = orig_orders[m_adj1]
                         neighbor_order_2 = orig_orders[m_adj2]
 
-                        # 既存が単結合(1)の場合、両隣は二重結合(2)であってほしい
                         if exist_order == 1:
+                            # 接合部が単なら、隣は二重であってほしい
                             if neighbor_order_1 == 2: current_score += 50
                             if neighbor_order_2 == 2: current_score += 50
                         
-                        # 既存が二重結合(2)の場合、両隣は単結合(1)であってほしい
                         elif exist_order == 2:
+                            # 接合部が二重なら、隣は単であってほしい
                             if neighbor_order_1 == 1: current_score += 50
                             if neighbor_order_2 == 1: current_score += 50
                             
-                        # 3. タイブレーク: その他の既存結合（フューズ辺ではない）との次数一致度も加味
+                        # 3. タイブレーク（他の接触しない辺との整合性など）
                         for k, e_order in existing_orders.items():
                              if k != k_fuse:
                                 r_t_order = orig_orders[(k + rot) % num_points]
-                                if r_t_order == e_order: current_score += 10 # 既存構造維持のボーナス
+                                if r_t_order == e_order: current_score += 10
                         
                         if current_score > max_score:
                             max_score = current_score
