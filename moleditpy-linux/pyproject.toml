@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "MoleditPy-linux"
 
-version = "1.16.2"
+version = "1.16.3"
 
 authors = [
   { name="HiroYokoyama", email="titech.yoko.hiro@gmail.com" },
