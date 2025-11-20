@@ -329,7 +329,7 @@ MoleditPy は、描画した 2D 構造から 3D 構造を生成し、表示、�
 
 **Apply** ボタンで設定を即座に反映し、**OK** ボタンで適用してダイアログを閉じます。**Reset Current Tab** / **Reset All** で設定をデフォルトに戻すこともできます。設定は次回起動時にも保持されます。
 
-* Setting menuのCPK Colors...から、CPK色の変更ができます。
+* Settings メニューのCPK Colors...から、CPK色の変更ができます。
   
   ![](img/3d-setting.png)
 
@@ -396,6 +396,7 @@ MoleditPy は、描画した 2D 構造から 3D 構造を生成し、表示、�
 メニューの `Help` \> `About` からバージョン情報を確認できます。
 
 -----
+
 
 
 
