@@ -317,30 +317,30 @@ You can copy each value to the clipboard using the **Copy** button next to it.
 
 -----
 
-## 8\. Settings
+## 8. Settings
 
-### 8\. Settings
+You can configure various 3D display settings via `Settings` > `3D View Settings...` in the menu.
 
-You can change various settings related to the 3D display from the menu `Settings` \> `3D View Settings...`.
+**Configurable items:**
 
-Configurable items:
+* **Scene Tab:**
+    * Background color
+    * Show/Hide 3D axes
+    * Enable/Disable lighting
+    * Light intensity
+    * Surface shininess (Specular) and its intensity (Specular Power)
+    * Camera projection mode (Perspective / Orthographic)
+* **Display Style Tabs (Ball & Stick, CPK, Wireframe, Stick):**
+    * Atom size/radius scale
+    * Bond radius
+    * Drawing quality (Resolution)
+* **Other Tab:**
+    * Whether to skip chemical validity checks when importing XYZ files
+    * Whether to use Kekulé structures for benzene rings
 
-  * **Scene Tab:**
-      * Background color
-      * Show/Hide 3D coordinate axes
-      * Enable/Disable lighting
-      * Light intensity
-      * Surface shininess (Specular) and its strength (Specular Power)
-      * **Camera projection mode (Perspective / Orthographic)**
-  * **Tabs for each display style (Ball & Stick, CPK, Wireframe, Stick):**
-      * Atom size/radius scale
-      * Bond radius
-      * **Multiple bond display offset and thickness (except for CPK)**
-      * Rendering quality (Resolution)
-  * **Other Tab:**
-      * Whether to skip chemical validity checks during XYZ file import
+Click the **Apply** button to reflect changes immediately, or the **OK** button to apply changes and close the dialog. You can also revert settings to defaults using **Reset Current Tab** / **Reset All**. Settings are retained for the next launch.
 
-Click the **Apply** button to immediately apply the settings, and the **OK** button to apply and close the dialog. You can also revert settings to default with **Reset Current Tab** / **Reset All**. Settings are retained for the next launch.
+* You can change CPK colors via `CPK Colors...` in the `Settings` menu.
 
   ![](img/3d-setting.png)
 
@@ -398,7 +398,7 @@ Click the **Apply** button to immediately apply the settings, and the **OK** but
 
 ## 10\. Version / License
 
-  * **Version:** 1.14
+  * **Version:** 1.17
   * **Author:** Hiromichi Yokoyama
   * **License:** Apache-2.0 license
   * **Repository:** [https://github.com/HiroYokoyama/python\_molecular\_editor](https://github.com/HiroYokoyama/python_molecular_editor)
@@ -407,6 +407,7 @@ Click the **Apply** button to immediately apply the settings, and the **OK** but
 You can check the version information from the `Help` \> `About` menu.
 
 -----
+
 
 
 
