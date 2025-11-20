@@ -325,9 +325,12 @@ MoleditPy は、描画した 2D 構造から 3D 構造を生成し、表示、�
       * 描画品質 (Resolution)
   * **Other タブ:**
     * XYZ ファイルインポート時に化学的妥当性チェックをスキップするかどうか
+    * ベンゼン環をケクレ表記にするかどうか
 
 **Apply** ボタンで設定を即座に反映し、**OK** ボタンで適用してダイアログを閉じます。**Reset Current Tab** / **Reset All** で設定をデフォルトに戻すこともできます。設定は次回起動時にも保持されます。
 
+* Setting menuのCPK Colors...から、CPK色の変更ができます。
+  
   ![](img/3d-setting.png)
 
 -----
@@ -384,15 +387,16 @@ MoleditPy は、描画した 2D 構造から 3D 構造を生成し、表示、�
 
 ## 10\. バージョン情報 / ライセンス
 
-  * **バージョン:** 1.14
+  * **バージョン:** 1.17
   * **作者:** Hiromichi Yokoyama
-  * **ライセンス:** Apache-2.0 license
+  * **ライセンス:** GPL-3.0 license
   * **リポジトリ:** [https://github.com/HiroYokoyama/python\_molecular\_editor](https://github.com/HiroYokoyama/python_molecular_editor)
   * **DOI:** 10.5281/zenodo.17268532
 
 メニューの `Help` \> `About` からバージョン情報を確認できます。
 
 -----
+
 
 
 
