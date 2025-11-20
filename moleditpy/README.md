@@ -6,7 +6,7 @@
 **MoleditPy** is a cross-platform, intuitive molecular editor built in Python. It provides a seamless workflow for drawing 2D molecular structures, visualizing them in 3D, and performing interactive geometric manipulations. Its powerful editing and export capabilities make it an ideal tool for preparing input files for DFT calculation software.
 
 **Author**: HiroYokoyama
-**License**: Apache-2.0
+**License**: GPL-v3
 **Repository**: [https://github.com/HiroYokoyama/python\_molecular\_editor](https://github.com/HiroYokoyama/python_molecular_editor)
 
 -----
@@ -82,15 +82,6 @@ For detailed instructions, please refer to the project [Wiki](https://github.com
     moleditpy-installer
     ```
 
-
-To enable Open Babel features (e.g., alternative 3D structure generation), please install the package manually.
-**Note:** Open Babel is licensed under **GPL v2**. Installing this package combines GPL code with this software.
-
-
-```bash
-pip install "moleditpy[openbabel]"
-```
-
 #### Running the Application
 
 ```bash
@@ -123,7 +114,7 @@ moleditpy
 
 ## License
 
-This project is licensed under the **Apache-2.0 License**. See the `LICENSE` file for details.
+This project is licensed under the **GNU General Public License v3.0 (GPL-v3)**. See the `LICENSE` file for details.
 
 -----
 
@@ -132,7 +123,7 @@ This project is licensed under the **Apache-2.0 License**. See the `LICENSE` fil
 **MoleditPy**は、Pythonで構築されたクロスプラットフォームかつ直感的な分子エディターです。2Dでの分子描画から3D構造の可視化・編集、さらにはインタラクティブな幾何学的操作まで、シームレスなワークフローを提供します。その強力な編集機能とエクスポート機能により、**DFT計算ソフトウェアのインプット作成に最適なツール**です。
 
 **作者**: HiroYokoyama
-**ライセンス**: Apache-2.0
+**ライセンス**: GPL-v3
 **リポジトリ**: [https://github.com/HiroYokoyama/python\_molecular\_editor](https://github.com/HiroYokoyama/python_molecular_editor)
 
 -----
@@ -205,13 +196,6 @@ This project is licensed under the **Apache-2.0 License**. See the `LICENSE` fil
     moleditpy-installer
     ```
 
-Open Babel 機能（代替的な3D構造生成など）を有効にする場合は、以下のコマンドで個別にインストールしてください。
-**注意:** Open Babel は **GPL v2** ライセンスです。このパッケージをインストールすると、GPLの条項が適用される可能性があります。
-
-```bash
-pip install "moleditpy[openbabel]"
-```
-
 #### アプリケーションの起動
 
 ```bash
@@ -244,4 +228,4 @@ moleditpy
 
 ## ライセンス
 
-このプロジェクトは **Apache-2.0 License** のもとで公開されています。詳細は `LICENSE` ファイルを参照してください。
+このプロジェクトは **GNU General Public License v3.0 (GPL-v3)** のもとで公開されています。詳細は `LICENSE` ファイルを参照してください。

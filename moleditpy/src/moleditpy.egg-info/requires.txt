@@ -3,6 +3,4 @@ pyqt6<6.10
 pyvista<0.47
 pyvistaqt<0.12
 rdkit<2025.10
-
-[openbabel]
 openbabel-wheel<3.2
