@@ -400,13 +400,14 @@ Click the **Apply** button to reflect changes immediately, or the **OK** button 
 
   * **Version:** 1.17
   * **Author:** Hiromichi Yokoyama
-  * **License:** Apache-2.0 license
+  * **License:** GPL-3.0 license
   * **Repository:** [https://github.com/HiroYokoyama/python\_molecular\_editor](https://github.com/HiroYokoyama/python_molecular_editor)
   * **DOI:** 10.5281/zenodo.17268532
 
 You can check the version information from the `Help` \> `About` menu.
 
 -----
+
 
 
 
