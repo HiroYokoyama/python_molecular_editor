@@ -7,7 +7,7 @@ MoleditPy — A Python-based molecular editing software
 Author: Hiromichi Yokoyama
 License: GPL-3.0 license
 Repo: https://github.com/HiroYokoyama/python_molecular_editor
-DOI 10.5281/zenodo.17268532
+DOI: 10.5281/zenodo.17268532
 """
 
 # --- Constants ---
@@ -16,7 +16,7 @@ from PyQt6.QtGui import QFont, QColor
 from rdkit import Chem
 
 #Version
-VERSION = '1.17.0'
+VERSION = '1.17.1'
 
 ATOM_RADIUS = 18
 BOND_OFFSET = 3.5
