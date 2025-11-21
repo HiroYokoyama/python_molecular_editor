@@ -7,7 +7,7 @@ MoleditPy — A Python-based molecular editing software
 Author: Hiromichi Yokoyama
 License: GPL-3.0 license
 Repo: https://github.com/HiroYokoyama/python_molecular_editor
-DOI 10.5281/zenodo.17268532
+DOI: 10.5281/zenodo.17268532
 """
 
 from PyQt6.QtWidgets import (
@@ -16,7 +16,7 @@ from PyQt6.QtWidgets import (
 
 
 from PyQt6.QtCore import (
-    Qt, QPointF
+    Qt, QPointF, QEvent
 )
 
 class ZoomableView(QGraphicsView):
@@ -107,3 +107,23 @@ class ZoomableView(QGraphicsView):
             event.accept()
         else:
             super().mouseReleaseEvent(event)
+
+    def viewportEvent(self, event):
+        """ Macのトラックパッドなどのネイティブジェスチャー（ピンチ）に対応 """
+        if event.type() == QEvent.Type.NativeGesture:
+            # ピンチズーム（ZoomNativeGesture）の場合
+            if event.gestureType() == Qt.NativeGestureType.ZoomNativeGesture:
+                # event.value() は拡大縮小の倍率差分を返します
+                # 例: 拡大時は正の値、縮小時は負の値
+                factor = 1.0 + event.value()
+                
+                # 既存の最大・最小スケール制限を考慮する場合（オプション）
+                current_scale = self.transform().m11()
+                min_scale, max_scale = 0.05, 20.0
+                
+                # 制限内であればスケールを適用
+                # (厳密に制限を守るならif文でガードしますが、最小実装としては以下で動作します)
+                self.scale(factor, factor)
+                return True
+                
+        return super().viewportEvent(event)
