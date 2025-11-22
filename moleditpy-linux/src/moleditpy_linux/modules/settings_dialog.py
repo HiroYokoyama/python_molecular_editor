@@ -69,6 +69,9 @@ class SettingsDialog(QDialog):
             'stick_triple_bond_offset_factor': 1.0,
             'stick_double_bond_radius_factor': 0.6,
             'stick_triple_bond_radius_factor': 0.4,
+            'aromatic_torus_thickness_factor': 0.6,
+            # Whether to draw an aromatic circle inside rings in 3D
+            'display_aromatic_circles_3d': False,
             # If True, attempts to be permissive when RDKit raises chemical/sanitization errors
             # during file import (useful for viewing malformed XYZ/MOL files). When enabled,
             # element symbol recognition will be coerced where possible and Chem.SanitizeMol
@@ -86,6 +89,7 @@ class SettingsDialog(QDialog):
             # If True, RDKit will attempt to kekulize aromatic systems for 3D display
             # (shows alternating single/double bonds rather than aromatic circles)
             'display_kekule_3d': False,
+            'ball_stick_use_cpk_bond_color': False,
         }
         
         # --- 選択された色を管理する専用のインスタンス変数 ---
@@ -118,6 +122,13 @@ class SettingsDialog(QDialog):
 
         # 渡された設定でUIと内部変数を初期化
         self.update_ui_from_settings(current_settings)
+        
+        # Initialize aromatic circle checkbox and torus thickness from settings
+        self.aromatic_circle_checkbox.setChecked(current_settings.get('display_aromatic_circles_3d', self.default_settings.get('display_aromatic_circles_3d', False)))
+        # Thickness factor is stored as a multiplier (e.g., 1.0), slider uses integer 0-300 representing 0.1x-3.0x
+        thickness_factor = current_settings.get('aromatic_torus_thickness_factor', self.default_settings.get('aromatic_torus_thickness_factor', 1.0))
+        self.aromatic_torus_thickness_slider.setValue(int(thickness_factor * 100))
+        self.aromatic_torus_thickness_label.setText(f"{thickness_factor:.1f}")
 
         # --- ボタンの配置 ---
         buttons = QHBoxLayout()
@@ -243,9 +254,40 @@ class SettingsDialog(QDialog):
         except Exception:
             pass
 
+        # Add separator after Kekule bonds option
+        separator = QFrame()
+        separator.setFrameShape(QFrame.Shape.HLine)
+        separator.setFrameShadow(QFrame.Shadow.Sunken)
+        self.other_form_layout.addRow(separator)
+
         # Place the Kekulé option after the always-ask-charge option
         try:
             self.other_form_layout.addRow("Display Kekulé bonds in 3D:", self.kekule_3d_checkbox)
+        except Exception:
+            pass
+        
+
+        # Aromatic ring circle display option
+        self.aromatic_circle_checkbox = QCheckBox()
+        self.aromatic_circle_checkbox.setToolTip("When enabled, aromatic rings will be displayed with a circle inside the ring in 3D view.")
+        try:
+            self.other_form_layout.addRow("Display aromatic rings as circles in 3D:", self.aromatic_circle_checkbox)
+        except Exception:
+            pass
+        
+        # Aromatic torus thickness factor
+        self.aromatic_torus_thickness_slider = QSlider(Qt.Orientation.Horizontal)
+        self.aromatic_torus_thickness_slider.setRange(10, 300)  # 0.1x to 3.0x
+        self.aromatic_torus_thickness_slider.setValue(100)  # Default 1.0x
+        self.aromatic_torus_thickness_label = QLabel("1.0")
+        self.aromatic_torus_thickness_slider.valueChanged.connect(
+            lambda v: self.aromatic_torus_thickness_label.setText(f"{v/100:.1f}")
+        )
+        thickness_layout = QHBoxLayout()
+        thickness_layout.addWidget(self.aromatic_torus_thickness_slider)
+        thickness_layout.addWidget(self.aromatic_torus_thickness_label)
+        try:
+            self.other_form_layout.addRow("Aromatic torus thickness (× bond radius):", thickness_layout)
         except Exception:
             pass
 
@@ -378,12 +420,23 @@ class SettingsDialog(QDialog):
         resolution_layout.addWidget(self.bs_resolution_label)
         form_layout.addRow("Resolution (Quality):", resolution_layout)
 
+        # --- 区切り線（水平ライン） ---
+        line = QFrame()
+        line.setFrameShape(QFrame.Shape.HLine)
+        line.setFrameShadow(QFrame.Shadow.Sunken)
+        form_layout.addRow(line)
+
         # --- Ball & Stick bond color ---
         self.bs_bond_color_button = QPushButton()
         self.bs_bond_color_button.setFixedSize(36, 24)
         self.bs_bond_color_button.clicked.connect(self.pick_bs_bond_color)
         self.bs_bond_color_button.setToolTip("Choose the uniform bond color for Ball & Stick model (3D)")
         form_layout.addRow("Ball & Stick bond color:", self.bs_bond_color_button)
+
+        # Use CPK colors for bonds option
+        self.bs_use_cpk_bond_checkbox = QCheckBox()
+        self.bs_use_cpk_bond_checkbox.setToolTip("If checked, bonds will be colored using the atom colors (split bonds). If unchecked, a uniform color is used.")
+        form_layout.addRow("Use CPK colors for bonds:", self.bs_use_cpk_bond_checkbox)
 
         self.tab_widget.addTab(ball_stick_widget, "Ball & Stick")
     
@@ -619,6 +672,8 @@ class SettingsDialog(QDialog):
                 'skip_chemistry_checks': self.default_settings.get('skip_chemistry_checks', False),
                 'display_kekule_3d': self.default_settings.get('display_kekule_3d', False),
                 'always_ask_charge': self.default_settings.get('always_ask_charge', False),
+                'display_aromatic_circles_3d': self.default_settings.get('display_aromatic_circles_3d', False),
+                'aromatic_torus_thickness_factor': self.default_settings.get('aromatic_torus_thickness_factor', 1.0),
             },
             "Ball & Stick": {
                 'ball_stick_atom_scale': self.default_settings['ball_stick_atom_scale'],
@@ -627,11 +682,14 @@ class SettingsDialog(QDialog):
                 'ball_stick_double_bond_offset_factor': self.default_settings.get('ball_stick_double_bond_offset_factor', 2.0),
                 'ball_stick_triple_bond_offset_factor': self.default_settings.get('ball_stick_triple_bond_offset_factor', 2.0),
                 'ball_stick_double_bond_radius_factor': self.default_settings.get('ball_stick_double_bond_radius_factor', 0.8),
-                'ball_stick_triple_bond_radius_factor': self.default_settings.get('ball_stick_triple_bond_radius_factor', 0.75)
+                'ball_stick_triple_bond_radius_factor': self.default_settings.get('ball_stick_triple_bond_radius_factor', 0.75),
+                'ball_stick_use_cpk_bond_color': self.default_settings['ball_stick_use_cpk_bond_color'],
+                'ball_stick_bond_color': self.default_settings.get('ball_stick_bond_color', '#7F7F7F')
             },
             "CPK (Space-filling)": {
                 'cpk_atom_scale': self.default_settings['cpk_atom_scale'],
                 'cpk_resolution': self.default_settings['cpk_resolution'],
+                'cpk_colors': {}
             },
             "Wireframe": {
                 'wireframe_bond_radius': self.default_settings['wireframe_bond_radius'],
@@ -665,6 +723,7 @@ class SettingsDialog(QDialog):
             
             # UIを更新
             self.update_ui_from_settings(updated_settings)
+            # CPK tab: do not change parent/settings immediately; let Apply/OK persist any changes
             
             # ユーザーへのフィードバック
             QMessageBox.information(self, "Reset Complete", f"Settings for '{tab_name}' tab have been reset to defaults.")
@@ -801,6 +860,17 @@ class SettingsDialog(QDialog):
             'stick_triple_bond_offset_factor': self.stick_triple_offset_slider.value() / 100.0,
             'stick_double_bond_radius_factor': self.stick_double_radius_slider.value() / 100.0,
             'stick_triple_bond_radius_factor': self.stick_triple_radius_slider.value() / 100.0,
+            # Projection mode
+            'projection_mode': self.projection_combo.currentText(),
+            # Kekule / aromatic / torus settings
+            'display_kekule_3d': self.kekule_3d_checkbox.isChecked(),
+            'display_aromatic_circles_3d': self.aromatic_circle_checkbox.isChecked(),
+            'aromatic_torus_thickness_factor': self.aromatic_torus_thickness_slider.value() / 100.0,
+            'skip_chemistry_checks': self.skip_chem_checks_checkbox.isChecked(),
+            'always_ask_charge': self.always_ask_charge_checkbox.isChecked(),
+            # Ball & Stick bond color and use-cpk option
+            'ball_stick_bond_color': getattr(self, 'bs_bond_color', self.default_settings.get('ball_stick_bond_color')),
+            'ball_stick_use_cpk_bond_color': self.bs_use_cpk_bond_checkbox.isChecked(),
         }
     
     def reset_to_defaults(self):
@@ -853,6 +923,9 @@ class SettingsDialog(QDialog):
                     pass
         except Exception:
             pass
+        
+        # Ball & Stick CPK bond color option
+        self.bs_use_cpk_bond_checkbox.setChecked(settings_dict.get('ball_stick_use_cpk_bond_color', self.default_settings['ball_stick_use_cpk_bond_color']))
         
         # CPK設定
         cpk_atom_scale = int(settings_dict.get('cpk_atom_scale', self.default_settings['cpk_atom_scale']) * 100)
@@ -944,6 +1017,14 @@ class SettingsDialog(QDialog):
         self.kekule_3d_checkbox.setChecked(settings_dict.get('display_kekule_3d', self.default_settings.get('display_kekule_3d', False)))
         # always ask for charge on XYZ imports
         self.always_ask_charge_checkbox.setChecked(settings_dict.get('always_ask_charge', self.default_settings.get('always_ask_charge', False)))
+        # Aromatic ring circle display and torus thickness factor
+        self.aromatic_circle_checkbox.setChecked(settings_dict.get('display_aromatic_circles_3d', self.default_settings.get('display_aromatic_circles_3d', False)))
+        thickness_factor = float(settings_dict.get('aromatic_torus_thickness_factor', self.default_settings.get('aromatic_torus_thickness_factor', 1.0)))
+        try:
+            self.aromatic_torus_thickness_slider.setValue(int(thickness_factor * 100))
+            self.aromatic_torus_thickness_label.setText(f"{thickness_factor:.1f}")
+        except Exception:
+            pass
       
     def select_color(self):
         """カラーピッカーを開き、選択された色を内部変数とUIに反映させる"""
@@ -996,10 +1077,13 @@ class SettingsDialog(QDialog):
             'stick_double_bond_radius_factor': self.stick_double_radius_slider.value() / 100.0,
             'stick_triple_bond_radius_factor': self.stick_triple_radius_slider.value() / 100.0,
             'display_kekule_3d': self.kekule_3d_checkbox.isChecked(),
+            'display_aromatic_circles_3d': self.aromatic_circle_checkbox.isChecked(),
+            'aromatic_torus_thickness_factor': self.aromatic_torus_thickness_slider.value() / 100.0,
             'skip_chemistry_checks': self.skip_chem_checks_checkbox.isChecked(),
             'always_ask_charge': self.always_ask_charge_checkbox.isChecked(),
             # Ball & Stick bond color (3D grey/uniform color)
             'ball_stick_bond_color': getattr(self, 'bs_bond_color', self.default_settings.get('ball_stick_bond_color', '#7F7F7F')),
+            'ball_stick_use_cpk_bond_color': self.bs_use_cpk_bond_checkbox.isChecked(),
         }
 
     def pick_bs_bond_color(self):
