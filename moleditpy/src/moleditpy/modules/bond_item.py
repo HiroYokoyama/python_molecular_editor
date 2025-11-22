@@ -216,11 +216,102 @@ class BondItem(QGraphicsItem):
                 offset = QPointF(v.dx(), v.dy()) * BOND_OFFSET
 
                 if self.order == 2:
-                    # -------------------- ここから差し替え --------------------)
-                    line1 = line.translated(offset)
-                    line2 = line.translated(-offset)
-                    painter.drawLine(line1)
-                    painter.drawLine(line2)
+                    # 環構造かどうかを判定し、描画方法を変更
+                    is_in_ring = False
+                    ring_center = None
+                    
+                    try:
+                        # シーンからRDKit分子を取得
+                        sc = self.scene()
+                        if sc and hasattr(sc, 'window') and sc.window:
+                            # 2DデータからRDKit分子を生成
+                            mol = sc.window.data.to_rdkit_mol(use_2d_stereo=False)
+                            if mol:
+                                # この結合に対応するRDKitボンドを探す
+                                atom1_id = self.atom1.atom_id
+                                atom2_id = self.atom2.atom_id
+                                
+                                # RDKitインデックスを取得
+                                rdkit_idx1 = None
+                                rdkit_idx2 = None
+                                for atom in mol.GetAtoms():
+                                    if atom.HasProp("_original_atom_id"):
+                                        orig_id = atom.GetIntProp("_original_atom_id")
+                                        if orig_id == atom1_id:
+                                            rdkit_idx1 = atom.GetIdx()
+                                        elif orig_id == atom2_id:
+                                            rdkit_idx2 = atom.GetIdx()
+                                
+                                if rdkit_idx1 is not None and rdkit_idx2 is not None:
+                                    bond = mol.GetBondBetweenAtoms(rdkit_idx1, rdkit_idx2)
+                                    if bond and bond.IsInRing():
+                                        is_in_ring = True
+                                        # 環の中心を計算（この結合を含む最小環）
+                                        from rdkit import Chem
+                                        ring_info = mol.GetRingInfo()
+                                        for ring in ring_info.AtomRings():
+                                            if rdkit_idx1 in ring and rdkit_idx2 in ring:
+                                                # 環の原子位置の平均を計算
+                                                ring_positions = []
+                                                for atom_idx in ring:
+                                                    # 対応するエディタ側の原子を探す
+                                                    rdkit_atom = mol.GetAtomWithIdx(atom_idx)
+                                                    if rdkit_atom.HasProp("_original_atom_id"):
+                                                        editor_atom_id = rdkit_atom.GetIntProp("_original_atom_id")
+                                                        if editor_atom_id in sc.window.data.atoms:
+                                                            atom_item = sc.window.data.atoms[editor_atom_id]['item']
+                                                            if atom_item:
+                                                                ring_positions.append(atom_item.pos())
+                                                
+                                                if ring_positions:
+                                                    # 環の中心を計算
+                                                    center_x = sum(p.x() for p in ring_positions) / len(ring_positions)
+                                                    center_y = sum(p.y() for p in ring_positions) / len(ring_positions)
+                                                    ring_center = QPointF(center_x, center_y)
+                                                    break
+                    except Exception as e:
+                        # エラーが発生した場合は通常の描画にフォールバック
+                        is_in_ring = False
+                    
+                    v = line.unitVector().normalVector()
+                    offset = QPointF(v.dx(), v.dy()) * BOND_OFFSET
+                    
+                    if is_in_ring and ring_center:
+                        # 環構造: 1本の中心線（単結合位置） + 1本の短い内側線
+                        # 結合の中心から環の中心への方向を計算
+                        bond_center = line.center()
+                        
+                        # ローカル座標系での環中心方向
+                        local_ring_center = self.mapFromScene(ring_center)
+                        local_bond_center = line.center()
+                        inward_vec = local_ring_center - local_bond_center
+                        
+                        # offsetとinward_vecの内積で内側を判定
+                        if QPointF.dotProduct(offset, inward_vec) > 0:
+                            # offsetが内側方向（2倍のオフセット）
+                            inner_offset = offset * 2
+                        else:
+                            # -offsetが内側方向（2倍のオフセット）
+                            inner_offset = -offset * 2
+                        
+                        # 中心線を描画（単結合と同じ位置）
+                        painter.drawLine(line)
+                        
+                        # 内側の短い線を描画（80%の長さ）
+                        inner_line = line.translated(inner_offset)
+                        shorten_factor = 0.8
+                        p1 = inner_line.p1()
+                        p2 = inner_line.p2()
+                        center = QPointF((p1.x() + p2.x()) / 2, (p1.y() + p2.y()) / 2)
+                        shortened_p1 = center + (p1 - center) * shorten_factor
+                        shortened_p2 = center + (p2 - center) * shorten_factor
+                        painter.drawLine(QLineF(shortened_p1, shortened_p2))
+                    else:
+                        # 非環構造: 従来の2本の平行線
+                        line1 = line.translated(offset)
+                        line2 = line.translated(-offset)
+                        painter.drawLine(line1)
+                        painter.drawLine(line2)
 
                     # E/Z ラベルの描画処理
                     if self.stereo in [3, 4]:

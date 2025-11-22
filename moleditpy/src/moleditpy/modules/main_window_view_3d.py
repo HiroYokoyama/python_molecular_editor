@@ -223,7 +223,118 @@ class MainWindowView3d(object):
 
         # Wireframeスタイルの場合は原子を描画しない
         if self.current_3d_style != 'wireframe':
-            glyphs = self.glyph_source.glyph(scale='radii', geom=pv.Sphere(radius=1.0, theta_resolution=resolution, phi_resolution=resolution), orient=False)
+            # Stickモードで末端二重結合・三重結合の原子を分裂させるための処理
+            if self.current_3d_style == 'stick':
+                # 末端原子（次数1）で多重結合を持つものを検出
+                split_atoms = []  # (atom_idx, bond_order, offset_vecs)
+                skip_atoms = set()  # スキップする原子のインデックス
+                
+                for i in range(mol_to_draw.GetNumAtoms()):
+                    atom = mol_to_draw.GetAtomWithIdx(i)
+                    if atom.GetDegree() == 1:  # 末端原子
+                        bonds = atom.GetBonds()
+                        if len(bonds) == 1:
+                            bond = bonds[0]
+                            bond_type = bond.GetBondType()
+                            
+                            if bond_type in [Chem.BondType.DOUBLE, Chem.BondType.TRIPLE]:
+                                # 多重結合を持つ末端原子を発見
+                                # 結合のもう一方の原子を取得
+                                other_idx = bond.GetBeginAtomIdx() if bond.GetEndAtomIdx() == i else bond.GetEndAtomIdx()
+                                
+                                # 結合ベクトルを計算
+                                pos_i = np.array(conf.GetAtomPosition(i))
+                                pos_other = np.array(conf.GetAtomPosition(other_idx))
+                                bond_vec = pos_i - pos_other
+                                bond_length = np.linalg.norm(bond_vec)
+                                
+                                if bond_length > 0:
+                                    bond_unit = bond_vec / bond_length
+                                    
+                                    # 二重結合の場合は実際の描画と同じオフセット方向を使用
+                                    if bond_type == Chem.BondType.DOUBLE:
+                                        offset_dir1 = self._calculate_double_bond_offset(mol_to_draw, bond, conf)
+                                    else:
+                                        # 三重結合の場合は結合描画と同じロジック
+                                        v_arb = np.array([0, 0, 1])
+                                        if np.allclose(np.abs(np.dot(bond_unit, v_arb)), 1.0):
+                                            v_arb = np.array([0, 1, 0])
+                                        offset_dir1 = np.cross(bond_unit, v_arb)
+                                        offset_dir1 /= np.linalg.norm(offset_dir1)
+                                    
+                                    # 二重/三重結合描画のオフセット値と半径を取得（結合描画と完全に一致させる）
+                                    try:
+                                        cyl_radius = self.settings.get('stick_bond_radius', 0.15)
+                                        if bond_type == Chem.BondType.DOUBLE:
+                                            radius_factor = self.settings.get('stick_double_bond_radius_factor', 0.60)
+                                            offset_factor = self.settings.get('stick_double_bond_offset_factor', 1.5)
+                                            # 二重結合：s_double / 2 を使用
+                                            offset_distance = cyl_radius * offset_factor / 2
+                                        else:  # TRIPLE
+                                            radius_factor = self.settings.get('stick_triple_bond_radius_factor', 0.40)
+                                            offset_factor = self.settings.get('stick_triple_bond_offset_factor', 1.0)
+                                            # 三重結合：s_triple をそのまま使用（/ 2 なし）
+                                            offset_distance = cyl_radius * offset_factor
+                                        
+                                        # 結合描画と同じ計算
+                                        sphere_radius = cyl_radius * radius_factor
+                                    except:
+                                        sphere_radius = 0.09  # デフォルト値
+                                        offset_distance = 0.15  # デフォルト値
+                                    
+                                    if bond_type == Chem.BondType.DOUBLE:
+                                        # 二重結合：2個に分裂
+                                        offset_vecs = [
+                                            offset_dir1 * offset_distance,
+                                            -offset_dir1 * offset_distance
+                                        ]
+                                        split_atoms.append((i, 2, offset_vecs))
+                                    else:  # TRIPLE
+                                        # 三重結合：3個に分裂（中心 + 両側2つ）
+                                        # 結合描画と同じ配置
+                                        offset_vecs = [
+                                            np.array([0, 0, 0]),  # 中心
+                                            offset_dir1 * offset_distance,  # +side
+                                            -offset_dir1 * offset_distance  # -side
+                                        ]
+                                        split_atoms.append((i, 3, offset_vecs))
+                                    
+                                    skip_atoms.add(i)
+                
+                # 分裂させる原子がある場合、新しい位置リストを作成
+                if split_atoms:
+                    new_positions = []
+                    new_colors = []
+                    new_radii = []
+                    
+                    # 通常の原子を追加（スキップリスト以外）
+                    for i in range(len(self.atom_positions_3d)):
+                        if i not in skip_atoms:
+                            new_positions.append(self.atom_positions_3d[i])
+                            new_colors.append(col[i])
+                            new_radii.append(rad[i])
+                    
+                    # 分裂した原子を追加
+                    # 上記で計算されたsphere_radiusを使用（結合描画のradius_factorを適用済み）
+                    for atom_idx, bond_order, offset_vecs in split_atoms:
+                        pos = self.atom_positions_3d[atom_idx]
+                        # この原子の結合から半径を取得（上記ループで計算済み）
+                        # 簡便のため、最後に計算されたsphere_radiusを使用
+                        for offset_vec in offset_vecs:
+                            new_positions.append(pos + offset_vec)
+                            new_colors.append(col[atom_idx])
+                            new_radii.append(sphere_radius)
+                    
+                    # PolyDataを新しい位置で作成
+                    glyph_source = pv.PolyData(np.array(new_positions))
+                    glyph_source['colors'] = np.array(new_colors)
+                    glyph_source['radii'] = np.array(new_radii)
+                else:
+                    glyph_source = self.glyph_source
+            else:
+                glyph_source = self.glyph_source
+            
+            glyphs = glyph_source.glyph(scale='radii', geom=pv.Sphere(radius=1.0, theta_resolution=resolution, phi_resolution=resolution), orient=False)
 
             if is_lighting_enabled:
                 self.atom_actor = self.plotter.add_mesh(glyphs, scalars='colors', rgb=True, **mesh_props)
@@ -254,60 +365,72 @@ class MainWindowView3d(object):
                 cyl_radius = self.settings.get('ball_stick_bond_radius', 0.1)
                 bond_resolution = self.settings.get('ball_stick_resolution', 16)
             
-            bond_counter = 0  # 結合の個別識別用
-            
-            # Ball and Stick用のシリンダーリストを準備（高速化のため）
+            # Ball and Stick用の共通色
+            bs_bond_rgb = [127, 127, 127]
             if self.current_3d_style == 'ball_and_stick':
-                bond_cylinders = []
-                # Compute the configured grey/uniform bond color for Ball & Stick
                 try:
                     bs_hex = self.settings.get('ball_stick_bond_color', '#7F7F7F')
                     q = QColor(bs_hex)
                     bs_bond_rgb = [q.red(), q.green(), q.blue()]
                 except Exception:
-                    bs_bond_rgb = [127, 127, 127]
+                    pass
+
+            # バッチ処理用のリスト
+            all_points = []
+            all_lines = []
+            all_radii = []
+            all_colors = [] # Cell data (one per line segment)
             
+            current_point_idx = 0
+            bond_counter = 0
+
             for bond in mol_to_draw.GetBonds():
                 begin_atom_idx = bond.GetBeginAtomIdx()
                 end_atom_idx = bond.GetEndAtomIdx()
                 sp = np.array(conf.GetAtomPosition(begin_atom_idx))
                 ep = np.array(conf.GetAtomPosition(end_atom_idx))
                 bt = bond.GetBondType()
-                c = (sp + ep) / 2
                 d = ep - sp
                 h = np.linalg.norm(d)
                 if h == 0: continue
 
-                # ボンドの色を原子の色から決定（各半分で異なる色）
+                # ボンドの色
                 begin_color = col[begin_atom_idx]
                 end_color = col[end_atom_idx]
-                
-                # 結合の色情報を記録
                 begin_color_rgb = [int(c * 255) for c in begin_color]
                 end_color_rgb = [int(c * 255) for c in end_color]
 
-                # UI応答性維持のためイベント処理
+                # セグメント追加用ヘルパー関数
+                def add_segment(p1, p2, radius, color_rgb):
+                    nonlocal current_point_idx
+                    all_points.append(p1)
+                    all_points.append(p2)
+                    all_lines.append([2, current_point_idx, current_point_idx + 1])
+                    all_radii.append(radius)
+                    all_radii.append(radius)
+                    all_colors.append(color_rgb)
+                    current_point_idx += 2
+
                 QApplication.processEvents()
+
+                # Get CPK bond color setting once for all bond types
+                use_cpk_bond = self.settings.get('ball_stick_use_cpk_bond_color', False)
+
                 if bt == Chem.rdchem.BondType.SINGLE or bt == Chem.rdchem.BondType.AROMATIC:
-                    if self.current_3d_style == 'ball_and_stick':
-                        # Ball and stickは全結合をまとめて処理（高速化）
-                        cyl = pv.Cylinder(center=c, direction=d, radius=cyl_radius, height=h, resolution=bond_resolution)
-                        bond_cylinders.append(cyl)
-                        self._3d_color_map[f'bond_{bond_counter}'] = bs_bond_rgb  # グレー (configurable)
+                    if self.current_3d_style == 'ball_and_stick' and not use_cpk_bond:
+                        # 単一セグメント (Uniform color)
+                        add_segment(sp, ep, cyl_radius, bs_bond_rgb)
+                        self._3d_color_map[f'bond_{bond_counter}'] = bs_bond_rgb
                     else:
-                        # その他（stick, wireframe）は中央で色が変わる2つの円柱
+                        # 分割セグメント (CPK split colors)
                         mid_point = (sp + ep) / 2
-                        
-                        # 前半（開始原子の色）
-                        cyl1 = pv.Cylinder(center=(sp + mid_point) / 2, direction=d, radius=cyl_radius, height=h/2, resolution=bond_resolution)
-                        actor1 = self.plotter.add_mesh(cyl1, color=begin_color, **mesh_props)
+                        add_segment(sp, mid_point, cyl_radius, begin_color_rgb)
+                        add_segment(mid_point, ep, cyl_radius, end_color_rgb)
                         self._3d_color_map[f'bond_{bond_counter}_start'] = begin_color_rgb
-                        
-                        # 後半（終了原子の色）
-                        cyl2 = pv.Cylinder(center=(mid_point + ep) / 2, direction=d, radius=cyl_radius, height=h/2, resolution=bond_resolution)
-                        actor2 = self.plotter.add_mesh(cyl2, color=end_color, **mesh_props)
                         self._3d_color_map[f'bond_{bond_counter}_end'] = end_color_rgb
+
                 else:
+                    # 多重結合のパラメータ計算
                     v1 = d / h
                     # モデルごとの半径ファクターを適用
                     if self.current_3d_style == 'ball_and_stick':
@@ -322,7 +445,7 @@ class MainWindowView3d(object):
                     else:
                         double_radius_factor = 1.0
                         triple_radius_factor = 0.75
-                    r = cyl_radius * 0.8  # fallback, will be overridden below
+                    
                     # 設定からオフセットファクターを取得（モデルごと）
                     if self.current_3d_style == 'ball_and_stick':
                         double_offset_factor = self.settings.get('ball_stick_double_bond_offset_factor', 2.0)
@@ -336,111 +459,208 @@ class MainWindowView3d(object):
                     else:
                         double_offset_factor = 2.0
                         triple_offset_factor = 2.0
-                    s = cyl_radius * 2.0  # デフォルト値
 
                     if bt == Chem.rdchem.BondType.DOUBLE:
                         r = cyl_radius * double_radius_factor
-                        # 二重結合の場合、結合している原子の他の結合を考慮してオフセット方向を決定
                         off_dir = self._calculate_double_bond_offset(mol_to_draw, bond, conf)
-                        # 設定から二重結合のオフセットファクターを適用
                         s_double = cyl_radius * double_offset_factor
-                        c1, c2 = c + off_dir * (s_double / 2), c - off_dir * (s_double / 2)
                         
-                        if self.current_3d_style == 'ball_and_stick':
-                            # Ball and stickは全結合をまとめて処理（高速化）
-                            cyl1 = pv.Cylinder(center=c1, direction=d, radius=r, height=h, resolution=bond_resolution)
-                            cyl2 = pv.Cylinder(center=c2, direction=d, radius=r, height=h, resolution=bond_resolution)
-                            bond_cylinders.extend([cyl1, cyl2])
+                        p1_start = sp + off_dir * (s_double / 2)
+                        p1_end = ep + off_dir * (s_double / 2)
+                        p2_start = sp - off_dir * (s_double / 2)
+                        p2_end = ep - off_dir * (s_double / 2)
+
+                        if self.current_3d_style == 'ball_and_stick' and not use_cpk_bond:
+                            add_segment(p1_start, p1_end, r, bs_bond_rgb)
+                            add_segment(p2_start, p2_end, r, bs_bond_rgb)
                             self._3d_color_map[f'bond_{bond_counter}_1'] = bs_bond_rgb
                             self._3d_color_map[f'bond_{bond_counter}_2'] = bs_bond_rgb
                         else:
-                            # その他（stick, wireframe）は中央で色が変わる
-                            mid_point = (sp + ep) / 2
-                            
-                            # 第一の結合線（前半・後半）
-                            cyl1_1 = pv.Cylinder(center=(sp + mid_point) / 2 + off_dir * (s_double / 2), direction=d, radius=r, height=h/2, resolution=bond_resolution)
-                            cyl1_2 = pv.Cylinder(center=(mid_point + ep) / 2 + off_dir * (s_double / 2), direction=d, radius=r, height=h/2, resolution=bond_resolution)
-                            self.plotter.add_mesh(cyl1_1, color=begin_color, **mesh_props)
-                            self.plotter.add_mesh(cyl1_2, color=end_color, **mesh_props)
+                            mid1 = (p1_start + p1_end) / 2
+                            mid2 = (p2_start + p2_end) / 2
+                            add_segment(p1_start, mid1, r, begin_color_rgb)
+                            add_segment(mid1, p1_end, r, end_color_rgb)
+                            add_segment(p2_start, mid2, r, begin_color_rgb)
+                            add_segment(mid2, p2_end, r, end_color_rgb)
                             self._3d_color_map[f'bond_{bond_counter}_1_start'] = begin_color_rgb
                             self._3d_color_map[f'bond_{bond_counter}_1_end'] = end_color_rgb
-                            
-                            # 第二の結合線（前半・後半）
-                            cyl2_1 = pv.Cylinder(center=(sp + mid_point) / 2 - off_dir * (s_double / 2), direction=d, radius=r, height=h/2, resolution=bond_resolution)
-                            cyl2_2 = pv.Cylinder(center=(mid_point + ep) / 2 - off_dir * (s_double / 2), direction=d, radius=r, height=h/2, resolution=bond_resolution)
-                            self.plotter.add_mesh(cyl2_1, color=begin_color, **mesh_props)
-                            self.plotter.add_mesh(cyl2_2, color=end_color, **mesh_props)
                             self._3d_color_map[f'bond_{bond_counter}_2_start'] = begin_color_rgb
                             self._3d_color_map[f'bond_{bond_counter}_2_end'] = end_color_rgb
+
                     elif bt == Chem.rdchem.BondType.TRIPLE:
                         r = cyl_radius * triple_radius_factor
-                        # 三重結合
                         v_arb = np.array([0, 0, 1])
                         if np.allclose(np.abs(np.dot(v1, v_arb)), 1.0): v_arb = np.array([0, 1, 0])
                         off_dir = np.cross(v1, v_arb)
                         off_dir /= np.linalg.norm(off_dir)
-                        
-                        # 設定から三重結合のオフセットファクターを適用
                         s_triple = cyl_radius * triple_offset_factor
-                        
-                        if self.current_3d_style == 'ball_and_stick':
-                            # Ball and stickは全結合をまとめて処理（高速化）
-                            cyl1 = pv.Cylinder(center=c, direction=d, radius=r, height=h, resolution=bond_resolution)
-                            cyl2 = pv.Cylinder(center=c + off_dir * s_triple, direction=d, radius=r, height=h, resolution=bond_resolution)
-                            cyl3 = pv.Cylinder(center=c - off_dir * s_triple, direction=d, radius=r, height=h, resolution=bond_resolution)
-                            bond_cylinders.extend([cyl1, cyl2, cyl3])
+
+                        # Center
+                        if self.current_3d_style == 'ball_and_stick' and not use_cpk_bond:
+                            add_segment(sp, ep, r, bs_bond_rgb)
                             self._3d_color_map[f'bond_{bond_counter}_1'] = bs_bond_rgb
-                            self._3d_color_map[f'bond_{bond_counter}_2'] = bs_bond_rgb
-                            self._3d_color_map[f'bond_{bond_counter}_3'] = bs_bond_rgb
                         else:
-                            # その他（stick, wireframe）は中央で色が変わる
-                            mid_point = (sp + ep) / 2
-                            
-                            # 中央の結合線（前半・後半）
-                            cyl1_1 = pv.Cylinder(center=(sp + mid_point) / 2, direction=d, radius=r, height=h/2, resolution=bond_resolution)
-                            cyl1_2 = pv.Cylinder(center=(mid_point + ep) / 2, direction=d, radius=r, height=h/2, resolution=bond_resolution)
-                            self.plotter.add_mesh(cyl1_1, color=begin_color, **mesh_props)
-                            self.plotter.add_mesh(cyl1_2, color=end_color, **mesh_props)
+                            mid = (sp + ep) / 2
+                            add_segment(sp, mid, r, begin_color_rgb)
+                            add_segment(mid, ep, r, end_color_rgb)
                             self._3d_color_map[f'bond_{bond_counter}_1_start'] = begin_color_rgb
                             self._3d_color_map[f'bond_{bond_counter}_1_end'] = end_color_rgb
+                        
+                        # Sides
+                        for sign in [1, -1]:
+                            offset = off_dir * s_triple * sign
+                            p_start = sp + offset
+                            p_end = ep + offset
                             
-                            # 上側の結合線（前半・後半）
-                            cyl2_1 = pv.Cylinder(center=(sp + mid_point) / 2 + off_dir * s_triple, direction=d, radius=r, height=h/2, resolution=bond_resolution)
-                            cyl2_2 = pv.Cylinder(center=(mid_point + ep) / 2 + off_dir * s_triple, direction=d, radius=r, height=h/2, resolution=bond_resolution)
-                            self.plotter.add_mesh(cyl2_1, color=begin_color, **mesh_props)
-                            self.plotter.add_mesh(cyl2_2, color=end_color, **mesh_props)
-                            self._3d_color_map[f'bond_{bond_counter}_2_start'] = begin_color_rgb
-                            self._3d_color_map[f'bond_{bond_counter}_2_end'] = end_color_rgb
-                            
-                            # 下側の結合線（前半・後半）
-                            cyl3_1 = pv.Cylinder(center=(sp + mid_point) / 2 - off_dir * s_triple, direction=d, radius=r, height=h/2, resolution=bond_resolution)
-                            cyl3_2 = pv.Cylinder(center=(mid_point + ep) / 2 - off_dir * s_triple, direction=d, radius=r, height=h/2, resolution=bond_resolution)
-                            self.plotter.add_mesh(cyl3_1, color=begin_color, **mesh_props)
-                            self.plotter.add_mesh(cyl3_2, color=end_color, **mesh_props)
-                            self._3d_color_map[f'bond_{bond_counter}_3_start'] = begin_color_rgb
-                            self._3d_color_map[f'bond_{bond_counter}_3_end'] = end_color_rgb
+                            if self.current_3d_style == 'ball_and_stick' and not use_cpk_bond:
+                                add_segment(p_start, p_end, r, bs_bond_rgb)
+                                suffix = '_2' if sign == 1 else '_3'
+                                self._3d_color_map[f'bond_{bond_counter}{suffix}'] = bs_bond_rgb
+                            else:
+                                mid = (p_start + p_end) / 2
+                                add_segment(p_start, mid, r, begin_color_rgb)
+                                add_segment(mid, p_end, r, end_color_rgb)
+                                suffix = '_2' if sign == 1 else '_3'
+                                self._3d_color_map[f'bond_{bond_counter}{suffix}_start'] = begin_color_rgb
+                                self._3d_color_map[f'bond_{bond_counter}{suffix}_end'] = end_color_rgb
 
                 bond_counter += 1
-            
-            # Ball and Stick用：全結合をまとめて一括描画（高速化）
-            if self.current_3d_style == 'ball_and_stick' and bond_cylinders:
-                # 全シリンダーを結合してMultiBlockを作成
-                combined_bonds = pv.MultiBlock(bond_cylinders)
-                combined_mesh = combined_bonds.combine()
+
+            # ジオメトリの生成と描画
+            if all_points:
+                # Create PolyData
+                bond_pd = pv.PolyData(np.array(all_points), lines=np.hstack(all_lines))
+                # lines needs to be a flat array with padding indicating number of points per cell
+                # all_lines is [[2, i, j], [2, k, l], ...], flatten it
                 
-                # 一括でグレーで描画
-                # Use the configured Ball & Stick bond color (hex) for the combined bonds
-                try:
-                    bs_hex = self.settings.get('ball_stick_bond_color', '#7F7F7F')
-                    q = QColor(bs_hex)
-                    # Use normalized RGB for pyvista (r,g,b) floats in [0,1]
-                    bond_color = (q.redF(), q.greenF(), q.blueF())
-                    bond_actor = self.plotter.add_mesh(combined_mesh, color=bond_color, **mesh_props)
-                except Exception:
-                    bond_actor = self.plotter.add_mesh(combined_mesh, color='grey', **mesh_props)
+                # Add data
+                bond_pd.point_data['radii'] = np.array(all_radii)
                 
-                # まとめて色情報を記録
-                self._3d_color_map['bonds_combined'] = bs_bond_rgb
+                # Convert colors to 0-1 range for PyVista if needed, but add_mesh with rgb=True expects uint8 if using direct array?
+                # Actually pyvista scalars usually prefer float 0-1 or uint8 0-255. 
+                # Let's use uint8 0-255 and rgb=True.
+                bond_pd.cell_data['colors'] = np.array(all_colors, dtype=np.uint8)
+                
+                # Tube filter
+                # n_sides (resolution) corresponds to theta_resolution in Cylinder
+                tube = bond_pd.tube(scalars='radii', absolute=True, radius_factor=1.0, n_sides=bond_resolution, capping=True)
+                
+                # Add to plotter
+                self.plotter.add_mesh(tube, scalars='colors', rgb=True, **mesh_props)
+
+        # Aromatic ring circles display
+        if self.settings.get('display_aromatic_circles_3d', False):
+            try:
+                ring_info = mol_to_draw.GetRingInfo()
+                aromatic_rings = []
+                
+                # Find aromatic rings
+                for ring in ring_info.AtomRings():
+                    # Check if all atoms in ring are aromatic
+                    is_aromatic = all(mol_to_draw.GetAtomWithIdx(idx).GetIsAromatic() for idx in ring)
+                    if is_aromatic:
+                        aromatic_rings.append(ring)
+                
+                # Draw circles for aromatic rings
+                for ring in aromatic_rings:
+                    # Get atom positions
+                    ring_positions = [self.atom_positions_3d[idx] for idx in ring]
+                    ring_positions_np = np.array(ring_positions)
+                    
+                    # Calculate ring center
+                    center = np.mean(ring_positions_np, axis=0)
+                    
+                    # Calculate ring normal using PCA or cross product
+                    # Use first 3 atoms to get two vectors
+                    if len(ring) >= 3:
+                        v1 = ring_positions_np[1] - ring_positions_np[0]
+                        v2 = ring_positions_np[2] - ring_positions_np[0]
+                        normal = np.cross(v1, v2)
+                        normal_length = np.linalg.norm(normal)
+                        if normal_length > 0:
+                            normal = normal / normal_length
+                        else:
+                            normal = np.array([0, 0, 1])
+                    else:
+                        normal = np.array([0, 0, 1])
+                    
+                    # Calculate ring radius (average distance from center)
+                    distances = [np.linalg.norm(pos - center) for pos in ring_positions_np]
+                    ring_radius = np.mean(distances) * 0.55  # Slightly smaller
+                    
+                    # Get bond radius from current style settings for torus thickness
+                    if self.current_3d_style == 'stick':
+                        bond_radius = self.settings.get('stick_bond_radius', 0.15)
+                    elif self.current_3d_style == 'ball_and_stick':
+                        bond_radius = self.settings.get('ball_stick_bond_radius', 0.1)
+                    elif self.current_3d_style == 'wireframe':
+                        bond_radius = self.settings.get('wireframe_bond_radius', 0.01)
+                    else:
+                        bond_radius = 0.1  # Default
+                    # Apply user-defined thickness factor (default 0.6)
+                    thickness_factor = self.settings.get('aromatic_torus_thickness_factor', 0.6)
+                    tube_radius = bond_radius * thickness_factor
+                    theta = np.linspace(0, 2.2 * np.pi, 64)
+                    circle_x = ring_radius * np.cos(theta)
+                    circle_y = ring_radius * np.sin(theta)
+                    circle_z = np.zeros_like(theta)
+                    circle_points = np.c_[circle_x, circle_y, circle_z]
+                    
+                    # Create line from points
+                    circle_line = pv.Spline(circle_points, n_points=64).tube(radius=tube_radius, n_sides=16)
+                    
+                    # Rotate torus to align with ring plane
+                    # Default torus is in XY plane (normal = [0, 0, 1])
+                    default_normal = np.array([0, 0, 1])
+                    
+                    # Calculate rotation axis and angle
+                    if not np.allclose(normal, default_normal) and not np.allclose(normal, -default_normal):
+                        axis = np.cross(default_normal, normal)
+                        axis_length = np.linalg.norm(axis)
+                        if axis_length > 0:
+                            axis = axis / axis_length
+                            angle = np.arccos(np.clip(np.dot(default_normal, normal), -1.0, 1.0))
+                            angle_deg = np.degrees(angle)
+                            
+                            # Rotate torus
+                            circle_line = circle_line.rotate_vector(axis, angle_deg, point=[0, 0, 0])
+                    
+                    # Translate to ring center
+                    circle_line = circle_line.translate(center)
+                    
+                    # Get torus color from bond color settings
+                    # Calculate most common atom type in ring for CPK color
+                    from collections import Counter
+                    atom_symbols = [mol_to_draw.GetAtomWithIdx(idx).GetSymbol() for idx in ring]
+                    most_common_symbol = Counter(atom_symbols).most_common(1)[0][0] if atom_symbols else None
+                    
+                    if self.current_3d_style == 'ball_and_stick':
+                        # Check if using CPK bond colors
+                        use_cpk = self.settings.get('ball_stick_use_cpk_bond_color', False)
+                        if use_cpk:
+                            # Use CPK color of most common atom type in ring
+                            if most_common_symbol:
+                                cpk_color = CPK_COLORS_PV.get(most_common_symbol, [0.5, 0.5, 0.5])
+                                torus_color = cpk_color
+                            else:
+                                torus_color = [0.5, 0.5, 0.5]
+                        else:
+                            # Use Ball & Stick bond color setting
+                            bond_hex = self.settings.get('ball_stick_bond_color', '#7F7F7F')
+                            q = QColor(bond_hex)
+                            torus_color = [q.red() / 255.0, q.green() / 255.0, q.blue() / 255.0]
+                    else:
+                        # For Wireframe and Stick, use CPK color of most common atom
+                        if most_common_symbol:
+                            cpk_color = CPK_COLORS_PV.get(most_common_symbol, [0.5, 0.5, 0.5])
+                            torus_color = cpk_color
+                        else:
+                            torus_color = [0.5, 0.5, 0.5]
+                    
+                    self.plotter.add_mesh(circle_line, color=torus_color, **mesh_props)
+                    
+            except Exception as e:
+                print(f"Error rendering aromatic circles: {e}")
 
         if getattr(self, 'show_chiral_labels', False):
             try:
@@ -463,7 +683,7 @@ class MainWindowView3d(object):
                 # If we drew a kekulized molecule use it for E/Z detection so
                 # E/Z labels reflect Kekulé rendering; pass mol_to_draw as the
                 # molecule to scan for bond stereochemistry.
-                self.show_ez_labels_3d(mol, scan_mol=mol_to_draw)
+                self.show_ez_labels_3d(mol)
             except Exception as e: 
                 self.statusBar().showMessage(f"3D E/Z label drawing error: {e}")
 
@@ -592,7 +812,7 @@ class MainWindowView3d(object):
 
 
 
-    def show_ez_labels_3d(self, mol, scan_mol=None):
+    def show_ez_labels_3d(self, mol):
         """3DビューでE/Zラベルを表示する（RDKitのステレオ化学判定を使用）"""
         if not mol:
             return
@@ -611,33 +831,40 @@ class MainWindowView3d(object):
             
         conf = mol.GetConformer()
         
-        # RDKitに3D座標からステレオ化学を計算させる
+        # 二重結合でRDKitが判定したE/Z立体化学を表示
+        
         try:
-            # 3D座標からステレオ化学を再計算
+            # 3D座標からステレオ化学を再計算 (molに対して行う)
+            # これにより、2Dでの描画状態に関わらず、現在の3D座標に基づいたE/Z判定が行われる
             Chem.AssignStereochemistry(mol, cleanIt=True, force=True, flagPossibleStereoCenters=True)
         except:
             pass
-        
-        # 二重結合でRDKitが判定したE/Z立体化学を表示
-        # `scan_mol` is used for stereochemistry detection (bond types); default
-        # to the provided molecule if not supplied.
-        if scan_mol is None:
-            scan_mol = mol
 
-        for bond in scan_mol.GetBonds():
+        for bond in mol.GetBonds():
             if bond.GetBondType() == Chem.BondType.DOUBLE:
-                stereo = bond.GetStereo()
-                if stereo in [Chem.BondStereo.STEREOE, Chem.BondStereo.STEREOZ]:
+                new_stereo = bond.GetStereo()
+                
+                if new_stereo in [Chem.BondStereo.STEREOE, Chem.BondStereo.STEREOZ]:
                     # 結合の中心座標を計算
-                    # Use positions from the original molecule's conformer; `bond` may
-                    # come from `scan_mol` which can be kekulized but position indices
-                    # correspond to the original `mol`.
                     begin_pos = np.array(conf.GetAtomPosition(bond.GetBeginAtomIdx()))
                     end_pos = np.array(conf.GetAtomPosition(bond.GetEndAtomIdx()))
                     center_pos = (begin_pos + end_pos) / 2
                     
-                    # RDKitの判定結果を使用
-                    label = 'E' if stereo == Chem.BondStereo.STEREOE else 'Z'
+                    # ラベルの決定
+                    label = 'E' if new_stereo == Chem.BondStereo.STEREOE else 'Z'
+                    
+                    # 2Dとの不一致チェック
+                    # main_window_compute.py で保存された2D由来の立体化学プロパティを取得
+                    try:
+                        old_stereo = bond.GetIntProp("_original_2d_stereo")
+                    except KeyError:
+                        old_stereo = Chem.BondStereo.STEREONONE
+
+                    # 2D側でもE/Zが指定されていて、かつ3Dと異なる場合は「?」にする
+                    if old_stereo in [Chem.BondStereo.STEREOE, Chem.BondStereo.STEREOZ]:
+                        if old_stereo != new_stereo:
+                            label = '?'
+                            
                     pts.append(center_pos)
                     labels.append(label)
         
