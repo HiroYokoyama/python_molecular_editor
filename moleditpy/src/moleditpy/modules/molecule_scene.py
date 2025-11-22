@@ -1712,7 +1712,11 @@ class MoleculeScene(QGraphicsScene):
                 return
                     
         # --- 3. Atomに対する操作 (原子の追加 - マージされた機能) ---
-        if key == Qt.Key.Key_1:
+        if key in [Qt.Key.Key_1, Qt.Key.Key_2, Qt.Key.Key_3]:
+            target_order = 1
+            if key == Qt.Key.Key_2: target_order = 2
+            elif key == Qt.Key.Key_3: target_order = 3
+
             start_atom = None
             if isinstance(item_at_cursor, AtomItem):
                 start_atom = item_at_cursor
@@ -1802,12 +1806,12 @@ class MoleculeScene(QGraphicsScene):
                 
                 if near_atom and near_atom is not start_atom:
                     # 近くに既存原子があれば結合
-                    self.create_bond(start_atom, near_atom)
+                    self.create_bond(start_atom, near_atom, bond_order=target_order, bond_stereo=0)
                 else:
                     # 新規原子を作成し結合
                     new_atom_id = self.create_atom('C', target_pos)
                     new_atom_item = self.data.atoms[new_atom_id]['item']
-                    self.create_bond(start_atom, new_atom_item)
+                    self.create_bond(start_atom, new_atom_item, bond_order=target_order, bond_stereo=0)
 
                 self.clearSelection()
                 self.window.push_undo_state()
