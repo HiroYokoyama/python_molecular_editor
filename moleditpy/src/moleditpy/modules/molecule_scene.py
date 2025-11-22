@@ -11,6 +11,7 @@ DOI: 10.5281/zenodo.17268532
 """
 
 import traceback
+import logging
 
 from PyQt6.QtWidgets import (
     QApplication, QGraphicsScene, QGraphicsItem,
@@ -203,9 +204,7 @@ class MoleculeScene(QGraphicsScene):
                             self.window.push_undo_state()
                             data_changed = False  # ここでundo済みなので以降で積まない
                     except Exception as e:
-                        print(f"Error clearing E/Z label: {e}")
-                        
-                        traceback.print_exc()
+                        logging.error(f"Error clearing E/Z label: {e}", exc_info=True)
                         if hasattr(self.window, 'statusBar'):
                             self.window.statusBar().showMessage(f"Error clearing E/Z label: {e}", 5000)
                 # AtomItemは何もしない
@@ -387,9 +386,7 @@ class MoleculeScene(QGraphicsScene):
                         self.update_bond_stereo(b, new_stereo)
                         self.window.push_undo_state()  # ここでUndo stackに積む
                 except Exception as e:
-                    print(f"Error in E/Z stereo toggle: {e}")
-                    
-                    traceback.print_exc()
+                    logging.error(f"Error in E/Z stereo toggle: {e}", exc_info=True)
                     if hasattr(self.window, 'statusBar'):
                         self.window.statusBar().showMessage(f"Error changing E/Z stereochemistry: {e}", 5000)
                 return # この後の処理は行わない
@@ -610,7 +607,7 @@ class MoleculeScene(QGraphicsScene):
     def create_bond(self, start_atom, end_atom, bond_order=None, bond_stereo=None):
         try:
             if start_atom is None or end_atom is None:
-                print("Error: Cannot create bond with None atoms")
+                logging.error("Error: Cannot create bond with None atoms")
                 return
                 
             exist_b = self.find_bond_between(start_atom, end_atom)
@@ -637,9 +634,7 @@ class MoleculeScene(QGraphicsScene):
                 end_atom.update_style()
                 
         except Exception as e:
-            print(f"Error creating bond: {e}")
-            
-            traceback.print_exc()
+            logging.error(f"Error creating bond: {e}", exc_info=True)
 
     def add_molecule_fragment(self, points, bonds_info, existing_items=None, symbol='C'):
         """
@@ -1668,9 +1663,9 @@ class MoleculeScene(QGraphicsScene):
                 elif key == Qt.Key.Key_1 and (bond.order != 1 or bond.stereo != 0):
                     bond.order = 1; bond.stereo = 0
                 elif key == Qt.Key.Key_2 and (bond.order != 2 or bond.stereo != 0):
-                    bond.order = 2; bond.stereo = 0; needs_update = True
+                    bond.order = 2; bond.stereo = 0
                 elif key == Qt.Key.Key_3 and bond.order != 3:
-                    bond.order = 3; bond.stereo = 0; needs_update = True
+                    bond.order = 3; bond.stereo = 0
 
                 # 4. 実際に変更があった場合のみデータモデルを更新
                 if old_order != bond.order or old_stereo != bond.stereo:

@@ -53,7 +53,6 @@ class SettingsDialog(QDialog):
             'wireframe_bond_radius': 0.01,
             'wireframe_resolution': 6,
             # Stick model parameters
-            'stick_atom_radius': 0.15,
             'stick_bond_radius': 0.15,
             'stick_resolution': 16,
             # Multiple bond offset parameters (per-model)
@@ -278,8 +277,8 @@ class SettingsDialog(QDialog):
         # Aromatic torus thickness factor
         self.aromatic_torus_thickness_slider = QSlider(Qt.Orientation.Horizontal)
         self.aromatic_torus_thickness_slider.setRange(10, 300)  # 0.1x to 3.0x
-        self.aromatic_torus_thickness_slider.setValue(100)  # Default 1.0x
-        self.aromatic_torus_thickness_label = QLabel("1.0")
+        self.aromatic_torus_thickness_slider.setValue(60)  # Default 0.6x
+        self.aromatic_torus_thickness_label = QLabel("0.6")
         self.aromatic_torus_thickness_slider.valueChanged.connect(
             lambda v: self.aromatic_torus_thickness_label.setText(f"{v/100:.1f}")
         )
@@ -564,17 +563,7 @@ class SettingsDialog(QDialog):
         info_label.setStyleSheet("color: #666; font-style: italic; margin-top: 10px;")
         form_layout.addRow(info_label)
         
-        # 原子半径
-        self.stick_atom_radius_slider = QSlider(Qt.Orientation.Horizontal)
-        self.stick_atom_radius_slider.setRange(5, 50)  # 0.05 ~ 0.5
-        self.stick_atom_radius_label = QLabel("0.15")
-        self.stick_atom_radius_slider.valueChanged.connect(lambda v: self.stick_atom_radius_label.setText(f"{v/100:.2f}"))
-        atom_radius_layout = QHBoxLayout()
-        atom_radius_layout.addWidget(self.stick_atom_radius_slider)
-        atom_radius_layout.addWidget(self.stick_atom_radius_label)
-        form_layout.addRow("Atom Radius:", atom_radius_layout)
-        
-        # ボンド半径
+        # ボンド半径（原子半径も同じ値を使用）
         self.stick_bond_radius_slider = QSlider(Qt.Orientation.Horizontal)
         self.stick_bond_radius_slider.setRange(5, 50)  # 0.05 ~ 0.5
         self.stick_bond_radius_label = QLabel("0.15")
@@ -673,7 +662,7 @@ class SettingsDialog(QDialog):
                 'display_kekule_3d': self.default_settings.get('display_kekule_3d', False),
                 'always_ask_charge': self.default_settings.get('always_ask_charge', False),
                 'display_aromatic_circles_3d': self.default_settings.get('display_aromatic_circles_3d', False),
-                'aromatic_torus_thickness_factor': self.default_settings.get('aromatic_torus_thickness_factor', 1.0),
+                'aromatic_torus_thickness_factor': self.default_settings.get('aromatic_torus_thickness_factor', 0.6),
             },
             "Ball & Stick": {
                 'ball_stick_atom_scale': self.default_settings['ball_stick_atom_scale'],
@@ -700,7 +689,6 @@ class SettingsDialog(QDialog):
                 'wireframe_triple_bond_radius_factor': self.default_settings.get('wireframe_triple_bond_radius_factor', 0.75)
             },
             "Stick": {
-                'stick_atom_radius': self.default_settings['stick_atom_radius'],
                 'stick_bond_radius': self.default_settings['stick_bond_radius'],
                 'stick_resolution': self.default_settings['stick_resolution'],
                 'stick_double_bond_offset_factor': self.default_settings.get('stick_double_bond_offset_factor', 1.5),
@@ -844,7 +832,6 @@ class SettingsDialog(QDialog):
             'wireframe_bond_radius': self.wf_bond_radius_slider.value() / 100.0,
             'wireframe_resolution': self.wf_resolution_slider.value(),
             # Stick settings
-            'stick_atom_radius': self.stick_atom_radius_slider.value() / 100.0,
             'stick_bond_radius': self.stick_bond_radius_slider.value() / 100.0,
             'stick_resolution': self.stick_resolution_slider.value(),
             # Multi-bond settings (per-model)
@@ -944,10 +931,6 @@ class SettingsDialog(QDialog):
         self.wf_resolution_label.setText(str(settings_dict.get('wireframe_resolution', self.default_settings['wireframe_resolution'])))
         
         # Stick設定
-        stick_atom_radius = int(settings_dict.get('stick_atom_radius', self.default_settings['stick_atom_radius']) * 100)
-        self.stick_atom_radius_slider.setValue(stick_atom_radius)
-        self.stick_atom_radius_label.setText(f"{stick_atom_radius/100:.2f}")
-        
         stick_bond_radius = int(settings_dict.get('stick_bond_radius', self.default_settings['stick_bond_radius']) * 100)
         self.stick_bond_radius_slider.setValue(stick_bond_radius)
         self.stick_bond_radius_label.setText(f"{stick_bond_radius/100:.2f}")
@@ -1019,7 +1002,7 @@ class SettingsDialog(QDialog):
         self.always_ask_charge_checkbox.setChecked(settings_dict.get('always_ask_charge', self.default_settings.get('always_ask_charge', False)))
         # Aromatic ring circle display and torus thickness factor
         self.aromatic_circle_checkbox.setChecked(settings_dict.get('display_aromatic_circles_3d', self.default_settings.get('display_aromatic_circles_3d', False)))
-        thickness_factor = float(settings_dict.get('aromatic_torus_thickness_factor', self.default_settings.get('aromatic_torus_thickness_factor', 1.0)))
+        thickness_factor = float(settings_dict.get('aromatic_torus_thickness_factor', self.default_settings.get('aromatic_torus_thickness_factor', 0.6)))
         try:
             self.aromatic_torus_thickness_slider.setValue(int(thickness_factor * 100))
             self.aromatic_torus_thickness_label.setText(f"{thickness_factor:.1f}")
@@ -1060,7 +1043,6 @@ class SettingsDialog(QDialog):
             'wireframe_bond_radius': self.wf_bond_radius_slider.value() / 100.0,
             'wireframe_resolution': self.wf_resolution_slider.value(),
             # Stick settings
-            'stick_atom_radius': self.stick_atom_radius_slider.value() / 100.0,
             'stick_bond_radius': self.stick_bond_radius_slider.value() / 100.0,
             'stick_resolution': self.stick_resolution_slider.value(),
             # Multiple bond offset settings (per-model)

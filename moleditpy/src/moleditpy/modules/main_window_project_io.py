@@ -430,9 +430,9 @@ class MainWindowProjectIo(object):
             # 拡張子不明の場合はJSONとして試行
             try:
                 self.load_json_data(file_path)
-            except:
+            except Exception:
                 try:
                     self.load_raw_data(file_path)
-                except:
+                except Exception:
                     self.statusBar().showMessage("Error: Unable to determine file format.")
 

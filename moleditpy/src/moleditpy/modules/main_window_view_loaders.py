@@ -317,7 +317,7 @@ class MainWindowViewLoaders(object):
                             # Keep mol as-is (may lack conformer); downstream code checks for conformers
                         else:
                             raise
-                except:
+                except Exception:
                     self.statusBar().showMessage("Failed to generate 3D coordinates")
                     return
             

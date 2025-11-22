@@ -19,6 +19,7 @@ MainWindow (main_window.py) から分離されたモジュール
 
 import numpy as np
 import vtk
+import logging
 
 
 # RDKit imports (explicit to satisfy flake8 and used features)
@@ -58,7 +59,7 @@ if OBABEL_AVAILABLE:
         # If import fails here, disable OBABEL locally; avoid raising
         pybel = None
         OBABEL_AVAILABLE = False
-        print("Warning: openbabel.pybel not available. Open Babel fallback and OBabel-based options will be disabled.")
+        logging.warning("Warning: openbabel.pybel not available. Open Babel fallback and OBabel-based options will be disabled.")
 else:
     pybel = None
 
@@ -201,7 +202,7 @@ class MainWindowView3d(object):
             resolution = self.settings.get('wireframe_resolution', 6)
             rad = np.array([0.01 for s in sym])  # 極小値（使用されない）
         elif self.current_3d_style == 'stick':
-            atom_radius = self.settings.get('stick_atom_radius', 0.15)
+            atom_radius = self.settings.get('stick_bond_radius', 0.15)  # Use bond radius for atoms
             resolution = self.settings.get('stick_resolution', 16)
             rad = np.array([atom_radius for s in sym])
         else:  # ball_and_stick
@@ -278,7 +279,7 @@ class MainWindowView3d(object):
                                         
                                         # 結合描画と同じ計算
                                         sphere_radius = cyl_radius * radius_factor
-                                    except:
+                                    except Exception:
                                         sphere_radius = 0.09  # デフォルト値
                                         offset_distance = 0.15  # デフォルト値
                                     
@@ -437,7 +438,7 @@ class MainWindowView3d(object):
                         double_radius_factor = self.settings.get('ball_stick_double_bond_radius_factor', 0.8)
                         triple_radius_factor = self.settings.get('ball_stick_triple_bond_radius_factor', 0.75)
                     elif self.current_3d_style == 'wireframe':
-                        double_radius_factor = self.settings.get('wireframe_double_bond_radius_factor', 1.0)
+                        double_radius_factor = self.settings.get('wireframe_double_bond_radius_factor', 0.8)
                         triple_radius_factor = self.settings.get('wireframe_triple_bond_radius_factor', 0.75)
                     elif self.current_3d_style == 'stick':
                         double_radius_factor = self.settings.get('stick_double_bond_radius_factor', 0.60)
@@ -660,7 +661,7 @@ class MainWindowView3d(object):
                     self.plotter.add_mesh(circle_line, color=torus_color, **mesh_props)
                     
             except Exception as e:
-                print(f"Error rendering aromatic circles: {e}")
+                logging.error(f"Error rendering aromatic circles: {e}")
 
         if getattr(self, 'show_chiral_labels', False):
             try:
@@ -820,7 +821,7 @@ class MainWindowView3d(object):
         try:
             # 既存のE/Zラベルを削除
             self.plotter.remove_actor('ez_labels')
-        except:
+        except Exception:
             pass
         
         pts, labels = [], []
@@ -837,7 +838,7 @@ class MainWindowView3d(object):
             # 3D座標からステレオ化学を再計算 (molに対して行う)
             # これにより、2Dでの描画状態に関わらず、現在の3D座標に基づいたE/Z判定が行われる
             Chem.AssignStereochemistry(mol, cleanIt=True, force=True, flagPossibleStereoCenters=True)
-        except:
+        except Exception:
             pass
 
         for bond in mol.GetBonds():
@@ -1171,7 +1172,7 @@ class MainWindowView3d(object):
                 for nm in self.atom_label_legend_names:
                     try:
                         self.plotter.remove_actor(nm)
-                    except:
+                    except Exception:
                         pass
             self.atom_label_legend_names = []
 
@@ -1237,12 +1238,12 @@ class MainWindowView3d(object):
                     for a in list(self.current_atom_info_labels):
                         try:
                             self.plotter.remove_actor(a)
-                        except:
+                        except Exception:
                             pass
                 else:
                     try:
                         self.plotter.remove_actor(self.current_atom_info_labels)
-                    except:
+                    except Exception:
                         pass
         except Exception:
             pass
@@ -1255,7 +1256,7 @@ class MainWindowView3d(object):
                 for nm in list(self.atom_label_legend_names):
                     try:
                         self.plotter.remove_actor(nm)
-                    except:
+                    except Exception:
                         pass
         except Exception:
             pass
@@ -1401,7 +1402,7 @@ class MainWindowView3d(object):
         if renderer and hasattr(renderer, 'SetNumberOfLayers'):
             try:
                 renderer.SetNumberOfLayers(2)  # レイヤー0:3Dオブジェクト、レイヤー1:2Dオーバーレイ
-            except:
+            except Exception:
                 pass  # PyVistaのバージョンによってはサポートされていない場合がある  
 
         # --- 3D軸ウィジェットの設定 ---

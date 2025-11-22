@@ -574,7 +574,7 @@ class MainWindowAppState(object):
                         inchi_key = Chem.MolToInchiKey(self.current_mol)
                         json_data["identifiers"]["inchi"] = inchi
                         json_data["identifiers"]["inchi_key"] = inchi_key
-                    except:
+                    except Exception:
                         pass  # InChI生成に失敗した場合は無視
                         
                 except Exception as e:

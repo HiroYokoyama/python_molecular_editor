@@ -23,6 +23,7 @@ except Exception:
     from modules.constants import VERSION, CPK_COLORS
 import os
 import json
+import logging
 
 class UserTemplateDialog(QDialog):
     """ユーザーテンプレート管理ダイアログ"""
@@ -106,7 +107,7 @@ class UserTemplateDialog(QDialog):
                         elif hasattr(child, 'refit_view'):
                             child.refit_view()
         except Exception as e:
-            print(f"Warning: Failed to refit template previews: {e}")
+            logging.warning(f"Warning: Failed to refit template previews: {e}")
     
     def showEvent(self, event):
         """ダイアログ表示時にプレビューを適切にフィット"""
@@ -136,7 +137,7 @@ class UserTemplateDialog(QDialog):
                         template_data['filepath'] = filepath
                         self.user_templates.append(template_data)
         except Exception as e:
-            print(f"Error loading user templates: {e}")
+            logging.error(f"Error loading user templates: {e}")
         
         self.update_template_grid()
     
@@ -146,7 +147,7 @@ class UserTemplateDialog(QDialog):
             with open(filepath, 'r', encoding='utf-8') as f:
                 return json.load(f)
         except Exception as e:
-            print(f"Error loading template file {filepath}: {e}")
+            logging.error(f"Error loading template file {filepath}: {e}")
             return None
     
     def save_template_file(self, filepath, template_data):
@@ -156,7 +157,7 @@ class UserTemplateDialog(QDialog):
                 json.dump(template_data, f, indent=2, ensure_ascii=False)
             return True
         except Exception as e:
-            print(f"Error saving template file {filepath}: {e}")
+            logging.error(f"Error saving template file {filepath}: {e}")
             return False
     
     def update_template_grid(self):
@@ -253,7 +254,7 @@ class UserTemplateDialog(QDialog):
             if view and not rect.isEmpty():
                 view.fitInView(rect, Qt.AspectRatioMode.KeepAspectRatio)
         except Exception as e:
-            print(f"Warning: Failed to fit preview view: {e}")
+            logging.warning(f"Warning: Failed to fit preview view: {e}")
     
     def draw_template_preview(self, scene, template_data, view_size=None):
         """テンプレートプレビューを描画 - fitInView縮小率に基づく動的スケーリング"""
@@ -303,7 +304,7 @@ class UserTemplateDialog(QDialog):
                 scale_factor = 4.0
             
             # Debug info (can be removed in production)
-            # print(f"Mol size: {mol_size:.1f}, Fit scale: {fit_scale:.3f}, Scale factor: {scale_factor:.2f}")
+            # logging.debug(f"Mol size: {mol_size:.1f}, Fit scale: {fit_scale:.3f}, Scale factor: {scale_factor:.2f}")
         else:
             scale_factor = 1.0
         
@@ -481,7 +482,7 @@ class UserTemplateDialog(QDialog):
             except Exception:
                 pass
         except Exception as e:
-            print(f"Warning: Failed to switch main window to template mode: {e}")
+            logging.warning(f"Warning: Failed to switch main window to template mode: {e}")
     
     def use_template(self, template_data):
         """テンプレートを使用（エディタに適用）"""
@@ -518,7 +519,7 @@ class UserTemplateDialog(QDialog):
                 # Mark selected and keep dialog open
                 self.selected_template = template_data
             except Exception as e:
-                print(f"Warning: Failed to switch main window to template mode: {e}")
+                logging.warning(f"Warning: Failed to switch main window to template mode: {e}")
 
             # Don't close dialog - keep it open for easy template switching
             # self.accept()

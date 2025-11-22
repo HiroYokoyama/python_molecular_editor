@@ -178,11 +178,6 @@ class MainWindowExport(object):
         except Exception as e:
             self.statusBar().showMessage(f"Error exporting OBJ/MTL: {e}")
 
-            return meshes_with_colors
-            
-        except Exception:
-            return []
-
 
 
     def create_multi_material_obj(self, meshes_with_colors, obj_path, mtl_path):
@@ -199,17 +194,17 @@ class MainWindowExport(object):
                     material_name = f"material_{i}_{mesh_data['name'].replace(' ', '_')}"
                     
                     mtl_file.write(f"newmtl {material_name}\n")
-                    mtl_file.write("Ka 0.2 0.2 0.2\n")  # Ambient
+                    mtl_file.write(f"Ka 0.2 0.2 0.2\n")  # Ambient
                     mtl_file.write(f"Kd {color[0]/255.0:.3f} {color[1]/255.0:.3f} {color[2]/255.0:.3f}\n")  # Diffuse
-                    mtl_file.write("Ks 0.5 0.5 0.5\n")  # Specular
-                    mtl_file.write("Ns 32.0\n")          # Specular exponent
-                    mtl_file.write("illum 2\n")          # Illumination model
-                    mtl_file.write("\n")
+                    mtl_file.write(f"Ks 0.5 0.5 0.5\n")  # Specular
+                    mtl_file.write(f"Ns 32.0\n")          # Specular exponent
+                    mtl_file.write(f"illum 2\n")          # Illumination model
+                    mtl_file.write(f"\n")
             
             # OBJファイルを作成
             with open(obj_path, 'w') as obj_file:
-                obj_file.write("# OBJ file with multiple materials\n")
-                obj_file.write("# Generated with individual object colors\n")
+                obj_file.write(f"# OBJ file with multiple materials\n")
+                obj_file.write(f"# Generated with individual object colors\n")
                 obj_file.write(f"mtllib {os.path.basename(mtl_path)}\n\n")
                 
                 vertex_offset = 1  # OBJファイルの頂点インデックスは1から始まる
@@ -229,6 +224,7 @@ class MainWindowExport(object):
                         obj_file.write(f"v {point[0]:.6f} {point[1]:.6f} {point[2]:.6f}\n")
                     
                     # 面を書き込み
+                    faces_written = 0
                     for j in range(mesh.n_cells):
                         cell = mesh.get_cell(j)
                         if cell.type == 5:  # VTK_TRIANGLE
@@ -237,6 +233,25 @@ class MainWindowExport(object):
                             v2 = points_in_cell[1] + vertex_offset
                             v3 = points_in_cell[2] + vertex_offset
                             obj_file.write(f"f {v1} {v2} {v3}\n")
+                            faces_written += 1
+                        elif cell.type == 6:  # VTK_TRIANGLE_STRIP
+                            # Triangle strips share vertices between adjacent triangles
+                            # For n points, we get (n-2) triangles
+                            points_in_cell = cell.point_ids
+                            n_points = len(points_in_cell)
+                            for k in range(n_points - 2):
+                                if k % 2 == 0:
+                                    # Even triangles: use points k, k+1, k+2
+                                    v1 = points_in_cell[k] + vertex_offset
+                                    v2 = points_in_cell[k+1] + vertex_offset
+                                    v3 = points_in_cell[k+2] + vertex_offset
+                                else:
+                                    # Odd triangles: reverse winding to maintain consistent orientation
+                                    v1 = points_in_cell[k+1] + vertex_offset
+                                    v2 = points_in_cell[k] + vertex_offset
+                                    v3 = points_in_cell[k+2] + vertex_offset
+                                obj_file.write(f"f {v1} {v2} {v3}\n")
+                                faces_written += 1
                         elif cell.type == 9:  # VTK_QUAD
                             points_in_cell = cell.point_ids
                             v1 = points_in_cell[0] + vertex_offset
@@ -244,10 +259,12 @@ class MainWindowExport(object):
                             v3 = points_in_cell[2] + vertex_offset
                             v4 = points_in_cell[3] + vertex_offset
                             obj_file.write(f"f {v1} {v2} {v3} {v4}\n")
+                            faces_written += 1
+                    
                     
                     vertex_offset += mesh.n_points
-                    obj_file.write("\n")
-                    
+                    obj_file.write(f"\n")
+                
         except Exception as e:
             raise Exception(f"Failed to create multi-material OBJ: {e}")
 
@@ -310,23 +327,24 @@ class MainWindowExport(object):
                     # VTKアクターからポリデータを取得する複数の方法を試行
                     mesh = None
                     
-                    # 方法1: mapperのinputから取得
+                    # 方法1: mapperのinputから取得 (Improved)
+                    mapper = None
                     if hasattr(actor, 'mapper') and actor.mapper is not None:
-                        if hasattr(actor.mapper, 'input') and actor.mapper.input is not None:
-                            mesh = actor.mapper.input
-                        elif hasattr(actor.mapper, 'GetInput') and actor.mapper.GetInput() is not None:
-                            mesh = actor.mapper.GetInput()
+                        mapper = actor.mapper
+                    elif hasattr(actor, 'GetMapper'):
+                        mapper = actor.GetMapper()
+                    
+                    if mapper is not None:
+                        if hasattr(mapper, 'input') and mapper.input is not None:
+                            mesh = mapper.input
+                        elif hasattr(mapper, 'GetInput') and mapper.GetInput() is not None:
+                            mesh = mapper.GetInput()
+                        elif hasattr(mapper, 'GetInputAsDataSet'):
+                            mesh = mapper.GetInputAsDataSet()
                     
                     # 方法2: PyVistaプロッターの内部データから取得
                     if mesh is None and actor_name in self.plotter.mesh:
                         mesh = self.plotter.mesh[actor_name]
-                    
-                    # 方法3: PyVistaのメッシュデータベースから検索
-                    if mesh is None:
-                        for mesh_name, mesh_data in self.plotter.mesh.items():
-                            if mesh_data is not None and mesh_data.n_points > 0:
-                                mesh = mesh_data
-                                break
                     
                     if mesh is not None and hasattr(mesh, 'n_points') and mesh.n_points > 0:
                         # PyVistaメッシュに変換（必要な場合）
@@ -391,23 +409,26 @@ class MainWindowExport(object):
                     # VTKアクターからポリデータを取得する複数の方法を試行
                     mesh = None
                     
-                    # 方法1: mapperのinputから取得
+                    # 方法1: mapperのinputから取得 (Improved)
+                    mapper = None
                     if hasattr(actor, 'mapper') and actor.mapper is not None:
-                        if hasattr(actor.mapper, 'input') and actor.mapper.input is not None:
-                            mesh = actor.mapper.input
-                        elif hasattr(actor.mapper, 'GetInput') and actor.mapper.GetInput() is not None:
-                            mesh = actor.mapper.GetInput()
+                        mapper = actor.mapper
+                    elif hasattr(actor, 'GetMapper'):
+                        mapper = actor.GetMapper()
+                    
+                    if mapper is not None:
+                        if hasattr(mapper, 'input') and mapper.input is not None:
+                            mesh = mapper.input
+                        elif hasattr(mapper, 'GetInput') and mapper.GetInput() is not None:
+                            mesh = mapper.GetInput()
+                        elif hasattr(mapper, 'GetInputAsDataSet'):
+                            mesh = mapper.GetInputAsDataSet()
                     
                     # 方法2: PyVistaプロッターの内部データから取得
                     if mesh is None and actor_name in self.plotter.mesh:
                         mesh = self.plotter.mesh[actor_name]
                     
-                    # 方法3: PyVistaのメッシュデータベースから検索
-                    if mesh is None:
-                        for mesh_name, mesh_data in self.plotter.mesh.items():
-                            if mesh_data is not None and mesh_data.n_points > 0:
-                                mesh = mesh_data
-                                break
+                    # 方法3: Removed unsafe fallback
                     
                     if mesh is not None and hasattr(mesh, 'n_points') and mesh.n_points > 0:
                         # PyVistaメッシュに変換（必要な場合）
@@ -447,17 +468,26 @@ class MainWindowExport(object):
             actors = renderer.actors
             
             actor_count = 0
+            
             for actor_name, actor in actors.items():
                 try:
                     # VTKアクターからポリデータを取得
                     mesh = None
                     
-                    # 方法1: mapperのinputから取得
+                    # 方法1: mapperのinputから取得 (Improved)
+                    mapper = None
                     if hasattr(actor, 'mapper') and actor.mapper is not None:
-                        if hasattr(actor.mapper, 'input') and actor.mapper.input is not None:
-                            mesh = actor.mapper.input
-                        elif hasattr(actor.mapper, 'GetInput') and actor.mapper.GetInput() is not None:
-                            mesh = actor.mapper.GetInput()
+                        mapper = actor.mapper
+                    elif hasattr(actor, 'GetMapper'):
+                        mapper = actor.GetMapper()
+                    
+                    if mapper is not None:
+                        if hasattr(mapper, 'input') and mapper.input is not None:
+                            mesh = mapper.input
+                        elif hasattr(mapper, 'GetInput') and mapper.GetInput() is not None:
+                            mesh = mapper.GetInput()
+                        elif hasattr(mapper, 'GetInputAsDataSet'):
+                            mesh = mapper.GetInputAsDataSet()
                     
                     # 方法2: PyVistaプロッターの内部データから取得
                     if mesh is None and actor_name in self.plotter.mesh:
@@ -484,7 +514,7 @@ class MainWindowExport(object):
                                 if prop is not None:
                                     vtk_color = prop.GetColor()
                                     color = [int(c * 255) for c in vtk_color]
-                        except:
+                        except Exception:
                             # 色取得に失敗した場合はデフォルト色をそのまま使用
                             pass
                         
@@ -513,6 +543,16 @@ class MainWindowExport(object):
                             # 単一の colors 配列があればそれを使う
                             elif 'colors' in pd:
                                 colors = np.asarray(pd['colors'])
+                            
+                            # cell_dataのcolorsも確認（Tubeフィルタなどはcell_dataに色を持つ場合がある）
+                            if colors is None and 'colors' in mesh_copy.cell_data:
+                                try:
+                                    # cell_dataをpoint_dataに変換
+                                    temp_mesh = mesh_copy.cell_data_to_point_data()
+                                    if 'colors' in temp_mesh.point_data:
+                                        colors = np.asarray(temp_mesh.point_data['colors'])
+                                except Exception:
+                                    pass
 
                             if colors is not None and colors.size > 0:
                                 # 整数に変換。colors が 0-1 の float の場合は 255 倍して正規化する。
@@ -539,18 +579,26 @@ class MainWindowExport(object):
 
                                 # 一意な色ごとにサブメッシュを抽出して追加
                                 unique_colors, inverse = np.unique(colors_int, axis=0, return_inverse=True)
+                                
+                                split_success = False
                                 if unique_colors.shape[0] > 1:
                                     for uc_idx, uc in enumerate(unique_colors):
                                         point_inds = np.where(inverse == uc_idx)[0]
                                         if point_inds.size == 0:
                                             continue
                                         try:
-                                            submesh = mesh_copy.extract_points(point_inds, adjacent_cells=True)
+                                            # Use temp_mesh if available (has point data), else mesh_copy
+                                            target_mesh = temp_mesh if 'temp_mesh' in locals() else mesh_copy
+                                            
+                                            # extract_points with adjacent_cells=False to avoid pulling in neighbors
+                                            submesh = target_mesh.extract_points(point_inds, adjacent_cells=False) 
+                                            
                                         except Exception:
                                             # extract_points が利用できない場合はスキップ
                                             continue
                                         if submesh is None or getattr(submesh, 'n_points', 0) == 0:
                                             continue
+                                        
                                         color_rgb = [int(uc[0]), int(uc[1]), int(uc[2])]
                                         meshes_with_colors.append({
                                             'mesh': submesh,
@@ -559,13 +607,22 @@ class MainWindowExport(object):
                                             'type': 'display_actor',
                                             'actor_name': actor_name
                                         })
-                                    actor_count += 1
-                                    # 分割したので以下の通常追加は行わない
-                                    continue
+                                        split_success = True
+                                    
+                                    if split_success:
+                                        actor_count += 1
+                                        # 分割に成功したので以下の通常追加は行わない
+                                        continue
+                                    # If splitting failed (no submeshes added), fall through to default
+                                else:
+                                    # 色が1色のみの場合は、その色を使用してメッシュ全体を出力
+                                    uc = unique_colors[0]
+                                    color = [int(uc[0]), int(uc[1]), int(uc[2])]
+                                    # ここでは continue せず、下のデフォルト追加処理に任せる（colorを更新したため）
                         except Exception:
                             # 分割処理に失敗した場合はフォールバックで単体メッシュを追加
                             pass
-
+                        
                         meshes_with_colors.append({
                             'mesh': mesh_copy,
                             'color': color,
@@ -577,8 +634,8 @@ class MainWindowExport(object):
                         actor_count += 1
                             
                 except Exception as e:
-                    print(f"Error processing actor {actor_name}: {e}")
                     continue
+            
             
             return meshes_with_colors
             
