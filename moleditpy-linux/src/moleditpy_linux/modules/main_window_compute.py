@@ -958,6 +958,12 @@ class MainWindowCompute(object):
         try:
             if mol.GetNumConformers() > 0:
                 # 初回変換では、2Dで設定したwedge/dashボンドの立体情報を保持
+                
+                # 3D立体化学計算で上書きされる前に、2D由来の立体化学情報をプロパティとして保存
+                for bond in mol.GetBonds():
+                    if bond.GetBondType() == Chem.BondType.DOUBLE:
+                        bond.SetIntProp("_original_2d_stereo", bond.GetStereo())
+
                 # 立体化学の割り当てを行うが、既存の2D立体情報を尊重
                 Chem.AssignStereochemistry(mol, cleanIt=False, force=True)
             
