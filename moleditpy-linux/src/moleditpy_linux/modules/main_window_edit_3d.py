@@ -119,7 +119,7 @@ class MainWindowEdit3d(object):
         for dialog in dialogs_to_close:
             try:
                 dialog.close()
-            except:
+            except Exception:
                 pass
         self.active_3d_dialogs.clear()
 
@@ -169,7 +169,7 @@ class MainWindowEdit3d(object):
         try:
             # 既存の測定ラベルを削除
             self.plotter.remove_actor('measurement_labels')
-        except:
+        except Exception:
             pass
         
         if not self.measurement_labels or not self.current_mol:
@@ -208,7 +208,7 @@ class MainWindowEdit3d(object):
         self.measurement_labels.clear()
         try:
             self.plotter.remove_actor('measurement_labels')
-        except:
+        except Exception:
             pass
         
         # 2Dビューの測定ラベルも削除
@@ -219,7 +219,7 @@ class MainWindowEdit3d(object):
             try:
                 self.plotter.remove_actor(self.measurement_text_actor)
                 self.measurement_text_actor = None
-            except:
+            except Exception:
                 pass
         
         self.plotter.render()
@@ -434,7 +434,7 @@ class MainWindowEdit3d(object):
         if self.measurement_text_actor:
             try:
                 self.plotter.remove_actor(self.measurement_text_actor)
-            except:
+            except Exception:
                 pass
         
         if not measurement_lines:
@@ -453,7 +453,7 @@ class MainWindowEdit3d(object):
                 text_color = 'black' if luminance > 128 else 'white'
             else:
                 text_color = 'white'
-        except:
+        except Exception:
             text_color = 'white'
         
         # 左上に表示（小さな等幅フォント）
@@ -496,7 +496,7 @@ class MainWindowEdit3d(object):
         try:
             # 既存の選択ハイライトを削除
             self.plotter.remove_actor('selection_highlight')
-        except:
+        except Exception:
             pass
         
         if not self.selected_atoms_3d or not self.current_mol:

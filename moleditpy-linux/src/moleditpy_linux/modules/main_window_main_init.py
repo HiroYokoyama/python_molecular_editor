@@ -1563,7 +1563,6 @@ class MainWindowMainInit(object):
             'wireframe_bond_radius': 0.01,
             'wireframe_resolution': 6,
             # Stick model parameters
-            'stick_atom_radius': 0.15,
             'stick_bond_radius': 0.15,
             'stick_resolution': 16,
             # Multiple bond offset parameters (per-model)
@@ -1573,12 +1572,13 @@ class MainWindowMainInit(object):
             'ball_stick_triple_bond_radius_factor': 0.75,
             'wireframe_double_bond_offset_factor': 3.0,
             'wireframe_triple_bond_offset_factor': 3.0,
-            'wireframe_double_bond_radius_factor': 1.0,
+            'wireframe_double_bond_radius_factor': 0.8,
             'wireframe_triple_bond_radius_factor': 0.75,
             'stick_double_bond_offset_factor': 1.5,
             'stick_triple_bond_offset_factor': 1.0,
             'stick_double_bond_radius_factor': 0.60,
             'stick_triple_bond_radius_factor': 0.40,
+            'aromatic_torus_thickness_factor': 0.6,
             # Ensure conversion/optimization defaults are present
             # If True, attempts to be permissive when RDKit raises chemical/sanitization errors
             # during file import (useful for viewing malformed XYZ/MOL files).
@@ -1629,7 +1629,7 @@ class MainWindowMainInit(object):
                         ('ball_stick_triple_bond_radius_factor', 'triple_bond_radius_factor', 0.75),
                         ('wireframe_double_bond_offset_factor', 'double_bond_offset_factor', 3.0),
                         ('wireframe_triple_bond_offset_factor', 'triple_bond_offset_factor', 3.0),
-                        ('wireframe_double_bond_radius_factor', 'double_bond_radius_factor', 1.0),
+                        ('wireframe_double_bond_radius_factor', 'double_bond_radius_factor', 0.8),
                         ('wireframe_triple_bond_radius_factor', 'triple_bond_radius_factor', 0.75),
                         ('stick_double_bond_offset_factor', 'double_bond_offset_factor', 1.5),
                         ('stick_triple_bond_offset_factor', 'triple_bond_offset_factor', 1.0),
