@@ -22,6 +22,7 @@ import io
 import os
 import contextlib
 import traceback
+import logging
 
 
 # RDKit imports (explicit to satisfy flake8 and used features)
@@ -59,7 +60,7 @@ if OBABEL_AVAILABLE:
         # If import fails here, disable OBABEL locally; avoid raising
         pybel = None
         OBABEL_AVAILABLE = False
-        print("Warning: openbabel.pybel not available. Open Babel fallback and OBabel-based options will be disabled.")
+        logging.warning("Warning: openbabel.pybel not available. Open Babel fallback and OBabel-based options will be disabled.")
 else:
     pybel = None
     
@@ -901,12 +902,12 @@ class MainWindowMolecularParsers(object):
                     try:
                         mol.AddBond(i, j, Chem.BondType.SINGLE)
                         bonds_added.append((i, j, distance))
-                    except:
+                    except Exception:
                         # 既に結合が存在する場合はスキップ
                         pass
         
         # デバッグ情報（オプション）
-        # print(f"Added {len(bonds_added)} bonds based on distance analysis")
+        # Added bonds based on distance analysis
         
         return len(bonds_added)
 

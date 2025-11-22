@@ -1,6 +1,6 @@
 Metadata-Version: 2.4
 Name: MoleditPy
-Version: 1.18.0
+Version: 1.18.1
 Summary: A cross-platform, simple, and intuitive molecular structure editor built in Python. It allows 2D molecular drawing and 3D structure visualization. It supports exporting structure files for input to DFT calculation software.
 Author-email: HiroYokoyama <titech.yoko.hiro@gmail.com>
 License:                     GNU GENERAL PUBLIC LICENSE
@@ -684,7 +684,6 @@ Classifier: Programming Language :: Python :: 3
 Classifier: Operating System :: OS Independent
 Classifier: Intended Audience :: Science/Research
 Classifier: Topic :: Scientific/Engineering :: Chemistry
-Classifier: Programming Language :: Python :: 3.8
 Classifier: Programming Language :: Python :: 3.9
 Classifier: Programming Language :: Python :: 3.10
 Classifier: Programming Language :: Python :: 3.11
