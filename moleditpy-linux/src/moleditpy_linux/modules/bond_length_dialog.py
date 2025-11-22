@@ -190,7 +190,7 @@ class BondLengthDialog(Dialog3DPickingMixin, QDialog):
             for label_actor in self.selection_labels:
                 try:
                     self.main_window.plotter.remove_actor(label_actor)
-                except:
+                except Exception:
                     pass
             self.selection_labels = []
     
@@ -200,7 +200,7 @@ class BondLengthDialog(Dialog3DPickingMixin, QDialog):
             for label_actor in self.selection_labels:
                 try:
                     self.main_window.plotter.remove_actor(label_actor)
-                except:
+                except Exception:
                     pass
             self.selection_labels = []
     
