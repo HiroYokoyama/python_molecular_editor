@@ -398,7 +398,7 @@ Click the **Apply** button to reflect changes immediately, or the **OK** button 
 
 ## 10\. Version / License
 
-  * **Version:** 1.17
+  * **Version:** 1.18
   * **Author:** Hiromichi Yokoyama
   * **License:** GPL-3.0 license
   * **Repository:** [https://github.com/HiroYokoyama/python\_molecular\_editor](https://github.com/HiroYokoyama/python_molecular_editor)
@@ -407,6 +407,7 @@ Click the **Apply** button to reflect changes immediately, or the **OK** button 
 You can check the version information from the `Help` \> `About` menu.
 
 -----
+
 
 
 
