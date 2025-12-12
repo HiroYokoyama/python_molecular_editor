@@ -1214,6 +1214,8 @@ class MainWindowMainInit(object):
         reload_plugins_action = QAction("Reload Plugins", self)
         reload_plugins_action.triggered.connect(lambda: self.update_plugin_menu(plugin_menu))
         plugin_menu.addAction(reload_plugins_action)
+
+
         
         plugin_menu.addSeparator()
         
@@ -1723,6 +1725,12 @@ class MainWindowMainInit(object):
         reload_plugins_action = QAction("Reload Plugins", self)
         reload_plugins_action.triggered.connect(lambda: self.update_plugin_menu(plugin_menu))
         plugin_menu.addAction(reload_plugins_action)
+
+        explore_plugins_action = QAction("Explore Plugins", self)
+        explore_plugins_action.triggered.connect(
+            lambda: QDesktopServices.openUrl(QUrl("https://github.com/HiroYokoyama/moleditpy-plugins"))
+        )
+        plugin_menu.addAction(explore_plugins_action)
         
         plugin_menu.addSeparator()
         
