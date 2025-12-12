@@ -115,6 +115,15 @@ class MoleculeScene(QGraphicsScene):
         }
         self.reinitialize_items()
 
+    
+    def update_all_items(self):
+        """全てのアイテムを強制的に再描画する"""
+        for item in self.items():
+            if isinstance(item, (AtomItem, BondItem)):
+                item.update()
+        if self.views():
+            self.views()[0].viewport().update()
+
     def reinitialize_items(self):
         self.template_preview = TemplatePreviewItem(); self.addItem(self.template_preview)
         self.template_preview.hide(); self.template_preview_points = []; self.template_context = {}
@@ -185,6 +194,7 @@ class MoleculeScene(QGraphicsScene):
                 # Delete the entire rectangular selection
                 data_changed = self.delete_items(set(selected_items))
                 if data_changed:
+                    self.update_all_items()
                     self.window.push_undo_state()
                 self.press_pos = None
                 event.accept()
@@ -207,6 +217,7 @@ class MoleculeScene(QGraphicsScene):
                         logging.error(f"Error clearing E/Z label: {e}", exc_info=True)
                         if hasattr(self.window, 'statusBar'):
                             self.window.statusBar().showMessage(f"Error clearing E/Z label: {e}", 5000)
+                        self.update_all_items() # エラー時も整合性維持のため再描画
                 # AtomItemは何もしない
             # --- 通常の処理 ---
             elif isinstance(item, AtomItem):
@@ -233,6 +244,7 @@ class MoleculeScene(QGraphicsScene):
                     data_changed = self.delete_items({item})
 
             if data_changed:
+                self.update_all_items()
                 self.window.push_undo_state()
             self.press_pos = None
             event.accept()
@@ -342,7 +354,9 @@ class MoleculeScene(QGraphicsScene):
                 self.data_changed_in_event = True
                 # イベント処理をここで完了させ、下のアイテムが選択されるのを防ぐ
                 self.start_atom=None; self.start_pos = None; self.press_pos = None
-                if self.data_changed_in_event: self.window.push_undo_state()
+                if self.data_changed_in_event:
+                    self.update_all_items()
+                    self.window.push_undo_state()
                 return
 
         released_item = self.itemAt(end_pos, self.views()[0].transform())
@@ -384,11 +398,13 @@ class MoleculeScene(QGraphicsScene):
                         else:  # current_stereo == 4
                             new_stereo = 0  # E -> None
                         self.update_bond_stereo(b, new_stereo)
+                        self.update_all_items() # 強制再描画
                         self.window.push_undo_state()  # ここでUndo stackに積む
                 except Exception as e:
                     logging.error(f"Error in E/Z stereo toggle: {e}", exc_info=True)
                     if hasattr(self.window, 'statusBar'):
                         self.window.statusBar().showMessage(f"Error changing E/Z stereochemistry: {e}", 5000)
+                    self.update_all_items() # エラー時も整合性維持のため再描画
                 return # この後の処理は行わない
             elif self.bond_stereo != 0 and b.order == self.bond_order and b.stereo == self.bond_stereo:
                 # 方向性を反転させる
@@ -488,6 +504,10 @@ class MoleculeScene(QGraphicsScene):
             # 原子移動後に測定ラベルの位置を更新
             self.window.update_2d_measurement_labels()
             if self.views(): self.views()[0].viewport().update()
+        
+        if self.data_changed_in_event:
+            self.update_all_items()
+
         self.start_atom=None; self.start_pos = None; self.press_pos = None; self.temp_line = None
         self.template_context = {}
         # Clear user template data when switching modes
@@ -512,6 +532,7 @@ class MoleculeScene(QGraphicsScene):
                 self.data.atoms[item.atom_id]['charge'] = item.charge
                 item.update_style()
 
+            self.update_all_items()
             self.window.push_undo_state()
 
             event.accept()
@@ -635,6 +656,7 @@ class MoleculeScene(QGraphicsScene):
                 
         except Exception as e:
             logging.error(f"Error creating bond: {e}", exc_info=True)
+            self.update_all_items() # エラーリカバリー
 
     def add_molecule_fragment(self, points, bonds_info, existing_items=None, symbol='C'):
         """
@@ -1265,6 +1287,7 @@ class MoleculeScene(QGraphicsScene):
             print(f"Error during delete_items operation: {e}")
             
             traceback.print_exc()
+            self.update_all_items() # エラーリカバリー
             return False
     def purge_deleted_items(self):
         """Purge and release any held deleted-wrapper references.
@@ -1536,6 +1559,7 @@ class MoleculeScene(QGraphicsScene):
                     
                     # 計算した情報を使って、その場にフラグメントを追加
                     self.add_molecule_fragment(points, bonds_info, existing_items=existing_items)
+                    self.update_all_items()
                     self.window.push_undo_state()
 
             # --- 動作2: カーソルが空白領域にある場合 (モード切替) ---
@@ -1561,6 +1585,7 @@ class MoleculeScene(QGraphicsScene):
                     atom.radical = (atom.radical + 1) % 3
                     self.data.atoms[atom.atom_id]['radical'] = atom.radical
                     atom.update_style()
+                self.update_all_items()
                 self.window.push_undo_state()
                 event.accept()
                 return
@@ -1581,6 +1606,7 @@ class MoleculeScene(QGraphicsScene):
                     atom.charge += delta
                     self.data.atoms[atom.atom_id]['charge'] = atom.charge
                     atom.update_style()
+                self.update_all_items()
                 self.window.push_undo_state()
                 event.accept()
                 return
@@ -1610,6 +1636,7 @@ class MoleculeScene(QGraphicsScene):
                 for atom in atoms_to_update:
                     atom.update_style()
 
+                self.update_all_items()
                 self.window.push_undo_state()
                 event.accept()
                 return
@@ -1688,6 +1715,7 @@ class MoleculeScene(QGraphicsScene):
                     bond.update()
 
             if any_bond_changed:
+                self.update_all_items()
                 self.window.push_undo_state()
             
             if key in [Qt.Key.Key_1, Qt.Key.Key_2, Qt.Key.Key_3, Qt.Key.Key_W, Qt.Key.Key_D]:
@@ -1697,11 +1725,13 @@ class MoleculeScene(QGraphicsScene):
         if isinstance(self.hovered_item, BondItem) and self.hovered_item.order == 2:
             if event.key() == Qt.Key.Key_Z:
                 self.update_bond_stereo(self.hovered_item, 3)  # Z-isomer
+                self.update_all_items()
                 self.window.push_undo_state()
                 event.accept()
                 return
             elif event.key() == Qt.Key.Key_E:
                 self.update_bond_stereo(self.hovered_item, 4)  # E-isomer
+                self.update_all_items()
                 self.window.push_undo_state()
                 event.accept()
                 return
@@ -1809,6 +1839,7 @@ class MoleculeScene(QGraphicsScene):
                     self.create_bond(start_atom, new_atom_item, bond_order=target_order, bond_stereo=0)
 
                 self.clearSelection()
+                self.update_all_items()
                 self.window.push_undo_state()
                 event.accept()
                 return
@@ -1839,6 +1870,7 @@ class MoleculeScene(QGraphicsScene):
                 items_to_process.add(item_at_cursor)
 
             if self.delete_items(items_to_process):
+                self.update_all_items()
                 self.window.push_undo_state()
                 self.window.statusBar().showMessage("Deleted selected items.")
 
@@ -1973,3 +2005,4 @@ class MoleculeScene(QGraphicsScene):
             traceback.print_exc()
             if hasattr(self.window, 'statusBar'):
                 self.window.statusBar().showMessage(f"Error updating bond stereochemistry: {e}", 5000)
+            self.update_all_items() # エラーリカバリー

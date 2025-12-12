@@ -46,11 +46,15 @@ from PyQt6.QtCore import (
     Qt, QPointF, QRectF, QLineF, QUrl, QTimer
 )
 import platform
-import subprocess
 try:
     import winreg
 except Exception:
     winreg = None
+
+try:
+    from .plugin_manager import PluginManager
+except Exception:
+    from modules.plugin_manager import PluginManager
 
 
 def detect_system_dark_mode():
@@ -253,6 +257,14 @@ class MainWindowMainInit(object):
         # 3D編集ダイアログの参照を保持
         self.active_3d_dialogs = []
         
+
+        # プラグインマネージャーの初期化
+        try:
+            self.plugin_manager = PluginManager()
+        except Exception as e:
+            print(f"Failed to initialize PluginManager: {e}")
+            self.plugin_manager = None
+
         self.init_ui()
         self.init_worker_thread()
         self._setup_3d_picker() 
@@ -285,6 +297,7 @@ class MainWindowMainInit(object):
         # 初期メニューテキストと状態を設定
         self.update_atom_id_menu_text()
         self.update_atom_id_menu_state()
+        
         
         # 初期化完了を設定
         self.initialization_complete = True
@@ -1188,6 +1201,25 @@ class MainWindowMainInit(object):
         edit_3d_menu.addAction(constrained_opt_action)
         self.constrained_opt_action = constrained_opt_action
 
+        # Plugin menu
+        plugin_menu = menu_bar.addMenu("&Plugin")
+        
+        open_plugin_dir_action = QAction("Open Plugin Directory", self)
+        if self.plugin_manager:
+            open_plugin_dir_action.triggered.connect(self.plugin_manager.open_plugin_folder)
+        else:
+            open_plugin_dir_action.setEnabled(False)
+        plugin_menu.addAction(open_plugin_dir_action)
+        
+        reload_plugins_action = QAction("Reload Plugins", self)
+        reload_plugins_action.triggered.connect(lambda: self.update_plugin_menu(plugin_menu))
+        plugin_menu.addAction(reload_plugins_action)
+        
+        plugin_menu.addSeparator()
+        
+        # Initial population of plugins
+        self.update_plugin_menu(plugin_menu)
+
         settings_menu = menu_bar.addMenu("&Settings")
         # 1) 3D View settings (existing)
         view_settings_action = QAction("3D View Settings...", self)
@@ -1674,4 +1706,36 @@ class MainWindowMainInit(object):
                 json.dump(self.settings, f, indent=4)
         except Exception as e:
             print(f"Error saving settings: {e}")
+
+    def update_plugin_menu(self, plugin_menu):
+        """Discovers plugins and updates the plugin menu actions."""
+        if not self.plugin_manager:
+            return
+
+        # Clear existing plugin actions
+        plugin_menu.clear()
+        
+        # Re-add static actions
+        open_plugin_dir_action = QAction("Open Plugin Directory", self)
+        open_plugin_dir_action.triggered.connect(self.plugin_manager.open_plugin_folder)
+        plugin_menu.addAction(open_plugin_dir_action)
+        
+        reload_plugins_action = QAction("Reload Plugins", self)
+        reload_plugins_action.triggered.connect(lambda: self.update_plugin_menu(plugin_menu))
+        plugin_menu.addAction(reload_plugins_action)
+        
+        plugin_menu.addSeparator()
+        
+        # Add dynamic plugin actions
+        plugins = self.plugin_manager.discover_plugins(self)
+        if not plugins:
+            no_plugin_action = QAction("(No plugins found)", self)
+            no_plugin_action.setEnabled(False)
+            plugin_menu.addAction(no_plugin_action)
+        else:
+            for p in plugins:
+                # Use default param in lambda to capture the current p
+                action = QAction(p['name'], self)
+                action.triggered.connect(lambda checked, mod=p['module']: self.plugin_manager.run_plugin(mod, self.mw if hasattr(self, 'mw') else self)) 
+                plugin_menu.addAction(action)
 
