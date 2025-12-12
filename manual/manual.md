@@ -14,6 +14,7 @@ MoleditPy is a molecular editing software developed in Python. Through an intuit
   * **3D Measurement:** Measure distances between atoms, angles between three atoms, and dihedral angles between four atoms in the 3D view.
   * **3D Editing:** Translate the entire molecule, **planarize selected atoms**, align to specific axes, adjust bond lengths, angles, and dihedral angles, and create mirror images.
   * **Customization:** Configure 3D display settings such as background color, lighting, and detailed display styles.
+  * **Plugin System:** Extend functionality with Python scripts. Place custom scripts in `~/.moleditpy/plugins` to add new features to the "Plugin" menu.
 
   ![](img/icon.png)
 
@@ -196,8 +197,9 @@ You can select the display style from the **3D Style** dropdown menu on the righ
   * **CPK (Space-filling):** Displays atoms as space-filling spheres based on their van der Waals radii. Suitable for visualizing the volume and shape of the molecule.
   * **Wireframe:** Displays only bonds as thin lines. Atoms are not displayed.
   * **Stick:** Displays bonds as thick sticks and atoms as small spheres.
+  * **Aromatic Ring:** By default, aromatic rings (e.g. benzene) are displayed as single bonds. You can change this to show aromatic circles (torus) or Kekulé structures (alternating double bonds) in Settings.
 
-**(Settings):** Details for each display style (atom size, bond radius, **multiple bond offsets**, rendering quality, etc.) can be adjusted from the menu `Settings` \> `3D View Settings...`.
+**(Settings):** Details for each display style (atom size, bond radius, **multiple bond offsets**, rendering quality, etc.) can be adjusted from the menu `Settings` \> `3D View Settings...`. You can also change **CPK Colors** from `Settings` \> `CPK Colors...`.
 
 ### 6.4. 3D View Operations
 
@@ -206,7 +208,21 @@ You can select the display style from the **3D Style** dropdown menu on the righ
   * **Pan (Move):** Middle mouse button drag, or Shift + Left mouse button drag.
   * **Reset View:** `View` \> `Reset 3D View` (Ctrl+R) from the menu resets the camera position and zoom to their initial state.
 
-### 6.5. 3D Measurement Function ("3D Select" Mode)
+### 6.5. Official Plugin Repository (Available for Download)
+
+Official sample plugins are available in the [GitHub repository](https://github.com/HiroYokoyama/moleditpy-plugins). You can download them and place them in your plugins directory (`~/.moleditpy/plugins`) to use them.
+
+**Available Plugins:**
+
+  * **Hello World (`hello.py`):** 
+      * A simple demonstration plugin.
+      * **Features:** Displays a "Hello World" message box with basic molecule information.
+  * **MS Spectrum Simulation (`ms_spectrum.py`):** 
+      * Simulates the Mass Spectrum for the currently loaded molecule.
+      * **Features:** Displays Formula, Exact Mass, and an interactive histogram of isotopic distribution. Supports exporting the spectrum plot as an image (PNG/JPG).
+
+
+### 6.6. 3D Measurement Function ("3D Select" Mode)
 
 1.  Click the **3D Select** button on the main toolbar to enable measurement mode.
 
@@ -222,7 +238,7 @@ You can select the display style from the **3D Style** dropdown menu on the righ
 
  ![](img/measurement.png)
 
-### 6.6. 3D Editing Function ("3D Drag" Mode / Alt Key)
+### 6.7. 3D Editing Function ("3D Drag" Mode / Alt Key)
 
 You can directly edit the atomic coordinates of the 3D structure. Turn on the **3D Drag** button on the main toolbar, or perform operations **while holding down the Alt key**.
 
@@ -230,7 +246,7 @@ You can directly edit the atomic coordinates of the 3D structure. Turn on the **
 
    ![](img/atom-drag.png)
 
-### 6.7. Other 3D Editing Functions (Menu `3D Edit`)
+### 6.8. Other 3D Editing Functions (Menu `3D Edit`)
 
 These functions are available from the menu when a 3D structure is displayed. Many open a dedicated dialog where you can select atoms or input parameters.
 
@@ -263,7 +279,7 @@ These functions are available from the menu when a 3D structure is displayed. Ma
 
   ![](img/multiple-molecules-edit.png)
 
-### 6.8. Constrained Optimization
+### 6.9. Constrained Optimization
 
 This is an advanced feature that performs a molecular structure optimization (force field calculation) while keeping the values of specific atomic distances, angles, or dihedral angles fixed (constrained).
 
@@ -281,7 +297,7 @@ This is an advanced feature that performs a molecular structure optimization (fo
 
   ![](img/constrained-opt.png)
 
-### 6.9. Displaying Atom Information
+### 6.10. Displaying Atom Information
 
 From the menu `View` \> `3D Atom Info Display`, you can select the information to be displayed above each atom in the 3D view.
 
@@ -336,7 +352,8 @@ You can configure various 3D display settings via `Settings` > `3D View Settings
     * Drawing quality (Resolution)
 * **Other Tab:**
     * Whether to skip chemical validity checks when importing XYZ files
-    * Whether to use Kekulé structures for benzene rings
+    * Whether to use Kekulé structures (alternating double bonds) for aromatic systems (e.g. benzene)
+    * Whether to display aromatic rings as circles (torus) in 3D
 
 Click the **Apply** button to reflect changes immediately, or the **OK** button to apply changes and close the dialog. You can also revert settings to defaults using **Reset Current Tab** / **Reset All**. Settings are retained for the next launch.
 
@@ -398,7 +415,7 @@ Click the **Apply** button to reflect changes immediately, or the **OK** button 
 
 ## 10\. Version / License
 
-  * **Version:** 1.18
+  * **Version:** 2.0
   * **Author:** Hiromichi Yokoyama
   * **License:** GPL-3.0 license
   * **Repository:** [https://github.com/HiroYokoyama/python\_molecular\_editor](https://github.com/HiroYokoyama/python_molecular_editor)
