@@ -59,6 +59,7 @@ This application combines a modern GUI built with **PyQt6**, powerful cheminform
       * Import structures from **MOL/SDF** files or **SMILES** strings.
       * Export 3D structures to **MOL** or **XYZ** formats, which are compatible with most DFT calculation software.
       * Export 2D and 3D views as high-resolution PNG images.
+  * **Plugin System:** Extend functionality with Python scripts. Place custom scripts in `~/.moleditpy/plugins` to add new features to the "Plugin" menu.
 
 ## Installation and Execution
 
@@ -173,6 +174,7 @@ This project is licensed under the **GNU General Public License v3.0 (GPL-v3)**.
       * **MOL/SDF**ファイルや**SMILES**文字列から構造をインポートできます。
       * 3D構造を**MOL**または**XYZ**形式でエクスポートでき、これらは多くのDFT計算ソフトウェアと互換性があります。
       * 2Dおよび3Dビューを高解像度のPNG画像としてエクスポートできます。
+  * **プラグインシステム:** Pythonスクリプトで機能を拡張できます。`~/.moleditpy/plugins` にスクリプトを配置することで、「Plugin」メニューに独自の機能を追加できます。
 
 ## インストールと実行
 

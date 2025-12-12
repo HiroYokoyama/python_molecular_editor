@@ -211,6 +211,10 @@ class MainWindow(QMainWindow):
         # --- MOVED TO main_window_main_init.py ---
         return self.main_window_main_init.init_menu_bar()
 
+    def update_plugin_menu(self, plugin_menu):
+        # --- MOVED TO main_window_main_init.py ---
+        return self.main_window_main_init.update_plugin_menu(plugin_menu)
+
     def init_worker_thread(self):
         # --- MOVED TO main_window_main_init.py ---
         return self.main_window_main_init.init_worker_thread()
