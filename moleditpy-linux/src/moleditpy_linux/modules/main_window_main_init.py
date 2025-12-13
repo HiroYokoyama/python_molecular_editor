@@ -1736,14 +1736,42 @@ class MainWindowMainInit(object):
         
         # Add dynamic plugin actions
         plugins = self.plugin_manager.discover_plugins(self)
+        
         if not plugins:
             no_plugin_action = QAction("(No plugins found)", self)
             no_plugin_action.setEnabled(False)
             plugin_menu.addAction(no_plugin_action)
         else:
+            # Sort plugins: directories first (to create menus), then alphabetical by name
+            # Actually simple sort by rel_folder, name is fine
+            plugins.sort(key=lambda x: (x.get('rel_folder', ''), x['name']))
+            
+            # Dictionary to keep track of created submenus: path -> QMenu
+            menus = { "": plugin_menu }
+
             for p in plugins:
-                # Use default param in lambda to capture the current p
+                rel_folder = p.get('rel_folder', "")
+                
+                # Get or create the parent menu for this plugin
+                parent_menu = menus.get("") # Start at root
+                
+                if rel_folder:
+                    # Split path and traverse/create submenus
+                    parts = rel_folder.split(os.sep)
+                    current_path = ""
+                    for part in parts:
+                        new_path = os.path.join(current_path, part) if current_path else part
+                        
+                        if new_path not in menus:
+                            # Create new submenu
+                            sub_menu = parent_menu.addMenu(part)
+                            menus[new_path] = sub_menu
+                        
+                        parent_menu = menus[new_path]
+                        current_path = new_path
+
+                # Add action to the resolved parent_menu
                 action = QAction(p['name'], self)
                 action.triggered.connect(lambda checked, mod=p['module']: self.plugin_manager.run_plugin(mod, self.mw if hasattr(self, 'mw') else self)) 
-                plugin_menu.addAction(action)
+                parent_menu.addAction(action)
 
