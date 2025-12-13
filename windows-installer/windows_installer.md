@@ -5,6 +5,8 @@
 MoleditPy is a cross-platform, simple, and intuitive molecular editor built in Python.
 This installer provides a package built for the Windows environment.
 
+![](../img/screenshot.png)
+
 ## About This Version
 
 This Windows package uses `moleditpy-linux`, in which the Open Babel library has been disabled due to compatibility issues.
@@ -46,6 +48,7 @@ To remove the software, open Windows "Settings" > "Apps" > "Installed apps," sel
 ## Disclaimer
 
 The developer assumes no responsibility for any damages arising from the use of this software. Please use it at your own risk.
+
 
 
 
