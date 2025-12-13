@@ -17,21 +17,6 @@ The download will start upon clicking.
 
 [Download MoleditPy Windows Installer](https://github.com/HiroYokoyama/python_molecular_editor/releases/download/2.1.0/MoleditPy_2.0.1_win64_setup.exe)
 
-### Important Installation Note
-
-When attempting to launch the downloaded installer, Windows security features (Microsoft Defender SmartScreen) may display the following blue warning screen:
-
-> **"Windows protected your PC"**
-> Microsoft Defender SmartScreen prevented an unrecognized app from starting. Running this app might put your PC at risk.
-
-This warning appears because MoleditPy is new software and has not yet been registered with Microsoft. Please be assured that this is not a virus.
-
-### How to Proceed
-Please follow these steps to proceed with the installation:
-
-1.  Click the text that says **"More info"** on the warning screen.
-2.  A button will appear at the bottom of the screen; click the **"Run anyway"** button.
-
 ## Installation Steps
 
 1.  **Download**
@@ -61,4 +46,5 @@ To remove the software, open Windows "Settings" > "Apps" > "Installed apps," sel
 ## Disclaimer
 
 The developer assumes no responsibility for any damages arising from the use of this software. Please use it at your own risk.
+
 
