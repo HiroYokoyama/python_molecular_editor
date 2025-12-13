@@ -46,6 +46,12 @@ MoleditPy は、Python で開発された分子編集ソフトウェアです。
 moleditpy
 ```
 
+**Windows向けインストーラー**
+
+Moleditpy は Windows 用のインストーラーを提供しています。インストーラーを使うことで、Python 環境の手動セットアップなしに簡単に Moleditpy をインストールできます。
+
+[配布先リンク](https://hiroyokoyama.github.io/python_molecular_editor/windows-installer/windows_installer-jp)
+
 -----
 
 ## 3\. 画面構成
@@ -412,6 +418,7 @@ MoleditPy は、描画した 2D 構造から 3D 構造を生成し、表示、�
 メニューの `Help` \> `About` からバージョン情報を確認できます。
 
 -----
+
 
 
 
