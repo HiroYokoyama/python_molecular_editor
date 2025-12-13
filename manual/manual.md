@@ -47,6 +47,13 @@ You can launch it with the following command.
 moleditpy
 ```
 
+**Windows Installer**
+
+MoleditPy offers a Windows installer. This allows you to easily install MoleditPy without manually setting up a Python environment.
+
+[Windows Installer](https://hiroyokoyama.github.io/python_molecular_editor/windows-installer/windows_installer)
+
+
 -----
 
 ## 3\. Screen Layout
@@ -424,6 +431,7 @@ Click the **Apply** button to reflect changes immediately, or the **OK** button 
 You can check the version information from the `Help` \> `About` menu.
 
 -----
+
 
 
 
