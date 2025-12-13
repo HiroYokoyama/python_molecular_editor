@@ -16,7 +16,7 @@ Open Babelに依存する機能（3D変換のフォールバック）は利用�
 以下のリンクからインストーラーをダウンロードしてください。
 クリックするとダウンロードが開始されます。
 
-[MoleditPy Windows Installer をダウンロード](https://github.com/HiroYokoyama/python_molecular_editor/releases/download/2.1.0/MoleditPy_2.0.1_win64_setup.exe)
+[MoleditPy Windows Installer をダウンロード](https://github.com/HiroYokoyama/python_molecular_editor/releases/download/2.1.0/MoleditPy_2.1.0_win64_setup.exe)
 
 ## インストール手順
 
@@ -47,5 +47,6 @@ Open Babelに依存する機能（3D変換のフォールバック）は利用�
 ## 免責事項
 
 本ソフトウェアの使用によって生じたいかなる損害についても、開発者は責任を負いません。自己責任においてご利用ください。
+
 
 
