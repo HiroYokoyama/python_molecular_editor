@@ -8,7 +8,7 @@ This installer provides a package built for the Windows environment.
 ## About This Version
 
 This Windows package uses `moleditpy-linux`, in which the Open Babel library has been disabled due to compatibility issues.
-While features dependent on Open Babel (such as some advanced chemical calculations and specific format conversions) are unavailable, basic molecular drawing and editing functions operate without issues.
+While features dependent on Open Babel (3D conversion fallback) are unavailable, basic molecular drawing and editing functions operate without issues.
 
 ## Download
 
@@ -61,3 +61,4 @@ To remove the software, open Windows "Settings" > "Apps" > "Installed apps," sel
 ## Disclaimer
 
 The developer assumes no responsibility for any damages arising from the use of this software. Please use it at your own risk.
+
