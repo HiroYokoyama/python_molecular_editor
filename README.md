@@ -61,7 +61,7 @@ This application combines a modern GUI built with **PyQt6**, powerful cheminform
 
 ## Installation and Execution
 
-For detailed instructions, please refer to the project [Wiki](https://github.com/HiroYokoyama/python_molecular_editor/wiki). A [Docker version](https://github.com/HiroYokoyama/python_molecular_editor_docker) is also available.
+For detailed instructions, please refer to the project [Wiki](https://github.com/HiroYokoyama/python_molecular_editor/wiki). A [Docker version](https://github.com/HiroYokoyama/python_molecular_editor_docker) is also available. [Windows installer](https://hiroyokoyama.github.io/python_molecular_editor/windows-installer/windows_installer) is also distributed.
 
 #### Requirements
 
@@ -176,7 +176,7 @@ This project is licensed under the **GNU General Public License v3.0 (GPL-v3)**.
 
 ## インストールと実行
 
-詳細な手順については、プロジェクトの[Wiki](https://github.com/HiroYokoyama/python_molecular_editor/wiki)を参照してください。[Docker版](https://github.com/HiroYokoyama/python_molecular_editor_docker)も利用可能です。
+詳細な手順については、プロジェクトの[Wiki](https://github.com/HiroYokoyama/python_molecular_editor/wiki)を参照してください。[Docker版](https://github.com/HiroYokoyama/python_molecular_editor_docker)も利用可能です。[Windows向けインストーラー](https://hiroyokoyama.github.io/python_molecular_editor/windows-installer/windows_installer-jp)も使用できます。
 
 #### 必要ライブラリ
 
