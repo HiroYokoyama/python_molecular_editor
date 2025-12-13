@@ -403,7 +403,7 @@ MoleditPy は、描画した 2D 構造から 3D 構造を生成し、表示、�
 
 ## 10\. バージョン情報 / ライセンス
 
-  * **バージョン:** 2.0
+  * **バージョン:** 2.1
   * **作者:** Hiromichi Yokoyama
   * **ライセンス:** GPL-3.0 license
   * **リポジトリ:** [https://github.com/HiroYokoyama/python\_molecular\_editor](https://github.com/HiroYokoyama/python_molecular_editor)
@@ -412,6 +412,7 @@ MoleditPy は、描画した 2D 構造から 3D 構造を生成し、表示、�
 メニューの `Help` \> `About` からバージョン情報を確認できます。
 
 -----
+
 
 
 
