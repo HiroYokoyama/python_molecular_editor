@@ -34,7 +34,8 @@ class PluginManager:
 
     def discover_plugins(self, parent=None):
         """
-        Scans the plugin directory for .py files and attempts to import them.
+        Recursively scans the plugin directory for .py files and attempts to import them.
+        Ignores __pycache__ and other directories starting with "__".
         Returns a list of valid loaded plugins.
         """
         self.ensure_plugin_dir()
@@ -43,35 +44,69 @@ class PluginManager:
         if not os.path.exists(self.plugin_dir):
             return []
 
-        for filename in os.listdir(self.plugin_dir):
-            if filename.endswith(".py") and not filename.startswith("__"):
-                filepath = os.path.join(self.plugin_dir, filename)
-                try:
-                    # Dynamically import the module
-                    spec = importlib.util.spec_from_file_location(filename[:-3], filepath)
-                    if spec and spec.loader:
-                        module = importlib.util.module_from_spec(spec)
-                        sys.modules[spec.name] = module # helper for relative imports if needed
-                        spec.loader.exec_module(module)
-
-                        # Check for required attributes
-                        plugin_name = getattr(module, 'PLUGIN_NAME', filename[:-3])
+        for root, dirs, files in os.walk(self.plugin_dir):
+            # Modify dirs in-place to skip hidden directories and __pycache__
+            dirs[:] = [d for d in dirs if not d.startswith('__') and d != '__pycache__']
+            
+            for filename in files:
+                if filename.endswith(".py") and not filename.startswith("__"):
+                    filepath = os.path.join(root, filename)
+                    
+                    # Calculate relative folder path for menu structure
+                    # equivalent to: rel_path = os.path.relpath(root, self.plugin_dir)
+                    # if root is plugin_dir, rel_path is '.'
+                    rel_folder = os.path.relpath(root, self.plugin_dir)
+                    if rel_folder == '.':
+                        rel_folder = ""
                         
-                        # Validate that it has a run function
-                        if hasattr(module, 'run') and callable(module.run):
-                            self.plugins.append({
-                                'name': plugin_name,
-                                'module': module
-                            })
-                        else:
-                            print(f"Plugin {filename} skipped: Missing 'run(main_window)' function.")
-                except Exception as e:
-                    # Robust error handling with user notification
-                    msg = f"Failed to load plugin {filename}:\n{e}"
-                    print(msg)
-                    traceback.print_exc()
-                    if parent:
-                        QMessageBox.warning(parent, "Plugin Load Error", msg)
+                    try:
+                        # Unique module name based on file path to avoid conflicts
+                        # e.g. plugins.subdir.myplugin
+                        module_name = os.path.splitext(os.path.relpath(filepath, self.plugin_dir))[0].replace(os.sep, '.')
+                        
+                        spec = importlib.util.spec_from_file_location(module_name, filepath)
+                        if spec and spec.loader:
+                            module = importlib.util.module_from_spec(spec)
+                            sys.modules[spec.name] = module 
+                            spec.loader.exec_module(module)
+
+                            # Check for required attributes
+                            plugin_name = getattr(module, 'PLUGIN_NAME', filename[:-3])
+                            
+                            # Valid plugin if it has 'run' OR 'autorun'
+                            has_run = hasattr(module, 'run') and callable(module.run)
+                            has_autorun = hasattr(module, 'autorun') and callable(module.autorun)
+                             
+                            if has_run:
+                                self.plugins.append({
+                                    'name': plugin_name,
+                                    'module': module,
+                                    'rel_folder': rel_folder
+                                })
+                            
+                            if has_autorun:
+                                try:
+                                    if parent:
+                                        module.autorun(parent)
+                                    else:
+                                        print(f"Skipping autorun for {plugin_name}: parent not provided.")
+                                except Exception as e:
+                                    print(f"Error executing autorun for {filename}: {e}")
+                                    traceback.print_exc()
+
+                            if not has_run and not has_autorun:
+                                print(f"Plugin {filename} skipped: Missing 'run(main_window)' or 'autorun(main_window)' function.")
+
+                    except Exception as e:
+                        # Robust error handling
+                        msg = f"Failed to load plugin {filename}:\n{e}"
+                        print(msg)
+                        traceback.print_exc()
+                        if parent:
+                            # Use print/status bar instead of popups for non-critical failures during bulk load?
+                            # For now, keep it visible but maybe less intrusive if many fail?
+                            # sticking to original logic just in catch block
+                            pass 
         
         return self.plugins
 
