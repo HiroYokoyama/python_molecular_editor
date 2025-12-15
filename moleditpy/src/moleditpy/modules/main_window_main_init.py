@@ -1728,7 +1728,7 @@ class MainWindowMainInit(object):
 
         explore_plugins_action = QAction("Explore Plugins", self)
         explore_plugins_action.triggered.connect(
-            lambda: QDesktopServices.openUrl(QUrl("https://github.com/HiroYokoyama/moleditpy-plugins"))
+            lambda: QDesktopServices.openUrl(QUrl("https://hiroyokoyama.github.io/moleditpy-plugins/explorer/"))
         )
         plugin_menu.addAction(explore_plugins_action)
         
