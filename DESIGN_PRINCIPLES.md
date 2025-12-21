@@ -1,5 +1,9 @@
 # Project Philosophy
 
+This document describes the design philosophy of MoleditPy.
+It is intended for users and contributors who want to understand
+the long-term direction and architectural decisions of the project.
+
 ## 1. Vision
 
 **“Simplicity at the Core. Limitless Potential.”**
