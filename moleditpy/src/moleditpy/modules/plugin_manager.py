@@ -40,7 +40,6 @@ class PluginManager:
         # Registries for actions
         self.menu_actions = [] # List of (plugin_name, path, callback, text, icon, shortcut)
         self.toolbar_actions = [] 
-        self.context_menu_3d_actions = []
         self.drop_handlers = [] # List of (priority, plugin_name, callback)
         
         # Extended Registries (Added to prevent lazy initialization "monkey patching")
@@ -48,7 +47,6 @@ class PluginManager:
         self.optimization_methods = {}
         self.file_openers = {}
         self.analysis_tools = []
-        self.save_handlers = {}
         self.save_handlers = {}
         self.load_handlers = {}
         self.custom_3d_styles = {} # style_name -> {'plugin': name, 'callback': func}
@@ -98,7 +96,6 @@ class PluginManager:
         self.plugins = []
         self.menu_actions = []
         self.toolbar_actions = []
-        self.context_menu_3d_actions = []
         self.drop_handlers = []
         
         # Clear extended registries

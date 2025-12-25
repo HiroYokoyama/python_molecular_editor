@@ -81,10 +81,68 @@ class UserTemplateDialog(QDialog):
         button_layout.addWidget(self.delete_button)
         
         close_button = QPushButton("Close")
-        close_button.clicked.connect(self.accept)
+        close_button.clicked.connect(self.close)
         button_layout.addWidget(close_button)
         
         layout.addLayout(button_layout)
+
+    def closeEvent(self, event):
+        """ダイアログクローズ時にモードをリセット"""
+        self.cleanup_template_mode()
+        super().closeEvent(event)
+
+    def cleanup_template_mode(self):
+        """テンプレートモードを終了し、atom_C(炭素描画)モードに戻す (Defensive implementation)"""
+        # 1. Reset Dialog State
+        self.selected_template = None
+        if hasattr(self, 'delete_button'):
+            self.delete_button.setEnabled(False)
+
+        # 2. Reset Main Window Mode (UI/Toolbar)
+        target_mode = 'atom_C'
+        try:
+            if hasattr(self.main_window, 'set_mode_and_update_toolbar'):
+                 self.main_window.set_mode_and_update_toolbar(target_mode)
+            elif hasattr(self.main_window, 'set_mode'):
+                 self.main_window.set_mode(target_mode)
+            
+            # Fallback: set attribute directly if methods fail/don't exist
+            if hasattr(self.main_window, 'mode'):
+                self.main_window.mode = target_mode
+        except Exception as e:
+            logging.error(f"Error resetting main window mode: {e}")
+
+        # 3. Reset Scene State (The Source of Truth)
+        try:
+            if hasattr(self.main_window, 'scene') and self.main_window.scene:
+                 scene = self.main_window.scene
+                 
+                 # A. FORCE MODE
+                 scene.mode = target_mode
+                 scene.current_atom_symbol = 'C'
+                 
+                 # B. Clear Data
+                 if hasattr(scene, 'user_template_data'):
+                     scene.user_template_data = None
+                 if hasattr(scene, 'template_context'):
+                     scene.template_context = {}
+                 
+                 # C. Clear/Hide Preview Item
+                 if hasattr(scene, 'clear_template_preview'):
+                     scene.clear_template_preview()
+                 
+                 if hasattr(scene, 'template_preview') and scene.template_preview:
+                     scene.template_preview.hide()
+                     
+                 # D. Reset Cursor & View
+                 if scene.views():
+                     view = scene.views()[0]
+                     view.setCursor(Qt.CursorShape.CrossCursor)
+                     view.viewport().update()
+                 
+                 scene.update()
+        except Exception as e:
+            logging.error(f"Error cleaning up scene state: {e}")
     
     def resizeEvent(self, event):
         """ダイアログリサイズ時にテンプレートプレビューを再フィット"""
