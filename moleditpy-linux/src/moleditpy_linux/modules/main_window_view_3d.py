@@ -120,8 +120,25 @@ class MainWindowView3d(object):
 
 
     def draw_molecule_3d(self, mol):
+        """Dispatch to custom style or standard drawing."""
+        mw = self.mw if hasattr(self, 'mw') else self
+        
+        if hasattr(mw, 'plugin_manager') and hasattr(mw.plugin_manager, 'custom_3d_styles'):
+             if hasattr(self, 'current_3d_style') and self.current_3d_style in mw.plugin_manager.custom_3d_styles:
+                 handler = mw.plugin_manager.custom_3d_styles[self.current_3d_style]['callback']
+                 try:
+                     handler(mw, mol)
+                     return
+                 except Exception as e:
+                     logging.error(f"Error in custom 3d style '{self.current_3d_style}': {e}")
+        
+        self.draw_standard_3d_style(mol)
+
+    def draw_standard_3d_style(self, mol, style_override=None):
         """3D 分子を描画し、軸アクターの参照をクリアする（軸の再制御は apply_3d_settings に任せる）"""
         
+        current_style = style_override if style_override else self.current_3d_style
+
         # 測定選択をクリア（分子が変更されたため）
         if hasattr(self, 'measurement_mode'):
             self.clear_measurement_selection()
@@ -192,16 +209,26 @@ class MainWindowView3d(object):
         sym = [a.GetSymbol() for a in mol_to_draw.GetAtoms()]
         col = np.array([CPK_COLORS_PV.get(s, [0.5, 0.5, 0.5]) for s in sym])
 
+        # Apply plugin color overrides
+        if hasattr(self, '_plugin_color_overrides') and self._plugin_color_overrides:
+            for atom_idx, hex_color in self._plugin_color_overrides.items():
+                if 0 <= atom_idx < len(col):
+                    try:
+                        c = QColor(hex_color)
+                        col[atom_idx] = [c.redF(), c.greenF(), c.blueF()]
+                    except Exception:
+                        pass
+
         # スタイルに応じて原子の半径を設定（設定から読み込み）
-        if self.current_3d_style == 'cpk':
+        if current_style == 'cpk':
             atom_scale = self.settings.get('cpk_atom_scale', 1.0)
             resolution = self.settings.get('cpk_resolution', 32)
             rad = np.array([pt.GetRvdw(pt.GetAtomicNumber(s)) * atom_scale for s in sym])
-        elif self.current_3d_style == 'wireframe':
+        elif current_style == 'wireframe':
             # Wireframeでは原子を描画しないので、この設定は実際には使用されない
             resolution = self.settings.get('wireframe_resolution', 6)
             rad = np.array([0.01 for s in sym])  # 極小値（使用されない）
-        elif self.current_3d_style == 'stick':
+        elif current_style == 'stick':
             atom_radius = self.settings.get('stick_bond_radius', 0.15)  # Use bond radius for atoms
             resolution = self.settings.get('stick_resolution', 16)
             rad = np.array([atom_radius for s in sym])
@@ -223,9 +250,9 @@ class MainWindowView3d(object):
         )
 
         # Wireframeスタイルの場合は原子を描画しない
-        if self.current_3d_style != 'wireframe':
+        if current_style != 'wireframe':
             # Stickモードで末端二重結合・三重結合の原子を分裂させるための処理
-            if self.current_3d_style == 'stick':
+            if current_style == 'stick':
                 # 末端原子（次数1）で多重結合を持つものを検出
                 split_atoms = []  # (atom_idx, bond_order, offset_vecs)
                 skip_atoms = set()  # スキップする原子のインデックス
@@ -354,12 +381,12 @@ class MainWindowView3d(object):
 
 
         # ボンドの描画（ball_and_stick、wireframe、stickで描画）
-        if self.current_3d_style in ['ball_and_stick', 'wireframe', 'stick']:
+        if current_style in ['ball_and_stick', 'wireframe', 'stick']:
             # スタイルに応じてボンドの太さと解像度を設定（設定から読み込み）
-            if self.current_3d_style == 'wireframe':
+            if current_style == 'wireframe':
                 cyl_radius = self.settings.get('wireframe_bond_radius', 0.01)
                 bond_resolution = self.settings.get('wireframe_resolution', 6)
-            elif self.current_3d_style == 'stick':
+            elif current_style == 'stick':
                 cyl_radius = self.settings.get('stick_bond_radius', 0.15)
                 bond_resolution = self.settings.get('stick_resolution', 16)
             else:  # ball_and_stick
@@ -368,7 +395,7 @@ class MainWindowView3d(object):
             
             # Ball and Stick用の共通色
             bs_bond_rgb = [127, 127, 127]
-            if self.current_3d_style == 'ball_and_stick':
+            if current_style == 'ball_and_stick':
                 try:
                     bs_hex = self.settings.get('ball_stick_bond_color', '#7F7F7F')
                     q = QColor(bs_hex)
@@ -401,6 +428,28 @@ class MainWindowView3d(object):
                 begin_color_rgb = [int(c * 255) for c in begin_color]
                 end_color_rgb = [int(c * 255) for c in end_color]
 
+                # Check for plugin override
+                bond_idx = bond.GetIdx()
+                # Override handling: if set, force both ends and uniform color to this value
+                if hasattr(self, '_plugin_bond_color_overrides') and bond_idx in self._plugin_bond_color_overrides:
+                     try:
+                         # Expecting hex string
+                         hex_c = self._plugin_bond_color_overrides[bond_idx]
+                         c_obj = QColor(hex_c)
+                         ov_rgb = [c_obj.red(), c_obj.green(), c_obj.blue()]
+                         begin_color_rgb = ov_rgb
+                         end_color_rgb = ov_rgb
+                         # Also override uniform color in case style uses it
+                         # We need to use a local variable for this iteration instead of the global bs_bond_rgb
+                         # But wait, bs_bond_rgb is defined outside loop.
+                         # We can define local_bs_bond_rgb
+                     except Exception:
+                         pass
+                
+                # Determine effective uniform color for this bond
+                local_bs_bond_rgb = begin_color_rgb if (hasattr(self, '_plugin_bond_color_overrides') and bond_idx in self._plugin_bond_color_overrides) else bs_bond_rgb
+
+
                 # セグメント追加用ヘルパー関数
                 def add_segment(p1, p2, radius, color_rgb):
                     nonlocal current_point_idx
@@ -416,14 +465,20 @@ class MainWindowView3d(object):
 
                 # Get CPK bond color setting once for all bond types
                 use_cpk_bond = self.settings.get('ball_stick_use_cpk_bond_color', False)
+                # If overwritten, treat as if we want to show that color (effectively behave like CPK_Split but with same color, or Uniform).
+                # To be robust, if overwritten, we can force "use_cpk_bond" logic but with our same colors?
+                # Actually, if overridden, we probably want the whole bond to be that color. 
+                
+                is_overridden = hasattr(self, '_plugin_bond_color_overrides') and bond_idx in self._plugin_bond_color_overrides
 
                 if bt == Chem.rdchem.BondType.SINGLE or bt == Chem.rdchem.BondType.AROMATIC:
-                    if self.current_3d_style == 'ball_and_stick' and not use_cpk_bond:
-                        # 単一セグメント (Uniform color)
-                        add_segment(sp, ep, cyl_radius, bs_bond_rgb)
-                        self._3d_color_map[f'bond_{bond_counter}'] = bs_bond_rgb
+                    if current_style == 'ball_and_stick' and not use_cpk_bond and not is_overridden:
+                        # 単一セグメント (Uniform color) - Default behavior
+                        add_segment(sp, ep, cyl_radius, local_bs_bond_rgb)
+                        self._3d_color_map[f'bond_{bond_counter}'] = local_bs_bond_rgb
                     else:
-                        # 分割セグメント (CPK split colors)
+                        # 分割セグメント (CPK split colors OR Overridden uniform)
+                        # If overridden, begin/end are same, so this produces a uniform looking bond split in middle
                         mid_point = (sp + ep) / 2
                         add_segment(sp, mid_point, cyl_radius, begin_color_rgb)
                         add_segment(mid_point, ep, cyl_radius, end_color_rgb)
@@ -434,13 +489,13 @@ class MainWindowView3d(object):
                     # 多重結合のパラメータ計算
                     v1 = d / h
                     # モデルごとの半径ファクターを適用
-                    if self.current_3d_style == 'ball_and_stick':
+                    if current_style == 'ball_and_stick':
                         double_radius_factor = self.settings.get('ball_stick_double_bond_radius_factor', 0.8)
                         triple_radius_factor = self.settings.get('ball_stick_triple_bond_radius_factor', 0.75)
-                    elif self.current_3d_style == 'wireframe':
+                    elif current_style == 'wireframe':
                         double_radius_factor = self.settings.get('wireframe_double_bond_radius_factor', 0.8)
                         triple_radius_factor = self.settings.get('wireframe_triple_bond_radius_factor', 0.75)
-                    elif self.current_3d_style == 'stick':
+                    elif current_style == 'stick':
                         double_radius_factor = self.settings.get('stick_double_bond_radius_factor', 0.60)
                         triple_radius_factor = self.settings.get('stick_triple_bond_radius_factor', 0.40)
                     else:
@@ -448,13 +503,13 @@ class MainWindowView3d(object):
                         triple_radius_factor = 0.75
                     
                     # 設定からオフセットファクターを取得（モデルごと）
-                    if self.current_3d_style == 'ball_and_stick':
+                    if current_style == 'ball_and_stick':
                         double_offset_factor = self.settings.get('ball_stick_double_bond_offset_factor', 2.0)
                         triple_offset_factor = self.settings.get('ball_stick_triple_bond_offset_factor', 2.0)
-                    elif self.current_3d_style == 'wireframe':
+                    elif current_style == 'wireframe':
                         double_offset_factor = self.settings.get('wireframe_double_bond_offset_factor', 3.0)
                         triple_offset_factor = self.settings.get('wireframe_triple_bond_offset_factor', 3.0)
-                    elif self.current_3d_style == 'stick':
+                    elif current_style == 'stick':
                         double_offset_factor = self.settings.get('stick_double_bond_offset_factor', 1.5)
                         triple_offset_factor = self.settings.get('stick_triple_bond_offset_factor', 1.0)
                     else:
@@ -471,11 +526,11 @@ class MainWindowView3d(object):
                         p2_start = sp - off_dir * (s_double / 2)
                         p2_end = ep - off_dir * (s_double / 2)
 
-                        if self.current_3d_style == 'ball_and_stick' and not use_cpk_bond:
-                            add_segment(p1_start, p1_end, r, bs_bond_rgb)
-                            add_segment(p2_start, p2_end, r, bs_bond_rgb)
-                            self._3d_color_map[f'bond_{bond_counter}_1'] = bs_bond_rgb
-                            self._3d_color_map[f'bond_{bond_counter}_2'] = bs_bond_rgb
+                        if current_style == 'ball_and_stick' and not use_cpk_bond and not is_overridden:
+                            add_segment(p1_start, p1_end, r, local_bs_bond_rgb)
+                            add_segment(p2_start, p2_end, r, local_bs_bond_rgb)
+                            self._3d_color_map[f'bond_{bond_counter}_1'] = local_bs_bond_rgb
+                            self._3d_color_map[f'bond_{bond_counter}_2'] = local_bs_bond_rgb
                         else:
                             mid1 = (p1_start + p1_end) / 2
                             mid2 = (p2_start + p2_end) / 2
@@ -497,9 +552,9 @@ class MainWindowView3d(object):
                         s_triple = cyl_radius * triple_offset_factor
 
                         # Center
-                        if self.current_3d_style == 'ball_and_stick' and not use_cpk_bond:
-                            add_segment(sp, ep, r, bs_bond_rgb)
-                            self._3d_color_map[f'bond_{bond_counter}_1'] = bs_bond_rgb
+                        if current_style == 'ball_and_stick' and not use_cpk_bond and not is_overridden:
+                            add_segment(sp, ep, r, local_bs_bond_rgb)
+                            self._3d_color_map[f'bond_{bond_counter}_1'] = local_bs_bond_rgb
                         else:
                             mid = (sp + ep) / 2
                             add_segment(sp, mid, r, begin_color_rgb)
@@ -513,10 +568,10 @@ class MainWindowView3d(object):
                             p_start = sp + offset
                             p_end = ep + offset
                             
-                            if self.current_3d_style == 'ball_and_stick' and not use_cpk_bond:
-                                add_segment(p_start, p_end, r, bs_bond_rgb)
+                            if current_style == 'ball_and_stick' and not use_cpk_bond and not is_overridden:
+                                add_segment(p_start, p_end, r, local_bs_bond_rgb)
                                 suffix = '_2' if sign == 1 else '_3'
-                                self._3d_color_map[f'bond_{bond_counter}{suffix}'] = bs_bond_rgb
+                                self._3d_color_map[f'bond_{bond_counter}{suffix}'] = local_bs_bond_rgb
                             else:
                                 mid = (p_start + p_end) / 2
                                 add_segment(p_start, mid, r, begin_color_rgb)
@@ -590,11 +645,11 @@ class MainWindowView3d(object):
                     ring_radius = np.mean(distances) * 0.55  # Slightly smaller
                     
                     # Get bond radius from current style settings for torus thickness
-                    if self.current_3d_style == 'stick':
+                    if current_style == 'stick':
                         bond_radius = self.settings.get('stick_bond_radius', 0.15)
-                    elif self.current_3d_style == 'ball_and_stick':
+                    elif current_style == 'ball_and_stick':
                         bond_radius = self.settings.get('ball_stick_bond_radius', 0.1)
-                    elif self.current_3d_style == 'wireframe':
+                    elif current_style == 'wireframe':
                         bond_radius = self.settings.get('wireframe_bond_radius', 0.01)
                     else:
                         bond_radius = 0.1  # Default
@@ -635,7 +690,7 @@ class MainWindowView3d(object):
                     atom_symbols = [mol_to_draw.GetAtomWithIdx(idx).GetSymbol() for idx in ring]
                     most_common_symbol = Counter(atom_symbols).most_common(1)[0][0] if atom_symbols else None
                     
-                    if self.current_3d_style == 'ball_and_stick':
+                    if current_style == 'ball_and_stick':
                         # Check if using CPK bond colors
                         use_cpk = self.settings.get('ball_stick_use_cpk_bond_color', False)
                         if use_cpk:
@@ -1443,6 +1498,38 @@ class MainWindowView3d(object):
                 self.plotter.update()
         except Exception:
             pass
+
+
+
+
+    def update_bond_color_override(self, bond_idx, hex_color):
+        """Plugin API helper to override bond color."""
+        if not hasattr(self, '_plugin_bond_color_overrides'):
+            self._plugin_bond_color_overrides = {}
+            
+        if hex_color is None:
+            if bond_idx in self._plugin_bond_color_overrides:
+                del self._plugin_bond_color_overrides[bond_idx]
+        else:
+            self._plugin_bond_color_overrides[bond_idx] = hex_color
+
+        if self.current_mol:
+            self.draw_molecule_3d(self.current_mol)
+
+    def update_atom_color_override(self, atom_index, color_hex):
+        """Plugin helper to update specific atom color override."""
+        if not hasattr(self, '_plugin_color_overrides'):
+            self._plugin_color_overrides = {}
+        
+        if color_hex is None:
+            if atom_index in self._plugin_color_overrides:
+                del self._plugin_color_overrides[atom_index]
+        else:
+            self._plugin_color_overrides[atom_index] = color_hex
+            
+        if self.current_mol:
+            self.draw_molecule_3d(self.current_mol)
+
 
 
 
