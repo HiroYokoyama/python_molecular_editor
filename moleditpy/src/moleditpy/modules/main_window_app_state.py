@@ -595,6 +595,20 @@ class MainWindowAppState(object):
         except Exception:
             json_data["last_successful_optimization_method"] = None
         
+        # Plugin State Persistence (Phase 3)
+        if self.plugin_manager and self.plugin_manager.save_handlers:
+            plugin_data = {}
+            for name, callback in self.plugin_manager.save_handlers.items():
+                try:
+                    p_state = callback()
+                    # Ensure serializable? Use primitive types ideally.
+                    plugin_data[name] = p_state
+                except Exception as e:
+                    print(f"Error saving state for plugin {name}: {e}")
+            
+            if plugin_data:
+                json_data['plugins'] = plugin_data
+
         return json_data
 
 
@@ -613,6 +627,16 @@ class MainWindowAppState(object):
             self.last_successful_optimization_method = json_data.get("last_successful_optimization_method", None)
         except Exception:
             self.last_successful_optimization_method = None
+
+        # Plugin State Restoration (Phase 3)
+        if "plugins" in json_data and self.plugin_manager and self.plugin_manager.load_handlers:
+            plugin_data = json_data["plugins"]
+            for name, p_state in plugin_data.items():
+                if name in self.plugin_manager.load_handlers:
+                    try:
+                        self.plugin_manager.load_handlers[name](p_state)
+                    except Exception as e:
+                        print(f"Error loading state for plugin {name}: {e}")
 
 
         # 2D構造データの復元

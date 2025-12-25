@@ -83,7 +83,7 @@ class MainWindowUiManager(object):
 
     def __init__(self, main_window):
         """ クラスの初期化 """
-        self.mw = main_window
+        self = main_window
 
 
     def update_status_bar(self, message):
@@ -330,6 +330,17 @@ class MainWindowUiManager(object):
                     continue
 
         if file_path:
+            # 1. Custom Plugin Handlers
+            if self.plugin_manager and hasattr(self.plugin_manager, 'drop_handlers'):
+                for handler_def in self.plugin_manager.drop_handlers:
+                    try:
+                         callback = handler_def['callback']
+                         handled = callback(file_path)
+                         if handled:
+                             event.acceptProposedAction()
+                             return
+                    except Exception as e:
+                         print(f"Error in plugin drop handler: {e}")
             # ドロップ位置を取得
             drop_pos = event.position().toPoint()
             # 拡張子に応じて適切な読み込みメソッドを呼び出す
