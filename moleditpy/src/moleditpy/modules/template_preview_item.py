@@ -88,12 +88,9 @@ class TemplatePreviewItem(QGraphicsItem):
             return
         
         # Draw bonds first with better visibility
-        # Bond preview color may also follow the configured bond color
-        try:
-            bond_hex = self.scene().window.settings.get('bond_color', '#222222')
-            bond_pen = QPen(QColor(bond_hex), 2.5)
-        except Exception:
-            bond_pen = QPen(QColor(100, 100, 100, 200), 2.5)
+        # Draw bonds first with better visibility
+        # Use gray (ghost) color for template preview to distinguish from real bonds
+        bond_pen = QPen(QColor(80, 80, 80, 180), 2.5)
         painter.setPen(bond_pen)
         
         for bond_info in self.user_template_bonds:
