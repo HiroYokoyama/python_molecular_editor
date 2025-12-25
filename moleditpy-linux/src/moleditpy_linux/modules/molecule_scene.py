@@ -1495,24 +1495,16 @@ class MoleculeScene(QGraphicsScene):
             'atoms_data': atoms,
             'attachment_atom': attachment_atom,
         }
-        # 既存のプレビューアイテムを一旦クリア
+        # 既存のプレビューアイテムを一旦クリア (レガシーな線画描画の消去)
         for item in list(self.items()):
             if isinstance(item, QGraphicsLineItem) and getattr(item, '_is_template_preview', False):
                 self.removeItem(item)
 
-        # Draw preview lines only using calculated points (do not access self.data.atoms)
-        for bond_info in bonds_info:
-            if isinstance(bond_info, (list, tuple)) and len(bond_info) >= 2:
-                i, j = bond_info[0], bond_info[1]
-                order = bond_info[2] if len(bond_info) > 2 else 1
-                # stereo = bond_info[3] if len(bond_info) > 3 else 0
-                if i < len(points) and j < len(points):
-                    line = QGraphicsLineItem(QLineF(points[i], points[j]))
-                    pen = QPen(Qt.black, 2 if order == 2 else 1)
-                    line.setPen(pen)
-                    line._is_template_preview = True  # フラグで区別
-                    self.addItem(line)
-        # Never access self.data.atoms here for preview-only atoms
+        # TemplatePreviewItemを使用して高機能なプレビューを描画
+        self.template_preview.set_user_template_geometry(points, bonds_info, atoms)
+        self.template_preview.show()
+        if self.views():
+            self.views()[0].viewport().update()
 
     def leaveEvent(self, event):
         self.template_preview.hide(); super().leaveEvent(event)
