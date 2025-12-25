@@ -83,7 +83,7 @@ class MainWindowUiManager(object):
 
     def __init__(self, main_window):
         """ クラスの初期化 """
-        self.mw = main_window
+        self = main_window
 
 
     def update_status_bar(self, message):
@@ -298,7 +298,7 @@ class MainWindowUiManager(object):
 
 
     def dragEnterEvent(self, event):
-        """ウィンドウ全体で .pmeraw、.pmeprj、.mol、.sdf、.xyz ファイルのドラッグを受け入れる"""
+        """ウィンドウ全体でサポートされているファイルのドラッグを受け入れる"""
         # Accept if any dragged local file has a supported extension
         if event.mimeData().hasUrls():
             urls = event.mimeData().urls()
@@ -306,9 +306,28 @@ class MainWindowUiManager(object):
                 try:
                     if url.isLocalFile():
                         file_path = url.toLocalFile()
-                        if file_path.lower().endswith(('.pmeraw', '.pmeprj', '.mol', '.sdf', '.xyz')):
+                        file_lower = file_path.lower()
+                        
+                        # Built-in extensions
+                        if file_lower.endswith(('.pmeraw', '.pmeprj', '.mol', '.sdf', '.xyz')):
                             event.acceptProposedAction()
                             return
+                        
+                        # Plugin-registered file openers
+                        if self.plugin_manager and hasattr(self.plugin_manager, 'file_openers'):
+                            for ext in self.plugin_manager.file_openers.keys():
+                                if file_lower.endswith(ext):
+                                    event.acceptProposedAction()
+                                    return
+                        
+                        # Plugin drop handlers (accept more liberally for custom logic)
+                        # A plugin drop handler might handle it, so accept
+                        if self.plugin_manager and hasattr(self.plugin_manager, 'drop_handlers'):
+                            if len(self.plugin_manager.drop_handlers) > 0:
+                                # Accept any file if drop handlers are registered
+                                # They will check the file type in dropEvent
+                                event.acceptProposedAction()
+                                return
                 except Exception:
                     continue
         event.ignore()
@@ -330,6 +349,17 @@ class MainWindowUiManager(object):
                     continue
 
         if file_path:
+            # 1. Custom Plugin Handlers
+            if self.plugin_manager and hasattr(self.plugin_manager, 'drop_handlers'):
+                for handler_def in self.plugin_manager.drop_handlers:
+                    try:
+                         callback = handler_def['callback']
+                         handled = callback(file_path)
+                         if handled:
+                             event.acceptProposedAction()
+                             return
+                    except Exception as e:
+                         print(f"Error in plugin drop handler: {e}")
             # ドロップ位置を取得
             drop_pos = event.position().toPoint()
             # 拡張子に応じて適切な読み込みメソッドを呼び出す

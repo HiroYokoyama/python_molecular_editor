@@ -600,6 +600,14 @@ class MainWindow(QMainWindow):
         # --- MOVED TO main_window_view_3d.py ---
         return self.main_window_view_3d.fit_to_view()
 
+    def draw_standard_3d_style(self, mol, style_override=None):
+        # --- MOVED TO main_window_view_3d.py ---
+        return self.main_window_view_3d.draw_standard_3d_style(mol, style_override)
+
+    def clear_measurement_selection(self):
+        # --- MOVED TO main_window_view_3d.py ---
+        return self.main_window_view_3d.clear_measurement_selection()
+
     def toggle_3d_edit_mode(self, checked):
         # --- MOVED TO main_window_ui_manager.py ---
         return self.main_window_ui_manager.toggle_3d_edit_mode(checked)

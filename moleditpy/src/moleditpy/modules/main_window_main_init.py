@@ -32,7 +32,7 @@ except Exception:
 # PyQt6 Modules
 from PyQt6.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QHBoxLayout,
-    QPushButton, QSplitter, QToolBar, QSizePolicy, QLabel, QToolButton, QMenu, QMessageBox
+    QPushButton, QSplitter, QToolBar, QSizePolicy, QLabel, QToolButton, QMenu, QMessageBox, QFileDialog
 )
 
 from PyQt6.QtGui import (
@@ -328,7 +328,7 @@ class MainWindowMainInit(object):
         else:
             print(f"警告: アイコンファイルが見つかりません: {icon_path}")
 
-        self.init_menu_bar()
+
 
         self.splitter = QSplitter(Qt.Orientation.Horizontal)
         # スプリッターハンドルを太くして視認性を向上
@@ -395,10 +395,11 @@ class MainWindowMainInit(object):
         self.plotter.setSizePolicy(
             QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
         )
+        self.plotter.setContextMenuPolicy(Qt.ContextMenuPolicy.NoContextMenu)
+        
         # 2. 垂直レイアウトに3Dビューを追加
         right_layout.addWidget(self.plotter, 1)
         #self.plotter.installEventFilter(self)
-
         # 3. ボタンをまとめるための「水平」レイアウトを作成
         right_buttons_layout = QHBoxLayout()
 
@@ -413,6 +414,7 @@ class MainWindowMainInit(object):
             self.optimize_3d_button.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
             self.optimize_3d_button.customContextMenuRequested.connect(self.show_optimize_menu)
         except Exception:
+            pass
             pass
         right_buttons_layout.addWidget(self.optimize_3d_button)
 
@@ -467,6 +469,9 @@ class MainWindowMainInit(object):
         # Keep a reference to the main toolbar for later updates
         self.toolbar = toolbar
 
+        # Now that toolbar exists, initialize menu bar (which might add toolbar actions from plugins)
+        # self.init_menu_bar() - Moved down
+
         # Templates toolbar: place it directly below the main toolbar (second row at the top)
         # Use addToolBarBreak to ensure this toolbar appears on the next row under the main toolbar.
         # Some older PyQt/PySide versions may not have addToolBarBreak; fall back silently in that case.
@@ -480,6 +485,20 @@ class MainWindowMainInit(object):
         toolbar_bottom = QToolBar("Templates Toolbar")
         self.addToolBar(Qt.ToolBarArea.TopToolBarArea, toolbar_bottom)
         self.toolbar_bottom = toolbar_bottom
+
+        # Plugin Toolbar (Third Row)
+        try:
+            self.addToolBarBreak(Qt.ToolBarArea.TopToolBarArea)
+        except Exception:
+            pass
+
+        self.plugin_toolbar = QToolBar("Plugin Toolbar")
+        self.addToolBar(Qt.ToolBarArea.TopToolBarArea, self.plugin_toolbar)
+        self.plugin_toolbar.hide()
+        
+        # Initialize menu bar (and populate toolbars) AFTER all toolbars are created
+        self.init_menu_bar()
+
         self.tool_group = QActionGroup(self)
         self.tool_group.setExclusive(True)
 
@@ -853,30 +872,31 @@ class MainWindowMainInit(object):
         
         file_menu.addSeparator()
         
+        
         # === インポート ===
-        import_menu = file_menu.addMenu("Import")
+        self.import_menu = file_menu.addMenu("Import")
         
         load_mol_action = QAction("MOL/SDF File...", self)
         load_mol_action.triggered.connect(self.load_mol_file)
-        import_menu.addAction(load_mol_action)
+        self.import_menu.addAction(load_mol_action)
         
         import_smiles_action = QAction("SMILES...", self)
         import_smiles_action.triggered.connect(self.import_smiles_dialog)
-        import_menu.addAction(import_smiles_action)
+        self.import_menu.addAction(import_smiles_action)
         
         import_inchi_action = QAction("InChI...", self)
         import_inchi_action.triggered.connect(self.import_inchi_dialog)
-        import_menu.addAction(import_inchi_action)
+        self.import_menu.addAction(import_inchi_action)
         
-        import_menu.addSeparator()
+        self.import_menu.addSeparator()
         
         load_3d_mol_action = QAction("3D MOL/SDF (3D View Only)...", self)
         load_3d_mol_action.triggered.connect(self.load_mol_file_for_3d_viewing)
-        import_menu.addAction(load_3d_mol_action)
+        self.import_menu.addAction(load_3d_mol_action)
         
         load_3d_xyz_action = QAction("3D XYZ (3D View Only)...", self)
         load_3d_xyz_action.triggered.connect(self.load_xyz_for_3d_viewing)
-        import_menu.addAction(load_3d_xyz_action)
+        self.import_menu.addAction(load_3d_xyz_action)
         
         # === エクスポート ===
         export_menu = file_menu.addMenu("Export")
@@ -1204,16 +1224,16 @@ class MainWindowMainInit(object):
         # Plugin menu
         plugin_menu = menu_bar.addMenu("&Plugin")
         
-        open_plugin_dir_action = QAction("Open Plugin Directory", self)
-        if self.plugin_manager:
-            open_plugin_dir_action.triggered.connect(self.plugin_manager.open_plugin_folder)
-        else:
-            open_plugin_dir_action.setEnabled(False)
-        plugin_menu.addAction(open_plugin_dir_action)
-        
-        reload_plugins_action = QAction("Reload Plugins", self)
-        reload_plugins_action.triggered.connect(lambda: self.update_plugin_menu(plugin_menu))
-        plugin_menu.addAction(reload_plugins_action)
+        # Only keep the Manager action, moving others to the Manager Window
+        manage_plugins_action = QAction("Plugin Manager...", self)
+        def show_plugin_manager():
+            from .plugin_manager_window import PluginManagerWindow
+            dlg = PluginManagerWindow(self.plugin_manager, self)
+            dlg.exec()
+            self.update_plugin_menu(plugin_menu) # Refresh after closing
+        manage_plugins_action.triggered.connect(show_plugin_manager)
+        plugin_menu.addAction(manage_plugins_action)
+
 
 
         
@@ -1386,6 +1406,8 @@ class MainWindowMainInit(object):
         )
         help_menu.addAction(manual_action)
 
+
+
         # 3D関連機能の初期状態を統一的に設定
         self._enable_3d_features(False)
         
@@ -1418,7 +1440,27 @@ class MainWindowMainInit(object):
         if not file_path or not os.path.exists(file_path):
             return
         
-        file_ext = file_path.lower().split('.')[-1]
+        # Helper for extension
+        _, ext_with_dot = os.path.splitext(file_path)
+        ext_with_dot = ext_with_dot.lower()
+        # Legacy variable name (no dot)
+        file_ext = ext_with_dot.lstrip('.')
+
+        # 1. Custom Plugin Openers
+        # 1. Custom Plugin Openers
+        if ext_with_dot in self.plugin_manager.file_openers:
+            opener = self.plugin_manager.file_openers[ext_with_dot]
+            try:
+                opener['callback'](file_path)
+                self.current_file_path = file_path
+                self.update_window_title()
+                return
+            except Exception as e:
+                print(f"Plugin opener failed: {e}")
+                QMessageBox.warning(self, "Plugin Error", f"Error opening file with plugin '{opener.get('plugin', 'Unknown')}':\n{e}")
+                # Fallback to standard logic if plugin fails? Or stop?
+                # Generally if a plugin claims it, we stop. But here we let it fall through if it errors?
+                # Let's simple check next.
         
         if file_ext in ['mol', 'sdf']:
             self.load_mol_file_for_3d_viewing(file_path)
@@ -1713,65 +1755,229 @@ class MainWindowMainInit(object):
         """Discovers plugins and updates the plugin menu actions."""
         if not self.plugin_manager:
             return
+        
+        PLUGIN_ACTION_TAG = "plugin_managed"
 
-        # Clear existing plugin actions
+        # Helper to clear tagged actions from a menu
+        def clear_plugin_actions(menu):
+            if not menu: return
+            for act in list(menu.actions()):
+                if act.data() == PLUGIN_ACTION_TAG:
+                    menu.removeAction(act)
+                # Recurse into submenus to clean deep actions
+                elif act.menu():
+                    clear_plugin_actions(act.menu())
+
+        # Clear existing plugin actions from main Plugin menu
         plugin_menu.clear()
         
-        # Re-add static actions
-        open_plugin_dir_action = QAction("Open Plugin Directory", self)
-        open_plugin_dir_action.triggered.connect(self.plugin_manager.open_plugin_folder)
-        plugin_menu.addAction(open_plugin_dir_action)
-        
-        reload_plugins_action = QAction("Reload Plugins", self)
-        reload_plugins_action.triggered.connect(lambda: self.update_plugin_menu(plugin_menu))
-        plugin_menu.addAction(reload_plugins_action)
+        # Clear tagged actions from ALL top-level menus in the Menu Bar
+        # This ensures we catch actions added to standard menus (File, Edit) OR custom menus
+        for top_action in self.menuBar().actions():
+            if top_action.menu():
+                 clear_plugin_actions(top_action.menu())
+            
+        # Clear Export menu (if button exists)
+        if hasattr(self, 'export_button') and self.export_button.menu():
+            clear_plugin_actions(self.export_button.menu())
 
-        explore_plugins_action = QAction("Explore Plugins", self)
-        explore_plugins_action.triggered.connect(
-            lambda: QDesktopServices.openUrl(QUrl("https://hiroyokoyama.github.io/moleditpy-plugins/explorer/"))
-        )
-        plugin_menu.addAction(explore_plugins_action)
+        # Only keep the Manager action
+        manage_plugins_action = QAction("Plugin Manager...", self)
+        def show_plugin_manager():
+            from .plugin_manager_window import PluginManagerWindow
+            dlg = PluginManagerWindow(self.plugin_manager, self)
+            dlg.exec()
+            self.update_plugin_menu(plugin_menu) # Refresh after closing
+        manage_plugins_action.triggered.connect(show_plugin_manager)
+        plugin_menu.addAction(manage_plugins_action)
         
         plugin_menu.addSeparator()
         
-        # Add dynamic plugin actions
+        # Add dynamic plugin actions (Legacy + New Registration)
         plugins = self.plugin_manager.discover_plugins(self)
         
+        # 1. Add Registered Menu Actions (New System)
+        if self.plugin_manager.menu_actions:
+             for action_def in self.plugin_manager.menu_actions:
+                 path = action_def['path']
+                 callback = action_def['callback']
+                 text = action_def['text']
+                 # Create/Find menu path
+                 current_menu = self.menuBar() # Or find specific top-level
+                 
+                 # Handling top-level menus vs nested
+                 parts = path.split('/')
+                 
+                 # If path starts with existing top-level (File, Edit, etc), grab it
+                 # Otherwise create new top-level
+                 top_level_title = parts[0]
+                 found_top = False
+                 for act in self.menuBar().actions():
+                     if act.menu() and act.text().replace('&', '') == top_level_title:
+                         current_menu = act.menu()
+                         found_top = True
+                         break
+                 
+                 if not found_top:
+                     current_menu = self.menuBar().addMenu(top_level_title)
+                 
+                 # Traverse rest
+                 for part in parts[1:]:
+                      found_sub = False
+                      for act in current_menu.actions():
+                          if act.menu() and act.text().replace('&', '') == part:
+                              current_menu = act.menu()
+                              found_sub = True
+                              break
+                      if not found_sub:
+                          current_menu = current_menu.addMenu(part)
+                 
+                 # Add action
+                 action_text = text if text else parts[-1]
+                 action = QAction(action_text, self)
+                 action.triggered.connect(callback)
+                 action.setData(PLUGIN_ACTION_TAG) # TAG THE ACTION
+                 current_menu.addAction(action)
+
+        # 2. Add Toolbar Buttons (New System)
+        # Use dedicated plugin toolbar
+        if hasattr(self, 'plugin_toolbar'):
+             self.plugin_toolbar.clear()
+
+             if self.plugin_manager.toolbar_actions:
+                 self.plugin_toolbar.show()
+                 for action_def in self.plugin_manager.toolbar_actions:
+                     text = action_def['text']
+                     callback = action_def['callback']
+                     
+                     action = QAction(text, self)
+                     action.triggered.connect(callback)
+                     if action_def['icon']:
+                          if os.path.exists(action_def['icon']):
+                               action.setIcon(QIcon(action_def['icon']))
+                     if action_def['tooltip']:
+                          action.setToolTip(action_def['tooltip'])
+                     self.plugin_toolbar.addAction(action)
+             else:
+                 self.plugin_toolbar.hide()
+
+        # 3. Legacy Menu Building (Folder based)
         if not plugins:
             no_plugin_action = QAction("(No plugins found)", self)
             no_plugin_action.setEnabled(False)
             plugin_menu.addAction(no_plugin_action)
         else:
             # Sort plugins: directories first (to create menus), then alphabetical by name
-            # Actually simple sort by rel_folder, name is fine
             plugins.sort(key=lambda x: (x.get('rel_folder', ''), x['name']))
             
             # Dictionary to keep track of created submenus: path -> QMenu
             menus = { "": plugin_menu }
 
             for p in plugins:
-                rel_folder = p.get('rel_folder', "")
-                
-                # Get or create the parent menu for this plugin
-                parent_menu = menus.get("") # Start at root
-                
-                if rel_folder:
-                    # Split path and traverse/create submenus
-                    parts = rel_folder.split(os.sep)
-                    current_path = ""
-                    for part in parts:
-                        new_path = os.path.join(current_path, part) if current_path else part
-                        
-                        if new_path not in menus:
-                            # Create new submenu
-                            sub_menu = parent_menu.addMenu(part)
-                            menus[new_path] = sub_menu
-                        
-                        parent_menu = menus[new_path]
-                        current_path = new_path
+                # Only add legacy plugins (with 'run' function) to the generic Plugins menu.
+                if hasattr(p['module'], 'run'):
+                    rel_folder = p.get('rel_folder', '')
+                    # Get or create the parent menu for this plugin
+                    parent_menu = menus.get("") # Start at root
+                    
+                    if rel_folder:
+                        # Split path and traverse/create submenus
+                        parts = rel_folder.split(os.sep)
+                        current_path = ""
+                        for part in parts:
+                            new_path = os.path.join(current_path, part) if current_path else part
+                            
+                            if new_path not in menus:
+                                # Create new submenu
+                                sub_menu = parent_menu.addMenu(part)
+                                menus[new_path] = sub_menu
+                            
+                            parent_menu = menus[new_path]
+                            current_path = new_path
 
-                # Add action to the resolved parent_menu
-                action = QAction(p['name'], self)
-                action.triggered.connect(lambda checked, mod=p['module']: self.plugin_manager.run_plugin(mod, self.mw if hasattr(self, 'mw') else self)) 
-                parent_menu.addAction(action)
+                    # Add action to the resolved parent_menu
+                    action = QAction(p['name'], self)
+                    action.triggered.connect(lambda checked, mod=p['module']: self.plugin_manager.run_plugin(mod, self.mw if hasattr(self, 'mw') else self)) 
+                    parent_menu.addAction(action)
+
+        # 4. Integrate Export Actions into Export Button and Menu
+        # 4. Integrate Export Actions into Export Button AND Main File->Export Menu
+        if self.plugin_manager.export_actions:
+            # Find Main File -> Export menu
+            main_export_menu = None
+            for top_action in self.menuBar().actions():
+                if top_action.text().replace('&', '') == 'File' and top_action.menu():
+                    for sub_action in top_action.menu().actions():
+                         if sub_action.text().replace('&', '') == 'Export' and sub_action.menu():
+                             main_export_menu = sub_action.menu()
+                             break
+                if main_export_menu: break
+
+            # List of menus to populate
+            target_menus = []
+            if hasattr(self, 'export_button') and self.export_button.menu():
+                target_menus.append(self.export_button.menu())
+            if main_export_menu:
+                target_menus.append(main_export_menu)
+
+            for menu in target_menus:
+                 # Add separator 
+                 sep = menu.addSeparator()
+                 sep.setData(PLUGIN_ACTION_TAG)
+                 
+                 for exp in self.plugin_manager.export_actions:
+                     label = exp['label']
+                     callback = exp['callback']
+                     
+                     a = QAction(label, self)
+                     a.triggered.connect(callback)
+                     a.setData(PLUGIN_ACTION_TAG)
+                     menu.addAction(a)
+
+        # 5. Integrate File Openers into Import Menu
+        if hasattr(self, 'import_menu') and self.plugin_manager.file_openers:
+             # Add separator 
+             sep = self.import_menu.addSeparator()
+             sep.setData(PLUGIN_ACTION_TAG)
+             
+             for ext, info in self.plugin_manager.file_openers.items():
+                 label = f"Import {ext} ({info.get('plugin', 'Plugin')})..."
+                 
+                 def make_cb(callback):
+                     def _cb():
+                         fpath, _ = QFileDialog.getOpenFileName(
+                             self, f"Import {ext}", "", 
+                             f"{info.get('plugin', 'Plugin')} File (*{ext});;All Files (*)"
+                         )
+                         if fpath:
+                             callback(fpath)
+                             self.current_file_path = fpath 
+                             self.update_window_title()
+                     return _cb
+
+                 a = QAction(label, self)
+                 a.triggered.connect(make_cb(info['callback']))
+                 a.setData(PLUGIN_ACTION_TAG)
+                 self.import_menu.addAction(a)
+    
+        # 6. Integrate Analysis Tools into Analysis Menu
+        # Find Analysis menu again as it might not be defined if cleanup block was generic
+        analysis_menu = None
+        for action in self.menuBar().actions():
+             if action.text().replace('&', '') == 'Analysis':
+                 analysis_menu = action.menu()
+                 break
+
+        if analysis_menu and self.plugin_manager.analysis_tools:
+             # Add separator
+             sep = analysis_menu.addSeparator()
+             sep.setData(PLUGIN_ACTION_TAG)
+             
+             for tool in self.plugin_manager.analysis_tools:
+                 label = f"{tool['label']} ({tool.get('plugin', 'Plugin')})"
+                 
+                 a = QAction(label, self)
+                 a.triggered.connect(tool['callback'])
+                 a.setData(PLUGIN_ACTION_TAG)
+                 analysis_menu.addAction(a)
 
