@@ -53,7 +53,9 @@ src/moleditpy/modules/molecule_scene.py
 src/moleditpy/modules/move_group_dialog.py
 src/moleditpy/modules/periodic_table_dialog.py
 src/moleditpy/modules/planarize_dialog.py
+src/moleditpy/modules/plugin_interface.py
 src/moleditpy/modules/plugin_manager.py
+src/moleditpy/modules/plugin_manager_window.py
 src/moleditpy/modules/settings_dialog.py
 src/moleditpy/modules/template_preview_item.py
 src/moleditpy/modules/template_preview_view.py
@@ -63,3 +65,20 @@ src/moleditpy/modules/zoomable_view.py
 src/moleditpy/modules/assets/icon.icns
 src/moleditpy/modules/assets/icon.ico
 src/moleditpy/modules/assets/icon.png
+src/moleditpy/plugins/Analysis/ms_spectrum_neo.py
+src/moleditpy/plugins/File/animated_xyz_giffer.py
+src/moleditpy/plugins/File/cube_viewer.py
+src/moleditpy/plugins/File/gaussian_fchk_freq_analyzer.py
+src/moleditpy/plugins/File/mapped_cube_viewer.py
+src/moleditpy/plugins/File/orca_out_freq_analyzer.py
+src/moleditpy/plugins/File/paste_xyz.py
+src/moleditpy/plugins/Input Generator/gaussian_input_generator_neo.py
+src/moleditpy/plugins/Input Generator/orca_input_generator_neo.py
+src/moleditpy/plugins/Input Generator/orca_xyz2inp_gui.py
+src/moleditpy/plugins/Optimization/all-trans_optimizer.py
+src/moleditpy/plugins/Optimization/complex_molecule_untangler.py
+src/moleditpy/plugins/Optimization/conf_search.py
+src/moleditpy/plugins/Utility/atom_colorizer.py
+src/moleditpy/plugins/Utility/console.py
+src/moleditpy/plugins/Utility/pubchem_ressolver.py
+src/moleditpy/plugins/Utility/vdw_radii_overlay.py
