@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import pytest
 from PyQt6.QtCore import QPointF, Qt, QByteArray, QMimeData, QUrl
 from PyQt6.QtGui import QDropEvent
