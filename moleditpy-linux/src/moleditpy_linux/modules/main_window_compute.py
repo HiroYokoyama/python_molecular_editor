@@ -145,6 +145,11 @@ class MainWindowCompute(object):
         """右クリックで表示する一時的な3D変換メニュー。
         選択したモードは一時フラグとして保持され、その後の変換で使用されます（永続化しません）。
         """
+        # If button is disabled (during calculation), do not show menu
+        if not self.convert_button.isEnabled():
+            return
+
+
         try:
             menu = QMenu(self)
             conv_options = [
@@ -203,6 +208,16 @@ class MainWindowCompute(object):
                 a.triggered.connect(lambda checked=False, k=key: self._trigger_optimize_with_temp_method(k))
                 menu.addAction(a)
 
+            # Add Plugin Optimization Methods
+            if hasattr(self.mw, 'plugin_manager') and self.mw.plugin_manager.optimization_methods:
+                methods = self.mw.plugin_manager.optimization_methods
+                if methods:
+                     menu.addSeparator()
+                     for method_name, info in methods.items():
+                         a = QAction(info.get('label', method_name), self)
+                         a.triggered.connect(lambda checked=False, k=method_name: self._trigger_optimize_with_temp_method(k))
+                         menu.addAction(a)
+                         
             menu.exec_(self.optimize_3d_button.mapToGlobal(pos))
         except Exception as e:
             print(f"Error showing optimize menu: {e}")
@@ -765,6 +780,18 @@ class MainWindowCompute(object):
                 except Exception as e:
                     self.statusBar().showMessage(f"UFF (RDKit) optimization error: {e}")
                     return
+            # Plugin method dispatch
+            elif hasattr(self.mw, 'plugin_manager') and hasattr(self.mw.plugin_manager, 'optimization_methods') and method in self.mw.plugin_manager.optimization_methods:
+                info = self.mw.plugin_manager.optimization_methods[method]
+                callback = info['callback']
+                try:
+                     success = callback(self.current_mol)
+                     if not success:
+                         self.statusBar().showMessage(f"Optimization method '{method}' returned failure.")
+                         return
+                except Exception as e:
+                     self.statusBar().showMessage(f"Plugin optimization error ({method}): {e}")
+                     return
             else:
                 self.statusBar().showMessage("Selected optimization method is not available. Use MMFF94 (RDKit) or UFF (RDKit).")
                 return

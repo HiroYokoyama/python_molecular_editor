@@ -32,7 +32,7 @@ except Exception:
 # PyQt6 Modules
 from PyQt6.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QHBoxLayout,
-    QPushButton, QSplitter, QToolBar, QSizePolicy, QLabel, QToolButton, QMenu, QMessageBox
+    QPushButton, QSplitter, QToolBar, QSizePolicy, QLabel, QToolButton, QMenu, QMessageBox, QFileDialog
 )
 
 from PyQt6.QtGui import (
@@ -1901,20 +1901,38 @@ class MainWindowMainInit(object):
                     parent_menu.addAction(action)
 
         # 4. Integrate Export Actions into Export Button and Menu
+        # 4. Integrate Export Actions into Export Button AND Main File->Export Menu
         if self.plugin_manager.export_actions:
+            # Find Main File -> Export menu
+            main_export_menu = None
+            for top_action in self.menuBar().actions():
+                if top_action.text().replace('&', '') == 'File' and top_action.menu():
+                    for sub_action in top_action.menu().actions():
+                         if sub_action.text().replace('&', '') == 'Export' and sub_action.menu():
+                             main_export_menu = sub_action.menu()
+                             break
+                if main_export_menu: break
+
+            # List of menus to populate
+            target_menus = []
             if hasattr(self, 'export_button') and self.export_button.menu():
-                # Add separator 
-                sep = self.export_button.menu().addSeparator()
-                sep.setData(PLUGIN_ACTION_TAG)
-                
-                for exp in self.plugin_manager.export_actions:
-                    label = exp['label']
-                    callback = exp['callback']
-                    
-                    a = QAction(label, self)
-                    a.triggered.connect(callback)
-                    a.setData(PLUGIN_ACTION_TAG)
-                    self.export_button.menu().addAction(a)
+                target_menus.append(self.export_button.menu())
+            if main_export_menu:
+                target_menus.append(main_export_menu)
+
+            for menu in target_menus:
+                 # Add separator 
+                 sep = menu.addSeparator()
+                 sep.setData(PLUGIN_ACTION_TAG)
+                 
+                 for exp in self.plugin_manager.export_actions:
+                     label = exp['label']
+                     callback = exp['callback']
+                     
+                     a = QAction(label, self)
+                     a.triggered.connect(callback)
+                     a.setData(PLUGIN_ACTION_TAG)
+                     menu.addAction(a)
 
         # 5. Integrate File Openers into Import Menu
         if hasattr(self, 'import_menu') and self.plugin_manager.file_openers:
