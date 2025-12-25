@@ -85,7 +85,9 @@ class PluginManagerWindow(QDialog):
         
         self.table.setRowCount(len(plugins))
         for row, p in enumerate(plugins):
-            self.table.setItem(row, 0, QTableWidgetItem(str(p.get('status', 'Unknown'))))
+            status_item = QTableWidgetItem(str(p.get('status', 'Unknown')))
+            status_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+            self.table.setItem(row, 0, status_item)
             self.table.setItem(row, 1, QTableWidgetItem(str(p.get('name', 'Unknown'))))
             self.table.setItem(row, 2, QTableWidgetItem(str(p.get('version', ''))))
             self.table.setItem(row, 3, QTableWidgetItem(str(p.get('author', ''))))
@@ -108,7 +110,7 @@ class PluginManagerWindow(QDialog):
             if status.startswith("Error"):
                 color = Qt.GlobalColor.red
             elif status == "Loaded":
-                color = Qt.GlobalColor.green
+                color = Qt.GlobalColor.darkGreen
             elif status == "No Entry Point":
                 color = Qt.GlobalColor.gray
             
@@ -120,7 +122,7 @@ class PluginManagerWindow(QDialog):
         if hasattr(self, 'btn_remove'):
             self.btn_remove.setEnabled(has_selection)
 
-    def on_reload(self):
+    def on_reload(self, silent=False):
         # Trigger reload in main manager
         if self.plugin_manager.main_window:
             self.plugin_manager.discover_plugins(self.plugin_manager.main_window)
@@ -132,7 +134,8 @@ class PluginManagerWindow(QDialog):
             # We will handle UI rebuild in the main window code by observing or callback.
             
             # For immediate feedback:
-            QMessageBox.information(self, "Reloaded", "Plugins have been reloaded.")
+            if not silent:
+                QMessageBox.information(self, "Reloaded", "Plugins have been reloaded.")
         else:
             self.plugin_manager.discover_plugins()
             self.refresh_plugin_list()
@@ -155,7 +158,7 @@ class PluginManagerWindow(QDialog):
                if reply == QMessageBox.StandardButton.Yes:
                    try:
                        os.remove(filepath)
-                       self.on_reload() # Reload list and plugins
+                       self.on_reload(silent=True) # Reload list and plugins
                        QMessageBox.information(self, "Success", f"Removed '{plugin.get('name', 'Unknown')}'.")
                    except Exception as e:
                        QMessageBox.critical(self, "Error", f"Failed to delete file: {e}")
