@@ -53,7 +53,9 @@ src/moleditpy/modules/molecule_scene.py
 src/moleditpy/modules/move_group_dialog.py
 src/moleditpy/modules/periodic_table_dialog.py
 src/moleditpy/modules/planarize_dialog.py
+src/moleditpy/modules/plugin_interface.py
 src/moleditpy/modules/plugin_manager.py
+src/moleditpy/modules/plugin_manager_window.py
 src/moleditpy/modules/settings_dialog.py
 src/moleditpy/modules/template_preview_item.py
 src/moleditpy/modules/template_preview_view.py
