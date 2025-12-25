@@ -1755,10 +1755,32 @@ class MainWindowMainInit(object):
         """Discovers plugins and updates the plugin menu actions."""
         if not self.plugin_manager:
             return
+        
+        PLUGIN_ACTION_TAG = "plugin_managed"
 
-        # Clear existing plugin actions
+        # Helper to clear tagged actions from a menu
+        def clear_plugin_actions(menu):
+            if not menu: return
+            for act in list(menu.actions()):
+                if act.data() == PLUGIN_ACTION_TAG:
+                    menu.removeAction(act)
+                # Recurse into submenus to clean deep actions
+                elif act.menu():
+                    clear_plugin_actions(act.menu())
+
+        # Clear existing plugin actions from main Plugin menu
         plugin_menu.clear()
         
+        # Clear tagged actions from ALL top-level menus in the Menu Bar
+        # This ensures we catch actions added to standard menus (File, Edit) OR custom menus
+        for top_action in self.menuBar().actions():
+            if top_action.menu():
+                 clear_plugin_actions(top_action.menu())
+            
+        # Clear Export menu (if button exists)
+        if hasattr(self, 'export_button') and self.export_button.menu():
+            clear_plugin_actions(self.export_button.menu())
+
         # Only keep the Manager action
         manage_plugins_action = QAction("Plugin Manager...", self)
         def show_plugin_manager():
@@ -1814,9 +1836,9 @@ class MainWindowMainInit(object):
                  action_text = text if text else parts[-1]
                  action = QAction(action_text, self)
                  action.triggered.connect(callback)
+                 action.setData(PLUGIN_ACTION_TAG) # TAG THE ACTION
                  current_menu.addAction(action)
 
-        # 2. Add Toolbar Buttons (New System)
         # 2. Add Toolbar Buttons (New System)
         # Use dedicated plugin toolbar
         if hasattr(self, 'plugin_toolbar'):
@@ -1840,14 +1862,12 @@ class MainWindowMainInit(object):
                  self.plugin_toolbar.hide()
 
         # 3. Legacy Menu Building (Folder based)
-        
         if not plugins:
             no_plugin_action = QAction("(No plugins found)", self)
             no_plugin_action.setEnabled(False)
             plugin_menu.addAction(no_plugin_action)
         else:
             # Sort plugins: directories first (to create menus), then alphabetical by name
-            # Actually simple sort by rel_folder, name is fine
             plugins.sort(key=lambda x: (x.get('rel_folder', ''), x['name']))
             
             # Dictionary to keep track of created submenus: path -> QMenu
@@ -1855,7 +1875,6 @@ class MainWindowMainInit(object):
 
             for p in plugins:
                 # Only add legacy plugins (with 'run' function) to the generic Plugins menu.
-                # New plugins (with 'initialize') should register their own menu actions if needed.
                 if hasattr(p['module'], 'run'):
                     rel_folder = p.get('rel_folder', '')
                     # Get or create the parent menu for this plugin
@@ -1883,113 +1902,64 @@ class MainWindowMainInit(object):
 
         # 4. Integrate Export Actions into Export Button and Menu
         if self.plugin_manager.export_actions:
-            # Add separator if we have custom exports (and haven't added it yet for this session/update)
-            # Since update_plugin_menu clears the dynamic plugin actions but NOT the export menu (which is on a button),
-            # we need to be careful not to duplicate.
-            # Ideally, we should clear custom actions from the export menu first.
-            # For simplicity, we'll just check existence.
-            
             if hasattr(self, 'export_button') and self.export_button.menu():
-                # Naive approach: check if separator/actions exist. 
-                # Better approach: Add them to a specific section or manage them explicitly.
-                # Here we just append if not present.
+                # Add separator 
+                sep = self.export_button.menu().addSeparator()
+                sep.setData(PLUGIN_ACTION_TAG)
                 
-                # Check if we need a separator (if we have built-in actions)
-                if self.export_button.menu().actions():
-                     has_sep = False
-                     for a in self.export_button.menu().actions():
-                         if a.isSeparator():
-                             has_sep = True
-                # Get or create the parent menu for this plugin
-                # For folder based hierarchy only?
-                # ... (Refer to existing code for menu building, skipped here for brevity)
-                pass
+                for exp in self.plugin_manager.export_actions:
+                    label = exp['label']
+                    callback = exp['callback']
+                    
+                    a = QAction(label, self)
+                    a.triggered.connect(callback)
+                    a.setData(PLUGIN_ACTION_TAG)
+                    self.export_button.menu().addAction(a)
 
         # 5. Integrate File Openers into Import Menu
         if hasattr(self, 'import_menu') and self.plugin_manager.file_openers:
-             # Add a separator if plugins are present
-             has_plugins = len(self.plugin_manager.file_openers) > 0
-             if has_plugins:
-                 self.import_menu.addSeparator()
-                 
+             # Add separator 
+             sep = self.import_menu.addSeparator()
+             sep.setData(PLUGIN_ACTION_TAG)
+             
              for ext, info in self.plugin_manager.file_openers.items():
-                 # ext e.g. .xyz
-                 # info = {'plugin': name, 'callback': cb}
                  label = f"Import {ext} ({info.get('plugin', 'Plugin')})..."
                  
-                 # duplicate check
-                 exists = False
-                 for act in self.import_menu.actions():
-                     if act.text() == label:
-                         exists = True
-                         break
-                 
-                 if not exists:
-                     def make_cb(callback):
-                         def _cb():
-                             # Standard file dialog to pick file, then callback
-                             fpath, _ = QFileDialog.getOpenFileName(
-                                 self, f"Import {ext}", "", 
-                                 f"{info.get('plugin', 'Plugin')} File (*{ext});;All Files (*)"
-                             )
-                             if fpath:
-                                 callback(fpath)
-                                 self.current_file_path = fpath # Update current file path?
-                                 self.update_window_title()
-                         return _cb
+                 def make_cb(callback):
+                     def _cb():
+                         fpath, _ = QFileDialog.getOpenFileName(
+                             self, f"Import {ext}", "", 
+                             f"{info.get('plugin', 'Plugin')} File (*{ext});;All Files (*)"
+                         )
+                         if fpath:
+                             callback(fpath)
+                             self.current_file_path = fpath 
+                             self.update_window_title()
+                     return _cb
 
-                     a = QAction(label, self)
-                     a.triggered.connect(make_cb(info['callback']))
-                     self.import_menu.addAction(a)
+                 a = QAction(label, self)
+                 a.triggered.connect(make_cb(info['callback']))
+                 a.setData(PLUGIN_ACTION_TAG)
+                 self.import_menu.addAction(a)
     
         # 6. Integrate Analysis Tools into Analysis Menu
-        if hasattr(self, 'analysis_action') and self.plugin_manager.analysis_tools:
-             # Determine parent menu (Analysis)
-             # self.analysis_action is just an action, we need the menu it belongs to? 
-             # Or did we stash the analysis_menu?
-             # Looking at init, analysis_menu wasn't stored as self.analysis_menu, but we can find it via menuBar.
+        # Find Analysis menu again as it might not be defined if cleanup block was generic
+        analysis_menu = None
+        for action in self.menuBar().actions():
+             if action.text().replace('&', '') == 'Analysis':
+                 analysis_menu = action.menu()
+                 break
+
+        if analysis_menu and self.plugin_manager.analysis_tools:
+             # Add separator
+             sep = analysis_menu.addSeparator()
+             sep.setData(PLUGIN_ACTION_TAG)
              
-             # Let's find "Analysis" menu
-             analysis_menu = None
-             for action in self.menuBar().actions():
-                 if action.text().replace('&', '') == 'Analysis':
-                     analysis_menu = action.menu()
-                     break
-            
-             if analysis_menu:
-                 # Add separator if we have plugins
-                 if self.plugin_manager.analysis_tools:
-                     analysis_menu.addSeparator()
-                     
-                 for tool in self.plugin_manager.analysis_tools:
-                     label = f"{tool['label']} ({tool.get('plugin', 'Plugin')})"
-                     # duplicate check
-                     exists = False
-                     for act in analysis_menu.actions():
-                         if act.text() == label:
-                             exists = True
-                             break
-                     if not exists:
-                         a = QAction(label, self)
-                         a.triggered.connect(tool['callback'])
-                         analysis_menu.addAction(a)
-
-        # 7. Integrate Export Actions (Continued)
-        if self.plugin_manager.export_actions:
-            for exp in self.plugin_manager.export_actions:
-                label = exp['label']
-                callback = exp['callback']
-                
-                exists = False
-                for act in self.export_button.menu().actions():
-                    if act.text() == label:
-                        exists = True
-                        break
-                
-                if not exists:
-                    a = QAction(label, self)
-                    a.triggered.connect(callback)
-                    self.export_button.menu().addAction(a)
-
-        # 5. Integrate File Openers (Implicitly handled during file load) uses PluginManager directly
+             for tool in self.plugin_manager.analysis_tools:
+                 label = f"{tool['label']} ({tool.get('plugin', 'Plugin')})"
+                 
+                 a = QAction(label, self)
+                 a.triggered.connect(tool['callback'])
+                 a.setData(PLUGIN_ACTION_TAG)
+                 analysis_menu.addAction(a)
 

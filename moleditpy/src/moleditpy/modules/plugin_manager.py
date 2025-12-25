@@ -98,7 +98,17 @@ class PluginManager:
         self.plugins = []
         self.menu_actions = []
         self.toolbar_actions = []
+        self.context_menu_3d_actions = []
         self.drop_handlers = []
+        
+        # Clear extended registries
+        self.export_actions = [] 
+        self.optimization_methods = {}
+        self.file_openers = {}
+        self.analysis_tools = []
+        self.save_handlers = {}
+        self.load_handlers = {}
+        self.custom_3d_styles = {}
         
         if not os.path.exists(self.plugin_dir):
             return []
