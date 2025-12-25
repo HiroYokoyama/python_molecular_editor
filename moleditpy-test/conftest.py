@@ -1,12 +1,17 @@
+# -*- coding: utf-8 -*-
 import os
 import sys
 # Add pytest import for fixtures
 import pytest
 # Add QApplication import for app fixture
 from PyQt6.QtWidgets import QApplication
+import importlib
+import importlib.util
 # Define project_main after os is imported
 project_main = os.path.join(os.path.dirname(__file__), 'src', 'moleditpy', '__main__.py')
 # ...existing code...
+
+
 # Only set headless environment variables if MOLEDITPY_HEADLESS=1
 if os.environ.get("MOLEDITPY_HEADLESS", "0") == "1":
     os.environ.setdefault('PYVISTA_OFF_SCREEN', 'true')
@@ -29,6 +34,66 @@ if os.path.isdir(src_path) and src_path not in sys.path:
 
 # Provide minimal stubs for pyvista and pyvistaqt in headless tests so imports
 # from `moleditpy.modules` don't trigger native GL or Qt windows.
+
+# --- Universal VTK Mocking to prevent crash in any mode ---
+# Provide vtkmodules and common submodules globally BEFORE any app code imports
+try:
+    import types
+    if 'vtkmodules' not in sys.modules:
+        vtkmodules = types.ModuleType('vtkmodules')
+        vtkmodules.__path__ = [] # Make it a package
+        sys.modules['vtkmodules'] = vtkmodules
+
+    if 'vtkmodules.all' not in sys.modules:
+        sys.modules['vtkmodules.all'] = types.ModuleType('vtkmodules.all')
+
+    if 'vtkmodules.vtkInteractionStyle' not in sys.modules:
+        intermod = types.ModuleType('vtkmodules.vtkInteractionStyle')
+        class DummyInteractorStyleBase:
+            def __init__(self, *a, **k): pass
+            def AddObserver(self, *_a, **_k): return
+            def OnLeftButtonDown(self): pass
+            def OnRightButtonDown(self): pass
+            def OnMouseMove(self): pass
+            def OnLeftButtonUp(self): pass
+            def OnRightButtonUp(self): pass
+            def GetInteractor(self):
+                from unittest.mock import MagicMock
+                return MagicMock()
+        intermod.vtkInteractorStyleTrackballCamera = DummyInteractorStyleBase
+        sys.modules['vtkmodules.vtkInteractionStyle'] = intermod
+    
+    if 'vtkmodules.vtkCommonCore' not in sys.modules:
+        sys.modules['vtkmodules.vtkCommonCore'] = types.ModuleType('vtkmodules.vtkCommonCore')
+    
+    if 'vtkmodules.vtkRenderingCore' not in sys.modules:
+        sys.modules['vtkmodules.vtkRenderingCore'] = types.ModuleType('vtkmodules.vtkRenderingCore')
+
+    if 'vtkmodules.vtkWebCore' not in sys.modules:
+        sys.modules['vtkmodules.vtkWebCore'] = types.ModuleType('vtkmodules.vtkWebCore')
+
+    if 'vtkmodules.vtkCommonMath' not in sys.modules:
+        sys.modules['vtkmodules.vtkCommonMath'] = types.ModuleType('vtkmodules.vtkCommonMath')
+
+    if 'vtkmodules.vtkCommonTransforms' not in sys.modules:
+        sys.modules['vtkmodules.vtkCommonTransforms'] = types.ModuleType('vtkmodules.vtkCommonTransforms')
+
+    # Also mock vtk if missing
+    # We apply this liberally to avoid the crash and partial-mocking issues.
+    if 'vtk' not in sys.modules:
+         vtk = types.ModuleType('vtk')
+         class DummyCellPicker:
+             def __init__(self, *a, **k): self._actor = None
+             def SetTolerance(self, v): self._tol = v
+             def Pick(self, x, y, z, renderer): return
+             def GetActor(self): return self._actor
+         vtk.vtkCellPicker = DummyCellPicker
+         vtk.vtkAxesActor = lambda *a, **k: None
+         vtk.vtkOrientationMarkerWidget = lambda *a, **k: None
+         sys.modules['vtk'] = vtk
+except Exception:
+    pass
+
 try:
     import types
     if 'pyvista' not in sys.modules:
@@ -76,6 +141,8 @@ try:
                     self.render = _mock.MagicMock()
                     self.reset_camera = _mock.MagicMock()
                     self.setAcceptDrops = _mock.MagicMock()
+                    # Debug print to verify instantiation
+                    print("DEBUGGING: DummyQtInteractor (Headless Mock) Initialized")
                     self.set_background = _mock.MagicMock()
                     # Expose an interactor and picker for compatibility
                     self.interactor = _mock.MagicMock()
@@ -90,6 +157,9 @@ try:
                     self.add_text = _mock.MagicMock()
                     # add_light is used in draw_molecule_3d
                     self.add_light = _mock.MagicMock(return_value='light_actor')
+                    # Expect 'camera' attribute in some contexts
+                    self.camera = _mock.MagicMock()
+                    self.camera.copy = _mock.MagicMock(return_value={})
         except Exception:
             # If PyQt classes not importable for some reason, fall back to
             # a simple dummy object to avoid breaking tests that only import
@@ -101,96 +171,82 @@ try:
         sys.modules['pyvistaqt'] = pvqt
 except Exception:
     pass
+
+    if 'pyvista' not in sys.modules:
+        import types
+        pyv = types.ModuleType('pyvista')
+        # Minimal Plotter/Light/PolyData for import compatibility
+        class DummyPlotterMinimal:
+            def __init__(self, *a, **k): pass
+            def add_mesh(self, *a, **k): return None
+            def add_point_labels(self, *a, **k): return []
+            def clear(self): return
+            def render(self): return
+            def reset_camera(self): return
         
+        pyv.Plotter = DummyPlotterMinimal
+        class DummyLight:
+            def __init__(self, *a, **k): pass
+        pyv.Light = DummyLight
+        def PolyData(points):
+             return types.SimpleNamespace(points=points)
+        pyv.PolyData = PolyData
+        sys.modules['pyvista'] = pyv
 
-if os.environ.get("MOLEDITPY_HEADLESS", "0") == "1":
-    # If we're running headless with PYVISTA_OFF_SCREEN, install small dummy `vtk` and
-    # `vtkmodules` modules to prevent native GL calls during imports.
-    if os.environ.get('PYVISTA_OFF_SCREEN', '').lower() in ('true', '1'):
+    if 'pyvistaqt' not in sys.modules:
+        import types
+        pvqt = types.ModuleType('pyvistaqt')
+        # Try to use real QWidget so it works in layouts
         try:
-            import types
-
-            # Only create dummy module if vtk not already importable
-            if 'vtk' not in sys.modules:
-                vtk = types.ModuleType('vtk')
-
-                class DummyCellPicker:
-                    def __init__(self, *a, **k):
-                        self._actor = None
-                    def SetTolerance(self, v):
-                        self._tol = v
-                    def Pick(self, x, y, z, renderer):
-                        return
-                    def GetActor(self):
-                        return self._actor
-                    def GetPickPosition(self):
-                        return (0.0, 0.0, 0.0)
-
-                class DummyAxesActor:
-                    def __init__(self, *a, **k):
-                        pass
-
-                class DummyOrientationMarkerWidget:
-                    def __init__(self, *a, **k):
-                        pass
-                    def SetOrientationMarker(self, m):
-                        pass
-                    def SetInteractor(self, interactor):
-                        pass
-                    def SetViewport(self, a, b, c, d):
-                        pass
-                    def On(self):
-                        pass
-                    def Off(self):
-                        pass
-                    def SetInteractive(self, val):
-                        pass
-
-                vtk.vtkCellPicker = DummyCellPicker
-                vtk.vtkAxesActor = DummyAxesActor
-                vtk.vtkOrientationMarkerWidget = DummyOrientationMarkerWidget
-                sys.modules['vtk'] = vtk
-
-            # Provide vtkmodules.vtkInteractionStyle.vtkInteractorStyleTrackballCamera
-            if 'vtkmodules' not in sys.modules:
-                vtkmodules = types.ModuleType('vtkmodules')
-                sys.modules['vtkmodules'] = vtkmodules
-            if 'vtkmodules.vtkInteractionStyle' not in sys.modules:
-                intermod = types.ModuleType('vtkmodules.vtkInteractionStyle')
-
-                class DummyInteractorStyleBase:
-                    def __init__(self, *a, **k):
-                        pass
-                    def AddObserver(self, *_a, **_k):
-                        return
-                intermod.vtkInteractorStyleTrackballCamera = DummyInteractorStyleBase
-                sys.modules['vtkmodules.vtkInteractionStyle'] = intermod
+            from PyQt6.QtWidgets import QWidget
+            class DummyQtInteractor(QWidget):
+                def __init__(self, parent=None, *a, **k):
+                    super().__init__(parent)
         except Exception:
-            # If dummy module construction fails, continue and rely on actual VTK
-            pass
-if os.path.exists(project_main):
+            class DummyQtInteractor(object):
+                def __init__(self, *a, **k): pass
+        
+        pvqt.QtInteractor = DummyQtInteractor
+        sys.modules['pyvistaqt'] = pvqt
+
+except Exception:
+    pass
+
+# (Removed old headless-only pyvista/qt mock block)
+
+# Try standard import first (preferred if source layout is correct)
+try:
+    import moleditpy
+except Exception:
+    moleditpy = None
+
+if moleditpy is None and os.path.exists(project_main):
     try:
         spec = importlib.util.spec_from_file_location('moleditpy', project_main)
         moleditpy = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(moleditpy)
         sys.modules['moleditpy'] = moleditpy
-    except Exception:
+    except Exception as e:
         # If this fails, fall back to trying an installed `moleditpy` or
         # the `__main__` module.
+        print(f"DEBUG: Failed to import moleditpy from spec: {e}")
         pass
 
 if moleditpy is None:
     try:
         import moleditpy
-    except Exception:
+    except Exception as e:
+        print(f"DEBUG: Failed to import moleditpy directly: {e}")
         try:
             import __main__ as moleditpy
-        except Exception:
+        except Exception as e2:
+            print(f"DEBUG: Failed to import __main__ as moleditpy: {e2}")
             # pytestがカレントディレクトリをパスに追加していない場合
             sys.path.append('.')
             try:
                 import moleditpy
-            except Exception:
+            except Exception as e3:
+                print(f"DEBUG: Failed to import moleditpy after sys.path append: {e3}")
                 moleditpy = None
 
 # As a last resort, attempt to import `moleditpy` from the local `src/` dir
@@ -327,6 +383,7 @@ def window(app, qtbot, monkeypatch):
     時間のかかる処理や外部ウィンドウをモック化します。
     """
     import os
+    import traceback
     # --- Discover MainWindowClass before any use ---
     app_mod = moleditpy
     if app_mod is None:
@@ -344,22 +401,26 @@ def window(app, qtbot, monkeypatch):
                     from moleditpy.modules.main_window import MainWindow as _MainWindowClass
                     MainWindowClass = _MainWindowClass
                 except Exception:
-                    try:
-                        proj_root = os.path.dirname(__file__)
-                        mm_path = os.path.join(proj_root, 'src', 'moleditpy', 'modules', 'main_window.py')
-                        import importlib.util as _il
-                        spec = _il.spec_from_file_location('moleditpy.modules.main_window', mm_path)
-                        mod = _il.module_from_spec(spec)
-                        spec.loader.exec_module(mod)
-                        MainWindowClass = getattr(mod, 'MainWindow', None)
-                    except Exception:
-                        MainWindowClass = None
+                    pass
+                try:
+                    proj_root = os.path.dirname(__file__)
+                    mm_path = os.path.join(proj_root, 'src', 'moleditpy', 'modules', 'main_window.py')
+                    import importlib.util as _il
+                    spec = _il.spec_from_file_location('moleditpy.modules.main_window', mm_path)
+                    mod = _il.module_from_spec(spec)
+                    # We must set the module in sys.modules manually for relative imports to work
+                    sys.modules['moleditpy.modules.main_window'] = mod
+                    spec.loader.exec_module(mod)
+                    MainWindowClass = getattr(mod, 'MainWindow', None)
+                except Exception:
+                    MainWindowClass = None
                 try:
                     setattr(app_mod, 'MainWindow', MainWindowClass)
                 except Exception:
                     pass
         except Exception:
             MainWindowClass = None
+    
     if MainWindowClass is None:
         raise RuntimeError("Could not find MainWindow class for tests; ensure module is importable")
 
@@ -380,6 +441,17 @@ def window(app, qtbot, monkeypatch):
             except Exception:
                 return None
         monkeypatch.setattr('moleditpy.modules.main_window_view_3d.MainWindowView3D.draw_molecule_3d', _safe_draw, raising=False)
+    except Exception:
+        pass
+
+    # Disable plugin loading to isolate tests from user environment
+    try:
+        def _no_op_discover(self, parent=None):
+            self.plugins = []
+            return []
+        monkeypatch.setattr('moleditpy.modules.plugin_manager.PluginManager.discover_plugins', _no_op_discover, raising=False)
+        monkeypatch.setattr('modules.plugin_manager.PluginManager.discover_plugins', _no_op_discover, raising=False)
+        monkeypatch.setattr('moleditpy.modules.plugin_manager.PluginManager.run_plugin', lambda s, m, w: None, raising=False)
     except Exception:
         pass
 
@@ -476,6 +548,46 @@ def window(app, qtbot, monkeypatch):
     except Exception:
         pass
 
+    # Ensure CustomQtInteractor is mockable/compatible; replace it with a simple
+    # widget that provides the plotting API used by the app to avoid real GL calls.
+    # We do this patch BEFORE instantiating MainWindow in either Headless or GUI mode.
+    try:
+        from PyQt6.QtWidgets import QWidget
+        from unittest import mock as _mock
+        class DummyPlotter(QWidget):
+            def __init__(self, parent=None, *a, **k):
+                super().__init__(parent)
+                self.renderer = _mock.MagicMock()
+                self.add_mesh = _mock.MagicMock(return_value='dummy')
+                self.add_text = _mock.MagicMock()
+                self.add_point_labels = _mock.MagicMock(return_value=['point_labels'])
+                self.clear = _mock.MagicMock()
+                self.reset_camera = _mock.MagicMock()
+                self.render = _mock.MagicMock()
+                self.set_background = _mock.MagicMock()
+                self.setAcceptDrops = _mock.MagicMock()
+                self.interactor = _mock.MagicMock()
+                # Provide a picker that looks like VTK's cell picker
+                class DummyPicker:
+                    def __init__(self):
+                        pass
+                    def SetTolerance(self, v):
+                        self._tol = v
+                self.picker = DummyPicker()
+                # Provide a camera placeholder expected by draw_molecule_3d
+                self.camera = _mock.MagicMock()
+                self.camera.copy = _mock.MagicMock(return_value={})
+                self.add_light = _mock.MagicMock(return_value='light_actor')
+        try:
+            monkeypatch.setattr('moleditpy.modules.custom_qt_interactor.CustomQtInteractor', DummyPlotter, raising=False)
+            monkeypatch.setattr('moleditpy.modules.main_window_main_init.CustomQtInteractor', DummyPlotter, raising=False)
+            monkeypatch.setattr('modules.custom_qt_interactor.CustomQtInteractor', DummyPlotter, raising=False)
+            monkeypatch.setattr('moleditpy.CustomQtInteractor', DummyPlotter, raising=False)
+        except Exception:
+            pass
+    except Exception:
+        pass
+
     # If headless, patch and mock as before
     if os.environ.get("MOLEDITPY_HEADLESS", "0") == "1":
         # Patch MainWindow.__init__ to always attach dummy formula_label before UI code runs
@@ -509,6 +621,10 @@ def window(app, qtbot, monkeypatch):
         class DummySplitter:
             def widget(self, idx):
                 return DummyWidget()
+            def handle(self, idx):
+                return DummyWidget()
+            def sizes(self):
+                return [100, 100]
         main_window.splitter = DummySplitter()
         # ... (rest of the headless-specific mocks and patches) ...
         # Keep running to the common yield below so teardown/cleanup are
@@ -666,7 +782,6 @@ def window(app, qtbot, monkeypatch):
         if hasattr(main_window, 'toggle_atom_info_display'):
             orig_toggle = getattr(main_window, 'toggle_atom_info_display')
             def _dbg_toggle(mode):
-                print(f"DEBUG: calling toggle_atom_info_display with mode={mode}")
                 return orig_toggle(mode)
             monkeypatch.setattr(main_window, 'toggle_atom_info_display', _dbg_toggle, raising=False)
     except Exception:
