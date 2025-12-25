@@ -1822,7 +1822,7 @@ class MainWindowMainInit(object):
                      current_menu = self.menuBar().addMenu(top_level_title)
                  
                  # Traverse rest
-                 for part in parts[1:]:
+                 for part in parts[1:-1]:
                       found_sub = False
                       for act in current_menu.actions():
                           if act.menu() and act.text().replace('&', '') == part:
