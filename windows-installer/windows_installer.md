@@ -20,7 +20,7 @@ For complex molecules that require Open Babel fallback, 3D conversion may fail. 
 Please download the installer from the link below.
 The download will start upon clicking.
 
-[Download MoleditPy Windows Installer](https://github.com/HiroYokoyama/python_molecular_editor/releases/download/2.2.0-1/MoleditPy_2.2.0_win64_setup.exe)
+[Download MoleditPy Windows Installer](https://github.com/HiroYokoyama/python_molecular_editor/releases/download/2.2.2/MoleditPy_2.2.2_win64_setup.exe)
 
 ## Installation Steps
 
@@ -51,6 +51,7 @@ To remove the software, open Windows "Settings" > "Apps" > "Installed apps," sel
 ## Disclaimer
 
 The developer assumes no responsibility for any damages arising from the use of this software. Please use it at your own risk.
+
 
 
 
