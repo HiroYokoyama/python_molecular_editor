@@ -1935,28 +1935,51 @@ class MainWindowMainInit(object):
                      menu.addAction(a)
 
         # 5. Integrate File Openers into Import Menu
+        # 5. Integrate File Openers into Import Menu
         if hasattr(self, 'import_menu') and self.plugin_manager.file_openers:
              # Add separator 
              sep = self.import_menu.addSeparator()
              sep.setData(PLUGIN_ACTION_TAG)
              
+             # Group by Plugin Name
+             plugin_map = {}
              for ext, info in self.plugin_manager.file_openers.items():
-                 label = f"Import {ext} ({info.get('plugin', 'Plugin')})..."
+                 p_name = info.get('plugin', 'Plugin')
+                 if p_name not in plugin_map:
+                     plugin_map[p_name] = {}
+                 plugin_map[p_name][ext] = info['callback']
+            
+             for p_name, ext_map in plugin_map.items():
+                 # Create combined label: "Import .ext1/.ext2 (PluginName)..."
+                 extensions = sorted(ext_map.keys())
+                 ext_str = "/".join(extensions)
+                 label = f"Import {ext_str} ({p_name})..."
                  
-                 def make_cb(callback):
+                 # Create combined filter: "PluginName Files (*.ext1 *.ext2)"
+                 filter_exts = " ".join([f"*{e}" for e in extensions])
+                 filter_str = f"{p_name} Files ({filter_exts});;All Files (*)"
+                 
+                 # Factory for callback to fix closure capture
+                 def make_unified_cb(extensions_map, dialog_filter, plugin_nm):
                      def _cb():
                          fpath, _ = QFileDialog.getOpenFileName(
-                             self, f"Import {ext}", "", 
-                             f"{info.get('plugin', 'Plugin')} File (*{ext});;All Files (*)"
+                             self, f"Import {plugin_nm} Files", "", 
+                             dialog_filter
                          )
                          if fpath:
-                             callback(fpath)
-                             self.current_file_path = fpath 
-                             self.update_window_title()
+                             _, extension = os.path.splitext(fpath)
+                             extension = extension.lower()
+                             # Dispatch to specific callback
+                             if extension in extensions_map:
+                                 extensions_map[extension](fpath)
+                                 self.current_file_path = fpath 
+                                 self.update_window_title()
+                             else:
+                                 self.statusBar().showMessage(f"No handler for extension {extension}")
                      return _cb
 
                  a = QAction(label, self)
-                 a.triggered.connect(make_cb(info['callback']))
+                 a.triggered.connect(make_unified_cb(ext_map, filter_str, p_name))
                  a.setData(PLUGIN_ACTION_TAG)
                  self.import_menu.addAction(a)
     
