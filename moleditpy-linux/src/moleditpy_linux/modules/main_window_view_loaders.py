@@ -79,10 +79,6 @@ except Exception:
 class MainWindowViewLoaders(object):
     """ main_window.py から分離された機能クラス """
 
-    def __init__(self, main_window):
-        """ クラスの初期化 """
-        self.mw = main_window
-
     def load_xyz_for_3d_viewing(self, file_path=None):
         """XYZファイルを読み込んで3Dビューアで表示する"""
         if not file_path:

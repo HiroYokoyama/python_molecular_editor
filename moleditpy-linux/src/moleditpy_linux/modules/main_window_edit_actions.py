@@ -102,10 +102,6 @@ except Exception:
 class MainWindowEditActions(object):
     """ main_window.py から分離された機能クラス """
 
-    def __init__(self, main_window):
-        """ クラスの初期化 """
-        self.mw = main_window
-
 
     def copy_selection(self):
         """選択された原子と結合をクリップボードにコピーする"""

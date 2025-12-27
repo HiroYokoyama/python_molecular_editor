@@ -88,10 +88,6 @@ except Exception:
 class MainWindowView3d(object):
     """ main_window.py から分離された機能クラス """
 
-    def __init__(self, main_window):
-        """ クラスの初期化 """
-        self.mw = main_window
-
 
     def set_3d_style(self, style_name):
         """3D表示スタイルを設定し、ビューを更新する"""
@@ -121,7 +117,7 @@ class MainWindowView3d(object):
 
     def draw_molecule_3d(self, mol):
         """Dispatch to custom style or standard drawing."""
-        mw = self.mw if hasattr(self, 'mw') else self
+        mw = self
         
         if hasattr(mw, 'plugin_manager') and hasattr(mw.plugin_manager, 'custom_3d_styles'):
              if hasattr(self, 'current_3d_style') and self.current_3d_style in mw.plugin_manager.custom_3d_styles:

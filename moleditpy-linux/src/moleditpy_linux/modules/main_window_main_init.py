@@ -1897,7 +1897,7 @@ class MainWindowMainInit(object):
 
                     # Add action to the resolved parent_menu
                     action = QAction(p['name'], self)
-                    action.triggered.connect(lambda checked, mod=p['module']: self.plugin_manager.run_plugin(mod, self.mw if hasattr(self, 'mw') else self)) 
+                    action.triggered.connect(lambda checked, mod=p['module']: self.plugin_manager.run_plugin(mod, self)) 
                     parent_menu.addAction(action)
 
         # 4. Integrate Export Actions into Export Button and Menu

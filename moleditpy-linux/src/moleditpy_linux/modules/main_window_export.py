@@ -88,10 +88,6 @@ except Exception:
 class MainWindowExport(object):
     """ main_window.py から分離された機能クラス """
 
-    def __init__(self, main_window):
-        """ クラスの初期化 """
-        self.mw = main_window
-
 
     def export_stl(self):
         """STLファイルとしてエクスポート（色なし）"""
