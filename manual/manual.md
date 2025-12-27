@@ -219,7 +219,7 @@ You can select the display style from the **3D Style** dropdown menu on the righ
 
 Official sample plugins are available in the [GitHub repository](https://github.com/HiroYokoyama/moleditpy-plugins). You can download them and place them in your plugins directory (`~/.moleditpy/plugins`) to use them.
 
-**Available Plugins:**
+**Examples of Examples of **Examples of Availa
 
   * **Hello World (`hello.py`):** 
       * A simple demonstration plugin.
@@ -422,7 +422,7 @@ Click the **Apply** button to reflect changes immediately, or the **OK** button 
 
 ## 10\. Version / License
 
-  * **Version:** 2.1
+  * **Version:** 2.2
   * **Author:** Hiromichi Yokoyama
   * **License:** GPL-3.0 license
   * **Repository:** [https://github.com/HiroYokoyama/python\_molecular\_editor](https://github.com/HiroYokoyama/python_molecular_editor)
@@ -431,6 +431,7 @@ Click the **Apply** button to reflect changes immediately, or the **OK** button 
 You can check the version information from the `Help` \> `About` menu.
 
 -----
+
 
 
 
