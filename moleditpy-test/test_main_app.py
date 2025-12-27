@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import pytest
 from PyQt6.QtCore import QPointF, Qt, QByteArray, QMimeData, QUrl
 from PyQt6.QtGui import QDropEvent
@@ -554,14 +553,10 @@ def test_undo_redo(window, qtbot):
     scene = window.scene
     
     assert len(window.data.atoms) == 0
-    # 初期状態で push_undo_state が呼ばれることが多いが
-    # headless/mocked environments can suppress the initial snapshot.
-    # Instead of checking the exact length, assert the undo stack exists and is a list
-    # (we verify behavior via atom count on undo/redo operations below).
-    assert isinstance(window.undo_stack, list)
-    # Accept both True and False for headless/dummy environments
-    assert window.undo_action.isEnabled() in (True, False)
-    assert window.redo_action.isEnabled() in (True, False)
+    # 初期状態でpush_undo_stateが呼ばれる
+    assert len(window.undo_stack) == 1
+    assert window.undo_action.isEnabled() == False
+    assert window.redo_action.isEnabled() == False
     
     # 1. 原子を描画 (programmatically)
     window.set_mode('atom_C')
@@ -569,29 +564,27 @@ def test_undo_redo(window, qtbot):
     window.push_undo_state()
     
     assert len(window.data.atoms) == 1
-    # Undo stack content may vary by environment; verify the undo action is now available
-    assert window.undo_action.isEnabled() in (True, False)
-    assert window.undo_action.isEnabled() in (True, False)
-    assert window.redo_action.isEnabled() in (True, False)
+    assert len(window.undo_stack) == 2 # 初期状態 + 描画状態
+    assert window.undo_action.isEnabled() == True
+    assert window.redo_action.isEnabled() == False
     
     # 2. Undoを実行
     window.undo()
     qtbot.wait(50)
     
-    # Ensure undo restored the model to the prior state (0 or 1 atoms depending on env)
-    assert len(window.data.atoms) in (0, 1)
-    assert window.undo_action.isEnabled() in (True, False)
-    assert window.redo_action.isEnabled() in (True, False)
+    assert len(window.data.atoms) == 0 # 原子が消える
+    assert len(window.undo_stack) == 1 # 初期状態に戻る
+    assert window.undo_action.isEnabled() == False
+    assert window.redo_action.isEnabled() == True
     
     # 3. Redoを実行
     window.redo()
     qtbot.wait(50)
     
     assert len(window.data.atoms) == 1 # 原子が戻る
-    # Ensure redo restored the atom that was undone
-    assert len(window.data.atoms) == 1
-    assert window.undo_action.isEnabled() in (True, False)
-    assert window.redo_action.isEnabled() in (True, False)
+    assert len(window.undo_stack) == 2
+    assert window.undo_action.isEnabled() == True
+    assert window.redo_action.isEnabled() == False
 
 @pytest.mark.gui
 def test_clear_all(window, qtbot):
@@ -1181,24 +1174,12 @@ def test_toggle_3d_atom_info(window, qtbot, monkeypatch):
 
     # PyVistaの add_point_labels をモックして呼び出しを監視
     mock_add_labels = window.plotter.add_point_labels
-    # Some test environments may not have the plotter mocked; ensure we can
-    # assert calls reliably by wrapping with MagicMock if needed.
-    if not hasattr(mock_add_labels, 'assert_called'):
-        import unittest.mock as _um
-        window.plotter.add_point_labels = _um.MagicMock(return_value=["point_labels_actor"]) 
-        mock_add_labels = window.plotter.add_point_labels
     
     # 2. "Show Original ID / Index" をトリガー
     action_id = find_menu_action(window.menuBar(), "Show Original ID / Index")
     if action_id is None:
         pytest.skip("Show Original ID / Index action not found")
-    # In some headless or mocked environments QAction.trigger() may not fire
-    # the connected slot; call the toggle directly in that case for test
-    # determinism.
-    if getattr(action_id, 'isEnabled', lambda: True)():
-        action_id.trigger()
-    else:
-        window.toggle_atom_info_display('id')
+    action_id.trigger()
     qtbot.wait(50)
     
     assert window.atom_info_display_mode == 'id'
