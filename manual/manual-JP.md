@@ -217,7 +217,7 @@ MoleditPy は、描画した 2D 構造から 3D 構造を生成し、表示、�
 
 [GitHub リポジトリ](https://github.com/HiroYokoyama/moleditpy-plugins) にて、公式サンプルプラグインが公開されています。これらをダウンロードし、プラグインディレクトリ (`~/.moleditpy/plugins`) に配置することで利用可能になります。
 
-**利用可能なプラグイン:**
+**利用可能なプラグインの例:**
 
   * **Hello World (`hello.py`):** 
       * 単純なデモンストレーション用プラグインです。
@@ -409,7 +409,7 @@ MoleditPy は、描画した 2D 構造から 3D 構造を生成し、表示、�
 
 ## 10\. バージョン情報 / ライセンス
 
-  * **バージョン:** 2.1
+  * **バージョン:** 2.2
   * **作者:** Hiromichi Yokoyama
   * **ライセンス:** GPL-3.0 license
   * **リポジトリ:** [https://github.com/HiroYokoyama/python\_molecular\_editor](https://github.com/HiroYokoyama/python_molecular_editor)
@@ -418,6 +418,7 @@ MoleditPy は、描画した 2D 構造から 3D 構造を生成し、表示、�
 メニューの `Help` \> `About` からバージョン情報を確認できます。
 
 -----
+
 
 
 
