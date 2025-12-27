@@ -82,10 +82,6 @@ except Exception:
 class MainWindowStringImporters(object):
     """ main_window.py から分離された機能クラス """
 
-    def __init__(self, main_window):
-        """ クラスの初期化 """
-        self.mw = main_window
-
 
     def import_smiles_dialog(self):
         """ユーザーにSMILES文字列の入力を促すダイアログを表示する"""

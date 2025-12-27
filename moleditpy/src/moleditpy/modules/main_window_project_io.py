@@ -83,10 +83,6 @@ except Exception:
 class MainWindowProjectIo(object):
     """ main_window.py から分離された機能クラス """
 
-    def __init__(self, main_window):
-        """ クラスの初期化 """
-        self.mw = main_window
-
 
     def save_project(self):
         """上書き保存（Ctrl+S）- デフォルトでPMEPRJ形式"""
