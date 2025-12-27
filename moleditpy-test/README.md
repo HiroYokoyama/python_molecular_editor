@@ -48,56 +48,21 @@ This is the main test file, containing all unit and GUI test cases.
       * `click_scene(...)`: Simulates a mouse click at a specific `QPointF` in the 2D scene.
       * `drag_scene(...)`: Simulates a mouse drag between two points in the 2D scene.
 
-  * **Test Cases List**:
+  * **Unit Tests (`@pytest.mark.unit`)**:
 
-      * **Unit Tests (`@pytest.mark.unit`)**:
+      * Focus on the `MolecularData` class.
+      * Test adding/removing atoms and bonds.
+      * Verify correct handling of bond sorting (normal vs. stereo bonds).
+      * Test RDKit conversion logic, including 2D stereochemistry (Wedge/Dash) and E/Z bond stereo.
 
-          * `test_molecular_data_add_atom`: Tests adding an atom to the data model.
-          * `test_molecular_data_add_bond`: Tests adding a standard bond.
-          * `test_molecular_data_add_stereo_bond`: Tests that stereo bonds (Wedge/Dash) are stored correctly without sorting.
-          * `test_molecular_data_remove_atom`: Tests that removing an atom also removes its associated bonds.
-          * `test_molecular_data_remove_bond`: Tests removing a bond.
-          * `test_to_rdkit_mol_stereo`: Tests conversion of Wedge/Dash 2D stereo to RDKit.
-          * `test_to_rdkit_mol_ez_stereo`: Tests conversion of E/Z bond stereo to RDKit.
+  * **GUI Tests (`@pytest.mark.gui`)**:
 
-      * **GUI Tests (`@pytest.mark.gui`)**:
-
-          * `test_app_launch`: Checks if the application window launches correctly.
-          * `test_mode_change_atom`: Tests changing the drawing mode via the atom toolbar (e.g., to 'N').
-          * `test_mode_change_bond`: Tests changing the drawing mode via the bond toolbar (e.g., to 'Double Bond').
-          * `test_draw_atom_on_click`: Tests creating an atom by clicking on the scene.
-          * `test_draw_bond_on_drag`: Tests creating two atoms and a bond by dragging on the scene.
-          * `test_draw_bond_to_existing_atom`: Tests drawing a bond between two existing atoms.
-          * `test_change_atom_symbol_on_click`: Tests changing an existing atom's element by clicking on it.
-          * `test_change_bond_order_on_click`: Tests changing an existing bond's order by clicking on it.
-          * `test_delete_atom_on_right_click`: Tests deleting an atom via right-click.
-          * `test_charge_mode_click`: Tests applying positive and negative charges to an atom.
-          * `test_2d_to_3d_conversion`: Tests the 2D to 3D conversion button and UI state change.
-          * `test_optimize_3d`: Tests the 3D optimization button.
-          * `test_change_3d_style`: Tests changing the 3D view style (e.g., to 'CPK').
-          * `test_undo_redo`: Tests the Undo and Redo actions.
-          * `test_clear_all`: Tests the "Clear All" action.
-          * `test_copy_paste`: Tests copying and pasting a selection.
-          * `test_file_import_smiles`: Tests importing a structure from a SMILES string.
-          * `test_key_press_change_atom`: Tests changing an atom's element via keyboard shortcut (e.g., 'o' for Oxygen).
-          * `test_key_press_change_bond`: Tests changing a bond's order via keyboard shortcut (e.g., '2' for double bond).
-          * `test_radical_mode_toggle`: Tests toggling radical states (0, 1, 2) on an atom.
-          * `test_delete_key_selection`: Tests deleting selected items using the 'Delete' key.
-          * `test_draw_benzene_template`: Tests placing the benzene template.
-          * `test_open_settings_dialog`: Tests opening the 3D View Settings dialog.
-          * `test_toggle_measurement_mode`: Tests toggling the 3D measurement/selection mode.
-          * `test_toggle_3d_edit_mode`: Tests toggling the 3D atom drag mode.
-          * `test_add_remove_hydrogens`: Tests the "Add Hydrogens" and "Remove Hydrogens" menu actions.
-          * `test_2d_cleanup`: Tests the "Optimize 2D" (cleanup) button.
-          * `test_3d_viewer_mode_mol`: Tests loading a .mol file directly into 3D viewer mode, disabling 2D editing.
-          * `test_open_3d_edit_dialogs`: Tests if 3D edit dialogs (Translate, Planarize) can be opened.
-          * `test_save_project_as`: Tests saving the current state as a .pmeprj project file.
-          * `test_open_project`: Tests loading a .pmeprj project file.
-          * `test_toggle_3d_atom_info`: Tests toggling 3D atom info labels (ID, Coords, Symbol).
-          * `test_user_template_dialog_save_and_use`: Tests saving the current 2D structure as a user template and using it.
-          * `test_implicit_hydrogens_update`: Tests that implicit hydrogen counts update automatically after drawing.
-          * `test_drag_drop_mol_file_on_3d_view`: Tests drag-and-drop of a .mol file onto the 3D view (for 3D viewer mode).
-          * `test_drag_drop_mol_file_on_2d_view`: Tests drag-and-drop of a .mol file onto the 2D view (for 2D editing).
+      * Cover all major application features by simulating user interaction via `qtbot`.
+      * **2D Editor**: Drawing atoms, bonds, templates (Benzene); changing modes (charge, radical); Undo/Redo; Copy/Paste; Clear All; 2D Cleanup.
+      * **3D Conversion**: Clicking the "Convert 2D -\> 3D" button and verifying the UI state change.
+      * **3D View**: Toggling 3D styles (CPK), measurement mode, 3D drag mode, and atom info labels.
+      * **File I/O**: Importing SMILES, saving/loading projects (`.pmeprj`), loading `.mol` files in viewer mode, and drag-and-drop file handling.
+      * **Keyboard Shortcuts**: Testing key presses ('O' for Oxygen, '2' for double bond, 'Delete' for deletion).
 
 ## 4\. Setup & Running
 
