@@ -84,10 +84,6 @@ except Exception:
 class MainWindowCompute(object):
     """ main_window.py から分離された機能クラス """
 
-    def __init__(self, main_window):
-        """ クラスの初期化 """
-        self.mw = main_window
-
 
     def set_optimization_method(self, method_name):
         """Set preferred 3D optimization method and persist to settings.
@@ -209,8 +205,8 @@ class MainWindowCompute(object):
                 menu.addAction(a)
 
             # Add Plugin Optimization Methods
-            if hasattr(self.mw, 'plugin_manager') and self.mw.plugin_manager.optimization_methods:
-                methods = self.mw.plugin_manager.optimization_methods
+            if hasattr(self, 'plugin_manager') and self.plugin_manager.optimization_methods:
+                methods = self.plugin_manager.optimization_methods
                 if methods:
                      menu.addSeparator()
                      for method_name, info in methods.items():
@@ -781,8 +777,9 @@ class MainWindowCompute(object):
                     self.statusBar().showMessage(f"UFF (RDKit) optimization error: {e}")
                     return
             # Plugin method dispatch
-            elif hasattr(self.mw, 'plugin_manager') and hasattr(self.mw.plugin_manager, 'optimization_methods') and method in self.mw.plugin_manager.optimization_methods:
-                info = self.mw.plugin_manager.optimization_methods[method]
+            # Plugin method dispatch
+            elif hasattr(self, 'plugin_manager') and hasattr(self.plugin_manager, 'optimization_methods') and method in self.plugin_manager.optimization_methods:
+                info = self.plugin_manager.optimization_methods[method]
                 callback = info['callback']
                 try:
                      success = callback(self.current_mol)

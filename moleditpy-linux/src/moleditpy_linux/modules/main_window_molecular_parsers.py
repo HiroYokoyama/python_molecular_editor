@@ -88,10 +88,6 @@ except Exception:
 class MainWindowMolecularParsers(object):
     """ main_window.py から分離された機能クラス """
 
-    def __init__(self, main_window):
-        """ クラスの初期化 """
-        self.mw = main_window
-
 
     def load_mol_file(self, file_path=None):
         if not self.check_unsaved_changes():

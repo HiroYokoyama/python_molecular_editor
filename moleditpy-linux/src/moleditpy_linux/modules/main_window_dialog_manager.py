@@ -111,10 +111,6 @@ except Exception:
 class MainWindowDialogManager(object):
     """ main_window.py から分離された機能クラス """
 
-    def __init__(self, main_window):
-        """ クラスの初期化 """
-        self.mw = main_window
-
 
     def show_about_dialog(self):
         """Show the custom About dialog with Easter egg functionality"""
