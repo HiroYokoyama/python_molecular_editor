@@ -84,10 +84,6 @@ except Exception:
 class MainWindowEdit3d(object):
     """ main_window.py から分離された機能クラス """
 
-    def __init__(self, main_window):
-        """ クラスの初期化 """
-        self.mw = main_window
-
 
     def toggle_measurement_mode(self, checked):
         """測定モードのオン/オフを切り替える"""
