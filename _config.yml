@@ -1,3 +1,7 @@
-remote_theme: jekyll/minima
-minima:
-  favicon: /icon_images/favicon.ico
+remote_theme: jekyll/minima@8d0aa75
+defaults:
+  - scope:
+      path: ""
+      type: "pages"
+    values:
+      title: false
