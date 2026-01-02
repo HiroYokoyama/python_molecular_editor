@@ -1,0 +1,3 @@
+remote_theme: jekyll/minima
+minima:
+  favicon: /icon_images/favicon.ico
