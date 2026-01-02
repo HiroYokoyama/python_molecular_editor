@@ -62,6 +62,7 @@ src/moleditpy/modules/template_preview_view.py
 src/moleditpy/modules/translation_dialog.py
 src/moleditpy/modules/user_template_dialog.py
 src/moleditpy/modules/zoomable_view.py
+src/moleditpy/modules/assets/file_icon.ico
 src/moleditpy/modules/assets/icon.icns
 src/moleditpy/modules/assets/icon.ico
 src/moleditpy/modules/assets/icon.png

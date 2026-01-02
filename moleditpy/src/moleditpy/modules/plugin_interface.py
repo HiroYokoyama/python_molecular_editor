@@ -65,6 +65,24 @@ class PluginContext:
         """
         return self._manager.get_main_window()
 
+    @property
+    def current_molecule(self) -> Any:
+        """
+        Get or set the current molecule (RDKit Mol object).
+        """
+        mw = self._manager.get_main_window()
+        if mw:
+            return mw.current_mol
+        return None
+
+    @current_molecule.setter
+    def current_molecule(self, mol: Any):
+        mw = self._manager.get_main_window()
+        if mw:
+            mw.current_mol = mol
+            if hasattr(mw, 'draw_molecule_3d'):
+                 mw.draw_molecule_3d(mol)
+
     def add_export_action(self, label: str, callback: Callable):
         """
         Register a custom export action.
