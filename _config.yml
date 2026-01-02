@@ -4,5 +4,3 @@ defaults:
   - scope:
       path: ""
       type: "pages"
-    values:
-      title: false
