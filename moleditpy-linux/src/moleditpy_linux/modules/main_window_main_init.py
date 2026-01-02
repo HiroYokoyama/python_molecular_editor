@@ -264,6 +264,9 @@ class MainWindowMainInit(object):
         except Exception as e:
             print(f"Failed to initialize PluginManager: {e}")
             self.plugin_manager = None
+        
+        # ロードされていないプラグインのデータを保持する辞書
+        self._preserved_plugin_data = {}
 
         self.init_ui()
         self.init_worker_thread()
@@ -1832,6 +1835,14 @@ class MainWindowMainInit(object):
                       if not found_sub:
                           current_menu = current_menu.addMenu(part)
                  
+                 # If last action was NOT from a plugin, insert a separator
+                 actions = current_menu.actions()
+                 if actions:
+                     last_action = actions[-1]
+                     if not last_action.isSeparator() and last_action.data() != PLUGIN_ACTION_TAG:
+                          sep = current_menu.addSeparator()
+                          sep.setData(PLUGIN_ACTION_TAG)
+
                  # Add action
                  action_text = text if text else parts[-1]
                  action = QAction(action_text, self)

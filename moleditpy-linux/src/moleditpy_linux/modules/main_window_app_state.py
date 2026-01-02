@@ -596,8 +596,10 @@ class MainWindowAppState(object):
             json_data["last_successful_optimization_method"] = None
         
         # Plugin State Persistence (Phase 3)
+        # Start with preserved data from missing plugins
+        plugin_data = self._preserved_plugin_data.copy() if self._preserved_plugin_data else {}
+        
         if self.plugin_manager and self.plugin_manager.save_handlers:
-            plugin_data = {}
             for name, callback in self.plugin_manager.save_handlers.items():
                 try:
                     p_state = callback()
@@ -606,8 +608,8 @@ class MainWindowAppState(object):
                 except Exception as e:
                     print(f"Error saving state for plugin {name}: {e}")
             
-            if plugin_data:
-                json_data['plugins'] = plugin_data
+        if plugin_data:
+            json_data['plugins'] = plugin_data
 
         return json_data
 
@@ -629,14 +631,19 @@ class MainWindowAppState(object):
             self.last_successful_optimization_method = None
 
         # Plugin State Restoration (Phase 3)
-        if "plugins" in json_data and self.plugin_manager and self.plugin_manager.load_handlers:
+        self._preserved_plugin_data = {} # Reset preserved data on new load
+        if "plugins" in json_data:
             plugin_data = json_data["plugins"]
             for name, p_state in plugin_data.items():
-                if name in self.plugin_manager.load_handlers:
+                if self.plugin_manager and name in self.plugin_manager.load_handlers:
                     try:
                         self.plugin_manager.load_handlers[name](p_state)
                     except Exception as e:
                         print(f"Error loading state for plugin {name}: {e}")
+                else:
+                    # No handler found (plugin disabled or missing)
+                    # Preserve data so it's not lost on next save
+                    self._preserved_plugin_data[name] = p_state
 
 
         # 2D構造データの復元
@@ -697,7 +704,7 @@ class MainWindowAppState(object):
             for atom in self.data.atoms.values():
                 atom['item'].update_style()
         # 3D構造データの復元
-        if "3d_structure" in json_data:
+        if "3d_structure" in json_data and json_data["3d_structure"] is not None:
             structure_3d = json_data["3d_structure"]
 
             # 制約データの復元 (JSONはタプルをリストとして保存するので、タプルに再変換)
