@@ -215,7 +215,7 @@ You can select the display style from the **3D Style** dropdown menu on the righ
   * **Pan (Move):** Middle mouse button drag, or Shift + Left mouse button drag.
   * **Reset View:** `View` \> `Reset 3D View` (Ctrl+R) from the menu resets the camera position and zoom to their initial state.
 
-### 6.5. Official Plugin Repository (Available for Download)
+### 6.5. Official Plugin Repository
 
 Official sample plugins are available in the [GitHub repository](https://github.com/HiroYokoyama/moleditpy-plugins). You can download them and place them in your plugins directory (`~/.moleditpy/plugins`) to use them.
 
@@ -431,6 +431,7 @@ Click the **Apply** button to reflect changes immediately, or the **OK** button 
 You can check the version information from the `Help` \> `About` menu.
 
 -----
+
 
 
 
