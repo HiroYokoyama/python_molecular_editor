@@ -1,6 +1,6 @@
 Metadata-Version: 2.4
 Name: MoleditPy
-Version: 2.2.3
+Version: 2.2.5
 Summary: A cross-platform, simple, and intuitive molecular structure editor built in Python. It allows 2D molecular drawing and 3D structure visualization. It supports exporting structure files for input to DFT calculation software.
 Author-email: HiroYokoyama <titech.yoko.hiro@gmail.com>
 License:                     GNU GENERAL PUBLIC LICENSE
@@ -705,7 +705,9 @@ Dynamic: license-file
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.17268532.svg)](https://doi.org/10.5281/zenodo.17268532)
 [![Powered by RDKit](https://img.shields.io/badge/Powered%20by-RDKit-3838ff.svg?logo=data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQBAMAAADt3eJSAAAABGdBTUEAALGPC/xhBQAAACBjSFJNAAB6JgAAgIQAAPoAAACA6AAAdTAAAOpgAAA6mAAAF3CculE8AAAAFVBMVEXc3NwUFP8UPP9kZP+MjP+0tP////9ZXZotAAAAAXRSTlMAQObYZgAAAAFiS0dEBmFmuH0AAAAHdElNRQfmAwsPGi+MyC9RAAAAQElEQVQI12NgQABGQUEBMENISUkRLKBsbGwEEhIyBgJFsICLC0iIUdnExcUZwnANQWfApKCK4doRBsKtQFgKAQC5Ww1JEHSEkAAAACV0RVh0ZGF0ZTpjcmVhdGUAMjAyMi0wMy0xMVQxNToyNjo0NyswMDowMDzr2J4AAAAldEVYdGRhdGU6bW9kaWZ5ADIwMjItMDMtMTFUMTU6MjY6NDcrMDA6MDBNtmAiAAAAAElFTkSuQmCC)](https://www.rdkit.org/)
 
-**MoleditPy** is a cross-platform, intuitive molecular editor built in Python. It provides a seamless workflow for drawing 2D molecular structures, visualizing them in 3D, and performing interactive geometric manipulations. Its powerful editing and export capabilities make it an ideal tool for preparing input files for DFT calculation software.
+[🇯🇵 日本語 (Japanese)](#japanese)
+
+**MoleditPy** is a **programmable** and cross-platform molecular editor built in Python. It streamlines the workflow from 2D drawing to 3D visualization, making it an **ideal tool for rapidly preparing input files for DFT calculations**. Designed as an **open platform**, it also allows users to freely extend its capabilities, writing custom Python scripts to manipulate molecular data, automate tasks, or integrate new cheminformatics algorithms seamlessly.
 
 **Author**: HiroYokoyama
 **License**: GPL-v3
@@ -714,7 +716,7 @@ Dynamic: license-file
 -----
 ![](img/icon.png)
 ![](img/screenshot.png)
------
+
 
 ## Overview
 
@@ -759,7 +761,14 @@ This application combines a modern GUI built with **PyQt6**, powerful cheminform
       * Import structures from **MOL/SDF** files or **SMILES** strings.
       * Export 3D structures to **MOL** or **XYZ** formats, which are compatible with most DFT calculation software.
       * Export 2D and 3D views as high-resolution PNG images.
-  * **Plugin System:** Extend functionality with Python scripts. Place custom scripts in `~/.moleditpy/plugins` to add new features to the "Plugin" menu.
+      * Export 2D and 3D views as high-resolution PNG images.
+
+### 4. Programmable & Extensible
+
+  * **Python Plugin System:** Drop your Python scripts into the plugin folder, and they instantly become part of the application menu.
+  * **Downloadable Plugins:** Explore and download specialized plugins from the [Plugin Explorer](https://hiroyokoyama.github.io/moleditpy-plugins/explorer/).
+  * **Full API Access:** Plugins have direct access to the `MainWindow`, `RDKit` molecule objects, and `PyGraphics` items, allowing for limitless customization.
+  * **Rapid Prototyping:** Ideal for researchers who need to test new algorithms or workflow automations on the fly.
 
 ## Installation and Execution
 
@@ -821,9 +830,11 @@ This project is licensed under the **GNU General Public License v3.0 (GPL-v3)**.
 
 -----
 
+<div id="japanese"></div>
+
 # MoleditPy — A Python Molecular Editor
 
-**MoleditPy**は、Pythonで構築されたクロスプラットフォームかつ直感的な分子エディターです。2Dでの分子描画から3D構造の可視化・編集、さらにはインタラクティブな幾何学的操作まで、シームレスなワークフローを提供します。その強力な編集機能とエクスポート機能により、**DFT計算ソフトウェアのインプット作成に最適なツール**です。
+**MoleditPy**は、Pythonで構築された**機能拡張が自由自在な**分子エディタープラットフォームです。2D描画から3Dへの変換により、**DFT計算用インプットの迅速な作成に最適なツール**であると同時に、**Pythonスクリプトを用いて必要な機能をユーザー自身が手軽に追加・開発できる**柔軟な環境を提供します。
 
 **作者**: HiroYokoyama
 **ライセンス**: GPL-v3
@@ -874,7 +885,14 @@ This project is licensed under the **GNU General Public License v3.0 (GPL-v3)**.
       * **MOL/SDF**ファイルや**SMILES**文字列から構造をインポートできます。
       * 3D構造を**MOL**または**XYZ**形式でエクスポートでき、これらは多くのDFT計算ソフトウェアと互換性があります。
       * 2Dおよび3Dビューを高解像度のPNG画像としてエクスポートできます。
-  * **プラグインシステム:** Pythonスクリプトで機能を拡張できます。`~/.moleditpy/plugins` にスクリプトを配置することで、「Plugin」メニューに独自の機能を追加できます。
+      * 2Dおよび3Dビューを高解像度のPNG画像としてエクスポートできます。
+
+### 4. プログラマブルで拡張可能
+
+  * **Pythonプラグインシステム:** Pythonスクリプトをプラグインフォルダに入れるだけで、即座にアプリケーションメニューの一部として機能します。
+  * **プラグインのダウンロード:** [Plugin Explorer](https://hiroyokoyama.github.io/moleditpy-plugins/explorer/) から特化したプラグインを探索・ダウンロードできます。
+  * **フルAPIアクセス:** プラグインは `MainWindow`、`RDKit` 分子オブジェクト、`PyGraphics` アイテムに直接アクセスでき、無限のカスタマイズが可能です。
+  * **迅速なプロトタイピング:** 新しいアルゴリズムやワークフローの自動化をその場でテストしたい研究者に最適です。
 
 ## インストールと実行
 
