@@ -219,7 +219,15 @@ class MainWindowView3d(object):
         if current_style == 'cpk':
             atom_scale = self.settings.get('cpk_atom_scale', 1.0)
             resolution = self.settings.get('cpk_resolution', 32)
-            rad = np.array([pt.GetRvdw(pt.GetAtomicNumber(s)) * atom_scale for s in sym])
+            # Safe VDW lookup to handle custom elements like 'Bq'
+            def get_safe_rvdw(s):
+                try:
+                    r = pt.GetRvdw(pt.GetAtomicNumber(s))
+                    return r if r > 0.1 else 1.5
+                except Exception:
+                    return 1.5
+
+            rad = np.array([get_safe_rvdw(s) * atom_scale for s in sym])
         elif current_style == 'wireframe':
             # Wireframeでは原子を描画しないので、この設定は実際には使用されない
             resolution = self.settings.get('wireframe_resolution', 6)
