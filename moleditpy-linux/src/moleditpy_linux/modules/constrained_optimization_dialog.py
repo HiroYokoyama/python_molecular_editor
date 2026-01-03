@@ -123,7 +123,6 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
         self.setWindowTitle("Constrained Optimization")
         self.setModal(False)
         self.resize(450, 500)
-        self.setWindowFlags(Qt.WindowType.Window | Qt.WindowType.WindowStaysOnTopHint)
         layout = QVBoxLayout(self)
 
         # 1. 説明
