@@ -45,7 +45,6 @@ class AlignPlaneDialog(Dialog3DPickingMixin, QDialog):
         plane_names = {'xy': 'XY', 'xz': 'XZ', 'yz': 'YZ'}
         self.setWindowTitle(f"Align to {plane_names[self.plane]} Plane")
         self.setModal(False)  # モードレスにしてクリックを阻害しない
-        self.setWindowFlags(Qt.WindowType.Window | Qt.WindowType.WindowStaysOnTopHint)  # 常に前面表示
         layout = QVBoxLayout(self)
         
         # Instructions

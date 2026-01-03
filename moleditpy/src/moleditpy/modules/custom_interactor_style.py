@@ -42,6 +42,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
         self._mouse_press_pos = None
 
         self.AddObserver("LeftButtonPressEvent", self.on_left_button_down)
+        #self.AddObserver("LeftButtonDoubleClickEvent", self.on_left_button_down)
         self.AddObserver("RightButtonPressEvent", self.on_right_button_down)
         self.AddObserver("MouseMoveEvent", self.on_mouse_move)
         self.AddObserver("LeftButtonReleaseEvent", self.on_left_button_up)
@@ -85,8 +86,12 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                 if 0 <= closest_atom_idx < mw.current_mol.GetNumAtoms():
                     atom = mw.current_mol.GetAtomWithIdx(int(closest_atom_idx))
                     if atom:
-                        atomic_num = atom.GetAtomicNum()
-                        vdw_radius = pt.GetRvdw(atomic_num)
+                        try:
+                            atomic_num = atom.GetAtomicNum()
+                            vdw_radius = pt.GetRvdw(atomic_num)
+                            if vdw_radius < 0.1: vdw_radius = 1.5
+                        except Exception:
+                            vdw_radius = 1.5
                         click_threshold = vdw_radius * 1.5
                         
                         if distances[closest_atom_idx] < click_threshold:
@@ -148,11 +153,11 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                     move_group_dialog.update_display()
                     return
             else:
-                # 原子以外をクリック - 全選択を解除
-                move_group_dialog.group_atoms.clear()
-                move_group_dialog.selected_atoms.clear()
-                move_group_dialog.clear_atom_labels()
-                move_group_dialog.update_display()
+                # 原子以外をクリック
+                # 即座に解除せず、マウスイベントを追跡して回転かクリックかを判定する
+                self._mouse_press_pos = self.GetInteractor().GetEventPosition()
+                self._mouse_moved_during_drag = False
+
                 # カメラ回転を許可
                 super(CustomInteractorStyle, self).OnLeftButtonDown()
                 return
@@ -166,8 +171,9 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
         # 測定モードが有効な場合の処理
         if mw.measurement_mode and mw.current_mol:
             click_pos = self.GetInteractor().GetEventPosition()
-            self._mouse_press_pos = click_pos  # マウスプレス位置を記録
-            self._mouse_moved_during_drag = False  # 移動フラグをリセット
+            # Note: We do NOT set _mouse_press_pos here initially.
+            # We only set it if we confirm it's a background click (see below).
+            self._mouse_moved_during_drag = False  # Reset drag flag
             
             picker = mw.plotter.picker
             
@@ -185,17 +191,24 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                     # クリック閾値チェック
                     atom = mw.current_mol.GetAtomWithIdx(int(closest_atom_idx))
                     if atom:
-                        atomic_num = atom.GetAtomicNum()
-                        vdw_radius = pt.GetRvdw(atomic_num)
+                        try:
+                            atomic_num = atom.GetAtomicNum()
+                            vdw_radius = pt.GetRvdw(atomic_num)
+                            if vdw_radius < 0.1: vdw_radius = 1.5
+                        except Exception:
+                            vdw_radius = 1.5
                         click_threshold = vdw_radius * 1.5
 
                         if distances[closest_atom_idx] < click_threshold:
                             mw.handle_measurement_atom_selection(int(closest_atom_idx))
                             return  # 原子選択処理完了、カメラ回転は無効
             
+            
             # 測定モードで原子以外をクリックした場合は計測選択をクリア
-            # ただし、これは通常のカメラ回転も許可する
+            # ただし、回転操作（ドラッグ）の場合はクリアしないため、
+            # ここで _mouse_press_pos を記録し、Upイベントで判定する。
             self._is_dragging_atom = False
+            self._mouse_press_pos = click_pos 
             super().OnLeftButtonDown()
             return
         
@@ -219,8 +232,12 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                     # RDKitのMolオブジェクトから原子を安全に取得
                     atom = mw.current_mol.GetAtomWithIdx(int(closest_atom_idx))
                     if atom:
-                        atomic_num = atom.GetAtomicNum()
-                        vdw_radius = pt.GetRvdw(atomic_num)
+                        try:
+                            atomic_num = atom.GetAtomicNum()
+                            vdw_radius = pt.GetRvdw(atomic_num)
+                            if vdw_radius < 0.1: vdw_radius = 1.5
+                        except Exception:
+                            vdw_radius = 1.5
                         click_threshold = vdw_radius * 1.5
 
                         if distances[closest_atom_idx] < click_threshold:
@@ -265,8 +282,12 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                 if 0 <= closest_atom_idx < mw.current_mol.GetNumAtoms():
                     atom = mw.current_mol.GetAtomWithIdx(int(closest_atom_idx))
                     if atom:
-                        atomic_num = atom.GetAtomicNum()
-                        vdw_radius = pt.GetRvdw(atomic_num)
+                        try:
+                            atomic_num = atom.GetAtomicNum()
+                            vdw_radius = pt.GetRvdw(atomic_num)
+                            if vdw_radius < 0.1: vdw_radius = 1.5
+                        except Exception:
+                            vdw_radius = 1.5
                         click_threshold = vdw_radius * 1.5
                         
                         if distances[closest_atom_idx] < click_threshold:
@@ -458,37 +479,23 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                         move_group_dialog.on_atom_picked(clicked_atom)
                     except Exception as e:
                         print(f"Error in toggle: {e}")
-            
-            # 状態をリセット（完全なクリーンアップ）
-            move_group_dialog._is_dragging_group_vtk = False
-            move_group_dialog._drag_start_pos = None
-            move_group_dialog._mouse_moved = False
-            if hasattr(move_group_dialog, '_initial_positions'):
-                delattr(move_group_dialog, '_initial_positions')
-            if hasattr(move_group_dialog, '_drag_atom_idx'):
-                delattr(move_group_dialog, '_drag_atom_idx')
-            
-            # CustomInteractorStyleの状態もクリア
-            self._is_dragging_atom = False
-            self.is_dragging = False
-            self._mouse_moved_during_drag = False
-            self._mouse_press_pos = None
-            
-            try:
-                mw.plotter.setCursor(Qt.CursorShape.ArrowCursor)
-            except Exception:
-                pass
-            return
+        
+        # Move Groupモードでの背景クリック判定（選択解除）
+        # グループドラッグでなく、マウス移動もなかった（＝回転操作でない）場合
+        # かつ、mouse_press_pos が記録されている（背景クリックで開始した）場合
+        if move_group_dialog and not getattr(move_group_dialog, '_is_dragging_group_vtk', False):
+            if not self._mouse_moved_during_drag and self._mouse_press_pos is not None:
+                # 背景クリック -> 選択解除
+                move_group_dialog.group_atoms.clear()
+                move_group_dialog.selected_atoms.clear()
+                move_group_dialog.clear_atom_labels()
+                move_group_dialog.update_display()
 
         # 計測モードで、マウスが動いていない場合（つまりクリック）の処理
+        # _mouse_press_pos が None でない = 背景をクリックしたことを意味する（Downイベントでそう設定したため）
         if mw.measurement_mode and not self._mouse_moved_during_drag and self._mouse_press_pos is not None:
-            click_pos = self.GetInteractor().GetEventPosition()
-            picker = mw.plotter.picker
-            picker.Pick(click_pos[0], click_pos[1], 0, mw.plotter.renderer)
-            
-            # 原子がクリックされていない場合は測定選択をクリア
-            if picker.GetActor() is not mw.atom_actor:
-                mw.clear_measurement_selection()
+             # 背景クリック -> 測定選択をクリア
+             mw.clear_measurement_selection()
 
         if self._is_dragging_atom:
             # カスタムドラッグの後始末
@@ -594,7 +601,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
             # カメラ回転の後始末を親クラスに任せます
             super().OnLeftButtonUp()
 
-        # 状態をリセット（完全なクリーンアップ）
+        # 状態をリセット（完全なクリーンアップ） - すべてのチェックの後に実行
         self._is_dragging_atom = False
         self.is_dragging = False
         self._mouse_press_pos = None
@@ -602,12 +609,6 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
         
         # Move Group関連の状態もクリア
         try:
-            move_group_dialog = None
-            for widget in QApplication.topLevelWidgets():
-                if isinstance(widget, MoveGroupDialog) and widget.isVisible():
-                    move_group_dialog = widget
-                    break
-            
             if move_group_dialog:
                 move_group_dialog._is_dragging_group_vtk = False
                 move_group_dialog._drag_start_pos = None
@@ -619,12 +620,11 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
         except Exception:
             pass
         
-        # ピックリセットは測定モードで実際に問題が発生した場合のみ行う
-        # （通常のドラッグ回転では行わない）
-        
         # ボタンを離した後のカーソル表示を最新の状態に更新
-        self.on_mouse_move(obj, event)
-
+        try:
+             mw.plotter.setCursor(Qt.CursorShape.ArrowCursor)
+        except Exception:
+             pass
         # 2Dビューにフォーカスを戻し、ショートカットキーなどが使えるようにする
         if mw and mw.view_2d:
             mw.view_2d.setFocus()

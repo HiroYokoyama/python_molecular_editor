@@ -31,6 +31,11 @@ class Dialog3DPickingMixin:
             event.type() == QEvent.Type.MouseButtonPress and 
             event.button() == Qt.MouseButton.LeftButton):
             
+            # Start tracking for smart selection (click vs drag)
+            self._mouse_press_pos = event.pos()
+            self._mouse_moved = False
+
+            
             try:
                 # VTKイベント座標を取得（元のロジックと同じ）
                 interactor = self.main_window.plotter.interactor
@@ -48,8 +53,12 @@ class Dialog3DPickingMixin:
                         # クリック閾値チェック（元のロジックと同じ）
                         atom = self.mol.GetAtomWithIdx(int(closest_atom_idx))
                         if atom:
-                            atomic_num = atom.GetAtomicNum()
-                            vdw_radius = pt.GetRvdw(atomic_num)
+                            try:
+                                atomic_num = atom.GetAtomicNum()
+                                vdw_radius = pt.GetRvdw(atomic_num)
+                                if vdw_radius < 0.1: vdw_radius = 1.5
+                            except Exception:
+                                vdw_radius = 1.5
                             click_threshold = vdw_radius * 1.5
 
                             if distances[closest_atom_idx] < click_threshold:
@@ -63,15 +72,14 @@ class Dialog3DPickingMixin:
                                 except Exception:
                                     pass
                                 self.on_atom_picked(int(closest_atom_idx))
+                                
+                                # We picked an atom, so stop tracking for background click
+                                self._mouse_press_pos = None
                                 return True
                 
-                # 原子以外をクリックした場合は選択をクリア（Measurementモードと同じロジック）
-                if hasattr(self, 'clear_selection'):
-                    self.clear_selection()
-                # We did not actually pick an atom; do NOT consume the event here so
-                # the interactor and CustomInteractorStyle can handle camera rotation
-                # and other behaviors. Returning False (or calling the base
-                # implementation) allows normal processing to continue.
+                # 原子以外をクリックした場合
+                # 即時には解除せず、回転操作（ドラッグ）を許可する。
+                # 実際の解除は MouseButtonRelease イベントで行う。
                 return False
                     
             except Exception as e:
@@ -79,6 +87,31 @@ class Dialog3DPickingMixin:
                 # On exception, don't swallow the event either — let the normal
                 # event pipeline continue so the UI remains responsive.
                 return False
+
+        # Add movement tracking for smart selection
+        elif (obj == self.main_window.plotter.interactor and 
+              event.type() == QEvent.Type.MouseMove):
+            if hasattr(self, '_mouse_press_pos') and self._mouse_press_pos is not None:
+                # Check if moved significantly
+                diff = event.pos() - self._mouse_press_pos
+                if diff.manhattanLength() > 3:
+                     self._mouse_moved = True
+
+        # Add release handling for smart selection
+        elif (obj == self.main_window.plotter.interactor and 
+              event.type() == QEvent.Type.MouseButtonRelease and 
+              event.button() == Qt.MouseButton.LeftButton):
+              
+            if hasattr(self, '_mouse_press_pos') and self._mouse_press_pos is not None:
+                if not getattr(self, '_mouse_moved', False):
+                    # Pure click (no drag) on background -> Clear selection
+                    if hasattr(self, 'clear_selection'):
+                        self.clear_selection()
+                
+                # Reset state
+                self._mouse_press_pos = None
+                self._mouse_moved = False
+
 
         return super().eventFilter(obj, event)
     

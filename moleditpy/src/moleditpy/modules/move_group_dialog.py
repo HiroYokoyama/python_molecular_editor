@@ -42,7 +42,6 @@ class MoveGroupDialog(Dialog3DPickingMixin, QDialog):
     def init_ui(self):
         self.setWindowTitle("Move Group")
         self.setModal(False)
-        self.setWindowFlags(Qt.WindowType.Window | Qt.WindowType.WindowStaysOnTopHint)
         self.resize(300,400)  # ウィンドウサイズを設定
         layout = QVBoxLayout(self)
         
@@ -195,9 +194,12 @@ class MoveGroupDialog(Dialog3DPickingMixin, QDialog):
                         if 0 <= closest_atom_idx < self.mol.GetNumAtoms():
                             atom = self.mol.GetAtomWithIdx(int(closest_atom_idx))
                             if atom:
-                                atomic_num = atom.GetAtomicNum()
-                                pt = Chem.GetPeriodicTable()
-                                vdw_radius = pt.GetRvdw(atomic_num)
+                                try:
+                                    atomic_num = atom.GetAtomicNum()
+                                    vdw_radius = pt.GetRvdw(atomic_num)
+                                    if vdw_radius < 0.1: vdw_radius = 1.5
+                                except Exception:
+                                    vdw_radius = 1.5
                                 click_threshold = vdw_radius * 1.5
                                 
                                 if distances[closest_atom_idx] < click_threshold:
@@ -349,7 +351,7 @@ class MoveGroupDialog(Dialog3DPickingMixin, QDialog):
                 return False
         
         # その他のイベントは親クラスに渡す
-        return False
+        return super().eventFilter(obj, event)
     
     def on_atom_picked(self, atom_idx):
         """原子がピックされたときに、その原子が属する連結成分全体を選択（複数グループ対応）"""

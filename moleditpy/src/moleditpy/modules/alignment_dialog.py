@@ -47,7 +47,6 @@ class AlignmentDialog(Dialog3DPickingMixin, QDialog):
         axis_names = {'x': 'X-axis', 'y': 'Y-axis', 'z': 'Z-axis'}
         self.setWindowTitle(f"Align to {axis_names[self.axis]}")
         self.setModal(False)  # モードレスにしてクリックを阻害しない
-        self.setWindowFlags(Qt.WindowType.Window | Qt.WindowType.WindowStaysOnTopHint)  # 常に前面表示
         layout = QVBoxLayout(self)
         
         # Instructions

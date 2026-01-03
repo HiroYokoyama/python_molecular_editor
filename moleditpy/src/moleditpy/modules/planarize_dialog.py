@@ -46,7 +46,6 @@ class PlanarizeDialog(Dialog3DPickingMixin, QDialog):
     def init_ui(self):
         self.setWindowTitle("Planarize")
         self.setModal(False)
-        self.setWindowFlags(Qt.WindowType.Window | Qt.WindowType.WindowStaysOnTopHint)
         layout = QVBoxLayout(self)
 
         instruction_label = QLabel("Click atoms in the 3D view to select them for planarization (minimum 3 required).")

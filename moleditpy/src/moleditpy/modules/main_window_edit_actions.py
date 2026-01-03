@@ -1211,7 +1211,10 @@ class MainWindowEditActions(object):
                 
                 atom = mol.GetAtomWithIdx(idx)
                 # GetRvdw() はファンデルワールス半径を返す
-                vdw_radii.append(pt.GetRvdw(atom.GetAtomicNum()))
+                try:
+                    vdw_radii.append(pt.GetRvdw(atom.GetAtomicNum()))
+                except RuntimeError:
+                    vdw_radii.append(1.5)
 
             positions_np = np.array(positions)
             vdw_radii_np = np.array(vdw_radii)

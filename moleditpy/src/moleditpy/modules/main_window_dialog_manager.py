@@ -263,7 +263,7 @@ class MainWindowDialogManager(object):
             self.measurement_action.setChecked(False)
             self.toggle_measurement_mode(False)
         
-        dialog = TranslationDialog(self.current_mol, self)
+        dialog = TranslationDialog(self.current_mol, self, parent=self)
         self.active_3d_dialogs.append(dialog)  # 参照を保持
         dialog.show()  # execではなくshowを使用してモードレス表示
         dialog.accepted.connect(lambda: self.statusBar().showMessage("Translation applied."))
@@ -279,7 +279,7 @@ class MainWindowDialogManager(object):
             self.measurement_action.setChecked(False)
             self.toggle_measurement_mode(False)
         
-        dialog = MoveGroupDialog(self.current_mol, self)
+        dialog = MoveGroupDialog(self.current_mol, self, parent=self)
         self.active_3d_dialogs.append(dialog)
         dialog.show()
         dialog.accepted.connect(lambda: self.statusBar().showMessage("Group transformation applied."))
@@ -302,7 +302,7 @@ class MainWindowDialogManager(object):
             self.measurement_action.setChecked(False)
             self.toggle_measurement_mode(False)
         
-        dialog = AlignPlaneDialog(self.current_mol, self, plane, preselected_atoms)
+        dialog = AlignPlaneDialog(self.current_mol, self, plane, preselected_atoms, parent=self)
         self.active_3d_dialogs.append(dialog)  # 参照を保持
         dialog.show()  # execではなくshowを使用してモードレス表示
         dialog.accepted.connect(lambda: self.statusBar().showMessage(f"Atoms alignd to {plane.upper()} plane."))
@@ -325,7 +325,7 @@ class MainWindowDialogManager(object):
             self.measurement_action.setChecked(False)
             self.toggle_measurement_mode(False)
 
-        dialog = PlanarizeDialog(self.current_mol, self, preselected_atoms)
+        dialog = PlanarizeDialog(self.current_mol, self, preselected_atoms, parent=self)
         self.active_3d_dialogs.append(dialog)
         dialog.show()
         dialog.accepted.connect(lambda: self.statusBar().showMessage("Selection planarized to best-fit plane."))
@@ -348,7 +348,7 @@ class MainWindowDialogManager(object):
             self.measurement_action.setChecked(False)
             self.toggle_measurement_mode(False)
         
-        dialog = AlignmentDialog(self.current_mol, self, axis, preselected_atoms)
+        dialog = AlignmentDialog(self.current_mol, self, axis, preselected_atoms, parent=self)
         self.active_3d_dialogs.append(dialog)  # 参照を保持
         dialog.show()  # execではなくshowを使用してモードレス表示
         dialog.accepted.connect(lambda: self.statusBar().showMessage(f"Atoms aligned to {axis.upper()}-axis."))
@@ -371,7 +371,7 @@ class MainWindowDialogManager(object):
             self.measurement_action.setChecked(False)
             self.toggle_measurement_mode(False)
         
-        dialog = BondLengthDialog(self.current_mol, self, preselected_atoms)
+        dialog = BondLengthDialog(self.current_mol, self, preselected_atoms, parent=self)
         self.active_3d_dialogs.append(dialog)  # 参照を保持
         dialog.show()  # execではなくshowを使用してモードレス表示
         dialog.accepted.connect(lambda: self.statusBar().showMessage("Bond length adjusted."))
@@ -394,7 +394,7 @@ class MainWindowDialogManager(object):
             self.measurement_action.setChecked(False)
             self.toggle_measurement_mode(False)
         
-        dialog = AngleDialog(self.current_mol, self, preselected_atoms)
+        dialog = AngleDialog(self.current_mol, self, preselected_atoms, parent=self)
         self.active_3d_dialogs.append(dialog)  # 参照を保持
         dialog.show()  # execではなくshowを使用してモードレス表示
         dialog.accepted.connect(lambda: self.statusBar().showMessage("Angle adjusted."))
@@ -417,7 +417,7 @@ class MainWindowDialogManager(object):
             self.measurement_action.setChecked(False)
             self.toggle_measurement_mode(False)
         
-        dialog = DihedralDialog(self.current_mol, self, preselected_atoms)
+        dialog = DihedralDialog(self.current_mol, self, preselected_atoms, parent=self)
         self.active_3d_dialogs.append(dialog)  # 参照を保持
         dialog.show()  # execではなくshowを使用してモードレス表示
         dialog.accepted.connect(lambda: self.statusBar().showMessage("Dihedral angle adjusted."))
@@ -453,7 +453,7 @@ class MainWindowDialogManager(object):
             self.measurement_action.setChecked(False)
             self.toggle_measurement_mode(False)
         
-        dialog = ConstrainedOptimizationDialog(self.current_mol, self)
+        dialog = ConstrainedOptimizationDialog(self.current_mol, self, parent=self)
         self.active_3d_dialogs.append(dialog)  # 参照を保持
         dialog.show()  # モードレス表示
         dialog.finished.connect(lambda: self.remove_dialog_from_list(dialog))
