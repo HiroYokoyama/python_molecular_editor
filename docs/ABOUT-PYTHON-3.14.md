@@ -1,22 +1,38 @@
-English
-# ⚠️ Notice Regarding Python 3.14 Installation Issues
-Users attempting to install this project with Python 3.14 may encounter installation failures.
-## The Reason
-The issue stems from a specific dependency conflict. Some package, a dependency of this project, requires an older version of NumPy (e.g., numpy<2.0).
-On Python 3.14, there are no pre-compiled binary packages (wheels) available for these older NumPy versions.
-Consequently, pip attempts to build this older NumPy from source. This process requires a C/C++ compiler (like Visual Studio Build Tools on Windows) and will fail on most standard user environments, leading to a compilation error.
-## Recommendation
-To avoid this compilation issue, we strongly recommend using Python 3.13 for this project.
-With Python 3.13, pip can find pre-compiled wheels for both openbabel-wheel and the specific older version of NumPy it requires, ensuring a smooth installation without the need for a local compiler environment.
+# Python Version Support / Python バージョンのサポートについて
 
+> [!NOTE]
+> Python 3.14 Support Status
+> Python 3.14 のサポート状況について
 
-日本語 (Japanese)
-# ⚠️ Python 3.14 でのインストールに関する注意喚起
-Python 3.14 環境でこのプロジェクトをインストールしようとすると、問題が発生する可能性があります。
-## 理由
-この問題は、特定の依存関係の競合が原因です。当プロジェクトが依存しているパッケージが、古いバージョンのNumPy（例：numpy<2.0）を要求します。
-しかし、Python 3.14環境では、この古いバージョンのNumPyに対応したコンパイル済みのバイナリパッケージ（Wheel）が提供されていません。
-その結果、pipは古いNumPyをソースコードからビルドしようと試みます。このプロセスにはC/C++コンパイラ（WindowsにおけるVisual Studio Build Toolsなど）が必要であり、多くのユーザー環境ではこのビルドが失敗し、コンパイルエラーに至ります。
-## 推奨事項
-このコンパイル問題を回避するため、このプロジェクトでは Python 3.13 を使用することを強く推奨します。
-Python 3.13環境であれば、pipがopenbabel-wheelと、それが必要とする古いNumPyの両方に対応したコンパイル済みWheelを見つけることができるため、ローカルでのコンパイル作業なしにスムーズなインストールが可能です。
+## English
+
+### Compatibility Notice
+Moleditpy currently fully supports Python 3.9 through 3.13.
+Support for Python 3.14 is currently pending.
+
+### Technical Details
+This application relies on openbabel-wheel for core functionality.
+Currently, pre-compiled binary wheels compatible with Python 3.14 are not yet available from the upstream source.
+
+Installing on Python 3.14 will trigger a compilation from source, which may fail due to complex system requirements. To ensure a stable experience, installation is restricted to Python 3.13 and earlier until compatible wheels become available.
+
+### Recommendation
+Please use Python 3.13 (or earlier).
+We will update our dependency requirements as soon as the upstream ecosystem supports Python 3.14.
+
+---
+
+## 日本語
+
+### 互換性のお知らせ
+Moleditpy は現在、Python 3.9 から 3.13 までの動作を完全にサポートしています。
+Python 3.14 への対応は、現在待機中です。
+
+### 技術的な背景
+本アプリケーションは openbabel-wheel に依存していますが、現時点では Python 3.14 と互換性のあるバイナリ（Wheel）がまだ利用可能になっていません。
+
+Python 3.14 環境では、ソースコードからのビルドが必要となり、インストールが不安定になる可能性があります。そのため、互換性のあるバイナリが公開されるまでの間、安全のために Python 3.13 以下への制限を設けています。
+
+### 推奨環境
+Python 3.13（またはそれ以前）をご利用ください。
+上流のライブラリ環境が Python 3.14 に対応次第、速やかに制限を解除する予定です。
