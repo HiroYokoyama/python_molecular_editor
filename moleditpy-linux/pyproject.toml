@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "MoleditPy-linux"
 
-version = "2.2.6"
+version = "2.3.0"
 
 license = {file = "LICENSE"}
 
@@ -17,7 +17,7 @@ description = "A cross-platform, simple, and intuitive molecular structure edito
 
 readme = "README.md"
 
-requires-python = ">=3.9, <3.14"
+requires-python = ">=3.9, <3.15"
 
 classifiers = [
     "Programming Language :: Python :: 3",
