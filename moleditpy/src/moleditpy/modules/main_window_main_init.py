@@ -1878,38 +1878,62 @@ class MainWindowMainInit(object):
             no_plugin_action.setEnabled(False)
             plugin_menu.addAction(no_plugin_action)
         else:
-            # Sort plugins: directories first (to create menus), then alphabetical by name
-            plugins.sort(key=lambda x: (x.get('rel_folder', ''), x['name']))
+            # Sort plugins: 
+            # 1. Categories (A-Z)
+            # 2. Within Category: Items (A-Z)
+            # 3. Root items (A-Z)
             
-            # Dictionary to keep track of created submenus: path -> QMenu
-            menus = { "": plugin_menu }
-
+            # Group plugins by category
+            categorized_plugins = {}
+            root_plugins = []
+            
             for p in plugins:
-                # Only add legacy plugins (with 'run' function) to the generic Plugins menu.
                 if hasattr(p['module'], 'run'):
-                    rel_folder = p.get('rel_folder', '')
-                    # Get or create the parent menu for this plugin
-                    parent_menu = menus.get("") # Start at root
-                    
-                    if rel_folder:
-                        # Split path and traverse/create submenus
-                        parts = rel_folder.split(os.sep)
-                        current_path = ""
-                        for part in parts:
-                            new_path = os.path.join(current_path, part) if current_path else part
-                            
-                            if new_path not in menus:
-                                # Create new submenu
-                                sub_menu = parent_menu.addMenu(part)
-                                menus[new_path] = sub_menu
-                            
-                            parent_menu = menus[new_path]
-                            current_path = new_path
+                    category = p.get('category', p.get('rel_folder', '')).strip()
+                    if category:
+                        if category not in categorized_plugins:
+                            categorized_plugins[category] = []
+                        categorized_plugins[category].append(p)
+                    else:
+                        root_plugins.append(p)
+            
+            # Sort categories
+            sorted_categories = sorted(categorized_plugins.keys())
+            
+            # Build menu: Categories first
+            for cat in sorted_categories:
+                # Create/Get Category Menu (Nested support)
+                parts = cat.split(os.sep)
+                parent_menu = plugin_menu
+                
+                # Traverse/Create nested menus
+                for part in parts:
+                    found_sub = False
+                    for act in parent_menu.actions():
+                        if act.menu() and act.text().replace('&', '') == part:
+                            parent_menu = act.menu()
+                            found_sub = True
+                            break
+                    if not found_sub:
+                        parent_menu = parent_menu.addMenu(part)
 
-                    # Add action to the resolved parent_menu
+                # Add items to the leaf category menu (Sorted A-Z)
+                cat_items = sorted(categorized_plugins[cat], key=lambda x: x['name'])
+                for p in cat_items:
                     action = QAction(p['name'], self)
-                    action.triggered.connect(lambda checked, mod=p['module']: self.plugin_manager.run_plugin(mod, self)) 
+                    action.triggered.connect(lambda checked, mod=p['module']: self.plugin_manager.run_plugin(mod, self))
                     parent_menu.addAction(action)
+
+            # Add separator if needed  <-- REMOVED per user request
+            # if sorted_categories and root_plugins:
+            #      plugin_menu.addSeparator()
+
+            # Build menu: Root items last (Sorted A-Z)
+            root_plugins.sort(key=lambda x: x['name'])
+            for p in root_plugins:
+                action = QAction(p['name'], self)
+                action.triggered.connect(lambda checked, mod=p['module']: self.plugin_manager.run_plugin(mod, self))
+                plugin_menu.addAction(action)
 
         # 4. Integrate Export Actions into Export Button and Menu
         # 4. Integrate Export Actions into Export Button AND Main File->Export Menu
