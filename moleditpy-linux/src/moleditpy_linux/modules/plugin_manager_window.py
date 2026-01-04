@@ -18,6 +18,7 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtCore import Qt, QMimeData, QUrl
 from PyQt6.QtGui import QDragEnterEvent, QDropEvent, QDesktopServices
+import shutil
 
 class PluginManagerWindow(QDialog):
     def __init__(self, plugin_manager, parent=None):
@@ -33,8 +34,7 @@ class PluginManagerWindow(QDialog):
     def init_ui(self):
         layout = QVBoxLayout(self)
         
-        # Header / Instruction
-        lbl_info = QLabel("Drag & Drop .py files here to install plugins.")
+        lbl_info = QLabel("Drag & Drop .py or .zip files here to install plugins.")
         lbl_info.setStyleSheet("color: gray; font-style: italic;")
         layout.addWidget(lbl_info)
 
@@ -152,16 +152,31 @@ class PluginManagerWindow(QDialog):
             filepath = plugin.get('filepath')
             
             if filepath and os.path.exists(filepath):
-               reply = QMessageBox.question(self, "Remove Plugin", 
-                                            f"Are you sure you want to remove '{plugin.get('name', 'Unknown')}'?\n\nFile: {filepath}\nThis cannot be undone.", 
-                                            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
-               if reply == QMessageBox.StandardButton.Yes:
-                   try:
-                       os.remove(filepath)
-                       self.on_reload(silent=True) # Reload list and plugins
-                       QMessageBox.information(self, "Success", f"Removed '{plugin.get('name', 'Unknown')}'.")
-                   except Exception as e:
-                       QMessageBox.critical(self, "Error", f"Failed to delete file: {e}")
+                # Check if it is a package plugin (based on __init__.py)
+                is_package = os.path.basename(filepath) == "__init__.py"
+                target_path = os.path.dirname(filepath) if is_package else filepath
+                
+                msg = f"Are you sure you want to remove '{plugin.get('name', 'Unknown')}'?"
+                if is_package:
+                    msg += f"\n\nThis will delete the entire folder:\n{target_path}"
+                else:
+                    msg += f"\n\nFile: {filepath}"
+                    
+                msg += "\nThis cannot be undone."
+
+                reply = QMessageBox.question(self, "Remove Plugin", msg, 
+                                             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+                if reply == QMessageBox.StandardButton.Yes:
+                    try:
+                        if is_package:
+                             shutil.rmtree(target_path)
+                        else:
+                             os.remove(target_path)
+                        
+                        self.on_reload(silent=True) # Reload list and plugins
+                        QMessageBox.information(self, "Success", f"Removed '{plugin.get('name', 'Unknown')}'.")
+                    except Exception as e:
+                        QMessageBox.critical(self, "Error", f"Failed to delete plugin: {e}")
             else:
                QMessageBox.warning(self, "Error", f"Plugin file not found:\n{filepath}")
 
@@ -189,9 +204,47 @@ class PluginManagerWindow(QDialog):
         errors = []
         for url in event.mimeData().urls():
             file_path = url.toLocalFile()
-            if os.path.isfile(file_path) and file_path.endswith('.py'):
+            
+            is_valid = False
+            is_zip = False
+            is_folder = False
+            
+            if os.path.isfile(file_path):
+                # Special handling: If user drops __init__.py, assume they want to install the package (folder)
+                if os.path.basename(file_path) == "__init__.py":
+                    file_path = os.path.dirname(file_path)
+                    is_valid = True
+                    is_folder = True
+                elif file_path.endswith('.py'):
+                    is_valid = True
+                elif file_path.endswith('.zip'):
+                    is_valid = True
+                    is_zip = True
+            
+            if os.path.isdir(file_path):
+                # Check for __init__.py to confirm it's a plugin package? 
+                # Or just assume any folder is fair game (could be category folder too?)
+                # We'll allow any folder and let manager handle it.
+                is_valid = True
+                is_folder = True
+
+            if is_valid:
                 # Extract info and confirm
-                info = self.plugin_manager.get_plugin_info_safe(file_path)
+                info = {'name': os.path.basename(file_path), 'version': 'Unknown', 'author': 'Unknown', 'description': ''}
+                
+                if is_folder:
+                     info['description'] = "Folder Plugin / Category"
+                     # Try to parse __init__.py if it exists
+                     init_path = os.path.join(file_path, "__init__.py")
+                     if os.path.exists(init_path):
+                         info = self.plugin_manager.get_plugin_info_safe(init_path)
+                         info['description'] += f" (Package: {info['name']})"
+                         
+                elif is_zip:
+                     info['description'] = "ZIP Package Plugin"
+                elif file_path.endswith('.py'):
+                     info = self.plugin_manager.get_plugin_info_safe(file_path)
+                     
                 msg = (f"Do you want to install this plugin?\n\n"
                        f"Name: {info['name']}\n"
                        f"Author: {info['author']}\n"
