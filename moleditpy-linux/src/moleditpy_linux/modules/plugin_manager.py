@@ -149,7 +149,6 @@ class PluginManager:
                 dest_path = os.path.join(self.plugin_dir, filename)
                 if os.path.exists(dest_path):
                     if os.path.isdir(dest_path):
-                        import shutil
                         shutil.rmtree(dest_path)
                 shutil.copy2(file_path, dest_path)
                 msg = f"Installed {filename}"
