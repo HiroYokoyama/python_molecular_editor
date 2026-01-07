@@ -219,15 +219,17 @@ You can select the display style from the **3D Style** dropdown menu on the righ
 
 Official sample plugins are available in the [GitHub repository](https://github.com/HiroYokoyama/moleditpy-plugins). You can download them and place them in your plugins directory (`~/.moleditpy/plugins`) to use them.
 
-**Examples of Examples of **Examples of Availa
+**Examples of Available Plugins
 
-  * **Hello World (`hello.py`):** 
-      * A simple demonstration plugin.
-      * **Features:** Displays a "Hello World" message box with basic molecule information.
-  * **MS Spectrum Simulation (`ms_spectrum.py`):** 
-      * Simulates the Mass Spectrum for the currently loaded molecule.
-      * **Features:** Displays Formula, Exact Mass, and an interactive histogram of isotopic distribution. Supports exporting the spectrum plot as an image (PNG/JPG).
+- **Input Generators: Gaussian / ORCA Input Generator Neo**
+    Evolved from simple demos to production-ready tools.
+    * **Gaussian Version:** Supports Link 0 commands, Route sections, and detailed Charge/Multiplicity settings.
+    * **ORCA Version:** Features a Block Builder to assist in constructing complex input blocks.
 
+ - **Advanced Analysis & Vis: Mapped Cube Viewer & MS Spectrum Neo**
+    Powerful tools for visual and numerical analysis of molecular properties.
+    * **Mapped Cube Viewer:** Maps properties (e.g., Electrostatic Potential) onto isosurfaces like electron density.
+    * **MS Spectrum Neo:** Simulates Mass Spectrometry spectra, supporting interactive zooming of isotope distributions and Gaussian broadening.
 
 ### 6.6. 3D Measurement Function ("3D Select" Mode)
 
@@ -431,6 +433,7 @@ Click the **Apply** button to reflect changes immediately, or the **OK** button 
 You can check the version information from the `Help` \> `About` menu.
 
 -----
+
 
 
 
