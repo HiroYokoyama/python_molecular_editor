@@ -14,6 +14,8 @@ While features dependent on Open Babel (3D conversion fallback) are unavailable,
 
 For complex molecules that require Open Babel fallback, 3D conversion may fail. In such cases, please try changing `3D Conversion` to `Direct` in the `Settings`. You can also temporarily switch to this mode by right-clicking the `Convert 2D to 3D` button.
 
+Note: As `pip` is not included in this package, plugins requiring external dependencies cannot be executed.
+
 
 ## Download
 
@@ -51,6 +53,7 @@ To remove the software, open Windows "Settings" > "Apps" > "Installed apps," sel
 ## Disclaimer
 
 The developer assumes no responsibility for any damages arising from the use of this software. Please use it at your own risk.
+
 
 
 
