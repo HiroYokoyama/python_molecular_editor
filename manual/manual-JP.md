@@ -215,17 +215,19 @@ MoleditPy は、描画した 2D 構造から 3D 構造を生成し、表示、�
 
 ### 6.5. 公式プラグインリポジトリ
 
-[GitHub リポジトリ](https://github.com/HiroYokoyama/moleditpy-plugins) にて、公式サンプルプラグインが公開されています。これらをダウンロードし、プラグインディレクトリ (`~/.moleditpy/plugins`) に配置することで利用可能になります。
+[GitHub リポジトリ](https://github.com/HiroYokoyama/moleditpy-plugins) にて、公式プラグインが公開されています。これらをダウンロードし、プラグインディレクトリ (`~/.moleditpy/plugins`) に配置することで利用可能になります。
 
 **利用可能なプラグインの例:**
 
-  * **Hello World (`hello.py`):** 
-      * 単純なデモンストレーション用プラグインです。
-      * **機能:** 分子情報を含む「Hello World」メッセージボックスを表示します。
-  * **MS Spectrum Simulation (MS スペクトルシミュレーション) (`ms_spectrum.py`):** 
-      * 現在読み込まれている分子の質量スペクトルをシミュレートします。
-      * **機能:** 分子式、精密質量の表示、同位体分布のインタラクティブなヒストグラム表示。スペクトルプロットの画像エクスポート (PNG/JPG) に対応。
-
+- **計算化学入力作成: Gaussian / ORCA Input Generator Neo**
+    実用的な入力ファイル作成をサポートします。
+    * **Gaussian版:** Link 0 コマンド、Route セクション、電荷・多重度の詳細設定が可能。
+    * **ORCA版:** Block Builder を搭載し、複雑な入力ブロックの構築を支援します。
+    
+- **高度な解析・可視化: Mapped Cube Viewer & MS Spectrum Neo**
+    分子の特性を視覚的・数値的に解析する強力なツール群です。
+    * **Mapped Cube Viewer:** 静電ポテンシャル（ESP）などを電子密度等値面にマッピングして表示します。
+    * **MS Spectrum Neo:** 質量分析スペクトルをシミュレートし、同位体分布の拡大表示やガウス関数によるブロードニングに対応しています。
 
 ### 6.6. 3D 測定機能 ("3D Select" モード)
 
@@ -418,6 +420,7 @@ MoleditPy は、描画した 2D 構造から 3D 構造を生成し、表示、�
 メニューの `Help` \> `About` からバージョン情報を確認できます。
 
 -----
+
 
 
 
