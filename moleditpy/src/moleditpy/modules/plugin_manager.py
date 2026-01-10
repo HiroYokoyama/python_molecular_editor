@@ -46,7 +46,7 @@ class PluginManager:
         # Extended Registries (Added to prevent lazy initialization "monkey patching")
         self.export_actions = [] 
         self.optimization_methods = {}
-        self.file_openers = {}
+        self.file_openers = {} # ext -> list of {'plugin':..., 'callback':..., 'priority':...}
         self.analysis_tools = []
         self.save_handlers = {}
         self.load_handlers = {}
@@ -345,14 +345,23 @@ class PluginManager:
             'plugin': plugin_name, 'callback': callback, 'label': method_name
         }
 
-    def register_file_opener(self, plugin_name, extension, callback):
+    def register_file_opener(self, plugin_name, extension, callback, priority=0):
         # Normalize extension to lowercase
         ext = extension.lower()
         if not ext.startswith('.'):
             ext = '.' + ext
-        self.file_openers[ext] = {
-            'plugin': plugin_name, 'callback': callback
-        }
+            
+        if ext not in self.file_openers:
+            self.file_openers[ext] = []
+            
+        self.file_openers[ext].append({
+            'plugin': plugin_name, 
+            'callback': callback,
+            'priority': priority
+        })
+        
+        # Sort by priority descending
+        self.file_openers[ext].sort(key=lambda x: x['priority'], reverse=True)
 
     # Analysis Tools registration
     def register_analysis_tool(self, plugin_name, label, callback):

@@ -313,12 +313,8 @@ class MainWindowUiManager(object):
                             event.acceptProposedAction()
                             return
                         
-                        # Plugin-registered file openers
-                        if self.plugin_manager and hasattr(self.plugin_manager, 'file_openers'):
-                            for ext in self.plugin_manager.file_openers.keys():
-                                if file_lower.endswith(ext):
-                                    event.acceptProposedAction()
-                                    return
+                        # 2. Plugin drop handlers (Drop専用ハンドラ)
+                        # プラグインが「Dropを受け入れる」と明示している場合のみ許可
                         
                         # Plugin drop handlers (accept more liberally for custom logic)
                         # A plugin drop handler might handle it, so accept
