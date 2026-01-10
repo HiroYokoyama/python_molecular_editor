@@ -104,7 +104,7 @@ class PluginContext:
         """
         self._manager.register_optimization_method(self._plugin_name, method_name, callback)
 
-    def register_file_opener(self, extension: str, callback: Callable[[str], None]):
+    def register_file_opener(self, extension: str, callback: Callable[[str], None], priority: int = 0):
         """
         Register a handler for opening a specific file extension.
         
@@ -112,19 +112,11 @@ class PluginContext:
             extension: File extension including dot, e.g. ".xyz".
             callback: Function taking (file_path) -> None.
                       Should load the file into the main window.
+            priority: Higher priority handlers are tried first (default 0).
         """
-        self._manager.register_file_opener(self._plugin_name, extension, callback)
+        self._manager.register_file_opener(self._plugin_name, extension, callback, priority)
 
-    def register_file_opener(self, extension: str, callback: Callable[[str], None]):
-        """
-        Register a handler for opening a specific file extension.
-        
-        Args:
-            extension: File extension including dot, e.g. ".xyz".
-            callback: Function taking (file_path) -> None.
-                      Should load the file into the main window.
-        """
-        self._manager.register_file_opener(self._plugin_name, extension, callback)
+
 
     def add_analysis_tool(self, label: str, callback: Callable):
         """
