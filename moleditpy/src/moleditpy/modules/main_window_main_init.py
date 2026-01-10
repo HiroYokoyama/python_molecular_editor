@@ -1452,18 +1452,22 @@ class MainWindowMainInit(object):
         # 1. Custom Plugin Openers
         # 1. Custom Plugin Openers
         if ext_with_dot in self.plugin_manager.file_openers:
-            opener = self.plugin_manager.file_openers[ext_with_dot]
-            try:
-                opener['callback'](file_path)
-                self.current_file_path = file_path
-                self.update_window_title()
-                return
-            except Exception as e:
-                print(f"Plugin opener failed: {e}")
-                QMessageBox.warning(self, "Plugin Error", f"Error opening file with plugin '{opener.get('plugin', 'Unknown')}':\n{e}")
-                # Fallback to standard logic if plugin fails? Or stop?
-                # Generally if a plugin claims it, we stop. But here we let it fall through if it errors?
-                # Let's simple check next.
+            openers = self.plugin_manager.file_openers[ext_with_dot]
+            # Iterate through openers (already sorted by priority)
+            for opener_info in openers:
+                try:
+                    callback = opener_info['callback']
+                    # Try to call the opener
+                    callback(file_path)
+                    
+                    self.current_file_path = file_path
+                    self.update_window_title()
+                    return # Success
+                except Exception as e:
+                    print(f"Plugin opener failed for '{opener_info.get('plugin', 'Unknown')}': {e}")
+                    # If this opener fails, try the next one or fall through to default
+                    continue
+        
         
         if file_ext in ['mol', 'sdf']:
             self.load_mol_file_for_3d_viewing(file_path)
@@ -1970,7 +1974,6 @@ class MainWindowMainInit(object):
                      menu.addAction(a)
 
         # 5. Integrate File Openers into Import Menu
-        # 5. Integrate File Openers into Import Menu
         if hasattr(self, 'import_menu') and self.plugin_manager.file_openers:
              # Add separator 
              sep = self.import_menu.addSeparator()
@@ -1978,16 +1981,32 @@ class MainWindowMainInit(object):
              
              # Group by Plugin Name
              plugin_map = {}
-             for ext, info in self.plugin_manager.file_openers.items():
-                 p_name = info.get('plugin', 'Plugin')
-                 if p_name not in plugin_map:
-                     plugin_map[p_name] = {}
-                 plugin_map[p_name][ext] = info['callback']
+             for ext, openers_list in self.plugin_manager.file_openers.items():
+                 # Handles potential multiple openers for same extension
+                 for info in openers_list:
+                     p_name = info.get('plugin', 'Plugin')
+                     if p_name not in plugin_map:
+                         plugin_map[p_name] = {}
+                     # We can only register one callback per plugin per extension in the menu for now.
+                     # Since we process them, let's just take the one present (if a plugin registers multiple openers for same ext - weird but ok)
+                     plugin_map[p_name][ext] = info['callback']
             
-             for p_name, ext_map in plugin_map.items():
+             for p_name, ext_map in sorted(plugin_map.items()):
                  # Create combined label: "Import .ext1/.ext2 (PluginName)..."
                  extensions = sorted(ext_map.keys())
                  ext_str = "/".join(extensions)
+                 
+                 # TRUNCATION LOGIC
+                 MAX_EXT_LEN = 30
+                 if len(ext_str) > MAX_EXT_LEN:
+                     # Find last slash within limit
+                     cutoff = ext_str.rfind('/', 0, MAX_EXT_LEN)
+                     if cutoff != -1:
+                        ext_str = ext_str[:cutoff] + "/..."
+                     else:
+                        # Fallback if first extension is super long (unlikely but safe)
+                        ext_str = ext_str[:MAX_EXT_LEN] + "..."
+                     
                  label = f"Import {ext_str} ({p_name})..."
                  
                  # Create combined filter: "PluginName Files (*.ext1 *.ext2)"
