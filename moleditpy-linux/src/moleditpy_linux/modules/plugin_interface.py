@@ -168,6 +168,16 @@ class PluginContext:
         """
         self._manager.register_3d_style(self._plugin_name, style_name, callback)
 
+    def register_document_reset_handler(self, callback: Callable[[], None]):
+        """
+        Register a callback to be called when a new document is created (File→New).
+        
+        Args:
+            callback: Function with no arguments that resets plugin state.
+        """
+        self._manager.register_document_reset_handler(self._plugin_name, callback)
+
+
 
 
 
