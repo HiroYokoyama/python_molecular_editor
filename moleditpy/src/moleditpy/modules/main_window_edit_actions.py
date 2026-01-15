@@ -641,6 +641,10 @@ class MainWindowEditActions(object):
         # アプリケーションのイベントループを強制的に処理し、画面の再描画を確実に行う
         QApplication.processEvents()
         
+        # Call plugin document reset handlers
+        if hasattr(self, 'plugin_manager') and self.plugin_manager:
+            self.plugin_manager.invoke_document_reset_handlers()
+        
         self.statusBar().showMessage("Cleared all data.")
         
 
