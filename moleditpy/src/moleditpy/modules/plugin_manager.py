@@ -51,6 +51,7 @@ class PluginManager:
         self.save_handlers = {}
         self.load_handlers = {}
         self.custom_3d_styles = {} # style_name -> {'plugin': name, 'callback': func}
+        self.document_reset_handlers = []  # List of callbacks to call on new document
 
     def get_main_window(self):
         return self.main_window
@@ -182,6 +183,7 @@ class PluginManager:
         self.save_handlers = {}
         self.load_handlers = {}
         self.custom_3d_styles = {}
+        self.document_reset_handlers = []
         
         if not os.path.exists(self.plugin_dir):
             return []
@@ -378,6 +380,21 @@ class PluginManager:
         self.custom_3d_styles[style_name] = {
             'plugin': plugin_name, 'callback': callback
         }
+    
+    def register_document_reset_handler(self, plugin_name, callback):
+        """Register callback to be invoked when a new document is created."""
+        self.document_reset_handlers.append({
+            'plugin': plugin_name,
+            'callback': callback
+        })
+    
+    def invoke_document_reset_handlers(self):
+        """Call all registered document reset handlers."""
+        for handler in self.document_reset_handlers:
+            try:
+                handler['callback']()
+            except Exception as e:
+                print(f"Error in document reset handler for {handler['plugin']}: {e}")
 
     def get_plugin_info_safe(self, file_path):
         """Extracts plugin metadata using AST parsing (safe, no execution)."""
