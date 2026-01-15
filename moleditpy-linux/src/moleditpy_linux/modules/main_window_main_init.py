@@ -1851,6 +1851,11 @@ class MainWindowMainInit(object):
                  action_text = text if text else parts[-1]
                  action = QAction(action_text, self)
                  action.triggered.connect(callback)
+                 
+                 # Apply shortcut if provided
+                 if action_def.get('shortcut'):
+                     action.setShortcut(QKeySequence(action_def['shortcut']))
+                 
                  action.setData(PLUGIN_ACTION_TAG) # TAG THE ACTION
                  current_menu.addAction(action)
 
