@@ -13,7 +13,7 @@ DOI: 10.5281/zenodo.17268532
 from PyQt6.QtWidgets import QGraphicsItem
 
 from PyQt6.QtGui import (
-    QPen, QBrush, QColor, QFont, QPainterPath, QFontMetricsF
+    QPen, QBrush, QColor, QFont, QPainterPath, QFontMetricsF, QPainter
 )
 
 from PyQt6.QtCore import (
@@ -45,14 +45,41 @@ class AtomItem(QGraphicsItem):
         self.setPos(pos)
         self.implicit_h_count = 0 
         self.setFlags(QGraphicsItem.GraphicsItemFlag.ItemIsMovable | QGraphicsItem.GraphicsItemFlag.ItemIsSelectable)
-        self.setZValue(1); self.font = QFont(FONT_FAMILY, FONT_SIZE_LARGE, FONT_WEIGHT_BOLD); self.update_style()
+        self.setZValue(1)
+        self.update_style()
         self.setAcceptHoverEvents(True)
         self.hovered = False
         self.has_problem = False 
 
+
+    def update_style(self):
+        # Allow updating font preference dynamically
+        font_size = 20
+        try:
+            if self.scene() and self.scene().views():
+                win = self.scene().views()[0].window()
+                if win and hasattr(win, 'settings'):
+                    font_size = win.settings.get('atom_font_size_2d', 20)
+        except Exception:
+            pass
+        self.font = QFont(FONT_FAMILY, font_size, FONT_WEIGHT_BOLD)
+        self.prepareGeometryChange()
+        
+        self.is_visible = not (self.symbol == 'C' and len(self.bonds) > 0 and self.charge == 0 and self.radical == 0)
+        self.update()
+
     def boundingRect(self):
         # --- paint()メソッドと完全に同じロジックでテキストの位置とサイズを計算 ---
-        font = QFont(FONT_FAMILY, FONT_SIZE_LARGE, FONT_WEIGHT_BOLD)
+        # Get dynamic font size
+        font_size = 20
+        try:
+            if self.scene() and self.scene().views():
+                win = self.scene().views()[0].window()
+                if win and hasattr(win, 'settings'):
+                    font_size = win.settings.get('atom_font_size_2d', 20)
+        except Exception:
+            pass
+        font = QFont(FONT_FAMILY, font_size, FONT_WEIGHT_BOLD)
         fm = QFontMetricsF(font)
 
         hydrogen_part = ""
@@ -164,9 +191,21 @@ class AtomItem(QGraphicsItem):
         return path
 
     def paint(self, painter, option, widget):
+        # Color logic: check if we should use bond color (uniform) or CPK (element-specific)
         color = CPK_COLORS.get(self.symbol, CPK_COLORS['DEFAULT'])
+        try:
+            if self.scene() and self.scene().views():
+                win = self.scene().views()[0].window()
+                if win and hasattr(win, 'settings'):
+                    if win.settings.get('atom_use_bond_color_2d', False):
+                        bond_col = win.settings.get('bond_color_2d', '#222222')
+                        color = QColor(bond_col)
+        except Exception:
+            pass
+
         if self.is_visible:
             # 1. 描画の準備
+            # Ensure correct font is used (self.font should be updated by update_style)
             painter.setFont(self.font)
             fm = painter.fontMetrics()
 
@@ -253,19 +292,29 @@ class AtomItem(QGraphicsItem):
                 offset_x = -symbol_rect.width() // 2
                 text_rect.moveTo(offset_x, -text_rect.height() // 2)
 
-            # 2. 原子記号の背景を白で塗りつぶす
+            # 2. 原子記号の背景を処理（白で塗りつぶす か 透明なら切り抜く）
             if self.scene():
                 bg_brush = self.scene().backgroundBrush()
                 bg_rect = text_rect.adjusted(-5, -8, 5, 8)
-                painter.setBrush(bg_brush)
-                painter.setPen(Qt.PenStyle.NoPen)
-                painter.drawEllipse(bg_rect)
+                
+                if bg_brush.style() == Qt.BrushStyle.NoBrush:
+                    # 背景が透明の場合は、CompositionMode_Clearを使って
+                    # 重なっている結合の線を「消しゴム」のように消す
+                    painter.save()
+                    painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_Clear)
+                    painter.setBrush(QColor(0, 0, 0, 255)) # 色は何でも良い（アルファが重要）
+                    painter.setPen(Qt.PenStyle.NoPen)
+                    painter.drawEllipse(bg_rect)
+                    painter.restore()
+                else:
+                    # 背景がある場合は、その背景色で塗りつぶす（従来通り）
+                    painter.setBrush(bg_brush)
+                    painter.setPen(Qt.PenStyle.NoPen)
+                    painter.drawEllipse(bg_rect)
             
             # 3. 原子記号自体を描画
-            if self.symbol == 'H':
-                painter.setPen(QPen(Qt.GlobalColor.black))
-            else:
-                painter.setPen(QPen(color))
+            # Color is already determined above
+            painter.setPen(QPen(color))
             painter.drawText(text_rect, int(alignment_flag), display_text)
             
             # --- 電荷とラジカルの描画  ---
@@ -316,9 +365,7 @@ class AtomItem(QGraphicsItem):
             painter.setPen(pen)
             painter.drawRect(self.boundingRect())
 
-    def update_style(self):
-        self.is_visible = not (self.symbol == 'C' and len(self.bonds) > 0 and self.charge == 0 and self.radical == 0)
-        self.update()
+
 
 
     # 約203行目 AtomItem クラス内

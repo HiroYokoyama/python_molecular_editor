@@ -672,7 +672,7 @@ class MainWindowExport(object):
             filePath += ".png"
 
         reply = QMessageBox.question(self, 'Choose Background',
-                                     'Do you want a transparent background?\n(Choose "No" for a white background)',
+                                     'Do you want a transparent background?\n(Choose "No" to use the current background color)',
                                      QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No | QMessageBox.StandardButton.Cancel,
                                      QMessageBox.StandardButton.Yes)
 
@@ -706,8 +706,7 @@ class MainWindowExport(object):
 
             if is_transparent:
                 self.scene.setBackgroundBrush(QBrush(Qt.BrushStyle.NoBrush))
-            else:
-                self.scene.setBackgroundBrush(QBrush(QColor("#FFFFFF")))
+            # Else: keep original_background (current 2D background)
 
             rect_to_render = molecule_bounds.adjusted(-20, -20, 20, 20)
 
@@ -719,10 +718,8 @@ class MainWindowExport(object):
                 return
 
             image = QImage(w, h, QImage.Format.Format_ARGB32_Premultiplied)
-            if is_transparent:
-                image.fill(Qt.GlobalColor.transparent)
-            else:
-                image.fill(Qt.GlobalColor.white)
+            # Always fill with transparent; render will paint opaque background if present
+            image.fill(Qt.GlobalColor.transparent)
 
             painter = QPainter()
             ok = painter.begin(image)
