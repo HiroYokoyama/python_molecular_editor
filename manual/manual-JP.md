@@ -392,7 +392,7 @@ MoleditPy は、描画した 2D 構造から 3D 構造を生成し、表示、�
 | `Ctrl`+`O` | Open Project... | 
 | `Ctrl`+`S` | Save Project |
 | `Ctrl`+`Shift`+`S` | Save Project As... |
-| `Ctrl`+`J` | Optimize 2D | 
+| `Ctrl`+`J` | Clean Up 2D | 
 | `Ctrl`+`K` | Convert 2D to 3D | 
 | `Ctrl`+`L` | Optimize 3D | 
 | `Ctrl`+`+` | Zoom In (2D View) |
@@ -420,6 +420,7 @@ MoleditPy は、描画した 2D 構造から 3D 構造を生成し、表示、�
 メニューの `Help` \> `About` からバージョン情報を確認できます。
 
 -----
+
 
 
 
