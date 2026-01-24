@@ -618,18 +618,15 @@ class MainWindowEditActions(object):
             self.rotate_molecule_2d(angle)
 
     def rotate_molecule_2d(self, angle_degrees):
-        """2D分子を指定角度回転させる（選択範囲があればそれのみ、なければ全体）"""
+        """2D分子を指定角度回転させる（選択範囲があればそれのみ）"""
         try:
             # Determine target atoms
             selected_items = self.scene.selectedItems()
             target_atoms = [item for item in selected_items if isinstance(item, AtomItem)]
             
-            # If no selection, rotate everything
+            # If no selection, do not rotate
             if not target_atoms:
-                target_atoms = [data['item'] for data in self.data.atoms.values() if data.get('item') and not sip_isdeleted_safe(data['item'])]
-            
-            if not target_atoms:
-                self.statusBar().showMessage("No atoms to rotate.")
+                self.statusBar().showMessage("No atoms selected to rotate.")
                 return
 
             # Calculate Center
@@ -663,6 +660,8 @@ class MainWindowEditActions(object):
             self.push_undo_state()
             self.statusBar().showMessage(f"Rotated {len(target_atoms)} atoms by {angle_degrees} degrees.")
             self.scene.update()
+            # Force full redraw as requested
+            self.scene.update_all_items()
             
         except Exception as e:
             print(f"Error rotating molecule: {e}")
