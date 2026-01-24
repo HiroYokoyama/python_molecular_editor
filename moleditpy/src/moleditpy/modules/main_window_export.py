@@ -37,9 +37,11 @@ from PyQt6.QtGui import (
     QBrush, QColor, QPainter, QImage
 )
 
+from PyQt6.QtSvg import QSvgGenerator
+
 
 from PyQt6.QtCore import (
-    Qt, QRectF
+    Qt, QRectF, QSize
 )
 
 import pyvista as pv
@@ -748,6 +750,118 @@ class MainWindowExport(object):
             for item, was_visible in items_to_restore.items():
                 item.setVisible(was_visible)
             self.scene.setBackgroundBrush(original_background)
+            if self.view_2d:
+                self.view_2d.viewport().update()
+
+
+
+    def export_2d_svg(self):
+        """2D drawingをSVGとしてエクスポート"""
+        if not self.data.atoms:
+            self.statusBar().showMessage("Nothing to export.")
+            return
+
+        # default filename
+        default_name = "untitled-2d"
+        try:
+            if self.current_file_path:
+                base = os.path.basename(self.current_file_path)
+                name = os.path.splitext(base)[0]
+                default_name = f"{name}-2d"
+        except Exception:
+            default_name = "untitled-2d"
+
+        # prefer same directory
+        default_path = default_name
+        try:
+            if self.current_file_path:
+                default_path = os.path.join(os.path.dirname(self.current_file_path), default_name)
+        except Exception:
+            default_path = default_name
+
+        filePath, _ = QFileDialog.getSaveFileName(self, "Export 2D as SVG", default_path, "SVG Files (*.svg)")
+        if not filePath:
+            return
+
+        if not (filePath.lower().endswith(".svg")):
+            filePath += ".svg"
+
+        # Ask about transparency
+        reply = QMessageBox.question(self, 'Choose Background',
+                                     'Do you want a transparent background?\n(Choose "No" to use the current background color)',
+                                     QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No | QMessageBox.StandardButton.Cancel,
+                                     QMessageBox.StandardButton.Yes)
+
+        if reply == QMessageBox.StandardButton.Cancel:
+            self.statusBar().showMessage("Export cancelled.", 2000)
+            return
+
+        is_transparent = (reply == QMessageBox.StandardButton.Yes)
+
+        try:
+            # 1. Hide non-molecular items if needed (optional, keeping consistent with PNG export)
+            items_to_restore = {}
+            original_background = self.scene.backgroundBrush()
+            
+            all_items = list(self.scene.items())
+            for item in all_items:
+                is_mol_part = isinstance(item, (AtomItem, BondItem))
+                if not (is_mol_part and item.isVisible()):
+                    # Keep measurement items visible if they are part of the scene? 
+                    # For now, let's stick to hiding everything that isn't atom/bond,
+                    # similar to png export logic, or we can decide to export everything visible.
+                    # The PNG export hides non-atom/bond items. Let's follow that for consistency.
+                    items_to_restore[item] = item.isVisible()
+                    item.hide()
+
+            # 2. Calculate bounds
+            molecule_bounds = QRectF()
+            for item in self.scene.items():
+                if isinstance(item, (AtomItem, BondItem)) and item.isVisible():
+                    molecule_bounds = molecule_bounds.united(item.sceneBoundingRect())
+
+            if molecule_bounds.isEmpty() or not molecule_bounds.isValid():
+                self.statusBar().showMessage("Error: Could not determine molecule bounds for export.")
+                # Restore
+                for item, was_visible in items_to_restore.items():
+                    item.setVisible(was_visible)
+                return
+
+            if is_transparent:
+                self.scene.setBackgroundBrush(QBrush(Qt.BrushStyle.NoBrush))
+            
+            # Margin
+            rect_to_render = molecule_bounds.adjusted(-20, -20, 20, 20)
+            
+            width = int(rect_to_render.width())
+            height = int(rect_to_render.height())
+
+            # 3. Setup QSvgGenerator
+            generator = QSvgGenerator()
+            generator.setFileName(filePath)
+            generator.setSize(QSize(width, height))
+            generator.setViewBox(rect_to_render)
+            generator.setTitle("MoleditPy Molecule")
+            
+            # 4. Render
+            painter = QPainter()
+            painter.begin(generator)
+            try:
+                self.scene.render(painter, rect_to_render, rect_to_render)
+            finally:
+                painter.end()
+
+            self.statusBar().showMessage(f"2D view exported to {filePath}")
+
+        except Exception as e:
+            self.statusBar().showMessage(f"An unexpected error occurred during SVG export: {e}")
+
+        finally:
+            # Restore
+            for item, was_visible in items_to_restore.items():
+                item.setVisible(was_visible)
+            if 'original_background' in locals():
+                self.scene.setBackgroundBrush(original_background)
             if self.view_2d:
                 self.view_2d.viewport().update()
 
