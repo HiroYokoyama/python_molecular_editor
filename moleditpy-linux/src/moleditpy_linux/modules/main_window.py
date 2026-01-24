@@ -524,6 +524,10 @@ class MainWindow(QMainWindow):
         # --- MOVED TO main_window_edit_actions.py ---
         return self.main_window_edit_actions.adjust_molecule_positions_to_avoid_collisions(mol, frags)
 
+    def open_rotate_2d_dialog(self):
+        # --- MOVED TO main_window_edit_actions.py ---
+        return self.main_window_edit_actions.open_rotate_2d_dialog()
+
     def draw_molecule_3d(self, mol):
         # --- MOVED TO main_window_view_3d.py ---
         return self.main_window_view_3d.draw_molecule_3d(mol)
