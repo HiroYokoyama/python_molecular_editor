@@ -406,7 +406,7 @@ Click the **Apply** button to reflect changes immediately, or the **OK** button 
 | `Ctrl`+`O` | Open Project... | 
 | `Ctrl`+`S` | Save Project |
 | `Ctrl`+`Shift`+`S` | Save Project As... |
-| `Ctrl`+`J` | Optimize 2D | 
+| `Ctrl`+`J` | Clean Up 2D | 
 | `Ctrl`+`K` | Convert 2D to 3D | 
 | `Ctrl`+`L` | Optimize 3D | 
 | `Ctrl`+`+` | Zoom In (2D View) |
@@ -433,6 +433,7 @@ Click the **Apply** button to reflect changes immediately, or the **OK** button 
 You can check the version information from the `Help` \> `About` menu.
 
 -----
+
 
 
 
