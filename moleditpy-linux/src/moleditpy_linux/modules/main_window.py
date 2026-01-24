@@ -532,6 +532,10 @@ class MainWindow(QMainWindow):
         # --- MOVED TO main_window_edit_actions.py ---
         return self.main_window_edit_actions.open_rotate_2d_dialog()
 
+    def rotate_molecule_2d(self, angle_degrees):
+        # --- MOVED TO main_window_edit_actions.py ---
+        return self.main_window_edit_actions.rotate_molecule_2d(angle_degrees)
+
     def draw_molecule_3d(self, mol):
         # --- MOVED TO main_window_view_3d.py ---
         return self.main_window_view_3d.draw_molecule_3d(mol)
