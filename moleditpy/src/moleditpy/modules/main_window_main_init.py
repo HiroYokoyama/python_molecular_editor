@@ -372,7 +372,7 @@ class MainWindowMainInit(object):
 
         # --- 左パネルのボタンレイアウト ---
         left_buttons_layout = QHBoxLayout()
-        self.cleanup_button = QPushButton("Optimize 2D")
+        self.cleanup_button = QPushButton("Clean Up 2D")
         self.cleanup_button.clicked.connect(self.clean_up_2d_structure)
         left_buttons_layout.addWidget(self.cleanup_button)
 
@@ -987,7 +987,13 @@ class MainWindowMainInit(object):
 
         edit_menu.addSeparator()
 
-        optimize_2d_action = QAction("Optimize 2D", self)
+        rotate_2d_action = QAction("Rotate 2D...", self)
+        rotate_2d_action.triggered.connect(self.open_rotate_2d_dialog)
+        edit_menu.addAction(rotate_2d_action)
+
+        edit_menu.addSeparator()
+
+        optimize_2d_action = QAction("Clean Up 2D", self)
         optimize_2d_action.setShortcut(QKeySequence("Ctrl+J"))
         optimize_2d_action.triggered.connect(self.clean_up_2d_structure)
         edit_menu.addAction(optimize_2d_action)
@@ -1247,7 +1253,7 @@ class MainWindowMainInit(object):
 
         settings_menu = menu_bar.addMenu("&Settings")
         # 1) 3D View settings (existing)
-        view_settings_action = QAction("3D View Settings...", self)
+        view_settings_action = QAction("Settings...", self)
         view_settings_action.triggered.connect(self.open_settings_dialog)
         settings_menu.addAction(view_settings_action)
         
@@ -1495,6 +1501,10 @@ class MainWindowMainInit(object):
         
         try:
             if hasattr(self, 'scene') and self.scene:
+                # Apply 2D background color
+                bg_color_2d = self.settings.get('background_color_2d', '#FFFFFF')
+                self.scene.setBackgroundBrush(QBrush(QColor(bg_color_2d)))
+
                 for it in list(self.scene.items()):
                     if hasattr(it, 'update_style'):
                         it.update_style()
@@ -1674,6 +1684,18 @@ class MainWindowMainInit(object):
             # Whether to kekulize aromatic systems for 3D display
             'display_kekule_3d': False,
             'always_ask_charge': False,
+            'display_aromatic_circles_3d': False,
+            'ball_stick_use_cpk_bond_color': False,
+            
+            # --- 2D Settings Defaults ---
+            'bond_width_2d': 2.0,
+            'bond_spacing_double_2d': 3.5,
+            'bond_spacing_triple_2d': 3.5,
+            'atom_font_size_2d': 20,
+            'background_color_2d': '#FFFFFF',
+            'bond_color_2d': '#222222', # Almost black
+            'atom_use_bond_color_2d': False,
+            'bond_cap_style_2d': 'Round',
         }
 
         try:

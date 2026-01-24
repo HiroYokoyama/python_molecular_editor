@@ -26,8 +26,8 @@ except Exception:
 class SettingsDialog(QDialog):
     def __init__(self, current_settings, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("3D View Settings")
-        self.setMinimumSize(500, 600)
+        self.setWindowTitle("Settings")
+        self.setMinimumSize(700, 800)
         
         # 親ウィンドウの参照を保存（Apply機能のため）
         self.parent_window = parent
@@ -89,6 +89,16 @@ class SettingsDialog(QDialog):
             # (shows alternating single/double bonds rather than aromatic circles)
             'display_kekule_3d': False,
             'ball_stick_use_cpk_bond_color': False,
+            
+            # --- 2D Settings Defaults ---
+            'bond_width_2d': 2.0,
+            'bond_spacing_double_2d': 3.5,
+            'bond_spacing_triple_2d': 3.5,
+            'atom_font_size_2d': 20,
+            'background_color_2d': '#FFFFFF',
+            'bond_color_2d': '#222222', # Almost black
+            'atom_use_bond_color_2d': False,
+            'bond_cap_style_2d': 'Round',
         }
         
         # --- 選択された色を管理する専用のインスタンス変数 ---
@@ -100,6 +110,9 @@ class SettingsDialog(QDialog):
         # タブウィジェットを作成
         self.tab_widget = QTabWidget()
         layout.addWidget(self.tab_widget)
+
+        # 2D Settings Tab (First)
+        self.create_2d_settings_tab()
 
         # Scene設定タブ
         self.create_scene_tab()
@@ -128,6 +141,13 @@ class SettingsDialog(QDialog):
         thickness_factor = current_settings.get('aromatic_torus_thickness_factor', self.default_settings.get('aromatic_torus_thickness_factor', 1.0))
         self.aromatic_torus_thickness_slider.setValue(int(thickness_factor * 100))
         self.aromatic_torus_thickness_label.setText(f"{thickness_factor:.1f}")
+
+        # Initialize internal 2D colors
+        self.current_bg_color_2d = current_settings.get('background_color_2d', self.default_settings['background_color_2d'])
+        self.current_bond_color_2d = current_settings.get('bond_color_2d', self.default_settings['bond_color_2d'])
+        
+        # Apply initial 2D button styles
+        self.update_2d_color_buttons()
 
         # --- ボタンの配置 ---
         buttons = QHBoxLayout()
@@ -160,6 +180,121 @@ class SettingsDialog(QDialog):
         buttons.addWidget(ok_button)
         buttons.addWidget(cancel_button)
         layout.addLayout(buttons)
+
+    def create_2d_settings_tab(self):
+        """2D Settings Tab"""
+        widget = QWidget()
+        form_layout = QFormLayout(widget)
+
+        # --- View Settings ---
+        form_layout.addRow(QLabel("<b>View Appearance</b>"))
+        
+        # Background Color
+        self.bg_color_2d_button = QPushButton()
+        self.bg_color_2d_button.setFixedSize(60, 24)
+        self.bg_color_2d_button.clicked.connect(self.pick_bg_color_2d)
+        form_layout.addRow("Background Color:", self.bg_color_2d_button)
+
+        line = QFrame()
+        line.setFrameShape(QFrame.Shape.HLine)
+        line.setFrameShadow(QFrame.Shadow.Sunken)
+        form_layout.addRow(line)
+
+        # --- Bond Settings ---
+        form_layout.addRow(QLabel("<b>Bond Settings</b>"))
+
+        # Bond Color
+        self.bond_color_2d_button = QPushButton()
+        self.bond_color_2d_button.setFixedSize(60, 24)
+        self.bond_color_2d_button.clicked.connect(self.pick_bond_color_2d)
+        form_layout.addRow("Bond Color:", self.bond_color_2d_button)
+
+        # Bond Width
+        self.bond_width_2d_slider = QSlider(Qt.Orientation.Horizontal)
+        self.bond_width_2d_slider.setRange(10, 200) # 1.0 - 20.0
+        self.bond_width_2d_label = QLabel("2.0")
+        self.bond_width_2d_slider.valueChanged.connect(lambda v: self.bond_width_2d_label.setText(f"{v/10:.1f}"))
+        bw_layout = QHBoxLayout()
+        bw_layout.addWidget(self.bond_width_2d_slider)
+        bw_layout.addWidget(self.bond_width_2d_label)
+        form_layout.addRow("Bond Width:", bw_layout)
+
+        # Double Bond Spacing
+        self.bond_spacing_double_2d_slider = QSlider(Qt.Orientation.Horizontal)
+        self.bond_spacing_double_2d_slider.setRange(10, 200) # 1.0 - 20.0
+        self.bond_spacing_double_2d_label = QLabel("3.5")
+        self.bond_spacing_double_2d_slider.valueChanged.connect(lambda v: self.bond_spacing_double_2d_label.setText(f"{v/10:.1f}"))
+        bsd_layout = QHBoxLayout()
+        bsd_layout.addWidget(self.bond_spacing_double_2d_slider)
+        bsd_layout.addWidget(self.bond_spacing_double_2d_label)
+        form_layout.addRow("Double Bond Spacing:", bsd_layout)
+
+        # Triple Bond Spacing
+        self.bond_spacing_triple_2d_slider = QSlider(Qt.Orientation.Horizontal)
+        self.bond_spacing_triple_2d_slider.setRange(10, 200) # 1.0 - 20.0
+        self.bond_spacing_triple_2d_label = QLabel("3.5")
+        self.bond_spacing_triple_2d_slider.valueChanged.connect(lambda v: self.bond_spacing_triple_2d_label.setText(f"{v/10:.1f}"))
+        bst_layout = QHBoxLayout()
+        bst_layout.addWidget(self.bond_spacing_triple_2d_slider)
+        bst_layout.addWidget(self.bond_spacing_triple_2d_label)
+        form_layout.addRow("Triple Bond Spacing:", bst_layout)
+        
+        # Bond Cap Style
+        self.bond_cap_style_2d_combo = QComboBox()
+        self.bond_cap_style_2d_combo.addItems(['Round', 'Flat', 'Square'])
+        form_layout.addRow("Bond Cap Style:", self.bond_cap_style_2d_combo)
+
+
+        line2 = QFrame()
+        line2.setFrameShape(QFrame.Shape.HLine)
+        line2.setFrameShadow(QFrame.Shadow.Sunken)
+        form_layout.addRow(line2)
+
+        # --- Atom Settings ---
+        form_layout.addRow(QLabel("<b>Atom Settings</b>"))
+
+        # Font Size
+        self.atom_font_size_2d_slider = QSlider(Qt.Orientation.Horizontal)
+        self.atom_font_size_2d_slider.setRange(8, 72)
+        self.atom_font_size_2d_label = QLabel("20")
+        self.atom_font_size_2d_slider.valueChanged.connect(lambda v: self.atom_font_size_2d_label.setText(str(v)))
+        fs_layout = QHBoxLayout()
+        fs_layout.addWidget(self.atom_font_size_2d_slider)
+        fs_layout.addWidget(self.atom_font_size_2d_label)
+        form_layout.addRow("Atom Label Font Size:", fs_layout)
+        
+        # Use Bond Color Checkbox
+        self.atom_use_bond_color_2d_checkbox = QCheckBox()
+        self.atom_use_bond_color_2d_checkbox.setToolTip("If checked, atoms will use the unified Bond Color instead of element-specific colors (CPK).")
+        form_layout.addRow("Use Bond Color for Atoms:", self.atom_use_bond_color_2d_checkbox)
+
+        self.tab_widget.addTab(widget, "2D Settings")
+        
+
+        
+        # Initialize internal variable for combo updates
+        # (Usually done in update_ui_from_settings, but we add direct access here for simple binding if needed)
+        # We rely on update_ui_from_settings to set current selection.
+
+
+    def pick_bg_color_2d(self):
+        color = QColorDialog.getColor(QColor(self.current_bg_color_2d), self, "Select 2D Background Color")
+        if color.isValid():
+            self.current_bg_color_2d = color.name()
+            self.update_2d_color_buttons()
+
+    def pick_bond_color_2d(self):
+        color = QColorDialog.getColor(QColor(self.current_bond_color_2d), self, "Select 2D Bond Color")
+        if color.isValid():
+            self.current_bond_color_2d = color.name()
+            self.update_2d_color_buttons()
+
+    def update_2d_color_buttons(self):
+        try:
+            self.bg_color_2d_button.setStyleSheet(f"background-color: {self.current_bg_color_2d}; border: 1px solid #888;")
+            self.bond_color_2d_button.setStyleSheet(f"background-color: {self.current_bond_color_2d}; border: 1px solid #888;")
+        except Exception:
+            pass
     
     def create_scene_tab(self):
         """基本設定タブを作成"""
@@ -217,7 +352,7 @@ class SettingsDialog(QDialog):
         self.projection_combo.setToolTip("Choose camera projection mode: Perspective (default) or Orthographic")
         form_layout.addRow("Projection Mode:", self.projection_combo)
         
-        self.tab_widget.addTab(scene_widget, "Scene")
+        self.tab_widget.addTab(scene_widget, "3D Scene")
     
     def create_other_tab(self):
         """other設定タブを作成"""
@@ -643,11 +778,22 @@ class SettingsDialog(QDialog):
         tab_name = self.tab_widget.tabText(current_tab_index)
         
         # 各タブの設定項目を定義
-        # Note: tab labels must match those added to the QTabWidget ("Scene", "Ball & Stick",
+        # Each tab settings
+        # Note: tab labels must match those added to the QTabWidget ("2D Settings", "Scene", "Ball & Stick", ...
         # "CPK (Space-filling)", "Wireframe", "Stick", "Other"). Use the per-model
         # multi-bond keys present in self.default_settings.
         tab_settings = {
-            "Scene": {
+            "2D Settings": {
+                'bond_width_2d': self.default_settings['bond_width_2d'],
+                'bond_spacing_double_2d': self.default_settings['bond_spacing_double_2d'],
+                'bond_spacing_triple_2d': self.default_settings['bond_spacing_triple_2d'],
+                'atom_font_size_2d': self.default_settings['atom_font_size_2d'],
+                'background_color_2d': self.default_settings['background_color_2d'],
+                'bond_color_2d': self.default_settings['bond_color_2d'],
+                'atom_use_bond_color_2d': self.default_settings['atom_use_bond_color_2d'],
+                'bond_cap_style_2d': self.default_settings['bond_cap_style_2d']
+            },
+            "3D Scene": {
                 'background_color': self.default_settings['background_color'],
                 'projection_mode': self.default_settings['projection_mode'],
                 'show_3d_axes': self.default_settings['show_3d_axes'],
@@ -711,6 +857,13 @@ class SettingsDialog(QDialog):
             
             # UIを更新
             self.update_ui_from_settings(updated_settings)
+            
+            # If 2D settings were reset, update internal color variables too
+            if tab_name == "2D Settings":
+                self.current_bg_color_2d = updated_settings.get('background_color_2d', self.default_settings['background_color_2d'])
+                self.current_bond_color_2d = updated_settings.get('bond_color_2d', self.default_settings['bond_color_2d'])
+                self.update_2d_color_buttons()
+
             # CPK tab: do not change parent/settings immediately; let Apply/OK persist any changes
             
             # ユーザーへのフィードバック
@@ -748,7 +901,9 @@ class SettingsDialog(QDialog):
                         if 'cpk_colors' in self.parent_window.settings:
                             # Reset to defaults (empty override dict)
                             self.parent_window.settings['cpk_colors'] = {}
-                        # 2D bond color is fixed and not part of the settings; do not modify it here
+                        
+                        # Reset 2D Settings (colors need manual refresh in parent scene/view usually handled by apply)
+                        
                         # Reset 3D Ball & Stick uniform bond color to default
                         self.parent_window.settings['ball_stick_bond_color'] = self.default_settings.get('ball_stick_bond_color', '#7F7F7F')
                         # Update global CPK colors and reapply 3D settings immediately
@@ -1063,9 +1218,17 @@ class SettingsDialog(QDialog):
             'aromatic_torus_thickness_factor': self.aromatic_torus_thickness_slider.value() / 100.0,
             'skip_chemistry_checks': self.skip_chem_checks_checkbox.isChecked(),
             'always_ask_charge': self.always_ask_charge_checkbox.isChecked(),
-            # Ball & Stick bond color (3D grey/uniform color)
             'ball_stick_bond_color': getattr(self, 'bs_bond_color', self.default_settings.get('ball_stick_bond_color', '#7F7F7F')),
             'ball_stick_use_cpk_bond_color': self.bs_use_cpk_bond_checkbox.isChecked(),
+            # 2D Settings
+            'bond_width_2d': self.bond_width_2d_slider.value() / 10.0,
+            'bond_spacing_double_2d': self.bond_spacing_double_2d_slider.value() / 10.0,
+            'bond_spacing_triple_2d': self.bond_spacing_triple_2d_slider.value() / 10.0,
+            'atom_font_size_2d': self.atom_font_size_2d_slider.value(),
+            'background_color_2d': self.current_bg_color_2d,
+            'bond_color_2d': self.current_bond_color_2d,
+            'atom_use_bond_color_2d': self.atom_use_bond_color_2d_checkbox.isChecked(),
+            'bond_cap_style_2d': self.bond_cap_style_2d_combo.currentText(),
         }
 
     def pick_bs_bond_color(self):
@@ -1119,6 +1282,27 @@ class SettingsDialog(QDialog):
             # 現在の分子を再描画（設定変更を反映）
             if hasattr(self.parent_window, 'current_mol') and self.parent_window.current_mol:
                 self.parent_window.draw_molecule_3d(self.parent_window.current_mol)
+            
+            # 2Dビューの設定適用 (背景色、結合スタイルなど)
+            # update_style() will read the new settings from parent_window.settings
+            try:
+                if hasattr(self.parent_window, 'scene') and self.parent_window.scene:
+                    # Update Background
+                    bg_col_2d = self.parent_window.settings.get('background_color_2d', '#FFFFFF')
+                    self.parent_window.scene.setBackgroundBrush(QColor(bg_col_2d))
+                    
+                    # Update Items
+                    for item in self.parent_window.scene.items():
+                        if hasattr(item, 'update_style'):
+                            item.update_style()
+                        elif hasattr(item, 'update'):
+                            item.update()
+                            
+                    if hasattr(self.parent_window.view_2d, 'viewport'):
+                        self.parent_window.view_2d.viewport().update()
+            except Exception:
+                pass
+            
             # ステータスバーに適用完了を表示
             self.parent_window.statusBar().showMessage("Settings applied successfully")
 
@@ -1147,3 +1331,173 @@ class SettingsDialog(QDialog):
         # apply_settingsを呼び出して設定を適用
         self.apply_settings()
         super().accept()
+
+    def update_ui_from_settings(self, settings_dict):
+        """設定辞書に基づいてUIを更新"""
+        # 1. Scene settings
+        self.current_bg_color = settings_dict.get('background_color', self.default_settings['background_color'])
+        self.update_color_button(self.current_bg_color)
+        
+        self.axes_checkbox.setChecked(settings_dict.get('show_3d_axes', self.default_settings['show_3d_axes']))
+        self.light_checkbox.setChecked(settings_dict.get('lighting_enabled', self.default_settings['lighting_enabled']))
+        
+        intensity = settings_dict.get('light_intensity', self.default_settings['light_intensity'])
+        self.intensity_slider.setValue(int(intensity * 100))
+        self.intensity_label.setText(f"{intensity:.2f}")
+        
+        specular = settings_dict.get('specular', self.default_settings['specular'])
+        self.specular_slider.setValue(int(specular * 100))
+        self.specular_label.setText(f"{specular:.2f}")
+        
+        spec_power = settings_dict.get('specular_power', self.default_settings['specular_power'])
+        self.spec_power_slider.setValue(int(spec_power))
+        self.spec_power_label.setText(str(spec_power))
+        
+        proj_mode = settings_dict.get('projection_mode', self.default_settings['projection_mode'])
+        idx = self.projection_combo.findText(proj_mode)
+        if idx >= 0:
+            self.projection_combo.setCurrentIndex(idx)
+            
+        # 2. Ball & Stick settings
+        bs_atom_scale = settings_dict.get('ball_stick_atom_scale', self.default_settings['ball_stick_atom_scale'])
+        self.bs_atom_scale_slider.setValue(int(bs_atom_scale * 100))
+        self.bs_atom_scale_label.setText(f"{bs_atom_scale:.2f}")
+        
+        bs_bond_radius = settings_dict.get('ball_stick_bond_radius', self.default_settings['ball_stick_bond_radius'])
+        self.bs_bond_radius_slider.setValue(int(bs_bond_radius * 100))
+        self.bs_bond_radius_label.setText(f"{bs_bond_radius:.2f}")
+
+        # Multi-bond offsets (Ball & Stick)
+        bs_db_offset = settings_dict.get('ball_stick_double_bond_offset_factor', self.default_settings.get('ball_stick_double_bond_offset_factor', 2.0))
+        self.bs_double_offset_slider.setValue(int(bs_db_offset * 100))
+        self.bs_double_offset_label.setText(f"{bs_db_offset:.2f}")
+
+        bs_tr_offset = settings_dict.get('ball_stick_triple_bond_offset_factor', self.default_settings.get('ball_stick_triple_bond_offset_factor', 2.0))
+        self.bs_triple_offset_slider.setValue(int(bs_tr_offset * 100))
+        self.bs_triple_offset_label.setText(f"{bs_tr_offset:.2f}")
+        
+        bs_db_rad = settings_dict.get('ball_stick_double_bond_radius_factor', self.default_settings.get('ball_stick_double_bond_radius_factor', 0.8))
+        self.bs_double_radius_slider.setValue(int(bs_db_rad * 100))
+        self.bs_double_radius_label.setText(f"{bs_db_rad:.2f}")
+
+        bs_tr_rad = settings_dict.get('ball_stick_triple_bond_radius_factor', self.default_settings.get('ball_stick_triple_bond_radius_factor', 0.75))
+        self.bs_triple_radius_slider.setValue(int(bs_tr_rad * 100))
+        self.bs_triple_radius_label.setText(f"{bs_tr_rad:.2f}")
+
+        bs_res = settings_dict.get('ball_stick_resolution', self.default_settings['ball_stick_resolution'])
+        self.bs_resolution_slider.setValue(int(bs_res))
+        self.bs_resolution_label.setText(str(bs_res))
+
+        # Ball & Stick bond color
+        self.bs_bond_color = settings_dict.get('ball_stick_bond_color', self.default_settings.get('ball_stick_bond_color', '#7F7F7F'))
+        try:
+            self.bs_bond_color_button.setStyleSheet(f"background-color: {self.bs_bond_color}; border: 1px solid #888;")
+            self.bs_bond_color_button.setToolTip(self.bs_bond_color)
+        except Exception:
+            pass
+
+        self.bs_use_cpk_bond_checkbox.setChecked(settings_dict.get('ball_stick_use_cpk_bond_color', self.default_settings.get('ball_stick_use_cpk_bond_color', False)))
+            
+        # 3. CPK settings
+        cpk_atom_scale = settings_dict.get('cpk_atom_scale', self.default_settings['cpk_atom_scale'])
+        self.cpk_atom_scale_slider.setValue(int(cpk_atom_scale * 100))
+        self.cpk_atom_scale_label.setText(f"{cpk_atom_scale:.2f}")
+        
+        cpk_res = settings_dict.get('cpk_resolution', self.default_settings['cpk_resolution'])
+        self.cpk_resolution_slider.setValue(int(cpk_res))
+        self.cpk_resolution_label.setText(str(cpk_res))
+        
+        # 4. Wireframe settings
+        wf_bond_radius = settings_dict.get('wireframe_bond_radius', self.default_settings['wireframe_bond_radius'])
+        self.wf_bond_radius_slider.setValue(int(wf_bond_radius * 100))
+        self.wf_bond_radius_label.setText(f"{wf_bond_radius:.2f}")
+        
+        wf_res = settings_dict.get('wireframe_resolution', self.default_settings['wireframe_resolution'])
+        self.wf_resolution_slider.setValue(int(wf_res))
+        self.wf_resolution_label.setText(str(wf_res))
+
+        # Multi-bond offsets (Wireframe)
+        wf_db_offset = settings_dict.get('wireframe_double_bond_offset_factor', self.default_settings.get('wireframe_double_bond_offset_factor', 3.0))
+        self.wf_double_offset_slider.setValue(int(wf_db_offset * 100))
+        self.wf_double_offset_label.setText(f"{wf_db_offset:.2f}")
+
+        wf_tr_offset = settings_dict.get('wireframe_triple_bond_offset_factor', self.default_settings.get('wireframe_triple_bond_offset_factor', 3.0))
+        self.wf_triple_offset_slider.setValue(int(wf_tr_offset * 100))
+        self.wf_triple_offset_label.setText(f"{wf_tr_offset:.2f}")
+        
+        wf_db_rad = settings_dict.get('wireframe_double_bond_radius_factor', self.default_settings.get('wireframe_double_bond_radius_factor', 0.8))
+        self.wf_double_radius_slider.setValue(int(wf_db_rad * 100))
+        self.wf_double_radius_label.setText(f"{wf_db_rad:.2f}")
+
+        wf_tr_rad = settings_dict.get('wireframe_triple_bond_radius_factor', self.default_settings.get('wireframe_triple_bond_radius_factor', 0.75))
+        self.wf_triple_radius_slider.setValue(int(wf_tr_rad * 100))
+        self.wf_triple_radius_label.setText(f"{wf_tr_rad:.2f}")
+            
+        # 5. Stick settings
+        stick_bond_radius = settings_dict.get('stick_bond_radius', self.default_settings['stick_bond_radius'])
+        self.stick_bond_radius_slider.setValue(int(stick_bond_radius * 100))
+        self.stick_bond_radius_label.setText(f"{stick_bond_radius:.2f}")
+        
+        stick_res = settings_dict.get('stick_resolution', self.default_settings['stick_resolution'])
+        self.stick_resolution_slider.setValue(int(stick_res))
+        self.stick_resolution_label.setText(str(stick_res))
+
+        # Multi-bond offsets (Stick)
+        stick_db_offset = settings_dict.get('stick_double_bond_offset_factor', self.default_settings.get('stick_double_bond_offset_factor', 1.5))
+        self.stick_double_offset_slider.setValue(int(stick_db_offset * 100))
+        self.stick_double_offset_label.setText(f"{stick_db_offset:.2f}")
+
+        stick_tr_offset = settings_dict.get('stick_triple_bond_offset_factor', self.default_settings.get('stick_triple_bond_offset_factor', 1.0))
+        self.stick_triple_offset_slider.setValue(int(stick_tr_offset * 100))
+        self.stick_triple_offset_label.setText(f"{stick_tr_offset:.2f}")
+        
+        stick_db_rad = settings_dict.get('stick_double_bond_radius_factor', self.default_settings.get('stick_double_bond_radius_factor', 0.6))
+        self.stick_double_radius_slider.setValue(int(stick_db_rad * 100))
+        self.stick_double_radius_label.setText(f"{stick_db_rad:.2f}")
+
+        stick_tr_rad = settings_dict.get('stick_triple_bond_radius_factor', self.default_settings.get('stick_triple_bond_radius_factor', 0.4))
+        self.stick_triple_radius_slider.setValue(int(stick_tr_rad * 100))
+        self.stick_triple_radius_label.setText(f"{stick_tr_rad:.2f}")
+
+        # 6. Other settings
+        self.skip_chem_checks_checkbox.setChecked(settings_dict.get('skip_chemistry_checks', self.default_settings.get('skip_chemistry_checks', False)))
+        self.kekule_3d_checkbox.setChecked(settings_dict.get('display_kekule_3d', self.default_settings.get('display_kekule_3d', False)))
+        # always ask for charge on XYZ imports
+        self.always_ask_charge_checkbox.setChecked(settings_dict.get('always_ask_charge', self.default_settings.get('always_ask_charge', False)))
+        # Aromatic ring circle display and torus thickness factor
+        self.aromatic_circle_checkbox.setChecked(settings_dict.get('display_aromatic_circles_3d', self.default_settings.get('display_aromatic_circles_3d', False)))
+        thickness_factor = float(settings_dict.get('aromatic_torus_thickness_factor', self.default_settings.get('aromatic_torus_thickness_factor', 0.6)))
+        try:
+            self.aromatic_torus_thickness_slider.setValue(int(thickness_factor * 100))
+            self.aromatic_torus_thickness_label.setText(f"{thickness_factor:.1f}")
+        except Exception:
+            pass
+
+        # 7. 2D Settings
+        bw_2d = settings_dict.get('bond_width_2d', self.default_settings['bond_width_2d'])
+        self.bond_width_2d_slider.setValue(int(bw_2d * 10))
+        self.bond_width_2d_label.setText(f"{bw_2d:.1f}")
+
+        bsd_2d = settings_dict.get('bond_spacing_double_2d', self.default_settings['bond_spacing_double_2d'])
+        self.bond_spacing_double_2d_slider.setValue(int(bsd_2d * 10))
+        self.bond_spacing_double_2d_label.setText(f"{bsd_2d:.1f}")
+
+        bst_2d = settings_dict.get('bond_spacing_triple_2d', self.default_settings['bond_spacing_triple_2d'])
+        self.bond_spacing_triple_2d_slider.setValue(int(bst_2d * 10))
+        self.bond_spacing_triple_2d_label.setText(f"{bst_2d:.1f}")
+
+        fs_2d = settings_dict.get('atom_font_size_2d', self.default_settings['atom_font_size_2d'])
+        self.atom_font_size_2d_slider.setValue(int(fs_2d))
+        self.atom_font_size_2d_label.setText(str(fs_2d))
+
+        self.atom_use_bond_color_2d_checkbox.setChecked(settings_dict.get('atom_use_bond_color_2d', self.default_settings.get('atom_use_bond_color_2d', False)))
+
+        self.current_bg_color_2d = settings_dict.get('background_color_2d', self.default_settings['background_color_2d'])
+
+        # Load Bond Cap Style
+        cap_style = settings_dict.get('bond_cap_style_2d', self.default_settings.get('bond_cap_style_2d', 'Round'))
+        index = self.bond_cap_style_2d_combo.findText(cap_style)
+        if index >= 0:
+            self.bond_cap_style_2d_combo.setCurrentIndex(index)
+        self.current_bond_color_2d = settings_dict.get('bond_color_2d', self.default_settings['bond_color_2d'])
+        self.update_2d_color_buttons()
