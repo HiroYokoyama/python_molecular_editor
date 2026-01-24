@@ -105,7 +105,21 @@ class BondItem(QGraphicsItem):
             line = self.get_line_in_local_coords()
         except Exception:
             line = QLineF(0, 0, 0, 0)
-        bond_offset = globals().get('BOND_OFFSET', 2)
+        
+        # Get dynamic bond offset (spacing)
+        bond_offset = 3.5
+        try:
+            if self.scene() and hasattr(self.scene(), 'views') and self.scene().views():
+                win = self.scene().views()[0].window()
+                if win and hasattr(win, 'settings'):
+                    # Use specific spacing based on bond order
+                    if getattr(self, 'order', 1) == 3:
+                        bond_offset = win.settings.get('bond_spacing_triple_2d', 3.5)
+                    else:
+                        bond_offset = win.settings.get('bond_spacing_double_2d', 3.5)
+        except Exception:
+             bond_offset = globals().get('BOND_OFFSET', 3.5)
+
         extra = (getattr(self, 'order', 1) - 1) * bond_offset + 20
         rect = QRectF(line.p1(), line.p2()).normalized().adjusted(-extra, -extra, extra, extra)
 
@@ -142,7 +156,18 @@ class BondItem(QGraphicsItem):
         view = scene.views()[0]
         scale = view.transform().m11()
 
-        scene_width = DESIRED_BOND_PIXEL_WIDTH / scale
+        # Dynamic bond width
+        width_2d = 2.0
+        try:
+            if view.window() and hasattr(view.window(), 'settings'):
+                width_2d = view.window().settings.get('bond_width_2d', 2.0)
+        except Exception:
+            pass
+
+        # Hit area should be roughly closely matched or slightly larger than visual
+        # Ensure minimum hit width for usability
+        scene_width = max(DESIRED_BOND_PIXEL_WIDTH, width_2d * 10) / scale
+
 
         stroker = QPainterPathStroker()
         stroker.setWidth(scene_width)
@@ -160,24 +185,44 @@ class BondItem(QGraphicsItem):
         line = self.get_line_in_local_coords()
         if line.length() == 0: return
 
-        # --- 1. 選択状態に応じてペンとブラシを準備 ---
-        if self.isSelected():
-            selection_color = QColor("blue")
-            painter.setPen(QPen(selection_color, 3))
-            painter.setBrush(QBrush(selection_color))
-        else:
-            # Allow bond color override from app settings (2D color)
-            try:
-                sc = self.scene()
-                if sc is not None and hasattr(sc, 'window') and sc.window is not None:
-                    bond_hex = sc.window.settings.get('bond_color', '#222222')
-                    bond_color = QColor(bond_hex)
-                    painter.setPen(QPen(bond_color, 2))
+        # Allow bond color override from app settings (2D color)
+        width_2d = 2.0
+        
+        try:
+            sc = self.scene()
+            if sc is not None and hasattr(sc, 'window') and sc.window is not None:
+                # Get settings
+                settings = sc.window.settings
+                
+                # Width
+                width_2d = settings.get('bond_width_2d', 2.0)
+                
+                # Cap Style logic
+                cap_style_str = settings.get('bond_cap_style_2d', 'Round')
+                cap_style = Qt.PenCapStyle.RoundCap # Default
+                
+                if cap_style_str == 'Flat':
+                    cap_style = Qt.PenCapStyle.FlatCap
+                elif cap_style_str == 'Square':
+                    cap_style = Qt.PenCapStyle.SquareCap
+                
+                # Color
+                if self.isSelected():
+                    bond_color = QColor("blue") # Selection color
                 else:
-                    painter.setPen(self.pen)
-            except Exception:
+                    bond_hex = settings.get('bond_color_2d', '#222222')
+                    bond_color = QColor(bond_hex)
+                
+                pen = QPen(bond_color, width_2d)
+                pen.setCapStyle(cap_style)
+                painter.setPen(pen)
+                
+            else:
                 painter.setPen(self.pen)
-            painter.setBrush(QBrush(Qt.GlobalColor.black))
+        except Exception:
+            painter.setPen(self.pen)
+            
+        painter.setBrush(QBrush(Qt.GlobalColor.black))
 
         # --- 立体化学 (Wedge/Dash) の描画 ---
         if self.order == 1 and self.stereo in [1, 2]:
@@ -213,7 +258,19 @@ class BondItem(QGraphicsItem):
                 painter.drawLine(line)
             else:
                 v = line.unitVector().normalVector()
-                offset = QPointF(v.dx(), v.dy()) * BOND_OFFSET
+                # Use dynamic offset
+                bond_offset = 3.5
+                try:
+                    sc = self.scene()
+                    if sc and sc.views() and hasattr(sc.views()[0].window(), 'settings'):
+                        if self.order == 3:
+                            bond_offset = sc.views()[0].window().settings.get('bond_spacing_triple_2d', 3.5)
+                        else:
+                            bond_offset = sc.views()[0].window().settings.get('bond_spacing_double_2d', 3.5)
+                except Exception:
+                    bond_offset = globals().get('BOND_OFFSET', 3.5)
+                
+                offset = QPointF(v.dx(), v.dy()) * bond_offset
 
                 if self.order == 2:
                     # 環構造かどうかを判定し、描画方法を変更
@@ -274,7 +331,8 @@ class BondItem(QGraphicsItem):
                         is_in_ring = False
                     
                     v = line.unitVector().normalVector()
-                    offset = QPointF(v.dx(), v.dy()) * BOND_OFFSET
+                    # Re-calculate offset in case loop variable scope issue, though strictly not needed if offset defined above works
+                    offset = QPointF(v.dx(), v.dy()) * bond_offset
                     
                     if is_in_ring and ring_center:
                         # 環構造: 1本の中心線（単結合位置） + 1本の短い内側線
