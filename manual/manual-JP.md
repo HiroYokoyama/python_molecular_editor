@@ -388,6 +388,7 @@ MoleditPy は、描画した 2D 構造から 3D 構造を生成し、表示、�
 | `Ctrl`+`X` | Cut Selection | 
 | `Ctrl`+`V` | Paste | 
 | `Ctrl`+`A` | Select All | 
+| `Ctrl`+`A` | Rotate 2D Molecule | 
 | `Ctrl`+`N` | New | 
 | `Ctrl`+`O` | Open Project... | 
 | `Ctrl`+`S` | Save Project |
@@ -399,7 +400,7 @@ MoleditPy は、描画した 2D 構造から 3D 構造を生成し、表示、�
 | `Ctrl`+`-` | Zoom Out (2D View) | 
 | `Ctrl`+`0` | Reset Zoom (2D View) | 
 | `Ctrl`+`9` | Fit to View (2D View) | 
-| `Ctrl`+`R` | Reset 3D View |
+| `Ctrl`+`Shift`+`R` | Reset 3D View |
 | `Ctrl`+`1` | Panel Layout 50:50 |
 | `Ctrl`+`2` | Panel Layout 70:30 (2D Focus) |
 | `Ctrl`+`3` | Panel Layout 30:70 (3D Focus) |
@@ -420,6 +421,7 @@ MoleditPy は、描画した 2D 構造から 3D 構造を生成し、表示、�
 メニューの `Help` \> `About` からバージョン情報を確認できます。
 
 -----
+
 
 
 
