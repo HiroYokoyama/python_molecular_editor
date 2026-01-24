@@ -402,6 +402,7 @@ Click the **Apply** button to reflect changes immediately, or the **OK** button 
 | `Ctrl`+`X` | Cut Selection | 
 | `Ctrl`+`V` | Paste | 
 | `Ctrl`+`A` | Select All | 
+| `Ctrl`+`A` | Rotate 2D Molecule | 
 | `Ctrl`+`N` | New | 
 | `Ctrl`+`O` | Open Project... | 
 | `Ctrl`+`S` | Save Project |
@@ -413,7 +414,7 @@ Click the **Apply** button to reflect changes immediately, or the **OK** button 
 | `Ctrl`+`-` | Zoom Out (2D View) | 
 | `Ctrl`+`0` | Reset Zoom (2D View) | 
 | `Ctrl`+`9` | Fit to View (2D View) | 
-| `Ctrl`+`R` | Reset 3D View |
+| `Ctrl`+`Shift`+`R` | Reset 3D View |
 | `Ctrl`+`1` | Panel Layout 50:50 |
 | `Ctrl`+`2` | Panel Layout 70:30 (2D Focus) |
 | `Ctrl`+`3` | Panel Layout 30:70 (3D Focus) |
@@ -424,7 +425,7 @@ Click the **Apply** button to reflect changes immediately, or the **OK** button 
 
 ## 10\. Version / License
 
-  * **Version:** 2.2
+  * **Version:** 2.4
   * **Author:** Hiromichi Yokoyama
   * **License:** GPL-3.0 license
   * **Repository:** [https://github.com/HiroYokoyama/python\_molecular\_editor](https://github.com/HiroYokoyama/python_molecular_editor)
@@ -433,6 +434,7 @@ Click the **Apply** button to reflect changes immediately, or the **OK** button 
 You can check the version information from the `Help` \> `About` menu.
 
 -----
+
 
 
 
