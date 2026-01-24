@@ -27,7 +27,7 @@ class SettingsDialog(QDialog):
     def __init__(self, current_settings, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Settings")
-        self.setMinimumSize(700, 800)
+        self.setMinimumSize(650, 750)
         
         # 親ウィンドウの参照を保存（Apply機能のため）
         self.parent_window = parent
@@ -99,6 +99,8 @@ class SettingsDialog(QDialog):
             'bond_color_2d': '#222222', # Almost black
             'atom_use_bond_color_2d': False,
             'bond_cap_style_2d': 'Round',
+            'bond_wedge_width_2d': 6.0,
+            'bond_dash_count_2d': 8,
         }
         
         # --- 選択された色を管理する専用のインスタンス変数 ---
@@ -243,6 +245,26 @@ class SettingsDialog(QDialog):
         self.bond_cap_style_2d_combo = QComboBox()
         self.bond_cap_style_2d_combo.addItems(['Round', 'Flat', 'Square'])
         form_layout.addRow("Bond Cap Style:", self.bond_cap_style_2d_combo)
+
+        # Wedge Bond Width
+        self.bond_wedge_width_2d_slider = QSlider(Qt.Orientation.Horizontal)
+        self.bond_wedge_width_2d_slider.setRange(10, 300) # 1.0 - 30.0
+        self.bond_wedge_width_2d_label = QLabel("6.0")
+        self.bond_wedge_width_2d_slider.valueChanged.connect(lambda v: self.bond_wedge_width_2d_label.setText(f"{v/10:.1f}"))
+        bww_layout = QHBoxLayout()
+        bww_layout.addWidget(self.bond_wedge_width_2d_slider)
+        bww_layout.addWidget(self.bond_wedge_width_2d_label)
+        form_layout.addRow("Wedge Bond Width:", bww_layout)
+
+        # Dash Count
+        self.bond_dash_count_2d_slider = QSlider(Qt.Orientation.Horizontal)
+        self.bond_dash_count_2d_slider.setRange(3, 20)
+        self.bond_dash_count_2d_label = QLabel("8")
+        self.bond_dash_count_2d_slider.valueChanged.connect(lambda v: self.bond_dash_count_2d_label.setText(str(v)))
+        bdc_layout = QHBoxLayout()
+        bdc_layout.addWidget(self.bond_dash_count_2d_slider)
+        bdc_layout.addWidget(self.bond_dash_count_2d_label)
+        form_layout.addRow("Dash Count:", bdc_layout)
 
 
         line2 = QFrame()
@@ -791,7 +813,10 @@ class SettingsDialog(QDialog):
                 'background_color_2d': self.default_settings['background_color_2d'],
                 'bond_color_2d': self.default_settings['bond_color_2d'],
                 'atom_use_bond_color_2d': self.default_settings['atom_use_bond_color_2d'],
-                'bond_cap_style_2d': self.default_settings['bond_cap_style_2d']
+                'atom_use_bond_color_2d': self.default_settings['atom_use_bond_color_2d'],
+                'bond_cap_style_2d': self.default_settings['bond_cap_style_2d'],
+                'bond_wedge_width_2d': self.default_settings['bond_wedge_width_2d'],
+                'bond_dash_count_2d': self.default_settings['bond_dash_count_2d']
             },
             "3D Scene": {
                 'background_color': self.default_settings['background_color'],
@@ -1228,7 +1253,11 @@ class SettingsDialog(QDialog):
             'background_color_2d': self.current_bg_color_2d,
             'bond_color_2d': self.current_bond_color_2d,
             'atom_use_bond_color_2d': self.atom_use_bond_color_2d_checkbox.isChecked(),
+            'bond_color_2d': self.current_bond_color_2d,
+            'atom_use_bond_color_2d': self.atom_use_bond_color_2d_checkbox.isChecked(),
             'bond_cap_style_2d': self.bond_cap_style_2d_combo.currentText(),
+            'bond_wedge_width_2d': self.bond_wedge_width_2d_slider.value() / 10.0,
+            'bond_dash_count_2d': self.bond_dash_count_2d_slider.value(),
         }
 
     def pick_bs_bond_color(self):
@@ -1499,5 +1528,13 @@ class SettingsDialog(QDialog):
         index = self.bond_cap_style_2d_combo.findText(cap_style)
         if index >= 0:
             self.bond_cap_style_2d_combo.setCurrentIndex(index)
+
+        bww_2d = settings_dict.get('bond_wedge_width_2d', self.default_settings['bond_wedge_width_2d'])
+        self.bond_wedge_width_2d_slider.setValue(int(bww_2d * 10))
+        self.bond_wedge_width_2d_label.setText(f"{bww_2d:.1f}")
+
+        self.bond_dash_count_2d_slider.setValue(settings_dict.get('bond_dash_count_2d', self.default_settings['bond_dash_count_2d']))
+        self.bond_dash_count_2d_label.setText(str(self.bond_dash_count_2d_slider.value()))
+
         self.current_bond_color_2d = settings_dict.get('bond_color_2d', self.default_settings['bond_color_2d'])
         self.update_2d_color_buttons()
