@@ -920,6 +920,10 @@ class MainWindowMainInit(object):
         export_2d_png_action = QAction("PNG Image...", self)
         export_2d_png_action.triggered.connect(self.export_2d_png)
         export_2d_menu.addAction(export_2d_png_action)
+
+        export_2d_svg_action = QAction("SVG Image...", self)
+        export_2d_svg_action.triggered.connect(self.export_2d_svg)
+        export_2d_menu.addAction(export_2d_svg_action)
         
         # 3D エクスポート
         export_3d_menu = export_menu.addMenu("3D Formats")
@@ -1597,6 +1601,15 @@ class MainWindowMainInit(object):
                 except Exception:
                     pass
                 # Update 2D scene styling to reflect default CPK colors
+                try:
+                    # Reset 2D background specifically
+                    if hasattr(self, 'scene') and self.scene:
+                        bg_c = self.settings.get('background_color_2d', '#FFFFFF')
+                        self.scene.setBackgroundBrush(QBrush(QColor(bg_c)))
+                    
+                    self.update_cpk_colors_from_settings()
+                except Exception:
+                    pass
                 try:
                     if hasattr(self, 'scene') and self.scene:
                         for it in list(self.scene.items()):
