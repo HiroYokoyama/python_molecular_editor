@@ -116,6 +116,20 @@ class MoleculeScene(QGraphicsScene):
         self.reinitialize_items()
 
     
+    def update_connected_bonds(self, atoms):
+        """指定された原子リストに接続する全ての結合の位置を更新する"""
+        bonds_to_update = set()
+        for atom in atoms:
+            if hasattr(atom, 'bonds'):
+                bonds_to_update.update(atom.bonds)
+        
+        for bond in bonds_to_update:
+            try:
+                if not sip_isdeleted_safe(bond):
+                    bond.update_position()
+            except Exception:
+                continue
+
     def update_all_items(self):
         """全てのアイテムを強制的に再描画する"""
         for item in self.items():
