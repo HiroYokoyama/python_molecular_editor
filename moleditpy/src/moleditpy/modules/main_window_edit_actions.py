@@ -47,7 +47,7 @@ from PyQt6.QtCore import (
 )
 
 class Rotate2DDialog(QDialog):
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, initial_angle=0):
         super().__init__(parent)
         self.setWindowTitle("Rotate 2D")
         self.setFixedWidth(300)
@@ -59,14 +59,14 @@ class Rotate2DDialog(QDialog):
         input_layout.addWidget(QLabel("Angle (degrees):"))
         self.angle_spin = QSpinBox()
         self.angle_spin.setRange(-360, 360)
-        self.angle_spin.setValue(45)
+        self.angle_spin.setValue(initial_angle)
         input_layout.addWidget(self.angle_spin)
         layout.addLayout(input_layout)
         
         # Slider
         self.slider = QSlider(Qt.Orientation.Horizontal)
         self.slider.setRange(-180, 180)
-        self.slider.setValue(45)
+        self.slider.setValue(initial_angle)
         self.slider.setTickPosition(QSlider.TickPosition.TicksBelow)
         self.slider.setTickInterval(15)
         layout.addWidget(self.slider)
@@ -612,9 +612,14 @@ class MainWindowEditActions(object):
 
     def open_rotate_2d_dialog(self):
         """2D回転ダイアログを開く"""
-        dialog = Rotate2DDialog(self)
+        # Initialize last_rotation_angle if not present
+        if not hasattr(self, 'last_rotation_angle'):
+            self.last_rotation_angle = 0
+        
+        dialog = Rotate2DDialog(self, initial_angle=self.last_rotation_angle)
         if dialog.exec() == QDialog.DialogCode.Accepted:
             angle = dialog.get_angle()
+            self.last_rotation_angle = angle  # Remember for next time
             self.rotate_molecule_2d(angle)
 
     def rotate_molecule_2d(self, angle_degrees):
@@ -663,6 +668,8 @@ class MainWindowEditActions(object):
             self.push_undo_state()
             self.statusBar().showMessage(f"Rotated {len(target_atoms)} atoms by {angle_degrees} degrees.")
             self.scene.update()
+            # Force full redraw as requested
+            self.scene.update_all_items()
             
         except Exception as e:
             print(f"Error rotating molecule: {e}")
