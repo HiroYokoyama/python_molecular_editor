@@ -217,12 +217,19 @@ class BondItem(QGraphicsItem):
                 pen.setCapStyle(cap_style)
                 painter.setPen(pen)
                 
-            else:
-                painter.setPen(self.pen)
+                # Wedge/Dash Specific Settings
+                wedge_width_half = settings.get('bond_wedge_width_2d', 6.0)
+                num_dashes = int(settings.get('bond_dash_count_2d', 8))
+
+            # Use bond color for fill
+            painter.setBrush(QBrush(bond_color))
         except Exception:
+            # Fallback
             painter.setPen(self.pen)
-            
-        painter.setBrush(QBrush(Qt.GlobalColor.black))
+            painter.setBrush(QBrush(Qt.GlobalColor.black))
+            # Default fallback width for wedge
+            wedge_width_half = 6.0
+            num_dashes = 8
 
         # --- 立体化学 (Wedge/Dash) の描画 ---
         if self.order == 1 and self.stereo in [1, 2]:
@@ -232,7 +239,7 @@ class BondItem(QGraphicsItem):
             p2 = line.p2() - vec.p2() * 5
 
             if self.stereo == 1: # Wedge (くさび形)
-                offset = QPointF(normal.dx(), normal.dy()) * 6.0
+                offset = QPointF(normal.dx(), normal.dy()) * wedge_width_half
                 poly = QPolygonF([p1, p2 + offset, p2 - offset])
                 painter.drawPolygon(poly)
             
@@ -243,11 +250,11 @@ class BondItem(QGraphicsItem):
                     pen.setWidthF(2.5) 
                     painter.setPen(pen)
                 
-                num_dashes = 8
+                # Use configured number of dashes (default 8)
                 for i in range(num_dashes + 1):
                     t = i / num_dashes
                     start_pt = p1 * (1 - t) + p2 * t
-                    width = 12.0 * t
+                    width = (wedge_width_half * 2.0) * t
                     offset = QPointF(normal.dx(), normal.dy()) * width / 2.0
                     painter.drawLine(start_pt - offset, start_pt + offset)
                 painter.restore()
