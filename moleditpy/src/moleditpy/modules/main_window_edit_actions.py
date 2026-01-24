@@ -34,7 +34,7 @@ from rdkit.Chem import AllChem
 
 # PyQt6 Modules
 from PyQt6.QtWidgets import (
-    QApplication
+    QApplication, QDialog, QVBoxLayout, QHBoxLayout, QLabel, QSpinBox, QSlider, QPushButton
 )
 
 from PyQt6.QtGui import (
@@ -43,8 +43,50 @@ from PyQt6.QtGui import (
 
 
 from PyQt6.QtCore import (
-    QPointF, QLineF, QMimeData, QByteArray, QTimer
+    QPointF, QLineF, QMimeData, QByteArray, QTimer, Qt
 )
+
+class Rotate2DDialog(QDialog):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Rotate 2D")
+        self.setFixedWidth(300)
+        
+        layout = QVBoxLayout(self)
+        
+        # Angle input
+        input_layout = QHBoxLayout()
+        input_layout.addWidget(QLabel("Angle (degrees):"))
+        self.angle_spin = QSpinBox()
+        self.angle_spin.setRange(-360, 360)
+        self.angle_spin.setValue(45)
+        input_layout.addWidget(self.angle_spin)
+        layout.addLayout(input_layout)
+        
+        # Slider
+        self.slider = QSlider(Qt.Orientation.Horizontal)
+        self.slider.setRange(-180, 180)
+        self.slider.setValue(45)
+        self.slider.setTickPosition(QSlider.TickPosition.TicksBelow)
+        self.slider.setTickInterval(15)
+        layout.addWidget(self.slider)
+
+        # Sync slider and spinbox
+        self.angle_spin.valueChanged.connect(self.slider.setValue)
+        self.slider.valueChanged.connect(self.angle_spin.setValue)
+        
+        # Buttons
+        btn_layout = QHBoxLayout()
+        ok_btn = QPushButton("Rotate")
+        ok_btn.clicked.connect(self.accept)
+        cancel_btn = QPushButton("Cancel")
+        cancel_btn.clicked.connect(self.reject)
+        btn_layout.addWidget(ok_btn)
+        btn_layout.addWidget(cancel_btn)
+        layout.addLayout(btn_layout)
+    
+    def get_angle(self):
+        return self.angle_spin.value()
 
 
 # Use centralized Open Babel availability from package-level __init__
@@ -565,6 +607,67 @@ class MainWindowEditActions(object):
             self.paste_action.setEnabled(mime_data is not None and mime_data.hasFormat(CLIPBOARD_MIME_TYPE))
         except RuntimeError:
             pass
+
+
+
+    def open_rotate_2d_dialog(self):
+        """2D回転ダイアログを開く"""
+        dialog = Rotate2DDialog(self)
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            angle = dialog.get_angle()
+            self.rotate_molecule_2d(angle)
+
+    def rotate_molecule_2d(self, angle_degrees):
+        """2D分子を指定角度回転させる（選択範囲があればそれのみ、なければ全体）"""
+        try:
+            # Determine target atoms
+            selected_items = self.scene.selectedItems()
+            target_atoms = [item for item in selected_items if isinstance(item, AtomItem)]
+            
+            # If no selection, rotate everything
+            if not target_atoms:
+                target_atoms = [data['item'] for data in self.data.atoms.values() if data.get('item') and not sip_isdeleted_safe(data['item'])]
+            
+            if not target_atoms:
+                self.statusBar().showMessage("No atoms to rotate.")
+                return
+
+            # Calculate Center
+            xs = [atom.pos().x() for atom in target_atoms]
+            ys = [atom.pos().y() for atom in target_atoms]
+            if not xs: return
+            
+            center_x = sum(xs) / len(xs)
+            center_y = sum(ys) / len(ys)
+            center = QPointF(center_x, center_y)
+            
+            rad = math.radians(angle_degrees)
+            cos_a = math.cos(rad)
+            sin_a = math.sin(rad)
+            
+            for atom in target_atoms:
+                # Relative pos
+                dx = atom.pos().x() - center_x
+                dy = atom.pos().y() - center_y
+                
+                # Rotate
+                new_dx = dx * cos_a - dy * sin_a
+                new_dy = dx * sin_a + dy * cos_a
+                
+                new_pos = QPointF(center_x + new_dx, center_y + new_dy)
+                atom.setPos(new_pos)
+            
+            # Update bonds
+            self.scene.update_connected_bonds(target_atoms)
+            
+            self.push_undo_state()
+            self.statusBar().showMessage(f"Rotated {len(target_atoms)} atoms by {angle_degrees} degrees.")
+            self.scene.update()
+            
+        except Exception as e:
+            print(f"Error rotating molecule: {e}")
+            traceback.print_exc()
+            self.statusBar().showMessage(f"Error rotating: {e}")
 
 
 
