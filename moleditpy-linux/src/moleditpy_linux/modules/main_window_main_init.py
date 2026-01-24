@@ -992,6 +992,7 @@ class MainWindowMainInit(object):
         edit_menu.addSeparator()
 
         rotate_2d_action = QAction("Rotate 2D...", self)
+        rotate_2d_action.setShortcut(QKeySequence("Ctrl+R"))
         rotate_2d_action.triggered.connect(self.open_rotate_2d_dialog)
         edit_menu.addAction(rotate_2d_action)
 
@@ -1054,7 +1055,7 @@ class MainWindowMainInit(object):
 
         reset_3d_view_action = QAction("Reset 3D View", self)
         reset_3d_view_action.triggered.connect(lambda: self.plotter.reset_camera() if hasattr(self, 'plotter') else None)
-        reset_3d_view_action.setShortcut(QKeySequence("Ctrl+R"))
+        reset_3d_view_action.setShortcut(QKeySequence("Ctrl+Shift+R"))
         view_menu.addAction(reset_3d_view_action)
         
         view_menu.addSeparator()
