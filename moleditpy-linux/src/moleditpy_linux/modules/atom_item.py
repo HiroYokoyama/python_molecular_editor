@@ -60,9 +60,13 @@ class AtomItem(QGraphicsItem):
                 win = self.scene().views()[0].window()
                 if win and hasattr(win, 'settings'):
                     font_size = win.settings.get('atom_font_size_2d', 20)
+                    font_family = win.settings.get('atom_font_family_2d', FONT_FAMILY)
+            else:
+                font_family = FONT_FAMILY
         except Exception:
-            pass
-        self.font = QFont(FONT_FAMILY, font_size, FONT_WEIGHT_BOLD)
+            font_family = FONT_FAMILY
+        
+        self.font = QFont(font_family, font_size, FONT_WEIGHT_BOLD)
         self.prepareGeometryChange()
         
         self.is_visible = not (self.symbol == 'C' and len(self.bonds) > 0 and self.charge == 0 and self.radical == 0)
@@ -70,16 +74,18 @@ class AtomItem(QGraphicsItem):
 
     def boundingRect(self):
         # --- paint()メソッドと完全に同じロジックでテキストの位置とサイズを計算 ---
-        # Get dynamic font size
+        # Get dynamic font size and family
         font_size = 20
+        font_family = FONT_FAMILY
         try:
             if self.scene() and self.scene().views():
                 win = self.scene().views()[0].window()
                 if win and hasattr(win, 'settings'):
                     font_size = win.settings.get('atom_font_size_2d', 20)
+                    font_family = win.settings.get('atom_font_family_2d', FONT_FAMILY)
         except Exception:
             pass
-        font = QFont(FONT_FAMILY, font_size, FONT_WEIGHT_BOLD)
+        font = QFont(font_family, font_size, FONT_WEIGHT_BOLD)
         fm = QFontMetricsF(font)
 
         hydrogen_part = ""
@@ -197,7 +203,9 @@ class AtomItem(QGraphicsItem):
             if self.scene() and self.scene().views():
                 win = self.scene().views()[0].window()
                 if win and hasattr(win, 'settings'):
-                    if win.settings.get('atom_use_bond_color_2d', False):
+                    # Force Hydrogen to use bond color (invisible on white bg otherwise)
+                    # OR if the global setting is checked
+                    if self.symbol == 'H' or win.settings.get('atom_use_bond_color_2d', False):
                         bond_col = win.settings.get('bond_color_2d', '#222222')
                         color = QColor(bond_col)
         except Exception:
@@ -374,11 +382,9 @@ class AtomItem(QGraphicsItem):
         res = super().itemChange(change, value)
         if change == QGraphicsItem.GraphicsItemChange.ItemPositionHasChanged:
             if self.flags() & QGraphicsItem.GraphicsItemFlag.ItemIsMovable:
-                # Prevent cascading updates during batch operations
-                if not getattr(self, '_updating_position', False):
-                    for bond in self.bonds: 
-                        if bond.scene():  # Only update if bond is still in scene
-                            bond.update_position()
+                for bond in self.bonds: 
+                    if bond.scene():
+                        bond.update_position()
             
         return res
 
