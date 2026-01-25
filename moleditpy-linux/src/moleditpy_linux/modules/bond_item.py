@@ -94,10 +94,12 @@ class BondItem(QGraphicsItem):
         if self.atom1 is None or self.atom2 is None:
             return QLineF(0, 0, 0, 0)
         try:
-            p2 = self.mapFromItem(self.atom2, 0, 0)
-            return QLineF(QPointF(0, 0), p2)
-        except (RuntimeError, TypeError):
-            # Handle case where atoms are deleted from scene
+            # Use pos() directly - assuming items are in scene coords (no parent)
+            # This is robust and efficient.
+            p1 = self.atom1.pos()
+            p2 = self.atom2.pos()
+            return QLineF(QPointF(0, 0), p2 - p1)
+        except Exception:
             return QLineF(0, 0, 0, 0)
 
     def boundingRect(self):
@@ -120,12 +122,33 @@ class BondItem(QGraphicsItem):
         except Exception:
              bond_offset = globals().get('BOND_OFFSET', 3.5)
 
-        extra = (getattr(self, 'order', 1) - 1) * bond_offset + 20
+        # Get dynamic wedge width
+        wedge_width = 6.0
+        try:
+             if self.scene() and self.scene().views():
+                  win = self.scene().views()[0].window()
+                  if win and hasattr(win, 'settings'):
+                       wedge_width = win.settings.get('bond_wedge_width_2d', 6.0)
+        except Exception:
+             pass
+
+        extra = (getattr(self, 'order', 1) - 1) * bond_offset + 50 + wedge_width
         rect = QRectF(line.p1(), line.p2()).normalized().adjusted(-extra, -extra, extra, extra)
 
         # E/Zラベルの描画範囲も考慮して拡張（QFontMetricsFで正確に）
         if self.order == 2 and self.stereo in [3, 4]:
-            font = QFont(FONT_FAMILY, FONT_SIZE_LARGE, FONT_WEIGHT_BOLD)
+            font_size = 20
+            font_family = FONT_FAMILY
+            try:
+                if self.scene() and self.scene().views():
+                    win = self.scene().views()[0].window()
+                    if win and hasattr(win, 'settings'):
+                        font_size = win.settings.get('atom_font_size_2d', 20)
+                        font_family = win.settings.get('atom_font_family_2d', FONT_FAMILY)
+            except Exception:
+                pass
+            
+            font = QFont(font_family, font_size, FONT_WEIGHT_BOLD)
             font.setItalic(True)
             text = "Z" if self.stereo == 3 else "E"
             fm = QFontMetricsF(font)
@@ -383,7 +406,18 @@ class BondItem(QGraphicsItem):
                         painter.save() # 現在の描画設定を保存
 
                         # --- ラベルの設定 ---
-                        font = QFont(FONT_FAMILY, FONT_SIZE_LARGE, FONT_WEIGHT_BOLD)
+                        font_size = 20
+                        font_family = FONT_FAMILY
+                        try:
+                            if self.scene() and self.scene().views():
+                                win = self.scene().views()[0].window()
+                                if win and hasattr(win, 'settings'):
+                                    font_size = win.settings.get('atom_font_size_2d', 20)
+                                    font_family = win.settings.get('atom_font_family_2d', FONT_FAMILY)
+                        except Exception:
+                            pass
+                        
+                        font = QFont(font_family, font_size, FONT_WEIGHT_BOLD)
                         font.setItalic(True)
                         text_color = QColor("gray")
                         # 輪郭の色を背景色と同じにする（scene()がNoneのときは安全なフォールバックを使う）
@@ -442,9 +476,10 @@ class BondItem(QGraphicsItem):
 
 
 
-    def update_position(self):
+    def update_position(self, notify=True):
         try:
-            self.prepareGeometryChange()
+            if notify:
+                self.prepareGeometryChange()
             if self.atom1:
                 self.setPos(self.atom1.pos())
             self.update()
