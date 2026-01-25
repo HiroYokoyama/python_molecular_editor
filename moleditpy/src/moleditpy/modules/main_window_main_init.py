@@ -1253,8 +1253,6 @@ class MainWindowMainInit(object):
         
         plugin_menu.addSeparator()
         
-        # Initial population of plugins
-        self.update_plugin_menu(plugin_menu)
 
         settings_menu = menu_bar.addMenu("&Settings")
         # 1) 3D View settings (existing)
@@ -1420,10 +1418,11 @@ class MainWindowMainInit(object):
         )
         help_menu.addAction(manual_action)
 
-
-
         # 3D関連機能の初期状態を統一的に設定
         self._enable_3d_features(False)
+        
+        # Finally, populate plugins now that all menus are created
+        self.update_plugin_menu(plugin_menu)
         
 
 
