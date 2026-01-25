@@ -65,8 +65,8 @@ The MoleditPy main window is primarily composed of the following elements:
 3.  **Template Toolbar:** Contains buttons for selecting templates such as ring structures.
 4.  **2D Edit View:** The main canvas for drawing and editing molecular structures. You can add and edit atoms and bonds using mouse operations.
 5.  **3D View:** Displays the 3D structure of the generated or loaded molecule. You can rotate, zoom, and pan with the mouse. 3D measurement and editing are also performed in this view.
-6.  **Splitter:** The boundary line between the 2D view and the 3D view. You can drag it to resize the display area of each view.
-7.  **Status Bar:** Displays the current operation mode, messages, and the molecular formula/atom count being calculated.
+6.  **Splitter:** The boundary line between the 2D view and the 3D view. You can drag it to resize the display area of each view. You can also quickly switch split ratios via `View` \> `Panel Layout` (or Ctrl+1, 2, 3).
+7.  **Status Bar:** Displays the current operating mode, messages, and the molecular formula/atom count being calculated.
 
 -----
 
@@ -142,6 +142,15 @@ Select a drawing mode by clicking a button on the main toolbar or pressing the c
   * In 'Select' mode, select atoms or bonds and execute `Edit` \> `Copy` (Ctrl+C) or `Cut` (Ctrl+X) from the menu.
   * Execute `Edit` \> `Paste` (Ctrl+V) from the menu to paste the clipboard contents at the cursor's position. This supports internal copy & paste within MoleditPy.
 
+### 4.6. Other Edit/View Functions
+
+  * **Clean Up 2D:** To tidy up the 2D structure, click the `Clean Up 2D` button at the bottom left or press `Ctrl+J`.
+  * **Rotate 2D...:** Select `Edit` \> `Rotate 2D...` (Ctrl+R) from the menu to open a dialog for rotating the 2D molecule by a specified angle.
+  * **Add Hydrogens:** Select `Edit` \> `Add Hydrogens` from the menu to explicitly add hydrogen atoms based on the current bonding.
+  * **Remove Hydrogens:** Select `Edit` \> `Remove Hydrogens` from the menu to remove all hydrogen atoms.
+  * **Clear All:** To delete all atoms and bonds on the canvas, execute `Edit` \> `Clear All` (Ctrl+Shift+C) from the menu.
+  * **Show Chiral Labels:** Check `View` \> `Show Chiral Labels` from the menu to display R/S labels for chiral centers.
+
 -----
 
 ## 5\. File Operations
@@ -168,6 +177,7 @@ Perform various file operations from the `File` menu in the menu bar.
   * **Export \> PME Raw Format...:** Saves project data in the legacy binary format (.pmeraw).
   * **Export \> 2D Formats \> MOL File...:** Saves the current 2D structure as a MOL file.
   * **Export \> 2D Formats \> PNG Image...:** Saves the current 2D Edit View content as a PNG image file. You can choose whether to make the background transparent.
+  * **Export \> 2D Formats \> SVG Image...:** Saves the current 2D Edit View content as an SVG vector image file. You can choose whether to make the background transparent.
   * **Export \> 3D Formats \> MOL File...:** Saves the currently displayed 3D structure as a MOL file with 3D coordinates.
   * **Export \> 3D Formats \> XYZ File...:** Saves the currently displayed 3D structure as an XYZ file.
   * **Export \> 3D Formats \> PNG Image...:** Saves the current 3D View content as a PNG image file. You can choose whether to make the background transparent.
@@ -206,7 +216,7 @@ You can select the display style from the **3D Style** dropdown menu on the righ
   * **Stick:** Displays bonds as thick sticks and atoms as small spheres.
   * **Aromatic Ring:** By default, aromatic rings (e.g. benzene) are displayed as single bonds. You can change this to show aromatic circles (torus) or Kekulé structures (alternating double bonds) in Settings.
 
-**(Settings):** Details for each display style (atom size, bond radius, **multiple bond offsets**, rendering quality, etc.) can be adjusted from the menu `Settings` \> `3D View Settings...`. You can also change **CPK Colors** from `Settings` \> `CPK Colors...`.
+**(Settings):** Details for each display style (atom size, bond radius, **multiple bond offsets**, rendering quality, etc.) can be adjusted from the menu `Settings` \> `Settings...`. You can also change **CPK Colors** from `Settings` \> `CPK Colors...`.
 
 ### 6.4. 3D View Operations
 
@@ -217,7 +227,7 @@ You can select the display style from the **3D Style** dropdown menu on the righ
 
 ### 6.5. Official Plugin Repository
 
-Official plugins are available in the [GitHub repository](https://github.com/HiroYokoyama/moleditpy-plugins). You can download them and place them in your plugins directory (`~/.moleditpy/plugins`) to use them.
+Official plugins are available in the [GitHub repository](https://github.com/HiroYokoyama/moleditpy-plugins). You can download them and place them in your plugins directory (`~/.moleditpy/plugins`) to use them. You can also use the **Plugin Manager** via `Plugin` \> `Plugin Manager...`.
 
 **Examples of Available Plugins
 
@@ -344,11 +354,24 @@ You can copy each value to the clipboard using the **Copy** button next to it.
 
 ## 8. Settings
 
-You can configure various 3D display settings via `Settings` > `3D View Settings...` in the menu.
+You can configure various 2D and 3D display settings via `Settings` > `Settings...` in the menu.
 
 **Configurable items:**
 
-* **Scene Tab:**
+* **2D Settings Tab:**
+    * **View Appearance:** 2D canvas background color
+    * **Bond Settings:**
+        * Bond Color
+        * Bond Width
+        * Double/Triple Bond Spacing
+        * Bond Cap Style (Round/Flat/Square)
+        * Wedge Bond Width
+        * Dash Count
+    * **Atom Settings:**
+        * Atom label font size
+        * Use Bond Color for Atoms (unified color)
+
+* **Scene (3D) Tab:**
     * Background color
     * Show/Hide 3D axes
     * Enable/Disable lighting
@@ -359,12 +382,16 @@ You can configure various 3D display settings via `Settings` > `3D View Settings
     * Atom size/radius scale
     * Bond radius
     * Drawing quality (Resolution)
+    * Multi-bond options (Offset, Thickness) per model
 * **Other Tab:**
     * Whether to skip chemical validity checks when importing XYZ files
     * Whether to use Kekulé structures (alternating double bonds) for aromatic systems (e.g. benzene)
     * Whether to display aromatic rings as circles (torus) in 3D
+    * Aromatic torus thickness
 
 Click the **Apply** button to reflect changes immediately, or the **OK** button to apply changes and close the dialog. You can also revert settings to defaults using **Reset Current Tab** / **Reset All**. Settings are retained for the next launch.
+
+You can also reset all settings to defaults via `Settings` \> `Reset All Settings` in the menu.
 
 * You can change CPK colors via `CPK Colors...` in the `Settings` menu.
 
@@ -402,7 +429,7 @@ Click the **Apply** button to reflect changes immediately, or the **OK** button 
 | `Ctrl`+`X` | Cut Selection | 
 | `Ctrl`+`V` | Paste | 
 | `Ctrl`+`A` | Select All | 
-| `Ctrl`+`A` | Rotate 2D Molecule | 
+| `Ctrl`+`R` | Rotate 2D Molecule | 
 | `Ctrl`+`N` | New | 
 | `Ctrl`+`O` | Open Project... | 
 | `Ctrl`+`S` | Save Project |
