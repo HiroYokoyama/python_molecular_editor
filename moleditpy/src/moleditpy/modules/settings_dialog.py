@@ -12,11 +12,11 @@ DOI: 10.5281/zenodo.17268532
 
 from PyQt6.QtWidgets import (
     QDialog, QVBoxLayout, QTabWidget, QWidget, QFormLayout, QPushButton, QHBoxLayout,
-    QCheckBox, QComboBox, QLabel, QColorDialog, QSlider, QFrame, QMessageBox
+    QCheckBox, QComboBox, QLabel, QColorDialog, QSlider, QFrame, QMessageBox, QFontComboBox
 )
 from PyQt6.QtWidgets import QApplication
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QColor
+from PyQt6.QtGui import QColor, QFont
 try:
     from .constants import CPK_COLORS
 except Exception:
@@ -101,6 +101,7 @@ class SettingsDialog(QDialog):
             'bond_cap_style_2d': 'Round',
             'bond_wedge_width_2d': 6.0,
             'bond_dash_count_2d': 8,
+            'atom_font_family_2d': 'Arial',
         }
         
         # --- 選択された色を管理する専用のインスタンス変数 ---
@@ -274,6 +275,13 @@ class SettingsDialog(QDialog):
 
         # --- Atom Settings ---
         form_layout.addRow(QLabel("<b>Atom Settings</b>"))
+
+        # Font Family
+        self.atom_font_family_2d_combo = QFontComboBox()
+        self.atom_font_family_2d_combo.setEditable(False) # Force selection from list
+        # Filter mostly for scalable fonts if desired, but default is usually fine
+        self.atom_font_family_2d_combo.setFontFilters(QFontComboBox.FontFilter.ScalableFonts)
+        form_layout.addRow("Atom Label Font Family:", self.atom_font_family_2d_combo)
 
         # Font Size
         self.atom_font_size_2d_slider = QSlider(Qt.Orientation.Horizontal)
@@ -813,10 +821,10 @@ class SettingsDialog(QDialog):
                 'background_color_2d': self.default_settings['background_color_2d'],
                 'bond_color_2d': self.default_settings['bond_color_2d'],
                 'atom_use_bond_color_2d': self.default_settings['atom_use_bond_color_2d'],
-                'atom_use_bond_color_2d': self.default_settings['atom_use_bond_color_2d'],
                 'bond_cap_style_2d': self.default_settings['bond_cap_style_2d'],
                 'bond_wedge_width_2d': self.default_settings['bond_wedge_width_2d'],
-                'bond_dash_count_2d': self.default_settings['bond_dash_count_2d']
+                'bond_dash_count_2d': self.default_settings['bond_dash_count_2d'],
+                'atom_font_family_2d': self.default_settings['atom_font_family_2d']
             },
             "3D Scene": {
                 'background_color': self.default_settings['background_color'],
@@ -1258,6 +1266,7 @@ class SettingsDialog(QDialog):
             'bond_cap_style_2d': self.bond_cap_style_2d_combo.currentText(),
             'bond_wedge_width_2d': self.bond_wedge_width_2d_slider.value() / 10.0,
             'bond_dash_count_2d': self.bond_dash_count_2d_slider.value(),
+            'atom_font_family_2d': self.atom_font_family_2d_combo.currentFont().family(),
         }
 
     def pick_bs_bond_color(self):
@@ -1518,6 +1527,10 @@ class SettingsDialog(QDialog):
         fs_2d = settings_dict.get('atom_font_size_2d', self.default_settings['atom_font_size_2d'])
         self.atom_font_size_2d_slider.setValue(int(fs_2d))
         self.atom_font_size_2d_label.setText(str(fs_2d))
+
+        # Load Font Family
+        font_family = settings_dict.get('atom_font_family_2d', self.default_settings['atom_font_family_2d'])
+        self.atom_font_family_2d_combo.setCurrentFont(QFont(font_family))
 
         self.atom_use_bond_color_2d_checkbox.setChecked(settings_dict.get('atom_use_bond_color_2d', self.default_settings.get('atom_use_bond_color_2d', False)))
 
