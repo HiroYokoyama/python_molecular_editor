@@ -164,43 +164,50 @@ class BondItem(QGraphicsItem):
         return rect
 
     def shape(self):
+        """Define the precise collision/selection area, separate from the drawing area (boundingRect)."""
         path = QPainterPath()
         try:
             line = self.get_line_in_local_coords()
+            # Create a simple path along the bond line
+            path.moveTo(line.p1())
+            path.lineTo(line.p2())
+            
+            # Stroke it to give it some width (e.g., 10px or dynamic based on settings) generally easier to click
+            # even if the visual width is smaller.
+            stroker = QPainterPathStroker()
+            stroker.setWidth(DESIRED_BOND_PIXEL_WIDTH) # Use constant (20.0)
+            path = stroker.createStroke(path)
+            
+            # If there's an E/Z label, add its rect to the selection shape
+            label_rect = self.get_ez_label_local_rect()
+            if label_rect:
+                path.addRect(label_rect)
+                
         except Exception:
-            return path 
-        if line.length() == 0:
-            return path
+            # Fallback to a small rect around the origin if calculation fails
+            path.addRect(QRectF(-5, -5, 10, 10))
+            
+        return path
 
-        scene = self.scene()
-        if not scene or not scene.views():
-            return super().shape()
-
-        view = scene.views()[0]
-        scale = view.transform().m11()
-
-        # Dynamic bond width
-        width_2d = 2.0
+    def get_ez_label_local_rect(self):
+        """Helper to get E/Z label rect in local coordinates."""
+        if self.order != 2 or self.stereo not in [3, 4]:
+            return None
         try:
-            if view.window() and hasattr(view.window(), 'settings'):
-                width_2d = view.window().settings.get('bond_width_2d', 2.0)
+            line = self.get_line_in_local_coords()
+            center = line.center()
+            
+            # Logic similar to boundingRect but returning just the label box
+            font_size = 20
+            # ... (Simpler logic: just return a box around center)
+            # Standard size estimate
+            box_size = 30 
+            return QRectF(center.x() - box_size/2, center.y() - box_size/2, box_size, box_size)
         except Exception:
-            pass
-
-        # Hit area should be roughly closely matched or slightly larger than visual
-        # Ensure minimum hit width for usability
-        scene_width = max(DESIRED_BOND_PIXEL_WIDTH, width_2d * 10) / scale
+            return None
 
 
-        stroker = QPainterPathStroker()
-        stroker.setWidth(scene_width)
-        stroker.setCapStyle(Qt.PenCapStyle.RoundCap)  
-        stroker.setJoinStyle(Qt.PenJoinStyle.RoundJoin) 
 
-        center_line_path = QPainterPath(line.p1())
-        center_line_path.lineTo(line.p2())
-        
-        return stroker.createStroke(center_line_path)
 
     def paint(self, painter, option, widget):
         if self.atom1 is None or self.atom2 is None:
