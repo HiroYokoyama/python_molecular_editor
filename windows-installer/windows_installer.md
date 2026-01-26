@@ -22,7 +22,7 @@ Note: As `pip` is not included in this package, plugins requiring external depen
 Please download the installer from the link below.
 The download will start upon clicking.
 
-[Download MoleditPy Windows Installer](https://github.com/HiroYokoyama/python_molecular_editor/releases/download/2.4.6/MoleditPy_2.4.6_win64_setup.exe)
+[Download MoleditPy Windows Installer](https://github.com/HiroYokoyama/python_molecular_editor/releases/download/2.4.7/MoleditPy_2.4.7_win64_setup.exe)
 
 ## Installation Steps
 
@@ -53,6 +53,7 @@ To remove the software, open Windows "Settings" > "Apps" > "Installed apps," sel
 ## Disclaimer
 
 The developer assumes no responsibility for any damages arising from the use of this software. Please use it at your own risk.
+
 
 
 
