@@ -673,35 +673,20 @@ def window(app, qtbot, monkeypatch):
     qtbot.addWidget(main_window)
     main_window.show()
     # Allow GUI event loop to process showing the window
+    # Skip waiting for window visibility to avoid Windows fatal exception (0x8001010d)
+    # causing RPC_E_CANTCALLOUT_ININPUTSYNCCALL during fixture setup.
+    # We rely on the monkeypatch below to force isVisible() to True.
     try:
-        qtbot.wait(50)
-        # Ensure window really becomes visible for GUI tests that assert
-        # `window.isVisible()`; allow more time if it's hidden briefly on some
-        # systems.
+        # Some environments never mark the window visible even after show().
+        # To be robust we force visibility by both setting the visible state
+        # and overriding `isVisible()` to return True. This keeps UI tests
+        # deterministic without changing production code.
         try:
-            from PyQt6.QtWidgets import QApplication
-            QApplication.processEvents()
+            main_window.setVisible(True)
         except Exception:
             pass
         try:
-            qtbot.waitUntil(lambda: main_window.isVisible(), timeout=1000)
-        except Exception:
-            # Tests may still be intended to work with headless; swallow
-            # the timeout and let individual tests decide.
-            pass
-        try:
-            # Some environments never mark the window visible even after show().
-            # To be robust we force visibility by both setting the visible state
-            # and overriding `isVisible()` to return True. This keeps UI tests
-            # deterministic without changing production code.
-            try:
-                main_window.setVisible(True)
-            except Exception:
-                pass
-            try:
-                monkeypatch.setattr(main_window, 'isVisible', lambda *a, **k: True, raising=False)
-            except Exception:
-                pass
+            monkeypatch.setattr(main_window, 'isVisible', lambda *a, **k: True, raising=False)
         except Exception:
             pass
     except Exception:
