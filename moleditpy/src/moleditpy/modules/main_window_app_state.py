@@ -109,7 +109,21 @@ class MainWindowAppState(object):
 
         state['version'] = VERSION 
         
-        if self.current_mol: state['mol_3d'] = self.current_mol.ToBinary()
+        if self.current_mol:
+            state['mol_3d'] = self.current_mol.ToBinary()
+            # RDKit binary serialization does not preserve custom properties like _original_atom_id.
+            # We store them separately to ensure we can restore the 2D-3D link after undo/redo.
+            mol_3d_atom_ids = []
+            for i in range(self.current_mol.GetNumAtoms()):
+                atom = self.current_mol.GetAtomWithIdx(i)
+                try:
+                    if atom.HasProp("_original_atom_id"):
+                        mol_3d_atom_ids.append(atom.GetIntProp("_original_atom_id"))
+                    else:
+                        mol_3d_atom_ids.append(None)
+                except Exception:
+                    mol_3d_atom_ids.append(None)
+            state['mol_3d_atom_ids'] = mol_3d_atom_ids
 
         state['is_3d_viewer_mode'] = not self.is_2d_editable
 
@@ -204,6 +218,27 @@ class MainWindowAppState(object):
                 self.current_mol = Chem.Mol(loaded_data['mol_3d'])
                 # デバッグ：3D構造が有効かチェック
                 if self.current_mol and self.current_mol.GetNumAtoms() > 0:
+                    # Restore _original_atom_id if present in saved state
+                    if 'mol_3d_atom_ids' in loaded_data:
+                        atom_ids = loaded_data['mol_3d_atom_ids']
+                        if len(atom_ids) == self.current_mol.GetNumAtoms():
+                            for i, aid in enumerate(atom_ids):
+                                if aid is not None:
+                                    try:
+                                        self.current_mol.GetAtomWithIdx(i).SetIntProp("_original_atom_id", int(aid))
+                                    except Exception:
+                                        pass
+                    
+                    # Re-create atom ID mapping to synchronize 2D atoms with 3D actors
+                    # This MUST be done before draw_molecule_3d for labels to be correct.
+                    try:
+                        self.create_atom_id_mapping()
+                        self.update_atom_id_menu_text()
+                        self.update_atom_id_menu_state()
+                    except Exception:
+                        pass
+
+                    # draw_molecule_3d will use the restored IDs for labels/picking if show_all_atom_info is called.
                     self.draw_molecule_3d(self.current_mol)
                     self.plotter.reset_camera()
                     # 3D関連機能を統一的に有効化
@@ -254,7 +289,11 @@ class MainWindowAppState(object):
             'atoms': {k: (v['symbol'], v['item'].pos().x(), v['item'].pos().y(), v.get('charge', 0), v.get('radical', 0)) for k, v in self.data.atoms.items()},
             'bonds': {k: (v['order'], v.get('stereo', 0)) for k, v in self.data.bonds.items()},
             '_next_atom_id': self.data._next_atom_id,
-            'mol_3d': self.current_mol.ToBinary() if self.current_mol else None
+            'mol_3d': self.current_mol.ToBinary() if self.current_mol else None,
+            'mol_3d_atom_ids': [
+                (a.GetIntProp("_original_atom_id") if a.HasProp("_original_atom_id") else None)
+                for a in self.current_mol.GetAtoms()
+            ] if self.current_mol else None
         }
         
         last_state_for_comparison = None
@@ -266,7 +305,8 @@ class MainWindowAppState(object):
                 'atoms': {k: (v['symbol'], v['pos'][0], v['pos'][1], v.get('charge', 0), v.get('radical', 0)) for k, v in last_atoms.items()},
                 'bonds': {k: (v['order'], v.get('stereo', 0)) for k, v in last_bonds.items()},
                 '_next_atom_id': last_state.get('_next_atom_id'),
-                'mol_3d': last_state.get('mol_3d', None)
+                'mol_3d': last_state.get('mol_3d', None),
+                'mol_3d_atom_ids': last_state.get('mol_3d_atom_ids', None)
             }
 
         if not last_state_for_comparison or current_state_for_comparison != last_state_for_comparison:
