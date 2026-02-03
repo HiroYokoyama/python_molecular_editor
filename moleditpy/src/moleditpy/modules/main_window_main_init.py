@@ -499,6 +499,7 @@ class MainWindowMainInit(object):
         self.addToolBar(Qt.ToolBarArea.TopToolBarArea, self.plugin_toolbar)
         self.plugin_toolbar.hide()
         
+        
         # Initialize menu bar (and populate toolbars) AFTER all toolbars are created
         self.init_menu_bar()
 
@@ -799,7 +800,7 @@ class MainWindowMainInit(object):
         toolbar.addAction(self.edit_3d_action)
 
         # 3Dスタイル変更ボタンとメニューを作成
-
+        # Reverted to original location and added immediate update for plugins
         self.style_button = QToolButton()
         self.style_button.setText("3D Style")
         self.style_button.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
@@ -835,6 +836,22 @@ class MainWindowMainInit(object):
         stick_action.triggered.connect(lambda: self.set_3d_style('stick'))
         style_menu.addAction(stick_action)
         style_group.addAction(stick_action)
+
+        # --- Fix for Custom 3D Styles from Plugins ---
+        # Since style_button is created after plugins are discovered/menus init,
+        # we need to manually trigger the update/injection of custom styles here.
+        if self.plugin_manager and self.plugin_manager.custom_3d_styles:
+             # Add separator
+             style_menu.addSeparator()
+             
+             for style_name in self.plugin_manager.custom_3d_styles:
+                 # Avoid duplicates just in case
+                 if not any(a.text() == style_name for a in style_menu.actions()):
+                     action = QAction(style_name, self, checkable=True)
+                     action.triggered.connect(lambda checked=False, s=style_name: self.set_3d_style(s))
+                     style_menu.addAction(action)
+                     style_group.addAction(action)
+
 
         quit_shortcut = QShortcut(QKeySequence("Ctrl+Q"), self)
         quit_shortcut.activated.connect(self.close)
@@ -1838,6 +1855,39 @@ class MainWindowMainInit(object):
         # Add dynamic plugin actions (Legacy + New Registration)
         plugins = self.plugin_manager.discover_plugins(self)
         
+        # --- Update 3D Style Menu with discovered styles ---
+        # This menu is built in init_ui (before plugins are discovered), so we must update it here.
+        if hasattr(self, 'style_button') and self.style_button.menu():
+            style_menu = self.style_button.menu()
+            
+            # Find the exclusive ActionGroup from an existing action (e.g. Ball & Stick)
+            style_group = None
+            for action in style_menu.actions():
+                if action.actionGroup():
+                    style_group = action.actionGroup()
+                    break
+            
+            if style_group and self.plugin_manager.custom_3d_styles:
+                # Add separator if not present at end
+                actions = style_menu.actions()
+                if actions and not actions[-1].isSeparator():
+                    style_menu.addSeparator()
+
+                for style_name in self.plugin_manager.custom_3d_styles:
+                     # Check if already added to avoid duplicates
+                     exists = False
+                     for act in style_menu.actions():
+                         if act.text() == style_name:
+                             exists = True
+                             break
+                     
+                     if not exists:
+                         action = QAction(style_name, self, checkable=True)
+                         # Use default arg to capture loop variable
+                         action.triggered.connect(lambda checked=False, s=style_name: self.set_3d_style(s))
+                         style_menu.addAction(action)
+                         style_group.addAction(action)
+
         # 1. Add Registered Menu Actions (New System)
         if self.plugin_manager.menu_actions:
              for action_def in self.plugin_manager.menu_actions:
