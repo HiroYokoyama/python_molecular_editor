@@ -46,7 +46,7 @@ if __name__ == "__main__":
         env_vars["MOLEDITPY_HEADLESS"] = "1"
         env_vars["QT_QPA_PLATFORM"] = "offscreen"
 
-    print("Starting Unified Test Suite (Unit + GUI)...", flush=True)
+        print("Starting Unified Test Suite (Unit + GUI)...", flush=True)
     
         unit_res = run_suite("UNIT", UNIT_DIR, env_vars=env_vars)
     
