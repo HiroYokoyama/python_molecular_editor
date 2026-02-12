@@ -43,3 +43,18 @@ This script:
 2.  Runs `tests/unit` first.
 3.  Runs `tests/integration` second.
 4.  Runs `tests/gui` third (only if previous suites pass).
+## Test Reports & Catalogs
+
+To simplify human review of the test suite, the following generated reports are available:
+
+*   [**Assertion Catalog**](assertion_catalog.md): A comprehensive list of all 91 test assertions, mapping test names and descriptions to their core verification logic.
+*   [**Coverage Report**](coverage_report.md): A Markdown-formatted summary of the combined coverage (Unit + Integration + GUI) across the entire codebase.
+
+### Running Coverage Locally
+
+You can regenerate the coverage report at any time using the provided utility:
+
+```powershell
+# From the project root
+python tests/print_cov.py
+```
