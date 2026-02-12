@@ -95,18 +95,3 @@ pip install pytest pytest-qt pytest-mock
 ```
 
 You will also need the application's main dependencies, such as `PyQt6`.
-
-### Running Tests
-
-To run the test suite, execute `pytest` from the root directory:
-
-```bash
-# Run all tests
-pytest
-
-# Run only unit tests
-pytest -m unit
-
-# Run only GUI tests
-pytest -m gui
-```
