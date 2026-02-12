@@ -48,11 +48,9 @@ if __name__ == "__main__":
 
     print("Starting Unified Test Suite (Unit + GUI)...", flush=True)
     
-    # Run Unit Tests
-    unit_res = run_suite("UNIT", UNIT_DIR, env_vars=env_vars)
+        unit_res = run_suite("UNIT", UNIT_DIR, env_vars=env_vars)
     
-    # Run GUI Tests (ignore OLD backup folder)
-    gui_res = run_suite(
+        gui_res = run_suite(
         "GUI", 
         GUI_DIR, 
         env_vars=env_vars

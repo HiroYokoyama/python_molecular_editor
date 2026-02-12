@@ -1,18 +1,14 @@
 # -*- coding: utf-8 -*-
 import os
 import sys
-# Add pytest import for fixtures
 import pytest
-# Add QApplication import for app fixture
 from PyQt6.QtWidgets import QApplication
 import importlib
 import importlib.util
-# Define project_main after os is imported
 project_main = os.path.join(os.path.dirname(__file__), 'src', 'moleditpy', '__main__.py')
 # ...existing code...
 
 
-# Only set headless environment variables if MOLEDITPY_HEADLESS=1
 if os.environ.get("MOLEDITPY_HEADLESS", "0") == "1":
     os.environ.setdefault('PYVISTA_OFF_SCREEN', 'true')
     os.environ.setdefault('PYVISTA_USE_OFF_SCREEN', 'true')

@@ -30,10 +30,7 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install pytest pytest-qt pytest-mock
-        # Install dependencies from requirements-linux.txt, excluding the package itself which we install locally
-        grep -v "moleditpy" requirements/requirements-linux.txt > ci-requirements.txt
-        pip install -r ci-requirements.txt
-        # Install local package in editable mode to ensure tests run against source
+        # Install local package + dependencies from pyproject.toml
         pip install -e moleditpy/
 
     - name: Run Tests
