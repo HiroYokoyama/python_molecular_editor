@@ -48,15 +48,23 @@ if __name__ == "__main__":
         env_vars["MOLEDITPY_HEADLESS"] = "1"
         env_vars["QT_QPA_PLATFORM"] = "offscreen"
 
-        print("Starting Unified Test Suite (Unit + GUI)...", flush=True)
+    print("Starting Unified Test Suite (Unit + GUI)...", flush=True)
     
+    unit_res = 0
+    gui_res = 0
+    
+    try:
         unit_res = run_suite("UNIT", UNIT_DIR, env_vars=env_vars)
-    
-        gui_res = run_suite(
-        "GUI", 
-        GUI_DIR, 
-        env_vars=env_vars
-    )
+    except KeyboardInterrupt:
+        print("\nInterrupted during UNIT tests.")
+        unit_res = 1
+
+    try:
+        if unit_res == 0: # Only run GUI if Unit passed (optional, but good for CI) or just run both
+             gui_res = run_suite("GUI", GUI_DIR, env_vars=env_vars)
+    except KeyboardInterrupt:
+         print("\nInterrupted during GUI tests.")
+         gui_res = 1
     
     if unit_res == 0 and gui_res == 0:
         print("\nALL tests passed successfully!")

@@ -392,6 +392,8 @@ def app(request):
         q_app = QApplication(sys.argv)
     return q_app
 
+_CACHED_MAIN_WINDOW_CLASS = None
+
 @pytest.fixture
 def window(app, qtbot, monkeypatch):
     """
@@ -400,43 +402,49 @@ def window(app, qtbot, monkeypatch):
     """
     import os
     import traceback
-    # --- Discover MainWindowClass before any use ---
-    app_mod = moleditpy
-    if app_mod is None:
-        try:
-            import __main__ as _m
-            app_mod = _m
-        except Exception:
-            pass
-    MainWindowClass = None
-    if app_mod is not None:
-        try:
-            MainWindowClass = getattr(app_mod, 'MainWindow', None)
-            if MainWindowClass is None:
-                try:
-                    from moleditpy.modules.main_window import MainWindow as _MainWindowClass
-                    MainWindowClass = _MainWindowClass
-                except Exception:
-                    pass
-                try:
-                    proj_root = os.path.dirname(__file__)
-                    mm_path = os.path.join(proj_root, 'src', 'moleditpy', 'modules', 'main_window.py')
-                    import importlib.util as _il
-                    spec = _il.spec_from_file_location('moleditpy.modules.main_window', mm_path)
-                    mod = _il.module_from_spec(spec)
-                    # We must set the module in sys.modules manually for relative imports to work
-                    sys.modules['moleditpy.modules.main_window'] = mod
-                    spec.loader.exec_module(mod)
-                    MainWindowClass = getattr(mod, 'MainWindow', None)
-                except Exception:
-                    MainWindowClass = None
-                try:
-                    setattr(app_mod, 'MainWindow', MainWindowClass)
-                except Exception:
-                    pass
-        except Exception:
-            MainWindowClass = None
+    global _CACHED_MAIN_WINDOW_CLASS
+
+    if _CACHED_MAIN_WINDOW_CLASS is None:
+        # --- Discover MainWindowClass once and cache it ---
+        app_mod = moleditpy
+        if app_mod is None:
+            try:
+                import __main__ as _m
+                app_mod = _m
+            except Exception:
+                pass
+        
+        MainWindowClass = None
+        if app_mod is not None:
+            try:
+                MainWindowClass = getattr(app_mod, 'MainWindow', None)
+                if MainWindowClass is None:
+                    try:
+                        from moleditpy.modules.main_window import MainWindow as _MainWindowClass
+                        MainWindowClass = _MainWindowClass
+                    except Exception:
+                        pass
+                    try:
+                        proj_root = os.path.dirname(__file__)
+                        mm_path = os.path.join(proj_root, 'src', 'moleditpy', 'modules', 'main_window.py')
+                        import importlib.util as _il
+                        spec = _il.spec_from_file_location('moleditpy.modules.main_window', mm_path)
+                        mod = _il.module_from_spec(spec)
+                        # We must set the module in sys.modules manually for relative imports to work
+                        sys.modules['moleditpy.modules.main_window'] = mod
+                        spec.loader.exec_module(mod)
+                        MainWindowClass = getattr(mod, 'MainWindow', None)
+                    except Exception:
+                        MainWindowClass = None
+                    try:
+                        setattr(app_mod, 'MainWindow', MainWindowClass)
+                    except Exception:
+                        pass
+            except Exception:
+                MainWindowClass = None
+        _CACHED_MAIN_WINDOW_CLASS = MainWindowClass
     
+    MainWindowClass = _CACHED_MAIN_WINDOW_CLASS
     if MainWindowClass is None:
         raise RuntimeError("Could not find MainWindow class for tests; ensure module is importable")
 
@@ -447,6 +455,16 @@ def window(app, qtbot, monkeypatch):
         # as `modules...`. Patch both to be robust in all import paths.
         monkeypatch.setattr('moleditpy.modules.main_window_ui_manager.MainWindowUiManager._setup_3d_picker', lambda self: None, raising=False)
         monkeypatch.setattr('modules.main_window_ui_manager.MainWindowUiManager._setup_3d_picker', lambda self: None, raising=False)
+        
+        # Patch init_worker_thread to prevent QThread creation which can cause hangs
+        monkeypatch.setattr('moleditpy.modules.main_window_main_init.MainWindowMainInit.init_worker_thread', lambda self: None, raising=False)
+        monkeypatch.setattr('modules.main_window_main_init.MainWindowMainInit.init_worker_thread', lambda self: None, raising=False)
+
+        # Patch RDKit warmup to save time
+        # We can't easily patch the try/except block in __init__, but we can try to
+        # patch the descriptors or just accept that it runs once.
+        # However, checking if we can patch Property availability on atoms might be too complex / unstable.
+        # Instead, we rely on the fact that if we mock enough heavy subsystems, the warmup is negligible.
     except Exception:
         pass
     try:
@@ -461,13 +479,42 @@ def window(app, qtbot, monkeypatch):
         pass
 
     # Disable plugin loading to isolate tests from user environment
+    # We patch the class itself so __init__ is never called, which avoids
+    # creating the plugin directory or setting up registries.
     try:
-        def _no_op_discover(self, parent=None):
-            self.plugins = []
-            return []
-        monkeypatch.setattr('moleditpy.modules.plugin_manager.PluginManager.discover_plugins', _no_op_discover, raising=False)
-        monkeypatch.setattr('modules.plugin_manager.PluginManager.discover_plugins', _no_op_discover, raising=False)
-        monkeypatch.setattr('moleditpy.modules.plugin_manager.PluginManager.run_plugin', lambda s, m, w: None, raising=False)
+        class DummyPluginManager:
+            def __init__(self, main_window=None):
+                self.plugins = []
+                self.menu_actions = []
+                self.toolbar_actions = []
+                self.drop_handlers = []
+                self.export_actions = []
+                self.optimization_methods = {}
+                self.file_openers = {}
+                self.analysis_tools = []
+                self.save_handlers = {}
+                self.load_handlers = {}
+                self.custom_3d_styles = {}
+                self.document_reset_handlers = []
+            def discover_plugins(self, parent=None): return []
+            def run_plugin(self, module, main_window): pass
+            def register_menu_action(self, *a, **k): pass
+            def register_toolbar_action(self, *a, **k): pass
+            def register_drop_handler(self, *a, **k): pass
+            def register_export_action(self, *a, **k): pass
+            def register_optimization_method(self, *a, **k): pass
+            def register_file_opener(self, *a, **k): pass
+            def register_analysis_tool(self, *a, **k): pass
+            def register_save_handler(self, *a, **k): pass
+            def register_load_handler(self, *a, **k): pass
+            def register_3d_style(self, *a, **k): pass
+            def register_document_reset_handler(self, *a, **k): pass
+            def invoke_document_reset_handlers(self): pass
+            def get_main_window(self): return None
+            def set_main_window(self, mw): pass
+
+        monkeypatch.setattr('moleditpy.modules.plugin_manager.PluginManager', DummyPluginManager, raising=False)
+        monkeypatch.setattr('modules.plugin_manager.PluginManager', DummyPluginManager, raising=False)
     except Exception:
         pass
 
@@ -597,6 +644,23 @@ def window(app, qtbot, monkeypatch):
             monkeypatch.setattr('moleditpy.CustomQtInteractor', DummyPlotter, raising=False)
         except Exception:
             pass
+    except Exception:
+        pass
+
+    # Patch PluginManager also in main_window_main_init because it imports it directly
+    try:
+        if 'DummyPluginManager' in locals():
+            monkeypatch.setattr('moleditpy.modules.main_window_main_init.PluginManager', DummyPluginManager, raising=False)
+            monkeypatch.setattr('modules.main_window_main_init.PluginManager', DummyPluginManager, raising=False)
+    except Exception:
+        pass
+    # Mock QMessageBox to prevent tests from getting stuck
+    try:
+        from PyQt6.QtWidgets import QMessageBox
+        monkeypatch.setattr(QMessageBox, 'warning', lambda *a, **k: None)
+        monkeypatch.setattr(QMessageBox, 'information', lambda *a, **k: None)
+        monkeypatch.setattr(QMessageBox, 'critical', lambda *a, **k: None)
+        monkeypatch.setattr(QMessageBox, 'question', lambda *a, **k: QMessageBox.StandardButton.Yes)
     except Exception:
         pass
 
