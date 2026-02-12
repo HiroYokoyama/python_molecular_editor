@@ -51,38 +51,24 @@ This file contains tests for the `PluginManager` module, ensuring robust plugin 
 
 ### `test_main_app.py`
 
-This is the main test file, containing all unit and GUI test cases.
+This is the primary integration test suite, executing user workflows in a headless environment.
 
-  * **Test Helpers**:
-
-      * `get_action(toolbar, tooltip_text)`: Finds a `QAction` on a toolbar.
-      * `click_scene(...)`: Simulates a mouse click at a specific `QPointF` in the 2D scene.
-      * `drag_scene(...)`: Simulates a mouse drag between two points in the 2D scene.
-
-  * **Test Cases List**:
-
-      * **Unit Tests (`@pytest.mark.unit`)**:
-
-          * See `tests/unit/README.md` for details on unit test coverage.
-
-      * **GUI Tests (`@pytest.mark.gui`)**:
-
-          | Test Function | Verified Application Behavior | Meaningful Logic Verified |
-          | :--- | :--- | :--- |
-          | `test_app_launch` | Window initialization | • Verifies critical startup wiring (signals, default modes). |
-          | `test_mode_change_atom` | Toolbar interaction | • Verifies global `ModeManager` state updates safely. |
-          | `test_draw_atom_on_click` | Scene interaction | • Verifies `QGraphicsScene` event handling logic, coordinate transformation, and data model sync. |
-          | `test_draw_bond_on_drag` | Drag & Drop logic | • Verifies complex state machine transitions (press -> drag -> release) for bond creation. |
-          | `test_2d_to_3d_conversion` | Workflow Integration | • Verifies the entire pipeline: 2D Data -> RDKit embedding -> 3D Actor generation -> View update. |
-          | `test_undo_redo` | State Persistence | • Verifies the `Command` pattern implementation (drawing -> undo -> restore state). |
-          | `test_copy_paste` | Clipboard Logic | • Verifies custom MIME type serialization/deserialization logic. |
-          | `test_file_import_smiles` | I/O Logic | • Verifies parsing logic integration with the UI thread. |
-          | `test_save_project_as` | Persistence | • Verifies JSON serialization structure and file writing logic. |
-          | `test_toggle_3d_atom_info` | View Logic | • Verifies that `show_atom_info` correctly iterates actors and updates labels based on internal state. |
-          | `test_draw_bond_to_existing_atom` | Connectivity | • Verifies logic for snapping to existing atoms and updating adjacency lists. |
-          | `test_delete_atom_on_right_click` | Data Integrity | • Verifies cascading deletes (removing usage in bonds/adjacency) when an atom is removed. |
-          | `test_key_press_change_atom` | Keyboard Shortcuts | • Verifies that key events correctly map to specific scientific commands. |
-          | `test_add_remove_hydrogens` | Algorithmic Actions | • Verifies the UI trigger correctly invokes the backend valency calculation logic. |
+| Test Function | Feature Under Test | Verification Scope |
+| :--- | :--- | :--- |
+| **`test_app_launch`** | **Startup & Initialization** | Verifies that the application launches correctly, ensuring all UI components, database connections, and signal slots are wired without runtime errors. |
+| **`test_mode_change_atom`** | **Toolbar Logic** | Verifies the `ModeManager` state transitions, ensuring that clicking toolbar buttons correctly updates the global application mode and cursor state. |
+| **`test_draw_atom_on_click`** | **Scene Events (Mouse)** | Verifies the entire event chain for atom creation: `Mouse Press` -> `Scene Event Filter` -> `Coordinate Transform` -> `Data Model Update`. |
+| **`test_draw_bond_on_drag`** | **Complex Interactions** | Verifies the state machine for bond creation, testing the press-drag-release sequence and satisfying valid valency checks. |
+| **`test_2d_to_3d_conversion`** | **Scientific Workflow** | Verifies the critical handoff between the 2D sketcher and the 3D embedding engine, confirming that 2D topology is correctly interpreted by the RDKit conformer generator. |
+| **`test_undo_redo`** | **Command Pattern** | Validates the Undo/Redo stack, ensuring that state snapshots are correctly captured before destructive actions and restored accurately. |
+| **`test_copy_paste`** | **Clipboard & MIME** | Verifies custom serialization logic, ensuring that internal molecular data can be copied and pasted within the app (and potentially to external apps favoring text formats). |
+| **`test_file_import_smiles`** | **Data Ingestion** | Tests the integration of the SMILES parser with the UI thread, ensuring valid strings generate the correct 2D graph structure. |
+| **`test_save_project_as`** | **Project Persistence** | Verifies the full JSON serialization pipeline, checking that all workspace state (including viewport camera positions) is saved to disk. |
+| **`test_toggle_3d_atom_info`** | **View Options** | Verifies that toggling UI view options triggers the correct update in the 3D render window (e.g., generating/removing text actors). |
+| **`test_draw_bond_to_existing_atom`** | **Graph Connectivity** | Verifies the snapping logic, ensuring that drawing a bond to an existing atom correctly merges the graph nodes rather than creating overlaps. |
+| **`test_delete_atom_on_right_click`** | **Data Integrity** | Verifies cascading deletion logic: ensuring that removing an atom also cleanly removes its incident bonds and updates neighbor lists. |
+| **`test_key_press_change_atom`** | **Shortcuts & Hotkeys** | Verifies that keyboard inputs are correctly intercepted and mapped to element changes or tool switches. |
+| **`test_add_remove_hydrogens`** | **Algorithmic Utilities** | Verifies that the 'Add/Remove Hydrogens' UI commands correctly invoke the backend valency algorithms and update the visualization. |
 
 ## 4\. Setup & Running
 
