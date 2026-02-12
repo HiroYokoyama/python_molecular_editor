@@ -40,6 +40,8 @@ def run_suite(name, path, env_vars=None, extra_args=None):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Unified Test Suite Runner")
     parser.add_argument("--headless", action="store_true", help="Run GUI tests in headless mode (no Windows)")
+    parser.add_argument("--unit", action="store_true", help="Run ONLY Unit tests")
+    parser.add_argument("--gui", action="store_true", help="Run ONLY GUI tests")
     args = parser.parse_args()
 
     env_vars = {}
@@ -53,15 +55,32 @@ if __name__ == "__main__":
     unit_res = 0
     gui_res = 0
     
+    # Unit tests
     try:
-        unit_res = run_suite("UNIT", UNIT_DIR, env_vars=env_vars)
+        if args.unit or (not args.unit and not args.gui):
+            unit_res = run_suite(
+                "UNIT", 
+                UNIT_DIR, 
+                env_vars=env_vars
+            )
+        else:
+            unit_res = 0  # Skipped
     except KeyboardInterrupt:
         print("\nInterrupted during UNIT tests.")
         unit_res = 1
 
+    # GUI tests
     try:
-        if unit_res == 0: # Only run GUI if Unit passed (optional, but good for CI) or just run both
-             gui_res = run_suite("GUI", GUI_DIR, env_vars=env_vars)
+        if args.gui or (not args.unit and not args.gui):
+            # Only run GUI if Unit passed (optional, but good for CI) or just run both
+            if unit_res == 0:
+                gui_res = run_suite(
+                    "GUI", 
+                    GUI_DIR, 
+                    env_vars=env_vars
+                )
+        else:
+            gui_res = 0 # Skipped
     except KeyboardInterrupt:
          print("\nInterrupted during GUI tests.")
          gui_res = 1
