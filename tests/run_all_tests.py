@@ -7,6 +7,7 @@ import subprocess
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 SRC_DIR = os.path.join(BASE_DIR, 'moleditpy', 'src')
 UNIT_DIR = os.path.join(BASE_DIR, 'tests', 'unit')
+INTEGRATION_DIR = os.path.join(BASE_DIR, 'tests', 'integration')
 GUI_DIR = os.path.join(BASE_DIR, 'tests', 'gui')
 
 def run_suite(name, path, env_vars=None, extra_args=None):
@@ -41,6 +42,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Unified Test Suite Runner")
     parser.add_argument("--headless", action="store_true", help="Run GUI tests in headless mode (no Windows)")
     parser.add_argument("--unit", action="store_true", help="Run ONLY Unit tests")
+    parser.add_argument("--integration", action="store_true", help="Run ONLY Integration tests")
     parser.add_argument("--gui", action="store_true", help="Run ONLY GUI tests")
     args = parser.parse_args()
 
@@ -50,42 +52,45 @@ if __name__ == "__main__":
         env_vars["MOLEDITPY_HEADLESS"] = "1"
         env_vars["QT_QPA_PLATFORM"] = "offscreen"
 
-    print("Starting Unified Test Suite (Unit + GUI)...", flush=True)
+    print("Starting Unified Test Suite (Unit + Integration + GUI)...", flush=True)
     
     unit_res = 0
+    int_res = 0
     gui_res = 0
     
-    # Unit tests
+    # 1. Unit tests
     try:
-        if args.unit or (not args.unit and not args.gui):
-            unit_res = run_suite(
-                "UNIT", 
-                UNIT_DIR, 
-                env_vars=env_vars
-            )
+        if args.unit or (not args.unit and not args.integration and not args.gui):
+            unit_res = run_suite("UNIT", UNIT_DIR, env_vars=env_vars)
         else:
             unit_res = 0  # Skipped
     except KeyboardInterrupt:
         print("\nInterrupted during UNIT tests.")
         unit_res = 1
 
-    # GUI tests
-    try:
-        if args.gui or (not args.unit and not args.gui):
-            # Only run GUI if Unit passed (optional, but good for CI) or just run both
-            if unit_res == 0:
-                gui_res = run_suite(
-                    "GUI", 
-                    GUI_DIR, 
-                    env_vars=env_vars
-                )
-        else:
-            gui_res = 0 # Skipped
-    except KeyboardInterrupt:
-         print("\nInterrupted during GUI tests.")
-         gui_res = 1
+    # 2. Integration tests
+    if unit_res == 0:
+        try:
+            if args.integration or (not args.unit and not args.integration and not args.gui):
+                int_res = run_suite("INTEGRATION", INTEGRATION_DIR, env_vars=env_vars)
+            else:
+                int_res = 0 # Skipped
+        except KeyboardInterrupt:
+            print("\nInterrupted during INTEGRATION tests.")
+            int_res = 1
+
+    # 3. GUI tests
+    if unit_res == 0 and int_res == 0:
+        try:
+            if args.gui or (not args.unit and not args.integration and not args.gui):
+                gui_res = run_suite("GUI", GUI_DIR, env_vars=env_vars)
+            else:
+                gui_res = 0 # Skipped
+        except KeyboardInterrupt:
+             print("\nInterrupted during GUI tests.")
+             gui_res = 1
     
-    if unit_res == 0 and gui_res == 0:
+    if unit_res == 0 and int_res == 0 and gui_res == 0:
         print("\nALL tests passed successfully!")
         sys.exit(0)
     else:
