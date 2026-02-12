@@ -618,9 +618,10 @@ def window(app, qtbot, monkeypatch):
         from PyQt6.QtGui import QAction
         main_window.toolbar = QToolBar()
         main_window.toolbar_bottom = QToolBar()
-        main_window.style_button = QPushButton()
-        main_window.measurement_action = QAction()
-        main_window.edit_3d_action = QAction()
+        main_window.measurement_action = QAction(checkable=True)
+        main_window.measurement_action.triggered.connect(main_window.toggle_measurement_mode)
+        main_window.edit_3d_action = QAction(checkable=True)
+        main_window.edit_3d_action.triggered.connect(main_window.toggle_3d_edit_mode)
         # Dummy splitter with widget() method
         class DummyWidget(QWidget):
             def mapTo(self, parent, point):
