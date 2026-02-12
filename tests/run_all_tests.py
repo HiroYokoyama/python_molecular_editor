@@ -13,7 +13,9 @@ def run_suite(name, path, env_vars=None, extra_args=None):
     """Run a test suite in a separate process for isolation."""
     print(f"\n>>> Running {name} Tests...", flush=True)
     
-    cmd = [sys.executable, "-m", "pytest", "-vv", "--timeout=60", path, "--tb=short"]
+    # Use shorter timeout in headless CI mode for faster feedback
+    timeout = "30" if os.environ.get("MOLEDITPY_HEADLESS") == "1" else "60"
+    cmd = [sys.executable, "-m", "pytest", "-vv", f"--timeout={timeout}", path, "--tb=short"]
     if extra_args:
         cmd.extend(extra_args)
     

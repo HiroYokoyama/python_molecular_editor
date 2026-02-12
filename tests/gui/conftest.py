@@ -6,8 +6,6 @@ from PyQt6.QtWidgets import QApplication
 import importlib
 import importlib.util
 project_main = os.path.join(os.path.dirname(__file__), 'src', 'moleditpy', '__main__.py')
-# ...existing code...
-
 
 if os.environ.get("MOLEDITPY_HEADLESS", "0") == "1":
     os.environ.setdefault('PYVISTA_OFF_SCREEN', 'true')
@@ -32,8 +30,6 @@ if os.path.isdir(src_path) and src_path not in sys.path:
     sys.path.insert(0, src_path)
     print(f"DEBUG: Inserted local src path: {src_path}")
 
-# Provide minimal stubs for pyvista and pyvistaqt in headless tests so imports
-# from `moleditpy.modules` don't trigger native GL or Qt windows.
 
 # --- Universal VTK Mocking to prevent crash in any mode ---
 # Provide vtkmodules and common submodules globally BEFORE any app code imports
@@ -619,11 +615,12 @@ def window(app, qtbot, monkeypatch):
 
         # Attach dummy toolbars and buttons for test compatibility
         from PyQt6.QtWidgets import QWidget, QPushButton, QToolBar
+        from PyQt6.QtGui import QAction
         main_window.toolbar = QToolBar()
         main_window.toolbar_bottom = QToolBar()
         main_window.style_button = QPushButton()
-        main_window.measurement_action = QPushButton()
-        main_window.edit_3d_action = QPushButton()
+        main_window.measurement_action = QAction()
+        main_window.edit_3d_action = QAction()
         # Dummy splitter with widget() method
         class DummyWidget(QWidget):
             def mapTo(self, parent, point):
