@@ -268,7 +268,7 @@ class MainWindowMolecularParsers(object):
                     skip_btn.clicked.connect(on_skip)
 
                     # Execute dialog modally
-                    if dialog.exec_() != QDialog.Accepted:
+                    if dialog.exec() != QDialog.Accepted:
                         return None, False, False
 
                     if result["skip"]:

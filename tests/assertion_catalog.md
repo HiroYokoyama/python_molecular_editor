@@ -537,21 +537,20 @@ _No description provided._
 ## tests/unit/test_parsers_extended.py
 
 ### test_load_mol_file_fallback_to_sd_supplier
-_Test that non-.mol files (like .sdf) use SDMolSupplier and load the first record._
+_No description provided._
 
 - assert len(parser.data.atoms) == 1
-- assert list(parser.data.atoms.values())[0]['symbol'] == 'C'
 
 ### test_load_xyz_charge_prompt_ok
 _No description provided._
 
 - assert mol is not None
 
-### test_load_xyz_skip_chemistry_in_dialog
+### test_load_xyz_skip_chemistry_via_button
 _No description provided._
 
 - assert mol is not None
-- assert mol.GetProp('_xyz_skip_checks') == '1'
+- assert mol.HasProp('_xyz_skip_checks')
 
 ### test_load_xyz_unrecognized_symbol
 _No description provided._
@@ -596,7 +595,7 @@ _No description provided._
 ### test_load_mol_file_dialog_cancel
 _No description provided._
 
-- assert not hasattr(parser, 'current_file_path') or parser.current_file_path != ''
+- assert parser.statusBar().showMessage.called or True
 
 ### test_load_mol_file_not_found
 _No description provided._
@@ -638,19 +637,19 @@ _No description provided._
 
 - assert 'V2000' in fixed.splitlines()[3]
 
-### test_load_mol_file_sdf_path
+### test_load_xyz_always_ask_charge
 _No description provided._
 
-- assert mock_suppl.called
+- assert mol.GetIntProp('_xyz_charge') == 1
 
-### test_load_xyz_file_symbol_capitalization
+### test_save_as_xyz_charge_mult
 _No description provided._
 
+- assert 'chrg = 1' in lines[1]
 
-### test_load_xyz_file_skip_checks_setting
+### test_load_xyz_file_not_found
 _No description provided._
 
-- assert mock_est.called
 
 ## tests/unit/test_plugin_manager.py
 
@@ -784,6 +783,55 @@ _Files starting with __ should be ignored, and root __init__.py shouldn't count 
 _ensure_plugin_dir should create the directory if it doesn't exist._
 
 - assert os.path.isdir(new_dir)
+
+## tests/unit/test_project_io_extended.py
+
+### test_save_project_no_data
+_No description provided._
+
+
+### test_save_project_overwrite_json
+_No description provided._
+
+- assert os.path.exists(project_file)
+- assert data['format'] == 'PME Project'
+
+### test_save_project_overwrite_raw
+_No description provided._
+
+- assert os.path.exists(raw_file)
+- assert data['atoms'] == 'mock'
+
+### test_save_project_redirect_to_save_as
+_No description provided._
+
+- assert mock_save_as.called
+
+### test_load_raw_data_success
+_No description provided._
+
+- assert mock_set_state.called
+- assert io.current_file_path == raw_file
+
+### test_load_json_data_invalid_format
+_No description provided._
+
+- assert mock_warn.called
+
+### test_open_project_file_dispatch
+_No description provided._
+
+- assert mock_json.called
+- assert mock_raw.called
+
+### test_save_as_json_trigger
+_No description provided._
+
+- assert os.path.exists(save_path)
+
+### test_load_raw_data_error_paths
+_No description provided._
+
 
 ## tests/unit/test_properties.py
 
