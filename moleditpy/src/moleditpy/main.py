@@ -17,11 +17,8 @@ import ctypes
 from PyQt6.QtWidgets import QApplication
 
 try:
-    # When executed as part of the package (python -m moleditpy)
     from .modules.main_window import MainWindow
 except Exception:
-    # When executed as a standalone script (python main.py) the package-relative
-    # import won't work; fall back to absolute import that works with sys.path
     from modules.main_window import MainWindow
 
 def main():
