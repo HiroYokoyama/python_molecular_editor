@@ -195,3 +195,118 @@ def test_scene_right_click_delete(mock_parser_host):
          patch.object(MoleculeScene, 'delete_items') as mock_del:
         scene.mousePressEvent(event)
         mock_del.assert_called_once_with({a1})
+
+def test_scene_bond_complex_interactions(mock_parser_host):
+    scene = setup_scene_with_view(mock_parser_host)
+    scene.mode = 'select'
+    
+    # Create bond
+    aid1 = scene.create_atom("C", QPointF(0, 0))
+    aid2 = scene.create_atom("C", QPointF(50, 0))
+    a1 = mock_parser_host.data.atoms[aid1]['item']
+    a2 = mock_parser_host.data.atoms[aid2]['item']
+    scene.create_bond(a1, a2, bond_order=2)
+    bond_key = (aid1, aid2) if (aid1, aid2) in scene.data.bonds else (aid2, aid1)
+    bond_item = scene.data.bonds[bond_key]['item']
+    
+    # Test Key_E / Key_Z on hovered bond
+    scene.hovered_item = bond_item
+    
+    with patch.object(MoleculeScene, 'itemAt', return_value=None), \
+         patch('PyQt6.QtGui.QCursor.pos', return_value=QPointF(25,0)):
+        
+        # Test Key_E (Stereo 4)
+        event = QKeyEvent(QKeyEvent.Type.KeyPress, Qt.Key.Key_E, Qt.KeyboardModifier.NoModifier)
+        scene.keyPressEvent(event)
+        assert scene.data.bonds[bond_key]['stereo'] == 4
+        
+        # Test Key_Z (Stereo 3)
+        event = QKeyEvent(QKeyEvent.Type.KeyPress, Qt.Key.Key_Z, Qt.KeyboardModifier.NoModifier)
+        scene.keyPressEvent(event)
+        assert scene.data.bonds[bond_key]['stereo'] == 3
+
+    # Test Key_W / Key_D on selected bond
+    scene.hovered_item = None
+    bond_item.setSelected(True)
+    
+    with patch.object(MoleculeScene, 'itemAt', return_value=None), \
+         patch('PyQt6.QtGui.QCursor.pos', return_value=QPointF(0,0)):
+        # Key_W (Stereo 1 - Up)
+        event = QKeyEvent(QKeyEvent.Type.KeyPress, Qt.Key.Key_W, Qt.KeyboardModifier.NoModifier)
+        scene.keyPressEvent(event)
+        # Bond order should become 1, stereo 1
+        current_bond_data = scene.data.bonds.get(bond_key) or scene.data.bonds.get((aid2, aid1))
+        assert current_bond_data['order'] == 1
+        assert current_bond_data['stereo'] == 1
+
+def test_scene_atom_keyboard_properties(mock_parser_host):
+    scene = setup_scene_with_view(mock_parser_host)
+    scene.mode = 'select'
+    aid = scene.create_atom("C", QPointF(0, 0))
+    atom_item = mock_parser_host.data.atoms[aid]['item']
+    atom_item.setSelected(True)
+    
+    with patch.object(MoleculeScene, 'itemAt', return_value=None), \
+         patch('PyQt6.QtGui.QCursor.pos', return_value=QPointF(0,0)):
+        
+        # Charge +
+        event = QKeyEvent(QKeyEvent.Type.KeyPress, Qt.Key.Key_Plus, Qt.KeyboardModifier.NoModifier)
+        scene.keyPressEvent(event)
+        assert atom_item.charge == 1
+        
+        # Charge -
+        event = QKeyEvent(QKeyEvent.Type.KeyPress, Qt.Key.Key_Minus, Qt.KeyboardModifier.NoModifier)
+        scene.keyPressEvent(event)
+        assert atom_item.charge == 0
+        
+        # Radical .
+        event = QKeyEvent(QKeyEvent.Type.KeyPress, Qt.Key.Key_Period, Qt.KeyboardModifier.NoModifier)
+        scene.keyPressEvent(event)
+        assert atom_item.radical == 1
+
+def test_scene_template_interaction(mock_parser_host):
+    scene = setup_scene_with_view(mock_parser_host)
+    scene.mode = 'select'
+    
+    # Test Key_4 on blank space -> triggers mode change
+    with patch.object(MoleculeScene, 'itemAt', return_value=None), \
+         patch('PyQt6.QtGui.QCursor.pos', return_value=QPointF(0,0)):
+        event = QKeyEvent(QKeyEvent.Type.KeyPress, Qt.Key.Key_4, Qt.KeyboardModifier.NoModifier)
+        scene.keyPressEvent(event)
+        scene.window.set_mode_and_update_toolbar.assert_called_with('template_benzene')
+
+    # Test Key_4 on existing atom -> triggers add_molecule_fragment
+    aid = scene.create_atom("C", QPointF(0, 0))
+    atom_item = mock_parser_host.data.atoms[aid]['item']
+    
+    with patch.object(MoleculeScene, 'itemAt', return_value=atom_item), \
+         patch('PyQt6.QtGui.QCursor.pos', return_value=QPointF(20,0)), \
+         patch.object(scene, 'add_molecule_fragment') as mock_add_frag:
+        event = QKeyEvent(QKeyEvent.Type.KeyPress, Qt.Key.Key_4, Qt.KeyboardModifier.NoModifier)
+        scene.keyPressEvent(event)
+        mock_add_frag.assert_called()
+
+def test_scene_user_template_logic(mock_parser_host):
+    scene = setup_scene_with_view(mock_parser_host)
+    
+    # Mock template data
+    scene.user_template_data = {
+        'atoms': [{'id': 'a1', 'symbol': 'C', 'x': 0, 'y': 0}],
+        'bonds': []
+    }
+    
+    # Test update_user_template_preview
+    scene.update_user_template_preview(QPointF(10, 10))
+    scene.template_preview.set_user_template_geometry.assert_called()
+    scene.template_preview.show.assert_called()
+    
+    # Test add_user_template_fragment
+    context = {
+        'points': [QPointF(0, 0)],
+        'atoms_data': [{'id': 'a1', 'symbol': 'N', 'charge': 1}],
+        'bonds_info': []
+    }
+    scene.add_user_template_fragment(context)
+    # Verify N+ atom created
+    assert any(a['symbol'] == 'N' and a['charge'] == 1 for a in scene.data.atoms.values())
+

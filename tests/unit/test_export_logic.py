@@ -140,3 +140,100 @@ def test_export_color_stl_logic(mock_parser_host, tmp_path):
          patch.object(exporter, 'export_from_3d_view_with_colors', return_value=[{'mesh': mesh, 'color': [1,1,1], 'name': 'A'}]):
         exporter.export_color_stl()
         assert exporter.statusBar().showMessage.called
+
+def test_export_from_3d_view_with_colors_complex_splitting(mock_parser_host):
+    """Test the complex logic of splitting a mesh by per-vertex colors."""
+    exporter = DummyExport(mock_parser_host)
+    
+    # Create a mock actor
+    actor = MagicMock()
+    actor_name = "test_actor"
+    
+    # Create a mock PyVista/VTK mesh with point data colors
+    mesh = MagicMock()
+    mesh.n_points = 4
+    
+    # Simulate PolyData behavior
+    mesh.copy.return_value = mesh 
+    mesh.point_data = {
+        # 4 vertices, 2 red, 2 blue
+        'red':   np.array([255, 255, 0, 0]),
+        'green': np.array([0, 0, 0, 0]),
+        'blue':  np.array([0, 0, 255, 255])
+    }
+    
+    # extraction result simulation
+    def extract_points_side_effect(point_inds, adjacent_cells=False):
+        sub = MagicMock()
+        sub.n_points = len(point_inds)
+        return sub
+        
+    mesh.extract_points.side_effect = extract_points_side_effect
+    
+    # Setup renderer actors
+    exporter.plotter.renderer.actors = {actor_name: actor}
+    
+    # Setup mapper to return our mesh
+    actor.mapper.input = mesh
+    
+    # Explicitly mock isinstance(mesh, pv.PolyData) to True if needed, 
+    # but the code checks attributes mostly. 
+    # The code calls: if not isinstance(mesh, pv.PolyData): wrap...
+    # Let's mock pv.PolyData in the module if possible, or just ensure our mock passes checks.
+    # The code imports pyvista as pv. We can patch pv.PolyData.
+    
+    with patch('moleditpy.modules.main_window_export.pv.PolyData', MagicMock): # used for type check
+        # We need `isinstance(mesh, pv.PolyData)` to be False so it wraps/extracts,
+        # OR True so it uses it directly.
+        # Simplest: make it behave like it's valid.
+        
+        # Actually, simpler to patch the whole logic flow or just the parts we need.
+        # But we want to test the Splitting Logic.
+        
+        # The code uses numpy heavily.
+        
+        res = exporter.export_from_3d_view_with_colors()
+        
+        # Expect 2 submeshes: one Red, one Blue
+        assert len(res) == 2
+        # Check colors
+        c1 = res[0]['color']
+        c2 = res[1]['color']
+        
+        # One should be [255,0,0], other [0,0,255]
+        colors = sorted([tuple(c1), tuple(c2)])
+        assert colors[0] == (0, 0, 255)
+        assert colors[1] == (255, 0, 0)
+
+def test_export_2d_png_hides_items(mock_parser_host, tmp_path):
+    """Test that export_2d_png hides non-atom items and restores them."""
+    exporter = DummyExport(mock_parser_host)
+    save_path = str(tmp_path / "hide_test.png")
+    
+    # 1. Add atom (should stay visible)
+    atom = MagicMock(spec=AtomItem)
+    atom.isVisible.return_value = True
+    atom.sceneBoundingRect.return_value = QRectF(0,0,10,10)
+    
+    # 2. Add random item (should be hidden)
+    # e.g. a Selection Box or temporary line
+    other_item = MagicMock()
+    other_item.isVisible.return_value = True
+    # Not instance of AtomItem/BondItem
+    
+    exporter.scene.items.return_value = [atom, other_item]
+    
+    # Ensure guard clause (if not self.data.atoms) passes
+    exporter.data.atoms = {0: 'dummy'}
+    
+    # We mock QFileDialog and render to avoid actual GUI dependency
+    with patch('PyQt6.QtWidgets.QFileDialog.getSaveFileName', return_value=(save_path, "*.png")):
+        with patch('PyQt6.QtWidgets.QMessageBox.question', return_value=QMessageBox.StandardButton.Yes):
+            with patch('PyQt6.QtGui.QPainter'): # Mock painter
+                with patch('PyQt6.QtGui.QImage'): # Mock image
+                     exporter.export_2d_png()
+                     
+    # Verify other_item was process (hidden then restored)
+    # The code calls item.hide() then item.setVisible(was_visible)
+    assert other_item.hide.called
+    other_item.setVisible.assert_called_with(True)

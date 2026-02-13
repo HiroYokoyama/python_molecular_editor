@@ -134,3 +134,103 @@ def test_double_click_select_component(mock_dbl, mock_parser_host):
             assert scene.data.atoms[id2]['item'].setSelected.called
             assert scene.data.atoms[id3]['item'].setSelected.called
             assert not atom_iso.setSelected.called
+
+
+@patch('PyQt6.QtWidgets.QGraphicsScene.keyPressEvent')
+def test_scene_key_event_dispatch(mock_kp, mock_parser_host):
+    """Test key events like '4' (template), '.' (radical), +/- (charge)."""
+    scene = setup_scene_with_view(mock_parser_host)
+    
+    # Case 1: Key '4' -> Template mode when hovering nothing
+    # Mock itemAt returning None
+    with patch.object(MoleculeScene, 'itemAt', return_value=None):
+        event = MagicMock()
+        event.key.return_value = Qt.Key.Key_4
+        event.modifiers.return_value = Qt.KeyboardModifier.NoModifier
+        
+        scene.keyPressEvent(event)
+        
+        # Verify mode switched to 'template_benzene'
+        mock_parser_host.set_mode_and_update_toolbar.assert_called_with('template_benzene')
+        
+    # Case 2: Key '+' -> Charge increase on hovered atom
+    aid = scene.create_atom("C", QPointF(0, 0))
+    atom_item = scene.data.atoms[aid]['item']
+    atom_item.charge = 0
+    
+    with patch.object(MoleculeScene, 'itemAt', return_value=atom_item):
+        event = MagicMock()
+        event.key.return_value = Qt.Key.Key_Plus
+        event.modifiers.return_value = Qt.KeyboardModifier.NoModifier
+        
+        scene.keyPressEvent(event)
+        
+        assert atom_item.charge == 1
+        assert scene.data.atoms[aid]['charge'] == 1
+
+def test_scene_update_template_preview_logic(mock_parser_host):
+    """Test update_template_preview with different targets."""
+    scene = setup_scene_with_view(mock_parser_host)
+    scene.mode = 'template_benzene' # 6-ring
+    
+    scene.template_preview = MagicMock()
+    
+    # Case 1: Hovering nothing
+    with patch.object(MoleculeScene, 'items', return_value=[]):
+        scene.update_template_preview(QPointF(100, 100))
+        # Should show preview at pos
+        scene.template_preview.set_geometry.assert_called()
+        args, _ = scene.template_preview.set_geometry.call_args
+        points = args[0]
+        assert len(points) == 6
+        
+    # Case 2: Hovering Atom
+    aid = scene.create_atom("C", QPointF(0, 0))
+    atom_item = scene.data.atoms[aid]['item']
+    
+    with patch.object(MoleculeScene, 'items', return_value=[atom_item]):
+        scene.update_template_preview(QPointF(20, 0)) # Mouse strictly to right
+        
+        # Should fuse to atom
+        scene.template_preview.set_geometry.assert_called()
+        # Verify context was set
+        assert 'items' in scene.template_context
+        assert scene.template_context['items'][0] == atom_item
+
+@patch('PyQt6.QtWidgets.QGraphicsScene.mousePressEvent')
+@patch('PyQt6.QtWidgets.QGraphicsScene.mouseMoveEvent')
+@patch('PyQt6.QtWidgets.QGraphicsScene.mouseReleaseEvent')
+def test_scene_drag_create_bond_sequence(mock_release, mock_move, mock_press, mock_parser_host):
+    """Test the full mouse press -> move -> release sequence for creating a bond."""
+    scene = setup_scene_with_view(mock_parser_host)
+    scene.mode = 'bond_1' # Single bond mode
+    
+    # Atom A at 0,0
+    id1 = scene.create_atom("C", QPointF(0, 0))
+    a1 = scene.data.atoms[id1]['item']
+    
+    # Atom B at 100,100
+    id2 = scene.create_atom("C", QPointF(100, 100))
+    a2 = scene.data.atoms[id2]['item']
+    
+    # 1. Press on A1
+    with patch.object(MoleculeScene, 'itemAt', return_value=a1):
+        event_press = create_mock_event(QPointF(0, 0))
+        scene.mousePressEvent(event_press)
+        # Verify start_atom is set
+        assert getattr(scene, 'start_atom', None) == a1
+        
+    # 2. Move to A2
+    # Logic might update temp line
+    event_move = create_mock_event(QPointF(50, 50))
+    scene.mouseMoveEvent(event_move)
+    
+    # 3. Release on A2
+    with patch.object(MoleculeScene, 'itemAt', return_value=a2):
+        event_release = create_mock_event(QPointF(100, 100))
+        scene.mouseReleaseEvent(event_release)
+        
+    # Verify bond created
+    bond = scene.find_bond_between(a1, a2)
+    assert bond is not None
+    assert bond.order == 1

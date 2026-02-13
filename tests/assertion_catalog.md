@@ -289,6 +289,18 @@ _No description provided._
 
 - assert exporter.statusBar().showMessage.called
 
+### test_export_from_3d_view_with_colors_complex_splitting
+_Test the complex logic of splitting a mesh by per-vertex colors._
+
+- assert len(res) == 2
+- assert colors[0] == (0, 0, 255)
+- assert colors[1] == (255, 0, 0)
+
+### test_export_2d_png_hides_items
+_Test that export_2d_png hides non-atom items and restores them._
+
+- assert other_item.hide.called
+
 ## tests/unit/test_geometry.py
 
 ### test_3d_bond_lengths
@@ -370,6 +382,34 @@ _Test BondItem rendering for triple bonds, wedge/dash, and E/Z labels._
 _Test BondItem ring rendering logic by mocking RDKit mol integration._
 
 - assert painter.drawLine.call_count == 2
+
+### test_atom_item_item_change_updates_bonds
+_Test that moving an atom updates connected bonds._
+
+
+### test_atom_item_paint_transparent_bg
+_Test AtomItem.paint with transparent background logic._
+
+
+### test_atom_item_paint_resilience_to_deleted_bond
+_Test paint doesn't crash if a bond refers to a deleted atom._
+
+- assert painter.drawText.called
+
+### test_atom_item_shape_collision
+_Test atom shape returns a path for collision detection._
+
+- assert isinstance(path, QPainterPath)
+- assert not path.isEmpty()
+- assert not path_scaled.isEmpty()
+
+### test_bond_item_shape_stroked
+_Test bond shape is a stroked path (wider than line)._
+
+- assert isinstance(path, QPainterPath)
+- assert not path.isEmpty()
+- assert rect.width() > 0
+- assert rect.height() > 0
 
 ## tests/unit/test_molecular_data.py
 
@@ -906,6 +946,30 @@ _No description provided._
 _No description provided._
 
 
+### test_scene_bond_complex_interactions
+_No description provided._
+
+- assert scene.data.bonds[bond_key]['stereo'] == 4
+- assert scene.data.bonds[bond_key]['stereo'] == 3
+- assert current_bond_data['order'] == 1
+- assert current_bond_data['stereo'] == 1
+
+### test_scene_atom_keyboard_properties
+_No description provided._
+
+- assert atom_item.charge == 1
+- assert atom_item.charge == 0
+- assert atom_item.radical == 1
+
+### test_scene_template_interaction
+_No description provided._
+
+
+### test_scene_user_template_logic
+_No description provided._
+
+- assert any((a['symbol'] == 'N' and a['charge'] == 1 for a in scene.data.atoms.values()))
+
 ## tests/unit/test_scene_interactions.py
 
 ### test_scene_toggle_radical
@@ -945,6 +1009,26 @@ _No description provided._
 - assert scene.data.atoms[id2]['item'].setSelected.called
 - assert scene.data.atoms[id3]['item'].setSelected.called
 - assert not atom_iso.setSelected.called
+
+### test_scene_key_event_dispatch
+_Test key events like '4' (template), '.' (radical), +/- (charge)._
+
+- assert atom_item.charge == 1
+- assert scene.data.atoms[aid]['charge'] == 1
+
+### test_scene_update_template_preview_logic
+_Test update_template_preview with different targets._
+
+- assert len(points) == 6
+- assert 'items' in scene.template_context
+- assert scene.template_context['items'][0] == atom_item
+
+### test_scene_drag_create_bond_sequence
+_Test the full mouse press -> move -> release sequence for creating a bond._
+
+- assert bond is not None
+- assert bond.order == 1
+- assert getattr(scene, 'start_atom', None) == a1
 
 ## tests/unit/test_stereochemistry.py
 
