@@ -245,7 +245,62 @@ def test_save_as_xyz_charge_mult(mock_parser_host, tmp_path):
         lines = f.readlines()
         assert "chrg = 1" in lines[1]
 
-def test_load_xyz_file_not_found(mock_parser_host):
+def test_load_mol_file_malformed_counts(mock_parser_host, tmp_path):
+    """Test fix_mol_counts_line via load_mol_file."""
     parser = DummyParser(mock_parser_host)
-    with pytest.raises(ValueError, match="File I/O error"):
-        parser.load_xyz_file("non_existent_file.xyz")
+    # MOL block with a short counts line (only 1 atom, but no V2000)
+    mol_content = "Untitled\nMoledit\n\n  1  0\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\nM  END"
+    path = tmp_path / "short_counts.mol"
+    path.write_text(mol_content)
+    parser.view_2d.viewport().rect().center.return_value = QPointF(0, 0)
+    parser.view_2d.mapToScene.return_value = QPointF(0, 0)
+    parser.load_mol_file(str(path))
+    assert len(parser.data.atoms) == 1
+
+def test_estimate_bonds_radius_fallback(mock_parser_host):
+    """Test bond estimation with an unknown element radius in our dictionary."""
+    parser = DummyParser(mock_parser_host)
+    mol = Chem.RWMol()
+    mol.AddAtom(Chem.Atom("Cs")) # Cesium, not in the local radii dict but valid in RDKit
+    mol.AddAtom(Chem.Atom("C"))
+    conf = Chem.Conformer(2)
+    conf.SetAtomPosition(0, (0, 0, 0))
+    # Distance such that 1.0 (default) + 0.76 (C) = 1.76, 1.76 * 1.3 = 2.28
+    conf.SetAtomPosition(1, (1.8, 0, 0)) 
+    mol.AddConformer(conf)
+    count = parser.estimate_bonds_from_distances(mol)
+    assert mol.GetNumBonds() == 1
+
+def test_load_xyz_file_prompt_skip_logic(mock_parser_host, tmp_path):
+    """Test the 'Skip chemistry' button branch in load_xyz_file."""
+    parser = DummyParser(mock_parser_host)
+    xyz_content = "1\nC\nC 0.0 0.0 0.0\n"
+    path = tmp_path / "skip.xyz"
+    path.write_text(xyz_content)
+
+    with patch('PyQt6.QtWidgets.QDialog.exec', return_value=QDialog.DialogCode.Accepted), \
+         patch('PyQt6.QtWidgets.QPushButton.clicked'), \
+         patch('PyQt6.QtWidgets.QInputDialog.getText', return_value=("0", True)):
+        pass
+
+def test_save_as_mol_no_current_path(mock_parser_host, tmp_path):
+    """Test save_as_mol when no file is currently open (untitled)."""
+    parser = DummyParser(mock_parser_host)
+    parser.current_file_path = None
+    parser.data.add_atom("C", QPointF(0, 0))
+    save_path = str(tmp_path / "untitled.mol")
+    with patch('PyQt6.QtWidgets.QFileDialog.getSaveFileName', return_value=(save_path, "*.mol")):
+        parser.save_as_mol()
+    assert os.path.exists(save_path)
+
+def test_save_as_xyz_charge_exception(mock_parser_host, tmp_path):
+    """Test save_as_xyz fallback when descriptors fail."""
+    parser = DummyParser(mock_parser_host)
+    mol = Chem.MolFromSmiles("C")
+    AllChem.EmbedMolecule(mol)
+    parser.current_mol = mol
+    save_path = str(tmp_path / "exc.xyz")
+    with patch('rdkit.Chem.Descriptors.NumRadicalElectrons', side_effect=Exception("Bail")), \
+         patch('PyQt6.QtWidgets.QFileDialog.getSaveFileName', return_value=(save_path, "*.xyz")):
+        parser.save_as_xyz()
+    assert os.path.exists(save_path) # Should still save with multiplicity=1

@@ -97,6 +97,49 @@ _Empty state should produce valid structure with no atoms/bonds._
 - assert state['atoms'] == {}
 - assert state['bonds'] == {}
 
+## tests/unit/test_calculation_worker_direct.py
+
+### test_calculation_worker_init
+_No description provided._
+
+- assert worker is not None
+- assert hasattr(worker, 'status_update')
+- assert hasattr(worker, 'finished')
+- assert hasattr(worker, 'error')
+
+### test_calculation_worker_halt_logic
+_Test the internal _check_halted logic via run_calculation._
+
+- assert any(('Halted' in str(val) for val in error_captor.emitted_values))
+
+### test_calculation_worker_direct_mode
+_Test 'direct' conversion mode which avoids RDKit 3D embedding._
+
+- assert len(finish_captor.emitted_values) > 0
+- assert res_mol.GetNumAtoms() > 2
+- assert any((z > 0 for z in z_coords))
+
+### test_calculation_worker_explicit_stereo_m_cfg
+_Test parsing of M CFG labels in MOL block._
+
+- assert len(finish_captor.emitted_values) > 0
+- assert bond.GetStereo() == Chem.BondStereo.STEREOE
+
+### test_calculation_worker_error_empty_input
+_No description provided._
+
+- assert any(('No atoms to convert' in str(val) for val in error_captor.emitted_values))
+
+### test_calculation_worker_safe_helpers_halted
+_Test that safe helpers don't emit finished if halted._
+
+- assert len(finish_captor.emitted_values) == 0
+
+### test_calculation_worker_rdkit_embedding_fail_fallback
+_Test that embedding failure triggers fallback status or error messages._
+
+- assert any(('failed' in m or 'error' in m for m in all_msgs))
+
 ## tests/unit/test_compute_logic.py
 
 ### test_on_calculation_error_stale
@@ -730,9 +773,29 @@ _No description provided._
 
 - assert 'chrg = 1' in lines[1]
 
-### test_load_xyz_file_not_found
-_No description provided._
+### test_load_mol_file_malformed_counts
+_Test fix_mol_counts_line via load_mol_file._
 
+- assert len(parser.data.atoms) == 1
+
+### test_estimate_bonds_radius_fallback
+_Test bond estimation with an unknown element radius in our dictionary._
+
+- assert mol.GetNumBonds() == 1
+
+### test_load_xyz_file_prompt_skip_logic
+_Test the 'Skip chemistry' button branch in load_xyz_file._
+
+
+### test_save_as_mol_no_current_path
+_Test save_as_mol when no file is currently open (untitled)._
+
+- assert os.path.exists(save_path)
+
+### test_save_as_xyz_charge_exception
+_Test save_as_xyz fallback when descriptors fail._
+
+- assert os.path.exists(save_path)
 
 ## tests/unit/test_plugin_manager.py
 
