@@ -255,3 +255,87 @@ def test_save_as_xyz_logic(mock_parser_host, tmp_path):
     assert "1" in content # Atom count
     assert "C" in content
     assert "1.2" in content
+
+def test_load_mol_file_cancel(mock_parser_host):
+    """Test that load_mol_file returns if check_unsaved_changes is False."""
+    parser = DummyParser(mock_parser_host)
+    mock_parser_host.check_unsaved_changes.return_value = False
+    
+    # Use patch directly on QFileDialog instead of relying on the host
+    with patch('PyQt6.QtWidgets.QFileDialog.getOpenFileName') as mock_dlg:
+        parser.load_mol_file()
+        assert not mock_dlg.called
+
+def test_load_mol_file_dialog_cancel(mock_parser_host):
+    """Test that load_mol_file returns if file dialog is cancelled."""
+    parser = DummyParser(mock_parser_host)
+    mock_parser_host.check_unsaved_changes.return_value = True
+    
+    with patch('PyQt6.QtWidgets.QFileDialog.getOpenFileName', return_value=("", "")):
+        parser.load_mol_file()
+        # Should return without doing anything
+        assert not hasattr(parser, 'current_file_path') or parser.current_file_path != ""
+
+def test_load_mol_file_not_found(mock_parser_host):
+    """Test load_mol_file with a non-existent file."""
+    parser = DummyParser(mock_parser_host)
+    mock_parser_host.statusBar().showMessage = MagicMock()
+    
+    parser.load_mol_file("non_existent_file.mol")
+    parser.statusBar().showMessage.assert_any_call("File not found: non_existent_file.mol")
+
+def test_load_mol_file_invalid_format(mock_parser_host, tmp_path):
+    """Test load_mol_file with garbage content."""
+    parser = DummyParser(mock_parser_host)
+    bad_mol = tmp_path / "garbage.mol"
+    bad_mol.write_text("NOT A MOL FILE")
+    
+    mock_parser_host.statusBar().showMessage = MagicMock()
+    parser.load_mol_file(str(bad_mol))
+    # Chem.MolFromMolBlock usually returns None for garbage
+    parser.statusBar().showMessage.assert_any_call("Invalid MOL file format: Failed to read molecule from .mol file after fixing counts line.")
+
+def test_load_xyz_file_invalid_atom_count(mock_parser_host, tmp_path):
+    """Test load_xyz_file with non-integer atom count."""
+    parser = DummyParser(mock_parser_host)
+    xyz_content = "GARBAGE\ncomment\nC 0 0 0\n"
+    xyz_path = tmp_path / "bad_count.xyz"
+    xyz_path.write_text(xyz_content)
+    
+    with pytest.raises(ValueError, match="invalid atom count"):
+        parser.load_xyz_file(str(xyz_path))
+
+def test_load_xyz_file_zero_atoms(mock_parser_host, tmp_path):
+    """Test load_xyz_file with 0 atoms."""
+    parser = DummyParser(mock_parser_host)
+    xyz_content = "0\ncomment\n"
+    xyz_path = tmp_path / "zero.xyz"
+    xyz_path.write_text(xyz_content)
+    
+    with pytest.raises(ValueError, match="atom count must be positive"):
+        parser.load_xyz_file(str(xyz_path))
+
+def test_load_xyz_file_too_few_lines(mock_parser_host, tmp_path):
+    """Test load_xyz_file with truncated data."""
+    parser = DummyParser(mock_parser_host)
+    xyz_content = "2\ncomment\nC 0 0 0\n" # Missing one atom
+    xyz_path = tmp_path / "short.xyz"
+    xyz_path.write_text(xyz_content)
+    
+    with pytest.raises(ValueError, match="expected 2 atom lines, found 1"):
+        parser.load_xyz_file(str(xyz_path))
+
+def test_save_as_mol_cancel(mock_parser_host):
+    """Test save_as_mol cancellation via dialog."""
+    parser = DummyParser(mock_parser_host)
+    with patch('PyQt6.QtWidgets.QFileDialog.getSaveFileName', return_value=("", "")):
+        parser.save_as_mol()
+        # Should just return
+        pass
+
+def test_save_as_xyz_cancel(mock_parser_host):
+    """Test save_as_xyz cancellation via dialog."""
+    parser = DummyParser(mock_parser_host)
+    with patch('PyQt6.QtWidgets.QFileDialog.getSaveFileName', return_value=("", "")):
+        parser.save_as_xyz()
+        pass
