@@ -77,6 +77,8 @@ class DummyPolyDataMock(_mock.MagicMock):
         self.cell_data = {}
     def __getitem__(self, key): return _mock.MagicMock()
     def __setitem__(self, key, val): pass
+    def glyph(self, *a, **k): return _mock.MagicMock()
+    def tube(self, *a, **k): return _mock.MagicMock()
 
 pyv.PolyData = DummyPolyDataMock
 pyv.Light = _mock.MagicMock
@@ -118,7 +120,26 @@ def app():
     q_app = QApplication.instance()
     if q_app is None:
         q_app = QApplication(sys.argv)
-    return q_app
+
+    yield q_app
+    
+    # Robust teardown sequence to prevent 0x80010108 RPC errors
+    try:
+        q_app.closeAllWindows()
+        for _ in range(10):
+            q_app.processEvents()
+        
+        # Force garbage collection to release Python-wrapped Qt objects
+        import gc
+        gc.collect()
+        
+        # Additional event processing after GC often helps QObjects finalize
+        q_app.processEvents()
+        
+    except Exception:
+        pass
+        
+    q_app.quit()
 
 @pytest.fixture
 def window(app, qtbot, monkeypatch):
@@ -279,3 +300,7 @@ def window(app, qtbot, monkeypatch):
             pass
         except Exception:
             pass
+
+        # Force garbage collection to clean up potential circular references or lingering Qt objects
+        import gc
+        gc.collect()

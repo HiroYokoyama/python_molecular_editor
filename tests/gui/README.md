@@ -40,14 +40,13 @@ This fixture file sets up the test environment for `pytest`.
 
 ### `test_plugin_manager.py`
 
-This file contains tests for the `PluginManager` module, ensuring robust plugin handling.
+This file verifies the **integration aspects** of the plugin system, specifically file system interactions and safe metadata parsing.
 
   * **Tests**:
-      * `test_init`: Verifies plugin manager initialization.
-      * `test_install_and_discover_single_file`: Tests installing and loading single-file plugins.
-      * `test_install_zip`: Tests installing and extracting ZIP plugins.
-      * `test_plugin_registration`: Verifies `PluginContext` action registration.
-      * `test_ast_metadata_parsing`: Tests safe metadata extraction from plugin files.
+      * `test_install_and_discover_single_file`: Verifies the end-to-end installation of a single `.py` plugin file.
+      * `test_install_zip`: Verifies the extraction and installation of zipped plugins.
+      * `test_plugin_registration`: Checks if a plugin can correctly register UI actions (menus/toolbars) in the `PluginContext`.
+      * `test_ast_metadata_parsing`: Ensures safe, non-executing extraction of plugin metadata (Author, Version) using AST.
 
 ### `test_main_app.py`
 

@@ -25,6 +25,7 @@ def test_calculation_worker_bond_length_validation(qtbot, app):
     with qtbot.waitSignal(worker.finished, timeout=10000) as blocker:
         worker.run_calculation(mol_block, settings)
     
+    
     result = blocker.args[0]
     # result is (mol_block_3d, rdkit_mol, info_dict)
     mol_3d = result[1]
@@ -72,6 +73,7 @@ def test_calculation_worker_angle_validation(qtbot, app):
     
     with qtbot.waitSignal(worker.finished, timeout=10000) as blocker:
         worker.run_calculation(mol_block, settings)
+    
     
     mol_3d = blocker.args[0][1]
     conf = mol_3d.GetConformer()
@@ -125,6 +127,7 @@ def test_calculation_worker_dihedral_validation(qtbot, app):
     with qtbot.waitSignal(worker.finished, timeout=10000) as blocker:
         worker.run_calculation(mol_block, settings)
     
+    
     mol_3d = blocker.args[0][1]
     conf = mol_3d.GetConformer()
     
@@ -155,6 +158,7 @@ def test_calculation_worker_conversion_no_optimize(qtbot, app):
     
     with qtbot.waitSignal(worker.finished, timeout=10000) as blocker:
         worker.run_calculation(mol_block, settings)
+    
     
     mol_3d = blocker.args[0][1]
     symbols = set(a.GetSymbol() for a in mol_3d.GetAtoms())
