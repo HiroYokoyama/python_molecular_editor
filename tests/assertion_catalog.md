@@ -180,6 +180,47 @@ _Test on_calculation_error with a string (legacy error format)._
 
 - assert any(('Fatal Error' in str(call[0][0]) for call in compute.statusBar().showMessage.call_args_list if call[0]))
 
+## tests/unit/test_edit_3d_logic.py
+
+### test_calculate_distance_logic
+_No description provided._
+
+- assert dist == pytest.approx(1.5)
+
+### test_calculate_angle_logic
+_No description provided._
+
+- assert angle == pytest.approx(90.0)
+
+### test_calculate_dihedral_logic
+_No description provided._
+
+- assert abs(dihedral) > 0
+
+### test_handle_measurement_atom_selection
+_No description provided._
+
+- assert 10 in edit3d.selected_atoms_for_measurement
+- assert len(edit3d.selected_atoms_for_measurement) == 1
+
+### test_clear_3d_selection
+_No description provided._
+
+- assert edit3d.plotter.remove_actor.called
+
+### test_toggle_measurement_mode
+_No description provided._
+
+- assert edit3d.measurement_mode is True
+- assert edit3d.statusBar().showMessage.called
+- assert edit3d.measurement_mode is False
+
+### test_calculate_and_display_measurements_trigger
+_No description provided._
+
+- assert mock_display.called
+- assert 'Distance' in mock_display.call_args[0][0][0]
+
 ## tests/unit/test_edit_actions.py
 
 ### test_rotate_molecule_2d_basic
@@ -227,6 +268,26 @@ _No description provided._
 ### test_export_obj_mtl_error_no_mol
 _No description provided._
 
+
+### test_export_stl_success_trigger
+_No description provided._
+
+- assert mesh.save.called
+
+### test_export_obj_mtl_success_trigger
+_No description provided._
+
+- assert mock_create.called
+
+### test_export_3d_png_logic
+_No description provided._
+
+- assert mock_plotter.screenshot.called
+
+### test_export_color_stl_logic
+_No description provided._
+
+- assert exporter.statusBar().showMessage.called
 
 ## tests/unit/test_geometry.py
 

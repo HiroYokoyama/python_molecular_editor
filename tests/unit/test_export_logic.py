@@ -1,11 +1,13 @@
 import pytest
 import os
 from rdkit import Chem
+from rdkit.Chem import AllChem
 from moleditpy.modules.main_window_export import MainWindowExport
 from moleditpy.modules.atom_item import AtomItem
 from moleditpy.modules.bond_item import BondItem
 from PyQt6.QtCore import QPointF, QRectF
 from PyQt6.QtGui import QColor
+from PyQt6.QtWidgets import QMessageBox
 from unittest.mock import MagicMock, patch
 import numpy as np
 
@@ -18,6 +20,7 @@ class DummyExport(MainWindowExport):
         self.view_2d = host.view_2d
         self.statusBar_mock = MagicMock()
         self.current_file_path = None
+        self.current_mol = host.current_mol
     
     def __getattr__(self, name):
         return getattr(self._host, name)
@@ -57,9 +60,8 @@ def test_export_2d_png_basic_trigger(mock_parser_host, tmp_path):
     exporter.scene.backgroundBrush.return_value = QColor(255, 255, 255)
     
     with patch('PyQt6.QtWidgets.QFileDialog.getSaveFileName', return_value=(save_path, "*.png")):
-        with patch('PyQt6.QtWidgets.QMessageBox.question', return_value=MagicMock(value=16384)):
+        with patch('PyQt6.QtWidgets.QMessageBox.question', return_value=QMessageBox.StandardButton.Yes):
             exporter.export_2d_png()
-    # verify it finishes
 
 def test_export_2d_svg_trigger(mock_parser_host, tmp_path):
     exporter = DummyExport(mock_parser_host)
@@ -72,7 +74,7 @@ def test_export_2d_svg_trigger(mock_parser_host, tmp_path):
     exporter.scene.items.return_value = [item]
     
     with patch('PyQt6.QtWidgets.QFileDialog.getSaveFileName', return_value=(save_path, "*.svg")):
-        with patch('PyQt6.QtWidgets.QMessageBox.question', return_value=MagicMock(value=16384)): # Yes
+        with patch('PyQt6.QtWidgets.QMessageBox.question', return_value=QMessageBox.StandardButton.Yes):
             exporter.export_2d_svg()
     assert os.path.exists(save_path)
 
@@ -80,10 +82,61 @@ def test_export_stl_error_no_mol(mock_parser_host):
     exporter = DummyExport(mock_parser_host)
     exporter.current_mol = None 
     exporter.export_stl()
-    exporter.statusBar().showMessage.assert_called_with("Error: Please generate a 3D structure first.")
+    exporter.statusBar().showMessage.assert_any_call("Error: Please generate a 3D structure first.")
 
 def test_export_obj_mtl_error_no_mol(mock_parser_host):
     exporter = DummyExport(mock_parser_host)
     exporter.current_mol = None
     exporter.export_obj_mtl()
-    exporter.statusBar().showMessage.assert_called_with("Error: Please generate a 3D structure first.")
+    exporter.statusBar().showMessage.assert_any_call("Error: Please generate a 3D structure first.")
+
+def test_export_stl_success_trigger(mock_parser_host, tmp_path):
+    exporter = DummyExport(mock_parser_host)
+    mol = Chem.MolFromSmiles("C")
+    AllChem.EmbedMolecule(mol)
+    exporter.current_mol = mol
+    save_path = str(tmp_path / "test.stl")
+    mesh = MagicMock()
+    mesh.n_points = 100 # Ensure it has points
+    
+    with patch('PyQt6.QtWidgets.QFileDialog.getSaveFileName', return_value=(save_path, "*.stl")), \
+         patch.object(exporter, 'export_from_3d_view_no_color', return_value=mesh):
+        exporter.export_stl()
+        assert mesh.save.called
+
+def test_export_obj_mtl_success_trigger(mock_parser_host, tmp_path):
+    exporter = DummyExport(mock_parser_host)
+    mol = Chem.MolFromSmiles("C")
+    AllChem.EmbedMolecule(mol)
+    exporter.current_mol = mol
+    save_path = str(tmp_path / "test.obj")
+    with patch('PyQt6.QtWidgets.QFileDialog.getSaveFileName', return_value=(save_path, "*.obj")), \
+         patch.object(exporter, 'export_from_3d_view_with_colors', return_value=[{'mesh': MagicMock(), 'color': [1,1,1], 'name': 'A'}]), \
+         patch.object(exporter, 'create_multi_material_obj') as mock_create:
+        exporter.export_obj_mtl()
+        assert mock_create.called
+
+def test_export_3d_png_logic(mock_parser_host, tmp_path):
+    exporter = DummyExport(mock_parser_host)
+    mol = Chem.MolFromSmiles("C")
+    exporter.current_mol = mol
+    save_path = str(tmp_path / "test3d.png")
+    mock_plotter = MagicMock()
+    exporter.plotter = mock_plotter
+    with patch('PyQt6.QtWidgets.QFileDialog.getSaveFileName', return_value=(save_path, "*.png")):
+        with patch('PyQt6.QtWidgets.QMessageBox.question', return_value=QMessageBox.StandardButton.Yes):
+            exporter.export_3d_png()
+            assert mock_plotter.screenshot.called
+
+def test_export_color_stl_logic(mock_parser_host, tmp_path):
+    exporter = DummyExport(mock_parser_host)
+    mol = Chem.MolFromSmiles("C")
+    AllChem.EmbedMolecule(mol)
+    exporter.current_mol = mol
+    save_path = str(tmp_path / "color.stl")
+    mesh = MagicMock()
+    mesh.n_points = 100
+    with patch('PyQt6.QtWidgets.QFileDialog.getSaveFileName', return_value=(save_path, "*.stl")), \
+         patch.object(exporter, 'export_from_3d_view_with_colors', return_value=[{'mesh': mesh, 'color': [1,1,1], 'name': 'A'}]):
+        exporter.export_color_stl()
+        assert exporter.statusBar().showMessage.called
