@@ -37,7 +37,7 @@ class BondLengthDialog(Dialog3DPickingMixin, QDialog):
     
     def init_ui(self):
         self.setWindowTitle("Adjust Bond Length")
-        self.setModal(False)  # モードレスにしてクリックを阻害しない
+        self.setModal(False)
 
         layout = QVBoxLayout(self)
         

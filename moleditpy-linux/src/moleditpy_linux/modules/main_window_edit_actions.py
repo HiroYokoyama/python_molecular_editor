@@ -138,8 +138,6 @@ except Exception:
 # --- クラス定義 ---
 class MainWindowEditActions(object):
     """ main_window.py から分離された機能クラス """
-
-
     def copy_selection(self):
         """選択された原子と結合をクリップボードにコピーする"""
         try:
@@ -199,8 +197,6 @@ class MainWindowEditActions(object):
             traceback.print_exc()
             self.statusBar().showMessage(f"Error during copy operation: {e}")
 
-
-
     def cut_selection(self):
         """選択されたアイテムを切り取り（コピーしてから削除）"""
         try:
@@ -220,8 +216,6 @@ class MainWindowEditActions(object):
             
             traceback.print_exc()
             self.statusBar().showMessage(f"Error during cut operation: {e}")
-
-
 
     def paste_from_clipboard(self):
         """クリップボードから分子フラグメントを貼り付け"""
@@ -273,8 +267,6 @@ class MainWindowEditActions(object):
             self.statusBar().showMessage(f"Error during paste operation: {e}")
         self.statusBar().showMessage(f"Pasted {len(new_atoms)} atoms.", 2000)
         self.activate_select_mode()
-
-
 
     def remove_hydrogen_atoms(self):
         """2Dビューで水素原子とその結合を削除する"""
@@ -403,8 +395,6 @@ class MainWindowEditActions(object):
                 self.statusBar().showMessage(f"Error removing hydrogen atoms: {e}")
             except Exception:
                 pass
-
-
 
     def add_hydrogen_atoms(self):
         """RDKitで各原子の暗黙の水素数を調べ、その数だけ明示的な水素原子と単結合を作成する（2Dビュー）。
@@ -588,8 +578,6 @@ class MainWindowEditActions(object):
             traceback.print_exc()
             self.statusBar().showMessage(f"Error adding hydrogen atoms: {e}")
 
-
-
     def update_edit_menu_actions(self):
         """選択状態やクリップボードの状態に応じて編集メニューを更新"""
         try:
@@ -602,8 +590,6 @@ class MainWindowEditActions(object):
             self.paste_action.setEnabled(mime_data is not None and mime_data.hasFormat(CLIPBOARD_MIME_TYPE))
         except RuntimeError:
             pass
-
-
 
     def open_rotate_2d_dialog(self):
         """2D回転ダイアログを開く"""
@@ -670,15 +656,10 @@ class MainWindowEditActions(object):
             traceback.print_exc()
             self.statusBar().showMessage(f"Error rotating: {e}")
 
-
-
-
     def select_all(self):
         for item in self.scene.items():
             if isinstance(item, (AtomItem, BondItem)):
                 item.setSelected(True)
-
-
 
     def clear_all(self):
         # 未保存の変更があるかチェック
@@ -750,8 +731,6 @@ class MainWindowEditActions(object):
             self.plugin_manager.invoke_document_reset_handlers()
         
         self.statusBar().showMessage("Cleared all data.")
-        
-
 
     def clear_2d_editor(self, push_to_undo=True):
         self.data = MolecularData()
@@ -772,8 +751,6 @@ class MainWindowEditActions(object):
         if push_to_undo:
             self.push_undo_state()
 
-
-
     def update_implicit_hydrogens(self):
         """現在の2D構造に基づいて各原子の暗黙の水素数を計算し、AtomItemに反映する"""
         # Quick guards: nothing to do if no atoms or no QApplication
@@ -783,11 +760,6 @@ class MainWindowEditActions(object):
         # If called from non-GUI thread, schedule the heavy RDKit work here but
         # always perform UI mutations on the main thread via QTimer.singleShot.
         try:
-            # Bump a local token to identify this request. The closure we
-            # schedule below will capture `my_token` and will only apply UI
-            # changes if the token still matches the most recent global
-            # counter. This avoids applying stale updates after deletions or
-            # teardown.
             try:
                 self._ih_update_counter += 1
             except Exception:
@@ -878,12 +850,8 @@ class MainWindowEditActions(object):
                         except Exception:
                             continue
             except Exception:
-                # If any unexpected error occurs while building the map, fall back
-                # to an empty map so we don't accidentally crash the UI.
                 problem_map = {}
 
-            # Schedule UI updates on the main thread to avoid calling Qt methods from
-            # background threads or during teardown (which can crash the C++ layer).
             def _apply_ui_updates():
                 # If the global counter changed since this closure was
                 # created, bail out — the update is stale.
@@ -891,22 +859,12 @@ class MainWindowEditActions(object):
                     if my_token != getattr(self, '_ih_update_counter', None):
                         return
                 except Exception:
-                    # If anything goes wrong checking the token, be conservative
-                    # and skip the update to avoid touching possibly-damaged
-                    # Qt wrappers.
                     return
 
-                # Work on a shallow copy/snapshot of the data.atoms mapping so
-                # that concurrent mutations won't raise KeyError during
-                # iteration. We still defensively check each item below.
                 try:
                     atoms_snapshot = dict(self.data.atoms)
                 except Exception:
                     atoms_snapshot = {}
-                # Prefer the module-level SIP helper to avoid repeated imports
-                # and centralize exception handling. Use the safe wrapper
-                # `sip_isdeleted_safe` provided by the package which already
-                # handles the optional presence of sip.isdeleted.
                 is_deleted_func = sip_isdeleted_safe
 
                 items_to_update = []
@@ -1115,8 +1073,6 @@ class MainWindowEditActions(object):
         finally:
             self.view_2d.setFocus()
 
-
-
     def resolve_overlapping_groups(self):
         """
         誤差範囲で完全に重なっている原子のグループを検出し、
@@ -1289,9 +1245,6 @@ class MainWindowEditActions(object):
         self.push_undo_state()
         self.statusBar().showMessage("Resolved overlapping groups.", 2000)
 
-
-
-
     def adjust_molecule_positions_to_avoid_collisions(self, mol, frags):
         """
         複数分子の位置を調整して、衝突を回避する（バウンディングボックス最適化版）
@@ -1427,10 +1380,6 @@ class MainWindowEditActions(object):
                             conf.SetAtomPosition(idx, new_pos.tolist())
                         
                         moved = True
-                        # (この移動により、このイテレーションで使う frag_info の座標キャッシュが古くなりますが、
-                        #  次のイテレーションの最初でボックスと共に再計算されるため問題ありません)
-
-
 
     def _apply_chem_check_and_set_flags(self, mol, source_desc=None):
         """Central helper to apply chemical sanitization (or skip it) and set
@@ -1471,8 +1420,6 @@ class MainWindowEditActions(object):
                     self.optimize_3d_button.setEnabled(False)
                 except Exception:
                     pass
-        
-
 
     def _clear_xyz_flags(self, mol=None):
         """Clear XYZ-derived markers from a molecule (or current_mol) and

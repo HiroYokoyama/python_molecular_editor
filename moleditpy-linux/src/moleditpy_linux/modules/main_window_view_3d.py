@@ -16,11 +16,9 @@ MainWindow (main_window.py) から分離されたモジュール
 機能クラス: MainWindowView3d
 """
 
-
 import numpy as np
 import vtk
 import logging
-
 
 # RDKit imports (explicit to satisfy flake8 and used features)
 from rdkit import Chem
@@ -38,15 +36,12 @@ from PyQt6.QtGui import (
     QColor, QTransform
 )
 
-
 from PyQt6.QtCore import (
     Qt, QRectF
 )
 
 import pyvista as pv
 
-# Use centralized Open Babel availability from package-level __init__
-# Use per-package modules availability (local __init__).
 try:
     from . import OBABEL_AVAILABLE
 except Exception:
@@ -82,8 +77,6 @@ except Exception:
 # --- クラス定義 ---
 class MainWindowView3d(object):
     """ main_window.py から分離された機能クラス """
-
-
     def set_3d_style(self, style_name):
         """3D表示スタイルを設定し、ビューを更新する"""
         if self.current_3d_style == style_name:
@@ -107,8 +100,6 @@ class MainWindowView3d(object):
         # 現在表示中の分子があれば、新しいスタイルで再描画する
         if self.current_mol:
             self.draw_molecule_3d(self.current_mol)
-
-
 
     def draw_molecule_3d(self, mol):
         """Dispatch to custom style or standard drawing."""
@@ -444,7 +435,6 @@ class MainWindowView3d(object):
                 # Determine effective uniform color for this bond
                 local_bs_bond_rgb = begin_color_rgb if (hasattr(self, '_plugin_bond_color_overrides') and bond_idx in self._plugin_bond_color_overrides) else bs_bond_rgb
 
-
                 # セグメント追加用ヘルパー関数
                 def add_segment(p1, p2, radius, color_rgb):
                     nonlocal current_point_idx
@@ -740,11 +730,6 @@ class MainWindowView3d(object):
 
         self.plotter.camera = camera_state
 
-        # Ensure the underlying VTK camera's parallel/projection flag matches
-        # the saved application setting. draw_molecule_3d restores a PyVista
-        # camera object which may not propagate the ParallelProjection flag
-        # to the VTK renderer camera; enforce it here to guarantee the
-        # projection mode selected in settings actually takes effect.
         try:
             proj_mode = self.settings.get('projection_mode', 'Perspective')
             if hasattr(self.plotter, 'renderer') and hasattr(self.plotter.renderer, 'GetActiveCamera'):
@@ -769,8 +754,6 @@ class MainWindowView3d(object):
         # メニューテキストと状態を現在の分子の種類に応じて更新
         self.update_atom_id_menu_text()
         self.update_atom_id_menu_state()
-
-
 
     def _calculate_double_bond_offset(self, mol, bond, conf):
         """
@@ -861,8 +844,6 @@ class MainWindowView3d(object):
         off_dir /= np.linalg.norm(off_dir)
         return off_dir
 
-
-
     def show_ez_labels_3d(self, mol):
         """3DビューでE/Zラベルを表示する（RDKitのステレオ化学判定を使用）"""
         if not mol:
@@ -932,9 +913,6 @@ class MainWindowView3d(object):
                 show_points=False
             )
 
-
-
-
     def toggle_chiral_labels_display(self, checked):
         """Viewメニューのアクションに応じてキラルラベル表示を切り替える"""
         self.show_chiral_labels = checked
@@ -946,9 +924,6 @@ class MainWindowView3d(object):
             self.statusBar().showMessage("Chiral labels: will be (re)computed after Convert→3D.")
         else:
             self.statusBar().showMessage("Chiral labels disabled.")
-
-
-
 
     def update_chiral_labels(self):
         """分子のキラル中心を計算し、2Dビューの原子アイテムにR/Sラベルを設定/解除する
@@ -1010,8 +985,6 @@ class MainWindowView3d(object):
         # 最後に 2D シーンを再描画
         self.scene.update()
 
-
-
     def toggle_atom_info_display(self, mode):
         """原子情報表示モードを切り替える"""
         # 現在の表示をクリア
@@ -1041,8 +1014,6 @@ class MainWindowView3d(object):
             # すべての原子に情報を表示
             self.show_all_atom_info()
 
-
-
     def is_xyz_derived_molecule(self):
         """現在の分子がXYZファイル由来かどうかを判定"""
         if not self.current_mol:
@@ -1054,8 +1025,6 @@ class MainWindowView3d(object):
         except Exception:
             pass
         return False
-
-
 
     def has_original_atom_ids(self):
         """現在の分子がOriginal Atom IDsを持っているかどうかを判定"""
@@ -1071,8 +1040,6 @@ class MainWindowView3d(object):
             pass
         return False
 
-
-
     def update_atom_id_menu_text(self):
         """原子IDメニューのテキストを現在の分子の種類に応じて更新"""
         if hasattr(self, 'show_atom_id_action'):
@@ -1080,8 +1047,6 @@ class MainWindowView3d(object):
                 self.show_atom_id_action.setText("Show XYZ Unique ID")
             else:
                 self.show_atom_id_action.setText("Show Original ID / Index")
-
-
 
     def update_atom_id_menu_state(self):
         """原子IDメニューの有効/無効状態を更新"""
@@ -1097,9 +1062,6 @@ class MainWindowView3d(object):
                 self.atom_info_display_mode = None
                 self.show_atom_id_action.setChecked(False)
                 self.clear_all_atom_info_labels()
-
-
-
 
     def show_all_atom_info(self):
         """すべての原子に情報を表示"""
@@ -1234,8 +1196,6 @@ class MainWindowView3d(object):
                 legend_entries.append(('ID', id_color, 'legend_id'))
             if xyz_positions:
                 legend_entries.append(('XYZ', xyz_color, 'legend_xyz'))
-            # Do not show 'Other' in the legend per UI requirement
-            # (other_positions are still labeled in-scene but not listed in the legend)
 
             # 左下に凡例ラベルを追加（背景なし、太字のみ）
             # Increase spacing to avoid overlapping when short labels like 'RDKit' and 'ID' appear
@@ -1277,8 +1237,6 @@ class MainWindowView3d(object):
         except Exception:
             pass
 
-
-
     def clear_all_atom_info_labels(self):
         """すべての原子情報ラベルをクリア"""
         # Remove label actors (may be a single actor, a list, or None)
@@ -1313,34 +1271,24 @@ class MainWindowView3d(object):
         finally:
             self.atom_label_legend_names = []
 
-
-
     def setup_3d_hover(self):
         """3Dビューでの表示を設定（常時表示に変更）"""
         if self.atom_info_display_mode is not None:
             self.show_all_atom_info()
 
-
-
     def zoom_in(self):
         """ ビューを 20% 拡大する """
         self.view_2d.scale(1.2, 1.2)
-
-
 
     def zoom_out(self):
         """ ビューを 20% 縮小する """
         self.view_2d.scale(1/1.2, 1/1.2)
         
-
-
     def reset_zoom(self):
         """ ビューの拡大率をデフォルト (75%) にリセットする """
         transform = QTransform()
         transform.scale(0.75, 0.75)
         self.view_2d.setTransform(transform)
-
-
 
     def fit_to_view(self):
         """ シーン上のすべてのアイテムがビューに収まるように調整する """
@@ -1430,9 +1378,6 @@ class MainWindowView3d(object):
         except Exception as e:
             print(f"Failed to update CPK colors from settings: {e}")
 
-
-
-
     def apply_3d_settings(self, redraw=True):
         # Projection mode
         proj_mode = self.settings.get('projection_mode', 'Perspective')
@@ -1494,9 +1439,6 @@ class MainWindowView3d(object):
         except Exception:
             pass
 
-
-
-
     def update_bond_color_override(self, bond_idx, hex_color):
         """Plugin API helper to override bond color."""
         if not hasattr(self, '_plugin_bond_color_overrides'):
@@ -1524,7 +1466,3 @@ class MainWindowView3d(object):
             
         if self.current_mol:
             self.draw_molecule_3d(self.current_mol)
-
-
-
-

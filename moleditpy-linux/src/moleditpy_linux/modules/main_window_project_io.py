@@ -16,12 +16,10 @@ MainWindow (main_window.py) から分離されたモジュール
 機能クラス: MainWindowProjectIo
 """
 
-
 import pickle
 import os
 import json 
 import traceback
-
 
 # RDKit imports (explicit to satisfy flake8 and used features)
 try:
@@ -34,15 +32,10 @@ from PyQt6.QtWidgets import (
     QFileDialog, QMessageBox
 )
 
-
-
 from PyQt6.QtCore import (
     QTimer
 )
 
-
-# Use centralized Open Babel availability from package-level __init__
-# Use per-package modules availability (local __init__).
 try:
     from . import OBABEL_AVAILABLE
 except Exception:
@@ -77,8 +70,6 @@ except Exception:
 # --- クラス定義 ---
 class MainWindowProjectIo(object):
     """ main_window.py から分離された機能クラス """
-
-
     def save_project(self):
         """上書き保存（Ctrl+S）- デフォルトでPMEPRJ形式"""
         if not self.data.atoms and not self.current_mol: 
@@ -117,8 +108,6 @@ class MainWindowProjectIo(object):
         else:
             # MOL/SDF/XYZなどは上書き保存せず、必ず「名前を付けて保存」にする
             self.save_project_as()
-
-
 
     def save_project_as(self):
         """名前を付けて保存（Ctrl+Shift+S）- デフォルトでPMEPRJ形式"""
@@ -181,8 +170,6 @@ class MainWindowProjectIo(object):
             
             traceback.print_exc()
 
-
-
     def save_raw_data(self):
         if not self.data.atoms and not self.current_mol: 
             self.statusBar().showMessage("Error: Nothing to save.")
@@ -238,9 +225,6 @@ class MainWindowProjectIo(object):
             
             traceback.print_exc()
 
-
-
-
     def load_raw_data(self, file_path=None):
         if not file_path:
             file_path, _ = QFileDialog.getOpenFileName(self, "Open Project File", "", "Project Files (*.pmeraw);;All Files (*)")
@@ -277,8 +261,6 @@ class MainWindowProjectIo(object):
             self.statusBar().showMessage(f"Error loading project file: {e}")
             
             traceback.print_exc()
-
-
 
     def save_as_json(self):
         """PMEJSONファイル形式で保存 (3D MOL情報含む)"""
@@ -338,8 +320,6 @@ class MainWindowProjectIo(object):
             
             traceback.print_exc()
 
-
-
     def load_json_data(self, file_path=None):
         """PME Projectファイル形式を読み込み"""
         if not file_path:
@@ -393,8 +373,6 @@ class MainWindowProjectIo(object):
             self.statusBar().showMessage(f"Error loading PME Project file: {e}")
             
             traceback.print_exc()
-
-
 
     def open_project_file(self, file_path=None):
         """プロジェクトファイルを開く（.pmeprjと.pmerawの両方に対応）"""

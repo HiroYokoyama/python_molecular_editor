@@ -88,7 +88,6 @@ class TemplatePreviewItem(QGraphicsItem):
             return
         
         # Draw bonds first with better visibility
-        # Draw bonds first with better visibility
         # Use gray (ghost) color for template preview to distinguish from real bonds
         bond_pen = QPen(QColor(80, 80, 80, 180), 2.5)
         painter.setPen(bond_pen)

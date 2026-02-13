@@ -122,7 +122,6 @@ class ZoomableView(QGraphicsView):
                 min_scale, max_scale = 0.05, 20.0
                 
                 # 制限内であればスケールを適用
-                # (厳密に制限を守るならif文でガードしますが、最小実装としては以下で動作します)
                 self.scale(factor, factor)
                 return True
                 

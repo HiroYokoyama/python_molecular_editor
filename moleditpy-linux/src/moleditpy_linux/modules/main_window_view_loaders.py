@@ -16,10 +16,8 @@ MainWindow (main_window.py) から分離されたモジュール
 機能クラス: MainWindowViewLoaders
 """
 
-
 import os
 import traceback
-
 
 # RDKit imports (explicit to satisfy flake8 and used features)
 from rdkit import Chem
@@ -35,11 +33,6 @@ from PyQt6.QtWidgets import (
 )
 
 
-
-
-
-# Use centralized Open Babel availability from package-level __init__
-# Use per-package modules availability (local __init__).
 try:
     from . import OBABEL_AVAILABLE
 except Exception:
@@ -178,8 +171,6 @@ class MainWindowViewLoaders(object):
             
             traceback.print_exc()
 
-
-
     def save_3d_as_mol(self):
         if not self.current_mol:
             self.statusBar().showMessage("Error: Please generate a 3D structure first.")
@@ -234,8 +225,6 @@ class MainWindowViewLoaders(object):
             self.statusBar().showMessage(f"Error saving 3D MOL file: {e}")
             
             traceback.print_exc()
-
-
 
     def load_mol_file_for_3d_viewing(self, file_path=None):
         """MOL/SDFファイルを3Dビューアーで開く"""

@@ -22,12 +22,6 @@ from rdkit.DistanceGeometry import DoTriangleSmoothing
 import math
 import re
 
-
-# Use centralized Open Babel availability from package-level __init__
-# Use per-package modules availability (local __init__).
-# Prefer package-relative import when running as `python -m moleditpy` and
-# fall back to a top-level import when running as a script. This mirrors the
-# import style used in other modules and keeps the package robust.
 try:
     from . import OBABEL_AVAILABLE
 except Exception:
@@ -47,22 +41,14 @@ else:
 class CalculationWorker(QObject):
     status_update = pyqtSignal(str)
     finished = pyqtSignal(object)
-    error = pyqtSignal(object)  # emit (worker_id, msg) tuples for robustness
-    # Per-worker start signal to avoid sharing a single MainWindow signal
-    # among many worker instances (which causes race conditions and stale
-    # workers being started on a single emission).
+    error = pyqtSignal(object) 
     start_work = pyqtSignal(str, object)
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        # Connect the worker's own start signal to its run slot. This
-        # guarantees that only this worker will respond when start_work
-        # is emitted (prevents cross-talk between workers).
         try:
             self.start_work.connect(self.run_calculation)
         except Exception:
-            # Be defensive: if connection fails, continue; the caller may
-            # fallback to emitting directly.
             pass
 
     @pyqtSlot(str, object)
@@ -75,11 +61,7 @@ class CalculationWorker(QObject):
                 worker_id = options.get('worker_id') if options else None
             except Exception:
                 worker_id = None
-
-            # If a caller starts a worker without providing a worker_id, treat
-            # it as a "global" worker that can still be halted via a global
-            # halt flag. Emit a single status warning so callers know that
-            # the worker was started without an identifier.
+                
             _warned_no_worker_id = False
             if worker_id is None:
                 try:
@@ -92,9 +74,6 @@ class CalculationWorker(QObject):
             def _check_halted():
                 try:
                     halt_ids = getattr(self, 'halt_ids', None)
-                    # If worker_id is None, allow halting via a global mechanism:
-                    #  - an explicit attribute `halt_all` set to True on the worker
-                    #  - the shared `halt_ids` set containing None or the sentinel 'ALL'
                     if worker_id is None:
                         if getattr(self, 'halt_all', False):
                             return True
@@ -155,10 +134,6 @@ class CalculationWorker(QObject):
             if options is None:
                 options = {}
             conversion_mode = options.get('conversion_mode', 'fallback')
-            # Ensure params exists in all code paths (some RDKit calls below
-            # reference `params` and earlier editing introduced a path where
-            # it might not be defined). Initialize to None here and assign
-            # a proper ETKDG params object later where needed.
             params = None
             if not mol_block:
                 raise ValueError("No atoms to convert.")
@@ -173,8 +148,6 @@ class CalculationWorker(QObject):
             if _check_halted():
                 raise RuntimeError("Halted")
 
-            # CRITICAL FIX: Extract and restore explicit E/Z labels from MOL block
-            # Parse M CFG lines to get explicit stereo labels
             explicit_stereo = {}
             mol_lines = mol_block.split('\n')
             for line in mol_lines:
@@ -552,10 +525,6 @@ class CalculationWorker(QObject):
                     stereo_atoms = bond.GetStereoAtoms()
                     original_stereo_info.append((bond.GetIdx(), bond.GetStereo(), stereo_atoms))
             
-            # Only report RDKit-specific messages when RDKit embedding will be
-            # attempted. For other conversion modes, emit clearer, non-misleading
-            # status messages so the UI doesn't show "RDKit" when e.g. direct
-            # coordinates or Open Babel will be used.
             if conversion_mode in ('fallback', 'rdkit'):
                 _safe_status("RDKit: Embedding 3D coordinates...")
             elif conversion_mode == 'obabel':

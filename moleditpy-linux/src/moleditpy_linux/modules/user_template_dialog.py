@@ -38,7 +38,7 @@ class UserTemplateDialog(QDialog):
     
     def init_ui(self):
         self.setWindowTitle("User Templates")
-        self.setModal(False)  # モードレスに変更
+        self.setModal(False)
         self.resize(800, 600)
         
         # ウィンドウを右上に配置

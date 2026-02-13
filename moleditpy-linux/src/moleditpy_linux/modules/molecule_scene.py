@@ -1121,10 +1121,7 @@ class MoleculeScene(QGraphicsScene):
                     # Defensive: if the atom has a bonds list, filter out bonds being deleted
                     if hasattr(atom, 'bonds') and atom.bonds:
                         try:
-                            # Replace in-place to preserve any other references.
-                            # Avoid touching SIP-deleted bond wrappers: build a set
-                            # of live bonds-to-delete and also prune any SIP-deleted
-                            # entries that may exist in atom.bonds.
+ 
                             live_btd = {b for b in bonds_to_delete if not sip_isdeleted_safe(b)}
 
                             # First, remove any SIP-deleted bond wrappers from atom.bonds
@@ -1178,10 +1175,6 @@ class MoleculeScene(QGraphicsScene):
                 except Exception:
                     continue
 
-            # Invalidate any pending implicit-hydrogen UI updates because the
-            # underlying data model changed. This prevents a scheduled
-            # update_implicit_hydrogens closure from touching atoms/bonds that
-            # were just removed. Do a single increment rather than one per-atom.
             try:
                 self._ih_update_counter += 1
             except Exception:
@@ -1206,9 +1199,7 @@ class MoleculeScene(QGraphicsScene):
                     # If the SIP wrapper is already deleted, skip it.
                     if sip_isdeleted_safe(bond):
                         continue
-                    # Only attempt to remove the bond if it is present in the
-                    # scene snapshot. This avoids calling bond.scene() which
-                    # may invoke C++ on a deleted object.
+
                     if bond in current_scene_items:
                         try:
                             self.removeItem(bond)
@@ -1288,6 +1279,7 @@ class MoleculeScene(QGraphicsScene):
             traceback.print_exc()
             self.update_all_items() # エラーリカバリー
             return False
+
     def purge_deleted_items(self):
         """Purge and release any held deleted-wrapper references.
 
@@ -1993,4 +1985,4 @@ class MoleculeScene(QGraphicsScene):
             traceback.print_exc()
             if hasattr(self.window, 'statusBar'):
                 self.window.statusBar().showMessage(f"Error updating bond stereochemistry: {e}", 5000)
-            self.update_all_items() # エラーリカバリー
+            self.update_all_items()
