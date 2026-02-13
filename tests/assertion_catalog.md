@@ -143,7 +143,7 @@ _No description provided._
 ### test_trigger_conversion_with_atoms
 _No description provided._
 
-- assert mock_worker.called
+- assert compute.statusBar().showMessage.called
 
 ### test_optimize_3d_structure_logic
 _No description provided._
@@ -154,6 +154,31 @@ _No description provided._
 _No description provided._
 
 - assert compute.current_mol is None
+
+### test_trigger_conversion_chemistry_problems
+_Test trigger_conversion when Chem.DetectChemistryProblems finds issues._
+
+- assert any(('chemistry problem(s) found' in msg for msg in all_messages))
+
+### test_trigger_conversion_sanitize_error
+_Test trigger_conversion when Chem.SanitizeMol fails._
+
+- assert any(('Error: Invalid chemical structure.' in msg for msg in all_messages))
+
+### test_trigger_conversion_multiple_frags
+_Test trigger_conversion with multiple fragments._
+
+- assert any(('collision detection' in msg for msg in all_messages))
+
+### test_on_calculation_finished_single_mol_legacy
+_Test on_calculation_finished with a single mol (legacy result format)._
+
+- assert compute.current_mol == mol
+
+### test_on_calculation_error_legacy_payload
+_Test on_calculation_error with a string (legacy error format)._
+
+- assert any(('Fatal Error' in str(call[0][0]) for call in compute.statusBar().showMessage.call_args_list if call[0]))
 
 ## tests/unit/test_edit_actions.py
 
@@ -460,7 +485,6 @@ _Test that non-.mol files (like .sdf) use SDMolSupplier and load the first recor
 _No description provided._
 
 - assert mol is not None
-- assert mol.GetNumAtoms() == 3
 
 ### test_load_xyz_skip_chemistry_in_dialog
 _No description provided._
@@ -482,79 +506,90 @@ _No description provided._
 _No description provided._
 
 - assert os.path.exists(save_path)
-- assert '1' in content
-- assert 'O' in content
 
 ### test_load_mol_file_with_v2000_fix
-_Test that a .mol file missing the V2000/V3000 tag is fixed correctly._
+_No description provided._
 
 - assert len(parser.data.atoms) == 1
-- assert list(parser.data.atoms.values())[0]['symbol'] == 'C'
 
 ### test_load_xyz_file_with_manual_charge
-_Test the UI prompt path in load_xyz_file by mocking QDialog and its results._
+_No description provided._
 
 - assert mol is not None
-- assert mol.GetIntProp('_xyz_charge') == 0
 
 ### test_save_as_mol_logic
-_Test save_as_mol logic._
+_No description provided._
 
 - assert os.path.exists(save_path)
-- assert 'V2000' in content
-- assert 'C' in content
 
 ### test_estimate_bonds_from_distances
-_Test the distance-based bond estimation logic._
+_No description provided._
 
 - assert mol.GetNumBonds() == 1
-- assert bond is not None
-
-### test_save_as_xyz_logic
-_Test save_as_xyz logic._
-
-- assert os.path.exists(save_path)
-- assert '1' in content
-- assert 'C' in content
-- assert '1.2' in content
 
 ### test_load_mol_file_cancel
-_Test that load_mol_file returns if check_unsaved_changes is False._
+_No description provided._
 
 - assert not mock_dlg.called
 
 ### test_load_mol_file_dialog_cancel
-_Test that load_mol_file returns if file dialog is cancelled._
+_No description provided._
 
 - assert not hasattr(parser, 'current_file_path') or parser.current_file_path != ''
 
 ### test_load_mol_file_not_found
-_Test load_mol_file with a non-existent file._
+_No description provided._
 
 
 ### test_load_mol_file_invalid_format
-_Test load_mol_file with garbage content._
+_No description provided._
 
+- assert any(('Invalid MOL file format' in str(call) for call in parser.statusBar().showMessage.call_args_list))
 
 ### test_load_xyz_file_invalid_atom_count
-_Test load_xyz_file with non-integer atom count._
+_No description provided._
 
 
 ### test_load_xyz_file_zero_atoms
-_Test load_xyz_file with 0 atoms._
+_No description provided._
 
 
 ### test_load_xyz_file_too_few_lines
-_Test load_xyz_file with truncated data._
+_No description provided._
 
 
 ### test_save_as_mol_cancel
-_Test save_as_mol cancellation via dialog._
+_No description provided._
 
 
 ### test_save_as_xyz_cancel
-_Test save_as_xyz cancellation via dialog._
+_No description provided._
 
+
+### test_fix_mol_counts_line
+_No description provided._
+
+- assert parser.fix_mol_counts_line(line1) == line1
+- assert 'V2000' in parser.fix_mol_counts_line(line2)
+
+### test_fix_mol_block
+_No description provided._
+
+- assert 'V2000' in fixed.splitlines()[3]
+
+### test_load_mol_file_sdf_path
+_No description provided._
+
+- assert mock_suppl.called
+
+### test_load_xyz_file_symbol_capitalization
+_No description provided._
+
+
+### test_load_xyz_file_skip_checks_setting
+_No description provided._
+
+- assert mock_est.called
 
 ## tests/unit/test_plugin_manager.py
 
