@@ -99,6 +99,17 @@ _Empty state should produce valid structure with no atoms/bonds._
 
 ## tests/unit/test_compute_logic.py
 
+### test_on_calculation_error_stale
+_Test on_calculation_error when the worker is stale (not in active set)._
+
+- assert not compute.statusBar().showMessage.called
+
+### test_on_calculation_error_basic
+_Test on_calculation_error for an ACTIVE worker._
+
+- assert compute.statusBar().showMessage.called
+- assert 'Real Error' in compute.statusBar().showMessage.call_args[0][0]
+
 ### test_compute_set_optimization_method
 _No description provided._
 
@@ -117,18 +128,32 @@ _No description provided._
 
 - assert compute.current_mol == mol
 - assert worker_id not in compute.active_worker_ids
-- assert mock_draw.called
 
-### test_on_calculation_error_basic
+### test_check_chemistry_problems_fallback_detects
+_No description provided._
+
+- assert c_item.has_problem is True
+- assert compute.statusBar().showMessage.called
+
+### test_trigger_conversion_empty
 _No description provided._
 
 - assert compute.statusBar().showMessage.called
 
-### test_check_chemistry_problems_fallback_detects
-_Test manual chemistry problem detection in fallback mode._
+### test_trigger_conversion_with_atoms
+_No description provided._
 
-- assert c_item.has_problem is True
+- assert mock_worker.called
+
+### test_optimize_3d_structure_logic
+_No description provided._
+
 - assert compute.statusBar().showMessage.called
+
+### test_on_calculation_finished_worker_id_mismatch
+_No description provided._
+
+- assert compute.current_mol is None
 
 ## tests/unit/test_edit_actions.py
 
@@ -492,6 +517,44 @@ _Test save_as_xyz logic._
 - assert '1' in content
 - assert 'C' in content
 - assert '1.2' in content
+
+### test_load_mol_file_cancel
+_Test that load_mol_file returns if check_unsaved_changes is False._
+
+- assert not mock_dlg.called
+
+### test_load_mol_file_dialog_cancel
+_Test that load_mol_file returns if file dialog is cancelled._
+
+- assert not hasattr(parser, 'current_file_path') or parser.current_file_path != ''
+
+### test_load_mol_file_not_found
+_Test load_mol_file with a non-existent file._
+
+
+### test_load_mol_file_invalid_format
+_Test load_mol_file with garbage content._
+
+
+### test_load_xyz_file_invalid_atom_count
+_Test load_xyz_file with non-integer atom count._
+
+
+### test_load_xyz_file_zero_atoms
+_Test load_xyz_file with 0 atoms._
+
+
+### test_load_xyz_file_too_few_lines
+_Test load_xyz_file with truncated data._
+
+
+### test_save_as_mol_cancel
+_Test save_as_mol cancellation via dialog._
+
+
+### test_save_as_xyz_cancel
+_Test save_as_xyz cancellation via dialog._
+
 
 ## tests/unit/test_plugin_manager.py
 
