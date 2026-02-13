@@ -17,10 +17,8 @@ MainWindow (main_window.py) から分離されたモジュール
 機能クラス: MainWindowDialogManager
 """
 
-
 import os
 import json 
-
 
 # RDKit imports (explicit to satisfy flake8 and used features)
 try:
@@ -34,15 +32,10 @@ from PyQt6.QtWidgets import (
     QInputDialog
 )
 
-
-
 from PyQt6.QtCore import (
     QDateTime
 )
 
-
-# Use centralized Open Babel availability from package-level __init__
-# Use per-package modules availability (local __init__).
 try:
     from . import OBABEL_AVAILABLE
 except Exception:
@@ -105,22 +98,16 @@ except Exception:
 # --- クラス定義 ---
 class MainWindowDialogManager(object):
     """ main_window.py から分離された機能クラス """
-
-
     def show_about_dialog(self):
         """Show the custom About dialog with Easter egg functionality"""
         dialog = AboutDialog(self, self)
         dialog.exec()
-
-
 
     def open_periodic_table_dialog(self):
         dialog=PeriodicTableDialog(self); dialog.element_selected.connect(self.set_atom_from_periodic_table)
         checked_action=self.tool_group.checkedAction()
         if checked_action: self.tool_group.setExclusive(False); checked_action.setChecked(False); self.tool_group.setExclusive(True)
         dialog.exec()
-
-
 
     def open_analysis_window(self):
         if self.current_mol:
@@ -129,15 +116,11 @@ class MainWindowDialogManager(object):
         else:
             self.statusBar().showMessage("Please generate a 3D structure first to show analysis.")
 
-
-
     def open_template_dialog(self):
         """テンプレートダイアログを開く"""
         dialog = UserTemplateDialog(self, self)
         dialog.exec()
     
-
-
     def open_template_dialog_and_activate(self):
         """テンプレートダイアログを開き、テンプレートがメイン画面で使用できるようにする"""
         # 既存のダイアログがあるかチェック
@@ -166,8 +149,6 @@ class MainWindowDialogManager(object):
         
         self._template_dialog.finished.connect(on_dialog_finished)
     
-
-
     def save_2d_as_template(self):
         """現在の2D構造をテンプレートとして保存"""
         if not self.data.atoms:
@@ -249,8 +230,6 @@ class MainWindowDialogManager(object):
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to save template: {str(e)}")
 
-
-
     def open_translation_dialog(self):
         """平行移動ダイアログを開く"""
         # 測定モードを無効化
@@ -265,8 +244,6 @@ class MainWindowDialogManager(object):
         dialog.accepted.connect(self.push_undo_state)
         dialog.finished.connect(lambda: self.remove_dialog_from_list(dialog))  # ダイアログが閉じられた時にリストから削除
     
-
-
     def open_move_group_dialog(self):
         """Move Groupダイアログを開く"""
         # 測定モードを無効化
@@ -281,8 +258,6 @@ class MainWindowDialogManager(object):
         dialog.accepted.connect(self.push_undo_state)
         dialog.finished.connect(lambda: self.remove_dialog_from_list(dialog))
     
-
-
     def open_align_plane_dialog(self, plane):
         """alignダイアログを開く"""
         # 事前選択された原子を取得（測定モード無効化前に）
@@ -304,8 +279,6 @@ class MainWindowDialogManager(object):
         dialog.accepted.connect(self.push_undo_state)
         dialog.finished.connect(lambda: self.remove_dialog_from_list(dialog))  # ダイアログが閉じられた時にリストから削除
         
-
-
     def open_planarize_dialog(self, plane=None):
         """選択原子群を最適平面へ投影するダイアログを開く"""
         # 事前選択された原子を取得（測定モード無効化前に）
@@ -327,8 +300,6 @@ class MainWindowDialogManager(object):
         dialog.accepted.connect(self.push_undo_state)
         dialog.finished.connect(lambda: self.remove_dialog_from_list(dialog))
     
-
-
     def open_alignment_dialog(self, axis):
         """アライメントダイアログを開く"""
         # 事前選択された原子を取得（測定モード無効化前に）
@@ -350,8 +321,6 @@ class MainWindowDialogManager(object):
         dialog.accepted.connect(self.push_undo_state)
         dialog.finished.connect(lambda: self.remove_dialog_from_list(dialog))  # ダイアログが閉じられた時にリストから削除
     
-
-
     def open_bond_length_dialog(self):
         """結合長変換ダイアログを開く"""
         # 事前選択された原子を取得（測定モード無効化前に）
@@ -372,8 +341,6 @@ class MainWindowDialogManager(object):
         dialog.accepted.connect(lambda: self.statusBar().showMessage("Bond length adjusted."))
         dialog.accepted.connect(self.push_undo_state)
         dialog.finished.connect(lambda: self.remove_dialog_from_list(dialog))  # ダイアログが閉じられた時にリストから削除
-    
-
 
     def open_angle_dialog(self):
         """角度変換ダイアログを開く"""
@@ -396,8 +363,6 @@ class MainWindowDialogManager(object):
         dialog.accepted.connect(self.push_undo_state)
         dialog.finished.connect(lambda: self.remove_dialog_from_list(dialog))  # ダイアログが閉じられた時にリストから削除
     
-
-
     def open_dihedral_dialog(self):
         """二面角変換ダイアログを開く"""
         # 事前選択された原子を取得（測定モード無効化前に）
@@ -419,8 +384,6 @@ class MainWindowDialogManager(object):
         dialog.accepted.connect(self.push_undo_state)
         dialog.finished.connect(lambda: self.remove_dialog_from_list(dialog))  # ダイアログが閉じられた時にリストから削除
     
-
-
     def open_mirror_dialog(self):
         """ミラー機能ダイアログを開く"""
         if not self.current_mol:
@@ -434,8 +397,6 @@ class MainWindowDialogManager(object):
         
         dialog = MirrorDialog(self.current_mol, self)
         dialog.exec()  # モーダルダイアログとして表示
-
-
 
     def open_constrained_optimization_dialog(self):
         """制約付き最適化ダイアログを開く"""

@@ -486,12 +486,6 @@ class SettingsDialog(QDialog):
                 pass
         except Exception:
             pass
-        # Avoid circular import: import ColorSettingsDialog only inside method using it
-
-        # NOTE: Multi-bond offset/thickness settings moved to per-model tabs to allow
-        # independent configuration for Ball&Stick/CPK/Wireframe/Stick.
-                
-        # 'Other' tab is created in create_other_tab; nothing to do here.
     
     def create_ball_stick_tab(self):
         """Ball and Stick設定タブを作成"""
@@ -809,9 +803,6 @@ class SettingsDialog(QDialog):
         
         # 各タブの設定項目を定義
         # Each tab settings
-        # Note: tab labels must match those added to the QTabWidget ("2D Settings", "Scene", "Ball & Stick", ...
-        # "CPK (Space-filling)", "Wireframe", "Stick", "Other"). Use the per-model
-        # multi-bond keys present in self.default_settings.
         tab_settings = {
             "2D Settings": {
                 'bond_width_2d': self.default_settings['bond_width_2d'],
@@ -1361,8 +1352,6 @@ class SettingsDialog(QDialog):
 
         except Exception:
             pass
-
-    # Note: Kekule display is applied only when user clicks Apply/OK.
 
     def accept(self):
         """ダイアログの設定を適用してから閉じる"""

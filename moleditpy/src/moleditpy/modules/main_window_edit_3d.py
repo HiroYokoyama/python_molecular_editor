@@ -19,7 +19,6 @@ MainWindow (main_window.py) から分離されたモジュール
 
 import numpy as np
 
-
 # RDKit imports (explicit to satisfy flake8 and used features)
 try:
     from . import sip_isdeleted_safe
@@ -78,8 +77,6 @@ except Exception:
 # --- クラス定義 ---
 class MainWindowEdit3d(object):
     """ main_window.py から分離された機能クラス """
-
-
     def toggle_measurement_mode(self, checked):
         """測定モードのオン/オフを切り替える"""
         if checked:
@@ -102,8 +99,6 @@ class MainWindowEdit3d(object):
         else:
             self.statusBar().showMessage("Measurement mode disabled.")
     
-
-
     def close_all_3d_edit_dialogs(self):
         """すべてのアクティブな3D編集ダイアログを閉じる"""
         dialogs_to_close = self.active_3d_dialogs.copy()
@@ -113,8 +108,6 @@ class MainWindowEdit3d(object):
             except Exception:
                 pass
         self.active_3d_dialogs.clear()
-
-
 
     def handle_measurement_atom_selection(self, atom_idx):
         """測定用の原子選択を処理する"""
@@ -137,8 +130,6 @@ class MainWindowEdit3d(object):
         # 測定値を計算して表示
         self.calculate_and_display_measurements()
 
-
-
     def add_measurement_label(self, atom_idx, label_number):
         """原子に数字ラベルを追加する"""
         if not self.current_mol or atom_idx >= self.current_mol.GetNumAtoms():
@@ -152,8 +143,6 @@ class MainWindowEdit3d(object):
         
         # 2Dビューの測定ラベルも更新
         self.update_2d_measurement_labels()
-
-
 
     def update_measurement_labels_display(self):
         """測定ラベルを3D表示に描画する（原子中心配置）"""
@@ -189,8 +178,6 @@ class MainWindowEdit3d(object):
                 show_points=False
             )
 
-
-
     def clear_measurement_selection(self):
         """測定選択をクリアする"""
         self.selected_atoms_for_measurement.clear()
@@ -214,8 +201,6 @@ class MainWindowEdit3d(object):
                 pass
         
         self.plotter.render()
-
-
 
     def update_2d_measurement_labels(self):
         """2Dビューで測定ラベルを更新表示する"""
@@ -247,8 +232,6 @@ class MainWindowEdit3d(object):
                 atom_item = atom_idx_to_item[atom_idx]
                 self.add_2d_measurement_label(atom_item, label_text)
 
-
-
     def add_2d_measurement_label(self, atom_item, label_text):
         """特定のAtomItemに測定ラベルを追加する"""
         # ラベルアイテムを作成
@@ -271,8 +254,6 @@ class MainWindowEdit3d(object):
         # シーンに追加
         self.scene.addItem(label_item)
         self.measurement_label_items_2d.append(label_item)
-
-
 
     def clear_2d_measurement_labels(self):
         """2Dビューの測定ラベルを全て削除する"""
@@ -297,8 +278,6 @@ class MainWindowEdit3d(object):
                         continue
             self.measurement_label_items_2d.clear()
 
-
-
     def find_rdkit_atom_index(self, atom_item):
         """AtomItemから対応するRDKit原子インデックスを見つける"""
         if not self.current_mol or not atom_item:
@@ -310,8 +289,6 @@ class MainWindowEdit3d(object):
         
         # マッピングが存在しない場合はNone（外部ファイル読み込み時など）
         return None
-
-
 
     def calculate_and_display_measurements(self):
         """選択された原子に基づいて測定値を計算し表示する"""
@@ -348,15 +325,11 @@ class MainWindowEdit3d(object):
         # 測定結果を3D画面の右上に表示
         self.display_measurement_text(measurement_text)
 
-
-
     def calculate_distance(self, atom1_idx, atom2_idx):
         """2原子間の距離を計算する"""
         pos1 = np.array(self.atom_positions_3d[atom1_idx])
         pos2 = np.array(self.atom_positions_3d[atom2_idx])
         return np.linalg.norm(pos2 - pos1)
-
-
 
     def calculate_angle(self, atom1_idx, atom2_idx, atom3_idx):
         """3原子の角度を計算する（中央が頂点）"""
@@ -374,8 +347,6 @@ class MainWindowEdit3d(object):
         cos_angle = np.clip(cos_angle, -1.0, 1.0)
         angle_rad = np.arccos(cos_angle)
         return np.degrees(angle_rad)
-
-
 
     def calculate_dihedral(self, atom1_idx, atom2_idx, atom3_idx, atom4_idx):
         """4原子の二面角を計算する（正しい公式を使用）"""
@@ -417,8 +388,6 @@ class MainWindowEdit3d(object):
         angle_rad = np.arctan2(sin_angle, cos_angle)
         return np.degrees(angle_rad)
 
-
-
     def display_measurement_text(self, measurement_lines):
         """測定結果のテキストを3D画面の左上に表示する（小さな等幅フォント）"""
         # 既存のテキストを削除
@@ -459,10 +428,6 @@ class MainWindowEdit3d(object):
         
         self.plotter.render()
 
-    # --- 3D Drag functionality ---
-    
-
-
     def toggle_atom_selection_3d(self, atom_idx):
         """3Dビューで原子の選択状態をトグルする"""
         if atom_idx in self.selected_atoms_3d:
@@ -472,15 +437,11 @@ class MainWindowEdit3d(object):
         
         # 選択状態のビジュアルフィードバックを更新
         self.update_3d_selection_display()
-    
-
 
     def clear_3d_selection(self):
         """3Dビューでの原子選択をクリア"""
         self.selected_atoms_3d.clear()
         self.update_3d_selection_display()
-    
-
 
     def update_3d_selection_display(self):
         """3Dビューでの選択原子のハイライト表示を更新"""

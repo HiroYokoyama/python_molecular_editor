@@ -90,8 +90,6 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
             current_method_str = self.main_window.optimization_method or "MMFF_RDKIT"
             current_method = current_method_str.upper()
             
-            # (修正) 比較順序を厳密化
-            
             # 1. UFF_RDKIT
             if current_method == "UFF_RDKIT":
                 self.ff_combo.setCurrentText("UFF")
@@ -278,8 +276,7 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
                 return
 
         self.constraints.append((constraint_type, atom_indices, value, force_const))
-        
-        # 表を更新
+
         # 表を更新
         row_count = self.constraint_table.rowCount()
         self.constraint_table.insertRow(row_count)

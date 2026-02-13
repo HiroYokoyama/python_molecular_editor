@@ -16,11 +16,9 @@ MainWindow (main_window.py) から分離されたモジュール
 機能クラス: MainWindowExport
 """
 
-
 import numpy as np
 import math
 import os
-
 
 # RDKit imports (explicit to satisfy flake8 and used features)
 try:
@@ -46,8 +44,6 @@ from PyQt6.QtCore import (
 
 import pyvista as pv
 
-# Use centralized Open Babel availability from package-level __init__
-# Use per-package modules availability (local __init__).
 try:
     from . import OBABEL_AVAILABLE
 except Exception:
@@ -84,8 +80,6 @@ except Exception:
 # --- クラス定義 ---
 class MainWindowExport(object):
     """ main_window.py から分離された機能クラス """
-
-
     def export_stl(self):
         """STLファイルとしてエクスポート（色なし）"""
         if not self.current_mol:
@@ -124,8 +118,6 @@ class MainWindowExport(object):
                 
         except Exception as e:
             self.statusBar().showMessage(f"Error exporting STL: {e}")
-
-
 
     def export_obj_mtl(self):
         """OBJ/MTLファイルとしてエクスポート（表示中のモデルベース、色付き）"""
@@ -170,8 +162,6 @@ class MainWindowExport(object):
                 
         except Exception as e:
             self.statusBar().showMessage(f"Error exporting OBJ/MTL: {e}")
-
-
 
     def create_multi_material_obj(self, meshes_with_colors, obj_path, mtl_path):
         """複数のマテリアルを持つOBJファイルとMTLファイルを作成（改良版）"""
@@ -261,8 +251,6 @@ class MainWindowExport(object):
         except Exception as e:
             raise Exception(f"Failed to create multi-material OBJ: {e}")
 
-
-
     def export_color_stl(self):
         """カラーSTLファイルとしてエクスポート"""
         if not self.current_mol:
@@ -302,8 +290,6 @@ class MainWindowExport(object):
         except Exception as e:
             self.statusBar().showMessage(f"Error exporting STL: {e}")
     
-
-
     def export_from_3d_view(self):
         """現在の3Dビューから直接メッシュデータを取得"""
         try:
@@ -384,8 +370,6 @@ class MainWindowExport(object):
         except Exception:
             return None
 
-
-
     def export_from_3d_view_no_color(self):
         """現在の3Dビューから直接メッシュデータを取得（色情報なし）"""
         try:
@@ -447,8 +431,6 @@ class MainWindowExport(object):
             
         except Exception:
             return None
-
-
 
     def export_from_3d_view_with_colors(self):
         """現在の3Dビューから直接メッシュデータを色情報とともに取得"""
@@ -636,8 +618,6 @@ class MainWindowExport(object):
             print(f"Error in export_from_3d_view_with_colors: {e}")
             return []
 
-
-
     def export_2d_png(self):
         if not self.data.atoms:
             self.statusBar().showMessage("Nothing to export.")
@@ -748,8 +728,6 @@ class MainWindowExport(object):
             if self.view_2d:
                 self.view_2d.viewport().update()
 
-
-
     def export_2d_svg(self):
         """2D drawingをSVGとしてエクスポート"""
         if not self.data.atoms:
@@ -859,8 +837,6 @@ class MainWindowExport(object):
                 self.scene.setBackgroundBrush(original_background)
             if self.view_2d:
                 self.view_2d.viewport().update()
-
-
 
     def export_3d_png(self):
         if not self.current_mol:

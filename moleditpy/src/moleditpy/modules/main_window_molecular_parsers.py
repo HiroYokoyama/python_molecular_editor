@@ -17,13 +17,11 @@ MainWindow (main_window.py) から分離されたモジュール
 機能クラス: MainWindowMolecularParsers
 """
 
-
 import io
 import os
 import contextlib
 import traceback
 import logging
-
 
 # RDKit imports (explicit to satisfy flake8 and used features)
 from rdkit import Chem
@@ -39,15 +37,10 @@ from PyQt6.QtWidgets import (
     QPushButton, QDialog, QFileDialog, QLabel, QLineEdit, QInputDialog, QDialogButtonBox
 )
 
-
-
 from PyQt6.QtCore import (
     QPointF, QTimer
 )
 
-
-# Use centralized Open Babel availability from package-level __init__
-# Use per-package modules availability (local __init__).
 try:
     from . import OBABEL_AVAILABLE
 except Exception:
@@ -82,8 +75,6 @@ except Exception:
 # --- クラス定義 ---
 class MainWindowMolecularParsers(object):
     """ main_window.py から分離された機能クラス """
-
-
     def load_mol_file(self, file_path=None):
         if not self.check_unsaved_changes():
                 return  # ユーザーがキャンセルした場合は何もしない
@@ -196,8 +187,6 @@ class MainWindowMolecularParsers(object):
             
             traceback.print_exc()
     
-
-
     def load_xyz_file(self, file_path):
         """XYZファイルを読み込んでRDKitのMolオブジェクトを作成する"""
         
@@ -810,8 +799,6 @@ class MainWindowMolecularParsers(object):
             else:
                 raise ValueError(f"Error parsing XYZ file: {e}")
 
-
-
     def estimate_bonds_from_distances(self, mol):
         """原子間距離に基づいて結合を推定する"""
         
@@ -875,8 +862,6 @@ class MainWindowMolecularParsers(object):
         
         return len(bonds_added)
 
-
-
     def save_as_mol(self):
         try:
             mol_block = self.data.to_mol_block()
@@ -927,8 +912,6 @@ class MainWindowMolecularParsers(object):
             
             traceback.print_exc()
             
-
-
     def save_as_xyz(self):
         if not self.current_mol: self.statusBar().showMessage("Error: Please generate a 3D structure first."); return
         # default filename based on current file

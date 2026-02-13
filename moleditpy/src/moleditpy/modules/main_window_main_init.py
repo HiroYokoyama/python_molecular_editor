@@ -532,8 +532,6 @@ class MainWindowMainInit(object):
         # --- アイコン前景色を決めるヘルパー（ダーク/ライトモード対応） ---
         # Use module-level detector `detect_system_dark_mode()` so tests and other
         # modules can reuse the logic.
-
-
         def _icon_foreground_color():
             """Return a QColor for icon foreground.
 
@@ -845,8 +843,6 @@ class MainWindowMainInit(object):
         quit_shortcut.activated.connect(self.close)
 
         self.view_2d.setFocus()
-
-
 
     def init_menu_bar(self):
         menu_bar = self.menuBar()
@@ -1245,13 +1241,9 @@ class MainWindowMainInit(object):
             self.update_plugin_menu(plugin_menu) # Refresh after closing
         manage_plugins_action.triggered.connect(show_plugin_manager)
         plugin_menu.addAction(manage_plugins_action)
-
-
-
         
         plugin_menu.addSeparator()
         
-
         settings_menu = menu_bar.addMenu("&Settings")
         # 1) 3D View settings (existing)
         view_settings_action = QAction("Settings...", self)
@@ -1418,8 +1410,6 @@ class MainWindowMainInit(object):
         # Finally, populate plugins now that all menus are created
         self.update_plugin_menu(plugin_menu)
         
-
-
     def init_worker_thread(self):
         # Initialize shared state for calculation runs.
         self.halt_ids = set()
@@ -1430,9 +1420,6 @@ class MainWindowMainInit(object):
             self._active_calc_threads = []
         except Exception:
             self._active_calc_threads = []
-
-
-
 
     def load_command_line_file(self, file_path):
         """コマンドライン引数で指定されたファイルを開く"""
@@ -1462,8 +1449,7 @@ class MainWindowMainInit(object):
                     print(f"Plugin opener failed for '{opener_info.get('plugin', 'Unknown')}': {e}")
                     # If this opener fails, try the next one or fall through to default
                     continue
-        
-        
+          
         if file_ext in ['mol', 'sdf']:
             self.load_mol_file_for_3d_viewing(file_path)
         elif file_ext == 'xyz':
@@ -1472,8 +1458,6 @@ class MainWindowMainInit(object):
             self.open_project_file(file_path=file_path)
         else:
             self.statusBar().showMessage(f"Unsupported file type: {file_ext}")
-        
-
 
     def apply_initial_settings(self):
         """UIの初期化が完了した後に、保存された設定を3Dビューに適用する"""
@@ -1626,9 +1610,6 @@ class MainWindowMainInit(object):
             except Exception as e:
                 QMessageBox.warning(self, "Reset Failed", f"Could not reset settings: {e}")
             
-
-
-
     def load_settings(self):
         default_settings = {
             'background_color': '#919191',
@@ -1753,8 +1734,6 @@ class MainWindowMainInit(object):
         
         except Exception:
             self.settings = default_settings
-
-
 
     def save_settings(self):
         try:

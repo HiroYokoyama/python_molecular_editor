@@ -24,15 +24,10 @@ from PyQt6.QtWidgets import (
     QMainWindow
 )
 
-
-
 from PyQt6.QtCore import (
     pyqtSignal, pyqtSlot
 )
 
-
-# Use centralized Open Babel availability from package-level __init__
-# Use per-package modules availability (local __init__).
 try:
     from . import OBABEL_AVAILABLE
 except Exception:

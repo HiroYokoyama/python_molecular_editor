@@ -366,14 +366,6 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
             # カスタムの原子ドラッグ処理
             self.is_dragging = True
             atom_id = mw.dragged_atom_info['id']
-            # We intentionally do NOT update visible coordinates or the
-            # authoritative atom position during mouse-move while dragging.
-            # The UX requirement here is that atoms need not visibly move
-            # while the mouse is being dragged. Compute and apply the final
-            # world-coordinate only once on mouse release (on_left_button_up).
-            # Keep minimal state: mark that a drag occurred (is_dragging)
-            # and allow the release handler to compute the final position.
-            # This avoids duplicate updates and simplifies event ordering.
         else:
             # カメラ回転処理を親クラスに任せます
             super().OnMouseMove()
@@ -496,13 +488,6 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
             if self.is_dragging:
                 if mw.current_mol and mw.current_mol.GetNumConformers() > 0:
                     try:
-                        # Before applying conformer updates, compute the final
-                        # world coordinates for the dragged atom based on the
-                        # release pointer position. During the drag we did not
-                        # update mw.atom_positions_3d (to keep the visuals
-                        # static). Now compute the final position for the
-                        # dragged atom and store it into mw.atom_positions_3d
-                        # so the conformer update loop below will pick it up.
                         atom_id = None
                         try:
                             atom_id = mw.dragged_atom_info.get('id') if mw.dragged_atom_info else None
@@ -515,10 +500,6 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                                 renderer = mw.plotter.renderer
                                 current_display_pos = interactor.GetEventPosition()
                                 conf = mw.current_mol.GetConformer()
-                                # Use the atom's current 3D position to obtain a
-                                # display-space depth (z) value, then replace the
-                                # x/y with the pointer position to project back to
-                                # world coordinates at that depth.
                                 pos_3d = conf.GetAtomPosition(atom_id)
                                 renderer.SetWorldPoint(pos_3d.x, pos_3d.y, pos_3d.z, 1.0)
                                 renderer.WorldToDisplay()
@@ -532,8 +513,6 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                                 try:
                                     mw.atom_positions_3d[atom_id] = new_world_coords
                                 except Exception:
-                                    # If atom_positions_3d is immutable or shaped
-                                    # differently, attempt a safe conversion.
                                     try:
                                         ap = list(mw.atom_positions_3d)
                                         ap[atom_id] = new_world_coords
@@ -541,13 +520,8 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                                     except Exception:
                                         pass
                             except Exception:
-                                # If final-position computation fails, continue
-                                # and apply whatever state is available.
                                 pass
 
-                        # Apply the (now updated) positions to the RDKit conformer
-                        # exactly once. This ensures the conformer is
-                        # authoritative and avoids double-moves.
                         conf = mw.current_mol.GetConformer()
                         for i in range(mw.current_mol.GetNumAtoms()):
                             try:
@@ -569,9 +543,6 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                         pass
                     mw.push_undo_state()
             mw.dragged_atom_info = None
-            # Refresh overlays and labels that depend on atom_positions_3d. Do
-            # not overwrite mw.atom_positions_3d here — it already reflects the
-            # positions the user dragged to. Only update dependent displays.
             try:
                 mw.update_3d_selection_display()
             except Exception:

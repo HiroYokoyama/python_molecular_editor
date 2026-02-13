@@ -15,10 +15,7 @@ main_window_string_importers.py
 MainWindow (main_window.py) から分離されたモジュール
 機能クラス: MainWindowStringImporters
 """
-
-
 import traceback
-
 
 # RDKit imports (explicit to satisfy flake8 and used features)
 from rdkit import Chem
@@ -33,15 +30,10 @@ from PyQt6.QtWidgets import (
     QInputDialog
 )
 
-
-
 from PyQt6.QtCore import (
     QPointF, QTimer
 )
 
-
-# Use centralized Open Babel availability from package-level __init__
-# Use per-package modules availability (local __init__).
 try:
     from . import OBABEL_AVAILABLE
 except Exception:
@@ -76,23 +68,17 @@ except Exception:
 # --- クラス定義 ---
 class MainWindowStringImporters(object):
     """ main_window.py から分離された機能クラス """
-
-
     def import_smiles_dialog(self):
         """ユーザーにSMILES文字列の入力を促すダイアログを表示する"""
         smiles, ok = QInputDialog.getText(self, "Import SMILES", "Enter SMILES string:")
         if ok and smiles:
             self.load_from_smiles(smiles)
 
-
-
     def import_inchi_dialog(self):
         """ユーザーにInChI文字列の入力を促すダイアログを表示する"""
         inchi, ok = QInputDialog.getText(self, "Import InChI", "Enter InChI string:")
         if ok and inchi:
             self.load_from_inchi(inchi)
-
-
 
     def load_from_smiles(self, smiles_string):
         """SMILES文字列から分子を読み込み、2Dエディタに表示する"""
@@ -180,8 +166,6 @@ class MainWindowStringImporters(object):
             self.statusBar().showMessage(f"Error loading from SMILES: {e}")
             
             traceback.print_exc()
-
-
 
     def load_from_inchi(self, inchi_string):
         """InChI文字列から分子を読み込み、2Dエディタに表示する"""

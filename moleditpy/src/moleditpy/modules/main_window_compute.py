@@ -16,9 +16,6 @@ MainWindow (main_window.py) から分離されたモジュール
 機能クラス: MainWindowCompute
 """
 
-
-
-
 # RDKit imports (explicit to satisfy flake8 and used features)
 from rdkit import Chem
 from rdkit.Chem import AllChem
@@ -36,14 +33,10 @@ from PyQt6.QtGui import (
     QColor, QAction
 )
 
-
 from PyQt6.QtCore import (
     QThread, QTimer
 )
 
-
-# Use centralized Open Babel availability from package-level __init__
-# Use per-package modules availability (local __init__).
 try:
     from . import OBABEL_AVAILABLE
 except Exception:
@@ -78,7 +71,6 @@ except Exception:
 # --- クラス定義 ---
 class MainWindowCompute(object):
     """ main_window.py から分離された機能クラス """
-
 
     def set_optimization_method(self, method_name):
         """Set preferred 3D optimization method and persist to settings.
@@ -130,8 +122,6 @@ class MainWindowCompute(object):
             label = self.optimization_method
         self.statusBar().showMessage(f"3D optimization method set to: {label}")
 
-
-
     def show_convert_menu(self, pos):
         """右クリックで表示する一時的な3D変換メニュー。
         選択したモードは一時フラグとして保持され、その後の変換で使用されます（永続化しません）。
@@ -162,9 +152,6 @@ class MainWindowCompute(object):
         except Exception as e:
             print(f"Error showing convert menu: {e}")
 
-
-
-
     def _trigger_conversion_with_temp_mode(self, mode_key):
         try:
             # store temporary override and invoke conversion
@@ -173,9 +160,6 @@ class MainWindowCompute(object):
             QTimer.singleShot(0, self.trigger_conversion)
         except Exception as e:
             print(f"Failed to start conversion with temp mode {mode_key}: {e}")
-
-
-
 
     def show_optimize_menu(self, pos):
         """右クリックで表示する一時的な3D最適化メニュー。
@@ -213,9 +197,6 @@ class MainWindowCompute(object):
         except Exception as e:
             print(f"Error showing optimize menu: {e}")
 
-
-
-
     def _trigger_optimize_with_temp_method(self, method_key):
         try:
             # store temporary override and invoke optimization
@@ -224,8 +205,6 @@ class MainWindowCompute(object):
             QTimer.singleShot(0, self.optimize_3d_structure)
         except Exception as e:
             print(f"Failed to start optimization with temp method {method_key}: {e}")
-
-
 
     def trigger_conversion(self):
         # Reset last successful optimization method at start of new conversion
@@ -565,8 +544,6 @@ class MainWindowCompute(object):
         
         self.view_2d.setFocus()
 
-
-
     def halt_conversion(self):
         """User requested to halt the in-progress conversion.
 
@@ -637,8 +614,6 @@ class MainWindowCompute(object):
         except Exception:
             pass
 
-
-
     def check_chemistry_problems_fallback(self):
         """RDKit変換が失敗した場合の化学的問題チェック（独自実装）"""
         try:
@@ -695,8 +670,6 @@ class MainWindowCompute(object):
             print(f"Error in fallback chemistry check: {e}")
             self.statusBar().showMessage("Error: Invalid chemical structure.")
             self.view_2d.setFocus()
-
-
 
     def optimize_3d_structure(self):
         """現在の3D分子構造を力場で最適化する"""
@@ -844,8 +817,6 @@ class MainWindowCompute(object):
             self.statusBar().showMessage("3D structure optimization successful.")
         self.push_undo_state() # Undo履歴に保存
         self.view_2d.setFocus()
-
-
 
     def on_calculation_finished(self, result):
         # Accept either (worker_id, mol) tuple or legacy single mol arg
@@ -1073,8 +1044,6 @@ class MainWindowCompute(object):
         self.update_atom_id_menu_text()
         self.update_atom_id_menu_state()
 
-
-
     def create_atom_id_mapping(self):
         """2D原子IDから3D RDKit原子インデックスへのマッピングを作成する（RDKitの原子プロパティ使用）"""
         if not self.current_mol:
@@ -1091,8 +1060,6 @@ class MainWindowCompute(object):
             except KeyError:
                 # プロパティが設定されていない場合（外部ファイル読み込み時など）
                 continue
-
-
 
     def on_calculation_error(self, result):
         """ワーカースレッドからのエラー（またはHalt）を処理する"""

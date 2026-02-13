@@ -30,7 +30,7 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog):
     
     def init_ui(self):
         self.setWindowTitle("Translation")
-        self.setModal(False)  # モードレスにしてクリックを阻害しない
+        self.setModal(False)
         layout = QVBoxLayout(self)
         
         # Instructions

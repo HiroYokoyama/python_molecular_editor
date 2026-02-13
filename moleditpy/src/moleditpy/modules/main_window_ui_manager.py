@@ -16,9 +16,7 @@ MainWindow (main_window.py) から分離されたモジュール
 機能クラス: MainWindowUiManager
 """
 
-
 import vtk
-
 
 # RDKit imports (explicit to satisfy flake8 and used features)
 try:
@@ -31,16 +29,11 @@ from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QGraphicsView, QDialog, QMessageBox
 )
 
-
-
 from PyQt6.QtCore import (
     Qt, QEvent, 
     QTimer
 )
 
-
-# Use centralized Open Babel availability from package-level __init__
-# Use per-package modules availability (local __init__).
 try:
     from . import OBABEL_AVAILABLE
 except Exception:
@@ -148,8 +141,6 @@ class MainWindowUiManager(object):
             self.scene.bond_order = 1
             self.scene.bond_stereo = 0
 
-
-
     def set_mode_and_update_toolbar(self, mode_str):
         self.set_mode(mode_str)
         # QAction→QToolButtonのマッピングを取得
@@ -180,22 +171,15 @@ class MainWindowUiManager(object):
                 else:
                     btn.setStyleSheet("")
 
-
-
     def activate_select_mode(self):
         self.set_mode('select')
         if 'select' in self.mode_actions:
             self.mode_actions['select'].setChecked(True)
 
-
-
-
     def eventFilter(self, obj, event):
         if obj is self.plotter and event.type() == QEvent.Type.MouseButtonPress:
             self.view_2d.setFocus()
         return super().eventFilter(obj, event)
-
-
 
     def closeEvent(self, event):
         # Persist settings on exit only when explicitly modified (deferred save)
@@ -260,8 +244,6 @@ class MainWindowUiManager(object):
         
         event.accept()
 
-
-
     def toggle_3d_edit_mode(self, checked):
         """「3D Drag」ボタンの状態に応じて編集モードを切り替える"""
         if checked:
@@ -277,8 +259,6 @@ class MainWindowUiManager(object):
             self.statusBar().showMessage("3D Drag Mode: OFF.")
         self.view_2d.setFocus()
 
-
-
     def _setup_3d_picker(self):
         self.plotter.picker = vtk.vtkCellPicker()
         self.plotter.picker.SetTolerance(0.025)
@@ -289,8 +269,6 @@ class MainWindowUiManager(object):
         # 調査の結果、'style' プロパティへの代入が正しい設定方法と判明
         self.plotter.interactor.SetInteractorStyle(style)
         self.plotter.interactor.Initialize()
-
-
 
     def dragEnterEvent(self, event):
         """ウィンドウ全体でサポートされているファイルのドラッグを受け入れる"""
@@ -322,8 +300,6 @@ class MainWindowUiManager(object):
                 except Exception:
                     continue
         event.ignore()
-
-
 
     def dropEvent(self, event):
         """ファイルがウィンドウ上でドロップされたときに呼び出される"""
@@ -380,8 +356,6 @@ class MainWindowUiManager(object):
         else:
             event.ignore()
 
-
-
     def _enable_3d_edit_actions(self, enabled=True):
         """3D編集機能のアクションを統一的に有効/無効化する"""
         actions = [
@@ -414,8 +388,6 @@ class MainWindowUiManager(object):
             if hasattr(self, menu_name):
                 getattr(self, menu_name).setEnabled(enabled)
 
-
-
     def _enable_3d_features(self, enabled=True):
         """3D関連機能を統一的に有効/無効化する"""
         # 基本的な3D機能（3D SelectとEditは除外して常に有効にする）
@@ -427,11 +399,6 @@ class MainWindowUiManager(object):
         
         for action_name in basic_3d_actions:
             if hasattr(self, action_name):
-                # If enabling globally but chemical sanitization failed earlier, keep Optimize 3D disabled
-                # Keep Optimize disabled when any of these conditions are true:
-                # - we're globally disabling 3D features (enabled==False)
-                # - the current molecule was created via the "skip chemistry checks" XYZ path
-                # - a prior chemistry check was attempted and failed
                 if action_name == 'optimize_3d_button':
                     try:
                         # If we're disabling all 3D features, ensure Optimize is disabled
@@ -473,8 +440,6 @@ class MainWindowUiManager(object):
         else:
             self._enable_3d_edit_actions(False)
 
-
-
     def _enter_3d_viewer_ui_mode(self):
         """3DビューアモードのUI状態に設定する"""
         self.is_2d_editable = False
@@ -489,8 +454,6 @@ class MainWindowUiManager(object):
 
         # 3D関連機能を統一的に有効化
         self._enable_3d_features(True)
-
-
 
     def restore_ui_for_editing(self):
         """Enables all 2D editing UI elements."""
@@ -508,8 +471,6 @@ class MainWindowUiManager(object):
         # 2Dモードに戻る時は3D編集機能を統一的に無効化
         self._enable_3d_edit_actions(False)
 
-
-
     def minimize_2d_panel(self):
         """2Dパネルを最小化（非表示に）する"""
         sizes = self.splitter.sizes()
@@ -518,8 +479,6 @@ class MainWindowUiManager(object):
             total_width = sum(sizes)
             self.splitter.setSizes([0, total_width])
 
-
-
     def restore_2d_panel(self):
         """最小化された2Dパネルを元のサイズに戻す"""
         sizes = self.splitter.sizes()
@@ -527,8 +486,6 @@ class MainWindowUiManager(object):
         # sizesリストが空でないことを確認してからアクセスする
         if sizes and sizes[0] == 0:
             self.splitter.setSizes([600, 600])
-
-
 
     def set_panel_layout(self, left_percent, right_percent):
         """パネルレイアウトを指定した比率に設定する"""
@@ -550,8 +507,6 @@ class MainWindowUiManager(object):
             2000
         )
 
-
-
     def toggle_2d_panel(self):
         """2Dパネルの表示/非表示を切り替える"""
         sizes = self.splitter.sizes()
@@ -567,8 +522,6 @@ class MainWindowUiManager(object):
             self.minimize_2d_panel()
             self.statusBar().showMessage("2D panel minimized", 1500)
 
-
-
     def on_splitter_moved(self, pos, index):
         """スプリッターが移動された時のフィードバック表示"""
         sizes = self.splitter.sizes()
@@ -583,8 +536,6 @@ class MainWindowUiManager(object):
                     handle = self.splitter.handle(1)
                     if handle:
                         handle.setToolTip(f"2D: {left_percent}% | 3D: {right_percent}%")
-
-
 
     def setup_splitter_tooltip(self):
         """スプリッターハンドルの初期ツールチップを設定"""

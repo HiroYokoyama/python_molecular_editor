@@ -42,14 +42,10 @@ from PyQt6.QtCore import (
     Qt, QPointF, QDateTime
 )
 
-
-# Use centralized Open Babel availability from package-level __init__
-# Use per-package modules availability (local __init__).
 try:
     from . import OBABEL_AVAILABLE
 except Exception:
     from modules import OBABEL_AVAILABLE
-# Only import pybel on demand — `moleditpy` itself doesn't expose `pybel`.
 if OBABEL_AVAILABLE:
     try:
         from openbabel import pybel
@@ -272,9 +268,6 @@ class MainWindowAppState(object):
         
         # undo/redo後に測定ラベルの位置を更新
         self.update_2d_measurement_labels()
-        
-
-
 
     def push_undo_state(self):
         if self._is_restoring_state:
@@ -324,8 +317,6 @@ class MainWindowAppState(object):
         self.update_realtime_info()
         self.update_undo_redo_actions()
 
-
-
     def update_window_title(self):
         """ウィンドウタイトルを更新（保存状態を反映）"""
         base_title = f"MoleditPy Ver. {VERSION}"
@@ -340,8 +331,6 @@ class MainWindowAppState(object):
             if self.has_unsaved_changes:
                 title = f"*{title}"
         self.setWindowTitle(title)
-
-
 
     def check_unsaved_changes(self):
         """未保存の変更があるかチェックし、警告ダイアログを表示"""
@@ -372,8 +361,6 @@ class MainWindowAppState(object):
         else:
             return False  # キャンセル
 
-
-
     def reset_undo_stack(self):
         self.undo_stack.clear()
         self.redo_stack.clear()
@@ -383,8 +370,6 @@ class MainWindowAppState(object):
                 print(f"DEBUG_UNDO: reset_undo_stack -> undo={len(self.undo_stack)} redo={len(self.redo_stack)}")
             except Exception:
                 pass
-
-
 
     def undo(self):
         if len(self.undo_stack) > 1:
@@ -396,7 +381,6 @@ class MainWindowAppState(object):
             finally:
                 self._is_restoring_state = False
 
-            
             # Undo後に3D構造の状態に基づいてメニューを再評価
             if self.current_mol and self.current_mol.GetNumAtoms() > 0:
                 # 3D構造がある場合は3D編集機能を有効化
@@ -413,8 +397,6 @@ class MainWindowAppState(object):
         self.update_undo_redo_actions()
         self.update_realtime_info()
         self.view_2d.setFocus() 
-
-
 
     def redo(self):
         if self.redo_stack:
@@ -443,13 +425,9 @@ class MainWindowAppState(object):
         self.update_realtime_info()
         self.view_2d.setFocus() 
         
-
-
     def update_undo_redo_actions(self):
         self.undo_action.setEnabled(len(self.undo_stack) > 1)
         self.redo_action.setEnabled(len(self.redo_stack) > 0)
-
-
 
     def update_realtime_info(self):
         """ステータスバーの右側に現在の分子情報を表示する"""
@@ -470,8 +448,6 @@ class MainWindowAppState(object):
         except Exception:
             # 計算に失敗してもアプリは継続
             self.formula_label.setText("Invalid structure")
-
-
 
     def create_json_data(self):
         """現在の状態をPMEJSON形式のデータに変換"""
@@ -647,8 +623,6 @@ class MainWindowAppState(object):
             json_data['plugins'] = plugin_data
 
         return json_data
-
-
 
     def load_from_json_data(self, json_data):
         """JSONデータから状態を復元"""

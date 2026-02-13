@@ -126,11 +126,6 @@ class ColorSettingsDialog(QDialog):
         h.addWidget(apply_button); h.addWidget(ok_button); h.addWidget(cancel_button)
         layout.addLayout(h)
 
-        # initialize
-        # No 2D bond color control here
-
-    # 2D bond color picker removed — 2D bond color is fixed and not configurable here
-
     def on_element_clicked(self):
         b = self.sender()
         symbol = b.text()

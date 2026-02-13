@@ -42,13 +42,13 @@ class MoveGroupDialog(Dialog3DPickingMixin, QDialog):
     def init_ui(self):
         self.setWindowTitle("Move Group")
         self.setModal(False)
-        self.resize(300,400)  # ウィンドウサイズを設定
+        self.resize(300,400) 
         layout = QVBoxLayout(self)
         
         # ドラッグ状態管理
         self.is_dragging_group = False
         self.drag_start_pos = None
-        self.mouse_moved_during_drag = False  # ドラッグ中にマウスが動いたかを追跡
+        self.mouse_moved_during_drag = False
         
         # Instructions
         instruction_label = QLabel("Click an atom in the 3D view to select its connected molecule group.\n"
@@ -175,7 +175,6 @@ class MoveGroupDialog(Dialog3DPickingMixin, QDialog):
                     return False
                 
                 # マウスプレス時の処理
-                # マウスプレス時の処理
                 try:
                     interactor = self.main_window.plotter.interactor
                     click_pos = interactor.GetEventPosition()
@@ -209,8 +208,8 @@ class MoveGroupDialog(Dialog3DPickingMixin, QDialog):
                     # クリックされた原子の処理
                     if clicked_atom_idx is not None:
                         if self.group_atoms and clicked_atom_idx in self.group_atoms:
-                            # 既存のグループ内の原子 - ドラッグ準備（まだドラッグとは確定しない）
-                            self.is_dragging_group = False  # まだドラッグ中ではない
+                            # 既存のグループ内の原子 - ドラッグ準備
+                            self.is_dragging_group = False 
                             self.drag_start_pos = click_pos
                             self.drag_atom_idx = clicked_atom_idx
                             self.mouse_moved_during_drag = False
