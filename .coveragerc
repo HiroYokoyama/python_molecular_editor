@@ -1,0 +1,23 @@
+[run]
+source = moleditpy
+
+[report]
+omit =
+    moleditpy/src/moleditpy/__main__.py
+    moleditpy/src/moleditpy/modules/*_dialog.py
+    moleditpy/src/moleditpy/modules/*mixin.py
+    moleditpy/src/moleditpy/modules/custom_interactor_style.py
+    moleditpy/src/moleditpy/modules/custom_qt_interactor.py
+    moleditpy/src/moleditpy/modules/zoomable_view.py
+    moleditpy/src/moleditpy/modules/main_window_ui_manager.py
+    moleditpy/src/moleditpy/modules/main_window_view_loaders.py
+    moleditpy/src/moleditpy/modules/main_window_dialog_manager.py
+
+exclude_lines =
+    pragma: no cover
+    def __repr__
+    if self.debug:
+    if __name__ == .__main__.:
+    raise NotImplementedError
+    if 0:
+    if TYPE_CHECKING:

@@ -58,6 +58,7 @@ if __name__ == "__main__":
     parser.add_argument("--unit", action="store_true", help="Run ONLY Unit tests")
     parser.add_argument("--integration", action="store_true", help="Run ONLY Integration tests")
     parser.add_argument("--gui", action="store_true", help="Run ONLY GUI tests")
+    parser.add_argument("--no-report", action="store_true", help="Skip coverage and documentation reporting")
     args = parser.parse_args()
 
     env_vars = {}
@@ -107,6 +108,11 @@ if __name__ == "__main__":
     
     if all_passed:
         print("\nALL requested tests passed successfully!")
+        
+        if not args.no_report:
+            print("\n>>> Generating Final Reports (Coverage + Assertion Catalog)...", flush=True)
+            subprocess.run([sys.executable, os.path.join(BASE_DIR, "tests", "utils", "print_cov.py")], cwd=BASE_DIR)
+            
         sys.exit(0)
     else:
         print("\nSome tests failed or were interrupted. Check the output above.")

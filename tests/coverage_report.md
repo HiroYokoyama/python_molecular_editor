@@ -1,12 +1,42 @@
-# Combined Coverage Report
+# MoleditPy Coverage Report
 
-**Suites**: Unit + Integration + GUI (Headless)
+- **Overall Project Coverage (Full)**: **41.44%**
+- **Core Molecular Logic Coverage**: **46.63%**
 
-- **Total Statements**: 15493
-- **Total Covered**: 6225
-- **Overall Coverage**: **40.18%**
+> [!NOTE]
+> **Core Molecular Logic Coverage** excludes UI boilerplate (dialogs, view managers, and interactor styles) to focus on scientific algorithm reliability.
 
-## File Breakdown
+### Core Logic Breakdown
+
+| File | Stmts | Miss | Cover |
+| :--- | :--- | :--- | :--- |
+| moleditpy\src\moleditpy\__init__.py                     |      1 |      0 |  100.0% |
+| moleditpy\src\moleditpy\modules\__init__.py             |     18 |      6 |   66.7% |
+| moleditpy\src\moleditpy\modules\analysis_window.py      |    114 |     25 |   78.1% |
+| moleditpy\src\moleditpy\modules\atom_item.py            |    259 |    154 |   40.5% |
+| moleditpy\src\moleditpy\modules\bond_item.py            |    341 |    284 |   16.7% |
+| moleditpy\src\moleditpy\modules\calculation_worker.py   |    517 |    307 |   40.6% |
+| moleditpy\src\moleditpy\modules\constants.py            |     27 |      0 |  100.0% |
+| moleditpy\src\moleditpy\modules\main_window.py          |    420 |     98 |   76.7% |
+| moleditpy\src\moleditpy\modules\main_window_app_state.py |    450 |    203 |   54.9% |
+| moleditpy\src\moleditpy\modules\main_window_compute.py  |    821 |    579 |   29.5% |
+| moleditpy\src\moleditpy\modules\main_window_edit_3d.py  |    256 |    178 |   30.5% |
+| moleditpy\src\moleditpy\modules\main_window_edit_actions.py |    968 |    602 |   37.8% |
+| moleditpy\src\moleditpy\modules\main_window_export.py   |    545 |    395 |   27.5% |
+| moleditpy\src\moleditpy\modules\main_window_main_init.py |   1317 |    469 |   64.4% |
+| moleditpy\src\moleditpy\modules\main_window_molecular_parsers.py |    676 |    386 |   42.9% |
+| moleditpy\src\moleditpy\modules\main_window_project_io.py |    256 |    179 |   30.1% |
+| moleditpy\src\moleditpy\modules\main_window_string_importers.py |    173 |     31 |   82.1% |
+| moleditpy\src\moleditpy\modules\main_window_view_3d.py  |    904 |    483 |   46.6% |
+| moleditpy\src\moleditpy\modules\molecular_data.py       |    203 |     26 |   87.2% |
+| moleditpy\src\moleditpy\modules\molecule_scene.py       |   1353 |    795 |   41.2% |
+| moleditpy\src\moleditpy\modules\plugin_interface.py     |     58 |     29 |   50.0% |
+| moleditpy\src\moleditpy\modules\plugin_manager.py       |    276 |     69 |   75.0% |
+| moleditpy\src\moleditpy\modules\template_preview_item.py |    101 |     77 |   23.8% |
+| moleditpy\src\moleditpy\modules\template_preview_view.py |     41 |     13 |   68.3% |
+| **TOTAL** | **10095** | **5388** | **46.63%** |
+
+### Full Application Breakdown
 
 | File | Stmts | Miss | Cover |
 | :--- | :--- | :--- | :--- |
@@ -17,8 +47,8 @@
 | moleditpy\src\moleditpy\modules\alignment_dialog.py     |    157 |    136 |   13.4% |
 | moleditpy\src\moleditpy\modules\analysis_window.py      |    114 |     25 |   78.1% |
 | moleditpy\src\moleditpy\modules\angle_dialog.py         |    275 |    251 |    8.7% |
-| moleditpy\src\moleditpy\modules\atom_item.py            |    259 |     97 |   62.5% |
-| moleditpy\src\moleditpy\modules\bond_item.py            |    341 |    240 |   29.6% |
+| moleditpy\src\moleditpy\modules\atom_item.py            |    259 |    154 |   40.5% |
+| moleditpy\src\moleditpy\modules\bond_item.py            |    341 |    284 |   16.7% |
 | moleditpy\src\moleditpy\modules\bond_length_dialog.py   |    233 |    212 |    9.0% |
 | moleditpy\src\moleditpy\modules\calculation_worker.py   |    517 |    307 |   40.6% |
 | moleditpy\src\moleditpy\modules\color_settings_dialog.py |    223 |    212 |    4.9% |
@@ -34,9 +64,9 @@
 | moleditpy\src\moleditpy\modules\main_window_dialog_manager.py |    254 |    160 |   37.0% |
 | moleditpy\src\moleditpy\modules\main_window_edit_3d.py  |    256 |    178 |   30.5% |
 | moleditpy\src\moleditpy\modules\main_window_edit_actions.py |    968 |    602 |   37.8% |
-| moleditpy\src\moleditpy\modules\main_window_export.py   |    545 |    510 |    6.4% |
+| moleditpy\src\moleditpy\modules\main_window_export.py   |    545 |    395 |   27.5% |
 | moleditpy\src\moleditpy\modules\main_window_main_init.py |   1317 |    469 |   64.4% |
-| moleditpy\src\moleditpy\modules\main_window_molecular_parsers.py |    676 |    444 |   34.3% |
+| moleditpy\src\moleditpy\modules\main_window_molecular_parsers.py |    676 |    386 |   42.9% |
 | moleditpy\src\moleditpy\modules\main_window_project_io.py |    256 |    179 |   30.1% |
 | moleditpy\src\moleditpy\modules\main_window_string_importers.py |    173 |     31 |   82.1% |
 | moleditpy\src\moleditpy\modules\main_window_ui_manager.py |    336 |    106 |   68.5% |
@@ -44,7 +74,7 @@
 | moleditpy\src\moleditpy\modules\main_window_view_loaders.py |    209 |    157 |   24.9% |
 | moleditpy\src\moleditpy\modules\mirror_dialog.py        |     65 |      7 |   89.2% |
 | moleditpy\src\moleditpy\modules\molecular_data.py       |    203 |     26 |   87.2% |
-| moleditpy\src\moleditpy\modules\molecule_scene.py       |   1353 |    918 |   32.2% |
+| moleditpy\src\moleditpy\modules\molecule_scene.py       |   1353 |    795 |   41.2% |
 | moleditpy\src\moleditpy\modules\move_group_dialog.py    |    381 |    357 |    6.3% |
 | moleditpy\src\moleditpy\modules\periodic_table_dialog.py |     33 |     24 |   27.3% |
 | moleditpy\src\moleditpy\modules\planarize_dialog.py     |    141 |     38 |   73.0% |
@@ -56,12 +86,11 @@
 | moleditpy\src\moleditpy\modules\translation_dialog.py   |    225 |    149 |   33.8% |
 | moleditpy\src\moleditpy\modules\user_template_dialog.py |    400 |    162 |   59.5% |
 | moleditpy\src\moleditpy\modules\zoomable_view.py        |     72 |     39 |   45.8% |
-| **TOTAL** | **15493** | **9268** | **40.18%** |
+| **TOTAL** | **15493** | **9073** | **41.44%** |
 
 ## Test Suite Status
 - **Unit tests**: PASSED
 - **Integration tests**: PASSED
 - **GUI tests**: PASSED
-- **Overall Coverage**: **40.18%**
 
-[View HTML Report](coverage_html/index.html)
+[View Detailed HTML Report](coverage_html/index.html)
