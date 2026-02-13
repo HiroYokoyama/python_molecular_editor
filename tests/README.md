@@ -17,6 +17,13 @@ python tests/run_all_tests.py --headless
 python tests/run_all_tests.py --unit
 python tests/run_all_tests.py --integration
 python tests/run_all_tests.py --gui --headless
+
+# Pass custom arguments to pytest (e.g., run tests matching a pattern)
+python tests/run_all_tests.py --unit -- -k test_edit
+
+# Reporting and maintenance
+python tests/run_all_tests.py --report-only    # Regenerate all reports without running tests
+python tests/run_all_tests.py --catalog-only   # Update only the assertion catalog
 ```
 
 ## Test Architecture
@@ -42,7 +49,7 @@ The MoleditPy test suite is organized into three layers:
 
 To simplify human review of the test suite, the following generated reports are available:
 
-*   [**Assertion Catalog**](assertion_catalog.md): A comprehensive list of all 91 test assertions, mapping test names and descriptions to their core verification logic.
+*   [**Assertion Catalog**](assertion_catalog.md): A comprehensive list of all 516 test assertions, mapping test names and descriptions to their core verification logic.
 *   [**Coverage Report**](coverage_report.md): A Markdown-formatted summary of the combined coverage (Unit + Integration + GUI) across the entire codebase.
 
 ### Running Coverage Locally

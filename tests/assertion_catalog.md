@@ -97,29 +97,84 @@ _Empty state should produce valid structure with no atoms/bonds._
 - assert state['atoms'] == {}
 - assert state['bonds'] == {}
 
+## tests/unit/test_compute_logic.py
+
+### test_compute_set_optimization_method
+_No description provided._
+
+- assert compute.settings['optimization_method'] == 'GAFF_OBABEL'
+- assert compute.statusBar().showMessage.called
+
+### test_compute_halt_logic
+_No description provided._
+
+- assert 'test_id' in compute.halt_ids
+- assert len(compute.active_worker_ids) == 0
+- assert compute.statusBar().showMessage.called
+
+### test_on_calculation_finished_basic
+_No description provided._
+
+- assert compute.current_mol == mol
+- assert worker_id not in compute.active_worker_ids
+- assert mock_draw.called
+
+### test_on_calculation_error_basic
+_No description provided._
+
+- assert compute.statusBar().showMessage.called
+
+### test_check_chemistry_problems_fallback_detects
+_Test manual chemistry problem detection in fallback mode._
+
+- assert c_item.has_problem is True
+- assert compute.statusBar().showMessage.called
+
+## tests/unit/test_edit_actions.py
+
+### test_rotate_molecule_2d_basic
+_Test 2D rotation of the entire molecule._
+
+- assert a1.setPos.called
+- assert a2.setPos.called
+
+### test_resolve_overlapping_groups_basic
+_Test overlapping group resolution._
+
+- assert a2.setPos.called
+
+### test_update_implicit_hydrogens_main_logic
+_Test calculation of implicit hydrogens for display._
+
+- assert a_item.implicit_h_count == 4
+
+### test_clipboard_copy_serialization
+_Test copy selection MimeData generation._
+
+- assert mock_clipboard.setMimeData.called
+
 ## tests/unit/test_export_logic.py
 
-### test_create_multi_material_obj
+### test_create_multi_material_obj_advanced
 _No description provided._
 
 - assert os.path.exists(obj_path)
 - assert os.path.exists(mtl_path)
-- assert 'newmtl material_0_Atom1' in content
-- assert 'Kd 1.000 0.000 0.000' in content
-- assert 'mtllib test.mtl' in content
-- assert 'usemtl material_0_Atom1' in content
-- assert 'f 1 2 3' in content
 
-### test_export_2d_png_logic
+### test_export_2d_png_basic_trigger
 _No description provided._
 
 
-### test_export_from_3d_view_no_color_basic
+### test_export_2d_svg_trigger
 _No description provided._
 
-- assert res is not None
+- assert os.path.exists(save_path)
 
-### test_export_stl_error_handling
+### test_export_stl_error_no_mol
+_No description provided._
+
+
+### test_export_obj_mtl_error_no_mol
 _No description provided._
 
 
@@ -176,6 +231,34 @@ _No description provided._
 
 - assert os.path.exists(xyz_file)
 - assert xyz_mol.GetNumAtoms() == mol.GetNumAtoms()
+
+## tests/unit/test_items_visual.py
+
+### test_atom_item_visual_states
+_Test AtomItem paint and boundingRect with different states._
+
+- assert isinstance(rect, QRectF)
+- assert not rect.isEmpty()
+- assert painter.drawText.called
+- assert painter.drawEllipse.called
+
+### test_atom_item_h_label_flip
+_Test AtomItem H-label flipping logic based on bond direction._
+
+- assert painter.drawText.called
+
+### test_bond_item_render_complex_types
+_Test BondItem rendering for triple bonds, wedge/dash, and E/Z labels._
+
+- assert painter.drawLine.call_count == 3
+- assert painter.drawPolygon.called
+- assert painter.drawLine.call_count > 1
+- assert painter.drawPath.called
+
+### test_bond_item_ring_logic
+_Test BondItem ring rendering logic by mocking RDKit mol integration._
+
+- assert painter.drawLine.call_count == 2
 
 ## tests/unit/test_molecular_data.py
 
@@ -376,6 +459,39 @@ _No description provided._
 - assert os.path.exists(save_path)
 - assert '1' in content
 - assert 'O' in content
+
+### test_load_mol_file_with_v2000_fix
+_Test that a .mol file missing the V2000/V3000 tag is fixed correctly._
+
+- assert len(parser.data.atoms) == 1
+- assert list(parser.data.atoms.values())[0]['symbol'] == 'C'
+
+### test_load_xyz_file_with_manual_charge
+_Test the UI prompt path in load_xyz_file by mocking QDialog and its results._
+
+- assert mol is not None
+- assert mol.GetIntProp('_xyz_charge') == 0
+
+### test_save_as_mol_logic
+_Test save_as_mol logic._
+
+- assert os.path.exists(save_path)
+- assert 'V2000' in content
+- assert 'C' in content
+
+### test_estimate_bonds_from_distances
+_Test the distance-based bond estimation logic._
+
+- assert mol.GetNumBonds() == 1
+- assert bond is not None
+
+### test_save_as_xyz_logic
+_Test save_as_xyz logic._
+
+- assert os.path.exists(save_path)
+- assert '1' in content
+- assert 'C' in content
+- assert '1.2' in content
 
 ## tests/unit/test_plugin_manager.py
 

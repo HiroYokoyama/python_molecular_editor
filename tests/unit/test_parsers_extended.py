@@ -140,3 +140,118 @@ def test_save_as_xyz_logic(mock_parser_host, tmp_path):
     content = open(save_path).read()
     assert "1" in content # Atom count
     assert "O" in content
+
+def test_load_mol_file_with_v2000_fix(mock_parser_host, tmp_path):
+    """Test that a .mol file missing the V2000/V3000 tag is fixed correctly."""
+    parser = DummyParser(mock_parser_host)
+    # Minimal MOL block without V2000 tag
+    mol_block = (
+        "Untitled\n"
+        "  RDKit          2D\n"
+        "\n"
+        "  1  0  0  0  0  0  0  0  0  0999 V2000\n" # This is correct, let's try one WITHOUT V2000
+        "    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n"
+        "M  END\n"
+    )
+    # Actually fix_mol_counts_line adds V2000 if not present.
+    bad_mol_block = (
+        "Untitled\n"
+        "  RDKit          2D\n"
+        "\n"
+        "  1  0  0  0  0  0  0  0  0  0\n" # Missing V2000
+        "    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n"
+        "M  END\n"
+    )
+    mol_path = tmp_path / "bad.mol"
+    mol_path.write_text(bad_mol_block)
+    
+    # Mock viewport properties
+    parser.view_2d.viewport().rect().center.return_value = QPointF(0, 0)
+    parser.view_2d.mapToScene.return_value = QPointF(0, 0)
+    
+    parser.load_mol_file(str(mol_path))
+    
+    assert len(parser.data.atoms) == 1
+    assert list(parser.data.atoms.values())[0]['symbol'] == 'C'
+
+def test_load_xyz_file_with_manual_charge(mock_parser_host, tmp_path):
+    """Test the UI prompt path in load_xyz_file by mocking QDialog and its results."""
+    parser = DummyParser(mock_parser_host)
+    xyz_content = "2\nC2\nC 0.0 0.0 0.0\nC 1.5 0.0 0.0\n"
+    xyz_path = tmp_path / "c2.xyz"
+    xyz_path.write_text(xyz_content)
+    
+    # We want to force a DetermineBonds failure to trigger the prompt loop
+    # But DetermineBonds success/failure is tricky to force without real data.
+    # Actually, we can patch '_process_with_charge' to raise RuntimeError("DetermineBondsFailed")
+    # No, it's an inner function. We'll patch rdDetermineBonds.DetermineBonds.
+    
+    from rdkit.Chem import rdDetermineBonds
+    with patch('rdkit.Chem.rdDetermineBonds.DetermineBonds', side_effect=[RuntimeError("DetermineBondsFailed"), None]):
+        # First call fails, second (after prompt) succeeds
+        with patch('PyQt6.QtWidgets.QDialog.exec', return_value=1): # Accepted
+            with patch('PyQt6.QtWidgets.QLineEdit.text', return_value="0"):
+                mol = parser.load_xyz_file(str(xyz_path))
+                assert mol is not None
+                assert mol.GetIntProp("_xyz_charge") == 0
+
+def test_save_as_mol_logic(mock_parser_host, tmp_path):
+    """Test save_as_mol logic."""
+    parser = DummyParser(mock_parser_host)
+    parser.data.add_atom("C", QPointF(0, 0))
+    mol = Chem.MolFromSmiles("C")
+    from rdkit.Chem import AllChem
+    AllChem.Compute2DCoords(mol)
+    parser._host.current_mol = mol
+    
+    save_path = str(tmp_path / "saved.mol")
+    
+    with patch('PyQt6.QtWidgets.QFileDialog.getSaveFileName', return_value=(save_path, "*.mol")):
+        parser.save_as_mol()
+    
+    assert os.path.exists(save_path)
+    content = open(save_path).read()
+    assert "V2000" in content
+    assert "C" in content
+
+def test_estimate_bonds_from_distances(mock_parser_host):
+    """Test the distance-based bond estimation logic."""
+    parser = DummyParser(mock_parser_host)
+    # Create two carbons 1.5A apart (bonded) and one 5A apart (not bonded)
+    mol = Chem.RWMol()
+    mol.AddAtom(Chem.Atom("C"))
+    mol.AddAtom(Chem.Atom("C"))
+    mol.AddAtom(Chem.Atom("C"))
+    conf = Chem.Conformer(3)
+    conf.SetAtomPosition(0, (0, 0, 0))
+    conf.SetAtomPosition(1, (1.5, 0, 0))
+    conf.SetAtomPosition(2, (5.0, 0, 0))
+    mol.AddConformer(conf)
+    
+    parser.estimate_bonds_from_distances(mol)
+    
+    # Should have 1 bond between 0 and 1
+    assert mol.GetNumBonds() == 1
+    bond = mol.GetBondBetweenAtoms(0, 1)
+    assert bond is not None
+
+def test_save_as_xyz_logic(mock_parser_host, tmp_path):
+    """Test save_as_xyz logic."""
+    parser = DummyParser(mock_parser_host)
+    # Setup data
+    parser.data.add_atom("C", QPointF(0, 0))
+    mol = Chem.MolFromSmiles("C")
+    conf = Chem.Conformer(1)
+    conf.SetAtomPosition(0, (1.2, 3.4, 5.6))
+    mol.AddConformer(conf)
+    parser._host.current_mol = mol
+    
+    save_path = str(tmp_path / "saved.xyz")
+    with patch('PyQt6.QtWidgets.QFileDialog.getSaveFileName', return_value=(save_path, "*.xyz")):
+        parser.save_as_xyz()
+    
+    assert os.path.exists(save_path)
+    content = open(save_path).read()
+    assert "1" in content # Atom count
+    assert "C" in content
+    assert "1.2" in content

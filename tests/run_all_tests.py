@@ -58,8 +58,29 @@ if __name__ == "__main__":
     parser.add_argument("--unit", action="store_true", help="Run ONLY Unit tests")
     parser.add_argument("--integration", action="store_true", help="Run ONLY Integration tests")
     parser.add_argument("--gui", action="store_true", help="Run ONLY GUI tests")
-    parser.add_argument("--no-report", action="store_true", help="Skip coverage and documentation reporting")
-    args = parser.parse_args()
+    parser.add_argument("--no-report", action="store_true", help="Skip reporting phase entirely")
+    parser.add_argument("--report-only", action="store_true", help="Generate reports without running tests")
+    parser.add_argument("--catalog-only", action="store_true", help="Update ONLY the assertion catalog")
+    parser.add_argument("--skip-catalog", action="store_true", help="Skip updating catalog during reporting")
+    
+    # Capture all remaining arguments to pass to pytest
+    args, extra_pytest_args = parser.parse_known_args()
+    if extra_pytest_args and extra_pytest_args[0] == "--":
+        extra_pytest_args = extra_pytest_args[1:]
+
+    # Handle --catalog-only early
+    if args.catalog_only:
+        print(">>> Updating Assertion Catalog only...", flush=True)
+        subprocess.run([sys.executable, os.path.join(BASE_DIR, "tests", "utils", "generate_assertion_catalog.py")], cwd=BASE_DIR)
+        sys.exit(0)
+
+    # Handle --report-only
+    if args.report_only:
+        print(">>> Generating Reports only...", flush=True)
+        subprocess.run([sys.executable, os.path.join(BASE_DIR, "tests", "utils", "print_cov.py")], cwd=BASE_DIR)
+        if not args.skip_catalog:
+             subprocess.run([sys.executable, os.path.join(BASE_DIR, "tests", "utils", "generate_assertion_catalog.py")], cwd=BASE_DIR)
+        sys.exit(0)
 
     env_vars = {}
     if args.headless:
@@ -68,6 +89,8 @@ if __name__ == "__main__":
         env_vars["QT_QPA_PLATFORM"] = "offscreen"
 
     print("Starting Unified Test Suite (Unit + Integration + GUI)...", flush=True)
+    if extra_pytest_args:
+        print(f"Extra pytest arguments: {extra_pytest_args}")
     
     results = {}
     
@@ -84,7 +107,7 @@ if __name__ == "__main__":
 
     for name, path in suites:
         try:
-            ret_code = run_suite(name, path, env_vars=env_vars)
+            ret_code = run_suite(name, path, env_vars=env_vars, extra_args=extra_pytest_args)
             results[name] = "PASSED" if ret_code == 0 else "FAILED"
         except KeyboardInterrupt:
             print(f"\nInterrupted during {name} tests.")
@@ -112,7 +135,9 @@ if __name__ == "__main__":
         if not args.no_report:
             print("\n>>> Generating Final Reports (Coverage + Assertion Catalog)...", flush=True)
             subprocess.run([sys.executable, os.path.join(BASE_DIR, "tests", "utils", "print_cov.py")], cwd=BASE_DIR)
-            
+            if not args.skip_catalog:
+                 subprocess.run([sys.executable, os.path.join(BASE_DIR, "tests", "utils", "generate_assertion_catalog.py")], cwd=BASE_DIR)
+        
         sys.exit(0)
     else:
         print("\nSome tests failed or were interrupted. Check the output above.")
