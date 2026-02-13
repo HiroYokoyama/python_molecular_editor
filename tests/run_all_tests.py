@@ -10,6 +10,20 @@ UNIT_DIR = os.path.join(BASE_DIR, 'tests', 'unit')
 INTEGRATION_DIR = os.path.join(BASE_DIR, 'tests', 'integration')
 GUI_DIR = os.path.join(BASE_DIR, 'tests', 'gui')
 
+# Avoid colorama/COM issues on Windows by disabling color globally for pytest
+os.environ["PYTEST_ADDOPTS"] = os.environ.get("PYTEST_ADDOPTS", "") + " --color=no"
+os.environ["NO_COLOR"] = "1"
+
+# Proactively neutralize colorama in the parent process if present
+try:
+    import colorama
+    # convert=False prevents colorama from wrapping stdout/stderr with COM collectors on Windows
+    colorama.init(convert=False)
+except ImportError:
+    pass
+except Exception:
+    pass
+
 def run_suite(name, path, env_vars=None, extra_args=None):
     """Run a test suite in a separate process for isolation."""
     print(f"\n>>> Running {name} Tests...", flush=True)
@@ -54,45 +68,46 @@ if __name__ == "__main__":
 
     print("Starting Unified Test Suite (Unit + Integration + GUI)...", flush=True)
     
-    unit_res = 0
-    int_res = 0
-    gui_res = 0
+    results = {}
     
-    # 1. Unit tests
-    try:
-        if args.unit or (not args.unit and not args.integration and not args.gui):
-            unit_res = run_suite("UNIT", UNIT_DIR, env_vars=env_vars)
-        else:
-            unit_res = 0  # Skipped
-    except KeyboardInterrupt:
-        print("\nInterrupted during UNIT tests.")
-        unit_res = 1
-
-    # 2. Integration tests
-    if unit_res == 0:
-        try:
-            if args.integration or (not args.unit and not args.integration and not args.gui):
-                int_res = run_suite("INTEGRATION", INTEGRATION_DIR, env_vars=env_vars)
-            else:
-                int_res = 0 # Skipped
-        except KeyboardInterrupt:
-            print("\nInterrupted during INTEGRATION tests.")
-            int_res = 1
-
-    # 3. GUI tests
-    if unit_res == 0 and int_res == 0:
-        try:
-            if args.gui or (not args.unit and not args.integration and not args.gui):
-                gui_res = run_suite("GUI", GUI_DIR, env_vars=env_vars)
-            else:
-                gui_res = 0 # Skipped
-        except KeyboardInterrupt:
-             print("\nInterrupted during GUI tests.")
-             gui_res = 1
+    # Define suites to run
+    suites = []
+    run_all = not (args.unit or args.integration or args.gui)
     
-    if unit_res == 0 and int_res == 0 and gui_res == 0:
-        print("\nALL tests passed successfully!")
+    if args.unit or run_all:
+        suites.append(("UNIT", UNIT_DIR))
+    if args.integration or run_all:
+        suites.append(("INTEGRATION", INTEGRATION_DIR))
+    if args.gui or run_all:
+        suites.append(("GUI", GUI_DIR))
+
+    for name, path in suites:
+        try:
+            ret_code = run_suite(name, path, env_vars=env_vars)
+            results[name] = "PASSED" if ret_code == 0 else "FAILED"
+        except KeyboardInterrupt:
+            print(f"\nInterrupted during {name} tests.")
+            results[name] = "INTERRUPTED"
+            break
+        except Exception as e:
+            print(f"Unexpected error running {name} tests: {e}")
+            results[name] = "ERROR"
+
+    # Final Summary
+    print("\n" + "="*40)
+    print("         TEST SUITE SUMMARY")
+    print("="*40)
+    all_passed = True
+    for name, path in [("UNIT", UNIT_DIR), ("INTEGRATION", INTEGRATION_DIR), ("GUI", GUI_DIR)]:
+        status = results.get(name, "SKIPPED")
+        print(f" {name:<12}: {status}")
+        if status != "PASSED" and status != "SKIPPED":
+            all_passed = False
+    print("="*40)
+    
+    if all_passed:
+        print("\nALL requested tests passed successfully!")
         sys.exit(0)
     else:
-        print("\nSome tests failed. Check the output above.")
+        print("\nSome tests failed or were interrupted. Check the output above.")
         sys.exit(1)

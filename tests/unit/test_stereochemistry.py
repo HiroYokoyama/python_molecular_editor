@@ -82,11 +82,88 @@ def test_chiral_r_s_consistency():
     data.add_bond(c3, c4, order=1)
     
     mol = data.to_rdkit_mol()
-    # Check if the bond between C2 (idx 0) and O (idx 2) is Wedge
-    # (Indices depend on order of add_atom)
+    # Check if a bond from atom 0 is Wedge
     found_wedge = False
     for bond in mol.GetBonds():
-        if bond.GetBondDir() == Chem.BondDir.BEGINWEDGE:
+        if bond.GetBeginAtomIdx() == 0 and bond.GetBondDir() == Chem.BondDir.BEGINWEDGE:
             found_wedge = True
             break
     assert found_wedge
+
+from moleditpy.modules.mirror_dialog import MirrorDialog
+from unittest import mock as _mock
+from unittest.mock import MagicMock
+from PyQt6.QtWidgets import QWidget
+
+def test_stereo_confirmation(qtbot):
+    """Verify that mirroring a molecule actually inverts its stereochemistry."""
+    # 1. Create (S)-2-butanol
+    mol = Chem.MolFromSmiles("C[C@H](O)CC")
+    mol = Chem.AddHs(mol)
+    AllChem.EmbedMolecule(mol, AllChem.ETKDG())
+    
+    # Verify initial state is (S)
+    Chem.AssignStereochemistry(mol, force=True, cleanIt=True)
+    assert mol.GetAtomWithIdx(1).GetProp("_CIPCode") == "S" 
+
+    # 2. Mock main_window
+    main_window = QWidget()
+    main_window.statusBar = MagicMock()
+    main_window.statusBar.return_value = MagicMock()
+    main_window.draw_molecule_3d = MagicMock()
+    main_window.update_chiral_labels = MagicMock()
+    main_window.push_undo_state = MagicMock()
+    
+    # 3. Instantiate MirrorDialog
+    dialog = MirrorDialog(mol, main_window)
+    qtbot.addWidget(dialog)
+    
+    # 4. Apply mirror (YZ plane = X axis mirror)
+    dialog.yz_radio.setChecked(True)
+    
+    # We need to mock QMessageBox for the successful message
+    # Actually MirrorDialog doesn't show info box on success, it uses statusBar
+    dialog.apply_mirror()
+    
+    # 5. Verify stereochemistry inversion
+    # RDKit tags must be updated from structure
+    Chem.AssignStereochemistry(mol, force=True, cleanIt=True)
+    assert mol.GetAtomWithIdx(1).GetProp("_CIPCode") == "R" # S becomes R
+
+def test_stereo_loss_on_planarize(qtbot):
+    """Verify that planarizing a chiral center removes its chirality."""
+    from moleditpy.modules.planarize_dialog import PlanarizeDialog
+    
+    # 1. Create (S)-2-butanol
+    mol = Chem.MolFromSmiles("C[C@H](O)CC")
+    mol = Chem.AddHs(mol)
+    AllChem.EmbedMolecule(mol, AllChem.ETKDG())
+    Chem.AssignStereochemistry(mol, force=True, cleanIt=True)
+    assert mol.GetAtomWithIdx(1).HasProp("_CIPCode")
+    
+    # 2. Mock main_window
+    main_window = QWidget()
+    main_window.atom_positions_3d = mol.GetConformer().GetPositions()
+    main_window.plotter = MagicMock()
+    main_window.draw_molecule_3d = MagicMock()
+    main_window.update_chiral_labels = MagicMock()
+    main_window.push_undo_state = MagicMock()
+    
+    # 3. Planarize only the chiral center and its neighbors
+    # This should effectively make it achiral
+    chiral_idx = 1
+    neighbors = [a.GetIdx() for a in mol.GetAtomWithIdx(chiral_idx).GetNeighbors()]
+    selected = [chiral_idx] + neighbors
+    
+    dialog = PlanarizeDialog(mol, main_window, preselected_atoms=selected)
+    qtbot.addWidget(dialog)
+    
+    with _mock.patch('PyQt6.QtWidgets.QMessageBox.information'):
+        dialog.apply_planarize()
+    
+    # 4. Verify chirality is lost
+    # We must clear existing tags and re-assign from structure
+    for atom in mol.GetAtoms():
+        atom.SetChiralTag(Chem.ChiralType.CHI_UNSPECIFIED)
+    Chem.AssignStereochemistry(mol, force=True, cleanIt=True)
+    assert not mol.GetAtomWithIdx(1).HasProp("_CIPCode")

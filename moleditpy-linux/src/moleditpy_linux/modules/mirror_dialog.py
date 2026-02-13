@@ -95,10 +95,7 @@ class MirrorDialog(QDialog):
                 from rdkit.Geometry import Point3D
                 conf.SetAtomPosition(atom_idx, Point3D(new_pos[0], new_pos[1], new_pos[2]))
             
-            # 3Dビューを更新
-            self.main_window.draw_molecule_3d(self.mol)
-            
-            # ミラー変換後にキラルタグを強制的に再計算
+            # ミラー変換後にキラルタグを強制的に再計算 (3Dレンダリングの前に必要)
             try:
                 if self.mol.GetNumConformers() > 0:
                     # 既存のキラルタグをクリア
@@ -108,8 +105,11 @@ class MirrorDialog(QDialog):
                     Chem.AssignAtomChiralTagsFromStructure(self.mol, confId=0)
             except Exception as e:
                 print(f"Error updating chiral tags: {e}")
+
+            # 3Dビューを更新 (この中で 3D chiral labels も描画される)
+            self.main_window.draw_molecule_3d(self.mol)
             
-            # キラルラベルを更新（鏡像変換でキラリティが変わる可能性があるため）
+            # 2Dキラルラベルを更新
             self.main_window.update_chiral_labels()
             
             self.main_window.push_undo_state()

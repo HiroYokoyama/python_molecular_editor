@@ -471,9 +471,12 @@ _Verify MirrorDialog correctly manipulates coordinates and UI (software logic)._
 - assert main_window.push_undo_state.called
 
 ### test_planarize_logic
-_Verify planarize functionality (coordinate logic)._
+_Verify planarize functionality using the actual PlanarizeDialog logic (SVD-based coplanarity check)._
 
-- assert conf.GetAtomPosition(i).z == 0.0
+- assert s[-1] < 1e-10
+- assert main_window.draw_molecule_3d.called
+- assert main_window.update_chiral_labels.called
+- assert main_window.push_undo_state.called
 
 ## tests/unit/test_hydrogen.py
 
@@ -572,5 +575,15 @@ _Verify E/Z double bond configurations are maintained._
 ### test_chiral_r_s_consistency
 _Verify that R/S markers match RDKit descriptors for a known chiral center._
 
-- assert found_wedge
+- assert atom.GetChiralTag() != Chem.ChiralType.CHI_UNSPECIFIED
+
+### test_stereo_confirmation
+_Verify that mirroring a molecule actually inverts its stereochemistry using MirrorDialog._
+
+- assert mol.GetAtomWithIdx(1).GetProp("_CIPCode") == "R" # S becomes R
+
+### test_stereo_loss_on_planarize
+_Verify that planarizing a chiral center removes its chirality using PlanarizeDialog._
+
+- assert not mol.GetAtomWithIdx(1).HasProp("_CIPCode")
 

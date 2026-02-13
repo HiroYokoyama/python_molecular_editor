@@ -5,6 +5,7 @@ from rdkit.Chem import AllChem, rdMolTransforms
 from moleditpy.modules.calculation_worker import CalculationWorker
 from moleditpy.modules.molecular_data import MolecularData
 from PyQt6.QtCore import QPointF
+from unittest import mock as _mock
 
 def test_3d_bond_lengths(qtbot):
     """Verify optimized 3D coordinates yield physical bond lengths."""
@@ -90,23 +91,50 @@ def test_mirror_dialog_logic(qtbot):
     assert main_window.update_chiral_labels.called
     assert main_window.push_undo_state.called
 
-def test_planarize_logic():
-    """Verify planarize functionality (coordinate logic)."""
-    # Create a non-planar 4-atom system
-    mol = Chem.RWMol()
-    for _ in range(4):
-        mol.AddAtom(Chem.Atom("C"))
-    conf = Chem.Conformer(4)
-    # Positions with large Z variation
-    positions = [(0, 0, 1.0), (1, 0, -1.0), (0, 1, 0.5), (1, 1, -0.5)]
-    for i, pos in enumerate(positions):
-        conf.SetAtomPosition(i, pos)
-    mol.AddConformer(conf)
+from moleditpy.modules.planarize_dialog import PlanarizeDialog
+import numpy as np
+
+def test_planarize_logic(qtbot):
+    """Verify planarize functionality using the actual PlanarizeDialog logic."""
+    # (R)-2-butanol
+    mol = Chem.MolFromSmiles("C[C@H](O)CC")
+    mol = Chem.AddHs(mol)
+    AllChem.EmbedMolecule(mol, AllChem.ETKDG())
+    conf = mol.GetConformer()
     
-    # Simulation of planarize logic for XY plane (Z=0)
-    for i in range(mol.GetNumAtoms()):
-        pos = conf.GetAtomPosition(i)
-        conf.SetAtomPosition(i, (pos.x, pos.y, 0.0))
-        
-    for i in range(mol.GetNumAtoms()):
-        assert conf.GetAtomPosition(i).z == 0.0
+    # Mock main_window
+    main_window = QWidget()
+    main_window.atom_positions_3d = mol.GetConformer().GetPositions()
+    main_window.plotter = MagicMock()
+    main_window.draw_molecule_3d = MagicMock()
+    main_window.update_chiral_labels = MagicMock()
+    main_window.push_undo_state = MagicMock()
+    
+    # Check that it's NOT planar initially (sum of absolute Z should be > 0 in some frame)
+    # But more simply, we check that it's not all zeros in any arbitrary frame? 
+    # Actually, we just want to see it TRANSFORMS.
+    
+    # Instantiate dialog with all atoms selected
+    dialog = PlanarizeDialog(mol, main_window, preselected_atoms=range(mol.GetNumAtoms()))
+    qtbot.addWidget(dialog)
+    
+    # Apply planarize
+    # We mock QMessageBox to prevent blocking
+    with _mock.patch('PyQt6.QtWidgets.QMessageBox.information'):
+        dialog.apply_planarize()
+    
+    # Verify: All atoms should now be coplanar.
+    # In SVD-based planarization, we subtract the centroid and project onto the first two principal components.
+    # The third principal component's variance should be zero (or very close to it).
+    new_positions = conf.GetPositions()
+    centroid = np.mean(new_positions, axis=0)
+    centered = new_positions - centroid
+    
+    u, s, vh = np.linalg.svd(centered)
+    # The smallest singular value s[-1] should be near 0 if they are planar
+    assert s[-1] < 1e-10
+    
+    # Also verify that main_window methods were called
+    assert main_window.draw_molecule_3d.called
+    assert main_window.update_chiral_labels.called
+    assert main_window.push_undo_state.called

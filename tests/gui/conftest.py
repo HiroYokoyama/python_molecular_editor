@@ -1164,10 +1164,47 @@ def window(app, qtbot, monkeypatch):
         pass
 
     # Yield once for both modes
-    yield main_window
+    try:
+        yield main_window
+    finally:
+        # --- クリーンアップ ---
+        try:
+            # Stop any active threads explicitly before closing
+            active_threads = list(getattr(main_window, '_active_calc_threads', []) or [])
+            for thr in active_threads:
+                try:
+                    if hasattr(thr, 'isRunning') and thr.isRunning():
+                        thr.quit()
+                        thr.wait(200)
+                except Exception:
+                    pass
 
-    # --- クリーンアップ ---
-    main_window.close()
+            # Aggressive auto-close: ensure all top-level widgets are closed
+            # to satisfy "auto close window" request and prevent COM hangs.
+            for widget in QApplication.topLevelWidgets():
+                try:
+                    widget.close()
+                    try:
+                        widget.deleteLater()
+                    except Exception:
+                        pass
+                except Exception:
+                    pass
+            
+            # Thoroughly process events to clear any pending COM calls or slots
+            for _ in range(5):
+                 app.processEvents()
+        except Exception:
+            pass
+
+        # Attempt to de-initialize colorama to prevent COM/RPC fatal exceptions on Windows teardown
+        try:
+            import colorama
+            colorama.deinit()
+        except ImportError:
+            pass
+        except Exception:
+            pass
 
 
 try:

@@ -39,6 +39,8 @@ def test_chiral_labels_toggle_3d(window, qtbot):
     # atom_idx, label = chiral_centers[0]
     # atom_id = mol.GetAtomWithIdx(atom_idx).GetIntProp("_original_atom_id")
     # assert window.data.atoms[atom_id]['item'].chiral_label == initial_label
+    
+    window.close()
 
 def test_chiral_labels_mirror_inversion_3d(window, qtbot):
     """
@@ -62,6 +64,7 @@ def test_chiral_labels_mirror_inversion_3d(window, qtbot):
     
     window.plotter.add_point_labels.reset_mock()
     dialog.apply_mirror()
+    dialog.close() # Close dialog
     
     mol = window.current_mol
     chiral_centers = Chem.FindMolChiralCenters(mol, includeUnassigned=True)
@@ -81,3 +84,5 @@ def test_chiral_labels_mirror_inversion_3d(window, qtbot):
     # atom_idx, label = chiral_centers[0]
     # atom_id = mol.GetAtomWithIdx(atom_idx).GetIntProp("_original_atom_id")
     # assert window.data.atoms[atom_id]['item'].chiral_label == new_label
+    
+    window.close()
