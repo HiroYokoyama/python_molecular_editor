@@ -38,6 +38,6 @@ jobs:
         MOLEDITPY_HEADLESS: "1"
         QT_QPA_PLATFORM: "offscreen"
       run: |
-        # Run the unified test runner
+        # Run the unified test runner with --no-report to skip coverage generation in CI
         # xvfb-run is still good practice even with offscreen platform for some Qt internals
-        xvfb-run python tests/run_all_tests.py --headless --unit
+        xvfb-run python tests/run_all_tests.py --headless --unit --no-report
