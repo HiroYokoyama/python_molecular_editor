@@ -438,10 +438,6 @@ class MainWindowView3d(object):
                          ov_rgb = [c_obj.red(), c_obj.green(), c_obj.blue()]
                          begin_color_rgb = ov_rgb
                          end_color_rgb = ov_rgb
-                         # Also override uniform color in case style uses it
-                         # We need to use a local variable for this iteration instead of the global bs_bond_rgb
-                         # But wait, bs_bond_rgb is defined outside loop.
-                         # We can define local_bs_bond_rgb
                      except Exception:
                          pass
                 
