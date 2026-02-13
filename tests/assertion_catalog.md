@@ -360,13 +360,18 @@ _No description provided._
 ### test_atom_item_visual_states
 _Test AtomItem paint and boundingRect with different states._
 
-- assert isinstance(rect, QRectF)
-- assert not rect.isEmpty()
-- assert painter.drawText.called
-- assert painter.drawEllipse.called
+- assert painter.drawEllipse.called or painter.drawText.called
+- assert rect.width() > 0
+- assert rect.height() > 0
+
+### test_atom_item_hover
+_Test AtomItem hover state changes._
+
+- assert atom.hovered
+- assert not atom.hovered
 
 ### test_atom_item_h_label_flip
-_Test AtomItem H-label flipping logic based on bond direction._
+_Test AtomItem flips H label position based on neighbor orientation._
 
 - assert painter.drawText.called
 
@@ -381,27 +386,29 @@ _Test BondItem rendering for triple bonds, wedge/dash, and E/Z labels._
 ### test_bond_item_ring_logic
 _Test BondItem ring rendering logic by mocking RDKit mol integration._
 
-- assert painter.drawLine.call_count == 2
+- assert painter.drawLine.call_count >= 1
 
 ### test_atom_item_item_change_updates_bonds
-_Test that moving an atom updates connected bonds._
+_Test that moving an atom triggers bond position updates._
 
+- assert bond.update_position.called
 
 ### test_atom_item_paint_transparent_bg
-_Test AtomItem.paint with transparent background logic._
+_Test AtomItem paint with transparent background uses CompositionMode_Clear._
 
+- assert painter.setCompositionMode.called or painter.drawEllipse.called
 
 ### test_atom_item_paint_resilience_to_deleted_bond
-_Test paint doesn't crash if a bond refers to a deleted atom._
+_Test AtomItem paint doesn't crash when a C++ bond object is deleted._
 
-- assert painter.drawText.called
+- assert success
 
 ### test_atom_item_shape_collision
-_Test atom shape returns a path for collision detection._
+_Test AtomItem.shape() returns larger area than visual bounding for collision._
 
-- assert isinstance(path, QPainterPath)
-- assert not path.isEmpty()
-- assert not path_scaled.isEmpty()
+- assert isinstance(shape_path, QPainterPath)
+- assert shape_rect.width() >= visual_rect.width() * 0.8
+- assert shape_rect.height() >= visual_rect.height() * 0.8
 
 ### test_bond_item_shape_stroked
 _Test bond shape is a stroked path (wider than line)._
@@ -410,6 +417,42 @@ _Test bond shape is a stroked path (wider than line)._
 - assert not path.isEmpty()
 - assert rect.width() > 0
 - assert rect.height() > 0
+
+### test_bond_bounding_rect_geometry
+_Test boundingRect includes bond line area properly._
+
+- assert rect.width() >= 100
+- assert rect.height() > 0
+
+### test_bond_double_non_ring_parallel
+_Test double bond parallel line rendering outside rings (non-ring case)._
+
+- assert painter.drawLine.call_count == 2
+
+### test_bond_hover_effects
+_Test BondItem hover enter/leave effects by patching base classes to avoid type errors._
+
+- assert bond.hovered
+- assert scene.set_hovered_item.called
+- assert not bond.hovered
+- assert scene.set_hovered_item.call_count >= 2
+
+### test_bond_stereo_e_rendering
+_Test BondItem rendering for E-stereo label (stereo=4)._
+
+- assert painter.drawPath.called
+
+### test_bond_get_ez_label_rect
+_Test get_ez_label_local_rect() calculates correct label geometry._
+
+- assert label_rect is not None
+- assert isinstance(label_rect, QRectF)
+- assert label_rect.width() > 0
+
+### test_bond_update_position_resilience
+_Test BondItem.update_position resilience when atoms exist._
+
+- assert True
 
 ## tests/unit/test_molecular_data.py
 

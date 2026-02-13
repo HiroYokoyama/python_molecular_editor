@@ -208,9 +208,6 @@ class BondItem(QGraphicsItem):
         except Exception:
             return None
 
-
-
-
     def paint(self, painter, option, widget):
         if self.atom1 is None or self.atom2 is None:
             return
