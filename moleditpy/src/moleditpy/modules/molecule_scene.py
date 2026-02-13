@@ -1521,7 +1521,7 @@ class MoleculeScene(QGraphicsScene):
             self.views()[0].viewport().update()
 
     def leaveEvent(self, event):
-        self.template_preview.hide(); super().leaveEvent(event)
+        self.template_preview.hide()
 
     def set_hovered_item(self, item):
         """BondItemから呼ばれ、ホバー中のアイテムを記録する"""

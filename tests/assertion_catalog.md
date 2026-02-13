@@ -847,6 +847,65 @@ _Verify AnalysisWindow uses manual logic for XYZ-derived structures._
 - assert 'C2HO' in formula_val
 - assert not smiles_present
 
+## tests/unit/test_scene_extended.py
+
+### test_scene_keypress_modes
+_No description provided._
+
+- assert scene.window.activate_select_mode.called
+- assert scene.mode == expected_mode
+
+### test_scene_keypress_special_symbols
+_No description provided._
+
+- assert scene.mode == 'atom_Cl'
+- assert scene.mode == 'atom_Br'
+- assert scene.mode == 'atom_Si'
+
+### test_scene_keypress_delete
+_No description provided._
+
+
+### test_scene_maintenance_methods
+_No description provided._
+
+- assert atom_item.has_problem is False
+
+### test_scene_queries
+_No description provided._
+
+- assert scene.find_atom_near(QPointF(50, 0)) == a2
+
+### test_scene_update_connected_bonds
+_No description provided._
+
+- assert a.bonds[0].update_position.called
+
+### test_scene_leave_event
+_No description provided._
+
+- assert scene.template_preview.hide.called
+
+### test_scene_update_bond_stereo
+_No description provided._
+
+- assert scene.data.bonds[10, 20]['stereo'] == 1
+- assert bond.set_stereo.called
+
+### test_scene_mouse_drag_create_bond_existing_atoms
+_No description provided._
+
+- assert (aid1, aid2) in scene.data.bonds or (aid2, aid1) in scene.data.bonds
+
+### test_scene_mouse_click_create_single_atom
+_No description provided._
+
+- assert any((a['symbol'] == 'O' for a in scene.data.atoms.values()))
+
+### test_scene_right_click_delete
+_No description provided._
+
+
 ## tests/unit/test_scene_interactions.py
 
 ### test_scene_toggle_radical
