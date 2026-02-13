@@ -799,8 +799,73 @@ _Integration test: 2D to 3D without optimization._
 
 - assert 'F' in symbols
 - assert 'Cl' in symbols
-- assert mol_3d.GetNumAtoms() == 2
 - assert dist > 0.1
+
+### test_calculation_worker_direct_mode
+_Integration test: Direct conversion mode._
+
+- assert p1.z == pytest.approx(0.0)
+- assert p2.z == pytest.approx(0.0)
+- assert p1.x == pytest.approx(10.0 * scale)
+- assert p1.y == pytest.approx(-20.0 * scale)
+- assert len(h_atoms) > 0
+- assert abs(hp.z) > 0.05
+
+### test_calculation_worker_halt_logic
+_Integration test: Verify halt mechanism._
+
+- assert err_id == 123
+- assert 'Halted' in err_msg
+
+### test_calculation_worker_global_halt
+_Integration test: Verify global halt._
+
+- assert err_id is None
+- assert 'Halted' in err_msg
+
+### test_calculation_worker_invalid_input
+_Test error handling for empty input._
+
+- assert 'No atoms to convert' in err_msg
+
+### test_calculation_worker_isolation
+_Ensure worker_id correctly isolates halt signals._
+
+- assert res_id == 789
+
+### test_calculation_worker_direct_mode_stereo
+_Integration test: Direct mode with wedge/dash bonds._
+
+- assert p1.z == pytest.approx(0.0)
+- assert p2.z == pytest.approx(0.0)
+- assert p3.z == pytest.approx(1.5)
+
+### test_calculation_worker_constraint_embedding_fallback
+_Test the fallback to constraint-based embedding when initial embedding fails._
+
+- assert mock_embed.call_count >= 2
+
+### test_calculation_worker_uff_fallback
+_Test fallback to UFF when MMFF optimization fails._
+
+- assert mock_mmff.called
+- assert mock_uff.called
+
+### test_calculation_worker_mmff_variants
+_Test switching between MMFF94 and MMFF94s._
+
+- assert found
+
+### test_calculation_worker_obabel_fallback_mocked
+_Test the Open Babel fallback path by mocking availability and pybel._
+
+- assert mock_pybel.readstring.called
+- assert mock_ob_mol.make3D.called
+
+### test_calculation_worker_complex_direct_h_placement
+_Test direct mode with 4 hydrogens on a carbon to hit the rotation/offset logic._
+
+- assert mol_3d.GetNumAtoms() >= 5
 
 ## tests/integration/test_chiral_labels_integration.py
 
