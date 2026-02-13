@@ -6,7 +6,7 @@ the long-term direction and architectural decisions of the project.
 
 ## 1. Vision
 
-**“Simplicity at the Core. A Molecular Editor with Limitless Potential via Plugins.”**
+**"Simplicity at the Core. Limitless Potential in the Extensions."**
 
 We believe a molecular editor should be easy to pick up, yet powerful enough to handle complex research. MoleditPy provides a streamlined foundation for visualization that puts simplicity first, while offering an open architecture that allows for infinite customization and expansion.
 
