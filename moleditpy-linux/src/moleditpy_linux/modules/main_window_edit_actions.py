@@ -107,11 +107,6 @@ if OBABEL_AVAILABLE:
 else:
     pybel = None
     
-# Optional SIP helper: on some PyQt6 builds sip.isdeleted is available and
-# allows safely detecting C++ wrapper objects that have been deleted. Import
-# it once at module import time and expose a small, robust wrapper so callers
-# can avoid re-importing sip repeatedly and so we centralize exception
-# handling (this reduces crash risk during teardown and deletion operations).
 try:
     import sip as _sip  # type: ignore
     _sip_isdeleted = getattr(_sip, 'isdeleted', None)
@@ -668,7 +663,6 @@ class MainWindowEditActions(object):
             self.push_undo_state()
             self.statusBar().showMessage(f"Rotated {len(target_atoms)} atoms by {angle_degrees} degrees.")
             self.scene.update()
-            # Force full redraw as requested
             self.scene.update_all_items()
             
         except Exception as e:
@@ -987,9 +981,6 @@ class MainWindowEditActions(object):
                         continue
 
                 # Trigger updates once for unique items; wrap in try/except to avoid crashes
-                # Trigger updates once for unique items; dedupe by object id so
-                # we don't attempt to hash QGraphicsItem wrappers which may
-                # behave oddly when partially deleted.
                 seen = set()
                 for it in items_to_update:
                     try:
@@ -1022,9 +1013,6 @@ class MainWindowEditActions(object):
         except Exception:
             # Make sure update failures never crash the application
             pass
-
-
-
 
     def clean_up_2d_structure(self):
         self.statusBar().showMessage("Optimizing 2D structure...")

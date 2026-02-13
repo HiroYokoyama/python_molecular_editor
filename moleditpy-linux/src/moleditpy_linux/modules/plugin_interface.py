@@ -177,12 +177,6 @@ class PluginContext:
         """
         self._manager.register_document_reset_handler(self._plugin_name, callback)
 
-
-
-
-
-
-
 class Plugin3DController:
     """Helper to manipulate the 3D scene."""
     def __init__(self, main_window):
@@ -195,10 +189,7 @@ class Plugin3DController:
             atom_index: RDKit atom index.
             color_hex: Hex string e.g., "#FF0000".
         """
-        # This will need to hook into the actual 3D view logic
         if hasattr(self._mw, 'main_window_view_3d'):
-             # Logic to update color map and trigger redraw
-             # For now we can assume we might need to expose a method in view_3d
              self._mw.main_window_view_3d.update_atom_color_override(atom_index, color_hex)
              self._mw.plotter.render()
 

@@ -147,11 +147,8 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog):
                 self.apply_button.setEnabled(False)
 
         # Update the coordinate input fields when selection changes
-        # If there are selected atoms, fill the inputs with the computed centroid (or single atom pos).
-        # If no atoms selected, clear or reset to 0.0.
         try:
             if self.selected_atoms:
-                # Use the centroid we just computed if available; otherwise compute now.
                 try:
                     coords = centroid
                 except NameError:

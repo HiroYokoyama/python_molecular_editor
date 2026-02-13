@@ -42,11 +42,6 @@ try:
 except Exception:
     from modules.constants import DEFAULT_BOND_LENGTH, SNAP_DISTANCE, SUM_TOLERANCE
 
-# Optional SIP helper: on some PyQt6 builds sip.isdeleted is available and
-# allows safely detecting C++ wrapper objects that have been deleted. Import
-# it once at module import time and expose a small, robust wrapper so callers
-# can avoid re-importing sip repeatedly and so we centralize exception
-# handling (this reduces crash risk during teardown and deletion operations).
 try:
     import sip as _sip  # type: ignore
     _sip_isdeleted = getattr(_sip, 'isdeleted', None)
@@ -141,23 +136,13 @@ class MoleculeScene(QGraphicsScene):
     def reinitialize_items(self):
         self.template_preview = TemplatePreviewItem(); self.addItem(self.template_preview)
         self.template_preview.hide(); self.template_preview_points = []; self.template_context = {}
-        # Hold strong references to deleted wrappers for the lifetime of the scene
-        # to avoid SIP/C++ finalization causing segfaults when Python still
-        # briefly touches those objects elsewhere in the app. Items collected
-        # here are hidden and never accessed again by normal code paths.
         self._deleted_items = []
-        # Ensure we purge any held deleted-wrapper references when the
-        # application is shutting down. Connecting here is safe even if
-        # multiple scenes exist; the slot is defensive and idempotent.
         try:
             app = QApplication.instance()
             if app is not None:
                 try:
                     app.aboutToQuit.connect(self.purge_deleted_items)
                 except Exception:
-                    # If connecting fails for any reason, continue without
-                    # the connection — at worst holders will be freed by
-                    # process teardown.
                     pass
         except Exception:
             pass
@@ -1327,14 +1312,11 @@ class MoleculeScene(QGraphicsScene):
                         except Exception:
                             pass
 
-                    # Try to clear container attributes that may hold refs
-                    # to other scene objects (bonds, etc.) to help GC.
                     try:
                         if hasattr(obj, 'bonds') and getattr(obj, 'bonds') is not None:
                             try:
                                 obj.bonds.clear()
                             except Exception:
-                                # Try assignment fallback
                                 try:
                                     obj.bonds = []
                                 except Exception:

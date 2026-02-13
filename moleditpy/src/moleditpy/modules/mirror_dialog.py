@@ -15,6 +15,7 @@ from PyQt6.QtWidgets import (
     QHBoxLayout, QPushButton, QMessageBox
 )
 from rdkit import Chem
+from rdkit.Geometry import Point3D
 
 class MirrorDialog(QDialog):
     """分子の鏡像を作成するダイアログ"""
@@ -92,7 +93,6 @@ class MirrorDialog(QDialog):
                     new_pos = [-pos.x, pos.y, pos.z]
                 
                 # 新しい座標を設定
-                from rdkit.Geometry import Point3D
                 conf.SetAtomPosition(atom_idx, Point3D(new_pos[0], new_pos[1], new_pos[2]))
             
             # ミラー変換後にキラルタグを強制的に再計算 (3Dレンダリングの前に必要)

@@ -64,11 +64,6 @@ if OBABEL_AVAILABLE:
 else:
     pybel = None
     
-# Optional SIP helper: on some PyQt6 builds sip.isdeleted is available and
-# allows safely detecting C++ wrapper objects that have been deleted. Import
-# it once at module import time and expose a small, robust wrapper so callers
-# can avoid re-importing sip repeatedly and so we centralize exception
-# handling (this reduces crash risk during teardown and deletion operations).
 try:
     import sip as _sip  # type: ignore
     _sip_isdeleted = getattr(_sip, 'isdeleted', None)
@@ -211,15 +206,8 @@ class MainWindowMolecularParsers(object):
 
         try:
             # We will attempt one silent load with default charge=0 (no dialog).
-            # If RDKit emits chemistry warnings (for example "Explicit valence ..."),
-            # prompt the user once for an overall charge and retry. Only one retry is allowed.
-
-
-            # Helper: prompt for charge once when needed
-            # Returns a tuple: (charge_value_or_0, accepted:bool, skip_chemistry:bool)
             def prompt_for_charge():
                 try:
-                    # Create a custom dialog so we can provide a "Skip chemistry" button
                     dialog = QDialog(self)
                     dialog.setWindowTitle("Import XYZ Charge")
                     layout = QVBoxLayout(dialog)
@@ -388,10 +376,6 @@ class MainWindowMolecularParsers(object):
             for i, (symbol, x, y, z) in enumerate(atoms_data):
                 conf.SetAtomPosition(i, rdGeometry.Point3D(x, y, z))
             mol.AddConformer(conf)
-            # If user requested to skip chemistry checks, bypass RDKit's
-            # DetermineBonds/sanitization flow entirely and use only the
-            # distance-based bond estimation. Treat the resulting molecule
-            # as "XYZ-derived" (disable 3D optimization) and return it.
             try:
                 skip_checks = bool(self.settings.get('skip_chemistry_checks', False))
             except Exception:
@@ -451,18 +435,9 @@ class MainWindowMolecularParsers(object):
                 # Store atom data for later analysis and return
                 candidate_mol._xyz_atom_data = atoms_data
                 return candidate_mol
-            # We'll attempt silently first with charge=0 and only prompt the user
-            # for a charge when the RDKit processing block fails (raises an
-            # exception). If the user provides a charge, retry; allow repeated
-            # prompts until the user cancels. This preserves the previous
-            # fallback behaviors (skip_chemistry_checks, distance-based bond
-            # estimation) and property attachments.
             used_rd_determine = False
             final_mol = None
 
-            # First, try silently with charge=0. If that raises an exception we
-            # will enter a loop prompting the user for a charge and retrying as
-            # long as the user provides values. If the user cancels, return None.
             def _process_with_charge(charge_val):
                 """Inner helper: attempt to build/finalize molecule with given charge.
 
@@ -470,12 +445,6 @@ class MainWindowMolecularParsers(object):
                 which will be propagated to the caller.
                 """
                 nonlocal used_rd_determine
-                # Capture RDKit stderr while we run the processing to avoid
-                # spamming the console. We won't treat warnings specially here;
-                # only exceptions will trigger a prompt/retry. We also want to
-                # distinguish failures originating from DetermineBonds so the
-                # outer logic can decide whether to prompt the user repeatedly
-                # for different charge values.
                 buf = io.StringIO()
                 determine_failed = False
                 with contextlib.redirect_stderr(buf):
@@ -656,7 +625,6 @@ class MainWindowMolecularParsers(object):
                                     # Continue prompting
                                     continue
                 else:
-                    # User has requested to always be asked for charge — prompt before any silent try
                     while True:
                         charge_val, ok, skip_flag = prompt_for_charge()
                         if not ok:

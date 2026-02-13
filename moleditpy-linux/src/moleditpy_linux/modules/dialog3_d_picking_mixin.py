@@ -62,11 +62,6 @@ class Dialog3DPickingMixin:
                             click_threshold = vdw_radius * 1.5
 
                             if distances[closest_atom_idx] < click_threshold:
-                                # We handled the pick (atom clicked) -> consume the event so
-                                # other UI elements (including the VTK interactor observers)
-                                # don't also process it. Set a flag on the main window so
-                                # the VTK-based handlers can ignore the same logical click
-                                # when it arrives via the VTK event pipeline.
                                 try:
                                     self.main_window._picking_consumed = True
                                 except Exception:

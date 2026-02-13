@@ -34,6 +34,8 @@ except Exception:
         HOVER_PEN_WIDTH, DESIRED_BOND_PIXEL_WIDTH,
     )
 
+from rdkit import Chem
+
 class BondItem(QGraphicsItem):
 
     def get_ez_label_rect(self):
@@ -341,7 +343,6 @@ class BondItem(QGraphicsItem):
                                     if bond and bond.IsInRing():
                                         is_in_ring = True
                                         # 環の中心を計算（この結合を含む最小環）
-                                        from rdkit import Chem
                                         ring_info = mol.GetRingInfo()
                                         for ring in ring_info.AtomRings():
                                             if rdkit_idx1 in ring and rdkit_idx2 in ring:

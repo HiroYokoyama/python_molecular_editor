@@ -58,11 +58,6 @@ if OBABEL_AVAILABLE:
 else:
     pybel = None
     
-# Optional SIP helper: on some PyQt6 builds sip.isdeleted is available and
-# allows safely detecting C++ wrapper objects that have been deleted. Import
-# it once at module import time and expose a small, robust wrapper so callers
-# can avoid re-importing sip repeatedly and so we centralize exception
-# handling (this reduces crash risk during teardown and deletion operations).
 try:
     import sip as _sip  # type: ignore
     _sip_isdeleted = getattr(_sip, 'isdeleted', None)

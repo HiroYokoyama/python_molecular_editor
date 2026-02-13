@@ -171,9 +171,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
         # 測定モードが有効な場合の処理
         if mw.measurement_mode and mw.current_mol:
             click_pos = self.GetInteractor().GetEventPosition()
-            # Note: We do NOT set _mouse_press_pos here initially.
-            # We only set it if we confirm it's a background click (see below).
-            self._mouse_moved_during_drag = False  # Reset drag flag
+            self._mouse_moved_during_drag = False
             
             picker = mw.plotter.picker
             
@@ -212,10 +210,6 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
             super().OnLeftButtonDown()
             return
         
-        # Ctrl+クリックの原子選択機能は無効化（Move Group機能で代替）
-        # if is_ctrl_click and mw.current_mol:
-        #     ... (無効化)
-
         # 3D分子(mw.current_mol)が存在する場合のみ、原子の選択処理を実行
         if is_edit_active and mw.current_mol:
             click_pos = self.GetInteractor().GetEventPosition()

@@ -49,11 +49,6 @@ if OBABEL_AVAILABLE:
 else:
     pybel = None
     
-# Optional SIP helper: on some PyQt6 builds sip.isdeleted is available and
-# allows safely detecting C++ wrapper objects that have been deleted. Import
-# it once at module import time and expose a small, robust wrapper so callers
-# can avoid re-importing sip repeatedly and so we centralize exception
-# handling (this reduces crash risk during teardown and deletion operations).
 try:
     import sip as _sip  # type: ignore
     _sip_isdeleted = getattr(_sip, 'isdeleted', None)
@@ -97,20 +92,8 @@ class MainWindow(QMainWindow):
     # start_calculation carries the MOL block and an options object (second arg)
     start_calculation = pyqtSignal(str, object)
     def __init__(self, initial_file=None):
-        # Initialize QMainWindow to ensure underlying Qt object is prepared
-        # before helper classes interact with the window (fixes crash when
-        # QMainWindow.__init__ not called).
         super().__init__()
         # --- MOVED TO main_window_main_init.py ---
-        # The window functionality has been split across several helper
-        # modules (main_window_*). Each helper is implemented as a class
-        # whose methods were originally written to operate on the
-        # MainWindow instance as 'self'. To maintain that behaviour we
-        # create a small proxy (BoundFeature) that will forward call to
-        # the helper class with the MainWindow instance as the first
-        # argument.
-        # Undo/Redo操作中に状態復元中であることを示すフラグ
-        # 他のモジュールが呼び出される前に初期化する
         self._is_restoring_state = False
 
         class BoundFeature:
@@ -148,9 +131,6 @@ class MainWindow(QMainWindow):
                     return init_method(self._host, *a, **k)
                 return None
 
-        # Attach bound helpers to the main window; this keeps the
-        # original call sites (e.g. self.main_window_compute.trigger_conversion)
-        # working without changing them.
         self.main_window_main_init = BoundFeature(MainWindowMainInit, self)
         self.main_window_ui_manager = BoundFeature(MainWindowUiManager, self)
         self.main_window_view_3d = BoundFeature(MainWindowView3d, self)
@@ -165,27 +145,11 @@ class MainWindow(QMainWindow):
         self.main_window_dialog_manager = BoundFeature(MainWindowDialogManager, self)
         self.main_window_edit_3d = BoundFeature(MainWindowEdit3d, self)
 
-        # Call the initialization method from main_window_main_init which
-        # sets up the UI and the initial app state. Other helpers may
-        # expect the UI to exist so initialize them after this call.
         try:
-            # The helper's __init__ usually accepts the initial_file
-            # argument and is expected to be invoked with the MainWindow
-            # instance as the host. Because BoundFeature itself defines
-            # __init__, attribute lookup would resolve to BoundFeature.__init__
-            # instead of the helper class method. Call the helper class
-            # __init__ explicitly with the main window instance as the
-            # first argument.
-            # Call the helper's __init__ via helper proxy to ensure the
-            # initial host and arguments are forwarded correctly.
             self.main_window_main_init.init(initial_file)
         except Exception:
-            # If main init fails, still continue so we can attempt
-            # to catch / repair other issues via error messages.
             traceback.print_exc()
 
-        # Initialize other helper modules which implement their own
-        # __init__(self, main_window) if present.
         other_inits = [
             'main_window_view_3d', 'main_window_ui_manager', 'main_window_compute',
             'main_window_edit_actions', 'main_window_string_importers',
@@ -195,12 +159,8 @@ class MainWindow(QMainWindow):
         ]
         for name in other_inits:
             try:
-                # Call the helper's __init__ through the proxy helper to
-                # avoid attribute-resolution issues.
                 getattr(self, name).init()
             except Exception:
-                # Ignore; many helpers only define __init__ when they
-                # actually need it.
                 pass
 
     def init_ui(self):

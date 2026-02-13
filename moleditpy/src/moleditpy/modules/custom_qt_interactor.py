@@ -18,11 +18,6 @@ class CustomQtInteractor(QtInteractor):
     def __init__(self, parent=None, main_window=None, **kwargs):
         super().__init__(parent, **kwargs)
         self.main_window = main_window
-        # Track recent clicks so we can detect and swallow triple-clicks
-        # Triple-clicks are not a distinct Qt event on all platforms, so we
-        # implement a small timing-based counter here and accept the event
-        # when 3 rapid clicks are detected to prevent them from reaching
-        # the VTK interactor and causing unexpected behaviour in the 3D view.
         self._last_click_time = 0.0
         self._click_count = 0
         self._ignore_next_release = False
@@ -91,7 +86,6 @@ class CustomQtInteractor(QtInteractor):
         else:
              self._click_count = 2 # Force sync
         
-        # We must ignore the release event that follows this double-click event
         self._ignore_next_release = True
         
         try:

@@ -153,11 +153,6 @@ if OBABEL_AVAILABLE:
 else:
     pybel = None
     
-# Optional SIP helper: on some PyQt6 builds sip.isdeleted is available and
-# allows safely detecting C++ wrapper objects that have been deleted. Import
-# it once at module import time and expose a small, robust wrapper so callers
-# can avoid re-importing sip repeatedly and so we centralize exception
-# handling (this reduces crash risk during teardown and deletion operations).
 try:
     import sip as _sip  # type: ignore
     _sip_isdeleted = getattr(_sip, 'isdeleted', None)
@@ -703,8 +698,6 @@ class MainWindowMainInit(object):
         toolbar.addAction(radical_action)
         self.tool_group.addAction(radical_action)
 
-        # We will show template controls in the bottom toolbar to improve layout.
-        # Add a small label to the bottom toolbar instead of the main toolbar.
         toolbar_bottom.addWidget(QLabel(" Templates:"))
         
         # --- アイコンを生成するヘルパー関数 ---
@@ -837,15 +830,10 @@ class MainWindowMainInit(object):
         style_menu.addAction(stick_action)
         style_group.addAction(stick_action)
 
-        # --- Fix for Custom 3D Styles from Plugins ---
-        # Since style_button is created after plugins are discovered/menus init,
-        # we need to manually trigger the update/injection of custom styles here.
         if self.plugin_manager and self.plugin_manager.custom_3d_styles:
-             # Add separator
              style_menu.addSeparator()
              
              for style_name in self.plugin_manager.custom_3d_styles:
-                 # Avoid duplicates just in case
                  if not any(a.text() == style_name for a in style_menu.actions()):
                      action = QAction(style_name, self, checkable=True)
                      action.triggered.connect(lambda checked=False, s=style_name: self.set_3d_style(s))
@@ -1029,13 +1017,6 @@ class MainWindowMainInit(object):
         optimize_3d_action.setShortcut(QKeySequence("Ctrl+L")) 
         optimize_3d_action.triggered.connect(self.optimize_3d_structure)
         edit_menu.addAction(optimize_3d_action)
-
-        # Note: 3D Optimization Settings moved to Settings -> "3D Optimization Settings"
-        # to avoid duplicating the same submenu in both Edit and Settings.
-
-        # Note: Open Babel-based optimization menu entries were intentionally
-        # removed above. Open Babel (pybel) is still available for conversion
-        # fallback elsewhere in the code, so we don't disable menu items here.
 
         edit_menu.addSeparator()
         
@@ -1319,10 +1300,6 @@ class MainWindowMainInit(object):
             conv_group.addAction(a)
             self.conv_actions[key] = a
 
-        # Initialize checked state from settings (fallback default)
-        # Determine saved conversion mode. If Open Babel is not available,
-        # prefer 'rdkit' as the default rather than 'fallback'. Also ensure
-        # the settings reflect the actual enabled choice.
         try:
             default_mode = 'rdkit' if not OBABEL_AVAILABLE else 'fallback'
             saved_conv = self.settings.get('3d_conversion_mode', default_mode)
@@ -1445,16 +1422,8 @@ class MainWindowMainInit(object):
 
     def init_worker_thread(self):
         # Initialize shared state for calculation runs.
-        # NOTE: we no longer create a persistent worker/thread here. Instead,
-        # each conversion run will create its own CalculationWorker + QThread
-        # so multiple conversions may run in parallel.
-        # Shared halt id set used to request early termination of specific worker runs
         self.halt_ids = set()
-        # IDs used to correlate start/halt/finish
         self.next_conversion_id = 1
-        # Track currently-active conversion worker IDs so Halt can target all
-        # running conversions. Use a set because multiple conversions may run
-        # concurrently.
         self.active_worker_ids = set()
         # Track active threads for diagnostics/cleanup (weak references ok)
         try:
@@ -1476,7 +1445,6 @@ class MainWindowMainInit(object):
         # Legacy variable name (no dot)
         file_ext = ext_with_dot.lstrip('.')
 
-        # 1. Custom Plugin Openers
         # 1. Custom Plugin Openers
         if ext_with_dot in self.plugin_manager.file_openers:
             openers = self.plugin_manager.file_openers[ext_with_dot]
@@ -1535,15 +1503,10 @@ class MainWindowMainInit(object):
         except Exception:
             pass
 
-
-
     def open_settings_dialog(self):
         dialog = SettingsDialog(self.settings, self)
         # accept()メソッドで設定の適用と3Dビューの更新を行うため、ここでは不要
         dialog.exec()
-
-
-
 
     def reset_all_settings_menu(self):
         # Expose the same functionality as SettingsDialog.reset_all_settings
@@ -1702,9 +1665,6 @@ class MainWindowMainInit(object):
             'stick_double_bond_radius_factor': 0.60,
             'stick_triple_bond_radius_factor': 0.40,
             'aromatic_torus_thickness_factor': 0.6,
-            # Ensure conversion/optimization defaults are present
-            # If True, attempts to be permissive when RDKit raises chemical/sanitization errors
-            # during file import (useful for viewing malformed XYZ/MOL files).
             'skip_chemistry_checks': False,
             '3d_conversion_mode': 'fallback',
             'optimization_method': 'MMFF_RDKIT',
@@ -1774,15 +1734,10 @@ class MainWindowMainInit(object):
                     for new_k, legacy_k, default_v in per_model_map:
                         copy_if_missing(new_k, legacy_k, default_v)
 
-                    # Optionally remove legacy keys to avoid confusion (keep them for now but mark dirty)
                     if migrated:
                         changed = True
 
-                # If we added any defaults (e.g. skip_chemistry_checks) or migrated keys, write them back so
-                # the configuration file reflects the effective defaults without requiring
-                # the user to edit the file manually.
                 if changed:
-                    # Don't write immediately; mark dirty and let closeEvent persist
                     try:
                         self.settings_dirty = True
                     except Exception:
@@ -2018,10 +1973,6 @@ class MainWindowMainInit(object):
                     action.triggered.connect(lambda checked, mod=p['module']: self.plugin_manager.run_plugin(mod, self))
                     parent_menu.addAction(action)
 
-            # Add separator if needed  <-- REMOVED per user request
-            # if sorted_categories and root_plugins:
-            #      plugin_menu.addSeparator()
-
             # Build menu: Root items last (Sorted A-Z)
             root_plugins.sort(key=lambda x: x['name'])
             for p in root_plugins:
@@ -2030,7 +1981,6 @@ class MainWindowMainInit(object):
                 plugin_menu.addAction(action)
 
         # 4. Integrate Export Actions into Export Button and Menu
-        # 4. Integrate Export Actions into Export Button AND Main File->Export Menu
         if self.plugin_manager.export_actions:
             # Find Main File -> Export menu
             main_export_menu = None
@@ -2077,8 +2027,6 @@ class MainWindowMainInit(object):
                      p_name = info.get('plugin', 'Plugin')
                      if p_name not in plugin_map:
                          plugin_map[p_name] = {}
-                     # We can only register one callback per plugin per extension in the menu for now.
-                     # Since we process them, let's just take the one present (if a plugin registers multiple openers for same ext - weird but ok)
                      plugin_map[p_name][ext] = info['callback']
             
              for p_name, ext_map in sorted(plugin_map.items()):

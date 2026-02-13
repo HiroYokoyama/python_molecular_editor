@@ -127,12 +127,7 @@ class PluginManagerWindow(QDialog):
         if self.plugin_manager.main_window:
             self.plugin_manager.discover_plugins(self.plugin_manager.main_window)
             self.refresh_plugin_list()
-            # Also update main window menu if possible, but that might require a callback or signal
-            # For now we assume discover_plugins re-runs autoruns which might duplicate stuff if not careful?
-            # Actually discover_plugins clears lists, so re-running is safe logic-wise, 
-            # but main_window need to rebuild its menu.
-            # We will handle UI rebuild in the main window code by observing or callback.
-            
+
             # For immediate feedback:
             if not silent:
                 QMessageBox.information(self, "Reloaded", "Plugins have been reloaded.")
@@ -222,9 +217,6 @@ class PluginManagerWindow(QDialog):
                     is_zip = True
             
             if os.path.isdir(file_path):
-                # Check for __init__.py to confirm it's a plugin package? 
-                # Or just assume any folder is fair game (could be category folder too?)
-                # We'll allow any folder and let manager handle it.
                 is_valid = True
                 is_folder = True
 
