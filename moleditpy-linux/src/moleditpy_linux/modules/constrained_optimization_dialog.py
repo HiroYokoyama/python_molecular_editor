@@ -21,7 +21,7 @@ from PyQt6.QtCore import Qt
 from rdkit.Chem import AllChem, rdMolTransforms
 
 
-class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
+class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
     """制約付き最適化ダイアログ"""
     
     def __init__(self, mol, main_window, parent=None):

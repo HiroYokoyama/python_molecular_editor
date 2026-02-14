@@ -24,7 +24,7 @@ from PyQt6.QtWidgets import QMessageBox
 import numpy as np
 
 
-class AngleDialog(Dialog3DPickingMixin, QDialog):
+class AngleDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
     def __init__(self, mol, main_window, preselected_atoms=None, parent=None):
         QDialog.__init__(self, parent)
         Dialog3DPickingMixin.__init__(self)

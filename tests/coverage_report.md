@@ -1,7 +1,7 @@
 # MoleditPy Coverage Report
 
-- **Overall Project Coverage (Full)**: **49.27%**
-- **Core Molecular Logic Coverage**: **65.54%**
+- **Overall Project Coverage (Full)**: **49.26%**
+- **Core Molecular Logic Coverage**: **65.52%**
 
 > [!NOTE]
 > **Core Molecular Logic Coverage** excludes UI boilerplate (dialogs, view managers, and interactor styles) to focus on scientific algorithm reliability.
@@ -22,14 +22,14 @@
 | moleditpy\src\moleditpy\modules\main_window_compute.py  |    602 |    244 |   59.5% |
 | moleditpy\src\moleditpy\modules\main_window_export.py   |    331 |    176 |   46.8% |
 | moleditpy\src\moleditpy\modules\main_window_main_init.py |     90 |     46 |   48.9% |
-| moleditpy\src\moleditpy\modules\main_window_molecular_parsers.py |    431 |    142 |   67.1% |
+| moleditpy\src\moleditpy\modules\main_window_molecular_parsers.py |    410 |    129 |   68.5% |
 | moleditpy\src\moleditpy\modules\main_window_project_io.py |    179 |     65 |   63.7% |
 | moleditpy\src\moleditpy\modules\main_window_string_importers.py |    173 |     31 |   82.1% |
 | moleditpy\src\moleditpy\modules\molecular_data.py       |    203 |     26 |   87.2% |
-| moleditpy\src\moleditpy\modules\molecule_scene.py       |    367 |    140 |   61.9% |
+| moleditpy\src\moleditpy\modules\molecule_scene.py       |    443 |    173 |   60.9% |
 | moleditpy\src\moleditpy\modules\plugin_interface.py     |     58 |     29 |   50.0% |
 | moleditpy\src\moleditpy\modules\plugin_manager.py       |    276 |     69 |   75.0% |
-| **TOTAL** | **4739** | **1633** | **65.54%** |
+| **TOTAL** | **4794** | **1653** | **65.52%** |
 
 ### Full Application Breakdown
 
@@ -61,7 +61,7 @@
 | moleditpy\src\moleditpy\modules\main_window_edit_actions.py |    968 |    509 |   47.4% |
 | moleditpy\src\moleditpy\modules\main_window_export.py   |    545 |    253 |   53.6% |
 | moleditpy\src\moleditpy\modules\main_window_main_init.py |   1317 |    469 |   64.4% |
-| moleditpy\src\moleditpy\modules\main_window_molecular_parsers.py |    676 |    350 |   48.2% |
+| moleditpy\src\moleditpy\modules\main_window_molecular_parsers.py |    679 |    353 |   48.0% |
 | moleditpy\src\moleditpy\modules\main_window_project_io.py |    256 |    117 |   54.3% |
 | moleditpy\src\moleditpy\modules\main_window_string_importers.py |    173 |     31 |   82.1% |
 | moleditpy\src\moleditpy\modules\main_window_ui_manager.py |    336 |    106 |   68.5% |
@@ -81,7 +81,7 @@
 | moleditpy\src\moleditpy\modules\translation_dialog.py   |    225 |    149 |   33.8% |
 | moleditpy\src\moleditpy\modules\user_template_dialog.py |    400 |    162 |   59.5% |
 | moleditpy\src\moleditpy\modules\zoomable_view.py        |     72 |     39 |   45.8% |
-| **TOTAL** | **15493** | **7859** | **49.27%** |
+| **TOTAL** | **15496** | **7862** | **49.26%** |
 
 ## Test Suite Status
 - **Unit tests**: PASSED

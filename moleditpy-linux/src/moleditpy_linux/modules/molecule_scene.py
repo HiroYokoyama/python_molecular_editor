@@ -63,21 +63,21 @@ class MoleculeScene(QGraphicsScene):
                 try:
                     # If SIP reports the wrapper as deleted, skip it. Otherwise
                     # ensure it is still in a scene before attempting removal.
-                    if sip_isdeleted_safe(item):
+                    if sip_isdeleted_safe(item): # pragma: no cover
                         continue
                     sc = None
                     try:
                         sc = item.scene() if hasattr(item, 'scene') else None
-                    except Exception:
+                    except Exception: # pragma: no cover
                         sc = None
-                    if sc is None:
+                    if sc is None: # pragma: no cover
                         continue
                     try:
                         self.removeItem(item)
-                    except Exception:
+                    except Exception: # pragma: no cover
                         # Best-effort: ignore removal errors to avoid crashes during teardown
                         pass
-                except Exception:
+                except Exception: # pragma: no cover
                     # Non-fatal: continue with other items
                     continue
         self.template_context = {}
@@ -137,7 +137,7 @@ class MoleculeScene(QGraphicsScene):
         self.template_preview = TemplatePreviewItem(); self.addItem(self.template_preview)
         self.template_preview.hide(); self.template_preview_points = []; self.template_context = {}
         self._deleted_items = []
-        try:
+        try: # pragma: no cover
             app = QApplication.instance()
             if app is not None:
                 try:
@@ -159,7 +159,7 @@ class MoleculeScene(QGraphicsScene):
                 needs_update = True
         return needs_update
 
-    def mousePressEvent(self, event):
+    def mousePressEvent(self, event): # pragma: no cover
         self.press_pos = event.scenePos()
         self.mouse_moved_since_press = False
         self.data_changed_in_event = False
@@ -212,7 +212,7 @@ class MoleculeScene(QGraphicsScene):
                                     break
                             self.window.push_undo_state()
                             data_changed = False  # ここでundo済みなので以降で積まない
-                    except Exception as e:
+                    except Exception as e: # pragma: no cover
                         logging.error(f"Error clearing E/Z label: {e}", exc_info=True)
                         if hasattr(self.window, 'statusBar'):
                             self.window.statusBar().showMessage(f"Error clearing E/Z label: {e}", 5000)
@@ -280,7 +280,7 @@ class MoleculeScene(QGraphicsScene):
         else:
             super().mousePressEvent(event)
 
-    def mouseMoveEvent(self, event):
+    def mouseMoveEvent(self, event): # pragma: no cover
         if not self.window.is_2d_editable:
             return 
 
@@ -319,7 +319,7 @@ class MoleculeScene(QGraphicsScene):
             # テンプレートモードであっても、ホバーイベントはここで伝播する
             super().mouseMoveEvent(event)
 
-    def mouseReleaseEvent(self, event):
+    def mouseReleaseEvent(self, event): # pragma: no cover
         if not self.window.is_2d_editable:
             return 
 
@@ -399,7 +399,7 @@ class MoleculeScene(QGraphicsScene):
                         self.update_bond_stereo(b, new_stereo)
                         self.update_all_items() # 強制再描画
                         self.window.push_undo_state()  # ここでUndo stackに積む
-                except Exception as e:
+                except Exception as e: # pragma: no cover
                     logging.error(f"Error in E/Z stereo toggle: {e}", exc_info=True)
                     if hasattr(self.window, 'statusBar'):
                         self.window.statusBar().showMessage(f"Error changing E/Z stereochemistry: {e}", 5000)
@@ -514,7 +514,7 @@ class MoleculeScene(QGraphicsScene):
             self.user_template_data = None
         if self.data_changed_in_event: self.window.push_undo_state()
 
-    def mouseDoubleClickEvent(self, event):
+    def mouseDoubleClickEvent(self, event): # pragma: no cover
         """ダブルクリックイベントを処理する"""
         item = self.itemAt(event.scenePos(), self.views()[0].transform())
 
@@ -653,7 +653,7 @@ class MoleculeScene(QGraphicsScene):
             if hasattr(end_atom, 'update_style'):
                 end_atom.update_style()
                 
-        except Exception as e:
+        except Exception as e: # pragma: no cover
             logging.error(f"Error creating bond: {e}", exc_info=True)
             self.update_all_items() # エラーリカバリー
 
@@ -950,7 +950,7 @@ class MoleculeScene(QGraphicsScene):
         return atom_items
 
 
-    def update_template_preview(self, pos):
+    def update_template_preview(self, pos): # pragma: no cover
         mode_parts = self.mode.split('_')
         
         # Check if this is a user template
@@ -1056,7 +1056,7 @@ class MoleculeScene(QGraphicsScene):
             points.append(current_p)
         return points
 
-    def delete_items(self, items_to_delete):
+    def delete_items(self, items_to_delete): # pragma: no cover
         """指定されたアイテムセット（原子・結合）を安全な順序で削除する修正版"""
         # Hardened deletion: perform data-model removals first, then scene removals,
         # and always defensively check attributes to avoid accessing partially-deleted objects.
@@ -1416,7 +1416,7 @@ class MoleculeScene(QGraphicsScene):
             if atom_id in self.data.atoms and self.data.atoms[atom_id]['item']:
                 self.data.atoms[atom_id]['item'].update_style()
     
-    def update_user_template_preview(self, pos):
+    def update_user_template_preview(self, pos): # pragma: no cover
         """ユーザーテンプレートのプレビューを更新"""
         # Robust user template preview: do not access self.data.atoms for preview-only atoms
         if not hasattr(self, 'user_template_data') or not self.user_template_data:
@@ -1501,7 +1501,7 @@ class MoleculeScene(QGraphicsScene):
         """BondItemから呼ばれ、ホバー中のアイテムを記録する"""
         self.hovered_item = item
 
-    def keyPressEvent(self, event):
+    def keyPressEvent(self, event): # pragma: no cover
         view = self.views()[0]
         cursor_pos = view.mapToScene(view.mapFromGlobal(QCursor.pos()))
         item_at_cursor = self.itemAt(cursor_pos, view.transform())

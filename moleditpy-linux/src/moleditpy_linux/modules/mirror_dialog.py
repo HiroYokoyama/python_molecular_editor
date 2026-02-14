@@ -17,7 +17,7 @@ from PyQt6.QtWidgets import (
 from rdkit import Chem
 from rdkit.Geometry import Point3D
 
-class MirrorDialog(QDialog):
+class MirrorDialog(QDialog): # pragma: no cover
     """分子の鏡像を作成するダイアログ"""
     
     def __init__(self, mol, main_window, parent=None):

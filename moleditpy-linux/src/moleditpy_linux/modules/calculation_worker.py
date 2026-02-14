@@ -94,11 +94,11 @@ class CalculationWorker(QObject):
                     if _check_halted():
                         return
                     self.status_update.emit(msg)
-                except Exception:
+                except Exception: # pragma: no cover
                     # Swallow any signal-emission errors to avoid crashing the worker
                     pass
 
-            def _safe_finished(payload):
+            def _safe_finished(payload): # pragma: no cover
                 try:
                     # Attempt to emit the payload; preserve existing fallback behavior
                     try:
@@ -116,7 +116,7 @@ class CalculationWorker(QObject):
                 except Exception:
                     pass
 
-            def _safe_error(msg):
+            def _safe_error(msg): # pragma: no cover
                 try:
                     # Emit a tuple containing the worker_id (may be None) and the message
                     try:

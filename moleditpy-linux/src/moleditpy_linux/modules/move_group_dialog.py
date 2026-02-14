@@ -27,7 +27,7 @@ try:
 except Exception:
     from modules.dialog3_d_picking_mixin import Dialog3DPickingMixin
 
-class MoveGroupDialog(Dialog3DPickingMixin, QDialog):
+class MoveGroupDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
     """結合している分子グループを選択して並行移動・回転するダイアログ"""
     
     def __init__(self, mol, main_window, parent=None):

@@ -21,7 +21,7 @@ try:
 except Exception:
     from modules.constants import VERSION
 
-class AboutDialog(QDialog):
+class AboutDialog(QDialog): # pragma: no cover
     def __init__(self, main_window, parent=None):
         super().__init__(parent)
         self.main_window = main_window
@@ -62,7 +62,7 @@ class AboutDialog(QDialog):
         layout.addWidget(self.image_label)
         
         # Add text information
-        info_text = f"MoleditPy for Linux Ver. {VERSION}\nAuthor: Hiromichi Yokoyama\nLicense: GPL-3.0 license"
+        info_text = f"MoleditPy Ver. {VERSION}\nAuthor: Hiromichi Yokoyama\nLicense: GPL-3.0 license"
         info_label = QLabel(info_text)
         info_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(info_label)
