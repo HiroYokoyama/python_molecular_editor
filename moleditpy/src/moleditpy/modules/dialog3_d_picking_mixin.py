@@ -134,3 +134,72 @@ class Dialog3DPickingMixin:
     
     def try_alternative_picking(self, x, y):
         """代替のピッキング方法（使用しない）"""
+
+    # ------------------------------------------------------------------
+    # Label management (shared across dialogs)
+    # ------------------------------------------------------------------
+
+    def clear_atom_labels(self):
+        """Remove all label actors from the plotter."""
+        if hasattr(self, 'selection_labels'):
+            for label_actor in self.selection_labels:
+                try:
+                    self.main_window.plotter.remove_actor(label_actor)
+                except Exception:
+                    pass
+            self.selection_labels = []
+
+    # Alias — some dialogs use this name instead.
+    clear_selection_labels = clear_atom_labels
+
+    def add_selection_label(self, atom_idx, label_text, color='yellow'):
+        """Add a point label at the position of *atom_idx*.
+
+        Parameters
+        ----------
+        atom_idx : int
+            Index into ``self.main_window.atom_positions_3d``.
+        label_text : str
+            Text shown next to the atom.
+        color : str, optional
+            Label colour (default ``'yellow'``).
+        """
+        if not hasattr(self, 'selection_labels'):
+            self.selection_labels = []
+
+        pos = self.main_window.atom_positions_3d[atom_idx]
+
+        label_actor = self.main_window.plotter.add_point_labels(
+            [pos], [label_text],
+            point_size=20,
+            font_size=12,
+            text_color=color,
+            always_visible=True
+        )
+        self.selection_labels.append(label_actor)
+
+    def show_atom_labels_for(self, atoms_and_labels, color='yellow'):
+        """Clear existing labels and add new ones for each *(idx, text)* pair.
+
+        Parameters
+        ----------
+        atoms_and_labels : list[tuple[int, str]]
+            Each element is ``(atom_idx, label_text)``.
+        color : str, optional
+            Label colour (default ``'yellow'``).
+        """
+        self.clear_atom_labels()
+
+        if not hasattr(self, 'selection_labels'):
+            self.selection_labels = []
+
+        for atom_idx, label_text in atoms_and_labels:
+            pos = self.main_window.atom_positions_3d[atom_idx]
+            label_actor = self.main_window.plotter.add_point_labels(
+                [pos], [label_text],
+                point_size=20,
+                font_size=12,
+                text_color=color,
+                always_visible=True
+            )
+            self.selection_labels.append(label_actor)

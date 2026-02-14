@@ -11,12 +11,12 @@ DOI: 10.5281/zenodo.17268532
 """
 
 import os
-import sys
+
 from PyQt6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QPushButton, QTableWidget, 
-    QTableWidgetItem, QHeaderView, QLabel, QFileDialog, QMessageBox, QAbstractItemView
+    QTableWidgetItem, QHeaderView, QLabel, QMessageBox, QAbstractItemView
 )
-from PyQt6.QtCore import Qt, QMimeData, QUrl
+from PyQt6.QtCore import Qt, QUrl
 from PyQt6.QtGui import QDragEnterEvent, QDropEvent, QDesktopServices
 import shutil
 

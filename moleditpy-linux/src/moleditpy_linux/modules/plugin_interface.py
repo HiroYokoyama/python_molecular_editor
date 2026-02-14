@@ -144,13 +144,6 @@ class PluginContext:
         Args:
             callback: Function receiving the dict of saved data.
         """
-    def register_load_handler(self, callback: Callable[[dict], None]):
-        """
-        Register a callback to restore state from the project file.
-        
-        Args:
-            callback: Function receiving the dict of saved data.
-        """
         self._manager.register_load_handler(self._plugin_name, callback)
 
     def register_3d_context_menu(self, callback: Callable, label: str):

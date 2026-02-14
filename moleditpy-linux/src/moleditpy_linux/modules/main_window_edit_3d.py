@@ -19,6 +19,11 @@ MainWindow (main_window.py) から分離されたモジュール
 
 import numpy as np
 
+try:
+    from .mol_geometry import calculate_dihedral as _calculate_dihedral
+except Exception:
+    from modules.mol_geometry import calculate_dihedral as _calculate_dihedral
+
 # RDKit imports (explicit to satisfy flake8 and used features)
 try:
     from . import sip_isdeleted_safe
@@ -41,24 +46,6 @@ from PyQt6.QtCore import (
 
 import pyvista as pv
 
-# Use centralized Open Babel availability from package-level __init__
-# Use per-package modules availability (local __init__).
-try:
-    from . import OBABEL_AVAILABLE
-except Exception:
-    from modules import OBABEL_AVAILABLE
-# Only import pybel on demand — `moleditpy` itself doesn't expose `pybel`.
-if OBABEL_AVAILABLE:
-    try:
-        from openbabel import pybel
-    except Exception:
-        # If import fails here, disable OBABEL locally; avoid raising
-        pybel = None
-        OBABEL_AVAILABLE = False
-        print("Warning: openbabel.pybel not available. Open Babel fallback and OBabel-based options will be disabled.")
-else:
-    pybel = None
-    
 try:
     import sip as _sip  # type: ignore
     _sip_isdeleted = getattr(_sip, 'isdeleted', None)
@@ -350,43 +337,9 @@ class MainWindowEdit3d(object):
 
     def calculate_dihedral(self, atom1_idx, atom2_idx, atom3_idx, atom4_idx):
         """4原子の二面角を計算する（正しい公式を使用）"""
-        pos1 = np.array(self.atom_positions_3d[atom1_idx])
-        pos2 = np.array(self.atom_positions_3d[atom2_idx])
-        pos3 = np.array(self.atom_positions_3d[atom3_idx])
-        pos4 = np.array(self.atom_positions_3d[atom4_idx])
-        
-        # Vectors between consecutive atoms
-        v1 = pos2 - pos1  # 1->2
-        v2 = pos3 - pos2  # 2->3 (central bond)
-        v3 = pos4 - pos3  # 3->4
-        
-        # Normalize the central bond vector
-        v2_norm = v2 / np.linalg.norm(v2)
-        
-        # Calculate plane normal vectors
-        n1 = np.cross(v1, v2)  # Normal to plane 1-2-3
-        n2 = np.cross(v2, v3)  # Normal to plane 2-3-4
-        
-        # Normalize the normal vectors
-        n1_norm = np.linalg.norm(n1)
-        n2_norm = np.linalg.norm(n2)
-        
-        if n1_norm == 0 or n2_norm == 0:
-            return 0.0  # Atoms are collinear
-        
-        n1 = n1 / n1_norm
-        n2 = n2 / n2_norm
-        
-        # Calculate the cosine of the dihedral angle
-        cos_angle = np.dot(n1, n2)
-        cos_angle = np.clip(cos_angle, -1.0, 1.0)
-        
-        # Calculate the sine for proper sign determination
-        sin_angle = np.dot(np.cross(n1, n2), v2_norm)
-        
-        # Calculate the dihedral angle with correct sign
-        angle_rad = np.arctan2(sin_angle, cos_angle)
-        return np.degrees(angle_rad)
+        return _calculate_dihedral(
+            self.atom_positions_3d, atom1_idx, atom2_idx, atom3_idx, atom4_idx
+        )
 
     def display_measurement_text(self, measurement_lines):
         """測定結果のテキストを3D画面の左上に表示する（小さな等幅フォント）"""

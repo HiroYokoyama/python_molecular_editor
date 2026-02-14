@@ -585,15 +585,7 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog): # pragma: no
             else:
                 self.selection_labels.append(label_actor)
 
-    def clear_selection_labels(self):
-        """選択ラベル(A1, A2...)をクリア"""
-        if hasattr(self, 'selection_labels'):
-            for label_actor in self.selection_labels:
-                try:
-                    self.main_window.plotter.remove_actor(label_actor)
-                except Exception:
-                    pass
-            self.selection_labels = []
+
 
     def on_cell_changed(self, row, column):
         """テーブルのセルが編集されたときに内部データを更新する"""

@@ -27,6 +27,11 @@ import traceback
 
 from collections import deque
 
+try:
+    from .mol_geometry import is_problematic_valence
+except Exception:
+    from modules.mol_geometry import is_problematic_valence
+
 # RDKit imports (explicit to satisfy flake8 and used features)
 from rdkit import Chem
 from rdkit.Chem import AllChem
@@ -88,25 +93,6 @@ class Rotate2DDialog(QDialog):
     def get_angle(self):
         return self.angle_spin.value()
 
-
-# Use centralized Open Babel availability from package-level __init__
-# Use per-package modules availability (local __init__).
-try:
-    from . import OBABEL_AVAILABLE
-except Exception:
-    from modules import OBABEL_AVAILABLE
-# Only import pybel on demand — `moleditpy` itself doesn't expose `pybel`.
-if OBABEL_AVAILABLE:
-    try:
-        from openbabel import pybel
-    except Exception:
-        # If import fails here, disable OBABEL locally; avoid raising
-        pybel = None
-        OBABEL_AVAILABLE = False
-        print("Warning: openbabel.pybel not available. Open Babel fallback and OBabel-based options will be disabled.")
-else:
-    pybel = None
-    
 try:
     import sip as _sip  # type: ignore
     _sip_isdeleted = getattr(_sip, 'isdeleted', None)
@@ -833,19 +819,7 @@ class MainWindowEditActions(object):
                                 if id1 == atom_id or id2 == atom_id:
                                     bond_count += bond_data.get('order', 1)
 
-                            is_problematic = False
-                            if symbol == 'C' and bond_count > 4:
-                                is_problematic = True
-                            elif symbol == 'N' and bond_count > 3 and charge == 0:
-                                is_problematic = True
-                            elif symbol == 'O' and bond_count > 2 and charge == 0:
-                                is_problematic = True
-                            elif symbol == 'H' and bond_count > 1:
-                                is_problematic = True
-                            elif symbol in ['F', 'Cl', 'Br', 'I'] and bond_count > 1 and charge == 0:
-                                is_problematic = True
-
-                            if is_problematic:
+                            if is_problematic_valence(symbol, bond_count, charge):
                                 problem_map[atom_id] = True
                         except Exception:
                             continue

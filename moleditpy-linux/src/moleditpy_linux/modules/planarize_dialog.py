@@ -13,7 +13,7 @@ DOI: 10.5281/zenodo.17268532
 from PyQt6.QtWidgets import (
     QDialog, QVBoxLayout, QLabel, QHBoxLayout, QPushButton, QMessageBox
 )
-from PyQt6.QtCore import Qt
+
 import numpy as np
 
 try:
@@ -135,30 +135,12 @@ class PlanarizeDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
             QMessageBox.warning(self, "Warning", f"Failed to select all atoms: {e}")
 
     def show_atom_labels(self):
-        self.clear_atom_labels()
-        if not hasattr(self, 'selection_labels'):
-            self.selection_labels = []
         if self.selected_atoms:
-            for i, atom_idx in enumerate(sorted(self.selected_atoms)):
-                pos = self.main_window.atom_positions_3d[atom_idx]
-                label_text = f"#{i+1}"
-                label_actor = self.main_window.plotter.add_point_labels(
-                    [pos], [label_text],
-                    point_size=20,
-                    font_size=12,
-                    text_color='cyan',
-                    always_visible=True
-                )
-                self.selection_labels.append(label_actor)
-
-    def clear_atom_labels(self):
-        if hasattr(self, 'selection_labels'):
-            for label_actor in self.selection_labels:
-                try:
-                    self.main_window.plotter.remove_actor(label_actor)
-                except Exception:
-                    pass
-            self.selection_labels = []
+            sorted_atoms = sorted(self.selected_atoms)
+            pairs = [(idx, f"#{i+1}") for i, idx in enumerate(sorted_atoms)]
+            self.show_atom_labels_for(pairs, color='cyan')
+        else:
+            self.clear_atom_labels()
 
     def apply_planarize(self):
         if not self.selected_atoms or len(self.selected_atoms) < 3:

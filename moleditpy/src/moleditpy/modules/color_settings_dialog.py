@@ -227,10 +227,12 @@ class ColorSettingsDialog(QDialog): # pragma: no cover
             # Refresh any open SettingsDialog instances so the ball & stick color preview updates
             try:
                 # Avoid circular import at module level; import SettingsDialog on demand
+                import importlib
                 try:
-                    from .settings_dialog import SettingsDialog
-                except Exception:
-                    from modules.settings_dialog import SettingsDialog
+                    mod = importlib.import_module('.settings_dialog', package='moleditpy.modules')
+                except ImportError:
+                    mod = importlib.import_module('modules.settings_dialog')
+                SettingsDialog = mod.SettingsDialog
 
                 for w in QApplication.topLevelWidgets():
                     try:

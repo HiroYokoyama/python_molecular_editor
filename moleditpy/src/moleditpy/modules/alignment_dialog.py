@@ -13,7 +13,7 @@ DOI: 10.5281/zenodo.17268532
 from PyQt6.QtWidgets import (
     QDialog, QVBoxLayout, QLabel, QHBoxLayout, QPushButton
 )
-from PyQt6.QtCore import Qt
+
 from PyQt6.QtWidgets import QMessageBox
 import numpy as np
 
@@ -133,24 +133,6 @@ class AlignmentDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
         self.selected_atoms.clear()
         self.update_display()
     
-    def add_selection_label(self, atom_idx, label_text):
-        """選択された原子にラベルを追加"""
-        if not hasattr(self, 'selection_labels'):
-            self.selection_labels = []
-        
-        # 原子の位置を取得
-        pos = self.main_window.atom_positions_3d[atom_idx]
-        
-        # ラベルを追加
-        label_actor = self.main_window.plotter.add_point_labels(
-            [pos], [label_text], 
-            point_size=20, 
-            font_size=12,
-            text_color='yellow',
-            always_visible=True
-        )
-        self.selection_labels.append(label_actor)
-    
     def remove_atom_label(self, atom_idx):
         """特定の原子のラベルを削除"""
         # 簡単化のため、全ラベルをクリアして再描画
@@ -158,16 +140,6 @@ class AlignmentDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
         for i, idx in enumerate(sorted(self.selected_atoms), 1):
             if idx != atom_idx:
                 self.add_selection_label(idx, f"Atom {i}")
-    
-    def clear_selection_labels(self):
-        """選択ラベルをクリア"""
-        if hasattr(self, 'selection_labels'):
-            for label_actor in self.selection_labels:
-                try:
-                    self.main_window.plotter.remove_actor(label_actor)
-                except Exception:
-                    pass
-            self.selection_labels = []
     
     def apply_alignment(self):
         """アライメントを適用"""

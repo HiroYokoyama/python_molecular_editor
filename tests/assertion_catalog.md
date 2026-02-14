@@ -370,6 +370,26 @@ _Test trigger_conversion detects and flags chemistry problems (valence)._
 - assert any(('chemistry problem(s) found' in msg for msg in msgs))
 - assert mock_item.has_problem == True
 
+### test_trigger_conversion_fragment_message_exact
+_Test verification of the exact status bar message for multiple fragments._
+
+- assert any(('Converting 3 molecules' in msg for msg in all_messages))
+
+### test_trigger_conversion_to_mol_block_priority
+_Test that data.to_mol_block() is used preferentially over RDKit's generation._
+
+- assert mock_to_block.called
+- assert not mock_rdkit_block.called
+- assert len(args) >= 2
+- assert call_args is not None
+- assert sent_block == custom_block
+
+### test_trigger_conversion_ez_stereo_injection
+_Test that M CFG lines are injected for E/Z stereo bonds._
+
+- assert 'M  CFG' in sent_block
+- assert 'M  CFG  1   2   2' in sent_block
+
 ## tests/unit/test_edit_3d_logic.py
 
 ### test_calculate_distance_logic
@@ -1173,6 +1193,30 @@ _Test full cycle of project save and load._
 - assert len(atoms) == 1
 - assert atoms[0]['symbol'] == 'C'
 - assert atoms[0]['charge'] == 1
+
+### test_save_project_no_data_error
+_Test save_project with no data returns error._
+
+
+### test_save_project_default_filename
+_Test save_project_as uses current_file_path to suggest filename._
+
+- assert suggested_path == expected
+- assert args[2] == 'untitled'
+
+### test_save_project_extension_enforcement
+_Test that extensions are enforced in save_project_as._
+
+- assert io.current_file_path == expected_path
+- assert os.path.exists(expected_path)
+
+### test_save_project_success_state_update
+_Test state updates after successful save._
+
+- assert io.has_unsaved_changes is False
+- assert io.current_file_path == save_path
+- assert io.update_window_title.called
+- assert io._saved_state is not None
 
 ## tests/unit/test_properties.py
 

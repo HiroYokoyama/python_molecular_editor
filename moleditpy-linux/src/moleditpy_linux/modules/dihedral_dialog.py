@@ -16,8 +16,10 @@ from PyQt6.QtWidgets import (
 
 try:
     from .dialog3_d_picking_mixin import Dialog3DPickingMixin
+    from .mol_geometry import get_connected_group, calculate_dihedral
 except Exception:
     from modules.dialog3_d_picking_mixin import Dialog3DPickingMixin
+    from modules.mol_geometry import get_connected_group, calculate_dihedral
 
 from PyQt6.QtCore import Qt
 import numpy as np
@@ -174,41 +176,10 @@ class DihedralDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
     
     def show_atom_labels(self):
         """選択された原子にラベルを表示"""
-        # 既存のラベルをクリア
-        self.clear_atom_labels()
-        
-        # 新しいラベルを表示
-        if not hasattr(self, 'selection_labels'):
-            self.selection_labels = []
-        
         selected_atoms = [self.atom1_idx, self.atom2_idx, self.atom3_idx, self.atom4_idx]
         labels = ["1st", "2nd (bond start)", "3rd (bond end)", "4th"]
-        colors = ["yellow", "yellow", "yellow", "yellow"]  # 全て黄色に統一
-        
-        for i, atom_idx in enumerate(selected_atoms):
-            if atom_idx is not None:
-                pos = self.main_window.atom_positions_3d[atom_idx]
-                label_text = f"{labels[i]}"
-                
-                # ラベルを追加
-                label_actor = self.main_window.plotter.add_point_labels(
-                    [pos], [label_text], 
-                    point_size=20, 
-                    font_size=12,
-                    text_color=colors[i],
-                    always_visible=True
-                )
-                self.selection_labels.append(label_actor)
-    
-    def clear_atom_labels(self):
-        """原子ラベルをクリア"""
-        if hasattr(self, 'selection_labels'):
-            for label_actor in self.selection_labels:
-                try:
-                    self.main_window.plotter.remove_actor(label_actor)
-                except Exception:
-                    pass
-            self.selection_labels = []
+        pairs = [(idx, labels[i]) for i, idx in enumerate(selected_atoms) if idx is not None]
+        self.show_atom_labels_for(pairs)
     
     def update_display(self):
         """表示を更新"""
@@ -253,7 +224,10 @@ class DihedralDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
             self.selection_label.setText(" - ".join(display_parts))
             
             # Calculate current dihedral angle
-            current_dihedral = self.calculate_dihedral()
+            current_dihedral = calculate_dihedral(
+                self.mol.GetConformer().GetPositions(),
+                self.atom1_idx, self.atom2_idx,
+                self.atom3_idx, self.atom4_idx)
             self.dihedral_label.setText(f"Current dihedral: {current_dihedral:.2f}°")
             self.apply_button.setEnabled(True)
             # Update dihedral input box with current dihedral
@@ -261,47 +235,6 @@ class DihedralDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
                 self.dihedral_input.setText(f"{current_dihedral:.2f}")
             except Exception:
                 pass
-    
-    def calculate_dihedral(self):
-        """現在の二面角を計算（正しい公式を使用）"""
-        conf = self.mol.GetConformer()
-        pos1 = np.array(conf.GetAtomPosition(self.atom1_idx))
-        pos2 = np.array(conf.GetAtomPosition(self.atom2_idx))
-        pos3 = np.array(conf.GetAtomPosition(self.atom3_idx))
-        pos4 = np.array(conf.GetAtomPosition(self.atom4_idx))
-        
-        # Vectors between consecutive atoms
-        v1 = pos2 - pos1  # 1->2
-        v2 = pos3 - pos2  # 2->3 (central bond)
-        v3 = pos4 - pos3  # 3->4
-        
-        # Normalize the central bond vector
-        v2_norm = v2 / np.linalg.norm(v2)
-        
-        # Calculate plane normal vectors
-        n1 = np.cross(v1, v2)  # Normal to plane 1-2-3
-        n2 = np.cross(v2, v3)  # Normal to plane 2-3-4
-        
-        # Normalize the normal vectors
-        n1_norm = np.linalg.norm(n1)
-        n2_norm = np.linalg.norm(n2)
-        
-        if n1_norm == 0 or n2_norm == 0:
-            return 0.0  # Atoms are collinear
-        
-        n1 = n1 / n1_norm
-        n2 = n2 / n2_norm
-        
-        # Calculate the cosine of the dihedral angle
-        cos_angle = np.dot(n1, n2)
-        cos_angle = np.clip(cos_angle, -1.0, 1.0)
-        
-        # Calculate the sine for proper sign determination
-        sin_angle = np.dot(np.cross(n1, n2), v2_norm)
-        
-        # Calculate the dihedral angle with correct sign
-        angle_rad = np.arctan2(sin_angle, cos_angle)
-        return np.degrees(angle_rad)
     
     def apply_changes(self):
         """変更を適用"""
@@ -335,7 +268,10 @@ class DihedralDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
         pos4 = np.array(conf.GetAtomPosition(self.atom4_idx))
         
         # Current dihedral angle
-        current_dihedral = self.calculate_dihedral()
+        current_dihedral = calculate_dihedral(
+            self.mol.GetConformer().GetPositions(),
+            self.atom1_idx, self.atom2_idx,
+            self.atom3_idx, self.atom4_idx)
         
         # Calculate rotation angle needed
         rotation_angle_deg = new_dihedral_deg - current_dihedral
@@ -383,8 +319,8 @@ class DihedralDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
             half_rotation = rotation_angle_rad / 2
             
             # Get both connected groups
-            group1_atoms = self.get_connected_group(self.atom2_idx, exclude=self.atom3_idx)
-            group4_atoms = self.get_connected_group(self.atom3_idx, exclude=self.atom2_idx)
+            group1_atoms = get_connected_group(self.mol, self.atom2_idx, exclude=self.atom3_idx)
+            group4_atoms = get_connected_group(self.mol, self.atom3_idx, exclude=self.atom2_idx)
             
             # Rotate group1 (atom1 side) by -half_rotation
             for atom_idx in group1_atoms:
@@ -403,7 +339,7 @@ class DihedralDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
         elif self.move_group_radio.isChecked():
             # Move the connected group containing atom4
             # Find all atoms connected to atom3 (excluding atom2 side)
-            atoms_to_rotate = self.get_connected_group(self.atom3_idx, exclude=self.atom2_idx)
+            atoms_to_rotate = get_connected_group(self.mol, self.atom3_idx, exclude=self.atom2_idx)
             
             # Rotate all atoms in the group
             for atom_idx in atoms_to_rotate:
@@ -420,23 +356,4 @@ class DihedralDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
         # Update the 3D view
         self.main_window.draw_molecule_3d(self.mol)
     
-    def get_connected_group(self, start_atom, exclude=None):
-        """指定された原子から連結されているグループを取得"""
-        visited = set()
-        to_visit = [start_atom]
-        
-        while to_visit:
-            current = to_visit.pop()
-            if current in visited or current == exclude:
-                continue
-            
-            visited.add(current)
-            
-            # Get neighboring atoms
-            atom = self.mol.GetAtomWithIdx(current)
-            for bond in atom.GetBonds():
-                other_idx = bond.GetOtherAtomIdx(current)
-                if other_idx not in visited and other_idx != exclude:
-                    to_visit.append(other_idx)
-        
-        return visited
+

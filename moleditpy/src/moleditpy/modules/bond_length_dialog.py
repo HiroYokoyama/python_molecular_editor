@@ -15,6 +15,7 @@ from PyQt6.QtWidgets import (
 )
 
 from .dialog3_d_picking_mixin import Dialog3DPickingMixin
+from .mol_geometry import get_connected_group
 
 from PyQt6.QtCore import Qt
 import numpy as np
@@ -158,69 +159,10 @@ class BondLengthDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
     
     def show_atom_labels(self):
         """選択された原子にラベルを表示"""
-        # 既存のラベルをクリア
-        self.clear_atom_labels()
-        
-        # 新しいラベルを表示
-        if not hasattr(self, 'selection_labels'):
-            self.selection_labels = []
-        
         selected_atoms = [self.atom1_idx, self.atom2_idx]
         labels = ["1st", "2nd"]
-        colors = ["yellow", "yellow"]
-        
-        for i, atom_idx in enumerate(selected_atoms):
-            if atom_idx is not None:
-                pos = self.main_window.atom_positions_3d[atom_idx]
-                label_text = f"{labels[i]}"
-                
-                # ラベルを追加
-                label_actor = self.main_window.plotter.add_point_labels(
-                    [pos], [label_text], 
-                    point_size=20, 
-                    font_size=12,
-                    text_color=colors[i],
-                    always_visible=True
-                )
-                self.selection_labels.append(label_actor)
-    
-    def clear_atom_labels(self):
-        """原子ラベルをクリア"""
-        if hasattr(self, 'selection_labels'):
-            for label_actor in self.selection_labels:
-                try:
-                    self.main_window.plotter.remove_actor(label_actor)
-                except Exception:
-                    pass
-            self.selection_labels = []
-    
-    def clear_selection_labels(self):
-        """選択ラベルをクリア"""
-        if hasattr(self, 'selection_labels'):
-            for label_actor in self.selection_labels:
-                try:
-                    self.main_window.plotter.remove_actor(label_actor)
-                except Exception:
-                    pass
-            self.selection_labels = []
-    
-    def add_selection_label(self, atom_idx, label_text):
-        """選択された原子にラベルを追加"""
-        if not hasattr(self, 'selection_labels'):
-            self.selection_labels = []
-        
-        # 原子の位置を取得
-        pos = self.main_window.atom_positions_3d[atom_idx]
-        
-        # ラベルを追加
-        label_actor = self.main_window.plotter.add_point_labels(
-            [pos], [label_text], 
-            point_size=20, 
-            font_size=12,
-            text_color='yellow',
-            always_visible=True
-        )
-        self.selection_labels.append(label_actor)
+        pairs = [(idx, labels[i]) for i, idx in enumerate(selected_atoms) if idx is not None]
+        self.show_atom_labels_for(pairs)
     
     def update_display(self):
         """表示を更新"""
@@ -317,8 +259,8 @@ class BondLengthDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
             new_pos2 = bond_center + direction * half_distance
             
             # Get both connected groups
-            group1_atoms = self.get_connected_group(self.atom1_idx, exclude=self.atom2_idx)
-            group2_atoms = self.get_connected_group(self.atom2_idx, exclude=self.atom1_idx)
+            group1_atoms = get_connected_group(self.mol, self.atom1_idx, exclude=self.atom2_idx)
+            group2_atoms = get_connected_group(self.mol, self.atom2_idx, exclude=self.atom1_idx)
             
             # Calculate displacements
             displacement1 = new_pos1 - pos1
@@ -346,7 +288,7 @@ class BondLengthDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
         else:
             # Move the connected group (default behavior)
             new_pos2 = pos1 + direction * new_distance
-            atoms_to_move = self.get_connected_group(self.atom2_idx, exclude=self.atom1_idx)
+            atoms_to_move = get_connected_group(self.mol, self.atom2_idx, exclude=self.atom1_idx)
             displacement = new_pos2 - pos2
             
             for atom_idx in atoms_to_move:
@@ -358,23 +300,4 @@ class BondLengthDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
         # Update the 3D view
         self.main_window.draw_molecule_3d(self.mol)
     
-    def get_connected_group(self, start_atom, exclude=None):
-        """指定された原子から連結されているグループを取得"""
-        visited = set()
-        to_visit = [start_atom]
-        
-        while to_visit:
-            current = to_visit.pop()
-            if current in visited or current == exclude:
-                continue
-            
-            visited.add(current)
-            
-            # Get neighboring atoms
-            atom = self.mol.GetAtomWithIdx(current)
-            for bond in atom.GetBonds():
-                other_idx = bond.GetOtherAtomIdx(current)
-                if other_idx not in visited and other_idx != exclude:
-                    to_visit.append(other_idx)
-        
-        return visited
+

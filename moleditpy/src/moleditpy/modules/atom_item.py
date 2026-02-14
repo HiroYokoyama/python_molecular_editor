@@ -23,13 +23,13 @@ from PyQt6.QtCore import (
 try:
     from .constants import (
         ATOM_RADIUS, DESIRED_ATOM_PIXEL_RADIUS,
-        FONT_FAMILY, FONT_SIZE_LARGE, FONT_WEIGHT_BOLD,
+        FONT_FAMILY, FONT_WEIGHT_BOLD,
         CPK_COLORS,
     )
 except Exception:
     from modules.constants import (
         ATOM_RADIUS, DESIRED_ATOM_PIXEL_RADIUS,
-        FONT_FAMILY, FONT_SIZE_LARGE, FONT_WEIGHT_BOLD,
+        FONT_FAMILY, FONT_WEIGHT_BOLD,
         CPK_COLORS,
     )
     

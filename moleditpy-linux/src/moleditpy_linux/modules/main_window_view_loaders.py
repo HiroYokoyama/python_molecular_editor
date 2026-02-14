@@ -31,23 +31,6 @@ except Exception:
 from PyQt6.QtWidgets import (
     QFileDialog
 )
-
-
-try:
-    from . import OBABEL_AVAILABLE
-except Exception:
-    from modules import OBABEL_AVAILABLE
-# Only import pybel on demand — `moleditpy` itself doesn't expose `pybel`.
-if OBABEL_AVAILABLE:
-    try:
-        from openbabel import pybel
-    except Exception:
-        # If import fails here, disable OBABEL locally; avoid raising
-        pybel = None
-        OBABEL_AVAILABLE = False
-        print("Warning: openbabel.pybel not available. Open Babel fallback and OBabel-based options will be disabled.")
-else:
-    pybel = None
     
 try:
     import sip as _sip  # type: ignore

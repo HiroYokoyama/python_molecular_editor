@@ -316,14 +316,8 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
                     self.selection_labels.append(label_actor)
     
     def clear_atom_labels(self):
-        """原子ラベルをクリア"""
-        if hasattr(self, 'selection_labels'):
-            for label_actor in self.selection_labels:
-                try:
-                    self.main_window.plotter.remove_actor(label_actor)
-                except Exception:
-                    pass
-            self.selection_labels = []
+        """原子ラベルをクリア (render追加)"""
+        super().clear_atom_labels()
         # ラベル消去後に再描画を強制
         try:
             self.main_window.plotter.render()

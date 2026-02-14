@@ -1043,150 +1043,6 @@ class SettingsDialog(QDialog): # pragma: no cover
         """UIをデフォルト設定に戻す（後方互換性のため残存）"""
         self.reset_all_settings()
 
-    def update_ui_from_settings(self, settings_dict):
-        # 基本設定
-        self.current_bg_color = settings_dict.get('background_color', self.default_settings['background_color'])
-        self.update_color_button(self.current_bg_color)
-        self.axes_checkbox.setChecked(settings_dict.get('show_3d_axes', self.default_settings['show_3d_axes']))
-        self.light_checkbox.setChecked(settings_dict.get('lighting_enabled', self.default_settings['lighting_enabled']))
-        
-        # スライダーの値を設定
-        intensity_val = int(settings_dict.get('light_intensity', self.default_settings['light_intensity']) * 100)
-        self.intensity_slider.setValue(intensity_val)
-        self.intensity_label.setText(f"{intensity_val/100:.2f}")
-        
-        specular_val = int(settings_dict.get('specular', self.default_settings['specular']) * 100)
-        self.specular_slider.setValue(specular_val)
-        self.specular_label.setText(f"{specular_val/100:.2f}")
-        
-        self.spec_power_slider.setValue(settings_dict.get('specular_power', self.default_settings['specular_power']))
-        self.spec_power_label.setText(str(settings_dict.get('specular_power', self.default_settings['specular_power'])))
-        
-        # Ball and Stick設定
-        bs_atom_scale = int(settings_dict.get('ball_stick_atom_scale', self.default_settings['ball_stick_atom_scale']) * 100)
-        self.bs_atom_scale_slider.setValue(bs_atom_scale)
-        self.bs_atom_scale_label.setText(f"{bs_atom_scale/100:.2f}")
-        
-        bs_bond_radius = int(settings_dict.get('ball_stick_bond_radius', self.default_settings['ball_stick_bond_radius']) * 100)
-        self.bs_bond_radius_slider.setValue(bs_bond_radius)
-        self.bs_bond_radius_label.setText(f"{bs_bond_radius/100:.2f}")
-        
-        self.bs_resolution_slider.setValue(settings_dict.get('ball_stick_resolution', self.default_settings['ball_stick_resolution']))
-        self.bs_resolution_label.setText(str(settings_dict.get('ball_stick_resolution', self.default_settings['ball_stick_resolution'])))
-        # Ball & Stick bond color (uniform gray color for ball-and-stick)
-        bs_bond_color = settings_dict.get('ball_stick_bond_color', self.default_settings.get('ball_stick_bond_color', '#7F7F7F'))
-        try:
-            self.bs_bond_color = QColor(bs_bond_color).name()
-        except Exception:
-            self.bs_bond_color = self.default_settings.get('ball_stick_bond_color', '#7F7F7F')
-        # Ensure color button exists and update its appearance
-        try:
-            if hasattr(self, 'bs_bond_color_button'):
-                self.bs_bond_color_button.setStyleSheet(f"background-color: {self.bs_bond_color}; border: 1px solid #888;")
-                try:
-                    self.bs_bond_color_button.setToolTip(self.bs_bond_color)
-                except Exception:
-                    pass
-        except Exception:
-            pass
-        
-        # Ball & Stick CPK bond color option
-        self.bs_use_cpk_bond_checkbox.setChecked(settings_dict.get('ball_stick_use_cpk_bond_color', self.default_settings['ball_stick_use_cpk_bond_color']))
-        
-        # CPK設定
-        cpk_atom_scale = int(settings_dict.get('cpk_atom_scale', self.default_settings['cpk_atom_scale']) * 100)
-        self.cpk_atom_scale_slider.setValue(cpk_atom_scale)
-        self.cpk_atom_scale_label.setText(f"{cpk_atom_scale/100:.2f}")
-        
-        self.cpk_resolution_slider.setValue(settings_dict.get('cpk_resolution', self.default_settings['cpk_resolution']))
-        self.cpk_resolution_label.setText(str(settings_dict.get('cpk_resolution', self.default_settings['cpk_resolution'])))
-        
-        # Wireframe設定
-        wf_bond_radius = int(settings_dict.get('wireframe_bond_radius', self.default_settings['wireframe_bond_radius']) * 100)
-        self.wf_bond_radius_slider.setValue(wf_bond_radius)
-        self.wf_bond_radius_label.setText(f"{wf_bond_radius/100:.2f}")
-        
-        self.wf_resolution_slider.setValue(settings_dict.get('wireframe_resolution', self.default_settings['wireframe_resolution']))
-        self.wf_resolution_label.setText(str(settings_dict.get('wireframe_resolution', self.default_settings['wireframe_resolution'])))
-        
-        # Stick設定
-        stick_bond_radius = int(settings_dict.get('stick_bond_radius', self.default_settings['stick_bond_radius']) * 100)
-        self.stick_bond_radius_slider.setValue(stick_bond_radius)
-        self.stick_bond_radius_label.setText(f"{stick_bond_radius/100:.2f}")
-        
-        self.stick_resolution_slider.setValue(settings_dict.get('stick_resolution', self.default_settings['stick_resolution']))
-        self.stick_resolution_label.setText(str(settings_dict.get('stick_resolution', self.default_settings['stick_resolution'])))
-        
-        # 多重結合設定（モデル毎） — 後方互換のため既存のグローバルキーがあればフォールバック
-        # Ball & Stick
-        bs_double_offset = int(settings_dict.get('ball_stick_double_bond_offset_factor', settings_dict.get('double_bond_offset_factor', self.default_settings.get('ball_stick_double_bond_offset_factor', 2.0))) * 100)
-        self.bs_double_offset_slider.setValue(bs_double_offset)
-        self.bs_double_offset_label.setText(f"{bs_double_offset/100:.2f}")
-    
-        bs_triple_offset = int(settings_dict.get('ball_stick_triple_bond_offset_factor', settings_dict.get('triple_bond_offset_factor', self.default_settings.get('ball_stick_triple_bond_offset_factor', 2.0))) * 100)
-        self.bs_triple_offset_slider.setValue(bs_triple_offset)
-        self.bs_triple_offset_label.setText(f"{bs_triple_offset/100:.2f}")
-    
-        bs_double_radius = int(settings_dict.get('ball_stick_double_bond_radius_factor', settings_dict.get('double_bond_radius_factor', self.default_settings.get('ball_stick_double_bond_radius_factor', 1.0))) * 100)
-        self.bs_double_radius_slider.setValue(bs_double_radius)
-        self.bs_double_radius_label.setText(f"{bs_double_radius/100:.2f}")
-    
-        bs_triple_radius = int(settings_dict.get('ball_stick_triple_bond_radius_factor', settings_dict.get('triple_bond_radius_factor', self.default_settings.get('ball_stick_triple_bond_radius_factor', 0.75))) * 100)
-        self.bs_triple_radius_slider.setValue(bs_triple_radius)
-        self.bs_triple_radius_label.setText(f"{bs_triple_radius/100:.2f}")
-    
-        # Wireframe
-        wf_double_offset = int(settings_dict.get('wireframe_double_bond_offset_factor', settings_dict.get('double_bond_offset_factor', self.default_settings.get('wireframe_double_bond_offset_factor', 3.0))) * 100)
-        self.wf_double_offset_slider.setValue(wf_double_offset)
-        self.wf_double_offset_label.setText(f"{wf_double_offset/100:.2f}")
-    
-        wf_triple_offset = int(settings_dict.get('wireframe_triple_bond_offset_factor', settings_dict.get('triple_bond_offset_factor', self.default_settings.get('wireframe_triple_bond_offset_factor', 3.0))) * 100)
-        self.wf_triple_offset_slider.setValue(wf_triple_offset)
-        self.wf_triple_offset_label.setText(f"{wf_triple_offset/100:.2f}")
-    
-        wf_double_radius = int(settings_dict.get('wireframe_double_bond_radius_factor', settings_dict.get('double_bond_radius_factor', self.default_settings.get('wireframe_double_bond_radius_factor', 1.0))) * 100)
-        self.wf_double_radius_slider.setValue(wf_double_radius)
-        self.wf_double_radius_label.setText(f"{wf_double_radius/100:.2f}")
-    
-        wf_triple_radius = int(settings_dict.get('wireframe_triple_bond_radius_factor', settings_dict.get('triple_bond_radius_factor', self.default_settings.get('wireframe_triple_bond_radius_factor', 0.75))) * 100)
-        self.wf_triple_radius_slider.setValue(wf_triple_radius)
-        self.wf_triple_radius_label.setText(f"{wf_triple_radius/100:.2f}")
-    
-        # Stick
-        stick_double_offset = int(settings_dict.get('stick_double_bond_offset_factor', settings_dict.get('double_bond_offset_factor', self.default_settings.get('stick_double_bond_offset_factor', 1.5))) * 100)
-        self.stick_double_offset_slider.setValue(stick_double_offset)
-        self.stick_double_offset_label.setText(f"{stick_double_offset/100:.2f}")
-    
-        stick_triple_offset = int(settings_dict.get('stick_triple_bond_offset_factor', settings_dict.get('triple_bond_offset_factor', self.default_settings.get('stick_triple_bond_offset_factor', 1.0))) * 100)
-        self.stick_triple_offset_slider.setValue(stick_triple_offset)
-        self.stick_triple_offset_label.setText(f"{stick_triple_offset/100:.2f}")
-    
-        stick_double_radius = int(settings_dict.get('stick_double_bond_radius_factor', settings_dict.get('double_bond_radius_factor', self.default_settings.get('stick_double_bond_radius_factor', 0.60))) * 100)
-        self.stick_double_radius_slider.setValue(stick_double_radius)
-        self.stick_double_radius_label.setText(f"{stick_double_radius/100:.2f}")
-    
-        stick_triple_radius = int(settings_dict.get('stick_triple_bond_radius_factor', settings_dict.get('triple_bond_radius_factor', self.default_settings.get('stick_triple_bond_radius_factor', 0.40))) * 100)
-        self.stick_triple_radius_slider.setValue(stick_triple_radius)
-        self.stick_triple_radius_label.setText(f"{stick_triple_radius/100:.2f}")
-        
-        # Projection mode
-        proj_mode = settings_dict.get('projection_mode', self.default_settings.get('projection_mode', 'Perspective'))
-        idx = self.projection_combo.findText(proj_mode)
-        self.projection_combo.setCurrentIndex(idx if idx != -1 else 0)
-        # skip chemistry checks
-        self.skip_chem_checks_checkbox.setChecked(settings_dict.get('skip_chemistry_checks', self.default_settings.get('skip_chemistry_checks', False)))
-        # kekule setting
-        self.kekule_3d_checkbox.setChecked(settings_dict.get('display_kekule_3d', self.default_settings.get('display_kekule_3d', False)))
-        # always ask for charge on XYZ imports
-        self.always_ask_charge_checkbox.setChecked(settings_dict.get('always_ask_charge', self.default_settings.get('always_ask_charge', False)))
-        # Aromatic ring circle display and torus thickness factor
-        self.aromatic_circle_checkbox.setChecked(settings_dict.get('display_aromatic_circles_3d', self.default_settings.get('display_aromatic_circles_3d', False)))
-        thickness_factor = float(settings_dict.get('aromatic_torus_thickness_factor', self.default_settings.get('aromatic_torus_thickness_factor', 0.6)))
-        try:
-            self.aromatic_torus_thickness_slider.setValue(int(thickness_factor * 100))
-            self.aromatic_torus_thickness_label.setText(f"{thickness_factor:.1f}")
-        except Exception:
-            pass
       
     def select_color(self):
         """カラーピッカーを開き、選択された色を内部変数とUIに反映させる"""
@@ -1295,10 +1151,14 @@ class SettingsDialog(QDialog): # pragma: no cover
                 for w in QApplication.topLevelWidgets():
                     try:
                         # import locally to avoid circular import
+                        import importlib
                         try:
-                            from .color_settings_dialog import ColorSettingsDialog
-                        except Exception:
-                            from modules.color_settings_dialog import ColorSettingsDialog
+                            # Try relative import first (if running as package)
+                            mod = importlib.import_module('.color_settings_dialog', package='moleditpy.modules')
+                        except (ImportError, TypeError):
+                            # Fallback to absolute
+                            mod = importlib.import_module('modules.color_settings_dialog')
+                        ColorSettingsDialog = mod.ColorSettingsDialog
                         if isinstance(w, ColorSettingsDialog):
                             try:
                                 w.refresh_ui()

@@ -163,39 +163,12 @@ class AlignPlaneDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
     
     def show_atom_labels(self):
         """選択された原子にラベルを表示"""
-        # 既存のラベルをクリア
-        self.clear_atom_labels()
-        
-        # 新しいラベルを表示
-        if not hasattr(self, 'selection_labels'):
-            self.selection_labels = []
-            
         if self.selected_atoms:
             sorted_atoms = sorted(self.selected_atoms)
-            
-            for i, atom_idx in enumerate(sorted_atoms):
-                pos = self.main_window.atom_positions_3d[atom_idx]
-                label_text = f"#{i+1}"
-                
-                # ラベルを追加
-                label_actor = self.main_window.plotter.add_point_labels(
-                    [pos], [label_text], 
-                    point_size=20, 
-                    font_size=12,
-                    text_color='blue',
-                    always_visible=True
-                )
-                self.selection_labels.append(label_actor)
-    
-    def clear_atom_labels(self):
-        """原子ラベルをクリア"""
-        if hasattr(self, 'selection_labels'):
-            for label_actor in self.selection_labels:
-                try:
-                    self.main_window.plotter.remove_actor(label_actor)
-                except Exception:
-                    pass
-            self.selection_labels = []
+            pairs = [(idx, f"#{i+1}") for i, idx in enumerate(sorted_atoms)]
+            self.show_atom_labels_for(pairs, color='blue')
+        else:
+            self.clear_atom_labels()
     
     def apply_PlaneAlign(self):
         """alignを適用（回転ベース）"""

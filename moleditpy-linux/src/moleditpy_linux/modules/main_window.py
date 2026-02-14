@@ -27,22 +27,6 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import (
     pyqtSignal, pyqtSlot
 )
-
-try:
-    from . import OBABEL_AVAILABLE
-except Exception:
-    from modules import OBABEL_AVAILABLE
-# Only import pybel on demand — `moleditpy` itself doesn't expose `pybel`.
-if OBABEL_AVAILABLE:
-    try:
-        from openbabel import pybel
-    except Exception:
-        # If import fails here, disable OBABEL locally; avoid raising
-        pybel = None
-        OBABEL_AVAILABLE = False
-        print("Warning: openbabel.pybel not available. Open Babel fallback and OBabel-based options will be disabled.")
-else:
-    pybel = None
     
 try:
     import sip as _sip  # type: ignore
@@ -570,10 +554,6 @@ class MainWindow(QMainWindow):
     def draw_standard_3d_style(self, mol, style_override=None):
         # --- MOVED TO main_window_view_3d.py ---
         return self.main_window_view_3d.draw_standard_3d_style(mol, style_override)
-
-    def clear_measurement_selection(self):
-        # --- MOVED TO main_window_view_3d.py ---
-        return self.main_window_view_3d.clear_measurement_selection()
 
     def toggle_3d_edit_mode(self, checked):
         # --- MOVED TO main_window_ui_manager.py ---

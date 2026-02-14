@@ -16,11 +16,11 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt, QEvent
 import numpy as np
 import pyvista as pv
-from rdkit import Chem
+
 try:
-    from .constants import VDW_RADII
+    from .constants import VDW_RADII, pt
 except Exception:
-    from modules.constants import VDW_RADII
+    from modules.constants import VDW_RADII, pt
 
 try:
     from .dialog3_d_picking_mixin import Dialog3DPickingMixin
@@ -441,19 +441,18 @@ class MoveGroupDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
         self.main_window.plotter.render()
     
     def clear_atom_labels(self):
-        """原子ハイライトをクリア"""
+        """原子ハイライトをクリア (MoveGroup固有のハイライトも削除)"""
+        super().clear_atom_labels()
         try:
             self.main_window.plotter.remove_actor('move_group_highlight')
         except Exception:
             pass
-        
         if hasattr(self, 'highlight_actor'):
             try:
                 self.main_window.plotter.remove_actor(self.highlight_actor)
             except Exception:
                 pass
             self.highlight_actor = None
-        
         try:
             self.main_window.plotter.render()
         except Exception:

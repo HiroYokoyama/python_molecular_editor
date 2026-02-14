@@ -19,7 +19,8 @@ MainWindow (main_window.py) から分離されたモジュール
 
 import math
 import os
-import json 
+import json
+import subprocess
 
 
 # RDKit imports (explicit to satisfy flake8 and used features)
@@ -45,6 +46,13 @@ from PyQt6.QtGui import (
 from PyQt6.QtCore import (
     Qt, QPointF, QRectF, QLineF, QUrl, QTimer
 )
+
+try:
+    from . import OBABEL_AVAILABLE
+except Exception:
+    from modules import OBABEL_AVAILABLE
+
+
 import platform
 try: # pragma: no cover
     import winreg
@@ -133,25 +141,6 @@ def detect_system_theme(): # pragma: no cover
     except Exception:
         pass
     return None
-
-
-# Use centralized Open Babel availability from package-level __init__
-# Use per-package modules availability (local __init__).
-try:
-    from . import OBABEL_AVAILABLE
-except Exception:
-    from modules import OBABEL_AVAILABLE
-# Only import pybel on demand — `moleditpy` itself doesn't expose `pybel`.
-if OBABEL_AVAILABLE:
-    try:
-        from openbabel import pybel
-    except Exception:
-        # If import fails here, disable OBABEL locally; avoid raising
-        pybel = None
-        OBABEL_AVAILABLE = False
-        print("Warning: openbabel.pybel not available. Open Babel fallback and OBabel-based options will be disabled.")
-else:
-    pybel = None
     
 try: # pragma: no cover
     import sip as _sip  # type: ignore

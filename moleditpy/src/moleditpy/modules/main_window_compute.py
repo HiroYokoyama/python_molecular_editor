@@ -19,10 +19,6 @@ MainWindow (main_window.py) から分離されたモジュール
 # RDKit imports (explicit to satisfy flake8 and used features)
 from rdkit import Chem
 from rdkit.Chem import AllChem
-try:
-    pass
-except Exception:
-    pass
 
 # PyQt6 Modules
 from PyQt6.QtWidgets import (
@@ -41,17 +37,7 @@ try:
     from . import OBABEL_AVAILABLE
 except Exception:
     from modules import OBABEL_AVAILABLE
-# Only import pybel on demand — `moleditpy` itself doesn't expose `pybel`.
-if OBABEL_AVAILABLE:
-    try:
-        from openbabel import pybel
-    except Exception:
-        # If import fails here, disable OBABEL locally; avoid raising
-        pybel = None
-        OBABEL_AVAILABLE = False
-        print("Warning: openbabel.pybel not available. Open Babel fallback and OBabel-based options will be disabled.")
-else:
-    pybel = None
+
     
 try:
     import sip as _sip  # type: ignore
@@ -63,9 +49,11 @@ except Exception:
 try:
     # package relative imports (preferred when running as `python -m moleditpy`)
     from .calculation_worker import CalculationWorker
+    from .mol_geometry import is_problematic_valence
 except Exception:
     # Fallback to absolute imports for script-style execution
     from modules.calculation_worker import CalculationWorker
+    from modules.mol_geometry import is_problematic_valence
 
 
 # --- クラス定義 ---
@@ -142,7 +130,7 @@ class MainWindowCompute(object):
             for label, key in conv_options:
                 a = QAction(label, self)
                 # If Open Babel is not available, disable actions that depend on it
-                if key in ('obabel', 'fallback') and not globals().get('OBABEL_AVAILABLE', False):
+                if key in ('obabel', 'fallback') and not OBABEL_AVAILABLE:
                     a.setEnabled(False)
                 a.triggered.connect(lambda checked=False, k=key: self._trigger_conversion_with_temp_mode(k))
                 menu.addAction(a)
@@ -638,19 +626,7 @@ class MainWindowCompute(object):
                         bond_count += bond_data.get('order', 1)
                 
                 # 基本的な価数チェック
-                is_problematic = False
-                if symbol == 'C' and bond_count > 4:
-                    is_problematic = True
-                elif symbol == 'N' and bond_count > 3 and charge == 0:
-                    is_problematic = True
-                elif symbol == 'O' and bond_count > 2 and charge == 0:
-                    is_problematic = True
-                elif symbol == 'H' and bond_count > 1:
-                    is_problematic = True
-                elif symbol in ['F', 'Cl', 'Br', 'I'] and bond_count > 1 and charge == 0:
-                    is_problematic = True
-                
-                if is_problematic:
+                if is_problematic_valence(symbol, bond_count, charge):
                     problem_atoms.append(atom_item)
             
             if problem_atoms:
