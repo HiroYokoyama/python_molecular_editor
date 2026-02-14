@@ -16,6 +16,10 @@ src/moleditpy.egg-info/dependency_links.txt
 src/moleditpy.egg-info/entry_points.txt
 src/moleditpy.egg-info/requires.txt
 src/moleditpy.egg-info/top_level.txt
+src/moleditpy/assets/file_icon.ico
+src/moleditpy/assets/icon.icns
+src/moleditpy/assets/icon.ico
+src/moleditpy/assets/icon.png
 src/moleditpy/modules/__init__.py
 src/moleditpy/modules/about_dialog.py
 src/moleditpy/modules/align_plane_dialog.py
@@ -48,6 +52,7 @@ src/moleditpy/modules/main_window_ui_manager.py
 src/moleditpy/modules/main_window_view_3d.py
 src/moleditpy/modules/main_window_view_loaders.py
 src/moleditpy/modules/mirror_dialog.py
+src/moleditpy/modules/mol_geometry.py
 src/moleditpy/modules/molecular_data.py
 src/moleditpy/modules/molecule_scene.py
 src/moleditpy/modules/move_group_dialog.py
@@ -62,7 +67,3 @@ src/moleditpy/modules/template_preview_view.py
 src/moleditpy/modules/translation_dialog.py
 src/moleditpy/modules/user_template_dialog.py
 src/moleditpy/modules/zoomable_view.py
-src/moleditpy/modules/assets/file_icon.ico
-src/moleditpy/modules/assets/icon.icns
-src/moleditpy/modules/assets/icon.ico
-src/moleditpy/modules/assets/icon.png
