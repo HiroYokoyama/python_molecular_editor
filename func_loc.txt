@@ -1,1 +1,0 @@
-﻿Found at line 617: def check_chemistry_problems_fallback(self):
