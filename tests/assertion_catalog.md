@@ -373,6 +373,21 @@ _Verify remove_hydrogen_atoms finds and deletes H items using app logic._
 - assert h_item in deleted_set
 - assert actions.data.atoms[c_id]['item'] not in deleted_set
 
+## tests/unit/test_io.py
+
+### test_project_save_load_logic
+_No description provided._
+
+- assert os.path.exists(project_file)
+- assert len(io_handler.data.atoms) == 1
+- assert next(iter(io_handler.data.atoms.values()))['charge'] == 1
+
+### test_xyz_export_logic
+_No description provided._
+
+- assert os.path.exists(xyz_file)
+- assert xyz_mol.GetNumAtoms() == mol.GetNumAtoms()
+
 ## tests/unit/test_items_visual.py
 
 ### test_atom_item_visual_states
@@ -612,6 +627,40 @@ _Verify MOL block text contains all expected atoms._
 _Build acetic acid and compare MW against RDKit reference._
 
 - assert Descriptors.HeavyAtomMolWt(mol) == pytest.approx(Descriptors.HeavyAtomMolWt(ref), abs=0.01)
+
+## tests/unit/test_parsers.py
+
+### test_fix_mol_block
+_No description provided._
+
+- assert 'V2000' in lines[3]
+- assert len(lines[3]) >= 39
+
+### test_load_mol_file_logic
+_No description provided._
+
+- assert len(parser.data.atoms) == 2
+- assert any((a['symbol'] == 'C' for a in parser.data.atoms.values()))
+
+### test_xyz_parsing_logic
+_No description provided._
+
+- assert mol is not None
+- assert mol.GetNumAtoms() == 3
+- assert any((a.GetSymbol() == 'O' for a in mol.GetAtoms()))
+
+### test_load_xyz_file_with_estimation
+_No description provided._
+
+- assert mol is not None
+- assert mol.GetNumAtoms() == 2
+- assert mol.GetNumBonds() == 1
+
+### test_save_as_mol_logic
+_No description provided._
+
+- assert os.path.exists(save_path)
+- assert 'C  ' in content
 
 ## tests/unit/test_parsers_extended.py
 
@@ -920,6 +969,39 @@ _Verify AnalysisWindow uses manual logic for XYZ-derived structures._
 
 - assert 'C2HO' in formula_val
 - assert not smiles_present
+
+## tests/unit/test_scene_advanced.py
+
+### test_right_click_bond_deletion
+_Test standard right-click deletion on a bond._
+
+- assert len(data.bonds) == 1
+- assert len(data.bonds) == 0
+- assert a1_id in data.atoms
+- assert a2_id in data.atoms
+- assert bond_item.scene() is None
+
+### test_drag_and_drop_atom
+_Test moving an atom via drag-and-drop._
+
+- assert a1_item.pos() == new_pos
+- assert data.atoms[a1_id]['pos'] == new_pos
+- assert len(window.undo_stack) > 0
+
+### test_delete_mixed_selection
+_Test deleting a selection containing both atoms and bonds._
+
+- assert a1_id not in data.atoms
+- assert len(data.bonds) == 0
+- assert a2_id in data.atoms
+- assert a2_id in data.atoms
+
+### test_undo_redo
+_Test undo/redo integration via scene modifications._
+
+- assert len(window.undo_stack) == 0
+- assert len(window.undo_stack) >= 1
+- assert len(window.undo_stack) >= 2
 
 ## tests/unit/test_scene_extended.py
 
