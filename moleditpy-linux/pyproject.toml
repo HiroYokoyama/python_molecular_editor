@@ -48,5 +48,5 @@ Issues = "https://github.com/HiroYokoyama/python_molecular_editor/issues"
 moleditpy = "moleditpy_linux.__main__:main"
 
 [tool.setuptools.package-data]
-"moleditpy_linux" = ["modules/assets/*"]
+"moleditpy_linux" = ["assets/*"]
 

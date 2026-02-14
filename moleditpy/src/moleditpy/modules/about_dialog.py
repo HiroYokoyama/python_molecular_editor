@@ -37,7 +37,7 @@ class AboutDialog(QDialog): # pragma: no cover
         self.image_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         
         # Load the original icon image
-        icon_path = os.path.join(os.path.dirname(__file__), 'assets', 'icon.png')
+        icon_path = os.path.join(os.path.dirname(__file__), '..', 'assets', 'icon.png')
         if os.path.exists(icon_path):
             original_pixmap = QPixmap(icon_path)
             # Scale to 2x size (160x160)

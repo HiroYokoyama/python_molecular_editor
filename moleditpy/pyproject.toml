@@ -48,4 +48,4 @@ Issues = "https://github.com/HiroYokoyama/python_molecular_editor/issues"
 moleditpy = "moleditpy.__main__:main"
 
 [tool.setuptools.package-data]
-"moleditpy" = ["modules/assets/*"]
+"moleditpy" = ["assets/*"]
