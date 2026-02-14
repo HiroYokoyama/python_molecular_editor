@@ -21,6 +21,9 @@ python tests/run_all_tests.py --gui --headless
 # Pass custom arguments to pytest (e.g., run tests matching a pattern)
 python tests/run_all_tests.py --unit -- -k test_edit
 
+# Skip coverage collection (useful for CI or speed)
+python tests/run_all_tests.py --no-cov
+
 # Reporting and maintenance
 python tests/run_all_tests.py --report-only    # Regenerate all reports without running tests
 python tests/run_all_tests.py --catalog-only   # Update only the assertion catalog

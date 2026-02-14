@@ -24,9 +24,9 @@ except ImportError:
 except Exception:
     pass
 
-def run_suite(name, path, env_vars=None, extra_args=None):
+def run_suite(name, path, env_vars=None, extra_args=None, enable_cov=True):
     """Run a test suite in a separate process for isolation."""
-    print(f"\n>>> Running {name} Tests with Coverage...", flush=True)
+    print(f"\n>>> Running {name} Tests{' with Coverage' if enable_cov else ''}...", flush=True)
     
     # Use shorter timeout in headless CI mode for faster feedback
     timeout = "30" if os.environ.get("MOLEDITPY_HEADLESS") == "1" else "60"
@@ -34,9 +34,12 @@ def run_suite(name, path, env_vars=None, extra_args=None):
     # Enable coverage and append to produce a combined .coverage file
     cmd = [
         sys.executable, "-m", "pytest", "-vv", 
-        f"--timeout={timeout}", path, "--tb=short",
-        "--cov=moleditpy", "--cov-append", "--cov-report="
+        f"--timeout={timeout}", path, "--tb=short"
     ]
+    
+    if enable_cov:
+        cmd.extend(["--cov=moleditpy", "--cov-append", "--cov-report="])
+        
     if extra_args:
         cmd.extend(extra_args)
     
@@ -65,6 +68,7 @@ if __name__ == "__main__":
     parser.add_argument("--integration", action="store_true", help="Run ONLY Integration tests")
     parser.add_argument("--gui", action="store_true", help="Run ONLY GUI tests")
     parser.add_argument("--no-report", action="store_true", help="Skip reporting phase entirely")
+    parser.add_argument("--no-cov", action="store_true", help="Disable coverage collection (useful for CI without pytest-cov)")
     parser.add_argument("--report-only", action="store_true", help="Generate reports without running tests")
     parser.add_argument("--catalog-only", action="store_true", help="Update ONLY the assertion catalog")
     parser.add_argument("--skip-catalog", action="store_true", help="Skip updating catalog during reporting")
@@ -81,12 +85,13 @@ if __name__ == "__main__":
         sys.exit(0)
 
     # Clean up old coverage data to ensure a fresh combined report
-    cov_file = os.path.join(BASE_DIR, '.coverage')
-    if not args.report_only and os.path.exists(cov_file):
-        try:
-            os.remove(cov_file)
-        except Exception as e:
-            print(f"Warning: Could not remove old .coverage file: {e}")
+    if not args.no_cov:
+        cov_file = os.path.join(BASE_DIR, '.coverage')
+        if not args.report_only and os.path.exists(cov_file):
+            try:
+                os.remove(cov_file)
+            except Exception as e:
+                print(f"Warning: Could not remove old .coverage file: {e}")
 
     # Handle --report-only
     if args.report_only:
@@ -102,7 +107,8 @@ if __name__ == "__main__":
         env_vars["MOLEDITPY_HEADLESS"] = "1"
         env_vars["QT_QPA_PLATFORM"] = "offscreen"
 
-    print("Starting Unified Test Suite with Coverage (Unit + Integration + GUI)...", flush=True)
+    enable_cov = not args.no_cov
+    print(f"Starting Unified Test Suite (Coverage: {'ENABLED' if enable_cov else 'DISABLED'})...", flush=True)
     if extra_pytest_args:
         print(f"Extra pytest arguments: {extra_pytest_args}")
     
@@ -121,7 +127,7 @@ if __name__ == "__main__":
 
     for name, path in suites:
         try:
-            ret_code = run_suite(name, path, env_vars=env_vars, extra_args=extra_pytest_args)
+            ret_code = run_suite(name, path, env_vars=env_vars, extra_args=extra_pytest_args, enable_cov=enable_cov)
             results[name] = "PASSED" if ret_code == 0 else "FAILED"
         except KeyboardInterrupt:
             print(f"\nInterrupted during {name} tests.")
@@ -146,7 +152,8 @@ if __name__ == "__main__":
     if all_passed:
         print("\nALL requested tests passed successfully!")
         
-        if not args.no_report:
+        # Only report if not disabled AND coverage was enabled
+        if not args.no_report and enable_cov:
             print("\n>>> Generating Final Reports (Markdown Coverage + Assertion Catalog)...", flush=True)
             # Call print_cov.py with --skip-run because we already collected coverage!
             subprocess.run([sys.executable, os.path.join(BASE_DIR, "tests", "utils", "print_cov.py"), "--skip-run"], cwd=BASE_DIR)
