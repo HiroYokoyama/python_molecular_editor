@@ -23,19 +23,8 @@ def mock_scene():
 class TestAtomItem:
     @pytest.fixture
     def atom_item(self, mock_main_window, mock_scene):
-        # We need to mock QGraphicsItem linkage since we are headless
-        # But AtomItem inherits from QGraphicsItem. In pytest-qt env it should be fine.
-        # However, we must ensure avoiding actual Qt rendering calls if possible or allow them via qtbot
-        
-        # AtomItem(atom_id, symbol, pos, charge=0, radical=0)
-        # Note: calling setPos in init, so pos argument should be QPointF or compatible
+
         item = AtomItem(1, 'C', QPointF(0.0, 0.0))
-        # Mocking scene() return value since item is not actually added to a scene
-        # item.scene = MagicMock(return_value=mock_scene) # This is a method in QGraphicsItem
-        
-        # Patch scene() method safely?
-        # QGraphicsItem.scene() is a C++ method. We can't patch instance method easily without wrapper.
-        # But we can check if the code calls self.scene() and use mock.
         return item
 
     def test_init(self, atom_item):
@@ -82,6 +71,16 @@ class TestAtomItem:
         # Note: Qt methods might not be called if logic branches off, but 'drawText' is usually called for atom symbol
         assert mock_painter.drawText.called
 
+
+# Helper for mocking scene() on BondItem
+class TestableBondItem(BondItem):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._mock_scene = MagicMock()
+        
+    def scene(self):
+        return self._mock_scene
+
 class TestBondItem:
     @pytest.fixture
     def bond_item(self, mock_main_window):
@@ -93,8 +92,8 @@ class TestBondItem:
         atom1 = AtomItem(1, 'C', QPointF(0.0, 0.0))
         atom2 = AtomItem(2, 'C', QPointF(10.0, 10.0))
         
-        # BondItem(atom1, atom2, order=1, stereo=0)
-        bond = BondItem(atom1, atom2)
+        # Use TestableBondItem to allow scene() mocking
+        bond = TestableBondItem(atom1, atom2)
         return bond
 
     def test_init(self, bond_item):
@@ -127,27 +126,16 @@ class TestBondItem:
         widget = MagicMock()
         
         # Setup mocking for scene/window settings accessed in paint
-        # BondItem.paint accesses self.scene().window.settings...
-        # We need to mock this chain
-        mock_scene = MagicMock()
+        mock_scene = bond_item.scene() # This is now our MagicMock from TestableBondItem
         mock_window = MagicMock()
         mock_window.settings = {} # Empty dict for defaults
         mock_scene.window = mock_window
         mock_scene.views.return_value = [MagicMock()]
         mock_scene.views.return_value[0].window.return_value = mock_window
         
-        # Mock bond_item.scene()
-        # QGraphicsItem.scene() is C++, can't patch easily on instance. 
-        # But we can patch BondItem.scene in the class for this test context? No, dangerous.
-        # However, the code does: `sc = self.scene()`
-        # If scene() returns None (default), it enters the `except` block and uses fallback.
-        # The fallback uses simple drawing.
-        
         bond_item.paint(mock_painter, option, widget)
         
         # Should draw line (single bond)
-        # fallback path: painter.setPen(self.pen); painter.drawLine(line)
-        # Need to ensure line has length
         assert mock_painter.drawLine.called
         
         # Test double bond
@@ -157,4 +145,104 @@ class TestBondItem:
         # Double bond often draws lines
         assert mock_painter.drawLine.call_count >= 1
 
+    def test_paint_ring_double_bond(self, bond_item):
+        """Test painting logic for double bond in a ring"""
+        bond_item.set_order(2)
+        
+        mock_painter = MagicMock()
+        option = MagicMock()
+        widget = MagicMock()
+        
+        # Mock scene and RDKit interaction (via TestableBondItem's mock_scene)
+        mock_scene = bond_item.scene()
+        
+        # Setup window and data
+        mock_window = MagicMock()
+        mock_window.settings = {} 
+        mock_scene.window = mock_window
+        
+        # Setup RDKit mol mock
+        mock_mol = MagicMock()
+        mock_window.data.to_rdkit_mol.return_value = mock_mol
+        
+        # Setup atoms in mol
+        atom1_mock = MagicMock()
+        atom1_mock.HasProp.return_value = True
+        atom1_mock.GetIntProp.return_value = 1
+        atom1_mock.GetIdx.return_value = 0
+        
+        atom2_mock = MagicMock()
+        atom2_mock.HasProp.return_value = True
+        atom2_mock.GetIntProp.return_value = 2
+        atom2_mock.GetIdx.return_value = 1
+        
+        mock_mol.GetAtoms.return_value = [atom1_mock, atom2_mock]
+        
+        # Setup Bond
+        mock_rdkit_bond = MagicMock()
+        mock_mol.GetBondBetweenAtoms.return_value = mock_rdkit_bond
+        mock_rdkit_bond.IsInRing.return_value = True
+        
+        # Setup Ring Info
+        mock_ring_info = MagicMock()
+        mock_mol.GetRingInfo.return_value = mock_ring_info
+        mock_ring_info.AtomRings.return_value = [[0, 1, 2]]
+        
+        # Setup GetAtomWithIdx for ring calculation failure safety or success
+        # We need a 3rd atom to define a ring center
+        atom3_mock = MagicMock()
+        atom3_mock.HasProp.return_value = True
+        atom3_mock.GetIntProp.return_value = 3
+        
+        def get_atom_with_idx(idx):
+            if idx == 0: return atom1_mock
+            if idx == 1: return atom2_mock
+            return atom3_mock
+        mock_mol.GetAtomWithIdx.side_effect = get_atom_with_idx
+        
+        # Setup scene.window.data.atoms dictionary
+        atom3_item = MagicMock()
+        atom3_item.pos.return_value = QPointF(5.0, 5.0)
+        
+        mock_window.data.atoms = {
+            1: {'item': bond_item.atom1},
+            2: {'item': bond_item.atom2},
+            3: {'item': atom3_item}
+        }
+        
+        # mapFromScene mock
+        bond_item.mapFromScene = MagicMock(side_effect=lambda p: p) # Identity map
+        
+        # Act
+        bond_item.paint(mock_painter, option, widget)
+        
+        # Verify
+        # If ring logic worked, it draws center line + inner line
+        # If it failed, it draws 2 parallel lines
+        # We just want to ensure it runs without crashing and calls drawLine
+        assert mock_painter.drawLine.call_count >= 2
 
+    def test_bounding_rect_ez_label(self, bond_item, qapp):
+        """Test boundingRect expansion for E/Z labels"""
+        bond_item.set_order(2)
+        bond_item.stereo = 3 # Z-isomer
+        
+        # Mock scene settings for font size
+        mock_scene = bond_item.scene()
+        mock_window = MagicMock()
+        mock_window.settings = {'atom_font_size_2d': 20}
+        mock_scene.views.return_value = [MagicMock()]
+        mock_scene.views.return_value[0].window.return_value = mock_window
+        mock_scene.window = mock_window
+
+        rect = bond_item.boundingRect()
+        
+        bond_item.stereo = 0
+        rect_no_stereo = bond_item.boundingRect()
+        
+        bond_item.stereo = 3
+        rect_stereo = bond_item.boundingRect()
+        
+        # Ensure rect_stereo is not smaller, and hopefully different or contains the other
+        assert rect_stereo.width() >= rect_no_stereo.width()
+        assert rect_stereo.height() >= rect_no_stereo.height()

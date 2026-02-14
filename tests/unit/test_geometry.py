@@ -110,10 +110,6 @@ def test_planarize_logic(qtbot):
     main_window.update_chiral_labels = MagicMock()
     main_window.push_undo_state = MagicMock()
     
-    # Check that it's NOT planar initially (sum of absolute Z should be > 0 in some frame)
-    # But more simply, we check that it's not all zeros in any arbitrary frame? 
-    # Actually, we just want to see it TRANSFORMS.
-    
     # Instantiate dialog with all atoms selected
     dialog = PlanarizeDialog(mol, main_window, preselected_atoms=range(mol.GetNumAtoms()))
     qtbot.addWidget(dialog)
@@ -123,9 +119,6 @@ def test_planarize_logic(qtbot):
     with _mock.patch('PyQt6.QtWidgets.QMessageBox.information'):
         dialog.apply_planarize()
     
-    # Verify: All atoms should now be coplanar.
-    # In SVD-based planarization, we subtract the centroid and project onto the first two principal components.
-    # The third principal component's variance should be zero (or very close to it).
     new_positions = conf.GetPositions()
     centroid = np.mean(new_positions, axis=0)
     centered = new_positions - centroid

@@ -175,22 +175,9 @@ def test_export_from_3d_view_with_colors_complex_splitting(mock_parser_host):
     
     # Setup mapper to return our mesh
     actor.mapper.input = mesh
-    
-    # Explicitly mock isinstance(mesh, pv.PolyData) to True if needed, 
-    # but the code checks attributes mostly. 
-    # The code calls: if not isinstance(mesh, pv.PolyData): wrap...
-    # Let's mock pv.PolyData in the module if possible, or just ensure our mock passes checks.
-    # The code imports pyvista as pv. We can patch pv.PolyData.
+
     
     with patch('moleditpy.modules.main_window_export.pv.PolyData', MagicMock): # used for type check
-        # We need `isinstance(mesh, pv.PolyData)` to be False so it wraps/extracts,
-        # OR True so it uses it directly.
-        # Simplest: make it behave like it's valid.
-        
-        # Actually, simpler to patch the whole logic flow or just the parts we need.
-        # But we want to test the Splitting Logic.
-        
-        # The code uses numpy heavily.
         
         res = exporter.export_from_3d_view_with_colors()
         

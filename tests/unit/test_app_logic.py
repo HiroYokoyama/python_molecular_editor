@@ -88,9 +88,6 @@ def test_coordinate_mapping_fallback():
     from unittest.mock import MagicMock
     
     data = MolecularData()
-    # Use invalid atom symbol to force RDKit serialization to fail/return None
-    # to_rdkit_mol sanitization will likely fail or return None for "X" depending on config
-    # We'll use "X" and ensure to_rdkit_mol returns None or raises to trigger fallback
     data.add_atom("X", QPointF(0, 0))
     data.add_atom("X", QPointF(0, 0)) 
     data.add_bond(0, 1, order=1)
