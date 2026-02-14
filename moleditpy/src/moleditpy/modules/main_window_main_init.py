@@ -19,6 +19,7 @@ MainWindow (main_window.py) から分離されたモジュール
 
 import math
 import os
+import sys
 import json
 import subprocess
 
@@ -304,14 +305,19 @@ class MainWindowMainInit(object):
         script_dir = os.path.dirname(os.path.abspath(__file__))
         
         # 2. 'assets'フォルダ内のアイコンファイルへのフルパスを構築
-        icon_path = os.path.join(script_dir, '..', 'assets', 'icon.png')
+        # Windows taskbar prefers .ico; fall back to .png on other platforms
+        if sys.platform == 'win32':
+            icon_path = os.path.join(script_dir, '..', 'assets', 'icon.ico')
+        else:
+            icon_path = os.path.join(script_dir, '..', 'assets', 'icon.png')
         
         # 3. ファイルパスから直接QIconオブジェクトを作成
         if os.path.exists(icon_path): # ファイルが存在するか確認
             app_icon = QIcon(icon_path)
             
-            # 4. ウィンドウにアイコンを設定
+            # 4. ウィンドウとアプリケーション両方にアイコンを設定
             self.setWindowIcon(app_icon)
+            QApplication.instance().setWindowIcon(app_icon)
         else:
             print(f"警告: アイコンファイルが見つかりません: {icon_path}")
 
