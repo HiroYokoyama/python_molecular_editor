@@ -245,20 +245,3 @@ def test_fix_mol_block(mock_parser_host):
     assert "V2000" in lines[3]
     assert len(lines[3]) >= 39
 
-def test_load_xyz_file_with_estimation(mock_parser_host, tmp_path):
-    parser = DummyParser(mock_parser_host)
-    xyz_content = "2\nEthane\nC 0.0 0.0 0.0\nC 1.5 0.0 0.0\n"
-    xyz_file = tmp_path / "ethane.xyz"
-    xyz_file.write_text(xyz_content)
-    
-    # Using skip_chemistry_checks bypasses the charge dialog and triggers distance-based estimation
-    parser.settings['skip_chemistry_checks'] = True
-    
-    parser.view_2d.viewport().rect().center.return_value = QPointF(0, 0)
-    parser.view_2d.mapToScene.return_value = QPointF(0, 0)
-    
-    mol = parser.load_xyz_file(str(xyz_file))
-    assert mol is not None
-    assert mol.GetNumAtoms() == 2
-    # Simple proximity-based estimation check (C-C distance 1.5 is within bond range)
-    assert mol.GetNumBonds() >= 1

@@ -1,7 +1,7 @@
 # MoleditPy Coverage Report
 
-- **Overall Project Coverage (Full)**: **48.29%**
-- **Core Molecular Logic Coverage**: **67.65%**
+- **Overall Project Coverage (Full)**: **48.91%**
+- **Core Molecular Logic Coverage**: **69.65%**
 
 > [!NOTE]
 > **Core Molecular Logic Coverage** excludes UI boilerplate (dialogs, view managers, and interactor styles) to focus on scientific algorithm reliability.
@@ -13,8 +13,8 @@
 | moleditpy\src\moleditpy\__init__.py                     |      1 |      0 |  100.0% |
 | moleditpy\src\moleditpy\modules\__init__.py             |      8 |      4 |   50.0% |
 | moleditpy\src\moleditpy\modules\analysis_window.py      |    114 |     25 |   78.1% |
-| moleditpy\src\moleditpy\modules\atom_item.py            |    259 |     73 |   71.8% |
-| moleditpy\src\moleditpy\modules\bond_item.py            |    341 |    153 |   55.1% |
+| moleditpy\src\moleditpy\modules\atom_item.py            |    259 |     59 |   77.2% |
+| moleditpy\src\moleditpy\modules\bond_item.py            |    341 |     71 |   79.2% |
 | moleditpy\src\moleditpy\modules\calculation_worker.py   |    491 |    176 |   64.2% |
 | moleditpy\src\moleditpy\modules\constants.py            |     27 |      0 |  100.0% |
 | moleditpy\src\moleditpy\modules\main_window.py          |    380 |     98 |   74.2% |
@@ -29,7 +29,7 @@
 | moleditpy\src\moleditpy\modules\molecule_scene.py       |    443 |    173 |   60.9% |
 | moleditpy\src\moleditpy\modules\plugin_interface.py     |     58 |      0 |  100.0% |
 | moleditpy\src\moleditpy\modules\plugin_manager.py       |    276 |     69 |   75.0% |
-| **TOTAL** | **4794** | **1551** | **67.65%** |
+| **TOTAL** | **4794** | **1455** | **69.65%** |
 
 ### Full Application Breakdown
 
@@ -42,8 +42,8 @@
 | moleditpy\src\moleditpy\modules\alignment_dialog.py     |    157 |    136 |   13.4% |
 | moleditpy\src\moleditpy\modules\analysis_window.py      |    114 |     25 |   78.1% |
 | moleditpy\src\moleditpy\modules\angle_dialog.py         |    275 |    251 |    8.7% |
-| moleditpy\src\moleditpy\modules\atom_item.py            |    259 |     73 |   71.8% |
-| moleditpy\src\moleditpy\modules\bond_item.py            |    341 |    153 |   55.1% |
+| moleditpy\src\moleditpy\modules\atom_item.py            |    259 |     59 |   77.2% |
+| moleditpy\src\moleditpy\modules\bond_item.py            |    341 |     71 |   79.2% |
 | moleditpy\src\moleditpy\modules\bond_length_dialog.py   |    233 |    212 |    9.0% |
 | moleditpy\src\moleditpy\modules\calculation_worker.py   |    517 |    194 |   62.5% |
 | moleditpy\src\moleditpy\modules\color_settings_dialog.py |    223 |    212 |    4.9% |
@@ -81,7 +81,7 @@
 | moleditpy\src\moleditpy\modules\translation_dialog.py   |    225 |    149 |   33.8% |
 | moleditpy\src\moleditpy\modules\user_template_dialog.py |    400 |    162 |   59.5% |
 | moleditpy\src\moleditpy\modules\zoomable_view.py        |     72 |     39 |   45.8% |
-| **TOTAL** | **15496** | **8013** | **48.29%** |
+| **TOTAL** | **15496** | **7917** | **48.91%** |
 
 ## Test Suite Status
 - **Unit tests**: PASSED

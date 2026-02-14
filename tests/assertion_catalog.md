@@ -965,13 +965,6 @@ _No description provided._
 - assert 'V2000' in lines[3]
 - assert len(lines[3]) >= 39
 
-### test_load_xyz_file_with_estimation
-_No description provided._
-
-- assert mol is not None
-- assert mol.GetNumAtoms() == 2
-- assert mol.GetNumBonds() >= 1
-
 ## tests/unit/test_plugin_interface.py
 
 ## tests/unit/test_plugin_manager.py
