@@ -20,7 +20,7 @@ from PyQt6.QtCore import Qt, QMimeData, QUrl
 from PyQt6.QtGui import QDragEnterEvent, QDropEvent, QDesktopServices
 import shutil
 
-class PluginManagerWindow(QDialog):
+class PluginManagerWindow(QDialog): # pragma: no cover
     def __init__(self, plugin_manager, parent=None):
         super().__init__(parent)
         self.plugin_manager = plugin_manager

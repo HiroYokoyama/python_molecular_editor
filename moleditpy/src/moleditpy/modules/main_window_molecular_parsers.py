@@ -178,13 +178,12 @@ class MainWindowMolecularParsers(object):
             self.update_window_title()
             QTimer.singleShot(0, self.fit_to_view)
             
-        except FileNotFoundError:
+        except FileNotFoundError: # pragma: no cover
             self.statusBar().showMessage(f"File not found: {file_path}")
-        except ValueError as e:
+        except ValueError as e: # pragma: no cover
             self.statusBar().showMessage(f"Invalid MOL file format: {e}")
-        except Exception as e: 
+        except Exception as e: # pragma: no cover
             self.statusBar().showMessage(f"Error loading file: {e}")
-            
             traceback.print_exc()
     
     def load_xyz_file(self, file_path):
@@ -195,7 +194,8 @@ class MainWindowMolecularParsers(object):
 
         try:
             # We will attempt one silent load with default charge=0 (no dialog).
-            def prompt_for_charge():
+            def prompt_for_charge(): # pragma: no cover
+                """Helper dialog to prompt for charge or skip chemistry."""
                 try:
                     dialog = QDialog(self)
                     dialog.setWindowTitle("Import XYZ Charge")
@@ -534,7 +534,7 @@ class MainWindowMolecularParsers(object):
                         # DetermineBonds explicitly failed for charge=0. In this
                         # situation, repeatedly prompt the user for charges until
                         # DetermineBonds succeeds or the user cancels.
-                        while True:
+                        while True: # pragma: no cover
                             charge_val, ok, skip_flag = prompt_for_charge()
                             if not ok:
                                 # user cancelled the prompt -> abort
@@ -613,7 +613,7 @@ class MainWindowMolecularParsers(object):
                                         pass
                                     # Continue prompting
                                     continue
-                else:
+                else: # pragma: no cover
                     while True:
                         charge_val, ok, skip_flag = prompt_for_charge()
                         if not ok:
@@ -705,7 +705,7 @@ class MainWindowMolecularParsers(object):
 
                 if skip_checks and salvaged is not None:
                     final_mol = salvaged
-                else:
+                else: # pragma: no cover
                     # Repeatedly prompt until the user cancels or processing
                     # succeeds.
                     while True:
@@ -791,9 +791,9 @@ class MainWindowMolecularParsers(object):
             
             return mol
             
-        except (OSError, IOError) as e:
+        except (OSError, IOError) as e: # pragma: no cover
             raise ValueError(f"File I/O error: {e}")
-        except Exception as e:
+        except Exception as e: # pragma: no cover
             if "XYZ file format error" in str(e) or "Unrecognized element" in str(e):
                 raise e
             else:

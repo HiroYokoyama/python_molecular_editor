@@ -57,7 +57,7 @@ subprocess.run(
 
 # 4b: Full Application Report
 with tempfile.NamedTemporaryFile(mode='w', suffix='.rc', delete=False) as tf:
-    tf.write("[run]\nsource = moleditpy\n\n[report]\nomit =\n")
+    tf.write("[run]\nsource = moleditpy\n\n[report]\nomit =\nexclude_lines =\n")
     tmp_rc = tf.name
 
 try:

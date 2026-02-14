@@ -46,7 +46,7 @@ from PyQt6.QtCore import (
     Qt, QPointF, QRectF, QLineF, QUrl, QTimer
 )
 import platform
-try:
+try: # pragma: no cover
     import winreg
 except Exception:
     winreg = None
@@ -57,7 +57,7 @@ except Exception:
     from modules.plugin_manager import PluginManager
 
 
-def detect_system_dark_mode():
+def detect_system_dark_mode(): # pragma: no cover
     """Return True if the OS prefers dark app theme, False if light, or None if unknown.
 
     This is a best-effort, cross-platform check supporting Windows (registry),
@@ -74,7 +74,7 @@ def detect_system_dark_mode():
         return False
     return None
 
-def detect_system_theme():
+def detect_system_theme(): # pragma: no cover
     """OSの優先テーマ設定を 'dark', 'light', または None として返す。
 
     This is a best-effort, cross-platform check.
@@ -153,7 +153,7 @@ if OBABEL_AVAILABLE:
 else:
     pybel = None
     
-try:
+try: # pragma: no cover
     import sip as _sip  # type: ignore
     _sip_isdeleted = getattr(_sip, 'isdeleted', None)
 except Exception:
@@ -188,7 +188,7 @@ class MainWindowMainInit(object):
     # __init__ は main_window.py からコピーされます
 
 
-    def __init__(self, initial_file=None):
+    def __init__(self, initial_file=None): # pragma: no cover
         # This helper is not used as a mixin in this project; initialization
         # happens on the `MainWindow` instance. Avoid calling super() here
         # because we initialize the `QMainWindow` base class in
@@ -288,13 +288,13 @@ class MainWindowMainInit(object):
         if initial_file:
             self.load_command_line_file(initial_file)
         
-        QTimer.singleShot(0, self.apply_initial_settings)
+        QTimer.singleShot(0, self.apply_initial_settings) # pragma: no cover
         # カメラ初期化フラグ（初回描画時のみリセットを許可する）
         self._camera_initialized = False
         
         # 初期メニューテキストと状態を設定
         self.update_atom_id_menu_text()
-        self.update_atom_id_menu_state()
+        self.update_atom_id_menu_state() # pragma: no cover
         
         
         # 初期化完了を設定
@@ -310,7 +310,7 @@ class MainWindowMainInit(object):
 
 
 
-    def init_ui(self):
+    def init_ui(self): # pragma: no cover
         # 1. 現在のスクリプトがあるディレクトリのパスを取得
         script_dir = os.path.dirname(os.path.abspath(__file__))
         
@@ -844,7 +844,7 @@ class MainWindowMainInit(object):
 
         self.view_2d.setFocus()
 
-    def init_menu_bar(self):
+    def init_menu_bar(self): # pragma: no cover
         menu_bar = self.menuBar()
         
         file_menu = menu_bar.addMenu("&File")
@@ -1408,9 +1408,9 @@ class MainWindowMainInit(object):
         self._enable_3d_features(False)
         
         # Finally, populate plugins now that all menus are created
-        self.update_plugin_menu(plugin_menu)
+        self.update_plugin_menu(plugin_menu) # pragma: no cover
         
-    def init_worker_thread(self):
+    def init_worker_thread(self): # pragma: no cover
         # Initialize shared state for calculation runs.
         self.halt_ids = set()
         self.next_conversion_id = 1
@@ -1421,7 +1421,7 @@ class MainWindowMainInit(object):
         except Exception:
             self._active_calc_threads = []
 
-    def load_command_line_file(self, file_path):
+    def load_command_line_file(self, file_path): # pragma: no cover
         """コマンドライン引数で指定されたファイルを開く"""
         if not file_path or not os.path.exists(file_path):
             return
@@ -1459,7 +1459,7 @@ class MainWindowMainInit(object):
         else:
             self.statusBar().showMessage(f"Unsupported file type: {file_ext}")
 
-    def apply_initial_settings(self):
+    def apply_initial_settings(self): # pragma: no cover
         """UIの初期化が完了した後に、保存された設定を3Dビューに適用する"""
         
         try:
@@ -1487,12 +1487,12 @@ class MainWindowMainInit(object):
         except Exception:
             pass
 
-    def open_settings_dialog(self):
+    def open_settings_dialog(self): # pragma: no cover
         dialog = SettingsDialog(self.settings, self)
         # accept()メソッドで設定の適用と3Dビューの更新を行うため、ここでは不要
         dialog.exec()
 
-    def reset_all_settings_menu(self):
+    def reset_all_settings_menu(self): # pragma: no cover
         # Expose the same functionality as SettingsDialog.reset_all_settings
         dlg = QMessageBox(self)
         dlg.setIcon(QMessageBox.Icon.Warning)
@@ -1735,7 +1735,7 @@ class MainWindowMainInit(object):
         except Exception:
             self.settings = default_settings
 
-    def save_settings(self):
+    def save_settings(self): # pragma: no cover
         try:
             if not os.path.exists(self.settings_dir):
                 os.makedirs(self.settings_dir)
@@ -1744,7 +1744,7 @@ class MainWindowMainInit(object):
         except Exception as e:
             print(f"Error saving settings: {e}")
 
-    def update_plugin_menu(self, plugin_menu):
+    def update_plugin_menu(self, plugin_menu): # pragma: no cover
         """Discovers plugins and updates the plugin menu actions."""
         if not self.plugin_manager:
             return

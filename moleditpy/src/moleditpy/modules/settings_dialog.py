@@ -23,7 +23,7 @@ except Exception:
     from modules.constants import CPK_COLORS
 
 
-class SettingsDialog(QDialog):
+class SettingsDialog(QDialog): # pragma: no cover
     def __init__(self, current_settings, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Settings")

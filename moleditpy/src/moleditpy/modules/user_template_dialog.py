@@ -25,7 +25,7 @@ import os
 import json
 import logging
 
-class UserTemplateDialog(QDialog):
+class UserTemplateDialog(QDialog): # pragma: no cover
     """ユーザーテンプレート管理ダイアログ"""
     
     def __init__(self, main_window, parent=None):

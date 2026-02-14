@@ -21,7 +21,7 @@ try:
 except Exception:
     from modules.constants import VERSION
 
-class AboutDialog(QDialog):
+class AboutDialog(QDialog): # pragma: no cover
     def __init__(self, main_window, parent=None):
         super().__init__(parent)
         self.main_window = main_window

@@ -497,6 +497,18 @@ _Test BondItem.update_position resilience when atoms exist._
 
 - assert True
 
+## tests/unit/test_main_window_init_coverage.py
+
+### test_imports_mainwindow
+_Ensure MainWindow and its init submodule can be imported._
+
+- assert MainWindow is not None
+- assert MainWindowMainInit is not None
+
+### test_mainwindow_init_with_mocks
+_Minimal test of MainWindow instantiation with heavy mocking._
+
+
 ## tests/unit/test_molecular_data.py
 
 ### test_add_atom_returns_incrementing_ids

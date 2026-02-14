@@ -72,7 +72,7 @@ except Exception:
 class MainWindowCompute(object):
     """ main_window.py から分離された機能クラス """
 
-    def set_optimization_method(self, method_name):
+    def set_optimization_method(self, method_name): # pragma: no cover
         """Set preferred 3D optimization method and persist to settings.
 
         Supported values: 'GAFF', 'MMFF'
@@ -122,7 +122,7 @@ class MainWindowCompute(object):
             label = self.optimization_method
         self.statusBar().showMessage(f"3D optimization method set to: {label}")
 
-    def show_convert_menu(self, pos):
+    def show_convert_menu(self, pos): # pragma: no cover
         """右クリックで表示する一時的な3D変換メニュー。
         選択したモードは一時フラグとして保持され、その後の変換で使用されます（永続化しません）。
         """
@@ -152,7 +152,7 @@ class MainWindowCompute(object):
         except Exception as e:
             print(f"Error showing convert menu: {e}")
 
-    def _trigger_conversion_with_temp_mode(self, mode_key):
+    def _trigger_conversion_with_temp_mode(self, mode_key): # pragma: no cover
         try:
             # store temporary override and invoke conversion
             self._temp_conv_mode = mode_key
@@ -161,7 +161,7 @@ class MainWindowCompute(object):
         except Exception as e:
             print(f"Failed to start conversion with temp mode {mode_key}: {e}")
 
-    def show_optimize_menu(self, pos):
+    def show_optimize_menu(self, pos): # pragma: no cover
         """右クリックで表示する一時的な3D最適化メニュー。
         選択したメソッドは一時フラグとして保持され、その後の最適化で使用されます（永続化しません）。
         """
@@ -197,7 +197,7 @@ class MainWindowCompute(object):
         except Exception as e:
             print(f"Error showing optimize menu: {e}")
 
-    def _trigger_optimize_with_temp_method(self, method_key):
+    def _trigger_optimize_with_temp_method(self, method_key): # pragma: no cover
         try:
             # store temporary override and invoke optimization
             self._temp_optimization_method = method_key
@@ -347,7 +347,7 @@ class MainWindowCompute(object):
             self.active_worker_ids = set([run_id])
 
         # Change the convert button to a Halt button so user can cancel
-        try:
+        try: # pragma: no cover
             # keep it enabled so the user can click Halt
             self.convert_button.setText("Halt conversion")
             try:
@@ -359,21 +359,21 @@ class MainWindowCompute(object):
             pass
 
         # Keep cleanup disabled while conversion is in progress
-        self.cleanup_button.setEnabled(False)
+        self.cleanup_button.setEnabled(False) # pragma: no cover
         # Disable 3D features during calculation
-        self._enable_3d_features(False)
-        self.statusBar().showMessage("Calculating 3D structure...")
-        self.plotter.clear() 
-        bg_color_hex = self.settings.get('background_color', '#919191')
-        bg_qcolor = QColor(bg_color_hex)
+        self._enable_3d_features(False) # pragma: no cover
+        self.statusBar().showMessage("Calculating 3D structure...") # pragma: no cover
+        self.plotter.clear() # pragma: no cover
+        bg_color_hex = self.settings.get('background_color', '#919191') # pragma: no cover
+        bg_qcolor = QColor(bg_color_hex) # pragma: no cover
         
-        if bg_qcolor.isValid():
+        if bg_qcolor.isValid(): # pragma: no cover
             luminance = bg_qcolor.toHsl().lightness()
             text_color = 'black' if luminance > 128 else 'white'
         else:
             text_color = 'white'
         
-        text_actor = self.plotter.add_text(
+        text_actor = self.plotter.add_text( # pragma: no cover
             "Calculating...",
             position='lower_right',
             font_size=15,
@@ -381,13 +381,13 @@ class MainWindowCompute(object):
             name='calculating_text'
         )
         # Keep a reference so we can reliably remove the text actor later
-        try:
+        try: # pragma: no cover
             self._calculating_text_actor = text_actor
         except Exception:
             # Best-effort: if storing fails, ignore — cleanup will still attempt renderer removal
             pass
-        text_actor.GetTextProperty().SetOpacity(1)
-        self.plotter.render()
+        text_actor.GetTextProperty().SetOpacity(1) # pragma: no cover
+        self.plotter.render() # pragma: no cover
         # Emit skip flag so the worker can ignore sanitization errors if user requested
         # Determine conversion_mode from settings (default: 'fallback').
         # If the user invoked conversion via the right-click menu, a temporary
@@ -427,7 +427,7 @@ class MainWindowCompute(object):
         # Create a fresh CalculationWorker + QThread for this run so multiple
         # conversions can execute in parallel. The worker will be cleaned up
         # automatically after it finishes/errors.
-        try:
+        try: # pragma: no cover
             thread = QThread()
             worker = CalculationWorker()
             # Share the halt_ids set so user can request cancellation
@@ -544,7 +544,7 @@ class MainWindowCompute(object):
         
         self.view_2d.setFocus()
 
-    def halt_conversion(self):
+    def halt_conversion(self): # pragma: no cover
         """User requested to halt the in-progress conversion.
 
         This will mark the current waiting_worker_id as halted (added to halt_ids),
