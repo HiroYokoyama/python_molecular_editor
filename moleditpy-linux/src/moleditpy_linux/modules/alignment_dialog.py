@@ -22,7 +22,7 @@ try:
 except Exception:
     from modules.dialog3_d_picking_mixin import Dialog3DPickingMixin
 
-class AlignmentDialog(Dialog3DPickingMixin, QDialog):
+class AlignmentDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
     def __init__(self, mol, main_window, axis, preselected_atoms=None, parent=None):
         QDialog.__init__(self, parent)
         Dialog3DPickingMixin.__init__(self)

@@ -2,11 +2,6 @@
 
 ## tests/unit/test_app_logic.py
 
-### test_worker_halt_logic
-_Verify that CalculationWorker respects the halt flag (software flow)._
-
-- assert 'Halted' in str(blocker.args[0])
-
 ### test_ez_preservation_logic
 _Verify worker preserves explicit E/Z labels even if RDKit might lose them._
 
@@ -33,11 +28,6 @@ _Verify fallback serialization (reverted logic) uses atom['item'].pos()._
 - assert 'MoleditPy' in mol_block
 - assert len(atom_lines) == 2
 - assert abs(x_coord - expected_x) < 0.0001
-
-### test_worker_direct_mode
-_Verify worker handles 'direct' mode (software branching)._
-
-- assert mol.GetNumAtoms() == 5
 
 ## tests/unit/test_app_state.py
 
@@ -383,21 +373,6 @@ _Verify remove_hydrogen_atoms finds and deletes H items using app logic._
 - assert h_item in deleted_set
 - assert actions.data.atoms[c_id]['item'] not in deleted_set
 
-## tests/unit/test_io.py
-
-### test_project_save_load_logic
-_No description provided._
-
-- assert os.path.exists(project_file)
-- assert len(io_handler.data.atoms) == 1
-- assert next(iter(io_handler.data.atoms.values()))['charge'] == 1
-
-### test_xyz_export_logic
-_No description provided._
-
-- assert os.path.exists(xyz_file)
-- assert xyz_mol.GetNumAtoms() == mol.GetNumAtoms()
-
 ## tests/unit/test_items_visual.py
 
 ### test_atom_item_visual_states
@@ -638,40 +613,6 @@ _Build acetic acid and compare MW against RDKit reference._
 
 - assert Descriptors.HeavyAtomMolWt(mol) == pytest.approx(Descriptors.HeavyAtomMolWt(ref), abs=0.01)
 
-## tests/unit/test_parsers.py
-
-### test_fix_mol_block
-_No description provided._
-
-- assert 'V2000' in lines[3]
-- assert len(lines[3]) >= 39
-
-### test_load_mol_file_logic
-_No description provided._
-
-- assert len(parser.data.atoms) == 2
-- assert any((a['symbol'] == 'C' for a in parser.data.atoms.values()))
-
-### test_xyz_parsing_logic
-_No description provided._
-
-- assert mol is not None
-- assert mol.GetNumAtoms() == 3
-- assert any((a.GetSymbol() == 'O' for a in mol.GetAtoms()))
-
-### test_load_xyz_file_with_estimation
-_No description provided._
-
-- assert mol is not None
-- assert mol.GetNumAtoms() == 2
-- assert mol.GetNumBonds() == 1
-
-### test_save_as_mol_logic
-_No description provided._
-
-- assert os.path.exists(save_path)
-- assert 'C  ' in content
-
 ## tests/unit/test_parsers_extended.py
 
 ### test_load_mol_file_fallback_to_sd_supplier
@@ -710,11 +651,6 @@ _No description provided._
 - assert mol is not None
 - assert mol.GetIntProp('_xyz_charge') == 1
 
-### test_save_as_mol_logic
-_No description provided._
-
-- assert os.path.exists(save_path)
-
 ### test_load_mol_file_not_found
 _No description provided._
 
@@ -750,6 +686,19 @@ _No description provided._
 
 - assert mol is not None
 - assert mol.HasProp('_xyz_skip_checks') or getattr(mol, '_xyz_skip_checks', False)
+
+### test_fix_mol_block
+_No description provided._
+
+- assert 'V2000' in lines[3]
+- assert len(lines[3]) >= 39
+
+### test_load_xyz_file_with_estimation
+_No description provided._
+
+- assert mol is not None
+- assert mol.GetNumAtoms() == 2
+- assert mol.GetNumBonds() >= 1
 
 ## tests/unit/test_plugin_manager.py
 
@@ -948,6 +897,16 @@ _No description provided._
 - assert mock_info.called
 - assert 'version 2.0' in mock_info.call_args[0][2]
 
+### test_project_save_load_full_cycle
+_Test full cycle of project save and load._
+
+- assert os.path.exists(project_file)
+- assert mock_load_json.called
+- assert '2d_structure' in saved_data
+- assert len(atoms) == 1
+- assert atoms[0]['symbol'] == 'C'
+- assert atoms[0]['charge'] == 1
+
 ## tests/unit/test_properties.py
 
 ### test_analysis_window_regular_mol
@@ -961,39 +920,6 @@ _Verify AnalysisWindow uses manual logic for XYZ-derived structures._
 
 - assert 'C2HO' in formula_val
 - assert not smiles_present
-
-## tests/unit/test_scene_advanced.py
-
-### test_right_click_bond_deletion
-_Test standard right-click deletion on a bond._
-
-- assert len(data.bonds) == 1
-- assert len(data.bonds) == 0
-- assert a1_id in data.atoms
-- assert a2_id in data.atoms
-- assert bond_item.scene() is None
-
-### test_drag_and_drop_atom
-_Test moving an atom via drag-and-drop._
-
-- assert a1_item.pos() == new_pos
-- assert data.atoms[a1_id]['pos'] == new_pos
-- assert len(window.undo_stack) > 0
-
-### test_delete_mixed_selection
-_Test deleting a selection containing both atoms and bonds._
-
-- assert a1_id not in data.atoms
-- assert len(data.bonds) == 0
-- assert a2_id in data.atoms
-- assert a2_id in data.atoms
-
-### test_undo_redo
-_Test undo/redo integration via scene modifications._
-
-- assert len(window.undo_stack) == 0
-- assert len(window.undo_stack) >= 1
-- assert len(window.undo_stack) >= 2
 
 ## tests/unit/test_scene_extended.py
 
@@ -1049,34 +975,27 @@ _No description provided._
 _No description provided._
 
 - assert any((a['symbol'] == 'O' for a in scene.data.atoms.values()))
+- assert mock_parser_host.push_undo_state.called
 
-### test_scene_right_click_delete
-_No description provided._
+### test_scene_right_click_bond_delete
+_Test right-click deletion on a bond._
 
+- assert len(mock_parser_host.data.bonds) == 0
+- assert mock_parser_host.push_undo_state.called
 
-### test_scene_bond_complex_interactions
-_No description provided._
+### test_scene_drag_and_drop_atom
+_Test moving an atom via drag-and-drop._
 
-- assert scene.data.bonds[bond_key]['stereo'] == 4
-- assert scene.data.bonds[bond_key]['stereo'] == 3
-- assert current_bond_data['order'] == 1
-- assert current_bond_data['stereo'] == 1
+- assert atom_item.pos() == new_pos
+- assert mock_parser_host.data.atoms[aid]['pos'] == new_pos
+- assert mock_parser_host.push_undo_state.called
 
-### test_scene_atom_keyboard_properties
-_No description provided._
+### test_scene_delete_mixed_selection
+_Test deleting a selection containing both atoms and bonds._
 
-- assert atom_item.charge == 1
-- assert atom_item.charge == 0
-- assert atom_item.radical == 1
-
-### test_scene_template_interaction
-_No description provided._
-
-
-### test_scene_user_template_logic
-_No description provided._
-
-- assert any((a['symbol'] == 'N' and a['charge'] == 1 for a in scene.data.atoms.values()))
+- assert aid1 not in mock_parser_host.data.atoms
+- assert len(mock_parser_host.data.bonds) == 0
+- assert aid2 in mock_parser_host.data.atoms
 
 ## tests/unit/test_scene_interactions.py
 

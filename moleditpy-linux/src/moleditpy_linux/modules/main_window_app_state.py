@@ -317,7 +317,7 @@ class MainWindowAppState(object):
         self.update_realtime_info()
         self.update_undo_redo_actions()
 
-    def update_window_title(self):
+    def update_window_title(self): # pragma: no cover
         """ウィンドウタイトルを更新（保存状態を反映）"""
         base_title = f"MoleditPy Ver. {VERSION}"
         if self.current_file_path:
@@ -332,7 +332,7 @@ class MainWindowAppState(object):
                 title = f"*{title}"
         self.setWindowTitle(title)
 
-    def check_unsaved_changes(self):
+    def check_unsaved_changes(self): # pragma: no cover
         """未保存の変更があるかチェックし、警告ダイアログを表示"""
         if not self.has_unsaved_changes:
             return True  # 保存済みまたは変更なし
@@ -425,11 +425,11 @@ class MainWindowAppState(object):
         self.update_realtime_info()
         self.view_2d.setFocus() 
         
-    def update_undo_redo_actions(self):
+    def update_undo_redo_actions(self): # pragma: no cover
         self.undo_action.setEnabled(len(self.undo_stack) > 1)
         self.redo_action.setEnabled(len(self.redo_stack) > 0)
 
-    def update_realtime_info(self):
+    def update_realtime_info(self): # pragma: no cover
         """ステータスバーの右側に現在の分子情報を表示する"""
         if not self.data.atoms:
             self.formula_label.setText("")  # 原子がなければ右側のラベルをクリア

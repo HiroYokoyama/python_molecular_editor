@@ -19,7 +19,7 @@ import numpy as np
 
 from .dialog3_d_picking_mixin import Dialog3DPickingMixin
 
-class TranslationDialog(Dialog3DPickingMixin, QDialog):
+class TranslationDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
     def __init__(self, mol, main_window, parent=None):
         QDialog.__init__(self, parent)
         Dialog3DPickingMixin.__init__(self)

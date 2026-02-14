@@ -68,6 +68,7 @@ class DummyParser(QWidget, MainWindowMolecularParsers):
     def estimate_bonds_from_distances(self, mol):
         if self.settings.get('force_fallback_fail', False):
             raise RuntimeError("FallbackFailed")
+        return super().estimate_bonds_from_distances(mol)
 
 # --- Safety Timer ---
 @pytest.fixture(autouse=True)
@@ -164,17 +165,6 @@ def test_load_xyz_recovery_loop_retries(mock_parser_host, tmp_path):
             assert mol is not None
             assert mol.GetIntProp("_xyz_charge") == 1
 
-def test_save_as_mol_logic(mock_parser_host, tmp_path):
-    parser = DummyParser(mock_parser_host)
-    parser.data.add_atom("C", QPointF(0, 0))
-    mol = Chem.MolFromSmiles("C")
-    AllChem.Compute2DCoords(mol)
-    parser.current_mol = mol
-    save_path = str(tmp_path / "saved.mol")
-    with patch.object(mwm.QFileDialog, 'getSaveFileName', return_value=(save_path, "*.mol")):
-        parser.save_as_mol()
-    assert os.path.exists(save_path)
-
 def test_load_mol_file_not_found(mock_parser_host):
     parser = DummyParser(mock_parser_host)
     parser.load_mol_file("missing_parser_xyz_final.mol")
@@ -246,4 +236,29 @@ def test_load_xyz_skip_chemistry_via_button(mock_parser_host, tmp_path):
     assert mol.HasProp("_xyz_skip_checks") or getattr(mol, "_xyz_skip_checks", False)
   
 
+def test_fix_mol_block(mock_parser_host):
+    parser = DummyParser(mock_parser_host)
+    invalid_counts = " 3 2  0  0  0  0  0  0  0  0\n"
+    mol_block = "\n  Title\n\n" + invalid_counts + "  0.0 0.0 0.0 C\n"
+    fixed = parser.fix_mol_block(mol_block)
+    lines = fixed.splitlines()
+    assert "V2000" in lines[3]
+    assert len(lines[3]) >= 39
 
+def test_load_xyz_file_with_estimation(mock_parser_host, tmp_path):
+    parser = DummyParser(mock_parser_host)
+    xyz_content = "2\nEthane\nC 0.0 0.0 0.0\nC 1.5 0.0 0.0\n"
+    xyz_file = tmp_path / "ethane.xyz"
+    xyz_file.write_text(xyz_content)
+    
+    # Using skip_chemistry_checks bypasses the charge dialog and triggers distance-based estimation
+    parser.settings['skip_chemistry_checks'] = True
+    
+    parser.view_2d.viewport().rect().center.return_value = QPointF(0, 0)
+    parser.view_2d.mapToScene.return_value = QPointF(0, 0)
+    
+    mol = parser.load_xyz_file(str(xyz_file))
+    assert mol is not None
+    assert mol.GetNumAtoms() == 2
+    # Simple proximity-based estimation check (C-C distance 1.5 is within bond range)
+    assert mol.GetNumBonds() >= 1

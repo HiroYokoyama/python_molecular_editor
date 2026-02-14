@@ -738,7 +738,7 @@ class MoleculeScene(QGraphicsScene):
         is_6ring = (num_points == 6 and len(bonds_info) == 6)
         template_has_double = any(o == 2 for (_, _, o) in bonds_info)
     
-        if is_6ring and template_has_double: # pragma: no cover
+        if is_6ring and template_has_double:
             existing_orders = {} # key: bonds_infoのインデックス, value: 既存の結合次数
             for k, (i_idx, j_idx, _) in enumerate(bonds_info):
                 if i_idx < len(atom_items) and j_idx < len(atom_items):

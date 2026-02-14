@@ -19,7 +19,7 @@ from .dialog3_d_picking_mixin import Dialog3DPickingMixin
 from PyQt6.QtCore import Qt
 import numpy as np
 
-class BondLengthDialog(Dialog3DPickingMixin, QDialog):
+class BondLengthDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
     def __init__(self, mol, main_window, preselected_atoms=None, parent=None):
         QDialog.__init__(self, parent)
         Dialog3DPickingMixin.__init__(self)

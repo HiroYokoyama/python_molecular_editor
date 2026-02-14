@@ -4,6 +4,7 @@ import pickle
 import pytest
 from rdkit import Chem
 from moleditpy.modules.main_window_project_io import MainWindowProjectIo
+from PyQt6.QtCore import QPointF
 from PyQt6.QtWidgets import QMessageBox
 from unittest.mock import MagicMock, patch
 
@@ -159,3 +160,31 @@ def test_load_json_data_version_mismatch(mock_parser_host, tmp_path):
         # Should verify warning was shown
         assert mock_info.called
         assert "version 2.0" in mock_info.call_args[0][2]
+def test_project_save_load_full_cycle(mock_parser_host, tmp_path):
+    """Test full cycle of project save and load."""
+    io = DummyProjectIo(mock_parser_host)
+    # Populate some data
+    io.data.add_atom("C", QPointF(10, 20), charge=1)
+    # Ensure item mock is present for coordinate extraction if needed
+    io.data.atoms[0]['item'] = MagicMock()
+    io.data.atoms[0]['item'].pos.return_value = QPointF(10, 20)
+    
+    project_file = str(tmp_path / "full_cycle.pmeprj")
+    
+    # Save
+    with patch('PyQt6.QtWidgets.QFileDialog.getSaveFileName', return_value=(project_file, "*.pmeprj")):
+        io.save_as_json()
+    assert os.path.exists(project_file)
+    
+    # Load
+    io.data.atoms.clear()
+    with patch.object(io, 'load_from_json_data') as mock_load_json:
+        io.load_json_data(project_file)
+        assert mock_load_json.called
+        # Verify the data passed to load_from_json_data contains our atom
+        saved_data = mock_load_json.call_args[0][0]
+        assert "2d_structure" in saved_data
+        atoms = saved_data["2d_structure"]["atoms"]
+        assert len(atoms) == 1
+        assert atoms[0]["symbol"] == "C"
+        assert atoms[0]["charge"] == 1

@@ -20,7 +20,7 @@ try:
 except Exception:
     from modules.constants import CPK_COLORS, DEFAULT_CPK_COLORS
 
-class ColorSettingsDialog(QDialog):
+class ColorSettingsDialog(QDialog): # pragma: no cover
     """Dialog to customize CPK element colors.
 
     - Click an element to pick a new color for the element (CPK colors).

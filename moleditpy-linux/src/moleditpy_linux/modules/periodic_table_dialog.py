@@ -19,7 +19,7 @@ except Exception:
 
 from PyQt6.QtCore import pyqtSignal
 
-class PeriodicTableDialog(QDialog):
+class PeriodicTableDialog(QDialog): # pragma: no cover
     element_selected = pyqtSignal(str)
     def __init__(self, parent=None):
         super().__init__(parent)

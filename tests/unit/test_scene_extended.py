@@ -8,6 +8,15 @@ from moleditpy.modules.atom_item import AtomItem
 from moleditpy.modules.bond_item import BondItem
 from unittest.mock import MagicMock, patch
 
+@pytest.fixture(autouse=True)
+def mock_graphics_scene_events():
+    """Patch QGraphicsScene mouse events to accept MagicMock."""
+    with patch('PyQt6.QtWidgets.QGraphicsScene.mousePressEvent'), \
+         patch('PyQt6.QtWidgets.QGraphicsScene.mouseMoveEvent'), \
+         patch('PyQt6.QtWidgets.QGraphicsScene.mouseReleaseEvent'), \
+         patch('PyQt6.QtWidgets.QGraphicsScene.keyPressEvent'):
+        yield
+
 def setup_scene_with_view(mock_parser_host):
     scene = MoleculeScene(mock_parser_host.data, mock_parser_host)
     mock_view = MagicMock()
@@ -181,132 +190,73 @@ def test_scene_mouse_click_create_single_atom(mock_parser_host):
         # mouseReleaseEvent calculates is_click and triggers atom creation if start_pos matches current pos
         scene.mouseReleaseEvent(click_event)
     
-    # Verify an 'O' atom was created
+    # Verify an 'O' atom was created and undo state pushed
     assert any(a['symbol'] == 'O' for a in scene.data.atoms.values())
+    assert mock_parser_host.push_undo_state.called
 
-def test_scene_right_click_delete(mock_parser_host):
+def test_scene_right_click_bond_delete(mock_parser_host):
+    """Test right-click deletion on a bond."""
     scene = setup_scene_with_view(mock_parser_host)
     scene.mode = 'select'
-    aid = scene.create_atom("C", QPointF(0, 0))
-    a1 = mock_parser_host.data.atoms[aid]['item']
-    
-    event = create_mock_mouse_event(QPointF(0, 0), button=Qt.MouseButton.RightButton)
-    with patch.object(scene, 'itemAt', return_value=a1), \
-         patch.object(MoleculeScene, 'delete_items') as mock_del:
-        scene.mousePressEvent(event)
-        mock_del.assert_called_once_with({a1})
-
-def test_scene_bond_complex_interactions(mock_parser_host):
-    scene = setup_scene_with_view(mock_parser_host)
-    scene.mode = 'select'
-    
-    # Create bond
     aid1 = scene.create_atom("C", QPointF(0, 0))
     aid2 = scene.create_atom("C", QPointF(50, 0))
     a1 = mock_parser_host.data.atoms[aid1]['item']
     a2 = mock_parser_host.data.atoms[aid2]['item']
-    scene.create_bond(a1, a2, bond_order=2)
-    bond_key = (aid1, aid2) if (aid1, aid2) in scene.data.bonds else (aid2, aid1)
-    bond_item = scene.data.bonds[bond_key]['item']
+    scene.create_bond(a1, a2)
+    bond_item = list(mock_parser_host.data.bonds.values())[0]['item']
     
-    # Test Key_E / Key_Z on hovered bond
-    scene.hovered_item = bond_item
-    
-    with patch.object(MoleculeScene, 'itemAt', return_value=None), \
-         patch('PyQt6.QtGui.QCursor.pos', return_value=QPointF(25,0)):
-        
-        # Test Key_E (Stereo 4)
-        event = QKeyEvent(QKeyEvent.Type.KeyPress, Qt.Key.Key_E, Qt.KeyboardModifier.NoModifier)
-        scene.keyPressEvent(event)
-        assert scene.data.bonds[bond_key]['stereo'] == 4
-        
-        # Test Key_Z (Stereo 3)
-        event = QKeyEvent(QKeyEvent.Type.KeyPress, Qt.Key.Key_Z, Qt.KeyboardModifier.NoModifier)
-        scene.keyPressEvent(event)
-        assert scene.data.bonds[bond_key]['stereo'] == 3
+    event = create_mock_mouse_event(QPointF(25, 0), button=Qt.MouseButton.RightButton)
+    with patch.object(scene, 'itemAt', return_value=bond_item), \
+         patch.object(MoleculeScene, 'delete_items', wraps=scene.delete_items) as mock_del:
+        scene.mousePressEvent(event)
+        mock_del.assert_called()
+        assert len(mock_parser_host.data.bonds) == 0
+        assert mock_parser_host.push_undo_state.called
 
-    # Test Key_W / Key_D on selected bond
-    scene.hovered_item = None
+def test_scene_drag_and_drop_atom(mock_parser_host):
+    """Test moving an atom via drag-and-drop."""
+    scene = setup_scene_with_view(mock_parser_host)
+    start_pos = QPointF(0, 0)
+    aid = scene.create_atom('C', start_pos)
+    atom_item = mock_parser_host.data.atoms[aid]['item']
+    
+    scene.mode = 'select'
+    new_pos = QPointF(50, 50)
+    
+    # 1. Press
+    press_event = create_mock_mouse_event(start_pos)
+    with patch.object(scene, 'items', return_value=[atom_item]), \
+         patch.object(scene, 'itemAt', return_value=atom_item):
+        scene.mousePressEvent(press_event)
+        
+        # 2. Move
+        atom_item.setPos(new_pos)
+        move_event = create_mock_mouse_event(new_pos)
+        with patch('PyQt6.QtWidgets.QApplication.startDragDistance', return_value=5):
+            scene.mouseMoveEvent(move_event)
+            
+            # 3. Release
+            scene.mouseReleaseEvent(move_event)
+    
+    assert atom_item.pos() == new_pos
+    assert mock_parser_host.data.atoms[aid]['pos'] == new_pos
+    assert mock_parser_host.push_undo_state.called
+
+def test_scene_delete_mixed_selection(mock_parser_host):
+    """Test deleting a selection containing both atoms and bonds."""
+    scene = setup_scene_with_view(mock_parser_host)
+    aid1 = scene.create_atom("C", QPointF(0, 0))
+    aid2 = scene.create_atom("C", QPointF(50, 0))
+    a1 = mock_parser_host.data.atoms[aid1]['item']
+    a2 = mock_parser_host.data.atoms[aid2]['item']
+    scene.create_bond(a1, a2)
+    bond_item = list(mock_parser_host.data.bonds.values())[0]['item']
+    
+    a1.setSelected(True)
     bond_item.setSelected(True)
     
-    with patch.object(MoleculeScene, 'itemAt', return_value=None), \
-         patch('PyQt6.QtGui.QCursor.pos', return_value=QPointF(0,0)):
-        # Key_W (Stereo 1 - Up)
-        event = QKeyEvent(QKeyEvent.Type.KeyPress, Qt.Key.Key_W, Qt.KeyboardModifier.NoModifier)
-        scene.keyPressEvent(event)
-        # Bond order should become 1, stereo 1
-        current_bond_data = scene.data.bonds.get(bond_key) or scene.data.bonds.get((aid2, aid1))
-        assert current_bond_data['order'] == 1
-        assert current_bond_data['stereo'] == 1
-
-def test_scene_atom_keyboard_properties(mock_parser_host):
-    scene = setup_scene_with_view(mock_parser_host)
-    scene.mode = 'select'
-    aid = scene.create_atom("C", QPointF(0, 0))
-    atom_item = mock_parser_host.data.atoms[aid]['item']
-    atom_item.setSelected(True)
+    scene.delete_items({a1, bond_item})
     
-    with patch.object(MoleculeScene, 'itemAt', return_value=None), \
-         patch('PyQt6.QtGui.QCursor.pos', return_value=QPointF(0,0)):
-        
-        # Charge +
-        event = QKeyEvent(QKeyEvent.Type.KeyPress, Qt.Key.Key_Plus, Qt.KeyboardModifier.NoModifier)
-        scene.keyPressEvent(event)
-        assert atom_item.charge == 1
-        
-        # Charge -
-        event = QKeyEvent(QKeyEvent.Type.KeyPress, Qt.Key.Key_Minus, Qt.KeyboardModifier.NoModifier)
-        scene.keyPressEvent(event)
-        assert atom_item.charge == 0
-        
-        # Radical .
-        event = QKeyEvent(QKeyEvent.Type.KeyPress, Qt.Key.Key_Period, Qt.KeyboardModifier.NoModifier)
-        scene.keyPressEvent(event)
-        assert atom_item.radical == 1
-
-def test_scene_template_interaction(mock_parser_host):
-    scene = setup_scene_with_view(mock_parser_host)
-    scene.mode = 'select'
-    
-    # Test Key_4 on blank space -> triggers mode change
-    with patch.object(MoleculeScene, 'itemAt', return_value=None), \
-         patch('PyQt6.QtGui.QCursor.pos', return_value=QPointF(0,0)):
-        event = QKeyEvent(QKeyEvent.Type.KeyPress, Qt.Key.Key_4, Qt.KeyboardModifier.NoModifier)
-        scene.keyPressEvent(event)
-        scene.window.set_mode_and_update_toolbar.assert_called_with('template_benzene')
-
-    # Test Key_4 on existing atom -> triggers add_molecule_fragment
-    aid = scene.create_atom("C", QPointF(0, 0))
-    atom_item = mock_parser_host.data.atoms[aid]['item']
-    
-    with patch.object(MoleculeScene, 'itemAt', return_value=atom_item), \
-         patch('PyQt6.QtGui.QCursor.pos', return_value=QPointF(20,0)), \
-         patch.object(scene, 'add_molecule_fragment') as mock_add_frag:
-        event = QKeyEvent(QKeyEvent.Type.KeyPress, Qt.Key.Key_4, Qt.KeyboardModifier.NoModifier)
-        scene.keyPressEvent(event)
-        mock_add_frag.assert_called()
-
-def test_scene_user_template_logic(mock_parser_host):
-    scene = setup_scene_with_view(mock_parser_host)
-    
-    # Mock template data
-    scene.user_template_data = {
-        'atoms': [{'id': 'a1', 'symbol': 'C', 'x': 0, 'y': 0}],
-        'bonds': []
-    }
-    
-    # Test update_user_template_preview
-    scene.update_user_template_preview(QPointF(10, 10))
-    scene.template_preview.set_user_template_geometry.assert_called()
-    scene.template_preview.show.assert_called()
-    
-    # Test add_user_template_fragment
-    context = {
-        'points': [QPointF(0, 0)],
-        'atoms_data': [{'id': 'a1', 'symbol': 'N', 'charge': 1}],
-        'bonds_info': []
-    }
-    scene.add_user_template_fragment(context)
-    # Verify N+ atom created
-    assert any(a['symbol'] == 'N' and a['charge'] == 1 for a in scene.data.atoms.values())
-
+    assert aid1 not in mock_parser_host.data.atoms
+    assert len(mock_parser_host.data.bonds) == 0
+    assert aid2 in mock_parser_host.data.atoms

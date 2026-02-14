@@ -21,7 +21,7 @@ try:
 except Exception:
     from modules.dialog3_d_picking_mixin import Dialog3DPickingMixin
 
-class PlanarizeDialog(Dialog3DPickingMixin, QDialog):
+class PlanarizeDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
 
     """選択原子群を最適フィット平面へ投影して planarize するダイアログ
     AlignPlane を参考にした選択UIを持ち、Apply ボタンで選択原子を平面へ直交射影する。

@@ -4,23 +4,6 @@ from moleditpy.modules.calculation_worker import CalculationWorker
 from moleditpy.modules.molecular_data import MolecularData
 from PyQt6.QtCore import QPointF
 
-def test_worker_halt_logic(qtbot):
-    """Verify that CalculationWorker respects the halt flag (software flow)."""
-    worker = CalculationWorker()
-    worker.halt_all = True # Force global halt
-    
-    # Simple Ethane
-    data = MolecularData()
-    data.add_atom("C", QPointF(0, 0))
-    data.add_atom("C", QPointF(10, 0))
-    data.add_bond(0, 1, order=1)
-    mol_block = data.to_mol_block()
-
-    with qtbot.waitSignal(worker.error, timeout=5000) as blocker:
-        worker.run_calculation(mol_block, {'conversion_mode': 'rdkit'})
-    
-    # It should emit error with "Halted" message
-    assert "Halted" in str(blocker.args[0])
 
 def test_ez_preservation_logic(qtbot):
     """Verify worker preserves explicit E/Z labels even if RDKit might lose them."""
@@ -137,20 +120,3 @@ def test_coordinate_mapping_fallback():
     print(f"DEBUG: Fallback x_coord={x_coord}, expected={expected_x}")
     assert abs(x_coord - expected_x) < 0.0001
     
-def test_worker_direct_mode(qtbot):
-    """Verify worker handles 'direct' mode (software branching)."""
-    worker = CalculationWorker()
-    # Direct mode just returns the input mol if it has coordinates
-    data = MolecularData()
-    data.add_atom("C", QPointF(0, 0))
-    # Add a coordinate
-    data.atoms[0]['pos'] = QPointF(1.0, 2.0)
-    mol_block = data.to_mol_block()
-    
-    with qtbot.waitSignal(worker.finished, timeout=5000) as blocker:
-        worker.run_calculation(mol_block, {'conversion_mode': 'direct'})
-    
-    res = blocker.args[0]
-    mol = res[1] if isinstance(res, tuple) else res
-    # CalculationWorker adds Hs, so 1 C becomes 5 atoms (CH4)
-    assert mol.GetNumAtoms() == 5

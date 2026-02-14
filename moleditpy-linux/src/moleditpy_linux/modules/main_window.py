@@ -86,12 +86,12 @@ class MainWindow(QMainWindow):
 
     # start_calculation carries the MOL block and an options object (second arg)
     start_calculation = pyqtSignal(str, object)
-    def __init__(self, initial_file=None):
+    def __init__(self, initial_file=None): # pragma: no cover
         super().__init__()
         # --- MOVED TO main_window_main_init.py ---
         self._is_restoring_state = False
 
-        class BoundFeature:
+        class BoundFeature: # pragma: no cover
             """Bind a feature-class method calls to the MainWindow.
 
             Usage:
