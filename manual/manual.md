@@ -452,7 +452,7 @@ You can also reset all settings to defaults via `Settings` \> `Reset All Setting
 
 ## 10\. Version / License
 
-  * **Version:** 2.5
+  * **Version:** 2.6
   * **Author:** Hiromichi Yokoyama
   * **License:** GPL-3.0 license
   * **Repository:** [https://github.com/HiroYokoyama/python\_molecular\_editor](https://github.com/HiroYokoyama/python_molecular_editor)

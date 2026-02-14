@@ -111,6 +111,6 @@ This comprehensive checklist is designed to verify that **MoleditPy** functions 
 
 | Field | Value |
 | :--- | :--- |
-| **Version Verified** | 2.5 |
-| **Date** | 2026-02-12 |
-| **Lead Developer** | Hiromichi Yokoyama |
+| **Version Verified** | - |
+| **Date** | - |
+| **Lead Developer** | - |
