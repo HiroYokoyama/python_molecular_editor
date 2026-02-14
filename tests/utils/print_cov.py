@@ -1,5 +1,5 @@
 """Run unit + integration + GUI tests with combined coverage and generate coverage_report.md."""
-import subprocess, json, sys, os, tempfile
+import subprocess, json, sys, os, tempfile, argparse
 
 # Adjusted for tests/utils/ location
 UTILS = os.path.dirname(os.path.abspath(__file__))
@@ -7,36 +7,43 @@ BASE = os.path.dirname(UTILS)  # tests/
 ROOT = os.path.dirname(BASE)   # project root
 SRC = os.path.join(ROOT, "moleditpy", "src")
 
+parser = argparse.ArgumentParser()
+parser.add_argument("--skip-run", action="store_true", help="Skip running tests and use existing .coverage data")
+args_cov = parser.parse_known_args()[0]
+
 env = os.environ.copy()
 pp = env.get("PYTHONPATH", "")
 env["PYTHONPATH"] = f"{SRC}{os.pathsep}{pp}".strip(os.pathsep)
 
 devnull = subprocess.DEVNULL
 
-# Ensure we are in ROOT when running coverage
-print("Running Unit Tests with coverage (headless)...")
-gui_env = env.copy()
-gui_env["MOLEDITPY_HEADLESS"] = "1"
-gui_env["QT_QPA_PLATFORM"] = "offscreen"
-subprocess.run(
-    [sys.executable, "-m", "pytest", "tests/unit", "-q",
-     "--cov=moleditpy", "--cov-report=", "--tb=short"],
-    env=gui_env, cwd=ROOT, stdout=devnull, stderr=devnull
-)
+if not args_cov.skip_run:
+    # Ensure we are in ROOT when running coverage
+    print("Running Unit Tests with coverage (headless)...")
+    gui_env = env.copy()
+    gui_env["MOLEDITPY_HEADLESS"] = "1"
+    gui_env["QT_QPA_PLATFORM"] = "offscreen"
+    subprocess.run(
+        [sys.executable, "-m", "pytest", "tests/unit", "-q",
+         "--cov=moleditpy", "--cov-report=", "--tb=short"],
+        env=gui_env, cwd=ROOT, stdout=devnull, stderr=devnull
+    )
 
-print("Running Integration Tests with coverage (headless)...")
-subprocess.run(
-    [sys.executable, "-m", "pytest", "tests/integration", "-q",
-     "--cov=moleditpy", "--cov-append", "--cov-report=", "--tb=short"],
-    env=gui_env, cwd=ROOT, stdout=devnull, stderr=devnull
-)
+    print("Running Integration Tests with coverage (headless)...")
+    subprocess.run(
+        [sys.executable, "-m", "pytest", "tests/integration", "-q",
+         "--cov=moleditpy", "--cov-append", "--cov-report=", "--tb=short"],
+        env=gui_env, cwd=ROOT, stdout=devnull, stderr=devnull
+    )
 
-print("Running GUI Tests with coverage (headless)...")
-subprocess.run(
-    [sys.executable, "-m", "pytest", "tests/gui", "-q", "--timeout=60",
-     "--cov=moleditpy", "--cov-append", "--cov-report=", "--tb=short"],
-    env=gui_env, cwd=ROOT, stdout=devnull, stderr=devnull
-)
+    print("Running GUI Tests with coverage (headless)...")
+    subprocess.run(
+        [sys.executable, "-m", "pytest", "tests/gui", "-q", "--timeout=60",
+         "--cov=moleditpy", "--cov-append", "--cov-report=", "--tb=short"],
+        env=gui_env, cwd=ROOT, stdout=devnull, stderr=devnull
+    )
+else:
+    print("Skipping test execution, using existing coverage data...")
 
 # Step 4: Generate reports
 print("Generating coverage reports...")

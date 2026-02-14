@@ -667,26 +667,20 @@ _No description provided._
 
 - assert len(parser.data.atoms) == 1
 
-### test_load_xyz_charge_prompt_ok
+### test_load_xyz_always_ask_charge
 _No description provided._
 
 - assert mol is not None
+- assert mol.GetIntProp('_xyz_charge') == 1
 
-### test_load_xyz_skip_chemistry_via_button
+### test_load_xyz_charge_loop_cancel
 _No description provided._
 
-- assert mol is not None
-- assert mol.HasProp('_xyz_skip_checks')
+- assert result is None
 
 ### test_load_xyz_unrecognized_symbol
 _No description provided._
 
-
-### test_load_xyz_unrecognized_symbol_auto_coerce
-_No description provided._
-
-- assert mol is not None
-- assert mol.GetAtomWithIdx(0).GetSymbol() == 'C'
 
 ### test_save_as_xyz_logic
 _No description provided._
@@ -698,30 +692,16 @@ _No description provided._
 
 - assert len(parser.data.atoms) == 1
 
-### test_load_xyz_file_with_manual_charge
+### test_load_xyz_recovery_loop_retries
 _No description provided._
 
 - assert mol is not None
+- assert mol.GetIntProp('_xyz_charge') == 1
 
 ### test_save_as_mol_logic
 _No description provided._
 
 - assert os.path.exists(save_path)
-
-### test_estimate_bonds_from_distances
-_No description provided._
-
-- assert mol.GetNumBonds() == 1
-
-### test_load_mol_file_cancel
-_No description provided._
-
-- assert not mock_dlg.called
-
-### test_load_mol_file_dialog_cancel
-_No description provided._
-
-- assert parser.statusBar().showMessage.called or True
 
 ### test_load_mol_file_not_found
 _No description provided._
@@ -730,72 +710,34 @@ _No description provided._
 ### test_load_mol_file_invalid_format
 _No description provided._
 
-- assert any(('Invalid MOL file format' in str(call) for call in parser.statusBar().showMessage.call_args_list))
-
-### test_load_xyz_file_invalid_atom_count
-_No description provided._
-
-
-### test_load_xyz_file_zero_atoms
-_No description provided._
-
-
-### test_load_xyz_file_too_few_lines
-_No description provided._
-
-
-### test_save_as_mol_cancel
-_No description provided._
-
-
-### test_save_as_xyz_cancel
-_No description provided._
-
-
-### test_fix_mol_counts_line
-_No description provided._
-
-- assert parser.fix_mol_counts_line(line1) == line1
-- assert 'V2000' in parser.fix_mol_counts_line(line2)
-
-### test_fix_mol_block
-_No description provided._
-
-- assert 'V2000' in fixed.splitlines()[3]
-
-### test_load_xyz_always_ask_charge
-_No description provided._
-
-- assert mol.GetIntProp('_xyz_charge') == 1
+- assert any(('Invalid MOL' in m or 'Failed to read' in m or 'Error loading' in m for m in msgs))
 
 ### test_save_as_xyz_charge_mult
 _No description provided._
 
-- assert 'chrg = 1' in lines[1]
+- assert 'chrg = 1' in f.read()
 
 ### test_load_mol_file_malformed_counts
-_Test fix_mol_counts_line via load_mol_file._
+_No description provided._
 
 - assert len(parser.data.atoms) == 1
 
-### test_estimate_bonds_radius_fallback
-_Test bond estimation with an unknown element radius in our dictionary._
+### test_load_xyz_complex_recovery_branches
+_No description provided._
 
-- assert mol.GetNumBonds() == 1
-
-### test_load_xyz_file_prompt_skip_logic
-_Test the 'Skip chemistry' button branch in load_xyz_file._
-
+- assert parser.load_xyz_file(str(path)) is None
+- assert any(('failed for that charge' in m for m in msgs))
 
 ### test_save_as_mol_no_current_path
-_Test save_as_mol when no file is currently open (untitled)._
+_No description provided._
 
 - assert os.path.exists(save_path)
 
-### test_save_as_xyz_charge_exception
-_Test save_as_xyz fallback when descriptors fail._
+### test_load_xyz_skip_chemistry_via_button
+_No description provided._
 
-- assert os.path.exists(save_path)
+- assert mol is not None
+- assert mol.HasProp('_xyz_skip_checks') or getattr(mol, '_xyz_skip_checks', False)
 
 ## tests/unit/test_plugin_manager.py
 

@@ -26,11 +26,17 @@ except Exception:
 
 def run_suite(name, path, env_vars=None, extra_args=None):
     """Run a test suite in a separate process for isolation."""
-    print(f"\n>>> Running {name} Tests...", flush=True)
+    print(f"\n>>> Running {name} Tests with Coverage...", flush=True)
     
     # Use shorter timeout in headless CI mode for faster feedback
     timeout = "30" if os.environ.get("MOLEDITPY_HEADLESS") == "1" else "60"
-    cmd = [sys.executable, "-m", "pytest", "-vv", f"--timeout={timeout}", path, "--tb=short"]
+    
+    # Enable coverage and append to produce a combined .coverage file
+    cmd = [
+        sys.executable, "-m", "pytest", "-vv", 
+        f"--timeout={timeout}", path, "--tb=short",
+        "--cov=moleditpy", "--cov-append", "--cov-report="
+    ]
     if extra_args:
         cmd.extend(extra_args)
     
@@ -74,10 +80,18 @@ if __name__ == "__main__":
         subprocess.run([sys.executable, os.path.join(BASE_DIR, "tests", "utils", "generate_assertion_catalog.py")], cwd=BASE_DIR)
         sys.exit(0)
 
+    # Clean up old coverage data to ensure a fresh combined report
+    cov_file = os.path.join(BASE_DIR, '.coverage')
+    if not args.report_only and os.path.exists(cov_file):
+        try:
+            os.remove(cov_file)
+        except Exception as e:
+            print(f"Warning: Could not remove old .coverage file: {e}")
+
     # Handle --report-only
     if args.report_only:
-        print(">>> Generating Reports only...", flush=True)
-        subprocess.run([sys.executable, os.path.join(BASE_DIR, "tests", "utils", "print_cov.py")], cwd=BASE_DIR)
+        print(">>> Generating Reports only (from existing .coverage)...", flush=True)
+        subprocess.run([sys.executable, os.path.join(BASE_DIR, "tests", "utils", "print_cov.py"), "--skip-run"], cwd=BASE_DIR)
         if not args.skip_catalog:
              subprocess.run([sys.executable, os.path.join(BASE_DIR, "tests", "utils", "generate_assertion_catalog.py")], cwd=BASE_DIR)
         sys.exit(0)
@@ -88,7 +102,7 @@ if __name__ == "__main__":
         env_vars["MOLEDITPY_HEADLESS"] = "1"
         env_vars["QT_QPA_PLATFORM"] = "offscreen"
 
-    print("Starting Unified Test Suite (Unit + Integration + GUI)...", flush=True)
+    print("Starting Unified Test Suite with Coverage (Unit + Integration + GUI)...", flush=True)
     if extra_pytest_args:
         print(f"Extra pytest arguments: {extra_pytest_args}")
     
@@ -133,8 +147,9 @@ if __name__ == "__main__":
         print("\nALL requested tests passed successfully!")
         
         if not args.no_report:
-            print("\n>>> Generating Final Reports (Coverage + Assertion Catalog)...", flush=True)
-            subprocess.run([sys.executable, os.path.join(BASE_DIR, "tests", "utils", "print_cov.py")], cwd=BASE_DIR)
+            print("\n>>> Generating Final Reports (Markdown Coverage + Assertion Catalog)...", flush=True)
+            # Call print_cov.py with --skip-run because we already collected coverage!
+            subprocess.run([sys.executable, os.path.join(BASE_DIR, "tests", "utils", "print_cov.py"), "--skip-run"], cwd=BASE_DIR)
             if not args.skip_catalog:
                  subprocess.run([sys.executable, os.path.join(BASE_DIR, "tests", "utils", "generate_assertion_catalog.py")], cwd=BASE_DIR)
         
