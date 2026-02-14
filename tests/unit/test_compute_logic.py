@@ -59,6 +59,7 @@ class DummyCompute(MainWindowCompute):
     def _enable_3d_features(self, val): pass
     def _enable_3d_edit_actions(self, val): pass
     def push_undo_state(self): pass
+    def adjust_molecule_positions_to_avoid_collisions(self, mol, frags): pass
 
 def test_on_calculation_error_stale(mock_parser_host):
     """Test on_calculation_error when the worker is stale (not in active set)."""
@@ -369,6 +370,44 @@ def test_optimize_3d_unavailable_method(mock_parser_host):
     compute.optimize_3d_structure()
     messages = compute.get_status_messages()
     assert any("Selected optimization" in msg for msg in messages)
+
+def test_on_calculation_finished_collision_single_frag(mock_parser_host):
+    """Test collision logic is skipped for single fragment."""
+    compute = DummyCompute(mock_parser_host)
+    mol = Chem.MolFromSmiles("C")
+    AllChem.EmbedMolecule(mol, randomSeed=42)
+    
+    with patch.object(compute, 'adjust_molecule_positions_to_avoid_collisions') as mock_adjust:
+        compute.on_calculation_finished(mol)
+        assert not mock_adjust.called
+        assert not any("Detecting collisions" in msg for msg in compute.get_status_messages())
+
+def test_on_calculation_finished_collision_multi_frag(mock_parser_host):
+    """Test collision logic is triggered for multiple fragments."""
+    compute = DummyCompute(mock_parser_host)
+    mol = Chem.MolFromSmiles("C.C")
+    AllChem.EmbedMolecule(mol, randomSeed=42)
+    
+    with patch.object(compute, 'adjust_molecule_positions_to_avoid_collisions') as mock_adjust:
+        compute.on_calculation_finished(mol)
+        assert mock_adjust.called
+        msgs = compute.get_status_messages()
+        assert any("Detecting collisions" in msg for msg in msgs)
+        assert any("collision avoidance" in msg for msg in msgs)
+
+def test_on_calculation_finished_collision_exception(mock_parser_host):
+    """Test grace during collision detection exception."""
+    compute = DummyCompute(mock_parser_host)
+    mol = Chem.MolFromSmiles("C.C")
+    AllChem.EmbedMolecule(mol, randomSeed=42)
+    
+    with patch.object(compute, 'adjust_molecule_positions_to_avoid_collisions', side_effect=Exception("Collision Error")):
+        # Should not raise exception
+        compute.on_calculation_finished(mol)
+        # Verify it at least tried
+        msgs = compute.get_status_messages()
+        assert any("Detecting collisions" in msg for msg in msgs)
+
 
 
 
