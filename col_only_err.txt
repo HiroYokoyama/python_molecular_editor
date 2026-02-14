@@ -1,0 +1,261 @@
+﻿
+> collect_only.txt:6:collected 260 items /
+ 2 errors
+  collect_only.txt:7:
+  collect_only.txt:8:<Dir python_molecular
+_editor>
+  collect_only.txt:9:  <Dir tests>
+  collect_only.txt:10:    <Dir gui>
+  collect_only.txt:11:      <Module test_m
+ain_app.py>
+  collect_only.txt:12:        <Function te
+st_molecular_data_add_atom>
+  collect_only.txt:13:        <Function te
+st_molecular_data_add_bond>
+  collect_only.txt:14:        <Function te
+st_molecular_data_add_stereo_bond>
+  collect_only.txt:15:        <Function te
+st_molecular_data_remove_atom>
+  collect_only.txt:16:        <Function te
+st_molecular_data_remove_bond>
+> collect_only.txt:56:        <Function te
+st_file_import_smiles_error>
+  collect_only.txt:57:        <Function te
+st_undo_redo_boundary>
+  collect_only.txt:58:        <Function te
+st_import_invalid_mol_file>
+  collect_only.txt:59:        <Function te
+st_clear_2d_editor_cancel>
+  collect_only.txt:60:        <Function te
+st_clipboard_copy_empty_selection>
+  collect_only.txt:61:      <Module test_p
+lugin_manager.py>
+  collect_only.txt:62:        <Function te
+st_init>
+  collect_only.txt:63:        <Function te
+st_install_and_discover_single_file>
+  collect_only.txt:64:        <Function te
+st_plugin_registration>
+  collect_only.txt:65:        <Function te
+st_install_zip>
+  collect_only.txt:66:        <Function te
+st_ast_metadata_parsing>
+> collect_only.txt:88:        <Function te
+st_calculation_worker_error_empty_input>
+  collect_only.txt:89:        <Function te
+st_calculation_worker_safe_helpers_halted>
+  collect_only.txt:90:        <Function te
+st_calculation_worker_rdkit_embedding_fail
+_fallback>
+  collect_only.txt:91:      <Module test_c
+ompute_logic.py>
+> collect_only.txt:92:        <Function te
+st_on_calculation_error_stale>
+> collect_only.txt:93:        <Function te
+st_on_calculation_error_basic>
+  collect_only.txt:94:        <Function te
+st_compute_set_optimization_method>
+  collect_only.txt:95:        <Function te
+st_compute_halt_logic>
+  collect_only.txt:96:        <Function te
+st_on_calculation_finished_basic>
+  collect_only.txt:97:        <Function te
+st_check_chemistry_problems_fallback_detec
+ts>
+  collect_only.txt:98:        <Function te
+st_trigger_conversion_empty>
+  collect_only.txt:99:        <Function te
+st_trigger_conversion_with_atoms>
+  collect_only.txt:100:        <Function t
+est_optimize_3d_structure_logic>
+  collect_only.txt:101:        <Function t
+est_on_calculation_finished_worker_id_mism
+atch>
+  collect_only.txt:102:        <Function t
+est_trigger_conversion_chemistry_problems>
+> collect_only.txt:103:        <Function t
+est_trigger_conversion_sanitize_error>
+  collect_only.txt:104:        <Function t
+est_trigger_conversion_multiple_frags>
+  collect_only.txt:105:        <Function t
+est_on_calculation_finished_single_mol_leg
+acy>
+> collect_only.txt:106:        <Function t
+est_on_calculation_error_legacy_payload>
+  collect_only.txt:107:        <Function t
+est_optimize_3d_temp_method_override>
+  collect_only.txt:108:        <Function t
+est_optimize_3d_mmff94s_success>
+  collect_only.txt:109:        <Function t
+est_optimize_3d_uff_success>
+  collect_only.txt:110:        <Function t
+est_optimize_3d_no_conformer>
+  collect_only.txt:111:        <Function t
+est_optimize_3d_mmff_exception_handling>
+  collect_only.txt:112:        <Function t
+est_optimize_3d_uff_exception_handling>
+  collect_only.txt:113:        <Function t
+est_optimize_3d_plugin_method>
+  collect_only.txt:114:        <Function t
+est_optimize_3d_plugin_failure>
+  collect_only.txt:115:        <Function t
+est_optimize_3d_mmff_fallback_success>
+  collect_only.txt:116:        <Function t
+est_optimize_3d_uff_fallback_failure>
+> collect_only.txt:131:        <Function t
+est_on_calculation_error_updated>
+  collect_only.txt:132:        <Function t
+est_trigger_conversion_chemistry_problem_d
+etection>
+  collect_only.txt:133:      <Module test_
+edit_3d_logic.py>
+  collect_only.txt:134:        <Function t
+est_calculate_distance_logic>
+  collect_only.txt:135:        <Function t
+est_calculate_angle_logic>
+  collect_only.txt:136:        <Function t
+est_calculate_dihedral_logic>
+  collect_only.txt:137:        <Function t
+est_handle_measurement_atom_selection>
+  collect_only.txt:138:        <Function t
+est_clear_3d_selection>
+  collect_only.txt:139:        <Function t
+est_toggle_measurement_mode>
+  collect_only.txt:140:        <Function t
+est_calculate_and_display_measurements_tri
+gger>
+  collect_only.txt:141:      <Module test_
+edit_actions.py>
+> collect_only.txt:150:        <Function t
+est_export_stl_error_no_mol>
+> collect_only.txt:151:        <Function t
+est_export_obj_mtl_error_no_mol>
+  collect_only.txt:152:        <Function t
+est_export_stl_success_trigger>
+  collect_only.txt:153:        <Function t
+est_export_obj_mtl_success_trigger>
+  collect_only.txt:154:        <Function t
+est_export_3d_png_logic>
+  collect_only.txt:155:        <Function t
+est_export_color_stl_logic>
+  collect_only.txt:156:        <Function t
+est_export_from_3d_view_with_colors_comple
+x_splitting>
+  collect_only.txt:157:        <Function t
+est_export_2d_png_hides_items>
+  collect_only.txt:158:      <Module test_
+geometry.py>
+  collect_only.txt:159:        <Function t
+est_3d_bond_lengths>
+  collect_only.txt:160:        <Function t
+est_mirror_dialog_logic>
+  collect_only.txt:161:        <Function t
+est_planarize_logic>
+> collect_only.txt:241:        <Function t
+est_load_raw_data_error_paths>
+  collect_only.txt:242:        <Function t
+est_open_project_file_unsaved_check>
+> collect_only.txt:243:        <Function t
+est_save_project_io_error>
+  collect_only.txt:244:        <Function t
+est_load_json_data_version_mismatch>
+  collect_only.txt:245:        <Function t
+est_project_save_load_full_cycle>
+  collect_only.txt:246:      <Module test_
+properties.py>
+  collect_only.txt:247:        <Function t
+est_analysis_window_regular_mol>
+  collect_only.txt:248:        <Function t
+est_analysis_window_xyz_derived>
+  collect_only.txt:249:      <Module test_
+scene_advanced.py>
+  collect_only.txt:250:        <Function t
+est_right_click_bond_deletion>
+  collect_only.txt:251:        <Function t
+est_drag_and_drop_atom>
+  collect_only.txt:252:        <Function t
+est_delete_mixed_selection>
+  collect_only.txt:253:        <Function t
+est_undo_redo>
+> collect_only.txt:291:        <Function t
+est_smiles_invalid_shows_error>
+> collect_only.txt:292:        <Function t
+est_smiles_empty_shows_error>
+  collect_only.txt:293:        <Function t
+est_inchi_ethanol>
+  collect_only.txt:294:        <Function t
+est_inchi_caffeine_formula>
+> collect_only.txt:295:        <Function t
+est_inchi_invalid_shows_error>
+  collect_only.txt:296:
+> collect_only.txt:297:===================
+================ ERRORS ==================
+==================
+> collect_only.txt:298:___________________
+__ ERROR collecting tests/integration ____
+__________________
+  collect_only.txt:299:C:\Users\hiro2\AppD
+ata\Local\Programs\Python\Python313\Lib\im
+portlib\__init__.py:88: in import_module
+  collect_only.txt:300:    return _bootstr
+ap._gcd_import(name[level:], package, leve
+l)
+  collect_only.txt:301:           ^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^
+  collect_only.txt:302:<frozen importlib._
+bootstrap>:1387: in _gcd_import
+  collect_only.txt:303:    ???
+  collect_only.txt:304:<frozen importlib._
+bootstrap>:1360: in _find_and_load
+  collect_only.txt:305:    ???
+  collect_only.txt:306:<frozen importlib._
+bootstrap>:1331: in _find_and_load_unlocke
+d
+  collect_only.txt:307:    ???
+  collect_only.txt:308:<frozen importlib._
+bootstrap>:935: in _load_unlocked
+> collect_only.txt:315:E   NameError: name
+ 'QWidget' is not defined
+> collect_only.txt:316:_____________ ERROR
+ collecting tests/unit/test_plugin_manager
+.py ______________
+  collect_only.txt:317:import file mismatc
+h:
+  collect_only.txt:318:imported module 'te
+st_plugin_manager' has this __file__ attri
+bute:
+  collect_only.txt:319:  E:\Research\Calcu
+lation\moleditpy\DEV_MAIN\python_molecular
+_editor\tests\gui\test_plugin_manager.py
+  collect_only.txt:320:which is not the sa
+me as the test file we want to collect:
+  collect_only.txt:321:  E:\Research\Calcu
+lation\moleditpy\DEV_MAIN\python_molecular
+_editor\tests\unit\test_plugin_manager.py
+  collect_only.txt:322:HINT: remove __pyca
+che__ / .pyc files and/or use a unique bas
+ename for your test file modules
+  collect_only.txt:323:===================
+=========== warnings summary =============
+==================
+  collect_only.txt:324:<frozen importlib._
+bootstrap>:488
+  collect_only.txt:325:  <frozen importlib
+._bootstrap>:488: DeprecationWarning: buil
+tin type SwigPyPacked has no __module__ at
+tribute
+  collect_only.txt:326:
+> collect_only.txt:531:ERROR tests/integra
+tion - NameError: name 'QWidget' is not de
+fined
+> collect_only.txt:532:ERROR tests/unit/te
+st_plugin_manager.py
+> collect_only.txt:533:!!!!!!!!!!!!!!!!!!!
+ Interrupted: 2 errors during collection !
+!!!!!!!!!!!!!!!!!!
+> collect_only.txt:534:===================
+ 260 tests collected, 2 errors in 0.47s ==
+==================
+
+

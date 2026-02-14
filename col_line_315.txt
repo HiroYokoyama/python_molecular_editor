@@ -1,0 +1,7 @@
+﻿E   NameError: name 'QWidget' is not defined
+_____________ ERROR collecting tests/unit/test_plugin_manager.py ______________
+import file mismatch:
+imported module 'test_plugin_manager' has this __file__ attribute:
+  E:\Research\Calculation\moleditpy\DEV_MAIN\python_molecular_editor\tests\gui\test_plugin_manager.py
+which is not the same as the test file we want to collect:
+  E:\Research\Calculation\moleditpy\DEV_MAIN\python_molecular_editor\tests\unit\test_plugin_manager.py

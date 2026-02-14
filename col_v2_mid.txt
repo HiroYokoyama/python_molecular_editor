@@ -1,0 +1,36 @@
+﻿        <Function test_smiles_invalid_shows_error>
+        <Function test_smiles_empty_shows_error>
+        <Function test_inchi_ethanol>
+        <Function test_inchi_caffeine_formula>
+        <Function test_inchi_invalid_shows_error>
+
+=================================== ERRORS ====================================
+_____________ ERROR collecting tests/unit/test_plugin_manager.py ______________
+import file mismatch:
+imported module 'test_plugin_manager' has this __file__ attribute:
+  E:\Research\Calculation\moleditpy\DEV_MAIN\python_molecular_editor\tests\gui\test_plugin_manager.py
+which is not the same as the test file we want to collect:
+  E:\Research\Calculation\moleditpy\DEV_MAIN\python_molecular_editor\tests\unit\test_plugin_manager.py
+HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
+============================== warnings summary ===============================
+<frozen importlib._bootstrap>:488
+  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyPacked has no __module__ attribute
+
+<frozen importlib._bootstrap>:488
+  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyObject has no __module__ attribute
+
+<frozen importlib._bootstrap>:488
+  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type swigvarlink has no __module__ attribute
+
+tests\gui\test_main_app.py:103
+  E:\Research\Calculation\moleditpy\DEV_MAIN\python_molecular_editor\tests\gui\test_main_app.py:103: PytestUnknownMarkWarning: Unknown pytest.mark.unit - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.unit
+
+tests\gui\test_main_app.py:115
+  E:\Research\Calculation\moleditpy\DEV_MAIN\python_molecular_editor\tests\gui\test_main_app.py:115: PytestUnknownMarkWarning: Unknown pytest.mark.unit - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.unit
+
+tests\gui\test_main_app.py:131
+  E:\Research\Calculation\moleditpy\DEV_MAIN\python_molecular_editor\tests\gui\test_main_app.py:131: PytestUnknownMarkWarning: Unknown pytest.mark.unit - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.unit
+

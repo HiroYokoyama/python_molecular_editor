@@ -1,0 +1,71 @@
+﻿============================= test session starts =============================
+platform win32 -- Python 3.13.7, pytest-9.0.1, pluggy-1.6.0 -- C:\Users\hiro2\AppData\Local\Programs\Python\Python313\python.exe
+cachedir: .pytest_cache
+PyQt6 6.9.1 -- Qt runtime 6.9.2 -- Qt compiled 6.9.0
+rootdir: E:\Research\Calculation\moleditpy\DEV_MAIN\python_molecular_editor
+plugins: anyio-4.12.0, cov-7.0.0, mock-3.15.1, qt-4.5.0, timeout-2.4.0
+collecting ... collected 1 item
+
+tests/unit/test_compute_logic.py::test_trigger_conversion_stereo_enhancement FAILED [100%]
+
+================================== FAILURES ===================================
+_________________ test_trigger_conversion_stereo_enhancement __________________
+
+mock_parser_host = <MagicMock id='2530397702864'>
+
+    def test_trigger_conversion_stereo_enhancement(mock_parser_host):
+        """Test trigger_conversion stereo enhancement logic for E/Z bonds."""
+        from PyQt6.QtCore import QPointF
+        compute = DummyCompute(mock_parser_host)
+        compute.data.add_atom("C", QPointF(0,0))
+        # Molecule with a double bond
+        mol = Chem.MolFromSmiles("CC=CC")
+        bond = mol.GetBondWithIdx(1)
+        bond.SetStereo(Chem.BondStereo.STEREOE)
+    
+        with patch.object(compute.data, 'to_rdkit_mol', return_value=mol):
+            # Provide a minimal MOL block that the logic can "enhance"
+            mol_block = (
+                "Molecule\n"
+                "  RDKit          2D\n"
+                "\n"
+                "  4  3  0  0  0  0  0  0  0  0999 V2000\n"
+                "    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n"
+                "    1.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n"
+                "    2.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n"
+                "    3.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n"
+                "  1  2  1  0\n"
+                "  2  3  2  0\n"
+                "  3  4  1  0\n"
+                "M  END\n"
+            )
+            with patch.object(compute.data, 'to_mol_block', return_value=mol_block):
+                with patch('rdkit.Chem.DetectChemistryProblems', return_value=[]):
+                    compute.start_calculation = MagicMock()
+                    compute.worker_thread = MagicMock()
+                    compute.trigger_conversion()
+                    # If everything works, it shouldn't crash and should reach the end
+>                   assert compute.start_calculation.emit.called
+E                   AssertionError: assert False
+E                    +  where False = <MagicMock name='mock.emit' id='2530398107840'>.called
+E                    +    where <MagicMock name='mock.emit' id='2530398107840'> = <MagicMock id='2530397714960'>.emit
+E                    +      where <MagicMock id='2530397714960'> = <test_compute_logic.DummyCompute object at 0x0000024D2774EA50>.start_calculation
+
+tests\unit\test_compute_logic.py:595: AssertionError
+============================== warnings summary ===============================
+<frozen importlib._bootstrap>:488
+  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyPacked has no __module__ attribute
+
+<frozen importlib._bootstrap>:488
+  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyObject has no __module__ attribute
+
+<frozen importlib._bootstrap>:488
+  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type swigvarlink has no __module__ attribute
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+FAILED tests/unit/test_compute_logic.py::test_trigger_conversion_stereo_enhancement - AssertionError: assert False
+ +  where False = <MagicMock name='mock.emit' id='2530398107840'>.called
+ +    where <MagicMock name='mock.emit' id='2530398107840'> = <MagicMock id='2530397714960'>.emit
+ +      where <MagicMock id='2530397714960'> = <test_compute_logic.DummyCompute object at 0x0000024D2774EA50>.start_calculation
+======================== 1 failed, 3 warnings in 0.27s ========================

@@ -12,6 +12,10 @@ def test_chiral_labels_toggle_3d(window, qtbot):
     window.trigger_conversion()
     qtbot.waitUntil(lambda: window.current_mol is not None, timeout=15000)
     
+    # Reset mock to clear any initialization calls
+    window.plotter.add_point_labels.reset_mock()
+
+    
     assert window.show_chiral_labels is False
     def labels_drawn():
         return any(call.kwargs.get('name') == 'chiral_labels' for call in window.plotter.add_point_labels.call_args_list)

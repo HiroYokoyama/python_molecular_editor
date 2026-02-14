@@ -1,0 +1,96 @@
+﻿
+> collect_v2.txt:6:collected 277 items / 1
+ error
+  collect_v2.txt:7:
+  collect_v2.txt:8:<Dir python_molecular_e
+ditor>
+> collect_v2.txt:56:        <Function test
+_file_import_smiles_error>
+  collect_v2.txt:57:        <Function test
+_undo_redo_boundary>
+  collect_v2.txt:58:        <Function test
+_import_invalid_mol_file>
+> collect_v2.txt:108:        <Function tes
+t_calculation_worker_error_empty_input>
+  collect_v2.txt:109:        <Function tes
+t_calculation_worker_safe_helpers_halted>
+  collect_v2.txt:110:        <Function tes
+t_calculation_worker_rdkit_embedding_fail_
+fallback>
+> collect_v2.txt:112:        <Function tes
+t_on_calculation_error_stale>
+> collect_v2.txt:113:        <Function tes
+t_on_calculation_error_basic>
+  collect_v2.txt:114:        <Function tes
+t_compute_set_optimization_method>
+  collect_v2.txt:115:        <Function tes
+t_compute_halt_logic>
+> collect_v2.txt:123:        <Function tes
+t_trigger_conversion_sanitize_error>
+  collect_v2.txt:124:        <Function tes
+t_trigger_conversion_multiple_frags>
+  collect_v2.txt:125:        <Function tes
+t_on_calculation_finished_single_mol_legac
+y>
+> collect_v2.txt:126:        <Function tes
+t_on_calculation_error_legacy_payload>
+  collect_v2.txt:127:        <Function tes
+t_optimize_3d_temp_method_override>
+  collect_v2.txt:128:        <Function tes
+t_optimize_3d_mmff94s_success>
+> collect_v2.txt:151:        <Function tes
+t_on_calculation_error_updated>
+  collect_v2.txt:152:        <Function tes
+t_trigger_conversion_chemistry_problem_det
+ection>
+  collect_v2.txt:153:      <Module test_ed
+it_3d_logic.py>
+> collect_v2.txt:170:        <Function tes
+t_export_stl_error_no_mol>
+> collect_v2.txt:171:        <Function tes
+t_export_obj_mtl_error_no_mol>
+  collect_v2.txt:172:        <Function tes
+t_export_stl_success_trigger>
+  collect_v2.txt:173:        <Function tes
+t_export_obj_mtl_success_trigger>
+> collect_v2.txt:261:        <Function tes
+t_load_raw_data_error_paths>
+  collect_v2.txt:262:        <Function tes
+t_open_project_file_unsaved_check>
+> collect_v2.txt:263:        <Function tes
+t_save_project_io_error>
+  collect_v2.txt:264:        <Function tes
+t_load_json_data_version_mismatch>
+  collect_v2.txt:265:        <Function tes
+t_project_save_load_full_cycle>
+> collect_v2.txt:311:        <Function tes
+t_smiles_invalid_shows_error>
+> collect_v2.txt:312:        <Function tes
+t_smiles_empty_shows_error>
+  collect_v2.txt:313:        <Function tes
+t_inchi_ethanol>
+  collect_v2.txt:314:        <Function tes
+t_inchi_caffeine_formula>
+> collect_v2.txt:315:        <Function tes
+t_inchi_invalid_shows_error>
+  collect_v2.txt:316:
+> collect_v2.txt:317:=====================
+============== ERRORS ====================
+================
+> collect_v2.txt:318:_____________ ERROR c
+ollecting tests/unit/test_plugin_manager.p
+y ______________
+  collect_v2.txt:319:import file mismatch:
+  collect_v2.txt:320:imported module 'test
+_plugin_manager' has this __file__ attribu
+te:
+> collect_v2.txt:533:ERROR tests/unit/test
+_plugin_manager.py
+> collect_v2.txt:534:!!!!!!!!!!!!!!!!!!! I
+nterrupted: 1 error during collection !!!!
+!!!!!!!!!!!!!!!!
+> collect_v2.txt:535:==================== 
+277 tests collected, 1 error in 0.46s ====
+================
+
+

@@ -272,6 +272,102 @@ _Test error when optimization method is unavailable._
 
 - assert any(('Selected optimization' in msg for msg in messages))
 
+### test_on_calculation_finished_collision_single_frag
+_Test collision logic is skipped for single fragment._
+
+- assert not mock_adjust.called
+- assert not any(('Detecting collisions' in msg for msg in compute.get_status_messages()))
+
+### test_on_calculation_finished_collision_multi_frag
+_Test collision logic is triggered for multiple fragments._
+
+- assert mock_adjust.called
+- assert any(('Detecting collisions' in msg for msg in msgs))
+- assert any(('collision avoidance' in msg for msg in msgs))
+
+### test_on_calculation_finished_collision_exception
+_Test grace during collision detection exception._
+
+- assert any(('Detecting collisions' in msg for msg in msgs))
+
+### test_molecular_data_radical_transfer
+_Test that radical electrons are transferred correctly to RDKit mol._
+
+- assert mol is not None
+- assert mol.GetAtomWithIdx(0).GetNumRadicalElectrons() == 1
+
+### test_app_state_radical_and_constraint_preservation
+_Test that radicals and constraints are preserved through state round-trip._
+
+- assert state['atoms'][0]['radical'] == 2
+- assert state['constraints_3d'][0] == ['DISTANCE', [0, 1], 1.5, 100000.0]
+- assert 0 in compute.data.atoms
+- assert compute.data.atoms[0]['radical'] == 2
+- assert compute.constraints_3d == [('DISTANCE', (0, 1), 1.5, 100000.0)]
+
+### test_app_state_original_atom_id_preservation
+_Test that _original_atom_id is preserved in 3D molecule state round-trip._
+
+- assert 123 in state['mol_3d_atom_ids']
+- assert compute.current_mol is not None
+- assert compute.current_mol.GetAtomWithIdx(0).HasProp('_original_atom_id')
+- assert compute.current_mol.GetAtomWithIdx(0).GetIntProp('_original_atom_id') == 123
+
+### test_optimize_3d_method_persistence
+_Test that the successful optimization method is recorded._
+
+- assert compute.last_successful_optimization_method == 'MMFF94s'
+
+### test_trigger_conversion_early_exits
+_Test early exits in trigger_conversion (empty mol, etc.)._
+
+- assert compute.current_mol is None
+- assert any(('3D view cleared' in msg for msg in compute.get_status_messages()))
+- assert mock_fallback.called
+
+### test_check_chemistry_problems_fallback
+_Test the manual valence check when RDKit fails._
+
+- assert compute.data.atoms[0]['item'].has_problem == True
+- assert any(('chemistry problem' in msg and 'valence' in msg for msg in msgs))
+
+### test_trigger_conversion_happy_path
+_Test trigger_conversion follows the success path until worker setup._
+
+- assert any(('Calculating 3D structure' in msg for msg in msgs))
+
+### test_trigger_conversion_stereo_enhancement
+_Test trigger_conversion stereo enhancement logic for E/Z bonds._
+
+- assert mock_timer.called
+
+### test_set_optimization_method
+_Test set_optimization_method updates state and settings._
+
+- assert compute.optimization_method == 'MMFF94_RDKIT'
+- assert compute.settings['optimization_method'] == 'MMFF94_RDKIT'
+- assert compute.optimization_method == 'MMFF94_RDKIT'
+- assert any(('Unknown 3D optimization method' in msg for msg in compute.get_status_messages()))
+
+### test_halt_conversion
+_Test halt_conversion clears active workers and restores UI._
+
+- assert compute.active_worker_ids == set()
+- assert 1 in compute.halt_ids
+- assert compute.convert_button.setText.called
+
+### test_on_calculation_error_updated
+_Test on_calculation_error with correct message formatting._
+
+- assert any(('Error: Test Error' in msg for msg in msgs))
+- assert worker_id not in compute.active_worker_ids
+
+### test_trigger_conversion_chemistry_problem_detection
+_Test trigger_conversion detects and flags chemistry problems (valence)._
+
+- assert any(('chemistry problem(s) found' in msg for msg in msgs))
+- assert mock_item.has_problem == True
+
 ## tests/unit/test_edit_3d_logic.py
 
 ### test_calculate_distance_logic
@@ -1834,7 +1930,7 @@ _全消去: 確認ダイアログでキャンセルのテスト_
 _コピー: 選択なしでのコピー操作の安全性テスト_
 
 
-## tests/gui/test_plugin_manager.py
+## tests/gui/test_plugin_manager_redundant.py
 
 ### test_init
 _Test initialization of PluginManager._

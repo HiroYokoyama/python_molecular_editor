@@ -1,0 +1,40 @@
+﻿def test_molecular_data_add_atom():
+def test_molecular_data_add_bond():
+def test_molecular_data_add_stereo_bond():
+def test_molecular_data_remove_atom():
+def test_molecular_data_remove_bond():
+def test_to_rdkit_mol_stereo():
+def test_to_rdkit_mol_ez_stereo():
+def test_app_launch(window):
+def test_mode_change_atom(window, qtbot):
+def test_mode_change_bond(window, qtbot):
+def test_draw_atom_on_click(window, qtbot):
+def test_draw_bond_on_drag(window, qtbot):
+def test_draw_bond_to_existing_atom(window, qtbot):
+def test_change_atom_symbol_on_click(window, qtbot):
+def test_change_bond_order_on_click(window, qtbot):
+def test_delete_atom_on_right_click(window, qtbot):
+def test_charge_mode_click(window, qtbot):
+def test_2d_to_3d_conversion(window, qtbot, monkeypatch):
+def test_optimize_3d(window, qtbot, monkeypatch):
+def test_change_3d_style(window, qtbot):
+def test_undo_redo(window, qtbot):
+def test_clear_all(window, qtbot):
+def test_copy_paste(window, qtbot, monkeypatch):
+def test_file_import_smiles(window, qtbot, monkeypatch):
+def test_key_press_change_atom(window, qtbot, monkeypatch):
+def test_key_press_change_bond(window, qtbot, monkeypatch):
+def test_radical_mode_toggle(window, qtbot):
+def test_delete_key_selection(window, qtbot):
+def test_draw_benzene_template(window, qtbot):
+def test_open_settings_dialog(window, qtbot):
+def test_toggle_measurement_mode(window, qtbot):
+def test_toggle_3d_edit_mode(window, qtbot):
+def test_add_remove_hydrogens(window, qtbot):
+def test_2d_cleanup(window, qtbot, monkeypatch):
+def test_3d_viewer_mode_mol(window, qtbot, monkeypatch, tmp_path):
+def test_open_3d_edit_dialogs(window, qtbot, monkeypatch):
+def test_save_project_as(window, qtbot, monkeypatch):
+def test_open_project(window, qtbot, monkeypatch):
+def test_toggle_3d_atom_info(window, qtbot, monkeypatch):
+def test_user_template_dialog_save_and_use(window, qtbot, monkeypatch):

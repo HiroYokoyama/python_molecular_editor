@@ -1,0 +1,101 @@
+﻿"""Tests for PluginManager — metadata extraction, registration, and discovery."""
+import os
+import pytest
+import tempfile
+import textwrap
+from moleditpy.modules.plugin_manager import PluginManager
+from unittest.mock import MagicMock
+
+
+# =============================================================================
+# get_plugin_info_safe (AST-based metadata extraction)
+# =============================================================================
+
+def test_plugin_info_extracts_all_fields(tmp_path):
+    """Verify AST parser extracts PLUGIN_NAME, VERSION, AUTHOR, DESCRIPTION."""
+    plugin_file = tmp_path / "test_plugin.py"
+    plugin_file.write_text(textwrap.dedent('''\
+        PLUGIN_NAME = "My Cool Plugin"
+        PLUGIN_VERSION = "1.2.3"
+        PLUGIN_AUTHOR = "Test Author"
+        PLUGIN_DESCRIPTION = "Does amazing things"
+        PLUGIN_CATEGORY = "Analysis"
+        
+        def run(ctx):
+            pass
+    '''))
+    
+    pm = PluginManager()
+    info = pm.get_plugin_info_safe(str(plugin_file))
+    
+    assert info['name'] == "My Cool Plugin"
+    assert info['version'] == "1.2.3"
+    assert info['author'] == "Test Author"
+    assert info['description'] == "Does amazing things"
+    assert info['category'] == "Analysis"
+
+
+def test_plugin_info_version_tuple(tmp_path):
+    """Version tuples like (1, 0, 0) should be joined as '1.0.0'."""
+    plugin_file = tmp_path / "tuple_ver.py"
+    plugin_file.write_text(textwrap.dedent('''\
+        PLUGIN_NAME = "Tuple Version"
+        PLUGIN_VERSION = (2, 3, 1)
+    '''))
+    
+    pm = PluginManager()
+    info = pm.get_plugin_info_safe(str(plugin_file))
+    assert info['version'] == "2.3.1"
+
+
+def test_plugin_info_fallback_dunder(tmp_path):
+    """__version__ and __author__ should be used when PLUGIN_ variants are missing."""
+    plugin_file = tmp_path / "dunder_plugin.py"
+    plugin_file.write_text(textwrap.dedent('''\
+        __version__ = "0.5.0"
+        __author__ = "Dunder Author"
+        PLUGIN_NAME = "Dunder Plugin"
+    '''))
+    
+    pm = PluginManager()
+    info = pm.get_plugin_info_safe(str(plugin_file))
+    assert info['version'] == "0.5.0"
+    assert info['author'] == "Dunder Author"
+
+
+def test_plugin_info_docstring_fallback(tmp_path):
+    """Module docstring should be used as description if PLUGIN_DESCRIPTION is missing."""
+    plugin_file = tmp_path / "docstring_plugin.py"
+    plugin_file.write_text(textwrap.dedent('''\
+        """This is the plugin description from docstring."""
+        PLUGIN_NAME = "Docstring Plugin"
+    '''))
+    
+    pm = PluginManager()
+    info = pm.get_plugin_info_safe(str(plugin_file))
+    assert info['description'] == "This is the plugin description from docstring."
+
+
+def test_plugin_info_missing_file(tmp_path):
+    """Non-existent file should return defaults, not crash."""
+    pm = PluginManager()
+    info = pm.get_plugin_info_safe(str(tmp_path / "nonexistent.py"))
+    assert info['name'] == "nonexistent.py"
+    assert info['version'] == "Unknown"
+
+
+def test_plugin_info_syntax_error(tmp_path):
+    """File with syntax errors should return defaults, not crash."""
+    plugin_file = tmp_path / "broken.py"
+    plugin_file.write_text("def foo(:\n    pass\n")
+    
+    pm = PluginManager()
+    info = pm.get_plugin_info_safe(str(plugin_file))
+    assert info['version'] == "Unknown"
+
+
+def test_plugin_info_empty_file(tmp_path):
+    """Empty file should return defaults."""
+    plugin_file = tmp_path / "empty.py"
+    plugin_file.write_text("")
+    

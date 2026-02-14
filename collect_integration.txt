@@ -1,0 +1,42 @@
+﻿============================= test session starts =============================
+platform win32 -- Python 3.13.7, pytest-9.0.1, pluggy-1.6.0
+PyQt6 6.9.1 -- Qt runtime 6.9.2 -- Qt compiled 6.9.0
+rootdir: E:\Research\Calculation\moleditpy\DEV_MAIN\python_molecular_editor
+plugins: anyio-4.12.0, cov-7.0.0, mock-3.15.1, qt-4.5.0, timeout-2.4.0
+collected 17 items
+
+<Dir python_molecular_editor>
+  <Dir tests>
+    <Dir integration>
+      <Module test_calculation_worker.py>
+        <Function test_calculation_worker_bond_length_validation>
+        <Function test_calculation_worker_angle_validation>
+        <Function test_calculation_worker_dihedral_validation>
+        <Function test_calculation_worker_conversion_no_optimize>
+        <Function test_calculation_worker_direct_mode>
+        <Function test_calculation_worker_halt_logic>
+        <Function test_calculation_worker_global_halt>
+        <Function test_calculation_worker_invalid_input>
+        <Function test_calculation_worker_isolation>
+        <Function test_calculation_worker_direct_mode_stereo>
+        <Function test_calculation_worker_constraint_embedding_fallback>
+        <Function test_calculation_worker_uff_fallback>
+        <Function test_calculation_worker_mmff_variants>
+        <Function test_calculation_worker_obabel_fallback_mocked>
+        <Function test_calculation_worker_complex_direct_h_placement>
+      <Module test_chiral_labels_integration.py>
+        <Function test_chiral_labels_toggle_3d>
+        <Function test_chiral_labels_mirror_inversion_3d>
+
+============================== warnings summary ===============================
+<frozen importlib._bootstrap>:488
+  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyPacked has no __module__ attribute
+
+<frozen importlib._bootstrap>:488
+  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyObject has no __module__ attribute
+
+<frozen importlib._bootstrap>:488
+  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type swigvarlink has no __module__ attribute
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+========================= 17 tests collected in 0.19s =========================

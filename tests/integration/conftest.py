@@ -90,9 +90,19 @@ pyv.Box = _mock.MagicMock
 
 pvqt = force_mock_module('pyvistaqt')
 pvqt.BackgroundPlotter = DummyPlotterMinimal
-class DummyQtInteractorMock(QWidget if 'PyQt6.QtWidgets' in sys.modules else object):
+# Handle QWidget inheritance safely for mocking
+_parent_class = object
+if 'PyQt6.QtWidgets' in sys.modules:
+    try:
+        from PyQt6.QtWidgets import QWidget
+        _parent_class = QWidget
+    except ImportError:
+        pass
+
+class DummyQtInteractorMock(_parent_class):
     def __init__(self, parent=None, *a, **k):
-        if hasattr(self, 'super'): super().__init__(parent)
+        if _parent_class is not object:
+            super().__init__(parent)
         self.renderer = _mock.MagicMock()
         self.add_mesh = _mock.MagicMock(return_value=_mock.MagicMock())
         self.add_point_labels = _mock.MagicMock(return_value=[])

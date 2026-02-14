@@ -1,0 +1,45 @@
+﻿
+  C:\Users\hiro2\AppData\Local\Programs\Py
+thon\Python313\Lib\site-packages\_pytest\a
+ssertion\rewrite.py:197: in exec_module
+      exec(co, module.__dict__)
+  tests\integration\conftest.py:93: in <mo
+dule>
+      class DummyQtInteractorMock(QWidget 
+if 'PyQt6.QtWidgets' in sys.modules else o
+bject):
+                                  ^^^^^^^
+> E   NameError: name 'QWidget' is not def
+ined
+  _____________ ERROR collecting tests/uni
+t/test_plugin_manager.py ______________
+  import file mismatch:
+  imported module 'test_plugin_manager' ha
+s this __file__ attribute:
+    E:\Research\Calculation\moleditpy\DEV_
+MAIN\python_molecular_editor\tests\gui\tes
+t_plugin_manager.py
+  which is not the same as the test file w
+e want to collect:
+    E:\Research\Calculation\moleditpy\DEV_
+MAIN\python_molecular_editor\tests\gui\tes
+t_main_app.py:1580: PytestUnknownMarkWarni
+ng: Unknown pytest.mark.gui - is this a ty
+po?  You can register custom marks to avoi
+d this warning - for details, see https://
+docs.pytest.org/en/stable/how-to/mark.html
+      @pytest.mark.gui
+  
+  -- Docs: https://docs.pytest.org/en/stab
+le/how-to/capture-warnings.html
+  =========================== short test s
+ummary info ===========================
+> ERROR tests/integration - NameError: nam
+e 'QWidget' is not defined
+  ERROR tests/unit/test_plugin_manager.py
+  !!!!!!!!!!!!!!!!!!! Interrupted: 2 error
+s during collection !!!!!!!!!!!!!!!!!!!
+  ======================= 52 warnings, 2 e
+rrors in 1.17s ========================
+
+

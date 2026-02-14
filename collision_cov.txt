@@ -1,0 +1,29 @@
+﻿============================= test session starts =============================
+platform win32 -- Python 3.13.7, pytest-9.0.1, pluggy-1.6.0
+PyQt6 6.9.1 -- Qt runtime 6.9.2 -- Qt compiled 6.9.0
+rootdir: E:\Research\Calculation\moleditpy\DEV_MAIN\python_molecular_editor
+plugins: anyio-4.12.0, cov-7.0.0, mock-3.15.1, qt-4.5.0, timeout-2.4.0
+collected 29 items / 26 deselected / 3 selected
+
+tests\unit\test_compute_logic.py ...                                     [100%]
+
+============================== warnings summary ===============================
+<frozen importlib._bootstrap>:488
+  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyPacked has no __module__ attribute
+
+<frozen importlib._bootstrap>:488
+  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyObject has no __module__ attribute
+
+<frozen importlib._bootstrap>:488
+  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type swigvarlink has no __module__ attribute
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=============================== tests coverage ================================
+_______________ coverage: platform win32, python 3.13.7-final-0 _______________
+
+Name                                                     Stmts   Miss  Cover   Missing
+--------------------------------------------------------------------------------------
+moleditpy\src\moleditpy\modules\main_window_compute.py     602    500    17%   24-25, 42-43, 48-54, 58, 66-68, 211-545, 619-672, 676-819, 827, 830-831, 837-880, 885-888, 891-900, 913-918, 926-935, 940-942, 954-955, 961-963, 990-1002, 1014-1017, 1025-1026, 1029-1030, 1049-1062, 1066-1203
+--------------------------------------------------------------------------------------
+TOTAL                                                      602    500    17%
+================ 3 passed, 26 deselected, 3 warnings in 0.37s =================

@@ -1,0 +1,54 @@
+﻿============================= test session starts =============================
+platform win32 -- Python 3.13.7, pytest-9.0.1, pluggy-1.6.0 -- C:\Users\hiro2\AppData\Local\Programs\Python\Python313\python.exe
+cachedir: .pytest_cache
+PyQt6 6.9.1 -- Qt runtime 6.9.2 -- Qt compiled 6.9.0
+rootdir: E:\Research\Calculation\moleditpy\DEV_MAIN\python_molecular_editor
+plugins: anyio-4.12.0, cov-7.0.0, mock-3.15.1, qt-4.5.0, timeout-2.4.0
+collecting ... collected 24 items
+
+<Dir python_molecular_editor>
+  <Dir tests>
+    <Dir unit>
+      <Module test_plugin_manager.py>
+        Tests for PluginManager \u2014 metadata extraction, registration, and discovery.
+        <Function test_plugin_info_extracts_all_fields>
+          Verify AST parser extracts PLUGIN_NAME, VERSION, AUTHOR, DESCRIPTION.
+        <Function test_plugin_info_version_tuple>
+          Version tuples like (1, 0, 0) should be joined as '1.0.0'.
+        <Function test_plugin_info_fallback_dunder>
+          __version__ and __author__ should be used when PLUGIN_ variants are missing.
+        <Function test_plugin_info_docstring_fallback>
+          Module docstring should be used as description if PLUGIN_DESCRIPTION is missing.
+        <Function test_plugin_info_missing_file>
+          Non-existent file should return defaults, not crash.
+        <Function test_plugin_info_syntax_error>
+          File with syntax errors should return defaults, not crash.
+        <Function test_plugin_info_empty_file>
+          Empty file should return defaults.
+        <Function test_register_menu_action>
+          register_menu_action should store action metadata.
+        <Function test_register_toolbar_action>
+        <Function test_register_export_action>
+        <Function test_register_optimization_method>
+        <Function test_register_file_opener>
+        <Function test_register_file_opener_priority>
+          Higher priority opener should replace lower priority one in sorted order.
+        <Function test_register_analysis_tool>
+        <Function test_register_save_handler>
+        <Function test_register_load_handler>
+        <Function test_register_3d_style>
+        <Function test_register_document_reset_handler>
+        <Function test_invoke_document_reset_handlers>
+          All registered reset handlers should be called.
+        <Function test_discover_plugins_empty_dir>
+          Empty plugin directory should return no plugins.
+        <Function test_discover_plugins_single_file>
+          Single .py file in plugin dir should be discovered.
+        <Function test_discover_plugins_package>
+          Folder with __init__.py should be discovered as package plugin.
+        <Function test_discover_plugins_ignores_dunder_files>
+          Files starting with __ should be ignored, and root __init__.py shouldn't count as a plugin.
+        <Function test_ensure_plugin_dir_creates_directory>
+          ensure_plugin_dir should create the directory if it doesn't exist.
+
+========================= 24 tests collected in 0.03s =========================

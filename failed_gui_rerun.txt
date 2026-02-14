@@ -1,0 +1,89 @@
+﻿============================= test session starts =============================
+platform win32 -- Python 3.13.7, pytest-9.0.1, pluggy-1.6.0 -- C:\Users\hiro2\AppData\Local\Programs\Python\Python313\python.exe
+cachedir: .pytest_cache
+PyQt6 6.9.1 -- Qt runtime 6.9.2 -- Qt compiled 6.9.0
+rootdir: E:\Research\Calculation\moleditpy\DEV_MAIN\python_molecular_editor\tests\gui
+configfile: pytest.ini
+plugins: anyio-4.12.0, cov-7.0.0, mock-3.15.1, qt-4.5.0, timeout-2.4.0
+collecting ... collected 71 items / 69 deselected / 2 selected
+run-last-failure: rerun previous 2 failures
+
+tests\gui\test_chiral_labels_integration.py::test_chiral_labels_toggle_3d FAILED [ 50%]
+tests\gui\test_chiral_labels_integration.py::test_chiral_labels_mirror_inversion_3d FAILED [100%]
+
+================================== FAILURES ===================================
+________________________ test_chiral_labels_toggle_3d _________________________
+
+window = <moleditpy.modules.main_window.MainWindow object at 0x0000019CA5590E10>
+qtbot = <pytestqt.qtbot.QtBot object at 0x0000019CA5489D30>
+
+    def test_chiral_labels_toggle_3d(window, qtbot):
+        """
+        Test that toggling 'Show Chiral Labels' correctly displays/hides labels in 3D.
+        """
+        window.load_from_smiles("C[C@H](O)CC")
+        window.trigger_conversion()
+        qtbot.waitUntil(lambda: window.current_mol is not None, timeout=15000)
+    
+        assert window.show_chiral_labels is False
+        def labels_drawn():
+            return any(call.kwargs.get('name') == 'chiral_labels' for call in window.plotter.add_point_labels.call_args_list)
+    
+        assert not labels_drawn()
+    
+        window.toggle_chiral_action.setChecked(True)
+        window.toggle_chiral_action.triggered.emit(True)
+    
+        assert window.show_chiral_labels is True
+    
+        mol = window.current_mol
+        chiral_centers = Chem.FindMolChiralCenters(mol, includeUnassigned=True)
+        assert len(chiral_centers) == 1
+        initial_label = chiral_centers[0][1]
+        assert initial_label in ['R', 'S']
+    
+>       qtbot.waitUntil(labels_drawn, timeout=5000)
+E       pytestqt.exceptions.TimeoutError: waitUntil timed out in 5000 milliseconds
+
+tests\integration\test_chiral_labels_integration.py:32: TimeoutError
+---------------------------- Captured Qt messages -----------------------------
+QtWarningMsg: QFontDatabase: Cannot find font directory C:/Users/hiro2/AppData/Local/Programs/Python/Python313/Lib/site-packages/PyQt6/Qt6/lib/fonts.
+Note that Qt no longer ships fonts. Deploy some (from https://dejavu-fonts.github.io/ for example) or switch to fontconfig.
+QtWarningMsg: This plugin does not support propagateSizeHints()
+___________________ test_chiral_labels_mirror_inversion_3d ____________________
+
+window = <moleditpy.modules.main_window.MainWindow object at 0x0000019CA5627B10>
+qtbot = <pytestqt.qtbot.QtBot object at 0x0000019CA5669310>
+
+    def test_chiral_labels_mirror_inversion_3d(window, qtbot):
+        """
+        Test that mirror transformation inverts the chiral label in 3D.
+        """
+        window.load_from_smiles("C[C@H](O)CC")
+        window.trigger_conversion()
+        qtbot.waitUntil(lambda: window.current_mol is not None, timeout=15000)
+    
+        window.toggle_chiral_action.setChecked(True)
+        window.toggle_chiral_action.triggered.emit(True)
+    
+>       qtbot.waitUntil(lambda: any(call.kwargs.get('name') == 'chiral_labels' for call in window.plotter.add_point_labels.call_args_list), timeout=5000)
+E       pytestqt.exceptions.TimeoutError: waitUntil timed out in 5000 milliseconds
+
+tests\integration\test_chiral_labels_integration.py:56: TimeoutError
+---------------------------- Captured Qt messages -----------------------------
+QtWarningMsg: This plugin does not support propagateSizeHints()
+============================== warnings summary ===============================
+<frozen importlib._bootstrap>:488
+  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyPacked has no __module__ attribute
+
+<frozen importlib._bootstrap>:488
+  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyObject has no __module__ attribute
+
+<frozen importlib._bootstrap>:488
+  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type swigvarlink has no __module__ attribute
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+FAILED tests\gui\test_chiral_labels_integration.py::test_chiral_labels_toggle_3d
+FAILED tests\gui\test_chiral_labels_integration.py::test_chiral_labels_mirror_inversion_3d
+================ 2 failed, 69 deselected, 3 warnings in 12.95s ================
