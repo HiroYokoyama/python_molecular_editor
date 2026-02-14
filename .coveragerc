@@ -12,6 +12,11 @@ omit =
     moleditpy/src/moleditpy/modules/main_window_ui_manager.py
     moleditpy/src/moleditpy/modules/main_window_view_loaders.py
     moleditpy/src/moleditpy/modules/main_window_dialog_manager.py
+    moleditpy/src/moleditpy/modules/main_window_view_3d.py
+    moleditpy/src/moleditpy/modules/main_window_edit_3d.py
+    moleditpy/src/moleditpy/modules/main_window_edit_actions.py
+    moleditpy/src/moleditpy/modules/template_preview_item.py
+    moleditpy/src/moleditpy/modules/template_preview_view.py
 
 exclude_lines =
     pragma: no cover

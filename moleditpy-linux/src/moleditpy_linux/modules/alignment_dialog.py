@@ -46,7 +46,7 @@ class AlignmentDialog(Dialog3DPickingMixin, QDialog):
     def init_ui(self):
         axis_names = {'x': 'X-axis', 'y': 'Y-axis', 'z': 'Z-axis'}
         self.setWindowTitle(f"Align to {axis_names[self.axis]}")
-        self.setModal(False)  # モードレスにしてクリックを阻害しない
+        self.setModal(False)
         layout = QVBoxLayout(self)
         
         # Instructions

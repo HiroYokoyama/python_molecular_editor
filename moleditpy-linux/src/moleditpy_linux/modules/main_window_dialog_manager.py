@@ -132,7 +132,7 @@ class MainWindowDialogManager(object):
         
         # 新しいダイアログを作成
         self._template_dialog = UserTemplateDialog(self, self)
-        self._template_dialog.show()  # モードレスで表示
+        self._template_dialog.show()
         
         # ダイアログが閉じられた後、テンプレートが選択されていればアクティブ化
         def on_dialog_finished():
@@ -410,7 +410,7 @@ class MainWindowDialogManager(object):
             self.toggle_measurement_mode(False)
         
         dialog = ConstrainedOptimizationDialog(self.current_mol, self, parent=self)
-        self.active_3d_dialogs.append(dialog)  # 参照を保持
-        dialog.show()  # モードレス表示
+        self.active_3d_dialogs.append(dialog)
+        dialog.show()
         dialog.finished.connect(lambda: self.remove_dialog_from_list(dialog))
     

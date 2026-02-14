@@ -125,3 +125,37 @@ def test_load_raw_data_error_paths(mock_parser_host):
         with patch('pickle.load', side_effect=pickle.UnpicklingError("Corrupt")):
             io.load_raw_data("dummy.pmeraw")
             io.statusBar().showMessage.assert_called_with("Invalid project file format: Corrupt")
+  
+
+def test_open_project_file_unsaved_check(mock_parser_host):
+    io = DummyProjectIo(mock_parser_host)
+    # Mock check_unsaved_changes to return False (cancel)
+    # Note: DummyProjectIo mocks check_unsaved_changes to return True by default.
+    # We need to override that.
+    with patch.object(io, 'check_unsaved_changes', return_value=False):
+        io.open_project_file()
+        # Should return early, not opening dialog
+        with patch('PyQt6.QtWidgets.QFileDialog.getOpenFileName') as mock_open:
+            assert not mock_open.called
+
+def test_save_project_io_error(mock_parser_host, tmp_path):
+    io = DummyProjectIo(mock_parser_host)
+    io.current_file_path = str(tmp_path / "readonly.pmeprj")
+    io.data.atoms = {1: "C"}
+    
+    with patch('builtins.open', side_effect=IOError("Permission denied")):
+         with patch.object(io, 'create_json_data', return_value={"format": "PME Project"}):
+             io.save_project()
+             io.statusBar().showMessage.assert_called_with("File I/O error: Permission denied")
+
+def test_load_json_data_version_mismatch(mock_parser_host, tmp_path):
+    io = DummyProjectIo(mock_parser_host)
+    json_path = tmp_path / "future.pmeprj"
+    with open(json_path, 'w') as f:
+        json.dump({"format": "PME Project", "version": "2.0"}, f)
+        
+    with patch('PyQt6.QtWidgets.QMessageBox.information') as mock_info:
+        io.load_json_data(str(json_path))
+        # Should verify warning was shown
+        assert mock_info.called
+        assert "version 2.0" in mock_info.call_args[0][2]

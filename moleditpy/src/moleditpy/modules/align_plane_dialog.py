@@ -44,7 +44,7 @@ class AlignPlaneDialog(Dialog3DPickingMixin, QDialog):
     def init_ui(self):
         plane_names = {'xy': 'XY', 'xz': 'XZ', 'yz': 'YZ'}
         self.setWindowTitle(f"Align to {plane_names[self.plane]} Plane")
-        self.setModal(False)  # モードレスにしてクリックを阻害しない
+        self.setModal(False)
         layout = QVBoxLayout(self)
         
         # Instructions

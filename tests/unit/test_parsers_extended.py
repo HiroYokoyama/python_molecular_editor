@@ -244,3 +244,6 @@ def test_load_xyz_skip_chemistry_via_button(mock_parser_host, tmp_path):
     mol = parser.load_xyz_file(str(xyz_path))
     assert mol is not None
     assert mol.HasProp("_xyz_skip_checks") or getattr(mol, "_xyz_skip_checks", False)
+  
+
+

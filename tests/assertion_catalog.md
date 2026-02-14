@@ -921,6 +921,21 @@ _No description provided._
 _No description provided._
 
 
+### test_open_project_file_unsaved_check
+_No description provided._
+
+- assert not mock_open.called
+
+### test_save_project_io_error
+_No description provided._
+
+
+### test_load_json_data_version_mismatch
+_No description provided._
+
+- assert mock_info.called
+- assert 'version 2.0' in mock_info.call_args[0][2]
+
 ## tests/unit/test_properties.py
 
 ### test_analysis_window_regular_mol
@@ -934,6 +949,39 @@ _Verify AnalysisWindow uses manual logic for XYZ-derived structures._
 
 - assert 'C2HO' in formula_val
 - assert not smiles_present
+
+## tests/unit/test_scene_advanced.py
+
+### test_right_click_bond_deletion
+_Test standard right-click deletion on a bond._
+
+- assert len(data.bonds) == 1
+- assert len(data.bonds) == 0
+- assert a1_id in data.atoms
+- assert a2_id in data.atoms
+- assert bond_item.scene() is None
+
+### test_drag_and_drop_atom
+_Test moving an atom via drag-and-drop._
+
+- assert a1_item.pos() == new_pos
+- assert data.atoms[a1_id]['pos'] == new_pos
+- assert len(window.undo_stack) > 0
+
+### test_delete_mixed_selection
+_Test deleting a selection containing both atoms and bonds._
+
+- assert a1_id not in data.atoms
+- assert len(data.bonds) == 0
+- assert a2_id in data.atoms
+- assert a2_id in data.atoms
+
+### test_undo_redo
+_Test undo/redo integration via scene modifications._
+
+- assert len(window.undo_stack) == 0
+- assert len(window.undo_stack) >= 1
+- assert len(window.undo_stack) >= 2
 
 ## tests/unit/test_scene_extended.py
 
