@@ -133,6 +133,81 @@ class TestAtomItem:
         atom_item.paint(mock_painter, option, widget)
         assert mock_painter.drawRect.called
 
+    def test_paint_implicit_hydrogens_and_flipping(self, atom_item):
+        """Test painting logic for implicit hydrogens and text alignment"""
+        mock_painter = MagicMock()
+        option = MagicMock()
+        widget = MagicMock()
+        
+        mock_fm = MagicMock()
+        mock_painter.fontMetrics.return_value = mock_fm
+        # Ensure boundingRect returns a TolerantQRectF
+        mock_fm.boundingRect.side_effect = lambda *args: TolerantQRectF(0, 0, 20, 20)
+        
+        # Patch sip_isdeleted_safe to avoid issues with Mock objects not being C++ pointers
+        with patch('moleditpy.modules.atom_item.sip_isdeleted_safe', return_value=False):
+            # 1. Test Implicit Hydrogens (e.g. CH3)
+            atom_item.implicit_h_count = 3
+            atom_item.paint(mock_painter, option, widget)
+            
+            # Verify call args for drawText to contain subscript
+            call_args_list = mock_painter.drawText.call_args_list
+            found_subscript = False
+            for args, _ in call_args_list:
+                # args[0] might be rect, args[1] flags, args[2] text OR args[0] x, args[1] y, args[2] text
+                # We look for string arg
+                for arg in args:
+                    if isinstance(arg, str) and "₃" in arg:
+                        found_subscript = True
+                        break
+            assert found_subscript, "Subscript for implicit H count 3 (₃) not found in drawText calls"
+            
+            # 2. Test Text Flipping (AlignLeft vs AlignRight) based on bond direction
+            
+            # Change symbol to 'N' so it's not a skeletal Carbon (which hides H)
+            atom_item.symbol = 'N'
+            
+            # Setup neighbors
+            # We need to add bonds to the atom
+            bond_mock = MagicMock()
+            other_atom = MagicMock()
+            
+            # Case A: Neighbor is to the LEFT (dx < 0) -> No Flip (Group on Right) -> AlignLeft
+            other_atom.pos.return_value = QPointF(-10.0, 0.0)
+            atom_item.setPos(0.0, 0.0)
+            
+            bond_mock.atom1 = atom_item
+            bond_mock.atom2 = other_atom
+            
+            # atom_item.bonds is a list
+            atom_item.bonds = [bond_mock]
+            
+            mock_painter.reset_mock()
+            mock_fm.boundingRect.side_effect = lambda *args: TolerantQRectF(0, 0, 20, 20)
+            
+            atom_item.paint(mock_painter, option, widget)
+            
+            # 3. Case B: Neighbor is on RIGHT (+10, 0) -> Flip -> H3C, AlignRight
+            other_atom.pos.return_value = QPointF(10.0, 0.0)
+            
+            mock_painter.reset_mock()
+            mock_fm.boundingRect.side_effect = lambda *args: TolerantQRectF(0, 0, 20, 20)
+            
+            atom_item.paint(mock_painter, option, widget)
+            
+            # Check for reversed text or checks
+            # If flip_text=True, display_text = hydrogen_part + symbol
+            # "H₃C" (H part first)
+            
+            call_args_list = mock_painter.drawText.call_args_list
+            found_flipped_text = False
+            for args, _ in call_args_list:
+                for arg in args:
+                    if isinstance(arg, str) and arg.startswith("H") and arg.endswith("N"):
+                         found_flipped_text = True
+            
+            assert found_flipped_text, "Expected flipped text 'H...N' when neighbor is on the right"
+
 
 
 # Helper for mocking scene() on BondItem
