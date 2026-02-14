@@ -87,6 +87,8 @@ _Empty state should produce valid structure with no atoms/bonds._
 - assert state['atoms'] == {}
 - assert state['bonds'] == {}
 
+## tests/unit/test_atom_bond_items.py
+
 ## tests/unit/test_calculation_worker_direct.py
 
 ### test_calculation_worker_init
@@ -642,6 +644,72 @@ _Test BondItem.update_position resilience when atoms exist._
 
 - assert True
 
+## tests/unit/test_main_window_export_extended.py
+
+### test_export_stl_success
+_Test export_stl success path._
+
+
+### test_export_stl_cancel
+_Test export_stl cancellation._
+
+- assert not any(('STL exported' in str(args) for args, _ in call_args_list))
+
+### test_export_stl_no_molecule
+_Test export_stl with no molecule._
+
+
+### test_export_obj_mtl_success
+_Test export_obj_mtl success path._
+
+
+### test_export_color_stl_success
+_"Test export_color_stl success path._
+
+
+### test_create_multi_material_obj_logic
+_Test the file writing logic of create_multi_material_obj._
+
+- assert 'mtllib test.mtl' in content
+- assert 'usemtl material_0_test_mesh' in content
+- assert 'v 0.000000 0.000000 0.000000' in content
+- assert 'f 1 2 3' in content
+
+### test_export_from_3d_view_logic
+_Test export_from_3d_view to ensure it iterates actors and extracts meshes._
+
+- assert result is not None
+
+### test_export_2d_png_success
+_Test export_2d_png success path._
+
+
+### test_export_2d_png_success
+_Test export_2d_png success path._
+
+
+### test_export_2d_svg_success
+_Test export_2d_svg success path._
+
+
+### test_export_from_3d_view_no_color_logic
+_Test the logic of extracting mesh without colors._
+
+- assert result is not None
+
+### test_export_from_3d_view_with_colors_logic
+_Test logic of extracting mesh with colors and splitting._
+
+- assert isinstance(results, list)
+- assert len(results) >= 1
+
+### test_create_multi_material_obj_complex_cells
+_Test create_multi_material_obj with Triangle Strips and Quads._
+
+- assert 'f 5 6 7 8' in content
+- assert 'f 1 2 3' in content
+- assert 'f 3 2 4' in content
+
 ## tests/unit/test_main_window_init_coverage.py
 
 ### test_imports_mainwindow
@@ -903,6 +971,8 @@ _No description provided._
 - assert mol is not None
 - assert mol.GetNumAtoms() == 2
 - assert mol.GetNumBonds() >= 1
+
+## tests/unit/test_plugin_interface.py
 
 ## tests/unit/test_plugin_manager.py
 
