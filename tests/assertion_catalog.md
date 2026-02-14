@@ -213,6 +213,65 @@ _Test on_calculation_error with a string (legacy error format)._
 
 - assert any(('Fatal Error' in str(call[0][0]) for call in compute.statusBar().showMessage.call_args_list if call[0]))
 
+### test_optimize_3d_temp_method_override
+_Test optimize_3d_structure with temporary optimization method override._
+
+- assert mock_mmff.called
+- assert any(('Optimizing' in msg for msg in msgs)) or any(('conformer' in msg for msg in msgs))
+
+### test_optimize_3d_mmff94s_success
+_Test MMFF94s optimization succeeds._
+
+- assert any(('Optimizing' in msg for msg in compute.get_status_messages()))
+
+### test_optimize_3d_uff_success
+_Test UFF optimization succeeds._
+
+- assert any(('Optimizing' in msg for msg in compute.get_status_messages()))
+
+### test_optimize_3d_no_conformer
+_Test optimize_3d_structure when molecule has no conformer._
+
+- assert any(('No conformer found' in msg for msg in messages))
+
+### test_optimize_3d_mmff_exception_handling
+_Test exception handling in MMFF optimization._
+
+- assert not any(('not available' in msg for msg in msgs))
+- assert any(('error' in msg.lower() for msg in msgs)) or any(('failed' in msg.lower() for msg in msgs))
+
+### test_optimize_3d_uff_exception_handling
+_Test exception handling in UFF optimization._
+
+- assert not any(('not available' in msg for msg in msgs))
+- assert any(('error' in msg.lower() for msg in msgs)) or any(('failed' in msg.lower() for msg in msgs))
+
+### test_optimize_3d_plugin_method
+_Test plugin optimization method._
+
+- assert not any(('not available' in msg for msg in msgs))
+- assert mock_callback.called
+
+### test_optimize_3d_plugin_failure
+_Test plugin optimization returning False._
+
+- assert any(('returned failure' in msg for msg in msgs))
+
+### test_optimize_3d_mmff_fallback_success
+_Test MMFF fallback to ForceField API when basic optimization fails._
+
+- assert any(('Optimizing' in msg for msg in compute.get_status_messages()))
+
+### test_optimize_3d_uff_fallback_failure
+_Test UFF fallback failure path._
+
+- assert any(('UFF minimize returned non-zero status' in msg for msg in msgs))
+
+### test_optimize_3d_unavailable_method
+_Test error when optimization method is unavailable._
+
+- assert any(('Selected optimization' in msg for msg in messages))
+
 ## tests/unit/test_edit_3d_logic.py
 
 ### test_calculate_distance_logic
