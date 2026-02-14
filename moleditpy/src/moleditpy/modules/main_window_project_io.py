@@ -19,6 +19,7 @@ MainWindow (main_window.py) から分離されたモジュール
 import pickle
 import os
 import json 
+import copy
 import traceback
 
 # RDKit imports (explicit to satisfy flake8 and used features)

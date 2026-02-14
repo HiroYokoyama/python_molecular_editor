@@ -7,6 +7,7 @@ from moleditpy.modules.main_window_project_io import MainWindowProjectIo
 from PyQt6.QtCore import QPointF
 from PyQt6.QtWidgets import QMessageBox
 from unittest.mock import MagicMock, patch
+import copy
 
 class DummyProjectIo(MainWindowProjectIo):
     def __init__(self, host):
@@ -16,10 +17,13 @@ class DummyProjectIo(MainWindowProjectIo):
         self.current_file_path = None
         self.has_unsaved_changes = False
         self.current_mol = None
+        self.current_mol = None
         self._saved_state = None
         self.statusBar_mock = MagicMock()
     
     def __getattr__(self, name):
+        if name == "_saved_state": # explicit check to avoid recursion if init didn't run or something
+             return self.__dict__.get("_saved_state", None)
         return getattr(self._host, name)
 
     def statusBar(self): return self.statusBar_mock
@@ -188,3 +192,79 @@ def test_project_save_load_full_cycle(mock_parser_host, tmp_path):
         assert len(atoms) == 1
         assert atoms[0]["symbol"] == "C"
         assert atoms[0]["charge"] == 1
+
+
+
+def test_save_project_no_data_error(mock_parser_host):
+    """Test save_project with no data returns error."""
+    io = DummyProjectIo(mock_parser_host)
+    io.data.atoms = {}
+    io.current_mol = None 
+    
+    io.save_project()
+    io.statusBar().showMessage.assert_called_with("Error: Nothing to save.")
+
+def test_save_project_default_filename(mock_parser_host, tmp_path):
+    """Test save_project_as uses current_file_path to suggest filename."""
+    io = DummyProjectIo(mock_parser_host)
+    io.data.atoms = {1: {'symbol': 'C'}}
+    
+    # 1. With existing path
+    io.current_file_path = str(tmp_path / "subdir" / "my_molecule.pmeprj")
+    
+    with patch('PyQt6.QtWidgets.QFileDialog.getSaveFileName', return_value=("", "")) as mock_save:
+        io.save_project_as()
+        
+        args, _ = mock_save.call_args
+        suggested_path = args[2]
+        # Should be in same dir, same name (without ext potentially, or used as is depending on logic)
+        # Logic says: os.path.join(dirname, basename_no_ext)
+        expected = str(tmp_path / "subdir" / "my_molecule")
+        assert suggested_path == expected
+
+    # 2. No existing path
+    io.current_file_path = None
+    with patch('PyQt6.QtWidgets.QFileDialog.getSaveFileName', return_value=("", "")) as mock_save:
+        io.save_project_as()
+        args, _ = mock_save.call_args
+        assert args[2] == "untitled"
+
+def test_save_project_extension_enforcement(mock_parser_host, tmp_path):
+    """Test that extensions are enforced in save_project_as."""
+    io = DummyProjectIo(mock_parser_host)
+    io.data.atoms = {1: {'symbol': 'C'}}
+    
+    # User types "test" without extension
+    save_path_input = str(tmp_path / "test")
+    # Expected output
+    expected_path = str(tmp_path / "test.pmeprj")
+    
+    with patch('PyQt6.QtWidgets.QFileDialog.getSaveFileName', return_value=(save_path_input, "PME Project Files (*.pmeprj)")), \
+         patch.object(io, 'create_json_data', return_value={}):
+         
+        io.save_project_as()
+        
+        assert io.current_file_path == expected_path
+        assert os.path.exists(expected_path)
+
+def test_save_project_success_state_update(mock_parser_host, tmp_path):
+    """Test state updates after successful save."""
+    io = DummyProjectIo(mock_parser_host)
+    io.data.atoms = {1: {'symbol': 'C'}}
+    io.has_unsaved_changes = True
+    io.update_window_title = MagicMock()
+    
+    save_path = str(tmp_path / "saved.pmeprj")
+    
+    # Mock deepcopy to just return the object (or a copy), avoiding issues with MagicMocks
+    with patch('PyQt6.QtWidgets.QFileDialog.getSaveFileName', return_value=(save_path, "")), \
+         patch.object(io, 'create_json_data', return_value={}), \
+         patch.object(io, 'get_current_state', return_value={'test': 1}), \
+         patch('copy.deepcopy', side_effect=lambda x: x):
+         
+        io.save_project_as()
+        
+        assert io.has_unsaved_changes is False
+        assert io.current_file_path == save_path
+        assert io.update_window_title.called
+        assert io._saved_state is not None
