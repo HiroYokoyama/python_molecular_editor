@@ -675,4 +675,125 @@ def test_trigger_conversion_chemistry_problem_detection(mock_parser_host):
     compute.data.bonds.clear()
     del compute
 
+def test_trigger_conversion_fragment_message_exact(mock_parser_host):
+    """Test verification of the exact status bar message for multiple fragments."""
+    compute = DummyCompute(mock_parser_host)
+    mol = Chem.MolFromSmiles("C.C.O") # 3 fragments
+    compute.data.atoms = {1: {'symbol': 'C', 'item': MagicMock()}, 2: {'symbol': 'C', 'item': MagicMock()}, 3: {'symbol': 'O', 'item': MagicMock()}}
+    
+    with patch('rdkit.Chem.DetectChemistryProblems', return_value=[]), \
+         patch('rdkit.Chem.SanitizeMol'), \
+         patch.object(compute.data, 'to_rdkit_mol', return_value=mol), \
+         patch('moleditpy.modules.main_window_compute.CalculationWorker'), \
+         patch('moleditpy.modules.main_window_compute.QThread'):
+        compute.trigger_conversion()
+        all_messages = [str(call[0][0]) for call in compute.statusBar().showMessage.call_args_list if call[0]]
+        # Should say "Converting 3 molecules..."
+        assert any("Converting 3 molecules" in msg for msg in all_messages)
+
+def test_trigger_conversion_to_mol_block_priority(mock_parser_host):
+    """Test that data.to_mol_block() is used preferentially over RDKit's generation."""
+    compute = DummyCompute(mock_parser_host)
+    compute.data.atoms = {1: {'symbol': 'C', 'item': MagicMock()}}
+    mol = Chem.MolFromSmiles("C")
+    
+    # Unique string to identify our custom block
+    custom_block = "M  V2000\nCUSTOM_BLOCK_CONTENT"
+    
+    with patch.object(compute.data, 'to_rdkit_mol', return_value=mol), \
+         patch('rdkit.Chem.DetectChemistryProblems', return_value=[]), \
+         patch('rdkit.Chem.SanitizeMol'), \
+         patch.object(compute.data, 'to_mol_block', return_value=custom_block) as mock_to_block, \
+         patch('rdkit.Chem.MolToMolBlock') as mock_rdkit_block, \
+         patch('moleditpy.modules.main_window_compute.CalculationWorker') as MockWorker, \
+         patch('moleditpy.modules.main_window_compute.QThread'):
+        
+        # Setup worker mock to capture the start_work signal payload
+        mock_worker_instance = MockWorker.return_value
+        mock_start_work = MagicMock()
+        mock_worker_instance.start_work = mock_start_work
+        
+        # We need to capture the lambda passed to QTimer.singleShot because that's what triggers start_work
+        with patch('PyQt6.QtCore.QTimer.singleShot') as mock_timer:
+            compute.trigger_conversion()
+            
+            # Verify to_mol_block was called
+            assert mock_to_block.called
+            # Verify RDKit's block generation was NOT called (or at least our result was used)
+            assert not mock_rdkit_block.called
+            
+            # Extract the lambda from QTimer.singleShot(10, lambda ...)
+            args, _ = mock_timer.call_args
+            assert len(args) >= 2
+            callback = args[1]
+            
+            # Execute the callback to trigger the signal emit on our mock
+            callback()
+            
+            # Verify the payload sent to worker contains our custom block
+            call_args = mock_start_work.emit.call_args
+            assert call_args is not None
+            sent_block = call_args[0][0]
+            assert sent_block == custom_block
+
+def test_trigger_conversion_ez_stereo_injection(mock_parser_host):
+    """Test that M CFG lines are injected for E/Z stereo bonds."""
+    compute = DummyCompute(mock_parser_host)
+    
+    # Create valid E-isomer (trans-2-butene)
+    mol = Chem.MolFromSmiles("C/C=C/C") 
+    mol.GetAtomWithIdx(0).SetIntProp("_original_atom_id", 1)
+    mol.GetAtomWithIdx(1).SetIntProp("_original_atom_id", 2)
+    mol.GetAtomWithIdx(2).SetIntProp("_original_atom_id", 3)
+    mol.GetAtomWithIdx(3).SetIntProp("_original_atom_id", 4)
+    
+    # Setup data to match
+    compute.data.atoms = {
+        1: {'symbol': 'C', 'item': MagicMock()},
+        2: {'symbol': 'C', 'item': MagicMock()},
+        3: {'symbol': 'C', 'item': MagicMock()},
+        4: {'symbol': 'C', 'item': MagicMock()}
+    }
+    
+    # Bond between 2 and 3 is the double bond
+    # stereo=3 (Z) or 4 (E). Let's use 4 (E) -> CFG value 2
+    # RDKit bond index for this might be 1 (0-1, 1-2, 2-3)
+    compute.data.bonds = {
+        (2, 3): {'stereo': 4, 'order': 2},
+        (1, 2): {'order': 1},
+        (3, 4): {'order': 1}
+    }
+    
+    # A mocked MOL block that we pretend came from our data
+    base_block = "M  V2000\nM  END"
+    
+    with patch.object(compute.data, 'to_rdkit_mol', return_value=mol), \
+         patch('rdkit.Chem.DetectChemistryProblems', return_value=[]), \
+         patch('rdkit.Chem.SanitizeMol'), \
+         patch.object(compute.data, 'to_mol_block', return_value=base_block), \
+         patch('moleditpy.modules.main_window_compute.CalculationWorker') as MockWorker, \
+         patch('moleditpy.modules.main_window_compute.QThread'):
+         
+        mock_worker_instance = MockWorker.return_value
+        mock_start_work = MagicMock()
+        mock_worker_instance.start_work = mock_start_work
+        
+        with patch('PyQt6.QtCore.QTimer.singleShot') as mock_timer:
+            compute.trigger_conversion()
+            
+            # Execute callback
+            args, _ = mock_timer.call_args
+            callback = args[1]
+            callback()
+            
+            # Check sent block for M CFG
+            call_args = mock_start_work.emit.call_args
+            sent_block = call_args[0][0]
+            
+            print(f"DEBUG: Sent Block:\\n{sent_block}")
+            assert "M  CFG" in sent_block
+            # Check for E isomer (val 2) on bond index 2 (RDKit idx 1 + 1)
+            # 1-2 is usually index 1
+            assert "M  CFG  1   2   2" in sent_block
+
 
