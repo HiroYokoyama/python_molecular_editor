@@ -15,11 +15,38 @@ if os.path.isdir(src_path) and src_path not in sys.path:
 
 @pytest.fixture(scope="session")
 def app():
-    """QApplication session-wide instance for unit tests that might need it."""
+    """QApplication session-wide instance with platform-aware teardown."""
+    is_headless = os.environ.get("MOLEDITPY_HEADLESS", "0") == "1"
+    is_offscreen = os.environ.get("QT_QPA_PLATFORM") == "offscreen"
+
     q_app = QApplication.instance()
     if q_app is None:
         q_app = QApplication(sys.argv)
-    return q_app
+
+    yield q_app
+
+    # Platform-aware teardown: prevent 0x80010108 on Windows but avoid CI segfaults
+    if not (is_headless or is_offscreen):
+        try:
+            q_app.closeAllWindows()
+            for _ in range(5):
+                q_app.processEvents()
+
+            import gc
+
+            gc.collect()
+            q_app.processEvents()
+
+            try:
+                import colorama
+
+                colorama.deinit()
+            except (ImportError, Exception):
+                pass
+        except Exception:
+            pass
+
+    q_app.quit()
 
 
 @pytest.fixture

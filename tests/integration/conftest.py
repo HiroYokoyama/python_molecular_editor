@@ -196,8 +196,11 @@ from PyQt6.QtWidgets import QApplication
 # 3. Minimal cleanup to avoid COM crashes
 @pytest.fixture(scope="session")
 def app():
-    """QApplication session-wide instance for integration tests."""
-    if os.environ.get("MOLEDITPY_HEADLESS", "0") == "1":
+    """QApplication session-wide instance with platform-aware teardown."""
+    is_headless = os.environ.get("MOLEDITPY_HEADLESS", "0") == "1"
+    is_offscreen = os.environ.get("QT_QPA_PLATFORM") == "offscreen"
+
+    if is_headless:
         os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
     q_app = QApplication.instance()
@@ -206,24 +209,27 @@ def app():
 
     yield q_app
 
-    # Robust teardown sequence to prevent 0x80010108 RPC errors
-    try:
-        q_app.closeAllWindows()
-        for _ in range(10):
+    # Platform-aware teardown: prevent 0x80010108 on Windows but avoid CI segfaults
+    if not (is_headless or is_offscreen):
+        try:
+            q_app.closeAllWindows()
+            for _ in range(5):
+                q_app.processEvents()
+
+            # Force garbage collection to release Python-wrapped Qt objects
+            import gc
+
+            gc.collect()
             q_app.processEvents()
 
-        # Force garbage collection to release Python-wrapped Qt objects
-        import gc
+            try:
+                import colorama
 
-        gc.collect()
-
-        # Additional event processing after GC often helps QObjects finalize
-        q_app.processEvents()
-
-    except Exception:
-        import traceback
-
-        traceback.print_exc()
+                colorama.deinit()
+            except (ImportError, Exception):
+                pass
+        except Exception:
+            pass
 
     q_app.quit()
 
@@ -441,14 +447,3 @@ def window(app, qtbot, monkeypatch):
         import gc
 
         gc.collect()
-
-        # Attempt to de-initialize colorama if it's wrapping stdout/stderr
-        # which can cause 0x80010012/0x80010108 fatal exceptions on Windows teardown
-        try:
-            import colorama
-
-            colorama.deinit()
-        except ImportError:
-            pass
-        except Exception:
-            pass

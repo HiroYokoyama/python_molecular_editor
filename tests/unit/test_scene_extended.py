@@ -241,7 +241,7 @@ def test_scene_mouse_click_create_single_atom(mock_parser_host):
     assert mock_parser_host.push_undo_state.called
 
 
-def test_scene_right_click_bond_delete(mock_parser_host):
+def test_scene_right_click_bond_delete(qtbot, mock_parser_host):
     """Test right-click deletion on a bond."""
     scene = setup_scene_with_view(mock_parser_host)
     scene.mode = "select"
@@ -263,6 +263,18 @@ def test_scene_right_click_bond_delete(mock_parser_host):
         mock_del.assert_called()
         assert len(mock_parser_host.data.bonds) == 0
         assert mock_parser_host.push_undo_state.called
+
+    # Safety for headless environments: ensure any popup menus are closed
+    # before the test finishes to avoid segmentation faults during teardown.
+    for widget in QApplication.topLevelWidgets():
+        try:
+            if widget.metaObject().className() == "QMenu":
+                widget.close()
+        except (RuntimeError, AttributeError):
+            continue
+
+    # Wait for the event loop to clear any pending events (e.g. deletion, menu fade out)
+    qtbot.wait(50)
 
 
 def test_scene_drag_and_drop_atom(mock_parser_host):
