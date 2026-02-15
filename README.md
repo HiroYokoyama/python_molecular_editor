@@ -7,6 +7,8 @@
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 ![Overall Coverage](https://img.shields.io/badge/coverage-48%25-orange)
 ![Core Logic Coverage](https://img.shields.io/badge/core_logic_coverage-73%25-green)
+![GUI Status](https://img.shields.io/badge/GUI-Manually_Verified-blue)
+
 
 
 
