@@ -5,6 +5,7 @@
 [![PyPI version](https://badge.fury.io/py/MoleditPy.svg)](https://badge.fury.io/py/MoleditPy)
 [![Python Versions](https://img.shields.io/pypi/pyversions/MoleditPy.svg)](https://pypi.org/project/MoleditPy/)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
+[![Build Status](https://github.com/HiroYokoyama/python_molecular_editor/actions/workflows/tests.yml/badge.svg)](https://github.com/HiroYokoyama/python_molecular_editor/actions)
 ![Core Logic Coverage](https://img.shields.io/badge/core_logic_coverage-73%25-green)
 ![Overall Coverage](https://img.shields.io/badge/coverage-48%25-orange)
 ![GUI Status](https://img.shields.io/badge/GUI-Manually_Verified-blue)
