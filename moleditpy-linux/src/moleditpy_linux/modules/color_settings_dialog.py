@@ -10,11 +10,18 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
-from PyQt6.QtWidgets import (
-    QDialog, QVBoxLayout, QGridLayout, QPushButton, QHBoxLayout, QLabel,
-    QApplication, QColorDialog
-)
 from PyQt6.QtGui import QColor
+from PyQt6.QtWidgets import (
+    QApplication,
+    QColorDialog,
+    QDialog,
+    QGridLayout,
+    QHBoxLayout,
+    QLabel,
+    QPushButton,
+    QVBoxLayout,
+)
+
 try:
     from .constants import CPK_COLORS, DEFAULT_CPK_COLORS
 except Exception:
@@ -145,20 +152,20 @@ class ColorSettingsDialog(QDialog): # pragma: no cover
         # Clear overrides
         self.changed_cpk = {}
         self._reset_all_flag = True
-        
+
         # 1. B&S結合色もリセット対象（デフォルト値）に設定
         try:
             self.changed_bs_color = self.parent_window.default_settings.get('ball_stick_bond_color', '#7F7F7F') if hasattr(self.parent_window, 'default_settings') else '#7F7F7F'
         except Exception:
             self.changed_bs_color = '#7F7F7F'
-            
+
         # 2. ダイアログ内のCPKボタンの表示をデフォルトに戻す
         for s, btn in self.element_buttons.items():
             q_color = DEFAULT_CPK_COLORS.get(s, DEFAULT_CPK_COLORS['DEFAULT'])
             brightness = (q_color.red() * 299 + q_color.green() * 587 + q_color.blue() * 114) / 1000
             text_color = 'white' if brightness < 128 else 'black'
             btn.setStyleSheet(f"background-color: {q_color.name()}; color: {text_color}; border: 1px solid #555; font-weight: bold;")
-        
+
         # 3. 3Dプレビューを更新する L.3337〜L.3386 の try...finally ブロックは削除
 
         # 4. ダイアログ内のB&S結合色ボタンの表示をデフォルトに戻す

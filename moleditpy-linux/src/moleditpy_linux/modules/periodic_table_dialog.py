@@ -10,14 +10,16 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
-from PyQt6.QtWidgets import QDialog, QGridLayout, QPushButton
 from PyQt6.QtGui import QColor
+from PyQt6.QtWidgets import QDialog, QGridLayout, QPushButton
+
 try:
     from .constants import CPK_COLORS
 except Exception:
     from modules.constants import CPK_COLORS
 
 from PyQt6.QtCore import pyqtSignal
+
 
 class PeriodicTableDialog(QDialog): # pragma: no cover
     element_selected = pyqtSignal(str)

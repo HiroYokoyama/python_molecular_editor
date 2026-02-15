@@ -19,7 +19,6 @@ submodules without circular dependencies.
 
 import numpy as np
 
-
 # ------------------------------------------------------------------
 # Graph traversal
 # ------------------------------------------------------------------

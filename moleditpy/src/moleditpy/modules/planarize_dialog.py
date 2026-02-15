@@ -10,11 +10,15 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
-from PyQt6.QtWidgets import (
-    QDialog, QVBoxLayout, QLabel, QHBoxLayout, QPushButton, QMessageBox
-)
-
 import numpy as np
+from PyQt6.QtWidgets import (
+    QDialog,
+    QHBoxLayout,
+    QLabel,
+    QMessageBox,
+    QPushButton,
+    QVBoxLayout,
+)
 
 try:
     from .dialog3_d_picking_mixin import Dialog3DPickingMixin
@@ -55,12 +59,11 @@ class PlanarizeDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
         self.selection_label = QLabel("No atoms selected")
         layout.addWidget(self.selection_label)
 
-
         button_layout = QHBoxLayout()
         self.clear_button = QPushButton("Clear Selection")
         self.clear_button.clicked.connect(self.clear_selection)
         button_layout.addWidget(self.clear_button)
-    
+
         # Select All Atoms ボタンを追加
         self.select_all_button = QPushButton("Select All Atoms")
         self.select_all_button.setToolTip("Select all atoms in the molecule for planarization")
@@ -71,13 +74,13 @@ class PlanarizeDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
         self.apply_button.clicked.connect(self.apply_planarize)
         self.apply_button.setEnabled(False)
         button_layout.addWidget(self.apply_button)
-    
+
         close_button = QPushButton("Close")
         close_button.clicked.connect(self.reject)
         button_layout.addWidget(close_button)
 
         button_layout.addStretch()
-    
+
         layout.addLayout(button_layout)
 
         # enable picking

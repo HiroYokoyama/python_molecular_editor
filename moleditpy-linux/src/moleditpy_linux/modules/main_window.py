@@ -12,7 +12,6 @@ DOI: 10.5281/zenodo.17268532
 
 import traceback
 
-
 # RDKit imports (explicit to satisfy flake8 and used features)
 try:
     pass
@@ -20,16 +19,11 @@ except Exception:
     pass
 
 # PyQt6 Modules
-from PyQt6.QtWidgets import (
-    QMainWindow
-)
+from PyQt6.QtCore import pyqtSignal, pyqtSlot
+from PyQt6.QtWidgets import QMainWindow
 
-from PyQt6.QtCore import (
-    pyqtSignal, pyqtSlot
-)
-    
 try:
-    import sip as _sip  # type: ignore
+    from PyQt6 import sip as _sip  # type: ignore
     _sip_isdeleted = getattr(_sip, 'isdeleted', None)
 except Exception:
     _sip = None
@@ -451,10 +445,9 @@ class MainWindow(QMainWindow):
         # --- MOVED TO main_window_dialog_manager.py ---
         return self.main_window_dialog_manager.open_periodic_table_dialog()
 
-    def set_atom_from_periodic_table(self, symbol): 
+    def set_atom_from_periodic_table(self, symbol):
         self.set_mode(f'atom_{symbol}')
 
-   
     def clean_up_2d_structure(self):
         # --- MOVED TO main_window_edit_actions.py ---
         return self.main_window_edit_actions.clean_up_2d_structure()

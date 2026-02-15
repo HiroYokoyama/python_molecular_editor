@@ -14,7 +14,7 @@ DOI: 10.5281/zenodo.17268532
 OBABEL_AVAILABLE = False
 
 try:
-    import sip as _sip  # type: ignore
+    from PyQt6 import sip as _sip  # type: ignore
     _sip_isdeleted = getattr(_sip, 'isdeleted', None)
 except Exception:
     _sip = None

@@ -17,30 +17,22 @@ MainWindow (main_window.py) から分離されたモジュール
 """
 
 # RDKit imports (explicit to satisfy flake8 and used features)
-from rdkit import Chem
-from rdkit.Chem import AllChem
+from PyQt6.QtCore import QThread, QTimer
+from PyQt6.QtGui import QAction, QColor
 
 # PyQt6 Modules
-from PyQt6.QtWidgets import (
-    QApplication, QMenu
-)
-
-from PyQt6.QtGui import (
-    QColor, QAction
-)
-
-from PyQt6.QtCore import (
-    QThread, QTimer
-)
+from PyQt6.QtWidgets import QApplication, QMenu
+from rdkit import Chem
+from rdkit.Chem import AllChem
 
 try:
     from . import OBABEL_AVAILABLE
 except Exception:
     from modules import OBABEL_AVAILABLE
 
-    
+
 try:
-    import sip as _sip  # type: ignore
+    from PyQt6 import sip as _sip  # type: ignore
     _sip_isdeleted = getattr(_sip, 'isdeleted', None)
 except Exception:
     _sip = None
@@ -118,7 +110,6 @@ class MainWindowCompute(object):
         if not self.convert_button.isEnabled():
             return
 
-
         try:
             menu = QMenu(self)
             conv_options = [
@@ -180,7 +171,7 @@ class MainWindowCompute(object):
                          a = QAction(info.get('label', method_name), self)
                          a.triggered.connect(lambda checked=False, k=method_name: self._trigger_optimize_with_temp_method(k))
                          menu.addAction(a)
-                         
+
             menu.exec_(self.optimize_3d_button.mapToGlobal(pos))
         except Exception as e:
             print(f"Error showing optimize menu: {e}")
@@ -197,7 +188,7 @@ class MainWindowCompute(object):
     def trigger_conversion(self):
         # Reset last successful optimization method at start of new conversion
         self.last_successful_optimization_method = None
-        
+
         # 3D変換時に既存の3D制約をクリア
         self.constraints_3d = []
 
@@ -207,7 +198,7 @@ class MainWindowCompute(object):
             self.current_mol = None
             self.analysis_action.setEnabled(False)
             self.statusBar().showMessage("3D view cleared.")
-            self.view_2d.setFocus() 
+            self.view_2d.setFocus()
             return
 
         # 描画モード変更時に測定モードと3D編集モードをリセット
@@ -242,7 +233,7 @@ class MainWindowCompute(object):
             self.scene.clear_all_problem_flags()
             self.statusBar().showMessage(f"Error: {len(problems)} chemistry problem(s) found.")
             # 既存の選択状態をクリア
-            self.scene.clearSelection() 
+            self.scene.clearSelection()
 
             # 問題のある原子に赤枠フラグを立てる
             for prob in problems:
@@ -253,7 +244,7 @@ class MainWindowCompute(object):
                     original_id = rdkit_atom.GetIntProp("_original_atom_id")
                     if original_id in self.data.atoms and self.data.atoms[original_id]['item']:
                         item = self.data.atoms[original_id]['item']
-                        item.has_problem = True 
+                        item.has_problem = True
                         item.update()
 
             self.view_2d.setFocus()
@@ -266,7 +257,7 @@ class MainWindowCompute(object):
             Chem.SanitizeMol(mol)
         except Exception:
             self.statusBar().showMessage("Error: Invalid chemical structure.")
-            self.view_2d.setFocus() 
+            self.view_2d.setFocus()
             return
 
         # 複数分子の処理に対応
@@ -275,17 +266,17 @@ class MainWindowCompute(object):
             self.statusBar().showMessage(f"Converting {num_frags} molecules to 3D with collision detection...")
         else:
             self.statusBar().showMessage("Calculating 3D structure...")
-            
+
         # CRITICAL FIX: Use the 2D editor's MOL block instead of RDKit's to preserve
         # wedge/dash stereo information that is stored in the 2D editor data.
         # RDKit's MolToMolBlock() doesn't preserve this information.
         mol_block = self.data.to_mol_block()
         if not mol_block:
             mol_block = Chem.MolToMolBlock(mol, includeStereo=True)
-        
+
         # Additional E/Z stereo enhancement: add M CFG lines for explicit E/Z bonds
         mol_lines = mol_block.split('\n')
-        
+
         # Find bonds with explicit E/Z labels from our data and map to RDKit bond indices
         ez_bond_info = {}
         for (id1, id2), bond_data in self.data.bonds.items():
@@ -300,12 +291,12 @@ class MainWindowCompute(object):
                             rdkit_idx1 = atom.GetIdx()
                         elif orig_id == id2:
                             rdkit_idx2 = atom.GetIdx()
-                
+
                 if rdkit_idx1 is not None and rdkit_idx2 is not None:
                     rdkit_bond = mol.GetBondBetweenAtoms(rdkit_idx1, rdkit_idx2)
                     if rdkit_bond and rdkit_bond.GetBondType() == Chem.BondType.DOUBLE:
                         ez_bond_info[rdkit_bond.GetIdx()] = bond_data['stereo']
-        
+
         # Add M  CFG lines for E/Z stereo if needed
         if ez_bond_info:
             insert_idx = len(mol_lines) - 1  # Before M  END
@@ -315,12 +306,9 @@ class MainWindowCompute(object):
                 mol_lines.insert(insert_idx, cfg_line)
                 insert_idx += 1
             mol_block = '\n'.join(mol_lines)
-        
+
         # Assign a unique ID for this conversion run so it can be halted/validated
-        try:
-            run_id = int(self.next_conversion_id)
-        except Exception:
-            run_id = 1
+        run_id = int(getattr(self, 'next_conversion_id', 1))
         try:
             self.next_conversion_id = run_id + 1
         except Exception:
@@ -354,13 +342,13 @@ class MainWindowCompute(object):
         self.plotter.clear() # pragma: no cover
         bg_color_hex = self.settings.get('background_color', '#919191') # pragma: no cover
         bg_qcolor = QColor(bg_color_hex) # pragma: no cover
-        
+
         if bg_qcolor.isValid(): # pragma: no cover
             luminance = bg_qcolor.toHsl().lightness()
             text_color = 'black' if luminance > 128 else 'white'
         else:
             text_color = 'white'
-        
+
         text_actor = self.plotter.add_text( # pragma: no cover
             "Calculating...",
             position='lower_right',
@@ -529,7 +517,7 @@ class MainWindowCompute(object):
         # 状態をUndo履歴に保存
         self.push_undo_state()
         self.update_chiral_labels()
-        
+
         self.view_2d.setFocus()
 
     def halt_conversion(self): # pragma: no cover
@@ -607,41 +595,41 @@ class MainWindowCompute(object):
         try:
             # 既存のフラグをクリア
             self.scene.clear_all_problem_flags()
-            
+
             # 簡易的な化学的問題チェック
             problem_atoms = []
-            
+
             for atom_id, atom_data in self.data.atoms.items():
                 atom_item = atom_data.get('item')
                 if not atom_item:
                     continue
-                
+
                 symbol = atom_data['symbol']
                 charge = atom_data.get('charge', 0)
-                
+
                 # 結合数を計算
                 bond_count = 0
                 for (id1, id2), bond_data in self.data.bonds.items():
                     if id1 == atom_id or id2 == atom_id:
                         bond_count += bond_data.get('order', 1)
-                
+
                 # 基本的な価数チェック
                 if is_problematic_valence(symbol, bond_count, charge):
                     problem_atoms.append(atom_item)
-            
+
             if problem_atoms:
                 # 問題のある原子に赤枠を設定
                 for atom_item in problem_atoms:
                     atom_item.has_problem = True
                     atom_item.update()
-                
+
                 self.statusBar().showMessage(f"Error: {len(problem_atoms)} chemistry problem(s) found (valence issues).")
             else:
                 self.statusBar().showMessage("Error: Invalid chemical structure (RDKit conversion failed).")
-            
+
             self.scene.clearSelection()
             self.view_2d.setFocus()
-            
+
         except Exception as e:
             print(f"Error in fallback chemistry check: {e}")
             self.statusBar().showMessage("Error: Invalid chemical structure.")
@@ -738,7 +726,7 @@ class MainWindowCompute(object):
                 return
         except Exception as e:
             self.statusBar().showMessage(f"3D optimization error: {e}")
-        
+
         # 最適化後の構造で3Dビューを再描画
         try:
             # Remember which concrete optimizer variant succeeded so it
@@ -767,9 +755,9 @@ class MainWindowCompute(object):
             self.update_chiral_labels() # キラル中心のラベルも更新
         except Exception:
             pass
-            
+
         self.draw_molecule_3d(self.current_mol)
-        
+
         # Show which method was used in the status bar (prefer human-readable label).
         # Prefer the actual method used during this run (last_successful_optimization_method
         # set earlier), then any temporary/local override used for this call (method),
@@ -909,22 +897,22 @@ class MainWindowCompute(object):
         except Exception:
             # non-fatal
             pass
-        
+
         # 原子プロパティを復元（ワーカープロセスで失われたため）
         if hasattr(self, 'original_atom_properties'):
             for i, original_id in self.original_atom_properties.items():
                 if i < mol.GetNumAtoms():
                     atom = mol.GetAtomWithIdx(i)
                     atom.SetIntProp("_original_atom_id", original_id)
-        
+
         # 原子IDマッピングを作成
         self.create_atom_id_mapping()
-        
+
         # キラル中心を初回変換時は2Dの立体情報を考慮して設定
         try:
             if mol.GetNumConformers() > 0:
                 # 初回変換では、2Dで設定したwedge/dashボンドの立体情報を保持
-                
+
                 # 3D立体化学計算で上書きされる前に、2D由来の立体化学情報をプロパティとして保存
                 for bond in mol.GetBonds():
                     if bond.GetBondType() == Chem.BondType.DOUBLE:
@@ -932,14 +920,14 @@ class MainWindowCompute(object):
 
                 # 立体化学の割り当てを行うが、既存の2D立体情報を尊重
                 Chem.AssignStereochemistry(mol, cleanIt=False, force=True)
-            
+
             self.update_chiral_labels()
         except Exception:
             # 念のためエラーを握り潰して UI を壊さない
             pass
 
         self.draw_molecule_3d(mol)
-        
+
         # 複数分子の場合、衝突検出と配置調整を実行
         try:
             frags = Chem.GetMolFrags(mol, asMols=False, sanitizeFrags=False)
@@ -1007,15 +995,15 @@ class MainWindowCompute(object):
         self.push_undo_state()
         self.view_2d.setFocus()
         self.cleanup_button.setEnabled(True)
-        
+
         # 3D関連機能を統一的に有効化
         self._enable_3d_features(True)
-            
+
         self.plotter.reset_camera()
-        
+
         # 3D原子情報ホバー表示を再設定
         self.setup_3d_hover()
-        
+
         # メニューテキストと状態を更新
         self.update_atom_id_menu_text()
         self.update_atom_id_menu_state()
@@ -1024,9 +1012,9 @@ class MainWindowCompute(object):
         """2D原子IDから3D RDKit原子インデックスへのマッピングを作成する（RDKitの原子プロパティ使用）"""
         if not self.current_mol:
             return
-            
+
         self.atom_id_to_rdkit_idx_map = {}
-        
+
         # RDKitの原子プロパティから直接マッピングを作成
         for i in range(self.current_mol.GetNumAtoms()):
             rdkit_atom = self.current_mol.GetAtomWithIdx(i)
@@ -1115,7 +1103,7 @@ class MainWindowCompute(object):
             pass
 
         self.statusBar().showMessage(f"Error: {error_message}")
-        
+
         try:
             self.cleanup_button.setEnabled(True)
         except Exception:

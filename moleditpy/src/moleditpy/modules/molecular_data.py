@@ -10,8 +10,9 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
-from rdkit import Chem
 import traceback
+
+from rdkit import Chem
 
 try:
     from .constants import ANGSTROM_PER_PIXEL
@@ -23,12 +24,12 @@ class MolecularData:
         self.atoms = {}
         self.bonds = {}
         self._next_atom_id = 0
-        self.adjacency_list = {} 
+        self.adjacency_list = {}
 
     def add_atom(self, symbol, pos, charge=0, radical=0):
         atom_id = self._next_atom_id
         self.atoms[atom_id] = {'symbol': symbol, 'pos': pos, 'item': None, 'charge': charge, 'radical': radical}
-        self.adjacency_list[atom_id] = [] 
+        self.adjacency_list[atom_id] = []
         self._next_atom_id += 1
         return atom_id
 
@@ -39,7 +40,7 @@ class MolecularData:
             if id1 > id2: id1, id2 = id2, id1
 
         bond_data = {'order': order, 'stereo': stereo, 'item': None}
-        
+
         # 逆方向のキーも考慮して、新規結合かどうかをチェック
         is_new_bond = (id1, id2) not in self.bonds and (id2, id1) not in self.bonds
         if is_new_bond:
@@ -68,15 +69,15 @@ class MolecularData:
                     del self.adjacency_list[atom_id]
 
                 del self.atoms[atom_id]
-                
+
                 # Remove bonds involving this atom
                 bonds_to_remove = [key for key in self.bonds if atom_id in key]
                 for key in bonds_to_remove:
                     del self.bonds[key]
-                    
+
             except Exception as e:
                 print(f"Error removing atom {atom_id}: {e}")
-                
+
                 traceback.print_exc()
 
     def remove_bond(self, id1, id2):
@@ -94,12 +95,11 @@ class MolecularData:
                 if id2 in self.adjacency_list and id1 in self.adjacency_list[id2]:
                     self.adjacency_list[id2].remove(id1)
                 del self.bonds[key_to_remove]
-                
+
         except Exception as e:
             print(f"Error removing bond {id1}-{id2}: {e}")
-            
-            traceback.print_exc()
 
+            traceback.print_exc()
 
     def to_rdkit_mol(self, use_2d_stereo=True):
         """
@@ -249,7 +249,7 @@ class MolecularData:
 
         # Step 7: 最終化（キャッシュ更新 + 立体割当の再実行）
         final_mol.UpdatePropertyCache(strict=False)
-        
+
         # 3D変換時（use_2d_stereo=False）でE/Zラベルがある場合は、force=Trueで強制適用
         if not use_2d_stereo and ez_labeled_bonds:
             Chem.AssignStereochemistry(final_mol, cleanIt=False, force=True)
@@ -297,6 +297,6 @@ class MolecularData:
                 stereo_code = 6
 
             mol_block += f"{idx1:3d}{idx2:3d}{order:3d}{stereo_code:3d}  0  0  0\n"
-            
+
         mol_block += "M  END\n"
         return mol_block

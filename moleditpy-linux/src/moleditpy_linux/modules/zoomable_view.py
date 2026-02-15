@@ -10,14 +10,9 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
-from PyQt6.QtWidgets import (
-    QGraphicsView
-)
+from PyQt6.QtCore import QEvent, QPointF, Qt
+from PyQt6.QtWidgets import QGraphicsView
 
-
-from PyQt6.QtCore import (
-    Qt, QPointF, QEvent
-)
 
 class ZoomableView(QGraphicsView):
     """ マウスホイールでのズームと、中ボタン or Shift+左ドラッグでのパン機能を追加したQGraphicsView """
@@ -53,8 +48,8 @@ class ZoomableView(QGraphicsView):
             else:
                 if min_scale < current_scale:
                     self.scale(zoom_out_factor, zoom_out_factor)
-            
-            event.accept() 
+
+            event.accept()
         else:
             super().wheelEvent(event)
 
@@ -116,13 +111,13 @@ class ZoomableView(QGraphicsView):
                 # event.value() は拡大縮小の倍率差分を返します
                 # 例: 拡大時は正の値、縮小時は負の値
                 factor = 1.0 + event.value()
-                
+
                 # 既存の最大・最小スケール制限を考慮する場合（オプション）
                 current_scale = self.transform().m11()
                 min_scale, max_scale = 0.05, 20.0
-                
+
                 # 制限内であればスケールを適用
                 self.scale(factor, factor)
                 return True
-                
+
         return super().viewportEvent(event)

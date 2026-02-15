@@ -89,6 +89,74 @@ _Empty state should produce valid structure with no atoms/bonds._
 
 ## tests/unit/test_atom_bond_items.py
 
+### TestAtomItem.test_init
+_No description provided._
+
+- assert atom_item.symbol == 'C'
+- assert atom_item.atom_id == 1
+- assert atom_item.pos().x() == 0.0
+- assert atom_item.pos().y() == 0.0
+
+### TestAtomItem.test_paint_mock
+_Test paint logic by mocking QPainter_
+
+- assert mock_painter.drawText.called
+
+### TestAtomItem.test_paint_radical
+_Test painting logic for radicals_
+
+- assert mock_painter.drawEllipse.called
+- assert mock_painter.drawEllipse.call_count >= 2
+
+### TestAtomItem.test_paint_selection_hover
+_Test painting logic for selection and hover highlights_
+
+- assert mock_painter.drawRect.called
+- assert mock_painter.drawRect.called
+- assert mock_painter.drawRect.called
+
+### TestAtomItem.test_paint_implicit_hydrogens_and_flipping
+_Test painting logic for implicit hydrogens and text alignment_
+
+- assert found_subscript
+- assert found_flipped_text
+
+### TestBondItem.test_init
+_No description provided._
+
+- assert bond_item.atom1.atom_id == 1
+- assert bond_item.atom2.atom_id == 2
+- assert bond_item.order == 1
+
+### TestBondItem.test_update_position
+_No description provided._
+
+- assert line.p1() == QPointF(0.0, 0.0)
+- assert line.p2() == QPointF(5.0, 5.0)
+
+### TestBondItem.test_set_bond_order
+_No description provided._
+
+- assert bond_item.order == 2
+- assert bond_item.order == 3
+
+### TestBondItem.test_paint_mock
+_Test paint logic for bond_
+
+- assert mock_painter.drawLine.called
+- assert mock_painter.drawLine.call_count >= 1
+
+### TestBondItem.test_paint_ring_double_bond
+_Test painting logic for double bond in a ring_
+
+- assert mock_painter.drawLine.call_count >= 2
+
+### TestBondItem.test_bounding_rect_ez_label
+_Test boundingRect expansion for E/Z labels_
+
+- assert rect_stereo.width() >= rect_no_stereo.width()
+- assert rect_stereo.height() >= rect_no_stereo.height()
+
 ## tests/unit/test_calculation_worker_direct.py
 
 ### test_calculation_worker_init
@@ -986,6 +1054,91 @@ _No description provided._
 - assert len(lines[3]) >= 39
 
 ## tests/unit/test_plugin_interface.py
+
+### TestPluginInterface.test_plugin_context_init
+_Test PluginContext initialization._
+
+- assert ctx._manager == mock_manager
+- assert ctx._plugin_name == 'TestPlugin'
+
+### TestPluginInterface.test_add_menu_action
+_Test add_menu_action delegation._
+
+
+### TestPluginInterface.test_add_toolbar_action
+_Test add_toolbar_action delegation._
+
+
+### TestPluginInterface.test_register_drop_handler
+_Test register_drop_handler delegation._
+
+
+### TestPluginInterface.test_get_3d_controller
+_Test get_3d_controller returns a controller linked to main window._
+
+- assert isinstance(controller, Plugin3DController)
+- assert controller._mw == mock_main_window
+
+### TestPluginInterface.test_get_main_window
+_Test get_main_window delegation._
+
+- assert ctx.get_main_window() == mock_main_window
+
+### TestPluginInterface.test_current_molecule_property
+_Test current_molecule getter and setter._
+
+- assert ctx.current_molecule == 'mock_molecule'
+- assert mock_main_window.current_mol == 'new_molecule'
+
+### TestPluginInterface.test_current_molecule_no_window
+_Test current_molecule when main window is None._
+
+- assert ctx.current_molecule is None
+
+### TestPluginInterface.test_add_export_action
+_Test add_export_action delegation._
+
+
+### TestPluginInterface.test_register_optimization_method
+_Test register_optimization_method delegation._
+
+
+### TestPluginInterface.test_register_file_opener
+_Test register_file_opener delegation._
+
+
+### TestPluginInterface.test_add_analysis_tool
+_Test add_analysis_tool delegation._
+
+
+### TestPluginInterface.test_register_save_handler
+_Test register_save_handler delegation._
+
+
+### TestPluginInterface.test_register_load_handler
+_Test register_load_handler delegation._
+
+
+### TestPluginInterface.test_register_3d_context_menu
+_Test deprecated register_3d_context_menu._
+
+- assert 'deprecated' in captured.out or 'deprecated' in captured.err
+
+### TestPluginInterface.test_register_3d_style
+_Test register_3d_style delegation._
+
+
+### TestPluginInterface.test_register_document_reset_handler
+_Test register_document_reset_handler delegation._
+
+
+### TestPluginInterface.test_3d_controller_set_atom_color
+_Test Plugin3DController.set_atom_color._
+
+
+### TestPluginInterface.test_3d_controller_set_bond_color
+_Test Plugin3DController.set_bond_color._
+
 
 ## tests/unit/test_plugin_manager.py
 
