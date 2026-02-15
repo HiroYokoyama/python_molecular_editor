@@ -8,11 +8,7 @@
 ![Core Logic Coverage](https://img.shields.io/badge/core_logic_coverage-73%25-green)
 ![Overall Coverage](https://img.shields.io/badge/coverage-48%25-orange)
 ![GUI Status](https://img.shields.io/badge/GUI-Manually_Verified-blue)
-![Pylint](https://img.shields.io/badge/pylint-8.66-brightgreen)
-
-
-
-
+![Pylint Score](https://img.shields.io/badge/pylint-8.66%2F10-brightgreen)
 
 [🇯🇵 日本語 (Japanese)](#japanese)
 
