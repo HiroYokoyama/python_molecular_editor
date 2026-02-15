@@ -86,7 +86,7 @@ def drag_scene(qtbot, scene, start_pos: QPointF, end_pos: QPointF):
         view.centerOn(mid)
         qtbot.wait(20)
     except Exception:
-        pass
+        import traceback; traceback.print_exc()
 
     start_vp = view.mapFromScene(start_pos)
     end_vp = view.mapFromScene(end_pos)
@@ -516,7 +516,7 @@ def test_optimize_3d(window, qtbot, monkeypatch):
         monkeypatch.setattr('rdkit.Chem.AllChem.MMFFOptimizeMolecule', lambda *a, **k: 0, raising=False)
         monkeypatch.setattr('rdkit.Chem.AllChem.UFFOptimizeMolecule', lambda *a, **k: 0, raising=False)
     except Exception:
-        pass
+        import traceback; traceback.print_exc()
     
     # 3. 3D最適化ボタンをクリック
     qtbot.mouseClick(window.optimize_3d_button, Qt.MouseButton.LeftButton)
@@ -965,7 +965,7 @@ def test_2d_cleanup(window, qtbot, monkeypatch):
     try:
         monkeypatch.setattr('rdkit.Chem.AllChem.Compute2DCoords', lambda *a, **k: None)
     except Exception:
-        pass
+        import traceback; traceback.print_exc()
     # Prevent RDKit's SetDoubleBondNeighborDirections from erroring when
     # we return a MagicMock for the conformer; make it a no-op in tests.
     try:
@@ -980,7 +980,7 @@ def test_2d_cleanup(window, qtbot, monkeypatch):
             GetAtomPosition=lambda idx: mock_pos0 if idx == 0 else mock_pos1
         ))
     except Exception:
-        pass
+        import traceback; traceback.print_exc()
     
     # 2. "Optimize 2D" ボタンをクリック
     qtbot.mouseClick(window.cleanup_button, Qt.MouseButton.LeftButton)

@@ -550,7 +550,7 @@ class UserTemplateDialog(QDialog): # pragma: no cover
                 if hasattr(self.main_window, 'mode_actions') and f"template_user_{template_name}" in self.main_window.mode_actions:
                     self.main_window.mode_actions[f"template_user_{template_name}"].setChecked(True)
             except Exception:
-                pass
+                import traceback; traceback.print_exc()
         except Exception as e:
             logging.warning(f"Warning: Failed to switch main window to template mode: {e}")
 
@@ -565,7 +565,7 @@ class UserTemplateDialog(QDialog): # pragma: no cover
             try:
                 self.main_window.scene.user_template_data = template_data
             except Exception:
-                pass
+                import traceback; traceback.print_exc()
 
             # Force the main window into the template mode (same approach as select_template)
             try:
@@ -584,7 +584,7 @@ class UserTemplateDialog(QDialog): # pragma: no cover
                 try:
                     self.main_window.statusBar().showMessage(f"Template mode: {template_name}")
                 except Exception:
-                    pass
+                    import traceback; traceback.print_exc()
 
                 # Mark selected and keep dialog open
                 self.selected_template = template_data

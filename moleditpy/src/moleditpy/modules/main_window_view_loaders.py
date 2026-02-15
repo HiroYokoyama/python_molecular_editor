@@ -26,7 +26,7 @@ from rdkit.Chem import AllChem
 try:
     pass
 except Exception:
-    pass
+    import traceback; traceback.print_exc()
 
 # PyQt6 Modules
 from PyQt6.QtWidgets import QFileDialog
@@ -95,7 +95,7 @@ class MainWindowViewLoaders(object):
                     try:
                         self.optimize_3d_button.setEnabled(False)
                     except Exception:
-                        pass
+                        import traceback; traceback.print_exc()
             else:
                 try:
                     has_bonds = (self.current_mol.GetNumBonds() > 0)
@@ -112,14 +112,14 @@ class MainWindowViewLoaders(object):
                             else:
                                 self.optimize_3d_button.setEnabled(False)
                         except Exception:
-                            pass
+                            import traceback; traceback.print_exc()
                 else:
                     self.is_xyz_derived = True
                     if hasattr(self, 'optimize_3d_button'):
                         try:
                             self.optimize_3d_button.setEnabled(False)
                         except Exception:
-                            pass
+                            import traceback; traceback.print_exc()
 
             self.draw_molecule_3d(self.current_mol)
             self.plotter.reset_camera()
@@ -288,7 +288,7 @@ class MainWindowViewLoaders(object):
             try:
                 self._clear_xyz_flags(mol)
             except Exception:
-                pass
+                import traceback; traceback.print_exc()
 
             # 3Dビューアーに表示
             # Centralized chemical/sanitization handling

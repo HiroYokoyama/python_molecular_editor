@@ -26,7 +26,7 @@ import traceback
 try:
     pass
 except Exception:
-    pass
+    import traceback; traceback.print_exc()
 
 # PyQt6 Modules
 from PyQt6.QtCore import QTimer
@@ -133,7 +133,7 @@ class MainWindowProjectIo(object):
             try:
                 self._saved_state = copy.deepcopy(self.get_current_state())
             except Exception:
-                pass
+                traceback.print_exc()
 
             self.statusBar().showMessage(f"Project saved to {file_path}")
 
@@ -187,7 +187,7 @@ class MainWindowProjectIo(object):
             try:
                 self._saved_state = copy.deepcopy(self.get_current_state())
             except Exception:
-                pass
+                traceback.print_exc()
 
             self.statusBar().showMessage(f"Project saved to {file_path}")
 
@@ -219,9 +219,9 @@ class MainWindowProjectIo(object):
             try:
                 self._saved_state= copy.deepcopy(self.get_current_state())
             except Exception:
-                pass
+                traceback.print_exc()
 
-            self.statusBar.showMessage(f"Project loaded from {file_path}")
+            self.statusBar().showMessage(f"Project loaded from {file_path}")
 
             QTimer.singleShot(0, self.fit_to_view)
 

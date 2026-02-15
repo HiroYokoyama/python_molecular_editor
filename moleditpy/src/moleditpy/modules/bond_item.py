@@ -142,7 +142,7 @@ class BondItem(QGraphicsItem):
                   if win and hasattr(win, 'settings'):
                        wedge_width = win.settings.get('bond_wedge_width_2d', 6.0)
         except Exception:
-             pass
+             import traceback; traceback.print_exc()
 
         extra = (getattr(self, 'order', 1) - 1) * bond_offset + 50 + wedge_width
         rect = QRectF(line.p1(), line.p2()).normalized().adjusted(-extra, -extra, extra, extra)
@@ -158,7 +158,7 @@ class BondItem(QGraphicsItem):
                         font_size = win.settings.get('atom_font_size_2d', 20)
                         font_family = win.settings.get('atom_font_family_2d', FONT_FAMILY)
             except Exception:
-                pass
+                import traceback; traceback.print_exc()
 
             font = QFont(font_family, font_size, FONT_WEIGHT_BOLD)
             font.setItalic(True)
@@ -432,7 +432,7 @@ class BondItem(QGraphicsItem):
                                     font_size = win.settings.get('atom_font_size_2d', 20)
                                     font_family = win.settings.get('atom_font_family_2d', FONT_FAMILY)
                         except Exception:
-                            pass
+                            import traceback; traceback.print_exc()
 
                         font = QFont(font_family, font_size, FONT_WEIGHT_BOLD)
                         font.setItalic(True)
@@ -489,7 +489,7 @@ class BondItem(QGraphicsItem):
                 painter.setPen(hover_pen)
                 painter.drawLine(line)
             except Exception:
-                pass
+                import traceback; traceback.print_exc()
 
     def update_position(self, notify=True):
         try:

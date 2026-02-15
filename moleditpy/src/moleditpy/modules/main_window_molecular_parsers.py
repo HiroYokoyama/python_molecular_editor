@@ -29,7 +29,7 @@ from rdkit.Chem import AllChem, Descriptors, rdGeometry, rdMolTransforms
 try:
     pass
 except Exception:
-    pass
+    import traceback; traceback.print_exc()
 
 # PyQt6 Modules
 from PyQt6.QtCore import QPointF, QTimer
@@ -386,7 +386,7 @@ class MainWindowMolecularParsers(object):
                     try:
                         candidate_mol._xyz_charge = 0
                     except Exception:
-                        pass
+                        import traceback; traceback.print_exc()
 
                 # Mark that this molecule was produced via the skip-chemistry path
                 try:
@@ -395,7 +395,7 @@ class MainWindowMolecularParsers(object):
                     try:
                         candidate_mol._xyz_skip_checks = True
                     except Exception:
-                        pass
+                        import traceback; traceback.print_exc()
 
                 # Set UI flags consistently: mark as XYZ-derived and disable optimize
                 try:
@@ -405,9 +405,9 @@ class MainWindowMolecularParsers(object):
                         try:
                             self.optimize_3d_button.setEnabled(False)
                         except Exception:
-                            pass
+                            import traceback; traceback.print_exc()
                 except Exception:
-                    pass
+                    import traceback; traceback.print_exc()
 
                 # Store atom data for later analysis and return
                 candidate_mol._xyz_atom_data = atoms_data
@@ -487,9 +487,9 @@ class MainWindowMolecularParsers(object):
                             try:
                                 candidate_mol._xyz_charge = int(charge_val)
                             except Exception:
-                                pass
+                                import traceback; traceback.print_exc()
                     except Exception:
-                        pass
+                        import traceback; traceback.print_exc()
 
                     # Preserve whether the user requested skip_chemistry_checks
                     try:
@@ -500,9 +500,9 @@ class MainWindowMolecularParsers(object):
                                 try:
                                     candidate_mol._xyz_skip_checks = True
                                 except Exception:
-                                    pass
+                                    import traceback; traceback.print_exc()
                     except Exception:
-                        pass
+                        import traceback; traceback.print_exc()
 
                     # Run chemistry checks which may emit warnings to stderr
                     self._apply_chem_check_and_set_flags(candidate_mol, source_desc='XYZ')
@@ -532,7 +532,7 @@ class MainWindowMolecularParsers(object):
                                 try:
                                     self.estimate_bonds_from_distances(mol)
                                 except Exception:
-                                    pass
+                                    import traceback; traceback.print_exc()
                                 salvaged = None
                                 try:
                                     salvaged = mol.GetMol()
@@ -546,7 +546,7 @@ class MainWindowMolecularParsers(object):
                                         try:
                                             salvaged._xyz_skip_checks = True
                                         except Exception:
-                                            pass
+                                            import traceback; traceback.print_exc()
                                     final_mol = salvaged
                                     break
                                 else:
@@ -554,7 +554,7 @@ class MainWindowMolecularParsers(object):
                                     try: # pragma: no cover
                                         self.statusBar().showMessage("Skip chemistry selected but failed to create salvaged molecule.")
                                     except Exception:
-                                        pass
+                                        import traceback; traceback.print_exc()
                                     return None
 
                             try:
@@ -566,7 +566,7 @@ class MainWindowMolecularParsers(object):
                                 try: # pragma: no cover
                                     self.statusBar().showMessage("DetermineBonds failed for that charge; please try a different total charge or cancel.")
                                 except Exception:
-                                    pass
+                                    import traceback; traceback.print_exc()
                                 continue
                             except Exception as e_prompt:
                                 # Some other failure occurred after DetermineBonds or in
@@ -592,13 +592,13 @@ class MainWindowMolecularParsers(object):
                                         try:
                                             final_mol._xyz_skip_checks = True
                                         except Exception:
-                                            pass
+                                            import traceback; traceback.print_exc()
                                     break
                                 else:
                                     try: # pragma: no cover
                                         self.statusBar().showMessage(f"Retry failed: {e_prompt}")
                                     except Exception:
-                                        pass
+                                        import traceback; traceback.print_exc()
                                     # Continue prompting
                                     continue
                 else: # pragma: no cover
@@ -612,7 +612,7 @@ class MainWindowMolecularParsers(object):
                             try:
                                 self.estimate_bonds_from_distances(mol)
                             except Exception:
-                                pass
+                                import traceback; traceback.print_exc()
                             salvaged = None
                             try:
                                 salvaged = mol.GetMol()
@@ -626,14 +626,14 @@ class MainWindowMolecularParsers(object):
                                     try:
                                         salvaged._xyz_skip_checks = True
                                     except Exception:
-                                        pass
+                                        import traceback; traceback.print_exc()
                                 final_mol = salvaged
                                 break
                             else:
                                 try: # pragma: no cover
                                     self.statusBar().showMessage("Skip chemistry selected but failed to create salvaged molecule.")
                                 except Exception:
-                                    pass
+                                    import traceback; traceback.print_exc()
                                 return None
 
                         try:
@@ -645,7 +645,7 @@ class MainWindowMolecularParsers(object):
                             try: # pragma: no cover
                                 self.statusBar().showMessage("DetermineBonds failed for that charge; please try a different total charge or cancel.")
                             except Exception:
-                                pass
+                                import traceback; traceback.print_exc()
                             continue
                         except Exception as e_prompt:
                             try:
@@ -667,13 +667,13 @@ class MainWindowMolecularParsers(object):
                                     try:
                                         final_mol._xyz_skip_checks = True
                                     except Exception:
-                                        pass
+                                        import traceback; traceback.print_exc()
                                 break
                             else:
                                 try: # pragma: no cover
                                     self.statusBar().showMessage(f"Retry failed: {e_prompt}")
                                 except Exception:
-                                    pass
+                                    import traceback; traceback.print_exc()
                                 continue
 
             except Exception:
@@ -706,7 +706,7 @@ class MainWindowMolecularParsers(object):
                             try:
                                 self.estimate_bonds_from_distances(mol)
                             except Exception:
-                                pass
+                                import traceback; traceback.print_exc()
                             salvaged = None
                             try:
                                 salvaged = mol.GetMol()
@@ -720,14 +720,14 @@ class MainWindowMolecularParsers(object):
                                     try:
                                         salvaged._xyz_skip_checks = True
                                     except Exception:
-                                        pass
+                                        import traceback; traceback.print_exc()
                                 final_mol = salvaged
                                 break
                             else:
                                 try:
                                     self.statusBar().showMessage("Skip chemistry selected but failed to create salvaged molecule.")
                                 except Exception:
-                                    pass
+                                    import traceback; traceback.print_exc()
                                 return None
 
                         try:
@@ -740,13 +740,13 @@ class MainWindowMolecularParsers(object):
                             try: # pragma: no cover
                                 self.statusBar().showMessage("DetermineBonds failed for that charge; please try a different total charge or cancel.")
                             except Exception:
-                                pass
+                                import traceback; traceback.print_exc()
                             continue
                         except Exception as e_prompt:
                             try: # pragma: no cover
                                 self.statusBar().showMessage(f"Retry failed: {e_prompt}")
                             except Exception:
-                                pass
+                                import traceback; traceback.print_exc()
                             continue
 
             # If we have a finalized molecule, apply the same UI flags and return
@@ -766,9 +766,9 @@ class MainWindowMolecularParsers(object):
                             else:
                                 self.optimize_3d_button.setEnabled(bool(has_bonds))
                         except Exception:
-                            pass
+                            import traceback; traceback.print_exc()
                 except Exception:
-                    pass
+                    import traceback; traceback.print_exc()
 
                 # Store original atom data for analysis
                 mol._xyz_atom_data = atoms_data

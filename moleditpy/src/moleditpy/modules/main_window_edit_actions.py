@@ -341,7 +341,7 @@ class MainWindowEditActions(object):
                 try:
                     QApplication.processEvents()
                 except Exception:
-                    pass
+                    import traceback; traceback.print_exc()
 
             # Determine how many hydrogens actually were removed by re-scanning data
             remaining_h = 0
@@ -380,7 +380,7 @@ class MainWindowEditActions(object):
             try:
                 self.statusBar().showMessage(f"Error removing hydrogen atoms: {e}")
             except Exception:
-                pass
+                import traceback; traceback.print_exc()
 
     def add_hydrogen_atoms(self):
         """RDKitで各原子の暗黙の水素数を調べ、その数だけ明示的な水素原子と単結合を作成する（2Dビュー）。
@@ -554,7 +554,7 @@ class MainWindowEditActions(object):
                     for it in added_items:
                         it.setSelected(True)
                 except Exception:
-                    pass
+                    import traceback; traceback.print_exc()
             else:
                 self.statusBar().showMessage("No implicit hydrogens found to add.", 2000)
 
@@ -885,7 +885,7 @@ class MainWindowEditActions(object):
                                 try:
                                     item.prepareGeometryChange()
                                 except Exception:
-                                    pass
+                                    import traceback; traceback.print_exc()
 
                             # Apply implicit hydrogen count (guarded)
                             try:
@@ -899,7 +899,7 @@ class MainWindowEditActions(object):
                             try:
                                 item.has_problem = bool(desired_prob)
                             except Exception:
-                                pass
+                                import traceback; traceback.print_exc()
 
                             # Ensure the item is updated in the scene so paint() runs
                             # when either geometry or problem-flag changed.
@@ -939,7 +939,7 @@ class MainWindowEditActions(object):
                 try:
                     _apply_ui_updates()
                 except Exception:
-                    pass
+                    import traceback; traceback.print_exc()
 
         except Exception:
             # Make sure update failures never crash the application
@@ -1195,7 +1195,7 @@ class MainWindowEditActions(object):
                 if sip_isdeleted_safe(item):
                     continue
             except Exception:
-                pass
+                import traceback; traceback.print_exc()
             try:
                 sc = None
                 try:
@@ -1386,13 +1386,13 @@ class MainWindowEditActions(object):
                 desc = f" ({source_desc})" if source_desc else ''
                 self.statusBar().showMessage(f"Molecule sanitization failed{desc}; file may be malformed.")
             except Exception:
-                pass
+                import traceback; traceback.print_exc()
             # Disable 3D optimization UI to prevent running on invalid molecules
             if hasattr(self, 'optimize_3d_button'):
                 try:
                     self.optimize_3d_button.setEnabled(False)
                 except Exception:
-                    pass
+                    import traceback; traceback.print_exc()
 
     def _clear_xyz_flags(self, mol=None):
         """Clear XYZ-derived markers from a molecule (or current_mol) and
@@ -1417,9 +1417,9 @@ class MainWindowEditActions(object):
                             try:
                                 target.SetIntProp('_xyz_skip_checks', 0)
                             except Exception:
-                                pass
+                                import traceback; traceback.print_exc()
                 except Exception:
-                    pass
+                    import traceback; traceback.print_exc()
 
                 # Remove attribute-style markers if present
                 try:
@@ -1433,9 +1433,9 @@ class MainWindowEditActions(object):
                                 try:
                                     target._xyz_skip_checks = False
                                 except Exception:
-                                    pass
+                                    import traceback; traceback.print_exc()
                 except Exception:
-                    pass
+                    import traceback; traceback.print_exc()
 
                 try:
                     if hasattr(target, '_xyz_atom_data'):
@@ -1448,9 +1448,9 @@ class MainWindowEditActions(object):
                                 try:
                                     target._xyz_atom_data = None
                                 except Exception:
-                                    pass
+                                    import traceback; traceback.print_exc()
                 except Exception:
-                    pass
+                    import traceback; traceback.print_exc()
 
         except Exception:
             # best-effort only
@@ -1460,7 +1460,7 @@ class MainWindowEditActions(object):
         try:
             self.is_xyz_derived = False
         except Exception:
-            pass
+            import traceback; traceback.print_exc()
 
         # Enable Optimize 3D unless sanitization failed
         try:
@@ -1469,12 +1469,12 @@ class MainWindowEditActions(object):
                     try:
                         self.optimize_3d_button.setEnabled(False)
                     except Exception:
-                        pass
+                        import traceback; traceback.print_exc()
                 else:
                     try:
                         self.optimize_3d_button.setEnabled(True)
                     except Exception:
-                        pass
+                        import traceback; traceback.print_exc()
         except Exception:
-            pass
+            import traceback; traceback.print_exc()
 

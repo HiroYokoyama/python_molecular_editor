@@ -27,7 +27,7 @@ from rdkit import Chem
 try:
     pass
 except Exception:
-    pass
+    import traceback; traceback.print_exc()
 
 # PyQt6 Modules
 import pyvista as pv
@@ -118,7 +118,7 @@ class MainWindowView3d(object):
             try:
                 self.plotter.remove_actor(old_axes_actor)
             except Exception:
-                pass
+                import traceback; traceback.print_exc()
             self.axes_actor = None
 
         self.plotter.clear()
@@ -157,7 +157,7 @@ class MainWindowView3d(object):
                 try:
                     self.statusBar().showMessage(f"Kekulize failed: {e}")
                 except Exception:
-                    pass
+                    import traceback; traceback.print_exc()
                 mol_to_draw = mol
 
         # Use the original molecule's conformer (positions) to ensure coordinates
@@ -179,7 +179,7 @@ class MainWindowView3d(object):
                         c = QColor(hex_color)
                         col[atom_idx] = [c.redF(), c.greenF(), c.blueF()]
                     except Exception:
-                        pass
+                        import traceback; traceback.print_exc()
 
         # スタイルに応じて原子の半径を設定（設定から読み込み）
         if current_style == 'cpk':
@@ -369,7 +369,7 @@ class MainWindowView3d(object):
                     q = QColor(bs_hex)
                     bs_bond_rgb = [q.red(), q.green(), q.blue()]
                 except Exception:
-                    pass
+                    import traceback; traceback.print_exc()
 
             # バッチ処理用のリスト
             all_points = []
@@ -408,7 +408,7 @@ class MainWindowView3d(object):
                          begin_color_rgb = ov_rgb
                          end_color_rgb = ov_rgb
                      except Exception:
-                         pass
+                         import traceback; traceback.print_exc()
 
                 # Determine effective uniform color for this bond
                 local_bs_bond_rgb = begin_color_rgb if (hasattr(self, '_plugin_bond_color_overrides') and bond_idx in self._plugin_bond_color_overrides) else bs_bond_rgb
@@ -721,9 +721,9 @@ class MainWindowView3d(object):
                         # Force a render so the change is visible immediately
                         self.plotter.render()
                     except Exception:
-                        pass
+                        import traceback; traceback.print_exc()
         except Exception:
-            pass
+            import traceback; traceback.print_exc()
 
         # AtomIDまたは他の原子情報が表示されている場合は再表示
         if hasattr(self, 'atom_info_display_mode') and self.atom_info_display_mode is not None:
@@ -831,7 +831,7 @@ class MainWindowView3d(object):
             # 既存のE/Zラベルを削除
             self.plotter.remove_actor('ez_labels')
         except Exception:
-            pass
+            import traceback; traceback.print_exc()
 
         pts, labels = [], []
 
@@ -848,7 +848,7 @@ class MainWindowView3d(object):
             # これにより、2Dでの描画状態に関わらず、現在の3D座標に基づいたE/Z判定が行われる
             Chem.AssignStereochemistry(mol, cleanIt=True, force=True, flagPossibleStereoCenters=True)
         except Exception:
-            pass
+            import traceback; traceback.print_exc()
 
         for bond in mol.GetBonds():
             if bond.GetBondType() == Chem.BondType.DOUBLE:
@@ -1001,7 +1001,7 @@ class MainWindowView3d(object):
             if self.current_mol.GetNumAtoms() > 0:
                 return self.current_mol.GetAtomWithIdx(0).HasProp("xyz_unique_id")
         except Exception:
-            pass
+            import traceback; traceback.print_exc()
         return False
 
     def has_original_atom_ids(self):
@@ -1015,7 +1015,7 @@ class MainWindowView3d(object):
                 if atom.HasProp("_original_atom_id"):
                     return True
         except Exception:
-            pass
+            import traceback; traceback.print_exc()
         return False
 
     def update_atom_id_menu_text(self):
@@ -1163,7 +1163,7 @@ class MainWindowView3d(object):
                     try:
                         self.plotter.remove_actor(nm)
                     except Exception:
-                        pass
+                        import traceback; traceback.print_exc()
             self.atom_label_legend_names = []
 
             # 凡例テキストを右上に縦並びで追加（背景なし、太字のみ）
@@ -1206,14 +1206,14 @@ class MainWindowView3d(object):
                             try:
                                 tp.SetBold(True)
                             except Exception:
-                                pass
+                                import traceback; traceback.print_exc()
                     except Exception:
-                        pass
+                        import traceback; traceback.print_exc()
                 except Exception:
                     continue
 
         except Exception:
-            pass
+            import traceback; traceback.print_exc()
 
     def clear_all_atom_info_labels(self):
         """すべての原子情報ラベルをクリア"""
@@ -1225,14 +1225,14 @@ class MainWindowView3d(object):
                         try:
                             self.plotter.remove_actor(a)
                         except Exception:
-                            pass
+                            import traceback; traceback.print_exc()
                 else:
                     try:
                         self.plotter.remove_actor(self.current_atom_info_labels)
                     except Exception:
-                        pass
+                        import traceback; traceback.print_exc()
         except Exception:
-            pass
+            import traceback; traceback.print_exc()
         finally:
             self.current_atom_info_labels = None
 
@@ -1243,9 +1243,9 @@ class MainWindowView3d(object):
                     try:
                         self.plotter.remove_actor(nm)
                     except Exception:
-                        pass
+                        import traceback; traceback.print_exc()
         except Exception:
-            pass
+            import traceback; traceback.print_exc()
         finally:
             self.atom_label_legend_names = []
 
@@ -1315,7 +1315,7 @@ class MainWindowView3d(object):
                 if old_ra is not None:
                     self.view_2d.setResizeAnchor(old_ra)
             except Exception:
-                pass
+                import traceback; traceback.print_exc()
 
     def update_cpk_colors_from_settings(self):
         """Update global CPK_COLORS and CPK_COLORS_PV from saved settings overrides.
@@ -1375,7 +1375,7 @@ class MainWindowView3d(object):
             try:
                 renderer.SetNumberOfLayers(2)  # レイヤー0:3Dオブジェクト、レイヤー1:2Dオーバーレイ
             except Exception:
-                pass  # PyVistaのバージョンによってはサポートされていない場合がある
+                import traceback; traceback.print_exc()  # PyVistaのバージョンによってはサポートされていない場合がある
 
         # --- 3D軸ウィジェットの設定 ---
         show_axes = self.settings.get('show_3d_axes', True)
@@ -1405,7 +1405,7 @@ class MainWindowView3d(object):
             try:
                 self.plotter.reset_camera()
             except Exception:
-                pass
+                import traceback; traceback.print_exc()
             self._camera_initialized = True
 
         # 強制的にプロッターを更新
@@ -1414,7 +1414,7 @@ class MainWindowView3d(object):
             if hasattr(self.plotter, 'update'):
                 self.plotter.update()
         except Exception:
-            pass
+            import traceback; traceback.print_exc()
 
     def update_bond_color_override(self, bond_idx, hex_color):
         """Plugin API helper to override bond color."""

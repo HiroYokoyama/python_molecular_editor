@@ -65,7 +65,7 @@ class Dialog3DPickingMixin:
                                 try:
                                     self.main_window._picking_consumed = True
                                 except Exception:
-                                    pass
+                                    import traceback; traceback.print_exc()
                                 self.on_atom_picked(int(closest_atom_idx))
 
                                 # We picked an atom, so stop tracking for background click
@@ -117,7 +117,7 @@ class Dialog3DPickingMixin:
         try:
             self.main_window._picking_consumed = False
         except Exception:
-            pass
+            import traceback; traceback.print_exc()
 
     def disable_picking(self):
         """3Dビューでの原子選択を無効にする"""
@@ -129,7 +129,7 @@ class Dialog3DPickingMixin:
             if hasattr(self.main_window, '_picking_consumed'):
                 self.main_window._picking_consumed = False
         except Exception:
-            pass
+            import traceback; traceback.print_exc()
 
     def try_alternative_picking(self, x, y):
         """代替のピッキング方法（使用しない）"""
@@ -145,7 +145,7 @@ class Dialog3DPickingMixin:
                 try:
                     self.main_window.plotter.remove_actor(label_actor)
                 except Exception:
-                    pass
+                    import traceback; traceback.print_exc()
             self.selection_labels = []
 
     # Alias — some dialogs use this name instead.

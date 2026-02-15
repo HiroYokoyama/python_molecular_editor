@@ -24,7 +24,7 @@ from rdkit.Chem import AllChem
 try:
     pass
 except Exception:
-    pass
+    import traceback; traceback.print_exc()
 
 # PyQt6 Modules
 from PyQt6.QtCore import QPointF, QTimer

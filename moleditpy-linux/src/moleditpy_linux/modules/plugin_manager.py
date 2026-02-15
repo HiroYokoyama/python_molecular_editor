@@ -435,7 +435,7 @@ class PluginManager:
                                              elts.append(elt.n)
                                      val = ".".join(map(str, elts))
                                  except:
-                                     pass
+                                     import traceback; traceback.print_exc()
 
                          if val is not None:
                              if target.id == 'PLUGIN_NAME':

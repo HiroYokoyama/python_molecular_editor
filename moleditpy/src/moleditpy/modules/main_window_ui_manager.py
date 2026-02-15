@@ -22,7 +22,7 @@ import vtk
 try:
     pass
 except Exception:
-    pass
+    import traceback; traceback.print_exc()
 
 # PyQt6 Modules
 from PyQt6.QtCore import QEvent, Qt, QTimer
@@ -53,9 +53,6 @@ except Exception:
 class MainWindowUiManager(object):
     """ main_window.py から分離された機能クラス """
 
-    def __init__(self, main_window):
-        """ クラスの初期化 """
-        self = main_window
 
     def update_status_bar(self, message):
         """ワーカースレッドからのメッセージでステータスバーを更新するスロット"""
@@ -169,7 +166,7 @@ class MainWindowUiManager(object):
                 self.save_settings()
                 self.settings_dirty = False
         except Exception:
-            pass
+            import traceback; traceback.print_exc()
 
         # 未保存の変更がある場合の処理
         if self.has_unsaved_changes:
@@ -201,9 +198,9 @@ class MainWindowUiManager(object):
                     try:
                         widget.close()
                     except Exception:
-                        pass
+                        import traceback; traceback.print_exc()
         except Exception:
-            pass
+            import traceback; traceback.print_exc()
 
         # 終了処理
         if self.scene and self.scene.template_preview:
@@ -215,13 +212,13 @@ class MainWindowUiManager(object):
                 try:
                     thr.quit()
                 except Exception:
-                    pass
+                    import traceback; traceback.print_exc()
                 try:
                     thr.wait(200)
                 except Exception:
-                    pass
+                    import traceback; traceback.print_exc()
         except Exception:
-            pass
+            import traceback; traceback.print_exc()
 
         event.accept()
 
@@ -400,12 +397,12 @@ class MainWindowUiManager(object):
                         # Otherwise enable/disable according to the requested global flag
                         getattr(self, action_name).setEnabled(bool(enabled))
                     except Exception:
-                        pass
+                        import traceback; traceback.print_exc()
                 else:
                     try:
                         getattr(self, action_name).setEnabled(enabled)
                     except Exception:
-                        pass
+                        import traceback; traceback.print_exc()
 
         # 3D Selectボタンは常に有効にする
         if hasattr(self, 'measurement_action'):

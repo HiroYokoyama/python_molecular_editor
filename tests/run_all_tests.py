@@ -22,7 +22,7 @@ try:
 except ImportError:
     pass
 except Exception:
-    pass
+    import traceback; traceback.print_exc()
 
 def run_suite(name, path, env_vars=None, extra_args=None, enable_cov=True):
     """Run a test suite in a separate process for isolation."""

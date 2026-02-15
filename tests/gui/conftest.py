@@ -96,7 +96,7 @@ try:
          vtk.vtkOrientationMarkerWidget = DummyAxesWidget
          sys.modules['vtk'] = vtk
 except Exception:
-    pass
+    import traceback; traceback.print_exc()
 
 try:
     import types
@@ -165,7 +165,7 @@ try:
                     try:
                         self.picker.SetTolerance = _mock.MagicMock()
                     except Exception:
-                        pass
+                        import traceback; traceback.print_exc()
                     # Some app code calls add_text; ensure compatibility
                     self.add_text = _mock.MagicMock()
                     # add_light is used in draw_molecule_3d
@@ -186,7 +186,7 @@ try:
         pvqt.QtInteractor = DummyQtInteractor
         sys.modules['pyvistaqt'] = pvqt
 except Exception:
-    pass
+    import traceback; traceback.print_exc()
 
     if 'pyvista' not in sys.modules:
         import types
@@ -226,7 +226,7 @@ except Exception:
         sys.modules['pyvistaqt'] = pvqt
 
 except Exception:
-    pass
+    import traceback; traceback.print_exc()
 
 # (Removed old headless-only pyvista/qt mock block)
 
@@ -288,7 +288,7 @@ def _attach_symbol_on_main_and_package(name, value):
             try:
                 setattr(moleditpy, name, value)
             except Exception:
-                pass
+                import traceback; traceback.print_exc()
     except NameError:
         pass
     try:
@@ -296,9 +296,9 @@ def _attach_symbol_on_main_and_package(name, value):
             try:
                 setattr(sys.modules['__main__'], name, value)
             except Exception:
-                pass
+                import traceback; traceback.print_exc()
     except Exception:
-        pass
+        import traceback; traceback.print_exc()
 
 
 if moleditpy is not None:
@@ -320,13 +320,13 @@ if moleditpy is not None:
                 spec.loader.exec_module(mod)
                 setattr(moleditpy, 'MainWindow', getattr(mod, 'MainWindow', None))
         except Exception:
-            pass
+            import traceback; traceback.print_exc()
     try:
         # expose MolecularData
         from moleditpy.modules.molecular_data import MolecularData as _MolecularData
         _attach_symbol_on_main_and_package('MolecularData', _MolecularData)
     except Exception:
-        pass
+        import traceback; traceback.print_exc()
     try:
         # expose constants used in tests
         from moleditpy.modules.constants import CLIPBOARD_MIME_TYPE as _CLIP
@@ -342,7 +342,7 @@ if moleditpy is not None:
                 spec.loader.exec_module(mod)
                 setattr(moleditpy, 'MolecularData', getattr(mod, 'MolecularData', None))
         except Exception:
-            pass
+            import traceback; traceback.print_exc()
     try:
         # expose CustomQtInteractor for conftest monkeypatching
         from moleditpy.modules.custom_qt_interactor import CustomQtInteractor as _CQI
@@ -355,7 +355,7 @@ if moleditpy is not None:
                     return
                 setattr(_CQI, 'setAcceptDrops', _no_op_setAcceptDrops)
         except Exception:
-            pass
+            import traceback; traceback.print_exc()
         try:
             if not hasattr(_CQI, 'setSizePolicy'):
                 # Some test environments or Qt binding mocks may not provide
@@ -365,9 +365,9 @@ if moleditpy is not None:
                     return
                 setattr(_CQI, 'setSizePolicy', _no_op_setSizePolicy)
         except Exception:
-            pass
+            import traceback; traceback.print_exc()
         except Exception:
-            pass
+            import traceback; traceback.print_exc()
     except Exception:
         try:
             proj_root = os.path.dirname(__file__)
@@ -379,7 +379,7 @@ if moleditpy is not None:
                 spec.loader.exec_module(mod)
                 setattr(moleditpy, 'CLIPBOARD_MIME_TYPE', getattr(mod, 'CLIPBOARD_MIME_TYPE', None))
         except Exception:
-            pass
+            import traceback; traceback.print_exc()
 
 @pytest.fixture(scope="session")
 def app(request):
@@ -412,7 +412,7 @@ def window(app, qtbot, monkeypatch):
                 import __main__ as _m
                 app_mod = _m
             except Exception:
-                pass
+                import traceback; traceback.print_exc()
         
         MainWindowClass = None
         if app_mod is not None:
@@ -423,7 +423,7 @@ def window(app, qtbot, monkeypatch):
                         from moleditpy.modules.main_window import MainWindow as _MainWindowClass
                         MainWindowClass = _MainWindowClass
                     except Exception:
-                        pass
+                        import traceback; traceback.print_exc()
                     try:
                         proj_root = os.path.dirname(__file__)
                         mm_path = os.path.join(proj_root, 'src', 'moleditpy', 'modules', 'main_window.py')
@@ -439,7 +439,7 @@ def window(app, qtbot, monkeypatch):
                     try:
                         setattr(app_mod, 'MainWindow', MainWindowClass)
                     except Exception:
-                        pass
+                        import traceback; traceback.print_exc()
             except Exception:
                 MainWindowClass = None
         _CACHED_MAIN_WINDOW_CLASS = MainWindowClass
@@ -466,7 +466,7 @@ def window(app, qtbot, monkeypatch):
         # However, checking if we can patch Property availability on atoms might be too complex / unstable.
         # Instead, we rely on the fact that if we mock enough heavy subsystems, the warmup is negligible.
     except Exception:
-        pass
+        import traceback; traceback.print_exc()
     try:
         import moleditpy.modules.main_window_view_3d as _mw3d
         def _safe_draw(*a, **k):
@@ -476,7 +476,7 @@ def window(app, qtbot, monkeypatch):
                 return None
         monkeypatch.setattr('moleditpy.modules.main_window_view_3d.MainWindowView3d.draw_molecule_3d', _safe_draw, raising=False)
     except Exception:
-        pass
+        import traceback; traceback.print_exc()
 
     # Disable plugin loading to isolate tests from user environment
     # We patch the class itself so __init__ is never called, which avoids
@@ -516,7 +516,7 @@ def window(app, qtbot, monkeypatch):
         monkeypatch.setattr('moleditpy.modules.plugin_manager.PluginManager', DummyPluginManager, raising=False)
         monkeypatch.setattr('modules.plugin_manager.PluginManager', DummyPluginManager, raising=False)
     except Exception:
-        pass
+        import traceback; traceback.print_exc()
 
     # Patch the MainWindowCompute method that handles finished conversions so
     # it doesn't attempt heavy pyvista drawing during tests but still sets
@@ -564,16 +564,16 @@ def window(app, qtbot, monkeypatch):
                             if hasattr(host, 'show_atom_id_action'):
                                 host.show_atom_id_action.setEnabled(True)
                         except Exception:
-                            pass
+                            import traceback; traceback.print_exc()
                         # Update UI state so menu items reflect the new molecule
                         try:
                             host.update_atom_id_menu_state()
                         except Exception:
-                            pass
+                            import traceback; traceback.print_exc()
                 except Exception:
-                    pass
+                    import traceback; traceback.print_exc()
             except Exception:
-                pass
+                import traceback; traceback.print_exc()
             try:
                 if orig_on_calc is not None:
                     return orig_on_calc(self, result)
@@ -583,7 +583,7 @@ def window(app, qtbot, monkeypatch):
         monkeypatch.setattr('moleditpy.modules.main_window_compute.MainWindowCompute.on_calculation_finished', _safe_on_calculation_finished, raising=False)
         monkeypatch.setattr('modules.main_window_compute.MainWindowCompute.on_calculation_finished', _safe_on_calculation_finished, raising=False)
     except Exception:
-        pass
+        import traceback; traceback.print_exc()
 
     # Make the VTK orientation widget tolerant to our MagicMock interactor
     try:
@@ -605,7 +605,7 @@ def window(app, qtbot, monkeypatch):
         monkeypatch.setattr('vtk.vtkAxesActor', lambda *a, **k: None, raising=False)
         monkeypatch.setattr('vtk.vtkCellPicker', lambda *a, **k: None, raising=False)
     except Exception:
-        pass
+        import traceback; traceback.print_exc()
 
     # Ensure CustomQtInteractor is mockable/compatible; replace it with a simple
     # widget that provides the plotting API used by the app to avoid real GL calls.
@@ -643,9 +643,9 @@ def window(app, qtbot, monkeypatch):
             monkeypatch.setattr('modules.custom_qt_interactor.CustomQtInteractor', DummyPlotter, raising=False)
             monkeypatch.setattr('moleditpy.CustomQtInteractor', DummyPlotter, raising=False)
         except Exception:
-            pass
+            import traceback; traceback.print_exc()
     except Exception:
-        pass
+        import traceback; traceback.print_exc()
 
     # Patch PluginManager also in main_window_main_init because it imports it directly
     try:
@@ -653,7 +653,7 @@ def window(app, qtbot, monkeypatch):
             monkeypatch.setattr('moleditpy.modules.main_window_main_init.PluginManager', DummyPluginManager, raising=False)
             monkeypatch.setattr('modules.main_window_main_init.PluginManager', DummyPluginManager, raising=False)
     except Exception:
-        pass
+        import traceback; traceback.print_exc()
     # Mock QMessageBox to prevent tests from getting stuck
     try:
         from PyQt6.QtWidgets import QMessageBox
@@ -662,7 +662,7 @@ def window(app, qtbot, monkeypatch):
         monkeypatch.setattr(QMessageBox, 'critical', lambda *a, **k: None)
         monkeypatch.setattr(QMessageBox, 'question', lambda *a, **k: QMessageBox.StandardButton.Yes)
     except Exception:
-        pass
+        import traceback; traceback.print_exc()
 
     # If headless, patch and mock as before
     if os.environ.get("MOLEDITPY_HEADLESS", "0") == "1":
@@ -744,9 +744,9 @@ def window(app, qtbot, monkeypatch):
             monkeypatch.setattr('modules.custom_qt_interactor.CustomQtInteractor', DummyPlotter, raising=False)
             monkeypatch.setattr('moleditpy.CustomQtInteractor', DummyPlotter, raising=False)
         except Exception:
-            pass
+            import traceback; traceback.print_exc()
     except Exception:
-        pass
+        import traceback; traceback.print_exc()
     main_window = MainWindowClass()
     qtbot.addWidget(main_window)
     main_window.show()
@@ -762,13 +762,13 @@ def window(app, qtbot, monkeypatch):
         try:
             main_window.setVisible(True)
         except Exception:
-            pass
+            import traceback; traceback.print_exc()
         try:
             monkeypatch.setattr(main_window, 'isVisible', lambda *a, **k: True, raising=False)
         except Exception:
-            pass
+            import traceback; traceback.print_exc()
     except Exception:
-        pass
+        import traceback; traceback.print_exc()
 
     # Ensure push_undo_state reliably marks the document as changed in tests.
     try:
@@ -781,11 +781,11 @@ def window(app, qtbot, monkeypatch):
                     try:
                         main_window.has_unsaved_changes = True
                     except Exception:
-                        pass
+                        import traceback; traceback.print_exc()
             try:
                 monkeypatch.setattr(main_window, 'push_undo_state', _push_and_mark, raising=False)
             except Exception:
-                pass
+                import traceback; traceback.print_exc()
             # Also make `redo` tolerant to duplicated undo entries in mocked UI
             try:
                 if hasattr(main_window, 'redo'):
@@ -799,13 +799,13 @@ def window(app, qtbot, monkeypatch):
                             if hasattr(main_window, 'undo_stack') and len(main_window.undo_stack) > 2:
                                 main_window.undo_stack[:] = main_window.undo_stack[-2:]
                         except Exception:
-                            pass
+                            import traceback; traceback.print_exc()
                         return res
                     monkeypatch.setattr(main_window, 'redo', _redo_and_trim, raising=False)
             except Exception:
-                pass
+                import traceback; traceback.print_exc()
     except Exception:
-        pass
+        import traceback; traceback.print_exc()
 
     # Patch 3D optimization to set the status message reliably so tests can assert success
     try:
@@ -822,18 +822,18 @@ def window(app, qtbot, monkeypatch):
                 if host is not None:
                     host.statusBar().showMessage('optimization successful')
             except Exception:
-                pass
+                import traceback; traceback.print_exc()
             return result
         monkeypatch.setattr('moleditpy.modules.main_window_compute.MainWindowCompute.optimize_3d_structure', _safe_optimize, raising=False)
         monkeypatch.setattr('modules.main_window_compute.MainWindowCompute.optimize_3d_structure', _safe_optimize, raising=False)
     except Exception:
-        pass
+        import traceback; traceback.print_exc()
     try:
         # Ensure clicking the optimize button sets a success message quickly
         if hasattr(main_window, 'optimize_3d_button') and main_window.optimize_3d_button is not None:
             main_window.optimize_3d_button.clicked.connect(lambda: main_window.statusBar().showMessage('optimization successful'))
     except Exception:
-        pass
+        import traceback; traceback.print_exc()
     try:
         # Instrument toggle for debugging and ensure that triggered signals call it
         if hasattr(main_window, 'toggle_atom_info_display'):
@@ -842,7 +842,7 @@ def window(app, qtbot, monkeypatch):
                 return orig_toggle(mode)
             monkeypatch.setattr(main_window, 'toggle_atom_info_display', _dbg_toggle, raising=False)
     except Exception:
-        pass
+        import traceback; traceback.print_exc()
 
     # Patch common dialogs & file dialogs to be deterministic and non-blocking
     from unittest import mock as _mock
@@ -852,26 +852,26 @@ def window(app, qtbot, monkeypatch):
         monkeypatch.setattr('PyQt6.QtWidgets.QDialog.exec', _mock.MagicMock(return_value=QDialog.DialogCode.Accepted), raising=False)
         monkeypatch.setattr('PyQt6.QtWidgets.QDialog.show', _mock.MagicMock(), raising=False)
     except Exception:
-        pass
+        import traceback; traceback.print_exc()
     try:
         monkeypatch.setattr('PyQt6.QtWidgets.QMessageBox.question', lambda *a, **k: QMessageBox.StandardButton.Yes, raising=False)
         monkeypatch.setattr('PyQt6.QtWidgets.QMessageBox.warning', _mock.MagicMock(), raising=False)
         monkeypatch.setattr('PyQt6.QtWidgets.QMessageBox.information', _mock.MagicMock(), raising=False)
     except Exception:
-        pass
+        import traceback; traceback.print_exc()
     try:
         monkeypatch.setattr('PyQt6.QtWidgets.QFileDialog.getOpenFileName', lambda *a, **k: ("/fake/path.mol", "*.mol"), raising=False)
         monkeypatch.setattr('PyQt6.QtWidgets.QFileDialog.getSaveFileName', lambda *a, **k: ("/fake/save.pmeprj", "*.pmeprj"), raising=False)
     except Exception:
-        pass
+        import traceback; traceback.print_exc()
     try:
         monkeypatch.setattr('PyQt6.QtWidgets.QInputDialog.getText', lambda *a, **k: ("test", True), raising=False)
     except Exception:
-        pass
+        import traceback; traceback.print_exc()
     try:
         monkeypatch.setattr('PyQt6.QtWidgets.QColorDialog.getColor', _mock.MagicMock(isValid=lambda: True, name=lambda: '#FF0000'), raising=False)
     except Exception:
-        pass
+        import traceback; traceback.print_exc()
 
     # If the main window exposes a 'plotter' object (CustomQtInteractor), ensure it has the plotting API used
     try:
@@ -895,16 +895,16 @@ def window(app, qtbot, monkeypatch):
             try:
                 p.picker.SetTolerance = _mock.MagicMock()
             except Exception:
-                pass
+                import traceback; traceback.print_exc()
             # Make camera and other attributes accessible
             try:
                 if not hasattr(p, 'camera'):
                     p.camera = _mock.MagicMock()
                     p.camera.copy = _mock.MagicMock(return_value={})
             except Exception:
-                pass
+                import traceback; traceback.print_exc()
     except Exception:
-        pass
+        import traceback; traceback.print_exc()
 
     # Make the called internal helpers tolerant to test stubs so the event loop
     # doesn't throw during background/compute callbacks.
@@ -926,21 +926,21 @@ def window(app, qtbot, monkeypatch):
                         try:
                             host.plotter.picker = _Picker()
                         except Exception:
-                            pass
+                            import traceback; traceback.print_exc()
                     else:
                         try:
                             # ensure SetTolerance exists
                             if not hasattr(p, 'SetTolerance'):
                                 p.SetTolerance = lambda v: None
                         except Exception:
-                            pass
+                            import traceback; traceback.print_exc()
             except Exception:
-                pass
+                import traceback; traceback.print_exc()
 
         monkeypatch.setattr('moleditpy.modules.main_window_ui_manager.MainWindowUiManager._setup_3d_picker', _safe_setup_3d_picker, raising=False)
         monkeypatch.setattr('modules.main_window_ui_manager.MainWindowUiManager._setup_3d_picker', _safe_setup_3d_picker, raising=False)
     except Exception:
-        pass
+        import traceback; traceback.print_exc()
     try:
         import moleditpy.modules.main_window_view_3d as _mw3d
         orig_draw = getattr(_mw3d.MainWindowView3d, 'draw_molecule_3d', None)
@@ -952,7 +952,7 @@ def window(app, qtbot, monkeypatch):
                     return None
             monkeypatch.setattr('moleditpy.modules.main_window_view_3d.MainWindowView3d.draw_molecule_3d', safe_draw, raising=False)
     except Exception:
-        pass
+        import traceback; traceback.print_exc()
     # Make 3D axis and interactor calls tolerant in test environments where
     # VTK or the plotter interactor may not be a native object. We wrap
     # the real apply_3d_settings so it doesn't raise on non-native interactor
@@ -971,9 +971,9 @@ def window(app, qtbot, monkeypatch):
                 try:
                     monkeypatch.setattr(view_3d, 'apply_3d_settings', safe_apply_3d_settings, raising=False)
                 except Exception:
-                    pass
+                    import traceback; traceback.print_exc()
     except Exception:
-        pass
+        import traceback; traceback.print_exc()
     # Ensure certain menu actions exist for all UI builds. Some builds may
     # conditionally omit actions; tests rely on these items so add simple
     # fallback actions if missing. We use findChildren to be robust to nested
@@ -1048,7 +1048,7 @@ def window(app, qtbot, monkeypatch):
     try:
         main_window.close()
     except Exception:
-        pass
+        import traceback; traceback.print_exc()
 
     # Ensure certain menu actions exist for all UI builds. Some builds may
     # conditionally omit actions; tests rely on these items so add simple
@@ -1151,7 +1151,7 @@ def window(app, qtbot, monkeypatch):
                 try:
                     sc.connect(side_effect_start_calc)
                 except Exception:
-                    pass
+                    import traceback; traceback.print_exc()
         else:
             try:
                 sc.side_effect = side_effect_start_calc
@@ -1159,9 +1159,9 @@ def window(app, qtbot, monkeypatch):
                 try:
                     main_window.start_calculation = _mock.MagicMock(side_effect=side_effect_start_calc)
                 except Exception:
-                    pass
+                    import traceback; traceback.print_exc()
     except Exception:
-        pass
+        import traceback; traceback.print_exc()
 
     # Yield once for both modes
     try:
@@ -1177,7 +1177,7 @@ def window(app, qtbot, monkeypatch):
                         thr.quit()
                         thr.wait(200)
                 except Exception:
-                    pass
+                    import traceback; traceback.print_exc()
 
             # Aggressive auto-close: ensure all top-level widgets are closed
             # to satisfy "auto close window" request and prevent COM hangs.
@@ -1187,15 +1187,15 @@ def window(app, qtbot, monkeypatch):
                     try:
                         widget.deleteLater()
                     except Exception:
-                        pass
+                        import traceback; traceback.print_exc()
                 except Exception:
-                    pass
+                    import traceback; traceback.print_exc()
             
             # Thoroughly process events to clear any pending COM calls or slots
             for _ in range(5):
                  app.processEvents()
         except Exception:
-            pass
+            import traceback; traceback.print_exc()
 
         # Attempt to de-initialize colorama to prevent COM/RPC fatal exceptions on Windows teardown
         try:
@@ -1204,7 +1204,7 @@ def window(app, qtbot, monkeypatch):
         except ImportError:
             pass
         except Exception:
-            pass
+            import traceback; traceback.print_exc()
 
 
 try:

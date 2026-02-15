@@ -256,9 +256,9 @@ class MoveGroupDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
                             try:
                                 self.main_window.plotter.setCursor(Qt.CursorShape.ClosedHandCursor)
                             except Exception:
-                                pass
+                                import traceback; traceback.print_exc()
                     except Exception:
-                        pass
+                        import traceback; traceback.print_exc()
 
                     # 閾値以下の場合はカメラ操作を許可
                     if not self.is_dragging_group:
@@ -276,7 +276,7 @@ class MoveGroupDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
                         if abs(dx) > 2 or abs(dy) > 2:
                             self.mouse_moved_during_drag = True
                     except Exception:
-                        pass
+                        import traceback; traceback.print_exc()
 
                     # ドラッグ中はイベントを消費してカメラ回転を防ぐ
                     return True
@@ -301,7 +301,7 @@ class MoveGroupDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
                         else:
                             self.main_window.plotter.setCursor(Qt.CursorShape.ArrowCursor)
                     except Exception:
-                        pass
+                        import traceback; traceback.print_exc()
 
                 # ドラッグ中でない場合はカメラ回転を許可
                 return False
@@ -331,11 +331,11 @@ class MoveGroupDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
                                 try:
                                     self.main_window.plotter.setCursor(Qt.CursorShape.ArrowCursor)
                                 except Exception:
-                                    pass
+                                    import traceback; traceback.print_exc()
                                 return True
 
                     except Exception:
-                        pass
+                        import traceback; traceback.print_exc()
                     finally:
                         # ドラッグ状態をリセット
                         self.is_dragging_group = False
@@ -348,7 +348,7 @@ class MoveGroupDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
                         try:
                             self.main_window.plotter.setCursor(Qt.CursorShape.ArrowCursor)
                         except Exception:
-                            pass
+                            import traceback; traceback.print_exc()
 
                     return True  # イベントを消費
 
@@ -452,17 +452,17 @@ class MoveGroupDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
         try:
             self.main_window.plotter.remove_actor('move_group_highlight')
         except Exception:
-            pass
+            import traceback; traceback.print_exc()
         if hasattr(self, 'highlight_actor'):
             try:
                 self.main_window.plotter.remove_actor(self.highlight_actor)
             except Exception:
-                pass
+                import traceback; traceback.print_exc()
             self.highlight_actor = None
         try:
             self.main_window.plotter.render()
         except Exception:
-            pass
+            import traceback; traceback.print_exc()
 
     def reset_translation_inputs(self):
         """Translation入力フィールドをリセット"""
@@ -590,7 +590,7 @@ class MoveGroupDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
         try:
             self.main_window.draw_molecule_3d(self.mol)
         except Exception:
-            pass
+            import traceback; traceback.print_exc()
         super().closeEvent(event)
 
     def reject(self):
@@ -600,5 +600,5 @@ class MoveGroupDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
         try:
             self.main_window.draw_molecule_3d(self.mol)
         except Exception:
-            pass
+            import traceback; traceback.print_exc()
         super().reject()

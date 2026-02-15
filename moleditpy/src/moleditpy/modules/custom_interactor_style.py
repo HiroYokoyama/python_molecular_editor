@@ -64,7 +64,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                     move_group_dialog = widget
                     break
         except Exception:
-            pass
+            import traceback; traceback.print_exc()
 
         if move_group_dialog and move_group_dialog.group_atoms:
             # グループが選択されている場合、グループドラッグ処理
@@ -253,7 +253,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                     move_group_dialog = widget
                     break
         except Exception:
-            pass
+            import traceback; traceback.print_exc()
 
         if move_group_dialog and move_group_dialog.group_atoms:
             # グループが選択されている場合、回転ドラッグを開始
@@ -320,7 +320,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                     move_group_dialog = widget
                     break
         except Exception:
-            pass
+            import traceback; traceback.print_exc()
 
         if move_group_dialog and getattr(move_group_dialog, '_is_dragging_group_vtk', False):
             # グループをドラッグ中 - 移動距離を記録するのみ
@@ -396,7 +396,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                     move_group_dialog = widget
                     break
         except Exception:
-            pass
+            import traceback; traceback.print_exc()
 
         # ダブルクリック/トリプルクリックで状態が混乱するのを防ぐ（Move Group用）
         if move_group_dialog:
@@ -512,9 +512,9 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                                         ap[atom_id] = new_world_coords
                                         mw.atom_positions_3d = ap
                                     except Exception:
-                                        pass
+                                        import traceback; traceback.print_exc()
                             except Exception:
-                                pass
+                                import traceback; traceback.print_exc()
 
                         conf = mw.current_mol.GetConformer()
                         for i in range(mw.current_mol.GetNumAtoms()):
@@ -534,25 +534,25 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                     try:
                         mw.draw_molecule_3d(mw.current_mol)
                     except Exception:
-                        pass
+                        import traceback; traceback.print_exc()
                     mw.push_undo_state()
             mw.dragged_atom_info = None
             try:
                 mw.update_3d_selection_display()
             except Exception:
-                pass
+                import traceback; traceback.print_exc()
             try:
                 mw.update_measurement_labels_display()
             except Exception:
-                pass
+                import traceback; traceback.print_exc()
             try:
                 mw.update_2d_measurement_labels()
             except Exception:
-                pass
+                import traceback; traceback.print_exc()
             try:
                 mw.show_all_atom_info()
             except Exception:
-                pass
+                import traceback; traceback.print_exc()
             except Exception:
                 # Do not allow a failure here to interrupt release flow
                 pass
@@ -577,13 +577,13 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                 if hasattr(move_group_dialog, '_drag_atom_idx'):
                     delattr(move_group_dialog, '_drag_atom_idx')
         except Exception:
-            pass
+            import traceback; traceback.print_exc()
 
         # ボタンを離した後のカーソル表示を最新の状態に更新
         try:
              mw.plotter.setCursor(Qt.CursorShape.ArrowCursor)
         except Exception:
-             pass
+             import traceback; traceback.print_exc()
         # 2Dビューにフォーカスを戻し、ショートカットキーなどが使えるようにする
         if mw and mw.view_2d:
             mw.view_2d.setFocus()
@@ -602,7 +602,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                     move_group_dialog = widget
                     break
         except Exception:
-            pass
+            import traceback; traceback.print_exc()
 
         if move_group_dialog and getattr(move_group_dialog, '_is_rotating_group_vtk', False):
             # 回転モードで右クリックリリース - 選択を保持
@@ -701,7 +701,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
             try:
                 mw.plotter.setCursor(Qt.CursorShape.ArrowCursor)
             except Exception:
-                pass
+                import traceback; traceback.print_exc()
             return
 
         # 通常の右クリックリリース処理

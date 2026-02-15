@@ -137,9 +137,9 @@ class MoleculeScene(QGraphicsScene):
                 try:
                     app.aboutToQuit.connect(self.purge_deleted_items)
                 except Exception:
-                    pass
+                    import traceback; traceback.print_exc()
         except Exception:
-            pass
+            import traceback; traceback.print_exc()
 
     def clear_all_problem_flags(self):
         """全ての AtomItem の has_problem フラグをリセットし、再描画する"""
@@ -327,12 +327,12 @@ class MoleculeScene(QGraphicsScene):
                         if getattr(self.temp_line, 'scene', None) and self.temp_line.scene():
                             self.removeItem(self.temp_line)
                     except Exception:
-                        pass
+                        import traceback; traceback.print_exc()
             except Exception:
                 try:
                     self.removeItem(self.temp_line)
                 except Exception:
-                    pass
+                    import traceback; traceback.print_exc()
             finally:
                 self.temp_line = None
 
@@ -580,7 +580,7 @@ class MoleculeScene(QGraphicsScene):
                 try:
                     self.clearSelection()
                 except Exception:
-                    pass
+                    import traceback; traceback.print_exc()
 
                 for a in connected_atoms:
                     try:
@@ -590,7 +590,7 @@ class MoleculeScene(QGraphicsScene):
                             # fallback: set selected attribute if exists
                             setattr(a, 'selected', True)
                         except Exception:
-                            pass
+                            import traceback; traceback.print_exc()
                 for b in connected_bonds:
                     try:
                         b.setSelected(True)
@@ -598,7 +598,7 @@ class MoleculeScene(QGraphicsScene):
                         try:
                             setattr(b, 'selected', True)
                         except Exception:
-                            pass
+                            import traceback; traceback.print_exc()
 
                 event.accept()
                 return
@@ -695,7 +695,7 @@ class MoleculeScene(QGraphicsScene):
                     atom_items[best_idx] = ex_item
                     used_indices.add(best_idx)
             except Exception:
-                pass
+                import traceback; traceback.print_exc()
 
         # --- 2) シーン内既存原子を self.data.atoms から列挙してマップ ---
         mapped_atoms = {it for it in atom_items if it is not None}
@@ -937,7 +937,7 @@ class MoleculeScene(QGraphicsScene):
             try:
                 if at: at.update_style()
             except Exception:
-                pass
+                import traceback; traceback.print_exc()
 
         return atom_items
 
@@ -1128,7 +1128,7 @@ class MoleculeScene(QGraphicsScene):
                                     if b in atom.bonds:
                                         atom.bonds.remove(b)
                             except Exception:
-                                pass
+                                import traceback; traceback.print_exc()
 
                     # After pruning bond references, update visual style so carbons without
                     # bonds become visible again.
@@ -1151,7 +1151,7 @@ class MoleculeScene(QGraphicsScene):
                             try:
                                 self.data.remove_bond(a2.atom_id, a1.atom_id)
                             except Exception:
-                                pass
+                                import traceback; traceback.print_exc()
                 except Exception:
                     continue
 
@@ -1161,7 +1161,7 @@ class MoleculeScene(QGraphicsScene):
                         try:
                             self.data.remove_atom(atom.atom_id)
                         except Exception:
-                            pass
+                            import traceback; traceback.print_exc()
                 except Exception:
                     continue
 
@@ -1171,7 +1171,7 @@ class MoleculeScene(QGraphicsScene):
                 try:
                     self._ih_update_counter = 0
                 except Exception:
-                    pass
+                    import traceback; traceback.print_exc()
 
             # 3) Remove graphic items from the scene (bonds first)
             # To avoid calling into methods on wrappers that may refer to
@@ -1194,7 +1194,7 @@ class MoleculeScene(QGraphicsScene):
                         try:
                             self.removeItem(bond)
                         except Exception:
-                            pass
+                            import traceback; traceback.print_exc()
                 except Exception:
                     continue
 
@@ -1207,7 +1207,7 @@ class MoleculeScene(QGraphicsScene):
                         try:
                             self.removeItem(atom)
                         except Exception:
-                            pass
+                            import traceback; traceback.print_exc()
                 except Exception:
                     continue
 
@@ -1229,7 +1229,7 @@ class MoleculeScene(QGraphicsScene):
                         try:
                             bond.hide()
                         except Exception:
-                            pass
+                            import traceback; traceback.print_exc()
                         try:
                             self._deleted_items.append(bond)
                         except Exception:
@@ -1244,11 +1244,11 @@ class MoleculeScene(QGraphicsScene):
                         try:
                             atom.hide()
                         except Exception:
-                            pass
+                            import traceback; traceback.print_exc()
                         try:
                             self._deleted_items.append(atom)
                         except Exception:
-                            pass
+                            import traceback; traceback.print_exc()
                 except Exception:
                     continue
 
@@ -1292,7 +1292,7 @@ class MoleculeScene(QGraphicsScene):
                         try:
                             obj.hide()
                         except Exception:
-                            pass
+                            import traceback; traceback.print_exc()
 
                     try:
                         if hasattr(obj, 'bonds') and getattr(obj, 'bonds') is not None:
@@ -1302,9 +1302,9 @@ class MoleculeScene(QGraphicsScene):
                                 try:
                                     obj.bonds = []
                                 except Exception:
-                                    pass
+                                    import traceback; traceback.print_exc()
                     except Exception:
-                        pass
+                        import traceback; traceback.print_exc()
 
                 except Exception:
                     # Continue purging remaining items even if one fails.
@@ -1317,14 +1317,14 @@ class MoleculeScene(QGraphicsScene):
                 try:
                     self._deleted_items = []
                 except Exception:
-                    pass
+                    import traceback; traceback.print_exc()
 
         except Exception as e:
             # Never raise during shutdown
             try:
                 print(f"Error purging deleted items: {e}")
             except Exception:
-                pass
+                import traceback; traceback.print_exc()
 
     def add_user_template_fragment(self, context):
         """ユーザーテンプレートフラグメントを配置"""
@@ -1821,12 +1821,12 @@ class MoleculeScene(QGraphicsScene):
                             if getattr(self.temp_line, 'scene', None) and self.temp_line.scene():
                                 self.removeItem(self.temp_line)
                         except Exception:
-                            pass
+                            import traceback; traceback.print_exc()
                 except Exception:
                     try:
                         self.removeItem(self.temp_line)
                     except Exception:
-                        pass
+                        import traceback; traceback.print_exc()
                 self.temp_line = None; self.start_atom = None; self.start_pos = None
                 self.initial_positions_in_event = {}
                 event.accept()

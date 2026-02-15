@@ -263,7 +263,7 @@ class MolecularData:
             if mol:
                 return Chem.MolToMolBlock(mol, includeStereo=True)
         except Exception:
-            pass
+            import traceback; traceback.print_exc()
         if not self.atoms: return None
         atom_map = {old_id: new_id for new_id, old_id in enumerate(self.atoms.keys())}
         num_atoms, num_bonds = len(self.atoms), len(self.bonds)

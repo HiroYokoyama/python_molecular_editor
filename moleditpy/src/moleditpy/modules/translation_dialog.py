@@ -228,7 +228,7 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
                         try:
                             self.main_window.atom_positions_3d[i] = new_pos
                         except Exception:
-                            pass
+                            import traceback; traceback.print_exc()
                     else:
                         # leave other atoms unchanged
                         continue
@@ -329,7 +329,7 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
         try:
             self.main_window.plotter.render()
         except Exception:
-            pass
+            import traceback; traceback.print_exc()
 
     def closeEvent(self, event):
         """ダイアログが閉じられる時の処理"""
@@ -338,7 +338,7 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
         try:
             self.main_window.draw_molecule_3d(self.mol)
         except Exception:
-            pass
+            import traceback; traceback.print_exc()
         super().closeEvent(event)
 
     def reject(self):
@@ -348,7 +348,7 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
         try:
             self.main_window.draw_molecule_3d(self.mol)
         except Exception:
-            pass
+            import traceback; traceback.print_exc()
         super().reject()
 
     def accept(self):
@@ -358,5 +358,5 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
         try:
             self.main_window.draw_molecule_3d(self.mol)
         except Exception:
-            pass
+            import traceback; traceback.print_exc()
         super().accept()

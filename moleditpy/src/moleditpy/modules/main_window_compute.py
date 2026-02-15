@@ -79,9 +79,9 @@ class MainWindowCompute(object):
                 try:
                     self.settings_dirty = True
                 except Exception:
-                    pass
+                    import traceback; traceback.print_exc()
         except Exception:
-            pass
+            import traceback; traceback.print_exc()
 
         # Update menu checked state if actions mapping exists
         try:
@@ -91,9 +91,9 @@ class MainWindowCompute(object):
                         # keys in opt3d_actions may be mixed-case; compare uppercased
                         act.setChecked(k.upper() == method)
                     except Exception:
-                        pass
+                        import traceback; traceback.print_exc()
         except Exception:
-            pass
+            import traceback; traceback.print_exc()
 
         # Also show user-friendly label if available
         try:
@@ -158,7 +158,7 @@ class MainWindowCompute(object):
                     if hasattr(self, 'opt3d_actions') and key in self.opt3d_actions:
                         a.setEnabled(self.opt3d_actions[key].isEnabled())
                 except Exception:
-                    pass
+                    import traceback; traceback.print_exc()
                 a.triggered.connect(lambda checked=False, k=key: self._trigger_optimize_with_temp_method(k))
                 menu.addAction(a)
 
@@ -329,10 +329,10 @@ class MainWindowCompute(object):
             try:
                 self.convert_button.clicked.disconnect()
             except Exception:
-                pass
+                import traceback; traceback.print_exc()
             self.convert_button.clicked.connect(self.halt_conversion)
         except Exception:
-            pass
+            import traceback; traceback.print_exc()
 
         # Keep cleanup disabled while conversion is in progress
         self.cleanup_button.setEnabled(False) # pragma: no cover
@@ -376,7 +376,7 @@ class MainWindowCompute(object):
                 try:
                     delattr(self, '_temp_conv_mode')
                 except Exception:
-                    pass
+                    import traceback; traceback.print_exc()
         else:
             conv_mode = self.settings.get('3d_conversion_mode', 'fallback')
 
@@ -390,7 +390,7 @@ class MainWindowCompute(object):
                 try:
                     delattr(self, '_temp_optimization_method')
                 except Exception:
-                    pass
+                    import traceback; traceback.print_exc()
 
         options = {'conversion_mode': conv_mode, 'optimization_method': opt_method}
         # Attach the run id so the worker and main thread can correlate
@@ -398,7 +398,7 @@ class MainWindowCompute(object):
             # Attach the concrete run id rather than the single waiting id
             options['worker_id'] = run_id
         except Exception:
-            pass
+            import traceback; traceback.print_exc()
 
         # Create a fresh CalculationWorker + QThread for this run so multiple
         # conversions can execute in parallel. The worker will be cleaned up
@@ -410,7 +410,7 @@ class MainWindowCompute(object):
             try:
                 worker.halt_ids = self.halt_ids
             except Exception:
-                pass
+                import traceback; traceback.print_exc()
 
             worker.moveToThread(thread)
 
@@ -418,7 +418,7 @@ class MainWindowCompute(object):
             try:
                 worker.status_update.connect(self.update_status_bar)
             except Exception:
-                pass
+                import traceback; traceback.print_exc()
 
             # When the worker finishes, call existing handler and then clean up
             def _on_worker_finished(result, w=worker, t=thread):
@@ -433,22 +433,22 @@ class MainWindowCompute(object):
                     try:
                         self._active_calc_threads.remove(t)
                     except Exception:
-                        pass
+                        import traceback; traceback.print_exc()
                     try:
                         # ask thread to quit; it will finish as worker returns
                         t.quit()
                     except Exception:
-                        pass
+                        import traceback; traceback.print_exc()
                     try:
                         # ensure thread object is deleted when finished
                         t.finished.connect(t.deleteLater)
                     except Exception:
-                        pass
+                        import traceback; traceback.print_exc()
                     try:
                         # schedule worker deletion
                         w.deleteLater()
                     except Exception:
-                        pass
+                        import traceback; traceback.print_exc()
 
             # When the worker errors (or halts), call existing handler and then clean up
             def _on_worker_error(error_msg, w=worker, t=thread):
@@ -463,32 +463,32 @@ class MainWindowCompute(object):
                     try:
                         self._active_calc_threads.remove(t)
                     except Exception:
-                        pass
+                        import traceback; traceback.print_exc()
                     try:
                         # ask thread to quit; it will finish as worker returns
                         t.quit()
                     except Exception:
-                        pass
+                        import traceback; traceback.print_exc()
                     try:
                         # ensure thread object is deleted when finished
                         t.finished.connect(t.deleteLater)
                     except Exception:
-                        pass
+                        import traceback; traceback.print_exc()
                     try:
                         # schedule worker deletion
                         w.deleteLater()
                     except Exception:
-                        pass
+                        import traceback; traceback.print_exc()
 
             try:
                 worker.error.connect(_on_worker_error)
             except Exception:
-                pass
+                import traceback; traceback.print_exc()
 
             try:
                 worker.finished.connect(_on_worker_finished)
             except Exception:
-                pass
+                import traceback; traceback.print_exc()
 
             # Start the thread
             thread.start()
@@ -502,7 +502,7 @@ class MainWindowCompute(object):
             try:
                 self._active_calc_threads.append(thread)
             except Exception:
-                pass
+                import traceback; traceback.print_exc()
         except Exception as e:
             # Fall back: if thread/worker creation failed, create a local
             # worker and start it (runs in main thread). This preserves
@@ -534,31 +534,31 @@ class MainWindowCompute(object):
                 try:
                     self.halt_ids.update(wids_to_halt)
                 except Exception:
-                    pass
+                    import traceback; traceback.print_exc()
 
             # Clear the active set immediately so UI reflects cancellation
             try:
                 if hasattr(self, 'active_worker_ids'):
                     self.active_worker_ids.clear()
             except Exception:
-                pass
+                import traceback; traceback.print_exc()
 
             # Restore UI immediately
             try:
                 try:
                     self.convert_button.clicked.disconnect()
                 except Exception:
-                    pass
+                    import traceback; traceback.print_exc()
                 self.convert_button.setText("Convert 2D to 3D")
                 self.convert_button.clicked.connect(self.trigger_conversion)
                 self.convert_button.setEnabled(True)
             except Exception:
-                pass
+                import traceback; traceback.print_exc()
 
             try:
                 self.cleanup_button.setEnabled(True)
             except Exception:
-                pass
+                import traceback; traceback.print_exc()
 
             # Remove any calculating text actor if present
             try:
@@ -568,27 +568,27 @@ class MainWindowCompute(object):
                         try:
                             self.plotter.remove_actor(actor)
                         except Exception:
-                            pass
+                            import traceback; traceback.print_exc()
                     else:
                         if hasattr(self.plotter, 'renderer') and self.plotter.renderer:
                             try:
                                 self.plotter.renderer.RemoveActor(actor)
                             except Exception:
-                                pass
+                                import traceback; traceback.print_exc()
                     try:
                         delattr(self, '_calculating_text_actor')
                     except Exception:
                         try:
                             del self._calculating_text_actor
                         except Exception:
-                            pass
+                            import traceback; traceback.print_exc()
             except Exception:
-                pass
+                import traceback; traceback.print_exc()
 
             # Give immediate feedback
             self.statusBar().showMessage("3D conversion halted. Waiting for the thread to finish")
         except Exception:
-            pass
+            import traceback; traceback.print_exc()
 
     def check_chemistry_problems_fallback(self):
         """RDKit変換が失敗した場合の化学的問題チェック（独自実装）"""
@@ -649,7 +649,7 @@ class MainWindowCompute(object):
                 try:
                     self.optimize_3d_button.setEnabled(False)
                 except Exception:
-                    pass
+                    import traceback; traceback.print_exc()
             return
 
         self.statusBar().showMessage("Optimizing 3D structure...")
@@ -666,7 +666,7 @@ class MainWindowCompute(object):
                     try:
                         delattr(self, '_temp_optimization_method')
                     except Exception:
-                        pass
+                        import traceback; traceback.print_exc()
             method = method.upper() if method else 'MMFF_RDKIT'
             # 事前チェック：コンフォーマがあるか
             if self.current_mol.GetNumConformers() == 0:
@@ -748,13 +748,13 @@ class MainWindowCompute(object):
                 if norm_method:
                     self.last_successful_optimization_method = norm_method
             except Exception:
-                pass
+                import traceback; traceback.print_exc()
             # 3D最適化後は3D座標から立体化学を再計算（2回目以降は3D優先）
             if self.current_mol.GetNumConformers() > 0:
                 Chem.AssignAtomChiralTagsFromStructure(self.current_mol, confId=0)
             self.update_chiral_labels() # キラル中心のラベルも更新
         except Exception:
-            pass
+            import traceback; traceback.print_exc()
 
         self.draw_molecule_3d(self.current_mol)
 
@@ -807,41 +807,41 @@ class MainWindowCompute(object):
                                 try:
                                     self.plotter.remove_actor(actor)
                                 except Exception:
-                                    pass
+                                    import traceback; traceback.print_exc()
                             else:
                                 if hasattr(self.plotter, 'renderer') and self.plotter.renderer:
                                     try:
                                         self.plotter.renderer.RemoveActor(actor)
                                     except Exception:
-                                        pass
+                                        import traceback; traceback.print_exc()
                             try:
                                 delattr(self, '_calculating_text_actor')
                             except Exception:
                                 try:
                                     del self._calculating_text_actor
                                 except Exception:
-                                    pass
+                                    import traceback; traceback.print_exc()
                     except Exception:
-                        pass
+                        import traceback; traceback.print_exc()
                     # Ensure Convert button is restored
                     try:
                         try:
                             self.convert_button.clicked.disconnect()
                         except Exception:
-                            pass
+                            import traceback; traceback.print_exc()
                         self.convert_button.setText("Convert 2D to 3D")
                         self.convert_button.clicked.connect(self.trigger_conversion)
                         self.convert_button.setEnabled(True)
                     except Exception:
-                        pass
+                        import traceback; traceback.print_exc()
                     try:
                         self.cleanup_button.setEnabled(True)
                     except Exception:
-                        pass
+                        import traceback; traceback.print_exc()
                     self.statusBar().showMessage("Ignored result from stale conversion.")
                     return
         except Exception:
-            pass
+            import traceback; traceback.print_exc()
 
         # Remove the finished worker id from the active set and any halt set
         try:
@@ -849,7 +849,7 @@ class MainWindowCompute(object):
                 try:
                     self.active_worker_ids.discard(worker_id)
                 except Exception:
-                    pass
+                    import traceback; traceback.print_exc()
             # Also remove id from halt set if present
             if worker_id is not None:
                 try:
@@ -857,11 +857,11 @@ class MainWindowCompute(object):
                         try:
                             self.halt_ids.discard(worker_id)
                         except Exception:
-                            pass
+                            import traceback; traceback.print_exc()
                 except Exception:
-                    pass
+                    import traceback; traceback.print_exc()
         except Exception:
-            pass
+            import traceback; traceback.print_exc()
 
         self.dragged_atom_info = None
         self.current_mol = mol
@@ -879,7 +879,7 @@ class MainWindowCompute(object):
                         # not all Mol objects support HasProp/GetProp safely
                         pass
             except Exception:
-                pass
+                import traceback; traceback.print_exc()
             if not opt_method:
                 opt_method = getattr(self, 'optimization_method', None)
             # normalize common forms
@@ -957,13 +957,13 @@ class MainWindowCompute(object):
                                 try:
                                     self.plotter.renderer.RemoveActor(actor)
                                 except Exception:
-                                    pass
+                                    import traceback; traceback.print_exc()
                     else:
                         if hasattr(self.plotter, 'renderer') and self.plotter.renderer:
                             try:
                                 self.plotter.renderer.RemoveActor(actor)
                             except Exception:
-                                pass
+                                import traceback; traceback.print_exc()
                 finally:
                     try:
                         delattr(self, '_calculating_text_actor')
@@ -971,14 +971,14 @@ class MainWindowCompute(object):
                         try:
                             del self._calculating_text_actor
                         except Exception:
-                            pass
+                            import traceback; traceback.print_exc()
             # Re-render to ensure the UI updates immediately
             try:
                 self.plotter.render()
             except Exception:
-                pass
+                import traceback; traceback.print_exc()
         except Exception:
-            pass
+            import traceback; traceback.print_exc()
 
         #self.statusBar().showMessage("3D conversion successful.")
         self.convert_button.setEnabled(True)
@@ -987,11 +987,11 @@ class MainWindowCompute(object):
             try:
                 self.convert_button.clicked.disconnect()
             except Exception:
-                pass
+                import traceback; traceback.print_exc()
             self.convert_button.setText("Convert 2D to 3D")
             self.convert_button.clicked.connect(self.trigger_conversion)
         except Exception:
-            pass
+            import traceback; traceback.print_exc()
         self.push_undo_state()
         self.view_2d.setFocus()
         self.cleanup_button.setEnabled(True)
@@ -1047,7 +1047,7 @@ class MainWindowCompute(object):
         try:
             self.plotter.clear()
         except Exception:
-            pass
+            import traceback; traceback.print_exc()
 
         # Also attempt to explicitly remove the calculating text actor if it was stored
         try:
@@ -1062,13 +1062,13 @@ class MainWindowCompute(object):
                                 try:
                                     self.plotter.renderer.RemoveActor(actor)
                                 except Exception:
-                                    pass
+                                    import traceback; traceback.print_exc()
                     else:
                         if hasattr(self.plotter, 'renderer') and self.plotter.renderer:
                             try:
                                 self.plotter.renderer.RemoveActor(actor)
                             except Exception:
-                                pass
+                                import traceback; traceback.print_exc()
                 finally:
                     try:
                         delattr(self, '_calculating_text_actor')
@@ -1076,9 +1076,9 @@ class MainWindowCompute(object):
                         try:
                             del self._calculating_text_actor
                         except Exception:
-                            pass
+                            import traceback; traceback.print_exc()
         except Exception:
-            pass
+            import traceback; traceback.print_exc()
 
         self.dragged_atom_info = None
         # Remove this worker id from active set (error belongs to this worker)
@@ -1087,9 +1087,9 @@ class MainWindowCompute(object):
                 try:
                     self.active_worker_ids.discard(worker_id)
                 except Exception:
-                    pass
+                    import traceback; traceback.print_exc()
         except Exception:
-            pass
+            import traceback; traceback.print_exc()
 
         # If this error was caused by an intentional halt and the main thread
         # already cleared waiting_worker_id earlier for other reasons, suppress the error noise.
@@ -1100,25 +1100,25 @@ class MainWindowCompute(object):
             if 'halt' in low and not getattr(self, 'active_worker_ids', set()):
                 return
         except Exception:
-            pass
+            import traceback; traceback.print_exc()
 
         self.statusBar().showMessage(f"Error: {error_message}")
 
         try:
             self.cleanup_button.setEnabled(True)
         except Exception:
-            pass
+            import traceback; traceback.print_exc()
         try:
             # Restore Convert button text/handler
             try:
                 self.convert_button.clicked.disconnect()
             except Exception:
-                pass
+                import traceback; traceback.print_exc()
             self.convert_button.setText("Convert 2D to 3D")
             self.convert_button.clicked.connect(self.trigger_conversion)
             self.convert_button.setEnabled(True)
         except Exception:
-            pass
+            import traceback; traceback.print_exc()
 
         # On calculation error we should NOT enable 3D-only features.
         # Explicitly disable Optimize and Export so the user can't try to operate
@@ -1127,41 +1127,41 @@ class MainWindowCompute(object):
             if hasattr(self, 'optimize_3d_button'):
                 self.optimize_3d_button.setEnabled(False)
         except Exception:
-            pass
+            import traceback; traceback.print_exc()
         try:
             if hasattr(self, 'export_button'):
                 self.export_button.setEnabled(False)
         except Exception:
-            pass
+            import traceback; traceback.print_exc()
 
         # Keep 3D feature buttons disabled to avoid inconsistent UI state
         try:
             self._enable_3d_features(False)
         except Exception:
-            pass
+            import traceback; traceback.print_exc()
 
         # Keep 3D edit actions disabled (no molecule to edit)
         try:
             self._enable_3d_edit_actions(False)
         except Exception:
-            pass
+            import traceback; traceback.print_exc()
         # Some menu items are explicitly disabled on error
         try:
             if hasattr(self, 'analysis_action'):
                 self.analysis_action.setEnabled(False)
         except Exception:
-            pass
+            import traceback; traceback.print_exc()
         try:
             if hasattr(self, 'edit_3d_action'):
                 self.edit_3d_action.setEnabled(False)
         except Exception:
-            pass
+            import traceback; traceback.print_exc()
 
         # Force a UI refresh
         try:
             self.plotter.render()
         except Exception:
-            pass
+            import traceback; traceback.print_exc()
 
         # Ensure focus returns to 2D editor
         self.view_2d.setFocus()

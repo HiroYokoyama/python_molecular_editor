@@ -200,7 +200,7 @@ class DihedralDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
             try:
                 self.dihedral_input.clear()
             except Exception:
-                pass
+                import traceback; traceback.print_exc()
         elif selected_count < 4:
             selected_atoms = [self.atom1_idx, self.atom2_idx, self.atom3_idx, self.atom4_idx]
 
@@ -219,7 +219,7 @@ class DihedralDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
             try:
                 self.dihedral_input.clear()
             except Exception:
-                pass
+                import traceback; traceback.print_exc()
         else:
             selected_atoms = [self.atom1_idx, self.atom2_idx, self.atom3_idx, self.atom4_idx]
 
@@ -241,7 +241,7 @@ class DihedralDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
             try:
                 self.dihedral_input.setText(f"{current_dihedral:.2f}")
             except Exception:
-                pass
+                import traceback; traceback.print_exc()
 
     def apply_changes(self):
         """変更を適用"""

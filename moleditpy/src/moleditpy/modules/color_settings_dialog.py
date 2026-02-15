@@ -108,14 +108,14 @@ class ColorSettingsDialog(QDialog): # pragma: no cover
                 self.bs_button.setStyleSheet(f"background-color: {cur_bs}; border: 1px solid #888;")
                 self.bs_button.setToolTip(cur_bs)
             except Exception:
-                pass
+                import traceback; traceback.print_exc()
             self.bs_button.clicked.connect(self.pick_bs_bond_color)
             bs_h.addWidget(bs_label)
             bs_h.addWidget(self.bs_button)
             bs_h.addStretch(1)
             layout.addLayout(bs_h)
         except Exception:
-            pass
+            import traceback; traceback.print_exc()
 
         # Reset button and action buttons
         h = QHBoxLayout()
@@ -176,7 +176,7 @@ class ColorSettingsDialog(QDialog): # pragma: no cover
                 self.bs_button.setStyleSheet(f"background-color: {hexv}; border: 1px solid #888;")
                 self.bs_button.setToolTip(hexv)
         except Exception:
-            pass
+            import traceback; traceback.print_exc()
 
     def apply_changes(self):
         # Persist only changed keys
@@ -187,7 +187,7 @@ class ColorSettingsDialog(QDialog): # pragma: no cover
                     if 'cpk_colors' in self.parent_window.settings:
                         del self.parent_window.settings['cpk_colors']
                 except Exception:
-                    pass
+                    import traceback; traceback.print_exc()
             if self.changed_cpk:
                 # Merge with existing overrides
                 cdict = self.parent_window.settings.get('cpk_colors', {}).copy()
@@ -198,16 +198,16 @@ class ColorSettingsDialog(QDialog): # pragma: no cover
             try:
                 self.parent_window.update_cpk_colors_from_settings()
             except Exception:
-                pass
+                import traceback; traceback.print_exc()
             try:
                 self.parent_window.apply_3d_settings(redraw=False)
             except Exception:
-                pass
+                import traceback; traceback.print_exc()
             try:
                 if hasattr(self.parent_window, 'current_mol') and self.parent_window.current_mol:
                     self.parent_window.draw_molecule_3d(self.parent_window.current_mol)
             except Exception:
-                pass
+                import traceback; traceback.print_exc()
             # update 2D scene objects
             try:
                 if hasattr(self.parent_window, 'scene'):
@@ -216,9 +216,9 @@ class ColorSettingsDialog(QDialog): # pragma: no cover
                             if hasattr(it, 'update_style'):
                                 it.update_style()
                         except Exception:
-                            pass
+                            import traceback; traceback.print_exc()
             except Exception:
-                pass
+                import traceback; traceback.print_exc()
             # update periodic table button styles in the dialog to reflect any overrides
             try:
                 for s, btn in self.element_buttons.items():
@@ -228,9 +228,9 @@ class ColorSettingsDialog(QDialog): # pragma: no cover
                         text_color = 'white' if brightness < 128 else 'black'
                         btn.setStyleSheet(f"background-color: {q_color.name()}; color: {text_color}; border: 1px solid #555; font-weight: bold;")
                     except Exception:
-                        pass
+                        import traceback; traceback.print_exc()
             except Exception:
-                pass
+                import traceback; traceback.print_exc()
             # Refresh any open SettingsDialog instances so the ball & stick color preview updates
             try:
                 # Avoid circular import at module level; import SettingsDialog on demand
@@ -247,11 +247,11 @@ class ColorSettingsDialog(QDialog): # pragma: no cover
                             try:
                                 w.update_ui_from_settings(self.parent_window.settings)
                             except Exception:
-                                pass
+                                import traceback; traceback.print_exc()
                     except Exception:
-                        pass
+                        import traceback; traceback.print_exc()
             except Exception:
-                pass
+                import traceback; traceback.print_exc()
             # Persist changed Ball & Stick color if the user changed it from the CPK dialog
             if getattr(self, 'changed_bs_color', None):
                 try:
@@ -259,19 +259,19 @@ class ColorSettingsDialog(QDialog): # pragma: no cover
                     try:
                         self.parent_window.settings_dirty = True
                     except Exception:
-                        pass
+                        import traceback; traceback.print_exc()
                     # After changing ball-stick color, ensure 3D view updates
                     try:
                         self.parent_window.apply_3d_settings()
                     except Exception:
-                        pass
+                        import traceback; traceback.print_exc()
                     try:
                         if hasattr(self.parent_window, 'current_mol') and self.parent_window.current_mol:
                             self.parent_window.draw_molecule_3d(self.parent_window.current_mol)
                     except Exception:
-                        pass
+                        import traceback; traceback.print_exc()
                 except Exception:
-                    pass
+                    import traceback; traceback.print_exc()
             # Removed 2D bond color control — nothing to persist here
             elif self._reset_all_flag:
                 # Reset Ball & Stick 3D bond color to default
@@ -281,9 +281,9 @@ class ColorSettingsDialog(QDialog): # pragma: no cover
                     try:
                         self.parent_window.settings_dirty = True
                     except Exception:
-                        pass
+                        import traceback; traceback.print_exc()
                 except Exception:
-                    pass
+                    import traceback; traceback.print_exc()
                 self.parent_window.update_cpk_colors_from_settings()
                 self.parent_window.apply_3d_settings()
                 if hasattr(self.parent_window, 'current_mol') and self.parent_window.current_mol:
@@ -298,9 +298,9 @@ class ColorSettingsDialog(QDialog): # pragma: no cover
                             if hasattr(it, 'update_style'):
                                 it.update_style()
                         except Exception:
-                            pass
+                            import traceback; traceback.print_exc()
             except Exception:
-                pass
+                import traceback; traceback.print_exc()
 
     def accept(self):
         self.apply_changes()
@@ -322,4 +322,4 @@ class ColorSettingsDialog(QDialog): # pragma: no cover
                 self.bs_button.setStyleSheet(f"background-color: {hexv}; border: 1px solid #888;")
                 self.bs_button.setToolTip(hexv)
             except Exception:
-                pass
+                import traceback; traceback.print_exc()

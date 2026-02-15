@@ -25,7 +25,7 @@ import numpy as np
 try:
     pass
 except Exception:
-    pass
+    import traceback; traceback.print_exc()
 
 # PyQt6 Modules
 import pyvista as pv
@@ -500,7 +500,7 @@ class MainWindowExport(object):
                                     if 'colors' in temp_mesh.point_data:
                                         colors = np.asarray(temp_mesh.point_data['colors'])
                                 except Exception:
-                                    pass
+                                    import traceback; traceback.print_exc()
 
                             if colors is not None and colors.size > 0:
                                 # 整数に変換。colors が 0-1 の float の場合は 255 倍して正規化する。
@@ -638,7 +638,7 @@ class MainWindowExport(object):
         try:
              original_background = self.scene.backgroundBrush()
         except Exception:
-             pass
+             import traceback; traceback.print_exc()
 
         try:
             all_items = list(self.scene.items())

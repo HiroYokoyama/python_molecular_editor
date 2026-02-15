@@ -16,7 +16,7 @@ import traceback
 try:
     pass
 except Exception:
-    pass
+    import traceback; traceback.print_exc()
 
 # PyQt6 Modules
 from PyQt6.QtCore import pyqtSignal, pyqtSlot
@@ -134,7 +134,7 @@ class MainWindow(QMainWindow):
             try:
                 getattr(self, name).init()
             except Exception:
-                pass
+                import traceback; traceback.print_exc()
 
     def init_ui(self):
         # --- MOVED TO main_window_main_init.py ---

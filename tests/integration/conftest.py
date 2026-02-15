@@ -147,7 +147,7 @@ def app():
         q_app.processEvents()
         
     except Exception:
-        pass
+        import traceback; traceback.print_exc()
         
     q_app.quit()
 
@@ -259,13 +259,13 @@ def window(app, qtbot, monkeypatch):
             try:
                 win.has_unsaved_changes = False
             except Exception:
-                pass
+                import traceback; traceback.print_exc()
             
             # Override closeEvent to avoid any blocking logic
             try:
                  win.closeEvent = lambda event: event.accept()
             except Exception:
-                pass
+                import traceback; traceback.print_exc()
 
             # Stop any active threads explicitly before closing
             active_threads = list(getattr(win, '_active_calc_threads', []) or [])
@@ -275,7 +275,7 @@ def window(app, qtbot, monkeypatch):
                         thr.quit()
                         thr.wait(100)
                 except Exception:
-                    pass
+                    import traceback; traceback.print_exc()
             
             # Aggressive auto-close: ensure all top-level widgets are closed
             # to satisfy "auto close window" request and prevent COM hangs.
@@ -283,11 +283,11 @@ def window(app, qtbot, monkeypatch):
             try:
                 win.close()
             except Exception:
-                pass
+                import traceback; traceback.print_exc()
             try:
                 win.deleteLater()
             except Exception:
-                pass
+                import traceback; traceback.print_exc()
 
             from PyQt6.QtWidgets import QApplication
             QApplication.closeAllWindows()
@@ -299,7 +299,7 @@ def window(app, qtbot, monkeypatch):
                  app.processEvents()
                  
         except Exception:
-            pass
+            import traceback; traceback.print_exc()
         
         # Attempt to de-initialize colorama if it's wrapping stdout/stderr
         # which can cause 0x80010012/0x80010108 fatal exceptions on Windows teardown
@@ -309,7 +309,7 @@ def window(app, qtbot, monkeypatch):
         except ImportError:
             pass
         except Exception:
-            pass
+            import traceback; traceback.print_exc()
 
         # Force garbage collection to clean up potential circular references or lingering Qt objects
         import gc

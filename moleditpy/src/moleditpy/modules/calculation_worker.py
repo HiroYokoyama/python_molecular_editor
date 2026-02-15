@@ -47,7 +47,7 @@ class CalculationWorker(QObject):
         try:
             self.start_work.connect(self.run_calculation)
         except Exception:
-            pass
+            import traceback; traceback.print_exc()
 
     @pyqtSlot(str, object)
     def run_calculation(self, mol_block, options=None):
@@ -96,9 +96,9 @@ class CalculationWorker(QObject):
                         else:
                             self.finished.emit(payload)
                     except Exception:
-                        pass
+                        import traceback; traceback.print_exc()
             except Exception:
-                pass
+                import traceback; traceback.print_exc()
 
         def _safe_error(msg): # pragma: no cover
             try:
@@ -110,9 +110,9 @@ class CalculationWorker(QObject):
                     try:
                         self.error.emit(msg)
                     except Exception:
-                        pass
+                        import traceback; traceback.print_exc()
             except Exception:
-                pass
+                import traceback; traceback.print_exc()
 
         try:
 
@@ -128,7 +128,7 @@ class CalculationWorker(QObject):
                     # best-effort, swallow any errors (signals may not be connected)
                     self.status_update.emit("Warning: worker started without 'worker_id'; will listen for global halt signals.")
                 except Exception:
-                    pass
+                    import traceback; traceback.print_exc()
                 _warned_no_worker_id = True
 
 
@@ -374,7 +374,7 @@ class CalculationWorker(QObject):
                             try:
                                 conf.SetAtomPosition(i, rdGeometry.Point3D(float(x), float(y), 0.0))
                             except Exception:
-                                pass
+                                import traceback; traceback.print_exc()
                         else:
                             # 新規追加されたH原子: 親原子の近くに配置
                             atom = mol.GetAtomWithIdx(i)
@@ -461,7 +461,7 @@ class CalculationWorker(QObject):
                                     try:
                                         conf.SetAtomPosition(i, rdGeometry.Point3D(0.0, 0.0, 0.10))
                                     except Exception:
-                                        pass
+                                        import traceback; traceback.print_exc()
 
                     # 5) Wedge/Dash の Zオフセットを適用
                     try:
@@ -484,13 +484,13 @@ class CalculationWorker(QObject):
                             except Exception:
                                 continue
                     except Exception:
-                        pass
+                        import traceback; traceback.print_exc()
 
                     # コンフォーマを入れ替えて終了
                     try:
                         mol.RemoveAllConformers()
                     except Exception:
-                        pass
+                        import traceback; traceback.print_exc()
                     mol.AddConformer(conf, assignId=True)
 
                     if _check_halted():
@@ -603,7 +603,7 @@ class CalculationWorker(QObject):
                     else:
                         conf_id = -1
                 except Exception:
-                    pass
+                    import traceback; traceback.print_exc()
             '''
             if conf_id == -1:
                         _safe_status("Initial embedding failed, retrying with ignoreSmoothingFailures=True...")
@@ -653,7 +653,7 @@ class CalculationWorker(QObject):
                             raise RuntimeError("Halted")
                         AllChem.UFFOptimizeMolecule(mol)
                     except Exception:
-                        pass
+                        import traceback; traceback.print_exc()
 
                 # CRITICAL: Restore stereochemistry again after optimization (explicit labels priority)
                 for bond_idx, stereo, stereo_atoms in original_stereo_info:
@@ -685,7 +685,7 @@ class CalculationWorker(QObject):
                     try:
                         ob_mol.addh()
                     except Exception:
-                        pass
+                        import traceback; traceback.print_exc()
                     ob_mol.make3D()
                     try:
                         _safe_status("Optimizing with Open Babel (MMFF94)...")
@@ -718,7 +718,7 @@ class CalculationWorker(QObject):
                                 raise RuntimeError("Halted")
                             AllChem.UFFOptimizeMolecule(rd_mol)
                         except Exception:
-                            pass
+                            import traceback; traceback.print_exc()
                     _safe_status("Open Babel embedding succeeded. Warning: Conformation accuracy may be limited.")
                     # CRITICAL: Check for halt *before* emitting finished signal
                     if _check_halted():
