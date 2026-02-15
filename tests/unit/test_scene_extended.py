@@ -133,6 +133,7 @@ def test_scene_keypress_delete(mock_parser_host):
         )
         scene.keyPressEvent(event)
         mock_delete.assert_called()
+        assert mock_delete.called
 
 
 def test_scene_maintenance_methods(mock_parser_host):

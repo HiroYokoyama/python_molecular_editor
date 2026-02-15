@@ -43,7 +43,7 @@ def mock_message_box():
 
 @pytest.fixture
 def mock_pv_polydata():
-    with patch("pyvista.PolyData") as mock:
+    with patch("moleditpy.modules.main_window_export.pv.PolyData", create=True) as mock:
         yield mock
 
 
@@ -64,6 +64,7 @@ def test_export_stl_success(window, mock_file_dialog, mock_pv_polydata):
         window.export_stl()
 
     mock_combined_mesh.save.assert_called_once_with("/path/to/export.stl", binary=True)
+    assert mock_combined_mesh.save.called
     window.statusBar().showMessage.assert_any_call(
         "STL exported to /path/to/export.stl"
     )
@@ -73,10 +74,6 @@ def test_export_stl_cancel(window, mock_file_dialog):
     """Test export_stl cancellation."""
     mock_file_dialog.getSaveFileName.return_value = ("", "")
     window.export_stl()
-    # Should ensure no critical methods called, effectively just return
-    # Since we mocked export_from_3d_view_no_color in previous test but not here,
-    # if it proceeds it might fail or try to call it.
-    # We can check that statusBar ws NOT called with success message
     call_args_list = window.statusBar().showMessage.call_args_list
     assert not any("STL exported" in str(args) for args, _ in call_args_list)
 
@@ -88,6 +85,7 @@ def test_export_stl_no_molecule(window):
     window.statusBar().showMessage.assert_called_with(
         "Error: Please generate a 3D structure first."
     )
+    assert window.statusBar().showMessage.called
 
 
 def test_export_obj_mtl_success(window, mock_file_dialog):
@@ -116,6 +114,7 @@ def test_export_obj_mtl_success(window, mock_file_dialog):
         mock_create.assert_called_once_with(
             meshes, "/path/to/export.obj", "/path/to/export.mtl"
         )
+        assert mock_create.called
         window.statusBar().showMessage.assert_any_call(
             "OBJ+MTL files with individual colors exported to /path/to/export.obj and /path/to/export.mtl"
         )
@@ -137,6 +136,7 @@ def test_export_color_stl_success(window, mock_file_dialog):
     mock_combined_mesh.save.assert_called_once_with(
         "/path/to/color_export.stl", binary=True
     )
+    assert mock_combined_mesh.save.called
     window.statusBar().showMessage.assert_any_call(
         "STL exported to /path/to/color_export.stl"
     )
@@ -203,8 +203,8 @@ def test_export_from_3d_view_logic(window):
 
     # Return a PolyData wrapped mesh
     mock_pv_mesh = MagicMock()
-    with patch("pyvista.wrap", return_value=mock_pv_mesh):
-        with patch("pyvista.PolyData") as mock_polydata_cls:
+    with patch("moleditpy.modules.main_window_export.pv.wrap", return_value=mock_pv_mesh, create=True):
+        with patch("moleditpy.modules.main_window_export.pv.PolyData", create=True) as mock_polydata_cls:
             # The initial container
             mock_container = MagicMock()
             mock_container.n_points = 0  # Initially empty
@@ -219,56 +219,7 @@ def test_export_from_3d_view_logic(window):
 
             result = window.export_from_3d_view()
 
-            # It should try to merge the mesh from the actor
-            # Note: The logic creates a copy of the mesh and potentially modifies colors.
             assert result is not None
-
-
-def test_export_2d_png_success(window, mock_file_dialog, mock_message_box):
-    """Test export_2d_png success path."""
-    window.data.atoms = [MagicMock()]  # Ensure we have atoms
-    mock_file_dialog.getSaveFileName.return_value = (
-        "/path/to/image.png",
-        "PNG Files (*.png)",
-    )
-    mock_message_box.question.return_value = (
-        mock_message_box.StandardButton.Yes
-    )  # Transparent
-
-    # Mock scene items and bounds
-    mock_atom = MagicMock()
-    mock_atom.isVisible.return_value = True
-    # mock isinstance check for AtomItem/BondItem by making our mock look right?
-    # The code checks `isinstance(item, (AtomItem, BondItem))`.
-    # We can patch AtomItem and BondItem in the module.
-
-    mock_rect = QRectF(0, 0, 100, 100)
-    mock_atom.sceneBoundingRect.return_value = mock_rect
-
-    with (
-        patch("moleditpy.modules.main_window_export.AtomItem", MagicMock()),
-        patch("moleditpy.modules.main_window_export.BondItem", MagicMock()),
-        patch("moleditpy.modules.main_window_export.QImage") as mock_qimage,
-        patch("moleditpy.modules.main_window_export.QPainter") as mock_painter,
-    ):
-        # Setup scene.items()
-        # We need the items to be instances of the patched classes
-        # But we can't easily make the mock instance of a mock class that is patched locally inside the function
-        # unless we define the classes outside or trick isinstance.
-        # Easier: patch the import in the module so `isinstance` checks against our mocks.
-
-        # But wait, `isinstance` checks are tough to mock without replacing classes.
-        # Let's try to just use MagicMock and rely on the fact that if we don't pass `isinstance`
-        # the code might just hide the item (if it's not atom/bond).
-        # Ah, the code iterates all items and hides non-atom/bond.
-        # Then it iterates items again to calc bounds.
-
-        # We'll rely on `scene.items()` returning our mocks.
-        # And we'll patch AtomItem/BondItem in `main_window_export` global scope via `patch`.
-        pass
-
-    # Let's refine the 2D export test to be simpler: verify calls to QFileDialog etc.
-    # and mock the heavy lifting `render`.
 
     with (
         patch("moleditpy.modules.main_window_export.QImage") as mock_qimage_cls,
@@ -281,14 +232,6 @@ def test_export_2d_png_success(window, mock_file_dialog, mock_message_box):
         mock_painter = MagicMock()
         mock_painter_cls.return_value = mock_painter
         mock_painter.begin.return_value = True
-
-        # We need to ensure `molecule_bounds` is valid.
-        # This requires `item.sceneBoundingRect` to work and `isinstance` to pass.
-        # We can bypass this by mocking the bounds calculation logic if we extract a method?
-        # Or just mock `scene.items()` to return objects that `isinstance` accepts.
-
-        # Let's patch AtomItem class in the module so we can create instances of it
-
 
 class DummyAtomItem:
     def isVisible(self):
@@ -352,6 +295,7 @@ def test_export_2d_png_success(window, mock_file_dialog, mock_message_box):
         window.export_2d_png()
 
         mock_image.save.assert_called_with("/path/to/image.png", "PNG")
+        assert mock_image.save.called
         window.statusBar().showMessage.assert_any_call(
             "2D view exported to /path/to/image.png"
         )
@@ -386,6 +330,7 @@ def test_export_2d_svg_success(window, mock_file_dialog, mock_message_box):
         window.export_2d_svg()
 
         mock_svg.setFileName.assert_called_with("/path/to/image.svg")
+        assert mock_svg.setFileName.called
         window.statusBar().showMessage.assert_any_call(
             "2D view exported to /path/to/image.svg"
         )
@@ -407,8 +352,8 @@ def test_export_from_3d_view_no_color_logic(window):
     mock_pv_mesh = MagicMock()
     mock_pv_mesh.copy.return_value = mock_pv_mesh  # Allow copy
 
-    with patch("pyvista.wrap", return_value=mock_pv_mesh):
-        with patch("pyvista.PolyData") as mock_polydata_cls:
+    with patch("moleditpy.modules.main_window_export.pv.wrap", return_value=mock_pv_mesh, create=True):
+        with patch("moleditpy.modules.main_window_export.pv.PolyData", create=True) as mock_polydata_cls:
             # The initial container
             mock_container = MagicMock()
             mock_container.n_points = 0  # Initially empty
@@ -459,7 +404,7 @@ def test_export_from_3d_view_with_colors_logic(window):
     colors[5:] = [0, 0, 255]
     mock_point_data["colors"] = colors
 
-    with patch("pyvista.wrap", return_value=mock_pv_mesh):
+    with patch("moleditpy.modules.main_window_export.pv.wrap", return_value=mock_pv_mesh, create=True):
         # Setup extract_points to return valid submeshes unconditionally
         mock_sub = MagicMock()
         mock_sub.n_points = 5  # Always > 0

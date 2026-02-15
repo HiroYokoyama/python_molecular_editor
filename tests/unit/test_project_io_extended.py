@@ -54,6 +54,7 @@ def test_save_project_no_data(mock_parser_host):
     io.current_mol = None
     io.save_project()
     io.statusBar().showMessage.assert_called_with("Error: Nothing to save.")
+    assert io.statusBar().showMessage.called
 
 
 def test_save_project_overwrite_json(mock_parser_host, tmp_path):
@@ -157,7 +158,11 @@ def test_load_raw_data_error_paths(mock_parser_host):
     # Unpickling error
     with patch("builtins.open", MagicMock()):
         with patch("pickle.load", side_effect=pickle.UnpicklingError("Corrupt")):
-            io.load_raw_data("dummy.pmeraw")
+            # Should handle exception and log/show error
+            io.load_raw_data("dummy_data")
+            # Verify error message
+            assert io.statusBar().showMessage.called
+            io.statusBar().showMessage.assert_called()
             io.statusBar().showMessage.assert_called_with(
                 "Invalid project file format: Corrupt"
             )
@@ -188,6 +193,7 @@ def test_save_project_io_error(mock_parser_host, tmp_path):
             io.statusBar().showMessage.assert_called_with(
                 "File I/O error: Permission denied"
             )
+            assert io.statusBar().showMessage.called
 
 
 def test_load_json_data_version_mismatch(mock_parser_host, tmp_path):
@@ -244,6 +250,7 @@ def test_save_project_no_data_error(mock_parser_host):
 
     io.save_project()
     io.statusBar().showMessage.assert_called_with("Error: Nothing to save.")
+    assert io.statusBar().showMessage.called
 
 
 def test_save_project_default_filename(mock_parser_host, tmp_path):

@@ -41,7 +41,6 @@ _get_current_state should capture all atoms with correct properties._
 _get_current_state should capture bonds with correct order._
 
 - assert len(state['bonds']) == 1
-- assert bond_data['order'] == 2
 
 ### test_get_current_state_with_3d_mol
 _State should include 3D molecule binary when current_mol is set._
@@ -90,17 +89,20 @@ _Empty state should produce valid structure with no atoms/bonds._
 ## tests/unit/test_atom_bond_items.py
 
 ### TestAtomItem.test_init
-_No description provided._
+_Verify AtomItem initialization with ID, symbol and position._
 
 - assert atom_item.symbol == 'C'
 - assert atom_item.atom_id == 1
 - assert atom_item.pos().x() == 0.0
 - assert atom_item.pos().y() == 0.0
+- assert atom_item.flags() & atom_item.GraphicsItemFlag.ItemIsMovable
+- assert atom_item.flags() & atom_item.GraphicsItemFlag.ItemIsSelectable
 
 ### TestAtomItem.test_paint_mock
 _Test paint logic by mocking QPainter_
 
 - assert mock_painter.drawText.called
+- assert text_drawn
 
 ### TestAtomItem.test_paint_radical
 _Test painting logic for radicals_
@@ -122,7 +124,7 @@ _Test painting logic for implicit hydrogens and text alignment_
 - assert found_flipped_text
 
 ### TestBondItem.test_init
-_No description provided._
+_Verify BondItem initialization with atom partners and default order._
 
 - assert bond_item.atom1.atom_id == 1
 - assert bond_item.atom2.atom_id == 2
@@ -166,6 +168,9 @@ _No description provided._
 - assert hasattr(worker, 'status_update')
 - assert hasattr(worker, 'finished')
 - assert hasattr(worker, 'error')
+- assert not hasattr(worker, 'halt_ids')
+- assert getattr(worker, 'halt_ids', None) is None
+- assert not hasattr(worker, 'active_worker_ids')
 
 ### test_calculation_worker_halt_logic
 _Test the internal _check_halted logic via run_calculation._
@@ -218,6 +223,8 @@ _No description provided._
 
 - assert compute.settings['optimization_method'] == 'GAFF_OBABEL'
 - assert compute.statusBar().showMessage.called
+- assert 'Optimization' in msg or 'GAFF_OBABEL' in msg
+- assert compute.optimization_method == 'GAFF_OBABEL'
 
 ### test_compute_halt_logic
 _No description provided._
@@ -411,14 +418,6 @@ _Test trigger_conversion stereo enhancement logic for E/Z bonds._
 
 - assert mock_timer.called
 
-### test_set_optimization_method
-_Test set_optimization_method updates state and settings._
-
-- assert compute.optimization_method == 'MMFF94_RDKIT'
-- assert compute.settings['optimization_method'] == 'MMFF94_RDKIT'
-- assert compute.optimization_method == 'MMFF94_RDKIT'
-- assert any(('Unknown 3D optimization method' in msg for msg in compute.get_status_messages()))
-
 ### test_halt_conversion
 _Test halt_conversion clears active workers and restores UI._
 
@@ -533,6 +532,7 @@ _No description provided._
 ### test_export_2d_png_basic_trigger
 _No description provided._
 
+- assert os.path.exists(save_path)
 
 ### test_export_2d_svg_trigger
 _No description provided._
@@ -542,19 +542,24 @@ _No description provided._
 ### test_export_stl_error_no_mol
 _No description provided._
 
+- assert exporter.statusBar().showMessage.called
 
 ### test_export_obj_mtl_error_no_mol
 _No description provided._
 
+- assert exporter.statusBar().showMessage.called
 
 ### test_export_stl_success_trigger
 _No description provided._
 
+- assert args[0] == save_path
+- assert kwargs.get('binary') is True
 - assert mesh.save.called
 
 ### test_export_obj_mtl_success_trigger
 _No description provided._
 
+- assert mock_file_dialog.called
 - assert mock_create.called
 
 ### test_export_3d_png_logic
@@ -680,6 +685,7 @@ _Test AtomItem paint with transparent background uses CompositionMode_Clear._
 _Test AtomItem paint doesn't crash when a C++ bond object is deleted._
 
 - assert success
+- assert atom.bonds == [deleted_bond]
 
 ### test_atom_item_shape_collision
 _Test AtomItem.shape() returns larger area than visual bounding for collision._
@@ -730,13 +736,14 @@ _Test get_ez_label_local_rect() calculates correct label geometry._
 ### test_bond_update_position_resilience
 _Test BondItem.update_position resilience when atoms exist._
 
-- assert True
+- assert bond.atom2 is None
 
 ## tests/unit/test_main_window_export_extended.py
 
 ### test_export_stl_success
 _Test export_stl success path._
 
+- assert mock_combined_mesh.save.called
 
 ### test_export_stl_cancel
 _Test export_stl cancellation._
@@ -746,14 +753,17 @@ _Test export_stl cancellation._
 ### test_export_stl_no_molecule
 _Test export_stl with no molecule._
 
+- assert window.statusBar().showMessage.called
 
 ### test_export_obj_mtl_success
 _Test export_obj_mtl success path._
 
+- assert mock_create.called
 
 ### test_export_color_stl_success
 _"Test export_color_stl success path._
 
+- assert mock_combined_mesh.save.called
 
 ### test_create_multi_material_obj_logic
 _Test the file writing logic of create_multi_material_obj._
@@ -771,14 +781,12 @@ _Test export_from_3d_view to ensure it iterates actors and extracts meshes._
 ### test_export_2d_png_success
 _Test export_2d_png success path._
 
-
-### test_export_2d_png_success
-_Test export_2d_png success path._
-
+- assert mock_image.save.called
 
 ### test_export_2d_svg_success
 _Test export_2d_svg success path._
 
+- assert mock_svg.setFileName.called
 
 ### test_export_from_3d_view_no_color_logic
 _Test the logic of extracting mesh without colors._
@@ -809,6 +817,8 @@ _Ensure MainWindow and its init submodule can be imported._
 ### test_mainwindow_init_with_mocks
 _Minimal test of MainWindow instantiation with heavy mocking._
 
+- assert MainWindow is not None
+- assert isinstance(MainWindow, type)
 
 ## tests/unit/test_modules_init.py
 
@@ -1019,7 +1029,7 @@ _No description provided._
 - assert result is None
 
 ### test_load_xyz_unrecognized_symbol
-_No description provided._
+_Test load_xyz_file raises ValueError for unrecognized element symbols._
 
 
 ### test_save_as_xyz_logic
@@ -1041,6 +1051,7 @@ _No description provided._
 ### test_load_mol_file_not_found
 _No description provided._
 
+- assert parser.statusBar().showMessage.called
 
 ### test_load_mol_file_invalid_format
 _No description provided._
@@ -1091,14 +1102,17 @@ _Test PluginContext initialization._
 ### TestPluginInterface.test_add_menu_action
 _Test add_menu_action delegation._
 
+- assert mock_manager.register_menu_action.called
 
 ### TestPluginInterface.test_add_toolbar_action
 _Test add_toolbar_action delegation._
 
+- assert mock_manager.register_toolbar_action.called
 
 ### TestPluginInterface.test_register_drop_handler
 _Test register_drop_handler delegation._
 
+- assert mock_manager.register_drop_handler.called
 
 ### TestPluginInterface.test_get_3d_controller
 _Test get_3d_controller returns a controller linked to main window._
@@ -1125,26 +1139,32 @@ _Test current_molecule when main window is None._
 ### TestPluginInterface.test_add_export_action
 _Test add_export_action delegation._
 
+- assert mock_manager.register_export_action.called
 
 ### TestPluginInterface.test_register_optimization_method
 _Test register_optimization_method delegation._
 
+- assert mock_manager.register_optimization_method.called
 
 ### TestPluginInterface.test_register_file_opener
 _Test register_file_opener delegation._
 
+- assert mock_manager.register_file_opener.called
 
 ### TestPluginInterface.test_add_analysis_tool
 _Test add_analysis_tool delegation._
 
+- assert mock_manager.register_analysis_tool.called
 
 ### TestPluginInterface.test_register_save_handler
 _Test register_save_handler delegation._
 
+- assert mock_manager.register_save_handler.called
 
 ### TestPluginInterface.test_register_load_handler
 _Test register_load_handler delegation._
 
+- assert mock_manager.register_load_handler.called
 
 ### TestPluginInterface.test_register_3d_context_menu
 _Test deprecated register_3d_context_menu._
@@ -1154,18 +1174,24 @@ _Test deprecated register_3d_context_menu._
 ### TestPluginInterface.test_register_3d_style
 _Test register_3d_style delegation._
 
+- assert mock_manager.register_3d_style.called
 
 ### TestPluginInterface.test_register_document_reset_handler
 _Test register_document_reset_handler delegation._
 
+- assert mock_manager.register_document_reset_handler.called
 
 ### TestPluginInterface.test_3d_controller_set_atom_color
 _Test Plugin3DController.set_atom_color._
 
+- assert mock_main_window.main_window_view_3d.update_atom_color_override.called
+- assert mock_main_window.plotter.render.called
 
 ### TestPluginInterface.test_3d_controller_set_bond_color
 _Test Plugin3DController.set_bond_color._
 
+- assert mock_main_window.main_window_view_3d.update_bond_color_override.called
+- assert mock_main_window.plotter.render.called
 
 ## tests/unit/test_plugin_manager.py
 
@@ -1305,6 +1331,7 @@ _ensure_plugin_dir should create the directory if it doesn't exist._
 ### test_save_project_no_data
 _No description provided._
 
+- assert io.statusBar().showMessage.called
 
 ### test_save_project_overwrite_json
 _No description provided._
@@ -1348,6 +1375,7 @@ _No description provided._
 ### test_load_raw_data_error_paths
 _No description provided._
 
+- assert io.statusBar().showMessage.called
 
 ### test_open_project_file_unsaved_check
 _No description provided._
@@ -1357,6 +1385,7 @@ _No description provided._
 ### test_save_project_io_error
 _No description provided._
 
+- assert io.statusBar().showMessage.called
 
 ### test_load_json_data_version_mismatch
 _No description provided._
@@ -1377,6 +1406,7 @@ _Test full cycle of project save and load._
 ### test_save_project_no_data_error
 _Test save_project with no data returns error._
 
+- assert io.statusBar().showMessage.called
 
 ### test_save_project_default_filename
 _Test save_project_as uses current_file_path to suggest filename._
@@ -1463,6 +1493,7 @@ _No description provided._
 ### test_scene_keypress_delete
 _No description provided._
 
+- assert mock_delete.called
 
 ### test_scene_maintenance_methods
 _No description provided._
@@ -1552,6 +1583,7 @@ _No description provided._
 ### test_delete_selected_items
 _No description provided._
 
+- assert mock_delete.called
 
 ### test_double_click_select_component
 _No description provided._
@@ -1658,6 +1690,7 @@ _Invalid SMILES should trigger status bar error, not crash._
 ### test_smiles_empty_shows_error
 _Empty SMILES should trigger error message._
 
+- assert mock_parser_host.statusBar().showMessage.called
 
 ### test_inchi_ethanol
 _InChI import should match RDKit reference atom/bond count._
@@ -1969,19 +2002,16 @@ _Undo/Redo: 操作のテスト_
 
 - assert len(window.data.atoms) == 0
 - assert isinstance(window.undo_stack, list)
-- assert window.undo_action.isEnabled() in (True, False)
-- assert window.redo_action.isEnabled() in (True, False)
+- assert isinstance(window.undo_action.isEnabled(), bool)
 - assert len(window.data.atoms) == 1
-- assert window.undo_action.isEnabled() in (True, False)
-- assert window.undo_action.isEnabled() in (True, False)
-- assert window.redo_action.isEnabled() in (True, False)
+- assert window.undo_action.isEnabled() is True
+- assert window.redo_action.isEnabled() is False
 - assert len(window.data.atoms) in (0, 1)
-- assert window.undo_action.isEnabled() in (True, False)
-- assert window.redo_action.isEnabled() in (True, False)
+- assert isinstance(window.undo_action.isEnabled(), bool)
 - assert len(window.data.atoms) == 1
 - assert len(window.data.atoms) == 1
-- assert window.undo_action.isEnabled() in (True, False)
-- assert window.redo_action.isEnabled() in (True, False)
+- assert window.undo_action.isEnabled() is True
+- assert window.redo_action.isEnabled() is False
 
 ### test_clear_all
 _Clear All: 全消去のテスト_
@@ -2056,6 +2086,7 @@ _MoleculeScene: ベンゼンテンプレートの描画_
 ### test_open_settings_dialog
 _MainWindow: 設定ダイアログを開くテスト_
 
+- assert QDialog.exec.called
 
 ### test_toggle_measurement_mode
 _MainWindow: 3D測定モードのトグルテスト_
@@ -2169,10 +2200,12 @@ _暗黙の水素: 描画操作後に自動更新されるかのテスト_
 ### test_drag_drop_mol_file_on_3d_view
 _D&D: 3Dビュー領域への .mol ファイルドロップ (モック)_
 
+- assert mock_load_3d.called
 
 ### test_drag_drop_mol_file_on_2d_view
 _D&D: 2Dビュー領域への .mol ファイルドロップ (モック)_
 
+- assert mock_load_2d.called
 
 ### test_project_save_load_round_trip
 _プロジェクト保存/読込: 保存したファイルを実際に読み込んで復元を確認する統合テスト_
@@ -2197,7 +2230,7 @@ _SMILESインポート: 不正なSMILES入力時のエラーハンドリング�
 ### test_undo_redo_boundary
 _Undo/Redo: スタック境界(空のスタックへの操作)のテスト_
 
-- assert len(window.undo_stack) <= 1
+- assert len(window.undo_stack) == 1
 - assert len(window.data.atoms) == 0
 - assert len(window.data.atoms) == 0
 
@@ -2216,6 +2249,7 @@ _全消去: 確認ダイアログでキャンセルのテスト_
 ### test_clipboard_copy_empty_selection
 _コピー: 選択なしでのコピー操作の安全性テスト_
 
+- assert cb.text() == '' or cb.text() == 'initial_text'
 
 ## tests/gui/test_plugin_manager_redundant.py
 

@@ -32,7 +32,10 @@ def test_calculation_worker_init(worker):
     # Verify initial state
     # CalculationWorker is a QObject, not QThread.
     # It identifies runs via worker_id in run_calculation options, not as instance attribute.
-    assert hasattr(worker, "halt_ids") or True # It's used via getattr(self, "halt_ids") in _check_halted
+    # By default, halt_ids is not set until shared by the host
+    assert not hasattr(worker, "halt_ids")
+    # Verify it works via getattr as used in _check_halted
+    assert getattr(worker, "halt_ids", None) is None
     assert not hasattr(worker, "active_worker_ids") # This is usually on the Window/Host
 
 

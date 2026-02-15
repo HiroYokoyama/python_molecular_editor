@@ -66,6 +66,7 @@ class TestAtomItem:
         return item
 
     def test_init(self, atom_item):
+        """Verify AtomItem initialization with ID, symbol and position."""
         assert atom_item.symbol == "C"
         assert atom_item.atom_id == 1
         assert atom_item.pos().x() == 0.0
@@ -262,6 +263,7 @@ class TestBondItem:
         return bond
 
     def test_init(self, bond_item):
+        """Verify BondItem initialization with atom partners and default order."""
         assert bond_item.atom1.atom_id == 1
         assert bond_item.atom2.atom_id == 2
         assert bond_item.order == 1

@@ -1,6 +1,6 @@
 # MoleditPy Coverage Report
 
-- **Overall Project Coverage (Full)**: **48.77%**
+- **Overall Project Coverage (Full)**: **48.75%**
 - **Core Molecular Logic Coverage**: **73.03%**
 
 > [!NOTE]
@@ -56,7 +56,7 @@
 | moleditpy\src\moleditpy\modules\dihedral_dialog.py      |    223 |    203 |    9.0% |
 | moleditpy\src\moleditpy\modules\main_window.py          |    402 |     96 |   76.1% |
 | moleditpy\src\moleditpy\modules\main_window_app_state.py |    443 |    175 |   60.5% |
-| moleditpy\src\moleditpy\modules\main_window_compute.py  |    873 |    362 |   58.5% |
+| moleditpy\src\moleditpy\modules\main_window_compute.py  |    873 |    364 |   58.3% |
 | moleditpy\src\moleditpy\modules\main_window_dialog_manager.py |    243 |    157 |   35.4% |
 | moleditpy\src\moleditpy\modules\main_window_edit_3d.py  |    234 |    125 |   46.6% |
 | moleditpy\src\moleditpy\modules\main_window_edit_actions.py |    973 |    519 |   46.7% |
@@ -83,7 +83,7 @@
 | moleditpy\src\moleditpy\modules\translation_dialog.py   |    223 |    148 |   33.6% |
 | moleditpy\src\moleditpy\modules\user_template_dialog.py |    403 |    165 |   59.1% |
 | moleditpy\src\moleditpy\modules\zoomable_view.py        |     72 |     39 |   45.8% |
-| **TOTAL** | **15519** | **7951** | **48.77%** |
+| **TOTAL** | **15519** | **7953** | **48.75%** |
 
 ## Test Suite Status
 - **Unit tests**: PASSED

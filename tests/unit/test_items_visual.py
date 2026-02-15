@@ -318,13 +318,9 @@ def test_bond_update_position_resilience(mock_parser_host):
     a2 = AtomItem(1, "C", QPointF(50, 0))
     bond = BondItem(a1, a2)
 
-    # Should not crash
-    bond.atom2 = None  # Simulate losing Partner after init
-    # Should not crash
-    bond.atom2 = None  # Simulate losing Partner after init
-    # Should not crash
-    bond.atom2 = None  # Simulate losing Partner after init
+    # Should not crash even if partner is lost after initialization
+    bond.atom2 = None
     bond.update_position(notify=True)
     assert bond.atom2 is None
-    # Verify it didn't raise exception
-    assert True
+    # Verify that the points remain at their last known positions or defaults if not calculated
+    # The main goal is resilience (no crash).

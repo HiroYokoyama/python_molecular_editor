@@ -33,6 +33,7 @@ def test_mainwindow_init_with_mocks():
             ):
                 from moleditpy.modules.main_window import MainWindow
 
-                # We don't actually call __init__ because we patched it,
-                # but just having the imports and class definitions is enough.
-                pass
+                # We don't actually call __init__ because we patched it.
+                # Just verify MainWindow is correctly imported and is a class.
+                assert MainWindow is not None
+                assert isinstance(MainWindow, type)

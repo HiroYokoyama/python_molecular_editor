@@ -617,22 +617,22 @@ def test_undo_redo(window, qtbot):
     # headless/mocked environments can suppress the initial snapshot.
     # Instead of checking the exact length, assert the undo stack exists and is a list
     # (we verify behavior via atom count on undo/redo operations below).
+    # Initial state verification
     assert isinstance(window.undo_stack, list)
-    # Accept both True and False for headless/dummy environments
-    # Removed tautology assertion: assert window.undo_action.isEnabled() in (True, False)
+    # After reset or initial launch, undo should be disabled if no states are saved yet
+    # but some environments might save the initial blank state.
+    # We verify it's a valid boolean and then perform an action to truly test it.
     assert isinstance(window.undo_action.isEnabled(), bool)
-    assert isinstance(window.redo_action.isEnabled(), bool)
 
-    # 1. 原子を描画 (programmatically)
+    # 1. Draw an atom (programmatically)
     window.set_mode("atom_C")
     id0 = scene.create_atom("C", QPointF(0, 0))
     window.push_undo_state()
 
     assert len(window.data.atoms) == 1
-    # Undo stack content may vary by environment; verify the undo action is now available
-    assert window.undo_action.isEnabled() in (True, False)
-    assert window.undo_action.isEnabled() in (True, False)
-    assert window.redo_action.isEnabled() in (True, False)
+    # After an action, Undo should be enabled
+    assert window.undo_action.isEnabled() is True
+    assert window.redo_action.isEnabled() is False
 
     # 2. Undoを実行
     # Undo前の状態保存
@@ -653,8 +653,8 @@ def test_undo_redo(window, qtbot):
     assert len(window.data.atoms) == 1  # 原子が戻る
     # Ensure redo restored the atom that was undone
     assert len(window.data.atoms) == 1
-    assert window.undo_action.isEnabled() in (True, False)
-    assert window.redo_action.isEnabled() in (True, False)
+    assert window.undo_action.isEnabled() is True
+    assert window.redo_action.isEnabled() is False
 
 
 @pytest.mark.gui
@@ -1682,7 +1682,8 @@ def test_undo_redo_boundary(window, qtbot):
     """Undo/Redo: スタック境界(空のスタックへの操作)のテスト"""
     # 1. スタックをリセット
     window.reset_undo_stack()
-    assert len(window.undo_stack) <= 1  # 初期状態 (1つだけある場合もある)
+    # After reset, the stack should contain exactly the current clean state.
+    assert len(window.undo_stack) == 1
 
     # 2. Undoを試行 (有効/無効に関わらず呼び出してみる)
     try:

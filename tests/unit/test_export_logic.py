@@ -71,6 +71,8 @@ def test_export_2d_png_basic_trigger(mock_parser_host, tmp_path):
             return_value=QMessageBox.StandardButton.Yes,
         ):
             exporter.export_2d_png()
+            # Verify file exists
+            assert os.path.exists(save_path)
 
 
 def test_export_2d_svg_trigger(mock_parser_host, tmp_path):

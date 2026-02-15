@@ -151,6 +151,7 @@ def test_load_xyz_charge_loop_cancel(mock_parser_host, tmp_path):
 
 
 def test_load_xyz_unrecognized_symbol(mock_parser_host, tmp_path):
+    """Test load_xyz_file raises ValueError for unrecognized element symbols."""
     parser = DummyParser(mock_parser_host)
     xyz_path = tmp_path / "unknown.xyz"
     xyz_path.write_text("1\nUnknown\nXx 0.0 0.0 0.0\n")
@@ -205,6 +206,7 @@ def test_load_mol_file_not_found(mock_parser_host):
     parser.statusBar().showMessage.assert_any_call(
         "File not found: missing_parser_xyz_final.mol"
     )
+    assert parser.statusBar().showMessage.called
 
 
 def test_load_mol_file_invalid_format(mock_parser_host, tmp_path):
