@@ -12,19 +12,12 @@ DOI: 10.5281/zenodo.17268532
 
 import traceback
 
-# RDKit imports (explicit to satisfy flake8 and used features)
-try:
-    pass
-except Exception:  # pragma: no cover
-    traceback.print_exc()
-
 # PyQt6 Modules
 from PyQt6.QtCore import pyqtSignal, pyqtSlot
 from PyQt6.QtWidgets import QMainWindow
 
 try:
     from PyQt6 import sip as _sip  # type: ignore
-
     _sip_isdeleted = getattr(_sip, "isdeleted", None)
 except Exception:
     _sip = None

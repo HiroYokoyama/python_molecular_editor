@@ -23,19 +23,11 @@ import traceback
 from rdkit import Chem
 from rdkit.Chem import AllChem
 
-try:
-    pass
-except Exception:  # pragma: no cover
-    import traceback
-
-    pass
-
 # PyQt6 Modules
 from PyQt6.QtWidgets import QFileDialog
 
 try:
     from PyQt6 import sip as _sip  # type: ignore
-
     _sip_isdeleted = getattr(_sip, "isdeleted", None)
 except Exception:
     _sip = None
@@ -162,8 +154,6 @@ class MainWindowViewLoaders(object):
         except Exception as e:
             self.statusBar().showMessage(f"Error loading XYZ file: {e}")
             self.restore_ui_for_editing()
-
-            pass
 
     def save_3d_as_mol(self):
         if not self.current_mol:

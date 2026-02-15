@@ -16,7 +16,7 @@ from PyQt6.QtGui import QColor, QFont
 from rdkit import Chem
 
 # Version
-VERSION = "2.6.2"
+VERSION = "2.6.3"
 
 ATOM_RADIUS = 18
 BOND_OFFSET = 3.5

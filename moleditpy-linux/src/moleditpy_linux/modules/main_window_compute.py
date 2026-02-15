@@ -33,7 +33,6 @@ except Exception:
 
 try:
     from PyQt6 import sip as _sip  # type: ignore
-
     _sip_isdeleted = getattr(_sip, "isdeleted", None)
 except Exception:
     _sip = None
@@ -397,7 +396,7 @@ class MainWindowCompute(object):
         # Keep a reference so we can reliably remove the text actor later
         try:
             self._calculating_text_actor = text_actor
-        except Exception:  # pragma: no cover
+        except Exception:
             # Best-effort: if storing fails, ignore — cleanup will still attempt renderer removal
             pass
         text_actor.GetTextProperty().SetOpacity(1)  # pragma: no cover
@@ -1005,7 +1004,7 @@ class MainWindowCompute(object):
                     try:
                         if mol.HasProp("_pme_optimization_method"):
                             opt_method = mol.GetProp("_pme_optimization_method")
-                    except Exception:  # pragma: no cover
+                    except Exception:
                         # not all Mol objects support HasProp/GetProp safely
                         pass
             except Exception:  # pragma: no cover
@@ -1025,7 +1024,7 @@ class MainWindowCompute(object):
                 else:
                     # store raw value otherwise
                     self.last_successful_optimization_method = opt_method
-        except Exception:  # pragma: no cover
+        except Exception:
             # non-fatal
             pass
 
@@ -1054,8 +1053,8 @@ class MainWindowCompute(object):
 
             self.update_chiral_labels()
         except Exception:  # pragma: no cover
-            # 念のためエラーを握り潰して UI を壊さない
-            pass
+            import traceback
+            traceback.print_exc()
 
         self.draw_molecule_3d(mol)
 

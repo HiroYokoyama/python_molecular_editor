@@ -82,7 +82,7 @@ class CalculationWorker(QObject):
                 if _check_halted():
                     return
                 self.status_update.emit(msg)
-            except Exception:  # pragma: no cover
+            except Exception:
                 # Swallow any signal-emission errors to avoid crashing the worker
                 pass
 

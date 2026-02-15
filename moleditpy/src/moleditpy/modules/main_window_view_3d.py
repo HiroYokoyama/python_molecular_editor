@@ -24,13 +24,6 @@ import vtk
 # RDKit imports (explicit to satisfy flake8 and used features)
 from rdkit import Chem
 
-try:
-    pass
-except Exception:  # pragma: no cover
-    import traceback
-
-    pass
-
 # PyQt6 Modules
 import pyvista as pv
 from PyQt6.QtCore import QRectF, Qt
@@ -39,7 +32,6 @@ from PyQt6.QtWidgets import QApplication, QGraphicsView
 
 try:
     from PyQt6 import sip as _sip  # type: ignore
-
     _sip_isdeleted = getattr(_sip, "isdeleted", None)
 except Exception:
     _sip = None

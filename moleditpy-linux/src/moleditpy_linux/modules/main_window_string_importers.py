@@ -21,31 +21,16 @@ import traceback
 from rdkit import Chem
 from rdkit.Chem import AllChem
 
-try:
-    pass
-except Exception:  # pragma: no cover
-    import traceback
-
-    pass
-
 # PyQt6 Modules
 from PyQt6.QtCore import QPointF, QTimer
 from PyQt6.QtWidgets import QInputDialog
 
 try:
     from PyQt6 import sip as _sip  # type: ignore
-
     _sip_isdeleted = getattr(_sip, "isdeleted", None)
 except Exception:
     _sip = None
     _sip_isdeleted = None
-
-try:
-    # package relative imports (preferred when running as `python -m moleditpy`)
-    pass
-except Exception:  # pragma: no cover
-    # Fallback to absolute imports for script-style execution
-    pass
 
 
 # --- クラス定義 ---
@@ -157,8 +142,6 @@ class MainWindowStringImporters(object):
             self.statusBar().showMessage(f"Invalid SMILES: {e}")
         except Exception as e:
             self.statusBar().showMessage(f"Error loading from SMILES: {e}")
-
-            pass
 
     def load_from_inchi(self, inchi_string):
         """InChI文字列から分子を読み込み、2Dエディタに表示する"""
