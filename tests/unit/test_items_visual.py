@@ -26,7 +26,9 @@ def test_atom_item_visual_states(mock_parser_host):
 
     # Basic rendering test
     atom.paint(painter, option, None)
-    assert painter.drawEllipse.called or painter.drawText.called
+    # Carbon with H label, charge, radical -> draws text and ellipse
+    assert painter.drawEllipse.called
+    assert painter.drawText.called
 
     # BoundingRect test
     rect = atom.boundingRect()
@@ -148,10 +150,10 @@ def test_atom_item_paint_transparent_bg(mock_parser_host):
     atom = AtomItem(0, "O", QPointF(0, 0))
 
     painter = MagicMock(spec=QPainter)
-    painter.background.return_value.alpha.return_value = 0  # Transparent
 
     # Mock scene with transparent background
     scene = MagicMock()
+    scene.backgroundBrush.return_value.style.return_value = Qt.BrushStyle.NoBrush
     scene.views.return_value = [MagicMock()]
     scene.views()[0].window.return_value.settings = {"background_color_2d": "#00000000"}
     atom.scene = MagicMock(return_value=scene)
@@ -159,9 +161,9 @@ def test_atom_item_paint_transparent_bg(mock_parser_host):
     option = QStyleOptionGraphicsItem()
     atom.paint(painter, option, None)
 
-    # Should set composition mode to clear at some point
-    # (This is a bit tricky to assert directly, but we check the method was called)
-    assert painter.setCompositionMode.called or painter.drawEllipse.called
+    # Should set composition mode to clear for background subtraction
+    assert painter.setCompositionMode.called
+    assert painter.drawEllipse.called
 
 
 def test_atom_item_paint_resilience_to_deleted_bond(mock_parser_host):
@@ -179,15 +181,10 @@ def test_atom_item_paint_resilience_to_deleted_bond(mock_parser_host):
     painter = MagicMock(spec=QPainter)
     option = QStyleOptionGraphicsItem()
 
-    # Should not crash
-    try:
-        atom.paint(painter, option, None)
-        success = True
-    except RuntimeError:
-        success = False
-
-    assert success, "Paint should handle deleted bond references gracefully"
-    # Ensure checking loop finished
+    # Should not crash. We call it directly and verify the bond remains.
+    atom.paint(painter, option, None)
+    
+    # Ensure checking loop finished and bond is still in the list
     assert atom.bonds == [deleted_bond]
 
 

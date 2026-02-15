@@ -643,7 +643,8 @@ _No description provided._
 ### test_atom_item_visual_states
 _Test AtomItem paint and boundingRect with different states._
 
-- assert painter.drawEllipse.called or painter.drawText.called
+- assert painter.drawEllipse.called
+- assert painter.drawText.called
 - assert rect.width() > 0
 - assert rect.height() > 0
 
@@ -679,12 +680,12 @@ _Test that moving an atom triggers bond position updates._
 ### test_atom_item_paint_transparent_bg
 _Test AtomItem paint with transparent background uses CompositionMode_Clear._
 
-- assert painter.setCompositionMode.called or painter.drawEllipse.called
+- assert painter.setCompositionMode.called
+- assert painter.drawEllipse.called
 
 ### test_atom_item_paint_resilience_to_deleted_bond
 _Test AtomItem paint doesn't crash when a C++ bond object is deleted._
 
-- assert success
 - assert atom.bonds == [deleted_bond]
 
 ### test_atom_item_shape_collision
@@ -809,16 +810,17 @@ _Test create_multi_material_obj with Triangle Strips and Quads._
 ## tests/unit/test_main_window_init_coverage.py
 
 ### test_imports_mainwindow
-_Ensure MainWindow and its init submodule can be imported._
+_Ensure MainWindow and its init submodule can be imported without crashing._
 
-- assert MainWindow is not None
-- assert MainWindowMainInit is not None
+- assert hasattr(MainWindow, '__init__')
+- assert hasattr(MainWindowMainInit, 'init_ui')
 
 ### test_mainwindow_init_with_mocks
-_Minimal test of MainWindow instantiation with heavy mocking._
+_Verify MainWindow class structure is intact with mocks._
 
-- assert MainWindow is not None
-- assert isinstance(MainWindow, type)
+- assert hasattr(MainWindow, 'init_ui')
+- assert hasattr(MainWindow, 'init_menu_bar')
+- assert hasattr(MainWindow, 'init_worker_thread')
 
 ## tests/unit/test_modules_init.py
 

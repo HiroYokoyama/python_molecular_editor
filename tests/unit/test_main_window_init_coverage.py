@@ -8,22 +8,18 @@ from unittest.mock import MagicMock, patch
 
 
 def test_imports_mainwindow():
-    """Ensure MainWindow and its init submodule can be imported."""
-    try:
-        from moleditpy.modules.main_window import MainWindow
-        from moleditpy.modules.main_window_main_init import MainWindowMainInit
-
-        assert MainWindow is not None
-        assert MainWindowMainInit is not None
-    except Exception as e:
-        pytest.fail(f"Failed to import MainWindow modules: {e}")
+    """Ensure MainWindow and its init submodule can be imported without crashing."""
+    # Importing is the primary verification here; if it fails, test runner raises error.
+    from moleditpy.modules.main_window import MainWindow
+    from moleditpy.modules.main_window_main_init import MainWindowMainInit
+    
+    # Verify they have expected core methods/attributes
+    assert hasattr(MainWindow, "__init__")
+    assert hasattr(MainWindowMainInit, "init_ui")
 
 
 def test_mainwindow_init_with_mocks():
-    """Minimal test of MainWindow instantiation with heavy mocking."""
-    # This might still be tricky due to VTK/Qt dependencies in CI,
-    # but since we are headless and using offscreen, it might work
-    # and would definitely trigger more coverage in the submodule.
+    """Verify MainWindow class structure is intact with mocks."""
     with patch("PyQt6.QtWidgets.QMainWindow.__init__", return_value=None):
         with patch(
             "moleditpy.modules.main_window_main_init.MainWindowMainInit.init_ui"
@@ -32,8 +28,9 @@ def test_mainwindow_init_with_mocks():
                 "moleditpy.modules.main_window_main_init.MainWindowMainInit.init_menu_bar"
             ):
                 from moleditpy.modules.main_window import MainWindow
-
-                # We don't actually call __init__ because we patched it.
-                # Just verify MainWindow is correctly imported and is a class.
-                assert MainWindow is not None
-                assert isinstance(MainWindow, type)
+                
+                # Instead of verifying it's a "type" (tautology), 
+                # verify it possesses the expected mixin-provided methods.
+                assert hasattr(MainWindow, "init_ui")
+                assert hasattr(MainWindow, "init_menu_bar")
+                assert hasattr(MainWindow, "init_worker_thread")
