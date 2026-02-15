@@ -31,6 +31,7 @@ class DummyExport(MainWindowExport):
 
 
 def test_create_multi_material_obj_advanced(mock_parser_host, tmp_path):
+    """Verify that create_multi_material_obj creates both .obj and .mtl files."""
     exporter = DummyExport(mock_parser_host)
     mesh1 = MagicMock()
     mesh1.points = np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0]], dtype=float)
@@ -48,9 +49,16 @@ def test_create_multi_material_obj_advanced(mock_parser_host, tmp_path):
     exporter.create_multi_material_obj(meshes_with_colors, obj_path, mtl_path)
     assert os.path.exists(obj_path)
     assert os.path.exists(mtl_path)
+    assert os.path.getsize(obj_path) > 0
+    assert os.path.getsize(mtl_path) > 0
+    with open(obj_path, 'r') as f:
+        content = f.read()
+        assert 'mtllib' in content
+        assert 'v ' in content
 
 
 def test_export_2d_png_basic_trigger(mock_parser_host, tmp_path):
+    """Verify that export_2d_png successfully creates a PNG file after user confirmation."""
     exporter = DummyExport(mock_parser_host)
     exporter.data.add_atom("C", QPointF(100, 100))
     save_path = str(tmp_path / "export.png")
@@ -71,11 +79,13 @@ def test_export_2d_png_basic_trigger(mock_parser_host, tmp_path):
             return_value=QMessageBox.StandardButton.Yes,
         ):
             exporter.export_2d_png()
-            # Verify file exists
+            # Verify file exists and is not empty
             assert os.path.exists(save_path)
+            assert os.path.getsize(save_path) > 0
 
 
 def test_export_2d_svg_trigger(mock_parser_host, tmp_path):
+    """Verify that export_2d_svg successfully creates an SVG file."""
     exporter = DummyExport(mock_parser_host)
     exporter.data.add_atom("C", QPointF(100, 100))
     save_path = str(tmp_path / "export.svg")
@@ -94,9 +104,13 @@ def test_export_2d_svg_trigger(mock_parser_host, tmp_path):
         ):
             exporter.export_2d_svg()
     assert os.path.exists(save_path)
+    assert os.path.getsize(save_path) > 0
+    with open(save_path, 'r') as f:
+        assert '<svg' in f.read().lower()
 
 
 def test_export_stl_error_no_mol(mock_parser_host):
+    """Verify that export_stl shows an error message when no molecule is present."""
     exporter = DummyExport(mock_parser_host)
     exporter.current_mol = None
     exporter.export_stl()
@@ -108,6 +122,7 @@ def test_export_stl_error_no_mol(mock_parser_host):
 
 
 def test_export_obj_mtl_error_no_mol(mock_parser_host):
+    """Verify that export_obj_mtl shows an error message when no molecule is present."""
     exporter = DummyExport(mock_parser_host)
     exporter.current_mol = None
     exporter.export_obj_mtl()
@@ -119,6 +134,7 @@ def test_export_obj_mtl_error_no_mol(mock_parser_host):
 
 
 def test_export_stl_success_trigger(mock_parser_host, tmp_path):
+    """Verify that export_stl triggers the mesh save logic for a valid 3D molecule."""
     exporter = DummyExport(mock_parser_host)
     mol = Chem.MolFromSmiles("C")
     AllChem.EmbedMolecule(mol)
@@ -143,6 +159,7 @@ def test_export_stl_success_trigger(mock_parser_host, tmp_path):
 
 
 def test_export_obj_mtl_success_trigger(mock_parser_host, tmp_path):
+    """Verify that export_obj_mtl triggers the multi-material OBJ creation logic."""
     exporter = DummyExport(mock_parser_host)
     mol = Chem.MolFromSmiles("C")
     AllChem.EmbedMolecule(mol)
@@ -166,6 +183,7 @@ def test_export_obj_mtl_success_trigger(mock_parser_host, tmp_path):
 
 
 def test_export_3d_png_logic(mock_parser_host, tmp_path):
+    """Verify that export_3d_png triggers the plotter screenshot logic."""
     exporter = DummyExport(mock_parser_host)
     mol = Chem.MolFromSmiles("C")
     exporter.current_mol = mol
@@ -184,6 +202,7 @@ def test_export_3d_png_logic(mock_parser_host, tmp_path):
 
 
 def test_export_color_stl_logic(mock_parser_host, tmp_path):
+    """Verify that export_color_stl triggers the status bar message (success indicator)."""
     exporter = DummyExport(mock_parser_host)
     mol = Chem.MolFromSmiles("C")
     AllChem.EmbedMolecule(mol)

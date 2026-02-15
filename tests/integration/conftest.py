@@ -441,3 +441,14 @@ def window(app, qtbot, monkeypatch):
         import gc
 
         gc.collect()
+
+        # Attempt to de-initialize colorama if it's wrapping stdout/stderr
+        # which can cause 0x80010012/0x80010108 fatal exceptions on Windows teardown
+        try:
+            import colorama
+
+            colorama.deinit()
+        except ImportError:
+            pass
+        except Exception:
+            pass

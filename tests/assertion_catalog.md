@@ -171,6 +171,7 @@ _Verify the initial state of the CalculationWorker._
 _Test the internal _check_halted logic via run_calculation._
 
 - assert any(('Halted' in str(val) for val in error_captor.emitted_values))
+- assert error_captor.emitted_values[0] == (123, 'Halted')
 
 ### test_calculation_worker_direct_mode
 _Test 'direct' conversion mode which avoids RDKit 3D embedding._
@@ -198,7 +199,8 @@ _Test that safe helpers don't emit finished if halted._
 ### test_calculation_worker_rdkit_embedding_fail_fallback
 _Test that embedding failure triggers fallback status or error messages._
 
-- assert any(('failed' in m or 'error' in m for m in all_msgs))
+- assert 'failed' in all_msgs_str or 'error' in all_msgs_str
+- assert 'rdkit' in all_msgs_str
 
 ## tests/unit/test_compute_logic.py
 
@@ -455,40 +457,40 @@ _Test that M CFG lines are injected for E/Z stereo bonds._
 ## tests/unit/test_edit_3d_logic.py
 
 ### test_calculate_distance_logic
-_No description provided._
+_Verify calculation of distance between 3D points._
 
 - assert dist == pytest.approx(1.5)
 
 ### test_calculate_angle_logic
-_No description provided._
+_Verify calculation of angle between three 3D points._
 
 - assert angle == pytest.approx(90.0)
 
 ### test_calculate_dihedral_logic
-_No description provided._
+_Verify calculation of dihedral angle between four 3D points._
 
 - assert abs(dihedral) > 0
 
 ### test_handle_measurement_atom_selection
-_No description provided._
+_Verify handling of atom selection for measurements._
 
 - assert 10 in edit3d.selected_atoms_for_measurement
 - assert len(edit3d.selected_atoms_for_measurement) == 1
 
 ### test_clear_3d_selection
-_No description provided._
+_Verify clearing of 3D selection highlights._
 
 - assert edit3d.plotter.remove_actor.called
 
 ### test_toggle_measurement_mode
-_No description provided._
+_Verify toggling of measurement mode._
 
 - assert edit3d.measurement_mode is True
 - assert edit3d.statusBar().showMessage.called
 - assert edit3d.measurement_mode is False
 
 ### test_calculate_and_display_measurements_trigger
-_No description provided._
+_Verify triggering of measurement calculation and display._
 
 - assert mock_display.called
 - assert 'Distance' in mock_display.call_args[0][0][0]
@@ -519,51 +521,60 @@ _Test copy selection MimeData generation._
 ## tests/unit/test_export_logic.py
 
 ### test_create_multi_material_obj_advanced
-_No description provided._
+_Verify that create_multi_material_obj creates both .obj and .mtl files._
 
 - assert os.path.exists(obj_path)
 - assert os.path.exists(mtl_path)
+- assert os.path.getsize(obj_path) > 0
+- assert os.path.getsize(mtl_path) > 0
+- assert 'mtllib' in content
+- assert 'v ' in content
 
 ### test_export_2d_png_basic_trigger
-_No description provided._
+_Verify that export_2d_png successfully creates a PNG file after user confirmation._
 
 - assert os.path.exists(save_path)
+- assert os.path.getsize(save_path) > 0
 
 ### test_export_2d_svg_trigger
-_No description provided._
+_Verify that export_2d_svg successfully creates an SVG file._
 
 - assert os.path.exists(save_path)
+- assert os.path.getsize(save_path) > 0
+- assert '<svg' in f.read().lower()
 
 ### test_export_stl_error_no_mol
-_No description provided._
+_Verify that export_stl shows an error message when no molecule is present._
 
 - assert exporter.statusBar().showMessage.called
+- exporter.statusBar().showMessage.assert_any_call('Error: Please generate a 3D structure first.')
 
 ### test_export_obj_mtl_error_no_mol
-_No description provided._
+_Verify that export_obj_mtl shows an error message when no molecule is present._
 
 - assert exporter.statusBar().showMessage.called
+- exporter.statusBar().showMessage.assert_any_call('Error: Please generate a 3D structure first.')
 
 ### test_export_stl_success_trigger
-_No description provided._
+_Verify that export_stl triggers the mesh save logic for a valid 3D molecule._
 
 - assert args[0] == save_path
 - assert kwargs.get('binary') is True
 - assert mesh.save.called
 
 ### test_export_obj_mtl_success_trigger
-_No description provided._
+_Verify that export_obj_mtl triggers the multi-material OBJ creation logic._
 
 - assert mock_file_dialog.called
 - assert mock_create.called
 
 ### test_export_3d_png_logic
-_No description provided._
+_Verify that export_3d_png triggers the plotter screenshot logic._
 
 - assert mock_plotter.screenshot.called
 
 ### test_export_color_stl_logic
-_No description provided._
+_Verify that export_color_stl triggers the status bar message (success indicator)._
 
 - assert exporter.statusBar().showMessage.called
 
@@ -578,6 +589,7 @@ _Test the complex logic of splitting a mesh by per-vertex colors._
 _Test that export_2d_png hides non-atom items and restores them._
 
 - assert other_item.hide.called
+- other_item.setVisible.assert_called_with(True)
 
 ## tests/unit/test_geometry.py
 
@@ -586,7 +598,8 @@ _Verify optimized 3D coordinates yield physical bond lengths._
 
 - assert mol is not None
 - assert cc_bond is not None
-- assert 1.5 < dist < 1.6
+- assert 1.51 < dist < 1.57
+- assert 107 < angle < 112
 
 ### test_mirror_dialog_logic
 _Verify MirrorDialog correctly manipulates coordinates and UI (software logic)._
@@ -615,20 +628,21 @@ _Verify add_hydrogen_atoms creates items in the scene based on RDKit logic._
 ### test_remove_hydrogen_atoms_app_logic
 _Verify remove_hydrogen_atoms finds and deletes H items using app logic._
 
+- actions.scene.delete_items.assert_called()
 - assert h_item in deleted_set
 - assert actions.data.atoms[c_id]['item'] not in deleted_set
 
 ## tests/unit/test_io.py
 
 ### test_project_save_load_logic
-_No description provided._
+_Verify project save and load logic for .pmeprj files._
 
 - assert os.path.exists(project_file)
 - assert len(io_handler.data.atoms) == 1
 - assert next(iter(io_handler.data.atoms.values()))['charge'] == 1
 
 ### test_xyz_export_logic
-_No description provided._
+_Verify XYZ export logic._
 
 - assert os.path.exists(xyz_file)
 - assert xyz_mol.GetNumAtoms() == mol.GetNumAtoms()
@@ -739,6 +753,10 @@ _Test BondItem.update_position resilience when atoms exist._
 ### test_export_stl_success
 _Test export_stl success path._
 
+- mock_combined_mesh.save.assert_called_once_with('/path/to/export.stl', binary=True)
+- assert mock_combined_mesh.save.called
+- window.statusBar().showMessage.assert_any_call('STL exported to /path/to/export.stl')
+- assert window.statusBar().showMessage.called
 
 ### test_export_stl_cancel
 _Test export_stl cancellation._
@@ -748,18 +766,29 @@ _Test export_stl cancellation._
 ### test_export_stl_no_molecule
 _Test export_stl with no molecule._
 
+- window.statusBar().showMessage.assert_called_with('Error: Please generate a 3D structure first.')
 
 ### test_export_obj_mtl_success
 _Test export_obj_mtl success path._
 
+- mock_create.assert_called_once_with(meshes, '/path/to/export.obj', '/path/to/export.mtl')
+- assert mock_create.called
+- window.statusBar().showMessage.assert_any_call('OBJ+MTL files with individual colors exported to /path/to/export.obj and /path/to/export.mtl')
+- assert window.statusBar().showMessage.called
 
 ### test_export_color_stl_success
 _Test export_color_stl success path._
 
+- mock_combined_mesh.save.assert_called_once_with('/path/to/color_export.stl', binary=True)
+- assert mock_combined_mesh.save.called
+- window.statusBar().showMessage.assert_any_call('STL exported to /path/to/color_export.stl')
+- assert window.statusBar().showMessage.called
 
 ### test_create_multi_material_obj_logic
 _Test the file writing logic of create_multi_material_obj._
 
+- mock_file.assert_any_call(obj_path, 'w')
+- mock_file.assert_any_call(mtl_path, 'w')
 - assert 'mtllib test.mtl' in content
 - assert 'usemtl material_0_test_mesh' in content
 - assert 'v 0.000000 0.000000 0.000000' in content
@@ -774,10 +803,18 @@ _Test export_from_3d_view to ensure it iterates actors and extracts meshes._
 ### test_export_2d_png_success
 _Test export_2d_png success path._
 
+- mock_image.save.assert_called_with('/path/to/image.png', 'PNG')
+- assert mock_image.save.called
+- window.statusBar().showMessage.assert_any_call('2D view exported to /path/to/image.png')
+- assert window.statusBar().showMessage.called
 
 ### test_export_2d_svg_success
 _Test export_2d_svg success path._
 
+- mock_svg.setFileName.assert_called_with('/path/to/image.svg')
+- assert mock_svg.setFileName.called
+- window.statusBar().showMessage.assert_any_call('2D view exported to /path/to/image.svg')
+- assert window.statusBar().showMessage.called
 
 ### test_export_from_3d_view_no_color_logic
 _Test the logic of extracting mesh without colors._
@@ -967,33 +1004,33 @@ _Build acetic acid and compare MW against RDKit reference._
 ## tests/unit/test_parsers.py
 
 ### test_fix_mol_block
-_No description provided._
+_Verify the logic that fixes malformed MOL block counts lines._
 
 - assert 'V2000' in lines[3]
 - assert len(lines[3]) >= 39
 
 ### test_load_mol_file_logic
-_No description provided._
+_Verify loading of a standard MOL file._
 
 - assert len(parser.data.atoms) == 2
 - assert any((a['symbol'] == 'C' for a in parser.data.atoms.values()))
 
 ### test_xyz_parsing_logic
-_No description provided._
+_Verify basic XYZ parsing logic._
 
 - assert mol is not None
 - assert mol.GetNumAtoms() == 3
 - assert any((a.GetSymbol() == 'O' for a in mol.GetAtoms()))
 
 ### test_load_xyz_file_with_estimation
-_No description provided._
+_Verify XYZ loading with automatic bond estimation._
 
 - assert mol is not None
 - assert mol.GetNumAtoms() == 2
 - assert mol.GetNumBonds() == 1
 
 ### test_save_as_mol_logic
-_No description provided._
+_Verify saving a molecule as a MOL file._
 
 - assert os.path.exists(save_path)
 - assert 'C  ' in content
@@ -1001,18 +1038,18 @@ _No description provided._
 ## tests/unit/test_parsers_extended.py
 
 ### test_load_mol_file_fallback_to_sd_supplier
-_No description provided._
+_Verify fallback to ForwardSDMolSupplier when standard MolBlock reading fails._
 
 - assert len(parser.data.atoms) == 1
 
 ### test_load_xyz_always_ask_charge
-_No description provided._
+_Verify that charge is requested from user when 'always_ask_charge' is enabled._
 
 - assert mol is not None
 - assert mol.GetIntProp('_xyz_charge') == 1
 
 ### test_load_xyz_charge_loop_cancel
-_No description provided._
+_Verify handling of user cancellation during the charge input loop._
 
 - assert result is None
 
@@ -1021,63 +1058,58 @@ _Test load_xyz_file raises ValueError for unrecognized element symbols._
 
 
 ### test_save_as_xyz_logic
-_No description provided._
+_Verify saving a molecule as an XYZ file._
 
 - assert os.path.exists(save_path)
 
 ### test_load_mol_file_with_v2000_fix
-_No description provided._
+_Verify that malformed V2000 headers are fixed automatically during MOL load._
 
 - assert len(parser.data.atoms) == 1
 
 ### test_load_xyz_recovery_loop_retries
-_No description provided._
+_Verify that the XYZ load recovery loop handles retries correctly._
 
 - assert mol is not None
 - assert mol.GetIntProp('_xyz_charge') == 1
 
 ### test_load_mol_file_not_found
-_No description provided._
+_Verify error handling when a MOL file is not found._
 
+- parser.statusBar().showMessage.assert_any_call('File not found: missing_parser_xyz_final.mol')
 - assert parser.statusBar().showMessage.called
 
 ### test_load_mol_file_invalid_format
-_No description provided._
+_Verify error handling for invalid MOL file content._
 
 - assert any(('Invalid MOL' in m or 'Failed to read' in m or 'Error loading' in m for m in msgs))
 
 ### test_save_as_xyz_charge_mult
-_No description provided._
+_Verify that charge and multiplicity are written to XYZ file headers._
 
 - assert 'chrg = 1' in f.read()
 
 ### test_load_mol_file_malformed_counts
-_No description provided._
+_Verify fixing of malformed counts lines in MOL files._
 
 - assert len(parser.data.atoms) == 1
 
 ### test_load_xyz_complex_recovery_branches
-_No description provided._
+_Verify complex error recovery branches during XYZ loading._
 
 - assert parser.load_xyz_file(str(path)) is None
 - assert any(('failed for that charge' in m for m in msgs))
 
 ### test_save_as_mol_no_current_path
-_No description provided._
+_Verify saving as MOL when no current file path is set._
 
 - assert os.path.exists(save_path)
 
 ### test_load_xyz_skip_chemistry_via_button
-_No description provided._
+_Verify skip chemistry check flag is set when user chooses to skip._
 
 - assert mol is not None
 - assert mol.HasProp('_xyz_skip_checks') or getattr(mol, '_xyz_skip_checks', False)
-
-### test_fix_mol_block
-_No description provided._
-
-- assert 'V2000' in lines[3]
-- assert len(lines[3]) >= 39
 
 ## tests/unit/test_plugin_interface.py
 
@@ -1090,16 +1122,19 @@ _Test PluginContext initialization._
 ### TestPluginInterface.test_add_menu_action
 _Test add_menu_action delegation._
 
+- mock_manager.register_menu_action.assert_called_once_with('TestPlugin', 'File/Test', callback, 'Test Action', 'icon.png', 'Ctrl+T')
 - assert mock_manager.register_menu_action.called
 
 ### TestPluginInterface.test_add_toolbar_action
 _Test add_toolbar_action delegation._
 
+- mock_manager.register_toolbar_action.assert_called_once_with('TestPlugin', callback, 'Toolbar Action', 'icon.png', 'Tooltip')
 - assert mock_manager.register_toolbar_action.called
 
 ### TestPluginInterface.test_register_drop_handler
 _Test register_drop_handler delegation._
 
+- mock_manager.register_drop_handler.assert_called_once_with('TestPlugin', callback, 5)
 - assert mock_manager.register_drop_handler.called
 
 ### TestPluginInterface.test_get_3d_controller
@@ -1118,6 +1153,7 @@ _Test current_molecule getter and setter._
 
 - assert ctx.current_molecule == 'mock_molecule'
 - assert mock_main_window.current_mol == 'new_molecule'
+- mock_main_window.draw_molecule_3d.assert_called_once_with('new_molecule')
 
 ### TestPluginInterface.test_current_molecule_no_window
 _Test current_molecule when main window is None._
@@ -1127,31 +1163,37 @@ _Test current_molecule when main window is None._
 ### TestPluginInterface.test_add_export_action
 _Test add_export_action delegation._
 
+- mock_manager.register_export_action.assert_called_once_with('TestPlugin', 'Export Plugin', callback)
 - assert mock_manager.register_export_action.called
 
 ### TestPluginInterface.test_register_optimization_method
 _Test register_optimization_method delegation._
 
+- mock_manager.register_optimization_method.assert_called_once_with('TestPlugin', 'My Opt', callback)
 - assert mock_manager.register_optimization_method.called
 
 ### TestPluginInterface.test_register_file_opener
 _Test register_file_opener delegation._
 
+- mock_manager.register_file_opener.assert_called_once_with('TestPlugin', '.ext', callback, 10)
 - assert mock_manager.register_file_opener.called
 
 ### TestPluginInterface.test_add_analysis_tool
 _Test add_analysis_tool delegation._
 
+- mock_manager.register_analysis_tool.assert_called_once_with('TestPlugin', 'Analyze This', callback)
 - assert mock_manager.register_analysis_tool.called
 
 ### TestPluginInterface.test_register_save_handler
 _Test register_save_handler delegation._
 
+- mock_manager.register_save_handler.assert_called_once_with('TestPlugin', callback)
 - assert mock_manager.register_save_handler.called
 
 ### TestPluginInterface.test_register_load_handler
 _Test register_load_handler delegation._
 
+- mock_manager.register_load_handler.assert_called_once_with('TestPlugin', callback)
 - assert mock_manager.register_load_handler.called
 
 ### TestPluginInterface.test_register_3d_context_menu
@@ -1162,23 +1204,29 @@ _Test deprecated register_3d_context_menu._
 ### TestPluginInterface.test_register_3d_style
 _Test register_3d_style delegation._
 
+- mock_manager.register_3d_style.assert_called_once_with('TestPlugin', 'My Style', callback)
 - assert mock_manager.register_3d_style.called
 
 ### TestPluginInterface.test_register_document_reset_handler
 _Test register_document_reset_handler delegation._
 
+- mock_manager.register_document_reset_handler.assert_called_once_with('TestPlugin', callback)
 - assert mock_manager.register_document_reset_handler.called
 
 ### TestPluginInterface.test_3d_controller_set_atom_color
 _Test Plugin3DController.set_atom_color._
 
+- mock_main_window.main_window_view_3d.update_atom_color_override.assert_called_once_with(1, '#FF0000')
 - assert mock_main_window.main_window_view_3d.update_atom_color_override.called
+- mock_main_window.plotter.render.assert_called_once()
 - assert mock_main_window.plotter.render.called
 
 ### TestPluginInterface.test_3d_controller_set_bond_color
 _Test Plugin3DController.set_bond_color._
 
+- mock_main_window.main_window_view_3d.update_bond_color_override.assert_called_once_with(2, '#00FF00')
 - assert mock_main_window.main_window_view_3d.update_bond_color_override.called
+- mock_main_window.plotter.render.assert_called_once()
 - assert mock_main_window.plotter.render.called
 
 ## tests/unit/test_plugin_manager.py
@@ -1317,72 +1365,78 @@ _ensure_plugin_dir should create the directory if it doesn't exist._
 ## tests/unit/test_project_io_extended.py
 
 ### test_save_project_no_data
-_No description provided._
+_Verify error message when trying to save an empty project._
 
+- io.statusBar().showMessage.assert_called_with('Error: Nothing to save.')
 - assert io.statusBar().showMessage.called
 
 ### test_save_project_overwrite_json
-_No description provided._
+_Verify overwriting an existing JSON project file._
 
 - assert os.path.exists(project_file)
+- io.statusBar().showMessage.assert_any_call(f'Project saved to {project_file}')
 - assert data['format'] == 'PME Project'
 
 ### test_save_project_overwrite_raw
-_No description provided._
+_Verify overwriting an existing raw (pickle) project file._
 
 - assert os.path.exists(raw_file)
 - assert data['atoms'] == 'mock'
 
 ### test_save_project_redirect_to_save_as
-_No description provided._
+_Verify that 'save' redirects to 'save as' if the current file is not a project file._
 
 - assert mock_save_as.called
 
 ### test_load_raw_data_success
-_No description provided._
+_Verify successful loading of a raw project file._
 
 - assert mock_set_state.called
 - assert io.current_file_path == raw_file
 
 ### test_load_json_data_invalid_format
-_No description provided._
+_Verify error handling for invalid JSON format in project files._
 
 - assert mock_warn.called
 
 ### test_open_project_file_dispatch
-_No description provided._
+_Verify dispatching to correct load method based on file extension._
 
 - assert mock_json.called
 - assert mock_raw.called
 
 ### test_save_as_json_trigger
-_No description provided._
+_Verify triggering of 'save as' for JSON format._
 
 - assert os.path.exists(save_path)
 
 ### test_load_raw_data_error_paths
-_No description provided._
+_Verify error handling during raw data loading (file not found, corrupt)._
 
+- io.statusBar().showMessage.assert_called_with('File not found: non_existent.pmeraw')
 - assert io.statusBar().showMessage.called
+- io.statusBar().showMessage.assert_called()
+- io.statusBar().showMessage.assert_called_with('Invalid project file format: Corrupt')
 
 ### test_open_project_file_unsaved_check
-_No description provided._
+_Verify that 'open project' checks for unsaved changes before proceeding._
 
 - assert not mock_open.called
 
 ### test_save_project_io_error
-_No description provided._
+_Verify handling of I/O errors during save._
 
+- io.statusBar().showMessage.assert_called_with('File I/O error: Permission denied')
 - assert io.statusBar().showMessage.called
 
 ### test_load_json_data_version_mismatch
-_No description provided._
+_Verify warning when loading a project from a newer software version._
 
 - assert mock_info.called
 - assert 'version 2.0' in mock_info.call_args[0][2]
 
 ### test_project_save_load_full_cycle
-_Test full cycle of project save and load._
+_Verify a complete save-load cycle for a project._
 
 - assert os.path.exists(project_file)
 - assert mock_load_json.called
@@ -1392,24 +1446,25 @@ _Test full cycle of project save and load._
 - assert atoms[0]['charge'] == 1
 
 ### test_save_project_no_data_error
-_Test save_project with no data returns error._
+_Verify error message when saving project without data._
 
+- io.statusBar().showMessage.assert_called_with('Error: Nothing to save.')
 - assert io.statusBar().showMessage.called
 
 ### test_save_project_default_filename
-_Test save_project_as uses current_file_path to suggest filename._
+_Verify that 'save as' suggests a reasonable default filename._
 
 - assert suggested_path == expected
 - assert args[2] == 'untitled'
 
 ### test_save_project_extension_enforcement
-_Test that extensions are enforced in save_project_as._
+_Verify that correct file extensions are enforced when saving._
 
 - assert io.current_file_path == expected_path
 - assert os.path.exists(expected_path)
 
 ### test_save_project_success_state_update
-_Test state updates after successful save._
+_Verify that application state is updated correctly after a successful save._
 
 - assert io.has_unsaved_changes is False
 - assert io.current_file_path == save_path
@@ -1481,6 +1536,7 @@ _No description provided._
 ### test_scene_keypress_delete
 _No description provided._
 
+- mock_delete.assert_called()
 - assert mock_delete.called
 
 ### test_scene_maintenance_methods
@@ -1523,6 +1579,7 @@ _No description provided._
 ### test_scene_right_click_bond_delete
 _Test right-click deletion on a bond._
 
+- mock_del.assert_called()
 - assert len(mock_parser_host.data.bonds) == 0
 - assert mock_parser_host.push_undo_state.called
 
@@ -1571,6 +1628,7 @@ _No description provided._
 ### test_delete_selected_items
 _No description provided._
 
+- mock_delete.assert_called()
 - assert mock_delete.called
 
 ### test_double_click_select_component
@@ -1584,13 +1642,16 @@ _No description provided._
 ### test_scene_key_event_dispatch
 _Test key events like '4' (template), '.' (radical), +/- (charge)._
 
+- mock_parser_host.set_mode_and_update_toolbar.assert_called_with('template_benzene')
 - assert atom_item.charge == 1
 - assert scene.data.atoms[aid]['charge'] == 1
 
 ### test_scene_update_template_preview_logic
 _Test update_template_preview with different targets._
 
+- scene.template_preview.set_geometry.assert_called()
 - assert len(points) == 6
+- scene.template_preview.set_geometry.assert_called()
 - assert 'items' in scene.template_context
 - assert scene.template_context['items'][0] == atom_item
 
@@ -1673,11 +1734,13 @@ _Chiral SMILES should produce at least one wedge or dash bond._
 ### test_smiles_invalid_shows_error
 _Invalid SMILES should trigger status bar error, not crash._
 
+- mock_parser_host.statusBar().showMessage.assert_called()
 - assert 'Invalid' in last_msg or 'Error' in last_msg
 
 ### test_smiles_empty_shows_error
 _Empty SMILES should trigger error message._
 
+- mock_parser_host.statusBar().showMessage.assert_called()
 - assert mock_parser_host.statusBar().showMessage.called
 
 ### test_inchi_ethanol
@@ -1694,6 +1757,7 @@ _Caffeine InChI should produce correct molecular formula._
 ### test_inchi_invalid_shows_error
 _Invalid InChI should show error, not crash._
 
+- mock_parser_host.statusBar().showMessage.assert_called()
 - assert 'Invalid' in last_msg or 'Error' in last_msg
 
 ## tests/integration/test_calculation_worker.py
@@ -2072,6 +2136,7 @@ _MoleculeScene: ベンゼンテンプレートの描画_
 ### test_open_settings_dialog
 _MainWindow: 設定ダイアログを開くテスト_
 
+- QDialog.exec.assert_called()
 - assert QDialog.exec.called
 
 ### test_toggle_measurement_mode
@@ -2130,11 +2195,14 @@ _3D編集: 3D編集ダイアログが起動するか_
 - assert window.translation_action.isEnabled() == True
 - assert window.align_menu.isEnabled() == True
 - assert window.planarize_action.isEnabled() == True
+- QDialog.show.assert_called()
 - assert len(window.active_3d_dialogs) == 0
+- QDialog.show.assert_called()
 
 ### test_save_project_as
 _プロジェクト保存: "Save Project As..." のテスト_
 
+- mocker_json_dump.assert_called_once()
 - assert window.has_unsaved_changes == False
 - assert window.current_file_path == '/fake/save.pmeprj'
 - assert 'Project saved to' in window.statusBar().currentMessage()
@@ -2156,8 +2224,10 @@ _3D原子情報表示: ID, 座標, シンボル表示の切り替えテスト_
 
 - assert window.current_mol is not None
 - assert window.atom_info_display_mode == 'id'
+- mock_add_labels.assert_called()
 - assert window.current_atom_info_labels is not None
 - assert window.atom_info_display_mode == 'coords'
+- mock_add_labels.assert_called()
 - assert window.atom_info_display_mode is None
 - assert window.current_atom_info_labels is None
 
@@ -2165,7 +2235,9 @@ _3D原子情報表示: ID, 座標, シンボル表示の切り替えテスト_
 _ユーザーテンプレート: ダイアログを開き、現在の構造を保存し、使用するテスト_
 
 - assert action_open_dialog is not None
+- QDialog.show.assert_called()
 - assert len(window.data.atoms) == 1
+- mocker_json_dump.assert_called_once()
 - assert QMessageBox.information.called
 - assert any(("Template 'test' saved" in str(a) for a in called_args))
 - assert len(window.data.atoms) == 2
@@ -2186,12 +2258,16 @@ _暗黙の水素: 描画操作後に自動更新されるかのテスト_
 ### test_drag_drop_mol_file_on_3d_view
 _D&D: 3Dビュー領域への .mol ファイルドロップ (モック)_
 
+- mock_load_3d.assert_called_once_with(file_path='/fake/drop.mol')
 - assert mock_load_3d.called
+- mock_event.acceptProposedAction.assert_called_once()
 
 ### test_drag_drop_mol_file_on_2d_view
 _D&D: 2Dビュー領域への .mol ファイルドロップ (モック)_
 
+- mock_load_2d.assert_called_once_with(file_path='/fake/drop.mol')
 - assert mock_load_2d.called
+- mock_event.acceptProposedAction.assert_called_once()
 
 ### test_project_save_load_round_trip
 _プロジェクト保存/読込: 保存したファイルを実際に読み込んで復元を確認する統合テスト_

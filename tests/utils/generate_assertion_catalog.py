@@ -36,6 +36,15 @@ def extract_assertions(filepath):
                         assertions.append("assert [expression]")
                 except:
                     assertions.append("assert [complex expression]")
+            elif isinstance(subnode, ast.Expr) and isinstance(subnode.value, ast.Call):
+                # Detect mock assertions like mock.assert_called_with(...)
+                try:
+                    if hasattr(ast, "unparse"):
+                        call_str = ast.unparse(subnode.value)
+                        if "assert" in call_str:
+                            assertions.append(call_str)
+                except:
+                    pass
 
         results.append(
             {"name": display_name, "description": summary, "assertions": assertions}

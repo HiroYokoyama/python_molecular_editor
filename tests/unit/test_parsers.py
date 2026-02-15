@@ -24,6 +24,7 @@ class DummyParser(MainWindowMolecularParsers):
 
 
 def test_fix_mol_block(mock_parser_host):
+    """Verify the logic that fixes malformed MOL block counts lines."""
     parser = DummyParser(mock_parser_host)
     invalid_counts = " 3 2  0  0  0  0  0  0  0  0\n"
     mol_block = "\n  Title\n\n" + invalid_counts + "  0.0 0.0 0.0 C\n"
@@ -34,6 +35,7 @@ def test_fix_mol_block(mock_parser_host):
 
 
 def test_load_mol_file_logic(mock_parser_host, tmp_path):
+    """Verify loading of a standard MOL file."""
     parser = DummyParser(mock_parser_host)
     ref_mol = Chem.MolFromSmiles("CC")
     mol_content = Chem.MolToMolBlock(ref_mol)
@@ -51,6 +53,7 @@ def test_load_mol_file_logic(mock_parser_host, tmp_path):
 
 
 def test_xyz_parsing_logic(mock_parser_host, tmp_path):
+    """Verify basic XYZ parsing logic."""
     parser = DummyParser(mock_parser_host)
     # NO LEADING SPACES in XYZ
     xyz_content = (
@@ -66,6 +69,7 @@ def test_xyz_parsing_logic(mock_parser_host, tmp_path):
 
 
 def test_load_xyz_file_with_estimation(mock_parser_host, tmp_path):
+    """Verify XYZ loading with automatic bond estimation."""
     parser = DummyParser(mock_parser_host)
     xyz_content = "2\nEthane\nC 0.0 0.0 0.0\nC 1.5 0.0 0.0\n"
     xyz_file = tmp_path / "ethane.xyz"
@@ -81,6 +85,7 @@ def test_load_xyz_file_with_estimation(mock_parser_host, tmp_path):
 
 
 def test_save_as_mol_logic(mock_parser_host, tmp_path):
+    """Verify saving a molecule as a MOL file."""
     parser = DummyParser(mock_parser_host)
     parser.data.add_atom("C", QPointF(0, 0))
     save_path = str(tmp_path / "saved.mol")

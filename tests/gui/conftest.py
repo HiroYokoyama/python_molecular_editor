@@ -545,13 +545,34 @@ if moleditpy is not None:
 @pytest.fixture(scope="session")
 def app(request):
     """
-    QApplication のセッションワイドなインスタンスを作成します。
+    QApplication のセッションワイドなインスタンスを作成し、終了時にクリーンアップします。
     """
     # QApplication.instance() が None の場合のみ新しいインスタンスを作成
     q_app = QApplication.instance()
     if q_app is None:
         q_app = QApplication(sys.argv)
-    return q_app
+    
+    yield q_app
+
+    # Robust teardown sequence to prevent 0x80010108 RPC errors and access violations
+    try:
+        q_app.closeAllWindows()
+        # Process events multiple times to ensure all windows are destroyed and events are handled
+        for _ in range(10):
+            q_app.processEvents()
+
+        # Force garbage collection to release Python-wrapped Qt objects
+        import gc
+        gc.collect()
+
+        # Additional event processing after GC often helps QObjects finalize
+        q_app.processEvents()
+
+    except Exception:
+        import traceback
+        traceback.print_exc()
+
+    q_app.quit()
 
 
 _CACHED_MAIN_WINDOW_CLASS = None
@@ -1713,6 +1734,18 @@ def window(app, qtbot, monkeypatch):
     finally:
         # --- クリーンアップ ---
         try:
+            # Forcefully prevent "unsaved changes" dialogs
+            try:
+                main_window.has_unsaved_changes = False
+            except Exception:
+                pass
+
+            # Override closeEvent to avoid any blocking logic
+            try:
+                main_window.closeEvent = lambda event: event.accept()
+            except Exception:
+                pass
+
             # Stop any active threads explicitly before closing
             active_threads = list(
                 getattr(main_window, "_active_calc_threads", []) or []
@@ -1721,34 +1754,31 @@ def window(app, qtbot, monkeypatch):
                 try:
                     if hasattr(thr, "isRunning") and thr.isRunning():
                         thr.quit()
-                        thr.wait(200)
+                        thr.wait(100)
                 except Exception:
-                    import traceback
-
-                    traceback.print_exc()
+                    pass
 
             # Aggressive auto-close: ensure all top-level widgets are closed
             # to satisfy "auto close window" request and prevent COM hangs.
+            try:
+                main_window.hide()
+                main_window.close()
+                main_window.deleteLater()
+            except Exception:
+                pass
+
             for widget in QApplication.topLevelWidgets():
                 try:
                     widget.close()
-                    try:
-                        widget.deleteLater()
-                    except Exception:
-                        import traceback
-
-                        traceback.print_exc()
+                    widget.deleteLater()
                 except Exception:
-                    import traceback
-
-                    traceback.print_exc()
+                    pass
 
             # Thoroughly process events to clear any pending COM calls or slots
-            for _ in range(5):
+            for _ in range(10):
                 app.processEvents()
         except Exception:
             import traceback
-
             traceback.print_exc()
 
         # Attempt to de-initialize colorama to prevent COM/RPC fatal exceptions on Windows teardown

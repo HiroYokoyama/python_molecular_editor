@@ -49,6 +49,7 @@ class DummyProjectIo(MainWindowProjectIo):
 
 
 def test_save_project_no_data(mock_parser_host):
+    """Verify error message when trying to save an empty project."""
     io = DummyProjectIo(mock_parser_host)
     io.data.atoms = {}
     io.current_mol = None
@@ -58,6 +59,7 @@ def test_save_project_no_data(mock_parser_host):
 
 
 def test_save_project_overwrite_json(mock_parser_host, tmp_path):
+    """Verify overwriting an existing JSON project file."""
     io = DummyProjectIo(mock_parser_host)
     project_file = str(tmp_path / "existing.pmeprj")
     io.current_file_path = project_file
@@ -73,6 +75,7 @@ def test_save_project_overwrite_json(mock_parser_host, tmp_path):
 
 
 def test_save_project_overwrite_raw(mock_parser_host, tmp_path):
+    """Verify overwriting an existing raw (pickle) project file."""
     io = DummyProjectIo(mock_parser_host)
     raw_file = str(tmp_path / "existing.pmeraw")
     io.current_file_path = raw_file
@@ -87,6 +90,7 @@ def test_save_project_overwrite_raw(mock_parser_host, tmp_path):
 
 
 def test_save_project_redirect_to_save_as(mock_parser_host):
+    """Verify that 'save' redirects to 'save as' if the current file is not a project file."""
     io = DummyProjectIo(mock_parser_host)
     io.current_file_path = "some_molecule.mol"
     io.data.atoms = {1: {"symbol": "C"}}
@@ -97,6 +101,7 @@ def test_save_project_redirect_to_save_as(mock_parser_host):
 
 
 def test_load_raw_data_success(mock_parser_host, tmp_path):
+    """Verify successful loading of a raw project file."""
     io = DummyProjectIo(mock_parser_host)
     raw_file = str(tmp_path / "test.pmeraw")
     sample_data = {"atoms": {1: "C"}}
@@ -110,6 +115,7 @@ def test_load_raw_data_success(mock_parser_host, tmp_path):
 
 
 def test_load_json_data_invalid_format(mock_parser_host, tmp_path):
+    """Verify error handling for invalid JSON format in project files."""
     io = DummyProjectIo(mock_parser_host)
     json_file = str(tmp_path / "wrong.pmeprj")
     with open(json_file, "w") as f:
@@ -121,6 +127,7 @@ def test_load_json_data_invalid_format(mock_parser_host, tmp_path):
 
 
 def test_open_project_file_dispatch(mock_parser_host):
+    """Verify dispatching to correct load method based on file extension."""
     io = DummyProjectIo(mock_parser_host)
     with (
         patch.object(io, "load_json_data") as mock_json,
@@ -134,6 +141,7 @@ def test_open_project_file_dispatch(mock_parser_host):
 
 
 def test_save_as_json_trigger(mock_parser_host, tmp_path):
+    """Verify triggering of 'save as' for JSON format."""
     io = DummyProjectIo(mock_parser_host)
     io.data.atoms = {1: "C"}
     save_path = str(tmp_path / "exported.pmeprj")
@@ -150,6 +158,7 @@ def test_save_as_json_trigger(mock_parser_host, tmp_path):
 
 
 def test_load_raw_data_error_paths(mock_parser_host):
+    """Verify error handling during raw data loading (file not found, corrupt)."""
     io = DummyProjectIo(mock_parser_host)
     # File not found
     io.load_raw_data("non_existent.pmeraw")
@@ -169,6 +178,7 @@ def test_load_raw_data_error_paths(mock_parser_host):
 
 
 def test_open_project_file_unsaved_check(mock_parser_host):
+    """Verify that 'open project' checks for unsaved changes before proceeding."""
     io = DummyProjectIo(mock_parser_host)
     # Mock check_unsaved_changes to return False (cancel)
     # Note: DummyProjectIo mocks check_unsaved_changes to return True by default.
@@ -181,6 +191,7 @@ def test_open_project_file_unsaved_check(mock_parser_host):
 
 
 def test_save_project_io_error(mock_parser_host, tmp_path):
+    """Verify handling of I/O errors during save."""
     io = DummyProjectIo(mock_parser_host)
     io.current_file_path = str(tmp_path / "readonly.pmeprj")
     io.data.atoms = {1: "C"}
@@ -197,6 +208,7 @@ def test_save_project_io_error(mock_parser_host, tmp_path):
 
 
 def test_load_json_data_version_mismatch(mock_parser_host, tmp_path):
+    """Verify warning when loading a project from a newer software version."""
     io = DummyProjectIo(mock_parser_host)
     json_path = tmp_path / "future.pmeprj"
     with open(json_path, "w") as f:
@@ -210,6 +222,7 @@ def test_load_json_data_version_mismatch(mock_parser_host, tmp_path):
 
 
 def test_project_save_load_full_cycle(mock_parser_host, tmp_path):
+    """Verify a complete save-load cycle for a project."""
     """Test full cycle of project save and load."""
     io = DummyProjectIo(mock_parser_host)
     # Populate some data
@@ -243,6 +256,7 @@ def test_project_save_load_full_cycle(mock_parser_host, tmp_path):
 
 
 def test_save_project_no_data_error(mock_parser_host):
+    """Verify error message when saving project without data."""
     """Test save_project with no data returns error."""
     io = DummyProjectIo(mock_parser_host)
     io.data.atoms = {}
@@ -254,6 +268,7 @@ def test_save_project_no_data_error(mock_parser_host):
 
 
 def test_save_project_default_filename(mock_parser_host, tmp_path):
+    """Verify that 'save as' suggests a reasonable default filename."""
     """Test save_project_as uses current_file_path to suggest filename."""
     io = DummyProjectIo(mock_parser_host)
     io.data.atoms = {1: {"symbol": "C"}}
@@ -284,6 +299,7 @@ def test_save_project_default_filename(mock_parser_host, tmp_path):
 
 
 def test_save_project_extension_enforcement(mock_parser_host, tmp_path):
+    """Verify that correct file extensions are enforced when saving."""
     """Test that extensions are enforced in save_project_as."""
     io = DummyProjectIo(mock_parser_host)
     io.data.atoms = {1: {"symbol": "C"}}
@@ -307,6 +323,7 @@ def test_save_project_extension_enforcement(mock_parser_host, tmp_path):
 
 
 def test_save_project_success_state_update(mock_parser_host, tmp_path):
+    """Verify that application state is updated correctly after a successful save."""
     """Test state updates after successful save."""
     io = DummyProjectIo(mock_parser_host)
     io.data.atoms = {1: {"symbol": "C"}}

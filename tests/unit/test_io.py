@@ -28,6 +28,7 @@ class DummyProjectIo(MainWindowProjectIo, MainWindowMolecularParsers):
 
 
 def test_project_save_load_logic(mock_parser_host, tmp_path):
+    """Verify project save and load logic for .pmeprj files."""
     io_handler = DummyProjectIo(mock_parser_host)
     # Use scene.create_atom to ensure atoms have 'item' mocks (required for create_json_data)
     io_handler.scene.create_atom("C", QPointF(10.5, 20.7), charge=1)
@@ -51,6 +52,7 @@ def test_project_save_load_logic(mock_parser_host, tmp_path):
 
 
 def test_xyz_export_logic(mock_parser_host, tmp_path):
+    """Verify XYZ export logic."""
     io_handler = DummyProjectIo(mock_parser_host)
     mol = Chem.MolFromSmiles("CC")
     AllChem.EmbedMolecule(mol, AllChem.ETKDG())

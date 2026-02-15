@@ -54,6 +54,7 @@ def test_calculation_worker_halt_logic(worker):
 
     # Should emit error with "Halted"
     assert any("Halted" in str(val) for val in error_captor.emitted_values)
+    assert error_captor.emitted_values[0] == (123, "Halted")
 
 
 def test_calculation_worker_direct_mode(worker):
@@ -158,9 +159,9 @@ def test_calculation_worker_rdkit_embedding_fail_fallback(worker):
 
     # If EmbedMolecule returns -1, it doesn't raise Exception, so it proceeds to constraint embedding
     with (
-        patch("rdkit.Chem.AllChem.EmbedMolecule", return_value=-1),
+        patch("moleditpy.modules.calculation_worker.AllChem.EmbedMolecule", return_value=-1),
         patch(
-            "rdkit.Chem.AllChem.GetMoleculeBoundsMatrix",
+            "moleditpy.modules.calculation_worker.AllChem.GetMoleculeBoundsMatrix",
             side_effect=Exception("Bounds fail"),
         ),
     ):
@@ -169,4 +170,10 @@ def test_calculation_worker_rdkit_embedding_fail_fallback(worker):
     all_msgs = [str(m).lower() for m in status_captor.emitted_values] + [
         str(m).lower() for m in error_captor.emitted_values
     ]
-    assert any("failed" in m or "error" in m for m in all_msgs)
+    all_msgs_str = " | ".join(all_msgs)
+    
+    # Check for any indication of the failure
+    # It might fail with "constraint embedding failed" or "rdkit 3d conversion failed"
+    # depending on whether the bounds matrix patch took effect.
+    assert "failed" in all_msgs_str or "error" in all_msgs_str, f"No failure message found in: {all_msgs_str}"
+    assert "rdkit" in all_msgs_str, f"Expected RDKit-related failure in: {all_msgs_str}"

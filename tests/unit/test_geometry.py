@@ -47,8 +47,17 @@ def test_3d_bond_lengths(qtbot):
     assert cc_bond is not None
     dist = rdMolTransforms.GetBondLength(conf, cc_bond[0], cc_bond[1])
 
-    # Ethane C-C length is approx 1.54 A. Tolerance 0.05 A
-    assert 1.50 < dist < 1.60
+    # Ethane C-C length is approx 1.54 A. Tightening tolerance to roughly 0.03 A
+    assert 1.51 < dist < 1.57
+
+    # Add sp3 angle verification (e.g., H-C-H or H-C-C should be ~109.5)
+    # We find a C atom and its neighbors
+    c_idx = cc_bond[0]
+    neighbors = [n.GetIdx() for n in mol.GetAtomWithIdx(c_idx).GetNeighbors()]
+    if len(neighbors) >= 2:
+        angle = rdMolTransforms.GetAngleDeg(conf, neighbors[0], c_idx, neighbors[1])
+        # Typical range for sp3 in RDKit ETKDG is roughly 107-112
+        assert 107 < angle < 112
 
 
 from moleditpy.modules.mirror_dialog import MirrorDialog

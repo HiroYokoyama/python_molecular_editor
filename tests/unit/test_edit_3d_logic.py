@@ -50,6 +50,7 @@ class DummyEdit3d(MainWindowEdit3d):
 
 
 def test_calculate_distance_logic(mock_parser_host):
+    """Verify calculation of distance between 3D points."""
     edit3d = DummyEdit3d(mock_parser_host)
     edit3d.atom_positions_3d = [[0.0, 0.0, 0.0], [1.5, 0.0, 0.0]]
     dist = edit3d.calculate_distance(0, 1)
@@ -57,6 +58,7 @@ def test_calculate_distance_logic(mock_parser_host):
 
 
 def test_calculate_angle_logic(mock_parser_host):
+    """Verify calculation of angle between three 3D points."""
     edit3d = DummyEdit3d(mock_parser_host)
     edit3d.atom_positions_3d = [[1.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 1.0, 0.0]]
     angle = edit3d.calculate_angle(0, 1, 2)
@@ -64,6 +66,7 @@ def test_calculate_angle_logic(mock_parser_host):
 
 
 def test_calculate_dihedral_logic(mock_parser_host):
+    """Verify calculation of dihedral angle between four 3D points."""
     edit3d = DummyEdit3d(mock_parser_host)
     # Ensure 3D vectors (non-collinear for cross product)
     edit3d.atom_positions_3d = [
@@ -78,6 +81,7 @@ def test_calculate_dihedral_logic(mock_parser_host):
 
 
 def test_handle_measurement_atom_selection(mock_parser_host):
+    """Verify handling of atom selection for measurements."""
     edit3d = DummyEdit3d(mock_parser_host)
     edit3d.selected_atoms_for_measurement = []
     edit3d.handle_measurement_atom_selection(10)
@@ -89,6 +93,7 @@ def test_handle_measurement_atom_selection(mock_parser_host):
 
 
 def test_clear_3d_selection(mock_parser_host):
+    """Verify clearing of 3D selection highlights."""
     edit3d = DummyEdit3d(mock_parser_host)
     mock_actor = MagicMock()
     mock_actor.name = "atom_10_highlight"
@@ -99,6 +104,7 @@ def test_clear_3d_selection(mock_parser_host):
 
 
 def test_toggle_measurement_mode(mock_parser_host):
+    """Verify toggling of measurement mode."""
     edit3d = DummyEdit3d(mock_parser_host)
     edit3d.toggle_measurement_mode(True)
     assert edit3d.measurement_mode is True
@@ -109,6 +115,7 @@ def test_toggle_measurement_mode(mock_parser_host):
 
 
 def test_calculate_and_display_measurements_trigger(mock_parser_host):
+    """Verify triggering of measurement calculation and display."""
     edit3d = DummyEdit3d(mock_parser_host)
     edit3d.selected_atoms_for_measurement = [0, 1]
     edit3d.atom_positions_3d = [[0.0, 0.0, 0.0], [1.5, 0.0, 0.0]]

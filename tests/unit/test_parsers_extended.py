@@ -112,6 +112,7 @@ def kill_all_dialogs():
 
 
 def test_load_mol_file_fallback_to_sd_supplier(mock_parser_host, tmp_path):
+    """Verify fallback to ForwardSDMolSupplier when standard MolBlock reading fails."""
     parser = DummyParser(mock_parser_host)
     mol1 = Chem.MolFromSmiles("C")
     sdf_path = tmp_path / "test.sdf"
@@ -125,6 +126,7 @@ def test_load_mol_file_fallback_to_sd_supplier(mock_parser_host, tmp_path):
 
 
 def test_load_xyz_always_ask_charge(mock_parser_host, tmp_path):
+    """Verify that charge is requested from user when 'always_ask_charge' is enabled."""
     parser = DummyParser(mock_parser_host)
     parser.settings["always_ask_charge"] = True
     xyz_path = tmp_path / "ask.xyz"
@@ -139,6 +141,7 @@ def test_load_xyz_always_ask_charge(mock_parser_host, tmp_path):
 
 
 def test_load_xyz_charge_loop_cancel(mock_parser_host, tmp_path):
+    """Verify handling of user cancellation during the charge input loop."""
     parser = DummyParser(mock_parser_host)
     path = tmp_path / "cancel.xyz"
     path.write_text("1\nC\nC 0 0 0\n")
@@ -161,6 +164,7 @@ def test_load_xyz_unrecognized_symbol(mock_parser_host, tmp_path):
 
 
 def test_save_as_xyz_logic(mock_parser_host, tmp_path):
+    """Verify saving a molecule as an XYZ file."""
     parser = DummyParser(mock_parser_host)
     parser.data.add_atom("O", QPointF(0, 0))
     mol = Chem.MolFromSmiles("O")
@@ -175,6 +179,7 @@ def test_save_as_xyz_logic(mock_parser_host, tmp_path):
 
 
 def test_load_mol_file_with_v2000_fix(mock_parser_host, tmp_path):
+    """Verify that malformed V2000 headers are fixed automatically during MOL load."""
     parser = DummyParser(mock_parser_host)
     mol = Chem.MolFromSmiles("C")
     AllChem.Compute2DCoords(mol)
@@ -188,6 +193,7 @@ def test_load_mol_file_with_v2000_fix(mock_parser_host, tmp_path):
 
 
 def test_load_xyz_recovery_loop_retries(mock_parser_host, tmp_path):
+    """Verify that the XYZ load recovery loop handles retries correctly."""
     parser = DummyParser(mock_parser_host)
     path = tmp_path / "retry.xyz"
     path.write_text("1\nC\nC 0 0 0\n")
@@ -201,6 +207,7 @@ def test_load_xyz_recovery_loop_retries(mock_parser_host, tmp_path):
 
 
 def test_load_mol_file_not_found(mock_parser_host):
+    """Verify error handling when a MOL file is not found."""
     parser = DummyParser(mock_parser_host)
     parser.load_mol_file("missing_parser_xyz_final.mol")
     parser.statusBar().showMessage.assert_any_call(
@@ -210,6 +217,7 @@ def test_load_mol_file_not_found(mock_parser_host):
 
 
 def test_load_mol_file_invalid_format(mock_parser_host, tmp_path):
+    """Verify error handling for invalid MOL file content."""
     parser = DummyParser(mock_parser_host)
     bad_mol = tmp_path / "bad.mol"
     bad_mol.write_text("GARBAGE")
@@ -224,6 +232,7 @@ def test_load_mol_file_invalid_format(mock_parser_host, tmp_path):
 
 
 def test_save_as_xyz_charge_mult(mock_parser_host, tmp_path):
+    """Verify that charge and multiplicity are written to XYZ file headers."""
     parser = DummyParser(mock_parser_host)
     mol = Chem.MolFromSmiles("[C+]")
     AllChem.EmbedMolecule(mol)
@@ -238,6 +247,7 @@ def test_save_as_xyz_charge_mult(mock_parser_host, tmp_path):
 
 
 def test_load_mol_file_malformed_counts(mock_parser_host, tmp_path):
+    """Verify fixing of malformed counts lines in MOL files."""
     parser = DummyParser(mock_parser_host)
     mol = Chem.MolFromSmiles("C")
     AllChem.Compute2DCoords(mol)
@@ -252,6 +262,7 @@ def test_load_mol_file_malformed_counts(mock_parser_host, tmp_path):
 
 
 def test_load_xyz_complex_recovery_branches(mock_parser_host, tmp_path):
+    """Verify complex error recovery branches during XYZ loading."""
     parser = DummyParser(mock_parser_host)
     path = tmp_path / "complex.xyz"
     path.write_text("1\nC\nC 0 0 0\n")
@@ -271,6 +282,7 @@ def test_load_xyz_complex_recovery_branches(mock_parser_host, tmp_path):
 
 
 def test_save_as_mol_no_current_path(mock_parser_host, tmp_path):
+    """Verify saving as MOL when no current file path is set."""
     parser = DummyParser(mock_parser_host)
     parser.current_file_path = None
     save_path = str(tmp_path / "new_save.mol")
@@ -286,6 +298,7 @@ def test_save_as_mol_no_current_path(mock_parser_host, tmp_path):
 
 
 def test_load_xyz_skip_chemistry_via_button(mock_parser_host, tmp_path):
+    """Verify skip chemistry check flag is set when user chooses to skip."""
     parser = DummyParser(mock_parser_host)
     xyz_path = tmp_path / "c2.xyz"
     xyz_path.write_text("2\nC2\nC 0.0 0.0 0.0\nC 1.5 0.0 0.0\n")
@@ -295,11 +308,4 @@ def test_load_xyz_skip_chemistry_via_button(mock_parser_host, tmp_path):
     assert mol.HasProp("_xyz_skip_checks") or getattr(mol, "_xyz_skip_checks", False)
 
 
-def test_fix_mol_block(mock_parser_host):
-    parser = DummyParser(mock_parser_host)
-    invalid_counts = " 3 2  0  0  0  0  0  0  0  0\n"
-    mol_block = "\n  Title\n\n" + invalid_counts + "  0.0 0.0 0.0 C\n"
-    fixed = parser.fix_mol_block(mol_block)
-    lines = fixed.splitlines()
-    assert "V2000" in lines[3]
-    assert len(lines[3]) >= 39
+
