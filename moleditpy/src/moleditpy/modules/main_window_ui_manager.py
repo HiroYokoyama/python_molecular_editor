@@ -22,7 +22,9 @@ import vtk
 try:
     pass
 except Exception:
-    import traceback; traceback.print_exc()
+    import traceback
+
+    traceback.print_exc()
 
 # PyQt6 Modules
 from PyQt6.QtCore import QEvent, Qt, QTimer
@@ -36,7 +38,8 @@ from PyQt6.QtWidgets import (
 
 try:
     from PyQt6 import sip as _sip  # type: ignore
-    _sip_isdeleted = getattr(_sip, 'isdeleted', None)
+
+    _sip_isdeleted = getattr(_sip, "isdeleted", None)
 except Exception:
     _sip = None
     _sip_isdeleted = None
@@ -51,69 +54,80 @@ except Exception:
 
 # --- クラス定義 ---
 class MainWindowUiManager(object):
-    """ main_window.py から分離された機能クラス """
-
+    """main_window.py から分離された機能クラス"""
 
     def update_status_bar(self, message):
         """ワーカースレッドからのメッセージでステータスバーを更新するスロット"""
         self.statusBar().showMessage(message)
 
     def set_mode(self, mode_str):
-        prev_mode = getattr(self.scene, 'mode', None)
+        prev_mode = getattr(self.scene, "mode", None)
         self.scene.mode = mode_str
         self.view_2d.setMouseTracking(True)
         # テンプレートモードから離れる場合はゴーストを消す
-        if prev_mode and prev_mode.startswith('template') and not mode_str.startswith('template'):
+        if (
+            prev_mode
+            and prev_mode.startswith("template")
+            and not mode_str.startswith("template")
+        ):
             self.scene.clear_template_preview()
-        elif not mode_str.startswith('template'):
+        elif not mode_str.startswith("template"):
             self.scene.template_preview.hide()
 
         # カーソル形状の設定
-        if mode_str == 'select':
+        if mode_str == "select":
             self.view_2d.setCursor(Qt.CursorShape.ArrowCursor)
-        elif mode_str.startswith(('atom', 'bond', 'template')):
+        elif mode_str.startswith(("atom", "bond", "template")):
             self.view_2d.setCursor(Qt.CursorShape.CrossCursor)
-        elif mode_str.startswith(('charge', 'radical')):
+        elif mode_str.startswith(("charge", "radical")):
             self.view_2d.setCursor(Qt.CursorShape.CrossCursor)
         else:
             self.view_2d.setCursor(Qt.CursorShape.ArrowCursor)
 
-        if mode_str.startswith('atom'):
-            self.scene.current_atom_symbol = mode_str.split('_')[1]
-            self.statusBar().showMessage(f"Mode: Draw Atom ({self.scene.current_atom_symbol})")
+        if mode_str.startswith("atom"):
+            self.scene.current_atom_symbol = mode_str.split("_")[1]
+            self.statusBar().showMessage(
+                f"Mode: Draw Atom ({self.scene.current_atom_symbol})"
+            )
             self.view_2d.setDragMode(QGraphicsView.DragMode.NoDrag)
             self.view_2d.setMouseTracking(True)
             self.scene.bond_order = 1
             self.scene.bond_stereo = 0
-        elif mode_str.startswith('bond'):
-            self.scene.current_atom_symbol = 'C'
-            parts = mode_str.split('_')
+        elif mode_str.startswith("bond"):
+            self.scene.current_atom_symbol = "C"
+            parts = mode_str.split("_")
             self.scene.bond_order = int(parts[1])
             self.scene.bond_stereo = int(parts[2]) if len(parts) > 2 else 0
-            stereo_text = {0: "", 1: " (Wedge)", 2: " (Dash)"}.get(self.scene.bond_stereo, "")
-            self.statusBar().showMessage(f"Mode: Draw Bond (Order: {self.scene.bond_order}{stereo_text})")
+            stereo_text = {0: "", 1: " (Wedge)", 2: " (Dash)"}.get(
+                self.scene.bond_stereo, ""
+            )
+            self.statusBar().showMessage(
+                f"Mode: Draw Bond (Order: {self.scene.bond_order}{stereo_text})"
+            )
             self.view_2d.setDragMode(QGraphicsView.DragMode.NoDrag)
             self.view_2d.setMouseTracking(True)
-        elif mode_str.startswith('template'):
-            if mode_str.startswith('template_user'):
+        elif mode_str.startswith("template"):
+            if mode_str.startswith("template_user"):
                 # User template mode
-                template_name = mode_str.replace('template_user_', '')
+                template_name = mode_str.replace("template_user_", "")
                 self.statusBar().showMessage(f"Mode: User Template ({template_name})")
             else:
                 # Built-in template mode
-                self.statusBar().showMessage(f"Mode: {mode_str.split('_')[1].capitalize()} Template")
+                self.statusBar().showMessage(
+                    f"Mode: {mode_str.split('_')[1].capitalize()} Template"
+                )
             self.view_2d.setDragMode(QGraphicsView.DragMode.NoDrag)
-        elif mode_str == 'charge_plus':
+        elif mode_str == "charge_plus":
             self.statusBar().showMessage("Mode: Increase Charge (Click on Atom)")
             self.view_2d.setDragMode(QGraphicsView.DragMode.NoDrag)
-        elif mode_str == 'charge_minus':
+        elif mode_str == "charge_minus":
             self.statusBar().showMessage("Mode: Decrease Charge (Click on Atom)")
             self.view_2d.setDragMode(QGraphicsView.DragMode.NoDrag)
-        elif mode_str == 'radical':
+        elif mode_str == "radical":
             self.statusBar().showMessage("Mode: Toggle Radical (Click on Atom)")
             self.view_2d.setDragMode(QGraphicsView.DragMode.NoDrag)
 
-        else: # Select mode
+        else:  # Select mode
             self.statusBar().showMessage("Mode: Select")
             self.view_2d.setDragMode(QGraphicsView.DragMode.RubberBandDrag)
             self.scene.bond_order = 1
@@ -122,7 +136,7 @@ class MainWindowUiManager(object):
     def set_mode_and_update_toolbar(self, mode_str):
         self.set_mode(mode_str)
         # QAction→QToolButtonのマッピングを取得
-        toolbar = getattr(self, 'toolbar', None)
+        toolbar = getattr(self, "toolbar", None)
         action_to_button = {}
         if toolbar:
             for key, action in self.mode_actions.items():
@@ -144,15 +158,15 @@ class MainWindowUiManager(object):
             btn = action_to_button.get(action)
             if btn:
                 # テンプレート系は青、それ以外はクリア
-                if mode_str.startswith('template'):
+                if mode_str.startswith("template"):
                     btn.setStyleSheet("background-color: #2196F3; color: white;")
                 else:
                     btn.setStyleSheet("")
 
     def activate_select_mode(self):
-        self.set_mode('select')
-        if 'select' in self.mode_actions:
-            self.mode_actions['select'].setChecked(True)
+        self.set_mode("select")
+        if "select" in self.mode_actions:
+            self.mode_actions["select"].setChecked(True)
 
     def eventFilter(self, obj, event):
         if obj is self.plotter and event.type() == QEvent.Type.MouseButtonPress:
@@ -162,19 +176,27 @@ class MainWindowUiManager(object):
     def closeEvent(self, event):
         # Persist settings on exit only when explicitly modified (deferred save)
         try:
-            if getattr(self, 'settings_dirty', False) or self.settings != self.initial_settings:
+            if (
+                getattr(self, "settings_dirty", False)
+                or self.settings != self.initial_settings
+            ):
                 self.save_settings()
                 self.settings_dirty = False
         except Exception:
-            import traceback; traceback.print_exc()
+            import traceback
+
+            traceback.print_exc()
 
         # 未保存の変更がある場合の処理
         if self.has_unsaved_changes:
             reply = QMessageBox.question(
-                self, "Unsaved Changes",
+                self,
+                "Unsaved Changes",
                 "You have unsaved changes. Do you want to save them?",
-                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No | QMessageBox.StandardButton.Cancel,
                 QMessageBox.StandardButton.Yes
+                | QMessageBox.StandardButton.No
+                | QMessageBox.StandardButton.Cancel,
+                QMessageBox.StandardButton.Yes,
             )
 
             if reply == QMessageBox.StandardButton.Yes:
@@ -198,9 +220,13 @@ class MainWindowUiManager(object):
                     try:
                         widget.close()
                     except Exception:
-                        import traceback; traceback.print_exc()
+                        import traceback
+
+                        traceback.print_exc()
         except Exception:
-            import traceback; traceback.print_exc()
+            import traceback
+
+            traceback.print_exc()
 
         # 終了処理
         if self.scene and self.scene.template_preview:
@@ -208,17 +234,23 @@ class MainWindowUiManager(object):
 
         # Clean up any active per-run calculation threads we spawned.
         try:
-            for thr in list(getattr(self, '_active_calc_threads', []) or []):
+            for thr in list(getattr(self, "_active_calc_threads", []) or []):
                 try:
                     thr.quit()
                 except Exception:
-                    import traceback; traceback.print_exc()
+                    import traceback
+
+                    traceback.print_exc()
                 try:
                     thr.wait(200)
                 except Exception:
-                    import traceback; traceback.print_exc()
+                    import traceback
+
+                    traceback.print_exc()
         except Exception:
-            import traceback; traceback.print_exc()
+            import traceback
+
+            traceback.print_exc()
 
         event.accept()
 
@@ -260,7 +292,9 @@ class MainWindowUiManager(object):
                         file_lower = file_path.lower()
 
                         # Built-in extensions
-                        if file_lower.endswith(('.pmeraw', '.pmeprj', '.mol', '.sdf', '.xyz')):
+                        if file_lower.endswith(
+                            (".pmeraw", ".pmeprj", ".mol", ".sdf", ".xyz")
+                        ):
                             event.acceptProposedAction()
                             return
 
@@ -269,7 +303,9 @@ class MainWindowUiManager(object):
 
                         # Plugin drop handlers (accept more liberally for custom logic)
                         # A plugin drop handler might handle it, so accept
-                        if self.plugin_manager and hasattr(self.plugin_manager, 'drop_handlers'):
+                        if self.plugin_manager and hasattr(
+                            self.plugin_manager, "drop_handlers"
+                        ):
                             if len(self.plugin_manager.drop_handlers) > 0:
                                 # Accept any file if drop handlers are registered
                                 # They will check the file type in dropEvent
@@ -295,16 +331,16 @@ class MainWindowUiManager(object):
 
         if file_path:
             # 1. Custom Plugin Handlers
-            if self.plugin_manager and hasattr(self.plugin_manager, 'drop_handlers'):
+            if self.plugin_manager and hasattr(self.plugin_manager, "drop_handlers"):
                 for handler_def in self.plugin_manager.drop_handlers:
                     try:
-                         callback = handler_def['callback']
-                         handled = callback(file_path)
-                         if handled:
-                             event.acceptProposedAction()
-                             return
+                        callback = handler_def["callback"]
+                        handled = callback(file_path)
+                        if handled:
+                            event.acceptProposedAction()
+                            return
                     except Exception as e:
-                         print(f"Error in plugin drop handler: {e}")
+                        print(f"Error in plugin drop handler: {e}")
             # ドロップ位置を取得
             drop_pos = event.position().toPoint()
             # 拡張子に応じて適切な読み込みメソッドを呼び出す
@@ -321,7 +357,9 @@ class MainWindowUiManager(object):
                     if hasattr(self, "load_mol_file"):
                         self.load_mol_file(file_path=file_path)
                     else:
-                        self.statusBar().showMessage("MOL file import not implemented for 2D editor.")
+                        self.statusBar().showMessage(
+                            "MOL file import not implemented for 2D editor."
+                        )
                 QTimer.singleShot(100, self.fit_to_view)  # 遅延でFit
                 event.acceptProposedAction()
             elif file_path.lower().endswith(".xyz"):
@@ -337,26 +375,24 @@ class MainWindowUiManager(object):
     def _enable_3d_edit_actions(self, enabled=True):
         """3D編集機能のアクションを統一的に有効/無効化する"""
         actions = [
-            'translation_action',
-            'move_group_action',
-            'alignplane_xy_action',
-            'alignplane_xz_action',
-            'alignplane_yz_action',
-            'align_x_action',
-            'align_y_action',
-            'align_z_action',
-            'bond_length_action',
-            'angle_action',
-            'dihedral_action',
-            'mirror_action',
-            'planarize_action',
-            'constrained_opt_action'
+            "translation_action",
+            "move_group_action",
+            "alignplane_xy_action",
+            "alignplane_xz_action",
+            "alignplane_yz_action",
+            "align_x_action",
+            "align_y_action",
+            "align_z_action",
+            "bond_length_action",
+            "angle_action",
+            "dihedral_action",
+            "mirror_action",
+            "planarize_action",
+            "constrained_opt_action",
         ]
 
         # メニューとサブメニューも有効/無効化
-        menus = [
-            'align_menu'
-        ]
+        menus = ["align_menu"]
 
         for action_name in actions:
             if hasattr(self, action_name):
@@ -369,15 +405,11 @@ class MainWindowUiManager(object):
     def _enable_3d_features(self, enabled=True):
         """3D関連機能を統一的に有効/無効化する"""
         # 基本的な3D機能（3D SelectとEditは除外して常に有効にする）
-        basic_3d_actions = [
-            'optimize_3d_button',
-            'export_button',
-            'analysis_action'
-        ]
+        basic_3d_actions = ["optimize_3d_button", "export_button", "analysis_action"]
 
         for action_name in basic_3d_actions:
             if hasattr(self, action_name):
-                if action_name == 'optimize_3d_button':
+                if action_name == "optimize_3d_button":
                     try:
                         # If we're disabling all 3D features, ensure Optimize is disabled
                         if not enabled:
@@ -385,31 +417,37 @@ class MainWindowUiManager(object):
                             continue
 
                         # If the current molecule was marked as XYZ-derived (skip path), keep Optimize disabled
-                        if getattr(self, 'is_xyz_derived', False):
+                        if getattr(self, "is_xyz_derived", False):
                             getattr(self, action_name).setEnabled(False)
                             continue
 
                         # If a chemistry check was tried and failed, keep Optimize disabled
-                        if getattr(self, 'chem_check_tried', False) and getattr(self, 'chem_check_failed', False):
+                        if getattr(self, "chem_check_tried", False) and getattr(
+                            self, "chem_check_failed", False
+                        ):
                             getattr(self, action_name).setEnabled(False)
                             continue
 
                         # Otherwise enable/disable according to the requested global flag
                         getattr(self, action_name).setEnabled(bool(enabled))
                     except Exception:
-                        import traceback; traceback.print_exc()
+                        import traceback
+
+                        traceback.print_exc()
                 else:
                     try:
                         getattr(self, action_name).setEnabled(enabled)
                     except Exception:
-                        import traceback; traceback.print_exc()
+                        import traceback
+
+                        traceback.print_exc()
 
         # 3D Selectボタンは常に有効にする
-        if hasattr(self, 'measurement_action'):
+        if hasattr(self, "measurement_action"):
             self.measurement_action.setEnabled(True)
 
         # 3D Dragボタンも常に有効にする
-        if hasattr(self, 'edit_3d_action'):
+        if hasattr(self, "edit_3d_action"):
             self.edit_3d_action.setEnabled(True)
 
         # 3D編集機能も含める
@@ -425,7 +463,7 @@ class MainWindowUiManager(object):
         self.convert_button.setEnabled(False)
         for action in self.tool_group.actions():
             action.setEnabled(False)
-        if hasattr(self, 'other_atom_action'):
+        if hasattr(self, "other_atom_action"):
             self.other_atom_action.setEnabled(False)
 
         self.minimize_2d_panel()
@@ -443,7 +481,7 @@ class MainWindowUiManager(object):
         for action in self.tool_group.actions():
             action.setEnabled(True)
 
-        if hasattr(self, 'other_atom_action'):
+        if hasattr(self, "other_atom_action"):
             self.other_atom_action.setEnabled(True)
 
         # 2Dモードに戻る時は3D編集機能を統一的に無効化
@@ -481,8 +519,7 @@ class MainWindowUiManager(object):
 
         # ユーザーにフィードバック表示
         self.statusBar().showMessage(
-            f"Panel layout set to {left_percent}% : {right_percent}%",
-            2000
+            f"Panel layout set to {left_percent}% : {right_percent}%", 2000
         )
 
     def toggle_2d_panel(self):
@@ -510,7 +547,7 @@ class MainWindowUiManager(object):
                 right_percent = round(sizes[1] * 100 / total)
 
                 # 現在の比率をツールチップで表示
-                if hasattr(self.splitter, 'handle'):
+                if hasattr(self.splitter, "handle"):
                     handle = self.splitter.handle(1)
                     if handle:
                         handle.setToolTip(f"2D: {left_percent}% | 3D: {right_percent}%")
@@ -519,8 +556,8 @@ class MainWindowUiManager(object):
         """スプリッターハンドルの初期ツールチップを設定"""
         handle = self.splitter.handle(1)
         if handle:
-            handle.setToolTip("Drag to resize panels | Ctrl+1/2/3 for presets | Ctrl+H to toggle 2D panel")
+            handle.setToolTip(
+                "Drag to resize panels | Ctrl+1/2/3 for presets | Ctrl+H to toggle 2D panel"
+            )
             # 初期サイズ比率も表示
             self.on_splitter_moved(0, 0)
-
-
