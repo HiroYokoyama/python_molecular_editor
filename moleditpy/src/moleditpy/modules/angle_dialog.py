@@ -24,7 +24,7 @@ from PyQt6.QtWidgets import (
 try:
     from .dialog3_d_picking_mixin import Dialog3DPickingMixin
     from .mol_geometry import get_connected_group
-except Exception:  # pragma: no cover
+except Exception:
     from modules.dialog3_d_picking_mixin import Dialog3DPickingMixin
     from modules.mol_geometry import get_connected_group
 

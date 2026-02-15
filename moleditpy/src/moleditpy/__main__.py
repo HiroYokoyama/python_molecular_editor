@@ -16,7 +16,7 @@ print("-----------------------------------------------------\n")
 
 try:
     from .main import main
-except Exception:  # pragma: no cover
+except Exception:
     from main import main
 
 # --- Application Execution ---

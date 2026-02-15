@@ -158,7 +158,7 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
                     f"Centroid: ({centroid[0]:.2f}, {centroid[1]:.2f}, {centroid[2]:.2f})"
                 )
                 self.apply_button.setEnabled(True)
-            except Exception as e:  # pragma: no cover
+            except Exception as e:
                 self.selection_label.setText(f"Error accessing atom data: {str(e)}")
                 self.apply_button.setEnabled(False)
 
@@ -264,7 +264,7 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
             # Undo状態を保存
             self.main_window.push_undo_state()
 
-        except Exception as e:  # pragma: no cover
+        except Exception as e:
             QMessageBox.critical(
                 self, "Error", f"Failed to apply translation: {str(e)}"
             )
@@ -284,7 +284,7 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
                     n = self.mol.GetNumAtoms()
                     # create a set of indices [0..n-1]
                     self.selected_atoms = set(range(n))
-                except Exception:  # pragma: no cover
+                except Exception:
                     # fallback to main_window data map
                     self.selected_atoms = (
                         set(self.main_window.data.atoms.keys())
@@ -303,7 +303,7 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
             self.show_atom_labels()
             self.update_display()
 
-        except Exception as e:  # pragma: no cover
+        except Exception as e:
             QMessageBox.warning(self, "Warning", f"Failed to select all atoms: {e}")
 
     def show_atom_labels(self):

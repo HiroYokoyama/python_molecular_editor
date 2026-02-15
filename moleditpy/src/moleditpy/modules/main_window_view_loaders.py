@@ -37,14 +37,14 @@ try:
     from PyQt6 import sip as _sip  # type: ignore
 
     _sip_isdeleted = getattr(_sip, "isdeleted", None)
-except Exception:  # pragma: no cover
+except Exception:
     _sip = None
     _sip_isdeleted = None
 
 try:
     # package relative imports (preferred when running as `python -m moleditpy`)
     from .constants import VERSION
-except Exception:  # pragma: no cover
+except Exception:
     # Fallback to absolute imports for script-style execution
     from modules.constants import VERSION
 
@@ -89,12 +89,12 @@ class MainWindowViewLoaders(object):
             try:
                 # Prefer RDKit int prop
                 skip_flag = bool(self.current_mol.GetIntProp("_xyz_skip_checks"))
-            except Exception:  # pragma: no cover
+            except Exception:
                 try:
                     skip_flag = bool(
                         getattr(self.current_mol, "_xyz_skip_checks", False)
                     )
-                except Exception:  # pragma: no cover
+                except Exception:
                     skip_flag = False
 
             if skip_flag:
@@ -109,7 +109,7 @@ class MainWindowViewLoaders(object):
             else:
                 try:
                     has_bonds = self.current_mol.GetNumBonds() > 0
-                except Exception:  # pragma: no cover
+                except Exception:
                     has_bonds = False
 
                 if has_bonds:
@@ -163,7 +163,7 @@ class MainWindowViewLoaders(object):
         except ValueError as e:
             self.statusBar().showMessage(f"Invalid XYZ file: {e}")
             self.restore_ui_for_editing()
-        except Exception as e:  # pragma: no cover
+        except Exception as e:
             self.statusBar().showMessage(f"Error loading XYZ file: {e}")
             self.restore_ui_for_editing()
 
@@ -182,7 +182,7 @@ class MainWindowViewLoaders(object):
                     base = os.path.basename(self.current_file_path)
                     name = os.path.splitext(base)[0]
                     default_name = f"{name}"
-            except Exception:  # pragma: no cover
+            except Exception:
                 default_name = "untitled"
 
             # prefer same directory as current file when available
@@ -192,7 +192,7 @@ class MainWindowViewLoaders(object):
                     default_path = os.path.join(
                         os.path.dirname(self.current_file_path), default_name
                     )
-            except Exception:  # pragma: no cover
+            except Exception:
                 default_path = default_name
 
             file_path, _ = QFileDialog.getSaveFileName(
@@ -226,7 +226,7 @@ class MainWindowViewLoaders(object):
             self.statusBar().showMessage(f"File I/O error: {e}")
         except UnicodeEncodeError as e:
             self.statusBar().showMessage(f"Text encoding error: {e}")
-        except Exception as e:  # pragma: no cover
+        except Exception as e:
             self.statusBar().showMessage(f"Error saving 3D MOL file: {e}")
 
             pass
@@ -267,7 +267,7 @@ class MainWindowViewLoaders(object):
                 if mol is None:
                     try:
                         mol = Chem.MolFromMolFile(file_path, removeHs=False)
-                    except Exception:  # pragma: no cover
+                    except Exception:
                         mol = None
 
                 if mol is None:
@@ -302,7 +302,7 @@ class MainWindowViewLoaders(object):
                         # 3D変換直後にUndoスタックに積む
                         self.current_mol = mol
                         self.push_undo_state()
-                    except Exception:  # pragma: no cover
+                    except Exception:
                         # If skipping chemistry checks, allow molecule to be displayed without 3D embedding
                         if self.settings.get("skip_chemistry_checks", False):
                             self.statusBar().showMessage(
@@ -311,7 +311,7 @@ class MainWindowViewLoaders(object):
                             # Keep mol as-is (may lack conformer); downstream code checks for conformers
                         else:
                             raise
-                except Exception:  # pragma: no cover
+                except Exception:
                     self.statusBar().showMessage("Failed to generate 3D coordinates")
                     return
 
@@ -349,5 +349,5 @@ class MainWindowViewLoaders(object):
             self.current_file_path = file_path
             self.update_window_title()
 
-        except Exception as e:  # pragma: no cover
+        except Exception as e:
             self.statusBar().showMessage(f"Error loading MOL/SDF file: {e}")

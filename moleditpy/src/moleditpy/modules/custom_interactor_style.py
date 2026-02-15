@@ -17,11 +17,11 @@ from vtkmodules.vtkInteractionStyle import vtkInteractorStyleTrackballCamera  # 
 
 try:
     from .constants import pt
-except Exception:  # pragma: no cover
+except Exception:
     from modules.constants import pt
 try:
     from .move_group_dialog import MoveGroupDialog
-except Exception:  # pragma: no cover
+except Exception:
     from modules.move_group_dialog import MoveGroupDialog
 
 
@@ -91,7 +91,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                             vdw_radius = pt.GetRvdw(atomic_num)
                             if vdw_radius < 0.1:
                                 vdw_radius = 1.5
-                        except Exception:  # pragma: no cover
+                        except Exception:
                             vdw_radius = 1.5
                         click_threshold = vdw_radius * 1.5
 
@@ -206,7 +206,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                             vdw_radius = pt.GetRvdw(atomic_num)
                             if vdw_radius < 0.1:
                                 vdw_radius = 1.5
-                        except Exception:  # pragma: no cover
+                        except Exception:
                             vdw_radius = 1.5
                         click_threshold = vdw_radius * 1.5
 
@@ -245,7 +245,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                             vdw_radius = pt.GetRvdw(atomic_num)
                             if vdw_radius < 0.1:
                                 vdw_radius = 1.5
-                        except Exception:  # pragma: no cover
+                        except Exception:
                             vdw_radius = 1.5
                         click_threshold = vdw_radius * 1.5
 
@@ -300,7 +300,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                             vdw_radius = pt.GetRvdw(atomic_num)
                             if vdw_radius < 0.1:
                                 vdw_radius = 1.5
-                        except Exception:  # pragma: no cover
+                        except Exception:
                             vdw_radius = 1.5
                         click_threshold = vdw_radius * 1.5
 
@@ -510,7 +510,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                     mw.update_chiral_labels()
                     move_group_dialog.show_atom_labels()
                     mw.push_undo_state()
-                except Exception as e:  # pragma: no cover
+                except Exception as e:
                     print(f"Error finalizing group drag: {e}")
             else:
                 # ドラッグがなかった = クリックのみ → トグル処理
@@ -518,7 +518,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                     clicked_atom = move_group_dialog._drag_atom_idx
                     try:
                         move_group_dialog.on_atom_picked(clicked_atom)
-                    except Exception as e:  # pragma: no cover
+                    except Exception as e:
                         print(f"Error in toggle: {e}")
 
         # Move Groupモードでの背景クリック判定（選択解除）
@@ -556,7 +556,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                                 if mw.dragged_atom_info
                                 else None
                             )
-                        except Exception:  # pragma: no cover
+                        except Exception:
                             atom_id = None
 
                         if atom_id is not None:
@@ -587,7 +587,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                                 # Ensure the container supports assignment
                                 try:
                                     mw.atom_positions_3d[atom_id] = new_world_coords
-                                except Exception:  # pragma: no cover
+                                except Exception:
                                     try:
                                         ap = list(mw.atom_positions_3d)
                                         ap[atom_id] = new_world_coords
@@ -810,7 +810,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                             mw.update_chiral_labels()
                             move_group_dialog.show_atom_labels()
                             mw.push_undo_state()
-                except Exception as e:  # pragma: no cover
+                except Exception as e:
                     print(f"Error finalizing group rotation: {e}")
 
             # 状態をリセット

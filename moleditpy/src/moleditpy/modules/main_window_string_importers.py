@@ -36,7 +36,7 @@ try:
     from PyQt6 import sip as _sip  # type: ignore
 
     _sip_isdeleted = getattr(_sip, "isdeleted", None)
-except Exception:  # pragma: no cover
+except Exception:
     _sip = None
     _sip_isdeleted = None
 
@@ -155,7 +155,7 @@ class MainWindowStringImporters(object):
 
         except ValueError as e:
             self.statusBar().showMessage(f"Invalid SMILES: {e}")
-        except Exception as e:  # pragma: no cover
+        except Exception as e:
             self.statusBar().showMessage(f"Error loading from SMILES: {e}")
 
             pass
@@ -250,7 +250,7 @@ class MainWindowStringImporters(object):
 
         except ValueError as e:
             self.statusBar().showMessage(f"Invalid InChI: {e}")
-        except Exception as e:  # pragma: no cover
+        except Exception as e:
             self.statusBar().showMessage(f"Error loading from InChI: {e}")
 
             pass

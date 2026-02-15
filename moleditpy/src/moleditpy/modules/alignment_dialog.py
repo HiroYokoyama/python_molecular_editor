@@ -22,7 +22,7 @@ from PyQt6.QtWidgets import (
 
 try:
     from .dialog3_d_picking_mixin import Dialog3DPickingMixin
-except Exception:  # pragma: no cover
+except Exception:
     from modules.dialog3_d_picking_mixin import Dialog3DPickingMixin
 
 
@@ -241,7 +241,7 @@ class AlignmentDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
                 self, "Success", f"Alignment to {self.axis.upper()}-axis completed."
             )
 
-        except Exception as e:  # pragma: no cover
+        except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to apply alignment: {str(e)}")
 
     def closeEvent(self, event):

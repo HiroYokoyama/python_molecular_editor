@@ -21,13 +21,13 @@ import numpy as np
 
 try:
     from .mol_geometry import calculate_dihedral as _calculate_dihedral
-except Exception:  # pragma: no cover
+except Exception:
     from modules.mol_geometry import calculate_dihedral as _calculate_dihedral
 
 # RDKit imports (explicit to satisfy flake8 and used features)
 try:
     from . import sip_isdeleted_safe
-except Exception:  # pragma: no cover
+except Exception:
     from modules import sip_isdeleted_safe
 
 # PyQt6 Modules
@@ -40,14 +40,14 @@ try:
     from PyQt6 import sip as _sip  # type: ignore
 
     _sip_isdeleted = getattr(_sip, "isdeleted", None)
-except Exception:  # pragma: no cover
+except Exception:
     _sip = None
     _sip_isdeleted = None
 
 try:
     # package relative imports (preferred when running as `python -m moleditpy`)
     from .constants import VDW_RADII
-except Exception:  # pragma: no cover
+except Exception:
     # Fallback to absolute imports for script-style execution
     from modules.constants import VDW_RADII
 
@@ -257,15 +257,15 @@ class MainWindowEdit3d(object):
                     try:
                         if label_item.scene():
                             self.scene.removeItem(label_item)
-                    except Exception:  # pragma: no cover
+                    except Exception:
                         # Scene access or removal failed; skip
                         continue
-                except Exception:  # pragma: no cover
+                except Exception:
                     # If sip check itself fails, fall back to best-effort removal
                     try:
                         if label_item.scene():
                             self.scene.removeItem(label_item)
-                    except Exception:  # pragma: no cover
+                    except Exception:
                         continue
             self.measurement_label_items_2d.clear()
 
@@ -377,7 +377,7 @@ class MainWindowEdit3d(object):
                 text_color = "black" if luminance > 128 else "white"
             else:
                 text_color = "white"
-        except Exception:  # pragma: no cover
+        except Exception:
             text_color = "white"
 
         # 左上に表示（小さな等幅フォント）

@@ -41,7 +41,7 @@ try:
     from PyQt6 import sip as _sip  # type: ignore
 
     _sip_isdeleted = getattr(_sip, "isdeleted", None)
-except Exception:  # pragma: no cover
+except Exception:
     _sip = None
     _sip_isdeleted = None
 
@@ -49,7 +49,7 @@ try:
     # package relative imports (preferred when running as `python -m moleditpy`)
     from .constants import CPK_COLORS_PV, DEFAULT_CPK_COLORS, VDW_RADII, pt
     from .template_preview_item import TemplatePreviewItem
-except Exception:  # pragma: no cover
+except Exception:
     # Fallback to absolute imports for script-style execution
     from modules.constants import CPK_COLORS_PV, DEFAULT_CPK_COLORS, VDW_RADII, pt
     from modules.template_preview_item import TemplatePreviewItem
@@ -101,7 +101,7 @@ class MainWindowView3d(object):
                 try:
                     handler(mw, mol)
                     return
-                except Exception as e:  # pragma: no cover
+                except Exception as e:
                     logging.error(
                         f"Error in custom 3d style '{self.current_3d_style}': {e}"
                     )
@@ -172,7 +172,7 @@ class MainWindowView3d(object):
                 # Operate on a copy to avoid mutating the original molecule
                 mol_to_draw = Chem.Mol(mol)
                 Chem.Kekulize(mol_to_draw, clearAromaticFlags=True)
-            except Exception as e:  # pragma: no cover
+            except Exception as e:
                 # Kekulize failed; keep original and warn user
                 try:
                     self.statusBar().showMessage(f"Kekulize failed: {e}")
@@ -217,7 +217,7 @@ class MainWindowView3d(object):
                 try:
                     r = pt.GetRvdw(pt.GetAtomicNumber(s))
                     return r if r > 0.1 else 1.5
-                except Exception:  # pragma: no cover
+                except Exception:
                     return 1.5
 
             rad = np.array([get_safe_rvdw(s) * atom_scale for s in sym])
@@ -330,7 +330,7 @@ class MainWindowView3d(object):
 
                                         # 結合描画と同じ計算
                                         sphere_radius = cyl_radius * radius_factor
-                                    except Exception:  # pragma: no cover
+                                    except Exception:
                                         sphere_radius = 0.09  # デフォルト値
                                         offset_distance = 0.15  # デフォルト値
 
@@ -877,7 +877,7 @@ class MainWindowView3d(object):
 
                     self.plotter.add_mesh(circle_line, color=torus_color, **mesh_props)
 
-            except Exception as e:  # pragma: no cover
+            except Exception as e:
                 logging.error(f"Error rendering aromatic circles: {e}")
 
         if getattr(self, "show_chiral_labels", False):
@@ -907,7 +907,7 @@ class MainWindowView3d(object):
                         tolerance=0.01,
                         show_points=False,
                     )
-            except Exception as e:  # pragma: no cover
+            except Exception as e:
                 self.statusBar().showMessage(f"3D chiral label drawing error: {e}")
 
         # E/Zラベルも表示
@@ -917,7 +917,7 @@ class MainWindowView3d(object):
                 # E/Z labels reflect Kekulé rendering; pass mol_to_draw as the
                 # molecule to scan for bond stereochemistry.
                 self.show_ez_labels_3d(mol)
-            except Exception as e:  # pragma: no cover
+            except Exception as e:
                 self.statusBar().showMessage(f"3D E/Z label drawing error: {e}")
 
         self.plotter.camera = camera_state
@@ -1194,7 +1194,7 @@ class MainWindowView3d(object):
                         # 'R' / 'S' / '?'
                         self.data.atoms[atom_id]["item"].chiral_label = label
 
-        except Exception as e:  # pragma: no cover
+        except Exception as e:
             self.statusBar().showMessage(f"Update chiral labels error: {e}")
 
         # 最後に 2D シーンを再描画
@@ -1337,7 +1337,7 @@ class MainWindowView3d(object):
                     else:
                         rdkit_positions.append(pos)
                         rdkit_texts.append(str(atom_idx))
-                except Exception:  # pragma: no cover
+                except Exception:
                     rdkit_positions.append(pos)
                     rdkit_texts.append(str(atom_idx))
 
@@ -1425,7 +1425,7 @@ class MainWindowView3d(object):
                     name="atom_labels_other",
                 )
                 self.current_atom_info_labels.append(a)
-        except Exception as e:  # pragma: no cover
+        except Exception as e:
             print(f"Error adding atom info labels: {e}")
 
         # 右上に凡例を表示（既存の凡例は消す）
@@ -1467,7 +1467,7 @@ class MainWindowView3d(object):
                         e[0] == "RDKit" for e in legend_entries
                     ):
                         x_offset = 0.06
-                except Exception:  # pragma: no cover
+                except Exception:
                     x_offset = 0.0
                 try:
                     actor = self.plotter.add_text(
@@ -1493,7 +1493,7 @@ class MainWindowView3d(object):
                         import traceback
 
                         traceback.print_exc()
-                except Exception:  # pragma: no cover
+                except Exception:
                     continue
 
         except Exception:  # pragma: no cover
@@ -1604,7 +1604,7 @@ class MainWindowView3d(object):
         try:
             old_ta = self.view_2d.transformationAnchor()
             old_ra = self.view_2d.resizeAnchor()
-        except Exception:  # pragma: no cover
+        except Exception:
             old_ta = old_ra = None
 
         try:
@@ -1642,7 +1642,7 @@ class MainWindowView3d(object):
             # Import the constants module so we can update mappings directly
             try:
                 from . import constants as constants_mod
-            except Exception:  # pragma: no cover
+            except Exception:
                 import modules.constants as constants_mod
 
             # Reset constants.CPK_COLORS to defaults but keep the same dict
@@ -1661,7 +1661,7 @@ class MainWindowView3d(object):
             constants_mod.CPK_COLORS_PV.clear()
             for k, c in constants_mod.CPK_COLORS.items():
                 constants_mod.CPK_COLORS_PV[k] = [c.redF(), c.greenF(), c.blueF()]
-        except Exception as e:  # pragma: no cover
+        except Exception as e:
             print(f"Failed to update CPK colors from settings: {e}")
 
     def apply_3d_settings(self, redraw=True):
@@ -1688,7 +1688,7 @@ class MainWindowView3d(object):
                 renderer.SetNumberOfLayers(
                     2
                 )  # レイヤー0:3Dオブジェクト、レイヤー1:2Dオーバーレイ
-            except Exception:  # pragma: no cover
+            except Exception:
                 import traceback
 
                 pass  # PyVistaのバージョンによってはサポートされていない場合がある

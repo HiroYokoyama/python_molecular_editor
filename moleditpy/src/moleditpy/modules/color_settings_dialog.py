@@ -24,7 +24,7 @@ from PyQt6.QtWidgets import (
 
 try:
     from .constants import CPK_COLORS, DEFAULT_CPK_COLORS
-except Exception:  # pragma: no cover
+except Exception:
     from modules.constants import CPK_COLORS, DEFAULT_CPK_COLORS
 
 
@@ -209,7 +209,7 @@ class ColorSettingsDialog(QDialog):  # pragma: no cover
                     if self.current_settings
                     else None
                 )
-            except Exception:  # pragma: no cover
+            except Exception:
                 cur_bs = None
             if (
                 not cur_bs
@@ -289,7 +289,7 @@ class ColorSettingsDialog(QDialog):  # pragma: no cover
                 if hasattr(self.parent_window, "default_settings")
                 else "#7F7F7F"
             )
-        except Exception:  # pragma: no cover
+        except Exception:
             self.changed_bs_color = "#7F7F7F"
 
         # 2. ダイアログ内のCPKボタンの表示をデフォルトに戻す
@@ -519,7 +519,7 @@ class ColorSettingsDialog(QDialog):  # pragma: no cover
                 if self.current_settings
                 else None
             )
-        except Exception:  # pragma: no cover
+        except Exception:
             cur = None
         if not cur and self.parent_window and hasattr(self.parent_window, "settings"):
             cur = self.parent_window.settings.get("ball_stick_bond_color", "#7F7F7F")

@@ -18,7 +18,7 @@ from PyQt6.QtWidgets import QDialog, QHBoxLayout, QLabel, QPushButton, QVBoxLayo
 
 try:
     from .constants import VERSION
-except Exception:  # pragma: no cover
+except Exception:
     from modules.constants import VERSION
 
 
@@ -104,7 +104,7 @@ class AboutDialog(QDialog):  # pragma: no cover
                 self.image_clicked(event)
             else:
                 event.ignore()
-        except Exception:  # pragma: no cover
+        except Exception:
             try:
                 event.ignore()
             except Exception:  # pragma: no cover

@@ -1,7 +1,7 @@
 # MoleditPy Coverage Report
 
 - **Overall Project Coverage (Full)**: **48.71%**
-- **Core Molecular Logic Coverage**: **81.44%**
+- **Core Molecular Logic Coverage**: **73.23%**
 
 > [!NOTE]
 > **Core Molecular Logic Coverage** excludes UI boilerplate (dialogs, view managers, and interactor styles) to focus on scientific algorithm reliability.
@@ -11,26 +11,26 @@
 | File | Stmts | Miss | Cover |
 | :--- | :--- | :--- | :--- |
 | moleditpy\src\moleditpy\__init__.py                     |      1 |      0 |  100.0% |
-| moleditpy\src\moleditpy\modules\__init__.py             |      1 |      0 |  100.0% |
-| moleditpy\src\moleditpy\modules\analysis_window.py      |    102 |     13 |   87.3% |
-| moleditpy\src\moleditpy\modules\atom_item.py            |    247 |     20 |   91.9% |
-| moleditpy\src\moleditpy\modules\bond_item.py            |    310 |     41 |   86.8% |
-| moleditpy\src\moleditpy\modules\calculation_worker.py   |    365 |     61 |   83.3% |
+| moleditpy\src\moleditpy\modules\__init__.py             |     18 |      5 |   72.2% |
+| moleditpy\src\moleditpy\modules\analysis_window.py      |    114 |     25 |   78.1% |
+| moleditpy\src\moleditpy\modules\atom_item.py            |    259 |     32 |   87.6% |
+| moleditpy\src\moleditpy\modules\bond_item.py            |    338 |     64 |   81.1% |
+| moleditpy\src\moleditpy\modules\calculation_worker.py   |    476 |    162 |   66.0% |
 | moleditpy\src\moleditpy\modules\constants.py            |     27 |      0 |  100.0% |
-| moleditpy\src\moleditpy\modules\main_window.py          |    347 |     73 |   79.0% |
-| moleditpy\src\moleditpy\modules\main_window_app_state.py |    338 |    108 |   68.0% |
-| moleditpy\src\moleditpy\modules\main_window_compute.py  |    401 |     31 |   92.3% |
-| moleditpy\src\moleditpy\modules\main_window_export.py   |    282 |     74 |   73.8% |
-| moleditpy\src\moleditpy\modules\main_window_main_init.py |     59 |     19 |   67.8% |
-| moleditpy\src\moleditpy\modules\main_window_molecular_parsers.py |    306 |     41 |   86.6% |
-| moleditpy\src\moleditpy\modules\main_window_project_io.py |    143 |     34 |   76.2% |
-| moleditpy\src\moleditpy\modules\main_window_string_importers.py |    148 |     14 |   90.5% |
+| moleditpy\src\moleditpy\modules\main_window.py          |    364 |     90 |   75.3% |
+| moleditpy\src\moleditpy\modules\main_window_app_state.py |    378 |    143 |   62.2% |
+| moleditpy\src\moleditpy\modules\main_window_compute.py  |    523 |     90 |   82.8% |
+| moleditpy\src\moleditpy\modules\main_window_export.py   |    317 |    105 |   66.9% |
+| moleditpy\src\moleditpy\modules\main_window_main_init.py |     83 |     38 |   54.2% |
+| moleditpy\src\moleditpy\modules\main_window_molecular_parsers.py |    388 |    108 |   72.2% |
+| moleditpy\src\moleditpy\modules\main_window_project_io.py |    181 |     72 |   60.2% |
+| moleditpy\src\moleditpy\modules\main_window_string_importers.py |    157 |     23 |   85.4% |
 | moleditpy\src\moleditpy\modules\mol_geometry.py         |     46 |     16 |   65.2% |
-| moleditpy\src\moleditpy\modules\molecular_data.py       |    196 |     20 |   89.8% |
-| moleditpy\src\moleditpy\modules\molecule_scene.py       |    417 |    135 |   67.6% |
+| moleditpy\src\moleditpy\modules\molecular_data.py       |    209 |     33 |   84.2% |
+| moleditpy\src\moleditpy\modules\molecule_scene.py       |    463 |    176 |   62.0% |
 | moleditpy\src\moleditpy\modules\plugin_interface.py     |     57 |      0 |  100.0% |
-| moleditpy\src\moleditpy\modules\plugin_manager.py       |    258 |     52 |   79.8% |
-| **TOTAL** | **4051** | **752** | **81.44%** |
+| moleditpy\src\moleditpy\modules\plugin_manager.py       |    278 |     70 |   74.8% |
+| **TOTAL** | **4677** | **1252** | **73.23%** |
 
 ### Full Application Breakdown
 

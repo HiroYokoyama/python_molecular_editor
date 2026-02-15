@@ -33,7 +33,7 @@ from PyQt6.QtWidgets import (
 
 try:
     from .constants import CPK_COLORS
-except Exception:  # pragma: no cover
+except Exception:
     from modules.constants import CPK_COLORS
 
 

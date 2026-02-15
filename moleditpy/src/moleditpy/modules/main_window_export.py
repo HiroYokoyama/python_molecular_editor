@@ -40,7 +40,7 @@ try:
     from PyQt6 import sip as _sip  # type: ignore
 
     _sip_isdeleted = getattr(_sip, "isdeleted", None)
-except Exception:  # pragma: no cover
+except Exception:
     _sip = None
     _sip_isdeleted = None
 
@@ -48,7 +48,7 @@ try:
     # package relative imports (preferred when running as `python -m moleditpy`)
     from .atom_item import AtomItem
     from .bond_item import BondItem
-except Exception:  # pragma: no cover
+except Exception:
     # Fallback to absolute imports for script-style execution
     from modules.atom_item import AtomItem
     from modules.bond_item import BondItem
@@ -69,7 +69,7 @@ class MainWindowExport(object):
         try:
             if self.current_file_path:
                 default_dir = os.path.dirname(self.current_file_path)
-        except Exception:  # pragma: no cover
+        except Exception:
             default_dir = ""
 
         file_path, _ = QFileDialog.getSaveFileName(  # pragma: no cover
@@ -95,7 +95,7 @@ class MainWindowExport(object):
                 f"STL exported to {file_path}"
             )  # pragma: no cover
 
-        except Exception as e:  # pragma: no cover
+        except Exception as e:
             self.statusBar().showMessage(f"Error exporting STL: {e}")
 
     def export_obj_mtl(self):
@@ -109,7 +109,7 @@ class MainWindowExport(object):
         try:
             if self.current_file_path:
                 default_dir = os.path.dirname(self.current_file_path)
-        except Exception:  # pragma: no cover
+        except Exception:
             default_dir = ""
 
         file_path, _ = QFileDialog.getSaveFileName(  # pragma: no cover
@@ -143,7 +143,7 @@ class MainWindowExport(object):
                 f"OBJ+MTL files with individual colors exported to {file_path} and {mtl_path}"
             )  # pragma: no cover
 
-        except Exception as e:  # pragma: no cover
+        except Exception as e:
             self.statusBar().showMessage(f"Error exporting OBJ/MTL: {e}")
 
     def create_multi_material_obj(self, meshes_with_colors, obj_path, mtl_path):
@@ -239,7 +239,7 @@ class MainWindowExport(object):
                     vertex_offset += mesh.n_points
                     obj_file.write(f"\n")
 
-        except Exception as e:  # pragma: no cover
+        except Exception as e:
             raise Exception(f"Failed to create multi-material OBJ: {e}")
 
     def export_color_stl(self):
@@ -253,7 +253,7 @@ class MainWindowExport(object):
         try:
             if self.current_file_path:
                 default_dir = os.path.dirname(self.current_file_path)
-        except Exception:  # pragma: no cover
+        except Exception:
             default_dir = ""
 
         file_path, _ = QFileDialog.getSaveFileName(  # pragma: no cover
@@ -279,7 +279,7 @@ class MainWindowExport(object):
                 f"STL exported to {file_path}"
             )  # pragma: no cover
 
-        except Exception as e:  # pragma: no cover
+        except Exception as e:
             self.statusBar().showMessage(f"Error exporting STL: {e}")
 
     def export_from_3d_view(self):
@@ -374,12 +374,12 @@ class MainWindowExport(object):
                         else:
                             combined_mesh = combined_mesh.merge(mesh_copy)
 
-                except Exception:  # pragma: no cover
+                except Exception:
                     continue
 
             return combined_mesh
 
-        except Exception:  # pragma: no cover
+        except Exception:
             return None
 
     def export_from_3d_view_no_color(self):
@@ -442,12 +442,12 @@ class MainWindowExport(object):
                         else:
                             combined_mesh = combined_mesh.merge(mesh_copy)
 
-                except Exception:  # pragma: no cover
+                except Exception:
                     continue
 
             return combined_mesh
 
-        except Exception:  # pragma: no cover
+        except Exception:
             return None
 
     def export_from_3d_view_with_colors(self):
@@ -616,7 +616,7 @@ class MainWindowExport(object):
                                                 point_inds, adjacent_cells=False
                                             )
 
-                                        except Exception:  # pragma: no cover
+                                        except Exception:
                                             # extract_points が利用できない場合はスキップ
                                             continue
                                         if (
@@ -663,12 +663,12 @@ class MainWindowExport(object):
 
                         actor_count += 1
 
-                except Exception as e:  # pragma: no cover
+                except Exception as e:
                     continue
 
             return meshes_with_colors
 
-        except Exception as e:  # pragma: no cover
+        except Exception as e:
             print(f"Error in export_from_3d_view_with_colors: {e}")
             return []
 
@@ -684,7 +684,7 @@ class MainWindowExport(object):
                 base = os.path.basename(self.current_file_path)
                 name = os.path.splitext(base)[0]
                 default_name = f"{name}-2d"
-        except Exception:  # pragma: no cover
+        except Exception:
             default_name = "untitled-2d"
 
         # prefer same directory as current file when available
@@ -694,7 +694,7 @@ class MainWindowExport(object):
                 default_path = os.path.join(
                     os.path.dirname(self.current_file_path), default_name
                 )
-        except Exception:  # pragma: no cover
+        except Exception:
             default_path = default_name
 
         filePath, _ = QFileDialog.getSaveFileName(
@@ -793,7 +793,7 @@ class MainWindowExport(object):
                     "Failed to save image. Check file path or permissions."
                 )
 
-        except Exception as e:  # pragma: no cover
+        except Exception as e:
             self.statusBar().showMessage(
                 f"An unexpected error occurred during 2D export: {e}"
             )
@@ -818,7 +818,7 @@ class MainWindowExport(object):
                 base = os.path.basename(self.current_file_path)
                 name = os.path.splitext(base)[0]
                 default_name = f"{name}-2d"
-        except Exception:  # pragma: no cover
+        except Exception:
             default_name = "untitled-2d"
 
         # prefer same directory
@@ -828,7 +828,7 @@ class MainWindowExport(object):
                 default_path = os.path.join(
                     os.path.dirname(self.current_file_path), default_name
                 )
-        except Exception:  # pragma: no cover
+        except Exception:
             default_path = default_name
 
         filePath, _ = QFileDialog.getSaveFileName(
@@ -915,7 +915,7 @@ class MainWindowExport(object):
 
             self.statusBar().showMessage(f"2D view exported to {filePath}")
 
-        except Exception as e:  # pragma: no cover
+        except Exception as e:
             self.statusBar().showMessage(
                 f"An unexpected error occurred during SVG export: {e}"
             )
@@ -941,7 +941,7 @@ class MainWindowExport(object):
                 base = os.path.basename(self.current_file_path)
                 name = os.path.splitext(base)[0]
                 default_name = f"{name}"
-        except Exception:  # pragma: no cover
+        except Exception:
             default_name = "untitled"
 
         # prefer same directory as current file when available
@@ -951,7 +951,7 @@ class MainWindowExport(object):
                 default_path = os.path.join(
                     os.path.dirname(self.current_file_path), default_name
                 )
-        except Exception:  # pragma: no cover
+        except Exception:
             default_path = default_name
 
         filePath, _ = QFileDialog.getSaveFileName(
@@ -982,5 +982,5 @@ class MainWindowExport(object):
         try:
             self.plotter.screenshot(filePath, transparent_background=is_transparent)
             self.statusBar().showMessage(f"3D view exported to {filePath}", 3000)
-        except Exception as e:  # pragma: no cover
+        except Exception as e:
             self.statusBar().showMessage(f"Error exporting 3D PNG: {e}")

@@ -121,7 +121,7 @@ class PluginManagerWindow(QDialog):  # pragma: no cover
                     rel_path = os.path.relpath(
                         full_path, self.plugin_manager.plugin_dir
                     )
-                except Exception:  # pragma: no cover
+                except Exception:
                     rel_path = os.path.basename(full_path)
             self.table.setItem(row, 4, QTableWidgetItem(str(rel_path)))
 
@@ -201,7 +201,7 @@ class PluginManagerWindow(QDialog):  # pragma: no cover
                             "Success",
                             f"Removed '{plugin.get('name', 'Unknown')}'.",
                         )
-                    except Exception as e:  # pragma: no cover
+                    except Exception as e:
                         QMessageBox.critical(
                             self, "Error", f"Failed to delete plugin: {e}"
                         )

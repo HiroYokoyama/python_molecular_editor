@@ -27,27 +27,27 @@ try:
     from .atom_item import AtomItem
     from .bond_item import BondItem
     from .template_preview_item import TemplatePreviewItem
-except Exception:  # pragma: no cover
+except Exception:
     from modules.atom_item import AtomItem
     from modules.bond_item import BondItem
     from modules.template_preview_item import TemplatePreviewItem
 
 try:
     from .constants import DEFAULT_BOND_LENGTH, SNAP_DISTANCE, SUM_TOLERANCE
-except Exception:  # pragma: no cover
+except Exception:
     from modules.constants import DEFAULT_BOND_LENGTH, SNAP_DISTANCE, SUM_TOLERANCE
 
 try:
     from PyQt6 import sip as _sip  # type: ignore
 
     _sip_isdeleted = getattr(_sip, "isdeleted", None)
-except Exception:  # pragma: no cover
+except Exception:
     _sip = None
     _sip_isdeleted = None
 
 try:
     from . import sip_isdeleted_safe
-except Exception:  # pragma: no cover
+except Exception:
     from modules import sip_isdeleted_safe
 
 
@@ -66,7 +66,7 @@ class MoleculeScene(QGraphicsScene):
                     sc = None
                     try:
                         sc = item.scene() if hasattr(item, "scene") else None
-                    except Exception:  # pragma: no cover
+                    except Exception:
                         sc = None
                     if sc is None:  # pragma: no cover
                         continue
@@ -75,7 +75,7 @@ class MoleculeScene(QGraphicsScene):
                     except Exception:  # pragma: no cover
                         # Best-effort: ignore removal errors to avoid crashes during teardown
                         pass
-                except Exception:  # pragma: no cover
+                except Exception:
                     # Non-fatal: continue with other items
                     continue
         self.template_context = {}
@@ -130,7 +130,7 @@ class MoleculeScene(QGraphicsScene):
             try:
                 if not sip_isdeleted_safe(bond):
                     bond.update_position()
-            except Exception:  # pragma: no cover
+            except Exception:
                 continue
 
     def update_all_items(self):
@@ -148,7 +148,7 @@ class MoleculeScene(QGraphicsScene):
         self.template_preview_points = []
         self.template_context = {}
         self._deleted_items = []
-        try:  # pragma: no cover
+        try:
             app = QApplication.instance()
             if app is not None:
                 try:
@@ -205,7 +205,7 @@ class MoleculeScene(QGraphicsScene):
                     for it in self.selectedItems()
                     if isinstance(it, (AtomItem, BondItem))
                 ]
-            except Exception:  # pragma: no cover
+            except Exception:
                 selected_items = []
 
             if (
@@ -235,7 +235,7 @@ class MoleculeScene(QGraphicsScene):
                                     break
                             self.window.push_undo_state()
                             data_changed = False  # ここでundo済みなので以降で積まない
-                    except Exception as e:  # pragma: no cover
+                    except Exception as e:
                         logging.error(f"Error clearing E/Z label: {e}", exc_info=True)
                         if hasattr(self.window, "statusBar"):
                             self.window.statusBar().showMessage(
@@ -375,7 +375,7 @@ class MoleculeScene(QGraphicsScene):
                         import traceback
 
                         traceback.print_exc()
-            except Exception:  # pragma: no cover
+            except Exception:
                 try:
                     self.removeItem(self.temp_line)
                 except Exception:  # pragma: no cover
@@ -466,7 +466,7 @@ class MoleculeScene(QGraphicsScene):
                         self.update_bond_stereo(b, new_stereo)
                         self.update_all_items()  # 強制再描画
                         self.window.push_undo_state()  # ここでUndo stackに積む
-                except Exception as e:  # pragma: no cover
+                except Exception as e:
                     logging.error(f"Error in E/Z stereo toggle: {e}", exc_info=True)
                     if hasattr(self.window, "statusBar"):
                         self.window.statusBar().showMessage(
@@ -696,7 +696,7 @@ class MoleculeScene(QGraphicsScene):
                                 other = getattr(b, "atom2", None)
                             else:
                                 other = getattr(b, "atom1", None)
-                        except Exception:  # pragma: no cover
+                        except Exception:
                             other = None
                         if other is not None and other not in connected_atoms:
                             atoms_to_visit.append(other)
@@ -712,7 +712,7 @@ class MoleculeScene(QGraphicsScene):
                 for a in connected_atoms:
                     try:
                         a.setSelected(True)
-                    except Exception:  # pragma: no cover
+                    except Exception:
                         try:
                             # fallback: set selected attribute if exists
                             setattr(a, "selected", True)
@@ -723,7 +723,7 @@ class MoleculeScene(QGraphicsScene):
                 for b in connected_bonds:
                     try:
                         b.setSelected(True)
-                    except Exception:  # pragma: no cover
+                    except Exception:
                         try:
                             setattr(b, "selected", True)
                         except Exception:  # pragma: no cover
@@ -781,7 +781,7 @@ class MoleculeScene(QGraphicsScene):
             if hasattr(end_atom, "update_style"):
                 end_atom.update_style()
 
-        except Exception as e:  # pragma: no cover
+        except Exception as e:
             logging.error(f"Error creating bond: {e}", exc_info=True)
             self.update_all_items()  # エラーリカバリー
 
@@ -805,7 +805,7 @@ class MoleculeScene(QGraphicsScene):
                 return (p.x(), p.y())
             try:
                 return (p[0], p[1])
-            except Exception:  # pragma: no cover
+            except Exception:
                 raise ValueError("point has no x/y")
 
         def dist_pts(a, b):
@@ -857,7 +857,7 @@ class MoleculeScene(QGraphicsScene):
                     continue
                 try:
                     d = dist_pts(p, a_item.pos())
-                except Exception:  # pragma: no cover
+                except Exception:
                     continue
                 if d < best_d:
                     best_d, nearby = d, a_item
@@ -1261,7 +1261,7 @@ class MoleculeScene(QGraphicsScene):
                     # Only accept AtomItem/BondItem or other QGraphicsItem subclasses
                     if isinstance(it, (AtomItem, BondItem, QGraphicsItem)):
                         sanitized.add(it)
-                except Exception:  # pragma: no cover
+                except Exception:
                     # If isinstance or sip check raises, skip this entry
                     continue
             items_to_delete = sanitized
@@ -1283,7 +1283,7 @@ class MoleculeScene(QGraphicsScene):
                     if hasattr(atom, "bonds") and atom.bonds:
                         for b in list(atom.bonds):
                             bonds_to_delete.add(b)
-                except Exception:  # pragma: no cover
+                except Exception:
                     # If accessing bonds raises (item partially deleted), skip
                     continue
 
@@ -1297,7 +1297,7 @@ class MoleculeScene(QGraphicsScene):
                         atoms_to_update.add(a1)
                     if a2 and a2 not in atoms_to_delete:
                         atoms_to_update.add(a2)
-                except Exception:  # pragma: no cover
+                except Exception:
                     continue
 
             # 1) Update surviving atoms' bond lists to remove references to bonds_to_delete
@@ -1324,7 +1324,7 @@ class MoleculeScene(QGraphicsScene):
                                 atom.bonds[:] = [
                                     b for b in atom.bonds if b not in live_btd
                                 ]
-                        except Exception:  # pragma: no cover
+                        except Exception:
                             # Fall back to iterative removal if list comprehension fails
                             try:
                                 live_btd = [
@@ -1344,7 +1344,7 @@ class MoleculeScene(QGraphicsScene):
                     # bonds become visible again.
                     if hasattr(atom, "update_style"):
                         atom.update_style()
-                except Exception:  # pragma: no cover
+                except Exception:
                     continue
 
             # 2) Remove bonds/atoms from the data model first (so other code reading the model
@@ -1356,7 +1356,7 @@ class MoleculeScene(QGraphicsScene):
                     if a1 and a2 and hasattr(self, "data"):
                         try:
                             self.data.remove_bond(a1.atom_id, a2.atom_id)
-                        except Exception:  # pragma: no cover
+                        except Exception:
                             # try reverse order if remove_bond expects ordered tuple
                             try:
                                 self.data.remove_bond(a2.atom_id, a1.atom_id)
@@ -1364,7 +1364,7 @@ class MoleculeScene(QGraphicsScene):
                                 import traceback
 
                                 traceback.print_exc()
-                except Exception:  # pragma: no cover
+                except Exception:
                     continue
 
             for atom in list(atoms_to_delete):
@@ -1376,12 +1376,12 @@ class MoleculeScene(QGraphicsScene):
                             import traceback
 
                             traceback.print_exc()
-                except Exception:  # pragma: no cover
+                except Exception:
                     continue
 
             try:
                 self._ih_update_counter += 1
-            except Exception:  # pragma: no cover
+            except Exception:
                 try:
                     self._ih_update_counter = 0
                 except Exception:  # pragma: no cover
@@ -1396,7 +1396,7 @@ class MoleculeScene(QGraphicsScene):
             # items and use membership tests instead of calling item.scene().
             try:
                 current_scene_items = set(self.items())
-            except Exception:  # pragma: no cover
+            except Exception:
                 # If for any reason items() fails, fall back to an empty set
                 current_scene_items = set()
 
@@ -1413,7 +1413,7 @@ class MoleculeScene(QGraphicsScene):
                             import traceback
 
                             traceback.print_exc()
-                except Exception:  # pragma: no cover
+                except Exception:
                     continue
 
             for atom in list(atoms_to_delete):
@@ -1428,7 +1428,7 @@ class MoleculeScene(QGraphicsScene):
                             import traceback
 
                             traceback.print_exc()
-                except Exception:  # pragma: no cover
+                except Exception:
                     continue
 
             # 4) Instead of aggressively nullling object attributes (which can
@@ -1439,7 +1439,7 @@ class MoleculeScene(QGraphicsScene):
             try:
                 if not hasattr(self, "_deleted_items") or self._deleted_items is None:
                     self._deleted_items = []
-            except Exception:  # pragma: no cover
+            except Exception:
                 self._deleted_items = []
 
             for bond in list(bonds_to_delete):
@@ -1457,7 +1457,7 @@ class MoleculeScene(QGraphicsScene):
                         except Exception:  # pragma: no cover
                             # Swallow any error while stashing
                             pass
-                except Exception:  # pragma: no cover
+                except Exception:
                     continue
 
             for atom in list(atoms_to_delete):
@@ -1475,7 +1475,7 @@ class MoleculeScene(QGraphicsScene):
                             import traceback
 
                             traceback.print_exc()
-                except Exception:  # pragma: no cover
+                except Exception:
                     continue
 
             # 5) Final visual updates for surviving atoms
@@ -1483,12 +1483,12 @@ class MoleculeScene(QGraphicsScene):
                 try:
                     if hasattr(atom, "update_style"):
                         atom.update_style()
-                except Exception:  # pragma: no cover
+                except Exception:
                     continue
 
             return True
 
-        except Exception as e:  # pragma: no cover
+        except Exception as e:
             # Keep the application alive on unexpected errors
             print(f"Error during delete_items operation: {e}")
 
@@ -1526,7 +1526,7 @@ class MoleculeScene(QGraphicsScene):
                         if hasattr(obj, "bonds") and getattr(obj, "bonds") is not None:
                             try:
                                 obj.bonds.clear()
-                            except Exception:  # pragma: no cover
+                            except Exception:
                                 try:
                                     obj.bonds = []
                                 except Exception:  # pragma: no cover
@@ -1538,14 +1538,14 @@ class MoleculeScene(QGraphicsScene):
 
                         traceback.print_exc()
 
-                except Exception:  # pragma: no cover
+                except Exception:
                     # Continue purging remaining items even if one fails.
                     continue
 
             # Finally, drop our references.
             try:
                 self._deleted_items.clear()
-            except Exception:  # pragma: no cover
+            except Exception:
                 try:
                     self._deleted_items = []
                 except Exception:  # pragma: no cover
@@ -1553,7 +1553,7 @@ class MoleculeScene(QGraphicsScene):
 
                     traceback.print_exc()
 
-        except Exception as e:  # pragma: no cover
+        except Exception as e:
             # Never raise during shutdown
             try:
                 print(f"Error purging deleted items: {e}")
@@ -2112,7 +2112,7 @@ class MoleculeScene(QGraphicsScene):
                             import traceback
 
                             traceback.print_exc()
-                except Exception:  # pragma: no cover
+                except Exception:
                     try:
                         self.removeItem(self.temp_line)
                     except Exception:  # pragma: no cover
@@ -2275,7 +2275,7 @@ class MoleculeScene(QGraphicsScene):
 
             self.data_changed_in_event = True
 
-        except Exception as e:  # pragma: no cover
+        except Exception as e:
             print(f"Error in update_bond_stereo: {e}")
 
             pass

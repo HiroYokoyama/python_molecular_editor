@@ -42,7 +42,7 @@ class TemplatePreviewView(QGraphicsView):
                 self.fitInView(
                     self.original_scene_rect, Qt.AspectRatioMode.KeepAspectRatio
                 )
-        except Exception as e:  # pragma: no cover
+        except Exception as e:
             print(f"Warning: Failed to refit template preview: {e}")
 
     def showEvent(self, event):
@@ -85,5 +85,5 @@ class TemplatePreviewView(QGraphicsView):
                             padded_rect, Qt.AspectRatioMode.KeepAspectRatio
                         ),
                     )
-            except Exception as e:  # pragma: no cover
+            except Exception as e:
                 print(f"Warning: Failed to redraw template preview: {e}")

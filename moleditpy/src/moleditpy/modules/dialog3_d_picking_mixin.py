@@ -15,7 +15,7 @@ from PyQt6.QtCore import QEvent, Qt
 
 try:
     from .constants import pt
-except Exception:  # pragma: no cover
+except Exception:
     from modules.constants import pt
 
 
@@ -63,7 +63,7 @@ class Dialog3DPickingMixin:
                                 vdw_radius = pt.GetRvdw(atomic_num)
                                 if vdw_radius < 0.1:
                                     vdw_radius = 1.5
-                            except Exception:  # pragma: no cover
+                            except Exception:
                                 vdw_radius = 1.5
                             click_threshold = vdw_radius * 1.5
 
@@ -85,7 +85,7 @@ class Dialog3DPickingMixin:
                 # 実際の解除は MouseButtonRelease イベントで行う。
                 return False
 
-            except Exception as e:  # pragma: no cover
+            except Exception as e:
                 print(f"Error in eventFilter: {e}")
                 # On exception, don't swallow the event either — let the normal
                 # event pipeline continue so the UI remains responsive.

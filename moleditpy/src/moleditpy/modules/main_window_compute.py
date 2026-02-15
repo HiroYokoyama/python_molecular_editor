@@ -27,7 +27,7 @@ from rdkit.Chem import AllChem
 
 try:
     from . import OBABEL_AVAILABLE
-except Exception:  # pragma: no cover
+except Exception:
     from modules import OBABEL_AVAILABLE
 
 
@@ -35,7 +35,7 @@ try:
     from PyQt6 import sip as _sip  # type: ignore
 
     _sip_isdeleted = getattr(_sip, "isdeleted", None)
-except Exception:  # pragma: no cover
+except Exception:
     _sip = None
     _sip_isdeleted = None
 
@@ -43,7 +43,7 @@ try:
     # package relative imports (preferred when running as `python -m moleditpy`)
     from .calculation_worker import CalculationWorker
     from .mol_geometry import is_problematic_valence
-except Exception:  # pragma: no cover
+except Exception:
     # Fallback to absolute imports for script-style execution
     from modules.calculation_worker import CalculationWorker
     from modules.mol_geometry import is_problematic_valence
@@ -116,7 +116,7 @@ class MainWindowCompute(object):
             label = self.opt3d_method_labels.get(
                 self.optimization_method, self.optimization_method
             )
-        except Exception:  # pragma: no cover
+        except Exception:
             label = self.optimization_method
         self.statusBar().showMessage(f"3D optimization method set to: {label}")
 
@@ -149,7 +149,7 @@ class MainWindowCompute(object):
 
             # Show menu at button position
             menu.exec_(self.convert_button.mapToGlobal(pos))
-        except Exception as e:  # pragma: no cover
+        except Exception as e:
             print(f"Error showing convert menu: {e}")
 
     def _trigger_conversion_with_temp_mode(self, mode_key):  # pragma: no cover
@@ -158,7 +158,7 @@ class MainWindowCompute(object):
             self._temp_conv_mode = mode_key
             # Call the normal conversion entry point (it will consume the temp)
             QTimer.singleShot(0, self.trigger_conversion)
-        except Exception as e:  # pragma: no cover
+        except Exception as e:
             print(f"Failed to start conversion with temp mode {mode_key}: {e}")
 
     def show_optimize_menu(self, pos):  # pragma: no cover
@@ -205,7 +205,7 @@ class MainWindowCompute(object):
                         menu.addAction(a)
 
             menu.exec_(self.optimize_3d_button.mapToGlobal(pos))
-        except Exception as e:  # pragma: no cover
+        except Exception as e:
             print(f"Error showing optimize menu: {e}")
 
     def _trigger_optimize_with_temp_method(self, method_key):  # pragma: no cover
@@ -214,7 +214,7 @@ class MainWindowCompute(object):
             self._temp_optimization_method = method_key
             # Run optimize on next event loop turn so UI updates first
             QTimer.singleShot(0, self.optimize_3d_structure)
-        except Exception as e:  # pragma: no cover
+        except Exception as e:
             print(f"Failed to start optimization with temp method {method_key}: {e}")
 
     def trigger_conversion(self):
@@ -292,7 +292,7 @@ class MainWindowCompute(object):
 
         try:
             Chem.SanitizeMol(mol)
-        except Exception:  # pragma: no cover
+        except Exception:
             self.statusBar().showMessage("Error: Invalid chemical structure.")
             self.view_2d.setFocus()
             return
@@ -350,19 +350,19 @@ class MainWindowCompute(object):
         run_id = int(getattr(self, "next_conversion_id", 1))
         try:
             self.next_conversion_id = run_id + 1
-        except Exception:  # pragma: no cover
+        except Exception:
             self.next_conversion_id = getattr(self, "next_conversion_id", 1) + 1
 
         # Record this run as active. Use a set to track all active worker ids
         # so a Halt request can target every running conversion.
         try:
             self.active_worker_ids.add(run_id)
-        except Exception:  # pragma: no cover
+        except Exception:
             # Ensure attribute exists in case of weird states
             self.active_worker_ids = set([run_id])
 
         # Change the convert button to a Halt button so user can cancel
-        try:  # pragma: no cover
+        try:
             # keep it enabled so the user can click Halt
             self.convert_button.setText("Halt conversion")
             try:
@@ -402,7 +402,7 @@ class MainWindowCompute(object):
             name="calculating_text",
         )
         # Keep a reference so we can reliably remove the text actor later
-        try:  # pragma: no cover
+        try:
             self._calculating_text_actor = text_actor
         except Exception:  # pragma: no cover
             # Best-effort: if storing fails, ignore — cleanup will still attempt renderer removal
@@ -417,7 +417,7 @@ class MainWindowCompute(object):
         if conv_mode:
             try:
                 del self._temp_conv_mode
-            except Exception:  # pragma: no cover
+            except Exception:
                 try:
                     delattr(self, "_temp_conv_mode")
                 except Exception:  # pragma: no cover
@@ -435,7 +435,7 @@ class MainWindowCompute(object):
         if hasattr(self, "_temp_optimization_method"):
             try:
                 del self._temp_optimization_method
-            except Exception:  # pragma: no cover
+            except Exception:
                 try:
                     delattr(self, "_temp_optimization_method")
                 except Exception:  # pragma: no cover
@@ -456,7 +456,7 @@ class MainWindowCompute(object):
         # Create a fresh CalculationWorker + QThread for this run so multiple
         # conversions can execute in parallel. The worker will be cleaned up
         # automatically after it finishes/errors.
-        try:  # pragma: no cover
+        try:
             thread = QThread()
             worker = CalculationWorker()
             # Share the halt_ids set so user can request cancellation
@@ -584,7 +584,7 @@ class MainWindowCompute(object):
                 import traceback
 
                 traceback.print_exc()
-        except Exception as e:  # pragma: no cover
+        except Exception as e:
             # Fall back: if thread/worker creation failed, create a local
             # worker and start it (runs in main thread). This preserves
             # functionality without relying on the shared MainWindow signal.
@@ -596,7 +596,7 @@ class MainWindowCompute(object):
                         m, o
                     ),
                 )
-            except Exception:  # pragma: no cover
+            except Exception:
                 # surface the original error via existing UI path
                 self.on_calculation_error(str(e))
 
@@ -677,7 +677,7 @@ class MainWindowCompute(object):
                                 traceback.print_exc()
                     try:
                         delattr(self, "_calculating_text_actor")
-                    except Exception:  # pragma: no cover
+                    except Exception:
                         try:
                             del self._calculating_text_actor
                         except Exception:  # pragma: no cover
@@ -742,7 +742,7 @@ class MainWindowCompute(object):
             self.scene.clearSelection()
             self.view_2d.setFocus()
 
-        except Exception as e:  # pragma: no cover
+        except Exception as e:
             print(f"Error in fallback chemistry check: {e}")
             self.statusBar().showMessage("Error: Invalid chemical structure.")
             self.view_2d.setFocus()
@@ -782,7 +782,7 @@ class MainWindowCompute(object):
             if hasattr(self, "_temp_optimization_method"):
                 try:
                     del self._temp_optimization_method
-                except Exception:  # pragma: no cover
+                except Exception:
                     try:
                         delattr(self, "_temp_optimization_method")
                     except Exception:  # pragma: no cover
@@ -818,12 +818,12 @@ class MainWindowCompute(object):
                                     f"{mmff_variant} minimize returned non-zero status: {ff_ret}"
                                 )
                                 return
-                        except Exception as e:  # pragma: no cover
+                        except Exception as e:
                             self.statusBar().showMessage(
                                 f"{mmff_variant} parameterization/minimize failed: {e}"
                             )
                             return
-                except Exception as e:  # pragma: no cover
+                except Exception as e:
                     self.statusBar().showMessage(
                         f"{mmff_variant} (RDKit) optimization error: {e}"
                     )
@@ -842,12 +842,12 @@ class MainWindowCompute(object):
                                     f"UFF minimize returned non-zero status: {ff_ret}"
                                 )
                                 return
-                        except Exception as e:  # pragma: no cover
+                        except Exception as e:
                             self.statusBar().showMessage(
                                 f"UFF parameterization/minimize failed: {e}"
                             )
                             return
-                except Exception as e:  # pragma: no cover
+                except Exception as e:
                     self.statusBar().showMessage(f"UFF (RDKit) optimization error: {e}")
                     return
             # Plugin method dispatch
@@ -866,7 +866,7 @@ class MainWindowCompute(object):
                             f"Optimization method '{method}' returned failure."
                         )
                         return
-                except Exception as e:  # pragma: no cover
+                except Exception as e:
                     self.statusBar().showMessage(
                         f"Plugin optimization error ({method}): {e}"
                     )
@@ -876,7 +876,7 @@ class MainWindowCompute(object):
                     "Selected optimization method is not available. Use MMFF94 (RDKit) or UFF (RDKit)."
                 )
                 return
-        except Exception as e:  # pragma: no cover
+        except Exception as e:
             self.statusBar().showMessage(f"3D optimization error: {e}")
 
         # 最適化後の構造で3Dビューを再描画
@@ -930,7 +930,7 @@ class MainWindowCompute(object):
                 used_label = (getattr(self, "opt3d_method_labels", {}) or {}).get(
                     str(used_method).upper(), used_method
                 )
-        except Exception:  # pragma: no cover
+        except Exception:
             used_label = None
 
         if used_label:
@@ -951,7 +951,7 @@ class MainWindowCompute(object):
                 worker_id, mol = result
             else:
                 mol = result
-        except Exception:  # pragma: no cover
+        except Exception:
             mol = result
 
         # If this finished result is from a stale/halting run, discard it
@@ -983,7 +983,7 @@ class MainWindowCompute(object):
                                         traceback.print_exc()
                             try:
                                 delattr(self, "_calculating_text_actor")
-                            except Exception:  # pragma: no cover
+                            except Exception:
                                 try:
                                     del self._calculating_text_actor
                                 except Exception:  # pragma: no cover
@@ -1133,7 +1133,7 @@ class MainWindowCompute(object):
                 self.statusBar().showMessage(
                     f"{len(frags)} molecules converted with collision avoidance."
                 )
-        except Exception as e:  # pragma: no cover
+        except Exception as e:
             print(f"Warning: Collision detection failed: {e}")
             # 衝突検出に失敗してもエラーにはしない
 
@@ -1146,7 +1146,7 @@ class MainWindowCompute(object):
                     if hasattr(self.plotter, "remove_actor"):
                         try:
                             self.plotter.remove_actor(actor)
-                        except Exception:  # pragma: no cover
+                        except Exception:
                             # Some pyvista versions use renderer.RemoveActor
                             if (
                                 hasattr(self.plotter, "renderer")
@@ -1169,7 +1169,7 @@ class MainWindowCompute(object):
                 finally:
                     try:
                         delattr(self, "_calculating_text_actor")
-                    except Exception:  # pragma: no cover
+                    except Exception:
                         try:
                             del self._calculating_text_actor
                         except Exception:  # pragma: no cover
@@ -1246,7 +1246,7 @@ class MainWindowCompute(object):
                 worker_id, error_message = result
             else:
                 error_message = str(result)
-        except Exception:  # pragma: no cover
+        except Exception:
             error_message = str(result)
 
         # If this error is from a stale/previous worker (not in active set), ignore it.
@@ -1273,7 +1273,7 @@ class MainWindowCompute(object):
                     if hasattr(self.plotter, "remove_actor"):
                         try:
                             self.plotter.remove_actor(actor)
-                        except Exception:  # pragma: no cover
+                        except Exception:
                             if (
                                 hasattr(self.plotter, "renderer")
                                 and self.plotter.renderer
@@ -1295,7 +1295,7 @@ class MainWindowCompute(object):
                 finally:
                     try:
                         delattr(self, "_calculating_text_actor")
-                    except Exception:  # pragma: no cover
+                    except Exception:
                         try:
                             del self._calculating_text_actor
                         except Exception:  # pragma: no cover

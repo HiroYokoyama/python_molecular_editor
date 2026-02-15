@@ -38,7 +38,7 @@ try:
     from PyQt6 import sip as _sip  # type: ignore
 
     _sip_isdeleted = getattr(_sip, "isdeleted", None)
-except Exception:  # pragma: no cover
+except Exception:
     _sip = None
     _sip_isdeleted = None
 
@@ -91,7 +91,7 @@ class MainWindowProjectIo(object):
                 ValueError,
             ) as e:  # pragma: no cover
                 self.statusBar().showMessage(f"Data serialization error: {e}")
-            except Exception as e:  # pragma: no cover
+            except Exception as e:
                 self.statusBar().showMessage(f"Error saving project file: {e}")
                 pass
         else:
@@ -111,7 +111,7 @@ class MainWindowProjectIo(object):
                 if self.current_file_path:
                     base = os.path.basename(self.current_file_path)
                     default_name = os.path.splitext(base)[0]
-            except Exception:  # pragma: no cover
+            except Exception:
                 default_name = "untitled"
 
             # Prefer the directory of the currently opened file as default
@@ -121,7 +121,7 @@ class MainWindowProjectIo(object):
                     default_path = os.path.join(
                         os.path.dirname(self.current_file_path), default_name
                     )
-            except Exception:  # pragma: no cover
+            except Exception:
                 default_path = default_name
 
             file_path, _ = QFileDialog.getSaveFileName(  # pragma: no cover
@@ -157,7 +157,7 @@ class MainWindowProjectIo(object):
             self.statusBar().showMessage(f"File I/O error: {e}")
         except pickle.PicklingError as e:  # pragma: no cover
             self.statusBar().showMessage(f"Data serialization error: {e}")
-        except Exception as e:  # pragma: no cover
+        except Exception as e:
             self.statusBar().showMessage(f"Error saving project file: {e}")
             pass
 
@@ -174,7 +174,7 @@ class MainWindowProjectIo(object):
                 if self.current_file_path:
                     base = os.path.basename(self.current_file_path)
                     default_name = os.path.splitext(base)[0]
-            except Exception:  # pragma: no cover
+            except Exception:
                 default_name = "untitled"
 
             # prefer same directory as current file when available
@@ -184,7 +184,7 @@ class MainWindowProjectIo(object):
                     default_path = os.path.join(
                         os.path.dirname(self.current_file_path), default_name
                     )
-            except Exception:  # pragma: no cover
+            except Exception:
                 default_path = default_name
 
             file_path, _ = QFileDialog.getSaveFileName(
@@ -218,7 +218,7 @@ class MainWindowProjectIo(object):
             self.statusBar().showMessage(f"File I/O error: {e}")
         except pickle.PicklingError as e:  # pragma: no cover
             self.statusBar().showMessage(f"Data serialization error: {e}")
-        except Exception as e:  # pragma: no cover
+        except Exception as e:
             self.statusBar().showMessage(f"Error saving project file: {e}")
             pass
 
@@ -256,7 +256,7 @@ class MainWindowProjectIo(object):
             self.statusBar().showMessage(f"File I/O error: {e}")
         except pickle.UnpicklingError as e:  # pragma: no cover
             self.statusBar().showMessage(f"Invalid project file format: {e}")
-        except Exception as e:  # pragma: no cover
+        except Exception as e:
             self.statusBar().showMessage(f"Error loading project file: {e}")
             pass
 
@@ -273,7 +273,7 @@ class MainWindowProjectIo(object):
                 if self.current_file_path:
                     base = os.path.basename(self.current_file_path)
                     default_name = os.path.splitext(base)[0]
-            except Exception:  # pragma: no cover
+            except Exception:
                 default_name = "untitled"
 
             # prefer same directory as current file when available
@@ -283,7 +283,7 @@ class MainWindowProjectIo(object):
                     default_path = os.path.join(
                         os.path.dirname(self.current_file_path), default_name
                     )
-            except Exception:  # pragma: no cover
+            except Exception:
                 default_path = default_name
 
             file_path, _ = QFileDialog.getSaveFileName(  # pragma: no cover
@@ -315,7 +315,7 @@ class MainWindowProjectIo(object):
             self.statusBar().showMessage(f"File I/O error: {e}")
         except (TypeError, ValueError) as e:  # pragma: no cover
             self.statusBar().showMessage(f"JSON serialization error: {e}")
-        except Exception as e:  # pragma: no cover
+        except Exception as e:
             self.statusBar().showMessage(f"Error saving PME Project file: {e}")
             pass
 
@@ -372,7 +372,7 @@ class MainWindowProjectIo(object):
             self.statusBar().showMessage(f"Invalid JSON format: {e}")
         except (OSError, IOError) as e:  # pragma: no cover
             self.statusBar().showMessage(f"File I/O error: {e}")
-        except Exception as e:  # pragma: no cover
+        except Exception as e:
             self.statusBar().showMessage(f"Error loading PME Project file: {e}")
             pass
 
@@ -403,10 +403,10 @@ class MainWindowProjectIo(object):
             # 拡張子不明の場合はJSONとして試行
             try:
                 self.load_json_data(file_path)
-            except Exception:  # pragma: no cover
+            except Exception:
                 try:
                     self.load_raw_data(file_path)
-                except Exception:  # pragma: no cover
+                except Exception:
                     self.statusBar().showMessage(
                         "Error: Unable to determine file format."
                     )

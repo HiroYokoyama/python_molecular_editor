@@ -164,7 +164,7 @@ class PluginManager:
             if self.main_window:
                 self.discover_plugins(self.main_window)
             return True, msg
-        except Exception as e:  # pragma: no cover
+        except Exception as e:
             return False, str(e)
 
     def discover_plugins(self, parent=None):
@@ -290,7 +290,7 @@ class PluginManager:
                     # Pass category to context if needed, currently not storing it in context directly but could be useful
                     try:
                         module.initialize(context)
-                    except Exception as e:  # pragma: no cover
+                    except Exception as e:
                         status = f"Error (Init): {e}"
                         print(f"Plugin {plugin_name} initialize error: {e}")
                         pass
@@ -300,7 +300,7 @@ class PluginManager:
                             module.autorun(self.main_window)
                         else:
                             status = "Skipped (No MW)"
-                    except Exception as e:  # pragma: no cover
+                    except Exception as e:
                         status = f"Error (Autorun): {e}"
                         print(f"Plugin {plugin_name} autorun error: {e}")
                         pass
@@ -321,7 +321,7 @@ class PluginManager:
                     }
                 )
 
-        except Exception as e:  # pragma: no cover
+        except Exception as e:
             print(f"Failed to load plugin {module_name}: {e}")
             pass
 
@@ -329,7 +329,7 @@ class PluginManager:
         """Executes the plugin's run method (Legacy manual trigger)."""
         try:
             module.run(main_window)
-        except Exception as e:  # pragma: no cover
+        except Exception as e:
             QMessageBox.critical(
                 main_window,
                 "Plugin Error",
@@ -427,7 +427,7 @@ class PluginManager:
         for handler in self.document_reset_handlers:
             try:
                 handler["callback"]()
-            except Exception as e:  # pragma: no cover
+            except Exception as e:
                 print(f"Error in document reset handler for {handler['plugin']}: {e}")
 
     def get_plugin_info_safe(self, file_path):
@@ -513,6 +513,6 @@ class PluginManager:
                     if val and not info["description"]:
                         info["description"] = val.strip().split("\n")[0]
 
-        except Exception as e:  # pragma: no cover
+        except Exception as e:
             print(f"Error parsing plugin info: {e}")
         return info

@@ -22,13 +22,13 @@ from rdkit.DistanceGeometry import DoTriangleSmoothing
 
 try:
     from . import OBABEL_AVAILABLE
-except Exception:  # pragma: no cover
+except Exception:
     from modules import OBABEL_AVAILABLE
 # Only import pybel on demand — `moleditpy` itself doesn't expose `pybel`.
 if OBABEL_AVAILABLE:
     try:
         from openbabel import pybel
-    except Exception:  # pragma: no cover
+    except Exception:
         # If import fails here, disable OBABEL locally; avoid raising
         pybel = None
         OBABEL_AVAILABLE = False
@@ -74,7 +74,7 @@ class CalculationWorker(QObject):
                 if halt_ids is None:
                     return False
                 return worker_id in halt_ids
-            except Exception:  # pragma: no cover
+            except Exception:
                 return False
 
         # Safe-emission helpers: do nothing if this worker has been halted.
@@ -114,7 +114,7 @@ class CalculationWorker(QObject):
                 # Emit a tuple containing the worker_id (may be None) and the message
                 try:
                     self.error.emit((worker_id, msg))
-                except Exception:  # pragma: no cover
+                except Exception:
                     # Fallback to emitting the raw message if tuple emission fails for any reason
                     try:
                         self.error.emit(msg)
@@ -131,7 +131,7 @@ class CalculationWorker(QObject):
             worker_id = None
             try:
                 worker_id = options.get("worker_id") if options else None
-            except Exception:  # pragma: no cover
+            except Exception:
                 worker_id = None
 
             _warned_no_worker_id = False
@@ -291,12 +291,12 @@ class CalculationWorker(QObject):
                         base2d_all = Chem.MolFromMolBlock(
                             mol_block, removeHs=False, sanitize=True
                         )
-                    except Exception:  # pragma: no cover
+                    except Exception:
                         try:
                             base2d_all = Chem.MolFromMolBlock(
                                 mol_block, removeHs=False, sanitize=False
                             )
-                        except Exception:  # pragma: no cover
+                        except Exception:
                             base2d_all = None
 
                     if base2d_all is not None and base2d_all.GetNumConformers() > 0:
@@ -320,7 +320,7 @@ class CalculationWorker(QObject):
                             try:
                                 natoms = int(parts[0])
                                 nbonds = int(parts[1])
-                            except Exception:  # pragma: no cover
+                            except Exception:
                                 natoms = nbonds = 0
 
                             # 全原子マップ (MOL 1-based index -> 0-based index)
@@ -344,7 +344,7 @@ class CalculationWorker(QObject):
                                             atom2_mol = int(
                                                 m.group(2)
                                             )  # 1-based MOL index
-                                        except Exception:  # pragma: no cover
+                                        except Exception:
                                             continue
                                         try:
                                             stereo_raw = (
@@ -352,7 +352,7 @@ class CalculationWorker(QObject):
                                                 if m.group(4) is not None
                                                 else 0
                                             )
-                                        except Exception:  # pragma: no cover
+                                        except Exception:
                                             stereo_raw = 0
                                     else:
                                         fields = bond_line.split()
@@ -364,7 +364,7 @@ class CalculationWorker(QObject):
                                                 atom2_mol = int(
                                                     fields[1]
                                                 )  # 1-based MOL index
-                                            except Exception:  # pragma: no cover
+                                            except Exception:
                                                 continue
                                             try:
                                                 stereo_raw = (
@@ -372,7 +372,7 @@ class CalculationWorker(QObject):
                                                     if len(fields) > 3
                                                     else 0
                                                 )
-                                            except Exception:  # pragma: no cover
+                                            except Exception:
                                                 stereo_raw = 0
                                         else:
                                             continue
@@ -396,9 +396,9 @@ class CalculationWorker(QObject):
                                             stereo_dirs.append(
                                                 (idx1, idx2, stereo_flag)
                                             )
-                                except Exception:  # pragma: no cover
+                                except Exception:
                                     continue
-                    except Exception:  # pragma: no cover
+                    except Exception:
                         stereo_dirs = []
 
                     # Fallback for parsed_coords (if RDKit parse failed)
@@ -414,7 +414,7 @@ class CalculationWorker(QObject):
                                 parts = lines[counts_idx].split()
                                 try:
                                     natoms = int(parts[0])
-                                except Exception:  # pragma: no cover
+                                except Exception:
                                     natoms = 0
                                 atom_start = counts_idx + 1
                                 for j in range(
@@ -425,20 +425,20 @@ class CalculationWorker(QObject):
                                         x = float(atom_line[0:10].strip())
                                         y = float(atom_line[10:20].strip())
                                         z = float(atom_line[20:30].strip())
-                                    except Exception:  # pragma: no cover
+                                    except Exception:
                                         fields = atom_line.split()
                                         if len(fields) >= 4:
                                             try:
                                                 x = float(fields[0])
                                                 y = float(fields[1])
                                                 z = float(fields[2])
-                                            except Exception:  # pragma: no cover
+                                            except Exception:
                                                 continue
                                         else:
                                             continue
                                     # H原子もスキップしない
                                     parsed_coords.append((x, y, z))
-                        except Exception:  # pragma: no cover
+                        except Exception:
                             parsed_coords = []
 
                     if not parsed_coords:
@@ -513,7 +513,7 @@ class CalculationWorker(QObject):
                                                             vecs.append(
                                                                 (vx / nrm, vy / nrm)
                                                             )
-                                                    except Exception:  # pragma: no cover
+                                                    except Exception:
                                                         continue
 
                                             if vecs:
@@ -569,10 +569,10 @@ class CalculationWorker(QObject):
 
                                             heavy_pos_found = True
                                             break
-                                        except Exception:  # pragma: no cover
+                                        except Exception:
                                             # fall back to trying the next neighbor if any
                                             continue
-                                    except Exception:  # pragma: no cover
+                                    except Exception:
                                         continue
                                 if not heavy_pos_found:
                                     # フォールバック (原点近く)
@@ -613,7 +613,7 @@ class CalculationWorker(QObject):
                                         float(pos.x), float(pos.y), float(newz)
                                     ),
                                 )
-                            except Exception:  # pragma: no cover
+                            except Exception:
                                 continue
                     except Exception:  # pragma: no cover
                         import traceback
@@ -633,11 +633,11 @@ class CalculationWorker(QObject):
                         raise RuntimeError("Halted (after optimization)")
                     try:
                         _safe_finished((worker_id, mol))
-                    except Exception:  # pragma: no cover
+                    except Exception:
                         _safe_finished(mol)
                     _safe_status("Direct conversion completed.")
                     return
-                except Exception as e:  # pragma: no cover
+                except Exception as e:
                     _safe_status(f"Direct conversion failed: {e}")
 
             params = AllChem.ETKDGv2()
@@ -693,7 +693,7 @@ class CalculationWorker(QObject):
                 # Final check before returning success
                 if _check_halted():
                     raise RuntimeError("Halted")
-            except Exception as e:  # pragma: no cover
+            except Exception as e:
                 # Standard embedding failed; report and continue to fallback attempts
                 _safe_status(f"Standard embedding failed: {e}")
 
@@ -740,7 +740,7 @@ class CalculationWorker(QObject):
                         DoTriangleSmoothing(bounds_matrix)
                         conf_id = AllChem.EmbedMolecule(mol, bounds_matrix, params)
                         _safe_status("Constraint-based embedding succeeded")
-                    except Exception:  # pragma: no cover
+                    except Exception:
                         # Constraint embedding failed: only raise error if mode is 'rdkit', otherwise allow fallback
                         _safe_status("RDKit: Constraint embedding failed")
                         if conversion_mode == "rdkit":
@@ -783,7 +783,7 @@ class CalculationWorker(QObject):
             opt_method = None
             try:
                 opt_method = options.get("optimization_method") if options else None
-            except Exception:  # pragma: no cover
+            except Exception:
                 opt_method = None
 
             if conf_id != -1:
@@ -802,7 +802,7 @@ class CalculationWorker(QObject):
                     if _check_halted():
                         raise RuntimeError("Halted")
                     AllChem.MMFFOptimizeMolecule(mol, mmffVariant=mmff_variant)
-                except Exception:  # pragma: no cover
+                except Exception:
                     # fallback to UFF if MMFF fails
                     try:
                         if _check_halted():
@@ -827,7 +827,7 @@ class CalculationWorker(QObject):
                     raise RuntimeError("Halted (after optimization)")
                 try:
                     _safe_finished((worker_id, mol))
-                except Exception:  # pragma: no cover
+                except Exception:
                     # Fallback to legacy single-arg emit
                     _safe_finished(mol)
                 _safe_status("RDKit 3D conversion succeeded.")
@@ -856,13 +856,13 @@ class CalculationWorker(QObject):
                         if _check_halted():
                             raise RuntimeError("Halted")
                         ob_mol.localopt(forcefield="mmff94", steps=500)
-                    except Exception:  # pragma: no cover
+                    except Exception:
                         try:
                             _safe_status("MMFF94 failed, falling back to UFF...")
                             if _check_halted():
                                 raise RuntimeError("Halted")
                             ob_mol.localopt(forcefield="uff", steps=500)
-                        except Exception:  # pragma: no cover
+                        except Exception:
                             _safe_status("UFF optimization also failed.")
                     molblock_ob = ob_mol.write("mol")
                     rd_mol = Chem.MolFromMolBlock(molblock_ob, removeHs=False)
@@ -876,7 +876,7 @@ class CalculationWorker(QObject):
                         if _check_halted():
                             raise RuntimeError("Halted")
                         AllChem.MMFFOptimizeMolecule(rd_mol, mmffVariant=mmff_variant)
-                    except Exception:  # pragma: no cover
+                    except Exception:
                         try:
                             if _check_halted():
                                 raise RuntimeError("Halted")
@@ -893,14 +893,14 @@ class CalculationWorker(QObject):
                         raise RuntimeError("Halted (after optimization)")
                     try:
                         _safe_finished((worker_id, rd_mol))
-                    except Exception:  # pragma: no cover
+                    except Exception:
                         _safe_finished(rd_mol)
                     return
-                except Exception as ob_err:  # pragma: no cover
+                except Exception as ob_err:
                     raise RuntimeError(f"Open Babel 3D conversion failed: {ob_err}")
 
             if conf_id == -1 and conversion_mode == "rdkit":
                 raise RuntimeError("RDKit 3D conversion failed (rdkit-only mode)")
 
-        except Exception as e:  # pragma: no cover
+        except Exception as e:
             _safe_error(str(e))

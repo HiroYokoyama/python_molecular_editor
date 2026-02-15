@@ -40,14 +40,14 @@ try:
     from PyQt6 import sip as _sip  # type: ignore
 
     _sip_isdeleted = getattr(_sip, "isdeleted", None)
-except Exception:  # pragma: no cover
+except Exception:
     _sip = None
     _sip_isdeleted = None
 
 try:
     # package relative imports (preferred when running as `python -m moleditpy`)
     from .custom_interactor_style import CustomInteractorStyle
-except Exception:  # pragma: no cover
+except Exception:
     # Fallback to absolute imports for script-style execution
     from modules.custom_interactor_style import CustomInteractorStyle
 
@@ -311,7 +311,7 @@ class MainWindowUiManager(object):
                                 # They will check the file type in dropEvent
                                 event.acceptProposedAction()
                                 return
-                except Exception:  # pragma: no cover
+                except Exception:
                     continue
         event.ignore()
 
@@ -326,7 +326,7 @@ class MainWindowUiManager(object):
                     if url.isLocalFile():
                         file_path = url.toLocalFile()
                         break
-                except Exception:  # pragma: no cover
+                except Exception:
                     continue
 
         if file_path:
@@ -339,7 +339,7 @@ class MainWindowUiManager(object):
                         if handled:
                             event.acceptProposedAction()
                             return
-                    except Exception as e:  # pragma: no cover
+                    except Exception as e:
                         print(f"Error in plugin drop handler: {e}")
             # ドロップ位置を取得
             drop_pos = event.position().toPoint()

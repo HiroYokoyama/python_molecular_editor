@@ -150,7 +150,7 @@ class AnalysisWindow(QDialog):
                 # InChIを生成
                 try:
                     inchi = Chem.MolToInchi(self.mol)
-                except Exception:  # pragma: no cover
+                except Exception:
                     inchi = "N/A"
 
                 # InChIKeyを生成（RDKitのinchi APIが無い場合に備えてフォールバック）
@@ -159,16 +159,16 @@ class AnalysisWindow(QDialog):
                     inchi_key = None
                     try:
                         inchi_key = Chem.MolToInchiKey(self.mol)
-                    except Exception:  # pragma: no cover
+                    except Exception:
                         # Fallback to rdkit.Chem.inchi if present
                         try:
                             inchi_key = rd_inchi.MolToInchiKey(self.mol)
-                        except Exception:  # pragma: no cover
+                        except Exception:
                             inchi_key = None
 
                     if not inchi_key:
                         inchi_key = "N/A"
-                except Exception:  # pragma: no cover
+                except Exception:
                     inchi_key = "N/A"
 
                 # 表示するプロパティを辞書にまとめる
@@ -186,7 +186,7 @@ class AnalysisWindow(QDialog):
                     "H-Bond Donors:": str(num_h_donors),
                     "H-Bond Acceptors:": str(num_h_acceptors),
                 }
-        except Exception as e:  # pragma: no cover
+        except Exception as e:
             main_layout.addWidget(QLabel(f"Error calculating properties: {e}"))
             return
 

@@ -30,7 +30,7 @@ try:
         FONT_FAMILY,
         FONT_WEIGHT_BOLD,
     )
-except Exception:  # pragma: no cover
+except Exception:
     from modules.constants import (
         ATOM_RADIUS,
         CPK_COLORS,
@@ -45,7 +45,7 @@ from PyQt6 import sip
 def sip_isdeleted_safe(obj):
     try:
         return sip.isdeleted(obj)
-    except Exception:  # pragma: no cover
+    except Exception:
         return False
 
 
@@ -87,7 +87,7 @@ class AtomItem(QGraphicsItem):
                     font_family = win.settings.get("atom_font_family_2d", FONT_FAMILY)
             else:
                 font_family = FONT_FAMILY
-        except Exception:  # pragma: no cover
+        except Exception:
             font_family = FONT_FAMILY
 
         self.font = QFont(font_family, font_size, FONT_WEIGHT_BOLD)
@@ -152,7 +152,7 @@ class AtomItem(QGraphicsItem):
                     if partner_pos is None:
                         continue
                     total_dx += partner_pos.x() - my_pos_x
-                except Exception:  # pragma: no cover
+                except Exception:
                     # Skip any bond that raises while inspecting; keep UI tolerant
                     continue
 
@@ -300,7 +300,7 @@ class AtomItem(QGraphicsItem):
                         other_pos = None
                         try:
                             other_pos = other_atom.pos()
-                        except Exception:  # pragma: no cover
+                        except Exception:
                             # Accessing .pos() may raise if the C++ object was destroyed
                             other_pos = None
 
@@ -308,7 +308,7 @@ class AtomItem(QGraphicsItem):
                             continue
 
                         total_dx += other_pos.x() - my_pos_x
-                    except Exception:  # pragma: no cover
+                    except Exception:
                         # Skip any problematic bond/partner rather than crashing the paint
                         continue
 

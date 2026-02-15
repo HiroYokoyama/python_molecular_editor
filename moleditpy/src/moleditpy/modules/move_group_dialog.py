@@ -26,12 +26,12 @@ from PyQt6.QtWidgets import (
 
 try:
     from .constants import VDW_RADII, pt
-except Exception:  # pragma: no cover
+except Exception:
     from modules.constants import VDW_RADII, pt
 
 try:
     from .dialog3_d_picking_mixin import Dialog3DPickingMixin
-except Exception:  # pragma: no cover
+except Exception:
     from modules.dialog3_d_picking_mixin import Dialog3DPickingMixin
 
 
@@ -215,7 +215,7 @@ class MoveGroupDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
                                     vdw_radius = pt.GetRvdw(atomic_num)
                                     if vdw_radius < 0.1:
                                         vdw_radius = 1.5
-                                except Exception:  # pragma: no cover
+                                except Exception:
                                     vdw_radius = 1.5
                                 click_threshold = vdw_radius * 1.5
 
@@ -246,7 +246,7 @@ class MoveGroupDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
                         # グループがあっても通常のカメラ操作を許可
                         return False
 
-                except Exception as e:  # pragma: no cover
+                except Exception as e:
                     print(f"Error in mouse press: {e}")
                     return False
 
