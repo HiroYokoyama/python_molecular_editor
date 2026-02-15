@@ -287,8 +287,8 @@ class MolecularData:
                 return Chem.MolToMolBlock(mol, includeStereo=True)
         except Exception:  # pragma: no cover
             import traceback
-
             traceback.print_exc()
+
         if not self.atoms:
             return None
         atom_map = {old_id: new_id for new_id, old_id in enumerate(self.atoms.keys())}

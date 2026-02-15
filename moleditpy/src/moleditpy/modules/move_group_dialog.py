@@ -276,11 +276,9 @@ class MoveGroupDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
                                 )
                             except Exception:  # pragma: no cover
                                 import traceback
-
                                 traceback.print_exc()
                     except Exception:  # pragma: no cover
                         import traceback
-
                         traceback.print_exc()
 
                     # 閾値以下の場合はカメラ操作を許可
@@ -300,7 +298,6 @@ class MoveGroupDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
                             self.mouse_moved_during_drag = True
                     except Exception:  # pragma: no cover
                         import traceback
-
                         traceback.print_exc()
 
                     # ドラッグ中はイベントを消費してカメラ回転を防ぐ
@@ -341,7 +338,6 @@ class MoveGroupDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
                             )
                     except Exception:  # pragma: no cover
                         import traceback
-
                         traceback.print_exc()
 
                 # ドラッグ中でない場合はカメラ回転を許可
@@ -380,13 +376,11 @@ class MoveGroupDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
                                     )
                                 except Exception:  # pragma: no cover
                                     import traceback
-
                                     traceback.print_exc()
                                 return True
 
                     except Exception:  # pragma: no cover
                         import traceback
-
                         traceback.print_exc()
                     finally:
                         # ドラッグ状態をリセット
@@ -403,7 +397,6 @@ class MoveGroupDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
                             )
                         except Exception:  # pragma: no cover
                             import traceback
-
                             traceback.print_exc()
 
                     return True  # イベントを消費
@@ -514,21 +507,20 @@ class MoveGroupDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
             self.main_window.plotter.remove_actor("move_group_highlight")
         except Exception:  # pragma: no cover
             import traceback
-
             traceback.print_exc()
+
         if hasattr(self, "highlight_actor"):
             try:
                 self.main_window.plotter.remove_actor(self.highlight_actor)
             except Exception:  # pragma: no cover
                 import traceback
-
                 traceback.print_exc()
+
             self.highlight_actor = None
         try:
             self.main_window.plotter.render()
         except Exception:  # pragma: no cover
             import traceback
-
             traceback.print_exc()
 
     def reset_translation_inputs(self):
@@ -666,8 +658,8 @@ class MoveGroupDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
             self.main_window.draw_molecule_3d(self.mol)
         except Exception:  # pragma: no cover
             import traceback
-
             traceback.print_exc()
+
         super().closeEvent(event)
 
     def reject(self):
@@ -678,6 +670,6 @@ class MoveGroupDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
             self.main_window.draw_molecule_3d(self.mol)
         except Exception:  # pragma: no cover
             import traceback
-
             traceback.print_exc()
+
         super().reject()

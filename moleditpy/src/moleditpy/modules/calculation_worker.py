@@ -51,7 +51,6 @@ class CalculationWorker(QObject):
             self.start_work.connect(self.run_calculation)
         except Exception:  # pragma: no cover
             import traceback
-
             traceback.print_exc()
 
     @pyqtSlot(str, object)
@@ -102,11 +101,9 @@ class CalculationWorker(QObject):
                             self.finished.emit(payload)
                     except Exception:  # pragma: no cover
                         import traceback
-
                         traceback.print_exc()
             except Exception:  # pragma: no cover
                 import traceback
-
                 traceback.print_exc()
 
         def _safe_error(msg):  # pragma: no cover
@@ -120,11 +117,9 @@ class CalculationWorker(QObject):
                         self.error.emit(msg)
                     except Exception:  # pragma: no cover
                         import traceback
-
                         traceback.print_exc()
             except Exception:  # pragma: no cover
                 import traceback
-
                 traceback.print_exc()
 
         try:
@@ -143,7 +138,6 @@ class CalculationWorker(QObject):
                     )
                 except Exception:  # pragma: no cover
                     import traceback
-
                     traceback.print_exc()
                 _warned_no_worker_id = True
 
@@ -463,7 +457,6 @@ class CalculationWorker(QObject):
                                 )
                             except Exception:  # pragma: no cover
                                 import traceback
-
                                 traceback.print_exc()
                         else:
                             # 新規追加されたH原子: 親原子の近くに配置
@@ -582,9 +575,7 @@ class CalculationWorker(QObject):
                                         )
                                     except Exception:  # pragma: no cover
                                         import traceback
-
                                         traceback.print_exc()
-
                     # 5) Wedge/Dash の Zオフセットを適用
                     try:
                         stereo_z_offset = 1.5  # wedge -> +1.5, dash -> -1.5
@@ -617,15 +608,12 @@ class CalculationWorker(QObject):
                                 continue
                     except Exception:  # pragma: no cover
                         import traceback
-
                         traceback.print_exc()
-
                     # コンフォーマを入れ替えて終了
                     try:
                         mol.RemoveAllConformers()
                     except Exception:  # pragma: no cover
                         import traceback
-
                         traceback.print_exc()
                     mol.AddConformer(conf, assignId=True)
 
@@ -758,7 +746,6 @@ class CalculationWorker(QObject):
                         conf_id = -1
                 except Exception:  # pragma: no cover
                     import traceback
-
                     traceback.print_exc()
             """
             if conf_id == -1:
@@ -810,9 +797,7 @@ class CalculationWorker(QObject):
                         AllChem.UFFOptimizeMolecule(mol)
                     except Exception:  # pragma: no cover
                         import traceback
-
                         traceback.print_exc()
-
                 # CRITICAL: Restore stereochemistry again after optimization (explicit labels priority)
                 for bond_idx, stereo, stereo_atoms in original_stereo_info:
                     bond = mol.GetBondWithIdx(bond_idx)
@@ -848,7 +833,6 @@ class CalculationWorker(QObject):
                         ob_mol.addh()
                     except Exception:  # pragma: no cover
                         import traceback
-
                         traceback.print_exc()
                     ob_mol.make3D()
                     try:
@@ -883,7 +867,6 @@ class CalculationWorker(QObject):
                             AllChem.UFFOptimizeMolecule(rd_mol)
                         except Exception:  # pragma: no cover
                             import traceback
-
                             traceback.print_exc()
                     _safe_status(
                         "Open Babel embedding succeeded. Warning: Conformation accuracy may be limited."

@@ -137,8 +137,8 @@ class MainWindowView3d(object):
                 self.plotter.remove_actor(old_axes_actor)
             except Exception:  # pragma: no cover
                 import traceback
-
                 traceback.print_exc()
+
             self.axes_actor = None
 
         self.plotter.clear()
@@ -178,7 +178,6 @@ class MainWindowView3d(object):
                     self.statusBar().showMessage(f"Kekulize failed: {e}")
                 except Exception:  # pragma: no cover
                     import traceback
-
                     traceback.print_exc()
                 mol_to_draw = mol
 
@@ -204,7 +203,6 @@ class MainWindowView3d(object):
                         col[atom_idx] = [c.redF(), c.greenF(), c.blueF()]
                     except Exception:  # pragma: no cover
                         import traceback
-
                         traceback.print_exc()
 
         # スタイルに応じて原子の半径を設定（設定から読み込み）
@@ -440,7 +438,6 @@ class MainWindowView3d(object):
                     bs_bond_rgb = [q.red(), q.green(), q.blue()]
                 except Exception:  # pragma: no cover
                     import traceback
-
                     traceback.print_exc()
 
             # バッチ処理用のリスト
@@ -485,7 +482,6 @@ class MainWindowView3d(object):
                         end_color_rgb = ov_rgb
                     except Exception:  # pragma: no cover
                         import traceback
-
                         traceback.print_exc()
 
                 # Determine effective uniform color for this bond
@@ -938,11 +934,9 @@ class MainWindowView3d(object):
                         self.plotter.render()
                     except Exception:  # pragma: no cover
                         import traceback
-
                         traceback.print_exc()
         except Exception:  # pragma: no cover
             import traceback
-
             traceback.print_exc()
 
         # AtomIDまたは他の原子情報が表示されている場合は再表示
@@ -1055,7 +1049,6 @@ class MainWindowView3d(object):
             self.plotter.remove_actor("ez_labels")
         except Exception:  # pragma: no cover
             import traceback
-
             traceback.print_exc()
 
         pts, labels = [], []
@@ -1076,7 +1069,6 @@ class MainWindowView3d(object):
             )
         except Exception:  # pragma: no cover
             import traceback
-
             traceback.print_exc()
 
         for bond in mol.GetBonds():
@@ -1244,8 +1236,8 @@ class MainWindowView3d(object):
                 return self.current_mol.GetAtomWithIdx(0).HasProp("xyz_unique_id")
         except Exception:  # pragma: no cover
             import traceback
-
             traceback.print_exc()
+
         return False
 
     def has_original_atom_ids(self):
@@ -1260,8 +1252,8 @@ class MainWindowView3d(object):
                     return True
         except Exception:  # pragma: no cover
             import traceback
-
             traceback.print_exc()
+
         return False
 
     def update_atom_id_menu_text(self):
@@ -1440,7 +1432,6 @@ class MainWindowView3d(object):
                         self.plotter.remove_actor(nm)
                     except Exception:  # pragma: no cover
                         import traceback
-
                         traceback.print_exc()
             self.atom_label_legend_names = []
 
@@ -1487,18 +1478,15 @@ class MainWindowView3d(object):
                                 tp.SetBold(True)
                             except Exception:  # pragma: no cover
                                 import traceback
-
                                 traceback.print_exc()
                     except Exception:  # pragma: no cover
                         import traceback
-
                         traceback.print_exc()
                 except Exception:
                     continue
 
         except Exception:  # pragma: no cover
             import traceback
-
             traceback.print_exc()
 
     def clear_all_atom_info_labels(self):
@@ -1515,18 +1503,15 @@ class MainWindowView3d(object):
                             self.plotter.remove_actor(a)
                         except Exception:  # pragma: no cover
                             import traceback
-
                             traceback.print_exc()
                 else:
                     try:
                         self.plotter.remove_actor(self.current_atom_info_labels)
                     except Exception:  # pragma: no cover
                         import traceback
-
                         traceback.print_exc()
         except Exception:  # pragma: no cover
             import traceback
-
             traceback.print_exc()
         finally:
             self.current_atom_info_labels = None
@@ -1542,11 +1527,9 @@ class MainWindowView3d(object):
                         self.plotter.remove_actor(nm)
                     except Exception:  # pragma: no cover
                         import traceback
-
                         traceback.print_exc()
         except Exception:  # pragma: no cover
             import traceback
-
             traceback.print_exc()
         finally:
             self.atom_label_legend_names = []
@@ -1622,7 +1605,6 @@ class MainWindowView3d(object):
                     self.view_2d.setResizeAnchor(old_ra)
             except Exception:  # pragma: no cover
                 import traceback
-
                 traceback.print_exc()
 
     def update_cpk_colors_from_settings(self):
@@ -1724,8 +1706,8 @@ class MainWindowView3d(object):
                 self.plotter.reset_camera()
             except Exception:  # pragma: no cover
                 import traceback
-
                 traceback.print_exc()
+
             self._camera_initialized = True
 
         # 強制的にプロッターを更新
@@ -1735,7 +1717,6 @@ class MainWindowView3d(object):
                 self.plotter.update()
         except Exception:  # pragma: no cover
             import traceback
-
             traceback.print_exc()
 
     def update_bond_color_override(self, bond_idx, hex_color):

@@ -432,8 +432,8 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):  # pragma: n
                 self.main_window.plotter.remove_actor(label_actor)
             except Exception:  # pragma: no cover
                 import traceback
-
                 traceback.print_exc()
+
         self.constraint_labels = []
 
     def apply_optimization(self):

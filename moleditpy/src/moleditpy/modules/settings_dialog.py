@@ -374,7 +374,6 @@ class SettingsDialog(QDialog):  # pragma: no cover
             )
         except Exception:  # pragma: no cover
             import traceback
-
             traceback.print_exc()
 
     def create_scene_tab(self):
@@ -460,7 +459,6 @@ class SettingsDialog(QDialog):  # pragma: no cover
             )
         except Exception:  # pragma: no cover
             import traceback
-
             traceback.print_exc()
 
         # Add the checkbox to the other tab's form
@@ -471,7 +469,6 @@ class SettingsDialog(QDialog):  # pragma: no cover
             )
         except Exception:  # pragma: no cover
             import traceback
-
             traceback.print_exc()
 
         # 3D Kekule display option (under Other) will be added below the
@@ -494,7 +491,6 @@ class SettingsDialog(QDialog):  # pragma: no cover
             )
         except Exception:  # pragma: no cover
             import traceback
-
             traceback.print_exc()
 
         # Add separator after Kekule bonds option
@@ -510,7 +506,6 @@ class SettingsDialog(QDialog):  # pragma: no cover
             )
         except Exception:  # pragma: no cover
             import traceback
-
             traceback.print_exc()
 
         # Aromatic ring circle display option
@@ -525,7 +520,6 @@ class SettingsDialog(QDialog):  # pragma: no cover
             )
         except Exception:  # pragma: no cover
             import traceback
-
             traceback.print_exc()
 
         # Aromatic torus thickness factor
@@ -545,7 +539,6 @@ class SettingsDialog(QDialog):  # pragma: no cover
             )
         except Exception:  # pragma: no cover
             import traceback
-
             traceback.print_exc()
 
         # Add Other tab to the tab widget
@@ -583,7 +576,6 @@ class SettingsDialog(QDialog):  # pragma: no cover
                     )
                 except Exception:  # pragma: no cover
                     import traceback
-
                     traceback.print_exc()
             # Update BS color button from parent settings
             try:
@@ -604,11 +596,9 @@ class SettingsDialog(QDialog):  # pragma: no cover
                     self.bs_button.setToolTip(bs_hex)
             except Exception:  # pragma: no cover
                 import traceback
-
                 traceback.print_exc()
         except Exception:  # pragma: no cover
             import traceback
-
             traceback.print_exc()
 
     def create_ball_stick_tab(self):
@@ -1159,7 +1149,6 @@ class SettingsDialog(QDialog):  # pragma: no cover
                         self.parent_window.settings_dirty = True
                     except Exception:  # pragma: no cover
                         import traceback
-
                         traceback.print_exc()
                     # Also ensure color settings return to defaults and UI reflects them
                     try:
@@ -1181,13 +1170,11 @@ class SettingsDialog(QDialog):  # pragma: no cover
                             self.parent_window.update_cpk_colors_from_settings()
                         except Exception:  # pragma: no cover
                             import traceback
-
                             traceback.print_exc()
                         try:
                             self.parent_window.apply_3d_settings()
                         except Exception:  # pragma: no cover
                             import traceback
-
                             traceback.print_exc()
                         # Re-draw current 3D molecule if any
                         try:
@@ -1200,7 +1187,6 @@ class SettingsDialog(QDialog):  # pragma: no cover
                                 )
                         except Exception:  # pragma: no cover
                             import traceback
-
                             traceback.print_exc()
                         # Update 2D scene items to reflect color reset
                         try:
@@ -1211,24 +1197,19 @@ class SettingsDialog(QDialog):  # pragma: no cover
                                             it.update_style()
                                     except Exception:  # pragma: no cover
                                         import traceback
-
                                         traceback.print_exc()
                         except Exception:  # pragma: no cover
                             import traceback
-
                             traceback.print_exc()
                         # Mark settings dirty so they'll be saved on exit
                         try:
                             self.parent_window.settings_dirty = True
                         except Exception:  # pragma: no cover
                             import traceback
-
                             traceback.print_exc()
                     except Exception:  # pragma: no cover
                         import traceback
-
                         traceback.print_exc()
-
                     # Refresh parent's optimization and conversion menu/action states
                     try:
                         # Optimization method
@@ -1249,9 +1230,7 @@ class SettingsDialog(QDialog):  # pragma: no cover
                                     )
                                 except Exception:  # pragma: no cover
                                     import traceback
-
                                     traceback.print_exc()
-
                         # Conversion mode
                         conv_mode = self.parent_window.settings.get(
                             "3d_conversion_mode", "fallback"
@@ -1262,15 +1241,12 @@ class SettingsDialog(QDialog):  # pragma: no cover
                                     act.setChecked(k == conv_mode)
                                 except Exception:  # pragma: no cover
                                     import traceback
-
                                     traceback.print_exc()
                     except Exception:  # pragma: no cover
                         import traceback
-
                         traceback.print_exc()
             except Exception:  # pragma: no cover
                 import traceback
-
                 traceback.print_exc()
 
             QMessageBox.information(
@@ -1454,7 +1430,6 @@ class SettingsDialog(QDialog):  # pragma: no cover
                 self.bs_bond_color_button.setToolTip(self.bs_bond_color)
             except Exception:  # pragma: no cover
                 import traceback
-
                 traceback.print_exc()
 
     def apply_settings(self):
@@ -1468,8 +1443,8 @@ class SettingsDialog(QDialog):  # pragma: no cover
                 self.parent_window.settings_dirty = True
             except Exception:  # pragma: no cover
                 import traceback
-
                 traceback.print_exc()
+
             # 3Dビューの設定を適用
             self.parent_window.apply_3d_settings()
             # Update CPK colors from settings if present (no-op otherwise)
@@ -1477,8 +1452,8 @@ class SettingsDialog(QDialog):  # pragma: no cover
                 self.parent_window.update_cpk_colors_from_settings()
             except Exception:  # pragma: no cover
                 import traceback
-
                 traceback.print_exc()
+
             # Refresh any open CPK color dialogs so they update their UI
             try:
                 for w in QApplication.topLevelWidgets():
@@ -1502,16 +1477,14 @@ class SettingsDialog(QDialog):  # pragma: no cover
                                 w.refresh_ui()
                             except Exception:  # pragma: no cover
                                 import traceback
-
                                 traceback.print_exc()
                     except Exception:  # pragma: no cover
                         import traceback
-
                         traceback.print_exc()
             except Exception:  # pragma: no cover
                 import traceback
-
                 traceback.print_exc()
+
             # 現在の分子を再描画（設定変更を反映）
             if (
                 hasattr(self.parent_window, "current_mol")
@@ -1540,7 +1513,6 @@ class SettingsDialog(QDialog):  # pragma: no cover
                         self.parent_window.view_2d.viewport().update()
             except Exception:  # pragma: no cover
                 import traceback
-
                 traceback.print_exc()
 
             # ステータスバーに適用完了を表示
@@ -1559,13 +1531,11 @@ class SettingsDialog(QDialog):  # pragma: no cover
                 self.settings_dirty = True
             except Exception:  # pragma: no cover
                 import traceback
-
                 traceback.print_exc()
             # If skip is enabled, allow Optimize button; otherwise, respect chem_check flags
 
         except Exception:  # pragma: no cover
             import traceback
-
             traceback.print_exc()
 
     def accept(self):
@@ -1674,7 +1644,6 @@ class SettingsDialog(QDialog):  # pragma: no cover
             self.bs_bond_color_button.setToolTip(self.bs_bond_color)
         except Exception:  # pragma: no cover
             import traceback
-
             traceback.print_exc()
 
         self.bs_use_cpk_bond_checkbox.setChecked(
@@ -1819,7 +1788,6 @@ class SettingsDialog(QDialog):  # pragma: no cover
             self.aromatic_torus_thickness_label.setText(f"{thickness_factor:.1f}")
         except Exception:  # pragma: no cover
             import traceback
-
             traceback.print_exc()
 
         # 7. 2D Settings

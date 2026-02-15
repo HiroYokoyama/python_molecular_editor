@@ -104,7 +104,6 @@ class MainWindowViewLoaders(object):
                         self.optimize_3d_button.setEnabled(False)
                     except Exception:  # pragma: no cover
                         import traceback
-
                         traceback.print_exc()
             else:
                 try:
@@ -123,7 +122,6 @@ class MainWindowViewLoaders(object):
                                 self.optimize_3d_button.setEnabled(False)
                         except Exception:  # pragma: no cover
                             import traceback
-
                             traceback.print_exc()
                 else:
                     self.is_xyz_derived = True
@@ -132,9 +130,7 @@ class MainWindowViewLoaders(object):
                             self.optimize_3d_button.setEnabled(False)
                         except Exception:  # pragma: no cover
                             import traceback
-
                             traceback.print_exc()
-
             self.draw_molecule_3d(self.current_mol)
             self.plotter.reset_camera()
 
@@ -321,9 +317,7 @@ class MainWindowViewLoaders(object):
                 self._clear_xyz_flags(mol)
             except Exception:  # pragma: no cover
                 import traceback
-
                 traceback.print_exc()
-
             # 3Dビューアーに表示
             # Centralized chemical/sanitization handling
             # Ensure the skip_chemistry_checks setting is respected and flags are set

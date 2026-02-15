@@ -155,11 +155,9 @@ class MoleculeScene(QGraphicsScene):
                     app.aboutToQuit.connect(self.purge_deleted_items)
                 except Exception:  # pragma: no cover
                     import traceback
-
                     traceback.print_exc()
         except Exception:  # pragma: no cover
             import traceback
-
             traceback.print_exc()
 
     def clear_all_problem_flags(self):
@@ -373,14 +371,12 @@ class MoleculeScene(QGraphicsScene):
                             self.removeItem(self.temp_line)
                     except Exception:  # pragma: no cover
                         import traceback
-
                         traceback.print_exc()
             except Exception:
                 try:
                     self.removeItem(self.temp_line)
                 except Exception:  # pragma: no cover
                     import traceback
-
                     traceback.print_exc()
             finally:
                 self.temp_line = None
@@ -706,9 +702,7 @@ class MoleculeScene(QGraphicsScene):
                     self.clearSelection()
                 except Exception:  # pragma: no cover
                     import traceback
-
                     traceback.print_exc()
-
                 for a in connected_atoms:
                     try:
                         a.setSelected(True)
@@ -718,7 +712,6 @@ class MoleculeScene(QGraphicsScene):
                             setattr(a, "selected", True)
                         except Exception:  # pragma: no cover
                             import traceback
-
                             traceback.print_exc()
                 for b in connected_bonds:
                     try:
@@ -728,9 +721,7 @@ class MoleculeScene(QGraphicsScene):
                             setattr(b, "selected", True)
                         except Exception:  # pragma: no cover
                             import traceback
-
                             traceback.print_exc()
-
                 event.accept()
                 return
             except Exception:  # pragma: no cover
@@ -839,7 +830,6 @@ class MoleculeScene(QGraphicsScene):
                     used_indices.add(best_idx)
             except Exception:  # pragma: no cover
                 import traceback
-
                 traceback.print_exc()
 
         # --- 2) シーン内既存原子を self.data.atoms から列挙してマップ ---
@@ -1115,7 +1105,6 @@ class MoleculeScene(QGraphicsScene):
                     at.update_style()
             except Exception:  # pragma: no cover
                 import traceback
-
                 traceback.print_exc()
 
         return atom_items
@@ -1337,9 +1326,7 @@ class MoleculeScene(QGraphicsScene):
                                         atom.bonds.remove(b)
                             except Exception:  # pragma: no cover
                                 import traceback
-
                                 traceback.print_exc()
-
                     # After pruning bond references, update visual style so carbons without
                     # bonds become visible again.
                     if hasattr(atom, "update_style"):
@@ -1362,7 +1349,6 @@ class MoleculeScene(QGraphicsScene):
                                 self.data.remove_bond(a2.atom_id, a1.atom_id)
                             except Exception:  # pragma: no cover
                                 import traceback
-
                                 traceback.print_exc()
                 except Exception:
                     continue
@@ -1374,7 +1360,6 @@ class MoleculeScene(QGraphicsScene):
                             self.data.remove_atom(atom.atom_id)
                         except Exception:  # pragma: no cover
                             import traceback
-
                             traceback.print_exc()
                 except Exception:
                     continue
@@ -1386,9 +1371,7 @@ class MoleculeScene(QGraphicsScene):
                     self._ih_update_counter = 0
                 except Exception:  # pragma: no cover
                     import traceback
-
                     traceback.print_exc()
-
             # 3) Remove graphic items from the scene (bonds first)
             # To avoid calling into methods on wrappers that may refer to
             # already-deleted C++ objects (which can cause a native crash when
@@ -1411,7 +1394,6 @@ class MoleculeScene(QGraphicsScene):
                             self.removeItem(bond)
                         except Exception:  # pragma: no cover
                             import traceback
-
                             traceback.print_exc()
                 except Exception:
                     continue
@@ -1426,7 +1408,6 @@ class MoleculeScene(QGraphicsScene):
                             self.removeItem(atom)
                         except Exception:  # pragma: no cover
                             import traceback
-
                             traceback.print_exc()
                 except Exception:
                     continue
@@ -1450,7 +1431,6 @@ class MoleculeScene(QGraphicsScene):
                             bond.hide()
                         except Exception:  # pragma: no cover
                             import traceback
-
                             traceback.print_exc()
                         try:
                             self._deleted_items.append(bond)
@@ -1467,13 +1447,11 @@ class MoleculeScene(QGraphicsScene):
                             atom.hide()
                         except Exception:  # pragma: no cover
                             import traceback
-
                             traceback.print_exc()
                         try:
                             self._deleted_items.append(atom)
                         except Exception:  # pragma: no cover
                             import traceback
-
                             traceback.print_exc()
                 except Exception:
                     continue
@@ -1519,9 +1497,7 @@ class MoleculeScene(QGraphicsScene):
                             obj.hide()
                         except Exception:  # pragma: no cover
                             import traceback
-
                             traceback.print_exc()
-
                     try:
                         if hasattr(obj, "bonds") and getattr(obj, "bonds") is not None:
                             try:
@@ -1531,13 +1507,10 @@ class MoleculeScene(QGraphicsScene):
                                     obj.bonds = []
                                 except Exception:  # pragma: no cover
                                     import traceback
-
                                     traceback.print_exc()
                     except Exception:  # pragma: no cover
                         import traceback
-
                         traceback.print_exc()
-
                 except Exception:
                     # Continue purging remaining items even if one fails.
                     continue
@@ -1550,16 +1523,13 @@ class MoleculeScene(QGraphicsScene):
                     self._deleted_items = []
                 except Exception:  # pragma: no cover
                     import traceback
-
                     traceback.print_exc()
-
         except Exception as e:
             # Never raise during shutdown
             try:
                 print(f"Error purging deleted items: {e}")
             except Exception:  # pragma: no cover
                 import traceback
-
                 traceback.print_exc()
 
     def add_user_template_fragment(self, context):
@@ -2110,15 +2080,14 @@ class MoleculeScene(QGraphicsScene):
                                 self.removeItem(self.temp_line)
                         except Exception:  # pragma: no cover
                             import traceback
-
                             traceback.print_exc()
                 except Exception:
                     try:
                         self.removeItem(self.temp_line)
                     except Exception:  # pragma: no cover
                         import traceback
-
                         traceback.print_exc()
+
                 self.temp_line = None
                 self.start_atom = None
                 self.start_pos = None

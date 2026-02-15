@@ -150,7 +150,6 @@ class MainWindowProjectIo(object):
                 self._saved_state = copy.deepcopy(self.get_current_state())
             except Exception:  # pragma: no cover
                 traceback.print_exc()
-
             self.statusBar().showMessage(f"Project saved to {file_path}")
 
         except (OSError, IOError) as e:  # pragma: no cover
@@ -211,7 +210,6 @@ class MainWindowProjectIo(object):
                 self._saved_state = copy.deepcopy(self.get_current_state())
             except Exception:  # pragma: no cover
                 traceback.print_exc()
-
             self.statusBar().showMessage(f"Project saved to {file_path}")
 
         except (OSError, IOError) as e:  # pragma: no cover
@@ -245,7 +243,6 @@ class MainWindowProjectIo(object):
                 self._saved_state = copy.deepcopy(self.get_current_state())
             except Exception:  # pragma: no cover
                 traceback.print_exc()
-
             self.statusBar().showMessage(f"Project loaded from {file_path}")
 
             QTimer.singleShot(0, self.fit_to_view)

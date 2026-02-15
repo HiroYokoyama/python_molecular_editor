@@ -430,9 +430,7 @@ class MainWindowMolecularParsers(object):
                         candidate_mol._xyz_charge = 0
                     except Exception:  # pragma: no cover
                         import traceback
-
                         traceback.print_exc()
-
                 # Mark that this molecule was produced via the skip-chemistry path
                 try:
                     candidate_mol.SetIntProp("_xyz_skip_checks", 1)
@@ -441,9 +439,7 @@ class MainWindowMolecularParsers(object):
                         candidate_mol._xyz_skip_checks = True
                     except Exception:  # pragma: no cover
                         import traceback
-
                         traceback.print_exc()
-
                 # Set UI flags consistently: mark as XYZ-derived and disable optimize
                 try:
                     self.current_mol = candidate_mol
@@ -453,13 +449,10 @@ class MainWindowMolecularParsers(object):
                             self.optimize_3d_button.setEnabled(False)
                         except Exception:  # pragma: no cover
                             import traceback
-
                             traceback.print_exc()
                 except Exception:  # pragma: no cover
                     import traceback
-
                     traceback.print_exc()
-
                 # Store atom data for later analysis and return
                 candidate_mol._xyz_atom_data = atoms_data
                 return candidate_mol
@@ -542,13 +535,10 @@ class MainWindowMolecularParsers(object):
                                 candidate_mol._xyz_charge = int(charge_val)
                             except Exception:  # pragma: no cover
                                 import traceback
-
                                 traceback.print_exc()
                     except Exception:  # pragma: no cover
                         import traceback
-
                         traceback.print_exc()
-
                     # Preserve whether the user requested skip_chemistry_checks
                     try:
                         if bool(self.settings.get("skip_chemistry_checks", False)):
@@ -559,13 +549,10 @@ class MainWindowMolecularParsers(object):
                                     candidate_mol._xyz_skip_checks = True
                                 except Exception:  # pragma: no cover
                                     import traceback
-
                                     traceback.print_exc()
                     except Exception:  # pragma: no cover
                         import traceback
-
                         traceback.print_exc()
-
                     # Run chemistry checks which may emit warnings to stderr
                     self._apply_chem_check_and_set_flags(
                         candidate_mol, source_desc="XYZ"
@@ -597,7 +584,6 @@ class MainWindowMolecularParsers(object):
                                     self.estimate_bonds_from_distances(mol)
                                 except Exception:  # pragma: no cover
                                     import traceback
-
                                     traceback.print_exc()
                                 salvaged = None
                                 try:
@@ -613,7 +599,6 @@ class MainWindowMolecularParsers(object):
                                             salvaged._xyz_skip_checks = True
                                         except Exception:  # pragma: no cover
                                             import traceback
-
                                             traceback.print_exc()
                                     final_mol = salvaged
                                     break
@@ -625,7 +610,6 @@ class MainWindowMolecularParsers(object):
                                         )
                                     except Exception:  # pragma: no cover
                                         import traceback
-
                                         traceback.print_exc()
                                     return None
 
@@ -641,7 +625,6 @@ class MainWindowMolecularParsers(object):
                                     )
                                 except Exception:  # pragma: no cover
                                     import traceback
-
                                     traceback.print_exc()
                                 continue
                             except Exception as e_prompt:
@@ -656,13 +639,11 @@ class MainWindowMolecularParsers(object):
                                     )
                                 except Exception:
                                     skip_checks = False
-
                                 salvaged = None
                                 try:
                                     salvaged = mol.GetMol()
                                 except Exception:
                                     salvaged = None
-
                                 if skip_checks and salvaged is not None:
                                     final_mol = salvaged
                                     # mark salvaged molecule as produced under skip_checks
@@ -673,7 +654,6 @@ class MainWindowMolecularParsers(object):
                                             final_mol._xyz_skip_checks = True
                                         except Exception:  # pragma: no cover
                                             import traceback
-
                                             traceback.print_exc()
                                     break
                                 else:
@@ -683,7 +663,6 @@ class MainWindowMolecularParsers(object):
                                         )
                                     except Exception:  # pragma: no cover
                                         import traceback
-
                                         traceback.print_exc()
                                     # Continue prompting
                                     continue
@@ -699,7 +678,6 @@ class MainWindowMolecularParsers(object):
                                 self.estimate_bonds_from_distances(mol)
                             except Exception:  # pragma: no cover
                                 import traceback
-
                                 traceback.print_exc()
                             salvaged = None
                             try:
@@ -715,7 +693,6 @@ class MainWindowMolecularParsers(object):
                                         salvaged._xyz_skip_checks = True
                                     except Exception:  # pragma: no cover
                                         import traceback
-
                                         traceback.print_exc()
                                 final_mol = salvaged
                                 break
@@ -726,7 +703,6 @@ class MainWindowMolecularParsers(object):
                                     )
                                 except Exception:  # pragma: no cover
                                     import traceback
-
                                     traceback.print_exc()
                                 return None
 
@@ -742,7 +718,6 @@ class MainWindowMolecularParsers(object):
                                 )
                             except Exception:  # pragma: no cover
                                 import traceback
-
                                 traceback.print_exc()
                             continue
                         except Exception as e_prompt:
@@ -752,13 +727,11 @@ class MainWindowMolecularParsers(object):
                                 )
                             except Exception:
                                 skip_checks = False
-
                             salvaged = None
                             try:
                                 salvaged = mol.GetMol()
                             except Exception:
                                 salvaged = None
-
                             if skip_checks and salvaged is not None:
                                 final_mol = salvaged
                                 try:
@@ -768,7 +741,6 @@ class MainWindowMolecularParsers(object):
                                         final_mol._xyz_skip_checks = True
                                     except Exception:  # pragma: no cover
                                         import traceback
-
                                         traceback.print_exc()
                                 break
                             else:
@@ -778,10 +750,8 @@ class MainWindowMolecularParsers(object):
                                     )
                                 except Exception:  # pragma: no cover
                                     import traceback
-
                                     traceback.print_exc()
                                 continue
-
             except Exception:
                 # If the silent attempt failed for reasons other than
                 # DetermineBonds failing (e.g., finalization errors), fall
@@ -791,14 +761,12 @@ class MainWindowMolecularParsers(object):
                     salvaged = mol.GetMol()
                 except Exception:
                     salvaged = None
-
                 try:
                     skip_checks = bool(
                         self.settings.get("skip_chemistry_checks", False)
                     )
                 except Exception:
                     skip_checks = False
-
                 if skip_checks and salvaged is not None:
                     final_mol = salvaged
                 else:  # pragma: no cover
@@ -815,14 +783,12 @@ class MainWindowMolecularParsers(object):
                                 self.estimate_bonds_from_distances(mol)
                             except Exception:  # pragma: no cover
                                 import traceback
-
                                 traceback.print_exc()
                             salvaged = None
                             try:
                                 salvaged = mol.GetMol()
                             except Exception:
                                 salvaged = None
-
                             if salvaged is not None:
                                 try:
                                     salvaged.SetIntProp("_xyz_skip_checks", 1)
@@ -831,7 +797,6 @@ class MainWindowMolecularParsers(object):
                                         salvaged._xyz_skip_checks = True
                                     except Exception:  # pragma: no cover
                                         import traceback
-
                                         traceback.print_exc()
                                 final_mol = salvaged
                                 break
@@ -842,10 +807,8 @@ class MainWindowMolecularParsers(object):
                                     )
                                 except Exception:  # pragma: no cover
                                     import traceback
-
                                     traceback.print_exc()
                                 return None
-
                         try:
                             final_mol = _process_with_charge(charge_val)
                             # success -> break out of prompt loop
@@ -859,7 +822,6 @@ class MainWindowMolecularParsers(object):
                                 )
                             except Exception:  # pragma: no cover
                                 import traceback
-
                                 traceback.print_exc()
                             continue
                         except Exception as e_prompt:
@@ -869,10 +831,8 @@ class MainWindowMolecularParsers(object):
                                 )
                             except Exception:  # pragma: no cover
                                 import traceback
-
                                 traceback.print_exc()
                             continue
-
             # If we have a finalized molecule, apply the same UI flags and return
             if final_mol is not None:
                 mol = final_mol
@@ -891,13 +851,10 @@ class MainWindowMolecularParsers(object):
                                 self.optimize_3d_button.setEnabled(bool(has_bonds))
                         except Exception:  # pragma: no cover
                             import traceback
-
                             traceback.print_exc()
                 except Exception:  # pragma: no cover
                     import traceback
-
                     traceback.print_exc()
-
                 # Store original atom data for analysis
                 mol._xyz_atom_data = atoms_data
                 return mol

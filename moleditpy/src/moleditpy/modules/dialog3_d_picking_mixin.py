@@ -72,7 +72,6 @@ class Dialog3DPickingMixin:
                                     self.main_window._picking_consumed = True
                                 except Exception:  # pragma: no cover
                                     import traceback
-
                                     traceback.print_exc()
                                 self.on_atom_picked(int(closest_atom_idx))
 
@@ -129,7 +128,6 @@ class Dialog3DPickingMixin:
             self.main_window._picking_consumed = False
         except Exception:  # pragma: no cover
             import traceback
-
             traceback.print_exc()
 
     def disable_picking(self):
@@ -143,7 +141,6 @@ class Dialog3DPickingMixin:
                 self.main_window._picking_consumed = False
         except Exception:  # pragma: no cover
             import traceback
-
             traceback.print_exc()
 
     def try_alternative_picking(self, x, y):
@@ -161,8 +158,8 @@ class Dialog3DPickingMixin:
                     self.main_window.plotter.remove_actor(label_actor)
                 except Exception:  # pragma: no cover
                     import traceback
-
                     traceback.print_exc()
+
             self.selection_labels = []
 
     # Alias — some dialogs use this name instead.

@@ -184,7 +184,6 @@ class MainWindowUiManager(object):
                 self.settings_dirty = False
         except Exception:  # pragma: no cover
             import traceback
-
             traceback.print_exc()
 
         # 未保存の変更がある場合の処理
@@ -221,11 +220,9 @@ class MainWindowUiManager(object):
                         widget.close()
                     except Exception:  # pragma: no cover
                         import traceback
-
                         traceback.print_exc()
         except Exception:  # pragma: no cover
             import traceback
-
             traceback.print_exc()
 
         # 終了処理
@@ -239,17 +236,14 @@ class MainWindowUiManager(object):
                     thr.quit()
                 except Exception:  # pragma: no cover
                     import traceback
-
                     traceback.print_exc()
                 try:
                     thr.wait(200)
                 except Exception:  # pragma: no cover
                     import traceback
-
                     traceback.print_exc()
         except Exception:  # pragma: no cover
             import traceback
-
             traceback.print_exc()
 
         event.accept()
@@ -432,14 +426,12 @@ class MainWindowUiManager(object):
                         getattr(self, action_name).setEnabled(bool(enabled))
                     except Exception:  # pragma: no cover
                         import traceback
-
                         traceback.print_exc()
                 else:
                     try:
                         getattr(self, action_name).setEnabled(enabled)
                     except Exception:  # pragma: no cover
                         import traceback
-
                         traceback.print_exc()
 
         # 3D Selectボタンは常に有効にする

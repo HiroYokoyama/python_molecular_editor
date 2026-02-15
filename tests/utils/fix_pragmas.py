@@ -4,103 +4,118 @@ import re
 
 TARGET_DIR = r"e:\Research\Calculation\moleditpy\DEV_MAIN\python_molecular_editor\moleditpy\src\moleditpy"
 
-def fix_pragmas_in_file(filepath):
+def fix_pragmas_robust(filepath):
     with open(filepath, 'r', encoding='utf-8') as f:
         lines = f.readlines()
 
+    new_lines = []
     modified = False
-    temp_lines = list(lines)
+    i = 0
     
-    # Pattern for try or except lines
-    # We now target any 'except Exception' line to ensure it has or lacks pragma correctly.
-    # We also target 'try' lines to REMOVE pragmas if they have them, as try blocks usually contain logic.
-    pattern_except = re.compile(r'^(\s*)except\s+Exception.*:')
-    pattern_try = re.compile(r'^(\s*)try:\s*#\s*pragma:\s*no\s*cover')
+    pattern_except = re.compile(r'^(\s*)except(\s+Exception.*)?\s*:')
+    pattern_try = re.compile(r'^(\s*)try:\s*(#\s*pragma:\s*no\s*cover)?')
 
-    for i in range(len(temp_lines)):
-        line = temp_lines[i]
-        
-        # 1. Handle 'try' lines (Remove pragma if body has logic, which is almost always)
+    # Check for global traceback import
+    global_has_traceback = any(re.match(r'^import\s+traceback', l) for l in lines)
+
+    while i < len(lines):
+        line = lines[i]
         match_try = pattern_try.match(line)
-        if match_try:
-            indent = match_try.group(1)
-            body_lines = []
+        match_except = pattern_except.match(line)
+        
+        target_match = match_try or match_except
+        
+        if target_match:
+            indent = target_match.group(1)
             j = i + 1
-            while j < len(temp_lines):
-                next_line = temp_lines[j]
-                if not next_line.strip():
+            body_lines = []
+            while j < len(lines):
+                if not lines[j].strip():
+                    body_lines.append(lines[j])
                     j += 1
                     continue
-                next_indent = len(next_line) - len(next_line.lstrip())
+                next_indent = len(lines[j]) - len(lines[j].lstrip())
                 if next_indent > len(indent):
-                    body_lines.append(next_line)
+                    body_lines.append(lines[j])
                     j += 1
-                else:
-                    break
+                else: break
             
-            content_lines = [l.strip() for l in body_lines if l.strip() and not l.strip().startswith('#')]
-            if content_lines: # If try block has ANY code, remove pragma
-                new_line = line.split('#')[0].rstrip() + "\n"
-                if new_line != line:
-                    temp_lines[i] = new_line
+            content = [l.strip() for l in body_lines if l.strip() and not l.strip().startswith('#')]
+            
+            if match_try:
+                if content and "# pragma: no cover" in line:
+                    line = line.split('#')[0].rstrip() + "\n"
+                    modified = True
+            
+            if match_except:
+                exempt_statements = {"pass", "import traceback", "traceback.print_exc()"}
+                is_exempt = len(content) > 0 and all(stmt in exempt_statements for stmt in content)
+                is_traceback_block = "traceback.print_exc()" in content
+                
+                # Check for missing import traceback in the block OR globally
+                if is_traceback_block and "import traceback" not in content and not global_has_traceback:
+                    # Insert import traceback at the top of the block
+                    body_lines_temp = [l for l in body_lines if l.strip()]
+                    # Find first line of body
+                    first_line_idx = -1
+                    for idx, bl in enumerate(body_lines):
+                        if bl.strip():
+                            first_line_idx = idx
+                            break
+                    if first_line_idx != -1:
+                        # Add import traceback before the content
+                        body_lines.insert(first_line_idx, indent + "    import traceback\n")
+                        modified = True
+                        # Re-calculate content
+                        content = [l.strip() for l in body_lines if l.strip() and not l.strip().startswith('#')]
+                
+                has_pragma = "# pragma: no cover" in line
+                if is_exempt and not has_pragma:
+                    line = line.split('#')[0].rstrip() + "  # pragma: no cover\n"
+                    modified = True
+                elif not is_exempt and has_pragma:
+                    line = line.split('#')[0].rstrip() + "\n"
                     modified = True
 
-        # 2. Handle 'except Exception' lines
-        match_except = pattern_except.match(line)
-        if match_except:
-            indent = match_except.group(1)
-            body_lines = []
-            j = i + 1
-            while j < len(temp_lines):
-                next_line = temp_lines[j]
-                if not next_line.strip():
-                    j += 1
-                    continue
-                next_indent = len(next_line) - len(next_line.lstrip())
-                if next_indent > len(indent):
-                    body_lines.append(next_line)
-                    j += 1
-                else:
-                    break
+                if is_traceback_block:
+                    # Clean up internal blank lines
+                    temp_body = [l for l in body_lines if l.strip()]
+                    if temp_body != body_lines:
+                        body_lines = temp_body
+                        modified = True
+                    
+                    if j < len(lines):
+                        next_line = lines[j].strip()
+                        if next_line and not next_line.startswith(('except', 'else', 'finally')):
+                            if not (body_lines and not body_lines[-1].strip()):
+                                body_lines.append("\n")
+                                modified = True
             
-            content_lines = [l.strip() for l in body_lines if l.strip() and not l.strip().startswith('#')]
-            
-            # Logic: Should have pragma if block ONLY contains pass/import traceback/traceback.print_exc()
-            exempt_statements = {"pass", "import traceback", "traceback.print_exc()"}
-            is_exempt = len(content_lines) > 0 and all(stmt in exempt_statements for stmt in content_lines)
-            
-            has_pragma = "# pragma: no cover" in line
-            
-            if is_exempt and not has_pragma:
-                # ADD pragma
-                new_line = line.split('#')[0].rstrip() + "  # pragma: no cover\n"
-                if new_line != line:
-                    temp_lines[i] = new_line
-                    modified = True
-            elif not is_exempt and has_pragma:
-                # REMOVE pragma
-                new_line = line.split('#')[0].rstrip() + "\n"
-                if new_line != line:
-                    temp_lines[i] = new_line
-                    modified = True
+            new_lines.append(line)
+            new_lines.extend(body_lines)
+            i = j
+            continue
+
+        new_lines.append(line)
+        i += 1
 
     if modified:
         with open(filepath, 'w', encoding='utf-8') as f:
-            f.writelines(temp_lines)
+            f.writelines(new_lines)
         return True
     return False
 
-def main():
+def run_main():
     print(f"Scanning {TARGET_DIR}...")
     count = 0
     for root, dirs, files in os.walk(TARGET_DIR):
         for file in files:
             if file.endswith(".py"):
                 filepath = os.path.join(root, file)
-                if fix_pragmas_in_file(filepath):
-                    print(f"Fixed: {file}")
+                if fix_pragmas_robust(filepath):
+                    print(f"Modified: {file}")
                     count += 1
-    print(f"Finished. Fixed {count} files.")
+    print(f"Finished. Modified {count} files.")
 
 if __name__ == "__main__":
-    main()
+    run_main()

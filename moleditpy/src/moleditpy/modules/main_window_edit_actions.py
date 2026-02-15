@@ -364,9 +364,7 @@ class MainWindowEditActions(object):
                     QApplication.processEvents()
                 except Exception:  # pragma: no cover
                     import traceback
-
                     traceback.print_exc()
-
             # Determine how many hydrogens actually were removed by re-scanning data
             remaining_h = 0
             try:
@@ -411,7 +409,6 @@ class MainWindowEditActions(object):
                 self.statusBar().showMessage(f"Error removing hydrogen atoms: {e}")
             except Exception:  # pragma: no cover
                 import traceback
-
                 traceback.print_exc()
 
     def add_hydrogen_atoms(self):
@@ -603,7 +600,6 @@ class MainWindowEditActions(object):
                         it.setSelected(True)
                 except Exception:  # pragma: no cover
                     import traceback
-
                     traceback.print_exc()
             else:
                 self.statusBar().showMessage(
@@ -949,9 +945,7 @@ class MainWindowEditActions(object):
                                     item.prepareGeometryChange()
                                 except Exception:  # pragma: no cover
                                     import traceback
-
                                     traceback.print_exc()
-
                             # Apply implicit hydrogen count (guarded)
                             try:
                                 item.implicit_h_count = new_count
@@ -965,9 +959,7 @@ class MainWindowEditActions(object):
                                 item.has_problem = bool(desired_prob)
                             except Exception:  # pragma: no cover
                                 import traceback
-
                                 traceback.print_exc()
-
                             # Ensure the item is updated in the scene so paint() runs
                             # when either geometry or problem-flag changed.
                             items_to_update.append(item)
@@ -1007,9 +999,7 @@ class MainWindowEditActions(object):
                     _apply_ui_updates()
                 except Exception:  # pragma: no cover
                     import traceback
-
                     traceback.print_exc()
-
         except Exception:  # pragma: no cover
             # Make sure update failures never crash the application
             pass
@@ -1284,8 +1274,8 @@ class MainWindowEditActions(object):
                     continue
             except Exception:  # pragma: no cover
                 import traceback
-
                 traceback.print_exc()
+
             try:
                 sc = None
                 try:
@@ -1494,7 +1484,6 @@ class MainWindowEditActions(object):
                 )
             except Exception:  # pragma: no cover
                 import traceback
-
                 traceback.print_exc()
             # Disable 3D optimization UI to prevent running on invalid molecules
             if hasattr(self, "optimize_3d_button"):
@@ -1502,7 +1491,6 @@ class MainWindowEditActions(object):
                     self.optimize_3d_button.setEnabled(False)
                 except Exception:  # pragma: no cover
                     import traceback
-
                     traceback.print_exc()
 
     def _clear_xyz_flags(self, mol=None):
@@ -1531,13 +1519,10 @@ class MainWindowEditActions(object):
                                 target.SetIntProp("_xyz_skip_checks", 0)
                             except Exception:  # pragma: no cover
                                 import traceback
-
                                 traceback.print_exc()
                 except Exception:  # pragma: no cover
                     import traceback
-
                     traceback.print_exc()
-
                 # Remove attribute-style markers if present
                 try:
                     if hasattr(target, "_xyz_skip_checks"):
@@ -1551,13 +1536,10 @@ class MainWindowEditActions(object):
                                     target._xyz_skip_checks = False
                                 except Exception:  # pragma: no cover
                                     import traceback
-
                                     traceback.print_exc()
                 except Exception:  # pragma: no cover
                     import traceback
-
                     traceback.print_exc()
-
                 try:
                     if hasattr(target, "_xyz_atom_data"):
                         try:
@@ -1570,13 +1552,10 @@ class MainWindowEditActions(object):
                                     target._xyz_atom_data = None
                                 except Exception:  # pragma: no cover
                                     import traceback
-
                                     traceback.print_exc()
                 except Exception:  # pragma: no cover
                     import traceback
-
                     traceback.print_exc()
-
         except Exception:  # pragma: no cover
             # best-effort only
             pass
@@ -1586,7 +1565,6 @@ class MainWindowEditActions(object):
             self.is_xyz_derived = False
         except Exception:  # pragma: no cover
             import traceback
-
             traceback.print_exc()
 
         # Enable Optimize 3D unless sanitization failed
@@ -1597,16 +1575,13 @@ class MainWindowEditActions(object):
                         self.optimize_3d_button.setEnabled(False)
                     except Exception:  # pragma: no cover
                         import traceback
-
                         traceback.print_exc()
                 else:
                     try:
                         self.optimize_3d_button.setEnabled(True)
                     except Exception:  # pragma: no cover
                         import traceback
-
                         traceback.print_exc()
         except Exception:  # pragma: no cover
             import traceback
-
             traceback.print_exc()

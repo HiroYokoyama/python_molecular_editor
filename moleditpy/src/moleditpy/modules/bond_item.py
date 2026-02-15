@@ -159,7 +159,6 @@ class BondItem(QGraphicsItem):
                     wedge_width = win.settings.get("bond_wedge_width_2d", 6.0)
         except Exception:  # pragma: no cover
             import traceback
-
             traceback.print_exc()
 
         extra = (getattr(self, "order", 1) - 1) * bond_offset + 50 + wedge_width
@@ -183,7 +182,6 @@ class BondItem(QGraphicsItem):
                         )
             except Exception:  # pragma: no cover
                 import traceback
-
                 traceback.print_exc()
 
             font = QFont(font_family, font_size, FONT_WEIGHT_BOLD)
@@ -508,7 +506,6 @@ class BondItem(QGraphicsItem):
                                     )
                         except Exception:  # pragma: no cover
                             import traceback
-
                             traceback.print_exc()
 
                         font = QFont(font_family, font_size, FONT_WEIGHT_BOLD)
@@ -569,7 +566,6 @@ class BondItem(QGraphicsItem):
                 painter.drawLine(line)
             except Exception:  # pragma: no cover
                 import traceback
-
                 traceback.print_exc()
 
     def update_position(self, notify=True):

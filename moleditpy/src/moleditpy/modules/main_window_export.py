@@ -558,9 +558,7 @@ class MainWindowExport(object):
                                         )
                                 except Exception:  # pragma: no cover
                                     import traceback
-
                                     traceback.print_exc()
-
                             if colors is not None and colors.size > 0:
                                 # 整数に変換。colors が 0-1 の float の場合は 255 倍して正規化する。
                                 colors_arr = np.asarray(colors)
@@ -730,7 +728,6 @@ class MainWindowExport(object):
             original_background = self.scene.backgroundBrush()
         except Exception:  # pragma: no cover
             import traceback
-
             traceback.print_exc()
 
         try:

@@ -601,7 +601,6 @@ class UserTemplateDialog(QDialog):  # pragma: no cover
                     ].setChecked(True)
             except Exception:  # pragma: no cover
                 import traceback
-
                 traceback.print_exc()
         except Exception as e:
             logging.warning(
@@ -620,9 +619,7 @@ class UserTemplateDialog(QDialog):  # pragma: no cover
                 self.main_window.scene.user_template_data = template_data
             except Exception:  # pragma: no cover
                 import traceback
-
                 traceback.print_exc()
-
             # Force the main window into the template mode (same approach as select_template)
             try:
                 if hasattr(self.main_window, "mode_actions") and isinstance(
@@ -647,9 +644,7 @@ class UserTemplateDialog(QDialog):  # pragma: no cover
                     )
                 except Exception:  # pragma: no cover
                     import traceback
-
                     traceback.print_exc()
-
                 # Mark selected and keep dialog open
                 self.selected_template = template_data
             except Exception as e:

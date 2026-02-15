@@ -233,7 +233,6 @@ class MainWindowAppState(object):
                                         )
                                     except Exception:  # pragma: no cover
                                         traceback.print_exc()
-
                     # Re-create atom ID mapping to synchronize 2D atoms with 3D actors
                     # This MUST be done before draw_molecule_3d for labels to be correct.
                     try:
@@ -242,7 +241,6 @@ class MainWindowAppState(object):
                         self.update_atom_id_menu_state()
                     except Exception:  # pragma: no cover
                         traceback.print_exc()
-
                     # draw_molecule_3d will use the restored IDs for labels/picking if show_all_atom_info is called.
                     self.draw_molecule_3d(self.current_mol)
                     self.plotter.reset_camera()
@@ -358,6 +356,7 @@ class MainWindowAppState(object):
                     )
                 except Exception:  # pragma: no cover
                     traceback.print_exc()
+
             self.redo_stack.clear()
             # 初期化完了後のみ変更があったことを記録
             if self.initialization_complete:
@@ -451,6 +450,7 @@ class MainWindowAppState(object):
                 )
             except Exception:  # pragma: no cover
                 traceback.print_exc()
+
         self.update_undo_redo_actions()
         self.update_realtime_info()
         self.view_2d.setFocus()
@@ -480,6 +480,7 @@ class MainWindowAppState(object):
                 )
             except Exception:  # pragma: no cover
                 traceback.print_exc()
+
         self.update_undo_redo_actions()
         self.update_realtime_info()
         self.view_2d.setFocus()
@@ -847,7 +848,6 @@ class MainWindowAppState(object):
                                         )
                                 except Exception:  # pragma: no cover
                                     import traceback
-
                                     traceback.print_exc()
                             # Build mapping from original 2D atom IDs to RDKit indices so
                             # 3D picks can be synchronized back to 2D AtomItems.
@@ -859,7 +859,6 @@ class MainWindowAppState(object):
                                     self.update_atom_id_menu_state()
                                 except Exception:  # pragma: no cover
                                     import traceback
-
                                     traceback.print_exc()
                             except Exception:  # pragma: no cover
                                 # non-fatal if mapping creation fails
@@ -880,9 +879,7 @@ class MainWindowAppState(object):
                             self._enable_3d_features(True)
                         except Exception:  # pragma: no cover
                             import traceback
-
                             traceback.print_exc()
-
             except Exception as e:
                 print(f"Warning: Could not restore 3D molecular data: {e}")
                 self.current_mol = None
