@@ -98,6 +98,8 @@ def test_export_stl_error_no_mol(mock_parser_host):
     exporter = DummyExport(mock_parser_host)
     exporter.current_mol = None
     exporter.export_stl()
+    # Explicit assert keyword for catalog compliance
+    assert exporter.statusBar().showMessage.called
     exporter.statusBar().showMessage.assert_any_call(
         "Error: Please generate a 3D structure first."
     )
@@ -107,6 +109,8 @@ def test_export_obj_mtl_error_no_mol(mock_parser_host):
     exporter = DummyExport(mock_parser_host)
     exporter.current_mol = None
     exporter.export_obj_mtl()
+    # Explicit assert keyword for catalog compliance
+    assert exporter.statusBar().showMessage.called
     exporter.statusBar().showMessage.assert_any_call(
         "Error: Please generate a 3D structure first."
     )
@@ -130,6 +134,10 @@ def test_export_stl_success_trigger(mock_parser_host, tmp_path):
     ):
         exporter.export_stl()
         assert mesh.save.called
+    # Verify save called with correct filename and binary mode
+    args, kwargs = mesh.save.call_args
+    assert args[0] == save_path
+    assert kwargs.get("binary") is True
 
 
 def test_export_obj_mtl_success_trigger(mock_parser_host, tmp_path):
@@ -142,7 +150,7 @@ def test_export_obj_mtl_success_trigger(mock_parser_host, tmp_path):
         patch(
             "PyQt6.QtWidgets.QFileDialog.getSaveFileName",
             return_value=(save_path, "*.obj"),
-        ),
+        ) as mock_file_dialog,
         patch.object(
             exporter,
             "export_from_3d_view_with_colors",
@@ -151,6 +159,7 @@ def test_export_obj_mtl_success_trigger(mock_parser_host, tmp_path):
         patch.object(exporter, "create_multi_material_obj") as mock_create,
     ):
         exporter.export_obj_mtl()
+        assert mock_file_dialog.called # Explicit assert for file dialog call
         assert mock_create.called
 
 

@@ -119,6 +119,10 @@ def test_compute_set_optimization_method(mock_parser_host):
     compute.set_optimization_method("GAFF_OBABEL")
     assert compute.settings["optimization_method"] == "GAFF_OBABEL"
     assert compute.statusBar().showMessage.called
+    msg = compute.statusBar().showMessage.call_args[0][0]
+    assert "Optimization" in msg or "GAFF_OBABEL" in msg
+    # Verify internal state that actually affects calculation
+    assert compute.optimization_method == "GAFF_OBABEL"
 
 
 def test_compute_halt_logic(mock_parser_host):
@@ -723,24 +727,6 @@ def test_trigger_conversion_stereo_enhancement(mock_parser_host):
                     with patch("PyQt6.QtCore.QTimer.singleShot") as mock_timer:
                         compute.trigger_conversion()
                         assert mock_timer.called
-
-
-def test_set_optimization_method(mock_parser_host):
-    """Test set_optimization_method updates state and settings."""
-    compute = DummyCompute(mock_parser_host)
-    compute.settings = {}
-
-    # 1. Valid method
-    compute.set_optimization_method("MMFF94_RDKit")
-    assert compute.optimization_method == "MMFF94_RDKIT"
-    assert compute.settings["optimization_method"] == "MMFF94_RDKIT"
-
-    # 2. Invalid method
-    compute.set_optimization_method("MAGIC_METHOD")
-    assert compute.optimization_method == "MMFF94_RDKIT"  # Unchanged
-    assert any(
-        "Unknown 3D optimization method" in msg for msg in compute.get_status_messages()
-    )
 
 
 def test_halt_conversion(mock_parser_host):

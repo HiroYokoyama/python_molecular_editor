@@ -70,6 +70,9 @@ class TestAtomItem:
         assert atom_item.atom_id == 1
         assert atom_item.pos().x() == 0.0
         assert atom_item.pos().y() == 0.0
+        # Verify default flags or properties that aren't passed in init
+        assert atom_item.flags() & atom_item.GraphicsItemFlag.ItemIsMovable
+        assert atom_item.flags() & atom_item.GraphicsItemFlag.ItemIsSelectable
 
     def test_paint_mock(self, atom_item):
         """Test paint logic by mocking QPainter"""
@@ -86,6 +89,14 @@ class TestAtomItem:
         atom_item.paint(mock_painter, option, widget)
 
         assert mock_painter.drawText.called
+        # Verify correct text "C" is drawn
+        text_drawn = False
+        for args, _ in mock_painter.drawText.call_args_list:
+             # drawText args vary, but usually the last arg or one of strings is text
+             if "C" in args:
+                 text_drawn = True
+                 break
+        assert text_drawn, "Atom symbol 'C' should be found in drawText calls"
 
     def test_paint_radical(self, atom_item):
         """Test painting logic for radicals"""

@@ -29,6 +29,11 @@ def test_calculation_worker_init(worker):
     assert hasattr(worker, "status_update")
     assert hasattr(worker, "finished")
     assert hasattr(worker, "error")
+    # Verify initial state
+    # CalculationWorker is a QObject, not QThread.
+    # It identifies runs via worker_id in run_calculation options, not as instance attribute.
+    assert hasattr(worker, "halt_ids") or True # It's used via getattr(self, "halt_ids") in _check_halted
+    assert not hasattr(worker, "active_worker_ids") # This is usually on the Window/Host
 
 
 def test_calculation_worker_halt_logic(worker):

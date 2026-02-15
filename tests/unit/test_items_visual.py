@@ -187,6 +187,8 @@ def test_atom_item_paint_resilience_to_deleted_bond(mock_parser_host):
         success = False
 
     assert success, "Paint should handle deleted bond references gracefully"
+    # Ensure checking loop finished
+    assert atom.bonds == [deleted_bond]
 
 
 def test_atom_item_shape_collision(mock_parser_host):
@@ -318,5 +320,11 @@ def test_bond_update_position_resilience(mock_parser_host):
 
     # Should not crash
     bond.atom2 = None  # Simulate losing Partner after init
+    # Should not crash
+    bond.atom2 = None  # Simulate losing Partner after init
+    # Should not crash
+    bond.atom2 = None  # Simulate losing Partner after init
     bond.update_position(notify=True)
+    assert bond.atom2 is None
+    # Verify it didn't raise exception
     assert True
