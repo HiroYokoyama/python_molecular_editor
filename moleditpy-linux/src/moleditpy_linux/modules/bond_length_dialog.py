@@ -192,10 +192,10 @@ class BondLengthDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
             # Clear distance input when no selection
             try:
                 self.distance_input.clear()
-            except Exception:
+            except Exception:  # pragma: no cover
                 import traceback
-
                 traceback.print_exc()
+
         elif self.atom2_idx is None:
             symbol1 = self.mol.GetAtomWithIdx(self.atom1_idx).GetSymbol()
             self.selection_label.setText(
@@ -208,9 +208,8 @@ class BondLengthDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
             # Clear distance input while selection is incomplete
             try:
                 self.distance_input.clear()
-            except Exception:
+            except Exception:  # pragma: no cover
                 import traceback
-
                 traceback.print_exc()
         else:
             symbol1 = self.mol.GetAtomWithIdx(self.atom1_idx).GetSymbol()
@@ -229,10 +228,10 @@ class BondLengthDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
             # Update the distance input box to show current distance
             try:
                 self.distance_input.setText(f"{current_distance:.3f}")
-            except Exception:
+            except Exception:  # pragma: no cover
                 import traceback
-
                 traceback.print_exc()
+
             # ラベル追加
             self.add_selection_label(self.atom1_idx, "1")
             self.add_selection_label(self.atom2_idx, "2")

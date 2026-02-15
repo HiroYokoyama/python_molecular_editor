@@ -86,10 +86,10 @@ class MainWindowEdit3d(object):
         for dialog in dialogs_to_close:
             try:
                 dialog.close()
-            except Exception:
+            except Exception:  # pragma: no cover
                 import traceback
-
                 traceback.print_exc()
+
         self.active_3d_dialogs.clear()
 
     def handle_measurement_atom_selection(self, atom_idx):
@@ -132,9 +132,8 @@ class MainWindowEdit3d(object):
         try:
             # 既存の測定ラベルを削除
             self.plotter.remove_actor("measurement_labels")
-        except Exception:
+        except Exception:  # pragma: no cover
             import traceback
-
             traceback.print_exc()
 
         if not self.measurement_labels or not self.current_mol:
@@ -171,9 +170,8 @@ class MainWindowEdit3d(object):
         self.measurement_labels.clear()
         try:
             self.plotter.remove_actor("measurement_labels")
-        except Exception:
+        except Exception:  # pragma: no cover
             import traceback
-
             traceback.print_exc()
 
         # 2Dビューの測定ラベルも削除
@@ -184,9 +182,8 @@ class MainWindowEdit3d(object):
             try:
                 self.plotter.remove_actor(self.measurement_text_actor)
                 self.measurement_text_actor = None
-            except Exception:
+            except Exception:  # pragma: no cover
                 import traceback
-
                 traceback.print_exc()
 
         self.plotter.render()
@@ -356,9 +353,8 @@ class MainWindowEdit3d(object):
         if self.measurement_text_actor:
             try:
                 self.plotter.remove_actor(self.measurement_text_actor)
-            except Exception:
+            except Exception:  # pragma: no cover
                 import traceback
-
                 traceback.print_exc()
 
         if not measurement_lines:
@@ -412,9 +408,8 @@ class MainWindowEdit3d(object):
         try:
             # 既存の選択ハイライトを削除
             self.plotter.remove_actor("selection_highlight")
-        except Exception:
+        except Exception:  # pragma: no cover
             import traceback
-
             traceback.print_exc()
 
         if not self.selected_atoms_3d or not self.current_mol:

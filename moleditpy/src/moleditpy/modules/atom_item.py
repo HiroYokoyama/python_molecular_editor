@@ -292,7 +292,7 @@ class AtomItem(QGraphicsItem):
                         try:
                             if sip_isdeleted_safe(other_atom):
                                 continue
-                        except Exception:  # pragma: no cover
+                        except Exception:
                             # If sip check fails, continue defensively
                             pass
 

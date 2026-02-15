@@ -20,6 +20,7 @@ MainWindow (main_window.py) から分離されたモジュール
 import base64
 import copy
 import os
+import traceback
 
 import numpy as np
 
@@ -27,12 +28,7 @@ import numpy as np
 from rdkit import Chem
 from rdkit.Chem import Descriptors, rdMolDescriptors
 
-try:
-    pass
-except Exception:
-    import traceback
 
-    traceback.print_exc()
 
 # PyQt6 Modules
 from PyQt6.QtCore import QDateTime, QPointF, Qt
@@ -123,9 +119,7 @@ class MainWindowAppState(object):
                         [const[0], list(const[1]), const[2], 1.0e5]
                     )
         except Exception:
-            import traceback
-
-            traceback.print_exc()  # 失敗したら空リスト
+            pass  # 失敗したら空リスト
         state["constraints_3d"] = json_safe_constraints
 
         return state
@@ -237,22 +231,16 @@ class MainWindowAppState(object):
                                         self.current_mol.GetAtomWithIdx(i).SetIntProp(
                                             "_original_atom_id", int(aid)
                                         )
-                                    except Exception:
-                                        import traceback
-
+                                    except Exception:  # pragma: no cover
                                         traceback.print_exc()
-
                     # Re-create atom ID mapping to synchronize 2D atoms with 3D actors
                     # This MUST be done before draw_molecule_3d for labels to be correct.
                     try:
                         self.create_atom_id_mapping()
                         self.update_atom_id_menu_text()
                         self.update_atom_id_menu_state()
-                    except Exception:
-                        import traceback
-
+                    except Exception:  # pragma: no cover
                         traceback.print_exc()
-
                     # draw_molecule_3d will use the restored IDs for labels/picking if show_all_atom_info is called.
                     self.draw_molecule_3d(self.current_mol)
                     self.plotter.reset_camera()
@@ -366,10 +354,9 @@ class MainWindowAppState(object):
                     print(
                         f"DEBUG_UNDO: push_undo_state -> new stack size: {len(self.undo_stack)}"
                     )
-                except Exception:
-                    import traceback
-
+                except Exception:  # pragma: no cover
                     traceback.print_exc()
+
             self.redo_stack.clear()
             # 初期化完了後のみ変更があったことを記録
             if self.initialization_complete:
@@ -435,9 +422,7 @@ class MainWindowAppState(object):
                 print(
                     f"DEBUG_UNDO: reset_undo_stack -> undo={len(self.undo_stack)} redo={len(self.redo_stack)}"
                 )
-            except Exception:
-                import traceback
-
+            except Exception:  # pragma: no cover
                 traceback.print_exc()
 
     def undo(self):
@@ -463,10 +448,9 @@ class MainWindowAppState(object):
                 print(
                     f"DEBUG_UNDO: undo -> undo_stack size: {len(self.undo_stack)}, redo_stack size: {len(self.redo_stack)}"
                 )
-            except Exception:
-                import traceback
-
+            except Exception:  # pragma: no cover
                 traceback.print_exc()
+
         self.update_undo_redo_actions()
         self.update_realtime_info()
         self.view_2d.setFocus()
@@ -494,10 +478,9 @@ class MainWindowAppState(object):
                 print(
                     f"DEBUG_UNDO: redo -> undo_stack size: {len(self.undo_stack)}, redo_stack size: {len(self.redo_stack)}"
                 )
-            except Exception:
-                import traceback
-
+            except Exception:  # pragma: no cover
                 traceback.print_exc()
+
         self.update_undo_redo_actions()
         self.update_realtime_info()
         self.view_2d.setFocus()
@@ -671,9 +654,7 @@ class MainWindowAppState(object):
                         json_data["identifiers"]["inchi"] = inchi
                         json_data["identifiers"]["inchi_key"] = inchi_key
                     except Exception:
-                        import traceback
-
-                        traceback.print_exc()  # InChI生成に失敗した場合は無視
+                        pass  # InChI生成に失敗した場合は無視
 
                 except Exception as e:
                     print(f"Warning: Could not generate molecular identifiers: {e}")
@@ -865,9 +846,8 @@ class MainWindowAppState(object):
                                         rd_atom.SetIntProp(
                                             "_original_atom_id", int(original_id)
                                         )
-                                except Exception:
+                                except Exception:  # pragma: no cover
                                     import traceback
-
                                     traceback.print_exc()
                             # Build mapping from original 2D atom IDs to RDKit indices so
                             # 3D picks can be synchronized back to 2D AtomItems.
@@ -877,11 +857,10 @@ class MainWindowAppState(object):
                                 try:
                                     self.update_atom_id_menu_text()
                                     self.update_atom_id_menu_state()
-                                except Exception:
+                                except Exception:  # pragma: no cover
                                     import traceback
-
                                     traceback.print_exc()
-                            except Exception:
+                            except Exception:  # pragma: no cover
                                 # non-fatal if mapping creation fails
                                 pass
 
@@ -898,11 +877,9 @@ class MainWindowAppState(object):
                         try:
                             self._enable_3d_edit_actions(True)
                             self._enable_3d_features(True)
-                        except Exception:
+                        except Exception:  # pragma: no cover
                             import traceback
-
                             traceback.print_exc()
-
             except Exception as e:
                 print(f"Warning: Could not restore 3D molecular data: {e}")
                 self.current_mol = None

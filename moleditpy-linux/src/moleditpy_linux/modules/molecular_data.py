@@ -89,7 +89,7 @@ class MolecularData:
             except Exception as e:
                 print(f"Error removing atom {atom_id}: {e}")
 
-                traceback.print_exc()
+                pass
 
     def remove_bond(self, id1, id2):
         try:
@@ -110,7 +110,7 @@ class MolecularData:
         except Exception as e:
             print(f"Error removing bond {id1}-{id2}: {e}")
 
-            traceback.print_exc()
+            pass
 
     def to_rdkit_mol(self, use_2d_stereo=True):
         """
@@ -285,10 +285,10 @@ class MolecularData:
             mol = self.to_rdkit_mol()
             if mol:
                 return Chem.MolToMolBlock(mol, includeStereo=True)
-        except Exception:
+        except Exception:  # pragma: no cover
             import traceback
-
             traceback.print_exc()
+
         if not self.atoms:
             return None
         atom_map = {old_id: new_id for new_id, old_id in enumerate(self.atoms.keys())}

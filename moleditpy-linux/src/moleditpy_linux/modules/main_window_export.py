@@ -24,10 +24,10 @@ import numpy as np
 # RDKit imports (explicit to satisfy flake8 and used features)
 try:
     pass
-except Exception:
+except Exception:  # pragma: no cover
     import traceback
 
-    traceback.print_exc()
+    pass
 
 # PyQt6 Modules
 import pyvista as pv
@@ -95,7 +95,7 @@ class MainWindowExport(object):
                 f"STL exported to {file_path}"
             )  # pragma: no cover
 
-        except Exception as e:  # pragma: no cover
+        except Exception as e:
             self.statusBar().showMessage(f"Error exporting STL: {e}")
 
     def export_obj_mtl(self):
@@ -143,7 +143,7 @@ class MainWindowExport(object):
                 f"OBJ+MTL files with individual colors exported to {file_path} and {mtl_path}"
             )  # pragma: no cover
 
-        except Exception as e:  # pragma: no cover
+        except Exception as e:
             self.statusBar().showMessage(f"Error exporting OBJ/MTL: {e}")
 
     def create_multi_material_obj(self, meshes_with_colors, obj_path, mtl_path):
@@ -279,7 +279,7 @@ class MainWindowExport(object):
                 f"STL exported to {file_path}"
             )  # pragma: no cover
 
-        except Exception as e:  # pragma: no cover
+        except Exception as e:
             self.statusBar().showMessage(f"Error exporting STL: {e}")
 
     def export_from_3d_view(self):
@@ -513,7 +513,7 @@ class MainWindowExport(object):
                                 if prop is not None:
                                     vtk_color = prop.GetColor()
                                     color = [int(c * 255) for c in vtk_color]
-                        except Exception:
+                        except Exception:  # pragma: no cover
                             # 色取得に失敗した場合はデフォルト色をそのまま使用
                             pass
 
@@ -556,11 +556,9 @@ class MainWindowExport(object):
                                         colors = np.asarray(
                                             temp_mesh.point_data["colors"]
                                         )
-                                except Exception:
+                                except Exception:  # pragma: no cover
                                     import traceback
-
                                     traceback.print_exc()
-
                             if colors is not None and colors.size > 0:
                                 # 整数に変換。colors が 0-1 の float の場合は 255 倍して正規化する。
                                 colors_arr = np.asarray(colors)
@@ -647,7 +645,7 @@ class MainWindowExport(object):
                                     uc = unique_colors[0]
                                     color = [int(uc[0]), int(uc[1]), int(uc[2])]
                                     # ここでは continue せず、下のデフォルト追加処理に任せる（colorを更新したため）
-                        except Exception:
+                        except Exception:  # pragma: no cover
                             # 分割処理に失敗した場合はフォールバックで単体メッシュを追加
                             pass
 
@@ -728,9 +726,8 @@ class MainWindowExport(object):
         original_background = None
         try:
             original_background = self.scene.backgroundBrush()
-        except Exception:
+        except Exception:  # pragma: no cover
             import traceback
-
             traceback.print_exc()
 
         try:

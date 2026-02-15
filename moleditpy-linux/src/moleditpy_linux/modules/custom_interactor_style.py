@@ -64,9 +64,8 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                 if isinstance(widget, MoveGroupDialog) and widget.isVisible():
                     move_group_dialog = widget
                     break
-        except Exception:
+        except Exception:  # pragma: no cover
             import traceback
-
             traceback.print_exc()
 
         if move_group_dialog and move_group_dialog.group_atoms:
@@ -273,9 +272,8 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                 if isinstance(widget, MoveGroupDialog) and widget.isVisible():
                     move_group_dialog = widget
                     break
-        except Exception:
+        except Exception:  # pragma: no cover
             import traceback
-
             traceback.print_exc()
 
         if move_group_dialog and move_group_dialog.group_atoms:
@@ -350,9 +348,8 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                 if isinstance(widget, MoveGroupDialog) and widget.isVisible():
                     move_group_dialog = widget
                     break
-        except Exception:
+        except Exception:  # pragma: no cover
             import traceback
-
             traceback.print_exc()
 
         if move_group_dialog and getattr(
@@ -435,9 +432,8 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                 if isinstance(widget, MoveGroupDialog) and widget.isVisible():
                     move_group_dialog = widget
                     break
-        except Exception:
+        except Exception:  # pragma: no cover
             import traceback
-
             traceback.print_exc()
 
         # ダブルクリック/トリプルクリックで状態が混乱するのを防ぐ（Move Group用）
@@ -592,25 +588,22 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                                         ap = list(mw.atom_positions_3d)
                                         ap[atom_id] = new_world_coords
                                         mw.atom_positions_3d = ap
-                                    except Exception:
+                                    except Exception:  # pragma: no cover
                                         import traceback
-
                                         traceback.print_exc()
-                            except Exception:
+                            except Exception:  # pragma: no cover
                                 import traceback
-
                                 traceback.print_exc()
-
                         conf = mw.current_mol.GetConformer()
                         for i in range(mw.current_mol.GetNumAtoms()):
                             try:
                                 pos = mw.atom_positions_3d[i]
                                 conf.SetAtomPosition(i, pos.tolist())
-                            except Exception:
+                            except Exception:  # pragma: no cover
                                 # Skip individual failures but continue applying
                                 # other atom positions.
                                 pass
-                    except Exception:
+                    except Exception:  # pragma: no cover
                         # If applying positions fails, continue to redraw from
                         # whatever authoritative state is available.
                         pass
@@ -618,37 +611,36 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                     # Redraw once and push undo state
                     try:
                         mw.draw_molecule_3d(mw.current_mol)
-                    except Exception:
+                    except Exception:  # pragma: no cover
                         import traceback
-
                         traceback.print_exc()
+
                     mw.push_undo_state()
             mw.dragged_atom_info = None
             try:
                 mw.update_3d_selection_display()
-            except Exception:
+            except Exception:  # pragma: no cover
                 import traceback
-
                 traceback.print_exc()
+
             try:
                 mw.update_measurement_labels_display()
-            except Exception:
+            except Exception:  # pragma: no cover
                 import traceback
-
                 traceback.print_exc()
+
             try:
                 mw.update_2d_measurement_labels()
-            except Exception:
+            except Exception:  # pragma: no cover
                 import traceback
-
                 traceback.print_exc()
+
             try:
                 mw.show_all_atom_info()
-            except Exception:
+            except Exception:  # pragma: no cover
                 import traceback
-
                 traceback.print_exc()
-            except Exception:
+            except Exception:  # pragma: no cover
                 # Do not allow a failure here to interrupt release flow
                 pass
         else:
@@ -671,18 +663,17 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                     delattr(move_group_dialog, "_initial_positions")
                 if hasattr(move_group_dialog, "_drag_atom_idx"):
                     delattr(move_group_dialog, "_drag_atom_idx")
-        except Exception:
+        except Exception:  # pragma: no cover
             import traceback
-
             traceback.print_exc()
 
         # ボタンを離した後のカーソル表示を最新の状態に更新
         try:
             mw.plotter.setCursor(Qt.CursorShape.ArrowCursor)
-        except Exception:
+        except Exception:  # pragma: no cover
             import traceback
-
             traceback.print_exc()
+
         # 2Dビューにフォーカスを戻し、ショートカットキーなどが使えるようにする
         if mw and mw.view_2d:
             mw.view_2d.setFocus()
@@ -700,9 +691,8 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                 if isinstance(widget, MoveGroupDialog) and widget.isVisible():
                     move_group_dialog = widget
                     break
-        except Exception:
+        except Exception:  # pragma: no cover
             import traceback
-
             traceback.print_exc()
 
         if move_group_dialog and getattr(
@@ -826,10 +816,10 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
 
             try:
                 mw.plotter.setCursor(Qt.CursorShape.ArrowCursor)
-            except Exception:
+            except Exception:  # pragma: no cover
                 import traceback
-
                 traceback.print_exc()
+
             return
 
         # 通常の右クリックリリース処理

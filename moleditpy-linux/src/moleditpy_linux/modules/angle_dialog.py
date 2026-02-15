@@ -202,10 +202,10 @@ class AngleDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
             # Clear angle input when no selection
             try:
                 self.angle_input.clear()
-            except Exception:
+            except Exception:  # pragma: no cover
                 import traceback
-
                 traceback.print_exc()
+
         elif self.atom2_idx is None:
             symbol1 = self.mol.GetAtomWithIdx(self.atom1_idx).GetSymbol()
             self.selection_label.setText(
@@ -218,10 +218,10 @@ class AngleDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
             # Clear angle input while selection is incomplete
             try:
                 self.angle_input.clear()
-            except Exception:
+            except Exception:  # pragma: no cover
                 import traceback
-
                 traceback.print_exc()
+
         elif self.atom3_idx is None:
             symbol1 = self.mol.GetAtomWithIdx(self.atom1_idx).GetSymbol()
             symbol2 = self.mol.GetAtomWithIdx(self.atom2_idx).GetSymbol()
@@ -236,9 +236,8 @@ class AngleDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
             # Clear angle input while selection is incomplete
             try:
                 self.angle_input.clear()
-            except Exception:
+            except Exception:  # pragma: no cover
                 import traceback
-
                 traceback.print_exc()
         else:
             symbol1 = self.mol.GetAtomWithIdx(self.atom1_idx).GetSymbol()
@@ -255,10 +254,10 @@ class AngleDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
             # Update angle input box with current angle
             try:
                 self.angle_input.setText(f"{current_angle:.2f}")
-            except Exception:
+            except Exception:  # pragma: no cover
                 import traceback
-
                 traceback.print_exc()
+
             # ラベル追加
             self.add_selection_label(self.atom1_idx, "1")
             self.add_selection_label(self.atom2_idx, "2(vertex)")

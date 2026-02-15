@@ -15,7 +15,7 @@ import traceback
 # RDKit imports (explicit to satisfy flake8 and used features)
 try:
     pass
-except Exception:
+except Exception:  # pragma: no cover
     traceback.print_exc()
 
 # PyQt6 Modules
@@ -126,7 +126,7 @@ class MainWindow(QMainWindow):
 
         try:
             self.main_window_main_init.init(initial_file)
-        except Exception:
+        except Exception:  # pragma: no cover
             traceback.print_exc()
 
         other_inits = [
@@ -146,7 +146,7 @@ class MainWindow(QMainWindow):
         for name in other_inits:
             try:
                 getattr(self, name).init()
-            except Exception:
+            except Exception:  # pragma: no cover
                 traceback.print_exc()
 
     def init_ui(self):

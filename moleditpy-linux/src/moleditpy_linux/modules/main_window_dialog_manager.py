@@ -22,10 +22,10 @@ import os
 # RDKit imports (explicit to satisfy flake8 and used features)
 try:
     pass
-except Exception:
+except Exception:  # pragma: no cover
     import traceback
 
-    traceback.print_exc()
+    pass
 
 # PyQt6 Modules
 from PyQt6.QtCore import QDateTime

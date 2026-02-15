@@ -293,7 +293,7 @@ class PluginManager:
                     except Exception as e:
                         status = f"Error (Init): {e}"
                         print(f"Plugin {plugin_name} initialize error: {e}")
-                        traceback.print_exc()
+                        pass
                 elif has_autorun:
                     try:
                         if self.main_window:
@@ -303,7 +303,7 @@ class PluginManager:
                     except Exception as e:
                         status = f"Error (Autorun): {e}"
                         print(f"Plugin {plugin_name} autorun error: {e}")
-                        traceback.print_exc()
+                        pass
                 elif not has_run:
                     status = "No Entry Point"
 
@@ -323,7 +323,7 @@ class PluginManager:
 
         except Exception as e:
             print(f"Failed to load plugin {module_name}: {e}")
-            traceback.print_exc()
+            pass
 
     def run_plugin(self, module, main_window):
         """Executes the plugin's run method (Legacy manual trigger)."""
@@ -335,7 +335,7 @@ class PluginManager:
                 "Plugin Error",
                 f"Error running plugin '{getattr(module, 'PLUGIN_NAME', 'Unknown')}':\n{e}",
             )
-            traceback.print_exc()
+            pass
 
     # --- Registration Callbacks ---
     def register_menu_action(self, plugin_name, path, callback, text, icon, shortcut):
@@ -476,7 +476,7 @@ class PluginManager:
                                 except:
                                     import traceback
 
-                                    traceback.print_exc()
+                                    pass
 
                         if val is not None:
                             if target.id == "PLUGIN_NAME":

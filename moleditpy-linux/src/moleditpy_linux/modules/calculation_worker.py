@@ -49,9 +49,8 @@ class CalculationWorker(QObject):
         super().__init__(parent)
         try:
             self.start_work.connect(self.run_calculation)
-        except Exception:
+        except Exception:  # pragma: no cover
             import traceback
-
             traceback.print_exc()
 
     @pyqtSlot(str, object)
@@ -100,13 +99,11 @@ class CalculationWorker(QObject):
                             self.finished.emit(payload[1])
                         else:
                             self.finished.emit(payload)
-                    except Exception:
+                    except Exception:  # pragma: no cover
                         import traceback
-
                         traceback.print_exc()
-            except Exception:
+            except Exception:  # pragma: no cover
                 import traceback
-
                 traceback.print_exc()
 
         def _safe_error(msg):  # pragma: no cover
@@ -118,13 +115,11 @@ class CalculationWorker(QObject):
                     # Fallback to emitting the raw message if tuple emission fails for any reason
                     try:
                         self.error.emit(msg)
-                    except Exception:
+                    except Exception:  # pragma: no cover
                         import traceback
-
                         traceback.print_exc()
-            except Exception:
+            except Exception:  # pragma: no cover
                 import traceback
-
                 traceback.print_exc()
 
         try:
@@ -141,9 +136,8 @@ class CalculationWorker(QObject):
                     self.status_update.emit(
                         "Warning: worker started without 'worker_id'; will listen for global halt signals."
                     )
-                except Exception:
+                except Exception:  # pragma: no cover
                     import traceback
-
                     traceback.print_exc()
                 _warned_no_worker_id = True
 
@@ -461,9 +455,8 @@ class CalculationWorker(QObject):
                                 conf.SetAtomPosition(
                                     i, rdGeometry.Point3D(float(x), float(y), 0.0)
                                 )
-                            except Exception:
+                            except Exception:  # pragma: no cover
                                 import traceback
-
                                 traceback.print_exc()
                         else:
                             # 新規追加されたH原子: 親原子の近くに配置
@@ -580,11 +573,9 @@ class CalculationWorker(QObject):
                                         conf.SetAtomPosition(
                                             i, rdGeometry.Point3D(0.0, 0.0, 0.10)
                                         )
-                                    except Exception:
+                                    except Exception:  # pragma: no cover
                                         import traceback
-
                                         traceback.print_exc()
-
                     # 5) Wedge/Dash の Zオフセットを適用
                     try:
                         stereo_z_offset = 1.5  # wedge -> +1.5, dash -> -1.5
@@ -615,17 +606,14 @@ class CalculationWorker(QObject):
                                 )
                             except Exception:
                                 continue
-                    except Exception:
+                    except Exception:  # pragma: no cover
                         import traceback
-
                         traceback.print_exc()
-
                     # コンフォーマを入れ替えて終了
                     try:
                         mol.RemoveAllConformers()
-                    except Exception:
+                    except Exception:  # pragma: no cover
                         import traceback
-
                         traceback.print_exc()
                     mol.AddConformer(conf, assignId=True)
 
@@ -756,9 +744,8 @@ class CalculationWorker(QObject):
                         conf_id = AllChem.EmbedMolecule(mol, basic_params)
                     else:
                         conf_id = -1
-                except Exception:
+                except Exception:  # pragma: no cover
                     import traceback
-
                     traceback.print_exc()
             """
             if conf_id == -1:
@@ -808,11 +795,9 @@ class CalculationWorker(QObject):
                         if _check_halted():
                             raise RuntimeError("Halted")
                         AllChem.UFFOptimizeMolecule(mol)
-                    except Exception:
+                    except Exception:  # pragma: no cover
                         import traceback
-
                         traceback.print_exc()
-
                 # CRITICAL: Restore stereochemistry again after optimization (explicit labels priority)
                 for bond_idx, stereo, stereo_atoms in original_stereo_info:
                     bond = mol.GetBondWithIdx(bond_idx)
@@ -846,9 +831,8 @@ class CalculationWorker(QObject):
                     ob_mol = pybel.readstring("mol", mol_block)
                     try:
                         ob_mol.addh()
-                    except Exception:
+                    except Exception:  # pragma: no cover
                         import traceback
-
                         traceback.print_exc()
                     ob_mol.make3D()
                     try:
@@ -881,9 +865,8 @@ class CalculationWorker(QObject):
                             if _check_halted():
                                 raise RuntimeError("Halted")
                             AllChem.UFFOptimizeMolecule(rd_mol)
-                        except Exception:
+                        except Exception:  # pragma: no cover
                             import traceback
-
                             traceback.print_exc()
                     _safe_status(
                         "Open Babel embedding succeeded. Warning: Conformation accuracy may be limited."

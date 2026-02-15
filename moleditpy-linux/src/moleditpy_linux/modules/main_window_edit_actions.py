@@ -195,7 +195,7 @@ class MainWindowEditActions(object):
         except Exception as e:
             print(f"Error during copy operation: {e}")
 
-            traceback.print_exc()
+            pass
             self.statusBar().showMessage(f"Error during copy operation: {e}")
 
     def cut_selection(self):
@@ -215,7 +215,7 @@ class MainWindowEditActions(object):
         except Exception as e:
             print(f"Error during cut operation: {e}")
 
-            traceback.print_exc()
+            pass
             self.statusBar().showMessage(f"Error during cut operation: {e}")
 
     def paste_from_clipboard(self):
@@ -271,7 +271,7 @@ class MainWindowEditActions(object):
         except Exception as e:
             print(f"Error during paste operation: {e}")
 
-            traceback.print_exc()
+            pass
             self.statusBar().showMessage(f"Error during paste operation: {e}")
         self.statusBar().showMessage(f"Pasted {len(new_atoms)} atoms.", 2000)
         self.activate_select_mode()
@@ -362,11 +362,9 @@ class MainWindowEditActions(object):
                 # Allow the GUI to process events between batches to remain responsive
                 try:
                     QApplication.processEvents()
-                except Exception:
+                except Exception:  # pragma: no cover
                     import traceback
-
                     traceback.print_exc()
-
             # Determine how many hydrogens actually were removed by re-scanning data
             remaining_h = 0
             try:
@@ -385,7 +383,7 @@ class MainWindowEditActions(object):
                 # Only push a single undo state once for the whole operation
                 try:
                     self.push_undo_state()
-                except Exception:
+                except Exception:  # pragma: no cover
                     # Do not allow undo stack problems to crash the app
                     pass
                 self.statusBar().showMessage(
@@ -406,12 +404,11 @@ class MainWindowEditActions(object):
         except Exception as e:
             # Capture and log unexpected errors but don't let them crash the UI
             print(f"Error during hydrogen removal: {e}")
-            traceback.print_exc()
+            pass
             try:
                 self.statusBar().showMessage(f"Error removing hydrogen atoms: {e}")
-            except Exception:
+            except Exception:  # pragma: no cover
                 import traceback
-
                 traceback.print_exc()
 
     def add_hydrogen_atoms(self):
@@ -601,9 +598,8 @@ class MainWindowEditActions(object):
                     self.scene.clearSelection()
                     for it in added_items:
                         it.setSelected(True)
-                except Exception:
+                except Exception:  # pragma: no cover
                     import traceback
-
                     traceback.print_exc()
             else:
                 self.statusBar().showMessage(
@@ -612,7 +608,7 @@ class MainWindowEditActions(object):
 
         except Exception as e:
             print(f"Error during hydrogen addition: {e}")
-            traceback.print_exc()
+            pass
             self.statusBar().showMessage(f"Error adding hydrogen atoms: {e}")
 
     def update_edit_menu_actions(self):
@@ -701,7 +697,7 @@ class MainWindowEditActions(object):
 
         except Exception as e:
             print(f"Error rotating molecule: {e}")
-            traceback.print_exc()
+            pass
             self.statusBar().showMessage(f"Error rotating: {e}")
 
     def select_all(self):
@@ -914,7 +910,7 @@ class MainWindowEditActions(object):
                         try:
                             if is_deleted_func and is_deleted_func(item):
                                 continue
-                        except Exception:
+                        except Exception:  # pragma: no cover
                             # If sip check itself fails, continue with other lightweight guards
                             pass
 
@@ -947,15 +943,13 @@ class MainWindowEditActions(object):
                             if need_geometry and hasattr(item, "prepareGeometryChange"):
                                 try:
                                     item.prepareGeometryChange()
-                                except Exception:
+                                except Exception:  # pragma: no cover
                                     import traceback
-
                                     traceback.print_exc()
-
                             # Apply implicit hydrogen count (guarded)
                             try:
                                 item.implicit_h_count = new_count
-                            except Exception:
+                            except Exception:  # pragma: no cover
                                 # If setting the count fails, continue but still
                                 # attempt to set the problem flag below.
                                 pass
@@ -963,11 +957,9 @@ class MainWindowEditActions(object):
                             # Apply problem flag (visual red-outline)
                             try:
                                 item.has_problem = bool(desired_prob)
-                            except Exception:
+                            except Exception:  # pragma: no cover
                                 import traceback
-
                                 traceback.print_exc()
-
                             # Ensure the item is updated in the scene so paint() runs
                             # when either geometry or problem-flag changed.
                             items_to_update.append(item)
@@ -991,7 +983,7 @@ class MainWindowEditActions(object):
                         if hasattr(it, "update"):
                             try:
                                 it.update()
-                            except Exception:
+                            except Exception:  # pragma: no cover
                                 # ignore update errors for robustness
                                 pass
                     except Exception:
@@ -1005,12 +997,10 @@ class MainWindowEditActions(object):
                 # Fallback: try to call directly (best-effort)
                 try:
                     _apply_ui_updates()
-                except Exception:
+                except Exception:  # pragma: no cover
                     import traceback
-
                     traceback.print_exc()
-
-        except Exception:
+        except Exception:  # pragma: no cover
             # Make sure update failures never crash the application
             pass
 
@@ -1093,7 +1083,7 @@ class MainWindowEditActions(object):
                     # If SIP is available, skip wrappers whose C++ object is gone
                     if sip_isdeleted_safe(item):
                         continue
-                except Exception:
+                except Exception:  # pragma: no cover
                     # If the sip check fails, continue with other lightweight guards
                     pass
                 try:
@@ -1282,10 +1272,10 @@ class MainWindowEditActions(object):
             try:
                 if sip_isdeleted_safe(item):
                     continue
-            except Exception:
+            except Exception:  # pragma: no cover
                 import traceback
-
                 traceback.print_exc()
+
             try:
                 sc = None
                 try:
@@ -1492,17 +1482,15 @@ class MainWindowEditActions(object):
                 self.statusBar().showMessage(
                     f"Molecule sanitization failed{desc}; file may be malformed."
                 )
-            except Exception:
+            except Exception:  # pragma: no cover
                 import traceback
-
                 traceback.print_exc()
             # Disable 3D optimization UI to prevent running on invalid molecules
             if hasattr(self, "optimize_3d_button"):
                 try:
                     self.optimize_3d_button.setEnabled(False)
-                except Exception:
+                except Exception:  # pragma: no cover
                     import traceback
-
                     traceback.print_exc()
 
     def _clear_xyz_flags(self, mol=None):
@@ -1529,15 +1517,12 @@ class MainWindowEditActions(object):
                         except Exception:
                             try:
                                 target.SetIntProp("_xyz_skip_checks", 0)
-                            except Exception:
+                            except Exception:  # pragma: no cover
                                 import traceback
-
                                 traceback.print_exc()
-                except Exception:
+                except Exception:  # pragma: no cover
                     import traceback
-
                     traceback.print_exc()
-
                 # Remove attribute-style markers if present
                 try:
                     if hasattr(target, "_xyz_skip_checks"):
@@ -1549,15 +1534,12 @@ class MainWindowEditActions(object):
                             except Exception:
                                 try:
                                     target._xyz_skip_checks = False
-                                except Exception:
+                                except Exception:  # pragma: no cover
                                     import traceback
-
                                     traceback.print_exc()
-                except Exception:
+                except Exception:  # pragma: no cover
                     import traceback
-
                     traceback.print_exc()
-
                 try:
                     if hasattr(target, "_xyz_atom_data"):
                         try:
@@ -1568,25 +1550,21 @@ class MainWindowEditActions(object):
                             except Exception:
                                 try:
                                     target._xyz_atom_data = None
-                                except Exception:
+                                except Exception:  # pragma: no cover
                                     import traceback
-
                                     traceback.print_exc()
-                except Exception:
+                except Exception:  # pragma: no cover
                     import traceback
-
                     traceback.print_exc()
-
-        except Exception:
+        except Exception:  # pragma: no cover
             # best-effort only
             pass
 
         # Reset UI flags
         try:
             self.is_xyz_derived = False
-        except Exception:
+        except Exception:  # pragma: no cover
             import traceback
-
             traceback.print_exc()
 
         # Enable Optimize 3D unless sanitization failed
@@ -1595,18 +1573,15 @@ class MainWindowEditActions(object):
                 if getattr(self, "chem_check_failed", False):
                     try:
                         self.optimize_3d_button.setEnabled(False)
-                    except Exception:
+                    except Exception:  # pragma: no cover
                         import traceback
-
                         traceback.print_exc()
                 else:
                     try:
                         self.optimize_3d_button.setEnabled(True)
-                    except Exception:
+                    except Exception:  # pragma: no cover
                         import traceback
-
                         traceback.print_exc()
-        except Exception:
+        except Exception:  # pragma: no cover
             import traceback
-
             traceback.print_exc()

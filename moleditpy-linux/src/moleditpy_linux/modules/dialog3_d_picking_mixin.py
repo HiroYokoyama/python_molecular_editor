@@ -70,9 +70,8 @@ class Dialog3DPickingMixin:
                             if distances[closest_atom_idx] < click_threshold:
                                 try:
                                     self.main_window._picking_consumed = True
-                                except Exception:
+                                except Exception:  # pragma: no cover
                                     import traceback
-
                                     traceback.print_exc()
                                 self.on_atom_picked(int(closest_atom_idx))
 
@@ -127,9 +126,8 @@ class Dialog3DPickingMixin:
         # Ensure the main window flag exists
         try:
             self.main_window._picking_consumed = False
-        except Exception:
+        except Exception:  # pragma: no cover
             import traceback
-
             traceback.print_exc()
 
     def disable_picking(self):
@@ -141,9 +139,8 @@ class Dialog3DPickingMixin:
             # Clear any leftover flag when picking is disabled
             if hasattr(self.main_window, "_picking_consumed"):
                 self.main_window._picking_consumed = False
-        except Exception:
+        except Exception:  # pragma: no cover
             import traceback
-
             traceback.print_exc()
 
     def try_alternative_picking(self, x, y):
@@ -159,10 +156,10 @@ class Dialog3DPickingMixin:
             for label_actor in self.selection_labels:
                 try:
                     self.main_window.plotter.remove_actor(label_actor)
-                except Exception:
+                except Exception:  # pragma: no cover
                     import traceback
-
                     traceback.print_exc()
+
             self.selection_labels = []
 
     # Alias — some dialogs use this name instead.

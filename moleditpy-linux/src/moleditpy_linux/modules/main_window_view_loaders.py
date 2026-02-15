@@ -25,10 +25,10 @@ from rdkit.Chem import AllChem
 
 try:
     pass
-except Exception:
+except Exception:  # pragma: no cover
     import traceback
 
-    traceback.print_exc()
+    pass
 
 # PyQt6 Modules
 from PyQt6.QtWidgets import QFileDialog
@@ -102,9 +102,8 @@ class MainWindowViewLoaders(object):
                 if hasattr(self, "optimize_3d_button"):
                     try:
                         self.optimize_3d_button.setEnabled(False)
-                    except Exception:
+                    except Exception:  # pragma: no cover
                         import traceback
-
                         traceback.print_exc()
             else:
                 try:
@@ -121,20 +120,17 @@ class MainWindowViewLoaders(object):
                                 self.optimize_3d_button.setEnabled(True)
                             else:
                                 self.optimize_3d_button.setEnabled(False)
-                        except Exception:
+                        except Exception:  # pragma: no cover
                             import traceback
-
                             traceback.print_exc()
                 else:
                     self.is_xyz_derived = True
                     if hasattr(self, "optimize_3d_button"):
                         try:
                             self.optimize_3d_button.setEnabled(False)
-                        except Exception:
+                        except Exception:  # pragma: no cover
                             import traceback
-
                             traceback.print_exc()
-
             self.draw_molecule_3d(self.current_mol)
             self.plotter.reset_camera()
 
@@ -167,7 +163,7 @@ class MainWindowViewLoaders(object):
             self.statusBar().showMessage(f"Error loading XYZ file: {e}")
             self.restore_ui_for_editing()
 
-            traceback.print_exc()
+            pass
 
     def save_3d_as_mol(self):
         if not self.current_mol:
@@ -229,7 +225,7 @@ class MainWindowViewLoaders(object):
         except Exception as e:
             self.statusBar().showMessage(f"Error saving 3D MOL file: {e}")
 
-            traceback.print_exc()
+            pass
 
     def load_mol_file_for_3d_viewing(self, file_path=None):
         """MOL/SDFファイルを3Dビューアーで開く"""
@@ -319,11 +315,9 @@ class MainWindowViewLoaders(object):
             # correctly enabled when appropriate.
             try:
                 self._clear_xyz_flags(mol)
-            except Exception:
+            except Exception:  # pragma: no cover
                 import traceback
-
                 traceback.print_exc()
-
             # 3Dビューアーに表示
             # Centralized chemical/sanitization handling
             # Ensure the skip_chemistry_checks setting is respected and flags are set

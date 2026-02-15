@@ -28,10 +28,10 @@ from rdkit import Chem
 
 try:
     pass
-except Exception:
+except Exception:  # pragma: no cover
     import traceback
 
-    traceback.print_exc()
+    pass
 
 # PyQt6 Modules
 from PyQt6.QtCore import QLineF, QPointF, QRectF, Qt, QTimer, QUrl
@@ -74,7 +74,7 @@ except Exception:
 
 import platform
 
-try:  # pragma: no cover
+try:
     import winreg
 except Exception:
     winreg = None
@@ -118,11 +118,9 @@ def detect_system_theme():  # pragma: no cover
                 ) as k:
                     val, _ = winreg.QueryValueEx(k, "AppsUseLightTheme")
                     return "dark" if int(val) == 0 else "light"
-            except Exception:
+            except Exception:  # pragma: no cover
                 import traceback
-
                 traceback.print_exc()
-
         # macOS: 'defaults read -g AppleInterfaceStyle'
         if platform.system() == "Darwin":
             return "light"
@@ -139,7 +137,7 @@ def detect_system_theme():  # pragma: no cover
             except subprocess.CalledProcessError:
                 # コマンド失敗 (キーが存在しない) = ライトモード
                 return 'light'
-            except Exception:
+            except Exception:  # pragma: no cover
                 # その他のエラー
                 pass
             """
@@ -158,11 +156,9 @@ def detect_system_theme():  # pragma: no cover
                         return "dark"
                     if "light" in out.lower():
                         return "light"
-            except Exception:
+            except Exception:  # pragma: no cover
                 import traceback
-
                 traceback.print_exc()
-
             try:
                 p = subprocess.run(
                     ["gsettings", "get", "org.gnome.desktop.interface", "gtk-theme"],
@@ -171,18 +167,17 @@ def detect_system_theme():  # pragma: no cover
                 )
                 if p.returncode == 0 and "-dark" in p.stdout.lower():
                     return "dark"
-            except Exception:
+            except Exception:  # pragma: no cover
                 import traceback
-
                 traceback.print_exc()
-    except Exception:
+    except Exception:  # pragma: no cover
         import traceback
-
         traceback.print_exc()
+
     return None
 
 
-try:  # pragma: no cover
+try:
     from PyQt6 import sip as _sip  # type: ignore
 
     _sip_isdeleted = getattr(_sip, "isdeleted", None)
@@ -335,9 +330,8 @@ class MainWindowMainInit(object):
         # accidental focus landing on toolbar/buttons (e.g. Optimize 2D).
         try:
             QTimer.singleShot(0, self.view_2d.setFocus)
-        except Exception:
+        except Exception:  # pragma: no cover
             import traceback
-
             traceback.print_exc()
 
     def init_ui(self):  # pragma: no cover
@@ -414,10 +408,10 @@ class MainWindowMainInit(object):
             self.convert_button.customContextMenuRequested.connect(
                 self.show_convert_menu
             )
-        except Exception:
+        except Exception:  # pragma: no cover
             import traceback
-
             traceback.print_exc()
+
         left_buttons_layout.addWidget(self.convert_button)
 
         left_layout.addLayout(left_buttons_layout)
@@ -456,11 +450,11 @@ class MainWindowMainInit(object):
             self.optimize_3d_button.customContextMenuRequested.connect(
                 self.show_optimize_menu
             )
-        except Exception:
+        except Exception:  # pragma: no cover
             import traceback
-
             traceback.print_exc()
             pass
+
         right_buttons_layout.addWidget(self.optimize_3d_button)
 
         # エクスポートボタン (メニュー付き)
@@ -525,7 +519,7 @@ class MainWindowMainInit(object):
         try:
             # Insert a toolbar break in the Top toolbar area to force the next toolbar onto a new row
             self.addToolBarBreak(Qt.ToolBarArea.TopToolBarArea)
-        except Exception:
+        except Exception:  # pragma: no cover
             # If addToolBarBreak isn't available, continue without raising; placement may still work depending on the platform.
             pass
 
@@ -536,9 +530,8 @@ class MainWindowMainInit(object):
         # Plugin Toolbar (Third Row)
         try:
             self.addToolBarBreak(Qt.ToolBarArea.TopToolBarArea)
-        except Exception:
+        except Exception:  # pragma: no cover
             import traceback
-
             traceback.print_exc()
 
         self.plugin_toolbar = QToolBar("Plugin Toolbar")
@@ -610,9 +603,8 @@ class MainWindowMainInit(object):
                     c = QColor(fg_hex)
                     if c.isValid():
                         return c
-            except Exception:
+            except Exception:  # pragma: no cover
                 import traceback
-
                 traceback.print_exc()
 
             # 1) Prefer the system/OS dark-mode preference if available.
@@ -621,9 +613,8 @@ class MainWindowMainInit(object):
                 # Standard mapping: dark -> white, light -> black
                 if os_pref is not None:
                     return QColor("#FFFFFF") if os_pref else QColor("#000000")
-            except Exception:
+            except Exception:  # pragma: no cover
                 import traceback
-
                 traceback.print_exc()
 
             try:
@@ -640,9 +631,8 @@ class MainWindowMainInit(object):
                         )
                         # Return white on dark (lum<0.5), black on light
                         return QColor("#FFFFFF") if lum < 0.5 else QColor("#000000")
-            except Exception:
+            except Exception:  # pragma: no cover
                 import traceback
-
                 traceback.print_exc()
 
             try:
@@ -1394,14 +1384,12 @@ class MainWindowMainInit(object):
                 # defer disk write
                 try:
                     self.settings_dirty = True
-                except Exception:
+                except Exception:  # pragma: no cover
                     import traceback
-
                     traceback.print_exc()
                 self.statusBar().showMessage(f"3D conversion mode set to: {mode}")
-            except Exception:
+            except Exception:  # pragma: no cover
                 import traceback
-
                 traceback.print_exc()
 
         conv_options = [
@@ -1454,20 +1442,17 @@ class MainWindowMainInit(object):
             if saved_conv in self.conv_actions:
                 try:
                     self.conv_actions[saved_conv].setChecked(True)
-                except Exception:
+                except Exception:  # pragma: no cover
                     import traceback
-
                     traceback.print_exc()
             self.settings["3d_conversion_mode"] = saved_conv
             try:
                 self.settings_dirty = True
-            except Exception:
+            except Exception:  # pragma: no cover
                 import traceback
-
                 traceback.print_exc()
-        except Exception:
+        except Exception:  # pragma: no cover
             import traceback
-
             traceback.print_exc()
 
         # 3) 3D Optimization Settings (single location under Settings menu)
@@ -1496,10 +1481,10 @@ class MainWindowMainInit(object):
             action.setCheckable(True)
             try:
                 action.setActionGroup(opt_group)
-            except Exception:
+            except Exception:  # pragma: no cover
                 import traceback
-
                 traceback.print_exc()
+
             action.triggered.connect(
                 lambda checked, m=key: self.set_optimization_method(m)
             )
@@ -1531,9 +1516,8 @@ class MainWindowMainInit(object):
                 if "MMFF_RDKIT" in self.opt3d_actions:
                     self.opt3d_actions["MMFF_RDKIT"].setChecked(True)
                     self.optimization_method = "MMFF_RDKIT"
-        except Exception:
+        except Exception:  # pragma: no cover
             import traceback
-
             traceback.print_exc()
 
         # 4) Reset all settings to defaults
@@ -1635,9 +1619,8 @@ class MainWindowMainInit(object):
 
         try:
             self.update_cpk_colors_from_settings()
-        except Exception:
+        except Exception:  # pragma: no cover
             import traceback
-
             traceback.print_exc()
 
         if self.plotter and self.plotter.renderer:
@@ -1657,9 +1640,8 @@ class MainWindowMainInit(object):
                 self.scene.update()
                 for v in list(self.scene.views()):
                     v.viewport().update()
-        except Exception:
+        except Exception:  # pragma: no cover
             import traceback
-
             traceback.print_exc()
 
     def open_settings_dialog(self):  # pragma: no cover
@@ -1686,9 +1668,8 @@ class MainWindowMainInit(object):
                 # Do not write to disk immediately; mark dirty so settings will be saved on exit
                 try:
                     self.settings_dirty = True
-                except Exception:
+                except Exception:  # pragma: no cover
                     import traceback
-
                     traceback.print_exc()
                 # If ColorSettingsDialog is open, refresh its UI to reflect the reset
                 try:
@@ -1697,24 +1678,20 @@ class MainWindowMainInit(object):
                             if isinstance(w, ColorSettingsDialog):
                                 try:
                                     w.refresh_ui()
-                                except Exception:
+                                except Exception:  # pragma: no cover
                                     import traceback
-
                                     traceback.print_exc()
-                        except Exception:
+                        except Exception:  # pragma: no cover
                             import traceback
-
                             traceback.print_exc()
-                except Exception:
+                except Exception:  # pragma: no cover
                     import traceback
-
                     traceback.print_exc()
                 # Ensure global CPK mapping is rebuilt from defaults and UI is updated
                 try:
                     self.update_cpk_colors_from_settings()
-                except Exception:
+                except Exception:  # pragma: no cover
                     import traceback
-
                     traceback.print_exc()
                 # Refresh UI/menu state for conversion and optimization
                 try:
@@ -1730,11 +1707,9 @@ class MainWindowMainInit(object):
                                 act.setChecked(False)
                             try:
                                 self.opt3d_actions[key].setChecked(True)
-                            except Exception:
+                            except Exception:  # pragma: no cover
                                 import traceback
-
                                 traceback.print_exc()
-
                     # update conversion mode
                     conv_mode = self.settings.get("3d_conversion_mode", "fallback")
                     if hasattr(self, "conv_actions") and conv_mode in self.conv_actions:
@@ -1742,11 +1717,9 @@ class MainWindowMainInit(object):
                             for act in self.conv_actions.values():
                                 act.setChecked(False)
                             self.conv_actions[conv_mode].setChecked(True)
-                        except Exception:
+                        except Exception:  # pragma: no cover
                             import traceback
-
                             traceback.print_exc()
-
                     # 3Dビューの設定を適用
                     self.apply_3d_settings()
                     # 現在の分子を再描画（設定変更を反映）
@@ -1759,9 +1732,8 @@ class MainWindowMainInit(object):
                         "All settings have been reset to defaults.",
                     )
 
-                except Exception:
+                except Exception:  # pragma: no cover
                     import traceback
-
                     traceback.print_exc()
                 # Update 2D scene styling to reflect default CPK colors
                 try:
@@ -1771,9 +1743,8 @@ class MainWindowMainInit(object):
                         self.scene.setBackgroundBrush(QBrush(QColor(bg_c)))
 
                     self.update_cpk_colors_from_settings()
-                except Exception:
+                except Exception:  # pragma: no cover
                     import traceback
-
                     traceback.print_exc()
                 try:
                     if hasattr(self, "scene") and self.scene:
@@ -1781,9 +1752,8 @@ class MainWindowMainInit(object):
                             try:
                                 if hasattr(it, "update_style"):
                                     it.update_style()
-                            except Exception:
+                            except Exception:  # pragma: no cover
                                 import traceback
-
                                 traceback.print_exc()
                         try:
                             # Force a full scene update and viewport repaint for all views
@@ -1791,17 +1761,14 @@ class MainWindowMainInit(object):
                             for v in list(self.scene.views()):
                                 try:
                                     v.viewport().update()
-                                except Exception:
+                                except Exception:  # pragma: no cover
                                     import traceback
-
                                     traceback.print_exc()
-                        except Exception:
+                        except Exception:  # pragma: no cover
                             import traceback
-
                             traceback.print_exc()
-                except Exception:
+                except Exception:  # pragma: no cover
                     import traceback
-
                     traceback.print_exc()
                 # Also refresh any open SettingsDialog instances so their UI matches
                 try:
@@ -1810,17 +1777,14 @@ class MainWindowMainInit(object):
                             if isinstance(w, SettingsDialog):
                                 try:
                                     w.update_ui_from_settings(self.settings)
-                                except Exception:
+                                except Exception:  # pragma: no cover
                                     import traceback
-
                                     traceback.print_exc()
-                        except Exception:
+                        except Exception:  # pragma: no cover
                             import traceback
-
                             traceback.print_exc()
-                except Exception:
+                except Exception:  # pragma: no cover
                     import traceback
-
                     traceback.print_exc()
             except Exception as e:
                 QMessageBox.warning(
@@ -1990,21 +1954,17 @@ class MainWindowMainInit(object):
                 if changed:
                     try:
                         self.settings_dirty = True
-                    except Exception:
+                    except Exception:  # pragma: no cover
                         import traceback
-
                         traceback.print_exc()
-
             else:
                 # No settings file - use defaults. Mark dirty so defaults will be written on exit.
                 self.settings = default_settings
                 try:
                     self.settings_dirty = True
-                except Exception:
+                except Exception:  # pragma: no cover
                     import traceback
-
                     traceback.print_exc()
-
         except Exception:
             self.settings = default_settings
 

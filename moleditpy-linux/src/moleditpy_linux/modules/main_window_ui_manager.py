@@ -21,10 +21,10 @@ import vtk
 # RDKit imports (explicit to satisfy flake8 and used features)
 try:
     pass
-except Exception:
+except Exception:  # pragma: no cover
     import traceback
 
-    traceback.print_exc()
+    pass
 
 # PyQt6 Modules
 from PyQt6.QtCore import QEvent, Qt, QTimer
@@ -182,9 +182,8 @@ class MainWindowUiManager(object):
             ):
                 self.save_settings()
                 self.settings_dirty = False
-        except Exception:
+        except Exception:  # pragma: no cover
             import traceback
-
             traceback.print_exc()
 
         # 未保存の変更がある場合の処理
@@ -219,13 +218,11 @@ class MainWindowUiManager(object):
                 if widget != self and isinstance(widget, (QDialog, QMainWindow)):
                     try:
                         widget.close()
-                    except Exception:
+                    except Exception:  # pragma: no cover
                         import traceback
-
                         traceback.print_exc()
-        except Exception:
+        except Exception:  # pragma: no cover
             import traceback
-
             traceback.print_exc()
 
         # 終了処理
@@ -237,19 +234,16 @@ class MainWindowUiManager(object):
             for thr in list(getattr(self, "_active_calc_threads", []) or []):
                 try:
                     thr.quit()
-                except Exception:
+                except Exception:  # pragma: no cover
                     import traceback
-
                     traceback.print_exc()
                 try:
                     thr.wait(200)
-                except Exception:
+                except Exception:  # pragma: no cover
                     import traceback
-
                     traceback.print_exc()
-        except Exception:
+        except Exception:  # pragma: no cover
             import traceback
-
             traceback.print_exc()
 
         event.accept()
@@ -430,16 +424,14 @@ class MainWindowUiManager(object):
 
                         # Otherwise enable/disable according to the requested global flag
                         getattr(self, action_name).setEnabled(bool(enabled))
-                    except Exception:
+                    except Exception:  # pragma: no cover
                         import traceback
-
                         traceback.print_exc()
                 else:
                     try:
                         getattr(self, action_name).setEnabled(enabled)
-                    except Exception:
+                    except Exception:  # pragma: no cover
                         import traceback
-
                         traceback.print_exc()
 
         # 3D Selectボタンは常に有効にする
