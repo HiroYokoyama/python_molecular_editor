@@ -613,16 +613,8 @@ def test_undo_redo(window, qtbot):
     scene = window.scene
 
     assert len(window.data.atoms) == 0
-    # 初期状態で push_undo_state が呼ばれることが多いが
-    # headless/mocked environments can suppress the initial snapshot.
-    # Instead of checking the exact length, assert the undo stack exists and is a list
-    # (we verify behavior via atom count on undo/redo operations below).
-    # Initial state verification
-    assert isinstance(window.undo_stack, list)
-    # After reset or initial launch, undo should be disabled if no states are saved yet
-    # but some environments might save the initial blank state.
-    # We verify it's a valid boolean and then perform an action to truly test it.
-    assert isinstance(window.undo_action.isEnabled(), bool)
+    # Capture initial stack size to verify progression
+    initial_stack_size = len(window.undo_stack)
 
     # 1. Draw an atom (programmatically)
     window.set_mode("atom_C")
@@ -630,27 +622,25 @@ def test_undo_redo(window, qtbot):
     window.push_undo_state()
 
     assert len(window.data.atoms) == 1
-    # After an action, Undo should be enabled
+    # After an action, Undo should be enabled and stack size increased
+    assert len(window.undo_stack) == initial_stack_size + 1
     assert window.undo_action.isEnabled() is True
     assert window.redo_action.isEnabled() is False
 
     # 2. Undoを実行
-    # Undo前の状態保存
-    can_undo_before = window.undo_action.isEnabled()
     window.undo()
     qtbot.wait(50)
 
-    # Ensure undo restored the model to the prior state (0 or 1 atoms depending on env)
-    assert len(window.data.atoms) in (0, 1)
-    # Check that undo action state might change or at least is valid boolean
-    assert isinstance(window.undo_action.isEnabled(), bool)
+    # Ensure undo restored the model to the prior state (0 atoms)
+    assert len(window.data.atoms) == 0
+    # Redo should now be enabled
+    assert window.redo_action.isEnabled() is True
 
 
     # 3. Redoを実行
     window.redo()
     qtbot.wait(50)
 
-    assert len(window.data.atoms) == 1  # 原子が戻る
     # Ensure redo restored the atom that was undone
     assert len(window.data.atoms) == 1
     assert window.undo_action.isEnabled() is True

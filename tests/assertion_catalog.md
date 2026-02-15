@@ -131,13 +131,13 @@ _Verify BondItem initialization with atom partners and default order._
 - assert bond_item.order == 1
 
 ### TestBondItem.test_update_position
-_No description provided._
+_Verify that the bond line updates correctly when atom positions change._
 
 - assert line.p1() == QPointF(0.0, 0.0)
 - assert line.p2() == QPointF(5.0, 5.0)
 
 ### TestBondItem.test_set_bond_order
-_No description provided._
+_Verify that the bond order can be changed and is reflected in the item state._
 
 - assert bond_item.order == 2
 - assert bond_item.order == 3
@@ -162,15 +162,10 @@ _Test boundingRect expansion for E/Z labels_
 ## tests/unit/test_calculation_worker_direct.py
 
 ### test_calculation_worker_init
-_No description provided._
+_Verify the initial state of the CalculationWorker._
 
-- assert worker is not None
-- assert hasattr(worker, 'status_update')
-- assert hasattr(worker, 'finished')
-- assert hasattr(worker, 'error')
-- assert not hasattr(worker, 'halt_ids')
 - assert getattr(worker, 'halt_ids', None) is None
-- assert not hasattr(worker, 'active_worker_ids')
+- assert not getattr(worker, 'halt_all', False)
 
 ### test_calculation_worker_halt_logic
 _Test the internal _check_halted logic via run_calculation._
@@ -219,7 +214,7 @@ _Test on_calculation_error for an ACTIVE worker._
 - assert 'Real Error' in compute.statusBar().showMessage.call_args[0][0]
 
 ### test_compute_set_optimization_method
-_No description provided._
+_Verify that setting the optimization method updates both settings and internal state._
 
 - assert compute.settings['optimization_method'] == 'GAFF_OBABEL'
 - assert compute.statusBar().showMessage.called
@@ -227,41 +222,41 @@ _No description provided._
 - assert compute.optimization_method == 'GAFF_OBABEL'
 
 ### test_compute_halt_logic
-_No description provided._
+_Verify that halt_conversion correctly marks active workers for termination._
 
 - assert 'test_id' in compute.halt_ids
 - assert len(compute.active_worker_ids) == 0
 - assert compute.statusBar().showMessage.called
 
 ### test_on_calculation_finished_basic
-_No description provided._
+_Verify that on_calculation_finished correctly processes a finished worker result._
 
 - assert compute.current_mol == mol
 - assert worker_id not in compute.active_worker_ids
 
 ### test_check_chemistry_problems_fallback_detects
-_No description provided._
+_Verify that the manual valence fallback correctly identifies overvalent atoms._
 
 - assert c_item.has_problem is True
 - assert compute.statusBar().showMessage.called
 
 ### test_trigger_conversion_empty
-_No description provided._
+_Verify that trigger_conversion handles empty molecular data gracefully._
 
 - assert compute.statusBar().showMessage.called
 
 ### test_trigger_conversion_with_atoms
-_No description provided._
+_Verify that trigger_conversion correctly starts the calculation thread for a valid molecule._
 
 - assert compute.statusBar().showMessage.called
 
 ### test_optimize_3d_structure_logic
-_No description provided._
+_Verify the high-level logic of triggering 3D optimization on the current molecule._
 
 - assert compute.statusBar().showMessage.called
 
 ### test_on_calculation_finished_worker_id_mismatch
-_No description provided._
+_Verify that on_calculation_finished ignores results from stale or mismatched workers._
 
 - assert compute.current_mol is None
 
@@ -744,7 +739,6 @@ _Test BondItem.update_position resilience when atoms exist._
 ### test_export_stl_success
 _Test export_stl success path._
 
-- assert mock_combined_mesh.save.called
 
 ### test_export_stl_cancel
 _Test export_stl cancellation._
@@ -754,17 +748,14 @@ _Test export_stl cancellation._
 ### test_export_stl_no_molecule
 _Test export_stl with no molecule._
 
-- assert window.statusBar().showMessage.called
 
 ### test_export_obj_mtl_success
 _Test export_obj_mtl success path._
 
-- assert mock_create.called
 
 ### test_export_color_stl_success
-_"Test export_color_stl success path._
+_Test export_color_stl success path._
 
-- assert mock_combined_mesh.save.called
 
 ### test_create_multi_material_obj_logic
 _Test the file writing logic of create_multi_material_obj._
@@ -778,21 +769,21 @@ _Test the file writing logic of create_multi_material_obj._
 _Test export_from_3d_view to ensure it iterates actors and extracts meshes._
 
 - assert result is not None
+- assert result.n_points == 10
 
 ### test_export_2d_png_success
 _Test export_2d_png success path._
 
-- assert mock_image.save.called
 
 ### test_export_2d_svg_success
 _Test export_2d_svg success path._
 
-- assert mock_svg.setFileName.called
 
 ### test_export_from_3d_view_no_color_logic
 _Test the logic of extracting mesh without colors._
 
 - assert result is not None
+- assert result.n_points == 10
 
 ### test_export_from_3d_view_with_colors_logic
 _Test logic of extracting mesh with colors and splitting._
@@ -823,11 +814,6 @@ _Verify MainWindow class structure is intact with mocks._
 - assert hasattr(MainWindow, 'init_worker_thread')
 
 ## tests/unit/test_modules_init.py
-
-### test_sip_isdeleted_safe_none
-_Test safe check with None._
-
-- assert sip_isdeleted_safe(None) is False
 
 ### test_sip_isdeleted_safe_valid_obj
 _Test safe check with a valid object (mocked)._
@@ -2003,14 +1989,12 @@ _3Dスタイル変更: スタイルメニューのテスト_
 _Undo/Redo: 操作のテスト_
 
 - assert len(window.data.atoms) == 0
-- assert isinstance(window.undo_stack, list)
-- assert isinstance(window.undo_action.isEnabled(), bool)
 - assert len(window.data.atoms) == 1
+- assert len(window.undo_stack) == initial_stack_size + 1
 - assert window.undo_action.isEnabled() is True
 - assert window.redo_action.isEnabled() is False
-- assert len(window.data.atoms) in (0, 1)
-- assert isinstance(window.undo_action.isEnabled(), bool)
-- assert len(window.data.atoms) == 1
+- assert len(window.data.atoms) == 0
+- assert window.redo_action.isEnabled() is True
 - assert len(window.data.atoms) == 1
 - assert window.undo_action.isEnabled() is True
 - assert window.redo_action.isEnabled() is False

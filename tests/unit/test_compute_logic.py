@@ -115,6 +115,7 @@ def test_on_calculation_error_basic(mock_parser_host):
 
 
 def test_compute_set_optimization_method(mock_parser_host):
+    """Verify that setting the optimization method updates both settings and internal state."""
     compute = DummyCompute(mock_parser_host)
     compute.set_optimization_method("GAFF_OBABEL")
     assert compute.settings["optimization_method"] == "GAFF_OBABEL"
@@ -126,6 +127,7 @@ def test_compute_set_optimization_method(mock_parser_host):
 
 
 def test_compute_halt_logic(mock_parser_host):
+    """Verify that halt_conversion correctly marks active workers for termination."""
     compute = DummyCompute(mock_parser_host)
     compute.active_worker_ids.add("test_id")
     compute.halt_conversion()
@@ -135,6 +137,7 @@ def test_compute_halt_logic(mock_parser_host):
 
 
 def test_on_calculation_finished_basic(mock_parser_host):
+    """Verify that on_calculation_finished correctly processes a finished worker result."""
     compute = DummyCompute(mock_parser_host)
     worker_id = "test_worker"
     compute.active_worker_ids.add(worker_id)
@@ -147,6 +150,7 @@ def test_on_calculation_finished_basic(mock_parser_host):
 
 
 def test_check_chemistry_problems_fallback_detects(mock_parser_host):
+    """Verify that the manual valence fallback correctly identifies overvalent atoms."""
     compute = DummyCompute(mock_parser_host)
     compute.data.atoms = {}
     compute.data.bonds = {}
@@ -162,6 +166,7 @@ def test_check_chemistry_problems_fallback_detects(mock_parser_host):
 
 
 def test_trigger_conversion_empty(mock_parser_host):
+    """Verify that trigger_conversion handles empty molecular data gracefully."""
     compute = DummyCompute(mock_parser_host)
     compute.data.atoms = {}
     compute.trigger_conversion()
@@ -169,6 +174,7 @@ def test_trigger_conversion_empty(mock_parser_host):
 
 
 def test_trigger_conversion_with_atoms(mock_parser_host):
+    """Verify that trigger_conversion correctly starts the calculation thread for a valid molecule."""
     compute = DummyCompute(mock_parser_host)
     compute.data.atoms = {1: {"symbol": "C", "item": MagicMock()}}
     compute.settings["conversion_target"] = "all"
@@ -181,6 +187,7 @@ def test_trigger_conversion_with_atoms(mock_parser_host):
 
 
 def test_optimize_3d_structure_logic(mock_parser_host):
+    """Verify the high-level logic of triggering 3D optimization on the current molecule."""
     compute = DummyCompute(mock_parser_host)
     mol = Chem.MolFromSmiles("C")
     AllChem.Compute2DCoords(mol)
@@ -190,6 +197,7 @@ def test_optimize_3d_structure_logic(mock_parser_host):
 
 
 def test_on_calculation_finished_worker_id_mismatch(mock_parser_host):
+    """Verify that on_calculation_finished ignores results from stale or mismatched workers."""
     compute = DummyCompute(mock_parser_host)
     compute.active_worker_ids = {"valid_id"}
     mol = Chem.MolFromSmiles("C")

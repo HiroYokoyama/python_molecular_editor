@@ -269,6 +269,7 @@ class TestBondItem:
         assert bond_item.order == 1
 
     def test_update_position(self, bond_item):
+        """Verify that the bond line updates correctly when atom positions change."""
         # Move an atom
         bond_item.atom1.setPos(5.0, 5.0)
         bond_item.update_position()
@@ -280,6 +281,7 @@ class TestBondItem:
         assert line.p2() == QPointF(5.0, 5.0)
 
     def test_set_bond_order(self, bond_item):
+        """Verify that the bond order can be changed and is reflected in the item state."""
         bond_item.set_order(2)  # method name is set_order
         assert bond_item.order == 2
 

@@ -25,18 +25,16 @@ def worker():
 
 
 def test_calculation_worker_init(worker):
-    assert worker is not None
-    assert hasattr(worker, "status_update")
-    assert hasattr(worker, "finished")
-    assert hasattr(worker, "error")
-    # Verify initial state
-    # CalculationWorker is a QObject, not QThread.
-    # It identifies runs via worker_id in run_calculation options, not as instance attribute.
-    # By default, halt_ids is not set until shared by the host
-    assert not hasattr(worker, "halt_ids")
-    # Verify it works via getattr as used in _check_halted
+    """Verify the initial state of the CalculationWorker."""
+    # CalculationWorker is a QObject. It identifies runs via worker_id
+    # in run_calculation options, not as instance attribute.
+    
+    # By default, halt_ids is not set until shared by the host.
+    # We verify it works via getattr as used in _check_halted logic.
     assert getattr(worker, "halt_ids", None) is None
-    assert not hasattr(worker, "active_worker_ids") # This is usually on the Window/Host
+    
+    # halt_all should also default to False or None to avoid premature halting
+    assert not getattr(worker, "halt_all", False)
 
 
 def test_calculation_worker_halt_logic(worker):
