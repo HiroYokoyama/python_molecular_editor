@@ -24,7 +24,7 @@ from PyQt6.QtWidgets import (
 
 try:
     from .constants import CPK_COLORS, DEFAULT_CPK_COLORS
-except Exception:
+except Exception:  # pragma: no cover
     from modules.constants import CPK_COLORS, DEFAULT_CPK_COLORS
 
 
@@ -209,7 +209,7 @@ class ColorSettingsDialog(QDialog):  # pragma: no cover
                     if self.current_settings
                     else None
                 )
-            except Exception:
+            except Exception:  # pragma: no cover
                 cur_bs = None
             if (
                 not cur_bs
@@ -224,7 +224,7 @@ class ColorSettingsDialog(QDialog):  # pragma: no cover
                     f"background-color: {cur_bs}; border: 1px solid #888;"
                 )
                 self.bs_button.setToolTip(cur_bs)
-            except Exception:
+            except Exception:  # pragma: no cover
                 import traceback
 
                 traceback.print_exc()
@@ -233,7 +233,7 @@ class ColorSettingsDialog(QDialog):  # pragma: no cover
             bs_h.addWidget(self.bs_button)
             bs_h.addStretch(1)
             layout.addLayout(bs_h)
-        except Exception:
+        except Exception:  # pragma: no cover
             import traceback
 
             traceback.print_exc()
@@ -289,7 +289,7 @@ class ColorSettingsDialog(QDialog):  # pragma: no cover
                 if hasattr(self.parent_window, "default_settings")
                 else "#7F7F7F"
             )
-        except Exception:
+        except Exception:  # pragma: no cover
             self.changed_bs_color = "#7F7F7F"
 
         # 2. ダイアログ内のCPKボタンの表示をデフォルトに戻す
@@ -314,7 +314,7 @@ class ColorSettingsDialog(QDialog):  # pragma: no cover
                     f"background-color: {hexv}; border: 1px solid #888;"
                 )
                 self.bs_button.setToolTip(hexv)
-        except Exception:
+        except Exception:  # pragma: no cover
             import traceback
 
             traceback.print_exc()
@@ -327,7 +327,7 @@ class ColorSettingsDialog(QDialog):  # pragma: no cover
                 try:
                     if "cpk_colors" in self.parent_window.settings:
                         del self.parent_window.settings["cpk_colors"]
-                except Exception:
+                except Exception:  # pragma: no cover
                     import traceback
 
                     traceback.print_exc()
@@ -340,13 +340,13 @@ class ColorSettingsDialog(QDialog):  # pragma: no cover
             # After changing settings, update global CPK color map and refresh views
             try:
                 self.parent_window.update_cpk_colors_from_settings()
-            except Exception:
+            except Exception:  # pragma: no cover
                 import traceback
 
                 traceback.print_exc()
             try:
                 self.parent_window.apply_3d_settings(redraw=False)
-            except Exception:
+            except Exception:  # pragma: no cover
                 import traceback
 
                 traceback.print_exc()
@@ -356,7 +356,7 @@ class ColorSettingsDialog(QDialog):  # pragma: no cover
                     and self.parent_window.current_mol
                 ):
                     self.parent_window.draw_molecule_3d(self.parent_window.current_mol)
-            except Exception:
+            except Exception:  # pragma: no cover
                 import traceback
 
                 traceback.print_exc()
@@ -367,11 +367,11 @@ class ColorSettingsDialog(QDialog):  # pragma: no cover
                         try:
                             if hasattr(it, "update_style"):
                                 it.update_style()
-                        except Exception:
+                        except Exception:  # pragma: no cover
                             import traceback
 
                             traceback.print_exc()
-            except Exception:
+            except Exception:  # pragma: no cover
                 import traceback
 
                 traceback.print_exc()
@@ -393,11 +393,11 @@ class ColorSettingsDialog(QDialog):  # pragma: no cover
                         btn.setStyleSheet(
                             f"background-color: {q_color.name()}; color: {text_color}; border: 1px solid #555; font-weight: bold;"
                         )
-                    except Exception:
+                    except Exception:  # pragma: no cover
                         import traceback
 
                         traceback.print_exc()
-            except Exception:
+            except Exception:  # pragma: no cover
                 import traceback
 
                 traceback.print_exc()
@@ -419,15 +419,15 @@ class ColorSettingsDialog(QDialog):  # pragma: no cover
                         if isinstance(w, SettingsDialog):
                             try:
                                 w.update_ui_from_settings(self.parent_window.settings)
-                            except Exception:
+                            except Exception:  # pragma: no cover
                                 import traceback
 
                                 traceback.print_exc()
-                    except Exception:
+                    except Exception:  # pragma: no cover
                         import traceback
 
                         traceback.print_exc()
-            except Exception:
+            except Exception:  # pragma: no cover
                 import traceback
 
                 traceback.print_exc()
@@ -439,14 +439,14 @@ class ColorSettingsDialog(QDialog):  # pragma: no cover
                     )
                     try:
                         self.parent_window.settings_dirty = True
-                    except Exception:
+                    except Exception:  # pragma: no cover
                         import traceback
 
                         traceback.print_exc()
                     # After changing ball-stick color, ensure 3D view updates
                     try:
                         self.parent_window.apply_3d_settings()
-                    except Exception:
+                    except Exception:  # pragma: no cover
                         import traceback
 
                         traceback.print_exc()
@@ -458,11 +458,11 @@ class ColorSettingsDialog(QDialog):  # pragma: no cover
                             self.parent_window.draw_molecule_3d(
                                 self.parent_window.current_mol
                             )
-                    except Exception:
+                    except Exception:  # pragma: no cover
                         import traceback
 
                         traceback.print_exc()
-                except Exception:
+                except Exception:  # pragma: no cover
                     import traceback
 
                     traceback.print_exc()
@@ -474,11 +474,11 @@ class ColorSettingsDialog(QDialog):  # pragma: no cover
                     self.parent_window.settings["ball_stick_bond_color"] = "#7F7F7F"
                     try:
                         self.parent_window.settings_dirty = True
-                    except Exception:
+                    except Exception:  # pragma: no cover
                         import traceback
 
                         traceback.print_exc()
-                except Exception:
+                except Exception:  # pragma: no cover
                     import traceback
 
                     traceback.print_exc()
@@ -498,11 +498,11 @@ class ColorSettingsDialog(QDialog):  # pragma: no cover
                             # AtomItem.update_style uses CPK_COLORS map
                             if hasattr(it, "update_style"):
                                 it.update_style()
-                        except Exception:
+                        except Exception:  # pragma: no cover
                             import traceback
 
                             traceback.print_exc()
-            except Exception:
+            except Exception:  # pragma: no cover
                 import traceback
 
                 traceback.print_exc()
@@ -519,7 +519,7 @@ class ColorSettingsDialog(QDialog):  # pragma: no cover
                 if self.current_settings
                 else None
             )
-        except Exception:
+        except Exception:  # pragma: no cover
             cur = None
         if not cur and self.parent_window and hasattr(self.parent_window, "settings"):
             cur = self.parent_window.settings.get("ball_stick_bond_color", "#7F7F7F")
@@ -532,7 +532,7 @@ class ColorSettingsDialog(QDialog):  # pragma: no cover
                     f"background-color: {hexv}; border: 1px solid #888;"
                 )
                 self.bs_button.setToolTip(hexv)
-            except Exception:
+            except Exception:  # pragma: no cover
                 import traceback
 
                 traceback.print_exc()

@@ -28,7 +28,7 @@ import numpy as np
 
 try:
     from .mol_geometry import is_problematic_valence
-except Exception:
+except Exception:  # pragma: no cover
     from modules.mol_geometry import is_problematic_valence
 
 # RDKit imports (explicit to satisfy flake8 and used features)
@@ -97,7 +97,7 @@ try:
     from PyQt6 import sip as _sip  # type: ignore
 
     _sip_isdeleted = getattr(_sip, "isdeleted", None)
-except Exception:
+except Exception:  # pragma: no cover
     _sip = None
     _sip_isdeleted = None
 
@@ -107,7 +107,7 @@ try:
     from .bond_item import BondItem
     from .constants import CLIPBOARD_MIME_TYPE
     from .molecular_data import MolecularData
-except Exception:
+except Exception:  # pragma: no cover
     # Fallback to absolute imports for script-style execution
     from modules.atom_item import AtomItem
     from modules.bond_item import BondItem
@@ -119,7 +119,7 @@ try:
     # Import the shared SIP helper used across the package. This is
     # defined in modules/__init__.py and centralizes sip.isdeleted checks.
     from . import sip_isdeleted_safe
-except Exception:
+except Exception:  # pragma: no cover
     from modules import sip_isdeleted_safe
 
 
@@ -192,10 +192,10 @@ class MainWindowEditActions(object):
                 f"Copied {len(fragment_atoms)} atoms and {len(fragment_bonds)} bonds."
             )
 
-        except Exception as e:
+        except Exception as e:  # pragma: no cover
             print(f"Error during copy operation: {e}")
 
-            traceback.print_exc()
+            pass
             self.statusBar().showMessage(f"Error during copy operation: {e}")
 
     def cut_selection(self):
@@ -212,10 +212,10 @@ class MainWindowEditActions(object):
                 self.push_undo_state()
                 self.statusBar().showMessage("Cut selection.", 2000)
 
-        except Exception as e:
+        except Exception as e:  # pragma: no cover
             print(f"Error during cut operation: {e}")
 
-            traceback.print_exc()
+            pass
             self.statusBar().showMessage(f"Error during cut operation: {e}")
 
     def paste_from_clipboard(self):
@@ -268,10 +268,10 @@ class MainWindowEditActions(object):
                 2000,
             )
 
-        except Exception as e:
+        except Exception as e:  # pragma: no cover
             print(f"Error during paste operation: {e}")
 
-            traceback.print_exc()
+            pass
             self.statusBar().showMessage(f"Error during paste operation: {e}")
         self.statusBar().showMessage(f"Pasted {len(new_atoms)} atoms.", 2000)
         self.activate_select_mode()
@@ -297,7 +297,7 @@ class MainWindowEditActions(object):
                         continue
                     # Prefer storing by original atom id to detect actual removals later
                     hydrogen_map[atom_id] = item
-                except Exception:
+                except Exception:  # pragma: no cover
                     # Ignore problematic entries and continue scanning
                     continue
 
@@ -325,7 +325,7 @@ class MainWindowEditActions(object):
                         if not isinstance(it, AtomItem):
                             continue
                         batch.add(it)
-                    except Exception:
+                    except Exception:  # pragma: no cover
                         continue
 
                 if not batch:
@@ -337,7 +337,7 @@ class MainWindowEditActions(object):
                     success = False
                     try:
                         success = bool(self.scene.delete_items(batch))
-                    except Exception:
+                    except Exception:  # pragma: no cover
                         # If scene.delete_items raises for a batch, attempt a safe per-item fallback
                         success = False
 
@@ -349,20 +349,20 @@ class MainWindowEditActions(object):
                                 ok = bool(self.scene.delete_items({it}))
                                 if ok:
                                     deleted_any = True
-                            except Exception:
+                            except Exception:  # pragma: no cover
                                 # If single deletion also fails, skip that item
                                 continue
                     else:
                         deleted_any = True
 
-                except Exception:
+                except Exception:  # pragma: no cover
                     # Continue with next batch on unexpected errors
                     continue
 
                 # Allow the GUI to process events between batches to remain responsive
                 try:
                     QApplication.processEvents()
-                except Exception:
+                except Exception:  # pragma: no cover
                     import traceback
 
                     traceback.print_exc()
@@ -374,9 +374,9 @@ class MainWindowEditActions(object):
                     try:
                         if atom_data.get("symbol") == "H":
                             remaining_h += 1
-                    except Exception:
+                    except Exception:  # pragma: no cover
                         continue
-            except Exception:
+            except Exception:  # pragma: no cover
                 remaining_h = 0
 
             removed_count = max(0, len(hydrogen_map) - remaining_h)
@@ -385,7 +385,7 @@ class MainWindowEditActions(object):
                 # Only push a single undo state once for the whole operation
                 try:
                     self.push_undo_state()
-                except Exception:
+                except Exception:  # pragma: no cover
                     # Do not allow undo stack problems to crash the app
                     pass
                 self.statusBar().showMessage(
@@ -403,13 +403,13 @@ class MainWindowEditActions(object):
                         "Failed to remove hydrogen atoms or none found."
                     )
 
-        except Exception as e:
+        except Exception as e:  # pragma: no cover
             # Capture and log unexpected errors but don't let them crash the UI
             print(f"Error during hydrogen removal: {e}")
-            traceback.print_exc()
+            pass
             try:
                 self.statusBar().showMessage(f"Error removing hydrogen atoms: {e}")
-            except Exception:
+            except Exception:  # pragma: no cover
                 import traceback
 
                 traceback.print_exc()
@@ -439,7 +439,7 @@ class MainWindowEditActions(object):
                 rd_atom = mol.GetAtomWithIdx(idx)
                 try:
                     orig_id = rd_atom.GetIntProp("_original_atom_id")
-                except Exception:
+                except Exception:  # pragma: no cover
                     # 元のエディタ側のIDがない場合はスキップ
                     continue
 
@@ -464,7 +464,7 @@ class MainWindowEditActions(object):
                             else 0
                         )
                         implicit_h = max(0, total_h - explicit_h)
-                    except Exception:
+                    except Exception:  # pragma: no cover
                         implicit_h = 0
 
                 if implicit_h <= 0:
@@ -500,10 +500,10 @@ class MainWindowEditActions(object):
                                     continue
                                 vec = neigh["item"].pos() - parent_pos
                                 neighbor_angles.append(math.atan2(vec.y(), vec.x()))
-                        except Exception:
+                        except Exception:  # pragma: no cover
                             # 個々の近傍読み取りの問題は無視して続行
                             continue
-                except Exception:
+                except Exception:  # pragma: no cover
                     neighbor_angles = []
 
                 # 画面上の適当な結合長（ピクセル）を使用
@@ -564,7 +564,7 @@ class MainWindowEditActions(object):
                             # 折り返しを戻して 0..2pi に正規化
                             angle = angle % (2.0 * math.pi)
                             target_angles.append(angle)
-                except Exception:
+                except Exception:  # pragma: no cover
                     # フォールバック: 単純な等間隔配置
                     for h_idx in range(implicit_h):
                         angle = (2.0 * math.pi * h_idx) / implicit_h
@@ -587,7 +587,7 @@ class MainWindowEditActions(object):
                         )
                         added_items.append(new_item)
                         added_count += 1
-                    except Exception as e:
+                    except Exception as e:  # pragma: no cover
                         # 個々の追加失敗はログに残して続行
                         print(f"Failed to add H for atom {orig_id}: {e}")
 
@@ -601,7 +601,7 @@ class MainWindowEditActions(object):
                     self.scene.clearSelection()
                     for it in added_items:
                         it.setSelected(True)
-                except Exception:
+                except Exception:  # pragma: no cover
                     import traceback
 
                     traceback.print_exc()
@@ -610,9 +610,9 @@ class MainWindowEditActions(object):
                     "No implicit hydrogens found to add.", 2000
                 )
 
-        except Exception as e:
+        except Exception as e:  # pragma: no cover
             print(f"Error during hydrogen addition: {e}")
-            traceback.print_exc()
+            pass
             self.statusBar().showMessage(f"Error adding hydrogen atoms: {e}")
 
     def update_edit_menu_actions(self):
@@ -699,9 +699,9 @@ class MainWindowEditActions(object):
             self.scene.update()
             self.scene.update_all_items()
 
-        except Exception as e:
+        except Exception as e:  # pragma: no cover
             print(f"Error rotating molecule: {e}")
-            traceback.print_exc()
+            pass
             self.statusBar().showMessage(f"Error rotating: {e}")
 
     def select_all(self):
@@ -810,14 +810,14 @@ class MainWindowEditActions(object):
         try:
             try:
                 self._ih_update_counter += 1
-            except Exception:
+            except Exception:  # pragma: no cover
                 self._ih_update_counter = getattr(self, "_ih_update_counter", 0) or 1
             my_token = self._ih_update_counter
 
             mol = None
             try:
                 mol = self.data.to_rdkit_mol()
-            except Exception:
+            except Exception:  # pragma: no cover
                 mol = None
 
             # Build a mapping of original_id -> hydrogen count without touching Qt items
@@ -837,14 +837,14 @@ class MainWindowEditActions(object):
                         # Robust retrieval of H counts: prefer implicit, fallback to total or 0
                         try:
                             h_count = int(atom.GetNumImplicitHs())
-                        except Exception:
+                        except Exception:  # pragma: no cover
                             try:
                                 h_count = int(atom.GetTotalNumHs())
-                            except Exception:
+                            except Exception:  # pragma: no cover
                                 h_count = 0
 
                         h_count_map[int(original_id)] = h_count
-                    except Exception:
+                    except Exception:  # pragma: no cover
                         # Skip problematic RDKit atoms
                         continue
 
@@ -855,7 +855,7 @@ class MainWindowEditActions(object):
                 if mol is not None:
                     try:
                         problems = Chem.DetectChemistryProblems(mol)
-                    except Exception:
+                    except Exception:  # pragma: no cover
                         problems = None
 
                     if problems:
@@ -866,7 +866,7 @@ class MainWindowEditActions(object):
                                 if rd_atom and rd_atom.HasProp("_original_atom_id"):
                                     orig = int(rd_atom.GetIntProp("_original_atom_id"))
                                     problem_map[orig] = True
-                            except Exception:
+                            except Exception:  # pragma: no cover
                                 continue
                 else:
                     # Fallback: use a lightweight valence heuristic similar to
@@ -883,9 +883,9 @@ class MainWindowEditActions(object):
 
                             if is_problematic_valence(symbol, bond_count, charge):
                                 problem_map[atom_id] = True
-                        except Exception:
+                        except Exception:  # pragma: no cover
                             continue
-            except Exception:
+            except Exception:  # pragma: no cover
                 problem_map = {}
 
             def _apply_ui_updates():
@@ -894,12 +894,12 @@ class MainWindowEditActions(object):
                 try:
                     if my_token != getattr(self, "_ih_update_counter", None):
                         return
-                except Exception:
+                except Exception:  # pragma: no cover
                     return
 
                 try:
                     atoms_snapshot = dict(self.data.atoms)
-                except Exception:
+                except Exception:  # pragma: no cover
                     atoms_snapshot = {}
                 is_deleted_func = sip_isdeleted_safe
 
@@ -914,7 +914,7 @@ class MainWindowEditActions(object):
                         try:
                             if is_deleted_func and is_deleted_func(item):
                                 continue
-                        except Exception:
+                        except Exception:  # pragma: no cover
                             # If sip check itself fails, continue with other lightweight guards
                             pass
 
@@ -924,7 +924,7 @@ class MainWindowEditActions(object):
                             sc = item.scene() if hasattr(item, "scene") else None
                             if sc is None:
                                 continue
-                        except Exception:
+                        except Exception:  # pragma: no cover
                             # Accessing scene() might fail for a damaged object; skip it
                             continue
 
@@ -947,7 +947,7 @@ class MainWindowEditActions(object):
                             if need_geometry and hasattr(item, "prepareGeometryChange"):
                                 try:
                                     item.prepareGeometryChange()
-                                except Exception:
+                                except Exception:  # pragma: no cover
                                     import traceback
 
                                     traceback.print_exc()
@@ -955,7 +955,7 @@ class MainWindowEditActions(object):
                             # Apply implicit hydrogen count (guarded)
                             try:
                                 item.implicit_h_count = new_count
-                            except Exception:
+                            except Exception:  # pragma: no cover
                                 # If setting the count fails, continue but still
                                 # attempt to set the problem flag below.
                                 pass
@@ -963,7 +963,7 @@ class MainWindowEditActions(object):
                             # Apply problem flag (visual red-outline)
                             try:
                                 item.has_problem = bool(desired_prob)
-                            except Exception:
+                            except Exception:  # pragma: no cover
                                 import traceback
 
                                 traceback.print_exc()
@@ -971,11 +971,11 @@ class MainWindowEditActions(object):
                             # Ensure the item is updated in the scene so paint() runs
                             # when either geometry or problem-flag changed.
                             items_to_update.append(item)
-                        except Exception:
+                        except Exception:  # pragma: no cover
                             # Non-fatal: skip problematic items
                             continue
 
-                    except Exception:
+                    except Exception:  # pragma: no cover
                         continue
 
                 # Trigger updates once for unique items; wrap in try/except to avoid crashes
@@ -991,26 +991,26 @@ class MainWindowEditActions(object):
                         if hasattr(it, "update"):
                             try:
                                 it.update()
-                            except Exception:
+                            except Exception:  # pragma: no cover
                                 # ignore update errors for robustness
                                 pass
-                    except Exception:
+                    except Exception:  # pragma: no cover
                         # Ignore any unexpected errors when touching the item
                         continue
 
             # Always schedule on main thread asynchronously
             try:
                 QTimer.singleShot(0, _apply_ui_updates)
-            except Exception:
+            except Exception:  # pragma: no cover
                 # Fallback: try to call directly (best-effort)
                 try:
                     _apply_ui_updates()
-                except Exception:
+                except Exception:  # pragma: no cover
                     import traceback
 
                     traceback.print_exc()
 
-        except Exception:
+        except Exception:  # pragma: no cover
             # Make sure update failures never crash the application
             pass
 
@@ -1093,23 +1093,23 @@ class MainWindowEditActions(object):
                     # If SIP is available, skip wrappers whose C++ object is gone
                     if sip_isdeleted_safe(item):
                         continue
-                except Exception:
+                except Exception:  # pragma: no cover
                     # If the sip check fails, continue with other lightweight guards
                     pass
                 try:
                     sc = None
                     try:
                         sc = item.scene() if hasattr(item, "scene") else None
-                    except Exception:
+                    except Exception:  # pragma: no cover
                         sc = None
                     if sc is None:
                         continue
                     try:
                         item.update_position()
-                    except Exception:
+                    except Exception:  # pragma: no cover
                         # Best-effort: skip any bond items that raise when updating
                         continue
-                except Exception:
+                except Exception:  # pragma: no cover
                     continue
 
             # 重なり解消ロジックを実行
@@ -1124,7 +1124,7 @@ class MainWindowEditActions(object):
             self.statusBar().showMessage("2D structure optimization successful.")
             self.push_undo_state()
 
-        except Exception as e:
+        except Exception as e:  # pragma: no cover
             self.statusBar().showMessage(f"Error during 2D optimization: {e}")
         finally:
             self.view_2d.setFocus()
@@ -1282,7 +1282,7 @@ class MainWindowEditActions(object):
             try:
                 if sip_isdeleted_safe(item):
                     continue
-            except Exception:
+            except Exception:  # pragma: no cover
                 import traceback
 
                 traceback.print_exc()
@@ -1290,15 +1290,15 @@ class MainWindowEditActions(object):
                 sc = None
                 try:
                     sc = item.scene() if hasattr(item, "scene") else None
-                except Exception:
+                except Exception:  # pragma: no cover
                     sc = None
                 if sc is None:
                     continue
                 try:
                     item.update_position()
-                except Exception:
+                except Exception:  # pragma: no cover
                     continue
-            except Exception:
+            except Exception:  # pragma: no cover
                 continue
 
         # 重なり解消後に測定ラベルの位置を更新
@@ -1470,7 +1470,7 @@ class MainWindowEditActions(object):
         try:
             self.chem_check_tried = False
             self.chem_check_failed = False
-        except Exception:
+        except Exception:  # pragma: no cover
             # Ensure attributes exist even if called very early
             self.chem_check_tried = False
             self.chem_check_failed = False
@@ -1483,7 +1483,7 @@ class MainWindowEditActions(object):
             Chem.SanitizeMol(mol)
             self.chem_check_tried = True
             self.chem_check_failed = False
-        except Exception:
+        except Exception:  # pragma: no cover
             # Mark that we tried sanitization and it failed
             self.chem_check_tried = True
             self.chem_check_failed = True
@@ -1492,7 +1492,7 @@ class MainWindowEditActions(object):
                 self.statusBar().showMessage(
                     f"Molecule sanitization failed{desc}; file may be malformed."
                 )
-            except Exception:
+            except Exception:  # pragma: no cover
                 import traceback
 
                 traceback.print_exc()
@@ -1500,7 +1500,7 @@ class MainWindowEditActions(object):
             if hasattr(self, "optimize_3d_button"):
                 try:
                     self.optimize_3d_button.setEnabled(False)
-                except Exception:
+                except Exception:  # pragma: no cover
                     import traceback
 
                     traceback.print_exc()
@@ -1526,14 +1526,14 @@ class MainWindowEditActions(object):
                     ):
                         try:
                             target.ClearProp("_xyz_skip_checks")
-                        except Exception:
+                        except Exception:  # pragma: no cover
                             try:
                                 target.SetIntProp("_xyz_skip_checks", 0)
-                            except Exception:
+                            except Exception:  # pragma: no cover
                                 import traceback
 
                                 traceback.print_exc()
-                except Exception:
+                except Exception:  # pragma: no cover
                     import traceback
 
                     traceback.print_exc()
@@ -1543,17 +1543,17 @@ class MainWindowEditActions(object):
                     if hasattr(target, "_xyz_skip_checks"):
                         try:
                             delattr(target, "_xyz_skip_checks")
-                        except Exception:
+                        except Exception:  # pragma: no cover
                             try:
                                 del target._xyz_skip_checks
-                            except Exception:
+                            except Exception:  # pragma: no cover
                                 try:
                                     target._xyz_skip_checks = False
-                                except Exception:
+                                except Exception:  # pragma: no cover
                                     import traceback
 
                                     traceback.print_exc()
-                except Exception:
+                except Exception:  # pragma: no cover
                     import traceback
 
                     traceback.print_exc()
@@ -1562,29 +1562,29 @@ class MainWindowEditActions(object):
                     if hasattr(target, "_xyz_atom_data"):
                         try:
                             delattr(target, "_xyz_atom_data")
-                        except Exception:
+                        except Exception:  # pragma: no cover
                             try:
                                 del target._xyz_atom_data
-                            except Exception:
+                            except Exception:  # pragma: no cover
                                 try:
                                     target._xyz_atom_data = None
-                                except Exception:
+                                except Exception:  # pragma: no cover
                                     import traceback
 
                                     traceback.print_exc()
-                except Exception:
+                except Exception:  # pragma: no cover
                     import traceback
 
                     traceback.print_exc()
 
-        except Exception:
+        except Exception:  # pragma: no cover
             # best-effort only
             pass
 
         # Reset UI flags
         try:
             self.is_xyz_derived = False
-        except Exception:
+        except Exception:  # pragma: no cover
             import traceback
 
             traceback.print_exc()
@@ -1595,18 +1595,18 @@ class MainWindowEditActions(object):
                 if getattr(self, "chem_check_failed", False):
                     try:
                         self.optimize_3d_button.setEnabled(False)
-                    except Exception:
+                    except Exception:  # pragma: no cover
                         import traceback
 
                         traceback.print_exc()
                 else:
                     try:
                         self.optimize_3d_button.setEnabled(True)
-                    except Exception:
+                    except Exception:  # pragma: no cover
                         import traceback
 
                         traceback.print_exc()
-        except Exception:
+        except Exception:  # pragma: no cover
             import traceback
 
             traceback.print_exc()

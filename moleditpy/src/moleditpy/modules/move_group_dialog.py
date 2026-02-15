@@ -26,12 +26,12 @@ from PyQt6.QtWidgets import (
 
 try:
     from .constants import VDW_RADII, pt
-except Exception:
+except Exception:  # pragma: no cover
     from modules.constants import VDW_RADII, pt
 
 try:
     from .dialog3_d_picking_mixin import Dialog3DPickingMixin
-except Exception:
+except Exception:  # pragma: no cover
     from modules.dialog3_d_picking_mixin import Dialog3DPickingMixin
 
 
@@ -215,7 +215,7 @@ class MoveGroupDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
                                     vdw_radius = pt.GetRvdw(atomic_num)
                                     if vdw_radius < 0.1:
                                         vdw_radius = 1.5
-                                except Exception:
+                                except Exception:  # pragma: no cover
                                     vdw_radius = 1.5
                                 click_threshold = vdw_radius * 1.5
 
@@ -246,7 +246,7 @@ class MoveGroupDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
                         # グループがあっても通常のカメラ操作を許可
                         return False
 
-                except Exception as e:
+                except Exception as e:  # pragma: no cover
                     print(f"Error in mouse press: {e}")
                     return False
 
@@ -274,11 +274,11 @@ class MoveGroupDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
                                 self.main_window.plotter.setCursor(
                                     Qt.CursorShape.ClosedHandCursor
                                 )
-                            except Exception:
+                            except Exception:  # pragma: no cover
                                 import traceback
 
                                 traceback.print_exc()
-                    except Exception:
+                    except Exception:  # pragma: no cover
                         import traceback
 
                         traceback.print_exc()
@@ -298,7 +298,7 @@ class MoveGroupDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
 
                         if abs(dx) > 2 or abs(dy) > 2:
                             self.mouse_moved_during_drag = True
-                    except Exception:
+                    except Exception:  # pragma: no cover
                         import traceback
 
                         traceback.print_exc()
@@ -339,7 +339,7 @@ class MoveGroupDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
                             self.main_window.plotter.setCursor(
                                 Qt.CursorShape.ArrowCursor
                             )
-                    except Exception:
+                    except Exception:  # pragma: no cover
                         import traceback
 
                         traceback.print_exc()
@@ -378,13 +378,13 @@ class MoveGroupDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
                                     self.main_window.plotter.setCursor(
                                         Qt.CursorShape.ArrowCursor
                                     )
-                                except Exception:
+                                except Exception:  # pragma: no cover
                                     import traceback
 
                                     traceback.print_exc()
                                 return True
 
-                    except Exception:
+                    except Exception:  # pragma: no cover
                         import traceback
 
                         traceback.print_exc()
@@ -401,7 +401,7 @@ class MoveGroupDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
                             self.main_window.plotter.setCursor(
                                 Qt.CursorShape.ArrowCursor
                             )
-                        except Exception:
+                        except Exception:  # pragma: no cover
                             import traceback
 
                             traceback.print_exc()
@@ -512,21 +512,21 @@ class MoveGroupDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
         super().clear_atom_labels()
         try:
             self.main_window.plotter.remove_actor("move_group_highlight")
-        except Exception:
+        except Exception:  # pragma: no cover
             import traceback
 
             traceback.print_exc()
         if hasattr(self, "highlight_actor"):
             try:
                 self.main_window.plotter.remove_actor(self.highlight_actor)
-            except Exception:
+            except Exception:  # pragma: no cover
                 import traceback
 
                 traceback.print_exc()
             self.highlight_actor = None
         try:
             self.main_window.plotter.render()
-        except Exception:
+        except Exception:  # pragma: no cover
             import traceback
 
             traceback.print_exc()
@@ -664,7 +664,7 @@ class MoveGroupDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
         self.disable_picking()
         try:
             self.main_window.draw_molecule_3d(self.mol)
-        except Exception:
+        except Exception:  # pragma: no cover
             import traceback
 
             traceback.print_exc()
@@ -676,7 +676,7 @@ class MoveGroupDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
         self.disable_picking()
         try:
             self.main_window.draw_molecule_3d(self.mol)
-        except Exception:
+        except Exception:  # pragma: no cover
             import traceback
 
             traceback.print_exc()

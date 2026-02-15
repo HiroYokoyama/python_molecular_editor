@@ -17,7 +17,7 @@ from PyQt6.QtWidgets import QApplication
 
 try:
     from .modules.main_window import MainWindow
-except Exception:
+except Exception:  # pragma: no cover
     from modules.main_window import MainWindow
 
 

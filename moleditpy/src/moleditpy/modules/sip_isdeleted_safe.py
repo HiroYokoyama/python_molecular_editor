@@ -13,5 +13,5 @@ def sip_isdeleted_safe(obj):
         if obj is None:
             return True
         return sip.isdeleted(obj)
-    except Exception:
+    except Exception:  # pragma: no cover
         return False

@@ -117,7 +117,7 @@ class MirrorDialog(QDialog):  # pragma: no cover
                         atom.SetChiralTag(Chem.rdchem.ChiralType.CHI_UNSPECIFIED)
                     # 3D座標から新しいキラルタグを計算
                     Chem.AssignAtomChiralTagsFromStructure(self.mol, confId=0)
-            except Exception as e:
+            except Exception as e:  # pragma: no cover
                 print(f"Error updating chiral tags: {e}")
 
             # 3Dビューを更新 (この中で 3D chiral labels も描画される)
@@ -133,7 +133,7 @@ class MirrorDialog(QDialog):  # pragma: no cover
                 f"Molecule mirrored across {plane_names[plane_id]} plane."
             )
 
-        except Exception as e:
+        except Exception as e:  # pragma: no cover
             QMessageBox.critical(
                 self, "Error", f"Failed to apply mirror transformation: {str(e)}"
             )

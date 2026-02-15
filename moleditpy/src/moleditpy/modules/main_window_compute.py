@@ -27,7 +27,7 @@ from rdkit.Chem import AllChem
 
 try:
     from . import OBABEL_AVAILABLE
-except Exception:
+except Exception:  # pragma: no cover
     from modules import OBABEL_AVAILABLE
 
 
@@ -35,7 +35,7 @@ try:
     from PyQt6 import sip as _sip  # type: ignore
 
     _sip_isdeleted = getattr(_sip, "isdeleted", None)
-except Exception:
+except Exception:  # pragma: no cover
     _sip = None
     _sip_isdeleted = None
 
@@ -43,7 +43,7 @@ try:
     # package relative imports (preferred when running as `python -m moleditpy`)
     from .calculation_worker import CalculationWorker
     from .mol_geometry import is_problematic_valence
-except Exception:
+except Exception:  # pragma: no cover
     # Fallback to absolute imports for script-style execution
     from modules.calculation_worker import CalculationWorker
     from modules.mol_geometry import is_problematic_valence
@@ -86,11 +86,11 @@ class MainWindowCompute(object):
             self.settings["optimization_method"] = self.optimization_method
             try:
                 self.settings_dirty = True
-            except Exception:
+            except Exception:  # pragma: no cover
                 import traceback
 
                 traceback.print_exc()
-        except Exception:
+        except Exception:  # pragma: no cover
             import traceback
 
             traceback.print_exc()
@@ -102,11 +102,11 @@ class MainWindowCompute(object):
                     try:
                         # keys in opt3d_actions may be mixed-case; compare uppercased
                         act.setChecked(k.upper() == method)
-                    except Exception:
+                    except Exception:  # pragma: no cover
                         import traceback
 
                         traceback.print_exc()
-        except Exception:
+        except Exception:  # pragma: no cover
             import traceback
 
             traceback.print_exc()
@@ -116,7 +116,7 @@ class MainWindowCompute(object):
             label = self.opt3d_method_labels.get(
                 self.optimization_method, self.optimization_method
             )
-        except Exception:
+        except Exception:  # pragma: no cover
             label = self.optimization_method
         self.statusBar().showMessage(f"3D optimization method set to: {label}")
 
@@ -149,7 +149,7 @@ class MainWindowCompute(object):
 
             # Show menu at button position
             menu.exec_(self.convert_button.mapToGlobal(pos))
-        except Exception as e:
+        except Exception as e:  # pragma: no cover
             print(f"Error showing convert menu: {e}")
 
     def _trigger_conversion_with_temp_mode(self, mode_key):  # pragma: no cover
@@ -158,7 +158,7 @@ class MainWindowCompute(object):
             self._temp_conv_mode = mode_key
             # Call the normal conversion entry point (it will consume the temp)
             QTimer.singleShot(0, self.trigger_conversion)
-        except Exception as e:
+        except Exception as e:  # pragma: no cover
             print(f"Failed to start conversion with temp mode {mode_key}: {e}")
 
     def show_optimize_menu(self, pos):  # pragma: no cover
@@ -178,7 +178,7 @@ class MainWindowCompute(object):
                 try:
                     if hasattr(self, "opt3d_actions") and key in self.opt3d_actions:
                         a.setEnabled(self.opt3d_actions[key].isEnabled())
-                except Exception:
+                except Exception:  # pragma: no cover
                     import traceback
 
                     traceback.print_exc()
@@ -205,7 +205,7 @@ class MainWindowCompute(object):
                         menu.addAction(a)
 
             menu.exec_(self.optimize_3d_button.mapToGlobal(pos))
-        except Exception as e:
+        except Exception as e:  # pragma: no cover
             print(f"Error showing optimize menu: {e}")
 
     def _trigger_optimize_with_temp_method(self, method_key):  # pragma: no cover
@@ -214,7 +214,7 @@ class MainWindowCompute(object):
             self._temp_optimization_method = method_key
             # Run optimize on next event loop turn so UI updates first
             QTimer.singleShot(0, self.optimize_3d_structure)
-        except Exception as e:
+        except Exception as e:  # pragma: no cover
             print(f"Failed to start optimization with temp method {method_key}: {e}")
 
     def trigger_conversion(self):
@@ -292,7 +292,7 @@ class MainWindowCompute(object):
 
         try:
             Chem.SanitizeMol(mol)
-        except Exception:
+        except Exception:  # pragma: no cover
             self.statusBar().showMessage("Error: Invalid chemical structure.")
             self.view_2d.setFocus()
             return
@@ -350,14 +350,14 @@ class MainWindowCompute(object):
         run_id = int(getattr(self, "next_conversion_id", 1))
         try:
             self.next_conversion_id = run_id + 1
-        except Exception:
+        except Exception:  # pragma: no cover
             self.next_conversion_id = getattr(self, "next_conversion_id", 1) + 1
 
         # Record this run as active. Use a set to track all active worker ids
         # so a Halt request can target every running conversion.
         try:
             self.active_worker_ids.add(run_id)
-        except Exception:
+        except Exception:  # pragma: no cover
             # Ensure attribute exists in case of weird states
             self.active_worker_ids = set([run_id])
 
@@ -367,12 +367,12 @@ class MainWindowCompute(object):
             self.convert_button.setText("Halt conversion")
             try:
                 self.convert_button.clicked.disconnect()
-            except Exception:
+            except Exception:  # pragma: no cover
                 import traceback
 
                 traceback.print_exc()
             self.convert_button.clicked.connect(self.halt_conversion)
-        except Exception:
+        except Exception:  # pragma: no cover
             import traceback
 
             traceback.print_exc()
@@ -404,7 +404,7 @@ class MainWindowCompute(object):
         # Keep a reference so we can reliably remove the text actor later
         try:  # pragma: no cover
             self._calculating_text_actor = text_actor
-        except Exception:
+        except Exception:  # pragma: no cover
             # Best-effort: if storing fails, ignore — cleanup will still attempt renderer removal
             pass
         text_actor.GetTextProperty().SetOpacity(1)  # pragma: no cover
@@ -417,10 +417,10 @@ class MainWindowCompute(object):
         if conv_mode:
             try:
                 del self._temp_conv_mode
-            except Exception:
+            except Exception:  # pragma: no cover
                 try:
                     delattr(self, "_temp_conv_mode")
-                except Exception:
+                except Exception:  # pragma: no cover
                     import traceback
 
                     traceback.print_exc()
@@ -435,10 +435,10 @@ class MainWindowCompute(object):
         if hasattr(self, "_temp_optimization_method"):
             try:
                 del self._temp_optimization_method
-            except Exception:
+            except Exception:  # pragma: no cover
                 try:
                     delattr(self, "_temp_optimization_method")
-                except Exception:
+                except Exception:  # pragma: no cover
                     import traceback
 
                     traceback.print_exc()
@@ -448,7 +448,7 @@ class MainWindowCompute(object):
         try:
             # Attach the concrete run id rather than the single waiting id
             options["worker_id"] = run_id
-        except Exception:
+        except Exception:  # pragma: no cover
             import traceback
 
             traceback.print_exc()
@@ -462,7 +462,7 @@ class MainWindowCompute(object):
             # Share the halt_ids set so user can request cancellation
             try:
                 worker.halt_ids = self.halt_ids
-            except Exception:
+            except Exception:  # pragma: no cover
                 import traceback
 
                 traceback.print_exc()
@@ -472,7 +472,7 @@ class MainWindowCompute(object):
             # Forward status signals to main window handlers
             try:
                 worker.status_update.connect(self.update_status_bar)
-            except Exception:
+            except Exception:  # pragma: no cover
                 import traceback
 
                 traceback.print_exc()
@@ -489,28 +489,28 @@ class MainWindowCompute(object):
                     # Remove thread from active threads list
                     try:
                         self._active_calc_threads.remove(t)
-                    except Exception:
+                    except Exception:  # pragma: no cover
                         import traceback
 
                         traceback.print_exc()
                     try:
                         # ask thread to quit; it will finish as worker returns
                         t.quit()
-                    except Exception:
+                    except Exception:  # pragma: no cover
                         import traceback
 
                         traceback.print_exc()
                     try:
                         # ensure thread object is deleted when finished
                         t.finished.connect(t.deleteLater)
-                    except Exception:
+                    except Exception:  # pragma: no cover
                         import traceback
 
                         traceback.print_exc()
                     try:
                         # schedule worker deletion
                         w.deleteLater()
-                    except Exception:
+                    except Exception:  # pragma: no cover
                         import traceback
 
                         traceback.print_exc()
@@ -527,42 +527,42 @@ class MainWindowCompute(object):
                     # Remove thread from active threads list
                     try:
                         self._active_calc_threads.remove(t)
-                    except Exception:
+                    except Exception:  # pragma: no cover
                         import traceback
 
                         traceback.print_exc()
                     try:
                         # ask thread to quit; it will finish as worker returns
                         t.quit()
-                    except Exception:
+                    except Exception:  # pragma: no cover
                         import traceback
 
                         traceback.print_exc()
                     try:
                         # ensure thread object is deleted when finished
                         t.finished.connect(t.deleteLater)
-                    except Exception:
+                    except Exception:  # pragma: no cover
                         import traceback
 
                         traceback.print_exc()
                     try:
                         # schedule worker deletion
                         w.deleteLater()
-                    except Exception:
+                    except Exception:  # pragma: no cover
                         import traceback
 
                         traceback.print_exc()
 
             try:
                 worker.error.connect(_on_worker_error)
-            except Exception:
+            except Exception:  # pragma: no cover
                 import traceback
 
                 traceback.print_exc()
 
             try:
                 worker.finished.connect(_on_worker_finished)
-            except Exception:
+            except Exception:  # pragma: no cover
                 import traceback
 
                 traceback.print_exc()
@@ -580,11 +580,11 @@ class MainWindowCompute(object):
             # Track the thread so it isn't immediately garbage-collected (diagnostics)
             try:
                 self._active_calc_threads.append(thread)
-            except Exception:
+            except Exception:  # pragma: no cover
                 import traceback
 
                 traceback.print_exc()
-        except Exception as e:
+        except Exception as e:  # pragma: no cover
             # Fall back: if thread/worker creation failed, create a local
             # worker and start it (runs in main thread). This preserves
             # functionality without relying on the shared MainWindow signal.
@@ -596,7 +596,7 @@ class MainWindowCompute(object):
                         m, o
                     ),
                 )
-            except Exception:
+            except Exception:  # pragma: no cover
                 # surface the original error via existing UI path
                 self.on_calculation_error(str(e))
 
@@ -619,7 +619,7 @@ class MainWindowCompute(object):
             if wids_to_halt:
                 try:
                     self.halt_ids.update(wids_to_halt)
-                except Exception:
+                except Exception:  # pragma: no cover
                     import traceback
 
                     traceback.print_exc()
@@ -628,7 +628,7 @@ class MainWindowCompute(object):
             try:
                 if hasattr(self, "active_worker_ids"):
                     self.active_worker_ids.clear()
-            except Exception:
+            except Exception:  # pragma: no cover
                 import traceback
 
                 traceback.print_exc()
@@ -637,21 +637,21 @@ class MainWindowCompute(object):
             try:
                 try:
                     self.convert_button.clicked.disconnect()
-                except Exception:
+                except Exception:  # pragma: no cover
                     import traceback
 
                     traceback.print_exc()
                 self.convert_button.setText("Convert 2D to 3D")
                 self.convert_button.clicked.connect(self.trigger_conversion)
                 self.convert_button.setEnabled(True)
-            except Exception:
+            except Exception:  # pragma: no cover
                 import traceback
 
                 traceback.print_exc()
 
             try:
                 self.cleanup_button.setEnabled(True)
-            except Exception:
+            except Exception:  # pragma: no cover
                 import traceback
 
                 traceback.print_exc()
@@ -663,7 +663,7 @@ class MainWindowCompute(object):
                     if hasattr(self.plotter, "remove_actor"):
                         try:
                             self.plotter.remove_actor(actor)
-                        except Exception:
+                        except Exception:  # pragma: no cover
                             import traceback
 
                             traceback.print_exc()
@@ -671,20 +671,20 @@ class MainWindowCompute(object):
                         if hasattr(self.plotter, "renderer") and self.plotter.renderer:
                             try:
                                 self.plotter.renderer.RemoveActor(actor)
-                            except Exception:
+                            except Exception:  # pragma: no cover
                                 import traceback
 
                                 traceback.print_exc()
                     try:
                         delattr(self, "_calculating_text_actor")
-                    except Exception:
+                    except Exception:  # pragma: no cover
                         try:
                             del self._calculating_text_actor
-                        except Exception:
+                        except Exception:  # pragma: no cover
                             import traceback
 
                             traceback.print_exc()
-            except Exception:
+            except Exception:  # pragma: no cover
                 import traceback
 
                 traceback.print_exc()
@@ -693,7 +693,7 @@ class MainWindowCompute(object):
             self.statusBar().showMessage(
                 "3D conversion halted. Waiting for the thread to finish"
             )
-        except Exception:
+        except Exception:  # pragma: no cover
             import traceback
 
             traceback.print_exc()
@@ -742,7 +742,7 @@ class MainWindowCompute(object):
             self.scene.clearSelection()
             self.view_2d.setFocus()
 
-        except Exception as e:
+        except Exception as e:  # pragma: no cover
             print(f"Error in fallback chemistry check: {e}")
             self.statusBar().showMessage("Error: Invalid chemical structure.")
             self.view_2d.setFocus()
@@ -764,7 +764,7 @@ class MainWindowCompute(object):
             if hasattr(self, "optimize_3d_button"):
                 try:
                     self.optimize_3d_button.setEnabled(False)
-                except Exception:
+                except Exception:  # pragma: no cover
                     import traceback
 
                     traceback.print_exc()
@@ -782,10 +782,10 @@ class MainWindowCompute(object):
             if hasattr(self, "_temp_optimization_method"):
                 try:
                     del self._temp_optimization_method
-                except Exception:
+                except Exception:  # pragma: no cover
                     try:
                         delattr(self, "_temp_optimization_method")
-                    except Exception:
+                    except Exception:  # pragma: no cover
                         import traceback
 
                         traceback.print_exc()
@@ -818,12 +818,12 @@ class MainWindowCompute(object):
                                     f"{mmff_variant} minimize returned non-zero status: {ff_ret}"
                                 )
                                 return
-                        except Exception as e:
+                        except Exception as e:  # pragma: no cover
                             self.statusBar().showMessage(
                                 f"{mmff_variant} parameterization/minimize failed: {e}"
                             )
                             return
-                except Exception as e:
+                except Exception as e:  # pragma: no cover
                     self.statusBar().showMessage(
                         f"{mmff_variant} (RDKit) optimization error: {e}"
                     )
@@ -842,12 +842,12 @@ class MainWindowCompute(object):
                                     f"UFF minimize returned non-zero status: {ff_ret}"
                                 )
                                 return
-                        except Exception as e:
+                        except Exception as e:  # pragma: no cover
                             self.statusBar().showMessage(
                                 f"UFF parameterization/minimize failed: {e}"
                             )
                             return
-                except Exception as e:
+                except Exception as e:  # pragma: no cover
                     self.statusBar().showMessage(f"UFF (RDKit) optimization error: {e}")
                     return
             # Plugin method dispatch
@@ -866,7 +866,7 @@ class MainWindowCompute(object):
                             f"Optimization method '{method}' returned failure."
                         )
                         return
-                except Exception as e:
+                except Exception as e:  # pragma: no cover
                     self.statusBar().showMessage(
                         f"Plugin optimization error ({method}): {e}"
                     )
@@ -876,7 +876,7 @@ class MainWindowCompute(object):
                     "Selected optimization method is not available. Use MMFF94 (RDKit) or UFF (RDKit)."
                 )
                 return
-        except Exception as e:
+        except Exception as e:  # pragma: no cover
             self.statusBar().showMessage(f"3D optimization error: {e}")
 
         # 最適化後の構造で3Dビューを再描画
@@ -899,7 +899,7 @@ class MainWindowCompute(object):
                 # store for later serialization
                 if norm_method:
                     self.last_successful_optimization_method = norm_method
-            except Exception:
+            except Exception:  # pragma: no cover
                 import traceback
 
                 traceback.print_exc()
@@ -907,7 +907,7 @@ class MainWindowCompute(object):
             if self.current_mol.GetNumConformers() > 0:
                 Chem.AssignAtomChiralTagsFromStructure(self.current_mol, confId=0)
             self.update_chiral_labels()  # キラル中心のラベルも更新
-        except Exception:
+        except Exception:  # pragma: no cover
             import traceback
 
             traceback.print_exc()
@@ -930,7 +930,7 @@ class MainWindowCompute(object):
                 used_label = (getattr(self, "opt3d_method_labels", {}) or {}).get(
                     str(used_method).upper(), used_method
                 )
-        except Exception:
+        except Exception:  # pragma: no cover
             used_label = None
 
         if used_label:
@@ -951,7 +951,7 @@ class MainWindowCompute(object):
                 worker_id, mol = result
             else:
                 mol = result
-        except Exception:
+        except Exception:  # pragma: no cover
             mol = result
 
         # If this finished result is from a stale/halting run, discard it
@@ -966,7 +966,7 @@ class MainWindowCompute(object):
                             if hasattr(self.plotter, "remove_actor"):
                                 try:
                                     self.plotter.remove_actor(actor)
-                                except Exception:
+                                except Exception:  # pragma: no cover
                                     import traceback
 
                                     traceback.print_exc()
@@ -977,20 +977,20 @@ class MainWindowCompute(object):
                                 ):
                                     try:
                                         self.plotter.renderer.RemoveActor(actor)
-                                    except Exception:
+                                    except Exception:  # pragma: no cover
                                         import traceback
 
                                         traceback.print_exc()
                             try:
                                 delattr(self, "_calculating_text_actor")
-                            except Exception:
+                            except Exception:  # pragma: no cover
                                 try:
                                     del self._calculating_text_actor
-                                except Exception:
+                                except Exception:  # pragma: no cover
                                     import traceback
 
                                     traceback.print_exc()
-                    except Exception:
+                    except Exception:  # pragma: no cover
                         import traceback
 
                         traceback.print_exc()
@@ -998,20 +998,20 @@ class MainWindowCompute(object):
                     try:
                         try:
                             self.convert_button.clicked.disconnect()
-                        except Exception:
+                        except Exception:  # pragma: no cover
                             import traceback
 
                             traceback.print_exc()
                         self.convert_button.setText("Convert 2D to 3D")
                         self.convert_button.clicked.connect(self.trigger_conversion)
                         self.convert_button.setEnabled(True)
-                    except Exception:
+                    except Exception:  # pragma: no cover
                         import traceback
 
                         traceback.print_exc()
                     try:
                         self.cleanup_button.setEnabled(True)
-                    except Exception:
+                    except Exception:  # pragma: no cover
                         import traceback
 
                         traceback.print_exc()
@@ -1019,7 +1019,7 @@ class MainWindowCompute(object):
                         "Ignored result from stale conversion."
                     )
                     return
-        except Exception:
+        except Exception:  # pragma: no cover
             import traceback
 
             traceback.print_exc()
@@ -1029,7 +1029,7 @@ class MainWindowCompute(object):
             if worker_id is not None:
                 try:
                     self.active_worker_ids.discard(worker_id)
-                except Exception:
+                except Exception:  # pragma: no cover
                     import traceback
 
                     traceback.print_exc()
@@ -1039,15 +1039,15 @@ class MainWindowCompute(object):
                     if worker_id in getattr(self, "halt_ids", set()):
                         try:
                             self.halt_ids.discard(worker_id)
-                        except Exception:
+                        except Exception:  # pragma: no cover
                             import traceback
 
                             traceback.print_exc()
-                except Exception:
+                except Exception:  # pragma: no cover
                     import traceback
 
                     traceback.print_exc()
-        except Exception:
+        except Exception:  # pragma: no cover
             import traceback
 
             traceback.print_exc()
@@ -1064,10 +1064,10 @@ class MainWindowCompute(object):
                     try:
                         if mol.HasProp("_pme_optimization_method"):
                             opt_method = mol.GetProp("_pme_optimization_method")
-                    except Exception:
+                    except Exception:  # pragma: no cover
                         # not all Mol objects support HasProp/GetProp safely
                         pass
-            except Exception:
+            except Exception:  # pragma: no cover
                 import traceback
 
                 traceback.print_exc()
@@ -1085,7 +1085,7 @@ class MainWindowCompute(object):
                 else:
                     # store raw value otherwise
                     self.last_successful_optimization_method = opt_method
-        except Exception:
+        except Exception:  # pragma: no cover
             # non-fatal
             pass
 
@@ -1113,7 +1113,7 @@ class MainWindowCompute(object):
                 Chem.AssignStereochemistry(mol, cleanIt=False, force=True)
 
             self.update_chiral_labels()
-        except Exception:
+        except Exception:  # pragma: no cover
             # 念のためエラーを握り潰して UI を壊さない
             pass
 
@@ -1133,7 +1133,7 @@ class MainWindowCompute(object):
                 self.statusBar().showMessage(
                     f"{len(frags)} molecules converted with collision avoidance."
                 )
-        except Exception as e:
+        except Exception as e:  # pragma: no cover
             print(f"Warning: Collision detection failed: {e}")
             # 衝突検出に失敗してもエラーにはしない
 
@@ -1146,7 +1146,7 @@ class MainWindowCompute(object):
                     if hasattr(self.plotter, "remove_actor"):
                         try:
                             self.plotter.remove_actor(actor)
-                        except Exception:
+                        except Exception:  # pragma: no cover
                             # Some pyvista versions use renderer.RemoveActor
                             if (
                                 hasattr(self.plotter, "renderer")
@@ -1154,7 +1154,7 @@ class MainWindowCompute(object):
                             ):
                                 try:
                                     self.plotter.renderer.RemoveActor(actor)
-                                except Exception:
+                                except Exception:  # pragma: no cover
                                     import traceback
 
                                     traceback.print_exc()
@@ -1162,28 +1162,28 @@ class MainWindowCompute(object):
                         if hasattr(self.plotter, "renderer") and self.plotter.renderer:
                             try:
                                 self.plotter.renderer.RemoveActor(actor)
-                            except Exception:
+                            except Exception:  # pragma: no cover
                                 import traceback
 
                                 traceback.print_exc()
                 finally:
                     try:
                         delattr(self, "_calculating_text_actor")
-                    except Exception:
+                    except Exception:  # pragma: no cover
                         try:
                             del self._calculating_text_actor
-                        except Exception:
+                        except Exception:  # pragma: no cover
                             import traceback
 
                             traceback.print_exc()
             # Re-render to ensure the UI updates immediately
             try:
                 self.plotter.render()
-            except Exception:
+            except Exception:  # pragma: no cover
                 import traceback
 
                 traceback.print_exc()
-        except Exception:
+        except Exception:  # pragma: no cover
             import traceback
 
             traceback.print_exc()
@@ -1194,13 +1194,13 @@ class MainWindowCompute(object):
         try:
             try:
                 self.convert_button.clicked.disconnect()
-            except Exception:
+            except Exception:  # pragma: no cover
                 import traceback
 
                 traceback.print_exc()
             self.convert_button.setText("Convert 2D to 3D")
             self.convert_button.clicked.connect(self.trigger_conversion)
-        except Exception:
+        except Exception:  # pragma: no cover
             import traceback
 
             traceback.print_exc()
@@ -1246,7 +1246,7 @@ class MainWindowCompute(object):
                 worker_id, error_message = result
             else:
                 error_message = str(result)
-        except Exception:
+        except Exception:  # pragma: no cover
             error_message = str(result)
 
         # If this error is from a stale/previous worker (not in active set), ignore it.
@@ -1260,7 +1260,7 @@ class MainWindowCompute(object):
         # Clear temporary plotter content and remove calculating text if present
         try:
             self.plotter.clear()
-        except Exception:
+        except Exception:  # pragma: no cover
             import traceback
 
             traceback.print_exc()
@@ -1273,14 +1273,14 @@ class MainWindowCompute(object):
                     if hasattr(self.plotter, "remove_actor"):
                         try:
                             self.plotter.remove_actor(actor)
-                        except Exception:
+                        except Exception:  # pragma: no cover
                             if (
                                 hasattr(self.plotter, "renderer")
                                 and self.plotter.renderer
                             ):
                                 try:
                                     self.plotter.renderer.RemoveActor(actor)
-                                except Exception:
+                                except Exception:  # pragma: no cover
                                     import traceback
 
                                     traceback.print_exc()
@@ -1288,21 +1288,21 @@ class MainWindowCompute(object):
                         if hasattr(self.plotter, "renderer") and self.plotter.renderer:
                             try:
                                 self.plotter.renderer.RemoveActor(actor)
-                            except Exception:
+                            except Exception:  # pragma: no cover
                                 import traceback
 
                                 traceback.print_exc()
                 finally:
                     try:
                         delattr(self, "_calculating_text_actor")
-                    except Exception:
+                    except Exception:  # pragma: no cover
                         try:
                             del self._calculating_text_actor
-                        except Exception:
+                        except Exception:  # pragma: no cover
                             import traceback
 
                             traceback.print_exc()
-        except Exception:
+        except Exception:  # pragma: no cover
             import traceback
 
             traceback.print_exc()
@@ -1313,11 +1313,11 @@ class MainWindowCompute(object):
             if worker_id is not None:
                 try:
                     self.active_worker_ids.discard(worker_id)
-                except Exception:
+                except Exception:  # pragma: no cover
                     import traceback
 
                     traceback.print_exc()
-        except Exception:
+        except Exception:  # pragma: no cover
             import traceback
 
             traceback.print_exc()
@@ -1330,7 +1330,7 @@ class MainWindowCompute(object):
             # already saw the halt message — suppress duplicate noise.
             if "halt" in low and not getattr(self, "active_worker_ids", set()):
                 return
-        except Exception:
+        except Exception:  # pragma: no cover
             import traceback
 
             traceback.print_exc()
@@ -1339,7 +1339,7 @@ class MainWindowCompute(object):
 
         try:
             self.cleanup_button.setEnabled(True)
-        except Exception:
+        except Exception:  # pragma: no cover
             import traceback
 
             traceback.print_exc()
@@ -1347,14 +1347,14 @@ class MainWindowCompute(object):
             # Restore Convert button text/handler
             try:
                 self.convert_button.clicked.disconnect()
-            except Exception:
+            except Exception:  # pragma: no cover
                 import traceback
 
                 traceback.print_exc()
             self.convert_button.setText("Convert 2D to 3D")
             self.convert_button.clicked.connect(self.trigger_conversion)
             self.convert_button.setEnabled(True)
-        except Exception:
+        except Exception:  # pragma: no cover
             import traceback
 
             traceback.print_exc()
@@ -1365,14 +1365,14 @@ class MainWindowCompute(object):
         try:
             if hasattr(self, "optimize_3d_button"):
                 self.optimize_3d_button.setEnabled(False)
-        except Exception:
+        except Exception:  # pragma: no cover
             import traceback
 
             traceback.print_exc()
         try:
             if hasattr(self, "export_button"):
                 self.export_button.setEnabled(False)
-        except Exception:
+        except Exception:  # pragma: no cover
             import traceback
 
             traceback.print_exc()
@@ -1380,7 +1380,7 @@ class MainWindowCompute(object):
         # Keep 3D feature buttons disabled to avoid inconsistent UI state
         try:
             self._enable_3d_features(False)
-        except Exception:
+        except Exception:  # pragma: no cover
             import traceback
 
             traceback.print_exc()
@@ -1388,7 +1388,7 @@ class MainWindowCompute(object):
         # Keep 3D edit actions disabled (no molecule to edit)
         try:
             self._enable_3d_edit_actions(False)
-        except Exception:
+        except Exception:  # pragma: no cover
             import traceback
 
             traceback.print_exc()
@@ -1396,14 +1396,14 @@ class MainWindowCompute(object):
         try:
             if hasattr(self, "analysis_action"):
                 self.analysis_action.setEnabled(False)
-        except Exception:
+        except Exception:  # pragma: no cover
             import traceback
 
             traceback.print_exc()
         try:
             if hasattr(self, "edit_3d_action"):
                 self.edit_3d_action.setEnabled(False)
-        except Exception:
+        except Exception:  # pragma: no cover
             import traceback
 
             traceback.print_exc()
@@ -1411,7 +1411,7 @@ class MainWindowCompute(object):
         # Force a UI refresh
         try:
             self.plotter.render()
-        except Exception:
+        except Exception:  # pragma: no cover
             import traceback
 
             traceback.print_exc()

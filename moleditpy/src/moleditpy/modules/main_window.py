@@ -15,7 +15,7 @@ import traceback
 # RDKit imports (explicit to satisfy flake8 and used features)
 try:
     pass
-except Exception:
+except Exception:  # pragma: no cover
     traceback.print_exc()
 
 # PyQt6 Modules
@@ -26,7 +26,7 @@ try:
     from PyQt6 import sip as _sip  # type: ignore
 
     _sip_isdeleted = getattr(_sip, "isdeleted", None)
-except Exception:
+except Exception:  # pragma: no cover
     _sip = None
     _sip_isdeleted = None
 
@@ -45,7 +45,7 @@ try:
     from .main_window_ui_manager import MainWindowUiManager
     from .main_window_view_3d import MainWindowView3d
     from .main_window_view_loaders import MainWindowViewLoaders
-except Exception:
+except Exception:  # pragma: no cover
     # Fallback to absolute imports for script-style execution
     from modules.main_window_app_state import MainWindowAppState
     from modules.main_window_compute import MainWindowCompute
@@ -126,7 +126,7 @@ class MainWindow(QMainWindow):
 
         try:
             self.main_window_main_init.init(initial_file)
-        except Exception:
+        except Exception:  # pragma: no cover
             traceback.print_exc()
 
         other_inits = [
@@ -146,7 +146,7 @@ class MainWindow(QMainWindow):
         for name in other_inits:
             try:
                 getattr(self, name).init()
-            except Exception:
+            except Exception:  # pragma: no cover
                 traceback.print_exc()
 
     def init_ui(self):

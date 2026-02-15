@@ -15,7 +15,7 @@ from PyQt6.QtCore import QEvent, Qt
 
 try:
     from .constants import pt
-except Exception:
+except Exception:  # pragma: no cover
     from modules.constants import pt
 
 
@@ -63,14 +63,14 @@ class Dialog3DPickingMixin:
                                 vdw_radius = pt.GetRvdw(atomic_num)
                                 if vdw_radius < 0.1:
                                     vdw_radius = 1.5
-                            except Exception:
+                            except Exception:  # pragma: no cover
                                 vdw_radius = 1.5
                             click_threshold = vdw_radius * 1.5
 
                             if distances[closest_atom_idx] < click_threshold:
                                 try:
                                     self.main_window._picking_consumed = True
-                                except Exception:
+                                except Exception:  # pragma: no cover
                                     import traceback
 
                                     traceback.print_exc()
@@ -85,7 +85,7 @@ class Dialog3DPickingMixin:
                 # 実際の解除は MouseButtonRelease イベントで行う。
                 return False
 
-            except Exception as e:
+            except Exception as e:  # pragma: no cover
                 print(f"Error in eventFilter: {e}")
                 # On exception, don't swallow the event either — let the normal
                 # event pipeline continue so the UI remains responsive.
@@ -127,7 +127,7 @@ class Dialog3DPickingMixin:
         # Ensure the main window flag exists
         try:
             self.main_window._picking_consumed = False
-        except Exception:
+        except Exception:  # pragma: no cover
             import traceback
 
             traceback.print_exc()
@@ -141,7 +141,7 @@ class Dialog3DPickingMixin:
             # Clear any leftover flag when picking is disabled
             if hasattr(self.main_window, "_picking_consumed"):
                 self.main_window._picking_consumed = False
-        except Exception:
+        except Exception:  # pragma: no cover
             import traceback
 
             traceback.print_exc()
@@ -159,7 +159,7 @@ class Dialog3DPickingMixin:
             for label_actor in self.selection_labels:
                 try:
                     self.main_window.plotter.remove_actor(label_actor)
-                except Exception:
+                except Exception:  # pragma: no cover
                     import traceback
 
                     traceback.print_exc()

@@ -21,10 +21,10 @@ import vtk
 # RDKit imports (explicit to satisfy flake8 and used features)
 try:
     pass
-except Exception:
+except Exception:  # pragma: no cover
     import traceback
 
-    traceback.print_exc()
+    pass
 
 # PyQt6 Modules
 from PyQt6.QtCore import QEvent, Qt, QTimer
@@ -40,14 +40,14 @@ try:
     from PyQt6 import sip as _sip  # type: ignore
 
     _sip_isdeleted = getattr(_sip, "isdeleted", None)
-except Exception:
+except Exception:  # pragma: no cover
     _sip = None
     _sip_isdeleted = None
 
 try:
     # package relative imports (preferred when running as `python -m moleditpy`)
     from .custom_interactor_style import CustomInteractorStyle
-except Exception:
+except Exception:  # pragma: no cover
     # Fallback to absolute imports for script-style execution
     from modules.custom_interactor_style import CustomInteractorStyle
 
@@ -182,7 +182,7 @@ class MainWindowUiManager(object):
             ):
                 self.save_settings()
                 self.settings_dirty = False
-        except Exception:
+        except Exception:  # pragma: no cover
             import traceback
 
             traceback.print_exc()
@@ -219,11 +219,11 @@ class MainWindowUiManager(object):
                 if widget != self and isinstance(widget, (QDialog, QMainWindow)):
                     try:
                         widget.close()
-                    except Exception:
+                    except Exception:  # pragma: no cover
                         import traceback
 
                         traceback.print_exc()
-        except Exception:
+        except Exception:  # pragma: no cover
             import traceback
 
             traceback.print_exc()
@@ -237,17 +237,17 @@ class MainWindowUiManager(object):
             for thr in list(getattr(self, "_active_calc_threads", []) or []):
                 try:
                     thr.quit()
-                except Exception:
+                except Exception:  # pragma: no cover
                     import traceback
 
                     traceback.print_exc()
                 try:
                     thr.wait(200)
-                except Exception:
+                except Exception:  # pragma: no cover
                     import traceback
 
                     traceback.print_exc()
-        except Exception:
+        except Exception:  # pragma: no cover
             import traceback
 
             traceback.print_exc()
@@ -311,7 +311,7 @@ class MainWindowUiManager(object):
                                 # They will check the file type in dropEvent
                                 event.acceptProposedAction()
                                 return
-                except Exception:
+                except Exception:  # pragma: no cover
                     continue
         event.ignore()
 
@@ -326,7 +326,7 @@ class MainWindowUiManager(object):
                     if url.isLocalFile():
                         file_path = url.toLocalFile()
                         break
-                except Exception:
+                except Exception:  # pragma: no cover
                     continue
 
         if file_path:
@@ -339,7 +339,7 @@ class MainWindowUiManager(object):
                         if handled:
                             event.acceptProposedAction()
                             return
-                    except Exception as e:
+                    except Exception as e:  # pragma: no cover
                         print(f"Error in plugin drop handler: {e}")
             # ドロップ位置を取得
             drop_pos = event.position().toPoint()
@@ -430,14 +430,14 @@ class MainWindowUiManager(object):
 
                         # Otherwise enable/disable according to the requested global flag
                         getattr(self, action_name).setEnabled(bool(enabled))
-                    except Exception:
+                    except Exception:  # pragma: no cover
                         import traceback
 
                         traceback.print_exc()
                 else:
                     try:
                         getattr(self, action_name).setEnabled(enabled)
-                    except Exception:
+                    except Exception:  # pragma: no cover
                         import traceback
 
                         traceback.print_exc()

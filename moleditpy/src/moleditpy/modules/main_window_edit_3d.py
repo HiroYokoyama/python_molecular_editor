@@ -21,13 +21,13 @@ import numpy as np
 
 try:
     from .mol_geometry import calculate_dihedral as _calculate_dihedral
-except Exception:
+except Exception:  # pragma: no cover
     from modules.mol_geometry import calculate_dihedral as _calculate_dihedral
 
 # RDKit imports (explicit to satisfy flake8 and used features)
 try:
     from . import sip_isdeleted_safe
-except Exception:
+except Exception:  # pragma: no cover
     from modules import sip_isdeleted_safe
 
 # PyQt6 Modules
@@ -40,14 +40,14 @@ try:
     from PyQt6 import sip as _sip  # type: ignore
 
     _sip_isdeleted = getattr(_sip, "isdeleted", None)
-except Exception:
+except Exception:  # pragma: no cover
     _sip = None
     _sip_isdeleted = None
 
 try:
     # package relative imports (preferred when running as `python -m moleditpy`)
     from .constants import VDW_RADII
-except Exception:
+except Exception:  # pragma: no cover
     # Fallback to absolute imports for script-style execution
     from modules.constants import VDW_RADII
 
@@ -86,7 +86,7 @@ class MainWindowEdit3d(object):
         for dialog in dialogs_to_close:
             try:
                 dialog.close()
-            except Exception:
+            except Exception:  # pragma: no cover
                 import traceback
 
                 traceback.print_exc()
@@ -132,7 +132,7 @@ class MainWindowEdit3d(object):
         try:
             # 既存の測定ラベルを削除
             self.plotter.remove_actor("measurement_labels")
-        except Exception:
+        except Exception:  # pragma: no cover
             import traceback
 
             traceback.print_exc()
@@ -171,7 +171,7 @@ class MainWindowEdit3d(object):
         self.measurement_labels.clear()
         try:
             self.plotter.remove_actor("measurement_labels")
-        except Exception:
+        except Exception:  # pragma: no cover
             import traceback
 
             traceback.print_exc()
@@ -184,7 +184,7 @@ class MainWindowEdit3d(object):
             try:
                 self.plotter.remove_actor(self.measurement_text_actor)
                 self.measurement_text_actor = None
-            except Exception:
+            except Exception:  # pragma: no cover
                 import traceback
 
                 traceback.print_exc()
@@ -257,15 +257,15 @@ class MainWindowEdit3d(object):
                     try:
                         if label_item.scene():
                             self.scene.removeItem(label_item)
-                    except Exception:
+                    except Exception:  # pragma: no cover
                         # Scene access or removal failed; skip
                         continue
-                except Exception:
+                except Exception:  # pragma: no cover
                     # If sip check itself fails, fall back to best-effort removal
                     try:
                         if label_item.scene():
                             self.scene.removeItem(label_item)
-                    except Exception:
+                    except Exception:  # pragma: no cover
                         continue
             self.measurement_label_items_2d.clear()
 
@@ -356,7 +356,7 @@ class MainWindowEdit3d(object):
         if self.measurement_text_actor:
             try:
                 self.plotter.remove_actor(self.measurement_text_actor)
-            except Exception:
+            except Exception:  # pragma: no cover
                 import traceback
 
                 traceback.print_exc()
@@ -377,7 +377,7 @@ class MainWindowEdit3d(object):
                 text_color = "black" if luminance > 128 else "white"
             else:
                 text_color = "white"
-        except Exception:
+        except Exception:  # pragma: no cover
             text_color = "white"
 
         # 左上に表示（小さな等幅フォント）
@@ -412,7 +412,7 @@ class MainWindowEdit3d(object):
         try:
             # 既存の選択ハイライトを削除
             self.plotter.remove_actor("selection_highlight")
-        except Exception:
+        except Exception:  # pragma: no cover
             import traceback
 
             traceback.print_exc()

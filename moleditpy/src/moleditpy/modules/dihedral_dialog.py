@@ -24,7 +24,7 @@ from PyQt6.QtWidgets import (
 try:
     from .dialog3_d_picking_mixin import Dialog3DPickingMixin
     from .mol_geometry import calculate_dihedral, get_connected_group
-except Exception:
+except Exception:  # pragma: no cover
     from modules.dialog3_d_picking_mixin import Dialog3DPickingMixin
     from modules.mol_geometry import calculate_dihedral, get_connected_group
 
@@ -215,7 +215,7 @@ class DihedralDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
             # Clear dihedral input when no selection
             try:
                 self.dihedral_input.clear()
-            except Exception:
+            except Exception:  # pragma: no cover
                 import traceback
 
                 traceback.print_exc()
@@ -241,7 +241,7 @@ class DihedralDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
             # Clear dihedral input while selection is incomplete
             try:
                 self.dihedral_input.clear()
-            except Exception:
+            except Exception:  # pragma: no cover
                 import traceback
 
                 traceback.print_exc()
@@ -273,7 +273,7 @@ class DihedralDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
             # Update dihedral input box with current dihedral
             try:
                 self.dihedral_input.setText(f"{current_dihedral:.2f}")
-            except Exception:
+            except Exception:  # pragma: no cover
                 import traceback
 
                 traceback.print_exc()

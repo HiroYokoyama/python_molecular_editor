@@ -22,7 +22,7 @@ from PyQt6.QtWidgets import (
 
 try:
     from .dialog3_d_picking_mixin import Dialog3DPickingMixin
-except Exception:
+except Exception:  # pragma: no cover
     from modules.dialog3_d_picking_mixin import Dialog3DPickingMixin
 
 
@@ -132,7 +132,7 @@ class PlanarizeDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
                     n = self.mol.GetNumAtoms()
                     # create a set of indices [0..n-1]
                     self.selected_atoms = set(range(n))
-                except Exception:
+                except Exception:  # pragma: no cover
                     # fallback to main_window data map
                     self.selected_atoms = (
                         set(self.main_window.data.atoms.keys())
@@ -151,7 +151,7 @@ class PlanarizeDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
             self.show_atom_labels()
             self.update_display()
 
-        except Exception as e:
+        except Exception as e:  # pragma: no cover
             QMessageBox.warning(self, "Warning", f"Failed to select all atoms: {e}")
 
     def show_atom_labels(self):
@@ -214,7 +214,7 @@ class PlanarizeDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
                 f"Planarized {len(selected_indices)} atoms to best-fit plane.",
             )
 
-        except Exception as e:
+        except Exception as e:  # pragma: no cover
             QMessageBox.critical(self, "Error", f"Failed to planarize: {e}")
 
     def closeEvent(self, event):

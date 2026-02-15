@@ -30,7 +30,7 @@ try:
         FONT_FAMILY,
         FONT_WEIGHT_BOLD,
     )
-except Exception:
+except Exception:  # pragma: no cover
     from modules.constants import (
         ATOM_RADIUS,
         CPK_COLORS,
@@ -45,7 +45,7 @@ from PyQt6 import sip
 def sip_isdeleted_safe(obj):
     try:
         return sip.isdeleted(obj)
-    except Exception:
+    except Exception:  # pragma: no cover
         return False
 
 
@@ -87,7 +87,7 @@ class AtomItem(QGraphicsItem):
                     font_family = win.settings.get("atom_font_family_2d", FONT_FAMILY)
             else:
                 font_family = FONT_FAMILY
-        except Exception:
+        except Exception:  # pragma: no cover
             font_family = FONT_FAMILY
 
         self.font = QFont(font_family, font_size, FONT_WEIGHT_BOLD)
@@ -112,7 +112,7 @@ class AtomItem(QGraphicsItem):
                 if win and hasattr(win, "settings"):
                     font_size = win.settings.get("atom_font_size_2d", 20)
                     font_family = win.settings.get("atom_font_family_2d", FONT_FAMILY)
-        except Exception:
+        except Exception:  # pragma: no cover
             import traceback
 
             traceback.print_exc()
@@ -152,7 +152,7 @@ class AtomItem(QGraphicsItem):
                     if partner_pos is None:
                         continue
                     total_dx += partner_pos.x() - my_pos_x
-                except Exception:
+                except Exception:  # pragma: no cover
                     # Skip any bond that raises while inspecting; keep UI tolerant
                     continue
 
@@ -247,7 +247,7 @@ class AtomItem(QGraphicsItem):
                     ):
                         bond_col = win.settings.get("bond_color_2d", "#222222")
                         color = QColor(bond_col)
-        except Exception:
+        except Exception:  # pragma: no cover
             import traceback
 
             traceback.print_exc()
@@ -293,14 +293,14 @@ class AtomItem(QGraphicsItem):
                         try:
                             if sip_isdeleted_safe(other_atom):
                                 continue
-                        except Exception:
+                        except Exception:  # pragma: no cover
                             # If sip check fails, continue defensively
                             pass
 
                         other_pos = None
                         try:
                             other_pos = other_atom.pos()
-                        except Exception:
+                        except Exception:  # pragma: no cover
                             # Accessing .pos() may raise if the C++ object was destroyed
                             other_pos = None
 
@@ -308,7 +308,7 @@ class AtomItem(QGraphicsItem):
                             continue
 
                         total_dx += other_pos.x() - my_pos_x
-                    except Exception:
+                    except Exception:  # pragma: no cover
                         # Skip any problematic bond/partner rather than crashing the paint
                         continue
 

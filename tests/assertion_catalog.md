@@ -810,6 +810,33 @@ _Ensure MainWindow and its init submodule can be imported._
 _Minimal test of MainWindow instantiation with heavy mocking._
 
 
+## tests/unit/test_modules_init.py
+
+### test_sip_isdeleted_safe_none
+_Test safe check with None._
+
+- assert sip_isdeleted_safe(None) is False
+
+### test_sip_isdeleted_safe_valid_obj
+_Test safe check with a valid object (mocked)._
+
+- assert sip_isdeleted_safe(obj) is False
+
+### test_sip_isdeleted_safe_deleted_obj
+_Test safe check with a deleted object._
+
+- assert sip_isdeleted_safe(obj) is True
+
+### test_sip_isdeleted_safe_exception
+_Test safe check when an exception occurs._
+
+- assert sip_isdeleted_safe(obj) is False
+
+### test_sip_isdeleted_safe_no_sip
+_Test safe check when _sip_isdeleted is None (sip import failed)._
+
+- assert sip_isdeleted_safe(MagicMock()) is False
+
 ## tests/unit/test_molecular_data.py
 
 ### test_add_atom_returns_incrementing_ids

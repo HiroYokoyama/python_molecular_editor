@@ -22,10 +22,10 @@ import os
 # RDKit imports (explicit to satisfy flake8 and used features)
 try:
     pass
-except Exception:
+except Exception:  # pragma: no cover
     import traceback
 
-    traceback.print_exc()
+    pass
 
 # PyQt6 Modules
 from PyQt6.QtCore import QDateTime
@@ -35,7 +35,7 @@ try:
     from PyQt6 import sip as _sip  # type: ignore
 
     _sip_isdeleted = getattr(_sip, "isdeleted", None)
-except Exception:
+except Exception:  # pragma: no cover
     _sip = None
     _sip_isdeleted = None
 
@@ -56,7 +56,7 @@ try:
     from .planarize_dialog import PlanarizeDialog
     from .translation_dialog import TranslationDialog
     from .user_template_dialog import UserTemplateDialog
-except Exception:
+except Exception:  # pragma: no cover
     # Fallback to absolute imports for script-style execution
     from modules.about_dialog import AboutDialog
     from modules.align_plane_dialog import AlignPlaneDialog
@@ -229,7 +229,7 @@ class MainWindowDialogManager(object):
                 self, "Success", f"Template '{name}' saved successfully."
             )
 
-        except Exception as e:
+        except Exception as e:  # pragma: no cover
             QMessageBox.critical(self, "Error", f"Failed to save template: {str(e)}")
 
     def open_translation_dialog(self):

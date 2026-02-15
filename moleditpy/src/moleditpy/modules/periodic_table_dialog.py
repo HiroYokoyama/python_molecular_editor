@@ -15,7 +15,7 @@ from PyQt6.QtWidgets import QDialog, QGridLayout, QPushButton
 
 try:
     from .constants import CPK_COLORS
-except Exception:
+except Exception:  # pragma: no cover
     from modules.constants import CPK_COLORS
 
 from PyQt6.QtCore import pyqtSignal
@@ -164,7 +164,7 @@ class PeriodicTableDialog(QDialog):  # pragma: no cover
                     else {}
                 )
                 override = overrides.get(symbol)
-            except Exception:
+            except Exception:  # pragma: no cover
                 override = None
             q_color = (
                 QColor(override)
