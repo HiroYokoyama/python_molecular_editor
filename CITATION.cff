@@ -1,9 +1,18 @@
-cff-version: 1.1.0
-message: "Cite as"
+cff-version: 1.2.0
+message: Please cite the following works when using this software.
+type: software
+abstract: "MoleditPy\_is a\_programmable\_and cross-platform molecular editor built in Python. It streamlines the workflow from 2D drawing to 3D visualization, making it an\_ideal tool for rapidly preparing input files for DFT calculations. Designed as an\_open platform, it also allows users to freely extend its capabilities, writing custom Python scripts to manipulate molecular data, automate tasks, or integrate new cheminformatics algorithms seamlessly."
 authors:
   - family-names: Yokoyama
     given-names: Hiromichi
     orcid: https://orcid.org/0000-0002-2798-1203
-title: "Moleditpy"
-doi: 10.5281/zenodo.17268532
-  
+date-released: 2026-02-15
+doi: 10.5281/ZENODO.18645504
+identifiers:
+  - type: doi
+    value: 10.5281/ZENODO.18645504
+  - type: url
+    value: https://zenodo.org/doi/10.5281/zenodo.18645504
+title: MoleditPy — A Python-based molecular editing software
+url: https://zenodo.org/doi/10.5281/zenodo.18645504
+version: 2.6.1
