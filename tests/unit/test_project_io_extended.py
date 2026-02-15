@@ -9,6 +9,7 @@ from PyQt6.QtWidgets import QMessageBox
 from unittest.mock import MagicMock, patch
 import copy
 
+
 class DummyProjectIo(MainWindowProjectIo):
     def __init__(self, host):
         self._host = host
@@ -20,18 +21,32 @@ class DummyProjectIo(MainWindowProjectIo):
         self.current_mol = None
         self._saved_state = None
         self.statusBar_mock = MagicMock()
-    
+
     def __getattr__(self, name):
-        if name == "_saved_state": # explicit check to avoid recursion if init didn't run or something
-             return self.__dict__.get("_saved_state", None)
+        if (
+            name == "_saved_state"
+        ):  # explicit check to avoid recursion if init didn't run or something
+            return self.__dict__.get("_saved_state", None)
         return getattr(self._host, name)
 
-    def statusBar(self): return self.statusBar_mock
-    def update_window_title(self): pass
-    def reset_undo_stack(self): pass
-    def restore_ui_for_editing(self): pass
-    def fit_to_view(self): pass
-    def check_unsaved_changes(self): return True # Default to allow in tests
+    def statusBar(self):
+        return self.statusBar_mock
+
+    def update_window_title(self):
+        pass
+
+    def reset_undo_stack(self):
+        pass
+
+    def restore_ui_for_editing(self):
+        pass
+
+    def fit_to_view(self):
+        pass
+
+    def check_unsaved_changes(self):
+        return True  # Default to allow in tests
+
 
 def test_save_project_no_data(mock_parser_host):
     io = DummyProjectIo(mock_parser_host)
@@ -40,149 +55,176 @@ def test_save_project_no_data(mock_parser_host):
     io.save_project()
     io.statusBar().showMessage.assert_called_with("Error: Nothing to save.")
 
+
 def test_save_project_overwrite_json(mock_parser_host, tmp_path):
     io = DummyProjectIo(mock_parser_host)
     project_file = str(tmp_path / "existing.pmeprj")
     io.current_file_path = project_file
-    io.data.atoms = {1: {'symbol': 'C'}}
-    
-    with patch.object(io, 'create_json_data', return_value={"format": "PME Project"}):
+    io.data.atoms = {1: {"symbol": "C"}}
+
+    with patch.object(io, "create_json_data", return_value={"format": "PME Project"}):
         io.save_project()
         assert os.path.exists(project_file)
-        with open(project_file, 'r') as f:
+        with open(project_file, "r") as f:
             data = json.load(f)
             assert data["format"] == "PME Project"
         io.statusBar().showMessage.assert_any_call(f"Project saved to {project_file}")
+
 
 def test_save_project_overwrite_raw(mock_parser_host, tmp_path):
     io = DummyProjectIo(mock_parser_host)
     raw_file = str(tmp_path / "existing.pmeraw")
     io.current_file_path = raw_file
-    io.data.atoms = {1: {'symbol': 'C'}}
-    
-    with patch.object(io, 'get_current_state', return_value={"atoms": "mock"}):
+    io.data.atoms = {1: {"symbol": "C"}}
+
+    with patch.object(io, "get_current_state", return_value={"atoms": "mock"}):
         io.save_project()
         assert os.path.exists(raw_file)
-        with open(raw_file, 'rb') as f:
+        with open(raw_file, "rb") as f:
             data = pickle.load(f)
             assert data["atoms"] == "mock"
+
 
 def test_save_project_redirect_to_save_as(mock_parser_host):
     io = DummyProjectIo(mock_parser_host)
     io.current_file_path = "some_molecule.mol"
-    io.data.atoms = {1: {'symbol': 'C'}}
-    
-    with patch.object(io, 'save_project_as') as mock_save_as:
+    io.data.atoms = {1: {"symbol": "C"}}
+
+    with patch.object(io, "save_project_as") as mock_save_as:
         io.save_project()
         assert mock_save_as.called
+
 
 def test_load_raw_data_success(mock_parser_host, tmp_path):
     io = DummyProjectIo(mock_parser_host)
     raw_file = str(tmp_path / "test.pmeraw")
     sample_data = {"atoms": {1: "C"}}
-    with open(raw_file, 'wb') as f:
+    with open(raw_file, "wb") as f:
         pickle.dump(sample_data, f)
-    
-    with patch.object(io, 'set_state_from_data') as mock_set_state:
+
+    with patch.object(io, "set_state_from_data") as mock_set_state:
         io.load_raw_data(raw_file)
         assert mock_set_state.called
         assert io.current_file_path == raw_file
 
+
 def test_load_json_data_invalid_format(mock_parser_host, tmp_path):
     io = DummyProjectIo(mock_parser_host)
     json_file = str(tmp_path / "wrong.pmeprj")
-    with open(json_file, 'w') as f:
+    with open(json_file, "w") as f:
         json.dump({"format": "Unknown"}, f)
-    
-    with patch('PyQt6.QtWidgets.QMessageBox.warning') as mock_warn:
+
+    with patch("PyQt6.QtWidgets.QMessageBox.warning") as mock_warn:
         io.load_json_data(json_file)
         assert mock_warn.called
 
+
 def test_open_project_file_dispatch(mock_parser_host):
     io = DummyProjectIo(mock_parser_host)
-    with patch.object(io, 'load_json_data') as mock_json, \
-         patch.object(io, 'load_raw_data') as mock_raw:
-        
+    with (
+        patch.object(io, "load_json_data") as mock_json,
+        patch.object(io, "load_raw_data") as mock_raw,
+    ):
         io.open_project_file("test.pmeprj")
         assert mock_json.called
-        
+
         io.open_project_file("test.pmeraw")
         assert mock_raw.called
+
 
 def test_save_as_json_trigger(mock_parser_host, tmp_path):
     io = DummyProjectIo(mock_parser_host)
     io.data.atoms = {1: "C"}
     save_path = str(tmp_path / "exported.pmeprj")
-    
-    with patch('PyQt6.QtWidgets.QFileDialog.getSaveFileName', return_value=(save_path, "*.pmeprj")), \
-         patch.object(io, 'create_json_data', return_value={"format": "PME Project"}):
+
+    with (
+        patch(
+            "PyQt6.QtWidgets.QFileDialog.getSaveFileName",
+            return_value=(save_path, "*.pmeprj"),
+        ),
+        patch.object(io, "create_json_data", return_value={"format": "PME Project"}),
+    ):
         io.save_as_json()
         assert os.path.exists(save_path)
+
 
 def test_load_raw_data_error_paths(mock_parser_host):
     io = DummyProjectIo(mock_parser_host)
     # File not found
     io.load_raw_data("non_existent.pmeraw")
     io.statusBar().showMessage.assert_called_with("File not found: non_existent.pmeraw")
-    
+
     # Unpickling error
-    with patch('builtins.open', MagicMock()):
-        with patch('pickle.load', side_effect=pickle.UnpicklingError("Corrupt")):
+    with patch("builtins.open", MagicMock()):
+        with patch("pickle.load", side_effect=pickle.UnpicklingError("Corrupt")):
             io.load_raw_data("dummy.pmeraw")
-            io.statusBar().showMessage.assert_called_with("Invalid project file format: Corrupt")
-  
+            io.statusBar().showMessage.assert_called_with(
+                "Invalid project file format: Corrupt"
+            )
+
 
 def test_open_project_file_unsaved_check(mock_parser_host):
     io = DummyProjectIo(mock_parser_host)
     # Mock check_unsaved_changes to return False (cancel)
     # Note: DummyProjectIo mocks check_unsaved_changes to return True by default.
     # We need to override that.
-    with patch.object(io, 'check_unsaved_changes', return_value=False):
+    with patch.object(io, "check_unsaved_changes", return_value=False):
         io.open_project_file()
         # Should return early, not opening dialog
-        with patch('PyQt6.QtWidgets.QFileDialog.getOpenFileName') as mock_open:
+        with patch("PyQt6.QtWidgets.QFileDialog.getOpenFileName") as mock_open:
             assert not mock_open.called
+
 
 def test_save_project_io_error(mock_parser_host, tmp_path):
     io = DummyProjectIo(mock_parser_host)
     io.current_file_path = str(tmp_path / "readonly.pmeprj")
     io.data.atoms = {1: "C"}
-    
-    with patch('builtins.open', side_effect=IOError("Permission denied")):
-         with patch.object(io, 'create_json_data', return_value={"format": "PME Project"}):
-             io.save_project()
-             io.statusBar().showMessage.assert_called_with("File I/O error: Permission denied")
+
+    with patch("builtins.open", side_effect=IOError("Permission denied")):
+        with patch.object(
+            io, "create_json_data", return_value={"format": "PME Project"}
+        ):
+            io.save_project()
+            io.statusBar().showMessage.assert_called_with(
+                "File I/O error: Permission denied"
+            )
+
 
 def test_load_json_data_version_mismatch(mock_parser_host, tmp_path):
     io = DummyProjectIo(mock_parser_host)
     json_path = tmp_path / "future.pmeprj"
-    with open(json_path, 'w') as f:
+    with open(json_path, "w") as f:
         json.dump({"format": "PME Project", "version": "2.0"}, f)
-        
-    with patch('PyQt6.QtWidgets.QMessageBox.information') as mock_info:
+
+    with patch("PyQt6.QtWidgets.QMessageBox.information") as mock_info:
         io.load_json_data(str(json_path))
         # Should verify warning was shown
         assert mock_info.called
         assert "version 2.0" in mock_info.call_args[0][2]
+
+
 def test_project_save_load_full_cycle(mock_parser_host, tmp_path):
     """Test full cycle of project save and load."""
     io = DummyProjectIo(mock_parser_host)
     # Populate some data
     io.data.add_atom("C", QPointF(10, 20), charge=1)
     # Ensure item mock is present for coordinate extraction if needed
-    io.data.atoms[0]['item'] = MagicMock()
-    io.data.atoms[0]['item'].pos.return_value = QPointF(10, 20)
-    
+    io.data.atoms[0]["item"] = MagicMock()
+    io.data.atoms[0]["item"].pos.return_value = QPointF(10, 20)
+
     project_file = str(tmp_path / "full_cycle.pmeprj")
-    
+
     # Save
-    with patch('PyQt6.QtWidgets.QFileDialog.getSaveFileName', return_value=(project_file, "*.pmeprj")):
+    with patch(
+        "PyQt6.QtWidgets.QFileDialog.getSaveFileName",
+        return_value=(project_file, "*.pmeprj"),
+    ):
         io.save_as_json()
     assert os.path.exists(project_file)
-    
+
     # Load
     io.data.atoms.clear()
-    with patch.object(io, 'load_from_json_data') as mock_load_json:
+    with patch.object(io, "load_from_json_data") as mock_load_json:
         io.load_json_data(project_file)
         assert mock_load_json.called
         # Verify the data passed to load_from_json_data contains our atom
@@ -194,27 +236,29 @@ def test_project_save_load_full_cycle(mock_parser_host, tmp_path):
         assert atoms[0]["charge"] == 1
 
 
-
 def test_save_project_no_data_error(mock_parser_host):
     """Test save_project with no data returns error."""
     io = DummyProjectIo(mock_parser_host)
     io.data.atoms = {}
-    io.current_mol = None 
-    
+    io.current_mol = None
+
     io.save_project()
     io.statusBar().showMessage.assert_called_with("Error: Nothing to save.")
+
 
 def test_save_project_default_filename(mock_parser_host, tmp_path):
     """Test save_project_as uses current_file_path to suggest filename."""
     io = DummyProjectIo(mock_parser_host)
-    io.data.atoms = {1: {'symbol': 'C'}}
-    
+    io.data.atoms = {1: {"symbol": "C"}}
+
     # 1. With existing path
     io.current_file_path = str(tmp_path / "subdir" / "my_molecule.pmeprj")
-    
-    with patch('PyQt6.QtWidgets.QFileDialog.getSaveFileName', return_value=("", "")) as mock_save:
+
+    with patch(
+        "PyQt6.QtWidgets.QFileDialog.getSaveFileName", return_value=("", "")
+    ) as mock_save:
         io.save_project_as()
-        
+
         args, _ = mock_save.call_args
         suggested_path = args[2]
         # Should be in same dir, same name (without ext potentially, or used as is depending on logic)
@@ -224,46 +268,57 @@ def test_save_project_default_filename(mock_parser_host, tmp_path):
 
     # 2. No existing path
     io.current_file_path = None
-    with patch('PyQt6.QtWidgets.QFileDialog.getSaveFileName', return_value=("", "")) as mock_save:
+    with patch(
+        "PyQt6.QtWidgets.QFileDialog.getSaveFileName", return_value=("", "")
+    ) as mock_save:
         io.save_project_as()
         args, _ = mock_save.call_args
         assert args[2] == "untitled"
 
+
 def test_save_project_extension_enforcement(mock_parser_host, tmp_path):
     """Test that extensions are enforced in save_project_as."""
     io = DummyProjectIo(mock_parser_host)
-    io.data.atoms = {1: {'symbol': 'C'}}
-    
+    io.data.atoms = {1: {"symbol": "C"}}
+
     # User types "test" without extension
     save_path_input = str(tmp_path / "test")
     # Expected output
     expected_path = str(tmp_path / "test.pmeprj")
-    
-    with patch('PyQt6.QtWidgets.QFileDialog.getSaveFileName', return_value=(save_path_input, "PME Project Files (*.pmeprj)")), \
-         patch.object(io, 'create_json_data', return_value={}):
-         
+
+    with (
+        patch(
+            "PyQt6.QtWidgets.QFileDialog.getSaveFileName",
+            return_value=(save_path_input, "PME Project Files (*.pmeprj)"),
+        ),
+        patch.object(io, "create_json_data", return_value={}),
+    ):
         io.save_project_as()
-        
+
         assert io.current_file_path == expected_path
         assert os.path.exists(expected_path)
+
 
 def test_save_project_success_state_update(mock_parser_host, tmp_path):
     """Test state updates after successful save."""
     io = DummyProjectIo(mock_parser_host)
-    io.data.atoms = {1: {'symbol': 'C'}}
+    io.data.atoms = {1: {"symbol": "C"}}
     io.has_unsaved_changes = True
     io.update_window_title = MagicMock()
-    
+
     save_path = str(tmp_path / "saved.pmeprj")
-    
+
     # Mock deepcopy to just return the object (or a copy), avoiding issues with MagicMocks
-    with patch('PyQt6.QtWidgets.QFileDialog.getSaveFileName', return_value=(save_path, "")), \
-         patch.object(io, 'create_json_data', return_value={}), \
-         patch.object(io, 'get_current_state', return_value={'test': 1}), \
-         patch('copy.deepcopy', side_effect=lambda x: x):
-         
+    with (
+        patch(
+            "PyQt6.QtWidgets.QFileDialog.getSaveFileName", return_value=(save_path, "")
+        ),
+        patch.object(io, "create_json_data", return_value={}),
+        patch.object(io, "get_current_state", return_value={"test": 1}),
+        patch("copy.deepcopy", side_effect=lambda x: x),
+    ):
         io.save_project_as()
-        
+
         assert io.has_unsaved_changes is False
         assert io.current_file_path == save_path
         assert io.update_window_title.called

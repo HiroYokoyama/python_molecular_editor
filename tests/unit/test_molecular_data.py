@@ -1,4 +1,5 @@
 """Tests for MolecularData — CRUD operations, adjacency, RDKit round-trip, and value validation."""
+
 import pytest
 from rdkit import Chem
 from rdkit.Chem import Descriptors, AllChem, rdMolDescriptors
@@ -10,6 +11,7 @@ from PyQt6.QtCore import QPointF
 # =============================================================================
 # Basic CRUD
 # =============================================================================
+
 
 def test_add_atom_returns_incrementing_ids():
     """Verify atom IDs are sequential integers starting from 0."""
@@ -26,11 +28,11 @@ def test_add_atom_stores_properties():
     data = MolecularData()
     aid = data.add_atom("N", QPointF(5.5, -3.2), charge=-1, radical=1)
     atom = data.atoms[aid]
-    assert atom['symbol'] == "N"
-    assert atom['pos'].x() == pytest.approx(5.5)
-    assert atom['pos'].y() == pytest.approx(-3.2)
-    assert atom['charge'] == -1
-    assert atom['radical'] == 1
+    assert atom["symbol"] == "N"
+    assert atom["pos"].x() == pytest.approx(5.5)
+    assert atom["pos"].y() == pytest.approx(-3.2)
+    assert atom["charge"] == -1
+    assert atom["radical"] == 1
 
 
 def test_add_bond_creates_adjacency():
@@ -50,7 +52,7 @@ def test_add_bond_normalizes_non_stereo_key():
     b = data.add_atom("C", QPointF(10, 0))
     key, status = data.add_bond(b, a, order=1, stereo=0)  # Reversed order
     assert key == (a, b)  # Should be normalized
-    assert status == 'created'
+    assert status == "created"
 
 
 def test_add_bond_preserves_stereo_key_direction():
@@ -69,8 +71,8 @@ def test_add_bond_update_existing():
     b = data.add_atom("C", QPointF(10, 0))
     data.add_bond(a, b, order=1)
     key, status = data.add_bond(a, b, order=2)
-    assert status == 'updated'
-    assert data.bonds[key]['order'] == 2
+    assert status == "updated"
+    assert data.bonds[key]["order"] == 2
 
 
 def test_remove_atom_cleans_adjacency_and_bonds():
@@ -81,9 +83,9 @@ def test_remove_atom_cleans_adjacency_and_bonds():
     c = data.add_atom("C", QPointF(20, 0))
     data.add_bond(a, b, order=1)
     data.add_bond(b, c, order=2)
-    
+
     data.remove_atom(b)
-    
+
     assert b not in data.atoms
     assert b not in data.adjacency_list
     assert a not in data.adjacency_list.get(b, [])
@@ -98,9 +100,9 @@ def test_remove_bond_cleans_adjacency():
     a = data.add_atom("C", QPointF(0, 0))
     b = data.add_atom("C", QPointF(10, 0))
     data.add_bond(a, b, order=1)
-    
+
     data.remove_bond(a, b)
-    
+
     assert len(data.bonds) == 0
     assert b not in data.adjacency_list[a]
     assert a not in data.adjacency_list[b]
@@ -114,7 +116,7 @@ def test_remove_bond_reverse_lookup():
     a = data.add_atom("C", QPointF(0, 0))
     b = data.add_atom("C", QPointF(10, 0))
     data.add_bond(a, b, order=1)
-    
+
     data.remove_bond(b, a)  # Reversed order
     assert len(data.bonds) == 0
 
@@ -122,6 +124,7 @@ def test_remove_bond_reverse_lookup():
 # =============================================================================
 # RDKit round-trip: compare against RDKit reference values
 # =============================================================================
+
 
 def test_to_rdkit_mol_ethanol():
     """Build ethanol in MolecularData and compare RDKit molecular formula."""
@@ -131,13 +134,15 @@ def test_to_rdkit_mol_ethanol():
     o = data.add_atom("O", QPointF(100, 0))
     data.add_bond(c1, c2, order=1)
     data.add_bond(c2, o, order=1)
-    
+
     mol = data.to_rdkit_mol()
     assert mol is not None
-    
+
     # Compare formula against RDKit's own ethanol
     ref_mol = Chem.MolFromSmiles("CCO")
-    assert rdMolDescriptors.CalcMolFormula(mol) == rdMolDescriptors.CalcMolFormula(ref_mol)
+    assert rdMolDescriptors.CalcMolFormula(mol) == rdMolDescriptors.CalcMolFormula(
+        ref_mol
+    )
 
 
 def test_to_rdkit_mol_benzene():
@@ -145,23 +150,26 @@ def test_to_rdkit_mol_benzene():
     data = MolecularData()
     # Hexagonal positions
     import math
+
     positions = []
     for i in range(6):
         angle = math.pi / 3 * i
         positions.append(QPointF(50 * math.cos(angle), 50 * math.sin(angle)))
-    
+
     ids = [data.add_atom("C", p) for p in positions]
     for i in range(6):
         order = 2 if i % 2 == 0 else 1
-        data.add_bond(ids[i], ids[(i+1) % 6], order=order)
-    
+        data.add_bond(ids[i], ids[(i + 1) % 6], order=order)
+
     mol = data.to_rdkit_mol()
     assert mol is not None
-    
+
     ref_mol = Chem.MolFromSmiles("c1ccccc1")
     # After sanitization, both should have aromatic carbons
     assert mol.GetNumAtoms() == 6
-    assert rdMolDescriptors.CalcMolFormula(mol) == rdMolDescriptors.CalcMolFormula(ref_mol)
+    assert rdMolDescriptors.CalcMolFormula(mol) == rdMolDescriptors.CalcMolFormula(
+        ref_mol
+    )
 
 
 def test_to_rdkit_mol_charged_atom():
@@ -174,10 +182,10 @@ def test_to_rdkit_mol_charged_atom():
     data.add_atom("H", QPointF(0, -10))
     for i in range(1, 5):
         data.add_bond(n, i, order=1)
-    
+
     mol = data.to_rdkit_mol()
     assert mol is not None
-    
+
     # Find N atom and check charge
     n_atoms = [a for a in mol.GetAtoms() if a.GetSymbol() == "N"]
     assert len(n_atoms) == 1
@@ -188,7 +196,7 @@ def test_to_rdkit_mol_radical():
     """Verify radical electrons are correctly transferred."""
     data = MolecularData()
     data.add_atom("C", QPointF(0, 0), radical=1)
-    
+
     mol = data.to_rdkit_mol()
     assert mol is not None
     assert mol.GetAtomWithIdx(0).GetNumRadicalElectrons() == 1
@@ -200,7 +208,7 @@ def test_to_rdkit_mol_double_bond():
     c1 = data.add_atom("C", QPointF(0, 0))
     c2 = data.add_atom("C", QPointF(50, 0))
     data.add_bond(c1, c2, order=2)
-    
+
     mol = data.to_rdkit_mol()
     assert mol is not None
     assert mol.GetBondBetweenAtoms(0, 1).GetBondTypeAsDouble() == 2.0
@@ -212,11 +220,11 @@ def test_to_rdkit_mol_triple_bond():
     c1 = data.add_atom("C", QPointF(0, 0))
     c2 = data.add_atom("C", QPointF(50, 0))
     data.add_bond(c1, c2, order=3)
-    
+
     mol = data.to_rdkit_mol()
     assert mol is not None
     assert mol.GetBondBetweenAtoms(0, 1).GetBondTypeAsDouble() == 3.0
-    
+
     ref = Chem.MolFromSmiles("C#C")
     assert rdMolDescriptors.CalcMolFormula(mol) == rdMolDescriptors.CalcMolFormula(ref)
 
@@ -226,11 +234,11 @@ def test_to_rdkit_mol_coordinate_conversion():
     data = MolecularData()
     px, py = 200.0, -150.0
     data.add_atom("C", QPointF(px, py))
-    
+
     mol = data.to_rdkit_mol()
     conf = mol.GetConformer()
     pos = conf.GetAtomPosition(0)
-    
+
     assert pos.x == pytest.approx(px * ANGSTROM_PER_PIXEL, abs=1e-6)
     assert pos.y == pytest.approx(-py * ANGSTROM_PER_PIXEL, abs=1e-6)  # Y is inverted
 
@@ -241,7 +249,7 @@ def test_to_rdkit_mol_preserves_original_atom_id():
     id0 = data.add_atom("C", QPointF(0, 0))
     id1 = data.add_atom("O", QPointF(50, 0))
     data.add_bond(id0, id1, order=1)
-    
+
     mol = data.to_rdkit_mol()
     for atom in mol.GetAtoms():
         assert atom.HasProp("_original_atom_id")
@@ -263,7 +271,7 @@ def test_to_mol_block_contains_all_atoms():
     data.add_atom("O", QPointF(100, 0))
     data.add_bond(0, 1, order=1)
     data.add_bond(1, 2, order=2)
-    
+
     mol_block = data.to_mol_block()
     assert mol_block is not None
     assert "V2000" in mol_block or "MoleditPy" in mol_block
@@ -285,9 +293,11 @@ def test_molecular_weight_matches_rdkit():
     data.add_bond(c1, c2, order=1)
     data.add_bond(c2, o1, order=1)
     data.add_bond(c2, o2, order=2)
-    
+
     mol = data.to_rdkit_mol()
     ref = Chem.MolFromSmiles("CC(=O)O")
-    
+
     # Same heavy-atom molecular weight (no Hs)
-    assert Descriptors.HeavyAtomMolWt(mol) == pytest.approx(Descriptors.HeavyAtomMolWt(ref), abs=0.01)
+    assert Descriptors.HeavyAtomMolWt(mol) == pytest.approx(
+        Descriptors.HeavyAtomMolWt(ref), abs=0.01
+    )

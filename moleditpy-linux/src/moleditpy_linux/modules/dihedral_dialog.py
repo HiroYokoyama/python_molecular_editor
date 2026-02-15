@@ -33,7 +33,7 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QMessageBox
 
 
-class DihedralDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
+class DihedralDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
     def __init__(self, mol, main_window, preselected_atoms=None, parent=None):
         QDialog.__init__(self, parent)
         Dialog3DPickingMixin.__init__(self)
@@ -59,7 +59,9 @@ class DihedralDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
         layout = QVBoxLayout(self)
 
         # Instructions
-        instruction_label = QLabel("Click four atoms in order to define a dihedral angle. The rotation will be around the bond between the 2nd and 3rd atoms.")
+        instruction_label = QLabel(
+            "Click four atoms in order to define a dihedral angle. The rotation will be around the bond between the 2nd and 3rd atoms."
+        )
         instruction_label.setWordWrap(True)
         layout.addWidget(instruction_label)
 
@@ -88,10 +90,14 @@ class DihedralDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
         self.move_group_radio.setChecked(True)
         group_layout.addWidget(self.move_group_radio)
 
-        self.move_atom_radio = QRadioButton("Atom 1,2,3: Fixed, Atom 4: Rotate atom only")
+        self.move_atom_radio = QRadioButton(
+            "Atom 1,2,3: Fixed, Atom 4: Rotate atom only"
+        )
         group_layout.addWidget(self.move_atom_radio)
 
-        self.both_groups_radio = QRadioButton("Central bond fixed: Both groups rotate equally")
+        self.both_groups_radio = QRadioButton(
+            "Central bond fixed: Both groups rotate equally"
+        )
         group_layout.addWidget(self.both_groups_radio)
 
         layout.addWidget(group_box)
@@ -183,14 +189,24 @@ class DihedralDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
 
     def show_atom_labels(self):
         """選択された原子にラベルを表示"""
-        selected_atoms = [self.atom1_idx, self.atom2_idx, self.atom3_idx, self.atom4_idx]
+        selected_atoms = [
+            self.atom1_idx,
+            self.atom2_idx,
+            self.atom3_idx,
+            self.atom4_idx,
+        ]
         labels = ["1st", "2nd (bond start)", "3rd (bond end)", "4th"]
-        pairs = [(idx, labels[i]) for i, idx in enumerate(selected_atoms) if idx is not None]
+        pairs = [
+            (idx, labels[i]) for i, idx in enumerate(selected_atoms) if idx is not None
+        ]
         self.show_atom_labels_for(pairs)
 
     def update_display(self):
         """表示を更新"""
-        selected_count = sum(x is not None for x in [self.atom1_idx, self.atom2_idx, self.atom3_idx, self.atom4_idx])
+        selected_count = sum(
+            x is not None
+            for x in [self.atom1_idx, self.atom2_idx, self.atom3_idx, self.atom4_idx]
+        )
 
         if selected_count == 0:
             self.selection_label.setText("No atoms selected")
@@ -200,9 +216,16 @@ class DihedralDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
             try:
                 self.dihedral_input.clear()
             except Exception:
-                import traceback; traceback.print_exc()
+                import traceback
+
+                traceback.print_exc()
         elif selected_count < 4:
-            selected_atoms = [self.atom1_idx, self.atom2_idx, self.atom3_idx, self.atom4_idx]
+            selected_atoms = [
+                self.atom1_idx,
+                self.atom2_idx,
+                self.atom3_idx,
+                self.atom4_idx,
+            ]
 
             display_parts = []
             for atom_idx in selected_atoms:
@@ -219,9 +242,16 @@ class DihedralDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
             try:
                 self.dihedral_input.clear()
             except Exception:
-                import traceback; traceback.print_exc()
+                import traceback
+
+                traceback.print_exc()
         else:
-            selected_atoms = [self.atom1_idx, self.atom2_idx, self.atom3_idx, self.atom4_idx]
+            selected_atoms = [
+                self.atom1_idx,
+                self.atom2_idx,
+                self.atom3_idx,
+                self.atom4_idx,
+            ]
 
             display_parts = []
             for atom_idx in selected_atoms:
@@ -233,25 +263,37 @@ class DihedralDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
             # Calculate current dihedral angle
             current_dihedral = calculate_dihedral(
                 self.mol.GetConformer().GetPositions(),
-                self.atom1_idx, self.atom2_idx,
-                self.atom3_idx, self.atom4_idx)
+                self.atom1_idx,
+                self.atom2_idx,
+                self.atom3_idx,
+                self.atom4_idx,
+            )
             self.dihedral_label.setText(f"Current dihedral: {current_dihedral:.2f}°")
             self.apply_button.setEnabled(True)
             # Update dihedral input box with current dihedral
             try:
                 self.dihedral_input.setText(f"{current_dihedral:.2f}")
             except Exception:
-                import traceback; traceback.print_exc()
+                import traceback
+
+                traceback.print_exc()
 
     def apply_changes(self):
         """変更を適用"""
-        if any(idx is None for idx in [self.atom1_idx, self.atom2_idx, self.atom3_idx, self.atom4_idx]):
+        if any(
+            idx is None
+            for idx in [self.atom1_idx, self.atom2_idx, self.atom3_idx, self.atom4_idx]
+        ):
             return
 
         try:
             new_dihedral = float(self.dihedral_input.text())
             if new_dihedral < -180 or new_dihedral > 180:
-                QMessageBox.warning(self, "Invalid Input", "Dihedral angle must be between -180 and 180 degrees.")
+                QMessageBox.warning(
+                    self,
+                    "Invalid Input",
+                    "Dihedral angle must be between -180 and 180 degrees.",
+                )
                 return
         except ValueError:
             QMessageBox.warning(self, "Invalid Input", "Please enter a valid number.")
@@ -277,8 +319,11 @@ class DihedralDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
         # Current dihedral angle
         current_dihedral = calculate_dihedral(
             self.mol.GetConformer().GetPositions(),
-            self.atom1_idx, self.atom2_idx,
-            self.atom3_idx, self.atom4_idx)
+            self.atom1_idx,
+            self.atom2_idx,
+            self.atom3_idx,
+            self.atom4_idx,
+        )
 
         # Calculate rotation angle needed
         rotation_angle_deg = new_dihedral_deg - current_dihedral
@@ -314,9 +359,13 @@ class DihedralDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
             cos_a = np.cos(angle)
             sin_a = np.sin(angle)
 
-            rotated = (translated_point * cos_a +
-                      np.cross(axis_direction, translated_point) * sin_a +
-                      axis_direction * np.dot(axis_direction, translated_point) * (1 - cos_a))
+            rotated = (
+                translated_point * cos_a
+                + np.cross(axis_direction, translated_point) * sin_a
+                + axis_direction
+                * np.dot(axis_direction, translated_point)
+                * (1 - cos_a)
+            )
 
             # Translate back to original coordinate system
             return rotated + axis_point
@@ -326,41 +375,53 @@ class DihedralDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
             half_rotation = rotation_angle_rad / 2
 
             # Get both connected groups
-            group1_atoms = get_connected_group(self.mol, self.atom2_idx, exclude=self.atom3_idx)
-            group4_atoms = get_connected_group(self.mol, self.atom3_idx, exclude=self.atom2_idx)
+            group1_atoms = get_connected_group(
+                self.mol, self.atom2_idx, exclude=self.atom3_idx
+            )
+            group4_atoms = get_connected_group(
+                self.mol, self.atom3_idx, exclude=self.atom2_idx
+            )
 
             # Rotate group1 (atom1 side) by -half_rotation
             for atom_idx in group1_atoms:
                 current_pos = np.array(conf.GetAtomPosition(atom_idx))
-                new_pos = rotate_point_around_axis(current_pos, pos2, rotation_axis, -half_rotation)
+                new_pos = rotate_point_around_axis(
+                    current_pos, pos2, rotation_axis, -half_rotation
+                )
                 conf.SetAtomPosition(atom_idx, new_pos.tolist())
                 self.main_window.atom_positions_3d[atom_idx] = new_pos
 
             # Rotate group4 (atom4 side) by +half_rotation
             for atom_idx in group4_atoms:
                 current_pos = np.array(conf.GetAtomPosition(atom_idx))
-                new_pos = rotate_point_around_axis(current_pos, pos2, rotation_axis, half_rotation)
+                new_pos = rotate_point_around_axis(
+                    current_pos, pos2, rotation_axis, half_rotation
+                )
                 conf.SetAtomPosition(atom_idx, new_pos.tolist())
                 self.main_window.atom_positions_3d[atom_idx] = new_pos
 
         elif self.move_group_radio.isChecked():
             # Move the connected group containing atom4
             # Find all atoms connected to atom3 (excluding atom2 side)
-            atoms_to_rotate = get_connected_group(self.mol, self.atom3_idx, exclude=self.atom2_idx)
+            atoms_to_rotate = get_connected_group(
+                self.mol, self.atom3_idx, exclude=self.atom2_idx
+            )
 
             # Rotate all atoms in the group
             for atom_idx in atoms_to_rotate:
                 current_pos = np.array(conf.GetAtomPosition(atom_idx))
-                new_pos = rotate_point_around_axis(current_pos, pos2, rotation_axis, rotation_angle_rad)
+                new_pos = rotate_point_around_axis(
+                    current_pos, pos2, rotation_axis, rotation_angle_rad
+                )
                 conf.SetAtomPosition(atom_idx, new_pos.tolist())
                 self.main_window.atom_positions_3d[atom_idx] = new_pos
         else:
             # Move only atom4
-            new_pos4 = rotate_point_around_axis(pos4, pos2, rotation_axis, rotation_angle_rad)
+            new_pos4 = rotate_point_around_axis(
+                pos4, pos2, rotation_axis, rotation_angle_rad
+            )
             conf.SetAtomPosition(self.atom4_idx, new_pos4.tolist())
             self.main_window.atom_positions_3d[self.atom4_idx] = new_pos4
 
         # Update the 3D view
         self.main_window.draw_molecule_3d(self.mol)
-
-

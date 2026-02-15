@@ -33,7 +33,7 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QMessageBox
 
 
-class AngleDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
+class AngleDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
     def __init__(self, mol, main_window, preselected_atoms=None, parent=None):
         QDialog.__init__(self, parent)
         Dialog3DPickingMixin.__init__(self)
@@ -57,7 +57,9 @@ class AngleDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
         layout = QVBoxLayout(self)
 
         # Instructions
-        instruction_label = QLabel("Click three atoms in order: first-vertex-third. The angle around the vertex atom will be adjusted.")
+        instruction_label = QLabel(
+            "Click three atoms in order: first-vertex-third. The angle around the vertex atom will be adjusted."
+        )
         instruction_label.setWordWrap(True)
         layout.addWidget(instruction_label)
 
@@ -82,11 +84,15 @@ class AngleDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
         group_layout = QVBoxLayout(group_box)
         group_layout.addWidget(QLabel("Rotation Options:"))
 
-        self.rotate_group_radio = QRadioButton("Atom 1,2: Fixed, Atom 3: Rotate connected group")
+        self.rotate_group_radio = QRadioButton(
+            "Atom 1,2: Fixed, Atom 3: Rotate connected group"
+        )
         self.rotate_group_radio.setChecked(True)
         group_layout.addWidget(self.rotate_group_radio)
 
-        self.rotate_atom_radio = QRadioButton("Atom 1,2: Fixed, Atom 3: Rotate atom only")
+        self.rotate_atom_radio = QRadioButton(
+            "Atom 1,2: Fixed, Atom 3: Rotate atom only"
+        )
         group_layout.addWidget(self.rotate_atom_radio)
 
         self.both_groups_radio = QRadioButton("Vertex fixed: Both arms rotate equally")
@@ -179,7 +185,9 @@ class AngleDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
         """選択された原子にラベルを表示"""
         selected_atoms = [self.atom1_idx, self.atom2_idx, self.atom3_idx]
         labels = ["1st", "2nd (vertex)", "3rd"]
-        pairs = [(idx, labels[i]) for i, idx in enumerate(selected_atoms) if idx is not None]
+        pairs = [
+            (idx, labels[i]) for i, idx in enumerate(selected_atoms) if idx is not None
+        ]
         self.show_atom_labels_for(pairs)
 
     def update_display(self):
@@ -195,10 +203,14 @@ class AngleDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
             try:
                 self.angle_input.clear()
             except Exception:
-                import traceback; traceback.print_exc()
+                import traceback
+
+                traceback.print_exc()
         elif self.atom2_idx is None:
             symbol1 = self.mol.GetAtomWithIdx(self.atom1_idx).GetSymbol()
-            self.selection_label.setText(f"First atom: {symbol1} (index {self.atom1_idx})")
+            self.selection_label.setText(
+                f"First atom: {symbol1} (index {self.atom1_idx})"
+            )
             self.angle_label.setText("")
             self.apply_button.setEnabled(False)
             # ラベル追加
@@ -207,11 +219,15 @@ class AngleDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
             try:
                 self.angle_input.clear()
             except Exception:
-                import traceback; traceback.print_exc()
+                import traceback
+
+                traceback.print_exc()
         elif self.atom3_idx is None:
             symbol1 = self.mol.GetAtomWithIdx(self.atom1_idx).GetSymbol()
             symbol2 = self.mol.GetAtomWithIdx(self.atom2_idx).GetSymbol()
-            self.selection_label.setText(f"Selected: {symbol1}({self.atom1_idx}) - {symbol2}({self.atom2_idx}) - ?")
+            self.selection_label.setText(
+                f"Selected: {symbol1}({self.atom1_idx}) - {symbol2}({self.atom2_idx}) - ?"
+            )
             self.angle_label.setText("")
             self.apply_button.setEnabled(False)
             # ラベル追加
@@ -221,12 +237,16 @@ class AngleDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
             try:
                 self.angle_input.clear()
             except Exception:
-                import traceback; traceback.print_exc()
+                import traceback
+
+                traceback.print_exc()
         else:
             symbol1 = self.mol.GetAtomWithIdx(self.atom1_idx).GetSymbol()
             symbol2 = self.mol.GetAtomWithIdx(self.atom2_idx).GetSymbol()
             symbol3 = self.mol.GetAtomWithIdx(self.atom3_idx).GetSymbol()
-            self.selection_label.setText(f"Angle: {symbol1}({self.atom1_idx}) - {symbol2}({self.atom2_idx}) - {symbol3}({self.atom3_idx})")
+            self.selection_label.setText(
+                f"Angle: {symbol1}({self.atom1_idx}) - {symbol2}({self.atom2_idx}) - {symbol3}({self.atom3_idx})"
+            )
 
             # Calculate current angle
             current_angle = self.calculate_angle()
@@ -236,7 +256,9 @@ class AngleDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
             try:
                 self.angle_input.setText(f"{current_angle:.2f}")
             except Exception:
-                import traceback; traceback.print_exc()
+                import traceback
+
+                traceback.print_exc()
             # ラベル追加
             self.add_selection_label(self.atom1_idx, "1")
             self.add_selection_label(self.atom2_idx, "2(vertex)")
@@ -265,7 +287,9 @@ class AngleDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
         try:
             new_angle = float(self.angle_input.text())
             if new_angle < 0 or new_angle >= 360:
-                QMessageBox.warning(self, "Invalid Input", "Angle must be between 0 and 360 degrees.")
+                QMessageBox.warning(
+                    self, "Invalid Input", "Angle must be between 0 and 360 degrees."
+                )
                 return
         except ValueError:
             QMessageBox.warning(self, "Invalid Input", "Please enter a valid number.")
@@ -291,8 +315,13 @@ class AngleDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
         vec2 = pos3 - pos2
 
         # Current angle
-        current_angle_rad = np.arccos(np.clip(
-            np.dot(vec1, vec2) / (np.linalg.norm(vec1) * np.linalg.norm(vec2)), -1.0, 1.0))
+        current_angle_rad = np.arccos(
+            np.clip(
+                np.dot(vec1, vec2) / (np.linalg.norm(vec1) * np.linalg.norm(vec2)),
+                -1.0,
+                1.0,
+            )
+        )
 
         # Target angle
         target_angle_rad = np.radians(new_angle_deg)
@@ -314,15 +343,23 @@ class AngleDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
         def rotate_vector(v, axis, angle):
             cos_a = np.cos(angle)
             sin_a = np.sin(angle)
-            return v * cos_a + np.cross(axis, v) * sin_a + axis * np.dot(axis, v) * (1 - cos_a)
+            return (
+                v * cos_a
+                + np.cross(axis, v) * sin_a
+                + axis * np.dot(axis, v) * (1 - cos_a)
+            )
 
         if self.both_groups_radio.isChecked():
             # Both arms rotate equally (half angle each in opposite directions)
             half_rotation = total_rotation_angle / 2
 
             # Get both connected groups
-            group1_atoms = get_connected_group(self.mol, self.atom1_idx, exclude=self.atom2_idx)
-            group3_atoms = get_connected_group(self.mol, self.atom3_idx, exclude=self.atom2_idx)
+            group1_atoms = get_connected_group(
+                self.mol, self.atom1_idx, exclude=self.atom2_idx
+            )
+            group3_atoms = get_connected_group(
+                self.mol, self.atom3_idx, exclude=self.atom2_idx
+            )
 
             # Rotate group 1 by -half_rotation
             for atom_idx in group1_atoms:
@@ -350,14 +387,18 @@ class AngleDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
             self.main_window.atom_positions_3d[self.atom3_idx] = new_pos3
         else:
             # Rotate the connected group around atom2 (vertex) - default behavior
-            atoms_to_move = get_connected_group(self.mol, self.atom3_idx, exclude=self.atom2_idx)
+            atoms_to_move = get_connected_group(
+                self.mol, self.atom3_idx, exclude=self.atom2_idx
+            )
 
             for atom_idx in atoms_to_move:
                 current_pos = np.array(conf.GetAtomPosition(atom_idx))
                 # Transform to coordinate system centered at atom2
                 relative_pos = current_pos - pos2
                 # Rotate around the rotation axis
-                rotated_pos = rotate_vector(relative_pos, rotation_axis, total_rotation_angle)
+                rotated_pos = rotate_vector(
+                    relative_pos, rotation_axis, total_rotation_angle
+                )
                 # Transform back to world coordinates
                 new_pos = pos2 + rotated_pos
                 conf.SetAtomPosition(atom_idx, new_pos.tolist())
@@ -365,5 +406,3 @@ class AngleDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
 
         # Update the 3D view
         self.main_window.draw_molecule_3d(self.mol)
-
-

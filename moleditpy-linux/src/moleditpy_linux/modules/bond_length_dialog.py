@@ -28,7 +28,7 @@ from .dialog3_d_picking_mixin import Dialog3DPickingMixin
 from .mol_geometry import get_connected_group
 
 
-class BondLengthDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
+class BondLengthDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
     def __init__(self, mol, main_window, preselected_atoms=None, parent=None):
         QDialog.__init__(self, parent)
         Dialog3DPickingMixin.__init__(self)
@@ -51,7 +51,9 @@ class BondLengthDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
         layout = QVBoxLayout(self)
 
         # Instructions
-        instruction_label = QLabel("Click two atoms in the 3D view to select a bond, then specify the new length.")
+        instruction_label = QLabel(
+            "Click two atoms in the 3D view to select a bond, then specify the new length."
+        )
         instruction_label.setWordWrap(True)
         layout.addWidget(instruction_label)
 
@@ -76,14 +78,18 @@ class BondLengthDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
         group_layout = QVBoxLayout(group_box)
         group_layout.addWidget(QLabel("Movement Options:"))
 
-        self.atom1_fix_group_radio = QRadioButton("Atom 1: Fixed, Atom 2: Move connected group")
+        self.atom1_fix_group_radio = QRadioButton(
+            "Atom 1: Fixed, Atom 2: Move connected group"
+        )
         self.atom1_fix_group_radio.setChecked(True)
         group_layout.addWidget(self.atom1_fix_group_radio)
 
         self.atom1_fix_radio = QRadioButton("Atom 1: Fixed, Atom 2: Move atom only")
         group_layout.addWidget(self.atom1_fix_radio)
 
-        self.both_groups_radio = QRadioButton("Both groups: Move towards center equally")
+        self.both_groups_radio = QRadioButton(
+            "Both groups: Move towards center equally"
+        )
         group_layout.addWidget(self.both_groups_radio)
 
         layout.addWidget(group_box)
@@ -169,7 +175,9 @@ class BondLengthDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
         """選択された原子にラベルを表示"""
         selected_atoms = [self.atom1_idx, self.atom2_idx]
         labels = ["1st", "2nd"]
-        pairs = [(idx, labels[i]) for i, idx in enumerate(selected_atoms) if idx is not None]
+        pairs = [
+            (idx, labels[i]) for i, idx in enumerate(selected_atoms) if idx is not None
+        ]
         self.show_atom_labels_for(pairs)
 
     def update_display(self):
@@ -185,10 +193,14 @@ class BondLengthDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
             try:
                 self.distance_input.clear()
             except Exception:
-                import traceback; traceback.print_exc()
+                import traceback
+
+                traceback.print_exc()
         elif self.atom2_idx is None:
             symbol1 = self.mol.GetAtomWithIdx(self.atom1_idx).GetSymbol()
-            self.selection_label.setText(f"First atom: {symbol1} (index {self.atom1_idx})")
+            self.selection_label.setText(
+                f"First atom: {symbol1} (index {self.atom1_idx})"
+            )
             self.distance_label.setText("")
             self.apply_button.setEnabled(False)
             # ラベル追加
@@ -197,11 +209,15 @@ class BondLengthDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
             try:
                 self.distance_input.clear()
             except Exception:
-                import traceback; traceback.print_exc()
+                import traceback
+
+                traceback.print_exc()
         else:
             symbol1 = self.mol.GetAtomWithIdx(self.atom1_idx).GetSymbol()
             symbol2 = self.mol.GetAtomWithIdx(self.atom2_idx).GetSymbol()
-            self.selection_label.setText(f"Bond: {symbol1}({self.atom1_idx}) - {symbol2}({self.atom2_idx})")
+            self.selection_label.setText(
+                f"Bond: {symbol1}({self.atom1_idx}) - {symbol2}({self.atom2_idx})"
+            )
 
             # Calculate current distance
             conf = self.mol.GetConformer()
@@ -214,7 +230,9 @@ class BondLengthDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
             try:
                 self.distance_input.setText(f"{current_distance:.3f}")
             except Exception:
-                import traceback; traceback.print_exc()
+                import traceback
+
+                traceback.print_exc()
             # ラベル追加
             self.add_selection_label(self.atom1_idx, "1")
             self.add_selection_label(self.atom2_idx, "2")
@@ -267,8 +285,12 @@ class BondLengthDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
             new_pos2 = bond_center + direction * half_distance
 
             # Get both connected groups
-            group1_atoms = get_connected_group(self.mol, self.atom1_idx, exclude=self.atom2_idx)
-            group2_atoms = get_connected_group(self.mol, self.atom2_idx, exclude=self.atom1_idx)
+            group1_atoms = get_connected_group(
+                self.mol, self.atom1_idx, exclude=self.atom2_idx
+            )
+            group2_atoms = get_connected_group(
+                self.mol, self.atom2_idx, exclude=self.atom1_idx
+            )
 
             # Calculate displacements
             displacement1 = new_pos1 - pos1
@@ -296,7 +318,9 @@ class BondLengthDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
         else:
             # Move the connected group (default behavior)
             new_pos2 = pos1 + direction * new_distance
-            atoms_to_move = get_connected_group(self.mol, self.atom2_idx, exclude=self.atom1_idx)
+            atoms_to_move = get_connected_group(
+                self.mol, self.atom2_idx, exclude=self.atom1_idx
+            )
             displacement = new_pos2 - pos2
 
             for atom_idx in atoms_to_move:
@@ -307,5 +331,3 @@ class BondLengthDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
 
         # Update the 3D view
         self.main_window.draw_molecule_3d(self.mol)
-
-

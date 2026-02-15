@@ -41,19 +41,31 @@ except Exception:
 
 from PyQt6 import sip
 
+
 def sip_isdeleted_safe(obj):
     try:
         return sip.isdeleted(obj)
     except Exception:
         return False
 
+
 class AtomItem(QGraphicsItem):
     def __init__(self, atom_id, symbol, pos, charge=0, radical=0):
         super().__init__()
-        self.atom_id, self.symbol, self.charge, self.radical, self.bonds, self.chiral_label = atom_id, symbol, charge, radical, [], None
+        (
+            self.atom_id,
+            self.symbol,
+            self.charge,
+            self.radical,
+            self.bonds,
+            self.chiral_label,
+        ) = atom_id, symbol, charge, radical, [], None
         self.setPos(pos)
         self.implicit_h_count = 0
-        self.setFlags(QGraphicsItem.GraphicsItemFlag.ItemIsMovable | QGraphicsItem.GraphicsItemFlag.ItemIsSelectable)
+        self.setFlags(
+            QGraphicsItem.GraphicsItemFlag.ItemIsMovable
+            | QGraphicsItem.GraphicsItemFlag.ItemIsSelectable
+        )
         self.setZValue(1)
         self.update_style()
         self.setAcceptHoverEvents(True)
@@ -70,9 +82,9 @@ class AtomItem(QGraphicsItem):
         try:
             if self.scene() and self.scene().views():
                 win = self.scene().views()[0].window()
-                if win and hasattr(win, 'settings'):
-                    font_size = win.settings.get('atom_font_size_2d', 20)
-                    font_family = win.settings.get('atom_font_family_2d', FONT_FAMILY)
+                if win and hasattr(win, "settings"):
+                    font_size = win.settings.get("atom_font_size_2d", 20)
+                    font_family = win.settings.get("atom_font_family_2d", FONT_FAMILY)
             else:
                 font_family = FONT_FAMILY
         except Exception:
@@ -81,7 +93,12 @@ class AtomItem(QGraphicsItem):
         self.font = QFont(font_family, font_size, FONT_WEIGHT_BOLD)
         self.prepareGeometryChange()
 
-        self.is_visible = not (self.symbol == 'C' and len(self.bonds) > 0 and self.charge == 0 and self.radical == 0)
+        self.is_visible = not (
+            self.symbol == "C"
+            and len(self.bonds) > 0
+            and self.charge == 0
+            and self.radical == 0
+        )
         self.update()
 
     def boundingRect(self):
@@ -92,20 +109,24 @@ class AtomItem(QGraphicsItem):
         try:
             if self.scene() and self.scene().views():
                 win = self.scene().views()[0].window()
-                if win and hasattr(win, 'settings'):
-                    font_size = win.settings.get('atom_font_size_2d', 20)
-                    font_family = win.settings.get('atom_font_family_2d', FONT_FAMILY)
+                if win and hasattr(win, "settings"):
+                    font_size = win.settings.get("atom_font_size_2d", 20)
+                    font_family = win.settings.get("atom_font_family_2d", FONT_FAMILY)
         except Exception:
-            import traceback; traceback.print_exc()
+            import traceback
+
+            traceback.print_exc()
         font = QFont(font_family, font_size, FONT_WEIGHT_BOLD)
         fm = QFontMetricsF(font)
 
         hydrogen_part = ""
         if self.implicit_h_count > 0:
-            is_skeletal_carbon = (self.symbol == 'C' and
-                                      self.charge == 0 and
-                                      self.radical == 0 and
-                                      len(self.bonds) > 0)
+            is_skeletal_carbon = (
+                self.symbol == "C"
+                and self.charge == 0
+                and self.radical == 0
+                and len(self.bonds) > 0
+            )
             if not is_skeletal_carbon:
                 hydrogen_part = "H"
                 if self.implicit_h_count > 1:
@@ -170,14 +191,16 @@ class AtomItem(QGraphicsItem):
             elif self.charge == -1:
                 charge_str = "-"
             else:
-                sign = '+' if self.charge > 0 else '-'
+                sign = "+" if self.charge > 0 else "-"
                 charge_str = f"{abs(self.charge)}{sign}"
             charge_font = QFont("Arial", 12, QFont.Weight.Bold)
             charge_fm = QFontMetricsF(charge_font)
             charge_rect = charge_fm.boundingRect(charge_str)
 
             if flip_text:
-                charge_pos = QPointF(text_rect.left() - charge_rect.width() - 2, text_rect.top())
+                charge_pos = QPointF(
+                    text_rect.left() - charge_rect.width() - 2, text_rect.top()
+                )
             else:
                 charge_pos = QPointF(text_rect.right() + 2, text_rect.top())
             charge_rect.moveTopLeft(charge_pos)
@@ -185,7 +208,9 @@ class AtomItem(QGraphicsItem):
 
         # ラジカル記号の領域を計算に含める
         if self.radical > 0:
-            radical_area = QRectF(text_rect.center().x() - 8, text_rect.top() - 8, 16, 8)
+            radical_area = QRectF(
+                text_rect.center().x() - 8, text_rect.top() - 8, 16, 8
+            )
             full_visual_rect = full_visual_rect.united(radical_area)
 
         # 3. 選択ハイライト等のための最終的なマージンを追加する
@@ -210,18 +235,22 @@ class AtomItem(QGraphicsItem):
 
     def paint(self, painter, option, widget):
         # Color logic: check if we should use bond color (uniform) or CPK (element-specific)
-        color = CPK_COLORS.get(self.symbol, CPK_COLORS['DEFAULT'])
+        color = CPK_COLORS.get(self.symbol, CPK_COLORS["DEFAULT"])
         try:
             if self.scene() and self.scene().views():
                 win = self.scene().views()[0].window()
-                if win and hasattr(win, 'settings'):
+                if win and hasattr(win, "settings"):
                     # Force Hydrogen to use bond color (invisible on white bg otherwise)
                     # OR if the global setting is checked
-                    if self.symbol == 'H' or win.settings.get('atom_use_bond_color_2d', False):
-                        bond_col = win.settings.get('bond_color_2d', '#222222')
+                    if self.symbol == "H" or win.settings.get(
+                        "atom_use_bond_color_2d", False
+                    ):
+                        bond_col = win.settings.get("bond_color_2d", "#222222")
                         color = QColor(bond_col)
         except Exception:
-            import traceback; traceback.print_exc()
+            import traceback
+
+            traceback.print_exc()
 
         if self.is_visible:
             # 1. 描画の準備
@@ -232,69 +261,76 @@ class AtomItem(QGraphicsItem):
             # --- 水素部分のテキストを作成 ---
             hydrogen_part = ""
             if self.implicit_h_count > 0:
-                is_skeletal_carbon = (self.symbol == 'C' and
-                                      self.charge == 0 and
-                                      self.radical == 0 and
-                                      len(self.bonds) > 0)
+                is_skeletal_carbon = (
+                    self.symbol == "C"
+                    and self.charge == 0
+                    and self.radical == 0
+                    and len(self.bonds) > 0
+                )
                 if not is_skeletal_carbon:
                     hydrogen_part = "H"
                     if self.implicit_h_count > 1:
                         subscript_map = str.maketrans("0123456789", "₀₁₂₃₄₅₆₇₈₉")
-                        hydrogen_part += str(self.implicit_h_count).translate(subscript_map)
+                        hydrogen_part += str(self.implicit_h_count).translate(
+                            subscript_map
+                        )
 
             # --- テキストを反転させるか決定 ---
             flip_text = False
             # 水素ラベルがあり、結合が1本以上ある場合のみ反転を考慮
             if hydrogen_part and self.bonds:
-
-                    # 相対的なX座標で、結合が左右どちらに偏っているか判定
-                    my_pos_x = self.pos().x()
-                    total_dx = 0.0
-                    # Defensive: some bonds may have missing atom references (None) or
-                    # wrappers that were deleted by SIP. Only accumulate valid partner positions.
-                    for bond in self.bonds:
+                # 相対的なX座標で、結合が左右どちらに偏っているか判定
+                my_pos_x = self.pos().x()
+                total_dx = 0.0
+                # Defensive: some bonds may have missing atom references (None) or
+                # wrappers that were deleted by SIP. Only accumulate valid partner positions.
+                for bond in self.bonds:
+                    try:
+                        other_atom = bond.atom1 if bond.atom2 is self else bond.atom2
+                        if other_atom is None:
+                            continue
+                        # If SIP reports the wrapper as deleted, skip it
                         try:
-                            other_atom = bond.atom1 if bond.atom2 is self else bond.atom2
-                            if other_atom is None:
+                            if sip_isdeleted_safe(other_atom):
                                 continue
-                            # If SIP reports the wrapper as deleted, skip it
-                            try:
-                                if sip_isdeleted_safe(other_atom):
-                                    continue
-                            except Exception:
-                                # If sip check fails, continue defensively
-                                pass
-
-                            other_pos = None
-                            try:
-                                other_pos = other_atom.pos()
-                            except Exception:
-                                # Accessing .pos() may raise if the C++ object was destroyed
-                                other_pos = None
-
-                            if other_pos is None:
-                                continue
-
-                            total_dx += (other_pos.x() - my_pos_x)
                         except Exception:
-                            # Skip any problematic bond/partner rather than crashing the paint
+                            # If sip check fails, continue defensively
+                            pass
+
+                        other_pos = None
+                        try:
+                            other_pos = other_atom.pos()
+                        except Exception:
+                            # Accessing .pos() may raise if the C++ object was destroyed
+                            other_pos = None
+
+                        if other_pos is None:
                             continue
 
-                    # 結合が主に右側にある場合はテキストを反転させる
-                    if total_dx > 0:
-                        flip_text = True
+                        total_dx += other_pos.x() - my_pos_x
+                    except Exception:
+                        # Skip any problematic bond/partner rather than crashing the paint
+                        continue
+
+                # 結合が主に右側にある場合はテキストを反転させる
+                if total_dx > 0:
+                    flip_text = True
 
             # --- 表示テキストとアライメントを最終決定 ---
             if flip_text:
                 display_text = hydrogen_part + self.symbol
-                alignment_flag = Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
+                alignment_flag = (
+                    Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
+                )
             else:
                 display_text = self.symbol + hydrogen_part
-                alignment_flag = Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter
+                alignment_flag = (
+                    Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter
+                )
 
             text_rect = fm.boundingRect(display_text)
             text_rect.adjust(-2, -2, 2, 2)
-            symbol_rect = fm.boundingRect(self.symbol) # 主元素のみの幅を計算
+            symbol_rect = fm.boundingRect(self.symbol)  # 主元素のみの幅を計算
 
             # --- テキストの描画位置を決定 ---
             # 水素ラベルがない場合 (従来通り中央揃え)
@@ -321,8 +357,12 @@ class AtomItem(QGraphicsItem):
                     # 背景が透明の場合は、CompositionMode_Clearを使って
                     # 重なっている結合の線を「消しゴム」のように消す
                     painter.save()
-                    painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_Clear)
-                    painter.setBrush(QColor(0, 0, 0, 255)) # 色は何でも良い（アルファが重要）
+                    painter.setCompositionMode(
+                        QPainter.CompositionMode.CompositionMode_Clear
+                    )
+                    painter.setBrush(
+                        QColor(0, 0, 0, 255)
+                    )  # 色は何でも良い（アルファが重要）
                     painter.setPen(Qt.PenStyle.NoPen)
                     painter.drawEllipse(bg_rect)
                     painter.restore()
@@ -345,16 +385,22 @@ class AtomItem(QGraphicsItem):
                 elif self.charge == -1:
                     charge_str = "-"
                 else:
-                    sign = '+' if self.charge > 0 else '-'
+                    sign = "+" if self.charge > 0 else "-"
                     charge_str = f"{abs(self.charge)}{sign}"
                 charge_font = QFont("Arial", 12, QFont.Weight.Bold)
                 painter.setFont(charge_font)
                 charge_rect = painter.fontMetrics().boundingRect(charge_str)
                 # 電荷の位置も反転に対応
                 if flip_text:
-                    charge_pos = QPointF(text_rect.left() - charge_rect.width() -2, text_rect.top() + charge_rect.height() - 2)
+                    charge_pos = QPointF(
+                        text_rect.left() - charge_rect.width() - 2,
+                        text_rect.top() + charge_rect.height() - 2,
+                    )
                 else:
-                    charge_pos = QPointF(text_rect.right() + 2, text_rect.top() + charge_rect.height() - 2)
+                    charge_pos = QPointF(
+                        text_rect.right() + 2,
+                        text_rect.top() + charge_rect.height() - 2,
+                    )
                 painter.setPen(Qt.GlobalColor.black)
                 painter.drawText(charge_pos, charge_str)
 
@@ -363,10 +409,16 @@ class AtomItem(QGraphicsItem):
                 painter.setPen(Qt.PenStyle.NoPen)
                 radical_pos_y = text_rect.top() - 5
                 if self.radical == 1:
-                    painter.drawEllipse(QPointF(text_rect.center().x(), radical_pos_y), 3, 3)
+                    painter.drawEllipse(
+                        QPointF(text_rect.center().x(), radical_pos_y), 3, 3
+                    )
                 elif self.radical == 2:
-                    painter.drawEllipse(QPointF(text_rect.center().x() - 5, radical_pos_y), 3, 3)
-                    painter.drawEllipse(QPointF(text_rect.center().x() + 5, radical_pos_y), 3, 3)
+                    painter.drawEllipse(
+                        QPointF(text_rect.center().x() - 5, radical_pos_y), 3, 3
+                    )
+                    painter.drawEllipse(
+                        QPointF(text_rect.center().x() + 5, radical_pos_y), 3, 3
+                    )
 
         # --- 選択時のハイライトなど ---
         if self.has_problem:
@@ -377,7 +429,7 @@ class AtomItem(QGraphicsItem):
             painter.setBrush(Qt.BrushStyle.NoBrush)
             painter.setPen(QPen(QColor(0, 100, 255), 3))
             painter.drawRect(self.boundingRect())
-        if (not self.isSelected()) and getattr(self, 'hovered', False):
+        if (not self.isSelected()) and getattr(self, "hovered", False):
             pen = QPen(QColor(144, 238, 144, 200), 3)
             pen.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
             painter.setBrush(Qt.BrushStyle.NoBrush)

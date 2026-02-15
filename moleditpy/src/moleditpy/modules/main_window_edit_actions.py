@@ -10,7 +10,6 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
-
 """
 main_window_edit_actions.py
 MainWindow (main_window.py) から分離されたモジュール
@@ -93,9 +92,11 @@ class Rotate2DDialog(QDialog):
     def get_angle(self):
         return self.angle_spin.value()
 
+
 try:
     from PyQt6 import sip as _sip  # type: ignore
-    _sip_isdeleted = getattr(_sip, 'isdeleted', None)
+
+    _sip_isdeleted = getattr(_sip, "isdeleted", None)
 except Exception:
     _sip = None
     _sip_isdeleted = None
@@ -121,13 +122,19 @@ try:
 except Exception:
     from modules import sip_isdeleted_safe
 
+
 # --- クラス定義 ---
 class MainWindowEditActions(object):
-    """ main_window.py から分離された機能クラス """
+    """main_window.py から分離された機能クラス"""
+
     def copy_selection(self):
         """選択された原子と結合をクリップボードにコピーする"""
         try:
-            selected_atoms = [item for item in self.scene.selectedItems() if isinstance(item, AtomItem)]
+            selected_atoms = [
+                item
+                for item in self.scene.selectedItems()
+                if isinstance(item, AtomItem)
+            ]
             if not selected_atoms:
                 return
 
@@ -137,7 +144,7 @@ class MainWindowEditActions(object):
             # 選択された原子の幾何学的中心を計算
             center = QPointF(
                 sum(atom.pos().x() for atom in selected_atoms) / len(selected_atoms),
-                sum(atom.pos().y() for atom in selected_atoms) / len(selected_atoms)
+                sum(atom.pos().y() for atom in selected_atoms) / len(selected_atoms),
             )
 
             # コピー対象の原子データをリストに格納（位置は中心からの相対座標）
@@ -146,26 +153,32 @@ class MainWindowEditActions(object):
             fragment_atoms = []
             for i, atom in enumerate(selected_atoms):
                 atom_id_to_idx_map[atom.atom_id] = i
-                fragment_atoms.append({
-                    'symbol': atom.symbol,
-                    'rel_pos': atom.pos() - center,
-                    'charge': atom.charge,
-                    'radical': atom.radical,
-                })
+                fragment_atoms.append(
+                    {
+                        "symbol": atom.symbol,
+                        "rel_pos": atom.pos() - center,
+                        "charge": atom.charge,
+                        "radical": atom.radical,
+                    }
+                )
 
             # 選択された原子同士を結ぶ結合のみをリストに格納
             fragment_bonds = []
             for (id1, id2), bond_data in self.data.bonds.items():
                 if id1 in selected_atom_ids and id2 in selected_atom_ids:
-                    fragment_bonds.append({
-                        'idx1': atom_id_to_idx_map[id1],
-                        'idx2': atom_id_to_idx_map[id2],
-                        'order': bond_data['order'],
-                        'stereo': bond_data.get('stereo', 0),  # E/Z立体化学情報も保存
-                    })
+                    fragment_bonds.append(
+                        {
+                            "idx1": atom_id_to_idx_map[id1],
+                            "idx2": atom_id_to_idx_map[id2],
+                            "order": bond_data["order"],
+                            "stereo": bond_data.get(
+                                "stereo", 0
+                            ),  # E/Z立体化学情報も保存
+                        }
+                    )
 
             # pickleを使ってデータをバイト配列にシリアライズ
-            data_to_pickle = {'atoms': fragment_atoms, 'bonds': fragment_bonds}
+            data_to_pickle = {"atoms": fragment_atoms, "bonds": fragment_bonds}
             byte_array = QByteArray()
             buffer = io.BytesIO()
             pickle.dump(data_to_pickle, buffer)
@@ -175,7 +188,9 @@ class MainWindowEditActions(object):
             mime_data = QMimeData()
             mime_data.setData(CLIPBOARD_MIME_TYPE, byte_array)
             QApplication.clipboard().setMimeData(mime_data)
-            self.statusBar().showMessage(f"Copied {len(fragment_atoms)} atoms and {len(fragment_bonds)} bonds.")
+            self.statusBar().showMessage(
+                f"Copied {len(fragment_atoms)} atoms and {len(fragment_bonds)} bonds."
+            )
 
         except Exception as e:
             print(f"Error during copy operation: {e}")
@@ -219,32 +234,39 @@ class MainWindowEditActions(object):
                 self.statusBar().showMessage("Error: Invalid clipboard data format")
                 return
 
-            paste_center_pos = self.view_2d.mapToScene(self.view_2d.mapFromGlobal(QCursor.pos()))
+            paste_center_pos = self.view_2d.mapToScene(
+                self.view_2d.mapFromGlobal(QCursor.pos())
+            )
             self.scene.clearSelection()
 
             new_atoms = []
-            for atom_data in fragment_data['atoms']:
-                pos = paste_center_pos + atom_data['rel_pos']
+            for atom_data in fragment_data["atoms"]:
+                pos = paste_center_pos + atom_data["rel_pos"]
                 new_id = self.scene.create_atom(
-                    atom_data['symbol'], pos,
-                    charge=atom_data.get('charge', 0),
-                    radical=atom_data.get('radical', 0)
+                    atom_data["symbol"],
+                    pos,
+                    charge=atom_data.get("charge", 0),
+                    radical=atom_data.get("radical", 0),
                 )
-                new_item = self.data.atoms[new_id]['item']
+                new_item = self.data.atoms[new_id]["item"]
                 new_atoms.append(new_item)
                 new_item.setSelected(True)
 
-            for bond_data in fragment_data['bonds']:
-                atom1 = new_atoms[bond_data['idx1']]
-                atom2 = new_atoms[bond_data['idx2']]
+            for bond_data in fragment_data["bonds"]:
+                atom1 = new_atoms[bond_data["idx1"]]
+                atom2 = new_atoms[bond_data["idx2"]]
                 self.scene.create_bond(
-                    atom1, atom2,
-                    bond_order=bond_data.get('order', 1),
-                    bond_stereo=bond_data.get('stereo', 0)  # E/Z立体化学情報も復元
+                    atom1,
+                    atom2,
+                    bond_order=bond_data.get("order", 1),
+                    bond_stereo=bond_data.get("stereo", 0),  # E/Z立体化学情報も復元
                 )
 
             self.push_undo_state()
-            self.statusBar().showMessage(f"Pasted {len(fragment_data['atoms'])} atoms and {len(fragment_data['bonds'])} bonds.", 2000)
+            self.statusBar().showMessage(
+                f"Pasted {len(fragment_data['atoms'])} atoms and {len(fragment_data['bonds'])} bonds.",
+                2000,
+            )
 
         except Exception as e:
             print(f"Error during paste operation: {e}")
@@ -263,9 +285,9 @@ class MainWindowEditActions(object):
             # Iterate over a snapshot of atoms to avoid "dictionary changed size"
             for atom_id, atom_data in list(self.data.atoms.items()):
                 try:
-                    if atom_data.get('symbol') != 'H':
+                    if atom_data.get("symbol") != "H":
                         continue
-                    item = atom_data.get('item')
+                    item = atom_data.get("item")
                     # Only collect live AtomItem wrappers
                     if item is None:
                         continue
@@ -341,14 +363,16 @@ class MainWindowEditActions(object):
                 try:
                     QApplication.processEvents()
                 except Exception:
-                    import traceback; traceback.print_exc()
+                    import traceback
+
+                    traceback.print_exc()
 
             # Determine how many hydrogens actually were removed by re-scanning data
             remaining_h = 0
             try:
                 for _, atom_data in list(self.data.atoms.items()):
                     try:
-                        if atom_data.get('symbol') == 'H':
+                        if atom_data.get("symbol") == "H":
                             remaining_h += 1
                     except Exception:
                         continue
@@ -364,14 +388,20 @@ class MainWindowEditActions(object):
                 except Exception:
                     # Do not allow undo stack problems to crash the app
                     pass
-                self.statusBar().showMessage(f"Removed {removed_count} hydrogen atoms.", 2000)
+                self.statusBar().showMessage(
+                    f"Removed {removed_count} hydrogen atoms.", 2000
+                )
             else:
                 # If nothing removed but we attempted, show an informative message
                 if deleted_any:
                     # Deleted something but couldn't determine count reliably
-                    self.statusBar().showMessage("Removed hydrogen atoms (count unknown).", 2000)
+                    self.statusBar().showMessage(
+                        "Removed hydrogen atoms (count unknown).", 2000
+                    )
                 else:
-                    self.statusBar().showMessage("Failed to remove hydrogen atoms or none found.")
+                    self.statusBar().showMessage(
+                        "Failed to remove hydrogen atoms or none found."
+                    )
 
         except Exception as e:
             # Capture and log unexpected errors but don't let them crash the UI
@@ -380,7 +410,9 @@ class MainWindowEditActions(object):
             try:
                 self.statusBar().showMessage(f"Error removing hydrogen atoms: {e}")
             except Exception:
-                import traceback; traceback.print_exc()
+                import traceback
+
+                traceback.print_exc()
 
     def add_hydrogen_atoms(self):
         """RDKitで各原子の暗黙の水素数を調べ、その数だけ明示的な水素原子と単結合を作成する（2Dビュー）。
@@ -392,10 +424,11 @@ class MainWindowEditActions(object):
           結合は `self.scene.create_bond(atom_item, hydrogen_item, bond_order=1)` で作成する。
         """
         try:
-
             mol = self.data.to_rdkit_mol(use_2d_stereo=False)
             if not mol or mol.GetNumAtoms() == 0:
-                self.statusBar().showMessage("No molecule available to compute hydrogens.", 2000)
+                self.statusBar().showMessage(
+                    "No molecule available to compute hydrogens.", 2000
+                )
                 return
 
             added_count = 0
@@ -414,14 +447,22 @@ class MainWindowEditActions(object):
                     continue
 
                 # 暗黙水素数を優先して取得。存在しない場合は総水素数 - 明示水素数を使用
-                implicit_h = int(rd_atom.GetNumImplicitHs()) if hasattr(rd_atom, 'GetNumImplicitHs') else 0
+                implicit_h = (
+                    int(rd_atom.GetNumImplicitHs())
+                    if hasattr(rd_atom, "GetNumImplicitHs")
+                    else 0
+                )
                 if implicit_h is None or implicit_h < 0:
                     implicit_h = 0
                 if implicit_h == 0:
                     # フォールバック
                     try:
                         total_h = int(rd_atom.GetTotalNumHs())
-                        explicit_h = int(rd_atom.GetNumExplicitHs()) if hasattr(rd_atom, 'GetNumExplicitHs') else 0
+                        explicit_h = (
+                            int(rd_atom.GetNumExplicitHs())
+                            if hasattr(rd_atom, "GetNumExplicitHs")
+                            else 0
+                        )
                         implicit_h = max(0, total_h - explicit_h)
                     except Exception:
                         implicit_h = 0
@@ -429,7 +470,7 @@ class MainWindowEditActions(object):
                 if implicit_h <= 0:
                     continue
 
-                parent_item = self.data.atoms[orig_id]['item']
+                parent_item = self.data.atoms[orig_id]["item"]
                 parent_pos = parent_item.pos()
 
                 # 周囲の近接原子の方向を取得して、水素を邪魔しないように角度を決定
@@ -441,23 +482,23 @@ class MainWindowEditActions(object):
                         try:
                             if a1 == orig_id and a2 in self.data.atoms:
                                 neigh = self.data.atoms[a2]
-                                if neigh.get('symbol') == 'H':
+                                if neigh.get("symbol") == "H":
                                     continue
-                                if neigh.get('item') is None:
+                                if neigh.get("item") is None:
                                     continue
-                                if sip_isdeleted_safe(neigh.get('item')):
+                                if sip_isdeleted_safe(neigh.get("item")):
                                     continue
-                                vec = neigh['item'].pos() - parent_pos
+                                vec = neigh["item"].pos() - parent_pos
                                 neighbor_angles.append(math.atan2(vec.y(), vec.x()))
                             elif a2 == orig_id and a1 in self.data.atoms:
                                 neigh = self.data.atoms[a1]
-                                if neigh.get('symbol') == 'H':
+                                if neigh.get("symbol") == "H":
                                     continue
-                                if neigh.get('item') is None:
+                                if neigh.get("item") is None:
                                     continue
-                                if sip_isdeleted_safe(neigh.get('item')):
+                                if sip_isdeleted_safe(neigh.get("item")):
                                     continue
-                                vec = neigh['item'].pos() - parent_pos
+                                vec = neigh["item"].pos() - parent_pos
                                 neighbor_angles.append(math.atan2(vec.y(), vec.x()))
                         except Exception:
                             # 個々の近傍読み取りの問題は無視して続行
@@ -477,7 +518,7 @@ class MainWindowEditActions(object):
                         return 1
                     if i == 2:
                         return 2
-                    return 0  #4th+ hydrogens are all plain
+                    return 0  # 4th+ hydrogens are all plain
 
                 # 角度配置を改善: 既存の結合角度の最大ギャップを見つけ、
                 # そこに水素を均等配置する。既存結合が無ければ全周に均等配置。
@@ -490,7 +531,10 @@ class MainWindowEditActions(object):
                             target_angles.append(angle)
                     else:
                         # 正規化してソート
-                        angs = [((a + 2.0 * math.pi) if a < 0 else a) for a in neighbor_angles]
+                        angs = [
+                            ((a + 2.0 * math.pi) if a < 0 else a)
+                            for a in neighbor_angles
+                        ]
                         angs = sorted(angs)
                         # ギャップを計算（循環含む）
                         gaps = []  # list of (gap_size, start_angle, end_angle)
@@ -534,11 +578,13 @@ class MainWindowEditActions(object):
 
                     # 新しい水素原子を作成
                     try:
-                        new_id = self.scene.create_atom('H', pos)
-                        new_item = self.data.atoms[new_id]['item']
+                        new_id = self.scene.create_atom("H", pos)
+                        new_item = self.data.atoms[new_id]["item"]
                         # bond_stereo を指定（最初は plain=0, 次に wedge/dash）
                         stereo = _choose_stereo(h_idx)
-                        self.scene.create_bond(parent_item, new_item, bond_order=1, bond_stereo=stereo)
+                        self.scene.create_bond(
+                            parent_item, new_item, bond_order=1, bond_stereo=stereo
+                        )
                         added_items.append(new_item)
                         added_count += 1
                     except Exception as e:
@@ -547,16 +593,22 @@ class MainWindowEditActions(object):
 
             if added_count > 0:
                 self.push_undo_state()
-                self.statusBar().showMessage(f"Added {added_count} hydrogen atoms.", 2000)
+                self.statusBar().showMessage(
+                    f"Added {added_count} hydrogen atoms.", 2000
+                )
                 # 選択を有効化して追加した原子を選択状態にする
                 try:
                     self.scene.clearSelection()
                     for it in added_items:
                         it.setSelected(True)
                 except Exception:
-                    import traceback; traceback.print_exc()
+                    import traceback
+
+                    traceback.print_exc()
             else:
-                self.statusBar().showMessage("No implicit hydrogens found to add.", 2000)
+                self.statusBar().showMessage(
+                    "No implicit hydrogens found to add.", 2000
+                )
 
         except Exception as e:
             print(f"Error during hydrogen addition: {e}")
@@ -572,14 +624,16 @@ class MainWindowEditActions(object):
 
             clipboard = QApplication.clipboard()
             mime_data = clipboard.mimeData()
-            self.paste_action.setEnabled(mime_data is not None and mime_data.hasFormat(CLIPBOARD_MIME_TYPE))
+            self.paste_action.setEnabled(
+                mime_data is not None and mime_data.hasFormat(CLIPBOARD_MIME_TYPE)
+            )
         except RuntimeError:
             pass
 
     def open_rotate_2d_dialog(self):
         """2D回転ダイアログを開く"""
         # Initialize last_rotation_angle if not present
-        if not hasattr(self, 'last_rotation_angle'):
+        if not hasattr(self, "last_rotation_angle"):
             self.last_rotation_angle = 0
 
         dialog = Rotate2DDialog(self, initial_angle=self.last_rotation_angle)
@@ -593,11 +647,17 @@ class MainWindowEditActions(object):
         try:
             # Determine target atoms
             selected_items = self.scene.selectedItems()
-            target_atoms = [item for item in selected_items if isinstance(item, AtomItem)]
+            target_atoms = [
+                item for item in selected_items if isinstance(item, AtomItem)
+            ]
 
             # If no selection, rotate everything
             if not target_atoms:
-                target_atoms = [data['item'] for data in self.data.atoms.values() if data.get('item') and not sip_isdeleted_safe(data['item'])]
+                target_atoms = [
+                    data["item"]
+                    for data in self.data.atoms.values()
+                    if data.get("item") and not sip_isdeleted_safe(data["item"])
+                ]
 
             if not target_atoms:
                 self.statusBar().showMessage("No atoms to rotate.")
@@ -606,7 +666,8 @@ class MainWindowEditActions(object):
             # Calculate Center
             xs = [atom.pos().x() for atom in target_atoms]
             ys = [atom.pos().y() for atom in target_atoms]
-            if not xs: return
+            if not xs:
+                return
 
             center_x = sum(xs) / len(xs)
             center_y = sum(ys) / len(ys)
@@ -632,7 +693,9 @@ class MainWindowEditActions(object):
             self.scene.update_connected_bonds(target_atoms)
 
             self.push_undo_state()
-            self.statusBar().showMessage(f"Rotated {len(target_atoms)} atoms by {angle_degrees} degrees.")
+            self.statusBar().showMessage(
+                f"Rotated {len(target_atoms)} atoms by {angle_degrees} degrees."
+            )
             self.scene.update()
             self.scene.update_all_items()
 
@@ -712,7 +775,7 @@ class MainWindowEditActions(object):
         QApplication.processEvents()
 
         # Call plugin document reset handlers
-        if hasattr(self, 'plugin_manager') and self.plugin_manager:
+        if hasattr(self, "plugin_manager") and self.plugin_manager:
             self.plugin_manager.invoke_document_reset_handlers()
 
         self.statusBar().showMessage("Cleared all data.")
@@ -748,7 +811,7 @@ class MainWindowEditActions(object):
             try:
                 self._ih_update_counter += 1
             except Exception:
-                self._ih_update_counter = getattr(self, '_ih_update_counter', 0) or 1
+                self._ih_update_counter = getattr(self, "_ih_update_counter", 0) or 1
             my_token = self._ih_update_counter
 
             mol = None
@@ -811,12 +874,12 @@ class MainWindowEditActions(object):
                     # when RDKit conversion wasn't possible.
                     for atom_id, atom_data in self.data.atoms.items():
                         try:
-                            symbol = atom_data.get('symbol')
-                            charge = atom_data.get('charge', 0)
+                            symbol = atom_data.get("symbol")
+                            charge = atom_data.get("charge", 0)
                             bond_count = 0
                             for (id1, id2), bond_data in self.data.bonds.items():
                                 if id1 == atom_id or id2 == atom_id:
-                                    bond_count += bond_data.get('order', 1)
+                                    bond_count += bond_data.get("order", 1)
 
                             if is_problematic_valence(symbol, bond_count, charge):
                                 problem_map[atom_id] = True
@@ -829,7 +892,7 @@ class MainWindowEditActions(object):
                 # If the global counter changed since this closure was
                 # created, bail out — the update is stale.
                 try:
-                    if my_token != getattr(self, '_ih_update_counter', None):
+                    if my_token != getattr(self, "_ih_update_counter", None):
                         return
                 except Exception:
                     return
@@ -843,7 +906,7 @@ class MainWindowEditActions(object):
                 items_to_update = []
                 for atom_id, atom_data in atoms_snapshot.items():
                     try:
-                        item = atom_data.get('item')
+                        item = atom_data.get("item")
                         if not item:
                             continue
 
@@ -858,7 +921,7 @@ class MainWindowEditActions(object):
                         # If the item is no longer in a scene, skip updating it to avoid
                         # touching partially-deleted objects during scene teardown.
                         try:
-                            sc = item.scene() if hasattr(item, 'scene') else None
+                            sc = item.scene() if hasattr(item, "scene") else None
                             if sc is None:
                                 continue
                         except Exception:
@@ -868,8 +931,8 @@ class MainWindowEditActions(object):
                         # Desired new count (default to 0 if not computed)
                         new_count = h_count_map.get(atom_id, 0)
 
-                        current = getattr(item, 'implicit_h_count', None)
-                        current_prob = getattr(item, 'has_problem', False)
+                        current = getattr(item, "implicit_h_count", None)
+                        current_prob = getattr(item, "has_problem", False)
                         desired_prob = problem_map.get(atom_id, False)
 
                         # If neither the implicit-H count nor the problem flag
@@ -879,13 +942,15 @@ class MainWindowEditActions(object):
 
                         # Only prepare a geometry change if the implicit H count
                         # changes (this may affect the item's bounding rect).
-                        need_geometry = (current != new_count)
+                        need_geometry = current != new_count
                         try:
-                            if need_geometry and hasattr(item, 'prepareGeometryChange'):
+                            if need_geometry and hasattr(item, "prepareGeometryChange"):
                                 try:
                                     item.prepareGeometryChange()
                                 except Exception:
-                                    import traceback; traceback.print_exc()
+                                    import traceback
+
+                                    traceback.print_exc()
 
                             # Apply implicit hydrogen count (guarded)
                             try:
@@ -899,7 +964,9 @@ class MainWindowEditActions(object):
                             try:
                                 item.has_problem = bool(desired_prob)
                             except Exception:
-                                import traceback; traceback.print_exc()
+                                import traceback
+
+                                traceback.print_exc()
 
                             # Ensure the item is updated in the scene so paint() runs
                             # when either geometry or problem-flag changed.
@@ -921,7 +988,7 @@ class MainWindowEditActions(object):
                         if oid in seen:
                             continue
                         seen.add(oid)
-                        if hasattr(it, 'update'):
+                        if hasattr(it, "update"):
                             try:
                                 it.update()
                             except Exception:
@@ -939,7 +1006,9 @@ class MainWindowEditActions(object):
                 try:
                     _apply_ui_updates()
                 except Exception:
-                    import traceback; traceback.print_exc()
+                    import traceback
+
+                    traceback.print_exc()
 
         except Exception:
             # Make sure update failures never crash the application
@@ -964,24 +1033,38 @@ class MainWindowEditActions(object):
 
         try:
             # 安定版：原子IDとRDKit座標の確実なマッピング
-            view_center = self.view_2d.mapToScene(self.view_2d.viewport().rect().center())
+            view_center = self.view_2d.mapToScene(
+                self.view_2d.viewport().rect().center()
+            )
             new_positions_map = {}
             AllChem.Compute2DCoords(mol)
             conf = mol.GetConformer()
             for rdkit_atom in mol.GetAtoms():
                 original_id = rdkit_atom.GetIntProp("_original_atom_id")
-                new_positions_map[original_id] = conf.GetAtomPosition(rdkit_atom.GetIdx())
+                new_positions_map[original_id] = conf.GetAtomPosition(
+                    rdkit_atom.GetIdx()
+                )
 
             if not new_positions_map:
-                self.statusBar().showMessage("Optimization failed to generate coordinates."); return
+                self.statusBar().showMessage(
+                    "Optimization failed to generate coordinates."
+                )
+                return
 
-            target_atom_items = [self.data.atoms[atom_id]['item'] for atom_id in new_positions_map.keys() if atom_id in self.data.atoms and 'item' in self.data.atoms[atom_id]]
+            target_atom_items = [
+                self.data.atoms[atom_id]["item"]
+                for atom_id in new_positions_map.keys()
+                if atom_id in self.data.atoms and "item" in self.data.atoms[atom_id]
+            ]
             if not target_atom_items:
-                self.statusBar().showMessage("Error: Atom items not found for optimized atoms."); return
+                self.statusBar().showMessage(
+                    "Error: Atom items not found for optimized atoms."
+                )
+                return
 
             # 元の図形の中心を維持
-            #original_center_x = sum(item.pos().x() for item in target_atom_items) / len(target_atom_items)
-            #original_center_y = sum(item.pos().y() for item in target_atom_items) / len(target_atom_items)
+            # original_center_x = sum(item.pos().x() for item in target_atom_items) / len(target_atom_items)
+            # original_center_y = sum(item.pos().y() for item in target_atom_items) / len(target_atom_items)
 
             positions = list(new_positions_map.values())
             rdkit_cx = sum(p.x for p in positions) / len(positions)
@@ -992,18 +1075,18 @@ class MainWindowEditActions(object):
             # 新しい座標を適用
             for atom_id, rdkit_pos in new_positions_map.items():
                 if atom_id in self.data.atoms:
-                    item = self.data.atoms[atom_id]['item']
+                    item = self.data.atoms[atom_id]["item"]
                     sx = ((rdkit_pos.x - rdkit_cx) * SCALE) + view_center.x()
                     sy = (-(rdkit_pos.y - rdkit_cy) * SCALE) + view_center.y()
                     new_scene_pos = QPointF(sx, sy)
                     item.setPos(new_scene_pos)
-                    self.data.atoms[atom_id]['pos'] = new_scene_pos
+                    self.data.atoms[atom_id]["pos"] = new_scene_pos
 
             # 最終的な座標に基づき、全ての結合表示を一度に更新
             # Guard against partially-deleted Qt wrappers: skip items that
             # SIP reports as deleted or which are no longer in a scene.
             for bond_data in self.data.bonds.values():
-                item = bond_data.get('item') if bond_data else None
+                item = bond_data.get("item") if bond_data else None
                 if not item:
                     continue
                 try:
@@ -1016,7 +1099,7 @@ class MainWindowEditActions(object):
                 try:
                     sc = None
                     try:
-                        sc = item.scene() if hasattr(item, 'scene') else None
+                        sc = item.scene() if hasattr(item, "scene") else None
                     except Exception:
                         sc = None
                     if sc is None:
@@ -1030,7 +1113,7 @@ class MainWindowEditActions(object):
                     continue
 
             # 重なり解消ロジックを実行
-            self. resolve_overlapping_groups()
+            self.resolve_overlapping_groups()
 
             # 測定ラベルの位置を更新
             self.update_2d_measurement_labels()
@@ -1060,8 +1143,7 @@ class MainWindowEditActions(object):
 
         # self.data.atoms.values() から item を安全に取得
         all_atom_items = [
-            data['item'] for data in self.data.atoms.values()
-            if data and 'item' in data
+            data["item"] for data in self.data.atoms.values() if data and "item" in data
         ]
 
         if len(all_atom_items) < 2:
@@ -1137,7 +1219,10 @@ class MainWindowEditActions(object):
                         current_id = q.popleft()
                         # 隣接リスト self.adjacency_list があれば、ここでの探索が高速になります
                         for neighbor_id in self.data.adjacency_list.get(current_id, []):
-                            if neighbor_id in group_atom_ids_set and neighbor_id not in visited_in_group:
+                            if (
+                                neighbor_id in group_atom_ids_set
+                                and neighbor_id not in visited_in_group
+                            ):
                                 visited_in_group.add(neighbor_id)
                                 current_fragment.add(neighbor_id)
                                 q.append(neighbor_id)
@@ -1154,7 +1239,8 @@ class MainWindowEditActions(object):
                     rep_item1, rep_item2 = i1, i2
                     break
 
-            if not rep_item1: continue
+            if not rep_item1:
+                continue
 
             # 代表ペアがそれぞれどのフラグメントに属するかを見つける
             frag1 = next((f for f in fragments if rep_item1.atom_id in f), None)
@@ -1171,7 +1257,9 @@ class MainWindowEditActions(object):
                 ids_to_move = frag2
 
             # 3c: 移動計画を作成
-            translation_vector = QPointF(-MOVE_DISTANCE, MOVE_DISTANCE)  # 左下方向へのベクトル
+            translation_vector = QPointF(
+                -MOVE_DISTANCE, MOVE_DISTANCE
+            )  # 左下方向へのベクトル
             move_operations.append((ids_to_move, translation_vector))
 
         # --- ステップ4: 計画された移動を一度に実行 ---
@@ -1181,25 +1269,27 @@ class MainWindowEditActions(object):
 
         for group_ids, vector in move_operations:
             for atom_id in group_ids:
-                item = self.data.atoms[atom_id]['item']
+                item = self.data.atoms[atom_id]["item"]
                 new_pos = item.pos() + vector
                 item.setPos(new_pos)
-                self.data.atoms[atom_id]['pos'] = new_pos
+                self.data.atoms[atom_id]["pos"] = new_pos
 
         # --- ステップ5: 表示と状態を更新 ---
         for bond_data in self.data.bonds.values():
-            item = bond_data.get('item') if bond_data else None
+            item = bond_data.get("item") if bond_data else None
             if not item:
                 continue
             try:
                 if sip_isdeleted_safe(item):
                     continue
             except Exception:
-                import traceback; traceback.print_exc()
+                import traceback
+
+                traceback.print_exc()
             try:
                 sc = None
                 try:
-                    sc = item.scene() if hasattr(item, 'scene') else None
+                    sc = item.scene() if hasattr(item, "scene") else None
                 except Exception:
                     sc = None
                 if sc is None:
@@ -1250,15 +1340,17 @@ class MainWindowEditActions(object):
             # このフラグメントで最大のVDW半径を計算（ボックスのマージンとして使用）
             max_vdw = np.max(vdw_radii_np) if len(vdw_radii_np) > 0 else 0.0
 
-            frag_info.append({
-                'indices': frag_indices,
-                'centroid': np.mean(positions_np, axis=0),
-                'positions_np': positions_np, # Numpy配列として保持
-                'vdw_radii_np': vdw_radii_np,  # Numpy配列として保持
-                'max_vdw_radius': max_vdw,
-                'bbox_min': np.zeros(3), # 後で計算
-                'bbox_max': np.zeros(3)  # 後で計算
-            })
+            frag_info.append(
+                {
+                    "indices": frag_indices,
+                    "centroid": np.mean(positions_np, axis=0),
+                    "positions_np": positions_np,  # Numpy配列として保持
+                    "vdw_radii_np": vdw_radii_np,  # Numpy配列として保持
+                    "max_vdw_radius": max_vdw,
+                    "bbox_min": np.zeros(3),  # 後で計算
+                    "bbox_max": np.zeros(3),  # 後で計算
+                }
+            )
 
         # --- 2. 衝突判定のパラメータ ---
         collision_scale = 1.2  # VDW半径の120%
@@ -1274,19 +1366,19 @@ class MainWindowEditActions(object):
             for i in range(len(frag_info)):
                 # 現在の座標からボックスを再計算
                 current_positions = []
-                for idx in frag_info[i]['indices']:
+                for idx in frag_info[i]["indices"]:
                     pos = conf.GetAtomPosition(idx)
                     current_positions.append([pos.x, pos.y, pos.z])
 
                 positions_np = np.array(current_positions)
-                frag_info[i]['positions_np'] = positions_np # 座標情報を更新
+                frag_info[i]["positions_np"] = positions_np  # 座標情報を更新
 
                 # VDW半径とスケールを考慮したマージンを計算
                 # (最大VDW半径 * スケール) をマージンとして使う
-                margin = frag_info[i]['max_vdw_radius'] * collision_scale
+                margin = frag_info[i]["max_vdw_radius"] * collision_scale
 
-                frag_info[i]['bbox_min'] = np.min(positions_np, axis=0) - margin
-                frag_info[i]['bbox_max'] = np.max(positions_np, axis=0) + margin
+                frag_info[i]["bbox_min"] = np.min(positions_np, axis=0) - margin
+                frag_info[i]["bbox_max"] = np.max(positions_np, axis=0) + margin
 
             # --- 4. 衝突判定ループ ---
             for i in range(len(frag_info)):
@@ -1297,9 +1389,18 @@ class MainWindowEditActions(object):
                     # === バウンディングボックス判定 ===
                     # 2つのボックスが重なっているかチェック (AABB交差判定)
                     # X, Y, Zの各軸で重なりをチェック
-                    overlap_x = (frag_i['bbox_min'][0] <= frag_j['bbox_max'][0] and frag_i['bbox_max'][0] >= frag_j['bbox_min'][0])
-                    overlap_y = (frag_i['bbox_min'][1] <= frag_j['bbox_max'][1] and frag_i['bbox_max'][1] >= frag_j['bbox_min'][1])
-                    overlap_z = (frag_i['bbox_min'][2] <= frag_j['bbox_max'][2] and frag_i['bbox_max'][2] >= frag_j['bbox_min'][2])
+                    overlap_x = (
+                        frag_i["bbox_min"][0] <= frag_j["bbox_max"][0]
+                        and frag_i["bbox_max"][0] >= frag_j["bbox_min"][0]
+                    )
+                    overlap_y = (
+                        frag_i["bbox_min"][1] <= frag_j["bbox_max"][1]
+                        and frag_i["bbox_max"][1] >= frag_j["bbox_min"][1]
+                    )
+                    overlap_z = (
+                        frag_i["bbox_min"][2] <= frag_j["bbox_max"][2]
+                        and frag_i["bbox_max"][2] >= frag_j["bbox_min"][2]
+                    )
 
                     # ボックスがX, Y, Zのいずれかの軸で離れている場合、原子間の詳細なチェックをスキップ
                     if not (overlap_x and overlap_y and overlap_z):
@@ -1311,21 +1412,23 @@ class MainWindowEditActions(object):
                     collision_count = 0
 
                     # 事前計算したNumpy配列を使用
-                    positions_i = frag_i['positions_np']
-                    positions_j = frag_j['positions_np']
-                    vdw_i_all = frag_i['vdw_radii_np']
-                    vdw_j_all = frag_j['vdw_radii_np']
+                    positions_i = frag_i["positions_np"]
+                    positions_j = frag_j["positions_np"]
+                    vdw_i_all = frag_i["vdw_radii_np"]
+                    vdw_j_all = frag_j["vdw_radii_np"]
 
-                    for k, idx_i in enumerate(frag_i['indices']):
+                    for k, idx_i in enumerate(frag_i["indices"]):
                         pos_i = positions_i[k]
                         vdw_i = vdw_i_all[k]
 
-                        for l, idx_j in enumerate(frag_j['indices']):
+                        for l, idx_j in enumerate(frag_j["indices"]):
                             pos_j = positions_j[l]
                             vdw_j = vdw_j_all[l]
 
                             distance_vec = pos_i - pos_j
-                            distance_sq = np.dot(distance_vec, distance_vec) # 平方根を避けて高速化
+                            distance_sq = np.dot(
+                                distance_vec, distance_vec
+                            )  # 平方根を避けて高速化
 
                             min_distance = (vdw_i + vdw_j) * collision_scale
                             min_distance_sq = min_distance * min_distance
@@ -1333,7 +1436,9 @@ class MainWindowEditActions(object):
                             if distance_sq < min_distance_sq and distance_sq > 0.0001:
                                 distance = np.sqrt(distance_sq)
                                 push_direction = distance_vec / distance
-                                push_magnitude = (min_distance - distance) / 2 # 押し出し量は半分ずつ
+                                push_magnitude = (
+                                    min_distance - distance
+                                ) / 2  # 押し出し量は半分ずつ
                                 total_push_vector += push_direction * push_magnitude
                                 collision_count += 1
 
@@ -1342,12 +1447,12 @@ class MainWindowEditActions(object):
                         avg_push_vector = total_push_vector / collision_count
 
                         # Conformerの座標を更新
-                        for idx in frag_i['indices']:
+                        for idx in frag_i["indices"]:
                             pos = np.array(conf.GetAtomPosition(idx))
                             new_pos = pos + avg_push_vector
                             conf.SetAtomPosition(idx, new_pos.tolist())
 
-                        for idx in frag_j['indices']:
+                        for idx in frag_j["indices"]:
                             pos = np.array(conf.GetAtomPosition(idx))
                             new_pos = pos - avg_push_vector
                             conf.SetAtomPosition(idx, new_pos.tolist())
@@ -1370,7 +1475,7 @@ class MainWindowEditActions(object):
             self.chem_check_tried = False
             self.chem_check_failed = False
 
-        if self.settings.get('skip_chemistry_checks', False):
+        if self.settings.get("skip_chemistry_checks", False):
             # User asked to skip chemistry checks entirely
             return
 
@@ -1383,16 +1488,22 @@ class MainWindowEditActions(object):
             self.chem_check_tried = True
             self.chem_check_failed = True
             try:
-                desc = f" ({source_desc})" if source_desc else ''
-                self.statusBar().showMessage(f"Molecule sanitization failed{desc}; file may be malformed.")
+                desc = f" ({source_desc})" if source_desc else ""
+                self.statusBar().showMessage(
+                    f"Molecule sanitization failed{desc}; file may be malformed."
+                )
             except Exception:
-                import traceback; traceback.print_exc()
+                import traceback
+
+                traceback.print_exc()
             # Disable 3D optimization UI to prevent running on invalid molecules
-            if hasattr(self, 'optimize_3d_button'):
+            if hasattr(self, "optimize_3d_button"):
                 try:
                     self.optimize_3d_button.setEnabled(False)
                 except Exception:
-                    import traceback; traceback.print_exc()
+                    import traceback
+
+                    traceback.print_exc()
 
     def _clear_xyz_flags(self, mol=None):
         """Clear XYZ-derived markers from a molecule (or current_mol) and
@@ -1405,27 +1516,33 @@ class MainWindowEditActions(object):
         Optimize 3D button is re-evaluated (enabled unless chem_check_failed
         is True).
         """
-        target = mol if mol is not None else getattr(self, 'current_mol', None)
+        target = mol if mol is not None else getattr(self, "current_mol", None)
         try:
             if target is not None:
                 # Remove RDKit property if present
                 try:
-                    if hasattr(target, 'HasProp') and target.HasProp('_xyz_skip_checks'):
+                    if hasattr(target, "HasProp") and target.HasProp(
+                        "_xyz_skip_checks"
+                    ):
                         try:
-                            target.ClearProp('_xyz_skip_checks')
+                            target.ClearProp("_xyz_skip_checks")
                         except Exception:
                             try:
-                                target.SetIntProp('_xyz_skip_checks', 0)
+                                target.SetIntProp("_xyz_skip_checks", 0)
                             except Exception:
-                                import traceback; traceback.print_exc()
+                                import traceback
+
+                                traceback.print_exc()
                 except Exception:
-                    import traceback; traceback.print_exc()
+                    import traceback
+
+                    traceback.print_exc()
 
                 # Remove attribute-style markers if present
                 try:
-                    if hasattr(target, '_xyz_skip_checks'):
+                    if hasattr(target, "_xyz_skip_checks"):
                         try:
-                            delattr(target, '_xyz_skip_checks')
+                            delattr(target, "_xyz_skip_checks")
                         except Exception:
                             try:
                                 del target._xyz_skip_checks
@@ -1433,14 +1550,18 @@ class MainWindowEditActions(object):
                                 try:
                                     target._xyz_skip_checks = False
                                 except Exception:
-                                    import traceback; traceback.print_exc()
+                                    import traceback
+
+                                    traceback.print_exc()
                 except Exception:
-                    import traceback; traceback.print_exc()
+                    import traceback
+
+                    traceback.print_exc()
 
                 try:
-                    if hasattr(target, '_xyz_atom_data'):
+                    if hasattr(target, "_xyz_atom_data"):
                         try:
-                            delattr(target, '_xyz_atom_data')
+                            delattr(target, "_xyz_atom_data")
                         except Exception:
                             try:
                                 del target._xyz_atom_data
@@ -1448,9 +1569,13 @@ class MainWindowEditActions(object):
                                 try:
                                     target._xyz_atom_data = None
                                 except Exception:
-                                    import traceback; traceback.print_exc()
+                                    import traceback
+
+                                    traceback.print_exc()
                 except Exception:
-                    import traceback; traceback.print_exc()
+                    import traceback
+
+                    traceback.print_exc()
 
         except Exception:
             # best-effort only
@@ -1460,21 +1585,28 @@ class MainWindowEditActions(object):
         try:
             self.is_xyz_derived = False
         except Exception:
-            import traceback; traceback.print_exc()
+            import traceback
+
+            traceback.print_exc()
 
         # Enable Optimize 3D unless sanitization failed
         try:
-            if hasattr(self, 'optimize_3d_button'):
-                if getattr(self, 'chem_check_failed', False):
+            if hasattr(self, "optimize_3d_button"):
+                if getattr(self, "chem_check_failed", False):
                     try:
                         self.optimize_3d_button.setEnabled(False)
                     except Exception:
-                        import traceback; traceback.print_exc()
+                        import traceback
+
+                        traceback.print_exc()
                 else:
                     try:
                         self.optimize_3d_button.setEnabled(True)
                     except Exception:
-                        import traceback; traceback.print_exc()
-        except Exception:
-            import traceback; traceback.print_exc()
+                        import traceback
 
+                        traceback.print_exc()
+        except Exception:
+            import traceback
+
+            traceback.print_exc()

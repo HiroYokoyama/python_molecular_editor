@@ -10,7 +10,6 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
-
 import ctypes
 import sys
 
@@ -21,10 +20,11 @@ try:
 except Exception:
     from modules.main_window import MainWindow
 
+
 def main():
     # --- Windows タスクバーアイコンのための追加処理 ---
-    if sys.platform == 'win32':
-        myappid = 'hyoko.moleditpy.1.0' # アプリケーション固有のID（任意）
+    if sys.platform == "win32":
+        myappid = "hyoko.moleditpy.1.0"  # アプリケーション固有のID（任意）
         ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
 
     app = QApplication(sys.argv)

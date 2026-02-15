@@ -29,7 +29,9 @@ from rdkit import Chem
 try:
     pass
 except Exception:
-    import traceback; traceback.print_exc()
+    import traceback
+
+    traceback.print_exc()
 
 # PyQt6 Modules
 from PyQt6.QtCore import QLineF, QPointF, QRectF, Qt, QTimer, QUrl
@@ -72,7 +74,7 @@ except Exception:
 
 import platform
 
-try: # pragma: no cover
+try:  # pragma: no cover
     import winreg
 except Exception:
     winreg = None
@@ -83,7 +85,7 @@ except Exception:
     from modules.plugin_manager import PluginManager
 
 
-def detect_system_dark_mode(): # pragma: no cover
+def detect_system_dark_mode():  # pragma: no cover
     """Return True if the OS prefers dark app theme, False if light, or None if unknown.
 
     This is a best-effort, cross-platform check supporting Windows (registry),
@@ -94,32 +96,37 @@ def detect_system_dark_mode(): # pragma: no cover
     # 'dark' -> True, 'light' -> False. This avoids duplicating the
     # registry and subprocess calls in two places.
     theme = detect_system_theme()
-    if theme == 'dark':
+    if theme == "dark":
         return True
-    if theme == 'light':
+    if theme == "light":
         return False
     return None
 
-def detect_system_theme(): # pragma: no cover
+
+def detect_system_theme():  # pragma: no cover
     """OSの優先テーマ設定を 'dark', 'light', または None として返す。
 
     This is a best-effort, cross-platform check.
     """
     try:
         # Windows: AppsUseLightTheme (0 = dark, 1 = light)
-        if platform.system() == 'Windows' and winreg is not None:
+        if platform.system() == "Windows" and winreg is not None:
             try:
-                with winreg.OpenKey(winreg.HKEY_CURRENT_USER,
-                                    r'Software\Microsoft\Windows\CurrentVersion\Themes\Personalize') as k:
-                    val, _ = winreg.QueryValueEx(k, 'AppsUseLightTheme')
-                    return 'dark' if int(val) == 0 else 'light'
+                with winreg.OpenKey(
+                    winreg.HKEY_CURRENT_USER,
+                    r"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize",
+                ) as k:
+                    val, _ = winreg.QueryValueEx(k, "AppsUseLightTheme")
+                    return "dark" if int(val) == 0 else "light"
             except Exception:
-                import traceback; traceback.print_exc()
+                import traceback
+
+                traceback.print_exc()
 
         # macOS: 'defaults read -g AppleInterfaceStyle'
-        if platform.system() == 'Darwin':
-            return 'light'
-            '''
+        if platform.system() == "Darwin":
+            return "light"
+            """
             try:
                 # 'defaults read ...' が成功すればダークモード
                 p = subprocess.run(
@@ -135,34 +142,50 @@ def detect_system_theme(): # pragma: no cover
             except Exception:
                 # その他のエラー
                 pass
-            '''
+            """
 
         # Linux / GNOME: try color-scheme gsetting; fallback to gtk-theme detection
-        if platform.system() == 'Linux':
+        if platform.system() == "Linux":
             try:
-                p = subprocess.run(['gsettings', 'get', 'org.gnome.desktop.interface', 'color-scheme'], capture_output=True, text=True)
+                p = subprocess.run(
+                    ["gsettings", "get", "org.gnome.desktop.interface", "color-scheme"],
+                    capture_output=True,
+                    text=True,
+                )
                 if p.returncode == 0:
                     out = p.stdout.strip().strip("'\n ")
-                    if 'dark' in out.lower():
-                        return 'dark'
-                    if 'light' in out.lower():
-                        return 'light'
+                    if "dark" in out.lower():
+                        return "dark"
+                    if "light" in out.lower():
+                        return "light"
             except Exception:
-                import traceback; traceback.print_exc()
+                import traceback
+
+                traceback.print_exc()
 
             try:
-                p = subprocess.run(['gsettings', 'get', 'org.gnome.desktop.interface', 'gtk-theme'], capture_output=True, text=True)
-                if p.returncode == 0 and '-dark' in p.stdout.lower():
-                    return 'dark'
+                p = subprocess.run(
+                    ["gsettings", "get", "org.gnome.desktop.interface", "gtk-theme"],
+                    capture_output=True,
+                    text=True,
+                )
+                if p.returncode == 0 and "-dark" in p.stdout.lower():
+                    return "dark"
             except Exception:
-                import traceback; traceback.print_exc()
+                import traceback
+
+                traceback.print_exc()
     except Exception:
-        import traceback; traceback.print_exc()
+        import traceback
+
+        traceback.print_exc()
     return None
 
-try: # pragma: no cover
+
+try:  # pragma: no cover
     from PyQt6 import sip as _sip  # type: ignore
-    _sip_isdeleted = getattr(_sip, 'isdeleted', None)
+
+    _sip_isdeleted = getattr(_sip, "isdeleted", None)
 except Exception:
     _sip = None
     _sip_isdeleted = None
@@ -189,24 +212,26 @@ except Exception:
 
 # --- クラス定義 ---
 class MainWindowMainInit(object):
-    """ main_window.py から分離された機能クラス """
+    """main_window.py から分離された機能クラス"""
 
     # __init__ は main_window.py からコピーされます
 
-    def __init__(self, initial_file=None): # pragma: no cover
+    def __init__(self, initial_file=None):  # pragma: no cover
         # This helper is not used as a mixin in this project; initialization
         # happens on the `MainWindow` instance. Avoid calling super() here
         # because we initialize the `QMainWindow` base class in
         # `MainWindow.__init__` directly.
         self.setAcceptDrops(True)
-        self.settings_dir = os.path.join(os.path.expanduser('~'), '.moleditpy')
-        self.settings_file = os.path.join(self.settings_dir, 'settings.json')
+        self.settings_dir = os.path.join(os.path.expanduser("~"), ".moleditpy")
+        self.settings_file = os.path.join(self.settings_dir, "settings.json")
         self.settings = {}
         self.load_settings()
         self.initial_settings = self.settings.copy()
-        self.setWindowTitle("MoleditPy Ver. " + VERSION); self.setGeometry(100, 100, 1400, 800)
-        self.data = MolecularData(); self.current_mol = None
-        self.current_3d_style = 'ball_and_stick'
+        self.setWindowTitle("MoleditPy Ver. " + VERSION)
+        self.setGeometry(100, 100, 1400, 800)
+        self.data = MolecularData()
+        self.current_mol = None
+        self.current_3d_style = "ball_and_stick"
         self.show_chiral_labels = False
         self.atom_info_display_mode = None  # 'id', 'coords', 'symbol', or None
         self.current_atom_info_labels = None  # 現在の原子情報ラベル
@@ -219,7 +244,9 @@ class MainWindowMainInit(object):
         self.chem_check_tried = False
         self.chem_check_failed = False
         # 3D最適化のデフォルト手法
-        self.optimization_method = self.settings.get('optimization_method', 'MMFF_RDKIT')
+        self.optimization_method = self.settings.get(
+            "optimization_method", "MMFF_RDKIT"
+        )
         self.axes_actor = None
         self.axes_widget = None
         self._template_dialog = None  # テンプレートダイアログの参照
@@ -292,13 +319,13 @@ class MainWindowMainInit(object):
         if initial_file:
             self.load_command_line_file(initial_file)
 
-        QTimer.singleShot(0, self.apply_initial_settings) # pragma: no cover
+        QTimer.singleShot(0, self.apply_initial_settings)  # pragma: no cover
         # カメラ初期化フラグ（初回描画時のみリセットを許可する）
         self._camera_initialized = False
 
         # 初期メニューテキストと状態を設定
         self.update_atom_id_menu_text()
-        self.update_atom_id_menu_state() # pragma: no cover
+        self.update_atom_id_menu_state()  # pragma: no cover
 
         # 初期化完了を設定
         self.initialization_complete = True
@@ -309,21 +336,23 @@ class MainWindowMainInit(object):
         try:
             QTimer.singleShot(0, self.view_2d.setFocus)
         except Exception:
-            import traceback; traceback.print_exc()
+            import traceback
 
-    def init_ui(self): # pragma: no cover
+            traceback.print_exc()
+
+    def init_ui(self):  # pragma: no cover
         # 1. 現在のスクリプトがあるディレクトリのパスを取得
         script_dir = os.path.dirname(os.path.abspath(__file__))
 
         # 2. 'assets'フォルダ内のアイコンファイルへのフルパスを構築
         # Windows taskbar prefers .ico; fall back to .png on other platforms
-        if sys.platform == 'win32':
-            icon_path = os.path.join(script_dir, '..', 'assets', 'icon.ico')
+        if sys.platform == "win32":
+            icon_path = os.path.join(script_dir, "..", "assets", "icon.ico")
         else:
-            icon_path = os.path.join(script_dir, '..', 'assets', 'icon.png')
+            icon_path = os.path.join(script_dir, "..", "assets", "icon.png")
 
         # 3. ファイルパスから直接QIconオブジェクトを作成
-        if os.path.exists(icon_path): # ファイルが存在するか確認
+        if os.path.exists(icon_path):  # ファイルが存在するか確認
             app_icon = QIcon(icon_path)
 
             # 4. ウィンドウとアプリケーション両方にアイコンを設定
@@ -352,15 +381,15 @@ class MainWindowMainInit(object):
         """)
         self.setCentralWidget(self.splitter)
 
-        left_pane=QWidget()
+        left_pane = QWidget()
         left_pane.setAcceptDrops(True)
-        left_layout=QVBoxLayout(left_pane)
+        left_layout = QVBoxLayout(left_pane)
 
-        self.scene=MoleculeScene(self.data,self)
-        self.scene.setSceneRect(-4000,-4000,4000,4000)
+        self.scene = MoleculeScene(self.data, self)
+        self.scene.setSceneRect(-4000, -4000, 4000, 4000)
         self.scene.setBackgroundBrush(QColor("#FFFFFF"))
 
-        self.view_2d=ZoomableView(self.scene, self)
+        self.view_2d = ZoomableView(self.scene, self)
         self.view_2d.setRenderHint(QPainter.RenderHint.Antialiasing)
         self.view_2d.setSizePolicy(
             QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
@@ -379,10 +408,16 @@ class MainWindowMainInit(object):
         self.convert_button.clicked.connect(self.trigger_conversion)
         # Allow right-click to open a temporary conversion-mode menu
         try:
-            self.convert_button.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
-            self.convert_button.customContextMenuRequested.connect(self.show_convert_menu)
+            self.convert_button.setContextMenuPolicy(
+                Qt.ContextMenuPolicy.CustomContextMenu
+            )
+            self.convert_button.customContextMenuRequested.connect(
+                self.show_convert_menu
+            )
         except Exception:
-            import traceback; traceback.print_exc()
+            import traceback
+
+            traceback.print_exc()
         left_buttons_layout.addWidget(self.convert_button)
 
         left_layout.addLayout(left_buttons_layout)
@@ -392,7 +427,7 @@ class MainWindowMainInit(object):
         right_pane = QWidget()
         # 1. 右パネル全体は「垂直」レイアウトにする
         right_layout = QVBoxLayout(right_pane)
-        self.plotter = CustomQtInteractor(right_pane, main_window=self, lighting='none')
+        self.plotter = CustomQtInteractor(right_pane, main_window=self, lighting="none")
         self.plotter.setAcceptDrops(False)
         self.plotter.setSizePolicy(
             QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
@@ -401,31 +436,41 @@ class MainWindowMainInit(object):
 
         # 2. 垂直レイアウトに3Dビューを追加
         right_layout.addWidget(self.plotter, 1)
-        #self.plotter.installEventFilter(self)
+        # self.plotter.installEventFilter(self)
         # 3. ボタンをまとめるための「水平」レイアウトを作成
         right_buttons_layout = QHBoxLayout()
 
         # 3D最適化ボタン
         self.optimize_3d_button = QPushButton("Optimize 3D")
-        self.optimize_3d_button.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        self.optimize_3d_button.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed
+        )
         self.optimize_3d_button.clicked.connect(self.optimize_3d_structure)
         self.optimize_3d_button.setEnabled(False)
         # 初期状態は_enable_3d_features(False)で統一的に設定
         # Allow right-click to open a temporary optimization-method menu
         try:
-            self.optimize_3d_button.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
-            self.optimize_3d_button.customContextMenuRequested.connect(self.show_optimize_menu)
+            self.optimize_3d_button.setContextMenuPolicy(
+                Qt.ContextMenuPolicy.CustomContextMenu
+            )
+            self.optimize_3d_button.customContextMenuRequested.connect(
+                self.show_optimize_menu
+            )
         except Exception:
-            import traceback; traceback.print_exc()
+            import traceback
+
+            traceback.print_exc()
             pass
         right_buttons_layout.addWidget(self.optimize_3d_button)
 
         # エクスポートボタン (メニュー付き)
         self.export_button = QToolButton()
-        self.export_button.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        self.export_button.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed
+        )
         self.export_button.setText("Export 3D")
         self.export_button.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
-        self.export_button.setEnabled(False) # 初期状態は無効
+        self.export_button.setEnabled(False)  # 初期状態は無効
 
         export_menu = QMenu(self)
         export_mol_action = QAction("Export as MOL...", self)
@@ -463,7 +508,7 @@ class MainWindowMainInit(object):
         # ラベルを右側に常時表示ウィジェットとして追加
         self.status_bar.addPermanentWidget(self.formula_label)
 
-        #self.view_2d.fitInView(self.scene.sceneRect(), Qt.AspectRatioMode.KeepAspectRatio)
+        # self.view_2d.fitInView(self.scene.sceneRect(), Qt.AspectRatioMode.KeepAspectRatio)
 
         # Top/main toolbar (keep 3D Edit controls on the right end of this toolbar)
         toolbar = QToolBar("Main Toolbar")
@@ -492,7 +537,9 @@ class MainWindowMainInit(object):
         try:
             self.addToolBarBreak(Qt.ToolBarArea.TopToolBarArea)
         except Exception:
-            import traceback; traceback.print_exc()
+            import traceback
+
+            traceback.print_exc()
 
         self.plugin_toolbar = QToolBar("Plugin Toolbar")
         self.addToolBar(Qt.ToolBarArea.TopToolBarArea, self.plugin_toolbar)
@@ -505,19 +552,31 @@ class MainWindowMainInit(object):
         self.tool_group.setExclusive(True)
 
         actions_data = [
-            ("Select", 'select', 'Space'), ("C", 'atom_C', 'c'), ("H", 'atom_H', 'h'), ("B", 'atom_B', 'b'),
-            ("N", 'atom_N', 'n'), ("O", 'atom_O', 'o'), ("S", 'atom_S', 's'), ("Si", 'atom_Si', 'Shift+S'), ("P", 'atom_P', 'p'),
-            ("F", 'atom_F', 'f'), ("Cl", 'atom_Cl', 'Shift+C'), ("Br", 'atom_Br', 'Shift+B'), ("I", 'atom_I', 'i'),
-            ("Other...", 'atom_other', '')
+            ("Select", "select", "Space"),
+            ("C", "atom_C", "c"),
+            ("H", "atom_H", "h"),
+            ("B", "atom_B", "b"),
+            ("N", "atom_N", "n"),
+            ("O", "atom_O", "o"),
+            ("S", "atom_S", "s"),
+            ("Si", "atom_Si", "Shift+S"),
+            ("P", "atom_P", "p"),
+            ("F", "atom_F", "f"),
+            ("Cl", "atom_Cl", "Shift+C"),
+            ("Br", "atom_Br", "Shift+B"),
+            ("I", "atom_I", "i"),
+            ("Other...", "atom_other", ""),
         ]
 
         for text, mode, shortcut_text in actions_data:
-            if text == "C": toolbar.addSeparator()
+            if text == "C":
+                toolbar.addSeparator()
 
-            action = QAction(text, self, checkable=(mode != 'atom_other'))
-            if shortcut_text: action.setToolTip(f"{text} ({shortcut_text})")
+            action = QAction(text, self, checkable=(mode != "atom_other"))
+            if shortcut_text:
+                action.setToolTip(f"{text} ({shortcut_text})")
 
-            if mode == 'atom_other':
+            if mode == "atom_other":
                 action.triggered.connect(self.open_periodic_table_dialog)
                 self.other_atom_action = action
             else:
@@ -525,7 +584,8 @@ class MainWindowMainInit(object):
                 self.mode_actions[mode] = action
 
             toolbar.addAction(action)
-            if mode != 'atom_other': self.tool_group.addAction(action)
+            if mode != "atom_other":
+                self.tool_group.addAction(action)
 
             if text == "Select":
                 select_action = action
@@ -545,45 +605,59 @@ class MainWindowMainInit(object):
             theme preference -> configured 3D background -> application palette.
             """
             try:
-                fg_hex = self.settings.get('icon_foreground')
+                fg_hex = self.settings.get("icon_foreground")
                 if fg_hex:
                     c = QColor(fg_hex)
                     if c.isValid():
                         return c
             except Exception:
-                import traceback; traceback.print_exc()
+                import traceback
+
+                traceback.print_exc()
 
             # 1) Prefer the system/OS dark-mode preference if available.
             try:
                 os_pref = detect_system_dark_mode()
                 # Standard mapping: dark -> white, light -> black
                 if os_pref is not None:
-                    return QColor('#FFFFFF') if os_pref else QColor('#000000')
+                    return QColor("#FFFFFF") if os_pref else QColor("#000000")
             except Exception:
-                import traceback; traceback.print_exc()
+                import traceback
+
+                traceback.print_exc()
 
             try:
                 # Keep background_color as a fallback: if system preference isn't
                 # available we'll use the configured 3D view background from settings.
-                bg_hex = self.settings.get('background_color')
+                bg_hex = self.settings.get("background_color")
                 if bg_hex:
                     bg = QColor(bg_hex)
                     if bg.isValid():
-                        lum = 0.2126 * bg.redF() + 0.7152 * bg.greenF() + 0.0722 * bg.blueF()
+                        lum = (
+                            0.2126 * bg.redF()
+                            + 0.7152 * bg.greenF()
+                            + 0.0722 * bg.blueF()
+                        )
                         # Return white on dark (lum<0.5), black on light
-                        return QColor('#FFFFFF') if lum < 0.5 else QColor('#000000')
+                        return QColor("#FFFFFF") if lum < 0.5 else QColor("#000000")
             except Exception:
-                import traceback; traceback.print_exc()
+                import traceback
+
+                traceback.print_exc()
 
             try:
                 pal = QApplication.palette()
                 # palette.window() returns a QBrush; call color()
                 window_bg = pal.window().color()
-                lum = 0.2126 * window_bg.redF() + 0.7152 * window_bg.greenF() + 0.0722 * window_bg.blueF()
+                lum = (
+                    0.2126 * window_bg.redF()
+                    + 0.7152 * window_bg.greenF()
+                    + 0.0722 * window_bg.blueF()
+                )
                 # Palette-based mapping: white on dark palette background
-                return QColor('#FFFFFF') if lum < 0.5 else QColor('#000000')
+                return QColor("#FFFFFF") if lum < 0.5 else QColor("#000000")
             except Exception:
-                return QColor('#000000')
+                return QColor("#000000")
 
         # --- 結合ボタンのアイコンを生成するヘルパー関数 ---
         def create_bond_icon(bond_type, size=32):
@@ -601,26 +675,26 @@ class MainWindowMainInit(object):
             painter.setPen(pen)
             painter.setBrush(QBrush(fg))
 
-            if bond_type == 'single':
+            if bond_type == "single":
                 painter.drawLine(line)
-            elif bond_type == 'double':
+            elif bond_type == "double":
                 v = line.unitVector().normalVector()
                 offset = QPointF(v.dx(), v.dy()) * 2.5
                 painter.drawLine(line.translated(offset))
                 painter.drawLine(line.translated(-offset))
-            elif bond_type == 'triple':
+            elif bond_type == "triple":
                 v = line.unitVector().normalVector()
                 offset = QPointF(v.dx(), v.dy()) * 3.0
                 painter.drawLine(line)
                 painter.drawLine(line.translated(offset))
                 painter.drawLine(line.translated(-offset))
-            elif bond_type == 'wedge':
+            elif bond_type == "wedge":
                 vec = line.unitVector()
                 normal = vec.normalVector()
                 offset = QPointF(normal.dx(), normal.dy()) * 5.0
                 poly = QPolygonF([p1, p2 + offset, p2 - offset])
                 painter.drawPolygon(poly)
-            elif bond_type == 'dash':
+            elif bond_type == "dash":
                 vec = line.unitVector()
                 normal = vec.normalVector()
 
@@ -633,7 +707,7 @@ class MainWindowMainInit(object):
                     painter.setPen(QPen(fg, 1.5))
                     painter.drawLine(start_pt - offset, start_pt + offset)
 
-            elif bond_type == 'ez_toggle':
+            elif bond_type == "ez_toggle":
                 # アイコン下部に二重結合を描画
                 p1 = QPointF(6, size * 0.75)
                 p2 = QPointF(size - 6, size * 0.75)
@@ -658,12 +732,12 @@ class MainWindowMainInit(object):
 
         # --- 結合ボタンをツールバーに追加 ---
         bond_actions_data = [
-            ("Single Bond", 'bond_1_0', '1', 'single'),
-            ("Double Bond", 'bond_2_0', '2', 'double'),
-            ("Triple Bond", 'bond_3_0', '3', 'triple'),
-            ("Wedge Bond", 'bond_1_1', 'W', 'wedge'),
-            ("Dash Bond", 'bond_1_2', 'D', 'dash'),
-            ("Toggle E/Z", 'bond_2_5', 'E/Z', 'ez_toggle'),
+            ("Single Bond", "bond_1_0", "1", "single"),
+            ("Double Bond", "bond_2_0", "2", "double"),
+            ("Triple Bond", "bond_3_0", "3", "triple"),
+            ("Wedge Bond", "bond_1_1", "W", "wedge"),
+            ("Dash Bond", "bond_1_2", "D", "dash"),
+            ("Toggle E/Z", "bond_2_5", "E/Z", "ez_toggle"),
         ]
 
         for text, mode, shortcut_text, icon_type in bond_actions_data:
@@ -680,22 +754,26 @@ class MainWindowMainInit(object):
 
         charge_plus_action = QAction("+ Charge", self, checkable=True)
         charge_plus_action.setToolTip("Increase Atom Charge (+)")
-        charge_plus_action.triggered.connect(lambda c, m='charge_plus': self.set_mode(m))
-        self.mode_actions['charge_plus'] = charge_plus_action
+        charge_plus_action.triggered.connect(
+            lambda c, m="charge_plus": self.set_mode(m)
+        )
+        self.mode_actions["charge_plus"] = charge_plus_action
         toolbar.addAction(charge_plus_action)
         self.tool_group.addAction(charge_plus_action)
 
         charge_minus_action = QAction("- Charge", self, checkable=True)
         charge_minus_action.setToolTip("Decrease Atom Charge (-)")
-        charge_minus_action.triggered.connect(lambda c, m='charge_minus': self.set_mode(m))
-        self.mode_actions['charge_minus'] = charge_minus_action
+        charge_minus_action.triggered.connect(
+            lambda c, m="charge_minus": self.set_mode(m)
+        )
+        self.mode_actions["charge_minus"] = charge_minus_action
         toolbar.addAction(charge_minus_action)
         self.tool_group.addAction(charge_minus_action)
 
         radical_action = QAction("Radical", self, checkable=True)
         radical_action.setToolTip("Toggle Radical (0/1/2) (.)")
-        radical_action.triggered.connect(lambda c, m='radical': self.set_mode(m))
-        self.mode_actions['radical'] = radical_action
+        radical_action.triggered.connect(lambda c, m="radical": self.set_mode(m))
+        self.mode_actions["radical"] = radical_action
         toolbar.addAction(radical_action)
         self.tool_group.addAction(radical_action)
 
@@ -712,7 +790,7 @@ class MainWindowMainInit(object):
             painter.setPen(QPen(fg, 2))
 
             center = QPointF(size / 2, size / 2)
-            radius = size / 2 - 4 # アイコンの余白
+            radius = size / 2 - 4  # アイコンの余白
 
             points = []
             angle_step = 2 * math.pi / n
@@ -734,20 +812,24 @@ class MainWindowMainInit(object):
                 font = QFont("Arial", 10, QFont.Weight.Bold)
                 painter.setFont(font)
                 painter.setPen(QPen(fg, 1))
-                painter.drawText(QRectF(0, 0, size, size), Qt.AlignmentFlag.AlignCenter, str(n))
+                painter.drawText(
+                    QRectF(0, 0, size, size), Qt.AlignmentFlag.AlignCenter, str(n)
+                )
 
             painter.end()
             return QIcon(pixmap)
 
         # --- ヘルパー関数を使ってアイコン付きボタンを作成 ---
-        templates = [("Benzene", "template_benzene", 6)] + [(f"{i}-Ring", f"template_{i}", i) for i in range(3, 10)]
+        templates = [("Benzene", "template_benzene", 6)] + [
+            (f"{i}-Ring", f"template_{i}", i) for i in range(3, 10)
+        ]
         for text, mode, n in templates:
-            action = QAction(self) # テキストなしでアクションを作成
+            action = QAction(self)  # テキストなしでアクションを作成
             action.setCheckable(True)
 
-            is_benzene = (text == "Benzene")
+            is_benzene = text == "Benzene"
             icon = create_template_icon(n, is_benzene=is_benzene)
-            action.setIcon(icon) # アイコンを設定
+            action.setIcon(icon)  # アイコンを設定
 
             if text == "Benzene":
                 action.setToolTip(f"{text} Template (4)")
@@ -765,15 +847,15 @@ class MainWindowMainInit(object):
         user_template_action.setCheckable(True)
         user_template_action.setToolTip("Open User Templates Dialog")
         user_template_action.triggered.connect(self.open_template_dialog_and_activate)
-        self.mode_actions['template_user'] = user_template_action
+        self.mode_actions["template_user"] = user_template_action
         toolbar_bottom.addAction(user_template_action)
         self.tool_group.addAction(user_template_action)
 
         # 初期モードを'select'から'atom_C'（炭素原子描画モード）に変更
-        self.set_mode('atom_C')
+        self.set_mode("atom_C")
         # 対応するツールバーの'C'ボタンを選択状態にする
-        if 'atom_C' in self.mode_actions:
-            self.mode_actions['atom_C'].setChecked(True)
+        if "atom_C" in self.mode_actions:
+            self.mode_actions["atom_C"].setChecked(True)
 
         # スペーサーを追加して、次のウィジェットを右端に配置する (keep on top toolbar)
         spacer = QWidget()
@@ -782,13 +864,17 @@ class MainWindowMainInit(object):
 
         # 測定機能ボタンを追加（"3D Select"に変更）
         self.measurement_action = QAction("3D Select", self, checkable=True)
-        self.measurement_action.setToolTip("Enable distance, angle, and dihedral measurement in 3D view")
+        self.measurement_action.setToolTip(
+            "Enable distance, angle, and dihedral measurement in 3D view"
+        )
         # 初期状態でも有効にする
         self.measurement_action.triggered.connect(self.toggle_measurement_mode)
         toolbar.addAction(self.measurement_action)
 
         self.edit_3d_action = QAction("3D Drag", self, checkable=True)
-        self.edit_3d_action.setToolTip("Toggle 3D atom dragging mode (Hold Alt for temporary mode)")
+        self.edit_3d_action.setToolTip(
+            "Toggle 3D atom dragging mode (Hold Alt for temporary mode)"
+        )
         # 初期状態でも有効にする
         self.edit_3d_action.toggled.connect(self.toggle_3d_edit_mode)
         toolbar.addAction(self.edit_3d_action)
@@ -809,44 +895,46 @@ class MainWindowMainInit(object):
         # Ball & Stick アクション
         bs_action = QAction("Ball & Stick", self, checkable=True)
         bs_action.setChecked(True)
-        bs_action.triggered.connect(lambda: self.set_3d_style('ball_and_stick'))
+        bs_action.triggered.connect(lambda: self.set_3d_style("ball_and_stick"))
         style_menu.addAction(bs_action)
         style_group.addAction(bs_action)
 
         # CPK アクション
         cpk_action = QAction("CPK (Space-filling)", self, checkable=True)
-        cpk_action.triggered.connect(lambda: self.set_3d_style('cpk'))
+        cpk_action.triggered.connect(lambda: self.set_3d_style("cpk"))
         style_menu.addAction(cpk_action)
         style_group.addAction(cpk_action)
 
         # Wireframe アクション
         wireframe_action = QAction("Wireframe", self, checkable=True)
-        wireframe_action.triggered.connect(lambda: self.set_3d_style('wireframe'))
+        wireframe_action.triggered.connect(lambda: self.set_3d_style("wireframe"))
         style_menu.addAction(wireframe_action)
         style_group.addAction(wireframe_action)
 
         # Stick アクション
         stick_action = QAction("Stick", self, checkable=True)
-        stick_action.triggered.connect(lambda: self.set_3d_style('stick'))
+        stick_action.triggered.connect(lambda: self.set_3d_style("stick"))
         style_menu.addAction(stick_action)
         style_group.addAction(stick_action)
 
         if self.plugin_manager and self.plugin_manager.custom_3d_styles:
-             style_menu.addSeparator()
+            style_menu.addSeparator()
 
-             for style_name in self.plugin_manager.custom_3d_styles:
-                 if not any(a.text() == style_name for a in style_menu.actions()):
-                     action = QAction(style_name, self, checkable=True)
-                     action.triggered.connect(lambda checked=False, s=style_name: self.set_3d_style(s))
-                     style_menu.addAction(action)
-                     style_group.addAction(action)
+            for style_name in self.plugin_manager.custom_3d_styles:
+                if not any(a.text() == style_name for a in style_menu.actions()):
+                    action = QAction(style_name, self, checkable=True)
+                    action.triggered.connect(
+                        lambda checked=False, s=style_name: self.set_3d_style(s)
+                    )
+                    style_menu.addAction(action)
+                    style_group.addAction(action)
 
         quit_shortcut = QShortcut(QKeySequence("Ctrl+Q"), self)
         quit_shortcut.activated.connect(self.close)
 
         self.view_2d.setFocus()
 
-    def init_menu_bar(self): # pragma: no cover
+    def init_menu_bar(self):  # pragma: no cover
         menu_bar = self.menuBar()
 
         file_menu = menu_bar.addMenu("&File")
@@ -957,11 +1045,15 @@ class MainWindowMainInit(object):
         file_menu.addAction(quit_action)
 
         edit_menu = menu_bar.addMenu("&Edit")
-        self.undo_action = QAction("Undo", self); self.undo_action.setShortcut(QKeySequence.StandardKey.Undo)
-        self.undo_action.triggered.connect(self.undo); edit_menu.addAction(self.undo_action)
+        self.undo_action = QAction("Undo", self)
+        self.undo_action.setShortcut(QKeySequence.StandardKey.Undo)
+        self.undo_action.triggered.connect(self.undo)
+        edit_menu.addAction(self.undo_action)
 
-        self.redo_action = QAction("Redo", self); self.redo_action.setShortcut(QKeySequence.StandardKey.Redo)
-        self.redo_action.triggered.connect(self.redo); edit_menu.addAction(self.redo_action)
+        self.redo_action = QAction("Redo", self)
+        self.redo_action.setShortcut(QKeySequence.StandardKey.Redo)
+        self.redo_action.triggered.connect(self.redo)
+        edit_menu.addAction(self.redo_action)
 
         edit_menu.addSeparator()
 
@@ -983,7 +1075,9 @@ class MainWindowMainInit(object):
         edit_menu.addSeparator()
 
         add_hydrogen_action = QAction("Add Hydrogens", self)
-        add_hydrogen_action.setToolTip("Add explicit hydrogens based on RDKit implicit counts")
+        add_hydrogen_action.setToolTip(
+            "Add explicit hydrogens based on RDKit implicit counts"
+        )
         add_hydrogen_action.triggered.connect(self.add_hydrogen_atoms)
         edit_menu.addAction(add_hydrogen_action)
 
@@ -1017,22 +1111,25 @@ class MainWindowMainInit(object):
 
         edit_menu.addSeparator()
 
-        select_all_action = QAction("Select All", self); select_all_action.setShortcut(QKeySequence.StandardKey.SelectAll)
-        select_all_action.triggered.connect(self.select_all); edit_menu.addAction(select_all_action)
+        select_all_action = QAction("Select All", self)
+        select_all_action.setShortcut(QKeySequence.StandardKey.SelectAll)
+        select_all_action.triggered.connect(self.select_all)
+        edit_menu.addAction(select_all_action)
 
         clear_all_action = QAction("Clear All", self)
         clear_all_action.setShortcut(QKeySequence("Ctrl+Shift+C"))
-        clear_all_action.triggered.connect(self.clear_all); edit_menu.addAction(clear_all_action)
+        clear_all_action.triggered.connect(self.clear_all)
+        edit_menu.addAction(clear_all_action)
 
         view_menu = menu_bar.addMenu("&View")
 
         zoom_in_action = QAction("Zoom In", self)
-        zoom_in_action.setShortcut(QKeySequence.StandardKey.ZoomIn) # Ctrl +
+        zoom_in_action.setShortcut(QKeySequence.StandardKey.ZoomIn)  # Ctrl +
         zoom_in_action.triggered.connect(self.zoom_in)
         view_menu.addAction(zoom_in_action)
 
         zoom_out_action = QAction("Zoom Out", self)
-        zoom_out_action.setShortcut(QKeySequence.StandardKey.ZoomOut) # Ctrl -
+        zoom_out_action.setShortcut(QKeySequence.StandardKey.ZoomOut)  # Ctrl -
         zoom_out_action.triggered.connect(self.zoom_out)
         view_menu.addAction(zoom_out_action)
 
@@ -1049,7 +1146,9 @@ class MainWindowMainInit(object):
         view_menu.addSeparator()
 
         reset_3d_view_action = QAction("Reset 3D View", self)
-        reset_3d_view_action.triggered.connect(lambda: self.plotter.reset_camera() if hasattr(self, 'plotter') else None)
+        reset_3d_view_action.triggered.connect(
+            lambda: self.plotter.reset_camera() if hasattr(self, "plotter") else None
+        )
         reset_3d_view_action.setShortcut(QKeySequence("Ctrl+Shift+R"))
         view_menu.addAction(reset_3d_view_action)
 
@@ -1092,20 +1191,34 @@ class MainWindowMainInit(object):
         # 3D Atom Info submenu
         atom_info_menu = view_menu.addMenu("3D Atom Info Display")
 
-        self.show_atom_id_action = QAction("Show Original ID / Index", self, checkable=True)
-        self.show_atom_id_action.triggered.connect(lambda: self.toggle_atom_info_display('id'))
+        self.show_atom_id_action = QAction(
+            "Show Original ID / Index", self, checkable=True
+        )
+        self.show_atom_id_action.triggered.connect(
+            lambda: self.toggle_atom_info_display("id")
+        )
         atom_info_menu.addAction(self.show_atom_id_action)
 
         self.show_rdkit_id_action = QAction("Show RDKit Index", self, checkable=True)
-        self.show_rdkit_id_action.triggered.connect(lambda: self.toggle_atom_info_display('rdkit_id'))
+        self.show_rdkit_id_action.triggered.connect(
+            lambda: self.toggle_atom_info_display("rdkit_id")
+        )
         atom_info_menu.addAction(self.show_rdkit_id_action)
 
-        self.show_atom_coords_action = QAction("Show Coordinates (X,Y,Z)", self, checkable=True)
-        self.show_atom_coords_action.triggered.connect(lambda: self.toggle_atom_info_display('coords'))
+        self.show_atom_coords_action = QAction(
+            "Show Coordinates (X,Y,Z)", self, checkable=True
+        )
+        self.show_atom_coords_action.triggered.connect(
+            lambda: self.toggle_atom_info_display("coords")
+        )
         atom_info_menu.addAction(self.show_atom_coords_action)
 
-        self.show_atom_symbol_action = QAction("Show Element Symbol", self, checkable=True)
-        self.show_atom_symbol_action.triggered.connect(lambda: self.toggle_atom_info_display('symbol'))
+        self.show_atom_symbol_action = QAction(
+            "Show Element Symbol", self, checkable=True
+        )
+        self.show_atom_symbol_action.triggered.connect(
+            lambda: self.toggle_atom_info_display("symbol")
+        )
         atom_info_menu.addAction(self.show_atom_symbol_action)
 
         analysis_menu = menu_bar.addMenu("&Analysis")
@@ -1142,19 +1255,19 @@ class MainWindowMainInit(object):
         axis_align_menu = align_menu.addMenu("Axis")
 
         align_x_action = QAction("X-axis", self)
-        align_x_action.triggered.connect(lambda: self.open_alignment_dialog('x'))
+        align_x_action.triggered.connect(lambda: self.open_alignment_dialog("x"))
         align_x_action.setEnabled(False)
         axis_align_menu.addAction(align_x_action)
         self.align_x_action = align_x_action
 
         align_y_action = QAction("Y-axis", self)
-        align_y_action.triggered.connect(lambda: self.open_alignment_dialog('y'))
+        align_y_action.triggered.connect(lambda: self.open_alignment_dialog("y"))
         align_y_action.setEnabled(False)
         axis_align_menu.addAction(align_y_action)
         self.align_y_action = align_y_action
 
         align_z_action = QAction("Z-axis", self)
-        align_z_action.triggered.connect(lambda: self.open_alignment_dialog('z'))
+        align_z_action.triggered.connect(lambda: self.open_alignment_dialog("z"))
         align_z_action.setEnabled(False)
         axis_align_menu.addAction(align_z_action)
         self.align_z_action = align_z_action
@@ -1163,19 +1276,25 @@ class MainWindowMainInit(object):
         plane_align_menu = align_menu.addMenu("Plane")
 
         alignplane_xy_action = QAction("XY-plane", self)
-        alignplane_xy_action.triggered.connect(lambda: self.open_align_plane_dialog('xy'))
+        alignplane_xy_action.triggered.connect(
+            lambda: self.open_align_plane_dialog("xy")
+        )
         alignplane_xy_action.setEnabled(False)
         plane_align_menu.addAction(alignplane_xy_action)
         self.alignplane_xy_action = alignplane_xy_action
 
         alignplane_xz_action = QAction("XZ-plane", self)
-        alignplane_xz_action.triggered.connect(lambda: self.open_align_plane_dialog('xz'))
+        alignplane_xz_action.triggered.connect(
+            lambda: self.open_align_plane_dialog("xz")
+        )
         alignplane_xz_action.setEnabled(False)
         plane_align_menu.addAction(alignplane_xz_action)
         self.alignplane_xz_action = alignplane_xz_action
 
         alignplane_yz_action = QAction("YZ-plane", self)
-        alignplane_yz_action.triggered.connect(lambda: self.open_align_plane_dialog('yz'))
+        alignplane_yz_action.triggered.connect(
+            lambda: self.open_align_plane_dialog("yz")
+        )
         alignplane_yz_action.setEnabled(False)
         plane_align_menu.addAction(alignplane_yz_action)
         self.alignplane_yz_action = alignplane_yz_action
@@ -1225,7 +1344,9 @@ class MainWindowMainInit(object):
 
         # Constrained Optimization action
         constrained_opt_action = QAction("Constrained Optimization...", self)
-        constrained_opt_action.triggered.connect(self.open_constrained_optimization_dialog)
+        constrained_opt_action.triggered.connect(
+            self.open_constrained_optimization_dialog
+        )
         constrained_opt_action.setEnabled(False)  # 3Dモデルロード時に有効化
         edit_3d_menu.addAction(constrained_opt_action)
         self.constrained_opt_action = constrained_opt_action
@@ -1235,11 +1356,14 @@ class MainWindowMainInit(object):
 
         # Only keep the Manager action, moving others to the Manager Window
         manage_plugins_action = QAction("Plugin Manager...", self)
+
         def show_plugin_manager():
             from .plugin_manager_window import PluginManagerWindow
+
             dlg = PluginManagerWindow(self.plugin_manager, self)
             dlg.exec()
-            self.update_plugin_menu(plugin_menu) # Refresh after closing
+            self.update_plugin_menu(plugin_menu)  # Refresh after closing
+
         manage_plugins_action.triggered.connect(show_plugin_manager)
         plugin_menu.addAction(manage_plugins_action)
 
@@ -1253,31 +1377,38 @@ class MainWindowMainInit(object):
 
         # Color settings (CPK/Bond) — keep with other settings
         color_action = QAction("CPK Colors...", self)
-        color_action.triggered.connect(lambda: ColorSettingsDialog(self.settings, parent=self).exec_())
+        color_action.triggered.connect(
+            lambda: ColorSettingsDialog(self.settings, parent=self).exec_()
+        )
         settings_menu.addAction(color_action)
 
         # 2) 3D Conversion settings — submenu with radio/check actions
         conversion_menu = settings_menu.addMenu("3D Conversion")
         conv_group = QActionGroup(self)
         conv_group.setExclusive(True)
+
         # helper to set conversion mode and persist
         def _set_conv_mode(mode):
             try:
-                self.settings['3d_conversion_mode'] = mode
+                self.settings["3d_conversion_mode"] = mode
                 # defer disk write
                 try:
                     self.settings_dirty = True
                 except Exception:
-                    import traceback; traceback.print_exc()
+                    import traceback
+
+                    traceback.print_exc()
                 self.statusBar().showMessage(f"3D conversion mode set to: {mode}")
             except Exception:
-                import traceback; traceback.print_exc()
+                import traceback
+
+                traceback.print_exc()
 
         conv_options = [
-            ("RDKit -> Open Babel (fallback)", 'fallback'),
-            ("RDKit only", 'rdkit'),
-            ("Open Babel only", 'obabel'),
-            ("Direct (use 2D coords + add H)", 'direct')
+            ("RDKit -> Open Babel (fallback)", "fallback"),
+            ("RDKit only", "rdkit"),
+            ("Open Babel only", "obabel"),
+            ("Direct (use 2D coords + add H)", "direct"),
         ]
         self.conv_actions = {}
         for label, key in conv_options:
@@ -1286,7 +1417,7 @@ class MainWindowMainInit(object):
             # If Open Babel isn't available, disable the Open Babel-only option
             # and also disable the fallback option since it depends on Open Babel.
             if not OBABEL_AVAILABLE:
-                if key == 'obabel' or key == 'fallback':
+                if key == "obabel" or key == "fallback":
                     a.setEnabled(False)
             a.triggered.connect(lambda checked, m=key: _set_conv_mode(m))
             conversion_menu.addAction(a)
@@ -1294,21 +1425,29 @@ class MainWindowMainInit(object):
             self.conv_actions[key] = a
 
         try:
-            default_mode = 'rdkit' if not OBABEL_AVAILABLE else 'fallback'
-            saved_conv = self.settings.get('3d_conversion_mode', default_mode)
+            default_mode = "rdkit" if not OBABEL_AVAILABLE else "fallback"
+            saved_conv = self.settings.get("3d_conversion_mode", default_mode)
         except Exception:
-            saved_conv = 'rdkit' if not OBABEL_AVAILABLE else 'fallback'
+            saved_conv = "rdkit" if not OBABEL_AVAILABLE else "fallback"
 
         # If the saved mode is disabled/unavailable, fall back to an enabled option.
-        if saved_conv not in self.conv_actions or not self.conv_actions[saved_conv].isEnabled():
+        if (
+            saved_conv not in self.conv_actions
+            or not self.conv_actions[saved_conv].isEnabled()
+        ):
             # Prefer 'rdkit' if available, else pick whichever action is enabled
-            preferred = 'rdkit' if 'rdkit' in self.conv_actions and self.conv_actions['rdkit'].isEnabled() else None
+            preferred = (
+                "rdkit"
+                if "rdkit" in self.conv_actions
+                and self.conv_actions["rdkit"].isEnabled()
+                else None
+            )
             if not preferred:
                 for k, act in self.conv_actions.items():
                     if act.isEnabled():
                         preferred = k
                         break
-            saved_conv = preferred or 'rdkit'
+            saved_conv = preferred or "rdkit"
 
         # Set the checked state and persist the chosen conversion mode
         try:
@@ -1316,14 +1455,20 @@ class MainWindowMainInit(object):
                 try:
                     self.conv_actions[saved_conv].setChecked(True)
                 except Exception:
-                    import traceback; traceback.print_exc()
-            self.settings['3d_conversion_mode'] = saved_conv
+                    import traceback
+
+                    traceback.print_exc()
+            self.settings["3d_conversion_mode"] = saved_conv
             try:
                 self.settings_dirty = True
             except Exception:
-                import traceback; traceback.print_exc()
+                import traceback
+
+                traceback.print_exc()
         except Exception:
-            import traceback; traceback.print_exc()
+            import traceback
+
+            traceback.print_exc()
 
         # 3) 3D Optimization Settings (single location under Settings menu)
         optimization_menu = settings_menu.addMenu("3D Optimization Settings")
@@ -1337,7 +1482,9 @@ class MainWindowMainInit(object):
 
         # Map key -> human-readable label for status messages and later lookups
         try:
-            self.opt3d_method_labels = {key.upper(): label for (label, key) in opt_methods}
+            self.opt3d_method_labels = {
+                key.upper(): label for (label, key) in opt_methods
+            }
         except Exception:
             self.opt3d_method_labels = {}
 
@@ -1350,8 +1497,12 @@ class MainWindowMainInit(object):
             try:
                 action.setActionGroup(opt_group)
             except Exception:
-                import traceback; traceback.print_exc()
-            action.triggered.connect(lambda checked, m=key: self.set_optimization_method(m))
+                import traceback
+
+                traceback.print_exc()
+            action.triggered.connect(
+                lambda checked, m=key: self.set_optimization_method(m)
+            )
             optimization_menu.addAction(action)
             opt_group.addAction(action)
             opt_actions[key] = action
@@ -1361,20 +1512,29 @@ class MainWindowMainInit(object):
 
         # Determine the initial checked menu item from saved settings (fall back to MMFF_RDKIT)
         try:
-            saved_opt = (self.settings.get('optimization_method') or self.optimization_method or 'MMFF_RDKIT').upper()
+            saved_opt = (
+                self.settings.get("optimization_method")
+                or self.optimization_method
+                or "MMFF_RDKIT"
+            ).upper()
         except Exception:
-            saved_opt = 'MMFF_RDKIT'
+            saved_opt = "MMFF_RDKIT"
 
         try:
-            if saved_opt in self.opt3d_actions and self.opt3d_actions[saved_opt].isEnabled():
+            if (
+                saved_opt in self.opt3d_actions
+                and self.opt3d_actions[saved_opt].isEnabled()
+            ):
                 self.opt3d_actions[saved_opt].setChecked(True)
                 self.optimization_method = saved_opt
             else:
-                if 'MMFF_RDKIT' in self.opt3d_actions:
-                    self.opt3d_actions['MMFF_RDKIT'].setChecked(True)
-                    self.optimization_method = 'MMFF_RDKIT'
+                if "MMFF_RDKIT" in self.opt3d_actions:
+                    self.opt3d_actions["MMFF_RDKIT"].setChecked(True)
+                    self.optimization_method = "MMFF_RDKIT"
         except Exception:
-            import traceback; traceback.print_exc()
+            import traceback
+
+            traceback.print_exc()
 
         # 4) Reset all settings to defaults
         settings_menu.addSeparator()
@@ -1389,19 +1549,27 @@ class MainWindowMainInit(object):
 
         github_action = QAction("GitHub", self)
         github_action.triggered.connect(
-            lambda: QDesktopServices.openUrl(QUrl("https://github.com/HiroYokoyama/python_molecular_editor"))
+            lambda: QDesktopServices.openUrl(
+                QUrl("https://github.com/HiroYokoyama/python_molecular_editor")
+            )
         )
         help_menu.addAction(github_action)
 
         github_wiki_action = QAction("GitHub Wiki", self)
         github_wiki_action.triggered.connect(
-            lambda: QDesktopServices.openUrl(QUrl("https://github.com/HiroYokoyama/python_molecular_editor/wiki"))
+            lambda: QDesktopServices.openUrl(
+                QUrl("https://github.com/HiroYokoyama/python_molecular_editor/wiki")
+            )
         )
         help_menu.addAction(github_wiki_action)
 
         manual_action = QAction("User Manual", self)
         manual_action.triggered.connect(
-            lambda: QDesktopServices.openUrl(QUrl("https://hiroyokoyama.github.io/python_molecular_editor/manual/manual"))
+            lambda: QDesktopServices.openUrl(
+                QUrl(
+                    "https://hiroyokoyama.github.io/python_molecular_editor/manual/manual"
+                )
+            )
         )
         help_menu.addAction(manual_action)
 
@@ -1409,9 +1577,9 @@ class MainWindowMainInit(object):
         self._enable_3d_features(False)
 
         # Finally, populate plugins now that all menus are created
-        self.update_plugin_menu(plugin_menu) # pragma: no cover
+        self.update_plugin_menu(plugin_menu)  # pragma: no cover
 
-    def init_worker_thread(self): # pragma: no cover
+    def init_worker_thread(self):  # pragma: no cover
         # Initialize shared state for calculation runs.
         self.halt_ids = set()
         self.next_conversion_id = 1
@@ -1422,7 +1590,7 @@ class MainWindowMainInit(object):
         except Exception:
             self._active_calc_threads = []
 
-    def load_command_line_file(self, file_path): # pragma: no cover
+    def load_command_line_file(self, file_path):  # pragma: no cover
         """コマンドライン引数で指定されたファイルを開く"""
         if not file_path or not os.path.exists(file_path):
             return
@@ -1431,7 +1599,7 @@ class MainWindowMainInit(object):
         _, ext_with_dot = os.path.splitext(file_path)
         ext_with_dot = ext_with_dot.lower()
         # Legacy variable name (no dot)
-        file_ext = ext_with_dot.lstrip('.')
+        file_ext = ext_with_dot.lstrip(".")
 
         # 1. Custom Plugin Openers
         if ext_with_dot in self.plugin_manager.file_openers:
@@ -1439,67 +1607,75 @@ class MainWindowMainInit(object):
             # Iterate through openers (already sorted by priority)
             for opener_info in openers:
                 try:
-                    callback = opener_info['callback']
+                    callback = opener_info["callback"]
                     # Try to call the opener
                     callback(file_path)
 
                     self.current_file_path = file_path
                     self.update_window_title()
-                    return # Success
+                    return  # Success
                 except Exception as e:
-                    print(f"Plugin opener failed for '{opener_info.get('plugin', 'Unknown')}': {e}")
+                    print(
+                        f"Plugin opener failed for '{opener_info.get('plugin', 'Unknown')}': {e}"
+                    )
                     # If this opener fails, try the next one or fall through to default
                     continue
 
-        if file_ext in ['mol', 'sdf']:
+        if file_ext in ["mol", "sdf"]:
             self.load_mol_file_for_3d_viewing(file_path)
-        elif file_ext == 'xyz':
+        elif file_ext == "xyz":
             self.load_xyz_for_3d_viewing(file_path)
-        elif file_ext in ['pmeraw', 'pmeprj']:
+        elif file_ext in ["pmeraw", "pmeprj"]:
             self.open_project_file(file_path=file_path)
         else:
             self.statusBar().showMessage(f"Unsupported file type: {file_ext}")
 
-    def apply_initial_settings(self): # pragma: no cover
+    def apply_initial_settings(self):  # pragma: no cover
         """UIの初期化が完了した後に、保存された設定を3Dビューに適用する"""
 
         try:
             self.update_cpk_colors_from_settings()
         except Exception:
-            import traceback; traceback.print_exc()
+            import traceback
+
+            traceback.print_exc()
 
         if self.plotter and self.plotter.renderer:
-            bg_color = self.settings.get('background_color', '#919191')
+            bg_color = self.settings.get("background_color", "#919191")
             self.plotter.set_background(bg_color)
             self.apply_3d_settings()
 
         try:
-            if hasattr(self, 'scene') and self.scene:
+            if hasattr(self, "scene") and self.scene:
                 # Apply 2D background color
-                bg_color_2d = self.settings.get('background_color_2d', '#FFFFFF')
+                bg_color_2d = self.settings.get("background_color_2d", "#FFFFFF")
                 self.scene.setBackgroundBrush(QBrush(QColor(bg_color_2d)))
 
                 for it in list(self.scene.items()):
-                    if hasattr(it, 'update_style'):
+                    if hasattr(it, "update_style"):
                         it.update_style()
                 self.scene.update()
                 for v in list(self.scene.views()):
                     v.viewport().update()
         except Exception:
-            import traceback; traceback.print_exc()
+            import traceback
 
-    def open_settings_dialog(self): # pragma: no cover
+            traceback.print_exc()
+
+    def open_settings_dialog(self):  # pragma: no cover
         dialog = SettingsDialog(self.settings, self)
         # accept()メソッドで設定の適用と3Dビューの更新を行うため、ここでは不要
         dialog.exec()
 
-    def reset_all_settings_menu(self): # pragma: no cover
+    def reset_all_settings_menu(self):  # pragma: no cover
         # Expose the same functionality as SettingsDialog.reset_all_settings
         dlg = QMessageBox(self)
         dlg.setIcon(QMessageBox.Icon.Warning)
         dlg.setWindowTitle("Reset All Settings")
         dlg.setText("Are you sure you want to reset all settings to defaults?")
-        dlg.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+        dlg.setStandardButtons(
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+        )
         res = dlg.exec()
         if res == QMessageBox.StandardButton.Yes:
             try:
@@ -1511,7 +1687,9 @@ class MainWindowMainInit(object):
                 try:
                     self.settings_dirty = True
                 except Exception:
-                    import traceback; traceback.print_exc()
+                    import traceback
+
+                    traceback.print_exc()
                 # If ColorSettingsDialog is open, refresh its UI to reflect the reset
                 try:
                     for w in QApplication.topLevelWidgets():
@@ -1520,22 +1698,32 @@ class MainWindowMainInit(object):
                                 try:
                                     w.refresh_ui()
                                 except Exception:
-                                    import traceback; traceback.print_exc()
+                                    import traceback
+
+                                    traceback.print_exc()
                         except Exception:
-                            import traceback; traceback.print_exc()
+                            import traceback
+
+                            traceback.print_exc()
                 except Exception:
-                    import traceback; traceback.print_exc()
+                    import traceback
+
+                    traceback.print_exc()
                 # Ensure global CPK mapping is rebuilt from defaults and UI is updated
                 try:
                     self.update_cpk_colors_from_settings()
                 except Exception:
-                    import traceback; traceback.print_exc()
+                    import traceback
+
+                    traceback.print_exc()
                 # Refresh UI/menu state for conversion and optimization
                 try:
                     # update optimization method
-                    self.optimization_method = self.settings.get('optimization_method', 'MMFF_RDKIT')
-                    if hasattr(self, 'opt3d_actions') and self.optimization_method:
-                        key = (self.optimization_method or '').upper()
+                    self.optimization_method = self.settings.get(
+                        "optimization_method", "MMFF_RDKIT"
+                    )
+                    if hasattr(self, "opt3d_actions") and self.optimization_method:
+                        key = (self.optimization_method or "").upper()
                         if key in self.opt3d_actions:
                             # uncheck all then check the saved one
                             for act in self.opt3d_actions.values():
@@ -1543,46 +1731,60 @@ class MainWindowMainInit(object):
                             try:
                                 self.opt3d_actions[key].setChecked(True)
                             except Exception:
-                                import traceback; traceback.print_exc()
+                                import traceback
+
+                                traceback.print_exc()
 
                     # update conversion mode
-                    conv_mode = self.settings.get('3d_conversion_mode', 'fallback')
-                    if hasattr(self, 'conv_actions') and conv_mode in self.conv_actions:
+                    conv_mode = self.settings.get("3d_conversion_mode", "fallback")
+                    if hasattr(self, "conv_actions") and conv_mode in self.conv_actions:
                         try:
                             for act in self.conv_actions.values():
                                 act.setChecked(False)
                             self.conv_actions[conv_mode].setChecked(True)
                         except Exception:
-                            import traceback; traceback.print_exc()
+                            import traceback
+
+                            traceback.print_exc()
 
                     # 3Dビューの設定を適用
                     self.apply_3d_settings()
                     # 現在の分子を再描画（設定変更を反映）
-                    if hasattr(self, 'current_mol') and self.current_mol:
+                    if hasattr(self, "current_mol") and self.current_mol:
                         self.draw_molecule_3d(self.current_mol)
 
-                    QMessageBox.information(self, "Reset Complete", "All settings have been reset to defaults.")
+                    QMessageBox.information(
+                        self,
+                        "Reset Complete",
+                        "All settings have been reset to defaults.",
+                    )
 
                 except Exception:
-                    import traceback; traceback.print_exc()
+                    import traceback
+
+                    traceback.print_exc()
                 # Update 2D scene styling to reflect default CPK colors
                 try:
                     # Reset 2D background specifically
-                    if hasattr(self, 'scene') and self.scene:
-                        bg_c = self.settings.get('background_color_2d', '#FFFFFF')
+                    if hasattr(self, "scene") and self.scene:
+                        bg_c = self.settings.get("background_color_2d", "#FFFFFF")
                         self.scene.setBackgroundBrush(QBrush(QColor(bg_c)))
 
                     self.update_cpk_colors_from_settings()
                 except Exception:
-                    import traceback; traceback.print_exc()
+                    import traceback
+
+                    traceback.print_exc()
                 try:
-                    if hasattr(self, 'scene') and self.scene:
+                    if hasattr(self, "scene") and self.scene:
                         for it in list(self.scene.items()):
                             try:
-                                if hasattr(it, 'update_style'):
+                                if hasattr(it, "update_style"):
                                     it.update_style()
                             except Exception:
-                                import traceback; traceback.print_exc()
+                                import traceback
+
+                                traceback.print_exc()
                         try:
                             # Force a full scene update and viewport repaint for all views
                             self.scene.update()
@@ -1590,11 +1792,17 @@ class MainWindowMainInit(object):
                                 try:
                                     v.viewport().update()
                                 except Exception:
-                                    import traceback; traceback.print_exc()
+                                    import traceback
+
+                                    traceback.print_exc()
                         except Exception:
-                            import traceback; traceback.print_exc()
+                            import traceback
+
+                            traceback.print_exc()
                 except Exception:
-                    import traceback; traceback.print_exc()
+                    import traceback
+
+                    traceback.print_exc()
                 # Also refresh any open SettingsDialog instances so their UI matches
                 try:
                     for w in QApplication.topLevelWidgets():
@@ -1603,76 +1811,83 @@ class MainWindowMainInit(object):
                                 try:
                                     w.update_ui_from_settings(self.settings)
                                 except Exception:
-                                    import traceback; traceback.print_exc()
+                                    import traceback
+
+                                    traceback.print_exc()
                         except Exception:
-                            import traceback; traceback.print_exc()
+                            import traceback
+
+                            traceback.print_exc()
                 except Exception:
-                    import traceback; traceback.print_exc()
+                    import traceback
+
+                    traceback.print_exc()
             except Exception as e:
-                QMessageBox.warning(self, "Reset Failed", f"Could not reset settings: {e}")
+                QMessageBox.warning(
+                    self, "Reset Failed", f"Could not reset settings: {e}"
+                )
 
     def load_settings(self):
         default_settings = {
-            'background_color': '#919191',
-            'projection_mode': 'Perspective',
-            'lighting_enabled': True,
-            'specular': 0.2,
-            'specular_power': 20,
-            'light_intensity': 1.0,
-            'show_3d_axes': True,
+            "background_color": "#919191",
+            "projection_mode": "Perspective",
+            "lighting_enabled": True,
+            "specular": 0.2,
+            "specular_power": 20,
+            "light_intensity": 1.0,
+            "show_3d_axes": True,
             # Ball and Stick model parameters
-            'ball_stick_atom_scale': 1.0,
-            'ball_stick_bond_radius': 0.1,
-            'ball_stick_resolution': 16,
+            "ball_stick_atom_scale": 1.0,
+            "ball_stick_bond_radius": 0.1,
+            "ball_stick_resolution": 16,
             # CPK (Space-filling) model parameters
-            'cpk_atom_scale': 1.0,
-            'cpk_resolution': 32,
+            "cpk_atom_scale": 1.0,
+            "cpk_resolution": 32,
             # Wireframe model parameters
-            'wireframe_bond_radius': 0.01,
-            'wireframe_resolution': 6,
+            "wireframe_bond_radius": 0.01,
+            "wireframe_resolution": 6,
             # Stick model parameters
-            'stick_bond_radius': 0.15,
-            'stick_resolution': 16,
+            "stick_bond_radius": 0.15,
+            "stick_resolution": 16,
             # Multiple bond offset parameters (per-model)
-            'ball_stick_double_bond_offset_factor': 2.0,
-            'ball_stick_triple_bond_offset_factor': 2.0,
-            'ball_stick_double_bond_radius_factor': 0.8,
-            'ball_stick_triple_bond_radius_factor': 0.75,
-            'wireframe_double_bond_offset_factor': 3.0,
-            'wireframe_triple_bond_offset_factor': 3.0,
-            'wireframe_double_bond_radius_factor': 0.8,
-            'wireframe_triple_bond_radius_factor': 0.75,
-            'stick_double_bond_offset_factor': 1.5,
-            'stick_triple_bond_offset_factor': 1.0,
-            'stick_double_bond_radius_factor': 0.60,
-            'stick_triple_bond_radius_factor': 0.40,
-            'aromatic_torus_thickness_factor': 0.6,
-            'skip_chemistry_checks': False,
-            '3d_conversion_mode': 'fallback',
-            'optimization_method': 'MMFF_RDKIT',
+            "ball_stick_double_bond_offset_factor": 2.0,
+            "ball_stick_triple_bond_offset_factor": 2.0,
+            "ball_stick_double_bond_radius_factor": 0.8,
+            "ball_stick_triple_bond_radius_factor": 0.75,
+            "wireframe_double_bond_offset_factor": 3.0,
+            "wireframe_triple_bond_offset_factor": 3.0,
+            "wireframe_double_bond_radius_factor": 0.8,
+            "wireframe_triple_bond_radius_factor": 0.75,
+            "stick_double_bond_offset_factor": 1.5,
+            "stick_triple_bond_offset_factor": 1.0,
+            "stick_double_bond_radius_factor": 0.60,
+            "stick_triple_bond_radius_factor": 0.40,
+            "aromatic_torus_thickness_factor": 0.6,
+            "skip_chemistry_checks": False,
+            "3d_conversion_mode": "fallback",
+            "optimization_method": "MMFF_RDKIT",
             # Color overrides
-            'ball_stick_bond_color': '#7F7F7F',
-            'cpk_colors': {},  # symbol->hex overrides
+            "ball_stick_bond_color": "#7F7F7F",
+            "cpk_colors": {},  # symbol->hex overrides
             # Whether to kekulize aromatic systems for 3D display
-            'display_kekule_3d': False,
-            'always_ask_charge': False,
-            'display_aromatic_circles_3d': False,
-            'ball_stick_use_cpk_bond_color': False,
-
+            "display_kekule_3d": False,
+            "always_ask_charge": False,
+            "display_aromatic_circles_3d": False,
+            "ball_stick_use_cpk_bond_color": False,
             # --- 2D Settings Defaults ---
-            'bond_width_2d': 2.0,
-            'bond_spacing_double_2d': 3.5,
-            'bond_spacing_triple_2d': 3.5,
-            'atom_font_size_2d': 20,
-            'background_color_2d': '#FFFFFF',
-            'bond_color_2d': '#222222', # Almost black
-            'atom_use_bond_color_2d': False,
-            'bond_cap_style_2d': 'Round',
+            "bond_width_2d": 2.0,
+            "bond_spacing_double_2d": 3.5,
+            "bond_spacing_triple_2d": 3.5,
+            "atom_font_size_2d": 20,
+            "background_color_2d": "#FFFFFF",
+            "bond_color_2d": "#222222",  # Almost black
+            "atom_use_bond_color_2d": False,
+            "bond_cap_style_2d": "Round",
         }
 
         try:
             if os.path.exists(self.settings_file):
-                with open(self.settings_file, 'r') as f:
+                with open(self.settings_file, "r") as f:
                     loaded_settings = json.load(f)
                 # Ensure any missing default keys are inserted and persisted.
                 changed = False
@@ -1684,7 +1899,12 @@ class MainWindowMainInit(object):
                 self.settings = loaded_settings
 
                 # Migration: if older global multi-bond keys exist, copy them to per-model keys
-                legacy_keys = ['double_bond_offset_factor', 'triple_bond_offset_factor', 'double_bond_radius_factor', 'triple_bond_radius_factor']
+                legacy_keys = [
+                    "double_bond_offset_factor",
+                    "triple_bond_offset_factor",
+                    "double_bond_radius_factor",
+                    "triple_bond_radius_factor",
+                ]
                 migrated = False
                 # If legacy keys exist, propagate to per-model keys when per-model keys missing
                 if any(k in self.settings for k in legacy_keys):
@@ -1700,18 +1920,66 @@ class MainWindowMainInit(object):
                                 migrated = True
 
                     per_model_map = [
-                        ('ball_stick_double_bond_offset_factor', 'double_bond_offset_factor', 2.0),
-                        ('ball_stick_triple_bond_offset_factor', 'triple_bond_offset_factor', 2.0),
-                        ('ball_stick_double_bond_radius_factor', 'double_bond_radius_factor', 0.8),
-                        ('ball_stick_triple_bond_radius_factor', 'triple_bond_radius_factor', 0.75),
-                        ('wireframe_double_bond_offset_factor', 'double_bond_offset_factor', 3.0),
-                        ('wireframe_triple_bond_offset_factor', 'triple_bond_offset_factor', 3.0),
-                        ('wireframe_double_bond_radius_factor', 'double_bond_radius_factor', 0.8),
-                        ('wireframe_triple_bond_radius_factor', 'triple_bond_radius_factor', 0.75),
-                        ('stick_double_bond_offset_factor', 'double_bond_offset_factor', 1.5),
-                        ('stick_triple_bond_offset_factor', 'triple_bond_offset_factor', 1.0),
-                        ('stick_double_bond_radius_factor', 'double_bond_radius_factor', 0.60),
-                        ('stick_triple_bond_radius_factor', 'triple_bond_radius_factor', 0.40),
+                        (
+                            "ball_stick_double_bond_offset_factor",
+                            "double_bond_offset_factor",
+                            2.0,
+                        ),
+                        (
+                            "ball_stick_triple_bond_offset_factor",
+                            "triple_bond_offset_factor",
+                            2.0,
+                        ),
+                        (
+                            "ball_stick_double_bond_radius_factor",
+                            "double_bond_radius_factor",
+                            0.8,
+                        ),
+                        (
+                            "ball_stick_triple_bond_radius_factor",
+                            "triple_bond_radius_factor",
+                            0.75,
+                        ),
+                        (
+                            "wireframe_double_bond_offset_factor",
+                            "double_bond_offset_factor",
+                            3.0,
+                        ),
+                        (
+                            "wireframe_triple_bond_offset_factor",
+                            "triple_bond_offset_factor",
+                            3.0,
+                        ),
+                        (
+                            "wireframe_double_bond_radius_factor",
+                            "double_bond_radius_factor",
+                            0.8,
+                        ),
+                        (
+                            "wireframe_triple_bond_radius_factor",
+                            "triple_bond_radius_factor",
+                            0.75,
+                        ),
+                        (
+                            "stick_double_bond_offset_factor",
+                            "double_bond_offset_factor",
+                            1.5,
+                        ),
+                        (
+                            "stick_triple_bond_offset_factor",
+                            "triple_bond_offset_factor",
+                            1.0,
+                        ),
+                        (
+                            "stick_double_bond_radius_factor",
+                            "double_bond_radius_factor",
+                            0.60,
+                        ),
+                        (
+                            "stick_triple_bond_radius_factor",
+                            "triple_bond_radius_factor",
+                            0.40,
+                        ),
                     ]
                     for new_k, legacy_k, default_v in per_model_map:
                         copy_if_missing(new_k, legacy_k, default_v)
@@ -1723,7 +1991,9 @@ class MainWindowMainInit(object):
                     try:
                         self.settings_dirty = True
                     except Exception:
-                        import traceback; traceback.print_exc()
+                        import traceback
+
+                        traceback.print_exc()
 
             else:
                 # No settings file - use defaults. Mark dirty so defaults will be written on exit.
@@ -1731,21 +2001,23 @@ class MainWindowMainInit(object):
                 try:
                     self.settings_dirty = True
                 except Exception:
-                    import traceback; traceback.print_exc()
+                    import traceback
+
+                    traceback.print_exc()
 
         except Exception:
             self.settings = default_settings
 
-    def save_settings(self): # pragma: no cover
+    def save_settings(self):  # pragma: no cover
         try:
             if not os.path.exists(self.settings_dir):
                 os.makedirs(self.settings_dir)
-            with open(self.settings_file, 'w') as f:
+            with open(self.settings_file, "w") as f:
                 json.dump(self.settings, f, indent=4)
         except Exception as e:
             print(f"Error saving settings: {e}")
 
-    def update_plugin_menu(self, plugin_menu): # pragma: no cover
+    def update_plugin_menu(self, plugin_menu):  # pragma: no cover
         """Discovers plugins and updates the plugin menu actions."""
         if not self.plugin_manager:
             return
@@ -1754,7 +2026,8 @@ class MainWindowMainInit(object):
 
         # Helper to clear tagged actions from a menu
         def clear_plugin_actions(menu):
-            if not menu: return
+            if not menu:
+                return
             for act in list(menu.actions()):
                 if act.data() == PLUGIN_ACTION_TAG:
                     menu.removeAction(act)
@@ -1769,19 +2042,22 @@ class MainWindowMainInit(object):
         # This ensures we catch actions added to standard menus (File, Edit) OR custom menus
         for top_action in self.menuBar().actions():
             if top_action.menu():
-                 clear_plugin_actions(top_action.menu())
+                clear_plugin_actions(top_action.menu())
 
         # Clear Export menu (if button exists)
-        if hasattr(self, 'export_button') and self.export_button.menu():
+        if hasattr(self, "export_button") and self.export_button.menu():
             clear_plugin_actions(self.export_button.menu())
 
         # Only keep the Manager action
         manage_plugins_action = QAction("Plugin Manager...", self)
+
         def show_plugin_manager():
             from .plugin_manager_window import PluginManagerWindow
+
             dlg = PluginManagerWindow(self.plugin_manager, self)
             dlg.exec()
-            self.update_plugin_menu(plugin_menu) # Refresh after closing
+            self.update_plugin_menu(plugin_menu)  # Refresh after closing
+
         manage_plugins_action.triggered.connect(show_plugin_manager)
         plugin_menu.addAction(manage_plugins_action)
 
@@ -1792,7 +2068,7 @@ class MainWindowMainInit(object):
 
         # --- Update 3D Style Menu with discovered styles ---
         # This menu is built in init_ui (before plugins are discovered), so we must update it here.
-        if hasattr(self, 'style_button') and self.style_button.menu():
+        if hasattr(self, "style_button") and self.style_button.menu():
             style_menu = self.style_button.menu()
 
             # Find the exclusive ActionGroup from an existing action (e.g. Ball & Stick)
@@ -1809,97 +2085,102 @@ class MainWindowMainInit(object):
                     style_menu.addSeparator()
 
                 for style_name in self.plugin_manager.custom_3d_styles:
-                     # Check if already added to avoid duplicates
-                     exists = False
-                     for act in style_menu.actions():
-                         if act.text() == style_name:
-                             exists = True
-                             break
+                    # Check if already added to avoid duplicates
+                    exists = False
+                    for act in style_menu.actions():
+                        if act.text() == style_name:
+                            exists = True
+                            break
 
-                     if not exists:
-                         action = QAction(style_name, self, checkable=True)
-                         # Use default arg to capture loop variable
-                         action.triggered.connect(lambda checked=False, s=style_name: self.set_3d_style(s))
-                         style_menu.addAction(action)
-                         style_group.addAction(action)
+                    if not exists:
+                        action = QAction(style_name, self, checkable=True)
+                        # Use default arg to capture loop variable
+                        action.triggered.connect(
+                            lambda checked=False, s=style_name: self.set_3d_style(s)
+                        )
+                        style_menu.addAction(action)
+                        style_group.addAction(action)
 
         # 1. Add Registered Menu Actions (New System)
         if self.plugin_manager.menu_actions:
-             for action_def in self.plugin_manager.menu_actions:
-                 path = action_def['path']
-                 callback = action_def['callback']
-                 text = action_def['text']
-                 # Create/Find menu path
-                 current_menu = self.menuBar() # Or find specific top-level
+            for action_def in self.plugin_manager.menu_actions:
+                path = action_def["path"]
+                callback = action_def["callback"]
+                text = action_def["text"]
+                # Create/Find menu path
+                current_menu = self.menuBar()  # Or find specific top-level
 
-                 # Handling top-level menus vs nested
-                 parts = path.split('/')
+                # Handling top-level menus vs nested
+                parts = path.split("/")
 
-                 # If path starts with existing top-level (File, Edit, etc), grab it
-                 # Otherwise create new top-level
-                 top_level_title = parts[0]
-                 found_top = False
-                 for act in self.menuBar().actions():
-                     if act.menu() and act.text().replace('&', '') == top_level_title:
-                         current_menu = act.menu()
-                         found_top = True
-                         break
+                # If path starts with existing top-level (File, Edit, etc), grab it
+                # Otherwise create new top-level
+                top_level_title = parts[0]
+                found_top = False
+                for act in self.menuBar().actions():
+                    if act.menu() and act.text().replace("&", "") == top_level_title:
+                        current_menu = act.menu()
+                        found_top = True
+                        break
 
-                 if not found_top:
-                     current_menu = self.menuBar().addMenu(top_level_title)
+                if not found_top:
+                    current_menu = self.menuBar().addMenu(top_level_title)
 
-                 # Traverse rest
-                 for part in parts[1:-1]:
-                      found_sub = False
-                      for act in current_menu.actions():
-                          if act.menu() and act.text().replace('&', '') == part:
-                              current_menu = act.menu()
-                              found_sub = True
-                              break
-                      if not found_sub:
-                          current_menu = current_menu.addMenu(part)
+                # Traverse rest
+                for part in parts[1:-1]:
+                    found_sub = False
+                    for act in current_menu.actions():
+                        if act.menu() and act.text().replace("&", "") == part:
+                            current_menu = act.menu()
+                            found_sub = True
+                            break
+                    if not found_sub:
+                        current_menu = current_menu.addMenu(part)
 
-                 # If last action was NOT from a plugin, insert a separator
-                 actions = current_menu.actions()
-                 if actions:
-                     last_action = actions[-1]
-                     if not last_action.isSeparator() and last_action.data() != PLUGIN_ACTION_TAG:
-                          sep = current_menu.addSeparator()
-                          sep.setData(PLUGIN_ACTION_TAG)
+                # If last action was NOT from a plugin, insert a separator
+                actions = current_menu.actions()
+                if actions:
+                    last_action = actions[-1]
+                    if (
+                        not last_action.isSeparator()
+                        and last_action.data() != PLUGIN_ACTION_TAG
+                    ):
+                        sep = current_menu.addSeparator()
+                        sep.setData(PLUGIN_ACTION_TAG)
 
-                 # Add action
-                 action_text = text if text else parts[-1]
-                 action = QAction(action_text, self)
-                 action.triggered.connect(callback)
+                # Add action
+                action_text = text if text else parts[-1]
+                action = QAction(action_text, self)
+                action.triggered.connect(callback)
 
-                 # Apply shortcut if provided
-                 if action_def.get('shortcut'):
-                     action.setShortcut(QKeySequence(action_def['shortcut']))
+                # Apply shortcut if provided
+                if action_def.get("shortcut"):
+                    action.setShortcut(QKeySequence(action_def["shortcut"]))
 
-                 action.setData(PLUGIN_ACTION_TAG) # TAG THE ACTION
-                 current_menu.addAction(action)
+                action.setData(PLUGIN_ACTION_TAG)  # TAG THE ACTION
+                current_menu.addAction(action)
 
         # 2. Add Toolbar Buttons (New System)
         # Use dedicated plugin toolbar
-        if hasattr(self, 'plugin_toolbar'):
-             self.plugin_toolbar.clear()
+        if hasattr(self, "plugin_toolbar"):
+            self.plugin_toolbar.clear()
 
-             if self.plugin_manager.toolbar_actions:
-                 self.plugin_toolbar.show()
-                 for action_def in self.plugin_manager.toolbar_actions:
-                     text = action_def['text']
-                     callback = action_def['callback']
+            if self.plugin_manager.toolbar_actions:
+                self.plugin_toolbar.show()
+                for action_def in self.plugin_manager.toolbar_actions:
+                    text = action_def["text"]
+                    callback = action_def["callback"]
 
-                     action = QAction(text, self)
-                     action.triggered.connect(callback)
-                     if action_def['icon']:
-                          if os.path.exists(action_def['icon']):
-                               action.setIcon(QIcon(action_def['icon']))
-                     if action_def['tooltip']:
-                          action.setToolTip(action_def['tooltip'])
-                     self.plugin_toolbar.addAction(action)
-             else:
-                 self.plugin_toolbar.hide()
+                    action = QAction(text, self)
+                    action.triggered.connect(callback)
+                    if action_def["icon"]:
+                        if os.path.exists(action_def["icon"]):
+                            action.setIcon(QIcon(action_def["icon"]))
+                    if action_def["tooltip"]:
+                        action.setToolTip(action_def["tooltip"])
+                    self.plugin_toolbar.addAction(action)
+            else:
+                self.plugin_toolbar.hide()
 
         # 3. Legacy Menu Building (Folder based)
         if not plugins:
@@ -1917,8 +2198,8 @@ class MainWindowMainInit(object):
             root_plugins = []
 
             for p in plugins:
-                if hasattr(p['module'], 'run'):
-                    category = p.get('category', p.get('rel_folder', '')).strip()
+                if hasattr(p["module"], "run"):
+                    category = p.get("category", p.get("rel_folder", "")).strip()
                     if category:
                         if category not in categorized_plugins:
                             categorized_plugins[category] = []
@@ -1939,7 +2220,7 @@ class MainWindowMainInit(object):
                 for part in parts:
                     found_sub = False
                     for act in parent_menu.actions():
-                        if act.menu() and act.text().replace('&', '') == part:
+                        if act.menu() and act.text().replace("&", "") == part:
                             parent_menu = act.menu()
                             found_sub = True
                             break
@@ -1947,17 +2228,25 @@ class MainWindowMainInit(object):
                         parent_menu = parent_menu.addMenu(part)
 
                 # Add items to the leaf category menu (Sorted A-Z)
-                cat_items = sorted(categorized_plugins[cat], key=lambda x: x['name'])
+                cat_items = sorted(categorized_plugins[cat], key=lambda x: x["name"])
                 for p in cat_items:
-                    action = QAction(p['name'], self)
-                    action.triggered.connect(lambda checked, mod=p['module']: self.plugin_manager.run_plugin(mod, self))
+                    action = QAction(p["name"], self)
+                    action.triggered.connect(
+                        lambda checked, mod=p["module"]: self.plugin_manager.run_plugin(
+                            mod, self
+                        )
+                    )
                     parent_menu.addAction(action)
 
             # Build menu: Root items last (Sorted A-Z)
-            root_plugins.sort(key=lambda x: x['name'])
+            root_plugins.sort(key=lambda x: x["name"])
             for p in root_plugins:
-                action = QAction(p['name'], self)
-                action.triggered.connect(lambda checked, mod=p['module']: self.plugin_manager.run_plugin(mod, self))
+                action = QAction(p["name"], self)
+                action.triggered.connect(
+                    lambda checked, mod=p["module"]: self.plugin_manager.run_plugin(
+                        mod, self
+                    )
+                )
                 plugin_menu.addAction(action)
 
         # 4. Integrate Export Actions into Export Button and Menu
@@ -1965,114 +2254,119 @@ class MainWindowMainInit(object):
             # Find Main File -> Export menu
             main_export_menu = None
             for top_action in self.menuBar().actions():
-                if top_action.text().replace('&', '') == 'File' and top_action.menu():
+                if top_action.text().replace("&", "") == "File" and top_action.menu():
                     for sub_action in top_action.menu().actions():
-                         if sub_action.text().replace('&', '') == 'Export' and sub_action.menu():
-                             main_export_menu = sub_action.menu()
-                             break
-                if main_export_menu: break
+                        if (
+                            sub_action.text().replace("&", "") == "Export"
+                            and sub_action.menu()
+                        ):
+                            main_export_menu = sub_action.menu()
+                            break
+                if main_export_menu:
+                    break
 
             # List of menus to populate
             target_menus = []
-            if hasattr(self, 'export_button') and self.export_button.menu():
+            if hasattr(self, "export_button") and self.export_button.menu():
                 target_menus.append(self.export_button.menu())
             if main_export_menu:
                 target_menus.append(main_export_menu)
 
             for menu in target_menus:
-                 # Add separator
-                 sep = menu.addSeparator()
-                 sep.setData(PLUGIN_ACTION_TAG)
+                # Add separator
+                sep = menu.addSeparator()
+                sep.setData(PLUGIN_ACTION_TAG)
 
-                 for exp in self.plugin_manager.export_actions:
-                     label = exp['label']
-                     callback = exp['callback']
+                for exp in self.plugin_manager.export_actions:
+                    label = exp["label"]
+                    callback = exp["callback"]
 
-                     a = QAction(label, self)
-                     a.triggered.connect(callback)
-                     a.setData(PLUGIN_ACTION_TAG)
-                     menu.addAction(a)
+                    a = QAction(label, self)
+                    a.triggered.connect(callback)
+                    a.setData(PLUGIN_ACTION_TAG)
+                    menu.addAction(a)
 
         # 5. Integrate File Openers into Import Menu
-        if hasattr(self, 'import_menu') and self.plugin_manager.file_openers:
-             # Add separator
-             sep = self.import_menu.addSeparator()
-             sep.setData(PLUGIN_ACTION_TAG)
+        if hasattr(self, "import_menu") and self.plugin_manager.file_openers:
+            # Add separator
+            sep = self.import_menu.addSeparator()
+            sep.setData(PLUGIN_ACTION_TAG)
 
-             # Group by Plugin Name
-             plugin_map = {}
-             for ext, openers_list in self.plugin_manager.file_openers.items():
-                 # Handles potential multiple openers for same extension
-                 for info in openers_list:
-                     p_name = info.get('plugin', 'Plugin')
-                     if p_name not in plugin_map:
-                         plugin_map[p_name] = {}
-                     plugin_map[p_name][ext] = info['callback']
+            # Group by Plugin Name
+            plugin_map = {}
+            for ext, openers_list in self.plugin_manager.file_openers.items():
+                # Handles potential multiple openers for same extension
+                for info in openers_list:
+                    p_name = info.get("plugin", "Plugin")
+                    if p_name not in plugin_map:
+                        plugin_map[p_name] = {}
+                    plugin_map[p_name][ext] = info["callback"]
 
-             for p_name, ext_map in sorted(plugin_map.items()):
-                 # Create combined label: "Import .ext1/.ext2 (PluginName)..."
-                 extensions = sorted(ext_map.keys())
-                 ext_str = "/".join(extensions)
+            for p_name, ext_map in sorted(plugin_map.items()):
+                # Create combined label: "Import .ext1/.ext2 (PluginName)..."
+                extensions = sorted(ext_map.keys())
+                ext_str = "/".join(extensions)
 
-                 # TRUNCATION LOGIC
-                 MAX_EXT_LEN = 30
-                 if len(ext_str) > MAX_EXT_LEN:
-                     # Find last slash within limit
-                     cutoff = ext_str.rfind('/', 0, MAX_EXT_LEN)
-                     if cutoff != -1:
+                # TRUNCATION LOGIC
+                MAX_EXT_LEN = 30
+                if len(ext_str) > MAX_EXT_LEN:
+                    # Find last slash within limit
+                    cutoff = ext_str.rfind("/", 0, MAX_EXT_LEN)
+                    if cutoff != -1:
                         ext_str = ext_str[:cutoff] + "/..."
-                     else:
+                    else:
                         # Fallback if first extension is super long (unlikely but safe)
                         ext_str = ext_str[:MAX_EXT_LEN] + "..."
 
-                 label = f"Import {ext_str} ({p_name})..."
+                label = f"Import {ext_str} ({p_name})..."
 
-                 # Create combined filter: "PluginName Files (*.ext1 *.ext2)"
-                 filter_exts = " ".join([f"*{e}" for e in extensions])
-                 filter_str = f"{p_name} Files ({filter_exts});;All Files (*)"
+                # Create combined filter: "PluginName Files (*.ext1 *.ext2)"
+                filter_exts = " ".join([f"*{e}" for e in extensions])
+                filter_str = f"{p_name} Files ({filter_exts});;All Files (*)"
 
-                 # Factory for callback to fix closure capture
-                 def make_unified_cb(extensions_map, dialog_filter, plugin_nm):
-                     def _cb():
-                         fpath, _ = QFileDialog.getOpenFileName(
-                             self, f"Import {plugin_nm} Files", "",
-                             dialog_filter
-                         )
-                         if fpath:
-                             _, extension = os.path.splitext(fpath)
-                             extension = extension.lower()
-                             # Dispatch to specific callback
-                             if extension in extensions_map:
-                                 extensions_map[extension](fpath)
-                                 self.current_file_path = fpath
-                                 self.update_window_title()
-                             else:
-                                 self.statusBar().showMessage(f"No handler for extension {extension}")
-                     return _cb
+                # Factory for callback to fix closure capture
+                def make_unified_cb(extensions_map, dialog_filter, plugin_nm):
+                    def _cb():
+                        fpath, _ = QFileDialog.getOpenFileName(
+                            self, f"Import {plugin_nm} Files", "", dialog_filter
+                        )
+                        if fpath:
+                            _, extension = os.path.splitext(fpath)
+                            extension = extension.lower()
+                            # Dispatch to specific callback
+                            if extension in extensions_map:
+                                extensions_map[extension](fpath)
+                                self.current_file_path = fpath
+                                self.update_window_title()
+                            else:
+                                self.statusBar().showMessage(
+                                    f"No handler for extension {extension}"
+                                )
 
-                 a = QAction(label, self)
-                 a.triggered.connect(make_unified_cb(ext_map, filter_str, p_name))
-                 a.setData(PLUGIN_ACTION_TAG)
-                 self.import_menu.addAction(a)
+                    return _cb
+
+                a = QAction(label, self)
+                a.triggered.connect(make_unified_cb(ext_map, filter_str, p_name))
+                a.setData(PLUGIN_ACTION_TAG)
+                self.import_menu.addAction(a)
 
         # 6. Integrate Analysis Tools into Analysis Menu
         # Find Analysis menu again as it might not be defined if cleanup block was generic
         analysis_menu = None
         for action in self.menuBar().actions():
-             if action.text().replace('&', '') == 'Analysis':
-                 analysis_menu = action.menu()
-                 break
+            if action.text().replace("&", "") == "Analysis":
+                analysis_menu = action.menu()
+                break
 
         if analysis_menu and self.plugin_manager.analysis_tools:
-             # Add separator
-             sep = analysis_menu.addSeparator()
-             sep.setData(PLUGIN_ACTION_TAG)
+            # Add separator
+            sep = analysis_menu.addSeparator()
+            sep.setData(PLUGIN_ACTION_TAG)
 
-             for tool in self.plugin_manager.analysis_tools:
-                 label = f"{tool['label']} ({tool.get('plugin', 'Plugin')})"
+            for tool in self.plugin_manager.analysis_tools:
+                label = f"{tool['label']} ({tool.get('plugin', 'Plugin')})"
 
-                 a = QAction(label, self)
-                 a.triggered.connect(tool['callback'])
-                 a.setData(PLUGIN_ACTION_TAG)
-                 analysis_menu.addAction(a)
-
+                a = QAction(label, self)
+                a.triggered.connect(tool["callback"])
+                a.setData(PLUGIN_ACTION_TAG)
+                analysis_menu.addAction(a)

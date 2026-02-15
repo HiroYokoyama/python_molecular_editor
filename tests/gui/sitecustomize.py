@@ -12,7 +12,8 @@ import importlib.util
 
 try:
     root = os.path.dirname(__file__)
-    shim_path = os.path.join(root, 'mocker_shim_test.py')
+    shim_path = os.path.join(root, "mocker_shim_test.py")
+
     # If a local shim file exists, protect pytest by preplacing it with a
     # harmless stub module so imports won't execute the shim.
     # Prevent imports of a local mocker shim by inserting a meta-path
@@ -20,13 +21,14 @@ try:
     class _StubLoader(importlib.abc.Loader):
         def create_module(self, spec):
             return types.ModuleType(spec.name)
+
         def exec_module(self, module):
             # No-op loader: do not execute module code
             return
 
     class _ShimBlocker(importlib.abc.MetaPathFinder):
         def find_spec(self, fullname, path, target=None):
-            if fullname == 'mocker_shim_test':
+            if fullname == "mocker_shim_test":
                 return importlib.util.spec_from_loader(fullname, _StubLoader())
             return None
 

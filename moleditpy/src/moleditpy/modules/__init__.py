@@ -10,18 +10,21 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
-try: # pragma: no cover
+try:  # pragma: no cover
     import importlib.util
+
     OBABEL_AVAILABLE = importlib.util.find_spec("openbabel") is not None
 except Exception:
     OBABEL_AVAILABLE = False
 
-try: # pragma: no cover
+try:  # pragma: no cover
     from PyQt6 import sip as _sip  # type: ignore
-    _sip_isdeleted = getattr(_sip, 'isdeleted', None)
+
+    _sip_isdeleted = getattr(_sip, "isdeleted", None)
 except Exception:
     _sip = None
     _sip_isdeleted = None
+
 
 def sip_isdeleted_safe(obj) -> bool:
     """Return True if sip reports the given wrapper object as deleted.
@@ -30,10 +33,9 @@ def sip_isdeleted_safe(obj) -> bool:
     occurs while checking, it returns False (i.e. not deleted) so that the
     caller can continue other lightweight guards (like checking scene()).
     """
-    try: # pragma: no cover
+    try:  # pragma: no cover
         if _sip_isdeleted is None:
             return False
         return bool(_sip_isdeleted(obj))
     except Exception:
         return False
-

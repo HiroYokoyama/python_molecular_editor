@@ -47,11 +47,13 @@ class AnalysisWindow(QDialog):
                 # （結合推定の影響を受けない）
 
                 # XYZファイルから読み込んだ元の原子情報を取得
-                if hasattr(self.mol, '_xyz_atom_data'):
+                if hasattr(self.mol, "_xyz_atom_data"):
                     xyz_atoms = self.mol._xyz_atom_data
                 else:
                     # フォールバック: RDKitオブジェクトから取得
-                    xyz_atoms = [(atom.GetSymbol(), 0, 0, 0) for atom in self.mol.GetAtoms()]
+                    xyz_atoms = [
+                        (atom.GetSymbol(), 0, 0, 0) for atom in self.mol.GetAtoms()
+                    ]
 
                 # 原子数と元素種を集計
                 atom_counts = {}
@@ -60,11 +62,11 @@ class AnalysisWindow(QDialog):
 
                 for symbol, x, y, z in xyz_atoms:
                     atom_counts[symbol] = atom_counts.get(symbol, 0) + 1
-                    if symbol != 'H':  # 水素以外
+                    if symbol != "H":  # 水素以外
                         num_heavy_atoms += 1
 
                 # 化学式を手動で構築（元素順序を考慮）
-                element_order = ['C', 'H', 'N', 'O', 'P', 'S', 'F', 'Cl', 'Br', 'I']
+                element_order = ["C", "H", "N", "O", "P", "S", "F", "Cl", "Br", "I"]
                 formula_parts = []
 
                 # 定義された順序で元素を追加
@@ -86,7 +88,7 @@ class AnalysisWindow(QDialog):
                     else:
                         formula_parts.append(f"{element}{count}")
 
-                mol_formula = ''.join(formula_parts)
+                mol_formula = "".join(formula_parts)
 
                 # 分子量と精密質量をRDKitから取得
 
@@ -105,7 +107,9 @@ class AnalysisWindow(QDialog):
                         exact_mw += exact_mass * count
                     except (ValueError, RuntimeError):
                         # 認識されない元素の場合はスキップ
-                        print(f"Warning: Unknown element {symbol}, skipping in mass calculation")
+                        print(
+                            f"Warning: Unknown element {symbol}, skipping in mass calculation"
+                        )
                         continue
 
                 # 表示するプロパティを辞書にまとめる（XYZ元データから計算）
@@ -118,7 +122,9 @@ class AnalysisWindow(QDialog):
                 }
 
                 # 注意メッセージを追加
-                note_label = QLabel("<i>Note: SMILES and structure-dependent properties are not available for XYZ-derived structures due to potential bond estimation inaccuracies.</i>")
+                note_label = QLabel(
+                    "<i>Note: SMILES and structure-dependent properties are not available for XYZ-derived structures due to potential bond estimation inaccuracies.</i>"
+                )
                 note_label.setWordWrap(True)
                 main_layout.addWidget(note_label)
 
@@ -192,7 +198,9 @@ class AnalysisWindow(QDialog):
             value.setReadOnly(True)
 
             copy_btn = QPushButton("Copy")
-            copy_btn.clicked.connect(lambda _, v=value: self.copy_to_clipboard(v.text()))
+            copy_btn.clicked.connect(
+                lambda _, v=value: self.copy_to_clipboard(v.text())
+            )
 
             grid_layout.addWidget(label, row, 0)
             grid_layout.addWidget(value, row, 1)
@@ -211,5 +219,7 @@ class AnalysisWindow(QDialog):
     def copy_to_clipboard(self, text):
         clipboard = QApplication.clipboard()
         clipboard.setText(text)
-        if self.parent() and hasattr(self.parent(), 'statusBar'):
-            self.parent().statusBar().showMessage(f"Copied '{text}' to clipboard.", 2000)
+        if self.parent() and hasattr(self.parent(), "statusBar"):
+            self.parent().statusBar().showMessage(
+                f"Copied '{text}' to clipboard.", 2000
+            )

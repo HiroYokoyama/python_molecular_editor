@@ -25,7 +25,8 @@ try:
 except Exception:
     from modules.dialog3_d_picking_mixin import Dialog3DPickingMixin
 
-class AlignmentDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
+
+class AlignmentDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
     def __init__(self, mol, main_window, axis, preselected_atoms=None, parent=None):
         QDialog.__init__(self, parent)
         Dialog3DPickingMixin.__init__(self)
@@ -47,13 +48,15 @@ class AlignmentDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
             self.update_display()
 
     def init_ui(self):
-        axis_names = {'x': 'X-axis', 'y': 'Y-axis', 'z': 'Z-axis'}
+        axis_names = {"x": "X-axis", "y": "Y-axis", "z": "Z-axis"}
         self.setWindowTitle(f"Align to {axis_names[self.axis]}")
         self.setModal(False)
         layout = QVBoxLayout(self)
 
         # Instructions
-        instruction_label = QLabel(f"Click atoms in the 3D view to select them for alignment to the {axis_names[self.axis]}. Exactly 2 atoms are required. The first atom will be moved to the origin, and the second atom will be positioned on the {axis_names[self.axis]}.")
+        instruction_label = QLabel(
+            f"Click atoms in the 3D view to select them for alignment to the {axis_names[self.axis]}. Exactly 2 atoms are required. The first atom will be moved to the origin, and the second atom will be positioned on the {axis_names[self.axis]}."
+        )
         instruction_label.setWordWrap(True)
         layout.addWidget(instruction_label)
 
@@ -116,18 +119,24 @@ class AlignmentDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
     def update_display(self):
         """選択状態の表示を更新"""
         if len(self.selected_atoms) == 0:
-            self.selection_label.setText("Click atoms to select for alignment (exactly 2 required)")
+            self.selection_label.setText(
+                "Click atoms to select for alignment (exactly 2 required)"
+            )
             self.apply_button.setEnabled(False)
         elif len(self.selected_atoms) == 1:
             selected_list = list(self.selected_atoms)
             atom = self.mol.GetAtomWithIdx(selected_list[0])
-            self.selection_label.setText(f"Selected 1 atom: {atom.GetSymbol()}{selected_list[0]+1}")
+            self.selection_label.setText(
+                f"Selected 1 atom: {atom.GetSymbol()}{selected_list[0] + 1}"
+            )
             self.apply_button.setEnabled(False)
         elif len(self.selected_atoms) == 2:
             selected_list = sorted(list(self.selected_atoms))
             atom1 = self.mol.GetAtomWithIdx(selected_list[0])
             atom2 = self.mol.GetAtomWithIdx(selected_list[1])
-            self.selection_label.setText(f"Selected 2 atoms: {atom1.GetSymbol()}{selected_list[0]+1}, {atom2.GetSymbol()}{selected_list[1]+1}")
+            self.selection_label.setText(
+                f"Selected 2 atoms: {atom1.GetSymbol()}{selected_list[0] + 1}, {atom2.GetSymbol()}{selected_list[1] + 1}"
+            )
             self.apply_button.setEnabled(True)
 
     def clear_selection(self):
@@ -147,10 +156,11 @@ class AlignmentDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
     def apply_alignment(self):
         """アライメントを適用"""
         if len(self.selected_atoms) != 2:
-            QMessageBox.warning(self, "Warning", "Please select exactly 2 atoms for alignment.")
+            QMessageBox.warning(
+                self, "Warning", "Please select exactly 2 atoms for alignment."
+            )
             return
         try:
-
             selected_list = sorted(list(self.selected_atoms))
             atom1_idx, atom2_idx = selected_list[0], selected_list[1]
 
@@ -172,9 +182,9 @@ class AlignmentDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
 
             # atom2を選択した軸上に配置するための回転を計算
             axis_vectors = {
-                'x': np.array([1.0, 0.0, 0.0]),
-                'y': np.array([0.0, 1.0, 0.0]),
-                'z': np.array([0.0, 0.0, 1.0])
+                "x": np.array([1.0, 0.0, 0.0]),
+                "y": np.array([0.0, 1.0, 0.0]),
+                "z": np.array([0.0, 0.0, 1.0]),
             }
             target_axis = axis_vectors[self.axis]
 
@@ -199,20 +209,24 @@ class AlignmentDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
                     def rodrigues_rotation(v, k, theta):
                         cos_theta = np.cos(theta)
                         sin_theta = np.sin(theta)
-                        return (v * cos_theta +
-                               np.cross(k, v) * sin_theta +
-                               k * np.dot(k, v) * (1 - cos_theta))
+                        return (
+                            v * cos_theta
+                            + np.cross(k, v) * sin_theta
+                            + k * np.dot(k, v) * (1 - cos_theta)
+                        )
 
                     # 全ての原子に回転を適用
                     for i in range(self.mol.GetNumAtoms()):
                         current_pos = np.array(conf.GetAtomPosition(i))
-                        rotated_pos = rodrigues_rotation(current_pos, rotation_axis, rotation_angle)
+                        rotated_pos = rodrigues_rotation(
+                            current_pos, rotation_axis, rotation_angle
+                        )
                         conf.SetAtomPosition(i, rotated_pos.tolist())
 
             # 3D座標を更新
-            self.main_window.atom_positions_3d = np.array([
-                list(conf.GetAtomPosition(i)) for i in range(self.mol.GetNumAtoms())
-            ])
+            self.main_window.atom_positions_3d = np.array(
+                [list(conf.GetAtomPosition(i)) for i in range(self.mol.GetNumAtoms())]
+            )
 
             # 3Dビューを更新
             self.main_window.draw_molecule_3d(self.mol)
@@ -223,7 +237,9 @@ class AlignmentDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
             # Undo状態を保存
             self.main_window.push_undo_state()
 
-            QMessageBox.information(self, "Success", f"Alignment to {self.axis.upper()}-axis completed.")
+            QMessageBox.information(
+                self, "Success", f"Alignment to {self.axis.upper()}-axis completed."
+            )
 
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to apply alignment: {str(e)}")

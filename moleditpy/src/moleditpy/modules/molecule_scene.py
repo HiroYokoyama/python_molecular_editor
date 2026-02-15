@@ -39,7 +39,8 @@ except Exception:
 
 try:
     from PyQt6 import sip as _sip  # type: ignore
-    _sip_isdeleted = getattr(_sip, 'isdeleted', None)
+
+    _sip_isdeleted = getattr(_sip, "isdeleted", None)
 except Exception:
     _sip = None
     _sip_isdeleted = None
@@ -54,54 +55,67 @@ class MoleculeScene(QGraphicsScene):
     def clear_template_preview(self):
         """テンプレートプレビュー用のゴースト線を全て消す"""
         for item in list(self.items()):
-            if isinstance(item, QGraphicsLineItem) and getattr(item, '_is_template_preview', False):
+            if isinstance(item, QGraphicsLineItem) and getattr(
+                item, "_is_template_preview", False
+            ):
                 try:
                     # If SIP reports the wrapper as deleted, skip it. Otherwise
                     # ensure it is still in a scene before attempting removal.
-                    if sip_isdeleted_safe(item): # pragma: no cover
+                    if sip_isdeleted_safe(item):  # pragma: no cover
                         continue
                     sc = None
                     try:
-                        sc = item.scene() if hasattr(item, 'scene') else None
-                    except Exception: # pragma: no cover
+                        sc = item.scene() if hasattr(item, "scene") else None
+                    except Exception:  # pragma: no cover
                         sc = None
-                    if sc is None: # pragma: no cover
+                    if sc is None:  # pragma: no cover
                         continue
                     try:
                         self.removeItem(item)
-                    except Exception: # pragma: no cover
+                    except Exception:  # pragma: no cover
                         # Best-effort: ignore removal errors to avoid crashes during teardown
                         pass
-                except Exception: # pragma: no cover
+                except Exception:  # pragma: no cover
                     # Non-fatal: continue with other items
                     continue
         self.template_context = {}
-        if hasattr(self, 'template_preview'):
+        if hasattr(self, "template_preview"):
             self.template_preview.hide()
 
     def __init__(self, data, window):
         super().__init__()
         self.data, self.window = data, window
-        self.mode, self.current_atom_symbol = 'select', 'C'
+        self.mode, self.current_atom_symbol = "select", "C"
         self.bond_order, self.bond_stereo = 1, 0
-        self.start_atom, self.temp_line, self.start_pos = None, None, None; self.press_pos = None
+        self.start_atom, self.temp_line, self.start_pos = None, None, None
+        self.press_pos = None
         self.mouse_moved_since_press = False
         self.data_changed_in_event = False
         self.hovered_item = None
 
         self.key_to_symbol_map = {
-            Qt.Key.Key_C: 'C', Qt.Key.Key_N: 'N', Qt.Key.Key_O: 'O', Qt.Key.Key_S: 'S',
-            Qt.Key.Key_F: 'F', Qt.Key.Key_B: 'B', Qt.Key.Key_I: 'I', Qt.Key.Key_H: 'H',
-            Qt.Key.Key_P: 'P',
+            Qt.Key.Key_C: "C",
+            Qt.Key.Key_N: "N",
+            Qt.Key.Key_O: "O",
+            Qt.Key.Key_S: "S",
+            Qt.Key.Key_F: "F",
+            Qt.Key.Key_B: "B",
+            Qt.Key.Key_I: "I",
+            Qt.Key.Key_H: "H",
+            Qt.Key.Key_P: "P",
         }
-        self.key_to_symbol_map_shift = { Qt.Key.Key_C: 'Cl', Qt.Key.Key_B: 'Br', Qt.Key.Key_S: 'Si',}
+        self.key_to_symbol_map_shift = {
+            Qt.Key.Key_C: "Cl",
+            Qt.Key.Key_B: "Br",
+            Qt.Key.Key_S: "Si",
+        }
 
         self.key_to_bond_mode_map = {
-            Qt.Key.Key_1: 'bond_1_0',
-            Qt.Key.Key_2: 'bond_2_0',
-            Qt.Key.Key_3: 'bond_3_0',
-            Qt.Key.Key_W: 'bond_1_1',
-            Qt.Key.Key_D: 'bond_1_2',
+            Qt.Key.Key_1: "bond_1_0",
+            Qt.Key.Key_2: "bond_2_0",
+            Qt.Key.Key_3: "bond_3_0",
+            Qt.Key.Key_W: "bond_1_1",
+            Qt.Key.Key_D: "bond_1_2",
         }
         self.reinitialize_items()
 
@@ -109,7 +123,7 @@ class MoleculeScene(QGraphicsScene):
         """指定された原子リストに接続する全ての結合の位置を更新する"""
         bonds_to_update = set()
         for atom in atoms:
-            if hasattr(atom, 'bonds'):
+            if hasattr(atom, "bonds"):
                 bonds_to_update.update(atom.bonds)
 
         for bond in bonds_to_update:
@@ -128,32 +142,39 @@ class MoleculeScene(QGraphicsScene):
             self.views()[0].viewport().update()
 
     def reinitialize_items(self):
-        self.template_preview = TemplatePreviewItem(); self.addItem(self.template_preview)
-        self.template_preview.hide(); self.template_preview_points = []; self.template_context = {}
+        self.template_preview = TemplatePreviewItem()
+        self.addItem(self.template_preview)
+        self.template_preview.hide()
+        self.template_preview_points = []
+        self.template_context = {}
         self._deleted_items = []
-        try: # pragma: no cover
+        try:  # pragma: no cover
             app = QApplication.instance()
             if app is not None:
                 try:
                     app.aboutToQuit.connect(self.purge_deleted_items)
                 except Exception:
-                    import traceback; traceback.print_exc()
+                    import traceback
+
+                    traceback.print_exc()
         except Exception:
-            import traceback; traceback.print_exc()
+            import traceback
+
+            traceback.print_exc()
 
     def clear_all_problem_flags(self):
         """全ての AtomItem の has_problem フラグをリセットし、再描画する"""
         needs_update = False
         for atom_data in self.data.atoms.values():
-            item = atom_data.get('item')
+            item = atom_data.get("item")
             # hasattr は安全性のためのチェック
-            if item and hasattr(item, 'has_problem') and item.has_problem:
+            if item and hasattr(item, "has_problem") and item.has_problem:
                 item.has_problem = False
                 item.update()
                 needs_update = True
         return needs_update
 
-    def mousePressEvent(self, event): # pragma: no cover
+    def mousePressEvent(self, event):  # pragma: no cover
         self.press_pos = event.scenePos()
         self.mouse_moved_since_press = False
         self.data_changed_in_event = False
@@ -174,16 +195,24 @@ class MoleculeScene(QGraphicsScene):
         if event.button() == Qt.MouseButton.RightButton:
             item = self.itemAt(event.scenePos(), self.views()[0].transform())
             if not isinstance(item, (AtomItem, BondItem)):
-                return # 対象外のものをクリックした場合は何もしない
+                return  # 対象外のものをクリックした場合は何もしない
             data_changed = False
             # If the user has a rectangular multi-selection and the clicked item
             # is part of that selection, delete all selected items (atoms/bonds).
             try:
-                selected_items = [it for it in self.selectedItems() if isinstance(it, (AtomItem, BondItem))]
+                selected_items = [
+                    it
+                    for it in self.selectedItems()
+                    if isinstance(it, (AtomItem, BondItem))
+                ]
             except Exception:
                 selected_items = []
 
-            if len(selected_items) > 1 and item in selected_items and not self.mode.startswith(('template', 'charge', 'radical')):
+            if (
+                len(selected_items) > 1
+                and item in selected_items
+                and not self.mode.startswith(("template", "charge", "radical"))
+            ):
                 # Delete the entire rectangular selection
                 data_changed = self.delete_items(set(selected_items))
                 if data_changed:
@@ -193,7 +222,7 @@ class MoleculeScene(QGraphicsScene):
                 event.accept()
                 return
             # --- E/Zモード専用処理 ---
-            if self.mode == 'bond_2_5':
+            if self.mode == "bond_2_5":
                 if isinstance(item, BondItem):
                     try:
                         # E/Zラベルを消す（ノーマルに戻す）
@@ -201,39 +230,41 @@ class MoleculeScene(QGraphicsScene):
                             item.set_stereo(0)
                             # データモデルも更新
                             for (id1, id2), bdata in self.data.bonds.items():
-                                if bdata.get('item') is item:
-                                    bdata['stereo'] = 0
+                                if bdata.get("item") is item:
+                                    bdata["stereo"] = 0
                                     break
                             self.window.push_undo_state()
                             data_changed = False  # ここでundo済みなので以降で積まない
-                    except Exception as e: # pragma: no cover
+                    except Exception as e:  # pragma: no cover
                         logging.error(f"Error clearing E/Z label: {e}", exc_info=True)
-                        if hasattr(self.window, 'statusBar'):
-                            self.window.statusBar().showMessage(f"Error clearing E/Z label: {e}", 5000)
-                        self.update_all_items() # エラー時も整合性維持のため再描画
+                        if hasattr(self.window, "statusBar"):
+                            self.window.statusBar().showMessage(
+                                f"Error clearing E/Z label: {e}", 5000
+                            )
+                        self.update_all_items()  # エラー時も整合性維持のため再描画
                 # AtomItemは何もしない
             # --- 通常の処理 ---
             elif isinstance(item, AtomItem):
                 # ラジカルモードの場合、ラジカルを0にする
-                if self.mode == 'radical' and item.radical != 0:
+                if self.mode == "radical" and item.radical != 0:
                     item.prepareGeometryChange()
                     item.radical = 0
-                    self.data.atoms[item.atom_id]['radical'] = 0
+                    self.data.atoms[item.atom_id]["radical"] = 0
                     item.update_style()
                     data_changed = True
                 # 電荷モードの場合、電荷を0にする
-                elif self.mode in ['charge_plus', 'charge_minus'] and item.charge != 0:
+                elif self.mode in ["charge_plus", "charge_minus"] and item.charge != 0:
                     item.prepareGeometryChange()
                     item.charge = 0
-                    self.data.atoms[item.atom_id]['charge'] = 0
+                    self.data.atoms[item.atom_id]["charge"] = 0
                     item.update_style()
                     data_changed = True
                 # 上記以外のモード（テンプレート、電荷、ラジカルを除く）では原子を削除
-                elif not self.mode.startswith(('template', 'charge', 'radical')):
+                elif not self.mode.startswith(("template", "charge", "radical")):
                     data_changed = self.delete_items({item})
             elif isinstance(item, BondItem):
                 # テンプレート、電荷、ラジカルモード以外で結合を削除
-                if not self.mode.startswith(('template', 'charge', 'radical')):
+                if not self.mode.startswith(("template", "charge", "radical")):
                     data_changed = self.delete_items({item})
 
             if data_changed:
@@ -241,14 +272,14 @@ class MoleculeScene(QGraphicsScene):
                 self.window.push_undo_state()
             self.press_pos = None
             event.accept()
-            return # 右クリック処理を完了し、左クリックの処理へ進ませない
+            return  # 右クリック処理を完了し、左クリックの処理へ進ませない
 
-        if self.mode.startswith('template'):
-            self.clearSelection() # テンプレートモードでは選択処理を一切行わず、クリック位置の記録のみ行う
+        if self.mode.startswith("template"):
+            self.clearSelection()  # テンプレートモードでは選択処理を一切行わず、クリック位置の記録のみ行う
             return
 
         # Z,Eモードの時は選択処理を行わないようにする
-        if self.mode in ['bond_2_5']:
+        if self.mode in ["bond_2_5"]:
             self.clearSelection()
             event.accept()
             return
@@ -261,31 +292,39 @@ class MoleculeScene(QGraphicsScene):
 
         if isinstance(item, AtomItem):
             self.start_atom = item
-            if self.mode != 'select':
+            if self.mode != "select":
                 self.clearSelection()
-                self.temp_line = QGraphicsLineItem(QLineF(self.start_atom.pos(), self.press_pos))
+                self.temp_line = QGraphicsLineItem(
+                    QLineF(self.start_atom.pos(), self.press_pos)
+                )
                 self.temp_line.setPen(QPen(Qt.GlobalColor.red, 2, Qt.PenStyle.DotLine))
                 self.addItem(self.temp_line)
             else:
                 super().mousePressEvent(event)
-        elif item is None and (self.mode.startswith('atom') or self.mode.startswith('bond')):
+        elif item is None and (
+            self.mode.startswith("atom") or self.mode.startswith("bond")
+        ):
             self.start_pos = self.press_pos
-            self.temp_line = QGraphicsLineItem(QLineF(self.start_pos, self.press_pos)); self.temp_line.setPen(QPen(Qt.GlobalColor.red, 2, Qt.PenStyle.DotLine)); self.addItem(self.temp_line)
+            self.temp_line = QGraphicsLineItem(QLineF(self.start_pos, self.press_pos))
+            self.temp_line.setPen(QPen(Qt.GlobalColor.red, 2, Qt.PenStyle.DotLine))
+            self.addItem(self.temp_line)
         else:
             super().mousePressEvent(event)
 
-    def mouseMoveEvent(self, event): # pragma: no cover
+    def mouseMoveEvent(self, event):  # pragma: no cover
         if not self.window.is_2d_editable:
             return
 
-        if self.mode.startswith('template'):
+        if self.mode.startswith("template"):
             self.update_template_preview(event.scenePos())
 
         if not self.mouse_moved_since_press and self.press_pos:
-            if (event.scenePos() - self.press_pos).manhattanLength() > QApplication.startDragDistance():
+            if (
+                event.scenePos() - self.press_pos
+            ).manhattanLength() > QApplication.startDragDistance():
                 self.mouse_moved_since_press = True
 
-        if self.temp_line and not self.mode.startswith('template'):
+        if self.temp_line and not self.mode.startswith("template"):
             start_point = self.start_atom.pos() if self.start_atom else self.start_pos
             if not start_point:
                 super().mouseMoveEvent(event)
@@ -300,9 +339,8 @@ class MoleculeScene(QGraphicsScene):
                     target_atom = item
                     break
 
-            is_valid_snap_target = (
-                target_atom is not None and
-                (self.start_atom is None or target_atom is not self.start_atom)
+            is_valid_snap_target = target_atom is not None and (
+                self.start_atom is None or target_atom is not self.start_atom
             )
 
             if is_valid_snap_target:
@@ -313,40 +351,57 @@ class MoleculeScene(QGraphicsScene):
             # テンプレートモードであっても、ホバーイベントはここで伝播する
             super().mouseMoveEvent(event)
 
-    def mouseReleaseEvent(self, event): # pragma: no cover
+    def mouseReleaseEvent(self, event):  # pragma: no cover
         if not self.window.is_2d_editable:
             return
 
         end_pos = event.scenePos()
-        is_click = self.press_pos and (end_pos - self.press_pos).manhattanLength() < QApplication.startDragDistance()
+        is_click = (
+            self.press_pos
+            and (end_pos - self.press_pos).manhattanLength()
+            < QApplication.startDragDistance()
+        )
 
         if self.temp_line:
             try:
                 if not sip_isdeleted_safe(self.temp_line):
                     try:
-                        if getattr(self.temp_line, 'scene', None) and self.temp_line.scene():
+                        if (
+                            getattr(self.temp_line, "scene", None)
+                            and self.temp_line.scene()
+                        ):
                             self.removeItem(self.temp_line)
                     except Exception:
-                        import traceback; traceback.print_exc()
+                        import traceback
+
+                        traceback.print_exc()
             except Exception:
                 try:
                     self.removeItem(self.temp_line)
                 except Exception:
-                    import traceback; traceback.print_exc()
+                    import traceback
+
+                    traceback.print_exc()
             finally:
                 self.temp_line = None
 
-        if self.mode.startswith('template') and is_click:
-            if self.template_context and self.template_context.get('points'):
+        if self.mode.startswith("template") and is_click:
+            if self.template_context and self.template_context.get("points"):
                 context = self.template_context
                 # Check if this is a user template
-                if self.mode.startswith('template_user'):
+                if self.mode.startswith("template_user"):
                     self.add_user_template_fragment(context)
                 else:
-                    self.add_molecule_fragment(context['points'], context['bonds_info'], existing_items=context.get('items', []))
+                    self.add_molecule_fragment(
+                        context["points"],
+                        context["bonds_info"],
+                        existing_items=context.get("items", []),
+                    )
                 self.data_changed_in_event = True
                 # イベント処理をここで完了させ、下のアイテムが選択されるのを防ぐ
-                self.start_atom=None; self.start_pos = None; self.press_pos = None
+                self.start_atom = None
+                self.start_pos = None
+                self.press_pos = None
                 if self.data_changed_in_event:
                     self.update_all_items()
                     self.window.push_undo_state()
@@ -355,32 +410,50 @@ class MoleculeScene(QGraphicsScene):
         released_item = self.itemAt(end_pos, self.views()[0].transform())
 
         # 1. 特殊モード（ラジカル/電荷）の処理
-        if (self.mode == 'radical') and is_click and isinstance(released_item, AtomItem):
+        if (
+            (self.mode == "radical")
+            and is_click
+            and isinstance(released_item, AtomItem)
+        ):
             atom = released_item
             atom.prepareGeometryChange()
             # ラジカルの状態をトグル (0 -> 1 -> 2 -> 0)
             atom.radical = (atom.radical + 1) % 3
-            self.data.atoms[atom.atom_id]['radical'] = atom.radical
+            self.data.atoms[atom.atom_id]["radical"] = atom.radical
             atom.update_style()
             self.data_changed_in_event = True
-            self.start_atom=None; self.start_pos = None; self.press_pos = None
-            if self.data_changed_in_event: self.window.push_undo_state()
+            self.start_atom = None
+            self.start_pos = None
+            self.press_pos = None
+            if self.data_changed_in_event:
+                self.window.push_undo_state()
             return
-        elif (self.mode == 'charge_plus' or self.mode == 'charge_minus') and is_click and isinstance(released_item, AtomItem):
+        elif (
+            (self.mode == "charge_plus" or self.mode == "charge_minus")
+            and is_click
+            and isinstance(released_item, AtomItem)
+        ):
             atom = released_item
             atom.prepareGeometryChange()
-            delta = 1 if self.mode == 'charge_plus' else -1
+            delta = 1 if self.mode == "charge_plus" else -1
             atom.charge += delta
-            self.data.atoms[atom.atom_id]['charge'] = atom.charge
+            self.data.atoms[atom.atom_id]["charge"] = atom.charge
             atom.update_style()
             self.data_changed_in_event = True
-            self.start_atom=None; self.start_pos = None; self.press_pos = None
-            if self.data_changed_in_event: self.window.push_undo_state()
+            self.start_atom = None
+            self.start_pos = None
+            self.press_pos = None
+            if self.data_changed_in_event:
+                self.window.push_undo_state()
             return
 
-        elif self.mode.startswith('bond') and is_click and isinstance(released_item, BondItem):
+        elif (
+            self.mode.startswith("bond")
+            and is_click
+            and isinstance(released_item, BondItem)
+        ):
             b = released_item
-            if self.mode == 'bond_2_5':
+            if self.mode == "bond_2_5":
                 try:
                     if b.order == 2:
                         current_stereo = b.stereo
@@ -391,24 +464,32 @@ class MoleculeScene(QGraphicsScene):
                         else:  # current_stereo == 4
                             new_stereo = 0  # E -> None
                         self.update_bond_stereo(b, new_stereo)
-                        self.update_all_items() # 強制再描画
+                        self.update_all_items()  # 強制再描画
                         self.window.push_undo_state()  # ここでUndo stackに積む
-                except Exception as e: # pragma: no cover
+                except Exception as e:  # pragma: no cover
                     logging.error(f"Error in E/Z stereo toggle: {e}", exc_info=True)
-                    if hasattr(self.window, 'statusBar'):
-                        self.window.statusBar().showMessage(f"Error changing E/Z stereochemistry: {e}", 5000)
-                    self.update_all_items() # エラー時も整合性維持のため再描画
-                return # この後の処理は行わない
-            elif self.bond_stereo != 0 and b.order == self.bond_order and b.stereo == self.bond_stereo:
+                    if hasattr(self.window, "statusBar"):
+                        self.window.statusBar().showMessage(
+                            f"Error changing E/Z stereochemistry: {e}", 5000
+                        )
+                    self.update_all_items()  # エラー時も整合性維持のため再描画
+                return  # この後の処理は行わない
+            elif (
+                self.bond_stereo != 0
+                and b.order == self.bond_order
+                and b.stereo == self.bond_stereo
+            ):
                 # 方向性を反転させる
                 old_id1, old_id2 = b.atom1.atom_id, b.atom2.atom_id
                 # 1. 古い方向の結合をデータから削除
                 self.data.remove_bond(old_id1, old_id2)
                 # 2. 逆方向で結合をデータに再追加
-                new_key, _ = self.data.add_bond(old_id2, old_id1, self.bond_order, self.bond_stereo)
+                new_key, _ = self.data.add_bond(
+                    old_id2, old_id1, self.bond_order, self.bond_stereo
+                )
                 # 3. BondItemの原子参照を入れ替え、新しいデータと関連付ける
                 b.atom1, b.atom2 = b.atom2, b.atom1
-                self.data.bonds[new_key]['item'] = b
+                self.data.bonds[new_key]["item"] = b
                 # 4. 見た目を更新
                 b.update_position()
             else:
@@ -416,62 +497,98 @@ class MoleculeScene(QGraphicsScene):
                 self.data.remove_bond(b.atom1.atom_id, b.atom2.atom_id)
                 # BondItemが記憶している方向(b.atom1 -> b.atom2)で、新しい結合様式を再作成
                 # これにより、修正済みのadd_bondが呼ばれ、正しい方向で保存される
-                new_key, _ = self.data.add_bond(b.atom1.atom_id, b.atom2.atom_id, self.bond_order, self.bond_stereo)
+                new_key, _ = self.data.add_bond(
+                    b.atom1.atom_id, b.atom2.atom_id, self.bond_order, self.bond_stereo
+                )
                 # BondItemの見た目とデータ参照を更新
                 b.prepareGeometryChange()
                 b.order = self.bond_order
                 b.stereo = self.bond_stereo
-                self.data.bonds[new_key]['item'] = b
+                self.data.bonds[new_key]["item"] = b
                 b.update()
             self.clearSelection()
             self.data_changed_in_event = True
         # 3. 新規原子・結合の作成処理 (atom_* モード および すべての bond_* モードで許可)
-        elif self.start_atom and (self.mode.startswith('atom') or self.mode.startswith('bond')):
-            line = QLineF(self.start_atom.pos(), end_pos); end_item = self.itemAt(end_pos, self.views()[0].transform())
+        elif self.start_atom and (
+            self.mode.startswith("atom") or self.mode.startswith("bond")
+        ):
+            line = QLineF(self.start_atom.pos(), end_pos)
+            end_item = self.itemAt(end_pos, self.views()[0].transform())
             # 使用する結合様式を決定
             # atomモードの場合は bond_order/stereo を None にして create_bond にデフォルト値(1, 0)を適用
             # bond_* モードの場合は現在の設定 (self.bond_order/stereo) を使用
-            order_to_use = self.bond_order if self.mode.startswith('bond') else None
-            stereo_to_use = self.bond_stereo if self.mode.startswith('bond') else None
+            order_to_use = self.bond_order if self.mode.startswith("bond") else None
+            stereo_to_use = self.bond_stereo if self.mode.startswith("bond") else None
             if is_click:
                 # 短いクリック: 既存原子のシンボル更新 (atomモードのみ)
-                if self.mode.startswith('atom') and self.start_atom.symbol != self.current_atom_symbol:
-                    self.start_atom.symbol=self.current_atom_symbol; self.data.atoms[self.start_atom.atom_id]['symbol']=self.current_atom_symbol; self.start_atom.update_style()
+                if (
+                    self.mode.startswith("atom")
+                    and self.start_atom.symbol != self.current_atom_symbol
+                ):
+                    self.start_atom.symbol = self.current_atom_symbol
+                    self.data.atoms[self.start_atom.atom_id]["symbol"] = (
+                        self.current_atom_symbol
+                    )
+                    self.start_atom.update_style()
                     self.data_changed_in_event = True
             else:
                 # ドラッグ: 新規結合または既存原子への結合
-                if isinstance(end_item, AtomItem) and self.start_atom!=end_item:
-                    self.create_bond(self.start_atom, end_item, bond_order=order_to_use, bond_stereo=stereo_to_use)
+                if isinstance(end_item, AtomItem) and self.start_atom != end_item:
+                    self.create_bond(
+                        self.start_atom,
+                        end_item,
+                        bond_order=order_to_use,
+                        bond_stereo=stereo_to_use,
+                    )
                 else:
-                    new_id = self.create_atom(self.current_atom_symbol, end_pos); new_item = self.data.atoms[new_id]['item']
-                    self.create_bond(self.start_atom, new_item, bond_order=order_to_use, bond_stereo=stereo_to_use)
+                    new_id = self.create_atom(self.current_atom_symbol, end_pos)
+                    new_item = self.data.atoms[new_id]["item"]
+                    self.create_bond(
+                        self.start_atom,
+                        new_item,
+                        bond_order=order_to_use,
+                        bond_stereo=stereo_to_use,
+                    )
                 self.data_changed_in_event = True
         # 4. 空白領域からの新規作成処理 (atom_* モード および すべての bond_* モードで許可)
-        elif self.start_pos and (self.mode.startswith('atom') or self.mode.startswith('bond')):
+        elif self.start_pos and (
+            self.mode.startswith("atom") or self.mode.startswith("bond")
+        ):
             line = QLineF(self.start_pos, end_pos)
             # 使用する結合様式を決定
-            order_to_use = self.bond_order if self.mode.startswith('bond') else None
-            stereo_to_use = self.bond_stereo if self.mode.startswith('bond') else None
+            order_to_use = self.bond_order if self.mode.startswith("bond") else None
+            stereo_to_use = self.bond_stereo if self.mode.startswith("bond") else None
             if line.length() < 10:
-                self.create_atom(self.current_atom_symbol, end_pos); self.data_changed_in_event = True
+                self.create_atom(self.current_atom_symbol, end_pos)
+                self.data_changed_in_event = True
             else:
                 end_item = self.itemAt(end_pos, self.views()[0].transform())
                 if isinstance(end_item, AtomItem):
-                    start_id = self.create_atom(self.current_atom_symbol, self.start_pos)
-                    start_item = self.data.atoms[start_id]['item']
-                    self.create_bond(start_item, end_item, bond_order=order_to_use, bond_stereo=stereo_to_use)
+                    start_id = self.create_atom(
+                        self.current_atom_symbol, self.start_pos
+                    )
+                    start_item = self.data.atoms[start_id]["item"]
+                    self.create_bond(
+                        start_item,
+                        end_item,
+                        bond_order=order_to_use,
+                        bond_stereo=stereo_to_use,
+                    )
                 else:
-                    start_id = self.create_atom(self.current_atom_symbol, self.start_pos)
+                    start_id = self.create_atom(
+                        self.current_atom_symbol, self.start_pos
+                    )
                     end_id = self.create_atom(self.current_atom_symbol, end_pos)
                     self.create_bond(
-                        self.data.atoms[start_id]['item'],
-                        self.data.atoms[end_id]['item'],
+                        self.data.atoms[start_id]["item"],
+                        self.data.atoms[end_id]["item"],
                         bond_order=order_to_use,
-                        bond_stereo=stereo_to_use
+                        bond_stereo=stereo_to_use,
                     )
                 self.data_changed_in_event = True
         # 5. それ以外の処理 (Selectモードなど)
-        else: super().mouseReleaseEvent(event)
+        else:
+            super().mouseReleaseEvent(event)
 
         # 削除されたオブジェクトを安全にチェック
         moved_atoms = []
@@ -488,41 +605,49 @@ class MoleculeScene(QGraphicsScene):
             bonds_to_update = set()
             for atom in moved_atoms:
                 try:
-                    self.data.atoms[atom.atom_id]['pos'] = atom.pos()
+                    self.data.atoms[atom.atom_id]["pos"] = atom.pos()
                     bonds_to_update.update(atom.bonds)
                 except RuntimeError:
                     # オブジェクトが削除されている場合はスキップ
                     continue
-            for bond in bonds_to_update: bond.update_position()
+            for bond in bonds_to_update:
+                bond.update_position()
             # 原子移動後に測定ラベルの位置を更新
             self.window.update_2d_measurement_labels()
-            if self.views(): self.views()[0].viewport().update()
+            if self.views():
+                self.views()[0].viewport().update()
 
         if self.data_changed_in_event:
             self.update_all_items()
 
-        self.start_atom=None; self.start_pos = None; self.press_pos = None; self.temp_line = None
+        self.start_atom = None
+        self.start_pos = None
+        self.press_pos = None
+        self.temp_line = None
         self.template_context = {}
         # Clear user template data when switching modes
-        if hasattr(self, 'user_template_data'):
+        if hasattr(self, "user_template_data"):
             self.user_template_data = None
-        if self.data_changed_in_event: self.window.push_undo_state()
+        if self.data_changed_in_event:
+            self.window.push_undo_state()
 
-    def mouseDoubleClickEvent(self, event): # pragma: no cover
+    def mouseDoubleClickEvent(self, event):  # pragma: no cover
         """ダブルクリックイベントを処理する"""
         item = self.itemAt(event.scenePos(), self.views()[0].transform())
 
-        if self.mode in ['charge_plus', 'charge_minus', 'radical'] and isinstance(item, AtomItem):
-            if self.mode == 'radical':
+        if self.mode in ["charge_plus", "charge_minus", "radical"] and isinstance(
+            item, AtomItem
+        ):
+            if self.mode == "radical":
                 item.prepareGeometryChange()
                 item.radical = (item.radical + 1) % 3
-                self.data.atoms[item.atom_id]['radical'] = item.radical
+                self.data.atoms[item.atom_id]["radical"] = item.radical
                 item.update_style()
             else:
                 item.prepareGeometryChange()
-                delta = 1 if self.mode == 'charge_plus' else -1
+                delta = 1 if self.mode == "charge_plus" else -1
                 item.charge += delta
-                self.data.atoms[item.atom_id]['charge'] = item.charge
+                self.data.atoms[item.atom_id]["charge"] = item.charge
                 item.update_style()
 
             self.update_all_items()
@@ -533,15 +658,15 @@ class MoleculeScene(QGraphicsScene):
 
         # Select-mode: double-click should select the clicked atom/bond and
         # only the atoms/bonds connected to it (the connected component).
-        if self.mode == 'select' and isinstance(item, (AtomItem, BondItem)):
+        if self.mode == "select" and isinstance(item, (AtomItem, BondItem)):
             try:
                 start_atoms = set()
                 if isinstance(item, AtomItem):
                     start_atoms.add(item)
                 else:
                     # BondItem: start from both ends if available
-                    a1 = getattr(item, 'atom1', None)
-                    a2 = getattr(item, 'atom2', None)
+                    a1 = getattr(item, "atom1", None)
+                    a2 = getattr(item, "atom2", None)
                     if a1 is not None:
                         start_atoms.add(a1)
                     if a2 is not None:
@@ -560,17 +685,17 @@ class MoleculeScene(QGraphicsScene):
                         continue
                     connected_atoms.add(a)
                     # iterate bonds attached to atom
-                    for b in getattr(a, 'bonds', []) or []:
+                    for b in getattr(a, "bonds", []) or []:
                         if b is None:
                             continue
                         connected_bonds.add(b)
                         # find the other atom at the bond
                         other = None
                         try:
-                            if getattr(b, 'atom1', None) is a:
-                                other = getattr(b, 'atom2', None)
+                            if getattr(b, "atom1", None) is a:
+                                other = getattr(b, "atom2", None)
                             else:
-                                other = getattr(b, 'atom1', None)
+                                other = getattr(b, "atom1", None)
                         except Exception:
                             other = None
                         if other is not None and other not in connected_atoms:
@@ -580,7 +705,9 @@ class MoleculeScene(QGraphicsScene):
                 try:
                     self.clearSelection()
                 except Exception:
-                    import traceback; traceback.print_exc()
+                    import traceback
+
+                    traceback.print_exc()
 
                 for a in connected_atoms:
                     try:
@@ -588,17 +715,21 @@ class MoleculeScene(QGraphicsScene):
                     except Exception:
                         try:
                             # fallback: set selected attribute if exists
-                            setattr(a, 'selected', True)
+                            setattr(a, "selected", True)
                         except Exception:
-                            import traceback; traceback.print_exc()
+                            import traceback
+
+                            traceback.print_exc()
                 for b in connected_bonds:
                     try:
                         b.setSelected(True)
                     except Exception:
                         try:
-                            setattr(b, 'selected', True)
+                            setattr(b, "selected", True)
                         except Exception:
-                            import traceback; traceback.print_exc()
+                            import traceback
+
+                            traceback.print_exc()
 
                 event.accept()
                 return
@@ -606,16 +737,18 @@ class MoleculeScene(QGraphicsScene):
                 # On any unexpected error, fall back to default handling
                 pass
 
-        elif self.mode in ['bond_2_5']:
-                event.accept()
-                return
+        elif self.mode in ["bond_2_5"]:
+            event.accept()
+            return
 
         super().mouseDoubleClickEvent(event)
 
     def create_atom(self, symbol, pos, charge=0, radical=0):
         atom_id = self.data.add_atom(symbol, pos, charge=charge, radical=radical)
         atom_item = AtomItem(atom_id, symbol, pos, charge=charge, radical=radical)
-        self.data.atoms[atom_id]['item'] = atom_item; self.addItem(atom_item); return atom_id
+        self.data.atoms[atom_id]["item"] = atom_item
+        self.addItem(atom_item)
+        return atom_id
 
     def create_bond(self, start_atom, end_atom, bond_order=None, bond_stereo=None):
         try:
@@ -631,26 +764,30 @@ class MoleculeScene(QGraphicsScene):
             order_to_use = self.bond_order if bond_order is None else bond_order
             stereo_to_use = self.bond_stereo if bond_stereo is None else bond_stereo
 
-            key, status = self.data.add_bond(start_atom.atom_id, end_atom.atom_id, order_to_use, stereo_to_use)
-            if status == 'created':
+            key, status = self.data.add_bond(
+                start_atom.atom_id, end_atom.atom_id, order_to_use, stereo_to_use
+            )
+            if status == "created":
                 bond_item = BondItem(start_atom, end_atom, order_to_use, stereo_to_use)
-                self.data.bonds[key]['item'] = bond_item
-                if hasattr(start_atom, 'bonds'):
+                self.data.bonds[key]["item"] = bond_item
+                if hasattr(start_atom, "bonds"):
                     start_atom.bonds.append(bond_item)
-                if hasattr(end_atom, 'bonds'):
+                if hasattr(end_atom, "bonds"):
                     end_atom.bonds.append(bond_item)
                 self.addItem(bond_item)
 
-            if hasattr(start_atom, 'update_style'):
+            if hasattr(start_atom, "update_style"):
                 start_atom.update_style()
-            if hasattr(end_atom, 'update_style'):
+            if hasattr(end_atom, "update_style"):
                 end_atom.update_style()
 
-        except Exception as e: # pragma: no cover
+        except Exception as e:  # pragma: no cover
             logging.error(f"Error creating bond: {e}", exc_info=True)
-            self.update_all_items() # エラーリカバリー
+            self.update_all_items()  # エラーリカバリー
 
-    def add_molecule_fragment(self, points, bonds_info, existing_items=None, symbol='C'):
+    def add_molecule_fragment(
+        self, points, bonds_info, existing_items=None, symbol="C"
+    ):
         """
         add_molecule_fragment の最終確定版。
         - 既存の結合次数を変更しないポリシーを徹底（最重要）。
@@ -661,10 +798,10 @@ class MoleculeScene(QGraphicsScene):
         num_points = len(points)
         atom_items = [None] * num_points
 
-        is_benzene_template = (num_points == 6 and any(o == 2 for _, _, o in bonds_info))
+        is_benzene_template = num_points == 6 and any(o == 2 for _, _, o in bonds_info)
 
         def coords(p):
-            if hasattr(p, 'x') and hasattr(p, 'y'):
+            if hasattr(p, "x") and hasattr(p, "y"):
                 return (p.x(), p.y())
             try:
                 return (p[0], p[1])
@@ -672,22 +809,28 @@ class MoleculeScene(QGraphicsScene):
                 raise ValueError("point has no x/y")
 
         def dist_pts(a, b):
-            ax, ay = coords(a); bx, by = coords(b)
+            ax, ay = coords(a)
+            bx, by = coords(b)
             return math.hypot(ax - bx, ay - by)
 
         # --- 1) 既にクリックされた existing_items をテンプレート頂点にマップ ---
         existing_items = existing_items or []
         used_indices = set()
-        ref_lengths = [dist_pts(points[i], points[j]) for i, j, _ in bonds_info if i < num_points and j < num_points]
+        ref_lengths = [
+            dist_pts(points[i], points[j])
+            for i, j, _ in bonds_info
+            if i < num_points and j < num_points
+        ]
         avg_len = (sum(ref_lengths) / len(ref_lengths)) if ref_lengths else 20.0
         map_threshold = max(0.5 * avg_len, 8.0)
 
         for ex_item in existing_items:
             try:
                 ex_pos = ex_item.pos()
-                best_idx, best_d = -1, float('inf')
+                best_idx, best_d = -1, float("inf")
                 for i, p in enumerate(points):
-                    if i in used_indices: continue
+                    if i in used_indices:
+                        continue
                     d = dist_pts(p, ex_pos)
                     if best_d is None or d < best_d:
                         best_d, best_idx = d, i
@@ -695,19 +838,23 @@ class MoleculeScene(QGraphicsScene):
                     atom_items[best_idx] = ex_item
                     used_indices.add(best_idx)
             except Exception:
-                import traceback; traceback.print_exc()
+                import traceback
+
+                traceback.print_exc()
 
         # --- 2) シーン内既存原子を self.data.atoms から列挙してマップ ---
         mapped_atoms = {it for it in atom_items if it is not None}
         for i, p in enumerate(points):
-            if atom_items[i] is not None: continue
+            if atom_items[i] is not None:
+                continue
 
             nearby = None
-            best_d = float('inf')
+            best_d = float("inf")
 
             for atom_data in self.data.atoms.values():
-                a_item = atom_data.get('item')
-                if not a_item or a_item in mapped_atoms: continue
+                a_item = atom_data.get("item")
+                if not a_item or a_item in mapped_atoms:
+                    continue
                 try:
                     d = dist_pts(p, a_item.pos())
                 except Exception:
@@ -723,31 +870,31 @@ class MoleculeScene(QGraphicsScene):
         for i, p in enumerate(points):
             if atom_items[i] is None:
                 atom_id = self.create_atom(symbol, p)
-                atom_items[i] = self.data.atoms[atom_id]['item']
+                atom_items[i] = self.data.atoms[atom_id]["item"]
 
         # --- 4) テンプレートのボンド配列を決定（ベンゼン回転合わせの処理） ---
         template_bonds_to_use = list(bonds_info)
-        is_6ring = (num_points == 6 and len(bonds_info) == 6)
+        is_6ring = num_points == 6 and len(bonds_info) == 6
         template_has_double = any(o == 2 for (_, _, o) in bonds_info)
 
         if is_6ring and template_has_double:
-            existing_orders = {} # key: bonds_infoのインデックス, value: 既存の結合次数
+            existing_orders = {}  # key: bonds_infoのインデックス, value: 既存の結合次数
             for k, (i_idx, j_idx, _) in enumerate(bonds_info):
                 if i_idx < len(atom_items) and j_idx < len(atom_items):
                     a, b = atom_items[i_idx], atom_items[j_idx]
-                    if a is None or b is None: continue
+                    if a is None or b is None:
+                        continue
                     eb = self.find_bond_between(a, b)
                     if eb:
-                        existing_orders[k] = getattr(eb, 'order', 1)
+                        existing_orders[k] = getattr(eb, "order", 1)
 
             if existing_orders:
                 orig_orders = [o for (_, _, o) in bonds_info]
                 best_rot = 0
-                max_score = -999 # スコアは「適合度」を意味する
+                max_score = -999  # スコアは「適合度」を意味する
 
                 # --- フューズされた辺の数による条件分岐 ---
                 if len(existing_orders) >= 2:
-
                     for rot in range(num_points):
                         match_double_count = 0
                         match_bonus = 0
@@ -791,11 +938,16 @@ class MoleculeScene(QGraphicsScene):
                         # 接合部(Legs)にあたるのは、残りのS-D-Sの両端のS。これが重要。
 
                         # テンプレートの結合次数配列
-                        current_template_orders = [orig_orders[(i + rot) % num_points] for i in range(num_points)]
+                        current_template_orders = [
+                            orig_orders[(i + rot) % num_points]
+                            for i in range(num_points)
+                        ]
 
                         # フューズ領域の両端を特定するために、
                         # 「フューズしているk」に対応するテンプレート側のインデックスを集める
-                        used_template_indices = set((k + rot) % num_points for k in existing_orders)
+                        used_template_indices = set(
+                            (k + rot) % num_points for k in existing_orders
+                        )
 
                         # テンプレート上で「使われている領域」の両隣（接続部）が「1(単結合)」なら超高得点
                         for t_idx in used_template_indices:
@@ -806,24 +958,32 @@ class MoleculeScene(QGraphicsScene):
 
                             # もし隣が「使われていない」なら、それは接続部である
                             if adj_l not in used_template_indices:
-                                if orig_orders[adj_l] == 1: safe_connection_score += 5000
+                                if orig_orders[adj_l] == 1:
+                                    safe_connection_score += 5000
 
                             if adj_r not in used_template_indices:
-                                if orig_orders[adj_r] == 1: safe_connection_score += 5000
+                                if orig_orders[adj_r] == 1:
+                                    safe_connection_score += 5000
 
                         # 既存のスコア計算
                         for k, exist_order in existing_orders.items():
                             template_ord = orig_orders[(k + rot) % num_points]
                             if template_ord == exist_order:
                                 match_bonus += 100
-                                if exist_order == 2: match_double_count += 1
+                                if exist_order == 2:
+                                    match_double_count += 1
                             else:
                                 # 不一致でも、Legsが安全なら許容したいのでペナルティは控えめに、
                                 # または safe_connection_score が圧倒的に勝つようにする
                                 mismatch_penalty += 50
 
                         # 最終スコア: 接続部の安全性を最優先
-                        current_score = safe_connection_score + (match_double_count * 1000) + match_bonus - mismatch_penalty
+                        current_score = (
+                            safe_connection_score
+                            + (match_double_count * 1000)
+                            + match_bonus
+                            - mismatch_penalty
+                        )
 
                         if current_score > max_score:
                             max_score = current_score
@@ -836,18 +996,21 @@ class MoleculeScene(QGraphicsScene):
 
                     for rot in range(num_points):
                         current_score = 0
-                        rotated_template_order = orig_orders[(k_fuse + rot) % num_points]
+                        rotated_template_order = orig_orders[
+                            (k_fuse + rot) % num_points
+                        ]
 
                         # 1. 接合部の次数マッチング
 
                         # パターンA: 交互配置（既存と逆）
-                        if (exist_order == 1 and rotated_template_order == 2) or \
-                           (exist_order == 2 and rotated_template_order == 1):
+                        if (exist_order == 1 and rotated_template_order == 2) or (
+                            exist_order == 2 and rotated_template_order == 1
+                        ):
                             current_score += 100
 
                         # 【追加変更点2】二重結合の重ね合わせ（共役維持）
                         # 既存が二重結合で、テンプレートも二重結合なら、ここで1つ消費される
-                        elif (exist_order == 2 and rotated_template_order == 2):
+                        elif exist_order == 2 and rotated_template_order == 2:
                             current_score += 100
 
                         # 2. 両隣の辺の次数チェック（交互配置の維持を確認）
@@ -858,19 +1021,24 @@ class MoleculeScene(QGraphicsScene):
 
                         if exist_order == 1:
                             # 接合部が単なら、隣は二重であってほしい
-                            if neighbor_order_1 == 2: current_score += 50
-                            if neighbor_order_2 == 2: current_score += 50
+                            if neighbor_order_1 == 2:
+                                current_score += 50
+                            if neighbor_order_2 == 2:
+                                current_score += 50
 
                         elif exist_order == 2:
                             # 接合部が二重なら、隣は単であってほしい
-                            if neighbor_order_1 == 1: current_score += 50
-                            if neighbor_order_2 == 1: current_score += 50
+                            if neighbor_order_1 == 1:
+                                current_score += 50
+                            if neighbor_order_2 == 1:
+                                current_score += 50
 
                         # 3. タイブレーク（他の接触しない辺との整合性など）
                         for k, e_order in existing_orders.items():
-                             if k != k_fuse:
+                            if k != k_fuse:
                                 r_t_order = orig_orders[(k + rot) % num_points]
-                                if r_t_order == e_order: current_score += 10
+                                if r_t_order == e_order:
+                                    current_score += 10
 
                         if current_score > max_score:
                             max_score = current_score
@@ -888,10 +1056,12 @@ class MoleculeScene(QGraphicsScene):
         for id1_idx, id2_idx, order in template_bonds_to_use:
             if id1_idx < len(atom_items) and id2_idx < len(atom_items):
                 a_item, b_item = atom_items[id1_idx], atom_items[id2_idx]
-                if not a_item or not b_item or a_item is b_item: continue
+                if not a_item or not b_item or a_item is b_item:
+                    continue
 
                 id1, id2 = a_item.atom_id, b_item.atom_id
-                if id1 > id2: id1, id2 = id2, id1
+                if id1 > id2:
+                    id1, id2 = id2, id1
 
                 exist_b = self.find_bond_between(a_item, b_item)
 
@@ -902,28 +1072,34 @@ class MoleculeScene(QGraphicsScene):
                     # 条件1: ベンゼン環テンプレートであること
                     # 条件2: 接続先が単結合であること
                     if is_benzene_template and exist_b.order == 1:
-
                         # 条件3: 接続先の単結合が共役系の一部ではないこと
                         # (つまり、両端の原子が他に二重結合を持たないこと)
                         atom1 = exist_b.atom1
                         atom2 = exist_b.atom2
 
                         # atom1が他に二重結合を持つかチェック
-                        atom1_has_other_double_bond = any(b.order == 2 for b in atom1.bonds if b is not exist_b)
+                        atom1_has_other_double_bond = any(
+                            b.order == 2 for b in atom1.bonds if b is not exist_b
+                        )
 
                         # atom2が他に二重結合を持つかチェック
-                        atom2_has_other_double_bond = any(b.order == 2 for b in atom2.bonds if b is not exist_b)
+                        atom2_has_other_double_bond = any(
+                            b.order == 2 for b in atom2.bonds if b is not exist_b
+                        )
 
                         # 両方の原子が他に二重結合を持たない「孤立した単結合」の場合のみ上書きフラグを立てる
-                        if not atom1_has_other_double_bond and not atom2_has_other_double_bond:
+                        if (
+                            not atom1_has_other_double_bond
+                            and not atom2_has_other_double_bond
+                        ):
                             should_overwrite = True
 
                     if should_overwrite:
                         # 上書き条件が全て満たされた場合にのみ、結合次数を更新
                         exist_b.order = order
                         exist_b.stereo = 0
-                        self.data.bonds[(id1, id2)]['order'] = order
-                        self.data.bonds[(id1, id2)]['stereo'] = 0
+                        self.data.bonds[(id1, id2)]["order"] = order
+                        self.data.bonds[(id1, id2)]["stereo"] = 0
                         exist_b.update()
                     else:
                         # 上書き条件を満たさない場合は、既存の結合を維持する
@@ -935,27 +1111,32 @@ class MoleculeScene(QGraphicsScene):
         # --- 6) 表示更新　---
         for at in atom_items:
             try:
-                if at: at.update_style()
+                if at:
+                    at.update_style()
             except Exception:
-                import traceback; traceback.print_exc()
+                import traceback
+
+                traceback.print_exc()
 
         return atom_items
 
-    def update_template_preview(self, pos): # pragma: no cover
-        mode_parts = self.mode.split('_')
+    def update_template_preview(self, pos):  # pragma: no cover
+        mode_parts = self.mode.split("_")
 
         # Check if this is a user template
-        if len(mode_parts) >= 3 and mode_parts[1] == 'user':
+        if len(mode_parts) >= 3 and mode_parts[1] == "user":
             self.update_user_template_preview(pos)
             return
 
         is_aromatic = False
-        if mode_parts[1] == 'benzene':
+        if mode_parts[1] == "benzene":
             n = 6
             is_aromatic = True
         else:
-            try: n = int(mode_parts[1])
-            except ValueError: return
+            try:
+                n = int(mode_parts[1])
+            except ValueError:
+                return
 
         items_under = self.items(pos)  # top-most first
         item = None
@@ -975,30 +1156,38 @@ class MoleculeScene(QGraphicsScene):
             snapped_angle = round(continuous_angle / snap_angle_rad) * snap_angle_rad
             p1 = p0 + QPointF(l * math.cos(snapped_angle), l * math.sin(snapped_angle))
             points = self._calculate_polygon_from_edge(p0, p1, n)
-            self.template_context['items'] = [item]
+            self.template_context["items"] = [item]
 
         elif isinstance(item, BondItem):
             # 結合にスナップ
             p0, p1 = item.atom1.pos(), item.atom2.pos()
-            points = self._calculate_polygon_from_edge(p0, p1, n, cursor_pos=pos, use_existing_length=True)
-            self.template_context['items'] = [item.atom1, item.atom2]
+            points = self._calculate_polygon_from_edge(
+                p0, p1, n, cursor_pos=pos, use_existing_length=True
+            )
+            self.template_context["items"] = [item.atom1, item.atom2]
 
         else:
             angle_step = 2 * math.pi / n
             start_angle = -math.pi / 2 if n % 2 != 0 else -math.pi / 2 - angle_step / 2
             points = [
-                pos + QPointF(l * math.cos(start_angle + i * angle_step), l * math.sin(start_angle + i * angle_step))
+                pos
+                + QPointF(
+                    l * math.cos(start_angle + i * angle_step),
+                    l * math.sin(start_angle + i * angle_step),
+                )
                 for i in range(n)
             ]
 
         if points:
             if is_aromatic:
-                bonds_info = [(i, (i + 1) % n, 2 if i % 2 == 0 else 1) for i in range(n)]
+                bonds_info = [
+                    (i, (i + 1) % n, 2 if i % 2 == 0 else 1) for i in range(n)
+                ]
             else:
                 bonds_info = [(i, (i + 1) % n, 1) for i in range(n)]
 
-            self.template_context['points'] = points
-            self.template_context['bonds_info'] = bonds_info
+            self.template_context["points"] = points
+            self.template_context["bonds_info"] = bonds_info
 
             self.template_preview.set_geometry(points, is_aromatic)
 
@@ -1010,18 +1199,22 @@ class MoleculeScene(QGraphicsScene):
             if self.views():
                 self.views()[0].viewport().update()
 
-    def _calculate_polygon_from_edge(self, p0, p1, n, cursor_pos=None, use_existing_length=False):
-        if n < 3: return []
+    def _calculate_polygon_from_edge(
+        self, p0, p1, n, cursor_pos=None, use_existing_length=False
+    ):
+        if n < 3:
+            return []
         v_edge = p1 - p0
-        edge_length = math.sqrt(v_edge.x()**2 + v_edge.y()**2)
-        if edge_length == 0: return []
+        edge_length = math.sqrt(v_edge.x() ** 2 + v_edge.y() ** 2)
+        if edge_length == 0:
+            return []
 
         target_length = edge_length if use_existing_length else DEFAULT_BOND_LENGTH
 
         v_edge = (v_edge / edge_length) * target_length
 
         if not use_existing_length:
-             p1 = p0 + v_edge
+            p1 = p0 + v_edge
 
         points = [p0, p1]
 
@@ -1031,7 +1224,9 @@ class MoleculeScene(QGraphicsScene):
         if cursor_pos:
             # Note: v_edgeは正規化済みだが、方向は同じなので判定には問題ない
             v_cursor = cursor_pos - p0
-            cross_product_z = (p1 - p0).x() * v_cursor.y() - (p1 - p0).y() * v_cursor.x()
+            cross_product_z = (p1 - p0).x() * v_cursor.y() - (
+                p1 - p0
+            ).y() * v_cursor.x()
             if cross_product_z < 0:
                 rotation_angle = -rotation_angle
 
@@ -1046,7 +1241,7 @@ class MoleculeScene(QGraphicsScene):
             points.append(current_p)
         return points
 
-    def delete_items(self, items_to_delete): # pragma: no cover
+    def delete_items(self, items_to_delete):  # pragma: no cover
         """指定されたアイテムセット（原子・結合）を安全な順序で削除する修正版"""
         # Hardened deletion: perform data-model removals first, then scene removals,
         # and always defensively check attributes to avoid accessing partially-deleted objects.
@@ -1075,13 +1270,17 @@ class MoleculeScene(QGraphicsScene):
             pass
 
         try:
-            atoms_to_delete = {item for item in items_to_delete if isinstance(item, AtomItem)}
-            bonds_to_delete = {item for item in items_to_delete if isinstance(item, BondItem)}
+            atoms_to_delete = {
+                item for item in items_to_delete if isinstance(item, AtomItem)
+            }
+            bonds_to_delete = {
+                item for item in items_to_delete if isinstance(item, BondItem)
+            }
 
             # Include bonds attached to atoms being deleted
             for atom in list(atoms_to_delete):
                 try:
-                    if hasattr(atom, 'bonds') and atom.bonds:
+                    if hasattr(atom, "bonds") and atom.bonds:
                         for b in list(atom.bonds):
                             bonds_to_delete.add(b)
                 except Exception:
@@ -1092,8 +1291,8 @@ class MoleculeScene(QGraphicsScene):
             atoms_to_update = set()
             for bond in list(bonds_to_delete):
                 try:
-                    a1 = getattr(bond, 'atom1', None)
-                    a2 = getattr(bond, 'atom2', None)
+                    a1 = getattr(bond, "atom1", None)
+                    a2 = getattr(bond, "atom2", None)
                     if a1 and a1 not in atoms_to_delete:
                         atoms_to_update.add(a1)
                     if a2 and a2 not in atoms_to_delete:
@@ -1109,30 +1308,41 @@ class MoleculeScene(QGraphicsScene):
                     if sip_isdeleted_safe(atom):
                         continue
                     # Defensive: if the atom has a bonds list, filter out bonds being deleted
-                    if hasattr(atom, 'bonds') and atom.bonds:
+                    if hasattr(atom, "bonds") and atom.bonds:
                         try:
-
-                            live_btd = {b for b in bonds_to_delete if not sip_isdeleted_safe(b)}
+                            live_btd = {
+                                b for b in bonds_to_delete if not sip_isdeleted_safe(b)
+                            }
 
                             # First, remove any SIP-deleted bond wrappers from atom.bonds
-                            atom.bonds[:] = [b for b in atom.bonds if not sip_isdeleted_safe(b)]
+                            atom.bonds[:] = [
+                                b for b in atom.bonds if not sip_isdeleted_safe(b)
+                            ]
 
                             # Then remove bonds which are in the live_btd set
                             if live_btd:
-                                atom.bonds[:] = [b for b in atom.bonds if b not in live_btd]
+                                atom.bonds[:] = [
+                                    b for b in atom.bonds if b not in live_btd
+                                ]
                         except Exception:
                             # Fall back to iterative removal if list comprehension fails
                             try:
-                                live_btd = [b for b in list(bonds_to_delete) if not sip_isdeleted_safe(b)]
+                                live_btd = [
+                                    b
+                                    for b in list(bonds_to_delete)
+                                    if not sip_isdeleted_safe(b)
+                                ]
                                 for b in live_btd:
                                     if b in atom.bonds:
                                         atom.bonds.remove(b)
                             except Exception:
-                                import traceback; traceback.print_exc()
+                                import traceback
+
+                                traceback.print_exc()
 
                     # After pruning bond references, update visual style so carbons without
                     # bonds become visible again.
-                    if hasattr(atom, 'update_style'):
+                    if hasattr(atom, "update_style"):
                         atom.update_style()
                 except Exception:
                     continue
@@ -1141,9 +1351,9 @@ class MoleculeScene(QGraphicsScene):
             #    doesn't encounter stale entries while we are removing graphics)
             for bond in list(bonds_to_delete):
                 try:
-                    a1 = getattr(bond, 'atom1', None)
-                    a2 = getattr(bond, 'atom2', None)
-                    if a1 and a2 and hasattr(self, 'data'):
+                    a1 = getattr(bond, "atom1", None)
+                    a2 = getattr(bond, "atom2", None)
+                    if a1 and a2 and hasattr(self, "data"):
                         try:
                             self.data.remove_bond(a1.atom_id, a2.atom_id)
                         except Exception:
@@ -1151,17 +1361,21 @@ class MoleculeScene(QGraphicsScene):
                             try:
                                 self.data.remove_bond(a2.atom_id, a1.atom_id)
                             except Exception:
-                                import traceback; traceback.print_exc()
+                                import traceback
+
+                                traceback.print_exc()
                 except Exception:
                     continue
 
             for atom in list(atoms_to_delete):
                 try:
-                    if hasattr(atom, 'atom_id') and hasattr(self, 'data'):
+                    if hasattr(atom, "atom_id") and hasattr(self, "data"):
                         try:
                             self.data.remove_atom(atom.atom_id)
                         except Exception:
-                            import traceback; traceback.print_exc()
+                            import traceback
+
+                            traceback.print_exc()
                 except Exception:
                     continue
 
@@ -1171,7 +1385,9 @@ class MoleculeScene(QGraphicsScene):
                 try:
                     self._ih_update_counter = 0
                 except Exception:
-                    import traceback; traceback.print_exc()
+                    import traceback
+
+                    traceback.print_exc()
 
             # 3) Remove graphic items from the scene (bonds first)
             # To avoid calling into methods on wrappers that may refer to
@@ -1194,7 +1410,9 @@ class MoleculeScene(QGraphicsScene):
                         try:
                             self.removeItem(bond)
                         except Exception:
-                            import traceback; traceback.print_exc()
+                            import traceback
+
+                            traceback.print_exc()
                 except Exception:
                     continue
 
@@ -1207,7 +1425,9 @@ class MoleculeScene(QGraphicsScene):
                         try:
                             self.removeItem(atom)
                         except Exception:
-                            import traceback; traceback.print_exc()
+                            import traceback
+
+                            traceback.print_exc()
                 except Exception:
                     continue
 
@@ -1217,7 +1437,7 @@ class MoleculeScene(QGraphicsScene):
             #    the scene. This prevents their underlying SIP wrappers from
             #    being finalized while other code may still touch them.
             try:
-                if not hasattr(self, '_deleted_items') or self._deleted_items is None:
+                if not hasattr(self, "_deleted_items") or self._deleted_items is None:
                     self._deleted_items = []
             except Exception:
                 self._deleted_items = []
@@ -1229,7 +1449,9 @@ class MoleculeScene(QGraphicsScene):
                         try:
                             bond.hide()
                         except Exception:
-                            import traceback; traceback.print_exc()
+                            import traceback
+
+                            traceback.print_exc()
                         try:
                             self._deleted_items.append(bond)
                         except Exception:
@@ -1244,18 +1466,22 @@ class MoleculeScene(QGraphicsScene):
                         try:
                             atom.hide()
                         except Exception:
-                            import traceback; traceback.print_exc()
+                            import traceback
+
+                            traceback.print_exc()
                         try:
                             self._deleted_items.append(atom)
                         except Exception:
-                            import traceback; traceback.print_exc()
+                            import traceback
+
+                            traceback.print_exc()
                 except Exception:
                     continue
 
             # 5) Final visual updates for surviving atoms
             for atom in list(atoms_to_update):
                 try:
-                    if hasattr(atom, 'update_style'):
+                    if hasattr(atom, "update_style"):
                         atom.update_style()
                 except Exception:
                     continue
@@ -1267,7 +1493,7 @@ class MoleculeScene(QGraphicsScene):
             print(f"Error during delete_items operation: {e}")
 
             traceback.print_exc()
-            self.update_all_items() # エラーリカバリー
+            self.update_all_items()  # エラーリカバリー
             return False
 
     def purge_deleted_items(self):
@@ -1280,7 +1506,7 @@ class MoleculeScene(QGraphicsScene):
         and any SIP unavailability.
         """
         try:
-            if not hasattr(self, '_deleted_items') or not self._deleted_items:
+            if not hasattr(self, "_deleted_items") or not self._deleted_items:
                 return
 
             # Iterate a copy since we will clear the list.
@@ -1292,19 +1518,25 @@ class MoleculeScene(QGraphicsScene):
                         try:
                             obj.hide()
                         except Exception:
-                            import traceback; traceback.print_exc()
+                            import traceback
+
+                            traceback.print_exc()
 
                     try:
-                        if hasattr(obj, 'bonds') and getattr(obj, 'bonds') is not None:
+                        if hasattr(obj, "bonds") and getattr(obj, "bonds") is not None:
                             try:
                                 obj.bonds.clear()
                             except Exception:
                                 try:
                                     obj.bonds = []
                                 except Exception:
-                                    import traceback; traceback.print_exc()
+                                    import traceback
+
+                                    traceback.print_exc()
                     except Exception:
-                        import traceback; traceback.print_exc()
+                        import traceback
+
+                        traceback.print_exc()
 
                 except Exception:
                     # Continue purging remaining items even if one fails.
@@ -1317,21 +1549,25 @@ class MoleculeScene(QGraphicsScene):
                 try:
                     self._deleted_items = []
                 except Exception:
-                    import traceback; traceback.print_exc()
+                    import traceback
+
+                    traceback.print_exc()
 
         except Exception as e:
             # Never raise during shutdown
             try:
                 print(f"Error purging deleted items: {e}")
             except Exception:
-                import traceback; traceback.print_exc()
+                import traceback
+
+                traceback.print_exc()
 
     def add_user_template_fragment(self, context):
         """ユーザーテンプレートフラグメントを配置"""
-        points = context.get('points', [])
-        bonds_info = context.get('bonds_info', [])
-        atoms_data = context.get('atoms_data', [])
-        attachment_atom = context.get('attachment_atom')
+        points = context.get("points", [])
+        bonds_info = context.get("bonds_info", [])
+        atoms_data = context.get("atoms_data", [])
+        attachment_atom = context.get("attachment_atom")
 
         if not points or not atoms_data:
             return
@@ -1342,24 +1578,24 @@ class MoleculeScene(QGraphicsScene):
         for i, (pos, atom_data) in enumerate(zip(points, atoms_data)):
             # Skip first atom if attaching to existing atom
             if i == 0 and attachment_atom:
-                atom_id_map[atom_data['id']] = attachment_atom.atom_id
+                atom_id_map[atom_data["id"]] = attachment_atom.atom_id
                 continue
 
-            symbol = atom_data.get('symbol', 'C')
-            charge = atom_data.get('charge', 0)
-            radical = atom_data.get('radical', 0)
+            symbol = atom_data.get("symbol", "C")
+            charge = atom_data.get("charge", 0)
+            radical = atom_data.get("radical", 0)
 
             atom_id = self.data.add_atom(symbol, pos, charge, radical)
-            atom_id_map[atom_data['id']] = atom_id
+            atom_id_map[atom_data["id"]] = atom_id
 
             # Create visual atom item
             atom_item = AtomItem(atom_id, symbol, pos, charge, radical)
-            self.data.atoms[atom_id]['item'] = atom_item
+            self.data.atoms[atom_id]["item"] = atom_item
             self.addItem(atom_item)
 
         # Create bonds (bonds_infoは必ずidベースで扱う)
         # まずindex→id変換テーブルを作る
-        index_to_id = [atom_data.get('id', i) for i, atom_data in enumerate(atoms_data)]
+        index_to_id = [atom_data.get("id", i) for i, atom_data in enumerate(atoms_data)]
         for bond_info in bonds_info:
             if isinstance(bond_info, (list, tuple)) and len(bond_info) >= 2:
                 # bonds_infoの0,1番目がindexならidに変換
@@ -1390,31 +1626,33 @@ class MoleculeScene(QGraphicsScene):
                         existing_bond = (atom2_id, atom1_id)
 
                     if not existing_bond:
-                        bond_key, _ = self.data.add_bond(atom1_id, atom2_id, order, stereo)
+                        bond_key, _ = self.data.add_bond(
+                            atom1_id, atom2_id, order, stereo
+                        )
                         # Create visual bond item
-                        atom1_item = self.data.atoms[atom1_id]['item']
-                        atom2_item = self.data.atoms[atom2_id]['item']
+                        atom1_item = self.data.atoms[atom1_id]["item"]
+                        atom2_item = self.data.atoms[atom2_id]["item"]
                         if atom1_item and atom2_item:
                             bond_item = BondItem(atom1_item, atom2_item, order, stereo)
-                            self.data.bonds[bond_key]['item'] = bond_item
+                            self.data.bonds[bond_key]["item"] = bond_item
                             self.addItem(bond_item)
                             atom1_item.bonds.append(bond_item)
                             atom2_item.bonds.append(bond_item)
 
         # Update atom visuals
         for atom_id in atom_id_map.values():
-            if atom_id in self.data.atoms and self.data.atoms[atom_id]['item']:
-                self.data.atoms[atom_id]['item'].update_style()
+            if atom_id in self.data.atoms and self.data.atoms[atom_id]["item"]:
+                self.data.atoms[atom_id]["item"].update_style()
 
-    def update_user_template_preview(self, pos): # pragma: no cover
+    def update_user_template_preview(self, pos):  # pragma: no cover
         """ユーザーテンプレートのプレビューを更新"""
         # Robust user template preview: do not access self.data.atoms for preview-only atoms
-        if not hasattr(self, 'user_template_data') or not self.user_template_data:
+        if not hasattr(self, "user_template_data") or not self.user_template_data:
             return
 
         template_data = self.user_template_data
-        atoms = template_data.get('atoms', [])
-        bonds = template_data.get('bonds', [])
+        atoms = template_data.get("atoms", [])
+        bonds = template_data.get("bonds", [])
 
         if not atoms:
             return
@@ -1433,51 +1671,53 @@ class MoleculeScene(QGraphicsScene):
         center_x = 0.0
         center_y = 0.0
         if atoms:
-            min_x = min(atom['x'] for atom in atoms)
-            max_x = max(atom['x'] for atom in atoms)
-            min_y = min(atom['y'] for atom in atoms)
-            max_y = max(atom['y'] for atom in atoms)
+            min_x = min(atom["x"] for atom in atoms)
+            max_x = max(atom["x"] for atom in atoms)
+            min_y = min(atom["y"] for atom in atoms)
+            max_y = max(atom["y"] for atom in atoms)
             center_x = (min_x + max_x) / 2
             center_y = (min_y + max_y) / 2
         # Position template
         if attachment_atom:
             # Attach to existing atom
             attach_pos = attachment_atom.pos()
-            offset_x = attach_pos.x() - atoms[0]['x']
-            offset_y = attach_pos.y() - atoms[0]['y']
+            offset_x = attach_pos.x() - atoms[0]["x"]
+            offset_y = attach_pos.y() - atoms[0]["y"]
         else:
             # Center at cursor position
             offset_x = pos.x() - center_x
             offset_y = pos.y() - center_y
         # Calculate atom positions
         for atom in atoms:
-            new_pos = QPointF(atom['x'] + offset_x, atom['y'] + offset_y)
+            new_pos = QPointF(atom["x"] + offset_x, atom["y"] + offset_y)
             points.append(new_pos)
         # Create atom ID to index mapping (for preview only)
         atom_id_to_index = {}
         for i, atom in enumerate(atoms):
-            atom_id = atom.get('id', i)
+            atom_id = atom.get("id", i)
             atom_id_to_index[atom_id] = i
         # bonds_info をテンプレートの bonds から生成
         bonds_info = []
         for bond in bonds:
-            atom1_idx = atom_id_to_index.get(bond['atom1'])
-            atom2_idx = atom_id_to_index.get(bond['atom2'])
+            atom1_idx = atom_id_to_index.get(bond["atom1"])
+            atom2_idx = atom_id_to_index.get(bond["atom2"])
             if atom1_idx is not None and atom2_idx is not None:
-                order = bond.get('order', 1)
-                stereo = bond.get('stereo', 0)
+                order = bond.get("order", 1)
+                stereo = bond.get("stereo", 0)
                 bonds_info.append((atom1_idx, atom2_idx, order, stereo))
         # プレビュー用: points, bonds_info から線を描画
         # 設置用 context を保存
         self.template_context = {
-            'points': points,
-            'bonds_info': bonds_info,
-            'atoms_data': atoms,
-            'attachment_atom': attachment_atom,
+            "points": points,
+            "bonds_info": bonds_info,
+            "atoms_data": atoms,
+            "attachment_atom": attachment_atom,
         }
         # 既存のプレビューアイテムを一旦クリア (レガシーな線画描画の消去)
         for item in list(self.items()):
-            if isinstance(item, QGraphicsLineItem) and getattr(item, '_is_template_preview', False):
+            if isinstance(item, QGraphicsLineItem) and getattr(
+                item, "_is_template_preview", False
+            ):
                 self.removeItem(item)
 
         # TemplatePreviewItemを使用して高機能なプレビューを描画
@@ -1493,7 +1733,7 @@ class MoleculeScene(QGraphicsScene):
         """BondItemから呼ばれ、ホバー中のアイテムを記録する"""
         self.hovered_item = item
 
-    def keyPressEvent(self, event): # pragma: no cover
+    def keyPressEvent(self, event):  # pragma: no cover
         view = self.views()[0]
         cursor_pos = view.mapToScene(view.mapFromGlobal(QCursor.pos()))
         item_at_cursor = self.itemAt(cursor_pos, view.transform())
@@ -1506,7 +1746,6 @@ class MoleculeScene(QGraphicsScene):
         if key == Qt.Key.Key_4:
             # --- 動作1: カーソルが原子/結合上にある場合 (ワンショットでテンプレート配置) ---
             if isinstance(item_at_cursor, (AtomItem, BondItem)):
-
                 # ベンゼンテンプレートのパラメータを設定
                 n, is_aromatic = 6, True
                 points, bonds_info, existing_items = [], [], []
@@ -1516,26 +1755,36 @@ class MoleculeScene(QGraphicsScene):
                     p0 = item_at_cursor.pos()
                     l = DEFAULT_BOND_LENGTH
                     direction = QLineF(p0, cursor_pos).unitVector()
-                    p1 = p0 + direction.p2() * l if direction.length() > 0 else p0 + QPointF(l, 0)
+                    p1 = (
+                        p0 + direction.p2() * l
+                        if direction.length() > 0
+                        else p0 + QPointF(l, 0)
+                    )
                     points = self._calculate_polygon_from_edge(p0, p1, n)
                     existing_items = [item_at_cursor]
 
                 elif isinstance(item_at_cursor, BondItem):
                     p0, p1 = item_at_cursor.atom1.pos(), item_at_cursor.atom2.pos()
-                    points = self._calculate_polygon_from_edge(p0, p1, n, cursor_pos=cursor_pos, use_existing_length=True)
+                    points = self._calculate_polygon_from_edge(
+                        p0, p1, n, cursor_pos=cursor_pos, use_existing_length=True
+                    )
                     existing_items = [item_at_cursor.atom1, item_at_cursor.atom2]
 
                 if points:
-                    bonds_info = [(i, (i + 1) % n, 2 if i % 2 == 0 else 1) for i in range(n)]
+                    bonds_info = [
+                        (i, (i + 1) % n, 2 if i % 2 == 0 else 1) for i in range(n)
+                    ]
 
                     # 計算した情報を使って、その場にフラグメントを追加
-                    self.add_molecule_fragment(points, bonds_info, existing_items=existing_items)
+                    self.add_molecule_fragment(
+                        points, bonds_info, existing_items=existing_items
+                    )
                     self.update_all_items()
                     self.window.push_undo_state()
 
             # --- 動作2: カーソルが空白領域にある場合 (モード切替) ---
             else:
-                self.window.set_mode_and_update_toolbar('template_benzene')
+                self.window.set_mode_and_update_toolbar("template_benzene")
 
             event.accept()
             return
@@ -1554,7 +1803,7 @@ class MoleculeScene(QGraphicsScene):
                     # ラジカルの状態をトグル (0 -> 1 -> 2 -> 0)
                     atom.prepareGeometryChange()
                     atom.radical = (atom.radical + 1) % 3
-                    self.data.atoms[atom.atom_id]['radical'] = atom.radical
+                    self.data.atoms[atom.atom_id]["radical"] = atom.radical
                     atom.update_style()
                 self.update_all_items()
                 self.window.push_undo_state()
@@ -1575,7 +1824,7 @@ class MoleculeScene(QGraphicsScene):
                 for atom in target_atoms:
                     atom.prepareGeometryChange()
                     atom.charge += delta
-                    self.data.atoms[atom.atom_id]['charge'] = atom.charge
+                    self.data.atoms[atom.atom_id]["charge"] = atom.charge
                     atom.update_style()
                 self.update_all_items()
                 self.window.push_undo_state()
@@ -1585,22 +1834,30 @@ class MoleculeScene(QGraphicsScene):
         # --- 1. Atomに対する操作 (元素記号の変更) ---
         if isinstance(item_at_cursor, AtomItem):
             new_symbol = None
-            if modifiers == Qt.KeyboardModifier.NoModifier and key in self.key_to_symbol_map:
+            if (
+                modifiers == Qt.KeyboardModifier.NoModifier
+                and key in self.key_to_symbol_map
+            ):
                 new_symbol = self.key_to_symbol_map[key]
-            elif modifiers == Qt.KeyboardModifier.ShiftModifier and key in self.key_to_symbol_map_shift:
+            elif (
+                modifiers == Qt.KeyboardModifier.ShiftModifier
+                and key in self.key_to_symbol_map_shift
+            ):
                 new_symbol = self.key_to_symbol_map_shift[key]
 
             if new_symbol and item_at_cursor.symbol != new_symbol:
                 item_at_cursor.prepareGeometryChange()
 
                 item_at_cursor.symbol = new_symbol
-                self.data.atoms[item_at_cursor.atom_id]['symbol'] = new_symbol
+                self.data.atoms[item_at_cursor.atom_id]["symbol"] = new_symbol
                 item_at_cursor.update_style()
 
                 atoms_to_update = {item_at_cursor}
                 for bond in item_at_cursor.bonds:
                     bond.update()
-                    other_atom = bond.atom1 if bond.atom2 is item_at_cursor else bond.atom2
+                    other_atom = (
+                        bond.atom1 if bond.atom2 is item_at_cursor else bond.atom2
+                    )
                     atoms_to_update.add(other_atom)
 
                 for atom in atoms_to_update:
@@ -1616,7 +1873,9 @@ class MoleculeScene(QGraphicsScene):
         if isinstance(item_at_cursor, BondItem):
             target_bonds = [item_at_cursor]
         else:
-            target_bonds = [it for it in self.selectedItems() if isinstance(it, BondItem)]
+            target_bonds = [
+                it for it in self.selectedItems() if isinstance(it, BondItem)
+            ]
 
         if target_bonds:
             any_bond_changed = False
@@ -1629,7 +1888,8 @@ class MoleculeScene(QGraphicsScene):
                 elif (id2, id1) in self.data.bonds:
                     current_key = (id2, id1)
 
-                if not current_key: continue
+                if not current_key:
+                    continue
 
                 # 2. 変更前の状態を保存
                 old_order, old_stereo = bond.order, bond.stereo
@@ -1644,7 +1904,8 @@ class MoleculeScene(QGraphicsScene):
                         bond.update_position()
                         was_reversed = True
                     else:
-                        bond.order = 1; bond.stereo = 1
+                        bond.order = 1
+                        bond.stereo = 1
 
                 elif key == Qt.Key.Key_D:
                     if bond.stereo == 2:
@@ -1655,14 +1916,18 @@ class MoleculeScene(QGraphicsScene):
                         bond.update_position()
                         was_reversed = True
                     else:
-                        bond.order = 1; bond.stereo = 2
+                        bond.order = 1
+                        bond.stereo = 2
 
                 elif key == Qt.Key.Key_1 and (bond.order != 1 or bond.stereo != 0):
-                    bond.order = 1; bond.stereo = 0
+                    bond.order = 1
+                    bond.stereo = 0
                 elif key == Qt.Key.Key_2 and (bond.order != 2 or bond.stereo != 0):
-                    bond.order = 2; bond.stereo = 0
+                    bond.order = 2
+                    bond.stereo = 0
                 elif key == Qt.Key.Key_3 and bond.order != 3:
-                    bond.order = 3; bond.stereo = 0
+                    bond.order = 3
+                    bond.stereo = 0
 
                 # 4. 実際に変更があった場合のみデータモデルを更新
                 if old_order != bond.order or old_stereo != bond.stereo:
@@ -1670,8 +1935,8 @@ class MoleculeScene(QGraphicsScene):
 
                     # 5. 古いキーでデータを辞書から一度削除
                     bond_data = self.data.bonds.pop(current_key)
-                    bond_data['order'] = bond.order
-                    bond_data['stereo'] = bond.stereo
+                    bond_data["order"] = bond.order
+                    bond_data["stereo"] = bond.stereo
 
                     # 6. 変更後の種類に応じて新しいキーを決定し、再登録する
                     new_key_id1, new_key_id2 = bond.atom1.atom_id, bond.atom2.atom_id
@@ -1688,7 +1953,13 @@ class MoleculeScene(QGraphicsScene):
                 self.update_all_items()
                 self.window.push_undo_state()
 
-            if key in [Qt.Key.Key_1, Qt.Key.Key_2, Qt.Key.Key_3, Qt.Key.Key_W, Qt.Key.Key_D]:
+            if key in [
+                Qt.Key.Key_1,
+                Qt.Key.Key_2,
+                Qt.Key.Key_3,
+                Qt.Key.Key_W,
+                Qt.Key.Key_D,
+            ]:
                 event.accept()
                 return
 
@@ -1709,27 +1980,33 @@ class MoleculeScene(QGraphicsScene):
         # --- 3. Atomに対する操作 (原子の追加 - マージされた機能) ---
         if key in [Qt.Key.Key_1, Qt.Key.Key_2, Qt.Key.Key_3]:
             target_order = 1
-            if key == Qt.Key.Key_2: target_order = 2
-            elif key == Qt.Key.Key_3: target_order = 3
+            if key == Qt.Key.Key_2:
+                target_order = 2
+            elif key == Qt.Key.Key_3:
+                target_order = 3
 
             start_atom = None
             if isinstance(item_at_cursor, AtomItem):
                 start_atom = item_at_cursor
             else:
-                selected_atoms = [item for item in self.selectedItems() if isinstance(item, AtomItem)]
+                selected_atoms = [
+                    item for item in self.selectedItems() if isinstance(item, AtomItem)
+                ]
                 if len(selected_atoms) == 1:
                     start_atom = selected_atoms[0]
 
             if start_atom:
                 start_pos = start_atom.pos()
                 l = DEFAULT_BOND_LENGTH
-                new_pos_offset = QPointF(0, -l) # デフォルトのオフセット (上)
+                new_pos_offset = QPointF(0, -l)  # デフォルトのオフセット (上)
 
                 # 接続している原子のリストを取得 (H原子以外)
                 neighbor_positions = []
                 for bond in start_atom.bonds:
                     other_atom = bond.atom1 if bond.atom2 is start_atom else bond.atom2
-                    if other_atom.symbol != 'H': # 水素原子を無視 (四面体構造の考慮のため)
+                    if (
+                        other_atom.symbol != "H"
+                    ):  # 水素原子を無視 (四面体構造の考慮のため)
                         neighbor_positions.append(other_atom.pos())
 
                 num_non_H_neighbors = len(neighbor_positions)
@@ -1755,36 +2032,37 @@ class MoleculeScene(QGraphicsScene):
                     new_pos_offset = line.p2()
 
                 elif num_non_H_neighbors == 3:
-
                     bond_vectors_sum = QPointF(0, 0)
                     for pos in neighbor_positions:
                         # start_pos から neighbor_pos へのベクトル
                         vec = pos - start_pos
                         # 単位ベクトルに変換
-                        line_to_other = QLineF(QPointF(0,0), vec)
+                        line_to_other = QLineF(QPointF(0, 0), vec)
                         if line_to_other.length() > 0:
                             line_to_other.setLength(1.0)
                             bond_vectors_sum += line_to_other.p2()
 
                     # SUM_TOLERANCE is now a module-level constant
                     if bond_vectors_sum.manhattanLength() > SUM_TOLERANCE:
-                        new_direction_line = QLineF(QPointF(0,0), -bond_vectors_sum)
+                        new_direction_line = QLineF(QPointF(0, 0), -bond_vectors_sum)
                         new_direction_line.setLength(l)
                         new_pos_offset = new_direction_line.p2()
                     else:
                         new_pos_offset = QPointF(l * 0.7071, -l * 0.7071)
 
-                else: # 2本または4本以上の場合 (一般的な骨格の継続、または過結合)
+                else:  # 2本または4本以上の場合 (一般的な骨格の継続、または過結合)
                     bond_vectors_sum = QPointF(0, 0)
                     for bond in start_atom.bonds:
-                        other_atom = bond.atom1 if bond.atom2 is start_atom else bond.atom2
+                        other_atom = (
+                            bond.atom1 if bond.atom2 is start_atom else bond.atom2
+                        )
                         line_to_other = QLineF(start_pos, other_atom.pos())
                         if line_to_other.length() > 0:
                             line_to_other.setLength(1.0)
                             bond_vectors_sum += line_to_other.p2() - line_to_other.p1()
 
                     if bond_vectors_sum.manhattanLength() > 0.01:
-                        new_direction_line = QLineF(QPointF(0,0), -bond_vectors_sum)
+                        new_direction_line = QLineF(QPointF(0, 0), -bond_vectors_sum)
                         new_direction_line.setLength(l)
                         new_pos_offset = new_direction_line.p2()
                     else:
@@ -1799,12 +2077,19 @@ class MoleculeScene(QGraphicsScene):
 
                 if near_atom and near_atom is not start_atom:
                     # 近くに既存原子があれば結合
-                    self.create_bond(start_atom, near_atom, bond_order=target_order, bond_stereo=0)
+                    self.create_bond(
+                        start_atom, near_atom, bond_order=target_order, bond_stereo=0
+                    )
                 else:
                     # 新規原子を作成し結合
-                    new_atom_id = self.create_atom('C', target_pos)
-                    new_atom_item = self.data.atoms[new_atom_id]['item']
-                    self.create_bond(start_atom, new_atom_item, bond_order=target_order, bond_stereo=0)
+                    new_atom_id = self.create_atom("C", target_pos)
+                    new_atom_item = self.data.atoms[new_atom_id]["item"]
+                    self.create_bond(
+                        start_atom,
+                        new_atom_item,
+                        bond_order=target_order,
+                        bond_stereo=0,
+                    )
 
                 self.clearSelection()
                 self.update_all_items()
@@ -1818,16 +2103,25 @@ class MoleculeScene(QGraphicsScene):
                 try:
                     if not sip_isdeleted_safe(self.temp_line):
                         try:
-                            if getattr(self.temp_line, 'scene', None) and self.temp_line.scene():
+                            if (
+                                getattr(self.temp_line, "scene", None)
+                                and self.temp_line.scene()
+                            ):
                                 self.removeItem(self.temp_line)
                         except Exception:
-                            import traceback; traceback.print_exc()
+                            import traceback
+
+                            traceback.print_exc()
                 except Exception:
                     try:
                         self.removeItem(self.temp_line)
                     except Exception:
-                        import traceback; traceback.print_exc()
-                self.temp_line = None; self.start_atom = None; self.start_pos = None
+                        import traceback
+
+                        traceback.print_exc()
+                self.temp_line = None
+                self.start_atom = None
+                self.start_pos = None
                 self.initial_positions_in_event = {}
                 event.accept()
                 return
@@ -1869,7 +2163,7 @@ class MoleculeScene(QGraphicsScene):
                 return
 
         if key == Qt.Key.Key_Space:
-            if self.mode != 'select':
+            if self.mode != "select":
                 self.window.activate_select_mode()
             else:
                 self.window.select_all()
@@ -1881,24 +2175,33 @@ class MoleculeScene(QGraphicsScene):
 
         # 1. 原子描画モードへの切り替え
         symbol_for_mode_change = None
-        if modifiers == Qt.KeyboardModifier.NoModifier and key in self.key_to_symbol_map:
+        if (
+            modifiers == Qt.KeyboardModifier.NoModifier
+            and key in self.key_to_symbol_map
+        ):
             symbol_for_mode_change = self.key_to_symbol_map[key]
-        elif modifiers == Qt.KeyboardModifier.ShiftModifier and key in self.key_to_symbol_map_shift:
+        elif (
+            modifiers == Qt.KeyboardModifier.ShiftModifier
+            and key in self.key_to_symbol_map_shift
+        ):
             symbol_for_mode_change = self.key_to_symbol_map_shift[key]
 
         if symbol_for_mode_change:
-            mode_to_set = f'atom_{symbol_for_mode_change}'
+            mode_to_set = f"atom_{symbol_for_mode_change}"
 
         # 2. 結合描画モードへの切り替え
-        elif modifiers == Qt.KeyboardModifier.NoModifier and key in self.key_to_bond_mode_map:
+        elif (
+            modifiers == Qt.KeyboardModifier.NoModifier
+            and key in self.key_to_bond_mode_map
+        ):
             mode_to_set = self.key_to_bond_mode_map[key]
 
         # モードが決定されていれば、モード変更を実行
         if mode_to_set:
-            if hasattr(self.window, 'set_mode_and_update_toolbar'):
-                 self.window.set_mode_and_update_toolbar(mode_to_set)
-                 event.accept()
-                 return
+            if hasattr(self.window, "set_mode_and_update_toolbar"):
+                self.window.set_mode_and_update_toolbar(mode_to_set)
+                event.accept()
+                return
 
         # --- どの操作にも当てはまらない場合 ---
         super().keyPressEvent(event)
@@ -1917,8 +2220,9 @@ class MoleculeScene(QGraphicsScene):
 
     def find_bond_between(self, atom1, atom2):
         for b in atom1.bonds:
-            if (b.atom1 is atom1 and b.atom2 is atom2) or \
-               (b.atom1 is atom2 and b.atom2 is atom1):
+            if (b.atom1 is atom1 and b.atom2 is atom2) or (
+                b.atom1 is atom2 and b.atom2 is atom1
+            ):
                 return b
         return None
 
@@ -1932,7 +2236,7 @@ class MoleculeScene(QGraphicsScene):
             if bond_item.order != 2 or bond_item.stereo == new_stereo:
                 return
 
-            if not hasattr(bond_item, 'atom1') or not hasattr(bond_item, 'atom2'):
+            if not hasattr(bond_item, "atom1") or not hasattr(bond_item, "atom2"):
                 print("Error: bond_item missing atom references")
                 return
 
@@ -1940,7 +2244,9 @@ class MoleculeScene(QGraphicsScene):
                 print("Error: bond_item has None atom references")
                 return
 
-            if not hasattr(bond_item.atom1, 'atom_id') or not hasattr(bond_item.atom2, 'atom_id'):
+            if not hasattr(bond_item.atom1, "atom_id") or not hasattr(
+                bond_item.atom2, "atom_id"
+            ):
                 print("Error: bond atoms missing atom_id")
                 return
 
@@ -1953,13 +2259,16 @@ class MoleculeScene(QGraphicsScene):
                 key_to_update = (id2, id1)
                 if key_to_update not in self.data.bonds:
                     # Log error instead of printing to console
-                    if hasattr(self.window, 'statusBar'):
-                        self.window.statusBar().showMessage(f"Warning: Bond between atoms {id1} and {id2} not found in data model.", 3000)
+                    if hasattr(self.window, "statusBar"):
+                        self.window.statusBar().showMessage(
+                            f"Warning: Bond between atoms {id1} and {id2} not found in data model.",
+                            3000,
+                        )
                     print(f"Error: Bond key not found: {id1}-{id2} or {id2}-{id1}")
                     return
 
             # Update data model
-            self.data.bonds[key_to_update]['stereo'] = new_stereo
+            self.data.bonds[key_to_update]["stereo"] = new_stereo
 
             # Update visual representation
             bond_item.set_stereo(new_stereo)
@@ -1970,6 +2279,8 @@ class MoleculeScene(QGraphicsScene):
             print(f"Error in update_bond_stereo: {e}")
 
             traceback.print_exc()
-            if hasattr(self.window, 'statusBar'):
-                self.window.statusBar().showMessage(f"Error updating bond stereochemistry: {e}", 5000)
+            if hasattr(self.window, "statusBar"):
+                self.window.statusBar().showMessage(
+                    f"Error updating bond stereochemistry: {e}", 5000
+                )
             self.update_all_items()

@@ -3,6 +3,7 @@ try:
 except ImportError:
     import sip
 
+
 def sip_isdeleted_safe(obj):
     """
     Safely check if a PyQt object has been deleted by C++.

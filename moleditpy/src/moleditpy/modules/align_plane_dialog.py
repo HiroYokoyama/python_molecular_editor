@@ -26,7 +26,8 @@ try:
 except Exception:
     from modules.dialog3_d_picking_mixin import Dialog3DPickingMixin
 
-class AlignPlaneDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
+
+class AlignPlaneDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
     def __init__(self, mol, main_window, plane, preselected_atoms=None, parent=None):
         QDialog.__init__(self, parent)
         Dialog3DPickingMixin.__init__(self)
@@ -47,13 +48,15 @@ class AlignPlaneDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
             self.update_display()
 
     def init_ui(self):
-        plane_names = {'xy': 'XY', 'xz': 'XZ', 'yz': 'YZ'}
+        plane_names = {"xy": "XY", "xz": "XZ", "yz": "YZ"}
         self.setWindowTitle(f"Align to {plane_names[self.plane]} Plane")
         self.setModal(False)
         layout = QVBoxLayout(self)
 
         # Instructions
-        instruction_label = QLabel(f"Click atoms in the 3D view to select them for align to the {plane_names[self.plane]} plane. At least 3 atoms are required.")
+        instruction_label = QLabel(
+            f"Click atoms in the 3D view to select them for align to the {plane_names[self.plane]} plane. At least 3 atoms are required."
+        )
         instruction_label.setWordWrap(True)
         layout.addWidget(instruction_label)
 
@@ -69,7 +72,9 @@ class AlignPlaneDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
 
         # Select all atoms button
         self.select_all_button = QPushButton("Select All Atoms")
-        self.select_all_button.setToolTip("Select all atoms in the molecule for alignment")
+        self.select_all_button.setToolTip(
+            "Select all atoms in the molecule for alignment"
+        )
         self.select_all_button.clicked.connect(self.select_all_atoms)
         button_layout.addWidget(self.select_all_button)
 
@@ -97,7 +102,7 @@ class AlignPlaneDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
 
     def disable_picking(self):
         """3Dビューでの原子選択を無効にする"""
-        if hasattr(self, 'picking_enabled') and self.picking_enabled:
+        if hasattr(self, "picking_enabled") and self.picking_enabled:
             self.main_window.plotter.interactor.removeEventFilter(self)
             self.picking_enabled = False
 
@@ -131,17 +136,25 @@ class AlignPlaneDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
         """Select all atoms in the current molecule and update labels/UI."""
         try:
             # Prefer RDKit molecule if available
-            if hasattr(self, 'mol') and self.mol is not None:
+            if hasattr(self, "mol") and self.mol is not None:
                 try:
                     n = self.mol.GetNumAtoms()
                     # create a set of indices [0..n-1]
                     self.selected_atoms = set(range(n))
                 except Exception:
                     # fallback to main_window data map
-                    self.selected_atoms = set(self.main_window.data.atoms.keys()) if hasattr(self.main_window, 'data') else set()
+                    self.selected_atoms = (
+                        set(self.main_window.data.atoms.keys())
+                        if hasattr(self.main_window, "data")
+                        else set()
+                    )
             else:
                 # fallback to main_window data map
-                self.selected_atoms = set(self.main_window.data.atoms.keys()) if hasattr(self.main_window, 'data') else set()
+                self.selected_atoms = (
+                    set(self.main_window.data.atoms.keys())
+                    if hasattr(self.main_window, "data")
+                    else set()
+                )
 
             # Update labels and display
             self.show_atom_labels()
@@ -154,37 +167,44 @@ class AlignPlaneDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
         """表示を更新"""
         count = len(self.selected_atoms)
         if count == 0:
-            self.selection_label.setText("Click atoms to select for align (minimum 3 required)")
+            self.selection_label.setText(
+                "Click atoms to select for align (minimum 3 required)"
+            )
             self.apply_button.setEnabled(False)
         else:
             atom_list = sorted(self.selected_atoms)
             atom_display = []
             for i, atom_idx in enumerate(atom_list):
                 symbol = self.mol.GetAtomWithIdx(atom_idx).GetSymbol()
-                atom_display.append(f"#{i+1}: {symbol}({atom_idx})")
+                atom_display.append(f"#{i + 1}: {symbol}({atom_idx})")
 
-            self.selection_label.setText(f"Selected {count} atoms: {', '.join(atom_display)}")
+            self.selection_label.setText(
+                f"Selected {count} atoms: {', '.join(atom_display)}"
+            )
             self.apply_button.setEnabled(count >= 3)
 
     def show_atom_labels(self):
         """選択された原子にラベルを表示"""
         if self.selected_atoms:
             sorted_atoms = sorted(self.selected_atoms)
-            pairs = [(idx, f"#{i+1}") for i, idx in enumerate(sorted_atoms)]
-            self.show_atom_labels_for(pairs, color='blue')
+            pairs = [(idx, f"#{i + 1}") for i, idx in enumerate(sorted_atoms)]
+            self.show_atom_labels_for(pairs, color="blue")
         else:
             self.clear_atom_labels()
 
     def apply_PlaneAlign(self):
         """alignを適用（回転ベース）"""
         if len(self.selected_atoms) < 3:
-            QMessageBox.warning(self, "Warning", "Please select at least 3 atoms for align.")
+            QMessageBox.warning(
+                self, "Warning", "Please select at least 3 atoms for align."
+            )
             return
         try:
-
             # 選択された原子の位置を取得
             selected_indices = list(self.selected_atoms)
-            selected_positions = self.main_window.atom_positions_3d[selected_indices].copy()
+            selected_positions = self.main_window.atom_positions_3d[
+                selected_indices
+            ].copy()
 
             # 重心を計算
             centroid = np.mean(selected_positions, axis=0)
@@ -201,11 +221,11 @@ class AlignPlaneDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
             normal_vector = eigenvectors[:, 0]  # 最小固有値に対応する固有ベクトル
 
             # 目標の平面の法線ベクトルを定義
-            if self.plane == 'xy':
+            if self.plane == "xy":
                 target_normal = np.array([0, 0, 1])  # Z軸方向
-            elif self.plane == 'xz':
+            elif self.plane == "xz":
                 target_normal = np.array([0, 1, 0])  # Y軸方向
-            elif self.plane == 'yz':
+            elif self.plane == "yz":
                 target_normal = np.array([1, 0, 0])  # X軸方向
             else:
                 target_normal = np.array([0, 0, 1])  # Default to Z-axis (XY plane)
@@ -228,7 +248,11 @@ class AlignPlaneDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
                 def rodrigues_rotation(v, axis, angle):
                     cos_a = np.cos(angle)
                     sin_a = np.sin(angle)
-                    return v * cos_a + np.cross(axis, v) * sin_a + axis * np.dot(axis, v) * (1 - cos_a)
+                    return (
+                        v * cos_a
+                        + np.cross(axis, v) * sin_a
+                        + axis * np.dot(axis, v) * (1 - cos_a)
+                    )
 
                 # 分子全体を回転させる
                 conf = self.mol.GetConformer()
@@ -236,7 +260,9 @@ class AlignPlaneDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
                     current_pos = np.array(conf.GetAtomPosition(i))
                     # 重心基準で回転
                     centered_pos = current_pos - centroid
-                    rotated_pos = rodrigues_rotation(centered_pos, rotation_axis, rotation_angle)
+                    rotated_pos = rodrigues_rotation(
+                        centered_pos, rotation_axis, rotation_angle
+                    )
                     new_pos = rotated_pos + centroid
                     conf.SetAtomPosition(i, new_pos.tolist())
                     self.main_window.atom_positions_3d[i] = new_pos

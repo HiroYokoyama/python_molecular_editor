@@ -25,11 +25,12 @@ try:
 except Exception:
     from modules.dialog3_d_picking_mixin import Dialog3DPickingMixin
 
-class PlanarizeDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
 
+class PlanarizeDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
     """選択原子群を最適フィット平面へ投影して planarize するダイアログ
     AlignPlane を参考にした選択UIを持ち、Apply ボタンで選択原子を平面へ直交射影する。
     """
+
     def __init__(self, mol, main_window, preselected_atoms=None, parent=None):
         QDialog.__init__(self, parent)
         Dialog3DPickingMixin.__init__(self)
@@ -52,7 +53,9 @@ class PlanarizeDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
         self.setModal(False)
         layout = QVBoxLayout(self)
 
-        instruction_label = QLabel("Click atoms in the 3D view to select them for planarization (minimum 3 required).")
+        instruction_label = QLabel(
+            "Click atoms in the 3D view to select them for planarization (minimum 3 required)."
+        )
         instruction_label.setWordWrap(True)
         layout.addWidget(instruction_label)
 
@@ -66,7 +69,9 @@ class PlanarizeDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
 
         # Select All Atoms ボタンを追加
         self.select_all_button = QPushButton("Select All Atoms")
-        self.select_all_button.setToolTip("Select all atoms in the molecule for planarization")
+        self.select_all_button.setToolTip(
+            "Select all atoms in the molecule for planarization"
+        )
         self.select_all_button.clicked.connect(self.select_all_atoms)
         button_layout.addWidget(self.select_all_button)
 
@@ -103,32 +108,44 @@ class PlanarizeDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
     def update_display(self):
         count = len(self.selected_atoms)
         if count == 0:
-            self.selection_label.setText("Click atoms to select for planarize (minimum 3 required)")
+            self.selection_label.setText(
+                "Click atoms to select for planarize (minimum 3 required)"
+            )
             self.apply_button.setEnabled(False)
         else:
             atom_list = sorted(self.selected_atoms)
             atom_display = []
             for i, atom_idx in enumerate(atom_list):
                 symbol = self.mol.GetAtomWithIdx(atom_idx).GetSymbol()
-                atom_display.append(f"#{i+1}: {symbol}({atom_idx})")
-            self.selection_label.setText(f"Selected {count} atoms: {', '.join(atom_display)}")
+                atom_display.append(f"#{i + 1}: {symbol}({atom_idx})")
+            self.selection_label.setText(
+                f"Selected {count} atoms: {', '.join(atom_display)}"
+            )
             self.apply_button.setEnabled(count >= 3)
 
     def select_all_atoms(self):
         """Select all atoms in the current molecule (or fallback) and update labels/UI."""
         try:
             # Prefer RDKit molecule if available
-            if hasattr(self, 'mol') and self.mol is not None:
+            if hasattr(self, "mol") and self.mol is not None:
                 try:
                     n = self.mol.GetNumAtoms()
                     # create a set of indices [0..n-1]
                     self.selected_atoms = set(range(n))
                 except Exception:
                     # fallback to main_window data map
-                    self.selected_atoms = set(self.main_window.data.atoms.keys()) if hasattr(self.main_window, 'data') else set()
+                    self.selected_atoms = (
+                        set(self.main_window.data.atoms.keys())
+                        if hasattr(self.main_window, "data")
+                        else set()
+                    )
             else:
                 # fallback to main_window data map
-                self.selected_atoms = set(self.main_window.data.atoms.keys()) if hasattr(self.main_window, 'data') else set()
+                self.selected_atoms = (
+                    set(self.main_window.data.atoms.keys())
+                    if hasattr(self.main_window, "data")
+                    else set()
+                )
 
             # Update labels and display
             self.show_atom_labels()
@@ -140,19 +157,23 @@ class PlanarizeDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
     def show_atom_labels(self):
         if self.selected_atoms:
             sorted_atoms = sorted(self.selected_atoms)
-            pairs = [(idx, f"#{i+1}") for i, idx in enumerate(sorted_atoms)]
-            self.show_atom_labels_for(pairs, color='cyan')
+            pairs = [(idx, f"#{i + 1}") for i, idx in enumerate(sorted_atoms)]
+            self.show_atom_labels_for(pairs, color="cyan")
         else:
             self.clear_atom_labels()
 
     def apply_planarize(self):
         if not self.selected_atoms or len(self.selected_atoms) < 3:
-            QMessageBox.warning(self, "Warning", "Please select at least 3 atoms for planarize.")
+            QMessageBox.warning(
+                self, "Warning", "Please select at least 3 atoms for planarize."
+            )
             return
 
         try:
             selected_indices = list(sorted(self.selected_atoms))
-            selected_positions = self.main_window.atom_positions_3d[selected_indices].copy()
+            selected_positions = self.main_window.atom_positions_3d[
+                selected_indices
+            ].copy()
 
             centroid = np.mean(selected_positions, axis=0)
             centered_positions = selected_positions - centroid
@@ -162,12 +183,18 @@ class PlanarizeDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
             normal = vh[-1]
             norm = np.linalg.norm(normal)
             if norm == 0:
-                QMessageBox.warning(self, "Warning", "Cannot determine fit plane (degenerate positions).")
+                QMessageBox.warning(
+                    self,
+                    "Warning",
+                    "Cannot determine fit plane (degenerate positions).",
+                )
                 return
             normal = normal / norm
 
             # 各点を重心を通る平面へ直交射影
-            projections = centered_positions - np.outer(np.dot(centered_positions, normal), normal)
+            projections = centered_positions - np.outer(
+                np.dot(centered_positions, normal), normal
+            )
             new_positions = projections + centroid
 
             # 分子座標を更新
@@ -181,7 +208,11 @@ class PlanarizeDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
             self.main_window.update_chiral_labels()
             self.main_window.push_undo_state()
 
-            QMessageBox.information(self, "Success", f"Planarized {len(selected_indices)} atoms to best-fit plane.")
+            QMessageBox.information(
+                self,
+                "Success",
+                f"Planarized {len(selected_indices)} atoms to best-fit plane.",
+            )
 
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to planarize: {e}")

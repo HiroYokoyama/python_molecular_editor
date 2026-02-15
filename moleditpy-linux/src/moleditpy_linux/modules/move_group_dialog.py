@@ -34,7 +34,8 @@ try:
 except Exception:
     from modules.dialog3_d_picking_mixin import Dialog3DPickingMixin
 
-class MoveGroupDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
+
+class MoveGroupDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
     """結合している分子グループを選択して並行移動・回転するダイアログ"""
 
     def __init__(self, mol, main_window, parent=None):
@@ -49,7 +50,7 @@ class MoveGroupDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
     def init_ui(self):
         self.setWindowTitle("Move Group")
         self.setModal(False)
-        self.resize(300,400)
+        self.resize(300, 400)
         layout = QVBoxLayout(self)
 
         # ドラッグ状態管理
@@ -58,9 +59,11 @@ class MoveGroupDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
         self.mouse_moved_during_drag = False
 
         # Instructions
-        instruction_label = QLabel("Click an atom in the 3D view to select its connected molecule group.\n"
-                                   "Left-drag: Move the group\n"
-                                   "Right-drag: Rotate the group around its center")
+        instruction_label = QLabel(
+            "Click an atom in the 3D view to select its connected molecule group.\n"
+            "Left-drag: Move the group\n"
+            "Right-drag: Rotate the group around its center"
+        )
         instruction_label.setWordWrap(True)
         layout.addWidget(instruction_label)
 
@@ -167,16 +170,19 @@ class MoveGroupDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
                 self.drag_start_pos = None
                 self.mouse_moved_during_drag = False
                 self.potential_drag = False
-                if hasattr(self, 'clicked_atom_for_toggle'):
-                    delattr(self, 'clicked_atom_for_toggle')
+                if hasattr(self, "clicked_atom_for_toggle"):
+                    delattr(self, "clicked_atom_for_toggle")
                 return False
 
-            if event.type() == QEvent.Type.MouseButtonPress and event.button() == Qt.MouseButton.LeftButton:
+            if (
+                event.type() == QEvent.Type.MouseButtonPress
+                and event.button() == Qt.MouseButton.LeftButton
+            ):
                 # 前回の状態をクリーンアップ（トリプルクリック対策）
                 self.is_dragging_group = False
                 self.potential_drag = False
-                if hasattr(self, 'clicked_atom_for_toggle'):
-                    delattr(self, 'clicked_atom_for_toggle')
+                if hasattr(self, "clicked_atom_for_toggle"):
+                    delattr(self, "clicked_atom_for_toggle")
                 # グループが既に選択されている場合は、CustomInteractorStyleに処理を任せる
                 if self.group_atoms:
                     return False
@@ -188,12 +194,16 @@ class MoveGroupDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
 
                     # まずピッキングしてどの原子がクリックされたか確認
                     picker = self.main_window.plotter.picker
-                    picker.Pick(click_pos[0], click_pos[1], 0, self.main_window.plotter.renderer)
+                    picker.Pick(
+                        click_pos[0], click_pos[1], 0, self.main_window.plotter.renderer
+                    )
 
                     clicked_atom_idx = None
                     if picker.GetActor() is self.main_window.atom_actor:
                         picked_position = np.array(picker.GetPickPosition())
-                        distances = np.linalg.norm(self.main_window.atom_positions_3d - picked_position, axis=1)
+                        distances = np.linalg.norm(
+                            self.main_window.atom_positions_3d - picked_position, axis=1
+                        )
                         closest_atom_idx = np.argmin(distances)
 
                         # 閾値チェック
@@ -203,7 +213,8 @@ class MoveGroupDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
                                 try:
                                     atomic_num = atom.GetAtomicNum()
                                     vdw_radius = pt.GetRvdw(atomic_num)
-                                    if vdw_radius < 0.1: vdw_radius = 1.5
+                                    if vdw_radius < 0.1:
+                                        vdw_radius = 1.5
                                 except Exception:
                                     vdw_radius = 1.5
                                 click_threshold = vdw_radius * 1.5
@@ -220,7 +231,9 @@ class MoveGroupDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
                             self.drag_atom_idx = clicked_atom_idx
                             self.mouse_moved_during_drag = False
                             self.potential_drag = True  # ドラッグの可能性がある
-                            self.clicked_atom_for_toggle = clicked_atom_idx  # トグル用に保存
+                            self.clicked_atom_for_toggle = (
+                                clicked_atom_idx  # トグル用に保存
+                            )
                             # イベントを消費せず、カメラ操作を許可（閾値超えたらドラッグ開始）
                             return False
                         else:
@@ -239,7 +252,11 @@ class MoveGroupDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
 
             elif event.type() == QEvent.Type.MouseMove:
                 # マウス移動時の処理
-                if getattr(self, 'potential_drag', False) and self.drag_start_pos and not self.is_dragging_group:
+                if (
+                    getattr(self, "potential_drag", False)
+                    and self.drag_start_pos
+                    and not self.is_dragging_group
+                ):
                     # potential_drag状態：閾値チェック
                     try:
                         interactor = self.main_window.plotter.interactor
@@ -254,11 +271,17 @@ class MoveGroupDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
                             self.is_dragging_group = True
                             self.potential_drag = False
                             try:
-                                self.main_window.plotter.setCursor(Qt.CursorShape.ClosedHandCursor)
+                                self.main_window.plotter.setCursor(
+                                    Qt.CursorShape.ClosedHandCursor
+                                )
                             except Exception:
-                                import traceback; traceback.print_exc()
+                                import traceback
+
+                                traceback.print_exc()
                     except Exception:
-                        import traceback; traceback.print_exc()
+                        import traceback
+
+                        traceback.print_exc()
 
                     # 閾値以下の場合はカメラ操作を許可
                     if not self.is_dragging_group:
@@ -276,7 +299,9 @@ class MoveGroupDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
                         if abs(dx) > 2 or abs(dy) > 2:
                             self.mouse_moved_during_drag = True
                     except Exception:
-                        import traceback; traceback.print_exc()
+                        import traceback
+
+                        traceback.print_exc()
 
                     # ドラッグ中はイベントを消費してカメラ回転を防ぐ
                     return True
@@ -287,28 +312,49 @@ class MoveGroupDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
                         interactor = self.main_window.plotter.interactor
                         current_pos = interactor.GetEventPosition()
                         picker = self.main_window.plotter.picker
-                        picker.Pick(current_pos[0], current_pos[1], 0, self.main_window.plotter.renderer)
+                        picker.Pick(
+                            current_pos[0],
+                            current_pos[1],
+                            0,
+                            self.main_window.plotter.renderer,
+                        )
 
                         if picker.GetActor() is self.main_window.atom_actor:
                             picked_position = np.array(picker.GetPickPosition())
-                            distances = np.linalg.norm(self.main_window.atom_positions_3d - picked_position, axis=1)
+                            distances = np.linalg.norm(
+                                self.main_window.atom_positions_3d - picked_position,
+                                axis=1,
+                            )
                             closest_atom_idx = np.argmin(distances)
 
                             if closest_atom_idx in self.group_atoms:
-                                self.main_window.plotter.setCursor(Qt.CursorShape.OpenHandCursor)
+                                self.main_window.plotter.setCursor(
+                                    Qt.CursorShape.OpenHandCursor
+                                )
                             else:
-                                self.main_window.plotter.setCursor(Qt.CursorShape.ArrowCursor)
+                                self.main_window.plotter.setCursor(
+                                    Qt.CursorShape.ArrowCursor
+                                )
                         else:
-                            self.main_window.plotter.setCursor(Qt.CursorShape.ArrowCursor)
+                            self.main_window.plotter.setCursor(
+                                Qt.CursorShape.ArrowCursor
+                            )
                     except Exception:
-                        import traceback; traceback.print_exc()
+                        import traceback
+
+                        traceback.print_exc()
 
                 # ドラッグ中でない場合はカメラ回転を許可
                 return False
 
-            elif event.type() == QEvent.Type.MouseButtonRelease and event.button() == Qt.MouseButton.LeftButton:
+            elif (
+                event.type() == QEvent.Type.MouseButtonRelease
+                and event.button() == Qt.MouseButton.LeftButton
+            ):
                 # マウスリリース時の処理
-                if getattr(self, 'potential_drag', False) or (self.is_dragging_group and self.drag_start_pos):
+                if getattr(self, "potential_drag", False) or (
+                    self.is_dragging_group and self.drag_start_pos
+                ):
                     try:
                         if self.is_dragging_group and self.mouse_moved_during_drag:
                             # ドラッグが実行された - CustomInteractorStyleに任せる（何もしない）
@@ -316,26 +362,32 @@ class MoveGroupDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
                         else:
                             # マウスが閾値以下の移動 = 単なるクリック
                             # グループ内の原子をクリックした場合は選択/解除をトグル
-                            if hasattr(self, 'clicked_atom_for_toggle'):
+                            if hasattr(self, "clicked_atom_for_toggle"):
                                 clicked_atom = self.clicked_atom_for_toggle
-                                delattr(self, 'clicked_atom_for_toggle')
+                                delattr(self, "clicked_atom_for_toggle")
                                 # ドラッグ状態をリセットしてからトグル処理
                                 self.is_dragging_group = False
                                 self.drag_start_pos = None
                                 self.mouse_moved_during_drag = False
                                 self.potential_drag = False
-                                if hasattr(self, 'last_drag_positions'):
-                                    delattr(self, 'last_drag_positions')
+                                if hasattr(self, "last_drag_positions"):
+                                    delattr(self, "last_drag_positions")
                                 # トグル処理を実行
                                 self.on_atom_picked(clicked_atom)
                                 try:
-                                    self.main_window.plotter.setCursor(Qt.CursorShape.ArrowCursor)
+                                    self.main_window.plotter.setCursor(
+                                        Qt.CursorShape.ArrowCursor
+                                    )
                                 except Exception:
-                                    import traceback; traceback.print_exc()
+                                    import traceback
+
+                                    traceback.print_exc()
                                 return True
 
                     except Exception:
-                        import traceback; traceback.print_exc()
+                        import traceback
+
+                        traceback.print_exc()
                     finally:
                         # ドラッグ状態をリセット
                         self.is_dragging_group = False
@@ -343,12 +395,16 @@ class MoveGroupDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
                         self.mouse_moved_during_drag = False
                         self.potential_drag = False
                         # 保存していた位置情報をクリア
-                        if hasattr(self, 'last_drag_positions'):
-                            delattr(self, 'last_drag_positions')
+                        if hasattr(self, "last_drag_positions"):
+                            delattr(self, "last_drag_positions")
                         try:
-                            self.main_window.plotter.setCursor(Qt.CursorShape.ArrowCursor)
+                            self.main_window.plotter.setCursor(
+                                Qt.CursorShape.ArrowCursor
+                            )
                         except Exception:
-                            import traceback; traceback.print_exc()
+                            import traceback
+
+                            traceback.print_exc()
 
                     return True  # イベントを消費
 
@@ -361,7 +417,7 @@ class MoveGroupDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
     def on_atom_picked(self, atom_idx):
         """原子がピックされたときに、その原子が属する連結成分全体を選択（複数グループ対応）"""
         # ドラッグ中は選択を変更しない（ただしリリース時のトグルは許可）
-        if getattr(self, 'is_dragging_group', False):
+        if getattr(self, "is_dragging_group", False):
             return
 
         # BFS/DFSで連結成分を探索
@@ -404,7 +460,9 @@ class MoveGroupDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
                 symbol = self.mol.GetAtomWithIdx(atom_idx).GetSymbol()
                 atom_info.append(f"{symbol}({atom_idx})")
 
-            self.selection_label.setText(f"Selected group: {len(self.group_atoms)} atoms - {', '.join(atom_info[:5])}{' ...' if len(atom_info) > 5 else ''}")
+            self.selection_label.setText(
+                f"Selected group: {len(self.group_atoms)} atoms - {', '.join(atom_info[:5])}{' ...' if len(atom_info) > 5 else ''}"
+            )
 
     def show_atom_labels(self):
         """選択されたグループの原子をハイライト表示（Ctrlクリックと同じスタイル）"""
@@ -420,28 +478,31 @@ class MoveGroupDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
         selected_positions = self.main_window.atom_positions_3d[selected_indices]
 
         # 原子の半径を少し大きくしてハイライト表示
-        selected_radii = np.array([VDW_RADII.get(
-            self.mol.GetAtomWithIdx(i).GetSymbol(), 0.4) * 1.3
-            for i in selected_indices])
+        selected_radii = np.array(
+            [
+                VDW_RADII.get(self.mol.GetAtomWithIdx(i).GetSymbol(), 0.4) * 1.3
+                for i in selected_indices
+            ]
+        )
 
         # ハイライト用のデータセットを作成
         highlight_source = pv.PolyData(selected_positions)
-        highlight_source['radii'] = selected_radii
+        highlight_source["radii"] = selected_radii
 
         # 黄色の半透明球でハイライト
         highlight_glyphs = highlight_source.glyph(
-            scale='radii',
+            scale="radii",
             geom=pv.Sphere(radius=1.0, theta_resolution=16, phi_resolution=16),
-            orient=False
+            orient=False,
         )
 
         # ハイライトアクターを追加して保存（ピッキング不可に設定）
         self.highlight_actor = self.main_window.plotter.add_mesh(
             highlight_glyphs,
-            color='yellow',
+            color="yellow",
             opacity=0.3,
-            name='move_group_highlight',
-            pickable=False  # ピッキングを無効化
+            name="move_group_highlight",
+            pickable=False,  # ピッキングを無効化
         )
 
         self.main_window.plotter.render()
@@ -450,19 +511,25 @@ class MoveGroupDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
         """原子ハイライトをクリア (MoveGroup固有のハイライトも削除)"""
         super().clear_atom_labels()
         try:
-            self.main_window.plotter.remove_actor('move_group_highlight')
+            self.main_window.plotter.remove_actor("move_group_highlight")
         except Exception:
-            import traceback; traceback.print_exc()
-        if hasattr(self, 'highlight_actor'):
+            import traceback
+
+            traceback.print_exc()
+        if hasattr(self, "highlight_actor"):
             try:
                 self.main_window.plotter.remove_actor(self.highlight_actor)
             except Exception:
-                import traceback; traceback.print_exc()
+                import traceback
+
+                traceback.print_exc()
             self.highlight_actor = None
         try:
             self.main_window.plotter.render()
         except Exception:
-            import traceback; traceback.print_exc()
+            import traceback
+
+            traceback.print_exc()
 
     def reset_translation_inputs(self):
         """Translation入力フィールドをリセット"""
@@ -481,7 +548,9 @@ class MoveGroupDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
             dy = float(self.y_trans_input.text())
             dz = float(self.z_trans_input.text())
         except ValueError:
-            QMessageBox.warning(self, "Warning", "Please enter valid translation values.")
+            QMessageBox.warning(
+                self, "Warning", "Please enter valid translation values."
+            )
             return
 
         translation_vector = np.array([dx, dy, dz])
@@ -533,23 +602,29 @@ class MoveGroupDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
 
         # 回転行列を作成
         # X軸周り
-        Rx = np.array([
-            [1, 0, 0],
-            [0, np.cos(rx_rad), -np.sin(rx_rad)],
-            [0, np.sin(rx_rad), np.cos(rx_rad)]
-        ])
+        Rx = np.array(
+            [
+                [1, 0, 0],
+                [0, np.cos(rx_rad), -np.sin(rx_rad)],
+                [0, np.sin(rx_rad), np.cos(rx_rad)],
+            ]
+        )
         # Y軸周り
-        Ry = np.array([
-            [np.cos(ry_rad), 0, np.sin(ry_rad)],
-            [0, 1, 0],
-            [-np.sin(ry_rad), 0, np.cos(ry_rad)]
-        ])
+        Ry = np.array(
+            [
+                [np.cos(ry_rad), 0, np.sin(ry_rad)],
+                [0, 1, 0],
+                [-np.sin(ry_rad), 0, np.cos(ry_rad)],
+            ]
+        )
         # Z軸周り
-        Rz = np.array([
-            [np.cos(rz_rad), -np.sin(rz_rad), 0],
-            [np.sin(rz_rad), np.cos(rz_rad), 0],
-            [0, 0, 1]
-        ])
+        Rz = np.array(
+            [
+                [np.cos(rz_rad), -np.sin(rz_rad), 0],
+                [np.sin(rz_rad), np.cos(rz_rad), 0],
+                [0, 0, 1],
+            ]
+        )
 
         # 合成回転行列 (Z * Y * X)
         R = Rz @ Ry @ Rx
@@ -580,8 +655,8 @@ class MoveGroupDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
         # ドラッグ関連のフラグもリセット
         self.is_dragging_group = False
         self.drag_start_pos = None
-        if hasattr(self, 'last_drag_positions'):
-            delattr(self, 'last_drag_positions')
+        if hasattr(self, "last_drag_positions"):
+            delattr(self, "last_drag_positions")
 
     def closeEvent(self, event):
         """ダイアログが閉じられる時の処理"""
@@ -590,7 +665,9 @@ class MoveGroupDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
         try:
             self.main_window.draw_molecule_3d(self.mol)
         except Exception:
-            import traceback; traceback.print_exc()
+            import traceback
+
+            traceback.print_exc()
         super().closeEvent(event)
 
     def reject(self):
@@ -600,5 +677,7 @@ class MoveGroupDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
         try:
             self.main_window.draw_molecule_3d(self.mol)
         except Exception:
-            import traceback; traceback.print_exc()
+            import traceback
+
+            traceback.print_exc()
         super().reject()

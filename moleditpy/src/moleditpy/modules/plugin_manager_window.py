@@ -29,13 +29,13 @@ from PyQt6.QtWidgets import (
 )
 
 
-class PluginManagerWindow(QDialog): # pragma: no cover
+class PluginManagerWindow(QDialog):  # pragma: no cover
     def __init__(self, plugin_manager, parent=None):
         super().__init__(parent)
         self.plugin_manager = plugin_manager
         self.setWindowTitle("Plugin Manager")
         self.resize(800, 500)
-        self.setAcceptDrops(True) # Enable drag & drop for the whole window
+        self.setAcceptDrops(True)  # Enable drag & drop for the whole window
 
         self.init_ui()
         self.refresh_plugin_list()
@@ -50,11 +50,19 @@ class PluginManagerWindow(QDialog): # pragma: no cover
         # Plugin Table
         self.table = QTableWidget()
         self.table.setColumnCount(6)
-        self.table.setHorizontalHeaderLabels(["Status", "Name", "Version", "Author", "Location", "Description"])
-        self.table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
-        self.table.horizontalHeader().setSectionResizeMode(4, QHeaderView.ResizeMode.Interactive)
-        self.table.horizontalHeader().setSectionResizeMode(5, QHeaderView.ResizeMode.Stretch) # Description stretches
-        self.table.setColumnWidth(1, 200) # Make Name column wider
+        self.table.setHorizontalHeaderLabels(
+            ["Status", "Name", "Version", "Author", "Location", "Description"]
+        )
+        self.table.horizontalHeader().setSectionResizeMode(
+            QHeaderView.ResizeMode.Interactive
+        )
+        self.table.horizontalHeader().setSectionResizeMode(
+            4, QHeaderView.ResizeMode.Interactive
+        )
+        self.table.horizontalHeader().setSectionResizeMode(
+            5, QHeaderView.ResizeMode.Stretch
+        )  # Description stretches
+        self.table.setColumnWidth(1, 200)  # Make Name column wider
         self.table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self.table.itemSelectionChanged.connect(self.update_button_state)
@@ -78,7 +86,11 @@ class PluginManagerWindow(QDialog): # pragma: no cover
         btn_layout.addWidget(self.btn_remove)
 
         btn_explore = QPushButton("Explore Plugins Online")
-        btn_explore.clicked.connect(lambda: QDesktopServices.openUrl(QUrl("https://hiroyokoyama.github.io/moleditpy-plugins/explorer/")))
+        btn_explore.clicked.connect(
+            lambda: QDesktopServices.openUrl(
+                QUrl("https://hiroyokoyama.github.io/moleditpy-plugins/explorer/")
+            )
+        )
         btn_layout.addWidget(btn_explore)
 
         btn_close = QPushButton("Close")
@@ -94,27 +106,29 @@ class PluginManagerWindow(QDialog): # pragma: no cover
 
         self.table.setRowCount(len(plugins))
         for row, p in enumerate(plugins):
-            status_item = QTableWidgetItem(str(p.get('status', 'Unknown')))
+            status_item = QTableWidgetItem(str(p.get("status", "Unknown")))
             status_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
             self.table.setItem(row, 0, status_item)
-            self.table.setItem(row, 1, QTableWidgetItem(str(p.get('name', 'Unknown'))))
-            self.table.setItem(row, 2, QTableWidgetItem(str(p.get('version', ''))))
-            self.table.setItem(row, 3, QTableWidgetItem(str(p.get('author', ''))))
+            self.table.setItem(row, 1, QTableWidgetItem(str(p.get("name", "Unknown"))))
+            self.table.setItem(row, 2, QTableWidgetItem(str(p.get("version", ""))))
+            self.table.setItem(row, 3, QTableWidgetItem(str(p.get("author", ""))))
 
             # Location (Relative Path)
-            full_path = p.get('filepath', '')
+            full_path = p.get("filepath", "")
             rel_path = ""
             if full_path:
                 try:
-                    rel_path = os.path.relpath(full_path, self.plugin_manager.plugin_dir)
+                    rel_path = os.path.relpath(
+                        full_path, self.plugin_manager.plugin_dir
+                    )
                 except Exception:
                     rel_path = os.path.basename(full_path)
             self.table.setItem(row, 4, QTableWidgetItem(str(rel_path)))
 
-            self.table.setItem(row, 5, QTableWidgetItem(str(p.get('description', ''))))
+            self.table.setItem(row, 5, QTableWidgetItem(str(p.get("description", ""))))
 
             # Simple color coding for status
-            status = str(p.get('status', ''))
+            status = str(p.get("status", ""))
             color = None
             if status.startswith("Error"):
                 color = Qt.GlobalColor.red
@@ -127,8 +141,8 @@ class PluginManagerWindow(QDialog): # pragma: no cover
                 self.table.item(row, 0).setForeground(color)
 
     def update_button_state(self):
-        has_selection = (self.table.currentRow() >= 0)
-        if hasattr(self, 'btn_remove'):
+        has_selection = self.table.currentRow() >= 0
+        if hasattr(self, "btn_remove"):
             self.btn_remove.setEnabled(has_selection)
 
     def on_reload(self, silent=False):
@@ -153,7 +167,7 @@ class PluginManagerWindow(QDialog): # pragma: no cover
         # Assuming table row index matches plugins list index (confirmed in refresh_plugin_list)
         if row < len(self.plugin_manager.plugins):
             plugin = self.plugin_manager.plugins[row]
-            filepath = plugin.get('filepath')
+            filepath = plugin.get("filepath")
 
             if filepath and os.path.exists(filepath):
                 # Check if it is a package plugin (based on __init__.py)
@@ -168,32 +182,46 @@ class PluginManagerWindow(QDialog): # pragma: no cover
 
                 msg += "\nThis cannot be undone."
 
-                reply = QMessageBox.question(self, "Remove Plugin", msg,
-                                             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+                reply = QMessageBox.question(
+                    self,
+                    "Remove Plugin",
+                    msg,
+                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                )
                 if reply == QMessageBox.StandardButton.Yes:
                     try:
                         if is_package:
-                             shutil.rmtree(target_path)
+                            shutil.rmtree(target_path)
                         else:
-                             os.remove(target_path)
+                            os.remove(target_path)
 
-                        self.on_reload(silent=True) # Reload list and plugins
-                        QMessageBox.information(self, "Success", f"Removed '{plugin.get('name', 'Unknown')}'.")
+                        self.on_reload(silent=True)  # Reload list and plugins
+                        QMessageBox.information(
+                            self,
+                            "Success",
+                            f"Removed '{plugin.get('name', 'Unknown')}'.",
+                        )
                     except Exception as e:
-                        QMessageBox.critical(self, "Error", f"Failed to delete plugin: {e}")
+                        QMessageBox.critical(
+                            self, "Error", f"Failed to delete plugin: {e}"
+                        )
             else:
-               QMessageBox.warning(self, "Error", f"Plugin file not found:\n{filepath}")
+                QMessageBox.warning(
+                    self, "Error", f"Plugin file not found:\n{filepath}"
+                )
 
     def show_plugin_details(self, item):
         row = item.row()
         if row < len(self.plugin_manager.plugins):
             p = self.plugin_manager.plugins[row]
-            msg = f"Name: {p.get('name', 'Unknown')}\n" \
-                  f"Version: {p.get('version', 'Unknown')}\n" \
-                  f"Author: {p.get('author', 'Unknown')}\n" \
-                  f"Status: {p.get('status', 'Unknown')}\n" \
-                  f"Location: {p.get('filepath', 'Unknown')}\n\n" \
-                  f"Description:\n{p.get('description', 'No description available.')}"
+            msg = (
+                f"Name: {p.get('name', 'Unknown')}\n"
+                f"Version: {p.get('version', 'Unknown')}\n"
+                f"Author: {p.get('author', 'Unknown')}\n"
+                f"Status: {p.get('status', 'Unknown')}\n"
+                f"Location: {p.get('filepath', 'Unknown')}\n\n"
+                f"Description:\n{p.get('description', 'No description available.')}"
+            )
             QMessageBox.information(self, "Plugin Details", msg)
 
     # --- Drag & Drop Support ---
@@ -219,9 +247,9 @@ class PluginManagerWindow(QDialog): # pragma: no cover
                     file_path = os.path.dirname(file_path)
                     is_valid = True
                     is_folder = True
-                elif file_path.endswith('.py'):
+                elif file_path.endswith(".py"):
                     is_valid = True
-                elif file_path.endswith('.zip'):
+                elif file_path.endswith(".zip"):
                     is_valid = True
                     is_zip = True
 
@@ -231,30 +259,41 @@ class PluginManagerWindow(QDialog): # pragma: no cover
 
             if is_valid:
                 # Extract info and confirm
-                info = {'name': os.path.basename(file_path), 'version': 'Unknown', 'author': 'Unknown', 'description': ''}
+                info = {
+                    "name": os.path.basename(file_path),
+                    "version": "Unknown",
+                    "author": "Unknown",
+                    "description": "",
+                }
 
                 if is_folder:
-                     info['description'] = "Folder Plugin / Category"
-                     # Try to parse __init__.py if it exists
-                     init_path = os.path.join(file_path, "__init__.py")
-                     if os.path.exists(init_path):
-                         info = self.plugin_manager.get_plugin_info_safe(init_path)
-                         info['description'] += f" (Package: {info['name']})"
+                    info["description"] = "Folder Plugin / Category"
+                    # Try to parse __init__.py if it exists
+                    init_path = os.path.join(file_path, "__init__.py")
+                    if os.path.exists(init_path):
+                        info = self.plugin_manager.get_plugin_info_safe(init_path)
+                        info["description"] += f" (Package: {info['name']})"
 
                 elif is_zip:
-                     info['description'] = "ZIP Package Plugin"
-                elif file_path.endswith('.py'):
-                     info = self.plugin_manager.get_plugin_info_safe(file_path)
+                    info["description"] = "ZIP Package Plugin"
+                elif file_path.endswith(".py"):
+                    info = self.plugin_manager.get_plugin_info_safe(file_path)
 
-                msg = (f"Do you want to install this plugin?\n\n"
-                       f"Name: {info['name']}\n"
-                       f"Author: {info['author']}\n"
-                       f"Version: {info['version']}\n"
-                       f"Description: {info['description']}\n\n"
-                       f"File: {os.path.basename(file_path)}")
+                msg = (
+                    f"Do you want to install this plugin?\n\n"
+                    f"Name: {info['name']}\n"
+                    f"Author: {info['author']}\n"
+                    f"Version: {info['version']}\n"
+                    f"Description: {info['description']}\n\n"
+                    f"File: {os.path.basename(file_path)}"
+                )
 
-                reply = QMessageBox.question(self, "Install Plugin?", msg,
-                                             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+                reply = QMessageBox.question(
+                    self,
+                    "Install Plugin?",
+                    msg,
+                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                )
 
                 if reply == QMessageBox.StandardButton.Yes:
                     success, msg = self.plugin_manager.install_plugin(file_path)
@@ -272,4 +311,3 @@ class PluginManagerWindow(QDialog): # pragma: no cover
                 summary += "Errors:\n" + "\n".join(errors)
 
             QMessageBox.information(self, "Plugin Installation", summary)
-

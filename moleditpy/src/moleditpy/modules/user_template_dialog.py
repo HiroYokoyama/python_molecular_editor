@@ -37,7 +37,7 @@ import logging
 import os
 
 
-class UserTemplateDialog(QDialog): # pragma: no cover
+class UserTemplateDialog(QDialog):  # pragma: no cover
     """ユーザーテンプレート管理ダイアログ"""
 
     def __init__(self, main_window, parent=None):
@@ -63,7 +63,9 @@ class UserTemplateDialog(QDialog): # pragma: no cover
         layout = QVBoxLayout(self)
 
         # Instructions
-        instruction_label = QLabel("Create and manage your custom molecular templates. Click a template to use it in the editor.")
+        instruction_label = QLabel(
+            "Create and manage your custom molecular templates. Click a template to use it in the editor."
+        )
         instruction_label.setWordWrap(True)
         layout.addWidget(instruction_label)
 
@@ -107,52 +109,52 @@ class UserTemplateDialog(QDialog): # pragma: no cover
         """テンプレートモードを終了し、atom_C(炭素描画)モードに戻す (Defensive implementation)"""
         # 1. Reset Dialog State
         self.selected_template = None
-        if hasattr(self, 'delete_button'):
+        if hasattr(self, "delete_button"):
             self.delete_button.setEnabled(False)
 
         # 2. Reset Main Window Mode (UI/Toolbar)
-        target_mode = 'atom_C'
+        target_mode = "atom_C"
         try:
-            if hasattr(self.main_window, 'set_mode_and_update_toolbar'):
-                 self.main_window.set_mode_and_update_toolbar(target_mode)
-            elif hasattr(self.main_window, 'set_mode'):
-                 self.main_window.set_mode(target_mode)
+            if hasattr(self.main_window, "set_mode_and_update_toolbar"):
+                self.main_window.set_mode_and_update_toolbar(target_mode)
+            elif hasattr(self.main_window, "set_mode"):
+                self.main_window.set_mode(target_mode)
 
             # Fallback: set attribute directly if methods fail/don't exist
-            if hasattr(self.main_window, 'mode'):
+            if hasattr(self.main_window, "mode"):
                 self.main_window.mode = target_mode
         except Exception as e:
             logging.error(f"Error resetting main window mode: {e}")
 
         # 3. Reset Scene State (The Source of Truth)
         try:
-            if hasattr(self.main_window, 'scene') and self.main_window.scene:
-                 scene = self.main_window.scene
+            if hasattr(self.main_window, "scene") and self.main_window.scene:
+                scene = self.main_window.scene
 
-                 # A. FORCE MODE
-                 scene.mode = target_mode
-                 scene.current_atom_symbol = 'C'
+                # A. FORCE MODE
+                scene.mode = target_mode
+                scene.current_atom_symbol = "C"
 
-                 # B. Clear Data
-                 if hasattr(scene, 'user_template_data'):
-                     scene.user_template_data = None
-                 if hasattr(scene, 'template_context'):
-                     scene.template_context = {}
+                # B. Clear Data
+                if hasattr(scene, "user_template_data"):
+                    scene.user_template_data = None
+                if hasattr(scene, "template_context"):
+                    scene.template_context = {}
 
-                 # C. Clear/Hide Preview Item
-                 if hasattr(scene, 'clear_template_preview'):
-                     scene.clear_template_preview()
+                # C. Clear/Hide Preview Item
+                if hasattr(scene, "clear_template_preview"):
+                    scene.clear_template_preview()
 
-                 if hasattr(scene, 'template_preview') and scene.template_preview:
-                     scene.template_preview.hide()
+                if hasattr(scene, "template_preview") and scene.template_preview:
+                    scene.template_preview.hide()
 
-                 # D. Reset Cursor & View
-                 if scene.views():
-                     view = scene.views()[0]
-                     view.setCursor(Qt.CursorShape.CrossCursor)
-                     view.viewport().update()
+                # D. Reset Cursor & View
+                if scene.views():
+                    view = scene.views()[0]
+                    view.setCursor(Qt.CursorShape.CrossCursor)
+                    view.viewport().update()
 
-                 scene.update()
+                scene.update()
         except Exception as e:
             logging.error(f"Error cleaning up scene state: {e}")
 
@@ -171,10 +173,10 @@ class UserTemplateDialog(QDialog): # pragma: no cover
                     widget = item.widget()
                     # Find the TemplatePreviewView within this widget
                     for child in widget.findChildren(TemplatePreviewView):
-                        if hasattr(child, 'redraw_with_current_size'):
+                        if hasattr(child, "redraw_with_current_size"):
                             # Use redraw for better scaling adaptation
                             child.redraw_with_current_size()
-                        elif hasattr(child, 'refit_view'):
+                        elif hasattr(child, "refit_view"):
                             child.refit_view()
         except Exception as e:
             logging.warning(f"Warning: Failed to refit template previews: {e}")
@@ -187,7 +189,7 @@ class UserTemplateDialog(QDialog): # pragma: no cover
 
     def get_template_directory(self):
         """テンプレートディレクトリのパスを取得"""
-        template_dir = os.path.join(self.main_window.settings_dir, 'user-templates')
+        template_dir = os.path.join(self.main_window.settings_dir, "user-templates")
         if not os.path.exists(template_dir):
             os.makedirs(template_dir)
         return template_dir
@@ -199,12 +201,12 @@ class UserTemplateDialog(QDialog): # pragma: no cover
 
         try:
             for filename in os.listdir(template_dir):
-                if filename.endswith('.pmetmplt'):
+                if filename.endswith(".pmetmplt"):
                     filepath = os.path.join(template_dir, filename)
                     template_data = self.load_template_file(filepath)
                     if template_data:
-                        template_data['filename'] = filename
-                        template_data['filepath'] = filepath
+                        template_data["filename"] = filename
+                        template_data["filepath"] = filepath
                         self.user_templates.append(template_data)
         except Exception as e:
             logging.error(f"Error loading user templates: {e}")
@@ -214,7 +216,7 @@ class UserTemplateDialog(QDialog): # pragma: no cover
     def load_template_file(self, filepath):
         """テンプレートファイルを読み込み"""
         try:
-            with open(filepath, 'r', encoding='utf-8') as f:
+            with open(filepath, "r", encoding="utf-8") as f:
                 return json.load(f)
         except Exception as e:
             logging.error(f"Error loading template file {filepath}: {e}")
@@ -223,7 +225,7 @@ class UserTemplateDialog(QDialog): # pragma: no cover
     def save_template_file(self, filepath, template_data):
         """テンプレートファイルを保存"""
         try:
-            with open(filepath, 'w', encoding='utf-8') as f:
+            with open(filepath, "w", encoding="utf-8") as f:
                 json.dump(template_data, f, indent=2, ensure_ascii=False)
             return True
         except Exception as e:
@@ -283,7 +285,11 @@ class UserTemplateDialog(QDialog): # pragma: no cover
 
         # Improved fitting approach with better error handling
         bounding_rect = preview_scene.itemsBoundingRect()
-        if not bounding_rect.isEmpty() and bounding_rect.width() > 0 and bounding_rect.height() > 0:
+        if (
+            not bounding_rect.isEmpty()
+            and bounding_rect.width() > 0
+            and bounding_rect.height() > 0
+        ):
             # Calculate appropriate padding based on content size
             content_size = max(bounding_rect.width(), bounding_rect.height())
             padding = max(20, content_size * 0.2)  # At least 20 units or 20% of content
@@ -295,25 +301,31 @@ class UserTemplateDialog(QDialog): # pragma: no cover
             preview_view.original_scene_rect = padded_rect
 
             # Use QTimer to ensure fitInView happens after widget is fully initialized
-            QTimer.singleShot(0, lambda: self.fit_preview_view_safely(preview_view, padded_rect))
+            QTimer.singleShot(
+                0, lambda: self.fit_preview_view_safely(preview_view, padded_rect)
+            )
         else:
             # Default view for empty or invalid content
             default_rect = QRectF(-50, -50, 100, 100)
             preview_scene.setSceneRect(default_rect)
             preview_view.original_scene_rect = default_rect
-            QTimer.singleShot(0, lambda: self.fit_preview_view_safely(preview_view, default_rect))
+            QTimer.singleShot(
+                0, lambda: self.fit_preview_view_safely(preview_view, default_rect)
+            )
 
         layout.addWidget(preview_view)
 
         # Template name
-        name = template_data.get('name', 'Unnamed Template')
+        name = template_data.get("name", "Unnamed Template")
         name_label = QLabel(name)
         name_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         name_label.setWordWrap(True)
         layout.addWidget(name_label)
 
         # Mouse events
-        widget.mousePressEvent = lambda event: self.select_template(template_data, widget)
+        widget.mousePressEvent = lambda event: self.select_template(
+            template_data, widget
+        )
         widget.mouseDoubleClickEvent = lambda event: self.use_template(template_data)
 
         return widget
@@ -328,17 +340,17 @@ class UserTemplateDialog(QDialog): # pragma: no cover
 
     def draw_template_preview(self, scene, template_data, view_size=None):
         """テンプレートプレビューを描画 - fitInView縮小率に基づく動的スケーリング"""
-        atoms = template_data.get('atoms', [])
-        bonds = template_data.get('bonds', [])
+        atoms = template_data.get("atoms", [])
+        bonds = template_data.get("bonds", [])
 
         if not atoms:
             # Add placeholder text when no atoms
-            text = scene.addText("No structure", QFont('Arial', 12))
-            text.setDefaultTextColor(QColor('gray'))
+            text = scene.addText("No structure", QFont("Arial", 12))
+            text.setDefaultTextColor(QColor("gray"))
             return
 
         # Calculate molecular dimensions
-        positions = [QPointF(atom['x'], atom['y']) for atom in atoms]
+        positions = [QPointF(atom["x"], atom["y"]) for atom in atoms]
         min_x = min(pos.x() for pos in positions)
         max_x = max(pos.x() for pos in positions)
         min_y = min(pos.y() for pos in positions)
@@ -364,7 +376,9 @@ class UserTemplateDialog(QDialog): # pragma: no cover
             # fitInView fits the padded rectangle into the view while maintaining aspect ratio
             fit_scale_x = view_width / padded_width
             fit_scale_y = view_height / padded_height
-            fit_scale = min(fit_scale_x, fit_scale_y)  # fitInView uses the smaller scale
+            fit_scale = min(
+                fit_scale_x, fit_scale_y
+            )  # fitInView uses the smaller scale
 
             # Compensate for the fit scaling to maintain visual thickness
             # When fit_scale is small (content heavily shrunk), we need thicker lines/fonts
@@ -397,24 +411,29 @@ class UserTemplateDialog(QDialog): # pragma: no cover
         # Create atom ID to index mapping for bond drawing
         atom_id_to_index = {}
         for i, atom in enumerate(atoms):
-            atom_id = atom.get('id', i)  # Use id if available, otherwise use index
+            atom_id = atom.get("id", i)  # Use id if available, otherwise use index
             atom_id_to_index[atom_id] = i
 
         # Draw bonds first using original coordinates with dynamic sizing
         for bond in bonds:
-            atom1_id, atom2_id = bond['atom1'], bond['atom2']
+            atom1_id, atom2_id = bond["atom1"], bond["atom2"]
 
             # Get atom indices from IDs
             atom1_idx = atom_id_to_index.get(atom1_id)
             atom2_idx = atom_id_to_index.get(atom2_id)
 
-            if atom1_idx is not None and atom2_idx is not None and atom1_idx < len(atoms) and atom2_idx < len(atoms):
-                pos1 = QPointF(atoms[atom1_idx]['x'], atoms[atom1_idx]['y'])
-                pos2 = QPointF(atoms[atom2_idx]['x'], atoms[atom2_idx]['y'])
+            if (
+                atom1_idx is not None
+                and atom2_idx is not None
+                and atom1_idx < len(atoms)
+                and atom2_idx < len(atoms)
+            ):
+                pos1 = QPointF(atoms[atom1_idx]["x"], atoms[atom1_idx]["y"])
+                pos2 = QPointF(atoms[atom2_idx]["x"], atoms[atom2_idx]["y"])
 
                 # Draw bonds with proper order - dynamic thickness
-                bond_order = bond.get('order', 1)
-                pen = QPen(QColor('black'), bond_width)
+                bond_order = bond.get("order", 1)
+                pen = QPen(QColor("black"), bond_width)
 
                 if bond_order == 2:
                     # Double bond - draw two parallel lines
@@ -423,8 +442,14 @@ class UserTemplateDialog(QDialog): # pragma: no cover
                         normal = line.normalVector()
                         normal.setLength(double_bond_offset)
 
-                        line1 = QLineF(pos1 + normal.p2() - normal.p1(), pos2 + normal.p2() - normal.p1())
-                        line2 = QLineF(pos1 - normal.p2() + normal.p1(), pos2 - normal.p2() + normal.p1())
+                        line1 = QLineF(
+                            pos1 + normal.p2() - normal.p1(),
+                            pos2 + normal.p2() - normal.p1(),
+                        )
+                        line2 = QLineF(
+                            pos1 - normal.p2() + normal.p1(),
+                            pos2 - normal.p2() + normal.p1(),
+                        )
 
                         scene.addLine(line1, pen)
                         scene.addLine(line2, pen)
@@ -440,8 +465,14 @@ class UserTemplateDialog(QDialog): # pragma: no cover
                         # Center line
                         scene.addLine(line, pen)
                         # Side lines
-                        line1 = QLineF(pos1 + normal.p2() - normal.p1(), pos2 + normal.p2() - normal.p1())
-                        line2 = QLineF(pos1 - normal.p2() + normal.p1(), pos2 - normal.p2() + normal.p1())
+                        line1 = QLineF(
+                            pos1 + normal.p2() - normal.p1(),
+                            pos2 + normal.p2() - normal.p1(),
+                        )
+                        line2 = QLineF(
+                            pos1 - normal.p2() + normal.p1(),
+                            pos2 - normal.p2() + normal.p1(),
+                        )
 
                         scene.addLine(line1, pen)
                         scene.addLine(line2, pen)
@@ -454,27 +485,34 @@ class UserTemplateDialog(QDialog): # pragma: no cover
         # Draw only non-carbon atom labels with dynamic sizing
         for i, atom in enumerate(atoms):
             try:
-                pos = QPointF(atom['x'], atom['y'])
-                symbol = atom.get('symbol', 'C')
+                pos = QPointF(atom["x"], atom["y"])
+                symbol = atom.get("symbol", "C")
 
                 # Draw atoms - white ellipse background to hide bonds, then CPK colored text
-                if symbol != 'C':
+                if symbol != "C":
                     # All non-carbon atoms including hydrogen: white background ellipse + CPK colored text
-                    color = CPK_COLORS.get(symbol, CPK_COLORS.get('DEFAULT', QColor('#FF1493')))
+                    color = CPK_COLORS.get(
+                        symbol, CPK_COLORS.get("DEFAULT", QColor("#FF1493"))
+                    )
 
                     # Add white background ellipse to hide bonds - dynamic size
                     pen = QPen(Qt.GlobalColor.white, 0)  # No border
                     brush = QBrush(Qt.GlobalColor.white)
-                    ellipse_x = pos.x() - ellipse_width/2
-                    ellipse_y = pos.y() - ellipse_height/2
-                    ellipse = scene.addEllipse(ellipse_x, ellipse_y, ellipse_width, ellipse_height, pen, brush)
+                    ellipse_x = pos.x() - ellipse_width / 2
+                    ellipse_y = pos.y() - ellipse_height / 2
+                    ellipse = scene.addEllipse(
+                        ellipse_x, ellipse_y, ellipse_width, ellipse_height, pen, brush
+                    )
 
                     # Add CPK colored text label on top - dynamic font size
                     font = QFont("Arial", font_size, QFont.Weight.Bold)
                     text = scene.addText(symbol, font)
                     text.setDefaultTextColor(color)  # CPK colored text
                     text_rect = text.boundingRect()
-                    text.setPos(pos.x() - text_rect.width()/2, pos.y() - text_rect.height()/2)
+                    text.setPos(
+                        pos.x() - text_rect.width() / 2,
+                        pos.y() - text_rect.height() / 2,
+                    )
 
             except Exception:
                 continue
@@ -510,7 +548,7 @@ class UserTemplateDialog(QDialog): # pragma: no cover
         self.delete_button.setEnabled(True)
 
         # Automatically switch to template mode when template is selected
-        template_name = template_data.get('name', 'user_template')
+        template_name = template_data.get("name", "user_template")
         mode_name = f"template_user_{template_name}"
 
         # Store template data for the scene to use
@@ -524,7 +562,9 @@ class UserTemplateDialog(QDialog): # pragma: no cover
         # Clear or uncheck any existing mode actions if present to avoid staying in another mode.
         try:
             # Uncheck all mode actions first (if a dict of QAction exists)
-            if hasattr(self.main_window, 'mode_actions') and isinstance(self.main_window.mode_actions, dict):
+            if hasattr(self.main_window, "mode_actions") and isinstance(
+                self.main_window.mode_actions, dict
+            ):
                 for act in self.main_window.mode_actions.values():
                     try:
                         act.setChecked(False)
@@ -532,64 +572,90 @@ class UserTemplateDialog(QDialog): # pragma: no cover
                         continue
 
             # If main_window has a set_mode method, call it. Otherwise, try to set a mode attribute.
-            if hasattr(self.main_window, 'set_mode') and callable(self.main_window.set_mode):
+            if hasattr(self.main_window, "set_mode") and callable(
+                self.main_window.set_mode
+            ):
                 self.main_window.set_mode(mode_name)
             else:
                 # Fallback: set an attribute and try to update UI
-                setattr(self.main_window, 'mode', mode_name)
+                setattr(self.main_window, "mode", mode_name)
 
             # Update UI
             try:
-                self.main_window.statusBar().showMessage(f"Template mode: {template_name}")
+                self.main_window.statusBar().showMessage(
+                    f"Template mode: {template_name}"
+                )
             except Exception:
                 # ignore status bar failures
                 pass
 
             # If there is a matching QAction in mode_actions, check it
             try:
-                if hasattr(self.main_window, 'mode_actions') and f"template_user_{template_name}" in self.main_window.mode_actions:
-                    self.main_window.mode_actions[f"template_user_{template_name}"].setChecked(True)
+                if (
+                    hasattr(self.main_window, "mode_actions")
+                    and f"template_user_{template_name}"
+                    in self.main_window.mode_actions
+                ):
+                    self.main_window.mode_actions[
+                        f"template_user_{template_name}"
+                    ].setChecked(True)
             except Exception:
-                import traceback; traceback.print_exc()
+                import traceback
+
+                traceback.print_exc()
         except Exception as e:
-            logging.warning(f"Warning: Failed to switch main window to template mode: {e}")
+            logging.warning(
+                f"Warning: Failed to switch main window to template mode: {e}"
+            )
 
     def use_template(self, template_data):
         """テンプレートを使用（エディタに適用）"""
         try:
             # Switch to template mode
-            template_name = template_data.get('name', 'user_template')
+            template_name = template_data.get("name", "user_template")
             mode_name = f"template_user_{template_name}"
 
             # Store template data for the scene to use
             try:
                 self.main_window.scene.user_template_data = template_data
             except Exception:
-                import traceback; traceback.print_exc()
+                import traceback
+
+                traceback.print_exc()
 
             # Force the main window into the template mode (same approach as select_template)
             try:
-                if hasattr(self.main_window, 'mode_actions') and isinstance(self.main_window.mode_actions, dict):
+                if hasattr(self.main_window, "mode_actions") and isinstance(
+                    self.main_window.mode_actions, dict
+                ):
                     for act in self.main_window.mode_actions.values():
                         try:
                             act.setChecked(False)
                         except Exception:
                             continue
 
-                if hasattr(self.main_window, 'set_mode') and callable(self.main_window.set_mode):
+                if hasattr(self.main_window, "set_mode") and callable(
+                    self.main_window.set_mode
+                ):
                     self.main_window.set_mode(mode_name)
                 else:
-                    setattr(self.main_window, 'mode', mode_name)
+                    setattr(self.main_window, "mode", mode_name)
 
                 try:
-                    self.main_window.statusBar().showMessage(f"Template mode: {template_name}")
+                    self.main_window.statusBar().showMessage(
+                        f"Template mode: {template_name}"
+                    )
                 except Exception:
-                    import traceback; traceback.print_exc()
+                    import traceback
+
+                    traceback.print_exc()
 
                 # Mark selected and keep dialog open
                 self.selected_template = template_data
             except Exception as e:
-                logging.warning(f"Warning: Failed to switch main window to template mode: {e}")
+                logging.warning(
+                    f"Warning: Failed to switch main window to template mode: {e}"
+                )
 
             # Don't close dialog - keep it open for easy template switching
             # self.accept()
@@ -620,9 +686,10 @@ class UserTemplateDialog(QDialog): # pragma: no cover
 
             if os.path.exists(filepath):
                 reply = QMessageBox.question(
-                    self, "Overwrite Template",
+                    self,
+                    "Overwrite Template",
                     f"Template '{name}' already exists. Overwrite?",
-                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
                 )
                 if reply != QMessageBox.StandardButton.Yes:
                     return
@@ -632,7 +699,9 @@ class UserTemplateDialog(QDialog): # pragma: no cover
                 self.main_window.has_unsaved_changes = False
                 self.main_window.update_window_title()
 
-                QMessageBox.information(self, "Success", f"Template '{name}' saved successfully.")
+                QMessageBox.information(
+                    self, "Success", f"Template '{name}' saved successfully."
+                )
                 self.load_user_templates()  # Refresh the display
             else:
                 QMessageBox.critical(self, "Error", "Failed to save template.")
@@ -647,35 +716,39 @@ class UserTemplateDialog(QDialog): # pragma: no cover
 
         # Convert atoms
         for atom_id, atom_info in self.main_window.data.atoms.items():
-            pos = atom_info['pos']
-            atoms_data.append({
-                'id': atom_id,
-                'symbol': atom_info['symbol'],
-                'x': pos.x(),
-                'y': pos.y(),
-                'charge': atom_info.get('charge', 0),
-                'radical': atom_info.get('radical', 0)
-            })
+            pos = atom_info["pos"]
+            atoms_data.append(
+                {
+                    "id": atom_id,
+                    "symbol": atom_info["symbol"],
+                    "x": pos.x(),
+                    "y": pos.y(),
+                    "charge": atom_info.get("charge", 0),
+                    "radical": atom_info.get("radical", 0),
+                }
+            )
 
         # Convert bonds
         for (atom1_id, atom2_id), bond_info in self.main_window.data.bonds.items():
-            bonds_data.append({
-                'atom1': atom1_id,
-                'atom2': atom2_id,
-                'order': bond_info['order'],
-                'stereo': bond_info.get('stereo', 0)
-            })
+            bonds_data.append(
+                {
+                    "atom1": atom1_id,
+                    "atom2": atom2_id,
+                    "order": bond_info["order"],
+                    "stereo": bond_info.get("stereo", 0),
+                }
+            )
 
         # Create template data
         template_data = {
-            'format': "PME Template",
-            'version': "1.0",
-            'application': "MoleditPy",
-            'application_version': VERSION,
-            'name': name,
-            'created': str(QDateTime.currentDateTime().toString()),
-            'atoms': atoms_data,
-            'bonds': bonds_data
+            "format": "PME Template",
+            "version": "1.0",
+            "application": "MoleditPy",
+            "application_version": VERSION,
+            "name": name,
+            "created": str(QDateTime.currentDateTime().toString()),
+            "atoms": atoms_data,
+            "bonds": bonds_data,
         }
 
         return template_data
@@ -685,20 +758,25 @@ class UserTemplateDialog(QDialog): # pragma: no cover
         if not self.selected_template:
             return
 
-        name = self.selected_template.get('name', 'Unknown')
+        name = self.selected_template.get("name", "Unknown")
         reply = QMessageBox.question(
-            self, "Delete Template",
+            self,
+            "Delete Template",
             f"Are you sure you want to delete template '{name}'?",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
         )
 
         if reply == QMessageBox.StandardButton.Yes:
             try:
-                filepath = self.selected_template['filepath']
+                filepath = self.selected_template["filepath"]
                 os.remove(filepath)
-                QMessageBox.information(self, "Success", f"Template '{name}' deleted successfully.")
+                QMessageBox.information(
+                    self, "Success", f"Template '{name}' deleted successfully."
+                )
                 self.load_user_templates()  # Refresh the display
                 self.selected_template = None
                 self.delete_button.setEnabled(False)
             except Exception as e:
-                QMessageBox.critical(self, "Error", f"Failed to delete template: {str(e)}")
+                QMessageBox.critical(
+                    self, "Error", f"Failed to delete template: {str(e)}"
+                )

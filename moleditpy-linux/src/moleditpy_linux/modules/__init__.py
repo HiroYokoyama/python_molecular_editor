@@ -15,10 +15,12 @@ OBABEL_AVAILABLE = False
 
 try:
     from PyQt6 import sip as _sip  # type: ignore
-    _sip_isdeleted = getattr(_sip, 'isdeleted', None)
+
+    _sip_isdeleted = getattr(_sip, "isdeleted", None)
 except Exception:
     _sip = None
     _sip_isdeleted = None
+
 
 def sip_isdeleted_safe(obj) -> bool:
     """Return True if sip reports the given wrapper object as deleted.
@@ -33,4 +35,3 @@ def sip_isdeleted_safe(obj) -> bool:
         return bool(_sip_isdeleted(obj))
     except Exception:
         return False
-

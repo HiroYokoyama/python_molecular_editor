@@ -24,7 +24,7 @@ from rdkit import Chem
 from rdkit.Geometry import Point3D
 
 
-class MirrorDialog(QDialog): # pragma: no cover
+class MirrorDialog(QDialog):  # pragma: no cover
     """分子の鏡像を作成するダイアログ"""
 
     def __init__(self, mol, main_window, parent=None):
@@ -105,7 +105,9 @@ class MirrorDialog(QDialog): # pragma: no cover
                     new_pos = [-pos.x, pos.y, pos.z]
 
                 # 新しい座標を設定
-                conf.SetAtomPosition(atom_idx, Point3D(new_pos[0], new_pos[1], new_pos[2]))
+                conf.SetAtomPosition(
+                    atom_idx, Point3D(new_pos[0], new_pos[1], new_pos[2])
+                )
 
             # ミラー変換後にキラルタグを強制的に再計算 (3Dレンダリングの前に必要)
             try:
@@ -127,7 +129,11 @@ class MirrorDialog(QDialog): # pragma: no cover
             self.main_window.push_undo_state()
 
             plane_names = ["XY", "XZ", "YZ"]
-            self.main_window.statusBar().showMessage(f"Molecule mirrored across {plane_names[plane_id]} plane.")
+            self.main_window.statusBar().showMessage(
+                f"Molecule mirrored across {plane_names[plane_id]} plane."
+            )
 
         except Exception as e:
-            QMessageBox.critical(self, "Error", f"Failed to apply mirror transformation: {str(e)}")
+            QMessageBox.critical(
+                self, "Error", f"Failed to apply mirror transformation: {str(e)}"
+            )
