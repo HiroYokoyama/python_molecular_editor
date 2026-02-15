@@ -25,17 +25,17 @@ except Exception:
     pass
 
 # PyQt6 Modules
+from PyQt6.QtCore import QEvent, Qt, QTimer
 from PyQt6.QtWidgets import (
-    QApplication, QMainWindow, QGraphicsView, QDialog, QMessageBox
+    QApplication,
+    QDialog,
+    QGraphicsView,
+    QMainWindow,
+    QMessageBox,
 )
 
-from PyQt6.QtCore import (
-    Qt, QEvent, 
-    QTimer
-)
-    
 try:
-    import sip as _sip  # type: ignore
+    from PyQt6 import sip as _sip  # type: ignore
     _sip_isdeleted = getattr(_sip, 'isdeleted', None)
 except Exception:
     _sip = None
@@ -57,12 +57,9 @@ class MainWindowUiManager(object):
         """ クラスの初期化 """
         self = main_window
 
-
     def update_status_bar(self, message):
         """ワーカースレッドからのメッセージでステータスバーを更新するスロット"""
         self.statusBar().showMessage(message)
-
-
 
     def set_mode(self, mode_str):
         prev_mode = getattr(self.scene, 'mode', None)
@@ -84,11 +81,11 @@ class MainWindowUiManager(object):
         else:
             self.view_2d.setCursor(Qt.CursorShape.ArrowCursor)
 
-        if mode_str.startswith('atom'): 
+        if mode_str.startswith('atom'):
             self.scene.current_atom_symbol = mode_str.split('_')[1]
             self.statusBar().showMessage(f"Mode: Draw Atom ({self.scene.current_atom_symbol})")
             self.view_2d.setDragMode(QGraphicsView.DragMode.NoDrag)
-            self.view_2d.setMouseTracking(True) 
+            self.view_2d.setMouseTracking(True)
             self.scene.bond_order = 1
             self.scene.bond_stereo = 0
         elif mode_str.startswith('bond'):
@@ -173,7 +170,7 @@ class MainWindowUiManager(object):
                 self.settings_dirty = False
         except Exception:
             pass
-        
+
         # 未保存の変更がある場合の処理
         if self.has_unsaved_changes:
             reply = QMessageBox.question(
@@ -182,21 +179,21 @@ class MainWindowUiManager(object):
                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No | QMessageBox.StandardButton.Cancel,
                 QMessageBox.StandardButton.Yes
             )
-            
+
             if reply == QMessageBox.StandardButton.Yes:
                 # 保存処理
                 self.save_project()
-                
+
                 # 保存がキャンセルされた場合は終了もキャンセル
                 if self.has_unsaved_changes:
                     event.ignore()
                     return
-                    
+
             elif reply == QMessageBox.StandardButton.Cancel:
                 event.ignore()
                 return
             # No の場合はそのまま終了処理へ
-        
+
         # 開いているすべてのダイアログウィンドウを閉じる
         try:
             for widget in QApplication.topLevelWidgets():
@@ -207,7 +204,7 @@ class MainWindowUiManager(object):
                         pass
         except Exception:
             pass
-        
+
         # 終了処理
         if self.scene and self.scene.template_preview:
             self.scene.template_preview.hide()
@@ -225,7 +222,7 @@ class MainWindowUiManager(object):
                     pass
         except Exception:
             pass
-        
+
         event.accept()
 
     def toggle_3d_edit_mode(self, checked):
@@ -235,7 +232,7 @@ class MainWindowUiManager(object):
             if self.measurement_mode:
                 self.measurement_action.setChecked(False)
                 self.toggle_measurement_mode(False)
-        
+
         self.is_3d_edit_mode = checked
         if checked:
             self.statusBar().showMessage("3D Drag Mode: ON.")
@@ -249,7 +246,7 @@ class MainWindowUiManager(object):
 
         # 新しいカスタムスタイル（原子移動用）のインスタンスを作成
         style = CustomInteractorStyle(self)
-        
+
         # 調査の結果、'style' プロパティへの代入が正しい設定方法と判明
         self.plotter.interactor.SetInteractorStyle(style)
         self.plotter.interactor.Initialize()
@@ -264,15 +261,15 @@ class MainWindowUiManager(object):
                     if url.isLocalFile():
                         file_path = url.toLocalFile()
                         file_lower = file_path.lower()
-                        
+
                         # Built-in extensions
                         if file_lower.endswith(('.pmeraw', '.pmeprj', '.mol', '.sdf', '.xyz')):
                             event.acceptProposedAction()
                             return
-                        
+
                         # 2. Plugin drop handlers (Drop専用ハンドラ)
                         # プラグインが「Dropを受け入れる」と明示している場合のみ許可
-                        
+
                         # Plugin drop handlers (accept more liberally for custom logic)
                         # A plugin drop handler might handle it, so accept
                         if self.plugin_manager and hasattr(self.plugin_manager, 'drop_handlers'):
@@ -349,7 +346,7 @@ class MainWindowUiManager(object):
             'alignplane_xz_action',
             'alignplane_yz_action',
             'align_x_action',
-            'align_y_action', 
+            'align_y_action',
             'align_z_action',
             'bond_length_action',
             'angle_action',
@@ -358,16 +355,16 @@ class MainWindowUiManager(object):
             'planarize_action',
             'constrained_opt_action'
         ]
-        
+
         # メニューとサブメニューも有効/無効化
         menus = [
             'align_menu'
         ]
-        
+
         for action_name in actions:
             if hasattr(self, action_name):
                 getattr(self, action_name).setEnabled(enabled)
-        
+
         for menu_name in menus:
             if hasattr(self, menu_name):
                 getattr(self, menu_name).setEnabled(enabled)
@@ -377,10 +374,10 @@ class MainWindowUiManager(object):
         # 基本的な3D機能（3D SelectとEditは除外して常に有効にする）
         basic_3d_actions = [
             'optimize_3d_button',
-            'export_button', 
+            'export_button',
             'analysis_action'
         ]
-        
+
         for action_name in basic_3d_actions:
             if hasattr(self, action_name):
                 if action_name == 'optimize_3d_button':
@@ -409,15 +406,15 @@ class MainWindowUiManager(object):
                         getattr(self, action_name).setEnabled(enabled)
                     except Exception:
                         pass
-        
+
         # 3D Selectボタンは常に有効にする
         if hasattr(self, 'measurement_action'):
             self.measurement_action.setEnabled(True)
-        
+
         # 3D Dragボタンも常に有効にする
         if hasattr(self, 'edit_3d_action'):
             self.edit_3d_action.setEnabled(True)
-        
+
         # 3D編集機能も含める
         if enabled:
             self._enable_3d_edit_actions(True)
@@ -433,7 +430,7 @@ class MainWindowUiManager(object):
             action.setEnabled(False)
         if hasattr(self, 'other_atom_action'):
             self.other_atom_action.setEnabled(False)
-        
+
         self.minimize_2d_panel()
 
         # 3D関連機能を統一的に有効化
@@ -448,10 +445,10 @@ class MainWindowUiManager(object):
 
         for action in self.tool_group.actions():
             action.setEnabled(True)
-        
+
         if hasattr(self, 'other_atom_action'):
             self.other_atom_action.setEnabled(True)
-            
+
         # 2Dモードに戻る時は3D編集機能を統一的に無効化
         self._enable_3d_edit_actions(False)
 
@@ -466,7 +463,7 @@ class MainWindowUiManager(object):
     def restore_2d_panel(self):
         """最小化された2Dパネルを元のサイズに戻す"""
         sizes = self.splitter.sizes()
-        
+
         # sizesリストが空でないことを確認してからアクセスする
         if sizes and sizes[0] == 0:
             self.splitter.setSizes([600, 600])
@@ -475,19 +472,19 @@ class MainWindowUiManager(object):
         """パネルレイアウトを指定した比率に設定する"""
         if left_percent + right_percent != 100:
             return
-        
+
         total_width = self.splitter.width()
         if total_width <= 0:
             total_width = 1200  # デフォルト幅
-        
+
         left_width = int(total_width * left_percent / 100)
         right_width = int(total_width * right_percent / 100)
-        
+
         self.splitter.setSizes([left_width, right_width])
-        
+
         # ユーザーにフィードバック表示
         self.statusBar().showMessage(
-            f"Panel layout set to {left_percent}% : {right_percent}%", 
+            f"Panel layout set to {left_percent}% : {right_percent}%",
             2000
         )
 
@@ -496,7 +493,7 @@ class MainWindowUiManager(object):
         sizes = self.splitter.sizes()
         if not sizes:
             return
-            
+
         if sizes[0] == 0:
             # 2Dパネルが非表示の場合は表示
             self.restore_2d_panel()
@@ -514,7 +511,7 @@ class MainWindowUiManager(object):
             if total > 0:
                 left_percent = round(sizes[0] * 100 / total)
                 right_percent = round(sizes[1] * 100 / total)
-                
+
                 # 現在の比率をツールチップで表示
                 if hasattr(self.splitter, 'handle'):
                     handle = self.splitter.handle(1)
@@ -529,4 +526,4 @@ class MainWindowUiManager(object):
             # 初期サイズ比率も表示
             self.on_splitter_moved(0, 0)
 
-            
+

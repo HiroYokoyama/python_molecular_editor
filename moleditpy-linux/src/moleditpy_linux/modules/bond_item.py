@@ -10,28 +10,38 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
-from PyQt6.QtWidgets import QGraphicsItem, QGraphicsScene
-
+from PyQt6.QtCore import QLineF, QPointF, QRectF, Qt
 from PyQt6.QtGui import (
-    QPen, QBrush, QColor, QFont, QPolygonF,
-    QPainterPath, QPainterPathStroker, QFontMetricsF
+    QBrush,
+    QColor,
+    QFont,
+    QFontMetricsF,
+    QPainterPath,
+    QPainterPathStroker,
+    QPen,
+    QPolygonF,
 )
-
-from PyQt6.QtCore import (
-    Qt, QPointF, QRectF, QLineF
-)
+from PyQt6.QtWidgets import QGraphicsItem, QGraphicsScene
 
 try:
     from .constants import (
-        EZ_LABEL_BOX_SIZE, EZ_LABEL_TEXT_OUTLINE, EZ_LABEL_MARGIN,
-        FONT_FAMILY, FONT_WEIGHT_BOLD,
-        HOVER_PEN_WIDTH, DESIRED_BOND_PIXEL_WIDTH,
+        DESIRED_BOND_PIXEL_WIDTH,
+        EZ_LABEL_BOX_SIZE,
+        EZ_LABEL_MARGIN,
+        EZ_LABEL_TEXT_OUTLINE,
+        FONT_FAMILY,
+        FONT_WEIGHT_BOLD,
+        HOVER_PEN_WIDTH,
     )
 except Exception:
     from modules.constants import (
-        EZ_LABEL_BOX_SIZE, EZ_LABEL_TEXT_OUTLINE, EZ_LABEL_MARGIN,
-        FONT_FAMILY, FONT_WEIGHT_BOLD,
-        HOVER_PEN_WIDTH, DESIRED_BOND_PIXEL_WIDTH,
+        DESIRED_BOND_PIXEL_WIDTH,
+        EZ_LABEL_BOX_SIZE,
+        EZ_LABEL_MARGIN,
+        EZ_LABEL_TEXT_OUTLINE,
+        FONT_FAMILY,
+        FONT_WEIGHT_BOLD,
+        HOVER_PEN_WIDTH,
     )
 
 class BondItem(QGraphicsItem):
@@ -53,18 +63,18 @@ class BondItem(QGraphicsItem):
             if new_stereo == 0 and self.stereo in [3, 4] and self.scene():
                 rect = self.mapToScene(self.boundingRect()).boundingRect()
                 self.scene().invalidate(rect, QGraphicsScene.SceneLayer.BackgroundLayer | QGraphicsScene.SceneLayer.ForegroundLayer)
-            
+
             self.prepareGeometryChange()
             self.stereo = new_stereo
             self.update()
-            
+
             if self.scene() and self.scene().views():
                 try:
                     self.scene().views()[0].viewport().update()
                 except (IndexError, RuntimeError):
                     # Handle case where views are being destroyed
                     pass
-                    
+
         except Exception as e:
             print(f"Error in BondItem.set_stereo: {e}")
             # Continue without crashing
@@ -87,8 +97,10 @@ class BondItem(QGraphicsItem):
         self.setZValue(0)
         self.update_position()
         self.setAcceptHoverEvents(True)
+        self.setAcceptHoverEvents(True)
         self.hovered = False
-
+        self.order = order
+        self.stereo = stereo
 
     def get_line_in_local_coords(self):
         if self.atom1 is None or self.atom2 is None:
@@ -107,7 +119,7 @@ class BondItem(QGraphicsItem):
             line = self.get_line_in_local_coords()
         except Exception:
             line = QLineF(0, 0, 0, 0)
-        
+
         # Get dynamic bond offset (spacing)
         bond_offset = 3.5
         try:
@@ -147,7 +159,7 @@ class BondItem(QGraphicsItem):
                         font_family = win.settings.get('atom_font_family_2d', FONT_FAMILY)
             except Exception:
                 pass
-            
+
             font = QFont(font_family, font_size, FONT_WEIGHT_BOLD)
             font.setItalic(True)
             text = "Z" if self.stereo == 3 else "E"
@@ -171,22 +183,22 @@ class BondItem(QGraphicsItem):
             # Create a simple path along the bond line
             path.moveTo(line.p1())
             path.lineTo(line.p2())
-            
+
             # Stroke it to give it some width (e.g., 10px or dynamic based on settings) generally easier to click
             # even if the visual width is smaller.
             stroker = QPainterPathStroker()
             stroker.setWidth(DESIRED_BOND_PIXEL_WIDTH) # Use constant (20.0)
             path = stroker.createStroke(path)
-            
+
             # If there's an E/Z label, add its rect to the selection shape
             label_rect = self.get_ez_label_local_rect()
             if label_rect:
                 path.addRect(label_rect)
-                
+
         except Exception:
             # Fallback to a small rect around the origin if calculation fails
             path.addRect(QRectF(-5, -5, 10, 10))
-            
+
         return path
 
     def get_ez_label_local_rect(self):
@@ -196,12 +208,12 @@ class BondItem(QGraphicsItem):
         try:
             line = self.get_line_in_local_coords()
             center = line.center()
-            
+
             # Logic similar to boundingRect but returning just the label box
             font_size = 20
             # ... (Simpler logic: just return a box around center)
             # Standard size estimate
-            box_size = 30 
+            box_size = 30
             return QRectF(center.x() - box_size/2, center.y() - box_size/2, box_size, box_size)
         except Exception:
             return None
@@ -212,38 +224,40 @@ class BondItem(QGraphicsItem):
         line = self.get_line_in_local_coords()
         if line.length() == 0: return
 
-        # Allow bond color override from app settings (2D color)
+        # Default values
         width_2d = 2.0
-        
+        wedge_width_half = 6.0
+        num_dashes = 8
+
         try:
             sc = self.scene()
             if sc is not None and hasattr(sc, 'window') and sc.window is not None:
                 # Get settings
                 settings = sc.window.settings
-                
+
                 # Width
                 width_2d = settings.get('bond_width_2d', 2.0)
-                
+
                 # Cap Style logic
                 cap_style_str = settings.get('bond_cap_style_2d', 'Round')
                 cap_style = Qt.PenCapStyle.RoundCap # Default
-                
+
                 if cap_style_str == 'Flat':
                     cap_style = Qt.PenCapStyle.FlatCap
                 elif cap_style_str == 'Square':
                     cap_style = Qt.PenCapStyle.SquareCap
-                
+
                 # Color
                 if self.isSelected():
                     bond_color = QColor("blue") # Selection color
                 else:
                     bond_hex = settings.get('bond_color_2d', '#222222')
                     bond_color = QColor(bond_hex)
-                
+
                 pen = QPen(bond_color, width_2d)
                 pen.setCapStyle(cap_style)
                 painter.setPen(pen)
-                
+
                 # Wedge/Dash Specific Settings
                 wedge_width_half = settings.get('bond_wedge_width_2d', 6.0)
                 num_dashes = int(settings.get('bond_dash_count_2d', 8))
@@ -269,14 +283,14 @@ class BondItem(QGraphicsItem):
                 offset = QPointF(normal.dx(), normal.dy()) * wedge_width_half
                 poly = QPolygonF([p1, p2 + offset, p2 - offset])
                 painter.drawPolygon(poly)
-            
+
             elif self.stereo == 2: # Dash (破線)
                 painter.save()
                 if not self.isSelected():
                     pen = painter.pen()
-                    pen.setWidthF(2.5) 
+                    pen.setWidthF(2.5)
                     painter.setPen(pen)
-                
+
                 # Use configured number of dashes (default 8)
                 for i in range(num_dashes + 1):
                     t = i / num_dashes
@@ -285,7 +299,7 @@ class BondItem(QGraphicsItem):
                     offset = QPointF(normal.dx(), normal.dy()) * width / 2.0
                     painter.drawLine(start_pt - offset, start_pt + offset)
                 painter.restore()
-        
+
         # --- 通常の結合 (単/二重/三重) の描画 ---
         else:
             if self.order == 1:
@@ -303,14 +317,14 @@ class BondItem(QGraphicsItem):
                             bond_offset = sc.views()[0].window().settings.get('bond_spacing_double_2d', 3.5)
                 except Exception:
                     bond_offset = globals().get('BOND_OFFSET', 3.5)
-                
+
                 offset = QPointF(v.dx(), v.dy()) * bond_offset
 
                 if self.order == 2:
                     # 環構造かどうかを判定し、描画方法を変更
                     is_in_ring = False
                     ring_center = None
-                    
+
                     try:
                         # シーンからRDKit分子を取得
                         sc = self.scene()
@@ -321,7 +335,7 @@ class BondItem(QGraphicsItem):
                                 # この結合に対応するRDKitボンドを探す
                                 atom1_id = self.atom1.atom_id
                                 atom2_id = self.atom2.atom_id
-                                
+
                                 # RDKitインデックスを取得
                                 rdkit_idx1 = None
                                 rdkit_idx2 = None
@@ -332,7 +346,7 @@ class BondItem(QGraphicsItem):
                                             rdkit_idx1 = atom.GetIdx()
                                         elif orig_id == atom2_id:
                                             rdkit_idx2 = atom.GetIdx()
-                                
+
                                 if rdkit_idx1 is not None and rdkit_idx2 is not None:
                                     bond = mol.GetBondBetweenAtoms(rdkit_idx1, rdkit_idx2)
                                     if bond and bond.IsInRing():
@@ -352,7 +366,7 @@ class BondItem(QGraphicsItem):
                                                             atom_item = sc.window.data.atoms[editor_atom_id]['item']
                                                             if atom_item:
                                                                 ring_positions.append(atom_item.pos())
-                                                
+
                                                 if ring_positions:
                                                     # 環の中心を計算
                                                     center_x = sum(p.x() for p in ring_positions) / len(ring_positions)
@@ -362,21 +376,21 @@ class BondItem(QGraphicsItem):
                     except Exception as e:
                         # エラーが発生した場合は通常の描画にフォールバック
                         is_in_ring = False
-                    
+
                     v = line.unitVector().normalVector()
                     # Re-calculate offset in case loop variable scope issue, though strictly not needed if offset defined above works
                     offset = QPointF(v.dx(), v.dy()) * bond_offset
-                    
+
                     if is_in_ring and ring_center:
                         # 環構造: 1本の中心線（単結合位置） + 1本の短い内側線
                         # 結合の中心から環の中心への方向を計算
                         bond_center = line.center()
-                        
+
                         # ローカル座標系での環中心方向
                         local_ring_center = self.mapFromScene(ring_center)
                         local_bond_center = line.center()
                         inward_vec = local_ring_center - local_bond_center
-                        
+
                         # offsetとinward_vecの内積で内側を判定
                         if QPointF.dotProduct(offset, inward_vec) > 0:
                             # offsetが内側方向（2倍のオフセット）
@@ -384,10 +398,10 @@ class BondItem(QGraphicsItem):
                         else:
                             # -offsetが内側方向（2倍のオフセット）
                             inner_offset = -offset * 2
-                        
+
                         # 中心線を描画（単結合と同じ位置）
                         painter.drawLine(line)
-                        
+
                         # 内側の短い線を描画（80%の長さ）
                         inner_line = line.translated(inner_offset)
                         shorten_factor = 0.8
@@ -419,7 +433,7 @@ class BondItem(QGraphicsItem):
                                     font_family = win.settings.get('atom_font_family_2d', FONT_FAMILY)
                         except Exception:
                             pass
-                        
+
                         font = QFont(font_family, font_size, FONT_WEIGHT_BOLD)
                         font.setItalic(True)
                         text_color = QColor("gray")
@@ -438,7 +452,7 @@ class BondItem(QGraphicsItem):
                         # --- 描画パスの作成 ---
                         text = "Z" if self.stereo == 3 else "E"
                         path = QPainterPath()
-                        
+
                         # テキストが正確に中央に来るように位置を計算
                         fm = QFontMetricsF(font)
                         text_rect = fm.boundingRect(text)
@@ -449,7 +463,7 @@ class BondItem(QGraphicsItem):
                         stroker = QPainterPathStroker()
                         stroker.setWidth(EZ_LABEL_TEXT_OUTLINE) # 輪郭の太さ
                         outline_path = stroker.createStroke(path)
-                        
+
                         painter.setBrush(outline_color)
                         painter.setPen(Qt.PenStyle.NoPen)
                         painter.drawPath(outline_path)
@@ -473,11 +487,9 @@ class BondItem(QGraphicsItem):
                 hover_pen = QPen(QColor(144, 238, 144, 180), HOVER_PEN_WIDTH) # LightGreen, 半透明
                 hover_pen.setCapStyle(Qt.PenCapStyle.RoundCap)
                 painter.setPen(hover_pen)
-                painter.drawLine(line) 
+                painter.drawLine(line)
             except Exception:
                 pass
-
-
 
     def update_position(self, notify=True):
         try:
@@ -489,7 +501,6 @@ class BondItem(QGraphicsItem):
         except Exception as e:
             print(f"Error updating bond position: {e}")
             # Continue without crashing
-
 
     def hoverEnterEvent(self, event):
         scene = self.scene()

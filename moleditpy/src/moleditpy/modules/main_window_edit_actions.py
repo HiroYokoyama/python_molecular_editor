@@ -18,14 +18,14 @@ MainWindow (main_window.py) から分離されたモジュール
 """
 
 
-import numpy as np
-import pickle
-import math
 import io
 import itertools
+import math
+import pickle
 import traceback
-
 from collections import deque
+
+import numpy as np
 
 try:
     from .mol_geometry import is_problematic_valence
@@ -33,32 +33,32 @@ except Exception:
     from modules.mol_geometry import is_problematic_valence
 
 # RDKit imports (explicit to satisfy flake8 and used features)
-from rdkit import Chem
-from rdkit.Chem import AllChem
-
+from PyQt6.QtCore import QByteArray, QLineF, QMimeData, QPointF, Qt, QTimer
+from PyQt6.QtGui import QCursor
 
 # PyQt6 Modules
 from PyQt6.QtWidgets import (
-    QApplication, QDialog, QVBoxLayout, QHBoxLayout, QLabel, QSpinBox, QSlider, QPushButton
+    QApplication,
+    QDialog,
+    QHBoxLayout,
+    QLabel,
+    QPushButton,
+    QSlider,
+    QSpinBox,
+    QVBoxLayout,
 )
+from rdkit import Chem
+from rdkit.Chem import AllChem
 
-from PyQt6.QtGui import (
-    QCursor
-)
-
-
-from PyQt6.QtCore import (
-    QPointF, QLineF, QMimeData, QByteArray, QTimer, Qt
-)
 
 class Rotate2DDialog(QDialog):
     def __init__(self, parent=None, initial_angle=0):
         super().__init__(parent)
         self.setWindowTitle("Rotate 2D")
         self.setFixedWidth(300)
-        
+
         layout = QVBoxLayout(self)
-        
+
         # Angle input
         input_layout = QHBoxLayout()
         input_layout.addWidget(QLabel("Angle (degrees):"))
@@ -67,7 +67,7 @@ class Rotate2DDialog(QDialog):
         self.angle_spin.setValue(initial_angle)
         input_layout.addWidget(self.angle_spin)
         layout.addLayout(input_layout)
-        
+
         # Slider
         self.slider = QSlider(Qt.Orientation.Horizontal)
         self.slider.setRange(-180, 180)
@@ -79,7 +79,7 @@ class Rotate2DDialog(QDialog):
         # Sync slider and spinbox
         self.angle_spin.valueChanged.connect(self.slider.setValue)
         self.slider.valueChanged.connect(self.angle_spin.setValue)
-        
+
         # Buttons
         btn_layout = QHBoxLayout()
         ok_btn = QPushButton("Rotate")
@@ -89,12 +89,12 @@ class Rotate2DDialog(QDialog):
         btn_layout.addWidget(ok_btn)
         btn_layout.addWidget(cancel_btn)
         layout.addLayout(btn_layout)
-    
+
     def get_angle(self):
         return self.angle_spin.value()
 
 try:
-    import sip as _sip  # type: ignore
+    from PyQt6 import sip as _sip  # type: ignore
     _sip_isdeleted = getattr(_sip, 'isdeleted', None)
 except Exception:
     _sip = None
@@ -102,16 +102,16 @@ except Exception:
 
 try:
     # package relative imports (preferred when running as `python -m moleditpy`)
-    from .constants import CLIPBOARD_MIME_TYPE
-    from .molecular_data import MolecularData
     from .atom_item import AtomItem
     from .bond_item import BondItem
+    from .constants import CLIPBOARD_MIME_TYPE
+    from .molecular_data import MolecularData
 except Exception:
     # Fallback to absolute imports for script-style execution
-    from modules.constants import CLIPBOARD_MIME_TYPE
-    from modules.molecular_data import MolecularData
     from modules.atom_item import AtomItem
     from modules.bond_item import BondItem
+    from modules.constants import CLIPBOARD_MIME_TYPE
+    from modules.molecular_data import MolecularData
 
 
 try:
@@ -133,13 +133,13 @@ class MainWindowEditActions(object):
 
             # 選択された原子のIDセットを作成
             selected_atom_ids = {atom.atom_id for atom in selected_atoms}
-            
+
             # 選択された原子の幾何学的中心を計算
             center = QPointF(
                 sum(atom.pos().x() for atom in selected_atoms) / len(selected_atoms),
                 sum(atom.pos().y() for atom in selected_atoms) / len(selected_atoms)
             )
-            
+
             # コピー対象の原子データをリストに格納（位置は中心からの相対座標）
             # 同時に、元のatom_idから新しいインデックス(0, 1, 2...)へのマッピングを作成
             atom_id_to_idx_map = {}
@@ -152,7 +152,7 @@ class MainWindowEditActions(object):
                     'charge': atom.charge,
                     'radical': atom.radical,
                 })
-                
+
             # 選択された原子同士を結ぶ結合のみをリストに格納
             fragment_bonds = []
             for (id1, id2), bond_data in self.data.bonds.items():
@@ -176,10 +176,10 @@ class MainWindowEditActions(object):
             mime_data.setData(CLIPBOARD_MIME_TYPE, byte_array)
             QApplication.clipboard().setMimeData(mime_data)
             self.statusBar().showMessage(f"Copied {len(fragment_atoms)} atoms and {len(fragment_bonds)} bonds.")
-            
+
         except Exception as e:
             print(f"Error during copy operation: {e}")
-            
+
             traceback.print_exc()
             self.statusBar().showMessage(f"Error during copy operation: {e}")
 
@@ -189,17 +189,17 @@ class MainWindowEditActions(object):
             selected_items = self.scene.selectedItems()
             if not selected_items:
                 return
-            
+
             # 最初にコピー処理を実行
             self.copy_selection()
-            
+
             if self.scene.delete_items(set(selected_items)):
                 self.push_undo_state()
                 self.statusBar().showMessage("Cut selection.", 2000)
-                
+
         except Exception as e:
             print(f"Error during cut operation: {e}")
-            
+
             traceback.print_exc()
             self.statusBar().showMessage(f"Error during cut operation: {e}")
 
@@ -218,7 +218,7 @@ class MainWindowEditActions(object):
             except pickle.UnpicklingError:
                 self.statusBar().showMessage("Error: Invalid clipboard data format")
                 return
-            
+
             paste_center_pos = self.view_2d.mapToScene(self.view_2d.mapFromGlobal(QCursor.pos()))
             self.scene.clearSelection()
 
@@ -242,13 +242,13 @@ class MainWindowEditActions(object):
                     bond_order=bond_data.get('order', 1),
                     bond_stereo=bond_data.get('stereo', 0)  # E/Z立体化学情報も復元
                 )
-            
+
             self.push_undo_state()
             self.statusBar().showMessage(f"Pasted {len(fragment_data['atoms'])} atoms and {len(fragment_data['bonds'])} bonds.", 2000)
-            
+
         except Exception as e:
             print(f"Error during paste operation: {e}")
-            
+
             traceback.print_exc()
             self.statusBar().showMessage(f"Error during paste operation: {e}")
         self.statusBar().showMessage(f"Pasted {len(new_atoms)} atoms.", 2000)
@@ -392,7 +392,6 @@ class MainWindowEditActions(object):
           結合は `self.scene.create_bond(atom_item, hydrogen_item, bond_order=1)` で作成する。
         """
         try:
-            
 
             mol = self.data.to_rdkit_mol(use_2d_stereo=False)
             if not mol or mol.GetNumAtoms() == 0:
@@ -570,7 +569,7 @@ class MainWindowEditActions(object):
             has_selection = len(self.scene.selectedItems()) > 0
             self.cut_action.setEnabled(has_selection)
             self.copy_action.setEnabled(has_selection)
-            
+
             clipboard = QApplication.clipboard()
             mime_data = clipboard.mimeData()
             self.paste_action.setEnabled(mime_data is not None and mime_data.hasFormat(CLIPBOARD_MIME_TYPE))
@@ -582,7 +581,7 @@ class MainWindowEditActions(object):
         # Initialize last_rotation_angle if not present
         if not hasattr(self, 'last_rotation_angle'):
             self.last_rotation_angle = 0
-        
+
         dialog = Rotate2DDialog(self, initial_angle=self.last_rotation_angle)
         if dialog.exec() == QDialog.DialogCode.Accepted:
             angle = dialog.get_angle()
@@ -595,11 +594,11 @@ class MainWindowEditActions(object):
             # Determine target atoms
             selected_items = self.scene.selectedItems()
             target_atoms = [item for item in selected_items if isinstance(item, AtomItem)]
-            
+
             # If no selection, rotate everything
             if not target_atoms:
                 target_atoms = [data['item'] for data in self.data.atoms.values() if data.get('item') and not sip_isdeleted_safe(data['item'])]
-            
+
             if not target_atoms:
                 self.statusBar().showMessage("No atoms to rotate.")
                 return
@@ -608,35 +607,35 @@ class MainWindowEditActions(object):
             xs = [atom.pos().x() for atom in target_atoms]
             ys = [atom.pos().y() for atom in target_atoms]
             if not xs: return
-            
+
             center_x = sum(xs) / len(xs)
             center_y = sum(ys) / len(ys)
             center = QPointF(center_x, center_y)
-            
+
             rad = math.radians(angle_degrees)
             cos_a = math.cos(rad)
             sin_a = math.sin(rad)
-            
+
             for atom in target_atoms:
                 # Relative pos
                 dx = atom.pos().x() - center_x
                 dy = atom.pos().y() - center_y
-                
+
                 # Rotate
                 new_dx = dx * cos_a - dy * sin_a
                 new_dy = dx * sin_a + dy * cos_a
-                
+
                 new_pos = QPointF(center_x + new_dx, center_y + new_dy)
                 atom.setPos(new_pos)
-            
+
             # Update bonds
             self.scene.update_connected_bonds(target_atoms)
-            
+
             self.push_undo_state()
             self.statusBar().showMessage(f"Rotated {len(target_atoms)} atoms by {angle_degrees} degrees.")
             self.scene.update()
             self.scene.update_all_items()
-            
+
         except Exception as e:
             print(f"Error rotating molecule: {e}")
             traceback.print_exc()
@@ -657,43 +656,43 @@ class MainWindowEditActions(object):
         # データが存在しない場合は何もしない
         if not self.data.atoms and self.current_mol is None:
             return
-        
+
         # 3Dモードをリセット
         if self.measurement_mode:
             self.measurement_action.setChecked(False)
             self.toggle_measurement_mode(False)  # 測定モードを無効化
-        
+
         if self.is_3d_edit_mode:
             self.edit_3d_action.setChecked(False)
             self.toggle_3d_edit_mode(False)  # 3D編集モードを無効化
-        
+
         # 3D原子選択をクリア
         self.clear_3d_selection()
-        
+
         self.dragged_atom_info = None
-            
+
         # 2Dエディタをクリアする（Undoスタックにはプッシュしない）
         self.clear_2d_editor(push_to_undo=False)
-        
+
         # 3Dモデルをクリアする
         self.current_mol = None
         self.plotter.clear()
         self.constraints_3d = []
-        
+
         # 3D関連機能を統一的に無効化
         self._enable_3d_features(False)
-        
+
         # Undo/Redoスタックをリセットする
         self.reset_undo_stack()
-        
+
         # ファイル状態をリセット（新規ファイル状態に）
         self.has_unsaved_changes = False
         self.current_file_path = None
         self.update_window_title()
-        
+
         # 2Dビューのズームをリセット
         self.reset_zoom()
-        
+
         # シーンとビューの明示的な更新
         self.scene.update()
         if self.view_2d:
@@ -701,21 +700,21 @@ class MainWindowEditActions(object):
 
         # 3D関連機能を統一的に無効化
         self._enable_3d_features(False)
-        
+
         # 3Dプロッターの再描画
         self.plotter.render()
-        
+
         # メニューテキストと状態を更新（分子がクリアされたので通常の表示に戻す）
         self.update_atom_id_menu_text()
         self.update_atom_id_menu_state()
-        
+
         # アプリケーションのイベントループを強制的に処理し、画面の再描画を確実に行う
         QApplication.processEvents()
-        
+
         # Call plugin document reset handlers
         if hasattr(self, 'plugin_manager') and self.plugin_manager:
             self.plugin_manager.invoke_document_reset_handlers()
-        
+
         self.statusBar().showMessage("Cleared all data.")
 
     def clear_2d_editor(self, push_to_undo=True):
@@ -724,16 +723,16 @@ class MainWindowEditActions(object):
         self.scene.clear()
         self.scene.reinitialize_items()
         self.is_xyz_derived = False  # 2Dエディタをクリアする際にXYZ由来フラグもリセット
-        
+
         # 測定ラベルもクリア
         self.clear_2d_measurement_labels()
-        
+
         # Clear 3D data and disable 3D-related menus
         self.current_mol = None
         self.plotter.clear()
         # 3D関連機能を統一的に無効化
         self._enable_3d_features(False)
-        
+
         if push_to_undo:
             self.push_undo_state()
 
@@ -948,15 +947,15 @@ class MainWindowEditActions(object):
 
     def clean_up_2d_structure(self):
         self.statusBar().showMessage("Optimizing 2D structure...")
-        
+
         # 最初に既存の化学的問題フラグをクリア
         self.scene.clear_all_problem_flags()
-        
+
         # 2Dエディタに原子が存在しない場合
         if not self.data.atoms:
             self.statusBar().showMessage("Error: No atoms to optimize.")
             return
-        
+
         mol = self.data.to_rdkit_mol()
         if mol is None or mol.GetNumAtoms() == 0:
             # RDKit変換が失敗した場合は化学的問題をチェック
@@ -1032,10 +1031,10 @@ class MainWindowEditActions(object):
 
             # 重なり解消ロジックを実行
             self. resolve_overlapping_groups()
-            
+
             # 測定ラベルの位置を更新
             self.update_2d_measurement_labels()
-            
+
             # シーン全体の再描画を要求
             self.scene.update()
 
@@ -1055,13 +1054,13 @@ class MainWindowEditActions(object):
 
         # --- パラメータ設定 ---
         # 重なっているとみなす距離の閾値。構造に合わせて調整してください。
-        OVERLAP_THRESHOLD = 0.5  
+        OVERLAP_THRESHOLD = 0.5
         # 左下へ移動させる距離。
         MOVE_DISTANCE = 20
 
         # self.data.atoms.values() から item を安全に取得
         all_atom_items = [
-            data['item'] for data in self.data.atoms.values() 
+            data['item'] for data in self.data.atoms.values()
             if data and 'item' in data
         ]
 
@@ -1211,10 +1210,10 @@ class MainWindowEditActions(object):
                     continue
             except Exception:
                 continue
-        
+
         # 重なり解消後に測定ラベルの位置を更新
         self.update_2d_measurement_labels()
-        
+
         self.scene.update()
         self.push_undo_state()
         self.statusBar().showMessage("Resolved overlapping groups.", 2000)
@@ -1225,10 +1224,10 @@ class MainWindowEditActions(object):
         """
         if len(frags) <= 1:
             return
-        
+
         conf = mol.GetConformer()
         pt = Chem.GetPeriodicTable()
-        
+
         # --- 1. 各フラグメントの情報（原子インデックス、VDW半径）を事前計算 ---
         frag_info = []
         for frag_indices in frags:
@@ -1237,7 +1236,7 @@ class MainWindowEditActions(object):
             for idx in frag_indices:
                 pos = conf.GetAtomPosition(idx)
                 positions.append(np.array([pos.x, pos.y, pos.z]))
-                
+
                 atom = mol.GetAtomWithIdx(idx)
                 # GetRvdw() はファンデルワールス半径を返す
                 try:
@@ -1247,7 +1246,7 @@ class MainWindowEditActions(object):
 
             positions_np = np.array(positions)
             vdw_radii_np = np.array(vdw_radii)
-            
+
             # このフラグメントで最大のVDW半径を計算（ボックスのマージンとして使用）
             max_vdw = np.max(vdw_radii_np) if len(vdw_radii_np) > 0 else 0.0
 
@@ -1260,17 +1259,17 @@ class MainWindowEditActions(object):
                 'bbox_min': np.zeros(3), # 後で計算
                 'bbox_max': np.zeros(3)  # 後で計算
             })
-        
+
         # --- 2. 衝突判定のパラメータ ---
         collision_scale = 1.2  # VDW半径の120%
         max_iterations = 100
         moved = True
         iteration = 0
-        
+
         while moved and iteration < max_iterations:
             moved = False
             iteration += 1
-            
+
             # --- 3. フラグメントのバウンディングボックスを毎イテレーション更新 ---
             for i in range(len(frag_info)):
                 # 現在の座標からボックスを再計算
@@ -1278,14 +1277,14 @@ class MainWindowEditActions(object):
                 for idx in frag_info[i]['indices']:
                     pos = conf.GetAtomPosition(idx)
                     current_positions.append([pos.x, pos.y, pos.z])
-                
+
                 positions_np = np.array(current_positions)
                 frag_info[i]['positions_np'] = positions_np # 座標情報を更新
-                
+
                 # VDW半径とスケールを考慮したマージンを計算
                 # (最大VDW半径 * スケール) をマージンとして使う
                 margin = frag_info[i]['max_vdw_radius'] * collision_scale
-                
+
                 frag_info[i]['bbox_min'] = np.min(positions_np, axis=0) - margin
                 frag_info[i]['bbox_max'] = np.max(positions_np, axis=0) + margin
 
@@ -1294,14 +1293,14 @@ class MainWindowEditActions(object):
                 for j in range(i + 1, len(frag_info)):
                     frag_i = frag_info[i]
                     frag_j = frag_info[j]
-                    
+
                     # === バウンディングボックス判定 ===
                     # 2つのボックスが重なっているかチェック (AABB交差判定)
                     # X, Y, Zの各軸で重なりをチェック
                     overlap_x = (frag_i['bbox_min'][0] <= frag_j['bbox_max'][0] and frag_i['bbox_max'][0] >= frag_j['bbox_min'][0])
                     overlap_y = (frag_i['bbox_min'][1] <= frag_j['bbox_max'][1] and frag_i['bbox_max'][1] >= frag_j['bbox_min'][1])
                     overlap_z = (frag_i['bbox_min'][2] <= frag_j['bbox_max'][2] and frag_i['bbox_max'][2] >= frag_j['bbox_min'][2])
-                    
+
                     # ボックスがX, Y, Zのいずれかの軸で離れている場合、原子間の詳細なチェックをスキップ
                     if not (overlap_x and overlap_y and overlap_z):
                         continue
@@ -1310,7 +1309,7 @@ class MainWindowEditActions(object):
                     # ボックスが重なっている場合のみ、高コストな原子間の総当たりチェックを実行
                     total_push_vector = np.zeros(3)
                     collision_count = 0
-                    
+
                     # 事前計算したNumpy配列を使用
                     positions_i = frag_i['positions_np']
                     positions_j = frag_j['positions_np']
@@ -1320,39 +1319,39 @@ class MainWindowEditActions(object):
                     for k, idx_i in enumerate(frag_i['indices']):
                         pos_i = positions_i[k]
                         vdw_i = vdw_i_all[k]
-                        
+
                         for l, idx_j in enumerate(frag_j['indices']):
                             pos_j = positions_j[l]
                             vdw_j = vdw_j_all[l]
-                            
+
                             distance_vec = pos_i - pos_j
                             distance_sq = np.dot(distance_vec, distance_vec) # 平方根を避けて高速化
-                            
+
                             min_distance = (vdw_i + vdw_j) * collision_scale
                             min_distance_sq = min_distance * min_distance
-                            
+
                             if distance_sq < min_distance_sq and distance_sq > 0.0001:
                                 distance = np.sqrt(distance_sq)
                                 push_direction = distance_vec / distance
                                 push_magnitude = (min_distance - distance) / 2 # 押し出し量は半分ずつ
                                 total_push_vector += push_direction * push_magnitude
                                 collision_count += 1
-                    
+
                     if collision_count > 0:
                         # 平均的な押し出しベクトルを適用
                         avg_push_vector = total_push_vector / collision_count
-                        
+
                         # Conformerの座標を更新
                         for idx in frag_i['indices']:
                             pos = np.array(conf.GetAtomPosition(idx))
                             new_pos = pos + avg_push_vector
                             conf.SetAtomPosition(idx, new_pos.tolist())
-                        
+
                         for idx in frag_j['indices']:
                             pos = np.array(conf.GetAtomPosition(idx))
                             new_pos = pos - avg_push_vector
                             conf.SetAtomPosition(idx, new_pos.tolist())
-                        
+
                         moved = True
 
     def _apply_chem_check_and_set_flags(self, mol, source_desc=None):
@@ -1478,4 +1477,4 @@ class MainWindowEditActions(object):
                         pass
         except Exception:
             pass
-            
+

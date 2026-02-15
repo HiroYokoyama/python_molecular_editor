@@ -10,8 +10,9 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
-from PyQt6.QtCore import Qt, QEvent
 import numpy as np
+from PyQt6.QtCore import QEvent, Qt
+
 try:
     from .constants import pt
 except Exception:
@@ -20,22 +21,21 @@ except Exception:
 
 class Dialog3DPickingMixin:
     """3D原子選択のための共通機能を提供するMixin"""
-    
+
     def __init__(self):
         """Mixinの初期化"""
         self.picking_enabled = False
-    
+
     def eventFilter(self, obj, event):
         """3Dビューでのマウスクリックをキャプチャする（元の3D editロジックを正確に再現）"""
-        if (obj == self.main_window.plotter.interactor and 
-            event.type() == QEvent.Type.MouseButtonPress and 
+        if (obj == self.main_window.plotter.interactor and
+            event.type() == QEvent.Type.MouseButtonPress and
             event.button() == Qt.MouseButton.LeftButton):
-            
+
             # Start tracking for smart selection (click vs drag)
             self._mouse_press_pos = event.pos()
             self._mouse_moved = False
 
-            
             try:
                 # VTKイベント座標を取得（元のロジックと同じ）
                 interactor = self.main_window.plotter.interactor
@@ -67,16 +67,16 @@ class Dialog3DPickingMixin:
                                 except Exception:
                                     pass
                                 self.on_atom_picked(int(closest_atom_idx))
-                                
+
                                 # We picked an atom, so stop tracking for background click
                                 self._mouse_press_pos = None
                                 return True
-                
+
                 # 原子以外をクリックした場合
                 # 即時には解除せず、回転操作（ドラッグ）を許可する。
                 # 実際の解除は MouseButtonRelease イベントで行う。
                 return False
-                    
+
             except Exception as e:
                 print(f"Error in eventFilter: {e}")
                 # On exception, don't swallow the event either — let the normal
@@ -84,7 +84,7 @@ class Dialog3DPickingMixin:
                 return False
 
         # Add movement tracking for smart selection
-        elif (obj == self.main_window.plotter.interactor and 
+        elif (obj == self.main_window.plotter.interactor and
               event.type() == QEvent.Type.MouseMove):
             if hasattr(self, '_mouse_press_pos') and self._mouse_press_pos is not None:
                 # Check if moved significantly
@@ -93,23 +93,22 @@ class Dialog3DPickingMixin:
                      self._mouse_moved = True
 
         # Add release handling for smart selection
-        elif (obj == self.main_window.plotter.interactor and 
-              event.type() == QEvent.Type.MouseButtonRelease and 
+        elif (obj == self.main_window.plotter.interactor and
+              event.type() == QEvent.Type.MouseButtonRelease and
               event.button() == Qt.MouseButton.LeftButton):
-              
+
             if hasattr(self, '_mouse_press_pos') and self._mouse_press_pos is not None:
                 if not getattr(self, '_mouse_moved', False):
                     # Pure click (no drag) on background -> Clear selection
                     if hasattr(self, 'clear_selection'):
                         self.clear_selection()
-                
+
                 # Reset state
                 self._mouse_press_pos = None
                 self._mouse_moved = False
 
-
         return super().eventFilter(obj, event)
-    
+
     def enable_picking(self):
         """3Dビューでの原子選択を有効にする"""
         self.main_window.plotter.interactor.installEventFilter(self)
@@ -119,7 +118,7 @@ class Dialog3DPickingMixin:
             self.main_window._picking_consumed = False
         except Exception:
             pass
-    
+
     def disable_picking(self):
         """3Dビューでの原子選択を無効にする"""
         if hasattr(self, 'picking_enabled') and self.picking_enabled:
@@ -131,7 +130,7 @@ class Dialog3DPickingMixin:
                 self.main_window._picking_consumed = False
         except Exception:
             pass
-    
+
     def try_alternative_picking(self, x, y):
         """代替のピッキング方法（使用しない）"""
 

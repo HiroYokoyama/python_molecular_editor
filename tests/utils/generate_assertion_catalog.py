@@ -12,28 +12,44 @@ def extract_assertions(filepath):
             return []
 
     results = []
+    
+    # helper to process function nodes
+    def process_function(func_node, parent_name=None):
+        if not func_node.name.startswith("test_"):
+            return
+
+        display_name = f"{parent_name}.{func_node.name}" if parent_name else func_node.name
+        docstring = ast.get_docstring(func_node) or "No description provided."
+        doc_lines = docstring.strip().split("\n")
+        summary = doc_lines[0].strip() if doc_lines else "No description."
+        
+        assertions = []
+        for subnode in ast.walk(func_node):
+            if isinstance(subnode, ast.Assert):
+                try:
+                    if hasattr(ast, "unparse"):
+                        assertions.append(f"assert {ast.unparse(subnode.test)}")
+                    else:
+                        assertions.append("assert [expression]")
+                except:
+                    assertions.append("assert [complex expression]")
+        
+        results.append({
+            "name": display_name,
+            "description": summary,
+            "assertions": assertions
+        })
+
     for node in tree.body:
-        if isinstance(node, ast.FunctionDef) and node.name.startswith("test_"):
-            docstring = ast.get_docstring(node) or "No description provided."
-            doc_lines = docstring.strip().split("\n")
-            summary = doc_lines[0].strip() if doc_lines else "No description."
-            
-            assertions = []
-            for subnode in ast.walk(node):
-                if isinstance(subnode, ast.Assert):
-                    try:
-                        if hasattr(ast, "unparse"):
-                            assertions.append(f"assert {ast.unparse(subnode.test)}")
-                        else:
-                            assertions.append("assert [expression]")
-                    except:
-                        assertions.append("assert [complex expression]")
-            
-            results.append({
-                "name": node.name,
-                "description": summary,
-                "assertions": assertions
-            })
+        # Top-level functions
+        if isinstance(node, ast.FunctionDef):
+            process_function(node)
+        # Class methods
+        elif isinstance(node, ast.ClassDef):
+            for subnode in node.body:
+                if isinstance(subnode, ast.FunctionDef):
+                    process_function(subnode, parent_name=node.name)
+
     return results
 
 def generate_catalog():

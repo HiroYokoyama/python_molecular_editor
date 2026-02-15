@@ -12,11 +12,11 @@ DOI: 10.5281/zenodo.17268532
 
 # --- Constants ---
 
-from PyQt6.QtGui import QFont, QColor
+from PyQt6.QtGui import QColor, QFont
 from rdkit import Chem
 
 #Version
-VERSION = '2.6.0'
+VERSION = '2.6.1'
 
 ATOM_RADIUS = 18
 BOND_OFFSET = 3.5
@@ -73,7 +73,7 @@ CPK_COLORS = {
     'Bi': QColor('#9E4FB5'), 'Po': QColor('#AB5C00'), 'At': QColor('#754F45'), 'Ac': QColor('#70ABFA'), 'Th': QColor('#00BAFF'),
     'Pa': QColor('#00A1FF'), 'U': QColor('#008FFF'), 'Np': QColor('#0080FF'), 'Pu': QColor('#006BFF'), 'Am': QColor('#545CF2'),
     'Cm': QColor('#785CE3'), 'Bk': QColor('#8A4FE3'), 'Cf': QColor('#A136D4'), 'Es': QColor('#B31FD4'), 'Fm': QColor('#B31FBA'),
-    'Md': QColor('#B30DA6'), 'No': QColor('#BD0D87'), 'Lr': QColor('#C70066'), 'Al': QColor('#B3A68F'), 'Y': QColor('#99FFFF'), 
+    'Md': QColor('#B30DA6'), 'No': QColor('#BD0D87'), 'Lr': QColor('#C70066'), 'Al': QColor('#B3A68F'), 'Y': QColor('#99FFFF'),
     'Zr': QColor('#7EE7E7'), 'Nb': QColor('#68CFCE'), 'Mo': QColor('#52B7B7'), 'DEFAULT': QColor('#FF1493') # Pink fallback
 }
 CPK_COLORS_PV = {

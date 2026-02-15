@@ -10,17 +10,15 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
-from PyQt6.QtCore import QObject
+import math
+import re
 
-from PyQt6.QtCore import pyqtSignal, pyqtSlot
+from PyQt6.QtCore import QObject, pyqtSignal, pyqtSlot
 
 # RDKit
 from rdkit import Chem
-from rdkit.Chem import AllChem
-from rdkit.Chem import rdGeometry
+from rdkit.Chem import AllChem, rdGeometry
 from rdkit.DistanceGeometry import DoTriangleSmoothing
-import math
-import re
 
 try:
     from . import OBABEL_AVAILABLE
@@ -41,7 +39,7 @@ else:
 class CalculationWorker(QObject):
     status_update = pyqtSignal(str)
     finished = pyqtSignal(object)
-    error = pyqtSignal(object) 
+    error = pyqtSignal(object)
     start_work = pyqtSignal(str, object)
 
     def __init__(self, parent=None):
@@ -53,15 +51,77 @@ class CalculationWorker(QObject):
 
     @pyqtSlot(str, object)
     def run_calculation(self, mol_block, options=None):
+        worker_id = None
+
+        # The worker may be asked to halt via a shared set `halt_ids` and
+        # identifies its own run by options['worker_id'] (int).
+        def _check_halted():
+            try:
+                halt_ids = getattr(self, 'halt_ids', None)
+                if worker_id is None:
+                    if getattr(self, 'halt_all', False):
+                        return True
+                    if halt_ids is None:
+                        return False
+                    # Support both None-in-set and string sentinel for compatibility
+                    return (None in halt_ids) or ('ALL' in halt_ids)
+
+                if halt_ids is None:
+                    return False
+                return (worker_id in halt_ids)
+            except Exception:
+                return False
+
+        # Safe-emission helpers: do nothing if this worker has been halted.
+        def _safe_status(msg):
+            try:
+                if _check_halted():
+                    return
+                self.status_update.emit(msg)
+            except Exception: # pragma: no cover
+                # Swallow any signal-emission errors to avoid crashing the worker
+                pass
+
+        def _safe_finished(payload): # pragma: no cover
+            try:
+                # Attempt to emit the payload; preserve existing fallback behavior
+                try:
+                    self.finished.emit(payload)
+                except TypeError:
+                    # Some slots/old code may expect a single-molecule arg; try that too
+                    try:
+                        # If payload was a tuple like (worker_id, mol), try sending the second element
+                        if isinstance(payload, (list, tuple)) and len(payload) >= 2:
+                            self.finished.emit(payload[1])
+                        else:
+                            self.finished.emit(payload)
+                    except Exception:
+                        pass
+            except Exception:
+                pass
+
+        def _safe_error(msg): # pragma: no cover
+            try:
+                # Emit a tuple containing the worker_id (may be None) and the message
+                try:
+                    self.error.emit((worker_id, msg))
+                except Exception:
+                    # Fallback to emitting the raw message if tuple emission fails for any reason
+                    try:
+                        self.error.emit(msg)
+                    except Exception:
+                        pass
+            except Exception:
+                pass
+
         try:
-            # The worker may be asked to halt via a shared set `halt_ids` and
-            # identifies its own run by options['worker_id'] (int).
+
             worker_id = None
             try:
                 worker_id = options.get('worker_id') if options else None
             except Exception:
                 worker_id = None
-                
+
             _warned_no_worker_id = False
             if worker_id is None:
                 try:
@@ -71,64 +131,7 @@ class CalculationWorker(QObject):
                     pass
                 _warned_no_worker_id = True
 
-            def _check_halted():
-                try:
-                    halt_ids = getattr(self, 'halt_ids', None)
-                    if worker_id is None:
-                        if getattr(self, 'halt_all', False):
-                            return True
-                        if halt_ids is None:
-                            return False
-                        # Support both None-in-set and string sentinel for compatibility
-                        return (None in halt_ids) or ('ALL' in halt_ids)
 
-                    if halt_ids is None:
-                        return False
-                    return (worker_id in halt_ids)
-                except Exception:
-                    return False
-
-            # Safe-emission helpers: do nothing if this worker has been halted.
-            def _safe_status(msg):
-                try:
-                    if _check_halted():
-                        return
-                    self.status_update.emit(msg)
-                except Exception: # pragma: no cover
-                    # Swallow any signal-emission errors to avoid crashing the worker
-                    pass
-
-            def _safe_finished(payload): # pragma: no cover
-                try:
-                    # Attempt to emit the payload; preserve existing fallback behavior
-                    try:
-                        self.finished.emit(payload)
-                    except TypeError:
-                        # Some slots/old code may expect a single-molecule arg; try that too
-                        try:
-                            # If payload was a tuple like (worker_id, mol), try sending the second element
-                            if isinstance(payload, (list, tuple)) and len(payload) >= 2:
-                                self.finished.emit(payload[1])
-                            else:
-                                self.finished.emit(payload)
-                        except Exception:
-                            pass
-                except Exception:
-                    pass
-
-            def _safe_error(msg): # pragma: no cover
-                try:
-                    # Emit a tuple containing the worker_id (may be None) and the message
-                    try:
-                        self.error.emit((worker_id, msg))
-                    except Exception:
-                        # Fallback to emitting the raw message if tuple emission fails for any reason
-                        try:
-                            self.error.emit(msg)
-                        except Exception:
-                            pass
-                except Exception:
-                    pass
 
             # options: dict-like with keys: 'conversion_mode' -> 'fallback'|'rdkit'|'obabel'|'direct'
             if options is None:
@@ -137,7 +140,7 @@ class CalculationWorker(QObject):
             params = None
             if not mol_block:
                 raise ValueError("No atoms to convert.")
-            
+
             _safe_status("Creating 3D structure...")
 
             mol = Chem.MolFromMolBlock(mol_block, removeHs=False)
@@ -173,19 +176,19 @@ class CalculationWorker(QObject):
                         # Find suitable stereo atoms
                         begin_atom = bond.GetBeginAtom()
                         end_atom = bond.GetEndAtom()
-                        
+
                         # Pick heavy atom neighbors preferentially
                         begin_neighbors = [nbr for nbr in begin_atom.GetNeighbors() if nbr.GetIdx() != end_atom.GetIdx()]
                         end_neighbors = [nbr for nbr in end_atom.GetNeighbors() if nbr.GetIdx() != begin_atom.GetIdx()]
-                        
+
                         if begin_neighbors and end_neighbors:
                             # Prefer heavy atoms
                             begin_heavy = [n for n in begin_neighbors if n.GetAtomicNum() > 1]
                             end_heavy = [n for n in end_neighbors if n.GetAtomicNum() > 1]
-                            
+
                             stereo_atom1 = (begin_heavy[0] if begin_heavy else begin_neighbors[0]).GetIdx()
                             stereo_atom2 = (end_heavy[0] if end_heavy else end_neighbors[0]).GetIdx()
-                            
+
                             bond.SetStereoAtoms(stereo_atom1, stereo_atom2)
                             bond.SetStereo(stereo_type)
 
@@ -205,19 +208,19 @@ class CalculationWorker(QObject):
                         # Re-find suitable stereo atoms after hydrogen addition
                         begin_atom = bond.GetBeginAtom()
                         end_atom = bond.GetEndAtom()
-                        
+
                         # Pick heavy atom neighbors preferentially
                         begin_neighbors = [nbr for nbr in begin_atom.GetNeighbors() if nbr.GetIdx() != end_atom.GetIdx()]
                         end_neighbors = [nbr for nbr in end_atom.GetNeighbors() if nbr.GetIdx() != begin_atom.GetIdx()]
-                        
+
                         if begin_neighbors and end_neighbors:
                             # Prefer heavy atoms
                             begin_heavy = [n for n in begin_neighbors if n.GetAtomicNum() > 1]
                             end_heavy = [n for n in end_neighbors if n.GetAtomicNum() > 1]
-                            
+
                             stereo_atom1 = (begin_heavy[0] if begin_heavy else begin_neighbors[0]).GetIdx()
                             stereo_atom2 = (end_heavy[0] if end_heavy else end_neighbors[0]).GetIdx()
-                            
+
                             bond.SetStereoAtoms(stereo_atom1, stereo_atom2)
                             bond.SetStereo(stereo_type)
 
@@ -233,7 +236,7 @@ class CalculationWorker(QObject):
                     #    to get coordinates for *all existing* atoms.
                     parsed_coords = []  # all-atom coordinates (x, y, z)
                     stereo_dirs = []    # list of (begin_idx, end_idx, stereo_flag)
-                    
+
                     base2d_all = None
                     try:
                         # H原子を含めてパース
@@ -249,17 +252,17 @@ class CalculationWorker(QObject):
                         for i in range(base2d_all.GetNumAtoms()):
                             p = oconf.GetAtomPosition(i)
                             parsed_coords.append((float(p.x), float(p.y), 0.0))
-                    
+
                     # 2) Parse wedge/dash bond information (using all atoms)
                     try:
                         lines = mol_block.splitlines()
                         counts_idx = None
-                        
+
                         for i, ln in enumerate(lines[:40]):
                             if re.match(r"^\s*\d+\s+\d+", ln):
                                 counts_idx = i
                                 break
-                        
+
                         if counts_idx is not None:
                             parts = lines[counts_idx].split()
                             try:
@@ -267,10 +270,10 @@ class CalculationWorker(QObject):
                                 nbonds = int(parts[1])
                             except Exception:
                                 natoms = nbonds = 0
-                            
+
                             # 全原子マップ (MOL 1-based index -> 0-based index)
                             atom_map = {i + 1: i for i in range(natoms)}
-                            
+
                             bond_start = counts_idx + 1 + natoms
                             for j in range(min(nbonds, max(0, len(lines) - bond_start))):
                                 bond_line = lines[bond_start + j]
@@ -319,7 +322,7 @@ class CalculationWorker(QObject):
                                     continue
                     except Exception:
                         stereo_dirs = []
-                
+
                     # Fallback for parsed_coords (if RDKit parse failed)
                     if not parsed_coords:
                         try:
@@ -353,7 +356,7 @@ class CalculationWorker(QObject):
                                     parsed_coords.append((x, y, z))
                         except Exception:
                             parsed_coords = []
-                    
+
                     if not parsed_coords:
                         raise ValueError("Failed to parse coordinates from MOL block for direct conversion.")
 
@@ -459,7 +462,7 @@ class CalculationWorker(QObject):
                                         conf.SetAtomPosition(i, rdGeometry.Point3D(0.0, 0.0, 0.10))
                                     except Exception:
                                         pass
-                    
+
                     # 5) Wedge/Dash の Zオフセットを適用
                     try:
                         stereo_z_offset = 1.5  # wedge -> +1.5, dash -> -1.5
@@ -468,12 +471,12 @@ class CalculationWorker(QObject):
                                 # インデックスは既存原子内のはず
                                 if begin_idx >= num_existing_atoms or end_idx >= num_existing_atoms:
                                     continue
-                                    
+
                                 if stereo_flag not in (1, 6):
                                     continue
-                                
+
                                 sign = 1.0 if stereo_flag == 1 else -1.0
-                                
+
                                 # end_idx (立体表記の終点側原子) にZオフセットを適用
                                 pos = conf.GetAtomPosition(end_idx)
                                 newz = float(pos.z) + (stereo_z_offset * sign) # 既存のZ=0にオフセットを加算
@@ -482,14 +485,14 @@ class CalculationWorker(QObject):
                                 continue
                     except Exception:
                         pass
-                    
+
                     # コンフォーマを入れ替えて終了
                     try:
                         mol.RemoveAllConformers()
                     except Exception:
                         pass
                     mol.AddConformer(conf, assignId=True)
-                    
+
                     if _check_halted():
                         raise RuntimeError("Halted (after optimization)")
                     try:
@@ -507,7 +510,7 @@ class CalculationWorker(QObject):
             params.useExpTorsionAnglePrefs = True
             params.useBasicKnowledge = True
             params.enforceChirality = True  # This is critical for stereo preservation
-            
+
             # Store original stereochemistry before embedding (prioritizing explicit labels)
             original_stereo_info = []
             for bond_idx, stereo_type in explicit_stereo.items():
@@ -516,15 +519,15 @@ class CalculationWorker(QObject):
                     if bond.GetBondType() == Chem.BondType.DOUBLE:
                         stereo_atoms = bond.GetStereoAtoms()
                         original_stereo_info.append((bond.GetIdx(), stereo_type, stereo_atoms))
-            
+
             # Also store any other stereo bonds not in explicit_stereo
             for bond in mol.GetBonds():
-                if (bond.GetBondType() == Chem.BondType.DOUBLE and 
+                if (bond.GetBondType() == Chem.BondType.DOUBLE and
                     bond.GetStereo() != Chem.BondStereo.STEREONONE and
                     bond.GetIdx() not in explicit_stereo):
                     stereo_atoms = bond.GetStereoAtoms()
                     original_stereo_info.append((bond.GetIdx(), bond.GetStereo(), stereo_atoms))
-            
+
             if conversion_mode in ('fallback', 'rdkit'):
                 _safe_status("RDKit: Embedding 3D coordinates...")
             elif conversion_mode == 'obabel':
@@ -534,10 +537,10 @@ class CalculationWorker(QObject):
                 pass
             if _check_halted():
                 raise RuntimeError("Halted")
-            
+
             # Try multiple times with different approaches if needed
             conf_id = -1
-            
+
             # First attempt: Standard ETKDG with stereo enforcement
             try:
                 # Only attempt RDKit embedding if mode allows
@@ -575,7 +578,7 @@ class CalculationWorker(QObject):
                                     bounds_matrix[neighbor1_idx][neighbor2_idx] = min(bounds_matrix[neighbor1_idx][neighbor2_idx], target_dist)
                                     bounds_matrix[neighbor2_idx][neighbor1_idx] = min(bounds_matrix[neighbor2_idx][neighbor1_idx], target_dist)
                                 elif stereo == Chem.BondStereo.STEREOE:
-                                    # E configuration: set longer distance constraint  
+                                    # E configuration: set longer distance constraint
                                     target_dist = 5.0  # Angstroms
                                     bounds_matrix[neighbor1_idx][neighbor2_idx] = max(bounds_matrix[neighbor1_idx][neighbor2_idx], target_dist)
                                     bounds_matrix[neighbor2_idx][neighbor1_idx] = max(bounds_matrix[neighbor2_idx][neighbor1_idx], target_dist)
@@ -589,7 +592,7 @@ class CalculationWorker(QObject):
                         if conversion_mode == 'rdkit':
                             raise RuntimeError("RDKit: Constraint embedding failed")
                         conf_id = -1
-                    
+
             # Fallback: Try basic embedding
             if conf_id == -1:
                 try:
@@ -635,7 +638,7 @@ class CalculationWorker(QObject):
                     if len(stereo_atoms) == 2:
                         bond.SetStereoAtoms(stereo_atoms[0], stereo_atoms[1])
                     bond.SetStereo(stereo)
-                
+
                 try:
                     mmff_variant = "MMFF94s"
                     if opt_method and str(opt_method).upper() == 'MMFF94_RDKIT':
@@ -651,14 +654,14 @@ class CalculationWorker(QObject):
                         AllChem.UFFOptimizeMolecule(mol)
                     except Exception:
                         pass
-                
+
                 # CRITICAL: Restore stereochemistry again after optimization (explicit labels priority)
                 for bond_idx, stereo, stereo_atoms in original_stereo_info:
                     bond = mol.GetBondWithIdx(bond_idx)
                     if len(stereo_atoms) == 2:
                         bond.SetStereoAtoms(stereo_atoms[0], stereo_atoms[1])
                     bond.SetStereo(stereo)
-                
+
                 # Do NOT call AssignStereochemistry here as it would override our explicit labels
                 # Include worker_id so the main thread can ignore stale results
                 # CRITICAL: Check for halt *before* emitting finished signal

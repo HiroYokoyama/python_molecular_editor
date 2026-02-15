@@ -22,18 +22,17 @@ import traceback
 # RDKit imports (explicit to satisfy flake8 and used features)
 from rdkit import Chem
 from rdkit.Chem import AllChem
+
 try:
     pass
 except Exception:
     pass
 
 # PyQt6 Modules
-from PyQt6.QtWidgets import (
-    QFileDialog
-)
-    
+from PyQt6.QtWidgets import QFileDialog
+
 try:
-    import sip as _sip  # type: ignore
+    from PyQt6 import sip as _sip  # type: ignore
     _sip_isdeleted = getattr(_sip, 'isdeleted', None)
 except Exception:
     _sip = None
@@ -66,7 +65,7 @@ class MainWindowViewLoaders(object):
 
             # 2Dエディタをクリア
             self.clear_2d_editor(push_to_undo=False)
-            
+
             # 3D構造をセットして描画
             # Set the molecule. If bonds were determined (mol has bonds),
             # treat this the same as loading a MOL file: clear the XYZ-derived
@@ -130,11 +129,11 @@ class MainWindowViewLoaders(object):
 
             # 3D関連機能を統一的に有効化
             self._enable_3d_features(True)
-            
+
             # メニューテキストと状態を更新
             self.update_atom_id_menu_text()
             self.update_atom_id_menu_state()
-            
+
             self.statusBar().showMessage(f"3D Viewer Mode: Loaded {os.path.basename(file_path)}")
             self.reset_undo_stack()
             # XYZファイル名をcurrent_file_pathにセットし、未保存状態はFalse
@@ -151,14 +150,14 @@ class MainWindowViewLoaders(object):
         except Exception as e:
             self.statusBar().showMessage(f"Error loading XYZ file: {e}")
             self.restore_ui_for_editing()
-            
+
             traceback.print_exc()
 
     def save_3d_as_mol(self):
         if not self.current_mol:
             self.statusBar().showMessage("Error: Please generate a 3D structure first.")
             return
-            
+
         try:
             # default filename based on current file
             default_name = "untitled"
@@ -181,7 +180,7 @@ class MainWindowViewLoaders(object):
             file_path, _ = QFileDialog.getSaveFileName(self, "Save 3D MOL File", default_path, "MOL Files (*.mol);;All Files (*)")
             if not file_path:
                 return
-                
+
             if not file_path.lower().endswith('.mol'):
                 file_path += '.mol'
 
@@ -195,18 +194,18 @@ class MainWindowViewLoaders(object):
             if len(lines) > 1 and 'RDKit' in lines[1]:
                 lines[1] = '  MoleditPy Ver. ' + VERSION + '  3D'
             modified_mol_block = '\n'.join(lines)
-            
+
             with open(file_path, 'w', encoding='utf-8') as f:
                 f.write(modified_mol_block)
             self.statusBar().showMessage(f"3D data saved to {file_path}")
-            
+
         except (OSError, IOError) as e:
             self.statusBar().showMessage(f"File I/O error: {e}")
         except UnicodeEncodeError as e:
             self.statusBar().showMessage(f"Text encoding error: {e}")
-        except Exception as e: 
+        except Exception as e:
             self.statusBar().showMessage(f"Error saving 3D MOL file: {e}")
-            
+
             traceback.print_exc()
 
     def load_mol_file_for_3d_viewing(self, file_path=None):
@@ -215,14 +214,14 @@ class MainWindowViewLoaders(object):
                 return  # ユーザーがキャンセルした場合は何もしない
         if not file_path:
             file_path, _ = QFileDialog.getOpenFileName(
-                self, "Open MOL/SDF File", "", 
+                self, "Open MOL/SDF File", "",
                 "MOL/SDF Files (*.mol *.sdf);;All Files (*)"
             )
             if not file_path:
                 return
-        
+
         try:
-            
+
             # Determine extension early and handle .mol specially by reading the
             # raw block and running it through fix_mol_block before parsing.
             _, ext = os.path.splitext(file_path)
@@ -283,7 +282,7 @@ class MainWindowViewLoaders(object):
                 except Exception:
                     self.statusBar().showMessage("Failed to generate 3D coordinates")
                     return
-            
+
             # Clear XYZ markers on the newly loaded MOL/SDF so Optimize 3D is
             # correctly enabled when appropriate.
             try:
@@ -298,25 +297,24 @@ class MainWindowViewLoaders(object):
 
             self.current_mol = mol
             self.draw_molecule_3d(mol)
-            
+
             # カメラをリセット
             self.plotter.reset_camera()
-            
+
             # UIを3Dビューアーモードに設定
             self._enter_3d_viewer_ui_mode()
-            
+
             # メニューテキストと状態を更新
             self.update_atom_id_menu_text()
             self.update_atom_id_menu_state()
-            
+
             self.statusBar().showMessage(f"Loaded {file_path} in 3D viewer")
-            
+
             self.reset_undo_stack()
             self.has_unsaved_changes = False  # ファイル読込直後は未変更扱い
             self.current_file_path = file_path
             self.update_window_title()
-            
 
         except Exception as e:
             self.statusBar().showMessage(f"Error loading MOL/SDF file: {e}")
-    
+

@@ -10,7 +10,8 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
-from typing import Callable, Optional, Any
+from typing import Any, Callable, Optional
+
 
 class PluginContext:
     """
@@ -24,7 +25,7 @@ class PluginContext:
     def add_menu_action(self, path: str, callback: Callable, text: Optional[str] = None, icon: Optional[str] = None, shortcut: Optional[str] = None):
         """
         Register a menu action.
-        
+
         Args:
             path: Menu path, e.g., "File/Import", "Edit", or "MyPlugin" (top level).
             callback: Function to call when triggered.
@@ -43,14 +44,12 @@ class PluginContext:
     def register_drop_handler(self, callback: Callable[[str], bool], priority: int = 0):
         """
         Register a handler for file drops.
-        
+
         Args:
             callback: Function taking (file_path) -> bool. Returns True if handled.
             priority: Higher priority handlers are tried first.
         """
         self._manager.register_drop_handler(self._plugin_name, callback, priority)
-
-
 
     def get_3d_controller(self) -> 'Plugin3DController':
         """
@@ -60,7 +59,7 @@ class PluginContext:
 
     def get_main_window(self) -> Any:
         """
-        Returns the raw MainWindow instance. 
+        Returns the raw MainWindow instance.
         Use with caution; prefer specific methods when available.
         """
         return self._manager.get_main_window()
@@ -86,7 +85,7 @@ class PluginContext:
     def add_export_action(self, label: str, callback: Callable):
         """
         Register a custom export action.
-        
+
         Args:
             label: Text to display in the Export menu (e.g., "Export as MyFormat...").
             callback: Function to call when triggered.
@@ -96,7 +95,7 @@ class PluginContext:
     def register_optimization_method(self, method_name: str, callback: Callable[[Any], bool]):
         """
         Register a custom 3D optimization method.
-        
+
         Args:
             method_name: Name of the method to display in 3D Optimization menu.
             callback: Function taking (rdkit_mol) -> bool (success).
@@ -107,7 +106,7 @@ class PluginContext:
     def register_file_opener(self, extension: str, callback: Callable[[str], None], priority: int = 0):
         """
         Register a handler for opening a specific file extension.
-        
+
         Args:
             extension: File extension including dot, e.g. ".xyz".
             callback: Function taking (file_path) -> None.
@@ -116,12 +115,10 @@ class PluginContext:
         """
         self._manager.register_file_opener(self._plugin_name, extension, callback, priority)
 
-
-
     def add_analysis_tool(self, label: str, callback: Callable):
         """
         Register a tool in the Analysis menu.
-        
+
         Args:
             label: Text to display in the menu.
             callback: Function to contact when triggered.
@@ -131,7 +128,7 @@ class PluginContext:
     def register_save_handler(self, callback: Callable[[], dict]):
         """
         Register a callback to save state into the project file.
-        
+
         Args:
             callback: Function returning a dict of serializable data.
         """
@@ -140,7 +137,7 @@ class PluginContext:
     def register_load_handler(self, callback: Callable[[dict], None]):
         """
         Register a callback to restore state from the project file.
-        
+
         Args:
             callback: Function receiving the dict of saved data.
         """
@@ -153,7 +150,7 @@ class PluginContext:
     def register_3d_style(self, style_name: str, callback: Callable[[Any, Any], None]):
         """
         Register a custom 3D rendering style.
-        
+
         Args:
             style_name: Name of the style (must be unique).
             callback: Function taking (main_window, mol) -> None.
@@ -164,7 +161,7 @@ class PluginContext:
     def register_document_reset_handler(self, callback: Callable[[], None]):
         """
         Register a callback to be called when a new document is created (File→New).
-        
+
         Args:
             callback: Function with no arguments that resets plugin state.
         """

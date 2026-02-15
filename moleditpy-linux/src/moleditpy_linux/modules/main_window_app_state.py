@@ -17,33 +17,27 @@ MainWindow (main_window.py) から分離されたモジュール
 """
 
 
-import numpy as np
+import base64
 import copy
 import os
-import base64
 
+import numpy as np
 
 # RDKit imports (explicit to satisfy flake8 and used features)
 from rdkit import Chem
 from rdkit.Chem import Descriptors, rdMolDescriptors
+
 try:
     pass
 except Exception:
     pass
 
 # PyQt6 Modules
-from PyQt6.QtWidgets import (
-    QMessageBox
-)
-
-
-
-from PyQt6.QtCore import (
-    Qt, QPointF, QDateTime
-)
+from PyQt6.QtCore import QDateTime, QPointF, Qt
+from PyQt6.QtWidgets import QMessageBox
 
 try:
-    import sip as _sip  # type: ignore
+    from PyQt6 import sip as _sip  # type: ignore
     _sip_isdeleted = getattr(_sip, 'isdeleted', None)
 except Exception:
     _sip = None
@@ -51,14 +45,14 @@ except Exception:
 
 try:
     # package relative imports (preferred when running as `python -m moleditpy`)
-    from .constants import VERSION
     from .atom_item import AtomItem
     from .bond_item import BondItem
+    from .constants import VERSION
 except Exception:
     # Fallback to absolute imports for script-style execution
-    from modules.constants import VERSION
     from modules.atom_item import AtomItem
     from modules.bond_item import BondItem
+    from modules.constants import VERSION
 
 
 # --- クラス定義 ---
@@ -72,19 +66,17 @@ class MainWindowAppState(object):
         """
         self.DEBUG_UNDO = False
 
-
-
     def get_current_state(self):
         atoms = {atom_id: {'symbol': data['symbol'],
                            'pos': (data['item'].pos().x(), data['item'].pos().y()),
                            'charge': data.get('charge', 0),
-                           'radical': data.get('radical', 0)} 
+                           'radical': data.get('radical', 0)}
                  for atom_id, data in self.data.atoms.items()}
         bonds = {key: {'order': data['order'], 'stereo': data.get('stereo', 0)} for key, data in self.data.bonds.items()}
         state = {'atoms': atoms, 'bonds': bonds, '_next_atom_id': self.data._next_atom_id}
 
-        state['version'] = VERSION 
-        
+        state['version'] = VERSION
+
         if self.current_mol:
             state['mol_3d'] = self.current_mol.ToBinary()
             # RDKit binary serialization does not preserve custom properties like _original_atom_id.
@@ -115,15 +107,13 @@ class MainWindowAppState(object):
         except Exception:
             pass # 失敗したら空リスト
         state['constraints_3d'] = json_safe_constraints
-            
+
         return state
-
-
 
     def set_state_from_data(self, state_data):
         self.dragged_atom_info = None
         self.clear_2d_editor(push_to_undo=False)
-        
+
         loaded_data = copy.deepcopy(state_data)
 
         # ファイルのバージョンを取得（存在しない場合は '0.0.0' とする）
@@ -173,7 +163,7 @@ class MainWindowAppState(object):
             # self.data.atomsにもradical情報を格納する
             self.data.atoms[atom_id] = {'symbol': data['symbol'], 'pos': pos, 'item': atom_item, 'charge': charge, 'radical': radical}
             self.scene.addItem(atom_item)
-        
+
         self.data._next_atom_id = loaded_data.get('_next_atom_id', max(self.data.atoms.keys()) + 1 if self.data.atoms else 0)
 
         for key_tuple, data in raw_bonds.items():
@@ -204,7 +194,7 @@ class MainWindowAppState(object):
                                         self.current_mol.GetAtomWithIdx(i).SetIntProp("_original_atom_id", int(aid))
                                     except Exception:
                                         pass
-                    
+
                     # Re-create atom ID mapping to synchronize 2D atoms with 3D actors
                     # This MUST be done before draw_molecule_3d for labels to be correct.
                     try:
@@ -219,7 +209,7 @@ class MainWindowAppState(object):
                     self.plotter.reset_camera()
                     # 3D関連機能を統一的に有効化
                     self._enable_3d_features(True)
-                    
+
                     # 3D原子情報ホバー表示を再設定
                     self.setup_3d_hover()
                 else:
@@ -250,14 +240,14 @@ class MainWindowAppState(object):
             # 3D分子がある場合は、2Dエディタモードでも3D編集機能を有効化
             if self.current_mol and self.current_mol.GetNumAtoms() > 0:
                 self._enable_3d_edit_actions(True)
-        
+
         # undo/redo後に測定ラベルの位置を更新
         self.update_2d_measurement_labels()
 
     def push_undo_state(self):
         if self._is_restoring_state:
             return
-            
+
         current_state_for_comparison = {
             'atoms': {k: (v['symbol'], v['item'].pos().x(), v['item'].pos().y(), v.get('charge', 0), v.get('radical', 0)) for k, v in self.data.atoms.items()},
             'bonds': {k: (v['order'], v.get('stereo', 0)) for k, v in self.data.bonds.items()},
@@ -268,7 +258,7 @@ class MainWindowAppState(object):
                 for a in self.current_mol.GetAtoms()
             ] if self.current_mol else None
         }
-        
+
         last_state_for_comparison = None
         if self.undo_stack:
             last_state = self.undo_stack[-1]
@@ -297,7 +287,7 @@ class MainWindowAppState(object):
             if self.initialization_complete:
                 self.has_unsaved_changes = True
                 self.update_window_title()
-        
+
         self.update_implicit_hydrogens()
         self.update_realtime_info()
         self.update_undo_redo_actions()
@@ -321,10 +311,10 @@ class MainWindowAppState(object):
         """未保存の変更があるかチェックし、警告ダイアログを表示"""
         if not self.has_unsaved_changes:
             return True  # 保存済みまたは変更なし
-        
+
         if not self.data.atoms and self.current_mol is None:
             return True  # 空のドキュメント
-        
+
         reply = QMessageBox.question(
             self,
             "Unsaved Changes",
@@ -332,7 +322,7 @@ class MainWindowAppState(object):
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No | QMessageBox.StandardButton.Cancel,
             QMessageBox.StandardButton.Yes
         )
-        
+
         if reply == QMessageBox.StandardButton.Yes:
             # 拡張子がPMEPRJでなければ「名前を付けて保存」
             file_path = self.current_file_path
@@ -373,7 +363,7 @@ class MainWindowAppState(object):
             else:
                 # 3D構造がない場合は3D編集機能を無効化
                 self._enable_3d_edit_actions(False)
-                    
+
         if getattr(self, 'DEBUG_UNDO', False):
             try:
                 print(f"DEBUG_UNDO: undo -> undo_stack size: {len(self.undo_stack)}, redo_stack size: {len(self.redo_stack)}")
@@ -381,7 +371,7 @@ class MainWindowAppState(object):
                 pass
         self.update_undo_redo_actions()
         self.update_realtime_info()
-        self.view_2d.setFocus() 
+        self.view_2d.setFocus()
 
     def redo(self):
         if self.redo_stack:
@@ -392,7 +382,7 @@ class MainWindowAppState(object):
                 self.set_state_from_data(state)
             finally:
                 self._is_restoring_state = False
-            
+
             # Redo後に3D構造の状態に基づいてメニューを再評価
             if self.current_mol and self.current_mol.GetNumAtoms() > 0:
                 # 3D構造がある場合は3D編集機能を有効化
@@ -400,7 +390,7 @@ class MainWindowAppState(object):
             else:
                 # 3D構造がない場合は3D編集機能を無効化
                 self._enable_3d_edit_actions(False)
-                    
+
         if getattr(self, 'DEBUG_UNDO', False):
             try:
                 print(f"DEBUG_UNDO: redo -> undo_stack size: {len(self.undo_stack)}, redo_stack size: {len(self.redo_stack)}")
@@ -408,8 +398,8 @@ class MainWindowAppState(object):
                 pass
         self.update_undo_redo_actions()
         self.update_realtime_info()
-        self.view_2d.setFocus() 
-        
+        self.view_2d.setFocus()
+
     def update_undo_redo_actions(self): # pragma: no cover
         self.undo_action.setEnabled(len(self.undo_stack) > 1)
         self.redo_action.setEnabled(len(self.redo_stack) > 0)
@@ -445,7 +435,7 @@ class MainWindowAppState(object):
             "created": str(QDateTime.currentDateTime().toString(Qt.DateFormat.ISODate)),
             "is_3d_viewer_mode": not self.is_2d_editable
         }
-        
+
         # 2D構造データ
         if self.data.atoms:
             atoms_2d = []
@@ -460,7 +450,7 @@ class MainWindowAppState(object):
                     "radical": data.get('radical', 0)
                 }
                 atoms_2d.append(atom_data)
-            
+
             bonds_2d = []
             for (atom1_id, atom2_id), bond_data in self.data.bonds.items():
                 bond_info = {
@@ -470,20 +460,20 @@ class MainWindowAppState(object):
                     "stereo": bond_data.get('stereo', 0)
                 }
                 bonds_2d.append(bond_info)
-            
+
             json_data["2d_structure"] = {
                 "atoms": atoms_2d,
                 "bonds": bonds_2d,
                 "next_atom_id": self.data._next_atom_id
             }
-        
+
         # 3D分子データ
         if self.current_mol and self.current_mol.GetNumConformers() > 0:
             try:
                 # MOLデータをBase64エンコードで保存（バイナリデータの安全な保存）
                 mol_binary = self.current_mol.ToBinary()
                 mol_base64 = base64.b64encode(mol_binary).decode('ascii')
-                
+
                 # 3D座標を抽出
                 atoms_3d = []
                 if self.current_mol.GetNumConformers() > 0:
@@ -517,7 +507,7 @@ class MainWindowAppState(object):
                             "original_id": original_id
                         }
                         atoms_3d.append(atom_3d)
-                
+
                 # 結合情報を抽出
                 bonds_3d = []
                 for bond in self.current_mol.GetBonds():
@@ -529,7 +519,7 @@ class MainWindowAppState(object):
                         "stereo": int(bond.GetStereo())
                     }
                     bonds_3d.append(bond_3d)
-                
+
                 # constraints_3dをJSON互換形式に変換
                 json_safe_constraints = []
                 try:
@@ -540,7 +530,7 @@ class MainWindowAppState(object):
                             json_safe_constraints.append([const[0], list(const[1]), const[2], 1.0e5])
                 except Exception:
                     json_safe_constraints = []
-                
+
                 json_data["3d_structure"] = {
                     "mol_binary_base64": mol_base64,
                     "atoms": atoms_3d,
@@ -548,7 +538,7 @@ class MainWindowAppState(object):
                     "num_conformers": self.current_mol.GetNumConformers(),
                     "constraints_3d": json_safe_constraints
                 }
-                
+
                 # 分子の基本情報
                 json_data["molecular_info"] = {
                     "num_atoms": self.current_mol.GetNumAtoms(),
@@ -556,14 +546,14 @@ class MainWindowAppState(object):
                     "molecular_weight": Descriptors.MolWt(self.current_mol),
                     "formula": rdMolDescriptors.CalcMolFormula(self.current_mol)
                 }
-                
+
                 # SMILESとInChI（可能であれば）
                 try:
                     json_data["identifiers"] = {
                         "smiles": Chem.MolToSmiles(self.current_mol),
                         "canonical_smiles": Chem.MolToSmiles(self.current_mol, canonical=True)
                     }
-                    
+
                     # InChI生成を試行
                     try:
                         inchi = Chem.MolToInchi(self.current_mol)
@@ -572,10 +562,10 @@ class MainWindowAppState(object):
                         json_data["identifiers"]["inchi_key"] = inchi_key
                     except Exception:
                         pass  # InChI生成に失敗した場合は無視
-                        
+
                 except Exception as e:
                     print(f"Warning: Could not generate molecular identifiers: {e}")
-                    
+
             except Exception as e:
                 print(f"Warning: Could not process 3D molecular data: {e}")
         else:
@@ -590,11 +580,11 @@ class MainWindowAppState(object):
             json_data["last_successful_optimization_method"] = getattr(self, 'last_successful_optimization_method', None)
         except Exception:
             json_data["last_successful_optimization_method"] = None
-        
+
         # Plugin State Persistence (Phase 3)
         # Start with preserved data from missing plugins
         plugin_data = self._preserved_plugin_data.copy() if self._preserved_plugin_data else {}
-        
+
         if self.plugin_manager and self.plugin_manager.save_handlers:
             for name, callback in self.plugin_manager.save_handlers.items():
                 try:
@@ -603,7 +593,7 @@ class MainWindowAppState(object):
                     plugin_data[name] = p_state
                 except Exception as e:
                     print(f"Error saving state for plugin {name}: {e}")
-            
+
         if plugin_data:
             json_data['plugins'] = plugin_data
 
@@ -638,7 +628,6 @@ class MainWindowAppState(object):
                     # No handler found (plugin disabled or missing)
                     # Preserve data so it's not lost on next save
                     self._preserved_plugin_data[name] = p_state
-
 
         # 2D構造データの復元
         if "2d_structure" in json_data:
@@ -732,8 +721,8 @@ class MainWindowAppState(object):
                                 idx = atom_data["index"]
                                 if idx < len(self.atom_positions_3d):
                                     self.atom_positions_3d[idx] = [
-                                        atom_data["x"], 
-                                        atom_data["y"], 
+                                        atom_data["x"],
+                                        atom_data["y"],
                                         atom_data["z"]
                                     ]
                                 # Restore original editor atom id into RDKit atom property
@@ -774,7 +763,7 @@ class MainWindowAppState(object):
                             self._enable_3d_features(True)
                         except Exception:
                             pass
-                            
+
             except Exception as e:
                 print(f"Warning: Could not restore 3D molecular data: {e}")
                 self.current_mol = None
