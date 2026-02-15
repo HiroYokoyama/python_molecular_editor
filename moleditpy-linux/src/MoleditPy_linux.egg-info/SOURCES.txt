@@ -56,6 +56,7 @@ src/moleditpy_linux/modules/plugin_interface.py
 src/moleditpy_linux/modules/plugin_manager.py
 src/moleditpy_linux/modules/plugin_manager_window.py
 src/moleditpy_linux/modules/settings_dialog.py
+src/moleditpy_linux/modules/sip_isdeleted_safe.py
 src/moleditpy_linux/modules/template_preview_item.py
 src/moleditpy_linux/modules/template_preview_view.py
 src/moleditpy_linux/modules/translation_dialog.py
