@@ -6,13 +6,11 @@ authors:
   - family-names: Yokoyama
     given-names: Hiromichi
     orcid: https://orcid.org/0000-0002-2798-1203
-date-released: 2026-02-15
-doi: 10.5281/ZENODO.18645504
+doi: 10.5281/zenodo.17268532
 identifiers:
   - type: doi
-    value: 10.5281/ZENODO.18645504
+    value: 10.5281/zenodo.17268532
   - type: url
-    value: https://zenodo.org/doi/10.5281/zenodo.18645504
+    value: https://zenodo.org/doi/10.5281/zenodo.17268532
 title: MoleditPy — A Python-based molecular editing software
-url: https://zenodo.org/doi/10.5281/zenodo.18645504
-version: 2.6.1
+url: https://zenodo.org/doi/10.5281/zenodo.17268532
