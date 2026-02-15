@@ -11,8 +11,8 @@ DOI: 10.5281/zenodo.17268532
 """
 
 
-import sys
 import ctypes
+import sys
 
 from PyQt6.QtWidgets import QApplication
 

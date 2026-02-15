@@ -10,8 +10,9 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
-from pyvistaqt import QtInteractor
 import time
+
+from pyvistaqt import QtInteractor
 
 
 class CustomQtInteractor(QtInteractor):
@@ -28,7 +29,7 @@ class CustomQtInteractor(QtInteractor):
         """
         # 最初に親クラスのイベントを呼び、通常のズーム処理を実行させる
         super().wheelEvent(event)
-        
+
         # ズーム処理の完了後、2Dビューにフォーカスを強制的に戻す
         if self.main_window and hasattr(self.main_window, 'view_2d'):
             self.main_window.view_2d.setFocus()
@@ -57,7 +58,7 @@ class CustomQtInteractor(QtInteractor):
         # Reset count if too much time has passed (0.5s is standard double-click time)
         if current_time - self._last_click_time > 0.5:
             self._click_count = 0
-        
+
         self._click_count += 1
         self._last_click_time = current_time
 
@@ -85,9 +86,9 @@ class CustomQtInteractor(QtInteractor):
              self._click_count = 2
         else:
              self._click_count = 2 # Force sync
-        
+
         self._ignore_next_release = True
-        
+
         try:
             # Accept the event to mark it handled and prevent further processing.
             event.accept()

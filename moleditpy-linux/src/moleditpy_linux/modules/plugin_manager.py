@@ -15,15 +15,16 @@ plugin_manager.py
 Manages discovery, loading, and execution of external plugins.
 """
 
-import os
-import sys
-import shutil
-import zipfile
-import importlib.util
-import traceback
 import ast
-from PyQt6.QtGui import QDesktopServices
+import importlib.util
+import os
+import shutil
+import sys
+import traceback
+import zipfile
+
 from PyQt6.QtCore import QUrl
+from PyQt6.QtGui import QDesktopServices
 from PyQt6.QtWidgets import QMessageBox
 
 try:
@@ -37,14 +38,14 @@ class PluginManager:
         self.plugin_dir = os.path.join(os.path.expanduser('~'), '.moleditpy', 'plugins')
         self.plugins = [] # List of dicts
         self.main_window = main_window
-        
+
         # Registries for actions
         self.menu_actions = [] # List of (plugin_name, path, callback, text, icon, shortcut)
-        self.toolbar_actions = [] 
+        self.toolbar_actions = []
         self.drop_handlers = [] # List of (priority, plugin_name, callback)
-        
+
         # Extended Registries (Added to prevent lazy initialization "monkey patching")
-        self.export_actions = [] 
+        self.export_actions = []
         self.optimization_methods = {}
         self.file_openers = {} # ext -> list of {'plugin':..., 'callback':..., 'priority':...}
         self.analysis_tools = []
@@ -79,7 +80,7 @@ class PluginManager:
             # Handle trailing slash and normalize path
             file_path = os.path.normpath(file_path)
             filename = os.path.basename(file_path)
-            
+
             if os.path.isdir(file_path):
                 # Copy entire directory
                 dest_path = os.path.join(self.plugin_dir, filename)
@@ -89,7 +90,7 @@ class PluginManager:
                          shutil.rmtree(dest_path)
                      else:
                          os.remove(dest_path)
-                
+
                 # Copy directory, ignoring cache files
                 shutil.copytree(file_path, dest_path, ignore=shutil.ignore_patterns('__pycache__', '*.pyc', '.git'))
                 msg = f"Installed package {filename}"
@@ -105,29 +106,29 @@ class PluginManager:
                         parts = name.split('/')
                         if parts[0]:
                             roots.add(parts[0])
-                    
+
                     is_nested = (len(roots) == 1)
-                    
+
                     if is_nested:
                         # Case A: ZIP contains a single folder (e.g. MyPlugin/init.py)
                         top_folder = list(roots)[0]
-                        
+
                         # Guard: If the single item is __init__.py, we MUST create a wrapper folder
                         # otherwise we pollute the plugin_dir root.
                         if top_folder == "__init__.py":
                             is_nested = False
-                    
+
                     if is_nested:
                         # Case A (Confirmed): Extract directly
                         dest_path = os.path.join(self.plugin_dir, top_folder)
-                        
+
                         # Clean Install: Remove existing folder to prevent stale files
                         if os.path.exists(dest_path):
                              if os.path.isdir(dest_path):
                                  shutil.rmtree(dest_path)
                              else:
                                  os.remove(dest_path)
-                        
+
                         zf.extractall(self.plugin_dir)
                         msg = f"Installed package {top_folder} (from ZIP)"
                     else:
@@ -135,13 +136,13 @@ class PluginManager:
                         # Extract into a new folder named after the ZIP file
                         folder_name = os.path.splitext(filename)[0]
                         dest_path = os.path.join(self.plugin_dir, folder_name)
-                        
+
                         if os.path.exists(dest_path):
                             if os.path.isdir(dest_path):
                                 shutil.rmtree(dest_path)
                             else:
                                 os.remove(dest_path)
-                        
+
                         os.makedirs(dest_path)
                         zf.extractall(dest_path)
                         msg = f"Installed package {folder_name} (from Flat ZIP)"
@@ -169,14 +170,14 @@ class PluginManager:
         """
         if parent:
             self.main_window = parent
-            
+
         self.ensure_plugin_dir()
         self.plugins = []
         # Clear registries
         self.menu_actions = []
         self.toolbar_actions = []
         self.drop_handlers = []
-        self.export_actions = [] 
+        self.export_actions = []
         self.optimization_methods = {}
         self.file_openers = {}
         self.analysis_tools = []
@@ -184,34 +185,34 @@ class PluginManager:
         self.load_handlers = {}
         self.custom_3d_styles = {}
         self.document_reset_handlers = []
-        
+
         if not os.path.exists(self.plugin_dir):
             return []
 
         for root, dirs, files in os.walk(self.plugin_dir):
             # Exclude hidden directories
             dirs[:] = [d for d in dirs if not d.startswith('__') and d != '__pycache__']
-            
+
             # [Check] Is current dir a package (plugin body)?
             if "__init__.py" in files:
                 # === Case 1: Package Plugin (Folder is the plugin) ===
-                
+
                 # Stop recursion into this folder
                 dirs[:] = []
-                
+
                 entry_point = os.path.join(root, "__init__.py")
                 # Category is relative path to parent folder
                 rel_path = os.path.relpath(os.path.dirname(root), self.plugin_dir)
                 category = rel_path if rel_path != "." else ""
-                
+
                 # Module name is the folder name
                 module_name = os.path.basename(root)
-                
+
                 self._load_single_plugin(entry_point, module_name, category)
-                
+
             else:
                 # === Case 2: Category Folder (Load individual .py files) ===
-                
+
                 # Category is relative path to current folder
                 rel_path = os.path.relpath(root, self.plugin_dir)
                 category = rel_path if rel_path != "." else ""
@@ -220,9 +221,9 @@ class PluginManager:
                     if filename.endswith(".py") and not filename.startswith("__"):
                         entry_point = os.path.join(root, filename)
                         module_name = os.path.splitext(filename)[0]
-                        
+
                         self._load_single_plugin(entry_point, module_name, category)
-        
+
         return self.plugins
 
     def _load_single_plugin(self, filepath, module_name, category):
@@ -237,10 +238,10 @@ class PluginManager:
             if spec and spec.loader:
                 module = importlib.util.module_from_spec(spec)
                 sys.modules[spec.name] = module
-                
+
                 # Inject category info
-                module.PLUGIN_CATEGORY = category 
-                
+                module.PLUGIN_CATEGORY = category
+
                 spec.loader.exec_module(module)
 
                 # --- Metadata Extraction ---
@@ -251,22 +252,22 @@ class PluginManager:
                 plugin_author = getattr(module, 'PLUGIN_AUTHOR', getattr(module, '__author__', 'Unknown'))
                 plugin_desc = getattr(module, 'PLUGIN_DESCRIPTION', getattr(module, '__doc__', ''))
                 plugin_category = getattr(module, 'PLUGIN_CATEGORY', category)
-                
+
                 # Additional cleanup for docstring (strip whitespace)
                 if plugin_desc is None: plugin_desc = ""
                 plugin_desc = str(plugin_desc).strip()
-                
+
                  # Handle version tuple
                 if isinstance(plugin_version, tuple):
                     plugin_version = ".".join(map(str, plugin_version))
-                    
+
                 # Interface compliance
                 has_run = hasattr(module, 'run') and callable(module.run)
                 has_autorun = hasattr(module, 'autorun') and callable(module.autorun)
                 has_init = hasattr(module, 'initialize') and callable(module.initialize)
-                
+
                 status = "Loaded"
-                
+
                 # Execute initialization
                 if has_init:
                     context = PluginContext(self, plugin_name)
@@ -301,7 +302,7 @@ class PluginManager:
                     'filepath': filepath,
                     'has_run': has_run
                 })
-                
+
         except Exception as e:
             print(f"Failed to load plugin {module_name}: {e}")
             traceback.print_exc()
@@ -320,15 +321,13 @@ class PluginManager:
             'plugin': plugin_name, 'path': path, 'callback': callback,
             'text': text, 'icon': icon, 'shortcut': shortcut
         })
-    
+
     def register_toolbar_action(self, plugin_name, callback, text, icon, tooltip):
         self.toolbar_actions.append({
-            'plugin': plugin_name, 'callback': callback, 
+            'plugin': plugin_name, 'callback': callback,
             'text': text, 'icon': icon, 'tooltip': tooltip
         })
 
-
-        
     def register_drop_handler(self, plugin_name, callback, priority):
         self.drop_handlers.append({
             'priority': priority, 'plugin': plugin_name, 'callback': callback
@@ -352,16 +351,16 @@ class PluginManager:
         ext = extension.lower()
         if not ext.startswith('.'):
             ext = '.' + ext
-            
+
         if ext not in self.file_openers:
             self.file_openers[ext] = []
-            
+
         self.file_openers[ext].append({
-            'plugin': plugin_name, 
+            'plugin': plugin_name,
             'callback': callback,
             'priority': priority
         })
-        
+
         # Sort by priority descending
         self.file_openers[ext].sort(key=lambda x: x['priority'], reverse=True)
 
@@ -380,14 +379,14 @@ class PluginManager:
         self.custom_3d_styles[style_name] = {
             'plugin': plugin_name, 'callback': callback
         }
-    
+
     def register_document_reset_handler(self, plugin_name, callback):
         """Register callback to be invoked when a new document is created."""
         self.document_reset_handlers.append({
             'plugin': plugin_name,
             'callback': callback
         })
-    
+
     def invoke_document_reset_handlers(self):
         """Call all registered document reset handlers."""
         for handler in self.document_reset_handlers:
@@ -407,14 +406,14 @@ class PluginManager:
         try:
              with open(file_path, "r", encoding="utf-8") as f:
                  tree = ast.parse(f.read())
-             
+
              for node in tree.body:
                  targets = []
                  if isinstance(node, ast.Assign):
                      targets = node.targets
                  elif isinstance(node, ast.AnnAssign):
                      targets = [node.target]
-                 
+
                  for target in targets:
                      if isinstance(target, ast.Name):
                          # Helper to extract value
@@ -437,7 +436,7 @@ class PluginManager:
                                      val = ".".join(map(str, elts))
                                  except:
                                      pass
-                         
+
                          if val is not None:
                              if target.id == 'PLUGIN_NAME':
                                  info['name'] = val
@@ -453,7 +452,7 @@ class PluginManager:
                                  info['version'] = val
                              elif target.id == '__author__' and info['author'] == 'Unknown':
                                  info['author'] = val
-                 
+
                  # Docstring extraction
                  if isinstance(node, ast.Expr):
                      val = None
@@ -461,7 +460,7 @@ class PluginManager:
                           val = node.value.value
                      elif hasattr(ast, 'Str') and isinstance(node.value, ast.Str):
                           val = node.value.s
-                          
+
                      if val and not info['description']:
                           info['description'] = val.strip().split('\n')[0]
 

@@ -20,24 +20,18 @@ import traceback
 # RDKit imports (explicit to satisfy flake8 and used features)
 from rdkit import Chem
 from rdkit.Chem import AllChem
+
 try:
     pass
 except Exception:
     pass
 
 # PyQt6 Modules
-from PyQt6.QtWidgets import (
-    QInputDialog
-)
+from PyQt6.QtCore import QPointF, QTimer
+from PyQt6.QtWidgets import QInputDialog
 
-from PyQt6.QtCore import (
-    QPointF, QTimer
-)
-
-
-    
 try:
-    import sip as _sip  # type: ignore
+    from PyQt6 import sip as _sip  # type: ignore
     _sip_isdeleted = getattr(_sip, 'isdeleted', None)
 except Exception:
     _sip = None
@@ -73,7 +67,7 @@ class MainWindowStringImporters(object):
                 return  # ユーザーがキャンセルした場合は何もしない
 
             cleaned_smiles = smiles_string.strip()
-            
+
             mol = Chem.MolFromSmiles(cleaned_smiles)
             if mol is None:
                 if not cleaned_smiles:
@@ -95,7 +89,7 @@ class MainWindowStringImporters(object):
 
             conf = mol.GetConformer()
             SCALE_FACTOR = 50.0
-            
+
             view_center = self.view_2d.mapToScene(self.view_2d.viewport().rect().center())
             positions = [conf.GetAtomPosition(i) for i in range(mol.GetNumAtoms())]
             mol_center_x = sum(p.x for p in positions) / len(positions) if positions else 0.0
@@ -106,16 +100,15 @@ class MainWindowStringImporters(object):
                 atom = mol.GetAtomWithIdx(i)
                 pos = conf.GetAtomPosition(i)
                 charge = atom.GetFormalCharge()
-                
+
                 relative_x = pos.x - mol_center_x
                 relative_y = pos.y - mol_center_y
-                
+
                 scene_x = (relative_x * SCALE_FACTOR) + view_center.x()
                 scene_y = (-relative_y * SCALE_FACTOR) + view_center.y()
-                
+
                 atom_id = self.scene.create_atom(atom.GetSymbol(), QPointF(scene_x, scene_y), charge=charge)
                 rdkit_idx_to_my_id[i] = atom_id
-            
 
             for bond in mol.GetBonds():
                 b_idx, e_idx = bond.GetBeginAtomIdx(), bond.GetEndAtomIdx()
@@ -145,12 +138,12 @@ class MainWindowStringImporters(object):
             self.has_unsaved_changes = False
             self.update_window_title()
             QTimer.singleShot(0, self.fit_to_view)
-            
+
         except ValueError as e:
             self.statusBar().showMessage(f"Invalid SMILES: {e}")
         except Exception as e:
             self.statusBar().showMessage(f"Error loading from SMILES: {e}")
-            
+
             traceback.print_exc()
 
     def load_from_inchi(self, inchi_string):
@@ -159,7 +152,7 @@ class MainWindowStringImporters(object):
             if not self.check_unsaved_changes():
                 return  # ユーザーがキャンセルした場合は何もしない
             cleaned_inchi = inchi_string.strip()
-            
+
             mol = Chem.MolFromInchi(cleaned_inchi)
             if mol is None:
                 if not cleaned_inchi:
@@ -181,7 +174,7 @@ class MainWindowStringImporters(object):
 
             conf = mol.GetConformer()
             SCALE_FACTOR = 50.0
-            
+
             view_center = self.view_2d.mapToScene(self.view_2d.viewport().rect().center())
             positions = [conf.GetAtomPosition(i) for i in range(mol.GetNumAtoms())]
             mol_center_x = sum(p.x for p in positions) / len(positions) if positions else 0.0
@@ -192,16 +185,16 @@ class MainWindowStringImporters(object):
                 atom = mol.GetAtomWithIdx(i)
                 pos = conf.GetAtomPosition(i)
                 charge = atom.GetFormalCharge()
-                
+
                 relative_x = pos.x - mol_center_x
                 relative_y = pos.y - mol_center_y
-                
+
                 scene_x = (relative_x * SCALE_FACTOR) + view_center.x()
                 scene_y = (-relative_y * SCALE_FACTOR) + view_center.y()
-                
+
                 atom_id = self.scene.create_atom(atom.GetSymbol(), QPointF(scene_x, scene_y), charge=charge)
                 rdkit_idx_to_my_id[i] = atom_id
-            
+
             for bond in mol.GetBonds():
                 b_idx, e_idx = bond.GetBeginAtomIdx(), bond.GetEndAtomIdx()
                 b_type = bond.GetBondTypeAsDouble()
@@ -230,11 +223,11 @@ class MainWindowStringImporters(object):
             self.has_unsaved_changes = False
             self.update_window_title()
             QTimer.singleShot(0, self.fit_to_view)
-            
+
         except ValueError as e:
             self.statusBar().showMessage(f"Invalid InChI: {e}")
         except Exception as e:
             self.statusBar().showMessage(f"Error loading from InChI: {e}")
-            
+
             traceback.print_exc()
-    
+

@@ -10,51 +10,63 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
-from PyQt6.QtWidgets import QGraphicsItem
-
+from PyQt6.QtCore import QPointF, QRectF, Qt
 from PyQt6.QtGui import (
-    QPen, QBrush, QColor, QFont, QPainterPath, QFontMetricsF, QPainter
+    QBrush,
+    QColor,
+    QFont,
+    QFontMetricsF,
+    QPainter,
+    QPainterPath,
+    QPen,
 )
-
-from PyQt6.QtCore import (
-    Qt, QPointF, QRectF
-)
+from PyQt6.QtWidgets import QGraphicsItem
 
 try:
     from .constants import (
-        ATOM_RADIUS, DESIRED_ATOM_PIXEL_RADIUS,
-        FONT_FAMILY, FONT_WEIGHT_BOLD,
+        ATOM_RADIUS,
         CPK_COLORS,
+        DESIRED_ATOM_PIXEL_RADIUS,
+        FONT_FAMILY,
+        FONT_WEIGHT_BOLD,
     )
 except Exception:
     from modules.constants import (
-        ATOM_RADIUS, DESIRED_ATOM_PIXEL_RADIUS,
-        FONT_FAMILY, FONT_WEIGHT_BOLD,
+        ATOM_RADIUS,
         CPK_COLORS,
+        DESIRED_ATOM_PIXEL_RADIUS,
+        FONT_FAMILY,
+        FONT_WEIGHT_BOLD,
     )
-    
-try:
-    from . import sip_isdeleted_safe
-except Exception:
-    from modules import sip_isdeleted_safe
+
+from PyQt6 import sip
+
+def sip_isdeleted_safe(obj):
+    try:
+        return sip.isdeleted(obj)
+    except Exception:
+        return False
 
 class AtomItem(QGraphicsItem):
     def __init__(self, atom_id, symbol, pos, charge=0, radical=0):
         super().__init__()
         self.atom_id, self.symbol, self.charge, self.radical, self.bonds, self.chiral_label = atom_id, symbol, charge, radical, [], None
         self.setPos(pos)
-        self.implicit_h_count = 0 
+        self.implicit_h_count = 0
         self.setFlags(QGraphicsItem.GraphicsItemFlag.ItemIsMovable | QGraphicsItem.GraphicsItemFlag.ItemIsSelectable)
         self.setZValue(1)
         self.update_style()
         self.setAcceptHoverEvents(True)
         self.hovered = False
-        self.has_problem = False 
-
+        self.hovered = False
+        self.has_problem = False
+        self.is_visible = True
+        self.font = QFont(FONT_FAMILY, 20, FONT_WEIGHT_BOLD)
 
     def update_style(self):
         # Allow updating font preference dynamically
         font_size = 20
+        font_family = FONT_FAMILY
         try:
             if self.scene() and self.scene().views():
                 win = self.scene().views()[0].window()
@@ -65,10 +77,10 @@ class AtomItem(QGraphicsItem):
                 font_family = FONT_FAMILY
         except Exception:
             font_family = FONT_FAMILY
-        
+
         self.font = QFont(font_family, font_size, FONT_WEIGHT_BOLD)
         self.prepareGeometryChange()
-        
+
         self.is_visible = not (self.symbol == 'C' and len(self.bonds) > 0 and self.charge == 0 and self.radical == 0)
         self.update()
 
@@ -90,9 +102,9 @@ class AtomItem(QGraphicsItem):
 
         hydrogen_part = ""
         if self.implicit_h_count > 0:
-            is_skeletal_carbon = (self.symbol == 'C' and 
-                                      self.charge == 0 and 
-                                      self.radical == 0 and 
+            is_skeletal_carbon = (self.symbol == 'C' and
+                                      self.charge == 0 and
+                                      self.radical == 0 and
                                       len(self.bonds) > 0)
             if not is_skeletal_carbon:
                 hydrogen_part = "H"
@@ -125,7 +137,7 @@ class AtomItem(QGraphicsItem):
 
             if total_dx > 0:
                 flip_text = True
-        
+
         if flip_text:
             display_text = hydrogen_part + self.symbol
         else:
@@ -146,7 +158,7 @@ class AtomItem(QGraphicsItem):
 
         # 1. paint()で描画される背景の矩形(bg_rect)を計算する
         bg_rect = text_rect.adjusted(-5, -8, 5, 8)
-        
+
         # 2. このbg_rectを基準として全体の描画領域を構築する
         full_visual_rect = QRectF(bg_rect)
 
@@ -220,9 +232,9 @@ class AtomItem(QGraphicsItem):
             # --- 水素部分のテキストを作成 ---
             hydrogen_part = ""
             if self.implicit_h_count > 0:
-                is_skeletal_carbon = (self.symbol == 'C' and 
-                                      self.charge == 0 and 
-                                      self.radical == 0 and 
+                is_skeletal_carbon = (self.symbol == 'C' and
+                                      self.charge == 0 and
+                                      self.radical == 0 and
                                       len(self.bonds) > 0)
                 if not is_skeletal_carbon:
                     hydrogen_part = "H"
@@ -304,7 +316,7 @@ class AtomItem(QGraphicsItem):
             if self.scene():
                 bg_brush = self.scene().backgroundBrush()
                 bg_rect = text_rect.adjusted(-5, -8, 5, 8)
-                
+
                 if bg_brush.style() == Qt.BrushStyle.NoBrush:
                     # 背景が透明の場合は、CompositionMode_Clearを使って
                     # 重なっている結合の線を「消しゴム」のように消す
@@ -319,12 +331,12 @@ class AtomItem(QGraphicsItem):
                     painter.setBrush(bg_brush)
                     painter.setPen(Qt.PenStyle.NoPen)
                     painter.drawEllipse(bg_rect)
-            
+
             # 3. 原子記号自体を描画
             # Color is already determined above
             painter.setPen(QPen(color))
             painter.drawText(text_rect, int(alignment_flag), display_text)
-            
+
             # --- 電荷とラジカルの描画  ---
             if self.charge != 0:
                 # Chemical convention: single charge as "+"/"-", multiple as "2+"/"2-"
@@ -345,7 +357,7 @@ class AtomItem(QGraphicsItem):
                     charge_pos = QPointF(text_rect.right() + 2, text_rect.top() + charge_rect.height() - 2)
                 painter.setPen(Qt.GlobalColor.black)
                 painter.drawText(charge_pos, charge_str)
-            
+
             if self.radical > 0:
                 painter.setBrush(QBrush(Qt.GlobalColor.black))
                 painter.setPen(Qt.PenStyle.NoPen)
@@ -355,7 +367,6 @@ class AtomItem(QGraphicsItem):
                 elif self.radical == 2:
                     painter.drawEllipse(QPointF(text_rect.center().x() - 5, radical_pos_y), 3, 3)
                     painter.drawEllipse(QPointF(text_rect.center().x() + 5, radical_pos_y), 3, 3)
-
 
         # --- 選択時のハイライトなど ---
         if self.has_problem:
@@ -373,19 +384,16 @@ class AtomItem(QGraphicsItem):
             painter.setPen(pen)
             painter.drawRect(self.boundingRect())
 
-
-
-
     # 約203行目 AtomItem クラス内
 
     def itemChange(self, change, value):
         res = super().itemChange(change, value)
         if change == QGraphicsItem.GraphicsItemChange.ItemPositionHasChanged:
             if self.flags() & QGraphicsItem.GraphicsItemFlag.ItemIsMovable:
-                for bond in self.bonds: 
+                for bond in self.bonds:
                     if bond.scene():
                         bond.update_position()
-            
+
         return res
 
     def hoverEnterEvent(self, event):

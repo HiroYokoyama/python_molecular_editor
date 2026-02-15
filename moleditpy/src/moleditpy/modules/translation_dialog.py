@@ -10,14 +10,22 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
-from PyQt6.QtWidgets import (
-    QDialog, QVBoxLayout, QLabel, QGridLayout, QLineEdit, QCheckBox, QPushButton, QHBoxLayout
-)
-from PyQt6.QtWidgets import QMessageBox
-from PyQt6.QtCore import Qt
 import numpy as np
+from PyQt6.QtCore import Qt
+from PyQt6.QtWidgets import (
+    QCheckBox,
+    QDialog,
+    QGridLayout,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QMessageBox,
+    QPushButton,
+    QVBoxLayout,
+)
 
 from .dialog3_d_picking_mixin import Dialog3DPickingMixin
+
 
 class TranslationDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
     def __init__(self, mol, main_window, parent=None):
@@ -27,35 +35,35 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
         self.main_window = main_window
         self.selected_atoms = set()  # 複数原子選択用
         self.init_ui()
-    
+
     def init_ui(self):
         self.setWindowTitle("Translation")
         self.setModal(False)
         layout = QVBoxLayout(self)
-        
+
         # Instructions
         instruction_label = QLabel("Click atoms in the 3D view to select them. The centroid of selected atoms will be moved to the target coordinates, translating the entire molecule.")
         instruction_label.setWordWrap(True)
         layout.addWidget(instruction_label)
-        
+
         # Selected atoms display
         self.selection_label = QLabel("No atoms selected")
         layout.addWidget(self.selection_label)
-        
+
         # Coordinate inputs
         coord_layout = QGridLayout()
         coord_layout.addWidget(QLabel("Target X:"), 0, 0)
         self.x_input = QLineEdit("0.0")
         coord_layout.addWidget(self.x_input, 0, 1)
-        
+
         coord_layout.addWidget(QLabel("Target Y:"), 1, 0)
         self.y_input = QLineEdit("0.0")
         coord_layout.addWidget(self.y_input, 1, 1)
-        
+
         coord_layout.addWidget(QLabel("Target Z:"), 2, 0)
         self.z_input = QLineEdit("0.0")
         coord_layout.addWidget(self.z_input, 2, 1)
-        
+
         layout.addLayout(coord_layout)
 
         # Translation target toggle: Entire molecule (default) or Selected atoms only
@@ -66,21 +74,21 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
         )
         self.translate_selected_only_checkbox.setChecked(False)  # default: entire molecule
         layout.addWidget(self.translate_selected_only_checkbox)
-        
+
         # Buttons
         button_layout = QHBoxLayout()
         self.clear_button = QPushButton("Clear Selection")
         self.clear_button.clicked.connect(self.clear_selection)
         button_layout.addWidget(self.clear_button)
-    
+
         # Select all atoms button
         self.select_all_button = QPushButton("Select All Atoms")
         self.select_all_button.setToolTip("Select all atoms in the molecule for translation")
         self.select_all_button.clicked.connect(self.select_all_atoms)
         button_layout.addWidget(self.select_all_button)
-        
+
         button_layout.addStretch()
-        
+
         self.apply_button = QPushButton("Apply Translation")
         self.apply_button.clicked.connect(self.apply_translation)
         self.apply_button.setEnabled(False)
@@ -89,13 +97,13 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
         close_button = QPushButton("Close")
         close_button.clicked.connect(self.reject)
         button_layout.addWidget(close_button)
-        
+
         layout.addLayout(button_layout)
-        
+
         # Connect to main window's picker
         self.picker_connection = None
         self.enable_picking()
-    
+
     def on_atom_picked(self, atom_idx):
         """原子がピックされたときの処理"""
         if atom_idx in self.selected_atoms:
@@ -104,7 +112,7 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
             self.selected_atoms.add(atom_idx)
         self.show_atom_labels()
         self.update_display()
-    
+
     def keyPressEvent(self, event):
         """キーボードイベントを処理"""
         if event.key() == Qt.Key.Key_Return or event.key() == Qt.Key.Key_Enter:
@@ -113,7 +121,7 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
             event.accept()
         else:
             super().keyPressEvent(event)
-    
+
     def update_display(self):
         """表示を更新"""
         if not self.selected_atoms:
@@ -125,18 +133,18 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
                 self.selection_label.setText("Error: No valid molecule or conformer")
                 self.apply_button.setEnabled(False)
                 return
-            
+
             try:
                 conf = self.mol.GetConformer()
                 # 選択原子の重心を計算
                 centroid = self.calculate_centroid()
-                
+
                 # 選択原子の情報を表示
                 atom_info = []
                 for atom_idx in sorted(self.selected_atoms):
                     symbol = self.mol.GetAtomWithIdx(atom_idx).GetSymbol()
                     atom_info.append(f"{symbol}({atom_idx})")
-                
+
                 self.selection_label.setText(
                     f"Selected atoms: {', '.join(atom_info)}\n"
                     f"Centroid: ({centroid[0]:.2f}, {centroid[1]:.2f}, {centroid[2]:.2f})"
@@ -166,20 +174,20 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
         except Exception:
             # Be tolerant: do not crash the UI if inputs cannot be updated
             pass
-    
+
     def calculate_centroid(self):
         """選択原子の重心を計算"""
         if not self.selected_atoms:
             return np.array([0.0, 0.0, 0.0])
-        
+
         conf = self.mol.GetConformer()
         positions = []
         for atom_idx in self.selected_atoms:
             pos = conf.GetAtomPosition(atom_idx)
             positions.append([pos.x, pos.y, pos.z])
-        
+
         return np.mean(positions, axis=0)
-    
+
     def apply_translation(self):
         """平行移動を適用"""
         if not self.selected_atoms:
@@ -232,7 +240,6 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
                     conf.SetAtomPosition(i, new_pos.tolist())
                     self.main_window.atom_positions_3d[i] = new_pos
 
-
             # 3D表示を更新
             self.main_window.draw_molecule_3d(self.mol)
 
@@ -247,13 +254,13 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
 
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to apply translation: {str(e)}")
-    
+
     def clear_selection(self):
         """選択をクリア"""
         self.selected_atoms.clear()
         self.clear_atom_labels()
         self.update_display()
-    
+
     def select_all_atoms(self):
         """Select all atoms in the current molecule and update labels/UI."""
         try:
@@ -276,7 +283,7 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
 
         except Exception as e:
             QMessageBox.warning(self, "Warning", f"Failed to select all atoms: {e}")
-    
+
     def show_atom_labels(self):
         """選択された原子にラベルを表示"""
         # 既存のラベルをクリア
@@ -314,7 +321,7 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
                     self.selection_labels.extend(label_actor)
                 else:
                     self.selection_labels.append(label_actor)
-    
+
     def clear_atom_labels(self):
         """原子ラベルをクリア (render追加)"""
         super().clear_atom_labels()
@@ -323,7 +330,7 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
             self.main_window.plotter.render()
         except Exception:
             pass
-    
+
     def closeEvent(self, event):
         """ダイアログが閉じられる時の処理"""
         self.clear_atom_labels()
@@ -333,7 +340,7 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
         except Exception:
             pass
         super().closeEvent(event)
-    
+
     def reject(self):
         """キャンセル時の処理"""
         self.clear_atom_labels()
@@ -343,7 +350,7 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
         except Exception:
             pass
         super().reject()
-    
+
     def accept(self):
         """OK時の処理"""
         self.clear_atom_labels()

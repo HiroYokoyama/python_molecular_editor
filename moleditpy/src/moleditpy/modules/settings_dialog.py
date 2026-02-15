@@ -10,13 +10,27 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
-from PyQt6.QtWidgets import (
-    QDialog, QVBoxLayout, QTabWidget, QWidget, QFormLayout, QPushButton, QHBoxLayout,
-    QCheckBox, QComboBox, QLabel, QColorDialog, QSlider, QFrame, QMessageBox, QFontComboBox
-)
-from PyQt6.QtWidgets import QApplication
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QColor, QFont
+from PyQt6.QtWidgets import (
+    QApplication,
+    QCheckBox,
+    QColorDialog,
+    QComboBox,
+    QDialog,
+    QFontComboBox,
+    QFormLayout,
+    QFrame,
+    QHBoxLayout,
+    QLabel,
+    QMessageBox,
+    QPushButton,
+    QSlider,
+    QTabWidget,
+    QVBoxLayout,
+    QWidget,
+)
+
 try:
     from .constants import CPK_COLORS
 except Exception:
@@ -28,10 +42,10 @@ class SettingsDialog(QDialog): # pragma: no cover
         super().__init__(parent)
         self.setWindowTitle("Settings")
         self.setMinimumSize(650, 750)
-        
+
         # 親ウィンドウの参照を保存（Apply機能のため）
         self.parent_window = parent
-        
+
         # デフォルト設定をクラス内で定義
         # Multi-bond settings are model-specific now (ball_stick, cpk, wireframe, stick)
         self.default_settings = {
@@ -89,7 +103,7 @@ class SettingsDialog(QDialog): # pragma: no cover
             # (shows alternating single/double bonds rather than aromatic circles)
             'display_kekule_3d': False,
             'ball_stick_use_cpk_bond_color': False,
-            
+
             # --- 2D Settings Defaults ---
             'bond_width_2d': 2.0,
             'bond_spacing_double_2d': 3.5,
@@ -103,13 +117,13 @@ class SettingsDialog(QDialog): # pragma: no cover
             'bond_dash_count_2d': 8,
             'atom_font_family_2d': 'Arial',
         }
-        
+
         # --- 選択された色を管理する専用のインスタンス変数 ---
         self.current_bg_color = None
 
         # --- UI要素の作成 ---
         layout = QVBoxLayout(self)
-        
+
         # タブウィジェットを作成
         self.tab_widget = QTabWidget()
         layout.addWidget(self.tab_widget)
@@ -119,16 +133,16 @@ class SettingsDialog(QDialog): # pragma: no cover
 
         # Scene設定タブ
         self.create_scene_tab()
-        
+
         # Ball and Stick設定タブ
         self.create_ball_stick_tab()
-        
+
         # CPK設定タブ
         self.create_cpk_tab()
-        
+
         # Wireframe設定タブ
         self.create_wireframe_tab()
-        
+
         # Stick設定タブ
         self.create_stick_tab()
 
@@ -137,7 +151,7 @@ class SettingsDialog(QDialog): # pragma: no cover
 
         # 渡された設定でUIと内部変数を初期化
         self.update_ui_from_settings(current_settings)
-        
+
         # Initialize aromatic circle checkbox and torus thickness from settings
         self.aromatic_circle_checkbox.setChecked(current_settings.get('display_aromatic_circles_3d', self.default_settings.get('display_aromatic_circles_3d', False)))
         # Thickness factor is stored as a multiplier (e.g., 1.0), slider uses integer 0-300 representing 0.1x-3.0x
@@ -148,33 +162,33 @@ class SettingsDialog(QDialog): # pragma: no cover
         # Initialize internal 2D colors
         self.current_bg_color_2d = current_settings.get('background_color_2d', self.default_settings['background_color_2d'])
         self.current_bond_color_2d = current_settings.get('bond_color_2d', self.default_settings['bond_color_2d'])
-        
+
         # Apply initial 2D button styles
         self.update_2d_color_buttons()
 
         # --- ボタンの配置 ---
         buttons = QHBoxLayout()
-        
+
         # タブごとのリセットボタン
         reset_tab_button = QPushButton("Reset Current Tab")
         reset_tab_button.clicked.connect(self.reset_current_tab)
         reset_tab_button.setToolTip("Reset settings for the currently selected tab only")
         buttons.addWidget(reset_tab_button)
-        
+
         # 全体リセットボタン
         reset_all_button = QPushButton("Reset All")
         reset_all_button.clicked.connect(self.reset_all_settings)
         reset_all_button.setToolTip("Reset all settings to defaults")
         buttons.addWidget(reset_all_button)
-        
+
         buttons.addStretch(1)
-        
+
         # Applyボタンを追加
         apply_button = QPushButton("Apply")
         apply_button.clicked.connect(self.apply_settings)
         apply_button.setToolTip("Apply settings without closing dialog")
         buttons.addWidget(apply_button)
-        
+
         ok_button = QPushButton("OK")
         cancel_button = QPushButton("Cancel")
         ok_button.clicked.connect(self.accept)
@@ -191,7 +205,7 @@ class SettingsDialog(QDialog): # pragma: no cover
 
         # --- View Settings ---
         form_layout.addRow(QLabel("<b>View Appearance</b>"))
-        
+
         # Background Color
         self.bg_color_2d_button = QPushButton()
         self.bg_color_2d_button.setFixedSize(60, 24)
@@ -241,7 +255,7 @@ class SettingsDialog(QDialog): # pragma: no cover
         bst_layout.addWidget(self.bond_spacing_triple_2d_slider)
         bst_layout.addWidget(self.bond_spacing_triple_2d_label)
         form_layout.addRow("Triple Bond Spacing:", bst_layout)
-        
+
         # Bond Cap Style
         self.bond_cap_style_2d_combo = QComboBox()
         self.bond_cap_style_2d_combo.addItems(['Round', 'Flat', 'Square'])
@@ -267,7 +281,6 @@ class SettingsDialog(QDialog): # pragma: no cover
         bdc_layout.addWidget(self.bond_dash_count_2d_label)
         form_layout.addRow("Dash Count:", bdc_layout)
 
-
         line2 = QFrame()
         line2.setFrameShape(QFrame.Shape.HLine)
         line2.setFrameShadow(QFrame.Shadow.Sunken)
@@ -292,20 +305,17 @@ class SettingsDialog(QDialog): # pragma: no cover
         fs_layout.addWidget(self.atom_font_size_2d_slider)
         fs_layout.addWidget(self.atom_font_size_2d_label)
         form_layout.addRow("Atom Label Font Size:", fs_layout)
-        
+
         # Use Bond Color Checkbox
         self.atom_use_bond_color_2d_checkbox = QCheckBox()
         self.atom_use_bond_color_2d_checkbox.setToolTip("If checked, atoms will use the unified Bond Color instead of element-specific colors (CPK).")
         form_layout.addRow("Use Bond Color for Atoms:", self.atom_use_bond_color_2d_checkbox)
 
         self.tab_widget.addTab(widget, "2D Settings")
-        
 
-        
         # Initialize internal variable for combo updates
         # (Usually done in update_ui_from_settings, but we add direct access here for simple binding if needed)
         # We rely on update_ui_from_settings to set current selection.
-
 
     def pick_bg_color_2d(self):
         color = QColorDialog.getColor(QColor(self.current_bg_color_2d), self, "Select 2D Background Color")
@@ -325,7 +335,7 @@ class SettingsDialog(QDialog): # pragma: no cover
             self.bond_color_2d_button.setStyleSheet(f"background-color: {self.current_bond_color_2d}; border: 1px solid #888;")
         except Exception:
             pass
-    
+
     def create_scene_tab(self):
         """基本設定タブを作成"""
         scene_widget = QWidget()
@@ -364,7 +374,7 @@ class SettingsDialog(QDialog): # pragma: no cover
         specular_layout.addWidget(self.specular_slider)
         specular_layout.addWidget(self.specular_label)
         form_layout.addRow("Shininess (Specular):", specular_layout)
-        
+
         # 4. 光沢の強さ (Specular Power)
         self.spec_power_slider = QSlider(Qt.Orientation.Horizontal)
         self.spec_power_slider.setRange(0, 100)
@@ -374,16 +384,16 @@ class SettingsDialog(QDialog): # pragma: no cover
         spec_power_layout.addWidget(self.spec_power_slider)
         spec_power_layout.addWidget(self.spec_power_label)
         form_layout.addRow("Shininess Power:", spec_power_layout)
-        
+
         # Projection mode (Perspective / Orthographic)
         self.projection_combo = QComboBox()
         self.projection_combo.addItem("Perspective")
         self.projection_combo.addItem("Orthographic")
         self.projection_combo.setToolTip("Choose camera projection mode: Perspective (default) or Orthographic")
         form_layout.addRow("Projection Mode:", self.projection_combo)
-        
+
         self.tab_widget.addTab(scene_widget, "3D Scene")
-    
+
     def create_other_tab(self):
         """other設定タブを作成"""
         self.other_widget = QWidget()
@@ -429,7 +439,6 @@ class SettingsDialog(QDialog): # pragma: no cover
             self.other_form_layout.addRow("Display Kekulé bonds in 3D:", self.kekule_3d_checkbox)
         except Exception:
             pass
-        
 
         # Aromatic ring circle display option
         self.aromatic_circle_checkbox = QCheckBox()
@@ -438,7 +447,7 @@ class SettingsDialog(QDialog): # pragma: no cover
             self.other_form_layout.addRow("Display aromatic rings as circles in 3D:", self.aromatic_circle_checkbox)
         except Exception:
             pass
-        
+
         # Aromatic torus thickness factor
         self.aromatic_torus_thickness_slider = QSlider(Qt.Orientation.Horizontal)
         self.aromatic_torus_thickness_slider.setRange(10, 300)  # 0.1x to 3.0x
@@ -486,7 +495,7 @@ class SettingsDialog(QDialog): # pragma: no cover
                 pass
         except Exception:
             pass
-    
+
     def create_ball_stick_tab(self):
         """Ball and Stick設定タブを作成"""
         ball_stick_widget = QWidget()
@@ -496,7 +505,7 @@ class SettingsDialog(QDialog): # pragma: no cover
         info_label.setWordWrap(True)
         info_label.setStyleSheet("color: #666; font-style: italic; margin-top: 10px;")
         form_layout.addRow(info_label)
-        
+
         # 原子サイズスケール
         self.bs_atom_scale_slider = QSlider(Qt.Orientation.Horizontal)
         self.bs_atom_scale_slider.setRange(10, 200)  # 0.1 ~ 2.0
@@ -506,7 +515,7 @@ class SettingsDialog(QDialog): # pragma: no cover
         atom_scale_layout.addWidget(self.bs_atom_scale_slider)
         atom_scale_layout.addWidget(self.bs_atom_scale_label)
         form_layout.addRow("Atom Size Scale:", atom_scale_layout)
-        
+
         # ボンド半径
         self.bs_bond_radius_slider = QSlider(Qt.Orientation.Horizontal)
         self.bs_bond_radius_slider.setRange(1, 50)  # 0.01 ~ 0.5
@@ -597,7 +606,7 @@ class SettingsDialog(QDialog): # pragma: no cover
         form_layout.addRow("Use CPK colors for bonds:", self.bs_use_cpk_bond_checkbox)
 
         self.tab_widget.addTab(ball_stick_widget, "Ball & Stick")
-    
+
     def create_cpk_tab(self):
         """CPK設定タブを作成"""
         cpk_widget = QWidget()
@@ -607,7 +616,7 @@ class SettingsDialog(QDialog): # pragma: no cover
         info_label.setWordWrap(True)
         info_label.setStyleSheet("color: #666; font-style: italic; margin-top: 10px;")
         form_layout.addRow(info_label)
-        
+
         # 原子サイズスケール
         self.cpk_atom_scale_slider = QSlider(Qt.Orientation.Horizontal)
         self.cpk_atom_scale_slider.setRange(50, 200)  # 0.5 ~ 2.0
@@ -617,7 +626,7 @@ class SettingsDialog(QDialog): # pragma: no cover
         atom_scale_layout.addWidget(self.cpk_atom_scale_slider)
         atom_scale_layout.addWidget(self.cpk_atom_scale_label)
         form_layout.addRow("Atom Size Scale:", atom_scale_layout)
-        
+
         # 解像度
         self.cpk_resolution_slider = QSlider(Qt.Orientation.Horizontal)
         self.cpk_resolution_slider.setRange(8, 64)
@@ -629,7 +638,7 @@ class SettingsDialog(QDialog): # pragma: no cover
         form_layout.addRow("Resolution (Quality):", resolution_layout)
 
         self.tab_widget.addTab(cpk_widget, "CPK (Space-filling)")
-    
+
     def create_wireframe_tab(self):
         """Wireframe設定タブを作成"""
         wireframe_widget = QWidget()
@@ -639,7 +648,7 @@ class SettingsDialog(QDialog): # pragma: no cover
         info_label.setWordWrap(True)
         info_label.setStyleSheet("color: #666; font-style: italic; margin-top: 10px;")
         form_layout.addRow(info_label)
-        
+
         # ボンド半径
         self.wf_bond_radius_slider = QSlider(Qt.Orientation.Horizontal)
         self.wf_bond_radius_slider.setRange(1, 10)  # 0.01 ~ 0.1
@@ -650,13 +659,12 @@ class SettingsDialog(QDialog): # pragma: no cover
         bond_radius_layout.addWidget(self.wf_bond_radius_label)
         form_layout.addRow("Bond Radius:", bond_radius_layout)
 
-
         # --- 区切り線（水平ライン） ---
         line = QFrame()
         line.setFrameShape(QFrame.Shape.HLine)
         line.setFrameShadow(QFrame.Shadow.Sunken)
         form_layout.addRow(line)
-            
+
         # --- Per-model multi-bond controls (Wireframe) ---
         self.wf_double_offset_slider = QSlider(Qt.Orientation.Horizontal)
         self.wf_double_offset_slider.setRange(100, 400)
@@ -666,7 +674,7 @@ class SettingsDialog(QDialog): # pragma: no cover
         wf_double_offset_layout.addWidget(self.wf_double_offset_slider)
         wf_double_offset_layout.addWidget(self.wf_double_offset_label)
         form_layout.addRow("Double Bond Offset (Wireframe):", wf_double_offset_layout)
-    
+
         self.wf_triple_offset_slider = QSlider(Qt.Orientation.Horizontal)
         self.wf_triple_offset_slider.setRange(100, 400)
         self.wf_triple_offset_label = QLabel("2.00")
@@ -675,7 +683,7 @@ class SettingsDialog(QDialog): # pragma: no cover
         wf_triple_offset_layout.addWidget(self.wf_triple_offset_slider)
         wf_triple_offset_layout.addWidget(self.wf_triple_offset_label)
         form_layout.addRow("Triple Bond Offset (Wireframe):", wf_triple_offset_layout)
-    
+
         self.wf_double_radius_slider = QSlider(Qt.Orientation.Horizontal)
         self.wf_double_radius_slider.setRange(50, 100)
         self.wf_double_radius_label = QLabel("0.80")
@@ -684,7 +692,7 @@ class SettingsDialog(QDialog): # pragma: no cover
         wf_double_radius_layout.addWidget(self.wf_double_radius_slider)
         wf_double_radius_layout.addWidget(self.wf_double_radius_label)
         form_layout.addRow("Double Bond Thickness (Wireframe):", wf_double_radius_layout)
-    
+
         self.wf_triple_radius_slider = QSlider(Qt.Orientation.Horizontal)
         self.wf_triple_radius_slider.setRange(50, 100)
         self.wf_triple_radius_label = QLabel("0.70")
@@ -709,9 +717,9 @@ class SettingsDialog(QDialog): # pragma: no cover
         resolution_layout.addWidget(self.wf_resolution_slider)
         resolution_layout.addWidget(self.wf_resolution_label)
         form_layout.addRow("Resolution (Quality):", resolution_layout)
-    
+
         self.tab_widget.addTab(wireframe_widget, "Wireframe")
-    
+
     def create_stick_tab(self):
         """Stick設定タブを作成"""
         stick_widget = QWidget()
@@ -721,7 +729,7 @@ class SettingsDialog(QDialog): # pragma: no cover
         info_label.setWordWrap(True)
         info_label.setStyleSheet("color: #666; font-style: italic; margin-top: 10px;")
         form_layout.addRow(info_label)
-        
+
         # ボンド半径（原子半径も同じ値を使用）
         self.stick_bond_radius_slider = QSlider(Qt.Orientation.Horizontal)
         self.stick_bond_radius_slider.setRange(5, 50)  # 0.05 ~ 0.5
@@ -731,7 +739,7 @@ class SettingsDialog(QDialog): # pragma: no cover
         bond_radius_layout.addWidget(self.stick_bond_radius_slider)
         bond_radius_layout.addWidget(self.stick_bond_radius_label)
         form_layout.addRow("Bond Radius:", bond_radius_layout)
-        
+
         # --- 区切り線（水平ライン） ---
         line = QFrame()
         line.setFrameShape(QFrame.Shape.HLine)
@@ -780,7 +788,7 @@ class SettingsDialog(QDialog): # pragma: no cover
         line.setFrameShape(QFrame.Shape.HLine)
         line.setFrameShadow(QFrame.Shadow.Sunken)
         form_layout.addRow(line)
-        
+
         # 解像度
         self.stick_resolution_slider = QSlider(Qt.Orientation.Horizontal)
         self.stick_resolution_slider.setRange(6, 32)
@@ -791,16 +799,13 @@ class SettingsDialog(QDialog): # pragma: no cover
         resolution_layout.addWidget(self.stick_resolution_label)
         form_layout.addRow("Resolution (Quality):", resolution_layout)
 
-
-
-
         self.tab_widget.addTab(stick_widget, "Stick")
 
     def reset_current_tab(self):
         """現在選択されているタブの設定のみをデフォルトに戻す"""
         current_tab_index = self.tab_widget.currentIndex()
         tab_name = self.tab_widget.tabText(current_tab_index)
-        
+
         # 各タブの設定項目を定義
         # Each tab settings
         tab_settings = {
@@ -867,21 +872,21 @@ class SettingsDialog(QDialog): # pragma: no cover
                 'stick_triple_bond_radius_factor': self.default_settings.get('stick_triple_bond_radius_factor', 0.4)
             }
         }
-        
+
         # 選択されたタブの設定のみを適用
         if tab_name in tab_settings:
             tab_defaults = tab_settings[tab_name]
-            
+
             # 現在の設定を取得
             current_settings = self.get_current_ui_settings()
-            
+
             # 選択されたタブの項目のみをデフォルト値で更新
             updated_settings = current_settings.copy()
             updated_settings.update(tab_defaults)
-            
+
             # UIを更新
             self.update_ui_from_settings(updated_settings)
-            
+
             # If 2D settings were reset, update internal color variables too
             if tab_name == "2D Settings":
                 self.current_bg_color_2d = updated_settings.get('background_color_2d', self.default_settings['background_color_2d'])
@@ -889,22 +894,22 @@ class SettingsDialog(QDialog): # pragma: no cover
                 self.update_2d_color_buttons()
 
             # CPK tab: do not change parent/settings immediately; let Apply/OK persist any changes
-            
+
             # ユーザーへのフィードバック
             QMessageBox.information(self, "Reset Complete", f"Settings for '{tab_name}' tab have been reset to defaults.")
         else:
             QMessageBox.warning(self, "Error", f"Unknown tab: {tab_name}")
-    
+
     def reset_all_settings(self):
         """すべての設定をデフォルトに戻す"""
         reply = QMessageBox.question(
-            self, 
-            "Reset All Settings", 
+            self,
+            "Reset All Settings",
             "Are you sure you want to reset all settings to defaults?",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No
         )
-        
+
         if reply == QMessageBox.StandardButton.Yes:
             # Update the dialog UI
             self.update_ui_from_settings(self.default_settings)
@@ -925,9 +930,9 @@ class SettingsDialog(QDialog): # pragma: no cover
                         if 'cpk_colors' in self.parent_window.settings:
                             # Reset to defaults (empty override dict)
                             self.parent_window.settings['cpk_colors'] = {}
-                        
+
                         # Reset 2D Settings (colors need manual refresh in parent scene/view usually handled by apply)
-                        
+
                         # Reset 3D Ball & Stick uniform bond color to default
                         self.parent_window.settings['ball_stick_bond_color'] = self.default_settings.get('ball_stick_bond_color', '#7F7F7F')
                         # Update global CPK colors and reapply 3D settings immediately
@@ -1038,12 +1043,11 @@ class SettingsDialog(QDialog): # pragma: no cover
             'ball_stick_bond_color': getattr(self, 'bs_bond_color', self.default_settings.get('ball_stick_bond_color')),
             'ball_stick_use_cpk_bond_color': self.bs_use_cpk_bond_checkbox.isChecked(),
         }
-    
+
     def reset_to_defaults(self):
         """UIをデフォルト設定に戻す（後方互換性のため残存）"""
         self.reset_all_settings()
 
-      
     def select_color(self):
         """カラーピッカーを開き、選択された色を内部変数とUIに反映させる"""
         # 内部変数から現在の色を取得してカラーピッカーを初期化
@@ -1171,7 +1175,7 @@ class SettingsDialog(QDialog): # pragma: no cover
             # 現在の分子を再描画（設定変更を反映）
             if hasattr(self.parent_window, 'current_mol') and self.parent_window.current_mol:
                 self.parent_window.draw_molecule_3d(self.parent_window.current_mol)
-            
+
             # 2Dビューの設定適用 (背景色、結合スタイルなど)
             # update_style() will read the new settings from parent_window.settings
             try:
@@ -1179,19 +1183,19 @@ class SettingsDialog(QDialog): # pragma: no cover
                     # Update Background
                     bg_col_2d = self.parent_window.settings.get('background_color_2d', '#FFFFFF')
                     self.parent_window.scene.setBackgroundBrush(QColor(bg_col_2d))
-                    
+
                     # Update Items
                     for item in self.parent_window.scene.items():
                         if hasattr(item, 'update_style'):
                             item.update_style()
                         elif hasattr(item, 'update'):
                             item.update()
-                            
+
                     if hasattr(self.parent_window.view_2d, 'viewport'):
                         self.parent_window.view_2d.viewport().update()
             except Exception:
                 pass
-            
+
             # ステータスバーに適用完了を表示
             self.parent_window.statusBar().showMessage("Settings applied successfully")
 
@@ -1224,32 +1228,32 @@ class SettingsDialog(QDialog): # pragma: no cover
         # 1. Scene settings
         self.current_bg_color = settings_dict.get('background_color', self.default_settings['background_color'])
         self.update_color_button(self.current_bg_color)
-        
+
         self.axes_checkbox.setChecked(settings_dict.get('show_3d_axes', self.default_settings['show_3d_axes']))
         self.light_checkbox.setChecked(settings_dict.get('lighting_enabled', self.default_settings['lighting_enabled']))
-        
+
         intensity = settings_dict.get('light_intensity', self.default_settings['light_intensity'])
         self.intensity_slider.setValue(int(intensity * 100))
         self.intensity_label.setText(f"{intensity:.2f}")
-        
+
         specular = settings_dict.get('specular', self.default_settings['specular'])
         self.specular_slider.setValue(int(specular * 100))
         self.specular_label.setText(f"{specular:.2f}")
-        
+
         spec_power = settings_dict.get('specular_power', self.default_settings['specular_power'])
         self.spec_power_slider.setValue(int(spec_power))
         self.spec_power_label.setText(str(spec_power))
-        
+
         proj_mode = settings_dict.get('projection_mode', self.default_settings['projection_mode'])
         idx = self.projection_combo.findText(proj_mode)
         if idx >= 0:
             self.projection_combo.setCurrentIndex(idx)
-            
+
         # 2. Ball & Stick settings
         bs_atom_scale = settings_dict.get('ball_stick_atom_scale', self.default_settings['ball_stick_atom_scale'])
         self.bs_atom_scale_slider.setValue(int(bs_atom_scale * 100))
         self.bs_atom_scale_label.setText(f"{bs_atom_scale:.2f}")
-        
+
         bs_bond_radius = settings_dict.get('ball_stick_bond_radius', self.default_settings['ball_stick_bond_radius'])
         self.bs_bond_radius_slider.setValue(int(bs_bond_radius * 100))
         self.bs_bond_radius_label.setText(f"{bs_bond_radius:.2f}")
@@ -1262,7 +1266,7 @@ class SettingsDialog(QDialog): # pragma: no cover
         bs_tr_offset = settings_dict.get('ball_stick_triple_bond_offset_factor', self.default_settings.get('ball_stick_triple_bond_offset_factor', 2.0))
         self.bs_triple_offset_slider.setValue(int(bs_tr_offset * 100))
         self.bs_triple_offset_label.setText(f"{bs_tr_offset:.2f}")
-        
+
         bs_db_rad = settings_dict.get('ball_stick_double_bond_radius_factor', self.default_settings.get('ball_stick_double_bond_radius_factor', 0.8))
         self.bs_double_radius_slider.setValue(int(bs_db_rad * 100))
         self.bs_double_radius_label.setText(f"{bs_db_rad:.2f}")
@@ -1284,21 +1288,21 @@ class SettingsDialog(QDialog): # pragma: no cover
             pass
 
         self.bs_use_cpk_bond_checkbox.setChecked(settings_dict.get('ball_stick_use_cpk_bond_color', self.default_settings.get('ball_stick_use_cpk_bond_color', False)))
-            
+
         # 3. CPK settings
         cpk_atom_scale = settings_dict.get('cpk_atom_scale', self.default_settings['cpk_atom_scale'])
         self.cpk_atom_scale_slider.setValue(int(cpk_atom_scale * 100))
         self.cpk_atom_scale_label.setText(f"{cpk_atom_scale:.2f}")
-        
+
         cpk_res = settings_dict.get('cpk_resolution', self.default_settings['cpk_resolution'])
         self.cpk_resolution_slider.setValue(int(cpk_res))
         self.cpk_resolution_label.setText(str(cpk_res))
-        
+
         # 4. Wireframe settings
         wf_bond_radius = settings_dict.get('wireframe_bond_radius', self.default_settings['wireframe_bond_radius'])
         self.wf_bond_radius_slider.setValue(int(wf_bond_radius * 100))
         self.wf_bond_radius_label.setText(f"{wf_bond_radius:.2f}")
-        
+
         wf_res = settings_dict.get('wireframe_resolution', self.default_settings['wireframe_resolution'])
         self.wf_resolution_slider.setValue(int(wf_res))
         self.wf_resolution_label.setText(str(wf_res))
@@ -1311,7 +1315,7 @@ class SettingsDialog(QDialog): # pragma: no cover
         wf_tr_offset = settings_dict.get('wireframe_triple_bond_offset_factor', self.default_settings.get('wireframe_triple_bond_offset_factor', 3.0))
         self.wf_triple_offset_slider.setValue(int(wf_tr_offset * 100))
         self.wf_triple_offset_label.setText(f"{wf_tr_offset:.2f}")
-        
+
         wf_db_rad = settings_dict.get('wireframe_double_bond_radius_factor', self.default_settings.get('wireframe_double_bond_radius_factor', 0.8))
         self.wf_double_radius_slider.setValue(int(wf_db_rad * 100))
         self.wf_double_radius_label.setText(f"{wf_db_rad:.2f}")
@@ -1319,12 +1323,12 @@ class SettingsDialog(QDialog): # pragma: no cover
         wf_tr_rad = settings_dict.get('wireframe_triple_bond_radius_factor', self.default_settings.get('wireframe_triple_bond_radius_factor', 0.75))
         self.wf_triple_radius_slider.setValue(int(wf_tr_rad * 100))
         self.wf_triple_radius_label.setText(f"{wf_tr_rad:.2f}")
-            
+
         # 5. Stick settings
         stick_bond_radius = settings_dict.get('stick_bond_radius', self.default_settings['stick_bond_radius'])
         self.stick_bond_radius_slider.setValue(int(stick_bond_radius * 100))
         self.stick_bond_radius_label.setText(f"{stick_bond_radius:.2f}")
-        
+
         stick_res = settings_dict.get('stick_resolution', self.default_settings['stick_resolution'])
         self.stick_resolution_slider.setValue(int(stick_res))
         self.stick_resolution_label.setText(str(stick_res))
@@ -1337,7 +1341,7 @@ class SettingsDialog(QDialog): # pragma: no cover
         stick_tr_offset = settings_dict.get('stick_triple_bond_offset_factor', self.default_settings.get('stick_triple_bond_offset_factor', 1.0))
         self.stick_triple_offset_slider.setValue(int(stick_tr_offset * 100))
         self.stick_triple_offset_label.setText(f"{stick_tr_offset:.2f}")
-        
+
         stick_db_rad = settings_dict.get('stick_double_bond_radius_factor', self.default_settings.get('stick_double_bond_radius_factor', 0.6))
         self.stick_double_radius_slider.setValue(int(stick_db_rad * 100))
         self.stick_double_radius_label.setText(f"{stick_db_rad:.2f}")
