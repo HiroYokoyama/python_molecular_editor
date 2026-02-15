@@ -31,7 +31,11 @@ The `CalculationWorker` class inherits from `QObject` and is designed to run in 
 
 ### Key Logic
 - **Explicit Stereo Preservation**: The worker aggressively enforces stereochemistry defined in the 2D editor (e.g., specific E/Z configurations) by setting `BondStereo` tags and using distance constraints during embedding if necessary.
-- **Halt Support**: Periodically checks a `halt_ids` set to safely abort long-running calculations.
+- **Explicit Stereo Preservation**: The worker aggressively enforces stereochemistry defined in the 2D editor (e.g., specific E/Z configurations) by setting `BondStereo` tags and using distance constraints during embedding if necessary.
+- **Worker ID & Halting**:
+    - Each calculation is assigned a unique `worker_id` by the main window.
+    - The worker periodically checks a shared `halt_ids` set (passed by reference).
+    - If its `worker_id` is found in `halt_ids`, the worker raises a `RuntimeError("Halted")`, allowing cleaner termination than forcefully killing the thread.
 
 ---
 
