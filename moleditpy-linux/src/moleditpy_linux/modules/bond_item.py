@@ -44,8 +44,8 @@ except Exception:
         HOVER_PEN_WIDTH,
     )
 
-class BondItem(QGraphicsItem):
 
+class BondItem(QGraphicsItem):
     def get_ez_label_rect(self):
         """E/Zラベルの描画範囲（シーン座標）を返す。ラベルが無い場合はNone。"""
         if self.order != 2 or self.stereo not in [3, 4]:
@@ -54,15 +54,25 @@ class BondItem(QGraphicsItem):
         center = line.center()
         label_width = EZ_LABEL_BOX_SIZE
         label_height = EZ_LABEL_BOX_SIZE
-        label_rect = QRectF(center.x() - label_width/2, center.y() - label_height/2, label_width, label_height)
+        label_rect = QRectF(
+            center.x() - label_width / 2,
+            center.y() - label_height / 2,
+            label_width,
+            label_height,
+        )
         # シーン座標に変換
         return self.mapToScene(label_rect).boundingRect()
+
     def set_stereo(self, new_stereo):
         try:
             # ラベルを消す場合は、消す前のboundingRectをscene().invalidateで強制的に無効化
             if new_stereo == 0 and self.stereo in [3, 4] and self.scene():
                 rect = self.mapToScene(self.boundingRect()).boundingRect()
-                self.scene().invalidate(rect, QGraphicsScene.SceneLayer.BackgroundLayer | QGraphicsScene.SceneLayer.ForegroundLayer)
+                self.scene().invalidate(
+                    rect,
+                    QGraphicsScene.SceneLayer.BackgroundLayer
+                    | QGraphicsScene.SceneLayer.ForegroundLayer,
+                )
 
             self.prepareGeometryChange()
             self.stereo = new_stereo
@@ -86,12 +96,18 @@ class BondItem(QGraphicsItem):
         self.update()
         if self.scene() and self.scene().views():
             self.scene().views()[0].viewport().update()
+
     def __init__(self, atom1_item, atom2_item, order=1, stereo=0):
         super().__init__()
         # Validate input parameters
         if atom1_item is None or atom2_item is None:
             raise ValueError("BondItem requires non-None atom items")
-        self.atom1, self.atom2, self.order, self.stereo = atom1_item, atom2_item, order, stereo
+        self.atom1, self.atom2, self.order, self.stereo = (
+            atom1_item,
+            atom2_item,
+            order,
+            stereo,
+        )
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable)
         self.pen = QPen(Qt.GlobalColor.black, 2)
         self.setZValue(0)
@@ -123,29 +139,34 @@ class BondItem(QGraphicsItem):
         # Get dynamic bond offset (spacing)
         bond_offset = 3.5
         try:
-            if self.scene() and hasattr(self.scene(), 'views') and self.scene().views():
+            if self.scene() and hasattr(self.scene(), "views") and self.scene().views():
                 win = self.scene().views()[0].window()
-                if win and hasattr(win, 'settings'):
+                if win and hasattr(win, "settings"):
                     # Use specific spacing based on bond order
-                    if getattr(self, 'order', 1) == 3:
-                        bond_offset = win.settings.get('bond_spacing_triple_2d', 3.5)
+                    if getattr(self, "order", 1) == 3:
+                        bond_offset = win.settings.get("bond_spacing_triple_2d", 3.5)
                     else:
-                        bond_offset = win.settings.get('bond_spacing_double_2d', 3.5)
+                        bond_offset = win.settings.get("bond_spacing_double_2d", 3.5)
         except Exception:
-             bond_offset = globals().get('BOND_OFFSET', 3.5)
+            bond_offset = globals().get("BOND_OFFSET", 3.5)
 
         # Get dynamic wedge width
         wedge_width = 6.0
         try:
-             if self.scene() and self.scene().views():
-                  win = self.scene().views()[0].window()
-                  if win and hasattr(win, 'settings'):
-                       wedge_width = win.settings.get('bond_wedge_width_2d', 6.0)
-        except Exception:
-             pass
+            if self.scene() and self.scene().views():
+                win = self.scene().views()[0].window()
+                if win and hasattr(win, "settings"):
+                    wedge_width = win.settings.get("bond_wedge_width_2d", 6.0)
+        except Exception:  # pragma: no cover
+            import traceback
+            traceback.print_exc()
 
-        extra = (getattr(self, 'order', 1) - 1) * bond_offset + 50 + wedge_width
-        rect = QRectF(line.p1(), line.p2()).normalized().adjusted(-extra, -extra, extra, extra)
+        extra = (getattr(self, "order", 1) - 1) * bond_offset + 50 + wedge_width
+        rect = (
+            QRectF(line.p1(), line.p2())
+            .normalized()
+            .adjusted(-extra, -extra, extra, extra)
+        )
 
         # E/Zラベルの描画範囲も考慮して拡張（QFontMetricsFで正確に）
         if self.order == 2 and self.stereo in [3, 4]:
@@ -154,11 +175,14 @@ class BondItem(QGraphicsItem):
             try:
                 if self.scene() and self.scene().views():
                     win = self.scene().views()[0].window()
-                    if win and hasattr(win, 'settings'):
-                        font_size = win.settings.get('atom_font_size_2d', 20)
-                        font_family = win.settings.get('atom_font_family_2d', FONT_FAMILY)
-            except Exception:
-                pass
+                    if win and hasattr(win, "settings"):
+                        font_size = win.settings.get("atom_font_size_2d", 20)
+                        font_family = win.settings.get(
+                            "atom_font_family_2d", FONT_FAMILY
+                        )
+            except Exception:  # pragma: no cover
+                import traceback
+                traceback.print_exc()
 
             font = QFont(font_family, font_size, FONT_WEIGHT_BOLD)
             font.setItalic(True)
@@ -166,12 +190,14 @@ class BondItem(QGraphicsItem):
             fm = QFontMetricsF(font)
             text_rect = fm.boundingRect(text)
             outline = EZ_LABEL_TEXT_OUTLINE  # 輪郭の太さ分
-            margin = EZ_LABEL_MARGIN   # 追加余白
+            margin = EZ_LABEL_MARGIN  # 追加余白
             center = line.center()
-            label_rect = QRectF(center.x() - text_rect.width()/2 - outline - margin,
-                                center.y() - text_rect.height()/2 - outline - margin,
-                                text_rect.width() + 2*outline + 2*margin,
-                                text_rect.height() + 2*outline + 2*margin)
+            label_rect = QRectF(
+                center.x() - text_rect.width() / 2 - outline - margin,
+                center.y() - text_rect.height() / 2 - outline - margin,
+                text_rect.width() + 2 * outline + 2 * margin,
+                text_rect.height() + 2 * outline + 2 * margin,
+            )
             rect = rect.united(label_rect)
         return rect
 
@@ -187,7 +213,7 @@ class BondItem(QGraphicsItem):
             # Stroke it to give it some width (e.g., 10px or dynamic based on settings) generally easier to click
             # even if the visual width is smaller.
             stroker = QPainterPathStroker()
-            stroker.setWidth(DESIRED_BOND_PIXEL_WIDTH) # Use constant (20.0)
+            stroker.setWidth(DESIRED_BOND_PIXEL_WIDTH)  # Use constant (20.0)
             path = stroker.createStroke(path)
 
             # If there's an E/Z label, add its rect to the selection shape
@@ -214,7 +240,9 @@ class BondItem(QGraphicsItem):
             # ... (Simpler logic: just return a box around center)
             # Standard size estimate
             box_size = 30
-            return QRectF(center.x() - box_size/2, center.y() - box_size/2, box_size, box_size)
+            return QRectF(
+                center.x() - box_size / 2, center.y() - box_size / 2, box_size, box_size
+            )
         except Exception:
             return None
 
@@ -222,7 +250,8 @@ class BondItem(QGraphicsItem):
         if self.atom1 is None or self.atom2 is None:
             return
         line = self.get_line_in_local_coords()
-        if line.length() == 0: return
+        if line.length() == 0:
+            return
 
         # Default values
         width_2d = 2.0
@@ -231,27 +260,27 @@ class BondItem(QGraphicsItem):
 
         try:
             sc = self.scene()
-            if sc is not None and hasattr(sc, 'window') and sc.window is not None:
+            if sc is not None and hasattr(sc, "window") and sc.window is not None:
                 # Get settings
                 settings = sc.window.settings
 
                 # Width
-                width_2d = settings.get('bond_width_2d', 2.0)
+                width_2d = settings.get("bond_width_2d", 2.0)
 
                 # Cap Style logic
-                cap_style_str = settings.get('bond_cap_style_2d', 'Round')
-                cap_style = Qt.PenCapStyle.RoundCap # Default
+                cap_style_str = settings.get("bond_cap_style_2d", "Round")
+                cap_style = Qt.PenCapStyle.RoundCap  # Default
 
-                if cap_style_str == 'Flat':
+                if cap_style_str == "Flat":
                     cap_style = Qt.PenCapStyle.FlatCap
-                elif cap_style_str == 'Square':
+                elif cap_style_str == "Square":
                     cap_style = Qt.PenCapStyle.SquareCap
 
                 # Color
                 if self.isSelected():
-                    bond_color = QColor("blue") # Selection color
+                    bond_color = QColor("blue")  # Selection color
                 else:
-                    bond_hex = settings.get('bond_color_2d', '#222222')
+                    bond_hex = settings.get("bond_color_2d", "#222222")
                     bond_color = QColor(bond_hex)
 
                 pen = QPen(bond_color, width_2d)
@@ -259,8 +288,8 @@ class BondItem(QGraphicsItem):
                 painter.setPen(pen)
 
                 # Wedge/Dash Specific Settings
-                wedge_width_half = settings.get('bond_wedge_width_2d', 6.0)
-                num_dashes = int(settings.get('bond_dash_count_2d', 8))
+                wedge_width_half = settings.get("bond_wedge_width_2d", 6.0)
+                num_dashes = int(settings.get("bond_dash_count_2d", 8))
 
             # Use bond color for fill
             painter.setBrush(QBrush(bond_color))
@@ -279,12 +308,12 @@ class BondItem(QGraphicsItem):
             p1 = line.p1() + vec.p2() * 5
             p2 = line.p2() - vec.p2() * 5
 
-            if self.stereo == 1: # Wedge (くさび形)
+            if self.stereo == 1:  # Wedge (くさび形)
                 offset = QPointF(normal.dx(), normal.dy()) * wedge_width_half
                 poly = QPolygonF([p1, p2 + offset, p2 - offset])
                 painter.drawPolygon(poly)
 
-            elif self.stereo == 2: # Dash (破線)
+            elif self.stereo == 2:  # Dash (破線)
                 painter.save()
                 if not self.isSelected():
                     pen = painter.pen()
@@ -310,13 +339,25 @@ class BondItem(QGraphicsItem):
                 bond_offset = 3.5
                 try:
                     sc = self.scene()
-                    if sc and sc.views() and hasattr(sc.views()[0].window(), 'settings'):
+                    if (
+                        sc
+                        and sc.views()
+                        and hasattr(sc.views()[0].window(), "settings")
+                    ):
                         if self.order == 3:
-                            bond_offset = sc.views()[0].window().settings.get('bond_spacing_triple_2d', 3.5)
+                            bond_offset = (
+                                sc.views()[0]
+                                .window()
+                                .settings.get("bond_spacing_triple_2d", 3.5)
+                            )
                         else:
-                            bond_offset = sc.views()[0].window().settings.get('bond_spacing_double_2d', 3.5)
+                            bond_offset = (
+                                sc.views()[0]
+                                .window()
+                                .settings.get("bond_spacing_double_2d", 3.5)
+                            )
                 except Exception:
-                    bond_offset = globals().get('BOND_OFFSET', 3.5)
+                    bond_offset = globals().get("BOND_OFFSET", 3.5)
 
                 offset = QPointF(v.dx(), v.dy()) * bond_offset
 
@@ -328,7 +369,7 @@ class BondItem(QGraphicsItem):
                     try:
                         # シーンからRDKit分子を取得
                         sc = self.scene()
-                        if sc and hasattr(sc, 'window') and sc.window:
+                        if sc and hasattr(sc, "window") and sc.window:
                             # 2DデータからRDKit分子を生成
                             mol = sc.window.data.to_rdkit_mol(use_2d_stereo=False)
                             if mol:
@@ -348,30 +389,58 @@ class BondItem(QGraphicsItem):
                                             rdkit_idx2 = atom.GetIdx()
 
                                 if rdkit_idx1 is not None and rdkit_idx2 is not None:
-                                    bond = mol.GetBondBetweenAtoms(rdkit_idx1, rdkit_idx2)
+                                    bond = mol.GetBondBetweenAtoms(
+                                        rdkit_idx1, rdkit_idx2
+                                    )
                                     if bond and bond.IsInRing():
                                         is_in_ring = True
                                         # 環の中心を計算（この結合を含む最小環）
                                         ring_info = mol.GetRingInfo()
                                         for ring in ring_info.AtomRings():
-                                            if rdkit_idx1 in ring and rdkit_idx2 in ring:
+                                            if (
+                                                rdkit_idx1 in ring
+                                                and rdkit_idx2 in ring
+                                            ):
                                                 # 環の原子位置の平均を計算
                                                 ring_positions = []
                                                 for atom_idx in ring:
                                                     # 対応するエディタ側の原子を探す
-                                                    rdkit_atom = mol.GetAtomWithIdx(atom_idx)
-                                                    if rdkit_atom.HasProp("_original_atom_id"):
-                                                        editor_atom_id = rdkit_atom.GetIntProp("_original_atom_id")
-                                                        if editor_atom_id in sc.window.data.atoms:
-                                                            atom_item = sc.window.data.atoms[editor_atom_id]['item']
+                                                    rdkit_atom = mol.GetAtomWithIdx(
+                                                        atom_idx
+                                                    )
+                                                    if rdkit_atom.HasProp(
+                                                        "_original_atom_id"
+                                                    ):
+                                                        editor_atom_id = (
+                                                            rdkit_atom.GetIntProp(
+                                                                "_original_atom_id"
+                                                            )
+                                                        )
+                                                        if (
+                                                            editor_atom_id
+                                                            in sc.window.data.atoms
+                                                        ):
+                                                            atom_item = (
+                                                                sc.window.data.atoms[
+                                                                    editor_atom_id
+                                                                ]["item"]
+                                                            )
                                                             if atom_item:
-                                                                ring_positions.append(atom_item.pos())
+                                                                ring_positions.append(
+                                                                    atom_item.pos()
+                                                                )
 
                                                 if ring_positions:
                                                     # 環の中心を計算
-                                                    center_x = sum(p.x() for p in ring_positions) / len(ring_positions)
-                                                    center_y = sum(p.y() for p in ring_positions) / len(ring_positions)
-                                                    ring_center = QPointF(center_x, center_y)
+                                                    center_x = sum(
+                                                        p.x() for p in ring_positions
+                                                    ) / len(ring_positions)
+                                                    center_y = sum(
+                                                        p.y() for p in ring_positions
+                                                    ) / len(ring_positions)
+                                                    ring_center = QPointF(
+                                                        center_x, center_y
+                                                    )
                                                     break
                     except Exception as e:
                         # エラーが発生した場合は通常の描画にフォールバック
@@ -420,7 +489,7 @@ class BondItem(QGraphicsItem):
 
                     # E/Z ラベルの描画処理
                     if self.stereo in [3, 4]:
-                        painter.save() # 現在の描画設定を保存
+                        painter.save()  # 現在の描画設定を保存
 
                         # --- ラベルの設定 ---
                         font_size = 20
@@ -428,11 +497,16 @@ class BondItem(QGraphicsItem):
                         try:
                             if self.scene() and self.scene().views():
                                 win = self.scene().views()[0].window()
-                                if win and hasattr(win, 'settings'):
-                                    font_size = win.settings.get('atom_font_size_2d', 20)
-                                    font_family = win.settings.get('atom_font_family_2d', FONT_FAMILY)
-                        except Exception:
-                            pass
+                                if win and hasattr(win, "settings"):
+                                    font_size = win.settings.get(
+                                        "atom_font_size_2d", 20
+                                    )
+                                    font_family = win.settings.get(
+                                        "atom_font_family_2d", FONT_FAMILY
+                                    )
+                        except Exception:  # pragma: no cover
+                            import traceback
+                            traceback.print_exc()
 
                         font = QFont(font_family, font_size, FONT_WEIGHT_BOLD)
                         font.setItalic(True)
@@ -461,7 +535,7 @@ class BondItem(QGraphicsItem):
 
                         # --- 輪郭の描画 ---
                         stroker = QPainterPathStroker()
-                        stroker.setWidth(EZ_LABEL_TEXT_OUTLINE) # 輪郭の太さ
+                        stroker.setWidth(EZ_LABEL_TEXT_OUTLINE)  # 輪郭の太さ
                         outline_path = stroker.createStroke(path)
 
                         painter.setBrush(outline_color)
@@ -473,7 +547,7 @@ class BondItem(QGraphicsItem):
                         painter.setPen(text_color)
                         painter.drawPath(path)
 
-                        painter.restore() # 描画設定を元に戻す
+                        painter.restore()  # 描画設定を元に戻す
 
                 elif self.order == 3:
                     painter.drawLine(line)
@@ -481,15 +555,18 @@ class BondItem(QGraphicsItem):
                     painter.drawLine(line.translated(-offset))
 
         # --- 2. ホバー時のエフェクトを上から重ねて描画 ---
-        if (not self.isSelected()) and getattr(self, 'hovered', False):
+        if (not self.isSelected()) and getattr(self, "hovered", False):
             try:
                 # ホバー時のハイライトを太めの半透明な線で描画
-                hover_pen = QPen(QColor(144, 238, 144, 180), HOVER_PEN_WIDTH) # LightGreen, 半透明
+                hover_pen = QPen(
+                    QColor(144, 238, 144, 180), HOVER_PEN_WIDTH
+                )  # LightGreen, 半透明
                 hover_pen.setCapStyle(Qt.PenCapStyle.RoundCap)
                 painter.setPen(hover_pen)
                 painter.drawLine(line)
-            except Exception:
-                pass
+            except Exception:  # pragma: no cover
+                import traceback
+                traceback.print_exc()
 
     def update_position(self, notify=True):
         try:
@@ -504,7 +581,7 @@ class BondItem(QGraphicsItem):
 
     def hoverEnterEvent(self, event):
         scene = self.scene()
-        mode = getattr(scene, 'mode', '')
+        mode = getattr(scene, "mode", "")
         self.hovered = True
         self.update()
         if self.scene():

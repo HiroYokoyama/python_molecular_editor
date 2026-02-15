@@ -18,11 +18,19 @@ class PluginContext:
     PluginContext provides a safe interface for plugins to interact with the application.
     It is passed to the `initialize(context)` function of the plugin.
     """
+
     def __init__(self, manager, plugin_name: str):
         self._manager = manager
         self._plugin_name = plugin_name
 
-    def add_menu_action(self, path: str, callback: Callable, text: Optional[str] = None, icon: Optional[str] = None, shortcut: Optional[str] = None):
+    def add_menu_action(
+        self,
+        path: str,
+        callback: Callable,
+        text: Optional[str] = None,
+        icon: Optional[str] = None,
+        shortcut: Optional[str] = None,
+    ):
         """
         Register a menu action.
 
@@ -33,13 +41,23 @@ class PluginContext:
             icon: Path to icon or icon name (optional).
             shortcut: Keyboard shortcut (optional).
         """
-        self._manager.register_menu_action(self._plugin_name, path, callback, text, icon, shortcut)
+        self._manager.register_menu_action(
+            self._plugin_name, path, callback, text, icon, shortcut
+        )
 
-    def add_toolbar_action(self, callback: Callable, text: str, icon: Optional[str] = None, tooltip: Optional[str] = None):
+    def add_toolbar_action(
+        self,
+        callback: Callable,
+        text: str,
+        icon: Optional[str] = None,
+        tooltip: Optional[str] = None,
+    ):
         """
         Register a toolbar action.
         """
-        self._manager.register_toolbar_action(self._plugin_name, callback, text, icon, tooltip)
+        self._manager.register_toolbar_action(
+            self._plugin_name, callback, text, icon, tooltip
+        )
 
     def register_drop_handler(self, callback: Callable[[str], bool], priority: int = 0):
         """
@@ -51,7 +69,7 @@ class PluginContext:
         """
         self._manager.register_drop_handler(self._plugin_name, callback, priority)
 
-    def get_3d_controller(self) -> 'Plugin3DController':
+    def get_3d_controller(self) -> "Plugin3DController":
         """
         Returns a controller to manipulate the 3D scene (e.g. colors).
         """
@@ -79,8 +97,8 @@ class PluginContext:
         mw = self._manager.get_main_window()
         if mw:
             mw.current_mol = mol
-            if hasattr(mw, 'draw_molecule_3d'):
-                 mw.draw_molecule_3d(mol)
+            if hasattr(mw, "draw_molecule_3d"):
+                mw.draw_molecule_3d(mol)
 
     def add_export_action(self, label: str, callback: Callable):
         """
@@ -92,7 +110,9 @@ class PluginContext:
         """
         self._manager.register_export_action(self._plugin_name, label, callback)
 
-    def register_optimization_method(self, method_name: str, callback: Callable[[Any], bool]):
+    def register_optimization_method(
+        self, method_name: str, callback: Callable[[Any], bool]
+    ):
         """
         Register a custom 3D optimization method.
 
@@ -101,9 +121,13 @@ class PluginContext:
             callback: Function taking (rdkit_mol) -> bool (success).
                       Modifies the molecule in-place.
         """
-        self._manager.register_optimization_method(self._plugin_name, method_name, callback)
+        self._manager.register_optimization_method(
+            self._plugin_name, method_name, callback
+        )
 
-    def register_file_opener(self, extension: str, callback: Callable[[str], None], priority: int = 0):
+    def register_file_opener(
+        self, extension: str, callback: Callable[[str], None], priority: int = 0
+    ):
         """
         Register a handler for opening a specific file extension.
 
@@ -113,7 +137,9 @@ class PluginContext:
                       Should load the file into the main window.
             priority: Higher priority handlers are tried first (default 0).
         """
-        self._manager.register_file_opener(self._plugin_name, extension, callback, priority)
+        self._manager.register_file_opener(
+            self._plugin_name, extension, callback, priority
+        )
 
     def add_analysis_tool(self, label: str, callback: Callable):
         """
@@ -145,7 +171,9 @@ class PluginContext:
 
     def register_3d_context_menu(self, callback: Callable, label: str):
         """Deprecated: This method does nothing. Kept for backward compatibility."""
-        print(f"Warning: Plugin '{self._plugin_name}' uses deprecated 'register_3d_context_menu'. This API has been removed.")
+        print(
+            f"Warning: Plugin '{self._plugin_name}' uses deprecated 'register_3d_context_menu'. This API has been removed."
+        )
 
     def register_3d_style(self, style_name: str, callback: Callable[[Any, Any], None]):
         """
@@ -167,8 +195,10 @@ class PluginContext:
         """
         self._manager.register_document_reset_handler(self._plugin_name, callback)
 
+
 class Plugin3DController:
     """Helper to manipulate the 3D scene."""
+
     def __init__(self, main_window):
         self._mw = main_window
 
@@ -179,9 +209,11 @@ class Plugin3DController:
             atom_index: RDKit atom index.
             color_hex: Hex string e.g., "#FF0000".
         """
-        if hasattr(self._mw, 'main_window_view_3d'):
-             self._mw.main_window_view_3d.update_atom_color_override(atom_index, color_hex)
-             self._mw.plotter.render()
+        if hasattr(self._mw, "main_window_view_3d"):
+            self._mw.main_window_view_3d.update_atom_color_override(
+                atom_index, color_hex
+            )
+            self._mw.plotter.render()
 
     def set_bond_color(self, bond_index: int, color_hex: str):
         """
@@ -191,6 +223,8 @@ class Plugin3DController:
              bond_index: RDKit bond index.
              color_hex: Hex string e.g., "#00FF00".
         """
-        if hasattr(self._mw, 'main_window_view_3d'):
-            self._mw.main_window_view_3d.update_bond_color_override(bond_index, color_hex)
+        if hasattr(self._mw, "main_window_view_3d"):
+            self._mw.main_window_view_3d.update_bond_color_override(
+                bond_index, color_hex
+            )
             self._mw.plotter.render()

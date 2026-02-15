@@ -38,7 +38,8 @@ from PyQt6.QtWidgets import QGraphicsTextItem
 
 try:
     from PyQt6 import sip as _sip  # type: ignore
-    _sip_isdeleted = getattr(_sip, 'isdeleted', None)
+
+    _sip_isdeleted = getattr(_sip, "isdeleted", None)
 except Exception:
     _sip = None
     _sip_isdeleted = None
@@ -53,7 +54,8 @@ except Exception:
 
 # --- クラス定義 ---
 class MainWindowEdit3d(object):
-    """ main_window.py から分離された機能クラス """
+    """main_window.py から分離された機能クラス"""
+
     def toggle_measurement_mode(self, checked):
         """測定モードのオン/オフを切り替える"""
         if checked:
@@ -72,7 +74,9 @@ class MainWindowEdit3d(object):
 
         # ボタンのテキストとステータスメッセージを更新
         if checked:
-            self.statusBar().showMessage("Measurement mode enabled. Click atoms to measure distances/angles/dihedrals.")
+            self.statusBar().showMessage(
+                "Measurement mode enabled. Click atoms to measure distances/angles/dihedrals."
+            )
         else:
             self.statusBar().showMessage("Measurement mode disabled.")
 
@@ -82,8 +86,10 @@ class MainWindowEdit3d(object):
         for dialog in dialogs_to_close:
             try:
                 dialog.close()
-            except Exception:
-                pass
+            except Exception:  # pragma: no cover
+                import traceback
+                traceback.print_exc()
+
         self.active_3d_dialogs.clear()
 
     def handle_measurement_atom_selection(self, atom_idx):
@@ -94,12 +100,12 @@ class MainWindowEdit3d(object):
 
         self.selected_atoms_for_measurement.append(atom_idx)
 
-        '''
+        """
         # 4つ以上選択された場合はクリア
         if len(self.selected_atoms_for_measurement) > 4:
             self.clear_measurement_selection()
             self.selected_atoms_for_measurement.append(atom_idx)
-        '''
+        """
 
         # 原子にラベルを追加
         self.add_measurement_label(atom_idx, len(self.selected_atoms_for_measurement))
@@ -125,9 +131,10 @@ class MainWindowEdit3d(object):
         """測定ラベルを3D表示に描画する（原子中心配置）"""
         try:
             # 既存の測定ラベルを削除
-            self.plotter.remove_actor('measurement_labels')
-        except Exception:
-            pass
+            self.plotter.remove_actor("measurement_labels")
+        except Exception:  # pragma: no cover
+            import traceback
+            traceback.print_exc()
 
         if not self.measurement_labels or not self.current_mol:
             return
@@ -148,11 +155,11 @@ class MainWindowEdit3d(object):
                 labels,
                 font_size=16,
                 point_size=0,
-                text_color='red',  # 測定時は常に赤色
-                name='measurement_labels',
+                text_color="red",  # 測定時は常に赤色
+                name="measurement_labels",
                 always_visible=True,
                 tolerance=0.01,
-                show_points=False
+                show_points=False,
             )
 
     def clear_measurement_selection(self):
@@ -162,9 +169,10 @@ class MainWindowEdit3d(object):
         # 3Dビューのラベルを削除
         self.measurement_labels.clear()
         try:
-            self.plotter.remove_actor('measurement_labels')
-        except Exception:
-            pass
+            self.plotter.remove_actor("measurement_labels")
+        except Exception:  # pragma: no cover
+            import traceback
+            traceback.print_exc()
 
         # 2Dビューの測定ラベルも削除
         self.clear_2d_measurement_labels()
@@ -174,8 +182,9 @@ class MainWindowEdit3d(object):
             try:
                 self.plotter.remove_actor(self.measurement_text_actor)
                 self.measurement_text_actor = None
-            except Exception:
-                pass
+            except Exception:  # pragma: no cover
+                import traceback
+                traceback.print_exc()
 
         self.plotter.render()
 
@@ -185,23 +194,25 @@ class MainWindowEdit3d(object):
         self.clear_2d_measurement_labels()
 
         # 現在の分子から原子-AtomItemマッピングを作成
-        if not self.current_mol or not hasattr(self, 'data') or not self.data.atoms:
+        if not self.current_mol or not hasattr(self, "data") or not self.data.atoms:
             return
 
         # RDKit原子インデックスから2D AtomItemへのマッピングを作成
         atom_idx_to_item = {}
 
         # シーンからAtomItemを取得してマッピング
-        if hasattr(self, 'scene'):
+        if hasattr(self, "scene"):
             for item in self.scene.items():
-                if hasattr(item, 'atom_id') and hasattr(item, 'symbol'):  # AtomItemかチェック
+                if hasattr(item, "atom_id") and hasattr(
+                    item, "symbol"
+                ):  # AtomItemかチェック
                     # 原子IDから対応するRDKit原子インデックスを見つける
                     rdkit_idx = self.find_rdkit_atom_index(item)
                     if rdkit_idx is not None:
                         atom_idx_to_item[rdkit_idx] = item
 
         # 測定ラベルを2Dビューに追加
-        if not hasattr(self, 'measurement_label_items_2d'):
+        if not hasattr(self, "measurement_label_items_2d"):
             self.measurement_label_items_2d = []
 
         for atom_idx, label_text in self.measurement_labels:
@@ -224,7 +235,7 @@ class MainWindowEdit3d(object):
         atom_rect = atom_item.boundingRect()
         label_pos = QPointF(
             atom_pos.x() + atom_rect.width() / 4 + 2,
-            atom_pos.y() - atom_rect.height() / 4 - 8
+            atom_pos.y() - atom_rect.height() / 4 - 8,
         )
         label_item.setPos(label_pos)
 
@@ -234,7 +245,7 @@ class MainWindowEdit3d(object):
 
     def clear_2d_measurement_labels(self):
         """2Dビューの測定ラベルを全て削除する"""
-        if hasattr(self, 'measurement_label_items_2d'):
+        if hasattr(self, "measurement_label_items_2d"):
             for label_item in self.measurement_label_items_2d:
                 try:
                     # Avoid touching partially-deleted wrappers
@@ -261,7 +272,10 @@ class MainWindowEdit3d(object):
             return None
 
         # マッピング辞書を使用（最も確実）
-        if hasattr(self, 'atom_id_to_rdkit_idx_map') and atom_item.atom_id in self.atom_id_to_rdkit_idx_map:
+        if (
+            hasattr(self, "atom_id_to_rdkit_idx_map")
+            and atom_item.atom_id in self.atom_id_to_rdkit_idx_map
+        ):
             return self.atom_id_to_rdkit_idx_map[atom_item.atom_id]
 
         # マッピングが存在しない場合はNone（外部ファイル読み込み時など）
@@ -296,7 +310,9 @@ class MainWindowEdit3d(object):
             atom2_idx = self.selected_atoms_for_measurement[1]
             atom3_idx = self.selected_atoms_for_measurement[2]
             atom4_idx = self.selected_atoms_for_measurement[3]
-            dihedral = self.calculate_dihedral(atom1_idx, atom2_idx, atom3_idx, atom4_idx)
+            dihedral = self.calculate_dihedral(
+                atom1_idx, atom2_idx, atom3_idx, atom4_idx
+            )
             measurement_text.append(f"Dihedral 1-2-3-4: {dihedral:.2f}°")
 
         # 測定結果を3D画面の右上に表示
@@ -337,36 +353,37 @@ class MainWindowEdit3d(object):
         if self.measurement_text_actor:
             try:
                 self.plotter.remove_actor(self.measurement_text_actor)
-            except Exception:
-                pass
+            except Exception:  # pragma: no cover
+                import traceback
+                traceback.print_exc()
 
         if not measurement_lines:
             self.measurement_text_actor = None
             return
 
         # テキストを結合
-        text = '\n'.join(measurement_lines)
+        text = "\n".join(measurement_lines)
 
         # 背景色から適切なテキスト色を決定
         try:
-            bg_color_hex = self.settings.get('background_color', '#919191')
+            bg_color_hex = self.settings.get("background_color", "#919191")
             bg_qcolor = QColor(bg_color_hex)
             if bg_qcolor.isValid():
                 luminance = bg_qcolor.toHsl().lightness()
-                text_color = 'black' if luminance > 128 else 'white'
+                text_color = "black" if luminance > 128 else "white"
             else:
-                text_color = 'white'
+                text_color = "white"
         except Exception:
-            text_color = 'white'
+            text_color = "white"
 
         # 左上に表示（小さな等幅フォント）
         self.measurement_text_actor = self.plotter.add_text(
             text,
-            position='upper_left',
+            position="upper_left",
             font_size=10,  # より小さく
             color=text_color,  # 背景に合わせた色
-            font='courier',  # 等幅フォント
-            name='measurement_display'
+            font="courier",  # 等幅フォント
+            name="measurement_display",
         )
 
         self.plotter.render()
@@ -390,9 +407,10 @@ class MainWindowEdit3d(object):
         """3Dビューでの選択原子のハイライト表示を更新"""
         try:
             # 既存の選択ハイライトを削除
-            self.plotter.remove_actor('selection_highlight')
-        except Exception:
-            pass
+            self.plotter.remove_actor("selection_highlight")
+        except Exception:  # pragma: no cover
+            import traceback
+            traceback.print_exc()
 
         if not self.selected_atoms_3d or not self.current_mol:
             self.plotter.render()
@@ -405,26 +423,26 @@ class MainWindowEdit3d(object):
         selected_positions = self.atom_positions_3d[selected_indices]
 
         # 原子の半径を少し大きくしてハイライト表示
-        selected_radii = np.array([VDW_RADII.get(
-            self.current_mol.GetAtomWithIdx(i).GetSymbol(), 0.4) * 1.3
-            for i in selected_indices])
+        selected_radii = np.array(
+            [
+                VDW_RADII.get(self.current_mol.GetAtomWithIdx(i).GetSymbol(), 0.4) * 1.3
+                for i in selected_indices
+            ]
+        )
 
         # ハイライト用のデータセットを作成
         highlight_source = pv.PolyData(selected_positions)
-        highlight_source['radii'] = selected_radii
+        highlight_source["radii"] = selected_radii
 
         # 黄色の半透明球でハイライト
         highlight_glyphs = highlight_source.glyph(
-            scale='radii',
+            scale="radii",
             geom=pv.Sphere(radius=1.0, theta_resolution=16, phi_resolution=16),
-            orient=False
+            orient=False,
         )
 
         self.plotter.add_mesh(
-            highlight_glyphs,
-            color='yellow',
-            opacity=0.3,
-            name='selection_highlight'
+            highlight_glyphs, color="yellow", opacity=0.3, name="selection_highlight"
         )
 
         self.plotter.render()

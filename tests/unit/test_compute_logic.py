@@ -6,6 +6,7 @@ from moleditpy.modules.main_window_compute import MainWindowCompute
 from PyQt6.QtCore import Qt, QPointF
 from unittest.mock import MagicMock, patch
 
+
 class DummyCompute(MainWindowCompute):
     def __init__(self, host):
         self._host = host
@@ -15,8 +16,8 @@ class DummyCompute(MainWindowCompute):
         self.view_3d = host.view_3d
         self.settings = host.settings
         self.current_mol = host.current_mol
-        self.active_worker_ids = set() 
-        self.halt_ids = set()          
+        self.active_worker_ids = set()
+        self.halt_ids = set()
         self.convert_button = MagicMock()
         self.cleanup_button = MagicMock()
         self.optimize_3d_button = MagicMock()
@@ -27,39 +28,73 @@ class DummyCompute(MainWindowCompute):
         self.is_xyz_derived = False
         self.plotter = MagicMock()
         self.waiting_worker_id = None
-        self.optimization_method = 'MMFF_RDKIT'
-        self.opt3d_method_labels = {'MMFF_RDKIT': 'MMFF94s (RDKit)', 'UFF_RDKIT': 'UFF (RDKit)'}
+        self.optimization_method = "MMFF_RDKIT"
+        self.opt3d_method_labels = {
+            "MMFF_RDKIT": "MMFF94s (RDKit)",
+            "UFF_RDKIT": "UFF (RDKit)",
+        }
         self._active_calc_threads = []
         self.chem_check_tried = False
         self.chem_check_failed = False
         self.last_successful_optimization_method = None
         self._temp_optimization_method = None
-    
+
     def __getattr__(self, name):
         # Prevent MagicMock from producing truthy results for standard MainWindow attributes we haven't mocked
-        if name in ('_temp_optimization_method', 'plugin_manager'):
+        if name in ("_temp_optimization_method", "plugin_manager"):
             return None
         return getattr(self._host, name)
 
-    def statusBar(self): 
+    def statusBar(self):
         return self._host.statusBar()
 
     def get_status_messages(self):
         """Helper to get all messages sent to the status bar."""
-        return [str(call[0][0]) for call in self.statusBar().showMessage.call_args_list if call[0]]
-    def update_from_rdkit_mol(self, mol): pass
-    def create_atom_id_mapping(self): return {}
-    def draw_molecule_3d(self, mol): pass
-    def update_chiral_labels(self): pass
-    def setup_3d_hover(self): pass
-    def update_atom_id_menu_text(self): pass
-    def update_atom_id_menu_state(self): pass
-    def update_window_title(self): pass
-    def setEnabled(self, val): pass
-    def _enable_3d_features(self, val): pass
-    def _enable_3d_edit_actions(self, val): pass
-    def push_undo_state(self): pass
-    def adjust_molecule_positions_to_avoid_collisions(self, mol, frags): pass
+        return [
+            str(call[0][0])
+            for call in self.statusBar().showMessage.call_args_list
+            if call[0]
+        ]
+
+    def update_from_rdkit_mol(self, mol):
+        pass
+
+    def create_atom_id_mapping(self):
+        return {}
+
+    def draw_molecule_3d(self, mol):
+        pass
+
+    def update_chiral_labels(self):
+        pass
+
+    def setup_3d_hover(self):
+        pass
+
+    def update_atom_id_menu_text(self):
+        pass
+
+    def update_atom_id_menu_state(self):
+        pass
+
+    def update_window_title(self):
+        pass
+
+    def setEnabled(self, val):
+        pass
+
+    def _enable_3d_features(self, val):
+        pass
+
+    def _enable_3d_edit_actions(self, val):
+        pass
+
+    def push_undo_state(self):
+        pass
+
+    def adjust_molecule_positions_to_avoid_collisions(self, mol, frags):
+        pass
+
 
 def test_on_calculation_error_stale(mock_parser_host):
     """Test on_calculation_error when the worker is stale (not in active set)."""
@@ -67,6 +102,7 @@ def test_on_calculation_error_stale(mock_parser_host):
     compute.active_worker_ids = {"new_worker_id"}
     compute.on_calculation_error(("stale_id", "Ignore this error"))
     assert not compute.statusBar().showMessage.called
+
 
 def test_on_calculation_error_basic(mock_parser_host):
     """Test on_calculation_error for an ACTIVE worker."""
@@ -77,11 +113,13 @@ def test_on_calculation_error_basic(mock_parser_host):
     assert compute.statusBar().showMessage.called
     assert "Real Error" in compute.statusBar().showMessage.call_args[0][0]
 
+
 def test_compute_set_optimization_method(mock_parser_host):
     compute = DummyCompute(mock_parser_host)
     compute.set_optimization_method("GAFF_OBABEL")
-    assert compute.settings['optimization_method'] == 'GAFF_OBABEL'
+    assert compute.settings["optimization_method"] == "GAFF_OBABEL"
     assert compute.statusBar().showMessage.called
+
 
 def test_compute_halt_logic(mock_parser_host):
     compute = DummyCompute(mock_parser_host)
@@ -91,30 +129,33 @@ def test_compute_halt_logic(mock_parser_host):
     assert len(compute.active_worker_ids) == 0
     assert compute.statusBar().showMessage.called
 
+
 def test_on_calculation_finished_basic(mock_parser_host):
     compute = DummyCompute(mock_parser_host)
     worker_id = "test_worker"
     compute.active_worker_ids.add(worker_id)
     mol = Chem.MolFromSmiles("C")
     result = (worker_id, mol)
-    with patch.object(compute, 'draw_molecule_3d') as mock_draw:
+    with patch.object(compute, "draw_molecule_3d") as mock_draw:
         compute.on_calculation_finished(result)
         assert compute.current_mol == mol
         assert worker_id not in compute.active_worker_ids
+
 
 def test_check_chemistry_problems_fallback_detects(mock_parser_host):
     compute = DummyCompute(mock_parser_host)
     compute.data.atoms = {}
     compute.data.bonds = {}
-    c_id = mock_parser_host.scene.create_atom("C", QPointF(0,0))
-    c_item = mock_parser_host.data.atoms[c_id]['item']
+    c_id = mock_parser_host.scene.create_atom("C", QPointF(0, 0))
+    c_item = mock_parser_host.data.atoms[c_id]["item"]
     for i in range(5):
-        h_id = mock_parser_host.scene.create_atom("H", QPointF(i+1, 0))
-        h_item = mock_parser_host.data.atoms[h_id]['item']
+        h_id = mock_parser_host.scene.create_atom("H", QPointF(i + 1, 0))
+        h_item = mock_parser_host.data.atoms[h_id]["item"]
         mock_parser_host.scene.create_bond(c_item, h_item, bond_order=1)
     compute.check_chemistry_problems_fallback()
     assert c_item.has_problem is True
     assert compute.statusBar().showMessage.called
+
 
 def test_trigger_conversion_empty(mock_parser_host):
     compute = DummyCompute(mock_parser_host)
@@ -122,22 +163,27 @@ def test_trigger_conversion_empty(mock_parser_host):
     compute.trigger_conversion()
     assert compute.statusBar().showMessage.called
 
+
 def test_trigger_conversion_with_atoms(mock_parser_host):
     compute = DummyCompute(mock_parser_host)
-    compute.data.atoms = {1: {'symbol': 'C', 'item': MagicMock()}}
-    compute.settings['conversion_target'] = 'all'
-    with patch('moleditpy.modules.main_window_compute.CalculationWorker'), \
-         patch('moleditpy.modules.main_window_compute.QThread'):
+    compute.data.atoms = {1: {"symbol": "C", "item": MagicMock()}}
+    compute.settings["conversion_target"] = "all"
+    with (
+        patch("moleditpy.modules.main_window_compute.CalculationWorker"),
+        patch("moleditpy.modules.main_window_compute.QThread"),
+    ):
         compute.trigger_conversion()
         assert compute.statusBar().showMessage.called
+
 
 def test_optimize_3d_structure_logic(mock_parser_host):
     compute = DummyCompute(mock_parser_host)
     mol = Chem.MolFromSmiles("C")
-    AllChem.Compute2DCoords(mol) 
+    AllChem.Compute2DCoords(mol)
     compute.current_mol = mol
     compute.optimize_3d_structure()
     assert compute.statusBar().showMessage.called
+
 
 def test_on_calculation_finished_worker_id_mismatch(mock_parser_host):
     compute = DummyCompute(mock_parser_host)
@@ -147,51 +193,76 @@ def test_on_calculation_finished_worker_id_mismatch(mock_parser_host):
     compute.on_calculation_finished(result)
     assert compute.current_mol is None
 
+
 def test_trigger_conversion_chemistry_problems(mock_parser_host):
     """Test trigger_conversion when Chem.DetectChemistryProblems finds issues."""
     compute = DummyCompute(mock_parser_host)
     mol = Chem.MolFromSmiles("C")
     atom = mol.GetAtomWithIdx(0)
     atom.SetIntProp("_original_atom_id", 1)
-    compute.data.atoms = {1: {'symbol': 'C', 'item': MagicMock()}}
-    
+    compute.data.atoms = {1: {"symbol": "C", "item": MagicMock()}}
+
     problem = MagicMock()
     problem.GetAtomIdx.return_value = 0
-    with patch('rdkit.Chem.DetectChemistryProblems', return_value=[problem]), \
-         patch.object(compute.data, 'to_rdkit_mol', return_value=mol):
+    with (
+        patch("rdkit.Chem.DetectChemistryProblems", return_value=[problem]),
+        patch.object(compute.data, "to_rdkit_mol", return_value=mol),
+    ):
         compute.trigger_conversion()
-        all_messages = [str(call[0][0]) for call in compute.statusBar().showMessage.call_args_list if call[0]]
+        all_messages = [
+            str(call[0][0])
+            for call in compute.statusBar().showMessage.call_args_list
+            if call[0]
+        ]
         assert any("chemistry problem(s) found" in msg for msg in all_messages)
+
 
 def test_trigger_conversion_sanitize_error(mock_parser_host):
     """Test trigger_conversion when Chem.SanitizeMol fails."""
     compute = DummyCompute(mock_parser_host)
     mol = Chem.MolFromSmiles("C")
     # MUST populate atoms to avoid empty trigger return
-    compute.data.atoms = {1: {'symbol': 'C', 'item': MagicMock()}}
-    
-    with patch('rdkit.Chem.DetectChemistryProblems', return_value=[]), \
-         patch('rdkit.Chem.SanitizeMol', side_effect=ValueError("Sanitize failed")), \
-         patch.object(compute.data, 'to_rdkit_mol', return_value=mol):
+    compute.data.atoms = {1: {"symbol": "C", "item": MagicMock()}}
+
+    with (
+        patch("rdkit.Chem.DetectChemistryProblems", return_value=[]),
+        patch("rdkit.Chem.SanitizeMol", side_effect=ValueError("Sanitize failed")),
+        patch.object(compute.data, "to_rdkit_mol", return_value=mol),
+    ):
         compute.trigger_conversion()
-        all_messages = [str(call[0][0]) for call in compute.statusBar().showMessage.call_args_list if call[0]]
+        all_messages = [
+            str(call[0][0])
+            for call in compute.statusBar().showMessage.call_args_list
+            if call[0]
+        ]
         assert any("Error: Invalid chemical structure." in msg for msg in all_messages)
+
 
 def test_trigger_conversion_multiple_frags(mock_parser_host):
     """Test trigger_conversion with multiple fragments."""
     compute = DummyCompute(mock_parser_host)
     mol = Chem.MolFromSmiles("C.C")
     # MUST populate atoms to avoid empty trigger return
-    compute.data.atoms = {1: {'symbol': 'C', 'item': MagicMock()}, 2: {'symbol': 'C', 'item': MagicMock()}}
-    
-    with patch('rdkit.Chem.DetectChemistryProblems', return_value=[]), \
-         patch('rdkit.Chem.SanitizeMol'), \
-         patch.object(compute.data, 'to_rdkit_mol', return_value=mol), \
-         patch('moleditpy.modules.main_window_compute.CalculationWorker'), \
-         patch('moleditpy.modules.main_window_compute.QThread'):
+    compute.data.atoms = {
+        1: {"symbol": "C", "item": MagicMock()},
+        2: {"symbol": "C", "item": MagicMock()},
+    }
+
+    with (
+        patch("rdkit.Chem.DetectChemistryProblems", return_value=[]),
+        patch("rdkit.Chem.SanitizeMol"),
+        patch.object(compute.data, "to_rdkit_mol", return_value=mol),
+        patch("moleditpy.modules.main_window_compute.CalculationWorker"),
+        patch("moleditpy.modules.main_window_compute.QThread"),
+    ):
         compute.trigger_conversion()
-        all_messages = [str(call[0][0]) for call in compute.statusBar().showMessage.call_args_list if call[0]]
+        all_messages = [
+            str(call[0][0])
+            for call in compute.statusBar().showMessage.call_args_list
+            if call[0]
+        ]
         assert any("collision detection" in msg for msg in all_messages)
+
 
 def test_on_calculation_finished_single_mol_legacy(mock_parser_host):
     """Test on_calculation_finished with a single mol (legacy result format)."""
@@ -200,12 +271,16 @@ def test_on_calculation_finished_single_mol_legacy(mock_parser_host):
     compute.on_calculation_finished(mol)
     assert compute.current_mol == mol
 
+
 def test_on_calculation_error_legacy_payload(mock_parser_host):
     """Test on_calculation_error with a string (legacy error format)."""
     compute = DummyCompute(mock_parser_host)
     compute.on_calculation_error("Fatal Error")
-    assert any("Fatal Error" in str(call[0][0]) for call in compute.statusBar().showMessage.call_args_list if call[0])
-
+    assert any(
+        "Fatal Error" in str(call[0][0])
+        for call in compute.statusBar().showMessage.call_args_list
+        if call[0]
+    )
 
 
 def test_optimize_3d_temp_method_override(mock_parser_host):
@@ -214,15 +289,18 @@ def test_optimize_3d_temp_method_override(mock_parser_host):
     mol = Chem.MolFromSmiles("C")
     AllChem.EmbedMolecule(mol, randomSeed=42)
     compute.current_mol = mol
-    compute.optimization_method = 'UFF_RDKIT'
-    compute._temp_optimization_method = 'MMFF_RDKIT'
-    
-    with patch('rdkit.Chem.AllChem.MMFFOptimizeMolecule', return_value=0) as mock_mmff:
+    compute.optimization_method = "UFF_RDKIT"
+    compute._temp_optimization_method = "MMFF_RDKIT"
+
+    with patch("rdkit.Chem.AllChem.MMFFOptimizeMolecule", return_value=0) as mock_mmff:
         compute.optimize_3d_structure()
         # Verify that MMFF was called (temp override used), not UFF
         assert mock_mmff.called
         msgs = compute.get_status_messages()
-        assert any("Optimizing" in msg for msg in msgs) or any("conformer" in msg for msg in msgs)
+        assert any("Optimizing" in msg for msg in msgs) or any(
+            "conformer" in msg for msg in msgs
+        )
+
 
 def test_optimize_3d_mmff94s_success(mock_parser_host):
     """Test MMFF94s optimization succeeds."""
@@ -230,11 +308,13 @@ def test_optimize_3d_mmff94s_success(mock_parser_host):
     mol = Chem.MolFromSmiles("C")
     AllChem.EmbedMolecule(mol, randomSeed=42)
     compute.current_mol = mol
-    compute.optimization_method = 'MMFF_RDKIT'
-    
-    with patch('rdkit.Chem.AllChem.MMFFOptimizeMolecule', return_value=0):
+    compute.optimization_method = "MMFF_RDKIT"
+
+    with patch("rdkit.Chem.AllChem.MMFFOptimizeMolecule", return_value=0):
         compute.optimize_3d_structure()
-        print(f"DEBUG: showMessage calls: {compute.statusBar().showMessage.call_args_list}")
+        print(
+            f"DEBUG: showMessage calls: {compute.statusBar().showMessage.call_args_list}"
+        )
         print(f"DEBUG: messages extracted: {compute.get_status_messages()}")
         assert any("Optimizing" in msg for msg in compute.get_status_messages())
 
@@ -245,22 +325,24 @@ def test_optimize_3d_uff_success(mock_parser_host):
     mol = Chem.MolFromSmiles("C")
     AllChem.EmbedMolecule(mol, randomSeed=42)
     compute.current_mol = mol
-    compute.optimization_method = 'UFF_RDKIT'
-    
-    with patch('rdkit.Chem.AllChem.UFFOptimizeMolecule', return_value=0):
+    compute.optimization_method = "UFF_RDKIT"
+
+    with patch("rdkit.Chem.AllChem.UFFOptimizeMolecule", return_value=0):
         compute.optimize_3d_structure()
         assert any("Optimizing" in msg for msg in compute.get_status_messages())
+
 
 def test_optimize_3d_no_conformer(mock_parser_host):
     """Test optimize_3d_structure when molecule has no conformer."""
     compute = DummyCompute(mock_parser_host)
     mol = Chem.MolFromSmiles("C")
     compute.current_mol = mol
-    compute.optimization_method = 'MMFF_RDKIT'
-    
+    compute.optimization_method = "MMFF_RDKIT"
+
     compute.optimize_3d_structure()
     messages = compute.get_status_messages()
     assert any("No conformer found" in msg for msg in messages)
+
 
 def test_optimize_3d_mmff_exception_handling(mock_parser_host):
     """Test exception handling in MMFF optimization."""
@@ -268,15 +350,20 @@ def test_optimize_3d_mmff_exception_handling(mock_parser_host):
     mol = Chem.MolFromSmiles("C")
     AllChem.EmbedMolecule(mol, randomSeed=42)
     compute.current_mol = mol
-    compute.optimization_method = 'MMFF_RDKIT'
-    
+    compute.optimization_method = "MMFF_RDKIT"
+
     # Test exception in MMFFOptimizeMolecule
-    with patch('rdkit.Chem.AllChem.MMFFOptimizeMolecule', side_effect=Exception("MMFF error")):
+    with patch(
+        "rdkit.Chem.AllChem.MMFFOptimizeMolecule", side_effect=Exception("MMFF error")
+    ):
         compute.optimize_3d_structure()
         msgs = compute.get_status_messages()
         # Ensure it didn't fall through to the "method not available" else block
         assert not any("not available" in msg for msg in msgs)
-        assert any("error" in msg.lower() for msg in msgs) or any("failed" in msg.lower() for msg in msgs)
+        assert any("error" in msg.lower() for msg in msgs) or any(
+            "failed" in msg.lower() for msg in msgs
+        )
+
 
 def test_optimize_3d_uff_exception_handling(mock_parser_host):
     """Test exception handling in UFF optimization."""
@@ -284,14 +371,19 @@ def test_optimize_3d_uff_exception_handling(mock_parser_host):
     mol = Chem.MolFromSmiles("C")
     AllChem.EmbedMolecule(mol, randomSeed=42)
     compute.current_mol = mol
-    compute.optimization_method = 'UFF_RDKIT'
-    
+    compute.optimization_method = "UFF_RDKIT"
+
     # Test exception in UFFOptimizeMolecule
-    with patch('rdkit.Chem.AllChem.UFFOptimizeMolecule', side_effect=Exception("UFF error")):
+    with patch(
+        "rdkit.Chem.AllChem.UFFOptimizeMolecule", side_effect=Exception("UFF error")
+    ):
         compute.optimize_3d_structure()
         msgs = compute.get_status_messages()
         assert not any("not available" in msg for msg in msgs)
-        assert any("error" in msg.lower() for msg in msgs) or any("failed" in msg.lower() for msg in msgs)
+        assert any("error" in msg.lower() for msg in msgs) or any(
+            "failed" in msg.lower() for msg in msgs
+        )
+
 
 def test_optimize_3d_plugin_method(mock_parser_host):
     """Test plugin optimization method."""
@@ -299,31 +391,38 @@ def test_optimize_3d_plugin_method(mock_parser_host):
     mol = Chem.MolFromSmiles("C")
     AllChem.EmbedMolecule(mol, randomSeed=42)
     compute.current_mol = mol
-    
+
     mock_callback = MagicMock(return_value=True)
     compute.plugin_manager = MagicMock()
-    compute.plugin_manager.optimization_methods = {'CUSTOM': {'callback': mock_callback}}
-    compute.optimization_method = 'CUSTOM'
-    
+    compute.plugin_manager.optimization_methods = {
+        "CUSTOM": {"callback": mock_callback}
+    }
+    compute.optimization_method = "CUSTOM"
+
     compute.optimize_3d_structure()
     msgs = compute.get_status_messages()
     assert not any("not available" in msg for msg in msgs)
     assert mock_callback.called
+
+
 def test_optimize_3d_plugin_failure(mock_parser_host):
     """Test plugin optimization returning False."""
     compute = DummyCompute(mock_parser_host)
     mol = Chem.MolFromSmiles("C")
     AllChem.EmbedMolecule(mol, randomSeed=42)
     compute.current_mol = mol
-    
-    mock_callback = MagicMock(return_value=False) # Failure
+
+    mock_callback = MagicMock(return_value=False)  # Failure
     compute.plugin_manager = MagicMock()
-    compute.plugin_manager.optimization_methods = {'CUSTOM': {'callback': mock_callback}}
-    compute.optimization_method = 'CUSTOM'
-    
+    compute.plugin_manager.optimization_methods = {
+        "CUSTOM": {"callback": mock_callback}
+    }
+    compute.optimization_method = "CUSTOM"
+
     compute.optimize_3d_structure()
     msgs = compute.get_status_messages()
     assert any("returned failure" in msg for msg in msgs)
+
 
 def test_optimize_3d_mmff_fallback_success(mock_parser_host):
     """Test MMFF fallback to ForceField API when basic optimization fails."""
@@ -331,17 +430,20 @@ def test_optimize_3d_mmff_fallback_success(mock_parser_host):
     mol = Chem.MolFromSmiles("C")
     AllChem.EmbedMolecule(mol, randomSeed=42)
     compute.current_mol = mol
-    compute.optimization_method = 'MMFF_RDKIT'
-    
+    compute.optimization_method = "MMFF_RDKIT"
+
     # Mock MMFFOptimizeMolecule to return 1 (non-zero/fail)
-    with patch('rdkit.Chem.AllChem.MMFFOptimizeMolecule', return_value=1):
+    with patch("rdkit.Chem.AllChem.MMFFOptimizeMolecule", return_value=1):
         # Mock FF Minimize to return 0 (success)
         mock_ff = MagicMock()
         mock_ff.Minimize.return_value = 0
-        with patch('rdkit.Chem.AllChem.MMFFGetMoleculeForceField', return_value=mock_ff):
+        with patch(
+            "rdkit.Chem.AllChem.MMFFGetMoleculeForceField", return_value=mock_ff
+        ):
             compute.optimize_3d_structure()
             # Success redraw should happen
             assert any("Optimizing" in msg for msg in compute.get_status_messages())
+
 
 def test_optimize_3d_uff_fallback_failure(mock_parser_host):
     """Test UFF fallback failure path."""
@@ -349,15 +451,16 @@ def test_optimize_3d_uff_fallback_failure(mock_parser_host):
     mol = Chem.MolFromSmiles("C")
     AllChem.EmbedMolecule(mol, randomSeed=42)
     compute.current_mol = mol
-    compute.optimization_method = 'UFF_RDKIT'
-    
-    with patch('rdkit.Chem.AllChem.UFFOptimizeMolecule', return_value=1):
+    compute.optimization_method = "UFF_RDKIT"
+
+    with patch("rdkit.Chem.AllChem.UFFOptimizeMolecule", return_value=1):
         mock_ff = MagicMock()
-        mock_ff.Minimize.return_value = 1 # Fallback also fails
-        with patch('rdkit.Chem.AllChem.UFFGetMoleculeForceField', return_value=mock_ff):
+        mock_ff.Minimize.return_value = 1  # Fallback also fails
+        with patch("rdkit.Chem.AllChem.UFFGetMoleculeForceField", return_value=mock_ff):
             compute.optimize_3d_structure()
             msgs = compute.get_status_messages()
             assert any("UFF minimize returned non-zero status" in msg for msg in msgs)
+
 
 def test_optimize_3d_unavailable_method(mock_parser_host):
     """Test error when optimization method is unavailable."""
@@ -365,53 +468,68 @@ def test_optimize_3d_unavailable_method(mock_parser_host):
     mol = Chem.MolFromSmiles("C")
     AllChem.EmbedMolecule(mol, randomSeed=42)
     compute.current_mol = mol
-    compute.optimization_method = 'INVALID_METHOD'
-    
+    compute.optimization_method = "INVALID_METHOD"
+
     compute.optimize_3d_structure()
     messages = compute.get_status_messages()
     assert any("Selected optimization" in msg for msg in messages)
+
 
 def test_on_calculation_finished_collision_single_frag(mock_parser_host):
     """Test collision logic is skipped for single fragment."""
     compute = DummyCompute(mock_parser_host)
     mol = Chem.MolFromSmiles("C")
     AllChem.EmbedMolecule(mol, randomSeed=42)
-    
-    with patch.object(compute, 'adjust_molecule_positions_to_avoid_collisions') as mock_adjust:
+
+    with patch.object(
+        compute, "adjust_molecule_positions_to_avoid_collisions"
+    ) as mock_adjust:
         compute.on_calculation_finished(mol)
         assert not mock_adjust.called
-        assert not any("Detecting collisions" in msg for msg in compute.get_status_messages())
+        assert not any(
+            "Detecting collisions" in msg for msg in compute.get_status_messages()
+        )
+
 
 def test_on_calculation_finished_collision_multi_frag(mock_parser_host):
     """Test collision logic is triggered for multiple fragments."""
     compute = DummyCompute(mock_parser_host)
     mol = Chem.MolFromSmiles("C.C")
     AllChem.EmbedMolecule(mol, randomSeed=42)
-    
-    with patch.object(compute, 'adjust_molecule_positions_to_avoid_collisions') as mock_adjust:
+
+    with patch.object(
+        compute, "adjust_molecule_positions_to_avoid_collisions"
+    ) as mock_adjust:
         compute.on_calculation_finished(mol)
         assert mock_adjust.called
         msgs = compute.get_status_messages()
         assert any("Detecting collisions" in msg for msg in msgs)
         assert any("collision avoidance" in msg for msg in msgs)
 
+
 def test_on_calculation_finished_collision_exception(mock_parser_host):
     """Test grace during collision detection exception."""
     compute = DummyCompute(mock_parser_host)
     mol = Chem.MolFromSmiles("C.C")
     AllChem.EmbedMolecule(mol, randomSeed=42)
-    
-    with patch.object(compute, 'adjust_molecule_positions_to_avoid_collisions', side_effect=Exception("Collision Error")):
+
+    with patch.object(
+        compute,
+        "adjust_molecule_positions_to_avoid_collisions",
+        side_effect=Exception("Collision Error"),
+    ):
         # Should not raise exception
         compute.on_calculation_finished(mol)
         # Verify it at least tried
         msgs = compute.get_status_messages()
         assert any("Detecting collisions" in msg for msg in msgs)
 
+
 def test_molecular_data_radical_transfer():
     """Test that radical electrons are transferred correctly to RDKit mol."""
     from moleditpy.modules.molecular_data import MolecularData
     from PyQt6.QtCore import QPointF
+
     data = MolecularData()
     # Adding a carbon with 1 radical electron
     data.add_atom("C", QPointF(0, 0), radical=1)
@@ -419,69 +537,72 @@ def test_molecular_data_radical_transfer():
     assert mol is not None
     assert mol.GetAtomWithIdx(0).GetNumRadicalElectrons() == 1
 
+
 def test_app_state_radical_and_constraint_preservation(mock_parser_host):
     """Test that radicals and constraints are preserved through state round-trip."""
     from moleditpy.modules.main_window_app_state import MainWindowAppState
     from moleditpy.modules.molecular_data import MolecularData
     from moleditpy.modules.atom_item import AtomItem
     from PyQt6.QtCore import QPointF
-    
+
     compute = DummyCompute(mock_parser_host)
-    compute.data = MolecularData() # Use real MolecularData for this test
-    
+    compute.data = MolecularData()  # Use real MolecularData for this test
+
     # Setup initial state with radical and constraint
     pos = QPointF(10, 20)
     aid = compute.data.add_atom("C", pos, radical=2)
     # Manually add AtomItem because get_current_state expects it
     item = AtomItem(aid, "C", pos, radical=2)
-    compute.data.atoms[aid]['item'] = item
-    
+    compute.data.atoms[aid]["item"] = item
+
     compute.constraints_3d = [("DISTANCE", (0, 1), 1.5, 1e5)]
-    
+
     # MainWindowAppState is a mixin class, we call its methods by passing 'compute' as self
     state = MainWindowAppState.get_current_state(compute)
-    
+
     # Verify state content
-    assert state['atoms'][0]['radical'] == 2
+    assert state["atoms"][0]["radical"] == 2
     # The code converts tuple to list for JSON compatibility in state
-    assert state['constraints_3d'][0] == ["DISTANCE", [0, 1], 1.5, 1e5]
-    
+    assert state["constraints_3d"][0] == ["DISTANCE", [0, 1], 1.5, 1e5]
+
     # Clear and Restore
     compute.data.atoms.clear()
     compute.constraints_3d = []
     # Mock scene.addItem as it is called in set_state_from_data
     compute.scene = MagicMock()
-    
+
     MainWindowAppState.set_state_from_data(compute, state)
-    
+
     # Verify restoration
     assert 0 in compute.data.atoms
-    assert compute.data.atoms[0]['radical'] == 2
+    assert compute.data.atoms[0]["radical"] == 2
     # set_state_from_data converts back to tuple
     assert compute.constraints_3d == [("DISTANCE", (0, 1), 1.5, 1e5)]
+
 
 def test_app_state_original_atom_id_preservation(mock_parser_host):
     """Test that _original_atom_id is preserved in 3D molecule state round-trip."""
     from moleditpy.modules.main_window_app_state import MainWindowAppState
-    
+
     compute = DummyCompute(mock_parser_host)
     mol = Chem.MolFromSmiles("C")
     AllChem.EmbedMolecule(mol)
     mol.GetAtomWithIdx(0).SetIntProp("_original_atom_id", 123)
     compute.current_mol = mol
-    
+
     # Get state
     state = MainWindowAppState.get_current_state(compute)
-    assert 123 in state['mol_3d_atom_ids']
-    
+    assert 123 in state["mol_3d_atom_ids"]
+
     # Clear and Restore
     compute.current_mol = None
     MainWindowAppState.set_state_from_data(compute, state)
-    
+
     # Verify restoration
     assert compute.current_mol is not None
     assert compute.current_mol.GetAtomWithIdx(0).HasProp("_original_atom_id")
     assert compute.current_mol.GetAtomWithIdx(0).GetIntProp("_original_atom_id") == 123
+
 
 def test_optimize_3d_method_persistence(mock_parser_host):
     """Test that the successful optimization method is recorded."""
@@ -489,122 +610,138 @@ def test_optimize_3d_method_persistence(mock_parser_host):
     mol = Chem.MolFromSmiles("C")
     AllChem.EmbedMolecule(mol)
     compute.current_mol = mol
-    compute.optimization_method = 'MMFF_RDKIT'
-    
+    compute.optimization_method = "MMFF_RDKIT"
+
     # Mocking AllChem.MMFFOptimizeMolecule to succeed (returns 0)
-    with patch('rdkit.Chem.AllChem.MMFFOptimizeMolecule', return_value=0):
+    with patch("rdkit.Chem.AllChem.MMFFOptimizeMolecule", return_value=0):
         compute.optimize_3d_structure()
-        assert compute.last_successful_optimization_method == 'MMFF94s'
+        assert compute.last_successful_optimization_method == "MMFF94s"
+
 
 def test_trigger_conversion_early_exits(mock_parser_host):
     """Test early exits in trigger_conversion (empty mol, etc.)."""
     from PyQt6.QtCore import QPointF
+
     compute = DummyCompute(mock_parser_host)
     compute.data.atoms = {}
     compute.plotter = MagicMock()
-    
+
     # 1. Empty data
     compute.trigger_conversion()
     assert compute.current_mol is None
     assert any("3D view cleared" in msg for msg in compute.get_status_messages())
-    
+
     # 2. RDKit conversion failure (triggers fallback check)
-    compute.data.add_atom("C", QPointF(0,0))
+    compute.data.add_atom("C", QPointF(0, 0))
     # Mock to_rdkit_mol to return None
-    with patch.object(compute.data, 'to_rdkit_mol', return_value=None):
-        with patch.object(compute, 'check_chemistry_problems_fallback') as mock_fallback:
+    with patch.object(compute.data, "to_rdkit_mol", return_value=None):
+        with patch.object(
+            compute, "check_chemistry_problems_fallback"
+        ) as mock_fallback:
             compute.trigger_conversion()
             assert mock_fallback.called
+
 
 @pytest.mark.skip(reason="Segfaults in headless environment")
 def test_check_chemistry_problems_fallback(mock_parser_host):
     """Test the manual valence check when RDKit fails."""
     # from moleditpy.modules.atom_item import AtomItem
     from PyQt6.QtCore import QPointF
+
     compute = DummyCompute(mock_parser_host)
-    
+
     # Setup a problematic atom: Carbon with 5 bonds
-    pos = QPointF(0,0)
+    pos = QPointF(0, 0)
     compute.data.add_atom("C", pos)
-    
+
     # Use Mock item to avoid Qt crash
     mock_item = MagicMock()
     mock_item.has_problem = False
     mock_item.pos.return_value = pos
-    compute.data.atoms[0]['item'] = mock_item
-    
+    compute.data.atoms[0]["item"] = mock_item
+
     # Mock bonds to have count 5
     compute.data.bonds = {
-        (0, 1): {'order': 2},
-        (0, 2): {'order': 1},
-        (0, 3): {'order': 1},
-        (0, 4): {'order': 1}
+        (0, 1): {"order": 2},
+        (0, 2): {"order": 1},
+        (0, 3): {"order": 1},
+        (0, 4): {"order": 1},
     }
     # Total bond count = 2+1+1+1 = 5
-    
+
     compute.check_chemistry_problems_fallback()
-    assert compute.data.atoms[0]['item'].has_problem == True
+    assert compute.data.atoms[0]["item"].has_problem == True
     msgs = compute.get_status_messages()
     assert any("chemistry problem" in msg and "valence" in msg for msg in msgs)
+
 
 def test_trigger_conversion_happy_path(mock_parser_host):
     """Test trigger_conversion follows the success path until worker setup."""
     from PyQt6.QtCore import QPointF
+
     compute = DummyCompute(mock_parser_host)
-    compute.data.add_atom("C", QPointF(0,0))
+    compute.data.add_atom("C", QPointF(0, 0))
     mol = Chem.MolFromSmiles("C")
-    
-    with patch.object(compute.data, 'to_rdkit_mol', return_value=mol):
-        with patch('rdkit.Chem.DetectChemistryProblems', return_value=[]):
-            with patch('rdkit.Chem.SanitizeMol'):
-                with patch.object(compute.data, 'to_mol_block', return_value= "M  V2000\n"):
+
+    with patch.object(compute.data, "to_rdkit_mol", return_value=mol):
+        with patch("rdkit.Chem.DetectChemistryProblems", return_value=[]):
+            with patch("rdkit.Chem.SanitizeMol"):
+                with patch.object(
+                    compute.data, "to_mol_block", return_value="M  V2000\n"
+                ):
                     # This should hit the main logic and proceed to worker creation
                     # We mock the signal to avoid real thread start
                     compute.start_calculation = MagicMock()
                     compute.worker_thread = MagicMock()
-                    
+
                     # Mock QThread to prevent actual thread creation in main_window_compute namespace
-                    with patch('moleditpy.modules.main_window_compute.QThread'):
+                    with patch("moleditpy.modules.main_window_compute.QThread"):
                         compute.trigger_conversion()
                         msgs = compute.get_status_messages()
                         assert any("Calculating 3D structure" in msg for msg in msgs)
 
+
 def test_trigger_conversion_stereo_enhancement(mock_parser_host):
     """Test trigger_conversion stereo enhancement logic for E/Z bonds."""
     from PyQt6.QtCore import QPointF, QTimer
+
     compute = DummyCompute(mock_parser_host)
-    compute.data.add_atom("C", QPointF(0,0))
+    compute.data.add_atom("C", QPointF(0, 0))
     # Molecule with a double bond
     mol = Chem.MolFromSmiles("CC=CC")
     bond = mol.GetBondWithIdx(1)
     bond.SetStereo(Chem.BondStereo.STEREOE)
-    
-    with patch.object(compute.data, 'to_rdkit_mol', return_value=mol):
+
+    with patch.object(compute.data, "to_rdkit_mol", return_value=mol):
         # Provide a properly formatted MOL block generated by RDKit to avoid warnings
         mol_block = Chem.MolToMolBlock(mol)
-        with patch.object(compute.data, 'to_mol_block', return_value=mol_block):
-            with patch('rdkit.Chem.DetectChemistryProblems', return_value=[]):
+        with patch.object(compute.data, "to_mol_block", return_value=mol_block):
+            with patch("rdkit.Chem.DetectChemistryProblems", return_value=[]):
                 # Mock QThread to prevent actual thread creation in main_window_compute namespace
-                with patch('moleditpy.modules.main_window_compute.QThread'):
+                with patch("moleditpy.modules.main_window_compute.QThread"):
                     # Mock QTimer.singleShot to verify it's called to start the worker
-                    with patch('PyQt6.QtCore.QTimer.singleShot') as mock_timer:
+                    with patch("PyQt6.QtCore.QTimer.singleShot") as mock_timer:
                         compute.trigger_conversion()
                         assert mock_timer.called
+
 
 def test_set_optimization_method(mock_parser_host):
     """Test set_optimization_method updates state and settings."""
     compute = DummyCompute(mock_parser_host)
     compute.settings = {}
-    
+
     # 1. Valid method
     compute.set_optimization_method("MMFF94_RDKit")
     assert compute.optimization_method == "MMFF94_RDKIT"
-    assert compute.settings['optimization_method'] == "MMFF94_RDKIT"
-    
+    assert compute.settings["optimization_method"] == "MMFF94_RDKIT"
+
     # 2. Invalid method
     compute.set_optimization_method("MAGIC_METHOD")
-    assert compute.optimization_method == "MMFF94_RDKIT" # Unchanged
-    assert any("Unknown 3D optimization method" in msg for msg in compute.get_status_messages())
+    assert compute.optimization_method == "MMFF94_RDKIT"  # Unchanged
+    assert any(
+        "Unknown 3D optimization method" in msg for msg in compute.get_status_messages()
+    )
+
 
 def test_halt_conversion(mock_parser_host):
     """Test halt_conversion clears active workers and restores UI."""
@@ -612,12 +749,13 @@ def test_halt_conversion(mock_parser_host):
     compute.active_worker_ids = {1, 2}
     compute.halt_ids = set()
     compute.convert_button = MagicMock()
-    
+
     compute.halt_conversion()
     assert compute.active_worker_ids == set()
     assert 1 in compute.halt_ids
     assert compute.convert_button.setText.called
     # Note: halt_conversion doesn't show status message directly
+
 
 @pytest.mark.skip(reason="Segfaults in headless environment")
 def test_on_calculation_error_updated(mock_parser_host):
@@ -631,42 +769,43 @@ def test_on_calculation_error_updated(mock_parser_host):
     assert any("Error: Test Error" in msg for msg in msgs)
     assert worker_id not in compute.active_worker_ids
 
+
 @pytest.mark.skip(reason="Segfaults in headless environment despite mocking")
 def test_trigger_conversion_chemistry_problem_detection(mock_parser_host):
     """Test trigger_conversion detects and flags chemistry problems (valence)."""
     from PyQt6.QtCore import QPointF
     # Avoid importing AtomItem to prevent QGraphicsItem instantiation in headless test
     # from moleditpy.modules.atom_item import AtomItem
-    
+
     compute = DummyCompute(mock_parser_host)
-    
+
     # Create a molecule that will fail sanitization/valence check (e.g. overvalent Nitrogen)
-    compute.data.add_atom("N", QPointF(0,0))
-    
+    compute.data.add_atom("N", QPointF(0, 0))
+
     # Use a mock item instead of real AtomItem to avoid QGraphicsItem/Scene crashes
     mock_item = MagicMock()
     mock_item.has_problem = False
-    mock_item.pos.return_value = QPointF(0,0)
-    compute.data.atoms[0]['item'] = mock_item
-    
+    mock_item.pos.return_value = QPointF(0, 0)
+    compute.data.atoms[0]["item"] = mock_item
+
     for i in range(1, 6):
         compute.data.add_atom("H", QPointF(i, 0))
         # Ensure neighbor atoms also have mock items
         h_item = MagicMock()
         h_item.pos.return_value = QPointF(i, 0)
-        compute.data.atoms[i]['item'] = h_item
-        compute.data.bonds[(0, i)] = {'order': 1}
-    
+        compute.data.atoms[i]["item"] = h_item
+        compute.data.bonds[(0, i)] = {"order": 1}
+
     # RDKit DetectChemistryProblems will catch this
     # We mock to_rdkit_mol to return None, simulating a conversion failure safely
     # without triggering actual RDKit sanitization errors that might crash the process.
-    with patch.object(compute.data, 'to_rdkit_mol', return_value=None):
+    with patch.object(compute.data, "to_rdkit_mol", return_value=None):
         compute.trigger_conversion()
-    
+
     # It should hit either DetectChemistryProblems or the fallback if mol is None
     msgs = compute.get_status_messages()
     assert any("chemistry problem(s) found" in msg for msg in msgs)
-    
+
     # Verify the item was flagged
     assert mock_item.has_problem == True
 
@@ -675,125 +814,140 @@ def test_trigger_conversion_chemistry_problem_detection(mock_parser_host):
     compute.data.bonds.clear()
     del compute
 
+
 def test_trigger_conversion_fragment_message_exact(mock_parser_host):
     """Test verification of the exact status bar message for multiple fragments."""
     compute = DummyCompute(mock_parser_host)
-    mol = Chem.MolFromSmiles("C.C.O") # 3 fragments
-    compute.data.atoms = {1: {'symbol': 'C', 'item': MagicMock()}, 2: {'symbol': 'C', 'item': MagicMock()}, 3: {'symbol': 'O', 'item': MagicMock()}}
-    
-    with patch('rdkit.Chem.DetectChemistryProblems', return_value=[]), \
-         patch('rdkit.Chem.SanitizeMol'), \
-         patch.object(compute.data, 'to_rdkit_mol', return_value=mol), \
-         patch('moleditpy.modules.main_window_compute.CalculationWorker'), \
-         patch('moleditpy.modules.main_window_compute.QThread'):
+    mol = Chem.MolFromSmiles("C.C.O")  # 3 fragments
+    compute.data.atoms = {
+        1: {"symbol": "C", "item": MagicMock()},
+        2: {"symbol": "C", "item": MagicMock()},
+        3: {"symbol": "O", "item": MagicMock()},
+    }
+
+    with (
+        patch("rdkit.Chem.DetectChemistryProblems", return_value=[]),
+        patch("rdkit.Chem.SanitizeMol"),
+        patch.object(compute.data, "to_rdkit_mol", return_value=mol),
+        patch("moleditpy.modules.main_window_compute.CalculationWorker"),
+        patch("moleditpy.modules.main_window_compute.QThread"),
+    ):
         compute.trigger_conversion()
-        all_messages = [str(call[0][0]) for call in compute.statusBar().showMessage.call_args_list if call[0]]
+        all_messages = [
+            str(call[0][0])
+            for call in compute.statusBar().showMessage.call_args_list
+            if call[0]
+        ]
         # Should say "Converting 3 molecules..."
         assert any("Converting 3 molecules" in msg for msg in all_messages)
+
 
 def test_trigger_conversion_to_mol_block_priority(mock_parser_host):
     """Test that data.to_mol_block() is used preferentially over RDKit's generation."""
     compute = DummyCompute(mock_parser_host)
-    compute.data.atoms = {1: {'symbol': 'C', 'item': MagicMock()}}
+    compute.data.atoms = {1: {"symbol": "C", "item": MagicMock()}}
     mol = Chem.MolFromSmiles("C")
-    
+
     # Unique string to identify our custom block
     custom_block = "M  V2000\nCUSTOM_BLOCK_CONTENT"
-    
-    with patch.object(compute.data, 'to_rdkit_mol', return_value=mol), \
-         patch('rdkit.Chem.DetectChemistryProblems', return_value=[]), \
-         patch('rdkit.Chem.SanitizeMol'), \
-         patch.object(compute.data, 'to_mol_block', return_value=custom_block) as mock_to_block, \
-         patch('rdkit.Chem.MolToMolBlock') as mock_rdkit_block, \
-         patch('moleditpy.modules.main_window_compute.CalculationWorker') as MockWorker, \
-         patch('moleditpy.modules.main_window_compute.QThread'):
-        
+
+    with (
+        patch.object(compute.data, "to_rdkit_mol", return_value=mol),
+        patch("rdkit.Chem.DetectChemistryProblems", return_value=[]),
+        patch("rdkit.Chem.SanitizeMol"),
+        patch.object(
+            compute.data, "to_mol_block", return_value=custom_block
+        ) as mock_to_block,
+        patch("rdkit.Chem.MolToMolBlock") as mock_rdkit_block,
+        patch("moleditpy.modules.main_window_compute.CalculationWorker") as MockWorker,
+        patch("moleditpy.modules.main_window_compute.QThread"),
+    ):
         # Setup worker mock to capture the start_work signal payload
         mock_worker_instance = MockWorker.return_value
         mock_start_work = MagicMock()
         mock_worker_instance.start_work = mock_start_work
-        
+
         # We need to capture the lambda passed to QTimer.singleShot because that's what triggers start_work
-        with patch('PyQt6.QtCore.QTimer.singleShot') as mock_timer:
+        with patch("PyQt6.QtCore.QTimer.singleShot") as mock_timer:
             compute.trigger_conversion()
-            
+
             # Verify to_mol_block was called
             assert mock_to_block.called
             # Verify RDKit's block generation was NOT called (or at least our result was used)
             assert not mock_rdkit_block.called
-            
+
             # Extract the lambda from QTimer.singleShot(10, lambda ...)
             args, _ = mock_timer.call_args
             assert len(args) >= 2
             callback = args[1]
-            
+
             # Execute the callback to trigger the signal emit on our mock
             callback()
-            
+
             # Verify the payload sent to worker contains our custom block
             call_args = mock_start_work.emit.call_args
             assert call_args is not None
             sent_block = call_args[0][0]
             assert sent_block == custom_block
 
+
 def test_trigger_conversion_ez_stereo_injection(mock_parser_host):
     """Test that M CFG lines are injected for E/Z stereo bonds."""
     compute = DummyCompute(mock_parser_host)
-    
+
     # Create valid E-isomer (trans-2-butene)
-    mol = Chem.MolFromSmiles("C/C=C/C") 
+    mol = Chem.MolFromSmiles("C/C=C/C")
     mol.GetAtomWithIdx(0).SetIntProp("_original_atom_id", 1)
     mol.GetAtomWithIdx(1).SetIntProp("_original_atom_id", 2)
     mol.GetAtomWithIdx(2).SetIntProp("_original_atom_id", 3)
     mol.GetAtomWithIdx(3).SetIntProp("_original_atom_id", 4)
-    
+
     # Setup data to match
     compute.data.atoms = {
-        1: {'symbol': 'C', 'item': MagicMock()},
-        2: {'symbol': 'C', 'item': MagicMock()},
-        3: {'symbol': 'C', 'item': MagicMock()},
-        4: {'symbol': 'C', 'item': MagicMock()}
+        1: {"symbol": "C", "item": MagicMock()},
+        2: {"symbol": "C", "item": MagicMock()},
+        3: {"symbol": "C", "item": MagicMock()},
+        4: {"symbol": "C", "item": MagicMock()},
     }
-    
+
     # Bond between 2 and 3 is the double bond
     # stereo=3 (Z) or 4 (E). Let's use 4 (E) -> CFG value 2
     # RDKit bond index for this might be 1 (0-1, 1-2, 2-3)
     compute.data.bonds = {
-        (2, 3): {'stereo': 4, 'order': 2},
-        (1, 2): {'order': 1},
-        (3, 4): {'order': 1}
+        (2, 3): {"stereo": 4, "order": 2},
+        (1, 2): {"order": 1},
+        (3, 4): {"order": 1},
     }
-    
+
     # A mocked MOL block that we pretend came from our data
     base_block = "M  V2000\nM  END"
-    
-    with patch.object(compute.data, 'to_rdkit_mol', return_value=mol), \
-         patch('rdkit.Chem.DetectChemistryProblems', return_value=[]), \
-         patch('rdkit.Chem.SanitizeMol'), \
-         patch.object(compute.data, 'to_mol_block', return_value=base_block), \
-         patch('moleditpy.modules.main_window_compute.CalculationWorker') as MockWorker, \
-         patch('moleditpy.modules.main_window_compute.QThread'):
-         
+
+    with (
+        patch.object(compute.data, "to_rdkit_mol", return_value=mol),
+        patch("rdkit.Chem.DetectChemistryProblems", return_value=[]),
+        patch("rdkit.Chem.SanitizeMol"),
+        patch.object(compute.data, "to_mol_block", return_value=base_block),
+        patch("moleditpy.modules.main_window_compute.CalculationWorker") as MockWorker,
+        patch("moleditpy.modules.main_window_compute.QThread"),
+    ):
         mock_worker_instance = MockWorker.return_value
         mock_start_work = MagicMock()
         mock_worker_instance.start_work = mock_start_work
-        
-        with patch('PyQt6.QtCore.QTimer.singleShot') as mock_timer:
+
+        with patch("PyQt6.QtCore.QTimer.singleShot") as mock_timer:
             compute.trigger_conversion()
-            
+
             # Execute callback
             args, _ = mock_timer.call_args
             callback = args[1]
             callback()
-            
+
             # Check sent block for M CFG
             call_args = mock_start_work.emit.call_args
             sent_block = call_args[0][0]
-            
+
             print(f"DEBUG: Sent Block:\\n{sent_block}")
             assert "M  CFG" in sent_block
             # Check for E isomer (val 2) on bond index 2 (RDKit idx 1 + 1)
             # 1-2 is usually index 1
             assert "M  CFG  1   2   2" in sent_block
-
-

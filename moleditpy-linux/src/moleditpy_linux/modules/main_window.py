@@ -15,8 +15,8 @@ import traceback
 # RDKit imports (explicit to satisfy flake8 and used features)
 try:
     pass
-except Exception:
-    pass
+except Exception:  # pragma: no cover
+    traceback.print_exc()
 
 # PyQt6 Modules
 from PyQt6.QtCore import pyqtSignal, pyqtSlot
@@ -24,7 +24,8 @@ from PyQt6.QtWidgets import QMainWindow
 
 try:
     from PyQt6 import sip as _sip  # type: ignore
-    _sip_isdeleted = getattr(_sip, 'isdeleted', None)
+
+    _sip_isdeleted = getattr(_sip, "isdeleted", None)
 except Exception:
     _sip = None
     _sip_isdeleted = None
@@ -60,16 +61,17 @@ except Exception:
     from modules.main_window_view_3d import MainWindowView3d
     from modules.main_window_view_loaders import MainWindowViewLoaders
 
-class MainWindow(QMainWindow):
 
+class MainWindow(QMainWindow):
     # start_calculation carries the MOL block and an options object (second arg)
     start_calculation = pyqtSignal(str, object)
-    def __init__(self, initial_file=None): # pragma: no cover
+
+    def __init__(self, initial_file=None):  # pragma: no cover
         super().__init__()
         # --- MOVED TO main_window_main_init.py ---
         self._is_restoring_state = False
 
-        class BoundFeature: # pragma: no cover
+        class BoundFeature:  # pragma: no cover
             """Bind a feature-class method calls to the MainWindow.
 
             Usage:
@@ -99,7 +101,7 @@ class MainWindow(QMainWindow):
                 This helper method allows callers to forward initialization
                 to the helper class implementation without touching _cls.
                 """
-                init_method = getattr(self._cls, '__init__', None)
+                init_method = getattr(self._cls, "__init__", None)
                 if callable(init_method):
                     return init_method(self._host, *a, **k)
                 return None
@@ -109,8 +111,12 @@ class MainWindow(QMainWindow):
         self.main_window_view_3d = BoundFeature(MainWindowView3d, self)
         self.main_window_compute = BoundFeature(MainWindowCompute, self)
         self.main_window_edit_actions = BoundFeature(MainWindowEditActions, self)
-        self.main_window_string_importers = BoundFeature(MainWindowStringImporters, self)
-        self.main_window_molecular_parsers = BoundFeature(MainWindowMolecularParsers, self)
+        self.main_window_string_importers = BoundFeature(
+            MainWindowStringImporters, self
+        )
+        self.main_window_molecular_parsers = BoundFeature(
+            MainWindowMolecularParsers, self
+        )
         self.main_window_view_loaders = BoundFeature(MainWindowViewLoaders, self)
         self.main_window_project_io = BoundFeature(MainWindowProjectIo, self)
         self.main_window_app_state = BoundFeature(MainWindowAppState, self)
@@ -120,21 +126,28 @@ class MainWindow(QMainWindow):
 
         try:
             self.main_window_main_init.init(initial_file)
-        except Exception:
+        except Exception:  # pragma: no cover
             traceback.print_exc()
 
         other_inits = [
-            'main_window_view_3d', 'main_window_ui_manager', 'main_window_compute',
-            'main_window_edit_actions', 'main_window_string_importers',
-            'main_window_molecular_parsers', 'main_window_view_loaders',
-            'main_window_project_io', 'main_window_app_state', 'main_window_export',
-            'main_window_dialog_manager', 'main_window_edit_3d'
+            "main_window_view_3d",
+            "main_window_ui_manager",
+            "main_window_compute",
+            "main_window_edit_actions",
+            "main_window_string_importers",
+            "main_window_molecular_parsers",
+            "main_window_view_loaders",
+            "main_window_project_io",
+            "main_window_app_state",
+            "main_window_export",
+            "main_window_dialog_manager",
+            "main_window_edit_3d",
         ]
         for name in other_inits:
             try:
                 getattr(self, name).init()
-            except Exception:
-                pass
+            except Exception:  # pragma: no cover
+                traceback.print_exc()
 
     def init_ui(self):
         # --- MOVED TO main_window_main_init.py ---
@@ -411,7 +424,9 @@ class MainWindow(QMainWindow):
 
     def create_multi_material_obj(self, meshes_with_colors, obj_path, mtl_path):
         # --- MOVED TO main_window_export.py ---
-        return self.main_window_export.create_multi_material_obj(meshes_with_colors, obj_path, mtl_path)
+        return self.main_window_export.create_multi_material_obj(
+            meshes_with_colors, obj_path, mtl_path
+        )
 
     def export_color_stl(self):
         # --- MOVED TO main_window_export.py ---
@@ -446,7 +461,7 @@ class MainWindow(QMainWindow):
         return self.main_window_dialog_manager.open_periodic_table_dialog()
 
     def set_atom_from_periodic_table(self, symbol):
-        self.set_mode(f'atom_{symbol}')
+        self.set_mode(f"atom_{symbol}")
 
     def clean_up_2d_structure(self):
         # --- MOVED TO main_window_edit_actions.py ---
@@ -458,7 +473,11 @@ class MainWindow(QMainWindow):
 
     def adjust_molecule_positions_to_avoid_collisions(self, mol, frags):
         # --- MOVED TO main_window_edit_actions.py ---
-        return self.main_window_edit_actions.adjust_molecule_positions_to_avoid_collisions(mol, frags)
+        return (
+            self.main_window_edit_actions.adjust_molecule_positions_to_avoid_collisions(
+                mol, frags
+            )
+        )
 
     def open_rotate_2d_dialog(self):
         # --- MOVED TO main_window_edit_actions.py ---
@@ -558,7 +577,9 @@ class MainWindow(QMainWindow):
 
     def _apply_chem_check_and_set_flags(self, mol, source_desc=None):
         # --- MOVED TO main_window_edit_actions.py ---
-        return self.main_window_edit_actions._apply_chem_check_and_set_flags(mol, source_desc=None)
+        return self.main_window_edit_actions._apply_chem_check_and_set_flags(
+            mol, source_desc=None
+        )
 
     def _clear_xyz_flags(self, mol=None):
         # --- MOVED TO main_window_edit_actions.py ---
@@ -714,7 +735,9 @@ class MainWindow(QMainWindow):
 
     def calculate_dihedral(self, atom1_idx, atom2_idx, atom3_idx, atom4_idx):
         # --- MOVED TO main_window_edit_3d.py ---
-        return self.main_window_edit_3d.calculate_dihedral(atom1_idx, atom2_idx, atom3_idx, atom4_idx)
+        return self.main_window_edit_3d.calculate_dihedral(
+            atom1_idx, atom2_idx, atom3_idx, atom4_idx
+        )
 
     def display_measurement_text(self, measurement_lines):
         # --- MOVED TO main_window_edit_3d.py ---
@@ -779,4 +802,3 @@ class MainWindow(QMainWindow):
     def remove_dialog_from_list(self, dialog):
         # --- MOVED TO main_window_edit_3d.py ---
         return self.main_window_edit_3d.remove_dialog_from_list(dialog)
-

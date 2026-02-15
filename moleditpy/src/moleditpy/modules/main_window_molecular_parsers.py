@@ -10,7 +10,6 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
-
 """
 main_window_molecular_parsers.py
 MainWindow (main_window.py) から分離されたモジュール
@@ -28,7 +27,9 @@ from rdkit.Chem import AllChem, Descriptors, rdGeometry, rdMolTransforms
 
 try:
     pass
-except Exception:
+except Exception:  # pragma: no cover
+    import traceback
+
     pass
 
 # PyQt6 Modules
@@ -47,7 +48,8 @@ from PyQt6.QtWidgets import (
 
 try:
     from PyQt6 import sip as _sip  # type: ignore
-    _sip_isdeleted = getattr(_sip, 'isdeleted', None)
+
+    _sip_isdeleted = getattr(_sip, "isdeleted", None)
 except Exception:
     _sip = None
     _sip_isdeleted = None
@@ -62,12 +64,18 @@ except Exception:
 
 # --- クラス定義 ---
 class MainWindowMolecularParsers(object):
-    """ main_window.py から分離された機能クラス """
+    """main_window.py から分離された機能クラス"""
+
     def load_mol_file(self, file_path=None):
         if not self.check_unsaved_changes():
-                return  # ユーザーがキャンセルした場合は何もしない
-        if not file_path: # pragma: no cover
-            file_path, _ = QFileDialog.getOpenFileName(self, "Import MOL File", "", "Chemical Files (*.mol *.sdf);;All Files (*)")
+            return  # ユーザーがキャンセルした場合は何もしない
+        if not file_path:  # pragma: no cover
+            file_path, _ = QFileDialog.getOpenFileName(
+                self,
+                "Import MOL File",
+                "",
+                "Chemical Files (*.mol *.sdf);;All Files (*)",
+            )
             if not file_path:
                 return
 
@@ -76,15 +84,17 @@ class MainWindowMolecularParsers(object):
             # If this is a single-record .mol file, read & fix the counts line
             # before parsing. For multi-record .sdf files, keep using SDMolSupplier.
             _, ext = os.path.splitext(file_path)
-            ext = ext.lower() if ext else ''
-            if ext == '.mol':
+            ext = ext.lower() if ext else ""
+            if ext == ".mol":
                 # Read file text, fix CTAB counts line if needed, then parse
-                with open(file_path, 'r', encoding='utf-8', errors='replace') as fh:
+                with open(file_path, "r", encoding="utf-8", errors="replace") as fh:
                     raw = fh.read()
                 fixed_block = self.fix_mol_block(raw)
                 mol = Chem.MolFromMolBlock(fixed_block, sanitize=True, removeHs=False)
                 if mol is None:
-                    raise ValueError("Failed to read molecule from .mol file after fixing counts line.")
+                    raise ValueError(
+                        "Failed to read molecule from .mol file after fixing counts line."
+                    )
             else:
                 suppl = Chem.SDMolSupplier(file_path, removeHs=False)
                 mol = next(suppl, None)
@@ -113,7 +123,9 @@ class MainWindowMolecularParsers(object):
 
             SCALE_FACTOR = 50.0
 
-            view_center = self.view_2d.mapToScene(self.view_2d.viewport().rect().center())
+            view_center = self.view_2d.mapToScene(
+                self.view_2d.viewport().rect().center()
+            )
 
             positions = [conf.GetAtomPosition(i) for i in range(mol.GetNumAtoms())]
             if positions:
@@ -134,12 +146,15 @@ class MainWindowMolecularParsers(object):
                 scene_x = (relative_x * SCALE_FACTOR) + view_center.x()
                 scene_y = (-relative_y * SCALE_FACTOR) + view_center.y()
 
-                atom_id = self.scene.create_atom(atom.GetSymbol(), QPointF(scene_x, scene_y), charge=charge)
+                atom_id = self.scene.create_atom(
+                    atom.GetSymbol(), QPointF(scene_x, scene_y), charge=charge
+                )
                 rdkit_idx_to_my_id[i] = atom_id
 
             for bond in mol.GetBonds():
-                b_idx,e_idx=bond.GetBeginAtomIdx(),bond.GetEndAtomIdx()
-                b_type = bond.GetBondTypeAsDouble(); b_dir = bond.GetBondDir()
+                b_idx, e_idx = bond.GetBeginAtomIdx(), bond.GetEndAtomIdx()
+                b_type = bond.GetBondTypeAsDouble()
+                b_dir = bond.GetBondDir()
                 stereo = 0
                 # Check for single bond Wedge/Dash
                 if b_dir == Chem.BondDir.BEGINWEDGE:
@@ -149,16 +164,23 @@ class MainWindowMolecularParsers(object):
                 # ADDED: Check for double bond E/Z stereochemistry
                 if bond.GetBondType() == Chem.BondType.DOUBLE:
                     if bond.GetStereo() == Chem.BondStereo.STEREOZ:
-                        stereo = 3 # Z
+                        stereo = 3  # Z
                     elif bond.GetStereo() == Chem.BondStereo.STEREOE:
-                        stereo = 4 # E
+                        stereo = 4  # E
 
                 a1_id, a2_id = rdkit_idx_to_my_id[b_idx], rdkit_idx_to_my_id[e_idx]
-                a1_item,a2_item=self.data.atoms[a1_id]['item'],self.data.atoms[a2_id]['item']
+                a1_item, a2_item = (
+                    self.data.atoms[a1_id]["item"],
+                    self.data.atoms[a2_id]["item"],
+                )
 
-                self.scene.create_bond(a1_item, a2_item, bond_order=int(b_type), bond_stereo=stereo)
+                self.scene.create_bond(
+                    a1_item, a2_item, bond_order=int(b_type), bond_stereo=stereo
+                )
 
-            self.statusBar().showMessage(f"Successfully loaded {file_path}") # pragma: no cover
+            self.statusBar().showMessage(
+                f"Successfully loaded {file_path}"
+            )  # pragma: no cover
             self.reset_undo_stack()
             # NEWファイル扱い: ファイルパスをクリアし未保存状態はFalse（変更なければ保存警告なし）
             self.current_file_path = file_path
@@ -166,13 +188,13 @@ class MainWindowMolecularParsers(object):
             self.update_window_title()
             QTimer.singleShot(0, self.fit_to_view)
 
-        except FileNotFoundError: # pragma: no cover
+        except FileNotFoundError:  # pragma: no cover
             self.statusBar().showMessage(f"File not found: {file_path}")
-        except ValueError as e: # pragma: no cover
+        except ValueError as e:  # pragma: no cover
             self.statusBar().showMessage(f"Invalid MOL file format: {e}")
-        except Exception as e: # pragma: no cover
+        except Exception as e:
             self.statusBar().showMessage(f"Error loading file: {e}")
-            traceback.print_exc()
+            pass
 
     def load_xyz_file(self, file_path):
         """XYZファイルを読み込んでRDKitのMolオブジェクトを作成する"""
@@ -182,7 +204,7 @@ class MainWindowMolecularParsers(object):
 
         try:
             # We will attempt one silent load with default charge=0 (no dialog).
-            def prompt_for_charge(): # pragma: no cover
+            def prompt_for_charge():  # pragma: no cover
                 """Helper dialog to prompt for charge or skip chemistry."""
                 try:
                     dialog = QDialog(self)
@@ -194,7 +216,9 @@ class MainWindowMolecularParsers(object):
                     line_edit.setText("")
 
                     # Standard OK/Cancel buttons
-                    btn_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel, parent=dialog)
+                    btn_box = QDialogButtonBox(
+                        QDialogButtonBox.Ok | QDialogButtonBox.Cancel, parent=dialog
+                    )
 
                     # Additional Skip chemistry button
                     skip_btn = QPushButton("Skip chemistry", dialog)
@@ -224,7 +248,9 @@ class MainWindowMolecularParsers(object):
 
                     try:
                         btn_box.button(QDialogButtonBox.Ok).clicked.connect(on_ok)
-                        btn_box.button(QDialogButtonBox.Cancel).clicked.connect(on_cancel)
+                        btn_box.button(QDialogButtonBox.Cancel).clicked.connect(
+                            on_cancel
+                        )
                     except Exception:
                         # Fallback if button lookup fails
                         btn_box.accepted.connect(on_ok)
@@ -247,7 +273,12 @@ class MainWindowMolecularParsers(object):
                 except Exception:
                     # On any dialog creation error, fall back to simple input dialog
                     try:
-                        charge_text, ok = QInputDialog.getText(self, "Import XYZ Charge", "Enter total molecular charge:", text="0")
+                        charge_text, ok = QInputDialog.getText(
+                            self,
+                            "Import XYZ Charge",
+                            "Enter total molecular charge:",
+                            text="0",
+                        )
                     except Exception:
                         return 0, True, False
                     if not ok:
@@ -271,7 +302,7 @@ class MainWindowMolecularParsers(object):
                     except Exception:
                         return 0, True, False
 
-            with open(file_path, 'r', encoding='utf-8') as f:
+            with open(file_path, "r", encoding="utf-8") as f:
                 lines = f.readlines()
 
             # 空行とコメント行を除去（但し、先頭2行は保持）
@@ -280,7 +311,9 @@ class MainWindowMolecularParsers(object):
                 stripped = line.strip()
                 if i < 2:  # 最初の2行は原子数とコメント行なので保持
                     non_empty_lines.append(stripped)
-                elif stripped and not stripped.startswith('#'):  # 空行とコメント行をスキップ
+                elif stripped and not stripped.startswith(
+                    "#"
+                ):  # 空行とコメント行をスキップ
                     non_empty_lines.append(stripped)
 
             if len(non_empty_lines) < 2:
@@ -303,12 +336,16 @@ class MainWindowMolecularParsers(object):
             data_lines = non_empty_lines[2:]
 
             if len(data_lines) < num_atoms:
-                raise ValueError(f"XYZ file format error: expected {num_atoms} atom lines, found {len(data_lines)}")
+                raise ValueError(
+                    f"XYZ file format error: expected {num_atoms} atom lines, found {len(data_lines)}"
+                )
 
             for i, line in enumerate(data_lines[:num_atoms]):
                 parts = line.split()
                 if len(parts) < 4:
-                    raise ValueError(f"XYZ file format error: invalid atom data at line {i+3}")
+                    raise ValueError(
+                        f"XYZ file format error: invalid atom data at line {i + 3}"
+                    )
 
                 symbol = parts[0].strip()
 
@@ -323,15 +360,19 @@ class MainWindowMolecularParsers(object):
                         test_atom = Chem.Atom(symbol)
                     except Exception:
                         # If user requested to skip chemistry checks, coerce unknown symbols to C
-                        if self.settings.get('skip_chemistry_checks', False):
-                            symbol = 'C'
+                        if self.settings.get("skip_chemistry_checks", False):
+                            symbol = "C"
                         else:
-                            raise ValueError(f"Unrecognized element symbol: {parts[0]} at line {i+3}")
+                            raise ValueError(
+                                f"Unrecognized element symbol: {parts[0]} at line {i + 3}"
+                            )
 
                 try:
                     x, y, z = float(parts[1]), float(parts[2]), float(parts[3])
                 except ValueError:
-                    raise ValueError(f"XYZ file format error: invalid coordinates at line {i+3}")
+                    raise ValueError(
+                        f"XYZ file format error: invalid coordinates at line {i + 3}"
+                    )
 
                 atoms_data.append((symbol, x, y, z))
 
@@ -354,7 +395,7 @@ class MainWindowMolecularParsers(object):
                 conf.SetAtomPosition(i, rdGeometry.Point3D(x, y, z))
             mol.AddConformer(conf)
             try:
-                skip_checks = bool(self.settings.get('skip_chemistry_checks', False))
+                skip_checks = bool(self.settings.get("skip_chemistry_checks", False))
             except Exception:
                 skip_checks = False
 
@@ -363,7 +404,7 @@ class MainWindowMolecularParsers(object):
                 try:
                     # Use the conservative distance-based heuristic to add bonds
                     self.estimate_bonds_from_distances(mol)
-                except Exception:
+                except Exception:  # pragma: no cover
                     # Non-fatal: continue even if distance-based estimation fails
                     pass
 
@@ -377,7 +418,9 @@ class MainWindowMolecularParsers(object):
                         candidate_mol = None
 
                 if candidate_mol is None:
-                    raise ValueError("Failed to create valid molecule object when skip_chemistry_checks=True")
+                    raise ValueError(
+                        "Failed to create valid molecule object when skip_chemistry_checks=True"
+                    )
 
                 # Attach a default charge property
                 try:
@@ -385,30 +428,31 @@ class MainWindowMolecularParsers(object):
                 except Exception:
                     try:
                         candidate_mol._xyz_charge = 0
-                    except Exception:
-                        pass
-
+                    except Exception:  # pragma: no cover
+                        import traceback
+                        traceback.print_exc()
                 # Mark that this molecule was produced via the skip-chemistry path
                 try:
                     candidate_mol.SetIntProp("_xyz_skip_checks", 1)
                 except Exception:
                     try:
                         candidate_mol._xyz_skip_checks = True
-                    except Exception:
-                        pass
-
+                    except Exception:  # pragma: no cover
+                        import traceback
+                        traceback.print_exc()
                 # Set UI flags consistently: mark as XYZ-derived and disable optimize
                 try:
                     self.current_mol = candidate_mol
                     self.is_xyz_derived = True
-                    if hasattr(self, 'optimize_3d_button'):
+                    if hasattr(self, "optimize_3d_button"):
                         try:
                             self.optimize_3d_button.setEnabled(False)
-                        except Exception:
-                            pass
-                except Exception:
-                    pass
-
+                        except Exception:  # pragma: no cover
+                            import traceback
+                            traceback.print_exc()
+                except Exception:  # pragma: no cover
+                    import traceback
+                    traceback.print_exc()
                 # Store atom data for later analysis and return
                 candidate_mol._xyz_atom_data = atoms_data
                 return candidate_mol
@@ -428,6 +472,7 @@ class MainWindowMolecularParsers(object):
                     # Try DetermineBonds if available
                     try:
                         from rdkit.Chem import rdDetermineBonds
+
                         try:
                             try:
                                 mol_candidate = Chem.RWMol(Chem.Mol(mol))
@@ -436,7 +481,9 @@ class MainWindowMolecularParsers(object):
 
                             # This call may raise. If it does, mark determine_failed
                             # so the caller can prompt for a different charge.
-                            rdDetermineBonds.DetermineBonds(mol_candidate, charge=charge_val)
+                            rdDetermineBonds.DetermineBonds(
+                                mol_candidate, charge=charge_val
+                            )
                             mol_to_finalize = mol_candidate
                             used_rd_determine = True
                         except Exception:
@@ -486,32 +533,36 @@ class MainWindowMolecularParsers(object):
                         except Exception:
                             try:
                                 candidate_mol._xyz_charge = int(charge_val)
-                            except Exception:
-                                pass
-                    except Exception:
-                        pass
-
+                            except Exception:  # pragma: no cover
+                                import traceback
+                                traceback.print_exc()
+                    except Exception:  # pragma: no cover
+                        import traceback
+                        traceback.print_exc()
                     # Preserve whether the user requested skip_chemistry_checks
                     try:
-                        if bool(self.settings.get('skip_chemistry_checks', False)):
+                        if bool(self.settings.get("skip_chemistry_checks", False)):
                             try:
                                 candidate_mol.SetIntProp("_xyz_skip_checks", 1)
                             except Exception:
                                 try:
                                     candidate_mol._xyz_skip_checks = True
-                                except Exception:
-                                    pass
-                    except Exception:
-                        pass
-
+                                except Exception:  # pragma: no cover
+                                    import traceback
+                                    traceback.print_exc()
+                    except Exception:  # pragma: no cover
+                        import traceback
+                        traceback.print_exc()
                     # Run chemistry checks which may emit warnings to stderr
-                    self._apply_chem_check_and_set_flags(candidate_mol, source_desc='XYZ')
+                    self._apply_chem_check_and_set_flags(
+                        candidate_mol, source_desc="XYZ"
+                    )
 
                     # Accept the candidate
                     return candidate_mol
 
             # Decide whether to silently try charge=0 first, or prompt user first.
-            always_ask = bool(self.settings.get('always_ask_charge', False))
+            always_ask = bool(self.settings.get("always_ask_charge", False))
 
             try:
                 if not always_ask:
@@ -522,7 +573,7 @@ class MainWindowMolecularParsers(object):
                         # DetermineBonds explicitly failed for charge=0. In this
                         # situation, repeatedly prompt the user for charges until
                         # DetermineBonds succeeds or the user cancels.
-                        while True: # pragma: no cover
+                        while True:  # pragma: no cover
                             charge_val, ok, skip_flag = prompt_for_charge()
                             if not ok:
                                 # user cancelled the prompt -> abort
@@ -531,8 +582,9 @@ class MainWindowMolecularParsers(object):
                                 # User selected Skip chemistry: attempt distance-based salvage
                                 try:
                                     self.estimate_bonds_from_distances(mol)
-                                except Exception:
-                                    pass
+                                except Exception:  # pragma: no cover
+                                    import traceback
+                                    traceback.print_exc()
                                 salvaged = None
                                 try:
                                     salvaged = mol.GetMol()
@@ -545,16 +597,20 @@ class MainWindowMolecularParsers(object):
                                     except Exception:
                                         try:
                                             salvaged._xyz_skip_checks = True
-                                        except Exception:
-                                            pass
+                                        except Exception:  # pragma: no cover
+                                            import traceback
+                                            traceback.print_exc()
                                     final_mol = salvaged
                                     break
                                 else:
                                     # Could not salvage; abort
-                                    try: # pragma: no cover
-                                        self.statusBar().showMessage("Skip chemistry selected but failed to create salvaged molecule.")
-                                    except Exception:
-                                        pass
+                                    try:
+                                        self.statusBar().showMessage(
+                                            "Skip chemistry selected but failed to create salvaged molecule."
+                                        )
+                                    except Exception:  # pragma: no cover
+                                        import traceback
+                                        traceback.print_exc()
                                     return None
 
                             try:
@@ -563,26 +619,31 @@ class MainWindowMolecularParsers(object):
                                 break
                             except RuntimeError:
                                 # DetermineBonds still failing for this charge -> loop again
-                                try: # pragma: no cover
-                                    self.statusBar().showMessage("DetermineBonds failed for that charge; please try a different total charge or cancel.")
-                                except Exception:
-                                    pass
+                                try:
+                                    self.statusBar().showMessage(
+                                        "DetermineBonds failed for that charge; please try a different total charge or cancel."
+                                    )
+                                except Exception:  # pragma: no cover
+                                    import traceback
+                                    traceback.print_exc()
                                 continue
                             except Exception as e_prompt:
                                 # Some other failure occurred after DetermineBonds or in
                                 # finalization. If skip_chemistry_checks is enabled we
                                 # try the salvaged mol once; otherwise prompt again.
                                 try:
-                                    skip_checks = bool(self.settings.get('skip_chemistry_checks', False))
+                                    skip_checks = bool(
+                                        self.settings.get(
+                                            "skip_chemistry_checks", False
+                                        )
+                                    )
                                 except Exception:
                                     skip_checks = False
-
                                 salvaged = None
                                 try:
                                     salvaged = mol.GetMol()
                                 except Exception:
                                     salvaged = None
-
                                 if skip_checks and salvaged is not None:
                                     final_mol = salvaged
                                     # mark salvaged molecule as produced under skip_checks
@@ -591,17 +652,21 @@ class MainWindowMolecularParsers(object):
                                     except Exception:
                                         try:
                                             final_mol._xyz_skip_checks = True
-                                        except Exception:
-                                            pass
+                                        except Exception:  # pragma: no cover
+                                            import traceback
+                                            traceback.print_exc()
                                     break
                                 else:
-                                    try: # pragma: no cover
-                                        self.statusBar().showMessage(f"Retry failed: {e_prompt}")
-                                    except Exception:
-                                        pass
+                                    try:
+                                        self.statusBar().showMessage(
+                                            f"Retry failed: {e_prompt}"
+                                        )
+                                    except Exception:  # pragma: no cover
+                                        import traceback
+                                        traceback.print_exc()
                                     # Continue prompting
                                     continue
-                else: # pragma: no cover
+                else:  # pragma: no cover
                     while True:
                         charge_val, ok, skip_flag = prompt_for_charge()
                         if not ok:
@@ -611,8 +676,9 @@ class MainWindowMolecularParsers(object):
                             # User selected Skip chemistry: attempt distance-based salvage
                             try:
                                 self.estimate_bonds_from_distances(mol)
-                            except Exception:
-                                pass
+                            except Exception:  # pragma: no cover
+                                import traceback
+                                traceback.print_exc()
                             salvaged = None
                             try:
                                 salvaged = mol.GetMol()
@@ -625,15 +691,19 @@ class MainWindowMolecularParsers(object):
                                 except Exception:
                                     try:
                                         salvaged._xyz_skip_checks = True
-                                    except Exception:
-                                        pass
+                                    except Exception:  # pragma: no cover
+                                        import traceback
+                                        traceback.print_exc()
                                 final_mol = salvaged
                                 break
                             else:
-                                try: # pragma: no cover
-                                    self.statusBar().showMessage("Skip chemistry selected but failed to create salvaged molecule.")
-                                except Exception:
-                                    pass
+                                try:
+                                    self.statusBar().showMessage(
+                                        "Skip chemistry selected but failed to create salvaged molecule."
+                                    )
+                                except Exception:  # pragma: no cover
+                                    import traceback
+                                    traceback.print_exc()
                                 return None
 
                         try:
@@ -642,23 +712,26 @@ class MainWindowMolecularParsers(object):
                             break
                         except RuntimeError:
                             # DetermineBonds still failing for this charge -> loop again
-                            try: # pragma: no cover
-                                self.statusBar().showMessage("DetermineBonds failed for that charge; please try a different total charge or cancel.")
-                            except Exception:
-                                pass
+                            try:
+                                self.statusBar().showMessage(
+                                    "DetermineBonds failed for that charge; please try a different total charge or cancel."
+                                )
+                            except Exception:  # pragma: no cover
+                                import traceback
+                                traceback.print_exc()
                             continue
                         except Exception as e_prompt:
                             try:
-                                skip_checks = bool(self.settings.get('skip_chemistry_checks', False))
+                                skip_checks = bool(
+                                    self.settings.get("skip_chemistry_checks", False)
+                                )
                             except Exception:
                                 skip_checks = False
-
                             salvaged = None
                             try:
                                 salvaged = mol.GetMol()
                             except Exception:
                                 salvaged = None
-
                             if skip_checks and salvaged is not None:
                                 final_mol = salvaged
                                 try:
@@ -666,16 +739,19 @@ class MainWindowMolecularParsers(object):
                                 except Exception:
                                     try:
                                         final_mol._xyz_skip_checks = True
-                                    except Exception:
-                                        pass
+                                    except Exception:  # pragma: no cover
+                                        import traceback
+                                        traceback.print_exc()
                                 break
                             else:
-                                try: # pragma: no cover
-                                    self.statusBar().showMessage(f"Retry failed: {e_prompt}")
-                                except Exception:
-                                    pass
+                                try:
+                                    self.statusBar().showMessage(
+                                        f"Retry failed: {e_prompt}"
+                                    )
+                                except Exception:  # pragma: no cover
+                                    import traceback
+                                    traceback.print_exc()
                                 continue
-
             except Exception:
                 # If the silent attempt failed for reasons other than
                 # DetermineBonds failing (e.g., finalization errors), fall
@@ -685,15 +761,15 @@ class MainWindowMolecularParsers(object):
                     salvaged = mol.GetMol()
                 except Exception:
                     salvaged = None
-
                 try:
-                    skip_checks = bool(self.settings.get('skip_chemistry_checks', False))
+                    skip_checks = bool(
+                        self.settings.get("skip_chemistry_checks", False)
+                    )
                 except Exception:
                     skip_checks = False
-
                 if skip_checks and salvaged is not None:
                     final_mol = salvaged
-                else: # pragma: no cover
+                else:  # pragma: no cover
                     # Repeatedly prompt until the user cancels or processing
                     # succeeds.
                     while True:
@@ -705,31 +781,34 @@ class MainWindowMolecularParsers(object):
                             # User selected Skip chemistry: attempt distance-based salvage
                             try:
                                 self.estimate_bonds_from_distances(mol)
-                            except Exception:
-                                pass
+                            except Exception:  # pragma: no cover
+                                import traceback
+                                traceback.print_exc()
                             salvaged = None
                             try:
                                 salvaged = mol.GetMol()
                             except Exception:
                                 salvaged = None
-
                             if salvaged is not None:
                                 try:
                                     salvaged.SetIntProp("_xyz_skip_checks", 1)
                                 except Exception:
                                     try:
                                         salvaged._xyz_skip_checks = True
-                                    except Exception:
-                                        pass
+                                    except Exception:  # pragma: no cover
+                                        import traceback
+                                        traceback.print_exc()
                                 final_mol = salvaged
                                 break
                             else:
                                 try:
-                                    self.statusBar().showMessage("Skip chemistry selected but failed to create salvaged molecule.")
-                                except Exception:
-                                    pass
+                                    self.statusBar().showMessage(
+                                        "Skip chemistry selected but failed to create salvaged molecule."
+                                    )
+                                except Exception:  # pragma: no cover
+                                    import traceback
+                                    traceback.print_exc()
                                 return None
-
                         try:
                             final_mol = _process_with_charge(charge_val)
                             # success -> break out of prompt loop
@@ -737,18 +816,23 @@ class MainWindowMolecularParsers(object):
                         except RuntimeError:
                             # DetermineBonds failed for this charge -> let the
                             # user try another
-                            try: # pragma: no cover
-                                self.statusBar().showMessage("DetermineBonds failed for that charge; please try a different total charge or cancel.")
-                            except Exception:
-                                pass
+                            try:
+                                self.statusBar().showMessage(
+                                    "DetermineBonds failed for that charge; please try a different total charge or cancel."
+                                )
+                            except Exception:  # pragma: no cover
+                                import traceback
+                                traceback.print_exc()
                             continue
                         except Exception as e_prompt:
-                            try: # pragma: no cover
-                                self.statusBar().showMessage(f"Retry failed: {e_prompt}")
-                            except Exception:
-                                pass
+                            try:
+                                self.statusBar().showMessage(
+                                    f"Retry failed: {e_prompt}"
+                                )
+                            except Exception:  # pragma: no cover
+                                import traceback
+                                traceback.print_exc()
                             continue
-
             # If we have a finalized molecule, apply the same UI flags and return
             if final_mol is not None:
                 mol = final_mol
@@ -756,20 +840,21 @@ class MainWindowMolecularParsers(object):
                     self.current_mol = mol
 
                     self.is_xyz_derived = not used_rd_determine
-                    if hasattr(self, 'optimize_3d_button'):
+                    if hasattr(self, "optimize_3d_button"):
                         try:
                             has_bonds = mol.GetNumBonds() > 0
                             # Respect the XYZ-derived flag: if the molecule is XYZ-derived,
                             # keep Optimize disabled regardless of bond detection.
-                            if getattr(self, 'is_xyz_derived', False):
+                            if getattr(self, "is_xyz_derived", False):
                                 self.optimize_3d_button.setEnabled(False)
                             else:
                                 self.optimize_3d_button.setEnabled(bool(has_bonds))
-                        except Exception:
-                            pass
-                except Exception:
-                    pass
-
+                        except Exception:  # pragma: no cover
+                            import traceback
+                            traceback.print_exc()
+                except Exception:  # pragma: no cover
+                    import traceback
+                    traceback.print_exc()
                 # Store original atom data for analysis
                 mol._xyz_atom_data = atoms_data
                 return mol
@@ -779,9 +864,9 @@ class MainWindowMolecularParsers(object):
 
             return mol
 
-        except (OSError, IOError) as e: # pragma: no cover
+        except (OSError, IOError) as e:  # pragma: no cover
             raise ValueError(f"File I/O error: {e}")
-        except Exception as e: # pragma: no cover
+        except Exception as e:
             if "XYZ file format error" in str(e) or "Unrecognized element" in str(e):
                 raise e
             else:
@@ -792,15 +877,60 @@ class MainWindowMolecularParsers(object):
 
         # 一般的な共有結合半径（Ångström）- より正確な値
         covalent_radii = {
-            'H': 0.31, 'He': 0.28, 'Li': 1.28, 'Be': 0.96, 'B': 0.84, 'C': 0.76,
-            'N': 0.75, 'O': 0.73, 'F': 0.71, 'Ne': 0.58, 'Na': 1.66, 'Mg': 1.41,
-            'Al': 1.21, 'Si': 1.11, 'P': 1.07, 'S': 1.05, 'Cl': 1.02, 'Ar': 1.06,
-            'K': 2.03, 'Ca': 1.76, 'Sc': 1.70, 'Ti': 1.60, 'V': 1.53, 'Cr': 1.39,
-            'Mn': 1.39, 'Fe': 1.32, 'Co': 1.26, 'Ni': 1.24, 'Cu': 1.32, 'Zn': 1.22,
-            'Ga': 1.22, 'Ge': 1.20, 'As': 1.19, 'Se': 1.20, 'Br': 1.14, 'Kr': 1.16,
-            'Rb': 2.20, 'Sr': 1.95, 'Y': 1.90, 'Zr': 1.75, 'Nb': 1.64, 'Mo': 1.54,
-            'Tc': 1.47, 'Ru': 1.46, 'Rh': 1.42, 'Pd': 1.39, 'Ag': 1.45, 'Cd': 1.44,
-            'In': 1.42, 'Sn': 1.39, 'Sb': 1.39, 'Te': 1.38, 'I': 1.33, 'Xe': 1.40
+            "H": 0.31,
+            "He": 0.28,
+            "Li": 1.28,
+            "Be": 0.96,
+            "B": 0.84,
+            "C": 0.76,
+            "N": 0.75,
+            "O": 0.73,
+            "F": 0.71,
+            "Ne": 0.58,
+            "Na": 1.66,
+            "Mg": 1.41,
+            "Al": 1.21,
+            "Si": 1.11,
+            "P": 1.07,
+            "S": 1.05,
+            "Cl": 1.02,
+            "Ar": 1.06,
+            "K": 2.03,
+            "Ca": 1.76,
+            "Sc": 1.70,
+            "Ti": 1.60,
+            "V": 1.53,
+            "Cr": 1.39,
+            "Mn": 1.39,
+            "Fe": 1.32,
+            "Co": 1.26,
+            "Ni": 1.24,
+            "Cu": 1.32,
+            "Zn": 1.22,
+            "Ga": 1.22,
+            "Ge": 1.20,
+            "As": 1.19,
+            "Se": 1.20,
+            "Br": 1.14,
+            "Kr": 1.16,
+            "Rb": 2.20,
+            "Sr": 1.95,
+            "Y": 1.90,
+            "Zr": 1.75,
+            "Nb": 1.64,
+            "Mo": 1.54,
+            "Tc": 1.47,
+            "Ru": 1.46,
+            "Rh": 1.42,
+            "Pd": 1.39,
+            "Ag": 1.45,
+            "Cd": 1.44,
+            "In": 1.42,
+            "Sn": 1.39,
+            "Sb": 1.39,
+            "Te": 1.38,
+            "I": 1.33,
+            "Xe": 1.40,
         }
 
         conf = mol.GetConformer()
@@ -828,7 +958,7 @@ class MainWindowMolecularParsers(object):
 
                 # 結合タイプによる許容範囲を調整
                 # 水素結合は通常の共有結合より短い
-                if symbol_i == 'H' or symbol_j == 'H':
+                if symbol_i == "H" or symbol_j == "H":
                     tolerance_factor = 1.2  # 水素は結合が短くなりがち
                 else:
                     tolerance_factor = 1.3  # 他の原子は少し余裕を持たせる
@@ -841,7 +971,7 @@ class MainWindowMolecularParsers(object):
                     try:
                         mol.AddBond(i, j, Chem.BondType.SINGLE)
                         bonds_added.append((i, j, distance))
-                    except Exception:
+                    except Exception:  # pragma: no cover
                         # 既に結合が存在する場合はスキップ
                         pass
 
@@ -853,14 +983,14 @@ class MainWindowMolecularParsers(object):
     def save_as_mol(self):
         try:
             mol_block = self.data.to_mol_block()
-            if not mol_block: # pragma: no cover
+            if not mol_block:  # pragma: no cover
                 self.statusBar().showMessage("Error: No 2D data to save.")
                 return
 
-            lines = mol_block.split('\n')
-            if len(lines) > 1 and 'RDKit' in lines[1]:
-                lines[1] = '  MoleditPy Ver. ' + VERSION + '  2D'
-            modified_mol_block = '\n'.join(lines)
+            lines = mol_block.split("\n")
+            if len(lines) > 1 and "RDKit" in lines[1]:
+                lines[1] = "  MoleditPy Ver. " + VERSION + "  2D"
+            modified_mol_block = "\n".join(lines)
 
             # default filename: based on current_file_path, append -2d for 2D mol
             default_name = "untitled-2d"
@@ -876,32 +1006,41 @@ class MainWindowMolecularParsers(object):
             default_path = default_name
             try:
                 if self.current_file_path:
-                    default_path = os.path.join(os.path.dirname(self.current_file_path), default_name)
+                    default_path = os.path.join(
+                        os.path.dirname(self.current_file_path), default_name
+                    )
             except Exception:
                 default_path = default_name
 
-            file_path, _ = QFileDialog.getSaveFileName(self, "Save 2D MOL File", default_path, "MOL Files (*.mol);;All Files (*)") # pragma: no cover
+            file_path, _ = QFileDialog.getSaveFileName(
+                self,
+                "Save 2D MOL File",
+                default_path,
+                "MOL Files (*.mol);;All Files (*)",
+            )  # pragma: no cover
             if not file_path:
                 return
 
-            if not file_path.lower().endswith('.mol'):
-                file_path += '.mol'
+            if not file_path.lower().endswith(".mol"):
+                file_path += ".mol"
 
-            with open(file_path, 'w', encoding='utf-8') as f:
+            with open(file_path, "w", encoding="utf-8") as f:
                 f.write(modified_mol_block)
-            self.statusBar().showMessage(f"2D data saved to {file_path}") # pragma: no cover
+            self.statusBar().showMessage(
+                f"2D data saved to {file_path}"
+            )  # pragma: no cover
 
-        except (OSError, IOError) as e: # pragma: no cover
+        except (OSError, IOError) as e:  # pragma: no cover
             self.statusBar().showMessage(f"File I/O error: {e}")
-        except UnicodeEncodeError as e: # pragma: no cover
+        except UnicodeEncodeError as e:  # pragma: no cover
             self.statusBar().showMessage(f"Text encoding error: {e}")
-        except Exception as e: # pragma: no cover
+        except Exception as e:
             self.statusBar().showMessage(f"Error saving file: {e}")
 
-            traceback.print_exc()
+            pass
 
     def save_as_xyz(self):
-        if not self.current_mol: # pragma: no cover
+        if not self.current_mol:  # pragma: no cover
             self.statusBar().showMessage("Error: Please generate a 3D structure first.")
             return
         # default filename based on current file
@@ -918,21 +1057,27 @@ class MainWindowMolecularParsers(object):
         default_path = default_name
         try:
             if self.current_file_path:
-                default_path = os.path.join(os.path.dirname(self.current_file_path), default_name)
+                default_path = os.path.join(
+                    os.path.dirname(self.current_file_path), default_name
+                )
         except Exception:
             default_path = default_name
 
-        file_path,_=QFileDialog.getSaveFileName(self,"Save 3D XYZ File",default_path,"XYZ Files (*.xyz);;All Files (*)") # pragma: no cover
+        file_path, _ = QFileDialog.getSaveFileName(
+            self, "Save 3D XYZ File", default_path, "XYZ Files (*.xyz);;All Files (*)"
+        )  # pragma: no cover
         if file_path:
-            if not file_path.lower().endswith('.xyz'): file_path += '.xyz'
+            if not file_path.lower().endswith(".xyz"):
+                file_path += ".xyz"
             try:
-                conf=self.current_mol.GetConformer(); num_atoms=self.current_mol.GetNumAtoms()
-                xyz_lines=[str(num_atoms)]
+                conf = self.current_mol.GetConformer()
+                num_atoms = self.current_mol.GetNumAtoms()
+                xyz_lines = [str(num_atoms)]
                 # 電荷と多重度を計算
                 try:
                     charge = Chem.GetFormalCharge(self.current_mol)
                 except Exception:
-                    charge = 0 # 取得失敗時は0
+                    charge = 0  # 取得失敗時は0
 
                 try:
                     # 全原子のラジカル電子の合計を取得
@@ -940,16 +1085,22 @@ class MainWindowMolecularParsers(object):
                     # スピン多重度を計算 (M = N + 1, N=ラジカル電子数)
                     multiplicity = num_radicals + 1
                 except Exception:
-                    multiplicity = 1 # 取得失敗時は 1 (singlet)
+                    multiplicity = 1  # 取得失敗時は 1 (singlet)
 
-                smiles=Chem.MolToSmiles(Chem.RemoveHs(self.current_mol))
-                xyz_lines.append(f"chrg = {charge}  mult = {multiplicity} | Generated by MoleditPy Ver. {VERSION}")
+                smiles = Chem.MolToSmiles(Chem.RemoveHs(self.current_mol))
+                xyz_lines.append(
+                    f"chrg = {charge}  mult = {multiplicity} | Generated by MoleditPy Ver. {VERSION}"
+                )
                 for i in range(num_atoms):
-                    pos=conf.GetAtomPosition(i); symbol=self.current_mol.GetAtomWithIdx(i).GetSymbol()
+                    pos = conf.GetAtomPosition(i)
+                    symbol = self.current_mol.GetAtomWithIdx(i).GetSymbol()
                     xyz_lines.append(f"{symbol} {pos.x:.6f} {pos.y:.6f} {pos.z:.6f}")
-                with open(file_path,'w') as f: f.write("\n".join(xyz_lines) + "\n")
-                self.statusBar().showMessage(f"Successfully saved to {file_path}") # pragma: no cover
-            except Exception as e: # pragma: no cover
+                with open(file_path, "w") as f:
+                    f.write("\n".join(xyz_lines) + "\n")
+                self.statusBar().showMessage(
+                    f"Successfully saved to {file_path}"
+                )  # pragma: no cover
+            except Exception as e:
                 self.statusBar().showMessage(f"Error saving file: {e}")
 
     def fix_mol_counts_line(self, line: str) -> str:
@@ -960,12 +1111,12 @@ class MainWindowMolecularParsers(object):
         format (33 chars of counts + ' V2000') is returned.
         """
         # If already V3000 or V2000, leave as-is
-        if 'V3000' in line or 'V2000' in line:
+        if "V3000" in line or "V2000" in line:
             return line
 
         # Prepare prefix (first 33 characters for the 11 * I3 fields)
         prefix = line.rstrip().ljust(33)[0:33]
-        version_str = ' V2000'
+        version_str = " V2000"
         return prefix + version_str
 
     def fix_mol_block(self, mol_block: str) -> str:
@@ -982,4 +1133,3 @@ class MainWindowMolecularParsers(object):
         fixed_counts_line = self.fix_mol_counts_line(counts_line)
         lines[3] = fixed_counts_line
         return "\n".join(lines)
-

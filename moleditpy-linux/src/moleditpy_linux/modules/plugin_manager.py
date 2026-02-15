@@ -33,25 +33,26 @@ except ImportError:
     # Fallback if running as script
     from modules.plugin_interface import PluginContext
 
+
 class PluginManager:
     def __init__(self, main_window=None):
-        self.plugin_dir = os.path.join(os.path.expanduser('~'), '.moleditpy', 'plugins')
-        self.plugins = [] # List of dicts
+        self.plugin_dir = os.path.join(os.path.expanduser("~"), ".moleditpy", "plugins")
+        self.plugins = []  # List of dicts
         self.main_window = main_window
 
         # Registries for actions
-        self.menu_actions = [] # List of (plugin_name, path, callback, text, icon, shortcut)
+        self.menu_actions = []  # List of (plugin_name, path, callback, text, icon, shortcut)
         self.toolbar_actions = []
-        self.drop_handlers = [] # List of (priority, plugin_name, callback)
+        self.drop_handlers = []  # List of (priority, plugin_name, callback)
 
         # Extended Registries (Added to prevent lazy initialization "monkey patching")
         self.export_actions = []
         self.optimization_methods = {}
-        self.file_openers = {} # ext -> list of {'plugin':..., 'callback':..., 'priority':...}
+        self.file_openers = {}  # ext -> list of {'plugin':..., 'callback':..., 'priority':...}
         self.analysis_tools = []
         self.save_handlers = {}
         self.load_handlers = {}
-        self.custom_3d_styles = {} # style_name -> {'plugin': name, 'callback': func}
+        self.custom_3d_styles = {}  # style_name -> {'plugin': name, 'callback': func}
         self.document_reset_handlers = []  # List of callbacks to call on new document
 
     def get_main_window(self):
@@ -85,29 +86,33 @@ class PluginManager:
                 # Copy entire directory
                 dest_path = os.path.join(self.plugin_dir, filename)
                 if os.path.exists(dest_path):
-                     # Option 1: Overwrite (remove then copy) - safer for clean install
-                     if os.path.isdir(dest_path):
-                         shutil.rmtree(dest_path)
-                     else:
-                         os.remove(dest_path)
+                    # Option 1: Overwrite (remove then copy) - safer for clean install
+                    if os.path.isdir(dest_path):
+                        shutil.rmtree(dest_path)
+                    else:
+                        os.remove(dest_path)
 
                 # Copy directory, ignoring cache files
-                shutil.copytree(file_path, dest_path, ignore=shutil.ignore_patterns('__pycache__', '*.pyc', '.git'))
+                shutil.copytree(
+                    file_path,
+                    dest_path,
+                    ignore=shutil.ignore_patterns("__pycache__", "*.pyc", ".git"),
+                )
                 msg = f"Installed package {filename}"
-            elif filename.lower().endswith('.zip'):
+            elif filename.lower().endswith(".zip"):
                 # Extract ZIP contents
-                with zipfile.ZipFile(file_path, 'r') as zf:
+                with zipfile.ZipFile(file_path, "r") as zf:
                     # Smart Extraction: Check if ZIP has a single top-level folder
                     # Fix for paths with backslashes on Windows if zip was created on Windows
                     roots = set()
                     for name in zf.namelist():
                         # Normalize path separators to forward slash for consistent check
-                        name = name.replace('\\', '/')
-                        parts = name.split('/')
+                        name = name.replace("\\", "/")
+                        parts = name.split("/")
                         if parts[0]:
                             roots.add(parts[0])
 
-                    is_nested = (len(roots) == 1)
+                    is_nested = len(roots) == 1
 
                     if is_nested:
                         # Case A: ZIP contains a single folder (e.g. MyPlugin/init.py)
@@ -124,10 +129,10 @@ class PluginManager:
 
                         # Clean Install: Remove existing folder to prevent stale files
                         if os.path.exists(dest_path):
-                             if os.path.isdir(dest_path):
-                                 shutil.rmtree(dest_path)
-                             else:
-                                 os.remove(dest_path)
+                            if os.path.isdir(dest_path):
+                                shutil.rmtree(dest_path)
+                            else:
+                                os.remove(dest_path)
 
                         zf.extractall(self.plugin_dir)
                         msg = f"Installed package {top_folder} (from ZIP)"
@@ -191,7 +196,7 @@ class PluginManager:
 
         for root, dirs, files in os.walk(self.plugin_dir):
             # Exclude hidden directories
-            dirs[:] = [d for d in dirs if not d.startswith('__') and d != '__pycache__']
+            dirs[:] = [d for d in dirs if not d.startswith("__") and d != "__pycache__"]
 
             # [Check] Is current dir a package (plugin body)?
             if "__init__.py" in files:
@@ -231,7 +236,11 @@ class PluginManager:
         try:
             # Ensure unique module name by including category path
             # e.g. Analysis.Docking
-            unique_module_name = f"{category.replace(os.sep, '.')}.{module_name}" if category else module_name
+            unique_module_name = (
+                f"{category.replace(os.sep, '.')}.{module_name}"
+                if category
+                else module_name
+            )
             unique_module_name = unique_module_name.strip(".")
 
             spec = importlib.util.spec_from_file_location(unique_module_name, filepath)
@@ -247,24 +256,31 @@ class PluginManager:
                 # --- Metadata Extraction ---
                 # Metadata
                 # Priority: PLUGIN_XXX > __xxx__ > Fallback
-                plugin_name = getattr(module, 'PLUGIN_NAME', module_name)
-                plugin_version = getattr(module, 'PLUGIN_VERSION', getattr(module, '__version__', 'Unknown'))
-                plugin_author = getattr(module, 'PLUGIN_AUTHOR', getattr(module, '__author__', 'Unknown'))
-                plugin_desc = getattr(module, 'PLUGIN_DESCRIPTION', getattr(module, '__doc__', ''))
-                plugin_category = getattr(module, 'PLUGIN_CATEGORY', category)
+                plugin_name = getattr(module, "PLUGIN_NAME", module_name)
+                plugin_version = getattr(
+                    module, "PLUGIN_VERSION", getattr(module, "__version__", "Unknown")
+                )
+                plugin_author = getattr(
+                    module, "PLUGIN_AUTHOR", getattr(module, "__author__", "Unknown")
+                )
+                plugin_desc = getattr(
+                    module, "PLUGIN_DESCRIPTION", getattr(module, "__doc__", "")
+                )
+                plugin_category = getattr(module, "PLUGIN_CATEGORY", category)
 
                 # Additional cleanup for docstring (strip whitespace)
-                if plugin_desc is None: plugin_desc = ""
+                if plugin_desc is None:
+                    plugin_desc = ""
                 plugin_desc = str(plugin_desc).strip()
 
-                 # Handle version tuple
+                # Handle version tuple
                 if isinstance(plugin_version, tuple):
                     plugin_version = ".".join(map(str, plugin_version))
 
                 # Interface compliance
-                has_run = hasattr(module, 'run') and callable(module.run)
-                has_autorun = hasattr(module, 'autorun') and callable(module.autorun)
-                has_init = hasattr(module, 'initialize') and callable(module.initialize)
+                has_run = hasattr(module, "run") and callable(module.run)
+                has_autorun = hasattr(module, "autorun") and callable(module.autorun)
+                has_init = hasattr(module, "initialize") and callable(module.initialize)
 
                 status = "Loaded"
 
@@ -277,7 +293,7 @@ class PluginManager:
                     except Exception as e:
                         status = f"Error (Init): {e}"
                         print(f"Plugin {plugin_name} initialize error: {e}")
-                        traceback.print_exc()
+                        pass
                 elif has_autorun:
                     try:
                         if self.main_window:
@@ -287,86 +303,105 @@ class PluginManager:
                     except Exception as e:
                         status = f"Error (Autorun): {e}"
                         print(f"Plugin {plugin_name} autorun error: {e}")
-                        traceback.print_exc()
+                        pass
                 elif not has_run:
                     status = "No Entry Point"
 
-                self.plugins.append({
-                    'name': plugin_name,
-                    'version': plugin_version,
-                    'author': plugin_author,
-                    'description': plugin_desc,
-                    'module': module,
-                    'category': plugin_category, # Store category
-                    'status': status,
-                    'filepath': filepath,
-                    'has_run': has_run
-                })
+                self.plugins.append(
+                    {
+                        "name": plugin_name,
+                        "version": plugin_version,
+                        "author": plugin_author,
+                        "description": plugin_desc,
+                        "module": module,
+                        "category": plugin_category,  # Store category
+                        "status": status,
+                        "filepath": filepath,
+                        "has_run": has_run,
+                    }
+                )
 
         except Exception as e:
             print(f"Failed to load plugin {module_name}: {e}")
-            traceback.print_exc()
+            pass
 
     def run_plugin(self, module, main_window):
         """Executes the plugin's run method (Legacy manual trigger)."""
         try:
             module.run(main_window)
         except Exception as e:
-            QMessageBox.critical(main_window, "Plugin Error", f"Error running plugin '{getattr(module, 'PLUGIN_NAME', 'Unknown')}':\n{e}")
-            traceback.print_exc()
+            QMessageBox.critical(
+                main_window,
+                "Plugin Error",
+                f"Error running plugin '{getattr(module, 'PLUGIN_NAME', 'Unknown')}':\n{e}",
+            )
+            pass
 
     # --- Registration Callbacks ---
     def register_menu_action(self, plugin_name, path, callback, text, icon, shortcut):
-        self.menu_actions.append({
-            'plugin': plugin_name, 'path': path, 'callback': callback,
-            'text': text, 'icon': icon, 'shortcut': shortcut
-        })
+        self.menu_actions.append(
+            {
+                "plugin": plugin_name,
+                "path": path,
+                "callback": callback,
+                "text": text,
+                "icon": icon,
+                "shortcut": shortcut,
+            }
+        )
 
     def register_toolbar_action(self, plugin_name, callback, text, icon, tooltip):
-        self.toolbar_actions.append({
-            'plugin': plugin_name, 'callback': callback,
-            'text': text, 'icon': icon, 'tooltip': tooltip
-        })
+        self.toolbar_actions.append(
+            {
+                "plugin": plugin_name,
+                "callback": callback,
+                "text": text,
+                "icon": icon,
+                "tooltip": tooltip,
+            }
+        )
 
     def register_drop_handler(self, plugin_name, callback, priority):
-        self.drop_handlers.append({
-            'priority': priority, 'plugin': plugin_name, 'callback': callback
-        })
+        self.drop_handlers.append(
+            {"priority": priority, "plugin": plugin_name, "callback": callback}
+        )
         # Sort by priority desc
-        self.drop_handlers.sort(key=lambda x: x['priority'], reverse=True)
+        self.drop_handlers.sort(key=lambda x: x["priority"], reverse=True)
 
     def register_export_action(self, plugin_name, label, callback):
-        self.export_actions.append({
-            'plugin': plugin_name, 'label': label, 'callback': callback
-        })
+        self.export_actions.append(
+            {"plugin": plugin_name, "label": label, "callback": callback}
+        )
 
     def register_optimization_method(self, plugin_name, method_name, callback):
         # Key by upper-case method name for consistency
         self.optimization_methods[method_name.upper()] = {
-            'plugin': plugin_name, 'callback': callback, 'label': method_name
+            "plugin": plugin_name,
+            "callback": callback,
+            "label": method_name,
         }
 
     def register_file_opener(self, plugin_name, extension, callback, priority=0):
         # Normalize extension to lowercase
         ext = extension.lower()
-        if not ext.startswith('.'):
-            ext = '.' + ext
+        if not ext.startswith("."):
+            ext = "." + ext
 
         if ext not in self.file_openers:
             self.file_openers[ext] = []
 
-        self.file_openers[ext].append({
-            'plugin': plugin_name,
-            'callback': callback,
-            'priority': priority
-        })
+        self.file_openers[ext].append(
+            {"plugin": plugin_name, "callback": callback, "priority": priority}
+        )
 
         # Sort by priority descending
-        self.file_openers[ext].sort(key=lambda x: x['priority'], reverse=True)
+        self.file_openers[ext].sort(key=lambda x: x["priority"], reverse=True)
 
     # Analysis Tools registration
     def register_analysis_tool(self, plugin_name, label, callback):
-        self.analysis_tools.append({'plugin': plugin_name, 'label': label, 'callback': callback})
+        self.analysis_tools.append(
+            {"plugin": plugin_name, "label": label, "callback": callback}
+        )
 
     # State Persistence registration
     def register_save_handler(self, plugin_name, callback):
@@ -377,96 +412,107 @@ class PluginManager:
 
     def register_3d_style(self, plugin_name, style_name, callback):
         self.custom_3d_styles[style_name] = {
-            'plugin': plugin_name, 'callback': callback
+            "plugin": plugin_name,
+            "callback": callback,
         }
 
     def register_document_reset_handler(self, plugin_name, callback):
         """Register callback to be invoked when a new document is created."""
-        self.document_reset_handlers.append({
-            'plugin': plugin_name,
-            'callback': callback
-        })
+        self.document_reset_handlers.append(
+            {"plugin": plugin_name, "callback": callback}
+        )
 
     def invoke_document_reset_handlers(self):
         """Call all registered document reset handlers."""
         for handler in self.document_reset_handlers:
             try:
-                handler['callback']()
+                handler["callback"]()
             except Exception as e:
                 print(f"Error in document reset handler for {handler['plugin']}: {e}")
 
     def get_plugin_info_safe(self, file_path):
         """Extracts plugin metadata using AST parsing (safe, no execution)."""
         info = {
-            'name': os.path.basename(file_path),
-            'version': 'Unknown',
-            'author': 'Unknown',
-            'description': ''
+            "name": os.path.basename(file_path),
+            "version": "Unknown",
+            "author": "Unknown",
+            "description": "",
         }
         try:
-             with open(file_path, "r", encoding="utf-8") as f:
-                 tree = ast.parse(f.read())
+            with open(file_path, "r", encoding="utf-8") as f:
+                tree = ast.parse(f.read())
 
-             for node in tree.body:
-                 targets = []
-                 if isinstance(node, ast.Assign):
-                     targets = node.targets
-                 elif isinstance(node, ast.AnnAssign):
-                     targets = [node.target]
+            for node in tree.body:
+                targets = []
+                if isinstance(node, ast.Assign):
+                    targets = node.targets
+                elif isinstance(node, ast.AnnAssign):
+                    targets = [node.target]
 
-                 for target in targets:
-                     if isinstance(target, ast.Name):
-                         # Helper to extract value
-                         val = None
-                         if node.value: # AnnAssign might presumably not have value? (though usually does for module globals)
-                             if isinstance(node.value, ast.Constant): # Py3.8+
-                                 val = node.value.value
-                             elif hasattr(ast, 'Str') and isinstance(node.value, ast.Str): # Py3.7 and below
-                                 val = node.value.s
-                             elif isinstance(node.value, ast.Tuple):
-                                 # Handle version tuples e.g. (1, 0, 0)
-                                 try:
-                                     # Extract simple constants from tuple
-                                     elts = []
-                                     for elt in node.value.elts:
-                                         if isinstance(elt, ast.Constant):
-                                             elts.append(elt.value)
-                                         elif hasattr(ast, 'Num') and isinstance(elt, ast.Num):
-                                             elts.append(elt.n)
-                                     val = ".".join(map(str, elts))
-                                 except:
-                                     pass
+                for target in targets:
+                    if isinstance(target, ast.Name):
+                        # Helper to extract value
+                        val = None
+                        if node.value:  # AnnAssign might presumably not have value? (though usually does for module globals)
+                            if isinstance(node.value, ast.Constant):  # Py3.8+
+                                val = node.value.value
+                            elif hasattr(ast, "Str") and isinstance(
+                                node.value, ast.Str
+                            ):  # Py3.7 and below
+                                val = node.value.s
+                            elif isinstance(node.value, ast.Tuple):
+                                # Handle version tuples e.g. (1, 0, 0)
+                                try:
+                                    # Extract simple constants from tuple
+                                    elts = []
+                                    for elt in node.value.elts:
+                                        if isinstance(elt, ast.Constant):
+                                            elts.append(elt.value)
+                                        elif hasattr(ast, "Num") and isinstance(
+                                            elt, ast.Num
+                                        ):
+                                            elts.append(elt.n)
+                                    val = ".".join(map(str, elts))
+                                except:
+                                    import traceback
 
-                         if val is not None:
-                             if target.id == 'PLUGIN_NAME':
-                                 info['name'] = val
-                             elif target.id == 'PLUGIN_VERSION':
-                                 info['version'] = val
-                             elif target.id == 'PLUGIN_AUTHOR':
-                                 info['author'] = val
-                             elif target.id == 'PLUGIN_DESCRIPTION':
-                                 info['description'] = val
-                             elif target.id == 'PLUGIN_CATEGORY':
-                                 info['category'] = val
-                             elif target.id == '__version__' and info['version'] == 'Unknown':
-                                 info['version'] = val
-                             elif target.id == '__author__' and info['author'] == 'Unknown':
-                                 info['author'] = val
+                                    pass
 
-                 # Docstring extraction
-                 if isinstance(node, ast.Expr):
-                     val = None
-                     if isinstance(node.value, ast.Constant) and isinstance(node.value.value, str):
-                          val = node.value.value
-                     elif hasattr(ast, 'Str') and isinstance(node.value, ast.Str):
-                          val = node.value.s
+                        if val is not None:
+                            if target.id == "PLUGIN_NAME":
+                                info["name"] = val
+                            elif target.id == "PLUGIN_VERSION":
+                                info["version"] = val
+                            elif target.id == "PLUGIN_AUTHOR":
+                                info["author"] = val
+                            elif target.id == "PLUGIN_DESCRIPTION":
+                                info["description"] = val
+                            elif target.id == "PLUGIN_CATEGORY":
+                                info["category"] = val
+                            elif (
+                                target.id == "__version__"
+                                and info["version"] == "Unknown"
+                            ):
+                                info["version"] = val
+                            elif (
+                                target.id == "__author__"
+                                and info["author"] == "Unknown"
+                            ):
+                                info["author"] = val
 
-                     if val and not info['description']:
-                          info['description'] = val.strip().split('\n')[0]
+                # Docstring extraction
+                if isinstance(node, ast.Expr):
+                    val = None
+                    if isinstance(node.value, ast.Constant) and isinstance(
+                        node.value.value, str
+                    ):
+                        val = node.value.value
+                    elif hasattr(ast, "Str") and isinstance(node.value, ast.Str):
+                        val = node.value.s
+
+                    if val and not info["description"]:
+                        info["description"] = val.strip().split("\n")[0]
 
         except Exception as e:
             print(f"Error parsing plugin info: {e}")
         return info
-
-
-

@@ -19,6 +19,7 @@ try:
 except Exception:
     from modules.constants import CPK_COLORS
 
+
 class TemplatePreviewItem(QGraphicsItem):
     def __init__(self):
         super().__init__()
@@ -55,7 +56,9 @@ class TemplatePreviewItem(QGraphicsItem):
             max_x = max(p.x() for p in self.user_template_points)
             min_y = min(p.y() for p in self.user_template_points)
             max_y = max(p.y() for p in self.user_template_points)
-            return QRectF(min_x - 20, min_y - 20, max_x - min_x + 40, max_y - min_y + 40)
+            return QRectF(
+                min_x - 20, min_y - 20, max_x - min_x + 40, max_y - min_y + 40
+            )
         return self.polygon.boundingRect().adjusted(-5, -5, 5, 5)
 
     def paint(self, painter, option, widget):
@@ -90,7 +93,9 @@ class TemplatePreviewItem(QGraphicsItem):
                 atom1_idx, atom2_idx = bond_info[:2]
                 order = 1
 
-            if atom1_idx < len(self.user_template_points) and atom2_idx < len(self.user_template_points):
+            if atom1_idx < len(self.user_template_points) and atom2_idx < len(
+                self.user_template_points
+            ):
                 pos1 = self.user_template_points[atom1_idx]
                 pos2 = self.user_template_points[atom2_idx]
 
@@ -100,8 +105,14 @@ class TemplatePreviewItem(QGraphicsItem):
                     normal = line.normalVector()
                     normal.setLength(4)
 
-                    line1 = QLineF(pos1 + normal.p2() - normal.p1(), pos2 + normal.p2() - normal.p1())
-                    line2 = QLineF(pos1 - normal.p2() + normal.p1(), pos2 - normal.p2() + normal.p1())
+                    line1 = QLineF(
+                        pos1 + normal.p2() - normal.p1(),
+                        pos2 + normal.p2() - normal.p1(),
+                    )
+                    line2 = QLineF(
+                        pos1 - normal.p2() + normal.p1(),
+                        pos2 - normal.p2() + normal.p1(),
+                    )
 
                     painter.drawLine(line1)
                     painter.drawLine(line2)
@@ -112,8 +123,14 @@ class TemplatePreviewItem(QGraphicsItem):
                     normal.setLength(6)
 
                     painter.drawLine(line)
-                    line1 = QLineF(pos1 + normal.p2() - normal.p1(), pos2 + normal.p2() - normal.p1())
-                    line2 = QLineF(pos1 - normal.p2() + normal.p1(), pos2 - normal.p2() + normal.p1())
+                    line1 = QLineF(
+                        pos1 + normal.p2() - normal.p1(),
+                        pos2 + normal.p2() - normal.p1(),
+                    )
+                    line2 = QLineF(
+                        pos1 - normal.p2() + normal.p1(),
+                        pos2 - normal.p2() + normal.p1(),
+                    )
 
                     painter.drawLine(line1)
                     painter.drawLine(line2)
@@ -125,12 +142,14 @@ class TemplatePreviewItem(QGraphicsItem):
         for i, pos in enumerate(self.user_template_points):
             if i < len(self.user_template_atoms):
                 atom_data = self.user_template_atoms[i]
-                symbol = atom_data.get('symbol', 'C')
+                symbol = atom_data.get("symbol", "C")
 
                 # Draw all non-carbon atoms including hydrogen with white background ellipse + CPK colored text
-                if symbol != 'C':
+                if symbol != "C":
                     # Get CPK color for text
-                    color = CPK_COLORS.get(symbol, CPK_COLORS.get('DEFAULT', QColor('#FF1493')))
+                    color = CPK_COLORS.get(
+                        symbol, CPK_COLORS.get("DEFAULT", QColor("#FF1493"))
+                    )
 
                     # Draw white background ellipse to hide bonds
                     painter.setPen(QPen(Qt.GlobalColor.white, 0))  # No border
@@ -143,5 +162,8 @@ class TemplatePreviewItem(QGraphicsItem):
                     painter.setFont(font)
                     metrics = painter.fontMetrics()
                     text_rect = metrics.boundingRect(symbol)
-                    text_pos = QPointF(pos.x() - text_rect.width()/2, pos.y() + text_rect.height()/3)
+                    text_pos = QPointF(
+                        pos.x() - text_rect.width() / 2,
+                        pos.y() + text_rect.height() / 3,
+                    )
                     painter.drawText(text_pos, symbol)

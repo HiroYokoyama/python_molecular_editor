@@ -27,7 +27,7 @@ from PyQt6.QtWidgets import (
 from .dialog3_d_picking_mixin import Dialog3DPickingMixin
 
 
-class TranslationDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
+class TranslationDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
     def __init__(self, mol, main_window, parent=None):
         QDialog.__init__(self, parent)
         Dialog3DPickingMixin.__init__(self)
@@ -42,7 +42,9 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
         layout = QVBoxLayout(self)
 
         # Instructions
-        instruction_label = QLabel("Click atoms in the 3D view to select them. The centroid of selected atoms will be moved to the target coordinates, translating the entire molecule.")
+        instruction_label = QLabel(
+            "Click atoms in the 3D view to select them. The centroid of selected atoms will be moved to the target coordinates, translating the entire molecule."
+        )
         instruction_label.setWordWrap(True)
         layout.addWidget(instruction_label)
 
@@ -67,12 +69,16 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
         layout.addLayout(coord_layout)
 
         # Translation target toggle: Entire molecule (default) or Selected atoms only
-        self.translate_selected_only_checkbox = QCheckBox("Translate selected atoms only")
+        self.translate_selected_only_checkbox = QCheckBox(
+            "Translate selected atoms only"
+        )
         self.translate_selected_only_checkbox.setToolTip(
             "When checked, only the atoms you selected will be moved so their centroid matches the target.\n"
             "When unchecked (default), the entire molecule will be translated so the selected atoms' centroid moves to the target."
         )
-        self.translate_selected_only_checkbox.setChecked(False)  # default: entire molecule
+        self.translate_selected_only_checkbox.setChecked(
+            False
+        )  # default: entire molecule
         layout.addWidget(self.translate_selected_only_checkbox)
 
         # Buttons
@@ -83,7 +89,9 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
 
         # Select all atoms button
         self.select_all_button = QPushButton("Select All Atoms")
-        self.select_all_button.setToolTip("Select all atoms in the molecule for translation")
+        self.select_all_button.setToolTip(
+            "Select all atoms in the molecule for translation"
+        )
         self.select_all_button.clicked.connect(self.select_all_atoms)
         button_layout.addWidget(self.select_all_button)
 
@@ -171,7 +179,7 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
                 self.x_input.setText("0.0")
                 self.y_input.setText("0.0")
                 self.z_input.setText("0.0")
-        except Exception:
+        except Exception:  # pragma: no cover
             # Be tolerant: do not crash the UI if inputs cannot be updated
             pass
 
@@ -196,7 +204,9 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
 
         # 分子の有効性チェック
         if not self.mol or self.mol.GetNumConformers() == 0:
-            QMessageBox.warning(self, "Warning", "No valid molecule or conformer available.")
+            QMessageBox.warning(
+                self, "Warning", "No valid molecule or conformer available."
+            )
             return
 
         try:
@@ -227,8 +237,9 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
                         # Update 3d positions for this atom only
                         try:
                             self.main_window.atom_positions_3d[i] = new_pos
-                        except Exception:
-                            pass
+                        except Exception:  # pragma: no cover
+                            import traceback
+                            traceback.print_exc()
                     else:
                         # leave other atoms unchanged
                         continue
@@ -253,7 +264,9 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
             self.main_window.push_undo_state()
 
         except Exception as e:
-            QMessageBox.critical(self, "Error", f"Failed to apply translation: {str(e)}")
+            QMessageBox.critical(
+                self, "Error", f"Failed to apply translation: {str(e)}"
+            )
 
     def clear_selection(self):
         """選択をクリア"""
@@ -265,17 +278,25 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
         """Select all atoms in the current molecule and update labels/UI."""
         try:
             # Prefer RDKit molecule if available
-            if hasattr(self, 'mol') and self.mol is not None:
+            if hasattr(self, "mol") and self.mol is not None:
                 try:
                     n = self.mol.GetNumAtoms()
                     # create a set of indices [0..n-1]
                     self.selected_atoms = set(range(n))
                 except Exception:
                     # fallback to main_window data map
-                    self.selected_atoms = set(self.main_window.data.atoms.keys()) if hasattr(self.main_window, 'data') else set()
+                    self.selected_atoms = (
+                        set(self.main_window.data.atoms.keys())
+                        if hasattr(self.main_window, "data")
+                        else set()
+                    )
             else:
                 # fallback to main_window data map
-                self.selected_atoms = set(self.main_window.data.atoms.keys()) if hasattr(self.main_window, 'data') else set()
+                self.selected_atoms = (
+                    set(self.main_window.data.atoms.keys())
+                    if hasattr(self.main_window, "data")
+                    else set()
+                )
 
             # Update labels and display
             self.show_atom_labels()
@@ -289,7 +310,7 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
         # 既存のラベルをクリア
         self.clear_atom_labels()
 
-        if not hasattr(self, 'selection_labels'):
+        if not hasattr(self, "selection_labels"):
             self.selection_labels = []
 
         if self.selected_atoms:
@@ -299,7 +320,7 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
             for i, atom_idx in enumerate(sorted(self.selected_atoms)):
                 pos = self.main_window.atom_positions_3d[atom_idx]
                 positions.append(pos)
-                labels.append(f"S{i+1}")
+                labels.append(f"S{i + 1}")
 
             # 重心位置も表示
             if len(self.selected_atoms) > 1:
@@ -310,11 +331,12 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
             # ラベルを追加
             if positions:
                 label_actor = self.main_window.plotter.add_point_labels(
-                    positions, labels,
+                    positions,
+                    labels,
                     point_size=20,
                     font_size=12,
-                    text_color='cyan',
-                    always_visible=True
+                    text_color="cyan",
+                    always_visible=True,
                 )
                 # add_point_labelsがリストを返す場合も考慮
                 if isinstance(label_actor, list):
@@ -328,8 +350,9 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
         # ラベル消去後に再描画を強制
         try:
             self.main_window.plotter.render()
-        except Exception:
-            pass
+        except Exception:  # pragma: no cover
+            import traceback
+            traceback.print_exc()
 
     def closeEvent(self, event):
         """ダイアログが閉じられる時の処理"""
@@ -337,8 +360,10 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
         self.disable_picking()
         try:
             self.main_window.draw_molecule_3d(self.mol)
-        except Exception:
-            pass
+        except Exception:  # pragma: no cover
+            import traceback
+            traceback.print_exc()
+
         super().closeEvent(event)
 
     def reject(self):
@@ -347,8 +372,10 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
         self.disable_picking()
         try:
             self.main_window.draw_molecule_3d(self.mol)
-        except Exception:
-            pass
+        except Exception:  # pragma: no cover
+            import traceback
+            traceback.print_exc()
+
         super().reject()
 
     def accept(self):
@@ -357,6 +384,8 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog): # pragma: no cover
         self.disable_picking()
         try:
             self.main_window.draw_molecule_3d(self.mol)
-        except Exception:
-            pass
+        except Exception:  # pragma: no cover
+            import traceback
+            traceback.print_exc()
+
         super().accept()

@@ -23,6 +23,7 @@ import numpy as np
 # Graph traversal
 # ------------------------------------------------------------------
 
+
 def get_connected_group(mol, start_atom, exclude=None):
     """Return the set of atom indices reachable from *start_atom*
     without passing through *exclude*.
@@ -67,6 +68,7 @@ def get_connected_group(mol, start_atom, exclude=None):
 # ------------------------------------------------------------------
 # Dihedral (torsion) angle
 # ------------------------------------------------------------------
+
 
 def calculate_dihedral(positions, i1, i2, i3, i4):
     """Compute the dihedral angle defined by four atom indices.
@@ -127,14 +129,14 @@ def calculate_dihedral(positions, i1, i2, i3, i4):
 # (symbol, requires_neutral).  Entries with ``requires_neutral=True``
 # are only checked when the formal charge is zero.
 _VALENCE_LIMITS = {
-    'C':  (4, False),
-    'N':  (3, True),
-    'O':  (2, True),
-    'H':  (1, False),
-    'F':  (1, True),
-    'Cl': (1, True),
-    'Br': (1, True),
-    'I':  (1, True),
+    "C": (4, False),
+    "N": (3, True),
+    "O": (2, True),
+    "H": (1, False),
+    "F": (1, True),
+    "Cl": (1, True),
+    "Br": (1, True),
+    "I": (1, True),
 }
 
 

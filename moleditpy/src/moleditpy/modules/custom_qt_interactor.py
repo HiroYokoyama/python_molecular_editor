@@ -31,7 +31,7 @@ class CustomQtInteractor(QtInteractor):
         super().wheelEvent(event)
 
         # ズーム処理の完了後、2Dビューにフォーカスを強制的に戻す
-        if self.main_window and hasattr(self.main_window, 'view_2d'):
+        if self.main_window and hasattr(self.main_window, "view_2d"):
             self.main_window.view_2d.setFocus()
 
     def mouseReleaseEvent(self, event):
@@ -45,8 +45,8 @@ class CustomQtInteractor(QtInteractor):
             event.accept()
             return
 
-        super().mouseReleaseEvent(event) # 親クラスのイベントを先に処理
-        if self.main_window and hasattr(self.main_window, 'view_2d'):
+        super().mouseReleaseEvent(event)  # 親クラスのイベントを先に処理
+        if self.main_window and hasattr(self.main_window, "view_2d"):
             self.main_window.view_2d.setFocus()
 
     def mousePressEvent(self, event):
@@ -83,9 +83,9 @@ class CustomQtInteractor(QtInteractor):
         self._last_click_time = current_time
         # Set to 2 to ensure the next click counts as 3rd
         if current_time - self._last_click_time < 0.5:
-             self._click_count = 2
+            self._click_count = 2
         else:
-             self._click_count = 2 # Force sync
+            self._click_count = 2  # Force sync
 
         self._ignore_next_release = True
 

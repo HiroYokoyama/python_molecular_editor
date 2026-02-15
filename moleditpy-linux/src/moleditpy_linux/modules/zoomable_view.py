@@ -15,7 +15,8 @@ from PyQt6.QtWidgets import QGraphicsView
 
 
 class ZoomableView(QGraphicsView):
-    """ マウスホイールでのズームと、中ボタン or Shift+左ドラッグでのパン機能を追加したQGraphicsView """
+    """マウスホイールでのズームと、中ボタン or Shift+左ドラッグでのパン機能を追加したQGraphicsView"""
+
     def __init__(self, scene, parent=None):
         super().__init__(scene, parent)
         self.setTransformationAnchor(QGraphicsView.ViewportAnchor.AnchorUnderMouse)
@@ -33,7 +34,7 @@ class ZoomableView(QGraphicsView):
         self._pan_start_scroll_v = 0
 
     def wheelEvent(self, event):
-        """ マウスホイールを回した際のイベント """
+        """マウスホイールを回した際のイベント"""
         if event.modifiers() & Qt.KeyboardModifier.ControlModifier:
             zoom_in_factor = 1.1
             zoom_out_factor = 1 / zoom_in_factor
@@ -54,14 +55,16 @@ class ZoomableView(QGraphicsView):
             super().wheelEvent(event)
 
     def mousePressEvent(self, event):
-        """ 中ボタン or Shift+左ボタンが押されたらパン（視点移動）モードを開始 """
+        """中ボタン or Shift+左ボタンが押されたらパン（視点移動）モードを開始"""
         is_middle_button = event.button() == Qt.MouseButton.MiddleButton
-        is_shift_left_button = (event.button() == Qt.MouseButton.LeftButton and
-                                event.modifiers() & Qt.KeyboardModifier.ShiftModifier)
+        is_shift_left_button = (
+            event.button() == Qt.MouseButton.LeftButton
+            and event.modifiers() & Qt.KeyboardModifier.ShiftModifier
+        )
 
         if is_middle_button or is_shift_left_button:
             self._is_panning = True
-            self._pan_start_pos = event.pos() # ビューポート座標で開始点を記録
+            self._pan_start_pos = event.pos()  # ビューポート座標で開始点を記録
             # 現在のスクロールバーの位置を記録
             self._pan_start_scroll_h = self.horizontalScrollBar().value()
             self._pan_start_scroll_v = self.verticalScrollBar().value()
@@ -71,9 +74,9 @@ class ZoomableView(QGraphicsView):
             super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event):
-        """ パンモード中にマウスを動かしたら、スクロールバーを操作して視点を移動させる """
+        """パンモード中にマウスを動かしたら、スクロールバーを操作して視点を移動させる"""
         if self._is_panning:
-            delta = event.pos() - self._pan_start_pos # マウスの移動量を計算
+            delta = event.pos() - self._pan_start_pos  # マウスの移動量を計算
             # 開始時のスクロール位置から移動量を引いた値を新しいスクロール位置に設定
             self.horizontalScrollBar().setValue(self._pan_start_scroll_h - delta.x())
             self.verticalScrollBar().setValue(self._pan_start_scroll_v - delta.y())
@@ -82,7 +85,7 @@ class ZoomableView(QGraphicsView):
             super().mouseMoveEvent(event)
 
     def mouseReleaseEvent(self, event):
-        """ パンに使用したボタンが離されたらパンモードを終了 """
+        """パンに使用したボタンが離されたらパンモードを終了"""
         # パンを開始したボタン（中 or 左）のどちらかが離されたかをチェック
         is_middle_button_release = event.button() == Qt.MouseButton.MiddleButton
         is_left_button_release = event.button() == Qt.MouseButton.LeftButton
@@ -90,12 +93,12 @@ class ZoomableView(QGraphicsView):
         if self._is_panning and (is_middle_button_release or is_left_button_release):
             self._is_panning = False
             # 現在の描画モードに応じたカーソルに戻す
-            current_mode = self.scene().mode if self.scene() else 'select'
-            if current_mode == 'select':
+            current_mode = self.scene().mode if self.scene() else "select"
+            if current_mode == "select":
                 self.setCursor(Qt.CursorShape.ArrowCursor)
-            elif current_mode.startswith(('atom', 'bond', 'template')):
+            elif current_mode.startswith(("atom", "bond", "template")):
                 self.setCursor(Qt.CursorShape.CrossCursor)
-            elif current_mode.startswith(('charge', 'radical')):
+            elif current_mode.startswith(("charge", "radical")):
                 self.setCursor(Qt.CursorShape.CrossCursor)
             else:
                 self.setCursor(Qt.CursorShape.ArrowCursor)
@@ -104,7 +107,7 @@ class ZoomableView(QGraphicsView):
             super().mouseReleaseEvent(event)
 
     def viewportEvent(self, event):
-        """ Macのトラックパッドなどのネイティブジェスチャー（ピンチ）に対応 """
+        """Macのトラックパッドなどのネイティブジェスチャー（ピンチ）に対応"""
         if event.type() == QEvent.Type.NativeGesture:
             # ピンチズーム（ZoomNativeGesture）の場合
             if event.gestureType() == Qt.NativeGestureType.ZoomNativeGesture:

@@ -39,7 +39,9 @@ class TemplatePreviewView(QGraphicsView):
         """ビューを再フィット"""
         try:
             if self.original_scene_rect and not self.original_scene_rect.isEmpty():
-                self.fitInView(self.original_scene_rect, Qt.AspectRatioMode.KeepAspectRatio)
+                self.fitInView(
+                    self.original_scene_rect, Qt.AspectRatioMode.KeepAspectRatio
+                )
         except Exception as e:
             print(f"Warning: Failed to refit template preview: {e}")
 
@@ -59,16 +61,29 @@ class TemplatePreviewView(QGraphicsView):
 
                 # Redraw with current view size for proper fit-based scaling
                 view_size = (self.width(), self.height())
-                self.parent_dialog.draw_template_preview(self.scene(), self.template_data, view_size)
+                self.parent_dialog.draw_template_preview(
+                    self.scene(), self.template_data, view_size
+                )
 
                 # Refit the view
                 bounding_rect = self.scene().itemsBoundingRect()
-                if not bounding_rect.isEmpty() and bounding_rect.width() > 0 and bounding_rect.height() > 0:
+                if (
+                    not bounding_rect.isEmpty()
+                    and bounding_rect.width() > 0
+                    and bounding_rect.height() > 0
+                ):
                     content_size = max(bounding_rect.width(), bounding_rect.height())
                     padding = max(20, content_size * 0.2)
-                    padded_rect = bounding_rect.adjusted(-padding, -padding, padding, padding)
+                    padded_rect = bounding_rect.adjusted(
+                        -padding, -padding, padding, padding
+                    )
                     self.scene().setSceneRect(padded_rect)
                     self.original_scene_rect = padded_rect
-                    QTimer.singleShot(10, lambda: self.fitInView(padded_rect, Qt.AspectRatioMode.KeepAspectRatio))
+                    QTimer.singleShot(
+                        10,
+                        lambda: self.fitInView(
+                            padded_rect, Qt.AspectRatioMode.KeepAspectRatio
+                        ),
+                    )
             except Exception as e:
                 print(f"Warning: Failed to redraw template preview: {e}")

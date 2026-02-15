@@ -5,44 +5,50 @@ from rdkit.Chem import AllChem
 from moleditpy.modules.calculation_worker import CalculationWorker
 from unittest.mock import MagicMock, patch
 
+
 # Helper to capture signal emissions
 class SignalCaptor:
     def __init__(self):
         self.emitted_values = []
+
     def capture(self, *args):
         if len(args) == 1:
             self.emitted_values.append(args[0])
         else:
             self.emitted_values.append(args)
 
+
 @pytest.fixture
 def worker():
     w = CalculationWorker()
     return w
 
+
 def test_calculation_worker_init(worker):
     assert worker is not None
-    assert hasattr(worker, 'status_update')
-    assert hasattr(worker, 'finished')
-    assert hasattr(worker, 'error')
+    assert hasattr(worker, "status_update")
+    assert hasattr(worker, "finished")
+    assert hasattr(worker, "error")
+
 
 def test_calculation_worker_halt_logic(worker):
     """Test the internal _check_halted logic via run_calculation."""
     mol = Chem.MolFromSmiles("C")
     mol_block = Chem.MolToMolBlock(mol)
-    
+
     # Mock error signal to catch the "Halted" message
     error_captor = SignalCaptor()
     worker.error.connect(error_captor.capture)
-    
+
     # Set halt state
     worker.halt_ids = {123}
-    options = {'worker_id': 123}
-    
+    options = {"worker_id": 123}
+
     worker.run_calculation(mol_block, options)
-    
+
     # Should emit error with "Halted"
     assert any("Halted" in str(val) for val in error_captor.emitted_values)
+
 
 def test_calculation_worker_direct_mode(worker):
     """Test 'direct' conversion mode which avoids RDKit 3D embedding."""
@@ -50,13 +56,13 @@ def test_calculation_worker_direct_mode(worker):
     mol = Chem.MolFromSmiles("CC")
     AllChem.Compute2DCoords(mol)
     mol_block = Chem.MolToMolBlock(mol)
-    
+
     finish_captor = SignalCaptor()
     worker.finished.connect(finish_captor.capture)
-    
-    options = {'conversion_mode': 'direct', 'worker_id': 1}
+
+    options = {"conversion_mode": "direct", "worker_id": 1}
     worker.run_calculation(mol_block, options)
-    
+
     assert len(finish_captor.emitted_values) > 0
     # Payload should be (worker_id, mol) or just mol
     result = finish_captor.emitted_values[0]
@@ -64,12 +70,13 @@ def test_calculation_worker_direct_mode(worker):
         res_mol = result[1]
     else:
         res_mol = result
-        
-    assert res_mol.GetNumAtoms() > 2 # Should have added Hydrogens
+
+    assert res_mol.GetNumAtoms() > 2  # Should have added Hydrogens
     # Check that Z is not all 0 (due to H-offset logic)
     conf = res_mol.GetConformer()
     z_coords = [conf.GetAtomPosition(i).z for i in range(res_mol.GetNumAtoms())]
     assert any(z > 0 for z in z_coords)
+
 
 def test_calculation_worker_explicit_stereo_m_cfg(worker):
     """Test parsing of M CFG labels in MOL block."""
@@ -91,58 +98,69 @@ M  END
 """
     finish_captor = SignalCaptor()
     worker.finished.connect(finish_captor.capture)
-    
+
     # Use direct mode to verify processing
-    worker.run_calculation(mol_block.strip() + "\n", {'conversion_mode': 'direct'})
-    
+    worker.run_calculation(mol_block.strip() + "\n", {"conversion_mode": "direct"})
+
     assert len(finish_captor.emitted_values) > 0
     res_mol = finish_captor.emitted_values[0]
-    if isinstance(res_mol, tuple): res_mol = res_mol[1]
-    
+    if isinstance(res_mol, tuple):
+        res_mol = res_mol[1]
+
     # Find double bond and check stereo
     for bond in res_mol.GetBonds():
         if bond.GetBondType() == Chem.BondType.DOUBLE:
             assert bond.GetStereo() == Chem.BondStereo.STEREOE
 
+
 def test_calculation_worker_error_empty_input(worker):
     error_captor = SignalCaptor()
     worker.error.connect(error_captor.capture)
-    
+
     worker.run_calculation("", None)
     assert any("No atoms to convert" in str(val) for val in error_captor.emitted_values)
+
 
 def test_calculation_worker_safe_helpers_halted(worker):
     """Test that safe helpers don't emit finished if halted."""
     # We need to set halt_all on the worker object
-    setattr(worker, 'halt_all', True)
-    
+    setattr(worker, "halt_all", True)
+
     status_captor = SignalCaptor()
     worker.status_update.connect(status_captor.capture)
-    
+
     finish_captor = SignalCaptor()
     worker.finished.connect(finish_captor.capture)
-    
+
     mol = Chem.MolFromSmiles("C")
     # run_calculation uses _check_halted which checks self.halt_all if worker_id is None
     worker.run_calculation(Chem.MolToMolBlock(mol), None)
-    
+
     # Finished should NOT be emitted
     assert len(finish_captor.emitted_values) == 0
     # Status should NOT be emitted (except maybe the first "Creating 3D structure..." if it happens before halt check?)
-    
+
+
 def test_calculation_worker_rdkit_embedding_fail_fallback(worker):
     """Test that embedding failure triggers fallback status or error messages."""
     status_captor = SignalCaptor()
     worker.status_update.connect(status_captor.capture)
     error_captor = SignalCaptor()
     worker.error.connect(error_captor.capture)
-    
+
     mol_block = Chem.MolToMolBlock(Chem.MolFromSmiles("C"))
-    
+
     # If EmbedMolecule returns -1, it doesn't raise Exception, so it proceeds to constraint embedding
-    with patch('rdkit.Chem.AllChem.EmbedMolecule', return_value=-1), \
-         patch('rdkit.Chem.AllChem.GetMoleculeBoundsMatrix', side_effect=Exception("Bounds fail")):
-        worker.run_calculation(mol_block, {'conversion_mode': 'rdkit'})
-        
-    all_msgs = [str(m).lower() for m in status_captor.emitted_values] + [str(m).lower() for m in error_captor.emitted_values]
+    with (
+        patch("rdkit.Chem.AllChem.EmbedMolecule", return_value=-1),
+        patch(
+            "rdkit.Chem.AllChem.GetMoleculeBoundsMatrix",
+            side_effect=Exception("Bounds fail"),
+        ),
+    ):
+        worker.run_calculation(mol_block, {"conversion_mode": "rdkit"})
+
+    all_msgs = [str(m).lower() for m in status_captor.emitted_values] + [
+        str(m).lower() for m in error_captor.emitted_values
+    ]
     assert any("failed" in m or "error" in m for m in all_msgs)

@@ -21,7 +21,8 @@ try:
 except Exception:
     from modules.constants import VERSION
 
-class AboutDialog(QDialog): # pragma: no cover
+
+class AboutDialog(QDialog):  # pragma: no cover
     def __init__(self, main_window, parent=None):
         super().__init__(parent)
         self.main_window = main_window
@@ -37,11 +38,16 @@ class AboutDialog(QDialog): # pragma: no cover
         self.image_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         # Load the original icon image
-        icon_path = os.path.join(os.path.dirname(__file__), '..', 'assets', 'icon.png')
+        icon_path = os.path.join(os.path.dirname(__file__), "..", "assets", "icon.png")
         if os.path.exists(icon_path):
             original_pixmap = QPixmap(icon_path)
             # Scale to 2x size (160x160)
-            pixmap = original_pixmap.scaled(160, 160, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+            pixmap = original_pixmap.scaled(
+                160,
+                160,
+                Qt.AspectRatioMode.KeepAspectRatio,
+                Qt.TransformationMode.SmoothTransformation,
+            )
         else:
             # Fallback: create a simple placeholder if icon.png not found
             pixmap = QPixmap(160, 160)
@@ -54,8 +60,9 @@ class AboutDialog(QDialog): # pragma: no cover
         self.image_label.setPixmap(pixmap)
         try:
             self.image_label.setCursor(QCursor(Qt.CursorShape.ArrowCursor))
-        except Exception:
-            pass
+        except Exception:  # pragma: no cover
+            import traceback
+            traceback.print_exc()
 
         self.image_label.mousePressEvent = self.image_mouse_press_event
 
@@ -100,5 +107,6 @@ class AboutDialog(QDialog): # pragma: no cover
         except Exception:
             try:
                 event.ignore()
-            except Exception:
-                pass
+            except Exception:  # pragma: no cover
+                import traceback
+                traceback.print_exc()

@@ -25,7 +25,9 @@ from rdkit.Chem import AllChem
 
 try:
     pass
-except Exception:
+except Exception:  # pragma: no cover
+    import traceback
+
     pass
 
 # PyQt6 Modules
@@ -33,7 +35,8 @@ from PyQt6.QtWidgets import QFileDialog
 
 try:
     from PyQt6 import sip as _sip  # type: ignore
-    _sip_isdeleted = getattr(_sip, 'isdeleted', None)
+
+    _sip_isdeleted = getattr(_sip, "isdeleted", None)
 except Exception:
     _sip = None
     _sip_isdeleted = None
@@ -45,14 +48,17 @@ except Exception:
     # Fallback to absolute imports for script-style execution
     from modules.constants import VERSION
 
+
 # --- クラス定義 ---
 class MainWindowViewLoaders(object):
-    """ main_window.py から分離された機能クラス """
+    """main_window.py から分離された機能クラス"""
 
     def load_xyz_for_3d_viewing(self, file_path=None):
         """XYZファイルを読み込んで3Dビューアで表示する"""
         if not file_path:
-            file_path, _ = QFileDialog.getOpenFileName(self, "Load 3D XYZ (View Only)", "", "XYZ Files (*.xyz);;All Files (*)")
+            file_path, _ = QFileDialog.getOpenFileName(
+                self, "Load 3D XYZ (View Only)", "", "XYZ Files (*.xyz);;All Files (*)"
+            )
             if not file_path:
                 return
 
@@ -85,42 +91,46 @@ class MainWindowViewLoaders(object):
                 skip_flag = bool(self.current_mol.GetIntProp("_xyz_skip_checks"))
             except Exception:
                 try:
-                    skip_flag = bool(getattr(self.current_mol, '_xyz_skip_checks', False))
+                    skip_flag = bool(
+                        getattr(self.current_mol, "_xyz_skip_checks", False)
+                    )
                 except Exception:
                     skip_flag = False
 
             if skip_flag:
                 self.is_xyz_derived = True
-                if hasattr(self, 'optimize_3d_button'):
+                if hasattr(self, "optimize_3d_button"):
                     try:
                         self.optimize_3d_button.setEnabled(False)
-                    except Exception:
-                        pass
+                    except Exception:  # pragma: no cover
+                        import traceback
+                        traceback.print_exc()
             else:
                 try:
-                    has_bonds = (self.current_mol.GetNumBonds() > 0)
+                    has_bonds = self.current_mol.GetNumBonds() > 0
                 except Exception:
                     has_bonds = False
 
                 if has_bonds:
                     self.is_xyz_derived = False
-                    if hasattr(self, 'optimize_3d_button'):
+                    if hasattr(self, "optimize_3d_button"):
                         try:
                             # Only enable optimize if the molecule is not considered XYZ-derived
-                            if not getattr(self, 'is_xyz_derived', False):
+                            if not getattr(self, "is_xyz_derived", False):
                                 self.optimize_3d_button.setEnabled(True)
                             else:
                                 self.optimize_3d_button.setEnabled(False)
-                        except Exception:
-                            pass
+                        except Exception:  # pragma: no cover
+                            import traceback
+                            traceback.print_exc()
                 else:
                     self.is_xyz_derived = True
-                    if hasattr(self, 'optimize_3d_button'):
+                    if hasattr(self, "optimize_3d_button"):
                         try:
                             self.optimize_3d_button.setEnabled(False)
-                        except Exception:
-                            pass
-
+                        except Exception:  # pragma: no cover
+                            import traceback
+                            traceback.print_exc()
             self.draw_molecule_3d(self.current_mol)
             self.plotter.reset_camera()
 
@@ -134,7 +144,9 @@ class MainWindowViewLoaders(object):
             self.update_atom_id_menu_text()
             self.update_atom_id_menu_state()
 
-            self.statusBar().showMessage(f"3D Viewer Mode: Loaded {os.path.basename(file_path)}")
+            self.statusBar().showMessage(
+                f"3D Viewer Mode: Loaded {os.path.basename(file_path)}"
+            )
             self.reset_undo_stack()
             # XYZファイル名をcurrent_file_pathにセットし、未保存状態はFalse
             self.current_file_path = file_path
@@ -151,7 +163,7 @@ class MainWindowViewLoaders(object):
             self.statusBar().showMessage(f"Error loading XYZ file: {e}")
             self.restore_ui_for_editing()
 
-            traceback.print_exc()
+            pass
 
     def save_3d_as_mol(self):
         if not self.current_mol:
@@ -173,16 +185,23 @@ class MainWindowViewLoaders(object):
             default_path = default_name
             try:
                 if self.current_file_path:
-                    default_path = os.path.join(os.path.dirname(self.current_file_path), default_name)
+                    default_path = os.path.join(
+                        os.path.dirname(self.current_file_path), default_name
+                    )
             except Exception:
                 default_path = default_name
 
-            file_path, _ = QFileDialog.getSaveFileName(self, "Save 3D MOL File", default_path, "MOL Files (*.mol);;All Files (*)")
+            file_path, _ = QFileDialog.getSaveFileName(
+                self,
+                "Save 3D MOL File",
+                default_path,
+                "MOL Files (*.mol);;All Files (*)",
+            )
             if not file_path:
                 return
 
-            if not file_path.lower().endswith('.mol'):
-                file_path += '.mol'
+            if not file_path.lower().endswith(".mol"):
+                file_path += ".mol"
 
             mol_to_save = Chem.Mol(self.current_mol)
 
@@ -190,12 +209,12 @@ class MainWindowViewLoaders(object):
                 mol_to_save.ClearProp("_2D")
 
             mol_block = Chem.MolToMolBlock(mol_to_save, includeStereo=True)
-            lines = mol_block.split('\n')
-            if len(lines) > 1 and 'RDKit' in lines[1]:
-                lines[1] = '  MoleditPy Ver. ' + VERSION + '  3D'
-            modified_mol_block = '\n'.join(lines)
+            lines = mol_block.split("\n")
+            if len(lines) > 1 and "RDKit" in lines[1]:
+                lines[1] = "  MoleditPy Ver. " + VERSION + "  3D"
+            modified_mol_block = "\n".join(lines)
 
-            with open(file_path, 'w', encoding='utf-8') as f:
+            with open(file_path, "w", encoding="utf-8") as f:
                 f.write(modified_mol_block)
             self.statusBar().showMessage(f"3D data saved to {file_path}")
 
@@ -206,34 +225,35 @@ class MainWindowViewLoaders(object):
         except Exception as e:
             self.statusBar().showMessage(f"Error saving 3D MOL file: {e}")
 
-            traceback.print_exc()
+            pass
 
     def load_mol_file_for_3d_viewing(self, file_path=None):
         """MOL/SDFファイルを3Dビューアーで開く"""
         if not self.check_unsaved_changes():
-                return  # ユーザーがキャンセルした場合は何もしない
+            return  # ユーザーがキャンセルした場合は何もしない
         if not file_path:
             file_path, _ = QFileDialog.getOpenFileName(
-                self, "Open MOL/SDF File", "",
-                "MOL/SDF Files (*.mol *.sdf);;All Files (*)"
+                self,
+                "Open MOL/SDF File",
+                "",
+                "MOL/SDF Files (*.mol *.sdf);;All Files (*)",
             )
             if not file_path:
                 return
 
         try:
-
             # Determine extension early and handle .mol specially by reading the
             # raw block and running it through fix_mol_block before parsing.
             _, ext = os.path.splitext(file_path)
-            ext = ext.lower() if ext else ''
+            ext = ext.lower() if ext else ""
 
-            if ext == '.sdf':
+            if ext == ".sdf":
                 suppl = Chem.SDMolSupplier(file_path, removeHs=False)
                 mol = next(suppl, None)
 
-            elif ext == '.mol':
+            elif ext == ".mol":
                 # Read the file contents and attempt to fix malformed counts lines
-                with open(file_path, 'r', encoding='utf-8', errors='replace') as fh:
+                with open(file_path, "r", encoding="utf-8", errors="replace") as fh:
                     raw = fh.read()
                 fixed_block = self.fix_mol_block(raw)
                 mol = Chem.MolFromMolBlock(fixed_block, sanitize=True, removeHs=False)
@@ -247,24 +267,30 @@ class MainWindowViewLoaders(object):
                         mol = None
 
                 if mol is None:
-                    self.statusBar().showMessage(f"Failed to load molecule from {file_path}")
+                    self.statusBar().showMessage(
+                        f"Failed to load molecule from {file_path}"
+                    )
                     return
 
             else:
                 # Default: let RDKit try to read the file (most common case)
-                if file_path.lower().endswith('.sdf'):
+                if file_path.lower().endswith(".sdf"):
                     suppl = Chem.SDMolSupplier(file_path, removeHs=False)
                     mol = next(suppl, None)
                 else:
                     mol = Chem.MolFromMolFile(file_path, removeHs=False)
 
                 if mol is None:
-                    self.statusBar().showMessage(f"Failed to load molecule from {file_path}")
+                    self.statusBar().showMessage(
+                        f"Failed to load molecule from {file_path}"
+                    )
                     return
 
             # 3D座標がない場合は2Dから3D変換（最適化なし）
             if mol.GetNumConformers() == 0:
-                self.statusBar().showMessage("No 3D coordinates found. Converting to 3D...")
+                self.statusBar().showMessage(
+                    "No 3D coordinates found. Converting to 3D..."
+                )
                 try:
                     try:
                         AllChem.EmbedMolecule(mol)
@@ -274,8 +300,10 @@ class MainWindowViewLoaders(object):
                         self.push_undo_state()
                     except Exception:
                         # If skipping chemistry checks, allow molecule to be displayed without 3D embedding
-                        if self.settings.get('skip_chemistry_checks', False):
-                            self.statusBar().showMessage("Warning: failed to generate 3D coordinates but skip_chemistry_checks is enabled; continuing.")
+                        if self.settings.get("skip_chemistry_checks", False):
+                            self.statusBar().showMessage(
+                                "Warning: failed to generate 3D coordinates but skip_chemistry_checks is enabled; continuing."
+                            )
                             # Keep mol as-is (may lack conformer); downstream code checks for conformers
                         else:
                             raise
@@ -287,13 +315,13 @@ class MainWindowViewLoaders(object):
             # correctly enabled when appropriate.
             try:
                 self._clear_xyz_flags(mol)
-            except Exception:
-                pass
-
+            except Exception:  # pragma: no cover
+                import traceback
+                traceback.print_exc()
             # 3Dビューアーに表示
             # Centralized chemical/sanitization handling
             # Ensure the skip_chemistry_checks setting is respected and flags are set
-            self._apply_chem_check_and_set_flags(mol, source_desc='MOL/SDF')
+            self._apply_chem_check_and_set_flags(mol, source_desc="MOL/SDF")
 
             self.current_mol = mol
             self.draw_molecule_3d(mol)
@@ -317,4 +345,3 @@ class MainWindowViewLoaders(object):
 
         except Exception as e:
             self.statusBar().showMessage(f"Error loading MOL/SDF file: {e}")
-

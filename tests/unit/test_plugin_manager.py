@@ -1,4 +1,5 @@
 """Tests for PluginManager — metadata extraction, registration, and discovery."""
+
 import os
 import pytest
 import tempfile
@@ -11,10 +12,12 @@ from unittest.mock import MagicMock
 # get_plugin_info_safe (AST-based metadata extraction)
 # =============================================================================
 
+
 def test_plugin_info_extracts_all_fields(tmp_path):
     """Verify AST parser extracts PLUGIN_NAME, VERSION, AUTHOR, DESCRIPTION."""
     plugin_file = tmp_path / "test_plugin.py"
-    plugin_file.write_text(textwrap.dedent('''\
+    plugin_file.write_text(
+        textwrap.dedent("""\
         PLUGIN_NAME = "My Cool Plugin"
         PLUGIN_VERSION = "1.2.3"
         PLUGIN_AUTHOR = "Test Author"
@@ -23,97 +26,107 @@ def test_plugin_info_extracts_all_fields(tmp_path):
         
         def run(ctx):
             pass
-    '''))
-    
+    """)
+    )
+
     pm = PluginManager()
     info = pm.get_plugin_info_safe(str(plugin_file))
-    
-    assert info['name'] == "My Cool Plugin"
-    assert info['version'] == "1.2.3"
-    assert info['author'] == "Test Author"
-    assert info['description'] == "Does amazing things"
-    assert info['category'] == "Analysis"
+
+    assert info["name"] == "My Cool Plugin"
+    assert info["version"] == "1.2.3"
+    assert info["author"] == "Test Author"
+    assert info["description"] == "Does amazing things"
+    assert info["category"] == "Analysis"
 
 
 def test_plugin_info_version_tuple(tmp_path):
     """Version tuples like (1, 0, 0) should be joined as '1.0.0'."""
     plugin_file = tmp_path / "tuple_ver.py"
-    plugin_file.write_text(textwrap.dedent('''\
+    plugin_file.write_text(
+        textwrap.dedent("""\
         PLUGIN_NAME = "Tuple Version"
         PLUGIN_VERSION = (2, 3, 1)
-    '''))
-    
+    """)
+    )
+
     pm = PluginManager()
     info = pm.get_plugin_info_safe(str(plugin_file))
-    assert info['version'] == "2.3.1"
+    assert info["version"] == "2.3.1"
 
 
 def test_plugin_info_fallback_dunder(tmp_path):
     """__version__ and __author__ should be used when PLUGIN_ variants are missing."""
     plugin_file = tmp_path / "dunder_plugin.py"
-    plugin_file.write_text(textwrap.dedent('''\
+    plugin_file.write_text(
+        textwrap.dedent("""\
         __version__ = "0.5.0"
         __author__ = "Dunder Author"
         PLUGIN_NAME = "Dunder Plugin"
-    '''))
-    
+    """)
+    )
+
     pm = PluginManager()
     info = pm.get_plugin_info_safe(str(plugin_file))
-    assert info['version'] == "0.5.0"
-    assert info['author'] == "Dunder Author"
+    assert info["version"] == "0.5.0"
+    assert info["author"] == "Dunder Author"
 
 
 def test_plugin_info_docstring_fallback(tmp_path):
     """Module docstring should be used as description if PLUGIN_DESCRIPTION is missing."""
     plugin_file = tmp_path / "docstring_plugin.py"
-    plugin_file.write_text(textwrap.dedent('''\
+    plugin_file.write_text(
+        textwrap.dedent('''\
         """This is the plugin description from docstring."""
         PLUGIN_NAME = "Docstring Plugin"
-    '''))
-    
+    ''')
+    )
+
     pm = PluginManager()
     info = pm.get_plugin_info_safe(str(plugin_file))
-    assert info['description'] == "This is the plugin description from docstring."
+    assert info["description"] == "This is the plugin description from docstring."
 
 
 def test_plugin_info_missing_file(tmp_path):
     """Non-existent file should return defaults, not crash."""
     pm = PluginManager()
     info = pm.get_plugin_info_safe(str(tmp_path / "nonexistent.py"))
-    assert info['name'] == "nonexistent.py"
-    assert info['version'] == "Unknown"
+    assert info["name"] == "nonexistent.py"
+    assert info["version"] == "Unknown"
 
 
 def test_plugin_info_syntax_error(tmp_path):
     """File with syntax errors should return defaults, not crash."""
     plugin_file = tmp_path / "broken.py"
     plugin_file.write_text("def foo(:\n    pass\n")
-    
+
     pm = PluginManager()
     info = pm.get_plugin_info_safe(str(plugin_file))
-    assert info['version'] == "Unknown"
+    assert info["version"] == "Unknown"
 
 
 def test_plugin_info_empty_file(tmp_path):
     """Empty file should return defaults."""
     plugin_file = tmp_path / "empty.py"
     plugin_file.write_text("")
-    
+
     pm = PluginManager()
     info = pm.get_plugin_info_safe(str(plugin_file))
-    assert info['name'] == "empty.py"
+    assert info["name"] == "empty.py"
 
 
 # =============================================================================
 # Registration methods
 # =============================================================================
 
+
 def test_register_menu_action():
     """register_menu_action should store action metadata."""
     pm = PluginManager()
-    pm.register_menu_action("TestPlugin", "Tools/Test", lambda: None, "Test", None, None)
+    pm.register_menu_action(
+        "TestPlugin", "Tools/Test", lambda: None, "Test", None, None
+    )
     assert len(pm.menu_actions) == 1
-    assert pm.menu_actions[0]['plugin'] == "TestPlugin"
+    assert pm.menu_actions[0]["plugin"] == "TestPlugin"
 
 
 def test_register_toolbar_action():
@@ -126,7 +139,7 @@ def test_register_export_action():
     pm = PluginManager()
     pm.register_export_action("TestPlugin", "Export as PDF", lambda: None)
     assert len(pm.export_actions) == 1
-    assert pm.export_actions[0]['label'] == "Export as PDF"
+    assert pm.export_actions[0]["label"] == "Export as PDF"
 
 
 def test_register_optimization_method():
@@ -149,7 +162,7 @@ def test_register_file_opener_priority():
     pm.register_file_opener("Plugin1", ".xyz", cb_low, priority=0)
     pm.register_file_opener("Plugin2", ".xyz", cb_high, priority=10)
     # It's a list, sorted by priority descending
-    assert pm.file_openers[".xyz"][0]['callback'] == cb_high
+    assert pm.file_openers[".xyz"][0]["callback"] == cb_high
 
 
 def test_register_analysis_tool():
@@ -188,7 +201,7 @@ def test_invoke_document_reset_handlers():
     called = []
     pm.register_document_reset_handler("P1", lambda: called.append("P1"))
     pm.register_document_reset_handler("P2", lambda: called.append("P2"))
-    
+
     pm.invoke_document_reset_handlers()
     assert called == ["P1", "P2"]
 
@@ -196,6 +209,7 @@ def test_invoke_document_reset_handlers():
 # =============================================================================
 # Discovery
 # =============================================================================
+
 
 def test_discover_plugins_empty_dir(tmp_path):
     """Empty plugin directory should return no plugins."""
@@ -208,20 +222,22 @@ def test_discover_plugins_empty_dir(tmp_path):
 def test_discover_plugins_single_file(tmp_path):
     """Single .py file in plugin dir should be discovered."""
     plugin_file = tmp_path / "hello_plugin.py"
-    plugin_file.write_text(textwrap.dedent('''\
+    plugin_file.write_text(
+        textwrap.dedent("""\
         PLUGIN_NAME = "Hello"
         PLUGIN_VERSION = "1.0"
         
         def register(ctx):
             pass
-    '''))
-    
+    """)
+    )
+
     pm = PluginManager(main_window=MagicMock())
     pm.plugin_dir = str(tmp_path)
     plugins = pm.discover_plugins()
-    
+
     assert len(plugins) >= 1
-    names = [p['name'] for p in plugins]
+    names = [p["name"] for p in plugins]
     assert "Hello" in names
 
 
@@ -230,20 +246,22 @@ def test_discover_plugins_package(tmp_path):
     pkg_dir = tmp_path / "my_package"
     pkg_dir.mkdir()
     init_file = pkg_dir / "__init__.py"
-    init_file.write_text(textwrap.dedent('''\
+    init_file.write_text(
+        textwrap.dedent("""\
         PLUGIN_NAME = "Package Plugin"
         PLUGIN_VERSION = "2.0"
         
         def register(ctx):
             pass
-    '''))
-    
+    """)
+    )
+
     pm = PluginManager(main_window=MagicMock())
     pm.plugin_dir = str(tmp_path)
     plugins = pm.discover_plugins()
-    
+
     assert len(plugins) >= 1
-    names = [p['name'] for p in plugins]
+    names = [p["name"] for p in plugins]
     assert "Package Plugin" in names
 
 
@@ -255,19 +273,19 @@ def test_discover_plugins_ignores_dunder_files(tmp_path):
     # To test pure 'ignoring', let's use a non-dunder folder but dunder file inside.
     cat_dir = tmp_path / "category"
     cat_dir.mkdir()
-    (cat_dir / "__init__.py").write_text("# Not a plugin") 
-    
+    (cat_dir / "__init__.py").write_text("# Not a plugin")
+
     pm = PluginManager(main_window=MagicMock())
     pm.plugin_dir = str(tmp_path)
     plugins = pm.discover_plugins()
-    
+
     # If the root has no __init__.py, and category has __init__.py, category is loaded as 1 plugin.
     # To test ignoring files:
     (cat_dir / "__trash.py").write_text("# ignore me")
-    assert len(plugins) == 1 # The 'category' package itself
-    
+    assert len(plugins) == 1  # The 'category' package itself
+
     # Let's verify it doesn't find __trash.py as a separate one
-    names = [p['name'] for p in plugins]
+    names = [p["name"] for p in plugins]
     assert "__trash" not in names
 
 

@@ -24,7 +24,9 @@ import numpy as np
 # RDKit imports (explicit to satisfy flake8 and used features)
 try:
     pass
-except Exception:
+except Exception:  # pragma: no cover
+    import traceback
+
     pass
 
 # PyQt6 Modules
@@ -36,7 +38,8 @@ from PyQt6.QtWidgets import QApplication, QFileDialog, QMessageBox
 
 try:
     from PyQt6 import sip as _sip  # type: ignore
-    _sip_isdeleted = getattr(_sip, 'isdeleted', None)
+
+    _sip_isdeleted = getattr(_sip, "isdeleted", None)
 except Exception:
     _sip = None
     _sip_isdeleted = None
@@ -53,10 +56,11 @@ except Exception:
 
 # --- クラス定義 ---
 class MainWindowExport(object):
-    """ main_window.py から分離された機能クラス """
+    """main_window.py から分離された機能クラス"""
+
     def export_stl(self):
         """STLファイルとしてエクスポート（色なし）"""
-        if not self.current_mol: # pragma: no cover
+        if not self.current_mol:  # pragma: no cover
             self.statusBar().showMessage("Error: Please generate a 3D structure first.")
             return
 
@@ -68,34 +72,35 @@ class MainWindowExport(object):
         except Exception:
             default_dir = ""
 
-        file_path, _ = QFileDialog.getSaveFileName( # pragma: no cover
+        file_path, _ = QFileDialog.getSaveFileName(  # pragma: no cover
             self, "Export as STL", default_dir, "STL Files (*.stl);;All Files (*)"
         )
 
-        if not file_path: # pragma: no cover
+        if not file_path:  # pragma: no cover
             return
 
         try:
-
             # 3Dビューから直接データを取得（色情報なし）
             combined_mesh = self.export_from_3d_view_no_color()
 
-            if combined_mesh is None or combined_mesh.n_points == 0: # pragma: no cover
+            if combined_mesh is None or combined_mesh.n_points == 0:  # pragma: no cover
                 self.statusBar().showMessage("No 3D geometry to export.")
                 return
 
-            if not file_path.lower().endswith('.stl'):
-                file_path += '.stl'
+            if not file_path.lower().endswith(".stl"):
+                file_path += ".stl"
 
             combined_mesh.save(file_path, binary=True)
-            self.statusBar().showMessage(f"STL exported to {file_path}") # pragma: no cover
+            self.statusBar().showMessage(
+                f"STL exported to {file_path}"
+            )  # pragma: no cover
 
-        except Exception as e: # pragma: no cover
+        except Exception as e:
             self.statusBar().showMessage(f"Error exporting STL: {e}")
 
     def export_obj_mtl(self):
         """OBJ/MTLファイルとしてエクスポート（表示中のモデルベース、色付き）"""
-        if not self.current_mol: # pragma: no cover
+        if not self.current_mol:  # pragma: no cover
             self.statusBar().showMessage("Error: Please generate a 3D structure first.")
             return
 
@@ -107,59 +112,66 @@ class MainWindowExport(object):
         except Exception:
             default_dir = ""
 
-        file_path, _ = QFileDialog.getSaveFileName( # pragma: no cover
-            self, "Export as OBJ/MTL (with colors)", default_dir, "OBJ Files (*.obj);;All Files (*)"
+        file_path, _ = QFileDialog.getSaveFileName(  # pragma: no cover
+            self,
+            "Export as OBJ/MTL (with colors)",
+            default_dir,
+            "OBJ Files (*.obj);;All Files (*)",
         )
 
         if not file_path:
             return
 
         try:
-
             # 3Dビューから表示中のメッシュデータを色情報とともに取得
             meshes_with_colors = self.export_from_3d_view_with_colors()
 
-            if not meshes_with_colors: # pragma: no cover
+            if not meshes_with_colors:  # pragma: no cover
                 self.statusBar().showMessage("No 3D geometry to export.")
                 return
 
             # ファイル拡張子を確認・追加
-            if not file_path.lower().endswith('.obj'):
-                file_path += '.obj'
+            if not file_path.lower().endswith(".obj"):
+                file_path += ".obj"
 
             # OBJ+MTL形式で保存（オブジェクトごとに色分け）
-            mtl_path = file_path.replace('.obj', '.mtl')
+            mtl_path = file_path.replace(".obj", ".mtl")
 
             self.create_multi_material_obj(meshes_with_colors, file_path, mtl_path)
 
-            self.statusBar().showMessage(f"OBJ+MTL files with individual colors exported to {file_path} and {mtl_path}") # pragma: no cover
+            self.statusBar().showMessage(
+                f"OBJ+MTL files with individual colors exported to {file_path} and {mtl_path}"
+            )  # pragma: no cover
 
-        except Exception as e: # pragma: no cover
+        except Exception as e:
             self.statusBar().showMessage(f"Error exporting OBJ/MTL: {e}")
 
     def create_multi_material_obj(self, meshes_with_colors, obj_path, mtl_path):
         """複数のマテリアルを持つOBJファイルとMTLファイルを作成（改良版）"""
         try:
-
             # MTLファイルを作成
-            with open(mtl_path, 'w') as mtl_file:
+            with open(mtl_path, "w") as mtl_file:
                 mtl_file.write(f"# Material file for {os.path.basename(obj_path)}\n")
                 mtl_file.write("# Generated with individual object colors\n\n")
 
                 for i, mesh_data in enumerate(meshes_with_colors):
-                    color = mesh_data['color']
-                    material_name = f"material_{i}_{mesh_data['name'].replace(' ', '_')}"
+                    color = mesh_data["color"]
+                    material_name = (
+                        f"material_{i}_{mesh_data['name'].replace(' ', '_')}"
+                    )
 
                     mtl_file.write(f"newmtl {material_name}\n")
                     mtl_file.write(f"Ka 0.2 0.2 0.2\n")  # Ambient
-                    mtl_file.write(f"Kd {color[0]/255.0:.3f} {color[1]/255.0:.3f} {color[2]/255.0:.3f}\n")  # Diffuse
+                    mtl_file.write(
+                        f"Kd {color[0] / 255.0:.3f} {color[1] / 255.0:.3f} {color[2] / 255.0:.3f}\n"
+                    )  # Diffuse
                     mtl_file.write(f"Ks 0.5 0.5 0.5\n")  # Specular
-                    mtl_file.write(f"Ns 32.0\n")          # Specular exponent
-                    mtl_file.write(f"illum 2\n")          # Illumination model
+                    mtl_file.write(f"Ns 32.0\n")  # Specular exponent
+                    mtl_file.write(f"illum 2\n")  # Illumination model
                     mtl_file.write(f"\n")
 
             # OBJファイルを作成
-            with open(obj_path, 'w') as obj_file:
+            with open(obj_path, "w") as obj_file:
                 obj_file.write(f"# OBJ file with multiple materials\n")
                 obj_file.write(f"# Generated with individual object colors\n")
                 obj_file.write(f"mtllib {os.path.basename(mtl_path)}\n\n")
@@ -167,18 +179,24 @@ class MainWindowExport(object):
                 vertex_offset = 1  # OBJファイルの頂点インデックスは1から始まる
 
                 for i, mesh_data in enumerate(meshes_with_colors):
-                    mesh = mesh_data['mesh']
-                    material_name = f"material_{i}_{mesh_data['name'].replace(' ', '_')}"
+                    mesh = mesh_data["mesh"]
+                    material_name = (
+                        f"material_{i}_{mesh_data['name'].replace(' ', '_')}"
+                    )
 
                     obj_file.write(f"# Object {i}: {mesh_data['name']}\n")
-                    obj_file.write(f"# Color: RGB({mesh_data['color'][0]}, {mesh_data['color'][1]}, {mesh_data['color'][2]})\n")
+                    obj_file.write(
+                        f"# Color: RGB({mesh_data['color'][0]}, {mesh_data['color'][1]}, {mesh_data['color'][2]})\n"
+                    )
                     obj_file.write(f"o object_{i}\n")
                     obj_file.write(f"usemtl {material_name}\n")
 
                     # 頂点を書き込み
                     points = mesh.points
                     for point in points:
-                        obj_file.write(f"v {point[0]:.6f} {point[1]:.6f} {point[2]:.6f}\n")
+                        obj_file.write(
+                            f"v {point[0]:.6f} {point[1]:.6f} {point[2]:.6f}\n"
+                        )
 
                     # 面を書き込み
                     faces_written = 0
@@ -200,13 +218,13 @@ class MainWindowExport(object):
                                 if k % 2 == 0:
                                     # Even triangles: use points k, k+1, k+2
                                     v1 = points_in_cell[k] + vertex_offset
-                                    v2 = points_in_cell[k+1] + vertex_offset
-                                    v3 = points_in_cell[k+2] + vertex_offset
+                                    v2 = points_in_cell[k + 1] + vertex_offset
+                                    v3 = points_in_cell[k + 2] + vertex_offset
                                 else:
                                     # Odd triangles: reverse winding to maintain consistent orientation
-                                    v1 = points_in_cell[k+1] + vertex_offset
+                                    v1 = points_in_cell[k + 1] + vertex_offset
                                     v2 = points_in_cell[k] + vertex_offset
-                                    v3 = points_in_cell[k+2] + vertex_offset
+                                    v3 = points_in_cell[k + 2] + vertex_offset
                                 obj_file.write(f"f {v1} {v2} {v3}\n")
                                 faces_written += 1
                         elif cell.type == 9:  # VTK_QUAD
@@ -226,7 +244,7 @@ class MainWindowExport(object):
 
     def export_color_stl(self):
         """カラーSTLファイルとしてエクスポート"""
-        if not self.current_mol: # pragma: no cover
+        if not self.current_mol:  # pragma: no cover
             self.statusBar().showMessage("Error: Please generate a 3D structure first.")
             return
 
@@ -238,35 +256,35 @@ class MainWindowExport(object):
         except Exception:
             default_dir = ""
 
-        file_path, _ = QFileDialog.getSaveFileName( # pragma: no cover
+        file_path, _ = QFileDialog.getSaveFileName(  # pragma: no cover
             self, "Export as Color STL", default_dir, "STL Files (*.stl);;All Files (*)"
         )
 
-        if not file_path: # pragma: no cover
+        if not file_path:  # pragma: no cover
             return
 
         try:
-
             # 3Dビューから直接データを取得
             combined_mesh = self.export_from_3d_view()
 
-            if combined_mesh is None or combined_mesh.n_points == 0: # pragma: no cover
+            if combined_mesh is None or combined_mesh.n_points == 0:  # pragma: no cover
                 self.statusBar().showMessage("No 3D geometry to export.")
                 return
 
             # STL形式で保存
-            if not file_path.lower().endswith('.stl'):
-                file_path += '.stl'
+            if not file_path.lower().endswith(".stl"):
+                file_path += ".stl"
             combined_mesh.save(file_path, binary=True)
-            self.statusBar().showMessage(f"STL exported to {file_path}") # pragma: no cover
+            self.statusBar().showMessage(
+                f"STL exported to {file_path}"
+            )  # pragma: no cover
 
-        except Exception as e: # pragma: no cover
+        except Exception as e:
             self.statusBar().showMessage(f"Error exporting STL: {e}")
 
     def export_from_3d_view(self):
         """現在の3Dビューから直接メッシュデータを取得"""
         try:
-
             # PyVistaプロッターから全てのアクターを取得
             combined_mesh = pv.PolyData()
 
@@ -281,27 +299,34 @@ class MainWindowExport(object):
 
                     # 方法1: mapperのinputから取得 (Improved)
                     mapper = None
-                    if hasattr(actor, 'mapper') and actor.mapper is not None:
+                    if hasattr(actor, "mapper") and actor.mapper is not None:
                         mapper = actor.mapper
-                    elif hasattr(actor, 'GetMapper'):
+                    elif hasattr(actor, "GetMapper"):
                         mapper = actor.GetMapper()
 
                     if mapper is not None:
-                        if hasattr(mapper, 'input') and mapper.input is not None:
+                        if hasattr(mapper, "input") and mapper.input is not None:
                             mesh = mapper.input
-                        elif hasattr(mapper, 'GetInput') and mapper.GetInput() is not None:
+                        elif (
+                            hasattr(mapper, "GetInput")
+                            and mapper.GetInput() is not None
+                        ):
                             mesh = mapper.GetInput()
-                        elif hasattr(mapper, 'GetInputAsDataSet'):
+                        elif hasattr(mapper, "GetInputAsDataSet"):
                             mesh = mapper.GetInputAsDataSet()
 
                     # 方法2: PyVistaプロッターの内部データから取得
                     if mesh is None and actor_name in self.plotter.mesh:
                         mesh = self.plotter.mesh[actor_name]
 
-                    if mesh is not None and hasattr(mesh, 'n_points') and mesh.n_points > 0:
+                    if (
+                        mesh is not None
+                        and hasattr(mesh, "n_points")
+                        and mesh.n_points > 0
+                    ):
                         # PyVistaメッシュに変換（必要な場合）
                         if not isinstance(mesh, pv.PolyData):
-                            if hasattr(mesh, 'extract_surface'):
+                            if hasattr(mesh, "extract_surface"):
                                 mesh = mesh.extract_surface()
                             else:
                                 mesh = pv.wrap(mesh)
@@ -310,24 +335,38 @@ class MainWindowExport(object):
                         mesh_copy = mesh.copy()
 
                         # コピーしたメッシュにカラー情報を追加
-                        if hasattr(actor, 'prop') and hasattr(actor.prop, 'color'):
+                        if hasattr(actor, "prop") and hasattr(actor.prop, "color"):
                             color = actor.prop.color
                             # RGB値を0-255の範囲に変換
-                            rgb = np.array([int(c * 255) for c in color], dtype=np.uint8)
+                            rgb = np.array(
+                                [int(c * 255) for c in color], dtype=np.uint8
+                            )
 
                             # Blender対応のPLY形式用カラー属性を設定
-                            mesh_copy.point_data['diffuse_red'] = np.full(mesh_copy.n_points, rgb[0], dtype=np.uint8)
-                            mesh_copy.point_data['diffuse_green'] = np.full(mesh_copy.n_points, rgb[1], dtype=np.uint8)
-                            mesh_copy.point_data['diffuse_blue'] = np.full(mesh_copy.n_points, rgb[2], dtype=np.uint8)
+                            mesh_copy.point_data["diffuse_red"] = np.full(
+                                mesh_copy.n_points, rgb[0], dtype=np.uint8
+                            )
+                            mesh_copy.point_data["diffuse_green"] = np.full(
+                                mesh_copy.n_points, rgb[1], dtype=np.uint8
+                            )
+                            mesh_copy.point_data["diffuse_blue"] = np.full(
+                                mesh_copy.n_points, rgb[2], dtype=np.uint8
+                            )
 
                             # 標準的なPLY形式もサポート
-                            mesh_copy.point_data['red'] = np.full(mesh_copy.n_points, rgb[0], dtype=np.uint8)
-                            mesh_copy.point_data['green'] = np.full(mesh_copy.n_points, rgb[1], dtype=np.uint8)
-                            mesh_copy.point_data['blue'] = np.full(mesh_copy.n_points, rgb[2], dtype=np.uint8)
+                            mesh_copy.point_data["red"] = np.full(
+                                mesh_copy.n_points, rgb[0], dtype=np.uint8
+                            )
+                            mesh_copy.point_data["green"] = np.full(
+                                mesh_copy.n_points, rgb[1], dtype=np.uint8
+                            )
+                            mesh_copy.point_data["blue"] = np.full(
+                                mesh_copy.n_points, rgb[2], dtype=np.uint8
+                            )
 
                             # 従来の colors 配列も保持（STL用）
                             mesh_colors = np.tile(rgb, (mesh_copy.n_points, 1))
-                            mesh_copy.point_data['colors'] = mesh_colors
+                            mesh_copy.point_data["colors"] = mesh_colors
 
                         # メッシュを結合
                         if combined_mesh.n_points == 0:
@@ -346,7 +385,6 @@ class MainWindowExport(object):
     def export_from_3d_view_no_color(self):
         """現在の3Dビューから直接メッシュデータを取得（色情報なし）"""
         try:
-
             # PyVistaプロッターから全てのアクターを取得
             combined_mesh = pv.PolyData()
 
@@ -361,17 +399,20 @@ class MainWindowExport(object):
 
                     # 方法1: mapperのinputから取得 (Improved)
                     mapper = None
-                    if hasattr(actor, 'mapper') and actor.mapper is not None:
+                    if hasattr(actor, "mapper") and actor.mapper is not None:
                         mapper = actor.mapper
-                    elif hasattr(actor, 'GetMapper'):
+                    elif hasattr(actor, "GetMapper"):
                         mapper = actor.GetMapper()
 
                     if mapper is not None:
-                        if hasattr(mapper, 'input') and mapper.input is not None:
+                        if hasattr(mapper, "input") and mapper.input is not None:
                             mesh = mapper.input
-                        elif hasattr(mapper, 'GetInput') and mapper.GetInput() is not None:
+                        elif (
+                            hasattr(mapper, "GetInput")
+                            and mapper.GetInput() is not None
+                        ):
                             mesh = mapper.GetInput()
-                        elif hasattr(mapper, 'GetInputAsDataSet'):
+                        elif hasattr(mapper, "GetInputAsDataSet"):
                             mesh = mapper.GetInputAsDataSet()
 
                     # 方法2: PyVistaプロッターの内部データから取得
@@ -380,10 +421,14 @@ class MainWindowExport(object):
 
                     # 方法3: Removed unsafe fallback
 
-                    if mesh is not None and hasattr(mesh, 'n_points') and mesh.n_points > 0:
+                    if (
+                        mesh is not None
+                        and hasattr(mesh, "n_points")
+                        and mesh.n_points > 0
+                    ):
                         # PyVistaメッシュに変換（必要な場合）
                         if not isinstance(mesh, pv.PolyData):
-                            if hasattr(mesh, 'extract_surface'):
+                            if hasattr(mesh, "extract_surface"):
                                 mesh = mesh.extract_surface()
                             else:
                                 mesh = pv.wrap(mesh)
@@ -408,7 +453,6 @@ class MainWindowExport(object):
     def export_from_3d_view_with_colors(self):
         """現在の3Dビューから直接メッシュデータを色情報とともに取得"""
         try:
-
             meshes_with_colors = []
 
             # PyVistaプロッターから全てのアクターを取得
@@ -424,27 +468,34 @@ class MainWindowExport(object):
 
                     # 方法1: mapperのinputから取得 (Improved)
                     mapper = None
-                    if hasattr(actor, 'mapper') and actor.mapper is not None:
+                    if hasattr(actor, "mapper") and actor.mapper is not None:
                         mapper = actor.mapper
-                    elif hasattr(actor, 'GetMapper'):
+                    elif hasattr(actor, "GetMapper"):
                         mapper = actor.GetMapper()
 
                     if mapper is not None:
-                        if hasattr(mapper, 'input') and mapper.input is not None:
+                        if hasattr(mapper, "input") and mapper.input is not None:
                             mesh = mapper.input
-                        elif hasattr(mapper, 'GetInput') and mapper.GetInput() is not None:
+                        elif (
+                            hasattr(mapper, "GetInput")
+                            and mapper.GetInput() is not None
+                        ):
                             mesh = mapper.GetInput()
-                        elif hasattr(mapper, 'GetInputAsDataSet'):
+                        elif hasattr(mapper, "GetInputAsDataSet"):
                             mesh = mapper.GetInputAsDataSet()
 
                     # 方法2: PyVistaプロッターの内部データから取得
                     if mesh is None and actor_name in self.plotter.mesh:
                         mesh = self.plotter.mesh[actor_name]
 
-                    if mesh is not None and hasattr(mesh, 'n_points') and mesh.n_points > 0:
+                    if (
+                        mesh is not None
+                        and hasattr(mesh, "n_points")
+                        and mesh.n_points > 0
+                    ):
                         # PyVistaメッシュに変換（必要な場合）
                         if not isinstance(mesh, pv.PolyData):
-                            if hasattr(mesh, 'extract_surface'):
+                            if hasattr(mesh, "extract_surface"):
                                 mesh = mesh.extract_surface()
                             else:
                                 mesh = pv.wrap(mesh)
@@ -454,15 +505,15 @@ class MainWindowExport(object):
 
                         try:
                             # VTKアクターのプロパティから色を取得
-                            if hasattr(actor, 'prop') and actor.prop is not None:
+                            if hasattr(actor, "prop") and actor.prop is not None:
                                 vtk_color = actor.prop.GetColor()
                                 color = [int(c * 255) for c in vtk_color]
-                            elif hasattr(actor, 'GetProperty'):
+                            elif hasattr(actor, "GetProperty"):
                                 prop = actor.GetProperty()
                                 if prop is not None:
                                     vtk_color = prop.GetColor()
                                     color = [int(c * 255) for c in vtk_color]
-                        except Exception:
+                        except Exception:  # pragma: no cover
                             # 色取得に失敗した場合はデフォルト色をそのまま使用
                             pass
 
@@ -477,31 +528,37 @@ class MainWindowExport(object):
                             colors = None
                             pd = mesh_copy.point_data
                             # 優先的にred/green/blue配列を使用
-                            if 'red' in pd and 'green' in pd and 'blue' in pd:
-                                r = np.asarray(pd['red']).reshape(-1)
-                                g = np.asarray(pd['green']).reshape(-1)
-                                b = np.asarray(pd['blue']).reshape(-1)
+                            if "red" in pd and "green" in pd and "blue" in pd:
+                                r = np.asarray(pd["red"]).reshape(-1)
+                                g = np.asarray(pd["green"]).reshape(-1)
+                                b = np.asarray(pd["blue"]).reshape(-1)
                                 colors = np.vstack([r, g, b]).T
                             # diffuse_* のキーもサポート
-                            elif 'diffuse_red' in pd and 'diffuse_green' in pd and 'diffuse_blue' in pd:
-                                r = np.asarray(pd['diffuse_red']).reshape(-1)
-                                g = np.asarray(pd['diffuse_green']).reshape(-1)
-                                b = np.asarray(pd['diffuse_blue']).reshape(-1)
+                            elif (
+                                "diffuse_red" in pd
+                                and "diffuse_green" in pd
+                                and "diffuse_blue" in pd
+                            ):
+                                r = np.asarray(pd["diffuse_red"]).reshape(-1)
+                                g = np.asarray(pd["diffuse_green"]).reshape(-1)
+                                b = np.asarray(pd["diffuse_blue"]).reshape(-1)
                                 colors = np.vstack([r, g, b]).T
                             # 単一の colors 配列があればそれを使う
-                            elif 'colors' in pd:
-                                colors = np.asarray(pd['colors'])
+                            elif "colors" in pd:
+                                colors = np.asarray(pd["colors"])
 
                             # cell_dataのcolorsも確認（Tubeフィルタなどはcell_dataに色を持つ場合がある）
-                            if colors is None and 'colors' in mesh_copy.cell_data:
+                            if colors is None and "colors" in mesh_copy.cell_data:
                                 try:
                                     # cell_dataをpoint_dataに変換
                                     temp_mesh = mesh_copy.cell_data_to_point_data()
-                                    if 'colors' in temp_mesh.point_data:
-                                        colors = np.asarray(temp_mesh.point_data['colors'])
-                                except Exception:
-                                    pass
-
+                                    if "colors" in temp_mesh.point_data:
+                                        colors = np.asarray(
+                                            temp_mesh.point_data["colors"]
+                                        )
+                                except Exception:  # pragma: no cover
+                                    import traceback
+                                    traceback.print_exc()
                             if colors is not None and colors.size > 0:
                                 # 整数に変換。colors が 0-1 の float の場合は 255 倍して正規化する。
                                 colors_arr = np.asarray(colors)
@@ -514,19 +571,29 @@ class MainWindowExport(object):
                                 if np.issubdtype(colors_arr.dtype, np.floating):
                                     # 値の最大が1付近なら0-1レンジとみなして255倍
                                     if colors_arr.max() <= 1.01:
-                                        colors_int = np.clip((colors_arr * 255.0).round(), 0, 255).astype(np.int32)
+                                        colors_int = np.clip(
+                                            (colors_arr * 255.0).round(), 0, 255
+                                        ).astype(np.int32)
                                     else:
                                         # 既に0-255レンジのfloatならそのまま丸める
-                                        colors_int = np.clip(colors_arr.round(), 0, 255).astype(np.int32)
+                                        colors_int = np.clip(
+                                            colors_arr.round(), 0, 255
+                                        ).astype(np.int32)
                                 else:
-                                    colors_int = np.clip(colors_arr, 0, 255).astype(np.int32)
+                                    colors_int = np.clip(colors_arr, 0, 255).astype(
+                                        np.int32
+                                    )
                                 # Ensure shape is (n_points, 3)
                                 if colors_int.ndim == 1:
                                     # 単一値が入っている場合は同一RGBとして扱う
-                                    colors_int = np.vstack([colors_int, colors_int, colors_int]).T
+                                    colors_int = np.vstack(
+                                        [colors_int, colors_int, colors_int]
+                                    ).T
 
                                 # 一意な色ごとにサブメッシュを抽出して追加
-                                unique_colors, inverse = np.unique(colors_int, axis=0, return_inverse=True)
+                                unique_colors, inverse = np.unique(
+                                    colors_int, axis=0, return_inverse=True
+                                )
 
                                 split_success = False
                                 if unique_colors.shape[0] > 1:
@@ -536,25 +603,36 @@ class MainWindowExport(object):
                                             continue
                                         try:
                                             # Use temp_mesh if available (has point data), else mesh_copy
-                                            target_mesh = temp_mesh if 'temp_mesh' in locals() else mesh_copy
+                                            target_mesh = (
+                                                temp_mesh
+                                                if "temp_mesh" in locals()
+                                                else mesh_copy
+                                            )
 
                                             # extract_points with adjacent_cells=False to avoid pulling in neighbors
-                                            submesh = target_mesh.extract_points(point_inds, adjacent_cells=False)
+                                            submesh = target_mesh.extract_points(
+                                                point_inds, adjacent_cells=False
+                                            )
 
                                         except Exception:
                                             # extract_points が利用できない場合はスキップ
                                             continue
-                                        if submesh is None or getattr(submesh, 'n_points', 0) == 0:
+                                        if (
+                                            submesh is None
+                                            or getattr(submesh, "n_points", 0) == 0
+                                        ):
                                             continue
 
                                         color_rgb = [int(uc[0]), int(uc[1]), int(uc[2])]
-                                        meshes_with_colors.append({
-                                            'mesh': submesh,
-                                            'color': color_rgb,
-                                            'name': f'{actor_name}_color_{uc_idx}',
-                                            'type': 'display_actor',
-                                            'actor_name': actor_name
-                                        })
+                                        meshes_with_colors.append(
+                                            {
+                                                "mesh": submesh,
+                                                "color": color_rgb,
+                                                "name": f"{actor_name}_color_{uc_idx}",
+                                                "type": "display_actor",
+                                                "actor_name": actor_name,
+                                            }
+                                        )
                                         split_success = True
 
                                     if split_success:
@@ -567,17 +645,19 @@ class MainWindowExport(object):
                                     uc = unique_colors[0]
                                     color = [int(uc[0]), int(uc[1]), int(uc[2])]
                                     # ここでは continue せず、下のデフォルト追加処理に任せる（colorを更新したため）
-                        except Exception:
+                        except Exception:  # pragma: no cover
                             # 分割処理に失敗した場合はフォールバックで単体メッシュを追加
                             pass
 
-                        meshes_with_colors.append({
-                            'mesh': mesh_copy,
-                            'color': color,
-                            'name': f'actor_{actor_count}_{actor_name}',
-                            'type': 'display_actor',
-                            'actor_name': actor_name
-                        })
+                        meshes_with_colors.append(
+                            {
+                                "mesh": mesh_copy,
+                                "color": color,
+                                "name": f"actor_{actor_count}_{actor_name}",
+                                "type": "display_actor",
+                                "actor_name": actor_name,
+                            }
+                        )
 
                         actor_count += 1
 
@@ -590,7 +670,7 @@ class MainWindowExport(object):
             print(f"Error in export_from_3d_view_with_colors: {e}")
             return []
 
-    def export_2d_png(self): # pragma: no cover
+    def export_2d_png(self):  # pragma: no cover
         if not self.data.atoms:
             self.statusBar().showMessage("Nothing to export.")
             return
@@ -609,36 +689,46 @@ class MainWindowExport(object):
         default_path = default_name
         try:
             if self.current_file_path:
-                default_path = os.path.join(os.path.dirname(self.current_file_path), default_name)
+                default_path = os.path.join(
+                    os.path.dirname(self.current_file_path), default_name
+                )
         except Exception:
             default_path = default_name
 
-        filePath, _ = QFileDialog.getSaveFileName(self, "Export 2D as PNG", default_path, "PNG Files (*.png)")
+        filePath, _ = QFileDialog.getSaveFileName(
+            self, "Export 2D as PNG", default_path, "PNG Files (*.png)"
+        )
         if not filePath:
             return
 
         if not (filePath.lower().endswith(".png")):
             filePath += ".png"
 
-        reply = QMessageBox.question(self, 'Choose Background',
-                                     'Do you want a transparent background?\n(Choose "No" to use the current background color)',
-                                     QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No | QMessageBox.StandardButton.Cancel,
-                                     QMessageBox.StandardButton.Yes)
+        reply = QMessageBox.question(
+            self,
+            "Choose Background",
+            'Do you want a transparent background?\n(Choose "No" to use the current background color)',
+            QMessageBox.StandardButton.Yes
+            | QMessageBox.StandardButton.No
+            | QMessageBox.StandardButton.Cancel,
+            QMessageBox.StandardButton.Yes,
+        )
 
         if reply == QMessageBox.StandardButton.Cancel:
             self.statusBar().showMessage("Export cancelled.", 2000)
             return
 
-        is_transparent = (reply == QMessageBox.StandardButton.Yes)
+        is_transparent = reply == QMessageBox.StandardButton.Yes
 
         QApplication.processEvents()
 
         items_to_restore = {}
         original_background = None
         try:
-             original_background = self.scene.backgroundBrush()
-        except Exception:
-             pass
+            original_background = self.scene.backgroundBrush()
+        except Exception:  # pragma: no cover
+            import traceback
+            traceback.print_exc()
 
         try:
             all_items = list(self.scene.items())
@@ -654,7 +744,9 @@ class MainWindowExport(object):
                     molecule_bounds = molecule_bounds.united(item.sceneBoundingRect())
 
             if molecule_bounds.isEmpty() or not molecule_bounds.isValid():
-                self.statusBar().showMessage("Error: Could not determine molecule bounds for export.")
+                self.statusBar().showMessage(
+                    "Error: Could not determine molecule bounds for export."
+                )
                 return
 
             # If transparent, set background to NoBrush. Otherwise, it will be rendered with the current background.
@@ -677,7 +769,9 @@ class MainWindowExport(object):
             painter = QPainter()
             ok = painter.begin(image)
             if not ok or not painter.isActive():
-                self.statusBar().showMessage("Failed to start QPainter for image rendering.")
+                self.statusBar().showMessage(
+                    "Failed to start QPainter for image rendering."
+                )
                 return
 
             try:
@@ -692,10 +786,14 @@ class MainWindowExport(object):
             if saved:
                 self.statusBar().showMessage(f"2D view exported to {filePath}")
             else:
-                self.statusBar().showMessage("Failed to save image. Check file path or permissions.")
+                self.statusBar().showMessage(
+                    "Failed to save image. Check file path or permissions."
+                )
 
         except Exception as e:
-            self.statusBar().showMessage(f"An unexpected error occurred during 2D export: {e}")
+            self.statusBar().showMessage(
+                f"An unexpected error occurred during 2D export: {e}"
+            )
 
         finally:
             for item, was_visible in items_to_restore.items():
@@ -704,7 +802,7 @@ class MainWindowExport(object):
             if self.view_2d:
                 self.view_2d.viewport().update()
 
-    def export_2d_svg(self): # pragma: no cover
+    def export_2d_svg(self):  # pragma: no cover
         """2D drawingをSVGとしてエクスポート"""
         if not self.data.atoms:
             self.statusBar().showMessage("Nothing to export.")
@@ -724,11 +822,15 @@ class MainWindowExport(object):
         default_path = default_name
         try:
             if self.current_file_path:
-                default_path = os.path.join(os.path.dirname(self.current_file_path), default_name)
+                default_path = os.path.join(
+                    os.path.dirname(self.current_file_path), default_name
+                )
         except Exception:
             default_path = default_name
 
-        filePath, _ = QFileDialog.getSaveFileName(self, "Export 2D as SVG", default_path, "SVG Files (*.svg)")
+        filePath, _ = QFileDialog.getSaveFileName(
+            self, "Export 2D as SVG", default_path, "SVG Files (*.svg)"
+        )
         if not filePath:
             return
 
@@ -736,16 +838,21 @@ class MainWindowExport(object):
             filePath += ".svg"
 
         # Ask about transparency
-        reply = QMessageBox.question(self, 'Choose Background',
-                                     'Do you want a transparent background?\n(Choose "No" to use the current background color)',
-                                     QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No | QMessageBox.StandardButton.Cancel,
-                                     QMessageBox.StandardButton.Yes)
+        reply = QMessageBox.question(
+            self,
+            "Choose Background",
+            'Do you want a transparent background?\n(Choose "No" to use the current background color)',
+            QMessageBox.StandardButton.Yes
+            | QMessageBox.StandardButton.No
+            | QMessageBox.StandardButton.Cancel,
+            QMessageBox.StandardButton.Yes,
+        )
 
         if reply == QMessageBox.StandardButton.Cancel:
             self.statusBar().showMessage("Export cancelled.", 2000)
             return
 
-        is_transparent = (reply == QMessageBox.StandardButton.Yes)
+        is_transparent = reply == QMessageBox.StandardButton.Yes
 
         original_background = None
         try:
@@ -771,7 +878,9 @@ class MainWindowExport(object):
                     molecule_bounds = molecule_bounds.united(item.sceneBoundingRect())
 
             if molecule_bounds.isEmpty() or not molecule_bounds.isValid():
-                self.statusBar().showMessage("Error: Could not determine molecule bounds for export.")
+                self.statusBar().showMessage(
+                    "Error: Could not determine molecule bounds for export."
+                )
                 # Restore
                 for item, was_visible in items_to_restore.items():
                     item.setVisible(was_visible)
@@ -804,7 +913,9 @@ class MainWindowExport(object):
             self.statusBar().showMessage(f"2D view exported to {filePath}")
 
         except Exception as e:
-            self.statusBar().showMessage(f"An unexpected error occurred during SVG export: {e}")
+            self.statusBar().showMessage(
+                f"An unexpected error occurred during SVG export: {e}"
+            )
 
         finally:
             # Restore
@@ -815,7 +926,7 @@ class MainWindowExport(object):
             if self.view_2d:
                 self.view_2d.viewport().update()
 
-    def export_3d_png(self): # pragma: no cover
+    def export_3d_png(self):  # pragma: no cover
         if not self.current_mol:
             self.statusBar().showMessage("No 3D molecule to export.", 2000)
             return
@@ -834,32 +945,39 @@ class MainWindowExport(object):
         default_path = default_name
         try:
             if self.current_file_path:
-                default_path = os.path.join(os.path.dirname(self.current_file_path), default_name)
+                default_path = os.path.join(
+                    os.path.dirname(self.current_file_path), default_name
+                )
         except Exception:
             default_path = default_name
 
-        filePath, _ = QFileDialog.getSaveFileName(self, "Export 3D as PNG", default_path, "PNG Files (*.png)")
+        filePath, _ = QFileDialog.getSaveFileName(
+            self, "Export 3D as PNG", default_path, "PNG Files (*.png)"
+        )
         if not filePath:
             return
 
         if not (filePath.lower().endswith(".png")):
             filePath += ".png"
 
-        reply = QMessageBox.question(self, 'Choose Background',
-                                     'Do you want a transparent background?\n(Choose "No" for current background)',
-                                     QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No | QMessageBox.StandardButton.Cancel,
-                                     QMessageBox.StandardButton.Yes)
+        reply = QMessageBox.question(
+            self,
+            "Choose Background",
+            'Do you want a transparent background?\n(Choose "No" for current background)',
+            QMessageBox.StandardButton.Yes
+            | QMessageBox.StandardButton.No
+            | QMessageBox.StandardButton.Cancel,
+            QMessageBox.StandardButton.Yes,
+        )
 
         if reply == QMessageBox.StandardButton.Cancel:
             self.statusBar().showMessage("Export cancelled.", 2000)
             return
 
-        is_transparent = (reply == QMessageBox.StandardButton.Yes)
+        is_transparent = reply == QMessageBox.StandardButton.Yes
 
         try:
             self.plotter.screenshot(filePath, transparent_background=is_transparent)
             self.statusBar().showMessage(f"3D view exported to {filePath}", 3000)
         except Exception as e:
             self.statusBar().showMessage(f"Error exporting 3D PNG: {e}")
-
-

@@ -1,7 +1,7 @@
-
 import pytest
 from unittest.mock import MagicMock, patch
 from moleditpy.modules.plugin_interface import PluginContext, Plugin3DController
+
 
 class TestPluginInterface:
     @pytest.fixture
@@ -65,10 +65,10 @@ class TestPluginInterface:
         """Test current_molecule getter and setter."""
         mock_manager.get_main_window.return_value = mock_main_window
         ctx = PluginContext(mock_manager, "TestPlugin")
-        
+
         # Test getter
         assert ctx.current_molecule == "mock_molecule"
-        
+
         # Test setter
         ctx.current_molecule = "new_molecule"
         assert mock_main_window.current_mol == "new_molecule"
@@ -78,11 +78,11 @@ class TestPluginInterface:
         """Test current_molecule when main window is None."""
         mock_manager.get_main_window.return_value = None
         ctx = PluginContext(mock_manager, "TestPlugin")
-        
+
         assert ctx.current_molecule is None
-        
+
         # Setter should safely do nothing
-        ctx.current_molecule = "fail" 
+        ctx.current_molecule = "fail"
         # No error raised is the pass condition
 
     def test_add_export_action(self, mock_manager):
@@ -170,10 +170,12 @@ class TestPluginInterface:
         # Mock the view_3d and plotter
         mock_main_window.main_window_view_3d = MagicMock()
         mock_main_window.plotter = MagicMock()
-        
+
         controller.set_atom_color(1, "#FF0000")
-        
-        mock_main_window.main_window_view_3d.update_atom_color_override.assert_called_once_with(1, "#FF0000")
+
+        mock_main_window.main_window_view_3d.update_atom_color_override.assert_called_once_with(
+            1, "#FF0000"
+        )
         mock_main_window.plotter.render.assert_called_once()
 
     def test_3d_controller_set_bond_color(self, mock_main_window):
@@ -182,8 +184,10 @@ class TestPluginInterface:
         # Mock the view_3d and plotter
         mock_main_window.main_window_view_3d = MagicMock()
         mock_main_window.plotter = MagicMock()
-        
+
         controller.set_bond_color(2, "#00FF00")
-        
-        mock_main_window.main_window_view_3d.update_bond_color_override.assert_called_once_with(2, "#00FF00")
+
+        mock_main_window.main_window_view_3d.update_bond_color_override.assert_called_once_with(
+            2, "#00FF00"
+        )
         mock_main_window.plotter.render.assert_called_once()
