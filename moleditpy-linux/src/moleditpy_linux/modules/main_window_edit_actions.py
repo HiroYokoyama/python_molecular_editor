@@ -194,8 +194,6 @@ class MainWindowEditActions(object):
 
         except Exception as e:
             print(f"Error during copy operation: {e}")
-
-            pass
             self.statusBar().showMessage(f"Error during copy operation: {e}")
 
     def cut_selection(self):
@@ -214,8 +212,6 @@ class MainWindowEditActions(object):
 
         except Exception as e:
             print(f"Error during cut operation: {e}")
-
-            pass
             self.statusBar().showMessage(f"Error during cut operation: {e}")
 
     def paste_from_clipboard(self):
@@ -270,8 +266,6 @@ class MainWindowEditActions(object):
 
         except Exception as e:
             print(f"Error during paste operation: {e}")
-
-            pass
             self.statusBar().showMessage(f"Error during paste operation: {e}")
         self.statusBar().showMessage(f"Pasted {len(new_atoms)} atoms.", 2000)
         self.activate_select_mode()
@@ -384,8 +378,8 @@ class MainWindowEditActions(object):
                 try:
                     self.push_undo_state()
                 except Exception:  # pragma: no cover
-                    # Do not allow undo stack problems to crash the app
-                    pass
+                    import traceback
+                    traceback.print_exc()
                 self.statusBar().showMessage(
                     f"Removed {removed_count} hydrogen atoms.", 2000
                 )
@@ -404,7 +398,6 @@ class MainWindowEditActions(object):
         except Exception as e:
             # Capture and log unexpected errors but don't let them crash the UI
             print(f"Error during hydrogen removal: {e}")
-            pass
             try:
                 self.statusBar().showMessage(f"Error removing hydrogen atoms: {e}")
             except Exception:  # pragma: no cover
@@ -608,7 +601,6 @@ class MainWindowEditActions(object):
 
         except Exception as e:
             print(f"Error during hydrogen addition: {e}")
-            pass
             self.statusBar().showMessage(f"Error adding hydrogen atoms: {e}")
 
     def update_edit_menu_actions(self):
@@ -697,7 +689,6 @@ class MainWindowEditActions(object):
 
         except Exception as e:
             print(f"Error rotating molecule: {e}")
-            pass
             self.statusBar().showMessage(f"Error rotating: {e}")
 
     def select_all(self):
@@ -911,8 +902,8 @@ class MainWindowEditActions(object):
                             if is_deleted_func and is_deleted_func(item):
                                 continue
                         except Exception:  # pragma: no cover
-                            # If sip check itself fails, continue with other lightweight guards
-                            pass
+                            import traceback
+                            traceback.print_exc()
 
                         # If the item is no longer in a scene, skip updating it to avoid
                         # touching partially-deleted objects during scene teardown.
@@ -950,9 +941,8 @@ class MainWindowEditActions(object):
                             try:
                                 item.implicit_h_count = new_count
                             except Exception:  # pragma: no cover
-                                # If setting the count fails, continue but still
-                                # attempt to set the problem flag below.
-                                pass
+                                import traceback
+                                traceback.print_exc()
 
                             # Apply problem flag (visual red-outline)
                             try:
@@ -984,8 +974,8 @@ class MainWindowEditActions(object):
                             try:
                                 it.update()
                             except Exception:  # pragma: no cover
-                                # ignore update errors for robustness
-                                pass
+                                import traceback
+                                traceback.print_exc()
                     except Exception:
                         # Ignore any unexpected errors when touching the item
                         continue
@@ -1001,8 +991,8 @@ class MainWindowEditActions(object):
                     import traceback
                     traceback.print_exc()
         except Exception:  # pragma: no cover
-            # Make sure update failures never crash the application
-            pass
+            import traceback
+            traceback.print_exc()
 
     def clean_up_2d_structure(self):
         self.statusBar().showMessage("Optimizing 2D structure...")
@@ -1084,8 +1074,8 @@ class MainWindowEditActions(object):
                     if sip_isdeleted_safe(item):
                         continue
                 except Exception:  # pragma: no cover
-                    # If the sip check fails, continue with other lightweight guards
-                    pass
+                    import traceback
+                    traceback.print_exc()
                 try:
                     sc = None
                     try:
@@ -1557,8 +1547,8 @@ class MainWindowEditActions(object):
                     import traceback
                     traceback.print_exc()
         except Exception:  # pragma: no cover
-            # best-effort only
-            pass
+            import traceback
+            traceback.print_exc()
 
         # Reset UI flags
         try:

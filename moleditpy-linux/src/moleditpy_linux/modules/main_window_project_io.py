@@ -22,32 +22,16 @@ import os
 import pickle
 import traceback
 
-# RDKit imports (explicit to satisfy flake8 and used features)
-try:
-    pass
-except Exception:  # pragma: no cover
-    import traceback
-
-    pass
-
 # PyQt6 Modules
 from PyQt6.QtCore import QTimer
 from PyQt6.QtWidgets import QFileDialog, QMessageBox
 
 try:
     from PyQt6 import sip as _sip  # type: ignore
-
     _sip_isdeleted = getattr(_sip, "isdeleted", None)
 except Exception:
     _sip = None
     _sip_isdeleted = None
-
-try:
-    # package relative imports (preferred when running as `python -m moleditpy`)
-    pass
-except Exception:  # pragma: no cover
-    # Fallback to absolute imports for script-style execution
-    pass
 
 
 # --- クラス定義 ---
@@ -93,7 +77,6 @@ class MainWindowProjectIo(object):
                 self.statusBar().showMessage(f"Data serialization error: {e}")
             except Exception as e:
                 self.statusBar().showMessage(f"Error saving project file: {e}")
-                pass
         else:
             # MOL/SDF/XYZなどは上書き保存せず、必ず「名前を付けて保存」にする
             self.save_project_as()
@@ -158,7 +141,6 @@ class MainWindowProjectIo(object):
             self.statusBar().showMessage(f"Data serialization error: {e}")
         except Exception as e:
             self.statusBar().showMessage(f"Error saving project file: {e}")
-            pass
 
     def save_raw_data(self):
         if not self.data.atoms and not self.current_mol:
@@ -218,7 +200,6 @@ class MainWindowProjectIo(object):
             self.statusBar().showMessage(f"Data serialization error: {e}")
         except Exception as e:
             self.statusBar().showMessage(f"Error saving project file: {e}")
-            pass
 
     def load_raw_data(self, file_path=None):
         if not file_path:  # pragma: no cover
@@ -255,7 +236,6 @@ class MainWindowProjectIo(object):
             self.statusBar().showMessage(f"Invalid project file format: {e}")
         except Exception as e:
             self.statusBar().showMessage(f"Error loading project file: {e}")
-            pass
 
     def save_as_json(self):
         """PMEJSONファイル形式で保存 (3D MOL情報含む)"""
@@ -314,7 +294,6 @@ class MainWindowProjectIo(object):
             self.statusBar().showMessage(f"JSON serialization error: {e}")
         except Exception as e:
             self.statusBar().showMessage(f"Error saving PME Project file: {e}")
-            pass
 
     def load_json_data(self, file_path=None):
         """PME Projectファイル形式を読み込み"""
@@ -371,7 +350,6 @@ class MainWindowProjectIo(object):
             self.statusBar().showMessage(f"File I/O error: {e}")
         except Exception as e:
             self.statusBar().showMessage(f"Error loading PME Project file: {e}")
-            pass
 
     def open_project_file(self, file_path=None):
         """プロジェクトファイルを開く（.pmeprjと.pmerawの両方に対応）"""

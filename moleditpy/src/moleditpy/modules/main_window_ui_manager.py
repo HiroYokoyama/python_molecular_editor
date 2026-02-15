@@ -18,14 +18,6 @@ MainWindow (main_window.py) から分離されたモジュール
 
 import vtk
 
-# RDKit imports (explicit to satisfy flake8 and used features)
-try:
-    pass
-except Exception:  # pragma: no cover
-    import traceback
-
-    pass
-
 # PyQt6 Modules
 from PyQt6.QtCore import QEvent, Qt, QTimer
 from PyQt6.QtWidgets import (
@@ -38,7 +30,6 @@ from PyQt6.QtWidgets import (
 
 try:
     from PyQt6 import sip as _sip  # type: ignore
-
     _sip_isdeleted = getattr(_sip, "isdeleted", None)
 except Exception:
     _sip = None

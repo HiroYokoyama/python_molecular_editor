@@ -16,19 +16,15 @@ MainWindow (main_window.py) から分離されたモジュール
 機能クラス: MainWindowAppState
 """
 
-
 import base64
 import copy
 import os
 import traceback
-
 import numpy as np
 
 # RDKit imports (explicit to satisfy flake8 and used features)
 from rdkit import Chem
 from rdkit.Chem import Descriptors, rdMolDescriptors
-
-
 
 # PyQt6 Modules
 from PyQt6.QtCore import QDateTime, QPointF, Qt
@@ -36,7 +32,6 @@ from PyQt6.QtWidgets import QMessageBox
 
 try:
     from PyQt6 import sip as _sip  # type: ignore
-
     _sip_isdeleted = getattr(_sip, "isdeleted", None)
 except Exception:
     _sip = None
@@ -860,7 +855,7 @@ class MainWindowAppState(object):
                                 except Exception:  # pragma: no cover
                                     import traceback
                                     traceback.print_exc()
-                            except Exception:  # pragma: no cover
+                            except Exception:
                                 # non-fatal if mapping creation fails
                                 pass
 

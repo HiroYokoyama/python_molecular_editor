@@ -25,13 +25,6 @@ import traceback
 from rdkit import Chem
 from rdkit.Chem import AllChem, Descriptors, rdGeometry, rdMolTransforms
 
-try:
-    pass
-except Exception:  # pragma: no cover
-    import traceback
-
-    pass
-
 # PyQt6 Modules
 from PyQt6.QtCore import QPointF, QTimer
 from PyQt6.QtWidgets import (
@@ -48,7 +41,6 @@ from PyQt6.QtWidgets import (
 
 try:
     from PyQt6 import sip as _sip  # type: ignore
-
     _sip_isdeleted = getattr(_sip, "isdeleted", None)
 except Exception:
     _sip = None
@@ -194,7 +186,6 @@ class MainWindowMolecularParsers(object):
             self.statusBar().showMessage(f"Invalid MOL file format: {e}")
         except Exception as e:
             self.statusBar().showMessage(f"Error loading file: {e}")
-            pass
 
     def load_xyz_file(self, file_path):
         """XYZファイルを読み込んでRDKitのMolオブジェクトを作成する"""
@@ -971,7 +962,7 @@ class MainWindowMolecularParsers(object):
                     try:
                         mol.AddBond(i, j, Chem.BondType.SINGLE)
                         bonds_added.append((i, j, distance))
-                    except Exception:  # pragma: no cover
+                    except Exception:
                         # 既に結合が存在する場合はスキップ
                         pass
 
@@ -983,7 +974,7 @@ class MainWindowMolecularParsers(object):
     def save_as_mol(self):
         try:
             mol_block = self.data.to_mol_block()
-            if not mol_block:  # pragma: no cover
+            if not mol_block:
                 self.statusBar().showMessage("Error: No 2D data to save.")
                 return
 
@@ -1036,8 +1027,6 @@ class MainWindowMolecularParsers(object):
             self.statusBar().showMessage(f"Text encoding error: {e}")
         except Exception as e:
             self.statusBar().showMessage(f"Error saving file: {e}")
-
-            pass
 
     def save_as_xyz(self):
         if not self.current_mol:  # pragma: no cover

@@ -599,11 +599,11 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                             try:
                                 pos = mw.atom_positions_3d[i]
                                 conf.SetAtomPosition(i, pos.tolist())
-                            except Exception:  # pragma: no cover
+                            except Exception:
                                 # Skip individual failures but continue applying
                                 # other atom positions.
                                 pass
-                    except Exception:  # pragma: no cover
+                    except Exception:
                         # If applying positions fails, continue to redraw from
                         # whatever authoritative state is available.
                         pass
@@ -640,9 +640,6 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
             except Exception:  # pragma: no cover
                 import traceback
                 traceback.print_exc()
-            except Exception:  # pragma: no cover
-                # Do not allow a failure here to interrupt release flow
-                pass
         else:
             # カメラ回転の後始末を親クラスに任せます
             super().OnLeftButtonUp()

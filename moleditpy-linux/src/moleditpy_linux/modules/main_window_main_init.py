@@ -26,13 +26,6 @@ import sys
 # RDKit imports (explicit to satisfy flake8 and used features)
 from rdkit import Chem
 
-try:
-    pass
-except Exception:  # pragma: no cover
-    import traceback
-
-    pass
-
 # PyQt6 Modules
 from PyQt6.QtCore import QLineF, QPointF, QRectF, Qt, QTimer, QUrl
 from PyQt6.QtGui import (
@@ -453,7 +446,6 @@ class MainWindowMainInit(object):
         except Exception:  # pragma: no cover
             import traceback
             traceback.print_exc()
-            pass
 
         right_buttons_layout.addWidget(self.optimize_3d_button)
 
