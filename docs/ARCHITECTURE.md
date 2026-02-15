@@ -12,13 +12,17 @@ Use this map to find the code responsible for specific features.
 | Feature Area | Key Modules / Classes | Primary Functions/Methods |
 | :--- | :--- | :--- |
 | **Startup / Init** | `main_window_main_init.py` | `init_ui`, `init_menu_bar` |
-| **File I/O (Core)** | `main_window_project_io.py` | `save_project`, `load_raw_data` |
-| **Parsing (MOL/XYZ)** | `main_window_molecular_parsers.py` | `load_xyz_file`, `load_mol_file` |
-| **3D Rendering** | `main_window_view_3d.py` | `draw_standard_3d_style` |
+| **File I/O (Project)** | `main_window_project_io.py` | `save_project`, `load_raw_data` |
+| **MOL/XYZ I/O** | `main_window_molecular_parsers.py` | `load_mol_file`, `save_as_mol`, `save_as_xyz` |
+| **SMILES/InChI Import** | `main_window_string_importers.py` | `load_from_smiles`, `load_from_inchi` |
+| **View Loading** | `main_window_view_loaders.py` | `load_xyz_for_3d_viewing`, `save_3d_as_mol` |
+| **3D Rendering** | `main_window_view_3d.py` | `draw_standard_3d_style`, `fit_to_view` |
 | **3D Optimization** | `main_window_compute.py` | `optimize_3d_structure` |
 | **2D Edit Operations** | `main_window_edit_actions.py` | `copy_selection`, `clean_up_2d_structure` |
-| **Measurements** | `main_window_edit_3d.py` | `calculate_distance`, `toggle_measurement_mode` |
-| **Exporting** | `main_window_export.py` | `export_stl`, `export_obj_mtl` |
+| **3D Edit Dialogs** | `main_window_dialog_manager.py` | `open_planarize_dialog`, `open_alignment_dialog` |
+| **3D Measurements** | `main_window_edit_3d.py` | `calculate_distance`, `toggle_measurement_mode` |
+| **Media/Mesh Export** | `main_window_export.py` | `export_2d_png`, `export_3d_png` |
+| **UI Management** | `main_window_ui_manager.py` | `set_mode`, `toggle_2d_panel` |
 | **Dialog Handling** | `main_window_dialog_manager.py` | `open_settings_dialog`, `open_analysis_window` |
 | **Undo/Redo** | `main_window_app_state.py` | `push_undo_state`, `undo`, `redo` |
 
@@ -92,10 +96,9 @@ Manages project persistence.
 - **Functionality**: Saving and loading project files, preserving full application state including UI settings.
 
 ### `main_window_molecular_parsers.py` available as `MainWindowMolecularParsers`
-Dedicated to loading molecular file formats.
-- **Parsers**:
-    - `load_mol_file()`: Handles .mol/.sdf files, fixing headers and generating 2D coordinates if missing.
-    - `load_xyz_file()`: Handles .xyz files with prompts for charge and optional chemistry checks (bond perception).
+Dedicated to loading and saving molecular file formats.
+- **MOL/SDF**: `load_mol_file()`/`save_as_mol()` handle .mol/.sdf files, fixing headers and generating 2D coordinates if missing.
+- **XYZ**: `load_xyz_file()`/`save_as_xyz()` handle .xyz files with prompts for charge and optional chemistry checks (bond perception).
 
 ### `main_window_view_loaders.py` available as `MainWindowViewLoaders`
 Specialized loaders for the 3D viewer.
@@ -126,9 +129,8 @@ Handles the core UI setup and event management.
 ### `main_window_edit_3d.py`
 **Purpose**: Provides tools for interacting with and measuring the 3D scene.
 **Key Responsibilities**:
-- **Measurements**: Logic for measuring distances, angles, and dihedrals between atoms in 3D.
-- **3D Selection**: Handling selection of atoms in the 3D utility for operations like alignment.
-- **Geometric Operations**: planarization and alignment tools.
+- **Measurements**: Logic for measuring distances, angles, and dihedrals between atoms in 3D (`toggle_measurement_mode`).
+- **3D Selection**: Handling selection of atoms in the 3D utility for operations like alignment and measurements.
 
 ### `main_window_view_3d.py`
 **Purpose**: Handles the rendering and visualization capabilities of the 3D viewer.
@@ -138,10 +140,10 @@ Handles the core UI setup and event management.
 - **Camera & Zoom**: Manages camera controls, zooming, and view fitting (`fit_to_view`).
 
 ### `main_window_export.py`
-**Purpose**: detailed export capabilities for 3D and 2D content.
+**Purpose**: Detailed export capabilities for 3D and 2D content (Mesh/Media).
 **Key Responsibilities**:
-- **3D Model Export**: Exports the 3D scene to STL (with or without color) and OBJ/MTL formats for external modeling software (`export_stl`, `export_obj_mtl`).
-- **Image Export**: Renders and saves high-quality PNG images of the 2D or 3D views.
+- **3D Model Export**: Exports the 3D scene to STL (color support limited) and OBJ/MTL formats for external modeling software (`export_obj_mtl`).
+- **Image Export**: Renders and saves high-quality PNG images of the 2D or 3D views (`export_3d_png`, `export_2d_png`).
 
 ### `main_window_string_importers.py`
 **Purpose**: Facilitates importing molecules from text representations.
@@ -159,6 +161,7 @@ Handles the core UI setup and event management.
 **Purpose**: Centralized manager for application dialogs.
 **Key Responsibilities**:
 - **Dialog Lifecycle**: opens and tracks instances of various dialogs (Settings, Analysis, Periodic Table, etc.) to prevent duplicate windows.
+- **3D Edit Dialogs**: Manages dialogs for geometric operations like `AlignPlaneDialog`, `PlanarizeDialog`, and `AlignmentDialog`.
 
 ## Detailed Component Documentation
 
