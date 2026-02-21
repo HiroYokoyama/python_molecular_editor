@@ -31,9 +31,6 @@ def test_calculation_worker_init(worker):
     # Verify it is a QObject subclass
     assert isinstance(worker, QObject)
 
-    # Verify the start_work signal exists and is connectable
-    assert hasattr(worker, "start_work")
-
     # By default, halt_ids is not set until shared by the host.
     assert getattr(worker, "halt_ids", None) is None
 

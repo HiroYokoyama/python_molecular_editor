@@ -303,7 +303,6 @@ def test_to_rdkit_mol_ez_stereo():
 @pytest.mark.gui
 def test_app_launch(window):
     """MainWindow: アプリケーションが正常に起動することを確認"""
-    assert window is not None
     assert window.isVisible()
     # Accept either a title starting with version or containing the app version
     assert "MoleditPy Ver." in window.windowTitle()
@@ -320,7 +319,6 @@ def test_mode_change_atom(window, qtbot):
 
     # "N" ボタンをクリック
     n_button = get_button(toolbar, "N (n)")
-    assert n_button is not None
     qtbot.mouseClick(n_button, Qt.MouseButton.LeftButton)
 
     # モードが変更されたか確認
@@ -337,7 +335,6 @@ def test_mode_change_bond(window, qtbot):
 
     # "Double Bond" ボタンをクリック
     db_button = get_button(toolbar, "Double Bond (2)")
-    assert db_button is not None
     qtbot.mouseClick(db_button, Qt.MouseButton.LeftButton)
 
     # モードが変更されたか確認
@@ -882,7 +879,6 @@ def test_draw_benzene_template(window, qtbot):
 
     # 1. ベンゼンモードに変更
     benzene_button = get_button(toolbar_bottom, "Benzene Template (4)")
-    assert benzene_button is not None
     qtbot.mouseClick(benzene_button, Qt.MouseButton.LeftButton)
     assert scene.mode == "template_benzene"
 
