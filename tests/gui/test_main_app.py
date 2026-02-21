@@ -546,8 +546,6 @@ def test_2d_to_3d_conversion(window, qtbot, monkeypatch):
     # (some environments may not route through start_calculation exactly)
     assert window.current_mol is not None
 
-    # 4. on_calculation_finished が実行され、current_mol が設定される
-    assert window.current_mol is not None
     # 3D関連機能が有効化される
     assert window.optimize_3d_button.isEnabled()
     assert window.export_button.isEnabled()
@@ -934,7 +932,6 @@ def test_open_settings_dialog(window, qtbot):
 
     # 2. QDialog.exec() が呼ばれたことを確認
     QDialog.exec.assert_called()
-    assert QDialog.exec.called
 
 
 @pytest.mark.gui
@@ -1689,8 +1686,6 @@ def test_undo_redo_boundary(window, qtbot):
         window.redo()
     except Exception as e:
         pytest.fail(f"Redo on empty stack raised exception: {e}")
-
-    assert len(window.data.atoms) == 0
 
 
 @pytest.mark.gui

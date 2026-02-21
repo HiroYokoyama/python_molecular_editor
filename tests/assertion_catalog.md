@@ -754,9 +754,7 @@ _Test BondItem.update_position resilience when atoms exist._
 _Test export_stl success path._
 
 - mock_combined_mesh.save.assert_called_once_with('/path/to/export.stl', binary=True)
-- assert mock_combined_mesh.save.called
 - window.statusBar().showMessage.assert_any_call('STL exported to /path/to/export.stl')
-- assert window.statusBar().showMessage.called
 
 ### test_export_stl_cancel
 _Test export_stl cancellation._
@@ -772,17 +770,13 @@ _Test export_stl with no molecule._
 _Test export_obj_mtl success path._
 
 - mock_create.assert_called_once_with(meshes, '/path/to/export.obj', '/path/to/export.mtl')
-- assert mock_create.called
 - window.statusBar().showMessage.assert_any_call('OBJ+MTL files with individual colors exported to /path/to/export.obj and /path/to/export.mtl')
-- assert window.statusBar().showMessage.called
 
 ### test_export_color_stl_success
 _Test export_color_stl success path._
 
 - mock_combined_mesh.save.assert_called_once_with('/path/to/color_export.stl', binary=True)
-- assert mock_combined_mesh.save.called
 - window.statusBar().showMessage.assert_any_call('STL exported to /path/to/color_export.stl')
-- assert window.statusBar().showMessage.called
 
 ### test_create_multi_material_obj_logic
 _Test the file writing logic of create_multi_material_obj._
@@ -804,17 +798,13 @@ _Test export_from_3d_view to ensure it iterates actors and extracts meshes._
 _Test export_2d_png success path._
 
 - mock_image.save.assert_called_with('/path/to/image.png', 'PNG')
-- assert mock_image.save.called
 - window.statusBar().showMessage.assert_any_call('2D view exported to /path/to/image.png')
-- assert window.statusBar().showMessage.called
 
 ### test_export_2d_svg_success
 _Test export_2d_svg success path._
 
 - mock_svg.setFileName.assert_called_with('/path/to/image.svg')
-- assert mock_svg.setFileName.called
 - window.statusBar().showMessage.assert_any_call('2D view exported to /path/to/image.svg')
-- assert window.statusBar().showMessage.called
 
 ### test_export_from_3d_view_no_color_logic
 _Test the logic of extracting mesh without colors._
@@ -840,7 +830,6 @@ _Test create_multi_material_obj with Triangle Strips and Quads._
 ### test_imports_mainwindow
 _Ensure MainWindow and its init submodule can be imported without crashing._
 
-- assert hasattr(MainWindow, '__init__')
 - assert hasattr(MainWindowMainInit, 'init_ui')
 
 ### test_mainwindow_init_with_mocks
@@ -1509,7 +1498,6 @@ _Test deleting a selection containing both atoms and bonds._
 - assert a1_id not in data.atoms
 - assert len(data.bonds) == 0
 - assert a2_id in data.atoms
-- assert a2_id in data.atoms
 
 ### test_undo_redo
 _Test undo/redo integration via scene modifications._
@@ -2029,7 +2017,6 @@ _2D->3D変換: 変換ボタンのテスト_
 - assert len(window.data.bonds) == 1
 - assert convert_button.isEnabled()
 - assert window.current_mol is not None
-- assert window.current_mol is not None
 - assert window.optimize_3d_button.isEnabled()
 - assert window.export_button.isEnabled()
 - assert window.analysis_action.isEnabled()
@@ -2137,7 +2124,6 @@ _MoleculeScene: ベンゼンテンプレートの描画_
 _MainWindow: 設定ダイアログを開くテスト_
 
 - QDialog.exec.assert_called()
-- assert QDialog.exec.called
 
 ### test_toggle_measurement_mode
 _MainWindow: 3D測定モードのトグルテスト_
@@ -2293,7 +2279,6 @@ _SMILESインポート: 不正なSMILES入力時のエラーハンドリング�
 _Undo/Redo: スタック境界(空のスタックへの操作)のテスト_
 
 - assert len(window.undo_stack) == 1
-- assert len(window.data.atoms) == 0
 - assert len(window.data.atoms) == 0
 
 ### test_import_invalid_mol_file

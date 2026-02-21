@@ -14,7 +14,6 @@ def test_imports_mainwindow():
     from moleditpy.modules.main_window_main_init import MainWindowMainInit
     
     # Verify they have expected core methods/attributes
-    assert hasattr(MainWindow, "__init__")
     assert hasattr(MainWindowMainInit, "init_ui")
 
 

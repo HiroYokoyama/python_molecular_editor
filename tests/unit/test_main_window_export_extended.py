@@ -106,11 +106,9 @@ def test_export_stl_success(window, mock_file_dialog, mock_pv_polydata):
         window.export_stl()
 
     mock_combined_mesh.save.assert_called_once_with("/path/to/export.stl", binary=True)
-    assert mock_combined_mesh.save.called
     window.statusBar().showMessage.assert_any_call(
         "STL exported to /path/to/export.stl"
     )
-    assert window.statusBar().showMessage.called
 
 
 def test_export_stl_cancel(window, mock_file_dialog):
@@ -156,11 +154,9 @@ def test_export_obj_mtl_success(window, mock_file_dialog):
         mock_create.assert_called_once_with(
             meshes, "/path/to/export.obj", "/path/to/export.mtl"
         )
-        assert mock_create.called
         window.statusBar().showMessage.assert_any_call(
             "OBJ+MTL files with individual colors exported to /path/to/export.obj and /path/to/export.mtl"
         )
-        assert window.statusBar().showMessage.called
 
 
 def test_export_color_stl_success(window, mock_file_dialog):
@@ -179,11 +175,9 @@ def test_export_color_stl_success(window, mock_file_dialog):
     mock_combined_mesh.save.assert_called_once_with(
         "/path/to/color_export.stl", binary=True
     )
-    assert mock_combined_mesh.save.called
     window.statusBar().showMessage.assert_any_call(
         "STL exported to /path/to/color_export.stl"
     )
-    assert window.statusBar().showMessage.called
 
 
 def test_create_multi_material_obj_logic(window):
@@ -279,11 +273,9 @@ def test_export_2d_png_success(window, mock_file_dialog, mock_message_box):
 
         window.export_2d_png()
         mock_image.save.assert_called_with("/path/to/image.png", "PNG")
-        assert mock_image.save.called
         window.statusBar().showMessage.assert_any_call(
             "2D view exported to /path/to/image.png"
         )
-        assert window.statusBar().showMessage.called
 
 
 def test_export_2d_svg_success(window, mock_file_dialog, mock_message_box):
@@ -316,11 +308,9 @@ def test_export_2d_svg_success(window, mock_file_dialog, mock_message_box):
 
         window.export_2d_svg()
         mock_svg.setFileName.assert_called_with("/path/to/image.svg")
-        assert mock_svg.setFileName.called
         window.statusBar().showMessage.assert_any_call(
             "2D view exported to /path/to/image.svg"
         )
-        assert window.statusBar().showMessage.called
 
 
 def test_export_from_3d_view_no_color_logic(window):

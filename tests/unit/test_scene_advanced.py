@@ -189,8 +189,6 @@ def test_delete_mixed_selection(scene_setup):
     assert len(data.bonds) == 0
     assert a2_id in data.atoms
 
-    assert a2_id in data.atoms
-
     # Note: direct call to delete_items does NOT push undo state (that's handled in mouseReleaseEvent)
     # so we don't assert window.undo_stack here.
 
