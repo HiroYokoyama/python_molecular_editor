@@ -137,7 +137,6 @@ def test_delete_selected_items(mock_parser_host):
                 event.scenePos.return_value = QPointF(0, 0)
                 scene.mousePressEvent(event)
                 mock_delete.assert_called()
-                assert mock_delete.called
 
 
 @patch("PyQt6.QtWidgets.QGraphicsScene.mouseDoubleClickEvent")

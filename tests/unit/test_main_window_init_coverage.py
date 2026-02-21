@@ -14,6 +14,7 @@ def test_imports_mainwindow():
     from moleditpy.modules.main_window_main_init import MainWindowMainInit
     
     # Verify they have expected core methods/attributes
+    assert "__init__" in MainWindow.__dict__  # has a custom constructor
     assert hasattr(MainWindowMainInit, "init_ui")
 
 

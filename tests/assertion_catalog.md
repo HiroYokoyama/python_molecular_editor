@@ -546,13 +546,11 @@ _Verify that export_2d_svg successfully creates an SVG file._
 ### test_export_stl_error_no_mol
 _Verify that export_stl shows an error message when no molecule is present._
 
-- assert exporter.statusBar().showMessage.called
 - exporter.statusBar().showMessage.assert_any_call('Error: Please generate a 3D structure first.')
 
 ### test_export_obj_mtl_error_no_mol
 _Verify that export_obj_mtl shows an error message when no molecule is present._
 
-- assert exporter.statusBar().showMessage.called
 - exporter.statusBar().showMessage.assert_any_call('Error: Please generate a 3D structure first.')
 
 ### test_export_stl_success_trigger
@@ -830,6 +828,7 @@ _Test create_multi_material_obj with Triangle Strips and Quads._
 ### test_imports_mainwindow
 _Ensure MainWindow and its init submodule can be imported without crashing._
 
+- assert '__init__' in MainWindow.__dict__
 - assert hasattr(MainWindowMainInit, 'init_ui')
 
 ### test_mainwindow_init_with_mocks
@@ -1112,19 +1111,16 @@ _Test PluginContext initialization._
 _Test add_menu_action delegation._
 
 - mock_manager.register_menu_action.assert_called_once_with('TestPlugin', 'File/Test', callback, 'Test Action', 'icon.png', 'Ctrl+T')
-- assert mock_manager.register_menu_action.called
 
 ### TestPluginInterface.test_add_toolbar_action
 _Test add_toolbar_action delegation._
 
 - mock_manager.register_toolbar_action.assert_called_once_with('TestPlugin', callback, 'Toolbar Action', 'icon.png', 'Tooltip')
-- assert mock_manager.register_toolbar_action.called
 
 ### TestPluginInterface.test_register_drop_handler
 _Test register_drop_handler delegation._
 
 - mock_manager.register_drop_handler.assert_called_once_with('TestPlugin', callback, 5)
-- assert mock_manager.register_drop_handler.called
 
 ### TestPluginInterface.test_get_3d_controller
 _Test get_3d_controller returns a controller linked to main window._
@@ -1153,37 +1149,31 @@ _Test current_molecule when main window is None._
 _Test add_export_action delegation._
 
 - mock_manager.register_export_action.assert_called_once_with('TestPlugin', 'Export Plugin', callback)
-- assert mock_manager.register_export_action.called
 
 ### TestPluginInterface.test_register_optimization_method
 _Test register_optimization_method delegation._
 
 - mock_manager.register_optimization_method.assert_called_once_with('TestPlugin', 'My Opt', callback)
-- assert mock_manager.register_optimization_method.called
 
 ### TestPluginInterface.test_register_file_opener
 _Test register_file_opener delegation._
 
 - mock_manager.register_file_opener.assert_called_once_with('TestPlugin', '.ext', callback, 10)
-- assert mock_manager.register_file_opener.called
 
 ### TestPluginInterface.test_add_analysis_tool
 _Test add_analysis_tool delegation._
 
 - mock_manager.register_analysis_tool.assert_called_once_with('TestPlugin', 'Analyze This', callback)
-- assert mock_manager.register_analysis_tool.called
 
 ### TestPluginInterface.test_register_save_handler
 _Test register_save_handler delegation._
 
 - mock_manager.register_save_handler.assert_called_once_with('TestPlugin', callback)
-- assert mock_manager.register_save_handler.called
 
 ### TestPluginInterface.test_register_load_handler
 _Test register_load_handler delegation._
 
 - mock_manager.register_load_handler.assert_called_once_with('TestPlugin', callback)
-- assert mock_manager.register_load_handler.called
 
 ### TestPluginInterface.test_register_3d_context_menu
 _Test deprecated register_3d_context_menu._
@@ -1194,29 +1184,23 @@ _Test deprecated register_3d_context_menu._
 _Test register_3d_style delegation._
 
 - mock_manager.register_3d_style.assert_called_once_with('TestPlugin', 'My Style', callback)
-- assert mock_manager.register_3d_style.called
 
 ### TestPluginInterface.test_register_document_reset_handler
 _Test register_document_reset_handler delegation._
 
 - mock_manager.register_document_reset_handler.assert_called_once_with('TestPlugin', callback)
-- assert mock_manager.register_document_reset_handler.called
 
 ### TestPluginInterface.test_3d_controller_set_atom_color
 _Test Plugin3DController.set_atom_color._
 
 - mock_main_window.main_window_view_3d.update_atom_color_override.assert_called_once_with(1, '#FF0000')
-- assert mock_main_window.main_window_view_3d.update_atom_color_override.called
 - mock_main_window.plotter.render.assert_called_once()
-- assert mock_main_window.plotter.render.called
 
 ### TestPluginInterface.test_3d_controller_set_bond_color
 _Test Plugin3DController.set_bond_color._
 
 - mock_main_window.main_window_view_3d.update_bond_color_override.assert_called_once_with(2, '#00FF00')
-- assert mock_main_window.main_window_view_3d.update_bond_color_override.called
 - mock_main_window.plotter.render.assert_called_once()
-- assert mock_main_window.plotter.render.called
 
 ## tests/unit/test_plugin_manager.py
 
@@ -1357,7 +1341,6 @@ _ensure_plugin_dir should create the directory if it doesn't exist._
 _Verify error message when trying to save an empty project._
 
 - io.statusBar().showMessage.assert_called_with('Error: Nothing to save.')
-- assert io.statusBar().showMessage.called
 
 ### test_save_project_overwrite_json
 _Verify overwriting an existing JSON project file._
@@ -1403,8 +1386,6 @@ _Verify triggering of 'save as' for JSON format._
 _Verify error handling during raw data loading (file not found, corrupt)._
 
 - io.statusBar().showMessage.assert_called_with('File not found: non_existent.pmeraw')
-- assert io.statusBar().showMessage.called
-- io.statusBar().showMessage.assert_called()
 - io.statusBar().showMessage.assert_called_with('Invalid project file format: Corrupt')
 
 ### test_open_project_file_unsaved_check
@@ -1525,7 +1506,6 @@ _No description provided._
 _No description provided._
 
 - mock_delete.assert_called()
-- assert mock_delete.called
 
 ### test_scene_maintenance_methods
 _No description provided._
@@ -1617,7 +1597,6 @@ _No description provided._
 _No description provided._
 
 - mock_delete.assert_called()
-- assert mock_delete.called
 
 ### test_double_click_select_component
 _No description provided._
@@ -2245,14 +2224,12 @@ _暗黙の水素: 描画操作後に自動更新されるかのテスト_
 _D&D: 3Dビュー領域への .mol ファイルドロップ (モック)_
 
 - mock_load_3d.assert_called_once_with(file_path='/fake/drop.mol')
-- assert mock_load_3d.called
 - mock_event.acceptProposedAction.assert_called_once()
 
 ### test_drag_drop_mol_file_on_2d_view
 _D&D: 2Dビュー領域への .mol ファイルドロップ (モック)_
 
 - mock_load_2d.assert_called_once_with(file_path='/fake/drop.mol')
-- assert mock_load_2d.called
 - mock_event.acceptProposedAction.assert_called_once()
 
 ### test_project_save_load_round_trip
@@ -2267,8 +2244,8 @@ _プロジェクト保存/読込: 保存したファイルを実際に読み込�
 - assert len(window.data.atoms) == 2
 - assert len(window.data.bonds) == 1
 - assert symbols == ['C', 'N']
-- assert len(window.data.bonds) == 1
 - assert bond_data['order'] == 1
+- assert bond_data['stereo'] == 0
 
 ### test_file_import_smiles_error
 _SMILESインポート: 不正なSMILES入力時のエラーハンドリングテスト_

@@ -55,7 +55,6 @@ def test_save_project_no_data(mock_parser_host):
     io.current_mol = None
     io.save_project()
     io.statusBar().showMessage.assert_called_with("Error: Nothing to save.")
-    assert io.statusBar().showMessage.called
 
 
 def test_save_project_overwrite_json(mock_parser_host, tmp_path):
@@ -170,8 +169,6 @@ def test_load_raw_data_error_paths(mock_parser_host):
             # Should handle exception and log/show error
             io.load_raw_data("dummy_data")
             # Verify error message
-            assert io.statusBar().showMessage.called
-            io.statusBar().showMessage.assert_called()
             io.statusBar().showMessage.assert_called_with(
                 "Invalid project file format: Corrupt"
             )

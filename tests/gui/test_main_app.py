@@ -1516,7 +1516,6 @@ def test_drag_drop_mol_file_on_3d_view(window, qtbot, monkeypatch):
 
     # 5. `load_mol_file_for_3d_viewing` が呼ばれたことを確認
     mock_load_3d.assert_called_once_with(file_path="/fake/drop.mol")
-    assert mock_load_3d.called
     mock_event.acceptProposedAction.assert_called_once()
 
 
@@ -1549,7 +1548,6 @@ def test_drag_drop_mol_file_on_2d_view(window, qtbot, monkeypatch):
 
     # 5. `load_mol_file` が呼ばれたことを確認
     mock_load_2d.assert_called_once_with(file_path="/fake/drop.mol")
-    assert mock_load_2d.called
     mock_event.acceptProposedAction.assert_called_once()
 
 
@@ -1613,11 +1611,10 @@ def test_project_save_load_round_trip(window, qtbot, monkeypatch, tmp_path):
     symbols = sorted([d["symbol"] for d in window.data.atoms.values()])
     assert symbols == ["C", "N"]
 
-    # 結合があるか
-    assert len(window.data.bonds) == 1
-    # 結合の次数やステレオもチェックできるとベスト
+    # 結合の次数やステレオもチェック
     bond_data = list(window.data.bonds.values())[0]
     assert bond_data["order"] == 1
+    assert bond_data["stereo"] == 0
 
 
 @pytest.mark.gui

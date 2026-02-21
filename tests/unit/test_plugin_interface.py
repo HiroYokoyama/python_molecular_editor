@@ -28,7 +28,6 @@ class TestPluginInterface:
         mock_manager.register_menu_action.assert_called_once_with(
             "TestPlugin", "File/Test", callback, "Test Action", "icon.png", "Ctrl+T"
         )
-        assert mock_manager.register_menu_action.called
 
     def test_add_toolbar_action(self, mock_manager):
         """Test add_toolbar_action delegation."""
@@ -38,7 +37,6 @@ class TestPluginInterface:
         mock_manager.register_toolbar_action.assert_called_once_with(
             "TestPlugin", callback, "Toolbar Action", "icon.png", "Tooltip"
         )
-        assert mock_manager.register_toolbar_action.called
 
     def test_register_drop_handler(self, mock_manager):
         """Test register_drop_handler delegation."""
@@ -48,7 +46,6 @@ class TestPluginInterface:
         mock_manager.register_drop_handler.assert_called_once_with(
             "TestPlugin", callback, 5
         )
-        assert mock_manager.register_drop_handler.called
 
     def test_get_3d_controller(self, mock_manager, mock_main_window):
         """Test get_3d_controller returns a controller linked to main window."""
@@ -96,7 +93,6 @@ class TestPluginInterface:
         mock_manager.register_export_action.assert_called_once_with(
             "TestPlugin", "Export Plugin", callback
         )
-        assert mock_manager.register_export_action.called
 
     def test_register_optimization_method(self, mock_manager):
         """Test register_optimization_method delegation."""
@@ -106,7 +102,6 @@ class TestPluginInterface:
         mock_manager.register_optimization_method.assert_called_once_with(
             "TestPlugin", "My Opt", callback
         )
-        assert mock_manager.register_optimization_method.called
 
     def test_register_file_opener(self, mock_manager):
         """Test register_file_opener delegation."""
@@ -116,7 +111,6 @@ class TestPluginInterface:
         mock_manager.register_file_opener.assert_called_once_with(
             "TestPlugin", ".ext", callback, 10
         )
-        assert mock_manager.register_file_opener.called
 
     def test_add_analysis_tool(self, mock_manager):
         """Test add_analysis_tool delegation."""
@@ -126,7 +120,6 @@ class TestPluginInterface:
         mock_manager.register_analysis_tool.assert_called_once_with(
             "TestPlugin", "Analyze This", callback
         )
-        assert mock_manager.register_analysis_tool.called
 
     def test_register_save_handler(self, mock_manager):
         """Test register_save_handler delegation."""
@@ -136,7 +129,6 @@ class TestPluginInterface:
         mock_manager.register_save_handler.assert_called_once_with(
             "TestPlugin", callback
         )
-        assert mock_manager.register_save_handler.called
 
     def test_register_load_handler(self, mock_manager):
         """Test register_load_handler delegation."""
@@ -146,7 +138,6 @@ class TestPluginInterface:
         mock_manager.register_load_handler.assert_called_once_with(
             "TestPlugin", callback
         )
-        assert mock_manager.register_load_handler.called
 
     def test_register_3d_context_menu(self, mock_manager, capsys):
         """Test deprecated register_3d_context_menu."""
@@ -163,7 +154,6 @@ class TestPluginInterface:
         mock_manager.register_3d_style.assert_called_once_with(
             "TestPlugin", "My Style", callback
         )
-        assert mock_manager.register_3d_style.called
 
     def test_register_document_reset_handler(self, mock_manager):
         """Test register_document_reset_handler delegation."""
@@ -173,7 +163,6 @@ class TestPluginInterface:
         mock_manager.register_document_reset_handler.assert_called_once_with(
             "TestPlugin", callback
         )
-        assert mock_manager.register_document_reset_handler.called
 
     def test_3d_controller_set_atom_color(self, mock_main_window):
         """Test Plugin3DController.set_atom_color."""
@@ -187,9 +176,7 @@ class TestPluginInterface:
         mock_main_window.main_window_view_3d.update_atom_color_override.assert_called_once_with(
             1, "#FF0000"
         )
-        assert mock_main_window.main_window_view_3d.update_atom_color_override.called
         mock_main_window.plotter.render.assert_called_once()
-        assert mock_main_window.plotter.render.called
 
     def test_3d_controller_set_bond_color(self, mock_main_window):
         """Test Plugin3DController.set_bond_color."""
@@ -203,6 +190,4 @@ class TestPluginInterface:
         mock_main_window.main_window_view_3d.update_bond_color_override.assert_called_once_with(
             2, "#00FF00"
         )
-        assert mock_main_window.main_window_view_3d.update_bond_color_override.called
         mock_main_window.plotter.render.assert_called_once()
-        assert mock_main_window.plotter.render.called
