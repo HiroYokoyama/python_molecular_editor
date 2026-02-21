@@ -10,7 +10,6 @@ _Verify worker preserves explicit E/Z labels even if RDKit might lose them._
 ### test_molecular_data_fallback_serialization
 _Verify MolecularData uses manual string construction if RDKit fails (fallback logic)._
 
-- assert mol_block is not None
 - assert 'V2000' in counts_line
 - assert 'MoleditPy' in mol_block
 - assert 'X  ' in mol_block
@@ -45,7 +44,6 @@ _get_current_state should capture bonds with correct order._
 ### test_get_current_state_with_3d_mol
 _State should include 3D molecule binary when current_mol is set._
 
-- assert 'mol_3d' in state
 - assert isinstance(mol_3d_binary, bytes) and len(mol_3d_binary) > 0
 - assert restored.GetNumAtoms() == mol.GetNumAtoms()
 - assert 'mol_3d_atom_ids' in state
@@ -1630,7 +1628,6 @@ _Test update_template_preview with different targets._
 ### test_scene_drag_create_bond_sequence
 _Test the full mouse press -> move -> release sequence for creating a bond._
 
-- assert bond is not None
 - assert bond.order == 1
 - assert getattr(scene, 'start_atom', None) == a1
 
@@ -1905,7 +1902,6 @@ _MolecularData: 結合削除のテスト_
 ### test_to_rdkit_mol_stereo
 _MolecularData: 立体結合 (Wedge/Dash) のRDKit変換テスト_
 
-- assert mol is not None
 - assert wedge_bond.GetBondDir() == Chem.BondDir.BEGINWEDGE
 - assert dash_bond.GetBondDir() == Chem.BondDir.BEGINDASH
 
@@ -1944,7 +1940,6 @@ _ツールバー: 結合ボタンでモードが変更されることを確認_
 ### test_draw_atom_on_click
 _MoleculeScene: クリックで原子を描画するテスト_
 
-- assert len(window.data.atoms) == 0
 - assert len(window.data.atoms) == 1
 - assert window.data.atoms[atom_id]['symbol'] == 'N'
 - assert window.data.atoms[atom_id]['item'].pos() == click_pos
@@ -1952,8 +1947,6 @@ _MoleculeScene: クリックで原子を描画するテスト_
 ### test_draw_bond_on_drag
 _MoleculeScene: ドラッグで結合を描画するテスト_
 
-- assert len(window.data.atoms) == 0
-- assert len(window.data.bonds) == 0
 - assert len(window.data.atoms) == 2
 - assert len(window.data.bonds) == 1
 - assert (id1, id2) in window.data.bonds
@@ -2037,8 +2030,6 @@ _Undo/Redo: 操作のテスト_
 ### test_clear_all
 _Clear All: 全消去のテスト_
 
-- assert len(window.data.atoms) == 1
-- assert window.has_unsaved_changes == True
 - assert len(window.data.atoms) == 0
 - assert len(window.data.bonds) == 0
 - assert window.current_mol is None

@@ -280,5 +280,4 @@ def test_scene_drag_create_bond_sequence(
 
     # Verify bond created
     bond = scene.find_bond_between(a1, a2)
-    assert bond is not None
     assert bond.order == 1

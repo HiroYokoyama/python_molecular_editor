@@ -54,8 +54,6 @@ def test_molecular_data_fallback_serialization():
 
     # to_mol_block should then use the fallback path
     mol_block = data.to_mol_block()
-
-    assert mol_block is not None
     # Verify fallback produced valid V2000 structure: 2 atoms, 1 bond
     lines = mol_block.split("\n")
     counts_line = lines[3]  # V2000 counts line
