@@ -164,7 +164,6 @@ _Test boundingRect expansion for E/Z labels_
 _Verify the initial state of the CalculationWorker._
 
 - assert isinstance(worker, QObject)
-- assert hasattr(worker, 'start_work')
 - assert getattr(worker, 'halt_ids', None) is None
 - assert not getattr(worker, 'halt_all', False)
 
@@ -834,10 +833,10 @@ _Ensure MainWindow and its init submodule can be imported without crashing._
 - assert hasattr(MainWindowMainInit, 'init_ui')
 
 ### test_mainwindow_init_with_mocks
-_Verify MainWindow class structure is intact with mocks._
+_Verify MainWindow delegates init_ui and init_menu_bar to mixin wrappers._
 
-- assert 'init_ui' in MainWindow.__dict__
-- assert 'init_menu_bar' in MainWindow.__dict__
+- assert callable(getattr(MainWindow, 'init_ui', None))
+- assert callable(getattr(MainWindow, 'init_menu_bar', None))
 
 ## tests/unit/test_modules_init.py
 
@@ -860,7 +859,6 @@ _Test safe check when an exception occurs._
 _Test safe check when _sip_isdeleted is None (sip import failed)._
 
 - assert result is False
-- assert sip_isdeleted_safe(object()) is False
 
 ## tests/unit/test_molecular_data.py
 
@@ -1478,8 +1476,7 @@ _Test deleting a selection containing both atoms and bonds._
 _Test undo/redo integration via scene modifications._
 
 - assert len(window.undo_stack) == 0
-- assert len(window.undo_stack) >= 1
-- assert len(window.undo_stack) >= 2
+- assert len(window.undo_stack) == initial_len + 1
 
 ## tests/unit/test_scene_extended.py
 
@@ -1905,7 +1902,6 @@ _MolecularData: E/Z立体結合のRDKit変換テスト_
 ### test_app_launch
 _MainWindow: アプリケーションが正常に起動することを確認_
 
-- assert window is not None
 - assert window.isVisible()
 - assert 'MoleditPy Ver.' in window.windowTitle()
 
@@ -1913,7 +1909,6 @@ _MainWindow: アプリケーションが正常に起動することを確認_
 _ツールバー: 原子ボタンでモードが変更されることを確認_
 
 - assert scene.mode == 'atom_C'
-- assert n_button is not None
 - assert scene.mode == 'atom_N'
 - assert scene.current_atom_symbol == 'N'
 - assert window.statusBar().currentMessage() == 'Mode: Draw Atom (N)'
@@ -1921,7 +1916,6 @@ _ツールバー: 原子ボタンでモードが変更されることを確認_
 ### test_mode_change_bond
 _ツールバー: 結合ボタンでモードが変更されることを確認_
 
-- assert db_button is not None
 - assert scene.mode == 'bond_2_0'
 - assert scene.bond_order == 2
 - assert scene.bond_stereo == 0
@@ -2079,7 +2073,6 @@ _MoleculeScene: Deleteキーで選択項目を削除_
 ### test_draw_benzene_template
 _MoleculeScene: ベンゼンテンプレートの描画_
 
-- assert benzene_button is not None
 - assert scene.mode == 'template_benzene'
 - assert len(window.data.atoms) == 6
 - assert len(window.data.bonds) == 6

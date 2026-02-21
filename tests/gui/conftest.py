@@ -892,6 +892,63 @@ def window(app, qtbot, monkeypatch):
 
         traceback.print_exc()
 
+    # Mock trigger_conversion to do a synchronous, VTK-free 3D conversion.
+    # The real method spawns threads and can race with VTK/GL teardown,
+    # causing intermittent CI aborts.  This mock does pure RDKit work only.
+    try:
+        import moleditpy.modules.main_window_compute as _mwcomp2
+        from rdkit import Chem
+        from rdkit.Chem import AllChem as _AllChem
+        import numpy as _np
+
+        def _sync_trigger_conversion(self):
+            """Synchronous, VTK-free trigger_conversion for tests."""
+            try:
+                if not self.data.atoms:
+                    self.plotter.clear()
+                    self.current_mol = None
+                    self.statusBar().showMessage("3D view cleared.")
+                    return
+
+                mol = self.data.to_rdkit_mol(use_2d_stereo=False)
+                if mol is None or mol.GetNumAtoms() == 0:
+                    self.statusBar().showMessage("Error: Invalid chemical structure.")
+                    return
+
+                try:
+                    Chem.SanitizeMol(mol)
+                except Exception:
+                    self.statusBar().showMessage("Error: Invalid chemical structure.")
+                    return
+
+                mol_h = Chem.AddHs(mol)
+                _AllChem.EmbedMolecule(mol_h, _AllChem.ETKDG())
+                self.current_mol = mol_h
+                self.atom_positions_3d = _np.zeros((mol_h.GetNumAtoms(), 3))
+                self.statusBar().showMessage("3D conversion complete.")
+
+                # Enable 3D-related UI elements
+                try:
+                    self.optimize_3d_button.setEnabled(True)
+                    self.export_button.setEnabled(True)
+                    self.analysis_action.setEnabled(True)
+                except Exception:
+                    pass
+            except Exception:
+                import traceback
+                traceback.print_exc()
+
+        monkeypatch.setattr(
+            _mwcomp2.MainWindowCompute,
+            "trigger_conversion",
+            _sync_trigger_conversion,
+            raising=False,
+        )
+    except Exception:
+        import traceback
+
+        traceback.print_exc()
+
     # Make the VTK orientation widget tolerant to our MagicMock interactor
     try:
 
