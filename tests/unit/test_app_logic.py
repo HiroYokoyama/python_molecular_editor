@@ -56,6 +56,10 @@ def test_molecular_data_fallback_serialization():
     mol_block = data.to_mol_block()
 
     assert mol_block is not None
+    # Verify fallback produced valid V2000 structure: 2 atoms, 1 bond
+    lines = mol_block.split("\n")
+    counts_line = lines[3]  # V2000 counts line
+    assert "V2000" in counts_line
     assert "MoleditPy" in mol_block
     assert "X  " in mol_block
     assert "C  " in mol_block
@@ -106,7 +110,6 @@ def test_coordinate_mapping_fallback():
     data.atoms[1]["item"] = item2
 
     mol_block = data.to_mol_block()
-    assert mol_block is not None
     assert "MoleditPy" in mol_block  # Check header of fallback block
 
     expected_x = 100.0 * ANGSTROM_PER_PIXEL

@@ -29,8 +29,11 @@ def test_mainwindow_init_with_mocks():
             ):
                 from moleditpy.modules.main_window import MainWindow
                 
-                # Instead of verifying it's a "type" (tautology), 
-                # verify it possesses the expected mixin-provided methods.
-                assert hasattr(MainWindow, "init_ui")
-                assert hasattr(MainWindow, "init_menu_bar")
-                assert hasattr(MainWindow, "init_worker_thread")
+                # MainWindow delegates to mixin objects (composition, not inheritance).
+                # Verify MainWindow defines its own init_ui and init_menu_bar wrappers.
+                assert "init_ui" in MainWindow.__dict__, (
+                    "MainWindow should define its own init_ui wrapper"
+                )
+                assert "init_menu_bar" in MainWindow.__dict__, (
+                    "MainWindow should define its own init_menu_bar wrapper"
+                )

@@ -181,10 +181,14 @@ def test_atom_item_paint_resilience_to_deleted_bond(mock_parser_host):
     painter = MagicMock(spec=QPainter)
     option = QStyleOptionGraphicsItem()
 
-    # Should not crash. We call it directly and verify the bond remains.
+    # Should not crash. We call paint and verify it completed.
     atom.paint(painter, option, None)
-    
-    # Ensure checking loop finished and bond is still in the list
+
+    # "C" with bonds is a skeletal carbon (is_visible=False), so the paint
+    # method reaches the highlight/selection section. Verify it reached
+    # the end without crashing by checking painter was interacted with.
+    assert len(painter.method_calls) > 0, "paint should have called painter methods"
+    # Ensure bond list reference survived the paint loop
     assert atom.bonds == [deleted_bond]
 
 
@@ -218,7 +222,8 @@ def test_bond_item_shape_stroked(mock_parser_host):
     assert not path.isEmpty()
     rect = path.boundingRect()
     assert rect.width() > 0
-    assert rect.height() > 0  # Should have thickness
+    # Stroked path must have visible thickness (not a zero-height hairline)
+    assert rect.height() >= 1.0, f"Stroked shape too thin: height={rect.height()}"
 
 
 def test_bond_bounding_rect_geometry(mock_parser_host):
@@ -319,5 +324,6 @@ def test_bond_update_position_resilience(mock_parser_host):
     bond.atom2 = None
     bond.update_position(notify=True)
     assert bond.atom2 is None
-    # Verify that the points remain at their last known positions or defaults if not calculated
-    # The main goal is resilience (no crash).
+    # Verify the bond didn't crash and returns a zero-length line for missing atom
+    line = bond.get_line_in_local_coords()
+    assert line.length() == 0.0, f"Expected zero-length line, got length={line.length()}"

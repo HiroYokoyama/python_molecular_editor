@@ -26,4 +26,9 @@ def test_sip_isdeleted_safe_exception():
 def test_sip_isdeleted_safe_no_sip():
     """Test safe check when _sip_isdeleted is None (sip import failed)."""
     with patch("moleditpy.modules._sip_isdeleted", None):
-        assert sip_isdeleted_safe(MagicMock()) is False
+        # MagicMock should return False (not deleted) when sip unavailable
+        result = sip_isdeleted_safe(MagicMock())
+        assert result is False
+        assert isinstance(result, bool)
+        # Plain Python object should also return False
+        assert sip_isdeleted_safe(object()) is False

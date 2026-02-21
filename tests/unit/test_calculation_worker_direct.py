@@ -26,14 +26,18 @@ def worker():
 
 def test_calculation_worker_init(worker):
     """Verify the initial state of the CalculationWorker."""
-    # CalculationWorker is a QObject. It identifies runs via worker_id
-    # in run_calculation options, not as instance attribute.
-    
+    from PyQt6.QtCore import QObject
+
+    # Verify it is a QObject subclass
+    assert isinstance(worker, QObject)
+
+    # Verify the start_work signal exists and is connectable
+    assert hasattr(worker, "start_work")
+
     # By default, halt_ids is not set until shared by the host.
-    # We verify it works via getattr as used in _check_halted logic.
     assert getattr(worker, "halt_ids", None) is None
-    
-    # halt_all should also default to False or None to avoid premature halting
+
+    # halt_all should default to falsy to avoid premature halting
     assert not getattr(worker, "halt_all", False)
 
 
@@ -171,9 +175,9 @@ def test_calculation_worker_rdkit_embedding_fail_fallback(worker):
         str(m).lower() for m in error_captor.emitted_values
     ]
     all_msgs_str = " | ".join(all_msgs)
-    
-    # Check for any indication of the failure
-    # It might fail with "constraint embedding failed" or "rdkit 3d conversion failed"
-    # depending on whether the bounds matrix patch took effect.
-    assert "failed" in all_msgs_str or "error" in all_msgs_str, f"No failure message found in: {all_msgs_str}"
-    assert "rdkit" in all_msgs_str, f"Expected RDKit-related failure in: {all_msgs_str}"
+
+    # Check for specific failure indication from the embedding/conversion path
+    assert any(
+        keyword in all_msgs_str
+        for keyword in ["embedding failed", "conversion failed", "bounds fail"]
+    ), f"Expected specific embedding failure message, got: {all_msgs_str}"

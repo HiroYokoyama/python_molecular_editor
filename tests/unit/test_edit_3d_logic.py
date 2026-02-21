@@ -76,8 +76,8 @@ def test_calculate_dihedral_logic(mock_parser_host):
         [2.0, 1.0, 1.0],
     ]
     dihedral = edit3d.calculate_dihedral(0, 1, 2, 3)
-    # Dihedral should be non-zero
-    assert abs(dihedral) > 0
+    # For these coordinates, the dihedral is exactly 45.0°
+    assert abs(dihedral - 45.0) < 0.01, f"Expected 45.0°, got {dihedral}°"
 
 
 def test_handle_measurement_atom_selection(mock_parser_host):

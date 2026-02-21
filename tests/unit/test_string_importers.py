@@ -110,10 +110,10 @@ def test_smiles_invalid_shows_error(mock_parser_host):
     with patch.object(QTimer, "singleShot"):
         importer.load_from_smiles("INVALID_SMILES_XYZ")
 
-    # Should call statusBar with error, not crash
+    # Should call statusBar with specific SMILES error prefix
     mock_parser_host.statusBar().showMessage.assert_called()
     last_msg = mock_parser_host.statusBar().showMessage.call_args[0][0]
-    assert "Invalid" in last_msg or "Error" in last_msg
+    assert last_msg.startswith("Invalid SMILES:"), f"Expected 'Invalid SMILES:' prefix, got: {last_msg}"
 
 
 def test_smiles_empty_shows_error(mock_parser_host):
@@ -159,4 +159,4 @@ def test_inchi_invalid_shows_error(mock_parser_host):
 
     mock_parser_host.statusBar().showMessage.assert_called()
     last_msg = mock_parser_host.statusBar().showMessage.call_args[0][0]
-    assert "Invalid" in last_msg or "Error" in last_msg
+    assert last_msg.startswith("Invalid InChI:"), f"Expected 'Invalid InChI:' prefix, got: {last_msg}"

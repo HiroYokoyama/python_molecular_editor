@@ -90,7 +90,11 @@ def test_get_current_state_with_3d_mol(mock_parser_host):
     state = app.get_current_state()
 
     assert "mol_3d" in state
-    assert state["mol_3d"] is not None
+    # Verify binary is non-empty and round-trips to a valid molecule
+    mol_3d_binary = state["mol_3d"]
+    assert isinstance(mol_3d_binary, bytes) and len(mol_3d_binary) > 0
+    restored = Chem.Mol(mol_3d_binary)
+    assert restored.GetNumAtoms() == mol.GetNumAtoms()
     assert "mol_3d_atom_ids" in state
 
 

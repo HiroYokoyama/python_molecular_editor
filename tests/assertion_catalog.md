@@ -11,6 +11,7 @@ _Verify worker preserves explicit E/Z labels even if RDKit might lose them._
 _Verify MolecularData uses manual string construction if RDKit fails (fallback logic)._
 
 - assert mol_block is not None
+- assert 'V2000' in counts_line
 - assert 'MoleditPy' in mol_block
 - assert 'X  ' in mol_block
 - assert 'C  ' in mol_block
@@ -24,7 +25,6 @@ _Verify primary RDKit conversion logic uses 'pos' attribute correctly._
 ### test_coordinate_mapping_fallback
 _Verify fallback serialization (reverted logic) uses atom['item'].pos()._
 
-- assert mol_block is not None
 - assert 'MoleditPy' in mol_block
 - assert len(atom_lines) == 2
 - assert abs(x_coord - expected_x) < 0.0001
@@ -46,7 +46,8 @@ _get_current_state should capture bonds with correct order._
 _State should include 3D molecule binary when current_mol is set._
 
 - assert 'mol_3d' in state
-- assert state['mol_3d'] is not None
+- assert isinstance(mol_3d_binary, bytes) and len(mol_3d_binary) > 0
+- assert restored.GetNumAtoms() == mol.GetNumAtoms()
 - assert 'mol_3d_atom_ids' in state
 
 ### test_get_current_state_includes_version
@@ -164,6 +165,8 @@ _Test boundingRect expansion for E/Z labels_
 ### test_calculation_worker_init
 _Verify the initial state of the CalculationWorker._
 
+- assert isinstance(worker, QObject)
+- assert hasattr(worker, 'start_work')
 - assert getattr(worker, 'halt_ids', None) is None
 - assert not getattr(worker, 'halt_all', False)
 
@@ -199,8 +202,7 @@ _Test that safe helpers don't emit finished if halted._
 ### test_calculation_worker_rdkit_embedding_fail_fallback
 _Test that embedding failure triggers fallback status or error messages._
 
-- assert 'failed' in all_msgs_str or 'error' in all_msgs_str
-- assert 'rdkit' in all_msgs_str
+- assert any((keyword in all_msgs_str for keyword in ['embedding failed', 'conversion failed', 'bounds fail']))
 
 ## tests/unit/test_compute_logic.py
 
@@ -469,7 +471,7 @@ _Verify calculation of angle between three 3D points._
 ### test_calculate_dihedral_logic
 _Verify calculation of dihedral angle between four 3D points._
 
-- assert abs(dihedral) > 0
+- assert abs(dihedral - 45.0) < 0.01
 
 ### test_handle_measurement_atom_selection
 _Verify handling of atom selection for measurements._
@@ -693,6 +695,7 @@ _Test AtomItem paint with transparent background uses CompositionMode_Clear._
 ### test_atom_item_paint_resilience_to_deleted_bond
 _Test AtomItem paint doesn't crash when a C++ bond object is deleted._
 
+- assert len(painter.method_calls) > 0
 - assert atom.bonds == [deleted_bond]
 
 ### test_atom_item_shape_collision
@@ -708,7 +711,7 @@ _Test bond shape is a stroked path (wider than line)._
 - assert isinstance(path, QPainterPath)
 - assert not path.isEmpty()
 - assert rect.width() > 0
-- assert rect.height() > 0
+- assert rect.height() >= 1.0
 
 ### test_bond_bounding_rect_geometry
 _Test boundingRect includes bond line area properly._
@@ -745,6 +748,7 @@ _Test get_ez_label_local_rect() calculates correct label geometry._
 _Test BondItem.update_position resilience when atoms exist._
 
 - assert bond.atom2 is None
+- assert line.length() == 0.0
 
 ## tests/unit/test_main_window_export_extended.py
 
@@ -834,9 +838,8 @@ _Ensure MainWindow and its init submodule can be imported without crashing._
 ### test_mainwindow_init_with_mocks
 _Verify MainWindow class structure is intact with mocks._
 
-- assert hasattr(MainWindow, 'init_ui')
-- assert hasattr(MainWindow, 'init_menu_bar')
-- assert hasattr(MainWindow, 'init_worker_thread')
+- assert 'init_ui' in MainWindow.__dict__
+- assert 'init_menu_bar' in MainWindow.__dict__
 
 ## tests/unit/test_modules_init.py
 
@@ -858,7 +861,9 @@ _Test safe check when an exception occurs._
 ### test_sip_isdeleted_safe_no_sip
 _Test safe check when _sip_isdeleted is None (sip import failed)._
 
-- assert sip_isdeleted_safe(MagicMock()) is False
+- assert result is False
+- assert isinstance(result, bool)
+- assert sip_isdeleted_safe(object()) is False
 
 ## tests/unit/test_molecular_data.py
 
@@ -1702,7 +1707,7 @@ _Chiral SMILES should produce at least one wedge or dash bond._
 _Invalid SMILES should trigger status bar error, not crash._
 
 - mock_parser_host.statusBar().showMessage.assert_called()
-- assert 'Invalid' in last_msg or 'Error' in last_msg
+- assert last_msg.startswith('Invalid SMILES:')
 
 ### test_smiles_empty_shows_error
 _Empty SMILES should trigger error message._
@@ -1725,7 +1730,7 @@ _Caffeine InChI should produce correct molecular formula._
 _Invalid InChI should show error, not crash._
 
 - mock_parser_host.statusBar().showMessage.assert_called()
-- assert 'Invalid' in last_msg or 'Error' in last_msg
+- assert last_msg.startswith('Invalid InChI:')
 
 ## tests/integration/test_calculation_worker.py
 
