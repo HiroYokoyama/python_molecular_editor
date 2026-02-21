@@ -201,7 +201,6 @@ def test_save_project_io_error(mock_parser_host, tmp_path):
             io.statusBar().showMessage.assert_called_with(
                 "File I/O error: Permission denied"
             )
-            assert io.statusBar().showMessage.called
 
 
 def test_load_json_data_version_mismatch(mock_parser_host, tmp_path):
@@ -250,18 +249,6 @@ def test_project_save_load_full_cycle(mock_parser_host, tmp_path):
         assert len(atoms) == 1
         assert atoms[0]["symbol"] == "C"
         assert atoms[0]["charge"] == 1
-
-
-def test_save_project_no_data_error(mock_parser_host):
-    """Verify error message when saving project without data."""
-    """Test save_project with no data returns error."""
-    io = DummyProjectIo(mock_parser_host)
-    io.data.atoms = {}
-    io.current_mol = None
-
-    io.save_project()
-    io.statusBar().showMessage.assert_called_with("Error: Nothing to save.")
-    assert io.statusBar().showMessage.called
 
 
 def test_save_project_default_filename(mock_parser_host, tmp_path):

@@ -215,8 +215,8 @@ def test_scene_mouse_drag_create_bond_existing_atoms(mock_parser_host):
     ):
         scene.mouseReleaseEvent(release_event)
 
-    # Verify bond creation via mock_parser_host's data.add_bond
-    assert (aid1, aid2) in scene.data.bonds or (aid2, aid1) in scene.data.bonds
+    # Verify bond creation - key order is deterministic: (pressed_atom, released_atom)
+    assert (aid1, aid2) in scene.data.bonds
 
 
 def test_scene_mouse_click_create_single_atom(mock_parser_host):

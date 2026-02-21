@@ -1635,22 +1635,12 @@ def test_file_import_smiles_error(window, qtbot, monkeypatch):
     qtbot.wait(100)
 
     # 4. エラーが表示されたことの確認
-    #    RDKitがパースに失敗すると None を返し、アプリはエラーメッセージを出すはず
-    #    (実装依存：ステータスバーだけの場合とダイアログの場合がある)
-
-    # パターンA: ステータスバーにエラーが出る場合
+    #    RDKitがパースに失敗すると None を返し、load_from_smiles は
+    #    "Invalid SMILES: Invalid SMILES string." をステータスバーに表示する
     status_msg = window.statusBar().currentMessage()
-
-    # パターンB: ダイアログが出る場合
-    dialog_called = mock_msg_box.called
-
-    # どちらかでエラーが通知されていればOK
-    assert (
-        dialog_called
-        or "Failed" in status_msg
-        or "Error" in status_msg
-        or "Invalid" in status_msg
-    ), "Error should be reported for invalid SMILES"
+    assert status_msg.startswith("Invalid SMILES:"), (
+        f"Expected 'Invalid SMILES:' prefix, got: {status_msg!r}"
+    )
 
 
 @pytest.mark.gui
@@ -1706,11 +1696,11 @@ def test_import_invalid_mol_file(window, qtbot, monkeypatch, tmp_path):
     qtbot.wait(100)
 
     # 4. エラー確認
-    failed_status = (
-        "Failed" in window.statusBar().currentMessage()
-        or "Error" in window.statusBar().currentMessage()
+    #    RDKit returns None → ValueError → "Invalid MOL file format: ..." on status bar
+    status_msg = window.statusBar().currentMessage()
+    assert "Invalid MOL file format:" in status_msg or "Error loading file:" in status_msg, (
+        f"Expected MOL parse error on status bar, got: {status_msg!r}"
     )
-    assert mock_msg_box.called or failed_status
     # データが空のままか確認
     assert len(window.data.atoms) == 0
 
@@ -1763,6 +1753,9 @@ def test_clipboard_copy_empty_selection(window, qtbot):
     # For now, just ensuring we reached this point is "success" for a resilience test,
     # but let's assert the clipboard wasn't filled with garbage.
     # Verify clipboard text is empty or unchanged implies no copy happened
+    # copy_selection() returns early when no atoms are selected (no clipboard change).
+    # Verify clipboard text is unchanged from our initial setup.
     cb = QApplication.clipboard()
-    # If we started with empty, it should remain empty
-    assert cb.text() == "" or cb.text() == "initial_text"
+    assert cb.text() == "initial_text", (
+        f"Clipboard should remain unchanged, got: {cb.text()!r}"
+    )

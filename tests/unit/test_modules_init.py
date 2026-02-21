@@ -29,6 +29,5 @@ def test_sip_isdeleted_safe_no_sip():
         # MagicMock should return False (not deleted) when sip unavailable
         result = sip_isdeleted_safe(MagicMock())
         assert result is False
-        assert isinstance(result, bool)
         # Plain Python object should also return False
         assert sip_isdeleted_safe(object()) is False

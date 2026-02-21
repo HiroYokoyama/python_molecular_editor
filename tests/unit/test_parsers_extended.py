@@ -213,7 +213,6 @@ def test_load_mol_file_not_found(mock_parser_host):
     parser.statusBar().showMessage.assert_any_call(
         "File not found: missing_parser_xyz_final.mol"
     )
-    assert parser.statusBar().showMessage.called
 
 
 def test_load_mol_file_invalid_format(mock_parser_host, tmp_path):

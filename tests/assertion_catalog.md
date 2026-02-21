@@ -291,7 +291,7 @@ _Test on_calculation_error with a string (legacy error format)._
 _Test optimize_3d_structure with temporary optimization method override._
 
 - assert mock_mmff.called
-- assert any(('Optimizing' in msg for msg in msgs)) or any(('conformer' in msg for msg in msgs))
+- compute.statusBar().showMessage.assert_any_call('Optimizing 3D structure...')
 
 ### test_optimize_3d_mmff94s_success
 _Test MMFF94s optimization succeeds._
@@ -860,7 +860,6 @@ _Test safe check when an exception occurs._
 _Test safe check when _sip_isdeleted is None (sip import failed)._
 
 - assert result is False
-- assert isinstance(result, bool)
 - assert sip_isdeleted_safe(object()) is False
 
 ## tests/unit/test_molecular_data.py
@@ -1068,7 +1067,6 @@ _Verify that the XYZ load recovery loop handles retries correctly._
 _Verify error handling when a MOL file is not found._
 
 - parser.statusBar().showMessage.assert_any_call('File not found: missing_parser_xyz_final.mol')
-- assert parser.statusBar().showMessage.called
 
 ### test_load_mol_file_invalid_format
 _Verify error handling for invalid MOL file content._
@@ -1400,7 +1398,6 @@ _Verify that 'open project' checks for unsaved changes before proceeding._
 _Verify handling of I/O errors during save._
 
 - io.statusBar().showMessage.assert_called_with('File I/O error: Permission denied')
-- assert io.statusBar().showMessage.called
 
 ### test_load_json_data_version_mismatch
 _Verify warning when loading a project from a newer software version._
@@ -1417,12 +1414,6 @@ _Verify a complete save-load cycle for a project._
 - assert len(atoms) == 1
 - assert atoms[0]['symbol'] == 'C'
 - assert atoms[0]['charge'] == 1
-
-### test_save_project_no_data_error
-_Verify error message when saving project without data._
-
-- io.statusBar().showMessage.assert_called_with('Error: Nothing to save.')
-- assert io.statusBar().showMessage.called
 
 ### test_save_project_default_filename
 _Verify that 'save as' suggests a reasonable default filename._
@@ -1539,7 +1530,7 @@ _No description provided._
 ### test_scene_mouse_drag_create_bond_existing_atoms
 _No description provided._
 
-- assert (aid1, aid2) in scene.data.bonds or (aid2, aid1) in scene.data.bonds
+- assert (aid1, aid2) in scene.data.bonds
 
 ### test_scene_mouse_click_create_single_atom
 _No description provided._
@@ -1710,7 +1701,6 @@ _Invalid SMILES should trigger status bar error, not crash._
 _Empty SMILES should trigger error message._
 
 - mock_parser_host.statusBar().showMessage.assert_called()
-- assert mock_parser_host.statusBar().showMessage.called
 
 ### test_inchi_ethanol
 _InChI import should match RDKit reference atom/bond count._
@@ -2246,7 +2236,7 @@ _プロジェクト保存/読込: 保存したファイルを実際に読み込�
 ### test_file_import_smiles_error
 _SMILESインポート: 不正なSMILES入力時のエラーハンドリングテスト_
 
-- assert dialog_called or 'Failed' in status_msg or 'Error' in status_msg or ('Invalid' in status_msg)
+- assert status_msg.startswith('Invalid SMILES:')
 
 ### test_undo_redo_boundary
 _Undo/Redo: スタック境界(空のスタックへの操作)のテスト_
@@ -2257,7 +2247,7 @@ _Undo/Redo: スタック境界(空のスタックへの操作)のテスト_
 ### test_import_invalid_mol_file
 _ファイル読込: 破損したMOLファイルのエラーハンドリング_
 
-- assert mock_msg_box.called or failed_status
+- assert 'Invalid MOL file format:' in status_msg or 'Error loading file:' in status_msg
 - assert len(window.data.atoms) == 0
 
 ### test_clear_2d_editor_cancel
@@ -2269,7 +2259,7 @@ _全消去: 確認ダイアログでキャンセルのテスト_
 ### test_clipboard_copy_empty_selection
 _コピー: 選択なしでのコピー操作の安全性テスト_
 
-- assert cb.text() == '' or cb.text() == 'initial_text'
+- assert cb.text() == 'initial_text'
 
 ## tests/gui/test_plugin_manager_redundant.py
 

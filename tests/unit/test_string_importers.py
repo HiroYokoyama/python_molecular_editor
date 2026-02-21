@@ -123,7 +123,6 @@ def test_smiles_empty_shows_error(mock_parser_host):
         importer.load_from_smiles("")
 
     mock_parser_host.statusBar().showMessage.assert_called()
-    assert mock_parser_host.statusBar().showMessage.called
 
 
 # =============================================================================

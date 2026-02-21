@@ -40,4 +40,4 @@ jobs:
       run: |
         # Run the unified test runner with --no-report to skip coverage generation in CI
         # xvfb-run is still good practice even with offscreen platform for some Qt internals
-        xvfb-run --auto-servernum --server-args="-screen 0 1280x1024x24" python tests/run_all_tests.py --headless --unit --no-report --no-cov
+        xvfb-run --auto-servernum --server-args="-screen 0 1280x1024x24" python tests/run_all_tests.py --headless --no-report --no-cov

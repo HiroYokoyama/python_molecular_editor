@@ -308,9 +308,9 @@ def test_optimize_3d_temp_method_override(mock_parser_host):
         compute.optimize_3d_structure()
         # Verify that MMFF was called (temp override used), not UFF
         assert mock_mmff.called
-        msgs = compute.get_status_messages()
-        assert any("Optimizing" in msg for msg in msgs) or any(
-            "conformer" in msg for msg in msgs
+        # Verify the exact status message from production code
+        compute.statusBar().showMessage.assert_any_call(
+            "Optimizing 3D structure..."
         )
 
 
