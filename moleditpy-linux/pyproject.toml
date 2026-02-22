@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "MoleditPy-linux"
 
-version = "2.7.0"
+version = "2.7.1"
 
 license = {file = "LICENSE"}
 
@@ -34,8 +34,8 @@ classifiers = [
 
 dependencies = [
     "numpy",
-    "pyqt6 < 6.10",
-    "pyvista < 0.47",
+    "pyqt6 < 6.11",
+    "pyvista < 0.48",
     "pyvistaqt < 0.12",
     "rdkit < 2025.10",
 ]
