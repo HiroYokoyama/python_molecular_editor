@@ -4,6 +4,15 @@ This is the Linux version of MoleditPy. The Open Babel fallback is disabled due 
 
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.17268532.svg)](https://doi.org/10.5281/zenodo.17268532)
 [![Powered by RDKit](https://img.shields.io/badge/Powered%20by-RDKit-3838ff.svg?logo=data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQBAMAAADt3eJSAAAABGdBTUEAALGPC/xhBQAAACBjSFJNAAB6JgAAgIQAAPoAAACA6AAAdTAAAOpgAAA6mAAAF3CculE8AAAAFVBMVEXc3NwUFP8UPP9kZP+MjP+0tP////9ZXZotAAAAAXRSTlMAQObYZgAAAAFiS0dEBmFmuH0AAAAHdElNRQfmAwsPGi+MyC9RAAAAQElEQVQI12NgQABGQUEBMENISUkRLKBsbGwEEhIyBgJFsICLC0iIUdnExcUZwnANQWfApKCK4doRBsKtQFgKAQC5Ww1JEHSEkAAAACV0RVh0ZGF0ZTpjcmVhdGUAMjAyMi0wMy0xMVQxNToyNjo0NyswMDowMDzr2J4AAAAldEVYdGRhdGU6bW9kaWZ5ADIwMjItMDMtMTFUMTU6MjY6NDcrMDA6MDBNtmAiAAAAAElFTkSuQmCC)](https://www.rdkit.org/)
+[![PyPI version](https://badge.fury.io/py/MoleditPy.svg)](https://badge.fury.io/py/MoleditPy)
+[![Python Versions](https://img.shields.io/pypi/pyversions/MoleditPy.svg)](https://pypi.org/project/MoleditPy/)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
+[![Build Status](https://github.com/HiroYokoyama/python_molecular_editor/actions/workflows/tests.yml/badge.svg)](https://github.com/HiroYokoyama/python_molecular_editor/actions)
+![Core Logic Coverage](https://img.shields.io/badge/core_logic_coverage-73%25-green)
+![Overall Coverage](https://img.shields.io/badge/coverage-50%25-orange)
+![GUI Status](https://img.shields.io/badge/GUI-Manually_Verified-blue)
+![Pylint Score](https://img.shields.io/badge/pylint-8.67%2F10-brightgreen)
+[![PyPI Downloads](https://static.pepy.tech/personalized-badge/moleditpy?period=total&units=INTERNATIONAL_SYSTEM&left_color=BLACK&right_color=GREEN&left_text=downloads)](https://pepy.tech/projects/moleditpy)
 
 [🇯🇵 日本語 (Japanese)](#japanese)
 

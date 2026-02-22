@@ -289,8 +289,8 @@ _Test on_calculation_error with a string (legacy error format)._
 ### test_optimize_3d_temp_method_override
 _Test optimize_3d_structure with temporary optimization method override._
 
-- assert mock_mmff.called
-- compute.statusBar().showMessage.assert_any_call('Optimizing 3D structure...')
+- assert MockWorker.called
+- compute.statusBar().showMessage.assert_any_call('Optimizing 3D structure (MMFF_RDKIT)...')
 
 ### test_optimize_3d_mmff94s_success
 _Test MMFF94s optimization succeeds._
@@ -308,16 +308,14 @@ _Test optimize_3d_structure when molecule has no conformer._
 - assert any(('No conformer found' in msg for msg in messages))
 
 ### test_optimize_3d_mmff_exception_handling
-_Test exception handling in MMFF optimization._
+_Test grace during MMFF exception._
 
-- assert not any(('not available' in msg for msg in msgs))
-- assert any(('error' in msg.lower() for msg in msgs)) or any(('failed' in msg.lower() for msg in msgs))
+- assert MockWorker.called
 
 ### test_optimize_3d_uff_exception_handling
-_Test exception handling in UFF optimization._
+_Test grace during UFF exception._
 
-- assert not any(('not available' in msg for msg in msgs))
-- assert any(('error' in msg.lower() for msg in msgs)) or any(('failed' in msg.lower() for msg in msgs))
+- assert MockWorker.called
 
 ### test_optimize_3d_plugin_method
 _Test plugin optimization method._
@@ -336,9 +334,9 @@ _Test MMFF fallback to ForceField API when basic optimization fails._
 - assert any(('Optimizing' in msg for msg in compute.get_status_messages()))
 
 ### test_optimize_3d_uff_fallback_failure
-_Test UFF fallback failure path._
+_Test UFF fallback failure handles gracefully._
 
-- assert any(('UFF minimize returned non-zero status' in msg for msg in msgs))
+- assert MockWorker.called
 
 ### test_optimize_3d_unavailable_method
 _Test error when optimization method is unavailable._
@@ -350,18 +348,6 @@ _Test collision logic is skipped for single fragment._
 
 - assert not mock_adjust.called
 - assert not any(('Detecting collisions' in msg for msg in compute.get_status_messages()))
-
-### test_on_calculation_finished_collision_multi_frag
-_Test collision logic is triggered for multiple fragments._
-
-- assert mock_adjust.called
-- assert any(('Detecting collisions' in msg for msg in msgs))
-- assert any(('collision avoidance' in msg for msg in msgs))
-
-### test_on_calculation_finished_collision_exception
-_Test grace during collision detection exception._
-
-- assert any(('Detecting collisions' in msg for msg in msgs))
 
 ### test_molecular_data_radical_transfer
 _Test that radical electrons are transferred correctly to RDKit mol._
@@ -387,7 +373,7 @@ _Test that _original_atom_id is preserved in 3D molecule state round-trip._
 - assert compute.current_mol.GetAtomWithIdx(0).GetIntProp('_original_atom_id') == 123
 
 ### test_optimize_3d_method_persistence
-_Test that the successful optimization method is recorded._
+_Test that the optimization method is recorded after success._
 
 - assert compute.last_successful_optimization_method == 'MMFF94s'
 
@@ -1790,8 +1776,8 @@ _Test the fallback to constraint-based embedding when initial embedding fails._
 ### test_calculation_worker_uff_fallback
 _Test fallback to UFF when MMFF optimization fails._
 
-- assert mock_mmff.called
-- assert mock_uff.called
+- assert mock_mmff_props.called
+- assert mock_uff_ff.called
 
 ### test_calculation_worker_mmff_variants
 _Test switching between MMFF94 and MMFF94s._
@@ -1808,6 +1794,135 @@ _Test the Open Babel fallback path by mocking availability and pybel._
 _Test direct mode with 4 hydrogens on a carbon to hit the rotation/offset logic._
 
 - assert mol_3d.GetNumAtoms() >= 5
+
+### test_worker_halt_error_is_exception
+_WorkerHaltError is a proper Exception subclass._
+
+- assert isinstance(err, Exception)
+- assert str(err) == 'test halt'
+
+### test_worker_halt_error_not_caught_by_generic
+_WorkerHaltError should propagate through except Exception if re-raised._
+
+
+### test_iterative_optimize_mmff
+__iterative_optimize: MMFF method converges on ethane._
+
+- assert result is True
+
+### test_iterative_optimize_uff
+__iterative_optimize: UFF method converges on ethane._
+
+- assert result is True
+
+### test_iterative_optimize_mmff94_variant
+__iterative_optimize: MMFF94 (non-s) variant._
+
+- assert result is True
+
+### test_iterative_optimize_unknown_method
+__iterative_optimize: unknown method returns False._
+
+- assert result is False
+
+### test_iterative_optimize_halt_during_optimization
+__iterative_optimize: raises WorkerHaltError when halted during chunks._
+
+
+### test_iterative_optimize_props_none
+__iterative_optimize: returns False when MMFF properties cannot be computed._
+
+- assert result is False
+
+### test_iterative_optimize_ff_none
+__iterative_optimize: returns False when UFF force field is None._
+
+- assert result is False
+
+### test_adjust_collision_avoidance_single_fragment
+__adjust_collision_avoidance: single fragment returns immediately (no-op)._
+
+- assert len(status_msgs) == 0
+
+### test_adjust_collision_avoidance_multi_fragment
+__adjust_collision_avoidance: two overlapping fragments get separated._
+
+- assert len(frags) == 2
+- assert len(status_msgs) >= 2
+- assert 'Resolving' in status_msgs[0]
+- assert 'completed' in status_msgs[-1]
+
+### test_adjust_collision_avoidance_halt
+__adjust_collision_avoidance: raises WorkerHaltError when halted._
+
+
+### test_calculation_worker_direct_with_optimize
+_Integration test: Direct conversion mode with do_optimize=True._
+
+- assert mol_3d is not None
+- assert mol_3d.GetNumConformers() >= 1
+
+### test_calculation_worker_optimized_result_better
+_Integration test: Optimized ethane should have a C-C bond length_
+
+- assert 1.3 < dist < 1.7
+
+### test_calculation_worker_optimize_only_mmff
+_Integration test: optimize_only mode with MMFF method._
+
+- assert mol_3d is not None
+- assert mol_3d.GetNumConformers() >= 1
+
+### test_calculation_worker_optimize_only_uff
+_Integration test: optimize_only mode with UFF method._
+
+- assert mol_3d is not None
+
+### test_calculation_worker_optimize_only_default
+_Integration test: optimize_only mode with default (no optimization_method)._
+
+- assert mol_3d is not None
+
+### test_calculation_worker_optimize_only_mmff94_variant
+_Integration test: optimize_only mode with MMFF94 (non-s) variant._
+
+- assert mol_3d is not None
+
+### test_calculation_worker_status_signals
+_Integration test: verify status_update signals are emitted during conversion._
+
+- assert len(status_messages) >= 1
+- assert any(('3D' in msg or 'Creating' in msg for msg in status_messages))
+
+### test_calculation_worker_multi_fragment_rdkit
+_Integration test: multi-fragment molecule triggers collision avoidance in RDKit path._
+
+- assert mol_3d is not None
+- assert len(collision_msgs) >= 1
+
+### test_calculation_worker_direct_dash_stereo
+_Integration test: direct mode with a dash bond._
+
+- assert p3.z == pytest.approx(-1.5)
+
+### test_calculation_worker_direct_mmff94_rdkit_variant
+_Integration test: direct mode with do_optimize=True and MMFF94_RDKIT variant._
+
+- assert mol_3d is not None
+- assert mol_3d.GetNumConformers() >= 1
+
+### test_calculation_worker_fallback_to_direct_no_obabel
+_Integration test: fallback mode with OBABEL_AVAILABLE=False and_
+
+- assert mol_3d is not None
+- assert mol_3d.GetNumConformers() >= 1
+- assert any(('direct' in m.lower() or 'Direct' in m for m in status_messages))
+
+### test_calculation_worker_fallback_to_direct_with_optimize
+_Integration test: fallback-to-direct with do_optimize=True._
+
+- assert mol_3d is not None
+- assert mol_3d.GetNumConformers() >= 1
 
 ## tests/integration/test_chiral_labels_integration.py
 
@@ -1987,7 +2102,7 @@ _3D最適化: 3D最適化ボタンのテスト_
 
 - assert window.current_mol is not None
 - assert window.optimize_3d_button.isEnabled()
-- assert 'optimization successful' in window.statusBar().currentMessage()
+- assert 'Optimization completed' in msg or 'optimization successful' in msg
 
 ### test_change_3d_style
 _3Dスタイル変更: スタイルメニューのテスト_

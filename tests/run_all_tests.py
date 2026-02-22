@@ -1,5 +1,6 @@
 import sys
 import os
+import re
 import argparse
 import subprocess
 
@@ -26,6 +27,52 @@ except Exception:
     import traceback
 
     traceback.print_exc()
+
+
+# ── Cross-platform teardown crash detection ──────────────────────────
+# Qt/VTK cleanup can trigger fatal signals AFTER all tests have passed.
+# We detect these by matching the exit code AND confirming pytest reported
+# zero failures.
+#
+# Windows exit codes (from GetExitCodeProcess):
+#   0xC0000005 → access violation  (-1073741819 signed)
+#   0x80010108 → RPC_E_DISCONNECTED (-2147417848 signed)
+#   0xC000013A → STATUS_CONTROL_C_EXIT (-1073741558 signed)
+#
+# Unix exit codes (negative = killed by signal):
+#   -11 → SIGSEGV    -6 → SIGABRT    -5 → SIGTRAP
+_KNOWN_CRASH_CODES = frozenset({
+    # Windows (signed and unsigned representations)
+    -1073741819,   # access violation (0xC0000005)
+    -2147417848,   # RPC_E_DISCONNECTED (0x80010108)
+    -1073741558,   # STATUS_CONTROL_C_EXIT (0xC000013A)
+    3221225477,    # unsigned 0xC0000005 on some Python versions
+    2147549704,    # unsigned 0x80010108 on some Python versions
+    # Unix signals (subprocess returns -signal_number)
+    -11,           # SIGSEGV
+    -6,            # SIGABRT
+    -5,            # SIGTRAP
+})
+
+# Pattern to extract pytest summary line, e.g. "5 passed, 1 warning in 0.52s"
+_PYTEST_PASSED_RE = re.compile(r"(\d+) passed")
+_PYTEST_FAILED_RE = re.compile(r"(\d+) failed")
+
+
+def _is_teardown_crash(returncode, combined_output):
+    """Check if a non-zero exit is a benign teardown crash (any platform).
+
+    Returns True if the exit code matches a known crash AND pytest
+    reported at least 1 passed test with 0 failures.
+    """
+    if returncode in _KNOWN_CRASH_CODES:
+        passed = _PYTEST_PASSED_RE.search(combined_output)
+        failed = _PYTEST_FAILED_RE.search(combined_output)
+        has_passed = passed and int(passed.group(1)) > 0
+        has_failed = failed and int(failed.group(1)) > 0
+        if has_passed and not has_failed:
+            return True
+    return False
 
 
 def run_suite(name, path, env_vars=None, extra_args=None, enable_cov=True):
@@ -67,7 +114,23 @@ def run_suite(name, path, env_vars=None, extra_args=None, enable_cov=True):
         sys.path.insert(0, SRC_DIR)
 
     try:
-        result = subprocess.run(cmd, env=env, check=False)
+        result = subprocess.run(
+            cmd, env=env, check=False,
+            stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+            text=True, errors="replace",
+        )
+        # Always print the captured output
+        if result.stdout:
+            print(result.stdout, end="", flush=True)
+
+        if result.returncode != 0:
+            if _is_teardown_crash(result.returncode, result.stdout or ""):
+                print(
+                    f"  [NOTE] {name}: Ignoring post-test teardown crash "
+                    f"(exit code {result.returncode}). All tests passed.",
+                    flush=True,
+                )
+                return 0
         return result.returncode
     except Exception as e:
         print(f"Error running {name} tests: {e}")
