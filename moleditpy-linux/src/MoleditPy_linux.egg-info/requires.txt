@@ -1,5 +1,5 @@
 numpy
-pyqt6<6.10
-pyvista<0.47
+pyqt6<6.11
+pyvista<0.48
 pyvistaqt<0.12
 rdkit<2025.10
