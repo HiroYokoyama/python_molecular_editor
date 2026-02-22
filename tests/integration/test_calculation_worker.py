@@ -195,7 +195,7 @@ def test_calculation_worker_direct_mode(qtbot, app):
     mol_block = data.to_mol_block()
 
     worker = CalculationWorker()
-    settings = {"conversion_mode": "direct"}
+    settings = {"conversion_mode": "direct", "do_optimize": False}
 
     with qtbot.waitSignal(worker.finished, timeout=10000) as blocker:
         worker.run_calculation(mol_block, settings)
@@ -311,7 +311,7 @@ def test_calculation_worker_direct_mode_stereo(qtbot, app):
     mol_block = data.to_mol_block()
 
     worker = CalculationWorker()
-    settings = {"conversion_mode": "direct"}
+    settings = {"conversion_mode": "direct", "do_optimize": False}
 
     with qtbot.waitSignal(worker.finished, timeout=10000) as blocker:
         worker.run_calculation(mol_block, settings)
@@ -356,26 +356,29 @@ def test_calculation_worker_uff_fallback(qtbot, app):
     Test fallback to UFF when MMFF optimization fails.
     """
     data = MolecularData()
-    data.add_atom("C", QPointF(0, 0))
+    c = data.add_atom("C", QPointF(0, 0))
+    # We use at least 2 atoms so RDKit Mol is definitely valid
+    c2 = data.add_atom("C", QPointF(50, 0))
+    data.add_bond(c, c2)
     mol_block = data.to_mol_block()
 
     worker = CalculationWorker()
 
     with (
         patch(
-            "moleditpy.modules.calculation_worker.AllChem.MMFFOptimizeMolecule"
-        ) as mock_mmff,
+            "rdkit.Chem.AllChem.MMFFGetMoleculeProperties",
+            return_value=None
+        ) as mock_mmff_props,
         patch(
-            "moleditpy.modules.calculation_worker.AllChem.UFFOptimizeMolecule"
-        ) as mock_uff,
+            "rdkit.Chem.AllChem.UFFGetMoleculeForceField"
+        ) as mock_uff_ff,
     ):
-        mock_mmff.side_effect = Exception("MMFF Failed")
-
+        # We need to wait for the signal
         with qtbot.waitSignal(worker.finished, timeout=10000):
             worker.run_calculation(mol_block, {"conversion_mode": "rdkit"})
 
-        assert mock_mmff.called
-        assert mock_uff.called
+        assert mock_mmff_props.called
+        assert mock_uff_ff.called
 
 
 def test_calculation_worker_mmff_variants(qtbot, app):
@@ -389,14 +392,14 @@ def test_calculation_worker_mmff_variants(qtbot, app):
     worker = CalculationWorker()
 
     with patch(
-        "moleditpy.modules.calculation_worker.AllChem.MMFFOptimizeMolecule"
-    ) as mock_mmff:
+        "moleditpy.modules.calculation_worker.AllChem.MMFFGetMoleculeProperties"
+    ) as mock_props:
         # Test MMFF94
         worker.run_calculation(mol_block, {"optimization_method": "MMFF94_RDKIT"})
         qtbot.wait(500)
         # Check if called with MMFF94
         found = False
-        for call in mock_mmff.call_args_list:
+        for call in mock_props.call_args_list:
             if call.kwargs.get("mmffVariant") == "MMFF94":
                 found = True
         assert found
@@ -456,7 +459,7 @@ def test_calculation_worker_complex_direct_h_placement(qtbot, app):
     mol_block = data.to_mol_block()
 
     worker = CalculationWorker()
-    settings = {"conversion_mode": "direct"}
+    settings = {"conversion_mode": "direct", "do_optimize": False}
 
     with qtbot.waitSignal(worker.finished, timeout=10000) as blocker:
         worker.run_calculation(mol_block, settings)
@@ -465,21 +468,473 @@ def test_calculation_worker_complex_direct_h_placement(qtbot, app):
     assert mol_3d.GetNumAtoms() >= 5
 
 
-# def test_calculation_worker_signal_type_error_fallback(qtbot, app):
-#     """
-#     Test the fallback in _safe_finished when a TypeError occurs (simulating old signal signature).
-#     """
-#     data = MolecularData()
-#     data.add_atom("C", QPointF(0, 0))
-#     mol_block = data.to_mol_block()
-#
-#     worker = CalculationWorker()
-#
-#     with patch.object(worker.finished, 'emit') as mock_emit:
-#         # First call fails with TypeError, second call (fallback) should pass
-#         mock_emit.side_effect = [TypeError("Simulated signature mismatch"), None]
-#
-#         with qtbot.waitSignal(worker.finished, timeout=10000) as blocker:
-#             worker.run_calculation(mol_block, {'conversion_mode': 'rdkit'})
-#
-#         assert mock_emit.call_count >= 2
+# ---------------------------------------------------------------------------
+# Unit tests for module-level helpers and new code paths
+# ---------------------------------------------------------------------------
+from moleditpy.modules.calculation_worker import (
+    WorkerHaltError,
+    _iterative_optimize,
+    _adjust_collision_avoidance,
+)
+
+
+def test_worker_halt_error_is_exception():
+    """WorkerHaltError is a proper Exception subclass."""
+    err = WorkerHaltError("test halt")
+    assert isinstance(err, Exception)
+    assert str(err) == "test halt"
+
+
+def test_worker_halt_error_not_caught_by_generic():
+    """WorkerHaltError should propagate through except Exception if re-raised."""
+    with pytest.raises(WorkerHaltError, match="Halted"):
+        try:
+            raise WorkerHaltError("Halted")
+        except WorkerHaltError:
+            raise
+
+
+def test_iterative_optimize_mmff(app):
+    """_iterative_optimize: MMFF method converges on ethane."""
+    mol = Chem.MolFromSmiles("CC")
+    mol = Chem.AddHs(mol)
+    AllChem.EmbedMolecule(mol, AllChem.ETKDGv2())
+
+    result = _iterative_optimize(
+        mol, "MMFF94s", lambda: False, lambda m: None, max_iters=200, chunk_size=50
+    )
+    assert result is True
+
+
+def test_iterative_optimize_uff(app):
+    """_iterative_optimize: UFF method converges on ethane."""
+    mol = Chem.MolFromSmiles("CC")
+    mol = Chem.AddHs(mol)
+    AllChem.EmbedMolecule(mol, AllChem.ETKDGv2())
+
+    result = _iterative_optimize(
+        mol, "UFF", lambda: False, lambda m: None, max_iters=200, chunk_size=50
+    )
+    assert result is True
+
+
+def test_iterative_optimize_mmff94_variant(app):
+    """_iterative_optimize: MMFF94 (non-s) variant."""
+    mol = Chem.MolFromSmiles("CC")
+    mol = Chem.AddHs(mol)
+    AllChem.EmbedMolecule(mol, AllChem.ETKDGv2())
+
+    result = _iterative_optimize(
+        mol, "MMFF94", lambda: False, lambda m: None, max_iters=200, chunk_size=50
+    )
+    assert result is True
+
+
+def test_iterative_optimize_unknown_method(app):
+    """_iterative_optimize: unknown method returns False."""
+    mol = Chem.MolFromSmiles("CC")
+    mol = Chem.AddHs(mol)
+    AllChem.EmbedMolecule(mol, AllChem.ETKDGv2())
+
+    result = _iterative_optimize(
+        mol, "INVALID", lambda: False, lambda m: None
+    )
+    assert result is False
+
+
+def test_iterative_optimize_halt_during_optimization(app):
+    """_iterative_optimize: raises WorkerHaltError when halted during chunks."""
+    mol = Chem.MolFromSmiles("CC")
+    mol = Chem.AddHs(mol)
+    AllChem.EmbedMolecule(mol, AllChem.ETKDGv2())
+
+    call_count = [0]
+
+    def check_halted():
+        call_count[0] += 1
+        return call_count[0] >= 2  # Halt after 1st chunk
+
+    with pytest.raises(WorkerHaltError):
+        _iterative_optimize(
+            mol, "UFF", check_halted, lambda m: None, max_iters=4000, chunk_size=10
+        )
+
+
+def test_iterative_optimize_props_none(app):
+    """_iterative_optimize: returns False when MMFF properties cannot be computed."""
+    mol = Chem.MolFromSmiles("CC")
+    mol = Chem.AddHs(mol)
+    AllChem.EmbedMolecule(mol, AllChem.ETKDGv2())
+
+    with patch(
+        "moleditpy.modules.calculation_worker.AllChem.MMFFGetMoleculeProperties",
+        return_value=None,
+    ):
+        result = _iterative_optimize(
+            mol, "MMFF94s", lambda: False, lambda m: None
+        )
+    assert result is False
+
+
+def test_iterative_optimize_ff_none(app):
+    """_iterative_optimize: returns False when UFF force field is None."""
+    mol = Chem.MolFromSmiles("CC")
+    mol = Chem.AddHs(mol)
+    AllChem.EmbedMolecule(mol, AllChem.ETKDGv2())
+
+    with patch(
+        "moleditpy.modules.calculation_worker.AllChem.UFFGetMoleculeForceField",
+        return_value=None,
+    ):
+        result = _iterative_optimize(
+            mol, "UFF", lambda: False, lambda m: None
+        )
+    assert result is False
+
+
+def test_adjust_collision_avoidance_single_fragment(app):
+    """_adjust_collision_avoidance: single fragment returns immediately (no-op)."""
+    mol = Chem.MolFromSmiles("CC")
+    mol = Chem.AddHs(mol)
+    AllChem.EmbedMolecule(mol, AllChem.ETKDGv2())
+
+    status_msgs = []
+    _adjust_collision_avoidance(mol, lambda: False, lambda m: status_msgs.append(m))
+    # Single fragment → should return before emitting any status
+    assert len(status_msgs) == 0
+
+
+def test_adjust_collision_avoidance_multi_fragment(app):
+    """_adjust_collision_avoidance: two overlapping fragments get separated."""
+    # Create two separate methane molecules very close together
+    mol = Chem.MolFromSmiles("C.C")
+    mol = Chem.AddHs(mol)
+    AllChem.EmbedMolecule(mol, AllChem.ETKDGv2())
+
+    # Force the two carbons on top of each other
+    conf = mol.GetConformer()
+    frags = Chem.GetMolFrags(mol, asMols=False, sanitizeFrags=False)
+    assert len(frags) == 2
+
+    # Move all atoms of second fragment to same position as first fragment
+    ref_pos = conf.GetAtomPosition(frags[0][0])
+    for idx in frags[1]:
+        conf.SetAtomPosition(idx, [ref_pos.x, ref_pos.y, ref_pos.z])
+
+    status_msgs = []
+    _adjust_collision_avoidance(mol, lambda: False, lambda m: status_msgs.append(m))
+
+    # Should have emitted at least "Resolving..." and "Collision avoidance completed."
+    assert len(status_msgs) >= 2
+    assert "Resolving" in status_msgs[0]
+    assert "completed" in status_msgs[-1]
+
+
+def test_adjust_collision_avoidance_halt(app):
+    """_adjust_collision_avoidance: raises WorkerHaltError when halted."""
+    mol = Chem.MolFromSmiles("C.C")
+    mol = Chem.AddHs(mol)
+    AllChem.EmbedMolecule(mol, AllChem.ETKDGv2())
+
+    # Force collision
+    conf = mol.GetConformer()
+    frags = Chem.GetMolFrags(mol, asMols=False, sanitizeFrags=False)
+    ref_pos = conf.GetAtomPosition(frags[0][0])
+    for idx in frags[1]:
+        conf.SetAtomPosition(idx, [ref_pos.x, ref_pos.y, ref_pos.z])
+
+    with pytest.raises(WorkerHaltError):
+        _adjust_collision_avoidance(mol, lambda: True, lambda m: None)
+
+
+def test_calculation_worker_direct_with_optimize(qtbot, app):
+    """
+    Integration test: Direct conversion mode with do_optimize=True.
+    Ensures optimization runs on the direct-mode structure.
+    """
+    data = MolecularData()
+    c1 = data.add_atom("C", QPointF(10, 20))
+    c2 = data.add_atom("C", QPointF(60, 20))
+    data.add_bond(c1, c2, order=1)
+    mol_block = data.to_mol_block()
+
+    worker = CalculationWorker()
+    settings = {"conversion_mode": "direct", "do_optimize": True}
+
+    with qtbot.waitSignal(worker.finished, timeout=10000) as blocker:
+        worker.run_calculation(mol_block, settings)
+
+    mol_3d = blocker.args[0][1]
+    assert mol_3d is not None
+    assert mol_3d.GetNumConformers() >= 1
+
+
+def test_calculation_worker_optimized_result_better(qtbot, app):
+    """
+    Integration test: Optimized ethane should have a C-C bond length
+    within a reasonable range (~1.52 Å for MMFF94s).
+    """
+    data = MolecularData()
+    c1 = data.add_atom("C", QPointF(0, 0))
+    c2 = data.add_atom("C", QPointF(50, 0))
+    data.add_bond(c1, c2, order=1)
+    mol_block = data.to_mol_block()
+
+    worker = CalculationWorker()
+
+    with qtbot.waitSignal(worker.finished, timeout=10000) as blocker:
+        worker.run_calculation(mol_block, {"conversion_mode": "rdkit", "do_optimize": True})
+
+    mol_3d = blocker.args[0][1]
+    conf = mol_3d.GetConformer()
+
+    # Find C-C bond
+    for b in mol_3d.GetBonds():
+        if b.GetBeginAtom().GetSymbol() == "C" and b.GetEndAtom().GetSymbol() == "C":
+            dist = rdMolTransforms.GetBondLength(
+                conf, b.GetBeginAtomIdx(), b.GetEndAtomIdx()
+            )
+            # Reasonable C-C single bond range after optimization
+            assert 1.3 < dist < 1.7, f"Unexpected C-C bond length: {dist}"
+            break
+
+
+def test_calculation_worker_optimize_only_mmff(qtbot, app):
+    """
+    Integration test: optimize_only mode with MMFF method.
+    Verifies that optimize_only skips embedding and only runs optimization.
+    """
+    # Create ethane with a valid 3D conformer
+    mol = Chem.MolFromSmiles("CC")
+    mol = Chem.AddHs(mol)
+    AllChem.EmbedMolecule(mol, AllChem.ETKDGv2())
+    mol_block = Chem.MolToMolBlock(mol)
+
+    worker = CalculationWorker()
+    settings = {"conversion_mode": "optimize_only", "optimization_method": "MMFF94s"}
+
+    with qtbot.waitSignal(worker.finished, timeout=10000) as blocker:
+        worker.run_calculation(mol_block, settings)
+
+    mol_3d = blocker.args[0][1]
+    assert mol_3d is not None
+    assert mol_3d.GetNumConformers() >= 1
+
+
+def test_calculation_worker_optimize_only_uff(qtbot, app):
+    """
+    Integration test: optimize_only mode with UFF method.
+    """
+    mol = Chem.MolFromSmiles("CC")
+    mol = Chem.AddHs(mol)
+    AllChem.EmbedMolecule(mol, AllChem.ETKDGv2())
+    mol_block = Chem.MolToMolBlock(mol)
+
+    worker = CalculationWorker()
+    settings = {"conversion_mode": "optimize_only", "optimization_method": "UFF"}
+
+    with qtbot.waitSignal(worker.finished, timeout=10000) as blocker:
+        worker.run_calculation(mol_block, settings)
+
+    mol_3d = blocker.args[0][1]
+    assert mol_3d is not None
+
+
+def test_calculation_worker_optimize_only_default(qtbot, app):
+    """
+    Integration test: optimize_only mode with default (no optimization_method).
+    Should fallback to MMFF94s then UFF if needed.
+    """
+    mol = Chem.MolFromSmiles("CC")
+    mol = Chem.AddHs(mol)
+    AllChem.EmbedMolecule(mol, AllChem.ETKDGv2())
+    mol_block = Chem.MolToMolBlock(mol)
+
+    worker = CalculationWorker()
+    settings = {"conversion_mode": "optimize_only"}
+
+    with qtbot.waitSignal(worker.finished, timeout=10000) as blocker:
+        worker.run_calculation(mol_block, settings)
+
+    mol_3d = blocker.args[0][1]
+    assert mol_3d is not None
+
+
+def test_calculation_worker_optimize_only_mmff94_variant(qtbot, app):
+    """
+    Integration test: optimize_only mode with MMFF94 (non-s) variant.
+    """
+    mol = Chem.MolFromSmiles("CC")
+    mol = Chem.AddHs(mol)
+    AllChem.EmbedMolecule(mol, AllChem.ETKDGv2())
+    mol_block = Chem.MolToMolBlock(mol)
+
+    worker = CalculationWorker()
+    settings = {"conversion_mode": "optimize_only", "optimization_method": "MMFF94_RDKIT"}
+
+    with qtbot.waitSignal(worker.finished, timeout=10000) as blocker:
+        worker.run_calculation(mol_block, settings)
+
+    mol_3d = blocker.args[0][1]
+    assert mol_3d is not None
+
+
+def test_calculation_worker_status_signals(qtbot, app):
+    """
+    Integration test: verify status_update signals are emitted during conversion.
+    """
+    data = MolecularData()
+    c1 = data.add_atom("C", QPointF(0, 0))
+    c2 = data.add_atom("C", QPointF(50, 0))
+    data.add_bond(c1, c2, order=1)
+    mol_block = data.to_mol_block()
+
+    worker = CalculationWorker()
+    status_messages = []
+    worker.status_update.connect(lambda msg: status_messages.append(msg))
+
+    with qtbot.waitSignal(worker.finished, timeout=10000):
+        worker.run_calculation(mol_block, {"conversion_mode": "rdkit", "do_optimize": True})
+
+    # Should have received at least one status update
+    assert len(status_messages) >= 1
+    assert any("3D" in msg or "Creating" in msg for msg in status_messages)
+
+
+def test_calculation_worker_multi_fragment_rdkit(qtbot, app):
+    """
+    Integration test: multi-fragment molecule triggers collision avoidance in RDKit path.
+    """
+    # Two separate methane molecules
+    mol = Chem.MolFromSmiles("C.C")
+    mol = Chem.AddHs(mol)
+    AllChem.EmbedMolecule(mol, AllChem.ETKDGv2())
+    mol_block = Chem.MolToMolBlock(mol)
+
+    worker = CalculationWorker()
+    status_messages = []
+    worker.status_update.connect(lambda msg: status_messages.append(msg))
+
+    with qtbot.waitSignal(worker.finished, timeout=10000) as blocker:
+        worker.run_calculation(mol_block, {"conversion_mode": "rdkit", "do_optimize": True})
+
+    mol_3d = blocker.args[0][1]
+    assert mol_3d is not None
+    # Multi-fragment should trigger collision avoidance status messages
+    collision_msgs = [m for m in status_messages if "collision" in m.lower() or "Resolving" in m]
+    assert len(collision_msgs) >= 1
+
+
+def test_calculation_worker_direct_dash_stereo(qtbot, app):
+    """
+    Integration test: direct mode with a dash bond.
+    Verifies negative Z-offset for the dash end atom.
+    """
+    data = MolecularData()
+    c1 = data.add_atom("C", QPointF(0, 0))
+    c2 = data.add_atom("C", QPointF(50, 0))
+    c3 = data.add_atom("C", QPointF(0, 50))
+    data.add_bond(c1, c2, order=1)
+    data.add_bond(c1, c3, order=1, stereo=2)  # 2=dash
+    mol_block = data.to_mol_block()
+
+    worker = CalculationWorker()
+    settings = {"conversion_mode": "direct", "do_optimize": False}
+
+    with qtbot.waitSignal(worker.finished, timeout=10000) as blocker:
+        worker.run_calculation(mol_block, settings)
+
+    mol_3d = blocker.args[0][1]
+    conf = mol_3d.GetConformer()
+    # The dash end atom should have negative Z
+    p3 = conf.GetAtomPosition(2)
+    assert p3.z == pytest.approx(-1.5)
+
+
+def test_calculation_worker_direct_mmff94_rdkit_variant(qtbot, app):
+    """
+    Integration test: direct mode with do_optimize=True and MMFF94_RDKIT variant.
+    Covers line 832 where optimization_method is checked for MMFF94_RDKIT.
+    """
+    data = MolecularData()
+    c1 = data.add_atom("C", QPointF(10, 20))
+    c2 = data.add_atom("C", QPointF(60, 20))
+    data.add_bond(c1, c2, order=1)
+    mol_block = data.to_mol_block()
+
+    worker = CalculationWorker()
+    settings = {
+        "conversion_mode": "direct",
+        "do_optimize": True,
+        "optimization_method": "MMFF94_RDKIT",
+    }
+
+    with qtbot.waitSignal(worker.finished, timeout=10000) as blocker:
+        worker.run_calculation(mol_block, settings)
+
+    mol_3d = blocker.args[0][1]
+    assert mol_3d is not None
+    assert mol_3d.GetNumConformers() >= 1
+
+
+def test_calculation_worker_fallback_to_direct_no_obabel(qtbot, app):
+    """
+    Integration test: fallback mode with OBABEL_AVAILABLE=False and
+    RDKit embedding forced to fail. Should fall through to direct conversion
+    as last resort.
+    """
+    data = MolecularData()
+    c1 = data.add_atom("C", QPointF(0, 0))
+    c2 = data.add_atom("C", QPointF(50, 0))
+    data.add_bond(c1, c2, order=1)
+    mol_block = data.to_mol_block()
+
+    worker = CalculationWorker()
+    status_messages = []
+    worker.status_update.connect(lambda msg: status_messages.append(msg))
+
+    # Mock OBABEL_AVAILABLE to False and force EmbedMolecule to return -1
+    with patch(
+        "moleditpy.modules.calculation_worker.OBABEL_AVAILABLE", False
+    ), patch(
+        "moleditpy.modules.calculation_worker.AllChem.EmbedMolecule", return_value=-1
+    ):
+        with qtbot.waitSignal(worker.finished, timeout=10000) as blocker:
+            worker.run_calculation(
+                mol_block, {"conversion_mode": "fallback", "do_optimize": False}
+            )
+
+    mol_3d = blocker.args[0][1]
+    assert mol_3d is not None
+    assert mol_3d.GetNumConformers() >= 1
+    # Should have hit the direct conversion path message
+    assert any("direct" in m.lower() or "Direct" in m for m in status_messages)
+
+
+def test_calculation_worker_fallback_to_direct_with_optimize(qtbot, app):
+    """
+    Integration test: fallback-to-direct with do_optimize=True.
+    Direct conversion should still run optimization after coordinate placement.
+    """
+    data = MolecularData()
+    c1 = data.add_atom("C", QPointF(0, 0))
+    c2 = data.add_atom("C", QPointF(50, 0))
+    data.add_bond(c1, c2, order=1)
+    mol_block = data.to_mol_block()
+
+    worker = CalculationWorker()
+
+    with patch(
+        "moleditpy.modules.calculation_worker.OBABEL_AVAILABLE", False
+    ), patch(
+        "moleditpy.modules.calculation_worker.AllChem.EmbedMolecule", return_value=-1
+    ):
+        with qtbot.waitSignal(worker.finished, timeout=10000) as blocker:
+            worker.run_calculation(
+                mol_block, {"conversion_mode": "fallback", "do_optimize": True}
+            )
+
+    mol_3d = blocker.args[0][1]
+    assert mol_3d is not None
+    assert mol_3d.GetNumConformers() >= 1
+

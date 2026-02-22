@@ -569,7 +569,8 @@ def test_optimize_3d(window, qtbot, monkeypatch):
     qtbot.wait(50)
 
     # 4. ステータスバーのメッセージで成功を確認
-    assert "optimization successful" in window.statusBar().currentMessage()
+    msg = window.statusBar().currentMessage()
+    assert "Optimization completed" in msg or "optimization successful" in msg
 
 
 @pytest.mark.gui

@@ -12,6 +12,7 @@ DOI: 10.5281/zenodo.17268532
 
 import math
 import re
+import numpy as np
 
 from PyQt6.QtCore import QObject, pyqtSignal, pyqtSlot
 
@@ -37,6 +38,174 @@ if OBABEL_AVAILABLE:
         )
 else:
     pybel = None
+
+
+class WorkerHaltError(Exception):
+    """Custom exception raised when a calculation worker is requested to halt."""
+    pass
+
+
+def _adjust_collision_avoidance(rd_mol, check_halted_cb, safe_status_cb):
+    """
+    Optimized collision avoidance using spatial partitioning (grid-based).
+    This avoids the O(F^2 * N^2) complexity of the previous implementation.
+    """
+    try:
+        frags = Chem.GetMolFrags(rd_mol, asMols=False, sanitizeFrags=False)
+        if len(frags) <= 1:
+            return
+
+        safe_status_cb(f"Resolving potential collisions among {len(frags)} fragments...")
+
+        conf = rd_mol.GetConformer()
+        pt = Chem.GetPeriodicTable()
+
+        # 1. Precalculate fragment data
+        frag_data = []
+        for f_indices in frags:
+            pos_list = []
+            radii_list = []
+            for idx in f_indices:
+                p = conf.GetAtomPosition(idx)
+                pos_list.append([p.x, p.y, p.z])
+                try:
+                    radii_list.append(pt.GetRvdw(rd_mol.GetAtomWithIdx(idx).GetAtomicNum()))
+                except Exception:
+                    radii_list.append(1.5)
+
+            pos_np = np.array(pos_list)
+            radii_np = np.array(radii_list)
+            frag_data.append({
+                "indices": f_indices,
+                "positions": pos_np,
+                "radii": radii_np,
+                "max_radius": np.max(radii_np) if len(radii_np) > 0 else 1.5
+            })
+
+        # Parameters
+        scale = 1.1  # Collision threshold scale
+        max_iters = 50
+        grid_size = 5.0
+
+        for iteration in range(max_iters):
+            if check_halted_cb():
+                raise WorkerHaltError("Halted")
+
+            moved = False
+            grid = {}
+            for i, fd in enumerate(frag_data):
+                fd_min = np.min(fd["positions"], axis=0)
+                fd_max = np.max(fd["positions"], axis=0)
+                margin = fd["max_radius"] * scale
+                fd["bbox_min"] = fd_min - margin
+                fd["bbox_max"] = fd_max + margin
+                g_min = (fd["bbox_min"] / grid_size).astype(int)
+                g_max = (fd["bbox_max"] / grid_size).astype(int)
+                for gx in range(g_min[0], g_max[0] + 1):
+                    for gy in range(g_min[1], g_max[1] + 1):
+                        for gz in range(g_min[2], g_max[2] + 1):
+                            cell = (gx, gy, gz)
+                            if cell not in grid:
+                                grid[cell] = []
+                            grid[cell].append(i)
+
+            all_push_vectors = [np.zeros(3) for _ in range(len(frag_data))]
+            processed_pairs = set()
+
+            for cell_indices in grid.values():
+                if len(cell_indices) < 2:
+                    continue
+                for idx_idx_i, i in enumerate(cell_indices):
+                    for j in cell_indices[idx_idx_i + 1:]:
+                        pair = tuple(sorted((i, j)))
+                        if pair in processed_pairs:
+                            continue
+                        processed_pairs.add(pair)
+                        if np.any(frag_data[i]["bbox_min"] > frag_data[j]["bbox_max"]) or \
+                           np.any(frag_data[j]["bbox_min"] > frag_data[i]["bbox_max"]):
+                            continue
+                        fd_i = frag_data[i]
+                        fd_j = frag_data[j]
+                        push_i = np.zeros(3)
+                        push_j = np.zeros(3)
+                        collision_count = 0
+                        for p_idx_i, p_i in enumerate(fd_i["positions"]):
+                            r_i = fd_i["radii"][p_idx_i]
+                            for p_idx_j, p_j in enumerate(fd_j["positions"]):
+                                r_j = fd_j["radii"][p_idx_j]
+                                diff = p_i - p_j
+                                dist_sq = np.dot(diff, diff)
+                                min_dist = (r_i + r_j) * scale
+                                if dist_sq < 0.0001:
+                                    diff = np.random.uniform(-0.1, 0.1, 3)
+                                    dist_sq = np.dot(diff, diff)
+                                if dist_sq < min_dist * min_dist:
+                                    dist = np.sqrt(dist_sq)
+                                    if dist < 0.0001:
+                                        dist = 0.0001
+                                    push_mag = (min_dist - dist) / 2.0
+                                    vec = (diff / dist) * push_mag
+                                    push_i += vec
+                                    push_j -= vec
+                                    collision_count += 1
+                        if collision_count > 0:
+                            all_push_vectors[i] += push_i / collision_count
+                            all_push_vectors[j] += push_j / collision_count
+                            moved = True
+
+            if not moved:
+                break
+
+            for i, push in enumerate(all_push_vectors):
+                if np.any(push != 0):
+                    frag_data[i]["positions"] += push
+                    for local_idx, global_idx in enumerate(frag_data[i]["indices"]):
+                        conf.SetAtomPosition(global_idx, frag_data[i]["positions"][local_idx].tolist())
+
+        safe_status_cb("Collision avoidance completed.")
+    except WorkerHaltError:
+        raise
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        safe_status_cb(f"Collision avoidance warning: {e}")
+
+
+def _iterative_optimize(mol, method, check_halted_cb, safe_status_cb, max_iters=4000, chunk_size=100):
+    """Perform force field optimization in small chunks to avoid UI freezing and allow halts."""
+    try:
+        if method in ("MMFF", "MMFF94", "MMFF94S", "MMFF94s"):
+            mmff_variant = "MMFF94" if method == "MMFF94" else "MMFF94s"
+            props = AllChem.MMFFGetMoleculeProperties(mol, mmffVariant=mmff_variant)
+            if props is None:
+                return False
+            ff = AllChem.MMFFGetMoleculeForceField(mol, props, confId=0)
+        elif method == "UFF":
+            ff = AllChem.UFFGetMoleculeForceField(mol, confId=0)
+        else:
+            return False
+
+        if ff is None:
+            return False
+
+        ff.Initialize()
+        iters_done = 0
+        while iters_done < max_iters:
+            if check_halted_cb():
+                raise WorkerHaltError("Halted")
+            res = ff.Minimize(maxIts=chunk_size)
+            iters_done += chunk_size
+            if res == 0:
+                break
+            import time
+            time.sleep(0.001)
+
+        return True
+    except WorkerHaltError:
+        raise
+    except Exception as e:
+        safe_status_cb(f"Iterative optimization ({method}) error: {e}")
+        return False
 
 
 class CalculationWorker(QObject):
@@ -80,44 +249,57 @@ class CalculationWorker(QObject):
         def _safe_status(msg):
             try:
                 if _check_halted():
-                    return
+                    raise WorkerHaltError("Halted")
                 self.status_update.emit(msg)
+            except WorkerHaltError:
+                raise
             except Exception:
                 # Swallow any signal-emission errors to avoid crashing the worker
                 pass
 
         def _safe_finished(payload):  # pragma: no cover
             try:
-                # Attempt to emit the payload; preserve existing fallback behavior
+                if _check_halted():
+                    raise WorkerHaltError("Halted")
                 try:
                     self.finished.emit(payload)
+                except WorkerHaltError:
+                    raise
                 except TypeError:
-                    # Some slots/old code may expect a single-molecule arg; try that too
                     try:
-                        # If payload was a tuple like (worker_id, mol), try sending the second element
                         if isinstance(payload, (list, tuple)) and len(payload) >= 2:
                             self.finished.emit(payload[1])
                         else:
                             self.finished.emit(payload)
+                    except WorkerHaltError:
+                        raise
                     except Exception:  # pragma: no cover
                         import traceback
                         traceback.print_exc()
+            except WorkerHaltError:
+                raise
             except Exception:  # pragma: no cover
                 import traceback
                 traceback.print_exc()
 
         def _safe_error(msg):  # pragma: no cover
             try:
-                # Emit a tuple containing the worker_id (may be None) and the message
+                if msg != "Halted" and _check_halted():
+                    raise WorkerHaltError("Halted")
                 try:
                     self.error.emit((worker_id, msg))
+                except WorkerHaltError:
+                    raise
                 except Exception:
-                    # Fallback to emitting the raw message if tuple emission fails for any reason
                     try:
                         self.error.emit(msg)
+                    except WorkerHaltError:
+                        raise
                     except Exception:  # pragma: no cover
                         import traceback
                         traceback.print_exc()
+            except WorkerHaltError:
+                raise
             except Exception:  # pragma: no cover
                 import traceback
                 traceback.print_exc()
@@ -157,7 +339,7 @@ class CalculationWorker(QObject):
 
             # Check early whether this run has been requested to halt
             if _check_halted():
-                raise RuntimeError("Halted")
+                raise WorkerHaltError("Halted")
 
             explicit_stereo = {}
             mol_lines = mol_block.split("\n")
@@ -222,7 +404,30 @@ class CalculationWorker(QObject):
 
             # Check after adding Hs (may be a long operation)
             if _check_halted():
-                raise RuntimeError("Halted")
+                raise WorkerHaltError("Halted")
+
+            # Support for optimize_only mode
+            if conversion_mode == "optimize_only":
+                _safe_status("Optimizing existing 3D structure...")
+                opt_method = str(options.get("optimization_method", "MMFF94s")).upper()
+                if "MMFF" in opt_method:
+                    method_key = "MMFF94" if "MMFF94" in opt_method and "MMFF94S" not in opt_method else "MMFF94s"
+                    if not _iterative_optimize(mol, method_key, _check_halted, _safe_status):
+                        _safe_status(f"{method_key} failed, falling back to UFF...")
+                        _iterative_optimize(mol, "UFF", _check_halted, _safe_status)
+                elif "UFF" in opt_method:
+                    _iterative_optimize(mol, "UFF", _check_halted, _safe_status)
+                else:
+                    if not _iterative_optimize(mol, "MMFF94s", _check_halted, _safe_status):
+                        _iterative_optimize(mol, "UFF", _check_halted, _safe_status)
+                if _check_halted():
+                    raise WorkerHaltError("Halted")
+                try:
+                    _safe_finished((worker_id, mol))
+                except Exception:
+                    _safe_finished(mol)
+                _safe_status("Optimization completed.")
+                return
 
             # CRITICAL: Re-apply explicit stereo after AddHs which may renumber atoms
             for bond_idx, stereo_type in explicit_stereo.items():
@@ -617,14 +822,35 @@ class CalculationWorker(QObject):
                         traceback.print_exc()
                     mol.AddConformer(conf, assignId=True)
 
+                    # Optimization (respects do_optimize flag)
+                    do_optimize = options.get("do_optimize", True) if options else True
+                    if do_optimize:
+                        _safe_status("Direct conversion: optimizing geometry...")
+                        if _check_halted():
+                            raise WorkerHaltError("Halted")
+                        mmff_method = "MMFF94s"
+                        if options and str(options.get("optimization_method", "")).upper() == "MMFF94_RDKIT":
+                            mmff_method = "MMFF94"
+                        if not _iterative_optimize(mol, mmff_method, _check_halted, _safe_status):
+                            if _check_halted():
+                                raise WorkerHaltError("Halted")
+                            _iterative_optimize(mol, "UFF", _check_halted, _safe_status)
+
                     if _check_halted():
-                        raise RuntimeError("Halted (after optimization)")
+                        raise WorkerHaltError("Halted")
+                    if do_optimize:
+                        _adjust_collision_avoidance(mol, _check_halted, _safe_status)
+
                     try:
                         _safe_finished((worker_id, mol))
+                    except WorkerHaltError:
+                        raise
                     except Exception:
                         _safe_finished(mol)
                     _safe_status("Direct conversion completed.")
                     return
+                except WorkerHaltError:
+                    raise
                 except Exception as e:
                     _safe_status(f"Direct conversion failed: {e}")
 
@@ -666,7 +892,7 @@ class CalculationWorker(QObject):
                 # direct mode (or any other explicit non-RDKit mode)
                 pass
             if _check_halted():
-                raise RuntimeError("Halted")
+                raise WorkerHaltError("Halted")
 
             # Try multiple times with different approaches if needed
             conf_id = -1
@@ -680,7 +906,9 @@ class CalculationWorker(QObject):
                     conf_id = -1
                 # Final check before returning success
                 if _check_halted():
-                    raise RuntimeError("Halted")
+                    raise WorkerHaltError("Halted")
+            except WorkerHaltError:
+                raise
             except Exception as e:
                 # Standard embedding failed; report and continue to fallback attempts
                 _safe_status(f"Standard embedding failed: {e}")
@@ -783,21 +1011,17 @@ class CalculationWorker(QObject):
                     bond.SetStereo(stereo)
 
                 try:
-                    mmff_variant = "MMFF94s"
+                    mmff_method = "MMFF94s"
                     if opt_method and str(opt_method).upper() == "MMFF94_RDKIT":
-                        mmff_variant = "MMFF94"
-                    if _check_halted():
-                        raise RuntimeError("Halted")
-                    AllChem.MMFFOptimizeMolecule(mol, mmffVariant=mmff_variant)
-                except Exception:
-                    # fallback to UFF if MMFF fails
-                    try:
+                        mmff_method = "MMFF94"
+                    if not _iterative_optimize(mol, mmff_method, _check_halted, _safe_status):
                         if _check_halted():
-                            raise RuntimeError("Halted")
-                        AllChem.UFFOptimizeMolecule(mol)
-                    except Exception:  # pragma: no cover
-                        import traceback
-                        traceback.print_exc()
+                            raise WorkerHaltError("Halted")
+                        _iterative_optimize(mol, "UFF", _check_halted, _safe_status)
+                except WorkerHaltError:
+                    raise
+                except Exception as opt_err:
+                    _safe_status(f"RDKit optimization failed (ignoring): {opt_err}")
                 # CRITICAL: Restore stereochemistry again after optimization (explicit labels priority)
                 for bond_idx, stereo, stereo_atoms in original_stereo_info:
                     bond = mol.GetBondWithIdx(bond_idx)
@@ -805,15 +1029,18 @@ class CalculationWorker(QObject):
                         bond.SetStereoAtoms(stereo_atoms[0], stereo_atoms[1])
                     bond.SetStereo(stereo)
 
-                # Do NOT call AssignStereochemistry here as it would override our explicit labels
-                # Include worker_id so the main thread can ignore stale results
                 # CRITICAL: Check for halt *before* emitting finished signal
                 if _check_halted():
-                    raise RuntimeError("Halted (after optimization)")
+                    raise WorkerHaltError("Halted")
+
+                # Collision avoidance
+                _adjust_collision_avoidance(mol, _check_halted, _safe_status)
+
                 try:
                     _safe_finished((worker_id, mol))
+                except WorkerHaltError:
+                    raise
                 except Exception:
-                    # Fallback to legacy single-arg emit
                     _safe_finished(mol)
                 _safe_status("RDKit 3D conversion succeeded.")
                 return
@@ -838,13 +1065,13 @@ class CalculationWorker(QObject):
                     try:
                         _safe_status("Optimizing with Open Babel (MMFF94)...")
                         if _check_halted():
-                            raise RuntimeError("Halted")
+                            raise WorkerHaltError("Halted")
                         ob_mol.localopt(forcefield="mmff94", steps=500)
                     except Exception:
                         try:
                             _safe_status("MMFF94 failed, falling back to UFF...")
                             if _check_halted():
-                                raise RuntimeError("Halted")
+                                raise WorkerHaltError("Halted")
                             ob_mol.localopt(forcefield="uff", steps=500)
                         except Exception:
                             _safe_status("UFF optimization also failed.")
@@ -854,36 +1081,61 @@ class CalculationWorker(QObject):
                         raise ValueError("Open Babel produced invalid MOL block.")
                     rd_mol = Chem.AddHs(rd_mol)
                     try:
-                        mmff_variant = "MMFF94s"
+                        mmff_method = "MMFF94s"
                         if opt_method and str(opt_method).upper() == "MMFF94_RDKIT":
-                            mmff_variant = "MMFF94"
+                            mmff_method = "MMFF94"
                         if _check_halted():
-                            raise RuntimeError("Halted")
-                        AllChem.MMFFOptimizeMolecule(rd_mol, mmffVariant=mmff_variant)
-                    except Exception:
-                        try:
+                            raise WorkerHaltError("Halted")
+                        if not _iterative_optimize(rd_mol, mmff_method, _check_halted, _safe_status):
                             if _check_halted():
-                                raise RuntimeError("Halted")
-                            AllChem.UFFOptimizeMolecule(rd_mol)
-                        except Exception:  # pragma: no cover
-                            import traceback
-                            traceback.print_exc()
+                                raise WorkerHaltError("Halted")
+                            _iterative_optimize(rd_mol, "UFF", _check_halted, _safe_status)
+                    except WorkerHaltError:
+                        raise
+                    except Exception:  # pragma: no cover
+                        import traceback
+                        traceback.print_exc()
                     _safe_status(
                         "Open Babel embedding succeeded. Warning: Conformation accuracy may be limited."
                     )
                     # CRITICAL: Check for halt *before* emitting finished signal
                     if _check_halted():
-                        raise RuntimeError("Halted (after optimization)")
+                        raise WorkerHaltError("Halted")
+
+                    # Collision avoidance
+                    _adjust_collision_avoidance(rd_mol, _check_halted, _safe_status)
                     try:
                         _safe_finished((worker_id, rd_mol))
                     except Exception:
                         _safe_finished(rd_mol)
                     return
+                except WorkerHaltError:
+                    raise
                 except Exception as ob_err:
-                    raise RuntimeError(f"Open Babel 3D conversion failed: {ob_err}")
+                    if conversion_mode == "obabel":
+                        # obabel-only mode: no further fallback
+                        raise RuntimeError(f"Open Babel 3D conversion failed: {ob_err}")
+                    # fallback mode: continue to direct conversion below
+                    _safe_status(
+                        f"Open Babel unavailable or failed ({ob_err}). "
+                        "Falling back to direct conversion..."
+                    )
 
             if conf_id == -1 and conversion_mode == "rdkit":
                 raise RuntimeError("RDKit 3D conversion failed (rdkit-only mode)")
 
+            # --- Last-resort fallback: direct conversion ---
+            if conf_id == -1 and conversion_mode == "fallback":
+                _safe_status(
+                    "All embedding methods failed. Using direct conversion as last resort..."
+                )
+                direct_opts = dict(options) if options else {}
+                direct_opts["conversion_mode"] = "direct"
+                self.run_calculation(mol_block, direct_opts)
+                return
+
+        except WorkerHaltError:
+            _safe_error("Halted")
+            return
         except Exception as e:
             _safe_error(str(e))

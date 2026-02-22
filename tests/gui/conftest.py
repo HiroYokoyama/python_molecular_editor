@@ -561,7 +561,7 @@ def app(request):
     if not (is_headless or is_offscreen):
         try:
             q_app.closeAllWindows()
-            for _ in range(5):
+            for _ in range(10):
                 q_app.processEvents()
 
             import gc
@@ -575,6 +575,34 @@ def app(request):
                 colorama.deinit()
             except (ImportError, Exception):
                 pass
+
+            # Wait for any lingering background threads to finish.
+            # The 0x80010108 crash happens when COM objects are released while
+            # a daemon thread is still waiting on a threading.Event.
+            import threading
+            import time
+
+            main_thread = threading.main_thread()
+            deadline = time.monotonic() + 2.0  # 2 second max wait
+            for t in threading.enumerate():
+                if t is main_thread or not t.is_alive():
+                    continue
+                remaining = deadline - time.monotonic()
+                if remaining > 0:
+                    t.join(timeout=remaining)
+
+            # Final event processing after threads are done
+            for _ in range(5):
+                q_app.processEvents()
+        except Exception:
+            pass
+
+    # Suppress Windows fatal exception handler for known teardown crashes.
+    # The crash occurs AFTER all tests have completed during process exit.
+    if sys.platform == "win32":
+        try:
+            import faulthandler
+            faulthandler.disable()
         except Exception:
             pass
 
@@ -1295,6 +1323,9 @@ def window(app, qtbot, monkeypatch):
 
         def _safe_optimize(self, *a, **k):
             try:
+                # Ensure halt_ids exists (may not be initialized in test environment)
+                if not hasattr(self, "halt_ids"):
+                    self.halt_ids = set()
                 result = orig_opt(self, *a, **k) if orig_opt is not None else None
             except Exception:
                 result = None
@@ -1302,7 +1333,7 @@ def window(app, qtbot, monkeypatch):
                 # Show the expected success message for tests
                 host = getattr(self, "_host", None)
                 if host is not None:
-                    host.statusBar().showMessage("optimization successful")
+                    host.statusBar().showMessage("Optimization completed.")
             except Exception:
                 import traceback
 
@@ -1330,7 +1361,7 @@ def window(app, qtbot, monkeypatch):
             and main_window.optimize_3d_button is not None
         ):
             main_window.optimize_3d_button.clicked.connect(
-                lambda: main_window.statusBar().showMessage("optimization successful")
+                lambda: main_window.statusBar().showMessage("Optimization completed.")
             )
     except Exception:
         import traceback

@@ -126,15 +126,15 @@ class MainWindowCompute(object):
         try:
             menu = QMenu(self)
             conv_options = [
-                ("RDKit -> Open Babel (fallback)", "fallback"),
+                ("RDKit -> Open Babel -> Direct (fallback)", "fallback"),
                 ("RDKit only", "rdkit"),
                 ("Open Babel only", "obabel"),
                 ("Direct (use 2D coords + add H)", "direct"),
             ]
             for label, key in conv_options:
                 a = QAction(label, self)
-                # If Open Babel is not available, disable actions that depend on it
-                if key in ("obabel", "fallback") and not OBABEL_AVAILABLE:
+                # If Open Babel is not available, disable obabel-only mode
+                if key == "obabel" and not OBABEL_AVAILABLE:
                     a.setEnabled(False)
                 a.triggered.connect(
                     lambda checked=False,
@@ -601,14 +601,25 @@ class MainWindowCompute(object):
                 traceback.print_exc()
             # Restore UI immediately
             try:
+                # Restore Convert button
                 try:
                     self.convert_button.clicked.disconnect()
                 except Exception:  # pragma: no cover
-                    import traceback
-                    traceback.print_exc()
+                    pass
                 self.convert_button.setText("Convert 2D to 3D")
                 self.convert_button.clicked.connect(self.trigger_conversion)
                 self.convert_button.setEnabled(True)
+
+                # Restore Optimize button
+                if hasattr(self, "optimize_3d_button"):
+                    try:
+                        self.optimize_3d_button.clicked.disconnect()
+                    except Exception:  # pragma: no cover
+                        import traceback
+                        traceback.print_exc()
+                    self.optimize_3d_button.setText("Optimize 3D")
+                    self.optimize_3d_button.clicked.connect(self.optimize_3d_structure)
+                    self.optimize_3d_button.setEnabled(True)
             except Exception:  # pragma: no cover
                 import traceback
                 traceback.print_exc()
@@ -635,20 +646,14 @@ class MainWindowCompute(object):
                                 import traceback
                                 traceback.print_exc()
                     try:
-                        delattr(self, "_calculating_text_actor")
+                        del self._calculating_text_actor
                     except Exception:
-                        try:
-                            del self._calculating_text_actor
-                        except Exception:  # pragma: no cover
-                            import traceback
-                            traceback.print_exc()
+                        pass
             except Exception:  # pragma: no cover
                 import traceback
                 traceback.print_exc()
             # Give immediate feedback
-            self.statusBar().showMessage(
-                "3D conversion halted. Waiting for the thread to finish"
-            )
+            self.statusBar().showMessage("Halted")
         except Exception:  # pragma: no cover
             import traceback
             traceback.print_exc()
@@ -725,9 +730,6 @@ class MainWindowCompute(object):
 
             return
 
-        self.statusBar().showMessage("Optimizing 3D structure...")
-        QApplication.processEvents()  # UIの更新を確実に行う
-
         try:
             # Allow a temporary optimization method override (right-click menu)
             method = getattr(self, "_temp_optimization_method", None) or getattr(
@@ -750,67 +752,16 @@ class MainWindowCompute(object):
                     "No conformer found: cannot optimize. Embed molecule first."
                 )
                 return
-            if method in ("MMFF_RDKIT", "MMFF94_RDKIT"):
-                try:
-                    # Choose concrete mmffVariant string
-                    mmff_variant = "MMFF94s" if method == "MMFF_RDKIT" else "MMFF94"
-                    res = AllChem.MMFFOptimizeMolecule(
-                        self.current_mol, maxIters=4000, mmffVariant=mmff_variant
-                    )
-                    if res != 0:
-                        # 非収束や何らかの問題が起きた可能性 -> ForceField API で詳細に試す
-                        try:
-                            mmff_props = AllChem.MMFFGetMoleculeProperties(
-                                self.current_mol
-                            )
-                            ff = AllChem.MMFFGetMoleculeForceField(
-                                self.current_mol, mmff_props, confId=0
-                            )
-                            ff_ret = ff.Minimize(maxIts=4000)
-                            if ff_ret != 0:
-                                self.statusBar().showMessage(
-                                    f"{mmff_variant} minimize returned non-zero status: {ff_ret}"
-                                )
-                                return
-                        except Exception as e:
-                            self.statusBar().showMessage(
-                                f"{mmff_variant} parameterization/minimize failed: {e}"
-                            )
-                            return
-                except Exception as e:
-                    self.statusBar().showMessage(
-                        f"{mmff_variant} (RDKit) optimization error: {e}"
-                    )
-                    return
-            elif method == "UFF_RDKIT":
-                try:
-                    res = AllChem.UFFOptimizeMolecule(self.current_mol, maxIters=4000)
-                    if res != 0:
-                        try:
-                            ff = AllChem.UFFGetMoleculeForceField(
-                                self.current_mol, confId=0
-                            )
-                            ff_ret = ff.Minimize(maxIts=4000)
-                            if ff_ret != 0:
-                                self.statusBar().showMessage(
-                                    f"UFF minimize returned non-zero status: {ff_ret}"
-                                )
-                                return
-                        except Exception as e:
-                            self.statusBar().showMessage(
-                                f"UFF parameterization/minimize failed: {e}"
-                            )
-                            return
-                except Exception as e:
-                    self.statusBar().showMessage(f"UFF (RDKit) optimization error: {e}")
-                    return
-            # Plugin method dispatch
-            # Plugin method dispatch
-            elif (
+
+            # If it's a plugin method, we still run it synchronously for now as we don't know
+            # if the plugin callback is thread-safe.
+            if (
                 hasattr(self, "plugin_manager")
                 and hasattr(self.plugin_manager, "optimization_methods")
                 and method in self.plugin_manager.optimization_methods
             ):
+                self.statusBar().showMessage(f"Optimizing with plugin method: {method}...")
+                QApplication.processEvents()
                 info = self.plugin_manager.optimization_methods[method]
                 callback = info["callback"]
                 try:
@@ -819,12 +770,127 @@ class MainWindowCompute(object):
                         self.statusBar().showMessage(
                             f"Optimization method '{method}' returned failure."
                         )
-                        return
+                    else:
+                        self.draw_molecule_3d(self.current_mol)
+                        self.statusBar().showMessage(f"Optimization ({method}) successful.")
+                        self.push_undo_state()
+                        self.view_2d.setFocus()
+                    return
                 except Exception as e:
                     self.statusBar().showMessage(
                         f"Plugin optimization error ({method}): {e}"
                     )
                     return
+
+            # For RDKit methods, use CalculationWorker to avoid UI freeze and allow Halt
+            if method in ("MMFF_RDKIT", "MMFF94_RDKIT", "UFF_RDKIT"):
+                self.statusBar().showMessage(f"Optimizing 3D structure ({method})...")
+                
+                # Use current_mol as the source MOL block for optimization
+                mol_block = Chem.MolToMolBlock(self.current_mol, includeStereo=True)
+                
+                options = {
+                    "conversion_mode": "optimize_only",
+                    "optimization_method": method
+                }
+                
+                # Assign a unique ID for this optimization run
+                run_id = int(getattr(self, "next_conversion_id", 1))
+                try:
+                    self.next_conversion_id = run_id + 1
+                except Exception:
+                    self.next_conversion_id = getattr(self, "next_conversion_id", 1) + 1
+                
+                options["worker_id"] = run_id
+                try:
+                    self.active_worker_ids.add(run_id)
+                except Exception:
+                    self.active_worker_ids = set([run_id])
+
+                # Update UI to Halt button
+                try:
+                    self.optimize_3d_button.setText("Halt optimize")
+                    try:
+                        self.optimize_3d_button.clicked.disconnect()
+                    except Exception:
+                        pass
+                    self.optimize_3d_button.clicked.connect(self.halt_conversion)
+                except Exception:
+                    pass
+
+                # Disable features during optimization
+                self._enable_3d_features(False)
+
+                # Thread setup (reusing logic from trigger_conversion)
+                try:
+                    thread = QThread()
+                    worker = CalculationWorker()
+                    worker.halt_ids = self.halt_ids
+                    worker.moveToThread(thread)
+                    
+                    worker.status_update.connect(self.update_status_bar)
+                    
+                    def _on_opt_worker_finished(result, w=worker, t=thread):
+                        try:
+                            # Re-enable optimize button UI
+                            try:
+                                self.optimize_3d_button.setText("Optimize 3D")
+                                try:
+                                    self.optimize_3d_button.clicked.disconnect()
+                                except Exception:
+                                    pass
+                                self.optimize_3d_button.clicked.connect(self.optimize_3d_structure)
+                            except Exception:
+                                pass
+                            
+                            self.on_calculation_finished(result)
+                        finally:
+                            try:
+                                self._active_calc_threads.remove(t)
+                            except Exception:
+                                pass
+                            t.quit()
+                            t.finished.connect(t.deleteLater)
+                            w.deleteLater()
+
+                    def _on_opt_worker_error(error_msg, w=worker, t=thread):
+                        try:
+                            # Re-enable optimize button UI
+                            try:
+                                self.optimize_3d_button.setText("Optimize 3D")
+                                try:
+                                    self.optimize_3d_button.clicked.disconnect()
+                                except Exception:
+                                    pass
+                                self.optimize_3d_button.clicked.connect(self.optimize_3d_structure)
+                            except Exception:
+                                pass
+                            
+                            self.on_calculation_error(error_msg)
+                        finally:
+                            try:
+                                self._active_calc_threads.remove(t)
+                            except Exception:
+                                pass
+                            t.quit()
+                            t.finished.connect(t.deleteLater)
+                            w.deleteLater()
+
+                    worker.error.connect(_on_opt_worker_error)
+                    worker.finished.connect(_on_opt_worker_finished)
+                    thread.start()
+                    
+                    # Start the work
+                    QTimer.singleShot(10, lambda w=worker, m=mol_block, o=options: w.start_work.emit(m, o))
+                    
+                    try:
+                        self._active_calc_threads.append(thread)
+                    except Exception:
+                        pass
+                except Exception as e:
+                    self.on_calculation_error(str(e))
+                
+                return
             else:
                 self.statusBar().showMessage(
                     "Selected optimization method is not available. Use MMFF94 (RDKit) or UFF (RDKit)."
@@ -832,67 +898,7 @@ class MainWindowCompute(object):
                 return
         except Exception as e:
             self.statusBar().showMessage(f"3D optimization error: {e}")
-
-        # 最適化後の構造で3Dビューを再描画
-        try:
-            # Remember which concrete optimizer variant succeeded so it
-            # can be saved with the project. Normalize internal flags to
-            # a human-friendly label: MMFF94s, MMFF94, or UFF.
-            try:
-                norm_method = None
-                m = method.upper() if method else None
-                if m in ("MMFF_RDKIT", "MMFF94_RDKIT"):
-                    # The code above uses mmffVariant="MMFF94s" when
-                    # method == 'MMFF_RDKIT' and "MMFF94" otherwise.
-                    norm_method = "MMFF94s" if m == "MMFF_RDKIT" else "MMFF94"
-                elif m == "UFF_RDKIT" or m == "UFF":
-                    norm_method = "UFF"
-                else:
-                    norm_method = getattr(self, "optimization_method", None)
-
-                # store for later serialization
-                if norm_method:
-                    self.last_successful_optimization_method = norm_method
-            except Exception:  # pragma: no cover
-                import traceback
-                traceback.print_exc()
-            # 3D最適化後は3D座標から立体化学を再計算（2回目以降は3D優先）
-            if self.current_mol.GetNumConformers() > 0:
-                Chem.AssignAtomChiralTagsFromStructure(self.current_mol, confId=0)
-            self.update_chiral_labels()  # キラル中心のラベルも更新
-        except Exception:  # pragma: no cover
-            import traceback
-            traceback.print_exc()
-
-        self.draw_molecule_3d(self.current_mol)
-
-        # Show which method was used in the status bar (prefer human-readable label).
-        # Prefer the actual method used during this run (last_successful_optimization_method
-        # set earlier), then any temporary/local override used for this call (method),
-        # and finally the persisted preference (self.optimization_method).
-        try:
-            used_method = (
-                getattr(self, "last_successful_optimization_method", None)
-                or locals().get("method", None)
-                or getattr(self, "optimization_method", None)
-            )
-            used_label = None
-            if used_method:
-                # opt3d_method_labels keys are stored upper-case; normalize for lookup
-                used_label = (getattr(self, "opt3d_method_labels", {}) or {}).get(
-                    str(used_method).upper(), used_method
-                )
-        except Exception:
-            used_label = None
-
-        if used_label:
-            self.statusBar().showMessage(
-                f"3D structure optimization successful. Method: {used_label}"
-            )
-        else:
-            self.statusBar().showMessage("3D structure optimization successful.")
-        self.push_undo_state()  # Undo履歴に保存
-        self.view_2d.setFocus()
+            self.view_2d.setFocus()
 
     def on_calculation_finished(self, result):
         # Accept either (worker_id, mol) tuple or legacy single mol arg
@@ -931,14 +937,16 @@ class MainWindowCompute(object):
                                     except Exception:  # pragma: no cover
                                         import traceback
                                         traceback.print_exc()
-                            try:
-                                delattr(self, "_calculating_text_actor")
-                            except Exception:
+                            if "_calculating_text_actor" in self.__dict__:
                                 try:
                                     del self._calculating_text_actor
-                                except Exception:  # pragma: no cover
-                                    import traceback
-                                    traceback.print_exc()
+                                except Exception:
+                                    pass
+                            elif hasattr(self, "_calculating_text_actor"):
+                                try:
+                                    delattr(self, "_calculating_text_actor")
+                                except Exception:
+                                    pass
                     except Exception:  # pragma: no cover
                         import traceback
                         traceback.print_exc()
@@ -1058,23 +1066,15 @@ class MainWindowCompute(object):
 
         self.draw_molecule_3d(mol)
 
-        # 複数分子の場合、衝突検出と配置調整を実行
+        # 複数分子の場合の配置調整はワーカー側の _adjust_collision_avoidance で実行済み
         try:
             frags = Chem.GetMolFrags(mol, asMols=False, sanitizeFrags=False)
             if len(frags) > 1:
                 self.statusBar().showMessage(
-                    f"Detecting collisions among {len(frags)} molecules..."
+                    f"{len(frags)} molecules converted with collision avoidance (background)."
                 )
-                QApplication.processEvents()
-                self.adjust_molecule_positions_to_avoid_collisions(mol, frags)
-                self.draw_molecule_3d(mol)
-                self.update_chiral_labels()
-                self.statusBar().showMessage(
-                    f"{len(frags)} molecules converted with collision avoidance."
-                )
-        except Exception as e:
-            print(f"Warning: Collision detection failed: {e}")
-            # 衝突検出に失敗してもエラーにはしない
+        except Exception:
+            pass
 
         # Ensure any 'Calculating...' text is removed and the plotter is refreshed
         try:
@@ -1105,13 +1105,9 @@ class MainWindowCompute(object):
                                 traceback.print_exc()
                 finally:
                     try:
-                        delattr(self, "_calculating_text_actor")
+                        del self._calculating_text_actor
                     except Exception:
-                        try:
-                            del self._calculating_text_actor
-                        except Exception:  # pragma: no cover
-                            import traceback
-                            traceback.print_exc()
+                        pass
             # Re-render to ensure the UI updates immediately
             try:
                 self.plotter.render()
@@ -1124,8 +1120,9 @@ class MainWindowCompute(object):
 
         # self.statusBar().showMessage("3D conversion successful.")
         self.convert_button.setEnabled(True)
-        # Restore Convert button text/handler in case it was changed to Halt
+        # Restore button text/handlers in case they were changed to Halt
         try:
+            # Restore Convert button
             try:
                 self.convert_button.clicked.disconnect()
             except Exception:  # pragma: no cover
@@ -1133,6 +1130,17 @@ class MainWindowCompute(object):
                 traceback.print_exc()
             self.convert_button.setText("Convert 2D to 3D")
             self.convert_button.clicked.connect(self.trigger_conversion)
+
+            # Restore Optimize button
+            if hasattr(self, "optimize_3d_button"):
+                try:
+                    self.optimize_3d_button.clicked.disconnect()
+                except Exception:  # pragma: no cover
+                    import traceback
+                    traceback.print_exc()
+                self.optimize_3d_button.setText("Optimize 3D")
+                self.optimize_3d_button.clicked.connect(self.optimize_3d_structure)
+                self.optimize_3d_button.setEnabled(True)
         except Exception:  # pragma: no cover
             import traceback
             traceback.print_exc()
@@ -1224,13 +1232,9 @@ class MainWindowCompute(object):
                                 traceback.print_exc()
                 finally:
                     try:
-                        delattr(self, "_calculating_text_actor")
+                        del self._calculating_text_actor
                     except Exception:
-                        try:
-                            del self._calculating_text_actor
-                        except Exception:  # pragma: no cover
-                            import traceback
-                            traceback.print_exc()
+                        pass
         except Exception:  # pragma: no cover
             import traceback
             traceback.print_exc()
@@ -1260,7 +1264,10 @@ class MainWindowCompute(object):
             import traceback
             traceback.print_exc()
 
-        self.statusBar().showMessage(f"Error: {error_message}")
+        if error_message == "Halted":
+            self.statusBar().showMessage("Halted")
+        else:
+            self.statusBar().showMessage(f"Error: {error_message}")
 
         try:
             self.cleanup_button.setEnabled(True)
@@ -1269,7 +1276,7 @@ class MainWindowCompute(object):
             traceback.print_exc()
 
         try:
-            # Restore Convert button text/handler
+            # Restore button texts/handlers
             try:
                 self.convert_button.clicked.disconnect()
             except Exception:  # pragma: no cover
@@ -1278,6 +1285,16 @@ class MainWindowCompute(object):
             self.convert_button.setText("Convert 2D to 3D")
             self.convert_button.clicked.connect(self.trigger_conversion)
             self.convert_button.setEnabled(True)
+
+            if hasattr(self, "optimize_3d_button"):
+                try:
+                    self.optimize_3d_button.clicked.disconnect()
+                except Exception:  # pragma: no cover
+                    import traceback
+                    traceback.print_exc()
+                self.optimize_3d_button.setText("Optimize 3D")
+                self.optimize_3d_button.clicked.connect(self.optimize_3d_structure)
+                self.optimize_3d_button.setEnabled(True)
         except Exception:  # pragma: no cover
             import traceback
             traceback.print_exc()

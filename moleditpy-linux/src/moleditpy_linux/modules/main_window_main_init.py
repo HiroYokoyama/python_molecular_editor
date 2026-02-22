@@ -1385,7 +1385,7 @@ class MainWindowMainInit(object):
                 traceback.print_exc()
 
         conv_options = [
-            ("RDKit -> Open Babel (fallback)", "fallback"),
+            ("Fallback", "fallback"),
             ("RDKit only", "rdkit"),
             ("Open Babel only", "obabel"),
             ("Direct (use 2D coords + add H)", "direct"),
@@ -1394,21 +1394,20 @@ class MainWindowMainInit(object):
         for label, key in conv_options:
             a = QAction(label, self)
             a.setCheckable(True)
-            # If Open Babel isn't available, disable the Open Babel-only option
-            # and also disable the fallback option since it depends on Open Babel.
-            if not OBABEL_AVAILABLE:
-                if key == "obabel" or key == "fallback":
-                    a.setEnabled(False)
+            # If Open Babel isn't available, disable the obabel-only option.
+            # Fallback is always enabled: it falls through to direct conversion.
+            if key == "obabel" and not OBABEL_AVAILABLE:
+                a.setEnabled(False)
             a.triggered.connect(lambda checked, m=key: _set_conv_mode(m))
             conversion_menu.addAction(a)
             conv_group.addAction(a)
             self.conv_actions[key] = a
 
         try:
-            default_mode = "rdkit" if not OBABEL_AVAILABLE else "fallback"
+            default_mode = "fallback"  # always safe: falls through to direct if OBabel unavailable
             saved_conv = self.settings.get("3d_conversion_mode", default_mode)
         except Exception:
-            saved_conv = "rdkit" if not OBABEL_AVAILABLE else "fallback"
+            saved_conv = "fallback"
 
         # If the saved mode is disabled/unavailable, fall back to an enabled option.
         if (
