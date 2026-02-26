@@ -1106,6 +1106,14 @@ class MainWindowEditActions(object):
         finally:
             self.view_2d.setFocus()
 
+    def redraw_molecule_3d(self):
+        """Manually trigger redraw of the 3D molecule."""
+        if hasattr(self, "current_mol") and self.current_mol:
+            self.draw_molecule_3d(self.current_mol)
+            self.statusBar().showMessage("Redraw complete.", 2000)
+        else:
+            self.statusBar().showMessage("No 3D molecule to redraw.")
+
     def resolve_overlapping_groups(self):
         """
         誤差範囲で完全に重なっている原子のグループを検出し、
