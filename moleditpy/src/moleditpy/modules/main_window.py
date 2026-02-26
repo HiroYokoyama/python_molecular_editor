@@ -484,6 +484,10 @@ class MainWindow(QMainWindow):
         # --- MOVED TO main_window_view_3d.py ---
         return self.main_window_view_3d.draw_molecule_3d(mol)
 
+    def redraw_molecule_3d(self):
+        # --- MOVED TO main_window_edit_actions.py ---
+        return self.main_window_edit_actions.redraw_molecule_3d()
+
     def _calculate_double_bond_offset(self, mol, bond, conf):
         # --- MOVED TO main_window_view_3d.py ---
         return self.main_window_view_3d._calculate_double_bond_offset(mol, bond, conf)

@@ -699,13 +699,9 @@ class MainWindowEditActions(object):
     def clear_all(self):
         # 未保存の変更があるかチェック
         if not self.check_unsaved_changes():
-            return  # ユーザーがキャンセルした場合は何もしない
+            return False  # ユーザーがキャンセルした場合は何もしない
 
         self.restore_ui_for_editing()
-
-        # データが存在しない場合は何もしない
-        if not self.data.atoms and self.current_mol is None:
-            return
 
         # 3Dモードをリセット
         if self.measurement_mode:
@@ -766,6 +762,7 @@ class MainWindowEditActions(object):
             self.plugin_manager.invoke_document_reset_handlers()
 
         self.statusBar().showMessage("Cleared all data.")
+        return True
 
     def clear_2d_editor(self, push_to_undo=True):
         self.data = MolecularData()
@@ -1108,6 +1105,14 @@ class MainWindowEditActions(object):
             self.statusBar().showMessage(f"Error during 2D optimization: {e}")
         finally:
             self.view_2d.setFocus()
+
+    def redraw_molecule_3d(self):
+        """Manually trigger redraw of the 3D molecule."""
+        if hasattr(self, "current_mol") and self.current_mol:
+            self.draw_molecule_3d(self.current_mol)
+            self.statusBar().showMessage("Redraw complete.", 2000)
+        else:
+            self.statusBar().showMessage("No 3D molecule to redraw.")
 
     def resolve_overlapping_groups(self):
         """

@@ -1134,6 +1134,10 @@ class MainWindowMainInit(object):
         reset_3d_view_action.setShortcut(QKeySequence("Ctrl+Shift+R"))
         view_menu.addAction(reset_3d_view_action)
 
+        self.redraw_menu_action = QAction("Redraw 3D Molecule", self)
+        self.redraw_menu_action.triggered.connect(self.redraw_molecule_3d)
+        view_menu.addAction(self.redraw_menu_action)
+
         view_menu.addSeparator()
 
         # Panel Layout submenu
