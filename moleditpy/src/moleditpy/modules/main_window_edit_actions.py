@@ -701,6 +701,8 @@ class MainWindowEditActions(object):
         if not self.check_unsaved_changes():
             return False  # ユーザーがキャンセルした場合は何もしない
 
+        self.restore_ui_for_editing()
+
         # 3Dモードをリセット
         if self.measurement_mode:
             self.measurement_action.setChecked(False)
