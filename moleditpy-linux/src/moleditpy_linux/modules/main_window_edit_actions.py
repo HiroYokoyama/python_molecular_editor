@@ -699,13 +699,7 @@ class MainWindowEditActions(object):
     def clear_all(self):
         # 未保存の変更があるかチェック
         if not self.check_unsaved_changes():
-            return  # ユーザーがキャンセルした場合は何もしない
-
-        self.restore_ui_for_editing()
-
-        # データが存在しない場合は何もしない
-        if not self.data.atoms and self.current_mol is None:
-            return
+            return False  # ユーザーがキャンセルした場合は何もしない
 
         # 3Dモードをリセット
         if self.measurement_mode:
@@ -766,6 +760,7 @@ class MainWindowEditActions(object):
             self.plugin_manager.invoke_document_reset_handlers()
 
         self.statusBar().showMessage("Cleared all data.")
+        return True
 
     def clear_2d_editor(self, push_to_undo=True):
         self.data = MolecularData()

@@ -209,6 +209,9 @@ class MainWindowProjectIo(object):
             if not file_path:
                 return
 
+        if not self.clear_all():
+            return
+
         try:
             with open(file_path, "rb") as f:
                 loaded_data = pickle.load(f)
@@ -307,6 +310,9 @@ class MainWindowProjectIo(object):
             if not file_path:
                 return
 
+        if not self.clear_all():
+            return
+
         try:
             with open(file_path, "r", encoding="utf-8") as f:
                 json_data = json.load(f)
@@ -357,8 +363,7 @@ class MainWindowProjectIo(object):
         # Previously this function opened .pmeprj/.pmeraw without prompting the
         # user to save current unsaved work. Ensure we honor the global
         # unsaved-change check like other loaders (SMILES/MOL/etc.).
-        if not self.check_unsaved_changes():
-            return
+        # No longer needed here as loaders call clear_all() which does the check
         if not file_path:  # pragma: no cover
             file_path, _ = QFileDialog.getOpenFileName(
                 self,
