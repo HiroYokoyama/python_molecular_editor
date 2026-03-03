@@ -1453,11 +1453,15 @@ class MainWindowMainInit(object):
         # 3) 3D Optimization Settings (single location under Settings menu)
         optimization_menu = settings_menu.addMenu("3D Optimization Settings")
 
-        # Only RDKit-backed optimization methods are offered here.
+        # Optimization methods offered here (RDKit and OpenBabel).
         opt_methods = [
-            ("MMFF94s", "MMFF_RDKIT"),
-            ("MMFF94", "MMFF94_RDKIT"),
-            ("UFF", "UFF_RDKIT"),
+            ("MMFF94s (RDKit)", "MMFF_RDKIT"),
+            ("MMFF94 (RDKit)", "MMFF94_RDKIT"),
+            ("UFF (RDKit)", "UFF_RDKIT"),
+            ("UFF (Open Babel)", "UFF_OBABEL"),
+            ("GAFF (Open Babel)", "GAFF_OBABEL"),
+            ("MMFF94 (Open Babel)", "MMFF94_OBABEL"),
+            ("Ghemical (Open Babel)", "GHEMICAL_OBABEL"),
         ]
 
         # Map key -> human-readable label for status messages and later lookups

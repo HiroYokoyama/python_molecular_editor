@@ -208,6 +208,58 @@ def _iterative_optimize(mol, method, check_halted_cb, safe_status_cb, max_iters=
         return False
 
 
+def _iterative_optimize_obabel(mol, method, check_halted_cb, safe_status_cb, max_iters=4000, chunk_size=100):
+    """Perform force field optimization using OpenBabel in chunks to avoid UI freezing."""
+    try:
+        if not OBABEL_AVAILABLE or pybel is None:
+            safe_status_cb("OpenBabel is not available.")
+            return False
+            
+        ff_name = method.lower()
+        
+        # Convert RDKit mol to OpenBabel pybel mol
+        mol_block = Chem.MolToMolBlock(mol)
+        ob_mol = pybel.readstring("mol", mol_block)
+        
+        # Set up forcefield
+        ff = pybel.ob.OBForceField.FindForceField(ff_name)
+        if not ff:
+            safe_status_cb(f"Forcefield '{ff_name}' not found in OpenBabel.")
+            return False
+            
+        if not ff.Setup(ob_mol.OBMol):
+            safe_status_cb(f"Failed to setup forcefield '{ff_name}' in OpenBabel.")
+            return False
+            
+        ff.SteepestDescent(100) # Initial stabilization
+        
+        iters_done = 0
+        while iters_done < max_iters:
+            if check_halted_cb():
+                raise WorkerHaltError("Halted")
+            
+            ff.ConjugateGradients(chunk_size)
+            iters_done += chunk_size
+            
+            import time
+            time.sleep(0.001)
+            
+        ff.GetCoordinates(ob_mol.OBMol)
+        
+        # Copy coordinates back to RDKit mol
+        conf = mol.GetConformer()
+        for i in range(mol.GetNumAtoms()):
+            atom = ob_mol.OBMol.GetAtom(i + 1)
+            conf.SetAtomPosition(i, [atom.GetX(), atom.GetY(), atom.GetZ()])
+            
+        return True
+    except WorkerHaltError:
+        raise
+    except Exception as e:
+        safe_status_cb(f"Iterative optimization ({method}) error (OpenBabel): {e}")
+        return False
+
+
 class CalculationWorker(QObject):
     status_update = pyqtSignal(str)
     finished = pyqtSignal(object)
@@ -409,17 +461,30 @@ class CalculationWorker(QObject):
             # Support for optimize_only mode
             if conversion_mode == "optimize_only":
                 _safe_status("Optimizing existing 3D structure...")
-                opt_method = str(options.get("optimization_method", "MMFF94s")).upper()
-                if "MMFF" in opt_method:
-                    method_key = "MMFF94" if "MMFF94" in opt_method and "MMFF94S" not in opt_method else "MMFF94s"
-                    if not _iterative_optimize(mol, method_key, _check_halted, _safe_status):
-                        _safe_status(f"{method_key} failed, falling back to UFF...")
-                        _iterative_optimize(mol, "UFF", _check_halted, _safe_status)
+                opt_method = str(options.get("optimization_method", "MMFF_RDKIT")).upper()
+                
+                # Determine backend and actual method
+                backend = "OBABEL" if "OBABEL" in opt_method else "RDKIT"
+                
+                # Default to MMFF94s
+                method_key = "MMFF94s"
+                if "MMFF94" in opt_method:
+                    method_key = "MMFF94" if "MMFF94S" not in opt_method else "MMFF94s"
                 elif "UFF" in opt_method:
-                    _iterative_optimize(mol, "UFF", _check_halted, _safe_status)
+                    method_key = "UFF"
+                elif "GAFF" in opt_method:
+                    method_key = "GAFF"
+                elif "GHEMICAL" in opt_method:
+                    method_key = "GHEMICAL"
+
+                if backend == "OBABEL":
+                    opt_success = _iterative_optimize_obabel(mol, method_key, _check_halted, _safe_status)
                 else:
-                    if not _iterative_optimize(mol, "MMFF94s", _check_halted, _safe_status):
-                        _iterative_optimize(mol, "UFF", _check_halted, _safe_status)
+                    opt_success = _iterative_optimize(mol, method_key, _check_halted, _safe_status)
+                
+                if not opt_success:
+                    raise Exception(f"Optimization with {opt_method} failed. You can change the method in the settings.")
+                
                 if _check_halted():
                     raise WorkerHaltError("Halted")
                 try:
@@ -828,13 +893,43 @@ class CalculationWorker(QObject):
                         _safe_status("Direct conversion: optimizing geometry...")
                         if _check_halted():
                             raise WorkerHaltError("Halted")
-                        mmff_method = "MMFF94s"
-                        if options and str(options.get("optimization_method", "")).upper() == "MMFF94_RDKIT":
-                            mmff_method = "MMFF94"
-                        if not _iterative_optimize(mol, mmff_method, _check_halted, _safe_status):
-                            if _check_halted():
-                                raise WorkerHaltError("Halted")
-                            _iterative_optimize(mol, "UFF", _check_halted, _safe_status)
+
+                        # Determine backend and actual method
+                        opt_method = options.get("optimization_method", "MMFF94s_RDKIT") if options else "MMFF94s_RDKIT"
+                        backend = "OBABEL" if "OBABEL" in opt_method.upper() else "RDKIT"
+                        
+                        # Default to MMFF94s
+                        method_key = "MMFF94s"
+                        if "MMFF94" in opt_method.upper():
+                            method_key = "MMFF94" if "MMFF94S" not in opt_method.upper() else "MMFF94s"
+                        elif "UFF" in opt_method.upper():
+                            method_key = "UFF"
+                        elif "GAFF" in opt_method.upper():
+                            method_key = "GAFF"
+                        elif "GHEMICAL" in opt_method.upper():
+                            method_key = "GHEMICAL"
+
+                        # Apply Force Field Optimization
+                        if backend == "OBABEL":
+                            try:
+                                # Add property for UI feedback
+                                mol.SetProp("_pme_optimization_method", opt_method)
+                            except Exception:
+                                pass
+                            _safe_status(f"Applying force field optimization ({method_key} / OpenBabel)...")
+                            opt_success = _iterative_optimize_obabel(mol, method_key, _check_halted, _safe_status)
+                            if not opt_success:
+                                raise Exception(f"Optimization with {opt_method} failed. You can change the method in the settings.")
+                        else: # RDKit backend
+                            try:
+                                # Add property for UI feedback
+                                mol.SetProp("_pme_optimization_method", opt_method)
+                            except Exception:
+                                pass
+                            _safe_status(f"Applying force field optimization ({method_key} / RDKit)...")
+                            opt_success = _iterative_optimize(mol, method_key, _check_halted, _safe_status)
+                            if not opt_success:
+                                raise Exception(f"Optimization with {opt_method} failed. You can change the method in the settings.")
 
                     if _check_halted():
                         raise WorkerHaltError("Halted")
@@ -1011,17 +1106,42 @@ class CalculationWorker(QObject):
                     bond.SetStereo(stereo)
 
                 try:
-                    mmff_method = "MMFF94s"
-                    if opt_method and str(opt_method).upper() == "MMFF94_RDKIT":
-                        mmff_method = "MMFF94"
-                    if not _iterative_optimize(mol, mmff_method, _check_halted, _safe_status):
-                        if _check_halted():
-                            raise WorkerHaltError("Halted")
-                        _iterative_optimize(mol, "UFF", _check_halted, _safe_status)
+                    opt_method_raw = opt_method or "MMFF94s_RDKIT"
+                    backend = "OBABEL" if "OBABEL" in opt_method_raw.upper() else "RDKIT"
+                    
+                    method_key = "MMFF94s"
+                    if "MMFF94" in opt_method_raw.upper():
+                        method_key = "MMFF94" if "MMFF94S" not in opt_method_raw.upper() else "MMFF94s"
+                    elif "UFF" in opt_method_raw.upper():
+                        method_key = "UFF"
+                    elif "GAFF" in opt_method_raw.upper():
+                        method_key = "GAFF"
+                    elif "GHEMICAL" in opt_method_raw.upper():
+                        method_key = "GHEMICAL"
+
+                    if backend == "OBABEL":
+                        try:
+                            mol.SetProp("_pme_optimization_method", opt_method_raw)
+                        except Exception:
+                            pass
+                        _safe_status(f"Optimizing with OpenBabel ({method_key})...")
+                        opt_success = _iterative_optimize_obabel(mol, method_key, _check_halted, _safe_status)
+                    else:
+                        try:
+                            mol.SetProp("_pme_optimization_method", opt_method_raw)
+                        except Exception:
+                            pass
+                        _safe_status(f"Optimizing with RDKit ({method_key})...")
+                        opt_success = _iterative_optimize(mol, method_key, _check_halted, _safe_status)
+
+                    if not opt_success:
+                        raise Exception(f"Optimization with {opt_method_raw} failed. You can change the method in the settings.")
                 except WorkerHaltError:
                     raise
                 except Exception as opt_err:
-                    _safe_status(f"RDKit optimization failed (ignoring): {opt_err}")
+                    _safe_status(f"Optimization failed: {opt_err}")
+                    raise
+                
                 # CRITICAL: Restore stereochemistry again after optimization (explicit labels priority)
                 for bond_idx, stereo, stereo_atoms in original_stereo_info:
                     bond = mol.GetBondWithIdx(bond_idx)
@@ -1062,39 +1182,50 @@ class CalculationWorker(QObject):
                         import traceback
                         traceback.print_exc()
                     ob_mol.make3D()
-                    try:
-                        _safe_status("Optimizing with Open Babel (MMFF94)...")
-                        if _check_halted():
-                            raise WorkerHaltError("Halted")
-                        ob_mol.localopt(forcefield="mmff94", steps=500)
-                    except Exception:
-                        try:
-                            _safe_status("MMFF94 failed, falling back to UFF...")
-                            if _check_halted():
-                                raise WorkerHaltError("Halted")
-                            ob_mol.localopt(forcefield="uff", steps=500)
-                        except Exception:
-                            _safe_status("UFF optimization also failed.")
+                    # Skip OpenBabel's redundant manual localopt here.
+                    # We will optimize rd_mol immediately after conversion using the selected user method.
                     molblock_ob = ob_mol.write("mol")
                     rd_mol = Chem.MolFromMolBlock(molblock_ob, removeHs=False)
                     if rd_mol is None:
                         raise ValueError("Open Babel produced invalid MOL block.")
                     rd_mol = Chem.AddHs(rd_mol)
                     try:
-                        mmff_method = "MMFF94s"
-                        if opt_method and str(opt_method).upper() == "MMFF94_RDKIT":
-                            mmff_method = "MMFF94"
-                        if _check_halted():
-                            raise WorkerHaltError("Halted")
-                        if not _iterative_optimize(rd_mol, mmff_method, _check_halted, _safe_status):
-                            if _check_halted():
-                                raise WorkerHaltError("Halted")
-                            _iterative_optimize(rd_mol, "UFF", _check_halted, _safe_status)
+                        opt_method_raw = opt_method or "MMFF94s_RDKIT"
+                        backend = "OBABEL" if "OBABEL" in opt_method_raw.upper() else "RDKIT"
+                        
+                        method_key = "MMFF94s"
+                        if "MMFF94" in opt_method_raw.upper():
+                            method_key = "MMFF94" if "MMFF94S" not in opt_method_raw.upper() else "MMFF94s"
+                        elif "UFF" in opt_method_raw.upper():
+                            method_key = "UFF"
+                        elif "GAFF" in opt_method_raw.upper():
+                            method_key = "GAFF"
+                        elif "GHEMICAL" in opt_method_raw.upper():
+                            method_key = "GHEMICAL"
+
+                        if backend == "OBABEL":
+                            try:
+                                rd_mol.SetProp("_pme_optimization_method", opt_method_raw)
+                            except Exception:
+                                pass
+                            _safe_status(f"Optimizing with OpenBabel ({method_key})...")
+                            opt_success = _iterative_optimize_obabel(rd_mol, method_key, _check_halted, _safe_status)
+                        else:
+                            try:
+                                rd_mol.SetProp("_pme_optimization_method", opt_method_raw)
+                            except Exception:
+                                pass
+                            _safe_status(f"Optimizing with RDKit ({method_key})...")
+                            opt_success = _iterative_optimize(rd_mol, method_key, _check_halted, _safe_status)
+
+                        if not opt_success:
+                            raise Exception(f"Optimization with {opt_method_raw} failed. You can change the method in the settings.")
                     except WorkerHaltError:
                         raise
-                    except Exception:  # pragma: no cover
-                        import traceback
-                        traceback.print_exc()
+                    except Exception as opt_err:
+                        _safe_status(f"Optimization failed: {opt_err}")
+                        raise
+
                     _safe_status(
                         "Open Babel embedding succeeded. Warning: Conformation accuracy may be limited."
                     )
