@@ -20,6 +20,7 @@ from PyQt6.QtWidgets import (
     QMessageBox,
     QPushButton,
     QRadioButton,
+    QSlider,
     QVBoxLayout,
     QWidget,
 )
@@ -70,8 +71,23 @@ class BondLengthDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
         distance_layout.addWidget(QLabel("New distance (Å):"))
         self.distance_input = QLineEdit()
         self.distance_input.setPlaceholderText("1.54")
+        self.distance_input.textChanged.connect(self.on_distance_input_changed)
         distance_layout.addWidget(self.distance_input)
+
+        self.distance_slider = QSlider(Qt.Orientation.Horizontal)
+        self.distance_slider.setMinimum(10)   # 0.1 A
+        self.distance_slider.setMaximum(1000) # 10.0 A
+        self.distance_slider.setValue(154)    # 1.54 A
+        self.distance_slider.setTickPosition(QSlider.TickPosition.TicksBelow)
+        self.distance_slider.setTickInterval(100)
+        self.distance_slider.setEnabled(False)
+        self.distance_slider.sliderPressed.connect(self.on_slider_pressed)
+        self.distance_slider.sliderMoved.connect(self.on_slider_moved)
+        self.distance_slider.sliderReleased.connect(self.on_slider_released)
+        self.distance_slider.valueChanged.connect(self.on_slider_value_changed)
+        self._slider_dragging = False
         layout.addLayout(distance_layout)
+        layout.addWidget(self.distance_slider)
 
         # Movement options
         group_box = QWidget()
@@ -191,7 +207,13 @@ class BondLengthDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
             self.apply_button.setEnabled(False)
             # Clear distance input when no selection
             try:
+                self.distance_input.blockSignals(True)
                 self.distance_input.clear()
+                self.distance_input.blockSignals(False)
+                self.distance_slider.blockSignals(True)
+                self.distance_slider.setValue(154)
+                self.distance_slider.setEnabled(False)
+                self.distance_slider.blockSignals(False)
             except Exception:  # pragma: no cover
                 import traceback
                 traceback.print_exc()
@@ -207,7 +229,13 @@ class BondLengthDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
             self.add_selection_label(self.atom1_idx, "1")
             # Clear distance input while selection is incomplete
             try:
+                self.distance_input.blockSignals(True)
                 self.distance_input.clear()
+                self.distance_input.blockSignals(False)
+                self.distance_slider.blockSignals(True)
+                self.distance_slider.setValue(154)
+                self.distance_slider.setEnabled(False)
+                self.distance_slider.blockSignals(False)
             except Exception:  # pragma: no cover
                 import traceback
                 traceback.print_exc()
@@ -227,7 +255,15 @@ class BondLengthDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
             self.apply_button.setEnabled(True)
             # Update the distance input box to show current distance
             try:
+                self.distance_input.blockSignals(True)
                 self.distance_input.setText(f"{current_distance:.3f}")
+                self.distance_input.blockSignals(False)
+                self.distance_slider.blockSignals(True)
+                slider_val = int(current_distance * 100)
+                slider_val = max(10, min(1000, slider_val))
+                self.distance_slider.setValue(slider_val)
+                self.distance_slider.setEnabled(True)
+                self.distance_slider.blockSignals(False)
             except Exception:  # pragma: no cover
                 import traceback
                 traceback.print_exc()
@@ -235,6 +271,58 @@ class BondLengthDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
             # ラベル追加
             self.add_selection_label(self.atom1_idx, "1")
             self.add_selection_label(self.atom2_idx, "2")
+
+    def on_distance_input_changed(self, text):
+        """Line edit text changed, update slider."""
+        if not self.distance_input.isEnabled() or not self.apply_button.isEnabled():
+            return
+        try:
+            val = float(text)
+            if 0.1 <= val <= 10.0:
+                self.distance_slider.blockSignals(True)
+                self.distance_slider.setValue(int(val * 100))
+                self.distance_slider.blockSignals(False)
+        except ValueError:
+            pass
+
+    def on_slider_pressed(self):
+        """Remember the state before slider dragging starts."""
+        if self.atom1_idx is None or self.atom2_idx is None:
+            return
+        self._slider_dragging = True
+        self.main_window.push_undo_state()
+
+    def on_slider_moved(self, value):
+        """Update geometry in real-time while dragging."""
+        if self.atom1_idx is None or self.atom2_idx is None:
+            return
+        
+        new_distance = value / 100.0
+        self.distance_input.blockSignals(True)
+        self.distance_input.setText(f"{new_distance:.3f}")
+        self.distance_input.blockSignals(False)
+        
+        self.adjust_bond_length(new_distance)
+
+    def on_slider_released(self):
+        """Finalize slider dragging."""
+        self._slider_dragging = False
+        self.main_window.draw_molecule_3d(self.mol)
+        self.main_window.update_chiral_labels()
+
+    def on_slider_value_changed(self, value):
+        """Handle click-to-position on the slider track."""
+        if self._slider_dragging:
+            return  # Already handled by on_slider_moved
+        if self.atom1_idx is None or self.atom2_idx is None:
+            return
+        self.main_window.push_undo_state()
+        new_distance = value / 100.0
+        self.distance_input.blockSignals(True)
+        self.distance_input.setText(f"{new_distance:.3f}")
+        self.distance_input.blockSignals(False)
+        self.adjust_bond_length(new_distance)
+        self.main_window.update_chiral_labels()
 
     def apply_changes(self):
         """変更を適用"""
@@ -330,3 +418,11 @@ class BondLengthDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
 
         # Update the 3D view
         self.main_window.draw_molecule_3d(self.mol)
+
+    def reject(self):
+        super().reject()
+        try:
+            if self.main_window.current_mol:
+                self.main_window.draw_molecule_3d(self.main_window.current_mol)
+        except Exception:
+            pass

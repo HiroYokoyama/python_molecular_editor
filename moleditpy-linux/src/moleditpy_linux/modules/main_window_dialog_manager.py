@@ -462,3 +462,5 @@ class MainWindowDialogManager(object):
         self.active_3d_dialogs.append(dialog)
         dialog.show()
         dialog.finished.connect(lambda: self.remove_dialog_from_list(dialog))
+
+

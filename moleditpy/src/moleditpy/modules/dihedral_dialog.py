@@ -17,6 +17,7 @@ from PyQt6.QtWidgets import (
     QLineEdit,
     QPushButton,
     QRadioButton,
+    QSlider,
     QVBoxLayout,
     QWidget,
 )
@@ -78,8 +79,23 @@ class DihedralDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
         dihedral_layout.addWidget(QLabel("New dihedral angle (degrees):"))
         self.dihedral_input = QLineEdit()
         self.dihedral_input.setPlaceholderText("180.0")
+        self.dihedral_input.textChanged.connect(self.on_dihedral_input_changed)
         dihedral_layout.addWidget(self.dihedral_input)
+
+        self.dihedral_slider = QSlider(Qt.Orientation.Horizontal)
+        self.dihedral_slider.setMinimum(-180)
+        self.dihedral_slider.setMaximum(180)
+        self.dihedral_slider.setValue(180)
+        self.dihedral_slider.setTickPosition(QSlider.TickPosition.TicksBelow)
+        self.dihedral_slider.setTickInterval(45)
+        self.dihedral_slider.setEnabled(False)
+        self.dihedral_slider.sliderPressed.connect(self.on_slider_pressed)
+        self.dihedral_slider.sliderMoved.connect(self.on_slider_moved)
+        self.dihedral_slider.sliderReleased.connect(self.on_slider_released)
+        self.dihedral_slider.valueChanged.connect(self.on_slider_value_changed)
+        self._slider_dragging = False
         layout.addLayout(dihedral_layout)
+        layout.addWidget(self.dihedral_slider)
 
         # Movement options
         group_box = QWidget()
@@ -214,7 +230,13 @@ class DihedralDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
             self.apply_button.setEnabled(False)
             # Clear dihedral input when no selection
             try:
+                self.dihedral_input.blockSignals(True)
                 self.dihedral_input.clear()
+                self.dihedral_input.blockSignals(False)
+                self.dihedral_slider.blockSignals(True)
+                self.dihedral_slider.setValue(180)
+                self.dihedral_slider.setEnabled(False)
+                self.dihedral_slider.blockSignals(False)
             except Exception:  # pragma: no cover
                 import traceback
                 traceback.print_exc()
@@ -240,7 +262,13 @@ class DihedralDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
             self.apply_button.setEnabled(False)
             # Clear dihedral input while selection is incomplete
             try:
+                self.dihedral_input.blockSignals(True)
                 self.dihedral_input.clear()
+                self.dihedral_input.blockSignals(False)
+                self.dihedral_slider.blockSignals(True)
+                self.dihedral_slider.setValue(180)
+                self.dihedral_slider.setEnabled(False)
+                self.dihedral_slider.blockSignals(False)
             except Exception:  # pragma: no cover
                 import traceback
                 traceback.print_exc()
@@ -271,10 +299,68 @@ class DihedralDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
             self.apply_button.setEnabled(True)
             # Update dihedral input box with current dihedral
             try:
+                self.dihedral_input.blockSignals(True)
                 self.dihedral_input.setText(f"{current_dihedral:.2f}")
+                self.dihedral_input.blockSignals(False)
+                self.dihedral_slider.blockSignals(True)
+                slider_val = int(round(current_dihedral))
+                slider_val = max(-180, min(180, slider_val))
+                self.dihedral_slider.setValue(slider_val)
+                self.dihedral_slider.setEnabled(True)
+                self.dihedral_slider.blockSignals(False)
             except Exception:  # pragma: no cover
                 import traceback
                 traceback.print_exc()
+
+    def on_dihedral_input_changed(self, text):
+        """Line edit text changed, update slider."""
+        if not self.dihedral_input.isEnabled() or not self.apply_button.isEnabled():
+            return
+        try:
+            val = float(text)
+            wrapped_val = (val + 180) % 360 - 180
+            self.dihedral_slider.blockSignals(True)
+            self.dihedral_slider.setValue(int(round(wrapped_val)))
+            self.dihedral_slider.blockSignals(False)
+        except ValueError:
+            pass
+
+    def on_slider_pressed(self):
+        """Remember the state before slider dragging starts."""
+        if any(idx is None for idx in [self.atom1_idx, self.atom2_idx, self.atom3_idx, self.atom4_idx]):
+            return
+        self._slider_dragging = True
+        self.main_window.push_undo_state()
+
+    def on_slider_moved(self, value):
+        """Update geometry in real-time while dragging."""
+        if any(idx is None for idx in [self.atom1_idx, self.atom2_idx, self.atom3_idx, self.atom4_idx]):
+            return
+        
+        self.dihedral_input.blockSignals(True)
+        self.dihedral_input.setText(f"{value}")
+        self.dihedral_input.blockSignals(False)
+        
+        self.adjust_dihedral(float(value))
+
+    def on_slider_released(self):
+        """Finalize slider dragging."""
+        self._slider_dragging = False
+        self.main_window.draw_molecule_3d(self.mol)
+        self.main_window.update_chiral_labels()
+
+    def on_slider_value_changed(self, value):
+        """Handle click-to-position on the slider track."""
+        if self._slider_dragging:
+            return
+        if any(idx is None for idx in [self.atom1_idx, self.atom2_idx, self.atom3_idx, self.atom4_idx]):
+            return
+        self.main_window.push_undo_state()
+        self.dihedral_input.blockSignals(True)
+        self.dihedral_input.setText(f"{value}")
+        self.dihedral_input.blockSignals(False)
+        self.adjust_dihedral(float(value))
+        self.main_window.update_chiral_labels()
 
     def apply_changes(self):
         """変更を適用"""
@@ -285,14 +371,14 @@ class DihedralDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
             return
 
         try:
-            new_dihedral = float(self.dihedral_input.text())
-            if new_dihedral < -180 or new_dihedral > 180:
-                QMessageBox.warning(
-                    self,
-                    "Invalid Input",
-                    "Dihedral angle must be between -180 and 180 degrees.",
-                )
-                return
+            raw_dihedral = float(self.dihedral_input.text())
+            # Automatic Range Wrapping
+            new_dihedral = (raw_dihedral + 180) % 360 - 180
+            
+            # Formally update the input to reflect wrapping
+            self.dihedral_input.blockSignals(True)
+            self.dihedral_input.setText(f"{new_dihedral:.2f}")
+            self.dihedral_input.blockSignals(False)
         except ValueError:
             QMessageBox.warning(self, "Invalid Input", "Please enter a valid number.")
             return
@@ -423,3 +509,11 @@ class DihedralDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
 
         # Update the 3D view
         self.main_window.draw_molecule_3d(self.mol)
+
+    def reject(self):
+        super().reject()
+        try:
+            if self.main_window.current_mol:
+                self.main_window.draw_molecule_3d(self.main_window.current_mol)
+        except Exception:
+            pass

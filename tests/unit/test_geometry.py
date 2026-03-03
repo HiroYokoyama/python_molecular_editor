@@ -148,3 +148,99 @@ def test_planarize_logic(qtbot):
     assert main_window.draw_molecule_3d.called
     assert main_window.update_chiral_labels.called
     assert main_window.push_undo_state.called
+
+
+# ------------------------------------------------------------------
+# rodrigues_rotate & adjust_bond_angle tests
+# ------------------------------------------------------------------
+from moleditpy.modules.mol_geometry import adjust_bond_angle, rodrigues_rotate
+
+
+def test_rodrigues_rotate_90_deg():
+    """Rotate [1,0,0] by 90° around [0,0,1] → expect [0,1,0]."""
+    v = np.array([1.0, 0.0, 0.0])
+    axis = np.array([0.0, 0.0, 1.0])
+    result = rodrigues_rotate(v, axis, np.pi / 2)
+    np.testing.assert_allclose(result, [0.0, 1.0, 0.0], atol=1e-12)
+
+
+def test_rodrigues_rotate_identity():
+    """Rotate by 0° → vector unchanged."""
+    v = np.array([3.0, -1.0, 2.0])
+    axis = np.array([0.0, 1.0, 0.0])
+    result = rodrigues_rotate(v, axis, 0.0)
+    np.testing.assert_allclose(result, v, atol=1e-12)
+
+
+def test_adjust_bond_angle_simple():
+    """Set a 90° angle to 120° and verify."""
+    # A at (1,0,0), B at origin, C at (0,1,0) → 90°
+    positions = np.array([
+        [1.0, 0.0, 0.0],  # A (idx 0)
+        [0.0, 0.0, 0.0],  # B (idx 1)
+        [0.0, 1.0, 0.0],  # C (idx 2)
+    ])
+    target = 120.0
+    adjust_bond_angle(positions, 0, 1, 2, target, {2})
+
+    # Verify resulting angle
+    ba = positions[0] - positions[1]
+    bc = positions[2] - positions[1]
+    cos_a = np.dot(ba, bc) / (np.linalg.norm(ba) * np.linalg.norm(bc))
+    angle_deg = np.degrees(np.arccos(np.clip(cos_a, -1, 1)))
+    assert angle_deg == pytest.approx(target, abs=1e-8)
+
+    # B should not have moved
+    np.testing.assert_allclose(positions[1], [0, 0, 0], atol=1e-12)
+
+    # Bond length of C from B should be preserved (was 1.0)
+    assert np.linalg.norm(positions[2] - positions[1]) == pytest.approx(1.0, abs=1e-12)
+
+
+def test_adjust_bond_angle_with_group():
+    """Move multiple atoms; verify relative geometry is preserved."""
+    # A(0), B(1) at origin, C(2), D(3) attached to C
+    positions = np.array([
+        [1.0, 0.0, 0.0],   # A
+        [0.0, 0.0, 0.0],   # B (vertex)
+        [0.0, 1.0, 0.0],   # C
+        [0.0, 2.0, 0.0],   # D (attached to C)
+    ])
+    cd_before = np.linalg.norm(positions[3] - positions[2])
+
+    adjust_bond_angle(positions, 0, 1, 2, 60.0, {2, 3})
+
+    # Angle should be 60°
+    ba = positions[0] - positions[1]
+    bc = positions[2] - positions[1]
+    cos_a = np.dot(ba, bc) / (np.linalg.norm(ba) * np.linalg.norm(bc))
+    angle_deg = np.degrees(np.arccos(np.clip(cos_a, -1, 1)))
+    assert angle_deg == pytest.approx(60.0, abs=1e-8)
+
+    # C-D distance should be preserved
+    cd_after = np.linalg.norm(positions[3] - positions[2])
+    assert cd_after == pytest.approx(cd_before, abs=1e-12)
+
+
+def test_adjust_bond_angle_collinear():
+    """Collinear atoms → fallback axis is used, rotation still succeeds."""
+    positions = np.array([
+        [2.0, 0.0, 0.0],  # A
+        [0.0, 0.0, 0.0],  # B
+        [-1.0, 0.0, 0.0], # C  (collinear with A-B, angle = 180°)
+    ])
+    target = 90.0
+    delta = adjust_bond_angle(positions, 0, 1, 2, target, {2})
+
+    # Should have rotated (non-zero delta)
+    assert delta != 0.0
+
+    # Verify resulting angle is 90°
+    ba = positions[0] - positions[1]
+    bc = positions[2] - positions[1]
+    cos_a = np.dot(ba, bc) / (np.linalg.norm(ba) * np.linalg.norm(bc))
+    angle_deg = np.degrees(np.arccos(np.clip(cos_a, -1, 1)))
+    assert angle_deg == pytest.approx(target, abs=1e-8)
+
+    # Bond length of C from B should be preserved (was 1.0)
+    assert np.linalg.norm(positions[2] - positions[1]) == pytest.approx(1.0, abs=1e-12)

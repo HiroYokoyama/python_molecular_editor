@@ -21,7 +21,7 @@ from PyQt6.QtCore import QThread, QTimer
 from PyQt6.QtGui import QAction, QColor
 
 # PyQt6 Modules
-from PyQt6.QtWidgets import QApplication, QMenu
+from PyQt6.QtWidgets import QApplication, QMenu, QMessageBox
 from rdkit import Chem
 from rdkit.Chem import AllChem
 
@@ -163,9 +163,13 @@ class MainWindowCompute(object):
         try:
             menu = QMenu(self)
             opt_list = [
-                ("MMFF94s", "MMFF_RDKIT"),
-                ("MMFF94", "MMFF94_RDKIT"),
-                ("UFF", "UFF_RDKIT"),
+                ("MMFF94s (RDKit)", "MMFF_RDKIT"),
+                ("MMFF94 (RDKit)", "MMFF94_RDKIT"),
+                ("UFF (RDKit)", "UFF_RDKIT"),
+                ("MMFF94 (Open Babel)", "MMFF94_OBABEL"),
+                ("UFF (Open Babel)", "UFF_OBABEL"),
+                ("GAFF (Open Babel)", "GAFF_OBABEL"),
+                ("Ghemical (Open Babel)", "GHEMICAL_OBABEL"),
             ]
             for label, key in opt_list:
                 a = QAction(label, self)
@@ -782,8 +786,8 @@ class MainWindowCompute(object):
                     )
                     return
 
-            # For RDKit methods, use CalculationWorker to avoid UI freeze and allow Halt
-            if method in ("MMFF_RDKIT", "MMFF94_RDKIT", "UFF_RDKIT"):
+            # For RDKit and OBabel methods, use CalculationWorker to avoid UI freeze and allow Halt
+            if "_RDKIT" in method or "_OBABEL" in method:
                 self.statusBar().showMessage(f"Optimizing 3D structure ({method})...")
                 
                 # Use current_mol as the source MOL block for optimization
@@ -1020,17 +1024,14 @@ class MainWindowCompute(object):
                 traceback.print_exc()
             if not opt_method:
                 opt_method = getattr(self, "optimization_method", None)
-            # normalize common forms
+            # Store the optimization method using its user-friendly UI label if available.
             if opt_method:
-                om = str(opt_method).upper()
-                if "MMFF94S" in om or "MMFF_RDKIT" in om:
-                    self.last_successful_optimization_method = "MMFF94s"
-                elif "MMFF94" in om:
-                    self.last_successful_optimization_method = "MMFF94"
-                elif "UFF" in om:
-                    self.last_successful_optimization_method = "UFF"
-                else:
-                    # store raw value otherwise
+                try:
+                    # Look up the UI label (e.g. "MMFF94s (RDKit)") from the internal ID (e.g. "MMFF_RDKIT")
+                    method_key = str(opt_method).upper()
+                    label = self.opt3d_method_labels.get(method_key, opt_method)
+                    self.last_successful_optimization_method = label
+                except Exception:
                     self.last_successful_optimization_method = opt_method
         except Exception:
             # non-fatal
@@ -1118,7 +1119,10 @@ class MainWindowCompute(object):
             import traceback
             traceback.print_exc()
 
-        # self.statusBar().showMessage("3D conversion successful.")
+        if self.last_successful_optimization_method:
+            self.statusBar().showMessage(f"3D calculation ({self.last_successful_optimization_method}) successful.")
+        else:
+            self.statusBar().showMessage("3D calculation successful.")
         self.convert_button.setEnabled(True)
         # Restore button text/handlers in case they were changed to Halt
         try:
@@ -1199,10 +1203,17 @@ class MainWindowCompute(object):
             return
 
         # Clear temporary plotter content and remove calculating text if present
+        # Only clear the entire plotter if we don't have an existing molecule to fall back to.
         try:
-            self.plotter.clear()
+            if self.current_mol is None:
+                self.plotter.clear()
+            else:
+                # If we have a molecule, just re-render to make sure it's drawn correctly
+                # (in case partial actors were added during 'calculating' phase)
+                self.plotter.render()
         except Exception:  # pragma: no cover
             import traceback
+            traceback.print_exc()
             traceback.print_exc()
 
         # Also attempt to explicitly remove the calculating text actor if it was stored
@@ -1264,6 +1275,28 @@ class MainWindowCompute(object):
             import traceback
             traceback.print_exc()
 
+        # Interactive Fallback to UFF if optimization explicitly failed
+        if "Optimization with" in error_message and "failed" in error_message:
+            try:
+                # Disable cleanup/convert buttons briefly while asking (they get re-enabled later)
+                # Ensure the main window stays responsive by using a modal dialog
+                self.statusBar().showMessage(f"Optimization failed: {error_message}")
+                reply = QMessageBox.question(
+                    self,
+                    "Optimization Failed",
+                    f"{error_message}\n\nRDKit's UFF algorithm is often more robust for unusual elements.\nWould you like to try optimizing with UFF (RDKit) instead?",
+                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                    QMessageBox.StandardButton.Yes,
+                )
+                if reply == QMessageBox.StandardButton.Yes:
+                    self._temp_optimization_method = "UFF_RDKIT"
+                    self.optimize_3d_structure()
+                    # Return immediately so the rest of the error cleanup doesn't disable buttons permanently
+                    return
+            except Exception:
+                import traceback
+                traceback.print_exc()
+
         if error_message == "Halted":
             self.statusBar().showMessage("Halted")
         else:
@@ -1299,51 +1332,70 @@ class MainWindowCompute(object):
             import traceback
             traceback.print_exc()
 
-        # On calculation error we should NOT enable 3D-only features.
-        # Explicitly disable Optimize and Export so the user can't try to operate
-        # on an invalid or missing 3D molecule.
-        try:
-            if hasattr(self, "optimize_3d_button"):
-                self.optimize_3d_button.setEnabled(False)
-        except Exception:  # pragma: no cover
-            import traceback
-            traceback.print_exc()
+        # On calculation error we should NOT enable 3D-only features IF we have no molecule.
+        # However, if we ALREADY had a molecule (e.g. optimization failed but previous 3D was valid),
+        # we should keep them enabled.
+        if self.current_mol is None:
+            try:
+                if hasattr(self, "optimize_3d_button"):
+                    self.optimize_3d_button.setEnabled(False)
+            except Exception:  # pragma: no cover
+                import traceback
+                traceback.print_exc()
 
-        try:
-            if hasattr(self, "export_button"):
-                self.export_button.setEnabled(False)
-        except Exception:  # pragma: no cover
-            import traceback
-            traceback.print_exc()
+            try:
+                if hasattr(self, "export_button"):
+                    self.export_button.setEnabled(False)
+            except Exception:  # pragma: no cover
+                import traceback
+                traceback.print_exc()
 
-        # Keep 3D feature buttons disabled to avoid inconsistent UI state
-        try:
-            self._enable_3d_features(False)
-        except Exception:  # pragma: no cover
-            import traceback
-            traceback.print_exc()
+            # Keep 3D feature buttons disabled to avoid inconsistent UI state
+            try:
+                self._enable_3d_features(False)
+            except Exception:  # pragma: no cover
+                import traceback
+                traceback.print_exc()
 
-        # Keep 3D edit actions disabled (no molecule to edit)
-        try:
-            self._enable_3d_edit_actions(False)
-        except Exception:  # pragma: no cover
-            import traceback
-            traceback.print_exc()
+            # Keep 3D edit actions disabled (no molecule to edit)
+            try:
+                self._enable_3d_edit_actions(False)
+            except Exception:  # pragma: no cover
+                import traceback
+                traceback.print_exc()
+        else:
+            # We HAVE a molecule, ensure features are enabled
+            try:
+                self._enable_3d_features(True)
+            except Exception:  # pragma: no cover
+                import traceback
+                traceback.print_exc()
 
-        # Some menu items are explicitly disabled on error
-        try:
-            if hasattr(self, "analysis_action"):
-                self.analysis_action.setEnabled(False)
-        except Exception:  # pragma: no cover
-            import traceback
-            traceback.print_exc()
+        # Some menu items are explicitly disabled on error IF no molecule exists
+        if self.current_mol is None:
+            try:
+                if hasattr(self, "analysis_action"):
+                    self.analysis_action.setEnabled(False)
+            except Exception:  # pragma: no cover
+                import traceback
+                traceback.print_exc()
 
-        try:
-            if hasattr(self, "edit_3d_action"):
-                self.edit_3d_action.setEnabled(False)
-        except Exception:  # pragma: no cover
-            import traceback
-            traceback.print_exc()
+            try:
+                if hasattr(self, "edit_3d_action"):
+                    self.edit_3d_action.setEnabled(False)
+            except Exception:  # pragma: no cover
+                import traceback
+                traceback.print_exc()
+        else:
+            # Ensure they are enabled if we have a molecule
+            try:
+                if hasattr(self, "analysis_action"):
+                    self.analysis_action.setEnabled(True)
+                if hasattr(self, "edit_3d_action"):
+                    self.edit_3d_action.setEnabled(True)
+            except Exception:  # pragma: no cover
+                import traceback
+                traceback.print_exc()
 
         # Force a UI refresh
         try:

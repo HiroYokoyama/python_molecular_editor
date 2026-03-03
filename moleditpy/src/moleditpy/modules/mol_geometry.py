@@ -66,6 +66,129 @@ def get_connected_group(mol, start_atom, exclude=None):
 
 
 # ------------------------------------------------------------------
+# Bond-angle adjustment (difference-based rotation)
+# ------------------------------------------------------------------
+
+
+def rodrigues_rotate(v, axis, angle):
+    """Rotate vector *v* around a unit *axis* by *angle* radians.
+
+    Implements Rodrigues' rotation formula:
+
+        v_rot = v·cos θ + (axis × v)·sin θ + axis·(axis · v)·(1 − cos θ)
+
+    Parameters
+    ----------
+    v : ndarray, shape (3,)
+        The vector to rotate.
+    axis : ndarray, shape (3,)
+        Unit rotation axis.
+    angle : float
+        Rotation angle in radians.
+
+    Returns
+    -------
+    ndarray, shape (3,)
+        The rotated vector.
+    """
+    cos_a = np.cos(angle)
+    sin_a = np.sin(angle)
+    return (
+        v * cos_a
+        + np.cross(axis, v) * sin_a
+        + axis * np.dot(axis, v) * (1 - cos_a)
+    )
+
+
+def adjust_bond_angle(positions, idx_a, idx_b, idx_c,
+                       target_angle_deg, atom_indices_to_move):
+    """Adjust the A–B–C bond angle to *target_angle_deg* using a
+    difference-based rotation.
+
+    The algorithm avoids 3D rotational ambiguity by computing the
+    difference Δθ between the current angle and the target, then
+    rotating only by that delta around the normal to the A-B-C plane.
+
+    Steps
+    -----
+    1. Compute BA = A − B and BC = C − B.
+    2. Calculate the current angle θ_current from BA and BC.
+    3. Obtain the plane normal  n = BA × BC  (normalised).
+       If |n| ≈ 0 the atoms are collinear and no unique rotation
+       plane exists; the function returns without modifying anything.
+    4. Δθ = target_angle (rad) − θ_current.
+    5. Translate all movable atoms so that B is at the origin.
+    6. Rotate each movable atom by Δθ around n using Rodrigues'
+       rotation formula.
+    7. Translate back so that B returns to its original position.
+
+    Parameters
+    ----------
+    positions : ndarray, shape (N, 3)
+        Atom coordinates.  **Modified in-place.**
+    idx_a, idx_b, idx_c : int
+        Atom indices defining the angle.  *idx_b* is the vertex
+        (central) atom.
+    target_angle_deg : float
+        Desired bond angle in degrees.
+    atom_indices_to_move : iterable of int
+        Indices of atoms whose coordinates will be rotated (typically
+        atom C and its connected sub-structure).
+
+    Returns
+    -------
+    float
+        The applied rotation Δθ in **radians**.  Returns 0.0 when the
+        atoms are collinear and no rotation was applied.
+    """
+    pos_a = positions[idx_a]
+    pos_b = positions[idx_b]  # vertex
+    pos_c = positions[idx_c]
+
+    # Vectors from vertex to the two arms
+    ba = pos_a - pos_b
+    bc = pos_c - pos_b
+
+    # Current angle
+    norm_ba = np.linalg.norm(ba)
+    norm_bc = np.linalg.norm(bc)
+    if norm_ba == 0 or norm_bc == 0:
+        return 0.0
+
+    cos_current = np.clip(np.dot(ba, bc) / (norm_ba * norm_bc), -1.0, 1.0)
+    current_angle_rad = np.arccos(cos_current)
+
+    # Normal vector of the A-B-C plane
+    rotation_axis = np.cross(ba, bc)
+    axis_norm = np.linalg.norm(rotation_axis)
+
+    if axis_norm < 1e-12:
+        # Atoms are collinear — pick an arbitrary axis perpendicular
+        # to BA so the rotation can still proceed.
+        ba_unit = ba / norm_ba
+        # Choose a candidate not parallel to BA
+        candidate = np.array([1.0, 0.0, 0.0])
+        if abs(np.dot(ba_unit, candidate)) > 0.9:
+            candidate = np.array([0.0, 1.0, 0.0])
+        rotation_axis = np.cross(ba_unit, candidate)
+        rotation_axis = rotation_axis / np.linalg.norm(rotation_axis)
+    else:
+        rotation_axis = rotation_axis / axis_norm
+
+    # Delta rotation
+    target_angle_rad = np.radians(target_angle_deg)
+    delta_theta = target_angle_rad - current_angle_rad
+
+    # Translate so B is at origin, rotate, then translate back
+    for idx in atom_indices_to_move:
+        rel = positions[idx] - pos_b          # step 5: translate
+        rotated = rodrigues_rotate(rel, rotation_axis, delta_theta)  # step 6
+        positions[idx] = pos_b + rotated      # step 7: translate back
+
+    return float(delta_theta)
+
+
+# ------------------------------------------------------------------
 # Dihedral (torsion) angle
 # ------------------------------------------------------------------
 
