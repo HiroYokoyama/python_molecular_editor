@@ -103,6 +103,19 @@ class MainWindowView3d(object):
     def draw_standard_3d_style(self, mol, style_override=None):
         """3D 分子を描画し、軸アクターの参照をクリアする（軸の再制御は apply_3d_settings に任せる）"""
 
+        # Re-entrancy guard: prevent overlapping draws that cause ghost
+        # bonds when slider events are processed mid-render.
+        if getattr(self, '_drawing_3d', False):
+            return
+        self._drawing_3d = True
+
+        try:
+            MainWindowView3d._draw_standard_3d_style_body(self, mol, style_override)
+        finally:
+            self._drawing_3d = False
+
+    def _draw_standard_3d_style_body(self, mol, style_override=None):
+
         current_style = (
             style_override
             if style_override
@@ -497,7 +510,6 @@ class MainWindowView3d(object):
                     all_colors.append(color_rgb)
                     current_point_idx += 2
 
-                QApplication.processEvents()
 
                 # Get CPK bond color setting once for all bond types
                 use_cpk_bond = self.settings.get("ball_stick_use_cpk_bond_color", False)
