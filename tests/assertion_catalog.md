@@ -375,7 +375,7 @@ _Test that _original_atom_id is preserved in 3D molecule state round-trip._
 ### test_optimize_3d_method_persistence
 _Test that the optimization method is recorded after success._
 
-- assert compute.last_successful_optimization_method == 'MMFF94s'
+- assert compute.last_successful_optimization_method == 'MMFF94s (RDKit)'
 
 ### test_trigger_conversion_early_exits
 _Test early exits in trigger_conversion (empty mol, etc.)._
@@ -438,6 +438,13 @@ _Test that M CFG lines are injected for E/Z stereo bonds._
 
 - assert 'M  CFG' in sent_block
 - assert 'M  CFG  1   2   2' in sent_block
+
+### test_on_calculation_error_uff_fallback_temporary
+_Verify that UFF fallback uses _temp_optimization_method and doesn't change persistent setting._
+
+- assert compute._temp_optimization_method == 'UFF_RDKIT'
+- assert mock_optimize.called
+- assert compute.optimization_method == 'MMFF_RDKIT'
 
 ## tests/unit/test_edit_3d_logic.py
 
