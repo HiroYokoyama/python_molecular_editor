@@ -1024,18 +1024,9 @@ class MainWindowCompute(object):
                 traceback.print_exc()
             if not opt_method:
                 opt_method = getattr(self, "optimization_method", None)
-            # normalize common forms
+            # Store the optimization method exactly as it was provided (no normalization)
             if opt_method:
-                om = str(opt_method).upper()
-                if "MMFF94S" in om or "MMFF_RDKIT" in om:
-                    self.last_successful_optimization_method = "MMFF94s"
-                elif "MMFF94" in om:
-                    self.last_successful_optimization_method = "MMFF94"
-                elif "UFF" in om:
-                    self.last_successful_optimization_method = "UFF"
-                else:
-                    # store raw value otherwise
-                    self.last_successful_optimization_method = opt_method
+                self.last_successful_optimization_method = opt_method
         except Exception:
             # non-fatal
             pass

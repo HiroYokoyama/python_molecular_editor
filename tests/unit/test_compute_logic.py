@@ -597,7 +597,7 @@ def test_optimize_3d_method_persistence(mock_parser_host):
     # In the new async implementation, the method persistence happens in on_calculation_finished.
     # We call it directly to test the persistence logic.
     compute.on_calculation_finished(mol)
-    assert compute.last_successful_optimization_method == "MMFF94s"
+    assert compute.last_successful_optimization_method == "MMFF_RDKIT"
 
 
 def test_trigger_conversion_early_exits(mock_parser_host):
