@@ -201,6 +201,38 @@ _Test that embedding failure triggers fallback status or error messages._
 
 - assert any((keyword in all_msgs_str for keyword in ['embedding failed', 'conversion failed', 'bounds fail']))
 
+## tests/unit/test_calculation_worker_optimize.py
+
+### test_optimize_only_mmff94s
+_Test optimize_only mode with MMFF94s._
+
+- assert len(finish_captor.emitted_values) > 0
+- assert res_mol.HasProp('_pme_optimization_method')
+- assert res_mol.GetProp('_pme_optimization_method').upper() == 'MMFF94S_RDKIT'
+
+### test_optimize_only_uff
+_Test optimize_only mode with UFF._
+
+- assert len(finish_captor.emitted_values) > 0
+- assert res_mol.GetProp('_pme_optimization_method') == 'UFF_RDKIT'
+
+### test_collision_avoidance_trigger
+_Test that collision avoidance is called in direct mode._
+
+- assert len(finish_captor.emitted_values) > 0
+- assert dist > 0.01
+
+### test_iterative_optimize_halt
+_Test that iterative optimization respects halt signals._
+
+
+### test_obabel_optimization_flow
+_Test the flow of OpenBabel optimization (mocked)._
+
+- assert mock_opt.called
+- assert len(finish_captor.emitted_values) > 0
+- assert res_mol.GetProp('_pme_optimization_method') == 'UFF_OBABEL'
+
 ## tests/unit/test_compute_logic.py
 
 ### test_on_calculation_error_stale

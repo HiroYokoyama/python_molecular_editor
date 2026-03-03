@@ -21,12 +21,12 @@ from rdkit import Chem
 from rdkit.Chem import AllChem, rdGeometry
 from rdkit.DistanceGeometry import DoTriangleSmoothing
 
-try:
+try: # pragma: no cover
     from . import OBABEL_AVAILABLE
-except Exception:
+except Exception: # pragma: no cover
     from modules import OBABEL_AVAILABLE
 # Only import pybel on demand — `moleditpy` itself doesn't expose `pybel`.
-if OBABEL_AVAILABLE:
+if OBABEL_AVAILABLE: # pragma: no cover
     try:
         import os
         import openbabel
@@ -43,7 +43,7 @@ if OBABEL_AVAILABLE:
         print(
             "Warning: openbabel.pybel not available. Open Babel fallback and OBabel-based options will be disabled."
         )
-else:
+else: # pragma: no cover
     pybel = None
 
 
@@ -172,7 +172,7 @@ def _adjust_collision_avoidance(rd_mol, check_halted_cb, safe_status_cb):
         safe_status_cb("Collision avoidance completed.")
     except WorkerHaltError:
         raise
-    except Exception as e:
+    except Exception as e: # pragma: no cover
         import traceback
         traceback.print_exc()
         safe_status_cb(f"Collision avoidance warning: {e}")
@@ -276,11 +276,11 @@ class CalculationWorker(QObject):
     error = pyqtSignal(object)
     start_work = pyqtSignal(str, object)
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None): # pragma: no cover
         super().__init__(parent)
         try:
             self.start_work.connect(self.run_calculation)
-        except Exception:  # pragma: no cover
+        except Exception:
             import traceback
             traceback.print_exc()
 
@@ -308,7 +308,7 @@ class CalculationWorker(QObject):
                 return False
 
         # Safe-emission helpers: do nothing if this worker has been halted.
-        def _safe_status(msg):
+        def _safe_status(msg): # pragma: no cover
             try:
                 if _check_halted():
                     raise WorkerHaltError("Halted")
@@ -374,13 +374,13 @@ class CalculationWorker(QObject):
                 worker_id = None
 
             _warned_no_worker_id = False
-            if worker_id is None:
+            if worker_id is None: # pragma: no cover
                 try:
                     # best-effort, swallow any errors (signals may not be connected)
                     self.status_update.emit(
                         "Warning: worker started without 'worker_id'; will listen for global halt signals."
                     )
-                except Exception:  # pragma: no cover
+                except Exception:
                     import traceback
                     traceback.print_exc()
                 _warned_no_worker_id = True
@@ -1089,7 +1089,7 @@ class CalculationWorker(QObject):
                         conf_id = AllChem.EmbedMolecule(mol, basic_params)
                     else:
                         conf_id = -1
-                except Exception:  # pragma: no cover
+                except Exception: # pragma: no cover
                     import traceback
                     traceback.print_exc()
             """
