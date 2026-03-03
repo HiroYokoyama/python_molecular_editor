@@ -1,6 +1,6 @@
 # MoleditPy Coverage Report
 
-- **Overall Project Coverage (Full)**: **50.92%**
+- **Overall Project Coverage (Full)**: **50.96%**
 - **Core Molecular Logic Coverage**: **72.55%**
 
 > [!NOTE]
@@ -46,7 +46,7 @@
 | moleditpy\src\moleditpy\modules\atom_item.py            |    267 |     40 |   85.0% |
 | moleditpy\src\moleditpy\modules\bond_item.py            |    350 |     75 |   78.6% |
 | moleditpy\src\moleditpy\modules\bond_length_dialog.py   |    274 |    250 |    8.8% |
-| moleditpy\src\moleditpy\modules\calculation_worker.py   |    844 |    308 |   63.5% |
+| moleditpy\src\moleditpy\modules\calculation_worker.py   |    857 |    308 |   64.1% |
 | moleditpy\src\moleditpy\modules\color_settings_dialog.py |    250 |    239 |    4.4% |
 | moleditpy\src\moleditpy\modules\constants.py            |     27 |      0 |  100.0% |
 | moleditpy\src\moleditpy\modules\constrained_optimization_dialog.py |    405 |    384 |    5.2% |
@@ -83,7 +83,7 @@
 | moleditpy\src\moleditpy\modules\translation_dialog.py   |    223 |    148 |   33.6% |
 | moleditpy\src\moleditpy\modules\user_template_dialog.py |    403 |    165 |   59.1% |
 | moleditpy\src\moleditpy\modules\zoomable_view.py        |     72 |     39 |   45.8% |
-| **TOTAL** | **16160** | **7931** | **50.92%** |
+| **TOTAL** | **16173** | **7931** | **50.96%** |
 
 ## Test Suite Status
 - **Unit tests**: PASSED

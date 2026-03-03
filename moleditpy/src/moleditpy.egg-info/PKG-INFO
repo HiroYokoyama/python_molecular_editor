@@ -1,6 +1,6 @@
 Metadata-Version: 2.4
 Name: MoleditPy
-Version: 2.8.0a3
+Version: 2.8.0a4
 Summary: A cross-platform, simple, and intuitive molecular structure editor built in Python. It allows 2D molecular drawing and 3D structure visualization. It supports exporting structure files for input to DFT calculation software.
 Author-email: HiroYokoyama <titech.yoko.hiro@gmail.com>
 License:                     GNU GENERAL PUBLIC LICENSE
@@ -694,7 +694,8 @@ Requires-Python: <3.15,>=3.9
 Description-Content-Type: text/markdown
 License-File: LICENSE
 Requires-Dist: numpy
-Requires-Dist: pyqt6<6.11
+Requires-Dist: pyqt6<6.10; sys_platform == "darwin"
+Requires-Dist: pyqt6<6.11; sys_platform != "darwin"
 Requires-Dist: pyvista<0.48
 Requires-Dist: pyvistaqt<0.12
 Requires-Dist: rdkit<2025.10

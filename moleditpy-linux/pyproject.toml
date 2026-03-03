@@ -34,7 +34,8 @@ classifiers = [
 
 dependencies = [
     "numpy",
-    "pyqt6 < 6.11",
+    "pyqt6 < 6.10; sys_platform == 'darwin'",
+    "pyqt6 < 6.11; sys_platform != 'darwin'",
     "pyvista < 0.48",
     "pyvistaqt < 0.12",
     "rdkit < 2025.10",

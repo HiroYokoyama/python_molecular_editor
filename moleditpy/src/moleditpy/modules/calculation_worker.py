@@ -29,13 +29,32 @@ except Exception: # pragma: no cover
 if OBABEL_AVAILABLE: # pragma: no cover
     try:
         import os
+        import glob
         import openbabel
         from openbabel import pybel
         
         # The python wheel often misses setting up the data directory.
-        # It typically places parameter files in openbabel/bin/data.
-        os.environ["BABEL_DATADIR"] = os.path.join(os.path.dirname(openbabel.__file__), "bin", "data")
-        os.environ["BABEL_LIBDIR"] = os.path.dirname(openbabel.__file__)
+        # Check multiple potential locations for BABEL_DATADIR.
+        ob_base = os.path.dirname(openbabel.__file__)
+        data_candidates = [
+            os.path.join(ob_base, "bin", "data"), # Typical for Windows wheel
+            os.path.join(ob_base, "share", "openbabel", "*") # Typical for macOS/Linux
+        ]
+        
+        found_datadir = None
+        for pattern in data_candidates:
+            matches = glob.glob(pattern)
+            for m in matches:
+                if os.path.isdir(m):
+                    found_datadir = m
+                    break
+            if found_datadir:
+                break
+        
+        if found_datadir:
+            os.environ["BABEL_DATADIR"] = found_datadir
+        
+        os.environ["BABEL_LIBDIR"] = ob_base
     except Exception:
         # If import fails here, disable OBABEL locally; avoid raising
         pybel = None
