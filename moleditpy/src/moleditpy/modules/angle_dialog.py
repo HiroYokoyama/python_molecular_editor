@@ -24,10 +24,10 @@ from PyQt6.QtWidgets import (
 
 try:
     from .dialog3_d_picking_mixin import Dialog3DPickingMixin
-    from .mol_geometry import get_connected_group
+    from .mol_geometry import adjust_bond_angle, get_connected_group, rodrigues_rotate
 except Exception:
     from modules.dialog3_d_picking_mixin import Dialog3DPickingMixin
-    from modules.mol_geometry import get_connected_group
+    from modules.mol_geometry import adjust_bond_angle, get_connected_group, rodrigues_rotate
 
 import numpy as np
 from PyQt6.QtCore import Qt
@@ -339,6 +339,8 @@ class AngleDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
             return
         self._slider_dragging = True
         self.main_window.push_undo_state()
+        # Snapshot positions so the rotation axis stays stable during drag
+        self._snapshot_positions = self.mol.GetConformer().GetPositions().copy()
 
     def on_slider_moved(self, value):
         """Update geometry in real-time while dragging."""
@@ -354,6 +356,7 @@ class AngleDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
     def on_slider_released(self):
         """Finalize slider dragging."""
         self._slider_dragging = False
+        self._snapshot_positions = None
         self.main_window.draw_molecule_3d(self.mol)
         self.main_window.update_chiral_labels()
 
@@ -398,104 +401,68 @@ class AngleDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
         self.main_window.update_chiral_labels()
 
     def adjust_angle(self, new_angle_deg):
-        """角度を調整（均等回転オプション付き）"""
+        """角度を調整（均等回転オプション付き）
+
+        Uses the difference-based rotation approach via
+        :func:`~mol_geometry.adjust_bond_angle` to avoid 3D
+        rotational ambiguity.
+
+        During slider dragging, positions are restored from a snapshot
+        taken at press-time so that the rotation axis (cross product)
+        never flips direction.
+        """
         conf = self.mol.GetConformer()
-        pos1 = np.array(conf.GetAtomPosition(self.atom1_idx))
-        pos2 = np.array(conf.GetAtomPosition(self.atom2_idx))  # vertex
-        pos3 = np.array(conf.GetAtomPosition(self.atom3_idx))
 
-        vec1 = pos1 - pos2
-        vec2 = pos3 - pos2
+        # Use snapshot if available (slider dragging) to keep the
+        # rotation axis stable; otherwise use current positions.
+        snapshot = getattr(self, '_snapshot_positions', None)
+        if snapshot is not None:
+            positions = snapshot.copy()
+        else:
+            positions = conf.GetPositions()  # N×3 ndarray (copy)
 
-        # Current angle
-        current_angle_rad = np.arccos(
-            np.clip(
-                np.dot(vec1, vec2) / (np.linalg.norm(vec1) * np.linalg.norm(vec2)),
-                -1.0,
-                1.0,
-            )
-        )
-
-        # Target angle
-        target_angle_rad = np.radians(new_angle_deg)
-
-        # Rotation axis (perpendicular to the plane containing vec1 and vec2)
-        rotation_axis = np.cross(vec1, vec2)
-        rotation_axis_norm = np.linalg.norm(rotation_axis)
-
-        if rotation_axis_norm == 0:
-            # Vectors are parallel, cannot rotate
-            return
-
-        rotation_axis = rotation_axis / rotation_axis_norm
-
-        # Total rotation angle needed
-        total_rotation_angle = target_angle_rad - current_angle_rad
-
-        # Rodrigues' rotation formula
-        def rotate_vector(v, axis, angle):
-            cos_a = np.cos(angle)
-            sin_a = np.sin(angle)
-            return (
-                v * cos_a
-                + np.cross(axis, v) * sin_a
-                + axis * np.dot(axis, v) * (1 - cos_a)
-            )
+        idx_a = self.atom1_idx
+        idx_b = self.atom2_idx  # vertex
+        idx_c = self.atom3_idx
 
         if self.both_groups_radio.isChecked():
-            # Both arms rotate equally (half angle each in opposite directions)
-            half_rotation = total_rotation_angle / 2
+            # Both arms rotate equally (half angle each)
+            current_angle = self.calculate_angle()
+            half_delta_deg = (new_angle_deg - current_angle) / 2.0
 
-            # Get both connected groups
-            group1_atoms = get_connected_group(
-                self.mol, self.atom1_idx, exclude=self.atom2_idx
+            group1 = get_connected_group(self.mol, idx_a, exclude=idx_b)
+            group3 = get_connected_group(self.mol, idx_c, exclude=idx_b)
+
+            # Arm 1 rotates by −half (note: reversed A/C roles)
+            adjust_bond_angle(
+                positions, idx_c, idx_b, idx_a,
+                current_angle + half_delta_deg, group1,
             )
-            group3_atoms = get_connected_group(
-                self.mol, self.atom3_idx, exclude=self.atom2_idx
+            # Arm 3 rotates by +half
+            adjust_bond_angle(
+                positions, idx_a, idx_b, idx_c,
+                current_angle + half_delta_deg, group3,
             )
-
-            # Rotate group 1 by -half_rotation
-            for atom_idx in group1_atoms:
-                current_pos = np.array(conf.GetAtomPosition(atom_idx))
-                relative_pos = current_pos - pos2
-                rotated_pos = rotate_vector(relative_pos, rotation_axis, -half_rotation)
-                new_pos = pos2 + rotated_pos
-                conf.SetAtomPosition(atom_idx, new_pos.tolist())
-                self.main_window.atom_positions_3d[atom_idx] = new_pos
-
-            # Rotate group 3 by +half_rotation
-            for atom_idx in group3_atoms:
-                current_pos = np.array(conf.GetAtomPosition(atom_idx))
-                relative_pos = current_pos - pos2
-                rotated_pos = rotate_vector(relative_pos, rotation_axis, half_rotation)
-                new_pos = pos2 + rotated_pos
-                conf.SetAtomPosition(atom_idx, new_pos.tolist())
-                self.main_window.atom_positions_3d[atom_idx] = new_pos
-
         elif self.rotate_atom_radio.isChecked():
-            # Move only the third atom
-            new_vec2 = rotate_vector(vec2, rotation_axis, total_rotation_angle)
-            new_pos3 = pos2 + new_vec2
-            conf.SetAtomPosition(self.atom3_idx, new_pos3.tolist())
-            self.main_window.atom_positions_3d[self.atom3_idx] = new_pos3
+            # Move only atom C
+            adjust_bond_angle(
+                positions, idx_a, idx_b, idx_c,
+                new_angle_deg, {idx_c},
+            )
         else:
-            # Rotate the connected group around atom2 (vertex) - default behavior
+            # Default: rotate atom C and its connected sub-structure
             atoms_to_move = get_connected_group(
-                self.mol, self.atom3_idx, exclude=self.atom2_idx
+                self.mol, idx_c, exclude=idx_b,
+            )
+            adjust_bond_angle(
+                positions, idx_a, idx_b, idx_c,
+                new_angle_deg, atoms_to_move,
             )
 
-            for atom_idx in atoms_to_move:
-                current_pos = np.array(conf.GetAtomPosition(atom_idx))
-                # Transform to coordinate system centered at atom2
-                relative_pos = current_pos - pos2
-                # Rotate around the rotation axis
-                rotated_pos = rotate_vector(
-                    relative_pos, rotation_axis, total_rotation_angle
-                )
-                # Transform back to world coordinates
-                new_pos = pos2 + rotated_pos
-                conf.SetAtomPosition(atom_idx, new_pos.tolist())
-                self.main_window.atom_positions_3d[atom_idx] = new_pos
+        # Write updated positions back to the conformer and 3D cache
+        for i in range(conf.GetNumAtoms()):
+            conf.SetAtomPosition(i, positions[i].tolist())
+            self.main_window.atom_positions_3d[i] = positions[i]
 
         # Update the 3D view
         self.main_window.draw_molecule_3d(self.mol)
