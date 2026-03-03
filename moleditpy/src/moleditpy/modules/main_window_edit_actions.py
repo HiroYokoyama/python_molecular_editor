@@ -1581,23 +1581,5 @@ class MainWindowEditActions(object):
             import traceback
             traceback.print_exc()
 
-    def apply_bond_editor_changes(self, id1, id2, order):
-        """Called by BondEditorDialog. Forces a topological bond to skip strict RDKit validation."""
-        if id1 not in self.data.atoms or id2 not in self.data.atoms:
-            self.statusBar().showMessage(f"Invalid atom IDs: {id1+1}, {id2+1}")
-            return
-            
-        self.data.force_bond(id1, id2, order)
-        
-        # UI updates: 2D scene
-        self.scene.reinitialize_items()
-        self.scene.update()
-        
-        # Trigger immediate 3D re-conversion to pass to OpenBabel
-        try:
-            self.trigger_conversion()
-        except Exception as e:
-            self.statusBar().showMessage(f"Failed to generate 3D structure after bond edit: {e}")
-        
-        self.push_undo_state()
-        self.statusBar().showMessage(f"Applied manual bond edit between {id1+1} and {id2+1}.")
+
+

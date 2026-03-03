@@ -289,10 +289,7 @@ class MainWindowCompute(object):
         self.scene.clear_all_problem_flags()
 
         try:
-            if not getattr(self.data, "bypass_sanitization", False):
-                Chem.SanitizeMol(mol)
-            else:
-                Chem.SanitizeMol(mol, sanitizeOps=Chem.SANITIZE_ALL ^ Chem.SANITIZE_PROPERTIES)
+            Chem.SanitizeMol(mol)
         except Exception:
             self.statusBar().showMessage("Error: Invalid chemical structure.")
             self.view_2d.setFocus()
