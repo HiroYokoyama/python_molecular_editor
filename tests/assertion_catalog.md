@@ -600,6 +600,36 @@ _Verify planarize functionality using the actual PlanarizeDialog logic._
 - assert main_window.update_chiral_labels.called
 - assert main_window.push_undo_state.called
 
+### test_rodrigues_rotate_90_deg
+_Rotate [1,0,0] by 90° around [0,0,1] → expect [0,1,0]._
+
+- np.testing.assert_allclose(result, [0.0, 1.0, 0.0], atol=1e-12)
+
+### test_rodrigues_rotate_identity
+_Rotate by 0° → vector unchanged._
+
+- np.testing.assert_allclose(result, v, atol=1e-12)
+
+### test_adjust_bond_angle_simple
+_Set a 90° angle to 120° and verify._
+
+- assert angle_deg == pytest.approx(target, abs=1e-08)
+- np.testing.assert_allclose(positions[1], [0, 0, 0], atol=1e-12)
+- assert np.linalg.norm(positions[2] - positions[1]) == pytest.approx(1.0, abs=1e-12)
+
+### test_adjust_bond_angle_with_group
+_Move multiple atoms; verify relative geometry is preserved._
+
+- assert angle_deg == pytest.approx(60.0, abs=1e-08)
+- assert cd_after == pytest.approx(cd_before, abs=1e-12)
+
+### test_adjust_bond_angle_collinear
+_Collinear atoms → fallback axis is used, rotation still succeeds._
+
+- assert delta != 0.0
+- assert angle_deg == pytest.approx(target, abs=1e-08)
+- assert np.linalg.norm(positions[2] - positions[1]) == pytest.approx(1.0, abs=1e-12)
+
 ## tests/unit/test_hydrogen.py
 
 ### test_add_hydrogen_atoms_app_logic
@@ -1605,6 +1635,20 @@ _Test the full mouse press -> move -> release sequence for creating a bond._
 - assert bond.order == 1
 - assert getattr(scene, 'start_atom', None) == a1
 
+## tests/unit/test_slider_logic.py
+
+### test_angle_dialog_wrapping
+_No description provided._
+
+- assert dialog.angle_input.text() == '-170.00'
+- dialog.adjust_angle.assert_called_once_with(-170.0)
+
+### test_dihedral_dialog_wrapping
+_No description provided._
+
+- assert dialog.dihedral_input.text() == '160.00'
+- dialog.adjust_dihedral.assert_called_once_with(160.0)
+
 ## tests/unit/test_stereochemistry.py
 
 ### test_wedge_dash_mapping
@@ -1773,11 +1817,11 @@ _Test the fallback to constraint-based embedding when initial embedding fails._
 
 - assert mock_embed.call_count >= 2
 
-### test_calculation_worker_uff_fallback
-_Test fallback to UFF when MMFF optimization fails._
+### test_calculation_worker_opt_failure_emits_error
+_Test that optimization failure emits an error string instead of failing silently or hanging._
 
 - assert mock_mmff_props.called
-- assert mock_uff_ff.called
+- assert 'Optimization with' in err_msg and 'failed' in err_msg
 
 ### test_calculation_worker_mmff_variants
 _Test switching between MMFF94 and MMFF94s._
