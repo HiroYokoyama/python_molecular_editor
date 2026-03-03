@@ -1,5 +1,10 @@
 numpy
-pyqt6<6.11
 pyvista<0.48
 pyvistaqt<0.12
 rdkit<2025.10
+
+[:sys_platform != "darwin"]
+pyqt6<6.11
+
+[:sys_platform == "darwin"]
+pyqt6<6.10

@@ -9,7 +9,7 @@
 ![Core Logic Coverage](https://img.shields.io/badge/core_logic_coverage-73%25-green)
 ![Overall Coverage](https://img.shields.io/badge/coverage-50%25-orange)
 ![GUI Status](https://img.shields.io/badge/GUI-Manually_Verified-blue)
-![Pylint Score](https://img.shields.io/badge/pylint-8.67%2F10-brightgreen)
+![Pylint Score](https://img.shields.io/badge/pylint-8.63%2F10-brightgreen)
 [![PyPI Downloads](https://static.pepy.tech/personalized-badge/moleditpy?period=total&units=INTERNATIONAL_SYSTEM&left_color=BLACK&right_color=GREEN&left_text=downloads)](https://pepy.tech/projects/moleditpy)
 
 [🇯🇵 日本語 (Japanese)](#japanese)
