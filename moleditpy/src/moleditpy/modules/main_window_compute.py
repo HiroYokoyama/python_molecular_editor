@@ -1119,7 +1119,10 @@ class MainWindowCompute(object):
             import traceback
             traceback.print_exc()
 
-        # self.statusBar().showMessage("3D conversion successful.")
+        if self.last_successful_optimization_method:
+            self.statusBar().showMessage(f"3D calculation ({self.last_successful_optimization_method}) successful.")
+        else:
+            self.statusBar().showMessage("3D calculation successful.")
         self.convert_button.setEnabled(True)
         # Restore button text/handlers in case they were changed to Halt
         try:

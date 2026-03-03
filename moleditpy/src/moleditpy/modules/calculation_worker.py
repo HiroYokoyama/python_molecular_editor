@@ -486,8 +486,16 @@ class CalculationWorker(QObject):
                     method_key = "GHEMICAL"
 
                 if backend == "OBABEL":
+                    try:
+                        mol.SetProp("_pme_optimization_method", opt_method)
+                    except Exception:
+                        pass
                     opt_success = _iterative_optimize_obabel(mol, method_key, _check_halted, _safe_status)
                 else:
+                    try:
+                        mol.SetProp("_pme_optimization_method", opt_method)
+                    except Exception:
+                        pass
                     opt_success = _iterative_optimize(mol, method_key, _check_halted, _safe_status)
                 
                 if not opt_success:
