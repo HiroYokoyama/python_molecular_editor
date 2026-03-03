@@ -37,7 +37,6 @@ try:
     from .alignment_dialog import AlignmentDialog
     from .analysis_window import AnalysisWindow
     from .angle_dialog import AngleDialog
-    from .bond_editor_dialog import BondEditorDialog
     from .bond_length_dialog import BondLengthDialog
     from .constants import VERSION
     from .constrained_optimization_dialog import ConstrainedOptimizationDialog
@@ -55,7 +54,6 @@ except Exception:
     from modules.alignment_dialog import AlignmentDialog
     from modules.analysis_window import AnalysisWindow
     from modules.angle_dialog import AngleDialog
-    from modules.bond_editor_dialog import BondEditorDialog
     from modules.bond_length_dialog import BondLengthDialog
     from modules.constants import VERSION
     from modules.constrained_optimization_dialog import ConstrainedOptimizationDialog
@@ -465,14 +463,4 @@ class MainWindowDialogManager(object):
         dialog.show()
         dialog.finished.connect(lambda: self.remove_dialog_from_list(dialog))
 
-    def open_bond_editor_dialog(self):
-        """結合編集ダイアログを開く"""
-        # 測定モードを無効化
-        if self.measurement_mode:
-            self.measurement_action.setChecked(False)
-            self.toggle_measurement_mode(False)
 
-        dialog = BondEditorDialog(self, parent=self)
-        self.active_3d_dialogs.append(dialog)
-        dialog.show()
-        dialog.finished.connect(lambda: self.remove_dialog_from_list(dialog))

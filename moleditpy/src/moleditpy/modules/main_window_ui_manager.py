@@ -374,7 +374,6 @@ class MainWindowUiManager(object):
             "mirror_action",
             "planarize_action",
             "constrained_opt_action",
-            "edit_bond_action",
         ]
 
         # メニューとサブメニューも有効/無効化

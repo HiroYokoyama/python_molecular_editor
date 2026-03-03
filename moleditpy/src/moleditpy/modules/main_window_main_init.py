@@ -1303,17 +1303,6 @@ class MainWindowMainInit(object):
         edit_3d_menu.addAction(planarize_action)
         self.planarize_action = planarize_action
 
-        edit_3d_menu.addSeparator()
-
-        # Edit Bond action
-        edit_bond_action = QAction("Edit Bond...", self)
-        edit_bond_action.triggered.connect(self.open_bond_editor_dialog)
-        edit_bond_action.setEnabled(False)
-        edit_3d_menu.addAction(edit_bond_action)
-        self.edit_bond_action = edit_bond_action
-
-        edit_3d_menu.addSeparator()
-
         # Bond length conversion
         bond_length_action = QAction("Adjust Bond Length...", self)
         bond_length_action.triggered.connect(self.open_bond_length_dialog)

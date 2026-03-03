@@ -796,10 +796,6 @@ class MainWindow(QMainWindow):
         # --- MOVED TO main_window_dialog_manager.py ---
         return self.main_window_dialog_manager.open_constrained_optimization_dialog()
 
-    def open_bond_editor_dialog(self):
-        # --- MOVED TO main_window_dialog_manager.py ---
-        return self.main_window_dialog_manager.open_bond_editor_dialog()
-
     def remove_dialog_from_list(self, dialog):
         # --- MOVED TO main_window_edit_3d.py ---
         return self.main_window_edit_3d.remove_dialog_from_list(dialog)
