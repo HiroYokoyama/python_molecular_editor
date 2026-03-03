@@ -61,7 +61,7 @@
 | moleditpy\src\moleditpy\modules\main_window_edit_3d.py  |    234 |    125 |   46.6% |
 | moleditpy\src\moleditpy\modules\main_window_edit_actions.py |    977 |    495 |   49.3% |
 | moleditpy\src\moleditpy\modules\main_window_export.py   |    536 |    163 |   69.6% |
-| moleditpy\src\moleditpy\modules\main_window_main_init.py |   1363 |    503 |   63.1% |
+| moleditpy\src\moleditpy\modules\main_window_main_init.py |   1365 |    504 |   63.1% |
 | moleditpy\src\moleditpy\modules\main_window_molecular_parsers.py |    691 |    372 |   46.2% |
 | moleditpy\src\moleditpy\modules\main_window_project_io.py |    233 |    105 |   54.9% |
 | moleditpy\src\moleditpy\modules\main_window_string_importers.py |    152 |     21 |   86.2% |
@@ -83,7 +83,7 @@
 | moleditpy\src\moleditpy\modules\translation_dialog.py   |    223 |    148 |   33.6% |
 | moleditpy\src\moleditpy\modules\user_template_dialog.py |    403 |    165 |   59.1% |
 | moleditpy\src\moleditpy\modules\zoomable_view.py        |     72 |     39 |   45.8% |
-| **TOTAL** | **16173** | **7931** | **50.96%** |
+| **TOTAL** | **16175** | **7932** | **50.96%** |
 
 ## Test Suite Status
 - **Unit tests**: PASSED

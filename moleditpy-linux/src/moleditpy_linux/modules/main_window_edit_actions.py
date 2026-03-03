@@ -1580,3 +1580,6 @@ class MainWindowEditActions(object):
         except Exception:  # pragma: no cover
             import traceback
             traceback.print_exc()
+
+
+

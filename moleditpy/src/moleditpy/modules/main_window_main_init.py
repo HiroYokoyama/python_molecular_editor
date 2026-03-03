@@ -1484,6 +1484,9 @@ class MainWindowMainInit(object):
                 import traceback
                 traceback.print_exc()
 
+            # If Open Babel is not available, disable Open Babel-based optimization methods
+            if key.endswith("_OBABEL") and not OBABEL_AVAILABLE:
+                action.setEnabled(False)
             action.triggered.connect(
                 lambda checked, m=key: self.set_optimization_method(m)
             )

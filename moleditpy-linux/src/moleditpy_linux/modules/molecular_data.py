@@ -27,6 +27,7 @@ class MolecularData:
         self._next_atom_id = 0
         self.adjacency_list = {}
 
+
     def add_atom(self, symbol, pos, charge=0, radical=0):
         atom_id = self._next_atom_id
         self.atoms[atom_id] = {
@@ -62,6 +63,8 @@ class MolecularData:
         else:
             self.bonds[(id1, id2)] = bond_data
             return (id1, id2), "created"
+
+
 
     def remove_atom(self, atom_id):
         if atom_id in self.atoms:
@@ -274,10 +277,13 @@ class MolecularData:
         final_mol.UpdatePropertyCache(strict=False)
 
         # 3D変換時（use_2d_stereo=False）でE/Zラベルがある場合は、force=Trueで強制適用
-        if not use_2d_stereo and ez_labeled_bonds:
-            Chem.AssignStereochemistry(final_mol, cleanIt=False, force=True)
-        else:
-            Chem.AssignStereochemistry(final_mol, cleanIt=False, force=False)
+        try:
+            if not use_2d_stereo and ez_labeled_bonds:
+                Chem.AssignStereochemistry(final_mol, cleanIt=False, force=True)
+            else:
+                Chem.AssignStereochemistry(final_mol, cleanIt=False, force=False)
+        except Exception:
+                raise
         return final_mol
 
     def to_mol_block(self):
