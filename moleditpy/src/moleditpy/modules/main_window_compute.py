@@ -1024,9 +1024,15 @@ class MainWindowCompute(object):
                 traceback.print_exc()
             if not opt_method:
                 opt_method = getattr(self, "optimization_method", None)
-            # Store the optimization method exactly as it was provided (no normalization)
+            # Store the optimization method using its user-friendly UI label if available.
             if opt_method:
-                self.last_successful_optimization_method = opt_method
+                try:
+                    # Look up the UI label (e.g. "MMFF94s (RDKit)") from the internal ID (e.g. "MMFF_RDKIT")
+                    method_key = str(opt_method).upper()
+                    label = self.opt3d_method_labels.get(method_key, opt_method)
+                    self.last_successful_optimization_method = label
+                except Exception:
+                    self.last_successful_optimization_method = opt_method
         except Exception:
             # non-fatal
             pass
