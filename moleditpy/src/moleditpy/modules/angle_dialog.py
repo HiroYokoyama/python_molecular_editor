@@ -17,6 +17,7 @@ from PyQt6.QtWidgets import (
     QLineEdit,
     QPushButton,
     QRadioButton,
+    QSlider,
     QVBoxLayout,
     QWidget,
 )
@@ -76,7 +77,21 @@ class AngleDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
         angle_layout.addWidget(QLabel("New angle (degrees):"))
         self.angle_input = QLineEdit()
         self.angle_input.setPlaceholderText("109.5")
+        self.angle_input.textChanged.connect(self.on_angle_input_changed)
         angle_layout.addWidget(self.angle_input)
+
+        self.angle_slider = QSlider(Qt.Orientation.Horizontal)
+        self.angle_slider.setMinimum(-180)
+        self.angle_slider.setMaximum(180)
+        self.angle_slider.setValue(109)
+        self.angle_slider.setTickPosition(QSlider.TickPosition.TicksBelow)
+        self.angle_slider.setTickInterval(45)
+        self.angle_slider.setEnabled(False)
+        self.angle_slider.sliderPressed.connect(self.on_slider_pressed)
+        self.angle_slider.sliderMoved.connect(self.on_slider_moved)
+        self.angle_slider.sliderReleased.connect(self.on_slider_released)
+        angle_layout.addWidget(self.angle_slider)
+
         layout.addLayout(angle_layout)
 
         # Movement options
@@ -201,7 +216,13 @@ class AngleDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
             self.apply_button.setEnabled(False)
             # Clear angle input when no selection
             try:
+                self.angle_input.blockSignals(True)
                 self.angle_input.clear()
+                self.angle_input.blockSignals(False)
+                self.angle_slider.blockSignals(True)
+                self.angle_slider.setValue(109)
+                self.angle_slider.setEnabled(False)
+                self.angle_slider.blockSignals(False)
             except Exception:  # pragma: no cover
                 import traceback
                 traceback.print_exc()
@@ -217,7 +238,13 @@ class AngleDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
             self.add_selection_label(self.atom1_idx, "1")
             # Clear angle input while selection is incomplete
             try:
+                self.angle_input.blockSignals(True)
                 self.angle_input.clear()
+                self.angle_input.blockSignals(False)
+                self.angle_slider.blockSignals(True)
+                self.angle_slider.setValue(109)
+                self.angle_slider.setEnabled(False)
+                self.angle_slider.blockSignals(False)
             except Exception:  # pragma: no cover
                 import traceback
                 traceback.print_exc()
@@ -235,7 +262,13 @@ class AngleDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
             self.add_selection_label(self.atom2_idx, "2(vertex)")
             # Clear angle input while selection is incomplete
             try:
+                self.angle_input.blockSignals(True)
                 self.angle_input.clear()
+                self.angle_input.blockSignals(False)
+                self.angle_slider.blockSignals(True)
+                self.angle_slider.setValue(109)
+                self.angle_slider.setEnabled(False)
+                self.angle_slider.blockSignals(False)
             except Exception:  # pragma: no cover
                 import traceback
                 traceback.print_exc()
@@ -253,7 +286,15 @@ class AngleDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
             self.apply_button.setEnabled(True)
             # Update angle input box with current angle
             try:
+                self.angle_input.blockSignals(True)
                 self.angle_input.setText(f"{current_angle:.2f}")
+                self.angle_input.blockSignals(False)
+                self.angle_slider.blockSignals(True)
+                slider_val = int(round(current_angle))
+                slider_val = max(-180, min(180, slider_val))
+                self.angle_slider.setValue(slider_val)
+                self.angle_slider.setEnabled(True)
+                self.angle_slider.blockSignals(False)
             except Exception:  # pragma: no cover
                 import traceback
                 traceback.print_exc()
@@ -278,18 +319,54 @@ class AngleDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
         angle_rad = np.arccos(cos_angle)
         return np.degrees(angle_rad)
 
+    def on_angle_input_changed(self, text):
+        """Line edit text changed, update slider."""
+        if not self.angle_input.isEnabled() or not self.apply_button.isEnabled():
+            return
+        try:
+            val = float(text)
+            wrapped_val = (val + 180) % 360 - 180
+            self.angle_slider.blockSignals(True)
+            self.angle_slider.setValue(int(round(wrapped_val)))
+            self.angle_slider.blockSignals(False)
+        except ValueError:
+            pass
+
+    def on_slider_pressed(self):
+        """Remember the state before slider dragging starts."""
+        if self.atom1_idx is None or self.atom2_idx is None or self.atom3_idx is None:
+            return
+        self.main_window.push_undo_state()
+
+    def on_slider_moved(self, value):
+        """Update geometry in real-time while dragging."""
+        if self.atom1_idx is None or self.atom2_idx is None or self.atom3_idx is None:
+            return
+        
+        self.angle_input.blockSignals(True)
+        self.angle_input.setText(f"{value}")
+        self.angle_input.blockSignals(False)
+        
+        self.adjust_angle(float(value))
+
+    def on_slider_released(self):
+        """Finalize slider dragging."""
+        self.main_window.update_chiral_labels()
+
     def apply_changes(self):
         """変更を適用"""
         if self.atom1_idx is None or self.atom2_idx is None or self.atom3_idx is None:
             return
 
         try:
-            new_angle = float(self.angle_input.text())
-            if new_angle < 0 or new_angle >= 360:
-                QMessageBox.warning(
-                    self, "Invalid Input", "Angle must be between 0 and 360 degrees."
-                )
-                return
+            raw_angle = float(self.angle_input.text())
+            # Automatic Range Wrapping
+            new_angle = (raw_angle + 180) % 360 - 180
+            
+            # Formally update the input to reflect wrapping
+            self.angle_input.blockSignals(True)
+            self.angle_input.setText(f"{new_angle:.2f}")
+            self.angle_input.blockSignals(False)
         except ValueError:
             QMessageBox.warning(self, "Invalid Input", "Please enter a valid number.")
             return
