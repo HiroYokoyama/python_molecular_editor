@@ -166,9 +166,9 @@ class MainWindowCompute(object):
                 ("MMFF94s (RDKit)", "MMFF_RDKIT"),
                 ("MMFF94 (RDKit)", "MMFF94_RDKIT"),
                 ("UFF (RDKit)", "UFF_RDKIT"),
+                ("MMFF94 (Open Babel)", "MMFF94_OBABEL"),
                 ("UFF (Open Babel)", "UFF_OBABEL"),
                 ("GAFF (Open Babel)", "GAFF_OBABEL"),
-                ("MMFF94 (Open Babel)", "MMFF94_OBABEL"),
                 ("Ghemical (Open Babel)", "GHEMICAL_OBABEL"),
             ]
             for label, key in opt_list:
@@ -289,7 +289,10 @@ class MainWindowCompute(object):
         self.scene.clear_all_problem_flags()
 
         try:
-            Chem.SanitizeMol(mol)
+            if not getattr(self.data, "bypass_sanitization", False):
+                Chem.SanitizeMol(mol)
+            else:
+                Chem.SanitizeMol(mol, sanitizeOps=Chem.SANITIZE_ALL ^ Chem.SANITIZE_PROPERTIES)
         except Exception:
             self.statusBar().showMessage("Error: Invalid chemical structure.")
             self.view_2d.setFocus()
@@ -1277,7 +1280,7 @@ class MainWindowCompute(object):
                 reply = QMessageBox.question(
                     self,
                     "Optimization Failed",
-                    f"{error_message}\n\nRDKit's UFF algorithm is often more robust for complex geometries like transition metal complexes.\nWould you like to try optimizing with UFF (RDKit) instead?",
+                    f"{error_message}\n\nRDKit's UFF algorithm is often more robust for unusual elements.\nWould you like to try optimizing with UFF (RDKit) instead?",
                     QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
                     QMessageBox.StandardButton.Yes,
                 )

@@ -28,7 +28,14 @@ except Exception:
 # Only import pybel on demand — `moleditpy` itself doesn't expose `pybel`.
 if OBABEL_AVAILABLE:
     try:
+        import os
+        import openbabel
         from openbabel import pybel
+        
+        # The python wheel often misses setting up the data directory.
+        # It typically places parameter files in openbabel/bin/data.
+        os.environ["BABEL_DATADIR"] = os.path.join(os.path.dirname(openbabel.__file__), "bin", "data")
+        os.environ["BABEL_LIBDIR"] = os.path.dirname(openbabel.__file__)
     except Exception:
         # If import fails here, disable OBABEL locally; avoid raising
         pybel = None
@@ -228,8 +235,11 @@ def _iterative_optimize_obabel(mol, method, check_halted_cb, safe_status_cb, max
             return False
             
         if not ff.Setup(ob_mol.OBMol):
-            safe_status_cb(f"Failed to setup forcefield '{ff_name}' in OpenBabel.")
-            return False
+            error_msg = f"Failed to load parameters for '{ff_name}'."
+            if ff_name.lower() == "gaff":
+                error_msg += " (Check if OpenBabel 'gaff.dat' and 'gaff.prm' parameter files are missing in your environment.)"
+            safe_status_cb(error_msg)
+            raise RuntimeError(error_msg)
             
         ff.SteepestDescent(100) # Initial stabilization
         
@@ -452,9 +462,7 @@ class CalculationWorker(QObject):
 
             # Do NOT call AssignStereochemistry here as it overrides our explicit labels
 
-            mol = Chem.AddHs(mol)
-
-            # Check after adding Hs (may be a long operation)
+            # Check for halts prior to checking conversion_mode
             if _check_halted():
                 raise WorkerHaltError("Halted")
 
@@ -493,6 +501,12 @@ class CalculationWorker(QObject):
                     _safe_finished(mol)
                 _safe_status("Optimization completed.")
                 return
+
+            mol = Chem.AddHs(mol)
+
+            # Check after adding Hs (may be a long operation)
+            if _check_halted():
+                raise WorkerHaltError("Halted")
 
             # CRITICAL: Re-apply explicit stereo after AddHs which may renumber atoms
             for bond_idx, stereo_type in explicit_stereo.items():

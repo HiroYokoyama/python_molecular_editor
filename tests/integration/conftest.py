@@ -209,11 +209,11 @@ def app():
 
     yield q_app
 
-    # Platform-aware teardown: prevent 0x80010108 on Windows but avoid CI segfaults
+    # Platform-aware teardown: prevent 0x80010108/0x8001010d on Windows but avoid CI segfaults
     if not (is_headless or is_offscreen):
         try:
             q_app.closeAllWindows()
-            for _ in range(5):
+            for _ in range(10):
                 q_app.processEvents()
 
             # Force garbage collection to release Python-wrapped Qt objects
@@ -228,6 +228,31 @@ def app():
                 colorama.deinit()
             except (ImportError, Exception):
                 pass
+                
+            # Wait for any lingering background threads to finish.
+            import threading
+            import time
+
+            main_thread = threading.main_thread()
+            deadline = time.monotonic() + 2.0  # 2 second max wait
+            for t in threading.enumerate():
+                if t is main_thread or not t.is_alive():
+                    continue
+                remaining = deadline - time.monotonic()
+                if remaining > 0:
+                    t.join(timeout=remaining)
+
+            # Final event processing after threads are done
+            for _ in range(5):
+                q_app.processEvents()
+        except Exception:
+            pass
+
+    # Suppress Windows fatal exception handler for known teardown crashes.
+    if sys.platform == "win32":
+        try:
+            import faulthandler
+            faulthandler.disable()
         except Exception:
             pass
 

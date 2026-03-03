@@ -351,9 +351,9 @@ def test_calculation_worker_constraint_embedding_fallback(qtbot, app):
         assert mock_embed.call_count >= 2
 
 
-def test_calculation_worker_uff_fallback(qtbot, app):
+def test_calculation_worker_opt_failure_emits_error(qtbot, app):
     """
-    Test fallback to UFF when MMFF optimization fails.
+    Test that optimization failure emits an error string instead of failing silently or hanging.
     """
     data = MolecularData()
     c = data.add_atom("C", QPointF(0, 0))
@@ -369,16 +369,14 @@ def test_calculation_worker_uff_fallback(qtbot, app):
             "rdkit.Chem.AllChem.MMFFGetMoleculeProperties",
             return_value=None
         ) as mock_mmff_props,
-        patch(
-            "rdkit.Chem.AllChem.UFFGetMoleculeForceField"
-        ) as mock_uff_ff,
     ):
-        # We need to wait for the signal
-        with qtbot.waitSignal(worker.finished, timeout=10000):
+        # We need to wait for the error signal now
+        with qtbot.waitSignal(worker.error, timeout=10000) as blocker:
             worker.run_calculation(mol_block, {"conversion_mode": "rdkit"})
 
         assert mock_mmff_props.called
-        assert mock_uff_ff.called
+        err_id, err_msg = blocker.args[0]
+        assert "Optimization with" in err_msg and "failed" in err_msg
 
 
 def test_calculation_worker_mmff_variants(qtbot, app):

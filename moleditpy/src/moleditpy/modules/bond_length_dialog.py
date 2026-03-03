@@ -84,9 +84,10 @@ class BondLengthDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
         self.distance_slider.sliderPressed.connect(self.on_slider_pressed)
         self.distance_slider.sliderMoved.connect(self.on_slider_moved)
         self.distance_slider.sliderReleased.connect(self.on_slider_released)
-        distance_layout.addWidget(self.distance_slider)
-
+        self.distance_slider.valueChanged.connect(self.on_slider_value_changed)
+        self._slider_dragging = False
         layout.addLayout(distance_layout)
+        layout.addWidget(self.distance_slider)
 
         # Movement options
         group_box = QWidget()
@@ -288,6 +289,7 @@ class BondLengthDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
         """Remember the state before slider dragging starts."""
         if self.atom1_idx is None or self.atom2_idx is None:
             return
+        self._slider_dragging = True
         self.main_window.push_undo_state()
 
     def on_slider_moved(self, value):
@@ -304,6 +306,22 @@ class BondLengthDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
 
     def on_slider_released(self):
         """Finalize slider dragging."""
+        self._slider_dragging = False
+        self.main_window.draw_molecule_3d(self.mol)
+        self.main_window.update_chiral_labels()
+
+    def on_slider_value_changed(self, value):
+        """Handle click-to-position on the slider track."""
+        if self._slider_dragging:
+            return  # Already handled by on_slider_moved
+        if self.atom1_idx is None or self.atom2_idx is None:
+            return
+        self.main_window.push_undo_state()
+        new_distance = value / 100.0
+        self.distance_input.blockSignals(True)
+        self.distance_input.setText(f"{new_distance:.3f}")
+        self.distance_input.blockSignals(False)
+        self.adjust_bond_length(new_distance)
         self.main_window.update_chiral_labels()
 
     def apply_changes(self):
@@ -400,3 +418,11 @@ class BondLengthDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
 
         # Update the 3D view
         self.main_window.draw_molecule_3d(self.mol)
+
+    def reject(self):
+        super().reject()
+        try:
+            if self.main_window.current_mol:
+                self.main_window.draw_molecule_3d(self.main_window.current_mol)
+        except Exception:
+            pass

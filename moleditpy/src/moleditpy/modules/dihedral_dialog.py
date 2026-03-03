@@ -92,9 +92,10 @@ class DihedralDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
         self.dihedral_slider.sliderPressed.connect(self.on_slider_pressed)
         self.dihedral_slider.sliderMoved.connect(self.on_slider_moved)
         self.dihedral_slider.sliderReleased.connect(self.on_slider_released)
-        dihedral_layout.addWidget(self.dihedral_slider)
-
+        self.dihedral_slider.valueChanged.connect(self.on_slider_value_changed)
+        self._slider_dragging = False
         layout.addLayout(dihedral_layout)
+        layout.addWidget(self.dihedral_slider)
 
         # Movement options
         group_box = QWidget()
@@ -328,6 +329,7 @@ class DihedralDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
         """Remember the state before slider dragging starts."""
         if any(idx is None for idx in [self.atom1_idx, self.atom2_idx, self.atom3_idx, self.atom4_idx]):
             return
+        self._slider_dragging = True
         self.main_window.push_undo_state()
 
     def on_slider_moved(self, value):
@@ -343,6 +345,21 @@ class DihedralDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
 
     def on_slider_released(self):
         """Finalize slider dragging."""
+        self._slider_dragging = False
+        self.main_window.draw_molecule_3d(self.mol)
+        self.main_window.update_chiral_labels()
+
+    def on_slider_value_changed(self, value):
+        """Handle click-to-position on the slider track."""
+        if self._slider_dragging:
+            return
+        if any(idx is None for idx in [self.atom1_idx, self.atom2_idx, self.atom3_idx, self.atom4_idx]):
+            return
+        self.main_window.push_undo_state()
+        self.dihedral_input.blockSignals(True)
+        self.dihedral_input.setText(f"{value}")
+        self.dihedral_input.blockSignals(False)
+        self.adjust_dihedral(float(value))
         self.main_window.update_chiral_labels()
 
     def apply_changes(self):
@@ -492,3 +509,11 @@ class DihedralDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
 
         # Update the 3D view
         self.main_window.draw_molecule_3d(self.mol)
+
+    def reject(self):
+        super().reject()
+        try:
+            if self.main_window.current_mol:
+                self.main_window.draw_molecule_3d(self.main_window.current_mol)
+        except Exception:
+            pass

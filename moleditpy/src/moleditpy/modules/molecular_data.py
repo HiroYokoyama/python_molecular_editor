@@ -26,6 +26,7 @@ class MolecularData:
         self.bonds = {}
         self._next_atom_id = 0
         self.adjacency_list = {}
+        self.bypass_sanitization = False
 
     def add_atom(self, symbol, pos, charge=0, radical=0):
         atom_id = self._next_atom_id
@@ -62,6 +63,14 @@ class MolecularData:
         else:
             self.bonds[(id1, id2)] = bond_data
             return (id1, id2), "created"
+
+    def force_bond(self, id1, id2, order):
+        """Used by manual Bond Editor overrides to skip RDKit sanitization checks later."""
+        if order == 0.0:
+            self.remove_bond(id1, id2)
+        else:
+            self.add_bond(id1, id2, order=order)
+        self.bypass_sanitization = True
 
     def remove_atom(self, atom_id):
         if atom_id in self.atoms:
@@ -158,10 +167,17 @@ class MolecularData:
 
         # --- Step 3: sanitize ---
         final_mol = mol.GetMol()
-        try:
-            Chem.SanitizeMol(final_mol)
-        except Exception:
-            return None
+        if not getattr(self, "bypass_sanitization", False):
+            try:
+                Chem.SanitizeMol(final_mol)
+            except Exception:
+                return None
+        else:
+            try:
+                # Try partial sanitization to maintain rings, but swallow strict valency failures.
+                Chem.SanitizeMol(final_mol, sanitizeOps=Chem.SANITIZE_ALL ^ Chem.SANITIZE_PROPERTIES)
+            except Exception:
+                pass
 
         # --- Step 4: add 2D conformer ---
         # Convert from scene pixels to angstroms when creating RDKit conformer.
@@ -274,10 +290,14 @@ class MolecularData:
         final_mol.UpdatePropertyCache(strict=False)
 
         # 3D変換時（use_2d_stereo=False）でE/Zラベルがある場合は、force=Trueで強制適用
-        if not use_2d_stereo and ez_labeled_bonds:
-            Chem.AssignStereochemistry(final_mol, cleanIt=False, force=True)
-        else:
-            Chem.AssignStereochemistry(final_mol, cleanIt=False, force=False)
+        try:
+            if not use_2d_stereo and ez_labeled_bonds:
+                Chem.AssignStereochemistry(final_mol, cleanIt=False, force=True)
+            else:
+                Chem.AssignStereochemistry(final_mol, cleanIt=False, force=False)
+        except Exception:
+            if not getattr(self, "bypass_sanitization", False):
+                raise
         return final_mol
 
     def to_mol_block(self):

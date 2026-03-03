@@ -90,9 +90,10 @@ class AngleDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
         self.angle_slider.sliderPressed.connect(self.on_slider_pressed)
         self.angle_slider.sliderMoved.connect(self.on_slider_moved)
         self.angle_slider.sliderReleased.connect(self.on_slider_released)
-        angle_layout.addWidget(self.angle_slider)
-
+        self.angle_slider.valueChanged.connect(self.on_slider_value_changed)
+        self._slider_dragging = False
         layout.addLayout(angle_layout)
+        layout.addWidget(self.angle_slider)
 
         # Movement options
         group_box = QWidget()
@@ -336,6 +337,7 @@ class AngleDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
         """Remember the state before slider dragging starts."""
         if self.atom1_idx is None or self.atom2_idx is None or self.atom3_idx is None:
             return
+        self._slider_dragging = True
         self.main_window.push_undo_state()
 
     def on_slider_moved(self, value):
@@ -351,6 +353,21 @@ class AngleDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
 
     def on_slider_released(self):
         """Finalize slider dragging."""
+        self._slider_dragging = False
+        self.main_window.draw_molecule_3d(self.mol)
+        self.main_window.update_chiral_labels()
+
+    def on_slider_value_changed(self, value):
+        """Handle click-to-position on the slider track."""
+        if self._slider_dragging:
+            return
+        if self.atom1_idx is None or self.atom2_idx is None or self.atom3_idx is None:
+            return
+        self.main_window.push_undo_state()
+        self.angle_input.blockSignals(True)
+        self.angle_input.setText(f"{value}")
+        self.angle_input.blockSignals(False)
+        self.adjust_angle(float(value))
         self.main_window.update_chiral_labels()
 
     def apply_changes(self):
@@ -482,3 +499,11 @@ class AngleDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
 
         # Update the 3D view
         self.main_window.draw_molecule_3d(self.mol)
+
+    def reject(self):
+        super().reject()
+        try:
+            if self.main_window.current_mol:
+                self.main_window.draw_molecule_3d(self.main_window.current_mol)
+        except Exception:
+            pass
