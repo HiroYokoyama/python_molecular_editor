@@ -4,6 +4,7 @@ from rdkit import Chem
 from rdkit.Chem import AllChem
 from moleditpy.modules.main_window_compute import MainWindowCompute
 from PyQt6.QtCore import Qt, QPointF
+from PyQt6.QtWidgets import QMessageBox
 from unittest.mock import MagicMock, patch
 
 
@@ -915,3 +916,29 @@ def test_trigger_conversion_ez_stereo_injection(mock_parser_host):
             # Check for E isomer (val 2) on bond index 2 (RDKit idx 1 + 1)
             # 1-2 is usually index 1
             assert "M  CFG  1   2   2" in sent_block
+
+
+def test_on_calculation_error_uff_fallback_temporary(mock_parser_host):
+    """Verify that UFF fallback uses _temp_optimization_method and doesn't change persistent setting."""
+    compute = DummyCompute(mock_parser_host)
+    worker_id = "test_id"
+    compute.active_worker_ids = {worker_id}
+    compute.optimization_method = "MMFF_RDKIT"
+
+    # Mocking QMessageBox.question to return Yes
+    # QMessageBox.StandardButton.Yes is usually 16384 (0x4000)
+    with patch(
+        "moleditpy.modules.main_window_compute.QMessageBox.question",
+        return_value=QMessageBox.StandardButton.Yes,
+    ):
+        with patch.object(compute, "optimize_3d_structure") as mock_optimize:
+            compute.on_calculation_error(
+                (worker_id, "Optimization with MMFF94 failed")
+            )
+
+            # Check if temp override was set
+            assert compute._temp_optimization_method == "UFF_RDKIT"
+            # Check if optimize was called
+            assert mock_optimize.called
+            # Check if persistent method remains unchanged
+            assert compute.optimization_method == "MMFF_RDKIT"

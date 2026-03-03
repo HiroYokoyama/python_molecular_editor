@@ -1286,7 +1286,7 @@ class MainWindowCompute(object):
                     QMessageBox.StandardButton.Yes,
                 )
                 if reply == QMessageBox.StandardButton.Yes:
-                    self.set_optimization_method("UFF_RDKIT")
+                    self._temp_optimization_method = "UFF_RDKIT"
                     self.optimize_3d_structure()
                     # Return immediately so the rest of the error cleanup doesn't disable buttons permanently
                     return
