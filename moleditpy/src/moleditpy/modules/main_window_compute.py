@@ -1203,10 +1203,17 @@ class MainWindowCompute(object):
             return
 
         # Clear temporary plotter content and remove calculating text if present
+        # Only clear the entire plotter if we don't have an existing molecule to fall back to.
         try:
-            self.plotter.clear()
+            if self.current_mol is None:
+                self.plotter.clear()
+            else:
+                # If we have a molecule, just re-render to make sure it's drawn correctly
+                # (in case partial actors were added during 'calculating' phase)
+                self.plotter.render()
         except Exception:  # pragma: no cover
             import traceback
+            traceback.print_exc()
             traceback.print_exc()
 
         # Also attempt to explicitly remove the calculating text actor if it was stored
@@ -1325,51 +1332,70 @@ class MainWindowCompute(object):
             import traceback
             traceback.print_exc()
 
-        # On calculation error we should NOT enable 3D-only features.
-        # Explicitly disable Optimize and Export so the user can't try to operate
-        # on an invalid or missing 3D molecule.
-        try:
-            if hasattr(self, "optimize_3d_button"):
-                self.optimize_3d_button.setEnabled(False)
-        except Exception:  # pragma: no cover
-            import traceback
-            traceback.print_exc()
+        # On calculation error we should NOT enable 3D-only features IF we have no molecule.
+        # However, if we ALREADY had a molecule (e.g. optimization failed but previous 3D was valid),
+        # we should keep them enabled.
+        if self.current_mol is None:
+            try:
+                if hasattr(self, "optimize_3d_button"):
+                    self.optimize_3d_button.setEnabled(False)
+            except Exception:  # pragma: no cover
+                import traceback
+                traceback.print_exc()
 
-        try:
-            if hasattr(self, "export_button"):
-                self.export_button.setEnabled(False)
-        except Exception:  # pragma: no cover
-            import traceback
-            traceback.print_exc()
+            try:
+                if hasattr(self, "export_button"):
+                    self.export_button.setEnabled(False)
+            except Exception:  # pragma: no cover
+                import traceback
+                traceback.print_exc()
 
-        # Keep 3D feature buttons disabled to avoid inconsistent UI state
-        try:
-            self._enable_3d_features(False)
-        except Exception:  # pragma: no cover
-            import traceback
-            traceback.print_exc()
+            # Keep 3D feature buttons disabled to avoid inconsistent UI state
+            try:
+                self._enable_3d_features(False)
+            except Exception:  # pragma: no cover
+                import traceback
+                traceback.print_exc()
 
-        # Keep 3D edit actions disabled (no molecule to edit)
-        try:
-            self._enable_3d_edit_actions(False)
-        except Exception:  # pragma: no cover
-            import traceback
-            traceback.print_exc()
+            # Keep 3D edit actions disabled (no molecule to edit)
+            try:
+                self._enable_3d_edit_actions(False)
+            except Exception:  # pragma: no cover
+                import traceback
+                traceback.print_exc()
+        else:
+            # We HAVE a molecule, ensure features are enabled
+            try:
+                self._enable_3d_features(True)
+            except Exception:  # pragma: no cover
+                import traceback
+                traceback.print_exc()
 
-        # Some menu items are explicitly disabled on error
-        try:
-            if hasattr(self, "analysis_action"):
-                self.analysis_action.setEnabled(False)
-        except Exception:  # pragma: no cover
-            import traceback
-            traceback.print_exc()
+        # Some menu items are explicitly disabled on error IF no molecule exists
+        if self.current_mol is None:
+            try:
+                if hasattr(self, "analysis_action"):
+                    self.analysis_action.setEnabled(False)
+            except Exception:  # pragma: no cover
+                import traceback
+                traceback.print_exc()
 
-        try:
-            if hasattr(self, "edit_3d_action"):
-                self.edit_3d_action.setEnabled(False)
-        except Exception:  # pragma: no cover
-            import traceback
-            traceback.print_exc()
+            try:
+                if hasattr(self, "edit_3d_action"):
+                    self.edit_3d_action.setEnabled(False)
+            except Exception:  # pragma: no cover
+                import traceback
+                traceback.print_exc()
+        else:
+            # Ensure they are enabled if we have a molecule
+            try:
+                if hasattr(self, "analysis_action"):
+                    self.analysis_action.setEnabled(True)
+                if hasattr(self, "edit_3d_action"):
+                    self.edit_3d_action.setEnabled(True)
+            except Exception:  # pragma: no cover
+                import traceback
+                traceback.print_exc()
 
         # Force a UI refresh
         try:
