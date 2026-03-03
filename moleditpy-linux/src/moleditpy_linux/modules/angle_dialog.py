@@ -177,12 +177,6 @@ class AngleDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
         self.disable_picking()
         super().closeEvent(event)
 
-    def reject(self):
-        """キャンセル時の処理"""
-        self.clear_atom_labels()
-        self.disable_picking()
-        super().reject()
-
     def accept(self):
         """OK時の処理"""
         self.clear_atom_labels()
@@ -468,6 +462,9 @@ class AngleDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
         self.main_window.draw_molecule_3d(self.mol)
 
     def reject(self):
+        """キャンセル時の処理"""
+        self.clear_atom_labels()
+        self.disable_picking()
         super().reject()
         try:
             if self.main_window.current_mol:

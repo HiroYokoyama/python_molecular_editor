@@ -67,6 +67,7 @@ class MainWindowCompute(object):
             "UFF_RDKIT",
             "UFF_OBABEL",
             "GAFF_OBABEL",
+            "MMFF94s_OBABEL",
             "MMFF94_OBABEL",
             "GHEMICAL_OBABEL",
         )
@@ -166,6 +167,7 @@ class MainWindowCompute(object):
                 ("MMFF94s (RDKit)", "MMFF_RDKIT"),
                 ("MMFF94 (RDKit)", "MMFF94_RDKIT"),
                 ("UFF (RDKit)", "UFF_RDKIT"),
+                ("MMFF94s (Open Babel)", "MMFF94s_OBABEL"),
                 ("MMFF94 (Open Babel)", "MMFF94_OBABEL"),
                 ("UFF (Open Babel)", "UFF_OBABEL"),
                 ("GAFF (Open Babel)", "GAFF_OBABEL"),

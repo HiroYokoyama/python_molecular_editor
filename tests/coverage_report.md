@@ -42,10 +42,10 @@
 | moleditpy\src\moleditpy\modules\align_plane_dialog.py   |    161 |    141 |   12.4% |
 | moleditpy\src\moleditpy\modules\alignment_dialog.py     |    141 |    124 |   12.1% |
 | moleditpy\src\moleditpy\modules\analysis_window.py      |    114 |     25 |   78.1% |
-| moleditpy\src\moleditpy\modules\angle_dialog.py         |    298 |    190 |   36.2% |
+| moleditpy\src\moleditpy\modules\angle_dialog.py         |    296 |    189 |   36.1% |
 | moleditpy\src\moleditpy\modules\atom_item.py            |    267 |     40 |   85.0% |
 | moleditpy\src\moleditpy\modules\bond_item.py            |    350 |     75 |   78.6% |
-| moleditpy\src\moleditpy\modules\bond_length_dialog.py   |    274 |    250 |    8.8% |
+| moleditpy\src\moleditpy\modules\bond_length_dialog.py   |    272 |    249 |    8.5% |
 | moleditpy\src\moleditpy\modules\calculation_worker.py   |    857 |    308 |   64.1% |
 | moleditpy\src\moleditpy\modules\color_settings_dialog.py |    250 |    239 |    4.4% |
 | moleditpy\src\moleditpy\modules\constants.py            |     27 |      0 |  100.0% |
@@ -53,7 +53,7 @@
 | moleditpy\src\moleditpy\modules\custom_interactor_style.py |    490 |    464 |    5.3% |
 | moleditpy\src\moleditpy\modules\custom_qt_interactor.py |     43 |     35 |   18.6% |
 | moleditpy\src\moleditpy\modules\dialog3_d_picking_mixin.py |    102 |     65 |   36.3% |
-| moleditpy\src\moleditpy\modules\dihedral_dialog.py      |    303 |    195 |   35.6% |
+| moleditpy\src\moleditpy\modules\dihedral_dialog.py      |    301 |    194 |   35.5% |
 | moleditpy\src\moleditpy\modules\main_window.py          |    404 |     93 |   77.0% |
 | moleditpy\src\moleditpy\modules\main_window_app_state.py |    443 |    175 |   60.5% |
 | moleditpy\src\moleditpy\modules\main_window_compute.py  |    933 |    432 |   53.7% |
@@ -83,7 +83,7 @@
 | moleditpy\src\moleditpy\modules\translation_dialog.py   |    223 |    148 |   33.6% |
 | moleditpy\src\moleditpy\modules\user_template_dialog.py |    403 |    165 |   59.1% |
 | moleditpy\src\moleditpy\modules\zoomable_view.py        |     72 |     39 |   45.8% |
-| **TOTAL** | **16175** | **7932** | **50.96%** |
+| **TOTAL** | **16169** | **7929** | **50.96%** |
 
 ## Test Suite Status
 - **Unit tests**: PASSED
