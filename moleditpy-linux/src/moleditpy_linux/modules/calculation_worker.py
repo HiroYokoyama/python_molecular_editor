@@ -959,6 +959,10 @@ class CalculationWorker(QObject):
                             opt_success = _iterative_optimize_obabel(mol, method_key, _check_halted, _safe_status)
                             if not opt_success:
                                 _safe_status(f"Warning: Optimization with {opt_method} failed. Using unoptimized structure.")
+                                try:
+                                    mol.ClearProp("_pme_optimization_method")
+                                except Exception:
+                                    pass
                         else: # RDKit backend
                             try:
                                 # Add property for UI feedback
@@ -969,6 +973,10 @@ class CalculationWorker(QObject):
                             opt_success = _iterative_optimize(mol, method_key, _check_halted, _safe_status)
                             if not opt_success:
                                 _safe_status(f"Warning: Optimization with {opt_method} failed. Using unoptimized structure.")
+                                try:
+                                    mol.ClearProp("_pme_optimization_method")
+                                except Exception:
+                                    pass
 
                     if _check_halted():
                         raise WorkerHaltError("Halted")
@@ -1179,6 +1187,10 @@ class CalculationWorker(QObject):
                     raise
                 except Exception as opt_err:
                     _safe_status(f"Optimization failed: {opt_err}. Falling back...")
+                    try:
+                        mol.ClearProp("_pme_optimization_method")
+                    except Exception:
+                        pass
                     # Allow fallback to proceed instead of crashing
                     conf_id = -1
                 
@@ -1261,10 +1273,18 @@ class CalculationWorker(QObject):
 
                         if not opt_success:
                             _safe_status(f"Warning: Optimization with {opt_method_raw} failed. Using unoptimized structure.")
+                            try:
+                                rd_mol.ClearProp("_pme_optimization_method")
+                            except Exception:
+                                pass
                     except WorkerHaltError:
                         raise
                     except Exception as opt_err:
                         _safe_status(f"Warning: Optimization failed: {opt_err}. Using unoptimized structure.")
+                        try:
+                            rd_mol.ClearProp("_pme_optimization_method")
+                        except Exception:
+                            pass
 
                     _safe_status(
                         "Open Babel embedding succeeded. Warning: Conformation accuracy may be limited."
