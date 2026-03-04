@@ -1,7 +1,7 @@
 # MoleditPy Coverage Report
 
 - **Overall Project Coverage (Full)**: **50.81%**
-- **Core Molecular Logic Coverage**: **72.06%**
+- **Core Molecular Logic Coverage**: **72.13%**
 
 > [!NOTE]
 > **Core Molecular Logic Coverage** excludes UI boilerplate (dialogs, view managers, and interactor styles) to focus on scientific algorithm reliability.
@@ -15,7 +15,7 @@
 | moleditpy\src\moleditpy\modules\analysis_window.py      |    114 |     25 |   78.1% |
 | moleditpy\src\moleditpy\modules\atom_item.py            |    261 |     34 |   87.0% |
 | moleditpy\src\moleditpy\modules\bond_item.py            |    338 |     63 |   81.4% |
-| moleditpy\src\moleditpy\modules\calculation_worker.py   |    759 |    268 |   64.7% |
+| moleditpy\src\moleditpy\modules\calculation_worker.py   |    749 |    262 |   65.0% |
 | moleditpy\src\moleditpy\modules\constants.py            |     27 |      0 |  100.0% |
 | moleditpy\src\moleditpy\modules\main_window.py          |    364 |     87 |   76.1% |
 | moleditpy\src\moleditpy\modules\main_window_app_state.py |    380 |    145 |   61.8% |
@@ -30,7 +30,7 @@
 | moleditpy\src\moleditpy\modules\molecule_scene.py       |    463 |    176 |   62.0% |
 | moleditpy\src\moleditpy\modules\plugin_interface.py     |     57 |      0 |  100.0% |
 | moleditpy\src\moleditpy\modules\plugin_manager.py       |    278 |     70 |   74.8% |
-| **TOTAL** | **5047** | **1410** | **72.06%** |
+| **TOTAL** | **5037** | **1404** | **72.13%** |
 
 ### Full Application Breakdown
 
