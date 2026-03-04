@@ -1186,6 +1186,8 @@ class CalculationWorker(QObject):
                 except WorkerHaltError:
                     raise
                 except Exception as opt_err:
+                    if conversion_mode == "rdkit":
+                        raise Exception(f"Optimization with {opt_method_raw} failed: {opt_err}")
                     _safe_status(f"Optimization failed: {opt_err}. Falling back...")
                     try:
                         mol.ClearProp("_pme_optimization_method")
