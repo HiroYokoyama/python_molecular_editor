@@ -204,15 +204,15 @@ def _iterative_optimize(mol, method, check_halted_cb, safe_status_cb, max_iters=
             mmff_variant = "MMFF94" if method == "MMFF94" else "MMFF94s"
             props = AllChem.MMFFGetMoleculeProperties(mol, mmffVariant=mmff_variant)
             if props is None:
-                return False
+                raise ValueError(f"Failed to generate MMFF properties for variant {mmff_variant}.")
             ff = AllChem.MMFFGetMoleculeForceField(mol, props, confId=0)
         elif method == "UFF":
             ff = AllChem.UFFGetMoleculeForceField(mol, confId=0)
         else:
-            return False
+            raise ValueError(f"Unknown optimization method: {method}")
 
         if ff is None:
-            return False
+            raise ValueError(f"Failed to setup force field for method: {method}")
 
         ff.Initialize()
         iters_done = 0
@@ -238,8 +238,7 @@ def _iterative_optimize_obabel(mol, method, check_halted_cb, safe_status_cb, max
     """Perform force field optimization using OpenBabel in chunks to avoid UI freezing."""
     try:
         if not OBABEL_AVAILABLE or pybel is None:
-            safe_status_cb("OpenBabel is not available.")
-            return False
+            raise RuntimeError("OpenBabel is not available.")
             
         ff_name = method.lower()
         
@@ -250,8 +249,7 @@ def _iterative_optimize_obabel(mol, method, check_halted_cb, safe_status_cb, max
         # Set up forcefield
         ff = pybel.ob.OBForceField.FindForceField(ff_name)
         if not ff:
-            safe_status_cb(f"Forcefield '{ff_name}' not found in OpenBabel.")
-            return False
+            raise ValueError(f"Forcefield '{ff_name}' not found in OpenBabel.")
             
         if not ff.Setup(ob_mol.OBMol):
             error_msg = f"Failed to load parameters for '{ff_name}'."
@@ -960,7 +958,7 @@ class CalculationWorker(QObject):
                             _safe_status(f"Applying force field optimization ({method_key} / OpenBabel)...")
                             opt_success = _iterative_optimize_obabel(mol, method_key, _check_halted, _safe_status)
                             if not opt_success:
-                                raise Exception(f"Optimization with {opt_method} failed. You can change the method in the settings.")
+                                _safe_status(f"Warning: Optimization with {opt_method} failed. Using unoptimized structure.")
                         else: # RDKit backend
                             try:
                                 # Add property for UI feedback
@@ -970,7 +968,7 @@ class CalculationWorker(QObject):
                             _safe_status(f"Applying force field optimization ({method_key} / RDKit)...")
                             opt_success = _iterative_optimize(mol, method_key, _check_halted, _safe_status)
                             if not opt_success:
-                                raise Exception(f"Optimization with {opt_method} failed. You can change the method in the settings.")
+                                _safe_status(f"Warning: Optimization with {opt_method} failed. Using unoptimized structure.")
 
                     if _check_halted():
                         raise WorkerHaltError("Halted")
@@ -1180,31 +1178,33 @@ class CalculationWorker(QObject):
                 except WorkerHaltError:
                     raise
                 except Exception as opt_err:
-                    _safe_status(f"Optimization failed: {opt_err}")
-                    raise
+                    _safe_status(f"Optimization failed: {opt_err}. Falling back...")
+                    # Allow fallback to proceed instead of crashing
+                    conf_id = -1
                 
                 # CRITICAL: Restore stereochemistry again after optimization (explicit labels priority)
-                for bond_idx, stereo, stereo_atoms in original_stereo_info:
-                    bond = mol.GetBondWithIdx(bond_idx)
-                    if len(stereo_atoms) == 2:
-                        bond.SetStereoAtoms(stereo_atoms[0], stereo_atoms[1])
-                    bond.SetStereo(stereo)
+                if conf_id != -1:
+                    for bond_idx, stereo, stereo_atoms in original_stereo_info:
+                        bond = mol.GetBondWithIdx(bond_idx)
+                        if len(stereo_atoms) == 2:
+                            bond.SetStereoAtoms(stereo_atoms[0], stereo_atoms[1])
+                        bond.SetStereo(stereo)
 
-                # CRITICAL: Check for halt *before* emitting finished signal
-                if _check_halted():
-                    raise WorkerHaltError("Halted")
+                    # CRITICAL: Check for halt *before* emitting finished signal
+                    if _check_halted():
+                        raise WorkerHaltError("Halted")
 
-                # Collision avoidance
-                _adjust_collision_avoidance(mol, _check_halted, _safe_status)
+                    # Collision avoidance
+                    _adjust_collision_avoidance(mol, _check_halted, _safe_status)
 
-                try:
-                    _safe_finished((worker_id, mol))
-                except WorkerHaltError:
-                    raise
-                except Exception:
-                    _safe_finished(mol)
-                _safe_status("RDKit 3D conversion succeeded.")
-                return
+                    try:
+                        _safe_finished((worker_id, mol))
+                    except WorkerHaltError:
+                        raise
+                    except Exception:
+                        _safe_finished(mol)
+                    _safe_status("RDKit 3D conversion succeeded.")
+                    return
 
             # If RDKit did not produce a conf and OBabel is allowed, try Open Babel
             if conf_id == -1 and conversion_mode in ("fallback", "obabel"):
@@ -1260,12 +1260,11 @@ class CalculationWorker(QObject):
                             opt_success = _iterative_optimize(rd_mol, method_key, _check_halted, _safe_status)
 
                         if not opt_success:
-                            raise Exception(f"Optimization with {opt_method_raw} failed. You can change the method in the settings.")
+                            _safe_status(f"Warning: Optimization with {opt_method_raw} failed. Using unoptimized structure.")
                     except WorkerHaltError:
                         raise
                     except Exception as opt_err:
-                        _safe_status(f"Optimization failed: {opt_err}")
-                        raise
+                        _safe_status(f"Warning: Optimization failed: {opt_err}. Using unoptimized structure.")
 
                     _safe_status(
                         "Open Babel embedding succeeded. Warning: Conformation accuracy may be limited."
