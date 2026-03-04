@@ -51,6 +51,9 @@ except Exception:
 # --- クラス定義 ---
 class MainWindowCompute(object):
     """main_window.py から分離された機能クラス"""
+    
+    # Default initial state 
+    last_successful_optimization_method = None
 
     def set_optimization_method(self, method_name):  # pragma: no cover
         """Set preferred 3D optimization method and persist to settings.
