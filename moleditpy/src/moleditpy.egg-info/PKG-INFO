@@ -1,6 +1,6 @@
 Metadata-Version: 2.4
 Name: MoleditPy
-Version: 2.8.0
+Version: 2.8.1
 Summary: A cross-platform, simple, and intuitive molecular structure editor built in Python. It allows 2D molecular drawing and 3D structure visualization. It supports exporting structure files for input to DFT calculation software.
 Author-email: HiroYokoyama <titech.yoko.hiro@gmail.com>
 License:                     GNU GENERAL PUBLIC LICENSE
@@ -710,10 +710,10 @@ Dynamic: license-file
 [![Python Versions](https://img.shields.io/pypi/pyversions/MoleditPy.svg)](https://pypi.org/project/MoleditPy/)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![Build Status](https://github.com/HiroYokoyama/python_molecular_editor/actions/workflows/tests.yml/badge.svg)](https://github.com/HiroYokoyama/python_molecular_editor/actions)
-![Core Logic Coverage](https://img.shields.io/badge/core_logic_coverage-73%25-green)
+![Core Logic Coverage](https://img.shields.io/badge/core_logic_coverage-72%25-green)
 ![Overall Coverage](https://img.shields.io/badge/coverage-50%25-orange)
 ![GUI Status](https://img.shields.io/badge/GUI-Manually_Verified-blue)
-![Pylint Score](https://img.shields.io/badge/pylint-8.63%2F10-brightgreen)
+![Pylint Score](https://img.shields.io/badge/pylint-8.64%2F10-brightgreen)
 [![PyPI Downloads](https://static.pepy.tech/personalized-badge/moleditpy?period=total&units=INTERNATIONAL_SYSTEM&left_color=BLACK&right_color=GREEN&left_text=downloads)](https://pepy.tech/projects/moleditpy)
 
 [🇯🇵 日本語 (Japanese)](#japanese)
