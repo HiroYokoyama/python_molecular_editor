@@ -1024,8 +1024,8 @@ class MainWindowCompute(object):
             except Exception:  # pragma: no cover
                 import traceback
                 traceback.print_exc()
-            if not opt_method:
-                opt_method = getattr(self, "optimization_method", None)
+            # If the property is not on the molecule, it means optimization failed or was bypassed.
+            # We explicitly do not fall back to self.optimization_method.
             # Store the optimization method using its user-friendly UI label if available.
             if opt_method:
                 try:
@@ -1035,6 +1035,8 @@ class MainWindowCompute(object):
                     self.last_successful_optimization_method = label
                 except Exception:
                     self.last_successful_optimization_method = opt_method
+            else:
+                self.last_successful_optimization_method = None
         except Exception:
             # non-fatal
             pass

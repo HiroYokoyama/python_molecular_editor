@@ -592,6 +592,7 @@ def test_optimize_3d_method_persistence(mock_parser_host):
     compute = DummyCompute(mock_parser_host)
     mol = Chem.MolFromSmiles("C")
     AllChem.EmbedMolecule(mol, randomSeed=42)
+    mol.SetProp("_pme_optimization_method", "MMFF_RDKIT")
     compute.current_mol = mol
     compute.optimization_method = "MMFF_RDKIT"
 
