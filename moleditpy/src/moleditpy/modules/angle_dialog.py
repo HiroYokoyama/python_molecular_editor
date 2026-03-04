@@ -152,11 +152,15 @@ class AngleDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
             self.atom2_idx = atom_idx
         elif self.atom3_idx is None:
             self.atom3_idx = atom_idx
+            # Take a fresh snapshot immediately upon completing the triad selection
+            # This locks in the "original" initial geometry the user started modifying from
+            self._snapshot_positions = self.mol.GetConformer().GetPositions().copy()
         else:
             # Reset and start over
             self.atom1_idx = atom_idx
             self.atom2_idx = None
             self.atom3_idx = None
+            self._snapshot_positions = None
 
         # 原子ラベルを表示
         self.show_atom_labels()
@@ -188,6 +192,7 @@ class AngleDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
         self.atom1_idx = None
         self.atom2_idx = None  # vertex atom
         self.atom3_idx = None
+        self._snapshot_positions = None
         self.clear_selection_labels()
         self.update_display()
 
@@ -209,6 +214,7 @@ class AngleDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
             self.selection_label.setText("No atoms selected")
             self.angle_label.setText("")
             self.apply_button.setEnabled(False)
+            self._snapshot_positions = None
             # Clear angle input when no selection
             try:
                 self.angle_input.blockSignals(True)
@@ -229,6 +235,7 @@ class AngleDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
             )
             self.angle_label.setText("")
             self.apply_button.setEnabled(False)
+            self._snapshot_positions = None
             # ラベル追加
             self.add_selection_label(self.atom1_idx, "1")
             # Clear angle input while selection is incomplete
@@ -252,6 +259,7 @@ class AngleDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
             )
             self.angle_label.setText("")
             self.apply_button.setEnabled(False)
+            self._snapshot_positions = None
             # ラベル追加
             self.add_selection_label(self.atom1_idx, "1")
             self.add_selection_label(self.atom2_idx, "2(vertex)")
@@ -334,7 +342,9 @@ class AngleDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
         self._slider_dragging = True
         self.main_window.push_undo_state()
         # Snapshot positions so the rotation axis stays stable during drag
-        self._snapshot_positions = self.mol.GetConformer().GetPositions().copy()
+        # Only take snapshot if one doesn't exist to preserve directional info
+        if getattr(self, '_snapshot_positions', None) is None:
+            self._snapshot_positions = self.mol.GetConformer().GetPositions().copy()
 
     def on_slider_moved(self, value):
         """Update geometry in real-time while dragging."""
@@ -350,7 +360,8 @@ class AngleDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
     def on_slider_released(self):
         """Finalize slider dragging."""
         self._slider_dragging = False
-        self._snapshot_positions = None
+        # Do NOT clear snapshot here. Keep it to preserve the turning direction
+        # even if they approach ±180°. It gets cleared when selection is changed.
         self.main_window.draw_molecule_3d(self.mol)
         self.main_window.update_chiral_labels()
 
@@ -361,6 +372,11 @@ class AngleDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
         if self.atom1_idx is None or self.atom2_idx is None or self.atom3_idx is None:
             return
         self.main_window.push_undo_state()
+        
+        # Ensure we have a snapshot for click-to-position as well to maintain direction
+        if getattr(self, '_snapshot_positions', None) is None:
+            self._snapshot_positions = self.mol.GetConformer().GetPositions().copy()
+            
         self.angle_input.blockSignals(True)
         self.angle_input.setText(f"{value}")
         self.angle_input.blockSignals(False)
