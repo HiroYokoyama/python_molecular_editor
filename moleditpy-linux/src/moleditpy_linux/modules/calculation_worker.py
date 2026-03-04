@@ -1169,14 +1169,14 @@ class CalculationWorker(QObject):
                     if backend == "OBABEL":
                         try:
                             mol.SetProp("_pme_optimization_method", opt_method_raw)
-                        except Exception:
+                        except Exception:  # pragma: no cover
                             pass
                         _safe_status(f"Optimizing with OpenBabel ({method_key})...")
                         opt_success = _iterative_optimize_obabel(mol, method_key, _check_halted, _safe_status)
                     else:
                         try:
                             mol.SetProp("_pme_optimization_method", opt_method_raw)
-                        except Exception:
+                        except Exception:  # pragma: no cover
                             pass
                         _safe_status(f"Optimizing with RDKit ({method_key})...")
                         opt_success = _iterative_optimize(mol, method_key, _check_halted, _safe_status)
@@ -1188,13 +1188,13 @@ class CalculationWorker(QObject):
                 except Exception as opt_err:
                     if conversion_mode == "rdkit":
                         raise Exception(f"Optimization with {opt_method_raw} failed: {opt_err}")
-                    _safe_status(f"Optimization failed: {opt_err}. Falling back...")
-                    try:
+                    _safe_status(f"Optimization failed: {opt_err}. Falling back...")  # pragma: no cover
+                    try:  # pragma: no cover
                         mol.ClearProp("_pme_optimization_method")
-                    except Exception:
+                    except Exception:  # pragma: no cover
                         pass
                     # Allow fallback to proceed instead of crashing
-                    conf_id = -1
+                    conf_id = -1  # pragma: no cover
                 
                 # CRITICAL: Restore stereochemistry again after optimization (explicit labels priority)
                 if conf_id != -1:
