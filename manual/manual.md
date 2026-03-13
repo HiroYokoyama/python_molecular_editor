@@ -202,9 +202,10 @@ MoleditPy provides functions to generate, display, measure, and edit 3D structur
 
   * With a 3D structure displayed, click the **Optimize 3D** button in the bottom right, or select `Edit` \> `Optimize 3D` (Ctrl+L) from the menu.
   * A more detailed structure optimization calculation is performed using the selected force field (MMFF or UFF).
+  * If an optimization method fails, an interactive fallback prompt may appear, offering a temporary UFF override.
   * When completed, the optimized structure is redrawn in the 3D view.
 
-**(Settings):** You can select the force field calculation library and method (RDKit MMFF/UFF) from the menu `Settings` \> `3D Optimization Settings`.
+**(Settings):** You can select the force field calculation library and method (RDKit MMFF94/MMFF94s/UFF, Open Babel MMFF94/MMFF94s/UFF/GAFF/Ghemical) from the menu `Settings` \> `3D Optimization Settings`.
 
 ### 6.3. Changing 3D Display Style
 
@@ -223,7 +224,8 @@ You can select the display style from the **3D Style** dropdown menu on the righ
   * **Rotate:** Left mouse button drag.
   * **Zoom:** Mouse wheel scroll (or Ctrl + Wheel).
   * **Pan (Move):** Middle mouse button drag, or Shift + Left mouse button drag.
-  * **Reset View:** `View` \> `Reset 3D View` (Ctrl+R) from the menu resets the camera position and zoom to their initial state.
+  * **Reset View:** `View` \> `Reset 3D View` (Ctrl+Shift+R) from the menu resets the camera position and zoom to their initial state.
+  * **Redraw 3D Molecule:** `View` \> `Redraw 3D Molecule` from the menu forces a redraw of the 3D structure.
 
 ### 6.5. Official Plugin Repository
 
@@ -284,11 +286,11 @@ These functions are available from the menu when a 3D structure is displayed. Ma
 
   * **Mirror...:** Creates a mirror image of the entire molecule with respect to a specified plane (XY, XZ, YZ).
 
-  * **Adjust Bond Length...:** Changes the distance between two selected atoms to a specified value. You can choose to fix one atom (or its connected group) or move both.
+  * **Adjust Bond Length...:** Changes the distance between two selected atoms to a specified value. You can choose to fix one atom (or its connected group) or move both. Includes an interactive slider for real-time adjustments.
 
-  * **Adjust Angle...:** Changes the angle formed by three selected atoms (1-2-3) to a specified value. You can choose to rotate the atom 3 side (or its connected group) or rotate both arms equally.
+  * **Adjust Angle...:** Changes the angle formed by three selected atoms (1-2-3) to a specified value. You can choose to rotate the atom 3 side (or its connected group) or rotate both arms equally. Includes an interactive slider for real-time adjustments.
 
-  * **Adjust Dihedral Angle...:** Changes the dihedral angle formed by four selected atoms (1-2-3-4) to a specified value. You can choose to rotate the atom 4 side (or its connected group) or rotate both groups equally.
+  * **Adjust Dihedral Angle...:** Changes the dihedral angle formed by four selected atoms (1-2-3-4) to a specified value. You can choose to rotate the atom 4 side (or its connected group) or rotate both groups equally. Includes an interactive slider for real-time adjustments.
 
   * **Planarize...:** Calculates the best-fit plane for three or more selected atoms and projects those atoms onto that plane.
 
