@@ -893,6 +893,60 @@ _Verify MainWindow delegates init_ui and init_menu_bar to mixin wrappers._
 - assert callable(getattr(MainWindow, 'init_ui', None))
 - assert callable(getattr(MainWindow, 'init_menu_bar', None))
 
+## tests/unit/test_measurement_calcs.py
+
+### test_angle_dialog_logic_matches_rdkit
+_Verify AngleDialog's native calculation against RDKit._
+
+- assert app_calculated_angle == pytest.approx(rdkit_ref_angle, abs=0.01)
+
+### test_adjust_bond_angle_internal_calc_matches_rdkit
+_mol_geometry.adjust_bond_angle internally calculates the current angle before rotation._
+
+- assert app_calculated_angle == pytest.approx(rdkit_ref_angle, abs=0.01)
+
+### test_main_window_edit_3d_angle_logic_matches_rdkit
+_Verify MainWindowEdit3d._calculate_angle matches RDKit._
+
+- assert app_calculated_angle == pytest.approx(rdkit_ref_angle, abs=0.01)
+
+### test_dihedral_logic_matches_rdkit
+_Verify calculate_dihedral native calculation against RDKit._
+
+- assert app_calculated_dihedral == pytest.approx(rdkit_ref_dihedral, abs=0.05)
+- assert float(dialog_calculated_text) == pytest.approx(rdkit_ref_dihedral, abs=0.05)
+
+### test_bond_length_dialog_logic_matches_rdkit
+_Verify BondLengthDialog's distance calculation against RDKit._
+
+- assert manual_distance == pytest.approx(rdkit_ref_dist, abs=0.0001)
+- assert float(dialog_calculated_text) == pytest.approx(rdkit_ref_dist, abs=0.01)
+
+### test_main_window_edit_3d_distance_logic_matches_rdkit
+_Verify MainWindowEdit3d._calculate_distance matches RDKit._
+
+- assert app_calculated_dist == pytest.approx(rdkit_ref_dist, abs=0.0001)
+
+### test_custom_interactor_style_distance_logic_matches_rdkit
+_Verify the inline distance calc logic in CustomInteractorStyle matches RDKit._
+
+- assert app_calculated_dist == pytest.approx(rdkit_ref_dist, abs=0.0001)
+
+### test_alignment_dialog_logic
+_Verify AlignmentDialog properly aligns given atoms to the target axis._
+
+- assert np.allclose(pos0, [0, 0, 0], atol=1e-05)
+- assert pos1[0] > 0
+- assert pos1[1] == pytest.approx(0.0, abs=1e-05)
+- assert pos1[2] == pytest.approx(0.0, abs=1e-05)
+
+### test_align_plane_dialog_logic
+_Verify AlignPlaneDialog properly aligns selected atoms to the target plane._
+
+- assert pos0[2] == pytest.approx(pos1[2], abs=1e-05)
+- assert pos1[2] == pytest.approx(pos2[2], abs=1e-05)
+- assert pos0[2] == pytest.approx(0.0, abs=1e-05)
+
 ## tests/unit/test_modules_init.py
 
 ### test_sip_isdeleted_safe_valid_obj
