@@ -798,7 +798,7 @@ def _perform_optimize_only(mol, options, worker_id, _check_halted, _safe_status,
         _safe_finished((worker_id, mol))
     except Exception:
         _safe_finished(mol)
-    _safe_status("Optimization completed.")
+    _safe_status(f"Optimization completed ({opt_method}).")
 
 
 def _perform_obabel_conversion(mol_block, conversion_mode, opt_method, worker_id, options, _check_halted, _safe_status, _safe_finished):
