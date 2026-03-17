@@ -71,6 +71,19 @@ class WorkerHaltError(Exception):
     pass
 
 
+# Human-readable labels for optimization method keys (mirrors opt3d_method_labels in the UI layer)
+_OPT_METHOD_LABELS = {
+    "MMFF_RDKIT":     "MMFF94s (RDKit)",
+    "MMFF94_RDKIT":   "MMFF94 (RDKit)",
+    "UFF_RDKIT":      "UFF (RDKit)",
+    "MMFF94S_OBABEL": "MMFF94s (Open Babel)",
+    "MMFF94_OBABEL":  "MMFF94 (Open Babel)",
+    "UFF_OBABEL":     "UFF (Open Babel)",
+    "GAFF_OBABEL":    "GAFF (Open Babel)",
+    "GHEMICAL_OBABEL": "Ghemical (Open Babel)",
+}
+
+
 def _adjust_collision_avoidance(rd_mol, check_halted_cb, safe_status_cb):
     """
     Optimized collision avoidance using spatial partitioning (grid-based).
@@ -798,7 +811,8 @@ def _perform_optimize_only(mol, options, worker_id, _check_halted, _safe_status,
         _safe_finished((worker_id, mol))
     except Exception:
         _safe_finished(mol)
-    _safe_status(f"Optimization completed ({opt_method}).")
+    friendly = _OPT_METHOD_LABELS.get(opt_method.upper(), opt_method)
+    _safe_status(f"Optimization completed ({friendly}).")
 
 
 def _perform_obabel_conversion(mol_block, conversion_mode, opt_method, worker_id, options, _check_halted, _safe_status, _safe_finished):
