@@ -1016,7 +1016,7 @@ class CalculationWorker(QObject):
                     traceback.print_exc()
                 _warned_no_worker_id = True
 
-            # options: dict-like with keys: 'conversion_mode' -> 'fallback'|'rdkit'|'obabel'|'direct'
+            # ── 1. Validate input ──────────────────────────────────────────
             if options is None:
                 options = {}
             conversion_mode = options.get("conversion_mode", "fallback")
@@ -1026,6 +1026,8 @@ class CalculationWorker(QObject):
 
             _safe_status("Creating 3D structure...")
 
+            # ── 2. Parse molecule ──────────────────────────────────────────
+
             mol = Chem.MolFromMolBlock(mol_block, removeHs=False)
             if mol is None:
                 raise ValueError("Failed to create molecule from MOL block.")
@@ -1034,36 +1036,29 @@ class CalculationWorker(QObject):
             if _check_halted():
                 raise WorkerHaltError("Halted")
 
+            # ── 3. Parse and apply explicit stereochemistry ────────────────
             explicit_stereo = _parse_explicit_stereo(mol_block)
-
-            # Force explicit stereo labels regardless of coordinates
             _apply_explicit_stereo(mol, explicit_stereo)
+            # Do NOT call AssignStereochemistry here — it overrides our explicit labels
 
-            # Do NOT call AssignStereochemistry here as it overrides our explicit labels
-
-            # Check for halts prior to checking conversion_mode
             if _check_halted():
                 raise WorkerHaltError("Halted")
 
-            # Support for optimize_only mode
+            # ── 4. Mode: optimize existing 3D structure ────────────────────
             if conversion_mode == "optimize_only":
                 _perform_optimize_only(mol, options, worker_id, _check_halted, _safe_status, _safe_finished)
                 return
 
+            # ── 5. Add hydrogens + re-apply stereo ────────────────────────
             mol = Chem.AddHs(mol)
 
-            # Check after adding Hs (may be a long operation)
             if _check_halted():
                 raise WorkerHaltError("Halted")
 
-            # CRITICAL: Re-apply explicit stereo after AddHs which may renumber atoms
+            # Re-apply after AddHs which may renumber atoms
             _apply_explicit_stereo(mol, explicit_stereo)
 
-            # Direct mode: construct a 3D conformer without embedding by using
-            # the 2D coordinates from the MOL block (z=0) and placing added
-            # hydrogens close to their parent heavy atoms with a small z offset.
-            # This avoids 3D embedding entirely and is useful for quick viewing
-            # when stereochemistry/geometry refinement is not desired.
+            # ── 6. Mode: direct 2D→3D without embedding ────────────────────
             if conversion_mode == "direct":
                 _safe_status(
                     "Direct conversion: using 2D coordinates + adding missing H (no embedding)."
@@ -1084,14 +1079,14 @@ class CalculationWorker(QObject):
                 except Exception as e:
                     _safe_status(f"Direct conversion failed: {e}")
 
+            # ── 7. RDKit ETKDG embedding ───────────────────────────────────
             params = AllChem.ETKDGv2()
             params.randomSeed = 42
-            # CRITICAL: Force ETKDG to respect the existing stereochemistry
             params.useExpTorsionAnglePrefs = True
             params.useBasicKnowledge = True
-            params.enforceChirality = True  # This is critical for stereo preservation
+            params.enforceChirality = True  # critical for stereo preservation
 
-            # Store original stereochemistry before embedding (prioritizing explicit labels)
+            # Snapshot stereo before embedding so we can restore it afterwards
             original_stereo_info = []
             for bond_idx, stereo_type in explicit_stereo.items():
                 if bond_idx < mol.GetNumBonds():
@@ -1102,7 +1097,7 @@ class CalculationWorker(QObject):
                             (bond.GetIdx(), stereo_type, stereo_atoms)
                         )
 
-            # Also store any other stereo bonds not in explicit_stereo
+            # Also snapshot stereo bonds not in explicit_stereo
             for bond in mol.GetBonds():
                 if (
                     bond.GetBondType() == Chem.BondType.DOUBLE
@@ -1116,15 +1111,10 @@ class CalculationWorker(QObject):
 
             if conversion_mode in ("fallback", "rdkit"):
                 _safe_status("RDKit: Embedding 3D coordinates...")
-            elif conversion_mode == "obabel":
-                pass
-            else:
-                # direct mode (or any other explicit non-RDKit mode)
-                pass
+
             if _check_halted():
                 raise WorkerHaltError("Halted")
 
-            # Try multiple times with different approaches if needed
             conf_id = -1
 
             # First attempt: Standard ETKDG with stereo enforcement
@@ -1193,7 +1183,7 @@ class CalculationWorker(QObject):
                             raise RuntimeError("RDKit: Constraint embedding failed")
                         conf_id = -1
 
-            # Fallback: Try basic embedding
+            # Attempt 3: basic ETKDGv2 (no stereo constraints)
             if conf_id == -1:
                 try:
                     if conversion_mode in ("fallback", "rdkit"):
@@ -1202,29 +1192,11 @@ class CalculationWorker(QObject):
                         conf_id = AllChem.EmbedMolecule(mol, basic_params)
                     else:
                         conf_id = -1
-                except Exception: # pragma: no cover
+                except Exception:  # pragma: no cover
                     import traceback
                     traceback.print_exc()
-            """
-            if conf_id == -1:
-                        _safe_status("Initial embedding failed, retrying with ignoreSmoothingFailures=True...")
-                # Try again with ignoreSmoothingFailures instead of random-seed retries
-                params.ignoreSmoothingFailures = True
-                # Use a deterministic seed to avoid random-coordinate behavior here
-                params.randomSeed = 0
-                conf_id = AllChem.EmbedMolecule(mol, params)
 
-            if conf_id == -1:
-                self.status_update.emit("Random-seed retry failed, attempting with random coordinates...")
-                try:
-                    conf_id = AllChem.EmbedMolecule(mol, useRandomCoords=True, ignoreSmoothingFailures=True)
-                except TypeError:
-                    # Some RDKit versions expect useRandomCoords in params
-                    params.useRandomCoords = True
-                    conf_id = AllChem.EmbedMolecule(mol, params)
-            """
-
-            # Determine requested MMFF variant from options (fall back to MMFF94s)
+            # ── 8. RDKit succeeded: optimize + emit ────────────────────────
             opt_method = None
             try:
                 opt_method = options.get("optimization_method") if options else None
@@ -1308,7 +1280,7 @@ class CalculationWorker(QObject):
                     _safe_status("RDKit 3D conversion succeeded.")
                     return
 
-            # If RDKit did not produce a conf and OBabel is allowed, try Open Babel
+            # ── 9. RDKit failed: try Open Babel ───────────────────────────
             if conf_id == -1 and conversion_mode in ("fallback", "obabel"):
                 success = _perform_obabel_conversion(mol_block, conversion_mode, opt_method, worker_id, options, _check_halted, _safe_status, _safe_finished)
                 if success:
@@ -1317,7 +1289,7 @@ class CalculationWorker(QObject):
             if conf_id == -1 and conversion_mode == "rdkit":
                 raise RuntimeError("RDKit 3D conversion failed (rdkit-only mode)")
 
-            # --- Last-resort fallback: direct conversion ---
+            # ── 10. Last resort: direct conversion ─────────────────────────
             if conf_id == -1 and conversion_mode == "fallback":
                 _safe_status(
                     "All embedding methods failed. Using direct conversion as last resort..."
