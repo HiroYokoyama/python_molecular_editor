@@ -1,8 +1,13 @@
 import pytest
 from rdkit import Chem
+import numpy as np
 from rdkit.Chem import AllChem, rdMolTransforms
 from moleditpy.modules.calculation_worker import CalculationWorker
+from moleditpy.modules.calculation_worker import CalculationWorker
+from moleditpy.modules.mol_geometry import calculate_dihedral
 from moleditpy.modules.molecular_data import MolecularData
+from moleditpy.modules.angle_dialog import AngleDialog
+from moleditpy.modules.bond_length_dialog import BondLengthDialog
 from PyQt6.QtCore import QPointF
 from unittest.mock import patch, MagicMock
 
@@ -44,9 +49,22 @@ def test_calculation_worker_bond_length_validation(qtbot, app):
 
     # Get optimized distance from the result conformer
     conf = mol_3d.GetConformer()
-    dist_measured = rdMolTransforms.GetBondLength(
-        conf, target_bond.GetBeginAtomIdx(), target_bond.GetEndAtomIdx()
-    )
+    
+    # Use BondLengthDialog logic via importing
+    main_window = MagicMock()
+    dialog = BondLengthDialog(mol_3d, main_window)
+    dialog.atom1_idx = target_bond.GetBeginAtomIdx()
+    dialog.atom2_idx = target_bond.GetEndAtomIdx()
+    dialog.update_display()
+    
+    # Dialog distance text holds the value formatted to 3 decimal places
+    dist_measured_text = dialog.distance_input.text()
+    if dist_measured_text == "":
+        p1 = np.array(conf.GetAtomPosition(target_bond.GetBeginAtomIdx()))
+        p2 = np.array(conf.GetAtomPosition(target_bond.GetEndAtomIdx()))
+        dist_measured = np.linalg.norm(p2 - p1)
+    else:
+        dist_measured = float(dist_measured_text)
 
     # Get "Reference" RDKit distance for a standard ETKDG embedded molecule
     ref_mol = Chem.MolFromSmiles("CC")
@@ -100,9 +118,21 @@ def test_calculation_worker_angle_validation(qtbot, app):
                 break
 
     assert central != -1, "Could not find central carbon in propane"
-    angle_measured = rdMolTransforms.GetAngleDeg(
-        conf, neighbors[0], central, neighbors[1]
-    )
+    
+    # Use AngleDialog logic via importing
+    main_window = MagicMock()
+    dialog = AngleDialog(mol_3d, main_window)
+    dialog.atom1_idx = neighbors[0]
+    dialog.atom2_idx = central
+    dialog.atom3_idx = neighbors[1]
+    dialog.update_display()
+    
+    angle_measured_text = dialog.angle_input.text()
+    if angle_measured_text == "":
+        current_angle = dialog.calculate_angle()
+        angle_measured = current_angle
+    else:
+        angle_measured = float(angle_measured_text)
 
     # Reference Propane (Identical setup to CalculationWorker)
     ref_mol = Chem.MolFromSmiles("CCC")
@@ -146,7 +176,8 @@ def test_calculation_worker_dihedral_validation(qtbot, app):
 
     # Path C1-C2-C3-C4
     # We find a chain of 4 carbons.
-    dihedral = rdMolTransforms.GetDihedralDeg(conf, 0, 1, 2, 3)
+    positions = conf.GetPositions()
+    dihedral = calculate_dihedral(positions, 0, 1, 2, 3)
 
     # A staggered conformation should have dihedral around 60 (gauche) or 180 (trans).
     # We check if it is NOT eclipsed (near 0, 120).
