@@ -801,6 +801,106 @@ def _perform_optimize_only(mol, options, worker_id, _check_halted, _safe_status,
     _safe_status("Optimization completed.")
 
 
+def _perform_obabel_conversion(mol_block, conversion_mode, opt_method, worker_id, options, _check_halted, _safe_status, _safe_finished):
+    """
+    Perform Open Babel 3D conversion and optimization.
+    Returns True if successful, False if it should fall back.
+    Raises exception on terminal failure.
+    """
+    _safe_status(
+        "RDKit embedding failed or disabled. Attempting Open Babel..."
+    )
+    try:
+        if not OBABEL_AVAILABLE:
+            raise RuntimeError(
+                "Open Babel (pybel) is not available in this Python environment."
+            )
+        ob_mol = pybel.readstring("mol", mol_block)
+        try:
+            ob_mol.addh()
+        except Exception:  # pragma: no cover
+            import traceback
+            traceback.print_exc()
+        ob_mol.make3D()
+        # Skip OpenBabel's redundant manual localopt here.
+        # We will optimize rd_mol immediately after conversion using the selected user method.
+        molblock_ob = ob_mol.write("mol")
+        rd_mol = Chem.MolFromMolBlock(molblock_ob, removeHs=False)
+        if rd_mol is None:
+            raise ValueError("Open Babel produced invalid MOL block.")
+        rd_mol = Chem.AddHs(rd_mol)
+        try:
+            opt_method_raw = opt_method or "MMFF94s_RDKIT"
+            backend = "OBABEL" if "OBABEL" in opt_method_raw.upper() else "RDKIT"
+
+            method_key = "MMFF94s"
+            if "MMFF94" in opt_method_raw.upper():
+                method_key = "MMFF94" if "MMFF94S" not in opt_method_raw.upper() else "MMFF94s"
+            elif "UFF" in opt_method_raw.upper():
+                method_key = "UFF"
+            elif "GAFF" in opt_method_raw.upper():
+                method_key = "GAFF"
+            elif "GHEMICAL" in opt_method_raw.upper():
+                method_key = "GHEMICAL"
+
+            if backend == "OBABEL":
+                try:
+                    rd_mol.SetProp("_pme_optimization_method", opt_method_raw)
+                except Exception:
+                    pass
+                _safe_status(f"Optimizing with OpenBabel ({method_key})...")
+                opt_success = _iterative_optimize_obabel(rd_mol, method_key, _check_halted, _safe_status)
+            else:
+                try:
+                    rd_mol.SetProp("_pme_optimization_method", opt_method_raw)
+                except Exception:
+                    pass
+                _safe_status(f"Optimizing with RDKit ({method_key})...")
+                opt_success = _iterative_optimize(rd_mol, method_key, _check_halted, _safe_status)
+
+            if not opt_success:
+                _safe_status(f"Warning: Optimization with {opt_method_raw} failed. Using unoptimized structure.")
+                try:
+                    rd_mol.ClearProp("_pme_optimization_method")
+                except Exception:
+                    pass
+        except WorkerHaltError:
+            raise
+        except Exception as opt_err:
+            _safe_status(f"Warning: Optimization failed: {opt_err}. Using unoptimized structure.")
+            try:
+                rd_mol.ClearProp("_pme_optimization_method")
+            except Exception:
+                pass
+
+        _safe_status(
+            "Open Babel embedding succeeded. Warning: Conformation accuracy may be limited."
+        )
+        # CRITICAL: Check for halt *before* emitting finished signal
+        if _check_halted():
+            raise WorkerHaltError("Halted")
+
+        # Collision avoidance
+        _adjust_collision_avoidance(rd_mol, _check_halted, _safe_status)
+        try:
+            _safe_finished((worker_id, rd_mol))
+        except Exception:
+            _safe_finished(rd_mol)
+        return True
+    except WorkerHaltError:
+        raise
+    except Exception as ob_err:
+        if conversion_mode == "obabel":
+            # obabel-only mode: no further fallback
+            raise RuntimeError(f"Open Babel 3D conversion failed: {ob_err}")
+        # fallback mode: continue to direct conversion below
+        _safe_status(
+            f"Open Babel unavailable or failed ({ob_err}). "
+            "Falling back to direct conversion..."
+        )
+    return False
+
+
 class CalculationWorker(QObject):
     status_update = pyqtSignal(str)
     finished = pyqtSignal(object)
@@ -1210,97 +1310,9 @@ class CalculationWorker(QObject):
 
             # If RDKit did not produce a conf and OBabel is allowed, try Open Babel
             if conf_id == -1 and conversion_mode in ("fallback", "obabel"):
-                _safe_status(
-                    "RDKit embedding failed or disabled. Attempting Open Babel..."
-                )
-                try:
-                    if not OBABEL_AVAILABLE:
-                        raise RuntimeError(
-                            "Open Babel (pybel) is not available in this Python environment."
-                        )
-                    ob_mol = pybel.readstring("mol", mol_block)
-                    try:
-                        ob_mol.addh()
-                    except Exception:  # pragma: no cover
-                        import traceback
-                        traceback.print_exc()
-                    ob_mol.make3D()
-                    # Skip OpenBabel's redundant manual localopt here.
-                    # We will optimize rd_mol immediately after conversion using the selected user method.
-                    molblock_ob = ob_mol.write("mol")
-                    rd_mol = Chem.MolFromMolBlock(molblock_ob, removeHs=False)
-                    if rd_mol is None:
-                        raise ValueError("Open Babel produced invalid MOL block.")
-                    rd_mol = Chem.AddHs(rd_mol)
-                    try:
-                        opt_method_raw = opt_method or "MMFF94s_RDKIT"
-                        backend = "OBABEL" if "OBABEL" in opt_method_raw.upper() else "RDKIT"
-                        
-                        method_key = "MMFF94s"
-                        if "MMFF94" in opt_method_raw.upper():
-                            method_key = "MMFF94" if "MMFF94S" not in opt_method_raw.upper() else "MMFF94s"
-                        elif "UFF" in opt_method_raw.upper():
-                            method_key = "UFF"
-                        elif "GAFF" in opt_method_raw.upper():
-                            method_key = "GAFF"
-                        elif "GHEMICAL" in opt_method_raw.upper():
-                            method_key = "GHEMICAL"
-
-                        if backend == "OBABEL":
-                            try:
-                                rd_mol.SetProp("_pme_optimization_method", opt_method_raw)
-                            except Exception:
-                                pass
-                            _safe_status(f"Optimizing with OpenBabel ({method_key})...")
-                            opt_success = _iterative_optimize_obabel(rd_mol, method_key, _check_halted, _safe_status)
-                        else:
-                            try:
-                                rd_mol.SetProp("_pme_optimization_method", opt_method_raw)
-                            except Exception:
-                                pass
-                            _safe_status(f"Optimizing with RDKit ({method_key})...")
-                            opt_success = _iterative_optimize(rd_mol, method_key, _check_halted, _safe_status)
-
-                        if not opt_success:
-                            _safe_status(f"Warning: Optimization with {opt_method_raw} failed. Using unoptimized structure.")
-                            try:
-                                rd_mol.ClearProp("_pme_optimization_method")
-                            except Exception:
-                                pass
-                    except WorkerHaltError:
-                        raise
-                    except Exception as opt_err:
-                        _safe_status(f"Warning: Optimization failed: {opt_err}. Using unoptimized structure.")
-                        try:
-                            rd_mol.ClearProp("_pme_optimization_method")
-                        except Exception:
-                            pass
-
-                    _safe_status(
-                        "Open Babel embedding succeeded. Warning: Conformation accuracy may be limited."
-                    )
-                    # CRITICAL: Check for halt *before* emitting finished signal
-                    if _check_halted():
-                        raise WorkerHaltError("Halted")
-
-                    # Collision avoidance
-                    _adjust_collision_avoidance(rd_mol, _check_halted, _safe_status)
-                    try:
-                        _safe_finished((worker_id, rd_mol))
-                    except Exception:
-                        _safe_finished(rd_mol)
+                success = _perform_obabel_conversion(mol_block, conversion_mode, opt_method, worker_id, options, _check_halted, _safe_status, _safe_finished)
+                if success:
                     return
-                except WorkerHaltError:
-                    raise
-                except Exception as ob_err:
-                    if conversion_mode == "obabel":
-                        # obabel-only mode: no further fallback
-                        raise RuntimeError(f"Open Babel 3D conversion failed: {ob_err}")
-                    # fallback mode: continue to direct conversion below
-                    _safe_status(
-                        f"Open Babel unavailable or failed ({ob_err}). "
-                        "Falling back to direct conversion..."
-                    )
 
             if conf_id == -1 and conversion_mode == "rdkit":
                 raise RuntimeError("RDKit 3D conversion failed (rdkit-only mode)")
