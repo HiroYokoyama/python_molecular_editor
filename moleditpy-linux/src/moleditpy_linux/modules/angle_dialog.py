@@ -24,10 +24,10 @@ from PyQt6.QtWidgets import (
 
 try:
     from .dialog3_d_picking_mixin import Dialog3DPickingMixin
-    from .mol_geometry import adjust_bond_angle, get_connected_group, rodrigues_rotate
+    from .mol_geometry import adjust_bond_angle, calc_angle_deg, get_connected_group, rodrigues_rotate
 except Exception:
     from modules.dialog3_d_picking_mixin import Dialog3DPickingMixin
-    from modules.mol_geometry import adjust_bond_angle, get_connected_group, rodrigues_rotate
+    from modules.mol_geometry import adjust_bond_angle, calc_angle_deg, get_connected_group, rodrigues_rotate
 
 import numpy as np
 from PyQt6.QtCore import Qt
@@ -310,17 +310,10 @@ class AngleDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
     def calculate_angle(self):
         """現在の角度を計算"""
         conf = self.mol.GetConformer()
-        pos1 = np.array(conf.GetAtomPosition(self.atom1_idx))
-        pos2 = np.array(conf.GetAtomPosition(self.atom2_idx))  # vertex
-        pos3 = np.array(conf.GetAtomPosition(self.atom3_idx))
-
-        vec1 = pos1 - pos2
-        vec2 = pos3 - pos2
-
-        cos_angle = np.dot(vec1, vec2) / (np.linalg.norm(vec1) * np.linalg.norm(vec2))
-        cos_angle = np.clip(cos_angle, -1.0, 1.0)
-        angle_rad = np.arccos(cos_angle)
-        return np.degrees(angle_rad)
+        pos1 = conf.GetAtomPosition(self.atom1_idx)
+        pos2 = conf.GetAtomPosition(self.atom2_idx)  # vertex
+        pos3 = conf.GetAtomPosition(self.atom3_idx)
+        return calc_angle_deg(pos1, pos2, pos3)
 
     def on_angle_input_changed(self, text):
         """Line edit text changed, update slider."""
