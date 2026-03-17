@@ -287,6 +287,620 @@ def _iterative_optimize_obabel(mol, method, check_halted_cb, safe_status_cb, max
         return False
 
 
+def _parse_explicit_stereo(mol_block):
+    """Parse explicit stereochemistry from the MOL block."""
+    explicit_stereo = {}
+    mol_lines = mol_block.split("\n")
+    for line in mol_lines:
+        if line.startswith("M  CFG"):
+            parts = line.split()
+            if len(parts) >= 4:
+                try:
+                    bond_idx = int(parts[3]) - 1  # MOL format is 1-indexed
+                    cfg_value = int(parts[4])
+                    # cfg_value: 1=Z, 2=E in MOL format
+                    if cfg_value == 1:
+                        explicit_stereo[bond_idx] = Chem.BondStereo.STEREOZ
+                    elif cfg_value == 2:
+                        explicit_stereo[bond_idx] = Chem.BondStereo.STEREOE
+                except (ValueError, IndexError):
+                    continue
+    return explicit_stereo
+
+
+def _apply_explicit_stereo(mol, explicit_stereo):
+    """Apply explicit stereochemistry to the molecule."""
+    for bond_idx, stereo_type in explicit_stereo.items():
+        if bond_idx < mol.GetNumBonds():
+            bond = mol.GetBondWithIdx(bond_idx)
+            if bond.GetBondType() == Chem.BondType.DOUBLE:
+                # Find suitable stereo atoms
+                begin_atom = bond.GetBeginAtom()
+                end_atom = bond.GetEndAtom()
+
+                # Pick heavy atom neighbors preferentially
+                begin_neighbors = [
+                    nbr
+                    for nbr in begin_atom.GetNeighbors()
+                    if nbr.GetIdx() != end_atom.GetIdx()
+                ]
+                end_neighbors = [
+                    nbr
+                    for nbr in end_atom.GetNeighbors()
+                    if nbr.GetIdx() != begin_atom.GetIdx()
+                ]
+
+                if begin_neighbors and end_neighbors:
+                    # Prefer heavy atoms
+                    begin_heavy = [
+                        n for n in begin_neighbors if n.GetAtomicNum() > 1
+                    ]
+                    end_heavy = [
+                        n for n in end_neighbors if n.GetAtomicNum() > 1
+                    ]
+
+                    stereo_atom1 = (
+                        begin_heavy[0] if begin_heavy else begin_neighbors[0]
+                    ).GetIdx()
+                    stereo_atom2 = (
+                        end_heavy[0] if end_heavy else end_neighbors[0]
+                    ).GetIdx()
+
+                    bond.SetStereoAtoms(stereo_atom1, stereo_atom2)
+                    bond.SetStereo(stereo_type)
+
+
+def _perform_direct_conversion(mol_block, mol, options, _check_halted, _safe_status):
+    """
+    Perform direct 3D conversion using 2D coordinates and adding missing H without embedding.
+    Returns the processed mol object if successful, or raises Exception on failure.
+    """
+    # 1) Parse MOL block *with* existing hydrogens (removeHs=False)
+    #    to get coordinates for *all existing* atoms.
+    parsed_coords = []  # all-atom coordinates (x, y, z)
+    stereo_dirs = []  # list of (begin_idx, end_idx, stereo_flag)
+
+    base2d_all = None
+    try:
+        # H原子を含めてパース
+        base2d_all = Chem.MolFromMolBlock(
+            mol_block, removeHs=False, sanitize=True
+        )
+    except Exception:
+        try:
+            base2d_all = Chem.MolFromMolBlock(
+                mol_block, removeHs=False, sanitize=False
+            )
+        except Exception:
+            base2d_all = None
+
+    if base2d_all is not None and base2d_all.GetNumConformers() > 0:
+        oconf = base2d_all.GetConformer()
+        for i in range(base2d_all.GetNumAtoms()):
+            p = oconf.GetAtomPosition(i)
+            parsed_coords.append((float(p.x), float(p.y), 0.0))
+
+    # 2) Parse wedge/dash bond information (using all atoms)
+    try:
+        lines = mol_block.splitlines()
+        counts_idx = None
+
+        for i, ln in enumerate(lines[:40]):
+            if re.match(r"^\s*\d+\s+\d+", ln):
+                counts_idx = i
+                break
+
+        if counts_idx is not None:
+            parts = lines[counts_idx].split()
+            try:
+                natoms = int(parts[0])
+                nbonds = int(parts[1])
+            except Exception:
+                natoms = nbonds = 0
+
+            # 全原子マップ (MOL 1-based index -> 0-based index)
+            atom_map = {i + 1: i for i in range(natoms)}
+
+            bond_start = counts_idx + 1 + natoms
+            for j in range(
+                min(nbonds, max(0, len(lines) - bond_start))
+            ):
+                bond_line = lines[bond_start + j]
+                try:
+                    m = re.match(
+                        r"^\s*(\d+)\s+(\d+)\s+(\d+)(?:\s+(-?\d+))?",
+                        bond_line,
+                    )
+                    if m:
+                        try:
+                            atom1_mol = int(
+                                m.group(1)
+                            )  # 1-based MOL index
+                            atom2_mol = int(
+                                m.group(2)
+                            )  # 1-based MOL index
+                        except Exception:
+                            continue
+                        try:
+                            stereo_raw = (
+                                int(m.group(4))
+                                if m.group(4) is not None
+                                else 0
+                            )
+                        except Exception:
+                            stereo_raw = 0
+                    else:
+                        fields = bond_line.split()
+                        if len(fields) >= 4:
+                            try:
+                                atom1_mol = int(
+                                    fields[0]
+                                )  # 1-based MOL index
+                                atom2_mol = int(
+                                    fields[1]
+                                )  # 1-based MOL index
+                            except Exception:
+                                continue
+                            try:
+                                stereo_raw = (
+                                    int(fields[3])
+                                    if len(fields) > 3
+                                    else 0
+                                )
+                            except Exception:
+                                stereo_raw = 0
+                        else:
+                            continue
+
+                    # V2000の立体表記を正規化
+                    if stereo_raw == 1:
+                        stereo_flag = 1  # Wedge
+                    elif stereo_raw == 2:
+                        stereo_flag = 6  # Dash (V2000では 6 がDash)
+                    else:
+                        stereo_flag = stereo_raw
+
+                    # 全原子マップでチェック
+                    if atom1_mol in atom_map and atom2_mol in atom_map:
+                        idx1 = atom_map[atom1_mol]
+                        idx2 = atom_map[atom2_mol]
+                        if stereo_flag in (
+                            1,
+                            6,
+                        ):  # Wedge (1) or Dash (6)
+                            stereo_dirs.append(
+                                (idx1, idx2, stereo_flag)
+                            )
+                except Exception:
+                    continue
+    except Exception:
+        stereo_dirs = []
+
+    # Fallback for parsed_coords (if RDKit parse failed)
+    if not parsed_coords:
+        try:
+            lines = mol_block.splitlines()
+            counts_idx = None
+            for i, ln in enumerate(lines[:40]):
+                if re.match(r"^\s*\d+\s+\d+", ln):
+                    counts_idx = i
+                    break
+            if counts_idx is not None:
+                parts = lines[counts_idx].split()
+                try:
+                    natoms = int(parts[0])
+                except Exception:
+                    natoms = 0
+                atom_start = counts_idx + 1
+                for j in range(
+                    min(natoms, max(0, len(lines) - atom_start))
+                ):
+                    atom_line = lines[atom_start + j]
+                    try:
+                        x = float(atom_line[0:10].strip())
+                        y = float(atom_line[10:20].strip())
+                        z = float(atom_line[20:30].strip())
+                    except Exception:
+                        fields = atom_line.split()
+                        if len(fields) >= 4:
+                            try:
+                                x = float(fields[0])
+                                y = float(fields[1])
+                                z = float(fields[2])
+                            except Exception:
+                                continue
+                        else:
+                            continue
+                    # H原子もスキップしない
+                    parsed_coords.append((x, y, z))
+        except Exception:
+            parsed_coords = []
+
+    if not parsed_coords:
+        raise ValueError(
+            "Failed to parse coordinates from MOL block for direct conversion."
+        )
+
+    # 3) `mol` は既に AddHs された状態
+    #    元の原子数 (H含む) を parsed_coords の長さから取得
+    num_existing_atoms = len(parsed_coords)
+
+    # 4) コンフォーマを作成
+    conf = Chem.Conformer(mol.GetNumAtoms())
+
+    for i in range(mol.GetNumAtoms()):
+        if i < num_existing_atoms:
+            # 既存原子 (H含む): 2D座標 (z=0) を設定
+            x, y, z_ignored = parsed_coords[i]
+            try:
+                conf.SetAtomPosition(
+                    i, rdGeometry.Point3D(float(x), float(y), 0.0)
+                )
+            except Exception:  # pragma: no cover
+                import traceback
+                traceback.print_exc()
+        else:
+            # 新規追加されたH原子: 親原子の近くに配置
+            atom = mol.GetAtomWithIdx(i)
+            if atom.GetAtomicNum() == 1:
+                neighs = [
+                    n
+                    for n in atom.GetNeighbors()
+                    if n.GetIdx() < num_existing_atoms
+                ]
+                heavy_pos_found = False
+                for nb in neighs:  # 親原子 (重原子または既存H)
+                    try:
+                        nb_idx = nb.GetIdx()
+                        # if nb_idx < num_existing_atoms: # チェックは不要 (neighs で既にフィルタ済み)
+                        nbpos = conf.GetAtomPosition(nb_idx)
+                        # Geometry-based placement:
+                        # Compute an "empty" direction around the parent atom by
+                        # summing existing bond unit vectors and taking the
+                        # opposite. If degenerate, pick a perpendicular or
+                        # fallback vector. Rotate slightly if multiple Hs already
+                        # attached to avoid overlap.
+                        parent_idx = nb_idx
+                        try:
+                            parent_pos = conf.GetAtomPosition(
+                                parent_idx
+                            )
+                            parent_atom = mol.GetAtomWithIdx(parent_idx)
+                            # collect unit vectors to already-placed neighbors (idx < i)
+                            vecs = []
+                            for nbr in parent_atom.GetNeighbors():
+                                nidx = nbr.GetIdx()
+                                if nidx == i:
+                                    continue
+                                # only consider neighbors whose positions are already set
+                                if nidx < i:
+                                    try:
+                                        p = conf.GetAtomPosition(nidx)
+                                        vx = float(p.x) - float(
+                                            parent_pos.x
+                                        )
+                                        vy = float(p.y) - float(
+                                            parent_pos.y
+                                        )
+                                        nrm = math.hypot(vx, vy)
+                                        if nrm > 1e-6:
+                                            vecs.append(
+                                                (vx / nrm, vy / nrm)
+                                            )
+                                    except Exception:
+                                        continue
+
+                            if vecs:
+                                sx = sum(v[0] for v in vecs)
+                                sy = sum(v[1] for v in vecs)
+                                fx = -sx
+                                fy = -sy
+                                fn = math.hypot(fx, fy)
+                                if fn < 1e-6:
+                                    # degenerate: pick a perpendicular to first bond
+                                    fx = -vecs[0][1]
+                                    fy = vecs[0][0]
+                                    fn = math.hypot(fx, fy)
+                                fx /= fn
+                                fy /= fn
+
+                                # Avoid placing multiple Hs at identical directions
+                                existing_h_count = sum(
+                                    1
+                                    for nbr in parent_atom.GetNeighbors()
+                                    if nbr.GetIdx() < i
+                                    and nbr.GetAtomicNum() == 1
+                                )
+                                angle = existing_h_count * (
+                                    math.pi / 6.0
+                                )  # 30deg steps
+                                cos_a = math.cos(angle)
+                                sin_a = math.sin(angle)
+                                rx = fx * cos_a - fy * sin_a
+                                ry = fx * sin_a + fy * cos_a
+
+                                bond_length = 1.0
+                                conf.SetAtomPosition(
+                                    i,
+                                    rdGeometry.Point3D(
+                                        float(parent_pos.x)
+                                        + rx * bond_length,
+                                        float(parent_pos.y)
+                                        + ry * bond_length,
+                                        0.3,
+                                    ),
+                                )
+                            else:
+                                # No existing placed neighbors: fallback to small offset
+                                conf.SetAtomPosition(
+                                    i,
+                                    rdGeometry.Point3D(
+                                        float(parent_pos.x) + 0.5,
+                                        float(parent_pos.y) + 0.5,
+                                        0.3,
+                                    ),
+                                )
+
+                            heavy_pos_found = True
+                            break
+                        except Exception:
+                            # fall back to trying the next neighbor if any
+                            continue
+                    except Exception:
+                        continue
+                if not heavy_pos_found:
+                    # フォールバック (原点近く)
+                    try:
+                        conf.SetAtomPosition(
+                            i, rdGeometry.Point3D(0.0, 0.0, 0.10)
+                        )
+                    except Exception:  # pragma: no cover
+                        import traceback
+                        traceback.print_exc()
+    # 5) Wedge/Dash の Zオフセットを適用
+    try:
+        stereo_z_offset = 1.5  # wedge -> +1.5, dash -> -1.5
+        for begin_idx, end_idx, stereo_flag in stereo_dirs:
+            try:
+                # インデックスは既存原子内のはず
+                if (
+                    begin_idx >= num_existing_atoms
+                    or end_idx >= num_existing_atoms
+                ):
+                    continue
+
+                if stereo_flag not in (1, 6):
+                    continue
+
+                sign = 1.0 if stereo_flag == 1 else -1.0
+
+                # end_idx (立体表記の終点側原子) にZオフセットを適用
+                pos = conf.GetAtomPosition(end_idx)
+                newz = float(pos.z) + (
+                    stereo_z_offset * sign
+                )  # 既存のZ=0にオフセットを加算
+                conf.SetAtomPosition(
+                    end_idx,
+                    rdGeometry.Point3D(
+                        float(pos.x), float(pos.y), float(newz)
+                    ),
+                )
+            except Exception:
+                continue
+    except Exception:  # pragma: no cover
+        import traceback
+        traceback.print_exc()
+    # コンフォーマを入れ替えて終了
+    try:
+        mol.RemoveAllConformers()
+    except Exception:  # pragma: no cover
+        import traceback
+        traceback.print_exc()
+    mol.AddConformer(conf, assignId=True)
+
+    # Optimization (respects do_optimize flag)
+    do_optimize = options.get("do_optimize", True) if options else True
+    if do_optimize:
+        _safe_status("Direct conversion: optimizing geometry...")
+        if _check_halted():
+            raise WorkerHaltError("Halted")
+
+        # Determine backend and actual method
+        opt_method = options.get("optimization_method", "MMFF94s_RDKIT") if options else "MMFF94s_RDKIT"
+        backend = "OBABEL" if "OBABEL" in opt_method.upper() else "RDKIT"
+        
+        # Default to MMFF94s
+        method_key = "MMFF94s"
+        if "MMFF94" in opt_method.upper():
+            method_key = "MMFF94" if "MMFF94S" not in opt_method.upper() else "MMFF94s"
+        elif "UFF" in opt_method.upper():
+            method_key = "UFF"
+        elif "GAFF" in opt_method.upper():
+            method_key = "GAFF"
+        elif "GHEMICAL" in opt_method.upper():
+            method_key = "GHEMICAL"
+
+        # Apply Force Field Optimization
+        if backend == "OBABEL":
+            try:
+                # Add property for UI feedback
+                mol.SetProp("_pme_optimization_method", opt_method)
+            except Exception:
+                pass
+            _safe_status(f"Applying force field optimization ({method_key} / OpenBabel)...")
+            opt_success = _iterative_optimize_obabel(mol, method_key, _check_halted, _safe_status)
+            if not opt_success:
+                _safe_status(f"Warning: Optimization with {opt_method} failed. Using unoptimized structure.")
+                try:
+                    mol.ClearProp("_pme_optimization_method")
+                except Exception:
+                    pass
+        else: # RDKit backend
+            try:
+                # Add property for UI feedback
+                mol.SetProp("_pme_optimization_method", opt_method)
+            except Exception:
+                pass
+            _safe_status(f"Applying force field optimization ({method_key} / RDKit)...")
+            opt_success = _iterative_optimize(mol, method_key, _check_halted, _safe_status)
+            if not opt_success:
+                _safe_status(f"Warning: Optimization with {opt_method} failed. Using unoptimized structure.")
+                try:
+                    mol.ClearProp("_pme_optimization_method")
+                except Exception:
+                    pass
+
+    if _check_halted():
+        raise WorkerHaltError("Halted")
+    if do_optimize:
+        _adjust_collision_avoidance(mol, _check_halted, _safe_status)
+    return mol
+
+
+def _perform_optimize_only(mol, options, worker_id, _check_halted, _safe_status, _safe_finished):
+    """Perform optimization on an existing 3D structure and emit finished signal."""
+    _safe_status("Optimizing existing 3D structure...")
+    opt_method = str(options.get("optimization_method", "MMFF_RDKIT")).upper()
+    
+    # Determine backend and actual method
+    backend = "OBABEL" if "OBABEL" in opt_method else "RDKIT"
+    
+    # Default to MMFF94s
+    method_key = "MMFF94s"
+    if "MMFF94" in opt_method:
+        method_key = "MMFF94" if "MMFF94S" not in opt_method else "MMFF94s"
+    elif "UFF" in opt_method:
+        method_key = "UFF"
+    elif "GAFF" in opt_method:
+        method_key = "GAFF"
+    elif "GHEMICAL" in opt_method:
+        method_key = "GHEMICAL"
+
+    if backend == "OBABEL":
+        try:
+            mol.SetProp("_pme_optimization_method", opt_method)
+        except Exception:
+            pass
+        opt_success = _iterative_optimize_obabel(mol, method_key, _check_halted, _safe_status)
+    else:
+        try:
+            mol.SetProp("_pme_optimization_method", opt_method)
+        except Exception:
+            pass
+        opt_success = _iterative_optimize(mol, method_key, _check_halted, _safe_status)
+    
+    if not opt_success:
+        raise Exception(f"Optimization with {opt_method} failed. You can change the method in the settings.")
+    
+    if _check_halted():
+        raise WorkerHaltError("Halted")
+    try:
+        _safe_finished((worker_id, mol))
+    except Exception:
+        _safe_finished(mol)
+    _safe_status("Optimization completed.")
+
+
+def _perform_obabel_conversion(mol_block, conversion_mode, opt_method, worker_id, options, _check_halted, _safe_status, _safe_finished):
+    """
+    Perform Open Babel 3D conversion and optimization.
+    Returns True if successful, False if it should fall back.
+    Raises exception on terminal failure.
+    """
+    _safe_status(
+        "RDKit embedding failed or disabled. Attempting Open Babel..."
+    )
+    try:
+        if not OBABEL_AVAILABLE:
+            raise RuntimeError(
+                "Open Babel (pybel) is not available in this Python environment."
+            )
+        ob_mol = pybel.readstring("mol", mol_block)
+        try:
+            ob_mol.addh()
+        except Exception:  # pragma: no cover
+            import traceback
+            traceback.print_exc()
+        ob_mol.make3D()
+        # Skip OpenBabel's redundant manual localopt here.
+        # We will optimize rd_mol immediately after conversion using the selected user method.
+        molblock_ob = ob_mol.write("mol")
+        rd_mol = Chem.MolFromMolBlock(molblock_ob, removeHs=False)
+        if rd_mol is None:
+            raise ValueError("Open Babel produced invalid MOL block.")
+        rd_mol = Chem.AddHs(rd_mol)
+        try:
+            opt_method_raw = opt_method or "MMFF94s_RDKIT"
+            backend = "OBABEL" if "OBABEL" in opt_method_raw.upper() else "RDKIT"
+
+            method_key = "MMFF94s"
+            if "MMFF94" in opt_method_raw.upper():
+                method_key = "MMFF94" if "MMFF94S" not in opt_method_raw.upper() else "MMFF94s"
+            elif "UFF" in opt_method_raw.upper():
+                method_key = "UFF"
+            elif "GAFF" in opt_method_raw.upper():
+                method_key = "GAFF"
+            elif "GHEMICAL" in opt_method_raw.upper():
+                method_key = "GHEMICAL"
+
+            if backend == "OBABEL":
+                try:
+                    rd_mol.SetProp("_pme_optimization_method", opt_method_raw)
+                except Exception:
+                    pass
+                _safe_status(f"Optimizing with OpenBabel ({method_key})...")
+                opt_success = _iterative_optimize_obabel(rd_mol, method_key, _check_halted, _safe_status)
+            else:
+                try:
+                    rd_mol.SetProp("_pme_optimization_method", opt_method_raw)
+                except Exception:
+                    pass
+                _safe_status(f"Optimizing with RDKit ({method_key})...")
+                opt_success = _iterative_optimize(rd_mol, method_key, _check_halted, _safe_status)
+
+            if not opt_success:
+                _safe_status(f"Warning: Optimization with {opt_method_raw} failed. Using unoptimized structure.")
+                try:
+                    rd_mol.ClearProp("_pme_optimization_method")
+                except Exception:
+                    pass
+        except WorkerHaltError:
+            raise
+        except Exception as opt_err:
+            _safe_status(f"Warning: Optimization failed: {opt_err}. Using unoptimized structure.")
+            try:
+                rd_mol.ClearProp("_pme_optimization_method")
+            except Exception:
+                pass
+
+        _safe_status(
+            "Open Babel embedding succeeded. Warning: Conformation accuracy may be limited."
+        )
+        # CRITICAL: Check for halt *before* emitting finished signal
+        if _check_halted():
+            raise WorkerHaltError("Halted")
+
+        # Collision avoidance
+        _adjust_collision_avoidance(rd_mol, _check_halted, _safe_status)
+        try:
+            _safe_finished((worker_id, rd_mol))
+        except Exception:
+            _safe_finished(rd_mol)
+        return True
+    except WorkerHaltError:
+        raise
+    except Exception as ob_err:
+        if conversion_mode == "obabel":
+            # obabel-only mode: no further fallback
+            raise RuntimeError(f"Open Babel 3D conversion failed: {ob_err}")
+        # fallback mode: continue to direct conversion below
+        _safe_status(
+            f"Open Babel unavailable or failed ({ob_err}). "
+            "Falling back to direct conversion..."
+        )
+    return False
+
+
 class CalculationWorker(QObject):
     status_update = pyqtSignal(str)
     finished = pyqtSignal(object)
@@ -402,7 +1016,7 @@ class CalculationWorker(QObject):
                     traceback.print_exc()
                 _warned_no_worker_id = True
 
-            # options: dict-like with keys: 'conversion_mode' -> 'fallback'|'rdkit'|'obabel'|'direct'
+            # ── 1. Validate input ──────────────────────────────────────────
             if options is None:
                 options = {}
             conversion_mode = options.get("conversion_mode", "fallback")
@@ -412,6 +1026,8 @@ class CalculationWorker(QObject):
 
             _safe_status("Creating 3D structure...")
 
+            # ── 2. Parse molecule ──────────────────────────────────────────
+
             mol = Chem.MolFromMolBlock(mol_block, removeHs=False)
             if mol is None:
                 raise ValueError("Failed to create molecule from MOL block.")
@@ -420,568 +1036,35 @@ class CalculationWorker(QObject):
             if _check_halted():
                 raise WorkerHaltError("Halted")
 
-            explicit_stereo = {}
-            mol_lines = mol_block.split("\n")
-            for line in mol_lines:
-                if line.startswith("M  CFG"):
-                    parts = line.split()
-                    if len(parts) >= 4:
-                        try:
-                            bond_idx = int(parts[3]) - 1  # MOL format is 1-indexed
-                            cfg_value = int(parts[4])
-                            # cfg_value: 1=Z, 2=E in MOL format
-                            if cfg_value == 1:
-                                explicit_stereo[bond_idx] = Chem.BondStereo.STEREOZ
-                            elif cfg_value == 2:
-                                explicit_stereo[bond_idx] = Chem.BondStereo.STEREOE
-                        except (ValueError, IndexError):
-                            continue
+            # ── 3. Parse and apply explicit stereochemistry ────────────────
+            explicit_stereo = _parse_explicit_stereo(mol_block)
+            _apply_explicit_stereo(mol, explicit_stereo)
+            # Do NOT call AssignStereochemistry here — it overrides our explicit labels
 
-            # Force explicit stereo labels regardless of coordinates
-            for bond_idx, stereo_type in explicit_stereo.items():
-                if bond_idx < mol.GetNumBonds():
-                    bond = mol.GetBondWithIdx(bond_idx)
-                    if bond.GetBondType() == Chem.BondType.DOUBLE:
-                        # Find suitable stereo atoms
-                        begin_atom = bond.GetBeginAtom()
-                        end_atom = bond.GetEndAtom()
-
-                        # Pick heavy atom neighbors preferentially
-                        begin_neighbors = [
-                            nbr
-                            for nbr in begin_atom.GetNeighbors()
-                            if nbr.GetIdx() != end_atom.GetIdx()
-                        ]
-                        end_neighbors = [
-                            nbr
-                            for nbr in end_atom.GetNeighbors()
-                            if nbr.GetIdx() != begin_atom.GetIdx()
-                        ]
-
-                        if begin_neighbors and end_neighbors:
-                            # Prefer heavy atoms
-                            begin_heavy = [
-                                n for n in begin_neighbors if n.GetAtomicNum() > 1
-                            ]
-                            end_heavy = [
-                                n for n in end_neighbors if n.GetAtomicNum() > 1
-                            ]
-
-                            stereo_atom1 = (
-                                begin_heavy[0] if begin_heavy else begin_neighbors[0]
-                            ).GetIdx()
-                            stereo_atom2 = (
-                                end_heavy[0] if end_heavy else end_neighbors[0]
-                            ).GetIdx()
-
-                            bond.SetStereoAtoms(stereo_atom1, stereo_atom2)
-                            bond.SetStereo(stereo_type)
-
-            # Do NOT call AssignStereochemistry here as it overrides our explicit labels
-
-            # Check for halts prior to checking conversion_mode
             if _check_halted():
                 raise WorkerHaltError("Halted")
 
-            # Support for optimize_only mode
+            # ── 4. Mode: optimize existing 3D structure ────────────────────
             if conversion_mode == "optimize_only":
-                _safe_status("Optimizing existing 3D structure...")
-                opt_method = str(options.get("optimization_method", "MMFF_RDKIT")).upper()
-                
-                # Determine backend and actual method
-                backend = "OBABEL" if "OBABEL" in opt_method else "RDKIT"
-                
-                # Default to MMFF94s
-                method_key = "MMFF94s"
-                if "MMFF94" in opt_method:
-                    method_key = "MMFF94" if "MMFF94S" not in opt_method else "MMFF94s"
-                elif "UFF" in opt_method:
-                    method_key = "UFF"
-                elif "GAFF" in opt_method:
-                    method_key = "GAFF"
-                elif "GHEMICAL" in opt_method:
-                    method_key = "GHEMICAL"
-
-                if backend == "OBABEL":
-                    try:
-                        mol.SetProp("_pme_optimization_method", opt_method)
-                    except Exception:
-                        pass
-                    opt_success = _iterative_optimize_obabel(mol, method_key, _check_halted, _safe_status)
-                else:
-                    try:
-                        mol.SetProp("_pme_optimization_method", opt_method)
-                    except Exception:
-                        pass
-                    opt_success = _iterative_optimize(mol, method_key, _check_halted, _safe_status)
-                
-                if not opt_success:
-                    raise Exception(f"Optimization with {opt_method} failed. You can change the method in the settings.")
-                
-                if _check_halted():
-                    raise WorkerHaltError("Halted")
-                try:
-                    _safe_finished((worker_id, mol))
-                except Exception:
-                    _safe_finished(mol)
-                _safe_status("Optimization completed.")
+                _perform_optimize_only(mol, options, worker_id, _check_halted, _safe_status, _safe_finished)
                 return
 
+            # ── 5. Add hydrogens + re-apply stereo ────────────────────────
             mol = Chem.AddHs(mol)
 
-            # Check after adding Hs (may be a long operation)
             if _check_halted():
                 raise WorkerHaltError("Halted")
 
-            # CRITICAL: Re-apply explicit stereo after AddHs which may renumber atoms
-            for bond_idx, stereo_type in explicit_stereo.items():
-                if bond_idx < mol.GetNumBonds():
-                    bond = mol.GetBondWithIdx(bond_idx)
-                    if bond.GetBondType() == Chem.BondType.DOUBLE:
-                        # Re-find suitable stereo atoms after hydrogen addition
-                        begin_atom = bond.GetBeginAtom()
-                        end_atom = bond.GetEndAtom()
+            # Re-apply after AddHs which may renumber atoms
+            _apply_explicit_stereo(mol, explicit_stereo)
 
-                        # Pick heavy atom neighbors preferentially
-                        begin_neighbors = [
-                            nbr
-                            for nbr in begin_atom.GetNeighbors()
-                            if nbr.GetIdx() != end_atom.GetIdx()
-                        ]
-                        end_neighbors = [
-                            nbr
-                            for nbr in end_atom.GetNeighbors()
-                            if nbr.GetIdx() != begin_atom.GetIdx()
-                        ]
-
-                        if begin_neighbors and end_neighbors:
-                            # Prefer heavy atoms
-                            begin_heavy = [
-                                n for n in begin_neighbors if n.GetAtomicNum() > 1
-                            ]
-                            end_heavy = [
-                                n for n in end_neighbors if n.GetAtomicNum() > 1
-                            ]
-
-                            stereo_atom1 = (
-                                begin_heavy[0] if begin_heavy else begin_neighbors[0]
-                            ).GetIdx()
-                            stereo_atom2 = (
-                                end_heavy[0] if end_heavy else end_neighbors[0]
-                            ).GetIdx()
-
-                            bond.SetStereoAtoms(stereo_atom1, stereo_atom2)
-                            bond.SetStereo(stereo_type)
-
-            # Direct mode: construct a 3D conformer without embedding by using
-            # the 2D coordinates from the MOL block (z=0) and placing added
-            # hydrogens close to their parent heavy atoms with a small z offset.
-            # This avoids 3D embedding entirely and is useful for quick viewing
-            # when stereochemistry/geometry refinement is not desired.
+            # ── 6. Mode: direct 2D→3D without embedding ────────────────────
             if conversion_mode == "direct":
                 _safe_status(
                     "Direct conversion: using 2D coordinates + adding missing H (no embedding)."
                 )
                 try:
-                    # 1) Parse MOL block *with* existing hydrogens (removeHs=False)
-                    #    to get coordinates for *all existing* atoms.
-                    parsed_coords = []  # all-atom coordinates (x, y, z)
-                    stereo_dirs = []  # list of (begin_idx, end_idx, stereo_flag)
-
-                    base2d_all = None
-                    try:
-                        # H原子を含めてパース
-                        base2d_all = Chem.MolFromMolBlock(
-                            mol_block, removeHs=False, sanitize=True
-                        )
-                    except Exception:
-                        try:
-                            base2d_all = Chem.MolFromMolBlock(
-                                mol_block, removeHs=False, sanitize=False
-                            )
-                        except Exception:
-                            base2d_all = None
-
-                    if base2d_all is not None and base2d_all.GetNumConformers() > 0:
-                        oconf = base2d_all.GetConformer()
-                        for i in range(base2d_all.GetNumAtoms()):
-                            p = oconf.GetAtomPosition(i)
-                            parsed_coords.append((float(p.x), float(p.y), 0.0))
-
-                    # 2) Parse wedge/dash bond information (using all atoms)
-                    try:
-                        lines = mol_block.splitlines()
-                        counts_idx = None
-
-                        for i, ln in enumerate(lines[:40]):
-                            if re.match(r"^\s*\d+\s+\d+", ln):
-                                counts_idx = i
-                                break
-
-                        if counts_idx is not None:
-                            parts = lines[counts_idx].split()
-                            try:
-                                natoms = int(parts[0])
-                                nbonds = int(parts[1])
-                            except Exception:
-                                natoms = nbonds = 0
-
-                            # 全原子マップ (MOL 1-based index -> 0-based index)
-                            atom_map = {i + 1: i for i in range(natoms)}
-
-                            bond_start = counts_idx + 1 + natoms
-                            for j in range(
-                                min(nbonds, max(0, len(lines) - bond_start))
-                            ):
-                                bond_line = lines[bond_start + j]
-                                try:
-                                    m = re.match(
-                                        r"^\s*(\d+)\s+(\d+)\s+(\d+)(?:\s+(-?\d+))?",
-                                        bond_line,
-                                    )
-                                    if m:
-                                        try:
-                                            atom1_mol = int(
-                                                m.group(1)
-                                            )  # 1-based MOL index
-                                            atom2_mol = int(
-                                                m.group(2)
-                                            )  # 1-based MOL index
-                                        except Exception:
-                                            continue
-                                        try:
-                                            stereo_raw = (
-                                                int(m.group(4))
-                                                if m.group(4) is not None
-                                                else 0
-                                            )
-                                        except Exception:
-                                            stereo_raw = 0
-                                    else:
-                                        fields = bond_line.split()
-                                        if len(fields) >= 4:
-                                            try:
-                                                atom1_mol = int(
-                                                    fields[0]
-                                                )  # 1-based MOL index
-                                                atom2_mol = int(
-                                                    fields[1]
-                                                )  # 1-based MOL index
-                                            except Exception:
-                                                continue
-                                            try:
-                                                stereo_raw = (
-                                                    int(fields[3])
-                                                    if len(fields) > 3
-                                                    else 0
-                                                )
-                                            except Exception:
-                                                stereo_raw = 0
-                                        else:
-                                            continue
-
-                                    # V2000の立体表記を正規化
-                                    if stereo_raw == 1:
-                                        stereo_flag = 1  # Wedge
-                                    elif stereo_raw == 2:
-                                        stereo_flag = 6  # Dash (V2000では 6 がDash)
-                                    else:
-                                        stereo_flag = stereo_raw
-
-                                    # 全原子マップでチェック
-                                    if atom1_mol in atom_map and atom2_mol in atom_map:
-                                        idx1 = atom_map[atom1_mol]
-                                        idx2 = atom_map[atom2_mol]
-                                        if stereo_flag in (
-                                            1,
-                                            6,
-                                        ):  # Wedge (1) or Dash (6)
-                                            stereo_dirs.append(
-                                                (idx1, idx2, stereo_flag)
-                                            )
-                                except Exception:
-                                    continue
-                    except Exception:
-                        stereo_dirs = []
-
-                    # Fallback for parsed_coords (if RDKit parse failed)
-                    if not parsed_coords:
-                        try:
-                            lines = mol_block.splitlines()
-                            counts_idx = None
-                            for i, ln in enumerate(lines[:40]):
-                                if re.match(r"^\s*\d+\s+\d+", ln):
-                                    counts_idx = i
-                                    break
-                            if counts_idx is not None:
-                                parts = lines[counts_idx].split()
-                                try:
-                                    natoms = int(parts[0])
-                                except Exception:
-                                    natoms = 0
-                                atom_start = counts_idx + 1
-                                for j in range(
-                                    min(natoms, max(0, len(lines) - atom_start))
-                                ):
-                                    atom_line = lines[atom_start + j]
-                                    try:
-                                        x = float(atom_line[0:10].strip())
-                                        y = float(atom_line[10:20].strip())
-                                        z = float(atom_line[20:30].strip())
-                                    except Exception:
-                                        fields = atom_line.split()
-                                        if len(fields) >= 4:
-                                            try:
-                                                x = float(fields[0])
-                                                y = float(fields[1])
-                                                z = float(fields[2])
-                                            except Exception:
-                                                continue
-                                        else:
-                                            continue
-                                    # H原子もスキップしない
-                                    parsed_coords.append((x, y, z))
-                        except Exception:
-                            parsed_coords = []
-
-                    if not parsed_coords:
-                        raise ValueError(
-                            "Failed to parse coordinates from MOL block for direct conversion."
-                        )
-
-                    # 3) `mol` は既に AddHs された状態
-                    #    元の原子数 (H含む) を parsed_coords の長さから取得
-                    num_existing_atoms = len(parsed_coords)
-
-                    # 4) コンフォーマを作成
-                    conf = Chem.Conformer(mol.GetNumAtoms())
-
-                    for i in range(mol.GetNumAtoms()):
-                        if i < num_existing_atoms:
-                            # 既存原子 (H含む): 2D座標 (z=0) を設定
-                            x, y, z_ignored = parsed_coords[i]
-                            try:
-                                conf.SetAtomPosition(
-                                    i, rdGeometry.Point3D(float(x), float(y), 0.0)
-                                )
-                            except Exception:  # pragma: no cover
-                                import traceback
-                                traceback.print_exc()
-                        else:
-                            # 新規追加されたH原子: 親原子の近くに配置
-                            atom = mol.GetAtomWithIdx(i)
-                            if atom.GetAtomicNum() == 1:
-                                neighs = [
-                                    n
-                                    for n in atom.GetNeighbors()
-                                    if n.GetIdx() < num_existing_atoms
-                                ]
-                                heavy_pos_found = False
-                                for nb in neighs:  # 親原子 (重原子または既存H)
-                                    try:
-                                        nb_idx = nb.GetIdx()
-                                        # if nb_idx < num_existing_atoms: # チェックは不要 (neighs で既にフィルタ済み)
-                                        nbpos = conf.GetAtomPosition(nb_idx)
-                                        # Geometry-based placement:
-                                        # Compute an "empty" direction around the parent atom by
-                                        # summing existing bond unit vectors and taking the
-                                        # opposite. If degenerate, pick a perpendicular or
-                                        # fallback vector. Rotate slightly if multiple Hs already
-                                        # attached to avoid overlap.
-                                        parent_idx = nb_idx
-                                        try:
-                                            parent_pos = conf.GetAtomPosition(
-                                                parent_idx
-                                            )
-                                            parent_atom = mol.GetAtomWithIdx(parent_idx)
-                                            # collect unit vectors to already-placed neighbors (idx < i)
-                                            vecs = []
-                                            for nbr in parent_atom.GetNeighbors():
-                                                nidx = nbr.GetIdx()
-                                                if nidx == i:
-                                                    continue
-                                                # only consider neighbors whose positions are already set
-                                                if nidx < i:
-                                                    try:
-                                                        p = conf.GetAtomPosition(nidx)
-                                                        vx = float(p.x) - float(
-                                                            parent_pos.x
-                                                        )
-                                                        vy = float(p.y) - float(
-                                                            parent_pos.y
-                                                        )
-                                                        nrm = math.hypot(vx, vy)
-                                                        if nrm > 1e-6:
-                                                            vecs.append(
-                                                                (vx / nrm, vy / nrm)
-                                                            )
-                                                    except Exception:
-                                                        continue
-
-                                            if vecs:
-                                                sx = sum(v[0] for v in vecs)
-                                                sy = sum(v[1] for v in vecs)
-                                                fx = -sx
-                                                fy = -sy
-                                                fn = math.hypot(fx, fy)
-                                                if fn < 1e-6:
-                                                    # degenerate: pick a perpendicular to first bond
-                                                    fx = -vecs[0][1]
-                                                    fy = vecs[0][0]
-                                                    fn = math.hypot(fx, fy)
-                                                fx /= fn
-                                                fy /= fn
-
-                                                # Avoid placing multiple Hs at identical directions
-                                                existing_h_count = sum(
-                                                    1
-                                                    for nbr in parent_atom.GetNeighbors()
-                                                    if nbr.GetIdx() < i
-                                                    and nbr.GetAtomicNum() == 1
-                                                )
-                                                angle = existing_h_count * (
-                                                    math.pi / 6.0
-                                                )  # 30deg steps
-                                                cos_a = math.cos(angle)
-                                                sin_a = math.sin(angle)
-                                                rx = fx * cos_a - fy * sin_a
-                                                ry = fx * sin_a + fy * cos_a
-
-                                                bond_length = 1.0
-                                                conf.SetAtomPosition(
-                                                    i,
-                                                    rdGeometry.Point3D(
-                                                        float(parent_pos.x)
-                                                        + rx * bond_length,
-                                                        float(parent_pos.y)
-                                                        + ry * bond_length,
-                                                        0.3,
-                                                    ),
-                                                )
-                                            else:
-                                                # No existing placed neighbors: fallback to small offset
-                                                conf.SetAtomPosition(
-                                                    i,
-                                                    rdGeometry.Point3D(
-                                                        float(parent_pos.x) + 0.5,
-                                                        float(parent_pos.y) + 0.5,
-                                                        0.3,
-                                                    ),
-                                                )
-
-                                            heavy_pos_found = True
-                                            break
-                                        except Exception:
-                                            # fall back to trying the next neighbor if any
-                                            continue
-                                    except Exception:
-                                        continue
-                                if not heavy_pos_found:
-                                    # フォールバック (原点近く)
-                                    try:
-                                        conf.SetAtomPosition(
-                                            i, rdGeometry.Point3D(0.0, 0.0, 0.10)
-                                        )
-                                    except Exception:  # pragma: no cover
-                                        import traceback
-                                        traceback.print_exc()
-                    # 5) Wedge/Dash の Zオフセットを適用
-                    try:
-                        stereo_z_offset = 1.5  # wedge -> +1.5, dash -> -1.5
-                        for begin_idx, end_idx, stereo_flag in stereo_dirs:
-                            try:
-                                # インデックスは既存原子内のはず
-                                if (
-                                    begin_idx >= num_existing_atoms
-                                    or end_idx >= num_existing_atoms
-                                ):
-                                    continue
-
-                                if stereo_flag not in (1, 6):
-                                    continue
-
-                                sign = 1.0 if stereo_flag == 1 else -1.0
-
-                                # end_idx (立体表記の終点側原子) にZオフセットを適用
-                                pos = conf.GetAtomPosition(end_idx)
-                                newz = float(pos.z) + (
-                                    stereo_z_offset * sign
-                                )  # 既存のZ=0にオフセットを加算
-                                conf.SetAtomPosition(
-                                    end_idx,
-                                    rdGeometry.Point3D(
-                                        float(pos.x), float(pos.y), float(newz)
-                                    ),
-                                )
-                            except Exception:
-                                continue
-                    except Exception:  # pragma: no cover
-                        import traceback
-                        traceback.print_exc()
-                    # コンフォーマを入れ替えて終了
-                    try:
-                        mol.RemoveAllConformers()
-                    except Exception:  # pragma: no cover
-                        import traceback
-                        traceback.print_exc()
-                    mol.AddConformer(conf, assignId=True)
-
-                    # Optimization (respects do_optimize flag)
-                    do_optimize = options.get("do_optimize", True) if options else True
-                    if do_optimize:
-                        _safe_status("Direct conversion: optimizing geometry...")
-                        if _check_halted():
-                            raise WorkerHaltError("Halted")
-
-                        # Determine backend and actual method
-                        opt_method = options.get("optimization_method", "MMFF94s_RDKIT") if options else "MMFF94s_RDKIT"
-                        backend = "OBABEL" if "OBABEL" in opt_method.upper() else "RDKIT"
-                        
-                        # Default to MMFF94s
-                        method_key = "MMFF94s"
-                        if "MMFF94" in opt_method.upper():
-                            method_key = "MMFF94" if "MMFF94S" not in opt_method.upper() else "MMFF94s"
-                        elif "UFF" in opt_method.upper():
-                            method_key = "UFF"
-                        elif "GAFF" in opt_method.upper():
-                            method_key = "GAFF"
-                        elif "GHEMICAL" in opt_method.upper():
-                            method_key = "GHEMICAL"
-
-                        # Apply Force Field Optimization
-                        if backend == "OBABEL":
-                            try:
-                                # Add property for UI feedback
-                                mol.SetProp("_pme_optimization_method", opt_method)
-                            except Exception:
-                                pass
-                            _safe_status(f"Applying force field optimization ({method_key} / OpenBabel)...")
-                            opt_success = _iterative_optimize_obabel(mol, method_key, _check_halted, _safe_status)
-                            if not opt_success:
-                                _safe_status(f"Warning: Optimization with {opt_method} failed. Using unoptimized structure.")
-                                try:
-                                    mol.ClearProp("_pme_optimization_method")
-                                except Exception:
-                                    pass
-                        else: # RDKit backend
-                            try:
-                                # Add property for UI feedback
-                                mol.SetProp("_pme_optimization_method", opt_method)
-                            except Exception:
-                                pass
-                            _safe_status(f"Applying force field optimization ({method_key} / RDKit)...")
-                            opt_success = _iterative_optimize(mol, method_key, _check_halted, _safe_status)
-                            if not opt_success:
-                                _safe_status(f"Warning: Optimization with {opt_method} failed. Using unoptimized structure.")
-                                try:
-                                    mol.ClearProp("_pme_optimization_method")
-                                except Exception:
-                                    pass
-
-                    if _check_halted():
-                        raise WorkerHaltError("Halted")
-                    if do_optimize:
-                        _adjust_collision_avoidance(mol, _check_halted, _safe_status)
+                    mol = _perform_direct_conversion(mol_block, mol, options, _check_halted, _safe_status)
 
                     try:
                         _safe_finished((worker_id, mol))
@@ -996,14 +1079,14 @@ class CalculationWorker(QObject):
                 except Exception as e:
                     _safe_status(f"Direct conversion failed: {e}")
 
+            # ── 7. RDKit ETKDG embedding ───────────────────────────────────
             params = AllChem.ETKDGv2()
             params.randomSeed = 42
-            # CRITICAL: Force ETKDG to respect the existing stereochemistry
             params.useExpTorsionAnglePrefs = True
             params.useBasicKnowledge = True
-            params.enforceChirality = True  # This is critical for stereo preservation
+            params.enforceChirality = True  # critical for stereo preservation
 
-            # Store original stereochemistry before embedding (prioritizing explicit labels)
+            # Snapshot stereo before embedding so we can restore it afterwards
             original_stereo_info = []
             for bond_idx, stereo_type in explicit_stereo.items():
                 if bond_idx < mol.GetNumBonds():
@@ -1014,7 +1097,7 @@ class CalculationWorker(QObject):
                             (bond.GetIdx(), stereo_type, stereo_atoms)
                         )
 
-            # Also store any other stereo bonds not in explicit_stereo
+            # Also snapshot stereo bonds not in explicit_stereo
             for bond in mol.GetBonds():
                 if (
                     bond.GetBondType() == Chem.BondType.DOUBLE
@@ -1028,15 +1111,10 @@ class CalculationWorker(QObject):
 
             if conversion_mode in ("fallback", "rdkit"):
                 _safe_status("RDKit: Embedding 3D coordinates...")
-            elif conversion_mode == "obabel":
-                pass
-            else:
-                # direct mode (or any other explicit non-RDKit mode)
-                pass
+
             if _check_halted():
                 raise WorkerHaltError("Halted")
 
-            # Try multiple times with different approaches if needed
             conf_id = -1
 
             # First attempt: Standard ETKDG with stereo enforcement
@@ -1105,7 +1183,7 @@ class CalculationWorker(QObject):
                             raise RuntimeError("RDKit: Constraint embedding failed")
                         conf_id = -1
 
-            # Fallback: Try basic embedding
+            # Attempt 3: basic ETKDGv2 (no stereo constraints)
             if conf_id == -1:
                 try:
                     if conversion_mode in ("fallback", "rdkit"):
@@ -1114,29 +1192,11 @@ class CalculationWorker(QObject):
                         conf_id = AllChem.EmbedMolecule(mol, basic_params)
                     else:
                         conf_id = -1
-                except Exception: # pragma: no cover
+                except Exception:  # pragma: no cover
                     import traceback
                     traceback.print_exc()
-            """
-            if conf_id == -1:
-                        _safe_status("Initial embedding failed, retrying with ignoreSmoothingFailures=True...")
-                # Try again with ignoreSmoothingFailures instead of random-seed retries
-                params.ignoreSmoothingFailures = True
-                # Use a deterministic seed to avoid random-coordinate behavior here
-                params.randomSeed = 0
-                conf_id = AllChem.EmbedMolecule(mol, params)
 
-            if conf_id == -1:
-                self.status_update.emit("Random-seed retry failed, attempting with random coordinates...")
-                try:
-                    conf_id = AllChem.EmbedMolecule(mol, useRandomCoords=True, ignoreSmoothingFailures=True)
-                except TypeError:
-                    # Some RDKit versions expect useRandomCoords in params
-                    params.useRandomCoords = True
-                    conf_id = AllChem.EmbedMolecule(mol, params)
-            """
-
-            # Determine requested MMFF variant from options (fall back to MMFF94s)
+            # ── 8. RDKit succeeded: optimize + emit ────────────────────────
             opt_method = None
             try:
                 opt_method = options.get("optimization_method") if options else None
@@ -1220,104 +1280,16 @@ class CalculationWorker(QObject):
                     _safe_status("RDKit 3D conversion succeeded.")
                     return
 
-            # If RDKit did not produce a conf and OBabel is allowed, try Open Babel
+            # ── 9. RDKit failed: try Open Babel ───────────────────────────
             if conf_id == -1 and conversion_mode in ("fallback", "obabel"):
-                _safe_status(
-                    "RDKit embedding failed or disabled. Attempting Open Babel..."
-                )
-                try:
-                    if not OBABEL_AVAILABLE:
-                        raise RuntimeError(
-                            "Open Babel (pybel) is not available in this Python environment."
-                        )
-                    ob_mol = pybel.readstring("mol", mol_block)
-                    try:
-                        ob_mol.addh()
-                    except Exception:  # pragma: no cover
-                        import traceback
-                        traceback.print_exc()
-                    ob_mol.make3D()
-                    # Skip OpenBabel's redundant manual localopt here.
-                    # We will optimize rd_mol immediately after conversion using the selected user method.
-                    molblock_ob = ob_mol.write("mol")
-                    rd_mol = Chem.MolFromMolBlock(molblock_ob, removeHs=False)
-                    if rd_mol is None:
-                        raise ValueError("Open Babel produced invalid MOL block.")
-                    rd_mol = Chem.AddHs(rd_mol)
-                    try:
-                        opt_method_raw = opt_method or "MMFF94s_RDKIT"
-                        backend = "OBABEL" if "OBABEL" in opt_method_raw.upper() else "RDKIT"
-                        
-                        method_key = "MMFF94s"
-                        if "MMFF94" in opt_method_raw.upper():
-                            method_key = "MMFF94" if "MMFF94S" not in opt_method_raw.upper() else "MMFF94s"
-                        elif "UFF" in opt_method_raw.upper():
-                            method_key = "UFF"
-                        elif "GAFF" in opt_method_raw.upper():
-                            method_key = "GAFF"
-                        elif "GHEMICAL" in opt_method_raw.upper():
-                            method_key = "GHEMICAL"
-
-                        if backend == "OBABEL":
-                            try:
-                                rd_mol.SetProp("_pme_optimization_method", opt_method_raw)
-                            except Exception:
-                                pass
-                            _safe_status(f"Optimizing with OpenBabel ({method_key})...")
-                            opt_success = _iterative_optimize_obabel(rd_mol, method_key, _check_halted, _safe_status)
-                        else:
-                            try:
-                                rd_mol.SetProp("_pme_optimization_method", opt_method_raw)
-                            except Exception:
-                                pass
-                            _safe_status(f"Optimizing with RDKit ({method_key})...")
-                            opt_success = _iterative_optimize(rd_mol, method_key, _check_halted, _safe_status)
-
-                        if not opt_success:
-                            _safe_status(f"Warning: Optimization with {opt_method_raw} failed. Using unoptimized structure.")
-                            try:
-                                rd_mol.ClearProp("_pme_optimization_method")
-                            except Exception:
-                                pass
-                    except WorkerHaltError:
-                        raise
-                    except Exception as opt_err:
-                        _safe_status(f"Warning: Optimization failed: {opt_err}. Using unoptimized structure.")
-                        try:
-                            rd_mol.ClearProp("_pme_optimization_method")
-                        except Exception:
-                            pass
-
-                    _safe_status(
-                        "Open Babel embedding succeeded. Warning: Conformation accuracy may be limited."
-                    )
-                    # CRITICAL: Check for halt *before* emitting finished signal
-                    if _check_halted():
-                        raise WorkerHaltError("Halted")
-
-                    # Collision avoidance
-                    _adjust_collision_avoidance(rd_mol, _check_halted, _safe_status)
-                    try:
-                        _safe_finished((worker_id, rd_mol))
-                    except Exception:
-                        _safe_finished(rd_mol)
+                success = _perform_obabel_conversion(mol_block, conversion_mode, opt_method, worker_id, options, _check_halted, _safe_status, _safe_finished)
+                if success:
                     return
-                except WorkerHaltError:
-                    raise
-                except Exception as ob_err:
-                    if conversion_mode == "obabel":
-                        # obabel-only mode: no further fallback
-                        raise RuntimeError(f"Open Babel 3D conversion failed: {ob_err}")
-                    # fallback mode: continue to direct conversion below
-                    _safe_status(
-                        f"Open Babel unavailable or failed ({ob_err}). "
-                        "Falling back to direct conversion..."
-                    )
 
             if conf_id == -1 and conversion_mode == "rdkit":
                 raise RuntimeError("RDKit 3D conversion failed (rdkit-only mode)")
 
-            # --- Last-resort fallback: direct conversion ---
+            # ── 10. Last resort: direct conversion ─────────────────────────
             if conf_id == -1 and conversion_mode == "fallback":
                 _safe_status(
                     "All embedding methods failed. Using direct conversion as last resort..."
