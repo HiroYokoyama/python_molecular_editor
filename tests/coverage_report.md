@@ -1,7 +1,7 @@
 # MoleditPy Coverage Report
 
-- **Overall Project Coverage (Full)**: **52.65%**
-- **Core Molecular Logic Coverage**: **72.13%**
+- **Overall Project Coverage (Full)**: **52.64%**
+- **Core Molecular Logic Coverage**: **72.22%**
 
 > [!NOTE]
 > **Core Molecular Logic Coverage** excludes UI boilerplate (dialogs, view managers, and interactor styles) to focus on scientific algorithm reliability.
@@ -42,11 +42,11 @@
 | moleditpy\src\moleditpy\modules\align_plane_dialog.py   |    161 |     67 |   58.4% |
 | moleditpy\src\moleditpy\modules\alignment_dialog.py     |    141 |     51 |   63.8% |
 | moleditpy\src\moleditpy\modules\analysis_window.py      |    114 |     25 |   78.1% |
-| moleditpy\src\moleditpy\modules\angle_dialog.py         |    304 |    163 |   46.4% |
+| moleditpy\src\moleditpy\modules\angle_dialog.py         |    299 |    163 |   45.5% |
 | moleditpy\src\moleditpy\modules\atom_item.py            |    267 |     40 |   85.0% |
 | moleditpy\src\moleditpy\modules\bond_item.py            |    350 |     75 |   78.6% |
-| moleditpy\src\moleditpy\modules\bond_length_dialog.py   |    272 |    160 |   41.2% |
-| moleditpy\src\moleditpy\modules\calculation_worker.py   |    877 |    339 |   61.3% |
+| moleditpy\src\moleditpy\modules\bond_length_dialog.py   |    270 |    160 |   40.7% |
+| moleditpy\src\moleditpy\modules\calculation_worker.py   |    874 |    336 |   61.6% |
 | moleditpy\src\moleditpy\modules\color_settings_dialog.py |    250 |    239 |    4.4% |
 | moleditpy\src\moleditpy\modules\constants.py            |     27 |      0 |  100.0% |
 | moleditpy\src\moleditpy\modules\constrained_optimization_dialog.py |    405 |    384 |    5.2% |
@@ -83,7 +83,7 @@
 | moleditpy\src\moleditpy\modules\translation_dialog.py   |    223 |    148 |   33.6% |
 | moleditpy\src\moleditpy\modules\user_template_dialog.py |    403 |    165 |   59.1% |
 | moleditpy\src\moleditpy\modules\zoomable_view.py        |     72 |     39 |   45.8% |
-| **TOTAL** | **16197** | **7670** | **52.65%** |
+| **TOTAL** | **16190** | **7668** | **52.64%** |
 
 ## Test Suite Status
 - **Unit tests**: PASSED
