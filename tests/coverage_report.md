@@ -1,7 +1,7 @@
 # MoleditPy Coverage Report
 
-- **Overall Project Coverage (Full)**: **52.65%**
-- **Core Molecular Logic Coverage**: **72.13%**
+- **Overall Project Coverage (Full)**: **52.64%**
+- **Core Molecular Logic Coverage**: **72.23%**
 
 > [!NOTE]
 > **Core Molecular Logic Coverage** excludes UI boilerplate (dialogs, view managers, and interactor styles) to focus on scientific algorithm reliability.
@@ -15,7 +15,7 @@
 | moleditpy\src\moleditpy\modules\analysis_window.py      |    114 |     25 |   78.1% |
 | moleditpy\src\moleditpy\modules\atom_item.py            |    261 |     34 |   87.0% |
 | moleditpy\src\moleditpy\modules\bond_item.py            |    338 |     63 |   81.4% |
-| moleditpy\src\moleditpy\modules\calculation_worker.py   |    749 |    262 |   65.0% |
+| moleditpy\src\moleditpy\modules\calculation_worker.py   |    748 |    259 |   65.4% |
 | moleditpy\src\moleditpy\modules\constants.py            |     27 |      0 |  100.0% |
 | moleditpy\src\moleditpy\modules\main_window.py          |    364 |     87 |   76.1% |
 | moleditpy\src\moleditpy\modules\main_window_app_state.py |    380 |    145 |   61.8% |
@@ -25,12 +25,12 @@
 | moleditpy\src\moleditpy\modules\main_window_molecular_parsers.py |    388 |    110 |   71.6% |
 | moleditpy\src\moleditpy\modules\main_window_project_io.py |    173 |     68 |   60.7% |
 | moleditpy\src\moleditpy\modules\main_window_string_importers.py |    152 |     21 |   86.2% |
-| moleditpy\src\moleditpy\modules\mol_geometry.py         |     79 |     17 |   78.5% |
+| moleditpy\src\moleditpy\modules\mol_geometry.py         |     92 |     18 |   80.4% |
 | moleditpy\src\moleditpy\modules\molecular_data.py       |    212 |     35 |   83.5% |
 | moleditpy\src\moleditpy\modules\molecule_scene.py       |    463 |    176 |   62.0% |
 | moleditpy\src\moleditpy\modules\plugin_interface.py     |     57 |      0 |  100.0% |
 | moleditpy\src\moleditpy\modules\plugin_manager.py       |    278 |     70 |   74.8% |
-| **TOTAL** | **5037** | **1404** | **72.13%** |
+| **TOTAL** | **5049** | **1402** | **72.23%** |
 
 ### Full Application Breakdown
 
@@ -42,11 +42,11 @@
 | moleditpy\src\moleditpy\modules\align_plane_dialog.py   |    161 |     67 |   58.4% |
 | moleditpy\src\moleditpy\modules\alignment_dialog.py     |    141 |     51 |   63.8% |
 | moleditpy\src\moleditpy\modules\analysis_window.py      |    114 |     25 |   78.1% |
-| moleditpy\src\moleditpy\modules\angle_dialog.py         |    304 |    163 |   46.4% |
+| moleditpy\src\moleditpy\modules\angle_dialog.py         |    299 |    163 |   45.5% |
 | moleditpy\src\moleditpy\modules\atom_item.py            |    267 |     40 |   85.0% |
 | moleditpy\src\moleditpy\modules\bond_item.py            |    350 |     75 |   78.6% |
-| moleditpy\src\moleditpy\modules\bond_length_dialog.py   |    272 |    160 |   41.2% |
-| moleditpy\src\moleditpy\modules\calculation_worker.py   |    877 |    339 |   61.3% |
+| moleditpy\src\moleditpy\modules\bond_length_dialog.py   |    270 |    160 |   40.7% |
+| moleditpy\src\moleditpy\modules\calculation_worker.py   |    876 |    336 |   61.6% |
 | moleditpy\src\moleditpy\modules\color_settings_dialog.py |    250 |    239 |    4.4% |
 | moleditpy\src\moleditpy\modules\constants.py            |     27 |      0 |  100.0% |
 | moleditpy\src\moleditpy\modules\constrained_optimization_dialog.py |    405 |    384 |    5.2% |
@@ -58,7 +58,7 @@
 | moleditpy\src\moleditpy\modules\main_window_app_state.py |    443 |    175 |   60.5% |
 | moleditpy\src\moleditpy\modules\main_window_compute.py  |    933 |    431 |   53.8% |
 | moleditpy\src\moleditpy\modules\main_window_dialog_manager.py |    243 |    157 |   35.4% |
-| moleditpy\src\moleditpy\modules\main_window_edit_3d.py  |    234 |    125 |   46.6% |
+| moleditpy\src\moleditpy\modules\main_window_edit_3d.py  |    224 |    125 |   44.2% |
 | moleditpy\src\moleditpy\modules\main_window_edit_actions.py |    977 |    495 |   49.3% |
 | moleditpy\src\moleditpy\modules\main_window_export.py   |    536 |    163 |   69.6% |
 | moleditpy\src\moleditpy\modules\main_window_main_init.py |   1365 |    504 |   63.1% |
@@ -69,7 +69,7 @@
 | moleditpy\src\moleditpy\modules\main_window_view_3d.py  |    926 |    503 |   45.7% |
 | moleditpy\src\moleditpy\modules\main_window_view_loaders.py |    196 |    153 |   21.9% |
 | moleditpy\src\moleditpy\modules\mirror_dialog.py        |     70 |      7 |   90.0% |
-| moleditpy\src\moleditpy\modules\mol_geometry.py         |     79 |     17 |   78.5% |
+| moleditpy\src\moleditpy\modules\mol_geometry.py         |     92 |     18 |   80.4% |
 | moleditpy\src\moleditpy\modules\molecular_data.py       |    215 |     35 |   83.7% |
 | moleditpy\src\moleditpy\modules\molecule_scene.py       |   1437 |    698 |   51.4% |
 | moleditpy\src\moleditpy\modules\move_group_dialog.py    |    394 |    371 |    5.8% |
@@ -83,7 +83,7 @@
 | moleditpy\src\moleditpy\modules\translation_dialog.py   |    223 |    148 |   33.6% |
 | moleditpy\src\moleditpy\modules\user_template_dialog.py |    403 |    165 |   59.1% |
 | moleditpy\src\moleditpy\modules\zoomable_view.py        |     72 |     39 |   45.8% |
-| **TOTAL** | **16197** | **7670** | **52.65%** |
+| **TOTAL** | **16192** | **7668** | **52.64%** |
 
 ## Test Suite Status
 - **Unit tests**: PASSED

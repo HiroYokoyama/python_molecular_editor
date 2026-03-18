@@ -20,6 +20,56 @@ submodules without circular dependencies.
 import numpy as np
 
 # ------------------------------------------------------------------
+# Primitive geometry helpers
+# ------------------------------------------------------------------
+
+
+def calc_distance(pos1, pos2) -> float:
+    """Return the Euclidean distance between two 3-D positions.
+
+    Parameters
+    ----------
+    pos1, pos2 : array-like, shape (3,)
+        Cartesian coordinates.
+
+    Returns
+    -------
+    float
+        Distance in the same units as the input coordinates.
+    """
+    return float(np.linalg.norm(np.asarray(pos2, dtype=float) - np.asarray(pos1, dtype=float)))
+
+
+def calc_angle_deg(pos1, pos2_vertex, pos3) -> float:
+    """Return the angle pos1–pos2_vertex–pos3 in degrees.
+
+    The angle is measured at *pos2_vertex* and is always in [0, 180].
+    Numerical clipping is applied before ``arccos`` to guard against
+    floating-point values slightly outside [−1, 1].
+
+    Parameters
+    ----------
+    pos1, pos2_vertex, pos3 : array-like, shape (3,)
+        Cartesian coordinates of the three atoms.
+
+    Returns
+    -------
+    float
+        Angle in degrees.
+    """
+    a = np.asarray(pos1, dtype=float)
+    b = np.asarray(pos2_vertex, dtype=float)
+    c = np.asarray(pos3, dtype=float)
+    vec1 = a - b
+    vec2 = c - b
+    denom = np.linalg.norm(vec1) * np.linalg.norm(vec2)
+    if denom == 0.0:
+        return 0.0
+    cos_a = np.clip(np.dot(vec1, vec2) / denom, -1.0, 1.0)
+    return float(np.degrees(np.arccos(cos_a)))
+
+
+# ------------------------------------------------------------------
 # Graph traversal
 # ------------------------------------------------------------------
 

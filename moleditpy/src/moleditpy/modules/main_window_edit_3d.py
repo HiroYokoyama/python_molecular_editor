@@ -20,9 +20,9 @@ MainWindow (main_window.py) から分離されたモジュール
 import numpy as np
 
 try:
-    from .mol_geometry import calculate_dihedral as _calculate_dihedral
+    from .mol_geometry import calc_angle_deg, calc_distance, calculate_dihedral as _calculate_dihedral
 except Exception:
-    from modules.mol_geometry import calculate_dihedral as _calculate_dihedral
+    from modules.mol_geometry import calc_angle_deg, calc_distance, calculate_dihedral as _calculate_dihedral
 
 # RDKit imports (explicit to satisfy flake8 and used features)
 try:
@@ -319,26 +319,15 @@ class MainWindowEdit3d(object):
 
     def calculate_distance(self, atom1_idx, atom2_idx):
         """2原子間の距離を計算する"""
-        pos1 = np.array(self.atom_positions_3d[atom1_idx])
-        pos2 = np.array(self.atom_positions_3d[atom2_idx])
-        return np.linalg.norm(pos2 - pos1)
+        return calc_distance(self.atom_positions_3d[atom1_idx], self.atom_positions_3d[atom2_idx])
 
     def calculate_angle(self, atom1_idx, atom2_idx, atom3_idx):
         """3原子の角度を計算する（中央が頂点）"""
-        pos1 = np.array(self.atom_positions_3d[atom1_idx])
-        pos2 = np.array(self.atom_positions_3d[atom2_idx])  # 頂点
-        pos3 = np.array(self.atom_positions_3d[atom3_idx])
-
-        # ベクトルを計算
-        vec1 = pos1 - pos2
-        vec2 = pos3 - pos2
-
-        # 角度を計算（ラジアンから度に変換）
-        cos_angle = np.dot(vec1, vec2) / (np.linalg.norm(vec1) * np.linalg.norm(vec2))
-        # 数値誤差による範囲外の値をクリップ
-        cos_angle = np.clip(cos_angle, -1.0, 1.0)
-        angle_rad = np.arccos(cos_angle)
-        return np.degrees(angle_rad)
+        return calc_angle_deg(
+            self.atom_positions_3d[atom1_idx],
+            self.atom_positions_3d[atom2_idx],  # 頂点
+            self.atom_positions_3d[atom3_idx],
+        )
 
     def calculate_dihedral(self, atom1_idx, atom2_idx, atom3_idx, atom4_idx):
         """4原子の二面角を計算する（正しい公式を使用）"""

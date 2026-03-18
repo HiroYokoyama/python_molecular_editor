@@ -26,7 +26,7 @@ from PyQt6.QtWidgets import (
 )
 
 from .dialog3_d_picking_mixin import Dialog3DPickingMixin
-from .mol_geometry import get_connected_group
+from .mol_geometry import calc_distance, get_connected_group
 
 
 class BondLengthDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
@@ -242,9 +242,10 @@ class BondLengthDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
 
             # Calculate current distance
             conf = self.mol.GetConformer()
-            pos1 = np.array(conf.GetAtomPosition(self.atom1_idx))
-            pos2 = np.array(conf.GetAtomPosition(self.atom2_idx))
-            current_distance = np.linalg.norm(pos2 - pos1)
+            current_distance = calc_distance(
+                conf.GetAtomPosition(self.atom1_idx),
+                conf.GetAtomPosition(self.atom2_idx),
+            )
             self.distance_label.setText(f"Current distance: {current_distance:.3f} Å")
             self.apply_button.setEnabled(True)
             # Update the distance input box to show current distance
@@ -349,7 +350,7 @@ class BondLengthDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
 
         # Direction vector from atom1 to atom2
         direction = pos2 - pos1
-        current_distance = np.linalg.norm(direction)
+        current_distance = calc_distance(pos1, pos2)
 
         if current_distance == 0:
             return
