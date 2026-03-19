@@ -210,17 +210,20 @@ def _adjust_collision_avoidance(rd_mol, check_halted_cb, safe_status_cb):
         safe_status_cb(f"Collision avoidance warning: {e}")
 
 
-def _iterative_optimize(mol, method, check_halted_cb, safe_status_cb, max_iters=4000, chunk_size=100):
+def _iterative_optimize(mol, method, check_halted_cb, safe_status_cb, max_iters=4000, chunk_size=100, options=None):
     """Perform force field optimization in small chunks to avoid UI freezing and allow halts."""
     try:
+        # Respect the "Consider Intermolecular Interaction for RDKit" setting
+        ignore_interfrag = not options.get("optimize_intermolecular_interaction_rdkit", True) if options else False
+
         if method in ("MMFF", "MMFF94", "MMFF94S", "MMFF94s"):
             mmff_variant = "MMFF94" if method == "MMFF94" else "MMFF94s"
             props = AllChem.MMFFGetMoleculeProperties(mol, mmffVariant=mmff_variant)
             if props is None:
                 raise ValueError(f"Failed to generate MMFF properties for variant {mmff_variant}.")
-            ff = AllChem.MMFFGetMoleculeForceField(mol, props, confId=0, ignoreInterfragInteractions=False)
+            ff = AllChem.MMFFGetMoleculeForceField(mol, props, confId=0, ignoreInterfragInteractions=ignore_interfrag)
         elif method == "UFF":
-            ff = AllChem.UFFGetMoleculeForceField(mol, confId=0, ignoreInterfragInteractions=False)
+            ff = AllChem.UFFGetMoleculeForceField(mol, confId=0, ignoreInterfragInteractions=ignore_interfrag)
         else:
             raise ValueError(f"Unknown optimization method: {method}")
 
@@ -757,7 +760,7 @@ def _perform_direct_conversion(mol_block, mol, options, _check_halted, _safe_sta
             except Exception:
                 pass
             _safe_status(f"Applying force field optimization ({method_key} / RDKit)...")
-            opt_success = _iterative_optimize(mol, method_key, _check_halted, _safe_status)
+            opt_success = _iterative_optimize(mol, method_key, _check_halted, _safe_status, options=options)
             if not opt_success:
                 _safe_status(f"Warning: Optimization with {opt_method} failed. Using unoptimized structure.")
                 try:
@@ -800,7 +803,7 @@ def _perform_optimize_only(mol, options, worker_id, _check_halted, _safe_status,
             mol.SetProp("_pme_optimization_method", opt_method)
         except Exception:
             pass
-        opt_success = _iterative_optimize(mol, method_key, _check_halted, _safe_status)
+        opt_success = _iterative_optimize(mol, method_key, _check_halted, _safe_status, options=options)
     
     if not opt_success:
         raise Exception(f"Optimization with {opt_method} failed. You can change the method in the settings.")
@@ -872,7 +875,7 @@ def _perform_obabel_conversion(mol_block, conversion_mode, opt_method, worker_id
                 except Exception:
                     pass
                 _safe_status(f"Optimizing with RDKit ({method_key})...")
-                opt_success = _iterative_optimize(rd_mol, method_key, _check_halted, _safe_status)
+                opt_success = _iterative_optimize(rd_mol, method_key, _check_halted, _safe_status, options=options)
 
             if not opt_success:
                 _safe_status(f"Warning: Optimization with {opt_method_raw} failed. Using unoptimized structure.")
@@ -1256,7 +1259,7 @@ class CalculationWorker(QObject):
                         except Exception:  # pragma: no cover
                             pass
                         _safe_status(f"Optimizing with RDKit ({method_key})...")
-                        opt_success = _iterative_optimize(mol, method_key, _check_halted, _safe_status)
+                        opt_success = _iterative_optimize(mol, method_key, _check_halted, _safe_status, options=options)
 
                     if not opt_success:
                         raise Exception(f"Optimization with {opt_method_raw} failed. You can change the method in the settings.")

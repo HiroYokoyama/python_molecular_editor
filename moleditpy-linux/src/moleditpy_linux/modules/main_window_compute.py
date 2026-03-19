@@ -119,6 +119,20 @@ class MainWindowCompute(object):
             label = self.optimization_method
         self.statusBar().showMessage(f"3D optimization method set to: {label}")
 
+    def toggle_intermolecular_interaction_rdkit(self, checked):  # pragma: no cover
+        """Toggle whether intermolecular interactions are considered for RDKit optimization."""
+        try:
+            self.settings["optimize_intermolecular_interaction_rdkit"] = checked
+            try:
+                self.settings_dirty = True
+            except Exception:
+                pass
+            state_str = "Enabled" if checked else "Disabled"
+            self.statusBar().showMessage(f"Intermolecular interaction for RDKit: {state_str}")
+        except Exception:
+            import traceback
+            traceback.print_exc()
+
     def show_convert_menu(self, pos):  # pragma: no cover
         """右クリックで表示する一時的な3D変換メニュー。
         選択したモードは一時フラグとして保持され、その後の変換で使用されます（永続化しません）。
@@ -442,7 +456,11 @@ class MainWindowCompute(object):
                     import traceback
                     traceback.print_exc()
 
-        options = {"conversion_mode": conv_mode, "optimization_method": opt_method}
+        options = {
+            "conversion_mode": conv_mode,
+            "optimization_method": opt_method,
+            "optimize_intermolecular_interaction_rdkit": self.settings.get("optimize_intermolecular_interaction_rdkit", True)
+        }
         # Attach the run id so the worker and main thread can correlate
         try:
             # Attach the concrete run id rather than the single waiting id
@@ -800,7 +818,8 @@ class MainWindowCompute(object):
                 
                 options = {
                     "conversion_mode": "optimize_only",
-                    "optimization_method": method
+                    "optimization_method": method,
+                    "optimize_intermolecular_interaction_rdkit": self.settings.get("optimize_intermolecular_interaction_rdkit", True)
                 }
                 
                 # Assign a unique ID for this optimization run

@@ -233,6 +233,19 @@ _Test the flow of OpenBabel optimization (mocked)._
 - assert len(finish_captor.emitted_values) > 0
 - assert res_mol.GetProp('_pme_optimization_method') == 'UFF_OBABEL'
 
+## tests/unit/test_calculation_worker_optimize_intermolecular.py
+
+### test_intermolecular_interaction_toggle
+_Test that ignoreInterfragInteractions is correctly toggled via options._
+
+- assert abs(dist_off - 6.0) < 1e-05
+- assert dist_on < 5.0
+
+### test_intermolecular_interaction_uff
+_Test UFF path as well._
+
+- assert abs(dist_off - 6.0) < 1e-05
+
 ## tests/unit/test_compute_logic.py
 
 ### test_on_calculation_error_stale

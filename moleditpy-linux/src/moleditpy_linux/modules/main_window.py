@@ -178,6 +178,10 @@ class MainWindow(QMainWindow):
         # --- MOVED TO main_window_compute.py ---
         return self.main_window_compute.set_optimization_method(method_name)
 
+    def toggle_intermolecular_interaction_rdkit(self, checked):
+        # --- MOVED TO main_window_compute.py ---
+        return self.main_window_compute.toggle_intermolecular_interaction_rdkit(checked)
+
     def copy_selection(self):
         # --- MOVED TO main_window_edit_actions.py ---
         return self.main_window_edit_actions.copy_selection()
