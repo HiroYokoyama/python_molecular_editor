@@ -218,9 +218,9 @@ def _iterative_optimize(mol, method, check_halted_cb, safe_status_cb, max_iters=
             props = AllChem.MMFFGetMoleculeProperties(mol, mmffVariant=mmff_variant)
             if props is None:
                 raise ValueError(f"Failed to generate MMFF properties for variant {mmff_variant}.")
-            ff = AllChem.MMFFGetMoleculeForceField(mol, props, confId=0)
+            ff = AllChem.MMFFGetMoleculeForceField(mol, props, confId=0, ignoreInterfragInteractions=False)
         elif method == "UFF":
-            ff = AllChem.UFFGetMoleculeForceField(mol, confId=0)
+            ff = AllChem.UFFGetMoleculeForceField(mol, confId=0, ignoreInterfragInteractions=False)
         else:
             raise ValueError(f"Unknown optimization method: {method}")
 

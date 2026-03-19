@@ -654,22 +654,10 @@ class MoveGroupDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
         """ダイアログが閉じられる時の処理"""
         self.clear_atom_labels()
         self.disable_picking()
-        try:
-            self.main_window.draw_molecule_3d(self.mol)
-        except Exception:  # pragma: no cover
-            import traceback
-            traceback.print_exc()
-
         super().closeEvent(event)
 
     def reject(self):
         """キャンセル時の処理"""
         self.clear_atom_labels()
         self.disable_picking()
-        try:
-            self.main_window.draw_molecule_3d(self.mol)
-        except Exception:  # pragma: no cover
-            import traceback
-            traceback.print_exc()
-
         super().reject()
