@@ -714,6 +714,8 @@ def _perform_direct_conversion(mol_block, mol, options, _check_halted, _safe_sta
     # Optimization (respects do_optimize flag)
     do_optimize = options.get("do_optimize", True) if options else True
     if do_optimize:
+        # Collision avoidance before optimization
+        _adjust_collision_avoidance(mol, _check_halted, _safe_status)
         _safe_status("Direct conversion: optimizing geometry...")
         if _check_halted():
             raise WorkerHaltError("Halted")
@@ -765,8 +767,6 @@ def _perform_direct_conversion(mol_block, mol, options, _check_halted, _safe_sta
 
     if _check_halted():
         raise WorkerHaltError("Halted")
-    if do_optimize:
-        _adjust_collision_avoidance(mol, _check_halted, _safe_status)
     return mol
 
 
@@ -843,6 +843,8 @@ def _perform_obabel_conversion(mol_block, conversion_mode, opt_method, worker_id
         if rd_mol is None:
             raise ValueError("Open Babel produced invalid MOL block.")
         rd_mol = Chem.AddHs(rd_mol)
+        # Collision avoidance before optimization
+        _adjust_collision_avoidance(rd_mol, _check_halted, _safe_status)
         try:
             opt_method_raw = opt_method or "MMFF94s_RDKIT"
             backend = "OBABEL" if "OBABEL" in opt_method_raw.upper() else "RDKIT"
@@ -894,8 +896,6 @@ def _perform_obabel_conversion(mol_block, conversion_mode, opt_method, worker_id
         if _check_halted():
             raise WorkerHaltError("Halted")
 
-        # Collision avoidance
-        _adjust_collision_avoidance(rd_mol, _check_halted, _safe_status)
         try:
             _safe_finished((worker_id, rd_mol))
         except Exception:
@@ -1226,6 +1226,9 @@ class CalculationWorker(QObject):
                         bond.SetStereoAtoms(stereo_atoms[0], stereo_atoms[1])
                     bond.SetStereo(stereo)
 
+                # Collision avoidance before optimization
+                _adjust_collision_avoidance(mol, _check_halted, _safe_status)
+
                 try:
                     opt_method_raw = opt_method or "MMFF94s_RDKIT"
                     backend = "OBABEL" if "OBABEL" in opt_method_raw.upper() else "RDKIT"
@@ -1281,9 +1284,6 @@ class CalculationWorker(QObject):
                     # CRITICAL: Check for halt *before* emitting finished signal
                     if _check_halted():
                         raise WorkerHaltError("Halted")
-
-                    # Collision avoidance
-                    _adjust_collision_avoidance(mol, _check_halted, _safe_status)
 
                     try:
                         _safe_finished((worker_id, mol))
