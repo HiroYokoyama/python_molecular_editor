@@ -49,7 +49,7 @@
 | moleditpy\src\moleditpy\modules\calculation_worker.py   |    876 |    336 |   61.6% |
 | moleditpy\src\moleditpy\modules\color_settings_dialog.py |    250 |    239 |    4.4% |
 | moleditpy\src\moleditpy\modules\constants.py            |     27 |      0 |  100.0% |
-| moleditpy\src\moleditpy\modules\constrained_optimization_dialog.py |    405 |    384 |    5.2% |
+| moleditpy\src\moleditpy\modules\constrained_optimization_dialog.py |    406 |    385 |    5.2% |
 | moleditpy\src\moleditpy\modules\custom_interactor_style.py |    490 |    464 |    5.3% |
 | moleditpy\src\moleditpy\modules\custom_qt_interactor.py |     43 |     35 |   18.6% |
 | moleditpy\src\moleditpy\modules\dialog3_d_picking_mixin.py |    102 |     60 |   41.2% |
@@ -83,7 +83,7 @@
 | moleditpy\src\moleditpy\modules\translation_dialog.py   |    208 |    135 |   35.1% |
 | moleditpy\src\moleditpy\modules\user_template_dialog.py |    403 |    165 |   59.1% |
 | moleditpy\src\moleditpy\modules\zoomable_view.py        |     72 |     39 |   45.8% |
-| **TOTAL** | **16189** | **7659** | **52.69%** |
+| **TOTAL** | **16190** | **7660** | **52.69%** |
 
 ## Test Suite Status
 - **Unit tests**: PASSED
