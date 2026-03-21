@@ -182,6 +182,7 @@ def test_trigger_conversion_with_atoms(mock_parser_host):
     with (
         patch("moleditpy.modules.main_window_compute.CalculationWorker"),
         patch("moleditpy.modules.main_window_compute.QThread"),
+        patch("PyQt6.QtCore.QTimer.singleShot"),
     ):
         compute.trigger_conversion()
         assert compute.statusBar().showMessage.called
@@ -267,6 +268,7 @@ def test_trigger_conversion_multiple_frags(mock_parser_host):
         patch.object(compute.data, "to_rdkit_mol", return_value=mol),
         patch("moleditpy.modules.main_window_compute.CalculationWorker"),
         patch("moleditpy.modules.main_window_compute.QThread"),
+        patch("PyQt6.QtCore.QTimer.singleShot"),
     ):
         compute.trigger_conversion()
         all_messages = [
@@ -308,6 +310,7 @@ def test_optimize_3d_temp_method_override(mock_parser_host):
     with (
         patch("moleditpy.modules.main_window_compute.CalculationWorker") as MockWorker,
         patch("moleditpy.modules.main_window_compute.QThread"),
+        patch("PyQt6.QtCore.QTimer.singleShot"),
     ):
         mock_worker = MockWorker.return_value
         compute.optimize_3d_structure()
@@ -376,6 +379,7 @@ def test_optimize_3d_mmff_exception_handling(mock_parser_host):
     with (
         patch("moleditpy.modules.main_window_compute.CalculationWorker") as MockWorker,
         patch("moleditpy.modules.main_window_compute.QThread"),
+        patch("PyQt6.QtCore.QTimer.singleShot"),
     ):
         compute.optimize_3d_structure()
         assert MockWorker.called
@@ -392,6 +396,7 @@ def test_optimize_3d_uff_exception_handling(mock_parser_host):
     with (
         patch("moleditpy.modules.main_window_compute.CalculationWorker") as MockWorker,
         patch("moleditpy.modules.main_window_compute.QThread"),
+        patch("PyQt6.QtCore.QTimer.singleShot"),
     ):
         compute.optimize_3d_structure()
         assert MockWorker.called
@@ -468,6 +473,7 @@ def test_optimize_3d_uff_fallback_failure(mock_parser_host):
     with (
         patch("moleditpy.modules.main_window_compute.CalculationWorker") as MockWorker,
         patch("moleditpy.modules.main_window_compute.QThread"),
+        patch("PyQt6.QtCore.QTimer.singleShot"),
     ):
         compute.optimize_3d_structure()
         assert MockWorker.called
