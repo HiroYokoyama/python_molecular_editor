@@ -445,14 +445,15 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):  # pragma: n
         conf = self.mol.GetConformer()
 
         try:
+            ignore_interfrag = not self.main_window.settings.get("optimize_intermolecular_interaction_rdkit", True)
             if ff_name.startswith("MMFF"):
                 props = AllChem.MMFFGetMoleculeProperties(self.mol, mmffVariant=ff_name)
-                ff = AllChem.MMFFGetMoleculeForceField(self.mol, props, confId=0)
+                ff = AllChem.MMFFGetMoleculeForceField(self.mol, props, confId=0, ignoreInterfragInteractions=ignore_interfrag)
                 add_dist_constraint = ff.MMFFAddDistanceConstraint
                 add_angle_constraint = ff.MMFFAddAngleConstraint
                 add_torsion_constraint = ff.MMFFAddTorsionConstraint
             else:  # UFF
-                ff = AllChem.UFFGetMoleculeForceField(self.mol, confId=0)
+                ff = AllChem.UFFGetMoleculeForceField(self.mol, confId=0, ignoreInterfragInteractions=ignore_interfrag)
                 add_dist_constraint = ff.UFFAddDistanceConstraint
                 add_angle_constraint = ff.UFFAddAngleConstraint
                 add_torsion_constraint = ff.UFFAddTorsionConstraint

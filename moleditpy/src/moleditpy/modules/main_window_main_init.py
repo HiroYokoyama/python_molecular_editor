@@ -1494,6 +1494,13 @@ class MainWindowMainInit(object):
             optimization_menu.addAction(action)
             opt_group.addAction(action)
             opt_actions[key] = action
+        
+        optimization_menu.addSeparator()
+        self.intermolecular_rdkit_action = QAction("Consider Intermolecular Interaction for RDKit", self)
+        self.intermolecular_rdkit_action.setCheckable(True)
+        self.intermolecular_rdkit_action.setChecked(self.settings.get("optimize_intermolecular_interaction_rdkit", True))
+        self.intermolecular_rdkit_action.triggered.connect(self.toggle_intermolecular_interaction_rdkit)
+        optimization_menu.addAction(self.intermolecular_rdkit_action)
 
         # Persist the actions mapping so other methods can update the checked state
         self.opt3d_actions = opt_actions
@@ -1723,6 +1730,11 @@ class MainWindowMainInit(object):
                         except Exception:  # pragma: no cover
                             import traceback
                             traceback.print_exc()
+                    
+                    # update intermolecular rdkit setting
+                    if hasattr(self, "intermolecular_rdkit_action"):
+                        self.intermolecular_rdkit_action.setChecked(self.settings.get("optimize_intermolecular_interaction_rdkit", True))
+
                     # 3Dビューの設定を適用
                     self.apply_3d_settings()
                     # 現在の分子を再描画（設定変更を反映）
@@ -1850,6 +1862,7 @@ class MainWindowMainInit(object):
             "bond_color_2d": "#222222",  # Almost black
             "atom_use_bond_color_2d": False,
             "bond_cap_style_2d": "Round",
+            "optimize_intermolecular_interaction_rdkit": True,
         }
 
         try:
