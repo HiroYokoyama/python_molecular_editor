@@ -3,7 +3,7 @@
 ; Non-commercial use only
 
 #define MyAppName "MoleditPy"
-#define MyAppVersion "2.8.2"
+#define MyAppVersion "2.8.3"
 #define MyAppPublisher "HiroYokoyama"
 #define MyAppURL "https://github.com/HiroYokoyama/python_molecular_editor"
 #define MyAppExeName "MoleditPy.exe"
@@ -36,7 +36,7 @@ ChangesAssociations=yes
 DisableProgramGroupPage=yes
 ; Uncomment the following line to run in non administrative install mode (install for current user only).
 ;PrivilegesRequired=lowest
-OutputBaseFilename=MoleditPy_2.8.2_win64_setup
+OutputBaseFilename=MoleditPy_2.8.3_win64_setup
 SolidCompression=yes
 WizardStyle=modern
 
