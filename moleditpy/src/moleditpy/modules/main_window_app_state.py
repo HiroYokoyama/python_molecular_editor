@@ -124,9 +124,24 @@ class MainWindowAppState(object):
         # Get file version (default '0.0.0')
         file_version_str = loaded_data.get("version", "0.0.0")
 
+        def parse_v(v_str):
+            try:
+                parts = []
+                for p in v_str.split("."):
+                    # Extract numeric part from start of string (e.g., '0a1' -> 0)
+                    import re
+                    m = re.match(r"(\d+)", p)
+                    if m:
+                        parts.append(int(m.group(1)))
+                    else:
+                        parts.append(0)
+                return tuple(parts)
+            except (ValueError, AttributeError):
+                return (0, 0, 0)
+
         try:
-            app_version_parts = tuple(map(int, VERSION.split(".")))
-            file_version_parts = tuple(map(int, file_version_str.split(".")))
+            app_version_parts = parse_v(VERSION)
+            file_version_parts = parse_v(file_version_str)
 
             # Warn if file version is newer than app version
             if file_version_parts > app_version_parts:
@@ -138,8 +153,7 @@ class MainWindowAppState(object):
                     "Some features may not load or work correctly.",
                 )
         except (ValueError, AttributeError):
-            import traceback
-            traceback.print_exc()
+            pass
 
         raw_atoms = loaded_data.get("atoms", {})
         raw_bonds = loaded_data.get("bonds", {})
@@ -853,8 +867,7 @@ class MainWindowAppState(object):
                                     traceback.print_exc()
                             except (AttributeError, RuntimeError, TypeError):
                                 # non-fatal if mapping creation fails
-                                import traceback
-                                traceback.print_exc()
+                                pass
 
                         # Always show 3D if 3D molecule exists
                         self.draw_molecule_3d(self.current_mol)
