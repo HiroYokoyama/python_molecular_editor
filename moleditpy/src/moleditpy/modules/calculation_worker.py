@@ -1243,7 +1243,7 @@ class CalculationWorker(QObject):
                     if backend == "OBABEL":
                         try:
                             mol.SetProp("_pme_optimization_method", opt_method_raw)
-                        except Exception:  # pragma: no cover
+                        except (AttributeError, RuntimeError):
                             pass
                         _safe_status(f"Optimizing with OpenBabel ({method_key})...")
                         opt_success = _iterative_optimize_obabel(mol, method_key, _check_halted, _safe_status)
