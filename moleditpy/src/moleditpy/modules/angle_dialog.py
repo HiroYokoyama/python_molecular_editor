@@ -25,7 +25,7 @@ from PyQt6.QtWidgets import (
 try:
     from .dialog3_d_picking_mixin import Dialog3DPickingMixin
     from .mol_geometry import adjust_bond_angle, calc_angle_deg, get_connected_group, rodrigues_rotate
-except Exception:
+except ImportError:
     from modules.dialog3_d_picking_mixin import Dialog3DPickingMixin
     from modules.mol_geometry import adjust_bond_angle, calc_angle_deg, get_connected_group, rodrigues_rotate
 
@@ -224,9 +224,8 @@ class AngleDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
                 self.angle_slider.setValue(109)
                 self.angle_slider.setEnabled(False)
                 self.angle_slider.blockSignals(False)
-            except Exception:  # pragma: no cover
-                import traceback
-                traceback.print_exc()
+            except (AttributeError, RuntimeError):
+                pass
 
         elif self.atom2_idx is None:
             symbol1 = self.mol.GetAtomWithIdx(self.atom1_idx).GetSymbol()
@@ -247,9 +246,8 @@ class AngleDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
                 self.angle_slider.setValue(109)
                 self.angle_slider.setEnabled(False)
                 self.angle_slider.blockSignals(False)
-            except Exception:  # pragma: no cover
-                import traceback
-                traceback.print_exc()
+            except (AttributeError, RuntimeError):
+                pass
 
         elif self.atom3_idx is None:
             symbol1 = self.mol.GetAtomWithIdx(self.atom1_idx).GetSymbol()
@@ -272,9 +270,8 @@ class AngleDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
                 self.angle_slider.setValue(109)
                 self.angle_slider.setEnabled(False)
                 self.angle_slider.blockSignals(False)
-            except Exception:  # pragma: no cover
-                import traceback
-                traceback.print_exc()
+            except (AttributeError, RuntimeError):
+                pass
         else:
             symbol1 = self.mol.GetAtomWithIdx(self.atom1_idx).GetSymbol()
             symbol2 = self.mol.GetAtomWithIdx(self.atom2_idx).GetSymbol()
@@ -478,5 +475,5 @@ class AngleDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
         try:
             if self.main_window.current_mol:
                 self.main_window.draw_molecule_3d(self.main_window.current_mol)
-        except Exception:
+        except (AttributeError, RuntimeError):
             pass
