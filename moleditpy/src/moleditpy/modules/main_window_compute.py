@@ -303,7 +303,7 @@ class MainWindowCompute(object):
 
         try:
             Chem.SanitizeMol(mol)
-        except Exception:
+        except (AttributeError, RuntimeError, ValueError):
             self.statusBar().showMessage("Error: Invalid chemical structure.")
             self.view_2d.setFocus()
             return
