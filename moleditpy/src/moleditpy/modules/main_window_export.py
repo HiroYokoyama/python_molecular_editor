@@ -59,7 +59,7 @@ class MainWindowExport(object):
         try:
             if self.current_file_path:
                 default_dir = os.path.dirname(self.current_file_path)
-        except (AttributeError, RuntimeError):
+        except (AttributeError, RuntimeError, ValueError, TypeError):
             default_dir = ""
 
         file_path, _ = QFileDialog.getSaveFileName(  # pragma: no cover
@@ -99,7 +99,7 @@ class MainWindowExport(object):
         try:
             if self.current_file_path:
                 default_dir = os.path.dirname(self.current_file_path)
-        except (AttributeError, RuntimeError):
+        except (AttributeError, RuntimeError, ValueError, TypeError):
             default_dir = ""
 
         file_path, _ = QFileDialog.getSaveFileName(  # pragma: no cover
@@ -243,7 +243,7 @@ class MainWindowExport(object):
         try:
             if self.current_file_path:
                 default_dir = os.path.dirname(self.current_file_path)
-        except (AttributeError, RuntimeError):
+        except (AttributeError, RuntimeError, ValueError, TypeError):
             default_dir = ""
 
         file_path, _ = QFileDialog.getSaveFileName(  # pragma: no cover
@@ -364,12 +364,12 @@ class MainWindowExport(object):
                         else:
                             combined_mesh = combined_mesh.merge(mesh_copy)
 
-                except (AttributeError, RuntimeError):
+                except (AttributeError, RuntimeError, ValueError, TypeError):
                     continue
 
             return combined_mesh
 
-        except (AttributeError, RuntimeError):
+        except (AttributeError, RuntimeError, ValueError, TypeError):
             return None
 
     def export_from_3d_view_no_color(self):
@@ -432,12 +432,12 @@ class MainWindowExport(object):
                         else:
                             combined_mesh = combined_mesh.merge(mesh_copy)
 
-                except (AttributeError, RuntimeError):
+                except (AttributeError, RuntimeError, ValueError, TypeError):
                     continue
 
             return combined_mesh
 
-        except (AttributeError, RuntimeError):
+        except (AttributeError, RuntimeError, ValueError, TypeError):
             return None
 
     def export_from_3d_view_with_colors(self):
@@ -546,7 +546,7 @@ class MainWindowExport(object):
                                         colors = np.asarray(
                                             temp_mesh.point_data["colors"]
                                         )
-                                except (AttributeError, RuntimeError):  # pragma: no cover
+                                except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
                                     import traceback
                                     traceback.print_exc()
                             if colors is not None and colors.size > 0:
@@ -635,7 +635,7 @@ class MainWindowExport(object):
                                     uc = unique_colors[0]
                                     color = [int(uc[0]), int(uc[1]), int(uc[2])]
                                     # Do not continue here; let the default addition handle it (color has been updated)
-                        except (AttributeError, RuntimeError):  # pragma: no cover
+                        except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
                             # Fallback: add single mesh on failure
                             import traceback
                             traceback.print_exc()
@@ -673,7 +673,7 @@ class MainWindowExport(object):
                 base = os.path.basename(self.current_file_path)
                 name = os.path.splitext(base)[0]
                 default_name = f"{name}-2d"
-        except (AttributeError, RuntimeError):
+        except (AttributeError, RuntimeError, ValueError, TypeError):
             default_name = "untitled-2d"
 
         # prefer same directory as current file when available
@@ -683,7 +683,7 @@ class MainWindowExport(object):
                 default_path = os.path.join(
                     os.path.dirname(self.current_file_path), default_name
                 )
-        except (AttributeError, RuntimeError):
+        except (AttributeError, RuntimeError, ValueError, TypeError):
             default_path = default_name
 
         filePath, _ = QFileDialog.getSaveFileName(
@@ -717,7 +717,7 @@ class MainWindowExport(object):
         original_background = None
         try:
             original_background = self.scene.backgroundBrush()
-        except (AttributeError, RuntimeError):  # pragma: no cover
+        except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
             import traceback
             traceback.print_exc()
 
@@ -806,7 +806,7 @@ class MainWindowExport(object):
                 base = os.path.basename(self.current_file_path)
                 name = os.path.splitext(base)[0]
                 default_name = f"{name}-2d"
-        except (AttributeError, RuntimeError):
+        except (AttributeError, RuntimeError, ValueError, TypeError):
             default_name = "untitled-2d"
 
         # prefer same directory
@@ -816,7 +816,7 @@ class MainWindowExport(object):
                 default_path = os.path.join(
                     os.path.dirname(self.current_file_path), default_name
                 )
-        except (AttributeError, RuntimeError):
+        except (AttributeError, RuntimeError, ValueError, TypeError):
             default_path = default_name
 
         filePath, _ = QFileDialog.getSaveFileName(
@@ -927,7 +927,7 @@ class MainWindowExport(object):
                 base = os.path.basename(self.current_file_path)
                 name = os.path.splitext(base)[0]
                 default_name = f"{name}"
-        except (AttributeError, RuntimeError):
+        except (AttributeError, RuntimeError, ValueError, TypeError):
             default_name = "untitled"
 
         # prefer same directory as current file when available
@@ -937,7 +937,7 @@ class MainWindowExport(object):
                 default_path = os.path.join(
                     os.path.dirname(self.current_file_path), default_name
                 )
-        except (AttributeError, RuntimeError):
+        except (AttributeError, RuntimeError, ValueError, TypeError):
             default_path = default_name
 
         filePath, _ = QFileDialog.getSaveFileName(

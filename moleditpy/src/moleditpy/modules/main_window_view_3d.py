@@ -1485,7 +1485,7 @@ class MainWindowView3d(object):
                 except (AttributeError, RuntimeError, TypeError):
                     continue
 
-        except (AttributeError, RuntimeError):  # pragma: no cover
+        except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
             import traceback
             traceback.print_exc()
 

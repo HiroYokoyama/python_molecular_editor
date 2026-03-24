@@ -208,7 +208,7 @@ class BondLengthDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
                 self.distance_slider.setValue(154)
                 self.distance_slider.setEnabled(False)
                 self.distance_slider.blockSignals(False)
-            except (AttributeError, RuntimeError):
+            except (AttributeError, RuntimeError, ValueError, TypeError):
                 import traceback
                 traceback.print_exc()
 
@@ -230,7 +230,7 @@ class BondLengthDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
                 self.distance_slider.setValue(154)
                 self.distance_slider.setEnabled(False)
                 self.distance_slider.blockSignals(False)
-            except (AttributeError, RuntimeError):
+            except (AttributeError, RuntimeError, ValueError, TypeError):
                 import traceback
                 traceback.print_exc()
         else:
@@ -423,6 +423,6 @@ class BondLengthDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
         try:
             if self.main_window.current_mol:
                 self.main_window.draw_molecule_3d(self.main_window.current_mol)
-        except (AttributeError, RuntimeError):
+        except (AttributeError, RuntimeError, ValueError, TypeError):
             import traceback
             traceback.print_exc()

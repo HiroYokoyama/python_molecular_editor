@@ -580,7 +580,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                                         ap = list(mw.atom_positions_3d)
                                         ap[atom_id] = new_world_coords
                                         mw.atom_positions_3d = ap
-                                    except (AttributeError, RuntimeError):  # pragma: no cover
+                                    except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
                                         import traceback
                                         traceback.print_exc()
                             except (AttributeError, RuntimeError, TypeError, ValueError):  # pragma: no cover
@@ -596,7 +596,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                                 # other atom positions.
                                 import traceback
                                 traceback.print_exc()
-                    except (AttributeError, RuntimeError):
+                    except (AttributeError, RuntimeError, ValueError, TypeError):
                         # If applying positions fails, continue to redraw from
                         # whatever authoritative state is available.
                         import traceback
@@ -605,7 +605,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                     # Redraw and push undo state
                     try:
                         mw.draw_molecule_3d(mw.current_mol)
-                    except (AttributeError, RuntimeError):  # pragma: no cover
+                    except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
                         import traceback
                         traceback.print_exc()
 
@@ -620,7 +620,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
             ]:
                 try:
                     update_call()
-                except (AttributeError, RuntimeError):  # pragma: no cover
+                except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
                     import traceback
                     traceback.print_exc()
         else:
@@ -643,14 +643,14 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                     delattr(move_group_dialog, "_initial_positions")
                 if hasattr(move_group_dialog, "_drag_atom_idx"):
                     delattr(move_group_dialog, "_drag_atom_idx")
-        except (AttributeError, RuntimeError):  # pragma: no cover
+        except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
             import traceback
             traceback.print_exc()
 
         # Update cursor after release
         try:
             mw.plotter.setCursor(Qt.CursorShape.ArrowCursor)
-        except (AttributeError, RuntimeError):  # pragma: no cover
+        except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
             import traceback
             traceback.print_exc()
 
@@ -795,7 +795,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
 
             try:
                 mw.plotter.setCursor(Qt.CursorShape.ArrowCursor)
-            except (AttributeError, RuntimeError):  # pragma: no cover
+            except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
                 import traceback
                 traceback.print_exc()
 

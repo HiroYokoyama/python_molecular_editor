@@ -121,7 +121,7 @@ class PluginManagerWindow(QDialog):  # pragma: no cover
                     rel_path = os.path.relpath(
                         full_path, self.plugin_manager.plugin_dir
                     )
-                except (AttributeError, RuntimeError):
+                except (AttributeError, RuntimeError, ValueError, TypeError):
                     rel_path = os.path.basename(full_path)
             self.table.setItem(row, 4, QTableWidgetItem(str(rel_path)))
 

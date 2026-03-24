@@ -514,7 +514,7 @@ class UserTemplateDialog(QDialog):  # pragma: no cover
                         pos.y() - text_rect.height() / 2,
                     )
 
-            except (AttributeError, RuntimeError):
+            except (AttributeError, RuntimeError, ValueError, TypeError):
                 continue
 
     def select_template(self, template_data, widget):
@@ -554,7 +554,7 @@ class UserTemplateDialog(QDialog):  # pragma: no cover
         # Store template data for the scene to use
         try:
             self.main_window.scene.user_template_data = template_data
-        except (AttributeError, RuntimeError):  # pragma: no cover
+        except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
             # Best-effort: ignore if scene or attribute missing
             import traceback
             traceback.print_exc()
@@ -569,7 +569,7 @@ class UserTemplateDialog(QDialog):  # pragma: no cover
                 for act in self.main_window.mode_actions.values():
                     try:
                         act.setChecked(False)
-                    except (AttributeError, RuntimeError):
+                    except (AttributeError, RuntimeError, ValueError, TypeError):
                         continue
 
             # If main_window has a set_mode method, call it. Otherwise, try to set a mode attribute.
@@ -586,7 +586,7 @@ class UserTemplateDialog(QDialog):  # pragma: no cover
                 self.main_window.statusBar().showMessage(
                     f"Template mode: {template_name}"
                 )
-            except (AttributeError, RuntimeError):  # pragma: no cover
+            except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
                 # ignore status bar failures
                 import traceback
                 traceback.print_exc()
@@ -601,7 +601,7 @@ class UserTemplateDialog(QDialog):  # pragma: no cover
                     self.main_window.mode_actions[
                         f"template_user_{template_name}"
                     ].setChecked(True)
-            except (AttributeError, RuntimeError):  # pragma: no cover
+            except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
                 import traceback
                 traceback.print_exc()
         except (AttributeError, RuntimeError, ValueError) as e:
@@ -619,7 +619,7 @@ class UserTemplateDialog(QDialog):  # pragma: no cover
             # Store template data for the scene to use
             try:
                 self.main_window.scene.user_template_data = template_data
-            except (AttributeError, RuntimeError):  # pragma: no cover
+            except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
                 import traceback
                 traceback.print_exc()
             # Force the main window into the template mode (same approach as select_template)
@@ -630,7 +630,7 @@ class UserTemplateDialog(QDialog):  # pragma: no cover
                     for act in self.main_window.mode_actions.values():
                         try:
                             act.setChecked(False)
-                        except (AttributeError, RuntimeError):
+                        except (AttributeError, RuntimeError, ValueError, TypeError):
                             continue
 
                 if hasattr(self.main_window, "set_mode") and callable(
@@ -644,7 +644,7 @@ class UserTemplateDialog(QDialog):  # pragma: no cover
                     self.main_window.statusBar().showMessage(
                         f"Template mode: {template_name}"
                     )
-                except (AttributeError, RuntimeError):  # pragma: no cover
+                except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
                     import traceback
                     traceback.print_exc()
                 # Mark selected and keep dialog open

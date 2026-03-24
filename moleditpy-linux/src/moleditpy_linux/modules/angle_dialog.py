@@ -224,7 +224,7 @@ class AngleDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
                 self.angle_slider.setValue(109)
                 self.angle_slider.setEnabled(False)
                 self.angle_slider.blockSignals(False)
-            except (AttributeError, RuntimeError):
+            except (AttributeError, RuntimeError, ValueError, TypeError):
                 import traceback
                 traceback.print_exc()
 
@@ -247,7 +247,7 @@ class AngleDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
                 self.angle_slider.setValue(109)
                 self.angle_slider.setEnabled(False)
                 self.angle_slider.blockSignals(False)
-            except (AttributeError, RuntimeError):
+            except (AttributeError, RuntimeError, ValueError, TypeError):
                 import traceback
                 traceback.print_exc()
 
@@ -272,7 +272,7 @@ class AngleDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
                 self.angle_slider.setValue(109)
                 self.angle_slider.setEnabled(False)
                 self.angle_slider.blockSignals(False)
-            except (AttributeError, RuntimeError):
+            except (AttributeError, RuntimeError, ValueError, TypeError):
                 import traceback
                 traceback.print_exc()
         else:
@@ -479,6 +479,6 @@ class AngleDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
         try:
             if self.main_window.current_mol:
                 self.main_window.draw_molecule_3d(self.main_window.current_mol)
-        except (AttributeError, RuntimeError):
+        except (AttributeError, RuntimeError, ValueError, TypeError):
             import traceback
             traceback.print_exc()

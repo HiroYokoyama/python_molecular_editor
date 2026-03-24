@@ -68,50 +68,60 @@ class MolecularData:
 
     def remove_atom(self, atom_id):
         if atom_id in self.atoms:
-            try:
-                # Safely get neighbors before deleting the atom's own entry
-                neighbors = self.adjacency_list.get(atom_id, [])
-                for neighbor_id in neighbors:
+            # Safely get neighbors before deleting the atom's own entry
+            neighbors = self.adjacency_list.get(atom_id, [])
+            for neighbor_id in neighbors:
+                try:
                     if (
                         neighbor_id in self.adjacency_list
                         and atom_id in self.adjacency_list[neighbor_id]
                     ):
                         self.adjacency_list[neighbor_id].remove(atom_id)
+                except (ValueError, KeyError, TypeError):
+                    # Handle cases where adjacency list might be inconsistent
+                    import traceback
+                    traceback.print_exc()
+                    continue
 
-                # Now, safely delete the atom's own entry from the adjacency list
-                if atom_id in self.adjacency_list:
-                    del self.adjacency_list[atom_id]
 
+            # Now, safely delete the atom's own entry from the adjacency list
+            if atom_id in self.adjacency_list:
+                del self.adjacency_list[atom_id]
+
+            if atom_id in self.atoms:
                 del self.atoms[atom_id]
 
-                # Remove bonds involving this atom
+            # Remove bonds involving this atom
+            try:
                 bonds_to_remove = [key for key in self.bonds if atom_id in key]
                 for key in bonds_to_remove:
                     del self.bonds[key]
-
-            except (AttributeError, RuntimeError, ValueError, TypeError):
+            except (RuntimeError, KeyError):
+                # Handle potential dictionary mutation issues
                 import traceback
                 traceback.print_exc()
 
-    def remove_bond(self, id1, id2):
-        try:
-            # Look for directional stereo bonds (forward/reverse) and normalized non-stereo bond keys.
-            key_to_remove = None
-            if (id1, id2) in self.bonds:
-                key_to_remove = (id1, id2)
-            elif (id2, id1) in self.bonds:
-                key_to_remove = (id2, id1)
 
-            if key_to_remove:
+    def remove_bond(self, id1, id2):
+        # Look for directional stereo bonds (forward/reverse) and normalized non-stereo bond keys.
+        key_to_remove = None
+        if (id1, id2) in self.bonds:
+            key_to_remove = (id1, id2)
+        elif (id2, id1) in self.bonds:
+            key_to_remove = (id2, id1)
+
+        if key_to_remove:
+            try:
                 if id1 in self.adjacency_list and id2 in self.adjacency_list[id1]:
                     self.adjacency_list[id1].remove(id2)
                 if id2 in self.adjacency_list and id1 in self.adjacency_list[id2]:
                     self.adjacency_list[id2].remove(id1)
                 del self.bonds[key_to_remove]
+            except (ValueError, KeyError):
+                # Ignore if already removed or inconsistent
+                import traceback
+                traceback.print_exc()
 
-        except (AttributeError, RuntimeError, ValueError, TypeError):
-            import traceback
-            traceback.print_exc()
 
     def to_rdkit_mol(self, use_2d_stereo=True):
         """
@@ -166,8 +176,13 @@ class MolecularData:
         final_mol = mol.GetMol()
         try:
             Chem.SanitizeMol(final_mol)
-        except (AttributeError, RuntimeError, ValueError, TypeError):
+        except (RuntimeError, ValueError, TypeError) as e:
+            # RDKit sanitization failed.
+            import traceback
+            traceback.print_exc()
             return None
+
+
 
         # --- Step 4: add 2D conformer ---
         # Convert from scene pixels to angstroms when creating RDKit conformer.
@@ -280,23 +295,21 @@ class MolecularData:
         final_mol.UpdatePropertyCache(strict=False)
 
         # During 3D conversion (use_2d_stereo=False), apply force=True if E/Z labels exist
-        try:
-            if not use_2d_stereo and ez_labeled_bonds:
-                Chem.AssignStereochemistry(final_mol, cleanIt=False, force=True)
-            else:
-                Chem.AssignStereochemistry(final_mol, cleanIt=False, force=False)
-        except (AttributeError, RuntimeError, ValueError, TypeError):
-                raise
+        if not use_2d_stereo and ez_labeled_bonds:
+            Chem.AssignStereochemistry(final_mol, cleanIt=False, force=True)
+        else:
+            Chem.AssignStereochemistry(final_mol, cleanIt=False, force=False)
         return final_mol
 
+
     def to_mol_block(self):
-        try:
-            mol = self.to_rdkit_mol()
-            if mol:
+        mol = self.to_rdkit_mol()
+        if mol:
+            try:
                 return Chem.MolToMolBlock(mol, includeStereo=True)
-        except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
-            import traceback
-            traceback.print_exc()
+            except (RuntimeError, ValueError, TypeError):  # pragma: no cover
+                import traceback
+                traceback.print_exc()
 
         if not self.atoms:
             return None

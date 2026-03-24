@@ -288,7 +288,7 @@ class MainWindowEditActions(object):
                         continue
                     # Prefer storing by original atom id to detect actual removals later
                     hydrogen_map[atom_id] = item
-                except (AttributeError, RuntimeError):
+                except (AttributeError, RuntimeError, ValueError, TypeError):
                     # Ignore problematic entries and continue scanning
                     continue
 
@@ -316,7 +316,7 @@ class MainWindowEditActions(object):
                         if not isinstance(it, AtomItem):
                             continue
                         batch.add(it)
-                    except (AttributeError, RuntimeError):
+                    except (AttributeError, RuntimeError, ValueError, TypeError):
                         continue
 
                 if not batch:
@@ -328,7 +328,7 @@ class MainWindowEditActions(object):
                     success = False
                     try:
                         success = bool(self.scene.delete_items(batch))
-                    except (AttributeError, RuntimeError):
+                    except (AttributeError, RuntimeError, ValueError, TypeError):
                         # If scene.delete_items raises for a batch, attempt a safe per-item fallback
                         success = False
 
@@ -340,20 +340,20 @@ class MainWindowEditActions(object):
                                 ok = bool(self.scene.delete_items({it}))
                                 if ok:
                                     deleted_any = True
-                            except (AttributeError, RuntimeError):
+                            except (AttributeError, RuntimeError, ValueError, TypeError):
                                 # If single deletion also fails, skip that item
                                 continue
                     else:
                         deleted_any = True
 
-                except (AttributeError, RuntimeError):
+                except (AttributeError, RuntimeError, ValueError, TypeError):
                     # Continue with next batch on unexpected errors
                     continue
 
                 # Allow the GUI to process events between batches to remain responsive
                 try:
                     QApplication.processEvents()
-                except (AttributeError, RuntimeError):  # pragma: no cover
+                except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
                     import traceback
                     traceback.print_exc()
             # Determine how many hydrogens actually were removed by re-scanning data
@@ -363,9 +363,9 @@ class MainWindowEditActions(object):
                     try:
                         if atom_data.get("symbol") == "H":
                             remaining_h += 1
-                    except (AttributeError, RuntimeError):
+                    except (AttributeError, RuntimeError, ValueError, TypeError):
                         continue
-            except (AttributeError, RuntimeError):
+            except (AttributeError, RuntimeError, ValueError, TypeError):
                 remaining_h = 0
 
             removed_count = max(0, len(hydrogen_map) - remaining_h)
@@ -374,7 +374,7 @@ class MainWindowEditActions(object):
                 # Only push a single undo state once for the whole operation
                 try:
                     self.push_undo_state()
-                except (AttributeError, RuntimeError):  # pragma: no cover
+                except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
                     import traceback
                     traceback.print_exc()
                 self.statusBar().showMessage(
@@ -397,7 +397,7 @@ class MainWindowEditActions(object):
             print(f"Error during hydrogen removal: {e}")
             try:
                 self.statusBar().showMessage(f"Error removing hydrogen atoms: {e}")
-            except (AttributeError, RuntimeError):  # pragma: no cover
+            except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
                 import traceback
                 traceback.print_exc()
 
@@ -419,7 +419,7 @@ class MainWindowEditActions(object):
                 rd_atom = mol.GetAtomWithIdx(idx)
                 try:
                     orig_id = rd_atom.GetIntProp("_original_atom_id")
-                except (AttributeError, RuntimeError):
+                except (AttributeError, RuntimeError, ValueError, TypeError):
                     # Skip if no original editor ID
                     continue
 
@@ -444,7 +444,7 @@ class MainWindowEditActions(object):
                             else 0
                         )
                         implicit_h = max(0, total_h - explicit_h)
-                    except (AttributeError, RuntimeError):
+                    except (AttributeError, RuntimeError, ValueError, TypeError):
                         implicit_h = 0
 
                 if implicit_h <= 0:
@@ -479,9 +479,9 @@ class MainWindowEditActions(object):
                                     continue
                                 vec = neigh["item"].pos() - parent_pos
                                 neighbor_angles.append(math.atan2(vec.y(), vec.x()))
-                        except (AttributeError, RuntimeError):
+                        except (AttributeError, RuntimeError, ValueError, TypeError):
                             continue
-                except (AttributeError, RuntimeError):
+                except (AttributeError, RuntimeError, ValueError, TypeError):
                     neighbor_angles = []
 
                 # Set bond length in pixels
@@ -538,7 +538,7 @@ class MainWindowEditActions(object):
                             # Normalize back to 0..2pi
                             angle = angle % (2.0 * math.pi)
                             target_angles.append(angle)
-                except (AttributeError, RuntimeError):
+                except (AttributeError, RuntimeError, ValueError, TypeError):
                     # Fallback: simple even spacing
                     for h_idx in range(implicit_h):
                         angle = (2.0 * math.pi * h_idx) / implicit_h
@@ -574,7 +574,7 @@ class MainWindowEditActions(object):
                     self.scene.clearSelection()
                     for it in added_items:
                         it.setSelected(True)
-                except (AttributeError, RuntimeError):  # pragma: no cover
+                except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
                     import traceback
                     traceback.print_exc()
             else:
@@ -780,14 +780,14 @@ class MainWindowEditActions(object):
         try:
             try:
                 self._ih_update_counter += 1
-            except (AttributeError, RuntimeError):
+            except (AttributeError, RuntimeError, ValueError, TypeError):
                 self._ih_update_counter = getattr(self, "_ih_update_counter", 0) or 1
             my_token = self._ih_update_counter
 
             mol = None
             try:
                 mol = self.data.to_rdkit_mol()
-            except (AttributeError, RuntimeError):
+            except (AttributeError, RuntimeError, ValueError, TypeError):
                 mol = None
 
             # Build a mapping of original_id -> hydrogen count without touching Qt items
@@ -807,14 +807,14 @@ class MainWindowEditActions(object):
                         # Robust retrieval of H counts: prefer implicit, fallback to total or 0
                         try:
                             h_count = int(atom.GetNumImplicitHs())
-                        except (AttributeError, RuntimeError):
+                        except (AttributeError, RuntimeError, ValueError, TypeError):
                             try:
                                 h_count = int(atom.GetTotalNumHs())
-                            except (AttributeError, RuntimeError):
+                            except (AttributeError, RuntimeError, ValueError, TypeError):
                                 h_count = 0
 
                         h_count_map[int(original_id)] = h_count
-                    except (AttributeError, RuntimeError):
+                    except (AttributeError, RuntimeError, ValueError, TypeError):
                         # Skip problematic RDKit atoms
                         continue
 
@@ -825,7 +825,7 @@ class MainWindowEditActions(object):
                 if mol is not None:
                     try:
                         problems = Chem.DetectChemistryProblems(mol)
-                    except (AttributeError, RuntimeError):
+                    except (AttributeError, RuntimeError, ValueError, TypeError):
                         problems = None
 
                     if problems:
@@ -836,7 +836,7 @@ class MainWindowEditActions(object):
                                 if rd_atom and rd_atom.HasProp("_original_atom_id"):
                                     orig = int(rd_atom.GetIntProp("_original_atom_id"))
                                     problem_map[orig] = True
-                            except (AttributeError, RuntimeError):
+                            except (AttributeError, RuntimeError, ValueError, TypeError):
                                 continue
                 else:
                     # Fallback: use a lightweight valence heuristic similar to
@@ -853,9 +853,9 @@ class MainWindowEditActions(object):
 
                             if is_problematic_valence(symbol, bond_count, charge):
                                 problem_map[atom_id] = True
-                        except (AttributeError, RuntimeError):
+                        except (AttributeError, RuntimeError, ValueError, TypeError):
                             continue
-            except (AttributeError, RuntimeError):
+            except (AttributeError, RuntimeError, ValueError, TypeError):
                 problem_map = {}
 
             def _apply_ui_updates():
@@ -864,12 +864,12 @@ class MainWindowEditActions(object):
                 try:
                     if my_token != getattr(self, "_ih_update_counter", None):
                         return
-                except (AttributeError, RuntimeError):
+                except (AttributeError, RuntimeError, ValueError, TypeError):
                     return
 
                 try:
                     atoms_snapshot = dict(self.data.atoms)
-                except (AttributeError, RuntimeError):
+                except (AttributeError, RuntimeError, ValueError, TypeError):
                     atoms_snapshot = {}
                 is_deleted_func = sip_isdeleted_safe
 
@@ -884,7 +884,7 @@ class MainWindowEditActions(object):
                         try:
                             if is_deleted_func and is_deleted_func(item):
                                 continue
-                        except (AttributeError, RuntimeError):  # pragma: no cover
+                        except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
                             import traceback
                             traceback.print_exc()
 
@@ -894,7 +894,7 @@ class MainWindowEditActions(object):
                             sc = item.scene() if hasattr(item, "scene") else None
                             if sc is None:
                                 continue
-                        except (AttributeError, RuntimeError):
+                        except (AttributeError, RuntimeError, ValueError, TypeError):
                             # Accessing scene() might fail for a damaged object; skip it
                             continue
 
@@ -917,30 +917,30 @@ class MainWindowEditActions(object):
                             if need_geometry and hasattr(item, "prepareGeometryChange"):
                                 try:
                                     item.prepareGeometryChange()
-                                except (AttributeError, RuntimeError):  # pragma: no cover
+                                except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
                                     import traceback
                                     traceback.print_exc()
                             # Apply implicit hydrogen count (guarded)
                             try:
                                 item.implicit_h_count = new_count
-                            except (AttributeError, RuntimeError):  # pragma: no cover
+                            except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
                                 import traceback
                                 traceback.print_exc()
 
                             # Apply problem flag (visual red-outline)
                             try:
                                 item.has_problem = bool(desired_prob)
-                            except (AttributeError, RuntimeError):  # pragma: no cover
+                            except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
                                 import traceback
                                 traceback.print_exc()
                             # Ensure the item is updated in the scene so paint() runs
                             # when either geometry or problem-flag changed.
                             items_to_update.append(item)
-                        except (AttributeError, RuntimeError):
+                        except (AttributeError, RuntimeError, ValueError, TypeError):
                             # Non-fatal: skip problematic items
                             continue
 
-                    except (AttributeError, RuntimeError):
+                    except (AttributeError, RuntimeError, ValueError, TypeError):
                         continue
 
                 # Trigger updates once for unique items; wrap in try/except to avoid crashes
@@ -956,24 +956,24 @@ class MainWindowEditActions(object):
                         if hasattr(it, "update"):
                             try:
                                 it.update()
-                            except (AttributeError, RuntimeError):  # pragma: no cover
+                            except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
                                 import traceback
                                 traceback.print_exc()
-                    except (AttributeError, RuntimeError):
+                    except (AttributeError, RuntimeError, ValueError, TypeError):
                         # Ignore any unexpected errors when touching the item
                         continue
 
             # Always schedule on main thread asynchronously
             try:
                 QTimer.singleShot(0, _apply_ui_updates)
-            except (AttributeError, RuntimeError):
+            except (AttributeError, RuntimeError, ValueError, TypeError):
                 # Fallback: try to call directly (best-effort)
                 try:
                     _apply_ui_updates()
-                except (AttributeError, RuntimeError):  # pragma: no cover
+                except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
                     import traceback
                     traceback.print_exc()
-        except (AttributeError, RuntimeError):  # pragma: no cover
+        except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
             import traceback
             traceback.print_exc()
 
@@ -1056,23 +1056,23 @@ class MainWindowEditActions(object):
                     # If SIP is available, skip wrappers whose C++ object is gone
                     if sip_isdeleted_safe(item):
                         continue
-                except (AttributeError, RuntimeError):  # pragma: no cover
+                except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
                     import traceback
                     traceback.print_exc()
                 try:
                     sc = None
                     try:
                         sc = item.scene() if hasattr(item, "scene") else None
-                    except (AttributeError, RuntimeError):
+                    except (AttributeError, RuntimeError, ValueError, TypeError):
                         sc = None
                     if sc is None:
                         continue
                     try:
                         item.update_position()
-                    except (AttributeError, RuntimeError):
+                    except (AttributeError, RuntimeError, ValueError, TypeError):
                         # Best-effort: skip any bond items that raise when updating
                         continue
-                except (AttributeError, RuntimeError):
+                except (AttributeError, RuntimeError, ValueError, TypeError):
                     continue
 
             # Run overlap resolution
@@ -1250,7 +1250,7 @@ class MainWindowEditActions(object):
             try:
                 if sip_isdeleted_safe(item):
                     continue
-            except (AttributeError, RuntimeError):  # pragma: no cover
+            except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
                 import traceback
                 traceback.print_exc()
 
@@ -1258,15 +1258,15 @@ class MainWindowEditActions(object):
                 sc = None
                 try:
                     sc = item.scene() if hasattr(item, "scene") else None
-                except (AttributeError, RuntimeError):
+                except (AttributeError, RuntimeError, ValueError, TypeError):
                     sc = None
                 if sc is None:
                     continue
                 try:
                     item.update_position()
-                except (AttributeError, RuntimeError):
+                except (AttributeError, RuntimeError, ValueError, TypeError):
                     continue
-            except (AttributeError, RuntimeError):
+            except (AttributeError, RuntimeError, ValueError, TypeError):
                 continue
 
         # Update labels after resolution
@@ -1433,7 +1433,7 @@ class MainWindowEditActions(object):
         try:
             self.chem_check_tried = False
             self.chem_check_failed = False
-        except (AttributeError, RuntimeError):
+        except (AttributeError, RuntimeError, ValueError, TypeError):
             # Ensure attributes exist even if called very early
             self.chem_check_tried = False
             self.chem_check_failed = False
@@ -1446,7 +1446,7 @@ class MainWindowEditActions(object):
             Chem.SanitizeMol(mol)
             self.chem_check_tried = True
             self.chem_check_failed = False
-        except (AttributeError, RuntimeError):
+        except (AttributeError, RuntimeError, ValueError, TypeError):
             # Mark that we tried sanitization and it failed
             self.chem_check_tried = True
             self.chem_check_failed = True
@@ -1455,14 +1455,14 @@ class MainWindowEditActions(object):
                 self.statusBar().showMessage(
                     f"Molecule sanitization failed{desc}; file may be malformed."
                 )
-            except (AttributeError, RuntimeError):  # pragma: no cover
+            except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
                 import traceback
                 traceback.print_exc()
             # Disable 3D optimization UI to prevent running on invalid molecules
             if hasattr(self, "optimize_3d_button"):
                 try:
                     self.optimize_3d_button.setEnabled(False)
-                except (AttributeError, RuntimeError):  # pragma: no cover
+                except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
                     import traceback
                     traceback.print_exc()
 
@@ -1487,13 +1487,13 @@ class MainWindowEditActions(object):
                     ):
                         try:
                             target.ClearProp("_xyz_skip_checks")
-                        except (AttributeError, RuntimeError):
+                        except (AttributeError, RuntimeError, ValueError, TypeError):
                             try:
                                 target.SetIntProp("_xyz_skip_checks", 0)
-                            except (AttributeError, RuntimeError):  # pragma: no cover
+                            except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
                                 import traceback
                                 traceback.print_exc()
-                except (AttributeError, RuntimeError):  # pragma: no cover
+                except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
                     import traceback
                     traceback.print_exc()
                 # Remove attribute-style markers if present
@@ -1501,42 +1501,42 @@ class MainWindowEditActions(object):
                     if hasattr(target, "_xyz_skip_checks"):
                         try:
                             delattr(target, "_xyz_skip_checks")
-                        except (AttributeError, RuntimeError):
+                        except (AttributeError, RuntimeError, ValueError, TypeError):
                             try:
                                 del target._xyz_skip_checks
-                            except (AttributeError, RuntimeError):
+                            except (AttributeError, RuntimeError, ValueError, TypeError):
                                 try:
                                     target._xyz_skip_checks = False
-                                except (AttributeError, RuntimeError):  # pragma: no cover
+                                except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
                                     import traceback
                                     traceback.print_exc()
-                except (AttributeError, RuntimeError):  # pragma: no cover
+                except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
                     import traceback
                     traceback.print_exc()
                 try:
                     if hasattr(target, "_xyz_atom_data"):
                         try:
                             delattr(target, "_xyz_atom_data")
-                        except (AttributeError, RuntimeError):
+                        except (AttributeError, RuntimeError, ValueError, TypeError):
                             try:
                                 del target._xyz_atom_data
-                            except (AttributeError, RuntimeError):
+                            except (AttributeError, RuntimeError, ValueError, TypeError):
                                 try:
                                     target._xyz_atom_data = None
-                                except (AttributeError, RuntimeError):  # pragma: no cover
+                                except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
                                     import traceback
                                     traceback.print_exc()
-                except (AttributeError, RuntimeError):  # pragma: no cover
+                except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
                     import traceback
                     traceback.print_exc()
-        except (AttributeError, RuntimeError):  # pragma: no cover
+        except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
             import traceback
             traceback.print_exc()
 
         # Reset UI flags
         try:
             self.is_xyz_derived = False
-        except (AttributeError, RuntimeError):  # pragma: no cover
+        except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
             import traceback
             traceback.print_exc()
 
@@ -1546,16 +1546,16 @@ class MainWindowEditActions(object):
                 if getattr(self, "chem_check_failed", False):
                     try:
                         self.optimize_3d_button.setEnabled(False)
-                    except (AttributeError, RuntimeError):  # pragma: no cover
+                    except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
                         import traceback
                         traceback.print_exc()
                 else:
                     try:
                         self.optimize_3d_button.setEnabled(True)
-                    except (AttributeError, RuntimeError):  # pragma: no cover
+                    except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
                         import traceback
                         traceback.print_exc()
-        except (AttributeError, RuntimeError):  # pragma: no cover
+        except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
             import traceback
             traceback.print_exc()
 

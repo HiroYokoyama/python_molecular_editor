@@ -60,22 +60,27 @@ class MainWindowViewLoaders(object):
                 raise ValueError("Failed to create molecule from XYZ file.")
             if mol.GetNumConformers() == 0:
                 raise ValueError("XYZ file has no 3D coordinates.")
+        except FileNotFoundError:
+            self.statusBar().showMessage(f"File not found: {file_path}")
+            self.restore_ui_for_editing()
+            return
+        except ValueError as e:
+            self.statusBar().showMessage(f"Invalid XYZ file: {e}")
+            self.restore_ui_for_editing()
+            return
 
+        try:
             # Clear 2D editor
             self.clear_2d_editor(push_to_undo=False)
 
-            # Set the molecule. If bonds were determined (mol has bonds),
-            # treat this the same as loading a MOL file: clear the XYZ-derived
-            # flag and enable 3D optimization. Only mark as XYZ-derived and
-            # disable 3D optimization when the molecule has no bond information.
+            # Set the molecule.
             self.current_mol = mol
 
             # Clear mapping when loading XYZ (no 2D structure)
             self.atom_id_to_rdkit_idx_map = {}
 
             # If the loader marked the molecule as produced under skip_chemistry_checks,
-            # always treat it as XYZ-derived and disable optimization. Otherwise
-            # fall back to the existing behavior based on bond presence.
+            # always treat it as XYZ-derived and disable optimization.
             skip_flag = False
             try:
                 # Prefer RDKit int prop
@@ -144,15 +149,13 @@ class MainWindowViewLoaders(object):
             self.has_unsaved_changes = False
             self.update_window_title()
 
-        except FileNotFoundError:
-            self.statusBar().showMessage(f"File not found: {file_path}")
+        except (AttributeError, RuntimeError, ValueError, TypeError) as e:
+            self.statusBar().showMessage(f"Error processing XYZ file: {e}")
+            import traceback
+            traceback.print_exc()
             self.restore_ui_for_editing()
-        except ValueError as e:
-            self.statusBar().showMessage(f"Invalid XYZ file: {e}")
-            self.restore_ui_for_editing()
-        except (AttributeError, RuntimeError, ValueError) as e:
-            self.statusBar().showMessage(f"Error loading XYZ file: {e}")
-            self.restore_ui_for_editing()
+
+
 
     def save_3d_as_mol(self):
         if not self.current_mol:
@@ -162,23 +165,23 @@ class MainWindowViewLoaders(object):
         try:
             # default filename based on current file
             default_name = "untitled"
-            try:
-                if self.current_file_path:
+            if self.current_file_path:
+                try:
                     base = os.path.basename(self.current_file_path)
                     name = os.path.splitext(base)[0]
                     default_name = f"{name}"
-            except (AttributeError, RuntimeError, TypeError, ValueError, OSError):
-                default_name = "untitled"
+                except (AttributeError, RuntimeError, TypeError, ValueError, OSError):
+                    default_name = "untitled"
 
             # prefer same directory as current file when available
             default_path = default_name
-            try:
-                if self.current_file_path:
+            if self.current_file_path:
+                try:
                     default_path = os.path.join(
                         os.path.dirname(self.current_file_path), default_name
                     )
-            except (AttributeError, RuntimeError, TypeError, ValueError, OSError):
-                default_path = default_name
+                except (AttributeError, RuntimeError, TypeError, ValueError, OSError):
+                    default_path = default_name
 
             file_path, _ = QFileDialog.getSaveFileName(
                 self,
@@ -211,8 +214,12 @@ class MainWindowViewLoaders(object):
             self.statusBar().showMessage(f"File I/O error: {e}")
         except UnicodeEncodeError as e:
             self.statusBar().showMessage(f"Text encoding error: {e}")
-        except (AttributeError, RuntimeError, ValueError) as e:
+        except (AttributeError, RuntimeError, ValueError, TypeError) as e:
             self.statusBar().showMessage(f"Error saving 3D MOL file: {e}")
+            import traceback
+            traceback.print_exc()
+
+
 
     def load_mol_file_for_3d_viewing(self, file_path=None):
         """Open MOL/SDF file in 3D viewer"""
@@ -250,7 +257,7 @@ class MainWindowViewLoaders(object):
                 if mol is None:
                     try:
                         mol = Chem.MolFromMolFile(file_path, removeHs=False)
-                    except (AttributeError, RuntimeError, TypeError, ValueError):
+                    except (RuntimeError, ValueError, TypeError):
                         mol = None
 
                 if mol is None:
@@ -272,30 +279,39 @@ class MainWindowViewLoaders(object):
                         f"Failed to load molecule from {file_path}"
                     )
                     return
+        except (OSError, IOError, RuntimeError, ValueError, TypeError) as e:
+            self.statusBar().showMessage(f"Error reading file {file_path}: {e}")
+            import traceback
+            traceback.print_exc()
+            return
 
+
+        try:
             # Convert 2D to 3D if no coordinates found (no optimization)
             if mol.GetNumConformers() == 0:
                 self.statusBar().showMessage(
                     "No 3D coordinates found. Converting to 3D..."
                 )
                 try:
-                    try:
-                        AllChem.EmbedMolecule(mol)
-                        # Push to undo stack after 3D conversion
-                        self.current_mol = mol
-                        self.push_undo_state()
-                    except (AttributeError, RuntimeError, TypeError, ValueError):
-                        # If skipping chemistry checks, allow molecule to be displayed without 3D embedding
-                        if self.settings.get("skip_chemistry_checks", False):
-                            self.statusBar().showMessage(
-                                "Warning: failed to generate 3D coordinates but skip_chemistry_checks is enabled; continuing."
-                            )
-                            # Keep mol as-is (may lack conformer); downstream code checks for conformers
-                        else:
-                            raise
+                    AllChem.EmbedMolecule(mol)
+                    # Push to undo stack after 3D conversion
+                    self.current_mol = mol
+                    self.push_undo_state()
                 except (AttributeError, RuntimeError, TypeError, ValueError):
-                    self.statusBar().showMessage("Failed to generate 3D coordinates")
-                    return
+                    # If skipping chemistry checks, allow molecule to be displayed without 3D embedding
+                    try:
+                        skip_checks = bool(self.settings.get("skip_chemistry_checks", False))
+                    except (AttributeError, KeyError):
+                        skip_checks = False
+
+                    if skip_checks:
+                        self.statusBar().showMessage(
+                            "Warning: failed to generate 3D coordinates but skip_chemistry_checks is enabled; continuing."
+                        )
+                        # Keep mol as-is (may lack conformer); downstream code checks for conformers
+                    else:
+                        self.statusBar().showMessage("Failed to generate 3D coordinates")
+                        return
 
             # Clear XYZ markers on the newly loaded MOL/SDF so Optimize 3D is
             # correctly enabled when appropriate.
@@ -329,5 +345,9 @@ class MainWindowViewLoaders(object):
             self.current_file_path = file_path
             self.update_window_title()
 
-        except (AttributeError, RuntimeError, ValueError) as e:
-            self.statusBar().showMessage(f"Error loading MOL/SDF file: {e}")
+        except (AttributeError, RuntimeError, ValueError, TypeError) as e:
+            self.statusBar().showMessage(f"Error processing MOL/SDF file: {e}")
+            import traceback
+            traceback.print_exc()
+
+

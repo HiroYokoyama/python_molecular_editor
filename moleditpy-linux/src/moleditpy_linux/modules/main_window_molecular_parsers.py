@@ -289,7 +289,7 @@ class MainWindowMolecularParsers(object):
                 except (AttributeError, RuntimeError, ValueError, TypeError):
                     try:
                         return int(float(str(charge_text).strip())), True, False
-                    except (AttributeError, RuntimeError):
+                    except (AttributeError, RuntimeError, ValueError, TypeError):
                         return 0, True, False
 
             with open(file_path, "r", encoding="utf-8") as f:
@@ -414,20 +414,20 @@ class MainWindowMolecularParsers(object):
                 # Attach a default charge property
                 try:
                     candidate_mol.SetIntProp("_xyz_charge", 0)
-                except (AttributeError, RuntimeError):
+                except (AttributeError, RuntimeError, ValueError, TypeError):
                     try:
                         candidate_mol._xyz_charge = 0
-                    except (AttributeError, RuntimeError):  # pragma: no cover
+                    except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
                         import traceback
                         traceback.print_exc()
 
                 # Mark as skip-chemistry product
                 try:
                     candidate_mol.SetIntProp("_xyz_skip_checks", 1)
-                except (AttributeError, RuntimeError):
+                except (AttributeError, RuntimeError, ValueError, TypeError):
                     try:
                         candidate_mol._xyz_skip_checks = True
-                    except (AttributeError, RuntimeError):  # pragma: no cover
+                    except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
                         import traceback
                         traceback.print_exc()
 
@@ -438,10 +438,10 @@ class MainWindowMolecularParsers(object):
                     if hasattr(self, "optimize_3d_button"):
                         try:
                             self.optimize_3d_button.setEnabled(False)
-                        except (AttributeError, RuntimeError):  # pragma: no cover
+                        except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
                             import traceback
                             traceback.print_exc()
-                except (AttributeError, RuntimeError):  # pragma: no cover
+                except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
                     import traceback
                     traceback.print_exc()
 
@@ -464,7 +464,7 @@ class MainWindowMolecularParsers(object):
                         try:
                             try:
                                 mol_candidate = Chem.RWMol(Chem.Mol(mol))
-                            except (AttributeError, RuntimeError):
+                            except (AttributeError, RuntimeError, ValueError, TypeError):
                                 mol_candidate = Chem.RWMol(mol)
 
                             # Proceed if DetermineBonds succeeds
@@ -473,7 +473,7 @@ class MainWindowMolecularParsers(object):
                             )
                             mol_to_finalize = mol_candidate
                             used_rd_determine = True
-                        except (AttributeError, RuntimeError):
+                        except (AttributeError, RuntimeError, ValueError, TypeError):
                             # Handle DetermineBonds failure
                             determine_failed = True
                             used_rd_determine = False
@@ -483,7 +483,7 @@ class MainWindowMolecularParsers(object):
                     except RuntimeError:
                         # Propagate our sentinel so outer code can catch it.
                         raise
-                    except (AttributeError, RuntimeError):
+                    except (AttributeError, RuntimeError, ValueError, TypeError):
                         # rdDetermineBonds not available or import failed; use
                         # distance-based fallback below.
                         used_rd_determine = False
@@ -496,14 +496,14 @@ class MainWindowMolecularParsers(object):
                     # Finalize molecule
                     try:
                         candidate_mol = mol_to_finalize.GetMol()
-                    except (AttributeError, RuntimeError):
+                    except (AttributeError, RuntimeError, ValueError, TypeError):
                         candidate_mol = None
 
                     if candidate_mol is None:
                         # Try salvage path
                         try:
                             candidate_mol = mol.GetMol()
-                        except (AttributeError, RuntimeError):
+                        except (AttributeError, RuntimeError, ValueError, TypeError):
                             candidate_mol = None
 
                     if candidate_mol is None:
@@ -513,14 +513,14 @@ class MainWindowMolecularParsers(object):
                     try:
                         try:
                             candidate_mol.SetIntProp("_xyz_charge", int(charge_val))
-                        except (AttributeError, RuntimeError):
+                        except (AttributeError, RuntimeError, ValueError, TypeError):
                             try:
                                 candidate_mol._xyz_charge = int(charge_val)
-                            except (AttributeError, RuntimeError):  # pragma: no cover
+                            except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
                                 import traceback
                                 traceback.print_exc()
 
-                    except (AttributeError, RuntimeError):  # pragma: no cover
+                    except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
                         import traceback
                         traceback.print_exc()
                     # Preserve whether the user requested skip_chemistry_checks
@@ -528,14 +528,14 @@ class MainWindowMolecularParsers(object):
                         if bool(self.settings.get("skip_chemistry_checks", False)):
                             try:
                                 candidate_mol.SetIntProp("_xyz_skip_checks", 1)
-                            except (AttributeError, RuntimeError):
+                            except (AttributeError, RuntimeError, ValueError, TypeError):
                                 try:
                                     candidate_mol._xyz_skip_checks = True
-                                except (AttributeError, RuntimeError):  # pragma: no cover
+                                except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
                                     import traceback
                                     traceback.print_exc()
 
-                    except (AttributeError, RuntimeError):  # pragma: no cover
+                    except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
                         import traceback
                         traceback.print_exc()
                     # Run chemistry checks which may emit warnings to stderr
@@ -554,7 +554,7 @@ class MainWindowMolecularParsers(object):
                     # Silent first attempt (existing behavior)
                     try:
                         final_mol = _process_with_charge(0)
-                    except RuntimeError:
+                    except (RuntimeError, ValueError, TypeError):
                     # Loop prompt on failure
                         while True:  # pragma: no cover
                             charge_val, ok, skip_flag = prompt_for_charge()
@@ -565,22 +565,22 @@ class MainWindowMolecularParsers(object):
                                 # User selected Skip chemistry: attempt distance-based salvage
                                 try:
                                     self.estimate_bonds_from_distances(mol)
-                                except (AttributeError, RuntimeError):  # pragma: no cover
+                                except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
                                     import traceback
                                     traceback.print_exc()
                                 salvaged = None
                                 try:
                                     salvaged = mol.GetMol()
-                                except (AttributeError, RuntimeError):
+                                except (AttributeError, RuntimeError, ValueError, TypeError):
                                     salvaged = None
 
                                 if salvaged is not None:
                                     try:
                                         salvaged.SetIntProp("_xyz_skip_checks", 1)
-                                    except (AttributeError, RuntimeError):
+                                    except (AttributeError, RuntimeError, ValueError, TypeError):
                                         try:
                                             salvaged._xyz_skip_checks = True
-                                        except (AttributeError, RuntimeError):  # pragma: no cover
+                                        except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
                                             import traceback
                                             traceback.print_exc()
                                     final_mol = salvaged
@@ -591,7 +591,7 @@ class MainWindowMolecularParsers(object):
                                         self.statusBar().showMessage(
                                             "Skip chemistry selected but failed to create salvaged molecule."
                                         )
-                                    except (AttributeError, RuntimeError):  # pragma: no cover
+                                    except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
                                         import traceback
                                         traceback.print_exc()
                                     return None
@@ -606,7 +606,7 @@ class MainWindowMolecularParsers(object):
                                     self.statusBar().showMessage(
                                         "DetermineBonds failed for that charge; please try a different total charge or cancel."
                                     )
-                                except (AttributeError, RuntimeError):  # pragma: no cover
+                                except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
                                     import traceback
                                     traceback.print_exc()
                                 continue
@@ -620,22 +620,22 @@ class MainWindowMolecularParsers(object):
                                             "skip_chemistry_checks", False
                                         )
                                     )
-                                except (AttributeError, RuntimeError):
+                                except (AttributeError, RuntimeError, ValueError, TypeError):
                                     skip_checks = False
                                 salvaged = None
                                 try:
                                     salvaged = mol.GetMol()
-                                except (AttributeError, RuntimeError):
+                                except (AttributeError, RuntimeError, ValueError, TypeError):
                                     salvaged = None
                                 if skip_checks and salvaged is not None:
                                     final_mol = salvaged
                                     # mark salvaged molecule as produced under skip_checks
                                     try:
                                         final_mol.SetIntProp("_xyz_skip_checks", 1)
-                                    except (AttributeError, RuntimeError):
+                                    except (AttributeError, RuntimeError, ValueError, TypeError):
                                         try:
                                             final_mol._xyz_skip_checks = True
-                                        except (AttributeError, RuntimeError):  # pragma: no cover
+                                        except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
                                             import traceback
                                             traceback.print_exc()
                                     break
@@ -644,7 +644,7 @@ class MainWindowMolecularParsers(object):
                                         self.statusBar().showMessage(
                                             f"Retry failed: {e_prompt}"
                                         )
-                                    except (AttributeError, RuntimeError):  # pragma: no cover
+                                    except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
                                         import traceback
                                         traceback.print_exc()
                                     # Continue prompting
@@ -659,22 +659,22 @@ class MainWindowMolecularParsers(object):
                             # User selected Skip chemistry: attempt distance-based salvage
                             try:
                                 self.estimate_bonds_from_distances(mol)
-                            except (AttributeError, RuntimeError):  # pragma: no cover
+                            except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
                                 import traceback
                                 traceback.print_exc()
                             salvaged = None
                             try:
                                 salvaged = mol.GetMol()
-                            except (AttributeError, RuntimeError):
+                            except (AttributeError, RuntimeError, ValueError, TypeError):
                                 salvaged = None
 
                             if salvaged is not None:
                                 try:
                                     salvaged.SetIntProp("_xyz_skip_checks", 1)
-                                except (AttributeError, RuntimeError):
+                                except (AttributeError, RuntimeError, ValueError, TypeError):
                                     try:
                                         salvaged._xyz_skip_checks = True
-                                    except (AttributeError, RuntimeError):  # pragma: no cover
+                                    except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
                                         import traceback
                                         traceback.print_exc()
                                 final_mol = salvaged
@@ -684,7 +684,7 @@ class MainWindowMolecularParsers(object):
                                     self.statusBar().showMessage(
                                         "Skip chemistry selected but failed to create salvaged molecule."
                                     )
-                                except (AttributeError, RuntimeError):  # pragma: no cover
+                                except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
                                     import traceback
                                     traceback.print_exc()
                                 return None
@@ -699,7 +699,7 @@ class MainWindowMolecularParsers(object):
                                 self.statusBar().showMessage(
                                     "DetermineBonds failed for that charge; please try a different total charge or cancel."
                                 )
-                            except (AttributeError, RuntimeError):  # pragma: no cover
+                            except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
                                 import traceback
                                 traceback.print_exc()
                             continue
@@ -708,21 +708,21 @@ class MainWindowMolecularParsers(object):
                                 skip_checks = bool(
                                     self.settings.get("skip_chemistry_checks", False)
                                 )
-                            except (AttributeError, RuntimeError):
+                            except (AttributeError, RuntimeError, ValueError, TypeError):
                                 skip_checks = False
                             salvaged = None
                             try:
                                 salvaged = mol.GetMol()
-                            except (AttributeError, RuntimeError):
+                            except (AttributeError, RuntimeError, ValueError, TypeError):
                                 salvaged = None
                             if skip_checks and salvaged is not None:
                                 final_mol = salvaged
                                 try:
                                     final_mol.SetIntProp("_xyz_skip_checks", 1)
-                                except (AttributeError, RuntimeError):
+                                except (AttributeError, RuntimeError, ValueError, TypeError):
                                     try:
                                         final_mol._xyz_skip_checks = True
-                                    except (AttributeError, RuntimeError):  # pragma: no cover
+                                    except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
                                         import traceback
                                         traceback.print_exc()
                                 break
@@ -731,24 +731,24 @@ class MainWindowMolecularParsers(object):
                                     self.statusBar().showMessage(
                                         f"Retry failed: {e_prompt}"
                                     )
-                                except (AttributeError, RuntimeError):  # pragma: no cover
+                                except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
                                     import traceback
                                     traceback.print_exc()
                                 continue
-            except (AttributeError, RuntimeError):
+            except (AttributeError, RuntimeError, ValueError, TypeError):
                 # If the silent attempt failed for reasons other than
                 # DetermineBonds failing (e.g., finalization errors), fall
                 # back to salvaging or prompting depending on settings.
                 salvaged = None
                 try:
                     salvaged = mol.GetMol()
-                except (AttributeError, RuntimeError):
+                except (AttributeError, RuntimeError, ValueError, TypeError):
                     salvaged = None
                 try:
                     skip_checks = bool(
                         self.settings.get("skip_chemistry_checks", False)
                     )
-                except (AttributeError, RuntimeError):
+                except (AttributeError, RuntimeError, ValueError, TypeError):
                     skip_checks = False
                 if skip_checks and salvaged is not None:
                     final_mol = salvaged
@@ -764,21 +764,21 @@ class MainWindowMolecularParsers(object):
                             # User selected Skip chemistry: attempt distance-based salvage
                             try:
                                 self.estimate_bonds_from_distances(mol)
-                            except (AttributeError, RuntimeError):  # pragma: no cover
+                            except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
                                 import traceback
                                 traceback.print_exc()
                             salvaged = None
                             try:
                                 salvaged = mol.GetMol()
-                            except (AttributeError, RuntimeError):
+                            except (AttributeError, RuntimeError, ValueError, TypeError):
                                 salvaged = None
                             if salvaged is not None:
                                 try:
                                     salvaged.SetIntProp("_xyz_skip_checks", 1)
-                                except (AttributeError, RuntimeError):
+                                except (AttributeError, RuntimeError, ValueError, TypeError):
                                     try:
                                         salvaged._xyz_skip_checks = True
-                                    except (AttributeError, RuntimeError):  # pragma: no cover
+                                    except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
                                         import traceback
                                         traceback.print_exc()
                                 final_mol = salvaged
@@ -788,7 +788,7 @@ class MainWindowMolecularParsers(object):
                                     self.statusBar().showMessage(
                                         "Skip chemistry selected but failed to create salvaged molecule."
                                     )
-                                except (AttributeError, RuntimeError):  # pragma: no cover
+                                except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
                                     import traceback
                                     traceback.print_exc()
                                 return None
@@ -803,7 +803,7 @@ class MainWindowMolecularParsers(object):
                                 self.statusBar().showMessage(
                                     "DetermineBonds failed for that charge; please try a different total charge or cancel."
                                 )
-                            except (AttributeError, RuntimeError):  # pragma: no cover
+                            except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
                                 import traceback
                                 traceback.print_exc()
                             continue
@@ -812,7 +812,7 @@ class MainWindowMolecularParsers(object):
                                 self.statusBar().showMessage(
                                     f"Retry failed: {e_prompt}"
                                 )
-                            except (AttributeError, RuntimeError):  # pragma: no cover
+                            except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
                                 import traceback
                                 traceback.print_exc()
                             continue
@@ -832,10 +832,10 @@ class MainWindowMolecularParsers(object):
                                 self.optimize_3d_button.setEnabled(False)
                             else:
                                 self.optimize_3d_button.setEnabled(bool(has_bonds))
-                        except (AttributeError, RuntimeError):  # pragma: no cover
+                        except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
                             import traceback
                             traceback.print_exc()
-                except (AttributeError, RuntimeError):  # pragma: no cover
+                except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
                     import traceback
                     traceback.print_exc()
                 # Store original atom data for analysis
@@ -950,7 +950,7 @@ class MainWindowMolecularParsers(object):
                     try:
                         mol.AddBond(i, j, Chem.BondType.SINGLE)
                         bonds_added.append((i, j, distance))
-                    except (AttributeError, RuntimeError):
+                    except (AttributeError, RuntimeError, ValueError, TypeError):
                         # Skip if bond exists
                         import traceback
                         traceback.print_exc()
@@ -979,7 +979,7 @@ class MainWindowMolecularParsers(object):
                     base = os.path.basename(self.current_file_path)
                     name = os.path.splitext(base)[0]
                     default_name = f"{name}-2d"
-            except (AttributeError, RuntimeError):
+            except (AttributeError, RuntimeError, ValueError, TypeError):
                 default_name = "untitled-2d"
 
             # prefer same directory as current file when available
@@ -989,7 +989,7 @@ class MainWindowMolecularParsers(object):
                     default_path = os.path.join(
                         os.path.dirname(self.current_file_path), default_name
                     )
-            except (AttributeError, RuntimeError):
+            except (AttributeError, RuntimeError, ValueError, TypeError):
                 default_path = default_name
 
             file_path, _ = QFileDialog.getSaveFileName(
@@ -1028,7 +1028,7 @@ class MainWindowMolecularParsers(object):
                 base = os.path.basename(self.current_file_path)
                 name = os.path.splitext(base)[0]
                 default_name = f"{name}"
-        except (AttributeError, RuntimeError):
+        except (AttributeError, RuntimeError, ValueError, TypeError):
             default_name = "untitled"
 
         # prefer same directory as current file when available
@@ -1038,7 +1038,7 @@ class MainWindowMolecularParsers(object):
                 default_path = os.path.join(
                     os.path.dirname(self.current_file_path), default_name
                 )
-        except (AttributeError, RuntimeError):
+        except (AttributeError, RuntimeError, ValueError, TypeError):
             default_path = default_name
 
         file_path, _ = QFileDialog.getSaveFileName(
@@ -1054,7 +1054,7 @@ class MainWindowMolecularParsers(object):
                 # Calculate charge and multiplicity
                 try:
                     charge = Chem.GetFormalCharge(self.current_mol)
-                except (AttributeError, RuntimeError):
+                except (AttributeError, RuntimeError, ValueError, TypeError):
                     charge = 0  # Default to 0
 
                 try:
@@ -1062,7 +1062,7 @@ class MainWindowMolecularParsers(object):
                     num_radicals = Descriptors.NumRadicalElectrons(self.current_mol)
                     # Multiplicity (M = N + 1)
                     multiplicity = num_radicals + 1
-                except (AttributeError, RuntimeError):
+                except (AttributeError, RuntimeError, ValueError, TypeError):
                     multiplicity = 1  # Default to 1 (singlet)
 
                 #smiles = Chem.MolToSmiles(Chem.RemoveHs(self.current_mol))

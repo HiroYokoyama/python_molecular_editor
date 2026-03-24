@@ -128,13 +128,13 @@ class BondItem(QGraphicsItem):
             p1 = self.atom1.pos()
             p2 = self.atom2.pos()
             return QLineF(QPointF(0, 0), p2 - p1)
-        except (AttributeError, RuntimeError):
+        except (AttributeError, RuntimeError, ValueError, TypeError):
             return QLineF(0, 0, 0, 0)
 
     def boundingRect(self):
         try:
             line = self.get_line_in_local_coords()
-        except (AttributeError, RuntimeError):
+        except (AttributeError, RuntimeError, ValueError, TypeError):
             line = QLineF(0, 0, 0, 0)
 
         # Get dynamic bond offset (spacing)

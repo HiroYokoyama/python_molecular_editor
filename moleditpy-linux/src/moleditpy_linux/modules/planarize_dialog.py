@@ -132,7 +132,7 @@ class PlanarizeDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
                     n = self.mol.GetNumAtoms()
                     # create a set of indices [0..n-1]
                     self.selected_atoms = set(range(n))
-                except (AttributeError, RuntimeError):
+                except (AttributeError, RuntimeError, ValueError, TypeError):
                     # fallback to main_window data map
                     self.selected_atoms = (
                         set(self.main_window.data.atoms.keys())

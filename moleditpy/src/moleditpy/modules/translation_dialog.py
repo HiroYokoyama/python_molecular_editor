@@ -179,7 +179,7 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
                 self.x_input.setText("0.0")
                 self.y_input.setText("0.0")
                 self.z_input.setText("0.0")
-        except (AttributeError, RuntimeError):  # pragma: no cover
+        except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
             # Be tolerant: do not crash the UI if inputs cannot be updated
             import traceback
             traceback.print_exc()
@@ -238,7 +238,7 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
                         # Update 3d positions for this atom only
                         try:
                             self.main_window.atom_positions_3d[i] = new_pos
-                        except (AttributeError, RuntimeError):  # pragma: no cover
+                        except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
                             import traceback
                             traceback.print_exc()
                     else:
@@ -284,7 +284,7 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
                     n = self.mol.GetNumAtoms()
                     # create a set of indices [0..n-1]
                     self.selected_atoms = set(range(n))
-                except (AttributeError, RuntimeError):
+                except (AttributeError, RuntimeError, ValueError, TypeError):
                     # fallback to main_window data map
                     self.selected_atoms = (
                         set(self.main_window.data.atoms.keys())
@@ -351,7 +351,7 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
         # Force re-render after clearing labels
         try:
             self.main_window.plotter.render()
-        except (AttributeError, RuntimeError):  # pragma: no cover
+        except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
             import traceback
             traceback.print_exc()
 

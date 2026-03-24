@@ -84,7 +84,7 @@ class MainWindowEdit3d(object):
         for dialog in dialogs_to_close:
             try:
                 dialog.close()
-            except (AttributeError, RuntimeError):  # pragma: no cover
+            except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
                 import traceback
                 traceback.print_exc()
 
@@ -123,7 +123,7 @@ class MainWindowEdit3d(object):
         try:
             # Remove existing labels
             self.plotter.remove_actor("measurement_labels")
-        except (AttributeError, RuntimeError):  # pragma: no cover
+        except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
             import traceback
             traceback.print_exc()
 
@@ -161,7 +161,7 @@ class MainWindowEdit3d(object):
         self.measurement_labels.clear()
         try:
             self.plotter.remove_actor("measurement_labels")
-        except (AttributeError, RuntimeError):  # pragma: no cover
+        except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
             import traceback
             traceback.print_exc()
 
@@ -173,7 +173,7 @@ class MainWindowEdit3d(object):
             try:
                 self.plotter.remove_actor(self.measurement_text_actor)
                 self.measurement_text_actor = None
-            except (AttributeError, RuntimeError):  # pragma: no cover
+            except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
                 import traceback
                 traceback.print_exc()
 
@@ -245,15 +245,15 @@ class MainWindowEdit3d(object):
                     try:
                         if label_item.scene():
                             self.scene.removeItem(label_item)
-                    except (AttributeError, RuntimeError):
+                    except (AttributeError, RuntimeError, ValueError, TypeError):
                         # Scene access or removal failed; skip
                         continue
-                except (AttributeError, RuntimeError):
+                except (AttributeError, RuntimeError, ValueError, TypeError):
                     # If sip check itself fails, fall back to best-effort removal
                     try:
                         if label_item.scene():
                             self.scene.removeItem(label_item)
-                    except (AttributeError, RuntimeError):
+                    except (AttributeError, RuntimeError, ValueError, TypeError):
                         continue
             self.measurement_label_items_2d.clear()
 
@@ -332,7 +332,7 @@ class MainWindowEdit3d(object):
         if self.measurement_text_actor:
             try:
                 self.plotter.remove_actor(self.measurement_text_actor)
-            except (AttributeError, RuntimeError):  # pragma: no cover
+            except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
                 import traceback
                 traceback.print_exc()
 
@@ -352,7 +352,7 @@ class MainWindowEdit3d(object):
                 text_color = "black" if luminance > 128 else "white"
             else:
                 text_color = "white"
-        except (AttributeError, RuntimeError):
+        except (AttributeError, RuntimeError, ValueError, TypeError):
             text_color = "white"
 
         # Display upper-left
@@ -387,7 +387,7 @@ class MainWindowEdit3d(object):
         try:
             # Remove existing highlight
             self.plotter.remove_actor("selection_highlight")
-        except (AttributeError, RuntimeError):  # pragma: no cover
+        except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
             import traceback
             traceback.print_exc()
 
