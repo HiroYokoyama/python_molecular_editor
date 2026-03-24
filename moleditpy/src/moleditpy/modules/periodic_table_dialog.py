@@ -164,7 +164,7 @@ class PeriodicTableDialog(QDialog):  # pragma: no cover
                     else {}
                 )
                 override = overrides.get(symbol)
-            except Exception:
+            except (AttributeError, RuntimeError):
                 override = None
             q_color = (
                 QColor(override)
