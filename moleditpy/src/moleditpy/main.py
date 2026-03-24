@@ -17,7 +17,7 @@ from PyQt6.QtWidgets import QApplication
 
 try:
     from .modules.main_window import MainWindow
-except Exception:
+except ImportError:
     from modules.main_window import MainWindow
 
 

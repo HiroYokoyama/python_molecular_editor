@@ -47,7 +47,7 @@ try:
     from .planarize_dialog import PlanarizeDialog
     from .translation_dialog import TranslationDialog
     from .user_template_dialog import UserTemplateDialog
-except Exception:
+except ImportError:
     # Fallback to absolute imports for script-style execution
     from modules.about_dialog import AboutDialog
     from modules.align_plane_dialog import AlignPlaneDialog

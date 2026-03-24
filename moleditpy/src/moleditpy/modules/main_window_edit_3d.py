@@ -20,13 +20,13 @@ import numpy as np
 
 try:
     from .mol_geometry import calc_angle_deg, calc_distance, calculate_dihedral as _calculate_dihedral
-except Exception:
+except ImportError:
     from modules.mol_geometry import calc_angle_deg, calc_distance, calculate_dihedral as _calculate_dihedral
 
 # RDKit imports (explicit to satisfy flake8 and used features)
 try:
     from . import sip_isdeleted_safe
-except Exception:
+except ImportError:
     from modules import sip_isdeleted_safe
 
 # PyQt6 Modules
@@ -38,14 +38,14 @@ from PyQt6.QtWidgets import QGraphicsTextItem
 try:
     from PyQt6 import sip as _sip  # type: ignore
     _sip_isdeleted = getattr(_sip, "isdeleted", None)
-except Exception:
+except ImportError:
     _sip = None
     _sip_isdeleted = None
 
 try:
     # package relative imports (preferred when running as `python -m moleditpy`)
     from .constants import VDW_RADII
-except Exception:
+except ImportError:
     # Fallback to absolute imports for script-style execution
     from modules.constants import VDW_RADII
 

@@ -26,7 +26,7 @@ from rdkit.Chem import AllChem
 
 try:
     from . import OBABEL_AVAILABLE
-except Exception:
+except ImportError:
     from modules import OBABEL_AVAILABLE
 
 
@@ -41,7 +41,7 @@ try:
     # package relative imports (preferred when running as `python -m moleditpy`)
     from .calculation_worker import CalculationWorker
     from .mol_geometry import is_problematic_valence
-except Exception:
+except ImportError:
     # Fallback to absolute imports for script-style execution
     from modules.calculation_worker import CalculationWorker
     from modules.mol_geometry import is_problematic_valence

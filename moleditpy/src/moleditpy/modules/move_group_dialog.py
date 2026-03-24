@@ -26,12 +26,12 @@ from PyQt6.QtWidgets import (
 
 try:
     from .constants import VDW_RADII, pt
-except Exception:
+except ImportError:
     from modules.constants import VDW_RADII, pt
 
 try:
     from .dialog3_d_picking_mixin import Dialog3DPickingMixin
-except Exception:
+except ImportError:
     from modules.dialog3_d_picking_mixin import Dialog3DPickingMixin
 
 

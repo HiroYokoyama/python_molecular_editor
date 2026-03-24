@@ -16,7 +16,7 @@ from rdkit import Chem
 
 try:
     from .constants import ANGSTROM_PER_PIXEL
-except Exception:
+except ImportError:
     from modules.constants import ANGSTROM_PER_PIXEL
 
 

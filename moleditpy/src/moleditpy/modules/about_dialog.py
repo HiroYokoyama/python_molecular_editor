@@ -18,7 +18,7 @@ from PyQt6.QtWidgets import QDialog, QHBoxLayout, QLabel, QPushButton, QVBoxLayo
 
 try:
     from .constants import VERSION
-except Exception:
+except ImportError:
     from modules.constants import VERSION
 
 

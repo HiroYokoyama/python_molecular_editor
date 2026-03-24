@@ -41,14 +41,14 @@ from PyQt6.QtWidgets import (
 try:
     from PyQt6 import sip as _sip  # type: ignore
     _sip_isdeleted = getattr(_sip, "isdeleted", None)
-except Exception:
+except ImportError:
     _sip = None
     _sip_isdeleted = None
 
 try:
     # package relative imports (preferred when running as `python -m moleditpy`)
     from .constants import VERSION
-except Exception:
+except ImportError:
     # Fallback to absolute imports for script-style execution
     from modules.constants import VERSION
 

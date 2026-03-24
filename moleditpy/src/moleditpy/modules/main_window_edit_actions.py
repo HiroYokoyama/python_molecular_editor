@@ -27,7 +27,7 @@ import numpy as np
 
 try:
     from .mol_geometry import is_problematic_valence
-except Exception:
+except ImportError:
     from modules.mol_geometry import is_problematic_valence
 
 # RDKit imports (explicit to satisfy flake8 and used features)

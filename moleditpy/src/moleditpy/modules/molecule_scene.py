@@ -27,26 +27,26 @@ try:
     from .atom_item import AtomItem
     from .bond_item import BondItem
     from .template_preview_item import TemplatePreviewItem
-except Exception:
+except ImportError:
     from modules.atom_item import AtomItem
     from modules.bond_item import BondItem
     from modules.template_preview_item import TemplatePreviewItem
 
 try:
     from .constants import DEFAULT_BOND_LENGTH, SNAP_DISTANCE, SUM_TOLERANCE
-except Exception:
+except ImportError:
     from modules.constants import DEFAULT_BOND_LENGTH, SNAP_DISTANCE, SUM_TOLERANCE
 
 try:
     from PyQt6 import sip as _sip  # type: ignore
     _sip_isdeleted = getattr(_sip, "isdeleted", None)
-except Exception:
+except ImportError:
     _sip = None
     _sip_isdeleted = None
 
 try:
     from . import sip_isdeleted_safe
-except Exception:
+except ImportError:
     from modules import sip_isdeleted_safe
 
 

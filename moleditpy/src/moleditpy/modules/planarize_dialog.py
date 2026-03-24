@@ -22,7 +22,7 @@ from PyQt6.QtWidgets import (
 
 try:
     from .dialog3_d_picking_mixin import Dialog3DPickingMixin
-except Exception:
+except ImportError:
     from modules.dialog3_d_picking_mixin import Dialog3DPickingMixin
 
 

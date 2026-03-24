@@ -60,7 +60,7 @@ from PyQt6.QtWidgets import (
 
 try:
     from . import OBABEL_AVAILABLE
-except Exception:
+except ImportError:
     from modules import OBABEL_AVAILABLE
 
 
@@ -68,12 +68,12 @@ import platform
 
 try:
     import winreg
-except Exception:
+except ImportError:
     winreg = None
 
 try:
     from .plugin_manager import PluginManager
-except Exception:
+except ImportError:
     from modules.plugin_manager import PluginManager
 
 

@@ -30,7 +30,7 @@ from .template_preview_view import TemplatePreviewView
 
 try:
     from .constants import CPK_COLORS, VERSION
-except Exception:
+except ImportError:
     from modules.constants import CPK_COLORS, VERSION
 import json
 import logging
