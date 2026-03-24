@@ -163,26 +163,18 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog):
                 self.apply_button.setEnabled(False)
 
         # Update the coordinate input fields when selection changes
-        try:
-            if self.selected_atoms:
-                try:
-                    coords = centroid
-                except NameError:
-                    coords = self.calculate_centroid()
-
-                # Format with reasonable precision
-                self.x_input.setText(f"{coords[0]:.4f}")
-                self.y_input.setText(f"{coords[1]:.4f}")
-                self.z_input.setText(f"{coords[2]:.4f}")
-            else:
-                # No selection: reset fields to default
-                self.x_input.setText("0.0")
-                self.y_input.setText("0.0")
-                self.z_input.setText("0.0")
-        except (AttributeError, RuntimeError, ValueError, TypeError):  
-            # Be tolerant: do not crash the UI if inputs cannot be updated
-            import traceback
-            traceback.print_exc()
+        if self.selected_atoms:
+            try:
+                coords = centroid
+            except NameError:
+                coords = self.calculate_centroid()
+            self.x_input.setText(f"{coords[0]:.4f}")
+            self.y_input.setText(f"{coords[1]:.4f}")
+            self.z_input.setText(f"{coords[2]:.4f}")
+        else:
+            self.x_input.setText("0.0")
+            self.y_input.setText("0.0")
+            self.z_input.setText("0.0")
 
     def calculate_centroid(self):
         """Calculate the geometric center (centroid) of the selected atoms."""
@@ -278,31 +270,16 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog):
     def select_all_atoms(self):
         """Select all atoms in the current molecule and update labels/UI."""
         try:
-            # Prefer RDKit molecule if available
             if hasattr(self, "mol") and self.mol is not None:
-                try:
-                    n = self.mol.GetNumAtoms()
-                    # create a set of indices [0..n-1]
-                    self.selected_atoms = set(range(n))
-                except (AttributeError, RuntimeError, ValueError, TypeError):
-                    # fallback to main_window data map
-                    self.selected_atoms = (
-                        set(self.main_window.data.atoms.keys())
-                        if hasattr(self.main_window, "data")
-                        else set()
-                    )
+                self.selected_atoms = set(range(self.mol.GetNumAtoms()))
             else:
-                # fallback to main_window data map
                 self.selected_atoms = (
                     set(self.main_window.data.atoms.keys())
                     if hasattr(self.main_window, "data")
                     else set()
                 )
-
-            # Update labels and display
             self.show_atom_labels()
             self.update_display()
-
         except (AttributeError, RuntimeError, ValueError) as e:
             QMessageBox.warning(self, "Warning", f"Failed to select all atoms: {e}")
 

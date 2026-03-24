@@ -54,36 +54,32 @@ class TemplatePreviewView(QGraphicsView):
 
     def redraw_with_current_size(self):
         """Redraw the template structure scaled to the current view dimensions."""
-        if self.template_data and self.parent_dialog:
-            try:
-                # Clear current scene
-                self.scene().clear()
-
-                # Redraw with current view size for proper fit-based scaling
-                view_size = (self.width(), self.height())
-                self.parent_dialog.draw_template_preview(
-                    self.scene(), self.template_data, view_size
+        if not (self.template_data and self.parent_dialog):
+            return
+        try:
+            self.scene().clear()
+            view_size = (self.width(), self.height())
+            self.parent_dialog.draw_template_preview(
+                self.scene(), self.template_data, view_size
+            )
+            bounding_rect = self.scene().itemsBoundingRect()
+            if (
+                not bounding_rect.isEmpty()
+                and bounding_rect.width() > 0
+                and bounding_rect.height() > 0
+            ):
+                content_size = max(bounding_rect.width(), bounding_rect.height())
+                padding = max(20, content_size * 0.2)
+                padded_rect = bounding_rect.adjusted(
+                    -padding, -padding, padding, padding
                 )
-
-                # Refit the view based on the newly drawn content
-                bounding_rect = self.scene().itemsBoundingRect()
-                if (
-                    not bounding_rect.isEmpty()
-                    and bounding_rect.width() > 0
-                    and bounding_rect.height() > 0
-                ):
-                    content_size = max(bounding_rect.width(), bounding_rect.height())
-                    padding = max(20, content_size * 0.2)
-                    padded_rect = bounding_rect.adjusted(
-                        -padding, -padding, padding, padding
-                    )
-                    self.scene().setSceneRect(padded_rect)
-                    self.original_scene_rect = padded_rect
-                    QTimer.singleShot(
-                        10,
-                        lambda: self.fitInView(
-                            padded_rect, Qt.AspectRatioMode.KeepAspectRatio
-                        ),
-                    )
-            except (AttributeError, RuntimeError, ValueError, TypeError) as e:
-                print(f"Warning: Failed to redraw template preview: {e}")
+                self.scene().setSceneRect(padded_rect)
+                self.original_scene_rect = padded_rect
+                QTimer.singleShot(
+                    10,
+                    lambda: self.fitInView(
+                        padded_rect, Qt.AspectRatioMode.KeepAspectRatio
+                    ),
+                )
+        except (AttributeError, RuntimeError, ValueError, TypeError) as e:
+            print(f"Warning: Failed to redraw template preview: {e}")

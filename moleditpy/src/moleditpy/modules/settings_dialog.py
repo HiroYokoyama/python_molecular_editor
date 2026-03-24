@@ -346,16 +346,12 @@ class SettingsDialog(QDialog):
             self.update_2d_color_buttons()
 
     def update_2d_color_buttons(self):
-        try:
-            self.bg_color_2d_button.setStyleSheet(
-                f"background-color: {self.current_bg_color_2d}; border: 1px solid #888;"
-            )
-            self.bond_color_2d_button.setStyleSheet(
-                f"background-color: {self.current_bond_color_2d}; border: 1px solid #888;"
-            )
-        except (AttributeError, RuntimeError, ValueError, TypeError):
-            import traceback
-            traceback.print_exc()
+        self.bg_color_2d_button.setStyleSheet(
+            f"background-color: {self.current_bg_color_2d}; border: 1px solid #888;"
+        )
+        self.bond_color_2d_button.setStyleSheet(
+            f"background-color: {self.current_bond_color_2d}; border: 1px solid #888;"
+        )
 
     def create_scene_tab(self):
         """Create primary settings tab"""
@@ -434,23 +430,13 @@ class SettingsDialog(QDialog):
             "When enabled, XYZ file import will try to ignore chemical/sanitization errors and allow viewing malformed files."
         )
         # Immediately persist change to settings when user toggles the checkbox
-        try:
-            self.skip_chem_checks_checkbox.stateChanged.connect(
-                lambda s: self._on_skip_chem_checks_changed(s)
-            )
-        except (AttributeError, RuntimeError, ValueError, TypeError):
-            import traceback
-            traceback.print_exc()
-
-        # Add the checkbox to the other tab's form
-        try:
-            self.other_form_layout.addRow(
-                "Skip chemistry checks on import XYZ file:",
-                self.skip_chem_checks_checkbox,
-            )
-        except (AttributeError, RuntimeError, TypeError):
-            import traceback
-            traceback.print_exc()
+        self.skip_chem_checks_checkbox.stateChanged.connect(
+            lambda s: self._on_skip_chem_checks_changed(s)
+        )
+        self.other_form_layout.addRow(
+            "Skip chemistry checks on import XYZ file:",
+            self.skip_chem_checks_checkbox,
+        )
 
         # 3D Kekule display option (under Other) will be added below the
         # 'Always ask molecular charge on import' option so ordering is clear
@@ -465,14 +451,10 @@ class SettingsDialog(QDialog):
         self.always_ask_charge_checkbox.setToolTip(
             "Prompt for overall molecular charge when importing XYZ files instead of silently trying charge=0 first."
         )
-        try:
-            self.other_form_layout.addRow(
-                "Always ask molecular charge on import XYZ file:",
-                self.always_ask_charge_checkbox,
-            )
-        except (AttributeError, RuntimeError, TypeError):
-            import traceback
-            traceback.print_exc()
+        self.other_form_layout.addRow(
+            "Always ask molecular charge on import XYZ file:",
+            self.always_ask_charge_checkbox,
+        )
 
         # Add separator after Kekule bonds option
         separator = QFrame()
@@ -481,27 +463,19 @@ class SettingsDialog(QDialog):
         self.other_form_layout.addRow(separator)
 
         # Place the Kekulé option after the always-ask-charge option
-        try:
-            self.other_form_layout.addRow(
-                "Display Kekulé bonds in 3D:", self.kekule_3d_checkbox
-            )
-        except (AttributeError, RuntimeError, TypeError):
-            import traceback
-            traceback.print_exc()
+        self.other_form_layout.addRow(
+            "Display Kekulé bonds in 3D:", self.kekule_3d_checkbox
+        )
 
         # Aromatic ring circle display option
         self.aromatic_circle_checkbox = QCheckBox()
         self.aromatic_circle_checkbox.setToolTip(
             "When enabled, aromatic rings will be displayed with a circle inside the ring in 3D view."
         )
-        try:
-            self.other_form_layout.addRow(
-                "Display aromatic rings as circles in 3D:",
-                self.aromatic_circle_checkbox,
-            )
-        except (AttributeError, RuntimeError, TypeError):
-            import traceback
-            traceback.print_exc()
+        self.other_form_layout.addRow(
+            "Display aromatic rings as circles in 3D:",
+            self.aromatic_circle_checkbox,
+        )
 
         # Aromatic torus thickness factor
         self.aromatic_torus_thickness_slider = QSlider(Qt.Orientation.Horizontal)
@@ -514,13 +488,9 @@ class SettingsDialog(QDialog):
         thickness_layout = QHBoxLayout()
         thickness_layout.addWidget(self.aromatic_torus_thickness_slider)
         thickness_layout.addWidget(self.aromatic_torus_thickness_label)
-        try:
-            self.other_form_layout.addRow(
-                "Aromatic torus thickness (× bond radius):", thickness_layout
-            )
-        except (AttributeError, RuntimeError, TypeError):
-            import traceback
-            traceback.print_exc()
+        self.other_form_layout.addRow(
+            "Aromatic torus thickness (× bond radius):", thickness_layout
+        )
 
         # Add Other tab to the tab widget
         self.tab_widget.addTab(self.other_widget, "Other")
@@ -539,48 +509,40 @@ class SettingsDialog(QDialog):
                 else {}
             )
             for s, btn in self.element_buttons.items():
-                try:
-                    override = overrides.get(s)
-                    q_color = (
-                        QColor(override)
-                        if override
-                        else CPK_COLORS.get(s, CPK_COLORS["DEFAULT"])
-                    )
-                    brightness = (
-                        q_color.red() * 299
-                        + q_color.green() * 587
-                        + q_color.blue() * 114
-                    ) / 1000
-                    text_color = "white" if brightness < 128 else "black"
-                    btn.setStyleSheet(
-                        f"background-color: {q_color.name()}; color: {text_color}; border: 1px solid #555; font-weight: bold;"
-                    )
-                except (AttributeError, RuntimeError, ValueError, TypeError):  
-                    import traceback
-                    traceback.print_exc()
+                override = overrides.get(s)
+                q_color = (
+                    QColor(override)
+                    if override
+                    else CPK_COLORS.get(s, CPK_COLORS["DEFAULT"])
+                )
+                brightness = (
+                    q_color.red() * 299
+                    + q_color.green() * 587
+                    + q_color.blue() * 114
+                ) / 1000
+                text_color = "white" if brightness < 128 else "black"
+                btn.setStyleSheet(
+                    f"background-color: {q_color.name()}; color: {text_color}; border: 1px solid #555; font-weight: bold;"
+                )
             # Update BS color button from parent settings
-            try:
-                if (
-                    hasattr(self, "bs_button")
-                    and self.parent_window
-                    and hasattr(self.parent_window, "settings")
-                ):
-                    bs_hex = self.parent_window.settings.get(
-                        "ball_stick_bond_color",
-                        self.parent_window.default_settings.get(
-                            "ball_stick_bond_color", "#7F7F7F"
-                        ),
-                    )
-                    self.bs_button.setStyleSheet(
-                        f"background-color: {bs_hex}; border: 1px solid #888;"
-                    )
-                    self.bs_button.setToolTip(bs_hex)
-            except (AttributeError, RuntimeError, ValueError, TypeError):  
-                import traceback
-                traceback.print_exc()
-        except (AttributeError, RuntimeError, ValueError, TypeError):  
-            import traceback
-            traceback.print_exc()
+            if (
+                hasattr(self, "bs_button")
+                and self.parent_window
+                and hasattr(self.parent_window, "settings")
+            ):
+                bs_hex = self.parent_window.settings.get(
+                    "ball_stick_bond_color",
+                    self.parent_window.default_settings.get(
+                        "ball_stick_bond_color", "#7F7F7F"
+                    ),
+                )
+                self.bs_button.setStyleSheet(
+                    f"background-color: {bs_hex}; border: 1px solid #888;"
+                )
+                self.bs_button.setToolTip(bs_hex)
+        except (AttributeError, RuntimeError, ValueError, TypeError) as e:
+            import logging
+            logging.warning(f"refresh_ui: {e}")
 
     def create_ball_stick_tab(self):
         """Create Ball and Stick settings tab"""
