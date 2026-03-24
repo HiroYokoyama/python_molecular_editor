@@ -150,7 +150,7 @@ class MainWindowViewLoaders(object):
         except ValueError as e:
             self.statusBar().showMessage(f"Invalid XYZ file: {e}")
             self.restore_ui_for_editing()
-        except Exception as e:
+        except (AttributeError, RuntimeError, ValueError) as e:
             self.statusBar().showMessage(f"Error loading XYZ file: {e}")
             self.restore_ui_for_editing()
 
@@ -211,7 +211,7 @@ class MainWindowViewLoaders(object):
             self.statusBar().showMessage(f"File I/O error: {e}")
         except UnicodeEncodeError as e:
             self.statusBar().showMessage(f"Text encoding error: {e}")
-        except Exception as e:
+        except (AttributeError, RuntimeError, ValueError) as e:
             self.statusBar().showMessage(f"Error saving 3D MOL file: {e}")
 
             pass
@@ -331,5 +331,5 @@ class MainWindowViewLoaders(object):
             self.current_file_path = file_path
             self.update_window_title()
 
-        except Exception as e:
+        except (AttributeError, RuntimeError, ValueError) as e:
             self.statusBar().showMessage(f"Error loading MOL/SDF file: {e}")
