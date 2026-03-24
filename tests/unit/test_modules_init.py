@@ -20,7 +20,7 @@ def test_sip_isdeleted_safe_deleted_obj():
 def test_sip_isdeleted_safe_exception():
     """Test safe check when an exception occurs."""
     obj = MagicMock()
-    with patch("moleditpy.modules._sip_isdeleted", side_effect=Exception("SIP error")):
+    with patch("moleditpy.modules._sip_isdeleted", side_effect=RuntimeError("SIP error")):
         assert sip_isdeleted_safe(obj) is False
 
 def test_sip_isdeleted_safe_no_sip():

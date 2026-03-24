@@ -35,5 +35,5 @@ def sip_isdeleted_safe(obj) -> bool:
         if _sip_isdeleted is None:
             return False
         return bool(_sip_isdeleted(obj))
-    except Exception:
+    except (AttributeError, RuntimeError, TypeError):
         return False

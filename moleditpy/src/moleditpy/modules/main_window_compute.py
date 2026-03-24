@@ -33,7 +33,7 @@ except ImportError:
 try:
     from PyQt6 import sip as _sip  # type: ignore
     _sip_isdeleted = getattr(_sip, "isdeleted", None)
-except Exception:
+except (AttributeError, RuntimeError, TypeError):
     _sip = None
     _sip_isdeleted = None
 
@@ -87,10 +87,10 @@ class MainWindowCompute(object):
             self.settings["optimization_method"] = self.optimization_method
             try:
                 self.settings_dirty = True
-            except Exception:  # pragma: no cover
+            except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
                 import traceback
                 traceback.print_exc()
-        except Exception:  # pragma: no cover
+        except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
             import traceback
             traceback.print_exc()
 
@@ -101,10 +101,10 @@ class MainWindowCompute(object):
                     try:
                         # keys in opt3d_actions may be mixed-case; compare uppercased
                         act.setChecked(k.upper() == method)
-                    except Exception:  # pragma: no cover
+                    except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
                         import traceback
                         traceback.print_exc()
-        except Exception:  # pragma: no cover
+        except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
             import traceback
             traceback.print_exc()
 
@@ -113,7 +113,7 @@ class MainWindowCompute(object):
             label = self.opt3d_method_labels.get(
                 self.optimization_method, self.optimization_method
             )
-        except Exception:
+        except (AttributeError, RuntimeError, TypeError):
             label = self.optimization_method
         self.statusBar().showMessage(f"3D optimization method set to: {label}")
 
@@ -123,11 +123,11 @@ class MainWindowCompute(object):
             self.settings["optimize_intermolecular_interaction_rdkit"] = checked
             try:
                 self.settings_dirty = True
-            except Exception:
+            except (AttributeError, RuntimeError, TypeError):
                 pass
             state_str = "Enabled" if checked else "Disabled"
             self.statusBar().showMessage(f"Intermolecular interaction for RDKit: {state_str}")
-        except Exception:
+        except (AttributeError, RuntimeError, TypeError):
             import traceback
             traceback.print_exc()
 
@@ -158,7 +158,7 @@ class MainWindowCompute(object):
 
             # Show menu at button position
             menu.exec_(self.convert_button.mapToGlobal(pos))
-        except Exception as e:
+        except (AttributeError, RuntimeError, ValueError) as e:
             print(f"Error showing convert menu: {e}")
 
     def _trigger_conversion_with_temp_mode(self, mode_key):  # pragma: no cover
@@ -167,7 +167,7 @@ class MainWindowCompute(object):
             self._temp_conv_mode = mode_key
             # Call the normal conversion entry point (it will consume the temp)
             QTimer.singleShot(0, self.trigger_conversion)
-        except Exception as e:
+        except (AttributeError, RuntimeError, ValueError) as e:
             print(f"Failed to start conversion with temp mode {mode_key}: {e}")
 
     def show_optimize_menu(self, pos):  # pragma: no cover
@@ -190,7 +190,7 @@ class MainWindowCompute(object):
                 try:
                     if hasattr(self, "opt3d_actions") and key in self.opt3d_actions:
                         a.setEnabled(self.opt3d_actions[key].isEnabled())
-                except Exception:  # pragma: no cover
+                except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
                     import traceback
                     traceback.print_exc()
                 a.triggered.connect(
@@ -216,7 +216,7 @@ class MainWindowCompute(object):
                         menu.addAction(a)
 
             menu.exec_(self.optimize_3d_button.mapToGlobal(pos))
-        except Exception as e:
+        except (AttributeError, RuntimeError, ValueError) as e:
             print(f"Error showing optimize menu: {e}")
 
     def _trigger_optimize_with_temp_method(self, method_key):  # pragma: no cover
@@ -225,7 +225,7 @@ class MainWindowCompute(object):
             self._temp_optimization_method = method_key
             # Run optimize on next event loop turn so UI updates first
             QTimer.singleShot(0, self.optimize_3d_structure)
-        except Exception as e:
+        except (AttributeError, RuntimeError, ValueError) as e:
             print(f"Failed to start optimization with temp method {method_key}: {e}")
 
     def trigger_conversion(self):
@@ -303,7 +303,7 @@ class MainWindowCompute(object):
 
         try:
             Chem.SanitizeMol(mol)
-        except (AttributeError, RuntimeError, ValueError):
+        except (AttributeError, RuntimeError, ValueError, TypeError):
             self.statusBar().showMessage("Error: Invalid chemical structure.")
             self.view_2d.setFocus()
             return
@@ -359,13 +359,13 @@ class MainWindowCompute(object):
         run_id = int(getattr(self, "next_conversion_id", 1))
         try:
             self.next_conversion_id = run_id + 1
-        except Exception:
+        except (AttributeError, RuntimeError, TypeError):
             self.next_conversion_id = getattr(self, "next_conversion_id", 1) + 1
 
         # Track active worker IDs
         try:
             self.active_worker_ids.add(run_id)
-        except Exception:
+        except (AttributeError, RuntimeError, TypeError):
             # Ensure attribute exists in case of weird states
             self.active_worker_ids = set([run_id])
 
@@ -375,11 +375,11 @@ class MainWindowCompute(object):
             self.convert_button.setText("Halt conversion")
             try:
                 self.convert_button.clicked.disconnect()
-            except Exception:  # pragma: no cover
+            except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
                 import traceback
                 traceback.print_exc()
             self.convert_button.clicked.connect(self.halt_conversion)
-        except Exception:  # pragma: no cover
+        except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
             import traceback
             traceback.print_exc()
 
@@ -410,7 +410,7 @@ class MainWindowCompute(object):
         # Keep a reference so we can reliably remove the text actor later
         try:
             self._calculating_text_actor = text_actor
-        except Exception:
+        except (AttributeError, RuntimeError, TypeError):
             # Best-effort: if storing fails, ignore — cleanup will still attempt renderer removal
             pass
         text_actor.GetTextProperty().SetOpacity(1)  # pragma: no cover
@@ -423,10 +423,10 @@ class MainWindowCompute(object):
         if conv_mode:
             try:
                 del self._temp_conv_mode
-            except Exception:
+            except (AttributeError, RuntimeError, TypeError):
                 try:
                     delattr(self, "_temp_conv_mode")
-                except Exception:  # pragma: no cover
+                except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
                     import traceback
                     traceback.print_exc()
         else:
@@ -440,10 +440,10 @@ class MainWindowCompute(object):
         if hasattr(self, "_temp_optimization_method"):
             try:
                 del self._temp_optimization_method
-            except Exception:
+            except (AttributeError, RuntimeError, TypeError):
                 try:
                     delattr(self, "_temp_optimization_method")
-                except Exception:  # pragma: no cover
+                except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
                     import traceback
                     traceback.print_exc()
 
@@ -456,7 +456,7 @@ class MainWindowCompute(object):
         try:
             # Attach the concrete run id rather than the single waiting id
             options["worker_id"] = run_id
-        except Exception:  # pragma: no cover
+        except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
             import traceback
             traceback.print_exc()
 
@@ -469,15 +469,23 @@ class MainWindowCompute(object):
             # Share the halt_ids set so user can request cancellation
             try:
                 worker.halt_ids = self.halt_ids
-            except Exception:  # pragma: no cover
+            except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
                 import traceback
                 traceback.print_exc()
-            worker.moveToThread(thread)
+            try:
+
+                worker.moveToThread(thread)
+
+            except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
+
+                import traceback
+
+                traceback.print_exc()
 
             # Forward status signals
             try:
                 worker.status_update.connect(self.update_status_bar)
-            except Exception:  # pragma: no cover
+            except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
                 import traceback
                 traceback.print_exc()
             # Handler for finished calculation
@@ -492,25 +500,25 @@ class MainWindowCompute(object):
                     # Remove thread from active threads list
                     try:
                         self._active_calc_threads.remove(t)
-                    except Exception:  # pragma: no cover
+                    except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
                         import traceback
                         traceback.print_exc()
                     try:
                         # ask thread to quit; it will finish as worker returns
                         t.quit()
-                    except Exception:  # pragma: no cover
+                    except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
                         import traceback
                         traceback.print_exc()
                     try:
                         # ensure thread object is deleted when finished
                         t.finished.connect(t.deleteLater)
-                    except Exception:  # pragma: no cover
+                    except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
                         import traceback
                         traceback.print_exc()
                     try:
                         # schedule worker deletion
                         w.deleteLater()
-                    except Exception:  # pragma: no cover
+                    except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
                         import traceback
                         traceback.print_exc()
             # Handler for calculation error/halt
@@ -525,35 +533,35 @@ class MainWindowCompute(object):
                     # Remove thread from active threads list
                     try:
                         self._active_calc_threads.remove(t)
-                    except Exception:  # pragma: no cover
+                    except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
                         import traceback
                         traceback.print_exc()
                     try:
                         # ask thread to quit; it will finish as worker returns
                         t.quit()
-                    except Exception:  # pragma: no cover
+                    except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
                         import traceback
                         traceback.print_exc()
                     try:
                         # ensure thread object is deleted when finished
                         t.finished.connect(t.deleteLater)
-                    except Exception:  # pragma: no cover
+                    except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
                         import traceback
                         traceback.print_exc()
                     try:
                         # schedule worker deletion
                         w.deleteLater()
-                    except Exception:  # pragma: no cover
+                    except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
                         import traceback
                         traceback.print_exc()
             try:
                 worker.error.connect(_on_worker_error)
-            except Exception:  # pragma: no cover
+            except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
                 import traceback
                 traceback.print_exc()
             try:
                 worker.finished.connect(_on_worker_finished)
-            except Exception:  # pragma: no cover
+            except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
                 import traceback
                 traceback.print_exc()
             # Start the thread
@@ -569,10 +577,10 @@ class MainWindowCompute(object):
             # Track thread reference
             try:
                 self._active_calc_threads.append(thread)
-            except Exception:  # pragma: no cover
+            except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
                 import traceback
                 traceback.print_exc()
-        except Exception as e:
+        except (AttributeError, RuntimeError, ValueError) as e:
             # Fall back: if thread/worker creation failed, create a local
             # worker and start it (runs in main thread). This preserves
             # functionality without relying on the shared MainWindow signal.
@@ -584,7 +592,7 @@ class MainWindowCompute(object):
                         m, o
                     ),
                 )
-            except Exception:
+            except (AttributeError, RuntimeError, TypeError):
                 # surface the original error via existing UI path
                 self.on_calculation_error(str(e))
 
@@ -602,14 +610,14 @@ class MainWindowCompute(object):
             if wids_to_halt:
                 try:
                     self.halt_ids.update(wids_to_halt)
-                except Exception:  # pragma: no cover
+                except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
                     import traceback
                     traceback.print_exc()
             # Clear active set
             try:
                 if hasattr(self, "active_worker_ids"):
                     self.active_worker_ids.clear()
-            except Exception:  # pragma: no cover
+            except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
                 import traceback
                 traceback.print_exc()
             # Restore UI
@@ -617,7 +625,7 @@ class MainWindowCompute(object):
                 # Restore Convert button
                 try:
                     self.convert_button.clicked.disconnect()
-                except Exception:  # pragma: no cover
+                except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
                     pass
                 self.convert_button.setText("Convert 2D to 3D")
                 self.convert_button.clicked.connect(self.trigger_conversion)
@@ -627,18 +635,18 @@ class MainWindowCompute(object):
                 if hasattr(self, "optimize_3d_button"):
                     try:
                         self.optimize_3d_button.clicked.disconnect()
-                    except Exception:  # pragma: no cover
+                    except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
                         import traceback
                         traceback.print_exc()
                     self.optimize_3d_button.setText("Optimize 3D")
                     self.optimize_3d_button.clicked.connect(self.optimize_3d_structure)
                     self.optimize_3d_button.setEnabled(True)
-            except Exception:  # pragma: no cover
+            except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
                 import traceback
                 traceback.print_exc()
             try:
                 self.cleanup_button.setEnabled(True)
-            except Exception:  # pragma: no cover
+            except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
                 import traceback
                 traceback.print_exc()
             # Remove 'Calculating...' text
@@ -648,26 +656,26 @@ class MainWindowCompute(object):
                     if hasattr(self.plotter, "remove_actor"):
                         try:
                             self.plotter.remove_actor(actor)
-                        except Exception:  # pragma: no cover
+                        except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
                             import traceback
                             traceback.print_exc()
                     else:
                         if hasattr(self.plotter, "renderer") and self.plotter.renderer:
                             try:
                                 self.plotter.renderer.RemoveActor(actor)
-                            except Exception:  # pragma: no cover
+                            except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
                                 import traceback
                                 traceback.print_exc()
                     try:
                         del self._calculating_text_actor
-                    except Exception:
+                    except (AttributeError, RuntimeError, TypeError):
                         pass
-            except Exception:  # pragma: no cover
+            except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
                 import traceback
                 traceback.print_exc()
             # Give immediate feedback
             self.statusBar().showMessage("Halted")
-        except Exception:  # pragma: no cover
+        except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
             import traceback
             traceback.print_exc()
 
@@ -714,7 +722,7 @@ class MainWindowCompute(object):
             self.scene.clearSelection()
             self.view_2d.setFocus()
 
-        except Exception as e:
+        except (AttributeError, RuntimeError, ValueError) as e:
             print(f"Error in fallback chemistry check: {e}")
             self.statusBar().showMessage("Error: Invalid chemical structure.")
             self.view_2d.setFocus()
@@ -736,7 +744,7 @@ class MainWindowCompute(object):
             if hasattr(self, "optimize_3d_button"):
                 try:
                     self.optimize_3d_button.setEnabled(False)
-                except Exception:  # pragma: no cover
+                except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
                     import traceback
                     traceback.print_exc()
 
@@ -751,10 +759,10 @@ class MainWindowCompute(object):
             if hasattr(self, "_temp_optimization_method"):
                 try:
                     del self._temp_optimization_method
-                except Exception:
+                except (AttributeError, RuntimeError, TypeError):
                     try:
                         delattr(self, "_temp_optimization_method")
-                    except Exception:  # pragma: no cover
+                    except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
                         import traceback
                         traceback.print_exc()
             method = method.upper() if method else "MMFF_RDKIT"
@@ -788,7 +796,7 @@ class MainWindowCompute(object):
                         self.push_undo_state()
                         self.view_2d.setFocus()
                     return
-                except Exception as e:
+                except (AttributeError, RuntimeError, ValueError) as e:
                     self.statusBar().showMessage(
                         f"Plugin optimization error ({method}): {e}"
                     )
@@ -811,13 +819,13 @@ class MainWindowCompute(object):
                 run_id = int(getattr(self, "next_conversion_id", 1))
                 try:
                     self.next_conversion_id = run_id + 1
-                except Exception:
+                except (AttributeError, RuntimeError, TypeError):
                     self.next_conversion_id = getattr(self, "next_conversion_id", 1) + 1
                 
                 options["worker_id"] = run_id
                 try:
                     self.active_worker_ids.add(run_id)
-                except Exception:
+                except (AttributeError, RuntimeError, TypeError):
                     self.active_worker_ids = set([run_id])
 
                 # Change button to 'Halt'
@@ -825,10 +833,10 @@ class MainWindowCompute(object):
                     self.optimize_3d_button.setText("Halt optimize")
                     try:
                         self.optimize_3d_button.clicked.disconnect()
-                    except Exception:
+                    except (AttributeError, RuntimeError, TypeError):
                         pass
                     self.optimize_3d_button.clicked.connect(self.halt_conversion)
-                except Exception:
+                except (AttributeError, RuntimeError, TypeError):
                     pass
 
                 # Disable features
@@ -839,7 +847,19 @@ class MainWindowCompute(object):
                     thread = QThread()
                     worker = CalculationWorker()
                     worker.halt_ids = self.halt_ids
-                    worker.moveToThread(thread)
+                    try:
+                        try:
+
+                            worker.moveToThread(thread)
+
+                        except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
+
+                            import traceback
+
+                            traceback.print_exc()
+                    except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
+                        import traceback
+                        traceback.print_exc()
                     
                     worker.status_update.connect(self.update_status_bar)
                     
@@ -850,17 +870,17 @@ class MainWindowCompute(object):
                                 self.optimize_3d_button.setText("Optimize 3D")
                                 try:
                                     self.optimize_3d_button.clicked.disconnect()
-                                except Exception:
+                                except (AttributeError, RuntimeError, TypeError):
                                     pass
                                 self.optimize_3d_button.clicked.connect(self.optimize_3d_structure)
-                            except Exception:
+                            except (AttributeError, RuntimeError, TypeError):
                                 pass
                             
                             self.on_calculation_finished(result)
                         finally:
                             try:
                                 self._active_calc_threads.remove(t)
-                            except Exception:
+                            except (AttributeError, RuntimeError, TypeError):
                                 pass
                             t.quit()
                             t.finished.connect(t.deleteLater)
@@ -873,17 +893,17 @@ class MainWindowCompute(object):
                                 self.optimize_3d_button.setText("Optimize 3D")
                                 try:
                                     self.optimize_3d_button.clicked.disconnect()
-                                except Exception:
+                                except (AttributeError, RuntimeError, TypeError):
                                     pass
                                 self.optimize_3d_button.clicked.connect(self.optimize_3d_structure)
-                            except Exception:
+                            except (AttributeError, RuntimeError, TypeError):
                                 pass
                             
                             self.on_calculation_error(error_msg)
                         finally:
                             try:
                                 self._active_calc_threads.remove(t)
-                            except Exception:
+                            except (AttributeError, RuntimeError, TypeError):
                                 pass
                             t.quit()
                             t.finished.connect(t.deleteLater)
@@ -898,9 +918,9 @@ class MainWindowCompute(object):
                     
                     try:
                         self._active_calc_threads.append(thread)
-                    except Exception:
+                    except (AttributeError, RuntimeError, TypeError):
                         pass
-                except Exception as e:
+                except (AttributeError, RuntimeError, ValueError) as e:
                     self.on_calculation_error(str(e))
                 
                 return
@@ -909,7 +929,7 @@ class MainWindowCompute(object):
                     "Selected optimization method is not available. Use MMFF94 (RDKit) or UFF (RDKit)."
                 )
                 return
-        except Exception as e:
+        except (AttributeError, RuntimeError, ValueError) as e:
             self.statusBar().showMessage(f"3D optimization error: {e}")
             self.view_2d.setFocus()
 
@@ -922,7 +942,7 @@ class MainWindowCompute(object):
                 worker_id, mol = result
             else:
                 mol = result
-        except Exception:
+        except (AttributeError, RuntimeError, TypeError):
             mol = result
 
         # Discard stale results
@@ -937,7 +957,7 @@ class MainWindowCompute(object):
                             if hasattr(self.plotter, "remove_actor"):
                                 try:
                                     self.plotter.remove_actor(actor)
-                                except Exception:  # pragma: no cover
+                                except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
                                     import traceback
                                     traceback.print_exc()
                             else:
@@ -947,45 +967,45 @@ class MainWindowCompute(object):
                                 ):
                                     try:
                                         self.plotter.renderer.RemoveActor(actor)
-                                    except Exception:  # pragma: no cover
+                                    except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
                                         import traceback
                                         traceback.print_exc()
                             if "_calculating_text_actor" in self.__dict__:
                                 try:
                                     del self._calculating_text_actor
-                                except Exception:
+                                except (AttributeError, RuntimeError, TypeError):
                                     pass
                             elif hasattr(self, "_calculating_text_actor"):
                                 try:
                                     delattr(self, "_calculating_text_actor")
-                                except Exception:
+                                except (AttributeError, RuntimeError, TypeError):
                                     pass
-                    except Exception:  # pragma: no cover
+                    except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
                         import traceback
                         traceback.print_exc()
                     # Restore Convert button
                     try:
                         try:
                             self.convert_button.clicked.disconnect()
-                        except Exception:  # pragma: no cover
+                        except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
                             import traceback
                             traceback.print_exc()
                         self.convert_button.setText("Convert 2D to 3D")
                         self.convert_button.clicked.connect(self.trigger_conversion)
                         self.convert_button.setEnabled(True)
-                    except Exception:  # pragma: no cover
+                    except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
                         import traceback
                         traceback.print_exc()
                     try:
                         self.cleanup_button.setEnabled(True)
-                    except Exception:  # pragma: no cover
+                    except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
                         import traceback
                         traceback.print_exc()
                     self.statusBar().showMessage(
                         "Ignored result from stale conversion."
                     )
                     return
-        except Exception:  # pragma: no cover
+        except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
             import traceback
             traceback.print_exc()
 
@@ -994,7 +1014,7 @@ class MainWindowCompute(object):
             if worker_id is not None:
                 try:
                     self.active_worker_ids.discard(worker_id)
-                except Exception:  # pragma: no cover
+                except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
                     import traceback
                     traceback.print_exc()
             # Remove from halt set
@@ -1003,13 +1023,13 @@ class MainWindowCompute(object):
                     if worker_id in getattr(self, "halt_ids", set()):
                         try:
                             self.halt_ids.discard(worker_id)
-                        except Exception:  # pragma: no cover
+                        except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
                             import traceback
                             traceback.print_exc()
-                except Exception:  # pragma: no cover
+                except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
                     import traceback
                     traceback.print_exc()
-        except Exception:  # pragma: no cover
+        except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
             import traceback
             traceback.print_exc()
 
@@ -1025,10 +1045,10 @@ class MainWindowCompute(object):
                     try:
                         if mol.HasProp("_pme_optimization_method"):
                             opt_method = mol.GetProp("_pme_optimization_method")
-                    except Exception:
+                    except (AttributeError, RuntimeError, TypeError):
                         # not all Mol objects support HasProp/GetProp safely
                         pass
-            except Exception:  # pragma: no cover
+            except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
                 import traceback
                 traceback.print_exc()
             # If the property is not on the molecule, it means optimization failed or was bypassed.
@@ -1040,11 +1060,11 @@ class MainWindowCompute(object):
                     method_key = str(opt_method).upper()
                     label = self.opt3d_method_labels.get(method_key, opt_method)
                     self.last_successful_optimization_method = label
-                except Exception:
+                except (AttributeError, RuntimeError, TypeError):
                     self.last_successful_optimization_method = opt_method
             else:
                 self.last_successful_optimization_method = None
-        except Exception:
+        except (AttributeError, RuntimeError, TypeError):
             # non-fatal
             pass
 
@@ -1072,7 +1092,7 @@ class MainWindowCompute(object):
                 Chem.AssignStereochemistry(mol, cleanIt=False, force=True)
 
             self.update_chiral_labels()
-        except Exception:  # pragma: no cover
+        except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
             import traceback
             traceback.print_exc()
 
@@ -1085,7 +1105,7 @@ class MainWindowCompute(object):
                 self.statusBar().showMessage(
                     f"{len(frags)} molecules converted with collision avoidance (background)."
                 )
-        except Exception:
+        except (AttributeError, RuntimeError, TypeError):
             pass
 
         # Remove 'Calculating...' text and refresh
@@ -1097,7 +1117,7 @@ class MainWindowCompute(object):
                     if hasattr(self.plotter, "remove_actor"):
                         try:
                             self.plotter.remove_actor(actor)
-                        except Exception:
+                        except (AttributeError, RuntimeError, TypeError):
                             # Some pyvista versions use renderer.RemoveActor
                             if (
                                 hasattr(self.plotter, "renderer")
@@ -1105,28 +1125,28 @@ class MainWindowCompute(object):
                             ):
                                 try:
                                     self.plotter.renderer.RemoveActor(actor)
-                                except Exception:  # pragma: no cover
+                                except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
                                     import traceback
                                     traceback.print_exc()
                     else:
                         if hasattr(self.plotter, "renderer") and self.plotter.renderer:
                             try:
                                 self.plotter.renderer.RemoveActor(actor)
-                            except Exception:  # pragma: no cover
+                            except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
                                 import traceback
                                 traceback.print_exc()
                 finally:
                     try:
                         del self._calculating_text_actor
-                    except Exception:
+                    except (AttributeError, RuntimeError, TypeError):
                         pass
             # Re-render to ensure the UI updates immediately
             try:
                 self.plotter.render()
-            except Exception:  # pragma: no cover
+            except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
                 import traceback
                 traceback.print_exc()
-        except Exception:  # pragma: no cover
+        except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
             import traceback
             traceback.print_exc()
 
@@ -1140,7 +1160,7 @@ class MainWindowCompute(object):
             # Restore Convert button
             try:
                 self.convert_button.clicked.disconnect()
-            except Exception:  # pragma: no cover
+            except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
                 import traceback
                 traceback.print_exc()
             self.convert_button.setText("Convert 2D to 3D")
@@ -1150,13 +1170,13 @@ class MainWindowCompute(object):
             if hasattr(self, "optimize_3d_button"):
                 try:
                     self.optimize_3d_button.clicked.disconnect()
-                except Exception:  # pragma: no cover
+                except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
                     import traceback
                     traceback.print_exc()
                 self.optimize_3d_button.setText("Optimize 3D")
                 self.optimize_3d_button.clicked.connect(self.optimize_3d_structure)
                 self.optimize_3d_button.setEnabled(True)
-        except Exception:  # pragma: no cover
+        except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
             import traceback
             traceback.print_exc()
 
@@ -1202,7 +1222,7 @@ class MainWindowCompute(object):
                 worker_id, error_message = result
             else:
                 error_message = str(result)
-        except Exception:
+        except (AttributeError, RuntimeError, TypeError):
             error_message = str(result)
 
         # If this error is from a stale/previous worker (not in active set), ignore it.
@@ -1221,7 +1241,7 @@ class MainWindowCompute(object):
             else:
                 # Re-render if molecule exists
                 self.plotter.render()
-        except Exception:  # pragma: no cover
+        except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
             import traceback
             traceback.print_exc()
             traceback.print_exc()
@@ -1234,29 +1254,29 @@ class MainWindowCompute(object):
                     if hasattr(self.plotter, "remove_actor"):
                         try:
                             self.plotter.remove_actor(actor)
-                        except Exception:
+                        except (AttributeError, RuntimeError, TypeError):
                             if (
                                 hasattr(self.plotter, "renderer")
                                 and self.plotter.renderer
                             ):
                                 try:
                                     self.plotter.renderer.RemoveActor(actor)
-                                except Exception:  # pragma: no cover
+                                except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
                                     import traceback
                                     traceback.print_exc()
                     else:
                         if hasattr(self.plotter, "renderer") and self.plotter.renderer:
                             try:
                                 self.plotter.renderer.RemoveActor(actor)
-                            except Exception:  # pragma: no cover
+                            except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
                                 import traceback
                                 traceback.print_exc()
                 finally:
                     try:
                         del self._calculating_text_actor
-                    except Exception:
+                    except (AttributeError, RuntimeError, TypeError):
                         pass
-        except Exception:  # pragma: no cover
+        except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
             import traceback
             traceback.print_exc()
 
@@ -1266,10 +1286,10 @@ class MainWindowCompute(object):
             if worker_id is not None:
                 try:
                     self.active_worker_ids.discard(worker_id)
-                except Exception:  # pragma: no cover
+                except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
                     import traceback
                     traceback.print_exc()
-        except Exception:  # pragma: no cover
+        except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
             import traceback
             traceback.print_exc()
 
@@ -1281,7 +1301,7 @@ class MainWindowCompute(object):
             # already saw the halt message — suppress duplicate noise.
             if "halt" in low and not getattr(self, "active_worker_ids", set()):
                 return
-        except Exception:  # pragma: no cover
+        except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
             import traceback
             traceback.print_exc()
 
@@ -1303,7 +1323,7 @@ class MainWindowCompute(object):
                     self.optimize_3d_structure()
                     # Return immediately so the rest of the error cleanup doesn't disable buttons permanently
                     return
-            except Exception:
+            except (AttributeError, RuntimeError, TypeError):
                 import traceback
                 traceback.print_exc()
 
@@ -1315,7 +1335,7 @@ class MainWindowCompute(object):
         # Restore button UI
         try:
             self.cleanup_button.setEnabled(True)
-        except Exception:  # pragma: no cover
+        except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
             import traceback
             traceback.print_exc()
 
@@ -1323,7 +1343,7 @@ class MainWindowCompute(object):
             # Restore button texts/handlers
             try:
                 self.convert_button.clicked.disconnect()
-            except Exception:  # pragma: no cover
+            except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
                 import traceback
                 traceback.print_exc()
             self.convert_button.setText("Convert 2D to 3D")
@@ -1333,13 +1353,13 @@ class MainWindowCompute(object):
             if hasattr(self, "optimize_3d_button"):
                 try:
                     self.optimize_3d_button.clicked.disconnect()
-                except Exception:  # pragma: no cover
+                except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
                     import traceback
                     traceback.print_exc()
                 self.optimize_3d_button.setText("Optimize 3D")
                 self.optimize_3d_button.clicked.connect(self.optimize_3d_structure)
                 self.optimize_3d_button.setEnabled(True)
-        except Exception:  # pragma: no cover
+        except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
             import traceback
             traceback.print_exc()
 
@@ -1348,35 +1368,35 @@ class MainWindowCompute(object):
             try:
                 if hasattr(self, "optimize_3d_button"):
                     self.optimize_3d_button.setEnabled(False)
-            except Exception:  # pragma: no cover
+            except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
                 import traceback
                 traceback.print_exc()
 
             try:
                 if hasattr(self, "export_button"):
                     self.export_button.setEnabled(False)
-            except Exception:  # pragma: no cover
+            except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
                 import traceback
                 traceback.print_exc()
 
             # Disable 3D features if no molecule
             try:
                 self._enable_3d_features(False)
-            except Exception:  # pragma: no cover
+            except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
                 import traceback
                 traceback.print_exc()
 
             # Disable 3D edit actions
             try:
                 self._enable_3d_edit_actions(False)
-            except Exception:  # pragma: no cover
+            except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
                 import traceback
                 traceback.print_exc()
         else:
             # We HAVE a molecule, ensure features are enabled
             try:
                 self._enable_3d_features(True)
-            except Exception:  # pragma: no cover
+            except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
                 import traceback
                 traceback.print_exc()
 
@@ -1385,14 +1405,14 @@ class MainWindowCompute(object):
             try:
                 if hasattr(self, "analysis_action"):
                     self.analysis_action.setEnabled(False)
-            except Exception:  # pragma: no cover
+            except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
                 import traceback
                 traceback.print_exc()
 
             try:
                 if hasattr(self, "edit_3d_action"):
                     self.edit_3d_action.setEnabled(False)
-            except Exception:  # pragma: no cover
+            except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
                 import traceback
                 traceback.print_exc()
         else:
@@ -1402,14 +1422,14 @@ class MainWindowCompute(object):
                     self.analysis_action.setEnabled(True)
                 if hasattr(self, "edit_3d_action"):
                     self.edit_3d_action.setEnabled(True)
-            except Exception:  # pragma: no cover
+            except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
                 import traceback
                 traceback.print_exc()
 
         # Refresh UI
         try:
             self.plotter.render()
-        except Exception:  # pragma: no cover
+        except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
             import traceback
             traceback.print_exc()
 

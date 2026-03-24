@@ -60,9 +60,8 @@ class AboutDialog(QDialog):  # pragma: no cover
         self.image_label.setPixmap(pixmap)
         try:
             self.image_label.setCursor(QCursor(Qt.CursorShape.ArrowCursor))
-        except Exception:  # pragma: no cover
-            import traceback
-            traceback.print_exc()
+        except (AttributeError, RuntimeError):  # pragma: no cover
+            pass
 
         self.image_label.mousePressEvent = self.image_mouse_press_event
 
@@ -104,9 +103,8 @@ class AboutDialog(QDialog):  # pragma: no cover
                 self.image_clicked(event)
             else:
                 event.ignore()
-        except Exception:
+        except (AttributeError, RuntimeError):
             try:
                 event.ignore()
-            except Exception:  # pragma: no cover
-                import traceback
-                traceback.print_exc()
+            except (AttributeError, RuntimeError):  # pragma: no cover
+                pass
