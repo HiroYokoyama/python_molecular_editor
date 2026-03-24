@@ -503,7 +503,7 @@ class MainWindowExport(object):
                                 if prop is not None:
                                     vtk_color = prop.GetColor()
                                     color = [int(c * 255) for c in vtk_color]
-                        except (AttributeError, RuntimeError):  # pragma: no cover
+                        except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
                             # Use default color on failure
                             pass
 
