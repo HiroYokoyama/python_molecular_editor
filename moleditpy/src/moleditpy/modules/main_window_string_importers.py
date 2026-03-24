@@ -139,7 +139,7 @@ class MainWindowStringImporters(object):
 
         except ValueError as e:
             self.statusBar().showMessage(f"Invalid SMILES: {e}")
-        except Exception as e:
+        except (AttributeError, RuntimeError, ValueError) as e:
             self.statusBar().showMessage(f"Error loading from SMILES: {e}")
 
     def load_from_inchi(self, inchi_string):
@@ -232,7 +232,7 @@ class MainWindowStringImporters(object):
 
         except ValueError as e:
             self.statusBar().showMessage(f"Invalid InChI: {e}")
-        except Exception as e:
+        except (AttributeError, RuntimeError, ValueError) as e:
             self.statusBar().showMessage(f"Error loading from InChI: {e}")
 
             pass
