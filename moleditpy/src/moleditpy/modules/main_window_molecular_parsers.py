@@ -18,7 +18,6 @@ DOI: 10.5281/zenodo.17268532
 import contextlib
 import io
 import os
-import traceback
 
 # RDKit imports (explicit to satisfy flake8 and used features)
 from rdkit import Chem
@@ -56,6 +55,12 @@ except ImportError:
 # --- Class Definition ---
 class MainWindowMolecularParsers(object):
     """Functional class separated from main_window.py"""
+
+    @staticmethod
+    def _set_mol_prop(mol, key, val):
+        """Set an integer property on an RDKit mol, silently ignoring failures."""
+        with contextlib.suppress(Exception):
+            mol.SetIntProp(key, int(val))
 
     def load_mol_file(self, file_path=None):
         if not self.check_unsaved_changes():
@@ -412,38 +417,17 @@ class MainWindowMolecularParsers(object):
                     )
 
                 # Attach a default charge property
-                try:
-                    candidate_mol.SetIntProp("_xyz_charge", 0)
-                except (AttributeError, RuntimeError, ValueError, TypeError):
-                    try:
-                        candidate_mol._xyz_charge = 0
-                    except (AttributeError, RuntimeError, ValueError, TypeError):  
-                        import traceback
-                        traceback.print_exc()
+                self._set_mol_prop(candidate_mol, "_xyz_charge", 0)
 
                 # Mark as skip-chemistry product
-                try:
-                    candidate_mol.SetIntProp("_xyz_skip_checks", 1)
-                except (AttributeError, RuntimeError, ValueError, TypeError):
-                    try:
-                        candidate_mol._xyz_skip_checks = True
-                    except (AttributeError, RuntimeError, ValueError, TypeError):  
-                        import traceback
-                        traceback.print_exc()
+                self._set_mol_prop(candidate_mol, "_xyz_skip_checks", 1)
 
                 # Set UI flags (XYZ-derived, disable optimize)
-                try:
+                with contextlib.suppress(Exception):
                     self.current_mol = candidate_mol
                     self.is_xyz_derived = True
                     if hasattr(self, "optimize_3d_button"):
-                        try:
-                            self.optimize_3d_button.setEnabled(False)
-                        except (AttributeError, RuntimeError, ValueError, TypeError):  
-                            import traceback
-                            traceback.print_exc()
-                except (AttributeError, RuntimeError, ValueError, TypeError):  
-                    import traceback
-                    traceback.print_exc()
+                        self.optimize_3d_button.setEnabled(False)
 
                 # Store atom data
                 candidate_mol._xyz_atom_data = atoms_data
@@ -510,34 +494,13 @@ class MainWindowMolecularParsers(object):
                         raise ValueError("Failed to create valid molecule object")
 
                     # Attach charge property if possible
-                    try:
-                        try:
-                            candidate_mol.SetIntProp("_xyz_charge", int(charge_val))
-                        except (AttributeError, RuntimeError, ValueError, TypeError):
-                            try:
-                                candidate_mol._xyz_charge = int(charge_val)
-                            except (AttributeError, RuntimeError, ValueError, TypeError):  
-                                import traceback
-                                traceback.print_exc()
+                    self._set_mol_prop(candidate_mol, "_xyz_charge", charge_val)
 
-                    except (AttributeError, RuntimeError, ValueError, TypeError):  
-                        import traceback
-                        traceback.print_exc()
                     # Preserve whether the user requested skip_chemistry_checks
-                    try:
-                        if bool(self.settings.get("skip_chemistry_checks", False)):
-                            try:
-                                candidate_mol.SetIntProp("_xyz_skip_checks", 1)
-                            except (AttributeError, RuntimeError, ValueError, TypeError):
-                                try:
-                                    candidate_mol._xyz_skip_checks = True
-                                except (AttributeError, RuntimeError, ValueError, TypeError):  
-                                    import traceback
-                                    traceback.print_exc()
+                    skip_checks = bool(getattr(self, "settings", {}).get("skip_chemistry_checks", False))
+                    if skip_checks:
+                        self._set_mol_prop(candidate_mol, "_xyz_skip_checks", 1)
 
-                    except (AttributeError, RuntimeError, ValueError, TypeError):  
-                        import traceback
-                        traceback.print_exc()
                     # Run chemistry checks which may emit warnings to stderr
                     self._apply_chem_check_and_set_flags(
                         candidate_mol, source_desc="XYZ"
@@ -563,37 +526,23 @@ class MainWindowMolecularParsers(object):
                                 return None
                             if skip_flag:
                                 # User selected Skip chemistry: attempt distance-based salvage
-                                try:
+                                with contextlib.suppress(Exception):
                                     self.estimate_bonds_from_distances(mol)
-                                except (AttributeError, RuntimeError, ValueError, TypeError):  
-                                    import traceback
-                                    traceback.print_exc()
                                 salvaged = None
                                 try:
                                     salvaged = mol.GetMol()
                                 except (AttributeError, RuntimeError, ValueError, TypeError):
                                     salvaged = None
-
                                 if salvaged is not None:
-                                    try:
-                                        salvaged.SetIntProp("_xyz_skip_checks", 1)
-                                    except (AttributeError, RuntimeError, ValueError, TypeError):
-                                        try:
-                                            salvaged._xyz_skip_checks = True
-                                        except (AttributeError, RuntimeError, ValueError, TypeError):  
-                                            import traceback
-                                            traceback.print_exc()
+                                    self._set_mol_prop(salvaged, "_xyz_skip_checks", 1)
                                     final_mol = salvaged
                                     break
                                 else:
                                     # Could not salvage; abort
-                                    try:
+                                    with contextlib.suppress(Exception):
                                         self.statusBar().showMessage(
                                             "Skip chemistry selected but failed to create salvaged molecule."
                                         )
-                                    except (AttributeError, RuntimeError, ValueError, TypeError):  
-                                        import traceback
-                                        traceback.print_exc()
                                     return None
 
                             try:
@@ -602,13 +551,10 @@ class MainWindowMolecularParsers(object):
                                 break
                             except RuntimeError:
                                 # DetermineBonds still failing for this charge -> loop again
-                                try:
+                                with contextlib.suppress(Exception):
                                     self.statusBar().showMessage(
                                         "DetermineBonds failed for that charge; please try a different total charge or cancel."
                                     )
-                                except (AttributeError, RuntimeError, ValueError, TypeError):  
-                                    import traceback
-                                    traceback.print_exc()
                                 continue
                             except (AttributeError, RuntimeError, ValueError, TypeError) as e_prompt:
                                 # Some other failure occurred after DetermineBonds or in
@@ -629,25 +575,11 @@ class MainWindowMolecularParsers(object):
                                     salvaged = None
                                 if skip_checks and salvaged is not None:
                                     final_mol = salvaged
-                                    # mark salvaged molecule as produced under skip_checks
-                                    try:
-                                        final_mol.SetIntProp("_xyz_skip_checks", 1)
-                                    except (AttributeError, RuntimeError, ValueError, TypeError):
-                                        try:
-                                            final_mol._xyz_skip_checks = True
-                                        except (AttributeError, RuntimeError, ValueError, TypeError):  
-                                            import traceback
-                                            traceback.print_exc()
+                                    self._set_mol_prop(final_mol, "_xyz_skip_checks", 1)
                                     break
                                 else:
-                                    try:
-                                        self.statusBar().showMessage(
-                                            f"Retry failed: {e_prompt}"
-                                        )
-                                    except (AttributeError, RuntimeError, ValueError, TypeError):  
-                                        import traceback
-                                        traceback.print_exc()
-                                    # Continue prompting
+                                    with contextlib.suppress(Exception):
+                                        self.statusBar().showMessage(f"Retry failed: {e_prompt}")
                                     continue
                 else:  
                     while True:
@@ -945,15 +877,10 @@ class MainWindowMolecularParsers(object):
                 max_bond_length = expected_bond_length * tolerance_factor
                 min_bond_length = expected_bond_length * 0.5
 
-                # Add bond if within range
                 if min_bond_length <= distance <= max_bond_length:
-                    try:
+                    with contextlib.suppress(Exception):
                         mol.AddBond(i, j, Chem.BondType.SINGLE)
                         bonds_added.append((i, j, distance))
-                    except (AttributeError, RuntimeError, ValueError, TypeError):
-                        # Skip if bond exists
-                        import traceback
-                        traceback.print_exc()
 
         # Debug information (optional)
         # Added bonds based on distance analysis
