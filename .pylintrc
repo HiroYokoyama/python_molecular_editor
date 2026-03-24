@@ -1,4 +1,3 @@
 [MASTER]
 extension-pkg-allow-list=PyQt6,numpy,rdkit,pyvista,vtk
-disable=W0703
 generated-members=generated-members=.*
