@@ -158,7 +158,7 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
                     f"Centroid: ({centroid[0]:.2f}, {centroid[1]:.2f}, {centroid[2]:.2f})"
                 )
                 self.apply_button.setEnabled(True)
-            except Exception as e:
+            except (AttributeError, RuntimeError, ValueError) as e:
                 self.selection_label.setText(f"Error accessing atom data: {str(e)}")
                 self.apply_button.setEnabled(False)
 
@@ -179,7 +179,7 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
                 self.x_input.setText("0.0")
                 self.y_input.setText("0.0")
                 self.z_input.setText("0.0")
-        except Exception:  # pragma: no cover
+        except (AttributeError, RuntimeError):  # pragma: no cover
             # Be tolerant: do not crash the UI if inputs cannot be updated
             pass
 
@@ -237,9 +237,8 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
                         # Update 3d positions for this atom only
                         try:
                             self.main_window.atom_positions_3d[i] = new_pos
-                        except Exception:  # pragma: no cover
-                            import traceback
-                            traceback.print_exc()
+                        except (AttributeError, RuntimeError):  # pragma: no cover
+                            pass
                     else:
                         # leave other atoms unchanged
                         continue
@@ -263,7 +262,7 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
             # Save state for Undo
             self.main_window.push_undo_state()
 
-        except Exception as e:
+        except (AttributeError, RuntimeError, ValueError) as e:
             QMessageBox.critical(
                 self, "Error", f"Failed to apply translation: {str(e)}"
             )
@@ -283,7 +282,7 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
                     n = self.mol.GetNumAtoms()
                     # create a set of indices [0..n-1]
                     self.selected_atoms = set(range(n))
-                except Exception:
+                except (AttributeError, RuntimeError):
                     # fallback to main_window data map
                     self.selected_atoms = (
                         set(self.main_window.data.atoms.keys())
@@ -302,7 +301,7 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
             self.show_atom_labels()
             self.update_display()
 
-        except Exception as e:
+        except (AttributeError, RuntimeError, ValueError) as e:
             QMessageBox.warning(self, "Warning", f"Failed to select all atoms: {e}")
 
     def show_atom_labels(self):
@@ -350,9 +349,8 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
         # Force re-render after clearing labels
         try:
             self.main_window.plotter.render()
-        except Exception:  # pragma: no cover
-            import traceback
-            traceback.print_exc()
+        except (AttributeError, RuntimeError):  # pragma: no cover
+            pass
 
     def closeEvent(self, event):
         """Clean up when the dialog is closed directly."""
