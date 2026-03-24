@@ -92,6 +92,6 @@ class CustomQtInteractor(QtInteractor):
         try:
             # Accept the event to mark it handled and prevent further processing.
             event.accept()
-        except Exception:
+        except (AttributeError, RuntimeError, TypeError):
             # If event doesn't support accept for some reason, just return.
             return

@@ -153,7 +153,7 @@ try:
     from PyQt6 import sip as _sip  # type: ignore
 
     _sip_isdeleted = getattr(_sip, "isdeleted", None)
-except Exception:
+except (AttributeError, RuntimeError, TypeError):
     _sip = None
     _sip_isdeleted = None
 
@@ -166,7 +166,7 @@ try:
     from .molecule_scene import MoleculeScene
     from .settings_dialog import SettingsDialog
     from .zoomable_view import ZoomableView
-except Exception:
+except (AttributeError, RuntimeError, TypeError):
     # Fallback to absolute imports for script-style execution
     from modules.color_settings_dialog import ColorSettingsDialog
     from modules.constants import NUM_DASHES, VERSION

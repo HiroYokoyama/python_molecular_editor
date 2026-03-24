@@ -129,7 +129,7 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):  # pragma: n
             else:
                 self.ff_combo.setCurrentText("MMFF94s")
 
-        except Exception as e:
+        except (AttributeError, RuntimeError, ValueError, TypeError) as e:
             print(f"Could not set default force field: {e}")
 
     def init_ui(self):
@@ -430,7 +430,7 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):  # pragma: n
         for label_actor in self.constraint_labels:
             try:
                 self.main_window.plotter.remove_actor(label_actor)
-            except Exception:  # pragma: no cover
+            except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
                 import traceback
                 traceback.print_exc()
 
@@ -458,7 +458,7 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):  # pragma: n
                 add_angle_constraint = ff.UFFAddAngleConstraint
                 add_torsion_constraint = ff.UFFAddTorsionConstraint
 
-        except Exception as e:
+        except (AttributeError, RuntimeError, ValueError, TypeError) as e:
             QMessageBox.critical(
                 self, "Error", f"Failed to initialize force field {ff_name}: {e}"
             )
@@ -508,7 +508,7 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):  # pragma: n
                         float(force_const),
                     )
 
-        except Exception as e:
+        except (AttributeError, RuntimeError, ValueError, TypeError) as e:
             QMessageBox.critical(self, "Error", f"Failed to add constraints: {e}")
             print(e)
             return
@@ -538,7 +538,7 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):  # pragma: n
                 self.main_window.last_successful_optimization_method = (
                     constrained_method_name
                 )
-            except Exception as e:
+            except (AttributeError, RuntimeError, ValueError, TypeError) as e:
                 print(f"Failed to set last_successful_optimization_method: {e}")
 
             # Save constraints list to MainWindow on success (same logic as reject)
@@ -565,10 +565,10 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):  # pragma: n
                     )
                     self.main_window.update_window_title()
 
-            except Exception as e:
+            except (AttributeError, RuntimeError, ValueError, TypeError) as e:
                 print(f"Failed to save constraints post-optimization: {e}")
 
-        except Exception as e:
+        except (AttributeError, RuntimeError, ValueError, TypeError) as e:
             QMessageBox.critical(self, "Error", f"Optimization failed: {e}")
 
     def closeEvent(self, event):
@@ -604,7 +604,7 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):  # pragma: n
                 )
                 self.main_window.update_window_title()
 
-        except Exception as e:
+        except (AttributeError, RuntimeError, ValueError, TypeError) as e:
             print(f"Failed to save constraints to main window: {e}")
 
         super().reject()

@@ -593,7 +593,7 @@ class MainWindowMolecularParsers(object):
                                 except (AttributeError, RuntimeError):  # pragma: no cover
                                     pass
                                 continue
-                            except Exception as e_prompt:
+                            except (AttributeError, RuntimeError, ValueError, TypeError) as e_prompt:
                                 # Some other failure occurred after DetermineBonds or in
                                 # finalization. If skip_chemistry_checks is enabled we
                                 # try the salvaged mol once; otherwise prompt again.
@@ -680,7 +680,7 @@ class MainWindowMolecularParsers(object):
                             except (AttributeError, RuntimeError):  # pragma: no cover
                                 pass
                             continue
-                        except Exception as e_prompt:
+                        except (AttributeError, RuntimeError, ValueError, TypeError) as e_prompt:
                             try:
                                 skip_checks = bool(
                                     self.settings.get("skip_chemistry_checks", False)
@@ -778,7 +778,7 @@ class MainWindowMolecularParsers(object):
                             except (AttributeError, RuntimeError):  # pragma: no cover
                                 pass
                             continue
-                        except Exception as e_prompt:
+                        except (AttributeError, RuntimeError, ValueError, TypeError) as e_prompt:
                             try:
                                 self.statusBar().showMessage(
                                     f"Retry failed: {e_prompt}"
