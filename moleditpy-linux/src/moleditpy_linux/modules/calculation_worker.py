@@ -298,8 +298,10 @@ def _iterative_optimize_obabel(mol, method, check_halted_cb, safe_status_cb, max
         return True
     except WorkerHaltError:
         raise
-    except (AttributeError, RuntimeError, ValueError) as e:
+    except (AttributeError, RuntimeError, TypeError, ValueError, KeyError, IndexError) as e:
         safe_status_cb(f"Iterative optimization ({method}) error (OpenBabel): {e}")
+        import traceback
+        traceback.print_exc()
         return False
 
 
@@ -553,7 +555,8 @@ def _perform_direct_conversion(mol_block, mol, options, _check_halted, _safe_sta
                     i, rdGeometry.Point3D(float(x), float(y), 0.0)
                 )
             except (AttributeError, RuntimeError):  # pragma: no cover
-                pass
+                import traceback
+                traceback.print_exc()
         else:
             # Newly added H atoms: place near the parent atom
             atom = mol.GetAtomWithIdx(i)
@@ -670,7 +673,8 @@ def _perform_direct_conversion(mol_block, mol, options, _check_halted, _safe_sta
                             i, rdGeometry.Point3D(0.0, 0.0, 0.10)
                         )
                     except (AttributeError, RuntimeError):  # pragma: no cover
-                        pass
+                        import traceback
+                        traceback.print_exc()
     # 5) Apply Z-offset for Wedge/Dash constraints
     try:
         stereo_z_offset = 1.5  # wedge -> +1.5, dash -> -1.5
@@ -702,12 +706,14 @@ def _perform_direct_conversion(mol_block, mol, options, _check_halted, _safe_sta
             except (AttributeError, RuntimeError, TypeError, ValueError):
                 continue
     except (AttributeError, RuntimeError):  # pragma: no cover
-        pass
+        import traceback
+        traceback.print_exc()
     # Replace conformer and finish
     try:
         mol.RemoveAllConformers()
     except (AttributeError, RuntimeError):  # pragma: no cover
-        pass
+        import traceback
+        traceback.print_exc()
     mol.AddConformer(conf, assignId=True)
 
     # Optimization (respects do_optimize flag)
@@ -740,7 +746,8 @@ def _perform_direct_conversion(mol_block, mol, options, _check_halted, _safe_sta
                 # Add property for UI feedback
                 mol.SetProp("_pme_optimization_method", opt_method)
             except (AttributeError, RuntimeError):
-                pass
+                import traceback
+                traceback.print_exc()
             _safe_status(f"Applying force field optimization ({method_key} / OpenBabel)...")
             opt_success = _iterative_optimize_obabel(mol, method_key, _check_halted, _safe_status)
             if not opt_success:
@@ -748,13 +755,15 @@ def _perform_direct_conversion(mol_block, mol, options, _check_halted, _safe_sta
                 try:
                     mol.ClearProp("_pme_optimization_method")
                 except (AttributeError, RuntimeError):
-                    pass
+                    import traceback
+                    traceback.print_exc()
         else: # RDKit backend
             try:
                 # Add property for UI feedback
                 mol.SetProp("_pme_optimization_method", opt_method)
             except (AttributeError, RuntimeError):
-                pass
+                import traceback
+                traceback.print_exc()
             _safe_status(f"Applying force field optimization ({method_key} / RDKit)...")
             opt_success = _iterative_optimize(mol, method_key, _check_halted, _safe_status, options=options)
             if not opt_success:
@@ -762,7 +771,8 @@ def _perform_direct_conversion(mol_block, mol, options, _check_halted, _safe_sta
                 try:
                     mol.ClearProp("_pme_optimization_method")
                 except (AttributeError, RuntimeError):
-                    pass
+                    import traceback
+                    traceback.print_exc()
 
     if _check_halted():
         raise WorkerHaltError("Halted")
@@ -791,14 +801,16 @@ def _perform_optimize_only(mol, options, worker_id, _check_halted, _safe_status,
     if backend == "OBABEL":
         try:
             mol.SetProp("_pme_optimization_method", opt_method)
-        except (AttributeError, RuntimeError):
-            pass
+        except (AttributeError, RuntimeError, TypeError, ValueError, KeyError):
+            import traceback
+            traceback.print_exc()
         opt_success = _iterative_optimize_obabel(mol, method_key, _check_halted, _safe_status)
     else:
         try:
             mol.SetProp("_pme_optimization_method", opt_method)
-        except (AttributeError, RuntimeError):
-            pass
+        except (AttributeError, RuntimeError, TypeError, ValueError, KeyError):
+            import traceback
+            traceback.print_exc()
         opt_success = _iterative_optimize(mol, method_key, _check_halted, _safe_status, options=options)
     
     if not opt_success:
@@ -832,7 +844,8 @@ def _perform_obabel_conversion(mol_block, conversion_mode, opt_method, worker_id
         try:
             ob_mol.addh()
         except (AttributeError, RuntimeError):  # pragma: no cover
-            pass
+            import traceback
+            traceback.print_exc()
         ob_mol.make3D()
         # Skip OpenBabel's redundant manual localopt here.
         # We will optimize rd_mol immediately after conversion using the selected user method.
@@ -861,14 +874,16 @@ def _perform_obabel_conversion(mol_block, conversion_mode, opt_method, worker_id
                 try:
                     rd_mol.SetProp("_pme_optimization_method", opt_method_raw)
                 except (AttributeError, RuntimeError):
-                    pass
+                    import traceback
+                    traceback.print_exc()
                 _safe_status(f"Optimizing with OpenBabel ({method_key})...")
                 opt_success = _iterative_optimize_obabel(rd_mol, method_key, _check_halted, _safe_status)
             else:
                 try:
                     rd_mol.SetProp("_pme_optimization_method", opt_method_raw)
                 except (AttributeError, RuntimeError):
-                    pass
+                    import traceback
+                    traceback.print_exc()
                 _safe_status(f"Optimizing with RDKit ({method_key})...")
                 opt_success = _iterative_optimize(rd_mol, method_key, _check_halted, _safe_status, options=options)
 
@@ -877,15 +892,17 @@ def _perform_obabel_conversion(mol_block, conversion_mode, opt_method, worker_id
                 try:
                     rd_mol.ClearProp("_pme_optimization_method")
                 except (AttributeError, RuntimeError):
-                    pass
+                    import traceback
+                    traceback.print_exc()
         except WorkerHaltError:
             raise
-        except (AttributeError, RuntimeError, TypeError, ValueError) as opt_err:
+        except (AttributeError, RuntimeError, TypeError, ValueError, KeyError, IndexError) as opt_err:
             _safe_status(f"Warning: Optimization failed: {opt_err}. Using unoptimized structure.")
             try:
                 rd_mol.ClearProp("_pme_optimization_method")
             except (AttributeError, RuntimeError):
-                pass
+                import traceback
+                traceback.print_exc()
 
         _safe_status(
             "Open Babel embedding succeeded. Warning: Conformation accuracy may be limited."
@@ -901,7 +918,7 @@ def _perform_obabel_conversion(mol_block, conversion_mode, opt_method, worker_id
         return True
     except WorkerHaltError:
         raise
-    except (AttributeError, RuntimeError, TypeError, ValueError) as ob_err:
+    except (AttributeError, RuntimeError, TypeError, ValueError, KeyError, IndexError) as ob_err:
         if conversion_mode == "obabel":
             # obabel-only mode: no further fallback
             raise RuntimeError(f"Open Babel 3D conversion failed: {ob_err}")
@@ -924,9 +941,11 @@ class CalculationWorker(QObject):
         try:
             self.start_work.connect(self.run_calculation)
         except (AttributeError, RuntimeError):
-            pass
+            import traceback
+            traceback.print_exc()
         except (AttributeError, RuntimeError):
-            pass
+            import traceback
+            traceback.print_exc()
 
     @pyqtSlot(str, object)
     def run_calculation(self, mol_block, options=None):
@@ -961,7 +980,8 @@ class CalculationWorker(QObject):
                 raise
             except (AttributeError, RuntimeError):
                 # Swallow any signal-emission errors to avoid crashing the worker
-                pass
+                import traceback
+                traceback.print_exc()
 
         def _safe_finished(payload):  # pragma: no cover
             try:
@@ -980,11 +1000,13 @@ class CalculationWorker(QObject):
                     except WorkerHaltError:
                         raise
                     except (AttributeError, RuntimeError):  # pragma: no cover
-                        pass
+                        import traceback
+                        traceback.print_exc()
             except WorkerHaltError:
                 raise
             except (AttributeError, RuntimeError):  # pragma: no cover
-                pass
+                import traceback
+                traceback.print_exc()
 
         def _safe_error(msg):  # pragma: no cover
             try:
@@ -999,7 +1021,8 @@ class CalculationWorker(QObject):
             except WorkerHaltError:
                 raise
             except (AttributeError, RuntimeError):
-                pass
+                import traceback
+                traceback.print_exc()
 
         try:
             worker_id = None
@@ -1197,7 +1220,8 @@ class CalculationWorker(QObject):
                     else:
                         conf_id = -1
                 except (AttributeError, RuntimeError, TypeError, ValueError):
-                    pass
+                    import traceback
+                    traceback.print_exc()
 
             # ── 8. RDKit succeeded: optimize + emit ────────────────────────
             opt_method = None
@@ -1236,14 +1260,16 @@ class CalculationWorker(QObject):
                         try:
                             mol.SetProp("_pme_optimization_method", opt_method_raw)
                         except (AttributeError, RuntimeError):
-                            pass
+                            import traceback
+                            traceback.print_exc()
                         _safe_status(f"Optimizing with OpenBabel ({method_key})...")
                         opt_success = _iterative_optimize_obabel(mol, method_key, _check_halted, _safe_status)
                     else:
                         try:
                             mol.SetProp("_pme_optimization_method", opt_method_raw)
                         except (AttributeError, RuntimeError):
-                            pass
+                            import traceback
+                            traceback.print_exc()
                         _safe_status(f"Optimizing with RDKit ({method_key})...")
                         opt_success = _iterative_optimize(mol, method_key, _check_halted, _safe_status, options=options)
 
@@ -1258,7 +1284,8 @@ class CalculationWorker(QObject):
                     try:  # pragma: no cover
                         mol.ClearProp("_pme_optimization_method")
                     except (AttributeError, RuntimeError):
-                        pass
+                        import traceback
+                        traceback.print_exc()
                     # Allow fallback to proceed instead of crashing
                     conf_id = -1  # pragma: no cover
                 
@@ -1305,5 +1332,5 @@ class CalculationWorker(QObject):
         except WorkerHaltError:
             _safe_error("Halted")
             return
-        except (AttributeError, RuntimeError, TypeError, ValueError) as e:
+        except (AttributeError, RuntimeError, TypeError, ValueError, KeyError, IndexError, StopIteration) as e:
             _safe_error(str(e))

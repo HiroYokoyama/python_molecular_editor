@@ -354,7 +354,8 @@ class MainWindowEditActions(object):
                 try:
                     QApplication.processEvents()
                 except (AttributeError, RuntimeError):  # pragma: no cover
-                    pass
+                    import traceback
+                    traceback.print_exc()
             # Determine how many hydrogens actually were removed by re-scanning data
             remaining_h = 0
             try:
@@ -374,7 +375,8 @@ class MainWindowEditActions(object):
                 try:
                     self.push_undo_state()
                 except (AttributeError, RuntimeError):  # pragma: no cover
-                    pass
+                    import traceback
+                    traceback.print_exc()
                 self.statusBar().showMessage(
                     f"Removed {removed_count} hydrogen atoms.", 2000
                 )
@@ -396,7 +398,8 @@ class MainWindowEditActions(object):
             try:
                 self.statusBar().showMessage(f"Error removing hydrogen atoms: {e}")
             except (AttributeError, RuntimeError):  # pragma: no cover
-                pass
+                import traceback
+                traceback.print_exc()
 
     def add_hydrogen_atoms(self):
         """Compute and add explicit hydrogens in 2D view using RDKit."""
@@ -572,7 +575,8 @@ class MainWindowEditActions(object):
                     for it in added_items:
                         it.setSelected(True)
                 except (AttributeError, RuntimeError):  # pragma: no cover
-                    pass
+                    import traceback
+                    traceback.print_exc()
             else:
                 self.statusBar().showMessage(
                     "No implicit hydrogens found to add.", 2000
@@ -595,7 +599,8 @@ class MainWindowEditActions(object):
                 mime_data is not None and mime_data.hasFormat(CLIPBOARD_MIME_TYPE)
             )
         except RuntimeError:
-            pass
+            import traceback
+            traceback.print_exc()
 
     def open_rotate_2d_dialog(self):
         """Open 2D rotation dialog"""
@@ -880,7 +885,8 @@ class MainWindowEditActions(object):
                             if is_deleted_func and is_deleted_func(item):
                                 continue
                         except (AttributeError, RuntimeError):  # pragma: no cover
-                            pass
+                            import traceback
+                            traceback.print_exc()
 
                         # If the item is no longer in a scene, skip updating it to avoid
                         # touching partially-deleted objects during scene teardown.
@@ -912,18 +918,21 @@ class MainWindowEditActions(object):
                                 try:
                                     item.prepareGeometryChange()
                                 except (AttributeError, RuntimeError):  # pragma: no cover
-                                    pass
+                                    import traceback
+                                    traceback.print_exc()
                             # Apply implicit hydrogen count (guarded)
                             try:
                                 item.implicit_h_count = new_count
                             except (AttributeError, RuntimeError):  # pragma: no cover
-                                pass
+                                import traceback
+                                traceback.print_exc()
 
                             # Apply problem flag (visual red-outline)
                             try:
                                 item.has_problem = bool(desired_prob)
                             except (AttributeError, RuntimeError):  # pragma: no cover
-                                pass
+                                import traceback
+                                traceback.print_exc()
                             # Ensure the item is updated in the scene so paint() runs
                             # when either geometry or problem-flag changed.
                             items_to_update.append(item)
@@ -948,7 +957,8 @@ class MainWindowEditActions(object):
                             try:
                                 it.update()
                             except (AttributeError, RuntimeError):  # pragma: no cover
-                                pass
+                                import traceback
+                                traceback.print_exc()
                     except (AttributeError, RuntimeError):
                         # Ignore any unexpected errors when touching the item
                         continue
@@ -961,9 +971,11 @@ class MainWindowEditActions(object):
                 try:
                     _apply_ui_updates()
                 except (AttributeError, RuntimeError):  # pragma: no cover
-                    pass
+                    import traceback
+                    traceback.print_exc()
         except (AttributeError, RuntimeError):  # pragma: no cover
-            pass
+            import traceback
+            traceback.print_exc()
 
     def clean_up_2d_structure(self):
         self.statusBar().showMessage("Optimizing 2D structure...")
@@ -1045,7 +1057,8 @@ class MainWindowEditActions(object):
                     if sip_isdeleted_safe(item):
                         continue
                 except (AttributeError, RuntimeError):  # pragma: no cover
-                    pass
+                    import traceback
+                    traceback.print_exc()
                 try:
                     sc = None
                     try:
@@ -1238,7 +1251,8 @@ class MainWindowEditActions(object):
                 if sip_isdeleted_safe(item):
                     continue
             except (AttributeError, RuntimeError):  # pragma: no cover
-                pass
+                import traceback
+                traceback.print_exc()
 
             try:
                 sc = None
@@ -1442,13 +1456,15 @@ class MainWindowEditActions(object):
                     f"Molecule sanitization failed{desc}; file may be malformed."
                 )
             except (AttributeError, RuntimeError):  # pragma: no cover
-                pass
+                import traceback
+                traceback.print_exc()
             # Disable 3D optimization UI to prevent running on invalid molecules
             if hasattr(self, "optimize_3d_button"):
                 try:
                     self.optimize_3d_button.setEnabled(False)
                 except (AttributeError, RuntimeError):  # pragma: no cover
-                    pass
+                    import traceback
+                    traceback.print_exc()
 
     def _clear_xyz_flags(self, mol=None):
         """Clear XYZ-derived markers from a molecule (or current_mol) and
@@ -1475,9 +1491,11 @@ class MainWindowEditActions(object):
                             try:
                                 target.SetIntProp("_xyz_skip_checks", 0)
                             except (AttributeError, RuntimeError):  # pragma: no cover
-                                pass
+                                import traceback
+                                traceback.print_exc()
                 except (AttributeError, RuntimeError):  # pragma: no cover
-                    pass
+                    import traceback
+                    traceback.print_exc()
                 # Remove attribute-style markers if present
                 try:
                     if hasattr(target, "_xyz_skip_checks"):
@@ -1490,9 +1508,11 @@ class MainWindowEditActions(object):
                                 try:
                                     target._xyz_skip_checks = False
                                 except (AttributeError, RuntimeError):  # pragma: no cover
-                                    pass
+                                    import traceback
+                                    traceback.print_exc()
                 except (AttributeError, RuntimeError):  # pragma: no cover
-                    pass
+                    import traceback
+                    traceback.print_exc()
                 try:
                     if hasattr(target, "_xyz_atom_data"):
                         try:
@@ -1504,17 +1524,21 @@ class MainWindowEditActions(object):
                                 try:
                                     target._xyz_atom_data = None
                                 except (AttributeError, RuntimeError):  # pragma: no cover
-                                    pass
+                                    import traceback
+                                    traceback.print_exc()
                 except (AttributeError, RuntimeError):  # pragma: no cover
-                    pass
+                    import traceback
+                    traceback.print_exc()
         except (AttributeError, RuntimeError):  # pragma: no cover
-            pass
+            import traceback
+            traceback.print_exc()
 
         # Reset UI flags
         try:
             self.is_xyz_derived = False
         except (AttributeError, RuntimeError):  # pragma: no cover
-            pass
+            import traceback
+            traceback.print_exc()
 
         # Enable Optimize 3D unless sanitization failed
         try:
@@ -1523,14 +1547,17 @@ class MainWindowEditActions(object):
                     try:
                         self.optimize_3d_button.setEnabled(False)
                     except (AttributeError, RuntimeError):  # pragma: no cover
-                        pass
+                        import traceback
+                        traceback.print_exc()
                 else:
                     try:
                         self.optimize_3d_button.setEnabled(True)
                     except (AttributeError, RuntimeError):  # pragma: no cover
-                        pass
+                        import traceback
+                        traceback.print_exc()
         except (AttributeError, RuntimeError):  # pragma: no cover
-            pass
+            import traceback
+            traceback.print_exc()
 
 
 

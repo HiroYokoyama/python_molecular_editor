@@ -209,9 +209,11 @@ class MainWindowUiManager(object):
                     try:
                         widget.close()
                     except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
-                        pass
+                        import traceback
+                        traceback.print_exc()
         except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
-            pass
+            import traceback
+            traceback.print_exc()
 
         # Final cleanup
         if self.scene and self.scene.template_preview:
@@ -223,13 +225,16 @@ class MainWindowUiManager(object):
                 try:
                     thr.quit()
                 except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
-                    pass
+                    import traceback
+                    traceback.print_exc()
                 try:
                     thr.wait(200)
                 except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
-                    pass
+                    import traceback
+                    traceback.print_exc()
         except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
-            pass
+            import traceback
+            traceback.print_exc()
 
         event.accept()
 
@@ -410,12 +415,14 @@ class MainWindowUiManager(object):
                         # Otherwise enable/disable according to the requested global flag
                         getattr(self, action_name).setEnabled(bool(enabled))
                     except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
-                        pass
+                        import traceback
+                        traceback.print_exc()
                 else:
                     try:
                         getattr(self, action_name).setEnabled(enabled)
                     except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
-                        pass
+                        import traceback
+                        traceback.print_exc()
 
         # Keep measurement action enabled
         if hasattr(self, "measurement_action"):

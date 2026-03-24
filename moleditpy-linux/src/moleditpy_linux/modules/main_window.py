@@ -120,7 +120,8 @@ class MainWindow(QMainWindow):
         try:
             self.main_window_main_init.init(initial_file)
         except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
-            pass
+            import traceback
+            traceback.print_exc()
 
         other_inits = [
             "main_window_view_3d",
@@ -140,7 +141,8 @@ class MainWindow(QMainWindow):
             try:
                 getattr(self, name).init()
             except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
-                pass
+                import traceback
+                traceback.print_exc()
 
     def init_ui(self):
         # --- MOVED TO main_window_main_init.py ---

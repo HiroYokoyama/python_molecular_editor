@@ -473,7 +473,7 @@ class PluginManager:
                                         ):
                                             elts.append(elt.n)
                                     val = ".".join(map(str, elts))
-                                except:
+                                except (AttributeError, RuntimeError, ValueError, TypeError):
                                     import traceback
 
                                     pass

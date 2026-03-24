@@ -1162,7 +1162,8 @@ class MainWindowView3d(object):
                     Chem.AssignAtomChiralTagsFromStructure(mol_for_chirality, confId=0)
                 except (AttributeError, RuntimeError, TypeError, ValueError):  # pragma: no cover
                     # Guard for older RDKit versions that might lack the function
-                    pass
+                    import traceback
+                    traceback.print_exc()
 
             # Get chiral centers (list of (idx, 'R'/'S'/'?'))
             chiral_centers = Chem.FindMolChiralCenters(
@@ -1431,7 +1432,8 @@ class MainWindowView3d(object):
                     try:
                         self.plotter.remove_actor(nm)
                     except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
-                        pass
+                        import traceback
+                        traceback.print_exc()
             self.atom_label_legend_names = []
 
             legend_entries = []
@@ -1475,14 +1477,17 @@ class MainWindowView3d(object):
                             try:
                                 tp.SetBold(True)
                             except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
-                                pass
+                                import traceback
+                                traceback.print_exc()
                     except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
-                        pass
+                        import traceback
+                        traceback.print_exc()
                 except (AttributeError, RuntimeError, TypeError):
                     continue
 
         except (AttributeError, RuntimeError):  # pragma: no cover
-            pass
+            import traceback
+            traceback.print_exc()
 
     def clear_all_atom_info_labels(self):
         """Clear all atom info labels"""
@@ -1503,9 +1508,11 @@ class MainWindowView3d(object):
                     try:
                         self.plotter.remove_actor(self.current_atom_info_labels)
                     except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
-                        pass
+                        import traceback
+                        traceback.print_exc()
         except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
-            pass
+            import traceback
+            traceback.print_exc()
         finally:
             self.current_atom_info_labels = None
 
@@ -1519,9 +1526,11 @@ class MainWindowView3d(object):
                     try:
                         self.plotter.remove_actor(nm)
                     except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
-                        pass
+                        import traceback
+                        traceback.print_exc()
         except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
-            pass
+            import traceback
+            traceback.print_exc()
         finally:
             self.atom_label_legend_names = []
 
@@ -1594,7 +1603,8 @@ class MainWindowView3d(object):
                 if old_ra is not None:
                     self.view_2d.setResizeAnchor(old_ra)
             except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
-                pass
+                import traceback
+                traceback.print_exc()
 
     def update_cpk_colors_from_settings(self):
         """Update global CPK_COLORS and CPK_COLORS_PV from saved settings overrides.
@@ -1690,7 +1700,8 @@ class MainWindowView3d(object):
             try:
                 self.plotter.reset_camera()
             except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
-                pass
+                import traceback
+                traceback.print_exc()
 
             self._camera_initialized = True
 
@@ -1700,7 +1711,8 @@ class MainWindowView3d(object):
             if hasattr(self.plotter, "update"):
                 self.plotter.update()
         except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
-            pass
+            import traceback
+            traceback.print_exc()
 
     def update_bond_color_override(self, bond_idx, hex_color):
         """Plugin API helper to override bond color."""

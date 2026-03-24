@@ -556,7 +556,8 @@ class UserTemplateDialog(QDialog):  # pragma: no cover
             self.main_window.scene.user_template_data = template_data
         except (AttributeError, RuntimeError):  # pragma: no cover
             # Best-effort: ignore if scene or attribute missing
-            pass
+            import traceback
+            traceback.print_exc()
 
         # Force the main window into the template mode.
         # Clear or uncheck any existing mode actions if present to avoid staying in another mode.
@@ -587,7 +588,8 @@ class UserTemplateDialog(QDialog):  # pragma: no cover
                 )
             except (AttributeError, RuntimeError):  # pragma: no cover
                 # ignore status bar failures
-                pass
+                import traceback
+                traceback.print_exc()
 
             # If there is a matching QAction in mode_actions, check it
             try:
@@ -600,7 +602,8 @@ class UserTemplateDialog(QDialog):  # pragma: no cover
                         f"template_user_{template_name}"
                     ].setChecked(True)
             except (AttributeError, RuntimeError):  # pragma: no cover
-                pass
+                import traceback
+                traceback.print_exc()
         except (AttributeError, RuntimeError, ValueError) as e:
             logging.warning(
                 f"Warning: Failed to switch main window to template mode: {e}"
@@ -617,7 +620,8 @@ class UserTemplateDialog(QDialog):  # pragma: no cover
             try:
                 self.main_window.scene.user_template_data = template_data
             except (AttributeError, RuntimeError):  # pragma: no cover
-                pass
+                import traceback
+                traceback.print_exc()
             # Force the main window into the template mode (same approach as select_template)
             try:
                 if hasattr(self.main_window, "mode_actions") and isinstance(
@@ -641,7 +645,8 @@ class UserTemplateDialog(QDialog):  # pragma: no cover
                         f"Template mode: {template_name}"
                     )
                 except (AttributeError, RuntimeError):  # pragma: no cover
-                    pass
+                    import traceback
+                    traceback.print_exc()
                 # Mark selected and keep dialog open
                 self.selected_template = template_data
             except (AttributeError, RuntimeError, ValueError) as e:

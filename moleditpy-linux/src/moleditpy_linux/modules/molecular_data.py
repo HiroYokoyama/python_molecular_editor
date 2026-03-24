@@ -89,8 +89,9 @@ class MolecularData:
                 for key in bonds_to_remove:
                     del self.bonds[key]
 
-            except (AttributeError, KeyError, TypeError):
-                pass
+            except (AttributeError, RuntimeError, ValueError, TypeError, KeyError, IndexError):
+                import traceback
+                traceback.print_exc()
 
     def remove_bond(self, id1, id2):
         try:
@@ -108,8 +109,9 @@ class MolecularData:
                     self.adjacency_list[id2].remove(id1)
                 del self.bonds[key_to_remove]
 
-        except (AttributeError, KeyError, TypeError):
-            pass
+        except (AttributeError, RuntimeError, ValueError, TypeError, KeyError, IndexError):
+            import traceback
+            traceback.print_exc()
 
     def to_rdkit_mol(self, use_2d_stereo=True):
         """
@@ -164,7 +166,7 @@ class MolecularData:
         final_mol = mol.GetMol()
         try:
             Chem.SanitizeMol(final_mol)
-        except (AttributeError, RuntimeError):
+        except (AttributeError, RuntimeError, ValueError, TypeError, KeyError, IndexError):
             return None
 
         # --- Step 4: add 2D conformer ---
@@ -246,7 +248,7 @@ class MolecularData:
                         a1_id, a2_id = stereo_atoms_specified
                         neigh1_idx = atom_id_to_idx_map.get(a1_id)
                         neigh2_idx = atom_id_to_idx_map.get(a2_id)
-                    except (AttributeError, RuntimeError):
+                    except (AttributeError, RuntimeError, ValueError, TypeError, KeyError, IndexError):
                         neigh1_idx = None
                         neigh2_idx = None
                 else:
@@ -283,7 +285,7 @@ class MolecularData:
                 Chem.AssignStereochemistry(final_mol, cleanIt=False, force=True)
             else:
                 Chem.AssignStereochemistry(final_mol, cleanIt=False, force=False)
-        except (AttributeError, RuntimeError):
+        except (AttributeError, RuntimeError, ValueError, TypeError, KeyError, IndexError):
                 raise
         return final_mol
 
@@ -292,8 +294,9 @@ class MolecularData:
             mol = self.to_rdkit_mol()
             if mol:
                 return Chem.MolToMolBlock(mol, includeStereo=True)
-        except (AttributeError, RuntimeError):  # pragma: no cover
-            pass
+        except (AttributeError, RuntimeError, ValueError, TypeError, KeyError, IndexError):  # pragma: no cover
+            import traceback
+            traceback.print_exc()
 
         if not self.atoms:
             return None

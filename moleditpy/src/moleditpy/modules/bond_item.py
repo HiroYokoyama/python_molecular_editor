@@ -83,7 +83,8 @@ class BondItem(QGraphicsItem):
                     self.scene().views()[0].viewport().update()
                 except (IndexError, RuntimeError):
                     # Handle case where views are being destroyed
-                    pass
+                    import traceback
+                    traceback.print_exc()
 
         except (AttributeError, RuntimeError, TypeError) as e:
             print(f"Error in BondItem.set_stereo: {e}")

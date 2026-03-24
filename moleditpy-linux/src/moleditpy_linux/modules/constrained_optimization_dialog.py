@@ -736,7 +736,8 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):  # pragma: n
             )
         except IndexError:
             # Case where constraints list and table are out of sync (should not occur)
-            pass
+            import traceback
+            traceback.print_exc()
 
     def keyPressEvent(self, event):
         """Handle keyboard events (Delete/Backspace to remove, Enter to optimize)."""

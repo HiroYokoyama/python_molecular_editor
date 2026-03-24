@@ -124,7 +124,8 @@ class MainWindowCompute(object):
             try:
                 self.settings_dirty = True
             except (AttributeError, RuntimeError, TypeError):
-                pass
+                import traceback
+                traceback.print_exc()
             state_str = "Enabled" if checked else "Disabled"
             self.statusBar().showMessage(f"Intermolecular interaction for RDKit: {state_str}")
         except (AttributeError, RuntimeError, TypeError):
@@ -158,7 +159,7 @@ class MainWindowCompute(object):
 
             # Show menu at button position
             menu.exec_(self.convert_button.mapToGlobal(pos))
-        except (AttributeError, RuntimeError, ValueError) as e:
+        except (AttributeError, RuntimeError, ValueError, TypeError) as e:
             print(f"Error showing convert menu: {e}")
 
     def _trigger_conversion_with_temp_mode(self, mode_key):  # pragma: no cover
@@ -167,7 +168,7 @@ class MainWindowCompute(object):
             self._temp_conv_mode = mode_key
             # Call the normal conversion entry point (it will consume the temp)
             QTimer.singleShot(0, self.trigger_conversion)
-        except (AttributeError, RuntimeError, ValueError) as e:
+        except (AttributeError, RuntimeError, ValueError, TypeError) as e:
             print(f"Failed to start conversion with temp mode {mode_key}: {e}")
 
     def show_optimize_menu(self, pos):  # pragma: no cover
@@ -216,7 +217,7 @@ class MainWindowCompute(object):
                         menu.addAction(a)
 
             menu.exec_(self.optimize_3d_button.mapToGlobal(pos))
-        except (AttributeError, RuntimeError, ValueError) as e:
+        except (AttributeError, RuntimeError, ValueError, TypeError) as e:
             print(f"Error showing optimize menu: {e}")
 
     def _trigger_optimize_with_temp_method(self, method_key):  # pragma: no cover
@@ -225,7 +226,7 @@ class MainWindowCompute(object):
             self._temp_optimization_method = method_key
             # Run optimize on next event loop turn so UI updates first
             QTimer.singleShot(0, self.optimize_3d_structure)
-        except (AttributeError, RuntimeError, ValueError) as e:
+        except (AttributeError, RuntimeError, ValueError, TypeError) as e:
             print(f"Failed to start optimization with temp method {method_key}: {e}")
 
     def trigger_conversion(self):
@@ -268,7 +269,8 @@ class MainWindowCompute(object):
                 original_id = atom.GetIntProp("_original_atom_id")
                 self.original_atom_properties[i] = original_id
             except KeyError:
-                pass
+                import traceback
+                traceback.print_exc()
 
         problems = Chem.DetectChemistryProblems(mol)
         if problems:
@@ -360,7 +362,8 @@ class MainWindowCompute(object):
         try:
             self.next_conversion_id = run_id + 1
         except (AttributeError, RuntimeError, TypeError):
-            self.next_conversion_id = getattr(self, "next_conversion_id", 1) + 1
+            import traceback
+            traceback.print_exc()
 
         # Track active worker IDs
         try:
@@ -411,8 +414,8 @@ class MainWindowCompute(object):
         try:
             self._calculating_text_actor = text_actor
         except (AttributeError, RuntimeError, TypeError):
-            # Best-effort: if storing fails, ignore — cleanup will still attempt renderer removal
-            pass
+            import traceback
+            traceback.print_exc()
         text_actor.GetTextProperty().SetOpacity(1)  # pragma: no cover
         self.plotter.render()  # pragma: no cover
         # Set flags for worker
@@ -580,7 +583,7 @@ class MainWindowCompute(object):
             except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
                 import traceback
                 traceback.print_exc()
-        except (AttributeError, RuntimeError, ValueError) as e:
+        except (AttributeError, RuntimeError, ValueError, TypeError) as e:
             # Fall back: if thread/worker creation failed, create a local
             # worker and start it (runs in main thread). This preserves
             # functionality without relying on the shared MainWindow signal.
@@ -626,7 +629,8 @@ class MainWindowCompute(object):
                 try:
                     self.convert_button.clicked.disconnect()
                 except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
-                    pass
+                    import traceback
+                    traceback.print_exc()
                 self.convert_button.setText("Convert 2D to 3D")
                 self.convert_button.clicked.connect(self.trigger_conversion)
                 self.convert_button.setEnabled(True)
@@ -669,7 +673,8 @@ class MainWindowCompute(object):
                     try:
                         del self._calculating_text_actor
                     except (AttributeError, RuntimeError, TypeError):
-                        pass
+                        import traceback
+                        traceback.print_exc()
             except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
                 import traceback
                 traceback.print_exc()
@@ -722,7 +727,7 @@ class MainWindowCompute(object):
             self.scene.clearSelection()
             self.view_2d.setFocus()
 
-        except (AttributeError, RuntimeError, ValueError) as e:
+        except (AttributeError, RuntimeError, ValueError, TypeError) as e:
             print(f"Error in fallback chemistry check: {e}")
             self.statusBar().showMessage("Error: Invalid chemical structure.")
             self.view_2d.setFocus()
@@ -796,7 +801,7 @@ class MainWindowCompute(object):
                         self.push_undo_state()
                         self.view_2d.setFocus()
                     return
-                except (AttributeError, RuntimeError, ValueError) as e:
+                except (AttributeError, RuntimeError, ValueError, TypeError) as e:
                     self.statusBar().showMessage(
                         f"Plugin optimization error ({method}): {e}"
                     )
@@ -834,10 +839,12 @@ class MainWindowCompute(object):
                     try:
                         self.optimize_3d_button.clicked.disconnect()
                     except (AttributeError, RuntimeError, TypeError):
-                        pass
+                        import traceback
+                        traceback.print_exc()
                     self.optimize_3d_button.clicked.connect(self.halt_conversion)
                 except (AttributeError, RuntimeError, TypeError):
-                    pass
+                    import traceback
+                    traceback.print_exc()
 
                 # Disable features
                 self._enable_3d_features(False)
@@ -871,17 +878,20 @@ class MainWindowCompute(object):
                                 try:
                                     self.optimize_3d_button.clicked.disconnect()
                                 except (AttributeError, RuntimeError, TypeError):
-                                    pass
+                                    import traceback
+                                    traceback.print_exc()
                                 self.optimize_3d_button.clicked.connect(self.optimize_3d_structure)
                             except (AttributeError, RuntimeError, TypeError):
-                                pass
+                                import traceback
+                                traceback.print_exc()
                             
                             self.on_calculation_finished(result)
                         finally:
                             try:
                                 self._active_calc_threads.remove(t)
                             except (AttributeError, RuntimeError, TypeError):
-                                pass
+                                import traceback
+                                traceback.print_exc()
                             t.quit()
                             t.finished.connect(t.deleteLater)
                             w.deleteLater()
@@ -894,17 +904,20 @@ class MainWindowCompute(object):
                                 try:
                                     self.optimize_3d_button.clicked.disconnect()
                                 except (AttributeError, RuntimeError, TypeError):
-                                    pass
+                                    import traceback
+                                    traceback.print_exc()
                                 self.optimize_3d_button.clicked.connect(self.optimize_3d_structure)
                             except (AttributeError, RuntimeError, TypeError):
-                                pass
+                                import traceback
+                                traceback.print_exc()
                             
                             self.on_calculation_error(error_msg)
                         finally:
                             try:
                                 self._active_calc_threads.remove(t)
                             except (AttributeError, RuntimeError, TypeError):
-                                pass
+                                import traceback
+                                traceback.print_exc()
                             t.quit()
                             t.finished.connect(t.deleteLater)
                             w.deleteLater()
@@ -919,8 +932,9 @@ class MainWindowCompute(object):
                     try:
                         self._active_calc_threads.append(thread)
                     except (AttributeError, RuntimeError, TypeError):
-                        pass
-                except (AttributeError, RuntimeError, ValueError) as e:
+                        import traceback
+                        traceback.print_exc()
+                except (AttributeError, RuntimeError, ValueError, TypeError) as e:
                     self.on_calculation_error(str(e))
                 
                 return
@@ -929,7 +943,7 @@ class MainWindowCompute(object):
                     "Selected optimization method is not available. Use MMFF94 (RDKit) or UFF (RDKit)."
                 )
                 return
-        except (AttributeError, RuntimeError, ValueError) as e:
+        except (AttributeError, RuntimeError, ValueError, TypeError) as e:
             self.statusBar().showMessage(f"3D optimization error: {e}")
             self.view_2d.setFocus()
 
@@ -974,12 +988,14 @@ class MainWindowCompute(object):
                                 try:
                                     del self._calculating_text_actor
                                 except (AttributeError, RuntimeError, TypeError):
-                                    pass
+                                    import traceback
+                                    traceback.print_exc()
                             elif hasattr(self, "_calculating_text_actor"):
                                 try:
                                     delattr(self, "_calculating_text_actor")
                                 except (AttributeError, RuntimeError, TypeError):
-                                    pass
+                                    import traceback
+                                    traceback.print_exc()
                     except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
                         import traceback
                         traceback.print_exc()
@@ -1047,7 +1063,8 @@ class MainWindowCompute(object):
                             opt_method = mol.GetProp("_pme_optimization_method")
                     except (AttributeError, RuntimeError, TypeError):
                         # not all Mol objects support HasProp/GetProp safely
-                        pass
+                        import traceback
+                        traceback.print_exc()
             except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
                 import traceback
                 traceback.print_exc()
@@ -1066,7 +1083,8 @@ class MainWindowCompute(object):
                 self.last_successful_optimization_method = None
         except (AttributeError, RuntimeError, TypeError):
             # non-fatal
-            pass
+            import traceback
+            traceback.print_exc()
 
         # Restore atom properties (lost during worker process)
         if hasattr(self, "original_atom_properties"):
@@ -1106,7 +1124,8 @@ class MainWindowCompute(object):
                     f"{len(frags)} molecules converted with collision avoidance (background)."
                 )
         except (AttributeError, RuntimeError, TypeError):
-            pass
+            import traceback
+            traceback.print_exc()
 
         # Remove 'Calculating...' text and refresh
         try:
@@ -1139,7 +1158,8 @@ class MainWindowCompute(object):
                     try:
                         del self._calculating_text_actor
                     except (AttributeError, RuntimeError, TypeError):
-                        pass
+                        import traceback
+                        traceback.print_exc()
             # Re-render to ensure the UI updates immediately
             try:
                 self.plotter.render()
@@ -1275,7 +1295,8 @@ class MainWindowCompute(object):
                     try:
                         del self._calculating_text_actor
                     except (AttributeError, RuntimeError, TypeError):
-                        pass
+                        import traceback
+                        traceback.print_exc()
         except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
             import traceback
             traceback.print_exc()

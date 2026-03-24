@@ -317,7 +317,8 @@ class DihedralDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
             self.dihedral_slider.setValue(int(round(wrapped_val)))
             self.dihedral_slider.blockSignals(False)
         except ValueError:
-            pass
+            import traceback
+            traceback.print_exc()
 
     def on_slider_pressed(self):
         """Remember the state before slider dragging starts."""
@@ -513,4 +514,5 @@ class DihedralDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
             if self.main_window.current_mol:
                 self.main_window.draw_molecule_3d(self.main_window.current_mol)
         except (AttributeError, RuntimeError, TypeError):
-            pass
+            import traceback
+            traceback.print_exc()

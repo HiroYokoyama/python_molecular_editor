@@ -111,7 +111,8 @@ def detect_system_theme():  # pragma: no cover
                     val, _ = winreg.QueryValueEx(k, "AppsUseLightTheme")
                     return "dark" if int(val) == 0 else "light"
             except (AttributeError, RuntimeError):  # pragma: no cover
-                pass
+                import traceback
+                traceback.print_exc()
         # macOS: 'defaults read -g AppleInterfaceStyle'
         if platform.system() == "Darwin":
             return "light"
@@ -132,7 +133,8 @@ def detect_system_theme():  # pragma: no cover
                     if "light" in out.lower():
                         return "light"
             except (AttributeError, RuntimeError):  # pragma: no cover
-                pass
+                import traceback
+                traceback.print_exc()
             try:
                 p = subprocess.run(
                     ["gsettings", "get", "org.gnome.desktop.interface", "gtk-theme"],
@@ -142,9 +144,11 @@ def detect_system_theme():  # pragma: no cover
                 if p.returncode == 0 and "-dark" in p.stdout.lower():
                     return "dark"
             except (AttributeError, RuntimeError):  # pragma: no cover
-                pass
+                import traceback
+                traceback.print_exc()
     except (AttributeError, RuntimeError):  # pragma: no cover
-        pass
+        import traceback
+        traceback.print_exc()
 
     return None
 
@@ -303,7 +307,8 @@ class MainWindowMainInit(object):
         try:
             QTimer.singleShot(0, self.view_2d.setFocus)
         except (AttributeError, RuntimeError):  # pragma: no cover
-            pass
+            import traceback
+            traceback.print_exc()
 
     def init_ui(self):  # pragma: no cover
         # 1. Get the path to the directory where the current script is located
@@ -380,7 +385,8 @@ class MainWindowMainInit(object):
                 self.show_convert_menu
             )
         except (AttributeError, RuntimeError):  # pragma: no cover
-            pass
+            import traceback
+            traceback.print_exc()
 
         left_buttons_layout.addWidget(self.convert_button)
 
@@ -421,7 +427,8 @@ class MainWindowMainInit(object):
                 self.show_optimize_menu
             )
         except (AttributeError, RuntimeError):  # pragma: no cover
-            pass
+            import traceback
+            traceback.print_exc()
 
         right_buttons_layout.addWidget(self.optimize_3d_button)
 
@@ -483,7 +490,8 @@ class MainWindowMainInit(object):
             self.addToolBarBreak(Qt.ToolBarArea.TopToolBarArea)
         except (AttributeError, RuntimeError):  # pragma: no cover
             # If addToolBarBreak isn't available, continue without raising; placement may still work depending on the platform.
-            pass
+            import traceback
+            traceback.print_exc()
 
         toolbar_bottom = QToolBar("Templates Toolbar")
         self.addToolBar(Qt.ToolBarArea.TopToolBarArea, toolbar_bottom)
@@ -493,7 +501,8 @@ class MainWindowMainInit(object):
         try:
             self.addToolBarBreak(Qt.ToolBarArea.TopToolBarArea)
         except (AttributeError, RuntimeError):  # pragma: no cover
-            pass
+            import traceback
+            traceback.print_exc()
 
         self.plugin_toolbar = QToolBar("Plugin Toolbar")
         self.addToolBar(Qt.ToolBarArea.TopToolBarArea, self.plugin_toolbar)
@@ -565,7 +574,8 @@ class MainWindowMainInit(object):
                     if c.isValid():
                         return c
             except (AttributeError, RuntimeError):  # pragma: no cover
-                pass
+                import traceback
+                traceback.print_exc()
 
             # 1) Prefer the system/OS dark-mode preference if available.
             try:
@@ -574,7 +584,8 @@ class MainWindowMainInit(object):
                 if os_pref is not None:
                     return QColor("#FFFFFF") if os_pref else QColor("#000000")
             except (AttributeError, RuntimeError):  # pragma: no cover
-                pass
+                import traceback
+                traceback.print_exc()
 
             try:
                 # Keep background_color as a fallback: if system preference isn't
@@ -591,7 +602,8 @@ class MainWindowMainInit(object):
                         # Return white on dark (lum<0.5), black on light
                         return QColor("#FFFFFF") if lum < 0.5 else QColor("#000000")
             except (AttributeError, RuntimeError):  # pragma: no cover
-                pass
+                import traceback
+                traceback.print_exc()
 
             try:
                 pal = QApplication.palette()
@@ -1347,10 +1359,12 @@ class MainWindowMainInit(object):
                 try:
                     self.settings_dirty = True
                 except (AttributeError, RuntimeError):  # pragma: no cover
-                    pass
+                    import traceback
+                    traceback.print_exc()
                 self.statusBar().showMessage(f"3D conversion mode set to: {mode}")
             except (AttributeError, RuntimeError):  # pragma: no cover
-                pass
+                import traceback
+                traceback.print_exc()
 
         conv_options = [
             ("Fallback", "fallback"),
@@ -1402,14 +1416,17 @@ class MainWindowMainInit(object):
                 try:
                     self.conv_actions[saved_conv].setChecked(True)
                 except (AttributeError, RuntimeError):  # pragma: no cover
-                    pass
+                    import traceback
+                    traceback.print_exc()
             self.settings["3d_conversion_mode"] = saved_conv
             try:
                 self.settings_dirty = True
             except (AttributeError, RuntimeError):  # pragma: no cover
-                pass
+                import traceback
+                traceback.print_exc()
         except (AttributeError, RuntimeError):  # pragma: no cover
-            pass
+            import traceback
+            traceback.print_exc()
 
         # 3) 3D Optimization Settings (single location under Settings menu)
         optimization_menu = settings_menu.addMenu("3D Optimization Settings")
@@ -1443,7 +1460,8 @@ class MainWindowMainInit(object):
             try:
                 action.setActionGroup(opt_group)
             except (AttributeError, RuntimeError):  # pragma: no cover
-                pass
+                import traceback
+                traceback.print_exc()
 
             # If Open Babel is not available, disable Open Babel-based optimization methods
             if key.endswith("_OBABEL") and not OBABEL_AVAILABLE:
@@ -1487,7 +1505,8 @@ class MainWindowMainInit(object):
                     self.opt3d_actions["MMFF_RDKIT"].setChecked(True)
                     self.optimization_method = "MMFF_RDKIT"
         except (AttributeError, RuntimeError):  # pragma: no cover
-            pass
+            import traceback
+            traceback.print_exc()
 
         # 4) Reset all settings to defaults
         settings_menu.addSeparator()
@@ -1589,7 +1608,8 @@ class MainWindowMainInit(object):
         try:
             self.update_cpk_colors_from_settings()
         except (AttributeError, RuntimeError):  # pragma: no cover
-            pass
+            import traceback
+            traceback.print_exc()
 
         if self.plotter and self.plotter.renderer:
             bg_color = self.settings.get("background_color", "#919191")
@@ -1609,7 +1629,8 @@ class MainWindowMainInit(object):
                 for v in list(self.scene.views()):
                     v.viewport().update()
         except (AttributeError, RuntimeError):  # pragma: no cover
-            pass
+            import traceback
+            traceback.print_exc()
 
     def open_settings_dialog(self):  # pragma: no cover
         dialog = SettingsDialog(self.settings, self)
@@ -1636,7 +1657,8 @@ class MainWindowMainInit(object):
                 try:
                     self.settings_dirty = True
                 except (AttributeError, RuntimeError):  # pragma: no cover
-                    pass
+                    import traceback
+                    traceback.print_exc()
                 # If ColorSettingsDialog is open, refresh its UI to reflect the reset
                 try:
                     for w in QApplication.topLevelWidgets():
@@ -1645,16 +1667,20 @@ class MainWindowMainInit(object):
                                 try:
                                     w.refresh_ui()
                                 except (AttributeError, RuntimeError):  # pragma: no cover
-                                    pass
+                                    import traceback
+                                    traceback.print_exc()
                         except (AttributeError, RuntimeError):  # pragma: no cover
-                            pass
+                            import traceback
+                            traceback.print_exc()
                 except (AttributeError, RuntimeError):  # pragma: no cover
-                    pass
+                    import traceback
+                    traceback.print_exc()
                 # Ensure global CPK mapping is rebuilt from defaults and UI is updated
                 try:
                     self.update_cpk_colors_from_settings()
                 except (AttributeError, RuntimeError):  # pragma: no cover
-                    pass
+                    import traceback
+                    traceback.print_exc()
                 # Refresh UI/menu state for conversion and optimization
                 try:
                     # update optimization method
@@ -1670,7 +1696,8 @@ class MainWindowMainInit(object):
                             try:
                                 self.opt3d_actions[key].setChecked(True)
                             except (AttributeError, RuntimeError):  # pragma: no cover
-                                pass
+                                import traceback
+                                traceback.print_exc()
                     # update conversion mode
                     conv_mode = self.settings.get("3d_conversion_mode", "fallback")
                     if hasattr(self, "conv_actions") and conv_mode in self.conv_actions:
@@ -1679,7 +1706,8 @@ class MainWindowMainInit(object):
                                 act.setChecked(False)
                             self.conv_actions[conv_mode].setChecked(True)
                         except (AttributeError, RuntimeError):  # pragma: no cover
-                            pass
+                            import traceback
+                            traceback.print_exc()
                     
                     # update intermolecular rdkit setting
                     if hasattr(self, "intermolecular_rdkit_action"):
@@ -1698,7 +1726,8 @@ class MainWindowMainInit(object):
                     )
 
                 except (AttributeError, RuntimeError):  # pragma: no cover
-                    pass
+                    import traceback
+                    traceback.print_exc()
                 # Update 2D scene styling to reflect default CPK colors
                 try:
                     # Reset 2D background specifically
@@ -1708,7 +1737,8 @@ class MainWindowMainInit(object):
 
                     self.update_cpk_colors_from_settings()
                 except (AttributeError, RuntimeError):  # pragma: no cover
-                    pass
+                    import traceback
+                    traceback.print_exc()
                 try:
                     if hasattr(self, "scene") and self.scene:
                         for it in list(self.scene.items()):
@@ -1716,7 +1746,8 @@ class MainWindowMainInit(object):
                                 if hasattr(it, "update_style"):
                                     it.update_style()
                             except (AttributeError, RuntimeError):  # pragma: no cover
-                                pass
+                                import traceback
+                                traceback.print_exc()
                         try:
                             # Force a full scene update and viewport repaint for all views
                             self.scene.update()
@@ -1724,11 +1755,14 @@ class MainWindowMainInit(object):
                                 try:
                                     v.viewport().update()
                                 except (AttributeError, RuntimeError):  # pragma: no cover
-                                    pass
+                                    import traceback
+                                    traceback.print_exc()
                         except (AttributeError, RuntimeError):  # pragma: no cover
-                            pass
+                            import traceback
+                            traceback.print_exc()
                 except (AttributeError, RuntimeError):  # pragma: no cover
-                    pass
+                    import traceback
+                    traceback.print_exc()
                 # Also refresh any open SettingsDialog instances so their UI matches
                 try:
                     for w in QApplication.topLevelWidgets():
@@ -1737,11 +1771,14 @@ class MainWindowMainInit(object):
                                 try:
                                     w.update_ui_from_settings(self.settings)
                                 except (AttributeError, RuntimeError):  # pragma: no cover
-                                    pass
+                                    import traceback
+                                    traceback.print_exc()
                         except (AttributeError, RuntimeError):  # pragma: no cover
-                            pass
+                            import traceback
+                            traceback.print_exc()
                 except (AttributeError, RuntimeError):  # pragma: no cover
-                    pass
+                    import traceback
+                    traceback.print_exc()
             except (AttributeError, RuntimeError, ValueError) as e:
                 QMessageBox.warning(
                     self, "Reset Failed", f"Could not reset settings: {e}"
@@ -1912,14 +1949,16 @@ class MainWindowMainInit(object):
                     try:
                         self.settings_dirty = True
                     except (AttributeError, RuntimeError):  # pragma: no cover
-                        pass
+                        import traceback
+                        traceback.print_exc()
             else:
                 # No settings file - use defaults. Mark dirty so defaults will be written on exit.
                 self.settings = default_settings
                 try:
                     self.settings_dirty = True
                 except (AttributeError, RuntimeError):  # pragma: no cover
-                    pass
+                    import traceback
+                    traceback.print_exc()
         except (AttributeError, RuntimeError):
             self.settings = default_settings
 

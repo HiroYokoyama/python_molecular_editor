@@ -181,7 +181,8 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
                 self.z_input.setText("0.0")
         except (AttributeError, RuntimeError):  # pragma: no cover
             # Be tolerant: do not crash the UI if inputs cannot be updated
-            pass
+            import traceback
+            traceback.print_exc()
 
     def calculate_centroid(self):
         """Calculate the geometric center (centroid) of the selected atoms."""
@@ -238,7 +239,8 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
                         try:
                             self.main_window.atom_positions_3d[i] = new_pos
                         except (AttributeError, RuntimeError):  # pragma: no cover
-                            pass
+                            import traceback
+                            traceback.print_exc()
                     else:
                         # leave other atoms unchanged
                         continue
@@ -350,7 +352,8 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
         try:
             self.main_window.plotter.render()
         except (AttributeError, RuntimeError):  # pragma: no cover
-            pass
+            import traceback
+            traceback.print_exc()
 
     def closeEvent(self, event):
         """Clean up when the dialog is closed directly."""

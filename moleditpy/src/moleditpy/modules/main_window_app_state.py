@@ -138,7 +138,8 @@ class MainWindowAppState(object):
                     "Some features may not load or work correctly.",
                 )
         except (ValueError, AttributeError):
-            pass
+            import traceback
+            traceback.print_exc()
 
         raw_atoms = loaded_data.get("atoms", {})
         raw_bonds = loaded_data.get("bonds", {})
@@ -852,7 +853,8 @@ class MainWindowAppState(object):
                                     traceback.print_exc()
                             except (AttributeError, RuntimeError, TypeError):
                                 # non-fatal if mapping creation fails
-                                pass
+                                import traceback
+                                traceback.print_exc()
 
                         # Always show 3D if 3D molecule exists
                         self.draw_molecule_3d(self.current_mol)

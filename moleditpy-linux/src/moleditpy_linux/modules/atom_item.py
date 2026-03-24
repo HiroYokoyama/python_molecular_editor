@@ -294,7 +294,8 @@ class AtomItem(QGraphicsItem):
                                 continue
                         except (AttributeError, RuntimeError, TypeError):
                             # If sip check fails, continue defensively
-                            pass
+                            import traceback
+                            traceback.print_exc()
 
                         other_pos = None
                         try:

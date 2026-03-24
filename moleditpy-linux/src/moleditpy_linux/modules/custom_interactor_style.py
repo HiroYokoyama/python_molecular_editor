@@ -594,11 +594,13 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                             except (AttributeError, KeyError, TypeError, ValueError):
                                 # Skip individual failures but continue applying
                                 # other atom positions.
-                                pass
+                                import traceback
+                                traceback.print_exc()
                     except (AttributeError, RuntimeError):
                         # If applying positions fails, continue to redraw from
                         # whatever authoritative state is available.
-                        pass
+                        import traceback
+                        traceback.print_exc()
 
                     # Redraw and push undo state
                     try:
@@ -619,7 +621,8 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                 try:
                     update_call()
                 except (AttributeError, RuntimeError):  # pragma: no cover
-                    pass
+                    import traceback
+                    traceback.print_exc()
         else:
             # Delegate cleanup to parent
             super().OnLeftButtonUp()

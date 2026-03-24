@@ -183,7 +183,7 @@ class MainWindowMolecularParsers(object):
             self.statusBar().showMessage(f"File not found: {file_path}")
         except ValueError as e:  # pragma: no cover
             self.statusBar().showMessage(f"Invalid MOL file format: {e}")
-        except (AttributeError, RuntimeError, ValueError) as e:
+        except (AttributeError, RuntimeError, ValueError, TypeError) as e:
             self.statusBar().showMessage(f"Error loading file: {e}")
 
     def load_xyz_file(self, file_path):
@@ -241,7 +241,7 @@ class MainWindowMolecularParsers(object):
                         btn_box.button(QDialogButtonBox.Cancel).clicked.connect(
                             on_cancel
                         )
-                    except (AttributeError, RuntimeError):
+                    except (AttributeError, RuntimeError, ValueError, TypeError):
                         # Fallback if button lookup fails
                         btn_box.accepted.connect(on_ok)
                         btn_box.rejected.connect(on_cancel)
@@ -260,7 +260,7 @@ class MainWindowMolecularParsers(object):
                         return None, False, False
 
                     charge_text = line_edit.text()
-                except (AttributeError, RuntimeError):
+                except (AttributeError, RuntimeError, ValueError, TypeError):
                     # Fallback to simple input dialog on error
                     try:
                         charge_text, ok = QInputDialog.getText(
@@ -269,16 +269,16 @@ class MainWindowMolecularParsers(object):
                             "Enter total molecular charge:",
                             text="0",
                         )
-                    except (AttributeError, RuntimeError):
+                    except (AttributeError, RuntimeError, ValueError, TypeError):
                         return 0, True, False
                     if not ok:
                         return None, False, False
                     try:
                         return int(str(charge_text).strip()), True, False
-                    except (AttributeError, RuntimeError):
+                    except (AttributeError, RuntimeError, ValueError, TypeError):
                         try:
                             return int(float(str(charge_text).strip())), True, False
-                        except (AttributeError, RuntimeError):
+                        except (AttributeError, RuntimeError, ValueError, TypeError):
                             return 0, True, False
 
                 if charge_text is None:
@@ -286,7 +286,7 @@ class MainWindowMolecularParsers(object):
 
                 try:
                     return int(str(charge_text).strip()), True, False
-                except (AttributeError, RuntimeError):
+                except (AttributeError, RuntimeError, ValueError, TypeError):
                     try:
                         return int(float(str(charge_text).strip())), True, False
                     except (AttributeError, RuntimeError):
@@ -342,12 +342,12 @@ class MainWindowMolecularParsers(object):
                 try:
                     # Check if RDKit recognizes element
                     test_atom = Chem.Atom(symbol)
-                except (AttributeError, RuntimeError):
+                except (AttributeError, RuntimeError, ValueError, TypeError):
                     # Retry with capitalized symbol if unrecognized
                     symbol = symbol.capitalize()
                     try:
                         test_atom = Chem.Atom(symbol)
-                    except (AttributeError, RuntimeError):
+                    except (AttributeError, RuntimeError, ValueError, TypeError):
                         # Coerce unknown symbols to 'C' if skipping checks
                         if self.settings.get("skip_chemistry_checks", False):
                             symbol = "C"
@@ -385,7 +385,7 @@ class MainWindowMolecularParsers(object):
             mol.AddConformer(conf)
             try:
                 skip_checks = bool(self.settings.get("skip_chemistry_checks", False))
-            except (AttributeError, KeyError, TypeError):
+            except (AttributeError, RuntimeError, ValueError, TypeError, KeyError):
                 skip_checks = False
 
             if skip_checks:
@@ -393,7 +393,7 @@ class MainWindowMolecularParsers(object):
                 try:
                     # Use the conservative distance-based heuristic to add bonds
                     self.estimate_bonds_from_distances(mol)
-                except (AttributeError, RuntimeError):  # pragma: no cover
+                except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
                     # Non-fatal: continue even if distance-based estimation fails
                     pass
 

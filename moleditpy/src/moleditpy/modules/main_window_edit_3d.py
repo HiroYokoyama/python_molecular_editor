@@ -85,7 +85,8 @@ class MainWindowEdit3d(object):
             try:
                 dialog.close()
             except (AttributeError, RuntimeError):  # pragma: no cover
-                pass
+                import traceback
+                traceback.print_exc()
 
         self.active_3d_dialogs.clear()
 
@@ -123,7 +124,8 @@ class MainWindowEdit3d(object):
             # Remove existing labels
             self.plotter.remove_actor("measurement_labels")
         except (AttributeError, RuntimeError):  # pragma: no cover
-            pass
+            import traceback
+            traceback.print_exc()
 
         if not self.measurement_labels or not self.current_mol:
             return
@@ -160,7 +162,8 @@ class MainWindowEdit3d(object):
         try:
             self.plotter.remove_actor("measurement_labels")
         except (AttributeError, RuntimeError):  # pragma: no cover
-            pass
+            import traceback
+            traceback.print_exc()
 
         # Remove 2D labels
         self.clear_2d_measurement_labels()
@@ -171,7 +174,8 @@ class MainWindowEdit3d(object):
                 self.plotter.remove_actor(self.measurement_text_actor)
                 self.measurement_text_actor = None
             except (AttributeError, RuntimeError):  # pragma: no cover
-                pass
+                import traceback
+                traceback.print_exc()
 
         self.plotter.render()
 
@@ -329,7 +333,8 @@ class MainWindowEdit3d(object):
             try:
                 self.plotter.remove_actor(self.measurement_text_actor)
             except (AttributeError, RuntimeError):  # pragma: no cover
-                pass
+                import traceback
+                traceback.print_exc()
 
         if not measurement_lines:
             self.measurement_text_actor = None
@@ -383,7 +388,8 @@ class MainWindowEdit3d(object):
             # Remove existing highlight
             self.plotter.remove_actor("selection_highlight")
         except (AttributeError, RuntimeError):  # pragma: no cover
-            pass
+            import traceback
+            traceback.print_exc()
 
         if not self.selected_atoms_3d or not self.current_mol:
             self.plotter.render()

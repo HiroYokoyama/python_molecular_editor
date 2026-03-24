@@ -505,7 +505,8 @@ class MainWindowExport(object):
                                     color = [int(c * 255) for c in vtk_color]
                         except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
                             # Use default color on failure
-                            pass
+                            import traceback
+                            traceback.print_exc()
 
                         # Create mesh copy
                         mesh_copy = mesh.copy()
@@ -546,7 +547,8 @@ class MainWindowExport(object):
                                             temp_mesh.point_data["colors"]
                                         )
                                 except (AttributeError, RuntimeError):  # pragma: no cover
-                                    pass
+                                    import traceback
+                                    traceback.print_exc()
                             if colors is not None and colors.size > 0:
                                 # Normalize float colors to 0-255
                                 colors_arr = np.asarray(colors)
@@ -635,7 +637,8 @@ class MainWindowExport(object):
                                     # Do not continue here; let the default addition handle it (color has been updated)
                         except (AttributeError, RuntimeError):  # pragma: no cover
                             # Fallback: add single mesh on failure
-                            pass
+                            import traceback
+                            traceback.print_exc()
 
                         meshes_with_colors.append(
                             {
@@ -715,7 +718,8 @@ class MainWindowExport(object):
         try:
             original_background = self.scene.backgroundBrush()
         except (AttributeError, RuntimeError):  # pragma: no cover
-            pass
+            import traceback
+            traceback.print_exc()
 
         try:
             all_items = list(self.scene.items())
