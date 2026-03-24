@@ -1430,9 +1430,8 @@ class MainWindowView3d(object):
                 for nm in self.atom_label_legend_names:
                     try:
                         self.plotter.remove_actor(nm)
-                    except Exception:  # pragma: no cover
-                        import traceback
-                        traceback.print_exc()
+                    except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
+                        pass
             self.atom_label_legend_names = []
 
             legend_entries = []
@@ -1476,11 +1475,9 @@ class MainWindowView3d(object):
                             try:
                                 tp.SetBold(True)
                             except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
-                                import traceback
-                                traceback.print_exc()
-                    except Exception:  # pragma: no cover
-                        import traceback
-                        traceback.print_exc()
+                                pass
+                    except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
+                        pass
                 except (AttributeError, RuntimeError, TypeError):
                     continue
 
@@ -1507,11 +1504,9 @@ class MainWindowView3d(object):
                     try:
                         self.plotter.remove_actor(self.current_atom_info_labels)
                     except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
-                        import traceback
-                        traceback.print_exc()
-        except Exception:  # pragma: no cover
-            import traceback
-            traceback.print_exc()
+                        pass
+        except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
+            pass
         finally:
             self.current_atom_info_labels = None
 
@@ -1524,12 +1519,10 @@ class MainWindowView3d(object):
                 for nm in list(self.atom_label_legend_names):
                     try:
                         self.plotter.remove_actor(nm)
-                    except Exception:  # pragma: no cover
-                        import traceback
-                        traceback.print_exc()
-        except Exception:  # pragma: no cover
-            import traceback
-            traceback.print_exc()
+                    except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
+                        pass
+        except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
+            pass
         finally:
             self.atom_label_legend_names = []
 
@@ -1601,9 +1594,8 @@ class MainWindowView3d(object):
                     self.view_2d.setTransformationAnchor(old_ta)
                 if old_ra is not None:
                     self.view_2d.setResizeAnchor(old_ra)
-            except Exception:  # pragma: no cover
-                import traceback
-                traceback.print_exc()
+            except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
+                pass
 
     def update_cpk_colors_from_settings(self):
         """Update global CPK_COLORS and CPK_COLORS_PV from saved settings overrides.
@@ -1698,9 +1690,8 @@ class MainWindowView3d(object):
         if not getattr(self, "_camera_initialized", False):
             try:
                 self.plotter.reset_camera()
-            except Exception:  # pragma: no cover
-                import traceback
-                traceback.print_exc()
+            except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
+                pass
 
             self._camera_initialized = True
 
@@ -1709,9 +1700,8 @@ class MainWindowView3d(object):
             self.plotter.render()
             if hasattr(self.plotter, "update"):
                 self.plotter.update()
-        except Exception:  # pragma: no cover
-            import traceback
-            traceback.print_exc()
+        except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
+            pass
 
     def update_bond_color_override(self, bond_idx, hex_color):
         """Plugin API helper to override bond color."""
