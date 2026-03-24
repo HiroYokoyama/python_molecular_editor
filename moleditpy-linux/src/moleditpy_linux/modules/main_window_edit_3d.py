@@ -84,7 +84,7 @@ class MainWindowEdit3d(object):
         for dialog in dialogs_to_close:
             try:
                 dialog.close()
-            except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
+            except (AttributeError, RuntimeError, ValueError, TypeError):  
                 import traceback
                 traceback.print_exc()
 
@@ -123,7 +123,7 @@ class MainWindowEdit3d(object):
         try:
             # Remove existing labels
             self.plotter.remove_actor("measurement_labels")
-        except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
+        except (AttributeError, RuntimeError, ValueError, TypeError):  
             import traceback
             traceback.print_exc()
 
@@ -161,7 +161,7 @@ class MainWindowEdit3d(object):
         self.measurement_labels.clear()
         try:
             self.plotter.remove_actor("measurement_labels")
-        except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
+        except (AttributeError, RuntimeError, ValueError, TypeError):  
             import traceback
             traceback.print_exc()
 
@@ -173,7 +173,7 @@ class MainWindowEdit3d(object):
             try:
                 self.plotter.remove_actor(self.measurement_text_actor)
                 self.measurement_text_actor = None
-            except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
+            except (AttributeError, RuntimeError, ValueError, TypeError):  
                 import traceback
                 traceback.print_exc()
 
@@ -332,7 +332,7 @@ class MainWindowEdit3d(object):
         if self.measurement_text_actor:
             try:
                 self.plotter.remove_actor(self.measurement_text_actor)
-            except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
+            except (AttributeError, RuntimeError, ValueError, TypeError):  
                 import traceback
                 traceback.print_exc()
 
@@ -387,7 +387,7 @@ class MainWindowEdit3d(object):
         try:
             # Remove existing highlight
             self.plotter.remove_actor("selection_highlight")
-        except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
+        except (AttributeError, RuntimeError, ValueError, TypeError):  
             import traceback
             traceback.print_exc()
 

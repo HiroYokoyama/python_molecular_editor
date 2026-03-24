@@ -34,7 +34,7 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QMessageBox
 
 
-class AngleDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
+class AngleDialog(Dialog3DPickingMixin, QDialog):  
     def __init__(self, mol, main_window, preselected_atoms=None, parent=None):
         QDialog.__init__(self, parent)
         Dialog3DPickingMixin.__init__(self)
@@ -298,7 +298,7 @@ class AngleDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
                 self.angle_slider.setValue(slider_val)
                 self.angle_slider.setEnabled(True)
                 self.angle_slider.blockSignals(False)
-            except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
+            except (AttributeError, RuntimeError, TypeError):  
                 import traceback
                 traceback.print_exc()
 

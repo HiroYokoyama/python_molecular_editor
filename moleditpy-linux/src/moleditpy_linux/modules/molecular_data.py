@@ -307,7 +307,7 @@ class MolecularData:
         if mol:
             try:
                 return Chem.MolToMolBlock(mol, includeStereo=True)
-            except (RuntimeError, ValueError, TypeError):  # pragma: no cover
+            except (RuntimeError, ValueError, TypeError):  
                 import traceback
                 traceback.print_exc()
 

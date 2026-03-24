@@ -77,7 +77,7 @@ except ImportError:
     from modules.plugin_manager import PluginManager
 
 
-def detect_system_dark_mode():  # pragma: no cover
+def detect_system_dark_mode():  
     """Return True if the OS prefers dark app theme, False if light, or None if unknown.
 
     This is a best-effort, cross-platform check supporting Windows (registry),
@@ -95,7 +95,7 @@ def detect_system_dark_mode():  # pragma: no cover
     return None
 
 
-def detect_system_theme():  # pragma: no cover
+def detect_system_theme():  
     """Return the OS's preferred theme setting as 'dark', 'light', or None.
 
     This is a best-effort, cross-platform check.
@@ -110,7 +110,7 @@ def detect_system_theme():  # pragma: no cover
                 ) as k:
                     val, _ = winreg.QueryValueEx(k, "AppsUseLightTheme")
                     return "dark" if int(val) == 0 else "light"
-            except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
+            except (AttributeError, RuntimeError, ValueError, TypeError):  
                 import traceback
                 traceback.print_exc()
         # macOS: 'defaults read -g AppleInterfaceStyle'
@@ -132,7 +132,7 @@ def detect_system_theme():  # pragma: no cover
                         return "dark"
                     if "light" in out.lower():
                         return "light"
-            except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
+            except (AttributeError, RuntimeError, ValueError, TypeError):  
                 import traceback
                 traceback.print_exc()
             try:
@@ -143,10 +143,10 @@ def detect_system_theme():  # pragma: no cover
                 )
                 if p.returncode == 0 and "-dark" in p.stdout.lower():
                     return "dark"
-            except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
+            except (AttributeError, RuntimeError, ValueError, TypeError):  
                 import traceback
                 traceback.print_exc()
-    except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
+    except (AttributeError, RuntimeError, ValueError, TypeError):  
         import traceback
         traceback.print_exc()
 
@@ -187,7 +187,7 @@ class MainWindowMainInit(object):
 
     # __init__ is copied from main_window.py
 
-    def __init__(self, initial_file=None):  # pragma: no cover
+    def __init__(self, initial_file=None):  
         # This helper is not used as a mixin in this project; initialization
         # happens on the `MainWindow` instance. Avoid calling super() here
         # because we initialize the `QMainWindow` base class in
@@ -290,13 +290,13 @@ class MainWindowMainInit(object):
         if initial_file:
             self.load_command_line_file(initial_file)
 
-        QTimer.singleShot(0, self.apply_initial_settings)  # pragma: no cover
+        QTimer.singleShot(0, self.apply_initial_settings)  
         # Camera initialization flag (permits reset only during the first draw)
         self._camera_initialized = False
 
         # Set initial menu text and state
         self.update_atom_id_menu_text()
-        self.update_atom_id_menu_state()  # pragma: no cover
+        self.update_atom_id_menu_state()  
 
         # Set initialization complete
         self.initialization_complete = True
@@ -306,11 +306,11 @@ class MainWindowMainInit(object):
         # accidental focus landing on toolbar/buttons (e.g. Optimize 2D).
         try:
             QTimer.singleShot(0, self.view_2d.setFocus)
-        except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
+        except (AttributeError, RuntimeError, ValueError, TypeError):  
             import traceback
             traceback.print_exc()
 
-    def init_ui(self):  # pragma: no cover
+    def init_ui(self):  
         # 1. Get the path to the directory where the current script is located
         script_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -384,7 +384,7 @@ class MainWindowMainInit(object):
             self.convert_button.customContextMenuRequested.connect(
                 self.show_convert_menu
             )
-        except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
+        except (AttributeError, RuntimeError, ValueError, TypeError):  
             import traceback
             traceback.print_exc()
 
@@ -426,7 +426,7 @@ class MainWindowMainInit(object):
             self.optimize_3d_button.customContextMenuRequested.connect(
                 self.show_optimize_menu
             )
-        except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
+        except (AttributeError, RuntimeError, ValueError, TypeError):  
             import traceback
             traceback.print_exc()
 
@@ -488,7 +488,7 @@ class MainWindowMainInit(object):
         try:
             # Insert a toolbar break in the Top toolbar area to force the next toolbar onto a new row
             self.addToolBarBreak(Qt.ToolBarArea.TopToolBarArea)
-        except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
+        except (AttributeError, RuntimeError, ValueError, TypeError):  
             # If addToolBarBreak isn't available, continue without raising; placement may still work depending on the platform.
             import traceback
             traceback.print_exc()
@@ -500,7 +500,7 @@ class MainWindowMainInit(object):
         # Plugin Toolbar (Third Row)
         try:
             self.addToolBarBreak(Qt.ToolBarArea.TopToolBarArea)
-        except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
+        except (AttributeError, RuntimeError, ValueError, TypeError):  
             import traceback
             traceback.print_exc()
 
@@ -573,7 +573,7 @@ class MainWindowMainInit(object):
                     c = QColor(fg_hex)
                     if c.isValid():
                         return c
-            except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
+            except (AttributeError, RuntimeError, ValueError, TypeError):  
                 import traceback
                 traceback.print_exc()
 
@@ -583,7 +583,7 @@ class MainWindowMainInit(object):
                 # Standard mapping: dark -> white, light -> black
                 if os_pref is not None:
                     return QColor("#FFFFFF") if os_pref else QColor("#000000")
-            except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
+            except (AttributeError, RuntimeError, ValueError, TypeError):  
                 import traceback
                 traceback.print_exc()
 
@@ -601,7 +601,7 @@ class MainWindowMainInit(object):
                         )
                         # Return white on dark (lum<0.5), black on light
                         return QColor("#FFFFFF") if lum < 0.5 else QColor("#000000")
-            except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
+            except (AttributeError, RuntimeError, ValueError, TypeError):  
                 import traceback
                 traceback.print_exc()
 
@@ -894,7 +894,7 @@ class MainWindowMainInit(object):
 
         self.view_2d.setFocus()
 
-    def init_menu_bar(self):  # pragma: no cover
+    def init_menu_bar(self):  
         menu_bar = self.menuBar()
 
         file_menu = menu_bar.addMenu("&File")
@@ -1358,11 +1358,11 @@ class MainWindowMainInit(object):
                 # defer disk write
                 try:
                     self.settings_dirty = True
-                except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
+                except (AttributeError, RuntimeError, ValueError, TypeError):  
                     import traceback
                     traceback.print_exc()
                 self.statusBar().showMessage(f"3D conversion mode set to: {mode}")
-            except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
+            except (AttributeError, RuntimeError, ValueError, TypeError):  
                 import traceback
                 traceback.print_exc()
 
@@ -1415,16 +1415,16 @@ class MainWindowMainInit(object):
             if saved_conv in self.conv_actions:
                 try:
                     self.conv_actions[saved_conv].setChecked(True)
-                except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
+                except (AttributeError, RuntimeError, ValueError, TypeError):  
                     import traceback
                     traceback.print_exc()
             self.settings["3d_conversion_mode"] = saved_conv
             try:
                 self.settings_dirty = True
-            except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
+            except (AttributeError, RuntimeError, ValueError, TypeError):  
                 import traceback
                 traceback.print_exc()
-        except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
+        except (AttributeError, RuntimeError, ValueError, TypeError):  
             import traceback
             traceback.print_exc()
 
@@ -1459,7 +1459,7 @@ class MainWindowMainInit(object):
             action.setCheckable(True)
             try:
                 action.setActionGroup(opt_group)
-            except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
+            except (AttributeError, RuntimeError, ValueError, TypeError):  
                 import traceback
                 traceback.print_exc()
 
@@ -1504,7 +1504,7 @@ class MainWindowMainInit(object):
                 if "MMFF_RDKIT" in self.opt3d_actions:
                     self.opt3d_actions["MMFF_RDKIT"].setChecked(True)
                     self.optimization_method = "MMFF_RDKIT"
-        except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
+        except (AttributeError, RuntimeError, ValueError, TypeError):  
             import traceback
             traceback.print_exc()
 
@@ -1549,9 +1549,9 @@ class MainWindowMainInit(object):
         self._enable_3d_features(False)
 
         # Finally, populate plugins now that all menus are created
-        self.update_plugin_menu(plugin_menu)  # pragma: no cover
+        self.update_plugin_menu(plugin_menu)  
 
-    def init_worker_thread(self):  # pragma: no cover
+    def init_worker_thread(self):  
         # Initialize shared state for calculation runs.
         self.halt_ids = set()
         self.next_conversion_id = 1
@@ -1562,7 +1562,7 @@ class MainWindowMainInit(object):
         except (AttributeError, RuntimeError, ValueError, TypeError):
             self._active_calc_threads = []
 
-    def load_command_line_file(self, file_path):  # pragma: no cover
+    def load_command_line_file(self, file_path):  
         """Open file specified by command-line argument"""
         if not file_path or not os.path.exists(file_path):
             return
@@ -1602,12 +1602,12 @@ class MainWindowMainInit(object):
         else:
             self.statusBar().showMessage(f"Unsupported file type: {file_ext}")
 
-    def apply_initial_settings(self):  # pragma: no cover
+    def apply_initial_settings(self):  
         """Apply saved settings to the 3D view after UI initialization is complete."""
 
         try:
             self.update_cpk_colors_from_settings()
-        except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
+        except (AttributeError, RuntimeError, ValueError, TypeError):  
             import traceback
             traceback.print_exc()
 
@@ -1628,16 +1628,16 @@ class MainWindowMainInit(object):
                 self.scene.update()
                 for v in list(self.scene.views()):
                     v.viewport().update()
-        except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
+        except (AttributeError, RuntimeError, ValueError, TypeError):  
             import traceback
             traceback.print_exc()
 
-    def open_settings_dialog(self):  # pragma: no cover
+    def open_settings_dialog(self):  
         dialog = SettingsDialog(self.settings, self)
         # Settings application and 3D view updates are handled by the accept() method.
         dialog.exec()
 
-    def reset_all_settings_menu(self):  # pragma: no cover
+    def reset_all_settings_menu(self):  
         # Expose the same functionality as SettingsDialog.reset_all_settings
         dlg = QMessageBox(self)
         dlg.setIcon(QMessageBox.Icon.Warning)
@@ -1656,7 +1656,7 @@ class MainWindowMainInit(object):
                 # Do not write to disk immediately; mark dirty so settings will be saved on exit
                 try:
                     self.settings_dirty = True
-                except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
+                except (AttributeError, RuntimeError, ValueError, TypeError):  
                     import traceback
                     traceback.print_exc()
                 # If ColorSettingsDialog is open, refresh its UI to reflect the reset
@@ -1666,19 +1666,19 @@ class MainWindowMainInit(object):
                             if isinstance(w, ColorSettingsDialog):
                                 try:
                                     w.refresh_ui()
-                                except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
+                                except (AttributeError, RuntimeError, ValueError, TypeError):  
                                     import traceback
                                     traceback.print_exc()
-                        except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
+                        except (AttributeError, RuntimeError, ValueError, TypeError):  
                             import traceback
                             traceback.print_exc()
-                except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
+                except (AttributeError, RuntimeError, ValueError, TypeError):  
                     import traceback
                     traceback.print_exc()
                 # Ensure global CPK mapping is rebuilt from defaults and UI is updated
                 try:
                     self.update_cpk_colors_from_settings()
-                except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
+                except (AttributeError, RuntimeError, ValueError, TypeError):  
                     import traceback
                     traceback.print_exc()
                 # Refresh UI/menu state for conversion and optimization
@@ -1695,7 +1695,7 @@ class MainWindowMainInit(object):
                                 act.setChecked(False)
                             try:
                                 self.opt3d_actions[key].setChecked(True)
-                            except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
+                            except (AttributeError, RuntimeError, ValueError, TypeError):  
                                 import traceback
                                 traceback.print_exc()
                     # update conversion mode
@@ -1705,7 +1705,7 @@ class MainWindowMainInit(object):
                             for act in self.conv_actions.values():
                                 act.setChecked(False)
                             self.conv_actions[conv_mode].setChecked(True)
-                        except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
+                        except (AttributeError, RuntimeError, ValueError, TypeError):  
                             import traceback
                             traceback.print_exc()
                     
@@ -1725,7 +1725,7 @@ class MainWindowMainInit(object):
                         "All settings have been reset to defaults.",
                     )
 
-                except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
+                except (AttributeError, RuntimeError, ValueError, TypeError):  
                     import traceback
                     traceback.print_exc()
                 # Update 2D scene styling to reflect default CPK colors
@@ -1736,7 +1736,7 @@ class MainWindowMainInit(object):
                         self.scene.setBackgroundBrush(QBrush(QColor(bg_c)))
 
                     self.update_cpk_colors_from_settings()
-                except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
+                except (AttributeError, RuntimeError, ValueError, TypeError):  
                     import traceback
                     traceback.print_exc()
                 try:
@@ -1745,7 +1745,7 @@ class MainWindowMainInit(object):
                             try:
                                 if hasattr(it, "update_style"):
                                     it.update_style()
-                            except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
+                            except (AttributeError, RuntimeError, ValueError, TypeError):  
                                 import traceback
                                 traceback.print_exc()
                         try:
@@ -1754,13 +1754,13 @@ class MainWindowMainInit(object):
                             for v in list(self.scene.views()):
                                 try:
                                     v.viewport().update()
-                                except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
+                                except (AttributeError, RuntimeError, ValueError, TypeError):  
                                     import traceback
                                     traceback.print_exc()
-                        except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
+                        except (AttributeError, RuntimeError, ValueError, TypeError):  
                             import traceback
                             traceback.print_exc()
-                except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
+                except (AttributeError, RuntimeError, ValueError, TypeError):  
                     import traceback
                     traceback.print_exc()
                 # Also refresh any open SettingsDialog instances so their UI matches
@@ -1770,13 +1770,13 @@ class MainWindowMainInit(object):
                             if isinstance(w, SettingsDialog):
                                 try:
                                     w.update_ui_from_settings(self.settings)
-                                except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
+                                except (AttributeError, RuntimeError, ValueError, TypeError):  
                                     import traceback
                                     traceback.print_exc()
-                        except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
+                        except (AttributeError, RuntimeError, ValueError, TypeError):  
                             import traceback
                             traceback.print_exc()
-                except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
+                except (AttributeError, RuntimeError, ValueError, TypeError):  
                     import traceback
                     traceback.print_exc()
             except (AttributeError, RuntimeError, ValueError) as e:
@@ -1948,7 +1948,7 @@ class MainWindowMainInit(object):
                 if changed:
                     try:
                         self.settings_dirty = True
-                    except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
+                    except (AttributeError, RuntimeError, ValueError, TypeError):  
                         import traceback
                         traceback.print_exc()
             else:
@@ -1956,13 +1956,13 @@ class MainWindowMainInit(object):
                 self.settings = default_settings
                 try:
                     self.settings_dirty = True
-                except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
+                except (AttributeError, RuntimeError, ValueError, TypeError):  
                     import traceback
                     traceback.print_exc()
         except (AttributeError, RuntimeError, ValueError, TypeError):
             self.settings = default_settings
 
-    def save_settings(self):  # pragma: no cover
+    def save_settings(self):  
         try:
             if not os.path.exists(self.settings_dir):
                 os.makedirs(self.settings_dir)
@@ -1971,7 +1971,7 @@ class MainWindowMainInit(object):
         except (AttributeError, RuntimeError, ValueError) as e:
             print(f"Error saving settings: {e}")
 
-    def update_plugin_menu(self, plugin_menu):  # pragma: no cover
+    def update_plugin_menu(self, plugin_menu):  
         """Discovers plugins and updates the plugin menu actions."""
         if not self.plugin_manager:
             return

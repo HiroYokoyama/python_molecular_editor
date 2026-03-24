@@ -112,7 +112,7 @@ class AtomItem(QGraphicsItem):
                 if win and hasattr(win, "settings"):
                     font_size = win.settings.get("atom_font_size_2d", 20)
                     font_family = win.settings.get("atom_font_family_2d", FONT_FAMILY)
-        except (AttributeError, RuntimeError, TypeError, ValueError):  # pragma: no cover
+        except (AttributeError, RuntimeError, TypeError, ValueError):  
             import traceback
             traceback.print_exc()
 
@@ -247,7 +247,7 @@ class AtomItem(QGraphicsItem):
                     ):
                         bond_col = win.settings.get("bond_color_2d", "#222222")
                         color = QColor(bond_col)
-        except (AttributeError, RuntimeError, TypeError, ValueError):  # pragma: no cover
+        except (AttributeError, RuntimeError, TypeError, ValueError):  
             import traceback
             traceback.print_exc()
 

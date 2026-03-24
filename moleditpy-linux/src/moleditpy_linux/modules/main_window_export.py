@@ -50,7 +50,7 @@ class MainWindowExport(object):
 
     def export_stl(self):
         """Export as STL (no color)."""
-        if not self.current_mol:  # pragma: no cover
+        if not self.current_mol:  
             self.statusBar().showMessage("Error: Please generate a 3D structure first.")
             return
 
@@ -62,18 +62,18 @@ class MainWindowExport(object):
         except (AttributeError, RuntimeError, ValueError, TypeError):
             default_dir = ""
 
-        file_path, _ = QFileDialog.getSaveFileName(  # pragma: no cover
+        file_path, _ = QFileDialog.getSaveFileName(  
             self, "Export as STL", default_dir, "STL Files (*.stl);;All Files (*)"
         )
 
-        if not file_path:  # pragma: no cover
+        if not file_path:  
             return
 
         try:
             # Get 3D data from view (no color)
             combined_mesh = self.export_from_3d_view_no_color()
 
-            if combined_mesh is None or combined_mesh.n_points == 0:  # pragma: no cover
+            if combined_mesh is None or combined_mesh.n_points == 0:  
                 self.statusBar().showMessage("No 3D geometry to export.")
                 return
 
@@ -83,14 +83,14 @@ class MainWindowExport(object):
             combined_mesh.save(file_path, binary=True)
             self.statusBar().showMessage(
                 f"STL exported to {file_path}"
-            )  # pragma: no cover
+            )  
 
         except (AttributeError, RuntimeError, ValueError) as e:
             self.statusBar().showMessage(f"Error exporting STL: {e}")
 
     def export_obj_mtl(self):
         """Export as OBJ/MTL (with colors)."""
-        if not self.current_mol:  # pragma: no cover
+        if not self.current_mol:  
             self.statusBar().showMessage("Error: Please generate a 3D structure first.")
             return
 
@@ -102,7 +102,7 @@ class MainWindowExport(object):
         except (AttributeError, RuntimeError, ValueError, TypeError):
             default_dir = ""
 
-        file_path, _ = QFileDialog.getSaveFileName(  # pragma: no cover
+        file_path, _ = QFileDialog.getSaveFileName(  
             self,
             "Export as OBJ/MTL (with colors)",
             default_dir,
@@ -116,7 +116,7 @@ class MainWindowExport(object):
             # Get mesh data with colors from 3D view
             meshes_with_colors = self.export_from_3d_view_with_colors()
 
-            if not meshes_with_colors:  # pragma: no cover
+            if not meshes_with_colors:  
                 self.statusBar().showMessage("No 3D geometry to export.")
                 return
 
@@ -131,7 +131,7 @@ class MainWindowExport(object):
 
             self.statusBar().showMessage(
                 f"OBJ+MTL files with individual colors exported to {file_path} and {mtl_path}"
-            )  # pragma: no cover
+            )  
 
         except (AttributeError, RuntimeError, ValueError) as e:
             self.statusBar().showMessage(f"Error exporting OBJ/MTL: {e}")
@@ -234,7 +234,7 @@ class MainWindowExport(object):
 
     def export_color_stl(self):
         """Export as Color STL."""
-        if not self.current_mol:  # pragma: no cover
+        if not self.current_mol:  
             self.statusBar().showMessage("Error: Please generate a 3D structure first.")
             return
 
@@ -246,18 +246,18 @@ class MainWindowExport(object):
         except (AttributeError, RuntimeError, ValueError, TypeError):
             default_dir = ""
 
-        file_path, _ = QFileDialog.getSaveFileName(  # pragma: no cover
+        file_path, _ = QFileDialog.getSaveFileName(  
             self, "Export as Color STL", default_dir, "STL Files (*.stl);;All Files (*)"
         )
 
-        if not file_path:  # pragma: no cover
+        if not file_path:  
             return
 
         try:
             # Get 3D data from view
             combined_mesh = self.export_from_3d_view()
 
-            if combined_mesh is None or combined_mesh.n_points == 0:  # pragma: no cover
+            if combined_mesh is None or combined_mesh.n_points == 0:  
                 self.statusBar().showMessage("No 3D geometry to export.")
                 return
 
@@ -267,7 +267,7 @@ class MainWindowExport(object):
             combined_mesh.save(file_path, binary=True)
             self.statusBar().showMessage(
                 f"STL exported to {file_path}"
-            )  # pragma: no cover
+            )  
 
         except (AttributeError, RuntimeError, ValueError) as e:
             self.statusBar().showMessage(f"Error exporting STL: {e}")
@@ -503,7 +503,7 @@ class MainWindowExport(object):
                                 if prop is not None:
                                     vtk_color = prop.GetColor()
                                     color = [int(c * 255) for c in vtk_color]
-                        except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
+                        except (AttributeError, RuntimeError, TypeError):  
                             # Use default color on failure
                             import traceback
                             traceback.print_exc()
@@ -546,7 +546,7 @@ class MainWindowExport(object):
                                         colors = np.asarray(
                                             temp_mesh.point_data["colors"]
                                         )
-                                except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
+                                except (AttributeError, RuntimeError, ValueError, TypeError):  
                                     import traceback
                                     traceback.print_exc()
                             if colors is not None and colors.size > 0:
@@ -635,7 +635,7 @@ class MainWindowExport(object):
                                     uc = unique_colors[0]
                                     color = [int(uc[0]), int(uc[1]), int(uc[2])]
                                     # Do not continue here; let the default addition handle it (color has been updated)
-                        except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
+                        except (AttributeError, RuntimeError, ValueError, TypeError):  
                             # Fallback: add single mesh on failure
                             import traceback
                             traceback.print_exc()
@@ -661,7 +661,7 @@ class MainWindowExport(object):
             print(f"Error in export_from_3d_view_with_colors: {e}")
             return []
 
-    def export_2d_png(self):  # pragma: no cover
+    def export_2d_png(self):  
         if not self.data.atoms:
             self.statusBar().showMessage("Nothing to export.")
             return
@@ -717,7 +717,7 @@ class MainWindowExport(object):
         original_background = None
         try:
             original_background = self.scene.backgroundBrush()
-        except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
+        except (AttributeError, RuntimeError, ValueError, TypeError):  
             import traceback
             traceback.print_exc()
 
@@ -793,7 +793,7 @@ class MainWindowExport(object):
             if self.view_2d:
                 self.view_2d.viewport().update()
 
-    def export_2d_svg(self):  # pragma: no cover
+    def export_2d_svg(self):  
         """Export 2D drawing as SVG."""
         if not self.data.atoms:
             self.statusBar().showMessage("Nothing to export.")
@@ -914,7 +914,7 @@ class MainWindowExport(object):
             if self.view_2d:
                 self.view_2d.viewport().update()
 
-    def export_3d_png(self):  # pragma: no cover
+    def export_3d_png(self):  
         """Export 3D view as PNG."""
         if not self.current_mol:
             self.statusBar().showMessage("No 3D molecule to export.", 2000)

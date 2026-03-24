@@ -27,7 +27,7 @@ except ImportError:
     from modules.dialog3_d_picking_mixin import Dialog3DPickingMixin
 
 
-class AlignPlaneDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
+class AlignPlaneDialog(Dialog3DPickingMixin, QDialog):  
     def __init__(self, mol, main_window, plane, preselected_atoms=None, parent=None):
         QDialog.__init__(self, parent)
         Dialog3DPickingMixin.__init__(self)

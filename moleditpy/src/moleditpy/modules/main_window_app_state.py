@@ -240,14 +240,14 @@ class MainWindowAppState(object):
                                         self.current_mol.GetAtomWithIdx(i).SetIntProp(
                                             "_original_atom_id", int(aid)
                                         )
-                                    except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
+                                    except (AttributeError, RuntimeError, TypeError):  
                                         traceback.print_exc()
                     # Sync 2D atoms with 3D actors
                     try:
                         self.create_atom_id_mapping()
                         self.update_atom_id_menu_text()
                         self.update_atom_id_menu_state()
-                    except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
+                    except (AttributeError, RuntimeError, TypeError):  
                         traceback.print_exc()
                     # draw_molecule_3d will use restored IDs
                     self.draw_molecule_3d(self.current_mol)
@@ -362,7 +362,7 @@ class MainWindowAppState(object):
                     print(
                         f"DEBUG_UNDO: push_undo_state -> new stack size: {len(self.undo_stack)}"
                     )
-                except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
+                except (AttributeError, RuntimeError, TypeError):  
                     traceback.print_exc()
 
             self.redo_stack.clear()
@@ -375,7 +375,7 @@ class MainWindowAppState(object):
         self.update_realtime_info()
         self.update_undo_redo_actions()
 
-    def update_window_title(self):  # pragma: no cover
+    def update_window_title(self):  
         """Update window title to reflect save state."""
         base_title = f"MoleditPy Ver. {VERSION}"
         if self.current_file_path:
@@ -390,7 +390,7 @@ class MainWindowAppState(object):
                 title = f"*{title}"
         self.setWindowTitle(title)
 
-    def check_unsaved_changes(self):  # pragma: no cover
+    def check_unsaved_changes(self):  
         """Check for unsaved changes and show warning."""
         if not self.has_unsaved_changes:
             return True  # Saved or no changes
@@ -430,7 +430,7 @@ class MainWindowAppState(object):
                 print(
                     f"DEBUG_UNDO: reset_undo_stack -> undo={len(self.undo_stack)} redo={len(self.redo_stack)}"
                 )
-            except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
+            except (AttributeError, RuntimeError, TypeError):  
                 traceback.print_exc()
 
     def undo(self):
@@ -456,7 +456,7 @@ class MainWindowAppState(object):
                 print(
                     f"DEBUG_UNDO: undo -> undo_stack size: {len(self.undo_stack)}, redo_stack size: {len(self.redo_stack)}"
                 )
-            except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
+            except (AttributeError, RuntimeError, TypeError):  
                 traceback.print_exc()
 
         self.update_undo_redo_actions()
@@ -486,18 +486,18 @@ class MainWindowAppState(object):
                 print(
                     f"DEBUG_UNDO: redo -> undo_stack size: {len(self.undo_stack)}, redo_stack size: {len(self.redo_stack)}"
                 )
-            except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
+            except (AttributeError, RuntimeError, TypeError):  
                 traceback.print_exc()
 
         self.update_undo_redo_actions()
         self.update_realtime_info()
         self.view_2d.setFocus()
 
-    def update_undo_redo_actions(self):  # pragma: no cover
+    def update_undo_redo_actions(self):  
         self.undo_action.setEnabled(len(self.undo_stack) > 1)
         self.redo_action.setEnabled(len(self.redo_stack) > 0)
 
-    def update_realtime_info(self):  # pragma: no cover
+    def update_realtime_info(self):  
         """Show molecular info in status bar."""
         if not self.data.atoms:
             self.formula_label.setText("")  # Clear label if no atoms
@@ -855,7 +855,7 @@ class MainWindowAppState(object):
                                         rd_atom.SetIntProp(
                                             "_original_atom_id", int(original_id)
                                         )
-                                except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
+                                except (AttributeError, RuntimeError, TypeError):  
                                     import traceback
                                     traceback.print_exc()
                             # Build mapping from original 2D atom IDs to RDKit indices so
@@ -866,7 +866,7 @@ class MainWindowAppState(object):
                                 try:
                                     self.update_atom_id_menu_text()
                                     self.update_atom_id_menu_state()
-                                except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
+                                except (AttributeError, RuntimeError, TypeError):  
                                     import traceback
                                     traceback.print_exc()
                             except (AttributeError, RuntimeError, TypeError):
@@ -886,7 +886,7 @@ class MainWindowAppState(object):
                         try:
                             self._enable_3d_edit_actions(True)
                             self._enable_3d_features(True)
-                        except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
+                        except (AttributeError, RuntimeError, TypeError):  
                             import traceback
                             traceback.print_exc()
             except (AttributeError, RuntimeError, ValueError, TypeError) as e:

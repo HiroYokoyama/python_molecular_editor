@@ -158,7 +158,7 @@ class BondItem(QGraphicsItem):
                 win = self.scene().views()[0].window()
                 if win and hasattr(win, "settings"):
                     wedge_width = win.settings.get("bond_wedge_width_2d", 6.0)
-        except (AttributeError, RuntimeError, TypeError, ValueError):  # pragma: no cover
+        except (AttributeError, RuntimeError, TypeError, ValueError):  
             import traceback
             traceback.print_exc()
 
@@ -181,7 +181,7 @@ class BondItem(QGraphicsItem):
                         font_family = win.settings.get(
                             "atom_font_family_2d", FONT_FAMILY
                         )
-            except (AttributeError, RuntimeError, TypeError, ValueError):  # pragma: no cover
+            except (AttributeError, RuntimeError, TypeError, ValueError):  
                 import traceback
                 traceback.print_exc()
 
@@ -506,7 +506,7 @@ class BondItem(QGraphicsItem):
                                     font_family = win.settings.get(
                                         "atom_font_family_2d", FONT_FAMILY
                                     )
-                        except (AttributeError, RuntimeError, TypeError, ValueError):  # pragma: no cover
+                        except (AttributeError, RuntimeError, TypeError, ValueError):  
                             import traceback
                             traceback.print_exc()
 
@@ -566,7 +566,7 @@ class BondItem(QGraphicsItem):
                 hover_pen.setCapStyle(Qt.PenCapStyle.RoundCap)
                 painter.setPen(hover_pen)
                 painter.drawLine(line)
-            except (AttributeError, RuntimeError, TypeError, ValueError):  # pragma: no cover
+            except (AttributeError, RuntimeError, TypeError, ValueError):  
                 import traceback
                 traceback.print_exc()
 

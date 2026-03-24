@@ -24,7 +24,7 @@ from rdkit import Chem
 from rdkit.Geometry import Point3D
 
 
-class MirrorDialog(QDialog):  # pragma: no cover
+class MirrorDialog(QDialog):  
     """Dialog to create a mirror image of the molecule."""
 
     def __init__(self, mol, main_window, parent=None):

@@ -30,7 +30,7 @@ from rdkit.Chem import AllChem, rdMolTransforms
 from .dialog3_d_picking_mixin import Dialog3DPickingMixin
 
 
-class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
+class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):  
     """Dialog for constrained optimization."""
 
     def __init__(self, mol, main_window, parent=None):
@@ -430,7 +430,7 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):  # pragma: n
         for label_actor in self.constraint_labels:
             try:
                 self.main_window.plotter.remove_actor(label_actor)
-            except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
+            except (AttributeError, RuntimeError, TypeError):  
                 import traceback
                 traceback.print_exc()
 

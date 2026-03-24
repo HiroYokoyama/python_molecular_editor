@@ -172,7 +172,7 @@ class MainWindowUiManager(object):
             ):
                 self.save_settings()
                 self.settings_dirty = False
-        except (AttributeError, RuntimeError, TypeError, OSError):  # pragma: no cover
+        except (AttributeError, RuntimeError, TypeError, OSError):  
             import traceback
             traceback.print_exc()
 
@@ -208,10 +208,10 @@ class MainWindowUiManager(object):
                 if widget != self and isinstance(widget, (QDialog, QMainWindow)):
                     try:
                         widget.close()
-                    except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
+                    except (AttributeError, RuntimeError, TypeError):  
                         import traceback
                         traceback.print_exc()
-        except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
+        except (AttributeError, RuntimeError, TypeError):  
             import traceback
             traceback.print_exc()
 
@@ -224,15 +224,15 @@ class MainWindowUiManager(object):
             for thr in list(getattr(self, "_active_calc_threads", []) or []):
                 try:
                     thr.quit()
-                except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
+                except (AttributeError, RuntimeError, TypeError):  
                     import traceback
                     traceback.print_exc()
                 try:
                     thr.wait(200)
-                except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
+                except (AttributeError, RuntimeError, TypeError):  
                     import traceback
                     traceback.print_exc()
-        except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
+        except (AttributeError, RuntimeError, TypeError):  
             import traceback
             traceback.print_exc()
 
@@ -414,13 +414,13 @@ class MainWindowUiManager(object):
 
                         # Otherwise enable/disable according to the requested global flag
                         getattr(self, action_name).setEnabled(bool(enabled))
-                    except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
+                    except (AttributeError, RuntimeError, TypeError):  
                         import traceback
                         traceback.print_exc()
                 else:
                     try:
                         getattr(self, action_name).setEnabled(enabled)
-                    except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
+                    except (AttributeError, RuntimeError, TypeError):  
                         import traceback
                         traceback.print_exc()
 

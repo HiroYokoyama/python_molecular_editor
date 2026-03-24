@@ -35,7 +35,7 @@ except ImportError:
     from modules.dialog3_d_picking_mixin import Dialog3DPickingMixin
 
 
-class MoveGroupDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
+class MoveGroupDialog(Dialog3DPickingMixin, QDialog):  
     """Dialog to select a connected molecular group and perform translation/rotation."""
 
     def __init__(self, mol, main_window, parent=None):
@@ -274,10 +274,10 @@ class MoveGroupDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
                                 self.main_window.plotter.setCursor(
                                     Qt.CursorShape.ClosedHandCursor
                                 )
-                            except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
+                            except (AttributeError, RuntimeError, ValueError, TypeError):  
                                 import traceback
                                 traceback.print_exc()
-                    except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
+                    except (AttributeError, RuntimeError, ValueError, TypeError):  
                         import traceback
                         traceback.print_exc()
 
@@ -296,7 +296,7 @@ class MoveGroupDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
 
                         if abs(dx) > 2 or abs(dy) > 2:
                             self.mouse_moved_during_drag = True
-                    except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
+                    except (AttributeError, RuntimeError, ValueError, TypeError):  
                         import traceback
                         traceback.print_exc()
 
@@ -336,7 +336,7 @@ class MoveGroupDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
                             self.main_window.plotter.setCursor(
                                 Qt.CursorShape.ArrowCursor
                             )
-                    except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
+                    except (AttributeError, RuntimeError, ValueError, TypeError):  
                         import traceback
                         traceback.print_exc()
 
@@ -374,12 +374,12 @@ class MoveGroupDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
                                     self.main_window.plotter.setCursor(
                                         Qt.CursorShape.ArrowCursor
                                     )
-                                except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
+                                except (AttributeError, RuntimeError, ValueError, TypeError):  
                                     import traceback
                                     traceback.print_exc()
                                 return True
 
-                    except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
+                    except (AttributeError, RuntimeError, ValueError, TypeError):  
                         import traceback
                         traceback.print_exc()
                     finally:
@@ -395,7 +395,7 @@ class MoveGroupDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
                             self.main_window.plotter.setCursor(
                                 Qt.CursorShape.ArrowCursor
                             )
-                        except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
+                        except (AttributeError, RuntimeError, ValueError, TypeError):  
                             import traceback
                             traceback.print_exc()
 
@@ -505,21 +505,21 @@ class MoveGroupDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
         super().clear_atom_labels()
         try:
             self.main_window.plotter.remove_actor("move_group_highlight")
-        except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
+        except (AttributeError, RuntimeError, ValueError, TypeError):  
             import traceback
             traceback.print_exc()
 
         if hasattr(self, "highlight_actor"):
             try:
                 self.main_window.plotter.remove_actor(self.highlight_actor)
-            except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
+            except (AttributeError, RuntimeError, ValueError, TypeError):  
                 import traceback
                 traceback.print_exc()
 
             self.highlight_actor = None
         try:
             self.main_window.plotter.render()
-        except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
+        except (AttributeError, RuntimeError, ValueError, TypeError):  
             import traceback
             traceback.print_exc()
 

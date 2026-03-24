@@ -22,7 +22,7 @@ except ImportError:
     from modules.constants import VERSION
 
 
-class AboutDialog(QDialog):  # pragma: no cover
+class AboutDialog(QDialog):  
     def __init__(self, main_window, parent=None):
         super().__init__(parent)
         self.main_window = main_window
@@ -60,7 +60,7 @@ class AboutDialog(QDialog):  # pragma: no cover
         self.image_label.setPixmap(pixmap)
         try:
             self.image_label.setCursor(QCursor(Qt.CursorShape.ArrowCursor))
-        except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
+        except (AttributeError, RuntimeError, ValueError, TypeError):  
             import traceback
             traceback.print_exc()
 
@@ -107,6 +107,6 @@ class AboutDialog(QDialog):  # pragma: no cover
         except (AttributeError, RuntimeError, ValueError, TypeError):
             try:
                 event.ignore()
-            except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
+            except (AttributeError, RuntimeError, ValueError, TypeError):  
                 import traceback
                 traceback.print_exc()

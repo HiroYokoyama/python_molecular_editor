@@ -29,7 +29,7 @@ from .dialog3_d_picking_mixin import Dialog3DPickingMixin
 from .mol_geometry import calc_distance, get_connected_group
 
 
-class BondLengthDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
+class BondLengthDialog(Dialog3DPickingMixin, QDialog):  
     def __init__(self, mol, main_window, preselected_atoms=None, parent=None):
         QDialog.__init__(self, parent)
         Dialog3DPickingMixin.__init__(self)
@@ -259,7 +259,7 @@ class BondLengthDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
                 self.distance_slider.setValue(slider_val)
                 self.distance_slider.setEnabled(True)
                 self.distance_slider.blockSignals(False)
-            except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
+            except (AttributeError, RuntimeError, TypeError):  
                 import traceback
                 traceback.print_exc()
 

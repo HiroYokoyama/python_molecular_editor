@@ -21,12 +21,12 @@ from rdkit import Chem
 from rdkit.Chem import AllChem, rdGeometry
 from rdkit.DistanceGeometry import DoTriangleSmoothing
 
-try: # pragma: no cover
+try: 
     from . import OBABEL_AVAILABLE
-except ImportError: # pragma: no cover
+except ImportError: 
     from modules import OBABEL_AVAILABLE
 # Only import pybel on demand — `moleditpy` itself doesn't expose `pybel`.
-if OBABEL_AVAILABLE: # pragma: no cover
+if OBABEL_AVAILABLE: 
     try:
         import os
         import glob
@@ -62,7 +62,7 @@ if OBABEL_AVAILABLE: # pragma: no cover
         print(
             "Warning: openbabel.pybel not available. Open Babel fallback and OBabel-based options will be disabled."
         )
-else: # pragma: no cover
+else: 
     pybel = None
 
 
@@ -204,7 +204,7 @@ def _adjust_collision_avoidance(rd_mol, check_halted_cb, safe_status_cb):
         safe_status_cb("Collision avoidance completed.")
     except WorkerHaltError:
         raise
-    except (AttributeError, RuntimeError, TypeError, ValueError) as e: # pragma: no cover
+    except (AttributeError, RuntimeError, TypeError, ValueError) as e: 
         import traceback
         traceback.print_exc()
         safe_status_cb(f"Collision avoidance warning: {e}")
@@ -554,7 +554,7 @@ def _perform_direct_conversion(mol_block, mol, options, _check_halted, _safe_sta
                 conf.SetAtomPosition(
                     i, rdGeometry.Point3D(float(x), float(y), 0.0)
                 )
-            except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
+            except (AttributeError, RuntimeError, ValueError, TypeError):  
                 import traceback
                 traceback.print_exc()
         else:
@@ -672,7 +672,7 @@ def _perform_direct_conversion(mol_block, mol, options, _check_halted, _safe_sta
                         conf.SetAtomPosition(
                             i, rdGeometry.Point3D(0.0, 0.0, 0.10)
                         )
-                    except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
+                    except (AttributeError, RuntimeError, ValueError, TypeError):  
                         import traceback
                         traceback.print_exc()
     # 5) Apply Z-offset for Wedge/Dash constraints
@@ -705,13 +705,13 @@ def _perform_direct_conversion(mol_block, mol, options, _check_halted, _safe_sta
                 )
             except (AttributeError, RuntimeError, TypeError, ValueError):
                 continue
-    except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
+    except (AttributeError, RuntimeError, ValueError, TypeError):  
         import traceback
         traceback.print_exc()
     # Replace conformer and finish
     try:
         mol.RemoveAllConformers()
-    except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
+    except (AttributeError, RuntimeError, ValueError, TypeError):  
         import traceback
         traceback.print_exc()
     mol.AddConformer(conf, assignId=True)
@@ -843,7 +843,7 @@ def _perform_obabel_conversion(mol_block, conversion_mode, opt_method, worker_id
         ob_mol = pybel.readstring("mol", mol_block)
         try:
             ob_mol.addh()
-        except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
+        except (AttributeError, RuntimeError, ValueError, TypeError):  
             import traceback
             traceback.print_exc()
         ob_mol.make3D()
@@ -936,7 +936,7 @@ class CalculationWorker(QObject):
     error = pyqtSignal(object)
     start_work = pyqtSignal(str, object)
 
-    def __init__(self, parent=None): # pragma: no cover
+    def __init__(self, parent=None): 
         super().__init__(parent)
         try:
             self.start_work.connect(self.run_calculation)
@@ -971,7 +971,7 @@ class CalculationWorker(QObject):
                 return False
 
         # Safe-emission helpers: do nothing if this worker has been halted.
-        def _safe_status(msg): # pragma: no cover
+        def _safe_status(msg): 
             try:
                 if _check_halted():
                     raise WorkerHaltError("Halted")
@@ -983,7 +983,7 @@ class CalculationWorker(QObject):
                 import traceback
                 traceback.print_exc()
 
-        def _safe_finished(payload):  # pragma: no cover
+        def _safe_finished(payload):  
             try:
                 if _check_halted():
                     raise WorkerHaltError("Halted")
@@ -999,16 +999,16 @@ class CalculationWorker(QObject):
                             self.finished.emit(payload)
                     except WorkerHaltError:
                         raise
-                    except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
+                    except (AttributeError, RuntimeError, ValueError, TypeError):  
                         import traceback
                         traceback.print_exc()
             except WorkerHaltError:
                 raise
-            except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
+            except (AttributeError, RuntimeError, ValueError, TypeError):  
                 import traceback
                 traceback.print_exc()
 
-        def _safe_error(msg):  # pragma: no cover
+        def _safe_error(msg):  
             try:
                 if msg != "Halted" and _check_halted():
                     raise WorkerHaltError("Halted")
@@ -1032,7 +1032,7 @@ class CalculationWorker(QObject):
                 worker_id = None
 
             _warned_no_worker_id = False
-            if worker_id is None: # pragma: no cover
+            if worker_id is None: 
                 try:
                     # best-effort, swallow any errors (signals may not be connected)
                     self.status_update.emit(
@@ -1280,14 +1280,14 @@ class CalculationWorker(QObject):
                 except (AttributeError, RuntimeError, TypeError, ValueError) as opt_err:
                     if conversion_mode == "rdkit":
                         raise RuntimeError(f"Optimization with {opt_method_raw} failed: {opt_err}")
-                    _safe_status(f"Optimization failed: {opt_err}. Falling back...")  # pragma: no cover
-                    try:  # pragma: no cover
+                    _safe_status(f"Optimization failed: {opt_err}. Falling back...")  
+                    try:  
                         mol.ClearProp("_pme_optimization_method")
                     except (AttributeError, RuntimeError, ValueError, TypeError):
                         import traceback
                         traceback.print_exc()
                     # Allow fallback to proceed instead of crashing
-                    conf_id = -1  # pragma: no cover
+                    conf_id = -1  
                 
                 # CRITICAL: Restore stereochemistry again after optimization (explicit labels priority)
                 if conf_id != -1:

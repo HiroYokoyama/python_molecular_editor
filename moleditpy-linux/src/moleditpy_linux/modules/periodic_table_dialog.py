@@ -21,7 +21,7 @@ except ImportError:
 from PyQt6.QtCore import pyqtSignal
 
 
-class PeriodicTableDialog(QDialog):  # pragma: no cover
+class PeriodicTableDialog(QDialog):  
     element_selected = pyqtSignal(str)
 
     def __init__(self, parent=None):

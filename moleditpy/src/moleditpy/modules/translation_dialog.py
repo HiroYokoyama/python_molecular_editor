@@ -27,7 +27,7 @@ from PyQt6.QtWidgets import (
 from .dialog3_d_picking_mixin import Dialog3DPickingMixin
 
 
-class TranslationDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
+class TranslationDialog(Dialog3DPickingMixin, QDialog):  
     def __init__(self, mol, main_window, parent=None):
         QDialog.__init__(self, parent)
         Dialog3DPickingMixin.__init__(self)
@@ -179,7 +179,7 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
                 self.x_input.setText("0.0")
                 self.y_input.setText("0.0")
                 self.z_input.setText("0.0")
-        except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
+        except (AttributeError, RuntimeError, ValueError, TypeError):  
             # Be tolerant: do not crash the UI if inputs cannot be updated
             import traceback
             traceback.print_exc()
@@ -238,7 +238,7 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
                         # Update 3d positions for this atom only
                         try:
                             self.main_window.atom_positions_3d[i] = new_pos
-                        except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
+                        except (AttributeError, RuntimeError, ValueError, TypeError):  
                             import traceback
                             traceback.print_exc()
                     else:
@@ -351,7 +351,7 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
         # Force re-render after clearing labels
         try:
             self.main_window.plotter.render()
-        except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
+        except (AttributeError, RuntimeError, ValueError, TypeError):  
             import traceback
             traceback.print_exc()
 

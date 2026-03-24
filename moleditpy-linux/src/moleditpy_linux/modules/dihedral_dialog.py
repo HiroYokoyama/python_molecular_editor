@@ -34,7 +34,7 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QMessageBox
 
 
-class DihedralDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
+class DihedralDialog(Dialog3DPickingMixin, QDialog):  
     def __init__(self, mol, main_window, preselected_atoms=None, parent=None):
         QDialog.__init__(self, parent)
         Dialog3DPickingMixin.__init__(self)
@@ -231,7 +231,7 @@ class DihedralDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
                 self.dihedral_slider.setValue(180)
                 self.dihedral_slider.setEnabled(False)
                 self.dihedral_slider.blockSignals(False)
-            except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
+            except (AttributeError, RuntimeError, TypeError):  
                 import traceback
                 traceback.print_exc()
 
@@ -263,7 +263,7 @@ class DihedralDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
                 self.dihedral_slider.setValue(180)
                 self.dihedral_slider.setEnabled(False)
                 self.dihedral_slider.blockSignals(False)
-            except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
+            except (AttributeError, RuntimeError, TypeError):  
                 import traceback
                 traceback.print_exc()
         else:
@@ -302,7 +302,7 @@ class DihedralDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
                 self.dihedral_slider.setValue(slider_val)
                 self.dihedral_slider.setEnabled(True)
                 self.dihedral_slider.blockSignals(False)
-            except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
+            except (AttributeError, RuntimeError, TypeError):  
                 import traceback
                 traceback.print_exc()
 

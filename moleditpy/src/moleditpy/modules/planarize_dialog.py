@@ -26,7 +26,7 @@ except ImportError:
     from modules.dialog3_d_picking_mixin import Dialog3DPickingMixin
 
 
-class PlanarizeDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
+class PlanarizeDialog(Dialog3DPickingMixin, QDialog):  
     """Dialog to planarize a selected set of atoms by projecting them onto a best-fit plane.
     Has a selection UI similar to AlignPlane, and projects selected atoms orthogonally onto the plane via the Apply button.
     """

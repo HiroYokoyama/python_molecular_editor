@@ -98,7 +98,7 @@ class MainWindowViewLoaders(object):
                 if hasattr(self, "optimize_3d_button"):
                     try:
                         self.optimize_3d_button.setEnabled(False)
-                    except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
+                    except (AttributeError, RuntimeError, TypeError):  
                         import traceback
                         traceback.print_exc()
             else:
@@ -116,7 +116,7 @@ class MainWindowViewLoaders(object):
                                 self.optimize_3d_button.setEnabled(True)
                             else:
                                 self.optimize_3d_button.setEnabled(False)
-                        except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
+                        except (AttributeError, RuntimeError, TypeError):  
                             import traceback
                             traceback.print_exc()
                 else:
@@ -124,7 +124,7 @@ class MainWindowViewLoaders(object):
                     if hasattr(self, "optimize_3d_button"):
                         try:
                             self.optimize_3d_button.setEnabled(False)
-                        except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
+                        except (AttributeError, RuntimeError, TypeError):  
                             import traceback
                             traceback.print_exc()
             self.draw_molecule_3d(self.current_mol)
@@ -317,7 +317,7 @@ class MainWindowViewLoaders(object):
             # correctly enabled when appropriate.
             try:
                 self._clear_xyz_flags(mol)
-            except (AttributeError, RuntimeError, TypeError, ValueError):  # pragma: no cover
+            except (AttributeError, RuntimeError, TypeError, ValueError):  
                 import traceback
                 traceback.print_exc()
             # Display in 3D viewer

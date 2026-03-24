@@ -62,7 +62,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                 if isinstance(widget, MoveGroupDialog) and widget.isVisible():
                     move_group_dialog = widget
                     break
-        except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
+        except (AttributeError, RuntimeError, TypeError):  
             import traceback
             traceback.print_exc()
 
@@ -267,7 +267,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                 if isinstance(widget, MoveGroupDialog) and widget.isVisible():
                     move_group_dialog = widget
                     break
-        except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
+        except (AttributeError, RuntimeError, TypeError):  
             import traceback
             traceback.print_exc()
 
@@ -343,7 +343,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                 if isinstance(widget, MoveGroupDialog) and widget.isVisible():
                     move_group_dialog = widget
                     break
-        except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
+        except (AttributeError, RuntimeError, TypeError):  
             import traceback
             traceback.print_exc()
 
@@ -427,7 +427,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                 if isinstance(widget, MoveGroupDialog) and widget.isVisible():
                     move_group_dialog = widget
                     break
-        except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
+        except (AttributeError, RuntimeError, TypeError):  
             import traceback
             traceback.print_exc()
 
@@ -580,10 +580,10 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                                         ap = list(mw.atom_positions_3d)
                                         ap[atom_id] = new_world_coords
                                         mw.atom_positions_3d = ap
-                                    except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
+                                    except (AttributeError, RuntimeError, ValueError, TypeError):  
                                         import traceback
                                         traceback.print_exc()
-                            except (AttributeError, RuntimeError, TypeError, ValueError):  # pragma: no cover
+                            except (AttributeError, RuntimeError, TypeError, ValueError):  
                                 import traceback
                                 traceback.print_exc()
                         conf = mw.current_mol.GetConformer()
@@ -605,7 +605,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                     # Redraw and push undo state
                     try:
                         mw.draw_molecule_3d(mw.current_mol)
-                    except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
+                    except (AttributeError, RuntimeError, ValueError, TypeError):  
                         import traceback
                         traceback.print_exc()
 
@@ -620,7 +620,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
             ]:
                 try:
                     update_call()
-                except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
+                except (AttributeError, RuntimeError, ValueError, TypeError):  
                     import traceback
                     traceback.print_exc()
         else:
@@ -643,14 +643,14 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                     delattr(move_group_dialog, "_initial_positions")
                 if hasattr(move_group_dialog, "_drag_atom_idx"):
                     delattr(move_group_dialog, "_drag_atom_idx")
-        except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
+        except (AttributeError, RuntimeError, ValueError, TypeError):  
             import traceback
             traceback.print_exc()
 
         # Update cursor after release
         try:
             mw.plotter.setCursor(Qt.CursorShape.ArrowCursor)
-        except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
+        except (AttributeError, RuntimeError, ValueError, TypeError):  
             import traceback
             traceback.print_exc()
 
@@ -671,7 +671,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                 if isinstance(widget, MoveGroupDialog) and widget.isVisible():
                     move_group_dialog = widget
                     break
-        except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
+        except (AttributeError, RuntimeError, TypeError):  
             import traceback
             traceback.print_exc()
 
@@ -795,7 +795,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
 
             try:
                 mw.plotter.setCursor(Qt.CursorShape.ArrowCursor)
-            except (AttributeError, RuntimeError, ValueError, TypeError):  # pragma: no cover
+            except (AttributeError, RuntimeError, ValueError, TypeError):  
                 import traceback
                 traceback.print_exc()
 
