@@ -38,7 +38,7 @@ try:
     from .main_window_ui_manager import MainWindowUiManager
     from .main_window_view_3d import MainWindowView3d
     from .main_window_view_loaders import MainWindowViewLoaders
-except Exception:
+except (AttributeError, RuntimeError, TypeError):
     # Fallback to absolute imports for script-style execution
     from modules.main_window_app_state import MainWindowAppState
     from modules.main_window_compute import MainWindowCompute

@@ -257,7 +257,7 @@ class BondLengthDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
                 self.distance_slider.setValue(slider_val)
                 self.distance_slider.setEnabled(True)
                 self.distance_slider.blockSignals(False)
-            except Exception:  # pragma: no cover
+            except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
                 import traceback
                 traceback.print_exc()
 

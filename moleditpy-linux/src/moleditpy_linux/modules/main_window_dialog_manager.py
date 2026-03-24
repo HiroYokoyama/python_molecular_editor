@@ -26,7 +26,7 @@ from PyQt6.QtWidgets import QInputDialog, QMessageBox
 try:
     from PyQt6 import sip as _sip  # type: ignore
     _sip_isdeleted = getattr(_sip, "isdeleted", None)
-except Exception:
+except (AttributeError, RuntimeError, TypeError):
     _sip = None
     _sip_isdeleted = None
 

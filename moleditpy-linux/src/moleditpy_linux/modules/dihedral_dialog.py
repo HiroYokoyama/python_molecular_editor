@@ -231,7 +231,7 @@ class DihedralDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
                 self.dihedral_slider.setValue(180)
                 self.dihedral_slider.setEnabled(False)
                 self.dihedral_slider.blockSignals(False)
-            except Exception:  # pragma: no cover
+            except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
                 import traceback
                 traceback.print_exc()
 
@@ -263,7 +263,7 @@ class DihedralDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
                 self.dihedral_slider.setValue(180)
                 self.dihedral_slider.setEnabled(False)
                 self.dihedral_slider.blockSignals(False)
-            except Exception:  # pragma: no cover
+            except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
                 import traceback
                 traceback.print_exc()
         else:
@@ -302,7 +302,7 @@ class DihedralDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
                 self.dihedral_slider.setValue(slider_val)
                 self.dihedral_slider.setEnabled(True)
                 self.dihedral_slider.blockSignals(False)
-            except Exception:  # pragma: no cover
+            except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
                 import traceback
                 traceback.print_exc()
 
@@ -512,5 +512,5 @@ class DihedralDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
         try:
             if self.main_window.current_mol:
                 self.main_window.draw_molecule_3d(self.main_window.current_mol)
-        except Exception:
+        except (AttributeError, RuntimeError, TypeError):
             pass
