@@ -134,7 +134,7 @@ def test_load_xyz_always_ask_charge(mock_parser_host, tmp_path):
     mock_rd_mod.DetermineBonds.side_effect = None
     mock_rd_mod.DetermineBonds.return_value = None
     with patch.object(mwm.QInputDialog, "getText", return_value=("1", True)):
-        with patch.object(mwm, "QDialog", side_effect=Exception("Force Fallback")):
+        with patch.object(mwm, "QDialog", side_effect=RuntimeError("Force Fallback")):
             mol = parser.load_xyz_file(str(xyz_path))
             assert mol is not None
             assert mol.GetIntProp("_xyz_charge") == 1
@@ -148,7 +148,7 @@ def test_load_xyz_charge_loop_cancel(mock_parser_host, tmp_path):
     mock_rd_mod.DetermineBonds.side_effect = RuntimeError("Fail")
     parser.settings["force_fallback_fail"] = True
     with patch.object(mwm.QInputDialog, "getText", return_value=("", False)):
-        with patch.object(mwm, "QDialog", side_effect=Exception("Force Fallback")):
+        with patch.object(mwm, "QDialog", side_effect=RuntimeError("Force Fallback")):
             result = parser.load_xyz_file(str(path))
             assert result is None
 
@@ -200,7 +200,7 @@ def test_load_xyz_recovery_loop_retries(mock_parser_host, tmp_path):
     mock_rd_mod.DetermineBonds.side_effect = [RuntimeError("Fail"), None]
     parser.settings["force_fallback_fail"] = True
     with patch.object(mwm.QInputDialog, "getText", return_value=("1", True)):
-        with patch.object(mwm, "QDialog", side_effect=Exception("Force Fallback")):
+        with patch.object(mwm, "QDialog", side_effect=RuntimeError("Force Fallback")):
             mol = parser.load_xyz_file(str(path))
             assert mol is not None
             assert mol.GetIntProp("_xyz_charge") == 1
@@ -270,7 +270,7 @@ def test_load_xyz_complex_recovery_branches(mock_parser_host, tmp_path):
     with patch.object(
         mwm.QInputDialog, "getText", side_effect=[("1", True), ("", False)]
     ):
-        with patch.object(mwm, "QDialog", side_effect=Exception("Force Fallback")):
+        with patch.object(mwm, "QDialog", side_effect=RuntimeError("Force Fallback")):
             assert parser.load_xyz_file(str(path)) is None
             msgs = [
                 str(c.args[0])
