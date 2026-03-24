@@ -220,6 +220,18 @@ class MainWindow(QMainWindow):
         # --- MOVED TO main_window_compute.py ---
         return self.main_window_compute._trigger_conversion_with_temp_mode(mode_key)
 
+    def _safe_disconnect(self, signal):
+        # --- MOVED TO main_window_compute.py ---
+        return self.main_window_compute._safe_disconnect(signal)
+
+    def _remove_calculating_text(self):
+        # --- MOVED TO main_window_compute.py ---
+        return self.main_window_compute._remove_calculating_text()
+
+    def _restore_button_ui(self):
+        # --- MOVED TO main_window_compute.py ---
+        return self.main_window_compute._restore_button_ui()
+
     def show_optimize_menu(self, pos):
         # --- MOVED TO main_window_compute.py ---
         return self.main_window_compute.show_optimize_menu(pos)
