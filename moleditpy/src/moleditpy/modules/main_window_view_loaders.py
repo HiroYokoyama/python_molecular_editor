@@ -44,7 +44,6 @@ except ImportError:
 # --- Class Definition ---
 class MainWindowViewLoaders(object):
     """Functional class separated from main_window.py"""
-
     def load_xyz_for_3d_viewing(self, file_path=None):
         """Load XYZ file and display in 3D viewer"""
         if not file_path:
@@ -60,165 +59,113 @@ class MainWindowViewLoaders(object):
                 raise ValueError("Failed to create molecule from XYZ file.")
             if mol.GetNumConformers() == 0:
                 raise ValueError("XYZ file has no 3D coordinates.")
-        except FileNotFoundError:
-            self.statusBar().showMessage(f"File not found: {file_path}")
-            self.restore_ui_for_editing()
-            return
-        except ValueError as e:
-            self.statusBar().showMessage(f"Invalid XYZ file: {e}")
-            self.restore_ui_for_editing()
-            return
 
-        try:
             # Clear 2D editor
-            self.clear_2d_editor(push_to_undo=False)
+            if hasattr(self, "clear_2d_editor"):
+                self.clear_2d_editor(push_to_undo=False)
 
-            # Set the molecule.
             self.current_mol = mol
-
-            # Clear mapping when loading XYZ (no 2D structure)
             self.atom_id_to_rdkit_idx_map = {}
 
-            # If the loader marked the molecule as produced under skip_chemistry_checks,
-            # always treat it as XYZ-derived and disable optimization.
+            # Check skip flag
             skip_flag = False
             try:
-                # Prefer RDKit int prop
-                skip_flag = bool(self.current_mol.GetIntProp("_xyz_skip_checks"))
-            except (AttributeError, KeyError, RuntimeError, TypeError):
-                try:
-                    skip_flag = bool(
-                        getattr(self.current_mol, "_xyz_skip_checks", False)
-                    )
-                except (AttributeError, KeyError, RuntimeError, TypeError):
-                    skip_flag = False
-
-            if skip_flag:
-                self.is_xyz_derived = True
-                if hasattr(self, "optimize_3d_button"):
-                    try:
-                        self.optimize_3d_button.setEnabled(False)
-                    except (AttributeError, RuntimeError, TypeError):  
-                        import traceback
-                        traceback.print_exc()
-            else:
-                try:
-                    has_bonds = self.current_mol.GetNumBonds() > 0
-                except (AttributeError, RuntimeError, TypeError):
-                    has_bonds = False
-
-                if has_bonds:
-                    self.is_xyz_derived = False
-                    if hasattr(self, "optimize_3d_button"):
-                        try:
-                            # Only enable optimize if the molecule is not considered XYZ-derived
-                            if not getattr(self, "is_xyz_derived", False):
-                                self.optimize_3d_button.setEnabled(True)
-                            else:
-                                self.optimize_3d_button.setEnabled(False)
-                        except (AttributeError, RuntimeError, TypeError):  
-                            import traceback
-                            traceback.print_exc()
+                # Try RDKit property first, then attribute fallback
+                if mol.HasProp("_xyz_skip_checks"):
+                    skip_flag = bool(mol.GetIntProp("_xyz_skip_checks"))
                 else:
-                    self.is_xyz_derived = True
-                    if hasattr(self, "optimize_3d_button"):
-                        try:
-                            self.optimize_3d_button.setEnabled(False)
-                        except (AttributeError, RuntimeError, TypeError):  
-                            import traceback
-                            traceback.print_exc()
-            self.draw_molecule_3d(self.current_mol)
-            self.plotter.reset_camera()
+                    skip_flag = bool(getattr(mol, "_xyz_skip_checks", False))
+            except (AttributeError, KeyError, RuntimeError, TypeError):
+                skip_flag = False
 
-            # Set UI to 3D viewer mode
-            self._enter_3d_viewer_ui_mode()
+            # Update optimization state
+            self.is_xyz_derived = skip_flag or (mol.GetNumBonds() == 0)
+            opt_btn = getattr(self, "optimize_3d_button", None)
+            if opt_btn:
+                opt_btn.setEnabled(not self.is_xyz_derived)
 
-            # Enable 3D features
-            self._enable_3d_features(True)
+            # Update visualization and UI mode
+            if hasattr(self, "draw_molecule_3d"):
+                self.draw_molecule_3d(self.current_mol)
+            
+            if hasattr(self, "plotter"):
+                self.plotter.reset_camera()
 
-            # Update menu text and state
-            self.update_atom_id_menu_text()
-            self.update_atom_id_menu_state()
+            if hasattr(self, "_enter_3d_viewer_ui_mode"):
+                self._enter_3d_viewer_ui_mode()
 
-            self.statusBar().showMessage(
-                f"3D Viewer Mode: Loaded {os.path.basename(file_path)}"
-            )
-            self.reset_undo_stack()
-            # Set XYZ file path and mark as saved
+            if hasattr(self, "_enable_3d_features"):
+                self._enable_3d_features(True)
+
+            if hasattr(self, "update_atom_id_menu_text"):
+                self.update_atom_id_menu_text()
+            if hasattr(self, "update_atom_id_menu_state"):
+                self.update_atom_id_menu_state()
+
+            self.statusBar().showMessage(f"3D Viewer Mode: Loaded {os.path.basename(file_path)}")
+            if hasattr(self, "reset_undo_stack"):
+                self.reset_undo_stack()
+            
             self.current_file_path = file_path
             self.has_unsaved_changes = False
-            self.update_window_title()
+            if hasattr(self, "update_window_title"):
+                self.update_window_title()
 
-        except (AttributeError, RuntimeError, ValueError, TypeError) as e:
+        except (FileNotFoundError, ValueError) as e:
+            self.statusBar().showMessage(f"Load failed: {e}")
+            if hasattr(self, "restore_ui_for_editing"):
+                self.restore_ui_for_editing()
+        except Exception as e:
             self.statusBar().showMessage(f"Error processing XYZ file: {e}")
             import traceback
             traceback.print_exc()
-            self.restore_ui_for_editing()
-
+            if hasattr(self, "restore_ui_for_editing"):
+                self.restore_ui_for_editing()
 
 
     def save_3d_as_mol(self):
+        """Save the current 3D structure as a MOL file."""
         if not self.current_mol:
             self.statusBar().showMessage("Error: Please generate a 3D structure first.")
             return
 
+        # Determine default save path
+        curr_path = getattr(self, "current_file_path", None)
+        default_dir = os.path.dirname(curr_path) if curr_path else ""
+        default_name = os.path.splitext(os.path.basename(curr_path))[0] if curr_path else "untitled"
+        default_save_path = os.path.join(default_dir, default_name)
+
+        file_path, _ = QFileDialog.getSaveFileName(
+            self,
+            "Save 3D MOL File",
+            default_save_path,
+            "MOL Files (*.mol);;All Files (*)",
+        )
+        if not file_path:
+            return
+
+        if not file_path.lower().endswith(".mol"):
+            file_path += ".mol"
+
         try:
-            # default filename based on current file
-            default_name = "untitled"
-            if self.current_file_path:
-                try:
-                    base = os.path.basename(self.current_file_path)
-                    name = os.path.splitext(base)[0]
-                    default_name = f"{name}"
-                except (AttributeError, RuntimeError, TypeError, ValueError, OSError):
-                    default_name = "untitled"
-
-            # prefer same directory as current file when available
-            default_path = default_name
-            if self.current_file_path:
-                try:
-                    default_path = os.path.join(
-                        os.path.dirname(self.current_file_path), default_name
-                    )
-                except (AttributeError, RuntimeError, TypeError, ValueError, OSError):
-                    default_path = default_name
-
-            file_path, _ = QFileDialog.getSaveFileName(
-                self,
-                "Save 3D MOL File",
-                default_path,
-                "MOL Files (*.mol);;All Files (*)",
-            )
-            if not file_path:
-                return
-
-            if not file_path.lower().endswith(".mol"):
-                file_path += ".mol"
-
             mol_to_save = Chem.Mol(self.current_mol)
-
             if mol_to_save.HasProp("_2D"):
                 mol_to_save.ClearProp("_2D")
 
             mol_block = Chem.MolToMolBlock(mol_to_save, includeStereo=True)
             lines = mol_block.split("\n")
             if len(lines) > 1 and "RDKit" in lines[1]:
-                lines[1] = "  MoleditPy Ver. " + VERSION + "  3D"
-            modified_mol_block = "\n".join(lines)
-
+                lines[1] = f"  MoleditPy Ver. {VERSION}  3D"
+            
             with open(file_path, "w", encoding="utf-8") as f:
-                f.write(modified_mol_block)
+                f.write("\n".join(lines))
             self.statusBar().showMessage(f"3D data saved to {file_path}")
 
-        except (OSError, IOError) as e:
-            self.statusBar().showMessage(f"File I/O error: {e}")
-        except UnicodeEncodeError as e:
-            self.statusBar().showMessage(f"Text encoding error: {e}")
-        except (AttributeError, RuntimeError, ValueError, TypeError) as e:
-            self.statusBar().showMessage(f"Error saving 3D MOL file: {e}")
+        except Exception as e:
+            msg = f"Error saving 3D MOL: {str(e)}"
+            self.statusBar().showMessage(msg)
             import traceback
             traceback.print_exc()
-
 
 
     def load_mol_file_for_3d_viewing(self, file_path=None):
@@ -233,121 +180,78 @@ class MainWindowViewLoaders(object):
                 "MOL/SDF Files (*.mol *.sdf);;All Files (*)",
             )
             if not file_path:
-                return
-
+                return        
         try:
-            # Determine extension early and handle .mol specially by reading the
-            # raw block and running it through fix_mol_block before parsing.
+            # Determine extension
             _, ext = os.path.splitext(file_path)
             ext = ext.lower() if ext else ""
 
+            # Load molecule
+            mol = None
             if ext == ".sdf":
                 suppl = Chem.SDMolSupplier(file_path, removeHs=False)
                 mol = next(suppl, None)
-
             elif ext == ".mol":
-                # Read the file contents and attempt to fix malformed counts lines
                 with open(file_path, "r", encoding="utf-8", errors="replace") as fh:
                     raw = fh.read()
                 fixed_block = self.fix_mol_block(raw)
                 mol = Chem.MolFromMolBlock(fixed_block, sanitize=True, removeHs=False)
-
-                # If parsing the fixed block fails, fall back to RDKit's file reader
-                # as a last resort (keeps behavior conservative).
                 if mol is None:
-                    try:
-                        mol = Chem.MolFromMolFile(file_path, removeHs=False)
-                    except (RuntimeError, ValueError, TypeError):
-                        mol = None
-
-                if mol is None:
-                    self.statusBar().showMessage(
-                        f"Failed to load molecule from {file_path}"
-                    )
-                    return
-
-            else:
-                # Default: let RDKit try to read the file (most common case)
-                if file_path.lower().endswith(".sdf"):
-                    suppl = Chem.SDMolSupplier(file_path, removeHs=False)
-                    mol = next(suppl, None)
-                else:
                     mol = Chem.MolFromMolFile(file_path, removeHs=False)
+            else:
+                mol = Chem.MolFromMolFile(file_path, removeHs=False)
 
-                if mol is None:
-                    self.statusBar().showMessage(
-                        f"Failed to load molecule from {file_path}"
-                    )
-                    return
-        except (OSError, IOError, RuntimeError, ValueError, TypeError) as e:
-            self.statusBar().showMessage(f"Error reading file {file_path}: {e}")
-            import traceback
-            traceback.print_exc()
-            return
+            if mol is None:
+                self.statusBar().showMessage(f"Failed to load molecule from {file_path}")
+                return
 
-
-        try:
-            # Convert 2D to 3D if no coordinates found (no optimization)
+            # Convert 2D to 3D if needed
             if mol.GetNumConformers() == 0:
-                self.statusBar().showMessage(
-                    "No 3D coordinates found. Converting to 3D..."
-                )
+                self.statusBar().showMessage("No 3D coordinates found. Converting to 3D...")
                 try:
                     AllChem.EmbedMolecule(mol)
-                    # Push to undo stack after 3D conversion
                     self.current_mol = mol
-                    self.push_undo_state()
-                except (AttributeError, RuntimeError, TypeError, ValueError):
-                    # If skipping chemistry checks, allow molecule to be displayed without 3D embedding
-                    try:
-                        skip_checks = bool(self.settings.get("skip_chemistry_checks", False))
-                    except (AttributeError, KeyError):
-                        skip_checks = False
-
-                    if skip_checks:
-                        self.statusBar().showMessage(
-                            "Warning: failed to generate 3D coordinates but skip_chemistry_checks is enabled; continuing."
-                        )
-                        # Keep mol as-is (may lack conformer); downstream code checks for conformers
-                    else:
+                    if hasattr(self, "push_undo_state"):
+                        self.push_undo_state()
+                except Exception:
+                    if not getattr(self, "settings", {}).get("skip_chemistry_checks", False):
                         self.statusBar().showMessage("Failed to generate 3D coordinates")
                         return
+                    self.statusBar().showMessage("Warning: failed to generate 3D coordinates (continuing due to settings)")
 
-            # Clear XYZ markers on the newly loaded MOL/SDF so Optimize 3D is
-            # correctly enabled when appropriate.
+            # Finalize load
             try:
-                self._clear_xyz_flags(mol)
-            except (AttributeError, RuntimeError, TypeError, ValueError):  
-                import traceback
-                traceback.print_exc()
-            # Display in 3D viewer
-            # Centralized chemical/sanitization handling
-            # Ensure the skip_chemistry_checks setting is respected and flags are set
-            self._apply_chem_check_and_set_flags(mol, source_desc="MOL/SDF")
+                if hasattr(self, "_clear_xyz_flags"):
+                    self._clear_xyz_flags(mol)
+            except Exception:
+                pass
+
+            if hasattr(self, "_apply_chem_check_and_set_flags"):
+                self._apply_chem_check_and_set_flags(mol, source_desc="MOL/SDF")
 
             self.current_mol = mol
-            self.draw_molecule_3d(mol)
+            if hasattr(self, "draw_molecule_3d"):
+                self.draw_molecule_3d(mol)
+            if hasattr(self, "plotter"):
+                self.plotter.reset_camera()
+            if hasattr(self, "_enter_3d_viewer_ui_mode"):
+                self._enter_3d_viewer_ui_mode()
 
-            # Reset camera
-            self.plotter.reset_camera()
-
-            # Set UI to 3D viewer mode
-            self._enter_3d_viewer_ui_mode()
-
-            # Update menu text and state
-            self.update_atom_id_menu_text()
-            self.update_atom_id_menu_state()
+            if hasattr(self, "update_atom_id_menu_text"):
+                self.update_atom_id_menu_text()
+            if hasattr(self, "update_atom_id_menu_state"):
+                self.update_atom_id_menu_state()
 
             self.statusBar().showMessage(f"Loaded {file_path} in 3D viewer")
-
-            self.reset_undo_stack()
-            self.has_unsaved_changes = False  # Mark as unchanged after loading
+            if hasattr(self, "reset_undo_stack"):
+                self.reset_undo_stack()
+            
+            self.has_unsaved_changes = False
             self.current_file_path = file_path
-            self.update_window_title()
+            if hasattr(self, "update_window_title"):
+                self.update_window_title()
 
-        except (AttributeError, RuntimeError, ValueError, TypeError) as e:
+        except Exception as e:
             self.statusBar().showMessage(f"Error processing MOL/SDF file: {e}")
             import traceback
             traceback.print_exc()
-
-
