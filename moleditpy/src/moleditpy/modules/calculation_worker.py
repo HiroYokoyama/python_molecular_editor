@@ -298,7 +298,7 @@ def _iterative_optimize_obabel(mol, method, check_halted_cb, safe_status_cb, max
         return True
     except WorkerHaltError:
         raise
-    except (AttributeError, RuntimeError, TypeError, ValueError) as e:
+    except (AttributeError, RuntimeError, TypeError, ValueError, KeyError, IndexError) as e:
         safe_status_cb(f"Iterative optimization ({method}) error (OpenBabel): {e}")
         import traceback
         traceback.print_exc()
@@ -918,7 +918,7 @@ def _perform_obabel_conversion(mol_block, conversion_mode, opt_method, worker_id
         return True
     except WorkerHaltError:
         raise
-    except (AttributeError, RuntimeError, TypeError, ValueError) as ob_err:
+    except (AttributeError, RuntimeError, TypeError, ValueError, KeyError, IndexError) as ob_err:
         if conversion_mode == "obabel":
             # obabel-only mode: no further fallback
             raise RuntimeError(f"Open Babel 3D conversion failed: {ob_err}")

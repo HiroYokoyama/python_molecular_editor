@@ -554,7 +554,7 @@ class MainWindowMolecularParsers(object):
                     # Silent first attempt (existing behavior)
                     try:
                         final_mol = _process_with_charge(0)
-                    except RuntimeError:
+                    except (RuntimeError, ValueError, TypeError):
                     # Loop prompt on failure
                         while True:  # pragma: no cover
                             charge_val, ok, skip_flag = prompt_for_charge()
@@ -735,7 +735,7 @@ class MainWindowMolecularParsers(object):
                                     import traceback
                                     traceback.print_exc()
                                 continue
-            except (AttributeError, RuntimeError):
+            except (AttributeError, RuntimeError, ValueError, TypeError):
                 # If the silent attempt failed for reasons other than
                 # DetermineBonds failing (e.g., finalization errors), fall
                 # back to salvaging or prompting depending on settings.
