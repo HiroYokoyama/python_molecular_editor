@@ -59,7 +59,7 @@ class MainWindowExport(object):
         try:
             if self.current_file_path:
                 default_dir = os.path.dirname(self.current_file_path)
-        except Exception:
+        except (AttributeError, RuntimeError):
             default_dir = ""
 
         file_path, _ = QFileDialog.getSaveFileName(  # pragma: no cover
@@ -85,7 +85,7 @@ class MainWindowExport(object):
                 f"STL exported to {file_path}"
             )  # pragma: no cover
 
-        except Exception as e:
+        except (AttributeError, RuntimeError, ValueError) as e:
             self.statusBar().showMessage(f"Error exporting STL: {e}")
 
     def export_obj_mtl(self):
@@ -99,7 +99,7 @@ class MainWindowExport(object):
         try:
             if self.current_file_path:
                 default_dir = os.path.dirname(self.current_file_path)
-        except Exception:
+        except (AttributeError, RuntimeError):
             default_dir = ""
 
         file_path, _ = QFileDialog.getSaveFileName(  # pragma: no cover
@@ -133,7 +133,7 @@ class MainWindowExport(object):
                 f"OBJ+MTL files with individual colors exported to {file_path} and {mtl_path}"
             )  # pragma: no cover
 
-        except Exception as e:
+        except (AttributeError, RuntimeError, ValueError) as e:
             self.statusBar().showMessage(f"Error exporting OBJ/MTL: {e}")
 
     def create_multi_material_obj(self, meshes_with_colors, obj_path, mtl_path):
@@ -229,7 +229,7 @@ class MainWindowExport(object):
                     vertex_offset += mesh.n_points
                     obj_file.write(f"\n")
 
-        except Exception as e:
+        except (AttributeError, RuntimeError, ValueError) as e:
             raise Exception(f"Failed to create multi-material OBJ: {e}")
 
     def export_color_stl(self):
@@ -243,7 +243,7 @@ class MainWindowExport(object):
         try:
             if self.current_file_path:
                 default_dir = os.path.dirname(self.current_file_path)
-        except Exception:
+        except (AttributeError, RuntimeError):
             default_dir = ""
 
         file_path, _ = QFileDialog.getSaveFileName(  # pragma: no cover
@@ -269,7 +269,7 @@ class MainWindowExport(object):
                 f"STL exported to {file_path}"
             )  # pragma: no cover
 
-        except Exception as e:
+        except (AttributeError, RuntimeError, ValueError) as e:
             self.statusBar().showMessage(f"Error exporting STL: {e}")
 
     def export_from_3d_view(self):
@@ -364,12 +364,12 @@ class MainWindowExport(object):
                         else:
                             combined_mesh = combined_mesh.merge(mesh_copy)
 
-                except Exception:
+                except (AttributeError, RuntimeError):
                     continue
 
             return combined_mesh
 
-        except Exception:
+        except (AttributeError, RuntimeError):
             return None
 
     def export_from_3d_view_no_color(self):
@@ -432,12 +432,12 @@ class MainWindowExport(object):
                         else:
                             combined_mesh = combined_mesh.merge(mesh_copy)
 
-                except Exception:
+                except (AttributeError, RuntimeError):
                     continue
 
             return combined_mesh
 
-        except Exception:
+        except (AttributeError, RuntimeError):
             return None
 
     def export_from_3d_view_with_colors(self):
@@ -503,7 +503,7 @@ class MainWindowExport(object):
                                 if prop is not None:
                                     vtk_color = prop.GetColor()
                                     color = [int(c * 255) for c in vtk_color]
-                        except Exception:  # pragma: no cover
+                        except (AttributeError, RuntimeError):  # pragma: no cover
                             # Use default color on failure
                             pass
 
@@ -545,9 +545,8 @@ class MainWindowExport(object):
                                         colors = np.asarray(
                                             temp_mesh.point_data["colors"]
                                         )
-                                except Exception:  # pragma: no cover
-                                    import traceback
-                                    traceback.print_exc()
+                                except (AttributeError, RuntimeError):  # pragma: no cover
+                                    pass
                             if colors is not None and colors.size > 0:
                                 # Normalize float colors to 0-255
                                 colors_arr = np.asarray(colors)
@@ -603,7 +602,7 @@ class MainWindowExport(object):
                                                 point_inds, adjacent_cells=False
                                             )
 
-                                        except Exception:
+                                        except (AttributeError, RuntimeError, TypeError):
                                             # Skip if extraction unavailable
                                             continue
                                         if (
@@ -634,7 +633,7 @@ class MainWindowExport(object):
                                     uc = unique_colors[0]
                                     color = [int(uc[0]), int(uc[1]), int(uc[2])]
                                     # Do not continue here; let the default addition handle it (color has been updated)
-                        except Exception:  # pragma: no cover
+                        except (AttributeError, RuntimeError):  # pragma: no cover
                             # Fallback: add single mesh on failure
                             pass
 
@@ -650,12 +649,12 @@ class MainWindowExport(object):
 
                         actor_count += 1
 
-                except Exception as e:
+                except (AttributeError, RuntimeError, ValueError) as e:
                     continue
 
             return meshes_with_colors
 
-        except Exception as e:
+        except (AttributeError, RuntimeError, ValueError) as e:
             print(f"Error in export_from_3d_view_with_colors: {e}")
             return []
 
@@ -671,7 +670,7 @@ class MainWindowExport(object):
                 base = os.path.basename(self.current_file_path)
                 name = os.path.splitext(base)[0]
                 default_name = f"{name}-2d"
-        except Exception:
+        except (AttributeError, RuntimeError):
             default_name = "untitled-2d"
 
         # prefer same directory as current file when available
@@ -681,7 +680,7 @@ class MainWindowExport(object):
                 default_path = os.path.join(
                     os.path.dirname(self.current_file_path), default_name
                 )
-        except Exception:
+        except (AttributeError, RuntimeError):
             default_path = default_name
 
         filePath, _ = QFileDialog.getSaveFileName(
@@ -715,9 +714,8 @@ class MainWindowExport(object):
         original_background = None
         try:
             original_background = self.scene.backgroundBrush()
-        except Exception:  # pragma: no cover
-            import traceback
-            traceback.print_exc()
+        except (AttributeError, RuntimeError):  # pragma: no cover
+            pass
 
         try:
             all_items = list(self.scene.items())
@@ -779,7 +777,7 @@ class MainWindowExport(object):
                     "Failed to save image. Check file path or permissions."
                 )
 
-        except Exception as e:
+        except (AttributeError, RuntimeError, ValueError) as e:
             self.statusBar().showMessage(
                 f"An unexpected error occurred during 2D export: {e}"
             )
@@ -804,7 +802,7 @@ class MainWindowExport(object):
                 base = os.path.basename(self.current_file_path)
                 name = os.path.splitext(base)[0]
                 default_name = f"{name}-2d"
-        except Exception:
+        except (AttributeError, RuntimeError):
             default_name = "untitled-2d"
 
         # prefer same directory
@@ -814,7 +812,7 @@ class MainWindowExport(object):
                 default_path = os.path.join(
                     os.path.dirname(self.current_file_path), default_name
                 )
-        except Exception:
+        except (AttributeError, RuntimeError):
             default_path = default_name
 
         filePath, _ = QFileDialog.getSaveFileName(
@@ -898,7 +896,7 @@ class MainWindowExport(object):
 
             self.statusBar().showMessage(f"2D view exported to {filePath}")
 
-        except Exception as e:
+        except (AttributeError, RuntimeError, ValueError) as e:
             self.statusBar().showMessage(
                 f"An unexpected error occurred during SVG export: {e}"
             )
@@ -925,7 +923,7 @@ class MainWindowExport(object):
                 base = os.path.basename(self.current_file_path)
                 name = os.path.splitext(base)[0]
                 default_name = f"{name}"
-        except Exception:
+        except (AttributeError, RuntimeError):
             default_name = "untitled"
 
         # prefer same directory as current file when available
@@ -935,7 +933,7 @@ class MainWindowExport(object):
                 default_path = os.path.join(
                     os.path.dirname(self.current_file_path), default_name
                 )
-        except Exception:
+        except (AttributeError, RuntimeError):
             default_path = default_name
 
         filePath, _ = QFileDialog.getSaveFileName(
@@ -966,5 +964,5 @@ class MainWindowExport(object):
         try:
             self.plotter.screenshot(filePath, transparent_background=is_transparent)
             self.statusBar().showMessage(f"3D view exported to {filePath}", 3000)
-        except Exception as e:
+        except (AttributeError, RuntimeError, ValueError) as e:
             self.statusBar().showMessage(f"Error exporting 3D PNG: {e}")
