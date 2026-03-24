@@ -382,7 +382,7 @@ def _perform_direct_conversion(mol_block, mol, options, _check_halted, _safe_sta
         base2d_all = Chem.MolFromMolBlock(
             mol_block, removeHs=False, sanitize=True
         )
-    except Exception:
+    except (AttributeError, RuntimeError):
         try:
             base2d_all = Chem.MolFromMolBlock(
                 mol_block, removeHs=False, sanitize=False
@@ -455,7 +455,7 @@ def _perform_direct_conversion(mol_block, mol, options, _check_halted, _safe_sta
                                 atom2_mol = int(
                                     fields[1]
                                 )  # 1-based MOL index
-                            except Exception:
+                            except (AttributeError, RuntimeError):
                                 continue
                             try:
                                 stereo_raw = (
@@ -516,14 +516,14 @@ def _perform_direct_conversion(mol_block, mol, options, _check_halted, _safe_sta
                         x = float(atom_line[0:10].strip())
                         y = float(atom_line[10:20].strip())
                         z = float(atom_line[20:30].strip())
-                    except Exception:
+                    except (AttributeError, RuntimeError):
                         fields = atom_line.split()
                         if len(fields) >= 4:
                             try:
                                 x = float(fields[0])
                                 y = float(fields[1])
                                 z = float(fields[2])
-                            except Exception:
+                            except (AttributeError, RuntimeError):
                                 continue
                         else:
                             continue
@@ -552,9 +552,8 @@ def _perform_direct_conversion(mol_block, mol, options, _check_halted, _safe_sta
                 conf.SetAtomPosition(
                     i, rdGeometry.Point3D(float(x), float(y), 0.0)
                 )
-            except Exception:  # pragma: no cover
-                import traceback
-                traceback.print_exc()
+            except (AttributeError, RuntimeError):  # pragma: no cover
+                pass
         else:
             # Newly added H atoms: place near the parent atom
             atom = mol.GetAtomWithIdx(i)
@@ -670,9 +669,8 @@ def _perform_direct_conversion(mol_block, mol, options, _check_halted, _safe_sta
                         conf.SetAtomPosition(
                             i, rdGeometry.Point3D(0.0, 0.0, 0.10)
                         )
-                    except Exception:  # pragma: no cover
-                        import traceback
-                        traceback.print_exc()
+                    except (AttributeError, RuntimeError):  # pragma: no cover
+                        pass
     # 5) Apply Z-offset for Wedge/Dash constraints
     try:
         stereo_z_offset = 1.5  # wedge -> +1.5, dash -> -1.5
@@ -703,15 +701,13 @@ def _perform_direct_conversion(mol_block, mol, options, _check_halted, _safe_sta
                 )
             except (AttributeError, RuntimeError, TypeError, ValueError):
                 continue
-    except Exception:  # pragma: no cover
-        import traceback
-        traceback.print_exc()
+    except (AttributeError, RuntimeError):  # pragma: no cover
+        pass
     # Replace conformer and finish
     try:
         mol.RemoveAllConformers()
-    except Exception:  # pragma: no cover
-        import traceback
-        traceback.print_exc()
+    except (AttributeError, RuntimeError):  # pragma: no cover
+        pass
     mol.AddConformer(conf, assignId=True)
 
     # Optimization (respects do_optimize flag)
@@ -795,13 +791,13 @@ def _perform_optimize_only(mol, options, worker_id, _check_halted, _safe_status,
     if backend == "OBABEL":
         try:
             mol.SetProp("_pme_optimization_method", opt_method)
-        except Exception:
+        except (AttributeError, RuntimeError):
             pass
         opt_success = _iterative_optimize_obabel(mol, method_key, _check_halted, _safe_status)
     else:
         try:
             mol.SetProp("_pme_optimization_method", opt_method)
-        except Exception:
+        except (AttributeError, RuntimeError):
             pass
         opt_success = _iterative_optimize(mol, method_key, _check_halted, _safe_status, options=options)
     
@@ -812,7 +808,7 @@ def _perform_optimize_only(mol, options, worker_id, _check_halted, _safe_status,
         raise WorkerHaltError("Halted")
     try:
         _safe_finished((worker_id, mol))
-    except Exception:
+    except (AttributeError, RuntimeError):
         _safe_finished(mol)
     friendly = _OPT_METHOD_LABELS.get(opt_method.upper(), opt_method)
     _safe_status(f"Optimization completed ({friendly}).")
@@ -835,9 +831,8 @@ def _perform_obabel_conversion(mol_block, conversion_mode, opt_method, worker_id
         ob_mol = pybel.readstring("mol", mol_block)
         try:
             ob_mol.addh()
-        except Exception:  # pragma: no cover
-            import traceback
-            traceback.print_exc()
+        except (AttributeError, RuntimeError):  # pragma: no cover
+            pass
         ob_mol.make3D()
         # Skip OpenBabel's redundant manual localopt here.
         # We will optimize rd_mol immediately after conversion using the selected user method.
@@ -930,9 +925,8 @@ class CalculationWorker(QObject):
             self.start_work.connect(self.run_calculation)
         except (AttributeError, RuntimeError):
             pass
-        except Exception:
-            import traceback
-            traceback.print_exc()
+        except (AttributeError, RuntimeError):
+            pass
 
     @pyqtSlot(str, object)
     def run_calculation(self, mol_block, options=None):
@@ -985,14 +979,12 @@ class CalculationWorker(QObject):
                             self.finished.emit(payload)
                     except WorkerHaltError:
                         raise
-                    except Exception:  # pragma: no cover
-                        import traceback
-                        traceback.print_exc()
+                    except (AttributeError, RuntimeError):  # pragma: no cover
+                        pass
             except WorkerHaltError:
                 raise
-            except Exception:  # pragma: no cover
-                import traceback
-                traceback.print_exc()
+            except (AttributeError, RuntimeError):  # pragma: no cover
+                pass
 
         def _safe_error(msg):  # pragma: no cover
             try:
@@ -1082,7 +1074,7 @@ class CalculationWorker(QObject):
                         _safe_finished((worker_id, mol))
                     except WorkerHaltError:
                         raise
-                    except Exception:
+                    except (AttributeError, RuntimeError):
                         _safe_finished(mol)
                     _safe_status("Direct conversion completed.")
                     return
@@ -1188,7 +1180,7 @@ class CalculationWorker(QObject):
                         DoTriangleSmoothing(bounds_matrix)
                         conf_id = AllChem.EmbedMolecule(mol, bounds_matrix, params)
                         _safe_status("Constraint-based embedding succeeded")
-                    except Exception:
+                    except (AttributeError, RuntimeError):
                         # Constraint embedding failed: only raise error if mode is 'rdkit', otherwise allow fallback
                         _safe_status("RDKit: Constraint embedding failed")
                         if conversion_mode == "rdkit":
@@ -1286,7 +1278,7 @@ class CalculationWorker(QObject):
                         _safe_finished((worker_id, mol))
                     except WorkerHaltError:
                         raise
-                    except Exception:
+                    except (AttributeError, RuntimeError):
                         _safe_finished(mol)
                     _safe_status("RDKit 3D conversion succeeded.")
                     return
