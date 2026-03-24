@@ -19,7 +19,7 @@ from PyQt6.QtWidgets import QMainWindow
 try:
     from PyQt6 import sip as _sip  # type: ignore
     _sip_isdeleted = getattr(_sip, "isdeleted", None)
-except Exception:
+except ImportError:
     _sip = None
     _sip_isdeleted = None
 
@@ -119,8 +119,8 @@ class MainWindow(QMainWindow):
 
         try:
             self.main_window_main_init.init(initial_file)
-        except Exception:  # pragma: no cover
-            traceback.print_exc()
+        except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
+            pass
 
         other_inits = [
             "main_window_view_3d",
@@ -139,8 +139,8 @@ class MainWindow(QMainWindow):
         for name in other_inits:
             try:
                 getattr(self, name).init()
-            except Exception:  # pragma: no cover
-                traceback.print_exc()
+            except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
+                pass
 
     def init_ui(self):
         # --- MOVED TO main_window_main_init.py ---

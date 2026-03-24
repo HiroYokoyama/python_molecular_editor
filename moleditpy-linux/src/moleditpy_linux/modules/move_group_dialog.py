@@ -26,12 +26,12 @@ from PyQt6.QtWidgets import (
 
 try:
     from .constants import VDW_RADII, pt
-except Exception:
+except ImportError:
     from modules.constants import VDW_RADII, pt
 
 try:
     from .dialog3_d_picking_mixin import Dialog3DPickingMixin
-except Exception:
+except ImportError:
     from modules.dialog3_d_picking_mixin import Dialog3DPickingMixin
 
 
@@ -215,7 +215,7 @@ class MoveGroupDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
                                     vdw_radius = pt.GetRvdw(atomic_num)
                                     if vdw_radius < 0.1:
                                         vdw_radius = 1.5
-                                except Exception:
+                                except (AttributeError, RuntimeError):
                                     vdw_radius = 1.5
                                 click_threshold = vdw_radius * 1.5
 
@@ -246,7 +246,7 @@ class MoveGroupDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
                         # Allow normal camera operation even if a group exists
                         return False
 
-                except Exception as e:
+                except (AttributeError, RuntimeError, ValueError) as e:
                     print(f"Error in mouse press: {e}")
                     return False
 
@@ -274,12 +274,10 @@ class MoveGroupDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
                                 self.main_window.plotter.setCursor(
                                     Qt.CursorShape.ClosedHandCursor
                                 )
-                            except Exception:  # pragma: no cover
-                                import traceback
-                                traceback.print_exc()
-                    except Exception:  # pragma: no cover
-                        import traceback
-                        traceback.print_exc()
+                            except (AttributeError, RuntimeError):  # pragma: no cover
+                                pass
+                    except (AttributeError, RuntimeError):  # pragma: no cover
+                        pass
 
                     # Allow camera operation if below threshold
                     if not self.is_dragging_group:
@@ -296,9 +294,8 @@ class MoveGroupDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
 
                         if abs(dx) > 2 or abs(dy) > 2:
                             self.mouse_moved_during_drag = True
-                    except Exception:  # pragma: no cover
-                        import traceback
-                        traceback.print_exc()
+                    except (AttributeError, RuntimeError):  # pragma: no cover
+                        pass
 
                     # Consume event during drag to prevent camera rotation
                     return True
@@ -336,9 +333,8 @@ class MoveGroupDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
                             self.main_window.plotter.setCursor(
                                 Qt.CursorShape.ArrowCursor
                             )
-                    except Exception:  # pragma: no cover
-                        import traceback
-                        traceback.print_exc()
+                    except (AttributeError, RuntimeError):  # pragma: no cover
+                        pass
 
                 # Allow camera rotation if not dragging
                 return False
@@ -374,14 +370,12 @@ class MoveGroupDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
                                     self.main_window.plotter.setCursor(
                                         Qt.CursorShape.ArrowCursor
                                     )
-                                except Exception:  # pragma: no cover
-                                    import traceback
-                                    traceback.print_exc()
+                                except (AttributeError, RuntimeError):  # pragma: no cover
+                                    pass
                                 return True
 
-                    except Exception:  # pragma: no cover
-                        import traceback
-                        traceback.print_exc()
+                    except (AttributeError, RuntimeError):  # pragma: no cover
+                        pass
                     finally:
                         # Reset drag state
                         self.is_dragging_group = False
@@ -395,9 +389,8 @@ class MoveGroupDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
                             self.main_window.plotter.setCursor(
                                 Qt.CursorShape.ArrowCursor
                             )
-                        except Exception:  # pragma: no cover
-                            import traceback
-                            traceback.print_exc()
+                        except (AttributeError, RuntimeError):  # pragma: no cover
+                            pass
 
                     return True  # Consume event
 
@@ -505,23 +498,20 @@ class MoveGroupDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
         super().clear_atom_labels()
         try:
             self.main_window.plotter.remove_actor("move_group_highlight")
-        except Exception:  # pragma: no cover
-            import traceback
-            traceback.print_exc()
+        except (AttributeError, RuntimeError):  # pragma: no cover
+            pass
 
         if hasattr(self, "highlight_actor"):
             try:
                 self.main_window.plotter.remove_actor(self.highlight_actor)
-            except Exception:  # pragma: no cover
-                import traceback
-                traceback.print_exc()
+            except (AttributeError, RuntimeError):  # pragma: no cover
+                pass
 
             self.highlight_actor = None
         try:
             self.main_window.plotter.render()
-        except Exception:  # pragma: no cover
-            import traceback
-            traceback.print_exc()
+        except (AttributeError, RuntimeError):  # pragma: no cover
+            pass
 
     def reset_translation_inputs(self):
         """Reset Translation input fields."""

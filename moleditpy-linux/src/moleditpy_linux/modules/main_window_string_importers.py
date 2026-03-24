@@ -27,7 +27,7 @@ from PyQt6.QtWidgets import QInputDialog
 try:
     from PyQt6 import sip as _sip  # type: ignore
     _sip_isdeleted = getattr(_sip, "isdeleted", None)
-except Exception:
+except ImportError:
     _sip = None
     _sip_isdeleted = None
 
@@ -139,7 +139,7 @@ class MainWindowStringImporters(object):
 
         except ValueError as e:
             self.statusBar().showMessage(f"Invalid SMILES: {e}")
-        except Exception as e:
+        except (AttributeError, RuntimeError, ValueError) as e:
             self.statusBar().showMessage(f"Error loading from SMILES: {e}")
 
     def load_from_inchi(self, inchi_string):
@@ -232,7 +232,7 @@ class MainWindowStringImporters(object):
 
         except ValueError as e:
             self.statusBar().showMessage(f"Invalid InChI: {e}")
-        except Exception as e:
+        except (AttributeError, RuntimeError, ValueError) as e:
             self.statusBar().showMessage(f"Error loading from InChI: {e}")
 
             pass

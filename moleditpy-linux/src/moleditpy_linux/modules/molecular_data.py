@@ -16,7 +16,7 @@ from rdkit import Chem
 
 try:
     from .constants import ANGSTROM_PER_PIXEL
-except Exception:
+except ImportError:
     from modules.constants import ANGSTROM_PER_PIXEL
 
 
@@ -89,9 +89,7 @@ class MolecularData:
                 for key in bonds_to_remove:
                     del self.bonds[key]
 
-            except Exception as e:
-                print(f"Error removing atom {atom_id}: {e}")
-
+            except (AttributeError, KeyError, TypeError):
                 pass
 
     def remove_bond(self, id1, id2):
@@ -110,9 +108,7 @@ class MolecularData:
                     self.adjacency_list[id2].remove(id1)
                 del self.bonds[key_to_remove]
 
-        except Exception as e:
-            print(f"Error removing bond {id1}-{id2}: {e}")
-
+        except (AttributeError, KeyError, TypeError):
             pass
 
     def to_rdkit_mol(self, use_2d_stereo=True):
@@ -127,7 +123,12 @@ class MolecularData:
         # --- Step 1: atoms ---
         atom_id_to_idx_map = {}
         for atom_id, data in self.atoms.items():
-            atom = Chem.Atom(data["symbol"])
+            try:
+                atom = Chem.Atom(data["symbol"])
+            except (RuntimeError, ValueError):
+                # RDKit doesn't support this symbol. Return None to trigger
+                # manual MoleditPy fallback (with 'MoleditPy' header).
+                return None
             atom.SetFormalCharge(data.get("charge", 0))
             atom.SetNumRadicalElectrons(data.get("radical", 0))
             atom.SetIntProp("_original_atom_id", atom_id)
@@ -163,7 +164,7 @@ class MolecularData:
         final_mol = mol.GetMol()
         try:
             Chem.SanitizeMol(final_mol)
-        except Exception:
+        except (AttributeError, RuntimeError):
             return None
 
         # --- Step 4: add 2D conformer ---
@@ -245,7 +246,7 @@ class MolecularData:
                         a1_id, a2_id = stereo_atoms_specified
                         neigh1_idx = atom_id_to_idx_map.get(a1_id)
                         neigh2_idx = atom_id_to_idx_map.get(a2_id)
-                    except Exception:
+                    except (AttributeError, RuntimeError):
                         neigh1_idx = None
                         neigh2_idx = None
                 else:
@@ -282,7 +283,7 @@ class MolecularData:
                 Chem.AssignStereochemistry(final_mol, cleanIt=False, force=True)
             else:
                 Chem.AssignStereochemistry(final_mol, cleanIt=False, force=False)
-        except Exception:
+        except (AttributeError, RuntimeError):
                 raise
         return final_mol
 
@@ -291,9 +292,8 @@ class MolecularData:
             mol = self.to_rdkit_mol()
             if mol:
                 return Chem.MolToMolBlock(mol, includeStereo=True)
-        except Exception:  # pragma: no cover
-            import traceback
-            traceback.print_exc()
+        except (AttributeError, RuntimeError):  # pragma: no cover
+            pass
 
         if not self.atoms:
             return None

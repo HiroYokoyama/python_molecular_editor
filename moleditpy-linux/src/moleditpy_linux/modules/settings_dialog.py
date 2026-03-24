@@ -33,7 +33,7 @@ from PyQt6.QtWidgets import (
 
 try:
     from .constants import CPK_COLORS
-except Exception:
+except ImportError:
     from modules.constants import CPK_COLORS
 
 
@@ -353,9 +353,8 @@ class SettingsDialog(QDialog):  # pragma: no cover
             self.bond_color_2d_button.setStyleSheet(
                 f"background-color: {self.current_bond_color_2d}; border: 1px solid #888;"
             )
-        except Exception:  # pragma: no cover
-            import traceback
-            traceback.print_exc()
+        except (AttributeError, RuntimeError):
+            pass
 
     def create_scene_tab(self):
         """Create primary settings tab"""
@@ -438,9 +437,8 @@ class SettingsDialog(QDialog):  # pragma: no cover
             self.skip_chem_checks_checkbox.stateChanged.connect(
                 lambda s: self._on_skip_chem_checks_changed(s)
             )
-        except Exception:  # pragma: no cover
-            import traceback
-            traceback.print_exc()
+        except (AttributeError, RuntimeError):
+            pass
 
         # Add the checkbox to the other tab's form
         try:
@@ -448,9 +446,8 @@ class SettingsDialog(QDialog):  # pragma: no cover
                 "Skip chemistry checks on import XYZ file:",
                 self.skip_chem_checks_checkbox,
             )
-        except Exception:  # pragma: no cover
-            import traceback
-            traceback.print_exc()
+        except (AttributeError, RuntimeError, TypeError):
+            pass
 
         # 3D Kekule display option (under Other) will be added below the
         # 'Always ask molecular charge on import' option so ordering is clear
@@ -470,9 +467,8 @@ class SettingsDialog(QDialog):  # pragma: no cover
                 "Always ask molecular charge on import XYZ file:",
                 self.always_ask_charge_checkbox,
             )
-        except Exception:  # pragma: no cover
-            import traceback
-            traceback.print_exc()
+        except (AttributeError, RuntimeError, TypeError):
+            pass
 
         # Add separator after Kekule bonds option
         separator = QFrame()
@@ -485,9 +481,8 @@ class SettingsDialog(QDialog):  # pragma: no cover
             self.other_form_layout.addRow(
                 "Display Kekulé bonds in 3D:", self.kekule_3d_checkbox
             )
-        except Exception:  # pragma: no cover
-            import traceback
-            traceback.print_exc()
+        except (AttributeError, RuntimeError, TypeError):
+            pass
 
         # Aromatic ring circle display option
         self.aromatic_circle_checkbox = QCheckBox()
@@ -499,9 +494,8 @@ class SettingsDialog(QDialog):  # pragma: no cover
                 "Display aromatic rings as circles in 3D:",
                 self.aromatic_circle_checkbox,
             )
-        except Exception:  # pragma: no cover
-            import traceback
-            traceback.print_exc()
+        except (AttributeError, RuntimeError, TypeError):
+            pass
 
         # Aromatic torus thickness factor
         self.aromatic_torus_thickness_slider = QSlider(Qt.Orientation.Horizontal)
@@ -518,9 +512,8 @@ class SettingsDialog(QDialog):  # pragma: no cover
             self.other_form_layout.addRow(
                 "Aromatic torus thickness (× bond radius):", thickness_layout
             )
-        except Exception:  # pragma: no cover
-            import traceback
-            traceback.print_exc()
+        except (AttributeError, RuntimeError, TypeError):
+            pass
 
         # Add Other tab to the tab widget
         self.tab_widget.addTab(self.other_widget, "Other")
@@ -555,9 +548,8 @@ class SettingsDialog(QDialog):  # pragma: no cover
                     btn.setStyleSheet(
                         f"background-color: {q_color.name()}; color: {text_color}; border: 1px solid #555; font-weight: bold;"
                     )
-                except Exception:  # pragma: no cover
-                    import traceback
-                    traceback.print_exc()
+                except (AttributeError, RuntimeError):  # pragma: no cover
+                    pass
             # Update BS color button from parent settings
             try:
                 if (
@@ -575,12 +567,10 @@ class SettingsDialog(QDialog):  # pragma: no cover
                         f"background-color: {bs_hex}; border: 1px solid #888;"
                     )
                     self.bs_button.setToolTip(bs_hex)
-            except Exception:  # pragma: no cover
-                import traceback
-                traceback.print_exc()
-        except Exception:  # pragma: no cover
-            import traceback
-            traceback.print_exc()
+            except (AttributeError, RuntimeError):  # pragma: no cover
+                pass
+        except (AttributeError, RuntimeError):  # pragma: no cover
+            pass
 
     def create_ball_stick_tab(self):
         """Create Ball and Stick settings tab"""
@@ -1128,9 +1118,8 @@ class SettingsDialog(QDialog):  # pragma: no cover
                     # defer writing to disk; mark dirty so closeEvent will persist
                     try:
                         self.parent_window.settings_dirty = True
-                    except Exception:  # pragma: no cover
-                        import traceback
-                        traceback.print_exc()
+                    except AttributeError:
+                        pass
                     # Also ensure color settings return to defaults and UI reflects them
                     try:
                         # Remove any CPK overrides to restore defaults
@@ -1149,14 +1138,12 @@ class SettingsDialog(QDialog):  # pragma: no cover
                         # Update global CPK colors and reapply 3D settings immediately
                         try:
                             self.parent_window.update_cpk_colors_from_settings()
-                        except Exception:  # pragma: no cover
-                            import traceback
-                            traceback.print_exc()
+                        except (AttributeError, RuntimeError):
+                            pass
                         try:
                             self.parent_window.apply_3d_settings()
-                        except Exception:  # pragma: no cover
-                            import traceback
-                            traceback.print_exc()
+                        except (AttributeError, RuntimeError):
+                            pass
                         # Re-draw current 3D molecule if any
                         try:
                             if (
@@ -1166,9 +1153,8 @@ class SettingsDialog(QDialog):  # pragma: no cover
                                 self.parent_window.draw_molecule_3d(
                                     self.parent_window.current_mol
                                 )
-                        except Exception:  # pragma: no cover
-                            import traceback
-                            traceback.print_exc()
+                        except (AttributeError, RuntimeError):
+                            pass
                         # Update 2D scene items to reflect color reset
                         try:
                             if hasattr(self.parent_window, "scene"):
@@ -1176,21 +1162,18 @@ class SettingsDialog(QDialog):  # pragma: no cover
                                     try:
                                         if hasattr(it, "update_style"):
                                             it.update_style()
-                                    except Exception:  # pragma: no cover
-                                        import traceback
-                                        traceback.print_exc()
-                        except Exception:  # pragma: no cover
-                            import traceback
-                            traceback.print_exc()
+                                    except (AttributeError, RuntimeError):
+                                        pass
+                        except (AttributeError, RuntimeError):
+                            pass
                         # Mark settings dirty so they'll be saved on exit
                         try:
                             self.parent_window.settings_dirty = True
-                        except Exception:  # pragma: no cover
-                            import traceback
-                            traceback.print_exc()
-                    except Exception:  # pragma: no cover
-                        import traceback
-                        traceback.print_exc()
+                        except AttributeError:
+                            pass
+                    except (AttributeError, RuntimeError):
+                        pass
+
                     # Refresh parent's optimization and conversion menu/action states
                     try:
                         # Optimization method
@@ -1209,9 +1192,8 @@ class SettingsDialog(QDialog):  # pragma: no cover
                                             self.parent_window.optimization_method or ""
                                         ).upper()
                                     )
-                                except Exception:  # pragma: no cover
-                                    import traceback
-                                    traceback.print_exc()
+                                except (AttributeError, RuntimeError):
+                                    pass
                         # Conversion mode
                         conv_mode = self.parent_window.settings.get(
                             "3d_conversion_mode", "fallback"
@@ -1220,15 +1202,12 @@ class SettingsDialog(QDialog):  # pragma: no cover
                             for k, act in self.parent_window.conv_actions.items():
                                 try:
                                     act.setChecked(k == conv_mode)
-                                except Exception:  # pragma: no cover
-                                    import traceback
-                                    traceback.print_exc()
-                    except Exception:  # pragma: no cover
-                        import traceback
-                        traceback.print_exc()
-            except Exception:  # pragma: no cover
-                import traceback
-                traceback.print_exc()
+                                except (AttributeError, RuntimeError):
+                                    pass
+                    except (AttributeError, RuntimeError):
+                        pass
+            except (AttributeError, RuntimeError, TypeError):
+                pass
 
             QMessageBox.information(
                 self, "Reset Complete", "All settings have been reset to defaults."
@@ -1409,9 +1388,8 @@ class SettingsDialog(QDialog):  # pragma: no cover
                     f"background-color: {self.bs_bond_color}; border: 1px solid #888;"
                 )
                 self.bs_bond_color_button.setToolTip(self.bs_bond_color)
-            except Exception:  # pragma: no cover
-                import traceback
-                traceback.print_exc()
+            except (AttributeError, RuntimeError):  # pragma: no cover
+                pass
 
     def apply_settings(self):
         """Apply settings (dialog stays open)"""
@@ -1422,18 +1400,16 @@ class SettingsDialog(QDialog):  # pragma: no cover
             # Mark settings dirty; persist on exit to avoid frequent disk writes
             try:
                 self.parent_window.settings_dirty = True
-            except Exception:  # pragma: no cover
-                import traceback
-                traceback.print_exc()
+            except (AttributeError, RuntimeError):  # pragma: no cover
+                pass
 
             # Apply 3D view settings
             self.parent_window.apply_3d_settings()
             # Update CPK colors from settings if present (no-op otherwise)
             try:
                 self.parent_window.update_cpk_colors_from_settings()
-            except Exception:  # pragma: no cover
-                import traceback
-                traceback.print_exc()
+            except (AttributeError, RuntimeError):  # pragma: no cover
+                pass
 
             # Refresh any open CPK color dialogs so they update their UI
             try:
@@ -1456,15 +1432,12 @@ class SettingsDialog(QDialog):  # pragma: no cover
                         if isinstance(w, ColorSettingsDialog):
                             try:
                                 w.refresh_ui()
-                            except Exception:  # pragma: no cover
-                                import traceback
-                                traceback.print_exc()
-                    except Exception:  # pragma: no cover
-                        import traceback
-                        traceback.print_exc()
-            except Exception:  # pragma: no cover
-                import traceback
-                traceback.print_exc()
+                            except (AttributeError, RuntimeError):  # pragma: no cover
+                                pass
+                    except (AttributeError, RuntimeError):  # pragma: no cover
+                        pass
+            except (AttributeError, RuntimeError):  # pragma: no cover
+                pass
 
             # Redraw current molecule (reflecting settings changes)
             if (
@@ -1492,9 +1465,8 @@ class SettingsDialog(QDialog):  # pragma: no cover
 
                     if hasattr(self.parent_window.view_2d, "viewport"):
                         self.parent_window.view_2d.viewport().update()
-            except Exception:  # pragma: no cover
-                import traceback
-                traceback.print_exc()
+            except (AttributeError, RuntimeError):  # pragma: no cover
+                pass
 
             # Display application completion in the status bar
             self.parent_window.statusBar().showMessage("Settings applied successfully")
@@ -1510,14 +1482,12 @@ class SettingsDialog(QDialog):  # pragma: no cover
             # mark dirty instead of immediate save
             try:
                 self.settings_dirty = True
-            except Exception:  # pragma: no cover
-                import traceback
-                traceback.print_exc()
+            except (AttributeError, RuntimeError):  # pragma: no cover
+                pass
             # If skip is enabled, allow Optimize button; otherwise, respect chem_check flags
 
-        except Exception:  # pragma: no cover
-            import traceback
-            traceback.print_exc()
+        except (AttributeError, RuntimeError):  # pragma: no cover
+            pass
 
     def accept(self):
         """Apply dialog settings before closing"""
@@ -1623,9 +1593,8 @@ class SettingsDialog(QDialog):  # pragma: no cover
                 f"background-color: {self.bs_bond_color}; border: 1px solid #888;"
             )
             self.bs_bond_color_button.setToolTip(self.bs_bond_color)
-        except Exception:  # pragma: no cover
-            import traceback
-            traceback.print_exc()
+        except (AttributeError, RuntimeError):  # pragma: no cover
+            pass
 
         self.bs_use_cpk_bond_checkbox.setChecked(
             settings_dict.get(
@@ -1767,9 +1736,8 @@ class SettingsDialog(QDialog):  # pragma: no cover
         try:
             self.aromatic_torus_thickness_slider.setValue(int(thickness_factor * 100))
             self.aromatic_torus_thickness_label.setText(f"{thickness_factor:.1f}")
-        except Exception:  # pragma: no cover
-            import traceback
-            traceback.print_exc()
+        except (AttributeError, RuntimeError):  # pragma: no cover
+            pass
 
         # 7. 2D Settings
         bw_2d = settings_dict.get(

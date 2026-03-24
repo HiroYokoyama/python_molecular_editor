@@ -16,7 +16,7 @@ from PyQt6.QtWidgets import QGraphicsItem
 
 try:
     from .constants import CPK_COLORS
-except Exception:
+except ImportError:
     from modules.constants import CPK_COLORS
 
 

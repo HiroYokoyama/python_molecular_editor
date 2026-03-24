@@ -17,7 +17,7 @@ try:
     from PyQt6 import sip as _sip  # type: ignore
 
     _sip_isdeleted = getattr(_sip, "isdeleted", None)
-except Exception:
+except ImportError:
     _sip = None
     _sip_isdeleted = None
 
@@ -33,5 +33,5 @@ def sip_isdeleted_safe(obj) -> bool:
         if _sip_isdeleted is None:
             return False
         return bool(_sip_isdeleted(obj))
-    except Exception:
+    except (AttributeError, RuntimeError, TypeError):
         return False

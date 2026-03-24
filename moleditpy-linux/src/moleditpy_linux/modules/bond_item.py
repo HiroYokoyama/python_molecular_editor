@@ -33,7 +33,7 @@ try:
         FONT_WEIGHT_BOLD,
         HOVER_PEN_WIDTH,
     )
-except Exception:
+except ImportError:
     from modules.constants import (
         DESIRED_BOND_PIXEL_WIDTH,
         EZ_LABEL_BOX_SIZE,
@@ -85,7 +85,7 @@ class BondItem(QGraphicsItem):
                     # Handle case where views are being destroyed
                     pass
 
-        except Exception as e:
+        except (AttributeError, RuntimeError, TypeError) as e:
             print(f"Error in BondItem.set_stereo: {e}")
             # Continue without crashing
             self.stereo = new_stereo
@@ -127,13 +127,13 @@ class BondItem(QGraphicsItem):
             p1 = self.atom1.pos()
             p2 = self.atom2.pos()
             return QLineF(QPointF(0, 0), p2 - p1)
-        except Exception:
+        except (AttributeError, RuntimeError):
             return QLineF(0, 0, 0, 0)
 
     def boundingRect(self):
         try:
             line = self.get_line_in_local_coords()
-        except Exception:
+        except (AttributeError, RuntimeError):
             line = QLineF(0, 0, 0, 0)
 
         # Get dynamic bond offset (spacing)
@@ -147,7 +147,7 @@ class BondItem(QGraphicsItem):
                         bond_offset = win.settings.get("bond_spacing_triple_2d", 3.5)
                     else:
                         bond_offset = win.settings.get("bond_spacing_double_2d", 3.5)
-        except Exception:
+        except (AttributeError, RuntimeError, TypeError, ValueError):
             bond_offset = globals().get("BOND_OFFSET", 3.5)
 
         # Get dynamic wedge width
@@ -157,7 +157,7 @@ class BondItem(QGraphicsItem):
                 win = self.scene().views()[0].window()
                 if win and hasattr(win, "settings"):
                     wedge_width = win.settings.get("bond_wedge_width_2d", 6.0)
-        except Exception:  # pragma: no cover
+        except (AttributeError, RuntimeError, TypeError, ValueError):  # pragma: no cover
             import traceback
             traceback.print_exc()
 
@@ -180,7 +180,7 @@ class BondItem(QGraphicsItem):
                         font_family = win.settings.get(
                             "atom_font_family_2d", FONT_FAMILY
                         )
-            except Exception:  # pragma: no cover
+            except (AttributeError, RuntimeError, TypeError, ValueError):  # pragma: no cover
                 import traceback
                 traceback.print_exc()
 
@@ -221,7 +221,7 @@ class BondItem(QGraphicsItem):
             if label_rect:
                 path.addRect(label_rect)
 
-        except Exception:
+        except (AttributeError, RuntimeError, TypeError, ValueError):
             # Fallback to a small rect around the origin if calculation fails
             path.addRect(QRectF(-5, -5, 10, 10))
 
@@ -243,7 +243,7 @@ class BondItem(QGraphicsItem):
             return QRectF(
                 center.x() - box_size / 2, center.y() - box_size / 2, box_size, box_size
             )
-        except Exception:
+        except (AttributeError, RuntimeError, TypeError, ValueError):
             return None
 
     def paint(self, painter, option, widget):
@@ -257,6 +257,7 @@ class BondItem(QGraphicsItem):
         width_2d = 2.0
         wedge_width_half = 6.0
         num_dashes = 8
+        bond_color = QColor("#222222")
 
         try:
             sc = self.scene()
@@ -293,7 +294,7 @@ class BondItem(QGraphicsItem):
 
             # Use bond color for fill
             painter.setBrush(QBrush(bond_color))
-        except Exception:
+        except (AttributeError, RuntimeError, TypeError, ValueError):
             # Fallback
             painter.setPen(self.pen)
             painter.setBrush(QBrush(Qt.GlobalColor.black))
@@ -356,7 +357,7 @@ class BondItem(QGraphicsItem):
                                 .window()
                                 .settings.get("bond_spacing_double_2d", 3.5)
                             )
-                except Exception:
+                except (AttributeError, RuntimeError, TypeError, ValueError):
                     bond_offset = globals().get("BOND_OFFSET", 3.5)
 
                 offset = QPointF(v.dx(), v.dy()) * bond_offset
@@ -442,7 +443,7 @@ class BondItem(QGraphicsItem):
                                                         center_x, center_y
                                                     )
                                                     break
-                    except Exception as e:
+                    except (AttributeError, RuntimeError, TypeError, ValueError) as e:
                         # Fallback to default drawing on error
                         is_in_ring = False
 
@@ -504,7 +505,7 @@ class BondItem(QGraphicsItem):
                                     font_family = win.settings.get(
                                         "atom_font_family_2d", FONT_FAMILY
                                     )
-                        except Exception:  # pragma: no cover
+                        except (AttributeError, RuntimeError, TypeError, ValueError):  # pragma: no cover
                             import traceback
                             traceback.print_exc()
 
@@ -517,7 +518,7 @@ class BondItem(QGraphicsItem):
                             sc = self.scene()
                             if sc is not None:
                                 outline_color = sc.backgroundBrush().color()
-                        except Exception:
+                        except (AttributeError, RuntimeError, TypeError):
                             outline_color = None
                         if outline_color is None:
                             # Default to white background outline for visibility
@@ -564,7 +565,7 @@ class BondItem(QGraphicsItem):
                 hover_pen.setCapStyle(Qt.PenCapStyle.RoundCap)
                 painter.setPen(hover_pen)
                 painter.drawLine(line)
-            except Exception:  # pragma: no cover
+            except (AttributeError, RuntimeError, TypeError, ValueError):  # pragma: no cover
                 import traceback
                 traceback.print_exc()
 
@@ -575,7 +576,7 @@ class BondItem(QGraphicsItem):
             if self.atom1:
                 self.setPos(self.atom1.pos())
             self.update()
-        except Exception as e:
+        except (AttributeError, RuntimeError) as e:
             print(f"Error updating bond position: {e}")
             # Continue without crashing
 

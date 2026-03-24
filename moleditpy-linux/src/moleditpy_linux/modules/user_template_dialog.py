@@ -30,7 +30,7 @@ from .template_preview_view import TemplatePreviewView
 
 try:
     from .constants import CPK_COLORS, VERSION
-except Exception:
+except ImportError:
     from modules.constants import CPK_COLORS, VERSION
 import json
 import logging
@@ -123,7 +123,7 @@ class UserTemplateDialog(QDialog):  # pragma: no cover
             # Fallback: set attribute directly if methods fail/don't exist
             if hasattr(self.main_window, "mode"):
                 self.main_window.mode = target_mode
-        except Exception as e:
+        except (AttributeError, RuntimeError, ValueError) as e:
             logging.error(f"Error resetting main window mode: {e}")
 
         # 3. Reset Scene State (The Source of Truth)
@@ -155,7 +155,7 @@ class UserTemplateDialog(QDialog):  # pragma: no cover
                     view.viewport().update()
 
                 scene.update()
-        except Exception as e:
+        except (AttributeError, RuntimeError, ValueError) as e:
             logging.error(f"Error cleaning up scene state: {e}")
 
     def resizeEvent(self, event):
@@ -178,7 +178,7 @@ class UserTemplateDialog(QDialog):  # pragma: no cover
                             child.redraw_with_current_size()
                         elif hasattr(child, "refit_view"):
                             child.refit_view()
-        except Exception as e:
+        except (AttributeError, RuntimeError, ValueError) as e:
             logging.warning(f"Warning: Failed to refit template previews: {e}")
 
     def showEvent(self, event):
@@ -208,7 +208,7 @@ class UserTemplateDialog(QDialog):  # pragma: no cover
                         template_data["filename"] = filename
                         template_data["filepath"] = filepath
                         self.user_templates.append(template_data)
-        except Exception as e:
+        except (AttributeError, RuntimeError, ValueError) as e:
             logging.error(f"Error loading user templates: {e}")
 
         self.update_template_grid()
@@ -218,7 +218,7 @@ class UserTemplateDialog(QDialog):  # pragma: no cover
         try:
             with open(filepath, "r", encoding="utf-8") as f:
                 return json.load(f)
-        except Exception as e:
+        except (AttributeError, RuntimeError, ValueError) as e:
             logging.error(f"Error loading template file {filepath}: {e}")
             return None
 
@@ -228,7 +228,7 @@ class UserTemplateDialog(QDialog):  # pragma: no cover
             with open(filepath, "w", encoding="utf-8") as f:
                 json.dump(template_data, f, indent=2, ensure_ascii=False)
             return True
-        except Exception as e:
+        except (AttributeError, RuntimeError, ValueError) as e:
             logging.error(f"Error saving template file {filepath}: {e}")
             return False
 
@@ -335,7 +335,7 @@ class UserTemplateDialog(QDialog):  # pragma: no cover
         try:
             if view and not rect.isEmpty():
                 view.fitInView(rect, Qt.AspectRatioMode.KeepAspectRatio)
-        except Exception as e:
+        except (AttributeError, RuntimeError, ValueError) as e:
             logging.warning(f"Warning: Failed to fit preview view: {e}")
 
     def draw_template_preview(self, scene, template_data, view_size=None):
@@ -514,7 +514,7 @@ class UserTemplateDialog(QDialog):  # pragma: no cover
                         pos.y() - text_rect.height() / 2,
                     )
 
-            except Exception:
+            except (AttributeError, RuntimeError):
                 continue
 
     def select_template(self, template_data, widget):
@@ -554,7 +554,7 @@ class UserTemplateDialog(QDialog):  # pragma: no cover
         # Store template data for the scene to use
         try:
             self.main_window.scene.user_template_data = template_data
-        except Exception:  # pragma: no cover
+        except (AttributeError, RuntimeError):  # pragma: no cover
             # Best-effort: ignore if scene or attribute missing
             pass
 
@@ -568,7 +568,7 @@ class UserTemplateDialog(QDialog):  # pragma: no cover
                 for act in self.main_window.mode_actions.values():
                     try:
                         act.setChecked(False)
-                    except Exception:
+                    except (AttributeError, RuntimeError):
                         continue
 
             # If main_window has a set_mode method, call it. Otherwise, try to set a mode attribute.
@@ -585,7 +585,7 @@ class UserTemplateDialog(QDialog):  # pragma: no cover
                 self.main_window.statusBar().showMessage(
                     f"Template mode: {template_name}"
                 )
-            except Exception:  # pragma: no cover
+            except (AttributeError, RuntimeError):  # pragma: no cover
                 # ignore status bar failures
                 pass
 
@@ -599,10 +599,9 @@ class UserTemplateDialog(QDialog):  # pragma: no cover
                     self.main_window.mode_actions[
                         f"template_user_{template_name}"
                     ].setChecked(True)
-            except Exception:  # pragma: no cover
-                import traceback
-                traceback.print_exc()
-        except Exception as e:
+            except (AttributeError, RuntimeError):  # pragma: no cover
+                pass
+        except (AttributeError, RuntimeError, ValueError) as e:
             logging.warning(
                 f"Warning: Failed to switch main window to template mode: {e}"
             )
@@ -617,9 +616,8 @@ class UserTemplateDialog(QDialog):  # pragma: no cover
             # Store template data for the scene to use
             try:
                 self.main_window.scene.user_template_data = template_data
-            except Exception:  # pragma: no cover
-                import traceback
-                traceback.print_exc()
+            except (AttributeError, RuntimeError):  # pragma: no cover
+                pass
             # Force the main window into the template mode (same approach as select_template)
             try:
                 if hasattr(self.main_window, "mode_actions") and isinstance(
@@ -628,7 +626,7 @@ class UserTemplateDialog(QDialog):  # pragma: no cover
                     for act in self.main_window.mode_actions.values():
                         try:
                             act.setChecked(False)
-                        except Exception:
+                        except (AttributeError, RuntimeError):
                             continue
 
                 if hasattr(self.main_window, "set_mode") and callable(
@@ -642,12 +640,11 @@ class UserTemplateDialog(QDialog):  # pragma: no cover
                     self.main_window.statusBar().showMessage(
                         f"Template mode: {template_name}"
                     )
-                except Exception:  # pragma: no cover
-                    import traceback
-                    traceback.print_exc()
+                except (AttributeError, RuntimeError):  # pragma: no cover
+                    pass
                 # Mark selected and keep dialog open
                 self.selected_template = template_data
-            except Exception as e:
+            except (AttributeError, RuntimeError, ValueError) as e:
                 logging.warning(
                     f"Warning: Failed to switch main window to template mode: {e}"
                 )
@@ -655,7 +652,7 @@ class UserTemplateDialog(QDialog):  # pragma: no cover
             # Don't close dialog - keep it open for easy template switching
             # self.accept()
 
-        except Exception as e:
+        except (AttributeError, RuntimeError, ValueError) as e:
             QMessageBox.critical(self, "Error", f"Failed to apply template: {str(e)}")
 
     def save_current_as_template(self):
@@ -701,7 +698,7 @@ class UserTemplateDialog(QDialog):  # pragma: no cover
             else:
                 QMessageBox.critical(self, "Error", "Failed to save template.")
 
-        except Exception as e:
+        except (AttributeError, RuntimeError, ValueError) as e:
             QMessageBox.critical(self, "Error", f"Failed to save template: {str(e)}")
 
     def convert_structure_to_template(self, name):
@@ -771,7 +768,7 @@ class UserTemplateDialog(QDialog):  # pragma: no cover
                 self.load_user_templates()  # Refresh the display
                 self.selected_template = None
                 self.delete_button.setEnabled(False)
-            except Exception as e:
+            except (AttributeError, RuntimeError, ValueError) as e:
                 QMessageBox.critical(
                     self, "Error", f"Failed to delete template: {str(e)}"
                 )

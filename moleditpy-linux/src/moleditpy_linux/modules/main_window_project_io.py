@@ -28,7 +28,7 @@ from PyQt6.QtWidgets import QFileDialog, QMessageBox
 try:
     from PyQt6 import sip as _sip  # type: ignore
     _sip_isdeleted = getattr(_sip, "isdeleted", None)
-except Exception:
+except ImportError:
     _sip = None
     _sip_isdeleted = None
 
@@ -74,7 +74,7 @@ class MainWindowProjectIo(object):
                 ValueError,
             ) as e:  # pragma: no cover
                 self.statusBar().showMessage(f"Data serialization error: {e}")
-            except Exception as e:
+            except (AttributeError, RuntimeError, ValueError) as e:
                 self.statusBar().showMessage(f"Error saving project file: {e}")
         else:
             # Force "Save As" for non-native formats
@@ -93,7 +93,7 @@ class MainWindowProjectIo(object):
                 if self.current_file_path:
                     base = os.path.basename(self.current_file_path)
                     default_name = os.path.splitext(base)[0]
-            except Exception:
+            except (AttributeError, RuntimeError):
                 default_name = "untitled"
 
             # Prefer the directory of the currently opened file as default
@@ -103,7 +103,7 @@ class MainWindowProjectIo(object):
                     default_path = os.path.join(
                         os.path.dirname(self.current_file_path), default_name
                     )
-            except Exception:
+            except (AttributeError, RuntimeError):
                 default_path = default_name
 
             file_path, _ = QFileDialog.getSaveFileName(  # pragma: no cover
@@ -130,7 +130,7 @@ class MainWindowProjectIo(object):
             # Mark this state as the last saved state for undo tracking
             try:
                 self._saved_state = copy.deepcopy(self.get_current_state())
-            except Exception:  # pragma: no cover
+            except (AttributeError, RuntimeError):  # pragma: no cover
                 traceback.print_exc()
             self.statusBar().showMessage(f"Project saved to {file_path}")
 
@@ -138,7 +138,7 @@ class MainWindowProjectIo(object):
             self.statusBar().showMessage(f"File I/O error: {e}")
         except pickle.PicklingError as e:  # pragma: no cover
             self.statusBar().showMessage(f"Data serialization error: {e}")
-        except Exception as e:
+        except (AttributeError, RuntimeError, ValueError) as e:
             self.statusBar().showMessage(f"Error saving project file: {e}")
 
     def save_raw_data(self):
@@ -154,7 +154,7 @@ class MainWindowProjectIo(object):
                 if self.current_file_path:
                     base = os.path.basename(self.current_file_path)
                     default_name = os.path.splitext(base)[0]
-            except Exception:
+            except (AttributeError, RuntimeError):
                 default_name = "untitled"
 
             # prefer same directory as current file when available
@@ -164,7 +164,7 @@ class MainWindowProjectIo(object):
                     default_path = os.path.join(
                         os.path.dirname(self.current_file_path), default_name
                     )
-            except Exception:
+            except (AttributeError, RuntimeError):
                 default_path = default_name
 
             file_path, _ = QFileDialog.getSaveFileName(
@@ -189,7 +189,7 @@ class MainWindowProjectIo(object):
             self.update_window_title()
             try:
                 self._saved_state = copy.deepcopy(self.get_current_state())
-            except Exception:  # pragma: no cover
+            except (AttributeError, RuntimeError):  # pragma: no cover
                 traceback.print_exc()
             self.statusBar().showMessage(f"Project saved to {file_path}")
 
@@ -197,7 +197,7 @@ class MainWindowProjectIo(object):
             self.statusBar().showMessage(f"File I/O error: {e}")
         except pickle.PicklingError as e:  # pragma: no cover
             self.statusBar().showMessage(f"Data serialization error: {e}")
-        except Exception as e:
+        except (AttributeError, RuntimeError, ValueError) as e:
             self.statusBar().showMessage(f"Error saving project file: {e}")
 
     def load_raw_data(self, file_path=None):
@@ -224,7 +224,7 @@ class MainWindowProjectIo(object):
             self.update_window_title()
             try:
                 self._saved_state = copy.deepcopy(self.get_current_state())
-            except Exception:  # pragma: no cover
+            except (AttributeError, RuntimeError):  # pragma: no cover
                 traceback.print_exc()
             self.statusBar().showMessage(f"Project loaded from {file_path}")
 
@@ -236,7 +236,7 @@ class MainWindowProjectIo(object):
             self.statusBar().showMessage(f"File I/O error: {e}")
         except pickle.UnpicklingError as e:  # pragma: no cover
             self.statusBar().showMessage(f"Invalid project file format: {e}")
-        except Exception as e:
+        except (AttributeError, RuntimeError, ValueError) as e:
             self.statusBar().showMessage(f"Error loading project file: {e}")
 
     def save_as_json(self):
@@ -252,7 +252,7 @@ class MainWindowProjectIo(object):
                 if self.current_file_path:
                     base = os.path.basename(self.current_file_path)
                     default_name = os.path.splitext(base)[0]
-            except Exception:
+            except (AttributeError, RuntimeError):
                 default_name = "untitled"
 
             # prefer same directory as current file when available
@@ -262,7 +262,7 @@ class MainWindowProjectIo(object):
                     default_path = os.path.join(
                         os.path.dirname(self.current_file_path), default_name
                     )
-            except Exception:
+            except (AttributeError, RuntimeError):
                 default_path = default_name
 
             file_path, _ = QFileDialog.getSaveFileName(  # pragma: no cover
@@ -294,7 +294,7 @@ class MainWindowProjectIo(object):
             self.statusBar().showMessage(f"File I/O error: {e}")
         except (TypeError, ValueError) as e:  # pragma: no cover
             self.statusBar().showMessage(f"JSON serialization error: {e}")
-        except Exception as e:
+        except (AttributeError, RuntimeError, ValueError) as e:
             self.statusBar().showMessage(f"Error saving PME Project file: {e}")
 
     def load_json_data(self, file_path=None):
@@ -353,8 +353,8 @@ class MainWindowProjectIo(object):
             self.statusBar().showMessage(f"Invalid JSON format: {e}")
         except (OSError, IOError) as e:  # pragma: no cover
             self.statusBar().showMessage(f"File I/O error: {e}")
-        except Exception as e:
-            self.statusBar().showMessage(f"Error loading PME Project file: {e}")
+        except (KeyError, TypeError, ValueError, AttributeError) as e:
+            self.statusBar().showMessage(f"Data corruption in PME Project file: {e}")
 
     def open_project_file(self, file_path=None):
         """Open project file (.pmeprj or .pmeraw)."""
@@ -377,10 +377,10 @@ class MainWindowProjectIo(object):
             # Try JSON if extension unknown
             try:
                 self.load_json_data(file_path)
-            except Exception:
+            except (json.JSONDecodeError, ValueError, KeyError):
                 try:
                     self.load_raw_data(file_path)
-                except Exception:
+                except (OSError, ValueError, KeyError):
                     self.statusBar().showMessage(
-                        "Error: Unable to determine file format."
+                        "Error: Unable to determine file format or file corrupted."
                     )

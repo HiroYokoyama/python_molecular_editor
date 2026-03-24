@@ -33,7 +33,7 @@ from PyQt6.QtWidgets import QApplication, QGraphicsView
 try:
     from PyQt6 import sip as _sip  # type: ignore
     _sip_isdeleted = getattr(_sip, "isdeleted", None)
-except Exception:
+except (ImportError, AttributeError, TypeError):
     _sip = None
     _sip_isdeleted = None
 
@@ -41,7 +41,7 @@ try:
     # package relative imports (preferred when running as `python -m moleditpy`)
     from .constants import CPK_COLORS_PV, DEFAULT_CPK_COLORS, VDW_RADII, pt
     from .template_preview_item import TemplatePreviewItem
-except Exception:
+except ImportError:
     # Fallback to absolute imports for script-style execution
     from modules.constants import CPK_COLORS_PV, DEFAULT_CPK_COLORS, VDW_RADII, pt
     from modules.template_preview_item import TemplatePreviewItem
@@ -93,7 +93,7 @@ class MainWindowView3d(object):
                 try:
                     handler(mw, mol)
                     return
-                except Exception as e:
+                except (AttributeError, RuntimeError, TypeError, ValueError) as e:
                     logging.error(
                         f"Error in custom 3d style '{self.current_3d_style}': {e}"
                     )
@@ -140,7 +140,7 @@ class MainWindowView3d(object):
         if old_axes_actor is not None:
             try:
                 self.plotter.remove_actor(old_axes_actor)
-            except Exception:  # pragma: no cover
+            except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
                 import traceback
                 traceback.print_exc()
 
@@ -177,11 +177,11 @@ class MainWindowView3d(object):
                 # Operate on a copy to avoid mutating the original molecule
                 mol_to_draw = Chem.Mol(mol)
                 Chem.Kekulize(mol_to_draw, clearAromaticFlags=True)
-            except Exception as e:
+            except (AttributeError, RuntimeError, TypeError, ValueError) as e:
                 # Kekulize failed; keep original and warn user
                 try:
                     self.statusBar().showMessage(f"Kekulize failed: {e}")
-                except Exception:  # pragma: no cover
+                except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
                     import traceback
                     traceback.print_exc()
                 mol_to_draw = mol
@@ -206,7 +206,7 @@ class MainWindowView3d(object):
                     try:
                         c = QColor(hex_color)
                         col[atom_idx] = [c.redF(), c.greenF(), c.blueF()]
-                    except Exception:  # pragma: no cover
+                    except (AttributeError, RuntimeError, TypeError, ValueError, KeyError):  # pragma: no cover
                         import traceback
                         traceback.print_exc()
 
@@ -220,7 +220,7 @@ class MainWindowView3d(object):
                 try:
                     r = pt.GetRvdw(pt.GetAtomicNumber(s))
                     return r if r > 0.1 else 1.5
-                except Exception:
+                except (AttributeError, RuntimeError, TypeError, ValueError):
                     return 1.5
 
             rad = np.array([get_safe_rvdw(s) * atom_scale for s in sym])
@@ -333,7 +333,7 @@ class MainWindowView3d(object):
 
                                         # Same calculation as bond drawing
                                         sphere_radius = cyl_radius * radius_factor
-                                    except Exception:
+                                    except (AttributeError, RuntimeError, TypeError, ValueError):
                                         sphere_radius = 0.09  # Default values
                                         offset_distance = 0.15  # Default values
 
@@ -441,7 +441,7 @@ class MainWindowView3d(object):
                     bs_hex = self.settings.get("ball_stick_bond_color", "#7F7F7F")
                     q = QColor(bs_hex)
                     bs_bond_rgb = [q.red(), q.green(), q.blue()]
-                except Exception:  # pragma: no cover
+                except (AttributeError, RuntimeError, TypeError, ValueError):  # pragma: no cover
                     import traceback
                     traceback.print_exc()
 
@@ -485,7 +485,7 @@ class MainWindowView3d(object):
                         ov_rgb = [c_obj.red(), c_obj.green(), c_obj.blue()]
                         begin_color_rgb = ov_rgb
                         end_color_rgb = ov_rgb
-                    except Exception:  # pragma: no cover
+                    except (AttributeError, RuntimeError, TypeError, ValueError, KeyError):  # pragma: no cover
                         import traceback
                         traceback.print_exc()
 
@@ -877,7 +877,7 @@ class MainWindowView3d(object):
 
                     self.plotter.add_mesh(circle_line, color=torus_color, **mesh_props)
 
-            except Exception as e:
+            except (AttributeError, RuntimeError, TypeError, ValueError) as e:
                 logging.error(f"Error rendering aromatic circles: {e}")
 
         if getattr(self, "show_chiral_labels", False):
@@ -894,7 +894,7 @@ class MainWindowView3d(object):
                         labels.append(lbl if lbl is not None else "?")
                     try:
                         self.plotter.remove_actor("chiral_labels")
-                    except Exception:  # pragma: no cover
+                    except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
                         traceback.print_exc()
                     self.plotter.add_point_labels(
                         np.array(pts),
@@ -907,7 +907,7 @@ class MainWindowView3d(object):
                         tolerance=0.01,
                         show_points=False,
                     )
-            except Exception as e:
+            except (AttributeError, RuntimeError, TypeError, ValueError) as e:
                 self.statusBar().showMessage(f"3D chiral label drawing error: {e}")
 
         # Also display E/Z labels
@@ -917,7 +917,7 @@ class MainWindowView3d(object):
                 # E/Z labels reflect Kekulé rendering; pass mol_to_draw as the
                 # molecule to scan for bond stereochemistry.
                 self.show_ez_labels_3d(mol)
-            except Exception as e:
+            except (AttributeError, RuntimeError, TypeError, ValueError) as e:
                 self.statusBar().showMessage(f"3D E/Z label drawing error: {e}")
 
         self.plotter.camera = camera_state
@@ -936,10 +936,10 @@ class MainWindowView3d(object):
                     try:
                         # Force a render so the change is visible immediately
                         self.plotter.render()
-                    except Exception:  # pragma: no cover
+                    except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
                         import traceback
                         traceback.print_exc()
-        except Exception:  # pragma: no cover
+        except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
             import traceback
             traceback.print_exc()
 
@@ -1051,7 +1051,7 @@ class MainWindowView3d(object):
         try:
             # Remove existing E/Z labels
             self.plotter.remove_actor("ez_labels")
-        except Exception:  # pragma: no cover
+        except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
             import traceback
             traceback.print_exc()
 
@@ -1071,7 +1071,7 @@ class MainWindowView3d(object):
             Chem.AssignStereochemistry(
                 mol, cleanIt=True, force=True, flagPossibleStereoCenters=True
             )
-        except Exception:  # pragma: no cover
+        except (AttributeError, RuntimeError, TypeError, ValueError):  # pragma: no cover
             import traceback
             traceback.print_exc()
 
@@ -1160,7 +1160,7 @@ class MainWindowView3d(object):
                 # Set chiral tags from 3D coordinates using confId=0
                 try:
                     Chem.AssignAtomChiralTagsFromStructure(mol_for_chirality, confId=0)
-                except Exception:  # pragma: no cover
+                except (AttributeError, RuntimeError, TypeError, ValueError):  # pragma: no cover
                     # Guard for older RDKit versions that might lack the function
                     pass
 
@@ -1187,7 +1187,7 @@ class MainWindowView3d(object):
                         # 'R' / 'S' / '?'
                         self.data.atoms[atom_id]["item"].chiral_label = label
 
-        except Exception as e:
+        except (AttributeError, RuntimeError, TypeError, ValueError) as e:
             self.statusBar().showMessage(f"Update chiral labels error: {e}")
 
         # Finally redraw 2D scene
@@ -1235,7 +1235,7 @@ class MainWindowView3d(object):
             # Check if the first atom has xyz_unique_id property
             if self.current_mol.GetNumAtoms() > 0:
                 return self.current_mol.GetAtomWithIdx(0).HasProp("xyz_unique_id")
-        except Exception:  # pragma: no cover
+        except (AttributeError, RuntimeError, TypeError, ValueError):  # pragma: no cover
             import traceback
             traceback.print_exc()
 
@@ -1251,7 +1251,7 @@ class MainWindowView3d(object):
                 atom = self.current_mol.GetAtomWithIdx(atom_idx)
                 if atom.HasProp("_original_atom_id"):
                     return True
-        except Exception:  # pragma: no cover
+        except (AttributeError, RuntimeError, TypeError, ValueError):  # pragma: no cover
             import traceback
             traceback.print_exc()
 
@@ -1330,7 +1330,7 @@ class MainWindowView3d(object):
                     else:
                         rdkit_positions.append(pos)
                         rdkit_texts.append(str(atom_idx))
-                except Exception:
+                except (AttributeError, RuntimeError, TypeError, ValueError):
                     rdkit_positions.append(pos)
                     rdkit_texts.append(str(atom_idx))
 
@@ -1418,7 +1418,7 @@ class MainWindowView3d(object):
                     name="atom_labels_other",
                 )
                 self.current_atom_info_labels.append(a)
-        except Exception as e:
+        except (AttributeError, RuntimeError, TypeError, ValueError) as e:
             print(f"Error adding atom info labels: {e}")
 
         # Display legend in the top-right (remove existing legends)
@@ -1430,9 +1430,8 @@ class MainWindowView3d(object):
                 for nm in self.atom_label_legend_names:
                     try:
                         self.plotter.remove_actor(nm)
-                    except Exception:  # pragma: no cover
-                        import traceback
-                        traceback.print_exc()
+                    except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
+                        pass
             self.atom_label_legend_names = []
 
             legend_entries = []
@@ -1457,7 +1456,7 @@ class MainWindowView3d(object):
                         e[0] == "RDKit" for e in legend_entries
                     ):
                         x_offset = 0.06
-                except Exception:
+                except (AttributeError, RuntimeError, TypeError):
                     x_offset = 0.0
                 try:
                     actor = self.plotter.add_text(
@@ -1475,18 +1474,15 @@ class MainWindowView3d(object):
                             tp = actor.GetTextProperty()
                             try:
                                 tp.SetBold(True)
-                            except Exception:  # pragma: no cover
-                                import traceback
-                                traceback.print_exc()
-                    except Exception:  # pragma: no cover
-                        import traceback
-                        traceback.print_exc()
-                except Exception:
+                            except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
+                                pass
+                    except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
+                        pass
+                except (AttributeError, RuntimeError, TypeError):
                     continue
 
-        except Exception:  # pragma: no cover
-            import traceback
-            traceback.print_exc()
+        except (AttributeError, RuntimeError):  # pragma: no cover
+            pass
 
     def clear_all_atom_info_labels(self):
         """Clear all atom info labels"""
@@ -1500,18 +1496,16 @@ class MainWindowView3d(object):
                     for a in list(self.current_atom_info_labels):
                         try:
                             self.plotter.remove_actor(a)
-                        except Exception:  # pragma: no cover
+                        except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
                             import traceback
                             traceback.print_exc()
                 else:
                     try:
                         self.plotter.remove_actor(self.current_atom_info_labels)
-                    except Exception:  # pragma: no cover
-                        import traceback
-                        traceback.print_exc()
-        except Exception:  # pragma: no cover
-            import traceback
-            traceback.print_exc()
+                    except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
+                        pass
+        except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
+            pass
         finally:
             self.current_atom_info_labels = None
 
@@ -1524,12 +1518,10 @@ class MainWindowView3d(object):
                 for nm in list(self.atom_label_legend_names):
                     try:
                         self.plotter.remove_actor(nm)
-                    except Exception:  # pragma: no cover
-                        import traceback
-                        traceback.print_exc()
-        except Exception:  # pragma: no cover
-            import traceback
-            traceback.print_exc()
+                    except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
+                        pass
+        except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
+            pass
         finally:
             self.atom_label_legend_names = []
 
@@ -1585,7 +1577,7 @@ class MainWindowView3d(object):
         try:
             old_ta = self.view_2d.transformationAnchor()
             old_ra = self.view_2d.resizeAnchor()
-        except Exception:
+        except (AttributeError, RuntimeError, TypeError):
             old_ta = old_ra = None
 
         try:
@@ -1601,9 +1593,8 @@ class MainWindowView3d(object):
                     self.view_2d.setTransformationAnchor(old_ta)
                 if old_ra is not None:
                     self.view_2d.setResizeAnchor(old_ra)
-            except Exception:  # pragma: no cover
-                import traceback
-                traceback.print_exc()
+            except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
+                pass
 
     def update_cpk_colors_from_settings(self):
         """Update global CPK_COLORS and CPK_COLORS_PV from saved settings overrides.
@@ -1622,7 +1613,7 @@ class MainWindowView3d(object):
             # Import the constants module so we can update mappings directly
             try:
                 from . import constants as constants_mod
-            except Exception:
+            except ImportError:
                 import modules.constants as constants_mod
 
             # Reset constants.CPK_COLORS to defaults but keep the same dict
@@ -1641,7 +1632,7 @@ class MainWindowView3d(object):
             constants_mod.CPK_COLORS_PV.clear()
             for k, c in constants_mod.CPK_COLORS.items():
                 constants_mod.CPK_COLORS_PV[k] = [c.redF(), c.greenF(), c.blueF()]
-        except Exception as e:
+        except (AttributeError, RuntimeError, TypeError, ValueError) as e:
             print(f"Failed to update CPK colors from settings: {e}")
 
     def apply_3d_settings(self, redraw=True):
@@ -1666,8 +1657,7 @@ class MainWindowView3d(object):
         if renderer and hasattr(renderer, "SetNumberOfLayers"):
             try:
                 renderer.SetNumberOfLayers(2)  # Layer 0: 3D, Layer 1: 2D Overlay
-            except Exception:
-                import traceback
+            except (AttributeError, RuntimeError, TypeError):
                 pass  # May not be supported depending on PyVista version
 
         # --- 3D Axis Widget Settings ---
@@ -1699,9 +1689,8 @@ class MainWindowView3d(object):
         if not getattr(self, "_camera_initialized", False):
             try:
                 self.plotter.reset_camera()
-            except Exception:  # pragma: no cover
-                import traceback
-                traceback.print_exc()
+            except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
+                pass
 
             self._camera_initialized = True
 
@@ -1710,9 +1699,8 @@ class MainWindowView3d(object):
             self.plotter.render()
             if hasattr(self.plotter, "update"):
                 self.plotter.update()
-        except Exception:  # pragma: no cover
-            import traceback
-            traceback.print_exc()
+        except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
+            pass
 
     def update_bond_color_override(self, bond_idx, hex_color):
         """Plugin API helper to override bond color."""

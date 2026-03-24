@@ -15,7 +15,7 @@ from PyQt6.QtCore import QEvent, Qt
 
 try:
     from .constants import pt
-except Exception:
+except ImportError:
     from modules.constants import pt
 
 

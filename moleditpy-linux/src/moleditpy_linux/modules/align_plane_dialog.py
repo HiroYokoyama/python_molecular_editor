@@ -23,7 +23,7 @@ from PyQt6.QtWidgets import (
 
 try:
     from .dialog3_d_picking_mixin import Dialog3DPickingMixin
-except Exception:
+except ImportError:
     from modules.dialog3_d_picking_mixin import Dialog3DPickingMixin
 
 
@@ -141,7 +141,7 @@ class AlignPlaneDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
                     n = self.mol.GetNumAtoms()
                     # create a set of indices [0..n-1]
                     self.selected_atoms = set(range(n))
-                except Exception:
+                except (AttributeError, RuntimeError):
                     # fallback to main_window data map
                     self.selected_atoms = (
                         set(self.main_window.data.atoms.keys())
@@ -160,7 +160,7 @@ class AlignPlaneDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
             self.show_atom_labels()
             self.update_display()
 
-        except Exception as e:
+        except (AttributeError, RuntimeError, TypeError, KeyError) as e:
             QMessageBox.warning(self, "Warning", f"Failed to select all atoms: {e}")
 
     def update_display(self):
@@ -276,7 +276,7 @@ class AlignPlaneDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
             # Save state for Undo
             self.main_window.push_undo_state()
 
-        except Exception as e:
+        except (AttributeError, RuntimeError, ValueError, TypeError) as e:
             QMessageBox.critical(self, "Error", f"Failed to apply align: {str(e)}")
 
     def closeEvent(self, event):

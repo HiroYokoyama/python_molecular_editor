@@ -30,14 +30,14 @@ from PyQt6.QtWidgets import (
 try:
     from PyQt6 import sip as _sip  # type: ignore
     _sip_isdeleted = getattr(_sip, "isdeleted", None)
-except Exception:
+except ImportError:
     _sip = None
     _sip_isdeleted = None
 
 try:
     # package relative imports (preferred when running as `python -m moleditpy`)
     from .custom_interactor_style import CustomInteractorStyle
-except Exception:
+except ImportError:
     # Fallback to absolute imports for script-style execution
     from modules.custom_interactor_style import CustomInteractorStyle
 
@@ -172,7 +172,7 @@ class MainWindowUiManager(object):
             ):
                 self.save_settings()
                 self.settings_dirty = False
-        except Exception:  # pragma: no cover
+        except (AttributeError, RuntimeError, TypeError, OSError):  # pragma: no cover
             import traceback
             traceback.print_exc()
 
@@ -208,12 +208,10 @@ class MainWindowUiManager(object):
                 if widget != self and isinstance(widget, (QDialog, QMainWindow)):
                     try:
                         widget.close()
-                    except Exception:  # pragma: no cover
-                        import traceback
-                        traceback.print_exc()
-        except Exception:  # pragma: no cover
-            import traceback
-            traceback.print_exc()
+                    except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
+                        pass
+        except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
+            pass
 
         # Final cleanup
         if self.scene and self.scene.template_preview:
@@ -224,17 +222,14 @@ class MainWindowUiManager(object):
             for thr in list(getattr(self, "_active_calc_threads", []) or []):
                 try:
                     thr.quit()
-                except Exception:  # pragma: no cover
-                    import traceback
-                    traceback.print_exc()
+                except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
+                    pass
                 try:
                     thr.wait(200)
-                except Exception:  # pragma: no cover
-                    import traceback
-                    traceback.print_exc()
-        except Exception:  # pragma: no cover
-            import traceback
-            traceback.print_exc()
+                except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
+                    pass
+        except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
+            pass
 
         event.accept()
 
@@ -295,7 +290,7 @@ class MainWindowUiManager(object):
                                 # They will check the file type in dropEvent
                                 event.acceptProposedAction()
                                 return
-                except Exception:
+                except (AttributeError, RuntimeError, TypeError):
                     continue
         event.ignore()
 
@@ -310,7 +305,7 @@ class MainWindowUiManager(object):
                     if url.isLocalFile():
                         file_path = url.toLocalFile()
                         break
-                except Exception:
+                except (AttributeError, RuntimeError, TypeError):
                     continue
 
         if file_path:
@@ -323,7 +318,7 @@ class MainWindowUiManager(object):
                         if handled:
                             event.acceptProposedAction()
                             return
-                    except Exception as e:
+                    except (AttributeError, RuntimeError, TypeError, ValueError) as e:
                         print(f"Error in plugin drop handler: {e}")
             # Get drop position
             drop_pos = event.position().toPoint()
@@ -414,15 +409,13 @@ class MainWindowUiManager(object):
 
                         # Otherwise enable/disable according to the requested global flag
                         getattr(self, action_name).setEnabled(bool(enabled))
-                    except Exception:  # pragma: no cover
-                        import traceback
-                        traceback.print_exc()
+                    except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
+                        pass
                 else:
                     try:
                         getattr(self, action_name).setEnabled(enabled)
-                    except Exception:  # pragma: no cover
-                        import traceback
-                        traceback.print_exc()
+                    except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
+                        pass
 
         # Keep measurement action enabled
         if hasattr(self, "measurement_action"):
