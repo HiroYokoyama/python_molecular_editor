@@ -353,8 +353,8 @@ class MainWindowProjectIo(object):
             self.statusBar().showMessage(f"Invalid JSON format: {e}")
         except (OSError, IOError) as e:  # pragma: no cover
             self.statusBar().showMessage(f"File I/O error: {e}")
-        except Exception as e:
-            self.statusBar().showMessage(f"Error loading PME Project file: {e}")
+        except (KeyError, TypeError, ValueError, AttributeError) as e:
+            self.statusBar().showMessage(f"Data corruption in PME Project file: {e}")
 
     def open_project_file(self, file_path=None):
         """Open project file (.pmeprj or .pmeraw)."""
@@ -377,10 +377,10 @@ class MainWindowProjectIo(object):
             # Try JSON if extension unknown
             try:
                 self.load_json_data(file_path)
-            except Exception:
+            except (json.JSONDecodeError, ValueError, KeyError):
                 try:
                     self.load_raw_data(file_path)
-                except Exception:
+                except (OSError, ValueError, KeyError):
                     self.statusBar().showMessage(
-                        "Error: Unable to determine file format."
+                        "Error: Unable to determine file format or file corrupted."
                     )

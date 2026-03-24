@@ -89,9 +89,7 @@ class MolecularData:
                 for key in bonds_to_remove:
                     del self.bonds[key]
 
-            except Exception as e:
-                print(f"Error removing atom {atom_id}: {e}")
-
+            except (AttributeError, KeyError, TypeError):
                 pass
 
     def remove_bond(self, id1, id2):
@@ -110,9 +108,7 @@ class MolecularData:
                     self.adjacency_list[id2].remove(id1)
                 del self.bonds[key_to_remove]
 
-        except Exception as e:
-            print(f"Error removing bond {id1}-{id2}: {e}")
-
+        except (AttributeError, KeyError, TypeError):
             pass
 
     def to_rdkit_mol(self, use_2d_stereo=True):
@@ -127,7 +123,12 @@ class MolecularData:
         # --- Step 1: atoms ---
         atom_id_to_idx_map = {}
         for atom_id, data in self.atoms.items():
-            atom = Chem.Atom(data["symbol"])
+            try:
+                atom = Chem.Atom(data["symbol"])
+            except (RuntimeError, ValueError):
+                # RDKit doesn't support this symbol. Return None to trigger
+                # manual MoleditPy fallback (with 'MoleditPy' header).
+                return None
             atom.SetFormalCharge(data.get("charge", 0))
             atom.SetNumRadicalElectrons(data.get("radical", 0))
             atom.SetIntProp("_original_atom_id", atom_id)

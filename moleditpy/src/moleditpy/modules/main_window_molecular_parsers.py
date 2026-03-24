@@ -385,7 +385,7 @@ class MainWindowMolecularParsers(object):
             mol.AddConformer(conf)
             try:
                 skip_checks = bool(self.settings.get("skip_chemistry_checks", False))
-            except Exception:
+            except (AttributeError, KeyError, TypeError):
                 skip_checks = False
 
             if skip_checks:
@@ -400,10 +400,10 @@ class MainWindowMolecularParsers(object):
                 # Finalize and return a plain Mol object
                 try:
                     candidate_mol = mol.GetMol()
-                except Exception:
+                except (RuntimeError, ValueError, AttributeError):
                     try:
                         candidate_mol = Chem.Mol(mol)
-                    except Exception:
+                    except (RuntimeError, ValueError, AttributeError):
                         candidate_mol = None
 
                 if candidate_mol is None:

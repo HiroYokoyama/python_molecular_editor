@@ -609,7 +609,7 @@ class MainWindowAppState(object):
                             json_safe_constraints.append(
                                 [const[0], list(const[1]), const[2], 1.0e5]
                             )
-                except Exception:
+                except (AttributeError, TypeError, KeyError):
                     json_safe_constraints = []
 
                 json_data["3d_structure"] = {
@@ -649,7 +649,7 @@ class MainWindowAppState(object):
                 except Exception as e:
                     print(f"Warning: Could not generate molecular identifiers: {e}")
 
-            except Exception as e:
+            except (AttributeError, RuntimeError, ValueError) as e:
                 print(f"Warning: Could not process 3D molecular data: {e}")
         else:
             # Record if no 3D data
@@ -680,7 +680,7 @@ class MainWindowAppState(object):
                     p_state = callback()
                     # Ensure serializable? Use primitive types ideally.
                     plugin_data[name] = p_state
-                except Exception as e:
+                except (AttributeError, RuntimeError, TypeError, KeyError) as e:
                     print(f"Error saving state for plugin {name}: {e}")
 
         if plugin_data:
@@ -782,8 +782,8 @@ class MainWindowAppState(object):
             for atom in self.data.atoms.values():
                 atom["item"].update_style()
         # Restore 3D data
-        if "3d_structure" in json_data and json_data["3d_structure"] is not None:
-            structure_3d = json_data["3d_structure"]
+        structure_3d = json_data.get("3d_structure")
+        if isinstance(structure_3d, dict):
 
             # Restore constraints
             try:
