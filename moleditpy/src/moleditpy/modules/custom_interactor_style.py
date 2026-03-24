@@ -29,11 +29,9 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
     def __init__(self, main_window):
         super().__init__()
         self.main_window = main_window
-        # カスタム状態を管理するフラグを一つに絞ります
+        # Custom state flags
         self._is_dragging_atom = False
-        # undoスタックのためのフラグ
         self.is_dragging = False
-        # 回転操作を検出するためのフラグ
         self._mouse_moved_during_drag = False
         self._mouse_press_pos = None
 
@@ -46,18 +44,18 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
 
     def on_left_button_down(self, obj, event):
         """
-        クリック時の処理を振り分けます。
-        原子を掴めた場合のみカスタム動作に入り、それ以外は親クラス（カメラ回転）に任せます。
+        Dispatch click events.
+        Use custom action if atom handles, else camera rotation.
         """
         mw = self.main_window
 
-        # 前回のドラッグ状態をクリア（トリプルクリック/ダブルクリック対策）
+        # Clear previous drag state
         self._is_dragging_atom = False
         self.is_dragging = False
         self._mouse_moved_during_drag = False
         self._mouse_press_pos = None
 
-        # Move Groupダイアログが開いている場合の処理
+        # Check Move Group dialog
         move_group_dialog = None
         try:
             for widget in QApplication.topLevelWidgets():
@@ -69,7 +67,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
             traceback.print_exc()
 
         if move_group_dialog and move_group_dialog.group_atoms:
-            # グループが選択されている場合、グループドラッグ処理
+            # Group drag if selected
             click_pos = self.GetInteractor().GetEventPosition()
             picker = mw.plotter.picker
             picker.Pick(click_pos[0], click_pos[1], 0, mw.plotter.renderer)
@@ -100,12 +98,12 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
             # グループ内の原子がクリックされた場合
             if clicked_atom_idx is not None:
                 if clicked_atom_idx in move_group_dialog.group_atoms:
-                    # 既存グループ内の原子 - ドラッグ準備
+                    # Preparation for group drag
                     move_group_dialog._is_dragging_group_vtk = True
                     move_group_dialog._drag_atom_idx = clicked_atom_idx
                     move_group_dialog._drag_start_pos = click_pos
                     move_group_dialog._mouse_moved = False
-                    # 初期位置を保存
+                    # Save initial positions
                     move_group_dialog._initial_positions = {}
                     conf = mw.current_mol.GetConformer()
                     for atom_idx in move_group_dialog.group_atoms:
@@ -114,9 +112,9 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                             [pos.x, pos.y, pos.z]
                         )
                     mw.plotter.setCursor(Qt.CursorShape.ClosedHandCursor)
-                    return  # カメラ回転を無効化
+                    return  # Disable camera rotation
                 else:
-                    # グループ外の原子をクリック - BFS/DFSで連結成分を探索
+                    # Clicked outside group - Search connected component
                     visited = set()
                     queue = [clicked_atom_idx]
                     visited.add(clicked_atom_idx)
@@ -135,22 +133,22 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                                 visited.add(begin_idx)
                                 queue.append(begin_idx)
 
-                    # Ctrlキーが押されている場合のみ複数グループ選択
+                    # Multi-selection with Ctrl
                     is_ctrl_pressed = bool(
                         QApplication.keyboardModifiers()
                         & Qt.KeyboardModifier.ControlModifier
                     )
 
                     if is_ctrl_pressed:
-                        # Ctrl + クリック: 追加または解除
+                        # Ctrl + Click: toggle selection
                         if visited.issubset(move_group_dialog.group_atoms):
-                            # すでに選択されている - 解除
+                            # Already selected - deselect
                             move_group_dialog.group_atoms -= visited
                         else:
-                            # 新しいグループを追加
+                            # Add new group
                             move_group_dialog.group_atoms |= visited
                     else:
-                        # 通常のクリック: 既存の選択を置き換え
+                        # Replace existing selection
                         move_group_dialog.group_atoms = visited.copy()
 
                     move_group_dialog.selected_atoms.add(clicked_atom_idx)
@@ -158,12 +156,11 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                     move_group_dialog.update_display()
                     return
             else:
-                # 原子以外をクリック
-                # 即座に解除せず、マウスイベントを追跡して回転かクリックかを判定する
+                # Track mouse event to distinguish rotation from click
                 self._mouse_press_pos = self.GetInteractor().GetEventPosition()
                 self._mouse_moved_during_drag = False
 
-                # カメラ回転を許可
+                # Allow camera rotation
                 super(CustomInteractorStyle, self).OnLeftButtonDown()
                 return
 
@@ -172,22 +169,22 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
         )
         is_edit_active = mw.is_3d_edit_mode or is_temp_mode
 
-        # Ctrl+クリックで原子選択（3D編集用）
+        # Ctrl+Click for atom selection (3D edit)
         is_ctrl_click = bool(
             QApplication.keyboardModifiers() & Qt.KeyboardModifier.ControlModifier
         )
 
-        # 測定モードが有効な場合の処理
+        # Handle measurement mode
         if mw.measurement_mode and mw.current_mol:
             click_pos = self.GetInteractor().GetEventPosition()
             self._mouse_moved_during_drag = False
 
             picker = mw.plotter.picker
 
-            # 通常のピック処理を実行
+            # Run pick process
             picker.Pick(click_pos[0], click_pos[1], 0, mw.plotter.renderer)
 
-            # 原子がクリックされた場合のみ特別処理
+            # Special handling if atom clicked
             if picker.GetActor() is mw.atom_actor:
                 picked_position = np.array(picker.GetPickPosition())
                 distances = np.linalg.norm(
@@ -195,9 +192,9 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                 )
                 closest_atom_idx = np.argmin(distances)
 
-                # 範囲チェックを追加
+                # Add range check
                 if 0 <= closest_atom_idx < mw.current_mol.GetNumAtoms():
-                    # クリック閾値チェック
+                    # Check click threshold
                     atom = mw.current_mol.GetAtomWithIdx(int(closest_atom_idx))
                     if atom:
                         try:
@@ -211,17 +208,15 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
 
                         if distances[closest_atom_idx] < click_threshold:
                             mw.handle_measurement_atom_selection(int(closest_atom_idx))
-                            return  # 原子選択処理完了、カメラ回転は無効
+                            return  # Selection complete, disable camera rotation
 
-            # 測定モードで原子以外をクリックした場合は計測選択をクリア
-            # ただし、回転操作（ドラッグ）の場合はクリアしないため、
-            # ここで _mouse_press_pos を記録し、Upイベントで判定する。
+            # Clear measurement if not dragging
             self._is_dragging_atom = False
             self._mouse_press_pos = click_pos
             super().OnLeftButtonDown()
             return
 
-        # 3D分子(mw.current_mol)が存在する場合のみ、原子の選択処理を実行
+        # Handle selection if 3D mol exists
         if is_edit_active and mw.current_mol:
             click_pos = self.GetInteractor().GetEventPosition()
             picker = mw.plotter.picker
@@ -234,9 +229,9 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                 )
                 closest_atom_idx = np.argmin(distances)
 
-                # 範囲チェックを追加
+                # Add range check
                 if 0 <= closest_atom_idx < mw.current_mol.GetNumAtoms():
-                    # RDKitのMolオブジェクトから原子を安全に取得
+                    # Get atom safely from RDKit Mol
                     atom = mw.current_mol.GetAtomWithIdx(int(closest_atom_idx))
                     if atom:
                         try:
@@ -249,23 +244,23 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                         click_threshold = vdw_radius * 1.5
 
                         if distances[closest_atom_idx] < click_threshold:
-                            # 原子を掴むことに成功した場合
+                            # Successfully grabbed atom
                             self._is_dragging_atom = True
                         self.is_dragging = False
                         mw.dragged_atom_info = {"id": int(closest_atom_idx)}
                         mw.plotter.setCursor(Qt.CursorShape.ClosedHandCursor)
-                        return  # 親クラスのカメラ回転を呼ばない
+                        return  # Prevent camera rotation
 
         self._is_dragging_atom = False
         super().OnLeftButtonDown()
 
     def on_right_button_down(self, obj, event):
         """
-        右クリック時の処理。Move Groupダイアログが開いている場合はグループ回転を開始。
+        Right-click: Start group rotation if dialog open.
         """
         mw = self.main_window
 
-        # Move Groupダイアログが開いているか確認
+        # Check if Move Group dialog is open
         move_group_dialog = None
         try:
             for widget in QApplication.topLevelWidgets():
@@ -277,7 +272,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
             traceback.print_exc()
 
         if move_group_dialog and move_group_dialog.group_atoms:
-            # グループが選択されている場合、回転ドラッグを開始
+            # Start rotation drag if group selected
             click_pos = self.GetInteractor().GetEventPosition()
             picker = mw.plotter.picker
             picker.Pick(click_pos[0], click_pos[1], 0, mw.plotter.renderer)
@@ -305,7 +300,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                         if distances[closest_atom_idx] < click_threshold:
                             clicked_atom_idx = int(closest_atom_idx)
 
-            # グループ内の原子がクリックされた場合、回転ドラッグを開始
+            # Start rotation drag if atom inside group clicked
             if (
                 clicked_atom_idx is not None
                 and clicked_atom_idx in move_group_dialog.group_atoms
@@ -314,10 +309,10 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                 move_group_dialog._rotation_start_pos = click_pos
                 move_group_dialog._rotation_mouse_moved = False
                 move_group_dialog._rotation_atom_idx = (
-                    clicked_atom_idx  # 掴んだ原子を記録
+                    clicked_atom_idx  # Record grabbed atom
                 )
 
-                # 初期位置と重心を保存
+                # Save initial positions and centroid
                 move_group_dialog._initial_positions = {}
                 conf = mw.current_mol.GetConformer()
                 centroid = np.zeros(3)
@@ -332,16 +327,16 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                 mw.plotter.setCursor(Qt.CursorShape.ClosedHandCursor)
                 return  # カメラ回転を無効化
 
-        # 通常の右クリック処理
+        # Standard right-click
         super().OnRightButtonDown()
 
     def on_mouse_move(self, obj, event):
         """
-        マウス移動時の処理。原子ドラッグ中か、それ以外（カメラ回転＋ホバー）かをハンドリングします。
+        Handle mouse move (drag vs camera/hover).
         """
         mw = self.main_window
 
-        # Move Groupダイアログのドラッグ処理
+        # Move Group drag handling
         move_group_dialog = None
         try:
             for widget in QApplication.topLevelWidgets():
@@ -355,7 +350,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
         if move_group_dialog and getattr(
             move_group_dialog, "_is_dragging_group_vtk", False
         ):
-            # グループをドラッグ中 - 移動距離を記録するのみ
+            # Dragging group - record offset
             interactor = self.GetInteractor()
             current_pos = interactor.GetEventPosition()
 
@@ -367,7 +362,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
 
             return  # カメラ回転を無効化
 
-        # グループ回転中の処理
+        # Group rotation handling
         if move_group_dialog and getattr(
             move_group_dialog, "_is_rotating_group_vtk", False
         ):
@@ -384,7 +379,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
 
         interactor = self.GetInteractor()
 
-        # マウス移動があったことを記録
+        # Record mouse movement
         if self._mouse_press_pos is not None:
             current_pos = interactor.GetEventPosition()
             if (
@@ -394,17 +389,17 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                 self._mouse_moved_during_drag = True
 
         if self._is_dragging_atom and mw.dragged_atom_info is not None:
-            # カスタムの原子ドラッグ処理
+            # Custom atom drag
             self.is_dragging = True
             atom_id = mw.dragged_atom_info["id"]
         else:
-            # カメラ回転処理を親クラスに任せます
+            # Delegate camera rotation to parent
             super().OnMouseMove()
 
-            # その後、カーソルの表示を更新します
+            # Update cursor display
             is_edit_active = mw.is_3d_edit_mode or interactor.GetAltKey()
             if is_edit_active:
-                # 編集がアクティブな場合のみ、原子のホバーチェックを行う
+                # Hover check if edit active
                 atom_under_cursor = False
                 click_pos = interactor.GetEventPosition()
                 picker = mw.plotter.picker
@@ -421,11 +416,11 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
 
     def on_left_button_up(self, obj, event):
         """
-        クリック終了時の処理。状態をリセットします。
+        Handle click release and reset state.
         """
         mw = self.main_window
 
-        # Move Groupダイアログのドラッグ終了処理
+        # Finalize Move Group drag
         move_group_dialog = None
         try:
             for widget in QApplication.topLevelWidgets():
@@ -436,12 +431,12 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
             import traceback
             traceback.print_exc()
 
-        # ダブルクリック/トリプルクリックで状態が混乱するのを防ぐ（Move Group用）
+        # Prevent multi-click issues
         if move_group_dialog:
             if getattr(
                 move_group_dialog, "_is_dragging_group_vtk", False
             ) and not getattr(move_group_dialog, "_mouse_moved", False):
-                # ドラッグしていない状態で複数クリックされた場合は状態をリセット
+                # Reset if multi-clicked without drag
                 move_group_dialog._is_dragging_group_vtk = False
                 move_group_dialog._drag_start_pos = None
                 move_group_dialog._mouse_moved = False
@@ -452,19 +447,19 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
             move_group_dialog, "_is_dragging_group_vtk", False
         ):
             if getattr(move_group_dialog, "_mouse_moved", False):
-                # ドラッグが実行された - リリース時に座標を更新
+                # Update coordinates on release if dragged
                 try:
                     interactor = self.GetInteractor()
                     renderer = mw.plotter.renderer
                     current_pos = interactor.GetEventPosition()
                     conf = mw.current_mol.GetConformer()
 
-                    # ドラッグ原子の初期位置
+                    # Initial position of dragged atom
                     drag_atom_initial_pos = move_group_dialog._initial_positions[
                         move_group_dialog._drag_atom_idx
                     ]
 
-                    # スクリーン座標からワールド座標への変換
+                    # screen to world conversion
                     renderer.SetWorldPoint(
                         drag_atom_initial_pos[0],
                         drag_atom_initial_pos[1],
@@ -485,7 +480,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                     renderer.DisplayToWorld()
                     new_world_coords = renderer.GetWorldPoint()
 
-                    # 移動ベクトル
+                    # Translation vector
                     translation_vector = np.array(
                         [
                             new_world_coords[0] - drag_atom_initial_pos[0],
@@ -494,14 +489,14 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                         ]
                     )
 
-                    # グループ全体を移動
+                    # Move entire group
                     for atom_idx in move_group_dialog.group_atoms:
                         initial_pos = move_group_dialog._initial_positions[atom_idx]
                         new_pos = initial_pos + translation_vector
                         conf.SetAtomPosition(atom_idx, new_pos.tolist())
                         mw.atom_positions_3d[atom_idx] = new_pos
 
-                    # 3D表示を更新
+                    # Update 3D display
                     mw.draw_molecule_3d(mw.current_mol)
                     mw.update_chiral_labels()
                     move_group_dialog.show_atom_labels()
@@ -509,7 +504,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                 except Exception as e:
                     print(f"Error finalizing group drag: {e}")
             else:
-                # ドラッグがなかった = クリックのみ → トグル処理
+                # No drag = click only -> toggle
                 if hasattr(move_group_dialog, "_drag_atom_idx"):
                     clicked_atom = move_group_dialog._drag_atom_idx
                     try:
@@ -517,31 +512,28 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                     except Exception as e:
                         print(f"Error in toggle: {e}")
 
-        # Move Groupモードでの背景クリック判定（選択解除）
-        # グループドラッグでなく、マウス移動もなかった（＝回転操作でない）場合
-        # かつ、mouse_press_pos が記録されている（背景クリックで開始した）場合
+        # Background click: deselect
         if move_group_dialog and not getattr(
             move_group_dialog, "_is_dragging_group_vtk", False
         ):
             if not self._mouse_moved_during_drag and self._mouse_press_pos is not None:
-                # 背景クリック -> 選択解除
+                # Background click: deselect
                 move_group_dialog.group_atoms.clear()
                 move_group_dialog.selected_atoms.clear()
                 move_group_dialog.clear_atom_labels()
                 move_group_dialog.update_display()
 
-        # 計測モードで、マウスが動いていない場合（つまりクリック）の処理
-        # _mouse_press_pos が None でない = 背景をクリックしたことを意味する（Downイベントでそう設定したため）
+        # Measurement mode click handling
         if (
             mw.measurement_mode
             and not self._mouse_moved_during_drag
             and self._mouse_press_pos is not None
         ):
-            # 背景クリック -> 測定選択をクリア
+            # Background click -> clear selection
             mw.clear_measurement_selection()
 
         if self._is_dragging_atom:
-            # カスタムドラッグの後始末
+            # Finalize custom drag
             if self.is_dragging:
                 if mw.current_mol and mw.current_mol.GetNumConformers() > 0:
                     try:
@@ -580,7 +572,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                                 renderer.DisplayToWorld()
                                 new_world_coords_tuple = renderer.GetWorldPoint()
                                 new_world_coords = list(new_world_coords_tuple)[:3]
-                                # Ensure the container supports assignment
+                                # Ensure container supports assignment
                                 try:
                                     mw.atom_positions_3d[atom_id] = new_world_coords
                                 except Exception:
@@ -608,7 +600,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                         # whatever authoritative state is available.
                         pass
 
-                    # Redraw once and push undo state
+                    # Redraw and push undo state
                     try:
                         mw.draw_molecule_3d(mw.current_mol)
                     except Exception:  # pragma: no cover
@@ -641,16 +633,16 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                 import traceback
                 traceback.print_exc()
         else:
-            # カメラ回転の後始末を親クラスに任せます
+            # Delegate cleanup to parent
             super().OnLeftButtonUp()
 
-        # 状態をリセット（完全なクリーンアップ） - すべてのチェックの後に実行
+        # Handle click release and reset state.
         self._is_dragging_atom = False
         self.is_dragging = False
         self._mouse_press_pos = None
         self._mouse_moved_during_drag = False
 
-        # Move Group関連の状態もクリア
+        # Clear Move Group state
         try:
             if move_group_dialog:
                 move_group_dialog._is_dragging_group_vtk = False
@@ -664,24 +656,24 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
             import traceback
             traceback.print_exc()
 
-        # ボタンを離した後のカーソル表示を最新の状態に更新
+        # Update cursor after release
         try:
             mw.plotter.setCursor(Qt.CursorShape.ArrowCursor)
         except Exception:  # pragma: no cover
             import traceback
             traceback.print_exc()
 
-        # 2Dビューにフォーカスを戻し、ショートカットキーなどが使えるようにする
+        # Restore focus to 2D view
         if mw and mw.view_2d:
             mw.view_2d.setFocus()
 
     def on_right_button_up(self, obj, event):
         """
-        右クリック終了時の処理。グループ回転を確定。
+        Finalize group rotation on right-click release.
         """
         mw = self.main_window
 
-        # Move Groupダイアログの回転終了処理
+        # Finalize Move Group rotation
         move_group_dialog = None
         try:
             for widget in QApplication.topLevelWidgets():
@@ -695,9 +687,9 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
         if move_group_dialog and getattr(
             move_group_dialog, "_is_rotating_group_vtk", False
         ):
-            # 回転モードで右クリックリリース - 選択を保持
+            # Maintain selection on rotate release
             if getattr(move_group_dialog, "_rotation_mouse_moved", False):
-                # 回転が実行された - リリース時に回転を適用
+                # Apply rotation on release if moved
                 try:
                     interactor = self.GetInteractor()
                     renderer = mw.plotter.renderer
@@ -705,9 +697,8 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                     conf = mw.current_mol.GetConformer()
                     centroid = move_group_dialog._group_centroid
 
-                    # 掴んだ原子の初期位置
+                    # Save initial grabbed atom index
                     if not hasattr(move_group_dialog, "_rotation_atom_idx"):
-                        # 最初に掴んだ原子のインデックスを保存
                         move_group_dialog._rotation_atom_idx = next(
                             iter(move_group_dialog.group_atoms)
                         )
@@ -717,7 +708,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                         grabbed_atom_idx
                     ]
 
-                    # 開始位置のスクリーン座標を取得
+                    # Get start screen coordinates
                     renderer.SetWorldPoint(
                         grabbed_initial_pos[0],
                         grabbed_initial_pos[1],
@@ -727,7 +718,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                     renderer.WorldToDisplay()
                     start_display = renderer.GetDisplayPoint()
 
-                    # 現在のマウス位置をワールド座標に変換（同じ深度で）
+                    # Convert current mouse pos to world (same depth)
                     renderer.SetDisplayPoint(
                         current_pos[0], current_pos[1], start_display[2]
                     )
@@ -737,11 +728,11 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                         [target_world[0], target_world[1], target_world[2]]
                     )
 
-                    # 重心から見た、掴んだ原子の初期ベクトルと目標ベクトル
+                    # Vectors relative to centroid
                     v1 = grabbed_initial_pos - centroid
                     v2 = target_pos - centroid
 
-                    # ベクトルを正規化
+                    # Normalize vectors
                     v1_norm = np.linalg.norm(v1)
                     v2_norm = np.linalg.norm(v2)
 
@@ -749,20 +740,20 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                         v1_normalized = v1 / v1_norm
                         v2_normalized = v2 / v2_norm
 
-                        # 回転軸（外積）
+                        # Rotation axis
                         rotation_axis = np.cross(v1_normalized, v2_normalized)
                         axis_norm = np.linalg.norm(rotation_axis)
 
                         if axis_norm > 1e-6:
                             rotation_axis = rotation_axis / axis_norm
 
-                            # 回転角（内積）
+                            # Rotation angle
                             cos_angle = np.clip(
                                 np.dot(v1_normalized, v2_normalized), -1.0, 1.0
                             )
                             angle = np.arccos(cos_angle)
 
-                            # Rodriguesの回転公式で回転行列を作成
+                            # Create rotation matrix
                             K = np.array(
                                 [
                                     [0, -rotation_axis[2], rotation_axis[1]],
@@ -777,22 +768,22 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                                 + (1 - np.cos(angle)) * (K @ K)
                             )
 
-                            # グループ全体を重心周りに回転
+                            # Rotate group around centroid
                             for atom_idx in move_group_dialog.group_atoms:
                                 initial_pos = move_group_dialog._initial_positions[
                                     atom_idx
                                 ]
-                                # 重心からの相対座標
+                                # Relative position from centroid
                                 relative_pos = initial_pos - centroid
-                                # 回転を適用
+                                # Apply rotation
                                 rotated_pos = rot_matrix @ relative_pos
-                                # 絶対座標に戻す
+                                # Restore absolute position
                                 new_pos = rotated_pos + centroid
 
                                 conf.SetAtomPosition(atom_idx, new_pos.tolist())
                                 mw.atom_positions_3d[atom_idx] = new_pos
 
-                            # 3D表示を更新
+                            # Update 3D display
                             mw.draw_molecule_3d(mw.current_mol)
                             mw.update_chiral_labels()
                             move_group_dialog.show_atom_labels()
@@ -800,7 +791,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                 except Exception as e:
                     print(f"Error finalizing group rotation: {e}")
 
-            # 状態をリセット
+            # Reset state
             move_group_dialog._is_rotating_group_vtk = False
             move_group_dialog._rotation_start_pos = None
             move_group_dialog._rotation_mouse_moved = False
@@ -819,5 +810,5 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
 
             return
 
-        # 通常の右クリックリリース処理
+        # Standard right-click release
         super().OnRightButtonUp()

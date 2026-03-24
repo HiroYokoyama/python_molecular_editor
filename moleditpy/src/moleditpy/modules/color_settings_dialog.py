@@ -278,7 +278,7 @@ class ColorSettingsDialog(QDialog):  # pragma: no cover
         self.changed_cpk = {}
         self._reset_all_flag = True
 
-        # 1. B&S結合色もリセット対象（デフォルト値）に設定
+        # 1. Set B&S bond color to default during reset
         try:
             self.changed_bs_color = (
                 self.parent_window.default_settings.get(
@@ -290,7 +290,7 @@ class ColorSettingsDialog(QDialog):  # pragma: no cover
         except Exception:
             self.changed_bs_color = "#7F7F7F"
 
-        # 2. ダイアログ内のCPKボタンの表示をデフォルトに戻す
+        # 2. Restore CPK button displays in the dialog to defaults
         for s, btn in self.element_buttons.items():
             q_color = DEFAULT_CPK_COLORS.get(s, DEFAULT_CPK_COLORS["DEFAULT"])
             brightness = (
@@ -301,12 +301,12 @@ class ColorSettingsDialog(QDialog):  # pragma: no cover
                 f"background-color: {q_color.name()}; color: {text_color}; border: 1px solid #555; font-weight: bold;"
             )
 
-        # 3. 3Dプレビューを更新する L.3337〜L.3386 の try...finally ブロックは削除
+        # 3. 3D preview update logic removed (previously L.3337-L.3386)
 
-        # 4. ダイアログ内のB&S結合色ボタンの表示をデフォルトに戻す
+        # 4. Restore B&S bond color button display in the dialog to default
         try:
             if hasattr(self, "bs_button"):
-                # self.changed_bs_color に設定したデフォルト値を反映
+                # Reflect fixed default value in self.changed_bs_color
                 hexv = self.changed_bs_color
                 self.bs_button.setStyleSheet(
                     f"background-color: {hexv}; border: 1px solid #888;"

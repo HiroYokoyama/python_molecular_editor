@@ -38,7 +38,7 @@ import os
 
 
 class UserTemplateDialog(QDialog):  # pragma: no cover
-    """ユーザーテンプレート管理ダイアログ"""
+    """Dialog for managing user-defined molecular templates."""
 
     def __init__(self, main_window, parent=None):
         super().__init__(parent)
@@ -53,7 +53,7 @@ class UserTemplateDialog(QDialog):  # pragma: no cover
         self.setModal(False)
         self.resize(800, 600)
 
-        # ウィンドウを右上に配置
+        # Position window to the top-right of the parent
         if self.parent():
             parent_geometry = self.parent().geometry()
             x = parent_geometry.right() - self.width() - 20
@@ -101,12 +101,12 @@ class UserTemplateDialog(QDialog):  # pragma: no cover
         layout.addLayout(button_layout)
 
     def closeEvent(self, event):
-        """ダイアログクローズ時にモードをリセット"""
+        """Reset mode when the dialog is closed."""
         self.cleanup_template_mode()
         super().closeEvent(event)
 
     def cleanup_template_mode(self):
-        """テンプレートモードを終了し、atom_C(炭素描画)モードに戻す (Defensive implementation)"""
+        """Exit template mode and revert to atom_C (Carbon) mode."""
         # 1. Reset Dialog State
         self.selected_template = None
         if hasattr(self, "delete_button"):
@@ -159,13 +159,13 @@ class UserTemplateDialog(QDialog):  # pragma: no cover
             logging.error(f"Error cleaning up scene state: {e}")
 
     def resizeEvent(self, event):
-        """ダイアログリサイズ時にテンプレートプレビューを再フィット"""
+        """Refit template previews when the dialog is resized."""
         super().resizeEvent(event)
         # Delay the refit to ensure proper widget sizing
         QTimer.singleShot(100, self.refit_all_previews)
 
     def refit_all_previews(self):
-        """すべてのテンプレートプレビューを再フィット"""
+        """Refit all template preview widgets."""
         try:
             for i in range(self.template_layout.count()):
                 item = self.template_layout.itemAt(i)
@@ -182,20 +182,20 @@ class UserTemplateDialog(QDialog):  # pragma: no cover
             logging.warning(f"Warning: Failed to refit template previews: {e}")
 
     def showEvent(self, event):
-        """ダイアログ表示時にプレビューを適切にフィット"""
+        """Ensure previews are properly fitted when the dialog is shown."""
         super().showEvent(event)
         # Ensure all previews are properly fitted when dialog becomes visible
         QTimer.singleShot(300, self.refit_all_previews)
 
     def get_template_directory(self):
-        """テンプレートディレクトリのパスを取得"""
+        """Get or create the user templates directory path."""
         template_dir = os.path.join(self.main_window.settings_dir, "user-templates")
         if not os.path.exists(template_dir):
             os.makedirs(template_dir)
         return template_dir
 
     def load_user_templates(self):
-        """ユーザーテンプレートを読み込み"""
+        """Load templates from the user template directory."""
         template_dir = self.get_template_directory()
         self.user_templates.clear()
 
@@ -214,7 +214,7 @@ class UserTemplateDialog(QDialog):  # pragma: no cover
         self.update_template_grid()
 
     def load_template_file(self, filepath):
-        """テンプレートファイルを読み込み"""
+        """Load and parse a template JSON file."""
         try:
             with open(filepath, "r", encoding="utf-8") as f:
                 return json.load(f)
@@ -223,7 +223,7 @@ class UserTemplateDialog(QDialog):  # pragma: no cover
             return None
 
     def save_template_file(self, filepath, template_data):
-        """テンプレートファイルを保存"""
+        """Save template data to a JSON file."""
         try:
             with open(filepath, "w", encoding="utf-8") as f:
                 json.dump(template_data, f, indent=2, ensure_ascii=False)
@@ -233,7 +233,7 @@ class UserTemplateDialog(QDialog):  # pragma: no cover
             return False
 
     def update_template_grid(self):
-        """テンプレートグリッドを更新"""
+        """Clear and rebuild the template grid display."""
         # Clear existing widgets
         for i in reversed(range(self.template_layout.count())):
             self.template_layout.itemAt(i).widget().setParent(None)
@@ -251,7 +251,7 @@ class UserTemplateDialog(QDialog):  # pragma: no cover
         QTimer.singleShot(200, self.refit_all_previews)
 
     def create_template_preview(self, template_data):
-        """テンプレートプレビューウィジェットを作成"""
+        """Create a widget containing a preview of the template."""
         widget = QWidget()
         widget.setFixedSize(180, 200)
         widget.setStyleSheet("""
@@ -331,7 +331,7 @@ class UserTemplateDialog(QDialog):  # pragma: no cover
         return widget
 
     def fit_preview_view_safely(self, view, rect):
-        """プレビュービューを安全にフィット"""
+        """Safely call fitInView for a preview."""
         try:
             if view and not rect.isEmpty():
                 view.fitInView(rect, Qt.AspectRatioMode.KeepAspectRatio)
@@ -339,7 +339,7 @@ class UserTemplateDialog(QDialog):  # pragma: no cover
             logging.warning(f"Warning: Failed to fit preview view: {e}")
 
     def draw_template_preview(self, scene, template_data, view_size=None):
-        """テンプレートプレビューを描画 - fitInView縮小率に基づく動的スケーリング"""
+        """Draw the molecular structure in the preview scene with dynamic scaling."""
         atoms = template_data.get("atoms", [])
         bonds = template_data.get("bonds", [])
 
@@ -518,7 +518,7 @@ class UserTemplateDialog(QDialog):  # pragma: no cover
                 continue
 
     def select_template(self, template_data, widget):
-        """テンプレートを選択してテンプレートモードに切り替え"""
+        """Select a template and activate template placement mode."""
         # Clear previous selection styling
         for i in range(self.template_layout.count()):
             item = self.template_layout.itemAt(i)
@@ -608,7 +608,7 @@ class UserTemplateDialog(QDialog):  # pragma: no cover
             )
 
     def use_template(self, template_data):
-        """テンプレートを使用（エディタに適用）"""
+        """Apply the selected template to the main editor."""
         try:
             # Switch to template mode
             template_name = template_data.get("name", "user_template")
@@ -659,7 +659,7 @@ class UserTemplateDialog(QDialog):  # pragma: no cover
             QMessageBox.critical(self, "Error", f"Failed to apply template: {str(e)}")
 
     def save_current_as_template(self):
-        """現在の2D構造をテンプレートとして保存"""
+        """Save the current editor structure as a new user template."""
         if not self.main_window.data.atoms:
             QMessageBox.warning(self, "Warning", "No structure to save as template.")
             return
@@ -705,7 +705,7 @@ class UserTemplateDialog(QDialog):  # pragma: no cover
             QMessageBox.critical(self, "Error", f"Failed to save template: {str(e)}")
 
     def convert_structure_to_template(self, name):
-        """現在の構造をテンプレート形式に変換"""
+        """Convert the internal molecular data to template format."""
         atoms_data = []
         bonds_data = []
 
@@ -749,7 +749,7 @@ class UserTemplateDialog(QDialog):  # pragma: no cover
         return template_data
 
     def delete_selected_template(self):
-        """選択されたテンプレートを削除"""
+        """Delete the currently selected template file."""
         if not self.selected_template:
             return
 

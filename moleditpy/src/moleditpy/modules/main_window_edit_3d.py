@@ -12,8 +12,7 @@ DOI: 10.5281/zenodo.17268532
 
 """
 main_window_edit_3d.py
-MainWindow (main_window.py) から分離されたモジュール
-機能クラス: MainWindowEdit3d
+Functional class separated from main_window.py
 """
 
 
@@ -51,19 +50,19 @@ except Exception:
     from modules.constants import VDW_RADII
 
 
-# --- クラス定義 ---
+# --- Classes ---
 class MainWindowEdit3d(object):
-    """main_window.py から分離された機能クラス"""
+    """Functional class separated from main_window.py."""
 
     def toggle_measurement_mode(self, checked):
-        """測定モードのオン/オフを切り替える"""
+        """Toggle measurement mode on/off."""
         if checked:
-            # 測定モードをオンにする時は、3D Dragモードを無効化
+            # Disable 3D Drag mode when measurement mode is on
             if self.is_3d_edit_mode:
                 self.edit_3d_action.setChecked(False)
                 self.toggle_3d_edit_mode(False)
 
-            # アクティブな3D編集ダイアログを閉じる
+            # Close active 3D edit dialogs
             self.close_all_3d_edit_dialogs()
 
         self.measurement_mode = checked
@@ -71,7 +70,7 @@ class MainWindowEdit3d(object):
         if not checked:
             self.clear_measurement_selection()
 
-        # ボタンのテキストとステータスメッセージを更新
+        # Update status message
         if checked:
             self.statusBar().showMessage(
                 "Measurement mode enabled. Click atoms to measure distances/angles/dihedrals."
@@ -80,7 +79,7 @@ class MainWindowEdit3d(object):
             self.statusBar().showMessage("Measurement mode disabled.")
 
     def close_all_3d_edit_dialogs(self):
-        """すべてのアクティブな3D編集ダイアログを閉じる"""
+        """Close all active 3D edit dialogs."""
         dialogs_to_close = self.active_3d_dialogs.copy()
         for dialog in dialogs_to_close:
             try:
@@ -92,44 +91,37 @@ class MainWindowEdit3d(object):
         self.active_3d_dialogs.clear()
 
     def handle_measurement_atom_selection(self, atom_idx):
-        """測定用の原子選択を処理する"""
-        # 既に選択されている原子の場合は除外
+        """Handle atom selection for measurement."""
+        # Skip if already selected
         if atom_idx in self.selected_atoms_for_measurement:
             return
 
         self.selected_atoms_for_measurement.append(atom_idx)
 
-        """
-        # 4つ以上選択された場合はクリア
-        if len(self.selected_atoms_for_measurement) > 4:
-            self.clear_measurement_selection()
-            self.selected_atoms_for_measurement.append(atom_idx)
-        """
-
-        # 原子にラベルを追加
+        # Add atom labels
         self.add_measurement_label(atom_idx, len(self.selected_atoms_for_measurement))
 
-        # 測定値を計算して表示
+        # Calculate and display results
         self.calculate_and_display_measurements()
 
     def add_measurement_label(self, atom_idx, label_number):
-        """原子に数字ラベルを追加する"""
+        """Add numeric labels to atoms."""
         if not self.current_mol or atom_idx >= self.current_mol.GetNumAtoms():
             return
 
-        # 測定ラベルリストを更新
+        # Update label list
         self.measurement_labels.append((atom_idx, str(label_number)))
 
-        # 3Dビューの測定ラベルを再描画
+        # Redraw 3D measurement labels
         self.update_measurement_labels_display()
 
-        # 2Dビューの測定ラベルも更新
+        # Update 2D measurement labels
         self.update_2d_measurement_labels()
 
     def update_measurement_labels_display(self):
-        """測定ラベルを3D表示に描画する（原子中心配置）"""
+        """Draw measurement labels in 3D (atom centers)."""
         try:
-            # 既存の測定ラベルを削除
+            # Remove existing labels
             self.plotter.remove_actor("measurement_labels")
         except Exception:  # pragma: no cover
             import traceback
@@ -138,23 +130,23 @@ class MainWindowEdit3d(object):
         if not self.measurement_labels or not self.current_mol:
             return
 
-        # ラベル位置とテキストを準備
+        # Prepare label positions and text
         pts, labels = [], []
         for atom_idx, label_text in self.measurement_labels:
             if atom_idx < len(self.atom_positions_3d):
                 coord = self.atom_positions_3d[atom_idx].copy()
-                # オフセットを削除して原子中心に配置
+                # Place at atom center
                 pts.append(coord)
                 labels.append(label_text)
 
         if pts and labels:
-            # PyVistaのpoint_labelsを使用（赤色固定）
+            # Use PyVista's point_labels
             self.plotter.add_point_labels(
                 np.array(pts),
                 labels,
                 font_size=16,
                 point_size=0,
-                text_color="red",  # 測定時は常に赤色
+                text_color="red",  # Always red for measurement
                 name="measurement_labels",
                 always_visible=True,
                 tolerance=0.01,
@@ -162,10 +154,10 @@ class MainWindowEdit3d(object):
             )
 
     def clear_measurement_selection(self):
-        """測定選択をクリアする"""
+        """Clear measurement selection."""
         self.selected_atoms_for_measurement.clear()
 
-        # 3Dビューのラベルを削除
+        # Remove 3D labels
         self.measurement_labels.clear()
         try:
             self.plotter.remove_actor("measurement_labels")
@@ -173,10 +165,10 @@ class MainWindowEdit3d(object):
             import traceback
             traceback.print_exc()
 
-        # 2Dビューの測定ラベルも削除
+        # Remove 2D labels
         self.clear_2d_measurement_labels()
 
-        # 測定結果のテキストを削除
+        # Remove result text
         if self.measurement_text_actor:
             try:
                 self.plotter.remove_actor(self.measurement_text_actor)
@@ -188,29 +180,29 @@ class MainWindowEdit3d(object):
         self.plotter.render()
 
     def update_2d_measurement_labels(self):
-        """2Dビューで測定ラベルを更新表示する"""
-        # 既存の2D測定ラベルを削除
+        """Update 2D measurement labels."""
+        # Remove existing 2D labels
         self.clear_2d_measurement_labels()
 
-        # 現在の分子から原子-AtomItemマッピングを作成
+        # Create atom-to-AtomItem mapping
         if not self.current_mol or not hasattr(self, "data") or not self.data.atoms:
             return
 
-        # RDKit原子インデックスから2D AtomItemへのマッピングを作成
+        # Map RDKit index to 2D AtomItem
         atom_idx_to_item = {}
 
-        # シーンからAtomItemを取得してマッピング
+        # Get AtomItems from scene
         if hasattr(self, "scene"):
             for item in self.scene.items():
                 if hasattr(item, "atom_id") and hasattr(
                     item, "symbol"
-                ):  # AtomItemかチェック
-                    # 原子IDから対応するRDKit原子インデックスを見つける
+                ):  # Check if AtomItem
+                    # Find RDKit index from atom ID
                     rdkit_idx = self.find_rdkit_atom_index(item)
                     if rdkit_idx is not None:
                         atom_idx_to_item[rdkit_idx] = item
 
-        # 測定ラベルを2Dビューに追加
+        # Add to 2D view
         if not hasattr(self, "measurement_label_items_2d"):
             self.measurement_label_items_2d = []
 
@@ -220,16 +212,16 @@ class MainWindowEdit3d(object):
                 self.add_2d_measurement_label(atom_item, label_text)
 
     def add_2d_measurement_label(self, atom_item, label_text):
-        """特定のAtomItemに測定ラベルを追加する"""
-        # ラベルアイテムを作成
+        """Add measurement label to specific AtomItem."""
+        # Create label item
         label_item = QGraphicsTextItem(label_text)
-        label_item.setDefaultTextColor(QColor(255, 0, 0))  # 赤色
+        label_item.setDefaultTextColor(QColor(255, 0, 0))  # Red
         label_item.setFont(QFont("Arial", 12, QFont.Weight.Bold))
 
-        # Z値を設定して最前面に表示（原子ラベルより上）
-        label_item.setZValue(2000)  # より高い値で確実に最前面に配置
+        # Set Z-value for top-most display
+        label_item.setZValue(2000)  # Ensure it stays on top
 
-        # 原子の右上により近く配置
+        # Position near top-right of atom
         atom_pos = atom_item.pos()
         atom_rect = atom_item.boundingRect()
         label_pos = QPointF(
@@ -238,12 +230,12 @@ class MainWindowEdit3d(object):
         )
         label_item.setPos(label_pos)
 
-        # シーンに追加
+        # Add to scene
         self.scene.addItem(label_item)
         self.measurement_label_items_2d.append(label_item)
 
     def clear_2d_measurement_labels(self):
-        """2Dビューの測定ラベルを全て削除する"""
+        """Remove all 2D measurement labels."""
         if hasattr(self, "measurement_label_items_2d"):
             for label_item in self.measurement_label_items_2d:
                 try:
@@ -266,22 +258,22 @@ class MainWindowEdit3d(object):
             self.measurement_label_items_2d.clear()
 
     def find_rdkit_atom_index(self, atom_item):
-        """AtomItemから対応するRDKit原子インデックスを見つける"""
+        """Find RDKit index from AtomItem."""
         if not self.current_mol or not atom_item:
             return None
 
-        # マッピング辞書を使用（最も確実）
+        # Use mapping dictionary
         if (
             hasattr(self, "atom_id_to_rdkit_idx_map")
             and atom_item.atom_id in self.atom_id_to_rdkit_idx_map
         ):
             return self.atom_id_to_rdkit_idx_map[atom_item.atom_id]
 
-        # マッピングが存在しない場合はNone（外部ファイル読み込み時など）
+        # Return None if no mapping exists
         return None
 
     def calculate_and_display_measurements(self):
-        """選択された原子に基づいて測定値を計算し表示する"""
+        """Calculate and display measurement values."""
         num_selected = len(self.selected_atoms_for_measurement)
         if num_selected < 2:
             return
@@ -289,14 +281,14 @@ class MainWindowEdit3d(object):
         measurement_text = []
 
         if num_selected >= 2:
-            # 距離の計算
+            # Distance calculation
             atom1_idx = self.selected_atoms_for_measurement[0]
             atom2_idx = self.selected_atoms_for_measurement[1]
             distance = self.calculate_distance(atom1_idx, atom2_idx)
             measurement_text.append(f"Distance 1-2: {distance:.3f} Å")
 
         if num_selected >= 3:
-            # 角度の計算
+            # Angle calculation
             atom1_idx = self.selected_atoms_for_measurement[0]
             atom2_idx = self.selected_atoms_for_measurement[1]
             atom3_idx = self.selected_atoms_for_measurement[2]
@@ -304,7 +296,7 @@ class MainWindowEdit3d(object):
             measurement_text.append(f"Angle 1-2-3: {angle:.2f}°")
 
         if num_selected >= 4:
-            # 二面角の計算
+            # Dihedral calculation
             atom1_idx = self.selected_atoms_for_measurement[0]
             atom2_idx = self.selected_atoms_for_measurement[1]
             atom3_idx = self.selected_atoms_for_measurement[2]
@@ -314,15 +306,15 @@ class MainWindowEdit3d(object):
             )
             measurement_text.append(f"Dihedral 1-2-3-4: {dihedral:.2f}°")
 
-        # 測定結果を3D画面の右上に表示
+        # Display results on 3D view
         self.display_measurement_text(measurement_text)
 
     def calculate_distance(self, atom1_idx, atom2_idx):
-        """2原子間の距離を計算する"""
+        """Calculate distance between two atoms."""
         return calc_distance(self.atom_positions_3d[atom1_idx], self.atom_positions_3d[atom2_idx])
 
     def calculate_angle(self, atom1_idx, atom2_idx, atom3_idx):
-        """3原子の角度を計算する（中央が頂点）"""
+        """Calculate angle (center is vertex)."""
         return calc_angle_deg(
             self.atom_positions_3d[atom1_idx],
             self.atom_positions_3d[atom2_idx],  # 頂点
@@ -330,14 +322,13 @@ class MainWindowEdit3d(object):
         )
 
     def calculate_dihedral(self, atom1_idx, atom2_idx, atom3_idx, atom4_idx):
-        """4原子の二面角を計算する（正しい公式を使用）"""
+        """Calculate dihedral angle."""
         return _calculate_dihedral(
             self.atom_positions_3d, atom1_idx, atom2_idx, atom3_idx, atom4_idx
         )
 
-    def display_measurement_text(self, measurement_lines):
-        """測定結果のテキストを3D画面の左上に表示する（小さな等幅フォント）"""
-        # 既存のテキストを削除
+        """Display results text on 3D view."""
+        # Remove existing text
         if self.measurement_text_actor:
             try:
                 self.plotter.remove_actor(self.measurement_text_actor)
@@ -349,10 +340,10 @@ class MainWindowEdit3d(object):
             self.measurement_text_actor = None
             return
 
-        # テキストを結合
+        # Combine text
         text = "\n".join(measurement_lines)
 
-        # 背景色から適切なテキスト色を決定
+        # Determine text color from background
         try:
             bg_color_hex = self.settings.get("background_color", "#919191")
             bg_qcolor = QColor(bg_color_hex)
@@ -364,37 +355,37 @@ class MainWindowEdit3d(object):
         except Exception:
             text_color = "white"
 
-        # 左上に表示（小さな等幅フォント）
+        # Display upper-left
         self.measurement_text_actor = self.plotter.add_text(
             text,
             position="upper_left",
-            font_size=10,  # より小さく
-            color=text_color,  # 背景に合わせた色
-            font="courier",  # 等幅フォント
+            font_size=10,  # Smaller font
+            color=text_color,  # Color matching background
+            font="courier",  # Monospace font
             name="measurement_display",
         )
 
         self.plotter.render()
 
     def toggle_atom_selection_3d(self, atom_idx):
-        """3Dビューで原子の選択状態をトグルする"""
+        """Toggle atom selection in 3D."""
         if atom_idx in self.selected_atoms_3d:
             self.selected_atoms_3d.remove(atom_idx)
         else:
             self.selected_atoms_3d.add(atom_idx)
 
-        # 選択状態のビジュアルフィードバックを更新
+        # Update feedback
         self.update_3d_selection_display()
 
     def clear_3d_selection(self):
-        """3Dビューでの原子選択をクリア"""
+        """Clear 3D selection."""
         self.selected_atoms_3d.clear()
         self.update_3d_selection_display()
 
     def update_3d_selection_display(self):
-        """3Dビューでの選択原子のハイライト表示を更新"""
+        """Update 3D selection highlight."""
         try:
-            # 既存の選択ハイライトを削除
+            # Remove existing highlight
             self.plotter.remove_actor("selection_highlight")
         except Exception:  # pragma: no cover
             import traceback
@@ -404,13 +395,13 @@ class MainWindowEdit3d(object):
             self.plotter.render()
             return
 
-        # 選択された原子のインデックスリストを作成
+        # Create index list
         selected_indices = list(self.selected_atoms_3d)
 
-        # 選択された原子の位置を取得
+        # Get atom positions
         selected_positions = self.atom_positions_3d[selected_indices]
 
-        # 原子の半径を少し大きくしてハイライト表示
+        # Highlight with slightly larger radius
         selected_radii = np.array(
             [
                 VDW_RADII.get(self.current_mol.GetAtomWithIdx(i).GetSymbol(), 0.4) * 1.3
@@ -418,11 +409,11 @@ class MainWindowEdit3d(object):
             ]
         )
 
-        # ハイライト用のデータセットを作成
+        # Create highlight dataset
         highlight_source = pv.PolyData(selected_positions)
         highlight_source["radii"] = selected_radii
 
-        # 黄色の半透明球でハイライト
+        # Yellow semi-transparent highlight
         highlight_glyphs = highlight_source.glyph(
             scale="radii",
             geom=pv.Sphere(radius=1.0, theta_resolution=16, phi_resolution=16),
@@ -436,6 +427,6 @@ class MainWindowEdit3d(object):
         self.plotter.render()
 
     def remove_dialog_from_list(self, dialog):
-        """ダイアログをアクティブリストから削除"""
+        """Remove dialog from active list."""
         if dialog in self.active_3d_dialogs:
             self.active_3d_dialogs.remove(dialog)

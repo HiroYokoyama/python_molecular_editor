@@ -31,33 +31,33 @@ from .dialog3_d_picking_mixin import Dialog3DPickingMixin
 
 
 class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
-    """制約付き最適化ダイアログ"""
+    """Dialog for constrained optimization."""
 
     def __init__(self, mol, main_window, parent=None):
         QDialog.__init__(self, parent)
         Dialog3DPickingMixin.__init__(self)
         self.mol = mol
         self.main_window = main_window
-        self.selected_atoms = []  # 順序が重要なのでリストを使用
+        self.selected_atoms = []  # Using a list because order matters
         self.constraints = []  # (type, atoms_indices, value)
-        self.constraint_labels = []  # 3Dラベルアクター
+        self.constraint_labels = []  # 3D label actors
         self.init_ui()
         self.enable_picking()
 
-        # MainWindowから既存の制約を読み込む
+        # Load existing constraints from MainWindow
         if self.main_window.constraints_3d:
-            self.constraint_table.blockSignals(True)  # 読み込み中のシグナルをブロック
+            self.constraint_table.blockSignals(True)  # Block signals during loading
             try:
-                # self.constraints には (Type, (Idx...), Value, Force) のタプル形式で読み込む
+                # Load into self.constraints as (Type, (Idx...), Value, Force) tuples
                 for const_data in self.main_window.constraints_3d:
-                    # 後方互換性のため、3要素または4要素の制約に対応
+                    # Support 3- or 4-element constraints for backward compatibility
                     if len(const_data) == 4:
                         const_type, atom_indices, value, force_const = const_data
                     else:
                         const_type, atom_indices, value = const_data
-                        force_const = 1.0e5  # デフォルト値
+                        force_const = 1.0e5  # Default value
 
-                    # タプル化して内部リストに追加
+                    # Convert to tuple and add to internal list
                     self.constraints.append(
                         (const_type, tuple(atom_indices), value, force_const)
                     )
@@ -99,9 +99,9 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):  # pragma: n
             finally:
                 self.constraint_table.blockSignals(False)
 
-            # <<< MainWindowの現在の最適化設定を読み込み、デフォルトにする >>>
+            # <<< Load current optimization settings from MainWindow as defaults >>>
         try:
-            # (修正) None の場合に備えてフォールバックを追加
+            # Add fallback for None case
             current_method_str = self.main_window.optimization_method or "MMFF_RDKIT"
             current_method = current_method_str.upper()
 
@@ -113,19 +113,19 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):  # pragma: n
             elif current_method == "MMFF94_RDKIT":
                 self.ff_combo.setCurrentText("MMFF94")
 
-            # 3. MMFF_RDKIT (MMFF94s) - これがデフォルトでもある
+            # 3. MMFF_RDKIT (MMFF94s) - This is the default
             elif current_method == "MMFF_RDKIT":
                 self.ff_combo.setCurrentText("MMFF94s")
 
-            # 4. (古い設定ファイルなどからのフォールバック)
+            # 4. (Fallback from old config files, etc.)
             elif "UFF" in current_method:
                 self.ff_combo.setCurrentText("UFF")
             elif "MMFF94S" in current_method:
                 self.ff_combo.setCurrentText("MMFF94s")
-            elif "MMFF94" in current_method:  # MMFF94_RDKITも含むが、先で処理済み
+            elif "MMFF94" in current_method:  # Already handled MMFF94_RDKIT above
                 self.ff_combo.setCurrentText("MMFF94")
 
-            # 5. デフォルト
+            # 5. Default
             else:
                 self.ff_combo.setCurrentText("MMFF94s")
 
@@ -138,20 +138,20 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):  # pragma: n
         self.resize(450, 500)
         layout = QVBoxLayout(self)
 
-        # 1. 説明
+        # 1. Instructions
         instruction_label = QLabel(
             "Select 2-4 atoms to add a constraint. Select constraints in the table to remove them."
         )
         instruction_label.setWordWrap(True)
         layout.addWidget(instruction_label)
 
-        # 2. 最適化方法とForce Constant
+        # 2. Optimization method and Force Constant
         form_layout = QFormLayout()
         self.ff_combo = QComboBox()
         self.ff_combo.addItems(["MMFF94s", "MMFF94", "UFF"])
         form_layout.addRow("Force Field:", self.ff_combo)
 
-        # Force Constant設定
+        # Force Constant setting
         self.force_const_input = QLineEdit("1.0e5")
         self.force_const_input.setToolTip(
             "Force constant for constraints (default: 1.0e5)"
@@ -160,11 +160,11 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):  # pragma: n
 
         layout.addLayout(form_layout)
 
-        # 3. 選択中の原子
+        # 3. Selected atoms
         self.selection_label = QLabel("Selected atoms: None")
         layout.addWidget(self.selection_label)
 
-        # 4. 制約の表
+        # 4. Constraints table
         self.constraint_table = QTableWidget()
         self.constraint_table.setColumnCount(4)
         self.constraint_table.setHorizontalHeaderLabels(
@@ -173,7 +173,7 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):  # pragma: n
         self.constraint_table.setSelectionBehavior(
             QTableWidget.SelectionBehavior.SelectRows
         )
-        # 編集トリガーをダブルクリックなどに変更
+        # Change edit triggers (e.g., double click)
         self.constraint_table.setEditTriggers(
             QTableWidget.EditTrigger.DoubleClicked
             | QTableWidget.EditTrigger.SelectedClicked
@@ -192,7 +192,7 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):  # pragma: n
 
         layout.addWidget(self.constraint_table)
 
-        # 5. ボタン (Add / Remove)
+        # 5. Buttons (Add / Remove)
         button_layout = QHBoxLayout()
         self.add_button = QPushButton("Add Constraint")
         self.add_button.clicked.connect(self.add_constraint)
@@ -209,7 +209,7 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):  # pragma: n
         self.remove_all_button.clicked.connect(self.remove_all_constraints)
         button_layout.addWidget(self.remove_all_button)
 
-        # 6. メインボタン (Optimize / Close)
+        # 6. Main buttons (Optimize / Close)
         main_buttons = QHBoxLayout()
         main_buttons.addStretch()
         self.optimize_button = QPushButton("Optimize")
@@ -226,7 +226,7 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):  # pragma: n
             self.selected_atoms.remove(atom_idx)
         else:
             if len(self.selected_atoms) >= 4:
-                self.selected_atoms.pop(0)  # 4つまで
+                self.selected_atoms.pop(0)  # Up to 4 atoms
             self.selected_atoms.append(atom_idx)
 
         self.show_selection_labels()
@@ -242,7 +242,7 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):  # pragma: n
 
         if n == 0:
             prefix = "Selected atoms: None"
-            atom_str = ""  # atom_str を空にする
+            atom_str = ""  # Set atom_str to empty
         elif n == 1:
             prefix = "Selected atoms: "
         elif n == 2:
@@ -257,22 +257,22 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):  # pragma: n
         else:  # n > 4
             prefix = "Selected atoms (max 4): "
 
-        # ラベルテキストを設定
+        # Set label text
         if n == 0:
             self.selection_label.setText(prefix)
         else:
             self.selection_label.setText(f"{prefix}[{atom_str}]")
 
-        # ボタンのテキストは常に固定
+        # Button text is fixed
         self.add_button.setText("Add Constraint")
-        # ボタンの有効状態を設定
+        # Set button enabled state
         self.add_button.setEnabled(can_add)
 
     def add_constraint(self):
         n = len(self.selected_atoms)
         conf = self.mol.GetConformer()
 
-        # Force Constantを取得
+        # Retrieve Force Constant
         try:
             force_const = float(self.force_const_input.text())
         except ValueError:
@@ -300,7 +300,7 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):  # pragma: n
 
         atom_indices = tuple(self.selected_atoms)
 
-        # 既存の制約と重複チェック (原子インデックスが同じもの)
+        # Check for duplicate constraints (same atom indices)
         for const in self.constraints:
             if const[0] == constraint_type and const[1] == atom_indices:
                 QMessageBox.warning(
@@ -310,37 +310,37 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):  # pragma: n
 
         self.constraints.append((constraint_type, atom_indices, value, force_const))
 
-        # 表を更新
+        # Update table
         row_count = self.constraint_table.rowCount()
         self.constraint_table.insertRow(row_count)
 
-        # --- カラム 0 (Type) ---
+        # --- Column 0 (Type) ---
         item_type = QTableWidgetItem(constraint_type)
-        # 編集不可フラグを設定 (ItemIsEnabled | ItemIsSelectable)
+        # Set non-editable flags
         item_type.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
         item_type.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
         self.constraint_table.setItem(row_count, 0, item_type)
 
-        # --- カラム 1 (Atom Indices) ---
+        # --- Column 1 (Atom Indices) ---
         item_indices = QTableWidgetItem(str(atom_indices))
-        # 編集不可フラグを設定
+        # Set non-editable flags
         item_indices.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
         item_indices.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
         self.constraint_table.setItem(row_count, 1, item_indices)
 
-        # --- カラム 2 (Value) ---
+        # --- Column 2 (Value) ---
         item_value = QTableWidgetItem(value_str)
         item_value.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-        # 編集可能フラグはデフォルトで有効 (ItemIsEnabled | ItemIsSelectable | ItemIsEditable)
+        # Editable flags (enabled by default)
         self.constraint_table.setItem(row_count, 2, item_value)
 
-        # --- カラム 3 (Force) ---
+        # --- Column 3 (Force) ---
         item_force = QTableWidgetItem(f"{force_const:.2e}")
         item_force.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-        # 編集可能
+        # Editable
         self.constraint_table.setItem(row_count, 3, item_force)
 
-        # 選択をクリア
+        # Clear selection
         self.selected_atoms.clear()
         self.update_selection_display()
 
@@ -363,22 +363,22 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):  # pragma: n
         self.clear_constraint_labels()
 
     def remove_all_constraints(self):
-        """全ての制約をクリアする"""
+        """Clear all constraints."""
         if not self.constraints:
             return
 
-        # 内部リストをクリア
+        # Clear internal list
         self.constraints.clear()
 
-        # テーブルの行を全て削除
+        # Remove all rows from the table
         self.constraint_table.blockSignals(True)
         self.constraint_table.setRowCount(0)
         self.constraint_table.blockSignals(False)
 
-        # 3Dラベルをクリア
+        # Clear 3D labels
         self.clear_constraint_labels()
 
-        # 選択ボタンを無効化
+        # Disable selection-based button
         self.remove_button.setEnabled(False)
 
     def show_constraint_labels(self):
@@ -390,12 +390,12 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):  # pragma: n
 
         self.remove_button.setEnabled(True)
 
-        # 選択された行の制約を取得 (最初の選択行のみ)
+        # Get the constraint from the selected row (first selection only)
         try:
             row = selected_items[0].row()
             constraint_type, atom_indices, value, force_const = self.constraints[row]
         except (IndexError, TypeError, ValueError):
-            # 古い形式の制約の場合は3要素でunpack
+            # Unpack 3-element tuple for old format constraints
             try:
                 constraint_type, atom_indices, value = self.constraints[row]
             except (IndexError, TypeError):
@@ -464,15 +464,15 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):  # pragma: n
             )
             return
 
-        # 制約を追加
+        # Add constraints
         try:
             for constraint in self.constraints:
-                # 後方互換性のため、4要素または3要素の制約に対応
+                # Support 4- or 3-element constraints for backward compatibility
                 if len(constraint) == 4:
                     const_type, atoms, value, force_const = constraint
                 else:
                     const_type, atoms, value = constraint
-                    force_const = 1.0e5  # デフォルト値
+                    force_const = 1.0e5  # Default value
 
                 if const_type == "Distance":
                     # C++ signature: (self, idx1, idx2, bool relative, minLen, maxLen, forceConst)
@@ -513,19 +513,19 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):  # pragma: n
             print(e)
             return
 
-        # 最適化の実行
+        # Execute optimization
         try:
             self.main_window.statusBar().showMessage(
                 f"Running constrained {ff_name} optimization..."
             )
             ff.Minimize(maxIts=20000)
 
-            # 最適化後の座標をメインウィンドウの numpy 配列に反映
+            # Apply optimized coordinates to the main window's numpy array
             for i in range(self.mol.GetNumAtoms()):
                 pos = conf.GetAtomPosition(i)
                 self.main_window.atom_positions_3d[i] = [pos.x, pos.y, pos.z]
 
-            # 3Dビューを更新
+            # Update 3D view
             self.main_window.draw_molecule_3d(self.mol)
             self.main_window.update_chiral_labels()
             self.main_window.push_undo_state()
@@ -541,27 +541,27 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):  # pragma: n
             except Exception as e:
                 print(f"Failed to set last_successful_optimization_method: {e}")
 
-            # (修正) 最適化成功時にも制約リストをMainWindowに保存 (reject と同じロジック)
+            # Save constraints list to MainWindow on success (same logic as reject)
             try:
-                # JSON互換のため、タプルをリストに変換して保存
+                # Save as list for JSON compatibility
                 json_safe_constraints = []
                 for const in self.constraints:
-                    # 4要素の制約（Type, Indices, Value, Force）
+                    # 4-element constraint
                     if len(const) == 4:
                         json_safe_constraints.append(
                             [const[0], list(const[1]), const[2], const[3]]
                         )
                     else:
-                        # 古い形式の場合は3要素にデフォルトのForceを追加
+                        # Add default force for old 3-element format
                         json_safe_constraints.append(
                             [const[0], list(const[1]), const[2], 1.0e5]
                         )
 
-                # 変更があった場合のみ MainWindow を更新
+                # Update MainWindow only if changed
                 if self.main_window.constraints_3d != json_safe_constraints:
                     self.main_window.constraints_3d = json_safe_constraints
                     self.main_window.has_unsaved_changes = (
-                        True  # 制約の変更も「未保存」扱い
+                        True  # Mark as unsaved changes
                     )
                     self.main_window.update_window_title()
 
@@ -580,27 +580,27 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):  # pragma: n
         self.clear_selection_labels()
         self.disable_picking()
 
-        # ダイアログを閉じる際に現在の制約リストをMainWindowに保存
+        # Save constraints list to MainWindow when closing the dialog
         try:
-            # JSON互換のため、タプルをリストに変換して保存
+            # Save as list for JSON compatibility
             json_safe_constraints = []
             for const in self.constraints:
-                # (Type, (Idx...), Value, Force) -> [Type, [Idx...], Value, Force]
+                # Tuple to list conversion
                 if len(const) == 4:
                     json_safe_constraints.append(
                         [const[0], list(const[1]), const[2], const[3]]
                     )
                 else:
-                    # 古い形式の場合は3要素にデフォルトのForceを追加
+                    # Add default force for old 3-element format
                     json_safe_constraints.append(
                         [const[0], list(const[1]), const[2], 1.0e5]
                     )
 
-            # 変更があった場合のみ MainWindow を更新
+            # Update MainWindow only if changed
             if self.main_window.constraints_3d != json_safe_constraints:
                 self.main_window.constraints_3d = json_safe_constraints
                 self.main_window.has_unsaved_changes = (
-                    True  # 制約の変更も「未保存」扱い
+                    True  # Mark as unsaved changes
                 )
                 self.main_window.update_window_title()
 
@@ -610,7 +610,7 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):  # pragma: n
         super().reject()
 
     def clear_selection(self):
-        """選択をクリア (原子以外をクリックした時にMixinから呼ばれる)"""
+        """Clear selection (called from Mixin when clicking outside an atom)"""
         self.selected_atoms.clear()
         self.clear_selection_labels()
         self.update_selection_display()
@@ -626,7 +626,7 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):  # pragma: n
             not hasattr(self.main_window, "atom_positions_3d")
             or self.main_window.atom_positions_3d is None
         ):
-            return  # 3D座標データがない場合は何もしない
+            return  # Do nothing if 3D coordinates are missing
 
         max_idx = len(self.main_window.atom_positions_3d) - 1
         positions = []
@@ -637,7 +637,7 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):  # pragma: n
                 positions.append(self.main_window.atom_positions_3d[atom_idx])
                 texts.append(f"A{i + 1}")
             elif atom_idx is not None:
-                # インデックスが無効な場合はログ（デバッグ用）
+                # Log invalid index (for debugging)
                 print(
                     f"Warning: Invalid atom index {atom_idx} in show_selection_labels"
                 )
@@ -658,14 +658,14 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):  # pragma: n
                 self.selection_labels.append(label_actor)
 
     def on_cell_changed(self, row, column):
-        """テーブルのセルが編集されたときに内部データを更新する"""
+        """Update internal data when a table cell is edited."""
 
-        # "Value" 列 (カラムインデックス 2) と "Force" 列 (カラムインデックス 3) のみ対応
+        # Handle only Value (col 2) and Force (col 3) columns
         if column not in [2, 3]:
             return
 
         try:
-            # 変更されたアイテムからテキストを取得
+            # Retrieve text from the modified item
             item = self.constraint_table.item(row, column)
             if not item:
                 return
@@ -673,19 +673,19 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):  # pragma: n
             new_value_str = item.text()
             new_value = float(new_value_str)
 
-            # 内部の constraints リストを更新
+            # Update internal constraints list
             old_constraint = self.constraints[row]
 
-            # 後方互換性のため、3要素または4要素の制約に対応
+            # Support 3- or 4-element constraints for backward compatibility
             if len(old_constraint) == 4:
-                if column == 2:  # Value列
+                if column == 2:  # Value column
                     self.constraints[row] = (
                         old_constraint[0],
                         old_constraint[1],
                         new_value,
                         old_constraint[3],
                     )
-                elif column == 3:  # Force列
+                elif column == 3:  # Force column
                     self.constraints[row] = (
                         old_constraint[0],
                         old_constraint[1],
@@ -693,15 +693,15 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):  # pragma: n
                         new_value,
                     )
             else:
-                # 古い3要素形式の場合
-                if column == 2:  # Value列
+                # Old 3-element format
+                if column == 2:  # Value column
                     self.constraints[row] = (
                         old_constraint[0],
                         old_constraint[1],
                         new_value,
                         1.0e5,
                     )
-                elif column == 3:  # Force列（新規追加）
+                elif column == 3:  # Force column (new addition)
                     self.constraints[row] = (
                         old_constraint[0],
                         old_constraint[1],
@@ -710,17 +710,17 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):  # pragma: n
                     )
 
         except (ValueError, TypeError):
-            # 不正な値（数値以外）が入力された場合
-            # 元の値をテーブルに戻す
+            # Case of invalid input (non-numeric)
+            # Restore original value to table
             self.constraint_table.blockSignals(True)
 
-            if column == 2:  # Value列
+            if column == 2:  # Value column
                 old_value = self.constraints[row][2]
                 if self.constraints[row][0] == "Distance":
                     item.setText(f"{old_value:.3f}")
                 else:
                     item.setText(f"{old_value:.2f}")
-            elif column == 3:  # Force列
+            elif column == 3:  # Force column
                 old_force = (
                     self.constraints[row][3]
                     if len(self.constraints[row]) == 4
@@ -735,16 +735,16 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):  # pragma: n
                 self, "Invalid Value", "Please enter a valid floating-point number."
             )
         except IndexError:
-            # constraints リストとテーブルが同期していない場合（通常発生しない）
+            # Case where constraints list and table are out of sync (should not occur)
             pass
 
     def keyPressEvent(self, event):
-        """キーボードイベントを処理 (Delete/Backspaceで制約を削除, Enterで最適化)"""
+        """Handle keyboard events (Delete/Backspace to remove, Enter to optimize)."""
         key = event.key()
 
-        # DeleteキーまたはBackspaceキーが押されたかチェック
+        # Check if Delete or Backspace was pressed
         if key == Qt.Key.Key_Delete or key == Qt.Key.Key_Backspace:
-            # テーブルがフォーカスを持っているか、またはアイテムが選択されているか確認
+            # Check if table has focus or items are selected
             if (
                 self.constraint_table.hasFocus()
                 or len(self.constraint_table.selectedIndexes()) > 0
@@ -753,14 +753,14 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):  # pragma: n
                 event.accept()
                 return
 
-        # Enter/Returnキーが押されたかチェック (最適化を実行)
+        # Check if Enter/Return was pressed (execute optimization)
         if key == Qt.Key.Key_Return or key == Qt.Key.Key_Enter:
-            # テーブルが編集中でないことを確認（セルの編集中にEnterを押した場合）
+            # Ensure table is not in editing state
             if self.constraint_table.state() != QAbstractItemView.State.EditingState:
                 if self.optimize_button.isEnabled():
                     self.apply_optimization()
                 event.accept()
                 return
 
-        # それ以外のキーはデフォルトの処理
+        # Default processing for other keys
         super().keyPressEvent(event)

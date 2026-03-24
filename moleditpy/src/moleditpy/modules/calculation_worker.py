@@ -378,7 +378,7 @@ def _perform_direct_conversion(mol_block, mol, options, _check_halted, _safe_sta
 
     base2d_all = None
     try:
-        # H原子を含めてパース
+        # Parse including hydrogen atoms
         base2d_all = Chem.MolFromMolBlock(
             mol_block, removeHs=False, sanitize=True
         )
@@ -414,7 +414,7 @@ def _perform_direct_conversion(mol_block, mol, options, _check_halted, _safe_sta
             except Exception:
                 natoms = nbonds = 0
 
-            # 全原子マップ (MOL 1-based index -> 0-based index)
+            # All-atom map (MOL 1-based index -> 0-based index)
             atom_map = {i + 1: i for i in range(natoms)}
 
             bond_start = counts_idx + 1 + natoms
@@ -468,7 +468,7 @@ def _perform_direct_conversion(mol_block, mol, options, _check_halted, _safe_sta
                         else:
                             continue
 
-                    # V2000の立体表記を正規化
+                    # Normalize V2000 stereo notation
                     if stereo_raw == 1:
                         stereo_flag = 1  # Wedge
                     elif stereo_raw == 2:
@@ -476,7 +476,7 @@ def _perform_direct_conversion(mol_block, mol, options, _check_halted, _safe_sta
                     else:
                         stereo_flag = stereo_raw
 
-                    # 全原子マップでチェック
+                    # Check using all-atom map
                     if atom1_mol in atom_map and atom2_mol in atom_map:
                         idx1 = atom_map[atom1_mol]
                         idx2 = atom_map[atom2_mol]
@@ -527,7 +527,7 @@ def _perform_direct_conversion(mol_block, mol, options, _check_halted, _safe_sta
                                 continue
                         else:
                             continue
-                    # H原子もスキップしない
+                    # Do not skip hydrogen atoms
                     parsed_coords.append((x, y, z))
         except Exception:
             parsed_coords = []
@@ -546,7 +546,7 @@ def _perform_direct_conversion(mol_block, mol, options, _check_halted, _safe_sta
 
     for i in range(mol.GetNumAtoms()):
         if i < num_existing_atoms:
-            # 既存原子 (H含む): 2D座標 (z=0) を設定
+            # Existing atoms (including H): set 2D coordinates (z=0)
             x, y, z_ignored = parsed_coords[i]
             try:
                 conf.SetAtomPosition(
@@ -565,7 +565,7 @@ def _perform_direct_conversion(mol_block, mol, options, _check_halted, _safe_sta
                     if n.GetIdx() < num_existing_atoms
                 ]
                 heavy_pos_found = False
-                for nb in neighs:  # 親原子 (重原子または既存H)
+                for nb in neighs:  # Parent atom (heavy atom or existing H)
                     try:
                         nb_idx = nb.GetIdx()
                         # if nb_idx < num_existing_atoms: # チェックは不要 (neighs で既にフィルタ済み)
@@ -665,7 +665,7 @@ def _perform_direct_conversion(mol_block, mol, options, _check_halted, _safe_sta
                     except Exception:
                         continue
                 if not heavy_pos_found:
-                    # フォールバック (原点近く)
+                    # Fallback (near origin)
                     try:
                         conf.SetAtomPosition(
                             i, rdGeometry.Point3D(0.0, 0.0, 0.10)

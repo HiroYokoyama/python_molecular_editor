@@ -12,8 +12,7 @@ DOI: 10.5281/zenodo.17268532
 
 """
 main_window_project_io.py
-MainWindow (main_window.py) から分離されたモジュール
-機能クラス: MainWindowProjectIo
+Functional class separated from main_window.py
 """
 
 import copy
@@ -34,16 +33,16 @@ except Exception:
     _sip_isdeleted = None
 
 
-# --- クラス定義 ---
+# --- Classes ---
 class MainWindowProjectIo(object):
-    """main_window.py から分離された機能クラス"""
+    """Functional class separated from main_window.py."""
 
     def save_project(self):
-        """上書き保存（Ctrl+S）- デフォルトでPMEPRJ形式"""
+        """Save (Ctrl+S) - Defaults to PMEPRJ format."""
         if not self.data.atoms and not self.current_mol:
             self.statusBar().showMessage("Error: Nothing to save.")
             return
-        # 非ネイティブ形式（.mol, .sdf, .xyz など）は上書き保存せず、必ず「名前を付けて保存」にする
+        # Non-native formats (MOL/SDF/XYZ) trigger "Save As"
         native_exts = [".pmeprj", ".pmeraw"]
         if self.current_file_path and any(
             self.current_file_path.lower().endswith(ext) for ext in native_exts
@@ -54,12 +53,12 @@ class MainWindowProjectIo(object):
                     with open(self.current_file_path, "wb") as f:
                         pickle.dump(save_data, f)
                 else:
-                    # PMEPRJ形式で保存
+                    # Save in PMEPRJ format
                     json_data = self.create_json_data()
                     with open(self.current_file_path, "w", encoding="utf-8") as f:
                         json.dump(json_data, f, indent=2, ensure_ascii=False)
 
-                # 保存成功時に状態をリセット
+                # Reset state on success
                 self.has_unsaved_changes = False
                 self.update_window_title()
 
@@ -78,11 +77,11 @@ class MainWindowProjectIo(object):
             except Exception as e:
                 self.statusBar().showMessage(f"Error saving project file: {e}")
         else:
-            # MOL/SDF/XYZなどは上書き保存せず、必ず「名前を付けて保存」にする
+            # Force "Save As" for non-native formats
             self.save_project_as()
 
     def save_project_as(self):
-        """名前を付けて保存（Ctrl+Shift+S）- デフォルトでPMEPRJ形式"""
+        """Save As (Ctrl+Shift+S) - Defaults to PMEPRJ format."""
         if not self.data.atoms and not self.current_mol:
             self.statusBar().showMessage("Error: Nothing to save.")
             return
@@ -123,7 +122,7 @@ class MainWindowProjectIo(object):
             with open(file_path, "w", encoding="utf-8") as f:
                 json.dump(json_data, f, indent=2, ensure_ascii=False)
 
-            # 保存成功時に状態をリセット
+            # Reset state on success
             self.has_unsaved_changes = False
             # Replace current file with the newly saved file so subsequent saves go to this path
             self.current_file_path = file_path
@@ -183,7 +182,7 @@ class MainWindowProjectIo(object):
             with open(file_path, "wb") as f:
                 pickle.dump(save_data, f)
 
-            # 保存成功時に状態をリセット
+            # Reset state on success
             self.has_unsaved_changes = False
             # Update current file to the newly saved raw file
             self.current_file_path = file_path
@@ -218,7 +217,7 @@ class MainWindowProjectIo(object):
             self.restore_ui_for_editing()
             self.set_state_from_data(loaded_data)
 
-            # ファイル読み込み時に状態をリセット
+            # Reset state on load
             self.reset_undo_stack()
             self.has_unsaved_changes = False
             self.current_file_path = file_path
@@ -241,7 +240,7 @@ class MainWindowProjectIo(object):
             self.statusBar().showMessage(f"Error loading project file: {e}")
 
     def save_as_json(self):
-        """PMEJSONファイル形式で保存 (3D MOL情報含む)"""
+        """Save as PMEProject (JSON) with 3D info."""
         if not self.data.atoms and not self.current_mol:
             self.statusBar().showMessage("Error: Nothing to save.")
             return
@@ -283,7 +282,7 @@ class MainWindowProjectIo(object):
             with open(file_path, "w", encoding="utf-8") as f:
                 json.dump(json_data, f, indent=2, ensure_ascii=False)
 
-            # 保存成功時に状態をリセット
+            # Reset state on success
             self.has_unsaved_changes = False
             # Replace current file with the newly saved PME Project
             self.current_file_path = file_path
@@ -299,7 +298,7 @@ class MainWindowProjectIo(object):
             self.statusBar().showMessage(f"Error saving PME Project file: {e}")
 
     def load_json_data(self, file_path=None):
-        """PME Projectファイル形式を読み込み"""
+        """Load PME Project file."""
         if not file_path:  # pragma: no cover
             file_path, _ = QFileDialog.getOpenFileName(
                 self,
@@ -317,7 +316,7 @@ class MainWindowProjectIo(object):
             with open(file_path, "r", encoding="utf-8") as f:
                 json_data = json.load(f)
 
-            # フォーマット検証
+            # Format validation
             if json_data.get("format") != "PME Project":  # pragma: no cover
                 QMessageBox.warning(
                     self,
@@ -326,7 +325,7 @@ class MainWindowProjectIo(object):
                 )
                 return
 
-            # バージョン確認
+            # Version check
             file_version = json_data.get("version", "1.0")
             if file_version != "1.0":  # pragma: no cover
                 QMessageBox.information(
@@ -338,7 +337,7 @@ class MainWindowProjectIo(object):
 
             self.restore_ui_for_editing()
             self.load_from_json_data(json_data)
-            # ファイル読み込み時に状態をリセット
+            # Reset state on load
             self.reset_undo_stack()
             self.has_unsaved_changes = False
             self.current_file_path = file_path
@@ -358,12 +357,7 @@ class MainWindowProjectIo(object):
             self.statusBar().showMessage(f"Error loading PME Project file: {e}")
 
     def open_project_file(self, file_path=None):
-        """プロジェクトファイルを開く（.pmeprjと.pmerawの両方に対応）"""
-        # Check for unsaved changes before opening a new project file.
-        # Previously this function opened .pmeprj/.pmeraw without prompting the
-        # user to save current unsaved work. Ensure we honor the global
-        # unsaved-change check like other loaders (SMILES/MOL/etc.).
-        # No longer needed here as loaders call clear_all() which does the check
+        """Open project file (.pmeprj or .pmeraw)."""
         if not file_path:  # pragma: no cover
             file_path, _ = QFileDialog.getOpenFileName(
                 self,
@@ -374,13 +368,13 @@ class MainWindowProjectIo(object):
             if not file_path:
                 return
 
-        # 拡張子に応じて適切な読み込み関数を呼び出し
+        # Dispatch based on extension
         if file_path.lower().endswith(".pmeprj"):
             self.load_json_data(file_path)
         elif file_path.lower().endswith(".pmeraw"):
             self.load_raw_data(file_path)
         else:
-            # 拡張子不明の場合はJSONとして試行
+            # Try JSON if extension unknown
             try:
                 self.load_json_data(file_path)
             except Exception:

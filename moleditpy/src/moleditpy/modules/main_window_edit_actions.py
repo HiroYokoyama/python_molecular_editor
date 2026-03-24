@@ -11,9 +11,8 @@ DOI: 10.5281/zenodo.17268532
 """
 
 """
-main_window_edit_actions.py
-MainWindow (main_window.py) から分離されたモジュール
-機能クラス: MainWindowEditActions
+# Module separated from MainWindow (main_window.py)
+# Functional class: MainWindowEditActions
 """
 
 
@@ -128,7 +127,7 @@ class MainWindowEditActions(object):
     """main_window.py から分離された機能クラス"""
 
     def copy_selection(self):
-        """選択された原子と結合をクリップボードにコピーする"""
+        """Copy selected atoms and bonds to clipboard"""
         try:
             selected_atoms = [
                 item
@@ -138,17 +137,15 @@ class MainWindowEditActions(object):
             if not selected_atoms:
                 return
 
-            # 選択された原子のIDセットを作成
+            # Create set of selected atom IDs
             selected_atom_ids = {atom.atom_id for atom in selected_atoms}
-
-            # 選択された原子の幾何学的中心を計算
+            # Calculate geometric center of selected atoms
             center = QPointF(
                 sum(atom.pos().x() for atom in selected_atoms) / len(selected_atoms),
                 sum(atom.pos().y() for atom in selected_atoms) / len(selected_atoms),
             )
 
-            # コピー対象の原子データをリストに格納（位置は中心からの相対座標）
-            # 同時に、元のatom_idから新しいインデックス(0, 1, 2...)へのマッピングを作成
+            # Store atom data with relative positions and map IDs to new indices
             atom_id_to_idx_map = {}
             fragment_atoms = []
             for i, atom in enumerate(selected_atoms):
@@ -162,7 +159,7 @@ class MainWindowEditActions(object):
                     }
                 )
 
-            # 選択された原子同士を結ぶ結合のみをリストに格納
+            # Store bonds between selected atoms
             fragment_bonds = []
             for (id1, id2), bond_data in self.data.bonds.items():
                 if id1 in selected_atom_ids and id2 in selected_atom_ids:
@@ -177,14 +174,14 @@ class MainWindowEditActions(object):
                         }
                     )
 
-            # pickleを使ってデータをバイト配列にシリアライズ
+            # Serialize data to byte array using pickle
             data_to_pickle = {"atoms": fragment_atoms, "bonds": fragment_bonds}
             byte_array = QByteArray()
             buffer = io.BytesIO()
             pickle.dump(data_to_pickle, buffer)
             byte_array.append(buffer.getvalue())
 
-            # カスタムMIMEタイプでクリップボードに設定
+            # Set clipboard with custom MIME type
             mime_data = QMimeData()
             mime_data.setData(CLIPBOARD_MIME_TYPE, byte_array)
             QApplication.clipboard().setMimeData(mime_data)
@@ -197,7 +194,7 @@ class MainWindowEditActions(object):
             self.statusBar().showMessage(f"Error during copy operation: {e}")
 
     def cut_selection(self):
-        """選択されたアイテムを切り取り（コピーしてから削除）"""
+        """Cut selected items (copy then delete)"""
         try:
             selected_items = self.scene.selectedItems()
             if not selected_items:
@@ -215,7 +212,7 @@ class MainWindowEditActions(object):
             self.statusBar().showMessage(f"Error during cut operation: {e}")
 
     def paste_from_clipboard(self):
-        """クリップボードから分子フラグメントを貼り付け"""
+        """Paste molecular fragment from clipboard"""
         try:
             clipboard = QApplication.clipboard()
             mime_data = clipboard.mimeData()
@@ -271,7 +268,7 @@ class MainWindowEditActions(object):
         self.activate_select_mode()
 
     def remove_hydrogen_atoms(self):
-        """2Dビューで水素原子とその結合を削除する"""
+        """Delete hydrogen atoms and their bonds in 2D view"""
         try:
             # Collect hydrogen atom items robustly (store atom_id -> item)
             hydrogen_map = {}
@@ -405,14 +402,7 @@ class MainWindowEditActions(object):
                 traceback.print_exc()
 
     def add_hydrogen_atoms(self):
-        """RDKitで各原子の暗黙の水素数を調べ、その数だけ明示的な水素原子と単結合を作成する（2Dビュー）。
-
-        実装上の仮定:
-        - `self.data.to_rdkit_mol()` は各RDKit原子に `_original_atom_id` プロパティを設定している。
-        - 原子の2D座標は `self.data.atoms[orig_id]['item'].pos()` で得られる。
-        - 新しい原子は `self.scene.create_atom(symbol, pos, ...)` で追加し、
-          結合は `self.scene.create_bond(atom_item, hydrogen_item, bond_order=1)` で作成する。
-        """
+        """Compute and add explicit hydrogens in 2D view using RDKit."""
         try:
             mol = self.data.to_rdkit_mol(use_2d_stereo=False)
             if not mol or mol.GetNumAtoms() == 0:
@@ -424,19 +414,19 @@ class MainWindowEditActions(object):
             added_count = 0
             added_items = []
 
-            # すべてのRDKit原子について暗黙水素数を確認
+            # Check implicit hydrogens for all RDKit atoms
             for idx in range(mol.GetNumAtoms()):
                 rd_atom = mol.GetAtomWithIdx(idx)
                 try:
                     orig_id = rd_atom.GetIntProp("_original_atom_id")
                 except Exception:
-                    # 元のエディタ側のIDがない場合はスキップ
+                    # Skip if no original editor ID
                     continue
 
                 if orig_id not in self.data.atoms:
                     continue
 
-                # 暗黙水素数を優先して取得。存在しない場合は総水素数 - 明示水素数を使用
+                # Get implicit hydrogens; fallback to total - explicit
                 implicit_h = (
                     int(rd_atom.GetNumImplicitHs())
                     if hasattr(rd_atom, "GetNumImplicitHs")
@@ -445,7 +435,7 @@ class MainWindowEditActions(object):
                 if implicit_h is None or implicit_h < 0:
                     implicit_h = 0
                 if implicit_h == 0:
-                    # フォールバック
+                    # Fallback
                     try:
                         total_h = int(rd_atom.GetTotalNumHs())
                         explicit_h = (
@@ -463,12 +453,11 @@ class MainWindowEditActions(object):
                 parent_item = self.data.atoms[orig_id]["item"]
                 parent_pos = parent_item.pos()
 
-                # 周囲の近接原子の方向を取得して、水素を邪魔しないように角度を決定
+                # Determine angles based on neighbors to avoid collisions
                 neighbor_angles = []
                 try:
                     for (a1, a2), bdata in self.data.bonds.items():
-                        # 対象原子に結合している近傍の原子角度を収集する。
-                        # ただし既存の水素は配置に影響させない（すでにあるHで埋めない）。
+                        # Collect neighboring atom angles (ignore H)
                         try:
                             if a1 == orig_id and a2 in self.data.atoms:
                                 neigh = self.data.atoms[a2]
@@ -491,15 +480,14 @@ class MainWindowEditActions(object):
                                 vec = neigh["item"].pos() - parent_pos
                                 neighbor_angles.append(math.atan2(vec.y(), vec.x()))
                         except Exception:
-                            # 個々の近傍読み取りの問題は無視して続行
                             continue
                 except Exception:
                     neighbor_angles = []
 
-                # 画面上の適当な結合長（ピクセル）を使用
+                # Set bond length in pixels
                 bond_length = 75
 
-                # ヘルパー: 指定インデックスの水素に使うbond_stereoを決定
+                # Helper: determine bond_stereo for hydrogen
                 def _choose_stereo(i):
                     # 0: plain, 1: wedge, 2: dash, 3: plain, 4+: all plain
                     if i == 0:
@@ -510,23 +498,22 @@ class MainWindowEditActions(object):
                         return 2
                     return 0  # 4th+ hydrogens are all plain
 
-                # 角度配置を改善: 既存の結合角度の最大ギャップを見つけ、
-                # そこに水素を均等配置する。既存結合が無ければ全周に均等配置。
+                # Improve placement: find largest gap in existing angles
                 target_angles = []
                 try:
                     if not neighbor_angles:
-                        # 既存結合が無い -> 全円周に均等配置
+                        # No existing bonds: space evenly around circle
                         for h_idx in range(implicit_h):
                             angle = (2.0 * math.pi * h_idx) / implicit_h
                             target_angles.append(angle)
                     else:
-                        # 正規化してソート
+                        # Normalize and sort
                         angs = [
                             ((a + 2.0 * math.pi) if a < 0 else a)
                             for a in neighbor_angles
                         ]
                         angs = sorted(angs)
-                        # ギャップを計算（循環含む）
+                        # Calculate gaps (including wrap-around)
                         gaps = []  # list of (gap_size, start_angle, end_angle)
                         for i in range(len(angs)):
                             a1 = angs[i]
@@ -542,25 +529,22 @@ class MainWindowEditActions(object):
                                 end = a2
                             gaps.append((gap, start, end))
 
-                        # 最大ギャップを選ぶ
+                        # Select largest gap and space hydrogens evenly
                         gaps.sort(key=lambda x: x[0], reverse=True)
                         max_gap, gstart, gend = gaps[0]
-                        # もし最大ギャップが小さい（つまり周りに均等に原子がある）でも
-                        # そのギャップ内に均等配置することで既存結合と重ならないようにする
-                        # ギャップ内に implicit_h 個を等間隔で配置（分割数 = implicit_h + 1）
                         for i in range(implicit_h):
                             seg = max_gap / (implicit_h + 1)
                             angle = gstart + (i + 1) * seg
-                            # 折り返しを戻して 0..2pi に正規化
+                            # Normalize back to 0..2pi
                             angle = angle % (2.0 * math.pi)
                             target_angles.append(angle)
                 except Exception:
-                    # フォールバック: 単純な等間隔配置
+                    # Fallback: simple even spacing
                     for h_idx in range(implicit_h):
                         angle = (2.0 * math.pi * h_idx) / implicit_h
                         target_angles.append(angle)
 
-                # 角度から位置を計算して原子と結合を追加
+                # Add atom/bond at calculated position
                 for h_idx, angle in enumerate(target_angles):
                     dx = bond_length * math.cos(angle)
                     dy = bond_length * math.sin(angle)
@@ -570,7 +554,7 @@ class MainWindowEditActions(object):
                     try:
                         new_id = self.scene.create_atom("H", pos)
                         new_item = self.data.atoms[new_id]["item"]
-                        # bond_stereo を指定（最初は plain=0, 次に wedge/dash）
+                        # Set bond_stereo (plain, wedge, dash)
                         stereo = _choose_stereo(h_idx)
                         self.scene.create_bond(
                             parent_item, new_item, bond_order=1, bond_stereo=stereo
@@ -578,7 +562,6 @@ class MainWindowEditActions(object):
                         added_items.append(new_item)
                         added_count += 1
                     except Exception as e:
-                        # 個々の追加失敗はログに残して続行
                         print(f"Failed to add H for atom {orig_id}: {e}")
 
             if added_count > 0:
@@ -586,7 +569,7 @@ class MainWindowEditActions(object):
                 self.statusBar().showMessage(
                     f"Added {added_count} hydrogen atoms.", 2000
                 )
-                # 選択を有効化して追加した原子を選択状態にする
+                # Select newly added atoms
                 try:
                     self.scene.clearSelection()
                     for it in added_items:
@@ -604,7 +587,7 @@ class MainWindowEditActions(object):
             self.statusBar().showMessage(f"Error adding hydrogen atoms: {e}")
 
     def update_edit_menu_actions(self):
-        """選択状態やクリップボードの状態に応じて編集メニューを更新"""
+        """Update edit menu based on selection and clipboard"""
         try:
             has_selection = len(self.scene.selectedItems()) > 0
             self.cut_action.setEnabled(has_selection)
@@ -619,7 +602,7 @@ class MainWindowEditActions(object):
             pass
 
     def open_rotate_2d_dialog(self):
-        """2D回転ダイアログを開く"""
+        """Open 2D rotation dialog"""
         # Initialize last_rotation_angle if not present
         if not hasattr(self, "last_rotation_angle"):
             self.last_rotation_angle = 0
@@ -631,7 +614,7 @@ class MainWindowEditActions(object):
             self.rotate_molecule_2d(angle)
 
     def rotate_molecule_2d(self, angle_degrees):
-        """2D分子を指定角度回転させる（選択範囲があればそれのみ、なければ全体）"""
+        """Rotate 2D molecule (selection or entire)"""
         try:
             # Determine target atoms
             selected_items = self.scene.selectedItems()
@@ -697,64 +680,65 @@ class MainWindowEditActions(object):
                 item.setSelected(True)
 
     def clear_all(self):
-        # 未保存の変更があるかチェック
+        # Check for unsaved changes
         if not self.check_unsaved_changes():
-            return False  # ユーザーがキャンセルした場合は何もしない
+            # Cancel if requested
+            return False
 
         self.restore_ui_for_editing()
 
-        # 3Dモードをリセット
+        # Reset 3D mode
         if self.measurement_mode:
             self.measurement_action.setChecked(False)
-            self.toggle_measurement_mode(False)  # 測定モードを無効化
+            self.toggle_measurement_mode(False)
 
         if self.is_3d_edit_mode:
             self.edit_3d_action.setChecked(False)
-            self.toggle_3d_edit_mode(False)  # 3D編集モードを無効化
+            self.toggle_3d_edit_mode(False)
 
-        # 3D原子選択をクリア
+        # Clear 3D selection
         self.clear_3d_selection()
 
         self.dragged_atom_info = None
 
-        # 2Dエディタをクリアする（Undoスタックにはプッシュしない）
+        # Clear 2D editor (no undo push)
         self.clear_2d_editor(push_to_undo=False)
 
-        # 3Dモデルをクリアする
+        # Clear 3D model
         self.current_mol = None
         self.plotter.clear()
         self.constraints_3d = []
 
-        # 3D関連機能を統一的に無効化
+        # Disable 3D features
         self._enable_3d_features(False)
 
-        # Undo/Redoスタックをリセットする
+        # Reset undo/redo stack
         self.reset_undo_stack()
 
-        # ファイル状態をリセット（新規ファイル状態に）
+        # Reset file state
         self.has_unsaved_changes = False
         self.current_file_path = None
         self.update_window_title()
 
-        # 2Dビューのズームをリセット
+        # Reset 2D zoom
         self.reset_zoom()
 
-        # シーンとビューの明示的な更新
+        # Update scene and view
         self.scene.update()
         if self.view_2d:
             self.view_2d.viewport().update()
 
-        # 3D関連機能を統一的に無効化
+        # Disable 3D features
         self._enable_3d_features(False)
 
-        # 3Dプロッターの再描画
+        # Redraw 3D plotter
         self.plotter.render()
 
-        # メニューテキストと状態を更新（分子がクリアされたので通常の表示に戻す）
+        # Update menu text and state
         self.update_atom_id_menu_text()
         self.update_atom_id_menu_state()
 
-        # アプリケーションのイベントループを強制的に処理し、画面の再描画を確実に行う
+        # Force UI event processing
         QApplication.processEvents()
 
         # Call plugin document reset handlers
@@ -765,11 +749,12 @@ class MainWindowEditActions(object):
         return True
 
     def clear_2d_editor(self, push_to_undo=True):
+        # Clear 2D editor (no undo push)
         self.data = MolecularData()
         self.scene.data = self.data
         self.scene.clear()
         self.scene.reinitialize_items()
-        self.is_xyz_derived = False  # 2Dエディタをクリアする際にXYZ由来フラグもリセット
+        self.is_xyz_derived = False
 
         # 測定ラベルもクリア
         self.clear_2d_measurement_labels()
@@ -777,14 +762,14 @@ class MainWindowEditActions(object):
         # Clear 3D data and disable 3D-related menus
         self.current_mol = None
         self.plotter.clear()
-        # 3D関連機能を統一的に無効化
+        # Disable 3D features
         self._enable_3d_features(False)
 
         if push_to_undo:
             self.push_undo_state()
 
     def update_implicit_hydrogens(self):
-        """現在の2D構造に基づいて各原子の暗黙の水素数を計算し、AtomItemに反映する"""
+        """Update implicit hydrogen counts on AtomItems."""
         # Quick guards: nothing to do if no atoms or no QApplication
         if not self.data.atoms:
             return
@@ -994,10 +979,10 @@ class MainWindowEditActions(object):
     def clean_up_2d_structure(self):
         self.statusBar().showMessage("Optimizing 2D structure...")
 
-        # 最初に既存の化学的問題フラグをクリア
+        # Clear existing problem flags
         self.scene.clear_all_problem_flags()
 
-        # 2Dエディタに原子が存在しない場合
+        # Case: no atoms in 2D editor
         if not self.data.atoms:
             self.statusBar().showMessage("Error: No atoms to optimize.")
             return
@@ -1009,7 +994,7 @@ class MainWindowEditActions(object):
             return
 
         try:
-            # 安定版：原子IDとRDKit座標の確実なマッピング
+            # Map atom IDs to RDKit coordinates
             view_center = self.view_2d.mapToScene(
                 self.view_2d.viewport().rect().center()
             )
@@ -1059,7 +1044,7 @@ class MainWindowEditActions(object):
                     item.setPos(new_scene_pos)
                     self.data.atoms[atom_id]["pos"] = new_scene_pos
 
-            # 最終的な座標に基づき、全ての結合表示を一度に更新
+            # Update all bond positions
             # Guard against partially-deleted Qt wrappers: skip items that
             # SIP reports as deleted or which are no longer in a scene.
             for bond_data in self.data.bonds.values():
@@ -1089,13 +1074,13 @@ class MainWindowEditActions(object):
                 except Exception:
                     continue
 
-            # 重なり解消ロジックを実行
+            # Run overlap resolution
             self.resolve_overlapping_groups()
 
-            # 測定ラベルの位置を更新
+            # Update measurement labels
             self.update_2d_measurement_labels()
 
-            # シーン全体の再描画を要求
+            # Request scene update
             self.scene.update()
 
             self.statusBar().showMessage("2D structure optimization successful.")
@@ -1115,15 +1100,12 @@ class MainWindowEditActions(object):
             self.statusBar().showMessage("No 3D molecule to redraw.")
 
     def resolve_overlapping_groups(self):
-        """
-        誤差範囲で完全に重なっている原子のグループを検出し、
-        IDが大きい方のフラグメントを左下に平行移動して解消する。
-        """
+        """Detect and resolve overlapping atom groups."""
 
-        # --- パラメータ設定 ---
-        # 重なっているとみなす距離の閾値。構造に合わせて調整してください。
+        # --- Parameters ---
+        # Distance threshold for overlap
         OVERLAP_THRESHOLD = 0.5
-        # 左下へ移動させる距離。
+        # Translation distance (bottom-left)
         MOVE_DISTANCE = 20
 
         # self.data.atoms.values() から item を安全に取得
@@ -1134,10 +1116,10 @@ class MainWindowEditActions(object):
         if len(all_atom_items) < 2:
             return
 
-        # --- ステップ1: 重なっている原子ペアを全てリストアップ ---
+        # Step 1: List overlapping pairs
         overlapping_pairs = []
         for item1, item2 in itertools.combinations(all_atom_items, 2):
-            # 結合で直接結ばれているペアは重なりと見なさない
+            # Ignore directly bonded pairs
             if self.scene.find_bond_between(item1, item2):
                 continue
 
@@ -1149,19 +1131,19 @@ class MainWindowEditActions(object):
             self.statusBar().showMessage("No overlapping atoms found.", 2000)
             return
 
-        # --- ステップ2: Union-Findアルゴリズムで重なりグループを構築 ---
-        # 各原子がどのグループに属するかを管理する
+        # Step 2: Build overlap groups (Union-Find)
+        # Track group membership
         parent = {item.atom_id: item.atom_id for item in all_atom_items}
 
         def find_set(atom_id):
-            # atom_idが属するグループの代表（ルート）を見つける
+            # Find group representative
             if parent[atom_id] == atom_id:
                 return atom_id
-            parent[atom_id] = find_set(parent[atom_id])  # 経路圧縮による最適化
+            parent[atom_id] = find_set(parent[atom_id])
             return parent[atom_id]
 
         def unite_sets(id1, id2):
-            # 2つの原子が属するグループを統合する
+            # Unite two groups
             root1 = find_set(id1)
             root2 = find_set(id2)
             if root1 != root2:
@@ -1170,8 +1152,8 @@ class MainWindowEditActions(object):
         for item1, item2 in overlapping_pairs:
             unite_sets(item1.atom_id, item2.atom_id)
 
-        # --- ステップ3: グループごとに移動計画を立てる ---
-        # 同じ代表を持つ原子でグループを辞書にまとめる
+        # Step 3: Plan translations per group
+        # Group atoms by representative
         groups_by_root = {}
         for item in all_atom_items:
             root_id = find_set(item.atom_id)
@@ -1183,12 +1165,12 @@ class MainWindowEditActions(object):
         processed_roots = set()
 
         for root_id, group_atom_ids in groups_by_root.items():
-            # 処理済みのグループや、メンバーが1つしかないグループはスキップ
+            # Skip processed or single-atom groups
             if root_id in processed_roots or len(group_atom_ids) < 2:
                 continue
             processed_roots.add(root_id)
 
-            # 3a: グループを、結合に基づいたフラグメントに分割する (BFSを使用)
+            # 3a: Split group into fragments (BFS)
             fragments = []
             visited_in_group = set()
             group_atom_ids_set = set(group_atom_ids)
@@ -1202,7 +1184,7 @@ class MainWindowEditActions(object):
 
                     while q:
                         current_id = q.popleft()
-                        # 隣接リスト self.adjacency_list があれば、ここでの探索が高速になります
+                        # Faster search if adjacency_list exists
                         for neighbor_id in self.data.adjacency_list.get(current_id, []):
                             if (
                                 neighbor_id in group_atom_ids_set
@@ -1214,10 +1196,10 @@ class MainWindowEditActions(object):
                     fragments.append(current_fragment)
 
             if len(fragments) < 2:
-                continue  # 複数のフラグメントが重なっていない場合
+                continue  # Skip if fragments don't overlap
 
-            # 3b: 移動するフラグメントを決定する
-            # このグループの重なりの原因となった代表ペアを一つ探す
+            # 3b: Determine fragment to move
+            # Find representative overlapping pair
             rep_item1, rep_item2 = None, None
             for i1, i2 in overlapping_pairs:
                 if find_set(i1.atom_id) == root_id:
@@ -1227,7 +1209,7 @@ class MainWindowEditActions(object):
             if not rep_item1:
                 continue
 
-            # 代表ペアがそれぞれどのフラグメントに属するかを見つける
+            # Map pair to fragments
             frag1 = next((f for f in fragments if rep_item1.atom_id in f), None)
             frag2 = next((f for f in fragments if rep_item2.atom_id in f), None)
 
@@ -1235,19 +1217,19 @@ class MainWindowEditActions(object):
             if not frag1 or not frag2 or frag1 == frag2:
                 continue
 
-            # 仕様: IDが大きい方の原子が含まれるフラグメントを動かす
+            # Move fragment with higher atom ID
             if rep_item1.atom_id > rep_item2.atom_id:
                 ids_to_move = frag1
             else:
                 ids_to_move = frag2
 
-            # 3c: 移動計画を作成
+            # 3c: Plan translation
             translation_vector = QPointF(
                 -MOVE_DISTANCE, MOVE_DISTANCE
             )  # 左下方向へのベクトル
             move_operations.append((ids_to_move, translation_vector))
 
-        # --- ステップ4: 計画された移動を一度に実行 ---
+        # Step 4: Execute translations
         if not move_operations:
             self.statusBar().showMessage("No actionable overlaps found.", 2000)
             return
@@ -1259,7 +1241,7 @@ class MainWindowEditActions(object):
                 item.setPos(new_pos)
                 self.data.atoms[atom_id]["pos"] = new_pos
 
-        # --- ステップ5: 表示と状態を更新 ---
+        # Step 5: Update display and state
         for bond_data in self.data.bonds.values():
             item = bond_data.get("item") if bond_data else None
             if not item:
@@ -1286,7 +1268,7 @@ class MainWindowEditActions(object):
             except Exception:
                 continue
 
-        # 重なり解消後に測定ラベルの位置を更新
+        # Update labels after resolution
         self.update_2d_measurement_labels()
 
         self.scene.update()
@@ -1294,16 +1276,14 @@ class MainWindowEditActions(object):
         self.statusBar().showMessage("Resolved overlapping groups.", 2000)
 
     def adjust_molecule_positions_to_avoid_collisions(self, mol, frags):
-        """
-        複数分子の位置を調整して、衝突を回避する（バウンディングボックス最適化版）
-        """
+        """Adjust molecule positions to avoid collisions (BBox optimized)."""
         if len(frags) <= 1:
             return
 
         conf = mol.GetConformer()
         pt = Chem.GetPeriodicTable()
 
-        # --- 1. 各フラグメントの情報（原子インデックス、VDW半径）を事前計算 ---
+        # 1. Precompute fragment info (indices, VDW radii)
         frag_info = []
         for frag_indices in frags:
             positions = []
@@ -1322,7 +1302,7 @@ class MainWindowEditActions(object):
             positions_np = np.array(positions)
             vdw_radii_np = np.array(vdw_radii)
 
-            # このフラグメントで最大のVDW半径を計算（ボックスのマージンとして使用）
+            # Max VDW for box margin
             max_vdw = np.max(vdw_radii_np) if len(vdw_radii_np) > 0 else 0.0
 
             frag_info.append(
@@ -1337,8 +1317,8 @@ class MainWindowEditActions(object):
                 }
             )
 
-        # --- 2. 衝突判定のパラメータ ---
-        collision_scale = 1.2  # VDW半径の120%
+        # 2. Collision parameters
+        collision_scale = 1.2  # 120% VDW
         max_iterations = 100
         moved = True
         iteration = 0
@@ -1347,9 +1327,9 @@ class MainWindowEditActions(object):
             moved = False
             iteration += 1
 
-            # --- 3. フラグメントのバウンディングボックスを毎イテレーション更新 ---
+            # 3. Update BBoxes per iteration
             for i in range(len(frag_info)):
-                # 現在の座標からボックスを再計算
+                # Recalculate box
                 current_positions = []
                 for idx in frag_info[i]["indices"]:
                     pos = conf.GetAtomPosition(idx)
@@ -1358,22 +1338,20 @@ class MainWindowEditActions(object):
                 positions_np = np.array(current_positions)
                 frag_info[i]["positions_np"] = positions_np  # 座標情報を更新
 
-                # VDW半径とスケールを考慮したマージンを計算
-                # (最大VDW半径 * スケール) をマージンとして使う
+                # Margin based on VDW and scale
                 margin = frag_info[i]["max_vdw_radius"] * collision_scale
 
                 frag_info[i]["bbox_min"] = np.min(positions_np, axis=0) - margin
                 frag_info[i]["bbox_max"] = np.max(positions_np, axis=0) + margin
 
-            # --- 4. 衝突判定ループ ---
+            # 4. Collision detection loop
             for i in range(len(frag_info)):
                 for j in range(i + 1, len(frag_info)):
                     frag_i = frag_info[i]
                     frag_j = frag_info[j]
 
-                    # === バウンディングボックス判定 ===
-                    # 2つのボックスが重なっているかチェック (AABB交差判定)
-                    # X, Y, Zの各軸で重なりをチェック
+                    # AABB intersection check
+                    # Check all axes
                     overlap_x = (
                         frag_i["bbox_min"][0] <= frag_j["bbox_max"][0]
                         and frag_i["bbox_max"][0] >= frag_j["bbox_min"][0]
@@ -1387,16 +1365,15 @@ class MainWindowEditActions(object):
                         and frag_i["bbox_max"][2] >= frag_j["bbox_min"][2]
                     )
 
-                    # ボックスがX, Y, Zのいずれかの軸で離れている場合、原子間の詳細なチェックをスキップ
                     if not (overlap_x and overlap_y and overlap_z):
+                        # Skip if BBoxes don't overlap
                         continue
-                    # =================================
 
-                    # ボックスが重なっている場合のみ、高コストな原子間の総当たりチェックを実行
+                    # Heavy per-atom check if BBoxes overlap
                     total_push_vector = np.zeros(3)
                     collision_count = 0
 
-                    # 事前計算したNumpy配列を使用
+                    # Use precomputed Numpy arrays
                     positions_i = frag_i["positions_np"]
                     positions_j = frag_j["positions_np"]
                     vdw_i_all = frag_i["vdw_radii_np"]
@@ -1423,12 +1400,12 @@ class MainWindowEditActions(object):
                                 push_direction = distance_vec / distance
                                 push_magnitude = (
                                     min_distance - distance
-                                ) / 2  # 押し出し量は半分ずつ
+                                ) / 2  # Split push
                                 total_push_vector += push_direction * push_magnitude
                                 collision_count += 1
 
                     if collision_count > 0:
-                        # 平均的な押し出しベクトルを適用
+                        # Apply average push vector
                         avg_push_vector = total_push_vector / collision_count
 
                         # Conformerの座標を更新

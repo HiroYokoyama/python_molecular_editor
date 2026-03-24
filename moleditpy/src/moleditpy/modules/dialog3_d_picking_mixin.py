@@ -20,14 +20,14 @@ except Exception:
 
 
 class Dialog3DPickingMixin:
-    """3D原子選択のための共通機能を提供するMixin"""
+    """Mixin providing common functionality for 3D atom selection."""
 
     def __init__(self):
-        """Mixinの初期化"""
+        """Initialize the Mixin."""
         self.picking_enabled = False
 
     def eventFilter(self, obj, event):
-        """3Dビューでのマウスクリックをキャプチャする（元の3D editロジックを正確に再現）"""
+        """Capture mouse clicks in the 3D view (reproducibly mimicking the original 3D edit logic)."""
         if (
             obj == self.main_window.plotter.interactor
             and event.type() == QEvent.Type.MouseButtonPress
@@ -38,7 +38,7 @@ class Dialog3DPickingMixin:
             self._mouse_moved = False
 
             try:
-                # VTKイベント座標を取得（元のロジックと同じ）
+                # Retrieve VTK event coordinates (matches original logic)
                 interactor = self.main_window.plotter.interactor
                 click_pos = interactor.GetEventPosition()
                 picker = self.main_window.plotter.picker
@@ -53,9 +53,9 @@ class Dialog3DPickingMixin:
                     )
                     closest_atom_idx = np.argmin(distances)
 
-                    # 範囲チェックを追加
+                    # Add range check
                     if 0 <= closest_atom_idx < self.mol.GetNumAtoms():
-                        # クリック閾値チェック（元のロジックと同じ）
+                        # Click threshold check (matches original logic)
                         atom = self.mol.GetAtomWithIdx(int(closest_atom_idx))
                         if atom:
                             try:
@@ -79,9 +79,9 @@ class Dialog3DPickingMixin:
                                 self._mouse_press_pos = None
                                 return True
 
-                # 原子以外をクリックした場合
-                # 即時には解除せず、回転操作（ドラッグ）を許可する。
-                # 実際の解除は MouseButtonRelease イベントで行う。
+                # Clicked something other than an atom
+                # Permitting rotation (drag) without immediate selection clearing.
+                # Actual clearing is handled in the MouseButtonRelease event.
                 return False
 
             except Exception as e:
@@ -120,7 +120,7 @@ class Dialog3DPickingMixin:
         return super().eventFilter(obj, event)
 
     def enable_picking(self):
-        """3Dビューでの原子選択を有効にする"""
+        """Enable atom selection in the 3D view."""
         self.main_window.plotter.interactor.installEventFilter(self)
         self.picking_enabled = True
         # Ensure the main window flag exists
@@ -131,7 +131,7 @@ class Dialog3DPickingMixin:
             traceback.print_exc()
 
     def disable_picking(self):
-        """3Dビューでの原子選択を無効にする"""
+        """Disable atom selection in the 3D view."""
         if hasattr(self, "picking_enabled") and self.picking_enabled:
             self.main_window.plotter.interactor.removeEventFilter(self)
             self.picking_enabled = False
@@ -144,7 +144,7 @@ class Dialog3DPickingMixin:
             traceback.print_exc()
 
     def try_alternative_picking(self, x, y):
-        """代替のピッキング方法（使用しない）"""
+        """Alternative picking method (unused)."""
 
     # ------------------------------------------------------------------
     # Label management (shared across dialogs)

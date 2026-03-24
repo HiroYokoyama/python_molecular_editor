@@ -11,9 +11,8 @@ DOI: 10.5281/zenodo.17268532
 """
 
 """
-main_window_compute.py
-MainWindow (main_window.py) から分離されたモジュール
-機能クラス: MainWindowCompute
+# Module separated from MainWindow (main_window.py)
+# Functional class: MainWindowCompute
 """
 
 # RDKit imports (explicit to satisfy flake8 and used features)
@@ -48,9 +47,8 @@ except Exception:
     from modules.mol_geometry import is_problematic_valence
 
 
-# --- クラス定義 ---
 class MainWindowCompute(object):
-    """main_window.py から分離された機能クラス"""
+    """Functional class separated from main_window.py"""
     
     # Default initial state 
     last_successful_optimization_method = None
@@ -134,9 +132,7 @@ class MainWindowCompute(object):
             traceback.print_exc()
 
     def show_convert_menu(self, pos):  # pragma: no cover
-        """右クリックで表示する一時的な3D変換メニュー。
-        選択したモードは一時フラグとして保持され、その後の変換で使用されます（永続化しません）。
-        """
+        """Temporary 3D conversion menu (right-click). Not persisted."""
         # If button is disabled (during calculation), do not show menu
         if not self.convert_button.isEnabled():
             return
@@ -175,9 +171,7 @@ class MainWindowCompute(object):
             print(f"Failed to start conversion with temp mode {mode_key}: {e}")
 
     def show_optimize_menu(self, pos):  # pragma: no cover
-        """右クリックで表示する一時的な3D最適化メニュー。
-        選択したメソッドは一時フラグとして保持され、その後の最適化で使用されます（永続化しません）。
-        """
+        """Temporary 3D optimization menu (right-click). Not persisted."""
         try:
             menu = QMenu(self)
             opt_list = [
@@ -238,10 +232,10 @@ class MainWindowCompute(object):
         # Reset last successful optimization method at start of new conversion
         self.last_successful_optimization_method = None
 
-        # 3D変換時に既存の3D制約をクリア
+        # Clear 3D constraints on conversion
         self.constraints_3d = []
 
-        # 2Dエディタに原子が存在しない場合は3Dビューをクリア
+        # Clear 3D view if no atoms in 2D editor
         if not self.data.atoms:
             self.plotter.clear()
             self.current_mol = None
@@ -250,7 +244,7 @@ class MainWindowCompute(object):
             self.view_2d.setFocus()
             return
 
-        # 描画モード変更時に測定モードと3D編集モードをリセット
+        # Reset measurement/3D-edit modes
         if self.measurement_mode:
             self.measurement_action.setChecked(False)
             self.toggle_measurement_mode(False)  # 測定モードを無効化
@@ -260,13 +254,13 @@ class MainWindowCompute(object):
 
         mol = self.data.to_rdkit_mol(use_2d_stereo=False)
 
-        # 分子オブジェクトが作成できない場合でも化学的問題をチェック
+        # Check chemistry if mol object creation fails
         if not mol or mol.GetNumAtoms() == 0:
-            # RDKitでの変換に失敗した場合は、独自の化学的問題チェックを実行
+            # Run fallback chemistry check
             self.check_chemistry_problems_fallback()
             return
 
-        # 原子プロパティを保存（ワーカープロセスで失われるため）
+        # Save atom properties (lost in worker)
         self.original_atom_properties = {}
         for i in range(mol.GetNumAtoms()):
             atom = mol.GetAtomWithIdx(i)
@@ -278,19 +272,19 @@ class MainWindowCompute(object):
 
         problems = Chem.DetectChemistryProblems(mol)
         if problems:
-            # 化学的問題が見つかった場合は既存のフラグをクリアしてから新しい問題を表示
+            # Clear existing flags and show new problems
             self.scene.clear_all_problem_flags()
             self.statusBar().showMessage(
                 f"Error: {len(problems)} chemistry problem(s) found."
             )
-            # 既存の選択状態をクリア
+            # Clear selection
             self.scene.clearSelection()
 
-            # 問題のある原子に赤枠フラグを立てる
+            # Mark problematic atoms
             for prob in problems:
                 atom_idx = prob.GetAtomIdx()
                 rdkit_atom = mol.GetAtomWithIdx(atom_idx)
-                # エディタ側での原子IDの取得と存在確認
+                # Validate atom ID in editor
                 if rdkit_atom.HasProp("_original_atom_id"):
                     original_id = rdkit_atom.GetIntProp("_original_atom_id")
                     if (
@@ -304,7 +298,7 @@ class MainWindowCompute(object):
             self.view_2d.setFocus()
             return
 
-        # 化学的問題がない場合のみフラグをクリアして3D変換を実行
+        # Clear flags and run 3D conversion if no problems
         self.scene.clear_all_problem_flags()
 
         try:
@@ -314,7 +308,7 @@ class MainWindowCompute(object):
             self.view_2d.setFocus()
             return
 
-        # 複数分子の処理に対応
+        # Handle multiple molecules
         num_frags = len(Chem.GetMolFrags(mol))
         if num_frags > 1:
             self.statusBar().showMessage(
@@ -323,21 +317,19 @@ class MainWindowCompute(object):
         else:
             self.statusBar().showMessage("Calculating 3D structure...")
 
-        # CRITICAL FIX: Use the 2D editor's MOL block instead of RDKit's to preserve
-        # wedge/dash stereo information that is stored in the 2D editor data.
-        # RDKit's MolToMolBlock() doesn't preserve this information.
+        # Use 2D editor's MOL block to preserve wedge/dash stereo
         mol_block = self.data.to_mol_block()
         if not mol_block:
             mol_block = Chem.MolToMolBlock(mol, includeStereo=True)
 
-        # Additional E/Z stereo enhancement: add M CFG lines for explicit E/Z bonds
+        # Add M CFG lines for explicit E/Z bonds
         mol_lines = mol_block.split("\n")
 
-        # Find bonds with explicit E/Z labels from our data and map to RDKit bond indices
+        # Map explicit E/Z labels to RDKit indices
         ez_bond_info = {}
         for (id1, id2), bond_data in self.data.bonds.items():
             if bond_data.get("stereo") in [3, 4]:  # E/Z labels
-                # Find corresponding atoms in RDKit molecule by _original_atom_id property
+                # Find atoms by _original_atom_id
                 rdkit_idx1 = None
                 rdkit_idx2 = None
                 for atom in mol.GetAtoms():
@@ -353,7 +345,7 @@ class MainWindowCompute(object):
                     if rdkit_bond and rdkit_bond.GetBondType() == Chem.BondType.DOUBLE:
                         ez_bond_info[rdkit_bond.GetIdx()] = bond_data["stereo"]
 
-        # Add M  CFG lines for E/Z stereo if needed
+        # Add M CFG lines if needed
         if ez_bond_info:
             insert_idx = len(mol_lines) - 1  # Before M  END
             for bond_idx, stereo_type in ez_bond_info.items():
@@ -363,22 +355,21 @@ class MainWindowCompute(object):
                 insert_idx += 1
             mol_block = "\n".join(mol_lines)
 
-        # Assign a unique ID for this conversion run so it can be halted/validated
+        # Assign unique run ID
         run_id = int(getattr(self, "next_conversion_id", 1))
         try:
             self.next_conversion_id = run_id + 1
         except Exception:
             self.next_conversion_id = getattr(self, "next_conversion_id", 1) + 1
 
-        # Record this run as active. Use a set to track all active worker ids
-        # so a Halt request can target every running conversion.
+        # Track active worker IDs
         try:
             self.active_worker_ids.add(run_id)
         except Exception:
             # Ensure attribute exists in case of weird states
             self.active_worker_ids = set([run_id])
 
-        # Change the convert button to a Halt button so user can cancel
+        # Change button to 'Halt' for cancellation
         try:
             # keep it enabled so the user can click Halt
             self.convert_button.setText("Halt conversion")
@@ -424,7 +415,7 @@ class MainWindowCompute(object):
             pass
         text_actor.GetTextProperty().SetOpacity(1)  # pragma: no cover
         self.plotter.render()  # pragma: no cover
-        # Emit skip flag so the worker can ignore sanitization errors if user requested
+        # Set flags for worker
         # Determine conversion_mode from settings (default: 'fallback').
         # If the user invoked conversion via the right-click menu, a temporary
         # override may be set on self._temp_conv_mode and should be used once.
@@ -441,7 +432,7 @@ class MainWindowCompute(object):
         else:
             conv_mode = self.settings.get("3d_conversion_mode", "fallback")
 
-        # Allow a temporary optimization method override as well (used when
+        # Temporary optimization override (non-persistent)
         # Optimize 3D is invoked via right-click menu). Do not persist here.
         opt_method = (
             getattr(self, "_temp_optimization_method", None) or self.optimization_method
@@ -483,13 +474,13 @@ class MainWindowCompute(object):
                 traceback.print_exc()
             worker.moveToThread(thread)
 
-            # Forward status signals to main window handlers
+            # Forward status signals
             try:
                 worker.status_update.connect(self.update_status_bar)
             except Exception:  # pragma: no cover
                 import traceback
                 traceback.print_exc()
-            # When the worker finishes, call existing handler and then clean up
+            # Handler for finished calculation
             def _on_worker_finished(result, w=worker, t=thread):
                 try:
                     # deliver result to existing handler
@@ -522,7 +513,7 @@ class MainWindowCompute(object):
                     except Exception:  # pragma: no cover
                         import traceback
                         traceback.print_exc()
-            # When the worker errors (or halts), call existing handler and then clean up
+            # Handler for calculation error/halt
             def _on_worker_error(error_msg, w=worker, t=thread):
                 try:
                     # deliver error to existing handler
@@ -568,14 +559,14 @@ class MainWindowCompute(object):
             # Start the thread
             thread.start()
 
-            # Start the worker calculation via the worker's own start_work signal
+            # Start worker via signal
             # (queued to the worker thread). Capture variables into lambda defaults
             # to avoid late-binding issues.
             QTimer.singleShot(
                 10, lambda w=worker, m=mol_block, o=options: w.start_work.emit(m, o)
             )
 
-            # Track the thread so it isn't immediately garbage-collected (diagnostics)
+            # Track thread reference
             try:
                 self._active_calc_threads.append(thread)
             except Exception:  # pragma: no cover
@@ -597,21 +588,16 @@ class MainWindowCompute(object):
                 # surface the original error via existing UI path
                 self.on_calculation_error(str(e))
 
-        # 状態をUndo履歴に保存
+        # Save undo state
         self.push_undo_state()
         self.update_chiral_labels()
 
         self.view_2d.setFocus()
 
     def halt_conversion(self):  # pragma: no cover
-        """User requested to halt the in-progress conversion.
-
-        This will mark the current waiting_worker_id as halted (added to halt_ids),
-        clear the waiting_worker_id, and immediately restore the UI (button text
-        and handlers). The worker thread will observe halt_ids and should stop.
-        """
+        """Halt the in-progress conversion."""
         try:
-            # Halt all currently-active workers by adding their ids to halt_ids
+            # Add active worker IDs to halt_ids
             wids_to_halt = set(getattr(self, "active_worker_ids", set()))
             if wids_to_halt:
                 try:
@@ -619,14 +605,14 @@ class MainWindowCompute(object):
                 except Exception:  # pragma: no cover
                     import traceback
                     traceback.print_exc()
-            # Clear the active set immediately so UI reflects cancellation
+            # Clear active set
             try:
                 if hasattr(self, "active_worker_ids"):
                     self.active_worker_ids.clear()
             except Exception:  # pragma: no cover
                 import traceback
                 traceback.print_exc()
-            # Restore UI immediately
+            # Restore UI
             try:
                 # Restore Convert button
                 try:
@@ -655,7 +641,7 @@ class MainWindowCompute(object):
             except Exception:  # pragma: no cover
                 import traceback
                 traceback.print_exc()
-            # Remove any calculating text actor if present
+            # Remove 'Calculating...' text
             try:
                 actor = getattr(self, "_calculating_text_actor", None)
                 if actor is not None:
@@ -686,12 +672,11 @@ class MainWindowCompute(object):
             traceback.print_exc()
 
     def check_chemistry_problems_fallback(self):
-        """RDKit変換が失敗した場合の化学的問題チェック（独自実装）"""
+        """Fallback chemistry check when RDKit fails."""
         try:
-            # 既存のフラグをクリア
             self.scene.clear_all_problem_flags()
 
-            # 簡易的な化学的問題チェック
+            # Lightweight valence check
             problem_atoms = []
 
             for atom_id, atom_data in self.data.atoms.items():
@@ -702,18 +687,18 @@ class MainWindowCompute(object):
                 symbol = atom_data["symbol"]
                 charge = atom_data.get("charge", 0)
 
-                # 結合数を計算
+                # Calculate bond order sum
                 bond_count = 0
                 for (id1, id2), bond_data in self.data.bonds.items():
                     if id1 == atom_id or id2 == atom_id:
                         bond_count += bond_data.get("order", 1)
 
-                # 基本的な価数チェック
+                # Check valence
                 if is_problematic_valence(symbol, bond_count, charge):
                     problem_atoms.append(atom_item)
 
             if problem_atoms:
-                # 問題のある原子に赤枠を設定
+                # Mark problematic atoms
                 for atom_item in problem_atoms:
                     atom_item.has_problem = True
                     atom_item.update()
@@ -735,7 +720,7 @@ class MainWindowCompute(object):
             self.view_2d.setFocus()
 
     def optimize_3d_structure(self):
-        """現在の3D分子構造を力場で最適化する"""
+        """Optimize 3D structure using force fields."""
         if not self.current_mol:
             self.statusBar().showMessage("No 3D molecule to optimize.")
             return
@@ -773,7 +758,7 @@ class MainWindowCompute(object):
                         import traceback
                         traceback.print_exc()
             method = method.upper() if method else "MMFF_RDKIT"
-            # 事前チェック：コンフォーマがあるか
+            # Check for conformer
             if self.current_mol.GetNumConformers() == 0:
                 self.statusBar().showMessage(
                     "No conformer found: cannot optimize. Embed molecule first."
@@ -822,7 +807,7 @@ class MainWindowCompute(object):
                     "optimize_intermolecular_interaction_rdkit": self.settings.get("optimize_intermolecular_interaction_rdkit", True)
                 }
                 
-                # Assign a unique ID for this optimization run
+                # Assign unique run ID
                 run_id = int(getattr(self, "next_conversion_id", 1))
                 try:
                     self.next_conversion_id = run_id + 1
@@ -835,7 +820,7 @@ class MainWindowCompute(object):
                 except Exception:
                     self.active_worker_ids = set([run_id])
 
-                # Update UI to Halt button
+                # Change button to 'Halt'
                 try:
                     self.optimize_3d_button.setText("Halt optimize")
                     try:
@@ -846,10 +831,10 @@ class MainWindowCompute(object):
                 except Exception:
                     pass
 
-                # Disable features during optimization
+                # Disable features
                 self._enable_3d_features(False)
 
-                # Thread setup (reusing logic from trigger_conversion)
+                # Setup worker thread
                 try:
                     thread = QThread()
                     worker = CalculationWorker()
@@ -908,7 +893,7 @@ class MainWindowCompute(object):
                     worker.finished.connect(_on_opt_worker_finished)
                     thread.start()
                     
-                    # Start the work
+                    # Start work
                     QTimer.singleShot(10, lambda w=worker, m=mol_block, o=options: w.start_work.emit(m, o))
                     
                     try:
@@ -929,7 +914,7 @@ class MainWindowCompute(object):
             self.view_2d.setFocus()
 
     def on_calculation_finished(self, result):
-        # Accept either (worker_id, mol) tuple or legacy single mol arg
+        # Handle result tuple or single mol
         worker_id = None
         mol = None
         try:
@@ -940,12 +925,12 @@ class MainWindowCompute(object):
         except Exception:
             mol = result
 
-        # If this finished result is from a stale/halting run, discard it
+        # Discard stale results
         try:
             if worker_id is not None:
-                # If this worker_id is not in the active set, it's stale/halting
+                # Skip if not in active set
                 if worker_id not in getattr(self, "active_worker_ids", set()):
-                    # Cleanup calculating UI and ignore
+                    # Cleanup 'Calculating...' UI
                     try:
                         actor = getattr(self, "_calculating_text_actor", None)
                         if actor is not None:
@@ -978,7 +963,7 @@ class MainWindowCompute(object):
                     except Exception:  # pragma: no cover
                         import traceback
                         traceback.print_exc()
-                    # Ensure Convert button is restored
+                    # Restore Convert button
                     try:
                         try:
                             self.convert_button.clicked.disconnect()
@@ -1004,7 +989,7 @@ class MainWindowCompute(object):
             import traceback
             traceback.print_exc()
 
-        # Remove the finished worker id from the active set and any halt set
+        # Cleanup worker IDs
         try:
             if worker_id is not None:
                 try:
@@ -1012,7 +997,7 @@ class MainWindowCompute(object):
                 except Exception:  # pragma: no cover
                     import traceback
                     traceback.print_exc()
-            # Also remove id from halt set if present
+            # Remove from halt set
             if worker_id is not None:
                 try:
                     if worker_id in getattr(self, "halt_ids", set()):
@@ -1030,7 +1015,7 @@ class MainWindowCompute(object):
 
         self.dragged_atom_info = None
         self.current_mol = mol
-        self.is_xyz_derived = False  # 2Dから生成した3D構造はXYZ由来ではない
+        self.is_xyz_derived = False  # Not XYZ-derived
         # Record the optimization method used for this conversion if available.
         try:
             opt_method = None
@@ -1070,20 +1055,20 @@ class MainWindowCompute(object):
                     atom = mol.GetAtomWithIdx(i)
                     atom.SetIntProp("_original_atom_id", original_id)
 
-        # 原子IDマッピングを作成
+        # Create atom ID mapping
         self.create_atom_id_mapping()
 
-        # キラル中心を初回変換時は2Dの立体情報を考慮して設定
+        # Set chiral centers from 2D stereo
         try:
             if mol.GetNumConformers() > 0:
-                # 初回変換では、2Dで設定したwedge/dashボンドの立体情報を保持
+                # Preserve 2D wedge/dash stereo
 
-                # 3D立体化学計算で上書きされる前に、2D由来の立体化学情報をプロパティとして保存
+                # Save 2D stereo as property before 3D calculation
                 for bond in mol.GetBonds():
                     if bond.GetBondType() == Chem.BondType.DOUBLE:
                         bond.SetIntProp("_original_2d_stereo", bond.GetStereo())
 
-                # 立体化学の割り当てを行うが、既存の2D立体情報を尊重
+                # Assign stereochemistry respecting 2D info
                 Chem.AssignStereochemistry(mol, cleanIt=False, force=True)
 
             self.update_chiral_labels()
@@ -1093,7 +1078,7 @@ class MainWindowCompute(object):
 
         self.draw_molecule_3d(mol)
 
-        # 複数分子の場合の配置調整はワーカー側の _adjust_collision_avoidance で実行済み
+        # Collision avoidance handled by worker
         try:
             frags = Chem.GetMolFrags(mol, asMols=False, sanitizeFrags=False)
             if len(frags) > 1:
@@ -1103,7 +1088,7 @@ class MainWindowCompute(object):
         except Exception:
             pass
 
-        # Ensure any 'Calculating...' text is removed and the plotter is refreshed
+        # Remove 'Calculating...' text and refresh
         try:
             actor = getattr(self, "_calculating_text_actor", None)
             if actor is not None:
@@ -1150,7 +1135,7 @@ class MainWindowCompute(object):
         else:
             self.statusBar().showMessage("3D calculation successful.")
         self.convert_button.setEnabled(True)
-        # Restore button text/handlers in case they were changed to Halt
+        # Restore button UI
         try:
             # Restore Convert button
             try:
@@ -1179,37 +1164,37 @@ class MainWindowCompute(object):
         self.view_2d.setFocus()
         self.cleanup_button.setEnabled(True)
 
-        # 3D関連機能を統一的に有効化
+        # Enable 3D features
         self._enable_3d_features(True)
 
         self.plotter.reset_camera()
 
-        # 3D原子情報ホバー表示を再設定
+        # Setup 3D hover
         self.setup_3d_hover()
 
-        # メニューテキストと状態を更新
+        # Update menu items
         self.update_atom_id_menu_text()
         self.update_atom_id_menu_state()
 
     def create_atom_id_mapping(self):
-        """2D原子IDから3D RDKit原子インデックスへのマッピングを作成する（RDKitの原子プロパティ使用）"""
+        """Map 2D atom IDs to 3D RDKit indices."""
         if not self.current_mol:
             return
 
         self.atom_id_to_rdkit_idx_map = {}
 
-        # RDKitの原子プロパティから直接マッピングを作成
+        # Create mapping from RDKit properties
         for i in range(self.current_mol.GetNumAtoms()):
             rdkit_atom = self.current_mol.GetAtomWithIdx(i)
             try:
                 original_atom_id = rdkit_atom.GetIntProp("_original_atom_id")
                 self.atom_id_to_rdkit_idx_map[original_atom_id] = i
             except KeyError:
-                # プロパティが設定されていない場合（外部ファイル読み込み時など）
+                # Skip if property missing
                 continue
 
     def on_calculation_error(self, result):
-        """ワーカースレッドからのエラー（またはHalt）を処理する"""
+        """Handle worker error or halt."""
         worker_id = None
         error_message = ""
         try:
@@ -1228,21 +1213,20 @@ class MainWindowCompute(object):
             print(f"Ignored stale error from worker {worker_id}: {error_message}")
             return
 
-        # Clear temporary plotter content and remove calculating text if present
-        # Only clear the entire plotter if we don't have an existing molecule to fall back to.
+        # Cleanup plotter and 'Calculating...' text
+        # Clear plotter if no fallback molecule
         try:
             if self.current_mol is None:
                 self.plotter.clear()
             else:
-                # If we have a molecule, just re-render to make sure it's drawn correctly
-                # (in case partial actors were added during 'calculating' phase)
+                # Re-render if molecule exists
                 self.plotter.render()
         except Exception:  # pragma: no cover
             import traceback
             traceback.print_exc()
             traceback.print_exc()
 
-        # Also attempt to explicitly remove the calculating text actor if it was stored
+        # Remove 'Calculating...' text
         try:
             actor = getattr(self, "_calculating_text_actor", None)
             if actor is not None:
@@ -1277,7 +1261,7 @@ class MainWindowCompute(object):
             traceback.print_exc()
 
         self.dragged_atom_info = None
-        # Remove this worker id from active set (error belongs to this worker)
+        # Cleanup worker ID
         try:
             if worker_id is not None:
                 try:
@@ -1328,6 +1312,7 @@ class MainWindowCompute(object):
         else:
             self.statusBar().showMessage(f"Error: {error_message}")
 
+        # Restore button UI
         try:
             self.cleanup_button.setEnabled(True)
         except Exception:  # pragma: no cover
@@ -1358,9 +1343,7 @@ class MainWindowCompute(object):
             import traceback
             traceback.print_exc()
 
-        # On calculation error we should NOT enable 3D-only features IF we have no molecule.
-        # However, if we ALREADY had a molecule (e.g. optimization failed but previous 3D was valid),
-        # we should keep them enabled.
+        # Enable 3D features if valid molecule exists
         if self.current_mol is None:
             try:
                 if hasattr(self, "optimize_3d_button"):
@@ -1376,14 +1359,14 @@ class MainWindowCompute(object):
                 import traceback
                 traceback.print_exc()
 
-            # Keep 3D feature buttons disabled to avoid inconsistent UI state
+            # Disable 3D features if no molecule
             try:
                 self._enable_3d_features(False)
             except Exception:  # pragma: no cover
                 import traceback
                 traceback.print_exc()
 
-            # Keep 3D edit actions disabled (no molecule to edit)
+            # Disable 3D edit actions
             try:
                 self._enable_3d_edit_actions(False)
             except Exception:  # pragma: no cover
@@ -1397,7 +1380,7 @@ class MainWindowCompute(object):
                 import traceback
                 traceback.print_exc()
 
-        # Some menu items are explicitly disabled on error IF no molecule exists
+        # Handle menu item states
         if self.current_mol is None:
             try:
                 if hasattr(self, "analysis_action"):
@@ -1423,12 +1406,12 @@ class MainWindowCompute(object):
                 import traceback
                 traceback.print_exc()
 
-        # Force a UI refresh
+        # Refresh UI
         try:
             self.plotter.render()
         except Exception:  # pragma: no cover
             import traceback
             traceback.print_exc()
 
-        # Ensure focus returns to 2D editor
+        # Return focus to 2D editor
         self.view_2d.setFocus()

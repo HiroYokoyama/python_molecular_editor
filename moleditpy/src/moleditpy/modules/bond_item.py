@@ -47,7 +47,7 @@ except Exception:
 
 class BondItem(QGraphicsItem):
     def get_ez_label_rect(self):
-        """E/Zラベルの描画範囲（シーン座標）を返す。ラベルが無い場合はNone。"""
+        """Returns the drawing range for E/Z labels (scene coords). Returns None if no label."""
         if self.order != 2 or self.stereo not in [3, 4]:
             return None
         line = self.get_line_in_local_coords()
@@ -65,7 +65,7 @@ class BondItem(QGraphicsItem):
 
     def set_stereo(self, new_stereo):
         try:
-            # ラベルを消す場合は、消す前のboundingRectをscene().invalidateで強制的に無効化
+            # Invalidate scene area when removing label
             if new_stereo == 0 and self.stereo in [3, 4] and self.scene():
                 rect = self.mapToScene(self.boundingRect()).boundingRect()
                 self.scene().invalidate(
@@ -168,7 +168,7 @@ class BondItem(QGraphicsItem):
             .adjusted(-extra, -extra, extra, extra)
         )
 
-        # E/Zラベルの描画範囲も考慮して拡張（QFontMetricsFで正確に）
+        # Expand bounding rect for E/Z labels (calculating precisely with QFontMetricsF)
         if self.order == 2 and self.stereo in [3, 4]:
             font_size = 20
             font_family = FONT_FAMILY
@@ -189,8 +189,8 @@ class BondItem(QGraphicsItem):
             text = "Z" if self.stereo == 3 else "E"
             fm = QFontMetricsF(font)
             text_rect = fm.boundingRect(text)
-            outline = EZ_LABEL_TEXT_OUTLINE  # 輪郭の太さ分
-            margin = EZ_LABEL_MARGIN  # 追加余白
+            outline = EZ_LABEL_TEXT_OUTLINE  # Outline thickness
+            margin = EZ_LABEL_MARGIN  # Additional margin
             center = line.center()
             label_rect = QRectF(
                 center.x() - text_rect.width() / 2 - outline - margin,
@@ -301,19 +301,19 @@ class BondItem(QGraphicsItem):
             wedge_width_half = 6.0
             num_dashes = 8
 
-        # --- 立体化学 (Wedge/Dash) の描画 ---
+        # --- Draw Stereochemistry (Wedge/Dash) ---
         if self.order == 1 and self.stereo in [1, 2]:
             vec = line.unitVector()
             normal = vec.normalVector()
             p1 = line.p1() + vec.p2() * 5
             p2 = line.p2() - vec.p2() * 5
 
-            if self.stereo == 1:  # Wedge (くさび形)
+            if self.stereo == 1:  # Wedge
                 offset = QPointF(normal.dx(), normal.dy()) * wedge_width_half
                 poly = QPolygonF([p1, p2 + offset, p2 - offset])
                 painter.drawPolygon(poly)
 
-            elif self.stereo == 2:  # Dash (破線)
+            elif self.stereo == 2:  # Dash
                 painter.save()
                 if not self.isSelected():
                     pen = painter.pen()
@@ -329,7 +329,7 @@ class BondItem(QGraphicsItem):
                     painter.drawLine(start_pt - offset, start_pt + offset)
                 painter.restore()
 
-        # --- 通常の結合 (単/二重/三重) の描画 ---
+        # --- Draw Regular Bonds (Single/Double/Triple) ---
         else:
             if self.order == 1:
                 painter.drawLine(line)
@@ -362,22 +362,22 @@ class BondItem(QGraphicsItem):
                 offset = QPointF(v.dx(), v.dy()) * bond_offset
 
                 if self.order == 2:
-                    # 環構造かどうかを判定し、描画方法を変更
+                    # Determine if part of a ring structure to adjust drawing style
                     is_in_ring = False
                     ring_center = None
 
                     try:
-                        # シーンからRDKit分子を取得
+                        # Get RDKit molecule from scene
                         sc = self.scene()
                         if sc and hasattr(sc, "window") and sc.window:
-                            # 2DデータからRDKit分子を生成
+                            # Generate RDKit molecule from 2D data
                             mol = sc.window.data.to_rdkit_mol(use_2d_stereo=False)
                             if mol:
-                                # この結合に対応するRDKitボンドを探す
+                                # Find RDKit bond corresponding to this editor bond
                                 atom1_id = self.atom1.atom_id
                                 atom2_id = self.atom2.atom_id
 
-                                # RDKitインデックスを取得
+                                # Get RDKit indices
                                 rdkit_idx1 = None
                                 rdkit_idx2 = None
                                 for atom in mol.GetAtoms():
@@ -394,17 +394,17 @@ class BondItem(QGraphicsItem):
                                     )
                                     if bond and bond.IsInRing():
                                         is_in_ring = True
-                                        # 環の中心を計算（この結合を含む最小環）
+                                        # Calculate ring center (smallest ring containing this bond)
                                         ring_info = mol.GetRingInfo()
                                         for ring in ring_info.AtomRings():
                                             if (
                                                 rdkit_idx1 in ring
                                                 and rdkit_idx2 in ring
                                             ):
-                                                # 環の原子位置の平均を計算
+                                                # Calculate average position of atoms in ring
                                                 ring_positions = []
                                                 for atom_idx in ring:
-                                                    # 対応するエディタ側の原子を探す
+                                                    # Find corresponding atom in editor
                                                     rdkit_atom = mol.GetAtomWithIdx(
                                                         atom_idx
                                                     )
@@ -431,7 +431,7 @@ class BondItem(QGraphicsItem):
                                                                 )
 
                                                 if ring_positions:
-                                                    # 環の中心を計算
+                                                    # Calculate ring center
                                                     center_x = sum(
                                                         p.x() for p in ring_positions
                                                     ) / len(ring_positions)
@@ -443,7 +443,7 @@ class BondItem(QGraphicsItem):
                                                     )
                                                     break
                     except Exception as e:
-                        # エラーが発生した場合は通常の描画にフォールバック
+                        # Fallback to default drawing on error
                         is_in_ring = False
 
                     v = line.unitVector().normalVector()
@@ -451,27 +451,27 @@ class BondItem(QGraphicsItem):
                     offset = QPointF(v.dx(), v.dy()) * bond_offset
 
                     if is_in_ring and ring_center:
-                        # 環構造: 1本の中心線（単結合位置） + 1本の短い内側線
-                        # 結合の中心から環の中心への方向を計算
+                        # Ring structure: 1 central line (single bond pos) + 1 short inner line
+                        # Calculate direction from bond center to ring center
                         bond_center = line.center()
 
-                        # ローカル座標系での環中心方向
+                        # Ring center direction in local coords
                         local_ring_center = self.mapFromScene(ring_center)
                         local_bond_center = line.center()
                         inward_vec = local_ring_center - local_bond_center
 
-                        # offsetとinward_vecの内積で内側を判定
+                        # Use dot product to determine inner side
                         if QPointF.dotProduct(offset, inward_vec) > 0:
-                            # offsetが内側方向（2倍のオフセット）
+                            # Offset is inward (double offset)
                             inner_offset = offset * 2
                         else:
-                            # -offsetが内側方向（2倍のオフセット）
+                            # Negative offset is inward (double offset)
                             inner_offset = -offset * 2
 
-                        # 中心線を描画（単結合と同じ位置）
+                        # Draw central line (same position as single bond)
                         painter.drawLine(line)
 
-                        # 内側の短い線を描画（80%の長さ）
+                        # Draw short inner line (80% length)
                         inner_line = line.translated(inner_offset)
                         shorten_factor = 0.8
                         p1 = inner_line.p1()
@@ -481,17 +481,17 @@ class BondItem(QGraphicsItem):
                         shortened_p2 = center + (p2 - center) * shorten_factor
                         painter.drawLine(QLineF(shortened_p1, shortened_p2))
                     else:
-                        # 非環構造: 従来の2本の平行線
+                        # Non-ring structure: parallel lines
                         line1 = line.translated(offset)
                         line2 = line.translated(-offset)
                         painter.drawLine(line1)
                         painter.drawLine(line2)
 
-                    # E/Z ラベルの描画処理
+                    # E/Z Label Drawing
                     if self.stereo in [3, 4]:
-                        painter.save()  # 現在の描画設定を保存
+                        painter.save()  # Save current painter state
 
-                        # --- ラベルの設定 ---
+                        # --- Label Settings ---
                         font_size = 20
                         font_family = FONT_FAMILY
                         try:
@@ -511,7 +511,7 @@ class BondItem(QGraphicsItem):
                         font = QFont(font_family, font_size, FONT_WEIGHT_BOLD)
                         font.setItalic(True)
                         text_color = QColor("gray")
-                        # 輪郭の色を背景色と同じにする（scene()がNoneのときは安全なフォールバックを使う）
+                        # Match outline color to background (safe fallback if scene() is None)
                         outline_color = None
                         try:
                             sc = self.scene()
@@ -520,47 +520,47 @@ class BondItem(QGraphicsItem):
                         except Exception:
                             outline_color = None
                         if outline_color is None:
-                            # デフォルトでは白背景を想定して黒系の輪郭が見やすい
+                            # Default to white background outline for visibility
                             outline_color = QColor(255, 255, 255)
 
-                        # --- 描画パスの作成 ---
+                        # --- Create Drawing Paths ---
                         text = "Z" if self.stereo == 3 else "E"
                         path = QPainterPath()
 
-                        # テキストが正確に中央に来るように位置を計算
+                        # Center text precisely
                         fm = QFontMetricsF(font)
                         text_rect = fm.boundingRect(text)
                         text_rect.moveCenter(line.center())
                         path.addText(text_rect.topLeft(), font, text)
 
-                        # --- 輪郭の描画 ---
+                        # --- Draw Outline ---
                         stroker = QPainterPathStroker()
-                        stroker.setWidth(EZ_LABEL_TEXT_OUTLINE)  # 輪郭の太さ
+                        stroker.setWidth(EZ_LABEL_TEXT_OUTLINE)  # Outline width
                         outline_path = stroker.createStroke(path)
 
                         painter.setBrush(outline_color)
                         painter.setPen(Qt.PenStyle.NoPen)
                         painter.drawPath(outline_path)
 
-                        # --- 文字本体の描画 ---
+                        # --- Draw Text Body ---
                         painter.setBrush(text_color)
                         painter.setPen(text_color)
                         painter.drawPath(path)
 
-                        painter.restore()  # 描画設定を元に戻す
+                        painter.restore()  # Restore painter state
 
                 elif self.order == 3:
                     painter.drawLine(line)
                     painter.drawLine(line.translated(offset))
                     painter.drawLine(line.translated(-offset))
 
-        # --- 2. ホバー時のエフェクトを上から重ねて描画 ---
+        # --- 2. Draw hover effects on top ---
         if (not self.isSelected()) and getattr(self, "hovered", False):
             try:
-                # ホバー時のハイライトを太めの半透明な線で描画
+                # Draw highlight as thick semi-transparent line
                 hover_pen = QPen(
                     QColor(144, 238, 144, 180), HOVER_PEN_WIDTH
-                )  # LightGreen, 半透明
+                )  # LightGreen, semi-transparent
                 hover_pen.setCapStyle(Qt.PenCapStyle.RoundCap)
                 painter.setPen(hover_pen)
                 painter.drawLine(line)
