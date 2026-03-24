@@ -220,7 +220,7 @@ class MainWindowDialogManager(object):
                 self, "Success", f"Template '{name}' saved successfully."
             )
 
-        except Exception as e:
+        except (AttributeError, RuntimeError, ValueError) as e:
             QMessageBox.critical(self, "Error", f"Failed to save template: {str(e)}")
 
     def open_translation_dialog(self):
