@@ -709,10 +709,10 @@ def test_trigger_conversion_stereo_enhancement(mock_parser_host):
             with patch("rdkit.Chem.DetectChemistryProblems", return_value=[]):
                 # Mock QThread to prevent actual thread creation in main_window_compute namespace
                 with patch("moleditpy.modules.main_window_compute.QThread"):
-                    # Mock QTimer.singleShot to verify it's called to start the worker
-                    with patch("PyQt6.QtCore.QTimer.singleShot") as mock_timer:
-                        compute.trigger_conversion()
-                        assert mock_timer.called
+                    with patch("moleditpy.modules.main_window_compute.CalculationWorker"):
+                        with patch("PyQt6.QtCore.QTimer.singleShot") as mock_timer:
+                            compute.trigger_conversion()
+                            assert mock_timer.called
 
 
 def test_halt_conversion(mock_parser_host):

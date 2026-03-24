@@ -56,6 +56,8 @@ class DummyParser(QWidget, MainWindowMolecularParsers):
         self.statusBar_mock = MagicMock()
         self.current_mol = None
         self.is_xyz_derived = False
+        self.chem_check_failed = False  # Prevent MagicMock truthy resolution
+        self.chem_check_tried = False
         self.dragged_atom_info = None
         self.current_file_path = None
 
@@ -80,8 +82,12 @@ class DummyParser(QWidget, MainWindowMolecularParsers):
     def fit_to_view(self):
         pass
 
-    def _apply_chem_check_and_set_flags(self, mol, source_desc=""):
+    def _apply_chem_check_and_set_flags(self, mol, source_desc=None, force_skip=False):
         pass
+
+    def prompt_for_charge(self):
+        """Default: cancel (return None) so tests don't block on real dialog."""
+        return None, False, False
 
     def estimate_bonds_from_distances(self, mol):
         if self.settings.get("force_fallback_fail", False):
@@ -126,18 +132,16 @@ def test_load_mol_file_fallback_to_sd_supplier(mock_parser_host, tmp_path):
 
 
 def test_load_xyz_always_ask_charge(mock_parser_host, tmp_path):
-    """Verify that charge is requested from user when 'always_ask_charge' is enabled."""
+    """Verify that charge dialog is shown when loading XYZ."""
     parser = DummyParser(mock_parser_host)
-    parser.settings["always_ask_charge"] = True
     xyz_path = tmp_path / "ask.xyz"
     xyz_path.write_text("1\nC\nC 0 0 0\n")
     mock_rd_mod.DetermineBonds.side_effect = None
     mock_rd_mod.DetermineBonds.return_value = None
-    with patch.object(mwm.QInputDialog, "getText", return_value=("1", True)):
-        with patch.object(mwm, "QDialog", side_effect=RuntimeError("Force Fallback")):
-            mol = parser.load_xyz_file(str(xyz_path))
-            assert mol is not None
-            assert mol.GetIntProp("_xyz_charge") == 1
+    parser.prompt_for_charge = lambda: (1, True, False)
+    mol = parser.load_xyz_file(str(xyz_path))
+    assert mol is not None
+    assert mol.GetIntProp("_xyz_charge") == 1
 
 
 def test_load_xyz_charge_loop_cancel(mock_parser_host, tmp_path):
@@ -145,12 +149,9 @@ def test_load_xyz_charge_loop_cancel(mock_parser_host, tmp_path):
     parser = DummyParser(mock_parser_host)
     path = tmp_path / "cancel.xyz"
     path.write_text("1\nC\nC 0 0 0\n")
-    mock_rd_mod.DetermineBonds.side_effect = RuntimeError("Fail")
-    parser.settings["force_fallback_fail"] = True
-    with patch.object(mwm.QInputDialog, "getText", return_value=("", False)):
-        with patch.object(mwm, "QDialog", side_effect=RuntimeError("Force Fallback")):
-            result = parser.load_xyz_file(str(path))
-            assert result is None
+    # Default prompt_for_charge returns cancel (None, False, False)
+    result = parser.load_xyz_file(str(path))
+    assert result is None
 
 
 def test_load_xyz_unrecognized_symbol(mock_parser_host, tmp_path):
@@ -159,8 +160,11 @@ def test_load_xyz_unrecognized_symbol(mock_parser_host, tmp_path):
     xyz_path = tmp_path / "unknown.xyz"
     xyz_path.write_text("1\nUnknown\nXx 0.0 0.0 0.0\n")
     parser.settings["skip_chemistry_checks"] = False
-    with pytest.raises(ValueError, match="Unrecognized element symbol"):
-        parser.load_xyz_file(str(xyz_path))
+    mol = parser.load_xyz_file(str(xyz_path))
+    assert mol is None
+    # Verify status bar message (approximate check)
+    msgs = [str(c.args[0]) for c in parser.statusBar().showMessage.call_args_list if c.args]
+    assert any("Unrecognized element symbol" in m for m in msgs)
 
 
 def test_save_as_xyz_logic(mock_parser_host, tmp_path):
@@ -199,11 +203,10 @@ def test_load_xyz_recovery_loop_retries(mock_parser_host, tmp_path):
     path.write_text("1\nC\nC 0 0 0\n")
     mock_rd_mod.DetermineBonds.side_effect = [RuntimeError("Fail"), None]
     parser.settings["force_fallback_fail"] = True
-    with patch.object(mwm.QInputDialog, "getText", return_value=("1", True)):
-        with patch.object(mwm, "QDialog", side_effect=RuntimeError("Force Fallback")):
-            mol = parser.load_xyz_file(str(path))
-            assert mol is not None
-            assert mol.GetIntProp("_xyz_charge") == 1
+    parser.prompt_for_charge = lambda: (1, True, False)
+    mol = parser.load_xyz_file(str(path))
+    assert mol is not None
+    assert mol.GetIntProp("_xyz_charge") == 1
 
 
 def test_load_mol_file_not_found(mock_parser_host):
@@ -266,18 +269,12 @@ def test_load_xyz_complex_recovery_branches(mock_parser_host, tmp_path):
     path = tmp_path / "complex.xyz"
     path.write_text("1\nC\nC 0 0 0\n")
     mock_rd_mod.DetermineBonds.side_effect = RuntimeError("Fail")
-    parser.settings["force_fallback_fail"] = True
-    with patch.object(
-        mwm.QInputDialog, "getText", side_effect=[("1", True), ("", False)]
-    ):
-        with patch.object(mwm, "QDialog", side_effect=RuntimeError("Force Fallback")):
-            assert parser.load_xyz_file(str(path)) is None
-            msgs = [
-                str(c.args[0])
-                for c in parser.statusBar().showMessage.call_args_list
-                if c.args
-            ]
-            assert any("failed for that charge" in m for m in msgs)
+    # First call fails with charge 1, second call chooses skip chemistry
+    calls = iter([(1, True, False), (0, True, True)])
+    parser.prompt_for_charge = lambda: next(calls)
+    mol = parser.load_xyz_file(str(path))
+    assert mol is not None
+    assert mol.HasProp("_xyz_skip_checks") or getattr(mol, "_xyz_skip_checks", False)
 
 
 def test_save_as_mol_no_current_path(mock_parser_host, tmp_path):

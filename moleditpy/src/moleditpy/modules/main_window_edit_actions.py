@@ -1359,7 +1359,7 @@ class MainWindowEditActions(object):
 
                         moved = True
 
-    def _apply_chem_check_and_set_flags(self, mol, source_desc=None):
+    def _apply_chem_check_and_set_flags(self, mol, source_desc=None, force_skip=False):
         """Central helper to apply chemical sanitization (or skip it) and set
         chem_check_tried / chem_check_failed flags consistently.
 
@@ -1370,7 +1370,7 @@ class MainWindowEditActions(object):
         self.chem_check_tried = False
         self.chem_check_failed = False
 
-        if self.settings.get("skip_chemistry_checks", False):
+        if force_skip or self.settings.get("skip_chemistry_checks", False):
             # User asked to skip chemistry checks entirely
             return
 

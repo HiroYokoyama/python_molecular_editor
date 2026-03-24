@@ -1153,7 +1153,7 @@ _Verify fallback to ForwardSDMolSupplier when standard MolBlock reading fails._
 - assert len(parser.data.atoms) == 1
 
 ### test_load_xyz_always_ask_charge
-_Verify that charge is requested from user when 'always_ask_charge' is enabled._
+_Verify that charge dialog is shown when loading XYZ._
 
 - assert mol is not None
 - assert mol.GetIntProp('_xyz_charge') == 1
@@ -1166,6 +1166,8 @@ _Verify handling of user cancellation during the charge input loop._
 ### test_load_xyz_unrecognized_symbol
 _Test load_xyz_file raises ValueError for unrecognized element symbols._
 
+- assert mol is None
+- assert any(('Unrecognized element symbol' in m for m in msgs))
 
 ### test_save_as_xyz_logic
 _Verify saving a molecule as an XYZ file._
@@ -1206,8 +1208,8 @@ _Verify fixing of malformed counts lines in MOL files._
 ### test_load_xyz_complex_recovery_branches
 _Verify complex error recovery branches during XYZ loading._
 
-- assert parser.load_xyz_file(str(path)) is None
-- assert any(('failed for that charge' in m for m in msgs))
+- assert mol is not None
+- assert mol.HasProp('_xyz_skip_checks') or getattr(mol, '_xyz_skip_checks', False)
 
 ### test_save_as_mol_no_current_path
 _Verify saving as MOL when no current file path is set._

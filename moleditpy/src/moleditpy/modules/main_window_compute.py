@@ -21,6 +21,7 @@ from PyQt6.QtGui import QAction, QColor
 
 # PyQt6 Modules
 from PyQt6.QtWidgets import QApplication, QMenu, QMessageBox
+import contextlib
 from rdkit import Chem
 from rdkit.Chem import AllChem
 
@@ -67,22 +68,9 @@ class MainWindowCompute(object):
     def _remove_calculating_text(self):
         """Safely remove the 'Calculating...' text actor from the plotter."""
         actor = getattr(self, "_calculating_text_actor", None)
-        if actor is None:
-            return
-        if hasattr(self.plotter, "remove_actor"):
-            try:
-                self.plotter.remove_actor(actor)
-            except Exception:
-                if hasattr(self.plotter, "renderer") and self.plotter.renderer:
-                    try:
-                        self.plotter.renderer.RemoveActor(actor)
-                    except Exception:
-                        pass
-        elif hasattr(self.plotter, "renderer") and self.plotter.renderer:
-            try:
+        if actor and hasattr(self.plotter, "renderer") and self.plotter.renderer:
+            with contextlib.suppress(Exception):
                 self.plotter.renderer.RemoveActor(actor)
-            except Exception:
-                pass
         # Remove attribute safely without risk of AttributeError
         self.__dict__.pop("_calculating_text_actor", None)
 
@@ -158,7 +146,7 @@ class MainWindowCompute(object):
         if not self.convert_button.isEnabled():
             return
 
-        try:
+        with contextlib.suppress(Exception):
             menu = QMenu(self)
             conv_options = [
                 ("RDKit -> Open Babel -> Direct (fallback)", "fallback"),
@@ -179,8 +167,6 @@ class MainWindowCompute(object):
 
             # Show menu at button position
             menu.exec_(self.convert_button.mapToGlobal(pos))
-        except (AttributeError, RuntimeError, ValueError, TypeError) as e:
-            print(f"Error showing convert menu: {e}")
 
     def _trigger_conversion_with_temp_mode(self, mode_key):  
         # store temporary override and invoke conversion
@@ -190,7 +176,7 @@ class MainWindowCompute(object):
 
     def show_optimize_menu(self, pos):  
         """Temporary 3D optimization menu (right-click). Not persisted."""
-        try:
+        with contextlib.suppress(Exception):
             menu = QMenu(self)
             opt_list = [
                 ("MMFF94s (RDKit)", "MMFF_RDKIT"),
@@ -215,7 +201,7 @@ class MainWindowCompute(object):
 
             # Add Plugin Optimization Methods
             if (
-                hasattr(self, "plugin_manager")
+                getattr(self, "plugin_manager", None)
                 and self.plugin_manager.optimization_methods
             ):
                 methods = self.plugin_manager.optimization_methods
@@ -230,8 +216,6 @@ class MainWindowCompute(object):
                         menu.addAction(a)
 
             menu.exec_(self.optimize_3d_button.mapToGlobal(pos))
-        except (AttributeError, RuntimeError, ValueError, TypeError) as e:
-            print(f"Error showing optimize menu: {e}")
 
     def _trigger_optimize_with_temp_method(self, method_key):  
         # store temporary override and invoke optimization
@@ -429,9 +413,7 @@ class MainWindowCompute(object):
         }
         options["worker_id"] = run_id
 
-        # Create a fresh CalculationWorker + QThread for this run so multiple
-        # conversions can execute in parallel. The worker will be cleaned up
-        # automatically after it finishes/errors.
+        # Create a fresh CalculationWorker + QThread for this run.
         try:
             thread = QThread()
             worker = CalculationWorker()
@@ -446,26 +428,22 @@ class MainWindowCompute(object):
                 try:
                     self.on_calculation_finished(result)
                 finally:
-                    try:
-                        self._active_calc_threads.remove(t)
-                    except (ValueError, AttributeError):
-                        pass
                     t.quit()
                     t.finished.connect(t.deleteLater)
                     w.deleteLater()
+                    with contextlib.suppress(ValueError, AttributeError):
+                        self._active_calc_threads.remove(t)
 
             # Handler for calculation error/halt
             def _on_worker_error(error_msg, w=worker, t=thread):
                 try:
                     self.on_calculation_error(error_msg)
                 finally:
-                    try:
-                        self._active_calc_threads.remove(t)
-                    except (ValueError, AttributeError):
-                        pass
                     t.quit()
                     t.finished.connect(t.deleteLater)
                     w.deleteLater()
+                    with contextlib.suppress(ValueError, AttributeError):
+                        self._active_calc_threads.remove(t)
 
             worker.error.connect(_on_worker_error)
             worker.finished.connect(_on_worker_finished)
@@ -475,21 +453,9 @@ class MainWindowCompute(object):
                 10, lambda w=worker, m=mol_block, o=options: w.start_work.emit(m, o)
             )
             self._active_calc_threads.append(thread)
-        except (AttributeError, RuntimeError, ValueError, TypeError) as e:
-            # Fall back: if thread/worker creation failed, create a local
-            # worker and start it (runs in main thread). This preserves
-            # functionality without relying on the shared MainWindow signal.
-            try:
-                fallback_worker = CalculationWorker()
-                QTimer.singleShot(
-                    10,
-                    lambda w=fallback_worker, m=mol_block, o=options: w.start_work.emit(
-                        m, o
-                    ),
-                )
-            except (AttributeError, RuntimeError, TypeError):
-                # surface the original error via existing UI path
-                self.on_calculation_error(str(e))
+        except Exception as e:
+            # Fall back: if thread/worker creation failed, create a local worker and start it
+            self.on_calculation_error(str(e))
 
         # Save undo state
         self.push_undo_state()
@@ -517,50 +483,29 @@ class MainWindowCompute(object):
 
     def check_chemistry_problems_fallback(self):
         """Fallback chemistry check when RDKit fails."""
-        try:
+        with contextlib.suppress(Exception):
             self.scene.clear_all_problem_flags()
-
-            # Lightweight valence check
             problem_atoms = []
 
             for atom_id, atom_data in self.data.atoms.items():
                 atom_item = atom_data.get("item")
-                if not atom_item:
-                    continue
+                if atom_item:
+                    symbol = atom_data["symbol"]
+                    charge = atom_data.get("charge", 0)
+                    bond_count = sum(b.get("order", 1) for k, b in self.data.bonds.items() if atom_id in k)
 
-                symbol = atom_data["symbol"]
-                charge = atom_data.get("charge", 0)
-
-                # Calculate bond order sum
-                bond_count = 0
-                for (id1, id2), bond_data in self.data.bonds.items():
-                    if id1 == atom_id or id2 == atom_id:
-                        bond_count += bond_data.get("order", 1)
-
-                # Check valence
-                if is_problematic_valence(symbol, bond_count, charge):
-                    problem_atoms.append(atom_item)
+                    if is_problematic_valence(symbol, bond_count, charge):
+                        problem_atoms.append(atom_item)
 
             if problem_atoms:
-                # Mark problematic atoms
                 for atom_item in problem_atoms:
                     atom_item.has_problem = True
                     atom_item.update()
-
-                self.statusBar().showMessage(
-                    f"Error: {len(problem_atoms)} chemistry problem(s) found (valence issues)."
-                )
+                self.statusBar().showMessage(f"Error: {len(problem_atoms)} chemistry problem(s) found (valence issues).")
             else:
-                self.statusBar().showMessage(
-                    "Error: Invalid chemical structure (RDKit conversion failed)."
-                )
+                self.statusBar().showMessage("Error: Invalid chemical structure (RDKit conversion failed).")
 
             self.scene.clearSelection()
-            self.view_2d.setFocus()
-
-        except (AttributeError, RuntimeError, ValueError, TypeError) as e:
-            print(f"Error in fallback chemistry check: {e}")
-            self.statusBar().showMessage("Error: Invalid chemical structure.")
             self.view_2d.setFocus()
 
     def optimize_3d_structure(self):
@@ -674,13 +619,11 @@ class MainWindowCompute(object):
                         
                         self.on_calculation_finished(result)
 
-                        try:
-                            self._active_calc_threads.remove(t)
-                        except (ValueError, AttributeError):
-                            pass
                         t.quit()
                         t.finished.connect(t.deleteLater)
                         w.deleteLater()
+                        with contextlib.suppress(ValueError, AttributeError):
+                            self._active_calc_threads.remove(t)
 
                     def _on_opt_worker_error(error_msg, w=worker, t=thread):
                         # Re-enable optimize button UI
@@ -691,13 +634,11 @@ class MainWindowCompute(object):
 
                         self.on_calculation_error(error_msg)
 
-                        try:
-                            self._active_calc_threads.remove(t)
-                        except (ValueError, AttributeError):
-                            pass
                         t.quit()
                         t.finished.connect(t.deleteLater)
                         w.deleteLater()
+                        with contextlib.suppress(ValueError, AttributeError):
+                            self._active_calc_threads.remove(t)
 
                     worker.error.connect(_on_opt_worker_error)
                     worker.finished.connect(_on_opt_worker_finished)
@@ -707,7 +648,7 @@ class MainWindowCompute(object):
                     QTimer.singleShot(10, lambda w=worker, m=mol_block, o=options: w.start_work.emit(m, o))
                     
                     self._active_calc_threads.append(thread)
-                except (AttributeError, RuntimeError, ValueError, TypeError) as e:
+                except Exception as e:
                     self.on_calculation_error(str(e))
                 
                 return
@@ -753,12 +694,8 @@ class MainWindowCompute(object):
 
         # Record the optimization method used for this conversion if available.
         opt_method = None
-        if isinstance(mol, object) and hasattr(mol, "HasProp") and mol is not None:
-            try:
-                if mol.HasProp("_pme_optimization_method"):
-                    opt_method = mol.GetProp("_pme_optimization_method")
-            except Exception:
-                pass
+        if mol is not None and hasattr(mol, "HasProp") and mol.HasProp("_pme_optimization_method"):
+            opt_method = mol.GetProp("_pme_optimization_method")
 
         # Store the optimization method using its user-friendly UI label if available.
         if opt_method:
@@ -779,21 +716,25 @@ class MainWindowCompute(object):
         self.create_atom_id_mapping()
 
         # Set chiral centers from 2D stereo
-        try:
-            if mol.GetNumConformers() > 0:
-                # Preserve 2D wedge/dash stereo
+        skip_chem_property = False
+        if mol is not None and hasattr(mol, "HasProp") and mol.HasProp("_xyz_skip_checks"):
+            with contextlib.suppress(Exception):
+                skip_chem_property = bool(mol.GetIntProp("_xyz_skip_checks"))
 
-                # Save 2D stereo as property before 3D calculation
-                for bond in mol.GetBonds():
-                    if bond.GetBondType() == Chem.BondType.DOUBLE:
-                        bond.SetIntProp("_original_2d_stereo", bond.GetStereo())
+        if not skip_chem_property:
+            try:
+                if mol.GetNumConformers() > 0:
+                    # Save 2D stereo as property before 3D calculation
+                    for bond in mol.GetBonds():
+                        if bond.GetBondType() == Chem.BondType.DOUBLE:
+                            bond.SetIntProp("_original_2d_stereo", bond.GetStereo())
 
-                # Assign stereochemistry respecting 2D info
-                Chem.AssignStereochemistry(mol, cleanIt=False, force=True)
+                    # Assign stereochemistry respecting 2D info
+                    Chem.AssignStereochemistry(mol, cleanIt=False, force=True)
 
-            self.update_chiral_labels()
-        except (AttributeError, RuntimeError, TypeError):
-            pass
+                self.update_chiral_labels()
+            except (AttributeError, RuntimeError, TypeError):
+                pass
 
         self.draw_molecule_3d(mol)
 

@@ -590,15 +590,31 @@ class MainWindow(QMainWindow):
         # --- MOVED TO main_window_ui_manager.py ---
         return self.main_window_ui_manager._setup_3d_picker()
 
-    def _apply_chem_check_and_set_flags(self, mol, source_desc=None):
+    def _apply_chem_check_and_set_flags(self, mol, source_desc=None, force_skip=False):
         # --- MOVED TO main_window_edit_actions.py ---
         return self.main_window_edit_actions._apply_chem_check_and_set_flags(
-            mol, source_desc=None
+            mol, source_desc=source_desc, force_skip=force_skip
         )
 
     def _clear_xyz_flags(self, mol=None):
         # --- MOVED TO main_window_edit_actions.py ---
-        return self.main_window_edit_actions._clear_xyz_flags(mol=None)
+        return self.main_window_edit_actions._clear_xyz_flags(mol=mol)
+
+    def _set_mol_prop(self, mol, prop_name, value):
+        # --- MOVED TO main_window_molecular_parsers.py ---
+        return self.main_window_molecular_parsers._set_mol_prop(mol, prop_name, value)
+
+    def _get_mol_prop(self, mol, prop_name, default=None):
+        # --- MOVED TO main_window_molecular_parsers.py ---
+        return self.main_window_molecular_parsers._get_mol_prop(mol, prop_name, default)
+
+    def _get_mol_prop(self, mol, prop_name, default=None):
+        # --- MOVED TO main_window_molecular_parsers.py ---
+        return self.main_window_molecular_parsers._get_mol_prop(mol, prop_name, default)
+
+    def prompt_for_charge(self):
+        # --- MOVED TO main_window_molecular_parsers.py ---
+        return self.main_window_molecular_parsers.prompt_for_charge()
 
     def load_mol_file_for_3d_viewing(self, file_path=None):
         # --- MOVED TO main_window_view_loaders.py ---
