@@ -651,7 +651,7 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):  # pragma: n
                 text_color="yellow",
                 always_visible=True,
             )
-            # add_point_labelsがリストを返す場合も考慮
+            # Consider case where add_point_labels returns a list
             if isinstance(label_actor, list):
                 self.selection_labels.extend(label_actor)
             else:

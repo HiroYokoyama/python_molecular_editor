@@ -350,7 +350,7 @@ class MainWindowView3d(object):
                                         # Triple bond: split into 3 (center + two sides)
                                         # Same arrangement as bond drawing
                                         offset_vecs = [
-                                            np.array([0, 0, 0]),  # 中心
+                                            np.array([0, 0, 0]),  # Center
                                             offset_dir1 * offset_distance,  # +side
                                             -offset_dir1 * offset_distance,  # -side
                                         ]
@@ -995,26 +995,26 @@ class MainWindowView3d(object):
             for neighbor_pos in begin_neighbors:
                 vec_to_neighbor = neighbor_pos - begin_pos
                 if np.linalg.norm(vec_to_neighbor) > 1e-6:
-                    # bond_vec と neighbor_vec の外積が平面の法線
+                    # Normal to the plane is the cross product of bond_vec and neighbor_vec
                     normal = np.cross(bond_vec, vec_to_neighbor)
                     norm_length = np.linalg.norm(normal)
                     if norm_length > 1e-6:
                         normal_candidates.append(normal / norm_length)
 
-        # 終了原子の隣接原子から平面を推定
+        # Estimate plane from neighbors of the end atom
         if len(end_neighbors) >= 1:
             for neighbor_pos in end_neighbors:
                 vec_to_neighbor = neighbor_pos - end_pos
                 if np.linalg.norm(vec_to_neighbor) > 1e-6:
-                    # bond_vec と neighbor_vec の外積が平面の法線
+                    # Cross product of bond_vec and neighbor_vec is the plane normal
                     normal = np.cross(bond_vec, vec_to_neighbor)
                     norm_length = np.linalg.norm(normal)
                     if norm_length > 1e-6:
                         normal_candidates.append(normal / norm_length)
 
-        # 複数の法線ベクトルがある場合は平均を取る
+        # If multiple normal vectors exist, take the average
         if normal_candidates:
-            # 方向を統一するため、最初のベクトルとの内積が正になるように調整
+            # Adjust so the dot product with the first vector is positive for consistent direction
             reference_normal = normal_candidates[0]
             aligned_normals = []
 
@@ -1028,13 +1028,13 @@ class MainWindowView3d(object):
             if norm_length > 1e-6:
                 avg_normal /= norm_length
 
-                # 法線ベクトルと結合ベクトルに垂直な方向を二重結合のオフセット方向とする
+                # Set offset direction perpendicular to normal and bond vectors
                 offset_dir = np.cross(bond_unit, avg_normal)
                 offset_length = np.linalg.norm(offset_dir)
                 if offset_length > 1e-6:
                     return offset_dir / offset_length
 
-        # フォールバック: 結合ベクトルに垂直な任意の方向
+        # Fallback: Arbitrary direction perpendicular to the bond vector
         v_arb = np.array([0, 0, 1])
         if np.allclose(np.abs(np.dot(bond_unit, v_arb)), 1.0):
             v_arb = np.array([0, 1, 0])
@@ -1574,7 +1574,7 @@ class MainWindowView3d(object):
             return
 
         # Add some padding
-        padding_factor = 1.10  # 10% の余裕
+        padding_factor = 1.10  # 10% margin
         cx = visible_items_rect.center().x()
         cy = visible_items_rect.center().y()
         w = visible_items_rect.width() * padding_factor

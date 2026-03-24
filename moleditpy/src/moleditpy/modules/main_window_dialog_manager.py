@@ -431,7 +431,7 @@ class MainWindowDialogManager(object):
         dialog.accepted.connect(self.push_undo_state)
         dialog.finished.connect(
             lambda: self.remove_dialog_from_list(dialog)
-        )  # ダイアログが閉じられた時にリストから削除
+        )
 
     def open_mirror_dialog(self):
         """Open mirror function dialog"""

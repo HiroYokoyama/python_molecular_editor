@@ -247,10 +247,10 @@ class MainWindowCompute(object):
         # Reset measurement/3D-edit modes
         if self.measurement_mode:
             self.measurement_action.setChecked(False)
-            self.toggle_measurement_mode(False)  # 測定モードを無効化
+            self.toggle_measurement_mode(False)  # Disable measurement mode
         if self.is_3d_edit_mode:
             self.edit_3d_action.setChecked(False)
-            self.toggle_3d_edit_mode(False)  # 3D編集モードを無効化
+            self.toggle_3d_edit_mode(False)  # Disable 3D edit mode
 
         mol = self.data.to_rdkit_mol(use_2d_stereo=False)
 
@@ -1048,7 +1048,7 @@ class MainWindowCompute(object):
             # non-fatal
             pass
 
-        # 原子プロパティを復元（ワーカープロセスで失われたため）
+        # Restore atom properties (lost during worker process)
         if hasattr(self, "original_atom_properties"):
             for i, original_id in self.original_atom_properties.items():
                 if i < mol.GetNumAtoms():

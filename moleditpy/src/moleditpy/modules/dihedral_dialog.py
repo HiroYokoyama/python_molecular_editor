@@ -163,7 +163,7 @@ class DihedralDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
             self.atom3_idx = None
             self.atom4_idx = None
 
-        # 原子ラベルを表示
+        # Display atom labels
         self.show_atom_labels()
         self.update_display()
 

@@ -314,7 +314,7 @@ class MainWindowExport(object):
                         and hasattr(mesh, "n_points")
                         and mesh.n_points > 0
                     ):
-                        # PyVistaメッシュに変換（必要な場合）
+                        # Convert to PyVista mesh (if necessary)
                         if not isinstance(mesh, pv.PolyData):
                             if hasattr(mesh, "extract_surface"):
                                 mesh = mesh.extract_surface()
@@ -358,7 +358,7 @@ class MainWindowExport(object):
                             mesh_colors = np.tile(rgb, (mesh_copy.n_points, 1))
                             mesh_copy.point_data["colors"] = mesh_colors
 
-                        # メッシュを結合
+                        # Combine meshes
                         if combined_mesh.n_points == 0:
                             combined_mesh = mesh_copy.copy()
                         else:
@@ -426,7 +426,7 @@ class MainWindowExport(object):
                         # Create copy of mesh
                         mesh_copy = mesh.copy()
 
-                        # メッシュを結合
+                        # Combine meshes
                         if combined_mesh.n_points == 0:
                             combined_mesh = mesh_copy.copy()
                         else:
@@ -553,7 +553,7 @@ class MainWindowExport(object):
                                 colors_arr = np.asarray(colors)
                                 # Reshape to expected shape
                                 if colors_arr.ndim == 1:
-                                    # 1次元の場合は単一チャンネルとして扱う
+                                    # Treat as a single channel if 1D
                                     colors_arr = colors_arr.reshape(-1, 1)
 
                                 # Normalize if float

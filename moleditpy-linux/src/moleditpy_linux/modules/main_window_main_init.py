@@ -12,8 +12,7 @@ DOI: 10.5281/zenodo.17268532
 
 """
 main_window_main_init.py
-MainWindow (main_window.py) から分離されたモジュール
-機能クラス: MainWindowMainInit
+Functional class separated from main_window.py
 """
 
 
@@ -97,7 +96,7 @@ def detect_system_dark_mode():  # pragma: no cover
 
 
 def detect_system_theme():  # pragma: no cover
-    """OSの優先テーマ設定を 'dark', 'light', または None として返す。
+    """Return the OS's preferred theme setting as 'dark', 'light', or None.
 
     This is a best-effort, cross-platform check.
     """
@@ -117,23 +116,7 @@ def detect_system_theme():  # pragma: no cover
         # macOS: 'defaults read -g AppleInterfaceStyle'
         if platform.system() == "Darwin":
             return "light"
-            """
-            try:
-                # 'defaults read ...' が成功すればダークモード
-                p = subprocess.run(
-                    ['defaults', 'read', '-g', 'AppleInterfaceStyle'],
-                    capture_output=True, text=True, check=True, encoding='utf-8'
-                )
-                if p.stdout.strip().lower() == 'dark':
-                    return 'dark'
 
-            except subprocess.CalledProcessError:
-                # コマンド失敗 (キーが存在しない) = ライトモード
-                return 'light'
-            except Exception:  # pragma: no cover
-                # その他のエラー
-                pass
-            """
 
         # Linux / GNOME: try color-scheme gsetting; fallback to gtk-theme detection
         if platform.system() == "Linux":
@@ -198,11 +181,11 @@ except Exception:
     from modules.zoomable_view import ZoomableView
 
 
-# --- クラス定義 ---
+# --- Class Definition ---
 class MainWindowMainInit(object):
-    """main_window.py から分離された機能クラス"""
+    """Feature class separated from main_window.py"""
 
-    # __init__ は main_window.py からコピーされます
+    # __init__ is copied from main_window.py
 
     def __init__(self, initial_file=None):  # pragma: no cover
         # This helper is not used as a mixin in this project; initialization
@@ -222,71 +205,71 @@ class MainWindowMainInit(object):
         self.current_3d_style = "ball_and_stick"
         self.show_chiral_labels = False
         self.atom_info_display_mode = None  # 'id', 'coords', 'symbol', or None
-        self.current_atom_info_labels = None  # 現在の原子情報ラベル
+        self.current_atom_info_labels = None  # Current atom info labels
         self.is_3d_edit_mode = False
         self.dragged_atom_info = None
         self.atom_actor = None
         self.is_2d_editable = True
-        self.is_xyz_derived = False  # XYZ由来の分子かどうかのフラグ
+        self.is_xyz_derived = False  # Flag indicating if the molecule is derived from XYZ
         # Chemical check flags: whether a chemical/sanitization check was attempted and whether it failed
         self.chem_check_tried = False
         self.chem_check_failed = False
-        # 3D最適化のデフォルト手法
+        # Default 3D optimization method
         self.optimization_method = self.settings.get(
             "optimization_method", "MMFF_RDKIT"
         )
         self.axes_actor = None
         self.axes_widget = None
-        self._template_dialog = None  # テンプレートダイアログの参照
+        self._template_dialog = None  # Reference to the template dialog
         self.undo_stack = []
         self.redo_stack = []
         self.constraints_3d = []
         self.mode_actions = {}
 
-        # 保存状態を追跡する変数
+        # Variable tracking the saved state
         self.has_unsaved_changes = False
-        # 設定ファイルのディスク書き込みを遅延するフラグ
-        # True に設定された場合、設定はメモリ上で更新され、アプリ終了時にまとめて保存されます。
+        # Flag to delay disk writes of the settings file
+        # If set to True, settings are updated in memory and saved together upon application exit.
         self.settings_dirty = True
-        self.current_file_path = None  # 現在開いているファイルのパス
-        self.initialization_complete = False  # 初期化完了フラグ
+        self.current_file_path = None  # Path of the currently open file
+        self.initialization_complete = False  # Initialization completion flag
         # Token to invalidate pending implicit-hydrogen UI updates
         self._ih_update_counter = 0
 
-        # 測定機能用の変数
+        # Variables for measurement functionality
         self.measurement_mode = False
         self.selected_atoms_for_measurement = []
-        self.measurement_labels = []  # (atom_idx, label_text) のタプルのリスト
+        self.measurement_labels = []  # List of (atom_idx, label_text) tuples
         self.measurement_text_actor = None
-        self.measurement_label_items_2d = []  # 2Dビューの測定ラベルアイテム
-        self.atom_id_to_rdkit_idx_map = {}  # 2D原子IDから3D RDKit原子インデックスへのマッピング
+        self.measurement_label_items_2d = []  # 2D view measurement label items
+        self.atom_id_to_rdkit_idx_map = {}  # Mapping from 2D atom ID to 3D RDKit atom index
 
-        # 3D原子選択用の変数
+        # Variables for 3D atom selection
         self.selected_atoms_3d = set()
         self.atom_selection_mode = False
         self.selected_atom_actors = []
 
-        # 3D編集用の原子選択状態 (3Dビューで選択された原子のインデックス)
+        # Atom selection state for 3D editing (indices of atoms selected in the 3D view)
         self.selected_atoms_3d = set()
 
-        # 3D編集ダイアログの参照を保持
+        # Holder for references to 3D editing dialogs
         self.active_3d_dialogs = []
 
-        # プラグインマネージャーの初期化
+        # Initialization of the plugin manager
         try:
             self.plugin_manager = PluginManager()
         except Exception as e:
             print(f"Failed to initialize PluginManager: {e}")
             self.plugin_manager = None
 
-        # ロードされていないプラグインのデータを保持する辞書
+        # Dictionary holding data for plugins that haven't been loaded
         self._preserved_plugin_data = {}
 
         self.init_ui()
         self.init_worker_thread()
         self._setup_3d_picker()
 
-        # --- RDKit初回実行コストの事前読み込み（ウォームアップ）---
+        # --- RDKit Warm-up (initial execution cost) ---
         try:
             # Create a molecule with a variety of common atoms to ensure
             # the valence/H-count machinery is fully initialized.
@@ -308,16 +291,16 @@ class MainWindowMainInit(object):
             self.load_command_line_file(initial_file)
 
         QTimer.singleShot(0, self.apply_initial_settings)  # pragma: no cover
-        # カメラ初期化フラグ（初回描画時のみリセットを許可する）
+        # Camera initialization flag (permits reset only during the first draw)
         self._camera_initialized = False
 
-        # 初期メニューテキストと状態を設定
+        # Set initial menu text and state
         self.update_atom_id_menu_text()
         self.update_atom_id_menu_state()  # pragma: no cover
 
-        # 初期化完了を設定
+        # Set initialization complete
         self.initialization_complete = True
-        self.update_window_title()  # 初期化完了後にタイトルを更新
+        self.update_window_title()  # Update title after initialization is complete
         # Ensure initial keyboard/mouse focus is placed on the 2D view
         # when opening a file or starting the application. This avoids
         # accidental focus landing on toolbar/buttons (e.g. Optimize 2D).
@@ -328,30 +311,30 @@ class MainWindowMainInit(object):
             traceback.print_exc()
 
     def init_ui(self):  # pragma: no cover
-        # 1. 現在のスクリプトがあるディレクトリのパスを取得
+        # 1. Get the path to the directory where the current script is located
         script_dir = os.path.dirname(os.path.abspath(__file__))
 
-        # 2. 'assets'フォルダ内のアイコンファイルへのフルパスを構築
+        # 2. Build the full path to the icon file in the 'assets' folder
         # Windows taskbar prefers .ico; fall back to .png on other platforms
         if sys.platform == "win32":
             icon_path = os.path.join(script_dir, "..", "assets", "icon.ico")
         else:
             icon_path = os.path.join(script_dir, "..", "assets", "icon.png")
 
-        # 3. ファイルパスから直接QIconオブジェクトを作成
-        if os.path.exists(icon_path):  # ファイルが存在するか確認
+        # 3. Create a QIcon object directly from the file path
+        if os.path.exists(icon_path):  # Check if file exists
             app_icon = QIcon(icon_path)
 
-            # 4. ウィンドウとアプリケーション両方にアイコンを設定
+            # 4. Set the icon for both the window and the application
             self.setWindowIcon(app_icon)
             QApplication.instance().setWindowIcon(app_icon)
         else:
-            print(f"警告: アイコンファイルが見つかりません: {icon_path}")
+            print(f"Warning: Icon file not found: {icon_path}")
 
         self.splitter = QSplitter(Qt.Orientation.Horizontal)
-        # スプリッターハンドルを太くして視認性を向上
+        # Make splitter handle thicker for visibility
         self.splitter.setHandleWidth(8)
-        # スプリッターハンドルのスタイルを改善
+        # Improve splitter handle style
         self.splitter.setStyleSheet("""
             QSplitter::handle {
                 background-color: #ccc;
@@ -385,7 +368,7 @@ class MainWindowMainInit(object):
 
         self.view_2d.scale(0.75, 0.75)
 
-        # --- 左パネルのボタンレイアウト ---
+        # --- Left panel button layout ---
         left_buttons_layout = QHBoxLayout()
         self.cleanup_button = QPushButton("Clean Up 2D")
         self.cleanup_button.clicked.connect(self.clean_up_2d_structure)
@@ -410,9 +393,9 @@ class MainWindowMainInit(object):
         left_layout.addLayout(left_buttons_layout)
         self.splitter.addWidget(left_pane)
 
-        # --- 右パネルとボタンレイアウト ---
+        # --- Right panel layout ---
         right_pane = QWidget()
-        # 1. 右パネル全体は「垂直」レイアウトにする
+        # 1. Use vertical layout for right pane
         right_layout = QVBoxLayout(right_pane)
         self.plotter = CustomQtInteractor(right_pane, main_window=self, lighting="none")
         self.plotter.setAcceptDrops(False)
@@ -421,20 +404,20 @@ class MainWindowMainInit(object):
         )
         self.plotter.setContextMenuPolicy(Qt.ContextMenuPolicy.NoContextMenu)
 
-        # 2. 垂直レイアウトに3Dビューを追加
+        # 2. Add 3D view to layout
         right_layout.addWidget(self.plotter, 1)
         # self.plotter.installEventFilter(self)
-        # 3. ボタンをまとめるための「水平」レイアウトを作成
+        # 3. Create horizontal layout for buttons
         right_buttons_layout = QHBoxLayout()
 
-        # 3D最適化ボタン
+        # 3D Optimize button
         self.optimize_3d_button = QPushButton("Optimize 3D")
         self.optimize_3d_button.setSizePolicy(
             QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed
         )
         self.optimize_3d_button.clicked.connect(self.optimize_3d_structure)
         self.optimize_3d_button.setEnabled(False)
-        # 初期状態は_enable_3d_features(False)で統一的に設定
+        # Initialized via _enable_3d_features(False)
         # Allow right-click to open a temporary optimization-method menu
         try:
             self.optimize_3d_button.setContextMenuPolicy(
@@ -449,14 +432,14 @@ class MainWindowMainInit(object):
 
         right_buttons_layout.addWidget(self.optimize_3d_button)
 
-        # エクスポートボタン (メニュー付き)
+        # Export button with menu
         self.export_button = QToolButton()
         self.export_button.setSizePolicy(
             QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed
         )
         self.export_button.setText("Export 3D")
         self.export_button.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
-        self.export_button.setEnabled(False)  # 初期状態は無効
+        self.export_button.setEnabled(False)  # Initially disabled
 
         export_menu = QMenu(self)
         export_mol_action = QAction("Export as MOL...", self)
@@ -474,24 +457,24 @@ class MainWindowMainInit(object):
         self.export_button.setMenu(export_menu)
         right_buttons_layout.addWidget(self.export_button)
 
-        # 4. 水平のボタンレイアウトを、全体の垂直レイアウトに追加
+        # 4. Add horizontal layout to vertical layout
         right_layout.addLayout(right_buttons_layout)
         self.splitter.addWidget(right_pane)
 
-        # スプリッターのサイズ変更をモニターして、フィードバックを提供
+        # Monitor splitter movement
         self.splitter.splitterMoved.connect(self.on_splitter_moved)
 
         self.splitter.setSizes([600, 600])
 
-        # スプリッターハンドルにツールチップを設定
+        # Set tooltip for splitter handle
         QTimer.singleShot(100, self.setup_splitter_tooltip)
 
-        # ステータスバーを左右に分離するための設定
+        # Settings to separate status bar segments
         self.status_bar = self.statusBar()
-        self.formula_label = QLabel("")  # 右側に表示するラベルを作成
-        # 右端に余白を追加して見栄えを調整
+        self.formula_label = QLabel("")  # Create label to be displayed on the right
+        # Add margin to the right end for better appearance
         self.formula_label.setStyleSheet("padding-right: 8px;")
-        # ラベルを右側に常時表示ウィジェットとして追加
+        # Add label as a permanent widget on the right
         self.status_bar.addPermanentWidget(self.formula_label)
 
         # self.view_2d.fitInView(self.scene.sceneRect(), Qt.AspectRatioMode.KeepAspectRatio)
@@ -502,12 +485,6 @@ class MainWindowMainInit(object):
         # Keep a reference to the main toolbar for later updates
         self.toolbar = toolbar
 
-        # Now that toolbar exists, initialize menu bar (which might add toolbar actions from plugins)
-        # self.init_menu_bar() - Moved down
-
-        # Templates toolbar: place it directly below the main toolbar (second row at the top)
-        # Use addToolBarBreak to ensure this toolbar appears on the next row under the main toolbar.
-        # Some older PyQt/PySide versions may not have addToolBarBreak; fall back silently in that case.
         try:
             # Insert a toolbar break in the Top toolbar area to force the next toolbar onto a new row
             self.addToolBarBreak(Qt.ToolBarArea.TopToolBarArea)
@@ -577,7 +554,7 @@ class MainWindowMainInit(object):
 
         toolbar.addSeparator()
 
-        # --- アイコン前景色を決めるヘルパー（ダーク/ライトモード対応） ---
+        # --- Helper for determining icon foreground color (dark/light mode support) ---
         # Use module-level detector `detect_system_dark_mode()` so tests and other
         # modules can reuse the logic.
         def _icon_foreground_color():
@@ -641,7 +618,7 @@ class MainWindowMainInit(object):
             except Exception:
                 return QColor("#000000")
 
-        # --- 結合ボタンのアイコンを生成するヘルパー関数 ---
+        # --- Helper function to generate bond button icons ---
         def create_bond_icon(bond_type, size=32):
             fg = _icon_foreground_color()
             pixmap = QPixmap(size, size)
@@ -690,7 +667,7 @@ class MainWindowMainInit(object):
                     painter.drawLine(start_pt - offset, start_pt + offset)
 
             elif bond_type == "ez_toggle":
-                # アイコン下部に二重結合を描画
+                # Draw double bond at the bottom of the icon
                 p1 = QPointF(6, size * 0.75)
                 p2 = QPointF(size - 6, size * 0.75)
                 line = QLineF(p1, p2)
@@ -699,20 +676,20 @@ class MainWindowMainInit(object):
                 painter.setPen(QPen(fg, 2))
                 painter.drawLine(line.translated(offset))
                 painter.drawLine(line.translated(-offset))
-                # 上部に "Z⇌E" のテキストを描画
+                # Draw "Z⇌E" text at the top
                 painter.setPen(QPen(fg, 1))
                 font = painter.font()
                 font.setPointSize(10)
                 font.setBold(True)
                 painter.setFont(font)
                 text_rect = QRectF(0, 0, size, size * 0.6)
-                # U+21CC は右向きと左向きのハープーンが重なった記号 (⇌)
+                # U+21CC is a symbol (⇌) where right-facing and left-facing harpoons overlap
                 painter.drawText(text_rect, Qt.AlignmentFlag.AlignCenter, "Z⇌E")
 
             painter.end()
             return QIcon(pixmap)
 
-        # --- 結合ボタンをツールバーに追加 ---
+        # --- Add bond buttons to the toolbar ---
         bond_actions_data = [
             ("Single Bond", "bond_1_0", "1", "single"),
             ("Double Bond", "bond_2_0", "2", "double"),
@@ -761,7 +738,7 @@ class MainWindowMainInit(object):
 
         toolbar_bottom.addWidget(QLabel(" Templates:"))
 
-        # --- アイコンを生成するヘルパー関数 ---
+        # --- Helper function to generate icons ---
         def create_template_icon(n, is_benzene=False):
             size = 32
             fg = _icon_foreground_color()
@@ -772,11 +749,11 @@ class MainWindowMainInit(object):
             painter.setPen(QPen(fg, 2))
 
             center = QPointF(size / 2, size / 2)
-            radius = size / 2 - 4  # アイコンの余白
+            radius = size / 2 - 4  # Icon margin
 
             points = []
             angle_step = 2 * math.pi / n
-            # ポリゴンが直立するように開始角度を調整
+            # Adjust start angle so the polygon is upright
             start_angle = -math.pi / 2 if n % 2 != 0 else -math.pi / 2 - angle_step / 2
 
             for i in range(n):
@@ -801,17 +778,17 @@ class MainWindowMainInit(object):
             painter.end()
             return QIcon(pixmap)
 
-        # --- ヘルパー関数を使ってアイコン付きボタンを作成 ---
+        # --- Create buttons with icons using helper functions ---
         templates = [("Benzene", "template_benzene", 6)] + [
             (f"{i}-Ring", f"template_{i}", i) for i in range(3, 10)
         ]
         for text, mode, n in templates:
-            action = QAction(self)  # テキストなしでアクションを作成
+            action = QAction(self)  # Create action without text
             action.setCheckable(True)
 
             is_benzene = text == "Benzene"
             icon = create_template_icon(n, is_benzene=is_benzene)
-            action.setIcon(icon)  # アイコンを設定
+            action.setIcon(icon)  # Set icon
 
             if text == "Benzene":
                 action.setToolTip(f"{text} Template (4)")
@@ -833,23 +810,23 @@ class MainWindowMainInit(object):
         toolbar_bottom.addAction(user_template_action)
         self.tool_group.addAction(user_template_action)
 
-        # 初期モードを'select'から'atom_C'（炭素原子描画モード）に変更
+        # Change initial mode from 'select' to 'atom_C' (carbon atom drawing mode)
         self.set_mode("atom_C")
-        # 対応するツールバーの'C'ボタンを選択状態にする
+        # Set the corresponding 'C' button in the toolbar to the selected state
         if "atom_C" in self.mode_actions:
             self.mode_actions["atom_C"].setChecked(True)
 
-        # スペーサーを追加して、次のウィジェットを右端に配置する (keep on top toolbar)
+        # Add a spacer to align subsequent widgets to the right (keep on top toolbar)
         spacer = QWidget()
         spacer.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         toolbar.addWidget(spacer)
 
-        # 測定機能ボタンを追加（"3D Select"に変更）
+        # Add measurement function button (changed to "3D Select")
         self.measurement_action = QAction("3D Select", self, checkable=True)
         self.measurement_action.setToolTip(
             "Enable distance, angle, and dihedral measurement in 3D view"
         )
-        # 初期状態でも有効にする
+        # Enable by default
         self.measurement_action.triggered.connect(self.toggle_measurement_mode)
         toolbar.addAction(self.measurement_action)
 
@@ -857,11 +834,11 @@ class MainWindowMainInit(object):
         self.edit_3d_action.setToolTip(
             "Toggle 3D atom dragging mode (Hold Alt for temporary mode)"
         )
-        # 初期状態でも有効にする
+        # Enable by default
         self.edit_3d_action.toggled.connect(self.toggle_3d_edit_mode)
         toolbar.addAction(self.edit_3d_action)
 
-        # 3Dスタイル変更ボタンとメニューを作成
+        # Create 3D style change button and menu
         # Reverted to original location and added immediate update for plugins
         self.style_button = QToolButton()
         self.style_button.setText("3D Style")
@@ -874,26 +851,26 @@ class MainWindowMainInit(object):
         style_group = QActionGroup(self)
         style_group.setExclusive(True)
 
-        # Ball & Stick アクション
+        # Ball & Stick Action
         bs_action = QAction("Ball & Stick", self, checkable=True)
         bs_action.setChecked(True)
         bs_action.triggered.connect(lambda: self.set_3d_style("ball_and_stick"))
         style_menu.addAction(bs_action)
         style_group.addAction(bs_action)
 
-        # CPK アクション
+        # CPK Action
         cpk_action = QAction("CPK (Space-filling)", self, checkable=True)
         cpk_action.triggered.connect(lambda: self.set_3d_style("cpk"))
         style_menu.addAction(cpk_action)
         style_group.addAction(cpk_action)
 
-        # Wireframe アクション
+        # Wireframe Action
         wireframe_action = QAction("Wireframe", self, checkable=True)
         wireframe_action.triggered.connect(lambda: self.set_3d_style("wireframe"))
         style_menu.addAction(wireframe_action)
         style_group.addAction(wireframe_action)
 
-        # Stick アクション
+        # Stick Action
         stick_action = QAction("Stick", self, checkable=True)
         stick_action.triggered.connect(lambda: self.set_3d_style("stick"))
         style_menu.addAction(stick_action)
@@ -921,7 +898,7 @@ class MainWindowMainInit(object):
 
         file_menu = menu_bar.addMenu("&File")
 
-        # === プロジェクト操作 ===
+        # === Project Operations ===
         new_action = QAction("&New", self)
         new_action.setShortcut("Ctrl+N")
         new_action.triggered.connect(self.clear_all)
@@ -948,7 +925,7 @@ class MainWindowMainInit(object):
 
         file_menu.addSeparator()
 
-        # === インポート ===
+        # === Import ===
         self.import_menu = file_menu.addMenu("Import")
 
         load_mol_action = QAction("MOL/SDF File...", self)
@@ -973,17 +950,17 @@ class MainWindowMainInit(object):
         load_3d_xyz_action.triggered.connect(self.load_xyz_for_3d_viewing)
         self.import_menu.addAction(load_3d_xyz_action)
 
-        # === エクスポート ===
+        # === Export ===
         export_menu = file_menu.addMenu("Export")
 
-        # プロジェクト形式エクスポート
+        # Project format export
         export_pmeraw_action = QAction("PME Raw Format...", self)
         export_pmeraw_action.triggered.connect(self.save_raw_data)
         export_menu.addAction(export_pmeraw_action)
 
         export_menu.addSeparator()
 
-        # 2D エクスポート
+        # 2D Export
         export_2d_menu = export_menu.addMenu("2D Formats")
         save_mol_action = QAction("MOL File...", self)
         save_mol_action.triggered.connect(self.save_as_mol)
@@ -997,7 +974,7 @@ class MainWindowMainInit(object):
         export_2d_svg_action.triggered.connect(self.export_2d_svg)
         export_2d_menu.addAction(export_2d_svg_action)
 
-        # 3D エクスポート
+        # 3D Export
         export_3d_menu = export_menu.addMenu("3D Formats")
         save_3d_mol_action = QAction("MOL File...", self)
         save_3d_mol_action.triggered.connect(self.save_3d_as_mol)
@@ -1232,7 +1209,7 @@ class MainWindowMainInit(object):
 
         edit_3d_menu.addSeparator()
 
-        # Alignment submenu (統合)
+        # Alignment submenu (Integrated)
         align_menu = edit_3d_menu.addMenu("Align to")
         align_menu.setEnabled(False)
         self.align_menu = align_menu
@@ -1258,7 +1235,7 @@ class MainWindowMainInit(object):
         axis_align_menu.addAction(align_z_action)
         self.align_z_action = align_z_action
 
-        # Plane alignment submenu (旧align)
+        # Plane alignment submenu (formerly align)
         plane_align_menu = align_menu.addMenu("Plane")
 
         alignplane_xy_action = QAction("XY-plane", self)
@@ -1333,7 +1310,7 @@ class MainWindowMainInit(object):
         constrained_opt_action.triggered.connect(
             self.open_constrained_optimization_dialog
         )
-        constrained_opt_action.setEnabled(False)  # 3Dモデルロード時に有効化
+        constrained_opt_action.setEnabled(False)  # Enabled when 3D model is loaded
         edit_3d_menu.addAction(constrained_opt_action)
         self.constrained_opt_action = constrained_opt_action
 
@@ -1567,7 +1544,7 @@ class MainWindowMainInit(object):
         )
         help_menu.addAction(manual_action)
 
-        # 3D関連機能の初期状態を統一的に設定
+        # Consistently set initial state for 3D-related features
         self._enable_3d_features(False)
 
         # Finally, populate plugins now that all menus are created
@@ -1585,7 +1562,7 @@ class MainWindowMainInit(object):
             self._active_calc_threads = []
 
     def load_command_line_file(self, file_path):  # pragma: no cover
-        """コマンドライン引数で指定されたファイルを開く"""
+        """Open file specified by command-line argument"""
         if not file_path or not os.path.exists(file_path):
             return
 
@@ -1625,7 +1602,7 @@ class MainWindowMainInit(object):
             self.statusBar().showMessage(f"Unsupported file type: {file_ext}")
 
     def apply_initial_settings(self):  # pragma: no cover
-        """UIの初期化が完了した後に、保存された設定を3Dビューに適用する"""
+        """Apply saved settings to the 3D view after UI initialization is complete."""
 
         try:
             self.update_cpk_colors_from_settings()
@@ -1656,7 +1633,7 @@ class MainWindowMainInit(object):
 
     def open_settings_dialog(self):  # pragma: no cover
         dialog = SettingsDialog(self.settings, self)
-        # accept()メソッドで設定の適用と3Dビューの更新を行うため、ここでは不要
+        # Settings application and 3D view updates are handled by the accept() method.
         dialog.exec()
 
     def reset_all_settings_menu(self):  # pragma: no cover
@@ -1735,9 +1712,9 @@ class MainWindowMainInit(object):
                     if hasattr(self, "intermolecular_rdkit_action"):
                         self.intermolecular_rdkit_action.setChecked(self.settings.get("optimize_intermolecular_interaction_rdkit", True))
 
-                    # 3Dビューの設定を適用
+                    # Apply 3D view settings
                     self.apply_3d_settings()
-                    # 現在の分子を再描画（設定変更を反映）
+                    # Redraw current molecule to reflect setting changes
                     if hasattr(self, "current_mol") and self.current_mol:
                         self.draw_molecule_3d(self.current_mol)
 

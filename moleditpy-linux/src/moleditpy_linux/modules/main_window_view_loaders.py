@@ -12,8 +12,8 @@ DOI: 10.5281/zenodo.17268532
 
 """
 main_window_view_loaders.py
-MainWindow (main_window.py) から分離されたモジュール
-機能クラス: MainWindowViewLoaders
+Module separated from MainWindow (main_window.py)
+Functional class: MainWindowViewLoaders
 """
 
 import os
@@ -41,12 +41,12 @@ except Exception:
     from modules.constants import VERSION
 
 
-# --- クラス定義 ---
+# --- Class Definition ---
 class MainWindowViewLoaders(object):
-    """main_window.py から分離された機能クラス"""
+    """Functional class separated from main_window.py"""
 
     def load_xyz_for_3d_viewing(self, file_path=None):
-        """XYZファイルを読み込んで3Dビューアで表示する"""
+        """Load XYZ file and display in 3D viewer"""
         if not file_path:
             file_path, _ = QFileDialog.getOpenFileName(
                 self, "Load 3D XYZ (View Only)", "", "XYZ Files (*.xyz);;All Files (*)"
@@ -61,17 +61,16 @@ class MainWindowViewLoaders(object):
             if mol.GetNumConformers() == 0:
                 raise ValueError("XYZ file has no 3D coordinates.")
 
-            # 2Dエディタをクリア
+            # Clear 2D editor
             self.clear_2d_editor(push_to_undo=False)
 
-            # 3D構造をセットして描画
             # Set the molecule. If bonds were determined (mol has bonds),
             # treat this the same as loading a MOL file: clear the XYZ-derived
             # flag and enable 3D optimization. Only mark as XYZ-derived and
             # disable 3D optimization when the molecule has no bond information.
             self.current_mol = mol
 
-            # XYZファイル読み込み時はマッピングをクリア（2D構造がないため）
+            # Clear mapping when loading XYZ (no 2D structure)
             self.atom_id_to_rdkit_idx_map = {}
 
             # If the loader marked the molecule as produced under skip_chemistry_checks,
@@ -126,13 +125,13 @@ class MainWindowViewLoaders(object):
             self.draw_molecule_3d(self.current_mol)
             self.plotter.reset_camera()
 
-            # UIを3Dビューアモードに設定
+            # Set UI to 3D viewer mode
             self._enter_3d_viewer_ui_mode()
 
-            # 3D関連機能を統一的に有効化
+            # Enable 3D features
             self._enable_3d_features(True)
 
-            # メニューテキストと状態を更新
+            # Update menu text and state
             self.update_atom_id_menu_text()
             self.update_atom_id_menu_state()
 
@@ -140,7 +139,7 @@ class MainWindowViewLoaders(object):
                 f"3D Viewer Mode: Loaded {os.path.basename(file_path)}"
             )
             self.reset_undo_stack()
-            # XYZファイル名をcurrent_file_pathにセットし、未保存状態はFalse
+            # Set XYZ file path and mark as saved
             self.current_file_path = file_path
             self.has_unsaved_changes = False
             self.update_window_title()
@@ -218,9 +217,9 @@ class MainWindowViewLoaders(object):
             pass
 
     def load_mol_file_for_3d_viewing(self, file_path=None):
-        """MOL/SDFファイルを3Dビューアーで開く"""
+        """Open MOL/SDF file in 3D viewer"""
         if not self.check_unsaved_changes():
-            return  # ユーザーがキャンセルした場合は何もしない
+            return  # Do nothing if user cancels
         if not file_path:
             file_path, _ = QFileDialog.getOpenFileName(
                 self,
@@ -276,7 +275,7 @@ class MainWindowViewLoaders(object):
                     )
                     return
 
-            # 3D座標がない場合は2Dから3D変換（最適化なし）
+            # Convert 2D to 3D if no coordinates found (no optimization)
             if mol.GetNumConformers() == 0:
                 self.statusBar().showMessage(
                     "No 3D coordinates found. Converting to 3D..."
@@ -284,8 +283,7 @@ class MainWindowViewLoaders(object):
                 try:
                     try:
                         AllChem.EmbedMolecule(mol)
-                        # 最適化は実行しない
-                        # 3D変換直後にUndoスタックに積む
+                        # Push to undo stack after 3D conversion
                         self.current_mol = mol
                         self.push_undo_state()
                     except Exception:
@@ -308,7 +306,7 @@ class MainWindowViewLoaders(object):
             except Exception:  # pragma: no cover
                 import traceback
                 traceback.print_exc()
-            # 3Dビューアーに表示
+            # Display in 3D viewer
             # Centralized chemical/sanitization handling
             # Ensure the skip_chemistry_checks setting is respected and flags are set
             self._apply_chem_check_and_set_flags(mol, source_desc="MOL/SDF")
@@ -316,20 +314,20 @@ class MainWindowViewLoaders(object):
             self.current_mol = mol
             self.draw_molecule_3d(mol)
 
-            # カメラをリセット
+            # Reset camera
             self.plotter.reset_camera()
 
-            # UIを3Dビューアーモードに設定
+            # Set UI to 3D viewer mode
             self._enter_3d_viewer_ui_mode()
 
-            # メニューテキストと状態を更新
+            # Update menu text and state
             self.update_atom_id_menu_text()
             self.update_atom_id_menu_state()
 
             self.statusBar().showMessage(f"Loaded {file_path} in 3D viewer")
 
             self.reset_undo_stack()
-            self.has_unsaved_changes = False  # ファイル読込直後は未変更扱い
+            self.has_unsaved_changes = False  # Mark as unchanged after loading
             self.current_file_path = file_path
             self.update_window_title()
 

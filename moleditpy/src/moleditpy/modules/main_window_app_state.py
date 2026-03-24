@@ -48,7 +48,7 @@ except Exception:
     from modules.constants import VERSION
 
 
-# --- クラス定義 ---
+# --- Class Definition ---
 class MainWindowAppState(object):
     """Functional class separated from main_window.py"""
 
@@ -156,7 +156,7 @@ class MainWindowAppState(object):
                             (const[0], tuple(const[1]), const[2], const[3])
                         )
                     elif len(const) == 3:
-                        # 後方互換性: [Type, [Idx...], Value] -> (Type, (Idx...), Value, 1.0e5)
+                        # Backward compatibility: [Type, [Idx...], Value] -> (Type, (Idx...), Value, 1.0e5)
                         self.constraints_3d.append(
                             (const[0], tuple(const[1]), const[2], 1.0e5)
                         )
@@ -268,7 +268,7 @@ class MainWindowAppState(object):
             self.statusBar().showMessage("Project loaded in 3D Viewer Mode.")
         else:
             self.restore_ui_for_editing()
-            # 3D分子がある場合は、2Dエディタモードでも3D編集機能を有効化
+            # Enable 3D edit features even in 2D editor mode if 3D molecule exists
             if self.current_mol and self.current_mol.GetNumAtoms() > 0:
                 self._enable_3d_edit_actions(True)
 
@@ -397,7 +397,7 @@ class MainWindowAppState(object):
                 self.save_project_as()
             else:
                 self.save_project()
-            return not self.has_unsaved_changes  # 保存に成功した場合のみTrueを返す
+            return not self.has_unsaved_changes  # Return True only if save was successful
         elif reply == QMessageBox.StandardButton.No:
             return True  # Continue without saving
         else:
@@ -425,12 +425,12 @@ class MainWindowAppState(object):
             finally:
                 self._is_restoring_state = False
 
-            # Undo後に3D構造の状態に基づいてメニューを再評価
+            # Re-evaluate menu states based on 3D structure after Undo
             if self.current_mol and self.current_mol.GetNumAtoms() > 0:
-                # 3D構造がある場合は3D編集機能を有効化
+                # 3D structure exists: enable 3D edit features
                 self._enable_3d_edit_actions(True)
             else:
-                # 3D構造がない場合は3D編集機能を無効化
+                # No 3D structure: disable 3D edit features
                 self._enable_3d_edit_actions(False)
 
         if getattr(self, "DEBUG_UNDO", False):
@@ -455,12 +455,12 @@ class MainWindowAppState(object):
             finally:
                 self._is_restoring_state = False
 
-            # Redo後に3D構造の状態に基づいてメニューを再評価
+            # Re-evaluate menu states based on 3D structure after Redo
             if self.current_mol and self.current_mol.GetNumAtoms() > 0:
-                # 3D構造がある場合は3D編集機能を有効化
+                # 3D structure exists: enable 3D edit features
                 self._enable_3d_edit_actions(True)
             else:
-                # 3D構造がない場合は3D編集機能を無効化
+                # No 3D structure: disable 3D edit features
                 self._enable_3d_edit_actions(False)
 
         if getattr(self, "DEBUG_UNDO", False):
@@ -797,21 +797,21 @@ class MainWindowAppState(object):
                                 (const[0], tuple(const[1]), const[2], const[3])
                             )
                         elif len(const) == 3:
-                            # 後方互換性: [Type, [Idx...], Value] -> (Type, (Idx...), Value, 1.0e5)
+                            # Backward compatibility: [Type, [Idx...], Value] -> (Type, (Idx...), Value, 1.0e5)
                             self.constraints_3d.append(
                                 (const[0], tuple(const[1]), const[2], 1.0e5)
                             )
             except Exception:
-                self.constraints_3d = []  # 読み込み失敗時はリセット
+                self.constraints_3d = []  # Reset on load failure
 
             try:
-                # バイナリデータの復元
+                # Restore binary data
                 mol_base64 = structure_3d.get("mol_binary_base64")
                 if mol_base64:
                     mol_binary = base64.b64decode(mol_base64.encode("ascii"))
                     self.current_mol = Chem.Mol(mol_binary)
                     if self.current_mol:
-                        # 3D座標の設定
+                        # Set 3D coordinates
                         if self.current_mol.GetNumConformers() > 0:
                             conf = self.current_mol.GetConformer()
                             atoms_3d = structure_3d.get("atoms", [])
@@ -854,16 +854,16 @@ class MainWindowAppState(object):
                                 # non-fatal if mapping creation fails
                                 pass
 
-                        # 3D分子があれば必ず3D表示
+                        # Always show 3D if 3D molecule exists
                         self.draw_molecule_3d(self.current_mol)
-                        # ViewerモードならUIも切り替え
+                        # Switch UI in Viewer mode
                         if is_3d_mode:
                             self._enter_3d_viewer_ui_mode()
                         else:
                             self.is_2d_editable = True
                         self.plotter.reset_camera()
 
-                        # 成功的に3D分子が復元されたので、3D関連UIを有効にする
+                        # Enable 3D-related UI as 3D molecule was successfully restored
                         try:
                             self._enable_3d_edit_actions(True)
                             self._enable_3d_features(True)

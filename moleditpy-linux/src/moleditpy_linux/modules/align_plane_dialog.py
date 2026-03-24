@@ -36,13 +36,13 @@ class AlignPlaneDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
         self.plane = plane
         self.selected_atoms = set()
 
-        # 事前選択された原子を追加
+        # Add preselected atoms
         if preselected_atoms:
             self.selected_atoms.update(preselected_atoms)
 
         self.init_ui()
 
-        # 事前選択された原子にラベルを追加
+        # Add labels to preselected atoms
         if self.selected_atoms:
             self.show_atom_labels()
             self.update_display()
@@ -96,29 +96,29 @@ class AlignPlaneDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
         self.enable_picking()
 
     def enable_picking(self):
-        """3Dビューでの原子選択を有効にする"""
+        """Enable atom selection in the 3D view."""
         self.main_window.plotter.interactor.installEventFilter(self)
         self.picking_enabled = True
 
     def disable_picking(self):
-        """3Dビューでの原子選択を無効にする"""
+        """Disable atom selection in the 3D view."""
         if hasattr(self, "picking_enabled") and self.picking_enabled:
             self.main_window.plotter.interactor.removeEventFilter(self)
             self.picking_enabled = False
 
     def on_atom_picked(self, atom_idx):
-        """原子がピックされたときの処理"""
+        """Handle the event when an atom is picked in the 3D view."""
         if atom_idx in self.selected_atoms:
             self.selected_atoms.remove(atom_idx)
         else:
             self.selected_atoms.add(atom_idx)
 
-        # 原子ラベルを表示
+        # Display labels on the atoms
         self.show_atom_labels()
         self.update_display()
 
     def keyPressEvent(self, event):
-        """キーボードイベントを処理"""
+        """Handle keyboard shortcut events."""
         if event.key() == Qt.Key.Key_Return or event.key() == Qt.Key.Key_Enter:
             if self.apply_button.isEnabled():
                 self.apply_PlaneAlign()
@@ -127,7 +127,7 @@ class AlignPlaneDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
             super().keyPressEvent(event)
 
     def clear_selection(self):
-        """選択をクリア"""
+        """Clear the current atom selection."""
         self.selected_atoms.clear()
         self.clear_atom_labels()
         self.update_display()
@@ -164,7 +164,7 @@ class AlignPlaneDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
             QMessageBox.warning(self, "Warning", f"Failed to select all atoms: {e}")
 
     def update_display(self):
-        """表示を更新"""
+        """Update the UI display with current selection info."""
         count = len(self.selected_atoms)
         if count == 0:
             self.selection_label.setText(
@@ -184,7 +184,7 @@ class AlignPlaneDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
             self.apply_button.setEnabled(count >= 3)
 
     def show_atom_labels(self):
-        """選択された原子にラベルを表示"""
+        """Show numeric labels for the selected atoms in the 3D view."""
         if self.selected_atoms:
             sorted_atoms = sorted(self.selected_atoms)
             pairs = [(idx, f"#{i + 1}") for i, idx in enumerate(sorted_atoms)]
@@ -193,58 +193,58 @@ class AlignPlaneDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
             self.clear_atom_labels()
 
     def apply_PlaneAlign(self):
-        """alignを適用（回転ベース）"""
+        """Apply plane alignment (rotation-based)."""
         if len(self.selected_atoms) < 3:
             QMessageBox.warning(
                 self, "Warning", "Please select at least 3 atoms for align."
             )
             return
         try:
-            # 選択された原子の位置を取得
+            # Get positions of selected atoms
             selected_indices = list(self.selected_atoms)
             selected_positions = self.main_window.atom_positions_3d[
                 selected_indices
             ].copy()
 
-            # 重心を計算
+            # Calculate centroid
             centroid = np.mean(selected_positions, axis=0)
 
-            # 重心を原点に移動
+            # Move centroid to origin
             centered_positions = selected_positions - centroid
 
-            # 主成分分析で最適な平面を見つける
-            # 選択された原子の座標の共分散行列を計算
+            # Find optimal plane using PCA
+            # Calculate covariance matrix for centered coordinates
             cov_matrix = np.cov(centered_positions.T)
             eigenvalues, eigenvectors = np.linalg.eigh(cov_matrix)
 
-            # 固有値が最も小さい固有ベクトルが平面の法線方向
-            normal_vector = eigenvectors[:, 0]  # 最小固有値に対応する固有ベクトル
+            # Normal vector of the plane corresponds to the smallest eigenvalue
+            normal_vector = eigenvectors[:, 0]  # Normal vector of the plane corresponds to the smallest eigenvalue
 
-            # 目標の平面の法線ベクトルを定義
+            # Define target plane normal vector
             if self.plane == "xy":
-                target_normal = np.array([0, 0, 1])  # Z軸方向
+                target_normal = np.array([0, 0, 1])  # Z-axis direction
             elif self.plane == "xz":
-                target_normal = np.array([0, 1, 0])  # Y軸方向
+                target_normal = np.array([0, 1, 0])  # Y-axis direction
             elif self.plane == "yz":
-                target_normal = np.array([1, 0, 0])  # X軸方向
+                target_normal = np.array([1, 0, 0])  # X-axis direction
             else:
                 target_normal = np.array([0, 0, 1])  # Default to Z-axis (XY plane)
 
-            # 法線ベクトルの向きを調整（内積が正になるように）
+            # Adjust normal vector direction (ensure it's in the target direction)
             if np.dot(normal_vector, target_normal) < 0:
                 normal_vector = -normal_vector
 
-            # 回転軸と回転角度を計算
+            # Calculate rotation axis and angle
             rotation_axis = np.cross(normal_vector, target_normal)
             rotation_axis_norm = np.linalg.norm(rotation_axis)
 
-            if rotation_axis_norm > 1e-10:  # 回転が必要な場合
+            if rotation_axis_norm > 1e-10:  # If rotation is necessary
                 rotation_axis = rotation_axis / rotation_axis_norm
                 cos_angle = np.dot(normal_vector, target_normal)
                 cos_angle = np.clip(cos_angle, -1.0, 1.0)
                 rotation_angle = np.arccos(cos_angle)
 
-                # Rodrigues回転公式を使用して全分子を回転
+                # Rotate the entire molecule using Rodrigues' rotation formula
                 def rodrigues_rotation(v, axis, angle):
                     cos_a = np.cos(angle)
                     sin_a = np.sin(angle)
@@ -254,11 +254,11 @@ class AlignPlaneDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
                         + axis * np.dot(axis, v) * (1 - cos_a)
                     )
 
-                # 分子全体を回転させる
+                # Rotate all atoms
                 conf = self.mol.GetConformer()
                 for i in range(self.mol.GetNumAtoms()):
                     current_pos = np.array(conf.GetAtomPosition(i))
-                    # 重心基準で回転
+                    # Rotate relative to centroid
                     centered_pos = current_pos - centroid
                     rotated_pos = rodrigues_rotation(
                         centered_pos, rotation_axis, rotation_angle
@@ -267,32 +267,32 @@ class AlignPlaneDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
                     conf.SetAtomPosition(i, new_pos.tolist())
                     self.main_window.atom_positions_3d[i] = new_pos
 
-            # 3D表示を更新
+            # Update 3D visualization
             self.main_window.draw_molecule_3d(self.mol)
 
-            # キラルラベルを更新
+            # Update chirality labels
             self.main_window.update_chiral_labels()
 
-            # Undo状態を保存
+            # Save state for Undo
             self.main_window.push_undo_state()
 
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to apply align: {str(e)}")
 
     def closeEvent(self, event):
-        """ダイアログが閉じられる時の処理"""
+        """Clean up labels and picking when closed."""
         self.clear_atom_labels()
         self.disable_picking()
         super().closeEvent(event)
 
     def reject(self):
-        """キャンセル時の処理"""
+        """Handle cancellation or manual closing."""
         self.clear_atom_labels()
         self.disable_picking()
         super().reject()
 
     def accept(self):
-        """OK時の処理"""
+        """Handle acceptance (Apply/OK)."""
         self.clear_atom_labels()
         self.disable_picking()
         super().accept()

@@ -45,7 +45,7 @@ class CustomQtInteractor(QtInteractor):
             event.accept()
             return
 
-        super().mouseReleaseEvent(event)  # 親クラスのイベントを先に処理
+        super().mouseReleaseEvent(event)  # Process parent class event first
         if self.main_window and hasattr(self.main_window, "view_2d"):
             self.main_window.view_2d.setFocus()
 

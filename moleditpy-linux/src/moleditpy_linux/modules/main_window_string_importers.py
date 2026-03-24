@@ -12,8 +12,7 @@ DOI: 10.5281/zenodo.17268532
 
 """
 main_window_string_importers.py
-MainWindow (main_window.py) から分離されたモジュール
-機能クラス: MainWindowStringImporters
+Functional class separated from main_window.py
 """
 import traceback
 
@@ -33,27 +32,27 @@ except Exception:
     _sip_isdeleted = None
 
 
-# --- クラス定義 ---
+# --- Classes ---
 class MainWindowStringImporters(object):
-    """main_window.py から分離された機能クラス"""
+    """Functional class separated from main_window.py."""
 
     def import_smiles_dialog(self):
-        """ユーザーにSMILES文字列の入力を促すダイアログを表示する"""
+        """Dialog for SMILES input."""
         smiles, ok = QInputDialog.getText(self, "Import SMILES", "Enter SMILES string:")
         if ok and smiles:
             self.load_from_smiles(smiles)
 
     def import_inchi_dialog(self):
-        """ユーザーにInChI文字列の入力を促すダイアログを表示する"""
+        """Dialog for InChI input."""
         inchi, ok = QInputDialog.getText(self, "Import InChI", "Enter InChI string:")
         if ok and inchi:
             self.load_from_inchi(inchi)
 
     def load_from_smiles(self, smiles_string):
-        """SMILES文字列から分子を読み込み、2Dエディタに表示する"""
+        """Load molecule from SMILES string to 2D editor."""
         try:
             if not self.check_unsaved_changes():
-                return  # ユーザーがキャンセルした場合は何もしない
+                return  # User cancelled
 
             cleaned_smiles = smiles_string.strip()
 
@@ -112,12 +111,12 @@ class MainWindowStringImporters(object):
                 b_type = bond.GetBondTypeAsDouble()
                 b_dir = bond.GetBondDir()
                 stereo = 0
-                # 単結合の立体
+                # Single bond stereo
                 if b_dir == Chem.BondDir.BEGINWEDGE:
                     stereo = 1  # Wedge
                 elif b_dir == Chem.BondDir.BEGINDASH:
                     stereo = 2  # Dash
-                # 二重結合のE/Z
+                # Double bond E/Z
                 if bond.GetBondType() == Chem.BondType.DOUBLE:
                     if bond.GetStereo() == Chem.BondStereo.STEREOZ:
                         stereo = 3  # Z
@@ -144,10 +143,10 @@ class MainWindowStringImporters(object):
             self.statusBar().showMessage(f"Error loading from SMILES: {e}")
 
     def load_from_inchi(self, inchi_string):
-        """InChI文字列から分子を読み込み、2Dエディタに表示する"""
+        """Load molecule from InChI string to 2D editor."""
         try:
             if not self.check_unsaved_changes():
-                return  # ユーザーがキャンセルした場合は何もしない
+                return  # User cancelled
             cleaned_inchi = inchi_string.strip()
 
             mol = Chem.MolFromInchi(cleaned_inchi)
@@ -205,12 +204,12 @@ class MainWindowStringImporters(object):
                 b_type = bond.GetBondTypeAsDouble()
                 b_dir = bond.GetBondDir()
                 stereo = 0
-                # 単結合の立体
+                # Single bond stereo
                 if b_dir == Chem.BondDir.BEGINWEDGE:
                     stereo = 1  # Wedge
                 elif b_dir == Chem.BondDir.BEGINDASH:
                     stereo = 2  # Dash
-                # 二重結合のE/Z
+                # Double bond E/Z
                 if bond.GetBondType() == Chem.BondType.DOUBLE:
                     if bond.GetStereo() == Chem.BondStereo.STEREOZ:
                         stereo = 3  # Z

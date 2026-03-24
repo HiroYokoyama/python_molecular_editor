@@ -22,9 +22,9 @@ except Exception:
 
 
 def main():
-    # --- Windows タスクバーアイコンのための追加処理 ---
+    # --- Additional handling for Windows taskbar icon ---
     if sys.platform == "win32":
-        myappid = "hyoko.moleditpy.1.0"  # アプリケーション固有のID（任意）
+        myappid = "hyoko.moleditpy.1.0"  # Application-specific ID (arbitrary)
         ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
 
     app = QApplication(sys.argv)

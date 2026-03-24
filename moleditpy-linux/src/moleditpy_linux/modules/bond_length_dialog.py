@@ -38,7 +38,7 @@ class BondLengthDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
         self.atom1_idx = None
         self.atom2_idx = None
 
-        # 事前選択された原子を設定
+        # Set preselected atoms
         if preselected_atoms and len(preselected_atoms) >= 2:
             self.atom1_idx = preselected_atoms[0]
             self.atom2_idx = preselected_atoms[1]
@@ -133,13 +133,13 @@ class BondLengthDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
         self.picker_connection = None
         self.enable_picking()
 
-        # 事前選択された原子がある場合は初期表示を更新
+        # Update display if atoms are preselected
         if self.atom1_idx is not None:
             self.show_atom_labels()
             self.update_display()
 
     def on_atom_picked(self, atom_idx):
-        """原子がピックされたときの処理"""
+        """Handle atom picking event in the 3D view."""
         if self.atom1_idx is None:
             self.atom1_idx = atom_idx
         elif self.atom2_idx is None:
@@ -149,12 +149,12 @@ class BondLengthDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
             self.atom1_idx = atom_idx
             self.atom2_idx = None
 
-        # 原子ラベルを表示
+        # Display atom labels
         self.show_atom_labels()
         self.update_display()
 
     def keyPressEvent(self, event):
-        """キーボードイベントを処理"""
+        """Handle keyboard events."""
         if event.key() == Qt.Key.Key_Return or event.key() == Qt.Key.Key_Enter:
             if self.apply_button.isEnabled():
                 self.apply_changes()
@@ -163,26 +163,26 @@ class BondLengthDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
             super().keyPressEvent(event)
 
     def closeEvent(self, event):
-        """ダイアログが閉じられる時の処理"""
+        """Handle dialog close event."""
         self.clear_atom_labels()
         self.disable_picking()
         super().closeEvent(event)
 
     def accept(self):
-        """OK時の処理"""
+        """Handle OK event."""
         self.clear_atom_labels()
         self.disable_picking()
         super().accept()
 
     def clear_selection(self):
-        """選択をクリア"""
+        """Clear the current atom selection."""
         self.atom1_idx = None
         self.atom2_idx = None
         self.clear_selection_labels()
         self.update_display()
 
     def show_atom_labels(self):
-        """選択された原子にラベルを表示"""
+        """Display labels on the selected atoms."""
         selected_atoms = [self.atom1_idx, self.atom2_idx]
         labels = ["1st", "2nd"]
         pairs = [
@@ -191,8 +191,8 @@ class BondLengthDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
         self.show_atom_labels_for(pairs)
 
     def update_display(self):
-        """表示を更新"""
-        # 既存のラベルをクリア
+        """Update the UI display."""
+        # Clear existing labels
         self.clear_selection_labels()
 
         if self.atom1_idx is None:
@@ -219,7 +219,7 @@ class BondLengthDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
             )
             self.distance_label.setText("")
             self.apply_button.setEnabled(False)
-            # ラベル追加
+            # Add label
             self.add_selection_label(self.atom1_idx, "1")
             # Clear distance input while selection is incomplete
             try:
@@ -263,7 +263,7 @@ class BondLengthDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
                 import traceback
                 traceback.print_exc()
 
-            # ラベル追加
+            # Add labels
             self.add_selection_label(self.atom1_idx, "1")
             self.add_selection_label(self.atom2_idx, "2")
 
@@ -320,7 +320,7 @@ class BondLengthDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
         self.main_window.update_chiral_labels()
 
     def apply_changes(self):
-        """変更を適用"""
+        """Apply the bond length changes to the molecule."""
         if self.atom1_idx is None or self.atom2_idx is None:
             return
 
@@ -333,17 +333,17 @@ class BondLengthDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
             QMessageBox.warning(self, "Invalid Input", "Please enter a valid number.")
             return
 
-        # Undo状態を保存
+        # Save undo state
         self.main_window.push_undo_state()
 
         # Apply the bond length change
         self.adjust_bond_length(new_distance)
 
-        # キラルラベルを更新
+        # Update chirality labels
         self.main_window.update_chiral_labels()
 
     def adjust_bond_length(self, new_distance):
-        """結合長を調整"""
+        """Adjust the bond length."""
         conf = self.mol.GetConformer()
         pos1 = np.array(conf.GetAtomPosition(self.atom1_idx))
         pos2 = np.array(conf.GetAtomPosition(self.atom2_idx))
@@ -415,7 +415,7 @@ class BondLengthDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
         self.main_window.draw_molecule_3d(self.mol)
 
     def reject(self):
-        """キャンセル時の処理"""
+        """Handle cancellation event."""
         self.clear_atom_labels()
         self.disable_picking()
         super().reject()

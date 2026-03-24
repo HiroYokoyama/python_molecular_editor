@@ -388,7 +388,7 @@ class MainWindowUiManager(object):
 
     def _enable_3d_features(self, enabled=True):
         """Enable/disable 3D features."""
-        # 基本的な3D機能（3D SelectとEditは除外して常に有効にする）
+        # Basic 3D features (excluding 3D Select and Edit, which are always enabled)
         basic_3d_actions = ["optimize_3d_button", "export_button", "analysis_action"]
 
         for action_name in basic_3d_actions:

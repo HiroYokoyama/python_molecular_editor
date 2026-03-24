@@ -252,7 +252,7 @@ class MainWindowEditActions(object):
                     atom1,
                     atom2,
                     bond_order=bond_data.get("order", 1),
-                    bond_stereo=bond_data.get("stereo", 0),  # E/Z立体化学情報も復元
+                    bond_stereo=bond_data.get("stereo", 0),  # Restore E/Z stereochemistry information as well
                 )
 
             self.push_undo_state()
@@ -1293,7 +1293,7 @@ class MainWindowEditActions(object):
                 positions.append(np.array([pos.x, pos.y, pos.z]))
 
                 atom = mol.GetAtomWithIdx(idx)
-                # GetRvdw() はファンデルワールス半径を返す
+                # GetRvdw() returns the Van der Waals radius
                 try:
                     vdw_radii.append(pt.GetRvdw(atom.GetAtomicNum()))
                 except RuntimeError:

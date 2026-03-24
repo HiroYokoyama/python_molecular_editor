@@ -317,7 +317,7 @@ class MainWindowEdit3d(object):
         """Calculate angle (center is vertex)."""
         return calc_angle_deg(
             self.atom_positions_3d[atom1_idx],
-            self.atom_positions_3d[atom2_idx],  # 頂点
+            self.atom_positions_3d[atom2_idx],  # vertex
             self.atom_positions_3d[atom3_idx],
         )
 

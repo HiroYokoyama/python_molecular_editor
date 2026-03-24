@@ -1209,7 +1209,7 @@ class MainWindowMainInit(object):
 
         edit_3d_menu.addSeparator()
 
-        # Alignment submenu (統合)
+        # Alignment submenu (Integrated)
         align_menu = edit_3d_menu.addMenu("Align to")
         align_menu.setEnabled(False)
         self.align_menu = align_menu
@@ -1235,7 +1235,7 @@ class MainWindowMainInit(object):
         axis_align_menu.addAction(align_z_action)
         self.align_z_action = align_z_action
 
-        # Plane alignment submenu (旧align)
+        # Plane alignment submenu (formerly align)
         plane_align_menu = align_menu.addMenu("Plane")
 
         alignplane_xy_action = QAction("XY-plane", self)

@@ -778,11 +778,11 @@ class MoleculeScene(QGraphicsScene):
     def add_molecule_fragment(
         self, points, bonds_info, existing_items=None, symbol="C"
     ):
-        """
-        Final version of add_molecule_fragment.
-        - Enforce policy of not changing existing bond orders (crucial).
+        """Add a molecular fragment (e.g., benzene template) to the scene.
+        
+        - Enforce policy of not changing existing bond orders.
         - Benzene template rotation is decided based on fused bond orders 
-          so that exactly two new double bonds are created (conditional logic).
+          so that exactly two new double bonds are created.
         """
 
         num_points = len(points)

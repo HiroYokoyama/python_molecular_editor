@@ -537,11 +537,11 @@ def _perform_direct_conversion(mol_block, mol, options, _check_halted, _safe_sta
             "Failed to parse coordinates from MOL block for direct conversion."
         )
 
-    # 3) `mol` は既に AddHs された状態
-    #    元の原子数 (H含む) を parsed_coords の長さから取得
+    # 3) mol is already in AddHs state
+    #    Get original atom count (including H) from parsed_coords length
     num_existing_atoms = len(parsed_coords)
 
-    # 4) コンフォーマを作成
+    # 4) Create conformer
     conf = Chem.Conformer(mol.GetNumAtoms())
 
     for i in range(mol.GetNumAtoms()):
@@ -568,7 +568,7 @@ def _perform_direct_conversion(mol_block, mol, options, _check_halted, _safe_sta
                 for nb in neighs:  # Parent atom (heavy atom or existing H)
                     try:
                         nb_idx = nb.GetIdx()
-                        # if nb_idx < num_existing_atoms: # チェックは不要 (neighs で既にフィルタ済み)
+                        # Already filtered in neighs
                         nbpos = conf.GetAtomPosition(nb_idx)
                         # Geometry-based placement:
                         # Compute an "empty" direction around the parent atom by
@@ -673,7 +673,7 @@ def _perform_direct_conversion(mol_block, mol, options, _check_halted, _safe_sta
                     except Exception:  # pragma: no cover
                         import traceback
                         traceback.print_exc()
-    # 5) Wedge/Dash の Zオフセットを適用
+    # 5) Apply Z-offset for Wedge/Dash constraints
     try:
         stereo_z_offset = 1.5  # wedge -> +1.5, dash -> -1.5
         for begin_idx, end_idx, stereo_flag in stereo_dirs:
@@ -706,7 +706,7 @@ def _perform_direct_conversion(mol_block, mol, options, _check_halted, _safe_sta
     except Exception:  # pragma: no cover
         import traceback
         traceback.print_exc()
-    # コンフォーマを入れ替えて終了
+    # Replace conformer and finish
     try:
         mol.RemoveAllConformers()
     except Exception:  # pragma: no cover

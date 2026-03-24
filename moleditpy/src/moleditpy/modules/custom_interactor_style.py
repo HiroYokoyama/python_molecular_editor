@@ -95,7 +95,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                         if distances[closest_atom_idx] < click_threshold:
                             clicked_atom_idx = int(closest_atom_idx)
 
-            # グループ内の原子がクリックされた場合
+            # If an atom in the group is clicked
             if clicked_atom_idx is not None:
                 if clicked_atom_idx in move_group_dialog.group_atoms:
                     # Preparation for group drag
@@ -325,7 +325,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                 move_group_dialog._group_centroid = centroid
 
                 mw.plotter.setCursor(Qt.CursorShape.ClosedHandCursor)
-                return  # カメラ回転を無効化
+                return  # Disable camera rotation
 
         # Standard right-click
         super().OnRightButtonDown()
@@ -360,7 +360,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
             if abs(dx) > 2 or abs(dy) > 2:
                 move_group_dialog._mouse_moved = True
 
-            return  # カメラ回転を無効化
+            return  # Disable camera rotation
 
         # Group rotation handling
         if move_group_dialog and getattr(
@@ -375,7 +375,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
             if abs(dx) > 2 or abs(dy) > 2:
                 move_group_dialog._rotation_mouse_moved = True
 
-            return  # カメラ回転を無効化
+            return  # Disable camera rotation
 
         interactor = self.GetInteractor()
 

@@ -378,7 +378,7 @@ def _perform_direct_conversion(mol_block, mol, options, _check_halted, _safe_sta
 
     base2d_all = None
     try:
-        # H原子を含めてパース
+        # Parse including hydrogen atoms
         base2d_all = Chem.MolFromMolBlock(
             mol_block, removeHs=False, sanitize=True
         )
@@ -414,7 +414,7 @@ def _perform_direct_conversion(mol_block, mol, options, _check_halted, _safe_sta
             except Exception:
                 natoms = nbonds = 0
 
-            # 全原子マップ (MOL 1-based index -> 0-based index)
+            # All-atom map (MOL 1-based index -> 0-based index)
             atom_map = {i + 1: i for i in range(natoms)}
 
             bond_start = counts_idx + 1 + natoms
@@ -468,15 +468,15 @@ def _perform_direct_conversion(mol_block, mol, options, _check_halted, _safe_sta
                         else:
                             continue
 
-                    # V2000の立体表記を正規化
+                    # Normalize V2000 stereo notation
                     if stereo_raw == 1:
                         stereo_flag = 1  # Wedge
                     elif stereo_raw == 2:
-                        stereo_flag = 6  # Dash (V2000では 6 がDash)
+                        stereo_flag = 6  # Dash (6 is Dash in V2000)
                     else:
                         stereo_flag = stereo_raw
 
-                    # 全原子マップでチェック
+                    # Check using all-atom map
                     if atom1_mol in atom_map and atom2_mol in atom_map:
                         idx1 = atom_map[atom1_mol]
                         idx2 = atom_map[atom2_mol]
@@ -527,7 +527,7 @@ def _perform_direct_conversion(mol_block, mol, options, _check_halted, _safe_sta
                                 continue
                         else:
                             continue
-                    # H原子もスキップしない
+                    # Do not skip hydrogen atoms
                     parsed_coords.append((x, y, z))
         except Exception:
             parsed_coords = []
@@ -537,16 +537,16 @@ def _perform_direct_conversion(mol_block, mol, options, _check_halted, _safe_sta
             "Failed to parse coordinates from MOL block for direct conversion."
         )
 
-    # 3) `mol` は既に AddHs された状態
-    #    元の原子数 (H含む) を parsed_coords の長さから取得
+    # 3) mol is already in AddHs state
+    #    Get original atom count (including H) from parsed_coords length
     num_existing_atoms = len(parsed_coords)
 
-    # 4) コンフォーマを作成
+    # 4) Create conformer
     conf = Chem.Conformer(mol.GetNumAtoms())
 
     for i in range(mol.GetNumAtoms()):
         if i < num_existing_atoms:
-            # 既存原子 (H含む): 2D座標 (z=0) を設定
+            # Existing atoms (including H): set 2D coordinates (z=0)
             x, y, z_ignored = parsed_coords[i]
             try:
                 conf.SetAtomPosition(
@@ -556,7 +556,7 @@ def _perform_direct_conversion(mol_block, mol, options, _check_halted, _safe_sta
                 import traceback
                 traceback.print_exc()
         else:
-            # 新規追加されたH原子: 親原子の近くに配置
+            # Newly added H atoms: place near the parent atom
             atom = mol.GetAtomWithIdx(i)
             if atom.GetAtomicNum() == 1:
                 neighs = [
@@ -565,10 +565,10 @@ def _perform_direct_conversion(mol_block, mol, options, _check_halted, _safe_sta
                     if n.GetIdx() < num_existing_atoms
                 ]
                 heavy_pos_found = False
-                for nb in neighs:  # 親原子 (重原子または既存H)
+                for nb in neighs:  # Parent atom (heavy atom or existing H)
                     try:
                         nb_idx = nb.GetIdx()
-                        # if nb_idx < num_existing_atoms: # チェックは不要 (neighs で既にフィルタ済み)
+                        # Already filtered in neighs
                         nbpos = conf.GetAtomPosition(nb_idx)
                         # Geometry-based placement:
                         # Compute an "empty" direction around the parent atom by
@@ -665,7 +665,7 @@ def _perform_direct_conversion(mol_block, mol, options, _check_halted, _safe_sta
                     except Exception:
                         continue
                 if not heavy_pos_found:
-                    # フォールバック (原点近く)
+                    # Fallback (near origin)
                     try:
                         conf.SetAtomPosition(
                             i, rdGeometry.Point3D(0.0, 0.0, 0.10)
@@ -673,12 +673,12 @@ def _perform_direct_conversion(mol_block, mol, options, _check_halted, _safe_sta
                     except Exception:  # pragma: no cover
                         import traceback
                         traceback.print_exc()
-    # 5) Wedge/Dash の Zオフセットを適用
+    # 5) Apply Z-offset for Wedge/Dash constraints
     try:
         stereo_z_offset = 1.5  # wedge -> +1.5, dash -> -1.5
         for begin_idx, end_idx, stereo_flag in stereo_dirs:
             try:
-                # インデックスは既存原子内のはず
+                # Indices should be within existing atoms
                 if (
                     begin_idx >= num_existing_atoms
                     or end_idx >= num_existing_atoms
@@ -689,12 +689,12 @@ def _perform_direct_conversion(mol_block, mol, options, _check_halted, _safe_sta
                     continue
 
                 sign = 1.0 if stereo_flag == 1 else -1.0
-
-                # end_idx (立体表記の終点側原子) にZオフセットを適用
+                
+                # Apply Z-offset to end_idx (the atom at the end of the stereo notation)
                 pos = conf.GetAtomPosition(end_idx)
                 newz = float(pos.z) + (
                     stereo_z_offset * sign
-                )  # 既存のZ=0にオフセットを加算
+                )  # Add offset to the existing Z-coordinate (usually 0)
                 conf.SetAtomPosition(
                     end_idx,
                     rdGeometry.Point3D(
@@ -706,7 +706,7 @@ def _perform_direct_conversion(mol_block, mol, options, _check_halted, _safe_sta
     except Exception:  # pragma: no cover
         import traceback
         traceback.print_exc()
-    # コンフォーマを入れ替えて終了
+    # Replace conformer and finish
     try:
         mol.RemoveAllConformers()
     except Exception:  # pragma: no cover

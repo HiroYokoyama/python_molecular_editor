@@ -15,7 +15,7 @@ from PyQt6.QtWidgets import QGraphicsView
 
 
 class TemplatePreviewView(QGraphicsView):
-    """テンプレートプレビュー用のカスタムビュークラス"""
+    """Custom view class for template previews."""
 
     def __init__(self, scene):
         super().__init__(scene)
@@ -24,19 +24,19 @@ class TemplatePreviewView(QGraphicsView):
         self.parent_dialog = None  # Reference to parent dialog for redraw access
 
     def set_template_data(self, template_data, parent_dialog):
-        """テンプレートデータと親ダイアログの参照を設定"""
+        """Set the template data and parent dialog reference for dynamic redrawing."""
         self.template_data = template_data
         self.parent_dialog = parent_dialog
 
     def resizeEvent(self, event):
-        """リサイズイベントを処理してプレビューを再フィット"""
+        """Handle resize events to ensure the preview is properly fitted."""
         super().resizeEvent(event)
         if self.original_scene_rect and not self.original_scene_rect.isEmpty():
             # Delay the fitInView call to ensure proper widget sizing
             QTimer.singleShot(10, self.refit_view)
 
     def refit_view(self):
-        """ビューを再フィット"""
+        """Refit the view to the stored original scene rectangle."""
         try:
             if self.original_scene_rect and not self.original_scene_rect.isEmpty():
                 self.fitInView(
@@ -46,14 +46,14 @@ class TemplatePreviewView(QGraphicsView):
             print(f"Warning: Failed to refit template preview: {e}")
 
     def showEvent(self, event):
-        """表示イベントを処理"""
+        """Handle the show event to ensure the preview fits correctly upon display."""
         super().showEvent(event)
         # Ensure proper fitting when widget becomes visible
         if self.original_scene_rect:
             QTimer.singleShot(50, self.refit_view)
 
     def redraw_with_current_size(self):
-        """現在のサイズに合わせてテンプレートを再描画"""
+        """Redraw the template structure scaled to the current view dimensions."""
         if self.template_data and self.parent_dialog:
             try:
                 # Clear current scene
@@ -65,7 +65,7 @@ class TemplatePreviewView(QGraphicsView):
                     self.scene(), self.template_data, view_size
                 )
 
-                # Refit the view
+                # Refit the view based on the newly drawn content
                 bounding_rect = self.scene().itemsBoundingRect()
                 if (
                     not bounding_rect.isEmpty()

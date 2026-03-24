@@ -35,13 +35,13 @@ class AlignmentDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
         self.axis = axis
         self.selected_atoms = set()
 
-        # 事前選択された原子を追加（最大2個まで）
+        # Add preselected atoms (maximum 2)
         if preselected_atoms:
             self.selected_atoms.update(preselected_atoms[:2])
 
         self.init_ui()
 
-        # 事前選択された原子にラベルを追加
+        # Add labels to preselected atoms
         if self.selected_atoms:
             for i, atom_idx in enumerate(sorted(self.selected_atoms), 1):
                 self.add_selection_label(atom_idx, f"Atom {i}")
@@ -88,36 +88,36 @@ class AlignmentDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
         self.enable_picking()
 
     def enable_picking(self):
-        """3Dビューでの原子選択を有効にする"""
-        # Dialog3DPickingMixinの機能を使用
+        """Enable atom selection in the 3D window."""
+        # Use functionality from Dialog3DPickingMixin
         super().enable_picking()
 
     def disable_picking(self):
-        """3Dビューでの原子選択を無効にする"""
-        # Dialog3DPickingMixinの機能を使用
+        """Disable atom selection in the 3D window."""
+        # Use functionality from Dialog3DPickingMixin
         super().disable_picking()
 
     def on_atom_picked(self, atom_idx):
-        """原子がクリックされた時の処理"""
+        """Handle atom selection event."""
         if self.main_window.current_mol is None:
             return
 
         if atom_idx in self.selected_atoms:
-            # 既に選択されている場合は選択解除
+            # De-select if already selected
             self.selected_atoms.remove(atom_idx)
             self.remove_atom_label(atom_idx)
         else:
-            # 2つまでしか選択できない
+            # Maximum of 2 atoms can be selected
             if len(self.selected_atoms) < 2:
                 self.selected_atoms.add(atom_idx)
-                # ラベルの順番を示す
+                # Show label indicating selection order
                 label_text = f"Atom {len(self.selected_atoms)}"
                 self.add_selection_label(atom_idx, label_text)
 
         self.update_display()
 
     def update_display(self):
-        """選択状態の表示を更新"""
+        """Update the UI based on current selection."""
         if len(self.selected_atoms) == 0:
             self.selection_label.setText(
                 "Click atoms to select for alignment (exactly 2 required)"
@@ -140,21 +140,21 @@ class AlignmentDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
             self.apply_button.setEnabled(True)
 
     def clear_selection(self):
-        """選択をクリア"""
+        """Clear the current selection and labels."""
         self.clear_selection_labels()
         self.selected_atoms.clear()
         self.update_display()
 
     def remove_atom_label(self, atom_idx):
-        """特定の原子のラベルを削除"""
-        # 簡単化のため、全ラベルをクリアして再描画
+        """Remove a label for a specific atom."""
+        # Re-draw all labels for simplicity
         self.clear_selection_labels()
         for i, idx in enumerate(sorted(self.selected_atoms), 1):
             if idx != atom_idx:
                 self.add_selection_label(idx, f"Atom {i}")
 
     def apply_alignment(self):
-        """アライメントを適用"""
+        """Apply the specific axial alignment to the molecule."""
         if len(self.selected_atoms) != 2:
             QMessageBox.warning(
                 self, "Warning", "Please select exactly 2 atoms for alignment."
@@ -166,21 +166,21 @@ class AlignmentDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
 
             conf = self.mol.GetConformer()
 
-            # 原子の現在位置を取得
+            # Get current atom positions
             pos1 = np.array(conf.GetAtomPosition(atom1_idx))
             pos2 = np.array(conf.GetAtomPosition(atom2_idx))
 
-            # 最初に全分子を移動して、atom1を原点に配置
+            # Translate entire molecule so atom1 is at the origin
             translation = -pos1
             for i in range(self.mol.GetNumAtoms()):
                 current_pos = np.array(conf.GetAtomPosition(i))
                 new_pos = current_pos + translation
                 conf.SetAtomPosition(i, new_pos.tolist())
 
-            # atom2の新しい位置を取得（移動後）
+            # Get new position of atom2 after translation
             pos2_translated = pos2 + translation
 
-            # atom2を選択した軸上に配置するための回転を計算
+            # Calculate rotation to align atom2 relative to the chosen axis
             axis_vectors = {
                 "x": np.array([1.0, 0.0, 0.0]),
                 "y": np.array([0.0, 1.0, 0.0]),
@@ -188,24 +188,24 @@ class AlignmentDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
             }
             target_axis = axis_vectors[self.axis]
 
-            # atom2から原点への方向ベクトル
+            # Direction vector from origin to translated atom2
             current_vector = pos2_translated
             current_length = np.linalg.norm(current_vector)
 
-            if current_length > 1e-10:  # ゼロベクトルでない場合
+            if current_length > 1e-10:  # If not a zero vector
                 current_vector_normalized = current_vector / current_length
 
-                # 回転軸と角度を計算
+                # Calculate rotation axis and angle
                 rotation_axis = np.cross(current_vector_normalized, target_axis)
                 rotation_axis_length = np.linalg.norm(rotation_axis)
 
-                if rotation_axis_length > 1e-10:  # 回転が必要
+                if rotation_axis_length > 1e-10:  # Rotation required
                     rotation_axis = rotation_axis / rotation_axis_length
                     cos_angle = np.dot(current_vector_normalized, target_axis)
                     cos_angle = np.clip(cos_angle, -1.0, 1.0)
                     rotation_angle = np.arccos(cos_angle)
 
-                    # ロドリゲスの回転公式を使用
+                    # Use Rodrigues' rotation formula
                     def rodrigues_rotation(v, k, theta):
                         cos_theta = np.cos(theta)
                         sin_theta = np.sin(theta)
@@ -215,7 +215,7 @@ class AlignmentDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
                             + k * np.dot(k, v) * (1 - cos_theta)
                         )
 
-                    # 全ての原子に回転を適用
+                    # Apply rotation to all atoms
                     for i in range(self.mol.GetNumAtoms()):
                         current_pos = np.array(conf.GetAtomPosition(i))
                         rotated_pos = rodrigues_rotation(
@@ -223,18 +223,18 @@ class AlignmentDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
                         )
                         conf.SetAtomPosition(i, rotated_pos.tolist())
 
-            # 3D座標を更新
+            # Update 3D positions
             self.main_window.atom_positions_3d = np.array(
                 [list(conf.GetAtomPosition(i)) for i in range(self.mol.GetNumAtoms())]
             )
 
-            # 3Dビューを更新
+            # Update 3D visualization
             self.main_window.draw_molecule_3d(self.mol)
 
-            # キラルラベルを更新
+            # Update chirality labels
             self.main_window.update_chiral_labels()
 
-            # Undo状態を保存
+            # Save state for Undo
             self.main_window.push_undo_state()
 
             QMessageBox.information(
@@ -245,19 +245,19 @@ class AlignmentDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
             QMessageBox.critical(self, "Error", f"Failed to apply alignment: {str(e)}")
 
     def closeEvent(self, event):
-        """ダイアログが閉じられる時の処理"""
+        """Clean up when the dialog is closed."""
         self.clear_selection_labels()
         self.disable_picking()
         super().closeEvent(event)
 
     def reject(self):
-        """キャンセル時の処理"""
+        """Handle dialog rejection/cancellation."""
         self.clear_selection_labels()
         self.disable_picking()
         super().reject()
 
     def accept(self):
-        """OK時の処理"""
+        """Handle dialog acceptance (OK/Apply)."""
         self.clear_selection_labels()
         self.disable_picking()
         super().accept()

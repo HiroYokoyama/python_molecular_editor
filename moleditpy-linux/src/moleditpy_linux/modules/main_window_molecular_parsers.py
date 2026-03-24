@@ -11,9 +11,8 @@ DOI: 10.5281/zenodo.17268532
 """
 
 """
-main_window_molecular_parsers.py
-MainWindow (main_window.py) から分離されたモジュール
-機能クラス: MainWindowMolecularParsers
+# Module separated from MainWindow (main_window.py)
+# Functional class: MainWindowMolecularParsers
 """
 
 import contextlib
@@ -54,13 +53,13 @@ except Exception:
     from modules.constants import VERSION
 
 
-# --- クラス定義 ---
+# --- Class Definition ---
 class MainWindowMolecularParsers(object):
-    """main_window.py から分離された機能クラス"""
+    """Functional class separated from main_window.py"""
 
     def load_mol_file(self, file_path=None):
         if not self.check_unsaved_changes():
-            return  # ユーザーがキャンセルした場合は何もしない
+            return  # Do nothing if user cancels
         if not file_path:  # pragma: no cover
             file_path, _ = QFileDialog.getOpenFileName(
                 self,
@@ -101,12 +100,12 @@ class MainWindowMolecularParsers(object):
             self.plotter.clear()
             self.analysis_action.setEnabled(False)
 
-            # 1. 座標がなければ2D座標を生成する
+            # 1. Generate 2D coords if missing
             if mol.GetNumConformers() == 0:
                 AllChem.Compute2DCoords(mol)
 
-            # 2. 座標の有無にかかわらず、常に立体化学を割り当て、2D表示用にくさび結合を設定する
-            # これにより、3D座標を持つMOLファイルからでも正しく2Dの立体表現が生成される
+            # 2. Assign stereochem and wedge bonds for 2D
+            # Ensures correct 2D stereo from 3D MOL files
             AllChem.AssignStereochemistry(mol, cleanIt=True, force=True)
             conf = mol.GetConformer()
             AllChem.WedgeMolBonds(mol, conf)
@@ -153,7 +152,7 @@ class MainWindowMolecularParsers(object):
                     stereo = 1
                 elif b_dir == Chem.BondDir.BEGINDASH:
                     stereo = 2
-                # ADDED: Check for double bond E/Z stereochemistry
+                # Check double bond E/Z stereo
                 if bond.GetBondType() == Chem.BondType.DOUBLE:
                     if bond.GetStereo() == Chem.BondStereo.STEREOZ:
                         stereo = 3  # Z
@@ -174,7 +173,7 @@ class MainWindowMolecularParsers(object):
                 f"Successfully loaded {file_path}"
             )  # pragma: no cover
             self.reset_undo_stack()
-            # NEWファイル扱い: ファイルパスをクリアし未保存状態はFalse（変更なければ保存警告なし）
+            # Treat as NEW file: clear path and reset unsaved changes
             self.current_file_path = file_path
             self.has_unsaved_changes = False
             self.update_window_title()
@@ -188,10 +187,10 @@ class MainWindowMolecularParsers(object):
             self.statusBar().showMessage(f"Error loading file: {e}")
 
     def load_xyz_file(self, file_path):
-        """XYZファイルを読み込んでRDKitのMolオブジェクトを作成する"""
+        """Load XYZ file and create RDKit Mol."""
 
         if not self.check_unsaved_changes():
-            return  # ユーザーがキャンセルした場合は何もしない
+            return  # Do nothing if user cancels
 
         try:
             # We will attempt one silent load with default charge=0 (no dialog).
@@ -249,12 +248,12 @@ class MainWindowMolecularParsers(object):
 
                     skip_btn.clicked.connect(on_skip)
 
-                    # Execute dialog modally
+                    # Execute modal dialog
                     if dialog.exec() != QDialog.Accepted:
                         return None, False, False
 
                     if result["skip"]:
-                        # User chose to skip chemistry checks; return skip flag
+                        # Return skip flag if requested
                         return 0, True, True
 
                     if not result["accepted"]:
@@ -262,7 +261,7 @@ class MainWindowMolecularParsers(object):
 
                     charge_text = line_edit.text()
                 except Exception:
-                    # On any dialog creation error, fall back to simple input dialog
+                    # Fallback to simple input dialog on error
                     try:
                         charge_text, ok = QInputDialog.getText(
                             self,
@@ -296,21 +295,20 @@ class MainWindowMolecularParsers(object):
             with open(file_path, "r", encoding="utf-8") as f:
                 lines = f.readlines()
 
-            # 空行とコメント行を除去（但し、先頭2行は保持）
+            # Remove empty/comment lines (keep first 2)
             non_empty_lines = []
             for i, line in enumerate(lines):
                 stripped = line.strip()
-                if i < 2:  # 最初の2行は原子数とコメント行なので保持
+                if i < 2:  # Keep first 2 lines (count/comment)
                     non_empty_lines.append(stripped)
-                elif stripped and not stripped.startswith(
-                    "#"
-                ):  # 空行とコメント行をスキップ
+                elif stripped and not stripped.startswith("#"):
+                    # Skip empty/comment lines
                     non_empty_lines.append(stripped)
 
             if len(non_empty_lines) < 2:
                 raise ValueError("XYZ file format error: too few lines")
 
-            # 原子数を読み取り
+            # Read atom count
             try:
                 num_atoms = int(non_empty_lines[0])
             except ValueError:
@@ -319,10 +317,10 @@ class MainWindowMolecularParsers(object):
             if num_atoms <= 0:
                 raise ValueError("XYZ file format error: atom count must be positive")
 
-            # コメント行（2行目）
+            # Comment line (2nd)
             comment = non_empty_lines[1] if len(non_empty_lines) > 1 else ""
 
-            # 原子データを読み取り
+            # Read atom data
             atoms_data = []
             data_lines = non_empty_lines[2:]
 
@@ -340,17 +338,17 @@ class MainWindowMolecularParsers(object):
 
                 symbol = parts[0].strip()
 
-                # 元素記号の妥当性をチェック
+                # Validate element symbol
                 try:
-                    # RDKitで認識される元素かどうかをチェック
+                    # Check if RDKit recognizes element
                     test_atom = Chem.Atom(symbol)
                 except Exception:
-                    # 認識されない場合、最初の文字を大文字にして再試行
+                    # Retry with capitalized symbol if unrecognized
                     symbol = symbol.capitalize()
                     try:
                         test_atom = Chem.Atom(symbol)
                     except Exception:
-                        # If user requested to skip chemistry checks, coerce unknown symbols to C
+                        # Coerce unknown symbols to 'C' if skipping checks
                         if self.settings.get("skip_chemistry_checks", False):
                             symbol = "C"
                         else:
@@ -370,17 +368,17 @@ class MainWindowMolecularParsers(object):
             if len(atoms_data) == 0:
                 raise ValueError("XYZ file format error: no atoms found")
 
-            # RDKitのMolオブジェクトを作成
+            # Create RDKit Mol
             mol = Chem.RWMol()
 
-            # 原子を追加
+            # Add atoms
             for i, (symbol, x, y, z) in enumerate(atoms_data):
                 atom = Chem.Atom(symbol)
-                # XYZファイルでの原子のUniqueID（0ベースのインデックス）を保存
+                # Save 0-based index
                 atom.SetIntProp("xyz_unique_id", i)
                 mol.AddAtom(atom)
 
-            # 3D座標を設定
+            # Set 3D coordinates
             conf = Chem.Conformer(len(atoms_data))
             for i, (symbol, x, y, z) in enumerate(atoms_data):
                 conf.SetAtomPosition(i, rdGeometry.Point3D(x, y, z))
@@ -422,7 +420,7 @@ class MainWindowMolecularParsers(object):
                     except Exception:  # pragma: no cover
                         import traceback
                         traceback.print_exc()
-                # Mark that this molecule was produced via the skip-chemistry path
+                # Mark as skip-chemistry product
                 try:
                     candidate_mol.SetIntProp("_xyz_skip_checks", 1)
                 except Exception:
@@ -431,7 +429,7 @@ class MainWindowMolecularParsers(object):
                     except Exception:  # pragma: no cover
                         import traceback
                         traceback.print_exc()
-                # Set UI flags consistently: mark as XYZ-derived and disable optimize
+                # Set UI flags (XYZ-derived, disable optimize)
                 try:
                     self.current_mol = candidate_mol
                     self.is_xyz_derived = True
@@ -444,18 +442,14 @@ class MainWindowMolecularParsers(object):
                 except Exception:  # pragma: no cover
                     import traceback
                     traceback.print_exc()
-                # Store atom data for later analysis and return
+                # Store atom data
                 candidate_mol._xyz_atom_data = atoms_data
                 return candidate_mol
             used_rd_determine = False
             final_mol = None
 
             def _process_with_charge(charge_val):
-                """Inner helper: attempt to build/finalize molecule with given charge.
-
-                Returns the finalized RDKit Mol on success. May raise exceptions
-                which will be propagated to the caller.
-                """
+                """Helper: finalize molecule with given charge."""
                 nonlocal used_rd_determine
                 buf = io.StringIO()
                 determine_failed = False
@@ -470,19 +464,14 @@ class MainWindowMolecularParsers(object):
                             except Exception:
                                 mol_candidate = Chem.RWMol(mol)
 
-                            # This call may raise. If it does, mark determine_failed
-                            # so the caller can prompt for a different charge.
+                            # Proceed if DetermineBonds succeeds
                             rdDetermineBonds.DetermineBonds(
                                 mol_candidate, charge=charge_val
                             )
                             mol_to_finalize = mol_candidate
                             used_rd_determine = True
                         except Exception:
-                            # DetermineBonds failed for this charge value. We
-                            # should allow the caller to prompt for another
-                            # charge (or cancel). Mark the flag and re-raise a
-                            # dedicated exception to be handled by the outer
-                            # loop.
+                            # Handle DetermineBonds failure
                             determine_failed = True
                             used_rd_determine = False
                             mol_to_finalize = mol
@@ -552,7 +541,7 @@ class MainWindowMolecularParsers(object):
                     # Accept the candidate
                     return candidate_mol
 
-            # Decide whether to silently try charge=0 first, or prompt user first.
+            # Decide whether to prompt or try charge=0
             always_ask = bool(self.settings.get("always_ask_charge", False))
 
             try:
@@ -561,9 +550,7 @@ class MainWindowMolecularParsers(object):
                     try:
                         final_mol = _process_with_charge(0)
                     except RuntimeError:
-                        # DetermineBonds explicitly failed for charge=0. In this
-                        # situation, repeatedly prompt the user for charges until
-                        # DetermineBonds succeeds or the user cancels.
+                    # Loop prompt on failure
                         while True:  # pragma: no cover
                             charge_val, ok, skip_flag = prompt_for_charge()
                             if not ok:
@@ -824,7 +811,7 @@ class MainWindowMolecularParsers(object):
                                 import traceback
                                 traceback.print_exc()
                             continue
-            # If we have a finalized molecule, apply the same UI flags and return
+            # Apply UI flags to finalized molecule
             if final_mol is not None:
                 mol = final_mol
                 try:
@@ -850,7 +837,7 @@ class MainWindowMolecularParsers(object):
                 mol._xyz_atom_data = atoms_data
                 return mol
 
-            # 元のXYZ原子データを分子オブジェクトに保存（分析用）
+            # Save original XYZ data (for analysis)
             mol._xyz_atom_data = atoms_data
 
             return mol
@@ -864,9 +851,9 @@ class MainWindowMolecularParsers(object):
                 raise ValueError(f"Error parsing XYZ file: {e}")
 
     def estimate_bonds_from_distances(self, mol):
-        """原子間距離に基づいて結合を推定する"""
+        """Estimate bonds based on interatomic distances."""
 
-        # 一般的な共有結合半径（Ångström）- より正確な値
+        # Covalent radii (Angstrom)
         covalent_radii = {
             "H": 0.31,
             "He": 0.28,
@@ -927,7 +914,7 @@ class MainWindowMolecularParsers(object):
         conf = mol.GetConformer()
         num_atoms = mol.GetNumAtoms()
 
-        # 追加された結合をトラッキング
+        # Track added bonds
         bonds_added = []
 
         for i in range(num_atoms):
@@ -935,38 +922,34 @@ class MainWindowMolecularParsers(object):
                 atom_i = mol.GetAtomWithIdx(i)
                 atom_j = mol.GetAtomWithIdx(j)
 
-                # 原子間距離を計算
                 distance = rdMolTransforms.GetBondLength(conf, i, j)
 
-                # 期待される結合距離を計算
                 symbol_i = atom_i.GetSymbol()
                 symbol_j = atom_j.GetSymbol()
 
-                radius_i = covalent_radii.get(symbol_i, 1.0)  # デフォルト半径
+                radius_i = covalent_radii.get(symbol_i, 1.0)  # Default
                 radius_j = covalent_radii.get(symbol_j, 1.0)
 
                 expected_bond_length = radius_i + radius_j
 
-                # 結合タイプによる許容範囲を調整
-                # 水素結合は通常の共有結合より短い
                 if symbol_i == "H" or symbol_j == "H":
-                    tolerance_factor = 1.2  # 水素は結合が短くなりがち
+                    tolerance_factor = 1.2   # H bonds often shorter
                 else:
-                    tolerance_factor = 1.3  # 他の原子は少し余裕を持たせる
+                    tolerance_factor = 1.3  # Margin for others
 
                 max_bond_length = expected_bond_length * tolerance_factor
-                min_bond_length = expected_bond_length * 0.5  # 最小距離も設定
+                min_bond_length = expected_bond_length * 0.5
 
-                # 距離が期待値の範囲内なら結合を追加
+                # Add bond if within range
                 if min_bond_length <= distance <= max_bond_length:
                     try:
                         mol.AddBond(i, j, Chem.BondType.SINGLE)
                         bonds_added.append((i, j, distance))
                     except Exception:
-                        # 既に結合が存在する場合はスキップ
+                        # Skip if bond exists
                         pass
 
-        # デバッグ情報（オプション）
+        # Debug information (optional)
         # Added bonds based on distance analysis
 
         return len(bonds_added)
@@ -1062,19 +1045,19 @@ class MainWindowMolecularParsers(object):
                 conf = self.current_mol.GetConformer()
                 num_atoms = self.current_mol.GetNumAtoms()
                 xyz_lines = [str(num_atoms)]
-                # 電荷と多重度を計算
+                # Calculate charge and multiplicity
                 try:
                     charge = Chem.GetFormalCharge(self.current_mol)
                 except Exception:
-                    charge = 0  # 取得失敗時は0
+                    charge = 0  # Default to 0
 
                 try:
-                    # 全原子のラジカル電子の合計を取得
+                    # Get total radical electrons
                     num_radicals = Descriptors.NumRadicalElectrons(self.current_mol)
-                    # スピン多重度を計算 (M = N + 1, N=ラジカル電子数)
+                    # Multiplicity (M = N + 1)
                     multiplicity = num_radicals + 1
                 except Exception:
-                    multiplicity = 1  # 取得失敗時は 1 (singlet)
+                    multiplicity = 1  # Default to 1 (singlet)
 
                 #smiles = Chem.MolToSmiles(Chem.RemoveHs(self.current_mol))
                 xyz_lines.append(
@@ -1109,10 +1092,7 @@ class MainWindowMolecularParsers(object):
         return prefix + version_str
 
     def fix_mol_block(self, mol_block: str) -> str:
-        """
-        Given an entire MOL block as a string, ensure the 4th line (CTAB counts
-        line) is valid. If the file has fewer than 4 lines, return as-is.
-        """
+        """Ensure CTAB counts line (4th) is valid."""
         lines = mol_block.splitlines()
         if len(lines) < 4:
             # Not a valid MOL block — return unchanged

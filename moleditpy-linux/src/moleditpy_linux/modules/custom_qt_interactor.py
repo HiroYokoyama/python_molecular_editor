@@ -25,27 +25,27 @@ class CustomQtInteractor(QtInteractor):
 
     def wheelEvent(self, event):
         """
-        マウスホイールイベントをオーバーライドする。
+        Override the mouse wheel event.
         """
-        # 最初に親クラスのイベントを呼び、通常のズーム処理を実行させる
+        # First call the parent class event to perform normal zoom processing
         super().wheelEvent(event)
 
-        # ズーム処理の完了後、2Dビューにフォーカスを強制的に戻す
+        # Force focus back to the 2D view after zoom processing
         if self.main_window and hasattr(self.main_window, "view_2d"):
             self.main_window.view_2d.setFocus()
 
     def mouseReleaseEvent(self, event):
         """
-        Qtのマウスリリースイベントをオーバーライドし、
-        3Dビューでの全ての操作完了後に2Dビューへフォーカスを戻す。
-        また、Ghost Release（対応するPressがないRelease）をフィルタリングする。
+        Override the Qt mouse release event to return focus to the 2D view after
+        all 3D view operations. Also filters out "Ghost Release" (release without
+        a corresponding press).
         """
         if self._ignore_next_release:
             self._ignore_next_release = False
             event.accept()
             return
 
-        super().mouseReleaseEvent(event)  # 親クラスのイベントを先に処理
+        super().mouseReleaseEvent(event)  # Process parent class event first
         if self.main_window and hasattr(self.main_window, "view_2d"):
             self.main_window.view_2d.setFocus()
 

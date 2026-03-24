@@ -33,7 +33,7 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
         Dialog3DPickingMixin.__init__(self)
         self.mol = mol
         self.main_window = main_window
-        self.selected_atoms = set()  # 複数原子選択用
+        self.selected_atoms = set()  # For selecting multiple atoms
         self.init_ui()
 
     def init_ui(self):
@@ -113,7 +113,7 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
         self.enable_picking()
 
     def on_atom_picked(self, atom_idx):
-        """原子がピックされたときの処理"""
+        """Handle the event when an atom is picked in the 3D view."""
         if atom_idx in self.selected_atoms:
             self.selected_atoms.remove(atom_idx)
         else:
@@ -122,7 +122,7 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
         self.update_display()
 
     def keyPressEvent(self, event):
-        """キーボードイベントを処理"""
+        """Handle keyboard shortcut events."""
         if event.key() == Qt.Key.Key_Return or event.key() == Qt.Key.Key_Enter:
             if self.apply_button.isEnabled():
                 self.apply_translation()
@@ -131,12 +131,12 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
             super().keyPressEvent(event)
 
     def update_display(self):
-        """表示を更新"""
+        """Update the UI labels and button state based on the current selection."""
         if not self.selected_atoms:
             self.selection_label.setText("No atoms selected")
             self.apply_button.setEnabled(False)
         else:
-            # 分子の有効性チェック
+            # Check molecule validity
             if not self.mol or self.mol.GetNumConformers() == 0:
                 self.selection_label.setText("Error: No valid molecule or conformer")
                 self.apply_button.setEnabled(False)
@@ -144,10 +144,10 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
 
             try:
                 conf = self.mol.GetConformer()
-                # 選択原子の重心を計算
+                # Calculate the centroid of selected atoms
                 centroid = self.calculate_centroid()
 
-                # 選択原子の情報を表示
+                # Display information about selected atoms
                 atom_info = []
                 for atom_idx in sorted(self.selected_atoms):
                     symbol = self.mol.GetAtomWithIdx(atom_idx).GetSymbol()
@@ -184,7 +184,7 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
             pass
 
     def calculate_centroid(self):
-        """選択原子の重心を計算"""
+        """Calculate the geometric center (centroid) of the selected atoms."""
         if not self.selected_atoms:
             return np.array([0.0, 0.0, 0.0])
 
@@ -197,12 +197,12 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
         return np.mean(positions, axis=0)
 
     def apply_translation(self):
-        """平行移動を適用"""
+        """Apply the translation to either the selected atoms or the entire molecule."""
         if not self.selected_atoms:
             QMessageBox.warning(self, "Warning", "Please select at least one atom.")
             return
 
-        # 分子の有効性チェック
+        # Check molecule validity
         if not self.mol or self.mol.GetNumConformers() == 0:
             QMessageBox.warning(
                 self, "Warning", "No valid molecule or conformer available."
@@ -218,11 +218,11 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
             return
 
         try:
-            # 選択原子の重心を計算
+            # Calculate current centroid
             current_centroid = self.calculate_centroid()
             target_pos = np.array([target_x, target_y, target_z])
 
-            # 移動ベクトルを計算
+            # Calculate the translation vector
             translation_vector = target_pos - current_centroid
 
             conf = self.mol.GetConformer()
@@ -251,16 +251,16 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
                     conf.SetAtomPosition(i, new_pos.tolist())
                     self.main_window.atom_positions_3d[i] = new_pos
 
-            # 3D表示を更新
+            # Update 3D visualization
             self.main_window.draw_molecule_3d(self.mol)
 
-            # キラルラベルを更新
+            # Update chirality labels
             self.main_window.update_chiral_labels()
 
-            # Apply後に選択解除
+            # Clear selection after application
             self.clear_selection()
 
-            # Undo状態を保存
+            # Save state for Undo
             self.main_window.push_undo_state()
 
         except Exception as e:
@@ -269,7 +269,7 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
             )
 
     def clear_selection(self):
-        """選択をクリア"""
+        """Clear the current atom selection and labels."""
         self.selected_atoms.clear()
         self.clear_atom_labels()
         self.update_display()
@@ -306,8 +306,8 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
             QMessageBox.warning(self, "Warning", f"Failed to select all atoms: {e}")
 
     def show_atom_labels(self):
-        """選択された原子にラベルを表示"""
-        # 既存のラベルをクリア
+        """Display geometric labels for the selected atoms in the 3D window."""
+        # Clear existing labels
         self.clear_atom_labels()
 
         if not hasattr(self, "selection_labels"):
@@ -322,13 +322,13 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
                 positions.append(pos)
                 labels.append(f"S{i + 1}")
 
-            # 重心位置も表示
+            # Indicate the centroid position
             if len(self.selected_atoms) > 1:
                 centroid = self.calculate_centroid()
                 positions.append(centroid)
                 labels.append("CEN")
 
-            # ラベルを追加
+            # Add labels to the plotter
             if positions:
                 label_actor = self.main_window.plotter.add_point_labels(
                     positions,
@@ -338,16 +338,16 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
                     text_color="cyan",
                     always_visible=True,
                 )
-                # add_point_labelsがリストを返す場合も考慮
+                # Handle case where add_point_labels returns a list
                 if isinstance(label_actor, list):
                     self.selection_labels.extend(label_actor)
                 else:
                     self.selection_labels.append(label_actor)
 
     def clear_atom_labels(self):
-        """原子ラベルをクリア (render追加)"""
+        """Clear atom labels and force a re-render of the 3D scene."""
         super().clear_atom_labels()
-        # ラベル消去後に再描画を強制
+        # Force re-render after clearing labels
         try:
             self.main_window.plotter.render()
         except Exception:  # pragma: no cover
@@ -355,19 +355,19 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
             traceback.print_exc()
 
     def closeEvent(self, event):
-        """ダイアログが閉じられる時の処理"""
+        """Clean up when the dialog is closed directly."""
         self.clear_atom_labels()
         self.disable_picking()
         super().closeEvent(event)
 
     def reject(self):
-        """キャンセル時の処理"""
+        """Clean up when the dialog is rejected (e.g., Cancel clicked)."""
         self.clear_atom_labels()
         self.disable_picking()
         super().reject()
 
     def accept(self):
-        """OK時の処理"""
+        """Clean up when the dialog is accepted (e.g., OK clicked)."""
         self.clear_atom_labels()
         self.disable_picking()
         super().accept()

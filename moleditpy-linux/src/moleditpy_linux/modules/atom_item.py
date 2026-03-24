@@ -102,7 +102,7 @@ class AtomItem(QGraphicsItem):
         self.update()
 
     def boundingRect(self):
-        # --- paint()メソッドと完全に同じロジックでテキストの位置とサイズを計算 ---
+        # --- Calculate text position and size using logic matching paint() ---
         # Get dynamic font size and family
         font_size = 20
         font_family = FONT_FAMILY
@@ -177,13 +177,13 @@ class AtomItem(QGraphicsItem):
         else:
             text_rect.moveCenter(QPointF(0, 0))
 
-        # 1. paint()で描画される背景の矩形(bg_rect)を計算する
+        # 1. Calculate the background rectangle (bg_rect) used in paint()
         bg_rect = text_rect.adjusted(-5, -8, 5, 8)
 
-        # 2. このbg_rectを基準として全体の描画領域を構築する
+        # 2. Construct the full visual rectangle relative to bg_rect
         full_visual_rect = QRectF(bg_rect)
 
-        # 電荷記号の領域を計算に含める
+        # Include charge symbol area in calculation
         if self.charge != 0:
             # Chemical convention: single charge as "+"/"-", multiple as "2+"/"2-"
             if self.charge == 1:
@@ -206,14 +206,14 @@ class AtomItem(QGraphicsItem):
             charge_rect.moveTopLeft(charge_pos)
             full_visual_rect = full_visual_rect.united(charge_rect)
 
-        # ラジカル記号の領域を計算に含める
+        # Include radical symbol area in calculation
         if self.radical > 0:
             radical_area = QRectF(
                 text_rect.center().x() - 8, text_rect.top() - 8, 16, 8
             )
             full_visual_rect = full_visual_rect.united(radical_area)
 
-        # 3. 選択ハイライト等のための最終的なマージンを追加する
+        # 3. Add final margins for selection highlights, etc.
         return full_visual_rect.adjusted(-3, -3, 3, 3)
 
     def shape(self):
@@ -252,12 +252,12 @@ class AtomItem(QGraphicsItem):
             traceback.print_exc()
 
         if self.is_visible:
-            # 1. 描画の準備
+            # 1. Preparation for painting
             # Ensure correct font is used (self.font should be updated by update_style)
             painter.setFont(self.font)
             fm = painter.fontMetrics()
 
-            # --- 水素部分のテキストを作成 ---
+            # --- Create text for the hydrogen part ---
             hydrogen_part = ""
             if self.implicit_h_count > 0:
                 is_skeletal_carbon = (
@@ -274,11 +274,11 @@ class AtomItem(QGraphicsItem):
                             subscript_map
                         )
 
-            # --- テキストを反転させるか決定 ---
+            # --- Determine if the text should be flipped ---
             flip_text = False
-            # 水素ラベルがあり、結合が1本以上ある場合のみ反転を考慮
+            # Consider flipping only if H-label exists and there are one or more bonds
             if hydrogen_part and self.bonds:
-                # 相対的なX座標で、結合が左右どちらに偏っているか判定
+                # Determine bias (left/right) based on relative X-coordinates
                 my_pos_x = self.pos().x()
                 total_dx = 0.0
                 # Defensive: some bonds may have missing atom references (None) or
@@ -311,11 +311,11 @@ class AtomItem(QGraphicsItem):
                         # Skip any problematic bond/partner rather than crashing the paint
                         continue
 
-                # 結合が主に右側にある場合はテキストを反転させる
+                # Flip text if bonds are primarily on the right
                 if total_dx > 0:
                     flip_text = True
 
-            # --- 表示テキストとアライメントを最終決定 ---
+            # --- Finalize display text and alignment ---
             if flip_text:
                 display_text = hydrogen_part + self.symbol
                 alignment_flag = (
@@ -329,54 +329,53 @@ class AtomItem(QGraphicsItem):
 
             text_rect = fm.boundingRect(display_text)
             text_rect.adjust(-2, -2, 2, 2)
-            symbol_rect = fm.boundingRect(self.symbol)  # 主元素のみの幅を計算
+            symbol_rect = fm.boundingRect(self.symbol)
 
-            # --- テキストの描画位置を決定 ---
-            # 水素ラベルがない場合 (従来通り中央揃え)
+            # --- Determine text drawing position ---
+            # No hydrogen label (center align as before)
             if not hydrogen_part:
                 alignment_flag = Qt.AlignmentFlag.AlignCenter
                 text_rect.moveCenter(QPointF(0, 0).toPoint())
-            # 水素ラベルがあり、反転する場合 (右揃え)
+            # Hydrogen label exists and is flipped (right align)
             elif flip_text:
-                # 主元素の中心が原子の中心に来るように、矩形の右端を調整
+                # Adjust right edge to center the main element
                 offset_x = symbol_rect.width() // 2
                 text_rect.moveTo(offset_x - text_rect.width(), -text_rect.height() // 2)
-            # 水素ラベルがあり、反転しない場合 (左揃え)
+            # Non-flipped H-label (left align)
             else:
-                # 主元素の中心が原子の中心に来るように、矩形の左端を調整
+                # Adjust left edge to center the main element
                 offset_x = -symbol_rect.width() // 2
                 text_rect.moveTo(offset_x, -text_rect.height() // 2)
 
-            # 2. 原子記号の背景を処理（白で塗りつぶす か 透明なら切り抜く）
+            # 2. Handle background (fill with white or clear if transparent)
             if self.scene():
                 bg_brush = self.scene().backgroundBrush()
                 bg_rect = text_rect.adjusted(-5, -8, 5, 8)
 
                 if bg_brush.style() == Qt.BrushStyle.NoBrush:
-                    # 背景が透明の場合は、CompositionMode_Clearを使って
-                    # 重なっている結合の線を「消しゴム」のように消す
+                    # Use CompositionMode_Clear to erase overlapping bond lines
                     painter.save()
                     painter.setCompositionMode(
                         QPainter.CompositionMode.CompositionMode_Clear
                     )
                     painter.setBrush(
                         QColor(0, 0, 0, 255)
-                    )  # 色は何でも良い（アルファが重要）
+                    )  # Color doesn't matter (alpha is key)
                     painter.setPen(Qt.PenStyle.NoPen)
                     painter.drawEllipse(bg_rect)
                     painter.restore()
                 else:
-                    # 背景がある場合は、その背景色で塗りつぶす（従来通り）
+                    # Fill with background color if it exists
                     painter.setBrush(bg_brush)
                     painter.setPen(Qt.PenStyle.NoPen)
                     painter.drawEllipse(bg_rect)
 
-            # 3. 原子記号自体を描画
+            # 3. Draw the atom symbol itself
             # Color is already determined above
             painter.setPen(QPen(color))
             painter.drawText(text_rect, int(alignment_flag), display_text)
 
-            # --- 電荷とラジカルの描画  ---
+            # --- Draw charge and radical ---
             if self.charge != 0:
                 # Chemical convention: single charge as "+"/"-", multiple as "2+"/"2-"
                 if self.charge == 1:
@@ -389,7 +388,7 @@ class AtomItem(QGraphicsItem):
                 charge_font = QFont("Arial", 12, QFont.Weight.Bold)
                 painter.setFont(charge_font)
                 charge_rect = painter.fontMetrics().boundingRect(charge_str)
-                # 電荷の位置も反転に対応
+                # Charge position also supports flipping
                 if flip_text:
                     charge_pos = QPointF(
                         text_rect.left() - charge_rect.width() - 2,
@@ -419,7 +418,7 @@ class AtomItem(QGraphicsItem):
                         QPointF(text_rect.center().x() + 5, radical_pos_y), 3, 3
                     )
 
-        # --- 選択時のハイライトなど ---
+        # --- Selection highlights etc. ---
         if self.has_problem:
             painter.setBrush(Qt.BrushStyle.NoBrush)
             painter.setPen(QPen(QColor(255, 0, 0, 200), 4))
@@ -435,7 +434,6 @@ class AtomItem(QGraphicsItem):
             painter.setPen(pen)
             painter.drawRect(self.boundingRect())
 
-    # 約203行目 AtomItem クラス内
 
     def itemChange(self, change, value):
         res = super().itemChange(change, value)
@@ -448,7 +446,7 @@ class AtomItem(QGraphicsItem):
         return res
 
     def hoverEnterEvent(self, event):
-        # シーンのモードにかかわらず、ホバー時にハイライトを有効にする
+        # Enable highlight on hover regardless of scene mode
         self.hovered = True
         self.update()
         super().hoverEnterEvent(event)

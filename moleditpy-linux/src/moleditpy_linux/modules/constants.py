@@ -16,11 +16,11 @@ from PyQt6.QtGui import QColor, QFont
 from rdkit import Chem
 
 # Version
-VERSION = "2.8.3"
+VERSION = "2.8.4"
 
 ATOM_RADIUS = 18
 BOND_OFFSET = 3.5
-DEFAULT_BOND_LENGTH = 75  # テンプレートで使用する標準結合長
+DEFAULT_BOND_LENGTH = 75  # Standard bond length used in templates
 CLIPBOARD_MIME_TYPE = "application/x-moleditpy-fragment"
 
 # Physical bond length (approximate) used to convert scene pixels to angstroms.

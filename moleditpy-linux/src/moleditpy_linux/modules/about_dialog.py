@@ -76,7 +76,7 @@ class AboutDialog(QDialog):  # pragma: no cover
 
         # Add OK button
         ok_button = QPushButton("OK")
-        ok_button.setFixedSize(80, 30)  # 小さいサイズに固定
+        ok_button.setFixedSize(80, 30)  # Fixed small size
         ok_button.clicked.connect(self.accept)
 
         # Center the button
