@@ -30,14 +30,14 @@ from PyQt6.QtWidgets import (
 try:
     from PyQt6 import sip as _sip  # type: ignore
     _sip_isdeleted = getattr(_sip, "isdeleted", None)
-except Exception:
+except ImportError:
     _sip = None
     _sip_isdeleted = None
 
 try:
     # package relative imports (preferred when running as `python -m moleditpy`)
     from .custom_interactor_style import CustomInteractorStyle
-except Exception:
+except ImportError:
     # Fallback to absolute imports for script-style execution
     from modules.custom_interactor_style import CustomInteractorStyle
 
@@ -172,7 +172,7 @@ class MainWindowUiManager(object):
             ):
                 self.save_settings()
                 self.settings_dirty = False
-        except Exception:  # pragma: no cover
+        except (AttributeError, RuntimeError, TypeError, OSError):  # pragma: no cover
             import traceback
             traceback.print_exc()
 
@@ -323,7 +323,7 @@ class MainWindowUiManager(object):
                         if handled:
                             event.acceptProposedAction()
                             return
-                    except Exception as e:
+                    except (AttributeError, RuntimeError, TypeError, ValueError) as e:
                         print(f"Error in plugin drop handler: {e}")
             # Get drop position
             drop_pos = event.position().toPoint()

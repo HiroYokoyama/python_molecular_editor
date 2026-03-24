@@ -50,7 +50,7 @@ MoleditPy uses a hybrid approach to quality assurance: **Automated Unit Tests** 
 
 ### B. GUI & Interaction (Manual + Defensive)
 * **Defensive Programming:** We prefer catching exceptions over crashing the application.
-    * Use `try-except Exception` blocks in UI slots (`*_dialog.py`, `view_3d.py`).
+    * **Avoid Broad Exceptions:** Minimize the use of `try-except Exception` blocks. Always prefer granular, specific exception types (e.g., `AttributeError`, `ValueError`, `RuntimeError`, `OSError`) to prevent masking unexpected bugs. Use broad `Exception` only at the highest level of a UI slot or when interfacing with unpredictable C-extensions.
     * **CRITICAL:** Never leave an `except` block empty (`pass`). You **MUST** log the traceback or show a user notification.
 * **Manual Testing:** For UI changes, you must verify the behavior using the **Manual Test Checklist**. Please confirm in your PR description that you have manually verified the fix.
 

@@ -29,14 +29,14 @@ from PyQt6.QtWidgets import QFileDialog
 try:
     from PyQt6 import sip as _sip  # type: ignore
     _sip_isdeleted = getattr(_sip, "isdeleted", None)
-except Exception:
+except (ImportError, AttributeError, TypeError):
     _sip = None
     _sip_isdeleted = None
 
 try:
     # package relative imports (preferred when running as `python -m moleditpy`)
     from .constants import VERSION
-except Exception:
+except ImportError:
     # Fallback to absolute imports for script-style execution
     from modules.constants import VERSION
 
@@ -80,12 +80,12 @@ class MainWindowViewLoaders(object):
             try:
                 # Prefer RDKit int prop
                 skip_flag = bool(self.current_mol.GetIntProp("_xyz_skip_checks"))
-            except Exception:
+            except (AttributeError, KeyError, RuntimeError, TypeError):
                 try:
                     skip_flag = bool(
                         getattr(self.current_mol, "_xyz_skip_checks", False)
                     )
-                except Exception:
+                except (AttributeError, KeyError, RuntimeError, TypeError):
                     skip_flag = False
 
             if skip_flag:
@@ -93,13 +93,13 @@ class MainWindowViewLoaders(object):
                 if hasattr(self, "optimize_3d_button"):
                     try:
                         self.optimize_3d_button.setEnabled(False)
-                    except Exception:  # pragma: no cover
+                    except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
                         import traceback
                         traceback.print_exc()
             else:
                 try:
                     has_bonds = self.current_mol.GetNumBonds() > 0
-                except Exception:
+                except (AttributeError, RuntimeError, TypeError):
                     has_bonds = False
 
                 if has_bonds:
@@ -111,7 +111,7 @@ class MainWindowViewLoaders(object):
                                 self.optimize_3d_button.setEnabled(True)
                             else:
                                 self.optimize_3d_button.setEnabled(False)
-                        except Exception:  # pragma: no cover
+                        except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
                             import traceback
                             traceback.print_exc()
                 else:
@@ -119,7 +119,7 @@ class MainWindowViewLoaders(object):
                     if hasattr(self, "optimize_3d_button"):
                         try:
                             self.optimize_3d_button.setEnabled(False)
-                        except Exception:  # pragma: no cover
+                        except (AttributeError, RuntimeError, TypeError):  # pragma: no cover
                             import traceback
                             traceback.print_exc()
             self.draw_molecule_3d(self.current_mol)
@@ -167,7 +167,7 @@ class MainWindowViewLoaders(object):
                     base = os.path.basename(self.current_file_path)
                     name = os.path.splitext(base)[0]
                     default_name = f"{name}"
-            except Exception:
+            except (AttributeError, RuntimeError, TypeError, ValueError, OSError):
                 default_name = "untitled"
 
             # prefer same directory as current file when available
@@ -177,7 +177,7 @@ class MainWindowViewLoaders(object):
                     default_path = os.path.join(
                         os.path.dirname(self.current_file_path), default_name
                     )
-            except Exception:
+            except (AttributeError, RuntimeError, TypeError, ValueError, OSError):
                 default_path = default_name
 
             file_path, _ = QFileDialog.getSaveFileName(
@@ -252,7 +252,7 @@ class MainWindowViewLoaders(object):
                 if mol is None:
                     try:
                         mol = Chem.MolFromMolFile(file_path, removeHs=False)
-                    except Exception:
+                    except (AttributeError, RuntimeError, TypeError, ValueError):
                         mol = None
 
                 if mol is None:
@@ -286,7 +286,7 @@ class MainWindowViewLoaders(object):
                         # Push to undo stack after 3D conversion
                         self.current_mol = mol
                         self.push_undo_state()
-                    except Exception:
+                    except (AttributeError, RuntimeError, TypeError, ValueError):
                         # If skipping chemistry checks, allow molecule to be displayed without 3D embedding
                         if self.settings.get("skip_chemistry_checks", False):
                             self.statusBar().showMessage(
@@ -295,7 +295,7 @@ class MainWindowViewLoaders(object):
                             # Keep mol as-is (may lack conformer); downstream code checks for conformers
                         else:
                             raise
-                except Exception:
+                except (AttributeError, RuntimeError, TypeError, ValueError):
                     self.statusBar().showMessage("Failed to generate 3D coordinates")
                     return
 
@@ -303,7 +303,7 @@ class MainWindowViewLoaders(object):
             # correctly enabled when appropriate.
             try:
                 self._clear_xyz_flags(mol)
-            except Exception:  # pragma: no cover
+            except (AttributeError, RuntimeError, TypeError, ValueError):  # pragma: no cover
                 import traceback
                 traceback.print_exc()
             # Display in 3D viewer
