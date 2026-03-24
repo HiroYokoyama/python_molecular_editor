@@ -50,12 +50,12 @@ class MainWindowStringImporters(object):
 
     def load_from_smiles(self, smiles_string):
         """Load molecule from SMILES string to 2D editor."""
+        if not self.check_unsaved_changes():
+            return  # User cancelled
+
+        cleaned_smiles = smiles_string.strip()
+
         try:
-            if not self.check_unsaved_changes():
-                return  # User cancelled
-
-            cleaned_smiles = smiles_string.strip()
-
             mol = Chem.MolFromSmiles(cleaned_smiles)
             if mol is None:
                 if not cleaned_smiles:
@@ -68,7 +68,17 @@ class MainWindowStringImporters(object):
             AllChem.AssignStereochemistry(mol, cleanIt=True, force=True)
             conf = mol.GetConformer()
             AllChem.WedgeMolBonds(mol, conf)
+        except ValueError as e:
+            self.statusBar().showMessage(f"Invalid SMILES: {e}")
+            return
+        except (RuntimeError, TypeError, AttributeError) as e:
+            self.statusBar().showMessage(f"Error parsing SMILES: {e}")
+            import traceback
+            traceback.print_exc()
+            return
 
+
+        try:
             self.restore_ui_for_editing()
             self.clear_2d_editor(push_to_undo=False)
             self.current_mol = None
@@ -137,18 +147,21 @@ class MainWindowStringImporters(object):
             self.update_window_title()
             QTimer.singleShot(0, self.fit_to_view)
 
-        except ValueError as e:
-            self.statusBar().showMessage(f"Invalid SMILES: {e}")
-        except (AttributeError, RuntimeError, ValueError) as e:
+        except (AttributeError, RuntimeError, ValueError, TypeError) as e:
             self.statusBar().showMessage(f"Error loading from SMILES: {e}")
+            import traceback
+            traceback.print_exc()
+
+
 
     def load_from_inchi(self, inchi_string):
         """Load molecule from InChI string to 2D editor."""
-        try:
-            if not self.check_unsaved_changes():
-                return  # User cancelled
-            cleaned_inchi = inchi_string.strip()
+        if not self.check_unsaved_changes():
+            return  # User cancelled
 
+        cleaned_inchi = inchi_string.strip()
+
+        try:
             mol = Chem.MolFromInchi(cleaned_inchi)
             if mol is None:
                 if not cleaned_inchi:
@@ -161,7 +174,17 @@ class MainWindowStringImporters(object):
             AllChem.AssignStereochemistry(mol, cleanIt=True, force=True)
             conf = mol.GetConformer()
             AllChem.WedgeMolBonds(mol, conf)
+        except ValueError as e:
+            self.statusBar().showMessage(f"Invalid InChI: {e}")
+            return
+        except (RuntimeError, TypeError, AttributeError) as e:
+            self.statusBar().showMessage(f"Error parsing InChI: {e}")
+            import traceback
+            traceback.print_exc()
+            return
 
+
+        try:
             self.restore_ui_for_editing()
             self.clear_2d_editor(push_to_undo=False)
             self.current_mol = None
@@ -230,8 +253,7 @@ class MainWindowStringImporters(object):
             self.update_window_title()
             QTimer.singleShot(0, self.fit_to_view)
 
-        except ValueError as e:
-            self.statusBar().showMessage(f"Invalid InChI: {e}")
-        except (AttributeError, RuntimeError, ValueError) as e:
+        except (AttributeError, RuntimeError, ValueError, TypeError) as e:
             self.statusBar().showMessage(f"Error loading from InChI: {e}")
+
 
