@@ -164,7 +164,7 @@ class MolecularData:
         final_mol = mol.GetMol()
         try:
             Chem.SanitizeMol(final_mol)
-        except Exception:
+        except (AttributeError, RuntimeError):
             return None
 
         # --- Step 4: add 2D conformer ---
@@ -246,7 +246,7 @@ class MolecularData:
                         a1_id, a2_id = stereo_atoms_specified
                         neigh1_idx = atom_id_to_idx_map.get(a1_id)
                         neigh2_idx = atom_id_to_idx_map.get(a2_id)
-                    except Exception:
+                    except (AttributeError, RuntimeError):
                         neigh1_idx = None
                         neigh2_idx = None
                 else:
@@ -283,7 +283,7 @@ class MolecularData:
                 Chem.AssignStereochemistry(final_mol, cleanIt=False, force=True)
             else:
                 Chem.AssignStereochemistry(final_mol, cleanIt=False, force=False)
-        except Exception:
+        except (AttributeError, RuntimeError):
                 raise
         return final_mol
 
@@ -292,9 +292,8 @@ class MolecularData:
             mol = self.to_rdkit_mol()
             if mol:
                 return Chem.MolToMolBlock(mol, includeStereo=True)
-        except Exception:  # pragma: no cover
-            import traceback
-            traceback.print_exc()
+        except (AttributeError, RuntimeError):  # pragma: no cover
+            pass
 
         if not self.atoms:
             return None

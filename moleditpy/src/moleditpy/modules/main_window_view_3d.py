@@ -1481,9 +1481,8 @@ class MainWindowView3d(object):
                 except (AttributeError, RuntimeError, TypeError):
                     continue
 
-        except Exception:  # pragma: no cover
-            import traceback
-            traceback.print_exc()
+        except (AttributeError, RuntimeError):  # pragma: no cover
+            pass
 
     def clear_all_atom_info_labels(self):
         """Clear all atom info labels"""

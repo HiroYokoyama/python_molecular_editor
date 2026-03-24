@@ -151,7 +151,7 @@ class AnalysisWindow(QDialog):
                 # Generate InChI
                 try:
                     inchi = Chem.MolToInchi(self.mol)
-                except Exception:
+                except (AttributeError, RuntimeError):
                     inchi = "N/A"
 
                 # Generate InChIKey (with fallback)
@@ -160,16 +160,16 @@ class AnalysisWindow(QDialog):
                     inchi_key = None
                     try:
                         inchi_key = Chem.MolToInchiKey(self.mol)
-                    except Exception:
+                    except (AttributeError, RuntimeError):
                         # Fallback to rdkit.Chem.inchi if present
                         try:
                             inchi_key = rd_inchi.MolToInchiKey(self.mol)
-                        except Exception:
+                        except (AttributeError, RuntimeError):
                             inchi_key = None
 
                     if not inchi_key:
                         inchi_key = "N/A"
-                except Exception:
+                except (AttributeError, RuntimeError):
                     inchi_key = "N/A"
 
                 # Compile properties for display
@@ -187,7 +187,7 @@ class AnalysisWindow(QDialog):
                     "H-Bond Donors:": str(num_h_donors),
                     "H-Bond Acceptors:": str(num_h_acceptors),
                 }
-        except Exception as e:
+        except (AttributeError, RuntimeError, ValueError) as e:
             main_layout.addWidget(QLabel(f"Error calculating properties: {e}"))
             return
 
