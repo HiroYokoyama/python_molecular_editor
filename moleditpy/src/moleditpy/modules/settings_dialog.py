@@ -783,7 +783,7 @@ class SettingsDialog(QDialog):  # pragma: no cover
         bond_radius_layout.addWidget(self.wf_bond_radius_label)
         form_layout.addRow("Bond Radius:", bond_radius_layout)
 
-        # --- 区切り線（水平ライン） ---
+        # --- Separator (horizontal line) ---
         line = QFrame()
         line.setFrameShape(QFrame.Shape.HLine)
         line.setFrameShadow(QFrame.Shadow.Sunken)
@@ -838,13 +838,13 @@ class SettingsDialog(QDialog):  # pragma: no cover
             "Triple Bond Thickness (Wireframe):", wf_triple_radius_layout
         )
 
-        # --- 区切り線（水平ライン） ---
+        # --- Separator (horizontal line) ---
         line = QFrame()
         line.setFrameShape(QFrame.Shape.HLine)
         line.setFrameShadow(QFrame.Shadow.Sunken)
         form_layout.addRow(line)
 
-        # 解像度
+        # Resolution
         self.wf_resolution_slider = QSlider(Qt.Orientation.Horizontal)
         self.wf_resolution_slider.setRange(4, 16)
         self.wf_resolution_label = QLabel("6")
@@ -882,7 +882,7 @@ class SettingsDialog(QDialog):  # pragma: no cover
         bond_radius_layout.addWidget(self.stick_bond_radius_label)
         form_layout.addRow("Bond Radius:", bond_radius_layout)
 
-        # --- 区切り線（水平ライン） ---
+        # --- Separator (horizontal line) ---
         line = QFrame()
         line.setFrameShape(QFrame.Shape.HLine)
         line.setFrameShadow(QFrame.Shadow.Sunken)
@@ -933,13 +933,13 @@ class SettingsDialog(QDialog):  # pragma: no cover
         stick_triple_radius_layout.addWidget(self.stick_triple_radius_label)
         form_layout.addRow("Triple Bond Thickness (Stick):", stick_triple_radius_layout)
 
-        # --- 区切り線（水平ライン） ---
+        # --- Separator (horizontal line) ---
         line = QFrame()
         line.setFrameShape(QFrame.Shape.HLine)
         line.setFrameShadow(QFrame.Shadow.Sunken)
         form_layout.addRow(line)
 
-        # 解像度
+        # Resolution
         self.stick_resolution_slider = QSlider(Qt.Orientation.Horizontal)
         self.stick_resolution_slider.setRange(6, 32)
         self.stick_resolution_label = QLabel("16")
@@ -958,7 +958,7 @@ class SettingsDialog(QDialog):  # pragma: no cover
         current_tab_index = self.tab_widget.currentIndex()
         tab_name = self.tab_widget.tabText(current_tab_index)
 
-        # 各タブの設定項目を定義
+        # Define settings for each tab
         # Each tab settings
         tab_settings = {
             "2D Settings": {
@@ -1082,7 +1082,7 @@ class SettingsDialog(QDialog):  # pragma: no cover
             updated_settings = current_settings.copy()
             updated_settings.update(tab_defaults)
 
-            # UIを更新
+            # Update UI
             self.update_ui_from_settings(updated_settings)
 
             # If 2D settings were reset, update internal color variables too
@@ -1473,7 +1473,7 @@ class SettingsDialog(QDialog):  # pragma: no cover
             ):
                 self.parent_window.draw_molecule_3d(self.parent_window.current_mol)
 
-            # 2Dビューの設定適用 (背景色、結合スタイルなど)
+            # Apply 2D view settings (background color, bond style, etc.)
             # update_style() will read the new settings from parent_window.settings
             try:
                 if hasattr(self.parent_window, "scene") and self.parent_window.scene:

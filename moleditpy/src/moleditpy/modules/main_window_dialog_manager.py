@@ -12,8 +12,8 @@ DOI: 10.5281/zenodo.17268532
 
 """
 main_window_dialog_manager.py
-MainWindow (main_window.py) から分離されたモジュール
-機能クラス: MainWindowDialogManager
+Module separated from MainWindow (main_window.py)
+Functional class: MainWindowDialogManager
 """
 
 import json
@@ -66,9 +66,9 @@ except Exception:
     from modules.user_template_dialog import UserTemplateDialog
 
 
-# --- クラス定義 ---
+# --- Class Definition ---
 class MainWindowDialogManager(object):
-    """main_window.py から分離された機能クラス"""
+    """Functional class separated from main_window.py """
 
     def show_about_dialog(self):
         """Show the custom About dialog with Easter egg functionality"""
@@ -97,25 +97,25 @@ class MainWindowDialogManager(object):
             )
 
     def open_template_dialog(self):
-        """テンプレートダイアログを開く"""
+        """Open the template dialog"""
         dialog = UserTemplateDialog(self, self)
         dialog.exec()
 
     def open_template_dialog_and_activate(self):
-        """テンプレートダイアログを開き、テンプレートがメイン画面で使用できるようにする"""
-        # 既存のダイアログがあるかチェック
+        """Open the template dialog and activate the selected template for use in the main window"""
+        # Check for existing dialog
         _template_dialog = getattr(self, "_template_dialog", None)
         if _template_dialog and not _template_dialog.isHidden():
-            # 既存のダイアログを前面に表示
+            # Bring existing dialog to front
             _template_dialog.raise_()
             _template_dialog.activateWindow()
             return
 
-        # 新しいダイアログを作成
+        # Create new dialog
         self._template_dialog = UserTemplateDialog(self, self)
         self._template_dialog.show()
 
-        # ダイアログが閉じられた後、テンプレートが選択されていればアクティブ化
+        # Activate if a template is selected after dialog is closed
         def on_dialog_finished():
             if (
                 hasattr(self._template_dialog, "selected_template")
@@ -136,7 +136,7 @@ class MainWindowDialogManager(object):
         self._template_dialog.finished.connect(on_dialog_finished)
 
     def save_2d_as_template(self):
-        """現在の2D構造をテンプレートとして保存"""
+        """Save current 2D structure as a template"""
         if not self.data.atoms:
             QMessageBox.warning(self, "Warning", "No structure to save as template.")
             return
@@ -224,26 +224,26 @@ class MainWindowDialogManager(object):
             QMessageBox.critical(self, "Error", f"Failed to save template: {str(e)}")
 
     def open_translation_dialog(self):
-        """平行移動ダイアログを開く"""
-        # 測定モードを無効化
+        """Open the translation dialog"""
+        # Disable measurement mode
         if self.measurement_mode:
             self.measurement_action.setChecked(False)
             self.toggle_measurement_mode(False)
 
         dialog = TranslationDialog(self.current_mol, self, parent=self)
-        self.active_3d_dialogs.append(dialog)  # 参照を保持
-        dialog.show()  # execではなくshowを使用してモードレス表示
+        self.active_3d_dialogs.append(dialog)  # Keep reference
+        dialog.show()  # Use show for modeless display
         dialog.accepted.connect(
             lambda: self.statusBar().showMessage("Translation applied.")
         )
         dialog.accepted.connect(self.push_undo_state)
         dialog.finished.connect(
             lambda: self.remove_dialog_from_list(dialog)
-        )  # ダイアログが閉じられた時にリストから削除
+        )  # Remove from list when dialog is closed
 
     def open_move_group_dialog(self):
-        """Move Groupダイアログを開く"""
-        # 測定モードを無効化
+        """Open Move Group dialog"""
+        # Disable measurement mode
         if self.measurement_mode:
             self.measurement_action.setChecked(False)
             self.toggle_measurement_mode(False)
@@ -258,8 +258,8 @@ class MainWindowDialogManager(object):
         dialog.finished.connect(lambda: self.remove_dialog_from_list(dialog))
 
     def open_align_plane_dialog(self, plane):
-        """alignダイアログを開く"""
-        # 事前選択された原子を取得（測定モード無効化前に）
+        """Open align dialog"""
+        # Get pre-selected atoms (before disabling measurement mode)
         preselected_atoms = []
         if hasattr(self, "selected_atoms_3d") and self.selected_atoms_3d:
             preselected_atoms = list(self.selected_atoms_3d)
@@ -269,7 +269,7 @@ class MainWindowDialogManager(object):
         ):
             preselected_atoms = list(self.selected_atoms_for_measurement)
 
-        # 測定モードを無効化
+        # Disable measurement mode
         if self.measurement_mode:
             self.measurement_action.setChecked(False)
             self.toggle_measurement_mode(False)
@@ -277,8 +277,8 @@ class MainWindowDialogManager(object):
         dialog = AlignPlaneDialog(
             self.current_mol, self, plane, preselected_atoms, parent=self
         )
-        self.active_3d_dialogs.append(dialog)  # 参照を保持
-        dialog.show()  # execではなくshowを使用してモードレス表示
+        self.active_3d_dialogs.append(dialog)  # Keep reference
+        dialog.show()  # Use show for modeless display
         dialog.accepted.connect(
             lambda: self.statusBar().showMessage(
                 f"Atoms alignd to {plane.upper()} plane."
@@ -287,11 +287,11 @@ class MainWindowDialogManager(object):
         dialog.accepted.connect(self.push_undo_state)
         dialog.finished.connect(
             lambda: self.remove_dialog_from_list(dialog)
-        )  # ダイアログが閉じられた時にリストから削除
+        )  # Remove from list when dialog is closed
 
     def open_planarize_dialog(self, plane=None):
-        """選択原子群を最適平面へ投影するダイアログを開く"""
-        # 事前選択された原子を取得（測定モード無効化前に）
+        """Open dialog to project selected atoms to the best-fit plane"""
+        # Get pre-selected atoms
         preselected_atoms = []
         if hasattr(self, "selected_atoms_3d") and self.selected_atoms_3d:
             preselected_atoms = list(self.selected_atoms_3d)
@@ -301,7 +301,7 @@ class MainWindowDialogManager(object):
         ):
             preselected_atoms = list(self.selected_atoms_for_measurement)
 
-        # 測定モードを無効化
+        # Disable measurement mode
         if self.measurement_mode:
             self.measurement_action.setChecked(False)
             self.toggle_measurement_mode(False)
@@ -318,8 +318,8 @@ class MainWindowDialogManager(object):
         dialog.finished.connect(lambda: self.remove_dialog_from_list(dialog))
 
     def open_alignment_dialog(self, axis):
-        """アライメントダイアログを開く"""
-        # 事前選択された原子を取得（測定モード無効化前に）
+        """Open alignment dialog"""
+        # Get pre-selected atoms
         preselected_atoms = []
         if hasattr(self, "selected_atoms_3d") and self.selected_atoms_3d:
             preselected_atoms = list(self.selected_atoms_3d)
@@ -329,7 +329,7 @@ class MainWindowDialogManager(object):
         ):
             preselected_atoms = list(self.selected_atoms_for_measurement)
 
-        # 測定モードを無効化
+        # Disable measurement mode
         if self.measurement_mode:
             self.measurement_action.setChecked(False)
             self.toggle_measurement_mode(False)
@@ -337,8 +337,8 @@ class MainWindowDialogManager(object):
         dialog = AlignmentDialog(
             self.current_mol, self, axis, preselected_atoms, parent=self
         )
-        self.active_3d_dialogs.append(dialog)  # 参照を保持
-        dialog.show()  # execではなくshowを使用してモードレス表示
+        self.active_3d_dialogs.append(dialog)  # Keep reference
+        dialog.show()  # Use show for modeless display
         dialog.accepted.connect(
             lambda: self.statusBar().showMessage(
                 f"Atoms aligned to {axis.upper()}-axis."
@@ -347,11 +347,11 @@ class MainWindowDialogManager(object):
         dialog.accepted.connect(self.push_undo_state)
         dialog.finished.connect(
             lambda: self.remove_dialog_from_list(dialog)
-        )  # ダイアログが閉じられた時にリストから削除
+        )  # Remove from list when dialog is closed
 
     def open_bond_length_dialog(self):
-        """結合長変換ダイアログを開く"""
-        # 事前選択された原子を取得（測定モード無効化前に）
+        """Open bond length adjustment dialog"""
+        # Get pre-selected atoms
         preselected_atoms = []
         if hasattr(self, "selected_atoms_3d") and self.selected_atoms_3d:
             preselected_atoms = list(self.selected_atoms_3d)
@@ -361,7 +361,7 @@ class MainWindowDialogManager(object):
         ):
             preselected_atoms = list(self.selected_atoms_for_measurement)
 
-        # 測定モードを無効化
+        # Disable measurement mode
         if self.measurement_mode:
             self.measurement_action.setChecked(False)
             self.toggle_measurement_mode(False)
@@ -369,19 +369,19 @@ class MainWindowDialogManager(object):
         dialog = BondLengthDialog(
             self.current_mol, self, preselected_atoms, parent=self
         )
-        self.active_3d_dialogs.append(dialog)  # 参照を保持
-        dialog.show()  # execではなくshowを使用してモードレス表示
+        self.active_3d_dialogs.append(dialog)  # Keep reference
+        dialog.show()  # Use show for modeless display
         dialog.accepted.connect(
             lambda: self.statusBar().showMessage("Bond length adjusted.")
         )
         dialog.accepted.connect(self.push_undo_state)
         dialog.finished.connect(
             lambda: self.remove_dialog_from_list(dialog)
-        )  # ダイアログが閉じられた時にリストから削除
+        )  # Remove from list when dialog is closed
 
     def open_angle_dialog(self):
-        """角度変換ダイアログを開く"""
-        # 事前選択された原子を取得（測定モード無効化前に）
+        """Open angle adjustment dialog"""
+        # Get pre-selected atoms
         preselected_atoms = []
         if hasattr(self, "selected_atoms_3d") and self.selected_atoms_3d:
             preselected_atoms = list(self.selected_atoms_3d)
@@ -391,23 +391,23 @@ class MainWindowDialogManager(object):
         ):
             preselected_atoms = list(self.selected_atoms_for_measurement)
 
-        # 測定モードを無効化
+        # Disable measurement mode
         if self.measurement_mode:
             self.measurement_action.setChecked(False)
             self.toggle_measurement_mode(False)
 
         dialog = AngleDialog(self.current_mol, self, preselected_atoms, parent=self)
-        self.active_3d_dialogs.append(dialog)  # 参照を保持
-        dialog.show()  # execではなくshowを使用してモードレス表示
+        self.active_3d_dialogs.append(dialog)  # Keep reference
+        dialog.show()  # Use show for modeless display
         dialog.accepted.connect(lambda: self.statusBar().showMessage("Angle adjusted."))
         dialog.accepted.connect(self.push_undo_state)
         dialog.finished.connect(
             lambda: self.remove_dialog_from_list(dialog)
-        )  # ダイアログが閉じられた時にリストから削除
+        )  # Remove from list when dialog is closed
 
     def open_dihedral_dialog(self):
-        """二面角変換ダイアログを開く"""
-        # 事前選択された原子を取得（測定モード無効化前に）
+        """Open dihedral angle adjustment dialog"""
+        # Get pre-selected atoms
         preselected_atoms = []
         if hasattr(self, "selected_atoms_3d") and self.selected_atoms_3d:
             preselected_atoms = list(self.selected_atoms_3d)
@@ -417,14 +417,14 @@ class MainWindowDialogManager(object):
         ):
             preselected_atoms = list(self.selected_atoms_for_measurement)
 
-        # 測定モードを無効化
+        # Disable measurement mode
         if self.measurement_mode:
             self.measurement_action.setChecked(False)
             self.toggle_measurement_mode(False)
 
         dialog = DihedralDialog(self.current_mol, self, preselected_atoms, parent=self)
-        self.active_3d_dialogs.append(dialog)  # 参照を保持
-        dialog.show()  # execではなくshowを使用してモードレス表示
+        self.active_3d_dialogs.append(dialog)  # Keep reference
+        dialog.show()  # Use show for modeless display
         dialog.accepted.connect(
             lambda: self.statusBar().showMessage("Dihedral angle adjusted.")
         )
@@ -434,26 +434,26 @@ class MainWindowDialogManager(object):
         )  # ダイアログが閉じられた時にリストから削除
 
     def open_mirror_dialog(self):
-        """ミラー機能ダイアログを開く"""
+        """Open mirror function dialog"""
         if not self.current_mol:
             self.statusBar().showMessage("No 3D molecule loaded.")
             return
 
-        # 測定モードを無効化
+        # Disable measurement mode
         if self.measurement_mode:
             self.measurement_action.setChecked(False)
             self.toggle_measurement_mode(False)
 
         dialog = MirrorDialog(self.current_mol, self)
-        dialog.exec()  # モーダルダイアログとして表示
+        dialog.exec()  # Display as modal dialog
 
     def open_constrained_optimization_dialog(self):
-        """制約付き最適化ダイアログを開く"""
+        """Open constrained optimization dialog"""
         if not self.current_mol:
             self.statusBar().showMessage("No 3D molecule loaded.")
             return
 
-        # 測定モードを無効化
+        # Disable measurement mode
         if self.measurement_mode:
             self.measurement_action.setChecked(False)
             self.toggle_measurement_mode(False)

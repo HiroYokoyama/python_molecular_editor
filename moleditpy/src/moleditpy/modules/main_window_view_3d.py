@@ -12,8 +12,8 @@ DOI: 10.5281/zenodo.17268532
 
 """
 main_window_view_3d.py
-MainWindow (main_window.py) から分離されたモジュール
-機能クラス: MainWindowView3d
+Module separated from MainWindow (main_window.py)
+Functional class: MainWindowView3d
 """
 
 import logging
@@ -47,32 +47,32 @@ except Exception:
     from modules.template_preview_item import TemplatePreviewItem
 
 
-# --- クラス定義 ---
+# --- Class Definition ---
 class MainWindowView3d(object):
-    """main_window.py から分離された機能クラス"""
+    """Functional class separated from main_window.py"""
 
     def set_3d_style(self, style_name):
-        """3D表示スタイルを設定し、ビューを更新する"""
+        """Set 3D display style and update view"""
         current_stored_style = getattr(self, "current_3d_style", None)
         if current_stored_style == style_name:
             return
 
-        # 描画モード変更時に測定モードと3D編集モードをリセット
+        # Reset measurement and 3D edit modes on style change
         if self.measurement_mode:
             self.measurement_action.setChecked(False)
-            self.toggle_measurement_mode(False)  # 測定モードを無効化
+            self.toggle_measurement_mode(False)  # Disable measurement mode
 
         if self.is_3d_edit_mode:
             self.edit_3d_action.setChecked(False)
-            self.toggle_3d_edit_mode(False)  # 3D編集モードを無効化
+            self.toggle_3d_edit_mode(False)  # Disable 3D edit mode
 
-        # 3D原子選択をクリア
+        # Clear 3D selection
         self.clear_3d_selection()
 
         self.current_3d_style = style_name
         self.statusBar().showMessage(f"3D style set to: {style_name}")
 
-        # 現在表示中の分子があれば、新しいスタイルで再描画する
+        # Redraw if molecule is displayed
         if self.current_mol:
             self.draw_molecule_3d(self.current_mol)
 
@@ -101,7 +101,7 @@ class MainWindowView3d(object):
         self.draw_standard_3d_style(mol)
 
     def draw_standard_3d_style(self, mol, style_override=None):
-        """3D 分子を描画し、軸アクターの参照をクリアする（軸の再制御は apply_3d_settings に任せる）"""
+        """Draw 3D molecule and clear axis actor reference (re-controlled by apply_3d_settings)"""
 
         # Re-entrancy guard: prevent overlapping draws that cause ghost
         # bonds when slider events are processed mid-render.
@@ -122,19 +122,19 @@ class MainWindowView3d(object):
             else getattr(self, "current_3d_style", "Ball and Stick")
         )
 
-        # 測定選択をクリア（分子が変更されたため）
+        # Clear measurement selection (molecule changed)
         if hasattr(self, "measurement_mode"):
             self.clear_measurement_selection()
 
-        # 色情報追跡のための辞書を初期化
+        # Initialize 3D color map
         if not hasattr(self, "_3d_color_map"):
             self._3d_color_map = {}
         self._3d_color_map.clear()
 
-        # 1. カメラ状態とクリア
+        # 1. Camera state and clear
         camera_state = self.plotter.camera.copy()
 
-        # **残留防止のための強制削除**
+        # **Force removal to prevent residue**
         # Pylint: access-member-before-definition fix
         old_axes_actor = getattr(self, "axes_actor", None)
         if old_axes_actor is not None:
@@ -148,17 +148,17 @@ class MainWindowView3d(object):
 
         self.plotter.clear()
 
-        # 2. 背景色の設定
+        # 2. Background color setting
         self.plotter.set_background(self.settings.get("background_color", "#4f4f4f"))
 
-        # 3. mol が None または原子数ゼロの場合は、背景と軸のみで終了
+        # 3. End with background and axes if mol is None or empty
         if mol is None or mol.GetNumAtoms() == 0:
             self.atom_actor = None
             self.current_mol = None
             self.plotter.render()
             return
 
-        # 4. ライティングの設定
+        # 4. Lighting setting
         is_lighting_enabled = self.settings.get("lighting_enabled", True)
 
         if is_lighting_enabled:
@@ -169,7 +169,7 @@ class MainWindowView3d(object):
             )
             self.plotter.add_light(light)
 
-        # 5. 分子描画ロジック
+        # 5. Molecule drawing logic
         # Optionally kekulize aromatic systems for 3D visualization.
         mol_to_draw = mol
         if self.settings.get("display_kekule_3d", False):
@@ -210,7 +210,7 @@ class MainWindowView3d(object):
                         import traceback
                         traceback.print_exc()
 
-        # スタイルに応じて原子の半径を設定（設定から読み込み）
+        # Set atom radii based on style
         if current_style == "cpk":
             atom_scale = self.settings.get("cpk_atom_scale", 1.0)
             resolution = self.settings.get("cpk_resolution", 32)
@@ -225,9 +225,9 @@ class MainWindowView3d(object):
 
             rad = np.array([get_safe_rvdw(s) * atom_scale for s in sym])
         elif current_style == "wireframe":
-            # Wireframeでは原子を描画しないので、この設定は実際には使用されない
+            # Atoms not drawn in wireframe mode
             resolution = self.settings.get("wireframe_resolution", 6)
-            rad = np.array([0.01 for s in sym])  # 極小値（使用されない）
+            rad = np.array([0.01 for s in sym])  # Minimal value (not used)
         elif current_style == "stick":
             atom_radius = self.settings.get(
                 "stick_bond_radius", 0.15
@@ -243,7 +243,7 @@ class MainWindowView3d(object):
         self.glyph_source["colors"] = col
         self.glyph_source["radii"] = rad
 
-        # メッシュプロパティを共通で定義
+        # Define common mesh properties
         mesh_props = dict(
             smooth_shading=True,
             specular=self.settings.get("specular", 0.2),
@@ -251,17 +251,17 @@ class MainWindowView3d(object):
             lighting=is_lighting_enabled,
         )
 
-        # Wireframeスタイルの場合は原子を描画しない
+        # Do not draw atoms in wireframe mode
         if current_style != "wireframe":
-            # Stickモードで末端二重結合・三重結合の原子を分裂させるための処理
+            # Split terminal multiple bond atoms in Stick mode
             if current_style == "stick":
-                # 末端原子（次数1）で多重結合を持つものを検出
+                # Detect terminal atoms with multiple bonds
                 split_atoms = []  # (atom_idx, bond_order, offset_vecs)
-                skip_atoms = set()  # スキップする原子のインデックス
+                skip_atoms = set()  # Indices of atoms to skip
 
                 for i in range(mol_to_draw.GetNumAtoms()):
                     atom = mol_to_draw.GetAtomWithIdx(i)
-                    if atom.GetDegree() == 1:  # 末端原子
+                    if atom.GetDegree() == 1:  # Terminal atom
                         bonds = atom.GetBonds()
                         if len(bonds) == 1:
                             bond = bonds[0]
@@ -271,15 +271,15 @@ class MainWindowView3d(object):
                                 Chem.BondType.DOUBLE,
                                 Chem.BondType.TRIPLE,
                             ]:
-                                # 多重結合を持つ末端原子を発見
-                                # 結合のもう一方の原子を取得
+                                # Found terminal atom with multiple bond
+                                # Get adjacent atom
                                 other_idx = (
                                     bond.GetBeginAtomIdx()
                                     if bond.GetEndAtomIdx() == i
                                     else bond.GetEndAtomIdx()
                                 )
 
-                                # 結合ベクトルを計算
+                                # Calculate bond vector
                                 pos_i = np.array(conf.GetAtomPosition(i))
                                 pos_other = np.array(conf.GetAtomPosition(other_idx))
                                 bond_vec = pos_i - pos_other
@@ -288,7 +288,7 @@ class MainWindowView3d(object):
                                 if bond_length > 0:
                                     bond_unit = bond_vec / bond_length
 
-                                    # 二重結合の場合は実際の描画と同じオフセット方向を使用
+                                    # Use same offset direction as bond drawing for double bonds
                                     if bond_type == Chem.BondType.DOUBLE:
                                         offset_dir1 = (
                                             self._calculate_double_bond_offset(
@@ -296,7 +296,7 @@ class MainWindowView3d(object):
                                             )
                                         )
                                     else:
-                                        # 三重結合の場合は結合描画と同じロジック
+                                        # Use same logic as bond drawing for triple bonds
                                         v_arb = np.array([0, 0, 1])
                                         if np.allclose(
                                             np.abs(np.dot(bond_unit, v_arb)), 1.0
@@ -305,7 +305,7 @@ class MainWindowView3d(object):
                                         offset_dir1 = np.cross(bond_unit, v_arb)
                                         offset_dir1 /= np.linalg.norm(offset_dir1)
 
-                                    # 二重/三重結合描画のオフセット値と半径を取得（結合描画と完全に一致させる）
+                                    # Get offset and radius for multiple bonds (matching bond drawing)
                                     try:
                                         cyl_radius = self.settings.get(
                                             "stick_bond_radius", 0.15
@@ -317,7 +317,7 @@ class MainWindowView3d(object):
                                             offset_factor = self.settings.get(
                                                 "stick_double_bond_offset_factor", 1.5
                                             )
-                                            # 二重結合：s_double / 2 を使用
+                                            # Double bond: use s_double / 2
                                             offset_distance = (
                                                 cyl_radius * offset_factor / 2
                                             )
@@ -328,17 +328,17 @@ class MainWindowView3d(object):
                                             offset_factor = self.settings.get(
                                                 "stick_triple_bond_offset_factor", 1.0
                                             )
-                                            # 三重結合：s_triple をそのまま使用（/ 2 なし）
+                                            # Triple bond: use s_triple without division
                                             offset_distance = cyl_radius * offset_factor
 
-                                        # 結合描画と同じ計算
+                                        # Same calculation as bond drawing
                                         sphere_radius = cyl_radius * radius_factor
                                     except Exception:
-                                        sphere_radius = 0.09  # デフォルト値
-                                        offset_distance = 0.15  # デフォルト値
+                                        sphere_radius = 0.09  # Default values
+                                        offset_distance = 0.15  # Default values
 
                                     if bond_type == Chem.BondType.DOUBLE:
-                                        # 二重結合：2個に分裂
+                                        # Double bond: split into 2
                                         offset_vecs = [
                                             offset_dir1 * offset_distance,
                                             -offset_dir1 * offset_distance,
@@ -347,8 +347,8 @@ class MainWindowView3d(object):
                                             (i, 2, offset_vecs, sphere_radius)
                                         )
                                     else:  # TRIPLE
-                                        # 三重結合：3個に分裂（中心 + 両側2つ）
-                                        # 結合描画と同じ配置
+                                        # Triple bond: split into 3 (center + two sides)
+                                        # Same arrangement as bond drawing
                                         offset_vecs = [
                                             np.array([0, 0, 0]),  # 中心
                                             offset_dir1 * offset_distance,  # +side
@@ -360,30 +360,30 @@ class MainWindowView3d(object):
 
                                     skip_atoms.add(i)
 
-                # 分裂させる原子がある場合、新しい位置リストを作成
+                # Create new positions if atoms are split
                 if split_atoms:
                     new_positions = []
                     new_colors = []
                     new_radii = []
 
-                    # 通常の原子を追加（スキップリスト以外）
+                    # Add normal atoms (excluding skip list)
                     for i in range(len(self.atom_positions_3d)):
                         if i not in skip_atoms:
                             new_positions.append(self.atom_positions_3d[i])
                             new_colors.append(col[i])
                             new_radii.append(rad[i])
 
-                    # 分裂した原子を追加
-                    # 上記で計算されたsphere_radiusを使用（結合描画のradius_factorを適用済み）
+                    # Add split atoms
+                    # Use calculated sphere_radius (with radius_factor applied)
                     for atom_idx, bond_order, offset_vecs, s_radius in split_atoms:
                         pos = self.atom_positions_3d[atom_idx]
-                        # この原子の結合から半径を取得（上記ループで計算済み）
+                        # Get radius from bond (calculated above)
                         for offset_vec in offset_vecs:
                             new_positions.append(pos + offset_vec)
                             new_colors.append(col[atom_idx])
                             new_radii.append(s_radius)
 
-                    # PolyDataを新しい位置で作成
+                    # Create PolyData at new positions
                     glyph_source = pv.PolyData(np.array(new_positions))
                     glyph_source["colors"] = np.array(new_colors)
                     glyph_source["radii"] = np.array(new_radii)
@@ -416,14 +416,14 @@ class MainWindowView3d(object):
                 )
                 self.atom_actor.GetProperty().SetEdgeOpacity(0.3)
 
-            # 原子の色情報を記録
+            # Record atom color info
             for i, atom_color in enumerate(col):
                 atom_rgb = [int(c * 255) for c in atom_color]
                 self._3d_color_map[f"atom_{i}"] = atom_rgb
 
-        # ボンドの描画（ball_and_stick、wireframe、stickで描画）
+        # Draw bonds (ball_and_stick, wireframe, stick)
         if current_style in ["ball_and_stick", "wireframe", "stick"]:
-            # スタイルに応じてボンドの太さと解像度を設定（設定から読み込み）
+            # Set bond radius and resolution based on style
             if current_style == "wireframe":
                 cyl_radius = self.settings.get("wireframe_bond_radius", 0.01)
                 bond_resolution = self.settings.get("wireframe_resolution", 6)
@@ -434,7 +434,7 @@ class MainWindowView3d(object):
                 cyl_radius = self.settings.get("ball_stick_bond_radius", 0.1)
                 bond_resolution = self.settings.get("ball_stick_resolution", 16)
 
-            # Ball and Stick用の共通色
+            # Common color for Ball and Stick
             bs_bond_rgb = [127, 127, 127]
             if current_style == "ball_and_stick":
                 try:
@@ -445,7 +445,7 @@ class MainWindowView3d(object):
                     import traceback
                     traceback.print_exc()
 
-            # バッチ処理用のリスト
+            # Lists for batch processing
             all_points = []
             all_lines = []
             all_radii = []
@@ -465,7 +465,7 @@ class MainWindowView3d(object):
                 if h == 0:
                     continue
 
-                # ボンドの色
+                # Bond colors
                 begin_color = col[begin_atom_idx]
                 end_color = col[end_atom_idx]
                 begin_color_rgb = [int(c * 255) for c in begin_color]
@@ -499,7 +499,7 @@ class MainWindowView3d(object):
                     else bs_bond_rgb
                 )
 
-                # セグメント追加用ヘルパー関数
+                # Helper to add segments
                 def add_segment(p1, p2, radius, color_rgb):
                     nonlocal current_point_idx
                     all_points.append(p1)
@@ -531,11 +531,11 @@ class MainWindowView3d(object):
                         and not use_cpk_bond
                         and not is_overridden
                     ):
-                        # 単一セグメント (Uniform color) - Default behavior
+                        # Single segment (Uniform color)
                         add_segment(sp, ep, cyl_radius, local_bs_bond_rgb)
                         self._3d_color_map[f"bond_{bond_counter}"] = local_bs_bond_rgb
                     else:
-                        # 分割セグメント (CPK split colors OR Overridden uniform)
+                        # Split segments (CPK split colors OR Overridden uniform)
                         # If overridden, begin/end are same, so this produces a uniform looking bond split in middle
                         mid_point = (sp + ep) / 2
                         add_segment(sp, mid_point, cyl_radius, begin_color_rgb)
@@ -546,9 +546,9 @@ class MainWindowView3d(object):
                         self._3d_color_map[f"bond_{bond_counter}_end"] = end_color_rgb
 
                 else:
-                    # 多重結合のパラメータ計算
+                    # Calculate multiple bond parameters
                     v1 = d / h
-                    # モデルごとの半径ファクターを適用
+                    # Apply radius factor per model
                     if current_style == "ball_and_stick":
                         double_radius_factor = self.settings.get(
                             "ball_stick_double_bond_radius_factor", 0.8
@@ -574,7 +574,7 @@ class MainWindowView3d(object):
                         double_radius_factor = 1.0
                         triple_radius_factor = 0.75
 
-                    # 設定からオフセットファクターを取得（モデルごと）
+                    # Get offset factor from settings (per model)
                     if current_style == "ball_and_stick":
                         double_offset_factor = self.settings.get(
                             "ball_stick_double_bond_offset_factor", 2.0
@@ -705,7 +705,7 @@ class MainWindowView3d(object):
 
                 bond_counter += 1
 
-            # ジオメトリの生成と描画
+            # Generate and draw geometry
             if all_points:
                 # Create PolyData
                 bond_pd = pv.PolyData(np.array(all_points), lines=np.hstack(all_lines))
@@ -721,7 +721,7 @@ class MainWindowView3d(object):
                 bond_pd.cell_data["colors"] = np.array(all_colors, dtype=np.uint8)
 
                 # Tube filter
-                # n_sides (resolution) corresponds to theta_resolution in Cylinder
+                # n_sides corresponds to theta_resolution in Cylinder
                 tube = bond_pd.tube(
                     scalars="radii",
                     absolute=True,
@@ -882,7 +882,7 @@ class MainWindowView3d(object):
 
         if getattr(self, "show_chiral_labels", False):
             try:
-                # 3D座標からキラル中心を計算
+                # Calculate chiral centers from 3D coordinates
                 chiral_centers = Chem.FindMolChiralCenters(mol, includeUnassigned=True)
                 if chiral_centers:
                     pts, labels = [], []
@@ -910,7 +910,7 @@ class MainWindowView3d(object):
             except Exception as e:
                 self.statusBar().showMessage(f"3D chiral label drawing error: {e}")
 
-        # E/Zラベルも表示
+        # Also display E/Z labels
         if getattr(self, "show_chiral_labels", False):
             try:
                 # If we drew a kekulized molecule use it for E/Z detection so
@@ -943,21 +943,21 @@ class MainWindowView3d(object):
             import traceback
             traceback.print_exc()
 
-        # AtomIDまたは他の原子情報が表示されている場合は再表示
+        # Re-display if AtomID or other atom info is shown
         if (
             hasattr(self, "atom_info_display_mode")
             and self.atom_info_display_mode is not None
         ):
             self.show_all_atom_info()
 
-        # メニューテキストと状態を現在の分子の種類に応じて更新
+        # Update menu text and state depending on molecule type
         self.update_atom_id_menu_text()
         self.update_atom_id_menu_state()
 
     def _calculate_double_bond_offset(self, mol, bond, conf):
         """
-        二重結合のオフセット方向を計算する。
-        結合している原子の他の結合を考慮して、平面的になるようにする。
+        Calculate double bond offset direction.
+        Consider other bonds of connected atoms to keep it planar.
         """
         begin_atom = mol.GetAtomWithIdx(bond.GetBeginAtomIdx())
         end_atom = mol.GetAtomWithIdx(bond.GetEndAtomIdx())
@@ -968,12 +968,12 @@ class MainWindowView3d(object):
         bond_vec = end_pos - begin_pos
         bond_length = np.linalg.norm(bond_vec)
         if bond_length == 0:
-            # フォールバック: Z軸基準
+            # Fallback: Z-axis reference
             return np.array([0, 0, 1])
 
         bond_unit = bond_vec / bond_length
 
-        # 両端の原子の隣接原子を調べる
+        # Check neighbors of both terminal atoms
         begin_neighbors = []
         end_neighbors = []
 
@@ -987,10 +987,10 @@ class MainWindowView3d(object):
                 neighbor_pos = np.array(conf.GetAtomPosition(neighbor.GetIdx()))
                 end_neighbors.append(neighbor_pos)
 
-        # 平面の法線ベクトルを計算
+        # Calculate plane normal vector
         normal_candidates = []
 
-        # 開始原子の隣接原子から平面を推定
+        # Estimate plane from start atom's neighbors
         if len(begin_neighbors) >= 1:
             for neighbor_pos in begin_neighbors:
                 vec_to_neighbor = neighbor_pos - begin_pos
@@ -1044,12 +1044,12 @@ class MainWindowView3d(object):
         return off_dir
 
     def show_ez_labels_3d(self, mol):
-        """3DビューでE/Zラベルを表示する（RDKitのステレオ化学判定を使用）"""
+        """Display E/Z labels in 3D view (using RDKit stereochemistry determination)"""
         if not mol:
             return
 
         try:
-            # 既存のE/Zラベルを削除
+            # Remove existing E/Z labels
             self.plotter.remove_actor("ez_labels")
         except Exception:  # pragma: no cover
             import traceback
@@ -1057,17 +1057,17 @@ class MainWindowView3d(object):
 
         pts, labels = [], []
 
-        # 3D座標が存在するかチェック
+        # Check if 3D coordinates exist
         if mol.GetNumConformers() == 0:
             return
 
         conf = mol.GetConformer()
 
-        # 二重結合でRDKitが判定したE/Z立体化学を表示
+        # Display E/Z stereochemistry determined by RDKit for double bonds
 
         try:
-            # 3D座標からステレオ化学を再計算 (molに対して行う)
-            # これにより、2Dでの描画状態に関わらず、現在の3D座標に基づいたE/Z判定が行われる
+            # Recalculate stereochemistry from 3D coordinates (on mol).
+            # This ensures determination is based on actual 3D positions regardless of 2D state.
             Chem.AssignStereochemistry(
                 mol, cleanIt=True, force=True, flagPossibleStereoCenters=True
             )
@@ -1080,22 +1080,22 @@ class MainWindowView3d(object):
                 new_stereo = bond.GetStereo()
 
                 if new_stereo in [Chem.BondStereo.STEREOE, Chem.BondStereo.STEREOZ]:
-                    # 結合の中心座標を計算
+                    # Calculate bond center coordinates
                     begin_pos = np.array(conf.GetAtomPosition(bond.GetBeginAtomIdx()))
                     end_pos = np.array(conf.GetAtomPosition(bond.GetEndAtomIdx()))
                     center_pos = (begin_pos + end_pos) / 2
 
-                    # ラベルの決定
+                    # Determine label
                     label = "E" if new_stereo == Chem.BondStereo.STEREOE else "Z"
 
-                    # 2Dとの不一致チェック
-                    # main_window_compute.py で保存された2D由来の立体化学プロパティを取得
+                    # Check for discrepancy with 2D
+                    # Get 2D-derived stereochemistry property saved in main_window_compute.py
                     try:
                         old_stereo = bond.GetIntProp("_original_2d_stereo")
                     except KeyError:
                         old_stereo = Chem.BondStereo.STEREONONE
 
-                    # 2D側でもE/Zが指定されていて、かつ3Dと異なる場合は「?」にする
+                    # Set to "?" if 2D also has E/Z specified but it differs from 3D
                     if old_stereo in [Chem.BondStereo.STEREOE, Chem.BondStereo.STEREOZ]:
                         if old_stereo != new_stereo:
                             label = "?"
@@ -1109,7 +1109,7 @@ class MainWindowView3d(object):
                 labels,
                 font_size=18,
                 point_size=0,
-                text_color="darkgreen",  # 暗い緑色
+                text_color="darkgreen",  # Dark green color
                 name="ez_labels",
                 always_visible=True,
                 tolerance=0.01,
@@ -1117,7 +1117,7 @@ class MainWindowView3d(object):
             )
 
     def toggle_chiral_labels_display(self, checked):
-        """Viewメニューのアクションに応じてキラルラベル表示を切り替える"""
+        """Toggle chiral label display based on View menu action"""
         self.show_chiral_labels = checked
 
         if self.current_mol:
@@ -1131,10 +1131,10 @@ class MainWindowView3d(object):
             self.statusBar().showMessage("Chiral labels disabled.")
 
     def update_chiral_labels(self):
-        """分子のキラル中心を計算し、2Dビューの原子アイテムにR/Sラベルを設定/解除する
-        ※ 可能なら 3D（self.current_mol）を優先して計算し、なければ 2D から作った RDKit 分子を使う。
+        """Calculate chiral centers and set/clear R/S labels on 2D AtomItems.
+        Prefer 3D (self.current_mol) if available; otherwise use RDKit mol from 2D.
         """
-        # まず全てのアイテムからラベルをクリア
+        # First clear labels from all items
         for atom_data in self.data.atoms.values():
             if atom_data.get("item"):
                 atom_data["item"].chiral_label = None
@@ -1143,7 +1143,7 @@ class MainWindowView3d(object):
             self.scene.update()
             return
 
-        # 3D の RDKit Mol（コンフォマーを持つもの）を使う
+        # Use 3D RDKit Mol with conformer
         mol_for_chirality = None
         if getattr(self, "current_mol", None) is not None:
             mol_for_chirality = self.current_mol
@@ -1155,24 +1155,21 @@ class MainWindowView3d(object):
             return
 
         try:
-            # --- 重要：3D コンフォマーがあるなら、それを使って原子のキラルタグを割り当てる ---
+            # --- IMPORTANT: if 3D conformer exists, use it to assign chiral tags ---
             if mol_for_chirality.GetNumConformers() > 0:
-                # confId=0（最初のコンフォマー）を指定して、原子のキラリティータグを3D座標由来で設定
+                # Set chiral tags from 3D coordinates using confId=0
                 try:
                     Chem.AssignAtomChiralTagsFromStructure(mol_for_chirality, confId=0)
                 except Exception:  # pragma: no cover
-                    # 古い RDKit では関数が無い場合があるので（念のため保護）
+                    # Guard for older RDKit versions that might lack the function
                     pass
 
-            # RDKit の通常の stereochemistry 割当（念のため）
-            # Chem.AssignStereochemistry(mol_for_chirality, cleanIt=True, force=True, flagPossibleStereoCenters=True)
-
-            # キラル中心の取得（(idx, 'R'/'S'/'?') のリスト）
+            # Get chiral centers (list of (idx, 'R'/'S'/'?'))
             chiral_centers = Chem.FindMolChiralCenters(
                 mol_for_chirality, includeUnassigned=True
             )
 
-            # RDKit atom index -> エディタ側 atom_id へのマッピング
+            # Mapping from RDKit atom index to editor atom_id
             rdkit_idx_to_my_id = {}
             for atom in mol_for_chirality.GetAtoms():
                 if atom.HasProp("_original_atom_id"):
@@ -1180,7 +1177,7 @@ class MainWindowView3d(object):
                         "_original_atom_id"
                     )
 
-            # 見つかったキラル中心を対応する AtomItem に設定
+            # Set found chiral centers to corresponding AtomItems
             for idx, label in chiral_centers:
                 if idx in rdkit_idx_to_my_id:
                     atom_id = rdkit_idx_to_my_id[idx]
@@ -1193,27 +1190,27 @@ class MainWindowView3d(object):
         except Exception as e:
             self.statusBar().showMessage(f"Update chiral labels error: {e}")
 
-        # 最後に 2D シーンを再描画
+        # Finally redraw 2D scene
         self.scene.update()
 
     def toggle_atom_info_display(self, mode):
-        """原子情報表示モードを切り替える"""
-        # 現在の表示をクリア
+        """Toggle atom info display mode"""
+        # Clear current display
         self.clear_all_atom_info_labels()
 
-        # 同じモードが選択された場合はOFFにする
+        # Turn OFF if the same mode is selected
         if self.atom_info_display_mode == mode:
             self.atom_info_display_mode = None
-            # 全てのアクションのチェックを外す
+            # Uncheck all actions
             self.show_atom_id_action.setChecked(False)
             self.show_rdkit_id_action.setChecked(False)
             self.show_atom_coords_action.setChecked(False)
             self.show_atom_symbol_action.setChecked(False)
             self.statusBar().showMessage("Atom info display disabled.")
         else:
-            # 新しいモードを設定
+            # Set new mode
             self.atom_info_display_mode = mode
-            # 該当するアクションのみチェック
+            # Check only the relevant action
             self.show_atom_id_action.setChecked(mode == "id")
             self.show_rdkit_id_action.setChecked(mode == "rdkit_id")
             self.show_atom_coords_action.setChecked(mode == "coords")
@@ -1227,15 +1224,15 @@ class MainWindowView3d(object):
             }
             self.statusBar().showMessage(f"Displaying: {mode_names[mode]}")
 
-            # すべての原子に情報を表示
+            # Display info for all atoms
             self.show_all_atom_info()
 
     def is_xyz_derived_molecule(self):
-        """現在の分子がXYZファイル由来かどうかを判定"""
+        """Determine if the current molecule is derived from an XYZ file"""
         if not self.current_mol:
             return False
         try:
-            # 最初の原子がxyz_unique_idプロパティを持っているかチェック
+            # Check if the first atom has xyz_unique_id property
             if self.current_mol.GetNumAtoms() > 0:
                 return self.current_mol.GetAtomWithIdx(0).HasProp("xyz_unique_id")
         except Exception:  # pragma: no cover
@@ -1245,11 +1242,11 @@ class MainWindowView3d(object):
         return False
 
     def has_original_atom_ids(self):
-        """現在の分子がOriginal Atom IDsを持っているかどうかを判定"""
+        """Determine if the current molecule has Original Atom IDs"""
         if not self.current_mol:
             return False
         try:
-            # いずれかの原子が_original_atom_idプロパティを持っているかチェック
+            # Check if any atom has _original_atom_id property
             for atom_idx in range(self.current_mol.GetNumAtoms()):
                 atom = self.current_mol.GetAtomWithIdx(atom_idx)
                 if atom.HasProp("_original_atom_id"):
@@ -1261,7 +1258,7 @@ class MainWindowView3d(object):
         return False
 
     def update_atom_id_menu_text(self):
-        """原子IDメニューのテキストを現在の分子の種類に応じて更新"""
+        """Update Atom ID menu text based on molecule type"""
         if hasattr(self, "show_atom_id_action"):
             if self.is_xyz_derived_molecule():
                 self.show_atom_id_action.setText("Show XYZ Unique ID")
@@ -1269,15 +1266,15 @@ class MainWindowView3d(object):
                 self.show_atom_id_action.setText("Show Original ID / Index")
 
     def update_atom_id_menu_state(self):
-        """原子IDメニューの有効/無効状態を更新"""
+        """Update Atom ID menu enabled/disabled state"""
         if hasattr(self, "show_atom_id_action"):
             has_original_ids = self.has_original_atom_ids()
             has_xyz_ids = self.is_xyz_derived_molecule()
 
-            # Original IDまたはXYZ IDがある場合のみ有効化
+            # Enable only if Original ID or XYZ ID exists
             self.show_atom_id_action.setEnabled(has_original_ids or has_xyz_ids)
 
-            # 現在選択されているモードが無効化される場合は解除
+            # Disable selection if the currently selected mode is no longer valid
             if (
                 not (has_original_ids or has_xyz_ids)
                 and self.atom_info_display_mode == "id"
@@ -1287,7 +1284,7 @@ class MainWindowView3d(object):
                 self.clear_all_atom_info_labels()
 
     def show_all_atom_info(self):
-        """すべての原子に情報を表示"""
+        """Display info for all atoms"""
         if (
             self.atom_info_display_mode is None
             or not hasattr(self, "atom_positions_3d")
@@ -1295,10 +1292,10 @@ class MainWindowView3d(object):
         ):
             return
 
-        # 既存のラベルをクリア
+        # Clear existing labels
         self.clear_all_atom_info_labels()
 
-        # ラベルを表示するためにタイプ別に分けてリストを作る
+        # Group by type to create lists for label display
         rdkit_positions = []
         rdkit_texts = []
         id_positions = []
@@ -1314,13 +1311,13 @@ class MainWindowView3d(object):
                 continue
 
             if self.atom_info_display_mode == "id":
-                # Original IDがある場合は優先表示、なければXYZのユニークID、最後にRDKitインデックス
+                # Display Original ID if available, otherwise XYZ unique ID, finally RDKit index
                 try:
                     if self.current_mol:
                         atom = self.current_mol.GetAtomWithIdx(atom_idx)
                         if atom.HasProp("_original_atom_id"):
                             original_id = atom.GetIntProp("_original_atom_id")
-                            # プレフィックスを削除して数値だけ表示
+                            # Remove prefix and display only the number
                             id_positions.append(pos)
                             id_texts.append(str(original_id))
                         elif atom.HasProp("xyz_unique_id"):
@@ -1357,13 +1354,13 @@ class MainWindowView3d(object):
             else:
                 continue
 
-        # 色の定義（暗めの青/緑/赤）
-        rdkit_color = "#003366"  # 暗めの青
-        id_color = "#006400"  # 暗めの緑
-        xyz_color = "#8B0000"  # 暗めの赤
+        # Color definitions (dark blue/green/red)
+        rdkit_color = "#003366"  # Dark blue
+        id_color = "#006400"  # Dark green
+        xyz_color = "#8B0000"  # Dark red
         other_color = "black"
 
-        # それぞれのグループごとにラベルを追加し、参照をリストで保持する
+        # Add labels for each group and keep references in a list
         self.current_atom_info_labels = []
         try:
             if rdkit_positions:
@@ -1424,9 +1421,8 @@ class MainWindowView3d(object):
         except Exception as e:
             print(f"Error adding atom info labels: {e}")
 
-        # 右上に凡例を表示（既存の凡例は消す）
+        # Display legend in the top-right (remove existing legends)
         try:
-            # 古い凡例削除
             if (
                 hasattr(self, "atom_label_legend_names")
                 and self.atom_label_legend_names
@@ -1439,7 +1435,6 @@ class MainWindowView3d(object):
                         traceback.print_exc()
             self.atom_label_legend_names = []
 
-            # 凡例テキストを右上に縦並びで追加（背景なし、太字のみ）
             legend_entries = []
             if rdkit_positions:
                 legend_entries.append(("RDKit", rdkit_color, "legend_rdkit"))
@@ -1448,11 +1443,11 @@ class MainWindowView3d(object):
             if xyz_positions:
                 legend_entries.append(("XYZ", xyz_color, "legend_xyz"))
 
-            # 左下に凡例ラベルを追加（背景なし、太字のみ）
+            # Add legend labels at bottom-left (no background, bold only)
             # Increase spacing to avoid overlapping when short labels like 'RDKit' and 'ID' appear
             spacing = 30
             for i, (label_text, label_color, label_name) in enumerate(legend_entries):
-                # 左下基準でy座標を上げる
+                # Incremental y-coordinate from bottom-left
                 # Add a small horizontal offset for very short adjacent labels so they don't visually collide
                 y = 0.0 + i * spacing
                 x_offset = 0.0
@@ -1474,7 +1469,7 @@ class MainWindowView3d(object):
                         font="arial",
                     )
                     self.atom_label_legend_names.append(label_name)
-                    # 太字のみ設定（背景は設定しない）
+                    # Set bold only (no background)
                     try:
                         if hasattr(actor, "GetTextProperty"):
                             tp = actor.GetTextProperty()
@@ -1494,7 +1489,7 @@ class MainWindowView3d(object):
             traceback.print_exc()
 
     def clear_all_atom_info_labels(self):
-        """すべての原子情報ラベルをクリア"""
+        """Clear all atom info labels"""
         # Remove label actors (may be a single actor, a list, or None)
         try:
             if (
@@ -1539,31 +1534,31 @@ class MainWindowView3d(object):
             self.atom_label_legend_names = []
 
     def setup_3d_hover(self):
-        """3Dビューでの表示を設定（常時表示に変更）"""
+        """Configure 3D view display (changed to persistent)"""
         if self.atom_info_display_mode is not None:
             self.show_all_atom_info()
 
     def zoom_in(self):
-        """ビューを 20% 拡大する"""
+        """Zoom in by 20%"""
         self.view_2d.scale(1.2, 1.2)
 
     def zoom_out(self):
-        """ビューを 20% 縮小する"""
+        """Zoom out by 20%"""
         self.view_2d.scale(1 / 1.2, 1 / 1.2)
 
     def reset_zoom(self):
-        """ビューの拡大率をデフォルト (75%) にリセットする"""
+        """Reset zoom to default (75%)"""
         transform = QTransform()
         transform.scale(0.75, 0.75)
         self.view_2d.setTransform(transform)
 
     def fit_to_view(self):
-        """シーン上のすべてのアイテムがビューに収まるように調整する"""
+        """Fit all items in the scene into the view"""
         if not self.scene.items():
             self.reset_zoom()
             return
 
-        # 合計の表示矩形（目に見えるアイテムのみ）を計算
+        # Calculate total bounding rect of visible items
         visible_items_rect = QRectF()
         for item in self.scene.items():
             if item.isVisible() and not isinstance(item, TemplatePreviewItem):
@@ -1578,7 +1573,7 @@ class MainWindowView3d(object):
             self.reset_zoom()
             return
 
-        # 少し余白を持たせる（パディング）
+        # Add some padding
         padding_factor = 1.10  # 10% の余裕
         cx = visible_items_rect.center().x()
         cy = visible_items_rect.center().y()
@@ -1586,8 +1581,7 @@ class MainWindowView3d(object):
         h = visible_items_rect.height() * padding_factor
         padded = QRectF(cx - w / 2.0, cy - h / 2.0, w, h)
 
-        # フィット時にマウス位置に依存するアンカーが原因でジャンプすることがあるため
-        # 一時的にトランスフォームアンカーをビュー中心にしてから fitInView を呼ぶ
+        # Temporarily set anchor to center before calling fitInView
         try:
             old_ta = self.view_2d.transformationAnchor()
             old_ra = self.view_2d.resizeAnchor()
@@ -1601,7 +1595,7 @@ class MainWindowView3d(object):
             self.view_2d.setResizeAnchor(QGraphicsView.ViewportAnchor.AnchorViewCenter)
             self.view_2d.fitInView(padded, Qt.AspectRatioMode.KeepAspectRatio)
         finally:
-            # 元のアンカーを復元
+            # Restore original anchor
             try:
                 if old_ta is not None:
                     self.view_2d.setTransformationAnchor(old_ta)
@@ -1651,7 +1645,7 @@ class MainWindowView3d(object):
             print(f"Failed to update CPK colors from settings: {e}")
 
     def apply_3d_settings(self, redraw=True):
-        """3Dビューの視覚設定を適用する"""
+        """Apply 3D view visual settings"""
         # Projection mode
         proj_mode = self.settings.get("projection_mode", "Perspective")
         if hasattr(self.plotter, "renderer") and hasattr(
@@ -1667,22 +1661,19 @@ class MainWindowView3d(object):
         if not hasattr(self, "plotter"):
             return
 
-        # レンダラーのレイヤー設定を有効化（テキストオーバーレイ用）
+        # Enable renderer layers (for text overlay)
         renderer = self.plotter.renderer
         if renderer and hasattr(renderer, "SetNumberOfLayers"):
             try:
-                renderer.SetNumberOfLayers(
-                    2
-                )  # レイヤー0:3Dオブジェクト、レイヤー1:2Dオーバーレイ
+                renderer.SetNumberOfLayers(2)  # Layer 0: 3D, Layer 1: 2D Overlay
             except Exception:
                 import traceback
+                pass  # May not be supported depending on PyVista version
 
-                pass  # PyVistaのバージョンによってはサポートされていない場合がある
-
-        # --- 3D軸ウィジェットの設定 ---
+        # --- 3D Axis Widget Settings ---
         show_axes = self.settings.get("show_3d_axes", True)
 
-        # ウィジェットがまだ作成されていない場合は作成する
+        # Create widget if not already created
         if getattr(self, "axes_widget", None) is None and hasattr(
             self.plotter, "interactor"
         ):
@@ -1690,10 +1681,10 @@ class MainWindowView3d(object):
             self.axes_widget = vtk.vtkOrientationMarkerWidget()
             self.axes_widget.SetOrientationMarker(axes)
             self.axes_widget.SetInteractor(self.plotter.interactor)
-            # 左下隅に設定 (幅・高さ20%)
+            # Position at bottom-left corner (20% width/height)
             self.axes_widget.SetViewport(0.0, 0.0, 0.2, 0.2)
 
-        # 設定に応じてウィジェットを有効化/無効化
+        # Enable/disable widget based on settings
         if self.axes_widget:
             if show_axes:
                 self.axes_widget.On()
@@ -1704,7 +1695,7 @@ class MainWindowView3d(object):
         if redraw:
             self.draw_molecule_3d(self.current_mol)
 
-        # 設定変更時にカメラ位置をリセットしない（初回のみリセット）
+        # Do not reset camera on settings change (reset only once)
         if not getattr(self, "_camera_initialized", False):
             try:
                 self.plotter.reset_camera()
@@ -1714,7 +1705,7 @@ class MainWindowView3d(object):
 
             self._camera_initialized = True
 
-        # 強制的にプロッターを更新
+        # Force plotter update
         try:
             self.plotter.render()
             if hasattr(self.plotter, "update"):

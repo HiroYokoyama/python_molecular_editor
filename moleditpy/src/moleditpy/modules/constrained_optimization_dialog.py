@@ -71,7 +71,7 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):  # pragma: n
                     else:
                         value_str = f"{value:.2f}"
 
-                    # カラム 0 (Type)
+                    # Column 0 (Type)
                     item_type = QTableWidgetItem(const_type)
                     item_type.setFlags(
                         Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable
@@ -79,7 +79,7 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):  # pragma: n
                     item_type.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
                     self.constraint_table.setItem(row_count, 0, item_type)
 
-                    # カラム 1 (Atom Indices)
+                    # Column 1 (Atom Indices)
                     item_indices = QTableWidgetItem(str(atom_indices))
                     item_indices.setFlags(
                         Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable
@@ -87,12 +87,12 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):  # pragma: n
                     item_indices.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
                     self.constraint_table.setItem(row_count, 1, item_indices)
 
-                    # カラム 2 (Value)
+                    # Column 2 (Value)
                     item_value = QTableWidgetItem(value_str)
                     item_value.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
                     self.constraint_table.setItem(row_count, 2, item_value)
 
-                    # カラム 3 (Force)
+                    # Column 3 (Force)
                     item_force = QTableWidgetItem(f"{force_const:.2e}")
                     item_force.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
                     self.constraint_table.setItem(row_count, 3, item_force)
@@ -616,7 +616,7 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):  # pragma: n
         self.update_selection_display()
 
     def show_selection_labels(self):
-        """選択された原子にラベルを表示"""
+        """Display labels on selected atoms."""
         self.clear_selection_labels()
 
         if not hasattr(self, "selection_labels"):

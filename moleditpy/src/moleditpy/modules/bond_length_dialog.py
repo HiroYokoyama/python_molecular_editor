@@ -219,7 +219,7 @@ class BondLengthDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
             )
             self.distance_label.setText("")
             self.apply_button.setEnabled(False)
-            # ラベル追加
+            # Add label
             self.add_selection_label(self.atom1_idx, "1")
             # Clear distance input while selection is incomplete
             try:

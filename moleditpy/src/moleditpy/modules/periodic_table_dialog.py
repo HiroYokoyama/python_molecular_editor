@@ -172,14 +172,14 @@ class PeriodicTableDialog(QDialog):  # pragma: no cover
                 else CPK_COLORS.get(symbol, CPK_COLORS["DEFAULT"])
             )
 
-            # 背景色の輝度を計算して、文字色を黒か白に決定
-            # 輝度 = (R*299 + G*587 + B*114) / 1000
+            # Calculate background brightness to determine text color (black or white)
+            # Brightness = (R*299 + G*587 + B*114) / 1000
             brightness = (
                 q_color.red() * 299 + q_color.green() * 587 + q_color.blue() * 114
             ) / 1000
             text_color = "white" if brightness < 128 else "black"
 
-            # ボタンのスタイルシートを設定
+            # Set button stylesheet
             b.setStyleSheet(
                 f"background-color: {q_color.name()};"
                 f"color: {text_color};"

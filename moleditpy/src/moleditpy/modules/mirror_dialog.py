@@ -25,7 +25,7 @@ from rdkit.Geometry import Point3D
 
 
 class MirrorDialog(QDialog):  # pragma: no cover
-    """分子の鏡像を作成するダイアログ"""
+    """Dialog to create a mirror image of the molecule."""
 
     def __init__(self, mol, main_window, parent=None):
         super().__init__(parent)
@@ -43,18 +43,18 @@ class MirrorDialog(QDialog):  # pragma: no cover
 
         layout = QVBoxLayout(self)
 
-        # 説明テキスト
+        # Instructional text
         info_label = QLabel("Select the mirror plane to create molecular mirror image:")
         layout.addWidget(info_label)
 
-        # ミラー平面選択のラジオボタン
+        # Radio buttons for mirror plane selection
         self.plane_group = QButtonGroup(self)
 
         self.xy_radio = QRadioButton("XY plane (Z = 0)")
         self.xz_radio = QRadioButton("XZ plane (Y = 0)")
         self.yz_radio = QRadioButton("YZ plane (X = 0)")
 
-        self.xy_radio.setChecked(True)  # デフォルト選択
+        self.xy_radio.setChecked(True)  # Default selection
 
         self.plane_group.addButton(self.xy_radio, 0)
         self.plane_group.addButton(self.xz_radio, 1)
@@ -66,7 +66,7 @@ class MirrorDialog(QDialog):  # pragma: no cover
 
         layout.addSpacing(20)
 
-        # ボタン
+        # Buttons
         button_layout = QHBoxLayout()
 
         apply_button = QPushButton("Apply Mirror")
@@ -81,49 +81,49 @@ class MirrorDialog(QDialog):  # pragma: no cover
         layout.addLayout(button_layout)
 
     def apply_mirror(self):
-        """選択された平面に対してミラー変換を適用"""
+        """Apply mirror transformation across the selected plane."""
         if not self.mol or self.mol.GetNumConformers() == 0:
             QMessageBox.warning(self, "Error", "No 3D coordinates available.")
             return
 
-        # 選択された平面を取得
+        # Get the selected plane
         plane_id = self.plane_group.checkedId()
 
         try:
             conf = self.mol.GetConformer()
 
-            # 各原子の座標を変換
+            # Transform coordinates for each atom
             for atom_idx in range(self.mol.GetNumAtoms()):
                 pos = conf.GetAtomPosition(atom_idx)
 
                 new_pos = [pos.x, pos.y, pos.z]
-                if plane_id == 0:  # XY平面（Z軸に対してミラー）
+                if plane_id == 0:  # XY plane (mirror across Z-axis)
                     new_pos = [pos.x, pos.y, -pos.z]
-                elif plane_id == 1:  # XZ平面（Y軸に対してミラー）
+                elif plane_id == 1:  # XZ plane (mirror across Y-axis)
                     new_pos = [pos.x, -pos.y, pos.z]
-                elif plane_id == 2:  # YZ平面（X軸に対してミラー）
+                elif plane_id == 2:  # YZ plane (mirror across X-axis)
                     new_pos = [-pos.x, pos.y, pos.z]
 
-                # 新しい座標を設定
+                # Set new coordinates
                 conf.SetAtomPosition(
                     atom_idx, Point3D(new_pos[0], new_pos[1], new_pos[2])
                 )
 
-            # ミラー変換後にキラルタグを強制的に再計算 (3Dレンダリングの前に必要)
+            # Force recalculation of chiral tags after mirror transform (required before 3D rendering)
             try:
                 if self.mol.GetNumConformers() > 0:
-                    # 既存のキラルタグをクリア
+                    # Clear existing chiral tags
                     for atom in self.mol.GetAtoms():
                         atom.SetChiralTag(Chem.rdchem.ChiralType.CHI_UNSPECIFIED)
-                    # 3D座標から新しいキラルタグを計算
+                    # Calculate new chiral tags from 3D coordinates
                     Chem.AssignAtomChiralTagsFromStructure(self.mol, confId=0)
             except Exception as e:
                 print(f"Error updating chiral tags: {e}")
 
-            # 3Dビューを更新 (この中で 3D chiral labels も描画される)
+            # Update 3D view (which also draws 3D chiral labels)
             self.main_window.draw_molecule_3d(self.mol)
 
-            # 2Dキラルラベルを更新
+            # Update 2D chiral labels
             self.main_window.update_chiral_labels()
 
             self.main_window.push_undo_state()

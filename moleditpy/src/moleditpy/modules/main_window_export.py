@@ -44,7 +44,7 @@ except Exception:
     from modules.bond_item import BondItem
 
 
-# --- クラス定義 ---
+# --- Class Definition ---
 class MainWindowExport(object):
     """Functional class separated from main_window.py"""
 
@@ -287,7 +287,7 @@ class MainWindowExport(object):
                     # Attempt to get polydata from VTK actor
                     mesh = None
 
-                    # 方法1: mapperのinputから取得 (Improved)
+                    # Method 1: Get from mapper input
                     mapper = None
                     if hasattr(actor, "mapper") and actor.mapper is not None:
                         mapper = actor.mapper
@@ -305,7 +305,7 @@ class MainWindowExport(object):
                         elif hasattr(mapper, "GetInputAsDataSet"):
                             mesh = mapper.GetInputAsDataSet()
 
-                    # 方法2: PyVistaプロッターの内部データから取得
+                    # Method 2: Get from PyVista plotter internal data
                     if mesh is None and actor_name in self.plotter.mesh:
                         mesh = self.plotter.mesh[actor_name]
 
@@ -405,18 +405,18 @@ class MainWindowExport(object):
                         elif hasattr(mapper, "GetInputAsDataSet"):
                             mesh = mapper.GetInputAsDataSet()
 
-                    # 方法2: PyVistaプロッターの内部データから取得
+                    # Method 2: Get from PyVista plotter internal data
                     if mesh is None and actor_name in self.plotter.mesh:
                         mesh = self.plotter.mesh[actor_name]
 
-                    # 方法3: Removed unsafe fallback
+                    # Method 3: Removed unsafe fallback
 
                     if (
                         mesh is not None
                         and hasattr(mesh, "n_points")
                         and mesh.n_points > 0
                     ):
-                        # PyVistaメッシュに変換（必要な場合）
+                        # Convert to PyVista mesh if necessary
                         if not isinstance(mesh, pv.PolyData):
                             if hasattr(mesh, "extract_surface"):
                                 mesh = mesh.extract_surface()
@@ -456,7 +456,7 @@ class MainWindowExport(object):
                     # Get polydata from VTK actor
                     mesh = None
 
-                    # 方法1: mapperのinputから取得 (Improved)
+                    # Method 1: Get from mapper input (Improved)
                     mapper = None
                     if hasattr(actor, "mapper") and actor.mapper is not None:
                         mapper = actor.mapper
@@ -474,7 +474,7 @@ class MainWindowExport(object):
                         elif hasattr(mapper, "GetInputAsDataSet"):
                             mesh = mapper.GetInputAsDataSet()
 
-                    # 方法2: PyVistaプロッターの内部データから取得
+                    # Method 2: Get from PyVista plotter internal data
                     if mesh is None and actor_name in self.plotter.mesh:
                         mesh = self.plotter.mesh[actor_name]
 
@@ -483,7 +483,7 @@ class MainWindowExport(object):
                         and hasattr(mesh, "n_points")
                         and mesh.n_points > 0
                     ):
-                        # PyVistaメッシュに変換（必要な場合）
+                        # Convert to PyVista mesh if necessary
                         if not isinstance(mesh, pv.PolyData):
                             if hasattr(mesh, "extract_surface"):
                                 mesh = mesh.extract_surface()
@@ -491,7 +491,7 @@ class MainWindowExport(object):
                                 mesh = pv.wrap(mesh)
 
                         # Get color from actor
-                        color = [128, 128, 128]  # デフォルト色（グレー）
+                        color = [128, 128, 128]  # Default color (gray)
 
                         try:
                             # Get color from properties
@@ -551,7 +551,7 @@ class MainWindowExport(object):
                             if colors is not None and colors.size > 0:
                                 # Normalize float colors to 0-255
                                 colors_arr = np.asarray(colors)
-                                # 期待形状に整形
+                                # Reshape to expected shape
                                 if colors_arr.ndim == 1:
                                     # 1次元の場合は単一チャンネルとして扱う
                                     colors_arr = colors_arr.reshape(-1, 1)

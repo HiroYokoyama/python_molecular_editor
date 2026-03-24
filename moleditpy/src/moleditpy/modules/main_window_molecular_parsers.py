@@ -53,7 +53,7 @@ except Exception:
     from modules.constants import VERSION
 
 
-# --- クラス定義 ---
+# --- Class Definition ---
 class MainWindowMolecularParsers(object):
     """Functional class separated from main_window.py"""
 
@@ -343,7 +343,7 @@ class MainWindowMolecularParsers(object):
                     # Check if RDKit recognizes element
                     test_atom = Chem.Atom(symbol)
                 except Exception:
-                    # 認識されない場合、最初の文字を大文字にして再試行
+                    # Retry with capitalized symbol if unrecognized
                     symbol = symbol.capitalize()
                     try:
                         test_atom = Chem.Atom(symbol)
@@ -949,7 +949,7 @@ class MainWindowMolecularParsers(object):
                         # Skip if bond exists
                         pass
 
-        # デバッグ情報（オプション）
+        # Debug information (optional)
         # Added bonds based on distance analysis
 
         return len(bonds_added)

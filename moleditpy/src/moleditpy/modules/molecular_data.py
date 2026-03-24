@@ -42,15 +42,15 @@ class MolecularData:
         return atom_id
 
     def add_bond(self, id1, id2, order=1, stereo=0):
-        # 立体結合の場合、IDの順序は方向性を意味するため、ソートしない。
-        # 非立体結合の場合は、キーを正規化するためにソートする。
+        # For stereo bonds, do not sort because ID order determines direction.
+        # For non-stereo bonds, sort to normalize the key.
         if stereo == 0:
             if id1 > id2:
                 id1, id2 = id2, id1
 
         bond_data = {"order": order, "stereo": stereo, "item": None}
 
-        # 逆方向のキーも考慮して、新規結合かどうかをチェック
+        # Check if it's a new bond, considering reverse direction keys.
         is_new_bond = (id1, id2) not in self.bonds and (id2, id1) not in self.bonds
         if is_new_bond:
             if id1 in self.adjacency_list and id2 in self.adjacency_list:
@@ -96,7 +96,7 @@ class MolecularData:
 
     def remove_bond(self, id1, id2):
         try:
-            # 方向性のある立体結合(順方向/逆方向)と、正規化された非立体結合のキーを探す
+            # Look for directional stereo bonds (forward/reverse) and normalized non-stereo bond keys.
             key_to_remove = None
             if (id1, id2) in self.bonds:
                 key_to_remove = (id1, id2)
@@ -117,8 +117,8 @@ class MolecularData:
 
     def to_rdkit_mol(self, use_2d_stereo=True):
         """
-        use_2d_stereo: Trueなら2D座標からE/Zを推定（従来通り）。FalseならE/Zラベル優先、ラベルがない場合のみ2D座標推定。
-        3D変換時はuse_2d_stereo=Falseで呼び出すこと。
+        use_2d_stereo: True estimates E/Z from 2D coordinates (as before). False prioritizes E/Z labels.
+        Call with use_2d_stereo=False for 3D conversion.
         """
         if not self.atoms:
             return None
@@ -134,7 +134,7 @@ class MolecularData:
             idx = mol.AddAtom(atom)
             atom_id_to_idx_map[atom_id] = idx
 
-        # --- Step 2: bonds & stereo info保存（ラベル情報はここで保持） ---
+        # --- Step 2: save bonds & stereo info (label info is kept here) ---
         bond_stereo_info = {}  # bond_idx -> {'type': int, 'atom_ids': (id1,id2), 'bond_data': bond_data}
         for (id1, id2), bond_data in self.bonds.items():
             if id1 not in atom_id_to_idx_map or id2 not in atom_id_to_idx_map:
@@ -151,7 +151,7 @@ class MolecularData:
 
             bond_idx = mol.AddBond(idx1, idx2, order) - 1
 
-            # stereoラベルがあれば、bond_idxに対して詳細を保持（あとで使う）
+            # If stereo label exists, keep details for bond_idx (used later)
             if "stereo" in bond_data and bond_data["stereo"] in [1, 2, 3, 4]:
                 bond_stereo_info[bond_idx] = {
                     "type": int(bond_data["stereo"]),
@@ -178,33 +178,33 @@ class MolecularData:
                     ax = pos.x() * ANGSTROM_PER_PIXEL
                     ay = (
                         -pos.y() * ANGSTROM_PER_PIXEL
-                    )  # Y座標を反転（画面座標系→化学座標系）
+                    )  # Invert Y-coordinate (screen coordinates -> chemical coordinates)
                     conf.SetAtomPosition(idx, (ax, ay, 0.0))
         final_mol.AddConformer(conf)
 
-        # --- Step 5: E/Zラベル優先の立体設定 ---
-        # まず、E/Zラベルがあるbondを記録
+        # --- Step 5: Stereochemistry setting prioritizing E/Z labels ---
+        # First, record bonds with E/Z labels
         ez_labeled_bonds = set()
         for bond_idx, info in bond_stereo_info.items():
             if info["type"] in [3, 4]:
                 ez_labeled_bonds.add(bond_idx)
 
-        # 2D座標からE/Zを推定するのは、use_2d_stereo=True かつE/Zラベルがないbondのみ
+        # Estimate E/Z from 2D coordinates only if use_2d_stereo=True and no E/Z label exists
         if use_2d_stereo:
             Chem.SetDoubleBondNeighborDirections(final_mol, final_mol.GetConformer(0))
         else:
-            # 3D変換時: E/Zラベルがある場合は座標ベースの推定を完全に無効化
+            # 3D conversion: Disable coordinate-based estimation completely if E/Z labels exist
             if ez_labeled_bonds:
-                # E/Zラベルがある場合は、すべての結合のBondDirをクリアして座標ベースの推定を無効化
+                # If E/Z labels exist, clear BondDir for all bonds to disable coordinate-based estimation
                 for b in final_mol.GetBonds():
                     b.SetBondDir(Chem.BondDir.NONE)
             else:
-                # E/Zラベルがない場合のみ座標ベースの推定を実行
+                # Perform coordinate-based estimation only if no E/Z labels exist
                 Chem.SetDoubleBondNeighborDirections(
                     final_mol, final_mol.GetConformer(0)
                 )
 
-        # ヘルパー: 重原子優先で近傍を選ぶ
+        # Helper: Pick neighbors prioritizing heavy atoms
         def pick_preferred_neighbor(atom, exclude_idx):
             for nbr in atom.GetNeighbors():
                 if nbr.GetIdx() == exclude_idx:
@@ -216,12 +216,12 @@ class MolecularData:
                     return nbr.GetIdx()
             return None
 
-        # --- Step 6: ラベルベースで上書き（E/Z を最優先） ---
+        # --- Step 6: Overwrite based on labels (E/Z has highest priority) ---
         for bond_idx, info in bond_stereo_info.items():
             stereo_type = info["type"]
             bond = final_mol.GetBondWithIdx(bond_idx)
 
-            # 単結合の wedge/dash ラベル（1/2）がある場合
+            # Case with single bond wedge/dash labels (1/2)
             if stereo_type in [1, 2]:
                 if stereo_type == 1:
                     bond.SetBondDir(Chem.BondDir.BEGINWEDGE)
@@ -229,7 +229,7 @@ class MolecularData:
                     bond.SetBondDir(Chem.BondDir.BEGINDASH)
                 continue
 
-            # 二重結合の E/Z ラベル（3/4）
+            # Double bond E/Z labels (3/4)
             if stereo_type in [3, 4]:
                 if bond.GetBondType() != Chem.BondType.DOUBLE:
                     continue
@@ -265,7 +265,7 @@ class MolecularData:
                 elif stereo_type == 4:
                     bond.SetStereo(Chem.BondStereo.STEREOE)
 
-                # 座標ベースでつけられた隣接単結合の BondDir（wedge/dash）がラベルと矛盾する可能性があるので消す
+                # Clear BondDir (wedge/dash) of adjacent single bonds assigned via coordinates to avoid label conflicts
                 b1 = final_mol.GetBondBetweenAtoms(begin_atom_idx, neigh1_idx)
                 b2 = final_mol.GetBondBetweenAtoms(end_atom_idx, neigh2_idx)
                 if b1 is not None:
@@ -273,10 +273,10 @@ class MolecularData:
                 if b2 is not None:
                     b2.SetBondDir(Chem.BondDir.NONE)
 
-        # Step 7: 最終化（キャッシュ更新 + 立体割当の再実行）
+        # Step 7: Finalization (cache update + stereochemistry reassignment)
         final_mol.UpdatePropertyCache(strict=False)
 
-        # 3D変換時（use_2d_stereo=False）でE/Zラベルがある場合は、force=Trueで強制適用
+        # During 3D conversion (use_2d_stereo=False), apply force=True if E/Z labels exist
         try:
             if not use_2d_stereo and ez_labeled_bonds:
                 Chem.AssignStereochemistry(final_mol, cleanIt=False, force=True)

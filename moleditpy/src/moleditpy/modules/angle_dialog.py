@@ -394,7 +394,7 @@ class AngleDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
             QMessageBox.warning(self, "Invalid Input", "Please enter a valid number.")
             return
 
-        # Undo状態を保存
+        # Save undo state
         self.main_window.push_undo_state()
 
         # Apply the angle change

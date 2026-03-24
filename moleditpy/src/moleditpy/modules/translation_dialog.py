@@ -202,7 +202,7 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
             QMessageBox.warning(self, "Warning", "Please select at least one atom.")
             return
 
-        # 分子の有効性チェック
+        # Check molecule validity
         if not self.mol or self.mol.GetNumConformers() == 0:
             QMessageBox.warning(
                 self, "Warning", "No valid molecule or conformer available."
@@ -338,7 +338,7 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
                     text_color="cyan",
                     always_visible=True,
                 )
-                # add_point_labelsがリストを返す場合も考慮
+                # Handle case where add_point_labels returns a list
                 if isinstance(label_actor, list):
                     self.selection_labels.extend(label_actor)
                 else:

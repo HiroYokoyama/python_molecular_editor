@@ -60,7 +60,7 @@ class BondItem(QGraphicsItem):
             label_width,
             label_height,
         )
-        # シーン座標に変換
+        # Convert to scene coordinates
         return self.mapToScene(label_rect).boundingRect()
 
     def set_stereo(self, new_stereo):

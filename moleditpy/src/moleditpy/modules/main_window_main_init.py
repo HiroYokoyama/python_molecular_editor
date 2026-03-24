@@ -466,15 +466,15 @@ class MainWindowMainInit(object):
 
         self.splitter.setSizes([600, 600])
 
-        # スプリッターハンドルにツールチップを設定
+        # Set tooltip for splitter handle
         QTimer.singleShot(100, self.setup_splitter_tooltip)
 
-        # ステータスバーを左右に分離するための設定
+        # Settings to separate status bar segments
         self.status_bar = self.statusBar()
-        self.formula_label = QLabel("")  # 右側に表示するラベルを作成
-        # 右端に余白を追加して見栄えを調整
+        self.formula_label = QLabel("")  # Create label to be displayed on the right
+        # Add margin to the right end for better appearance
         self.formula_label.setStyleSheet("padding-right: 8px;")
-        # ラベルを右側に常時表示ウィジェットとして追加
+        # Add label as a permanent widget on the right
         self.status_bar.addPermanentWidget(self.formula_label)
 
         # self.view_2d.fitInView(self.scene.sceneRect(), Qt.AspectRatioMode.KeepAspectRatio)
@@ -485,12 +485,6 @@ class MainWindowMainInit(object):
         # Keep a reference to the main toolbar for later updates
         self.toolbar = toolbar
 
-        # Now that toolbar exists, initialize menu bar (which might add toolbar actions from plugins)
-        # self.init_menu_bar() - Moved down
-
-        # Templates toolbar: place it directly below the main toolbar (second row at the top)
-        # Use addToolBarBreak to ensure this toolbar appears on the next row under the main toolbar.
-        # Some older PyQt/PySide versions may not have addToolBarBreak; fall back silently in that case.
         try:
             # Insert a toolbar break in the Top toolbar area to force the next toolbar onto a new row
             self.addToolBarBreak(Qt.ToolBarArea.TopToolBarArea)
@@ -1608,7 +1602,7 @@ class MainWindowMainInit(object):
             self.statusBar().showMessage(f"Unsupported file type: {file_ext}")
 
     def apply_initial_settings(self):  # pragma: no cover
-        """UIの初期化が完了した後に、保存された設定を3Dビューに適用する"""
+        """Apply saved settings to the 3D view after UI initialization is complete."""
 
         try:
             self.update_cpk_colors_from_settings()
@@ -1639,7 +1633,7 @@ class MainWindowMainInit(object):
 
     def open_settings_dialog(self):  # pragma: no cover
         dialog = SettingsDialog(self.settings, self)
-        # accept()メソッドで設定の適用と3Dビューの更新を行うため、ここでは不要
+        # Settings application and 3D view updates are handled by the accept() method.
         dialog.exec()
 
     def reset_all_settings_menu(self):  # pragma: no cover
@@ -1718,9 +1712,9 @@ class MainWindowMainInit(object):
                     if hasattr(self, "intermolecular_rdkit_action"):
                         self.intermolecular_rdkit_action.setChecked(self.settings.get("optimize_intermolecular_interaction_rdkit", True))
 
-                    # 3Dビューの設定を適用
+                    # Apply 3D view settings
                     self.apply_3d_settings()
-                    # 現在の分子を再描画（設定変更を反映）
+                    # Redraw current molecule to reflect setting changes
                     if hasattr(self, "current_mol") and self.current_mol:
                         self.draw_molecule_3d(self.current_mol)
 

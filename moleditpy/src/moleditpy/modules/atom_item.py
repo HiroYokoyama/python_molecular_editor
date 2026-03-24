@@ -183,7 +183,7 @@ class AtomItem(QGraphicsItem):
         # 2. Construct the full visual rectangle relative to bg_rect
         full_visual_rect = QRectF(bg_rect)
 
-        # 電荷記号の領域を計算に含める
+        # Include charge symbol area in calculation
         if self.charge != 0:
             # Chemical convention: single charge as "+"/"-", multiple as "2+"/"2-"
             if self.charge == 1:
@@ -206,7 +206,7 @@ class AtomItem(QGraphicsItem):
             charge_rect.moveTopLeft(charge_pos)
             full_visual_rect = full_visual_rect.united(charge_rect)
 
-        # ラジカル記号の領域を計算に含める
+        # Include radical symbol area in calculation
         if self.radical > 0:
             radical_area = QRectF(
                 text_rect.center().x() - 8, text_rect.top() - 8, 16, 8
@@ -388,7 +388,7 @@ class AtomItem(QGraphicsItem):
                 charge_font = QFont("Arial", 12, QFont.Weight.Bold)
                 painter.setFont(charge_font)
                 charge_rect = painter.fontMetrics().boundingRect(charge_str)
-                # 電荷の位置も反転に対応
+                # Charge position also supports flipping
                 if flip_text:
                     charge_pos = QPointF(
                         text_rect.left() - charge_rect.width() - 2,
@@ -446,7 +446,7 @@ class AtomItem(QGraphicsItem):
         return res
 
     def hoverEnterEvent(self, event):
-        # シーンのモードにかかわらず、ホバー時にハイライトを有効にする
+        # Enable highlight on hover regardless of scene mode
         self.hovered = True
         self.update()
         super().hoverEnterEvent(event)

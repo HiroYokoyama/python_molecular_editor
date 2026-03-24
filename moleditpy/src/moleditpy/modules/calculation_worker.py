@@ -472,7 +472,7 @@ def _perform_direct_conversion(mol_block, mol, options, _check_halted, _safe_sta
                     if stereo_raw == 1:
                         stereo_flag = 1  # Wedge
                     elif stereo_raw == 2:
-                        stereo_flag = 6  # Dash (V2000では 6 がDash)
+                        stereo_flag = 6  # Dash (6 is Dash in V2000)
                     else:
                         stereo_flag = stereo_raw
 
@@ -556,7 +556,7 @@ def _perform_direct_conversion(mol_block, mol, options, _check_halted, _safe_sta
                 import traceback
                 traceback.print_exc()
         else:
-            # 新規追加されたH原子: 親原子の近くに配置
+            # Newly added H atoms: place near the parent atom
             atom = mol.GetAtomWithIdx(i)
             if atom.GetAtomicNum() == 1:
                 neighs = [
@@ -678,7 +678,7 @@ def _perform_direct_conversion(mol_block, mol, options, _check_halted, _safe_sta
         stereo_z_offset = 1.5  # wedge -> +1.5, dash -> -1.5
         for begin_idx, end_idx, stereo_flag in stereo_dirs:
             try:
-                # インデックスは既存原子内のはず
+                # Indices should be within existing atoms
                 if (
                     begin_idx >= num_existing_atoms
                     or end_idx >= num_existing_atoms
@@ -689,12 +689,12 @@ def _perform_direct_conversion(mol_block, mol, options, _check_halted, _safe_sta
                     continue
 
                 sign = 1.0 if stereo_flag == 1 else -1.0
-
-                # end_idx (立体表記の終点側原子) にZオフセットを適用
+                
+                # Apply Z-offset to end_idx (the atom at the end of the stereo notation)
                 pos = conf.GetAtomPosition(end_idx)
                 newz = float(pos.z) + (
                     stereo_z_offset * sign
-                )  # 既存のZ=0にオフセットを加算
+                )  # Add offset to the existing Z-coordinate (usually 0)
                 conf.SetAtomPosition(
                     end_idx,
                     rdGeometry.Point3D(

@@ -45,7 +45,7 @@ class DihedralDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
         self.atom3_idx = None  # central bond end
         self.atom4_idx = None
 
-        # 事前選択された原子を設定
+        # Set pre-selected atoms
         if preselected_atoms and len(preselected_atoms) >= 4:
             self.atom1_idx = preselected_atoms[0]
             self.atom2_idx = preselected_atoms[1]  # central bond start
@@ -141,13 +141,13 @@ class DihedralDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
         self.picker_connection = None
         self.enable_picking()
 
-        # 事前選択された原子がある場合は初期表示を更新
+        # Update initial display if atoms are pre-selected
         if self.atom1_idx is not None:
             self.show_atom_labels()
             self.update_display()
 
     def on_atom_picked(self, atom_idx):
-        """原子がピックされたときの処理"""
+        """Handle atom picked event."""
         if self.atom1_idx is None:
             self.atom1_idx = atom_idx
         elif self.atom2_idx is None:
@@ -168,7 +168,7 @@ class DihedralDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
         self.update_display()
 
     def keyPressEvent(self, event):
-        """キーボードイベントを処理"""
+        """Handle keyboard events."""
         if event.key() == Qt.Key.Key_Return or event.key() == Qt.Key.Key_Enter:
             if self.apply_button.isEnabled():
                 self.apply_changes()
@@ -177,19 +177,19 @@ class DihedralDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
             super().keyPressEvent(event)
 
     def closeEvent(self, event):
-        """ダイアログが閉じられる時の処理"""
+        """Handle dialog close event."""
         self.clear_atom_labels()
         self.disable_picking()
         super().closeEvent(event)
 
     def accept(self):
-        """OK時の処理"""
+        """Handle OK action."""
         self.clear_atom_labels()
         self.disable_picking()
         super().accept()
 
     def clear_selection(self):
-        """選択をクリア"""
+        """Clear selection."""
         self.atom1_idx = None
         self.atom2_idx = None  # central bond start
         self.atom3_idx = None  # central bond end
@@ -198,7 +198,7 @@ class DihedralDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
         self.update_display()
 
     def show_atom_labels(self):
-        """選択された原子にラベルを表示"""
+        """Display labels on selected atoms."""
         selected_atoms = [
             self.atom1_idx,
             self.atom2_idx,
@@ -212,7 +212,7 @@ class DihedralDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
         self.show_atom_labels_for(pairs)
 
     def update_display(self):
-        """表示を更新"""
+        """Update display."""
         selected_count = sum(
             x is not None
             for x in [self.atom1_idx, self.atom2_idx, self.atom3_idx, self.atom4_idx]
@@ -357,7 +357,7 @@ class DihedralDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
         self.main_window.update_chiral_labels()
 
     def apply_changes(self):
-        """変更を適用"""
+        """Apply changes."""
         if any(
             idx is None
             for idx in [self.atom1_idx, self.atom2_idx, self.atom3_idx, self.atom4_idx]
@@ -380,14 +380,14 @@ class DihedralDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
         # Apply the dihedral angle change
         self.adjust_dihedral(new_dihedral)
 
-        # キラルラベルを更新
+        # Update chiral labels
         self.main_window.update_chiral_labels()
 
-        # Undo状態を保存
+        # Save undo state
         self.main_window.push_undo_state()
 
     def adjust_dihedral(self, new_dihedral_deg):
-        """二面角を調整（改善されたアルゴリズム）"""
+        """Adjust dihedral angle (improved algorithm)."""
         conf = self.mol.GetConformer()
         pos1 = np.array(conf.GetAtomPosition(self.atom1_idx))
         pos2 = np.array(conf.GetAtomPosition(self.atom2_idx))
@@ -505,7 +505,7 @@ class DihedralDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
         self.main_window.draw_molecule_3d(self.mol)
 
     def reject(self):
-        """キャンセル時の処理"""
+        """Handle cancel action."""
         self.clear_atom_labels()
         self.disable_picking()
         super().reject()

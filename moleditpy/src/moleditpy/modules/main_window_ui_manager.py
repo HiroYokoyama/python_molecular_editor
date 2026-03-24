@@ -330,7 +330,7 @@ class MainWindowUiManager(object):
             # Dispatch based on extension
             if file_path.lower().endswith((".pmeraw", ".pmeprj")):
                 self.open_project_file(file_path=file_path)
-                QTimer.singleShot(100, self.fit_to_view)  # 遅延でFit
+                QTimer.singleShot(100, self.fit_to_view)  # Delayed Fit
                 event.acceptProposedAction()
             elif file_path.lower().endswith((".mol", ".sdf")):
                 plotter_widget = self.splitter.widget(1)  # 3D viewer widget
@@ -344,11 +344,11 @@ class MainWindowUiManager(object):
                         self.statusBar().showMessage(
                             "MOL file import not implemented for 2D editor."
                         )
-                QTimer.singleShot(100, self.fit_to_view)  # 遅延でFit
+                QTimer.singleShot(100, self.fit_to_view)  # Delayed Fit
                 event.acceptProposedAction()
             elif file_path.lower().endswith(".xyz"):
                 self.load_xyz_for_3d_viewing(file_path=file_path)
-                QTimer.singleShot(100, self.fit_to_view)  # 遅延でFit
+                QTimer.singleShot(100, self.fit_to_view)  # Delayed Fit
                 event.acceptProposedAction()
             else:
                 self.statusBar().showMessage(f"Unsupported file type: {file_path}")
@@ -450,7 +450,7 @@ class MainWindowUiManager(object):
 
         self.minimize_2d_panel()
 
-        # 3D関連機能を統一的に有効化
+        # Collectively enable 3D-related features
         self._enable_3d_features(True)
 
     def restore_ui_for_editing(self):
@@ -466,7 +466,7 @@ class MainWindowUiManager(object):
         if hasattr(self, "other_atom_action"):
             self.other_atom_action.setEnabled(True)
 
-        # 2Dモードに戻る時は3D編集機能を統一的に無効化
+        # Collectively disable 3D edit functions when returning to 2D mode
         self._enable_3d_edit_actions(False)
 
     def minimize_2d_panel(self):

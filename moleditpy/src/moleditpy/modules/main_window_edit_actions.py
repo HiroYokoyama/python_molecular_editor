@@ -122,9 +122,9 @@ except Exception:
     from modules import sip_isdeleted_safe
 
 
-# --- クラス定義 ---
+# --- Class Definition ---
 class MainWindowEditActions(object):
-    """main_window.py から分離された機能クラス"""
+    """Functional class separated from main_window.py"""
 
     def copy_selection(self):
         """Copy selected atoms and bonds to clipboard"""
@@ -170,7 +170,7 @@ class MainWindowEditActions(object):
                             "order": bond_data["order"],
                             "stereo": bond_data.get(
                                 "stereo", 0
-                            ),  # E/Z立体化学情報も保存
+                            ),  # Also save E/Z stereochemistry info
                         }
                     )
 
@@ -200,7 +200,7 @@ class MainWindowEditActions(object):
             if not selected_items:
                 return
 
-            # 最初にコピー処理を実行
+            # Execute copy process first
             self.copy_selection()
 
             if self.scene.delete_items(set(selected_items)):
@@ -550,7 +550,7 @@ class MainWindowEditActions(object):
                     dy = bond_length * math.sin(angle)
                     pos = QPointF(parent_pos.x() + dx, parent_pos.y() + dy)
 
-                    # 新しい水素原子を作成
+                    # Create new hydrogen atom
                     try:
                         new_id = self.scene.create_atom("H", pos)
                         new_item = self.data.atoms[new_id]["item"]
@@ -756,7 +756,7 @@ class MainWindowEditActions(object):
         self.scene.reinitialize_items()
         self.is_xyz_derived = False
 
-        # 測定ラベルもクリア
+        # Also clear measurement labels
         self.clear_2d_measurement_labels()
 
         # Clear 3D data and disable 3D-related menus
@@ -989,7 +989,7 @@ class MainWindowEditActions(object):
 
         mol = self.data.to_rdkit_mol()
         if mol is None or mol.GetNumAtoms() == 0:
-            # RDKit変換が失敗した場合は化学的問題をチェック
+            # If RDKit conversion fails, check for chemistry problems
             self.check_chemistry_problems_fallback()
             return
 
@@ -1024,7 +1024,7 @@ class MainWindowEditActions(object):
                 )
                 return
 
-            # 元の図形の中心を維持
+            # Maintain original centroid
             # original_center_x = sum(item.pos().x() for item in target_atom_items) / len(target_atom_items)
             # original_center_y = sum(item.pos().y() for item in target_atom_items) / len(target_atom_items)
 
@@ -1034,7 +1034,7 @@ class MainWindowEditActions(object):
 
             SCALE = 50.0
 
-            # 新しい座標を適用
+            # Apply new coordinates
             for atom_id, rdkit_pos in new_positions_map.items():
                 if atom_id in self.data.atoms:
                     item = self.data.atoms[atom_id]["item"]
@@ -1108,7 +1108,7 @@ class MainWindowEditActions(object):
         # Translation distance (bottom-left)
         MOVE_DISTANCE = 20
 
-        # self.data.atoms.values() から item を安全に取得
+        # Safely retrieve item from self.data.atoms.values()
         all_atom_items = [
             data["item"] for data in self.data.atoms.values() if data and "item" in data
         ]
@@ -1213,7 +1213,7 @@ class MainWindowEditActions(object):
             frag1 = next((f for f in fragments if rep_item1.atom_id in f), None)
             frag2 = next((f for f in fragments if rep_item2.atom_id in f), None)
 
-            # 同一フラグメント内の重なりなどはスキップ
+            # Skip overlaps within the same fragment
             if not frag1 or not frag2 or frag1 == frag2:
                 continue
 
@@ -1226,7 +1226,7 @@ class MainWindowEditActions(object):
             # 3c: Plan translation
             translation_vector = QPointF(
                 -MOVE_DISTANCE, MOVE_DISTANCE
-            )  # 左下方向へのベクトル
+            )  # Vector towards bottom-left
             move_operations.append((ids_to_move, translation_vector))
 
         # Step 4: Execute translations
@@ -1309,11 +1309,11 @@ class MainWindowEditActions(object):
                 {
                     "indices": frag_indices,
                     "centroid": np.mean(positions_np, axis=0),
-                    "positions_np": positions_np,  # Numpy配列として保持
-                    "vdw_radii_np": vdw_radii_np,  # Numpy配列として保持
+                    "positions_np": positions_np,  # Keep as Numpy array
+                    "vdw_radii_np": vdw_radii_np,  # Keep as Numpy array
                     "max_vdw_radius": max_vdw,
-                    "bbox_min": np.zeros(3),  # 後で計算
-                    "bbox_max": np.zeros(3),  # 後で計算
+                    "bbox_min": np.zeros(3),  # To be calculated later
+                    "bbox_max": np.zeros(3),  # To be calculated later
                 }
             )
 
@@ -1336,7 +1336,7 @@ class MainWindowEditActions(object):
                     current_positions.append([pos.x, pos.y, pos.z])
 
                 positions_np = np.array(current_positions)
-                frag_info[i]["positions_np"] = positions_np  # 座標情報を更新
+                frag_info[i]["positions_np"] = positions_np  # Update position info
 
                 # Margin based on VDW and scale
                 margin = frag_info[i]["max_vdw_radius"] * collision_scale
@@ -1390,7 +1390,7 @@ class MainWindowEditActions(object):
                             distance_vec = pos_i - pos_j
                             distance_sq = np.dot(
                                 distance_vec, distance_vec
-                            )  # 平方根を避けて高速化
+                            )  # Avoid square root for speed
 
                             min_distance = (vdw_i + vdw_j) * collision_scale
                             min_distance_sq = min_distance * min_distance
@@ -1408,7 +1408,7 @@ class MainWindowEditActions(object):
                         # Apply average push vector
                         avg_push_vector = total_push_vector / collision_count
 
-                        # Conformerの座標を更新
+                        # Update conformer coordinates
                         for idx in frag_i["indices"]:
                             pos = np.array(conf.GetAtomPosition(idx))
                             new_pos = pos + avg_push_vector

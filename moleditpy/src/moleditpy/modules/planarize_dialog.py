@@ -27,8 +27,8 @@ except Exception:
 
 
 class PlanarizeDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
-    """選択原子群を最適フィット平面へ投影して planarize するダイアログ
-    AlignPlane を参考にした選択UIを持ち、Apply ボタンで選択原子を平面へ直交射影する。
+    """Dialog to planarize a selected set of atoms by projecting them onto a best-fit plane.
+    Has a selection UI similar to AlignPlane, and projects selected atoms orthogonally onto the plane via the Apply button.
     """
 
     def __init__(self, mol, main_window, preselected_atoms=None, parent=None):
@@ -39,7 +39,7 @@ class PlanarizeDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
         self.selected_atoms = set()
 
         if preselected_atoms:
-            # 事前選択された原子を追加
+            # Add pre-selected atoms
             self.selected_atoms.update(preselected_atoms)
 
         self.init_ui()
@@ -67,7 +67,7 @@ class PlanarizeDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
         self.clear_button.clicked.connect(self.clear_selection)
         button_layout.addWidget(self.clear_button)
 
-        # Select All Atoms ボタンを追加
+        # Add Select All Atoms button
         self.select_all_button = QPushButton("Select All Atoms")
         self.select_all_button.setToolTip(
             "Select all atoms in the molecule for planarization"
@@ -178,7 +178,7 @@ class PlanarizeDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
             centroid = np.mean(selected_positions, axis=0)
             centered_positions = selected_positions - centroid
 
-            # SVDによる最小二乗平面の法線取得
+            # Get normal of the least-squares plane via SVD
             u, s, vh = np.linalg.svd(centered_positions, full_matrices=False)
             normal = vh[-1]
             norm = np.linalg.norm(normal)
@@ -191,19 +191,19 @@ class PlanarizeDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
                 return
             normal = normal / norm
 
-            # 各点を重心を通る平面へ直交射影
+            # Project each point orthogonally onto the plane passing through the centroid
             projections = centered_positions - np.outer(
                 np.dot(centered_positions, normal), normal
             )
             new_positions = projections + centroid
 
-            # 分子座標を更新
+            # Update molecular coordinates
             conf = self.mol.GetConformer()
             for i, new_pos in zip(selected_indices, new_positions):
                 conf.SetAtomPosition(int(i), new_pos.tolist())
                 self.main_window.atom_positions_3d[int(i)] = new_pos
 
-            # 3Dビュー更新
+            # Update 3D view
             self.main_window.draw_molecule_3d(self.mol)
             self.main_window.update_chiral_labels()
             self.main_window.push_undo_state()
@@ -218,19 +218,19 @@ class PlanarizeDialog(Dialog3DPickingMixin, QDialog):  # pragma: no cover
             QMessageBox.critical(self, "Error", f"Failed to planarize: {e}")
 
     def closeEvent(self, event):
-        """ダイアログが閉じられる時の処理"""
+        """Handle dialog close event."""
         self.clear_atom_labels()
         self.disable_picking()
         super().closeEvent(event)
 
     def reject(self):
-        """キャンセル時の処理"""
+        """Handle cancel action."""
         self.clear_atom_labels()
         self.disable_picking()
         super().reject()
 
     def accept(self):
-        """OK時の処理"""
+        """Handle OK action."""
         self.clear_atom_labels()
         self.disable_picking()
         super().accept()

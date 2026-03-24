@@ -41,7 +41,7 @@ class AnalysisWindow(QDialog):
 
         # --- Calculate molecular properties ---
         try:
-            # RDKitのモジュールをインポート
+            # Import RDKit modules
 
             if self.is_xyz_derived:
                 # XYZ-derived: Calculate directly from original atomic information

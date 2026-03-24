@@ -164,7 +164,7 @@ class MoleculeScene(QGraphicsScene):
         needs_update = False
         for atom_data in self.data.atoms.values():
             item = atom_data.get("item")
-            # hasattr は安全性のためのチェック
+            # hasattr is a safety check
             if item and hasattr(item, "has_problem") and item.has_problem:
                 item.has_problem = False
                 item.update()
@@ -345,7 +345,7 @@ class MoleculeScene(QGraphicsScene):
 
             self.temp_line.setLine(QLineF(start_point, end_point))
         else:
-            # テンプレートモードであっても、ホバーイベントはここで伝播する
+            # Even in template mode, hover events are propagated here
             super().mouseMoveEvent(event)
 
     def mouseReleaseEvent(self, event):  # pragma: no cover
@@ -393,7 +393,7 @@ class MoleculeScene(QGraphicsScene):
                         existing_items=context.get("items", []),
                     )
                 self.data_changed_in_event = True
-                # イベント処理をここで完了させ、下のアイテムが選択されるのを防ぐ
+                # Complete event processing here to prevent selection of underlying items
                 self.start_atom = None
                 self.start_pos = None
                 self.press_pos = None
@@ -404,7 +404,7 @@ class MoleculeScene(QGraphicsScene):
 
         released_item = self.itemAt(end_pos, self.views()[0].transform())
 
-        # 1. 特殊モード（ラジカル/電荷）の処理
+        # 1. Handle special modes (radical/charge)
         if (
             (self.mode == "radical")
             and is_click
@@ -412,7 +412,7 @@ class MoleculeScene(QGraphicsScene):
         ):
             atom = released_item
             atom.prepareGeometryChange()
-            # ラジカルの状態をトグル (0 -> 1 -> 2 -> 0)
+            # Toggle radical state (0 -> 1 -> 2 -> 0)
             atom.radical = (atom.radical + 1) % 3
             self.data.atoms[atom.atom_id]["radical"] = atom.radical
             atom.update_style()
@@ -459,43 +459,43 @@ class MoleculeScene(QGraphicsScene):
                         else:  # current_stereo == 4
                             new_stereo = 0  # E -> None
                         self.update_bond_stereo(b, new_stereo)
-                        self.update_all_items()  # 強制再描画
-                        self.window.push_undo_state()  # ここでUndo stackに積む
+                        self.update_all_items()  # Force redraw
+                        self.window.push_undo_state()  # Push to undo stack here
                 except Exception as e:
                     logging.error(f"Error in E/Z stereo toggle: {e}", exc_info=True)
                     if hasattr(self.window, "statusBar"):
                         self.window.statusBar().showMessage(
                             f"Error changing E/Z stereochemistry: {e}", 5000
                         )
-                    self.update_all_items()  # エラー時も整合性維持のため再描画
-                return  # この後の処理は行わない
+                    self.update_all_items()  # Redraw even on error to maintain consistency
+                return  # Do not proceed further
             elif (
                 self.bond_stereo != 0
                 and b.order == self.bond_order
                 and b.stereo == self.bond_stereo
             ):
-                # 方向性を反転させる
+                # Invert bond direction
                 old_id1, old_id2 = b.atom1.atom_id, b.atom2.atom_id
-                # 1. 古い方向の結合をデータから削除
+                # 1. Remove old bond from data
                 self.data.remove_bond(old_id1, old_id2)
-                # 2. 逆方向で結合をデータに再追加
+                # 2. Add bond in reverse direction
                 new_key, _ = self.data.add_bond(
                     old_id2, old_id1, self.bond_order, self.bond_stereo
                 )
-                # 3. BondItemの原子参照を入れ替え、新しいデータと関連付ける
+                # 3. Swap atom references and link to new data in BondItem
                 b.atom1, b.atom2 = b.atom2, b.atom1
                 self.data.bonds[new_key]["item"] = b
-                # 4. 見た目を更新
+                # 4. Update visual state
                 b.update_position()
             else:
-                # 既存の結合を一度削除
+                # Remove existing bond once
                 self.data.remove_bond(b.atom1.atom_id, b.atom2.atom_id)
-                # BondItemが記憶している方向(b.atom1 -> b.atom2)で、新しい結合様式を再作成
-                # これにより、修正済みのadd_bondが呼ばれ、正しい方向で保存される
+                # Recreate bond in the direction recorded by BondItem (b.atom1 -> b.atom2)
+                # This ensures the corrected add_bond is called and saved with proper directionality.
                 new_key, _ = self.data.add_bond(
                     b.atom1.atom_id, b.atom2.atom_id, self.bond_order, self.bond_stereo
                 )
-                # BondItemの見た目とデータ参照を更新
+                # Update BondItem visual state and data reference
                 b.prepareGeometryChange()
                 b.order = self.bond_order
                 b.stereo = self.bond_stereo
@@ -503,19 +503,19 @@ class MoleculeScene(QGraphicsScene):
                 b.update()
             self.clearSelection()
             self.data_changed_in_event = True
-        # 3. 新規原子・結合の作成処理 (atom_* モード および すべての bond_* モードで許可)
+        # 3. Create new atom/bond (Allowed in atom_* and all bond_* modes)
         elif self.start_atom and (
             self.mode.startswith("atom") or self.mode.startswith("bond")
         ):
             line = QLineF(self.start_atom.pos(), end_pos)
             end_item = self.itemAt(end_pos, self.views()[0].transform())
-            # 使用する結合様式を決定
-            # atomモードの場合は bond_order/stereo を None にして create_bond にデフォルト値(1, 0)を適用
-            # bond_* モードの場合は現在の設定 (self.bond_order/stereo) を使用
+            # Determine bond style to use
+            # In atom modes, set bond_order/stereo to None so create_bond uses defaults (1, 0)
+            # In bond_* modes, use current settings (self.bond_order/stereo)
             order_to_use = self.bond_order if self.mode.startswith("bond") else None
             stereo_to_use = self.bond_stereo if self.mode.startswith("bond") else None
             if is_click:
-                # 短いクリック: 既存原子のシンボル更新 (atomモードのみ)
+                # Short click: Update existing atom symbol (atom mode only)
                 if (
                     self.mode.startswith("atom")
                     and self.start_atom.symbol != self.current_atom_symbol
@@ -527,7 +527,7 @@ class MoleculeScene(QGraphicsScene):
                     self.start_atom.update_style()
                     self.data_changed_in_event = True
             else:
-                # ドラッグ: 新規結合または既存原子への結合
+                # Drag: new bond or bond to existing atom
                 if isinstance(end_item, AtomItem) and self.start_atom != end_item:
                     self.create_bond(
                         self.start_atom,
@@ -545,12 +545,12 @@ class MoleculeScene(QGraphicsScene):
                         bond_stereo=stereo_to_use,
                     )
                 self.data_changed_in_event = True
-        # 4. 空白領域からの新規作成処理 (atom_* モード および すべての bond_* モードで許可)
+        # 4. Create new from empty area (allowed in atom_* and all bond_* modes)
         elif self.start_pos and (
             self.mode.startswith("atom") or self.mode.startswith("bond")
         ):
             line = QLineF(self.start_pos, end_pos)
-            # 使用する結合様式を決定
+            # Determine bond type to use
             order_to_use = self.bond_order if self.mode.startswith("bond") else None
             stereo_to_use = self.bond_stereo if self.mode.startswith("bond") else None
             if line.length() < 10:
@@ -581,19 +581,19 @@ class MoleculeScene(QGraphicsScene):
                         bond_stereo=stereo_to_use,
                     )
                 self.data_changed_in_event = True
-        # 5. それ以外の処理 (Selectモードなど)
+        # 5. Other processing (Select mode, etc.)
         else:
             super().mouseReleaseEvent(event)
 
-        # 削除されたオブジェクトを安全にチェック
+        # Safely check for deleted objects
         moved_atoms = []
         for item, old_pos in self.initial_positions_in_event.items():
             try:
-                # オブジェクトが有効で、シーンに存在し、位置が変更されているかチェック
+                # Check if object is valid, in scene, and position changed
                 if item.scene() and item.pos() != old_pos:
                     moved_atoms.append(item)
             except RuntimeError:
-                # オブジェクトが削除されている場合はスキップ
+                # Skip if object is deleted
                 continue
         if moved_atoms:
             self.data_changed_in_event = True
@@ -603,11 +603,11 @@ class MoleculeScene(QGraphicsScene):
                     self.data.atoms[atom.atom_id]["pos"] = atom.pos()
                     bonds_to_update.update(atom.bonds)
                 except RuntimeError:
-                    # オブジェクトが削除されている場合はスキップ
+                    # Skip if object is deleted
                     continue
             for bond in bonds_to_update:
                 bond.update_position()
-            # 原子移動後に測定ラベルの位置を更新
+            # Update measurement label positions after atom move
             self.window.update_2d_measurement_labels()
             if self.views():
                 self.views()[0].viewport().update()
@@ -779,10 +779,10 @@ class MoleculeScene(QGraphicsScene):
         self, points, bonds_info, existing_items=None, symbol="C"
     ):
         """
-        add_molecule_fragment の最終確定版。
-        - 既存の結合次数を変更しないポリシーを徹底（最重要）。
-        - ベンゼン環テンプレートは、フューズされる既存結合の次数に基づき、
-          「新規に作られる二重結合が2本になるように」回転を決定するロジックを適用（条件分岐あり）。
+        Final version of add_molecule_fragment.
+        - Enforce policy of not changing existing bond orders (crucial).
+        - Benzene template rotation is decided based on fused bond orders 
+          so that exactly two new double bonds are created (conditional logic).
         """
 
         num_points = len(points)
@@ -2195,10 +2195,10 @@ class MoleculeScene(QGraphicsScene):
 
             id1, id2 = bond_item.atom1.atom_id, bond_item.atom2.atom_id
 
-            # E/Z結合は方向性を持つため、キーは(id1, id2)のまま探す
+            # For E/Z bonds, keep key as (id1, id2) due to directionality
             key_to_update = (id1, id2)
             if key_to_update not in self.data.bonds:
-                # Wedge/Dashなど、逆順で登録されている可能性も考慮
+                # Consider possibilities like Wedge/Dash registered in reverse order
                 key_to_update = (id2, id1)
                 if key_to_update not in self.data.bonds:
                     # Log error instead of printing to console
