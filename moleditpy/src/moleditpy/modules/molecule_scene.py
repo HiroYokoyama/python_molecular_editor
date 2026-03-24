@@ -57,27 +57,16 @@ class MoleculeScene(QGraphicsScene):
             if isinstance(item, QGraphicsLineItem) and getattr(
                 item, "_is_template_preview", False
             ):
-                try:
-                    # If SIP reports the wrapper as deleted, skip it. Otherwise
-                    # ensure it is still in a scene before attempting removal.
-                    if sip_isdeleted_safe(item):  
-                        continue
-                    sc = None
-                    try:
-                        sc = item.scene() if hasattr(item, "scene") else None
-                    except (AttributeError, RuntimeError, ValueError, TypeError):
-                        sc = None
-                    if sc is None:  
-                        continue
-                    try:
-                        self.removeItem(item)
-                    except (AttributeError, RuntimeError, ValueError, TypeError):  
-                        # Best-effort: ignore removal errors to avoid crashes during teardown
-                        import traceback
-                        traceback.print_exc()
-                except (AttributeError, RuntimeError, ValueError, TypeError):
-                    # Non-fatal: continue with other items
+                if sip_isdeleted_safe(item):
                     continue
+                sc = getattr(item, "scene", lambda: None)()
+                if sc is None:
+                    continue
+                try:
+                    self.removeItem(item)
+                except (RuntimeError, ValueError, TypeError):
+                    # Best-effort: ignore removal errors during teardown
+                    pass
         self.template_context = {}
         if hasattr(self, "template_preview"):
             self.template_preview.hide()
@@ -127,11 +116,11 @@ class MoleculeScene(QGraphicsScene):
                 bonds_to_update.update(atom.bonds)
 
         for bond in bonds_to_update:
-            try:
-                if not sip_isdeleted_safe(bond):
+            if not sip_isdeleted_safe(bond):
+                try:
                     bond.update_position()
-            except (AttributeError, RuntimeError, ValueError, TypeError):
-                continue
+                except (AttributeError, RuntimeError, ValueError, TypeError):
+                    continue
 
     def update_all_items(self):
         """Force redraw of all items."""
@@ -148,17 +137,14 @@ class MoleculeScene(QGraphicsScene):
         self.template_preview_points = []
         self.template_context = {}
         self._deleted_items = []
-        try:
-            app = QApplication.instance()
-            if app is not None:
-                try:
-                    app.aboutToQuit.connect(self.purge_deleted_items)
-                except (AttributeError, RuntimeError, ValueError, TypeError):  
-                    import traceback
-                    traceback.print_exc()
-        except (AttributeError, RuntimeError, ValueError, TypeError):  
-            import traceback
-            traceback.print_exc()
+
+        app = QApplication.instance()
+        if app is not None:
+            try:
+                app.aboutToQuit.connect(self.purge_deleted_items)
+            except (AttributeError, RuntimeError, ValueError, TypeError):
+                # Non-fatal during setup
+                pass
 
     def clear_all_problem_flags(self):
         """Reset the has_problem flag for all AtomItems and redraw them."""
@@ -361,25 +347,15 @@ class MoleculeScene(QGraphicsScene):
         )
 
         if self.temp_line:
-            try:
-                if not sip_isdeleted_safe(self.temp_line):
-                    try:
-                        if (
-                            getattr(self.temp_line, "scene", None)
-                            and self.temp_line.scene()
-                        ):
-                            self.removeItem(self.temp_line)
-                    except (AttributeError, RuntimeError, ValueError, TypeError):  
-                        import traceback
-                        traceback.print_exc()
-            except (AttributeError, RuntimeError, ValueError, TypeError):
+            if not sip_isdeleted_safe(self.temp_line):
                 try:
-                    self.removeItem(self.temp_line)
-                except (AttributeError, RuntimeError, ValueError, TypeError):  
+                    sc = getattr(self.temp_line, "scene", lambda: None)()
+                    if sc:
+                        self.removeItem(self.temp_line)
+                except (RuntimeError, ValueError, TypeError):
                     import traceback
                     traceback.print_exc()
-            finally:
-                self.temp_line = None
+            self.temp_line = None
 
         if self.mode.startswith("template") and is_click:
             if self.template_context and self.template_context.get("points"):
@@ -698,33 +674,26 @@ class MoleculeScene(QGraphicsScene):
                             atoms_to_visit.append(other)
 
                 # Apply selection: clear previous and select only these
-                try:
-                    self.clearSelection()
-                except (AttributeError, RuntimeError, ValueError, TypeError):  
-                    import traceback
-                    traceback.print_exc()
+                self.clearSelection()
+
                 for a in connected_atoms:
-                    try:
-                        a.setSelected(True)
-                    except (AttributeError, RuntimeError, ValueError, TypeError):
+                    if not sip_isdeleted_safe(a):
                         try:
-                            # fallback: set selected attribute if exists
-                            setattr(a, "selected", True)
-                        except (AttributeError, RuntimeError, ValueError, TypeError):  
+                            a.setSelected(True)
+                        except (RuntimeError, ValueError, TypeError):
                             import traceback
                             traceback.print_exc()
+
                 for b in connected_bonds:
-                    try:
-                        b.setSelected(True)
-                    except (AttributeError, RuntimeError, ValueError, TypeError):
+                    if not sip_isdeleted_safe(b):
                         try:
-                            setattr(b, "selected", True)
-                        except (AttributeError, RuntimeError, ValueError, TypeError):  
+                            b.setSelected(True)
+                        except (RuntimeError, ValueError, TypeError):
                             import traceback
                             traceback.print_exc()
                 event.accept()
                 return
-            except (AttributeError, RuntimeError, ValueError, TypeError):  
+            except (AttributeError, RuntimeError, ValueError, TypeError):
                 # On any unexpected error, fall back to default handling
                 import traceback
                 traceback.print_exc()
@@ -743,16 +712,16 @@ class MoleculeScene(QGraphicsScene):
         return atom_id
 
     def create_bond(self, start_atom, end_atom, bond_order=None, bond_stereo=None):
-        try:
-            if start_atom is None or end_atom is None:
-                logging.error("Error: Cannot create bond with None atoms")
-                return
+        if start_atom is None or end_atom is None:
+            logging.error("Error: Cannot create bond with None atoms")
+            return
 
+        try:
             exist_b = self.find_bond_between(start_atom, end_atom)
             if exist_b:
                 return
 
-            # Use the order specified in the argument if provided, otherwise use the value from the current mode
+            # Use the order specified in the argument if provided, otherwise use current defaults
             order_to_use = self.bond_order if bond_order is None else bond_order
             stereo_to_use = self.bond_stereo if bond_stereo is None else bond_stereo
 
@@ -775,7 +744,7 @@ class MoleculeScene(QGraphicsScene):
 
         except (AttributeError, RuntimeError, ValueError) as e:
             logging.error(f"Error creating bond: {e}", exc_info=True)
-            self.update_all_items()  # Error recovery
+            self.update_all_items()
 
     def add_molecule_fragment(
         self, points, bonds_info, existing_items=None, symbol="C"
@@ -1204,303 +1173,140 @@ class MoleculeScene(QGraphicsScene):
             points.append(current_p)
         return points
 
-    def delete_items(self, items_to_delete):  
+    def delete_items(self, items_to_delete):
         """Safely delete specified items (atoms/bonds) in order"""
-        # Hardened deletion: model first, then scene, defensively check attributes.
         if not items_to_delete:
             return False
 
-        # First sanitize the incoming collection: only keep live, expected QGraphics wrappers
-        try:
-            sanitized = set()
-            for it in items_to_delete:
-                try:
-                    if it is None:
-                        continue
-                    # Skip SIP-deleted wrappers early to avoid native crashes
-                    if sip_isdeleted_safe(it):
-                        continue
-                    # Only accept AtomItem/BondItem or other QGraphicsItem subclasses
-                    if isinstance(it, (AtomItem, BondItem, QGraphicsItem)):
-                        sanitized.add(it)
-                except (AttributeError, RuntimeError, ValueError, TypeError):
-                    # If isinstance or sip check raises, skip this entry
-                    continue
-            items_to_delete = sanitized
-        except (AttributeError, RuntimeError, ValueError, TypeError):  
-            # If sanitization fails, fall back to original input and proceed defensively
-            import traceback
-            traceback.print_exc()
+        # 1. Sanitize input: only keep live QGraphicsItem wrappers
+        sanitized = set()
+        for it in items_to_delete:
+            if it is not None and not sip_isdeleted_safe(it):
+                if isinstance(it, (AtomItem, BondItem, QGraphicsItem)):
+                    sanitized.add(it)
+        items_to_delete = sanitized
 
         try:
-            atoms_to_delete = {
-                item for item in items_to_delete if isinstance(item, AtomItem)
-            }
-            bonds_to_delete = {
-                item for item in items_to_delete if isinstance(item, BondItem)
-            }
+            atoms_to_delete = {it for it in items_to_delete if isinstance(it, AtomItem)}
+            bonds_to_delete = {it for it in items_to_delete if isinstance(it, BondItem)}
 
             # Include bonds attached to atoms being deleted
             for atom in list(atoms_to_delete):
-                try:
-                    if hasattr(atom, "bonds") and atom.bonds:
-                        for b in list(atom.bonds):
-                            bonds_to_delete.add(b)
-                except (AttributeError, RuntimeError, ValueError, TypeError):
-                    # If accessing bonds raises (item partially deleted), skip
-                    continue
+                if hasattr(atom, "bonds") and atom.bonds:
+                    for b in list(atom.bonds):
+                        bonds_to_delete.add(b)
 
-            # Determine atoms that will remain but whose bond lists must be updated
+            # Determine surviving atoms whose bond lists need pruning
             atoms_to_update = set()
             for bond in list(bonds_to_delete):
-                try:
-                    a1 = getattr(bond, "atom1", None)
-                    a2 = getattr(bond, "atom2", None)
-                    if a1 and a1 not in atoms_to_delete:
-                        atoms_to_update.add(a1)
-                    if a2 and a2 not in atoms_to_delete:
-                        atoms_to_update.add(a2)
-                except (AttributeError, RuntimeError, ValueError, TypeError):
-                    continue
+                a1 = getattr(bond, "atom1", None)
+                a2 = getattr(bond, "atom2", None)
+                if a1 and a1 not in atoms_to_delete:
+                    atoms_to_update.add(a1)
+                if a2 and a2 not in atoms_to_delete:
+                    atoms_to_update.add(a2)
 
-            # 1) Update surviving atoms' bond lists to remove references to bonds_to_delete
-            #    (Important: remove BondItem references so atoms properly reflect
-            #     that they have no remaining bonds and update visibility accordingly.)
+            # 2. Update surviving atoms' bond lists
             for atom in list(atoms_to_update):
-                try:
-                    if sip_isdeleted_safe(atom):
-                        continue
-                    # Defensive: if the atom has a bonds list, filter out bonds being deleted
-                    if hasattr(atom, "bonds") and atom.bonds:
-                        try:
-                            live_btd = {
-                                b for b in bonds_to_delete if not sip_isdeleted_safe(b)
-                            }
-
-                            # First, remove any SIP-deleted bond wrappers from atom.bonds
-                            atom.bonds[:] = [
-                                b for b in atom.bonds if not sip_isdeleted_safe(b)
-                            ]
-
-                            # Then remove bonds which are in the live_btd set
-                            if live_btd:
-                                atom.bonds[:] = [
-                                    b for b in atom.bonds if b not in live_btd
-                                ]
-                        except (AttributeError, RuntimeError, ValueError, TypeError):
-                            # Fall back to iterative removal if list comprehension fails
-                            try:
-                                live_btd = [
-                                    b
-                                    for b in list(bonds_to_delete)
-                                    if not sip_isdeleted_safe(b)
-                                ]
-                                for b in live_btd:
-                                    if b in atom.bonds:
-                                        atom.bonds.remove(b)
-                            except (AttributeError, RuntimeError, ValueError, TypeError):  
-                                import traceback
-                                traceback.print_exc()
-                    # After pruning bond references, update visual style so carbons without
-                    # bonds become visible again.
-                    if hasattr(atom, "update_style"):
-                        atom.update_style()
-                except (AttributeError, RuntimeError, ValueError, TypeError):
+                if sip_isdeleted_safe(atom):
                     continue
+                if hasattr(atom, "bonds") and atom.bonds:
+                    try:
+                        # Filter out bonds being deleted and SIP-stale wrappers
+                        atom.bonds[:] = [
+                            b for b in atom.bonds 
+                            if not sip_isdeleted_safe(b) and b not in bonds_to_delete
+                        ]
+                    except (AttributeError, RuntimeError, ValueError, TypeError):
+                        import traceback
+                        traceback.print_exc()
+                
+                if hasattr(atom, "update_style"):
+                    atom.update_style()
 
-            # 2) Remove bonds/atoms from the data model first (so other code reading the model
-            #    doesn't encounter stale entries while we are removing graphics)
+            # 3. Remove from data model
             for bond in list(bonds_to_delete):
-                try:
-                    a1 = getattr(bond, "atom1", None)
-                    a2 = getattr(bond, "atom2", None)
-                    if a1 and a2 and hasattr(self, "data"):
-                        try:
-                            self.data.remove_bond(a1.atom_id, a2.atom_id)
-                        except (AttributeError, RuntimeError, ValueError, TypeError):
-                            # try reverse order if remove_bond expects ordered tuple
-                            try:
-                                self.data.remove_bond(a2.atom_id, a1.atom_id)
-                            except (AttributeError, RuntimeError, ValueError, TypeError):  
-                                import traceback
-                                traceback.print_exc()
-                except (AttributeError, RuntimeError, ValueError, TypeError):
-                    continue
+                a1 = getattr(bond, "atom1", None)
+                a2 = getattr(bond, "atom2", None)
+                if a1 and a2 and hasattr(self, "data"):
+                    try:
+                        # Try both directions
+                        if not self.data.remove_bond(a1.atom_id, a2.atom_id):
+                            self.data.remove_bond(a2.atom_id, a1.atom_id)
+                    except (AttributeError, RuntimeError, ValueError, TypeError):
+                        import traceback
+                        traceback.print_exc()
 
             for atom in list(atoms_to_delete):
-                try:
-                    if hasattr(atom, "atom_id") and hasattr(self, "data"):
-                        try:
-                            self.data.remove_atom(atom.atom_id)
-                        except (AttributeError, RuntimeError, ValueError, TypeError):  
-                            import traceback
-                            traceback.print_exc()
-                except (AttributeError, RuntimeError, ValueError, TypeError):
-                    continue
+                if hasattr(atom, "atom_id") and hasattr(self, "data"):
+                    try:
+                        self.data.remove_atom(atom.atom_id)
+                    except (AttributeError, RuntimeError, ValueError, TypeError):
+                        import traceback
+                        traceback.print_exc()
 
             try:
-                self._ih_update_counter += 1
+                self._ih_update_counter = getattr(self, "_ih_update_counter", 0) + 1
             except (AttributeError, RuntimeError, ValueError, TypeError):
-                try:
-                    self._ih_update_counter = 0
-                except (AttributeError, RuntimeError, ValueError, TypeError):  
-                    import traceback
-                    traceback.print_exc()
-            # 3) Remove graphic items from the scene (bonds first)
-            # To avoid calling into methods on wrappers that may refer to
-            # already-deleted C++ objects (which can cause a native crash when
-            # SIP is not available), take a snapshot of the current scene's
-            # items and use membership tests instead of calling item.scene().
-            try:
-                current_scene_items = set(self.items())
-            except (AttributeError, RuntimeError, ValueError, TypeError):
-                # If for any reason items() fails, fall back to an empty set
-                current_scene_items = set()
+                pass
 
-            for bond in list(bonds_to_delete):
-                try:
-                    # If the SIP wrapper is already deleted, skip it.
-                    if sip_isdeleted_safe(bond):
+            # 4. Remove graphic items from the scene
+            current_scene_items = set(self.items())
+            
+            # Helper to safely remove and hide items
+            def safe_remove_and_hide(item_set):
+                for item in list(item_set):
+                    if sip_isdeleted_safe(item):
                         continue
-
-                    if bond in current_scene_items:
+                    if item in current_scene_items:
                         try:
-                            self.removeItem(bond)
-                        except (AttributeError, RuntimeError, ValueError, TypeError):  
+                            self.removeItem(item)
+                        except (RuntimeError, ValueError, TypeError):
                             import traceback
                             traceback.print_exc()
-                except (AttributeError, RuntimeError, ValueError, TypeError):
-                    continue
+                    
+                    try:
+                        item.hide()
+                        if not hasattr(self, "_deleted_items") or self._deleted_items is None:
+                            self._deleted_items = []
+                        self._deleted_items.append(item)
+                    except (AttributeError, RuntimeError, ValueError, TypeError):
+                        import traceback
+                        traceback.print_exc()
 
-            for atom in list(atoms_to_delete):
-                try:
-                    # Skip if wrapper is reported deleted by SIP
-                    if sip_isdeleted_safe(atom):
-                        continue
-                    if atom in current_scene_items:
-                        try:
-                            self.removeItem(atom)
-                        except (AttributeError, RuntimeError, ValueError, TypeError):  
-                            import traceback
-                            traceback.print_exc()
-                except (AttributeError, RuntimeError, ValueError, TypeError):
-                    continue
+            safe_remove_and_hide(bonds_to_delete)
+            safe_remove_and_hide(atoms_to_delete)
 
-            # 4) Keep strong reference to deleted wrappers for scene lifetime.
-            # Prevents underlying SIP wrappers from being finalized while in use.
-            try:
-                if not hasattr(self, "_deleted_items") or self._deleted_items is None:
-                    self._deleted_items = []
-            except (AttributeError, RuntimeError, ValueError, TypeError):
-                self._deleted_items = []
-
-            for bond in list(bonds_to_delete):
-                try:
-                    # Hide the graphics item if possible and stash it
-                    if not sip_isdeleted_safe(bond):
-                        try:
-                            bond.hide()
-                        except (AttributeError, RuntimeError, ValueError, TypeError):  
-                            import traceback
-                            traceback.print_exc()
-                        try:
-                            self._deleted_items.append(bond)
-                        except (AttributeError, RuntimeError, ValueError, TypeError):  
-                            # Swallow any error while stashing
-                            import traceback
-                            traceback.print_exc()
-                except (AttributeError, RuntimeError, ValueError, TypeError):
-                    continue
-
-            for atom in list(atoms_to_delete):
-                try:
-                    if not sip_isdeleted_safe(atom):
-                        try:
-                            atom.hide()
-                        except (AttributeError, RuntimeError, ValueError, TypeError):  
-                            import traceback
-                            traceback.print_exc()
-                        try:
-                            self._deleted_items.append(atom)
-                        except (AttributeError, RuntimeError, ValueError, TypeError):  
-                            import traceback
-                            traceback.print_exc()
-                except (AttributeError, RuntimeError, ValueError, TypeError):
-                    continue
-
-            # 5) Final visual updates for surviving atoms
             for atom in list(atoms_to_update):
-                try:
-                    if hasattr(atom, "update_style"):
-                        atom.update_style()
-                except (AttributeError, RuntimeError, ValueError, TypeError):
-                    continue
+                if hasattr(atom, "update_style"):
+                    atom.update_style()
 
             return True
 
         except (AttributeError, RuntimeError, ValueError) as e:
-            # Keep the application alive on unexpected errors
             print(f"Error during delete_items operation: {e}")
-            self.update_all_items()  # Error recovery
+            self.update_all_items()
             return False
 
     def purge_deleted_items(self):
-        """Purge and release any held deleted-wrapper references.
+        """Purge and release any held deleted-wrapper references during shutdown."""
+        if not getattr(self, "_deleted_items", None):
+            return
 
-        This is intended to be invoked on application shutdown to allow
-        the process to release references to SIP/C++ wrappers that were
-        kept around to avoid finalization races during normal runtime.
-        The method is defensive: it tolerates partially-deleted wrappers
-        and any SIP unavailability.
-        """
-        try:
-            if not hasattr(self, "_deleted_items") or not self._deleted_items:
-                return
-
-            # Iterate a copy since we will clear the list.
-            for obj in list(self._deleted_items):
+        for obj in list(self._deleted_items):
+            if not sip_isdeleted_safe(obj):
                 try:
-                    # If the wrapper is still alive, attempt to hide it so
-                    # the graphics subsystem isn't holding on to resources.
-                    if not sip_isdeleted_safe(obj):
-                        try:
-                            obj.hide()
-                        except (AttributeError, RuntimeError, ValueError, TypeError):  
-                            import traceback
-                            traceback.print_exc()
-                    try:
-                        if hasattr(obj, "bonds") and getattr(obj, "bonds") is not None:
-                            try:
-                                obj.bonds.clear()
-                            except (AttributeError, RuntimeError, ValueError, TypeError):
-                                try:
-                                    obj.bonds = []
-                                except (AttributeError, RuntimeError, ValueError, TypeError):  
-                                    import traceback
-                                    traceback.print_exc()
-                    except (AttributeError, RuntimeError, ValueError, TypeError):  
-                        import traceback
-                        traceback.print_exc()
+                    obj.hide()
+                    if hasattr(obj, "bonds") and obj.bonds is not None:
+                        obj.bonds.clear()
                 except (AttributeError, RuntimeError, ValueError, TypeError):
-                    # Continue purging remaining items even if one fails.
-                    continue
-
-            # Finally, drop our references.
-            try:
-                self._deleted_items.clear()
-            except (AttributeError, RuntimeError, ValueError, TypeError):
-                try:
-                    self._deleted_items = []
-                except (AttributeError, RuntimeError, ValueError, TypeError):  
                     import traceback
                     traceback.print_exc()
-        except (AttributeError, RuntimeError, ValueError) as e:
-            # Never raise during shutdown
-            try:
-                print(f"Error purging deleted items: {e}")
-            except (AttributeError, RuntimeError, ValueError, TypeError):  
-                import traceback
-                traceback.print_exc()
+
+        try:
+            self._deleted_items.clear()
+        except (AttributeError, RuntimeError, ValueError, TypeError):
+            self._deleted_items = []
 
     def add_user_template_fragment(self, context):
         """Place user template fragment"""
@@ -2167,57 +1973,38 @@ class MoleculeScene(QGraphicsScene):
 
     def update_bond_stereo(self, bond_item, new_stereo):
         """Update bond stereochemistry"""
-        try:
-            if bond_item is None:
-                print("Error: bond_item is None in update_bond_stereo")
-                return
+        if bond_item is None:
+            return
 
+        try:
             if bond_item.order != 2 or bond_item.stereo == new_stereo:
                 return
 
-            if not hasattr(bond_item, "atom1") or not hasattr(bond_item, "atom2"):
-                print("Error: bond_item missing atom references")
+            a1 = getattr(bond_item, "atom1", None)
+            a2 = getattr(bond_item, "atom2", None)
+            if not a1 or not a2 or not hasattr(a1, "atom_id") or not hasattr(a2, "atom_id"):
                 return
 
-            if bond_item.atom1 is None or bond_item.atom2 is None:
-                print("Error: bond_item has None atom references")
-                return
-
-            if not hasattr(bond_item.atom1, "atom_id") or not hasattr(
-                bond_item.atom2, "atom_id"
-            ):
-                print("Error: bond atoms missing atom_id")
-                return
-
-            id1, id2 = bond_item.atom1.atom_id, bond_item.atom2.atom_id
-
-            # For E/Z bonds, keep key as (id1, id2) due to directionality
+            id1, id2 = a1.atom_id, a2.atom_id
             key_to_update = (id1, id2)
+            
             if key_to_update not in self.data.bonds:
-                # Consider possibilities like Wedge/Dash registered in reverse order
                 key_to_update = (id2, id1)
                 if key_to_update not in self.data.bonds:
-                    # Log error instead of printing to console
                     if hasattr(self.window, "statusBar"):
                         self.window.statusBar().showMessage(
-                            f"Warning: Bond between atoms {id1} and {id2} not found in data model.",
-                            3000,
+                            f"Warning: Bond {id1}-{id2} not found in model.", 3000
                         )
-                    print(f"Error: Bond key not found: {id1}-{id2} or {id2}-{id1}")
                     return
 
-            # Update data model
+            # Update data model and visual representation
             self.data.bonds[key_to_update]["stereo"] = new_stereo
-
-            # Update visual representation
             bond_item.set_stereo(new_stereo)
-
             self.data_changed_in_event = True
 
         except (AttributeError, RuntimeError, ValueError) as e:
-            print(f"Error in update_bond_stereo: {e}")
+            import traceback
+            traceback.print_exc()
             if hasattr(self.window, "statusBar"):
-                self.window.statusBar().showMessage(
-                    f"Error updating bond stereochemistry: {e}", 5000
-                )
+                self.window.statusBar().showMessage(f"Error: {e}", 5000)
             self.update_all_items()
