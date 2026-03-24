@@ -83,54 +83,26 @@ class MainWindowCompute(object):
         self.optimization_method = method
 
         # Persist to settings
-        try:
-            self.settings["optimization_method"] = self.optimization_method
-            try:
-                self.settings_dirty = True
-            except (AttributeError, RuntimeError, TypeError):  
-                import traceback
-                traceback.print_exc()
-        except (AttributeError, RuntimeError, TypeError):  
-            import traceback
-            traceback.print_exc()
+        self.settings["optimization_method"] = self.optimization_method
+        self.settings_dirty = True
 
         # Update menu checked state if actions mapping exists
-        try:
-            if hasattr(self, "opt3d_actions") and self.opt3d_actions:
-                for k, act in self.opt3d_actions.items():
-                    try:
-                        # keys in opt3d_actions may be mixed-case; compare uppercased
-                        act.setChecked(k.upper() == method)
-                    except (AttributeError, RuntimeError, TypeError):  
-                        import traceback
-                        traceback.print_exc()
-        except (AttributeError, RuntimeError, TypeError):  
-            import traceback
-            traceback.print_exc()
+        if hasattr(self, "opt3d_actions") and self.opt3d_actions:
+            for k, act in self.opt3d_actions.items():
+                act.setChecked(k.upper() == method)
 
         # Also show user-friendly label if available
-        try:
-            label = self.opt3d_method_labels.get(
-                self.optimization_method, self.optimization_method
-            )
-        except (AttributeError, RuntimeError, TypeError):
-            label = self.optimization_method
+        label = getattr(self, "opt3d_method_labels", {}).get(
+            self.optimization_method, self.optimization_method
+        )
         self.statusBar().showMessage(f"3D optimization method set to: {label}")
 
     def toggle_intermolecular_interaction_rdkit(self, checked):  
         """Toggle whether intermolecular interactions are considered for RDKit optimization."""
-        try:
-            self.settings["optimize_intermolecular_interaction_rdkit"] = checked
-            try:
-                self.settings_dirty = True
-            except (AttributeError, RuntimeError, TypeError):
-                import traceback
-                traceback.print_exc()
-            state_str = "Enabled" if checked else "Disabled"
-            self.statusBar().showMessage(f"Intermolecular interaction for RDKit: {state_str}")
-        except (AttributeError, RuntimeError, TypeError):
-            import traceback
-            traceback.print_exc()
+        self.settings["optimize_intermolecular_interaction_rdkit"] = checked
+        self.settings_dirty = True
+        state_str = "Enabled" if checked else "Disabled"
+        self.statusBar().showMessage(f"Intermolecular interaction for RDKit: {state_str}")
 
     def show_convert_menu(self, pos):  
         """Temporary 3D conversion menu (right-click). Not persisted."""
@@ -188,12 +160,8 @@ class MainWindowCompute(object):
             for label, key in opt_list:
                 a = QAction(label, self)
                 # If opt3d_actions exist, reflect their enabled state
-                try:
-                    if hasattr(self, "opt3d_actions") and key in self.opt3d_actions:
-                        a.setEnabled(self.opt3d_actions[key].isEnabled())
-                except (AttributeError, RuntimeError, TypeError):  
-                    import traceback
-                    traceback.print_exc()
+                if hasattr(self, "opt3d_actions") and key in self.opt3d_actions:
+                    a.setEnabled(self.opt3d_actions[key].isEnabled())
                 a.triggered.connect(
                     lambda checked=False,
                     k=key: self._trigger_optimize_with_temp_method(k)
@@ -269,8 +237,7 @@ class MainWindowCompute(object):
                 original_id = atom.GetIntProp("_original_atom_id")
                 self.original_atom_properties[i] = original_id
             except KeyError:
-                import traceback
-                traceback.print_exc()
+                continue
 
         problems = Chem.DetectChemistryProblems(mol)
         if problems:
@@ -359,18 +326,12 @@ class MainWindowCompute(object):
 
         # Assign unique run ID
         run_id = int(getattr(self, "next_conversion_id", 1))
-        try:
-            self.next_conversion_id = run_id + 1
-        except (AttributeError, RuntimeError, TypeError):
-            import traceback
-            traceback.print_exc()
+        self.next_conversion_id = run_id + 1
 
         # Track active worker IDs
-        try:
-            self.active_worker_ids.add(run_id)
-        except (AttributeError, RuntimeError, TypeError):
-            # Ensure attribute exists in case of weird states
-            self.active_worker_ids = set([run_id])
+        if not hasattr(self, "active_worker_ids"):
+            self.active_worker_ids = set()
+        self.active_worker_ids.add(run_id)
 
         # Change button to 'Halt' for cancellation
         try:
@@ -411,11 +372,7 @@ class MainWindowCompute(object):
             name="calculating_text",
         )
         # Keep a reference so we can reliably remove the text actor later
-        try:
-            self._calculating_text_actor = text_actor
-        except (AttributeError, RuntimeError, TypeError):
-            import traceback
-            traceback.print_exc()
+        self._calculating_text_actor = text_actor
         text_actor.GetTextProperty().SetOpacity(1)  
         self.plotter.render()  
         # Set flags for worker
@@ -423,45 +380,30 @@ class MainWindowCompute(object):
         # If the user invoked conversion via the right-click menu, a temporary
         # override may be set on self._temp_conv_mode and should be used once.
         conv_mode = getattr(self, "_temp_conv_mode", None)
-        if conv_mode:
+        if hasattr(self, "_temp_conv_mode"):
+            # Consume the once-only override set by the right-click menu
             try:
                 del self._temp_conv_mode
-            except (AttributeError, RuntimeError, TypeError):
-                try:
-                    delattr(self, "_temp_conv_mode")
-                except (AttributeError, RuntimeError, TypeError):  
-                    import traceback
-                    traceback.print_exc()
-        else:
+            except AttributeError:
+                pass
+        
+        if not conv_mode:
             conv_mode = self.settings.get("3d_conversion_mode", "fallback")
 
         # Temporary optimization override (non-persistent)
-        # Optimize 3D is invoked via right-click menu). Do not persist here.
+        # Optimize 3D is invoked via right-click menu. Do not persist here.
         opt_method = (
             getattr(self, "_temp_optimization_method", None) or self.optimization_method
         )
         if hasattr(self, "_temp_optimization_method"):
-            try:
-                del self._temp_optimization_method
-            except (AttributeError, RuntimeError, TypeError):
-                try:
-                    delattr(self, "_temp_optimization_method")
-                except (AttributeError, RuntimeError, TypeError):  
-                    import traceback
-                    traceback.print_exc()
+            del self._temp_optimization_method
 
         options = {
             "conversion_mode": conv_mode,
             "optimization_method": opt_method,
             "optimize_intermolecular_interaction_rdkit": self.settings.get("optimize_intermolecular_interaction_rdkit", True)
         }
-        # Attach the run id so the worker and main thread can correlate
-        try:
-            # Attach the concrete run id rather than the single waiting id
-            options["worker_id"] = run_id
-        except (AttributeError, RuntimeError, TypeError):  
-            import traceback
-            traceback.print_exc()
+        options["worker_id"] = run_id
 
         # Create a fresh CalculationWorker + QThread for this run so multiple
         # conversions can execute in parallel. The worker will be cleaned up
@@ -469,120 +411,46 @@ class MainWindowCompute(object):
         try:
             thread = QThread()
             worker = CalculationWorker()
-            # Share the halt_ids set so user can request cancellation
-            try:
-                worker.halt_ids = self.halt_ids
-            except (AttributeError, RuntimeError, TypeError):  
-                import traceback
-                traceback.print_exc()
-            try:
-
-                worker.moveToThread(thread)
-
-            except (AttributeError, RuntimeError, TypeError):  
-
-                import traceback
-
-                traceback.print_exc()
+            worker.halt_ids = self.halt_ids
+            worker.moveToThread(thread)
 
             # Forward status signals
-            try:
-                worker.status_update.connect(self.update_status_bar)
-            except (AttributeError, RuntimeError, TypeError):  
-                import traceback
-                traceback.print_exc()
+            worker.status_update.connect(self.update_status_bar)
+
             # Handler for finished calculation
             def _on_worker_finished(result, w=worker, t=thread):
                 try:
-                    # deliver result to existing handler
                     self.on_calculation_finished(result)
                 finally:
-                    # Clean up signal connections to avoid stale references
-                    # worker used its own start_work signal; no shared-signal
-                    # disconnect necessary here.
-                    # Remove thread from active threads list
                     try:
                         self._active_calc_threads.remove(t)
-                    except (AttributeError, RuntimeError, TypeError):  
-                        import traceback
-                        traceback.print_exc()
-                    try:
-                        # ask thread to quit; it will finish as worker returns
-                        t.quit()
-                    except (AttributeError, RuntimeError, TypeError):  
-                        import traceback
-                        traceback.print_exc()
-                    try:
-                        # ensure thread object is deleted when finished
-                        t.finished.connect(t.deleteLater)
-                    except (AttributeError, RuntimeError, TypeError):  
-                        import traceback
-                        traceback.print_exc()
-                    try:
-                        # schedule worker deletion
-                        w.deleteLater()
-                    except (AttributeError, RuntimeError, TypeError):  
-                        import traceback
-                        traceback.print_exc()
+                    except (ValueError, AttributeError):
+                        pass
+                    t.quit()
+                    t.finished.connect(t.deleteLater)
+                    w.deleteLater()
+
             # Handler for calculation error/halt
             def _on_worker_error(error_msg, w=worker, t=thread):
                 try:
-                    # deliver error to existing handler
                     self.on_calculation_error(error_msg)
                 finally:
-                    # Clean up signal connections to avoid stale references
-                    # worker used its own start_work signal; no shared-signal
-                    # disconnect necessary here.
-                    # Remove thread from active threads list
                     try:
                         self._active_calc_threads.remove(t)
-                    except (AttributeError, RuntimeError, TypeError):  
-                        import traceback
-                        traceback.print_exc()
-                    try:
-                        # ask thread to quit; it will finish as worker returns
-                        t.quit()
-                    except (AttributeError, RuntimeError, TypeError):  
-                        import traceback
-                        traceback.print_exc()
-                    try:
-                        # ensure thread object is deleted when finished
-                        t.finished.connect(t.deleteLater)
-                    except (AttributeError, RuntimeError, TypeError):  
-                        import traceback
-                        traceback.print_exc()
-                    try:
-                        # schedule worker deletion
-                        w.deleteLater()
-                    except (AttributeError, RuntimeError, TypeError):  
-                        import traceback
-                        traceback.print_exc()
-            try:
-                worker.error.connect(_on_worker_error)
-            except (AttributeError, RuntimeError, TypeError):  
-                import traceback
-                traceback.print_exc()
-            try:
-                worker.finished.connect(_on_worker_finished)
-            except (AttributeError, RuntimeError, TypeError):  
-                import traceback
-                traceback.print_exc()
+                    except (ValueError, AttributeError):
+                        pass
+                    t.quit()
+                    t.finished.connect(t.deleteLater)
+                    w.deleteLater()
+
+            worker.error.connect(_on_worker_error)
+            worker.finished.connect(_on_worker_finished)
             # Start the thread
             thread.start()
-
-            # Start worker via signal
-            # (queued to the worker thread). Capture variables into lambda defaults
-            # to avoid late-binding issues.
             QTimer.singleShot(
                 10, lambda w=worker, m=mol_block, o=options: w.start_work.emit(m, o)
             )
-
-            # Track thread reference
-            try:
-                self._active_calc_threads.append(thread)
-            except (AttributeError, RuntimeError, TypeError):  
-                import traceback
-                traceback.print_exc()
+            self._active_calc_threads.append(thread)
         except (AttributeError, RuntimeError, ValueError, TypeError) as e:
             # Fall back: if thread/worker creation failed, create a local
             # worker and start it (runs in main thread). This preserves
@@ -607,82 +475,49 @@ class MainWindowCompute(object):
 
     def halt_conversion(self):  
         """Halt the in-progress conversion."""
-        try:
-            # Add active worker IDs to halt_ids
-            wids_to_halt = set(getattr(self, "active_worker_ids", set()))
-            if wids_to_halt:
-                try:
-                    self.halt_ids.update(wids_to_halt)
-                except (AttributeError, RuntimeError, TypeError):  
-                    import traceback
-                    traceback.print_exc()
-            # Clear active set
-            try:
-                if hasattr(self, "active_worker_ids"):
-                    self.active_worker_ids.clear()
-            except (AttributeError, RuntimeError, TypeError):  
-                import traceback
-                traceback.print_exc()
-            # Restore UI
-            try:
-                # Restore Convert button
-                try:
-                    self.convert_button.clicked.disconnect()
-                except (AttributeError, RuntimeError, TypeError):  
-                    import traceback
-                    traceback.print_exc()
-                self.convert_button.setText("Convert 2D to 3D")
-                self.convert_button.clicked.connect(self.trigger_conversion)
-                self.convert_button.setEnabled(True)
+        # Add active worker IDs to halt_ids
+        wids_to_halt = set(getattr(self, "active_worker_ids", set()))
+        if wids_to_halt:
+            self.halt_ids.update(wids_to_halt)
+        if hasattr(self, "active_worker_ids"):
+            self.active_worker_ids.clear()
 
-                # Restore Optimize button
-                if hasattr(self, "optimize_3d_button"):
-                    try:
-                        self.optimize_3d_button.clicked.disconnect()
-                    except (AttributeError, RuntimeError, TypeError):  
-                        import traceback
-                        traceback.print_exc()
-                    self.optimize_3d_button.setText("Optimize 3D")
-                    self.optimize_3d_button.clicked.connect(self.optimize_3d_structure)
-                    self.optimize_3d_button.setEnabled(True)
-            except (AttributeError, RuntimeError, TypeError):  
-                import traceback
-                traceback.print_exc()
+        # Restore UI — clicked.disconnect() can raise RuntimeError if nothing is connected
+        try:
+            self.convert_button.clicked.disconnect()
+        except RuntimeError:
+            pass
+        self.convert_button.setText("Convert 2D to 3D")
+        self.convert_button.clicked.connect(self.trigger_conversion)
+        self.convert_button.setEnabled(True)
+
+        if hasattr(self, "optimize_3d_button"):
             try:
-                self.cleanup_button.setEnabled(True)
-            except (AttributeError, RuntimeError, TypeError):  
-                import traceback
-                traceback.print_exc()
-            # Remove 'Calculating...' text
+                self.optimize_3d_button.clicked.disconnect()
+            except RuntimeError:
+                pass
+            self.optimize_3d_button.setText("Optimize 3D")
+            self.optimize_3d_button.clicked.connect(self.optimize_3d_structure)
+            self.optimize_3d_button.setEnabled(True)
+
+        self.cleanup_button.setEnabled(True)
+
+        # Remove 'Calculating...' text
+        actor = getattr(self, "_calculating_text_actor", None)
+        if actor is not None:
             try:
-                actor = getattr(self, "_calculating_text_actor", None)
-                if actor is not None:
-                    if hasattr(self.plotter, "remove_actor"):
-                        try:
-                            self.plotter.remove_actor(actor)
-                        except (AttributeError, RuntimeError, TypeError):  
-                            import traceback
-                            traceback.print_exc()
-                    else:
-                        if hasattr(self.plotter, "renderer") and self.plotter.renderer:
-                            try:
-                                self.plotter.renderer.RemoveActor(actor)
-                            except (AttributeError, RuntimeError, TypeError):  
-                                import traceback
-                                traceback.print_exc()
-                    try:
-                        del self._calculating_text_actor
-                    except (AttributeError, RuntimeError, TypeError):
-                        import traceback
-                        traceback.print_exc()
-            except (AttributeError, RuntimeError, TypeError):  
-                import traceback
-                traceback.print_exc()
-            # Give immediate feedback
-            self.statusBar().showMessage("Halted")
-        except (AttributeError, RuntimeError, TypeError):  
-            import traceback
-            traceback.print_exc()
+                if hasattr(self.plotter, "remove_actor"):
+                    self.plotter.remove_actor(actor)
+                elif hasattr(self.plotter, "renderer") and self.plotter.renderer:
+                    self.plotter.renderer.RemoveActor(actor)
+            except (AttributeError, RuntimeError, TypeError):
+                pass
+            try:
+                del self._calculating_text_actor
+            except AttributeError:
+                pass
+
+        self.statusBar().showMessage("Halted")
 
     def check_chemistry_problems_fallback(self):
         """Fallback chemistry check when RDKit fails."""
@@ -855,16 +690,8 @@ class MainWindowCompute(object):
                     worker = CalculationWorker()
                     worker.halt_ids = self.halt_ids
                     try:
-                        try:
-
-                            worker.moveToThread(thread)
-
-                        except (AttributeError, RuntimeError, TypeError):  
-
-                            import traceback
-
-                            traceback.print_exc()
-                    except (AttributeError, RuntimeError, TypeError):  
+                        worker.moveToThread(thread)
+                    except (AttributeError, RuntimeError, TypeError):
                         import traceback
                         traceback.print_exc()
                     
