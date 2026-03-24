@@ -235,4 +235,3 @@ class MainWindowStringImporters(object):
         except (AttributeError, RuntimeError, ValueError) as e:
             self.statusBar().showMessage(f"Error loading from InChI: {e}")
 
-            pass

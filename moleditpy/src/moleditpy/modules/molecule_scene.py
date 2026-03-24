@@ -904,12 +904,6 @@ class MoleculeScene(QGraphicsScene):
                             # Check right neighbor
                             next_idx = (k + 1 + rot) % num_points
 
-                            # Check bond order of neighboring connection parts (legs)
-                            # Verify if adjacent template bonds are used in this fuse
-                            pass
-
-                        # Check all peripheral (non-fused) edges for valid bond orders
-
                         # Template bond order array
                         current_template_orders = [
                             orig_orders[(i + rot) % num_points]
@@ -1447,8 +1441,6 @@ class MoleculeScene(QGraphicsScene):
         except (AttributeError, RuntimeError, ValueError) as e:
             # Keep the application alive on unexpected errors
             print(f"Error during delete_items operation: {e}")
-
-            pass
             self.update_all_items()  # Error recovery
             return False
 
@@ -2224,8 +2216,6 @@ class MoleculeScene(QGraphicsScene):
 
         except (AttributeError, RuntimeError, ValueError) as e:
             print(f"Error in update_bond_stereo: {e}")
-
-            pass
             if hasattr(self.window, "statusBar"):
                 self.window.statusBar().showMessage(
                     f"Error updating bond stereochemistry: {e}", 5000

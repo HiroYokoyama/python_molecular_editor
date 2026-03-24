@@ -298,7 +298,7 @@ def _iterative_optimize_obabel(mol, method, check_halted_cb, safe_status_cb, max
         return True
     except WorkerHaltError:
         raise
-    except (AttributeError, RuntimeError, TypeError, ValueError, KeyError, IndexError) as e:
+    except (AttributeError, RuntimeError, TypeError, ValueError) as e:
         safe_status_cb(f"Iterative optimization ({method}) error (OpenBabel): {e}")
         import traceback
         traceback.print_exc()
@@ -801,14 +801,14 @@ def _perform_optimize_only(mol, options, worker_id, _check_halted, _safe_status,
     if backend == "OBABEL":
         try:
             mol.SetProp("_pme_optimization_method", opt_method)
-        except (AttributeError, RuntimeError, TypeError, ValueError, KeyError):
+        except (AttributeError, RuntimeError):
             import traceback
             traceback.print_exc()
         opt_success = _iterative_optimize_obabel(mol, method_key, _check_halted, _safe_status)
     else:
         try:
             mol.SetProp("_pme_optimization_method", opt_method)
-        except (AttributeError, RuntimeError, TypeError, ValueError, KeyError):
+        except (AttributeError, RuntimeError):
             import traceback
             traceback.print_exc()
         opt_success = _iterative_optimize(mol, method_key, _check_halted, _safe_status, options=options)
@@ -896,7 +896,7 @@ def _perform_obabel_conversion(mol_block, conversion_mode, opt_method, worker_id
                     traceback.print_exc()
         except WorkerHaltError:
             raise
-        except (AttributeError, RuntimeError, TypeError, ValueError, KeyError, IndexError) as opt_err:
+        except (AttributeError, RuntimeError, TypeError, ValueError) as opt_err:
             _safe_status(f"Warning: Optimization failed: {opt_err}. Using unoptimized structure.")
             try:
                 rd_mol.ClearProp("_pme_optimization_method")
@@ -918,7 +918,7 @@ def _perform_obabel_conversion(mol_block, conversion_mode, opt_method, worker_id
         return True
     except WorkerHaltError:
         raise
-    except (AttributeError, RuntimeError, TypeError, ValueError, KeyError, IndexError) as ob_err:
+    except (AttributeError, RuntimeError, TypeError, ValueError) as ob_err:
         if conversion_mode == "obabel":
             # obabel-only mode: no further fallback
             raise RuntimeError(f"Open Babel 3D conversion failed: {ob_err}")
@@ -1332,5 +1332,5 @@ class CalculationWorker(QObject):
         except WorkerHaltError:
             _safe_error("Halted")
             return
-        except (AttributeError, RuntimeError, TypeError, ValueError, KeyError, IndexError, StopIteration) as e:
+        except (AttributeError, RuntimeError, TypeError, ValueError, StopIteration) as e:
             _safe_error(str(e))

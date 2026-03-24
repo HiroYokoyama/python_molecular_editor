@@ -214,8 +214,6 @@ class MainWindowViewLoaders(object):
         except (AttributeError, RuntimeError, ValueError) as e:
             self.statusBar().showMessage(f"Error saving 3D MOL file: {e}")
 
-            pass
-
     def load_mol_file_for_3d_viewing(self, file_path=None):
         """Open MOL/SDF file in 3D viewer"""
         if not self.check_unsaved_changes():

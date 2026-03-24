@@ -293,7 +293,8 @@ class PluginManager:
                     except (AttributeError, RuntimeError, ValueError, OSError, ImportError, SyntaxError) as e:
                         status = f"Error (Init): {e}"
                         print(f"Plugin {plugin_name} initialize error: {e}")
-                        pass
+                        import traceback
+                        traceback.print_exc()
                 elif has_autorun:
                     try:
                         if self.main_window:
@@ -303,7 +304,8 @@ class PluginManager:
                     except (AttributeError, RuntimeError, ValueError, OSError, ImportError, SyntaxError) as e:
                         status = f"Error (Autorun): {e}"
                         print(f"Plugin {plugin_name} autorun error: {e}")
-                        pass
+                        import traceback
+                        traceback.print_exc()
                 elif not has_run:
                     status = "No Entry Point"
 
@@ -323,7 +325,8 @@ class PluginManager:
 
         except (AttributeError, RuntimeError, ValueError, OSError, ImportError, SyntaxError) as e:
             print(f"Failed to load plugin {module_name}: {e}")
-            pass
+            import traceback
+            traceback.print_exc()
 
     def run_plugin(self, module, main_window):
         """Executes the plugin's run method (Legacy manual trigger)."""
@@ -335,7 +338,6 @@ class PluginManager:
                 "Plugin Error",
                 f"Error running plugin '{getattr(module, 'PLUGIN_NAME', 'Unknown')}':\n{e}",
             )
-            pass
 
     # --- Registration Callbacks ---
     def register_menu_action(self, plugin_name, path, callback, text, icon, shortcut):
@@ -428,6 +430,8 @@ class PluginManager:
             try:
                 handler["callback"]()
             except (AttributeError, RuntimeError, ValueError, OSError, ImportError, SyntaxError) as e:
+                import traceback
+                traceback.print_exc()
                 print(f"Error in document reset handler for {handler['plugin']}: {e}")
 
     def get_plugin_info_safe(self, file_path):
@@ -475,8 +479,7 @@ class PluginManager:
                                     val = ".".join(map(str, elts))
                                 except (AttributeError, RuntimeError, ValueError, TypeError):
                                     import traceback
-
-                                    pass
+                                    traceback.print_exc()
 
                         if val is not None:
                             if target.id == "PLUGIN_NAME":

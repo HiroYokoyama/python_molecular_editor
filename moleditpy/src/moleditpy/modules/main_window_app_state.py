@@ -110,7 +110,9 @@ class MainWindowAppState(object):
                         [const[0], list(const[1]), const[2], 1.0e5]
                     )
         except (AttributeError, RuntimeError, TypeError):
-            pass  # Empty list on failure
+            import traceback
+            traceback.print_exc()
+            json_safe_constraints = []  # Explicitly reset on failure
         state["constraints_3d"] = json_safe_constraints
 
         return state
@@ -153,7 +155,8 @@ class MainWindowAppState(object):
                     "Some features may not load or work correctly.",
                 )
         except (ValueError, AttributeError):
-            pass
+            import traceback
+            traceback.print_exc()
 
         raw_atoms = loaded_data.get("atoms", {})
         raw_bonds = loaded_data.get("bonds", {})
@@ -659,7 +662,8 @@ class MainWindowAppState(object):
                         json_data["identifiers"]["inchi"] = inchi
                         json_data["identifiers"]["inchi_key"] = inchi_key
                     except (AttributeError, RuntimeError, TypeError):
-                        pass  # Ignore InChI failure
+                        import traceback
+                        traceback.print_exc()
 
                 except (AttributeError, RuntimeError, ValueError, TypeError) as e:
                     print(f"Warning: Could not generate molecular identifiers: {e}")
