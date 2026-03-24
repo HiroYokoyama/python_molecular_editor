@@ -1077,119 +1077,73 @@ class SettingsDialog(QDialog):
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No,
         )
-
         if reply == QMessageBox.StandardButton.Yes:
-            # Update the dialog UI
             self.update_ui_from_settings(self.default_settings)
+            
+            if not (self.parent_window and hasattr(self.parent_window, "settings")):
+                return
 
-            # Also persist defaults to the application-level settings if parent is available
             try:
-                if self.parent_window and hasattr(self.parent_window, "settings"):
-                    # Update parent settings and save
-                    self.parent_window.settings.update(self.default_settings)
-                    # defer writing to disk; mark dirty so closeEvent will persist
-                    try:
-                        self.parent_window.settings_dirty = True
-                    except AttributeError:
-                        import traceback
-                        traceback.print_exc()
-                    # Also ensure color settings return to defaults and UI reflects them
-                    try:
-                        # Remove any CPK overrides to restore defaults
-                        if "cpk_colors" in self.parent_window.settings:
-                            # Reset to defaults (empty override dict)
-                            self.parent_window.settings["cpk_colors"] = {}
+                # 1. Update core settings
+                self.parent_window.settings.update(self.default_settings)
+                if "cpk_colors" in self.parent_window.settings:
+                    self.parent_window.settings["cpk_colors"] = {}
+                
+                self.parent_window.settings["ball_stick_bond_color"] = self.default_settings.get(
+                    "ball_stick_bond_color", "#7F7F7F"
+                )
 
-                        # Reset 2D Settings (colors need manual refresh in parent scene/view usually handled by apply)
+                # 2. Sync parent state
+                if hasattr(self.parent_window, "update_cpk_colors_from_settings"):
+                    self.parent_window.update_cpk_colors_from_settings()
+                if hasattr(self.parent_window, "apply_3d_settings"):
+                    self.parent_window.apply_3d_settings()
 
-                        # Reset 3D Ball & Stick uniform bond color to default
-                        self.parent_window.settings["ball_stick_bond_color"] = (
-                            self.default_settings.get(
-                                "ball_stick_bond_color", "#7F7F7F"
-                            )
-                        )
-                        # Update global CPK colors and reapply 3D settings immediately
+                # 3. Redraw molecule
+                current_mol = getattr(self.parent_window, "current_mol", None)
+                if current_mol and hasattr(self.parent_window, "draw_molecule_3d"):
+                    self.parent_window.draw_molecule_3d(current_mol)
+
+                # 4. Refresh 2D scene items
+                scene = getattr(self.parent_window, "scene", None)
+                if scene:
+                    for it in scene.items():
                         try:
-                            self.parent_window.update_cpk_colors_from_settings()
-                        except (AttributeError, RuntimeError, ValueError, TypeError):
+                            if hasattr(it, "update_style"):
+                                it.update_style()
+                        except (RuntimeError, ValueError, TypeError):
                             import traceback
                             traceback.print_exc()
-                        try:
-                            self.parent_window.apply_3d_settings()
-                        except (AttributeError, RuntimeError, ValueError, TypeError):
-                            import traceback
-                            traceback.print_exc()
-                        # Re-draw current 3D molecule if any
-                        try:
-                            if (
-                                hasattr(self.parent_window, "current_mol")
-                                and self.parent_window.current_mol
-                            ):
-                                self.parent_window.draw_molecule_3d(
-                                    self.parent_window.current_mol
-                                )
-                        except (AttributeError, RuntimeError, ValueError, TypeError):
-                            import traceback
-                            traceback.print_exc()
-                        # Update 2D scene items to reflect color reset
-                        try:
-                            if hasattr(self.parent_window, "scene"):
-                                for it in self.parent_window.scene.items():
-                                    try:
-                                        if hasattr(it, "update_style"):
-                                            it.update_style()
-                                    except (AttributeError, RuntimeError, ValueError, TypeError):
-                                        import traceback
-                                        traceback.print_exc()
-                        except (AttributeError, RuntimeError, ValueError, TypeError):
-                            import traceback
-                            traceback.print_exc()
-                        # Mark settings dirty so they'll be saved on exit
-                        try:
-                            self.parent_window.settings_dirty = True
-                        except AttributeError:
-                            import traceback
-                            traceback.print_exc()
-                    except (AttributeError, RuntimeError, ValueError, TypeError):
+
+                # 5. Refresh opt/conv actions
+                opt_method = self.parent_window.settings.get("optimization_method", "MMFF_RDKIT")
+                if hasattr(self.parent_window, "optimization_method"):
+                    self.parent_window.optimization_method = opt_method
+
+                opt_actions = getattr(self.parent_window, "opt3d_actions", {})
+                for k, act in opt_actions.items():
+                    try:
+                        act.setChecked(k.upper() == (opt_method or "").upper())
+                    except (RuntimeError, ValueError, TypeError):
                         import traceback
                         traceback.print_exc()
 
-                    # Refresh parent's optimization and conversion menu/action states
+                conv_mode = self.parent_window.settings.get("3d_conversion_mode", "fallback")
+                conv_actions = getattr(self.parent_window, "conv_actions", {})
+                for k, act in conv_actions.items():
                     try:
-                        # Optimization method
-                        if hasattr(self.parent_window, "optimization_method"):
-                            self.parent_window.optimization_method = (
-                                self.parent_window.settings.get(
-                                    "optimization_method", "MMFF_RDKIT"
-                                )
-                            )
-                        if hasattr(self.parent_window, "opt3d_actions"):
-                            for k, act in self.parent_window.opt3d_actions.items():
-                                try:
-                                    act.setChecked(
-                                        k.upper()
-                                        == (
-                                            self.parent_window.optimization_method or ""
-                                        ).upper()
-                                    )
-                                except (AttributeError, RuntimeError, ValueError, TypeError):
-                                    import traceback
-                                    traceback.print_exc()
-                        # Conversion mode
-                        conv_mode = self.parent_window.settings.get(
-                            "3d_conversion_mode", "fallback"
-                        )
-                        if hasattr(self.parent_window, "conv_actions"):
-                            for k, act in self.parent_window.conv_actions.items():
-                                try:
-                                    act.setChecked(k == conv_mode)
-                                except (AttributeError, RuntimeError, ValueError, TypeError):
-                                    import traceback
-                                    traceback.print_exc()
-                    except (AttributeError, RuntimeError, ValueError, TypeError):
+                        act.setChecked(k == conv_mode)
+                    except (RuntimeError, ValueError, TypeError):
                         import traceback
                         traceback.print_exc()
-            except (AttributeError, RuntimeError, TypeError):
+
+                # 6. Mark dirty
+                try:
+                    self.parent_window.settings_dirty = True
+                except AttributeError:
+                    pass
+
+            except (AttributeError, RuntimeError, ValueError) as e:
                 import traceback
                 traceback.print_exc()
 
@@ -1378,109 +1332,87 @@ class SettingsDialog(QDialog):
 
     def apply_settings(self):
         """Apply settings (dialog stays open)"""
-        # Update parent window settings
-        if self.parent_window:
-            settings = self.get_settings()
-            self.parent_window.settings.update(settings)
-            # Mark settings dirty; persist on exit to avoid frequent disk writes
-            try:
-                self.parent_window.settings_dirty = True
-            except (AttributeError, RuntimeError, ValueError, TypeError):  
-                import traceback
-                traceback.print_exc()
+        if not self.parent_window:
+            return
 
-            # Apply 3D view settings
+        settings = self.get_settings()
+        self.parent_window.settings.update(settings)
+        
+        # Mark settings dirty
+        try:
+            self.parent_window.settings_dirty = True
+        except (AttributeError, RuntimeError, ValueError, TypeError):
+            pass
+
+        # Apply 3D view settings
+        if hasattr(self.parent_window, "apply_3d_settings"):
             self.parent_window.apply_3d_settings()
-            # Update CPK colors from settings if present (no-op otherwise)
+        
+        # Update CPK colors
+        if hasattr(self.parent_window, "update_cpk_colors_from_settings"):
             try:
                 self.parent_window.update_cpk_colors_from_settings()
-            except (AttributeError, RuntimeError, ValueError, TypeError):  
+            except (RuntimeError, TypeError):
                 import traceback
                 traceback.print_exc()
 
-            # Refresh any open CPK color dialogs so they update their UI
+        # Refresh other dialogs
+        for w in QApplication.topLevelWidgets():
             try:
-                for w in QApplication.topLevelWidgets():
-                    try:
-                        # import locally to avoid circular import
-                        import importlib
+                # Check for ColorSettingsDialog without dynamic import if possible, 
+                # but dynamic import was used to avoid circular dependencies.
+                # We'll stick to dynamic import but clean up the call.
+                if type(w).__name__ == "ColorSettingsDialog" and hasattr(w, "refresh_ui"):
+                    w.refresh_ui()
+            except (RuntimeError, ValueError, TypeError):
+                pass # Silent for UI refresh of other windows
 
-                        try:
-                            # Try relative import first (if running as package)
-                            mod = importlib.import_module(
-                                ".color_settings_dialog", package="moleditpy.modules"
-                            )
-                        except (ImportError, TypeError):
-                            # Fallback to absolute
-                            mod = importlib.import_module(
-                                "modules.color_settings_dialog"
-                            )
-                        ColorSettingsDialog = mod.ColorSettingsDialog
-                        if isinstance(w, ColorSettingsDialog):
-                            try:
-                                w.refresh_ui()
-                            except (AttributeError, RuntimeError, ValueError, TypeError):  
-                                import traceback
-                                traceback.print_exc()
-                    except (AttributeError, RuntimeError, ValueError, TypeError):  
-                        import traceback
-                        traceback.print_exc()
-            except (AttributeError, RuntimeError, ValueError, TypeError):  
-                import traceback
-                traceback.print_exc()
+        # Redraw molecule
+        current_mol = getattr(self.parent_window, "current_mol", None)
+        if current_mol and hasattr(self.parent_window, "draw_molecule_3d"):
+            self.parent_window.draw_molecule_3d(current_mol)
 
-            # Redraw current molecule (reflecting settings changes)
-            if (
-                hasattr(self.parent_window, "current_mol")
-                and self.parent_window.current_mol
-            ):
-                self.parent_window.draw_molecule_3d(self.parent_window.current_mol)
-
-            # Apply 2D view settings (background color, bond style, etc.)
-            # update_style() will read the new settings from parent_window.settings
+        # Apply 2D view settings
+        scene = getattr(self.parent_window, "scene", None)
+        if scene:
             try:
-                if hasattr(self.parent_window, "scene") and self.parent_window.scene:
-                    # Update Background
-                    bg_col_2d = self.parent_window.settings.get(
-                        "background_color_2d", "#FFFFFF"
-                    )
-                    self.parent_window.scene.setBackgroundBrush(QColor(bg_col_2d))
+                bg_col_2d = self.parent_window.settings.get("background_color_2d", "#FFFFFF")
+                scene.setBackgroundBrush(QColor(bg_col_2d))
 
-                    # Update Items
-                    for item in self.parent_window.scene.items():
-                        if hasattr(item, "update_style"):
-                            item.update_style()
-                        elif hasattr(item, "update"):
-                            item.update()
+                for item in scene.items():
+                    if hasattr(item, "update_style"):
+                        item.update_style()
+                    elif hasattr(item, "update"):
+                        item.update()
 
-                    if hasattr(self.parent_window.view_2d, "viewport"):
-                        self.parent_window.view_2d.viewport().update()
-            except (AttributeError, RuntimeError, ValueError, TypeError):  
+                view_2d = getattr(self.parent_window, "view_2d", None)
+                if view_2d and hasattr(view_2d, "viewport"):
+                    view_2d.viewport().update()
+            except (RuntimeError, ValueError, TypeError) as e:
                 import traceback
                 traceback.print_exc()
 
-            # Display application completion in the status bar
+        # Update status bar
+        if hasattr(self.parent_window, "statusBar") and self.parent_window.statusBar():
             self.parent_window.statusBar().showMessage("Settings applied successfully")
 
     def _on_skip_chem_checks_changed(self, state):
         """Handle user toggling of skip chemistry checks: persist and update UI.
-
+        
         state: Qt.Checked (2) or Qt.Unchecked (0)
         """
+        enabled = bool(state)
+        # Handle cases where self.settings might not be initialized or is a different object
+        settings = getattr(self, "settings", None)
+        if isinstance(settings, dict):
+            settings["skip_chemistry_checks"] = enabled
+        
+        # Mark dirty
         try:
-            enabled = bool(state)
-            self.settings["skip_chemistry_checks"] = enabled
-            # mark dirty instead of immediate save
-            try:
-                self.settings_dirty = True
-            except (AttributeError, RuntimeError, ValueError, TypeError):  
-                import traceback
-                traceback.print_exc()
-            # If skip is enabled, allow Optimize button; otherwise, respect chem_check flags
-
-        except (AttributeError, RuntimeError, ValueError, TypeError):  
-            import traceback
-            traceback.print_exc()
+            self.settings_dirty = True
+        except AttributeError:
+            pass
+        # If skip is enabled, allow Optimize button; otherwise, respect chem_check flags
 
     def accept(self):
         """Apply dialog settings before closing"""
@@ -1581,14 +1513,11 @@ class SettingsDialog(QDialog):
             "ball_stick_bond_color",
             self.default_settings.get("ball_stick_bond_color", "#7F7F7F"),
         )
-        try:
+        if hasattr(self, "bs_bond_color_button"):
             self.bs_bond_color_button.setStyleSheet(
                 f"background-color: {self.bs_bond_color}; border: 1px solid #888;"
             )
             self.bs_bond_color_button.setToolTip(self.bs_bond_color)
-        except (AttributeError, RuntimeError, ValueError, TypeError):  
-            import traceback
-            traceback.print_exc()
 
         self.bs_use_cpk_bond_checkbox.setChecked(
             settings_dict.get(

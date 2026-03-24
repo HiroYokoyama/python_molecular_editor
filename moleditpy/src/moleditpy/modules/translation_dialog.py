@@ -189,17 +189,15 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog):
 
         return np.mean(positions, axis=0)
 
+        
     def apply_translation(self):
         """Apply the translation to either the selected atoms or the entire molecule."""
         if not self.selected_atoms:
             QMessageBox.warning(self, "Warning", "Please select at least one atom.")
             return
 
-        # Check molecule validity
         if not self.mol or self.mol.GetNumConformers() == 0:
-            QMessageBox.warning(
-                self, "Warning", "No valid molecule or conformer available."
-            )
+            QMessageBox.warning(self, "Warning", "No valid molecule or conformer available.")
             return
 
         try:
@@ -211,61 +209,47 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog):
             return
 
         try:
-            # Calculate current centroid
+            # Calculate translation
             current_centroid = self.calculate_centroid()
             target_pos = np.array([target_x, target_y, target_z])
-
-            # Calculate the translation vector
             translation_vector = target_pos - current_centroid
 
             conf = self.mol.GetConformer()
+            atom_positions = getattr(self.main_window, "atom_positions_3d", {})
 
-            if self.translate_selected_only_checkbox.isChecked():
-                # Move only the selected atoms: shift selected atoms by translation_vector
-                for i in range(self.mol.GetNumAtoms()):
-                    if i in self.selected_atoms:
-                        atom_pos = np.array(conf.GetAtomPosition(i))
-                        new_pos = atom_pos + translation_vector
-                        conf.SetAtomPosition(i, new_pos.tolist())
-                        # Update 3d positions for this atom only
-                        try:
-                            self.main_window.atom_positions_3d[i] = new_pos
-                        except (AttributeError, RuntimeError, ValueError, TypeError):  
-                            import traceback
-                            traceback.print_exc()
-                    else:
-                        # leave other atoms unchanged
-                        continue
-            else:
-                # Default: translate entire molecule so centroid moves to target
-                for i in range(self.mol.GetNumAtoms()):
+            # Apply translation
+            translate_selected = self.translate_selected_only_checkbox.isChecked()
+            for i in range(self.mol.GetNumAtoms()):
+                if not translate_selected or i in self.selected_atoms:
                     atom_pos = np.array(conf.GetAtomPosition(i))
                     new_pos = atom_pos + translation_vector
                     conf.SetAtomPosition(i, new_pos.tolist())
-                    self.main_window.atom_positions_3d[i] = new_pos
+                    
+                    # Update cache in main window
+                    if i in atom_positions:
+                        atom_positions[i] = new_pos
 
-            # Update 3D visualization
-            self.main_window.draw_molecule_3d(self.mol)
+            # Update visualization and state
+            if hasattr(self.main_window, "draw_molecule_3d"):
+                self.main_window.draw_molecule_3d(self.mol)
+            
+            if hasattr(self.main_window, "update_chiral_labels"):
+                self.main_window.update_chiral_labels()
 
-            # Update chirality labels
-            self.main_window.update_chiral_labels()
-
-            # Clear selection after application
             self.clear_selection()
 
-            # Save state for Undo
-            self.main_window.push_undo_state()
+            if hasattr(self.main_window, "push_undo_state"):
+                self.main_window.push_undo_state()
 
         except (AttributeError, RuntimeError, ValueError) as e:
-            QMessageBox.critical(
-                self, "Error", f"Failed to apply translation: {str(e)}"
-            )
+            import traceback
+            traceback.print_exc()
+            QMessageBox.critical(self, "Error", f"Failed to apply translation: {str(e)}")
 
     def clear_selection(self):
         """Clear the current atom selection and labels."""
         self.selected_atoms.clear()
         self.clear_atom_labels()
-        self.update_display()
 
     def select_all_atoms(self):
         """Select all atoms in the current molecule and update labels/UI."""
@@ -325,12 +309,13 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog):
     def clear_atom_labels(self):
         """Clear atom labels and force a re-render of the 3D scene."""
         super().clear_atom_labels()
-        # Force re-render after clearing labels
-        try:
-            self.main_window.plotter.render()
-        except (AttributeError, RuntimeError, ValueError, TypeError):  
-            import traceback
-            traceback.print_exc()
+        
+        # Force re-render
+        if hasattr(self.main_window, "plotter"):
+            try:
+                self.main_window.plotter.render()
+            except (RuntimeError, ValueError, TypeError):
+                pass
 
     def closeEvent(self, event):
         """Clean up when the dialog is closed directly."""
