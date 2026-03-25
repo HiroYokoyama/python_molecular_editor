@@ -473,9 +473,8 @@ class MainWindowMainInit(object):
             # Insert a toolbar break in the Top toolbar area to force the next toolbar onto a new row
             self.addToolBarBreak(Qt.ToolBarArea.TopToolBarArea)
         except (AttributeError, RuntimeError, ValueError, TypeError):  
-            # If addToolBarBreak isn't available, continue without raising; placement may still work depending on the platform.
-            import traceback
-            traceback.print_exc()
+            # If addToolBarBreak isn't available, continue without raising.
+            pass
 
         toolbar_bottom = QToolBar("Templates Toolbar")
         self.addToolBar(Qt.ToolBarArea.TopToolBarArea, toolbar_bottom)
@@ -1721,8 +1720,8 @@ class MainWindowMainInit(object):
                                 try:
                                     v.viewport().update()
                                 except (AttributeError, RuntimeError, ValueError, TypeError):  
-                                    import traceback
-                                    traceback.print_exc()
+                                    # Ignore viewport update failure
+                                    pass
                         except (AttributeError, RuntimeError, ValueError, TypeError):  
                             import traceback
                             traceback.print_exc()
@@ -1910,11 +1909,7 @@ class MainWindowMainInit(object):
                         changed = True
 
                 if changed:
-                    try:
-                        self.settings_dirty = True
-                    except (AttributeError, RuntimeError, ValueError, TypeError):  
-                        import traceback
-                        traceback.print_exc()
+                    self.settings_dirty = True
             else:
                 # No settings file - use defaults. Mark dirty so defaults will be written on exit.
                 self.settings = default_settings

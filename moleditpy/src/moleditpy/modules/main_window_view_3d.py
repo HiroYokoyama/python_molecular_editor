@@ -440,8 +440,8 @@ class MainWindowView3d(object):
                     q = QColor(bs_hex)
                     bs_bond_rgb = [q.red(), q.green(), q.blue()]
                 except (AttributeError, RuntimeError, TypeError, ValueError):  
-                    import traceback
-                    traceback.print_exc()
+                    # Suppress non-critical bond drawing color fallback noise
+                    pass
 
             # Lists for batch processing
             all_points = []
@@ -1473,8 +1473,8 @@ class MainWindowView3d(object):
                             try:
                                 tp.SetBold(True)
                             except (AttributeError, RuntimeError, TypeError):  
-                                import traceback
-                                traceback.print_exc()
+                                # Suppress non-critical actor property update noise
+                                pass
                     except (AttributeError, RuntimeError, TypeError):  
                         pass  # Suppress non-critical 3D rendering/actor update errors
                 except (AttributeError, RuntimeError, TypeError):
@@ -1496,8 +1496,8 @@ class MainWindowView3d(object):
                         try:
                             self.plotter.remove_actor(a)
                         except (AttributeError, RuntimeError, TypeError):  
-                            import traceback
-                            traceback.print_exc()
+                            # Suppress non-critical actor removal noise
+                            pass
                 else:
                     try:
                         self.plotter.remove_actor(self.current_atom_info_labels)

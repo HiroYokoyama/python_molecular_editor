@@ -1653,8 +1653,8 @@ class SettingsDialog(QDialog):
             self.aromatic_torus_thickness_slider.setValue(int(thickness_factor * 100))
             self.aromatic_torus_thickness_label.setText(f"{thickness_factor:.1f}")
         except (AttributeError, RuntimeError, ValueError, TypeError):  
-            import traceback
-            traceback.print_exc()
+            # Handle UI sync failure for aromatic torus slider
+            pass
 
         # 7. 2D Settings
         bw_2d = settings_dict.get(
