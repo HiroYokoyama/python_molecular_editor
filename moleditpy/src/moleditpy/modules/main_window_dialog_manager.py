@@ -67,8 +67,8 @@ except ImportError:
 
 
 # --- Class Definition ---
-class MainWindowDialogManager(object):
-    """Functional class separated from main_window.py """
+class MainWindowDialogManager:
+    """Mixin class separated from main_window.py """
 
     def show_about_dialog(self):
         """Show the custom About dialog with Easter egg functionality"""

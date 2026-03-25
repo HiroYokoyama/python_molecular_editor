@@ -73,8 +73,8 @@ def _set_mol_prop_safe(mol, key, val):
 
 
 # --- Class Definition ---
-class MainWindowMolecularParsers(object):
-    """Functional class separated from main_window.py"""
+class MainWindowMolecularParsers:
+    """Mixin class separated from main_window.py"""
 
     def load_mol_file(self, file_path=None):
         if not self.check_unsaved_changes():

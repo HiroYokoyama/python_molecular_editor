@@ -694,24 +694,15 @@ def window(app, qtbot, monkeypatch):
             lambda self: None,
             raising=False,
         )
-        monkeypatch.setattr(
-            "modules.main_window_ui_manager.MainWindowUiManager._setup_3d_picker",
-            lambda self: None,
-            raising=False,
-        )
+        def _mock_init_worker(self):
+            self.halt_ids = set()
+            self._active_calc_threads = []
 
-        # Patch init_worker_thread to prevent QThread creation which can cause hangs
         monkeypatch.setattr(
             "moleditpy.modules.main_window_main_init.MainWindowMainInit.init_worker_thread",
-            lambda self: None,
+            _mock_init_worker,
             raising=False,
         )
-        monkeypatch.setattr(
-            "modules.main_window_main_init.MainWindowMainInit.init_worker_thread",
-            lambda self: None,
-            raising=False,
-        )
-
         # Patch RDKit warmup to save time
         # We can't easily patch the try/except block in __init__, but we can try to
         # patch the descriptors or just accept that it runs once.
@@ -813,9 +804,6 @@ def window(app, qtbot, monkeypatch):
             DummyPluginManager,
             raising=False,
         )
-        monkeypatch.setattr(
-            "modules.plugin_manager.PluginManager", DummyPluginManager, raising=False
-        )
     except Exception:
         import traceback
 
@@ -910,11 +898,6 @@ def window(app, qtbot, monkeypatch):
             _safe_on_calculation_finished,
             raising=False,
         )
-        monkeypatch.setattr(
-            "modules.main_window_compute.MainWindowCompute.on_calculation_finished",
-            _safe_on_calculation_finished,
-            raising=False,
-        )
     except Exception:
         import traceback
 
@@ -960,6 +943,8 @@ def window(app, qtbot, monkeypatch):
                     self.optimize_3d_button.setEnabled(True)
                     self.export_button.setEnabled(True)
                     self.analysis_action.setEnabled(True)
+                    if hasattr(self, "_enable_3d_edit_actions"):
+                        self._enable_3d_edit_actions(True)
                 except Exception:
                     pass
             except Exception:
@@ -1057,11 +1042,6 @@ def window(app, qtbot, monkeypatch):
                 raising=False,
             )
             monkeypatch.setattr(
-                "modules.custom_qt_interactor.CustomQtInteractor",
-                DummyPlotter,
-                raising=False,
-            )
-            monkeypatch.setattr(
                 "moleditpy.CustomQtInteractor", DummyPlotter, raising=False
             )
         except Exception:
@@ -1078,11 +1058,6 @@ def window(app, qtbot, monkeypatch):
         if "DummyPluginManager" in locals():
             monkeypatch.setattr(
                 "moleditpy.modules.main_window_main_init.PluginManager",
-                DummyPluginManager,
-                raising=False,
-            )
-            monkeypatch.setattr(
-                "modules.main_window_main_init.PluginManager",
                 DummyPluginManager,
                 raising=False,
             )
@@ -1207,11 +1182,6 @@ def window(app, qtbot, monkeypatch):
             )
             monkeypatch.setattr(
                 "moleditpy.modules.main_window_main_init.CustomQtInteractor",
-                DummyPlotter,
-                raising=False,
-            )
-            monkeypatch.setattr(
-                "modules.custom_qt_interactor.CustomQtInteractor",
                 DummyPlotter,
                 raising=False,
             )
@@ -1342,11 +1312,6 @@ def window(app, qtbot, monkeypatch):
 
         monkeypatch.setattr(
             "moleditpy.modules.main_window_compute.MainWindowCompute.optimize_3d_structure",
-            _safe_optimize,
-            raising=False,
-        )
-        monkeypatch.setattr(
-            "modules.main_window_compute.MainWindowCompute.optimize_3d_structure",
             _safe_optimize,
             raising=False,
         )
@@ -1542,11 +1507,6 @@ def window(app, qtbot, monkeypatch):
 
         monkeypatch.setattr(
             "moleditpy.modules.main_window_ui_manager.MainWindowUiManager._setup_3d_picker",
-            _safe_setup_3d_picker,
-            raising=False,
-        )
-        monkeypatch.setattr(
-            "modules.main_window_ui_manager.MainWindowUiManager._setup_3d_picker",
             _safe_setup_3d_picker,
             raising=False,
         )

@@ -1499,8 +1499,8 @@ def test_drag_drop_mol_file_on_3d_view(window, qtbot, monkeypatch):
     # QDropEvent.position() は QPointF を返すため、toPointF() を使用
     mock_event.position.return_value = drop_pos_global.toPointF()
 
-    # 4. `window.dropEvent` を直接呼び出す
-    window.dropEvent(mock_event)
+    # 4. `window.handle_drop_event` を直接呼び出す
+    window.handle_drop_event(mock_event)
     qtbot.wait(50)
 
     # 5. `load_mol_file_for_3d_viewing` が呼ばれたことを確認
@@ -1531,8 +1531,8 @@ def test_drag_drop_mol_file_on_2d_view(window, qtbot, monkeypatch):
     drop_pos_global = editor_widget.mapTo(window, editor_widget.rect().center())
     mock_event.position.return_value = drop_pos_global.toPointF()
 
-    # 4. `window.dropEvent` を直接呼び出す
-    window.dropEvent(mock_event)
+    # 4. `window.handle_drop_event` を直接呼び出す
+    window.handle_drop_event(mock_event)
     qtbot.wait(50)
 
     # 5. `load_mol_file` が呼ばれたことを確認

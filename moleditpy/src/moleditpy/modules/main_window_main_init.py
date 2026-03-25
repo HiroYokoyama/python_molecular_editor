@@ -12,7 +12,7 @@ DOI: 10.5281/zenodo.17268532
 
 """
 main_window_main_init.py
-Functional class separated from main_window.py
+Mixin class separated from main_window.py
 """
 
 
@@ -170,7 +170,7 @@ except (AttributeError, RuntimeError, TypeError):
 
 
 # --- Class Definition ---
-class MainWindowMainInit(object):
+class MainWindowMainInit:
     """Feature class separated from main_window.py"""
 
     # __init__ is copied from main_window.py

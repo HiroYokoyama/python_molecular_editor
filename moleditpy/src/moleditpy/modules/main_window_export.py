@@ -45,8 +45,8 @@ except ImportError:
 
 
 # --- Class Definition ---
-class MainWindowExport(object):
-    """Functional class separated from main_window.py"""
+class MainWindowExport:
+    """Mixin class separated from main_window.py"""
 
     def export_stl(self):
         """Export as STL (no color)."""

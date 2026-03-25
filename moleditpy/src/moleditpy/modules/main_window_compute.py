@@ -55,8 +55,8 @@ except ImportError:
     )
 
 
-class MainWindowCompute(object):
-    """Functional class separated from main_window.py"""
+class MainWindowCompute:
+    """Mixin class separated from main_window.py"""
     
     # Default initial state 
     last_successful_optimization_method = None
@@ -289,7 +289,7 @@ class MainWindowCompute(object):
 
         problems = Chem.DetectChemistryProblems(mol)
         if problems:
-            self.main_window_compute._handle_chemistry_problems(mol, problems)
+            self._handle_chemistry_problems(mol, problems)
             return None
 
         # Clear flags and run 3D conversion if no problems
@@ -388,7 +388,7 @@ class MainWindowCompute(object):
             self.edit_3d_action.setChecked(False)
             self.toggle_3d_edit_mode(False)
 
-        mol = self.main_window_compute._prepare_rdkit_mol_for_conversion()
+        mol = self._prepare_rdkit_mol_for_conversion()
         if not mol:
             return
 
@@ -400,7 +400,7 @@ class MainWindowCompute(object):
         else:
             self.statusBar().showMessage("Calculating 3D structure...")
 
-        mol_block = self.main_window_compute._setup_mol_block_for_worker(mol)
+        mol_block = self._setup_mol_block_for_worker(mol)
         
         run_id = int(getattr(self, "next_conversion_id", 1))
         self.next_conversion_id = run_id + 1
@@ -435,7 +435,7 @@ class MainWindowCompute(object):
             "worker_id": run_id
         }
 
-        self.main_window_compute._start_calculation_worker(mol_block, options, run_id)
+        self._start_calculation_worker(mol_block, options, run_id)
         self.push_undo_state()
         self.update_chiral_labels()
         self.view_2d.setFocus()

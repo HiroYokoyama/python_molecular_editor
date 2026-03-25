@@ -12,7 +12,7 @@ DOI: 10.5281/zenodo.17268532
 
 """
 main_window_project_io.py
-Functional class separated from main_window.py
+Mixin class separated from main_window.py
 """
 
 import copy
@@ -32,8 +32,8 @@ except ImportError:
 
 
 # --- Classes ---
-class MainWindowProjectIo(object):
-    """Functional class separated from main_window.py."""
+class MainWindowProjectIo:
+    """Mixin class separated from main_window.py."""
 
     def save_project(self):
         """Save (Ctrl+S) - Defaults to PMEPRJ format."""

@@ -42,8 +42,8 @@ except ImportError:
 
 
 # --- Class Definition ---
-class MainWindowViewLoaders(object):
-    """Functional class separated from main_window.py"""
+class MainWindowViewLoaders:
+    """Mixin class separated from main_window.py"""
     def load_xyz_for_3d_viewing(self, file_path=None):
         """Load XYZ file and display in 3D viewer"""
         if not file_path:

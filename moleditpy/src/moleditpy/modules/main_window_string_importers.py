@@ -12,7 +12,7 @@ DOI: 10.5281/zenodo.17268532
 
 """
 main_window_string_importers.py
-Functional class separated from main_window.py
+Mixin class separated from main_window.py
 """
 # RDKit imports (explicit to satisfy flake8 and used features)
 from rdkit import Chem
@@ -31,8 +31,8 @@ except ImportError:
 
 
 # --- Classes ---
-class MainWindowStringImporters(object):
-    """Functional class separated from main_window.py."""
+class MainWindowStringImporters:
+    """Mixin class separated from main_window.py."""
 
     def import_smiles_dialog(self):
         """Dialog for SMILES input."""

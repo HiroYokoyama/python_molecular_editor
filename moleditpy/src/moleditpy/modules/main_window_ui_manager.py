@@ -12,7 +12,7 @@ DOI: 10.5281/zenodo.17268532
 
 """
 main_window_ui_manager.py
-Functional class separated from main_window.py
+Mixin class separated from main_window.py
 """
 
 import vtk
@@ -43,8 +43,8 @@ except ImportError:
 
 
 # --- Classes ---
-class MainWindowUiManager(object):
-    """Functional class separated from main_window.py."""
+class MainWindowUiManager:
+    """Mixin class separated from main_window.py."""
 
     def update_status_bar(self, message):
         """Update status bar with worker messages."""
@@ -248,6 +248,10 @@ class MainWindowUiManager(object):
         self.plotter.interactor.Initialize()
     def dragEnterEvent(self, event):
         """Handle drag enter event."""
+        self.handle_drag_enter_event(event)
+
+    def handle_drag_enter_event(self, event):
+        """Internal handler for drag enter event (bypasses PyQt type checks in tests)."""
         if not event.mimeData().hasUrls():
             event.ignore()
             return
@@ -272,6 +276,10 @@ class MainWindowUiManager(object):
 
     def dropEvent(self, event):
         """Handle file drop event."""
+        self.handle_drop_event(event)
+
+    def handle_drop_event(self, event):
+        """Internal handler for file drop event (bypasses PyQt type checks in tests)."""
         urls = event.mimeData().urls()
         file_path = next((u.toLocalFile() for u in urls if u.isLocalFile()), None)
         if not file_path:

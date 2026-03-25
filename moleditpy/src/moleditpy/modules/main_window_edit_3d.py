@@ -12,7 +12,7 @@ DOI: 10.5281/zenodo.17268532
 
 """
 main_window_edit_3d.py
-Functional class separated from main_window.py
+Mixin class separated from main_window.py
 """
 
 
@@ -51,8 +51,8 @@ except ImportError:
 
 
 # --- Classes ---
-class MainWindowEdit3d(object):
-    """Functional class separated from main_window.py."""
+class MainWindowEdit3d:
+    """Mixin class separated from main_window.py."""
 
     def toggle_measurement_mode(self, checked):
         """Toggle measurement mode on/off."""

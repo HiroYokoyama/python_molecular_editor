@@ -48,8 +48,8 @@ except ImportError:
 
 
 # --- Class Definition ---
-class MainWindowView3d(object):
-    """Functional class separated from main_window.py"""
+class MainWindowView3d:
+    """Mixin class separated from main_window.py"""
 
     def set_3d_style(self, style_name):
         """Set 3D display style and update view"""

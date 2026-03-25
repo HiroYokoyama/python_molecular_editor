@@ -125,8 +125,8 @@ except ImportError:
 
 
 # --- Class Definition ---
-class MainWindowEditActions(object):
-    """Functional class separated from main_window.py"""
+class MainWindowEditActions:
+    """Mixin class separated from main_window.py"""
 
     def copy_selection(self):
         """Copy selected atoms and bonds to clipboard"""
@@ -915,11 +915,11 @@ class MainWindowEditActions(object):
                 logging.debug(f"to_rdkit_mol failed during H-update: {e}")
                 mol = None
 
-            h_count_map = self.main_window_edit_actions._compute_h_counts(mol)
-            problem_map = self.main_window_edit_actions._detect_chemistry_problems(mol)
+            h_count_map = self._compute_h_counts(mol)
+            problem_map = self._detect_chemistry_problems(mol)
 
             def _ui_closure():
-                self.main_window_edit_actions._apply_ui_h_counts(h_count_map, problem_map, my_token)
+                self._apply_ui_h_counts(h_count_map, problem_map, my_token)
 
             try:
                 QTimer.singleShot(0, _ui_closure)

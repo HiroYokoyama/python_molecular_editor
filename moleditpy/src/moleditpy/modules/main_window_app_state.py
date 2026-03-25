@@ -48,8 +48,8 @@ except ImportError:
 
 
 # --- Class Definition ---
-class MainWindowAppState(object):
-    """Functional class separated from main_window.py"""
+class MainWindowAppState:
+    """Mixin class separated from main_window.py"""
 
     def __init__(self):
         """Initialize class. 'self' is MainWindow instance."""
