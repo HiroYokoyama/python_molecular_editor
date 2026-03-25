@@ -98,13 +98,20 @@ class MoleculeScene(QGraphicsScene):
         }
 
         self.key_to_bond_mode_map = {
-            Qt.Key.Key_1: "bond_1_0",
-            Qt.Key.Key_2: "bond_2_0",
-            Qt.Key.Key_3: "bond_3_0",
-            Qt.Key.Key_W: "bond_1_1",
-            Qt.Key.Key_D: "bond_1_2",
+            Qt.Key.Key_1: (1, 0),
+            Qt.Key.Key_2: (2, 0),
+            Qt.Key.Key_3: (3, 0),
+            Qt.Key.Key_4: (1, 1),  # Wedge
+            Qt.Key.Key_5: (1, 2),  # Dash
         }
+
         self.reinitialize_items()
+
+    def get_setting(self, key, default=None):
+        """Safe gateway to access MainWindow settings without deep traversal from items."""
+        if hasattr(self, "window") and self.window and hasattr(self.window, "settings"):
+            return self.window.settings.get(key, default)
+        return default
 
     def update_connected_bonds(self, atoms):
         """Update the positions of all bonds connected to the specified atom list."""

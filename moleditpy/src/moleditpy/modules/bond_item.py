@@ -137,28 +137,19 @@ class BondItem(QGraphicsItem):
             line = QLineF(0, 0, 0, 0)
 
         # Get dynamic bond offset (spacing)
+        scene = self.scene()
         bond_offset = 3.5
-        try:
-            if self.scene() and hasattr(self.scene(), "views") and self.scene().views():
-                win = self.scene().views()[0].window()
-                if win and hasattr(win, "settings"):
-                    # Use specific spacing based on bond order
-                    if getattr(self, "order", 1) == 3:
-                        bond_offset = win.settings.get("bond_spacing_triple_2d", 3.5)
-                    else:
-                        bond_offset = win.settings.get("bond_spacing_double_2d", 3.5)
-        except (AttributeError, RuntimeError, TypeError, ValueError):
-            bond_offset = globals().get("BOND_OFFSET", 3.5)
+        if hasattr(scene, "get_setting"):
+            # Use specific spacing based on bond order
+            key = "bond_spacing_triple_2d" if getattr(self, "order", 1) == 3 else "bond_spacing_double_2d"
+            val = scene.get_setting(key, 3.5)
+            if isinstance(val, (int, float)):
+                bond_offset = val
 
         # Get dynamic wedge width
         wedge_width = 6.0
-        try:
-            if self.scene() and self.scene().views():
-                win = self.scene().views()[0].window()
-                if win and hasattr(win, "settings"):
-                    wedge_width = win.settings.get("bond_wedge_width_2d", 6.0)
-        except (AttributeError, RuntimeError, TypeError, ValueError):  
-            wedge_width = 6.0
+        if hasattr(scene, "get_setting"):
+            wedge_width = scene.get_setting("bond_wedge_width_2d", 6.0)
 
         extra = (getattr(self, "order", 1) - 1) * bond_offset + 50 + wedge_width
         rect = (
@@ -171,16 +162,9 @@ class BondItem(QGraphicsItem):
         if self.order == 2 and self.stereo in [3, 4]:
             font_size = 20
             font_family = FONT_FAMILY
-            try:
-                if self.scene() and self.scene().views():
-                    win = self.scene().views()[0].window()
-                    if win and hasattr(win, "settings"):
-                        font_size = win.settings.get("atom_font_size_2d", 20)
-                        font_family = win.settings.get(
-                            "atom_font_family_2d", FONT_FAMILY
-                        )
-            except (AttributeError, RuntimeError, TypeError, ValueError):  
-                pass  # Silent failure for non-critical font setting in boundingRect
+            if hasattr(scene, "get_setting"):
+                font_size = scene.get_setting("atom_font_size_2d", 20)
+                font_family = scene.get_setting("atom_font_family_2d", FONT_FAMILY)
 
             font = QFont(font_family, font_size, FONT_WEIGHT_BOLD)
             font.setItalic(True)
@@ -263,11 +247,25 @@ class BondItem(QGraphicsItem):
                 # Get settings
                 settings = sc.window.settings
 
-                # Width
-                width_2d = settings.get("bond_width_2d", 2.0)
+                # Use bond color if specified in settings
+                scene = self.scene()
+                bond_color = QColor("#222222")
+                bond_width = 2.0
+                cap_style_str = "Round"
+                if hasattr(scene, "get_setting"):
+                    custom_color = scene.get_setting("bond_color_2d", "#222222")
+                    if isinstance(custom_color, str):
+                        bond_color = QColor(custom_color)
+                    
+                    custom_width = scene.get_setting("bond_width_2d", 2.0)
+                    if isinstance(custom_width, (int, float)):
+                        bond_width = float(custom_width)
+                    
+                    custom_cap = scene.get_setting("bond_cap_style_2d", "Round")
+                    if isinstance(custom_cap, str):
+                        cap_style_str = custom_cap
 
                 # Cap Style logic
-                cap_style_str = settings.get("bond_cap_style_2d", "Round")
                 cap_style = Qt.PenCapStyle.RoundCap  # Default
 
                 if cap_style_str == "Flat":

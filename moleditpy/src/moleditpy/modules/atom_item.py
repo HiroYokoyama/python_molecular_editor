@@ -79,16 +79,11 @@ class AtomItem(QGraphicsItem):
         # Allow updating font preference dynamically
         font_size = 20
         font_family = FONT_FAMILY
-        try:
-            if self.scene() and self.scene().views():
-                win = self.scene().views()[0].window()
-                if win and hasattr(win, "settings"):
-                    font_size = win.settings.get("atom_font_size_2d", 20)
-                    font_family = win.settings.get("atom_font_family_2d", FONT_FAMILY)
-            else:
-                font_family = FONT_FAMILY
-        except (AttributeError, RuntimeError, TypeError, ValueError):
-            font_family = FONT_FAMILY
+        
+        scene = self.scene()
+        if hasattr(scene, "get_setting"):
+            font_size = scene.get_setting("atom_font_size_2d", 20)
+            font_family = scene.get_setting("atom_font_family_2d", FONT_FAMILY)
 
         self.font = QFont(font_family, font_size, FONT_WEIGHT_BOLD)
         self.prepareGeometryChange()
@@ -106,14 +101,14 @@ class AtomItem(QGraphicsItem):
         # Get dynamic font size and family
         font_size = 20
         font_family = FONT_FAMILY
-        try:
-            if self.scene() and self.scene().views():
-                win = self.scene().views()[0].window()
-                if win and hasattr(win, "settings"):
-                    font_size = win.settings.get("atom_font_size_2d", 20)
-                    font_family = win.settings.get("atom_font_family_2d", FONT_FAMILY)
-        except (AttributeError, RuntimeError, TypeError, ValueError):  
-            pass  # Silent failure for non-critical font setting in boundingRect
+        scene = self.scene()
+        if hasattr(scene, "get_setting"):
+            font_size = scene.get_setting("atom_font_size_2d", 20)
+            if not isinstance(font_size, (int, float)):
+                font_size = 20
+            font_family = scene.get_setting("atom_font_family_2d", FONT_FAMILY)
+            if not isinstance(font_family, str):
+                font_family = FONT_FAMILY
 
         font = QFont(font_family, font_size, FONT_WEIGHT_BOLD)
         fm = QFontMetricsF(font)
@@ -235,19 +230,12 @@ class AtomItem(QGraphicsItem):
     def paint(self, painter, option, widget):
         # Color logic: check if we should use bond color (uniform) or CPK (element-specific)
         color = CPK_COLORS.get(self.symbol, CPK_COLORS["DEFAULT"])
-        try:
-            if self.scene() and self.scene().views():
-                win = self.scene().views()[0].window()
-                if win and hasattr(win, "settings"):
-                    # Force Hydrogen to use bond color (invisible on white bg otherwise)
-                    # OR if the global setting is checked
-                    if self.symbol == "H" or win.settings.get(
-                        "atom_use_bond_color_2d", False
-                    ):
-                        bond_col = win.settings.get("bond_color_2d", "#222222")
-                        color = QColor(bond_col)
-        except (AttributeError, RuntimeError, TypeError, ValueError):  
-            pass  # Silent failure for element-specific color setting
+        # Use bond color if specified in settings
+        scene = self.scene()
+        if hasattr(scene, "get_setting") and (self.symbol == "H" or scene.get_setting("atom_use_bond_color_2d", False)):
+            custom_color = scene.get_setting("bond_color_2d", "#222222")
+            if isinstance(custom_color, str):
+                color = QColor(custom_color)
 
         if self.is_visible:
             # 1. Preparation for painting
