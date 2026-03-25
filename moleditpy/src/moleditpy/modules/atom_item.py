@@ -113,8 +113,7 @@ class AtomItem(QGraphicsItem):
                     font_size = win.settings.get("atom_font_size_2d", 20)
                     font_family = win.settings.get("atom_font_family_2d", FONT_FAMILY)
         except (AttributeError, RuntimeError, TypeError, ValueError):  
-            import traceback
-            traceback.print_exc()
+            pass  # Silent failure for non-critical font setting in boundingRect
 
         font = QFont(font_family, font_size, FONT_WEIGHT_BOLD)
         fm = QFontMetricsF(font)
@@ -248,8 +247,7 @@ class AtomItem(QGraphicsItem):
                         bond_col = win.settings.get("bond_color_2d", "#222222")
                         color = QColor(bond_col)
         except (AttributeError, RuntimeError, TypeError, ValueError):  
-            import traceback
-            traceback.print_exc()
+            pass  # Silent failure for element-specific color setting
 
         if self.is_visible:
             # 1. Preparation for painting
@@ -294,8 +292,7 @@ class AtomItem(QGraphicsItem):
                                 continue
                         except (AttributeError, RuntimeError, TypeError):
                             # If sip check fails, continue defensively
-                            import traceback
-                            traceback.print_exc()
+                            pass  # Silent failure for non-critical partner state check
 
                         other_pos = None
                         try:

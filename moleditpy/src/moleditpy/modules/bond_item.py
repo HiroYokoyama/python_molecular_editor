@@ -79,12 +79,9 @@ class BondItem(QGraphicsItem):
             self.update()
 
             if self.scene() and self.scene().views():
-                try:
-                    self.scene().views()[0].viewport().update()
-                except (IndexError, RuntimeError):
-                    # Handle case where views are being destroyed
-                    import traceback
-                    traceback.print_exc()
+                view = self.scene().views()[0]
+                if view and view.viewport():
+                    view.viewport().update()
 
         except (AttributeError, RuntimeError, TypeError) as e:
             print(f"Error in BondItem.set_stereo: {e}")
@@ -159,8 +156,7 @@ class BondItem(QGraphicsItem):
                 if win and hasattr(win, "settings"):
                     wedge_width = win.settings.get("bond_wedge_width_2d", 6.0)
         except (AttributeError, RuntimeError, TypeError, ValueError):  
-            import traceback
-            traceback.print_exc()
+            wedge_width = 6.0
 
         extra = (getattr(self, "order", 1) - 1) * bond_offset + 50 + wedge_width
         rect = (
@@ -182,8 +178,7 @@ class BondItem(QGraphicsItem):
                             "atom_font_family_2d", FONT_FAMILY
                         )
             except (AttributeError, RuntimeError, TypeError, ValueError):  
-                import traceback
-                traceback.print_exc()
+                pass  # Silent failure for non-critical font setting in boundingRect
 
             font = QFont(font_family, font_size, FONT_WEIGHT_BOLD)
             font.setItalic(True)
@@ -507,8 +502,7 @@ class BondItem(QGraphicsItem):
                                         "atom_font_family_2d", FONT_FAMILY
                                     )
                         except (AttributeError, RuntimeError, TypeError, ValueError):  
-                            import traceback
-                            traceback.print_exc()
+                            pass  # Silent failure for non-critical 2D atom font setting
 
                         font = QFont(font_family, font_size, FONT_WEIGHT_BOLD)
                         font.setItalic(True)
@@ -567,8 +561,7 @@ class BondItem(QGraphicsItem):
                 painter.setPen(hover_pen)
                 painter.drawLine(line)
             except (AttributeError, RuntimeError, TypeError, ValueError):  
-                import traceback
-                traceback.print_exc()
+                pass  # Silent failure for non-critical hover highlight drawing
 
     def update_position(self, notify=True):
         try:
