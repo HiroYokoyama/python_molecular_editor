@@ -28,9 +28,9 @@ from collections import deque
 import numpy as np
 
 try:
-    from .mol_geometry import is_problematic_valence
+    from .mol_geometry import is_problematic_valence, identify_valence_problems
 except ImportError:
-    from modules.mol_geometry import is_problematic_valence
+    from modules.mol_geometry import is_problematic_valence, identify_valence_problems
 
 # RDKit imports (explicit to satisfy flake8 and used features)
 from PyQt6.QtCore import QByteArray, QLineF, QMimeData, QPointF, Qt, QTimer
@@ -812,20 +812,9 @@ class MainWindowEditActions(object):
                         except (AttributeError, RuntimeError, ValueError, TypeError):
                             continue
             else:
-                # Fallback: use a lightweight valence heuristic
-                for atom_id, atom_data in self.data.atoms.items():
-                    try:
-                        symbol = atom_data.get("symbol")
-                        charge = atom_data.get("charge", 0)
-                        bond_count = 0
-                        for (id1, id2), bond_data in self.data.bonds.items():
-                            if id1 == atom_id or id2 == atom_id:
-                                bond_count += bond_data.get("order", 1)
-
-                        if is_problematic_valence(symbol, bond_count, charge):
-                            problem_map[atom_id] = True
-                    except (AttributeError, RuntimeError, ValueError, TypeError):
-                        continue
+                # Fallback: use the pure-logic valence heuristic from mol_geometry
+                for atom_id in identify_valence_problems(self.data.atoms, self.data.bonds):
+                    problem_map[atom_id] = True
         except (AttributeError, RuntimeError, ValueError, TypeError) as e:
             logging.error(f"Error during chemistry problem detection: {e}")
 
