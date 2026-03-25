@@ -84,5 +84,15 @@ class MainWindow(
         # MainWindowAppState handles undo/redo stack and app-wide state tracking
         MainWindowAppState.__init__(self)
 
+        # Backwards compatibility for legacy plugins using delegation attributes
+        for attr in [
+            "main_window_app_state", "main_window_compute", "main_window_dialog_manager",
+            "main_window_edit_3d", "main_window_edit_actions", "main_window_export",
+            "main_window_main_init", "main_window_molecular_parsers", "main_window_project_io",
+            "main_window_string_importers", "main_window_ui_manager", "main_window_view_3d",
+            "main_window_view_loaders"
+        ]:
+            setattr(self, attr, self)
+
     def set_atom_from_periodic_table(self, symbol):
         self.set_mode(f"atom_{symbol}")
