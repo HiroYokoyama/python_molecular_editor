@@ -920,25 +920,19 @@ class MainWindowView3d(object):
 
         self.plotter.camera = camera_state
 
-        try:
-            proj_mode = self.settings.get("projection_mode", "Perspective")
-            if hasattr(self.plotter, "renderer") and hasattr(
-                self.plotter.renderer, "GetActiveCamera"
-            ):
-                vcam = self.plotter.renderer.GetActiveCamera()
-                if vcam:
-                    if proj_mode == "Orthographic":
-                        vcam.SetParallelProjection(True)
-                    else:
-                        vcam.SetParallelProjection(False)
-                    try:
-                        # Force a render so the change is visible immediately
-                        self.plotter.render()
-                    except (AttributeError, RuntimeError, TypeError):  
-                        pass  # Suppress non-critical 3D rendering/actor update errors
-        except (AttributeError, RuntimeError, TypeError):  
-            import traceback
-            traceback.print_exc()
+        # Update projection mode and force render
+        settings = getattr(self, "settings", {})
+        proj_mode = settings.get("projection_mode", "Perspective")
+        if hasattr(self.plotter, "renderer") and hasattr(self.plotter.renderer, "GetActiveCamera"):
+            vcam = self.plotter.renderer.GetActiveCamera()
+            if vcam:
+                vcam.SetParallelProjection(proj_mode == "Orthographic")
+                try:
+                    # Force a render so the change is visible immediately
+                    self.plotter.render()
+                except (AttributeError, RuntimeError, TypeError):  
+                    # Suppress non-critical 3D rendering errors
+                    pass
 
         # Re-display if AtomID or other atom info is shown
         if (
@@ -1045,12 +1039,13 @@ class MainWindowView3d(object):
         if not mol:
             return
 
-        try:
-            # Remove existing E/Z labels
-            self.plotter.remove_actor("ez_labels")
-        except (AttributeError, RuntimeError, TypeError):  
-            import traceback
-            traceback.print_exc()
+        # Remove existing E/Z labels
+        if hasattr(self.plotter, "renderer") and "ez_labels" in self.plotter.renderer.actors:
+            try:
+                self.plotter.remove_actor("ez_labels")
+            except (AttributeError, RuntimeError, TypeError):  
+                # Ignore label removal failure on stale plotter
+                pass
 
         pts, labels = [], []
 
@@ -1069,8 +1064,8 @@ class MainWindowView3d(object):
                 mol, cleanIt=True, force=True, flagPossibleStereoCenters=True
             )
         except (AttributeError, RuntimeError, TypeError, ValueError):  
-            import traceback
-            traceback.print_exc()
+            # Suppress non-critical stereochemistry assignment noise during 3D label update
+            pass
 
         for bond in mol.GetBonds():
             if bond.GetBondType() == Chem.BondType.DOUBLE:
@@ -1158,9 +1153,8 @@ class MainWindowView3d(object):
                 try:
                     Chem.AssignAtomChiralTagsFromStructure(mol_for_chirality, confId=0)
                 except (AttributeError, RuntimeError, TypeError, ValueError):  
-                    # Guard for older RDKit versions that might lack the function
-                    import traceback
-                    traceback.print_exc()
+                    # Guard for older RDKit versions or invalid coordinates
+                    pass
 
             # Get chiral centers (list of (idx, 'R'/'S'/'?'))
             chiral_centers = Chem.FindMolChiralCenters(
@@ -1229,18 +1223,22 @@ class MainWindowView3d(object):
         """Determine if the current molecule is derived from an XYZ file"""
         if not self.current_mol:
             return False
+        if not self.current_mol or self.current_mol.GetNumAtoms() == 0:
+            return False
+            
         try:
             # Check if the first atom has xyz_unique_id property
-            if self.current_mol.GetNumAtoms() > 0:
-                return self.current_mol.GetAtomWithIdx(0).HasProp("xyz_unique_id")
+            return self.current_mol.GetAtomWithIdx(0).HasProp("xyz_unique_id")
         except (AttributeError, RuntimeError, TypeError, ValueError):  
-            import traceback
-            traceback.print_exc()
+            # Suppress non-critical property access noise
+            return False
 
         return False
 
     def has_original_atom_ids(self):
         """Determine if the current molecule has Original Atom IDs"""
+        if not self.current_mol:
+            return False
         if not self.current_mol:
             return False
         try:
@@ -1250,8 +1248,9 @@ class MainWindowView3d(object):
                 if atom.HasProp("_original_atom_id"):
                     return True
         except (AttributeError, RuntimeError, TypeError, ValueError):  
-            import traceback
-            traceback.print_exc()
+            # Suppress non-critical property access noise
+            pass
+        return False
 
         return False
 
