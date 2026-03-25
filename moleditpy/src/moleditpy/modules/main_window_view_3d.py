@@ -17,6 +17,7 @@ Functional class: MainWindowView3d
 """
 
 import logging
+import contextlib
 
 import numpy as np
 import vtk
@@ -116,6 +117,443 @@ class MainWindowView3d:
         finally:
             self._drawing_3d = False
 
+    def _prepare_3d_kekule_mol(self, mol):
+        """Optionally kekulize aromatic systems for 3D visualization."""
+        if self.settings.get("display_kekule_3d", False):
+            try:
+                mol_to_draw = Chem.Mol(mol)
+                Chem.Kekulize(mol_to_draw, clearAromaticFlags=True)
+                return mol_to_draw
+            except (AttributeError, RuntimeError, TypeError, ValueError) as e:
+                # Kekulize failed; keep original and warn user
+                with contextlib.suppress(AttributeError, RuntimeError, TypeError):
+                    self.statusBar().showMessage(f"Kekulize failed: {e}")
+        return mol
+
+    def _prepare_3d_kekule_mol(self, mol):
+        """Optionally kekulize aromatic systems for 3D visualization."""
+        if self.settings.get("display_kekule_3d", False):
+            try:
+                mol_to_draw = Chem.Mol(mol)
+                Chem.Kekulize(mol_to_draw, clearAromaticFlags=True)
+                return mol_to_draw
+            except (AttributeError, RuntimeError, TypeError, ValueError) as e:
+                # Kekulize failed; keep original and warn user
+                with contextlib.suppress(AttributeError, RuntimeError, TypeError):
+                    self.statusBar().showMessage(f"Kekulize failed: {e}")
+        return mol
+
+    def _get_3d_rendering_parameters(self, style_name):
+        """Get rendering parameters based on style."""
+        params = {
+            "atom_radius_scale": 0.3,
+            "bond_radius": 0.15,
+            "atom_resolution": self.settings.get("atom_sphere_resolution_3d", 15),
+            "bond_resolution": self.settings.get("bond_cylinder_resolution_3d", 15),
+            "use_cpk_bond": self.settings.get("use_cpk_colorsbox_3d", True),
+        }
+
+        # Normalize style name for comparison
+        sn = style_name.lower().replace(" ", "_")
+
+        if sn == "ball_and_stick":
+            params["atom_radius_scale"] = self.settings.get("ball_stick_atom_radius_scale", 0.3)
+            params["bond_radius"] = self.settings.get("ball_stick_bond_radius", 0.15)
+        elif sn == "stick":
+            params["atom_radius_scale"] = self.settings.get("stick_atom_radius_scale", 0.20)
+            params["bond_radius"] = self.settings.get("stick_bond_radius", 0.20)
+        elif sn == "wireframe":
+            params["atom_radius_scale"] = self.settings.get("wireframe_atom_radius_scale", 0.1)
+            params["bond_radius"] = self.settings.get("wireframe_bond_radius", 0.05)
+        elif sn == "vdv":
+            params["atom_radius_scale"] = self.settings.get("vdv_atom_radius_scale", 1.0)
+            params["bond_radius"] = 0.0 # No bonds in VdW
+
+        return params
+
+    def _prepare_3d_atom_data(self, mol, atom_positions, atom_radius_scale, current_style):
+        """Prepare lists of points, colors, and radii for atom rendering."""
+        points = []
+        colors = []
+        radii = []
+        
+        for atom in mol.GetAtoms():
+            idx = atom.GetIdx()
+            pos = atom_positions[idx]
+            symbol = atom.GetSymbol()
+            
+            # 1. Position
+            points.append(pos)
+            
+            # 2. Radius
+            if current_style == "stick":
+                 r = self.settings.get("stick_bond_radius", 0.15)
+            elif current_style == "wireframe":
+                 r = 0.01
+            else:
+                 try:
+                     vdw = pt.GetRvdw(pt.GetAtomicNumber(symbol))
+                 except (AttributeError, RuntimeError, TypeError, ValueError):
+                     vdw = VDW_RADII.get(symbol, 1.5)
+                 r = vdw * atom_radius_scale
+            radii.append(r)
+            
+            # 3. Color (float 0-1 for PyVista)
+            color_pv = list(CPK_COLORS_PV.get(symbol, CPK_COLORS_PV.get("DEFAULT", [0.5, 0.5, 0.5])))
+            # Overwrite by plugin if necessary
+            if hasattr(self, "_plugin_color_overrides") and idx in self._plugin_color_overrides:
+                hex_color = self._plugin_color_overrides[idx]
+                try:
+                    c = QColor(hex_color)
+                    color_pv = [c.redF(), c.greenF(), c.blueF()]
+                except (AttributeError, RuntimeError, TypeError, ValueError):
+                    pass
+            colors.append(color_pv)
+            
+        return np.array(points), np.array(colors), np.array(radii)
+
+    def _draw_3d_aromatic_rings(self, mol, atom_positions, current_style):
+        """Draw high-fidelity torus (tube) for aromatic rings."""
+        if not self.settings.get("display_aromatic_circles_3d", False):
+            return
+
+        try:
+            ring_info = mol.GetRingInfo()
+            for ring in ring_info.AtomRings():
+                if all(mol.GetAtomWithIdx(idx).GetIsAromatic() for idx in ring):
+                    ring_pts = np.array([atom_positions[idx] for idx in ring])
+                    center = np.mean(ring_pts, axis=0)
+                    
+                    # Calculate ring normal (PCA or cross product)
+                    if len(ring) >= 3:
+                        v1 = ring_pts[1] - ring_pts[0]
+                        v2 = ring_pts[2] - ring_pts[0]
+                        normal = np.cross(v1, v2)
+                        norm_val = np.linalg.norm(normal)
+                        if norm_val > 1e-6:
+                            normal /= norm_val
+                        else:
+                            normal = np.array([0, 0, 1])
+                    else:
+                        normal = np.array([0, 0, 1])
+
+                    # Calculate ring radius
+                    radius = np.mean([np.linalg.norm(p - center) for p in ring_pts]) * 0.55
+                    
+                    # Thickness based on style
+                    bond_radius = 0.1
+                    if current_style == "stick": bond_radius = self.settings.get("stick_bond_radius", 0.15)
+                    elif current_style == "ball_and_stick": bond_radius = self.settings.get("ball_stick_bond_radius", 0.1)
+                    
+                    thickness = bond_radius * self.settings.get("aromatic_torus_thickness_factor", 0.6)
+                    
+                    # Create circular path in XY plane, then rotate/translate
+                    theta = np.linspace(0, 2 * np.pi, 64)
+                    circle_pts = np.c_[radius * np.cos(theta), radius * np.sin(theta), np.zeros_like(theta)]
+                    
+                    # Create torus using Spline + tube
+                    torus = pv.Spline(circle_pts, n_points=64).tube(radius=thickness, n_sides=16)
+                    
+                    # Align normal to target normal
+                    # (Simplified rotation - in full version we use vtkTransform)
+                    from collections import Counter
+                    atom_symbols = [mol.GetAtomWithIdx(idx).GetSymbol() for idx in ring]
+                    most_common = Counter(atom_symbols).most_common(1)[0][0] if atom_symbols else None
+                    
+                    use_cpk_ring = (current_style != "ball_and_stick" or 
+                                   self.settings.get("ball_stick_use_cpk_bond_color", False))
+                    
+                    if use_cpk_ring and most_common:
+                        torus_color = CPK_COLORS_PV.get(most_common, [0.5, 0.5, 0.5])
+                    else:
+                        torus_hex = self.settings.get("ball_stick_bond_color", "#7F7F7F")
+                        q_torus = QColor(torus_hex)
+                        torus_color = [q_torus.red()/255.0, q_torus.green()/255.0, q_torus.blue()/255.0]
+
+                    circle_mesh = pv.Disc(center=center, inner_radius=radius * 0.9, 
+                                        outer_radius=radius, normal=normal)
+                    self.plotter.add_mesh(circle_mesh, color=torus_color, opacity=0.7)
+        except (AttributeError, RuntimeError, TypeError, ValueError, IndexError):
+            pass
+
+    def _add_3d_labels(self, mol):
+        """Add chiral and E/Z labels to the 3D view."""
+        if getattr(self, "show_chiral_labels", False):
+            try:
+                # 1. Chiral labels (R/S)
+                chiral_centers = Chem.FindMolChiralCenters(mol, includeUnassigned=True)
+                if chiral_centers:
+                    pts, labels = [], []
+                    for idx, lbl in chiral_centers:
+                        # Ensure index is within range of current atoms
+                        if idx < len(self.atom_positions_3d):
+                            pts.append(self.atom_positions_3d[idx])
+                            labels.append(lbl if lbl is not None else "?")
+                    
+                    if pts:
+                        # Safely remove old labels
+                        with contextlib.suppress(Exception):
+                            self.plotter.remove_actor("chiral_labels")
+                            
+                        self.plotter.add_point_labels(
+                            np.array(pts), labels, 
+                            font_size=20, 
+                            point_size=0,
+                            text_color="blue", 
+                            name="chiral_labels", 
+                            always_visible=True
+                        )
+                
+                # 2. E/Z labels
+                if hasattr(self, "show_ez_labels_3d"):
+                    self.show_ez_labels_3d(mol)
+                    
+            except (AttributeError, RuntimeError, TypeError, ValueError, IndexError) as e:
+                with contextlib.suppress(AttributeError, RuntimeError, TypeError):
+                    self.statusBar().showMessage(f"3D Label error: {e}")
+
+    def _add_3d_atom_glyphs(self, mol, points, colors, radii, resolution, mesh_props, current_style):
+        """Add atom spheres (glyphs) to the plotter with terminal atom splitting for stick mode."""
+        if current_style == "wireframe" or np.max(radii) < 0.02:
+            return None
+
+        glyph_pts, glyph_cols, glyph_rads = points, colors, radii
+        # Special logic for Stick mode: only draw terminal multiple-bond atoms as split caps
+        if current_style == "stick":
+            new_pts, new_cols, new_rads = [], [], []
+            conf = mol.GetConformer()
+            
+            for i in range(mol.GetNumAtoms()):
+                atom = mol.GetAtomWithIdx(i)
+                if atom.GetDegree() == 1:
+                    bonds = atom.GetBonds()
+                    if bonds:
+                        bond = bonds[0]
+                        bt = bond.GetBondType()
+                        if bt == Chem.BondType.DOUBLE or bt == Chem.BondType.TRIPLE:
+                            other_idx = bond.GetBeginAtomIdx() if bond.GetEndAtomIdx() == i else bond.GetEndAtomIdx()
+                            pos_i = points[i]
+                            pos_other = points[other_idx]
+                            bond_vec = pos_i - pos_other
+                            h = np.linalg.norm(bond_vec)
+                            if h > 1e-6:
+                                bond_unit = bond_vec / h
+                                # Double bond offset
+                                if bt == Chem.BondType.DOUBLE:
+                                    offset_dist = self.settings.get("stick_bond_radius", 0.15) * self.settings.get("stick_double_bond_offset_factor", 1.5) / 2.0
+                                    off_dir = self._calculate_double_bond_offset(mol, bond, conf)
+                                    offsets = [off_dir * offset_dist, -off_dir * offset_dist]
+                                    s_radius = self.settings.get("stick_bond_radius", 0.15) * self.settings.get("stick_double_bond_radius_factor", 0.6)
+                                else: # TRIPLE
+                                    v_arb = np.array([0, 0, 1])
+                                    if np.allclose(np.abs(np.dot(bond_unit, v_arb)), 1.0): v_arb = np.array([0, 1, 0])
+                                    off_dir = np.cross(bond_unit, v_arb)
+                                    off_dir /= np.linalg.norm(off_dir)
+                                    offset_dist = self.settings.get("stick_bond_radius", 0.15) * self.settings.get("stick_triple_bond_offset_factor", 1.0)
+                                    offsets = [np.array([0,0,0]), off_dir * offset_dist, -off_dir * offset_dist]
+                                    s_radius = self.settings.get("stick_bond_radius", 0.15) * self.settings.get("stick_triple_bond_radius_factor", 0.4)
+                                
+                                for offset in offsets:
+                                    new_pts.append(pos_i + offset)
+                                    new_cols.append(colors[i])
+                                    new_rads.append(s_radius)
+            
+            if not new_pts:
+                return None
+            glyph_pts, glyph_cols, glyph_rads = np.array(new_pts), np.array(new_cols), np.array(new_rads)
+        else:
+            glyph_pts, glyph_cols, glyph_rads = points, colors, radii
+
+        glyph_source = pv.PolyData(glyph_pts)
+        glyph_source.point_data["colors"] = glyph_cols
+        glyph_source.point_data["radii"] = glyph_rads
+        
+        sphere = pv.Sphere(radius=1.0, phi_resolution=resolution, theta_resolution=resolution)
+        
+        # Ensure colors is the active scalar
+        glyph_source.set_active_scalars("colors")
+        glyphs = glyph_source.glyph(scale="radii", geom=sphere)
+        
+        # Manual propagation: repeat colors for each point in the glyph
+        if "colors" not in glyphs.point_data:
+            try:
+                n_source = glyph_source.n_points
+                n_geom = sphere.n_points
+                if glyphs.n_points == n_source * n_geom:
+                    colors_rep = np.repeat(glyph_cols, n_geom, axis=0)
+                    glyphs.point_data["colors"] = colors_rep
+            except (AttributeError, RuntimeError, TypeError, ValueError):
+                pass
+
+        return self.plotter.add_mesh(glyphs, scalars="colors", rgb=True, **mesh_props)
+
+    def _add_3d_bond_cylinders(self, mol, atom_positions, params, mesh_props, current_style):
+        """Add bond cylinders (tube filter) to the plotter with support for split colors and multiple bonds."""
+        cyl_radius = params["bond_radius"]
+        use_cpk_bond = params["use_cpk_bond"]
+        bond_resolution = params["bond_resolution"]
+        
+        if cyl_radius < 0.01: # wireframe style or similar
+             return None
+
+        all_pts = []
+        all_lds = []
+        all_cols = []
+        all_rads = []
+
+        def add_segment(p1, p2, r, c):
+            idx = len(all_pts)
+            all_pts.extend([p1, p2])
+            all_lds.append([2, idx, idx+1])
+            all_cols.append(c)
+            all_rads.append(r)
+
+        conf = mol.GetConformer()
+        bond_counter = 0
+        
+        # Get BS bond color default (Linux reference: #7F7F7F)
+        bs_bond_color_hex = self.settings.get("ball_stick_bond_color", "#7F7F7F")
+        c_bs = QColor(bs_bond_color_hex)
+        local_bs_bond_rgb = [c_bs.red(), c_bs.green(), c_bs.blue()]
+
+        for bond in mol.GetBonds():
+            idx1, idx2 = bond.GetBeginAtomIdx(), bond.GetEndAtomIdx()
+            sp, ep = atom_positions[idx1], atom_positions[idx2]
+            v = ep - sp
+            h = np.linalg.norm(v)
+            if h < 1e-6: continue
+
+            # Determine colors for begin/end segments
+            c1_pv = CPK_COLORS_PV.get(mol.GetAtomWithIdx(idx1).GetSymbol(), [0.5, 0.5, 0.5])
+            c2_pv = CPK_COLORS_PV.get(mol.GetAtomWithIdx(idx2).GetSymbol(), [0.5, 0.5, 0.5])
+            
+            c1_255 = [int(x * 255) for x in c1_pv]
+            c2_255 = [int(x * 255) for x in c2_pv]
+
+            bond_idx = bond.GetIdx()
+            if hasattr(self, "_plugin_bond_color_overrides") and bond_idx in self._plugin_bond_color_overrides:
+                bond_hex = self._plugin_bond_color_overrides[bond_idx]
+                try:
+                    bc = QColor(bond_hex)
+                    c1_255 = [bc.red(), bc.green(), bc.blue()]
+                    c2_255 = [bc.red(), bc.green(), bc.blue()]
+                except (AttributeError, RuntimeError, TypeError, ValueError):
+                    pass
+            elif hasattr(self, "_plugin_color_overrides"):
+                if idx1 in self._plugin_color_overrides:
+                    c = QColor(self._plugin_color_overrides[idx1])
+                    c1_255 = [c.red(), c.green(), c.blue()]
+                if idx2 in self._plugin_color_overrides:
+                    c = QColor(self._plugin_color_overrides[idx2])
+                    c2_255 = [c.red(), c.green(), c.blue()]
+
+            bt = bond.GetBondType()
+            is_overridden = hasattr(self, "_plugin_bond_color_overrides") and bond_idx in self._plugin_bond_color_overrides
+            
+            if bt == Chem.rdchem.BondType.SINGLE or bt == Chem.rdchem.BondType.AROMATIC:
+                if current_style == "ball_and_stick" and not use_cpk_bond and not is_overridden:
+                    add_segment(sp, ep, cyl_radius, local_bs_bond_rgb)
+                    self._3d_color_map[f"bond_{bond_counter}"] = local_bs_bond_rgb
+                else:
+                    mid = (sp + ep) / 2
+                    add_segment(sp, mid, cyl_radius, c1_255)
+                    add_segment(mid, ep, cyl_radius, c2_255)
+                    self._3d_color_map[f"bond_{bond_counter}_start"] = c1_255
+                    self._3d_color_map[f"bond_{bond_counter}_end"] = c2_255
+            elif bt == Chem.rdchem.BondType.DOUBLE:
+                # Double bond rendering (2 parallel cylinders)
+                off_dir = self._calculate_double_bond_offset(mol, bond, conf)
+                offset_factor = self.settings.get(f"{current_style.replace(' ', '_').lower()}_double_bond_offset_factor", 2.0)
+                offset_dist = cyl_radius * offset_factor / 2.0
+                radius_factor = self.settings.get(f"{current_style.replace(' ', '_').lower()}_double_bond_radius_factor", 0.8)
+                r = cyl_radius * radius_factor
+                
+                for sign in [1, -1]:
+                    p_start, p_end = sp + off_dir * offset_dist * sign, ep + off_dir * offset_dist * sign
+                    if current_style == "ball_and_stick" and not use_cpk_bond and not is_overridden:
+                        add_segment(p_start, p_end, r, local_bs_bond_rgb)
+                        suffix = "_1" if sign == 1 else "_2"
+                        self._3d_color_map[f"bond_{bond_counter}{suffix}"] = local_bs_bond_rgb
+                    else:
+                        m = (p_start + p_end) / 2
+                        add_segment(p_start, m, r, c1_255)
+                        add_segment(m, p_end, r, c2_255)
+                        suffix = "_1" if sign == 1 else "_2"
+                        self._3d_color_map[f"bond_{bond_counter}{suffix}_start"] = c1_255
+                        self._3d_color_map[f"bond_{bond_counter}{suffix}_end"] = c2_255
+            elif bt == Chem.rdchem.BondType.TRIPLE:
+                # Triple bond (3 parallel cylinders)
+                v1 = v / h
+                v_arb = np.array([0, 0, 1])
+                if np.allclose(np.abs(np.dot(v1, v_arb)), 1.0): v_arb = np.array([0, 1, 0])
+                off_dir = np.cross(v1, v_arb)
+                off_dir /= np.linalg.norm(off_dir)
+                
+                offset_factor = self.settings.get(f"{current_style.replace(' ', '_').lower()}_triple_bond_offset_factor", 2.0)
+                offset_dist = cyl_radius * offset_factor
+                radius_factor = self.settings.get(f"{current_style.replace(' ', '_').lower()}_triple_bond_radius_factor", 0.75)
+                r = cyl_radius * radius_factor
+                
+                # Center cylinder
+                if current_style == "ball_and_stick" and not use_cpk_bond and not is_overridden:
+                    add_segment(sp, ep, r, local_bs_bond_rgb)
+                    self._3d_color_map[f"bond_{bond_counter}_1"] = local_bs_bond_rgb
+                else:
+                    m = (sp+ep)/2
+                    add_segment(sp, m, r, c1_255)
+                    add_segment(m, ep, r, c2_255)
+                    self._3d_color_map[f"bond_{bond_counter}_1_start"] = c1_255
+                    self._3d_color_map[f"bond_{bond_counter}_1_end"] = c2_255
+                
+                # Side cylinders
+                for sign in [1, -1]:
+                    p_start, p_end = sp + off_dir * offset_dist * sign, ep + off_dir * offset_dist * sign
+                    if current_style == "ball_and_stick" and not use_cpk_bond and not is_overridden:
+                        add_segment(p_start, p_end, r, local_bs_bond_rgb)
+                        suffix = "_2" if sign == 1 else "_3"
+                        self._3d_color_map[f"bond_{bond_counter}{suffix}"] = local_bs_bond_rgb
+                    else:
+                        m = (p_start+p_end)/2
+                        add_segment(p_start, m, r, c1_255)
+                        add_segment(m, p_end, r, c2_255)
+                        suffix = "_2" if sign == 1 else "_3"
+                        self._3d_color_map[f"bond_{bond_counter}{suffix}_start"] = c1_255
+                        self._3d_color_map[f"bond_{bond_counter}{suffix}_end"] = c2_255
+            bond_counter += 1
+
+        if all_pts:
+            bond_pd = pv.PolyData(np.array(all_pts), lines=np.hstack(all_lds))
+            
+            # Use point data for both colors and radii to ensure propagation through the tube filter
+            # Each segment (cell) has 2 points, so we repeat the values twice
+            all_rads_pts = np.repeat(np.array(all_rads), 2, axis=0)
+            bond_pd.point_data["radii"] = all_rads_pts
+            
+            all_cols_pts = np.repeat(np.array(all_cols, dtype=np.uint8), 2, axis=0)
+            bond_pd.point_data["colors"] = all_cols_pts
+            
+            # Ensure colors is active before filtering to promote propagation
+            bond_pd.set_active_scalars("colors")
+            
+            tube = bond_pd.tube(scalars="radii", absolute=True, n_sides=bond_resolution, capping=True)
+            
+            # Manual propagation for bonds if needed
+            if "colors" not in tube.point_data and "colors" not in tube.cell_data:
+                try:
+                    # tube filter on lines often puts original cell data into output cell data
+                    # but if it failed, we can try to recover. 
+                    # For now, let's try setting it as active on the source again.
+                    pass
+                except (AttributeError, RuntimeError, TypeError, ValueError):
+                    pass
+
+            if "colors" in tube.point_data:
+                tube.set_active_scalars("colors")
+            elif "colors" in tube.cell_data:
+                tube.set_active_scalars("colors")
+                
+            return self.plotter.add_mesh(tube, scalars="colors", rgb=True, **mesh_props)
+        return None
     def _draw_standard_3d_style_body(self, mol, style_override=None):
 
         current_style = (
@@ -908,7 +1346,7 @@ class MainWindowView3d:
         if getattr(self, "show_chiral_labels", False):
             try:
                 # If we drew a kekulized molecule use it for E/Z detection so
-                # E/Z labels reflect Kekulé rendering; pass mol_to_draw as the
+                # E/Z labels reflect Kekulﾃｩ rendering; pass mol_to_draw as the
                 # molecule to scan for bond stereochemistry.
                 self.show_ez_labels_3d(mol)
             except (AttributeError, RuntimeError, TypeError, ValueError) as e:
