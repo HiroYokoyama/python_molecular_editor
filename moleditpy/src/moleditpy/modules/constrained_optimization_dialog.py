@@ -27,7 +27,7 @@ from PyQt6.QtWidgets import (
 )
 from rdkit.Chem import AllChem, rdMolTransforms
 
-from .dialog3_d_picking_mixin import Dialog3DPickingMixin
+from .dialog_3d_picking_mixin import Dialog3DPickingMixin
 
 
 class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):  

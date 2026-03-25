@@ -202,7 +202,7 @@ class MainWindowUiManager(object):
                     try:
                         widget.close()
                     except (RuntimeError, TypeError):
-                        # Suppress non-critical error
+                        # Suppress errors if a thread is already terminated or non-responsive during bulk teardown.
                         pass
             # Stop calculation threads
             active_threads = list(getattr(self, "_active_calc_threads", []) or [])
@@ -211,7 +211,7 @@ class MainWindowUiManager(object):
                     if hasattr(thr, "quit"): thr.quit()
                     if hasattr(thr, "wait"): thr.wait(200)
                 except (RuntimeError, TypeError):
-                    # Suppress non-critical error
+                    # Suppress errors if a thread is already terminated or non-responsive during bulk teardown.
                     pass
         except Exception:
             pass  # Suppress thread/widget cleanup errors on close

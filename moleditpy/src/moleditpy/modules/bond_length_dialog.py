@@ -25,7 +25,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from .dialog3_d_picking_mixin import Dialog3DPickingMixin
+from .dialog_3d_picking_mixin import Dialog3DPickingMixin
 from .mol_geometry import calc_distance, get_connected_group
 
 

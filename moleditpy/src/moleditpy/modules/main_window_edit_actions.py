@@ -412,7 +412,7 @@ class MainWindowEditActions(object):
                 try:
                     orig_id = rd_atom.GetIntProp("_original_atom_id")
                 except (AttributeError, RuntimeError, ValueError, TypeError):
-                    # Skip if no original editor ID
+                    # Skip if original editor ID is missing or entry is already stale.
                     continue
 
                 if orig_id not in self.data.atoms:
@@ -938,7 +938,7 @@ class MainWindowEditActions(object):
                 with contextlib.suppress(Exception):
                     _apply_ui_updates()
         except (AttributeError, RuntimeError, ValueError, TypeError):
-            # Suppress non-critical error
+            # Suppress non-critical clipboard interaction errors (e.g., OS-level access lock).
             pass
     def clean_up_2d_structure(self):
         self.statusBar().showMessage("Optimizing 2D structure...")

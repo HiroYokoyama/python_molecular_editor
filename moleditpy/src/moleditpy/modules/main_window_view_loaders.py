@@ -220,7 +220,7 @@ class MainWindowViewLoaders(object):
                 if hasattr(self, "_clear_xyz_flags"):
                     self._clear_xyz_flags(mol)
             except Exception:
-                # Suppress non-critical error
+                # Suppress errors if the molecule does not originate from an XYZ source and lacks flags to clear.
                 pass
             if hasattr(self, "_apply_chem_check_and_set_flags"):
                 self._apply_chem_check_and_set_flags(mol, source_desc="MOL/SDF")

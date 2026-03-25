@@ -52,7 +52,7 @@
 | moleditpy\src\moleditpy\modules\constrained_optimization_dialog.py |    405 |    384 |    5.2% |
 | moleditpy\src\moleditpy\modules\custom_interactor_style.py |    454 |    428 |    5.7% |
 | moleditpy\src\moleditpy\modules\custom_qt_interactor.py |     43 |     35 |   18.6% |
-| moleditpy\src\moleditpy\modules\dialog3_d_picking_mixin.py |     92 |     50 |   45.7% |
+| moleditpy\src\moleditpy\modules\dialog_3d_picking_mixin.py |     92 |     50 |   45.7% |
 | moleditpy\src\moleditpy\modules\dihedral_dialog.py      |    298 |    169 |   43.3% |
 | moleditpy\src\moleditpy\modules\main_window.py          |    419 |     98 |   76.6% |
 | moleditpy\src\moleditpy\modules\main_window_app_state.py |    450 |    182 |   59.6% |

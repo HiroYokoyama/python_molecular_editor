@@ -23,10 +23,10 @@ from PyQt6.QtWidgets import (
 )
 
 try:
-    from .dialog3_d_picking_mixin import Dialog3DPickingMixin
+    from .dialog_3d_picking_mixin import Dialog3DPickingMixin
     from .mol_geometry import adjust_bond_angle, calc_angle_deg, get_connected_group, rodrigues_rotate
 except ImportError:
-    from modules.dialog3_d_picking_mixin import Dialog3DPickingMixin
+    from modules.dialog_3d_picking_mixin import Dialog3DPickingMixin
     from modules.mol_geometry import adjust_bond_angle, calc_angle_deg, get_connected_group, rodrigues_rotate
 
 import numpy as np
@@ -476,4 +476,5 @@ class AngleDialog(Dialog3DPickingMixin, QDialog):
             if self.main_window.current_mol:
                 self.main_window.draw_molecule_3d(self.main_window.current_mol)
         except (AttributeError, RuntimeError, ValueError, TypeError):
-            pass  # Suppress errors during dialog teardown
+            # Suppress errors during dialog teardown to ensure the window closes smoothly.
+            pass

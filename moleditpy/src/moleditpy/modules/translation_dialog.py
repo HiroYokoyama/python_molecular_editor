@@ -24,7 +24,7 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
 )
 
-from .dialog3_d_picking_mixin import Dialog3DPickingMixin
+from .dialog_3d_picking_mixin import Dialog3DPickingMixin
 
 
 class TranslationDialog(Dialog3DPickingMixin, QDialog):  
@@ -242,7 +242,9 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog):
                 self.main_window.push_undo_state()
 
         except (AttributeError, RuntimeError, ValueError) as e:
-            pass  # Suppress errors during translation application
+            # Suppress non-critical errors during translation application to avoid crash.
+            # User is notified via QMessageBox below if critical logic failed.
+            pass
             QMessageBox.critical(self, "Error", f"Failed to apply translation: {str(e)}")
 
     def clear_selection(self):
@@ -314,7 +316,7 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog):
             try:
                 self.main_window.plotter.render()
             except (RuntimeError, ValueError, TypeError):
-                # Suppress non-critical error
+                # Suppress non-critical renderer errors during label picking cleanup.
                 pass
     def closeEvent(self, event):
         """Clean up when the dialog is closed directly."""

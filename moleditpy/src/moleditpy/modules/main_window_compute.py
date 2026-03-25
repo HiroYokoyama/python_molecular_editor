@@ -734,7 +734,7 @@ class MainWindowCompute(object):
 
                 self.update_chiral_labels()
             except (AttributeError, RuntimeError, TypeError):
-                # Suppress non-critical error
+                # Suppress non-critical stereochemistry assignment errors for malformed fragments.
                 pass
         self.draw_molecule_3d(mol)
 
@@ -746,14 +746,14 @@ class MainWindowCompute(object):
                     f"{len(frags)} molecules converted with collision avoidance (background)."
                 )
         except (AttributeError, RuntimeError, TypeError):
-            # Suppress non-critical error
+            # Suppress errors if fragment count retrieval fails for an invalid molecule state.
             pass
         # Remove 'Calculating...' text and refresh
         self._remove_calculating_text()
         try:
             self.plotter.render()
         except (AttributeError, RuntimeError, TypeError):
-            # Suppress non-critical error
+            # Suppress transient plotter render errors if the 3D scene is not yet ready.
             pass
         if self.last_successful_optimization_method:
             self.statusBar().showMessage(f"3D calculation ({self.last_successful_optimization_method}) successful.")

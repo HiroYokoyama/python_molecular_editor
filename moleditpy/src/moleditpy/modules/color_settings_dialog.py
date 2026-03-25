@@ -176,7 +176,7 @@ class ColorSettingsDialog(QDialog):
                 try:
                     del settings["cpk_colors"]
                 except KeyError:
-                    # Suppress non-critical error
+                    # Suppress if cpk_colors key is already missing or removed during reset.
                     pass
         if self.changed_cpk:
             cdict = settings.get("cpk_colors", {}).copy()

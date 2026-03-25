@@ -170,7 +170,8 @@ class MainWindowMolecularParsers(object):
             else:
                 mol.SetProp(prop_name, str(value))
         except (AttributeError, RuntimeError, TypeError, ValueError):
-            # Suppress non-critical error
+            # Suppress errors if RDKit property setter fails (e.g., invalid type or concurrent mol access).
+            # These properties are metadata and should not block core molecule loading logic.
             pass
     def _get_mol_prop(self, mol, prop_name, default=None):
         """Internal helper to get molecule properties safely."""

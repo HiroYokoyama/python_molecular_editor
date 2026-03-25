@@ -23,10 +23,10 @@ from PyQt6.QtWidgets import (
 )
 
 try:
-    from .dialog3_d_picking_mixin import Dialog3DPickingMixin
+    from .dialog_3d_picking_mixin import Dialog3DPickingMixin
     from .mol_geometry import calculate_dihedral, get_connected_group
 except ImportError:
-    from modules.dialog3_d_picking_mixin import Dialog3DPickingMixin
+    from modules.dialog_3d_picking_mixin import Dialog3DPickingMixin
     from modules.mol_geometry import calculate_dihedral, get_connected_group
 
 import numpy as np

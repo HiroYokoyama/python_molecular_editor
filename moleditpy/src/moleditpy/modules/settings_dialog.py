@@ -1112,7 +1112,8 @@ class SettingsDialog(QDialog):
                             if hasattr(it, "update_style"):
                                 it.update_style()
                         except (RuntimeError, ValueError, TypeError):
-                            pass  # Suppress item style refresh errors
+                            # Suppress style refresh errors for items that might be in a transient/deleted state.
+                            pass
 
                 # 5. Refresh opt/conv actions
                 opt_method = self.parent_window.settings.get("optimization_method", "MMFF_RDKIT")
@@ -1138,7 +1139,7 @@ class SettingsDialog(QDialog):
                 try:
                     self.parent_window.settings_dirty = True
                 except AttributeError:
-                    # Suppress non-critical error
+                    # Suppress if parent window is partially torn down and lacks settings_dirty flag.
                     pass
             except (AttributeError, RuntimeError, ValueError) as e:
                 pass  # Suppress global settings sync errors
@@ -1337,7 +1338,7 @@ class SettingsDialog(QDialog):
         try:
             self.parent_window.settings_dirty = True
         except (AttributeError, RuntimeError, ValueError, TypeError):
-            # Suppress non-critical error
+            # Suppress if parent window is already partially torn down or flag is missing.
             pass
         # Apply 3D view settings
         if hasattr(self.parent_window, "apply_3d_settings"):
@@ -1404,7 +1405,7 @@ class SettingsDialog(QDialog):
         try:
             self.settings_dirty = True
         except AttributeError:
-            # Suppress non-critical error
+            # Suppress if the settings object is not yet fully initialized or during early teardown.
             pass
         # If skip is enabled, allow Optimize button; otherwise, respect chem_check flags
 

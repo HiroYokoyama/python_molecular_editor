@@ -21,9 +21,9 @@ from PyQt6.QtWidgets import (
 )
 
 try:
-    from .dialog3_d_picking_mixin import Dialog3DPickingMixin
+    from .dialog_3d_picking_mixin import Dialog3DPickingMixin
 except ImportError:
-    from modules.dialog3_d_picking_mixin import Dialog3DPickingMixin
+    from modules.dialog_3d_picking_mixin import Dialog3DPickingMixin
 
 
 class AlignmentDialog(Dialog3DPickingMixin, QDialog):  
