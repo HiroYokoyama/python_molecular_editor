@@ -122,6 +122,9 @@ class MoleculeScene(QGraphicsScene):
 
     def update_all_items(self):
         """Force redraw of all items."""
+        if hasattr(self.data, "update_ring_info_2d"):
+            self.data.update_ring_info_2d()
+
         for item in self.items():
             if isinstance(item, (AtomItem, BondItem)):
                 item.update()

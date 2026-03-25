@@ -115,6 +115,8 @@ class BondItem(QGraphicsItem):
         self.hovered = False
         self.order = order
         self.stereo = stereo
+        self.is_in_ring = False
+        self.ring_center = None
 
     def get_line_in_local_coords(self):
         if self.atom1 is None or self.atom2 is None:
@@ -359,89 +361,9 @@ class BondItem(QGraphicsItem):
                 offset = QPointF(v.dx(), v.dy()) * bond_offset
 
                 if self.order == 2:
-                    # Determine if part of a ring structure to adjust drawing style
-                    is_in_ring = False
-                    ring_center = None
-
-                    try:
-                        # Get RDKit molecule from scene
-                        sc = self.scene()
-                        if sc and hasattr(sc, "window") and sc.window:
-                            # Generate RDKit molecule from 2D data
-                            mol = sc.window.data.to_rdkit_mol(use_2d_stereo=False)
-                            if mol:
-                                # Find RDKit bond corresponding to this editor bond
-                                atom1_id = self.atom1.atom_id
-                                atom2_id = self.atom2.atom_id
-
-                                # Get RDKit indices
-                                rdkit_idx1 = None
-                                rdkit_idx2 = None
-                                for atom in mol.GetAtoms():
-                                    if atom.HasProp("_original_atom_id"):
-                                        orig_id = atom.GetIntProp("_original_atom_id")
-                                        if orig_id == atom1_id:
-                                            rdkit_idx1 = atom.GetIdx()
-                                        elif orig_id == atom2_id:
-                                            rdkit_idx2 = atom.GetIdx()
-
-                                if rdkit_idx1 is not None and rdkit_idx2 is not None:
-                                    bond = mol.GetBondBetweenAtoms(
-                                        rdkit_idx1, rdkit_idx2
-                                    )
-                                    if bond and bond.IsInRing():
-                                        is_in_ring = True
-                                        # Calculate ring center (smallest ring containing this bond)
-                                        ring_info = mol.GetRingInfo()
-                                        for ring in ring_info.AtomRings():
-                                            if (
-                                                rdkit_idx1 in ring
-                                                and rdkit_idx2 in ring
-                                            ):
-                                                # Calculate average position of atoms in ring
-                                                ring_positions = []
-                                                for atom_idx in ring:
-                                                    # Find corresponding atom in editor
-                                                    rdkit_atom = mol.GetAtomWithIdx(
-                                                        atom_idx
-                                                    )
-                                                    if rdkit_atom.HasProp(
-                                                        "_original_atom_id"
-                                                    ):
-                                                        editor_atom_id = (
-                                                            rdkit_atom.GetIntProp(
-                                                                "_original_atom_id"
-                                                            )
-                                                        )
-                                                        if (
-                                                            editor_atom_id
-                                                            in sc.window.data.atoms
-                                                        ):
-                                                            atom_item = (
-                                                                sc.window.data.atoms[
-                                                                    editor_atom_id
-                                                                ]["item"]
-                                                            )
-                                                            if atom_item:
-                                                                ring_positions.append(
-                                                                    atom_item.pos()
-                                                                )
-
-                                                if ring_positions:
-                                                    # Calculate ring center
-                                                    center_x = sum(
-                                                        p.x() for p in ring_positions
-                                                    ) / len(ring_positions)
-                                                    center_y = sum(
-                                                        p.y() for p in ring_positions
-                                                    ) / len(ring_positions)
-                                                    ring_center = QPointF(
-                                                        center_x, center_y
-                                                    )
-                                                    break
-                    except (AttributeError, RuntimeError, TypeError, ValueError) as e:
-                        # Fallback to default drawing on error
-                        is_in_ring = False
+                    # Use cached ring info
+                    is_in_ring = self.is_in_ring
+                    ring_center = self.ring_center
 
                     v = line.unitVector().normalVector()
                     # Re-calculate offset in case loop variable scope issue, though strictly not needed if offset defined above works
