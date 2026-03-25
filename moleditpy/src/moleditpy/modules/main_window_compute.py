@@ -42,11 +42,17 @@ except (AttributeError, RuntimeError, TypeError):
 try:
     # package relative imports (preferred when running as `python -m moleditpy`)
     from .calculation_worker import CalculationWorker
-    from .mol_geometry import is_problematic_valence
+    from .mol_geometry import (
+        identify_valence_problems,
+        inject_ez_stereo_to_mol_block,
+    )
 except ImportError:
     # Fallback to absolute imports for script-style execution
     from modules.calculation_worker import CalculationWorker
-    from modules.mol_geometry import is_problematic_valence
+    from modules.mol_geometry import (
+        identify_valence_problems,
+        inject_ez_stereo_to_mol_block,
+    )
 
 
 class MainWindowCompute(object):
@@ -326,31 +332,7 @@ class MainWindowCompute(object):
         if not mol_block:
             mol_block = Chem.MolToMolBlock(mol, includeStereo=True)
 
-        mol_lines = mol_block.split("\n")
-        ez_bond_info = {}
-        for (id1, id2), bond_data in self.data.bonds.items():
-            if bond_data.get("stereo") in [3, 4]:  # E/Z labels
-                rdkit_idx1, rdkit_idx2 = None, None
-                for atom in mol.GetAtoms():
-                    if atom.HasProp("_original_atom_id"):
-                        orig_id = atom.GetIntProp("_original_atom_id")
-                        if orig_id == id1: rdkit_idx1 = atom.GetIdx()
-                        elif orig_id == id2: rdkit_idx2 = atom.GetIdx()
-
-                if rdkit_idx1 is not None and rdkit_idx2 is not None:
-                    rdkit_bond = mol.GetBondBetweenAtoms(rdkit_idx1, rdkit_idx2)
-                    if rdkit_bond and rdkit_bond.GetBondType() == Chem.BondType.DOUBLE:
-                        ez_bond_info[rdkit_bond.GetIdx()] = bond_data["stereo"]
-
-        if ez_bond_info:
-            insert_idx = len(mol_lines) - 1  # Before M  END
-            for bond_idx, stereo_type in ez_bond_info.items():
-                cfg_value = 1 if stereo_type == 3 else 2  # 1=Z, 2=E in MOL format
-                cfg_line = f"M  CFG  1 {bond_idx + 1:3d}   {cfg_value}"
-                mol_lines.insert(insert_idx, cfg_line)
-                insert_idx += 1
-            mol_block = "\n".join(mol_lines)
-        return mol_block
+        return inject_ez_stereo_to_mol_block(mol_block, mol, self.data.bonds)
 
     def _start_calculation_worker(self, mol_block, options, run_id):
         """Initialize and start the background calculation worker."""
@@ -481,23 +463,16 @@ class MainWindowCompute(object):
         # Suppress non-critical errors during fallback chemistry check to avoid crashing the UI
         with contextlib.suppress(AttributeError, RuntimeError, TypeError, ValueError):
             self.scene.clear_all_problem_flags()
-            problem_atoms = []
+            
+            problem_atom_ids = identify_valence_problems(self.data.atoms, self.data.bonds)
 
-            for atom_id, atom_data in self.data.atoms.items():
-                atom_item = atom_data.get("item")
-                if atom_item:
-                    symbol = atom_data["symbol"]
-                    charge = atom_data.get("charge", 0)
-                    bond_count = sum(b.get("order", 1) for k, b in self.data.bonds.items() if atom_id in k)
-
-                    if is_problematic_valence(symbol, bond_count, charge):
-                        problem_atoms.append(atom_item)
-
-            if problem_atoms:
-                for atom_item in problem_atoms:
-                    atom_item.has_problem = True
-                    atom_item.update()
-                self.statusBar().showMessage(f"Error: {len(problem_atoms)} chemistry problem(s) found (valence issues).")
+            if problem_atom_ids:
+                for atom_id in problem_atom_ids:
+                    atom_item = self.data.atoms[atom_id].get("item")
+                    if atom_item:
+                        atom_item.has_problem = True
+                        atom_item.update()
+                self.statusBar().showMessage(f"Error: {len(problem_atom_ids)} chemistry problem(s) found (valence issues).")
             else:
                 self.statusBar().showMessage("Error: Invalid chemical structure (RDKit conversion failed).")
 

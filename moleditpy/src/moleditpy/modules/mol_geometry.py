@@ -337,3 +337,103 @@ def is_problematic_valence(symbol, bond_count, charge=0):
     if neutral_only and charge != 0:
         return False
     return bond_count > max_bonds
+
+
+# ------------------------------------------------------------------
+# MOL Block & Chemical Logic (Pure)
+# ------------------------------------------------------------------
+
+
+def inject_ez_stereo_to_mol_block(mol_block, rdkit_mol, bonds_data):
+    """Generate a modified MOL block with 'M CFG' lines for E/Z stereochemistry.
+
+    Parameters
+    ----------
+    mol_block : str
+        The original MOL block string.
+    rdkit_mol : rdkit.Chem.Mol
+        The RDKit molecule object (must have '_original_atom_id' properties).
+    bonds_data : dict
+        The bonds dictionary from MolecularData (key is tuple of atom IDs).
+
+    Returns
+    -------
+    str
+        The modified MOL block string.
+    """
+    mol_lines = mol_block.split("\n")
+    ez_bond_info = {}
+
+    # Map atom_id -> rdkit_idx once
+    atom_id_to_rdkit_idx = {}
+    for atom in rdkit_mol.GetAtoms():
+        if atom.HasProp("_original_atom_id"):
+            atom_id_to_rdkit_idx[atom.GetIntProp("_original_atom_id")] = atom.GetIdx()
+
+    for (id1, id2), bond_info in bonds_data.items():
+        stereo_type = bond_info.get("stereo", 0)
+        if stereo_type in [3, 4]:  # E/Z labels
+            idx1 = atom_id_to_rdkit_idx.get(id1)
+            idx2 = atom_id_to_rdkit_idx.get(id2)
+
+            if idx1 is not None and idx2 is not None:
+                from rdkit import Chem
+                rdkit_bond = rdkit_mol.GetBondBetweenAtoms(idx1, idx2)
+                if rdkit_bond and rdkit_bond.GetBondType() == Chem.BondType.DOUBLE:
+                    ez_bond_info[rdkit_bond.GetIdx()] = stereo_type
+
+    if not ez_bond_info:
+        return mol_block
+
+    # Insert CFG lines before M  END
+    insert_idx = -1
+    for i, line in enumerate(mol_lines):
+        if "M  END" in line:
+            insert_idx = i
+            break
+    
+    if insert_idx == -1:
+        insert_idx = len(mol_lines)
+
+    for bond_idx, stereo_type in sorted(ez_bond_info.items()):
+        cfg_value = 1 if stereo_type == 3 else 2  # 1=Z, 2=E in MOL format
+        cfg_line = f"M  CFG  1 {bond_idx + 1:3d}   {cfg_value}"
+        mol_lines.insert(insert_idx, cfg_line)
+        insert_idx += 1
+
+    return "\n".join(mol_lines)
+
+
+def identify_valence_problems(atoms_data, bonds_data):
+    """Identify atoms with problematic valence.
+
+    Parameters
+    ----------
+    atoms_data : dict
+        The atoms dictionary from MolecularData.
+    bonds_data : dict
+        The bonds dictionary from MolecularData.
+
+    Returns
+    -------
+    list
+        IDs of atoms with problematic valence.
+    """
+    problem_atom_ids = []
+    
+    # Pre-calculate bond orders per atom
+    bond_orders = {}
+    for (id1, id2), bond in bonds_data.items():
+        order = bond.get("order", 1)
+        bond_orders[id1] = bond_orders.get(id1, 0) + order
+        bond_orders[id2] = bond_orders.get(id2, 0) + order
+
+    for atom_id, data in atoms_data.items():
+        symbol = data["symbol"]
+        charge = data.get("charge", 0)
+        total_order = bond_orders.get(atom_id, 0)
+
+        if is_problematic_valence(symbol, total_order, charge):
+            problem_atom_ids.append(atom_id)
+
+    return problem_atom_ids
