@@ -169,8 +169,9 @@ class MainWindowUiManager(object):
             if modified and hasattr(self, "save_settings"):
                 self.save_settings()
                 self.settings_dirty = False
-        except Exception:
-            pass  # Suppress settings persistence errors on close
+        except (AttributeError, RuntimeError, TypeError, ValueError):
+            # Suppress non-critical settings persistence errors during application shutdown
+            pass
 
         # 2. Handle unsaved changes
         if getattr(self, "has_unsaved_changes", False):
@@ -213,8 +214,9 @@ class MainWindowUiManager(object):
                 except (RuntimeError, TypeError):
                     # Suppress errors if a thread is already terminated or non-responsive during bulk teardown.
                     pass
-        except Exception:
-            pass  # Suppress thread/widget cleanup errors on close
+        except (AttributeError, RuntimeError, TypeError, ValueError):
+            # Suppress non-critical thread/widget cleanup errors during application shutdown
+            pass
 
 
         event.accept()
@@ -283,7 +285,8 @@ class MainWindowUiManager(object):
                 if handler_def["callback"](file_path):
                     event.acceptProposedAction()
                     return
-            except Exception as e:
+            except (AttributeError, RuntimeError, TypeError, ValueError) as e:
+                # Log but suppress plugin-specific drop handler errors to prevent app-wide crash
                 print(f"Error in plugin drop handler: {e}")
 
         # 2. Built-in Handlers
@@ -363,8 +366,9 @@ class MainWindowUiManager(object):
                     obj.setEnabled(can_optimize)
                 else:
                     obj.setEnabled(enabled)
-            except Exception:
-                pass  # Suppress non-critical 3D feature state update errors
+            except (AttributeError, RuntimeError, TypeError, ValueError):
+                # Suppress non-critical 3D feature state update errors if widgets are not fully initialized
+                pass
 
         # Always enable these core 3D interactors
         for core_act in ["measurement_action", "edit_3d_action"]:

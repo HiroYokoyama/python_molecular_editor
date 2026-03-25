@@ -156,7 +156,9 @@ def _adjust_collision_avoidance(rd_mol, check_halted_cb, safe_status_cb):
 
         safe_status_cb("Collision avoidance completed.")
     except WorkerHaltError: raise
-    except Exception: pass
+    except (AttributeError, RuntimeError, TypeError, ValueError):
+        # Suppress non-critical errors during fragment collision resolution if state is inconsistent
+        pass
 
 
 def _iterative_optimize(mol, method, check_halted_cb, safe_status_cb, max_iters=4000, chunk_size=100, options=None):
@@ -281,7 +283,9 @@ def _apply_explicit_stereo(mol, explicit_stereo):
 def _perform_direct_conversion(mol_block, mol, options, _check_halted, _safe_status):
     """Direct 3D conversion using 2D coordinates and adding missing H without embedding."""
     parsed_coords, stereo_dirs = [], []
-    with contextlib.suppress(Exception):
+    # Best-effort attempt to parse 2D coordinates from MOL block for direct conversion.
+    # We suppress AttributeError/RuntimeError if the block is malformed or RDKit fails internally.
+    with contextlib.suppress(AttributeError, RuntimeError, ValueError, TypeError):
         base2d_all = Chem.MolFromMolBlock(mol_block, removeHs=False, sanitize=True) or \
                      Chem.MolFromMolBlock(mol_block, removeHs=False, sanitize=False)
         if base2d_all and base2d_all.GetNumConformers() > 0:
@@ -290,7 +294,9 @@ def _perform_direct_conversion(mol_block, mol, options, _check_halted, _safe_sta
                 p = oconf.GetAtomPosition(i)
                 parsed_coords.append((float(p.x), float(p.y), 0.0))
 
-    with contextlib.suppress(Exception):
+    # Manual parse of bond stereo flags from MOL block text.
+    # Suppress IndexError/ValueError if the block format is unexpected or lines are truncated.
+    with contextlib.suppress(IndexError, ValueError, AttributeError):
         lines = mol_block.splitlines()
         counts_idx = next((i for i, ln in enumerate(lines[:40]) if re.match(r"^\s*\d+\s+\d+", ln)), None)
         if counts_idx is not None:
@@ -314,7 +320,9 @@ def _perform_direct_conversion(mol_block, mol, options, _check_halted, _safe_sta
                     stereo_dirs.append((atom_map[a1], atom_map[a2], stereo_flag))
 
     if not parsed_coords:
-        with contextlib.suppress(Exception):
+        # Fallback manual parse of atom coordinates from MOL block text.
+        # Suppress IndexError/ValueError if the block format is unexpected.
+        with contextlib.suppress(IndexError, ValueError, AttributeError):
             lines = mol_block.splitlines()
             idx = next((i for i, ln in enumerate(lines[:40]) if re.match(r"^\s*\d+\s+\d+", ln)), None)
             if idx is not None:
@@ -362,7 +370,8 @@ def _perform_direct_conversion(mol_block, mol, options, _check_halted, _safe_sta
                 else:
                     conf.SetAtomPosition(i, rdGeometry.Point3D(0.0, 0.0, 0.1))
 
-    with contextlib.suppress(Exception):
+    # Best-effort application of stereo directions to Z-coordinates for direct conversion.
+    with contextlib.suppress(AttributeError, RuntimeError, TypeError, IndexError):
         for b, e, f in stereo_dirs:
             if b < num_existing and e < num_existing:
                 pos = conf.GetAtomPosition(e)
@@ -380,7 +389,8 @@ def _perform_direct_conversion(mol_block, mol, options, _check_halted, _safe_sta
         method_key = "UFF" if "UFF" in opt_method.upper() else ("GAFF" if "GAFF" in opt_method.upper() else ("GHEMICAL" if "GHEMICAL" in opt_method.upper() else "MMFF94s"))
         if "MMFF94" in opt_method.upper() and "MMFF94S" not in opt_method.upper(): method_key = "MMFF94"
 
-        with contextlib.suppress(Exception): mol.SetProp("_pme_optimization_method", opt_method)
+        # Best-effort property assignment for UI feedback
+        with contextlib.suppress(AttributeError, RuntimeError, TypeError): mol.SetProp("_pme_optimization_method", opt_method)
         _safe_status(f"Optimizing ({method_key} / {backend})...")
         
         opt_func = _iterative_optimize_obabel if backend == "OBABEL" else _iterative_optimize
@@ -401,7 +411,8 @@ def _perform_optimize_only(mol, options, worker_id, _check_halted, _safe_status,
     method_key = "UFF" if "UFF" in opt_method else ("GAFF" if "GAFF" in opt_method else ("GHEMICAL" if "GHEMICAL" in opt_method else "MMFF94s"))
     if "MMFF94" in opt_method and "MMFF94S" not in opt_method: method_key = "MMFF94"
 
-    with contextlib.suppress(Exception): mol.SetProp("_pme_optimization_method", opt_method)
+    # Best-effort property assignment for UI feedback
+    with contextlib.suppress(AttributeError, RuntimeError, TypeError): mol.SetProp("_pme_optimization_method", opt_method)
     
     opt_func = _iterative_optimize_obabel if backend == "OBABEL" else _iterative_optimize
     if not opt_func(mol, method_key, _check_halted, _safe_status, options=options if backend == "RDKIT" else None):
@@ -418,7 +429,8 @@ def _perform_obabel_conversion(mol_block, mode, opt_method, worker_id, options, 
     try:
         if not OBABEL_AVAILABLE or not pybel: raise RuntimeError("Open Babel not available.")
         ob_mol = pybel.readstring("mol", mol_block)
-        with contextlib.suppress(Exception): ob_mol.addh()
+        # Suppress errors if OBabel cannot add hydrogens (e.g., malformed structure or missing parameters)
+        with contextlib.suppress(AttributeError, RuntimeError, TypeError): ob_mol.addh()
         ob_mol.make3D()
         
         rd_mol = Chem.AddHs(Chem.MolFromMolBlock(ob_mol.write("mol"), removeHs=False))
@@ -430,19 +442,21 @@ def _perform_obabel_conversion(mol_block, mode, opt_method, worker_id, options, 
         method_key = "UFF" if "UFF" in opt_method.upper() else ("GAFF" if "GAFF" in opt_method.upper() else ("GHEMICAL" if "GHEMICAL" in opt_method.upper() else "MMFF94s"))
         if "MMFF94" in opt_method.upper() and "MMFF94S" not in opt_method.upper(): method_key = "MMFF94"
 
-        with contextlib.suppress(Exception): rd_mol.SetProp("_pme_optimization_method", opt_method)
+        # Best-effort property assignment for UI feedback
+        with contextlib.suppress(AttributeError, RuntimeError, TypeError): rd_mol.SetProp("_pme_optimization_method", opt_method)
         _safe_status(f"Optimizing ({method_key} / {backend})...")
         
         opt_func = _iterative_optimize_obabel if backend == "OBABEL" else _iterative_optimize
         if not opt_func(rd_mol, method_key, _check_halted, _safe_status, options=options if backend == "RDKIT" else None):
             _safe_status("Warning: Optimization failed. Using unoptimized structure.")
-            with contextlib.suppress(Exception): rd_mol.ClearProp("_pme_optimization_method")
+            # Best-effort property cleanup if optimization was skipped
+            with contextlib.suppress(AttributeError, RuntimeError, TypeError): rd_mol.ClearProp("_pme_optimization_method")
 
         if _check_halted(): raise WorkerHaltError("Halted")
         _safe_finished((worker_id, rd_mol))
         return True
     except WorkerHaltError: raise
-    except Exception as e:
+    except (AttributeError, RuntimeError, ValueError, TypeError) as e:
         if mode == "obabel": raise RuntimeError(f"Open Babel conversion failed: {e}")
         _safe_status(f"Open Babel failed: {e}. Falling back...")
     return False
@@ -474,17 +488,20 @@ class CalculationWorker(QObject):
 
         def _safe_finished(payload):  
             if _check_halted(): raise WorkerHaltError("Halted")
-            with contextlib.suppress(Exception): self.finished.emit(payload)
+            # Suppress errors if the receiver is already destroyed
+            with contextlib.suppress(AttributeError, RuntimeError, TypeError): self.finished.emit(payload)
 
         def _safe_error(msg):  
             if msg != "Halted" and _check_halted(): raise WorkerHaltError("Halted")
-            with contextlib.suppress(Exception): self.error.emit(((options or {}).get("worker_id"), msg))
+            # Suppress errors if the receiver is already destroyed
+            with contextlib.suppress(AttributeError, RuntimeError, TypeError): self.error.emit(((options or {}).get("worker_id"), msg))
 
         try:
             options = options or {}
             w_id = options.get("worker_id")
             if w_id is None:
-                with contextlib.suppress(Exception): self.status_update.emit("Warning: worker started without 'worker_id'.")
+                # Best-effort status update; suppress if UI is unresponsive
+                with contextlib.suppress(AttributeError, RuntimeError, TypeError): self.status_update.emit("Warning: worker started without 'worker_id'.")
 
             if not mol_block: raise ValueError("No atoms to convert.")
             _safe_status("Creating 3D structure...")
@@ -535,7 +552,8 @@ class CalculationWorker(QObject):
                 # Suppress potential RDKit-specific crashes during embedding for retry logic
                 with contextlib.suppress(RuntimeError, ValueError): conf_id = AllChem.EmbedMolecule(mol, params)
                 if conf_id == -1 and mode in ("fallback", "rdkit"):
-                    with contextlib.suppress(Exception):
+                        # Robust fallback: attempt simplified embedding if stereo-constrained embedding fails
+                    with contextlib.suppress(AttributeError, RuntimeError, ValueError, TypeError):
                         bm = AllChem.GetMoleculeBoundsMatrix(mol)
                         for b_idx, s, satoms in orig_stereo:
                             if len(satoms) == 2:
@@ -544,7 +562,8 @@ class CalculationWorker(QObject):
                         DoTriangleSmoothing(bm)
                         conf_id = AllChem.EmbedMolecule(mol, bm, params)
                 if conf_id == -1 and mode in ("fallback", "rdkit"):
-                    with contextlib.suppress(Exception): conf_id = AllChem.EmbedMolecule(mol, AllChem.ETKDGv2(randomSeed=42))
+                    # Level 3 fallback: basic embedding without specialized prefs
+                    with contextlib.suppress(AttributeError, RuntimeError, ValueError, TypeError): conf_id = AllChem.EmbedMolecule(mol, AllChem.ETKDGv2(randomSeed=42))
 
             if conf_id != -1:
                 for b_idx, s, satoms in orig_stereo:
@@ -558,7 +577,8 @@ class CalculationWorker(QObject):
                 method_key = "UFF" if "UFF" in opt_method.upper() else ("GAFF" if "GAFF" in opt_method.upper() else ("GHEMICAL" if "GHEMICAL" in opt_method.upper() else "MMFF94s"))
                 if "MMFF94" in opt_method.upper() and "MMFF94S" not in opt_method.upper(): method_key = "MMFF94"
 
-                with contextlib.suppress(Exception): mol.SetProp("_pme_optimization_method", opt_method)
+                # Best-effort property assignment for UI feedback
+                with contextlib.suppress(AttributeError, RuntimeError, TypeError): mol.SetProp("_pme_optimization_method", opt_method)
                 _safe_status(f"Optimizing ({method_key} / {backend})...")
                 
                 opt_func = _iterative_optimize_obabel if backend == "OBABEL" else _iterative_optimize

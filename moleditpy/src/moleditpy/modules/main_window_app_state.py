@@ -90,6 +90,7 @@ class MainWindowAppState(object):
                     else:
                         mol_3d_atom_ids.append(None)
                 except (AttributeError, RuntimeError, TypeError):
+                    # Suppress minor property access errors if RDKit object state is inconsistent
                     mol_3d_atom_ids.append(None)
             state["mol_3d_atom_ids"] = mol_3d_atom_ids
 
@@ -149,8 +150,8 @@ class MainWindowAppState(object):
                     f"Your current version is {VERSION}.\n\n"
                     "Some features may not load or work correctly.",
                 )
-        except (ValueError, AttributeError):
-            # Suppress non-critical version parsing errors
+        except (ValueError, AttributeError, IndexError):
+            # Suppress non-critical version parsing errors if file metadata is malformed
             pass
 
         raw_atoms = loaded_data.get("atoms", {})
@@ -173,8 +174,9 @@ class MainWindowAppState(object):
                         self.constraints_3d.append(
                             (const[0], tuple(const[1]), const[2], 1.0e5)
                         )
-        except (AttributeError, RuntimeError, TypeError):
-            self.constraints_3d = []  # Reset on failure
+        except (AttributeError, RuntimeError, TypeError, ValueError, IndexError):
+            # Reset constraints on load failure to prevent inconsistent state
+            self.constraints_3d = []
 
         for atom_id, data in raw_atoms.items():
             pos = QPointF(data["pos"][0], data["pos"][1])
@@ -236,16 +238,16 @@ class MainWindowAppState(object):
                                             self.current_mol.GetAtomWithIdx(i).SetIntProp(
                                                 "_original_atom_id", int(aid)
                                             )
-                                        except (AttributeError, RuntimeError, TypeError):  
-                                            # Skip property assignment on failure
+                                        except (AttributeError, RuntimeError, TypeError, ValueError):  
+                                            # Skip property assignment on failure if RDKit object is partially invalid
                                             pass
                     # Sync 2D atoms with 3D actors
                     try:
                         self.create_atom_id_mapping()
                         self.update_atom_id_menu_text()
                         self.update_atom_id_menu_state()
-                    except (AttributeError, RuntimeError, TypeError):  
-                        # Suppress UI sync noise during state restoration
+                    except (AttributeError, RuntimeError, TypeError, ValueError):  
+                        # Suppress UI sync noise during state restoration if widgets are being recreated
                         pass
                     # draw_molecule_3d will use restored IDs
                     self.draw_molecule_3d(self.current_mol)
@@ -361,7 +363,7 @@ class MainWindowAppState(object):
                         f"DEBUG_UNDO: push_undo_state -> new stack size: {len(self.undo_stack)}"
                     )
                 except (AttributeError, RuntimeError, TypeError):  
-                    # Suppress debug output noise
+                    # Suppress debug output noise during undo/redo state tracking
                     pass
 
             self.redo_stack.clear()
@@ -517,8 +519,8 @@ class MainWindowAppState(object):
                 self.formula_label.setText(
                     f"Formula: {mol_formula}   |   Atoms: {num_atoms}"
                 )
-        except (AttributeError, RuntimeError, TypeError):
-            # Continue on failure
+        except (AttributeError, RuntimeError, TypeError, ValueError):
+            # Suppress molecular info update errors if structure is partially invalid during real-time updates
             self.formula_label.setText("Invalid structure")
 
     def create_json_data(self):
@@ -587,7 +589,8 @@ class MainWindowAppState(object):
                         try:
                             if atom.HasProp("_original_atom_id"):
                                 original_id = atom.GetIntProp("_original_atom_id")
-                        except (AttributeError, RuntimeError, TypeError):
+                        except (AttributeError, RuntimeError, TypeError, ValueError):
+                            # Skip property access if atom data is inconsistent
                             original_id = None
 
                         atom_3d = {
@@ -629,7 +632,8 @@ class MainWindowAppState(object):
                             json_safe_constraints.append(
                                 [const[0], list(const[1]), const[2], 1.0e5]
                             )
-                except (AttributeError, TypeError, KeyError):
+                except (AttributeError, TypeError, KeyError, ValueError):
+                    # Reset constraints if serialization fails
                     json_safe_constraints = []
 
                 json_data["3d_structure"] = {
@@ -663,8 +667,8 @@ class MainWindowAppState(object):
                         inchi_key = Chem.MolToInchiKey(self.current_mol)
                         json_data["identifiers"]["inchi"] = inchi
                         json_data["identifiers"]["inchi_key"] = inchi_key
-                    except (AttributeError, RuntimeError, TypeError):
-                        # Suppress InChI generation errors during project save
+                    except (AttributeError, RuntimeError, TypeError, ValueError):
+                        # Suppress InChI generation errors during project save if RDKit lacks InChI support
                         pass
 
                 except (AttributeError, RuntimeError, ValueError, TypeError) as e:
@@ -735,6 +739,7 @@ class MainWindowAppState(object):
                     try:
                         self.plugin_manager.load_handlers[name](p_state)
                     except (AttributeError, RuntimeError, ValueError, TypeError) as e:
+                        # Log but suppress individual plugin load errors to prevent app-wide crash
                         print(f"Error loading state for plugin {name}: {e}")
                 else:
                     # No handler found (plugin disabled or missing)
@@ -822,7 +827,8 @@ class MainWindowAppState(object):
                             self.constraints_3d.append(
                                 (const[0], tuple(const[1]), const[2], 1.0e5)
                             )
-            except (AttributeError, RuntimeError, TypeError):
+            except (AttributeError, RuntimeError, TypeError, ValueError, IndexError):
+                # Reset constraints if restoration fails to prevent inconsistent state
                 self.constraints_3d = []  # Reset on load failure
 
             try:
@@ -857,8 +863,8 @@ class MainWindowAppState(object):
                                         rd_atom.SetIntProp(
                                             "_original_atom_id", int(original_id)
                                         )
-                                except (AttributeError, RuntimeError, TypeError):  
-                                    # Suppress traceback
+                                except (AttributeError, RuntimeError, TypeError, ValueError):  
+                                    # Skip UI update if widgets or mapping is partially invalid during restoration
                                     pass
                             # Build mapping from original 2D atom IDs to RDKit indices so
                             # 3D picks can be synchronized back to 2D AtomItems.
@@ -888,8 +894,8 @@ class MainWindowAppState(object):
                         try:
                             self._enable_3d_edit_actions(True)
                             self._enable_3d_features(True)
-                        except (AttributeError, RuntimeError, TypeError):  
-                            # Suppress 3D UI activation noise if features unavailable
+                        except (AttributeError, RuntimeError, TypeError, ValueError):  
+                            # Suppress 3D UI activation noise if features or widgets are unavailable
                             pass
             except (AttributeError, RuntimeError, ValueError, TypeError) as e:
                 print(f"Warning: Could not restore 3D molecular data: {e}")
