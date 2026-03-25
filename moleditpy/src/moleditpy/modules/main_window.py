@@ -619,10 +619,6 @@ class MainWindow(QMainWindow):
         # --- MOVED TO main_window_molecular_parsers.py ---
         return self.main_window_molecular_parsers._get_mol_prop(mol, prop_name, default)
 
-    def _get_mol_prop(self, mol, prop_name, default=None):
-        # --- MOVED TO main_window_molecular_parsers.py ---
-        return self.main_window_molecular_parsers._get_mol_prop(mol, prop_name, default)
-
     def prompt_for_charge(self):
         # --- MOVED TO main_window_molecular_parsers.py ---
         return self.main_window_molecular_parsers.prompt_for_charge()

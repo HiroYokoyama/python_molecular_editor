@@ -938,7 +938,7 @@ class MainWindowEditActions(object):
                 # Fallback if QTimer fails (e.g. during app shutdown)
                 with contextlib.suppress(Exception):
                     _ui_closure()
-        except Exception as e:
+        except (AttributeError, RuntimeError, TypeError, ValueError) as e:
             logging.exception(f"Unexpected error in update_implicit_hydrogens: {e}")
     def clean_up_2d_structure(self):
         self.statusBar().showMessage("Optimizing 2D structure...")
