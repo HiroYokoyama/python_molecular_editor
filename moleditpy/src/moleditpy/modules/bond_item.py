@@ -95,6 +95,11 @@ class BondItem(QGraphicsItem):
         if self.scene() and self.scene().views():
             self.scene().views()[0].viewport().update()
 
+    def update_style(self):
+        """Force internal state refresh and redraw (primarily from settings)."""
+        self.prepareGeometryChange()
+        self.update()
+
     def __init__(self, atom1_item, atom2_item, order=1, stereo=0):
         super().__init__()
         # Validate input parameters
