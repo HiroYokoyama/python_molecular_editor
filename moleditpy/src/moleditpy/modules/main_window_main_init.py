@@ -294,8 +294,7 @@ class MainWindowMainInit(object):
         try:
             QTimer.singleShot(0, self.view_2d.setFocus)
         except (AttributeError, RuntimeError, ValueError, TypeError):  
-            import traceback
-            traceback.print_exc()
+            pass  # Suppress non-critical UI/menu initialization errors
 
     def init_ui(self):  
         # 1. Get the path to the directory where the current script is located
@@ -372,8 +371,7 @@ class MainWindowMainInit(object):
                 self.show_convert_menu
             )
         except (AttributeError, RuntimeError, ValueError, TypeError):  
-            import traceback
-            traceback.print_exc()
+            pass  # Suppress non-critical UI/menu initialization errors
 
         left_buttons_layout.addWidget(self.convert_button)
 
@@ -414,8 +412,7 @@ class MainWindowMainInit(object):
                 self.show_optimize_menu
             )
         except (AttributeError, RuntimeError, ValueError, TypeError):  
-            import traceback
-            traceback.print_exc()
+            pass  # Suppress non-critical UI/menu initialization errors
 
         right_buttons_layout.addWidget(self.optimize_3d_button)
 
@@ -488,8 +485,7 @@ class MainWindowMainInit(object):
         try:
             self.addToolBarBreak(Qt.ToolBarArea.TopToolBarArea)
         except (AttributeError, RuntimeError, ValueError, TypeError):  
-            import traceback
-            traceback.print_exc()
+            pass  # Suppress non-critical UI/menu initialization errors
 
         self.plugin_toolbar = QToolBar("Plugin Toolbar")
         self.addToolBar(Qt.ToolBarArea.TopToolBarArea, self.plugin_toolbar)
@@ -561,8 +557,7 @@ class MainWindowMainInit(object):
                     if c.isValid():
                         return c
             except (AttributeError, RuntimeError, ValueError, TypeError):  
-                import traceback
-                traceback.print_exc()
+                pass  # Suppress non-critical UI/menu/settings sync errors
 
             # 1) Prefer the system/OS dark-mode preference if available.
             try:
@@ -571,8 +566,7 @@ class MainWindowMainInit(object):
                 if os_pref is not None:
                     return QColor("#FFFFFF") if os_pref else QColor("#000000")
             except (AttributeError, RuntimeError, ValueError, TypeError):  
-                import traceback
-                traceback.print_exc()
+                pass  # Suppress non-critical UI/menu/settings sync errors
 
             try:
                 # Keep background_color as a fallback: if system preference isn't
@@ -589,8 +583,7 @@ class MainWindowMainInit(object):
                         # Return white on dark (lum<0.5), black on light
                         return QColor("#FFFFFF") if lum < 0.5 else QColor("#000000")
             except (AttributeError, RuntimeError, ValueError, TypeError):  
-                import traceback
-                traceback.print_exc()
+                pass  # Suppress non-critical UI/menu/settings sync errors
 
             try:
                 pal = QApplication.palette()
@@ -1346,12 +1339,10 @@ class MainWindowMainInit(object):
                 try:
                     self.settings_dirty = True
                 except (AttributeError, RuntimeError, ValueError, TypeError):  
-                    import traceback
-                    traceback.print_exc()
+                    pass  # Suppress non-critical UI/menu/settings sync errors
                 self.statusBar().showMessage(f"3D conversion mode set to: {mode}")
             except (AttributeError, RuntimeError, ValueError, TypeError):  
-                import traceback
-                traceback.print_exc()
+                pass  # Suppress non-critical UI/menu/settings sync errors
 
         conv_options = [
             ("Fallback", "fallback"),
@@ -1403,17 +1394,14 @@ class MainWindowMainInit(object):
                 try:
                     self.conv_actions[saved_conv].setChecked(True)
                 except (AttributeError, RuntimeError, ValueError, TypeError):  
-                    import traceback
-                    traceback.print_exc()
+                    pass  # Suppress non-critical UI/menu/settings sync errors
             self.settings["3d_conversion_mode"] = saved_conv
             try:
                 self.settings_dirty = True
             except (AttributeError, RuntimeError, ValueError, TypeError):  
-                import traceback
-                traceback.print_exc()
+                pass  # Suppress non-critical UI/menu/settings sync errors
         except (AttributeError, RuntimeError, ValueError, TypeError):  
-            import traceback
-            traceback.print_exc()
+            pass  # Suppress non-critical UI/menu/settings sync errors
 
         # 3) 3D Optimization Settings (single location under Settings menu)
         optimization_menu = settings_menu.addMenu("3D Optimization Settings")
@@ -1447,8 +1435,7 @@ class MainWindowMainInit(object):
             try:
                 action.setActionGroup(opt_group)
             except (AttributeError, RuntimeError, ValueError, TypeError):  
-                import traceback
-                traceback.print_exc()
+                pass  # Suppress non-critical UI/menu/settings sync errors
 
             # If Open Babel is not available, disable Open Babel-based optimization methods
             if key.endswith("_OBABEL") and not OBABEL_AVAILABLE:
@@ -1492,8 +1479,7 @@ class MainWindowMainInit(object):
                     self.opt3d_actions["MMFF_RDKIT"].setChecked(True)
                     self.optimization_method = "MMFF_RDKIT"
         except (AttributeError, RuntimeError, ValueError, TypeError):  
-            import traceback
-            traceback.print_exc()
+            pass  # Suppress non-critical UI/menu/settings sync errors
 
         # 4) Reset all settings to defaults
         settings_menu.addSeparator()
@@ -1595,8 +1581,7 @@ class MainWindowMainInit(object):
         try:
             self.update_cpk_colors_from_settings()
         except (AttributeError, RuntimeError, ValueError, TypeError):  
-            import traceback
-            traceback.print_exc()
+            pass  # Suppress non-critical UI/menu/settings sync errors
 
         if self.plotter and self.plotter.renderer:
             bg_color = self.settings.get("background_color", "#919191")
@@ -1616,8 +1601,7 @@ class MainWindowMainInit(object):
                 for v in list(self.scene.views()):
                     v.viewport().update()
         except (AttributeError, RuntimeError, ValueError, TypeError):  
-            import traceback
-            traceback.print_exc()
+            pass  # Suppress non-critical UI/menu/settings sync errors
 
     def open_settings_dialog(self):  
         dialog = SettingsDialog(self.settings, self)
@@ -1644,8 +1628,7 @@ class MainWindowMainInit(object):
                 try:
                     self.settings_dirty = True
                 except (AttributeError, RuntimeError, ValueError, TypeError):  
-                    import traceback
-                    traceback.print_exc()
+                    pass  # Suppress non-critical UI/menu/settings sync errors
                 # If ColorSettingsDialog is open, refresh its UI to reflect the reset
                 try:
                     for w in QApplication.topLevelWidgets():
@@ -1660,14 +1643,12 @@ class MainWindowMainInit(object):
                             import traceback
                             traceback.print_exc()
                 except (AttributeError, RuntimeError, ValueError, TypeError):  
-                    import traceback
-                    traceback.print_exc()
+                    pass  # Suppress non-critical UI/menu/settings sync errors
                 # Ensure global CPK mapping is rebuilt from defaults and UI is updated
                 try:
                     self.update_cpk_colors_from_settings()
                 except (AttributeError, RuntimeError, ValueError, TypeError):  
-                    import traceback
-                    traceback.print_exc()
+                    pass  # Suppress non-critical UI/menu/settings sync errors
                 # Refresh UI/menu state for conversion and optimization
                 try:
                     # update optimization method
@@ -1713,8 +1694,7 @@ class MainWindowMainInit(object):
                     )
 
                 except (AttributeError, RuntimeError, ValueError, TypeError):  
-                    import traceback
-                    traceback.print_exc()
+                    pass  # Suppress non-critical UI/menu/settings sync errors
                 # Update 2D scene styling to reflect default CPK colors
                 try:
                     # Reset 2D background specifically
@@ -1724,8 +1704,7 @@ class MainWindowMainInit(object):
 
                     self.update_cpk_colors_from_settings()
                 except (AttributeError, RuntimeError, ValueError, TypeError):  
-                    import traceback
-                    traceback.print_exc()
+                    pass  # Suppress non-critical UI/menu/settings sync errors
                 try:
                     if hasattr(self, "scene") and self.scene:
                         for it in list(self.scene.items()):
@@ -1748,8 +1727,7 @@ class MainWindowMainInit(object):
                             import traceback
                             traceback.print_exc()
                 except (AttributeError, RuntimeError, ValueError, TypeError):  
-                    import traceback
-                    traceback.print_exc()
+                    pass  # Suppress non-critical UI/menu/settings sync errors
                 # Also refresh any open SettingsDialog instances so their UI matches
                 try:
                     for w in QApplication.topLevelWidgets():
@@ -1764,8 +1742,7 @@ class MainWindowMainInit(object):
                             import traceback
                             traceback.print_exc()
                 except (AttributeError, RuntimeError, ValueError, TypeError):  
-                    import traceback
-                    traceback.print_exc()
+                    pass  # Suppress non-critical UI/menu/settings sync errors
             except (AttributeError, RuntimeError, ValueError) as e:
                 QMessageBox.warning(
                     self, "Reset Failed", f"Could not reset settings: {e}"
@@ -1944,8 +1921,7 @@ class MainWindowMainInit(object):
                 try:
                     self.settings_dirty = True
                 except (AttributeError, RuntimeError, ValueError, TypeError):  
-                    import traceback
-                    traceback.print_exc()
+                    pass  # Suppress non-critical UI/menu/settings sync errors
         except (AttributeError, RuntimeError, ValueError, TypeError):
             self.settings = default_settings
 

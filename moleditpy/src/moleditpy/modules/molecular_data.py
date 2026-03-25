@@ -78,10 +78,7 @@ class MolecularData:
                     ):
                         self.adjacency_list[neighbor_id].remove(atom_id)
                 except (ValueError, KeyError, TypeError):
-                    # Handle cases where adjacency list might be inconsistent
-                    import traceback
-                    traceback.print_exc()
-                    continue
+                    pass  # Ignore adjacency list inconsistencies during atom removal
 
 
             # Now, safely delete the atom's own entry from the adjacency list
@@ -97,9 +94,7 @@ class MolecularData:
                 for key in bonds_to_remove:
                     del self.bonds[key]
             except (RuntimeError, KeyError):
-                # Handle potential dictionary mutation issues
-                import traceback
-                traceback.print_exc()
+                pass  # Ignore mutation issues during batch bond removal
 
 
     def remove_bond(self, id1, id2):
@@ -118,9 +113,7 @@ class MolecularData:
                     self.adjacency_list[id2].remove(id1)
                 del self.bonds[key_to_remove]
             except (ValueError, KeyError):
-                # Ignore if already removed or inconsistent
-                import traceback
-                traceback.print_exc()
+                pass  # Ignore if bond already removed or inconsistent
 
 
     def to_rdkit_mol(self, use_2d_stereo=True):
@@ -177,9 +170,7 @@ class MolecularData:
         try:
             Chem.SanitizeMol(final_mol)
         except (RuntimeError, ValueError, TypeError) as e:
-            # RDKit sanitization failed.
-            import traceback
-            traceback.print_exc()
+            pass  # Suppress RDKit sanitization failures (triggers fallback)
             return None
 
 
@@ -308,8 +299,7 @@ class MolecularData:
             try:
                 return Chem.MolToMolBlock(mol, includeStereo=True)
             except (RuntimeError, ValueError, TypeError):  
-                import traceback
-                traceback.print_exc()
+                pass  # Suppress errors during RDKit MolBlock generation
 
         if not self.atoms:
             return None

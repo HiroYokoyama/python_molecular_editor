@@ -131,7 +131,7 @@ class MainWindowProjectIo(object):
             try:
                 self._saved_state = copy.deepcopy(self.get_current_state())
             except (AttributeError, RuntimeError, ValueError, TypeError):  
-                traceback.print_exc()
+                pass  # Suppress undo-state deepcopy errors
             self.statusBar().showMessage(f"Project saved to {file_path}")
 
         except (OSError, IOError) as e:  
@@ -190,7 +190,7 @@ class MainWindowProjectIo(object):
             try:
                 self._saved_state = copy.deepcopy(self.get_current_state())
             except (AttributeError, RuntimeError, ValueError, TypeError):  
-                traceback.print_exc()
+                pass  # Suppress undo-state deepcopy errors
             self.statusBar().showMessage(f"Project saved to {file_path}")
 
         except (OSError, IOError) as e:  
@@ -225,7 +225,7 @@ class MainWindowProjectIo(object):
             try:
                 self._saved_state = copy.deepcopy(self.get_current_state())
             except (AttributeError, RuntimeError, ValueError, TypeError):  
-                traceback.print_exc()
+                pass  # Suppress undo-state deepcopy errors
             self.statusBar().showMessage(f"Project loaded from {file_path}")
 
             QTimer.singleShot(0, self.fit_to_view)

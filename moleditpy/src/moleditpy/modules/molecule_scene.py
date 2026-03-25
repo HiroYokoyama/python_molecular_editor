@@ -353,8 +353,7 @@ class MoleculeScene(QGraphicsScene):
                     if sc:
                         self.removeItem(self.temp_line)
                 except (RuntimeError, ValueError, TypeError):
-                    import traceback
-                    traceback.print_exc()
+                    pass  # Suppress removal errors during teardown
             self.temp_line = None
 
         if self.mode.startswith("template") and is_click:
@@ -681,22 +680,19 @@ class MoleculeScene(QGraphicsScene):
                         try:
                             a.setSelected(True)
                         except (RuntimeError, ValueError, TypeError):
-                            import traceback
-                            traceback.print_exc()
+                            pass  # Ignore invalid item states during component search
 
                 for b in connected_bonds:
                     if not sip_isdeleted_safe(b):
                         try:
                             b.setSelected(True)
                         except (RuntimeError, ValueError, TypeError):
-                            import traceback
-                            traceback.print_exc()
+                            pass  # Ignore invalid bond states during component search
                 event.accept()
                 return
             except (AttributeError, RuntimeError, ValueError, TypeError):
                 # On any unexpected error, fall back to default handling
-                import traceback
-                traceback.print_exc()
+                pass  # Suppress errors during connection search
 
         elif self.mode in ["bond_2_5"]:
             event.accept()
@@ -799,8 +795,7 @@ class MoleculeScene(QGraphicsScene):
                     atom_items[best_idx] = ex_item
                     used_indices.add(best_idx)
             except (AttributeError, RuntimeError, ValueError, TypeError):  
-                import traceback
-                traceback.print_exc()
+                pass  # Suppress point distance mapping errors during fragment addition
 
         # --- 2) Enumerate existing atoms in the scene from self.data.atoms and map them ---
         mapped_atoms = {it for it in atom_items if it is not None}
@@ -1047,8 +1042,7 @@ class MoleculeScene(QGraphicsScene):
                 if at:
                     at.update_style()
             except (AttributeError, RuntimeError, ValueError, TypeError):  
-                import traceback
-                traceback.print_exc()
+                pass  # Suppress style update errors during fragment addition
 
         return atom_items
 
@@ -1218,8 +1212,7 @@ class MoleculeScene(QGraphicsScene):
                             if not sip_isdeleted_safe(b) and b not in bonds_to_delete
                         ]
                     except (AttributeError, RuntimeError, ValueError, TypeError):
-                        import traceback
-                        traceback.print_exc()
+                        pass  # Suppress SIP-stale bond removal errors
                 
                 if hasattr(atom, "update_style"):
                     atom.update_style()
@@ -1234,16 +1227,14 @@ class MoleculeScene(QGraphicsScene):
                         if not self.data.remove_bond(a1.atom_id, a2.atom_id):
                             self.data.remove_bond(a2.atom_id, a1.atom_id)
                     except (AttributeError, RuntimeError, ValueError, TypeError):
-                        import traceback
-                        traceback.print_exc()
+                        pass  # Suppress bond model data removal errors
 
             for atom in list(atoms_to_delete):
                 if hasattr(atom, "atom_id") and hasattr(self, "data"):
                     try:
                         self.data.remove_atom(atom.atom_id)
                     except (AttributeError, RuntimeError, ValueError, TypeError):
-                        import traceback
-                        traceback.print_exc()
+                        pass  # Suppress data model/graphic removal errors
 
             try:
                 self._ih_update_counter = getattr(self, "_ih_update_counter", 0) + 1
@@ -1262,8 +1253,7 @@ class MoleculeScene(QGraphicsScene):
                         try:
                             self.removeItem(item)
                         except (RuntimeError, ValueError, TypeError):
-                            import traceback
-                            traceback.print_exc()
+                            pass  # Suppress graphic removal errors (stale pointers)
                     
                     try:
                         item.hide()
@@ -1271,8 +1261,7 @@ class MoleculeScene(QGraphicsScene):
                             self._deleted_items = []
                         self._deleted_items.append(item)
                     except (AttributeError, RuntimeError, ValueError, TypeError):
-                        import traceback
-                        traceback.print_exc()
+                        pass  # Suppress data model/graphic removal errors
 
             safe_remove_and_hide(bonds_to_delete)
             safe_remove_and_hide(atoms_to_delete)
@@ -1300,8 +1289,7 @@ class MoleculeScene(QGraphicsScene):
                     if hasattr(obj, "bonds") and obj.bonds is not None:
                         obj.bonds.clear()
                 except (AttributeError, RuntimeError, ValueError, TypeError):
-                    import traceback
-                    traceback.print_exc()
+                    pass  # Suppress errors during template point mapping
 
         try:
             self._deleted_items.clear()
@@ -1855,14 +1843,12 @@ class MoleculeScene(QGraphicsScene):
                             ):
                                 self.removeItem(self.temp_line)
                         except (AttributeError, RuntimeError, ValueError, TypeError):  
-                            import traceback
-                            traceback.print_exc()
+                            pass  # Suppress bond visual state sync errors
                 except (AttributeError, RuntimeError, ValueError, TypeError):
                     try:
                         self.removeItem(self.temp_line)
                     except (AttributeError, RuntimeError, ValueError, TypeError):  
-                        import traceback
-                        traceback.print_exc()
+                        pass  # Suppress atom visual state sync errors
 
                 self.temp_line = None
                 self.start_atom = None
@@ -2003,8 +1989,7 @@ class MoleculeScene(QGraphicsScene):
             self.data_changed_in_event = True
 
         except (AttributeError, RuntimeError, ValueError) as e:
-            import traceback
-            traceback.print_exc()
+            pass  # Suppress final coordinate adjustment errors
             if hasattr(self.window, "statusBar"):
                 self.window.statusBar().showMessage(f"Error: {e}", 5000)
             self.update_all_items()

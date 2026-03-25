@@ -61,8 +61,7 @@ class AboutDialog(QDialog):
         try:
             self.image_label.setCursor(QCursor(Qt.CursorShape.ArrowCursor))
         except (AttributeError, RuntimeError, ValueError, TypeError):  
-            import traceback
-            traceback.print_exc()
+            pass  # Suppress cursor setting errors on about image
 
         self.image_label.mousePressEvent = self.image_mouse_press_event
 
@@ -108,5 +107,4 @@ class AboutDialog(QDialog):
             try:
                 event.ignore()
             except (AttributeError, RuntimeError, ValueError, TypeError):  
-                import traceback
-                traceback.print_exc()
+                pass  # Suppress nested event errors

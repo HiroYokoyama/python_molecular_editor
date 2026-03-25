@@ -170,8 +170,7 @@ class MainWindowUiManager(object):
                 self.save_settings()
                 self.settings_dirty = False
         except Exception:
-            import traceback
-            traceback.print_exc()
+            pass  # Suppress settings persistence errors on close
 
         # 2. Handle unsaved changes
         if getattr(self, "has_unsaved_changes", False):
@@ -214,8 +213,7 @@ class MainWindowUiManager(object):
                 except (RuntimeError, TypeError):
                     pass
         except Exception:
-            import traceback
-            traceback.print_exc()
+            pass  # Suppress thread/widget cleanup errors on close
 
 
         event.accept()
@@ -365,8 +363,7 @@ class MainWindowUiManager(object):
                 else:
                     obj.setEnabled(enabled)
             except Exception:
-                import traceback
-                traceback.print_exc()
+                pass  # Suppress non-critical 3D feature state update errors
 
         # Always enable these core 3D interactors
         for core_act in ["measurement_action", "edit_3d_action"]:

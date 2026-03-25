@@ -242,8 +242,7 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog):
                 self.main_window.push_undo_state()
 
         except (AttributeError, RuntimeError, ValueError) as e:
-            import traceback
-            traceback.print_exc()
+            pass  # Suppress errors during translation application
             QMessageBox.critical(self, "Error", f"Failed to apply translation: {str(e)}")
 
     def clear_selection(self):

@@ -117,8 +117,7 @@ class MainWindowViewLoaders(object):
                 self.restore_ui_for_editing()
         except Exception as e:
             self.statusBar().showMessage(f"Error processing XYZ file: {e}")
-            import traceback
-            traceback.print_exc()
+            pass  # Suppress detailed traceback for XYZ processing error
             if hasattr(self, "restore_ui_for_editing"):
                 self.restore_ui_for_editing()
 
@@ -164,8 +163,7 @@ class MainWindowViewLoaders(object):
         except Exception as e:
             msg = f"Error saving 3D MOL: {str(e)}"
             self.statusBar().showMessage(msg)
-            import traceback
-            traceback.print_exc()
+            pass  # Suppress detailed traceback for 3D MOL save error
 
 
     def load_mol_file_for_3d_viewing(self, file_path=None):
@@ -253,5 +251,4 @@ class MainWindowViewLoaders(object):
 
         except Exception as e:
             self.statusBar().showMessage(f"Error processing MOL/SDF file: {e}")
-            import traceback
-            traceback.print_exc()
+            pass  # Suppress detailed traceback for MOL/SDF processing error

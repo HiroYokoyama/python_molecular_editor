@@ -85,8 +85,7 @@ class MainWindowEdit3d(object):
             try:
                 dialog.close()
             except (AttributeError, RuntimeError, ValueError, TypeError):  
-                import traceback
-                traceback.print_exc()
+                pass  # Suppress non-critical 3D edit/UI sync errors
 
         self.active_3d_dialogs.clear()
 
@@ -174,8 +173,7 @@ class MainWindowEdit3d(object):
                 self.plotter.remove_actor(self.measurement_text_actor)
                 self.measurement_text_actor = None
             except (AttributeError, RuntimeError, ValueError, TypeError):  
-                import traceback
-                traceback.print_exc()
+                pass  # Suppress non-critical 3D edit/UI sync errors
 
         self.plotter.render()
 
@@ -327,14 +325,14 @@ class MainWindowEdit3d(object):
             self.atom_positions_3d, atom1_idx, atom2_idx, atom3_idx, atom4_idx
         )
 
+    def display_measurement_text(self, measurement_lines):
         """Display results text on 3D view."""
         # Remove existing text
         if self.measurement_text_actor:
             try:
                 self.plotter.remove_actor(self.measurement_text_actor)
             except (AttributeError, RuntimeError, ValueError, TypeError):  
-                import traceback
-                traceback.print_exc()
+                pass  # Suppress non-critical 3D edit/UI sync errors
 
         if not measurement_lines:
             self.measurement_text_actor = None

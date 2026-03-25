@@ -1112,8 +1112,7 @@ class SettingsDialog(QDialog):
                             if hasattr(it, "update_style"):
                                 it.update_style()
                         except (RuntimeError, ValueError, TypeError):
-                            import traceback
-                            traceback.print_exc()
+                            pass  # Suppress item style refresh errors
 
                 # 5. Refresh opt/conv actions
                 opt_method = self.parent_window.settings.get("optimization_method", "MMFF_RDKIT")
@@ -1125,8 +1124,7 @@ class SettingsDialog(QDialog):
                     try:
                         act.setChecked(k.upper() == (opt_method or "").upper())
                     except (RuntimeError, ValueError, TypeError):
-                        import traceback
-                        traceback.print_exc()
+                        pass  # Suppress optimization action sync errors
 
                 conv_mode = self.parent_window.settings.get("3d_conversion_mode", "fallback")
                 conv_actions = getattr(self.parent_window, "conv_actions", {})
@@ -1134,8 +1132,7 @@ class SettingsDialog(QDialog):
                     try:
                         act.setChecked(k == conv_mode)
                     except (RuntimeError, ValueError, TypeError):
-                        import traceback
-                        traceback.print_exc()
+                        pass  # Suppress conversion action sync errors
 
                 # 6. Mark dirty
                 try:
@@ -1144,8 +1141,7 @@ class SettingsDialog(QDialog):
                     pass
 
             except (AttributeError, RuntimeError, ValueError) as e:
-                import traceback
-                traceback.print_exc()
+                pass  # Suppress global settings sync errors
 
             QMessageBox.information(
                 self, "Reset Complete", "All settings have been reset to defaults."
@@ -1327,8 +1323,7 @@ class SettingsDialog(QDialog):
                 )
                 self.bs_bond_color_button.setToolTip(self.bs_bond_color)
             except (AttributeError, RuntimeError, ValueError, TypeError):  
-                import traceback
-                traceback.print_exc()
+                pass  # Suppress bond color update errors
 
     def apply_settings(self):
         """Apply settings (dialog stays open)"""
@@ -1353,8 +1348,7 @@ class SettingsDialog(QDialog):
             try:
                 self.parent_window.update_cpk_colors_from_settings()
             except (RuntimeError, TypeError):
-                import traceback
-                traceback.print_exc()
+                pass  # Suppress CPK color update sync errors
 
         # Refresh other dialogs
         for w in QApplication.topLevelWidgets():
@@ -1389,8 +1383,7 @@ class SettingsDialog(QDialog):
                 if view_2d and hasattr(view_2d, "viewport"):
                     view_2d.viewport().update()
             except (RuntimeError, ValueError, TypeError) as e:
-                import traceback
-                traceback.print_exc()
+                pass  # Suppress 2D scene item refresh errors
 
         # Update status bar
         if hasattr(self.parent_window, "statusBar") and self.parent_window.statusBar():

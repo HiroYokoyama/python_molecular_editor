@@ -141,8 +141,7 @@ class MainWindowView3d(object):
             try:
                 self.plotter.remove_actor(old_axes_actor)
             except (AttributeError, RuntimeError, TypeError):  
-                import traceback
-                traceback.print_exc()
+                pass  # Suppress axes actor removal errors
 
             self.axes_actor = None
 
@@ -182,8 +181,7 @@ class MainWindowView3d(object):
                 try:
                     self.statusBar().showMessage(f"Kekulize failed: {e}")
                 except (AttributeError, RuntimeError, TypeError):  
-                    import traceback
-                    traceback.print_exc()
+                    pass  # Suppress status bar update errors
                 mol_to_draw = mol
 
         # Use the original molecule's conformer (positions) to ensure coordinates
@@ -895,7 +893,7 @@ class MainWindowView3d(object):
                     try:
                         self.plotter.remove_actor("chiral_labels")
                     except (AttributeError, RuntimeError, TypeError):  
-                        traceback.print_exc()
+                        pass  # Suppress non-critical 3D label update errors
                     self.plotter.add_point_labels(
                         np.array(pts),
                         labels,
@@ -937,8 +935,7 @@ class MainWindowView3d(object):
                         # Force a render so the change is visible immediately
                         self.plotter.render()
                     except (AttributeError, RuntimeError, TypeError):  
-                        import traceback
-                        traceback.print_exc()
+                        pass  # Suppress non-critical 3D rendering/actor update errors
         except (AttributeError, RuntimeError, TypeError):  
             import traceback
             traceback.print_exc()
@@ -1432,8 +1429,7 @@ class MainWindowView3d(object):
                     try:
                         self.plotter.remove_actor(nm)
                     except (AttributeError, RuntimeError, TypeError):  
-                        import traceback
-                        traceback.print_exc()
+                        pass  # Suppress non-critical 3D rendering/actor update errors
             self.atom_label_legend_names = []
 
             legend_entries = []
@@ -1480,14 +1476,12 @@ class MainWindowView3d(object):
                                 import traceback
                                 traceback.print_exc()
                     except (AttributeError, RuntimeError, TypeError):  
-                        import traceback
-                        traceback.print_exc()
+                        pass  # Suppress non-critical 3D rendering/actor update errors
                 except (AttributeError, RuntimeError, TypeError):
                     continue
 
         except (AttributeError, RuntimeError, ValueError, TypeError):  
-            import traceback
-            traceback.print_exc()
+            pass  # Suppress legend addition errors
 
     def clear_all_atom_info_labels(self):
         """Clear all atom info labels"""
@@ -1508,11 +1502,9 @@ class MainWindowView3d(object):
                     try:
                         self.plotter.remove_actor(self.current_atom_info_labels)
                     except (AttributeError, RuntimeError, TypeError):  
-                        import traceback
-                        traceback.print_exc()
+                        pass  # Suppress non-critical 3D rendering/actor update errors
         except (AttributeError, RuntimeError, TypeError):  
-            import traceback
-            traceback.print_exc()
+            pass  # Suppress non-critical 3D state update errors
         finally:
             self.current_atom_info_labels = None
 
@@ -1526,11 +1518,9 @@ class MainWindowView3d(object):
                     try:
                         self.plotter.remove_actor(nm)
                     except (AttributeError, RuntimeError, TypeError):  
-                        import traceback
-                        traceback.print_exc()
+                        pass  # Suppress non-critical 3D rendering/actor update errors
         except (AttributeError, RuntimeError, TypeError):  
-            import traceback
-            traceback.print_exc()
+            pass  # Suppress non-critical 3D state update errors
         finally:
             self.atom_label_legend_names = []
 
@@ -1603,8 +1593,7 @@ class MainWindowView3d(object):
                 if old_ra is not None:
                     self.view_2d.setResizeAnchor(old_ra)
             except (AttributeError, RuntimeError, TypeError):  
-                import traceback
-                traceback.print_exc()
+                pass  # Suppress non-critical 3D view/actor cleanup errors
 
     def update_cpk_colors_from_settings(self):
         """Update global CPK_COLORS and CPK_COLORS_PV from saved settings overrides.
@@ -1700,8 +1689,7 @@ class MainWindowView3d(object):
             try:
                 self.plotter.reset_camera()
             except (AttributeError, RuntimeError, TypeError):  
-                import traceback
-                traceback.print_exc()
+                pass  # Suppress non-critical 3D view/actor cleanup errors
 
             self._camera_initialized = True
 
@@ -1711,8 +1699,7 @@ class MainWindowView3d(object):
             if hasattr(self.plotter, "update"):
                 self.plotter.update()
         except (AttributeError, RuntimeError, TypeError):  
-            import traceback
-            traceback.print_exc()
+            pass  # Suppress non-critical 3D state update errors
 
     def update_bond_color_override(self, bond_idx, hex_color):
         """Plugin API helper to override bond color."""

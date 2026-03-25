@@ -275,11 +275,9 @@ class MoveGroupDialog(Dialog3DPickingMixin, QDialog):
                                     Qt.CursorShape.ClosedHandCursor
                                 )
                             except (AttributeError, RuntimeError, ValueError, TypeError):  
-                                import traceback
-                                traceback.print_exc()
+                                pass  # Suppress cursor setting errors
                     except (AttributeError, RuntimeError, ValueError, TypeError):  
-                        import traceback
-                        traceback.print_exc()
+                        pass  # Suppress threshold check errors during mouse move
 
                     # Allow camera operation if below threshold
                     if not self.is_dragging_group:
@@ -297,8 +295,7 @@ class MoveGroupDialog(Dialog3DPickingMixin, QDialog):
                         if abs(dx) > 2 or abs(dy) > 2:
                             self.mouse_moved_during_drag = True
                     except (AttributeError, RuntimeError, ValueError, TypeError):  
-                        import traceback
-                        traceback.print_exc()
+                        pass  # Suppress drag distance tracking errors
 
                     # Consume event during drag to prevent camera rotation
                     return True
@@ -337,8 +334,7 @@ class MoveGroupDialog(Dialog3DPickingMixin, QDialog):
                                 Qt.CursorShape.ArrowCursor
                             )
                     except (AttributeError, RuntimeError, ValueError, TypeError):  
-                        import traceback
-                        traceback.print_exc()
+                        pass  # Suppress hover-state cursor updates
 
                 # Allow camera rotation if not dragging
                 return False
@@ -375,13 +371,11 @@ class MoveGroupDialog(Dialog3DPickingMixin, QDialog):
                                         Qt.CursorShape.ArrowCursor
                                     )
                                 except (AttributeError, RuntimeError, ValueError, TypeError):  
-                                    import traceback
-                                    traceback.print_exc()
+                                    pass  # Suppress cursor reset errors
                                 return True
 
                     except (AttributeError, RuntimeError, ValueError, TypeError):  
-                        import traceback
-                        traceback.print_exc()
+                        pass  # Suppress release event toggle errors
                     finally:
                         # Reset drag state
                         self.is_dragging_group = False
@@ -396,8 +390,7 @@ class MoveGroupDialog(Dialog3DPickingMixin, QDialog):
                                 Qt.CursorShape.ArrowCursor
                             )
                         except (AttributeError, RuntimeError, ValueError, TypeError):  
-                            import traceback
-                            traceback.print_exc()
+                            pass  # Suppress cursor cleanup on release
 
                     return True  # Consume event
 
@@ -506,22 +499,19 @@ class MoveGroupDialog(Dialog3DPickingMixin, QDialog):
         try:
             self.main_window.plotter.remove_actor("move_group_highlight")
         except (AttributeError, RuntimeError, ValueError, TypeError):  
-            import traceback
-            traceback.print_exc()
+            pass  # Suppress actor removal errors for move_group_highlight
 
         if hasattr(self, "highlight_actor"):
             try:
                 self.main_window.plotter.remove_actor(self.highlight_actor)
             except (AttributeError, RuntimeError, ValueError, TypeError):  
-                import traceback
-                traceback.print_exc()
+                pass  # Suppress errors during actor cleanup
 
             self.highlight_actor = None
         try:
             self.main_window.plotter.render()
         except (AttributeError, RuntimeError, ValueError, TypeError):  
-            import traceback
-            traceback.print_exc()
+            pass  # Suppress render errors during clearing
 
     def reset_translation_inputs(self):
         """Reset Translation input fields."""

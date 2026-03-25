@@ -232,8 +232,7 @@ class DihedralDialog(Dialog3DPickingMixin, QDialog):
                 self.dihedral_slider.setEnabled(False)
                 self.dihedral_slider.blockSignals(False)
             except (AttributeError, RuntimeError, TypeError):  
-                import traceback
-                traceback.print_exc()
+                pass  # Suppress errors during dihedral input clearing
 
         elif selected_count < 4:
             selected_atoms = [
@@ -264,8 +263,7 @@ class DihedralDialog(Dialog3DPickingMixin, QDialog):
                 self.dihedral_slider.setEnabled(False)
                 self.dihedral_slider.blockSignals(False)
             except (AttributeError, RuntimeError, TypeError):  
-                import traceback
-                traceback.print_exc()
+                pass  # Suppress non-critical UI update errors
         else:
             selected_atoms = [
                 self.atom1_idx,
@@ -303,8 +301,7 @@ class DihedralDialog(Dialog3DPickingMixin, QDialog):
                 self.dihedral_slider.setEnabled(True)
                 self.dihedral_slider.blockSignals(False)
             except (AttributeError, RuntimeError, TypeError):  
-                import traceback
-                traceback.print_exc()
+                pass  # Suppress non-critical UI update errors
 
     def on_dihedral_input_changed(self, text):
         """Line edit text changed, update slider."""
@@ -317,8 +314,7 @@ class DihedralDialog(Dialog3DPickingMixin, QDialog):
             self.dihedral_slider.setValue(int(round(wrapped_val)))
             self.dihedral_slider.blockSignals(False)
         except ValueError:
-            import traceback
-            traceback.print_exc()
+            pass  # Ignore invalid numeric input during typing
 
     def on_slider_pressed(self):
         """Remember the state before slider dragging starts."""
@@ -514,5 +510,4 @@ class DihedralDialog(Dialog3DPickingMixin, QDialog):
             if self.main_window.current_mol:
                 self.main_window.draw_molecule_3d(self.main_window.current_mol)
         except (AttributeError, RuntimeError, TypeError):
-            import traceback
-            traceback.print_exc()
+            pass  # Suppress errors during dialog teardown
