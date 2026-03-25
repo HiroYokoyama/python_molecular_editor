@@ -125,7 +125,7 @@ class MainWindowCompute(object):
                 
             if hasattr(self, "view_2d") and hasattr(self.view_2d, "setFocus"):
                 self.view_2d.setFocus()
-        except Exception as e:
+        except (AttributeError, RuntimeError, TypeError) as e:
             logging.debug(f"Non-critical UI refresh error: {e}")
 
     # ------------------------------------------------------------------

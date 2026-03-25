@@ -936,7 +936,7 @@ class MainWindowEditActions(object):
                 QTimer.singleShot(0, _ui_closure)
             except (RuntimeError, TypeError):
                 # Fallback if QTimer fails (e.g. during app shutdown)
-                with contextlib.suppress(Exception):
+                with contextlib.suppress(AttributeError, RuntimeError, TypeError):
                     _ui_closure()
         except (AttributeError, RuntimeError, TypeError, ValueError) as e:
             logging.exception(f"Unexpected error in update_implicit_hydrogens: {e}")
