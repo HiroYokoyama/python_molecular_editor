@@ -89,6 +89,39 @@ class MainWindowCompute(object):
             self.optimize_3d_button.clicked.connect(self.optimize_3d_structure)
             self.optimize_3d_button.setEnabled(True)
 
+    def _refresh_ui_state(self):
+        """Consolidate UI state updates into a single robust boundary."""
+        try:
+            has_mol = self.current_mol is not None
+            
+            if hasattr(self, "cleanup_button"):
+                self.cleanup_button.setEnabled(True)
+            
+            self._restore_button_ui()
+            
+            if hasattr(self, "optimize_3d_button"):
+                self.optimize_3d_button.setEnabled(has_mol)
+            if hasattr(self, "export_button"):
+                self.export_button.setEnabled(has_mol)
+                
+            if hasattr(self, "_enable_3d_features"):
+                self._enable_3d_features(has_mol)
+            if hasattr(self, "_enable_3d_edit_actions"):
+                self._enable_3d_edit_actions(has_mol)
+                
+            if hasattr(self, "analysis_action"):
+                self.analysis_action.setEnabled(has_mol)
+            if hasattr(self, "edit_3d_action"):
+                self.edit_3d_action.setEnabled(has_mol)
+                
+            if hasattr(self, "plotter") and hasattr(self.plotter, "render"):
+                self.plotter.render()
+                
+            if hasattr(self, "view_2d") and hasattr(self.view_2d, "setFocus"):
+                self.view_2d.setFocus()
+        except Exception as e:
+            logging.debug(f"Non-critical UI refresh error: {e}")
+
     # ------------------------------------------------------------------
 
     def set_optimization_method(self, method_name):  
@@ -704,45 +737,35 @@ class MainWindowCompute(object):
         self.draw_molecule_3d(mol)
 
         # Collision avoidance handled by worker
-        try:
+        if mol is not None:
             frags = Chem.GetMolFrags(mol, asMols=False, sanitizeFrags=False)
             if len(frags) > 1:
                 self.statusBar().showMessage(
                     f"{len(frags)} molecules converted with collision avoidance (background)."
                 )
-        except (AttributeError, RuntimeError, TypeError):
-            # Suppress errors if fragment count retrieval fails for an invalid molecule state.
-            pass
         # Remove 'Calculating...' text and refresh
         self._remove_calculating_text()
-        try:
-            self.plotter.render()
-        except (AttributeError, RuntimeError, TypeError):
-            # Suppress transient plotter render errors if the 3D scene is not yet ready.
-            pass
+        
         if self.last_successful_optimization_method:
             self.statusBar().showMessage(f"3D calculation ({self.last_successful_optimization_method}) successful.")
         else:
             self.statusBar().showMessage("3D calculation successful.")
 
-        # Restore button UI
-        self._restore_button_ui()
-
+        self._refresh_ui_state()
         self.push_undo_state()
-        self.view_2d.setFocus()
-        self.cleanup_button.setEnabled(True)
 
-        # Enable 3D features
-        self._enable_3d_features(True)
-
-        self.plotter.reset_camera()
+        if hasattr(self, "plotter") and hasattr(self.plotter, "reset_camera"):
+            self.plotter.reset_camera()
 
         # Setup 3D hover
-        self.setup_3d_hover()
+        if hasattr(self, "setup_3d_hover"):
+            self.setup_3d_hover()
 
         # Update menu items
-        self.update_atom_id_menu_text()
-        self.update_atom_id_menu_state()
+        if hasattr(self, "update_atom_id_menu_text"):
+            self.update_atom_id_menu_text()
+        if hasattr(self, "update_atom_id_menu_state"):
+            self.update_atom_id_menu_state()
 
     def create_atom_id_mapping(self):
         """Map 2D atom IDs to 3D RDKit indices."""
@@ -779,15 +802,11 @@ class MainWindowCompute(object):
             return
 
         # Cleanup plotter and 'Calculating...' text
-        try:
-            if self.current_mol is None:
+        if hasattr(self, "plotter"):
+            if self.current_mol is None and hasattr(self.plotter, "clear"):
                 self.plotter.clear()
-            else:
-                # Re-render if molecule exists
+            elif hasattr(self.plotter, "render"):
                 self.plotter.render()
-        except (AttributeError, RuntimeError, TypeError):
-            # Suppress non-critical error
-            pass
         # Remove 'Calculating...' text
         self._remove_calculating_text()
 
@@ -827,42 +846,4 @@ class MainWindowCompute(object):
         else:
             self.statusBar().showMessage(f"Error: {error_message}")
 
-        # Restore button UI
-        self.cleanup_button.setEnabled(True)
-        self._restore_button_ui()
-
-        # Enable 3D features if valid molecule exists
-        if self.current_mol is None:
-            if hasattr(self, "optimize_3d_button"):
-                self.optimize_3d_button.setEnabled(False)
-            if hasattr(self, "export_button"):
-                self.export_button.setEnabled(False)
-            # Disable 3D features if no molecule
-            self._enable_3d_features(False)
-            # Disable 3D edit actions
-            self._enable_3d_edit_actions(False)
-        else:
-            # We HAVE a molecule, ensure features are enabled
-            self._enable_3d_features(True)
-
-        # Handle menu item states
-        if self.current_mol is None:
-            if hasattr(self, "analysis_action"):
-                self.analysis_action.setEnabled(False)
-            if hasattr(self, "edit_3d_action"):
-                self.edit_3d_action.setEnabled(False)
-        else:
-            # Ensure they are enabled if we have a molecule
-            if hasattr(self, "analysis_action"):
-                self.analysis_action.setEnabled(True)
-            if hasattr(self, "edit_3d_action"):
-                self.edit_3d_action.setEnabled(True)
-
-        # Refresh UI
-        try:
-            self.plotter.render()
-        except (AttributeError, RuntimeError, TypeError):
-            # Suppress non-critical error
-            pass
-        # Return focus to 2D editor
-        self.view_2d.setFocus()
+        self._refresh_ui_state()

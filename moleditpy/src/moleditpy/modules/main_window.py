@@ -239,6 +239,10 @@ class MainWindow(QMainWindow):
         # --- MOVED TO main_window_compute.py ---
         return self.main_window_compute._restore_button_ui()
 
+    def _refresh_ui_state(self):
+        # --- MOVED TO main_window_compute.py ---
+        return self.main_window_compute._refresh_ui_state()
+
     def show_optimize_menu(self, pos):
         # --- MOVED TO main_window_compute.py ---
         return self.main_window_compute.show_optimize_menu(pos)
