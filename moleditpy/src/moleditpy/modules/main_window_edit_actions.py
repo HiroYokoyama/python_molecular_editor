@@ -389,7 +389,8 @@ class MainWindowEditActions(object):
 
         except (AttributeError, RuntimeError, ValueError) as e:
             print(f"Error during hydrogen removal: {e}")
-            with contextlib.suppress(Exception):
+            with contextlib.suppress(AttributeError, RuntimeError, TypeError):
+                # Suppress transient errors during UI status reporting.
                 self.statusBar().showMessage(f"Error removing hydrogen atoms: {e}")
 
     def add_hydrogen_atoms(self):
@@ -561,8 +562,8 @@ class MainWindowEditActions(object):
                 self.statusBar().showMessage(
                     f"Added {added_count} hydrogen atoms.", 2000
                 )
-                # Select newly added atoms
-                with contextlib.suppress(Exception):
+                with contextlib.suppress(AttributeError, RuntimeError, TypeError):
+                    # Suppress selection errors if the scene is being cleared or items are invalid.
                     self.scene.clearSelection()
                     for it in added_items:
                         it.setSelected(True)
@@ -855,10 +856,7 @@ class MainWindowEditActions(object):
                 except (AttributeError, RuntimeError, ValueError, TypeError):
                     return
 
-                try:
-                    atoms_snapshot = dict(self.data.atoms)
-                except (AttributeError, RuntimeError, ValueError, TypeError):
-                    atoms_snapshot = {}
+                atoms_snapshot = dict(self.data.atoms) if (hasattr(self, "data") and hasattr(self.data, "atoms")) else {}
                 is_deleted_func = sip_isdeleted_safe
 
                 items_to_update = []
@@ -873,14 +871,10 @@ class MainWindowEditActions(object):
                             if is_deleted_func and is_deleted_func(item):
                                 continue
 
-                        # If the item is no longer in a scene, skip updating it to avoid
+                        # Check if the item is no longer in a scene: skip updating it to avoid
                         # touching partially-deleted objects during scene teardown.
-                        try:
-                            sc = item.scene() if hasattr(item, "scene") else None
-                            if sc is None:
-                                continue
-                        except (AttributeError, RuntimeError, ValueError, TypeError):
-                            # Accessing scene() might fail for a damaged object; skip it
+                        sc = item.scene() if hasattr(item, "scene") else None
+                        if sc is None:
                             continue
 
                         # Desired new count (default to 0 if not computed)
@@ -897,21 +891,14 @@ class MainWindowEditActions(object):
 
                         # Only prepare a geometry change if the implicit H count
                         # changes (this may affect the item's bounding rect).
-                        try:
-                            need_geometry = current != new_count
-                            if need_geometry and hasattr(item, "prepareGeometryChange"):
-                                with contextlib.suppress(AttributeError, RuntimeError, TypeError):
-                                    item.prepareGeometryChange()
-                            with contextlib.suppress(AttributeError, RuntimeError, TypeError):
-                                item.implicit_h_count = new_count
-                            with contextlib.suppress(AttributeError, RuntimeError, TypeError):
-                                item.has_problem = bool(desired_prob)
-                            # Ensure the item is updated in the scene so paint() runs
-                            # when either geometry or problem-flag changed.
-                            items_to_update.append(item)
-                        except (AttributeError, RuntimeError, ValueError, TypeError):
-                            # Non-fatal: skip problematic items
-                            continue
+                        need_geometry = current != new_count
+                        if need_geometry and hasattr(item, "prepareGeometryChange"):
+                            item.prepareGeometryChange()
+                        item.implicit_h_count = new_count
+                        item.has_problem = bool(desired_prob)
+                        # Ensure the item is updated in the scene so paint() runs
+                        # when either geometry or problem-flag changed.
+                        items_to_update.append(item)
 
                     except (AttributeError, RuntimeError, ValueError, TypeError):
                         continue
@@ -927,7 +914,8 @@ class MainWindowEditActions(object):
                             continue
                         seen.add(oid)
                         if hasattr(it, "update"):
-                            with contextlib.suppress(Exception):
+                            with contextlib.suppress(AttributeError, RuntimeError, TypeError):
+                                # Suppress transient errors during item update.
                                 it.update()
                     except (AttributeError, RuntimeError, ValueError, TypeError):
                         # Ignore any unexpected errors when touching the item
@@ -1200,8 +1188,8 @@ class MainWindowEditActions(object):
             try:
                 if sip_isdeleted_safe(item):
                     continue
-            except Exception:
-                # Suppress non-critical error
+            except (AttributeError, RuntimeError, TypeError):
+                # Suppress non-critical error during bond position update iteration.
                 pass
                 sc = item.scene() if hasattr(item, "scene") else None
                 if sc is None:
@@ -1410,9 +1398,10 @@ class MainWindowEditActions(object):
         target = mol if mol is not None else getattr(self, "current_mol", None)
         if target is not None:
             # Remove RDKit property _xyz_skip_checks
-            with contextlib.suppress(Exception):
+            with contextlib.suppress(AttributeError, RuntimeError, TypeError):
+                # Suppress error if HasProp or ClearProp is unavailable.
                 if hasattr(target, "HasProp") and target.HasProp("_xyz_skip_checks"):
-                    with contextlib.suppress(Exception):
+                    with contextlib.suppress(AttributeError, RuntimeError, TypeError):
                         target.ClearProp("_xyz_skip_checks")
             # Remove attribute-style markers
             target.__dict__.pop("_xyz_skip_checks", None)
@@ -1423,7 +1412,8 @@ class MainWindowEditActions(object):
 
         # Enable Optimize 3D unless sanitization failed
         if hasattr(self, "optimize_3d_button"):
-            with contextlib.suppress(Exception):
+            with contextlib.suppress(AttributeError, RuntimeError, TypeError):
+                # Suppress error if optimize_3d_button is partially destroyed.
                 self.optimize_3d_button.setEnabled(
                     not getattr(self, "chem_check_failed", False)
                 )

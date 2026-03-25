@@ -140,34 +140,31 @@ class MainWindowCompute(object):
         self.settings_dirty = True
         state_str = "Enabled" if checked else "Disabled"
         self.statusBar().showMessage(f"Intermolecular interaction for RDKit: {state_str}")
-
+    
     def show_convert_menu(self, pos):  
         """Temporary 3D conversion menu (right-click). Not persisted."""
         # If button is disabled (during calculation), do not show menu
         if not self.convert_button.isEnabled():
-            return
+            return            
+        
+        menu = QMenu(self)
+        conv_options = [
+            ("RDKit -> Open Babel -> Direct (fallback)", "fallback"),
+            ("RDKit only", "rdkit"),
+            ("Open Babel only", "obabel"),
+            ("Direct (use 2D coords + add H)", "direct"),
+        ]
+        for label, key in conv_options:
+            a = QAction(label, self)
+            if key == "obabel" and not OBABEL_AVAILABLE:
+                a.setEnabled(False)
+            a.triggered.connect(
+                lambda checked=False, k=key: self._trigger_conversion_with_temp_mode(k)
+            )
+            menu.addAction(a)
 
-        # Suppress potential errors if the widget is already destroyed during menu creation
-        with contextlib.suppress(AttributeError, RuntimeError, TypeError):
-            menu = QMenu(self)
-            conv_options = [
-                ("RDKit -> Open Babel -> Direct (fallback)", "fallback"),
-                ("RDKit only", "rdkit"),
-                ("Open Babel only", "obabel"),
-                ("Direct (use 2D coords + add H)", "direct"),
-            ]
-            for label, key in conv_options:
-                a = QAction(label, self)
-                # If Open Babel is not available, disable obabel-only mode
-                if key == "obabel" and not OBABEL_AVAILABLE:
-                    a.setEnabled(False)
-                a.triggered.connect(
-                    lambda checked=False,
-                    k=key: self._trigger_conversion_with_temp_mode(k)
-                )
-                menu.addAction(a)
-
-            # Show menu at button position
+        # Show menu at button position
+        if hasattr(self, "convert_button") and _sip_isdeleted and not _sip_isdeleted(self.convert_button):
             menu.exec_(self.convert_button.mapToGlobal(pos))
 
     def _trigger_conversion_with_temp_mode(self, mode_key):  
@@ -178,45 +175,50 @@ class MainWindowCompute(object):
 
     def show_optimize_menu(self, pos):  
         """Temporary 3D optimization menu (right-click). Not persisted."""
-        with contextlib.suppress(Exception):
-            menu = QMenu(self)
-            opt_list = [
-                ("MMFF94s (RDKit)", "MMFF_RDKIT"),
-                ("MMFF94 (RDKit)", "MMFF94_RDKIT"),
-                ("UFF (RDKit)", "UFF_RDKIT"),
-                ("MMFF94s (Open Babel)", "MMFF94s_OBABEL"),
-                ("MMFF94 (Open Babel)", "MMFF94_OBABEL"),
-                ("UFF (Open Babel)", "UFF_OBABEL"),
-                ("GAFF (Open Babel)", "GAFF_OBABEL"),
-                ("Ghemical (Open Babel)", "GHEMICAL_OBABEL"),
-            ]
-            for label, key in opt_list:
-                a = QAction(label, self)
-                # If opt3d_actions exist, reflect their enabled state
-                if hasattr(self, "opt3d_actions") and key in self.opt3d_actions:
-                    a.setEnabled(self.opt3d_actions[key].isEnabled())
-                a.triggered.connect(
-                    lambda checked=False,
-                    k=key: self._trigger_optimize_with_temp_method(k)
-                )
-                menu.addAction(a)
+        # If button is disabled (during calculation), do not show menu
+        if not self.optimize_3d_button.isEnabled():
+            return
 
-            # Add Plugin Optimization Methods
-            if (
-                getattr(self, "plugin_manager", None)
-                and self.plugin_manager.optimization_methods
-            ):
-                methods = self.plugin_manager.optimization_methods
-                if methods:
-                    menu.addSeparator()
-                    for method_name, info in methods.items():
-                        a = QAction(info.get("label", method_name), self)
-                        a.triggered.connect(
-                            lambda checked=False,
-                            k=method_name: self._trigger_optimize_with_temp_method(k)
-                        )
-                        menu.addAction(a)
+        menu = QMenu(self)
+        opt_list = [
+            ("MMFF94s (RDKit)", "MMFF_RDKIT"),
+            ("MMFF94 (RDKit)", "MMFF94_RDKIT"),
+            ("UFF (RDKit)", "UFF_RDKIT"),
+            ("MMFF94s (Open Babel)", "MMFF94s_OBABEL"),
+            ("MMFF94 (Open Babel)", "MMFF94_OBABEL"),
+            ("UFF (Open Babel)", "UFF_OBABEL"),
+            ("GAFF (Open Babel)", "GAFF_OBABEL"),
+            ("Ghemical (Open Babel)", "GHEMICAL_OBABEL"),
+        ]
+        for label, key in opt_list:
+            a = QAction(label, self)
+            # If opt3d_actions exist, reflect their enabled state
+            if hasattr(self, "opt3d_actions") and key in self.opt3d_actions:
+                a.setEnabled(self.opt3d_actions[key].isEnabled())
+            a.triggered.connect(
+                lambda checked=False,
+                k=key: self._trigger_optimize_with_temp_method(k)
+            )
+            menu.addAction(a)
 
+        # Add Plugin Optimization Methods
+        if (
+            getattr(self, "plugin_manager", None)
+            and getattr(self.plugin_manager, "optimization_methods", None)
+        ):
+            methods = self.plugin_manager.optimization_methods
+            if methods:
+                menu.addSeparator()
+                for method_name, info in methods.items():
+                    a = QAction(info.get("label", method_name), self)
+                    a.triggered.connect(
+                        lambda checked=False,
+                        k=method_name: self._trigger_optimize_with_temp_method(k)
+                    )
+                    menu.addAction(a)
+
+        # Show menu at button position
+        if hasattr(self, "optimize_3d_button") and _sip_isdeleted and not _sip_isdeleted(self.optimize_3d_button):
             menu.exec_(self.optimize_3d_button.mapToGlobal(pos))
 
     def _trigger_optimize_with_temp_method(self, method_key):  
@@ -455,8 +457,9 @@ class MainWindowCompute(object):
                 10, lambda w=worker, m=mol_block, o=options: w.start_work.emit(m, o)
             )
             self._active_calc_threads.append(thread)
-        except Exception as e:
-            # Fall back: if thread/worker creation failed, create a local worker and start it
+        except (RuntimeError, TypeError, AttributeError) as e:
+            # Fall back: if thread/worker creation failed, create a local worker and start it.
+            # We catch specific creation errors here.
             self.on_calculation_error(str(e))
 
         # Save undo state
@@ -651,7 +654,8 @@ class MainWindowCompute(object):
                     QTimer.singleShot(10, lambda w=worker, m=mol_block, o=options: w.start_work.emit(m, o))
                     
                     self._active_calc_threads.append(thread)
-                except Exception as e:
+                except (RuntimeError, TypeError, AttributeError) as e:
+                    # Catch specific worker/thread creation failures.
                     self.on_calculation_error(str(e))
                 
                 return

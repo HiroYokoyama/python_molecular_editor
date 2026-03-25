@@ -107,13 +107,10 @@ class MainWindowViewLoaders(object):
             if hasattr(self, "update_window_title"):
                 self.update_window_title()
 
-        except (FileNotFoundError, ValueError) as e:
+        except (FileNotFoundError, ValueError, RuntimeError, TypeError, AttributeError) as e:
+            # File loading or coordinate validation error reported to user via status bar.
+            # We catch AttributeError/TypeError here to handle malformed RDKit molecule objects gracefully.
             self.statusBar().showMessage(f"Load failed: {e}")
-            if hasattr(self, "restore_ui_for_editing"):
-                self.restore_ui_for_editing()
-        except Exception as e:
-            self.statusBar().showMessage(f"Error processing XYZ file: {e}")
-            pass  # Suppress detailed traceback for XYZ processing error
             if hasattr(self, "restore_ui_for_editing"):
                 self.restore_ui_for_editing()
 
@@ -156,10 +153,11 @@ class MainWindowViewLoaders(object):
                 f.write("\n".join(lines))
             self.statusBar().showMessage(f"3D data saved to {file_path}")
 
-        except Exception as e:
+        except (IOError, OSError, RuntimeError, ValueError, TypeError) as e:
+            # Catch I/O errors and RDKit serialization failures (RuntimeError/ValueError).
+            # We also catch TypeError in case of unexpected nil objects during teardown or property access.
             msg = f"Error saving 3D MOL: {str(e)}"
             self.statusBar().showMessage(msg)
-            pass  # Suppress detailed traceback for 3D MOL save error
 
 
     def load_mol_file_for_3d_viewing(self, file_path=None):
@@ -245,6 +243,7 @@ class MainWindowViewLoaders(object):
             if hasattr(self, "update_window_title"):
                 self.update_window_title()
 
-        except Exception as e:
+        except (RuntimeError, ValueError, TypeError, ImportError, UnicodeDecodeError) as e:
+            # Catch RDKit parsing errors (RuntimeError), UI data mismatches (ValueError/TypeError),
+            # and file encoding issues during manual fix_mol_block processing.
             self.statusBar().showMessage(f"Error processing MOL/SDF file: {e}")
-            pass  # Suppress detailed traceback for MOL/SDF processing error

@@ -157,8 +157,9 @@ class MainWindowMolecularParsers(object):
             self.update_window_title()
             QTimer.singleShot(0, self.fit_to_view)
 
-        except Exception as e:
-            # File loading error reported to user via status bar
+        except (RuntimeError, ValueError, TypeError, ImportError, UnicodeDecodeError) as e:
+            # File loading or coordinate validation error reported to user via status bar.
+            # We catch RuntimeError/ValueError for RDKit parsing and UnicodeDecodeError for encoding issues.
             self.statusBar().showMessage(f"Error loading file: {e}")
 
     def _set_mol_prop(self, mol, prop_name, value):
@@ -247,7 +248,8 @@ class MainWindowMolecularParsers(object):
                 symbol = parts[0].capitalize()
                 try:
                     Chem.Atom(symbol)
-                except Exception:
+                except (RuntimeError, ValueError):
+                    # Catch RDKit atom creation failures due to unrecognized symbols.
                     if self.settings.get("skip_chemistry_checks", False): symbol = "C"
                     else: raise ValueError(f"Unrecognized element symbol: {parts[0]}")
                 atoms_data.append((symbol, float(parts[1]), float(parts[2]), float(parts[3])))
@@ -280,7 +282,8 @@ class MainWindowMolecularParsers(object):
                             raise ValueError("Sanitization failed")
                         _set_mol_prop_safe(candidate, "_xyz_charge", charge_val)
                         return candidate
-                    except Exception as e:
+                    except (RuntimeError, ValueError, TypeError) as e:
+                        # Catch RDKit bond determination failures (e.g., valence overflow).
                         used_rd_determine = False
                         raise e
                 else:
@@ -308,7 +311,8 @@ class MainWindowMolecularParsers(object):
                     try:
                         final_mol = _process(charge_val, use_rd_determine=True)
                         break
-                    except Exception as e:
+                    except (RuntimeError, ValueError, TypeError) as e:
+                        # Catch chemistry failures and prompt the user to adjust charge or skip.
                         self.statusBar().showMessage(
                             f"Chemistry failed for charge {charge_val}: {e}. Try a different charge or skip."
                         )
@@ -322,8 +326,9 @@ class MainWindowMolecularParsers(object):
                     )
             return final_mol
 
-        except Exception as e:
-            # XYZ parsing error reported to user via status bar
+        except (RuntimeError, TypeError, ValueError, ImportError, UnicodeDecodeError) as e:
+            # XYZ parsing error reported to user via status bar.
+            # We catch RuntimeError/ValueError for parsing and UnicodeDecodeError for file encoding.
             self.statusBar().showMessage(f"Error parsing XYZ file: {e}")
             return None
 
@@ -537,7 +542,8 @@ class MainWindowMolecularParsers(object):
             with open(file_path, "w", encoding="utf-8") as f:
                 f.write("\n".join(xyz_lines) + "\n")
             self.statusBar().showMessage(f"Successfully saved to {file_path}")
-        except Exception as e:
+        except (IOError, OSError, RuntimeError, ValueError, TypeError) as e:
+            # Catch I/O errors and RDKit serialization failures (RuntimeError/ValueError).
             self.statusBar().showMessage(f"Error saving file: {e}")
 
     def fix_mol_counts_line(self, line: str) -> str:
