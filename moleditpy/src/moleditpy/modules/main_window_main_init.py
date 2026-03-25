@@ -16,6 +16,7 @@ Functional class separated from main_window.py
 """
 
 
+import contextlib
 import json
 import math
 import os
@@ -95,60 +96,46 @@ def detect_system_dark_mode():
     return None
 
 
-def detect_system_theme():  
+def detect_system_theme():
     """Return the OS's preferred theme setting as 'dark', 'light', or None.
 
     This is a best-effort, cross-platform check.
     """
-    try:
+    with contextlib.suppress(Exception):
         # Windows: AppsUseLightTheme (0 = dark, 1 = light)
         if platform.system() == "Windows" and winreg is not None:
-            try:
-                with winreg.OpenKey(
-                    winreg.HKEY_CURRENT_USER,
-                    r"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize",
-                ) as k:
-                    val, _ = winreg.QueryValueEx(k, "AppsUseLightTheme")
-                    return "dark" if int(val) == 0 else "light"
-            except (AttributeError, RuntimeError, ValueError, TypeError):  
-                import traceback
-                traceback.print_exc()
-        # macOS: 'defaults read -g AppleInterfaceStyle'
+            with winreg.OpenKey(
+                winreg.HKEY_CURRENT_USER,
+                r"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize",
+            ) as k:
+                val, _ = winreg.QueryValueEx(k, "AppsUseLightTheme")
+                return "dark" if int(val) == 0 else "light"
+
+        # macOS: 'AppleInterfaceStyle' detection (basic fallback)
         if platform.system() == "Darwin":
             return "light"
 
-
         # Linux / GNOME: try color-scheme gsetting; fallback to gtk-theme detection
         if platform.system() == "Linux":
-            try:
-                p = subprocess.run(
-                    ["gsettings", "get", "org.gnome.desktop.interface", "color-scheme"],
-                    capture_output=True,
-                    text=True,
-                )
-                if p.returncode == 0:
-                    out = p.stdout.strip().strip("'\n ")
-                    if "dark" in out.lower():
-                        return "dark"
-                    if "light" in out.lower():
-                        return "light"
-            except (AttributeError, RuntimeError, ValueError, TypeError):  
-                import traceback
-                traceback.print_exc()
-            try:
-                p = subprocess.run(
-                    ["gsettings", "get", "org.gnome.desktop.interface", "gtk-theme"],
-                    capture_output=True,
-                    text=True,
-                )
-                if p.returncode == 0 and "-dark" in p.stdout.lower():
+            p = subprocess.run(
+                ["gsettings", "get", "org.gnome.desktop.interface", "color-scheme"],
+                capture_output=True,
+                text=True,
+            )
+            if p.returncode == 0:
+                out = p.stdout.strip().strip("'\n ")
+                if "dark" in out.lower():
                     return "dark"
-            except (AttributeError, RuntimeError, ValueError, TypeError):  
-                import traceback
-                traceback.print_exc()
-    except (AttributeError, RuntimeError, ValueError, TypeError):  
-        import traceback
-        traceback.print_exc()
+                if "light" in out.lower():
+                    return "light"
+
+            p = subprocess.run(
+                ["gsettings", "get", "org.gnome.desktop.interface", "gtk-theme"],
+                capture_output=True,
+                text=True,
+            )
+            if p.returncode == 0 and "-dark" in p.stdout.lower():
+                return "dark"
 
     return None
 
