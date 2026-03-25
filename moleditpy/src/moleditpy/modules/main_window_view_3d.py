@@ -138,11 +138,8 @@ class MainWindowView3d(object):
         # Pylint: access-member-before-definition fix
         old_axes_actor = getattr(self, "axes_actor", None)
         if old_axes_actor is not None:
-            try:
+            with contextlib.suppress(AttributeError, RuntimeError, TypeError):
                 self.plotter.remove_actor(old_axes_actor)
-            except (AttributeError, RuntimeError, TypeError):  
-                pass  # Suppress axes actor removal errors
-
             self.axes_actor = None
 
         self.plotter.clear()
@@ -173,15 +170,12 @@ class MainWindowView3d(object):
         mol_to_draw = mol
         if self.settings.get("display_kekule_3d", False):
             try:
-                # Operate on a copy to avoid mutating the original molecule
                 mol_to_draw = Chem.Mol(mol)
                 Chem.Kekulize(mol_to_draw, clearAromaticFlags=True)
             except (AttributeError, RuntimeError, TypeError, ValueError) as e:
                 # Kekulize failed; keep original and warn user
-                try:
+                with contextlib.suppress(AttributeError, RuntimeError, TypeError):
                     self.statusBar().showMessage(f"Kekulize failed: {e}")
-                except (AttributeError, RuntimeError, TypeError):  
-                    pass  # Suppress status bar update errors
                 mol_to_draw = mol
 
         # Use the original molecule's conformer (positions) to ensure coordinates
