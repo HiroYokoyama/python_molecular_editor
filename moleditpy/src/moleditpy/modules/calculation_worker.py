@@ -186,7 +186,7 @@ def _iterative_optimize(mol, method, check_halted_cb, safe_status_cb, max_iters=
             if res == 0: break
         return True
     except WorkerHaltError: raise
-    except Exception as e:
+    except (RuntimeError, ValueError, TypeError) as e:
         safe_status_cb(f"Iterative optimization ({method}) error: {e}"); return False
 
 
@@ -213,7 +213,7 @@ def _iterative_optimize_obabel(mol, method, check_halted_cb, safe_status_cb, max
             conf.SetAtomPosition(i, [at.GetX(), at.GetY(), at.GetZ()])
         return True
     except WorkerHaltError: raise
-    except Exception as e:
+    except (RuntimeError, ValueError, TypeError, ImportError) as e:
         safe_status_cb(f"Iterative optimization ({method}) error (OpenBabel): {e}"); return False
 
 
@@ -530,7 +530,7 @@ class CalculationWorker(QObject):
                 if success: return
                 if mode == "rdkit":
                     opt_method = options.get("optimization_method", "MMFF94s_RDKIT")
-                    raise RuntimeError(f"Optimization with {opt_method} failed.")
+                    raise RuntimeError(f"RDKit 3D conversion failed (Optimization with {opt_method} failed).")
 
             # 6. Open Babel Workflow (Fallback)
             if mode in ("fallback", "obabel"):
@@ -543,7 +543,8 @@ class CalculationWorker(QObject):
                 self._run_direct_workflow(mol_block, mol, options, helpers)
 
         except WorkerHaltError: _safe_error("Halted")
-        except Exception as e: _safe_error(str(e))
+        except (RuntimeError, ValueError, TypeError, AttributeError, ImportError, OSError, UnicodeDecodeError) as e: 
+            _safe_error(str(e))
 
     def _prepare_molecule_for_calc(self, mol_block, helpers):
         """Parse MOL block and extract explicit stereochemistry info."""

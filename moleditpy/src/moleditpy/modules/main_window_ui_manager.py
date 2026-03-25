@@ -169,7 +169,7 @@ class MainWindowUiManager(object):
             if modified and hasattr(self, "save_settings"):
                 self.save_settings()
                 self.settings_dirty = False
-        except (AttributeError, RuntimeError, TypeError, ValueError):
+        except (AttributeError, RuntimeError, TypeError, ValueError, OSError):
             # Suppress non-critical settings persistence errors during application shutdown
             pass
 

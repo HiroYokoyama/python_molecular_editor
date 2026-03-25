@@ -163,7 +163,7 @@ def test_calculation_worker_rdkit_embedding_fail_fallback(worker):
         patch("moleditpy.modules.calculation_worker.AllChem.EmbedMolecule", return_value=-1),
         patch(
             "moleditpy.modules.calculation_worker.AllChem.GetMoleculeBoundsMatrix",
-            side_effect=Exception("Bounds fail"),
+            side_effect=RuntimeError("Bounds fail"),
         ),
     ):
         worker.run_calculation(mol_block, {"conversion_mode": "rdkit"})

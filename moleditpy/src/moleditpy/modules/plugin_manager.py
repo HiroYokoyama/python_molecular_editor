@@ -456,7 +456,7 @@ class PluginManager:
                             if isinstance(node.value, ast.Constant):  # Py3.8+
                                 val = node.value.value
                             elif hasattr(ast, "Str") and isinstance(
-                                node.value, ast.Str
+                                node.value, getattr(ast, "Str", type(None))
                             ):  # Py3.7 and below
                                 val = node.value.s
                             elif isinstance(node.value, ast.Tuple):
@@ -467,9 +467,7 @@ class PluginManager:
                                     for elt in node.value.elts:
                                         if isinstance(elt, ast.Constant):
                                             elts.append(elt.value)
-                                        elif hasattr(ast, "Num") and isinstance(
-                                            elt, ast.Num
-                                        ):
+                                        elif hasattr(ast, "Num") and isinstance(elt, getattr(ast, "Num", type(None))):
                                             elts.append(elt.n)
                                     val = ".".join(map(str, elts))
                                 except (AttributeError, RuntimeError, ValueError, TypeError):
@@ -505,7 +503,7 @@ class PluginManager:
                         node.value.value, str
                     ):
                         val = node.value.value
-                    elif hasattr(ast, "Str") and isinstance(node.value, ast.Str):
+                    elif hasattr(ast, "Str") and isinstance(node.value, getattr(ast, "Str", type(None))):
                         val = node.value.s
 
                     if val and not info["description"]:
