@@ -868,7 +868,8 @@ class MainWindowEditActions(object):
                         if not item:
                             continue
 
-                        with contextlib.suppress(Exception):
+                        # Suppress potential errors if the item is already destroyed by SIP during iteration
+                        with contextlib.suppress(AttributeError, RuntimeError, TypeError):
                             if is_deleted_func and is_deleted_func(item):
                                 continue
 
@@ -899,11 +900,11 @@ class MainWindowEditActions(object):
                         try:
                             need_geometry = current != new_count
                             if need_geometry and hasattr(item, "prepareGeometryChange"):
-                                with contextlib.suppress(Exception):
+                                with contextlib.suppress(AttributeError, RuntimeError, TypeError):
                                     item.prepareGeometryChange()
-                            with contextlib.suppress(Exception):
+                            with contextlib.suppress(AttributeError, RuntimeError, TypeError):
                                 item.implicit_h_count = new_count
-                            with contextlib.suppress(Exception):
+                            with contextlib.suppress(AttributeError, RuntimeError, TypeError):
                                 item.has_problem = bool(desired_prob)
                             # Ensure the item is updated in the scene so paint() runs
                             # when either geometry or problem-flag changed.
@@ -1020,7 +1021,8 @@ class MainWindowEditActions(object):
                 sc = item.scene() if hasattr(item, "scene") else None
                 if sc is None:
                     continue
-                with contextlib.suppress(Exception):
+                # Suppress potential errors if the item is already destroyed during coordinate adjustment
+                with contextlib.suppress(AttributeError, RuntimeError, TypeError):
                     item.update_position()
 
             # Run overlap resolution
@@ -1204,7 +1206,8 @@ class MainWindowEditActions(object):
                 sc = item.scene() if hasattr(item, "scene") else None
                 if sc is None:
                     continue
-                with contextlib.suppress(Exception):
+                # Suppress potential errors if the item is already destroyed during overlap resolution
+                with contextlib.suppress(AttributeError, RuntimeError, TypeError):
                     item.update_position()
 
         # Update labels after resolution
@@ -1383,13 +1386,14 @@ class MainWindowEditActions(object):
             self.chem_check_tried = True
             self.chem_check_failed = True
             desc = f" ({source_desc})" if source_desc else ""
-            with contextlib.suppress(Exception):
+            # Suppress potential status bar or button state errors if the window is being closed or destroyed
+            with contextlib.suppress(AttributeError, RuntimeError, TypeError):
                 self.statusBar().showMessage(
                     f"Molecule sanitization failed{desc}; file may be malformed."
                 )
             # Disable 3D optimization UI to prevent running on invalid molecules
             if hasattr(self, "optimize_3d_button"):
-                with contextlib.suppress(Exception):
+                with contextlib.suppress(AttributeError, RuntimeError, TypeError):
                     self.optimize_3d_button.setEnabled(False)
 
     def _clear_xyz_flags(self, mol=None):

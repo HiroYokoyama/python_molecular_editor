@@ -29,7 +29,8 @@ except ImportError:
 
 # Only import pybel on demand
 if OBABEL_AVAILABLE: 
-    with contextlib.suppress(Exception):
+    # Suppress potential import errors if Open Babel is not correctly installed or configured
+    with contextlib.suppress(ImportError, OSError, RuntimeError):
         import os, glob, openbabel
         from openbabel import pybel
         
@@ -385,7 +386,8 @@ def _perform_direct_conversion(mol_block, mol, options, _check_halted, _safe_sta
         opt_func = _iterative_optimize_obabel if backend == "OBABEL" else _iterative_optimize
         if not opt_func(mol, method_key, _check_halted, _safe_status, options=options if backend == "RDKIT" else None):
             _safe_status(f"Warning: Optimization failed. Using unoptimized structure.")
-            with contextlib.suppress(Exception): mol.ClearProp("_pme_optimization_method")
+            # Best-effort metadata cleanup
+            with contextlib.suppress(RuntimeError, ValueError): mol.ClearProp("_pme_optimization_method")
 
     if _check_halted(): raise WorkerHaltError("Halted")
     return mol
@@ -467,7 +469,8 @@ class CalculationWorker(QObject):
 
         def _safe_status(msg): 
             if _check_halted(): raise WorkerHaltError("Halted")
-            with contextlib.suppress(Exception): self.status_update.emit(msg)
+            # Suppress potential errors if the UI thread or receiver is already destroyed
+            with contextlib.suppress(AttributeError, RuntimeError): self.status_update.emit(msg)
 
         def _safe_finished(payload):  
             if _check_halted(): raise WorkerHaltError("Halted")
@@ -529,7 +532,8 @@ class CalculationWorker(QObject):
 
             conf_id = -1
             if mode in ("fallback", "rdkit"):
-                with contextlib.suppress(Exception): conf_id = AllChem.EmbedMolecule(mol, params)
+                # Suppress potential RDKit-specific crashes during embedding for retry logic
+                with contextlib.suppress(RuntimeError, ValueError): conf_id = AllChem.EmbedMolecule(mol, params)
                 if conf_id == -1 and mode in ("fallback", "rdkit"):
                     with contextlib.suppress(Exception):
                         bm = AllChem.GetMoleculeBoundsMatrix(mol)

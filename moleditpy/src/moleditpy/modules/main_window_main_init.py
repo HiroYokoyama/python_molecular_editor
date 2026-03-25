@@ -101,7 +101,8 @@ def detect_system_theme():
 
     This is a best-effort, cross-platform check.
     """
-    with contextlib.suppress(Exception):
+    # Suppress potential errors from OS-specific theme detection (registry/subprocess)
+    with contextlib.suppress(AttributeError, RuntimeError, OSError, FileNotFoundError):
         # Windows: AppsUseLightTheme (0 = dark, 1 = light)
         if platform.system() == "Windows" and winreg is not None:
             with winreg.OpenKey(
@@ -1631,7 +1632,8 @@ class MainWindowMainInit(object):
                 # If ColorSettingsDialog is open, refresh its UI to reflect the reset
                 # If ColorSettingsDialog is open, refresh its UI to reflect the reset
                 for w in QApplication.topLevelWidgets():
-                    with contextlib.suppress(Exception):
+                    # Suppress errors if a top-level widget is destroyed or has inconsistent state during reset
+                    with contextlib.suppress(AttributeError, RuntimeError, TypeError):
                         if isinstance(w, ColorSettingsDialog):
                             w.refresh_ui()
                 # Ensure global CPK mapping is rebuilt from defaults and UI is updated
@@ -1651,12 +1653,13 @@ class MainWindowMainInit(object):
                             # uncheck all then check the saved one
                             for act in self.opt3d_actions.values():
                                 act.setChecked(False)
-                            with contextlib.suppress(Exception):
+                            # Suppress errors if menu actions are not fully initialized or already destroyed
+                            with contextlib.suppress(AttributeError, RuntimeError, TypeError):
                                 self.opt3d_actions[key].setChecked(True)
                     # update conversion mode
                     conv_mode = self.settings.get("3d_conversion_mode", "fallback")
                     if hasattr(self, "conv_actions") and conv_mode in self.conv_actions:
-                        with contextlib.suppress(Exception):
+                        with contextlib.suppress(AttributeError, RuntimeError, TypeError):
                             self.conv_actions[conv_mode].setChecked(True)
                     
                     # update intermolecular rdkit setting
@@ -1689,20 +1692,20 @@ class MainWindowMainInit(object):
                     pass  # Suppress non-critical UI/menu/settings sync errors
                 if hasattr(self, "scene") and self.scene:
                     for it in list(self.scene.items()):
-                        with contextlib.suppress(Exception):
+                        # Best-effort update of scene item styles; suppress if item is already partially destroyed
+                        with contextlib.suppress(AttributeError, RuntimeError, TypeError):
                             if hasattr(it, "update_style"):
                                 it.update_style()
                     
-                    with contextlib.suppress(Exception):
-                        # Force a full scene update and viewport repaint for all views
+                    # Best-effort viewport refresh; suppress if views are already closed
+                    with contextlib.suppress(AttributeError, RuntimeError, TypeError):
                         self.scene.update()
                         for v in list(self.scene.views()):
-                            with contextlib.suppress(Exception):
+                            with contextlib.suppress(AttributeError, RuntimeError, TypeError):
                                 v.viewport().update()
-                # Also refresh any open SettingsDialog instances so their UI matches
-                # Also refresh any open SettingsDialog instances so their UI matches
+                # Refresh any open SettingsDialog instances; suppress if they are closed during reset
                 for w in QApplication.topLevelWidgets():
-                    with contextlib.suppress(Exception):
+                    with contextlib.suppress(AttributeError, RuntimeError, TypeError):
                         if isinstance(w, SettingsDialog):
                             w.update_ui_from_settings(self.settings)
             except (AttributeError, RuntimeError, ValueError) as e:

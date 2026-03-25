@@ -63,7 +63,7 @@ class MoleculeScene(QGraphicsScene):
                 try:
                     self.removeItem(item)
                 except (RuntimeError, ValueError, TypeError):
-                    # Best-effort: ignore removal errors during teardown
+                    # Best-effort: ignore removal errors during teardown if underlying C++ object is already gone
                     pass
         self.template_context = {}
         if hasattr(self, "template_preview"):
@@ -141,7 +141,7 @@ class MoleculeScene(QGraphicsScene):
             try:
                 app.aboutToQuit.connect(self.purge_deleted_items)
             except (AttributeError, RuntimeError, ValueError, TypeError):
-                # Non-fatal during setup
+                # Non-fatal during setup; app instance may be invalid or signal already connected
                 pass
 
     def clear_all_problem_flags(self):
@@ -168,7 +168,7 @@ class MoleculeScene(QGraphicsScene):
                 try:
                     self.initial_positions_in_event[item] = item.pos()
                 except RuntimeError:
-                    # Skip if the object has been deleted
+                    # Skip if the object has been deleted (common in rapid UI updates)
                     continue
 
         if not self.window.is_2d_editable:
@@ -188,6 +188,7 @@ class MoleculeScene(QGraphicsScene):
                     if isinstance(it, (AtomItem, BondItem))
                 ]
             except (AttributeError, RuntimeError, ValueError, TypeError):
+                # Fallback to empty selection if the scene state is inconsistent during event processing
                 selected_items = []
 
             if (

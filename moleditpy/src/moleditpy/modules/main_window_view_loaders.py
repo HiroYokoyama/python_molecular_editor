@@ -67,14 +67,12 @@ class MainWindowViewLoaders(object):
 
             # Check skip flag
             skip_flag = False
-            try:
-                # Try RDKit property first, then attribute fallback
+            # Suppress potential errors if the coordinate skip flag is missing or RDKit property system fails
+            with contextlib.suppress(AttributeError, KeyError, RuntimeError, TypeError):
                 if mol.HasProp("_xyz_skip_checks"):
                     skip_flag = bool(mol.GetIntProp("_xyz_skip_checks"))
                 else:
                     skip_flag = bool(getattr(mol, "_xyz_skip_checks", False))
-            except (AttributeError, KeyError, RuntimeError, TypeError):
-                skip_flag = False
 
             # Update optimization state
             self.is_xyz_derived = skip_flag or (mol.GetNumBonds() == 0)
@@ -209,7 +207,7 @@ class MainWindowViewLoaders(object):
                     self.current_mol = mol
                     if hasattr(self, "push_undo_state"):
                         self.push_undo_state()
-                except Exception:
+                except (RuntimeError, ValueError, TypeError):
                     if not getattr(self, "settings", {}).get("skip_chemistry_checks", False):
                         self.statusBar().showMessage("Failed to generate 3D coordinates")
                         return

@@ -55,7 +55,8 @@ except ImportError:
 
 def _set_mol_prop_safe(mol, key, val):
     """Set an integer property on an RDKit mol, silently ignoring failures."""
-    with contextlib.suppress(Exception):
+    # Suppress potential RDKit-specific crashes when setting properties on invalid/malformed atoms
+    with contextlib.suppress(RuntimeError, TypeError, ValueError):
         mol.SetIntProp(key, int(val))
 
 
@@ -422,7 +423,8 @@ class MainWindowMolecularParsers(object):
                         if (symbol_i == "H" and mol.GetAtomWithIdx(i).GetDegree() >= 1) or \
                            (symbol_j == "H" and mol.GetAtomWithIdx(j).GetDegree() >= 1):
                             continue
-                        with contextlib.suppress(Exception):
+                        # Best-effort: ignore bond adding errors for invalid distances
+                        with contextlib.suppress(RuntimeError, ValueError, TypeError):
                             mol.AddBond(i, j, Chem.BondType.SINGLE)
                             bonds_added.append((i, j, distance))
 
@@ -518,7 +520,8 @@ class MainWindowMolecularParsers(object):
             if hasattr(self.current_mol, "HasProp") and self.current_mol.HasProp("_xyz_charge"):
                 charge = self.current_mol.GetIntProp("_xyz_charge")
             else:
-                with contextlib.suppress(Exception):
+                # Suppress potential errors during formal charge calculation for unvalidated RDKit mools
+                with contextlib.suppress(AttributeError, RuntimeError, TypeError):
                     charge = Chem.GetFormalCharge(self.current_mol)
 
             multiplicity = 1

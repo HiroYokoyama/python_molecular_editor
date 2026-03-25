@@ -69,7 +69,8 @@ class MainWindowCompute(object):
         """Safely remove the 'Calculating...' text actor from the plotter."""
         actor = getattr(self, "_calculating_text_actor", None)
         if actor and hasattr(self.plotter, "renderer") and self.plotter.renderer:
-            with contextlib.suppress(Exception):
+            # Suppress potential errors if the actor or renderer is already destroyed during teardown
+            with contextlib.suppress(AttributeError, RuntimeError, TypeError):
                 self.plotter.renderer.RemoveActor(actor)
         # Remove attribute safely without risk of AttributeError
         self.__dict__.pop("_calculating_text_actor", None)
@@ -146,7 +147,8 @@ class MainWindowCompute(object):
         if not self.convert_button.isEnabled():
             return
 
-        with contextlib.suppress(Exception):
+        # Suppress potential errors if the widget is already destroyed during menu creation
+        with contextlib.suppress(AttributeError, RuntimeError, TypeError):
             menu = QMenu(self)
             conv_options = [
                 ("RDKit -> Open Babel -> Direct (fallback)", "fallback"),
@@ -483,7 +485,8 @@ class MainWindowCompute(object):
 
     def check_chemistry_problems_fallback(self):
         """Fallback chemistry check when RDKit fails."""
-        with contextlib.suppress(Exception):
+        # Suppress non-critical errors during fallback chemistry check to avoid crashing the UI
+        with contextlib.suppress(AttributeError, RuntimeError, TypeError, ValueError):
             self.scene.clear_all_problem_flags()
             problem_atoms = []
 
@@ -718,7 +721,8 @@ class MainWindowCompute(object):
         # Set chiral centers from 2D stereo
         skip_chem_property = False
         if mol is not None and hasattr(mol, "HasProp") and mol.HasProp("_xyz_skip_checks"):
-            with contextlib.suppress(Exception):
+            # Suppress potential errors if the property is malformed 
+            with contextlib.suppress(RuntimeError, TypeError, ValueError, KeyError):
                 skip_chem_property = bool(mol.GetIntProp("_xyz_skip_checks"))
 
         if not skip_chem_property:
