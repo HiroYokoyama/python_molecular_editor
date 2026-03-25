@@ -555,7 +555,6 @@ class MainWindowView3d:
             return self.plotter.add_mesh(tube, scalars="colors", rgb=True, **mesh_props)
         return None
     def _draw_standard_3d_style_body(self, mol, style_override=None):
-
         current_style = (
             style_override
             if style_override
@@ -642,6 +641,48 @@ class MainWindowView3d:
                         # Suppress traceback
                         pass
 
+
+        # Define common mesh properties
+        mesh_props = dict(
+            smooth_shading=True,
+            specular=self.settings.get("specular", 0.2),
+            specular_power=self.settings.get("specular_power", 20),
+            lighting=is_lighting_enabled,
+        )
+
+        # --- Mod: Extract variables for delegates ---
+        self._add_3d_atom_glyphs(mol_to_draw, conf, sym, col, current_style, is_lighting_enabled, mesh_props)
+        self._add_3d_bond_cylinders(mol_to_draw, conf, col, current_style, mesh_props)
+        self._add_3d_aromatic_rings(mol_to_draw, current_style, mesh_props)
+        self._add_3d_labels(mol, mol_to_draw)
+        self.plotter.camera = camera_state
+
+        # Update projection mode and force render
+        settings = getattr(self, "settings", {})
+        proj_mode = settings.get("projection_mode", "Perspective")
+        if hasattr(self.plotter, "renderer") and hasattr(self.plotter.renderer, "GetActiveCamera"):
+            vcam = self.plotter.renderer.GetActiveCamera()
+            if vcam:
+                vcam.SetParallelProjection(proj_mode == "Orthographic")
+                try:
+                    # Force a render so the change is visible immediately
+                    self.plotter.render()
+                except (AttributeError, RuntimeError, TypeError):  
+                    # Suppress non-critical 3D rendering errors
+                    pass
+
+        # Re-display if AtomID or other atom info is shown
+        if (
+            hasattr(self, "atom_info_display_mode")
+            and self.atom_info_display_mode is not None
+        ):
+            self.show_all_atom_info()
+
+        # Update menu text and state depending on molecule type
+        self.update_atom_id_menu_text()
+        self.update_atom_id_menu_state()
+
+    def _add_3d_atom_glyphs(self, mol_to_draw, conf, sym, col, current_style, is_lighting_enabled, mesh_props):
         # Set atom radii based on style
         if current_style == "cpk":
             atom_scale = self.settings.get("cpk_atom_scale", 1.0)
@@ -675,13 +716,6 @@ class MainWindowView3d:
         self.glyph_source["colors"] = col
         self.glyph_source["radii"] = rad
 
-        # Define common mesh properties
-        mesh_props = dict(
-            smooth_shading=True,
-            specular=self.settings.get("specular", 0.2),
-            specular_power=self.settings.get("specular_power", 20),
-            lighting=is_lighting_enabled,
-        )
 
         # Do not draw atoms in wireframe mode
         if current_style != "wireframe":
@@ -853,6 +887,8 @@ class MainWindowView3d:
                 atom_rgb = [int(c * 255) for c in atom_color]
                 self._3d_color_map[f"atom_{i}"] = atom_rgb
 
+
+    def _add_3d_bond_cylinders(self, mol_to_draw, conf, col, current_style, mesh_props):
         # Draw bonds (ball_and_stick, wireframe, stick)
         if current_style in ["ball_and_stick", "wireframe", "stick"]:
             # Set bond radius and resolution based on style
@@ -1165,6 +1201,8 @@ class MainWindowView3d:
                 # Add to plotter
                 self.plotter.add_mesh(tube, scalars="colors", rgb=True, **mesh_props)
 
+
+    def _add_3d_aromatic_rings(self, mol_to_draw, current_style, mesh_props):
         # Aromatic ring circles display
         if self.settings.get("display_aromatic_circles_3d", False):
             try:
@@ -1312,6 +1350,8 @@ class MainWindowView3d:
             except (AttributeError, RuntimeError, TypeError, ValueError) as e:
                 logging.error(f"Error rendering aromatic circles: {e}")
 
+
+    def _add_3d_labels(self, mol, mol_to_draw):
         if getattr(self, "show_chiral_labels", False):
             try:
                 # Calculate chiral centers from 3D coordinates
@@ -1352,32 +1392,6 @@ class MainWindowView3d:
             except (AttributeError, RuntimeError, TypeError, ValueError) as e:
                 self.statusBar().showMessage(f"3D E/Z label drawing error: {e}")
 
-        self.plotter.camera = camera_state
-
-        # Update projection mode and force render
-        settings = getattr(self, "settings", {})
-        proj_mode = settings.get("projection_mode", "Perspective")
-        if hasattr(self.plotter, "renderer") and hasattr(self.plotter.renderer, "GetActiveCamera"):
-            vcam = self.plotter.renderer.GetActiveCamera()
-            if vcam:
-                vcam.SetParallelProjection(proj_mode == "Orthographic")
-                try:
-                    # Force a render so the change is visible immediately
-                    self.plotter.render()
-                except (AttributeError, RuntimeError, TypeError):  
-                    # Suppress non-critical 3D rendering errors
-                    pass
-
-        # Re-display if AtomID or other atom info is shown
-        if (
-            hasattr(self, "atom_info_display_mode")
-            and self.atom_info_display_mode is not None
-        ):
-            self.show_all_atom_info()
-
-        # Update menu text and state depending on molecule type
-        self.update_atom_id_menu_text()
-        self.update_atom_id_menu_state()
 
     def _calculate_double_bond_offset(self, mol, bond, conf):
         """
