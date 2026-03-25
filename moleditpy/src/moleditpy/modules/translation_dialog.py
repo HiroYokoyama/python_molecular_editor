@@ -314,8 +314,8 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog):
             try:
                 self.main_window.plotter.render()
             except (RuntimeError, ValueError, TypeError):
+                # Suppress non-critical error
                 pass
-
     def closeEvent(self, event):
         """Clean up when the dialog is closed directly."""
         self.clear_atom_labels()

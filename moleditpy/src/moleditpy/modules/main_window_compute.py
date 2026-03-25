@@ -734,8 +734,8 @@ class MainWindowCompute(object):
 
                 self.update_chiral_labels()
             except (AttributeError, RuntimeError, TypeError):
+                # Suppress non-critical error
                 pass
-
         self.draw_molecule_3d(mol)
 
         # Collision avoidance handled by worker
@@ -746,15 +746,15 @@ class MainWindowCompute(object):
                     f"{len(frags)} molecules converted with collision avoidance (background)."
                 )
         except (AttributeError, RuntimeError, TypeError):
+            # Suppress non-critical error
             pass
-
         # Remove 'Calculating...' text and refresh
         self._remove_calculating_text()
         try:
             self.plotter.render()
         except (AttributeError, RuntimeError, TypeError):
+            # Suppress non-critical error
             pass
-
         if self.last_successful_optimization_method:
             self.statusBar().showMessage(f"3D calculation ({self.last_successful_optimization_method}) successful.")
         else:
@@ -821,8 +821,8 @@ class MainWindowCompute(object):
                 # Re-render if molecule exists
                 self.plotter.render()
         except (AttributeError, RuntimeError, TypeError):
+            # Suppress non-critical error
             pass
-
         # Remove 'Calculating...' text
         self._remove_calculating_text()
 
@@ -855,8 +855,8 @@ class MainWindowCompute(object):
                     # Return immediately so the rest of the error cleanup doesn't disable buttons permanently
                     return
             except (AttributeError, RuntimeError, TypeError):
+                # Suppress non-critical error
                 pass
-
         if error_message == "Halted":
             self.statusBar().showMessage("Halted")
         else:
@@ -897,7 +897,7 @@ class MainWindowCompute(object):
         try:
             self.plotter.render()
         except (AttributeError, RuntimeError, TypeError):
+            # Suppress non-critical error
             pass
-
         # Return focus to 2D editor
         self.view_2d.setFocus()

@@ -225,8 +225,8 @@ class AngleDialog(Dialog3DPickingMixin, QDialog):
                 self.angle_slider.setEnabled(False)
                 self.angle_slider.blockSignals(False)
             except (AttributeError, RuntimeError, ValueError, TypeError):
+                # Suppress non-critical error
                 pass
-
         elif self.atom2_idx is None:
             symbol1 = self.mol.GetAtomWithIdx(self.atom1_idx).GetSymbol()
             self.selection_label.setText(
@@ -247,8 +247,8 @@ class AngleDialog(Dialog3DPickingMixin, QDialog):
                 self.angle_slider.setEnabled(False)
                 self.angle_slider.blockSignals(False)
             except (AttributeError, RuntimeError, ValueError, TypeError):
+                # Suppress non-critical error
                 pass
-
         elif self.atom3_idx is None:
             symbol1 = self.mol.GetAtomWithIdx(self.atom1_idx).GetSymbol()
             symbol2 = self.mol.GetAtomWithIdx(self.atom2_idx).GetSymbol()
@@ -271,6 +271,7 @@ class AngleDialog(Dialog3DPickingMixin, QDialog):
                 self.angle_slider.setEnabled(False)
                 self.angle_slider.blockSignals(False)
             except (AttributeError, RuntimeError, ValueError, TypeError):
+                # Suppress non-critical error
                 pass
         else:
             symbol1 = self.mol.GetAtomWithIdx(self.atom1_idx).GetSymbol()

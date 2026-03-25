@@ -1138,8 +1138,8 @@ class SettingsDialog(QDialog):
                 try:
                     self.parent_window.settings_dirty = True
                 except AttributeError:
+                    # Suppress non-critical error
                     pass
-
             except (AttributeError, RuntimeError, ValueError) as e:
                 pass  # Suppress global settings sync errors
 
@@ -1337,8 +1337,8 @@ class SettingsDialog(QDialog):
         try:
             self.parent_window.settings_dirty = True
         except (AttributeError, RuntimeError, ValueError, TypeError):
+            # Suppress non-critical error
             pass
-
         # Apply 3D view settings
         if hasattr(self.parent_window, "apply_3d_settings"):
             self.parent_window.apply_3d_settings()
@@ -1404,6 +1404,7 @@ class SettingsDialog(QDialog):
         try:
             self.settings_dirty = True
         except AttributeError:
+            # Suppress non-critical error
             pass
         # If skip is enabled, allow Optimize button; otherwise, respect chem_check flags
 

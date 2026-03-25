@@ -170,8 +170,8 @@ class MainWindowMolecularParsers(object):
             else:
                 mol.SetProp(prop_name, str(value))
         except (AttributeError, RuntimeError, TypeError, ValueError):
+            # Suppress non-critical error
             pass
-
     def _get_mol_prop(self, mol, prop_name, default=None):
         """Internal helper to get molecule properties safely."""
         try:

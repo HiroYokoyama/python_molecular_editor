@@ -353,6 +353,7 @@ class MainWindowEditActions(object):
                 try:
                     QApplication.processEvents()
                 except RuntimeError:
+                    # Suppress non-critical error
                     pass
             # Determine how many hydrogens actually were removed by re-scanning data
             remaining_h = 0
@@ -587,8 +588,8 @@ class MainWindowEditActions(object):
                 mime_data is not None and mime_data.hasFormat(CLIPBOARD_MIME_TYPE)
             )
         except RuntimeError:
+            # Suppress non-critical error
             pass
-
     def open_rotate_2d_dialog(self):
         """Open 2D rotation dialog"""
         # Initialize last_rotation_angle if not present
@@ -937,8 +938,8 @@ class MainWindowEditActions(object):
                 with contextlib.suppress(Exception):
                     _apply_ui_updates()
         except (AttributeError, RuntimeError, ValueError, TypeError):
+            # Suppress non-critical error
             pass
-
     def clean_up_2d_structure(self):
         self.statusBar().showMessage("Optimizing 2D structure...")
 
@@ -1198,8 +1199,8 @@ class MainWindowEditActions(object):
                 if sip_isdeleted_safe(item):
                     continue
             except Exception:
+                # Suppress non-critical error
                 pass
-
                 sc = item.scene() if hasattr(item, "scene") else None
                 if sc is None:
                     continue

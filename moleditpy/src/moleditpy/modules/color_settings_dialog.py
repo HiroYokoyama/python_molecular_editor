@@ -176,8 +176,8 @@ class ColorSettingsDialog(QDialog):
                 try:
                     del settings["cpk_colors"]
                 except KeyError:
+                    # Suppress non-critical error
                     pass
-
         if self.changed_cpk:
             cdict = settings.get("cpk_colors", {}).copy()
             cdict.update(self.changed_cpk)
@@ -202,8 +202,8 @@ class ColorSettingsDialog(QDialog):
                     try:
                         it.update_style()
                     except (AttributeError, RuntimeError, TypeError):
+                        # Suppress non-critical error
                         pass
-
         # Update button styles
         for s, btn in self.element_buttons.items():
             overrides = settings.get("cpk_colors", {})
@@ -253,8 +253,8 @@ class ColorSettingsDialog(QDialog):
                     try:
                         it.update_style()
                     except (AttributeError, RuntimeError, TypeError):
+                        # Suppress non-critical error
                         pass
-
     def accept(self):
         self.apply_changes()
         super().accept()

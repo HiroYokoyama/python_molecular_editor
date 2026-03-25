@@ -1237,8 +1237,8 @@ class MoleculeScene(QGraphicsScene):
             try:
                 self._ih_update_counter = getattr(self, "_ih_update_counter", 0) + 1
             except (AttributeError, RuntimeError, ValueError, TypeError):
+                # Suppress non-critical error
                 pass
-
             # 4. Remove graphic items from the scene
             current_scene_items = set(self.items())
             
