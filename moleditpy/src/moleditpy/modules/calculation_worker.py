@@ -474,134 +474,170 @@ class CalculationWorker(QObject):
 
     @pyqtSlot(str, object)
     def run_calculation(self, mol_block, options=None):
+        """Main entry point for 3D coordinate generation and optimization."""
+        options = options or {}
+        w_id = options.get("worker_id")
+
         def _check_halted():
             h_ids = getattr(self, "halt_ids", None)
-            w_id = (options or {}).get("worker_id")
             if getattr(self, "halt_all", False): return True
             if h_ids is None: return False
             return ("ALL" in h_ids) or (None in h_ids) or (w_id is not None and w_id in h_ids)
 
         def _safe_status(msg): 
             if _check_halted(): raise WorkerHaltError("Halted")
-            # Suppress potential errors if the UI thread or receiver is already destroyed
-            with contextlib.suppress(AttributeError, RuntimeError): self.status_update.emit(msg)
+            with contextlib.suppress(AttributeError, RuntimeError): 
+                self.status_update.emit(msg)
 
         def _safe_finished(payload):  
             if _check_halted(): raise WorkerHaltError("Halted")
-            # Suppress errors if the receiver is already destroyed
-            with contextlib.suppress(AttributeError, RuntimeError, TypeError): self.finished.emit(payload)
+            with contextlib.suppress(AttributeError, RuntimeError, TypeError): 
+                self.finished.emit(payload)
 
         def _safe_error(msg):  
             if msg != "Halted" and _check_halted(): raise WorkerHaltError("Halted")
-            # Suppress errors if the receiver is already destroyed
-            with contextlib.suppress(AttributeError, RuntimeError, TypeError): self.error.emit(((options or {}).get("worker_id"), msg))
+            with contextlib.suppress(AttributeError, RuntimeError, TypeError): 
+                self.error.emit((w_id, msg))
+
+        helpers = {"check_halted": _check_halted, "status": _safe_status, "finished": _safe_finished}
 
         try:
-            options = options or {}
-            w_id = options.get("worker_id")
-            if w_id is None:
-                # Best-effort status update; suppress if UI is unresponsive
-                with contextlib.suppress(AttributeError, RuntimeError, TypeError): self.status_update.emit("Warning: worker started without 'worker_id'.")
-
             if not mol_block: raise ValueError("No atoms to convert.")
             _safe_status("Creating 3D structure...")
 
-            mol = Chem.MolFromMolBlock(mol_block, removeHs=False)
-            if not mol: raise ValueError("Failed to parse MOL block.")
-            if _check_halted(): raise WorkerHaltError("Halted")
-
-            ex_stereo = _parse_explicit_stereo(mol_block)
-            _apply_explicit_stereo(mol, ex_stereo)
-            if _check_halted(): raise WorkerHaltError("Halted")
-
+            # 1. Prepare Molecule (Parsing & Stereo)
+            mol, ex_stereo = self._prepare_molecule_for_calc(mol_block, helpers)
             mode = options.get("conversion_mode", "fallback")
+
+            # 2. Optimization Only Mode
             if mode == "optimize_only":
                 _perform_optimize_only(mol, options, w_id, _check_halted, _safe_status, _safe_finished)
                 return
 
+            # 3. Add Hydrogens for full conversion modes
             mol = Chem.AddHs(mol)
             if _check_halted(): raise WorkerHaltError("Halted")
             _apply_explicit_stereo(mol, ex_stereo)
 
+            # 4. Mode-specific Workflows
             if mode == "direct":
-                mol = _perform_direct_conversion(mol_block, mol, options, _check_halted, _safe_status)
-                _safe_finished((w_id, mol))
-                _safe_status("Direct conversion completed.")
+                self._run_direct_workflow(mol_block, mol, options, helpers)
                 return
 
-            # ── 7. RDKit ETKDG embedding ───────────────────────────────────
-            params = AllChem.ETKDGv2()
-            params.randomSeed = 42
-            params.useExpTorsionAnglePrefs = params.useBasicKnowledge = params.enforceChirality = True
-
-            orig_stereo = []
-            for b_idx, s_type in ex_stereo.items():
-                if b_idx < mol.GetNumBonds():
-                    b = mol.GetBondWithIdx(b_idx)
-                    if b.GetBondType() == Chem.BondType.DOUBLE:
-                        orig_stereo.append((b.GetIdx(), s_type, b.GetStereoAtoms()))
-            for b in mol.GetBonds():
-                if b.GetBondType() == Chem.BondType.DOUBLE and b.GetStereo() != Chem.BondStereo.STEREONONE and b.GetIdx() not in ex_stereo:
-                    orig_stereo.append((b.GetIdx(), b.GetStereo(), b.GetStereoAtoms()))
-
-            if mode in ("fallback", "rdkit"): _safe_status("RDKit: Embedding 3D coordinates...")
-            if _check_halted(): raise WorkerHaltError("Halted")
-
-            conf_id = -1
+            # 5. RDKit Workflow (Primary)
             if mode in ("fallback", "rdkit"):
-                # Suppress potential RDKit-specific crashes during embedding for retry logic
-                with contextlib.suppress(RuntimeError, ValueError): conf_id = AllChem.EmbedMolecule(mol, params)
-                if conf_id == -1 and mode in ("fallback", "rdkit"):
-                        # Robust fallback: attempt simplified embedding if stereo-constrained embedding fails
-                    with contextlib.suppress(AttributeError, RuntimeError, ValueError, TypeError):
-                        bm = AllChem.GetMoleculeBoundsMatrix(mol)
-                        for b_idx, s, satoms in orig_stereo:
-                            if len(satoms) == 2:
-                                t = 3.0 if s == Chem.BondStereo.STEREOZ else 5.0
-                                bm[satoms[0]][satoms[1]] = bm[satoms[1]][satoms[0]] = t
-                        DoTriangleSmoothing(bm)
-                        conf_id = AllChem.EmbedMolecule(mol, bm, params)
-                if conf_id == -1 and mode in ("fallback", "rdkit"):
-                    # Level 3 fallback: basic embedding without specialized prefs
-                    with contextlib.suppress(AttributeError, RuntimeError, ValueError, TypeError): conf_id = AllChem.EmbedMolecule(mol, AllChem.ETKDGv2(randomSeed=42))
-
-            if conf_id != -1:
-                for b_idx, s, satoms in orig_stereo:
-                    b = mol.GetBondWithIdx(b_idx)
-                    if len(satoms) == 2: b.SetStereoAtoms(satoms[0], satoms[1])
-                    b.SetStereo(s)
-                _adjust_collision_avoidance(mol, _check_halted, _safe_status)
-                
-                opt_method = (options or {}).get("optimization_method", "MMFF94s_RDKIT")
-                backend = "OBABEL" if "OBABEL" in opt_method.upper() else "RDKIT"
-                method_key = "UFF" if "UFF" in opt_method.upper() else ("GAFF" if "GAFF" in opt_method.upper() else ("GHEMICAL" if "GHEMICAL" in opt_method.upper() else "MMFF94s"))
-                if "MMFF94" in opt_method.upper() and "MMFF94S" not in opt_method.upper(): method_key = "MMFF94"
-
-                # Best-effort property assignment for UI feedback
-                with contextlib.suppress(AttributeError, RuntimeError, TypeError): mol.SetProp("_pme_optimization_method", opt_method)
-                _safe_status(f"Optimizing ({method_key} / {backend})...")
-                
-                opt_func = _iterative_optimize_obabel if backend == "OBABEL" else _iterative_optimize
-                if opt_func(mol, method_key, _check_halted, _safe_status, options=options if backend == "RDKIT" else None):
-                    for b_idx, s, satoms in orig_stereo:
-                        b = mol.GetBondWithIdx(b_idx)
-                        if len(satoms) == 2: b.SetStereoAtoms(satoms[0], satoms[1])
-                        b.SetStereo(s)
-                    if _check_halted(): raise WorkerHaltError("Halted")
-                    _safe_finished((w_id, mol))
-                    _safe_status("RDKit conversion succeeded.")
-                    return
-                elif mode == "rdkit": raise RuntimeError(f"Optimization with {opt_method} failed.")
-                else: conf_id = -1 # fall back
-
-            if conf_id == -1 and mode in ("fallback", "obabel"):
-                if _perform_obabel_conversion(mol_block, mode, options.get("optimization_method"), w_id, options, _check_halted, _safe_status, _safe_finished):
-                    return
-
-            if conf_id == -1:
+                success = self._run_rdkit_workflow(mol, ex_stereo, options, helpers)
+                if success: return
                 if mode == "rdkit": raise RuntimeError("RDKit conversion failed.")
-                if mode == "fallback":
-                    _safe_status("Falling back to direct conversion...")
-                    self.run_calculation(mol_block, {**options, "conversion_mode": "direct"})
+
+            # 6. Open Babel Workflow (Fallback)
+            if mode in ("fallback", "obabel"):
+                success = self._run_obabel_workflow(mol_block, options, helpers)
+                if success: return
+
+            # 7. Final Fallback to Direct
+            if mode == "fallback":
+                _safe_status("Falling back to direct conversion...")
+                self._run_direct_workflow(mol_block, mol, options, helpers)
+
         except WorkerHaltError: _safe_error("Halted")
         except Exception as e: _safe_error(str(e))
+
+    def _prepare_molecule_for_calc(self, mol_block, helpers):
+        """Parse MOL block and extract explicit stereochemistry info."""
+        mol = Chem.MolFromMolBlock(mol_block, removeHs=False)
+        if not mol: raise ValueError("Failed to parse MOL block.")
+        if helpers["check_halted"](): raise WorkerHaltError("Halted")
+
+        ex_stereo = _parse_explicit_stereo(mol_block)
+        _apply_explicit_stereo(mol, ex_stereo)
+        if helpers["check_halted"](): raise WorkerHaltError("Halted")
+        return mol, ex_stereo
+
+    def _run_rdkit_workflow(self, mol, ex_stereo, options, helpers):
+        """Execute RDKit ETKDG embedding and force-field optimization."""
+        _check_halted = helpers["check_halted"]
+        _safe_status = helpers["status"]
+        _safe_finished = helpers["finished"]
+        w_id = options.get("worker_id")
+
+        params = AllChem.ETKDGv2()
+        params.randomSeed = 42
+        params.useExpTorsionAnglePrefs = params.useBasicKnowledge = params.enforceChirality = True
+
+        # Track existing/explicit stereo to restore after embedding
+        orig_stereo = []
+        for b_idx, s_type in ex_stereo.items():
+            if b_idx < mol.GetNumBonds():
+                b = mol.GetBondWithIdx(b_idx)
+                if b.GetBondType() == Chem.BondType.DOUBLE:
+                    orig_stereo.append((b.GetIdx(), s_type, b.GetStereoAtoms()))
+        for b in mol.GetBonds():
+            if b.GetBondType() == Chem.BondType.DOUBLE and b.GetStereo() != Chem.BondStereo.STEREONONE and b.GetIdx() not in ex_stereo:
+                orig_stereo.append((b.GetIdx(), b.GetStereo(), b.GetStereoAtoms()))
+
+        _safe_status("RDKit: Embedding 3D coordinates...")
+        if _check_halted(): raise WorkerHaltError("Halted")
+
+        conf_id = -1
+        with contextlib.suppress(RuntimeError, ValueError): 
+            conf_id = AllChem.EmbedMolecule(mol, params)
+        
+        # Fallback embedding strategies
+        if conf_id == -1:
+            with contextlib.suppress(AttributeError, RuntimeError, ValueError, TypeError):
+                bm = AllChem.GetMoleculeBoundsMatrix(mol)
+                for b_idx, s, satoms in orig_stereo:
+                    if len(satoms) == 2:
+                        t = 3.0 if s == Chem.BondStereo.STEREOZ else 5.0
+                        bm[satoms[0]][satoms[1]] = bm[satoms[1]][satoms[0]] = t
+                DoTriangleSmoothing(bm)
+                conf_id = AllChem.EmbedMolecule(mol, bm, params)
+        
+        if conf_id == -1:
+            with contextlib.suppress(AttributeError, RuntimeError, ValueError, TypeError): 
+                conf_id = AllChem.EmbedMolecule(mol, AllChem.ETKDGv2(randomSeed=42))
+
+        if conf_id == -1: return False
+
+        # Restoration and Optimization
+        for b_idx, s, satoms in orig_stereo:
+            b = mol.GetBondWithIdx(b_idx)
+            if len(satoms) == 2: b.SetStereoAtoms(satoms[0], satoms[1])
+            b.SetStereo(s)
+        
+        _adjust_collision_avoidance(mol, _check_halted, _safe_status)
+        opt_method = options.get("optimization_method", "MMFF94s_RDKIT")
+        backend = "OBABEL" if "OBABEL" in opt_method.upper() else "RDKIT"
+        method_key = "UFF" if "UFF" in opt_method.upper() else ("GAFF" if "GAFF" in opt_method.upper() else ("GHEMICAL" if "GHEMICAL" in opt_method.upper() else "MMFF94s"))
+        if "MMFF94" in opt_method.upper() and "MMFF94S" not in opt_method.upper(): method_key = "MMFF94"
+
+        with contextlib.suppress(AttributeError, RuntimeError, TypeError): mol.SetProp("_pme_optimization_method", opt_method)
+        _safe_status(f"Optimizing ({method_key} / {backend})...")
+        
+        opt_func = _iterative_optimize_obabel if backend == "OBABEL" else _iterative_optimize
+        if opt_func(mol, method_key, _check_halted, _safe_status, options=options if backend == "RDKIT" else None):
+            # Final stereo restoration check
+            for b_idx, s, satoms in orig_stereo:
+                b = mol.GetBondWithIdx(b_idx)
+                if len(satoms) == 2: b.SetStereoAtoms(satoms[0], satoms[1])
+                b.SetStereo(s)
+            if _check_halted(): raise WorkerHaltError("Halted")
+            _safe_finished((w_id, mol))
+            _safe_status("RDKit conversion succeeded.")
+            return True
+        return False
+
+    def _run_obabel_workflow(self, mol_block, options, helpers):
+        """Execute Open Babel 3D conversion."""
+        return _perform_obabel_conversion(
+            mol_block, options.get("conversion_mode", "fallback"), 
+            options.get("optimization_method"), options.get("worker_id"), 
+            options, helpers["check_halted"], helpers["status"], helpers["finished"]
+        )
+
+    def _run_direct_workflow(self, mol_block, mol, options, helpers):
+        """Execute direct 2D->3D conversion."""
+        mol = _perform_direct_conversion(mol_block, mol, options, helpers["check_halted"], helpers["status"])
+        helpers["finished"]((options.get("worker_id"), mol))
+        helpers["status"]("Direct conversion completed.")
