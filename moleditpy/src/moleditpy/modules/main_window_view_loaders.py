@@ -16,6 +16,7 @@ Module separated from MainWindow (main_window.py)
 Functional class: MainWindowViewLoaders
 """
 
+import contextlib
 import logging
 import os
 # RDKit imports (explicit to satisfy flake8 and used features)

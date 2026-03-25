@@ -47,10 +47,22 @@ except ImportError:
 
 try:
     # package relative imports (preferred when running as `python -m moleditpy`)
-    from .constants import VERSION
+    from .constants import (
+        VERSION,
+        COVALENT_RADII,
+        BOND_ESTIMATION_MAX_DIST,
+        BOND_ESTIMATION_MIN_DIST,
+        BOND_ESTIMATION_TOLERANCE,
+    )
 except ImportError:
     # Fallback to absolute imports for script-style execution
-    from modules.constants import VERSION
+    from modules.constants import (
+        VERSION,
+        COVALENT_RADII,
+        BOND_ESTIMATION_MAX_DIST,
+        BOND_ESTIMATION_MIN_DIST,
+        BOND_ESTIMATION_TOLERANCE,
+    )
 
 
 def _set_mol_prop_safe(mol, key, val):
@@ -157,9 +169,11 @@ class MainWindowMolecularParsers(object):
             self.update_window_title()
             QTimer.singleShot(0, self.fit_to_view)
 
-        except (RuntimeError, ValueError, TypeError, ImportError, UnicodeDecodeError) as e:
+        except (RuntimeError, ValueError, TypeError, UnicodeDecodeError) as e:
             # File loading or coordinate validation error reported to user via status bar.
             # We catch RuntimeError/ValueError for RDKit parsing and UnicodeDecodeError for encoding issues.
+            import logging
+            logging.error(f"Error loading MOL/SDF file: {e}", exc_info=True)
             self.statusBar().showMessage(f"Error loading file: {e}")
 
     def _set_mol_prop(self, mol, prop_name, value):
@@ -174,7 +188,7 @@ class MainWindowMolecularParsers(object):
         except (AttributeError, RuntimeError, TypeError, ValueError, Chem.rdchem.MolPropException):
             # Suppress errors if RDKit property setter fails (e.g., invalid type or concurrent mol access).
             # These properties are metadata and should not block core molecule loading logic.
-            pass
+            pass  # Metadata failure is non-critical
     def _get_mol_prop(self, mol, prop_name, default=None):
         """Internal helper to get molecule properties safely."""
         try:
@@ -185,9 +199,11 @@ class MainWindowMolecularParsers(object):
                 try:
                     return getter(prop_name)
                 except (AttributeError, RuntimeError, TypeError, ValueError):
+                    # If one getter fails, try the next one in the sequence.
                     continue
             return default
         except (AttributeError, RuntimeError, TypeError, ValueError):
+            # Property retrieval failure returns the default value.
             return default
 
     def prompt_for_charge(self):
@@ -316,82 +332,18 @@ class MainWindowMolecularParsers(object):
                         self.statusBar().showMessage(
                             f"Chemistry failed for charge {charge_val}: {e}. Try a different charge or skip."
                         )
-
-            if final_mol:
-                self.current_mol = final_mol
-                self.is_xyz_derived = not used_rd_determine
-                if hasattr(self, "optimize_3d_button"):
-                    self.optimize_3d_button.setEnabled(
-                        not self.is_xyz_derived and final_mol.GetNumBonds() > 0
-                    )
             return final_mol
 
-        except (RuntimeError, TypeError, ValueError, ImportError, UnicodeDecodeError) as e:
+        except (RuntimeError, TypeError, ValueError, UnicodeDecodeError) as e:
             # XYZ parsing error reported to user via status bar.
             # We catch RuntimeError/ValueError for parsing and UnicodeDecodeError for file encoding.
+            import logging
+            logging.error(f"Error parsing XYZ file: {e}", exc_info=True)
             self.statusBar().showMessage(f"Error parsing XYZ file: {e}")
             return None
 
     def estimate_bonds_from_distances(self, mol):
         """Estimate bonds based on interatomic distances."""
-
-        # Covalent radii (Angstrom)
-        covalent_radii = {
-            "H": 0.31,
-            "He": 0.28,
-            "Li": 1.28,
-            "Be": 0.96,
-            "B": 0.84,
-            "C": 0.76,
-            "N": 0.75,
-            "O": 0.73,
-            "F": 0.71,
-            "Ne": 0.58,
-            "Na": 1.66,
-            "Mg": 1.41,
-            "Al": 1.21,
-            "Si": 1.11,
-            "P": 1.07,
-            "S": 1.05,
-            "Cl": 1.02,
-            "Ar": 1.06,
-            "K": 2.03,
-            "Ca": 1.76,
-            "Sc": 1.70,
-            "Ti": 1.60,
-            "V": 1.53,
-            "Cr": 1.39,
-            "Mn": 1.39,
-            "Fe": 1.32,
-            "Co": 1.26,
-            "Ni": 1.24,
-            "Cu": 1.32,
-            "Zn": 1.22,
-            "Ga": 1.22,
-            "Ge": 1.20,
-            "As": 1.19,
-            "Se": 1.20,
-            "Br": 1.14,
-            "Kr": 1.16,
-            "Rb": 2.20,
-            "Sr": 1.95,
-            "Y": 1.90,
-            "Zr": 1.75,
-            "Nb": 1.64,
-            "Mo": 1.54,
-            "Tc": 1.47,
-            "Ru": 1.46,
-            "Rh": 1.42,
-            "Pd": 1.39,
-            "Ag": 1.45,
-            "Cd": 1.44,
-            "In": 1.42,
-            "Sn": 1.39,
-            "Sb": 1.39,
-            "Te": 1.38,
-            "I": 1.33,
-            "Xe": 1.40,
-        }
 
         conf = mol.GetConformer()
         num_atoms = mol.GetNumAtoms()
@@ -409,8 +361,8 @@ class MainWindowMolecularParsers(object):
                 symbol_i = atom_i.GetSymbol()
                 symbol_j = atom_j.GetSymbol()
 
-                radius_i = covalent_radii.get(symbol_i, 1.0)  # Default
-                radius_j = covalent_radii.get(symbol_j, 1.0)
+                radius_i = COVALENT_RADII.get(symbol_i, 1.0)  # Default
+                radius_j = COVALENT_RADII.get(symbol_j, 1.0)
 
                 expected_bond_length = radius_i + radius_j
 
@@ -428,10 +380,13 @@ class MainWindowMolecularParsers(object):
                         if (symbol_i == "H" and mol.GetAtomWithIdx(i).GetDegree() >= 1) or \
                            (symbol_j == "H" and mol.GetAtomWithIdx(j).GetDegree() >= 1):
                             continue
-                        # Best-effort: ignore bond adding errors for invalid distances
-                        with contextlib.suppress(RuntimeError, ValueError, TypeError):
+                        try:
                             mol.AddBond(i, j, Chem.BondType.SINGLE)
                             bonds_added.append((i, j, distance))
+                        except (RuntimeError, ValueError, TypeError) as e:
+                            # Best-effort: ignore bond adding errors for invalid distances
+                            # or if the molecule state becomes inconsistent during loop.
+                            pass
 
         # Debug information (optional)
         # Added bonds based on distance analysis
@@ -492,7 +447,9 @@ class MainWindowMolecularParsers(object):
             self.statusBar().showMessage(f"File I/O error: {e}")
         except UnicodeEncodeError as e:  
             self.statusBar().showMessage(f"Text encoding error: {e}")
-        except (AttributeError, RuntimeError, ValueError) as e:
+        except (AttributeError, RuntimeError, ValueError, TypeError) as e:
+            import logging
+            logging.error(f"Error saving MOL file: {e}", exc_info=True)
             self.statusBar().showMessage(f"Error saving file: {e}")
 
     def save_as_xyz(self):
@@ -544,6 +501,8 @@ class MainWindowMolecularParsers(object):
             self.statusBar().showMessage(f"Successfully saved to {file_path}")
         except (IOError, OSError, RuntimeError, ValueError, TypeError) as e:
             # Catch I/O errors and RDKit serialization failures (RuntimeError/ValueError).
+            import logging
+            logging.error(f"Error saving XYZ file: {e}", exc_info=True)
             self.statusBar().showMessage(f"Error saving file: {e}")
 
     def fix_mol_counts_line(self, line: str) -> str:

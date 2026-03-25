@@ -66,7 +66,8 @@ class PluginManager:
             try:
                 os.makedirs(self.plugin_dir)
             except OSError as e:
-                print(f"Error creating plugin directory: {e}")
+                import logging
+                logging.error(f"Error creating plugin directory: {e}")
 
     def open_plugin_folder(self):
         """Opens the plugin directory in the OS file explorer."""
@@ -290,9 +291,10 @@ class PluginManager:
                     try:
                         module.initialize(context)
                     except (AttributeError, RuntimeError, ValueError, OSError, ImportError, SyntaxError) as e:
+                        # [BROAD EXCEPTION] Plugins have root power; catch all potential failures during init.
                         status = f"Error (Init): {e}"
                         # Initialization errors are stored in plugin status for display in Plugin Dialog
-                        print(f"Plugin {plugin_name} initialize error: {e}")
+                        logging.error(f"Plugin {plugin_name} initialize error: {e}")
                 elif has_autorun:
                     try:
                         if self.main_window:
@@ -321,8 +323,10 @@ class PluginManager:
                 )
 
         except (AttributeError, RuntimeError, ValueError, OSError, ImportError, SyntaxError) as e:
-            # Loading failures are printed but silenced to allow other plugins to load
-            print(f"Failed to load plugin {module_name}: {e}")
+            # [BROAD EXCEPTION] Loading failures are caught to prevent a single buggy plugin from 
+            # crashing the entire discovery process.
+            import logging
+            logging.error(f"Failed to load plugin {module_name}: {e}")
 
     def run_plugin(self, module, main_window):
         """Executes the plugin's run method (Legacy manual trigger)."""
@@ -426,8 +430,9 @@ class PluginManager:
             try:
                 handler["callback"]()
             except (AttributeError, RuntimeError, ValueError, OSError, ImportError, SyntaxError) as e:
-                # Document reset handlers are user plugins; silence noise but keep brief print
-                print(f"Error in document reset handler for {handler['plugin']}: {e}")
+                # [BROAD EXCEPTION] Document reset handlers are user plugins; catch all to prevent data loss.
+                import logging
+                logging.error(f"Error in document reset handler for {handler['plugin']}: {e}")
 
     def get_plugin_info_safe(self, file_path):
         """Extracts plugin metadata using AST parsing (safe, no execution)."""
@@ -510,5 +515,7 @@ class PluginManager:
                         info["description"] = val.strip().split("\n")[0]
 
         except (AttributeError, RuntimeError, ValueError, OSError, ImportError, SyntaxError) as e:
-            print(f"Error parsing plugin info: {e}")
+            # Metadata extraction is best-effort and should not block the app.
+            import logging
+            logging.debug(f"Error parsing plugin info for {file_path}: {e}")
         return info

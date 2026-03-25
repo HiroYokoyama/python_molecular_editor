@@ -46,7 +46,9 @@ def sip_isdeleted_safe(obj):
     try:
         return sip.isdeleted(obj)
     except (AttributeError, TypeError, RuntimeError):
-        return False
+        # If the object does not support sip.isdeleted or is already in a state 
+        # where the check fails, we assume it's unsafe or "deleted" for our purposes.
+        return True
 
 
 class AtomItem(QGraphicsItem):
@@ -146,8 +148,9 @@ class AtomItem(QGraphicsItem):
                     if partner_pos is None:
                         continue
                     total_dx += partner_pos.x() - my_pos_x
-                except (AttributeError, RuntimeError, TypeError):
-                    # Skip any bond that raises while inspecting; keep UI tolerant
+                except (AttributeError, RuntimeError, TypeError) as e:
+                    # Skip any bond that raises while inspecting; keep UI tolerant.
+                    # This happens if the underlying C++ object is being destroyed.
                     continue
 
             if total_dx > 0:
@@ -279,7 +282,8 @@ class AtomItem(QGraphicsItem):
                             if sip_isdeleted_safe(other_atom):
                                 continue
                         except (AttributeError, RuntimeError, TypeError):
-                            # If sip check fails, continue defensively
+                            # If sip check fails, continue defensively.
+                            # This usually means the object is in an inconsistent state.
                             pass  # Silent failure for non-critical partner state check
 
                         other_pos = None

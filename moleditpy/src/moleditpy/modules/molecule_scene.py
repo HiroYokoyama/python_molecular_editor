@@ -62,8 +62,9 @@ class MoleculeScene(QGraphicsScene):
                     continue
                 try:
                     self.removeItem(item)
-                except (RuntimeError, ValueError, TypeError):
+                except (RuntimeError, ValueError, TypeError) as e:
                     # Best-effort: ignore removal errors during teardown if underlying C++ object is already gone
+                    logging.debug(f"Could not remove template preview item: {e}")
                     pass
         self.template_context = {}
         if hasattr(self, "template_preview"):
@@ -124,7 +125,8 @@ class MoleculeScene(QGraphicsScene):
             if not sip_isdeleted_safe(bond):
                 try:
                     bond.update_position()
-                except (AttributeError, RuntimeError, ValueError, TypeError):
+                except (AttributeError, RuntimeError, ValueError, TypeError) as e:
+                    logging.debug(f"Failed to update bond position for {bond}: {e}")
                     continue
 
     def update_all_items(self):
@@ -150,8 +152,9 @@ class MoleculeScene(QGraphicsScene):
         if app is not None:
             try:
                 app.aboutToQuit.connect(self.purge_deleted_items)
-            except (AttributeError, RuntimeError, ValueError, TypeError):
+            except (AttributeError, RuntimeError, ValueError, TypeError) as e:
                 # Non-fatal during setup; app instance may be invalid or signal already connected
+                logging.debug(f"Could not connect aboutToQuit in MoleculeScene: {e}")
                 pass
 
     def clear_all_problem_flags(self):
@@ -197,8 +200,9 @@ class MoleculeScene(QGraphicsScene):
                     for it in self.selectedItems()
                     if isinstance(it, (AtomItem, BondItem))
                 ]
-            except (AttributeError, RuntimeError, ValueError, TypeError):
+            except (AttributeError, RuntimeError, ValueError, TypeError) as e:
                 # Fallback to empty selection if the scene state is inconsistent during event processing
+                logging.debug(f"Failed to retrieve selected items: {e}")
                 selected_items = []
 
             if (
@@ -361,7 +365,8 @@ class MoleculeScene(QGraphicsScene):
                     sc = getattr(self.temp_line, "scene", lambda: None)()
                     if sc:
                         self.removeItem(self.temp_line)
-                except (RuntimeError, ValueError, TypeError):
+                except (RuntimeError, ValueError, TypeError) as e:
+                    logging.debug(f"Error removing temp_line: {e}")
                     pass  # Suppress removal errors during teardown
             self.temp_line = None
 
@@ -699,19 +704,22 @@ class MoleculeScene(QGraphicsScene):
                     if not sip_isdeleted_safe(a):
                         try:
                             a.setSelected(True)
-                        except (RuntimeError, ValueError, TypeError):
+                        except (RuntimeError, ValueError, TypeError) as e:
+                            logging.debug(f"Failed to select atom {a}: {e}")
                             pass  # Ignore invalid item states during component search
 
                 for b in connected_bonds:
                     if not sip_isdeleted_safe(b):
                         try:
                             b.setSelected(True)
-                        except (RuntimeError, ValueError, TypeError):
+                        except (RuntimeError, ValueError, TypeError) as e:
+                            logging.debug(f"Failed to select bond {b}: {e}")
                             pass  # Ignore invalid bond states during component search
                 event.accept()
                 return
-            except (AttributeError, RuntimeError, ValueError, TypeError):
+            except (AttributeError, RuntimeError, ValueError, TypeError) as e:
                 # On any unexpected error, fall back to default handling
+                logging.error(f"Error in connected component selection: {e}")
                 pass  # Suppress errors during connection search
 
         elif self.mode in ["bond_2_5"]:
@@ -1294,8 +1302,8 @@ class MoleculeScene(QGraphicsScene):
             self.update_all_items()
             return True
 
-        except (AttributeError, RuntimeError, ValueError) as e:
-            print(f"Error during delete_items operation: {e}")
+        except (AttributeError, RuntimeError, ValueError, TypeError) as e:
+            logging.error(f"Error during delete_items operation: {e}", exc_info=True)
             self.update_all_items()
             return False
 
@@ -1310,12 +1318,14 @@ class MoleculeScene(QGraphicsScene):
                     obj.hide()
                     if hasattr(obj, "bonds") and obj.bonds is not None:
                         obj.bonds.clear()
-                except (AttributeError, RuntimeError, ValueError, TypeError):
+                except (AttributeError, RuntimeError, ValueError, TypeError) as e:
+                    logging.debug(f"Error purging item {obj}: {e}")
                     pass  # Suppress errors during template point mapping
 
         try:
             self._deleted_items.clear()
-        except (AttributeError, RuntimeError, ValueError, TypeError):
+        except (AttributeError, RuntimeError, ValueError, TypeError) as e:
+            logging.debug(f"Error clearing _deleted_items list: {e}")
             self._deleted_items = []
 
     def add_user_template_fragment(self, context):
@@ -1499,465 +1509,474 @@ class MoleculeScene(QGraphicsScene):
         if not self.window.is_2d_editable:
             return
 
-        if key == Qt.Key.Key_4:
-            # Case 1: Cursor over atom/bond (one-shot placement)
-            if isinstance(item_at_cursor, (AtomItem, BondItem)):
-                # Set benzene template parameters
-                n, is_aromatic = 6, True
-                points, bonds_info, existing_items = [], [], []
+        try:
+            if key == Qt.Key.Key_4:
+                # Case 1: Cursor over atom/bond (one-shot placement)
+                if isinstance(item_at_cursor, (AtomItem, BondItem)):
+                    # Set benzene template parameters
+                    n, is_aromatic = 6, True
+                    points, bonds_info, existing_items = [], [], []
 
-                # Calculate placement like update_template_preview
-                if isinstance(item_at_cursor, AtomItem):
-                    p0 = item_at_cursor.pos()
-                    l = DEFAULT_BOND_LENGTH
-                    direction = QLineF(p0, cursor_pos).unitVector()
-                    p1 = (
-                        p0 + direction.p2() * l
-                        if direction.length() > 0
-                        else p0 + QPointF(l, 0)
-                    )
-                    points = self._calculate_polygon_from_edge(p0, p1, n)
-                    existing_items = [item_at_cursor]
+                    # Calculate placement like update_template_preview
+                    if isinstance(item_at_cursor, AtomItem):
+                        p0 = item_at_cursor.pos()
+                        l = DEFAULT_BOND_LENGTH
+                        direction = QLineF(p0, cursor_pos).unitVector()
+                        p1 = (
+                            p0 + direction.p2() * l
+                            if direction.length() > 0
+                            else p0 + QPointF(l, 0)
+                        )
+                        points = self._calculate_polygon_from_edge(p0, p1, n)
+                        existing_items = [item_at_cursor]
 
-                elif isinstance(item_at_cursor, BondItem):
-                    p0, p1 = item_at_cursor.atom1.pos(), item_at_cursor.atom2.pos()
-                    points = self._calculate_polygon_from_edge(
-                        p0, p1, n, cursor_pos=cursor_pos, use_existing_length=True
-                    )
-                    existing_items = [item_at_cursor.atom1, item_at_cursor.atom2]
+                    elif isinstance(item_at_cursor, BondItem):
+                        p0, p1 = item_at_cursor.atom1.pos(), item_at_cursor.atom2.pos()
+                        points = self._calculate_polygon_from_edge(
+                            p0, p1, n, cursor_pos=cursor_pos, use_existing_length=True
+                        )
+                        existing_items = [item_at_cursor.atom1, item_at_cursor.atom2]
 
-                if points:
-                    bonds_info = [
-                        (i, (i + 1) % n, 2 if i % 2 == 0 else 1) for i in range(n)
-                    ]
+                    if points:
+                        bonds_info = [
+                            (i, (i + 1) % n, 2 if i % 2 == 0 else 1) for i in range(n)
+                        ]
 
-                    # Add fragment at calculated position
-                    self.add_molecule_fragment(
-                        points, bonds_info, existing_items=existing_items
-                    )
+                        # Add fragment at calculated position
+                        self.add_molecule_fragment(
+                            points, bonds_info, existing_items=existing_items
+                        )
+                        self.update_all_items()
+                        self.window.push_undo_state()
+
+                # Case 2: Cursor over empty space (mode switch)
+                else:
+                    self.window.set_mode_and_update_toolbar("template_benzene")
+
+                event.accept()
+                return
+
+            # --- 0a. Change radical (.) ---
+            if key == Qt.Key.Key_Period:
+                target_atoms = []
+                selected = self.selectedItems()
+                if selected:
+                    target_atoms = [item for item in selected if isinstance(item, AtomItem)]
+                elif isinstance(item_at_cursor, AtomItem):
+                    target_atoms = [item_at_cursor]
+
+                if target_atoms:
+                    for atom in target_atoms:
+                        # Toggle radical state (0 -> 1 -> 2 -> 0)
+                        atom.prepareGeometryChange()
+                        atom.radical = (atom.radical + 1) % 3
+                        self.data.atoms[atom.atom_id]["radical"] = atom.radical
+                        atom.update_style()
+                    self.update_all_items()
+                    self.window.push_undo_state()
+                    event.accept()
+                    return
+
+            # --- 0b. Change charge (+/-) ---
+            if key == Qt.Key.Key_Plus or key == Qt.Key.Key_Minus:
+                target_atoms = []
+                selected = self.selectedItems()
+                if selected:
+                    target_atoms = [item for item in selected if isinstance(item, AtomItem)]
+                elif isinstance(item_at_cursor, AtomItem):
+                    target_atoms = [item_at_cursor]
+
+                if target_atoms:
+                    delta = 1 if key == Qt.Key.Key_Plus else -1
+                    for atom in target_atoms:
+                        atom.prepareGeometryChange()
+                        atom.charge += delta
+                        self.data.atoms[atom.atom_id]["charge"] = atom.charge
+                        atom.update_style()
+                    self.update_all_items()
+                    self.window.push_undo_state()
+                    event.accept()
+                    return
+
+            # --- 1. Atom operations (change symbol) ---
+            if isinstance(item_at_cursor, AtomItem):
+                new_symbol = None
+                if (
+                    modifiers == Qt.KeyboardModifier.NoModifier
+                    and key in self.key_to_symbol_map
+                ):
+                    new_symbol = self.key_to_symbol_map[key]
+                elif (
+                    modifiers == Qt.KeyboardModifier.ShiftModifier
+                    and key in self.key_to_symbol_map_shift
+                ):
+                    new_symbol = self.key_to_symbol_map_shift[key]
+
+                if new_symbol and item_at_cursor.symbol != new_symbol:
+                    try:
+                        item_at_cursor.prepareGeometryChange()
+
+                        item_at_cursor.symbol = new_symbol
+                        self.data.atoms[item_at_cursor.atom_id]["symbol"] = new_symbol
+                        item_at_cursor.update_style()
+
+                        atoms_to_update = {item_at_cursor}
+                        for bond in item_at_cursor.bonds:
+                            bond.update()
+                            other_atom = (
+                                bond.atom1 if bond.atom2 is item_at_cursor else bond.atom2
+                            )
+                            atoms_to_update.add(other_atom)
+
+                        for atom in atoms_to_update:
+                            atom.update_style()
+
+                        self.update_all_items()
+                        self.window.push_undo_state()
+                        event.accept()
+                        return
+                    except (AttributeError, RuntimeError, ValueError, TypeError) as e:
+                        logging.error(f"Error changing atom symbol via key {key}: {e}", exc_info=True)
+                        pass
+
+            # --- 2. Bond operations (change order/stereo) ---
+            target_bonds = []
+            if isinstance(item_at_cursor, BondItem):
+                target_bonds = [item_at_cursor]
+            else:
+                target_bonds = [
+                    it for it in self.selectedItems() if isinstance(it, BondItem)
+                ]
+
+            if target_bonds:
+                any_bond_changed = False
+                for bond in target_bonds:
+                    # 1. Identify current bond key in data model
+                    id1, id2 = bond.atom1.atom_id, bond.atom2.atom_id
+                    current_key = None
+                    if (id1, id2) in self.data.bonds:
+                        current_key = (id1, id2)
+                    elif (id2, id1) in self.data.bonds:
+                        current_key = (id2, id1)
+
+                    if not current_key:
+                        continue
+
+                    # 2. Save previous state
+                    old_order, old_stereo = bond.order, bond.stereo
+
+                    # 3. Update BondItem properties based on key
+                    if key == Qt.Key.Key_W:
+                        if bond.stereo == 1:
+                            bond_data = self.data.bonds.pop(current_key)
+                            new_key = (current_key[1], current_key[0])
+                            self.data.bonds[new_key] = bond_data
+                            bond.atom1, bond.atom2 = bond.atom2, bond.atom1
+                            bond.update_position()
+                            was_reversed = True
+                        else:
+                            bond.order = 1
+                            bond.stereo = 1
+
+                    elif key == Qt.Key.Key_D:
+                        if bond.stereo == 2:
+                            bond_data = self.data.bonds.pop(current_key)
+                            new_key = (current_key[1], current_key[0])
+                            self.data.bonds[new_key] = bond_data
+                            bond.atom1, bond.atom2 = bond.atom2, bond.atom1
+                            bond.update_position()
+                            was_reversed = True
+                        else:
+                            bond.order = 1
+                            bond.stereo = 2
+
+                    elif key == Qt.Key.Key_1 and (bond.order != 1 or bond.stereo != 0):
+                        bond.order = 1
+                        bond.stereo = 0
+                    elif key == Qt.Key.Key_2 and (bond.order != 2 or bond.stereo != 0):
+                        bond.order = 2
+                        bond.stereo = 0
+                    elif key == Qt.Key.Key_3 and bond.order != 3:
+                        bond.order = 3
+                        bond.stereo = 0
+
+                    # 4. Update data model if changed
+                    if old_order != bond.order or old_stereo != bond.stereo:
+                        any_bond_changed = True
+
+                        # 5. Remove data with old key
+                        bond_data = self.data.bonds.pop(current_key)
+                        bond_data["order"] = bond.order
+                        bond_data["stereo"] = bond.stereo
+
+                        # 6. Determine new key and re-register
+                        new_key_id1, new_key_id2 = bond.atom1.atom_id, bond.atom2.atom_id
+                        if bond.stereo == 0:
+                            if new_key_id1 > new_key_id2:
+                                new_key_id1, new_key_id2 = new_key_id2, new_key_id1
+
+                        new_key = (new_key_id1, new_key_id2)
+                        self.data.bonds[new_key] = bond_data
+
+                        bond.update()
+
+                if any_bond_changed:
                     self.update_all_items()
                     self.window.push_undo_state()
 
-            # Case 2: Cursor over empty space (mode switch)
-            else:
-                self.window.set_mode_and_update_toolbar("template_benzene")
+                if key in [
+                    Qt.Key.Key_1,
+                    Qt.Key.Key_2,
+                    Qt.Key.Key_3,
+                    Qt.Key.Key_W,
+                    Qt.Key.Key_D,
+                ]:
+                    event.accept()
+                    return
 
-            event.accept()
-            return
+            if isinstance(self.hovered_item, BondItem) and self.hovered_item.order == 2:
+                if event.key() == Qt.Key.Key_Z:
+                    self.update_bond_stereo(self.hovered_item, 3)  # Z-isomer
+                    self.update_all_items()
+                    self.window.push_undo_state()
+                    event.accept()
+                    return
+                elif event.key() == Qt.Key.Key_E:
+                    self.update_bond_stereo(self.hovered_item, 4)  # E-isomer
+                    self.update_all_items()
+                    self.window.push_undo_state()
+                    event.accept()
+                    return
 
-        # --- 0a. Change radical (.) ---
-        if key == Qt.Key.Key_Period:
-            target_atoms = []
-            selected = self.selectedItems()
-            if selected:
-                target_atoms = [item for item in selected if isinstance(item, AtomItem)]
-            elif isinstance(item_at_cursor, AtomItem):
-                target_atoms = [item_at_cursor]
+            # --- 3. Atom operations (add atom) ---
+            if key in [Qt.Key.Key_1, Qt.Key.Key_2, Qt.Key.Key_3]:
+                target_order = 1
+                if key == Qt.Key.Key_2:
+                    target_order = 2
+                elif key == Qt.Key.Key_3:
+                    target_order = 3
 
-            if target_atoms:
-                for atom in target_atoms:
-                    # Toggle radical state (0 -> 1 -> 2 -> 0)
-                    atom.prepareGeometryChange()
-                    atom.radical = (atom.radical + 1) % 3
-                    self.data.atoms[atom.atom_id]["radical"] = atom.radical
-                    atom.update_style()
-                self.update_all_items()
-                self.window.push_undo_state()
+                start_atom = None
+                if isinstance(item_at_cursor, AtomItem):
+                    start_atom = item_at_cursor
+                else:
+                    selected_atoms = [
+                        item for item in self.selectedItems() if isinstance(item, AtomItem)
+                    ]
+                    if len(selected_atoms) == 1:
+                        start_atom = selected_atoms[0]
+
+                if start_atom:
+                    start_pos = start_atom.pos()
+                    l = DEFAULT_BOND_LENGTH
+                    new_pos_offset = QPointF(0, -l)  # Default offset (up)
+
+                    # Get non-H neighbors
+                    neighbor_positions = []
+                    for bond in start_atom.bonds:
+                        other_atom = bond.atom1 if bond.atom2 is start_atom else bond.atom2
+                        if (
+                            other_atom.symbol != "H"
+                        ):  # Ignore H
+                            neighbor_positions.append(other_atom.pos())
+
+                    num_non_H_neighbors = len(neighbor_positions)
+
+                    if num_non_H_neighbors == 0:
+                        # Zero bonds: default direction
+                        new_pos_offset = QPointF(0, -l)
+
+                    elif num_non_H_neighbors == 1:
+                        # One bond: ~120/60 degree angle
+                        bond = start_atom.bonds[0]
+                        other_atom = bond.atom1 if bond.atom2 is start_atom else bond.atom2
+                        existing_bond_vector = start_pos - other_atom.pos()
+
+                        # Rotate 60° clockwise from existing bond
+                        angle_rad = math.radians(60)
+                        cos_a, sin_a = math.cos(angle_rad), math.sin(angle_rad)
+                        vx, vy = existing_bond_vector.x(), existing_bond_vector.y()
+                        new_vx, new_vy = vx * cos_a - vy * sin_a, vx * sin_a + vy * cos_a
+                        rotated_vector = QPointF(new_vx, new_vy)
+                        line = QLineF(QPointF(0, 0), rotated_vector)
+                        line.setLength(l)
+                        new_pos_offset = line.p2()
+
+                    elif num_non_H_neighbors == 3:
+                        bond_vectors_sum = QPointF(0, 0)
+                        for pos in neighbor_positions:
+                            # Vector from start_pos to neighbor_pos
+                            vec = pos - start_pos
+                            # Convert to unit vector
+                            line_to_other = QLineF(QPointF(0, 0), vec)
+                            if line_to_other.length() > 0:
+                                line_to_other.setLength(1.0)
+                                bond_vectors_sum += line_to_other.p2()
+
+                        # SUM_TOLERANCE is now a module-level constant
+                        if bond_vectors_sum.manhattanLength() > SUM_TOLERANCE:
+                            new_direction_line = QLineF(QPointF(0, 0), -bond_vectors_sum)
+                            new_direction_line.setLength(l)
+                            new_pos_offset = new_direction_line.p2()
+                        else:
+                            new_pos_offset = QPointF(l * 0.7071, -l * 0.7071)
+
+                    else:  # 2, 4+ bonds: skeleton continuation or over-bonding
+                        bond_vectors_sum = QPointF(0, 0)
+                        for bond in start_atom.bonds:
+                            other_atom = (
+                                bond.atom1 if bond.atom2 is start_atom else bond.atom2
+                            )
+                            line_to_other = QLineF(start_pos, other_atom.pos())
+                            if line_to_other.length() > 0:
+                                line_to_other.setLength(1.0)
+                                bond_vectors_sum += line_to_other.p2() - line_to_other.p1()
+
+                        if bond_vectors_sum.manhattanLength() > 0.01:
+                            new_direction_line = QLineF(QPointF(0, 0), -bond_vectors_sum)
+                            new_direction_line.setLength(l)
+                            new_pos_offset = new_direction_line.p2()
+                        else:
+                            # Default (up) if sum is zero
+                            new_pos_offset = QPointF(0, -l)
+
+                    # SNAP_DISTANCE is a module-level constant
+                    target_pos = start_pos + new_pos_offset
+
+                    # Find nearby atom
+                    near_atom = self.find_atom_near(target_pos, tol=SNAP_DISTANCE)
+
+                    if near_atom and near_atom is not start_atom:
+                        # Bond if exists
+                        self.create_bond(
+                            start_atom, near_atom, bond_order=target_order, bond_stereo=0
+                        )
+                    else:
+                        # Create new atom and bond
+                        new_atom_id = self.create_atom("C", target_pos)
+                        new_atom_item = self.data.atoms[new_atom_id]["item"]
+                        self.create_bond(
+                            start_atom,
+                            new_atom_item,
+                            bond_order=target_order,
+                            bond_stereo=0,
+                        )
+
+                    self.clearSelection()
+                    self.update_all_items()
+                    self.window.push_undo_state()
+                    event.accept()
+                    return
+
+            # --- 4. Global operations (delete, mode switch) ---
+            if key == Qt.Key.Key_Delete or key == Qt.Key.Key_Backspace:
+                if self.temp_line:
+                    try:
+                        if not sip_isdeleted_safe(self.temp_line):
+                            try:
+                                if (
+                                    getattr(self.temp_line, "scene", None)
+                                    and self.temp_line.scene()
+                                ):
+                                    self.removeItem(self.temp_line)
+                            except (AttributeError, RuntimeError, ValueError, TypeError):  
+                                pass  # Suppress bond visual state sync errors
+                    except (AttributeError, RuntimeError, ValueError, TypeError):
+                        try:
+                            self.removeItem(self.temp_line)
+                        except (AttributeError, RuntimeError, ValueError, TypeError):  
+                            pass  # Suppress atom visual state sync errors
+
+                    self.temp_line = None
+                    self.start_atom = None
+                    self.start_pos = None
+                    self.initial_positions_in_event = {}
+                    event.accept()
+                    return
+
+                items_to_process = set(self.selectedItems())
+                # Include item under cursor in deletion
+                if item_at_cursor and isinstance(item_at_cursor, (AtomItem, BondItem)):
+                    items_to_process.add(item_at_cursor)
+
+                if self.delete_items(items_to_process):
+                    self.update_all_items()
+                    self.window.push_undo_state()
+                    self.window.statusBar().showMessage("Deleted selected items.")
+
+                # Clear scene if no atoms left
+                if not self.data.atoms:
+                    # 1. Remove all graphics items
+                    self.clear()
+
+                    # 2. Re-initialize required items
+                    self.reinitialize_items()
+
+                    # 3. Reset temporary states
+                    self.temp_line = None
+                    self.start_atom = None
+                    self.start_pos = None
+                    self.initial_positions_in_event = {}
+
+                    # Event handled
+                    event.accept()
+                    return
+
+                # Force redraw
+                if self.views():
+                    self.views()[0].viewport().update()
+                    QApplication.processEvents()
+
+                    event.accept()
+                    return
+
+            if key == Qt.Key.Key_Space:
+                if self.mode != "select":
+                    self.window.activate_select_mode()
+                else:
+                    self.window.select_all()
                 event.accept()
                 return
 
-        # --- 0b. Change charge (+/-) ---
-        if key == Qt.Key.Key_Plus or key == Qt.Key.Key_Minus:
-            target_atoms = []
-            selected = self.selectedItems()
-            if selected:
-                target_atoms = [item for item in selected if isinstance(item, AtomItem)]
-            elif isinstance(item_at_cursor, AtomItem):
-                target_atoms = [item_at_cursor]
+            # Global drawing mode switch
+            mode_to_set = None
 
-            if target_atoms:
-                delta = 1 if key == Qt.Key.Key_Plus else -1
-                for atom in target_atoms:
-                    atom.prepareGeometryChange()
-                    atom.charge += delta
-                    self.data.atoms[atom.atom_id]["charge"] = atom.charge
-                    atom.update_style()
-                self.update_all_items()
-                self.window.push_undo_state()
-                event.accept()
-                return
-
-        # --- 1. Atom operations (change symbol) ---
-        if isinstance(item_at_cursor, AtomItem):
-            new_symbol = None
+            # 1. Switch to atom mode
+            symbol_for_mode_change = None
             if (
                 modifiers == Qt.KeyboardModifier.NoModifier
                 and key in self.key_to_symbol_map
             ):
-                new_symbol = self.key_to_symbol_map[key]
+                symbol_for_mode_change = self.key_to_symbol_map[key]
             elif (
                 modifiers == Qt.KeyboardModifier.ShiftModifier
                 and key in self.key_to_symbol_map_shift
             ):
-                new_symbol = self.key_to_symbol_map_shift[key]
+                symbol_for_mode_change = self.key_to_symbol_map_shift[key]
 
-            if new_symbol and item_at_cursor.symbol != new_symbol:
-                item_at_cursor.prepareGeometryChange()
+            if symbol_for_mode_change:
+                mode_to_set = f"atom_{symbol_for_mode_change}"
 
-                item_at_cursor.symbol = new_symbol
-                self.data.atoms[item_at_cursor.atom_id]["symbol"] = new_symbol
-                item_at_cursor.update_style()
+            # 2. Switch to bond mode
+            elif (
+                modifiers == Qt.KeyboardModifier.NoModifier
+                and key in self.key_to_bond_mode_map
+            ):
+                mode_to_set = self.key_to_bond_mode_map[key]
 
-                atoms_to_update = {item_at_cursor}
-                for bond in item_at_cursor.bonds:
-                    bond.update()
-                    other_atom = (
-                        bond.atom1 if bond.atom2 is item_at_cursor else bond.atom2
-                    )
-                    atoms_to_update.add(other_atom)
+            # Execute mode change
+            if mode_to_set:
+                if hasattr(self.window, "set_mode_and_update_toolbar"):
+                    self.window.set_mode_and_update_toolbar(mode_to_set)
+                    event.accept()
+                    return
 
-                for atom in atoms_to_update:
-                    atom.update_style()
+            # Fallback
+            super().keyPressEvent(event)
 
-                self.update_all_items()
-                self.window.push_undo_state()
-                event.accept()
-                return
-
-        # --- 2. Bond operations (change order/stereo) ---
-        target_bonds = []
-        if isinstance(item_at_cursor, BondItem):
-            target_bonds = [item_at_cursor]
-        else:
-            target_bonds = [
-                it for it in self.selectedItems() if isinstance(it, BondItem)
-            ]
-
-        if target_bonds:
-            any_bond_changed = False
-            for bond in target_bonds:
-                # 1. Identify current bond key in data model
-                id1, id2 = bond.atom1.atom_id, bond.atom2.atom_id
-                current_key = None
-                if (id1, id2) in self.data.bonds:
-                    current_key = (id1, id2)
-                elif (id2, id1) in self.data.bonds:
-                    current_key = (id2, id1)
-
-                if not current_key:
-                    continue
-
-                # 2. Save previous state
-                old_order, old_stereo = bond.order, bond.stereo
-
-                # 3. Update BondItem properties based on key
-                if key == Qt.Key.Key_W:
-                    if bond.stereo == 1:
-                        bond_data = self.data.bonds.pop(current_key)
-                        new_key = (current_key[1], current_key[0])
-                        self.data.bonds[new_key] = bond_data
-                        bond.atom1, bond.atom2 = bond.atom2, bond.atom1
-                        bond.update_position()
-                        was_reversed = True
-                    else:
-                        bond.order = 1
-                        bond.stereo = 1
-
-                elif key == Qt.Key.Key_D:
-                    if bond.stereo == 2:
-                        bond_data = self.data.bonds.pop(current_key)
-                        new_key = (current_key[1], current_key[0])
-                        self.data.bonds[new_key] = bond_data
-                        bond.atom1, bond.atom2 = bond.atom2, bond.atom1
-                        bond.update_position()
-                        was_reversed = True
-                    else:
-                        bond.order = 1
-                        bond.stereo = 2
-
-                elif key == Qt.Key.Key_1 and (bond.order != 1 or bond.stereo != 0):
-                    bond.order = 1
-                    bond.stereo = 0
-                elif key == Qt.Key.Key_2 and (bond.order != 2 or bond.stereo != 0):
-                    bond.order = 2
-                    bond.stereo = 0
-                elif key == Qt.Key.Key_3 and bond.order != 3:
-                    bond.order = 3
-                    bond.stereo = 0
-
-                # 4. Update data model if changed
-                if old_order != bond.order or old_stereo != bond.stereo:
-                    any_bond_changed = True
-
-                    # 5. Remove data with old key
-                    bond_data = self.data.bonds.pop(current_key)
-                    bond_data["order"] = bond.order
-                    bond_data["stereo"] = bond.stereo
-
-                    # 6. Determine new key and re-register
-                    new_key_id1, new_key_id2 = bond.atom1.atom_id, bond.atom2.atom_id
-                    if bond.stereo == 0:
-                        if new_key_id1 > new_key_id2:
-                            new_key_id1, new_key_id2 = new_key_id2, new_key_id1
-
-                    new_key = (new_key_id1, new_key_id2)
-                    self.data.bonds[new_key] = bond_data
-
-                    bond.update()
-
-            if any_bond_changed:
-                self.update_all_items()
-                self.window.push_undo_state()
-
-            if key in [
-                Qt.Key.Key_1,
-                Qt.Key.Key_2,
-                Qt.Key.Key_3,
-                Qt.Key.Key_W,
-                Qt.Key.Key_D,
-            ]:
-                event.accept()
-                return
-
-        if isinstance(self.hovered_item, BondItem) and self.hovered_item.order == 2:
-            if event.key() == Qt.Key.Key_Z:
-                self.update_bond_stereo(self.hovered_item, 3)  # Z-isomer
-                self.update_all_items()
-                self.window.push_undo_state()
-                event.accept()
-                return
-            elif event.key() == Qt.Key.Key_E:
-                self.update_bond_stereo(self.hovered_item, 4)  # E-isomer
-                self.update_all_items()
-                self.window.push_undo_state()
-                event.accept()
-                return
-
-        # --- 3. Atom operations (add atom) ---
-        if key in [Qt.Key.Key_1, Qt.Key.Key_2, Qt.Key.Key_3]:
-            target_order = 1
-            if key == Qt.Key.Key_2:
-                target_order = 2
-            elif key == Qt.Key.Key_3:
-                target_order = 3
-
-            start_atom = None
-            if isinstance(item_at_cursor, AtomItem):
-                start_atom = item_at_cursor
-            else:
-                selected_atoms = [
-                    item for item in self.selectedItems() if isinstance(item, AtomItem)
-                ]
-                if len(selected_atoms) == 1:
-                    start_atom = selected_atoms[0]
-
-            if start_atom:
-                start_pos = start_atom.pos()
-                l = DEFAULT_BOND_LENGTH
-                new_pos_offset = QPointF(0, -l)  # Default offset (up)
-
-                # Get non-H neighbors
-                neighbor_positions = []
-                for bond in start_atom.bonds:
-                    other_atom = bond.atom1 if bond.atom2 is start_atom else bond.atom2
-                    if (
-                        other_atom.symbol != "H"
-                    ):  # Ignore H
-                        neighbor_positions.append(other_atom.pos())
-
-                num_non_H_neighbors = len(neighbor_positions)
-
-                if num_non_H_neighbors == 0:
-                    # Zero bonds: default direction
-                    new_pos_offset = QPointF(0, -l)
-
-                elif num_non_H_neighbors == 1:
-                    # One bond: ~120/60 degree angle
-                    bond = start_atom.bonds[0]
-                    other_atom = bond.atom1 if bond.atom2 is start_atom else bond.atom2
-                    existing_bond_vector = start_pos - other_atom.pos()
-
-                    # Rotate 60° clockwise from existing bond
-                    angle_rad = math.radians(60)
-                    cos_a, sin_a = math.cos(angle_rad), math.sin(angle_rad)
-                    vx, vy = existing_bond_vector.x(), existing_bond_vector.y()
-                    new_vx, new_vy = vx * cos_a - vy * sin_a, vx * sin_a + vy * cos_a
-                    rotated_vector = QPointF(new_vx, new_vy)
-                    line = QLineF(QPointF(0, 0), rotated_vector)
-                    line.setLength(l)
-                    new_pos_offset = line.p2()
-
-                elif num_non_H_neighbors == 3:
-                    bond_vectors_sum = QPointF(0, 0)
-                    for pos in neighbor_positions:
-                        # Vector from start_pos to neighbor_pos
-                        vec = pos - start_pos
-                        # Convert to unit vector
-                        line_to_other = QLineF(QPointF(0, 0), vec)
-                        if line_to_other.length() > 0:
-                            line_to_other.setLength(1.0)
-                            bond_vectors_sum += line_to_other.p2()
-
-                    # SUM_TOLERANCE is now a module-level constant
-                    if bond_vectors_sum.manhattanLength() > SUM_TOLERANCE:
-                        new_direction_line = QLineF(QPointF(0, 0), -bond_vectors_sum)
-                        new_direction_line.setLength(l)
-                        new_pos_offset = new_direction_line.p2()
-                    else:
-                        new_pos_offset = QPointF(l * 0.7071, -l * 0.7071)
-
-                else:  # 2, 4+ bonds: skeleton continuation or over-bonding
-                    bond_vectors_sum = QPointF(0, 0)
-                    for bond in start_atom.bonds:
-                        other_atom = (
-                            bond.atom1 if bond.atom2 is start_atom else bond.atom2
-                        )
-                        line_to_other = QLineF(start_pos, other_atom.pos())
-                        if line_to_other.length() > 0:
-                            line_to_other.setLength(1.0)
-                            bond_vectors_sum += line_to_other.p2() - line_to_other.p1()
-
-                    if bond_vectors_sum.manhattanLength() > 0.01:
-                        new_direction_line = QLineF(QPointF(0, 0), -bond_vectors_sum)
-                        new_direction_line.setLength(l)
-                        new_pos_offset = new_direction_line.p2()
-                    else:
-                        # Default (up) if sum is zero
-                        new_pos_offset = QPointF(0, -l)
-
-                # SNAP_DISTANCE is a module-level constant
-                target_pos = start_pos + new_pos_offset
-
-                # Find nearby atom
-                near_atom = self.find_atom_near(target_pos, tol=SNAP_DISTANCE)
-
-                if near_atom and near_atom is not start_atom:
-                    # Bond if exists
-                    self.create_bond(
-                        start_atom, near_atom, bond_order=target_order, bond_stereo=0
-                    )
-                else:
-                    # Create new atom and bond
-                    new_atom_id = self.create_atom("C", target_pos)
-                    new_atom_item = self.data.atoms[new_atom_id]["item"]
-                    self.create_bond(
-                        start_atom,
-                        new_atom_item,
-                        bond_order=target_order,
-                        bond_stereo=0,
-                    )
-
-                self.clearSelection()
-                self.update_all_items()
-                self.window.push_undo_state()
-                event.accept()
-                return
-
-        # --- 4. Global operations (delete, mode switch) ---
-        if key == Qt.Key.Key_Delete or key == Qt.Key.Key_Backspace:
-            if self.temp_line:
-                try:
-                    if not sip_isdeleted_safe(self.temp_line):
-                        try:
-                            if (
-                                getattr(self.temp_line, "scene", None)
-                                and self.temp_line.scene()
-                            ):
-                                self.removeItem(self.temp_line)
-                        except (AttributeError, RuntimeError, ValueError, TypeError):  
-                            pass  # Suppress bond visual state sync errors
-                except (AttributeError, RuntimeError, ValueError, TypeError):
-                    try:
-                        self.removeItem(self.temp_line)
-                    except (AttributeError, RuntimeError, ValueError, TypeError):  
-                        pass  # Suppress atom visual state sync errors
-
-                self.temp_line = None
-                self.start_atom = None
-                self.start_pos = None
-                self.initial_positions_in_event = {}
-                event.accept()
-                return
-
-            items_to_process = set(self.selectedItems())
-            # Include item under cursor in deletion
-            if item_at_cursor and isinstance(item_at_cursor, (AtomItem, BondItem)):
-                items_to_process.add(item_at_cursor)
-
-            if self.delete_items(items_to_process):
-                self.update_all_items()
-                self.window.push_undo_state()
-                self.window.statusBar().showMessage("Deleted selected items.")
-
-            # Clear scene if no atoms left
-            if not self.data.atoms:
-                # 1. Remove all graphics items
-                self.clear()
-
-                # 2. Re-initialize required items
-                self.reinitialize_items()
-
-                # 3. Reset temporary states
-                self.temp_line = None
-                self.start_atom = None
-                self.start_pos = None
-                self.initial_positions_in_event = {}
-
-                # Event handled
-                event.accept()
-                return
-
-            # Force redraw
-            if self.views():
-                self.views()[0].viewport().update()
-                QApplication.processEvents()
-
-                event.accept()
-                return
-
-        if key == Qt.Key.Key_Space:
-            if self.mode != "select":
-                self.window.activate_select_mode()
-            else:
-                self.window.select_all()
-            event.accept()
-            return
-
-        # Global drawing mode switch
-        mode_to_set = None
-
-        # 1. Switch to atom mode
-        symbol_for_mode_change = None
-        if (
-            modifiers == Qt.KeyboardModifier.NoModifier
-            and key in self.key_to_symbol_map
-        ):
-            symbol_for_mode_change = self.key_to_symbol_map[key]
-        elif (
-            modifiers == Qt.KeyboardModifier.ShiftModifier
-            and key in self.key_to_symbol_map_shift
-        ):
-            symbol_for_mode_change = self.key_to_symbol_map_shift[key]
-
-        if symbol_for_mode_change:
-            mode_to_set = f"atom_{symbol_for_mode_change}"
-
-        # 2. Switch to bond mode
-        elif (
-            modifiers == Qt.KeyboardModifier.NoModifier
-            and key in self.key_to_bond_mode_map
-        ):
-            mode_to_set = self.key_to_bond_mode_map[key]
-
-        # Execute mode change
-        if mode_to_set:
-            if hasattr(self.window, "set_mode_and_update_toolbar"):
-                self.window.set_mode_and_update_toolbar(mode_to_set)
-                event.accept()
-                return
-
-        # Fallback
-        super().keyPressEvent(event)
+        except (AttributeError, RuntimeError, ValueError, TypeError) as e:
+            logging.error(f"Unexpected error in MoleculeScene.keyPressEvent: {e}", exc_info=True)
+            event.ignore()
 
     def find_atom_near(self, pos, tol=14.0):
         # Create a small search rectangle around the position
@@ -2010,8 +2029,8 @@ class MoleculeScene(QGraphicsScene):
             bond_item.set_stereo(new_stereo)
             self.data_changed_in_event = True
 
-        except (AttributeError, RuntimeError, ValueError) as e:
-            pass  # Suppress final coordinate adjustment errors
+        except (AttributeError, RuntimeError, ValueError, TypeError) as e:
+            logging.error(f"Error updating bond stereo for bond {bond_item}: {e}", exc_info=True)
             if hasattr(self.window, "statusBar"):
                 self.window.statusBar().showMessage(f"Error: {e}", 5000)
             self.update_all_items()

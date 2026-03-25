@@ -127,7 +127,9 @@ class BondItem(QGraphicsItem):
             p1 = self.atom1.pos()
             p2 = self.atom2.pos()
             return QLineF(QPointF(0, 0), p2 - p1)
-        except (AttributeError, RuntimeError, ValueError, TypeError):
+        except (AttributeError, RuntimeError, ValueError, TypeError) as e:
+            # Fallback for inconsistent/deleted atom references
+            # return zero line to prevent downstream crashes.
             return QLineF(0, 0, 0, 0)
 
     def boundingRect(self):
@@ -203,8 +205,9 @@ class BondItem(QGraphicsItem):
             if label_rect:
                 path.addRect(label_rect)
 
-        except (AttributeError, RuntimeError, TypeError, ValueError):
+        except (AttributeError, RuntimeError, TypeError, ValueError) as e:
             # Fallback to a small rect around the origin if calculation fails
+            # This is non-critical for collision detection if points are missing.
             path.addRect(QRectF(-5, -5, 10, 10))
 
         return path
@@ -421,8 +424,10 @@ class BondItem(QGraphicsItem):
                                     font_family = win.settings.get(
                                         "atom_font_family_2d", FONT_FAMILY
                                     )
-                        except (AttributeError, RuntimeError, TypeError, ValueError):  
-                            pass  # Silent failure for non-critical 2D atom font setting
+                        except (AttributeError, RuntimeError, TypeError, ValueError) as e:
+                            # Silent failure for non-critical 2D atom font setting
+                            # If we can't get custom settings, we just use defaults.
+                            pass
 
                         font = QFont(font_family, font_size, FONT_WEIGHT_BOLD)
                         font.setItalic(True)
@@ -480,8 +485,10 @@ class BondItem(QGraphicsItem):
                 hover_pen.setCapStyle(Qt.PenCapStyle.RoundCap)
                 painter.setPen(hover_pen)
                 painter.drawLine(line)
-            except (AttributeError, RuntimeError, TypeError, ValueError):  
-                pass  # Silent failure for non-critical hover highlight drawing
+            except (AttributeError, RuntimeError, TypeError, ValueError) as e:
+                # Silent failure for non-critical hover highlight drawing.
+                # If highlight fails, it's just a visual artifact.
+                pass
 
     def update_position(self, notify=True):
         try:

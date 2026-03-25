@@ -84,8 +84,9 @@ class MainWindowEdit3d(object):
         for dialog in dialogs_to_close:
             try:
                 dialog.close()
-            except (AttributeError, RuntimeError, ValueError, TypeError):  
-                # Suppress non-critical 3D edit/UI sync errors during bulk dialog teardown
+            except (AttributeError, RuntimeError) as e:
+                # Suppress non-critical 3D edit/UI sync errors during bulk dialog teardown.
+                # If a dialog is already closed or its C++ object is gone, we ignore it.
                 pass
 
         self.active_3d_dialogs.clear()
@@ -123,8 +124,8 @@ class MainWindowEdit3d(object):
         try:
             # Remove existing labels
             self.plotter.remove_actor("measurement_labels")
-        except (AttributeError, RuntimeError, ValueError, TypeError):  
-            # Suppress non-critical UI/rendering/measurement noise if the plotter or actor is already destroyed
+        except (AttributeError, RuntimeError):  
+            # Suppress if the actor is already destroyed or not found.
             pass
 
         if not self.measurement_labels or not self.current_mol:
@@ -161,8 +162,8 @@ class MainWindowEdit3d(object):
         self.measurement_labels.clear()
         try:
             self.plotter.remove_actor("measurement_labels")
-        except (AttributeError, RuntimeError, ValueError, TypeError):  
-            # Suppress non-critical UI/rendering/measurement noise
+        except (AttributeError, RuntimeError):
+            # Suppress if the actor is already destroyed or not found.
             pass
 
         # Remove 2D labels
@@ -173,8 +174,8 @@ class MainWindowEdit3d(object):
             try:
                 self.plotter.remove_actor(self.measurement_text_actor)
                 self.measurement_text_actor = None
-            except (AttributeError, RuntimeError, ValueError, TypeError):  
-                # Suppress non-critical 3D edit/UI sync errors if the plotter or actor is already destroyed
+            except (AttributeError, RuntimeError):
+                # Suppress if the actor is already destroyed or not found.
                 pass
 
         self.plotter.render()
@@ -245,15 +246,16 @@ class MainWindowEdit3d(object):
                     try:
                         if label_item.scene():
                             self.scene.removeItem(label_item)
-                    except (AttributeError, RuntimeError, ValueError, TypeError):
-                        # Scene access or removal failed; skip
-                        continue
-                except (AttributeError, RuntimeError, ValueError, TypeError):
+                    except (AttributeError, RuntimeError):
+                        # Scene access or removal failed; skip this item.
+                        pass
+                except (AttributeError, RuntimeError):
                     # If sip check itself fails, fall back to best-effort removal
                     try:
                         if label_item.scene():
                             self.scene.removeItem(label_item)
                     except (AttributeError, RuntimeError, ValueError, TypeError):
+                        # Best-effort removal failed after sip check failed; skip.
                         continue
             self.measurement_label_items_2d.clear()
 
@@ -353,8 +355,8 @@ class MainWindowEdit3d(object):
                 text_color = "black" if luminance > 128 else "white"
             else:
                 text_color = "white"
-        except (AttributeError, RuntimeError, ValueError, TypeError):
-            # Fallback for determining text contrast; suppress if settings or plotter state is inconsistent
+        except (AttributeError, RuntimeError, ValueError, TypeError) as e:
+            # Fallback for determining text contrast; suppress if settings or plotter state is inconsistent.
             text_color = "white"
 
         # Display upper-left
@@ -389,8 +391,8 @@ class MainWindowEdit3d(object):
         try:
             # Remove existing highlight
             self.plotter.remove_actor("selection_highlight")
-        except (AttributeError, RuntimeError, ValueError, TypeError):  
-            # Suppress non-critical UI/rendering/measurement noise if the plotter or actor is already destroyed
+        except (AttributeError, RuntimeError, ValueError, TypeError) as e:
+            # Suppress non-critical UI/rendering/measurement noise if the plotter or actor is already destroyed.
             pass
 
         if not self.selected_atoms_3d or not self.current_mol:

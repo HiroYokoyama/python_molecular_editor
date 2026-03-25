@@ -166,5 +166,38 @@ DEFAULT_CPK_COLORS = {
     k: QColor(v) if not isinstance(v, QColor) else v for k, v in CPK_COLORS.items()
 }
 
+
 pt = Chem.GetPeriodicTable()
 VDW_RADII = {pt.GetElementSymbol(i): pt.GetRvdw(i) * 0.3 for i in range(1, 119)}
+
+# Covalent radii (Angstrom) for bond estimation
+COVALENT_RADII = {
+    "H": 0.31,
+    "He": 0.28,
+    "Li": 1.28,
+    "Be": 0.96,
+    "B": 0.84,
+    "C": 0.76,
+    "N": 0.75,
+    "O": 0.73,
+    "F": 0.71,
+    "Ne": 0.58,
+    "Na": 1.66,
+    "Mg": 1.41,
+    "Al": 1.21,
+    "Si": 1.11,
+    "P": 1.07,
+    "S": 1.05,
+    "Cl": 1.02,
+    "Ar": 1.06,
+    "K": 2.03,
+    "Ca": 1.76,
+    "Sc": 1.70,
+    "Ti": 1.60,
+    "V": 1.53,
+}
+
+# Bond estimation thresholds
+BOND_ESTIMATION_MAX_DIST = 3.0
+BOND_ESTIMATION_MIN_DIST = 0.4
+BOND_ESTIMATION_TOLERANCE = 0.45
