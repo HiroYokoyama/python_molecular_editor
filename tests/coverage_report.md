@@ -1,7 +1,7 @@
 # MoleditPy Coverage Report
 
-- **Overall Project Coverage (Full)**: **56.42%**
-- **Core Molecular Logic Coverage**: **69.55%**
+- **Overall Project Coverage (Full)**: **56.56%**
+- **Core Molecular Logic Coverage**: **69.59%**
 
 > [!NOTE]
 > **Core Molecular Logic Coverage** excludes UI boilerplate (dialogs, view managers, and interactor styles) to focus on scientific algorithm reliability.
@@ -18,7 +18,7 @@
 | moleditpy\src\moleditpy\modules\calculation_worker.py   |    426 |     55 |   87.1% |
 | moleditpy\src\moleditpy\modules\constants.py            |     27 |      0 |  100.0% |
 | moleditpy\src\moleditpy\modules\main_window.py          |    422 |    100 |   76.3% |
-| moleditpy\src\moleditpy\modules\main_window_app_state.py |    459 |    191 |   58.4% |
+| moleditpy\src\moleditpy\modules\main_window_app_state.py |    456 |    187 |   59.0% |
 | moleditpy\src\moleditpy\modules\main_window_compute.py  |    508 |    123 |   75.8% |
 | moleditpy\src\moleditpy\modules\main_window_export.py   |    538 |    163 |   69.7% |
 | moleditpy\src\moleditpy\modules\main_window_main_init.py |   1330 |    463 |   65.2% |
@@ -30,7 +30,7 @@
 | moleditpy\src\moleditpy\modules\molecule_scene.py       |   1280 |    573 |   55.2% |
 | moleditpy\src\moleditpy\modules\plugin_interface.py     |     57 |      0 |  100.0% |
 | moleditpy\src\moleditpy\modules\plugin_manager.py       |    282 |     74 |   73.8% |
-| **TOTAL** | **7133** | **2172** | **69.55%** |
+| **TOTAL** | **7130** | **2168** | **69.59%** |
 
 ### Full Application Breakdown
 
@@ -50,12 +50,12 @@
 | moleditpy\src\moleditpy\modules\color_settings_dialog.py |    250 |    239 |    4.4% |
 | moleditpy\src\moleditpy\modules\constants.py            |     27 |      0 |  100.0% |
 | moleditpy\src\moleditpy\modules\constrained_optimization_dialog.py |    405 |    384 |    5.2% |
-| moleditpy\src\moleditpy\modules\custom_interactor_style.py |    478 |    452 |    5.4% |
+| moleditpy\src\moleditpy\modules\custom_interactor_style.py |    458 |    432 |    5.7% |
 | moleditpy\src\moleditpy\modules\custom_qt_interactor.py |     43 |     35 |   18.6% |
-| moleditpy\src\moleditpy\modules\dialog3_d_picking_mixin.py |    102 |     60 |   41.2% |
+| moleditpy\src\moleditpy\modules\dialog3_d_picking_mixin.py |     92 |     50 |   45.7% |
 | moleditpy\src\moleditpy\modules\dihedral_dialog.py      |    298 |    169 |   43.3% |
 | moleditpy\src\moleditpy\modules\main_window.py          |    422 |    100 |   76.3% |
-| moleditpy\src\moleditpy\modules\main_window_app_state.py |    459 |    191 |   58.4% |
+| moleditpy\src\moleditpy\modules\main_window_app_state.py |    456 |    187 |   59.0% |
 | moleditpy\src\moleditpy\modules\main_window_compute.py  |    508 |    123 |   75.8% |
 | moleditpy\src\moleditpy\modules\main_window_dialog_manager.py |    243 |    157 |   35.4% |
 | moleditpy\src\moleditpy\modules\main_window_edit_3d.py  |    217 |    121 |   44.2% |
@@ -83,7 +83,7 @@
 | moleditpy\src\moleditpy\modules\translation_dialog.py   |    196 |    122 |   37.8% |
 | moleditpy\src\moleditpy\modules\user_template_dialog.py |    370 |    131 |   64.6% |
 | moleditpy\src\moleditpy\modules\zoomable_view.py        |     72 |     39 |   45.8% |
-| **TOTAL** | **14439** | **6292** | **56.42%** |
+| **TOTAL** | **14406** | **6258** | **56.56%** |
 
 ## Test Suite Status
 - **Unit tests**: PASSED

@@ -97,22 +97,18 @@ class MainWindowAppState(object):
         state["is_3d_viewer_mode"] = not self.is_2d_editable
 
         json_safe_constraints = []
-        try:
-            for const in self.constraints_3d:
-                # (Type, (Idx...), Value, Force) -> [Type, [Idx...], Value, Force]
-                if len(const) == 4:
-                    json_safe_constraints.append(
-                        [const[0], list(const[1]), const[2], const[3]]
-                    )
-                else:
-                    # Backward compatibility
-                    json_safe_constraints.append(
-                        [const[0], list(const[1]), const[2], 1.0e5]
-                    )
-        except (AttributeError, RuntimeError, TypeError):
-            import traceback
-            traceback.print_exc()
-            json_safe_constraints = []  # Explicitly reset on failure
+        constraints = getattr(self, "constraints_3d", [])
+        for const in constraints:
+            # (Type, (Idx...), Value, Force) -> [Type, [Idx...], Value, Force]
+            if len(const) == 4:
+                json_safe_constraints.append(
+                    [const[0], list(const[1]), const[2], const[3]]
+                )
+            else:
+                # Backward compatibility
+                json_safe_constraints.append(
+                    [const[0], list(const[1]), const[2], 1.0e5]
+                )
         state["constraints_3d"] = json_safe_constraints
 
         return state
@@ -236,19 +232,22 @@ class MainWindowAppState(object):
                         if len(atom_ids) == self.current_mol.GetNumAtoms():
                             for i, aid in enumerate(atom_ids):
                                 if aid is not None:
-                                    try:
-                                        self.current_mol.GetAtomWithIdx(i).SetIntProp(
-                                            "_original_atom_id", int(aid)
-                                        )
-                                    except (AttributeError, RuntimeError, TypeError):  
-                                        traceback.print_exc()
+                                    if self.current_mol and i < self.current_mol.GetNumAtoms():
+                                        try:
+                                            self.current_mol.GetAtomWithIdx(i).SetIntProp(
+                                                "_original_atom_id", int(aid)
+                                            )
+                                        except (AttributeError, RuntimeError, TypeError):  
+                                            # Skip property assignment on failure
+                                            pass
                     # Sync 2D atoms with 3D actors
                     try:
                         self.create_atom_id_mapping()
                         self.update_atom_id_menu_text()
                         self.update_atom_id_menu_state()
                     except (AttributeError, RuntimeError, TypeError):  
-                        traceback.print_exc()
+                        # Suppress UI sync noise during state restoration
+                        pass
                     # draw_molecule_3d will use restored IDs
                     self.draw_molecule_3d(self.current_mol)
                     self.plotter.reset_camera()
@@ -363,7 +362,8 @@ class MainWindowAppState(object):
                         f"DEBUG_UNDO: push_undo_state -> new stack size: {len(self.undo_stack)}"
                     )
                 except (AttributeError, RuntimeError, TypeError):  
-                    traceback.print_exc()
+                    # Suppress debug output noise
+                    pass
 
             self.redo_stack.clear()
             # Record changes after initialization
@@ -431,7 +431,8 @@ class MainWindowAppState(object):
                     f"DEBUG_UNDO: reset_undo_stack -> undo={len(self.undo_stack)} redo={len(self.redo_stack)}"
                 )
             except (AttributeError, RuntimeError, TypeError):  
-                traceback.print_exc()
+                # Suppress debug output noise
+                pass
 
     def undo(self):
         if len(self.undo_stack) > 1:
@@ -457,7 +458,8 @@ class MainWindowAppState(object):
                     f"DEBUG_UNDO: undo -> undo_stack size: {len(self.undo_stack)}, redo_stack size: {len(self.redo_stack)}"
                 )
             except (AttributeError, RuntimeError, TypeError):  
-                traceback.print_exc()
+                # Suppress debug output noise
+                pass
 
         self.update_undo_redo_actions()
         self.update_realtime_info()
@@ -487,7 +489,8 @@ class MainWindowAppState(object):
                     f"DEBUG_UNDO: redo -> undo_stack size: {len(self.undo_stack)}, redo_stack size: {len(self.redo_stack)}"
                 )
             except (AttributeError, RuntimeError, TypeError):  
-                traceback.print_exc()
+                # Suppress debug output noise
+                pass
 
         self.update_undo_redo_actions()
         self.update_realtime_info()
