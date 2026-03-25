@@ -20,7 +20,6 @@ import importlib.util
 import os
 import shutil
 import sys
-import traceback
 import zipfile
 
 from PyQt6.QtCore import QUrl
@@ -292,9 +291,8 @@ class PluginManager:
                         module.initialize(context)
                     except (AttributeError, RuntimeError, ValueError, OSError, ImportError, SyntaxError) as e:
                         status = f"Error (Init): {e}"
+                        # Initialization errors are stored in plugin status for display in Plugin Dialog
                         print(f"Plugin {plugin_name} initialize error: {e}")
-                        import traceback
-                        traceback.print_exc()
                 elif has_autorun:
                     try:
                         if self.main_window:
@@ -303,9 +301,8 @@ class PluginManager:
                             status = "Skipped (No MW)"
                     except (AttributeError, RuntimeError, ValueError, OSError, ImportError, SyntaxError) as e:
                         status = f"Error (Autorun): {e}"
+                        # Autorun errors are stored in plugin status
                         print(f"Plugin {plugin_name} autorun error: {e}")
-                        import traceback
-                        traceback.print_exc()
                 elif not has_run:
                     status = "No Entry Point"
 
@@ -324,9 +321,8 @@ class PluginManager:
                 )
 
         except (AttributeError, RuntimeError, ValueError, OSError, ImportError, SyntaxError) as e:
+            # Loading failures are printed but silenced to allow other plugins to load
             print(f"Failed to load plugin {module_name}: {e}")
-            import traceback
-            traceback.print_exc()
 
     def run_plugin(self, module, main_window):
         """Executes the plugin's run method (Legacy manual trigger)."""
@@ -430,8 +426,7 @@ class PluginManager:
             try:
                 handler["callback"]()
             except (AttributeError, RuntimeError, ValueError, OSError, ImportError, SyntaxError) as e:
-                import traceback
-                traceback.print_exc()
+                # Document reset handlers are user plugins; silence noise but keep brief print
                 print(f"Error in document reset handler for {handler['plugin']}: {e}")
 
     def get_plugin_info_safe(self, file_path):
@@ -478,8 +473,8 @@ class PluginManager:
                                             elts.append(elt.n)
                                     val = ".".join(map(str, elts))
                                 except (AttributeError, RuntimeError, ValueError, TypeError):
-                                    import traceback
-                                    traceback.print_exc()
+                                    # Fallback for complex AST structures during metadata extraction
+                                    pass
 
                         if val is not None:
                             if target.id == "PLUGIN_NAME":

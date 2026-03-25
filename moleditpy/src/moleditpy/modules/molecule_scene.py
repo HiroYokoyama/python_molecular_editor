@@ -12,8 +12,6 @@ DOI: 10.5281/zenodo.17268532
 
 import logging
 import math
-import traceback
-
 from PyQt6.QtCore import QLineF, QPointF, QRectF, Qt
 from PyQt6.QtGui import QCursor, QPen
 from PyQt6.QtWidgets import (

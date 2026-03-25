@@ -504,9 +504,8 @@ class MainWindowExport(object):
                                     vtk_color = prop.GetColor()
                                     color = [int(c * 255) for c in vtk_color]
                         except (AttributeError, RuntimeError, TypeError):  
-                            # Use default color on failure
-                            import traceback
-                            traceback.print_exc()
+                            # Use default color on failure to avoid console noise during complex mesh export
+                            pass
 
                         # Create mesh copy
                         mesh_copy = mesh.copy()
@@ -547,8 +546,8 @@ class MainWindowExport(object):
                                             temp_mesh.point_data["colors"]
                                         )
                                 except (AttributeError, RuntimeError, ValueError, TypeError):  
-                                    import traceback
-                                    traceback.print_exc()
+                                    # Fail silently and fall through to default mesh addition
+                                    pass
                             if colors is not None and colors.size > 0:
                                 # Normalize float colors to 0-255
                                 colors_arr = np.asarray(colors)
@@ -637,8 +636,7 @@ class MainWindowExport(object):
                                     # Do not continue here; let the default addition handle it (color has been updated)
                         except (AttributeError, RuntimeError, ValueError, TypeError):  
                             # Fallback: add single mesh on failure
-                            import traceback
-                            traceback.print_exc()
+                            pass
 
                         meshes_with_colors.append(
                             {
@@ -718,8 +716,8 @@ class MainWindowExport(object):
         try:
             original_background = self.scene.backgroundBrush()
         except (AttributeError, RuntimeError, ValueError, TypeError):  
-            import traceback
-            traceback.print_exc()
+            # Minimal risk; keep default brush
+            pass
 
         try:
             all_items = list(self.scene.items())

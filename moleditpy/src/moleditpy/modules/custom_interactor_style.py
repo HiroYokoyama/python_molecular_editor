@@ -268,7 +268,6 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                     move_group_dialog = widget
                     break
         except (AttributeError, RuntimeError, TypeError):  
-            import traceback
             pass  # Suppress non-critical widget search noise
 
 
@@ -345,9 +344,8 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                     move_group_dialog = widget
                     break
         except (AttributeError, RuntimeError, TypeError):  
-            import traceback
-            traceback.print_exc()
-
+            # Suppress traceback
+            pass
         if move_group_dialog and getattr(
             move_group_dialog, "_is_dragging_group_vtk", False
         ):
@@ -429,9 +427,8 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                     move_group_dialog = widget
                     break
         except (AttributeError, RuntimeError, TypeError):  
-            import traceback
-            traceback.print_exc()
-
+            # Suppress traceback
+            pass
         # Prevent multi-click issues
         if move_group_dialog:
             if getattr(
@@ -661,9 +658,8 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                     move_group_dialog = widget
                     break
         except (AttributeError, RuntimeError, TypeError):  
-            import traceback
-            traceback.print_exc()
-
+            # Suppress traceback
+            pass
         if move_group_dialog and getattr(
             move_group_dialog, "_is_rotating_group_vtk", False
         ):

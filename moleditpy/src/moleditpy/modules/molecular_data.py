@@ -10,8 +10,6 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
-import traceback
-
 from rdkit import Chem
 
 try:

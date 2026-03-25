@@ -19,8 +19,6 @@ import copy
 import json
 import os
 import pickle
-import traceback
-
 # PyQt6 Modules
 from PyQt6.QtCore import QTimer
 from PyQt6.QtWidgets import QFileDialog, QMessageBox

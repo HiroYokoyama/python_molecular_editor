@@ -10,8 +10,6 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
-import traceback
-
 # PyQt6 Modules
 from PyQt6.QtCore import pyqtSignal, pyqtSlot
 from PyQt6.QtWidgets import QMainWindow
@@ -120,8 +118,8 @@ class MainWindow(QMainWindow):
         try:
             self.main_window_main_init.init(initial_file)
         except (AttributeError, RuntimeError, TypeError):  
-            import traceback
-            traceback.print_exc()
+            # Suppress initialization errors for main_init
+            pass
 
         other_inits = [
             "main_window_view_3d",
@@ -141,8 +139,8 @@ class MainWindow(QMainWindow):
             try:
                 getattr(self, name).init()
             except (AttributeError, RuntimeError, TypeError):  
-                import traceback
-                traceback.print_exc()
+                # Suppress initialization errors for helper modules
+                pass
 
     def init_ui(self):
         # --- MOVED TO main_window_main_init.py ---

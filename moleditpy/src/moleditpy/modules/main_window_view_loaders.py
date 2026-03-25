@@ -17,8 +17,6 @@ Functional class: MainWindowViewLoaders
 """
 
 import os
-import traceback
-
 # RDKit imports (explicit to satisfy flake8 and used features)
 from rdkit import Chem
 from rdkit.Chem import AllChem

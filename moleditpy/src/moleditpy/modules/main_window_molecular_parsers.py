@@ -157,8 +157,7 @@ class MainWindowMolecularParsers(object):
             QTimer.singleShot(0, self.fit_to_view)
 
         except Exception as e:
-            import traceback
-            traceback.print_exc()
+            # File loading error reported to user via status bar
             self.statusBar().showMessage(f"Error loading file: {e}")
 
     def _set_mol_prop(self, mol, prop_name, value):
@@ -322,8 +321,7 @@ class MainWindowMolecularParsers(object):
             return final_mol
 
         except Exception as e:
-            import traceback
-            traceback.print_exc()
+            # XYZ parsing error reported to user via status bar
             self.statusBar().showMessage(f"Error parsing XYZ file: {e}")
             return None
 

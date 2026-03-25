@@ -18,7 +18,6 @@ DOI: 10.5281/zenodo.17268532
 import base64
 import copy
 import os
-import traceback
 import numpy as np
 
 # RDKit imports (explicit to satisfy flake8 and used features)
@@ -151,8 +150,8 @@ class MainWindowAppState(object):
                     "Some features may not load or work correctly.",
                 )
         except (ValueError, AttributeError):
-            import traceback
-            traceback.print_exc()
+            # Suppress non-critical version parsing errors
+            pass
 
         raw_atoms = loaded_data.get("atoms", {})
         raw_bonds = loaded_data.get("bonds", {})
@@ -665,8 +664,8 @@ class MainWindowAppState(object):
                         json_data["identifiers"]["inchi"] = inchi
                         json_data["identifiers"]["inchi_key"] = inchi_key
                     except (AttributeError, RuntimeError, TypeError):
-                        import traceback
-                        traceback.print_exc()
+                        # Suppress InChI generation errors during project save
+                        pass
 
                 except (AttributeError, RuntimeError, ValueError, TypeError) as e:
                     print(f"Warning: Could not generate molecular identifiers: {e}")
@@ -859,8 +858,8 @@ class MainWindowAppState(object):
                                             "_original_atom_id", int(original_id)
                                         )
                                 except (AttributeError, RuntimeError, TypeError):  
-                                    import traceback
-                                    traceback.print_exc()
+                                    # Suppress traceback
+                                    pass
                             # Build mapping from original 2D atom IDs to RDKit indices so
                             # 3D picks can be synchronized back to 2D AtomItems.
                             try:
@@ -870,8 +869,8 @@ class MainWindowAppState(object):
                                     self.update_atom_id_menu_text()
                                     self.update_atom_id_menu_state()
                                 except (AttributeError, RuntimeError, TypeError):  
-                                    import traceback
-                                    traceback.print_exc()
+                                    # Suppress traceback
+                                    pass
                             except (AttributeError, RuntimeError, TypeError):
                                 # non-fatal if mapping creation fails
                                 pass
@@ -890,8 +889,8 @@ class MainWindowAppState(object):
                             self._enable_3d_edit_actions(True)
                             self._enable_3d_features(True)
                         except (AttributeError, RuntimeError, TypeError):  
-                            import traceback
-                            traceback.print_exc()
+                            # Suppress 3D UI activation noise if features unavailable
+                            pass
             except (AttributeError, RuntimeError, ValueError, TypeError) as e:
                 print(f"Warning: Could not restore 3D molecular data: {e}")
                 self.current_mol = None

@@ -14,8 +14,6 @@ DOI: 10.5281/zenodo.17268532
 main_window_string_importers.py
 Functional class separated from main_window.py
 """
-import traceback
-
 # RDKit imports (explicit to satisfy flake8 and used features)
 from rdkit import Chem
 from rdkit.Chem import AllChem
@@ -73,8 +71,6 @@ class MainWindowStringImporters(object):
             return
         except (RuntimeError, TypeError, AttributeError) as e:
             self.statusBar().showMessage(f"Error parsing SMILES: {e}")
-            import traceback
-            traceback.print_exc()
             return
 
 
@@ -149,8 +145,6 @@ class MainWindowStringImporters(object):
 
         except (AttributeError, RuntimeError, ValueError, TypeError) as e:
             self.statusBar().showMessage(f"Error loading from SMILES: {e}")
-            import traceback
-            traceback.print_exc()
 
 
 
@@ -179,8 +173,6 @@ class MainWindowStringImporters(object):
             return
         except (RuntimeError, TypeError, AttributeError) as e:
             self.statusBar().showMessage(f"Error parsing InChI: {e}")
-            import traceback
-            traceback.print_exc()
             return
 
 

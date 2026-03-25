@@ -205,8 +205,8 @@ class MainWindowView3d(object):
                         c = QColor(hex_color)
                         col[atom_idx] = [c.redF(), c.greenF(), c.blueF()]
                     except (AttributeError, RuntimeError, TypeError, ValueError, KeyError):  
-                        import traceback
-                        traceback.print_exc()
+                        # Suppress traceback
+                        pass
 
         # Set atom radii based on style
         if current_style == "cpk":
@@ -484,8 +484,8 @@ class MainWindowView3d(object):
                         begin_color_rgb = ov_rgb
                         end_color_rgb = ov_rgb
                     except (AttributeError, RuntimeError, TypeError, ValueError, KeyError):  
-                        import traceback
-                        traceback.print_exc()
+                        # Suppress traceback
+                        pass
 
                 # Determine effective uniform color for this bond
                 local_bs_bond_rgb = (

@@ -1629,20 +1629,11 @@ class MainWindowMainInit(object):
                 except (AttributeError, RuntimeError, ValueError, TypeError):  
                     pass  # Suppress non-critical UI/menu/settings sync errors
                 # If ColorSettingsDialog is open, refresh its UI to reflect the reset
-                try:
-                    for w in QApplication.topLevelWidgets():
-                        try:
-                            if isinstance(w, ColorSettingsDialog):
-                                try:
-                                    w.refresh_ui()
-                                except (AttributeError, RuntimeError, ValueError, TypeError):  
-                                    import traceback
-                                    traceback.print_exc()
-                        except (AttributeError, RuntimeError, ValueError, TypeError):  
-                            import traceback
-                            traceback.print_exc()
-                except (AttributeError, RuntimeError, ValueError, TypeError):  
-                    pass  # Suppress non-critical UI/menu/settings sync errors
+                # If ColorSettingsDialog is open, refresh its UI to reflect the reset
+                for w in QApplication.topLevelWidgets():
+                    with contextlib.suppress(Exception):
+                        if isinstance(w, ColorSettingsDialog):
+                            w.refresh_ui()
                 # Ensure global CPK mapping is rebuilt from defaults and UI is updated
                 try:
                     self.update_cpk_colors_from_settings()
@@ -1660,21 +1651,13 @@ class MainWindowMainInit(object):
                             # uncheck all then check the saved one
                             for act in self.opt3d_actions.values():
                                 act.setChecked(False)
-                            try:
+                            with contextlib.suppress(Exception):
                                 self.opt3d_actions[key].setChecked(True)
-                            except (AttributeError, RuntimeError, ValueError, TypeError):  
-                                import traceback
-                                traceback.print_exc()
                     # update conversion mode
                     conv_mode = self.settings.get("3d_conversion_mode", "fallback")
                     if hasattr(self, "conv_actions") and conv_mode in self.conv_actions:
-                        try:
-                            for act in self.conv_actions.values():
-                                act.setChecked(False)
+                        with contextlib.suppress(Exception):
                             self.conv_actions[conv_mode].setChecked(True)
-                        except (AttributeError, RuntimeError, ValueError, TypeError):  
-                            import traceback
-                            traceback.print_exc()
                     
                     # update intermolecular rdkit setting
                     if hasattr(self, "intermolecular_rdkit_action"):
@@ -1704,44 +1687,24 @@ class MainWindowMainInit(object):
                     self.update_cpk_colors_from_settings()
                 except (AttributeError, RuntimeError, ValueError, TypeError):  
                     pass  # Suppress non-critical UI/menu/settings sync errors
-                try:
-                    if hasattr(self, "scene") and self.scene:
-                        for it in list(self.scene.items()):
-                            try:
-                                if hasattr(it, "update_style"):
-                                    it.update_style()
-                            except (AttributeError, RuntimeError, ValueError, TypeError):  
-                                import traceback
-                                traceback.print_exc()
-                        try:
-                            # Force a full scene update and viewport repaint for all views
-                            self.scene.update()
-                            for v in list(self.scene.views()):
-                                try:
-                                    v.viewport().update()
-                                except (AttributeError, RuntimeError, ValueError, TypeError):  
-                                    # Ignore viewport update failure
-                                    pass
-                        except (AttributeError, RuntimeError, ValueError, TypeError):  
-                            import traceback
-                            traceback.print_exc()
-                except (AttributeError, RuntimeError, ValueError, TypeError):  
-                    pass  # Suppress non-critical UI/menu/settings sync errors
+                if hasattr(self, "scene") and self.scene:
+                    for it in list(self.scene.items()):
+                        with contextlib.suppress(Exception):
+                            if hasattr(it, "update_style"):
+                                it.update_style()
+                    
+                    with contextlib.suppress(Exception):
+                        # Force a full scene update and viewport repaint for all views
+                        self.scene.update()
+                        for v in list(self.scene.views()):
+                            with contextlib.suppress(Exception):
+                                v.viewport().update()
                 # Also refresh any open SettingsDialog instances so their UI matches
-                try:
-                    for w in QApplication.topLevelWidgets():
-                        try:
-                            if isinstance(w, SettingsDialog):
-                                try:
-                                    w.update_ui_from_settings(self.settings)
-                                except (AttributeError, RuntimeError, ValueError, TypeError):  
-                                    import traceback
-                                    traceback.print_exc()
-                        except (AttributeError, RuntimeError, ValueError, TypeError):  
-                            import traceback
-                            traceback.print_exc()
-                except (AttributeError, RuntimeError, ValueError, TypeError):  
-                    pass  # Suppress non-critical UI/menu/settings sync errors
+                # Also refresh any open SettingsDialog instances so their UI matches
+                for w in QApplication.topLevelWidgets():
+                    with contextlib.suppress(Exception):
+                        if isinstance(w, SettingsDialog):
+                            w.update_ui_from_settings(self.settings)
             except (AttributeError, RuntimeError, ValueError) as e:
                 QMessageBox.warning(
                     self, "Reset Failed", f"Could not reset settings: {e}"
