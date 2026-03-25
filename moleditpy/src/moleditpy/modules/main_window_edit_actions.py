@@ -19,7 +19,9 @@ DOI: 10.5281/zenodo.17268532
 import contextlib
 import io
 import itertools
+import logging
 import math
+import os
 import pickle
 from collections import deque
 
@@ -758,14 +760,158 @@ class MainWindowEditActions(object):
         if push_to_undo:
             self.push_undo_state()
 
+    def _compute_h_counts(self, mol):
+        """Build a mapping of original_id -> hydrogen count without touching Qt items."""
+        h_count_map = {}
+        if mol is None:
+            # Invalid/unsanitizable structure: reset all counts to 0
+            for atom_id in list(self.data.atoms.keys()):
+                h_count_map[atom_id] = 0
+            return h_count_map
+
+        for atom in mol.GetAtoms():
+            try:
+                if not atom.HasProp("_original_atom_id"):
+                    continue
+                original_id = atom.GetIntProp("_original_atom_id")
+
+                # Robust retrieval of H counts: prefer implicit, fallback to total or 0
+                try:
+                    h_count = int(atom.GetNumImplicitHs())
+                except (AttributeError, RuntimeError, ValueError, TypeError):
+                    try:
+                        h_count = int(atom.GetTotalNumHs())
+                    except (AttributeError, RuntimeError, ValueError, TypeError):
+                        h_count = 0
+
+                h_count_map[int(original_id)] = h_count
+            except (AttributeError, RuntimeError, ValueError, TypeError):
+                # Skip problematic RDKit atoms
+                continue
+        return h_count_map
+
+    def _detect_chemistry_problems(self, mol):
+        """Compute a per-atom problem map (original_id -> bool)."""
+        problem_map = {}
+        try:
+            if mol is not None:
+                try:
+                    problems = Chem.DetectChemistryProblems(mol)
+                except (AttributeError, RuntimeError, ValueError, TypeError) as e:
+                    logging.warning(f"RDKit DetectChemistryProblems failed: {e}")
+                    problems = None
+
+                if problems:
+                    for prob in problems:
+                        try:
+                            atom_idx = prob.GetAtomIdx()
+                            rd_atom = mol.GetAtomWithIdx(atom_idx)
+                            if rd_atom and rd_atom.HasProp("_original_atom_id"):
+                                orig = int(rd_atom.GetIntProp("_original_atom_id"))
+                                problem_map[orig] = True
+                        except (AttributeError, RuntimeError, ValueError, TypeError):
+                            continue
+            else:
+                # Fallback: use a lightweight valence heuristic
+                for atom_id, atom_data in self.data.atoms.items():
+                    try:
+                        symbol = atom_data.get("symbol")
+                        charge = atom_data.get("charge", 0)
+                        bond_count = 0
+                        for (id1, id2), bond_data in self.data.bonds.items():
+                            if id1 == atom_id or id2 == atom_id:
+                                bond_count += bond_data.get("order", 1)
+
+                        if is_problematic_valence(symbol, bond_count, charge):
+                            problem_map[atom_id] = True
+                    except (AttributeError, RuntimeError, ValueError, TypeError):
+                        continue
+        except (AttributeError, RuntimeError, ValueError, TypeError) as e:
+            logging.error(f"Error during chemistry problem detection: {e}")
+
+        return problem_map
+
+    def _apply_ui_h_counts(self, h_count_map, problem_map, my_token):
+        """Apply the computed H counts and problem flags to UI items on the main thread."""
+        # If the global counter changed since this closure was
+        # created, bail out — the update is stale.
+        try:
+            if my_token != getattr(self, "_ih_update_counter", None):
+                return
+        except (AttributeError, RuntimeError, ValueError, TypeError):
+            return
+
+        atoms_snapshot = dict(self.data.atoms) if (hasattr(self, "data") and hasattr(self.data, "atoms")) else {}
+        is_deleted_func = sip_isdeleted_safe
+
+        items_to_update = []
+        for atom_id, atom_data in atoms_snapshot.items():
+            try:
+                item = atom_data.get("item")
+                if not item:
+                    continue
+
+                # Suppress potential errors if the item is already destroyed by SIP during iteration
+                with contextlib.suppress(AttributeError, RuntimeError, TypeError):
+                    if is_deleted_func and is_deleted_func(item):
+                        continue
+
+                # Check if the item is no longer in a scene: skip updating it to avoid
+                # touching partially-deleted objects during scene teardown.
+                sc = item.scene() if hasattr(item, "scene") else None
+                if sc is None:
+                    continue
+
+                # Desired new count (default to 0 if not computed)
+                new_count = h_count_map.get(atom_id, 0)
+
+                current = getattr(item, "implicit_h_count", None)
+                current_prob = getattr(item, "has_problem", False)
+                desired_prob = problem_map.get(atom_id, False)
+
+                # If neither the implicit-H count nor the problem flag
+                # changed, skip this item.
+                if current == new_count and current_prob == desired_prob:
+                    continue
+
+                # Only prepare a geometry change if the implicit H count
+                # changes (this may affect the item's bounding rect).
+                need_geometry = current != new_count
+                if need_geometry and hasattr(item, "prepareGeometryChange"):
+                    item.prepareGeometryChange()
+                item.implicit_h_count = new_count
+                item.has_problem = bool(desired_prob)
+                # Ensure the item is updated in the scene so paint() runs
+                # when either geometry or problem-flag changed.
+                items_to_update.append(item)
+
+            except (AttributeError, RuntimeError, ValueError, TypeError):
+                continue
+
+        # Trigger updates once for unique items; wrap in try/except to avoid crashes
+        seen = set()
+        for it in items_to_update:
+            try:
+                if it is None:
+                    continue
+                oid = id(it)
+                if oid in seen:
+                    continue
+                seen.add(oid)
+                if hasattr(it, "update"):
+                    with contextlib.suppress(AttributeError, RuntimeError, TypeError):
+                        # Suppress transient errors during item update.
+                        it.update()
+            except (AttributeError, RuntimeError, ValueError, TypeError):
+                # Ignore any unexpected errors when touching the item
+                continue
+
     def update_implicit_hydrogens(self):
         """Update implicit hydrogen counts on AtomItems."""
         # Quick guards: nothing to do if no atoms or no QApplication
         if not self.data.atoms:
             return
 
-        # If called from non-GUI thread, schedule the heavy RDKit work here but
-        # always perform UI mutations on the main thread via QTimer.singleShot.
         try:
             try:
                 self._ih_update_counter += 1
@@ -776,159 +922,24 @@ class MainWindowEditActions(object):
             mol = None
             try:
                 mol = self.data.to_rdkit_mol()
-            except (AttributeError, RuntimeError, ValueError, TypeError):
+            except (AttributeError, RuntimeError, ValueError, TypeError) as e:
+                logging.debug(f"to_rdkit_mol failed during H-update: {e}")
                 mol = None
 
-            # Build a mapping of original_id -> hydrogen count without touching Qt items
-            h_count_map = {}
+            h_count_map = self.main_window_edit_actions._compute_h_counts(mol)
+            problem_map = self.main_window_edit_actions._detect_chemistry_problems(mol)
 
-            if mol is None:
-                # Invalid/unsanitizable structure: reset all counts to 0
-                for atom_id in list(self.data.atoms.keys()):
-                    h_count_map[atom_id] = 0
-            else:
-                for atom in mol.GetAtoms():
-                    try:
-                        if not atom.HasProp("_original_atom_id"):
-                            continue
-                        original_id = atom.GetIntProp("_original_atom_id")
-
-                        # Robust retrieval of H counts: prefer implicit, fallback to total or 0
-                        try:
-                            h_count = int(atom.GetNumImplicitHs())
-                        except (AttributeError, RuntimeError, ValueError, TypeError):
-                            try:
-                                h_count = int(atom.GetTotalNumHs())
-                            except (AttributeError, RuntimeError, ValueError, TypeError):
-                                h_count = 0
-
-                        h_count_map[int(original_id)] = h_count
-                    except (AttributeError, RuntimeError, ValueError, TypeError):
-                        # Skip problematic RDKit atoms
-                        continue
-
-            # Compute a per-atom problem map (original_id -> bool) so the
-            # UI closure can safely set AtomItem.has_problem on the main thread.
-            problem_map = {}
-            try:
-                if mol is not None:
-                    try:
-                        problems = Chem.DetectChemistryProblems(mol)
-                    except (AttributeError, RuntimeError, ValueError, TypeError):
-                        problems = None
-
-                    if problems:
-                        for prob in problems:
-                            try:
-                                atom_idx = prob.GetAtomIdx()
-                                rd_atom = mol.GetAtomWithIdx(atom_idx)
-                                if rd_atom and rd_atom.HasProp("_original_atom_id"):
-                                    orig = int(rd_atom.GetIntProp("_original_atom_id"))
-                                    problem_map[orig] = True
-                            except (AttributeError, RuntimeError, ValueError, TypeError):
-                                continue
-                else:
-                    # Fallback: use a lightweight valence heuristic similar to
-                    # check_chemistry_problems_fallback() so we still flag atoms
-                    # when RDKit conversion wasn't possible.
-                    for atom_id, atom_data in self.data.atoms.items():
-                        try:
-                            symbol = atom_data.get("symbol")
-                            charge = atom_data.get("charge", 0)
-                            bond_count = 0
-                            for (id1, id2), bond_data in self.data.bonds.items():
-                                if id1 == atom_id or id2 == atom_id:
-                                    bond_count += bond_data.get("order", 1)
-
-                            if is_problematic_valence(symbol, bond_count, charge):
-                                problem_map[atom_id] = True
-                        except (AttributeError, RuntimeError, ValueError, TypeError):
-                            continue
-            except (AttributeError, RuntimeError, ValueError, TypeError):
-                problem_map = {}
-
-            def _apply_ui_updates():
-                # If the global counter changed since this closure was
-                # created, bail out — the update is stale.
-                try:
-                    if my_token != getattr(self, "_ih_update_counter", None):
-                        return
-                except (AttributeError, RuntimeError, ValueError, TypeError):
-                    return
-
-                atoms_snapshot = dict(self.data.atoms) if (hasattr(self, "data") and hasattr(self.data, "atoms")) else {}
-                is_deleted_func = sip_isdeleted_safe
-
-                items_to_update = []
-                for atom_id, atom_data in atoms_snapshot.items():
-                    try:
-                        item = atom_data.get("item")
-                        if not item:
-                            continue
-
-                        # Suppress potential errors if the item is already destroyed by SIP during iteration
-                        with contextlib.suppress(AttributeError, RuntimeError, TypeError):
-                            if is_deleted_func and is_deleted_func(item):
-                                continue
-
-                        # Check if the item is no longer in a scene: skip updating it to avoid
-                        # touching partially-deleted objects during scene teardown.
-                        sc = item.scene() if hasattr(item, "scene") else None
-                        if sc is None:
-                            continue
-
-                        # Desired new count (default to 0 if not computed)
-                        new_count = h_count_map.get(atom_id, 0)
-
-                        current = getattr(item, "implicit_h_count", None)
-                        current_prob = getattr(item, "has_problem", False)
-                        desired_prob = problem_map.get(atom_id, False)
-
-                        # If neither the implicit-H count nor the problem flag
-                        # changed, skip this item.
-                        if current == new_count and current_prob == desired_prob:
-                            continue
-
-                        # Only prepare a geometry change if the implicit H count
-                        # changes (this may affect the item's bounding rect).
-                        need_geometry = current != new_count
-                        if need_geometry and hasattr(item, "prepareGeometryChange"):
-                            item.prepareGeometryChange()
-                        item.implicit_h_count = new_count
-                        item.has_problem = bool(desired_prob)
-                        # Ensure the item is updated in the scene so paint() runs
-                        # when either geometry or problem-flag changed.
-                        items_to_update.append(item)
-
-                    except (AttributeError, RuntimeError, ValueError, TypeError):
-                        continue
-
-                # Trigger updates once for unique items; wrap in try/except to avoid crashes
-                seen = set()
-                for it in items_to_update:
-                    try:
-                        if it is None:
-                            continue
-                        oid = id(it)
-                        if oid in seen:
-                            continue
-                        seen.add(oid)
-                        if hasattr(it, "update"):
-                            with contextlib.suppress(AttributeError, RuntimeError, TypeError):
-                                # Suppress transient errors during item update.
-                                it.update()
-                    except (AttributeError, RuntimeError, ValueError, TypeError):
-                        # Ignore any unexpected errors when touching the item
-                        continue
+            def _ui_closure():
+                self.main_window_edit_actions._apply_ui_h_counts(h_count_map, problem_map, my_token)
 
             try:
-                QTimer.singleShot(0, _apply_ui_updates)
-            except Exception:
+                QTimer.singleShot(0, _ui_closure)
+            except (RuntimeError, TypeError):
+                # Fallback if QTimer fails (e.g. during app shutdown)
                 with contextlib.suppress(Exception):
-                    _apply_ui_updates()
-        except (AttributeError, RuntimeError, ValueError, TypeError):
-            # Suppress non-critical clipboard interaction errors (e.g., OS-level access lock).
-            pass
+                    _ui_closure()
+        except Exception as e:
+            logging.exception(f"Unexpected error in update_implicit_hydrogens: {e}")
     def clean_up_2d_structure(self):
         self.statusBar().showMessage("Optimizing 2D structure...")
 

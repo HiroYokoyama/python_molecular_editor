@@ -16,6 +16,7 @@ class DummyEditActions(MainWindowEditActions):
         self.current_mol = host.current_mol
         self.current_file_path = host.current_file_path
         self.has_unsaved_changes = host.has_unsaved_changes
+        self.main_window_edit_actions = self
 
     def statusBar(self):
         return self._host.statusBar()

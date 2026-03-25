@@ -16,6 +16,7 @@ Module separated from MainWindow (main_window.py)
 Functional class: MainWindowViewLoaders
 """
 
+import logging
 import os
 # RDKit imports (explicit to satisfy flake8 and used features)
 from rdkit import Chem
@@ -215,9 +216,9 @@ class MainWindowViewLoaders(object):
             try:
                 if hasattr(self, "_clear_xyz_flags"):
                     self._clear_xyz_flags(mol)
-            except Exception:
-                # Suppress errors if the molecule does not originate from an XYZ source and lacks flags to clear.
-                pass
+            except (AttributeError, RuntimeError, TypeError, ValueError) as e:
+                # Suppress non-critical errors if the molecule lacks XYZ source flags to clear.
+                logging.debug(f"Failed to clear XYZ flags (likely not an XYZ source): {e}")
             if hasattr(self, "_apply_chem_check_and_set_flags"):
                 self._apply_chem_check_and_set_flags(mol, source_desc="MOL/SDF")
 

@@ -16,6 +16,7 @@ class DummyEditActions(MainWindowEditActions):
         self.view_2d = host.view_2d
         self.undo_stack = MagicMock()
         self.is_xyz_derived = False
+        self.main_window_edit_actions = self
         self._ih_update_counter = 0
 
     def __getattr__(self, name):

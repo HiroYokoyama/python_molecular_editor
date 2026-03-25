@@ -16,6 +16,7 @@ DOI: 10.5281/zenodo.17268532
 """
 
 # RDKit imports (explicit to satisfy flake8 and used features)
+import logging
 from PyQt6.QtCore import QThread, QTimer
 from PyQt6.QtGui import QAction, QColor
 
@@ -227,37 +228,15 @@ class MainWindowCompute(object):
         # Run optimize on next event loop turn so UI updates first
         QTimer.singleShot(0, self.optimize_3d_structure)
 
-    def trigger_conversion(self):
-        # Reset last successful optimization method at start of new conversion
-        self.last_successful_optimization_method = None
-
-        # Clear 3D constraints on conversion
-        self.constraints_3d = []
-
-        # Clear 3D view if no atoms in 2D editor
-        if not self.data.atoms:
-            self.plotter.clear()
-            self.current_mol = None
-            self.analysis_action.setEnabled(False)
-            self.statusBar().showMessage("3D view cleared.")
-            self.view_2d.setFocus()
-            return
-
-        # Reset measurement/3D-edit modes
-        if self.measurement_mode:
-            self.measurement_action.setChecked(False)
-            self.toggle_measurement_mode(False)  # Disable measurement mode
-        if self.is_3d_edit_mode:
-            self.edit_3d_action.setChecked(False)
-            self.toggle_3d_edit_mode(False)  # Disable 3D edit mode
-
+    def _prepare_rdkit_mol_for_conversion(self):
+        """Convert current data to RDKit mol and check for chemistry problems."""
         mol = self.data.to_rdkit_mol(use_2d_stereo=False)
 
         # Check chemistry if mol object creation fails
         if not mol or mol.GetNumAtoms() == 0:
             # Run fallback chemistry check
             self.check_chemistry_problems_fallback()
-            return
+            return None
 
         # Save atom properties (lost in worker)
         self.original_atom_properties = {}
@@ -271,80 +250,65 @@ class MainWindowCompute(object):
 
         problems = Chem.DetectChemistryProblems(mol)
         if problems:
-            # Clear existing flags and show new problems
-            self.scene.clear_all_problem_flags()
-            self.statusBar().showMessage(
-                f"Error: {len(problems)} chemistry problem(s) found."
-            )
-            # Clear selection
-            self.scene.clearSelection()
-
-            # Mark problematic atoms
-            for prob in problems:
-                atom_idx = prob.GetAtomIdx()
-                rdkit_atom = mol.GetAtomWithIdx(atom_idx)
-                # Validate atom ID in editor
-                if rdkit_atom.HasProp("_original_atom_id"):
-                    original_id = rdkit_atom.GetIntProp("_original_atom_id")
-                    if (
-                        original_id in self.data.atoms
-                        and self.data.atoms[original_id]["item"]
-                    ):
-                        item = self.data.atoms[original_id]["item"]
-                        item.has_problem = True
-                        item.update()
-
-            self.view_2d.setFocus()
-            return
+            self.main_window_compute._handle_chemistry_problems(mol, problems)
+            return None
 
         # Clear flags and run 3D conversion if no problems
         self.scene.clear_all_problem_flags()
 
         try:
             Chem.SanitizeMol(mol)
-        except (AttributeError, RuntimeError, ValueError, TypeError):
+        except (AttributeError, RuntimeError, ValueError, TypeError) as e:
+            logging.error(f"Sanitization failed: {e}")
             self.statusBar().showMessage("Error: Invalid chemical structure.")
             self.view_2d.setFocus()
-            return
+            return None
 
-        # Handle multiple molecules
-        num_frags = len(Chem.GetMolFrags(mol))
-        if num_frags > 1:
-            self.statusBar().showMessage(
-                f"Converting {num_frags} molecules to 3D with collision detection..."
-            )
-        else:
-            self.statusBar().showMessage("Calculating 3D structure...")
+        return mol
 
-        # Use 2D editor's MOL block to preserve wedge/dash stereo
+    def _handle_chemistry_problems(self, mol, problems):
+        """Mark chemistry problems in the 2D scene."""
+        self.scene.clear_all_problem_flags()
+        self.statusBar().showMessage(f"Error: {len(problems)} chemistry problem(s) found.")
+        self.scene.clearSelection()
+
+        for prob in problems:
+            try:
+                atom_idx = prob.GetAtomIdx()
+                rdkit_atom = mol.GetAtomWithIdx(atom_idx)
+                if rdkit_atom.HasProp("_original_atom_id"):
+                    original_id = rdkit_atom.GetIntProp("_original_atom_id")
+                    if original_id in self.data.atoms:
+                        item = self.data.atoms[original_id]["item"]
+                        if item:
+                            item.has_problem = True
+                            item.update()
+            except (AttributeError, RuntimeError, ValueError, TypeError):
+                continue
+        self.view_2d.setFocus()
+
+    def _setup_mol_block_for_worker(self, mol):
+        """Generate high-quality MOL block with E/Z stereo for the worker."""
         mol_block = self.data.to_mol_block()
         if not mol_block:
             mol_block = Chem.MolToMolBlock(mol, includeStereo=True)
 
-        # Add M CFG lines for explicit E/Z bonds
         mol_lines = mol_block.split("\n")
-
-        # Map explicit E/Z labels to RDKit indices
         ez_bond_info = {}
         for (id1, id2), bond_data in self.data.bonds.items():
             if bond_data.get("stereo") in [3, 4]:  # E/Z labels
-                # Find atoms by _original_atom_id
-                rdkit_idx1 = None
-                rdkit_idx2 = None
+                rdkit_idx1, rdkit_idx2 = None, None
                 for atom in mol.GetAtoms():
                     if atom.HasProp("_original_atom_id"):
                         orig_id = atom.GetIntProp("_original_atom_id")
-                        if orig_id == id1:
-                            rdkit_idx1 = atom.GetIdx()
-                        elif orig_id == id2:
-                            rdkit_idx2 = atom.GetIdx()
+                        if orig_id == id1: rdkit_idx1 = atom.GetIdx()
+                        elif orig_id == id2: rdkit_idx2 = atom.GetIdx()
 
                 if rdkit_idx1 is not None and rdkit_idx2 is not None:
                     rdkit_bond = mol.GetBondBetweenAtoms(rdkit_idx1, rdkit_idx2)
                     if rdkit_bond and rdkit_bond.GetBondType() == Chem.BondType.DOUBLE:
                         ez_bond_info[rdkit_bond.GetIdx()] = bond_data["stereo"]
 
-        # Add M CFG lines if needed
         if ez_bond_info:
             insert_idx = len(mol_lines) - 1  # Before M  END
             for bond_idx, stereo_type in ez_bond_info.items():
@@ -353,119 +317,112 @@ class MainWindowCompute(object):
                 mol_lines.insert(insert_idx, cfg_line)
                 insert_idx += 1
             mol_block = "\n".join(mol_lines)
+        return mol_block
 
-        # Assign unique run ID
-        run_id = int(getattr(self, "next_conversion_id", 1))
-        self.next_conversion_id = run_id + 1
-
-        # Track active worker IDs
-        if not hasattr(self, "active_worker_ids"):
-            self.active_worker_ids = set()
-        self.active_worker_ids.add(run_id)
-
-        # Change button to 'Halt' for cancellation (keep it enabled so the user can click Halt)
-        self.convert_button.setText("Halt conversion")
-        self._safe_disconnect(self.convert_button.clicked)
-        self.convert_button.clicked.connect(self.halt_conversion)
-
-        # Keep cleanup disabled while conversion is in progress
-        self.cleanup_button.setEnabled(False)  
-        # Disable 3D features during calculation
-        self._enable_3d_features(False)  
-        self.statusBar().showMessage("Calculating 3D structure...")  
-        self.plotter.clear()  
-        bg_color_hex = self.settings.get(
-            "background_color", "#919191"
-        )  
-        bg_qcolor = QColor(bg_color_hex)  
-
-        if bg_qcolor.isValid():  
-            luminance = bg_qcolor.toHsl().lightness()
-            text_color = "black" if luminance > 128 else "white"
-        else:
-            text_color = "white"
-
-        text_actor = self.plotter.add_text(  
-            "Calculating...",
-            position="lower_right",
-            font_size=15,
-            color=text_color,
-            name="calculating_text",
-        )
-        # Keep a reference so we can reliably remove the text actor later
-        self._calculating_text_actor = text_actor
-        text_actor.GetTextProperty().SetOpacity(1)  
-        self.plotter.render()  
-
-        # Determine conversion_mode from settings (default: 'fallback').
-        # If the user invoked conversion via the right-click menu, a temporary
-        # override may be set on self._temp_conv_mode and should be used once.
-        conv_mode = self.__dict__.pop("_temp_conv_mode", None)
-        if not conv_mode:
-            conv_mode = self.settings.get("3d_conversion_mode", "fallback")
-
-        # Temporary optimization override (non-persistent)
-        # Optimize 3D is invoked via right-click menu. Do not persist here.
-        opt_method = (
-            self.__dict__.pop("_temp_optimization_method", None) or self.optimization_method
-        )
-
-        options = {
-            "conversion_mode": conv_mode,
-            "optimization_method": opt_method,
-            "optimize_intermolecular_interaction_rdkit": self.settings.get("optimize_intermolecular_interaction_rdkit", True)
-        }
-        options["worker_id"] = run_id
-
-        # Create a fresh CalculationWorker + QThread for this run.
+    def _start_calculation_worker(self, mol_block, options, run_id):
+        """Initialize and start the background calculation worker."""
         try:
             thread = QThread()
             worker = CalculationWorker()
             worker.halt_ids = self.halt_ids
             worker.moveToThread(thread)
 
-            # Forward status signals
             worker.status_update.connect(self.update_status_bar)
 
-            # Handler for finished calculation
-            def _on_worker_finished(result, w=worker, t=thread):
-                try:
-                    self.on_calculation_finished(result)
-                finally:
-                    t.quit()
-                    t.finished.connect(t.deleteLater)
-                    w.deleteLater()
-                    with contextlib.suppress(ValueError, AttributeError):
-                        self._active_calc_threads.remove(t)
+            def _cleanup(t=thread, w=worker):
+                t.quit()
+                t.finished.connect(t.deleteLater)
+                w.deleteLater()
+                with contextlib.suppress(ValueError, AttributeError):
+                    self._active_calc_threads.remove(t)
 
-            # Handler for calculation error/halt
-            def _on_worker_error(error_msg, w=worker, t=thread):
-                try:
-                    self.on_calculation_error(error_msg)
-                finally:
-                    t.quit()
-                    t.finished.connect(t.deleteLater)
-                    w.deleteLater()
-                    with contextlib.suppress(ValueError, AttributeError):
-                        self._active_calc_threads.remove(t)
+            def _on_finished(result):
+                try: self.on_calculation_finished(result)
+                finally: _cleanup()
 
-            worker.error.connect(_on_worker_error)
-            worker.finished.connect(_on_worker_finished)
-            # Start the thread
+            def _on_error(error_msg):
+                try: self.on_calculation_error(error_msg)
+                finally: _cleanup()
+
+            worker.error.connect(_on_error)
+            worker.finished.connect(_on_finished)
             thread.start()
-            QTimer.singleShot(
-                10, lambda w=worker, m=mol_block, o=options: w.start_work.emit(m, o)
-            )
+            QTimer.singleShot(10, lambda: worker.start_work.emit(mol_block, options))
             self._active_calc_threads.append(thread)
         except (RuntimeError, TypeError, AttributeError) as e:
-            # Fall back: if thread/worker creation failed, create a local worker and start it.
-            # We catch specific creation errors here.
+            logging.exception(f"Failed to start calculation worker: {e}")
             self.on_calculation_error(str(e))
 
-        # Save undo state
+    def trigger_conversion(self):
+        self.last_successful_optimization_method = None
+        self.constraints_3d = []
+
+        if not self.data.atoms:
+            self.plotter.clear()
+            self.current_mol = None
+            self.analysis_action.setEnabled(False)
+            self.statusBar().showMessage("3D view cleared.")
+            self.view_2d.setFocus()
+            return
+
+        # Reset states
+        if self.measurement_mode:
+            self.measurement_action.setChecked(False)
+            self.toggle_measurement_mode(False)
+        if self.is_3d_edit_mode:
+            self.edit_3d_action.setChecked(False)
+            self.toggle_3d_edit_mode(False)
+
+        mol = self.main_window_compute._prepare_rdkit_mol_for_conversion()
+        if not mol:
+            return
+
+        num_frags = len(Chem.GetMolFrags(mol))
+        if num_frags > 1:
+            self.statusBar().showMessage(
+                f"Converting {num_frags} molecules to 3D with collision detection..."
+            )
+        else:
+            self.statusBar().showMessage("Calculating 3D structure...")
+
+        mol_block = self.main_window_compute._setup_mol_block_for_worker(mol)
+        
+        run_id = int(getattr(self, "next_conversion_id", 1))
+        self.next_conversion_id = run_id + 1
+        if not hasattr(self, "active_worker_ids"):
+            self.active_worker_ids = set()
+        self.active_worker_ids.add(run_id)
+
+        # UI Updates
+        self.convert_button.setText("Halt conversion")
+        self._safe_disconnect(self.convert_button.clicked)
+        self.convert_button.clicked.connect(self.halt_conversion)
+        self.cleanup_button.setEnabled(False)
+        self._enable_3d_features(False)
+        self.plotter.clear()
+
+        # Add 'Calculating...' overlay
+        bg_qcolor = QColor(self.settings.get("background_color", "#919191"))
+        text_color = "black" if (bg_qcolor.isValid() and bg_qcolor.toHsl().lightness() > 128) else "white"
+        self._calculating_text_actor = self.plotter.add_text(
+            "Calculating...", position="lower_right", font_size=15, color=text_color, name="calculating_text"
+        )
+        self.plotter.render()
+
+        # Build options
+        conv_mode = self.__dict__.pop("_temp_conv_mode", self.settings.get("3d_conversion_mode", "fallback"))
+        opt_method = self.__dict__.pop("_temp_optimization_method", None) or getattr(self, "optimization_method", "MMFF_RDKIT")
+        
+        options = {
+            "conversion_mode": conv_mode,
+            "optimization_method": opt_method,
+            "optimize_intermolecular_interaction_rdkit": self.settings.get("optimize_intermolecular_interaction_rdkit", True),
+            "worker_id": run_id
+        }
+
+        self.main_window_compute._start_calculation_worker(mol_block, options, run_id)
         self.push_undo_state()
         self.update_chiral_labels()
-
         self.view_2d.setFocus()
 
     def halt_conversion(self):  

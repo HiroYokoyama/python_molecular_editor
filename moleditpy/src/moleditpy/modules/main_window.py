@@ -97,23 +97,32 @@ class MainWindow(QMainWindow):
                     return init_method(self._host, *a, **k)
                 return None
 
-        self.main_window_main_init = BoundFeature(MainWindowMainInit, self)
-        self.main_window_ui_manager = BoundFeature(MainWindowUiManager, self)
-        self.main_window_view_3d = BoundFeature(MainWindowView3d, self)
-        self.main_window_compute = BoundFeature(MainWindowCompute, self)
-        self.main_window_edit_actions = BoundFeature(MainWindowEditActions, self)
-        self.main_window_string_importers = BoundFeature(
-            MainWindowStringImporters, self
-        )
-        self.main_window_molecular_parsers = BoundFeature(
-            MainWindowMolecularParsers, self
-        )
-        self.main_window_view_loaders = BoundFeature(MainWindowViewLoaders, self)
-        self.main_window_project_io = BoundFeature(MainWindowProjectIo, self)
-        self.main_window_app_state = BoundFeature(MainWindowAppState, self)
-        self.main_window_export = BoundFeature(MainWindowExport, self)
-        self.main_window_dialog_manager = BoundFeature(MainWindowDialogManager, self)
-        self.main_window_edit_3d = BoundFeature(MainWindowEdit3d, self)
+        # --- Feature Initialization (Delegation Pattern) ---
+        # The following 'functional classes' are separated from main_window.py to reduce file size.
+        # BoundFeature binds their methods to this MainWindow instance (self).
+        
+        # UI & Lifecycle
+        self.main_window_main_init = BoundFeature(MainWindowMainInit, self)  # init_ui, init_menu_bar, load_settings
+        self.main_window_ui_manager = BoundFeature(MainWindowUiManager, self) # set_mode, toggle_3d_edit_mode, closeEvent
+        self.main_window_dialog_manager = BoundFeature(MainWindowDialogManager, self) # show_about_dialog, open_periodic_table_dialog
+        
+        # View & Visualization
+        self.main_window_view_3d = BoundFeature(MainWindowView3d, self)   # draw_molecule_3d, set_3d_style, apply_3d_settings
+        self.main_window_view_loaders = BoundFeature(MainWindowViewLoaders, self) # load_mol_file_for_3d_viewing, save_3d_as_mol
+        
+        # Computation & Logic
+        self.main_window_compute = BoundFeature(MainWindowCompute, self)  # trigger_conversion, optimize_3d_structure
+        self.main_window_edit_actions = BoundFeature(MainWindowEditActions, self) # copy_selection, add_hydrogen_atoms, update_implicit_hydrogens
+        self.main_window_molecular_parsers = BoundFeature(MainWindowMolecularParsers, self) # load_mol_file, fix_mol_block
+        self.main_window_string_importers = BoundFeature(MainWindowStringImporters, self) # load_from_smiles, load_from_inchi
+        
+        # Project & State
+        self.main_window_project_io = BoundFeature(MainWindowProjectIo, self) # save_project, open_project_file
+        self.main_window_app_state = BoundFeature(MainWindowAppState, self) # push_undo_state, get_current_state, undo, redo
+        self.main_window_export = BoundFeature(MainWindowExport, self) # export_stl, export_obj_mtl, export_2d_png
+        
+        # 3D Editing
+        self.main_window_edit_3d = BoundFeature(MainWindowEdit3d, self) # toggle_measurement_mode, calculate_distance
 
         try:
             self.main_window_main_init.init(initial_file)

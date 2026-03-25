@@ -35,6 +35,8 @@ class DummyCompute(MainWindowCompute):
             "UFF_RDKIT": "UFF (RDKit)",
         }
         self._active_calc_threads = []
+        self.main_window_compute = self
+        self.main_window_edit_actions = self
         self.chem_check_tried = False
         self.chem_check_failed = False
         self.last_successful_optimization_method = None
