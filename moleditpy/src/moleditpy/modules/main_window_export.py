@@ -48,6 +48,8 @@ except ImportError:
 class MainWindowExport:
     """Mixin class separated from main_window.py"""
 
+    _cls = None
+
     def export_stl(self):
         """Export as STL (no color)."""
         if not self.current_mol:  
@@ -968,3 +970,5 @@ class MainWindowExport:
             self.statusBar().showMessage(f"3D view exported to {filePath}", 3000)
         except (AttributeError, RuntimeError, ValueError) as e:
             self.statusBar().showMessage(f"Error exporting 3D PNG: {e}")
+
+MainWindowExport._cls = MainWindowExport

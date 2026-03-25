@@ -54,6 +54,8 @@ except ImportError:
 class MainWindowEdit3d:
     """Mixin class separated from main_window.py."""
 
+    _cls = None
+
     def toggle_measurement_mode(self, checked):
         """Toggle measurement mode on/off."""
         if checked:
@@ -434,3 +436,5 @@ class MainWindowEdit3d:
         """Remove dialog from active list."""
         if dialog in self.active_3d_dialogs:
             self.active_3d_dialogs.remove(dialog)
+
+MainWindowEdit3d._cls = MainWindowEdit3d

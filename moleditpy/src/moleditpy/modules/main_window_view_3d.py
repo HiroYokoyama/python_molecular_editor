@@ -51,6 +51,8 @@ except ImportError:
 class MainWindowView3d:
     """Mixin class separated from main_window.py"""
 
+    _cls = None  # Class-level reference for plugin patching accessibility
+
     def set_3d_style(self, style_name):
         """Set 3D display style and update view"""
         current_stored_style = getattr(self, "current_3d_style", None)
@@ -1721,3 +1723,7 @@ class MainWindowView3d:
 
         if self.current_mol:
             self.draw_molecule_3d(self.current_mol)
+
+
+# Set class-level marker for plugin compatibility
+MainWindowView3d._cls = MainWindowView3d

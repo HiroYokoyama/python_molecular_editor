@@ -128,6 +128,8 @@ except ImportError:
 class MainWindowEditActions:
     """Mixin class separated from main_window.py"""
 
+    _cls = None  # Placeholder for class-level patching
+
     def copy_selection(self):
         """Copy selected atoms and bonds to clipboard"""
         try:
@@ -1418,5 +1420,4 @@ class MainWindowEditActions:
                     not getattr(self, "chem_check_failed", False)
                 )
 
-
-
+MainWindowEditActions._cls = MainWindowEditActions

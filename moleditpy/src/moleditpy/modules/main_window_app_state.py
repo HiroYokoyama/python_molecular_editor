@@ -51,6 +51,8 @@ except ImportError:
 class MainWindowAppState:
     """Mixin class separated from main_window.py"""
 
+    _cls = None
+
     def __init__(self):
         """Initialize class. 'self' is MainWindow instance."""
         self.DEBUG_UNDO = False
@@ -900,3 +902,5 @@ class MainWindowAppState:
             except (AttributeError, RuntimeError, ValueError, TypeError) as e:
                 print(f"Warning: Could not restore 3D molecular data: {e}")
                 self.current_mol = None
+
+MainWindowAppState._cls = MainWindowAppState

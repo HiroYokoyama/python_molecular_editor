@@ -70,6 +70,8 @@ except ImportError:
 class MainWindowDialogManager:
     """Mixin class separated from main_window.py """
 
+    _cls = None
+
     def show_about_dialog(self):
         """Show the custom About dialog with Easter egg functionality"""
         dialog = AboutDialog(self, self)
@@ -463,4 +465,4 @@ class MainWindowDialogManager:
         dialog.show()
         dialog.finished.connect(lambda: self.remove_dialog_from_list(dialog))
 
-
+MainWindowDialogManager._cls = MainWindowDialogManager

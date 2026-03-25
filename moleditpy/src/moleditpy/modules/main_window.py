@@ -54,7 +54,6 @@ except (AttributeError, RuntimeError, TypeError):
 
 
 class MainWindow(
-    QMainWindow,
     MainWindowAppState,
     MainWindowCompute,
     MainWindowDialogManager,
@@ -68,6 +67,7 @@ class MainWindow(
     MainWindowUiManager,
     MainWindowView3d,
     MainWindowViewLoaders,
+    QMainWindow,
 ):
     # start_calculation carries the MOL block and an options object (second arg)
     start_calculation = pyqtSignal(str, object)

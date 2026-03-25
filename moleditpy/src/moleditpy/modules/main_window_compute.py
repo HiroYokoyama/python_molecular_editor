@@ -57,6 +57,8 @@ except ImportError:
 
 class MainWindowCompute:
     """Mixin class separated from main_window.py"""
+
+    _cls = None
     
     # Default initial state 
     last_successful_optimization_method = None
@@ -822,3 +824,5 @@ class MainWindowCompute:
             self.statusBar().showMessage(f"Error: {error_message}")
 
         self._refresh_ui_state()
+
+MainWindowCompute._cls = MainWindowCompute

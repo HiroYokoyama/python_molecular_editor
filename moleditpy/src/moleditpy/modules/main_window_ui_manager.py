@@ -219,7 +219,8 @@ class MainWindowUiManager:
             pass
 
 
-        event.accept()
+        # 4. Standard framework cleanup
+        super().closeEvent(event)
 
     def toggle_3d_edit_mode(self, checked):
         """Toggle 3D Drag mode."""
