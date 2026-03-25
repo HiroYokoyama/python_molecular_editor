@@ -138,6 +138,7 @@ class MainWindowStringImporters:
                     )
 
             self.statusBar().showMessage("Successfully loaded from SMILES.")
+            self.scene.update_all_items()
             self.reset_undo_stack()
             self.has_unsaved_changes = False
             self.update_window_title()
@@ -240,6 +241,7 @@ class MainWindowStringImporters:
                     )
 
             self.statusBar().showMessage("Successfully loaded from InChI.")
+            self.scene.update_all_items()
             self.reset_undo_stack()
             self.has_unsaved_changes = False
             self.update_window_title()
