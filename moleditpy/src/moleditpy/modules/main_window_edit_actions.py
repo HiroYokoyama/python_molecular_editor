@@ -1019,8 +1019,8 @@ class MainWindowEditActions(object):
             # Update measurement labels
             self.update_2d_measurement_labels()
 
-            # Request scene update
-            self.scene.update()
+            # Request scene update and ring re-analysis
+            self.scene.update_all_items()
 
             self.statusBar().showMessage("2D structure optimization successful.")
             self.push_undo_state()

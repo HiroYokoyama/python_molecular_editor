@@ -280,7 +280,7 @@ class BondItem(QGraphicsItem):
                     bond_hex = settings.get("bond_color_2d", "#222222")
                     bond_color = QColor(bond_hex)
 
-                pen = QPen(bond_color, width_2d)
+                pen = QPen(bond_color, bond_width)
                 pen.setCapStyle(cap_style)
                 painter.setPen(pen)
 

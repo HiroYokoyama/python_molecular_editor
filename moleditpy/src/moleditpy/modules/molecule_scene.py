@@ -380,7 +380,6 @@ class MoleculeScene(QGraphicsScene):
                 self.data_changed_in_event = True
                 # Complete event processing here to prevent selection of underlying items
                 self.start_atom = None
-                self.start_pos = None
                 self.press_pos = None
                 if self.data_changed_in_event:
                     self.update_all_items()
@@ -389,8 +388,19 @@ class MoleculeScene(QGraphicsScene):
 
         released_item = self.itemAt(end_pos, self.views()[0].transform())
 
-        # 1. Handle special modes (radical/charge)
+        # 1. Handle special modes (delete/radical/charge)
         if (
+            (self.mode == "delete")
+            and is_click
+            and released_item is not None
+        ):
+            # Safe deletion via unified handler
+            if self.delete_items({released_item}):
+                self.window.push_undo_state()
+            self.press_pos = None
+            return
+
+        elif (
             (self.mode == "radical")
             and is_click
             and isinstance(released_item, AtomItem)
@@ -570,9 +580,10 @@ class MoleculeScene(QGraphicsScene):
         else:
             super().mouseReleaseEvent(event)
 
-        # Safely check for deleted objects
+        # Safely check for moved objects
         moved_atoms = []
-        for item, old_pos in self.initial_positions_in_event.items():
+        initial_positions = getattr(self, "initial_positions_in_event", {})
+        for item, old_pos in initial_positions.items():
             try:
                 # Check if object is valid, in scene, and position changed
                 if item.scene() and item.pos() != old_pos:
@@ -597,7 +608,7 @@ class MoleculeScene(QGraphicsScene):
             if self.views():
                 self.views()[0].viewport().update()
 
-        if self.data_changed_in_event:
+        if getattr(self, "data_changed_in_event", False):
             self.update_all_items()
 
         self.start_atom = None
@@ -608,7 +619,7 @@ class MoleculeScene(QGraphicsScene):
         # Clear user template data when switching modes
         if hasattr(self, "user_template_data"):
             self.user_template_data = None
-        if self.data_changed_in_event:
+        if getattr(self, "data_changed_in_event", False):
             self.window.push_undo_state()
 
     def mouseDoubleClickEvent(self, event):  
@@ -1280,6 +1291,7 @@ class MoleculeScene(QGraphicsScene):
                 if hasattr(atom, "update_style"):
                     atom.update_style()
 
+            self.update_all_items()
             return True
 
         except (AttributeError, RuntimeError, ValueError) as e:
