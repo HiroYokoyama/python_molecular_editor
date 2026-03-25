@@ -15,6 +15,7 @@ main_window_ui_manager.py
 Mixin class separated from main_window.py
 """
 
+import contextlib
 import vtk
 
 # PyQt6 Modules
@@ -220,7 +221,12 @@ class MainWindowUiManager:
 
 
         # 4. Standard framework cleanup
-        super().closeEvent(event)
+        try:
+            super().closeEvent(event)
+        except (TypeError, RuntimeError):
+            # Fallback for unit tests using mock events or if C++ object is already gone
+            with contextlib.suppress(AttributeError):
+                event.accept()
 
     def toggle_3d_edit_mode(self, checked):
         """Toggle 3D Drag mode."""
