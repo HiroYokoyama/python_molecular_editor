@@ -168,10 +168,9 @@ class MolecularData:
         final_mol = mol.GetMol()
         try:
             Chem.SanitizeMol(final_mol)
-        except (RuntimeError, ValueError, TypeError) as e:
-            pass  # Suppress RDKit sanitization failures (triggers fallback)
+        except (RuntimeError, ValueError, TypeError):
+            # Sanitization failure: return None to trigger manual MOL block fallback
             return None
-
 
 
         # --- Step 4: add 2D conformer ---
