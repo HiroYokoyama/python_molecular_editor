@@ -528,7 +528,9 @@ class CalculationWorker(QObject):
             if mode in ("fallback", "rdkit"):
                 success = self._run_rdkit_workflow(mol, ex_stereo, options, helpers)
                 if success: return
-                if mode == "rdkit": raise RuntimeError("RDKit conversion failed.")
+                if mode == "rdkit":
+                    opt_method = options.get("optimization_method", "MMFF94s_RDKIT")
+                    raise RuntimeError(f"Optimization with {opt_method} failed.")
 
             # 6. Open Babel Workflow (Fallback)
             if mode in ("fallback", "obabel"):
