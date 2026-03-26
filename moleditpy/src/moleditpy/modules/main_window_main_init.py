@@ -95,7 +95,7 @@ except (AttributeError, RuntimeError, TypeError):
 try:
     # package relative imports (preferred when running as `python -m moleditpy`)
     from .color_settings_dialog import ColorSettingsDialog
-    from .constants import NUM_DASHES, VERSION
+    from .constants import DEFAULT_CPK_COLORS, NUM_DASHES, VERSION
     from .custom_qt_interactor import CustomQtInteractor
     from .molecular_data import MolecularData
     from .molecule_scene import MoleculeScene
@@ -361,15 +361,43 @@ class MainWindowMainInit:
             pass  # Suppress non-critical UI/menu/settings sync errors
 
     def update_cpk_colors_from_settings(self):
-        """Apply any CPK color overrides from settings to the global CPK_COLORS."""
-        overrides = self.settings.get("cpk_colors", {})
-        # Note: In this project, CPK_COLORS is imported from constants
-        from .constants import CPK_COLORS
-        for symbol, hex_color in overrides.items():
+        """Update global CPK_COLORS and CPK_COLORS_PV from saved settings overrides.
+
+        This modifies the in-memory CPK_COLORS mapping (not persisted until settings are saved).
+        Only keys present in self.settings['cpk_colors'] are changed; other elements keep the defaults.
+        """
+        try:
+            # Overridden CPK settings are stored in self.settings['cpk_colors'].
+            # To ensure that 2D modules (e.g., atom_item.py) which imported the
+            # `CPK_COLORS` mapping from `modules.constants` at import time see
+            # updates, mutate the mapping in-place on the constants module
+            # instead of rebinding a new local variable here.
+            overrides = self.settings.get("cpk_colors", {}) or {}
+
+            # Import the constants module so we can update mappings directly
             try:
-                CPK_COLORS[symbol] = QColor(hex_color)
-            except (ValueError, TypeError):
-                continue
+                from . import constants as constants_mod
+            except ImportError:
+                import modules.constants as constants_mod
+
+            # Reset constants.CPK_COLORS to defaults but keep the same dict
+            constants_mod.CPK_COLORS.clear()
+            for k, v in DEFAULT_CPK_COLORS.items():
+                constants_mod.CPK_COLORS[k] = (
+                    QColor(v) if not isinstance(v, QColor) else v
+                )
+
+            # Apply overrides from settings
+            for k, hexv in overrides.items():
+                if isinstance(hexv, str) and hexv:
+                    constants_mod.CPK_COLORS[k] = QColor(hexv)
+
+            # Rebuild the PV representation in-place too
+            constants_mod.CPK_COLORS_PV.clear()
+            for k, c in constants_mod.CPK_COLORS.items():
+                constants_mod.CPK_COLORS_PV[k] = [c.redF(), c.greenF(), c.blueF()]
+        except (AttributeError, RuntimeError, TypeError, ValueError) as e:
+            print(f"Failed to update CPK colors from settings: {e}")
 
     def open_settings_dialog(self):  
         dialog = SettingsDialog(self.settings, self)
