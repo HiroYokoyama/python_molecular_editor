@@ -190,7 +190,7 @@ def _iterative_optimize(mol, method, check_halted_cb, safe_status_cb, max_iters=
         safe_status_cb(f"Iterative optimization ({method}) error: {e}"); return False
 
 
-def _iterative_optimize_obabel(mol, method, check_halted_cb, safe_status_cb, max_iters=4000, chunk_size=100):
+def _iterative_optimize_obabel(mol, method, check_halted_cb, safe_status_cb, max_iters=4000, chunk_size=100, options=None):
     """Perform force field optimization using OpenBabel in chunks."""
     try:
         if not OBABEL_AVAILABLE or not pybel: raise RuntimeError("OpenBabel is not available.")
@@ -395,9 +395,7 @@ def _perform_direct_conversion(mol_block, mol, options, _check_halted, _safe_sta
         
         opt_func = _iterative_optimize_obabel if backend == "OBABEL" else _iterative_optimize
         if not opt_func(mol, method_key, _check_halted, _safe_status, options=options if backend == "RDKIT" else None):
-            _safe_status(f"Warning: Optimization failed. Using unoptimized structure.")
-            # Best-effort metadata cleanup
-            with contextlib.suppress(RuntimeError, ValueError): mol.ClearProp("_pme_optimization_method")
+            raise RuntimeError(f"Optimization with {opt_method} failed.")
 
     if _check_halted(): raise WorkerHaltError("Halted")
     return mol
@@ -416,7 +414,7 @@ def _perform_optimize_only(mol, options, worker_id, _check_halted, _safe_status,
     
     opt_func = _iterative_optimize_obabel if backend == "OBABEL" else _iterative_optimize
     if not opt_func(mol, method_key, _check_halted, _safe_status, options=options if backend == "RDKIT" else None):
-        raise Exception(f"Optimization with {opt_method} failed.")
+        raise RuntimeError(f"Optimization with {opt_method} failed.")
     
     if _check_halted(): raise WorkerHaltError("Halted")
     _safe_finished((worker_id, mol))
@@ -543,7 +541,7 @@ class CalculationWorker(QObject):
                 self._run_direct_workflow(mol_block, mol, options, helpers)
 
         except WorkerHaltError: _safe_error("Halted")
-        except (RuntimeError, ValueError, TypeError, AttributeError, ImportError, OSError, UnicodeDecodeError) as e: 
+        except (Exception, RuntimeError, ValueError, TypeError, AttributeError, ImportError, OSError, UnicodeDecodeError) as e: 
             _safe_error(str(e))
 
     def _prepare_molecule_for_calc(self, mol_block, helpers):
