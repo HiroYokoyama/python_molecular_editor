@@ -10,10 +10,6 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
-"""
-# Module separated from MainWindow (main_window.py)
-# Functional class: MainWindowEditActions
-"""
 
 
 import contextlib

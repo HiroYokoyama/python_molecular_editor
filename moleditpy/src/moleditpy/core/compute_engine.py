@@ -10,10 +10,6 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
-"""
-# Module separated from MainWindow (main_window.py)
-# Functional class: MainWindowCompute
-"""
 
 # RDKit imports (explicit to satisfy flake8 and used features)
 import logging
@@ -56,8 +52,6 @@ except ImportError:
 
 
 class MainWindowCompute:
-    """Mixin class separated from main_window.py"""
-
     _cls = None
 
     # Default initial state

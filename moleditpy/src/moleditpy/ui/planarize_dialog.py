@@ -224,19 +224,16 @@ class PlanarizeDialog(Dialog3DPickingMixin, QDialog):
             QMessageBox.critical(self, "Error", f"Failed to planarize: {e}")
 
     def closeEvent(self, event):
-        """Handle dialog close event."""
         self.clear_atom_labels()
         self.disable_picking()
         super().closeEvent(event)
 
     def reject(self):
-        """Handle cancel action."""
         self.clear_atom_labels()
         self.disable_picking()
         super().reject()
 
     def accept(self):
-        """Handle OK action."""
         self.clear_atom_labels()
         self.disable_picking()
         super().accept()

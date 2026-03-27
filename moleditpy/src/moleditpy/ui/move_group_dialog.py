@@ -1,4 +1,3 @@
-import logging
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
@@ -11,6 +10,8 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
+
+import logging
 import numpy as np
 import pyvista as pv
 from PyQt6.QtCore import QEvent, Qt
@@ -693,13 +694,11 @@ class MoveGroupDialog(Dialog3DPickingMixin, QDialog):
             delattr(self, "last_drag_positions")
 
     def closeEvent(self, event):
-        """Handle dialog close event."""
         self.clear_atom_labels()
         self.disable_picking()
         super().closeEvent(event)
 
     def reject(self):
-        """Handle cancel action."""
         self.clear_atom_labels()
         self.disable_picking()
         super().reject()

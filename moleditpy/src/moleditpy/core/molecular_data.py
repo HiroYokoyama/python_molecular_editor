@@ -139,7 +139,7 @@ class MolecularData:
             return None
         mol = Chem.RWMol()
 
-        # --- Step 1: atoms ---
+        # atoms ---
         atom_id_to_idx_map = {}
         for atom_id, data in self.atoms.items():
             try:
@@ -154,7 +154,7 @@ class MolecularData:
             idx = mol.AddAtom(atom)
             atom_id_to_idx_map[atom_id] = idx
 
-        # --- Step 2: save bonds & stereo info (label info is kept here) ---
+        # save bonds & stereo info (label info is kept here) ---
         bond_stereo_info = {}  # bond_idx -> {'type': int, 'atom_ids': (id1,id2), 'bond_data': bond_data}
         for (id1, id2), bond_data in self.bonds.items():
             if id1 not in atom_id_to_idx_map or id2 not in atom_id_to_idx_map:
@@ -179,7 +179,7 @@ class MolecularData:
                     "bond_data": bond_data,
                 }
 
-        # --- Step 3: sanitize ---
+        # sanitize ---
         final_mol = mol.GetMol()
         try:
             Chem.SanitizeMol(final_mol)
@@ -187,7 +187,7 @@ class MolecularData:
             # Sanitization failure: return None to trigger manual MOL block fallback
             return None
 
-        # --- Step 4: add 2D conformer ---
+        # add 2D conformer ---
         # Convert from scene pixels to angstroms when creating RDKit conformer.
         conf = Chem.Conformer(final_mol.GetNumAtoms())
         conf.Set3D(False)
@@ -208,7 +208,7 @@ class MolecularData:
                     conf.SetAtomPosition(idx, (ax, ay, 0.0))
         final_mol.AddConformer(conf)
 
-        # --- Step 5: Stereochemistry setting prioritizing E/Z labels ---
+        # Stereochemistry setting prioritizing E/Z labels ---
         # First, record bonds with E/Z labels
         ez_labeled_bonds = set()
         for bond_idx, info in bond_stereo_info.items():
@@ -242,7 +242,7 @@ class MolecularData:
                     return nbr.GetIdx()
             return None
 
-        # --- Step 6: Overwrite based on labels (E/Z has highest priority) ---
+        # Overwrite based on labels (E/Z has highest priority) ---
         for bond_idx, info in bond_stereo_info.items():
             stereo_type = info["type"]
             bond = final_mol.GetBondWithIdx(bond_idx)
@@ -299,7 +299,7 @@ class MolecularData:
                 if b2 is not None:
                     b2.SetBondDir(Chem.BondDir.NONE)
 
-        # Step 7: Finalization (cache update + stereochemistry reassignment)
+        # Finalization (cache update + stereochemistry reassignment)
         final_mol.UpdatePropertyCache(strict=False)
 
         # During 3D conversion (use_2d_stereo=False), apply force=True if E/Z labels exist

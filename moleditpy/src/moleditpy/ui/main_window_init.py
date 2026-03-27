@@ -1,4 +1,3 @@
-import logging
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
@@ -11,12 +10,8 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
-"""
-main_window_main_init.py
-Mixin class separated from main_window.py
-"""
 
-
+import logging
 import contextlib
 import json
 import math
@@ -113,7 +108,6 @@ except (AttributeError, RuntimeError, TypeError):
 class MainWindowMainInit:
     """Feature class separated from main_window.py"""
 
-    # __init__ is copied from main_window.py
 
     def __init__(self, initial_file=None, safe_mode=False):
         # This helper is not used as a mixin in this project; initialization

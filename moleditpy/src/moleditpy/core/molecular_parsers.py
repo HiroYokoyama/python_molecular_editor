@@ -10,10 +10,6 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
-"""
-# Module separated from MainWindow (main_window.py)
-# Functional class: MainWindowMolecularParsers
-"""
 
 import contextlib
 import os
@@ -70,8 +66,6 @@ def _set_mol_prop_safe(mol, key, val):
 
 # --- Class Definition ---
 class MainWindowMolecularParsers:
-    """Mixin class separated from main_window.py"""
-
     def load_mol_file(self, file_path=None):
         if not self.check_unsaved_changes():
             return

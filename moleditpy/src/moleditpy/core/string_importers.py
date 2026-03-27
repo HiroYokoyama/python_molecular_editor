@@ -10,10 +10,7 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
-"""
-main_window_string_importers.py
-Mixin class separated from main_window.py
-"""
+
 # RDKit imports (explicit to satisfy flake8 and used features)
 from rdkit import Chem
 from rdkit.Chem import AllChem
@@ -33,8 +30,6 @@ except ImportError:
 
 # --- Classes ---
 class MainWindowStringImporters:
-    """Mixin class separated from main_window.py."""
-
     def import_smiles_dialog(self):
         """Dialog for SMILES input."""
         smiles, ok = QInputDialog.getText(self, "Import SMILES", "Enter SMILES string:")

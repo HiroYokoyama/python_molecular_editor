@@ -10,10 +10,6 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
-"""
-plugin_manager.py
-Manages discovery, loading, and execution of external plugins.
-"""
 
 import ast
 import importlib.util

@@ -10,11 +10,6 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
-"""
-main_window_edit_3d.py
-Mixin class separated from main_window.py
-"""
-
 
 import numpy as np
 
@@ -61,8 +56,6 @@ except ImportError:
 
 # --- Classes ---
 class MainWindowEdit3d:
-    """Mixin class separated from main_window.py."""
-
     _cls = None
 
     def toggle_measurement_mode(self, checked):

@@ -1,4 +1,3 @@
-import logging
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
@@ -11,11 +10,8 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
-"""
-main_window_project_io.py
-Mixin class separated from main_window.py
-"""
 
+import logging
 import copy
 import json
 import os
@@ -36,8 +32,6 @@ except ImportError:
 
 # --- Classes ---
 class MainWindowProjectIo:
-    """Mixin class separated from main_window.py."""
-
     def save_project(self):
         """Save (Ctrl+S) - Defaults to PMEPRJ format."""
         if not self.data.atoms and not self.current_mol:

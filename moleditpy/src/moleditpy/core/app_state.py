@@ -10,10 +10,6 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
-"""
-# Module separated from MainWindow (main_window.py)
-# Functional class: MainWindowAppState
-"""
 
 import base64
 import copy
@@ -51,8 +47,6 @@ except ImportError:
 
 # --- Class Definition ---
 class MainWindowAppState:
-    """Mixin class separated from main_window.py"""
-
     _cls = None
 
     def __init__(self):

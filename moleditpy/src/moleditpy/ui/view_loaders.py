@@ -10,11 +10,6 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
-"""
-main_window_view_loaders.py
-Module separated from MainWindow (main_window.py)
-Functional class: MainWindowViewLoaders
-"""
 
 import contextlib
 import logging
@@ -45,8 +40,6 @@ except ImportError:
 
 # --- Class Definition ---
 class MainWindowViewLoaders:
-    """Mixin class separated from main_window.py"""
-
     def load_xyz_for_3d_viewing(self, file_path=None):
         """Load XYZ file and display in 3D viewer"""
         if not file_path:

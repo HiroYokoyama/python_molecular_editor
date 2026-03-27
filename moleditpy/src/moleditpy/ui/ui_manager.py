@@ -10,10 +10,6 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
-"""
-main_window_ui_manager.py
-Mixin class separated from main_window.py
-"""
 
 import contextlib
 import vtk
@@ -46,8 +42,6 @@ except ImportError:
 
 # --- Classes ---
 class MainWindowUiManager:
-    """Mixin class separated from main_window.py."""
-
     def update_status_bar(self, message):
         """Update status bar with worker messages."""
         self.statusBar().showMessage(message)

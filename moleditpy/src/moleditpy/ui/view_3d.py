@@ -10,11 +10,6 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
-"""
-main_window_view_3d.py
-Module separated from MainWindow (main_window.py)
-Functional class: MainWindowView3d
-"""
 
 import logging
 import contextlib
@@ -51,8 +46,6 @@ except ImportError:
 
 # --- Class Definition ---
 class MainWindowView3d:
-    """Mixin class separated from main_window.py"""
-
     _cls = None  # Class-level reference for plugin patching accessibility
 
     def set_3d_style(self, style_name):

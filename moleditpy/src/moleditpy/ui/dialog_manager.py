@@ -10,11 +10,6 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
-"""
-main_window_dialog_manager.py
-Module separated from MainWindow (main_window.py)
-Functional class: MainWindowDialogManager
-"""
 
 import json
 import os
