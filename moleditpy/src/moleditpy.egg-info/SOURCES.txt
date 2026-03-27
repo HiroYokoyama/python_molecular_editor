@@ -35,7 +35,7 @@ src/moleditpy/modules/constants.py
 src/moleditpy/modules/constrained_optimization_dialog.py
 src/moleditpy/modules/custom_interactor_style.py
 src/moleditpy/modules/custom_qt_interactor.py
-src/moleditpy/modules/dialog3_d_picking_mixin.py
+src/moleditpy/modules/dialog_3d_picking_mixin.py
 src/moleditpy/modules/dihedral_dialog.py
 src/moleditpy/modules/main_window.py
 src/moleditpy/modules/main_window_app_state.py
@@ -54,6 +54,7 @@ src/moleditpy/modules/main_window_view_loaders.py
 src/moleditpy/modules/mirror_dialog.py
 src/moleditpy/modules/mol_geometry.py
 src/moleditpy/modules/molecular_data.py
+src/moleditpy/modules/molecular_scene_handler.py
 src/moleditpy/modules/molecule_scene.py
 src/moleditpy/modules/move_group_dialog.py
 src/moleditpy/modules/periodic_table_dialog.py
@@ -63,6 +64,7 @@ src/moleditpy/modules/plugin_manager.py
 src/moleditpy/modules/plugin_manager_window.py
 src/moleditpy/modules/settings_dialog.py
 src/moleditpy/modules/sip_isdeleted_safe.py
+src/moleditpy/modules/system_utils.py
 src/moleditpy/modules/template_preview_item.py
 src/moleditpy/modules/template_preview_view.py
 src/moleditpy/modules/translation_dialog.py

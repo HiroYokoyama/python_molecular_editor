@@ -268,8 +268,8 @@ class MainWindowEditActions:
         except (AttributeError, RuntimeError, ValueError) as e:
             print(f"Error during paste operation: {e}")
             self.statusBar().showMessage(f"Error during paste operation: {e}")
-        self.statusBar().showMessage(f"Pasted {len(new_atoms)} atoms.", 2000)
         self.activate_select_mode()
+        self.update_all_items()
 
     def remove_hydrogen_atoms(self):
         """Delete hydrogen atoms and their bonds in 2D view"""

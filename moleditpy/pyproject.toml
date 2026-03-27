@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "MoleditPy"
 
-version = "3.0.0a1"
+version = "3.0.0a2"
 
 license = {file = "LICENSE"}
 
