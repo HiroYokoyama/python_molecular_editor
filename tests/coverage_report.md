@@ -1,6 +1,6 @@
 # MoleditPy Coverage Report
 
-- **Overall Project Coverage (Full)**: **63.85%**
+- **Overall Project Coverage (Full)**: **63.49%**
 - **Core Molecular Logic Coverage**: **80.08%**
 
 > [!NOTE]
@@ -78,14 +78,18 @@
 | moleditpy\src\moleditpy\modules\planarize_dialog.py     |    129 |     37 |   71.3% |
 | moleditpy\src\moleditpy\modules\plugin_interface.py     |     57 |      0 |  100.0% |
 | moleditpy\src\moleditpy\modules\plugin_manager.py       |    273 |     65 |   76.2% |
-| moleditpy\src\moleditpy\modules\settings_dialog.py      |    712 |    131 |   81.6% |
+| moleditpy\src\moleditpy\modules\settings_dialog.py      |     97 |     36 |   62.9% |
 | moleditpy\src\moleditpy\modules\system_utils.py         |     34 |     18 |   47.1% |
 | moleditpy\src\moleditpy\modules\template_preview_item.py |    101 |     77 |   23.8% |
 | moleditpy\src\moleditpy\modules\template_preview_view.py |     42 |     14 |   66.7% |
 | moleditpy\src\moleditpy\modules\translation_dialog.py   |    197 |     87 |   55.8% |
 | moleditpy\src\moleditpy\modules\user_template_dialog.py |    370 |    131 |   64.6% |
 | moleditpy\src\moleditpy\modules\zoomable_view.py        |     72 |     39 |   45.8% |
-| **TOTAL** | **14041** | **5076** | **63.85%** |
+| moleditpy\src\moleditpy\modules\settings_tabs\settings_2d_tab.py |     99 |      9 |   90.9% |
+| moleditpy\src\moleditpy\modules\settings_tabs\settings_3d_tabs.py |    173 |     26 |   85.0% |
+| moleditpy\src\moleditpy\modules\settings_tabs\settings_other_tab.py |     42 |      1 |   97.6% |
+| moleditpy\src\moleditpy\modules\settings_tabs\settings_tab_base.py |     11 |      3 |   72.7% |
+| **TOTAL** | **13751** | **5020** | **63.49%** |
 
 ## Test Suite Status
 - **Unit tests**: PASSED
