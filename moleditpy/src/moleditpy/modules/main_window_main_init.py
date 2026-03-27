@@ -570,6 +570,9 @@ class MainWindowMainInit:
 
     def _show_plugin_manager(self, plugin_menu):
         """Displays the plugin manager window and refreshes the menu."""
+        if not self.plugin_manager:
+            QMessageBox.information(self, "Safe Mode", "Plugins are disabled (safe mode).")
+            return
         from .plugin_manager_window import PluginManagerWindow
         dlg = PluginManagerWindow(self.plugin_manager, self)
         dlg.exec()
@@ -1600,6 +1603,9 @@ class MainWindowMainInit:
         self.plugin_menu = menu_bar.addMenu("&Plugin")
         manage_plugins_action = QAction("Plugin Manager...", self)
         def show_plugin_manager():
+            if not self.plugin_manager:
+                QMessageBox.information(self, "Safe Mode", "Plugins are disabled (safe mode).")
+                return
             from .plugin_manager_window import PluginManagerWindow
             dlg = PluginManagerWindow(self.plugin_manager, self)
             dlg.exec()
