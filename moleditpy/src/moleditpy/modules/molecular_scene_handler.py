@@ -59,6 +59,112 @@ class TemplateMixin:
         self.template_context = {}
         if hasattr(self, "template_preview"):
             self.template_preview.hide()
+
+    def _calculate_6ring_rotation(self, num_points, bonds_info, atom_items):
+        """
+        Calculate the best rotation for a 6-ring template (like benzene) 
+        to match existing bond orders and ensure chemical safety.
+        """
+        existing_orders = {}
+        for k, (i_idx, j_idx, _) in enumerate(bonds_info):
+            if i_idx < len(atom_items) and j_idx < len(atom_items):
+                a, b = atom_items[i_idx], atom_items[j_idx]
+                if a and b:
+                    eb = self.find_bond_between(a, b)
+                    if eb:
+                        existing_orders[k] = getattr(eb, "order", 1)
+        
+        if not existing_orders:
+            return 0
+            
+        orig_orders = [o for (_, _, o) in bonds_info]
+        best_rot = 0
+        max_score = -999
+
+        # Case A: Fused (>= 2 edges)
+        if len(existing_orders) >= 2:
+            for rot in range(num_points):
+                match_double_count = 0
+                match_bonus = 0
+                mismatch_penalty = 0
+                safe_connection_score = 0
+                
+                # Identify template-side indices corresponding to fusing k
+                used_template_indices = set((k + rot) % num_points for k in existing_orders)
+
+                for t_idx in used_template_indices:
+                    # Neighbor indices in the template
+                    adj_l = (t_idx - 1) % num_points
+                    adj_r = (t_idx + 1) % num_points
+                    
+                    # Connection safety: Unused template neighbors that are single bonds
+                    if adj_l not in used_template_indices and orig_orders[adj_l] == 1:
+                        safe_connection_score += 5000
+                    if adj_r not in used_template_indices and orig_orders[adj_r] == 1:
+                        safe_connection_score += 5000
+
+                for k, exist_order in existing_orders.items():
+                    template_ord = orig_orders[(k + rot) % num_points]
+                    if template_ord == exist_order:
+                        match_bonus += 100
+                        if exist_order == 2:
+                            match_double_count += 1
+                    else:
+                        mismatch_penalty += 50
+
+                current_score = safe_connection_score + (match_double_count * 1000) + match_bonus - mismatch_penalty
+                if current_score > max_score:
+                    max_score = current_score
+                    best_rot = rot
+
+        # Case B: 1-edge fuse
+        elif len(existing_orders) == 1:
+            k_fuse = next(iter(existing_orders.keys()))
+            exist_order = existing_orders[k_fuse]
+            for rot in range(num_points):
+                current_score = 0
+                template_ord = orig_orders[(k_fuse + rot) % num_points]
+                
+                # Leg order matching (prefer alternating or double-double for conjugation)
+                if (exist_order == 1 and template_ord == 2) or \
+                   (exist_order == 2 and template_ord == 1) or \
+                   (exist_order == 2 and template_ord == 2):
+                    current_score += 100
+
+                # Check adjacent template edges for alternating arrangement
+                m_adj1 = (k_fuse - 1 + rot) % num_points
+                m_adj2 = (k_fuse + 1 + rot) % num_points
+                if exist_order == 1:
+                    if orig_orders[m_adj1] == 2: current_score += 50
+                    if orig_orders[m_adj2] == 2: current_score += 50
+                elif exist_order == 2:
+                    if orig_orders[m_adj1] == 1: current_score += 50
+                    if orig_orders[m_adj2] == 1: current_score += 50
+
+                if current_score > max_score:
+                    max_score = current_score
+                    best_rot = rot
+        
+        return best_rot
+
+    def _should_overwrite_benzene_bond(self, exist_b):
+        """
+        Enforce policy for benzene template insertion.
+        Overwrite existing single bonds only if they can participate in the template's aromatic system
+        without violating valence (no other double bonds on the atoms).
+        """
+        if exist_b.order != 1:
+            return False
+            
+        atom1, atom2 = exist_b.atom1, exist_b.atom2
+        
+        # Atoms at both ends must not have other double bonds
+        atom1_has_other_double = any(b.order == 2 for b in atom1.bonds if b is not exist_b)
+        atom2_has_other_double = any(b.order == 2 for b in atom2.bonds if b is not exist_b)
+        
+        return not atom1_has_other_double and not atom2_has_other_double
+
+
     def add_molecule_fragment(
         self, points, bonds_info, existing_items=None, symbol="C"
     ):
@@ -150,153 +256,16 @@ class TemplateMixin:
         template_has_double = any(o == 2 for (_, _, o) in bonds_info)
 
         if is_6ring and template_has_double:
-            existing_orders = {}  # key: index of bonds_info, value: existing bond order
-            for k, (i_idx, j_idx, _) in enumerate(bonds_info):
-                if i_idx < len(atom_items) and j_idx < len(atom_items):
-                    a, b = atom_items[i_idx], atom_items[j_idx]
-                    if a is None or b is None:
-                        continue
-                    eb = self.find_bond_between(a, b)
-                    if eb:
-                        existing_orders[k] = getattr(eb, "order", 1)
-
-            if existing_orders:
-                orig_orders = [o for (_, _, o) in bonds_info]
-                best_rot = 0
-                max_score = -999  # Score means "goodness of fit"
-
-                # --- Conditional branching based on the number of fused edges ---
-                if len(existing_orders) >= 2:
-                    for rot in range(num_points):
-                        match_double_count = 0
-                        match_bonus = 0
-                        mismatch_penalty = 0
-
-                        # Safety check: ensure fused region neighbors are single bonds to avoid valence overflow
-                        safe_connection_score = 0
-
-                        # Identify fused region boundaries (assuming continuity)
-                        fused_indices = sorted(list(existing_orders.keys()))
-
-                        # Check neighboring edges outside the fused region
-                        for k in existing_orders:
-                            # Check left neighbor
-                            prev_idx = (k - 1 + rot) % num_points
-                            # Check right neighbor
-                            next_idx = (k + 1 + rot) % num_points
-
-                        # Template bond order array
-                        current_template_orders = [
-                            orig_orders[(i + rot) % num_points]
-                            for i in range(num_points)
-                        ]
-
-                        # To identify both ends of the fused region,
-                        # collect template-side indices corresponding to "fusing k"
-                        used_template_indices = set(
-                            (k + rot) % num_points for k in existing_orders
-                        )
-
-                        # Score boost if template leg neighbors are single bonds
-                        for t_idx in used_template_indices:
-                            # Left template neighbor
-                            adj_l = (t_idx - 1) % num_points
-                            # Right template neighbor
-                            adj_r = (t_idx + 1) % num_points
-
-                            # Unused neighbors are connection "legs"
-                            if adj_l not in used_template_indices:
-                                if orig_orders[adj_l] == 1:
-                                    safe_connection_score += 5000
-
-                            if adj_r not in used_template_indices:
-                                if orig_orders[adj_r] == 1:
-                                    safe_connection_score += 5000
-
-                        # Score calculation
-                        for k, exist_order in existing_orders.items():
-                            template_ord = orig_orders[(k + rot) % num_points]
-                            if template_ord == exist_order:
-                                match_bonus += 100
-                                if exist_order == 2:
-                                    match_double_count += 1
-                            else:
-                                # Modest penalty for mismatch if connection is otherwise safe
-                                mismatch_penalty += 50
-
-                        # Final score: connection safety as tip priority
-                        current_score = (
-                            safe_connection_score
-                            + (match_double_count * 1000)
-                            + match_bonus
-                            - mismatch_penalty
-                        )
-
-                        if current_score > max_score:
-                            max_score = current_score
-                            best_rot = rot
-
-                elif len(existing_orders) == 1:
-                    # 1-edge fuse
-                    k_fuse = next(iter(existing_orders.keys()))
-                    exist_order = existing_orders[k_fuse]
-
-                    for rot in range(num_points):
-                        current_score = 0
-                        rotated_template_order = orig_orders[
-                            (k_fuse + rot) % num_points
-                        ]
-
-                        # 1. Leg order matching
-
-                        # Pattern A: Alternating (opposite of existing)
-                        if (exist_order == 1 and rotated_template_order == 2) or (
-                            exist_order == 2 and rotated_template_order == 1
-                        ):
-                            current_score += 100
-
-                        # Handle double bond superposition for conjugation
-                        elif exist_order == 2 and rotated_template_order == 2:
-                            current_score += 100
-
-                        # 2. Verify alternating bond arrangement in adjacent edges
-                        m_adj1 = (k_fuse - 1 + rot) % num_points
-                        m_adj2 = (k_fuse + 1 + rot) % num_points
-                        neighbor_order_1 = orig_orders[m_adj1]
-                        neighbor_order_2 = orig_orders[m_adj2]
-
-                        if exist_order == 1:
-                            # If leg is single, neighbor should be double
-                            if neighbor_order_1 == 2:
-                                current_score += 50
-                            if neighbor_order_2 == 2:
-                                current_score += 50
-
-                        elif exist_order == 2:
-                            # If leg is double, neighbor should be single
-                            if neighbor_order_1 == 1:
-                                current_score += 50
-                            if neighbor_order_2 == 1:
-                                current_score += 50
-
-                        # 3. Tie-break using consistency of non-contacting edges
-                        for k, e_order in existing_orders.items():
-                            if k != k_fuse:
-                                r_t_order = orig_orders[(k + rot) % num_points]
-                                if r_t_order == e_order:
-                                    current_score += 10
-
-                        if current_score > max_score:
-                            max_score = current_score
-                            best_rot = rot
-
-                # Reflect final rotation
-                new_tb = []
-                for m in range(num_points):
-                    i_idx, j_idx, _ = bonds_info[m]
-                    new_order = orig_orders[(m + best_rot) % num_points]
-                    new_tb.append((i_idx, j_idx, new_order))
-                template_bonds_to_use = new_tb
+            best_rot = self._calculate_6ring_rotation(num_points, bonds_info, atom_items)
+            
+            # Reflect final rotation
+            orig_orders = [o for (_, _, o) in bonds_info]
+            new_tb = []
+            for m in range(num_points):
+                i_idx, j_idx, _ = bonds_info[m]
+                new_order = orig_orders[(m + best_rot) % num_points]
+                new_tb.append((i_idx, j_idx, new_order))
+            template_bonds_to_use = new_tb
 
         # --- 5) Bond Creation/Update ---
         for id1_idx, id2_idx, order in template_bonds_to_use:
@@ -312,32 +281,8 @@ class TemplateMixin:
                 exist_b = self.find_bond_between(a_item, b_item)
 
                 if exist_b:
-                    # Keep existing bonds by default
-                    should_overwrite = False
-
-                    # Check if benzene template and fused bond is single
-                    if is_benzene_template and exist_b.order == 1:
-                        # Check if fused single bond is part of conjugation
-                        # (atoms at both ends should not have other double bonds)
-                        atom1 = exist_b.atom1
-                        atom2 = exist_b.atom2
-
-                        # Check if atom1 has other double bonds
-                        atom1_has_other_double_bond = any(
-                            b.order == 2 for b in atom1.bonds if b is not exist_b
-                        )
-
-                        # Check atom2 for double bonds
-                        atom2_has_other_double_bond = any(
-                            b.order == 2 for b in atom2.bonds if b is not exist_b
-                        )
-
-                        # Overwrite if isolated single bond
-                        if (
-                            not atom1_has_other_double_bond
-                            and not atom2_has_other_double_bond
-                        ):
-                            should_overwrite = True
+                    # Keep existing bonds by default unless it's a safe benzene overwrite
+                    should_overwrite = is_benzene_template and self._should_overwrite_benzene_bond(exist_b)
 
                     if should_overwrite:
                         # Update bond order if conditions met
