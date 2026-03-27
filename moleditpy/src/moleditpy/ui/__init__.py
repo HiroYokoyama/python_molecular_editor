@@ -16,6 +16,7 @@ try:
 except ImportError:
     # Use fallback if package layout is not yet fully initialized or during tests
     import importlib.util
+
     OBABEL_AVAILABLE = importlib.util.find_spec("openbabel") is not None
 
 # Re-export core UI utilities
