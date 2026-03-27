@@ -145,6 +145,7 @@ def test_on_calculation_finished_basic(mock_parser_host):
     worker_id = "test_worker"
     compute.active_worker_ids.add(worker_id)
     mol = Chem.MolFromSmiles("C")
+    mol = Chem.AddHs(mol)
     result = (worker_id, mol)
     with patch.object(compute, "draw_molecule_3d") as mock_draw:
         compute.on_calculation_finished(result)
@@ -194,6 +195,7 @@ def test_optimize_3d_structure_logic(mock_parser_host):
     """Verify the high-level logic of triggering 3D optimization on the current molecule."""
     compute = DummyCompute(mock_parser_host)
     mol = Chem.MolFromSmiles("C")
+    mol = Chem.AddHs(mol)
     AllChem.Compute2DCoords(mol)
     compute.current_mol = mol
     compute.optimize_3d_structure()
@@ -205,6 +207,7 @@ def test_on_calculation_finished_worker_id_mismatch(mock_parser_host):
     compute = DummyCompute(mock_parser_host)
     compute.active_worker_ids = {"valid_id"}
     mol = Chem.MolFromSmiles("C")
+    mol = Chem.AddHs(mol)
     result = ("invalid_id", mol)
     compute.on_calculation_finished(result)
     assert compute.current_mol is None
@@ -214,6 +217,7 @@ def test_trigger_conversion_chemistry_problems(mock_parser_host):
     """Test trigger_conversion when Chem.DetectChemistryProblems finds issues."""
     compute = DummyCompute(mock_parser_host)
     mol = Chem.MolFromSmiles("C")
+    mol = Chem.AddHs(mol)
     atom = mol.GetAtomWithIdx(0)
     atom.SetIntProp("_original_atom_id", 1)
     compute.data.atoms = {1: {"symbol": "C", "item": MagicMock()}}
@@ -237,6 +241,7 @@ def test_trigger_conversion_sanitize_error(mock_parser_host):
     """Test trigger_conversion when Chem.SanitizeMol fails."""
     compute = DummyCompute(mock_parser_host)
     mol = Chem.MolFromSmiles("C")
+    mol = Chem.AddHs(mol)
     # MUST populate atoms to avoid empty trigger return
     compute.data.atoms = {1: {"symbol": "C", "item": MagicMock()}}
 
@@ -258,6 +263,7 @@ def test_trigger_conversion_multiple_frags(mock_parser_host):
     """Test trigger_conversion with multiple fragments."""
     compute = DummyCompute(mock_parser_host)
     mol = Chem.MolFromSmiles("C.C")
+    mol = Chem.AddHs(mol)
     # MUST populate atoms to avoid empty trigger return
     compute.data.atoms = {
         1: {"symbol": "C", "item": MagicMock()},
@@ -285,6 +291,7 @@ def test_on_calculation_finished_single_mol_legacy(mock_parser_host):
     """Test on_calculation_finished with a single mol (legacy result format)."""
     compute = DummyCompute(mock_parser_host)
     mol = Chem.MolFromSmiles("C")
+    mol = Chem.AddHs(mol)
     compute.on_calculation_finished(mol)
     assert compute.current_mol == mol
 
@@ -304,6 +311,7 @@ def test_optimize_3d_temp_method_override(mock_parser_host):
     """Test optimize_3d_structure with temporary optimization method override."""
     compute = DummyCompute(mock_parser_host)
     mol = Chem.MolFromSmiles("C")
+    mol = Chem.AddHs(mol)
     AllChem.EmbedMolecule(mol, randomSeed=42)
     compute.current_mol = mol
     compute.optimization_method = "UFF_RDKIT"
@@ -332,6 +340,7 @@ def test_optimize_3d_mmff94s_success(mock_parser_host):
     """Test MMFF94s optimization succeeds."""
     compute = DummyCompute(mock_parser_host)
     mol = Chem.MolFromSmiles("C")
+    mol = Chem.AddHs(mol)
     AllChem.EmbedMolecule(mol, randomSeed=42)
     compute.current_mol = mol
     compute.optimization_method = "MMFF_RDKIT"
@@ -349,6 +358,7 @@ def test_optimize_3d_uff_success(mock_parser_host):
     """Test UFF optimization succeeds."""
     compute = DummyCompute(mock_parser_host)
     mol = Chem.MolFromSmiles("C")
+    mol = Chem.AddHs(mol)
     AllChem.EmbedMolecule(mol, randomSeed=42)
     compute.current_mol = mol
     compute.optimization_method = "UFF_RDKIT"
@@ -362,6 +372,7 @@ def test_optimize_3d_no_conformer(mock_parser_host):
     """Test optimize_3d_structure when molecule has no conformer."""
     compute = DummyCompute(mock_parser_host)
     mol = Chem.MolFromSmiles("C")
+    mol = Chem.AddHs(mol)
     compute.current_mol = mol
     compute.optimization_method = "MMFF_RDKIT"
 
@@ -374,6 +385,7 @@ def test_optimize_3d_mmff_exception_handling(mock_parser_host):
     """Test grace during MMFF exception."""
     compute = DummyCompute(mock_parser_host)
     mol = Chem.MolFromSmiles("C")
+    mol = Chem.AddHs(mol)
     AllChem.EmbedMolecule(mol, randomSeed=42)
     compute.current_mol = mol
     compute.optimization_method = "MMFF_RDKIT"
@@ -391,6 +403,7 @@ def test_optimize_3d_uff_exception_handling(mock_parser_host):
     """Test grace during UFF exception."""
     compute = DummyCompute(mock_parser_host)
     mol = Chem.MolFromSmiles("C")
+    mol = Chem.AddHs(mol)
     AllChem.EmbedMolecule(mol, randomSeed=42)
     compute.current_mol = mol
     compute.optimization_method = "UFF_RDKIT"
@@ -408,6 +421,7 @@ def test_optimize_3d_plugin_method(mock_parser_host):
     """Test plugin optimization method."""
     compute = DummyCompute(mock_parser_host)
     mol = Chem.MolFromSmiles("C")
+    mol = Chem.AddHs(mol)
     AllChem.EmbedMolecule(mol, randomSeed=42)
     compute.current_mol = mol
 
@@ -428,6 +442,7 @@ def test_optimize_3d_plugin_failure(mock_parser_host):
     """Test plugin optimization returning False."""
     compute = DummyCompute(mock_parser_host)
     mol = Chem.MolFromSmiles("C")
+    mol = Chem.AddHs(mol)
     AllChem.EmbedMolecule(mol, randomSeed=42)
     compute.current_mol = mol
 
@@ -447,6 +462,7 @@ def test_optimize_3d_mmff_fallback_success(mock_parser_host):
     """Test MMFF fallback to ForceField API when basic optimization fails."""
     compute = DummyCompute(mock_parser_host)
     mol = Chem.MolFromSmiles("C")
+    mol = Chem.AddHs(mol)
     AllChem.EmbedMolecule(mol, randomSeed=42)
     compute.current_mol = mol
     compute.optimization_method = "MMFF_RDKIT"
@@ -468,6 +484,7 @@ def test_optimize_3d_uff_fallback_failure(mock_parser_host):
     """Test UFF fallback failure handles gracefully."""
     compute = DummyCompute(mock_parser_host)
     mol = Chem.MolFromSmiles("C")
+    mol = Chem.AddHs(mol)
     AllChem.EmbedMolecule(mol, randomSeed=42)
     compute.current_mol = mol
     compute.optimization_method = "MMFF_RDKIT"
@@ -485,6 +502,7 @@ def test_optimize_3d_unavailable_method(mock_parser_host):
     """Test error when optimization method is unavailable."""
     compute = DummyCompute(mock_parser_host)
     mol = Chem.MolFromSmiles("C")
+    mol = Chem.AddHs(mol)
     AllChem.EmbedMolecule(mol, randomSeed=42)
     compute.current_mol = mol
     compute.optimization_method = "INVALID_METHOD"
@@ -498,6 +516,7 @@ def test_on_calculation_finished_collision_single_frag(mock_parser_host):
     """Test collision logic is skipped for single fragment."""
     compute = DummyCompute(mock_parser_host)
     mol = Chem.MolFromSmiles("C")
+    mol = Chem.AddHs(mol)
     AllChem.EmbedMolecule(mol, randomSeed=42)
 
     with patch.object(
