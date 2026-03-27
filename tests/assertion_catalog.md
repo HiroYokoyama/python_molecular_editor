@@ -228,6 +228,29 @@ _Two neighbors: should continue skeleton (opposite to average bond vector)._
 - assert offset.x() == pytest.approx(0)
 - assert offset.y() == pytest.approx(-L)
 
+## tests/unit/test_benzene_placement_shortcut.py
+
+### test_benzene_shortcut_on_atom
+_Test one-shot benzene placement when cursor is over an atom._
+
+- scene._calculate_polygon_from_edge.assert_called_once()
+- scene.add_molecule_fragment.assert_called_once()
+- scene.window.push_undo_state.assert_called_once()
+- event.accept.assert_called_once()
+
+### test_benzene_shortcut_on_bond
+_Test one-shot benzene placement when cursor is over a bond._
+
+- assert called_kwargs.get('use_existing_length') is True
+- scene.add_molecule_fragment.assert_called_once()
+
+### test_benzene_shortcut_empty_space
+_Test mode switch when cursor is over empty space._
+
+- scene.window.set_mode_and_update_toolbar.assert_called_with('template_benzene')
+- event.accept.assert_called_once()
+- scene.add_molecule_fragment.assert_not_called()
+
 ## tests/unit/test_benzene_rotation.py
 
 ### test_calculate_6ring_rotation_empty
@@ -587,6 +610,44 @@ _Verify that UFF fallback uses _temp_optimization_method and doesn't change pers
 - assert compute._temp_optimization_method == 'UFF_RDKIT'
 - assert mock_optimize.called
 - assert compute.optimization_method == 'MMFF_RDKIT'
+
+## tests/unit/test_dialog_logic.py
+
+### test_bond_length_adjustment_logic
+_Test the geometric logic of bond length adjustment directly._
+
+- assert pytest.approx(final_dist, abs=0.001) == 2.0
+
+### test_alignment_logic
+_Test the geometry logic for aligning a bond to a specific axis._
+
+- assert np.allclose(p0, [0, 0, 0], atol=1e-07)
+- assert p1[0] > 0
+- assert pytest.approx(p1[1], abs=1e-07) == 0
+- assert pytest.approx(p1[2], abs=1e-07) == 0
+
+### test_angle_adjustment_logic
+_Test the geometric logic of bond angle adjustment directly._
+
+- assert initial_angle != pytest.approx(120.0)
+- assert pytest.approx(final_angle, abs=0.01) == 120.0
+
+### test_dihedral_adjustment_logic
+_Test the geometric logic of dihedral angle adjustment._
+
+- assert pytest.approx(abs(final_dihedral), abs=0.01) == 180.0
+
+### test_translation_logic
+_Test the geometric logic of centroid-based translation._
+
+- assert np.allclose(new_pos5, expected_pos5, atol=1e-07)
+
+### test_move_group_logic
+_Test the translation and rotation logic in MoveGroupDialog._
+
+- assert np.allclose(np.array(mol.GetConformer().GetAtomPosition(0)), initial_pos0 + [5, 0, 0])
+- assert np.allclose(np.array(mol.GetConformer().GetAtomPosition(5)), initial_pos5)
+- assert np.allclose(new_pos0, expected_rotated, atol=1e-07)
 
 ## tests/unit/test_edit_3d_logic.py
 
@@ -2367,6 +2428,65 @@ _Test that mirror transformation inverts the chiral label in 3D._
 - assert new_label in ['R', 'S']
 - assert new_label in labels
 - assert initial_label not in labels
+
+## tests/gui/test_additional_dialogs_launch.py
+
+### test_planarize_dialog_launch
+_No description provided._
+
+- assert dialog.windowTitle() == 'Planarize'
+
+### test_mirror_dialog_launch
+_No description provided._
+
+- assert dialog.windowTitle() == 'Mirror Molecule'
+
+### test_align_plane_dialog_launch
+_No description provided._
+
+- assert dialog.windowTitle() == f'Align to {plane_names[plane]} Plane'
+
+### test_constrained_optimization_dialog_launch
+_No description provided._
+
+- assert dialog.windowTitle() == 'Constrained Optimization'
+
+### test_periodic_table_dialog_launch
+_No description provided._
+
+- assert dialog.windowTitle() == 'Select an Element'
+
+## tests/gui/test_dialog_launch.py
+
+### test_bond_length_dialog_launch
+_No description provided._
+
+- assert dialog.windowTitle() == 'Adjust Bond Length'
+
+### test_angle_dialog_launch
+_No description provided._
+
+- assert dialog.windowTitle() == 'Adjust Angle'
+
+### test_dihedral_dialog_launch
+_No description provided._
+
+- assert dialog.windowTitle() == 'Adjust Dihedral Angle'
+
+### test_alignment_dialog_launch
+_No description provided._
+
+- assert dialog.windowTitle() == 'Align to X-axis'
+
+### test_translation_dialog_launch
+_No description provided._
+
+- assert dialog.windowTitle() == 'Translation'
+
+### test_move_group_dialog_launch
+_No description provided._
+
+- assert dialog.windowTitle() == 'Move Group'
 
 ## tests/gui/test_main_app.py
 

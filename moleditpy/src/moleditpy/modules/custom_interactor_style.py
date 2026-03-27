@@ -25,6 +25,8 @@ try:
 except ImportError:
     from modules.move_group_dialog import MoveGroupDialog
 
+from rdkit import Geometry
+
 
 class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
     def __init__(self, main_window):
@@ -492,7 +494,12 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                     for atom_idx in move_group_dialog.group_atoms:
                         initial_pos = move_group_dialog._initial_positions[atom_idx]
                         new_pos = initial_pos + translation_vector
-                        conf.SetAtomPosition(atom_idx, new_pos.tolist())
+                        conf.SetAtomPosition(
+                            atom_idx,
+                            Geometry.Point3D(
+                                float(new_pos[0]), float(new_pos[1]), float(new_pos[2])
+                            ),
+                        )
                         mw.atom_positions_3d[atom_idx] = new_pos
 
                     # Update 3D display
@@ -585,7 +592,12 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                         pos_count = len(mw.atom_positions_3d) if isinstance(mw.atom_positions_3d, (list, np.ndarray)) else 0
                         for i in range(min(mw.current_mol.GetNumAtoms(), pos_count)):
                             pos = mw.atom_positions_3d[i]
-                            conf.SetAtomPosition(i, pos.tolist())
+                            conf.SetAtomPosition(
+                                i,
+                                Geometry.Point3D(
+                                    float(pos[0]), float(pos[1]), float(pos[2])
+                                ),
+                            )
                     except (AttributeError, RuntimeError, ValueError, TypeError):
                         # Ignore major coordinate refresh failure
                         pass
@@ -757,7 +769,14 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                                 # Restore absolute position
                                 new_pos = rotated_pos + centroid
 
-                                conf.SetAtomPosition(atom_idx, new_pos.tolist())
+                                conf.SetAtomPosition(
+                                    atom_idx,
+                                    Geometry.Point3D(
+                                        float(new_pos[0]),
+                                        float(new_pos[1]),
+                                        float(new_pos[2]),
+                                    ),
+                                )
                                 mw.atom_positions_3d[atom_idx] = new_pos
 
                             # Update 3D display

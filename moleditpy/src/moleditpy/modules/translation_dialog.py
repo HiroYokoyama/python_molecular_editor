@@ -23,6 +23,7 @@ from PyQt6.QtWidgets import (
     QPushButton,
     QVBoxLayout,
 )
+from rdkit import Geometry
 
 from .dialog_3d_picking_mixin import Dialog3DPickingMixin
 
@@ -223,7 +224,7 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog):
                 if not translate_selected or i in self.selected_atoms:
                     atom_pos = np.array(conf.GetAtomPosition(i))
                     new_pos = atom_pos + translation_vector
-                    conf.SetAtomPosition(i, new_pos.tolist())
+                    conf.SetAtomPosition(i, Geometry.Point3D(float(new_pos[0]), float(new_pos[1]), float(new_pos[2])))
                     
                     # Update cache in main window
                     if i in atom_positions:

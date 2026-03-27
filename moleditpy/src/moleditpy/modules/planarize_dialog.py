@@ -19,6 +19,7 @@ from PyQt6.QtWidgets import (
     QPushButton,
     QVBoxLayout,
 )
+from rdkit import Geometry
 
 try:
     from .dialog_3d_picking_mixin import Dialog3DPickingMixin
@@ -200,7 +201,12 @@ class PlanarizeDialog(Dialog3DPickingMixin, QDialog):
             # Update molecular coordinates
             conf = self.mol.GetConformer()
             for i, new_pos in zip(selected_indices, new_positions):
-                conf.SetAtomPosition(int(i), new_pos.tolist())
+                conf.SetAtomPosition(
+                    int(i),
+                    Geometry.Point3D(
+                        float(new_pos[0]), float(new_pos[1]), float(new_pos[2])
+                    ),
+                )
                 self.main_window.atom_positions_3d[int(i)] = new_pos
 
             # Update 3D view
