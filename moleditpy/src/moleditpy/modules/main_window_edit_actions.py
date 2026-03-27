@@ -269,7 +269,7 @@ class MainWindowEditActions:
             print(f"Error during paste operation: {e}")
             self.statusBar().showMessage(f"Error during paste operation: {e}")
         self.activate_select_mode()
-        self.update_all_items()
+        self.scene.update_all_items()
 
     def remove_hydrogen_atoms(self):
         """Delete hydrogen atoms and their bonds in 2D view"""
@@ -562,6 +562,7 @@ class MainWindowEditActions:
                         print(f"Failed to add H for atom {orig_id}: {e}")
 
             if added_count > 0:
+                self.scene.update_all_items()
                 self.push_undo_state()
                 self.statusBar().showMessage(
                     f"Added {added_count} hydrogen atoms.", 2000
@@ -656,13 +657,12 @@ class MainWindowEditActions:
 
             # Update bonds
             self.scene.update_connected_bonds(target_atoms)
+            self.scene.update_all_items()
 
             self.push_undo_state()
             self.statusBar().showMessage(
                 f"Rotated {len(target_atoms)} atoms by {angle_degrees} degrees."
             )
-            self.scene.update()
-            self.scene.update_all_items()
 
         except (AttributeError, RuntimeError, ValueError) as e:
             print(f"Error rotating molecule: {e}")

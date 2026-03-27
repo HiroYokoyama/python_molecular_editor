@@ -167,6 +167,8 @@ class MainWindowMolecularParsers:
             self.current_file_path = file_path
             self.has_unsaved_changes = False
             self.update_window_title()
+            # Request scene update and ring re-analysis
+            self.scene.update_all_items()
             QTimer.singleShot(0, self.fit_to_view)
 
         except (RuntimeError, ValueError, TypeError, UnicodeDecodeError) as e:

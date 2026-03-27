@@ -222,7 +222,7 @@ class MainWindowAppState:
         for atom_data in self.data.atoms.values():
             if atom_data["item"]:
                 atom_data["item"].update_style()
-        self.scene.update()
+        self.scene.update_all_items()
 
         if "mol_3d" in loaded_data and loaded_data["mol_3d"] is not None:
             try:
@@ -809,6 +809,7 @@ class MainWindowAppState:
             # Update all AtomItem styles
             for atom in self.data.atoms.values():
                 atom["item"].update_style()
+            self.scene.update_all_items()
         # Restore 3D data
         structure_3d = json_data.get("3d_structure")
         if isinstance(structure_3d, dict):
