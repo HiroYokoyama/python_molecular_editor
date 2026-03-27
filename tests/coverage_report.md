@@ -1,7 +1,7 @@
 # MoleditPy Coverage Report
 
-- **Overall Project Coverage (Full)**: **58.15%**
-- **Core Molecular Logic Coverage**: **72.33%**
+- **Overall Project Coverage (Full)**: **58.19%**
+- **Core Molecular Logic Coverage**: **72.38%**
 
 > [!NOTE]
 > **Core Molecular Logic Coverage** excludes UI boilerplate (dialogs, view managers, and interactor styles) to focus on scientific algorithm reliability.
@@ -15,7 +15,7 @@
 | moleditpy\src\moleditpy\modules\analysis_window.py      |    114 |     25 |   78.1% |
 | moleditpy\src\moleditpy\modules\atom_item.py            |    256 |     33 |   87.1% |
 | moleditpy\src\moleditpy\modules\bond_item.py            |    311 |     77 |   75.2% |
-| moleditpy\src\moleditpy\modules\calculation_worker.py   |    459 |     57 |   87.6% |
+| moleditpy\src\moleditpy\modules\calculation_worker.py   |    470 |     57 |   87.9% |
 | moleditpy\src\moleditpy\modules\constants.py            |     31 |      0 |  100.0% |
 | moleditpy\src\moleditpy\modules\main_window.py          |     47 |     18 |   61.7% |
 | moleditpy\src\moleditpy\modules\main_window_app_state.py |    468 |    189 |   59.6% |
@@ -32,7 +32,7 @@
 | moleditpy\src\moleditpy\modules\plugin_interface.py     |     57 |      0 |  100.0% |
 | moleditpy\src\moleditpy\modules\plugin_manager.py       |    276 |     68 |   75.4% |
 | moleditpy\src\moleditpy\modules\system_utils.py         |     35 |     18 |   48.6% |
-| **TOTAL** | **6755** | **1869** | **72.33%** |
+| **TOTAL** | **6766** | **1869** | **72.38%** |
 
 ### Full Application Breakdown
 
@@ -48,7 +48,7 @@
 | moleditpy\src\moleditpy\modules\atom_item.py            |    256 |     33 |   87.1% |
 | moleditpy\src\moleditpy\modules\bond_item.py            |    311 |     77 |   75.2% |
 | moleditpy\src\moleditpy\modules\bond_length_dialog.py   |    269 |    157 |   41.6% |
-| moleditpy\src\moleditpy\modules\calculation_worker.py   |    459 |     57 |   87.6% |
+| moleditpy\src\moleditpy\modules\calculation_worker.py   |    470 |     57 |   87.9% |
 | moleditpy\src\moleditpy\modules\color_settings_dialog.py |    181 |    170 |    6.1% |
 | moleditpy\src\moleditpy\modules\constants.py            |     31 |      0 |  100.0% |
 | moleditpy\src\moleditpy\modules\constrained_optimization_dialog.py |    407 |    384 |    5.7% |
@@ -87,7 +87,7 @@
 | moleditpy\src\moleditpy\modules\translation_dialog.py   |    196 |    122 |   37.8% |
 | moleditpy\src\moleditpy\modules\user_template_dialog.py |    370 |    131 |   64.6% |
 | moleditpy\src\moleditpy\modules\zoomable_view.py        |     72 |     39 |   45.8% |
-| **TOTAL** | **13939** | **5833** | **58.15%** |
+| **TOTAL** | **13950** | **5833** | **58.19%** |
 
 ## Test Suite Status
 - **Unit tests**: PASSED

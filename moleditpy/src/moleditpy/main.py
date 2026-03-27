@@ -13,6 +13,7 @@ DOI: 10.5281/zenodo.17268532
 import ctypes
 import sys
 import argparse
+import logging
 
 from PyQt6.QtWidgets import QApplication
 
@@ -22,7 +23,19 @@ except ImportError:
     from modules.main_window import MainWindow
 
 
+def setup_logging():
+    """Configure global logging to standard output."""
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+        stream=sys.stdout,
+    )
+ 
+ 
 def main():
+    # Setup logging as early as possible
+    setup_logging()
+    
     # --- Additional handling for Windows taskbar icon ---
     if sys.platform == "win32":
         myappid = "hyoko.moleditpy.1.0"  # Application-specific ID (arbitrary)

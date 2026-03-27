@@ -398,7 +398,9 @@ def _perform_direct_conversion(mol_block, mol, options, _check_halted, _safe_sta
         if "MMFF94" in opt_method.upper() and "MMFF94S" not in opt_method.upper(): method_key = "MMFF94"
 
         # Best-effort property assignment for UI feedback
-        with contextlib.suppress(AttributeError, RuntimeError, TypeError): mol.SetProp("_pme_optimization_method", opt_method)
+        with contextlib.suppress(AttributeError, RuntimeError, TypeError): 
+            mol.SetProp("_pme_optimization_method", opt_method)
+            mol.SetProp("_pme_conversion_backend", "Direct")
         _safe_status(f"Optimizing ({method_key} / {backend})...")
         
         opt_func = _iterative_optimize_obabel if backend == "OBABEL" else _iterative_optimize
@@ -427,7 +429,10 @@ def _perform_optimize_only(mol, options, worker_id, _check_halted, _safe_status,
     
     if _check_halted(): raise WorkerHaltError("Halted")
     _safe_finished((worker_id, mol))
-    _safe_status(f"Process completed ({_OPT_METHOD_LABELS.get(opt_method, opt_method)}).")
+    
+    # Final status message showing both conversion (Existing 3D) and optimization info
+    opt_label = _OPT_METHOD_LABELS.get(opt_method, opt_method)
+    _safe_status(f"Process completed (Existing 3D Structure / {opt_label}).")
 
 
 def _perform_obabel_conversion(mol_block, mode, opt_method, worker_id, options, _check_halted, _safe_status, _safe_finished):
@@ -476,7 +481,9 @@ print(ob_mol.write("mol"))
         if "MMFF94" in opt_method.upper() and "MMFF94S" not in opt_method.upper(): method_key = "MMFF94"
 
         # Best-effort property assignment for UI feedback
-        with contextlib.suppress(AttributeError, RuntimeError, TypeError): rd_mol.SetProp("_pme_optimization_method", opt_method)
+        with contextlib.suppress(AttributeError, RuntimeError, TypeError): 
+            rd_mol.SetProp("_pme_optimization_method", opt_method)
+            rd_mol.SetProp("_pme_conversion_backend", "Open Babel")
         _safe_status(f"Optimizing ({method_key} / {backend})...")
         
         opt_func = _iterative_optimize_obabel if backend == "OBABEL" else _iterative_optimize
@@ -487,6 +494,10 @@ print(ob_mol.write("mol"))
 
         if _check_halted(): raise WorkerHaltError("Halted")
         _safe_finished((worker_id, rd_mol))
+        
+        # Final status message showing both conversion (Open Babel) and optimization info
+        opt_label = _OPT_METHOD_LABELS.get(opt_method, opt_method)
+        _safe_status(f"Process completed (Open Babel Conversion / {opt_label}).")
         return True
     except WorkerHaltError: raise
     except (AttributeError, RuntimeError, ValueError, TypeError) as e:
@@ -647,7 +658,9 @@ class CalculationWorker(QObject):
         method_key = "UFF" if "UFF" in opt_method.upper() else ("GAFF" if "GAFF" in opt_method.upper() else ("GHEMICAL" if "GHEMICAL" in opt_method.upper() else "MMFF94s"))
         if "MMFF94" in opt_method.upper() and "MMFF94S" not in opt_method.upper(): method_key = "MMFF94"
 
-        with contextlib.suppress(AttributeError, RuntimeError, TypeError): mol.SetProp("_pme_optimization_method", opt_method)
+        with contextlib.suppress(AttributeError, RuntimeError, TypeError): 
+            mol.SetProp("_pme_optimization_method", opt_method)
+            mol.SetProp("_pme_conversion_backend", "RDKit")
         _safe_status(f"Optimizing ({method_key} / {backend})...")
         
         opt_func = _iterative_optimize_obabel if backend == "OBABEL" else _iterative_optimize
@@ -663,7 +676,10 @@ class CalculationWorker(QObject):
             
         if _check_halted(): raise WorkerHaltError("Halted")
         _safe_finished((w_id, mol))
-        _safe_status("RDKit conversion completed.")
+        
+        # Final status message showing both conversion (RDKit) and optimization info
+        opt_label = _OPT_METHOD_LABELS.get(opt_method, opt_method)
+        _safe_status(f"Process completed (RDKit Conversion / {opt_label}).")
         return True
 
     def _run_obabel_workflow(self, mol_block, options, helpers):
@@ -678,4 +694,7 @@ class CalculationWorker(QObject):
         """Execute direct 2D->3D conversion."""
         mol = _perform_direct_conversion(mol_block, mol, options, helpers["check_halted"], helpers["status"])
         helpers["finished"]((options.get("worker_id"), mol))
-        helpers["status"]("Direct conversion completed.")
+        
+        # Final status message showing conversion (Direct) info
+        _safe_status = helpers["status"] 
+        _safe_status("Process completed (Direct 2D->3D Conversion).")
