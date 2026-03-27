@@ -2627,6 +2627,86 @@ _コピー: 選択なしでのコピー操作の安全性テスト_
 
 - assert cb.text() == 'initial_text'
 
+## tests/gui/test_main_window_settings.py
+
+### test_load_command_line_file_with_plugin
+_Test that load_command_line_file uses plugin openers when available._
+
+- mock_callback.assert_called_once_with(test_file)
+- assert window.current_file_path == test_file
+
+### test_load_command_line_file_default_extensions
+_Test that load_command_line_file handles standard extensions._
+
+- window.load_mol_file_for_3d_viewing.assert_called_once_with('test.mol')
+- window.load_xyz_for_3d_viewing.assert_called_once_with('test.xyz')
+- window.open_project_file.assert_called_once_with(file_path='test.pmeprj')
+
+### test_update_cpk_colors_from_settings
+_Test that CPK colors are updated correctly from settings overrides._
+
+- assert constants.CPK_COLORS['C'] == QColor('#FF0000')
+- assert constants.CPK_COLORS_PV['C'] == [1.0, 0.0, 0.0]
+
+### test_apply_initial_settings
+_Test that apply_initial_settings updates scene background and style._
+
+- assert window.scene.backgroundBrush().color() == expected_color
+- window.plotter.set_background.assert_called_with('#112233')
+
+### test_reset_all_settings_flow
+_Test the complete settings reset flow._
+
+- window._perform_settings_reset.assert_called_once()
+- window._refresh_ui_after_reset.assert_called_once()
+
+### test_perform_settings_reset_logic
+_Test the low-level settings reset (file deletion and reload)._
+
+- assert not settings_file.exists()
+- window.load_settings.assert_called_once()
+- assert window.settings_dirty is True
+
+## tests/gui/test_molecule_scene_events.py
+
+### test_bond_stereo_toggle_keys
+_Test Z and E keys toggle double bond stereochemistry._
+
+- assert data.bonds[bond_key]['stereo'] == 3
+- assert bond_item.stereo == 3
+- assert data.bonds[bond_key]['stereo'] == 4
+- assert bond_item.stereo == 4
+
+### test_atom_addition_keys
+_Test 1, 2, 3 keys add atoms/bonds from selected atom._
+
+- assert len(data.atoms) == 2
+- assert len(data.bonds) == 1
+- assert data.bonds[bond_key]['order'] == 1
+- assert len(data.atoms) == 3
+- assert len(data.bonds) == 2
+- assert b_data['order'] == 2
+
+### test_delete_items_keys
+_Test Delete and Backspace keys remove selected items._
+
+- assert a1_id not in data.atoms
+- assert a2_id in data.atoms
+- assert a2_id not in data.atoms
+- assert len(data.atoms) == 0
+
+### test_temp_line_cancellation
+_Test Delete key cancels an active temp_line (bond drawing)._
+
+- assert scene.temp_line is None
+
+### test_bonding_to_existing_atom
+_Test that pressing 1, 2, 3 bonds to an existing atom if it's nearby._
+
+- assert len(data.atoms) == 2
+- assert len(data.bonds) == 1
+- assert bond_key in data.bonds
+
 ## tests/gui/test_plugin_manager_redundant.py
 
 ### test_init

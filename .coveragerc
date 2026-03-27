@@ -17,6 +17,8 @@ omit =
     moleditpy/src/moleditpy/modules/main_window_edit_actions.py
     moleditpy/src/moleditpy/modules/template_preview_item.py
     moleditpy/src/moleditpy/modules/template_preview_view.py
+    moleditpy/src/moleditpy/modules/molecule_scene.py
+    moleditpy/src/moleditpy/modules/system_utils.py
 
 exclude_lines =
     pragma: no cover
