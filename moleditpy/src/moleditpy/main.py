@@ -12,6 +12,7 @@ DOI: 10.5281/zenodo.17268532
 
 import ctypes
 import sys
+import argparse
 
 from PyQt6.QtWidgets import QApplication
 
@@ -27,8 +28,19 @@ def main():
         myappid = "hyoko.moleditpy.1.0"  # Application-specific ID (arbitrary)
         ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
 
-    app = QApplication(sys.argv)
-    file_path = sys.argv[1] if len(sys.argv) > 1 else None
-    window = MainWindow(initial_file=file_path)
+
+    parser = argparse.ArgumentParser(prog="moleditpy", description="MoleditPy molecular editor")
+    parser.add_argument("file", nargs="?", default=None, help="File to open on startup")
+    parser.add_argument(
+        "--safe",
+        action="store_true",
+        default=False,
+        help="Start in safe mode: skip loading all plugins",
+    )
+    # parse_known_args so Qt's own argv flags (e.g. -platform) are passed through
+    args, remaining = parser.parse_known_args()
+
+    app = QApplication([sys.argv[0]] + remaining)
+    window = MainWindow(initial_file=args.file, safe_mode=args.safe)
     window.show()
     sys.exit(app.exec())

@@ -118,7 +118,7 @@ class MainWindowMainInit:
 
     # __init__ is copied from main_window.py
 
-    def __init__(self, initial_file=None):  
+    def __init__(self, initial_file=None, safe_mode=False):  
         # This helper is not used as a mixin in this project; initialization
         # happens on the `QMainWindow` base class in
         # `MainWindow.__init__` directly.
@@ -183,11 +183,15 @@ class MainWindowMainInit:
         self.active_3d_dialogs = []
 
         # Initialization of the plugin manager
-        try:
-            self.plugin_manager = PluginManager()
-        except (AttributeError, RuntimeError, ValueError) as e:
-            print(f"Failed to initialize PluginManager: {e}")
+        if safe_mode:
+            print("Safe mode: plugins disabled.")
             self.plugin_manager = None
+        else:
+            try:
+                self.plugin_manager = PluginManager()
+            except (AttributeError, RuntimeError, ValueError) as e:
+                print(f"Failed to initialize PluginManager: {e}")
+                self.plugin_manager = None
 
         # Dictionary holding data for plugins that haven't been loaded
         self._preserved_plugin_data = {}

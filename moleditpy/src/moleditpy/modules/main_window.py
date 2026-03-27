@@ -72,7 +72,7 @@ class MainWindow(
     # start_calculation carries the MOL block and an options object (second arg)
     start_calculation = pyqtSignal(str, object)
 
-    def __init__(self, initial_file=None):
+    def __init__(self, initial_file=None, safe_mode=False):
         QMainWindow.__init__(self)
         
         # Initialize properties
@@ -80,7 +80,7 @@ class MainWindow(
         
         # Initialize features via Mixins
         # MainWindowMainInit handles the bulk of the UI and data setup
-        MainWindowMainInit.__init__(self, initial_file)
+        MainWindowMainInit.__init__(self, initial_file, safe_mode=safe_mode)
         # MainWindowAppState handles undo/redo stack and app-wide state tracking
         MainWindowAppState.__init__(self)
 
