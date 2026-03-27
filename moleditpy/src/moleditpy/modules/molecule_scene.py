@@ -108,11 +108,11 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
 
         for bond in bonds_to_update:
             if not sip_isdeleted_safe(bond):
-                try:
-                    bond.update_position()
-                except (AttributeError, RuntimeError, ValueError, TypeError) as e:
-                    logging.debug(f"Failed to update bond position for {bond}: {e}")
-                    continue
+                if hasattr(bond, "update_position"):
+                    try:
+                        bond.update_position()
+                    except (RuntimeError, ValueError, TypeError) as e:
+                        logging.debug(f"Failed to update bond position for {bond}: {e}")
 
     def update_all_items(self):
         """Force redraw of all items."""
@@ -134,13 +134,12 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
         self._deleted_items = []
 
         app = QApplication.instance()
-        if app is not None:
+        if app is not None and hasattr(app, "aboutToQuit"):
             try:
                 app.aboutToQuit.connect(self.purge_deleted_items)
-            except (AttributeError, RuntimeError, ValueError, TypeError) as e:
+            except (RuntimeError, ValueError, TypeError) as e:
                 # Non-fatal during setup; app instance may be invalid or signal already connected
                 logging.debug(f"Could not connect aboutToQuit in MoleculeScene: {e}")
-                pass
 
     def clear_all_problem_flags(self):
         """Reset the has_problem flag for all AtomItems and redraw them."""
@@ -162,11 +161,11 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
         # Record initial positions by safely checking for deleted objects
         self.initial_positions_in_event = {}
         for item in self.items():
-            if isinstance(item, AtomItem):
+            if isinstance(item, AtomItem) and not sip_isdeleted_safe(item):
                 try:
                     self.initial_positions_in_event[item] = item.pos()
-                except RuntimeError:
-                    # Skip if the object has been deleted (common in rapid UI updates)
+                except (RuntimeError, AttributeError):
+                    # Skip if the object is inaccessible
                     continue
 
         if not self.window.is_2d_editable:
@@ -180,14 +179,16 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
             # If the user has a rectangular multi-selection and the clicked item
             # is part of that selection, delete all selected items (atoms/bonds).
             try:
+                # Use getattr safely for selectedItems if scene state is transitioning
+                raw_selected = getattr(self, "selectedItems", lambda: [])()
                 selected_items = [
                     it
-                    for it in self.selectedItems()
-                    if isinstance(it, (AtomItem, BondItem))
+                    for it in raw_selected
+                    if isinstance(it, (AtomItem, BondItem)) and not sip_isdeleted_safe(it)
                 ]
-            except (AttributeError, RuntimeError, ValueError, TypeError) as e:
+            except Exception as e:
                 # Fallback to empty selection if the scene state is inconsistent during event processing
-                logging.debug(f"Failed to retrieve selected items: {e}")
+                logging.debug(f"Failed to retrieve selected items in mousePressEvent: {e}")
                 selected_items = []
 
             if (
@@ -208,7 +209,7 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
                 if isinstance(item, BondItem):
                     try:
                         # Clear E/Z label (revert to normal)
-                        if item.stereo in [3, 4]:
+                        if hasattr(item, "stereo") and item.stereo in [3, 4]:
                             item.set_stereo(0)
                             # Also update the data model
                             for (id1, id2), bdata in self.data.bonds.items():
@@ -217,12 +218,12 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
                                     break
                             self.window.push_undo_state()
                             data_changed = False  # Already added to undo stack, so skip redundant pushes later
-                    except (AttributeError, RuntimeError, ValueError) as e:
-                        logging.error(f"Error in E/Z stereo toggle: {e}", exc_info=True)
+                    except (AttributeError, RuntimeError, ValueError, TypeError) as e:
+                        logging.error(f"Error in E/Z stereo toggle (mousePressEvent): {e}", exc_info=True)
                         if hasattr(self.window, "statusBar"):
-                            self.window.statusBar().showMessage(
-                                f"Error clearing E/Z label: {e}", 5000
-                            )
+                            sb = self.window.statusBar()
+                            if sb:
+                                sb.showMessage(f"Error clearing E/Z label: {e}", 5000)
                         self.update_all_items()  # Redraw even on error to maintain consistency
                 # AtomItem does nothing
             # --- Normal processing ---
@@ -347,12 +348,14 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
         if self.temp_line:
             if not sip_isdeleted_safe(self.temp_line):
                 try:
-                    sc = getattr(self.temp_line, "scene", lambda: None)()
-                    if sc:
-                        self.removeItem(self.temp_line)
-                except (RuntimeError, ValueError, TypeError) as e:
-                    logging.debug(f"Error removing temp_line: {e}")
-                    pass  # Suppress removal errors during teardown
+                    scene_func = getattr(self.temp_line, "scene", None)
+                    if scene_func:
+                        sc = scene_func()
+                        if sc and hasattr(self, "removeItem"):
+                            self.removeItem(self.temp_line)
+                except (RuntimeError, ValueError, TypeError, AttributeError) as e:
+                    logging.debug(f"Error removing temp_line in mouseReleaseEvent: {e}") 
+
             self.temp_line = None
 
         if self.mode.startswith("template") and is_click:
@@ -435,23 +438,25 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
             b = released_item
             if self.mode == "bond_2_5":
                 try:
-                    if b.order == 2:
-                        current_stereo = b.stereo
+                    if hasattr(b, "order") and b.order == 2:
+                        current_stereo = getattr(b, "stereo", 0)
                         if current_stereo not in [3, 4]:
                             new_stereo = 3  # None -> Z
                         elif current_stereo == 3:
                             new_stereo = 4  # Z -> E
                         else:  # current_stereo == 4
                             new_stereo = 0  # E -> None
-                        self.update_bond_stereo(b, new_stereo)
-                        self.update_all_items()  # Force redraw
-                        self.window.push_undo_state()  # Push to undo stack here
-                except (AttributeError, RuntimeError, ValueError) as e:
-                    logging.error(f"Error in E/Z stereo toggle: {e}", exc_info=True)
+                        
+                        if hasattr(self, "update_bond_stereo"):
+                            self.update_bond_stereo(b, new_stereo)
+                            self.update_all_items()  # Force redraw
+                            self.window.push_undo_state()  # Push to undo stack here
+                except (AttributeError, RuntimeError, ValueError, TypeError) as e:
+                    logging.error(f"Error in E/Z stereo toggle (mouseReleaseEvent): {e}", exc_info=True)
                     if hasattr(self.window, "statusBar"):
-                        self.window.statusBar().showMessage(
-                            f"Error changing E/Z stereochemistry: {e}", 5000
-                        )
+                        sb = self.window.statusBar()
+                        if sb:
+                            sb.showMessage(f"Error changing E/Z stereochemistry: {e}", 5000)
                     self.update_all_items()  # Redraw even on error to maintain consistency
                 return  # Do not proceed further
             elif (
@@ -660,52 +665,53 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
 
                 while atoms_to_visit:
                     a = atoms_to_visit.pop()
-                    if a is None:
+                    if a is None or sip_isdeleted_safe(a):
                         continue
                     if a in connected_atoms:
                         continue
                     connected_atoms.add(a)
                     # iterate bonds attached to atom
-                    for b in getattr(a, "bonds", []) or []:
-                        if b is None:
-                            continue
-                        connected_bonds.add(b)
-                        # find the other atom at the bond
-                        other = None
-                        try:
-                            if getattr(b, "atom1", None) is a:
-                                other = getattr(b, "atom2", None)
-                            else:
-                                other = getattr(b, "atom1", None)
-                        except (AttributeError, RuntimeError, ValueError, TypeError):
+                    atom_bonds = getattr(a, "bonds", [])
+                    if atom_bonds:
+                        for b in atom_bonds:
+                            if b is None or sip_isdeleted_safe(b):
+                                continue
+                            connected_bonds.add(b)
+                            # find the other atom at the bond
                             other = None
-                        if other is not None and other not in connected_atoms:
-                            atoms_to_visit.append(other)
+                            try:
+                                b_atom1 = getattr(b, "atom1", None)
+                                b_atom2 = getattr(b, "atom2", None)
+                                if b_atom1 is a:
+                                    other = b_atom2
+                                else:
+                                    other = b_atom1
+                            except (AttributeError, RuntimeError, ValueError, TypeError):
+                                other = None
+                            if other is not None and not sip_isdeleted_safe(other) and other not in connected_atoms:
+                                atoms_to_visit.append(other)
 
                 # Apply selection: clear previous and select only these
                 self.clearSelection()
 
                 for a in connected_atoms:
-                    if not sip_isdeleted_safe(a):
+                    if not sip_isdeleted_safe(a) and hasattr(a, "setSelected"):
                         try:
                             a.setSelected(True)
-                        except (RuntimeError, ValueError, TypeError) as e:
+                        except (RuntimeError, ValueError, TypeError, AttributeError) as e:
                             logging.debug(f"Failed to select atom {a}: {e}")
-                            pass  # Ignore invalid item states during component search
 
                 for b in connected_bonds:
-                    if not sip_isdeleted_safe(b):
+                    if not sip_isdeleted_safe(b) and hasattr(b, "setSelected"):
                         try:
                             b.setSelected(True)
-                        except (RuntimeError, ValueError, TypeError) as e:
+                        except (RuntimeError, ValueError, TypeError, AttributeError) as e:
                             logging.debug(f"Failed to select bond {b}: {e}")
-                            pass  # Ignore invalid bond states during component search
                 event.accept()
                 return
             except (AttributeError, RuntimeError, ValueError, TypeError) as e:
                 # On any unexpected error, fall back to default handling
                 logging.error(f"Error in connected component selection: {e}")
-                pass  # Suppress errors during connection search
 
         elif self.mode in ["bond_2_5"]:
             event.accept()
@@ -723,12 +729,13 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
         for obj in list(self._deleted_items):
             if not sip_isdeleted_safe(obj):
                 try:
-                    obj.hide()
+                    if hasattr(obj, "hide"):
+                        obj.hide()
                     if hasattr(obj, "bonds") and obj.bonds is not None:
-                        obj.bonds.clear()
+                        if hasattr(obj.bonds, "clear"):
+                            obj.bonds.clear()
                 except (AttributeError, RuntimeError, ValueError, TypeError) as e:
-                    logging.debug(f"Error purging item {obj}: {e}")
-                    pass  # Suppress errors during template point mapping
+                    logging.debug(f"Error purging item {obj} in MoleculeScene: {e}")
 
         try:
             self._deleted_items.clear()
