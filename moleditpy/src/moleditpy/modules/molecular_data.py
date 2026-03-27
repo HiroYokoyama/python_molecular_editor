@@ -1,3 +1,4 @@
+import logging
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
@@ -76,8 +77,8 @@ class MolecularData:
                         and atom_id in self.adjacency_list[neighbor_id]
                     ):
                         self.adjacency_list[neighbor_id].remove(atom_id)
-                except (ValueError, KeyError, TypeError):
-                    pass  # Ignore adjacency list inconsistencies during atom removal
+                except (ValueError, KeyError, TypeError) as e:
+                    logging.debug(f"Suppressed exception: {e}")  # Ignore adjacency list inconsistencies during atom removal
 
 
             # Now, safely delete the atom's own entry from the adjacency list
@@ -92,8 +93,8 @@ class MolecularData:
                 bonds_to_remove = [key for key in self.bonds if atom_id in key]
                 for key in bonds_to_remove:
                     del self.bonds[key]
-            except (RuntimeError, KeyError):
-                pass  # Ignore mutation issues during batch bond removal
+            except (RuntimeError, KeyError) as e:
+                logging.debug(f"Suppressed exception: {e}")  # Ignore mutation issues during batch bond removal
 
 
     def remove_bond(self, id1, id2):
@@ -111,8 +112,8 @@ class MolecularData:
                 if id2 in self.adjacency_list and id1 in self.adjacency_list[id2]:
                     self.adjacency_list[id2].remove(id1)
                 del self.bonds[key_to_remove]
-            except (ValueError, KeyError):
-                pass  # Ignore if bond already removed or inconsistent
+            except (ValueError, KeyError) as e:
+                logging.debug(f"Suppressed exception: {e}")  # Ignore if bond already removed or inconsistent
 
 
     def to_rdkit_mol(self, use_2d_stereo=True):
@@ -351,8 +352,8 @@ class MolecularData:
                 if item:
                     try:
                         positions.append(item.pos())
-                    except (AttributeError, RuntimeError):
-                        pass
+                    except (AttributeError, RuntimeError) as e:
+                        logging.debug(f"Suppressed exception: {e}")
             
             if not positions:
                 continue
@@ -379,8 +380,8 @@ class MolecularData:
         if mol:
             try:
                 return Chem.MolToMolBlock(mol, includeStereo=True)
-            except (RuntimeError, ValueError, TypeError):  
-                pass  # Suppress errors during RDKit MolBlock generation
+            except (RuntimeError, ValueError, TypeError) as e:
+                logging.debug(f"Suppressed exception: {e}")  # Suppress errors during RDKit MolBlock generation
 
         if not self.atoms:
             return None

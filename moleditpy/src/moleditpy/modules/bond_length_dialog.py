@@ -1,3 +1,4 @@
+import logging
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
@@ -208,8 +209,8 @@ class BondLengthDialog(Dialog3DPickingMixin, QDialog):
                 self.distance_slider.setValue(154)
                 self.distance_slider.setEnabled(False)
                 self.distance_slider.blockSignals(False)
-            except (AttributeError, RuntimeError, ValueError, TypeError):
-                pass  # Suppress non-critical UI update errors (distance input/slider)
+            except (AttributeError, RuntimeError, ValueError, TypeError) as e:
+                logging.debug(f"Suppressed exception: {e}")  # Suppress non-critical UI update errors (distance input/slider)
 
         elif self.atom2_idx is None:
             symbol1 = self.mol.GetAtomWithIdx(self.atom1_idx).GetSymbol()
@@ -229,8 +230,8 @@ class BondLengthDialog(Dialog3DPickingMixin, QDialog):
                 self.distance_slider.setValue(154)
                 self.distance_slider.setEnabled(False)
                 self.distance_slider.blockSignals(False)
-            except (AttributeError, RuntimeError, ValueError, TypeError):
-                pass  # Suppress non-critical UI update errors (distance input/slider)
+            except (AttributeError, RuntimeError, ValueError, TypeError) as e:
+                logging.debug(f"Suppressed exception: {e}")  # Suppress non-critical UI update errors (distance input/slider)
         else:
             symbol1 = self.mol.GetAtomWithIdx(self.atom1_idx).GetSymbol()
             symbol2 = self.mol.GetAtomWithIdx(self.atom2_idx).GetSymbol()
@@ -257,8 +258,8 @@ class BondLengthDialog(Dialog3DPickingMixin, QDialog):
                 self.distance_slider.setValue(slider_val)
                 self.distance_slider.setEnabled(True)
                 self.distance_slider.blockSignals(False)
-            except (AttributeError, RuntimeError, TypeError):  
-                pass  # Suppress errors during distance UI sync
+            except (AttributeError, RuntimeError, TypeError) as e:
+                logging.debug(f"Suppressed exception: {e}")  # Suppress errors during distance UI sync
 
             # Add labels
             self.add_selection_label(self.atom1_idx, "1")
@@ -274,8 +275,8 @@ class BondLengthDialog(Dialog3DPickingMixin, QDialog):
                 self.distance_slider.blockSignals(True)
                 self.distance_slider.setValue(int(val * 100))
                 self.distance_slider.blockSignals(False)
-        except ValueError:
-            pass  # Ignore invalid numeric input during typing
+        except ValueError as e:
+            logging.debug(f"Suppressed exception: {e}")  # Ignore invalid numeric input during typing
 
     def on_slider_pressed(self):
         """Remember the state before slider dragging starts."""
@@ -419,5 +420,5 @@ class BondLengthDialog(Dialog3DPickingMixin, QDialog):
         try:
             if self.main_window.current_mol:
                 self.main_window.draw_molecule_3d(self.main_window.current_mol)
-        except (AttributeError, RuntimeError, ValueError, TypeError):
-            pass  # Suppress errors during dialog teardown
+        except (AttributeError, RuntimeError, ValueError, TypeError) as e:
+            logging.debug(f"Suppressed exception: {e}")  # Suppress errors during dialog teardown

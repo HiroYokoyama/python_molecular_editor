@@ -71,8 +71,8 @@ class MainWindowCompute:
         """Safely disconnect a signal, silently ignoring RuntimeError if nothing is connected."""
         try:
             signal.disconnect()
-        except RuntimeError:
-            pass  # nothing was connected, ignore
+        except RuntimeError as e:
+            logging.debug(f"Suppressed exception: {e}")  # nothing was connected, ignore
 
     def _remove_calculating_text(self):
         """Safely remove the 'Calculating...' text actor from the plotter."""

@@ -1,3 +1,4 @@
+import logging
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
@@ -296,8 +297,8 @@ class AngleDialog(Dialog3DPickingMixin, QDialog):
                 self.angle_slider.setValue(slider_val)
                 self.angle_slider.setEnabled(True)
                 self.angle_slider.blockSignals(False)
-            except (AttributeError, RuntimeError, TypeError):  
-                pass  # Suppress non-critical UI updates
+            except (AttributeError, RuntimeError, TypeError) as e:
+                logging.debug(f"Suppressed exception: {e}")  # Suppress non-critical UI updates
 
             # Add labels
             self.add_selection_label(self.atom1_idx, "1")
@@ -322,8 +323,8 @@ class AngleDialog(Dialog3DPickingMixin, QDialog):
             self.angle_slider.blockSignals(True)
             self.angle_slider.setValue(int(round(wrapped_val)))
             self.angle_slider.blockSignals(False)
-        except ValueError:
-            pass  # Ignore invalid numeric input during typing
+        except ValueError as e:
+            logging.debug(f"Suppressed exception: {e}")  # Ignore invalid numeric input during typing
 
     def on_slider_pressed(self):
         """Remember the state before slider dragging starts."""

@@ -1124,16 +1124,16 @@ class SettingsDialog(QDialog):
                 for k, act in opt_actions.items():
                     try:
                         act.setChecked(k.upper() == (opt_method or "").upper())
-                    except (RuntimeError, ValueError, TypeError):
-                        pass  # Suppress optimization action sync errors
+                    except (RuntimeError, ValueError, TypeError) as e:
+                        logging.debug(f"Suppressed exception: {e}")  # Suppress optimization action sync errors
 
                 conv_mode = self.parent_window.settings.get("3d_conversion_mode", "fallback")
                 conv_actions = getattr(self.parent_window, "conv_actions", {})
                 for k, act in conv_actions.items():
                     try:
                         act.setChecked(k == conv_mode)
-                    except (RuntimeError, ValueError, TypeError):
-                        pass  # Suppress conversion action sync errors
+                    except (RuntimeError, ValueError, TypeError) as e:
+                        logging.debug(f"Suppressed exception: {e}")  # Suppress conversion action sync errors
 
                 # 6. Mark dirty
                 try:
@@ -1142,7 +1142,7 @@ class SettingsDialog(QDialog):
                     # Suppress if parent window is partially torn down and lacks settings_dirty flag.
                     pass
             except (AttributeError, RuntimeError, ValueError) as e:
-                pass  # Suppress global settings sync errors
+                logging.debug(f"Suppressed exception: {e}")  # Suppress global settings sync errors
 
             QMessageBox.information(
                 self, "Reset Complete", "All settings have been reset to defaults."
@@ -1323,8 +1323,8 @@ class SettingsDialog(QDialog):
                     f"background-color: {self.bs_bond_color}; border: 1px solid #888;"
                 )
                 self.bs_bond_color_button.setToolTip(self.bs_bond_color)
-            except (AttributeError, RuntimeError, ValueError, TypeError):  
-                pass  # Suppress bond color update errors
+            except (AttributeError, RuntimeError, ValueError, TypeError) as e:
+                logging.debug(f"Suppressed exception: {e}")  # Suppress bond color update errors
 
     def apply_settings(self):
         """Apply settings (dialog stays open)"""
@@ -1348,8 +1348,8 @@ class SettingsDialog(QDialog):
         if hasattr(self.parent_window, "update_cpk_colors_from_settings"):
             try:
                 self.parent_window.update_cpk_colors_from_settings()
-            except (RuntimeError, TypeError):
-                pass  # Suppress CPK color update sync errors
+            except (RuntimeError, TypeError) as e:
+                logging.debug(f"Suppressed exception: {e}")  # Suppress CPK color update sync errors
 
         # Refresh other dialogs
         for w in QApplication.topLevelWidgets():
@@ -1359,8 +1359,8 @@ class SettingsDialog(QDialog):
                 # We'll stick to dynamic import but clean up the call.
                 if type(w).__name__ == "ColorSettingsDialog" and hasattr(w, "refresh_ui"):
                     w.refresh_ui()
-            except (RuntimeError, ValueError, TypeError):
-                pass # Silent for UI refresh of other windows
+            except (RuntimeError, ValueError, TypeError) as e:
+                logging.debug(f"Suppressed exception: {e}") # Silent for UI refresh of other windows
 
         # Redraw molecule
         current_mol = getattr(self.parent_window, "current_mol", None)
@@ -1384,7 +1384,7 @@ class SettingsDialog(QDialog):
                 if view_2d and hasattr(view_2d, "viewport"):
                     view_2d.viewport().update()
             except (RuntimeError, ValueError, TypeError) as e:
-                pass  # Suppress 2D scene item refresh errors
+                logging.debug(f"Suppressed exception: {e}")  # Suppress 2D scene item refresh errors
 
         # Update status bar
         if hasattr(self.parent_window, "statusBar") and self.parent_window.statusBar():

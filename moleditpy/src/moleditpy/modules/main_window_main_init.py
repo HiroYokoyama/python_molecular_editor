@@ -1,3 +1,4 @@
+import logging
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
@@ -237,8 +238,8 @@ class MainWindowMainInit:
         # accidental focus landing on toolbar/buttons (e.g. Optimize 2D).
         try:
             QTimer.singleShot(0, self.view_2d.setFocus)
-        except (AttributeError, RuntimeError, ValueError, TypeError):  
-            pass  # Suppress non-critical UI/menu initialization errors
+        except (AttributeError, RuntimeError, ValueError, TypeError) as e:
+            logging.debug(f"Suppressed exception: {e}")  # Suppress non-critical UI/menu initialization errors
 
     def init_ui(self):  
         # 1. Get the path to the directory where the current script is located
@@ -341,8 +342,8 @@ class MainWindowMainInit:
 
         try:
             self.update_cpk_colors_from_settings()
-        except (AttributeError, RuntimeError, ValueError, TypeError):  
-            pass  # Suppress non-critical UI/menu/settings sync errors
+        except (AttributeError, RuntimeError, ValueError, TypeError) as e:
+            logging.debug(f"Suppressed exception: {e}")  # Suppress non-critical UI/menu/settings sync errors
 
         if self.plotter and self.plotter.renderer:
             bg_color = self.settings.get("background_color", "#919191")
@@ -361,8 +362,8 @@ class MainWindowMainInit:
                 self.scene.update()
                 for v in list(self.scene.views()):
                     v.viewport().update()
-        except (AttributeError, RuntimeError, ValueError, TypeError):  
-            pass  # Suppress non-critical UI/menu/settings sync errors
+        except (AttributeError, RuntimeError, ValueError, TypeError) as e:
+            logging.debug(f"Suppressed exception: {e}")  # Suppress non-critical UI/menu/settings sync errors
 
     def update_cpk_colors_from_settings(self):
         """Update global CPK_COLORS and CPK_COLORS_PV from saved settings overrides.
@@ -451,8 +452,8 @@ class MainWindowMainInit:
         self.optimization_method = self.settings.get("optimization_method", "MMFF_RDKIT")
         try:
             self.update_cpk_colors_from_settings()
-        except (AttributeError, RuntimeError, ValueError, TypeError):
-            pass
+        except (AttributeError, RuntimeError, ValueError, TypeError) as e:
+            logging.debug(f"Suppressed exception: {e}")
 
         # 3. Synchronize menu actions with new settings
         self._sync_settings_to_menu_actions()
@@ -488,8 +489,8 @@ class MainWindowMainInit:
             self.apply_3d_settings()
             if hasattr(self, "current_mol") and self.current_mol:
                 self.draw_molecule_3d(self.current_mol)
-        except (AttributeError, RuntimeError, ValueError, TypeError):
-            pass
+        except (AttributeError, RuntimeError, ValueError, TypeError) as e:
+            logging.debug(f"Suppressed exception: {e}")
         
         # Refresh 2D View
         if hasattr(self, "scene") and self.scene:
@@ -503,8 +504,8 @@ class MainWindowMainInit:
                 self.scene.update()
                 for v in self.scene.views():
                     v.viewport().update()
-            except (AttributeError, RuntimeError, ValueError, TypeError):
-                pass
+            except (AttributeError, RuntimeError, ValueError, TypeError) as e:
+                logging.debug(f"Suppressed exception: {e}")
 
     def load_settings(self):  
         """Load settings from a JSON file, or use defaults if the file is missing."""
@@ -912,8 +913,8 @@ class MainWindowMainInit:
             self.convert_button.customContextMenuRequested.connect(
                 self.show_convert_menu
             )
-        except (AttributeError, RuntimeError, ValueError, TypeError):  
-            pass  # Suppress non-critical UI/menu initialization errors
+        except (AttributeError, RuntimeError, ValueError, TypeError) as e:
+            logging.debug(f"Suppressed exception: {e}")  # Suppress non-critical UI/menu initialization errors
 
         left_buttons_layout.addWidget(self.convert_button)
         left_layout.addLayout(left_buttons_layout)
@@ -949,8 +950,8 @@ class MainWindowMainInit:
             self.optimize_3d_button.customContextMenuRequested.connect(
                 self.show_optimize_menu
             )
-        except (AttributeError, RuntimeError, ValueError, TypeError):  
-            pass  # Suppress non-critical UI/menu initialization errors
+        except (AttributeError, RuntimeError, ValueError, TypeError) as e:
+            logging.debug(f"Suppressed exception: {e}")  # Suppress non-critical UI/menu initialization errors
 
         right_buttons_layout.addWidget(self.optimize_3d_button)
 
@@ -1634,7 +1635,7 @@ class MainWindowMainInit:
                 self.settings["3d_conversion_mode"] = mode
                 self.settings_dirty = True
                 self.statusBar().showMessage(f"3D conversion mode set to: {mode}")
-            except Exception: pass
+            except Exception as e: logging.debug(f"Suppressed exception: {e}")
 
         conv_options = [("Fallback", "fallback"), ("RDKit only", "rdkit"), ("Open Babel only", "obabel"), ("Direct (use 2D coords + add H)", "direct")]
         self.conv_actions = {}

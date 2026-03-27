@@ -1,3 +1,4 @@
+import logging
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
@@ -267,8 +268,8 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                 if isinstance(widget, MoveGroupDialog) and widget.isVisible():
                     move_group_dialog = widget
                     break
-        except (AttributeError, RuntimeError, TypeError):  
-            pass  # Suppress non-critical widget search noise
+        except (AttributeError, RuntimeError, TypeError) as e:
+            logging.debug(f"Suppressed exception: {e}")  # Suppress non-critical widget search noise
 
 
         if move_group_dialog and move_group_dialog.group_atoms:

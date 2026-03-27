@@ -111,8 +111,8 @@ class TemplateMixin:
                 if best_idx != -1 and best_d <= max(map_threshold, 1.5 * avg_len):
                     atom_items[best_idx] = ex_item
                     used_indices.add(best_idx)
-            except (AttributeError, RuntimeError, ValueError, TypeError):  
-                pass  # Suppress point distance mapping errors during fragment addition
+            except (AttributeError, RuntimeError, ValueError, TypeError) as e:
+                logging.debug(f"Suppressed exception: {e}")  # Suppress point distance mapping errors during fragment addition
 
         # --- 2) Enumerate existing atoms in the scene from self.data.atoms and map them ---
         mapped_atoms = {it for it in atom_items if it is not None}
@@ -358,8 +358,8 @@ class TemplateMixin:
             try:
                 if at:
                     at.update_style()
-            except (AttributeError, RuntimeError, ValueError, TypeError):  
-                pass  # Suppress style update errors during fragment addition
+            except (AttributeError, RuntimeError, ValueError, TypeError) as e:
+                logging.debug(f"Suppressed exception: {e}")  # Suppress style update errors during fragment addition
 
         return atom_items
 
@@ -1035,13 +1035,13 @@ class KeyboardMixin:
                                     and self.temp_line.scene()
                                 ):
                                     self.removeItem(self.temp_line)
-                            except (AttributeError, RuntimeError, ValueError, TypeError):  
-                                pass  # Suppress bond visual state sync errors
+                            except (AttributeError, RuntimeError, ValueError, TypeError) as e:
+                                logging.debug(f"Suppressed exception: {e}")  # Suppress bond visual state sync errors
                     except (AttributeError, RuntimeError, ValueError, TypeError):
                         try:
                             self.removeItem(self.temp_line)
-                        except (AttributeError, RuntimeError, ValueError, TypeError):  
-                            pass  # Suppress atom visual state sync errors
+                        except (AttributeError, RuntimeError, ValueError, TypeError) as e:
+                            logging.debug(f"Suppressed exception: {e}")  # Suppress atom visual state sync errors
 
                     self.temp_line = None
                     self.start_atom = None
@@ -1231,8 +1231,8 @@ class SceneQueryMixin:
                             b for b in atom.bonds 
                             if not sip_isdeleted_safe(b) and b not in bonds_to_delete
                         ]
-                    except (AttributeError, RuntimeError, ValueError, TypeError):
-                        pass  # Suppress SIP-stale bond removal errors
+                    except (AttributeError, RuntimeError, ValueError, TypeError) as e:
+                        logging.debug(f"Suppressed exception: {e}")  # Suppress SIP-stale bond removal errors
                 
                 if hasattr(atom, "update_style"):
                     atom.update_style()
@@ -1246,15 +1246,15 @@ class SceneQueryMixin:
                         # Try both directions
                         if not self.data.remove_bond(a1.atom_id, a2.atom_id):
                             self.data.remove_bond(a2.atom_id, a1.atom_id)
-                    except (AttributeError, RuntimeError, ValueError, TypeError):
-                        pass  # Suppress bond model data removal errors
+                    except (AttributeError, RuntimeError, ValueError, TypeError) as e:
+                        logging.debug(f"Suppressed exception: {e}")  # Suppress bond model data removal errors
 
             for atom in list(atoms_to_delete):
                 if hasattr(atom, "atom_id") and hasattr(self, "data"):
                     try:
                         self.data.remove_atom(atom.atom_id)
-                    except (AttributeError, RuntimeError, ValueError, TypeError):
-                        pass  # Suppress data model/graphic removal errors
+                    except (AttributeError, RuntimeError, ValueError, TypeError) as e:
+                        logging.debug(f"Suppressed exception: {e}")  # Suppress data model/graphic removal errors
 
             try:
                 self._ih_update_counter = getattr(self, "_ih_update_counter", 0) + 1
@@ -1273,16 +1273,16 @@ class SceneQueryMixin:
                     if item in current_scene_items:
                         try:
                             self.removeItem(item)
-                        except (RuntimeError, ValueError, TypeError):
-                            pass  # Suppress graphic removal errors (stale pointers)
+                        except (RuntimeError, ValueError, TypeError) as e:
+                            logging.debug(f"Suppressed exception: {e}")  # Suppress graphic removal errors (stale pointers)
                     
                     try:
                         item.hide()
                         if not hasattr(self, "_deleted_items") or self._deleted_items is None:
                             self._deleted_items = []
                         self._deleted_items.append(item)
-                    except (AttributeError, RuntimeError, ValueError, TypeError):
-                        pass  # Suppress data model/graphic removal errors
+                    except (AttributeError, RuntimeError, ValueError, TypeError) as e:
+                        logging.debug(f"Suppressed exception: {e}")  # Suppress data model/graphic removal errors
 
             safe_remove_and_hide(bonds_to_delete)
             safe_remove_and_hide(atoms_to_delete)

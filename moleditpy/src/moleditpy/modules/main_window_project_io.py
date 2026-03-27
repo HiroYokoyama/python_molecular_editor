@@ -1,3 +1,4 @@
+import logging
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
@@ -128,8 +129,8 @@ class MainWindowProjectIo:
             # Mark this state as the last saved state for undo tracking
             try:
                 self._saved_state = copy.deepcopy(self.get_current_state())
-            except (AttributeError, RuntimeError, ValueError, TypeError):  
-                pass  # Suppress undo-state deepcopy errors
+            except (AttributeError, RuntimeError, ValueError, TypeError) as e:
+                logging.debug(f"Suppressed exception: {e}")  # Suppress undo-state deepcopy errors
             self.statusBar().showMessage(f"Project saved to {file_path}")
 
         except (OSError, IOError) as e:  
@@ -187,8 +188,8 @@ class MainWindowProjectIo:
             self.update_window_title()
             try:
                 self._saved_state = copy.deepcopy(self.get_current_state())
-            except (AttributeError, RuntimeError, ValueError, TypeError):  
-                pass  # Suppress undo-state deepcopy errors
+            except (AttributeError, RuntimeError, ValueError, TypeError) as e:
+                logging.debug(f"Suppressed exception: {e}")  # Suppress undo-state deepcopy errors
             self.statusBar().showMessage(f"Project saved to {file_path}")
 
         except (OSError, IOError) as e:  
@@ -222,8 +223,8 @@ class MainWindowProjectIo:
             self.update_window_title()
             try:
                 self._saved_state = copy.deepcopy(self.get_current_state())
-            except (AttributeError, RuntimeError, ValueError, TypeError):  
-                pass  # Suppress undo-state deepcopy errors
+            except (AttributeError, RuntimeError, ValueError, TypeError) as e:
+                logging.debug(f"Suppressed exception: {e}")  # Suppress undo-state deepcopy errors
             self.statusBar().showMessage(f"Project loaded from {file_path}")
 
             QTimer.singleShot(0, self.fit_to_view)

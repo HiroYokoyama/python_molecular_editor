@@ -1,3 +1,4 @@
+import logging
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
@@ -231,8 +232,8 @@ class DihedralDialog(Dialog3DPickingMixin, QDialog):
                 self.dihedral_slider.setValue(180)
                 self.dihedral_slider.setEnabled(False)
                 self.dihedral_slider.blockSignals(False)
-            except (AttributeError, RuntimeError, TypeError):  
-                pass  # Suppress errors during dihedral input clearing
+            except (AttributeError, RuntimeError, TypeError) as e:
+                logging.debug(f"Suppressed exception: {e}")  # Suppress errors during dihedral input clearing
 
         elif selected_count < 4:
             selected_atoms = [
@@ -262,8 +263,8 @@ class DihedralDialog(Dialog3DPickingMixin, QDialog):
                 self.dihedral_slider.setValue(180)
                 self.dihedral_slider.setEnabled(False)
                 self.dihedral_slider.blockSignals(False)
-            except (AttributeError, RuntimeError, TypeError):  
-                pass  # Suppress non-critical UI update errors
+            except (AttributeError, RuntimeError, TypeError) as e:
+                logging.debug(f"Suppressed exception: {e}")  # Suppress non-critical UI update errors
         else:
             selected_atoms = [
                 self.atom1_idx,
@@ -300,8 +301,8 @@ class DihedralDialog(Dialog3DPickingMixin, QDialog):
                 self.dihedral_slider.setValue(slider_val)
                 self.dihedral_slider.setEnabled(True)
                 self.dihedral_slider.blockSignals(False)
-            except (AttributeError, RuntimeError, TypeError):  
-                pass  # Suppress non-critical UI update errors
+            except (AttributeError, RuntimeError, TypeError) as e:
+                logging.debug(f"Suppressed exception: {e}")  # Suppress non-critical UI update errors
 
     def on_dihedral_input_changed(self, text):
         """Line edit text changed, update slider."""
@@ -313,8 +314,8 @@ class DihedralDialog(Dialog3DPickingMixin, QDialog):
             self.dihedral_slider.blockSignals(True)
             self.dihedral_slider.setValue(int(round(wrapped_val)))
             self.dihedral_slider.blockSignals(False)
-        except ValueError:
-            pass  # Ignore invalid numeric input during typing
+        except ValueError as e:
+            logging.debug(f"Suppressed exception: {e}")  # Ignore invalid numeric input during typing
 
     def on_slider_pressed(self):
         """Remember the state before slider dragging starts."""
@@ -509,5 +510,5 @@ class DihedralDialog(Dialog3DPickingMixin, QDialog):
         try:
             if self.main_window.current_mol:
                 self.main_window.draw_molecule_3d(self.main_window.current_mol)
-        except (AttributeError, RuntimeError, TypeError):
-            pass  # Suppress errors during dialog teardown
+        except (AttributeError, RuntimeError, TypeError) as e:
+            logging.debug(f"Suppressed exception: {e}")  # Suppress errors during dialog teardown

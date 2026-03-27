@@ -942,8 +942,8 @@ class MainWindowView3d:
                         labels.append(lbl if lbl is not None else "?")
                     try:
                         self.plotter.remove_actor("chiral_labels")
-                    except (AttributeError, RuntimeError, TypeError):  
-                        pass  # Suppress non-critical 3D label update errors
+                    except (AttributeError, RuntimeError, TypeError) as e:
+                        logging.debug(f"Suppressed exception: {e}")  # Suppress non-critical 3D label update errors
                     self.plotter.add_point_labels(
                         np.array(pts),
                         labels,
@@ -1451,8 +1451,8 @@ class MainWindowView3d:
                 for nm in self.atom_label_legend_names:
                     try:
                         self.plotter.remove_actor(nm)
-                    except (AttributeError, RuntimeError, TypeError):  
-                        pass  # Suppress non-critical 3D rendering/actor update errors
+                    except (AttributeError, RuntimeError, TypeError) as e:
+                        logging.debug(f"Suppressed exception: {e}")  # Suppress non-critical 3D rendering/actor update errors
             self.atom_label_legend_names = []
 
             legend_entries = []
@@ -1498,13 +1498,13 @@ class MainWindowView3d:
                             except (AttributeError, RuntimeError, TypeError):  
                                 # Suppress non-critical actor property update noise
                                 pass
-                    except (AttributeError, RuntimeError, TypeError):  
-                        pass  # Suppress non-critical 3D rendering/actor update errors
+                    except (AttributeError, RuntimeError, TypeError) as e:
+                        logging.debug(f"Suppressed exception: {e}")  # Suppress non-critical 3D rendering/actor update errors
                 except (AttributeError, RuntimeError, TypeError):
                     continue
 
-        except (AttributeError, RuntimeError, ValueError, TypeError):  
-            pass  # Suppress legend addition errors
+        except (AttributeError, RuntimeError, ValueError, TypeError) as e:
+            logging.debug(f"Suppressed exception: {e}")  # Suppress legend addition errors
 
     def clear_all_atom_info_labels(self):
         """Clear all atom info labels"""
@@ -1524,10 +1524,10 @@ class MainWindowView3d:
                 else:
                     try:
                         self.plotter.remove_actor(self.current_atom_info_labels)
-                    except (AttributeError, RuntimeError, TypeError):  
-                        pass  # Suppress non-critical 3D rendering/actor update errors
-        except (AttributeError, RuntimeError, TypeError):  
-            pass  # Suppress non-critical 3D state update errors
+                    except (AttributeError, RuntimeError, TypeError) as e:
+                        logging.debug(f"Suppressed exception: {e}")  # Suppress non-critical 3D rendering/actor update errors
+        except (AttributeError, RuntimeError, TypeError) as e:
+            logging.debug(f"Suppressed exception: {e}")  # Suppress non-critical 3D state update errors
         finally:
             self.current_atom_info_labels = None
 
@@ -1540,10 +1540,10 @@ class MainWindowView3d:
                 for nm in list(self.atom_label_legend_names):
                     try:
                         self.plotter.remove_actor(nm)
-                    except (AttributeError, RuntimeError, TypeError):  
-                        pass  # Suppress non-critical 3D rendering/actor update errors
-        except (AttributeError, RuntimeError, TypeError):  
-            pass  # Suppress non-critical 3D state update errors
+                    except (AttributeError, RuntimeError, TypeError) as e:
+                        logging.debug(f"Suppressed exception: {e}")  # Suppress non-critical 3D rendering/actor update errors
+        except (AttributeError, RuntimeError, TypeError) as e:
+            logging.debug(f"Suppressed exception: {e}")  # Suppress non-critical 3D state update errors
         finally:
             self.atom_label_legend_names = []
 
@@ -1615,8 +1615,8 @@ class MainWindowView3d:
                     self.view_2d.setTransformationAnchor(old_ta)
                 if old_ra is not None:
                     self.view_2d.setResizeAnchor(old_ra)
-            except (AttributeError, RuntimeError, TypeError):  
-                pass  # Suppress non-critical 3D view/actor cleanup errors
+            except (AttributeError, RuntimeError, TypeError) as e:
+                logging.debug(f"Suppressed exception: {e}")  # Suppress non-critical 3D view/actor cleanup errors
 
 
     def apply_3d_settings(self, redraw=True):
@@ -1641,8 +1641,8 @@ class MainWindowView3d:
         if renderer and hasattr(renderer, "SetNumberOfLayers"):
             try:
                 renderer.SetNumberOfLayers(2)  # Layer 0: 3D, Layer 1: 2D Overlay
-            except (AttributeError, RuntimeError, TypeError):
-                pass  # May not be supported depending on PyVista version
+            except (AttributeError, RuntimeError, TypeError) as e:
+                logging.debug(f"Suppressed exception: {e}")  # May not be supported depending on PyVista version
 
         # --- 3D Axis Widget Settings ---
         show_axes = self.settings.get("show_3d_axes", True)
@@ -1673,8 +1673,8 @@ class MainWindowView3d:
         if not getattr(self, "_camera_initialized", False):
             try:
                 self.plotter.reset_camera()
-            except (AttributeError, RuntimeError, TypeError):  
-                pass  # Suppress non-critical 3D view/actor cleanup errors
+            except (AttributeError, RuntimeError, TypeError) as e:
+                logging.debug(f"Suppressed exception: {e}")  # Suppress non-critical 3D view/actor cleanup errors
 
             self._camera_initialized = True
 
@@ -1683,8 +1683,8 @@ class MainWindowView3d:
             self.plotter.render()
             if hasattr(self.plotter, "update"):
                 self.plotter.update()
-        except (AttributeError, RuntimeError, TypeError):  
-            pass  # Suppress non-critical 3D state update errors
+        except (AttributeError, RuntimeError, TypeError) as e:
+            logging.debug(f"Suppressed exception: {e}")  # Suppress non-critical 3D state update errors
 
     def update_bond_color_override(self, bond_idx, hex_color):
         """Plugin API helper to override bond color."""

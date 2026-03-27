@@ -1,3 +1,4 @@
+import logging
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
@@ -430,8 +431,8 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
         for label_actor in self.constraint_labels:
             try:
                 self.main_window.plotter.remove_actor(label_actor)
-            except (AttributeError, RuntimeError, TypeError):  
-                pass  # Suppress errors during constraint label removal
+            except (AttributeError, RuntimeError, TypeError) as e:
+                logging.debug(f"Suppressed exception: {e}")  # Suppress errors during constraint label removal
 
         self.constraint_labels = []
 
@@ -733,8 +734,8 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
             QMessageBox.warning(
                 self, "Invalid Value", "Please enter a valid floating-point number."
             )
-        except IndexError:
-            pass  # Suppress sync errors between table and constraints list
+        except IndexError as e:
+            logging.debug(f"Suppressed exception: {e}")  # Suppress sync errors between table and constraints list
 
     def keyPressEvent(self, event):
         """Handle keyboard events (Delete/Backspace to remove, Enter to optimize)."""
