@@ -176,8 +176,14 @@ def _iterative_optimize(mol, method, check_halted_cb, safe_status_cb, max_iters=
             props = AllChem.MMFFGetMoleculeProperties(mol, mmffVariant=mmff_variant)
             if props: 
                 ff = AllChem.MMFFGetMoleculeForceField(mol, props, confId=0, ignoreInterfragInteractions=ignore_interfrag)
+            else:
+                safe_status_cb("MMFF94 skipped (unsupported atoms). Reverting to UFF...")
+                ff = AllChem.UFFGetMoleculeForceField(mol, confId=0, ignoreInterfragInteractions=ignore_interfrag)
+                method = "UFF (Fallback)"
         
-        if not ff: return False
+        if not ff: 
+            safe_status_cb(f"Failed to setup {method} Force Field.")
+            return False
         
         iters_done = 0
         while iters_done < max_iters:
@@ -416,16 +422,17 @@ def _perform_optimize_only(mol, options, worker_id, _check_halted, _safe_status,
     
     opt_func = _iterative_optimize_obabel if backend == "OBABEL" else _iterative_optimize
     if not opt_func(mol, method_key, _check_halted, _safe_status, options=options if backend == "RDKIT" else None):
-        raise RuntimeError(f"Optimization with {opt_method} failed.")
+        _safe_status(f"Warning: Optimization with {opt_method} failed. Structure preserved.")
+        with contextlib.suppress(Exception): mol.ClearProp("_pme_optimization_method")
     
     if _check_halted(): raise WorkerHaltError("Halted")
     _safe_finished((worker_id, mol))
-    _safe_status(f"Optimization completed ({_OPT_METHOD_LABELS.get(opt_method, opt_method)}).")
+    _safe_status(f"Process completed ({_OPT_METHOD_LABELS.get(opt_method, opt_method)}).")
 
 
 def _perform_obabel_conversion(mol_block, mode, opt_method, worker_id, options, _check_halted, _safe_status, _safe_finished):
     """Perform Open Babel 3D conversion and optimization."""
-    _safe_status("Attempting Open Babel conversion (Isolated)...")
+    _safe_status("Attempting Open Babel conversion...")
     try:
         if not OBABEL_AVAILABLE or not pybel: raise RuntimeError("Open Babel not available.")
         
@@ -555,8 +562,7 @@ class CalculationWorker(QObject):
                 success = self._run_rdkit_workflow(mol, ex_stereo, options, helpers)
                 if success: return
                 if mode == "rdkit":
-                    opt_method = options.get("optimization_method", "MMFF94s_RDKIT")
-                    raise RuntimeError(f"RDKit 3D conversion failed (Optimization with {opt_method} failed).")
+                    raise RuntimeError("RDKit 3D conversion failed: Could not generate (embed) 3D coordinates.")
 
             # 6. Open Babel Workflow (Fallback)
             if mode in ("fallback", "obabel"):
@@ -645,17 +651,20 @@ class CalculationWorker(QObject):
         _safe_status(f"Optimizing ({method_key} / {backend})...")
         
         opt_func = _iterative_optimize_obabel if backend == "OBABEL" else _iterative_optimize
-        if opt_func(mol, method_key, _check_halted, _safe_status, options=options if backend == "RDKIT" else None):
-            # Final stereo restoration check
-            for b_idx, s, satoms in orig_stereo:
-                b = mol.GetBondWithIdx(b_idx)
-                if len(satoms) == 2: b.SetStereoAtoms(satoms[0], satoms[1])
-                b.SetStereo(s)
-            if _check_halted(): raise WorkerHaltError("Halted")
-            _safe_finished((w_id, mol))
-            _safe_status("RDKit conversion succeeded.")
-            return True
-        return False
+        if not opt_func(mol, method_key, _check_halted, _safe_status, options=options if backend == "RDKIT" else None):
+            _safe_status("Warning: Optimization failed. Using unoptimized structure.")
+            with contextlib.suppress(Exception): mol.ClearProp("_pme_optimization_method")
+
+        # Final stereo restoration check
+        for b_idx, s, satoms in orig_stereo:
+            b = mol.GetBondWithIdx(b_idx)
+            if len(satoms) == 2: b.SetStereoAtoms(satoms[0], satoms[1])
+            b.SetStereo(s)
+            
+        if _check_halted(): raise WorkerHaltError("Halted")
+        _safe_finished((w_id, mol))
+        _safe_status("RDKit conversion completed.")
+        return True
 
     def _run_obabel_workflow(self, mol_block, options, helpers):
         """Execute Open Babel 3D conversion."""

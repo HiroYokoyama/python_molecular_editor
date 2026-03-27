@@ -417,6 +417,7 @@ class MainWindowCompute:
         self.cleanup_button.setEnabled(False)
         self._enable_3d_features(False)
         self.plotter.clear()
+        self.current_mol = None
 
         # Add 'Calculating...' overlay
         bg_qcolor = QColor(self.settings.get("background_color", "#919191"))
