@@ -33,6 +33,7 @@ except ImportError:
 import numpy as np
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QMessageBox
+from rdkit import Geometry
 
 
 class DihedralDialog(Dialog3DPickingMixin, QDialog):  
@@ -489,14 +490,14 @@ class DihedralDialog(Dialog3DPickingMixin, QDialog):
                 new_pos = rotate_point_around_axis(
                     current_pos, pos2, rotation_axis, rotation_angle_rad
                 )
-                conf.SetAtomPosition(atom_idx, new_pos.tolist())
+                conf.SetAtomPosition(atom_idx, Geometry.Point3D(float(new_pos[0]), float(new_pos[1]), float(new_pos[2])))
                 self.main_window.atom_positions_3d[atom_idx] = new_pos
         else:
             # Move only atom4
             new_pos4 = rotate_point_around_axis(
                 pos4, pos2, rotation_axis, rotation_angle_rad
             )
-            conf.SetAtomPosition(self.atom4_idx, new_pos4.tolist())
+            conf.SetAtomPosition(self.atom4_idx, Geometry.Point3D(float(new_pos4[0]), float(new_pos4[1]), float(new_pos4[2])))
             self.main_window.atom_positions_3d[self.atom4_idx] = new_pos4
 
         # Update the 3D view

@@ -33,6 +33,7 @@ except ImportError:
 import numpy as np
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QMessageBox
+from rdkit import Geometry
 
 
 class AngleDialog(Dialog3DPickingMixin, QDialog):  
@@ -462,7 +463,8 @@ class AngleDialog(Dialog3DPickingMixin, QDialog):
 
         # Write updated positions back to the conformer and 3D cache
         for i in range(conf.GetNumAtoms()):
-            conf.SetAtomPosition(i, positions[i].tolist())
+            p = positions[i]
+            conf.SetAtomPosition(i, Geometry.Point3D(float(p[0]), float(p[1]), float(p[2])))
             self.main_window.atom_positions_3d[i] = positions[i]
 
         # Update the 3D view

@@ -25,6 +25,7 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+from rdkit import Geometry
 
 from .dialog_3d_picking_mixin import Dialog3DPickingMixin
 from .mol_geometry import calc_distance, get_connected_group
@@ -380,20 +381,20 @@ class BondLengthDialog(Dialog3DPickingMixin, QDialog):
             for atom_idx in group1_atoms:
                 current_pos = np.array(conf.GetAtomPosition(atom_idx))
                 new_pos = current_pos + displacement1
-                conf.SetAtomPosition(atom_idx, new_pos.tolist())
+                conf.SetAtomPosition(atom_idx, Geometry.Point3D(float(new_pos[0]), float(new_pos[1]), float(new_pos[2])))
                 self.main_window.atom_positions_3d[atom_idx] = new_pos
 
             # Move group 2
             for atom_idx in group2_atoms:
                 current_pos = np.array(conf.GetAtomPosition(atom_idx))
                 new_pos = current_pos + displacement2
-                conf.SetAtomPosition(atom_idx, new_pos.tolist())
+                conf.SetAtomPosition(atom_idx, Geometry.Point3D(float(new_pos[0]), float(new_pos[1]), float(new_pos[2])))
                 self.main_window.atom_positions_3d[atom_idx] = new_pos
 
         elif self.atom1_fix_radio.isChecked():
             # Move only the second atom
             new_pos2 = pos1 + direction * new_distance
-            conf.SetAtomPosition(self.atom2_idx, new_pos2.tolist())
+            conf.SetAtomPosition(self.atom2_idx, Geometry.Point3D(float(new_pos2[0]), float(new_pos2[1]), float(new_pos2[2])))
             self.main_window.atom_positions_3d[self.atom2_idx] = new_pos2
         else:
             # Move the connected group (default behavior)
@@ -406,7 +407,7 @@ class BondLengthDialog(Dialog3DPickingMixin, QDialog):
             for atom_idx in atoms_to_move:
                 current_pos = np.array(conf.GetAtomPosition(atom_idx))
                 new_pos = current_pos + displacement
-                conf.SetAtomPosition(atom_idx, new_pos.tolist())
+                conf.SetAtomPosition(atom_idx, Geometry.Point3D(float(new_pos[0]), float(new_pos[1]), float(new_pos[2])))
                 self.main_window.atom_positions_3d[atom_idx] = new_pos
 
         # Update the 3D view

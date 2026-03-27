@@ -24,6 +24,7 @@ from PyQt6.QtWidgets import (
     QPushButton,
     QVBoxLayout,
 )
+from rdkit import Geometry
 
 try:
     from .constants import VDW_RADII, pt
@@ -542,7 +543,7 @@ class MoveGroupDialog(Dialog3DPickingMixin, QDialog):
         for atom_idx in self.group_atoms:
             atom_pos = np.array(conf.GetAtomPosition(atom_idx))
             new_pos = atom_pos + translation_vector
-            conf.SetAtomPosition(atom_idx, new_pos.tolist())
+            conf.SetAtomPosition(atom_idx, Geometry.Point3D(float(new_pos[0]), float(new_pos[1]), float(new_pos[2])))
             self.main_window.atom_positions_3d[atom_idx] = new_pos
 
         self.main_window.draw_molecule_3d(self.mol)
@@ -621,7 +622,7 @@ class MoveGroupDialog(Dialog3DPickingMixin, QDialog):
             rotated_pos = R @ centered_pos
             # Restore centroid
             new_pos = rotated_pos + centroid
-            conf.SetAtomPosition(atom_idx, new_pos.tolist())
+            conf.SetAtomPosition(atom_idx, Geometry.Point3D(float(new_pos[0]), float(new_pos[1]), float(new_pos[2])))
             self.main_window.atom_positions_3d[atom_idx] = new_pos
 
         self.main_window.draw_molecule_3d(self.mol)
