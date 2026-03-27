@@ -1693,6 +1693,46 @@ _Verify that application state is updated correctly after a successful save._
 - assert io.update_window_title.called
 - assert io._saved_state is not None
 
+## tests/unit/test_project_io_raw.py
+
+### test_save_raw_data_no_data
+_Verify error message when trying to save empty project._
+
+- io.statusBar().showMessage.assert_called_with('Error: Nothing to save.')
+
+### test_save_raw_data_success
+_Verify successful saving via file dialog._
+
+- assert os.path.exists(save_path)
+- assert io.current_file_path == save_path
+- assert io.has_unsaved_changes is False
+- io.statusBar().showMessage.assert_called_with(f'Project saved to {save_path}')
+- assert data == {'atoms': 'mock'}
+
+### test_save_raw_data_cancel
+_Verify that nothing happens if the user cancels the save dialog._
+
+- io.statusBar().showMessage.assert_not_called()
+
+### test_load_raw_data_dialog_success
+_Verify loading via file dialog._
+
+- io.set_state_from_data.assert_called_with(sample_data)
+- assert io.current_file_path == load_path
+- assert io.has_unsaved_changes is False
+- io.statusBar().showMessage.assert_called_with(f'Project loaded from {load_path}')
+
+### test_load_raw_data_cancel
+_Verify that nothing happens if the user cancels the load dialog._
+
+- io.set_state_from_data.assert_not_called()
+
+### test_load_raw_data_io_error
+_Verify handling of I/O errors during load._
+
+- io.statusBar().showMessage.assert_called()
+- assert 'Invalid project file format' in msg or 'Error loading project file' in msg
+
 ## tests/unit/test_properties.py
 
 ### test_analysis_window_regular_mol
