@@ -6,11 +6,11 @@ This document explains the internal architecture of the MoleditPy plugin system.
 
 The plugin system is composed of three main classes:
 
-| Class | File | Role |
-| :--- | :--- | :--- |
-| **`PluginManager`** | `plugin_manager.py` | The backend engine. Discovers, loads, and manages the lifecycle of plugins. Maintains registries for all extension points. |
-| **`PluginContext`** | `plugin_interface.py` | The API surface exposed to plugins. It wraps the manager's internal methods to provide a safe, scoped interface for developers. |
-| **`PluginManagerWindow`** | `plugin_manager_window.py` | The frontend UI. Allows users to view, install (drag & drop), and remove plugins. |
+| Class | File | Location | Role |
+| :--- | :--- | :--- | :--- |
+| **`PluginManager`** | `plugin_manager.py` | `plugins/` | The backend engine. Discovers, loads, and manages the lifecycle of plugins. |
+| **`PluginContext`** | `plugin_interface.py` | `plugins/` | The API surface exposed to plugins. Scoped interface for developers. |
+| **`PluginManagerWindow`** | `plugin_manager_window.py` | `ui/` | The frontend UI. Allows users to view, install, and remove plugins. |
 
 ---
 

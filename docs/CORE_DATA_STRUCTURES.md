@@ -6,15 +6,16 @@ This document details the internal data models and the visual scene graph archit
 
 The application strictly separates the chemical data model (`MolecularData`) from the visual representation in the 2D editor (`MoleculeScene`, `AtomItem`, `BondItem`).
 
-| Component | Responsibility | Key Class |
-| :--- | :--- | :--- |
-| **Data Model** | Pure chemical state (atoms, bonds, connectivity). No UI dependencies. | `MolecularData` |
-| **Scene Graph** | 2D visualization and interaction logic. | `MoleculeScene` |
-| **Visual Items** | Rendering individual atoms and bonds. | `AtomItem`, `BondItem` |
+| Component | Responsibility | Key Class | Location |
+| :--- | :--- | :--- | :--- |
+| **Data Model** | Pure chemical state (atoms, bonds, connectivity). | `MolecularData` | `core/molecular_data.py` |
+| **App State** | Undo/Redo and project serialization. | `MainWindowAppState` | `core/app_state.py` |
+| **Scene Graph** | 2D visualization and interaction logic. | `MoleculeScene` | `ui/molecule_scene.py` |
+| **Visual Items** | Rendering individual atoms and bonds. | `AtomItem`, `BondItem` | `ui/` package |
 
 ---
 
-## 1. Data Model (`molecular_data.py`)
+## 1. Data Model (`core/molecular_data.py`)
 
 The `MolecularData` class is the source of truth for the chemistry being edited.
 
@@ -44,7 +45,7 @@ This is the **critical bridge** between the 2D drawing and RDKit's chemical logi
 
 ---
 
-## 2. The Scene (`molecule_scene.py`)
+## 2. The Scene (`ui/molecule_scene.py`)
 
 `MoleculeScene` inherits from `QGraphicsScene` and several specialized mixin classes defined in `molecular_scene_handler.py`. This decomposition keeps the core scene logic manageable and separates concerns like template handling and keyboard events.
 
