@@ -47,7 +47,7 @@ EZ_LABEL_BOX_SIZE = 28
 
 # Interaction thresholds
 SNAP_DISTANCE = 14.0
-SUM_TOLERANCE = 5.0
+SUM_TOLERANCE = 0.1
 
 # Misc drawing
 NUM_DASHES = 8

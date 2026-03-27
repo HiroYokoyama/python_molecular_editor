@@ -196,6 +196,65 @@ _Test boundingRect expansion for E/Z labels_
 - assert rect_stereo.width() >= rect_no_stereo.width()
 - assert rect_stereo.height() >= rect_no_stereo.height()
 
+## tests/unit/test_atom_placement_logic.py
+
+### test_placement_0_neighbors
+_Zero bonds: should place default (up)._
+
+- assert offset.x() == pytest.approx(0)
+- assert offset.y() == pytest.approx(-L)
+
+### test_placement_1_neighbor
+_One bond: should rotate 60 degrees clockwise from existing bond vector._
+
+- assert offset.x() == pytest.approx(10.0)
+- assert offset.y() == pytest.approx(17.32, abs=0.01)
+
+### test_placement_3_neighbors_balanced
+_Three balanced neighbors: sum is near zero, should use fallback (45 deg offset)._
+
+- assert offset.x() == pytest.approx(L * 0.7071)
+- assert offset.y() == pytest.approx(-L * 0.7071)
+
+### test_placement_3_neighbors_unbalanced
+_Three unbalanced neighbors: should place in direction opposite to the sum._
+
+- assert offset.x() == pytest.approx(0)
+- assert offset.y() == pytest.approx(-L)
+
+### test_placement_2_neighbors_skeleton
+_Two neighbors: should continue skeleton (opposite to average bond vector)._
+
+- assert offset.x() == pytest.approx(0)
+- assert offset.y() == pytest.approx(-L)
+
+## tests/unit/test_benzene_rotation.py
+
+### test_calculate_6ring_rotation_empty
+_Test with no existing bonds._
+
+- assert rot == 0
+
+### test_calculate_6ring_rotation_single_edge_single
+_Test fusing on a single bond (order 1). Should prefer alternating (template double)._
+
+- assert rot % 2 == 0
+
+### test_calculate_6ring_rotation_single_edge_double
+_Test fusing on a double bond. Should prefer 1 or 2 (alternating or matching)._
+
+- assert rot % 2 == 0
+
+### test_calculate_6ring_rotation_multi_edge_fused
+_Test fusing on two adjacent edges (naphthalene-like)._
+
+- assert rot == 0
+
+### test_calculate_6ring_rotation_connection_safety
+_Verify that 'safe connection' scoring prioritizes rotations where template single bonds connect to fusion points._
+
+- assert rot % 2 == 0
+
 ## tests/unit/test_calculation_worker_direct.py
 
 ### test_calculation_worker_init
@@ -1647,6 +1706,33 @@ _Verify AnalysisWindow uses manual logic for XYZ-derived structures._
 
 - assert 'C2HO' in formula_val
 - assert not smiles_present
+
+## tests/unit/test_radical_toggle.py
+
+### test_radical_toggle_selected
+_Test toggling radical on multiple selected atoms._
+
+- assert a1.radical == 1
+- assert a2.radical == 2
+- assert scene.data.atoms[1]['radical'] == 1
+- assert scene.data.atoms[2]['radical'] == 2
+- a1.update_style.assert_called_once()
+- a2.update_style.assert_called_once()
+- scene.window.push_undo_state.assert_called_once()
+- event.accept.assert_called_once()
+
+### test_radical_toggle_at_cursor
+_Test toggling radical on an atom at the cursor when nothing is selected._
+
+- assert a1.radical == 0
+- assert scene.data.atoms[1]['radical'] == 0
+- scene.window.push_undo_state.assert_called_once()
+
+### test_radical_toggle_no_target
+_Test that nothing happens if no atoms are selected or at the cursor._
+
+- scene.window.push_undo_state.assert_not_called()
+- event.accept.assert_not_called()
 
 ## tests/unit/test_scene_advanced.py
 

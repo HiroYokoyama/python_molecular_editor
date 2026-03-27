@@ -594,13 +594,90 @@ class TemplateMixin:
             self.views()[0].viewport().update()
 
 
-
 class KeyboardMixin:
     """
     Mixin class that handles all keyboard events for MoleculeScene.
     Because this is a Mixin, `self` refers directly to the MoleculeScene instance.
     """
-    def keyPressEvent(self, event):  
+    def _calculate_new_atom_position(self, start_atom, bond_length):
+        """
+        Calculate the position for a new atom based on the surroundings of start_atom.
+        Returns the offset QPointF.
+        """
+        start_pos = start_atom.pos()
+        l = bond_length
+        new_pos_offset = QPointF(0, -l)  # Default offset (up)
+
+        # Get non-H neighbors
+        neighbor_positions = []
+        for bond in start_atom.bonds:
+            other_atom = bond.atom1 if bond.atom2 is start_atom else bond.atom2
+            if hasattr(other_atom, "symbol") and other_atom.symbol != "H":  # Ignore H
+                neighbor_positions.append(other_atom.pos())
+
+        num_non_H_neighbors = len(neighbor_positions)
+
+        if num_non_H_neighbors == 0:
+            # Zero bonds: default direction (up)
+            new_pos_offset = QPointF(0, -l)
+
+        elif num_non_H_neighbors == 1:
+            # One bond: ~120/60 degree angle
+            bond = start_atom.bonds[0]
+            other_atom = bond.atom1 if bond.atom2 is start_atom else bond.atom2
+            existing_bond_vector = start_pos - other_atom.pos()
+
+            # Rotate 60° clockwise from existing bond
+            angle_rad = math.radians(60)
+            cos_a, sin_a = math.cos(angle_rad), math.sin(angle_rad)
+            vx, vy = existing_bond_vector.x(), existing_bond_vector.y()
+            new_vx, new_vy = vx * cos_a - vy * sin_a, vx * sin_a + vy * cos_a
+            rotated_vector = QPointF(new_vx, new_vy)
+            line = QLineF(QPointF(0, 0), rotated_vector)
+            line.setLength(l)
+            new_pos_offset = line.p2()
+
+        elif num_non_H_neighbors == 3:
+            bond_vectors_sum = QPointF(0, 0)
+            for pos in neighbor_positions:
+                # Vector from start_pos to neighbor_pos
+                vec = pos - start_pos
+                # Convert to unit vector
+                line_to_other = QLineF(QPointF(0, 0), vec)
+                if line_to_other.length() > 0:
+                    line_to_other.setLength(1.0)
+                    bond_vectors_sum += line_to_other.p2()
+
+            # SUM_TOLERANCE is now a module-level constant
+            if bond_vectors_sum.manhattanLength() > SUM_TOLERANCE:
+                new_direction_line = QLineF(QPointF(0, 0), -bond_vectors_sum)
+                new_direction_line.setLength(l)
+                new_pos_offset = new_direction_line.p2()
+            else:
+                new_pos_offset = QPointF(l * 0.7071, -l * 0.7071)
+
+        else:  # 2, 4+ bonds: skeleton continuation or over-bonding
+            bond_vectors_sum = QPointF(0, 0)
+            for bond in start_atom.bonds:
+                other_atom = (
+                    bond.atom1 if bond.atom2 is start_atom else bond.atom2
+                )
+                line_to_other = QLineF(start_pos, other_atom.pos())
+                if line_to_other.length() > 0:
+                    line_to_other.setLength(1.0)
+                    bond_vectors_sum += line_to_other.p2() - line_to_other.p1()
+
+            if bond_vectors_sum.manhattanLength() > 0.01:
+                new_direction_line = QLineF(QPointF(0, 0), -bond_vectors_sum)
+                new_direction_line.setLength(l)
+                new_pos_offset = new_direction_line.p2()
+            else:
+                # Default (up) if sum is zero
+                new_pos_offset = QPointF(0, -l)
+        
+        return new_pos_offset
+
+    def keyPressEvent(self, event):
         view = self.views()[0]
         cursor_pos = view.mapToScene(view.mapFromGlobal(QCursor.pos()))
         item_at_cursor = self.itemAt(cursor_pos, view.transform())
@@ -870,76 +947,7 @@ class KeyboardMixin:
                 if start_atom:
                     start_pos = start_atom.pos()
                     l = DEFAULT_BOND_LENGTH
-                    new_pos_offset = QPointF(0, -l)  # Default offset (up)
-
-                    # Get non-H neighbors
-                    neighbor_positions = []
-                    for bond in start_atom.bonds:
-                        other_atom = bond.atom1 if bond.atom2 is start_atom else bond.atom2
-                        if (
-                            other_atom.symbol != "H"
-                        ):  # Ignore H
-                            neighbor_positions.append(other_atom.pos())
-
-                    num_non_H_neighbors = len(neighbor_positions)
-
-                    if num_non_H_neighbors == 0:
-                        # Zero bonds: default direction
-                        new_pos_offset = QPointF(0, -l)
-
-                    elif num_non_H_neighbors == 1:
-                        # One bond: ~120/60 degree angle
-                        bond = start_atom.bonds[0]
-                        other_atom = bond.atom1 if bond.atom2 is start_atom else bond.atom2
-                        existing_bond_vector = start_pos - other_atom.pos()
-
-                        # Rotate 60° clockwise from existing bond
-                        angle_rad = math.radians(60)
-                        cos_a, sin_a = math.cos(angle_rad), math.sin(angle_rad)
-                        vx, vy = existing_bond_vector.x(), existing_bond_vector.y()
-                        new_vx, new_vy = vx * cos_a - vy * sin_a, vx * sin_a + vy * cos_a
-                        rotated_vector = QPointF(new_vx, new_vy)
-                        line = QLineF(QPointF(0, 0), rotated_vector)
-                        line.setLength(l)
-                        new_pos_offset = line.p2()
-
-                    elif num_non_H_neighbors == 3:
-                        bond_vectors_sum = QPointF(0, 0)
-                        for pos in neighbor_positions:
-                            # Vector from start_pos to neighbor_pos
-                            vec = pos - start_pos
-                            # Convert to unit vector
-                            line_to_other = QLineF(QPointF(0, 0), vec)
-                            if line_to_other.length() > 0:
-                                line_to_other.setLength(1.0)
-                                bond_vectors_sum += line_to_other.p2()
-
-                        # SUM_TOLERANCE is now a module-level constant
-                        if bond_vectors_sum.manhattanLength() > SUM_TOLERANCE:
-                            new_direction_line = QLineF(QPointF(0, 0), -bond_vectors_sum)
-                            new_direction_line.setLength(l)
-                            new_pos_offset = new_direction_line.p2()
-                        else:
-                            new_pos_offset = QPointF(l * 0.7071, -l * 0.7071)
-
-                    else:  # 2, 4+ bonds: skeleton continuation or over-bonding
-                        bond_vectors_sum = QPointF(0, 0)
-                        for bond in start_atom.bonds:
-                            other_atom = (
-                                bond.atom1 if bond.atom2 is start_atom else bond.atom2
-                            )
-                            line_to_other = QLineF(start_pos, other_atom.pos())
-                            if line_to_other.length() > 0:
-                                line_to_other.setLength(1.0)
-                                bond_vectors_sum += line_to_other.p2() - line_to_other.p1()
-
-                        if bond_vectors_sum.manhattanLength() > 0.01:
-                            new_direction_line = QLineF(QPointF(0, 0), -bond_vectors_sum)
-                            new_direction_line.setLength(l)
-                            new_pos_offset = new_direction_line.p2()
-                        else:
-                            # Default (up) if sum is zero
-                            new_pos_offset = QPointF(0, -l)
+                    new_pos_offset = self._calculate_new_atom_position(start_atom, l)
 
                     # SNAP_DISTANCE is a module-level constant
                     target_pos = start_pos + new_pos_offset
