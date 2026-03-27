@@ -24,9 +24,9 @@ try:
     from .bond_item import BondItem
     from .template_preview_item import TemplatePreviewItem
 except ImportError:
-    from modules.atom_item import AtomItem
-    from modules.bond_item import BondItem
-    from modules.template_preview_item import TemplatePreviewItem
+    from moleditpy.ui.atom_item import AtomItem
+    from moleditpy.ui.bond_item import BondItem
+    from moleditpy.ui.template_preview_item import TemplatePreviewItem
 
 try:
     from .constants import DEFAULT_BOND_LENGTH, SNAP_DISTANCE, SUM_TOLERANCE
@@ -49,7 +49,7 @@ except ImportError:
 try:
     from .molecular_scene_handler import TemplateMixin, KeyboardMixin, SceneQueryMixin
 except ImportError:
-    from modules.molecular_scene_handler import (
+    from moleditpy.ui.molecular_scene_handler import (
         TemplateMixin,
         KeyboardMixin,
         SceneQueryMixin,

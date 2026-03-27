@@ -2,8 +2,8 @@ import pytest
 import math
 from rdkit import Chem
 from rdkit.Chem import AllChem, rdMolTransforms
-from moleditpy.modules.calculation_worker import CalculationWorker
-from moleditpy.modules.molecular_data import MolecularData
+from moleditpy.core.calculation_worker import CalculationWorker
+from moleditpy.core.molecular_data import MolecularData
 from PyQt6.QtCore import QPointF
 from unittest import mock as _mock
 
@@ -60,7 +60,7 @@ def test_3d_bond_lengths(qtbot):
         assert 107 < angle < 112
 
 
-from moleditpy.modules.mirror_dialog import MirrorDialog
+from moleditpy.ui.mirror_dialog import MirrorDialog
 from unittest.mock import MagicMock
 from rdkit.Geometry import Point3D
 from PyQt6.QtWidgets import QWidget
@@ -105,7 +105,7 @@ def test_mirror_dialog_logic(qtbot):
     assert main_window.push_undo_state.called
 
 
-from moleditpy.modules.planarize_dialog import PlanarizeDialog
+from moleditpy.ui.planarize_dialog import PlanarizeDialog
 import numpy as np
 
 
@@ -153,7 +153,7 @@ def test_planarize_logic(qtbot):
 # ------------------------------------------------------------------
 # rodrigues_rotate & adjust_bond_angle tests
 # ------------------------------------------------------------------
-from moleditpy.modules.mol_geometry import adjust_bond_angle, rodrigues_rotate
+from moleditpy.core.mol_geometry import adjust_bond_angle, rodrigues_rotate
 
 
 def test_rodrigues_rotate_90_deg():

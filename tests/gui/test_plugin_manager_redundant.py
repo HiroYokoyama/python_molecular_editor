@@ -10,7 +10,7 @@ import sys
 
 sys.path.append(os.path.abspath("src"))
 
-from moleditpy.modules.plugin_manager import PluginManager
+from moleditpy.plugins.plugin_manager import PluginManager
 
 
 @pytest.fixture

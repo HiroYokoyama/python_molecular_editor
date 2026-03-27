@@ -2,7 +2,7 @@ import pytest
 import os
 from rdkit import Chem
 from rdkit.Chem import AllChem
-from moleditpy.modules.main_window_edit_3d import MainWindowEdit3d
+from moleditpy.ui.edit_3d import MainWindowEdit3d
 from PyQt6.QtCore import Qt, QPointF
 from unittest.mock import MagicMock, patch
 import numpy as np

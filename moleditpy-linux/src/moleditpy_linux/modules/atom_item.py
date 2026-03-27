@@ -31,7 +31,7 @@ try:
         FONT_WEIGHT_BOLD,
     )
 except ImportError:
-    from modules.constants import (
+    from moleditpy.utils.constants import (
         ATOM_RADIUS,
         CPK_COLORS,
         DESIRED_ATOM_PIXEL_RADIUS,

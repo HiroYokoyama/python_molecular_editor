@@ -2,7 +2,7 @@ import pytest
 import math
 from unittest.mock import MagicMock
 from PyQt6.QtCore import QPointF
-from moleditpy.modules.molecular_scene_handler import TemplateMixin
+from moleditpy.ui.molecular_scene_handler import TemplateMixin
 
 class MockScene(TemplateMixin):
     def __init__(self):

@@ -1,12 +1,12 @@
 import pytest
 from rdkit import Chem
 from rdkit.Chem import AllChem
-from moleditpy.modules.bond_length_dialog import BondLengthDialog
-from moleditpy.modules.angle_dialog import AngleDialog
-from moleditpy.modules.dihedral_dialog import DihedralDialog
-from moleditpy.modules.alignment_dialog import AlignmentDialog
-from moleditpy.modules.translation_dialog import TranslationDialog
-from moleditpy.modules.move_group_dialog import MoveGroupDialog
+from moleditpy.ui.bond_length_dialog import BondLengthDialog
+from moleditpy.ui.angle_dialog import AngleDialog
+from moleditpy.ui.dihedral_dialog import DihedralDialog
+from moleditpy.ui.alignment_dialog import AlignmentDialog
+from moleditpy.ui.translation_dialog import TranslationDialog
+from moleditpy.ui.move_group_dialog import MoveGroupDialog
 
 @pytest.fixture
 def mol():

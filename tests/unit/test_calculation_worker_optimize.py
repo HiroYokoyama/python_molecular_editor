@@ -1,7 +1,7 @@
 import pytest
 from rdkit import Chem
 from rdkit.Chem import AllChem
-from moleditpy.modules.calculation_worker import CalculationWorker
+from moleditpy.core.calculation_worker import CalculationWorker
 from unittest.mock import MagicMock, patch
 
 # Helper to capture signal emissions
@@ -87,7 +87,7 @@ def test_collision_avoidance_trigger(worker):
     options = {"conversion_mode": "direct", "do_optimize": True}
     
     # Mock _iterative_optimize to avoid actual optimization and just check collision avoidance
-    with patch("moleditpy.modules.calculation_worker._iterative_optimize", return_value=True):
+    with patch("moleditpy.core.calculation_worker._iterative_optimize", return_value=True):
         worker.run_calculation(mol_block, options)
     
     assert len(finish_captor.emitted_values) > 0
@@ -109,7 +109,7 @@ def test_iterative_optimize_halt(worker):
     
     worker.halt_ids = {1}
     
-    from moleditpy.modules.calculation_worker import _iterative_optimize, WorkerHaltError
+    from moleditpy.core.calculation_worker import _iterative_optimize, WorkerHaltError
     
     def check_halted():
         return 1 in worker.halt_ids
@@ -137,8 +137,8 @@ def test_obabel_optimization_flow(worker):
     }
     
     # Mock both availability and the iterative function
-    with patch("moleditpy.modules.calculation_worker.OBABEL_AVAILABLE", True), \
-         patch("moleditpy.modules.calculation_worker._iterative_optimize_obabel", return_value=True) as mock_opt:
+    with patch("moleditpy.core.calculation_worker.OBABEL_AVAILABLE", True), \
+         patch("moleditpy.core.calculation_worker._iterative_optimize_obabel", return_value=True) as mock_opt:
         worker.run_calculation(mol_block, options)
         
     assert mock_opt.called

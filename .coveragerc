@@ -4,28 +4,30 @@ source = moleditpy
 [report]
 omit =
     moleditpy/src/moleditpy/__main__.py
-    moleditpy/src/moleditpy/modules/*_dialog.py
-    moleditpy/src/moleditpy/modules/*mixin.py
-    moleditpy/src/moleditpy/modules/custom_interactor_style.py
-    moleditpy/src/moleditpy/modules/custom_qt_interactor.py
-    moleditpy/src/moleditpy/modules/zoomable_view.py
-    moleditpy/src/moleditpy/modules/main_window_ui_manager.py
-    moleditpy/src/moleditpy/modules/main_window_view_loaders.py
-    moleditpy/src/moleditpy/modules/main_window_dialog_manager.py
-    moleditpy/src/moleditpy/modules/main_window_view_3d.py
-    moleditpy/src/moleditpy/modules/main_window_edit_3d.py
-    moleditpy/src/moleditpy/modules/main_window_edit_actions.py
-    moleditpy/src/moleditpy/modules/template_preview_item.py
-    moleditpy/src/moleditpy/modules/template_preview_view.py
-    moleditpy/src/moleditpy/modules/molecule_scene.py
-    moleditpy/src/moleditpy/modules/system_utils.py
-    moleditpy/src/moleditpy/modules/settings_tabs/*
+    moleditpy/src/moleditpy/ui/*_dialog.py
+    moleditpy/src/moleditpy/ui/dialog_manager.py
+    moleditpy/src/moleditpy/ui/ui_manager.py
+    moleditpy/src/moleditpy/ui/view_loaders.py
+    moleditpy/src/moleditpy/ui/view_3d.py
+    moleditpy/src/moleditpy/ui/edit_3d.py
+    moleditpy/src/moleditpy/ui/edit_actions.py
+    moleditpy/src/moleditpy/ui/molecule_scene.py
+    moleditpy/src/moleditpy/ui/molecular_scene_handler.py
+    moleditpy/src/moleditpy/ui/atom_item.py
+    moleditpy/src/moleditpy/ui/bond_item.py
+    moleditpy/src/moleditpy/ui/template_preview_item.py
+    moleditpy/src/moleditpy/ui/template_preview_view.py
+    moleditpy/src/moleditpy/ui/zoomable_view.py
+    moleditpy/src/moleditpy/ui/settings_tabs/*
+    moleditpy/src/moleditpy/ui/custom_interactor_style.py
+    moleditpy/src/moleditpy/ui/custom_qt_interactor.py
+    moleditpy/src/moleditpy/utils/system_utils.py
 
 exclude_lines =
     pragma: no cover
     def __repr__
     if self.debug:
-    if __name__ == .__main__.:
+    if __name__ == "__main__":
     raise NotImplementedError
     if 0:
     if TYPE_CHECKING:

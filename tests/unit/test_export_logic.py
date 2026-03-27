@@ -2,9 +2,9 @@ import pytest
 import os
 from rdkit import Chem
 from rdkit.Chem import AllChem
-from moleditpy.modules.main_window_export import MainWindowExport
-from moleditpy.modules.atom_item import AtomItem
-from moleditpy.modules.bond_item import BondItem
+from moleditpy.ui.export_logic import ExportManager
+from moleditpy.ui.atom_item import AtomItem
+from moleditpy.ui.bond_item import BondItem
 from PyQt6.QtCore import QPointF, QRectF
 from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import QMessageBox
@@ -12,22 +12,16 @@ from unittest.mock import MagicMock, patch
 import numpy as np
 
 
-class DummyExport(MainWindowExport):
+class DummyExport(ExportManager):
     def __init__(self, host):
-        self._host = host
-        self.data = host.data
-        self.scene = host.scene
-        self.plotter = host.plotter
-        self.view_2d = host.view_2d
+        super().__init__(host)
         self.statusBar_mock = MagicMock()
-        self.current_file_path = None
-        self.current_mol = host.current_mol
 
     def __getattr__(self, name):
-        return getattr(self._host, name)
+        return getattr(self.host, name)
 
     def statusBar(self):
-        return self.statusBar_mock
+        return self.host.statusBar()
 
 
 def test_create_multi_material_obj_advanced(mock_parser_host, tmp_path):
@@ -112,7 +106,7 @@ def test_export_2d_svg_trigger(mock_parser_host, tmp_path):
 def test_export_stl_error_no_mol(mock_parser_host):
     """Verify that export_stl shows an error message when no molecule is present."""
     exporter = DummyExport(mock_parser_host)
-    exporter.current_mol = None
+    exporter.host.current_mol = None
     exporter.export_stl()
     exporter.statusBar().showMessage.assert_any_call(
         "Error: Please generate a 3D structure first."
@@ -122,7 +116,7 @@ def test_export_stl_error_no_mol(mock_parser_host):
 def test_export_obj_mtl_error_no_mol(mock_parser_host):
     """Verify that export_obj_mtl shows an error message when no molecule is present."""
     exporter = DummyExport(mock_parser_host)
-    exporter.current_mol = None
+    exporter.host.current_mol = None
     exporter.export_obj_mtl()
     exporter.statusBar().showMessage.assert_any_call(
         "Error: Please generate a 3D structure first."
@@ -134,7 +128,7 @@ def test_export_stl_success_trigger(mock_parser_host, tmp_path):
     exporter = DummyExport(mock_parser_host)
     mol = Chem.MolFromSmiles("C")
     AllChem.EmbedMolecule(mol)
-    exporter.current_mol = mol
+    exporter.host.current_mol = mol
     save_path = str(tmp_path / "test.stl")
     mesh = MagicMock()
     mesh.n_points = 100  # Ensure it has points
@@ -159,7 +153,7 @@ def test_export_obj_mtl_success_trigger(mock_parser_host, tmp_path):
     exporter = DummyExport(mock_parser_host)
     mol = Chem.MolFromSmiles("C")
     AllChem.EmbedMolecule(mol)
-    exporter.current_mol = mol
+    exporter.host.current_mol = mol
     save_path = str(tmp_path / "test.obj")
     with (
         patch(
@@ -182,10 +176,10 @@ def test_export_3d_png_logic(mock_parser_host, tmp_path):
     """Verify that export_3d_png triggers the plotter screenshot logic."""
     exporter = DummyExport(mock_parser_host)
     mol = Chem.MolFromSmiles("C")
-    exporter.current_mol = mol
+    exporter.host.current_mol = mol
     save_path = str(tmp_path / "test3d.png")
     mock_plotter = MagicMock()
-    exporter.plotter = mock_plotter
+    exporter.host.plotter = mock_plotter
     with patch(
         "PyQt6.QtWidgets.QFileDialog.getSaveFileName", return_value=(save_path, "*.png")
     ):
@@ -202,7 +196,7 @@ def test_export_color_stl_logic(mock_parser_host, tmp_path):
     exporter = DummyExport(mock_parser_host)
     mol = Chem.MolFromSmiles("C")
     AllChem.EmbedMolecule(mol)
-    exporter.current_mol = mol
+    exporter.host.current_mol = mol
     save_path = str(tmp_path / "color.stl")
     mesh = MagicMock()
     mesh.n_points = 100
@@ -257,7 +251,7 @@ def test_export_from_3d_view_with_colors_complex_splitting(mock_parser_host):
     actor.mapper.input = mesh
 
     with patch(
-        "moleditpy.modules.main_window_export.pv.PolyData", MagicMock
+        "moleditpy.ui.export_logic.pv.PolyData", MagicMock
     ):  # used for type check
         res = exporter.export_from_3d_view_with_colors()
 

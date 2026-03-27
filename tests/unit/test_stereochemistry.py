@@ -1,6 +1,6 @@
 from rdkit import Chem
 from rdkit.Chem import AllChem
-from moleditpy.modules.molecular_data import MolecularData
+from moleditpy.core.molecular_data import MolecularData
 from PyQt6.QtCore import QPointF
 
 
@@ -94,7 +94,7 @@ def test_chiral_r_s_consistency():
     assert found_wedge
 
 
-from moleditpy.modules.mirror_dialog import MirrorDialog
+from moleditpy.ui.mirror_dialog import MirrorDialog
 from unittest import mock as _mock
 from unittest.mock import MagicMock
 from PyQt6.QtWidgets import QWidget
@@ -138,7 +138,7 @@ def test_stereo_confirmation(qtbot):
 
 def test_stereo_loss_on_planarize(qtbot):
     """Verify that planarizing a chiral center removes its chirality."""
-    from moleditpy.modules.planarize_dialog import PlanarizeDialog
+    from moleditpy.ui.planarize_dialog import PlanarizeDialog
 
     # 1. Create (S)-2-butanol
     mol = Chem.MolFromSmiles("C[C@H](O)CC")

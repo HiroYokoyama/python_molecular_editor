@@ -2,8 +2,8 @@
 import pytest
 from PyQt6.QtCore import Qt, QPointF
 from PyQt6.QtGui import QKeyEvent
-from moleditpy.modules.atom_item import AtomItem
-from moleditpy.modules.bond_item import BondItem
+from moleditpy.ui.atom_item import AtomItem
+from moleditpy.ui.bond_item import BondItem
 
 def test_bond_stereo_toggle_keys(window, qtbot):
     """Test Z and E keys toggle double bond stereochemistry."""
@@ -124,7 +124,7 @@ def test_bonding_to_existing_atom(window, qtbot):
     """Test that pressing 1, 2, 3 bonds to an existing atom if it's nearby."""
     scene = window.scene
     data = scene.data
-    from moleditpy.modules.constants import DEFAULT_BOND_LENGTH
+    from moleditpy.utils.constants import DEFAULT_BOND_LENGTH
     
     # Create two atoms separated by DEFAULT_BOND_LENGTH
     a1_id = scene.create_atom("C", QPointF(0, 0))

@@ -3,7 +3,7 @@ import json
 import pickle
 import pytest
 from rdkit import Chem
-from moleditpy.modules.main_window_project_io import MainWindowProjectIo
+from moleditpy.core.project_io import MainWindowProjectIo
 from PyQt6.QtCore import QPointF
 from PyQt6.QtWidgets import QMessageBox
 from unittest.mock import MagicMock, patch

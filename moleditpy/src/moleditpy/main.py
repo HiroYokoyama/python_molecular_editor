@@ -14,13 +14,18 @@ import ctypes
 import sys
 import argparse
 import logging
+import os
 
 from PyQt6.QtWidgets import QApplication
 
 try:
-    from .modules.main_window import MainWindow
+    from .ui.main_window import MainWindow
 except ImportError:
-    from modules.main_window import MainWindow
+    # Add the parent directory (src) to sys.path so 'moleditpy.*' imports work
+    src_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    if src_dir not in sys.path:
+        sys.path.insert(0, src_dir)
+    from moleditpy.ui.main_window import MainWindow
 
 
 def setup_logging():

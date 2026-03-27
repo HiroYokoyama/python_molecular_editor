@@ -1,0 +1,593 @@
+﻿============================= test session starts =============================
+platform win32 -- Python 3.13.7, pytest-9.0.1, pluggy-1.6.0
+PyQt6 6.10.2 -- Qt runtime 6.10.2 -- Qt compiled 6.10.0
+rootdir: E:\Research\Calculation\moleditpy\DEV_MAIN\python_molecular_editor\tests\gui
+configfile: pytest.ini
+plugins: anyio-4.12.0, cov-7.0.0, mock-3.15.1, qt-4.5.0, timeout-2.4.0
+collected 49 items / 43 deselected / 6 selected
+run-last-failure: rerun previous 6 failures
+
+tests\gui\test_main_app.py FEFEFEFEFEF                                   [100%]
+
+=================================== ERRORS ====================================
+________________ ERROR at teardown of test_2d_to_3d_conversion ________________
+TEARDOWN ERROR: Exceptions caught in Qt event loop:
+________________________________________________________________________________
+Traceback (most recent call last):
+  File "E:\Research\Calculation\moleditpy\DEV_MAIN\python_molecular_editor\moleditpy\src\moleditpy\ui\compute_logic.py", line 377, in _on_finished
+    self.on_calculation_finished(result)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+  File "E:\Research\Calculation\moleditpy\DEV_MAIN\python_molecular_editor\moleditpy\src\moleditpy\ui\compute_logic.py", line 413, in on_calculation_finished
+    self.host.create_atom_id_mapping()
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\Research\Calculation\moleditpy\DEV_MAIN\python_molecular_editor\moleditpy\src\moleditpy\ui\main_window.py", line 189, in __getattr__
+    raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
+AttributeError: 'MainWindow' object has no attribute 'create_atom_id_mapping'
+________________________________________________________________________________
+
+---------------------------- Captured stderr call -----------------------------
+Exceptions caught in Qt event loop:
+________________________________________________________________________________
+Traceback (most recent call last):
+  File "E:\Research\Calculation\moleditpy\DEV_MAIN\python_molecular_editor\moleditpy\src\moleditpy\ui\compute_logic.py", line 377, in _on_finished
+    self.on_calculation_finished(result)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+  File "E:\Research\Calculation\moleditpy\DEV_MAIN\python_molecular_editor\moleditpy\src\moleditpy\ui\compute_logic.py", line 413, in on_calculation_finished
+    self.host.create_atom_id_mapping()
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\Research\Calculation\moleditpy\DEV_MAIN\python_molecular_editor\moleditpy\src\moleditpy\ui\main_window.py", line 189, in __getattr__
+    raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
+AttributeError: 'MainWindow' object has no attribute 'create_atom_id_mapping'
+________________________________________________________________________________
+____________________ ERROR at teardown of test_optimize_3d ____________________
+TEARDOWN ERROR: Exceptions caught in Qt event loop:
+________________________________________________________________________________
+Traceback (most recent call last):
+  File "E:\Research\Calculation\moleditpy\DEV_MAIN\python_molecular_editor\moleditpy\src\moleditpy\ui\compute_logic.py", line 377, in _on_finished
+    self.on_calculation_finished(result)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+  File "E:\Research\Calculation\moleditpy\DEV_MAIN\python_molecular_editor\moleditpy\src\moleditpy\ui\compute_logic.py", line 413, in on_calculation_finished
+    self.host.create_atom_id_mapping()
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\Research\Calculation\moleditpy\DEV_MAIN\python_molecular_editor\moleditpy\src\moleditpy\ui\main_window.py", line 189, in __getattr__
+    raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
+AttributeError: 'MainWindow' object has no attribute 'create_atom_id_mapping'
+________________________________________________________________________________
+
+---------------------------- Captured stderr call -----------------------------
+Exceptions caught in Qt event loop:
+________________________________________________________________________________
+Traceback (most recent call last):
+  File "E:\Research\Calculation\moleditpy\DEV_MAIN\python_molecular_editor\moleditpy\src\moleditpy\ui\compute_logic.py", line 377, in _on_finished
+    self.on_calculation_finished(result)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+  File "E:\Research\Calculation\moleditpy\DEV_MAIN\python_molecular_editor\moleditpy\src\moleditpy\ui\compute_logic.py", line 413, in on_calculation_finished
+    self.host.create_atom_id_mapping()
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\Research\Calculation\moleditpy\DEV_MAIN\python_molecular_editor\moleditpy\src\moleditpy\ui\main_window.py", line 189, in __getattr__
+    raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
+AttributeError: 'MainWindow' object has no attribute 'create_atom_id_mapping'
+________________________________________________________________________________
+____________________ ERROR at teardown of test_2d_cleanup _____________________
+TEARDOWN ERROR: Exceptions caught in Qt event loop:
+________________________________________________________________________________
+Traceback (most recent call last):
+  File "E:\Research\Calculation\moleditpy\DEV_MAIN\python_molecular_editor\moleditpy\src\moleditpy\ui\edit_actions_logic.py", line 1052, in clean_up_2d_structure
+    self.host.scene.update_all_items()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "E:\Research\Calculation\moleditpy\DEV_MAIN\python_molecular_editor\moleditpy\src\moleditpy\ui\molecule_scene.py", line 122, in update_all_items
+    self.data.update_ring_info_2d()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "E:\Research\Calculation\moleditpy\DEV_MAIN\python_molecular_editor\moleditpy\src\moleditpy\core\molecular_data.py", line 314, in update_ring_info_2d
+    mol = self.to_rdkit_mol(use_2d_stereo=False)
+  File "E:\Research\Calculation\moleditpy\DEV_MAIN\python_molecular_editor\moleditpy\src\moleditpy\core\molecular_data.py", line 200, in to_rdkit_mol
+    ax = pos[0] * ANGSTROM_PER_PIXEL
+         ~~~^^^
+TypeError: 'QPointF' object is not subscriptable
+________________________________________________________________________________
+
+---------------------------- Captured stderr call -----------------------------
+Exceptions caught in Qt event loop:
+________________________________________________________________________________
+Traceback (most recent call last):
+  File "E:\Research\Calculation\moleditpy\DEV_MAIN\python_molecular_editor\moleditpy\src\moleditpy\ui\edit_actions_logic.py", line 1052, in clean_up_2d_structure
+    self.host.scene.update_all_items()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "E:\Research\Calculation\moleditpy\DEV_MAIN\python_molecular_editor\moleditpy\src\moleditpy\ui\molecule_scene.py", line 122, in update_all_items
+    self.data.update_ring_info_2d()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "E:\Research\Calculation\moleditpy\DEV_MAIN\python_molecular_editor\moleditpy\src\moleditpy\core\molecular_data.py", line 314, in update_ring_info_2d
+    mol = self.to_rdkit_mol(use_2d_stereo=False)
+  File "E:\Research\Calculation\moleditpy\DEV_MAIN\python_molecular_editor\moleditpy\src\moleditpy\core\molecular_data.py", line 200, in to_rdkit_mol
+    ax = pos[0] * ANGSTROM_PER_PIXEL
+         ~~~^^^
+TypeError: 'QPointF' object is not subscriptable
+________________________________________________________________________________
+_______________ ERROR at teardown of test_open_3d_edit_dialogs ________________
+TEARDOWN ERROR: Exceptions caught in Qt event loop:
+________________________________________________________________________________
+Traceback (most recent call last):
+  File "E:\Research\Calculation\moleditpy\DEV_MAIN\python_molecular_editor\moleditpy\src\moleditpy\ui\compute_logic.py", line 377, in _on_finished
+    self.on_calculation_finished(result)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+  File "E:\Research\Calculation\moleditpy\DEV_MAIN\python_molecular_editor\moleditpy\src\moleditpy\ui\compute_logic.py", line 413, in on_calculation_finished
+    self.host.create_atom_id_mapping()
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\Research\Calculation\moleditpy\DEV_MAIN\python_molecular_editor\moleditpy\src\moleditpy\ui\main_window.py", line 189, in __getattr__
+    raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
+AttributeError: 'MainWindow' object has no attribute 'create_atom_id_mapping'
+________________________________________________________________________________
+
+---------------------------- Captured stderr call -----------------------------
+Exceptions caught in Qt event loop:
+________________________________________________________________________________
+Traceback (most recent call last):
+  File "E:\Research\Calculation\moleditpy\DEV_MAIN\python_molecular_editor\moleditpy\src\moleditpy\ui\compute_logic.py", line 377, in _on_finished
+    self.on_calculation_finished(result)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+  File "E:\Research\Calculation\moleditpy\DEV_MAIN\python_molecular_editor\moleditpy\src\moleditpy\ui\compute_logic.py", line 413, in on_calculation_finished
+    self.host.create_atom_id_mapping()
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\Research\Calculation\moleditpy\DEV_MAIN\python_molecular_editor\moleditpy\src\moleditpy\ui\main_window.py", line 189, in __getattr__
+    raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
+AttributeError: 'MainWindow' object has no attribute 'create_atom_id_mapping'
+________________________________________________________________________________
+________________ ERROR at teardown of test_toggle_3d_atom_info ________________
+TEARDOWN ERROR: Exceptions caught in Qt event loop:
+________________________________________________________________________________
+Traceback (most recent call last):
+  File "E:\Research\Calculation\moleditpy\DEV_MAIN\python_molecular_editor\moleditpy\src\moleditpy\ui\compute_logic.py", line 377, in _on_finished
+    self.on_calculation_finished(result)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+  File "E:\Research\Calculation\moleditpy\DEV_MAIN\python_molecular_editor\moleditpy\src\moleditpy\ui\compute_logic.py", line 413, in on_calculation_finished
+    self.host.create_atom_id_mapping()
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\Research\Calculation\moleditpy\DEV_MAIN\python_molecular_editor\moleditpy\src\moleditpy\ui\main_window.py", line 189, in __getattr__
+    raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
+AttributeError: 'MainWindow' object has no attribute 'create_atom_id_mapping'
+________________________________________________________________________________
+
+---------------------------- Captured stderr call -----------------------------
+Exceptions caught in Qt event loop:
+________________________________________________________________________________
+Traceback (most recent call last):
+  File "E:\Research\Calculation\moleditpy\DEV_MAIN\python_molecular_editor\moleditpy\src\moleditpy\ui\compute_logic.py", line 377, in _on_finished
+    self.on_calculation_finished(result)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+  File "E:\Research\Calculation\moleditpy\DEV_MAIN\python_molecular_editor\moleditpy\src\moleditpy\ui\compute_logic.py", line 413, in on_calculation_finished
+    self.host.create_atom_id_mapping()
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\Research\Calculation\moleditpy\DEV_MAIN\python_molecular_editor\moleditpy\src\moleditpy\ui\main_window.py", line 189, in __getattr__
+    raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
+AttributeError: 'MainWindow' object has no attribute 'create_atom_id_mapping'
+________________________________________________________________________________
+================================== FAILURES ===================================
+__________________________ test_2d_to_3d_conversion ___________________________
+
+window = <moleditpy.ui.main_window.MainWindow object at 0x0000015DD2997750>
+qtbot = <pytestqt.qtbot.QtBot object at 0x0000015DD290A660>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x0000015DD28B6FD0>
+
+    @pytest.mark.gui
+    def test_2d_to_3d_conversion(window, qtbot, monkeypatch):
+        """2D->3D変換: 変換ボタンのテスト"""
+        scene = window.scene
+    
+        # 1. 2Dでエタンを描画 (クリックで原子、ドラッグで結合を作成)
+        # Create ethane without UI flakiness: create atoms and bond programmatically
+        id1 = scene.create_atom("C", QPointF(0, 0))
+        id2 = scene.create_atom("C", QPointF(50, 0))
+        scene.create_bond(scene.data.atoms[id1]["item"], scene.data.atoms[id2]["item"])
+        qtbot.wait(50)
+        assert len(window.data.atoms) == 2
+        assert len(window.data.bonds) == 1
+    
+        # 2. 変換ボタンをクリック
+        convert_button = window.convert_button
+        assert convert_button.isEnabled()
+    
+        qtbot.mouseClick(convert_button, Qt.MouseButton.LeftButton)
+        qtbot.wait(100)  # 非同期処理を待つ
+    
+        # 3. conftest.py のモックにより、on_calculation_finished が呼ばれ current_mol が設定される
+        # (some environments may not route through start_calculation exactly)
+        assert window.current_mol is not None
+    
+        # 3D関連機能が有効化される
+>       assert window.optimize_3d_button.isEnabled()
+E       assert False
+E        +  where False = <built-in method isEnabled of QPushButton object at 0x0000015DD29FC690>()
+E        +    where <built-in method isEnabled of QPushButton object at 0x0000015DD29FC690> = <PyQt6.QtWidgets.QPushButton object at 0x0000015DD29FC690>.isEnabled
+E        +      where <PyQt6.QtWidgets.QPushButton object at 0x0000015DD29FC690> = <moleditpy.ui.main_window.MainWindow object at 0x0000015DD2997750>.optimize_3d_button
+
+tests\gui\test_main_app.py:541: AssertionError
+---------------------------- Captured stderr call -----------------------------
+Exceptions caught in Qt event loop:
+________________________________________________________________________________
+Traceback (most recent call last):
+  File "E:\Research\Calculation\moleditpy\DEV_MAIN\python_molecular_editor\moleditpy\src\moleditpy\ui\compute_logic.py", line 377, in _on_finished
+    self.on_calculation_finished(result)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+  File "E:\Research\Calculation\moleditpy\DEV_MAIN\python_molecular_editor\moleditpy\src\moleditpy\ui\compute_logic.py", line 413, in on_calculation_finished
+    self.host.create_atom_id_mapping()
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\Research\Calculation\moleditpy\DEV_MAIN\python_molecular_editor\moleditpy\src\moleditpy\ui\main_window.py", line 189, in __getattr__
+    raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
+AttributeError: 'MainWindow' object has no attribute 'create_atom_id_mapping'
+________________________________________________________________________________
+______________________________ test_optimize_3d _______________________________
+
+window = <moleditpy.ui.main_window.MainWindow object at 0x0000015DD29FEFD0>
+qtbot = <pytestqt.qtbot.QtBot object at 0x0000015DD2A46D50>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x0000015DD28B69E0>
+
+    @pytest.mark.gui
+    def test_optimize_3d(window, qtbot, monkeypatch):
+        """3D最適化: 3D最適化ボタンのテスト"""
+        # 1. 2D->3D変換を実行して、current_mol を設定
+>       test_2d_to_3d_conversion(window, qtbot, monkeypatch)
+
+tests\gui\test_main_app.py:550: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+window = <moleditpy.ui.main_window.MainWindow object at 0x0000015DD29FEFD0>
+qtbot = <pytestqt.qtbot.QtBot object at 0x0000015DD2A46D50>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x0000015DD28B69E0>
+
+    @pytest.mark.gui
+    def test_2d_to_3d_conversion(window, qtbot, monkeypatch):
+        """2D->3D変換: 変換ボタンのテスト"""
+        scene = window.scene
+    
+        # 1. 2Dでエタンを描画 (クリックで原子、ドラッグで結合を作成)
+        # Create ethane without UI flakiness: create atoms and bond programmatically
+        id1 = scene.create_atom("C", QPointF(0, 0))
+        id2 = scene.create_atom("C", QPointF(50, 0))
+        scene.create_bond(scene.data.atoms[id1]["item"], scene.data.atoms[id2]["item"])
+        qtbot.wait(50)
+        assert len(window.data.atoms) == 2
+        assert len(window.data.bonds) == 1
+    
+        # 2. 変換ボタンをクリック
+        convert_button = window.convert_button
+        assert convert_button.isEnabled()
+    
+        qtbot.mouseClick(convert_button, Qt.MouseButton.LeftButton)
+        qtbot.wait(100)  # 非同期処理を待つ
+    
+        # 3. conftest.py のモックにより、on_calculation_finished が呼ばれ current_mol が設定される
+        # (some environments may not route through start_calculation exactly)
+        assert window.current_mol is not None
+    
+        # 3D関連機能が有効化される
+>       assert window.optimize_3d_button.isEnabled()
+E       assert False
+E        +  where False = <built-in method isEnabled of QPushButton object at 0x0000015DD2A2D9F0>()
+E        +    where <built-in method isEnabled of QPushButton object at 0x0000015DD2A2D9F0> = <PyQt6.QtWidgets.QPushButton object at 0x0000015DD2A2D9F0>.isEnabled
+E        +      where <PyQt6.QtWidgets.QPushButton object at 0x0000015DD2A2D9F0> = <moleditpy.ui.main_window.MainWindow object at 0x0000015DD29FEFD0>.optimize_3d_button
+
+tests\gui\test_main_app.py:541: AssertionError
+---------------------------- Captured stderr call -----------------------------
+Exceptions caught in Qt event loop:
+________________________________________________________________________________
+Traceback (most recent call last):
+  File "E:\Research\Calculation\moleditpy\DEV_MAIN\python_molecular_editor\moleditpy\src\moleditpy\ui\compute_logic.py", line 377, in _on_finished
+    self.on_calculation_finished(result)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+  File "E:\Research\Calculation\moleditpy\DEV_MAIN\python_molecular_editor\moleditpy\src\moleditpy\ui\compute_logic.py", line 413, in on_calculation_finished
+    self.host.create_atom_id_mapping()
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\Research\Calculation\moleditpy\DEV_MAIN\python_molecular_editor\moleditpy\src\moleditpy\ui\main_window.py", line 189, in __getattr__
+    raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
+AttributeError: 'MainWindow' object has no attribute 'create_atom_id_mapping'
+________________________________________________________________________________
+_______________________________ test_2d_cleanup _______________________________
+
+window = <moleditpy.ui.main_window.MainWindow object at 0x0000015DD887AAD0>
+qtbot = <pytestqt.qtbot.QtBot object at 0x0000015DD2A47ED0>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x0000015DDA95E7B0>
+
+    @pytest.mark.gui
+    def test_2d_cleanup(window, qtbot, monkeypatch):
+        """2Dクリーンアップ: ボタンクリックで座標が変更されるか"""
+        try:
+            from rdkit import Chem
+            from rdkit.Chem import AllChem
+        except ImportError:
+            pytest.skip("RDKit not found, skipping 2D cleanup test.")
+    
+        scene = window.scene
+    
+        # 1. 適当な位置にエタンを描画
+        window.set_mode("atom_C")
+        # Create two atoms programmatically to avoid flaky UI interactions
+        id0 = scene.create_atom("C", QPointF(10, 10))
+        id1 = scene.create_atom("C", QPointF(20, 20))
+        window.set_mode("bond_1_0")
+        scene.create_bond(scene.data.atoms[id0]["item"], scene.data.atoms[id1]["item"])
+    
+        pos0_before = window.data.atoms[0]["item"].pos()
+        pos1_before = window.data.atoms[1]["item"].pos()
+    
+        # RDKitの 2D 座標計算をモック化 (Compute2DCoords)
+        # RDKitモックが返す座標 (RDKit座標系)
+        mock_pos0 = _mock.MagicMock()
+        mock_pos0.x, mock_pos0.y, mock_pos0.z = -0.5, 0.0, 0.0
+        mock_pos1 = _mock.MagicMock()
+        mock_pos1.x, mock_pos1.y, mock_pos1.z = 0.5, 0.0, 0.0
+    
+        try:
+            monkeypatch.setattr("rdkit.Chem.AllChem.Compute2DCoords", lambda *a, **k: None)
+        except Exception:
+            import traceback
+    
+            traceback.print_exc()
+        # Prevent RDKit's SetDoubleBondNeighborDirections from erroring when
+        # we return a MagicMock for the conformer; make it a no-op in tests.
+        try:
+            monkeypatch.setattr(
+                "rdkit.Chem.SetDoubleBondNeighborDirections", lambda *a, **k: None
+            )
+        except Exception:
+            # If RDKit isn't present or patch fails, continue - the test will
+            # be skipped earlier.
+            pass
+    
+        try:
+            monkeypatch.setattr(
+                "rdkit.Chem.Mol.GetConformer",
+                lambda *a, **k: _mock.MagicMock(
+                    GetAtomPosition=lambda idx: mock_pos0 if idx == 0 else mock_pos1
+                ),
+            )
+        except Exception:
+            import traceback
+    
+            traceback.print_exc()
+    
+        # 2. "Optimize 2D" ボタンをクリック
+        qtbot.mouseClick(window.cleanup_button, Qt.MouseButton.LeftButton)
+        qtbot.wait(100)
+    
+        # 3. 座標が変更されたことを確認
+        pos0_after = window.data.atoms[0]["item"].pos()
+        pos1_after = window.data.atoms[1]["item"].pos()
+    
+        # Sometimes RDKit coordinate generation yields similar coords in some envs;
+        # prefer asserting visible success message and that positions are not both unchanged.
+        assert not (pos0_before == pos0_after and pos1_before == pos1_after)
+>       assert "2D structure optimization successful" in window.statusBar().currentMessage()
+E       AssertionError: assert '2D structure optimization successful' in 'No overlapping atoms found.'
+E        +  where 'No overlapping atoms found.' = <built-in method currentMessage of QStatusBar object at 0x0000015DD2A34CD0>()
+E        +    where <built-in method currentMessage of QStatusBar object at 0x0000015DD2A34CD0> = <PyQt6.QtWidgets.QStatusBar object at 0x0000015DD2A34CD0>.currentMessage
+E        +      where <PyQt6.QtWidgets.QStatusBar object at 0x0000015DD2A34CD0> = <built-in method statusBar of MainWindow object at 0x0000015DD887AAD0>()
+E        +        where <built-in method statusBar of MainWindow object at 0x0000015DD887AAD0> = <moleditpy.ui.main_window.MainWindow object at 0x0000015DD887AAD0>.statusBar
+
+tests\gui\test_main_app.py:1086: AssertionError
+---------------------------- Captured stderr call -----------------------------
+Exceptions caught in Qt event loop:
+________________________________________________________________________________
+Traceback (most recent call last):
+  File "E:\Research\Calculation\moleditpy\DEV_MAIN\python_molecular_editor\moleditpy\src\moleditpy\ui\edit_actions_logic.py", line 1052, in clean_up_2d_structure
+    self.host.scene.update_all_items()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "E:\Research\Calculation\moleditpy\DEV_MAIN\python_molecular_editor\moleditpy\src\moleditpy\ui\molecule_scene.py", line 122, in update_all_items
+    self.data.update_ring_info_2d()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "E:\Research\Calculation\moleditpy\DEV_MAIN\python_molecular_editor\moleditpy\src\moleditpy\core\molecular_data.py", line 314, in update_ring_info_2d
+    mol = self.to_rdkit_mol(use_2d_stereo=False)
+  File "E:\Research\Calculation\moleditpy\DEV_MAIN\python_molecular_editor\moleditpy\src\moleditpy\core\molecular_data.py", line 200, in to_rdkit_mol
+    ax = pos[0] * ANGSTROM_PER_PIXEL
+         ~~~^^^
+TypeError: 'QPointF' object is not subscriptable
+________________________________________________________________________________
+__________________________ test_open_3d_edit_dialogs __________________________
+
+window = <moleditpy.ui.main_window.MainWindow object at 0x0000015DD89113B0>
+qtbot = <pytestqt.qtbot.QtBot object at 0x0000015DD29EF950>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x0000015DDA9D88D0>
+
+    @pytest.mark.gui
+    def test_open_3d_edit_dialogs(window, qtbot, monkeypatch):
+        """3D編集: 3D編集ダイアログが起動するか"""
+        # 1. 3D分子をロード
+>       test_2d_to_3d_conversion(window, qtbot, monkeypatch)
+
+tests\gui\test_main_app.py:1149: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+window = <moleditpy.ui.main_window.MainWindow object at 0x0000015DD89113B0>
+qtbot = <pytestqt.qtbot.QtBot object at 0x0000015DD29EF950>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x0000015DDA9D88D0>
+
+    @pytest.mark.gui
+    def test_2d_to_3d_conversion(window, qtbot, monkeypatch):
+        """2D->3D変換: 変換ボタンのテスト"""
+        scene = window.scene
+    
+        # 1. 2Dでエタンを描画 (クリックで原子、ドラッグで結合を作成)
+        # Create ethane without UI flakiness: create atoms and bond programmatically
+        id1 = scene.create_atom("C", QPointF(0, 0))
+        id2 = scene.create_atom("C", QPointF(50, 0))
+        scene.create_bond(scene.data.atoms[id1]["item"], scene.data.atoms[id2]["item"])
+        qtbot.wait(50)
+        assert len(window.data.atoms) == 2
+        assert len(window.data.bonds) == 1
+    
+        # 2. 変換ボタンをクリック
+        convert_button = window.convert_button
+        assert convert_button.isEnabled()
+    
+        qtbot.mouseClick(convert_button, Qt.MouseButton.LeftButton)
+        qtbot.wait(100)  # 非同期処理を待つ
+    
+        # 3. conftest.py のモックにより、on_calculation_finished が呼ばれ current_mol が設定される
+        # (some environments may not route through start_calculation exactly)
+        assert window.current_mol is not None
+    
+        # 3D関連機能が有効化される
+>       assert window.optimize_3d_button.isEnabled()
+E       assert False
+E        +  where False = <built-in method isEnabled of QPushButton object at 0x0000015DD894E530>()
+E        +    where <built-in method isEnabled of QPushButton object at 0x0000015DD894E530> = <PyQt6.QtWidgets.QPushButton object at 0x0000015DD894E530>.isEnabled
+E        +      where <PyQt6.QtWidgets.QPushButton object at 0x0000015DD894E530> = <moleditpy.ui.main_window.MainWindow object at 0x0000015DD89113B0>.optimize_3d_button
+
+tests\gui\test_main_app.py:541: AssertionError
+---------------------------- Captured stderr call -----------------------------
+Exceptions caught in Qt event loop:
+________________________________________________________________________________
+Traceback (most recent call last):
+  File "E:\Research\Calculation\moleditpy\DEV_MAIN\python_molecular_editor\moleditpy\src\moleditpy\ui\compute_logic.py", line 377, in _on_finished
+    self.on_calculation_finished(result)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+  File "E:\Research\Calculation\moleditpy\DEV_MAIN\python_molecular_editor\moleditpy\src\moleditpy\ui\compute_logic.py", line 413, in on_calculation_finished
+    self.host.create_atom_id_mapping()
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\Research\Calculation\moleditpy\DEV_MAIN\python_molecular_editor\moleditpy\src\moleditpy\ui\main_window.py", line 189, in __getattr__
+    raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
+AttributeError: 'MainWindow' object has no attribute 'create_atom_id_mapping'
+________________________________________________________________________________
+__________________________ test_toggle_3d_atom_info ___________________________
+
+window = <moleditpy.ui.main_window.MainWindow object at 0x0000015DD894F7F0>
+qtbot = <pytestqt.qtbot.QtBot object at 0x0000015DD29EED70>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x0000015DD2933570>
+
+    @pytest.mark.gui
+    def test_toggle_3d_atom_info(window, qtbot, monkeypatch):
+        """3D原子情報表示: ID, 座標, シンボル表示の切り替えテスト"""
+        # 1. 3D分子をロード
+>       test_2d_to_3d_conversion(window, qtbot, monkeypatch)
+
+tests\gui\test_main_app.py:1285: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+window = <moleditpy.ui.main_window.MainWindow object at 0x0000015DD894F7F0>
+qtbot = <pytestqt.qtbot.QtBot object at 0x0000015DD29EED70>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x0000015DD2933570>
+
+    @pytest.mark.gui
+    def test_2d_to_3d_conversion(window, qtbot, monkeypatch):
+        """2D->3D変換: 変換ボタンのテスト"""
+        scene = window.scene
+    
+        # 1. 2Dでエタンを描画 (クリックで原子、ドラッグで結合を作成)
+        # Create ethane without UI flakiness: create atoms and bond programmatically
+        id1 = scene.create_atom("C", QPointF(0, 0))
+        id2 = scene.create_atom("C", QPointF(50, 0))
+        scene.create_bond(scene.data.atoms[id1]["item"], scene.data.atoms[id2]["item"])
+        qtbot.wait(50)
+        assert len(window.data.atoms) == 2
+        assert len(window.data.bonds) == 1
+    
+        # 2. 変換ボタンをクリック
+        convert_button = window.convert_button
+        assert convert_button.isEnabled()
+    
+        qtbot.mouseClick(convert_button, Qt.MouseButton.LeftButton)
+        qtbot.wait(100)  # 非同期処理を待つ
+    
+        # 3. conftest.py のモックにより、on_calculation_finished が呼ばれ current_mol が設定される
+        # (some environments may not route through start_calculation exactly)
+        assert window.current_mol is not None
+    
+        # 3D関連機能が有効化される
+>       assert window.optimize_3d_button.isEnabled()
+E       assert False
+E        +  where False = <built-in method isEnabled of QPushButton object at 0x0000015DD894DEF0>()
+E        +    where <built-in method isEnabled of QPushButton object at 0x0000015DD894DEF0> = <PyQt6.QtWidgets.QPushButton object at 0x0000015DD894DEF0>.isEnabled
+E        +      where <PyQt6.QtWidgets.QPushButton object at 0x0000015DD894DEF0> = <moleditpy.ui.main_window.MainWindow object at 0x0000015DD894F7F0>.optimize_3d_button
+
+tests\gui\test_main_app.py:541: AssertionError
+---------------------------- Captured stderr call -----------------------------
+Exceptions caught in Qt event loop:
+________________________________________________________________________________
+Traceback (most recent call last):
+  File "E:\Research\Calculation\moleditpy\DEV_MAIN\python_molecular_editor\moleditpy\src\moleditpy\ui\compute_logic.py", line 377, in _on_finished
+    self.on_calculation_finished(result)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+  File "E:\Research\Calculation\moleditpy\DEV_MAIN\python_molecular_editor\moleditpy\src\moleditpy\ui\compute_logic.py", line 413, in on_calculation_finished
+    self.host.create_atom_id_mapping()
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\Research\Calculation\moleditpy\DEV_MAIN\python_molecular_editor\moleditpy\src\moleditpy\ui\main_window.py", line 189, in __getattr__
+    raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
+AttributeError: 'MainWindow' object has no attribute 'create_atom_id_mapping'
+________________________________________________________________________________
+___________________ test_user_template_dialog_save_and_use ____________________
+
+self = <MagicMock id='1502611478848'>
+
+    def assert_called_once(self):
+        """assert that the mock was called only once.
+        """
+        if not self.call_count == 1:
+            msg = ("Expected '%s' to have been called once. Called %s times.%s"
+                   % (self._mock_name or 'mock',
+                      self.call_count,
+                      self._calls_repr()))
+>           raise AssertionError(msg)
+E           AssertionError: Expected 'mock' to have been called once. Called 0 times.
+
+C:\Users\hiro2\AppData\Local\Programs\Python\Python313\Lib\unittest\mock.py:958: AssertionError
+
+During handling of the above exception, another exception occurred:
+
+window = <moleditpy.ui.main_window.MainWindow object at 0x0000015DD8951450>
+qtbot = <pytestqt.qtbot.QtBot object at 0x0000015DDA95D910>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x0000015DD29F2350>
+
+    @pytest.mark.gui
+    def test_user_template_dialog_save_and_use(window, qtbot, monkeypatch):
+        """ユーザーテンプレート: ダイアログを開き、現在の構造を保存し、使用するテスト"""
+        scene = window.scene
+    
+        # 1. テンプレートダイアログを開くアクションをトリガー
+        # conftest.py により QDialog.show はモック化されている
+        action_open_dialog = get_button(window.toolbar_bottom, "Open User Templates Dialog")
+        assert action_open_dialog is not None
+        action_open_dialog.click()
+        qtbot.wait(50)
+    
+        # `QDialog.show` が呼ばれたことを確認
+        QDialog.show.assert_called()
+    
+        # 2. テンプレートとして保存する構造を描画 (C原子1つ)
+        window.set_mode("atom_C")
+        click_scene(qtbot, scene, QPointF(10, 10))
+        assert len(window.data.atoms) == 1
+    
+        # 3. "Save 2D as Template..." アクションをトリガー
+        action_save_template = find_menu_action(window.menuBar(), "Save 2D as Template...")
+        if action_save_template is None:
+            pytest.skip("Save 2D as Template action not available")
+    
+        # `QInputDialog.getText` が "test" を返すようにモック (conftest.py)
+        # `json.dump` をモック
+        monkeypatch.setattr("os.makedirs", lambda *a, **k: None, raising=False)
+        monkeypatch.setattr("builtins.open", mock_open(), raising=False)
+        mocker_json_dump = _mock.MagicMock()
+        monkeypatch.setattr(json, "dump", mocker_json_dump, raising=False)
+    
+        action_save_template.trigger()
+        qtbot.wait(50)
+    
+        # `json.dump` が呼ばれたことを確認
+>       mocker_json_dump.assert_called_once()
+E       AssertionError: Expected 'mock' to have been called once. Called 0 times.
+
+tests\gui\test_main_app.py:1378: AssertionError
+---------------------------- Captured stdout call -----------------------------
+DEBUG: click_scene viewport_pos=PyQt6.QtCore.QPoint(667, 620) for scene pos=PyQt6.QtCore.QPointF(10.0, 10.0)
+=========================== short test summary info ===========================
+FAILED tests\gui\test_main_app.py::test_2d_to_3d_conversion - assert False
+FAILED tests\gui\test_main_app.py::test_optimize_3d - assert False
+FAILED tests\gui\test_main_app.py::test_2d_cleanup - AssertionError: assert '...
+FAILED tests\gui\test_main_app.py::test_open_3d_edit_dialogs - assert False
+FAILED tests\gui\test_main_app.py::test_toggle_3d_atom_info - assert False
+FAILED tests\gui\test_main_app.py::test_user_template_dialog_save_and_use - A...
+ERROR tests\gui\test_main_app.py::test_2d_to_3d_conversion - Failed: TEARDOWN...
+ERROR tests\gui\test_main_app.py::test_optimize_3d - Failed: TEARDOWN ERROR: ...
+ERROR tests\gui\test_main_app.py::test_2d_cleanup - Failed: TEARDOWN ERROR: E...
+ERROR tests\gui\test_main_app.py::test_open_3d_edit_dialogs - Failed: TEARDOW...
+ERROR tests\gui\test_main_app.py::test_toggle_3d_atom_info - Failed: TEARDOWN...
+================= 6 failed, 43 deselected, 5 errors in 2.25s ==================

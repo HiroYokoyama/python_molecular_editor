@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import MagicMock, patch
 from rdkit import Chem
-from moleditpy.modules.calculation_worker import CalculationWorker, WorkerHaltError
+from moleditpy.core.calculation_worker import CalculationWorker, WorkerHaltError
 
 class MockWorker(CalculationWorker):
     def __init__(self):
@@ -25,14 +25,14 @@ def test_worker_halt_logic():
 
 def test_iterative_optimize_robustness():
     """Test that iterative_optimize handles RDKit failures by returning False instead of crashing."""
-    from moleditpy.modules.calculation_worker import _iterative_optimize
+    from moleditpy.core.calculation_worker import _iterative_optimize
     mol = Chem.MolFromSmiles("C")
     # Empty conformer should fail optimization
     assert not _iterative_optimize(mol, "UFF", lambda: False, lambda x: None)
 
 def test_direct_conversion_failure_robustness():
     """Test that _perform_direct_conversion raises ValueError on empty input."""
-    from moleditpy.modules.calculation_worker import _perform_direct_conversion
+    from moleditpy.core.calculation_worker import _perform_direct_conversion
     mol = Chem.MolFromSmiles("C")
     with pytest.raises(ValueError, match="Failed to parse coordinates"):
         _perform_direct_conversion("", mol, {}, lambda: False, lambda x: None)

@@ -72,13 +72,13 @@ except ImportError:
 try:
     from .plugin_manager import PluginManager
 except ImportError:
-    from modules.plugin_manager import PluginManager
+    from moleditpy.plugins.plugin_manager import PluginManager
 
 
 try:
     from .system_utils import detect_system_dark_mode
 except ImportError:
-    from modules.system_utils import detect_system_dark_mode
+    from moleditpy.utils.system_utils import detect_system_dark_mode
 
 
 try:
@@ -100,13 +100,13 @@ try:
     from .zoomable_view import ZoomableView
 except (AttributeError, RuntimeError, TypeError):
     # Fallback to absolute imports for script-style execution
-    from modules.color_settings_dialog import ColorSettingsDialog
-    from modules.constants import NUM_DASHES, VERSION
-    from modules.custom_qt_interactor import CustomQtInteractor
-    from modules.molecular_data import MolecularData
-    from modules.molecule_scene import MoleculeScene
-    from modules.settings_dialog import SettingsDialog
-    from modules.zoomable_view import ZoomableView
+    from moleditpy.ui.color_settings_dialog import ColorSettingsDialog
+    from moleditpy.utils.constants import NUM_DASHES, VERSION
+    from moleditpy.ui.custom_qt_interactor import CustomQtInteractor
+    from moleditpy.core.molecular_data import MolecularData
+    from moleditpy.ui.molecule_scene import MoleculeScene
+    from moleditpy.ui.settings_dialog import SettingsDialog
+    from moleditpy.ui.zoomable_view import ZoomableView
 
 
 # --- Class Definition ---
@@ -378,7 +378,7 @@ class MainWindowMainInit:
         try:
             # Overridden CPK settings are stored in self.settings['cpk_colors'].
             # To ensure that 2D modules (e.g., atom_item.py) which imported the
-            # `CPK_COLORS` mapping from `modules.constants` at import time see
+            # `CPK_COLORS` mapping from `moleditpy.utils.constants` at import time see
             # updates, mutate the mapping in-place on the constants module
             # instead of rebinding a new local variable here.
             overrides = self.settings.get("cpk_colors", {}) or {}
@@ -387,7 +387,7 @@ class MainWindowMainInit:
             try:
                 from . import constants as constants_mod
             except ImportError:
-                import modules.constants as constants_mod
+                import moleditpy.utils.constants as constants_mod
 
             # Reset constants.CPK_COLORS to defaults but keep the same dict
             constants_mod.CPK_COLORS.clear()

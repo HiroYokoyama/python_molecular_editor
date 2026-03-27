@@ -4,13 +4,13 @@ import numpy as np
 from rdkit import Chem
 from rdkit.Chem import AllChem
 
-from moleditpy.modules.bond_length_dialog import BondLengthDialog
-from moleditpy.modules.alignment_dialog import AlignmentDialog
-from moleditpy.modules.angle_dialog import AngleDialog
-from moleditpy.modules.dihedral_dialog import DihedralDialog
-from moleditpy.modules.translation_dialog import TranslationDialog
-from moleditpy.modules.move_group_dialog import MoveGroupDialog
-from moleditpy.modules.mol_geometry import calc_distance, calculate_dihedral, calc_angle_deg
+from moleditpy.ui.bond_length_dialog import BondLengthDialog
+from moleditpy.ui.alignment_dialog import AlignmentDialog
+from moleditpy.ui.angle_dialog import AngleDialog
+from moleditpy.ui.dihedral_dialog import DihedralDialog
+from moleditpy.ui.translation_dialog import TranslationDialog
+from moleditpy.ui.move_group_dialog import MoveGroupDialog
+from moleditpy.core.mol_geometry import calc_distance, calculate_dihedral, calc_angle_deg
 
 @pytest.fixture
 def mol():
@@ -27,7 +27,7 @@ def test_bond_length_adjustment_logic(mock_parser_host, mol):
         [list(conf.GetAtomPosition(i)) for i in range(mol.GetNumAtoms())]
     )
     
-    with patch("moleditpy.modules.bond_length_dialog.BondLengthDialog.init_ui"):
+    with patch("moleditpy.ui.bond_length_dialog.BondLengthDialog.init_ui"):
         dialog = BondLengthDialog(mol, window)
         dialog.atom1_idx = 0
         dialog.atom2_idx = 1
@@ -55,11 +55,11 @@ def test_alignment_logic(mock_parser_host, mol):
         [list(conf.GetAtomPosition(i)) for i in range(mol.GetNumAtoms())]
     )
     
-    with patch("moleditpy.modules.alignment_dialog.AlignmentDialog.init_ui"):
+    with patch("moleditpy.ui.alignment_dialog.AlignmentDialog.init_ui"):
         dialog = AlignmentDialog(mol, window, axis="x")
         dialog.selected_atoms = {0, 1}
         
-        with patch("moleditpy.modules.alignment_dialog.QMessageBox"):
+        with patch("moleditpy.ui.alignment_dialog.QMessageBox"):
             dialog.apply_alignment()
         
         new_conf = mol.GetConformer()
@@ -83,7 +83,7 @@ def test_angle_adjustment_logic(mock_parser_host):
         [list(conf.GetAtomPosition(i)) for i in range(mol.GetNumAtoms())]
     )
     
-    with patch("moleditpy.modules.angle_dialog.AngleDialog.init_ui"):
+    with patch("moleditpy.ui.angle_dialog.AngleDialog.init_ui"):
         dialog = AngleDialog(mol, window)
         dialog.atom1_idx = 1
         dialog.atom2_idx = 0
@@ -117,7 +117,7 @@ def test_dihedral_adjustment_logic(mock_parser_host):
         [list(conf.GetAtomPosition(i)) for i in range(mol.GetNumAtoms())]
     )
     
-    with patch("moleditpy.modules.dihedral_dialog.DihedralDialog.init_ui"):
+    with patch("moleditpy.ui.dihedral_dialog.DihedralDialog.init_ui"):
         dialog = DihedralDialog(mol, window)
         dialog.atom1_idx = 2
         dialog.atom2_idx = 0
@@ -144,7 +144,7 @@ def test_translation_logic(mock_parser_host, mol):
         [list(conf.GetAtomPosition(i)) for i in range(mol.GetNumAtoms())]
     )
     
-    with patch("moleditpy.modules.translation_dialog.TranslationDialog.init_ui"):
+    with patch("moleditpy.ui.translation_dialog.TranslationDialog.init_ui"):
         dialog = TranslationDialog(mol, window)
         dialog.selected_atoms = {0, 1}
         dialog.x_input = MagicMock()
@@ -163,7 +163,7 @@ def test_translation_logic(mock_parser_host, mol):
         translation = np.array([10.0, 10.0, 10.0]) - centroid
         expected_pos5 = p5_initial + translation
         
-        with patch("moleditpy.modules.translation_dialog.QMessageBox"):
+        with patch("moleditpy.ui.translation_dialog.QMessageBox"):
             dialog.apply_translation()
         
         new_pos5 = np.array(mol.GetConformer().GetAtomPosition(5))
@@ -177,8 +177,8 @@ def test_move_group_logic(mock_parser_host, mol):
         [list(conf.GetAtomPosition(i)) for i in range(mol.GetNumAtoms())]
     )
     
-    with patch("moleditpy.modules.move_group_dialog.MoveGroupDialog.init_ui"), \
-         patch("moleditpy.modules.move_group_dialog.MoveGroupDialog.show_atom_labels"):
+    with patch("moleditpy.ui.move_group_dialog.MoveGroupDialog.init_ui"), \
+         patch("moleditpy.ui.move_group_dialog.MoveGroupDialog.show_atom_labels"):
         dialog = MoveGroupDialog(mol, window)
         dialog.group_atoms = {0, 1, 2}
         
@@ -192,7 +192,7 @@ def test_move_group_logic(mock_parser_host, mol):
         initial_pos0 = np.array(conf.GetAtomPosition(0))
         initial_pos5 = np.array(conf.GetAtomPosition(5))
         
-        with patch("moleditpy.modules.move_group_dialog.QMessageBox"):
+        with patch("moleditpy.ui.move_group_dialog.QMessageBox"):
             dialog.apply_translation()
             
         assert np.allclose(np.array(mol.GetConformer().GetAtomPosition(0)), initial_pos0 + [5, 0, 0])
@@ -210,7 +210,7 @@ def test_move_group_logic(mock_parser_host, mol):
         pos2 = np.array(mol.GetConformer().GetAtomPosition(2))
         centroid = (pos0 + pos1 + pos2) / 3.0
         
-        with patch("moleditpy.modules.move_group_dialog.QMessageBox"):
+        with patch("moleditpy.ui.move_group_dialog.QMessageBox"):
             dialog.apply_rotation()
             
         new_pos0 = np.array(mol.GetConformer().GetAtomPosition(0))

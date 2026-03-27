@@ -2,9 +2,9 @@ import pytest
 from unittest.mock import MagicMock, patch
 from PyQt6.QtCore import Qt, QPointF
 from PyQt6.QtGui import QKeyEvent
-from moleditpy.modules.molecular_scene_handler import KeyboardMixin
-from moleditpy.modules.atom_item import AtomItem
-from moleditpy.modules.bond_item import BondItem
+from moleditpy.ui.molecular_scene_handler import KeyboardMixin
+from moleditpy.ui.atom_item import AtomItem
+from moleditpy.ui.bond_item import BondItem
 
 class MockScene(KeyboardMixin):
     def __init__(self):
@@ -44,7 +44,7 @@ def test_benzene_shortcut_on_atom(scene):
     
     # Needs to match the view's mapToScene etc. logic
     # In MockScene, itemAt returns self._item_at_cursor regardless of pos argument
-    with patch("moleditpy.modules.molecular_scene_handler.QCursor.pos") as mock_cursor:
+    with patch("moleditpy.ui.molecular_scene_handler.QCursor.pos") as mock_cursor:
         mock_cursor.return_value = QPointF(150, 100) # Simulated global cursor pos
         scene.keyPressEvent(event)
     
@@ -65,7 +65,7 @@ def test_benzene_shortcut_on_bond(scene):
     event = MagicMock(spec=QKeyEvent)
     event.key.return_value = Qt.Key.Key_4
     
-    with patch("moleditpy.modules.molecular_scene_handler.QCursor.pos") as mock_cursor:
+    with patch("moleditpy.ui.molecular_scene_handler.QCursor.pos") as mock_cursor:
         mock_cursor.return_value = QPointF(120, 110)
         print(f"DEBUG: item_at_cursor type: {type(scene._item_at_cursor)}")
         scene.keyPressEvent(event)
@@ -83,7 +83,7 @@ def test_benzene_shortcut_empty_space(scene):
     event = MagicMock(spec=QKeyEvent)
     event.key.return_value = Qt.Key.Key_4
     
-    with patch("moleditpy.modules.molecular_scene_handler.QCursor.pos") as mock_cursor:
+    with patch("moleditpy.ui.molecular_scene_handler.QCursor.pos") as mock_cursor:
         mock_cursor.return_value = QPointF(200, 200)
         scene.keyPressEvent(event)
     

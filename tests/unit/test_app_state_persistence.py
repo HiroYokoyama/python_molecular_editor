@@ -4,8 +4,8 @@ import json
 import numpy as np
 from rdkit import Chem
 from rdkit.Chem import AllChem
-from moleditpy.modules.main_window_app_state import MainWindowAppState
-from moleditpy.modules.molecular_data import MolecularData
+from moleditpy.core.app_state import MainWindowAppState
+from moleditpy.core.molecular_data import MolecularData
 from PyQt6.QtCore import QPointF, Qt
 from unittest.mock import MagicMock
 

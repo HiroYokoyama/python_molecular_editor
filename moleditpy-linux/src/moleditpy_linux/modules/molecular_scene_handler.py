@@ -20,8 +20,8 @@ try:
     from .atom_item import AtomItem
     from .bond_item import BondItem
 except ImportError:
-    from modules.atom_item import AtomItem
-    from modules.bond_item import BondItem
+    from moleditpy.ui.atom_item import AtomItem
+    from moleditpy.ui.bond_item import BondItem
 
 try:
     from . import sip_isdeleted_safe
@@ -31,7 +31,7 @@ except ImportError:
 try:
     from .constants import DEFAULT_BOND_LENGTH, SNAP_DISTANCE, SUM_TOLERANCE
 except ImportError:
-    from modules.constants import DEFAULT_BOND_LENGTH, SNAP_DISTANCE, SUM_TOLERANCE
+    from moleditpy.utils.constants import DEFAULT_BOND_LENGTH, SNAP_DISTANCE, SUM_TOLERANCE
 
 
 class TemplateMixin:

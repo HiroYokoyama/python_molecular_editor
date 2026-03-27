@@ -17,7 +17,7 @@ from PyQt6.QtCore import QPointF
 try:
     from .constants import ANGSTROM_PER_PIXEL
 except ImportError:
-    from modules.constants import ANGSTROM_PER_PIXEL
+    from moleditpy.utils.constants import ANGSTROM_PER_PIXEL
 
 
 class MolecularData:

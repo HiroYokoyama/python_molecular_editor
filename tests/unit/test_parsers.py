@@ -1,7 +1,7 @@
 import os
 from rdkit import Chem
-from moleditpy.modules.main_window_molecular_parsers import MainWindowMolecularParsers
-from moleditpy.modules.molecular_data import MolecularData
+from moleditpy.core.molecular_parsers import MainWindowMolecularParsers
+from moleditpy.core.molecular_data import MolecularData
 from PyQt6.QtCore import QPointF
 from unittest.mock import MagicMock, patch
 

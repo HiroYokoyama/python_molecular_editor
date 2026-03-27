@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import MagicMock, patch
-from moleditpy.modules.plugin_interface import PluginContext, Plugin3DController
+from moleditpy.plugins.plugin_interface import PluginContext, Plugin3DController
 
 
 class TestPluginInterface:

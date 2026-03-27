@@ -32,8 +32,8 @@ try:
         rodrigues_rotate,
     )
 except ImportError:
-    from modules.dialog_3d_picking_mixin import Dialog3DPickingMixin
-    from modules.mol_geometry import (
+    from moleditpy.ui.dialog_3d_picking_mixin import Dialog3DPickingMixin
+    from moleditpy.core.mol_geometry import (
         adjust_bond_angle,
         calc_angle_deg,
         get_connected_group,

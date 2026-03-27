@@ -29,12 +29,12 @@ from rdkit import Geometry
 try:
     from .constants import VDW_RADII, pt
 except ImportError:
-    from modules.constants import VDW_RADII, pt
+    from moleditpy.utils.constants import VDW_RADII, pt
 
 try:
     from .dialog_3d_picking_mixin import Dialog3DPickingMixin
 except ImportError:
-    from modules.dialog_3d_picking_mixin import Dialog3DPickingMixin
+    from moleditpy.ui.dialog_3d_picking_mixin import Dialog3DPickingMixin
 
 
 class MoveGroupDialog(Dialog3DPickingMixin, QDialog):

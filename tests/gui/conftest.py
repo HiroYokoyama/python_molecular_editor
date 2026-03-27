@@ -424,7 +424,7 @@ def _attach_symbol_on_main_and_package(name, value):
 if moleditpy is not None:
     try:
         # expose MainWindow for tests
-        from moleditpy.modules.main_window import MainWindow as _MainWindow
+        from moleditpy.ui.main_window import MainWindow as _MainWindow
 
         _attach_symbol_on_main_and_package("MainWindow", _MainWindow)
     except Exception:
@@ -432,15 +432,16 @@ if moleditpy is not None:
         # not be a package; in that case import the module directly from the
         # project `src` layout as a fallback.
         try:
-            proj_root = os.path.dirname(__file__)
+            # Get the real project root (two levels up from tests/gui)
+            proj_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
             mm_path = os.path.join(
-                proj_root, "src", "moleditpy", "modules", "main_window.py"
+                proj_root, "moleditpy", "src", "moleditpy", "ui", "main_window.py"
             )
             if os.path.exists(mm_path):
                 import importlib.util as _il
 
                 spec = _il.spec_from_file_location(
-                    "moleditpy.modules.main_window", mm_path
+                    "moleditpy.ui.main_window", mm_path
                 )
                 mod = _il.module_from_spec(spec)
                 spec.loader.exec_module(mod)
@@ -451,7 +452,7 @@ if moleditpy is not None:
             traceback.print_exc()
     try:
         # expose MolecularData
-        from moleditpy.modules.molecular_data import MolecularData as _MolecularData
+        from moleditpy.core.molecular_data import MolecularData as _MolecularData
 
         _attach_symbol_on_main_and_package("MolecularData", _MolecularData)
     except Exception:
@@ -460,20 +461,20 @@ if moleditpy is not None:
         traceback.print_exc()
     try:
         # expose constants used in tests
-        from moleditpy.modules.constants import CLIPBOARD_MIME_TYPE as _CLIP
+        from moleditpy.utils.constants import CLIPBOARD_MIME_TYPE as _CLIP
 
         _attach_symbol_on_main_and_package("CLIPBOARD_MIME_TYPE", _CLIP)
     except Exception:
         try:
-            proj_root = os.path.dirname(__file__)
+            proj_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
             md_path = os.path.join(
-                proj_root, "src", "moleditpy", "modules", "molecular_data.py"
+                proj_root, "moleditpy", "src", "moleditpy", "core", "molecular_data.py"
             )
             if os.path.exists(md_path):
                 import importlib.util as _il
 
                 spec = _il.spec_from_file_location(
-                    "moleditpy.modules.molecular_data", md_path
+                    "moleditpy.core.molecular_data", md_path
                 )
                 mod = _il.module_from_spec(spec)
                 spec.loader.exec_module(mod)
@@ -484,7 +485,7 @@ if moleditpy is not None:
             traceback.print_exc()
     try:
         # expose CustomQtInteractor for conftest monkeypatching
-        from moleditpy.modules.custom_qt_interactor import CustomQtInteractor as _CQI
+        from moleditpy.ui.custom_qt_interactor import CustomQtInteractor as _CQI
 
         _attach_symbol_on_main_and_package("CustomQtInteractor", _CQI)
         # Ensure tests don't crash when calling setAcceptDrops on the plotter
@@ -519,15 +520,15 @@ if moleditpy is not None:
             traceback.print_exc()
     except Exception:
         try:
-            proj_root = os.path.dirname(__file__)
+            proj_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
             const_path = os.path.join(
-                proj_root, "src", "moleditpy", "modules", "constants.py"
+                proj_root, "moleditpy", "src", "moleditpy", "utils", "constants.py"
             )
             if os.path.exists(const_path):
                 import importlib.util as _il
 
                 spec = _il.spec_from_file_location(
-                    "moleditpy.modules.constants", const_path
+                    "moleditpy.utils.constants", const_path
                 )
                 mod = _il.module_from_spec(spec)
                 spec.loader.exec_module(mod)
@@ -642,7 +643,7 @@ def window(app, qtbot, monkeypatch):
                 MainWindowClass = getattr(app_mod, "MainWindow", None)
                 if MainWindowClass is None:
                     try:
-                        from moleditpy.modules.main_window import (
+                        from moleditpy.ui.main_window import (
                             MainWindow as _MainWindowClass,
                         )
 
@@ -652,18 +653,18 @@ def window(app, qtbot, monkeypatch):
 
                         traceback.print_exc()
                     try:
-                        proj_root = os.path.dirname(__file__)
+                        proj_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
                         mm_path = os.path.join(
-                            proj_root, "src", "moleditpy", "modules", "main_window.py"
+                            proj_root, "moleditpy", "src", "moleditpy", "ui", "main_window.py"
                         )
                         import importlib.util as _il
 
                         spec = _il.spec_from_file_location(
-                            "moleditpy.modules.main_window", mm_path
+                            "moleditpy.ui.main_window", mm_path
                         )
                         mod = _il.module_from_spec(spec)
                         # We must set the module in sys.modules manually for relative imports to work
-                        sys.modules["moleditpy.modules.main_window"] = mod
+                        sys.modules["moleditpy.ui.main_window"] = mod
                         spec.loader.exec_module(mod)
                         MainWindowClass = getattr(mod, "MainWindow", None)
                     except Exception:
@@ -690,7 +691,7 @@ def window(app, qtbot, monkeypatch):
         # Some imports reference the module as `moleditpy.modules...`, others
         # as `modules...`. Patch both to be robust in all import paths.
         monkeypatch.setattr(
-            "moleditpy.modules.main_window_ui_manager.MainWindowUiManager._setup_3d_picker",
+            "moleditpy.ui.ui_manager.MainWindowUiManager._setup_3d_picker",
             lambda self: None,
             raising=False,
         )
@@ -699,7 +700,7 @@ def window(app, qtbot, monkeypatch):
             self._active_calc_threads = []
 
         monkeypatch.setattr(
-            "moleditpy.modules.main_window_main_init.MainWindowMainInit.init_worker_thread",
+            "moleditpy.ui.main_window_init.MainWindowMainInit.init_worker_thread",
             _mock_init_worker,
             raising=False,
         )
@@ -713,16 +714,16 @@ def window(app, qtbot, monkeypatch):
 
         traceback.print_exc()
     try:
-        import moleditpy.modules.main_window_view_3d as _mw3d
+        import moleditpy.ui.view_3d_logic as _mw3d
 
         def _safe_draw(*a, **k):
             try:
-                return _mw3d.MainWindowView3d.draw_molecule_3d(*a, **k)
+                return _mw3d.View3DManager.draw_molecule_3d(*a, **k)
             except Exception:
                 return None
 
         monkeypatch.setattr(
-            "moleditpy.modules.main_window_view_3d.MainWindowView3d.draw_molecule_3d",
+            "moleditpy.ui.view_3d_logic.View3DManager.draw_molecule_3d",
             _safe_draw,
             raising=False,
         )
@@ -800,7 +801,7 @@ def window(app, qtbot, monkeypatch):
                 pass
 
         monkeypatch.setattr(
-            "moleditpy.modules.plugin_manager.PluginManager",
+            "moleditpy.plugins.plugin_manager.PluginManager",
             DummyPluginManager,
             raising=False,
         )
@@ -814,7 +815,7 @@ def window(app, qtbot, monkeypatch):
     # `current_mol` on the host window. This keeps conversion tests simple
     # and avoids GL/VTK calls.
     try:
-        import moleditpy.modules.main_window_compute as _mwcomp
+        import moleditpy.core.compute_engine as _mwcomp
 
         orig_on_calc = getattr(
             _mwcomp.MainWindowCompute, "on_calculation_finished", None
@@ -894,7 +895,7 @@ def window(app, qtbot, monkeypatch):
                 return None
 
         monkeypatch.setattr(
-            "moleditpy.modules.main_window_compute.MainWindowCompute.on_calculation_finished",
+            "moleditpy.core.compute_engine.MainWindowCompute.on_calculation_finished",
             _safe_on_calculation_finished,
             raising=False,
         )
@@ -907,7 +908,7 @@ def window(app, qtbot, monkeypatch):
     # The real method spawns threads and can race with VTK/GL teardown,
     # causing intermittent CI aborts.  This mock does pure RDKit work only.
     try:
-        import moleditpy.modules.main_window_compute as _mwcomp2
+        import moleditpy.core.compute_engine as _mwcomp2
         from rdkit import Chem
         from rdkit.Chem import AllChem as _AllChem
         import numpy as _np
@@ -1032,12 +1033,12 @@ def window(app, qtbot, monkeypatch):
 
         try:
             monkeypatch.setattr(
-                "moleditpy.modules.custom_qt_interactor.CustomQtInteractor",
+                "moleditpy.ui.custom_qt_interactor.CustomQtInteractor",
                 DummyPlotter,
                 raising=False,
             )
             monkeypatch.setattr(
-                "moleditpy.modules.main_window_main_init.CustomQtInteractor",
+                "moleditpy.ui.main_window_init.CustomQtInteractor",
                 DummyPlotter,
                 raising=False,
             )
@@ -1057,7 +1058,7 @@ def window(app, qtbot, monkeypatch):
     try:
         if "DummyPluginManager" in locals():
             monkeypatch.setattr(
-                "moleditpy.modules.main_window_main_init.PluginManager",
+                "moleditpy.ui.main_window_init.PluginManager",
                 DummyPluginManager,
                 raising=False,
             )
@@ -1176,12 +1177,12 @@ def window(app, qtbot, monkeypatch):
 
         try:
             monkeypatch.setattr(
-                "moleditpy.modules.custom_qt_interactor.CustomQtInteractor",
+                "moleditpy.ui.custom_qt_interactor.CustomQtInteractor",
                 DummyPlotter,
                 raising=False,
             )
             monkeypatch.setattr(
-                "moleditpy.modules.main_window_main_init.CustomQtInteractor",
+                "moleditpy.ui.main_window_init.CustomQtInteractor",
                 DummyPlotter,
                 raising=False,
             )
@@ -1287,7 +1288,7 @@ def window(app, qtbot, monkeypatch):
 
     # Patch 3D optimization to set the status message reliably so tests can assert success
     try:
-        import moleditpy.modules.main_window_compute as _mwcomp
+        import moleditpy.core.compute_engine as _mwcomp
 
         orig_opt = getattr(_mwcomp.MainWindowCompute, "optimize_3d_structure", None)
 
@@ -1311,7 +1312,7 @@ def window(app, qtbot, monkeypatch):
             return result
 
         monkeypatch.setattr(
-            "moleditpy.modules.main_window_compute.MainWindowCompute.optimize_3d_structure",
+            "moleditpy.core.compute_engine.MainWindowCompute.optimize_3d_structure",
             _safe_optimize,
             raising=False,
         )
@@ -1506,7 +1507,7 @@ def window(app, qtbot, monkeypatch):
                 traceback.print_exc()
 
         monkeypatch.setattr(
-            "moleditpy.modules.main_window_ui_manager.MainWindowUiManager._setup_3d_picker",
+            "moleditpy.ui.ui_manager.MainWindowUiManager._setup_3d_picker",
             _safe_setup_3d_picker,
             raising=False,
         )
@@ -1515,7 +1516,7 @@ def window(app, qtbot, monkeypatch):
 
         traceback.print_exc()
     try:
-        import moleditpy.modules.main_window_view_3d as _mw3d
+        import moleditpy.ui.view_3d as _mw3d
 
         orig_draw = getattr(_mw3d.MainWindowView3d, "draw_molecule_3d", None)
         if orig_draw is not None:
@@ -1527,7 +1528,7 @@ def window(app, qtbot, monkeypatch):
                     return None
 
             monkeypatch.setattr(
-                "moleditpy.modules.main_window_view_3d.MainWindowView3d.draw_molecule_3d",
+                "moleditpy.ui.view_3d.MainWindowView3d.draw_molecule_3d",
                 safe_draw,
                 raising=False,
             )

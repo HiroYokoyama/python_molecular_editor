@@ -7,8 +7,8 @@ from PyQt6.QtWidgets import (
     QGraphicsItem,
     QGraphicsSceneHoverEvent,
 )
-from moleditpy.modules.atom_item import AtomItem
-from moleditpy.modules.bond_item import BondItem
+from moleditpy.ui.atom_item import AtomItem
+from moleditpy.ui.bond_item import BondItem
 from unittest.mock import MagicMock, patch
 from rdkit import Chem
 

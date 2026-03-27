@@ -3,9 +3,9 @@ import math
 from PyQt6.QtCore import Qt, QPointF, QLineF
 from PyQt6.QtGui import QKeyEvent, QTransform, QMouseEvent
 from PyQt6.QtWidgets import QApplication, QGraphicsLineItem
-from moleditpy.modules.molecule_scene import MoleculeScene
-from moleditpy.modules.atom_item import AtomItem
-from moleditpy.modules.bond_item import BondItem
+from moleditpy.ui.molecule_scene import MoleculeScene
+from moleditpy.ui.atom_item import AtomItem
+from moleditpy.ui.bond_item import BondItem
 from unittest.mock import MagicMock, patch
 
 

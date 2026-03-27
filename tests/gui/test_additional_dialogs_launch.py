@@ -1,12 +1,12 @@
 import pytest
 from rdkit import Chem
 from rdkit.Chem import AllChem
-from moleditpy.modules.planarize_dialog import PlanarizeDialog
-from moleditpy.modules.mirror_dialog import MirrorDialog
-from moleditpy.modules.align_plane_dialog import AlignPlaneDialog
-from moleditpy.modules.constrained_optimization_dialog import ConstrainedOptimizationDialog
-from moleditpy.modules.periodic_table_dialog import PeriodicTableDialog
-# from moleditpy.modules.color_settings_dialog import ColorSettingsDialog # Color settings might be in a different module
+from moleditpy.ui.planarize_dialog import PlanarizeDialog
+from moleditpy.ui.mirror_dialog import MirrorDialog
+from moleditpy.ui.align_plane_dialog import AlignPlaneDialog
+from moleditpy.ui.constrained_optimization_dialog import ConstrainedOptimizationDialog
+from moleditpy.ui.periodic_table_dialog import PeriodicTableDialog
+# from moleditpy.ui.color_settings_dialog import ColorSettingsDialog # Color settings might be in a different module
 
 @pytest.fixture
 def mol():

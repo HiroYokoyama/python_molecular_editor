@@ -4,7 +4,7 @@ import os
 import pytest
 import tempfile
 import textwrap
-from moleditpy.modules.plugin_manager import PluginManager
+from moleditpy.plugins.plugin_manager import PluginManager
 from unittest.mock import MagicMock
 
 

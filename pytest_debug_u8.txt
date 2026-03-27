@@ -1,0 +1,185 @@
+﻿============================= test session starts =============================
+platform win32 -- Python 3.13.7, pytest-9.0.1, pluggy-1.6.0
+PyQt6 6.10.2 -- Qt runtime 6.10.2 -- Qt compiled 6.10.0
+rootdir: E:\Research\Calculation\moleditpy\DEV_MAIN\python_molecular_editor\tests\gui
+configfile: pytest.ini
+plugins: anyio-4.12.0, cov-7.0.0, mock-3.15.1, qt-4.5.0, timeout-2.4.0
+collected 49 items / 47 deselected / 2 selected
+
+tests\gui\test_main_app.py F.                                            [100%]
+
+================================== FAILURES ===================================
+_______________________________ test_undo_redo ________________________________
+
+window = <moleditpy.ui.main_window.MainWindow object at 0x000001E39CB07430>
+qtbot = <pytestqt.qtbot.QtBot object at 0x000001E39CA623C0>
+
+    @pytest.mark.gui
+    def test_undo_redo(window, qtbot):
+        """Undo/Redo: 操作のテスト"""
+        scene = window.scene
+    
+        assert len(window.data.atoms) == 0
+        # Capture initial stack size to verify progression
+        initial_stack_size = len(window.undo_stack)
+    
+        # 1. Draw an atom (programmatically)
+        window.set_mode("atom_C")
+        id0 = scene.create_atom("C", QPointF(0, 0))
+        window.push_undo_state()
+    
+        assert len(window.data.atoms) == 1
+        # After an action, Undo should be enabled and stack size increased
+        assert len(window.undo_stack) == initial_stack_size + 1
+        assert window.undo_action.isEnabled() is True
+        assert window.redo_action.isEnabled() is False
+    
+        # 2. Undoを実行
+>       window.undo()
+
+tests\gui\test_main_app.py:621: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <moleditpy.ui.main_window.MainWindow object at 0x000001E39CB07430>
+
+    def undo(self):
+        if len(self.undo_stack) > 1:
+            self.redo_stack.append(self.undo_stack.pop())
+            state = self.undo_stack[-1]
+            self._is_restoring_state = True
+            try:
+>               self.set_state_from_data(state)
+
+moleditpy\src\moleditpy\core\app_state.py:446: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <moleditpy.ui.main_window.MainWindow object at 0x000001E39CB07430>
+state_data = {'_next_atom_id': 0, 'atoms': {}, 'bonds': {}, 'constraints_3d': [], ...}
+
+    def set_state_from_data(self, state_data):
+        self.dragged_atom_info = None
+        self.clear_2d_editor(push_to_undo=False)
+    
+        loaded_data = copy.deepcopy(state_data)
+    
+        # Get file version (default '0.0.0')
+        file_version_str = loaded_data.get("version", "0.0.0")
+    
+        def parse_v(v_str):
+            if not v_str or not isinstance(v_str, str):
+                return (0, 0, 0)
+            try:
+                parts = []
+                import re
+    
+                for p in v_str.split("."):
+                    m = re.match(r"(\d+)", p)
+                    parts.append(int(m.group(1)) if m else 0)
+                return tuple(parts)
+            except (ValueError, AttributeError, IndexError):
+                return (0, 0, 0)
+    
+        app_version_parts = parse_v(VERSION)
+        file_version_parts = parse_v(file_version_str)
+    
+        # Warn if file version is newer than app version
+        if file_version_parts > app_version_parts:
+            if hasattr(self, "warning_message_box"):  # Use helper if available
+                self.warning_message_box(
+                    "Version Mismatch",
+                    f"The file you are opening was saved with a newer version of MoleditPy (ver. {file_version_str}).",
+                )
+            else:
+                QMessageBox.warning(
+                    self,
+                    "Version Mismatch",
+                    f"The file you are opening was saved with a newer version of MoleditPy (ver. {file_version_str}).\n\n"
+                    f"Your current version is {VERSION}.\n\n"
+                    "Some features may not load or work correctly.",
+                )
+    
+        raw_atoms = loaded_data.get("atoms", {})
+        raw_bonds = loaded_data.get("bonds", {})
+    
+        # Restore constraints
+        loaded_constraints = loaded_data.get("constraints_3d", [])
+        if loaded_constraints and isinstance(loaded_constraints, list):
+            self.constraints_3d = []
+            for const in loaded_constraints:
+                if isinstance(const, (list, tuple)):
+                    try:
+                        if len(const) == 4:
+                            self.constraints_3d.append(
+                                (const[0], tuple(const[1]), const[2], const[3])
+                            )
+                        elif len(const) == 3:
+                            self.constraints_3d.append(
+                                (const[0], tuple(const[1]), const[2], 1.0e5)
+                            )
+                    except (TypeError, ValueError, IndexError) as e:
+                        logging.debug(f"Failed to parse constraint {const}: {e}")
+        else:
+            self.constraints_3d = []
+    
+        for atom_id, data in raw_atoms.items():
+            raw_pos = tuple(data["pos"])
+            pos_q = QPointF(raw_pos[0], raw_pos[1])
+            charge = data.get("charge", 0)
+            radical = data.get("radical", 0)
+            # Pass QPointF to AtomItem for UI positioning
+            atom_item = AtomItem(
+                atom_id, data["symbol"], pos_q, charge=charge, radical=radical
+            )
+            # Store raw tuple in data
+            self.data.atoms[atom_id] = {
+                "symbol": data["symbol"],
+                "pos": raw_pos,
+                "item": atom_item,
+                "charge": charge,
+                "radical": radical,
+            }
+            self.scene.addItem(atom_item)
+    
+        self.data._next_atom_id = loaded_data.get(
+            "_next_atom_id", max(self.data.atoms.keys()) + 1 if self.data.atoms else 0
+        )
+    
+        for key_tuple, data in raw_bonds.items():
+            id1, id2 = key_tuple
+            if id1 in self.data.atoms and id2 in self.data.atoms:
+                atom1_item = self.data.atoms[id1]["item"]
+                atom2_item = self.data.atoms[id2]["item"]
+                bond_item = BondItem(
+                    atom1_item, atom2_item, data.get("order", 1), data.get("stereo", 0)
+                )
+                self.data.bonds[key_tuple] = {
+                    "order": data.get("order", 1),
+                    "stereo": data.get("stereo", 0),
+                    "item": bond_item,
+                }
+                atom1_item.bonds.append(bond_item)
+                atom2_item.bonds.append(bond_item)
+                self.scene.addItem(bond_item)
+    
+        for atom_data in self.data.atoms.values():
+            if atom_data["item"]:
+>               atom_data["item"].update_style()
+
+moleditpy\src\moleditpy\core\app_state.py:226: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <moleditpy.ui.atom_item.AtomItem object at 0x000001E39CBAC690>
+
+    def update_style(self):
+        # Allow updating font preference dynamically
+        font_size = 20
+        font_family = FONT_FAMILY
+    
+>       scene = self.scene()
+                ^^^^^^^^^^^^
+E       RuntimeError: wrapped C/C++ object of type AtomItem has been deleted
+
+moleditpy\src\moleditpy\ui\atom_item.py:85: RuntimeError
+=========================== short test summary info ===========================
+FAILED tests\gui\test_main_app.py::test_undo_redo - RuntimeError: wrapped C/C...
+================= 1 failed, 1 passed, 47 deselected in 0.59s ==================

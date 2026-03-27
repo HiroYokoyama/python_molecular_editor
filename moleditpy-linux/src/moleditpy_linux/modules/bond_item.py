@@ -34,7 +34,7 @@ try:
         HOVER_PEN_WIDTH,
     )
 except ImportError:
-    from modules.constants import (
+    from moleditpy.utils.constants import (
         DESIRED_BOND_PIXEL_WIDTH,
         EZ_LABEL_BOX_SIZE,
         EZ_LABEL_MARGIN,

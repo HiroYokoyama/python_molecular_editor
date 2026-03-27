@@ -27,8 +27,8 @@ try:
     from .dialog_3d_picking_mixin import Dialog3DPickingMixin
     from .mol_geometry import calculate_dihedral, get_connected_group
 except ImportError:
-    from modules.dialog_3d_picking_mixin import Dialog3DPickingMixin
-    from modules.mol_geometry import calculate_dihedral, get_connected_group
+    from moleditpy.ui.dialog_3d_picking_mixin import Dialog3DPickingMixin
+    from moleditpy.core.mol_geometry import calculate_dihedral, get_connected_group
 
 import numpy as np
 from PyQt6.QtCore import Qt

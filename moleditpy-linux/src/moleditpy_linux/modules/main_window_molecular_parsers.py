@@ -55,7 +55,7 @@ try:
     )
 except ImportError:
     # Fallback to absolute imports for script-style execution
-    from modules.constants import (
+    from moleditpy.utils.constants import (
         VERSION,
         COVALENT_RADII,
     )

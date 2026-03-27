@@ -2,8 +2,8 @@ import pytest
 from unittest.mock import MagicMock, patch
 from PyQt6.QtCore import Qt, QPointF
 from PyQt6.QtGui import QKeyEvent
-from moleditpy.modules.molecular_scene_handler import KeyboardMixin
-from moleditpy.modules.atom_item import AtomItem
+from moleditpy.ui.molecular_scene_handler import KeyboardMixin
+from moleditpy.ui.atom_item import AtomItem
 
 def MockAtom(atom_id, radical=0):
     atom = MagicMock(spec=AtomItem)
@@ -47,7 +47,7 @@ def test_radical_toggle_selected(scene):
     event.key.return_value = Qt.Key.Key_Period
     
     # We need to patch QCursor.pos() inside KeyboardMixin.keyPressEvent
-    with patch("moleditpy.modules.molecular_scene_handler.QCursor.pos") as mock_cursor:
+    with patch("moleditpy.ui.molecular_scene_handler.QCursor.pos") as mock_cursor:
         mock_cursor.return_value = QPointF(0,0)
         scene.keyPressEvent(event)
     
@@ -70,7 +70,7 @@ def test_radical_toggle_at_cursor(scene):
     event = MagicMock(spec=QKeyEvent)
     event.key.return_value = Qt.Key.Key_Period
     
-    with patch("moleditpy.modules.molecular_scene_handler.QCursor.pos") as mock_cursor:
+    with patch("moleditpy.ui.molecular_scene_handler.QCursor.pos") as mock_cursor:
         mock_cursor.return_value = QPointF(0,0)
         scene.keyPressEvent(event)
     
@@ -86,7 +86,7 @@ def test_radical_toggle_no_target(scene):
     event = MagicMock(spec=QKeyEvent)
     event.key.return_value = Qt.Key.Key_Period
     
-    with patch("moleditpy.modules.molecular_scene_handler.QCursor.pos") as mock_cursor:
+    with patch("moleditpy.ui.molecular_scene_handler.QCursor.pos") as mock_cursor:
         mock_cursor.return_value = QPointF(0,0)
         scene.keyPressEvent(event)
     

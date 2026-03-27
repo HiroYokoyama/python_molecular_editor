@@ -1,6 +1,6 @@
 import pytest
-from moleditpy.modules.angle_dialog import AngleDialog
-from moleditpy.modules.dihedral_dialog import DihedralDialog
+from moleditpy.ui.angle_dialog import AngleDialog
+from moleditpy.ui.dihedral_dialog import DihedralDialog
 from rdkit import Chem
 from unittest.mock import MagicMock
 

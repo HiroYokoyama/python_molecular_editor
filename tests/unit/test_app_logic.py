@@ -1,7 +1,7 @@
 import pytest
 from rdkit import Chem
-from moleditpy.modules.calculation_worker import CalculationWorker
-from moleditpy.modules.molecular_data import MolecularData
+from moleditpy.core.calculation_worker import CalculationWorker
+from moleditpy.core.molecular_data import MolecularData
 from PyQt6.QtCore import QPointF
 
 
@@ -65,7 +65,7 @@ def test_molecular_data_fallback_serialization():
 
 def test_coordinate_mapping_primary():
     """Verify primary RDKit conversion logic uses 'pos' attribute correctly."""
-    from moleditpy.modules.constants import ANGSTROM_PER_PIXEL
+    from moleditpy.utils.constants import ANGSTROM_PER_PIXEL
 
     data = MolecularData()
     # RDKit path uses 'pos' passed in add_atom
@@ -90,7 +90,7 @@ def test_coordinate_mapping_primary():
 
 def test_coordinate_mapping_fallback():
     """Verify fallback serialization (reverted logic) uses atom['item'].pos()."""
-    from moleditpy.modules.constants import ANGSTROM_PER_PIXEL
+    from moleditpy.utils.constants import ANGSTROM_PER_PIXEL
     from unittest.mock import MagicMock
 
     data = MolecularData()

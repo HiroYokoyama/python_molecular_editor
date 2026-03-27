@@ -53,8 +53,8 @@ def app():
 def mock_parser_host(app):
     """A dummy host for MainWindow helper classes to satisfy their interface."""
     from unittest.mock import MagicMock
-    from moleditpy.modules.molecular_data import MolecularData
-    from moleditpy.modules.atom_item import AtomItem
+    from moleditpy.core.molecular_data import MolecularData
+    from moleditpy.ui.atom_item import AtomItem
 
     host = MagicMock()
     # Data and Scene

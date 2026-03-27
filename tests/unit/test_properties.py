@@ -1,6 +1,6 @@
 import pytest
 from rdkit import Chem
-from moleditpy.modules.analysis_window import AnalysisWindow
+from moleditpy.ui.analysis_window import AnalysisWindow
 from unittest.mock import MagicMock
 from PyQt6.QtWidgets import QApplication, QWidget
 

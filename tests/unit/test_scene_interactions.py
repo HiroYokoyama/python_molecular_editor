@@ -3,9 +3,9 @@ import math
 from PyQt6.QtCore import Qt, QPointF
 from PyQt6.QtWidgets import QApplication
 from PyQt6.QtGui import QMouseEvent, QTransform
-from moleditpy.modules.molecule_scene import MoleculeScene
-from moleditpy.modules.atom_item import AtomItem
-from moleditpy.modules.bond_item import BondItem
+from moleditpy.ui.molecule_scene import MoleculeScene
+from moleditpy.ui.atom_item import AtomItem
+from moleditpy.ui.bond_item import BondItem
 from unittest.mock import MagicMock, patch
 
 
@@ -27,7 +27,7 @@ def create_mock_event(pos=QPointF(100, 100), button=Qt.MouseButton.LeftButton):
 @patch("PyQt6.QtWidgets.QGraphicsScene.mousePressEvent")
 @patch("PyQt6.QtWidgets.QGraphicsScene.mouseReleaseEvent")
 @patch(
-    "moleditpy.modules.molecule_scene.QApplication.startDragDistance", return_value=1000
+    "moleditpy.ui.molecule_scene.QApplication.startDragDistance", return_value=1000
 )
 def test_scene_toggle_radical(mock_drag, mock_release, mock_press, mock_parser_host):
     scene = setup_scene_with_view(mock_parser_host)
@@ -39,7 +39,7 @@ def test_scene_toggle_radical(mock_drag, mock_release, mock_press, mock_parser_h
     atom_item.update_style = MagicMock()
 
     with (
-        patch("moleditpy.modules.molecule_scene.isinstance", return_value=True),
+        patch("moleditpy.ui.molecule_scene.isinstance", return_value=True),
         patch.object(MoleculeScene, "itemAt", return_value=atom_item),
     ):
         event = create_mock_event(QPointF(100, 100))
@@ -57,7 +57,7 @@ def test_scene_toggle_radical(mock_drag, mock_release, mock_press, mock_parser_h
 @patch("PyQt6.QtWidgets.QGraphicsScene.mousePressEvent")
 @patch("PyQt6.QtWidgets.QGraphicsScene.mouseReleaseEvent")
 @patch(
-    "moleditpy.modules.molecule_scene.QApplication.startDragDistance", return_value=1000
+    "moleditpy.ui.molecule_scene.QApplication.startDragDistance", return_value=1000
 )
 def test_scene_toggle_charge(mock_drag, mock_release, mock_press, mock_parser_host):
     scene = setup_scene_with_view(mock_parser_host)
@@ -69,7 +69,7 @@ def test_scene_toggle_charge(mock_drag, mock_release, mock_press, mock_parser_ho
     atom_item.update_style = MagicMock()
 
     with (
-        patch("moleditpy.modules.molecule_scene.isinstance", return_value=True),
+        patch("moleditpy.ui.molecule_scene.isinstance", return_value=True),
         patch.object(MoleculeScene, "itemAt", return_value=atom_item),
     ):
         event = create_mock_event(QPointF(100, 100))
@@ -168,7 +168,7 @@ def test_double_click_select_component(mock_dbl, mock_parser_host):
             return _orig_isinstance(obj, types)
 
         with patch(
-            "moleditpy.modules.molecule_scene.isinstance", side_effect=mock_isinstance
+            "moleditpy.ui.molecule_scene.isinstance", side_effect=mock_isinstance
         ):
             event = create_mock_event(QPointF(0, 0))
             scene.mouseDoubleClickEvent(event)

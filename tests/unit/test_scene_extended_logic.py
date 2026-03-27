@@ -1,9 +1,9 @@
 import pytest
 from PyQt6.QtCore import Qt, QPointF
 from PyQt6.QtWidgets import QGraphicsView, QGraphicsScene, QApplication
-from moleditpy.modules.molecule_scene import MoleculeScene
-from moleditpy.modules.atom_item import AtomItem
-from moleditpy.modules.bond_item import BondItem
+from moleditpy.ui.molecule_scene import MoleculeScene
+from moleditpy.ui.atom_item import AtomItem
+from moleditpy.ui.bond_item import BondItem
 from unittest.mock import MagicMock, patch
 
 @pytest.fixture

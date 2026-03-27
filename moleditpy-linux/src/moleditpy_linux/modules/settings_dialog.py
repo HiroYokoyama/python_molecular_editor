@@ -34,7 +34,7 @@ from PyQt6.QtWidgets import (
 try:
     from .constants import CPK_COLORS
 except ImportError:
-    from modules.constants import CPK_COLORS
+    from moleditpy.utils.constants import CPK_COLORS
 
 
 class SettingsDialog(QDialog):

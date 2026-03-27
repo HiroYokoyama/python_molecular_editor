@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 from PyQt6.QtCore import Qt, QPointF
 from PyQt6.QtGui import QColor, QBrush
 from PyQt6.QtWidgets import QMessageBox, QApplication
-from moleditpy.modules.constants import DEFAULT_CPK_COLORS
+from moleditpy.utils.constants import DEFAULT_CPK_COLORS
 
 def test_load_command_line_file_with_plugin(window, monkeypatch):
     """Test that load_command_line_file uses plugin openers when available."""
@@ -42,7 +42,7 @@ def test_load_command_line_file_default_extensions(window, monkeypatch):
 
 def test_update_cpk_colors_from_settings(window):
     """Test that CPK colors are updated correctly from settings overrides."""
-    from moleditpy.modules import constants
+    from moleditpy.utils import constants
     
     # Define an override
     overrides = {"C": "#FF0000"}  # Carbon as Red

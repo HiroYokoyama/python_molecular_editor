@@ -20,7 +20,7 @@ from PyQt6.QtWidgets import QDialog, QHBoxLayout, QLabel, QPushButton, QVBoxLayo
 try:
     from .constants import VERSION
 except ImportError:
-    from modules.constants import VERSION
+    from moleditpy.utils.constants import VERSION
 
 
 class AboutDialog(QDialog):

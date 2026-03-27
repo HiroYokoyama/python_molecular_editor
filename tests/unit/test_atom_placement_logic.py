@@ -2,8 +2,8 @@ import pytest
 import math
 from unittest.mock import MagicMock
 from PyQt6.QtCore import QPointF
-from moleditpy.modules.molecular_scene_handler import KeyboardMixin
-from moleditpy.modules.atom_item import AtomItem
+from moleditpy.ui.molecular_scene_handler import KeyboardMixin
+from moleditpy.ui.atom_item import AtomItem
 
 def MockAtom(pos=QPointF(0,0), symbol="C"):
     atom = MagicMock(spec=AtomItem)

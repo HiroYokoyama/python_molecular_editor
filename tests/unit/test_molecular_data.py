@@ -3,8 +3,8 @@
 import pytest
 from rdkit import Chem
 from rdkit.Chem import Descriptors, AllChem, rdMolDescriptors
-from moleditpy.modules.molecular_data import MolecularData
-from moleditpy.modules.constants import ANGSTROM_PER_PIXEL
+from moleditpy.core.molecular_data import MolecularData
+from moleditpy.utils.constants import ANGSTROM_PER_PIXEL
 from PyQt6.QtCore import QPointF
 
 

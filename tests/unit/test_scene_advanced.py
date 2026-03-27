@@ -3,10 +3,10 @@ from PyQt6.QtWidgets import QApplication, QGraphicsScene, QGraphicsView, QMenu
 from PyQt6.QtCore import Qt, QPointF, QRectF, QMimeData
 from PyQt6.QtGui import QClipboard
 
-from moleditpy.modules.molecule_scene import MoleculeScene
-from moleditpy.modules.molecular_data import MolecularData
-from moleditpy.modules.atom_item import AtomItem
-from moleditpy.modules.bond_item import BondItem
+from moleditpy.ui.molecule_scene import MoleculeScene
+from moleditpy.core.molecular_data import MolecularData
+from moleditpy.ui.atom_item import AtomItem
+from moleditpy.ui.bond_item import BondItem
 
 # Helper for mouse events
 from unittest.mock import MagicMock, patch

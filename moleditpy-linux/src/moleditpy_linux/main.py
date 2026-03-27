@@ -18,9 +18,9 @@ import logging
 from PyQt6.QtWidgets import QApplication
 
 try:
-    from .modules.main_window import MainWindow
+    from .moleditpy.ui.main_window import MainWindow
 except ImportError:
-    from modules.main_window import MainWindow
+    from moleditpy.ui.main_window import MainWindow
 
 
 def setup_logging():

@@ -12,16 +12,14 @@ if app is None:
     app = QApplication(sys.argv)
 
 # Import all geometry measuring logics from the application:
-from moleditpy.modules.angle_dialog import AngleDialog
-from moleditpy.modules.dihedral_dialog import DihedralDialog
-from moleditpy.modules.bond_length_dialog import BondLengthDialog
-from moleditpy.modules.mol_geometry import calculate_dihedral, adjust_bond_angle
-from moleditpy.modules.alignment_dialog import AlignmentDialog
-from moleditpy.modules.align_plane_dialog import AlignPlaneDialog
-from moleditpy.modules.main_window_edit_3d import MainWindowEdit3d
-from moleditpy.modules.custom_interactor_style import CustomInteractorStyle
-from moleditpy.modules.alignment_dialog import AlignmentDialog
-from moleditpy.modules.align_plane_dialog import AlignPlaneDialog
+from moleditpy.ui.angle_dialog import AngleDialog
+from moleditpy.ui.dihedral_dialog import DihedralDialog
+from moleditpy.ui.bond_length_dialog import BondLengthDialog
+from moleditpy.core.mol_geometry import calculate_dihedral, adjust_bond_angle
+from moleditpy.ui.alignment_dialog import AlignmentDialog
+from moleditpy.ui.align_plane_dialog import AlignPlaneDialog
+from moleditpy.ui.edit_3d import MainWindowEdit3d
+from moleditpy.ui.custom_interactor_style import CustomInteractorStyle
 
 def setup_test_molecule(smiles: str):
     """Creates an optimized 3D RDKit molecule from SMILES for testing."""

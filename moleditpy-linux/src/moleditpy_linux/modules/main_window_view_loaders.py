@@ -40,7 +40,7 @@ try:
     from .constants import VERSION
 except ImportError:
     # Fallback to absolute imports for script-style execution
-    from modules.constants import VERSION
+    from moleditpy.utils.constants import VERSION
 
 
 # --- Class Definition ---

@@ -39,19 +39,19 @@ try:
     from .main_window_view_loaders import MainWindowViewLoaders
 except (AttributeError, RuntimeError, TypeError):
     # Fallback to absolute imports for script-style execution
-    from modules.main_window_app_state import MainWindowAppState
-    from modules.main_window_compute import MainWindowCompute
-    from modules.main_window_dialog_manager import MainWindowDialogManager
-    from modules.main_window_edit_3d import MainWindowEdit3d
-    from modules.main_window_edit_actions import MainWindowEditActions
-    from modules.main_window_export import MainWindowExport
-    from modules.main_window_main_init import MainWindowMainInit
-    from modules.main_window_molecular_parsers import MainWindowMolecularParsers
-    from modules.main_window_project_io import MainWindowProjectIo
-    from modules.main_window_string_importers import MainWindowStringImporters
-    from modules.main_window_ui_manager import MainWindowUiManager
-    from modules.main_window_view_3d import MainWindowView3d
-    from modules.main_window_view_loaders import MainWindowViewLoaders
+    from moleditpy.core.app_state import MainWindowAppState
+    from moleditpy.core.compute_engine import MainWindowCompute
+    from moleditpy.ui.dialog_manager import MainWindowDialogManager
+    from moleditpy.ui.edit_3d import MainWindowEdit3d
+    from moleditpy.ui.edit_actions import MainWindowEditActions
+    from moleditpy.ui.export_logic import MainWindowExport
+    from moleditpy.ui.main_window_init import MainWindowMainInit
+    from moleditpy.core.molecular_parsers import MainWindowMolecularParsers
+    from moleditpy.core.project_io import MainWindowProjectIo
+    from moleditpy.core.string_importers import MainWindowStringImporters
+    from moleditpy.ui.ui_manager import MainWindowUiManager
+    from moleditpy.ui.view_3d import MainWindowView3d
+    from moleditpy.ui.view_loaders import MainWindowViewLoaders
 
 
 class MainWindow(

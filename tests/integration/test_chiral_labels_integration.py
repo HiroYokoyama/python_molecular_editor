@@ -3,7 +3,7 @@ import sys
 import numpy as np
 from rdkit import Chem
 from PyQt6.QtCore import Qt
-from moleditpy.modules.mirror_dialog import MirrorDialog
+from moleditpy.ui.mirror_dialog import MirrorDialog
 
 
 def test_chiral_labels_toggle_3d(window, qtbot):

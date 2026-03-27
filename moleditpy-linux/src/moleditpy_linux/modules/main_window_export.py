@@ -41,8 +41,8 @@ try:
     from .bond_item import BondItem
 except ImportError:
     # Fallback to absolute imports for script-style execution
-    from modules.atom_item import AtomItem
-    from modules.bond_item import BondItem
+    from moleditpy.ui.atom_item import AtomItem
+    from moleditpy.ui.bond_item import BondItem
 
 
 # --- Class Definition ---

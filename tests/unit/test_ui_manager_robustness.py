@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import MagicMock, patch
 from PyQt6.QtWidgets import QMainWindow, QApplication
-from moleditpy.modules.main_window_ui_manager import MainWindowUiManager
+from moleditpy.ui.ui_manager import MainWindowUiManager
 
 class MockUiManager(MainWindowUiManager, QMainWindow):
     def __init__(self):
