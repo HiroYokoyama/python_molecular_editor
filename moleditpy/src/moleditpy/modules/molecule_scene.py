@@ -406,7 +406,8 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
             atom.prepareGeometryChange()
             # Toggle radical state (0 -> 1 -> 2 -> 0)
             atom.radical = (atom.radical + 1) % 3
-            self.data.atoms[atom.atom_id]["radical"] = atom.radical
+            if atom.atom_id in self.data.atoms:
+                self.data.atoms[atom.atom_id]["radical"] = atom.radical
             atom.update_style()
             self.data_changed_in_event = True
             self.start_atom = None
@@ -424,7 +425,8 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
             atom.prepareGeometryChange()
             delta = 1 if self.mode == "charge_plus" else -1
             atom.charge += delta
-            self.data.atoms[atom.atom_id]["charge"] = atom.charge
+            if atom.atom_id in self.data.atoms:
+                self.data.atoms[atom.atom_id]["charge"] = atom.charge
             atom.update_style()
             self.data_changed_in_event = True
             self.start_atom = None
@@ -600,7 +602,7 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
             bonds_to_update = set()
             for atom in moved_atoms:
                 try:
-                    self.data.atoms[atom.atom_id]["pos"] = atom.pos()
+                    self.data.set_atom_pos(atom.atom_id, atom.pos())
                     bonds_to_update.update(atom.bonds)
                 except RuntimeError:
                     # Skip if object is deleted

@@ -29,8 +29,8 @@ def test_add_atom_stores_properties():
     aid = data.add_atom("N", QPointF(5.5, -3.2), charge=-1, radical=1)
     atom = data.atoms[aid]
     assert atom["symbol"] == "N"
-    assert atom["pos"].x() == pytest.approx(5.5)
-    assert atom["pos"].y() == pytest.approx(-3.2)
+    assert atom["pos"][0] == pytest.approx(5.5)
+    assert atom["pos"][1] == pytest.approx(-3.2)
     assert atom["charge"] == -1
     assert atom["radical"] == 1
 

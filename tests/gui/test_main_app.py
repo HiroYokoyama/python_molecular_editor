@@ -135,7 +135,7 @@ def test_molecular_data_add_atom():
     assert atom_id == 0
     assert 0 in data.atoms
     assert data.atoms[0]["symbol"] == "C"
-    assert data.atoms[0]["pos"] == QPointF(0, 0)
+    assert data.atoms[0]["pos"] == (0.0, 0.0)
     assert data._next_atom_id == 1
     assert 0 in data.adjacency_list
 
@@ -713,10 +713,10 @@ def test_copy_paste(window, qtbot, monkeypatch):
     assert len(window.data.bonds) == 2
 
     # 7. 新しい原子 (id 2, 3) の位置が (100, 50) 中心になっているか
-    assert window.data.atoms[2]["pos"].x() > 50
-    assert window.data.atoms[2]["pos"].y() > 0
-    assert window.data.atoms[3]["pos"].x() > 50
-    assert window.data.atoms[3]["pos"].y() > 0
+    assert window.data.atoms[2]["pos"][0] > 50
+    assert window.data.atoms[2]["pos"][1] > 0
+    assert window.data.atoms[3]["pos"][0] > 50
+    assert window.data.atoms[3]["pos"][1] > 0
 
 
 @pytest.mark.gui
@@ -1430,7 +1430,7 @@ def test_user_template_dialog_save_and_use(window, qtbot, monkeypatch):
     assert len(window.data.atoms) == 2  # 既存の1 + 新規の1
     assert 1 in window.data.atoms  # 新しい原子 ID 1
     assert window.data.atoms[1]["symbol"] == "C"
-    assert window.data.atoms[1]["pos"].x() > 50  # (100, 100) 付近に配置
+    assert window.data.atoms[1]["pos"][0] > 50  # (100, 100) 付近に配置
 
 
 @pytest.mark.gui

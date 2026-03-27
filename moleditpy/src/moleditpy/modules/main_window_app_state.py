@@ -63,7 +63,7 @@ class MainWindowAppState:
         atoms = {
             atom_id: {
                 "symbol": data["symbol"],
-                "pos": (data["item"].pos().x(), data["item"].pos().y()),
+                "pos": data["pos"],  # Already a tuple (x, y)
                 "charge": data.get("charge", 0),
                 "radical": data.get("radical", 0),
             }
@@ -182,17 +182,18 @@ class MainWindowAppState:
             self.constraints_3d = []
 
         for atom_id, data in raw_atoms.items():
-            pos = QPointF(data["pos"][0], data["pos"][1])
+            raw_pos = tuple(data["pos"])
+            pos_q = QPointF(raw_pos[0], raw_pos[1])
             charge = data.get("charge", 0)
             radical = data.get("radical", 0)
-            # Pass radical to AtomItem
+            # Pass QPointF to AtomItem for UI positioning
             atom_item = AtomItem(
-                atom_id, data["symbol"], pos, charge=charge, radical=radical
+                atom_id, data["symbol"], pos_q, charge=charge, radical=radical
             )
-            # Store radical in data
+            # Store raw tuple in data
             self.data.atoms[atom_id] = {
                 "symbol": data["symbol"],
-                "pos": pos,
+                "pos": raw_pos,
                 "item": atom_item,
                 "charge": charge,
                 "radical": radical,
@@ -316,8 +317,8 @@ class MainWindowAppState:
             "atoms": {
                 k: (
                     v["symbol"],
-                    v["item"].pos().x(),
-                    v["item"].pos().y(),
+                    v["pos"][0],
+                    v["pos"][1],
                     v.get("charge", 0),
                     v.get("radical", 0),
                 )
@@ -527,12 +528,12 @@ class MainWindowAppState:
         if self.data.atoms:
             atoms_2d = []
             for atom_id, data in self.data.atoms.items():
-                pos = data["item"].pos()
+                pos = data["pos"]
                 atom_data = {
                     "id": atom_id,
                     "symbol": data["symbol"],
-                    "x": pos.x(),
-                    "y": pos.y(),
+                    "x": pos[0],
+                    "y": pos[1],
                     "charge": data.get("charge", 0),
                     "radical": data.get("radical", 0),
                 }
@@ -750,16 +751,17 @@ class MainWindowAppState:
             for atom_data in atoms_2d:
                 atom_id = atom_data["id"]
                 symbol = atom_data["symbol"]
-                pos = QPointF(atom_data["x"], atom_data["y"])
+                raw_pos = (float(atom_data["x"]), float(atom_data["y"]))
+                pos_q = QPointF(raw_pos[0], raw_pos[1])
                 charge = atom_data.get("charge", 0)
                 radical = atom_data.get("radical", 0)
 
                 atom_item = AtomItem(
-                    atom_id, symbol, pos, charge=charge, radical=radical
+                    atom_id, symbol, pos_q, charge=charge, radical=radical
                 )
                 self.data.atoms[atom_id] = {
                     "symbol": symbol,
-                    "pos": pos,
+                    "pos": raw_pos,
                     "item": atom_item,
                     "charge": charge,
                     "radical": radical,

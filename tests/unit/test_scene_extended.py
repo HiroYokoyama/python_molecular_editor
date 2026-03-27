@@ -304,7 +304,7 @@ def test_scene_drag_and_drop_atom(mock_parser_host):
             scene.mouseReleaseEvent(move_event)
 
     assert atom_item.pos() == new_pos
-    assert mock_parser_host.data.atoms[aid]["pos"] == new_pos
+    assert mock_parser_host.data.atoms[aid]["pos"] == (new_pos.x(), new_pos.y())
     assert mock_parser_host.push_undo_state.called
 
 

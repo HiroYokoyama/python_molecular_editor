@@ -155,7 +155,7 @@ def test_drag_and_drop_atom(scene_setup, monkeypatch):
     # Verify position updated
     assert a1_item.pos() == new_pos
     # Verify data model updated
-    assert data.atoms[a1_id]["pos"] == new_pos
+    assert data.atoms[a1_id]["pos"] == (new_pos.x(), new_pos.y())
     # Verify undo state pushed
     assert len(window.undo_stack) > 0
 

@@ -661,6 +661,8 @@ class MainWindowEditActions:
 
                 new_pos = QPointF(center_x + new_dx, center_y + new_dy)
                 atom.setPos(new_pos)
+                if atom.atom_id in self.data.atoms:
+                    self.data.set_atom_pos(atom.atom_id, new_pos)
 
             # Update bonds
             self.scene.update_connected_bonds(target_atoms)
@@ -1011,7 +1013,7 @@ class MainWindowEditActions:
                     sy = (-(rdkit_pos.y - rdkit_cy) * SCALE) + view_center.y()
                     new_scene_pos = QPointF(sx, sy)
                     item.setPos(new_scene_pos)
-                    self.data.atoms[atom_id]["pos"] = new_scene_pos
+                    self.data.set_atom_pos(atom_id, new_scene_pos)
 
             # Update all bond positions
             # Guard against partially-deleted Qt wrappers: skip items that
@@ -1194,7 +1196,7 @@ class MainWindowEditActions:
                 item = self.data.atoms[atom_id]["item"]
                 new_pos = item.pos() + vector
                 item.setPos(new_pos)
-                self.data.atoms[atom_id]["pos"] = new_pos
+                self.data.set_atom_pos(atom_id, new_pos)
 
         # Step 5: Update display and state
         for bond_data in self.data.bonds.values():

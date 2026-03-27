@@ -98,14 +98,9 @@ def test_coordinate_mapping_fallback():
     data.add_atom("X", QPointF(0, 0))
     data.add_bond(0, 1, order=1)
 
-    # Mock items for fallback logic
-    item1 = MagicMock()
-    item1.pos.return_value = QPointF(0.0, 0.0)
-    data.atoms[0]["item"] = item1
-
-    item2 = MagicMock()
-    item2.pos.return_value = QPointF(100.0, 0.0)
-    data.atoms[1]["item"] = item2
+    # Set coordinates in the model directly
+    data.set_atom_pos(0, QPointF(0.0, 0.0))
+    data.set_atom_pos(1, QPointF(100.0, 0.0))
 
     mol_block = data.to_mol_block()
     assert "MoleditPy" in mol_block  # Check header of fallback block

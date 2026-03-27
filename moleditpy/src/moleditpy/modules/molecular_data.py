@@ -29,9 +29,15 @@ class MolecularData:
 
     def add_atom(self, symbol, pos, charge=0, radical=0):
         atom_id = self._next_atom_id
+        # Internalize position as raw floats to decouple from UI types (QPointF)
+        if hasattr(pos, "x") and hasattr(pos, "y"):
+            raw_pos = (float(pos.x()), float(pos.y()))
+        else:
+            raw_pos = (float(pos[0]), float(pos[1]))
+
         self.atoms[atom_id] = {
             "symbol": symbol,
-            "pos": pos,
+            "pos": raw_pos,
             "item": None,
             "charge": charge,
             "radical": radical,
@@ -39,6 +45,14 @@ class MolecularData:
         self.adjacency_list[atom_id] = []
         self._next_atom_id += 1
         return atom_id
+
+    def set_atom_pos(self, atom_id, pos):
+        """Update atom position using raw floats or QPointF."""
+        if atom_id in self.atoms:
+            if hasattr(pos, "x") and hasattr(pos, "y"):
+                self.atoms[atom_id]["pos"] = (float(pos.x()), float(pos.y()))
+            else:
+                self.atoms[atom_id]["pos"] = (float(pos[0]), float(pos[1]))
 
     def add_bond(self, id1, id2, order=1, stereo=0):
         # For stereo bonds, do not sort because ID order determines direction.
@@ -182,9 +196,10 @@ class MolecularData:
                 idx = atom_id_to_idx_map[atom_id]
                 pos = data.get("pos")
                 if pos:
-                    ax = pos.x() * ANGSTROM_PER_PIXEL
+                    # pos is now a tuple (x, y)
+                    ax = pos[0] * ANGSTROM_PER_PIXEL
                     ay = (
-                        -pos.y() * ANGSTROM_PER_PIXEL
+                        -pos[1] * ANGSTROM_PER_PIXEL
                     )  # Invert Y-coordinate (screen coordinates -> chemical coordinates)
                     conf.SetAtomPosition(idx, (ax, ay, 0.0))
         final_mol.AddConformer(conf)
@@ -390,8 +405,10 @@ class MolecularData:
         mol_block += f"{num_atoms:3d}{num_bonds:3d}  0  0  0  0  0  0  0  0999 V2000\n"
         for old_id, atom in self.atoms.items():
             # Convert scene pixel coordinates to angstroms when emitting MOL block
-            x_px = atom["item"].pos().x()
-            y_px = -atom["item"].pos().y()
+            pos = atom.get("pos")
+            if not pos:
+                continue
+            x_px, y_px = pos[0], -pos[1]
             x, y = x_px * ANGSTROM_PER_PIXEL, y_px * ANGSTROM_PER_PIXEL
             z, symbol = 0.0, atom["symbol"]
             charge = atom.get("charge", 0)

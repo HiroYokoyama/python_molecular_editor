@@ -168,8 +168,8 @@ class MainWindowDialogManager:
                     {
                         "id": atom_id,
                         "symbol": atom_info["symbol"],
-                        "x": pos.x(),
-                        "y": pos.y(),
+                        "x": pos[0],
+                        "y": pos[1],
                         "charge": atom_info.get("charge", 0),
                         "radical": atom_info.get("radical", 0),
                     }

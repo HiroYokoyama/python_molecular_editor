@@ -126,7 +126,7 @@ def test_pmeprj_serialization_roundtrip(dummy_window):
     assert len(mw.data.atoms) == 2
     assert mw.data.atoms[aid1]["symbol"] == "C"
     assert mw.data.atoms[aid2]["symbol"] == "O"
-    assert mw.data.atoms[aid1]["pos"].x() == 10
+    assert mw.data.atoms[aid1]["pos"][0] == 10
     
     # 6. Verify 3D Restored
     assert mw.current_mol is not None
