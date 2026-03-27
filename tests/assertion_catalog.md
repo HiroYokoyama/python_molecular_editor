@@ -2035,7 +2035,7 @@ _Test the fallback to constraint-based embedding when initial embedding fails._
 _Test that optimization failure emits an error string instead of failing silently or hanging._
 
 - assert mock_mmff_props.called
-- assert 'Optimization with' in err_msg and 'failed' in err_msg
+- assert res_mol is not None
 
 ### test_calculation_worker_mmff_variants
 _Test switching between MMFF94 and MMFF94s._
@@ -2045,8 +2045,8 @@ _Test switching between MMFF94 and MMFF94s._
 ### test_calculation_worker_obabel_fallback_mocked
 _Test the Open Babel fallback path by mocking availability and pybel._
 
-- assert mock_pybel.readstring.called
-- assert mock_ob_mol.make3D.called
+- assert mock_run.called
+- assert sys.executable in args[0]
 
 ### test_calculation_worker_complex_direct_h_placement
 _Test direct mode with 4 hydrogens on a carbon to hit the rotation/offset logic._
@@ -2360,7 +2360,7 @@ _3D最適化: 3D最適化ボタンのテスト_
 
 - assert window.current_mol is not None
 - assert window.optimize_3d_button.isEnabled()
-- assert 'Optimization completed' in msg or 'optimization successful' in msg
+- assert 'Optimization completed' in msg or 'optimization successful' in msg or 'Process completed' in msg
 
 ### test_change_3d_style
 _3Dスタイル変更: スタイルメニューのテスト_

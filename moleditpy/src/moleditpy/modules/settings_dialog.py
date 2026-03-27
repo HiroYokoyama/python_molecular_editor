@@ -30,6 +30,7 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+import logging
 
 try:
     from .constants import CPK_COLORS
@@ -501,48 +502,45 @@ class SettingsDialog(QDialog):
         Called when settings change externally (e.g., Reset All in main settings) so
         the dialog reflects the current stored overrides.
         """
-        try:
-            # Update element button colors from parent.settings cpks
-            overrides = (
-                self.parent_window.settings.get("cpk_colors", {})
-                if self.parent_window and hasattr(self.parent_window, "settings")
-                else {}
+        if not self.parent_window:
+            return
+
+        settings = getattr(self.parent_window, "settings", {})
+        overrides = settings.get("cpk_colors", {})
+
+        # Update element button colors
+        for s, btn in self.element_buttons.items():
+            if not btn: # Check if the button still exists
+                continue
+            
+            override = overrides.get(s)
+            q_color = (
+                QColor(override)
+                if override
+                else CPK_COLORS.get(s, CPK_COLORS["DEFAULT"])
             )
-            for s, btn in self.element_buttons.items():
-                override = overrides.get(s)
-                q_color = (
-                    QColor(override)
-                    if override
-                    else CPK_COLORS.get(s, CPK_COLORS["DEFAULT"])
-                )
-                brightness = (
-                    q_color.red() * 299
-                    + q_color.green() * 587
-                    + q_color.blue() * 114
-                ) / 1000
-                text_color = "white" if brightness < 128 else "black"
-                btn.setStyleSheet(
-                    f"background-color: {q_color.name()}; color: {text_color}; border: 1px solid #555; font-weight: bold;"
-                )
-            # Update BS color button from parent settings
-            if (
-                hasattr(self, "bs_button")
-                and self.parent_window
-                and hasattr(self.parent_window, "settings")
-            ):
-                bs_hex = self.parent_window.settings.get(
-                    "ball_stick_bond_color",
-                    self.parent_window.default_settings.get(
-                        "ball_stick_bond_color", "#7F7F7F"
-                    ),
-                )
-                self.bs_button.setStyleSheet(
-                    f"background-color: {bs_hex}; border: 1px solid #888;"
-                )
-                self.bs_button.setToolTip(bs_hex)
-        except (AttributeError, RuntimeError, ValueError, TypeError) as e:
-            import logging
-            logging.warning(f"refresh_ui: {e}")
+            brightness = (
+                q_color.red() * 299
+                + q_color.green() * 587
+                + q_color.blue() * 114
+            ) / 1000
+            text_color = "white" if brightness < 128 else "black"
+            btn.setStyleSheet(
+                f"background-color: {q_color.name()}; color: {text_color}; border: 1px solid #555; font-weight: bold;"
+            )
+
+        # Update BS color button from parent settings
+        if hasattr(self, "bs_button") and self.bs_button:
+            bs_hex = settings.get(
+                "ball_stick_bond_color",
+                getattr(self.parent_window, "default_settings", {}).get(
+                    "ball_stick_bond_color", "#7F7F7F"
+                ),
+            )
+            self.bs_button.setStyleSheet(
+                f"background-color: {bs_hex}; border: 1px solid #888;"
+            )
+            self.bs_button.setToolTip(bs_hex)
 
     def create_ball_stick_tab(self):
         """Create Ball and Stick settings tab"""
@@ -1083,66 +1081,53 @@ class SettingsDialog(QDialog):
             if not (self.parent_window and hasattr(self.parent_window, "settings")):
                 return
 
-            try:
-                # 1. Update core settings
-                self.parent_window.settings.update(self.default_settings)
-                if "cpk_colors" in self.parent_window.settings:
-                    self.parent_window.settings["cpk_colors"] = {}
-                
-                self.parent_window.settings["ball_stick_bond_color"] = self.default_settings.get(
-                    "ball_stick_bond_color", "#7F7F7F"
-                )
+            # 1. Update core settings
+            settings = getattr(self.parent_window, "settings", {})
+            settings.update(self.default_settings)
+            if "cpk_colors" in settings:
+                settings["cpk_colors"] = {}
+            
+            settings["ball_stick_bond_color"] = self.default_settings.get(
+                "ball_stick_bond_color", "#7F7F7F"
+            )
 
-                # 2. Sync parent state
-                if hasattr(self.parent_window, "update_cpk_colors_from_settings"):
-                    self.parent_window.update_cpk_colors_from_settings()
-                if hasattr(self.parent_window, "apply_3d_settings"):
-                    self.parent_window.apply_3d_settings()
+            # 2. Sync parent state
+            if hasattr(self.parent_window, "update_cpk_colors_from_settings"):
+                self.parent_window.update_cpk_colors_from_settings()
+            if hasattr(self.parent_window, "apply_3d_settings"):
+                self.parent_window.apply_3d_settings()
 
-                # 3. Redraw molecule
-                current_mol = getattr(self.parent_window, "current_mol", None)
-                if current_mol and hasattr(self.parent_window, "draw_molecule_3d"):
-                    self.parent_window.draw_molecule_3d(current_mol)
+            # 3. Redraw molecule
+            current_mol = getattr(self.parent_window, "current_mol", None)
+            if current_mol and hasattr(self.parent_window, "draw_molecule_3d"):
+                self.parent_window.draw_molecule_3d(current_mol)
 
-                # 4. Refresh 2D scene items
-                scene = getattr(self.parent_window, "scene", None)
-                if scene:
-                    for it in scene.items():
-                        try:
-                            if hasattr(it, "update_style"):
-                                it.update_style()
-                        except (RuntimeError, ValueError, TypeError):
-                            # Suppress style refresh errors for items that might be in a transient/deleted state.
-                            pass
+            # 4. Refresh 2D scene items
+            scene = getattr(self.parent_window, "scene", None)
+            if scene:
+                for it in scene.items():
+                    if it and hasattr(it, "update_style"):
+                        it.update_style()
 
-                # 5. Refresh opt/conv actions
-                opt_method = self.parent_window.settings.get("optimization_method", "MMFF_RDKIT")
-                if hasattr(self.parent_window, "optimization_method"):
-                    self.parent_window.optimization_method = opt_method
+            # 5. Refresh opt/conv actions
+            opt_method = self.parent_window.settings.get("optimization_method", "MMFF_RDKIT")
+            if hasattr(self.parent_window, "optimization_method"):
+                self.parent_window.optimization_method = opt_method
 
-                opt_actions = getattr(self.parent_window, "opt3d_actions", {})
-                for k, act in opt_actions.items():
-                    try:
-                        act.setChecked(k.upper() == (opt_method or "").upper())
-                    except (RuntimeError, ValueError, TypeError) as e:
-                        logging.debug(f"Suppressed exception: {e}")  # Suppress optimization action sync errors
+            opt_actions = getattr(self.parent_window, "opt3d_actions", {})
+            for k, act in opt_actions.items():
+                if act:
+                    act.setChecked(k.upper() == (opt_method or "").upper())
 
-                conv_mode = self.parent_window.settings.get("3d_conversion_mode", "fallback")
-                conv_actions = getattr(self.parent_window, "conv_actions", {})
-                for k, act in conv_actions.items():
-                    try:
-                        act.setChecked(k == conv_mode)
-                    except (RuntimeError, ValueError, TypeError) as e:
-                        logging.debug(f"Suppressed exception: {e}")  # Suppress conversion action sync errors
+            conv_mode = settings.get("3d_conversion_mode", "fallback")
+            conv_actions = getattr(self.parent_window, "conv_actions", {})
+            for k, act in conv_actions.items():
+                if act:
+                    act.setChecked(k == conv_mode)
 
-                # 6. Mark dirty
-                try:
-                    self.parent_window.settings_dirty = True
-                except AttributeError:
-                    # Suppress if parent window is partially torn down and lacks settings_dirty flag.
-                    pass
-            except (AttributeError, RuntimeError, ValueError) as e:
-                logging.debug(f"Suppressed exception: {e}")  # Suppress global settings sync errors
+            # 6. Mark dirty
+            if hasattr(self.parent_window, "settings_dirty"):
+                self.parent_window.settings_dirty = True
 
             QMessageBox.information(
                 self, "Reset Complete", "All settings have been reset to defaults."
@@ -1318,13 +1303,11 @@ class SettingsDialog(QDialog):
         color = QColorDialog.getColor(QColor(cur), self)
         if color.isValid():
             self.bs_bond_color = color.name()
-            try:
+            if hasattr(self, "bs_bond_color_button") and self.bs_bond_color_button:
                 self.bs_bond_color_button.setStyleSheet(
                     f"background-color: {self.bs_bond_color}; border: 1px solid #888;"
                 )
                 self.bs_bond_color_button.setToolTip(self.bs_bond_color)
-            except (AttributeError, RuntimeError, ValueError, TypeError) as e:
-                logging.debug(f"Suppressed exception: {e}")  # Suppress bond color update errors
 
     def apply_settings(self):
         """Apply settings (dialog stays open)"""
@@ -1335,32 +1318,22 @@ class SettingsDialog(QDialog):
         self.parent_window.settings.update(settings)
         
         # Mark settings dirty
-        try:
+        if hasattr(self.parent_window, "settings_dirty"):
             self.parent_window.settings_dirty = True
-        except (AttributeError, RuntimeError, ValueError, TypeError):
-            # Suppress if parent window is already partially torn down or flag is missing.
-            pass
+
         # Apply 3D view settings
         if hasattr(self.parent_window, "apply_3d_settings"):
             self.parent_window.apply_3d_settings()
         
         # Update CPK colors
         if hasattr(self.parent_window, "update_cpk_colors_from_settings"):
-            try:
-                self.parent_window.update_cpk_colors_from_settings()
-            except (RuntimeError, TypeError) as e:
-                logging.debug(f"Suppressed exception: {e}")  # Suppress CPK color update sync errors
+            self.parent_window.update_cpk_colors_from_settings()
 
         # Refresh other dialogs
         for w in QApplication.topLevelWidgets():
-            try:
-                # Check for ColorSettingsDialog without dynamic import if possible, 
-                # but dynamic import was used to avoid circular dependencies.
-                # We'll stick to dynamic import but clean up the call.
-                if type(w).__name__ == "ColorSettingsDialog" and hasattr(w, "refresh_ui"):
-                    w.refresh_ui()
-            except (RuntimeError, ValueError, TypeError) as e:
-                logging.debug(f"Suppressed exception: {e}") # Silent for UI refresh of other windows
+            # Check for ColorSettingsDialog without dynamic name check but cleaning up.
+            if w and type(w).__name__ == "ColorSettingsDialog" and hasattr(w, "refresh_ui"):
+                w.refresh_ui()
 
         # Redraw molecule
         current_mol = getattr(self.parent_window, "current_mol", None)
@@ -1370,21 +1343,20 @@ class SettingsDialog(QDialog):
         # Apply 2D view settings
         scene = getattr(self.parent_window, "scene", None)
         if scene:
-            try:
-                bg_col_2d = self.parent_window.settings.get("background_color_2d", "#FFFFFF")
-                scene.setBackgroundBrush(QColor(bg_col_2d))
+            parent_settings = getattr(self.parent_window, "settings", {})
+            bg_col_2d = parent_settings.get("background_color_2d", "#FFFFFF")
+            scene.setBackgroundBrush(QColor(bg_col_2d))
 
-                for item in scene.items():
+            for item in scene.items():
+                if item:
                     if hasattr(item, "update_style"):
                         item.update_style()
                     elif hasattr(item, "update"):
                         item.update()
 
-                view_2d = getattr(self.parent_window, "view_2d", None)
-                if view_2d and hasattr(view_2d, "viewport"):
-                    view_2d.viewport().update()
-            except (RuntimeError, ValueError, TypeError) as e:
-                logging.debug(f"Suppressed exception: {e}")  # Suppress 2D scene item refresh errors
+            view_2d = getattr(self.parent_window, "view_2d", None)
+            if view_2d and hasattr(view_2d, "viewport"):
+                view_2d.viewport().update()
 
         # Update status bar
         if hasattr(self.parent_window, "statusBar") and self.parent_window.statusBar():
@@ -1402,11 +1374,8 @@ class SettingsDialog(QDialog):
             settings["skip_chemistry_checks"] = enabled
         
         # Mark dirty
-        try:
+        if hasattr(self, "settings_dirty"):
             self.settings_dirty = True
-        except AttributeError:
-            # Suppress if the settings object is not yet fully initialized or during early teardown.
-            pass
         # If skip is enabled, allow Optimize button; otherwise, respect chem_check flags
 
     def accept(self):
@@ -1651,12 +1620,10 @@ class SettingsDialog(QDialog):
                 self.default_settings.get("aromatic_torus_thickness_factor", 0.6),
             )
         )
-        try:
+        if hasattr(self, "aromatic_torus_thickness_slider") and self.aromatic_torus_thickness_slider:
             self.aromatic_torus_thickness_slider.setValue(int(thickness_factor * 100))
+        if hasattr(self, "aromatic_torus_thickness_label") and self.aromatic_torus_thickness_label:
             self.aromatic_torus_thickness_label.setText(f"{thickness_factor:.1f}")
-        except (AttributeError, RuntimeError, ValueError, TypeError):  
-            # Handle UI sync failure for aromatic torus slider
-            pass
 
         # 7. 2D Settings
         bw_2d = settings_dict.get(

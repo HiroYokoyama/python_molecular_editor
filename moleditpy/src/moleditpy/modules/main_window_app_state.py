@@ -55,7 +55,7 @@ class MainWindowAppState:
 
     def __init__(self):
         """Initialize class. 'self' is MainWindow instance."""
-        self.DEBUG_UNDO = False
+        pass
 
     def get_current_state(self):
         atoms = {
@@ -359,14 +359,6 @@ class MainWindowAppState:
             # by later modifications to objects referenced from the state.
             state = copy.deepcopy(self.get_current_state())
             self.undo_stack.append(state)
-            if getattr(self, "DEBUG_UNDO", False):
-                try:
-                    print(
-                        f"DEBUG_UNDO: push_undo_state -> new stack size: {len(self.undo_stack)}"
-                    )
-                except (AttributeError, RuntimeError, TypeError):  
-                    # Suppress debug output noise during undo/redo state tracking
-                    pass
 
             self.redo_stack.clear()
             # Record changes after initialization
@@ -428,14 +420,6 @@ class MainWindowAppState:
         self.undo_stack.clear()
         self.redo_stack.clear()
         self.push_undo_state()
-        if getattr(self, "DEBUG_UNDO", False):
-            try:
-                print(
-                    f"DEBUG_UNDO: reset_undo_stack -> undo={len(self.undo_stack)} redo={len(self.redo_stack)}"
-                )
-            except (AttributeError, RuntimeError, TypeError):  
-                # Suppress debug output noise
-                pass
 
     def undo(self):
         if len(self.undo_stack) > 1:
@@ -454,15 +438,6 @@ class MainWindowAppState:
             else:
                 # No 3D structure: disable 3D edit features
                 self._enable_3d_edit_actions(False)
-
-        if getattr(self, "DEBUG_UNDO", False):
-            try:
-                print(
-                    f"DEBUG_UNDO: undo -> undo_stack size: {len(self.undo_stack)}, redo_stack size: {len(self.redo_stack)}"
-                )
-            except (AttributeError, RuntimeError, TypeError):  
-                # Suppress debug output noise
-                pass
 
         self.update_undo_redo_actions()
         self.update_realtime_info()
@@ -485,15 +460,6 @@ class MainWindowAppState:
             else:
                 # No 3D structure: disable 3D edit features
                 self._enable_3d_edit_actions(False)
-
-        if getattr(self, "DEBUG_UNDO", False):
-            try:
-                print(
-                    f"DEBUG_UNDO: redo -> undo_stack size: {len(self.undo_stack)}, redo_stack size: {len(self.redo_stack)}"
-                )
-            except (AttributeError, RuntimeError, TypeError):  
-                # Suppress debug output noise
-                pass
 
         self.update_undo_redo_actions()
         self.update_realtime_info()

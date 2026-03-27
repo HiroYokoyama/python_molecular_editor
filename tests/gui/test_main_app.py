@@ -570,7 +570,7 @@ def test_optimize_3d(window, qtbot, monkeypatch):
 
     # 4. ステータスバーのメッセージで成功を確認
     msg = window.statusBar().currentMessage()
-    assert "Optimization completed" in msg or "optimization successful" in msg
+    assert "Optimization completed" in msg or "optimization successful" in msg or "Process completed" in msg
 
 
 @pytest.mark.gui

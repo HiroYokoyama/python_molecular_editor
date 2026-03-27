@@ -836,41 +836,6 @@ def window(app, qtbot, monkeypatch):
 
                         # Provide dummy positions for one atom if not present
                         host.atom_positions_3d = _np.zeros((1, 3))
-                # Add minimal RDKit-like API to dummy mols so UI features
-                # (e.g., Original ID display) detect properties as expected.
-                try:
-                    mol = host.current_mol
-                    if mol is not None:
-                        # Ensure HasProp/GetIntProp/GetAtomWithIdx are present
-                        if not hasattr(mol, "HasProp"):
-                            mol.HasProp = (
-                                lambda prop: True
-                                if prop == "_original_atom_id"
-                                else False
-                            )
-                        if not hasattr(mol, "GetIntProp"):
-                            mol.GetIntProp = lambda p: 0
-                        if not hasattr(mol, "GetAtomWithIdx"):
-
-                            class _FakeAtom:
-                                def __init__(self, idx):
-                                    self._idx = idx
-
-                                def HasProp(self, p):
-                                    return p == "_original_atom_id"
-
-                                def GetIntProp(self, p):
-                                    return self._idx
-
-                            mol.GetAtomWithIdx = lambda i: _FakeAtom(i)
-                        # Ensure menu action is enabled so test can trigger it
-                        try:
-                            if hasattr(host, "show_atom_id_action"):
-                                host.show_atom_id_action.setEnabled(True)
-                        except Exception:
-                            import traceback
-
-                            traceback.print_exc()
                         # Update UI state so menu items reflect the new molecule
                         try:
                             host.update_atom_id_menu_state()
@@ -878,10 +843,45 @@ def window(app, qtbot, monkeypatch):
                             import traceback
 
                             traceback.print_exc()
-                except Exception:
-                    import traceback
+                        # Add minimal RDKit-like API to dummy mols so UI features
+                        # (e.g., Original ID display) detect properties as expected.
+                        try:
+                            mol = host.current_mol
+                            if mol is not None:
+                                # Ensure HasProp/GetIntProp/GetAtomWithIdx are present
+                                if not hasattr(mol, "HasProp"):
+                                    mol.HasProp = (
+                                        lambda prop: True
+                                        if prop == "_original_atom_id"
+                                        else False
+                                    )
+                                if not hasattr(mol, "GetIntProp"):
+                                    mol.GetIntProp = lambda p: 0
+                                if not hasattr(mol, "GetAtomWithIdx"):
 
-                    traceback.print_exc()
+                                    class _FakeAtom:
+                                        def __init__(self, idx):
+                                            self._idx = idx
+
+                                        def HasProp(self, p):
+                                            return p == "_original_atom_id"
+
+                                        def GetIntProp(self, p):
+                                            return self._idx
+
+                                    mol.GetAtomWithIdx = lambda i: _FakeAtom(i)
+                                # Ensure menu action is enabled so test can trigger it
+                                try:
+                                    if hasattr(host, "show_atom_id_action"):
+                                        host.show_atom_id_action.setEnabled(True)
+                                except Exception:
+                                    import traceback
+
+                                    traceback.print_exc()
+                        except Exception:
+                            import traceback
+
+                            traceback.print_exc()
             except Exception:
                 import traceback
 
