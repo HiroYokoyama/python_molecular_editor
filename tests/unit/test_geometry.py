@@ -244,3 +244,68 @@ def test_adjust_bond_angle_collinear():
 
     # Bond length of C from B should be preserved (was 1.0)
     assert np.linalg.norm(positions[2] - positions[1]) == pytest.approx(1.0, abs=1e-12)
+
+
+def test_optimize_2d_coords():
+    """Verify 2D coordinate optimization generating coordinates for a simple molecule."""
+    from rdkit import Chem
+    from moleditpy.core.mol_geometry import optimize_2d_coords
+
+    mol = Chem.MolFromSmiles("C1=CC=CC=C1")
+    for i, atom in enumerate(mol.GetAtoms()):
+        atom.SetIntProp("_original_atom_id", i)
+
+    new_pos = optimize_2d_coords(mol)
+    assert len(new_pos) == 6
+    for pos in new_pos.values():
+        assert len(pos) == 2
+
+
+def test_calculate_best_fit_plane_projection():
+    """Verify orthogonal projection onto a best-fit plane."""
+    import numpy as np
+    from moleditpy.core.mol_geometry import calculate_best_fit_plane_projection
+
+    points = np.array([[1, 1, 1], [2, 2, 2], [3, 3, 3], [1, 2, 3]])
+    centroid = np.mean(points, axis=0)
+    centered = points - centroid
+    u, s, vh = np.linalg.svd(centered)
+    normal = vh[-1]
+    projected = calculate_best_fit_plane_projection(centered, normal, centroid)
+
+    # Check planarity: SVD of centered projected points should have s[-1] approx 0
+    p_centered = projected - np.mean(projected, axis=0)
+    pu, ps, pvh = np.linalg.svd(p_centered)
+    assert ps[-1] < 1e-10
+
+
+def test_rotate_2d_points():
+    """Verify 2D rotation of point maps."""
+    import numpy as np
+    from moleditpy.core.mol_geometry import rotate_2d_points
+
+    points = {1: (1, 0), 2: (0, 1)}
+    rotated = rotate_2d_points(points, 0, 0, 90)
+    np.testing.assert_allclose(rotated[1], [0, 1], atol=1e-12)
+    np.testing.assert_allclose(rotated[2], [-1, 0], atol=1e-12)
+
+
+def test_resolve_2d_overlaps():
+    """Verify 2D overlap resolution logic handles collisions correctly."""
+    from moleditpy.core.mol_geometry import resolve_2d_overlaps
+
+    atom_ids = {1, 2}
+    positions = {1: (0, 0), 2: (0, 0.1)}  # Overlapping if threshold > 0.1
+    adj = {1: [], 2: []}  # Not connected
+    # If they are NOT bonded, they should move
+    moves = resolve_2d_overlaps(
+        atom_ids,
+        positions,
+        adj,
+        overlap_threshold=0.5,
+        move_distance=1.0,
+        has_bond_check_func=lambda i, j: False,
+    )
+    assert len(moves) > 0
+    # One fragment should be planned to move
+    assert len(moves[0][0]) == 1

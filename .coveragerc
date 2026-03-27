@@ -10,6 +10,8 @@ omit =
     moleditpy/src/moleditpy/ui/view_loaders.py
     moleditpy/src/moleditpy/ui/view_3d.py
     moleditpy/src/moleditpy/ui/edit_3d.py
+    moleditpy/src/moleditpy/ui/*_logic.py
+    moleditpy/src/moleditpy/ui/export_logic.py
     moleditpy/src/moleditpy/ui/edit_actions.py
     moleditpy/src/moleditpy/ui/molecule_scene.py
     moleditpy/src/moleditpy/ui/molecular_scene_handler.py
@@ -21,6 +23,9 @@ omit =
     moleditpy/src/moleditpy/ui/settings_tabs/*
     moleditpy/src/moleditpy/ui/custom_interactor_style.py
     moleditpy/src/moleditpy/ui/custom_qt_interactor.py
+    moleditpy/src/moleditpy/ui/dialog_3d_picking_mixin.py
+    moleditpy/src/moleditpy/ui/sip_isdeleted_safe.py
+    moleditpy/src/moleditpy/modules/*
     moleditpy/src/moleditpy/utils/system_utils.py
 
 exclude_lines =

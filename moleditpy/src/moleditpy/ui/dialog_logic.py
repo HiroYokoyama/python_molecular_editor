@@ -161,52 +161,10 @@ class DialogManager:
             template_dir = os.path.join(self.host.settings_dir, "user-templates")
             if not os.path.exists(template_dir):
                 os.makedirs(template_dir)
-
-            # Convert current structure to template format
-            atoms_data = []
-            bonds_data = []
-
-            # Convert atoms
-            for atom_id, atom_info in self.host.data.atoms.items():
-                pos = atom_info["pos"]
-                # pos may be a tuple (x, y) or a QPointF
-                if hasattr(pos, "x") and hasattr(pos, "y"):
-                    ax, ay = pos.x(), pos.y()
-                else:
-                    ax, ay = pos[0], pos[1]
-                atoms_data.append(
-                    {
-                        "id": atom_id,
-                        "symbol": atom_info["symbol"],
-                        "x": ax,
-                        "y": ay,
-                        "charge": atom_info.get("charge", 0),
-                        "radical": atom_info.get("radical", 0),
-                    }
-                )
-
-            # Convert bonds
-            for (atom1_id, atom2_id), bond_info in self.host.data.bonds.items():
-                bonds_data.append(
-                    {
-                        "atom1": atom1_id,
-                        "atom2": atom2_id,
-                        "order": bond_info["order"],
-                        "stereo": bond_info.get("stereo", 0),
-                    }
-                )
-
-            # Create template data
-            template_data = {
-                "format": "PME Template",
-                "version": "1.0",
-                "application": "MoleditPy",
-                "application_version": VERSION,
-                "name": name,
-                "created": str(QDateTime.currentDateTime().toString()),
-                "atoms": atoms_data,
-                "bonds": bonds_data,
-            }
+            # Convert current structure to template format using core method
+            template_data = self.host.data.to_template_dict(
+                name, application_version=VERSION
+            )
 
             # Save to file
             filename = f"{name.replace(' ', '_')}.pmetmplt"

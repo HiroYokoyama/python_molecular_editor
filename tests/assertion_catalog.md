@@ -840,6 +840,29 @@ _Collinear atoms → fallback axis is used, rotation still succeeds._
 - assert angle_deg == pytest.approx(target, abs=1e-08)
 - assert np.linalg.norm(positions[2] - positions[1]) == pytest.approx(1.0, abs=1e-12)
 
+### test_optimize_2d_coords
+_Verify 2D coordinate optimization generating coordinates for a simple molecule._
+
+- assert len(new_pos) == 6
+- assert len(pos) == 2
+
+### test_calculate_best_fit_plane_projection
+_Verify orthogonal projection onto a best-fit plane._
+
+- assert ps[-1] < 1e-10
+
+### test_rotate_2d_points
+_Verify 2D rotation of point maps._
+
+- np.testing.assert_allclose(rotated[1], [0, 1], atol=1e-12)
+- np.testing.assert_allclose(rotated[2], [-1, 0], atol=1e-12)
+
+### test_resolve_2d_overlaps
+_Verify 2D overlap resolution logic handles collisions correctly._
+
+- assert len(moves) > 0
+- assert len(moves[0][0]) == 1
+
 ## tests/unit/test_hydrogen.py
 
 ### test_add_hydrogen_atoms_app_logic
@@ -1246,6 +1269,23 @@ _Verify MOL block text contains all expected atoms._
 _Build acetic acid and compare MW against RDKit reference._
 
 - assert Descriptors.HeavyAtomMolWt(mol) == pytest.approx(Descriptors.HeavyAtomMolWt(ref), abs=0.01)
+
+### test_to_template_dict
+_Verify template serialization dictionary format and content._
+
+- assert tmpl['format'] == 'PME Template'
+- assert tmpl['version'] == '2.0'
+- assert tmpl['application_version'] == '1.2.3'
+- assert tmpl['name'] == 'Test Template'
+- assert 'created' in tmpl
+- assert len(tmpl['atoms']) == 2
+- assert tmpl['atoms'][0]['symbol'] == 'C'
+- assert tmpl['atoms'][0]['x'] == 1.0
+- assert tmpl['atoms'][0]['y'] == 2.0
+- assert tmpl['atoms'][0]['charge'] == 1
+- assert len(tmpl['bonds']) == 1
+- assert tmpl['bonds'][0]['order'] == 1
+- assert tmpl['bonds'][0]['stereo'] == 1
 
 ## tests/unit/test_parser_robustness.py
 

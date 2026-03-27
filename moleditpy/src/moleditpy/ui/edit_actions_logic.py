@@ -655,23 +655,24 @@ class EditActionsManager:
 
             center_x = sum(xs) / len(xs)
             center_y = sum(ys) / len(ys)
-            center = QPointF(center_x, center_y)
 
-            rad = math.radians(angle_degrees)
-            cos_a = math.cos(rad)
-            sin_a = math.sin(rad)
+            # Map for core rotation
+            points_map = {
+                atom.atom_id: (atom.pos().x(), atom.pos().y()) for atom in target_atoms
+            }
+
+            from moleditpy.core.mol_geometry import rotate_2d_points
+
+            new_positions = rotate_2d_points(
+                points_map, center_x, center_y, angle_degrees
+            )
 
             for atom in target_atoms:
-                # Relative pos
-                dx = atom.pos().x() - center_x
-                dy = atom.pos().y() - center_y
-
-                # Rotate
-                new_dx = dx * cos_a - dy * sin_a
-                new_dy = dx * sin_a + dy * cos_a
-
-                new_pos = QPointF(center_x + new_dx, center_y + new_dy)
-                atom.setPos(new_pos)
+                if atom.atom_id in new_positions:
+                    nx, ny = new_positions[atom.atom_id]
+                    new_pos = QPointF(nx, ny)
+                    atom.setPos(new_pos)
+                    self.host.data.set_atom_pos(atom.atom_id, new_pos)
 
             # Update bonds
             self.host.scene.update_connected_bonds(target_atoms)
@@ -976,71 +977,52 @@ class EditActionsManager:
             return
 
         try:
-            # Map atom IDs to RDKit coordinates
-            view_center = self.view_2d.mapToScene(
-                self.view_2d.viewport().rect().center()
-            )
-            new_positions_map = {}
-            AllChem.Compute2DCoords(mol)
-            conf = mol.GetConformer()
-            for rdkit_atom in mol.GetAtoms():
-                original_id = rdkit_atom.GetIntProp("_original_atom_id")
-                new_positions_map[original_id] = conf.GetAtomPosition(
-                    rdkit_atom.GetIdx()
-                )
+            from moleditpy.core.mol_geometry import optimize_2d_coords
 
-            if not new_positions_map:
+            new_positions = optimize_2d_coords(mol)
+
+            if not new_positions:
                 self.host.statusBar().showMessage(
                     "Optimization failed to generate coordinates."
                 )
                 return
 
-            target_atom_items = [
-                self.host.data.atoms[atom_id]["item"]
-                for atom_id in new_positions_map.keys()
-                if atom_id in self.host.data.atoms and "item" in self.host.data.atoms[atom_id]
-            ]
-            if not target_atom_items:
-                self.host.statusBar().showMessage(
-                    "Error: Atom items not found for optimized atoms."
-                )
-                return
+            # Centering logic: identify 2D view center and RDKit molecule centroid
+            view_center = self.view_2d.mapToScene(
+                self.view_2d.viewport().rect().center()
+            )
+            
+            coords = list(new_positions.values())
+            rdkit_cx = sum(p[0] for p in coords) / len(coords)
+            rdkit_cy = sum(p[1] for p in coords) / len(coords)
+            
+            SCALE = 50.0  # 1.0 A = 50 pixels (matches 0.02 A/pixel constant)
 
-            # Maintain original centroid
-            # original_center_x = sum(item.pos().x() for item in target_atom_items) / len(target_atom_items)
-            # original_center_y = sum(item.pos().y() for item in target_atom_items) / len(target_atom_items)
-
-            positions = list(new_positions_map.values())
-            rdkit_cx = sum(p.x for p in positions) / len(positions)
-            rdkit_cy = sum(p.y for p in positions) / len(positions)
-
-            SCALE = 50.0
-
-            # Apply new coordinates
-            for atom_id, rdkit_pos in new_positions_map.items():
+            # Apply new coordinates with centering and scaling
+            for atom_id, (nx, ny) in new_positions.items():
                 if atom_id in self.host.data.atoms:
+                    # Centered scaling: (coord - rdkit_center) * scale + scene_view_center
+                    sx = ((nx - rdkit_cx) * SCALE) + view_center.x()
+                    sy = (-(ny - rdkit_cy) * SCALE) + view_center.y()
+                    new_pos = QPointF(sx, sy)
+                    
                     item = self.host.data.atoms[atom_id]["item"]
-                    sx = ((rdkit_pos.x - rdkit_cx) * SCALE) + view_center.x()
-                    sy = (-(rdkit_pos.y - rdkit_cy) * SCALE) + view_center.y()
-                    new_scene_pos = QPointF(sx, sy)
-                    item.setPos(new_scene_pos)
-                    self.host.data.set_atom_pos(atom_id, new_scene_pos)
+                    if item:
+                        item.setPos(new_pos)
+                    # Cache back to model
+                    self.host.data.set_atom_pos(atom_id, new_pos)
 
             # Update all bond positions
-            # Guard against partially-deleted Qt wrappers: skip items that
-            # SIP reports as deleted or which are no longer in a scene.
             for bond_data in self.host.data.bonds.values():
                 item = bond_data.get("item") if bond_data else None
                 if not item:
                     continue
                 if sip_isdeleted_safe(item):
                     continue
-                sc = item.scene() if hasattr(item, "scene") else None
-                if sc is None:
-                    continue
-                # Suppress potential errors if the item is already destroyed during coordinate adjustment
-                with contextlib.suppress(AttributeError, RuntimeError, TypeError):
-                    item.update_position()
+                if hasattr(item, "scene") and item.scene():
+                    # Suppress potential errors if the item is already destroyed during coordinate adjustment
+                    with contextlib.suppress(AttributeError, RuntimeError, TypeError):
+                        item.update_position()
 
             # Run overlap resolution
             self.resolve_overlapping_groups()
@@ -1082,127 +1064,34 @@ class EditActionsManager:
         ]
 
         if len(all_atom_items) < 2:
-            return
+            return        # Step 1-3: Handled by core logic
+        positions_map = {
+            aid: data["pos"] for aid, data in self.host.data.atoms.items()
+        }
 
-        # Step 1: List overlapping pairs
-        overlapping_pairs = []
-        for item1, item2 in itertools.combinations(all_atom_items, 2):
-            # Ignore directly bonded pairs
-            if self.host.scene.find_bond_between(item1, item2):
-                continue
+        from moleditpy.core.mol_geometry import resolve_2d_overlaps
 
-            dist = QLineF(item1.pos(), item2.pos()).length()
-            if dist < OVERLAP_THRESHOLD:
-                overlapping_pairs.append((item1, item2))
+        def has_bond_check(id1, id2):
+            item1 = self.host.data.atoms[id1]["item"]
+            item2 = self.host.data.atoms[id2]["item"]
+            return self.host.scene.find_bond_between(item1, item2) is not None
 
-        if not overlapping_pairs:
+        move_operations = resolve_2d_overlaps(
+            set(self.host.data.atoms.keys()),
+            positions_map,
+            self.host.data.adjacency_list,
+            overlap_threshold=OVERLAP_THRESHOLD,
+            move_distance=MOVE_DISTANCE,
+            has_bond_check_func=has_bond_check,
+        )
+
+        if not move_operations:
             self.host.statusBar().showMessage("No overlapping atoms found.", 2000)
             return
 
-        # Step 2: Build overlap groups (Union-Find)
-        # Track group membership
-        parent = {item.atom_id: item.atom_id for item in all_atom_items}
-
-        def find_set(atom_id):
-            # Find group representative
-            if parent[atom_id] == atom_id:
-                return atom_id
-            parent[atom_id] = find_set(parent[atom_id])
-            return parent[atom_id]
-
-        def unite_sets(id1, id2):
-            # Unite two groups
-            root1 = find_set(id1)
-            root2 = find_set(id2)
-            if root1 != root2:
-                parent[root2] = root1
-
-        for item1, item2 in overlapping_pairs:
-            unite_sets(item1.atom_id, item2.atom_id)
-
-        # Step 3: Plan translations per group
-        # Group atoms by representative
-        groups_by_root = {}
-        for item in all_atom_items:
-            root_id = find_set(item.atom_id)
-            if root_id not in groups_by_root:
-                groups_by_root[root_id] = []
-            groups_by_root[root_id].append(item.atom_id)
-
-        move_operations = []
-        processed_roots = set()
-
-        for root_id, group_atom_ids in groups_by_root.items():
-            # Skip processed or single-atom groups
-            if root_id in processed_roots or len(group_atom_ids) < 2:
-                continue
-            processed_roots.add(root_id)
-
-            # 3a: Split group into fragments (BFS)
-            fragments = []
-            visited_in_group = set()
-            group_atom_ids_set = set(group_atom_ids)
-
-            for atom_id in group_atom_ids:
-                if atom_id not in visited_in_group:
-                    current_fragment = set()
-                    q = deque([atom_id])
-                    visited_in_group.add(atom_id)
-                    current_fragment.add(atom_id)
-
-                    while q:
-                        current_id = q.popleft()
-                        # Faster search if adjacency_list exists
-                        for neighbor_id in self.host.data.adjacency_list.get(current_id, []):
-                            if (
-                                neighbor_id in group_atom_ids_set
-                                and neighbor_id not in visited_in_group
-                            ):
-                                visited_in_group.add(neighbor_id)
-                                current_fragment.add(neighbor_id)
-                                q.append(neighbor_id)
-                    fragments.append(current_fragment)
-
-            if len(fragments) < 2:
-                continue  # Skip if fragments don't overlap
-
-            # 3b: Determine fragment to move
-            # Find representative overlapping pair
-            rep_item1, rep_item2 = None, None
-            for i1, i2 in overlapping_pairs:
-                if find_set(i1.atom_id) == root_id:
-                    rep_item1, rep_item2 = i1, i2
-                    break
-
-            if not rep_item1:
-                continue
-
-            # Map pair to fragments
-            frag1 = next((f for f in fragments if rep_item1.atom_id in f), None)
-            frag2 = next((f for f in fragments if rep_item2.atom_id in f), None)
-
-            # Skip overlaps within the same fragment
-            if not frag1 or not frag2 or frag1 == frag2:
-                continue
-
-            # Move fragment with higher atom ID
-            if rep_item1.atom_id > rep_item2.atom_id:
-                ids_to_move = frag1
-            else:
-                ids_to_move = frag2
-
-            # 3c: Plan translation
-            translation_vector = QPointF(
-                -MOVE_DISTANCE, MOVE_DISTANCE
-            )  # Vector towards bottom-left
-            move_operations.append((ids_to_move, translation_vector))
-
         # Step 4: Execute translations
-        if not move_operations:
-            self.host.statusBar().showMessage("No actionable overlaps found.", 2000)
-            return
-
-        for group_ids, vector in move_operations:
+        for group_ids, (vx, vy) in move_operations:
+            vector = QPointF(vx, vy)
             for atom_id in group_ids:
                 item = self.host.data.atoms[atom_id]["item"]
                 new_pos = item.pos() + vector
@@ -1217,15 +1106,10 @@ class EditActionsManager:
             try:
                 if sip_isdeleted_safe(item):
                     continue
-            except (AttributeError, RuntimeError, TypeError):
-                # Suppress non-critical error during bond position update iteration.
-                pass
-                sc = item.scene() if hasattr(item, "scene") else None
-                if sc is None:
-                    continue
-                # Suppress potential errors if the item is already destroyed during overlap resolution
-                with contextlib.suppress(AttributeError, RuntimeError, TypeError):
+                if hasattr(item, "scene") and item.scene():
                     item.update_position()
+            except (AttributeError, RuntimeError, TypeError) as e:
+                logging.debug(f"Bond position update suppressed: {e}")
 
         # Update labels after resolution
         self.update_2d_measurement_labels()

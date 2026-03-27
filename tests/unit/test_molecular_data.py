@@ -301,3 +301,31 @@ def test_molecular_weight_matches_rdkit():
     assert Descriptors.HeavyAtomMolWt(mol) == pytest.approx(
         Descriptors.HeavyAtomMolWt(ref), abs=0.01
     )
+
+
+def test_to_template_dict():
+    """Verify template serialization dictionary format and content."""
+    data = MolecularData()
+    c = data.add_atom("C", QPointF(1.0, 2.0), charge=1, radical=0)
+    o = data.add_atom("O", QPointF(10.0, 20.0))
+    data.add_bond(c, o, order=1, stereo=1)  # Wedge
+
+    tmpl = data.to_template_dict(
+        "Test Template", version="2.0", application_version="1.2.3"
+    )
+
+    assert tmpl["format"] == "PME Template"
+    assert tmpl["version"] == "2.0"
+    assert tmpl["application_version"] == "1.2.3"
+    assert tmpl["name"] == "Test Template"
+    assert "created" in tmpl
+
+    assert len(tmpl["atoms"]) == 2
+    assert tmpl["atoms"][0]["symbol"] == "C"
+    assert tmpl["atoms"][0]["x"] == 1.0
+    assert tmpl["atoms"][0]["y"] == 2.0
+    assert tmpl["atoms"][0]["charge"] == 1
+
+    assert len(tmpl["bonds"]) == 1
+    assert tmpl["bonds"][0]["order"] == 1
+    assert tmpl["bonds"][0]["stereo"] == 1

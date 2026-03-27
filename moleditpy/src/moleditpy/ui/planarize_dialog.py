@@ -179,6 +179,8 @@ class PlanarizeDialog(Dialog3DPickingMixin, QDialog):
             centroid = np.mean(selected_positions, axis=0)
             centered_positions = selected_positions - centroid
 
+            from moleditpy.core.mol_geometry import calculate_best_fit_plane_projection
+
             # Get normal of the least-squares plane via SVD
             u, s, vh = np.linalg.svd(centered_positions, full_matrices=False)
             normal = vh[-1]
@@ -192,11 +194,9 @@ class PlanarizeDialog(Dialog3DPickingMixin, QDialog):
                 return
             normal = normal / norm
 
-            # Project each point orthogonally onto the plane passing through the centroid
-            projections = centered_positions - np.outer(
-                np.dot(centered_positions, normal), normal
+            new_positions = calculate_best_fit_plane_projection(
+                centered_positions, normal, centroid
             )
-            new_positions = projections + centroid
 
             # Update molecular coordinates
             conf = self.mol.GetConformer()

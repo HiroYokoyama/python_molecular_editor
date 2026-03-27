@@ -453,3 +453,44 @@ class MolecularData:
 
         mol_block += "M  END\n"
         return mol_block
+
+    def to_template_dict(self, name, version="1.0", application_version=""):
+        """Convert current structure to a dictionary for template storage."""
+        import datetime
+
+        atoms_data = []
+        for atom_id, atom_info in self.atoms.items():
+            pos = atom_info["pos"]
+            # pos is guaranteed to be a tuple (x, y) due to internal caching in add_atom/set_atom_pos
+            atoms_data.append(
+                {
+                    "id": atom_id,
+                    "symbol": atom_info["symbol"],
+                    "x": pos[0],
+                    "y": pos[1],
+                    "charge": atom_info.get("charge", 0),
+                    "radical": atom_info.get("radical", 0),
+                }
+            )
+
+        bonds_data = []
+        for (id1, id2), bond_info in self.bonds.items():
+            bonds_data.append(
+                {
+                    "atom1": id1,
+                    "atom2": id2,
+                    "order": bond_info["order"],
+                    "stereo": bond_info.get("stereo", 0),
+                }
+            )
+
+        return {
+            "format": "PME Template",
+            "version": version,
+            "application": "MoleditPy",
+            "application_version": application_version,
+            "name": name,
+            "created": str(datetime.datetime.now()),
+            "atoms": atoms_data,
+            "bonds": bonds_data,
+        }

@@ -18,6 +18,9 @@ submodules without circular dependencies.
 """
 
 import numpy as np
+import math
+import itertools
+from collections import deque
 
 # ------------------------------------------------------------------
 # Primitive geometry helpers
@@ -437,3 +440,148 @@ def identify_valence_problems(atoms_data, bonds_data):
             problem_atom_ids.append(atom_id)
 
     return problem_atom_ids
+
+
+def optimize_2d_coords(mol):
+    """Generate 2D coordinates using RDKit and return a map of (x, y) tuples."""
+    from rdkit.Chem import AllChem
+
+    AllChem.Compute2DCoords(mol)
+    conf = mol.GetConformer()
+    new_positions = {}
+    for rdkit_atom in mol.GetAtoms():
+        if rdkit_atom.HasProp("_original_atom_id"):
+            original_id = rdkit_atom.GetIntProp("_original_atom_id")
+            pos = conf.GetAtomPosition(rdkit_atom.GetIdx())
+            new_positions[original_id] = (pos.x, pos.y)
+    return new_positions
+
+
+def calculate_best_fit_plane_projection(centered_positions, normal, centroid):
+    """Project centered points orthogonally onto the plane defined by normal and centroid."""
+    projections = centered_positions - np.outer(
+        np.dot(centered_positions, normal), normal
+    )
+    return projections + centroid
+
+
+def rotate_2d_points(points_map, center_x, center_y, angle_degrees):
+    """Rotate 2D points (atom_id -> (x, y)) around a center."""
+    rad = math.radians(angle_degrees)
+    cos_a = math.cos(rad)
+    sin_a = math.sin(rad)
+    new_positions = {}
+    for atom_id, (x, y) in points_map.items():
+        dx = x - center_x
+        dy = y - center_y
+        new_dx = dx * cos_a - dy * sin_a
+        new_dy = dx * sin_a + dy * cos_a
+        new_positions[atom_id] = (center_x + new_dx, center_y + new_dy)
+    return new_positions
+
+
+def resolve_2d_overlaps(
+    atom_ids,
+    positions_map,
+    adjacency_list,
+    overlap_threshold=0.5,
+    move_distance=20,
+    has_bond_check_func=None,
+):
+    """Detect and resolve overlapping atom groups in 2D.
+
+    Returns list of (atom_ids_set, translation_vector_tuple).
+    """
+    overlapping_pairs = []
+    ids_list = list(atom_ids)
+    for i in range(len(ids_list)):
+        for j in range(i + 1, len(ids_list)):
+            id1 = ids_list[i]
+            id2 = ids_list[j]
+
+            # Skip directly bonded pairs
+            if has_bond_check_func and has_bond_check_func(id1, id2):
+                continue
+
+            p1 = positions_map[id1]
+            p2 = positions_map[id2]
+            dist = math.sqrt((p1[0] - p2[0]) ** 2 + (p1[1] - p2[1]) ** 2)
+            if dist < overlap_threshold:
+                overlapping_pairs.append((id1, id2))
+
+    if not overlapping_pairs:
+        return []
+
+    # Union-Find for overlap groups
+    parent = {aid: aid for aid in atom_ids}
+
+    def find_set(aid):
+        if parent[aid] == aid:
+            return aid
+        parent[aid] = find_set(parent[aid])
+        return parent[aid]
+
+    def unite_sets(aid1, aid2):
+        root1 = find_set(aid1)
+        root2 = find_set(aid2)
+        if root1 != root2:
+            parent[root2] = root1
+
+    for id1, id2 in overlapping_pairs:
+        unite_sets(id1, id2)
+
+    groups_by_root = {}
+    for aid in atom_ids:
+        root = find_set(aid)
+        groups_by_root.setdefault(root, []).append(aid)
+
+    move_operations = []
+    processed_roots = set()
+
+    for root_id, group_ids in groups_by_root.items():
+        if root_id in processed_roots or len(group_ids) < 2:
+            continue
+        processed_roots.add(root_id)
+
+        # Split into fragments via BFS
+        fragments = []
+        visited = set()
+        group_set = set(group_ids)
+        for aid in group_ids:
+            if aid not in visited:
+                frag = set()
+                q = deque([aid])
+                visited.add(aid)
+                frag.add(aid)
+                while q:
+                    curr = q.popleft()
+                    for neighbor in adjacency_list.get(curr, []):
+                        if neighbor in group_set and neighbor not in visited:
+                            visited.add(neighbor)
+                            frag.add(neighbor)
+                            q.append(neighbor)
+                fragments.append(frag)
+
+        if len(fragments) < 2:
+            continue
+
+        # Find representative pair
+        rep_id1, rep_id2 = None, None
+        for i1, i2 in overlapping_pairs:
+            if find_set(i1) == root_id:
+                rep_id1, rep_id2 = i1, i2
+                break
+
+        if not rep_id1:
+            continue
+
+        frag1 = next((f for f in fragments if rep_id1 in f), None)
+        frag2 = next((f for f in fragments if rep_id2 in f), None)
+        if not frag1 or not frag2 or frag1 == frag2:
+            continue
+
+        ids_to_move = frag1 if rep_id1 > rep_id2 else frag2
+        # Move vector (-move_distance, move_distance)
+        move_operations.append((ids_to_move, (-move_distance, move_distance)))
+
+    return move_operations
