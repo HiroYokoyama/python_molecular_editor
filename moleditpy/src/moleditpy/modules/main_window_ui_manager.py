@@ -52,6 +52,9 @@ class MainWindowUiManager:
         self.statusBar().showMessage(message)
 
     def set_mode(self, mode_str):
+        if isinstance(mode_str, tuple):
+            mode_str = f"bond_{mode_str[0]}_{mode_str[1]}" if len(mode_str) == 2 else str(mode_str[0])
+            
         prev_mode = getattr(self.scene, "mode", None)
         self.scene.mode = mode_str
         self.view_2d.setMouseTracking(True)

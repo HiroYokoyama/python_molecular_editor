@@ -1118,7 +1118,8 @@ class KeyboardMixin:
                 modifiers == Qt.KeyboardModifier.NoModifier
                 and key in self.key_to_bond_mode_map
             ):
-                mode_to_set = self.key_to_bond_mode_map[key]
+                bond_data = self.key_to_bond_mode_map[key]
+                mode_to_set = f"bond_{bond_data[0]}_{bond_data[1]}"
 
             # Execute mode change
             if mode_to_set:

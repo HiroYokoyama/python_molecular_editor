@@ -14,6 +14,8 @@ import contextlib
 import math
 import re
 import numpy as np
+import sys
+import subprocess
 
 from PyQt6.QtCore import QObject, pyqtSignal, pyqtSlot
 
@@ -423,15 +425,41 @@ def _perform_optimize_only(mol, options, worker_id, _check_halted, _safe_status,
 
 def _perform_obabel_conversion(mol_block, mode, opt_method, worker_id, options, _check_halted, _safe_status, _safe_finished):
     """Perform Open Babel 3D conversion and optimization."""
-    _safe_status("Attempting Open Babel conversion...")
+    _safe_status("Attempting Open Babel conversion (Isolated)...")
     try:
         if not OBABEL_AVAILABLE or not pybel: raise RuntimeError("Open Babel not available.")
-        ob_mol = pybel.readstring("mol", mol_block)
-        # Suppress errors if OBabel cannot add hydrogens (e.g., malformed structure or missing parameters)
-        with contextlib.suppress(AttributeError, RuntimeError, TypeError): ob_mol.addh()
-        ob_mol.make3D()
         
-        rd_mol = Chem.AddHs(Chem.MolFromMolBlock(ob_mol.write("mol"), removeHs=False))
+        # Isolate make3D in a subprocess to prevent hard C++ aborts from crashing the main GUI
+        script = '''
+import sys, contextlib
+from openbabel import pybel
+import os
+# Inherit babel variables if any
+if "BABEL_DATADIR" in os.environ: os.environ["BABEL_DATADIR"] = os.environ["BABEL_DATADIR"]
+mol_block = sys.stdin.read()
+ob_mol = pybel.readstring("mol", mol_block)
+with contextlib.suppress(Exception): ob_mol.addh()
+ob_mol.make3D()
+print(ob_mol.write("mol"))
+        '''
+        
+        try:
+            result = subprocess.run(
+                [sys.executable, "-c", script],
+                input=mol_block,
+                text=True,
+                capture_output=True,
+                timeout=20  # Prevent infinite hangs in OBabel
+            )
+            if result.returncode != 0 or not result.stdout.strip():
+                raise RuntimeError(f"Subprocess crashed or failed. Error: {result.stderr.strip()}")
+            out_mol_block = result.stdout
+        except subprocess.TimeoutExpired:
+            raise RuntimeError("Open Babel make3D() timed out.")
+        except Exception as e:
+            raise RuntimeError(f"Open Babel isolated execution failed: {e}")
+            
+        rd_mol = Chem.AddHs(Chem.MolFromMolBlock(out_mol_block, removeHs=False))
         if not rd_mol: raise ValueError("Open Babel produced invalid MOL.")
         
         _adjust_collision_avoidance(rd_mol, _check_halted, _safe_status)
