@@ -12,12 +12,14 @@ DOI: 10.5281/zenodo.17268532
 
 try:
     import importlib.util
+
     OBABEL_AVAILABLE = importlib.util.find_spec("openbabel") is not None
 except ImportError:
     OBABEL_AVAILABLE = False
 
 try:
     from PyQt6 import sip as _sip  # type: ignore
+
     _sip_isdeleted = getattr(_sip, "isdeleted", None)
 except ImportError:
     _sip = None

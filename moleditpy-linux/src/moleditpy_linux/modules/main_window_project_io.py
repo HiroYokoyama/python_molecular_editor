@@ -1,3 +1,4 @@
+import logging
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
@@ -12,14 +13,13 @@ DOI: 10.5281/zenodo.17268532
 
 """
 main_window_project_io.py
-Functional class separated from main_window.py
+Mixin class separated from main_window.py
 """
 
 import copy
 import json
 import os
 import pickle
-import traceback
 
 # PyQt6 Modules
 from PyQt6.QtCore import QTimer
@@ -27,6 +27,7 @@ from PyQt6.QtWidgets import QFileDialog, QMessageBox
 
 try:
     from PyQt6 import sip as _sip  # type: ignore
+
     _sip_isdeleted = getattr(_sip, "isdeleted", None)
 except ImportError:
     _sip = None
@@ -34,8 +35,8 @@ except ImportError:
 
 
 # --- Classes ---
-class MainWindowProjectIo(object):
-    """Functional class separated from main_window.py."""
+class MainWindowProjectIo:
+    """Mixin class separated from main_window.py."""
 
     def save_project(self):
         """Save (Ctrl+S) - Defaults to PMEPRJ format."""
@@ -66,13 +67,13 @@ class MainWindowProjectIo(object):
                     f"Project saved to {self.current_file_path}"
                 )
 
-            except (OSError, IOError) as e:  
+            except (OSError, IOError) as e:
                 self.statusBar().showMessage(f"File I/O error: {e}")
             except (
                 pickle.PicklingError,
                 TypeError,
                 ValueError,
-            ) as e:  
+            ) as e:
                 self.statusBar().showMessage(f"Data serialization error: {e}")
             except (AttributeError, RuntimeError, ValueError) as e:
                 self.statusBar().showMessage(f"Error saving project file: {e}")
@@ -106,13 +107,13 @@ class MainWindowProjectIo(object):
             except (AttributeError, RuntimeError, ValueError, TypeError):
                 default_path = default_name
 
-            file_path, _ = QFileDialog.getSaveFileName(  
+            file_path, _ = QFileDialog.getSaveFileName(
                 self,
                 "Save Project As",
                 default_path,
                 "PME Project Files (*.pmeprj);;All Files (*)",
             )
-            if not file_path:  
+            if not file_path:
                 return
 
             if not file_path.lower().endswith(".pmeprj"):
@@ -130,13 +131,15 @@ class MainWindowProjectIo(object):
             # Mark this state as the last saved state for undo tracking
             try:
                 self._saved_state = copy.deepcopy(self.get_current_state())
-            except (AttributeError, RuntimeError, ValueError, TypeError):  
-                traceback.print_exc()
+            except (AttributeError, RuntimeError, ValueError, TypeError) as e:
+                logging.debug(
+                    f"Suppressed exception: {e}"
+                )  # Suppress undo-state deepcopy errors
             self.statusBar().showMessage(f"Project saved to {file_path}")
 
-        except (OSError, IOError) as e:  
+        except (OSError, IOError) as e:
             self.statusBar().showMessage(f"File I/O error: {e}")
-        except pickle.PicklingError as e:  
+        except pickle.PicklingError as e:
             self.statusBar().showMessage(f"Data serialization error: {e}")
         except (AttributeError, RuntimeError, ValueError) as e:
             self.statusBar().showMessage(f"Error saving project file: {e}")
@@ -172,8 +175,8 @@ class MainWindowProjectIo(object):
                 "Save Project File",
                 default_path,
                 "Project Files (*.pmeraw);;All Files (*)",
-            )  
-            if not file_path:  
+            )
+            if not file_path:
                 return
 
             if not file_path.lower().endswith(".pmeraw"):
@@ -189,19 +192,21 @@ class MainWindowProjectIo(object):
             self.update_window_title()
             try:
                 self._saved_state = copy.deepcopy(self.get_current_state())
-            except (AttributeError, RuntimeError, ValueError, TypeError):  
-                traceback.print_exc()
+            except (AttributeError, RuntimeError, ValueError, TypeError) as e:
+                logging.debug(
+                    f"Suppressed exception: {e}"
+                )  # Suppress undo-state deepcopy errors
             self.statusBar().showMessage(f"Project saved to {file_path}")
 
-        except (OSError, IOError) as e:  
+        except (OSError, IOError) as e:
             self.statusBar().showMessage(f"File I/O error: {e}")
-        except pickle.PicklingError as e:  
+        except pickle.PicklingError as e:
             self.statusBar().showMessage(f"Data serialization error: {e}")
         except (AttributeError, RuntimeError, ValueError) as e:
             self.statusBar().showMessage(f"Error saving project file: {e}")
 
     def load_raw_data(self, file_path=None):
-        if not file_path:  
+        if not file_path:
             file_path, _ = QFileDialog.getOpenFileName(
                 self, "Open Project File", "", "Project Files (*.pmeraw);;All Files (*)"
             )
@@ -224,17 +229,19 @@ class MainWindowProjectIo(object):
             self.update_window_title()
             try:
                 self._saved_state = copy.deepcopy(self.get_current_state())
-            except (AttributeError, RuntimeError, ValueError, TypeError):  
-                traceback.print_exc()
+            except (AttributeError, RuntimeError, ValueError, TypeError) as e:
+                logging.debug(
+                    f"Suppressed exception: {e}"
+                )  # Suppress undo-state deepcopy errors
             self.statusBar().showMessage(f"Project loaded from {file_path}")
 
             QTimer.singleShot(0, self.fit_to_view)
 
-        except FileNotFoundError:  
+        except FileNotFoundError:
             self.statusBar().showMessage(f"File not found: {file_path}")
-        except (OSError, IOError) as e:  
+        except (OSError, IOError) as e:
             self.statusBar().showMessage(f"File I/O error: {e}")
-        except pickle.UnpicklingError as e:  
+        except pickle.UnpicklingError as e:
             self.statusBar().showMessage(f"Invalid project file format: {e}")
         except (AttributeError, RuntimeError, ValueError) as e:
             self.statusBar().showMessage(f"Error loading project file: {e}")
@@ -265,13 +272,13 @@ class MainWindowProjectIo(object):
             except (AttributeError, RuntimeError, ValueError, TypeError):
                 default_path = default_name
 
-            file_path, _ = QFileDialog.getSaveFileName(  
+            file_path, _ = QFileDialog.getSaveFileName(
                 self,
                 "Save as PME Project",
                 default_path,
                 "PME Project Files (*.pmeprj);;All Files (*)",
             )
-            if not file_path:  
+            if not file_path:
                 return
 
             if not file_path.lower().endswith(".pmeprj"):
@@ -290,16 +297,16 @@ class MainWindowProjectIo(object):
 
             self.statusBar().showMessage(f"PME Project saved to {file_path}")
 
-        except (OSError, IOError) as e:  
+        except (OSError, IOError) as e:
             self.statusBar().showMessage(f"File I/O error: {e}")
-        except (TypeError, ValueError) as e:  
+        except (TypeError, ValueError) as e:
             self.statusBar().showMessage(f"JSON serialization error: {e}")
         except (AttributeError, RuntimeError, ValueError) as e:
             self.statusBar().showMessage(f"Error saving PME Project file: {e}")
 
     def load_json_data(self, file_path=None):
         """Load PME Project file."""
-        if not file_path:  
+        if not file_path:
             file_path, _ = QFileDialog.getOpenFileName(
                 self,
                 "Open PME Project File",
@@ -317,7 +324,7 @@ class MainWindowProjectIo(object):
                 json_data = json.load(f)
 
             # Format validation
-            if json_data.get("format") != "PME Project":  
+            if json_data.get("format") != "PME Project":
                 QMessageBox.warning(
                     self,
                     "Invalid Format",
@@ -327,7 +334,7 @@ class MainWindowProjectIo(object):
 
             # Version check
             file_version = json_data.get("version", "1.0")
-            if file_version != "1.0":  
+            if file_version != "1.0":
                 QMessageBox.information(
                     self,
                     "Version Notice",
@@ -347,18 +354,18 @@ class MainWindowProjectIo(object):
 
             QTimer.singleShot(0, self.fit_to_view)
 
-        except FileNotFoundError:  
+        except FileNotFoundError:
             self.statusBar().showMessage(f"File not found: {file_path}")
-        except json.JSONDecodeError as e:  
+        except json.JSONDecodeError as e:
             self.statusBar().showMessage(f"Invalid JSON format: {e}")
-        except (OSError, IOError) as e:  
+        except (OSError, IOError) as e:
             self.statusBar().showMessage(f"File I/O error: {e}")
         except (KeyError, TypeError, ValueError, AttributeError) as e:
             self.statusBar().showMessage(f"Data corruption in PME Project file: {e}")
 
     def open_project_file(self, file_path=None):
         """Open project file (.pmeprj or .pmeraw)."""
-        if not file_path:  
+        if not file_path:
             file_path, _ = QFileDialog.getOpenFileName(
                 self,
                 "Open Project File",

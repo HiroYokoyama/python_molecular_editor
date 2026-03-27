@@ -19,6 +19,7 @@ Functional class: MainWindowViewLoaders
 import contextlib
 import logging
 import os
+
 # RDKit imports (explicit to satisfy flake8 and used features)
 from rdkit import Chem
 from rdkit.Chem import AllChem
@@ -28,6 +29,7 @@ from PyQt6.QtWidgets import QFileDialog
 
 try:
     from PyQt6 import sip as _sip  # type: ignore
+
     _sip_isdeleted = getattr(_sip, "isdeleted", None)
 except (ImportError, AttributeError, TypeError):
     _sip = None
@@ -44,6 +46,7 @@ except ImportError:
 # --- Class Definition ---
 class MainWindowViewLoaders:
     """Mixin class separated from main_window.py"""
+
     def load_xyz_for_3d_viewing(self, file_path=None):
         """Load XYZ file and display in 3D viewer"""
         if not file_path:
@@ -85,7 +88,7 @@ class MainWindowViewLoaders:
             # Update visualization and UI mode
             if hasattr(self, "draw_molecule_3d"):
                 self.draw_molecule_3d(self.current_mol)
-            
+
             if hasattr(self, "plotter"):
                 self.plotter.reset_camera()
 
@@ -100,22 +103,29 @@ class MainWindowViewLoaders:
             if hasattr(self, "update_atom_id_menu_state"):
                 self.update_atom_id_menu_state()
 
-            self.statusBar().showMessage(f"3D Viewer Mode: Loaded {os.path.basename(file_path)}")
+            self.statusBar().showMessage(
+                f"3D Viewer Mode: Loaded {os.path.basename(file_path)}"
+            )
             if hasattr(self, "reset_undo_stack"):
                 self.reset_undo_stack()
-            
+
             self.current_file_path = file_path
             self.has_unsaved_changes = False
             if hasattr(self, "update_window_title"):
                 self.update_window_title()
 
-        except (FileNotFoundError, ValueError, RuntimeError, TypeError, AttributeError) as e:
+        except (
+            FileNotFoundError,
+            ValueError,
+            RuntimeError,
+            TypeError,
+            AttributeError,
+        ) as e:
             # File loading or coordinate validation error reported to user via status bar.
             # We catch AttributeError/TypeError here to handle malformed RDKit molecule objects gracefully.
             self.statusBar().showMessage(f"Load failed: {e}")
             if hasattr(self, "restore_ui_for_editing"):
                 self.restore_ui_for_editing()
-
 
     def save_3d_as_mol(self):
         """Save the current 3D structure as a MOL file."""
@@ -126,7 +136,11 @@ class MainWindowViewLoaders:
         # Determine default save path
         curr_path = getattr(self, "current_file_path", None)
         default_dir = os.path.dirname(curr_path) if curr_path else ""
-        default_name = os.path.splitext(os.path.basename(curr_path))[0] if curr_path else "untitled"
+        default_name = (
+            os.path.splitext(os.path.basename(curr_path))[0]
+            if curr_path
+            else "untitled"
+        )
         default_save_path = os.path.join(default_dir, default_name)
 
         file_path, _ = QFileDialog.getSaveFileName(
@@ -150,7 +164,7 @@ class MainWindowViewLoaders:
             lines = mol_block.split("\n")
             if len(lines) > 1 and "RDKit" in lines[1]:
                 lines[1] = f"  MoleditPy Ver. {VERSION}  3D"
-            
+
             with open(file_path, "w", encoding="utf-8") as f:
                 f.write("\n".join(lines))
             self.statusBar().showMessage(f"3D data saved to {file_path}")
@@ -160,7 +174,6 @@ class MainWindowViewLoaders:
             # We also catch TypeError in case of unexpected nil objects during teardown or property access.
             msg = f"Error saving 3D MOL: {str(e)}"
             self.statusBar().showMessage(msg)
-
 
     def load_mol_file_for_3d_viewing(self, file_path=None):
         """Open MOL/SDF file in 3D viewer"""
@@ -174,7 +187,7 @@ class MainWindowViewLoaders:
                 "MOL/SDF Files (*.mol *.sdf);;All Files (*)",
             )
             if not file_path:
-                return        
+                return
         try:
             # Determine extension
             _, ext = os.path.splitext(file_path)
@@ -196,22 +209,32 @@ class MainWindowViewLoaders:
                 mol = Chem.MolFromMolFile(file_path, removeHs=False)
 
             if mol is None:
-                self.statusBar().showMessage(f"Failed to load molecule from {file_path}")
+                self.statusBar().showMessage(
+                    f"Failed to load molecule from {file_path}"
+                )
                 return
 
             # Convert 2D to 3D if needed
             if mol.GetNumConformers() == 0:
-                self.statusBar().showMessage("No 3D coordinates found. Converting to 3D...")
+                self.statusBar().showMessage(
+                    "No 3D coordinates found. Converting to 3D..."
+                )
                 try:
                     AllChem.EmbedMolecule(mol)
                     self.current_mol = mol
                     if hasattr(self, "push_undo_state"):
                         self.push_undo_state()
                 except (RuntimeError, ValueError, TypeError):
-                    if not getattr(self, "settings", {}).get("skip_chemistry_checks", False):
-                        self.statusBar().showMessage("Failed to generate 3D coordinates")
+                    if not getattr(self, "settings", {}).get(
+                        "skip_chemistry_checks", False
+                    ):
+                        self.statusBar().showMessage(
+                            "Failed to generate 3D coordinates"
+                        )
                         return
-                    self.statusBar().showMessage("Warning: failed to generate 3D coordinates (continuing due to settings)")
+                    self.statusBar().showMessage(
+                        "Warning: failed to generate 3D coordinates (continuing due to settings)"
+                    )
 
             # Finalize load
             try:
@@ -219,7 +242,9 @@ class MainWindowViewLoaders:
                     self._clear_xyz_flags(mol)
             except (AttributeError, RuntimeError, TypeError, ValueError) as e:
                 # Suppress non-critical errors if the molecule lacks XYZ source flags to clear.
-                logging.debug(f"Failed to clear XYZ flags (likely not an XYZ source): {e}")
+                logging.debug(
+                    f"Failed to clear XYZ flags (likely not an XYZ source): {e}"
+                )
             if hasattr(self, "_apply_chem_check_and_set_flags"):
                 self._apply_chem_check_and_set_flags(mol, source_desc="MOL/SDF")
 
@@ -239,13 +264,19 @@ class MainWindowViewLoaders:
             self.statusBar().showMessage(f"Loaded {file_path} in 3D viewer")
             if hasattr(self, "reset_undo_stack"):
                 self.reset_undo_stack()
-            
+
             self.has_unsaved_changes = False
             self.current_file_path = file_path
             if hasattr(self, "update_window_title"):
                 self.update_window_title()
 
-        except (RuntimeError, ValueError, TypeError, ImportError, UnicodeDecodeError) as e:
+        except (
+            RuntimeError,
+            ValueError,
+            TypeError,
+            ImportError,
+            UnicodeDecodeError,
+        ) as e:
             # Catch RDKit parsing errors (RuntimeError), UI data mismatches (ValueError/TypeError),
             # and file encoding issues during manual fix_mol_block processing.
             self.statusBar().showMessage(f"Error processing MOL/SDF file: {e}")

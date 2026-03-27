@@ -21,7 +21,6 @@ import io
 import itertools
 import logging
 import math
-import os
 import pickle
 from collections import deque
 
@@ -30,7 +29,7 @@ import numpy as np
 try:
     from .mol_geometry import is_problematic_valence, identify_valence_problems
 except ImportError:
-    from modules.mol_geometry import is_problematic_valence, identify_valence_problems
+    from modules.mol_geometry import identify_valence_problems
 
 # RDKit imports (explicit to satisfy flake8 and used features)
 from PyQt6.QtCore import QByteArray, QLineF, QMimeData, QPointF, Qt, QTimer
@@ -256,7 +255,9 @@ class MainWindowEditActions:
                     atom1,
                     atom2,
                     bond_order=bond_data.get("order", 1),
-                    bond_stereo=bond_data.get("stereo", 0),  # Restore E/Z stereochemistry information as well
+                    bond_stereo=bond_data.get(
+                        "stereo", 0
+                    ),  # Restore E/Z stereochemistry information as well
                 )
 
             self.push_undo_state()
@@ -344,7 +345,12 @@ class MainWindowEditActions:
                                 ok = bool(self.scene.delete_items({it}))
                                 if ok:
                                     deleted_any = True
-                            except (AttributeError, RuntimeError, ValueError, TypeError):
+                            except (
+                                AttributeError,
+                                RuntimeError,
+                                ValueError,
+                                TypeError,
+                            ):
                                 # If single deletion also fails, skip that item
                                 continue
                     else:
@@ -596,6 +602,7 @@ class MainWindowEditActions:
         except RuntimeError:
             # Suppress non-critical error
             pass
+
     def open_rotate_2d_dialog(self):
         """Open 2D rotation dialog"""
         # Initialize last_rotation_angle if not present
@@ -815,7 +822,9 @@ class MainWindowEditActions:
                             continue
             else:
                 # Fallback: use the pure-logic valence heuristic from mol_geometry
-                for atom_id in identify_valence_problems(self.data.atoms, self.data.bonds):
+                for atom_id in identify_valence_problems(
+                    self.data.atoms, self.data.bonds
+                ):
                     problem_map[atom_id] = True
         except (AttributeError, RuntimeError, ValueError, TypeError) as e:
             logging.error(f"Error during chemistry problem detection: {e}")
@@ -832,7 +841,11 @@ class MainWindowEditActions:
         except (AttributeError, RuntimeError, ValueError, TypeError):
             return
 
-        atoms_snapshot = dict(self.data.atoms) if (hasattr(self, "data") and hasattr(self.data, "atoms")) else {}
+        atoms_snapshot = (
+            dict(self.data.atoms)
+            if (hasattr(self, "data") and hasattr(self.data, "atoms"))
+            else {}
+        )
         is_deleted_func = sip_isdeleted_safe
 
         items_to_update = []
@@ -931,6 +944,7 @@ class MainWindowEditActions:
                     _ui_closure()
         except (AttributeError, RuntimeError, TypeError, ValueError) as e:
             logging.exception(f"Unexpected error in update_implicit_hydrogens: {e}")
+
     def clean_up_2d_structure(self):
         self.statusBar().showMessage("Optimizing 2D structure...")
 
@@ -1419,5 +1433,6 @@ class MainWindowEditActions:
                 self.optimize_3d_button.setEnabled(
                     not getattr(self, "chem_check_failed", False)
                 )
+
 
 MainWindowEditActions._cls = MainWindowEditActions

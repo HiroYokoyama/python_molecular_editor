@@ -19,14 +19,15 @@ from PyQt6.QtWidgets import (
     QPushButton,
     QVBoxLayout,
 )
+from rdkit import Geometry
 
 try:
-    from .dialog3_d_picking_mixin import Dialog3DPickingMixin
+    from .dialog_3d_picking_mixin import Dialog3DPickingMixin
 except ImportError:
-    from modules.dialog3_d_picking_mixin import Dialog3DPickingMixin
+    from modules.dialog_3d_picking_mixin import Dialog3DPickingMixin
 
 
-class PlanarizeDialog(Dialog3DPickingMixin, QDialog):  
+class PlanarizeDialog(Dialog3DPickingMixin, QDialog):
     """Dialog to planarize a selected set of atoms by projecting them onto a best-fit plane.
     Has a selection UI similar to AlignPlane, and projects selected atoms orthogonally onto the plane via the Apply button.
     """
@@ -200,7 +201,12 @@ class PlanarizeDialog(Dialog3DPickingMixin, QDialog):
             # Update molecular coordinates
             conf = self.mol.GetConformer()
             for i, new_pos in zip(selected_indices, new_positions):
-                conf.SetAtomPosition(int(i), new_pos.tolist())
+                conf.SetAtomPosition(
+                    int(i),
+                    Geometry.Point3D(
+                        float(new_pos[0]), float(new_pos[1]), float(new_pos[2])
+                    ),
+                )
                 self.main_window.atom_positions_3d[int(i)] = new_pos
 
             # Update 3D view

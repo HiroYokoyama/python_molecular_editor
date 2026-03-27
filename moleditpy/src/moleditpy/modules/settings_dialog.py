@@ -30,7 +30,6 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-import logging
 
 try:
     from .constants import CPK_COLORS
@@ -38,7 +37,7 @@ except ImportError:
     from modules.constants import CPK_COLORS
 
 
-class SettingsDialog(QDialog):  
+class SettingsDialog(QDialog):
     def __init__(self, current_settings, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Settings")
@@ -132,6 +131,7 @@ class SettingsDialog(QDialog):
         self.create_other_tab()
 
         # Initialize UI and internal variables with the provided settings
+        self.settings = current_settings
         self.update_ui_from_settings(current_settings)
 
         # Initialize aromatic circle checkbox and torus thickness from settings
@@ -510,9 +510,9 @@ class SettingsDialog(QDialog):
 
         # Update element button colors
         for s, btn in self.element_buttons.items():
-            if not btn: # Check if the button still exists
+            if not btn:  # Check if the button still exists
                 continue
-            
+
             override = overrides.get(s)
             q_color = (
                 QColor(override)
@@ -520,9 +520,7 @@ class SettingsDialog(QDialog):
                 else CPK_COLORS.get(s, CPK_COLORS["DEFAULT"])
             )
             brightness = (
-                q_color.red() * 299
-                + q_color.green() * 587
-                + q_color.blue() * 114
+                q_color.red() * 299 + q_color.green() * 587 + q_color.blue() * 114
             ) / 1000
             text_color = "white" if brightness < 128 else "black"
             btn.setStyleSheet(
@@ -1077,7 +1075,7 @@ class SettingsDialog(QDialog):
         )
         if reply == QMessageBox.StandardButton.Yes:
             self.update_ui_from_settings(self.default_settings)
-            
+
             if not (self.parent_window and hasattr(self.parent_window, "settings")):
                 return
 
@@ -1086,7 +1084,7 @@ class SettingsDialog(QDialog):
             settings.update(self.default_settings)
             if "cpk_colors" in settings:
                 settings["cpk_colors"] = {}
-            
+
             settings["ball_stick_bond_color"] = self.default_settings.get(
                 "ball_stick_bond_color", "#7F7F7F"
             )
@@ -1110,7 +1108,9 @@ class SettingsDialog(QDialog):
                         it.update_style()
 
             # 5. Refresh opt/conv actions
-            opt_method = self.parent_window.settings.get("optimization_method", "MMFF_RDKIT")
+            opt_method = self.parent_window.settings.get(
+                "optimization_method", "MMFF_RDKIT"
+            )
             if hasattr(self.parent_window, "optimization_method"):
                 self.parent_window.optimization_method = opt_method
 
@@ -1316,7 +1316,7 @@ class SettingsDialog(QDialog):
 
         settings = self.get_settings()
         self.parent_window.settings.update(settings)
-        
+
         # Mark settings dirty
         if hasattr(self.parent_window, "settings_dirty"):
             self.parent_window.settings_dirty = True
@@ -1324,7 +1324,7 @@ class SettingsDialog(QDialog):
         # Apply 3D view settings
         if hasattr(self.parent_window, "apply_3d_settings"):
             self.parent_window.apply_3d_settings()
-        
+
         # Update CPK colors
         if hasattr(self.parent_window, "update_cpk_colors_from_settings"):
             self.parent_window.update_cpk_colors_from_settings()
@@ -1332,7 +1332,11 @@ class SettingsDialog(QDialog):
         # Refresh other dialogs
         for w in QApplication.topLevelWidgets():
             # Check for ColorSettingsDialog without dynamic name check but cleaning up.
-            if w and type(w).__name__ == "ColorSettingsDialog" and hasattr(w, "refresh_ui"):
+            if (
+                w
+                and type(w).__name__ == "ColorSettingsDialog"
+                and hasattr(w, "refresh_ui")
+            ):
                 w.refresh_ui()
 
         # Redraw molecule
@@ -1364,15 +1368,14 @@ class SettingsDialog(QDialog):
 
     def _on_skip_chem_checks_changed(self, state):
         """Handle user toggling of skip chemistry checks: persist and update UI.
-        
+
         state: Qt.Checked (2) or Qt.Unchecked (0)
         """
         enabled = bool(state)
         # Handle cases where self.settings might not be initialized or is a different object
-        settings = getattr(self, "settings", None)
-        if isinstance(settings, dict):
-            settings["skip_chemistry_checks"] = enabled
-        
+        if isinstance(self.settings, dict):
+            self.settings["skip_chemistry_checks"] = enabled
+
         # Mark dirty
         if hasattr(self, "settings_dirty"):
             self.settings_dirty = True
@@ -1620,9 +1623,15 @@ class SettingsDialog(QDialog):
                 self.default_settings.get("aromatic_torus_thickness_factor", 0.6),
             )
         )
-        if hasattr(self, "aromatic_torus_thickness_slider") and self.aromatic_torus_thickness_slider:
+        if (
+            hasattr(self, "aromatic_torus_thickness_slider")
+            and self.aromatic_torus_thickness_slider
+        ):
             self.aromatic_torus_thickness_slider.setValue(int(thickness_factor * 100))
-        if hasattr(self, "aromatic_torus_thickness_label") and self.aromatic_torus_thickness_label:
+        if (
+            hasattr(self, "aromatic_torus_thickness_label")
+            and self.aromatic_torus_thickness_label
+        ):
             self.aromatic_torus_thickness_label.setText(f"{thickness_factor:.1f}")
 
         # 7. 2D Settings

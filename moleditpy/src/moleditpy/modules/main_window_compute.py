@@ -24,7 +24,6 @@ from PyQt6.QtGui import QAction, QColor
 from PyQt6.QtWidgets import QApplication, QMenu, QMessageBox
 import contextlib
 from rdkit import Chem
-from rdkit.Chem import AllChem
 
 try:
     from . import OBABEL_AVAILABLE
@@ -34,6 +33,7 @@ except ImportError:
 
 try:
     from PyQt6 import sip as _sip  # type: ignore
+
     _sip_isdeleted = getattr(_sip, "isdeleted", None)
 except (AttributeError, RuntimeError, TypeError):
     _sip = None
@@ -59,8 +59,8 @@ class MainWindowCompute:
     """Mixin class separated from main_window.py"""
 
     _cls = None
-    
-    # Default initial state 
+
+    # Default initial state
     last_successful_optimization_method = None
 
     # ------------------------------------------------------------------
@@ -101,30 +101,30 @@ class MainWindowCompute:
         """Consolidate UI state updates into a single robust boundary."""
         try:
             has_mol = self.current_mol is not None
-            
+
             if hasattr(self, "cleanup_button"):
                 self.cleanup_button.setEnabled(True)
-            
+
             self._restore_button_ui()
-            
+
             if hasattr(self, "optimize_3d_button"):
                 self.optimize_3d_button.setEnabled(has_mol)
             if hasattr(self, "export_button"):
                 self.export_button.setEnabled(has_mol)
-                
+
             if hasattr(self, "_enable_3d_features"):
                 self._enable_3d_features(has_mol)
             if hasattr(self, "_enable_3d_edit_actions"):
                 self._enable_3d_edit_actions(has_mol)
-                
+
             if hasattr(self, "analysis_action"):
                 self.analysis_action.setEnabled(has_mol)
             if hasattr(self, "edit_3d_action"):
                 self.edit_3d_action.setEnabled(has_mol)
-                
+
             if hasattr(self, "plotter") and hasattr(self.plotter, "render"):
                 self.plotter.render()
-                
+
             if hasattr(self, "view_2d") and hasattr(self.view_2d, "setFocus"):
                 self.view_2d.setFocus()
         except (AttributeError, RuntimeError, TypeError) as e:
@@ -132,7 +132,7 @@ class MainWindowCompute:
 
     # ------------------------------------------------------------------
 
-    def set_optimization_method(self, method_name):  
+    def set_optimization_method(self, method_name):
         """Set preferred 3D optimization method and persist to settings.
 
         Supported values: 'GAFF', 'MMFF'
@@ -176,19 +176,21 @@ class MainWindowCompute:
         )
         self.statusBar().showMessage(f"3D optimization method set to: {label}")
 
-    def toggle_intermolecular_interaction_rdkit(self, checked):  
+    def toggle_intermolecular_interaction_rdkit(self, checked):
         """Toggle whether intermolecular interactions are considered for RDKit optimization."""
         self.settings["optimize_intermolecular_interaction_rdkit"] = checked
         self.settings_dirty = True
         state_str = "Enabled" if checked else "Disabled"
-        self.statusBar().showMessage(f"Intermolecular interaction for RDKit: {state_str}")
-    
-    def show_convert_menu(self, pos):  
+        self.statusBar().showMessage(
+            f"Intermolecular interaction for RDKit: {state_str}"
+        )
+
+    def show_convert_menu(self, pos):
         """Temporary 3D conversion menu (right-click). Not persisted."""
         # If button is disabled (during calculation), do not show menu
         if not self.convert_button.isEnabled():
-            return            
-        
+            return
+
         menu = QMenu(self)
         conv_options = [
             ("RDKit -> Open Babel -> Direct (fallback)", "fallback"),
@@ -206,16 +208,20 @@ class MainWindowCompute:
             menu.addAction(a)
 
         # Show menu at button position
-        if hasattr(self, "convert_button") and _sip_isdeleted and not _sip_isdeleted(self.convert_button):
+        if (
+            hasattr(self, "convert_button")
+            and _sip_isdeleted
+            and not _sip_isdeleted(self.convert_button)
+        ):
             menu.exec_(self.convert_button.mapToGlobal(pos))
 
-    def _trigger_conversion_with_temp_mode(self, mode_key):  
+    def _trigger_conversion_with_temp_mode(self, mode_key):
         # store temporary override and invoke conversion
         self._temp_conv_mode = mode_key
         # Call the normal conversion entry point (it will consume the temp)
         QTimer.singleShot(0, self.trigger_conversion)
 
-    def show_optimize_menu(self, pos):  
+    def show_optimize_menu(self, pos):
         """Temporary 3D optimization menu (right-click). Not persisted."""
         # If button is disabled (during calculation), do not show menu
         if not self.optimize_3d_button.isEnabled():
@@ -238,15 +244,13 @@ class MainWindowCompute:
             if hasattr(self, "opt3d_actions") and key in self.opt3d_actions:
                 a.setEnabled(self.opt3d_actions[key].isEnabled())
             a.triggered.connect(
-                lambda checked=False,
-                k=key: self._trigger_optimize_with_temp_method(k)
+                lambda checked=False, k=key: self._trigger_optimize_with_temp_method(k)
             )
             menu.addAction(a)
 
         # Add Plugin Optimization Methods
-        if (
-            getattr(self, "plugin_manager", None)
-            and getattr(self.plugin_manager, "optimization_methods", None)
+        if getattr(self, "plugin_manager", None) and getattr(
+            self.plugin_manager, "optimization_methods", None
         ):
             methods = self.plugin_manager.optimization_methods
             if methods:
@@ -260,10 +264,14 @@ class MainWindowCompute:
                     menu.addAction(a)
 
         # Show menu at button position
-        if hasattr(self, "optimize_3d_button") and _sip_isdeleted and not _sip_isdeleted(self.optimize_3d_button):
+        if (
+            hasattr(self, "optimize_3d_button")
+            and _sip_isdeleted
+            and not _sip_isdeleted(self.optimize_3d_button)
+        ):
             menu.exec_(self.optimize_3d_button.mapToGlobal(pos))
 
-    def _trigger_optimize_with_temp_method(self, method_key):  
+    def _trigger_optimize_with_temp_method(self, method_key):
         # store temporary override and invoke optimization
         self._temp_optimization_method = method_key
         # Run optimize on next event loop turn so UI updates first
@@ -310,7 +318,9 @@ class MainWindowCompute:
     def _handle_chemistry_problems(self, mol, problems):
         """Mark chemistry problems in the 2D scene."""
         self.scene.clear_all_problem_flags()
-        self.statusBar().showMessage(f"Error: {len(problems)} chemistry problem(s) found.")
+        self.statusBar().showMessage(
+            f"Error: {len(problems)} chemistry problem(s) found."
+        )
         self.scene.clearSelection()
 
         for prob in problems:
@@ -354,12 +364,16 @@ class MainWindowCompute:
                     self._active_calc_threads.remove(t)
 
             def _on_finished(result):
-                try: self.on_calculation_finished(result)
-                finally: _cleanup()
+                try:
+                    self.on_calculation_finished(result)
+                finally:
+                    _cleanup()
 
             def _on_error(error_msg):
-                try: self.on_calculation_error(error_msg)
-                finally: _cleanup()
+                try:
+                    self.on_calculation_error(error_msg)
+                finally:
+                    _cleanup()
 
             worker.error.connect(_on_error)
             worker.finished.connect(_on_finished)
@@ -403,7 +417,7 @@ class MainWindowCompute:
             self.statusBar().showMessage("Calculating 3D structure...")
 
         mol_block = self._setup_mol_block_for_worker(mol)
-        
+
         run_id = int(getattr(self, "next_conversion_id", 1))
         self.next_conversion_id = run_id + 1
         if not hasattr(self, "active_worker_ids"):
@@ -421,21 +435,35 @@ class MainWindowCompute:
 
         # Add 'Calculating...' overlay
         bg_qcolor = QColor(self.settings.get("background_color", "#919191"))
-        text_color = "black" if (bg_qcolor.isValid() and bg_qcolor.toHsl().lightness() > 128) else "white"
+        text_color = (
+            "black"
+            if (bg_qcolor.isValid() and bg_qcolor.toHsl().lightness() > 128)
+            else "white"
+        )
         self._calculating_text_actor = self.plotter.add_text(
-            "Calculating...", position="lower_right", font_size=15, color=text_color, name="calculating_text"
+            "Calculating...",
+            position="lower_right",
+            font_size=15,
+            color=text_color,
+            name="calculating_text",
         )
         self.plotter.render()
 
         # Build options
-        conv_mode = self.__dict__.pop("_temp_conv_mode", self.settings.get("3d_conversion_mode", "fallback"))
-        opt_method = self.__dict__.pop("_temp_optimization_method", None) or getattr(self, "optimization_method", "MMFF_RDKIT")
-        
+        conv_mode = self.__dict__.pop(
+            "_temp_conv_mode", self.settings.get("3d_conversion_mode", "fallback")
+        )
+        opt_method = self.__dict__.pop("_temp_optimization_method", None) or getattr(
+            self, "optimization_method", "MMFF_RDKIT"
+        )
+
         options = {
             "conversion_mode": conv_mode,
             "optimization_method": opt_method,
-            "optimize_intermolecular_interaction_rdkit": self.settings.get("optimize_intermolecular_interaction_rdkit", True),
-            "worker_id": run_id
+            "optimize_intermolecular_interaction_rdkit": self.settings.get(
+                "optimize_intermolecular_interaction_rdkit", True
+            ),
+            "worker_id": run_id,
         }
 
         self._start_calculation_worker(mol_block, options, run_id)
@@ -443,7 +471,7 @@ class MainWindowCompute:
         self.update_chiral_labels()
         self.view_2d.setFocus()
 
-    def halt_conversion(self):  
+    def halt_conversion(self):
         """Halt the in-progress conversion."""
         # Add active worker IDs to halt_ids
         wids_to_halt = set(getattr(self, "active_worker_ids", set()))
@@ -466,8 +494,10 @@ class MainWindowCompute:
         # Suppress non-critical errors during fallback chemistry check to avoid crashing the UI
         with contextlib.suppress(AttributeError, RuntimeError, TypeError, ValueError):
             self.scene.clear_all_problem_flags()
-            
-            problem_atom_ids = identify_valence_problems(self.data.atoms, self.data.bonds)
+
+            problem_atom_ids = identify_valence_problems(
+                self.data.atoms, self.data.bonds
+            )
 
             if problem_atom_ids:
                 for atom_id in problem_atom_ids:
@@ -475,9 +505,13 @@ class MainWindowCompute:
                     if atom_item:
                         atom_item.has_problem = True
                         atom_item.update()
-                self.statusBar().showMessage(f"Error: {len(problem_atom_ids)} chemistry problem(s) found (valence issues).")
+                self.statusBar().showMessage(
+                    f"Error: {len(problem_atom_ids)} chemistry problem(s) found (valence issues)."
+                )
             else:
-                self.statusBar().showMessage("Error: Invalid chemical structure (RDKit conversion failed).")
+                self.statusBar().showMessage(
+                    "Error: Invalid chemical structure (RDKit conversion failed)."
+                )
 
             self.scene.clearSelection()
             self.view_2d.setFocus()
@@ -521,7 +555,9 @@ class MainWindowCompute:
                 and hasattr(self.plugin_manager, "optimization_methods")
                 and method in self.plugin_manager.optimization_methods
             ):
-                self.statusBar().showMessage(f"Optimizing with plugin method: {method}...")
+                self.statusBar().showMessage(
+                    f"Optimizing with plugin method: {method}..."
+                )
                 QApplication.processEvents()
                 info = self.plugin_manager.optimization_methods[method]
                 callback = info["callback"]
@@ -533,7 +569,9 @@ class MainWindowCompute:
                         )
                     else:
                         self.draw_molecule_3d(self.current_mol)
-                        self.statusBar().showMessage(f"Optimization ({method}) successful.")
+                        self.statusBar().showMessage(
+                            f"Optimization ({method}) successful."
+                        )
                         self.push_undo_state()
                         self.view_2d.setFocus()
                     return
@@ -546,16 +584,18 @@ class MainWindowCompute:
             # For RDKit and OBabel methods, use CalculationWorker to avoid UI freeze and allow Halt
             if "_RDKIT" in method or "_OBABEL" in method:
                 self.statusBar().showMessage(f"Optimizing 3D structure ({method})...")
-                
+
                 # Use current_mol as the source MOL block for optimization
                 mol_block = Chem.MolToMolBlock(self.current_mol, includeStereo=True)
-                
+
                 options = {
                     "conversion_mode": "optimize_only",
                     "optimization_method": method,
-                    "optimize_intermolecular_interaction_rdkit": self.settings.get("optimize_intermolecular_interaction_rdkit", True)
+                    "optimize_intermolecular_interaction_rdkit": self.settings.get(
+                        "optimize_intermolecular_interaction_rdkit", True
+                    ),
                 }
-                
+
                 # Assign unique run ID
                 run_id = int(getattr(self, "next_conversion_id", 1))
                 self.next_conversion_id = run_id + 1
@@ -581,16 +621,18 @@ class MainWindowCompute:
                     worker = CalculationWorker()
                     worker.halt_ids = self.halt_ids
                     worker.moveToThread(thread)
-                    
+
                     worker.status_update.connect(self.update_status_bar)
-                    
+
                     def _on_opt_worker_finished(result, w=worker, t=thread):
                         # Re-enable optimize button UI
                         if hasattr(self, "optimize_3d_button"):
                             self._safe_disconnect(self.optimize_3d_button.clicked)
                             self.optimize_3d_button.setText("Optimize 3D")
-                            self.optimize_3d_button.clicked.connect(self.optimize_3d_structure)
-                        
+                            self.optimize_3d_button.clicked.connect(
+                                self.optimize_3d_structure
+                            )
+
                         self.on_calculation_finished(result)
 
                         t.quit()
@@ -604,7 +646,9 @@ class MainWindowCompute:
                         if hasattr(self, "optimize_3d_button"):
                             self._safe_disconnect(self.optimize_3d_button.clicked)
                             self.optimize_3d_button.setText("Optimize 3D")
-                            self.optimize_3d_button.clicked.connect(self.optimize_3d_structure)
+                            self.optimize_3d_button.clicked.connect(
+                                self.optimize_3d_structure
+                            )
 
                         self.on_calculation_error(error_msg)
 
@@ -617,15 +661,20 @@ class MainWindowCompute:
                     worker.error.connect(_on_opt_worker_error)
                     worker.finished.connect(_on_opt_worker_finished)
                     thread.start()
-                    
+
                     # Start work
-                    QTimer.singleShot(10, lambda w=worker, m=mol_block, o=options: w.start_work.emit(m, o))
-                    
+                    QTimer.singleShot(
+                        10,
+                        lambda w=worker, m=mol_block, o=options: w.start_work.emit(
+                            m, o
+                        ),
+                    )
+
                     self._active_calc_threads.append(thread)
                 except (RuntimeError, TypeError, AttributeError) as e:
                     # Catch specific worker/thread creation failures.
                     self.on_calculation_error(str(e))
-                
+
                 return
             else:
                 self.statusBar().showMessage(
@@ -653,9 +702,7 @@ class MainWindowCompute:
                 self._remove_calculating_text()
                 self._restore_button_ui()
                 self.cleanup_button.setEnabled(True)
-                self.statusBar().showMessage(
-                    "Ignored result from stale conversion."
-                )
+                self.statusBar().showMessage("Ignored result from stale conversion.")
                 return
 
         # Cleanup worker IDs
@@ -669,7 +716,11 @@ class MainWindowCompute:
 
         # Record the optimization method used for this conversion if available.
         opt_method = None
-        if mol is not None and hasattr(mol, "HasProp") and mol.HasProp("_pme_optimization_method"):
+        if (
+            mol is not None
+            and hasattr(mol, "HasProp")
+            and mol.HasProp("_pme_optimization_method")
+        ):
             opt_method = mol.GetProp("_pme_optimization_method")
 
         # Store the optimization method using its user-friendly UI label if available.
@@ -692,8 +743,12 @@ class MainWindowCompute:
 
         # Set chiral centers from 2D stereo
         skip_chem_property = False
-        if mol is not None and hasattr(mol, "HasProp") and mol.HasProp("_xyz_skip_checks"):
-            # Suppress potential errors if the property is malformed 
+        if (
+            mol is not None
+            and hasattr(mol, "HasProp")
+            and mol.HasProp("_xyz_skip_checks")
+        ):
+            # Suppress potential errors if the property is malformed
             with contextlib.suppress(RuntimeError, TypeError, ValueError, KeyError):
                 skip_chem_property = bool(mol.GetIntProp("_xyz_skip_checks"))
 
@@ -723,9 +778,11 @@ class MainWindowCompute:
                 )
         # Remove 'Calculating...' text and refresh
         self._remove_calculating_text()
-        
+
         if self.last_successful_optimization_method:
-            self.statusBar().showMessage(f"3D calculation ({self.last_successful_optimization_method}) successful.")
+            self.statusBar().showMessage(
+                f"3D calculation ({self.last_successful_optimization_method}) successful."
+            )
         else:
             self.statusBar().showMessage("3D calculation successful.")
 
@@ -825,5 +882,6 @@ class MainWindowCompute:
             self.statusBar().showMessage(f"Error: {error_message}")
 
         self._refresh_ui_state()
+
 
 MainWindowCompute._cls = MainWindowCompute

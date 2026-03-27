@@ -17,6 +17,7 @@ Manages discovery, loading, and execution of external plugins.
 
 import ast
 import importlib.util
+import logging
 import os
 import shutil
 import sys
@@ -66,7 +67,6 @@ class PluginManager:
             try:
                 os.makedirs(self.plugin_dir)
             except OSError as e:
-                import logging
                 logging.error(f"Error creating plugin directory: {e}")
 
     def open_plugin_folder(self):
@@ -164,7 +164,14 @@ class PluginManager:
             if self.main_window:
                 self.discover_plugins(self.main_window)
             return True, msg
-        except (AttributeError, RuntimeError, ValueError, OSError, ImportError, SyntaxError) as e:
+        except (
+            AttributeError,
+            RuntimeError,
+            ValueError,
+            OSError,
+            ImportError,
+            SyntaxError,
+        ) as e:
             return False, str(e)
 
     def discover_plugins(self, parent=None):
@@ -290,7 +297,14 @@ class PluginManager:
                     # Pass category to context if needed, currently not storing it in context directly but could be useful
                     try:
                         module.initialize(context)
-                    except (AttributeError, RuntimeError, ValueError, OSError, ImportError, SyntaxError) as e:
+                    except (
+                        AttributeError,
+                        RuntimeError,
+                        ValueError,
+                        OSError,
+                        ImportError,
+                        SyntaxError,
+                    ) as e:
                         # [BROAD EXCEPTION] Plugins have root power; catch all potential failures during init.
                         status = f"Error (Init): {e}"
                         # Initialization errors are stored in plugin status for display in Plugin Dialog
@@ -301,7 +315,14 @@ class PluginManager:
                             module.autorun(self.main_window)
                         else:
                             status = "Skipped (No MW)"
-                    except (AttributeError, RuntimeError, ValueError, OSError, ImportError, SyntaxError) as e:
+                    except (
+                        AttributeError,
+                        RuntimeError,
+                        ValueError,
+                        OSError,
+                        ImportError,
+                        SyntaxError,
+                    ) as e:
                         status = f"Error (Autorun): {e}"
                         # Autorun errors are stored in plugin status
                         print(f"Plugin {plugin_name} autorun error: {e}")
@@ -322,17 +343,30 @@ class PluginManager:
                     }
                 )
 
-        except (AttributeError, RuntimeError, ValueError, OSError, ImportError, SyntaxError) as e:
-            # [BROAD EXCEPTION] Loading failures are caught to prevent a single buggy plugin from 
+        except (
+            AttributeError,
+            RuntimeError,
+            ValueError,
+            OSError,
+            ImportError,
+            SyntaxError,
+        ) as e:
+            # [BROAD EXCEPTION] Loading failures are caught to prevent a single buggy plugin from
             # crashing the entire discovery process.
-            import logging
             logging.error(f"Failed to load plugin {module_name}: {e}")
 
     def run_plugin(self, module, main_window):
         """Executes the plugin's run method (Legacy manual trigger)."""
         try:
             module.run(main_window)
-        except (AttributeError, RuntimeError, ValueError, OSError, ImportError, SyntaxError) as e:
+        except (
+            AttributeError,
+            RuntimeError,
+            ValueError,
+            OSError,
+            ImportError,
+            SyntaxError,
+        ) as e:
             QMessageBox.critical(
                 main_window,
                 "Plugin Error",
@@ -429,10 +463,18 @@ class PluginManager:
         for handler in self.document_reset_handlers:
             try:
                 handler["callback"]()
-            except (AttributeError, RuntimeError, ValueError, OSError, ImportError, SyntaxError) as e:
+            except (
+                AttributeError,
+                RuntimeError,
+                ValueError,
+                OSError,
+                ImportError,
+                SyntaxError,
+            ) as e:
                 # [BROAD EXCEPTION] Document reset handlers are user plugins; catch all to prevent data loss.
-                import logging
-                logging.error(f"Error in document reset handler for {handler['plugin']}: {e}")
+                logging.error(
+                    f"Error in document reset handler for {handler['plugin']}: {e}"
+                )
 
     def get_plugin_info_safe(self, file_path):
         """Extracts plugin metadata using AST parsing (safe, no execution)."""
@@ -472,10 +514,17 @@ class PluginManager:
                                     for elt in node.value.elts:
                                         if isinstance(elt, ast.Constant):
                                             elts.append(elt.value)
-                                        elif hasattr(ast, "Num") and isinstance(elt, getattr(ast, "Num", type(None))):
+                                        elif hasattr(ast, "Num") and isinstance(
+                                            elt, getattr(ast, "Num", type(None))
+                                        ):
                                             elts.append(elt.n)
                                     val = ".".join(map(str, elts))
-                                except (AttributeError, RuntimeError, ValueError, TypeError):
+                                except (
+                                    AttributeError,
+                                    RuntimeError,
+                                    ValueError,
+                                    TypeError,
+                                ):
                                     # Fallback for complex AST structures during metadata extraction
                                     pass
 
@@ -508,14 +557,22 @@ class PluginManager:
                         node.value.value, str
                     ):
                         val = node.value.value
-                    elif hasattr(ast, "Str") and isinstance(node.value, getattr(ast, "Str", type(None))):
+                    elif hasattr(ast, "Str") and isinstance(
+                        node.value, getattr(ast, "Str", type(None))
+                    ):
                         val = node.value.s
 
                     if val and not info["description"]:
                         info["description"] = val.strip().split("\n")[0]
 
-        except (AttributeError, RuntimeError, ValueError, OSError, ImportError, SyntaxError) as e:
+        except (
+            AttributeError,
+            RuntimeError,
+            ValueError,
+            OSError,
+            ImportError,
+            SyntaxError,
+        ) as e:
             # Metadata extraction is best-effort and should not block the app.
-            import logging
             logging.debug(f"Error parsing plugin info for {file_path}: {e}")
         return info

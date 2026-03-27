@@ -64,7 +64,9 @@ class ZoomableView(QGraphicsView):
 
         if is_middle_button or is_shift_left_button:
             self._is_panning = True
-            self._pan_start_pos = event.pos()  # Record start point in viewport coordinates
+            self._pan_start_pos = (
+                event.pos()
+            )  # Record start point in viewport coordinates
             # Record current scrollbar values
             self._pan_start_scroll_h = self.horizontalScrollBar().value()
             self._pan_start_scroll_v = self.verticalScrollBar().value()

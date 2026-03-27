@@ -146,7 +146,7 @@ class Dialog3DPickingMixin:
                 try:
                     if label_actor is not None:
                         self.main_window.plotter.remove_actor(label_actor)
-                except (AttributeError, RuntimeError, TypeError):  
+                except (AttributeError, RuntimeError, TypeError):
                     # Ignore actor removal failure on stale plotter
                     pass
 

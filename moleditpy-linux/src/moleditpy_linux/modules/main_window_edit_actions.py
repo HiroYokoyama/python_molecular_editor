@@ -16,19 +16,20 @@ DOI: 10.5281/zenodo.17268532
 """
 
 
+import contextlib
 import io
 import itertools
+import logging
 import math
 import pickle
-import traceback
 from collections import deque
 
 import numpy as np
 
 try:
-    from .mol_geometry import is_problematic_valence
+    from .mol_geometry import is_problematic_valence, identify_valence_problems
 except ImportError:
-    from modules.mol_geometry import is_problematic_valence
+    from modules.mol_geometry import identify_valence_problems
 
 # RDKit imports (explicit to satisfy flake8 and used features)
 from PyQt6.QtCore import QByteArray, QLineF, QMimeData, QPointF, Qt, QTimer
@@ -123,8 +124,10 @@ except ImportError:
 
 
 # --- Class Definition ---
-class MainWindowEditActions(object):
-    """Functional class separated from main_window.py"""
+class MainWindowEditActions:
+    """Mixin class separated from main_window.py"""
+
+    _cls = None  # Placeholder for class-level patching
 
     def copy_selection(self):
         """Copy selected atoms and bonds to clipboard"""
@@ -252,7 +255,9 @@ class MainWindowEditActions(object):
                     atom1,
                     atom2,
                     bond_order=bond_data.get("order", 1),
-                    bond_stereo=bond_data.get("stereo", 0),  # Restore E/Z stereochemistry information as well
+                    bond_stereo=bond_data.get(
+                        "stereo", 0
+                    ),  # Restore E/Z stereochemistry information as well
                 )
 
             self.push_undo_state()
@@ -264,8 +269,8 @@ class MainWindowEditActions(object):
         except (AttributeError, RuntimeError, ValueError) as e:
             print(f"Error during paste operation: {e}")
             self.statusBar().showMessage(f"Error during paste operation: {e}")
-        self.statusBar().showMessage(f"Pasted {len(new_atoms)} atoms.", 2000)
         self.activate_select_mode()
+        self.scene.update_all_items()
 
     def remove_hydrogen_atoms(self):
         """Delete hydrogen atoms and their bonds in 2D view"""
@@ -340,7 +345,12 @@ class MainWindowEditActions(object):
                                 ok = bool(self.scene.delete_items({it}))
                                 if ok:
                                     deleted_any = True
-                            except (AttributeError, RuntimeError, ValueError, TypeError):
+                            except (
+                                AttributeError,
+                                RuntimeError,
+                                ValueError,
+                                TypeError,
+                            ):
                                 # If single deletion also fails, skip that item
                                 continue
                     else:
@@ -350,12 +360,11 @@ class MainWindowEditActions(object):
                     # Continue with next batch on unexpected errors
                     continue
 
-                # Allow the GUI to process events between batches to remain responsive
                 try:
                     QApplication.processEvents()
-                except (AttributeError, RuntimeError, ValueError, TypeError):  
-                    import traceback
-                    traceback.print_exc()
+                except RuntimeError:
+                    # Suppress non-critical error
+                    pass
             # Determine how many hydrogens actually were removed by re-scanning data
             remaining_h = 0
             try:
@@ -372,11 +381,7 @@ class MainWindowEditActions(object):
 
             if removed_count > 0:
                 # Only push a single undo state once for the whole operation
-                try:
-                    self.push_undo_state()
-                except (AttributeError, RuntimeError, ValueError, TypeError):  
-                    import traceback
-                    traceback.print_exc()
+                self.push_undo_state()
                 self.statusBar().showMessage(
                     f"Removed {removed_count} hydrogen atoms.", 2000
                 )
@@ -393,16 +398,14 @@ class MainWindowEditActions(object):
                     )
 
         except (AttributeError, RuntimeError, ValueError) as e:
-            # Capture and log unexpected errors but don't let them crash the UI
             print(f"Error during hydrogen removal: {e}")
-            try:
+            with contextlib.suppress(AttributeError, RuntimeError, TypeError):
+                # Suppress transient errors during UI status reporting.
                 self.statusBar().showMessage(f"Error removing hydrogen atoms: {e}")
-            except (AttributeError, RuntimeError, ValueError, TypeError):  
-                import traceback
-                traceback.print_exc()
 
     def add_hydrogen_atoms(self):
         """Compute and add explicit hydrogens in 2D view using RDKit."""
+
         try:
             mol = self.data.to_rdkit_mol(use_2d_stereo=False)
             if not mol or mol.GetNumAtoms() == 0:
@@ -420,7 +423,7 @@ class MainWindowEditActions(object):
                 try:
                     orig_id = rd_atom.GetIntProp("_original_atom_id")
                 except (AttributeError, RuntimeError, ValueError, TypeError):
-                    # Skip if no original editor ID
+                    # Skip if original editor ID is missing or entry is already stale.
                     continue
 
                 if orig_id not in self.data.atoms:
@@ -565,18 +568,16 @@ class MainWindowEditActions(object):
                         print(f"Failed to add H for atom {orig_id}: {e}")
 
             if added_count > 0:
+                self.scene.update_all_items()
                 self.push_undo_state()
                 self.statusBar().showMessage(
                     f"Added {added_count} hydrogen atoms.", 2000
                 )
-                # Select newly added atoms
-                try:
+                with contextlib.suppress(AttributeError, RuntimeError, TypeError):
+                    # Suppress selection errors if the scene is being cleared or items are invalid.
                     self.scene.clearSelection()
                     for it in added_items:
                         it.setSelected(True)
-                except (AttributeError, RuntimeError, ValueError, TypeError):  
-                    import traceback
-                    traceback.print_exc()
             else:
                 self.statusBar().showMessage(
                     "No implicit hydrogens found to add.", 2000
@@ -599,8 +600,8 @@ class MainWindowEditActions(object):
                 mime_data is not None and mime_data.hasFormat(CLIPBOARD_MIME_TYPE)
             )
         except RuntimeError:
-            import traceback
-            traceback.print_exc()
+            # Suppress non-critical error
+            pass
 
     def open_rotate_2d_dialog(self):
         """Open 2D rotation dialog"""
@@ -663,13 +664,12 @@ class MainWindowEditActions(object):
 
             # Update bonds
             self.scene.update_connected_bonds(target_atoms)
+            self.scene.update_all_items()
 
             self.push_undo_state()
             self.statusBar().showMessage(
                 f"Rotated {len(target_atoms)} atoms by {angle_degrees} degrees."
             )
-            self.scene.update()
-            self.scene.update_all_items()
 
         except (AttributeError, RuntimeError, ValueError) as e:
             print(f"Error rotating molecule: {e}")
@@ -769,14 +769,153 @@ class MainWindowEditActions(object):
         if push_to_undo:
             self.push_undo_state()
 
+    def _compute_h_counts(self, mol):
+        """Build a mapping of original_id -> hydrogen count without touching Qt items."""
+        h_count_map = {}
+        if mol is None:
+            # Invalid/unsanitizable structure: reset all counts to 0
+            for atom_id in list(self.data.atoms.keys()):
+                h_count_map[atom_id] = 0
+            return h_count_map
+
+        for atom in mol.GetAtoms():
+            try:
+                if not atom.HasProp("_original_atom_id"):
+                    continue
+                original_id = atom.GetIntProp("_original_atom_id")
+
+                # Robust retrieval of H counts: prefer implicit, fallback to total or 0
+                try:
+                    h_count = int(atom.GetNumImplicitHs())
+                except (AttributeError, RuntimeError, ValueError, TypeError):
+                    try:
+                        h_count = int(atom.GetTotalNumHs())
+                    except (AttributeError, RuntimeError, ValueError, TypeError):
+                        h_count = 0
+
+                h_count_map[int(original_id)] = h_count
+            except (AttributeError, RuntimeError, ValueError, TypeError):
+                # Skip problematic RDKit atoms
+                continue
+        return h_count_map
+
+    def _detect_chemistry_problems(self, mol):
+        """Compute a per-atom problem map (original_id -> bool)."""
+        problem_map = {}
+        try:
+            if mol is not None:
+                try:
+                    problems = Chem.DetectChemistryProblems(mol)
+                except (AttributeError, RuntimeError, ValueError, TypeError) as e:
+                    logging.warning(f"RDKit DetectChemistryProblems failed: {e}")
+                    problems = None
+
+                if problems:
+                    for prob in problems:
+                        try:
+                            atom_idx = prob.GetAtomIdx()
+                            rd_atom = mol.GetAtomWithIdx(atom_idx)
+                            if rd_atom and rd_atom.HasProp("_original_atom_id"):
+                                orig = int(rd_atom.GetIntProp("_original_atom_id"))
+                                problem_map[orig] = True
+                        except (AttributeError, RuntimeError, ValueError, TypeError):
+                            continue
+            else:
+                # Fallback: use the pure-logic valence heuristic from mol_geometry
+                for atom_id in identify_valence_problems(
+                    self.data.atoms, self.data.bonds
+                ):
+                    problem_map[atom_id] = True
+        except (AttributeError, RuntimeError, ValueError, TypeError) as e:
+            logging.error(f"Error during chemistry problem detection: {e}")
+
+        return problem_map
+
+    def _apply_ui_h_counts(self, h_count_map, problem_map, my_token):
+        """Apply the computed H counts and problem flags to UI items on the main thread."""
+        # If the global counter changed since this closure was
+        # created, bail out — the update is stale.
+        try:
+            if my_token != getattr(self, "_ih_update_counter", None):
+                return
+        except (AttributeError, RuntimeError, ValueError, TypeError):
+            return
+
+        atoms_snapshot = (
+            dict(self.data.atoms)
+            if (hasattr(self, "data") and hasattr(self.data, "atoms"))
+            else {}
+        )
+        is_deleted_func = sip_isdeleted_safe
+
+        items_to_update = []
+        for atom_id, atom_data in atoms_snapshot.items():
+            try:
+                item = atom_data.get("item")
+                if not item:
+                    continue
+
+                # Suppress potential errors if the item is already destroyed by SIP during iteration
+                with contextlib.suppress(AttributeError, RuntimeError, TypeError):
+                    if is_deleted_func and is_deleted_func(item):
+                        continue
+
+                # Check if the item is no longer in a scene: skip updating it to avoid
+                # touching partially-deleted objects during scene teardown.
+                sc = item.scene() if hasattr(item, "scene") else None
+                if sc is None:
+                    continue
+
+                # Desired new count (default to 0 if not computed)
+                new_count = h_count_map.get(atom_id, 0)
+
+                current = getattr(item, "implicit_h_count", None)
+                current_prob = getattr(item, "has_problem", False)
+                desired_prob = problem_map.get(atom_id, False)
+
+                # If neither the implicit-H count nor the problem flag
+                # changed, skip this item.
+                if current == new_count and current_prob == desired_prob:
+                    continue
+
+                # Only prepare a geometry change if the implicit H count
+                # changes (this may affect the item's bounding rect).
+                need_geometry = current != new_count
+                if need_geometry and hasattr(item, "prepareGeometryChange"):
+                    item.prepareGeometryChange()
+                item.implicit_h_count = new_count
+                item.has_problem = bool(desired_prob)
+                # Ensure the item is updated in the scene so paint() runs
+                # when either geometry or problem-flag changed.
+                items_to_update.append(item)
+
+            except (AttributeError, RuntimeError, ValueError, TypeError):
+                continue
+
+        # Trigger updates once for unique items; wrap in try/except to avoid crashes
+        seen = set()
+        for it in items_to_update:
+            try:
+                if it is None:
+                    continue
+                oid = id(it)
+                if oid in seen:
+                    continue
+                seen.add(oid)
+                if hasattr(it, "update"):
+                    with contextlib.suppress(AttributeError, RuntimeError, TypeError):
+                        # Suppress transient errors during item update.
+                        it.update()
+            except (AttributeError, RuntimeError, ValueError, TypeError):
+                # Ignore any unexpected errors when touching the item
+                continue
+
     def update_implicit_hydrogens(self):
         """Update implicit hydrogen counts on AtomItems."""
         # Quick guards: nothing to do if no atoms or no QApplication
         if not self.data.atoms:
             return
 
-        # If called from non-GUI thread, schedule the heavy RDKit work here but
-        # always perform UI mutations on the main thread via QTimer.singleShot.
         try:
             try:
                 self._ih_update_counter += 1
@@ -787,195 +926,24 @@ class MainWindowEditActions(object):
             mol = None
             try:
                 mol = self.data.to_rdkit_mol()
-            except (AttributeError, RuntimeError, ValueError, TypeError):
+            except (AttributeError, RuntimeError, ValueError, TypeError) as e:
+                logging.debug(f"to_rdkit_mol failed during H-update: {e}")
                 mol = None
 
-            # Build a mapping of original_id -> hydrogen count without touching Qt items
-            h_count_map = {}
+            h_count_map = self._compute_h_counts(mol)
+            problem_map = self._detect_chemistry_problems(mol)
 
-            if mol is None:
-                # Invalid/unsanitizable structure: reset all counts to 0
-                for atom_id in list(self.data.atoms.keys()):
-                    h_count_map[atom_id] = 0
-            else:
-                for atom in mol.GetAtoms():
-                    try:
-                        if not atom.HasProp("_original_atom_id"):
-                            continue
-                        original_id = atom.GetIntProp("_original_atom_id")
+            def _ui_closure():
+                self._apply_ui_h_counts(h_count_map, problem_map, my_token)
 
-                        # Robust retrieval of H counts: prefer implicit, fallback to total or 0
-                        try:
-                            h_count = int(atom.GetNumImplicitHs())
-                        except (AttributeError, RuntimeError, ValueError, TypeError):
-                            try:
-                                h_count = int(atom.GetTotalNumHs())
-                            except (AttributeError, RuntimeError, ValueError, TypeError):
-                                h_count = 0
-
-                        h_count_map[int(original_id)] = h_count
-                    except (AttributeError, RuntimeError, ValueError, TypeError):
-                        # Skip problematic RDKit atoms
-                        continue
-
-            # Compute a per-atom problem map (original_id -> bool) so the
-            # UI closure can safely set AtomItem.has_problem on the main thread.
-            problem_map = {}
             try:
-                if mol is not None:
-                    try:
-                        problems = Chem.DetectChemistryProblems(mol)
-                    except (AttributeError, RuntimeError, ValueError, TypeError):
-                        problems = None
-
-                    if problems:
-                        for prob in problems:
-                            try:
-                                atom_idx = prob.GetAtomIdx()
-                                rd_atom = mol.GetAtomWithIdx(atom_idx)
-                                if rd_atom and rd_atom.HasProp("_original_atom_id"):
-                                    orig = int(rd_atom.GetIntProp("_original_atom_id"))
-                                    problem_map[orig] = True
-                            except (AttributeError, RuntimeError, ValueError, TypeError):
-                                continue
-                else:
-                    # Fallback: use a lightweight valence heuristic similar to
-                    # check_chemistry_problems_fallback() so we still flag atoms
-                    # when RDKit conversion wasn't possible.
-                    for atom_id, atom_data in self.data.atoms.items():
-                        try:
-                            symbol = atom_data.get("symbol")
-                            charge = atom_data.get("charge", 0)
-                            bond_count = 0
-                            for (id1, id2), bond_data in self.data.bonds.items():
-                                if id1 == atom_id or id2 == atom_id:
-                                    bond_count += bond_data.get("order", 1)
-
-                            if is_problematic_valence(symbol, bond_count, charge):
-                                problem_map[atom_id] = True
-                        except (AttributeError, RuntimeError, ValueError, TypeError):
-                            continue
-            except (AttributeError, RuntimeError, ValueError, TypeError):
-                problem_map = {}
-
-            def _apply_ui_updates():
-                # If the global counter changed since this closure was
-                # created, bail out — the update is stale.
-                try:
-                    if my_token != getattr(self, "_ih_update_counter", None):
-                        return
-                except (AttributeError, RuntimeError, ValueError, TypeError):
-                    return
-
-                try:
-                    atoms_snapshot = dict(self.data.atoms)
-                except (AttributeError, RuntimeError, ValueError, TypeError):
-                    atoms_snapshot = {}
-                is_deleted_func = sip_isdeleted_safe
-
-                items_to_update = []
-                for atom_id, atom_data in atoms_snapshot.items():
-                    try:
-                        item = atom_data.get("item")
-                        if not item:
-                            continue
-
-                        # If sip.isdeleted is available, skip deleted C++ wrappers
-                        try:
-                            if is_deleted_func and is_deleted_func(item):
-                                continue
-                        except (AttributeError, RuntimeError, ValueError, TypeError):  
-                            import traceback
-                            traceback.print_exc()
-
-                        # If the item is no longer in a scene, skip updating it to avoid
-                        # touching partially-deleted objects during scene teardown.
-                        try:
-                            sc = item.scene() if hasattr(item, "scene") else None
-                            if sc is None:
-                                continue
-                        except (AttributeError, RuntimeError, ValueError, TypeError):
-                            # Accessing scene() might fail for a damaged object; skip it
-                            continue
-
-                        # Desired new count (default to 0 if not computed)
-                        new_count = h_count_map.get(atom_id, 0)
-
-                        current = getattr(item, "implicit_h_count", None)
-                        current_prob = getattr(item, "has_problem", False)
-                        desired_prob = problem_map.get(atom_id, False)
-
-                        # If neither the implicit-H count nor the problem flag
-                        # changed, skip this item.
-                        if current == new_count and current_prob == desired_prob:
-                            continue
-
-                        # Only prepare a geometry change if the implicit H count
-                        # changes (this may affect the item's bounding rect).
-                        need_geometry = current != new_count
-                        try:
-                            if need_geometry and hasattr(item, "prepareGeometryChange"):
-                                try:
-                                    item.prepareGeometryChange()
-                                except (AttributeError, RuntimeError, ValueError, TypeError):  
-                                    import traceback
-                                    traceback.print_exc()
-                            # Apply implicit hydrogen count (guarded)
-                            try:
-                                item.implicit_h_count = new_count
-                            except (AttributeError, RuntimeError, ValueError, TypeError):  
-                                import traceback
-                                traceback.print_exc()
-
-                            # Apply problem flag (visual red-outline)
-                            try:
-                                item.has_problem = bool(desired_prob)
-                            except (AttributeError, RuntimeError, ValueError, TypeError):  
-                                import traceback
-                                traceback.print_exc()
-                            # Ensure the item is updated in the scene so paint() runs
-                            # when either geometry or problem-flag changed.
-                            items_to_update.append(item)
-                        except (AttributeError, RuntimeError, ValueError, TypeError):
-                            # Non-fatal: skip problematic items
-                            continue
-
-                    except (AttributeError, RuntimeError, ValueError, TypeError):
-                        continue
-
-                # Trigger updates once for unique items; wrap in try/except to avoid crashes
-                seen = set()
-                for it in items_to_update:
-                    try:
-                        if it is None:
-                            continue
-                        oid = id(it)
-                        if oid in seen:
-                            continue
-                        seen.add(oid)
-                        if hasattr(it, "update"):
-                            try:
-                                it.update()
-                            except (AttributeError, RuntimeError, ValueError, TypeError):  
-                                import traceback
-                                traceback.print_exc()
-                    except (AttributeError, RuntimeError, ValueError, TypeError):
-                        # Ignore any unexpected errors when touching the item
-                        continue
-
-            # Always schedule on main thread asynchronously
-            try:
-                QTimer.singleShot(0, _apply_ui_updates)
-            except (AttributeError, RuntimeError, ValueError, TypeError):
-                # Fallback: try to call directly (best-effort)
-                try:
-                    _apply_ui_updates()
-                except (AttributeError, RuntimeError, ValueError, TypeError):  
-                    import traceback
-                    traceback.print_exc()
-        except (AttributeError, RuntimeError, ValueError, TypeError):  
-            import traceback
-            traceback.print_exc()
+                QTimer.singleShot(0, _ui_closure)
+            except (RuntimeError, TypeError):
+                # Fallback if QTimer fails (e.g. during app shutdown)
+                with contextlib.suppress(AttributeError, RuntimeError, TypeError):
+                    _ui_closure()
+        except (AttributeError, RuntimeError, TypeError, ValueError) as e:
+            logging.exception(f"Unexpected error in update_implicit_hydrogens: {e}")
 
     def clean_up_2d_structure(self):
         self.statusBar().showMessage("Optimizing 2D structure...")
@@ -1052,28 +1020,14 @@ class MainWindowEditActions(object):
                 item = bond_data.get("item") if bond_data else None
                 if not item:
                     continue
-                try:
-                    # If SIP is available, skip wrappers whose C++ object is gone
-                    if sip_isdeleted_safe(item):
-                        continue
-                except (AttributeError, RuntimeError, ValueError, TypeError):  
-                    import traceback
-                    traceback.print_exc()
-                try:
-                    sc = None
-                    try:
-                        sc = item.scene() if hasattr(item, "scene") else None
-                    except (AttributeError, RuntimeError, ValueError, TypeError):
-                        sc = None
-                    if sc is None:
-                        continue
-                    try:
-                        item.update_position()
-                    except (AttributeError, RuntimeError, ValueError, TypeError):
-                        # Best-effort: skip any bond items that raise when updating
-                        continue
-                except (AttributeError, RuntimeError, ValueError, TypeError):
+                if sip_isdeleted_safe(item):
                     continue
+                sc = item.scene() if hasattr(item, "scene") else None
+                if sc is None:
+                    continue
+                # Suppress potential errors if the item is already destroyed during coordinate adjustment
+                with contextlib.suppress(AttributeError, RuntimeError, TypeError):
+                    item.update_position()
 
             # Run overlap resolution
             self.resolve_overlapping_groups()
@@ -1081,8 +1035,8 @@ class MainWindowEditActions(object):
             # Update measurement labels
             self.update_2d_measurement_labels()
 
-            # Request scene update
-            self.scene.update()
+            # Request scene update and ring re-analysis
+            self.scene.update_all_items()
 
             self.statusBar().showMessage("2D structure optimization successful.")
             self.push_undo_state()
@@ -1250,24 +1204,15 @@ class MainWindowEditActions(object):
             try:
                 if sip_isdeleted_safe(item):
                     continue
-            except (AttributeError, RuntimeError, ValueError, TypeError):  
-                import traceback
-                traceback.print_exc()
-
-            try:
-                sc = None
-                try:
-                    sc = item.scene() if hasattr(item, "scene") else None
-                except (AttributeError, RuntimeError, ValueError, TypeError):
-                    sc = None
+            except (AttributeError, RuntimeError, TypeError):
+                # Suppress non-critical error during bond position update iteration.
+                pass
+                sc = item.scene() if hasattr(item, "scene") else None
                 if sc is None:
                     continue
-                try:
+                # Suppress potential errors if the item is already destroyed during overlap resolution
+                with contextlib.suppress(AttributeError, RuntimeError, TypeError):
                     item.update_position()
-                except (AttributeError, RuntimeError, ValueError, TypeError):
-                    continue
-            except (AttributeError, RuntimeError, ValueError, TypeError):
-                continue
 
         # Update labels after resolution
         self.update_2d_measurement_labels()
@@ -1422,7 +1367,7 @@ class MainWindowEditActions(object):
 
                         moved = True
 
-    def _apply_chem_check_and_set_flags(self, mol, source_desc=None):
+    def _apply_chem_check_and_set_flags(self, mol, source_desc=None, force_skip=False):
         """Central helper to apply chemical sanitization (or skip it) and set
         chem_check_tried / chem_check_failed flags consistently.
 
@@ -1430,15 +1375,10 @@ class MainWindowEditActions(object):
         is disabled. If the user setting 'skip_chemistry_checks' is True, no
         sanitization is attempted and both flags remain False.
         """
-        try:
-            self.chem_check_tried = False
-            self.chem_check_failed = False
-        except (AttributeError, RuntimeError, ValueError, TypeError):
-            # Ensure attributes exist even if called very early
-            self.chem_check_tried = False
-            self.chem_check_failed = False
+        self.chem_check_tried = False
+        self.chem_check_failed = False
 
-        if self.settings.get("skip_chemistry_checks", False):
+        if force_skip or self.settings.get("skip_chemistry_checks", False):
             # User asked to skip chemistry checks entirely
             return
 
@@ -1447,24 +1387,18 @@ class MainWindowEditActions(object):
             self.chem_check_tried = True
             self.chem_check_failed = False
         except (AttributeError, RuntimeError, ValueError, TypeError):
-            # Mark that we tried sanitization and it failed
             self.chem_check_tried = True
             self.chem_check_failed = True
-            try:
-                desc = f" ({source_desc})" if source_desc else ""
+            desc = f" ({source_desc})" if source_desc else ""
+            # Suppress potential status bar or button state errors if the window is being closed or destroyed
+            with contextlib.suppress(AttributeError, RuntimeError, TypeError):
                 self.statusBar().showMessage(
                     f"Molecule sanitization failed{desc}; file may be malformed."
                 )
-            except (AttributeError, RuntimeError, ValueError, TypeError):  
-                import traceback
-                traceback.print_exc()
             # Disable 3D optimization UI to prevent running on invalid molecules
             if hasattr(self, "optimize_3d_button"):
-                try:
+                with contextlib.suppress(AttributeError, RuntimeError, TypeError):
                     self.optimize_3d_button.setEnabled(False)
-                except (AttributeError, RuntimeError, ValueError, TypeError):  
-                    import traceback
-                    traceback.print_exc()
 
     def _clear_xyz_flags(self, mol=None):
         """Clear XYZ-derived markers from a molecule (or current_mol) and
@@ -1478,86 +1412,27 @@ class MainWindowEditActions(object):
         is True).
         """
         target = mol if mol is not None else getattr(self, "current_mol", None)
-        try:
-            if target is not None:
-                # Remove RDKit property if present
-                try:
-                    if hasattr(target, "HasProp") and target.HasProp(
-                        "_xyz_skip_checks"
-                    ):
-                        try:
-                            target.ClearProp("_xyz_skip_checks")
-                        except (AttributeError, RuntimeError, ValueError, TypeError):
-                            try:
-                                target.SetIntProp("_xyz_skip_checks", 0)
-                            except (AttributeError, RuntimeError, ValueError, TypeError):  
-                                import traceback
-                                traceback.print_exc()
-                except (AttributeError, RuntimeError, ValueError, TypeError):  
-                    import traceback
-                    traceback.print_exc()
-                # Remove attribute-style markers if present
-                try:
-                    if hasattr(target, "_xyz_skip_checks"):
-                        try:
-                            delattr(target, "_xyz_skip_checks")
-                        except (AttributeError, RuntimeError, ValueError, TypeError):
-                            try:
-                                del target._xyz_skip_checks
-                            except (AttributeError, RuntimeError, ValueError, TypeError):
-                                try:
-                                    target._xyz_skip_checks = False
-                                except (AttributeError, RuntimeError, ValueError, TypeError):  
-                                    import traceback
-                                    traceback.print_exc()
-                except (AttributeError, RuntimeError, ValueError, TypeError):  
-                    import traceback
-                    traceback.print_exc()
-                try:
-                    if hasattr(target, "_xyz_atom_data"):
-                        try:
-                            delattr(target, "_xyz_atom_data")
-                        except (AttributeError, RuntimeError, ValueError, TypeError):
-                            try:
-                                del target._xyz_atom_data
-                            except (AttributeError, RuntimeError, ValueError, TypeError):
-                                try:
-                                    target._xyz_atom_data = None
-                                except (AttributeError, RuntimeError, ValueError, TypeError):  
-                                    import traceback
-                                    traceback.print_exc()
-                except (AttributeError, RuntimeError, ValueError, TypeError):  
-                    import traceback
-                    traceback.print_exc()
-        except (AttributeError, RuntimeError, ValueError, TypeError):  
-            import traceback
-            traceback.print_exc()
+        if target is not None:
+            # Remove RDKit property _xyz_skip_checks
+            with contextlib.suppress(AttributeError, RuntimeError, TypeError):
+                # Suppress error if HasProp or ClearProp is unavailable.
+                if hasattr(target, "HasProp") and target.HasProp("_xyz_skip_checks"):
+                    with contextlib.suppress(AttributeError, RuntimeError, TypeError):
+                        target.ClearProp("_xyz_skip_checks")
+            # Remove attribute-style markers
+            target.__dict__.pop("_xyz_skip_checks", None)
+            target.__dict__.pop("_xyz_atom_data", None)
 
-        # Reset UI flags
-        try:
-            self.is_xyz_derived = False
-        except (AttributeError, RuntimeError, ValueError, TypeError):  
-            import traceback
-            traceback.print_exc()
+        # Reset UI flag
+        self.is_xyz_derived = False
 
         # Enable Optimize 3D unless sanitization failed
-        try:
-            if hasattr(self, "optimize_3d_button"):
-                if getattr(self, "chem_check_failed", False):
-                    try:
-                        self.optimize_3d_button.setEnabled(False)
-                    except (AttributeError, RuntimeError, ValueError, TypeError):  
-                        import traceback
-                        traceback.print_exc()
-                else:
-                    try:
-                        self.optimize_3d_button.setEnabled(True)
-                    except (AttributeError, RuntimeError, ValueError, TypeError):  
-                        import traceback
-                        traceback.print_exc()
-        except (AttributeError, RuntimeError, ValueError, TypeError):  
-            import traceback
-            traceback.print_exc()
+        if hasattr(self, "optimize_3d_button"):
+            with contextlib.suppress(AttributeError, RuntimeError, TypeError):
+                # Suppress error if optimize_3d_button is partially destroyed.
+                self.optimize_3d_button.setEnabled(
+                    not getattr(self, "chem_check_failed", False)
+                )
 
 
-
+MainWindowEditActions._cls = MainWindowEditActions

@@ -1,3 +1,4 @@
+import logging
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
@@ -23,6 +24,7 @@ from PyQt6.QtWidgets import (
     QPushButton,
     QVBoxLayout,
 )
+from rdkit import Geometry
 
 try:
     from .constants import VDW_RADII, pt
@@ -30,12 +32,12 @@ except ImportError:
     from modules.constants import VDW_RADII, pt
 
 try:
-    from .dialog3_d_picking_mixin import Dialog3DPickingMixin
+    from .dialog_3d_picking_mixin import Dialog3DPickingMixin
 except ImportError:
-    from modules.dialog3_d_picking_mixin import Dialog3DPickingMixin
+    from modules.dialog_3d_picking_mixin import Dialog3DPickingMixin
 
 
-class MoveGroupDialog(Dialog3DPickingMixin, QDialog):  
+class MoveGroupDialog(Dialog3DPickingMixin, QDialog):
     """Dialog to select a connected molecular group and perform translation/rotation."""
 
     def __init__(self, mol, main_window, parent=None):
@@ -215,7 +217,12 @@ class MoveGroupDialog(Dialog3DPickingMixin, QDialog):
                                     vdw_radius = pt.GetRvdw(atomic_num)
                                     if vdw_radius < 0.1:
                                         vdw_radius = 1.5
-                                except (AttributeError, RuntimeError, ValueError, TypeError):
+                                except (
+                                    AttributeError,
+                                    RuntimeError,
+                                    ValueError,
+                                    TypeError,
+                                ):
                                     vdw_radius = 1.5
                                 click_threshold = vdw_radius * 1.5
 
@@ -274,12 +281,19 @@ class MoveGroupDialog(Dialog3DPickingMixin, QDialog):
                                 self.main_window.plotter.setCursor(
                                     Qt.CursorShape.ClosedHandCursor
                                 )
-                            except (AttributeError, RuntimeError, ValueError, TypeError):  
-                                import traceback
-                                traceback.print_exc()
-                    except (AttributeError, RuntimeError, ValueError, TypeError):  
-                        import traceback
-                        traceback.print_exc()
+                            except (
+                                AttributeError,
+                                RuntimeError,
+                                ValueError,
+                                TypeError,
+                            ) as e:
+                                logging.debug(
+                                    f"Suppressed exception: {e}"
+                                )  # Suppress cursor setting errors
+                    except (AttributeError, RuntimeError, ValueError, TypeError) as e:
+                        logging.debug(
+                            f"Suppressed exception: {e}"
+                        )  # Suppress threshold check errors during mouse move
 
                     # Allow camera operation if below threshold
                     if not self.is_dragging_group:
@@ -296,9 +310,10 @@ class MoveGroupDialog(Dialog3DPickingMixin, QDialog):
 
                         if abs(dx) > 2 or abs(dy) > 2:
                             self.mouse_moved_during_drag = True
-                    except (AttributeError, RuntimeError, ValueError, TypeError):  
-                        import traceback
-                        traceback.print_exc()
+                    except (AttributeError, RuntimeError, ValueError, TypeError) as e:
+                        logging.debug(
+                            f"Suppressed exception: {e}"
+                        )  # Suppress drag distance tracking errors
 
                     # Consume event during drag to prevent camera rotation
                     return True
@@ -336,9 +351,10 @@ class MoveGroupDialog(Dialog3DPickingMixin, QDialog):
                             self.main_window.plotter.setCursor(
                                 Qt.CursorShape.ArrowCursor
                             )
-                    except (AttributeError, RuntimeError, ValueError, TypeError):  
-                        import traceback
-                        traceback.print_exc()
+                    except (AttributeError, RuntimeError, ValueError, TypeError) as e:
+                        logging.debug(
+                            f"Suppressed exception: {e}"
+                        )  # Suppress hover-state cursor updates
 
                 # Allow camera rotation if not dragging
                 return False
@@ -374,14 +390,21 @@ class MoveGroupDialog(Dialog3DPickingMixin, QDialog):
                                     self.main_window.plotter.setCursor(
                                         Qt.CursorShape.ArrowCursor
                                     )
-                                except (AttributeError, RuntimeError, ValueError, TypeError):  
-                                    import traceback
-                                    traceback.print_exc()
+                                except (
+                                    AttributeError,
+                                    RuntimeError,
+                                    ValueError,
+                                    TypeError,
+                                ) as e:
+                                    logging.debug(
+                                        f"Suppressed exception: {e}"
+                                    )  # Suppress cursor reset errors
                                 return True
 
-                    except (AttributeError, RuntimeError, ValueError, TypeError):  
-                        import traceback
-                        traceback.print_exc()
+                    except (AttributeError, RuntimeError, ValueError, TypeError) as e:
+                        logging.debug(
+                            f"Suppressed exception: {e}"
+                        )  # Suppress release event toggle errors
                     finally:
                         # Reset drag state
                         self.is_dragging_group = False
@@ -395,9 +418,15 @@ class MoveGroupDialog(Dialog3DPickingMixin, QDialog):
                             self.main_window.plotter.setCursor(
                                 Qt.CursorShape.ArrowCursor
                             )
-                        except (AttributeError, RuntimeError, ValueError, TypeError):  
-                            import traceback
-                            traceback.print_exc()
+                        except (
+                            AttributeError,
+                            RuntimeError,
+                            ValueError,
+                            TypeError,
+                        ) as e:
+                            logging.debug(
+                                f"Suppressed exception: {e}"
+                            )  # Suppress cursor cleanup on release
 
                     return True  # Consume event
 
@@ -505,23 +534,26 @@ class MoveGroupDialog(Dialog3DPickingMixin, QDialog):
         super().clear_atom_labels()
         try:
             self.main_window.plotter.remove_actor("move_group_highlight")
-        except (AttributeError, RuntimeError, ValueError, TypeError):  
-            import traceback
-            traceback.print_exc()
+        except (AttributeError, RuntimeError, ValueError, TypeError) as e:
+            logging.debug(
+                f"Suppressed exception: {e}"
+            )  # Suppress actor removal errors for move_group_highlight
 
         if hasattr(self, "highlight_actor"):
             try:
                 self.main_window.plotter.remove_actor(self.highlight_actor)
-            except (AttributeError, RuntimeError, ValueError, TypeError):  
-                import traceback
-                traceback.print_exc()
+            except (AttributeError, RuntimeError, ValueError, TypeError) as e:
+                logging.debug(
+                    f"Suppressed exception: {e}"
+                )  # Suppress errors during actor cleanup
 
             self.highlight_actor = None
         try:
             self.main_window.plotter.render()
-        except (AttributeError, RuntimeError, ValueError, TypeError):  
-            import traceback
-            traceback.print_exc()
+        except (AttributeError, RuntimeError, ValueError, TypeError) as e:
+            logging.debug(
+                f"Suppressed exception: {e}"
+            )  # Suppress render errors during clearing
 
     def reset_translation_inputs(self):
         """Reset Translation input fields."""
@@ -551,7 +583,12 @@ class MoveGroupDialog(Dialog3DPickingMixin, QDialog):
         for atom_idx in self.group_atoms:
             atom_pos = np.array(conf.GetAtomPosition(atom_idx))
             new_pos = atom_pos + translation_vector
-            conf.SetAtomPosition(atom_idx, new_pos.tolist())
+            conf.SetAtomPosition(
+                atom_idx,
+                Geometry.Point3D(
+                    float(new_pos[0]), float(new_pos[1]), float(new_pos[2])
+                ),
+            )
             self.main_window.atom_positions_3d[atom_idx] = new_pos
 
         self.main_window.draw_molecule_3d(self.mol)
@@ -630,7 +667,12 @@ class MoveGroupDialog(Dialog3DPickingMixin, QDialog):
             rotated_pos = R @ centered_pos
             # Restore centroid
             new_pos = rotated_pos + centroid
-            conf.SetAtomPosition(atom_idx, new_pos.tolist())
+            conf.SetAtomPosition(
+                atom_idx,
+                Geometry.Point3D(
+                    float(new_pos[0]), float(new_pos[1]), float(new_pos[2])
+                ),
+            )
             self.main_window.atom_positions_3d[atom_idx] = new_pos
 
         self.main_window.draw_molecule_3d(self.mol)

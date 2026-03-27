@@ -25,18 +25,26 @@ from PyQt6.QtWidgets import (
 
 try:
     from .dialog_3d_picking_mixin import Dialog3DPickingMixin
-    from .mol_geometry import adjust_bond_angle, calc_angle_deg, get_connected_group, rodrigues_rotate
+    from .mol_geometry import (
+        adjust_bond_angle,
+        calc_angle_deg,
+        get_connected_group,
+        rodrigues_rotate,
+    )
 except ImportError:
     from modules.dialog_3d_picking_mixin import Dialog3DPickingMixin
-    from modules.mol_geometry import adjust_bond_angle, calc_angle_deg, get_connected_group, rodrigues_rotate
+    from modules.mol_geometry import (
+        adjust_bond_angle,
+        calc_angle_deg,
+        get_connected_group,
+    )
 
-import numpy as np
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QMessageBox
 from rdkit import Geometry
 
 
-class AngleDialog(Dialog3DPickingMixin, QDialog):  
+class AngleDialog(Dialog3DPickingMixin, QDialog):
     def __init__(self, mol, main_window, preselected_atoms=None, parent=None):
         QDialog.__init__(self, parent)
         Dialog3DPickingMixin.__init__(self)
@@ -299,7 +307,9 @@ class AngleDialog(Dialog3DPickingMixin, QDialog):
                 self.angle_slider.setEnabled(True)
                 self.angle_slider.blockSignals(False)
             except (AttributeError, RuntimeError, TypeError) as e:
-                logging.debug(f"Suppressed exception: {e}")  # Suppress non-critical UI updates
+                logging.debug(
+                    f"Suppressed exception: {e}"
+                )  # Suppress non-critical UI updates
 
             # Add labels
             self.add_selection_label(self.atom1_idx, "1")
@@ -325,7 +335,9 @@ class AngleDialog(Dialog3DPickingMixin, QDialog):
             self.angle_slider.setValue(int(round(wrapped_val)))
             self.angle_slider.blockSignals(False)
         except ValueError as e:
-            logging.debug(f"Suppressed exception: {e}")  # Ignore invalid numeric input during typing
+            logging.debug(
+                f"Suppressed exception: {e}"
+            )  # Ignore invalid numeric input during typing
 
     def on_slider_pressed(self):
         """Remember the state before slider dragging starts."""
@@ -335,18 +347,18 @@ class AngleDialog(Dialog3DPickingMixin, QDialog):
         self.main_window.push_undo_state()
         # Snapshot positions so the rotation axis stays stable during drag
         # Only take snapshot if one doesn't exist to preserve directional info
-        if getattr(self, '_snapshot_positions', None) is None:
+        if getattr(self, "_snapshot_positions", None) is None:
             self._snapshot_positions = self.mol.GetConformer().GetPositions().copy()
 
     def on_slider_moved(self, value):
         """Update geometry in real-time while dragging."""
         if self.atom1_idx is None or self.atom2_idx is None or self.atom3_idx is None:
             return
-        
+
         self.angle_input.blockSignals(True)
         self.angle_input.setText(f"{value}")
         self.angle_input.blockSignals(False)
-        
+
         self.adjust_angle(float(value))
 
     def on_slider_released(self):
@@ -364,11 +376,11 @@ class AngleDialog(Dialog3DPickingMixin, QDialog):
         if self.atom1_idx is None or self.atom2_idx is None or self.atom3_idx is None:
             return
         self.main_window.push_undo_state()
-        
+
         # Ensure we have a snapshot for click-to-position as well to maintain direction
-        if getattr(self, '_snapshot_positions', None) is None:
+        if getattr(self, "_snapshot_positions", None) is None:
             self._snapshot_positions = self.mol.GetConformer().GetPositions().copy()
-            
+
         self.angle_input.blockSignals(True)
         self.angle_input.setText(f"{value}")
         self.angle_input.blockSignals(False)
@@ -384,7 +396,7 @@ class AngleDialog(Dialog3DPickingMixin, QDialog):
             raw_angle = float(self.angle_input.text())
             # Automatic Range Wrapping
             new_angle = (raw_angle + 180) % 360 - 180
-            
+
             # Formally update the input to reflect wrapping
             self.angle_input.blockSignals(True)
             self.angle_input.setText(f"{new_angle:.2f}")
@@ -417,7 +429,7 @@ class AngleDialog(Dialog3DPickingMixin, QDialog):
 
         # Use snapshot if available (slider dragging) to keep the
         # rotation axis stable; otherwise use current positions.
-        snapshot = getattr(self, '_snapshot_positions', None)
+        snapshot = getattr(self, "_snapshot_positions", None)
         if snapshot is not None:
             positions = snapshot.copy()
         else:
@@ -437,34 +449,54 @@ class AngleDialog(Dialog3DPickingMixin, QDialog):
 
             # Arm 1 rotates by −half (note: reversed A/C roles)
             adjust_bond_angle(
-                positions, idx_c, idx_b, idx_a,
-                current_angle + half_delta_deg, group1,
+                positions,
+                idx_c,
+                idx_b,
+                idx_a,
+                current_angle + half_delta_deg,
+                group1,
             )
             # Arm 3 rotates by +half
             adjust_bond_angle(
-                positions, idx_a, idx_b, idx_c,
-                current_angle + half_delta_deg, group3,
+                positions,
+                idx_a,
+                idx_b,
+                idx_c,
+                current_angle + half_delta_deg,
+                group3,
             )
         elif self.rotate_atom_radio.isChecked():
             # Move only atom C
             adjust_bond_angle(
-                positions, idx_a, idx_b, idx_c,
-                new_angle_deg, {idx_c},
+                positions,
+                idx_a,
+                idx_b,
+                idx_c,
+                new_angle_deg,
+                {idx_c},
             )
         else:
             # Default: rotate atom C and its connected sub-structure
             atoms_to_move = get_connected_group(
-                self.mol, idx_c, exclude=idx_b,
+                self.mol,
+                idx_c,
+                exclude=idx_b,
             )
             adjust_bond_angle(
-                positions, idx_a, idx_b, idx_c,
-                new_angle_deg, atoms_to_move,
+                positions,
+                idx_a,
+                idx_b,
+                idx_c,
+                new_angle_deg,
+                atoms_to_move,
             )
 
         # Write updated positions back to the conformer and 3D cache
         for i in range(conf.GetNumAtoms()):
             p = positions[i]
-            conf.SetAtomPosition(i, Geometry.Point3D(float(p[0]), float(p[1]), float(p[2])))
+            conf.SetAtomPosition(
+                i, Geometry.Point3D(float(p[0]), float(p[1]), float(p[2]))
+            )
             self.main_window.atom_positions_3d[i] = positions[i]
 
         # Update the 3D view

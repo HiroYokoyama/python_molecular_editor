@@ -27,7 +27,6 @@ class MolecularData:
         self._next_atom_id = 0
         self.adjacency_list = {}
 
-
     def add_atom(self, symbol, pos, charge=0, radical=0):
         atom_id = self._next_atom_id
         self.atoms[atom_id] = {
@@ -64,8 +63,6 @@ class MolecularData:
             self.bonds[(id1, id2)] = bond_data
             return (id1, id2), "created"
 
-
-
     def remove_atom(self, atom_id):
         if atom_id in self.atoms:
             # Safely get neighbors before deleting the atom's own entry
@@ -78,8 +75,9 @@ class MolecularData:
                     ):
                         self.adjacency_list[neighbor_id].remove(atom_id)
                 except (ValueError, KeyError, TypeError) as e:
-                    logging.debug(f"Suppressed exception: {e}")  # Ignore adjacency list inconsistencies during atom removal
-
+                    logging.debug(
+                        f"Suppressed exception: {e}"
+                    )  # Ignore adjacency list inconsistencies during atom removal
 
             # Now, safely delete the atom's own entry from the adjacency list
             if atom_id in self.adjacency_list:
@@ -94,8 +92,9 @@ class MolecularData:
                 for key in bonds_to_remove:
                     del self.bonds[key]
             except (RuntimeError, KeyError) as e:
-                logging.debug(f"Suppressed exception: {e}")  # Ignore mutation issues during batch bond removal
-
+                logging.debug(
+                    f"Suppressed exception: {e}"
+                )  # Ignore mutation issues during batch bond removal
 
     def remove_bond(self, id1, id2):
         # Look for directional stereo bonds (forward/reverse) and normalized non-stereo bond keys.
@@ -113,8 +112,9 @@ class MolecularData:
                     self.adjacency_list[id2].remove(id1)
                 del self.bonds[key_to_remove]
             except (ValueError, KeyError) as e:
-                logging.debug(f"Suppressed exception: {e}")  # Ignore if bond already removed or inconsistent
-
+                logging.debug(
+                    f"Suppressed exception: {e}"
+                )  # Ignore if bond already removed or inconsistent
 
     def to_rdkit_mol(self, use_2d_stereo=True):
         """
@@ -172,7 +172,6 @@ class MolecularData:
         except (RuntimeError, ValueError, TypeError):
             # Sanitization failure: return None to trigger manual MOL block fallback
             return None
-
 
         # --- Step 4: add 2D conformer ---
         # Convert from scene pixels to angstroms when creating RDKit conformer.
@@ -291,7 +290,6 @@ class MolecularData:
             Chem.AssignStereochemistry(final_mol, cleanIt=False, force=False)
         return final_mol
 
-
     def update_ring_info_2d(self):
         """Update is_in_ring and ring_center for all BondItems based on 2D topology."""
         if not self.atoms or not self.bonds:
@@ -354,10 +352,10 @@ class MolecularData:
                         positions.append(item.pos())
                     except (AttributeError, RuntimeError) as e:
                         logging.debug(f"Suppressed exception: {e}")
-            
+
             if not positions:
                 continue
-                
+
             center_x = sum(p.x() for p in positions) / len(positions)
             center_y = sum(p.y() for p in positions) / len(positions)
             ring_center = QPointF(center_x, center_y)
@@ -374,14 +372,15 @@ class MolecularData:
                     # so this is usually correct for 2D drawing.
                     bond_item.ring_center = ring_center
 
-
     def to_mol_block(self):
         mol = self.to_rdkit_mol()
         if mol:
             try:
                 return Chem.MolToMolBlock(mol, includeStereo=True)
             except (RuntimeError, ValueError, TypeError) as e:
-                logging.debug(f"Suppressed exception: {e}")  # Suppress errors during RDKit MolBlock generation
+                logging.debug(
+                    f"Suppressed exception: {e}"
+                )  # Suppress errors during RDKit MolBlock generation
 
         if not self.atoms:
             return None

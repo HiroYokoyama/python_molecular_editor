@@ -11,12 +11,10 @@ DOI: 10.5281/zenodo.17268532
 """
 
 import logging
-import math
-from PyQt6.QtCore import QLineF, QPointF, QRectF, Qt
-from PyQt6.QtGui import QCursor, QPen
+from PyQt6.QtCore import QLineF, Qt
+from PyQt6.QtGui import QPen
 from PyQt6.QtWidgets import (
     QApplication,
-    QGraphicsItem,
     QGraphicsLineItem,
     QGraphicsScene,
 )
@@ -33,10 +31,11 @@ except ImportError:
 try:
     from .constants import DEFAULT_BOND_LENGTH, SNAP_DISTANCE, SUM_TOLERANCE
 except ImportError:
-    from modules.constants import DEFAULT_BOND_LENGTH, SNAP_DISTANCE, SUM_TOLERANCE
+    pass
 
 try:
     from PyQt6 import sip as _sip  # type: ignore
+
     _sip_isdeleted = getattr(_sip, "isdeleted", None)
 except ImportError:
     _sip = None
@@ -50,11 +49,14 @@ except ImportError:
 try:
     from .molecular_scene_handler import TemplateMixin, KeyboardMixin, SceneQueryMixin
 except ImportError:
-    from modules.molecular_scene_handler import TemplateMixin, KeyboardMixin, SceneQueryMixin
+    from modules.molecular_scene_handler import (
+        TemplateMixin,
+        KeyboardMixin,
+        SceneQueryMixin,
+    )
 
 
 class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScene):
-
     def __init__(self, data, window):
         super().__init__()
         self.data, self.window = data, window
@@ -153,7 +155,7 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
                 needs_update = True
         return needs_update
 
-    def mousePressEvent(self, event):  
+    def mousePressEvent(self, event):
         self.press_pos = event.scenePos()
         self.mouse_moved_since_press = False
         self.data_changed_in_event = False
@@ -184,11 +186,14 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
                 selected_items = [
                     it
                     for it in raw_selected
-                    if isinstance(it, (AtomItem, BondItem)) and not sip_isdeleted_safe(it)
+                    if isinstance(it, (AtomItem, BondItem))
+                    and not sip_isdeleted_safe(it)
                 ]
             except Exception as e:
                 # Fallback to empty selection if the scene state is inconsistent during event processing
-                logging.debug(f"Failed to retrieve selected items in mousePressEvent: {e}")
+                logging.debug(
+                    f"Failed to retrieve selected items in mousePressEvent: {e}"
+                )
                 selected_items = []
 
             if (
@@ -219,7 +224,10 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
                             self.window.push_undo_state()
                             data_changed = False  # Already added to undo stack, so skip redundant pushes later
                     except (AttributeError, RuntimeError, ValueError, TypeError) as e:
-                        logging.error(f"Error in E/Z stereo toggle (mousePressEvent): {e}", exc_info=True)
+                        logging.error(
+                            f"Error in E/Z stereo toggle (mousePressEvent): {e}",
+                            exc_info=True,
+                        )
                         if hasattr(self.window, "statusBar"):
                             sb = self.window.statusBar()
                             if sb:
@@ -294,7 +302,7 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
         else:
             super().mousePressEvent(event)
 
-    def mouseMoveEvent(self, event):  
+    def mouseMoveEvent(self, event):
         if not self.window.is_2d_editable:
             return
 
@@ -334,7 +342,7 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
             # Even in template mode, hover events are propagated here
             super().mouseMoveEvent(event)
 
-    def mouseReleaseEvent(self, event):  
+    def mouseReleaseEvent(self, event):
         if not self.window.is_2d_editable:
             return
 
@@ -354,7 +362,7 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
                         if sc and hasattr(self, "removeItem"):
                             self.removeItem(self.temp_line)
                 except (RuntimeError, ValueError, TypeError, AttributeError) as e:
-                    logging.debug(f"Error removing temp_line in mouseReleaseEvent: {e}") 
+                    logging.debug(f"Error removing temp_line in mouseReleaseEvent: {e}")
 
             self.temp_line = None
 
@@ -382,11 +390,7 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
         released_item = self.itemAt(end_pos, self.views()[0].transform())
 
         # 1. Handle special modes (delete/radical/charge)
-        if (
-            (self.mode == "delete")
-            and is_click
-            and released_item is not None
-        ):
+        if (self.mode == "delete") and is_click and released_item is not None:
             # Safe deletion via unified handler
             if self.delete_items({released_item}):
                 self.window.push_undo_state()
@@ -446,17 +450,22 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
                             new_stereo = 4  # Z -> E
                         else:  # current_stereo == 4
                             new_stereo = 0  # E -> None
-                        
+
                         if hasattr(self, "update_bond_stereo"):
                             self.update_bond_stereo(b, new_stereo)
                             self.update_all_items()  # Force redraw
                             self.window.push_undo_state()  # Push to undo stack here
                 except (AttributeError, RuntimeError, ValueError, TypeError) as e:
-                    logging.error(f"Error in E/Z stereo toggle (mouseReleaseEvent): {e}", exc_info=True)
+                    logging.error(
+                        f"Error in E/Z stereo toggle (mouseReleaseEvent): {e}",
+                        exc_info=True,
+                    )
                     if hasattr(self.window, "statusBar"):
                         sb = self.window.statusBar()
                         if sb:
-                            sb.showMessage(f"Error changing E/Z stereochemistry: {e}", 5000)
+                            sb.showMessage(
+                                f"Error changing E/Z stereochemistry: {e}", 5000
+                            )
                     self.update_all_items()  # Redraw even on error to maintain consistency
                 return  # Do not proceed further
             elif (
@@ -617,7 +626,7 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
         if getattr(self, "data_changed_in_event", False):
             self.window.push_undo_state()
 
-    def mouseDoubleClickEvent(self, event):  
+    def mouseDoubleClickEvent(self, event):
         """Handle double click events."""
         item = self.itemAt(event.scenePos(), self.views()[0].transform())
 
@@ -686,9 +695,18 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
                                     other = b_atom2
                                 else:
                                     other = b_atom1
-                            except (AttributeError, RuntimeError, ValueError, TypeError):
+                            except (
+                                AttributeError,
+                                RuntimeError,
+                                ValueError,
+                                TypeError,
+                            ):
                                 other = None
-                            if other is not None and not sip_isdeleted_safe(other) and other not in connected_atoms:
+                            if (
+                                other is not None
+                                and not sip_isdeleted_safe(other)
+                                and other not in connected_atoms
+                            ):
                                 atoms_to_visit.append(other)
 
                 # Apply selection: clear previous and select only these
@@ -698,14 +716,24 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
                     if not sip_isdeleted_safe(a) and hasattr(a, "setSelected"):
                         try:
                             a.setSelected(True)
-                        except (RuntimeError, ValueError, TypeError, AttributeError) as e:
+                        except (
+                            RuntimeError,
+                            ValueError,
+                            TypeError,
+                            AttributeError,
+                        ) as e:
                             logging.debug(f"Failed to select atom {a}: {e}")
 
                 for b in connected_bonds:
                     if not sip_isdeleted_safe(b) and hasattr(b, "setSelected"):
                         try:
                             b.setSelected(True)
-                        except (RuntimeError, ValueError, TypeError, AttributeError) as e:
+                        except (
+                            RuntimeError,
+                            ValueError,
+                            TypeError,
+                            AttributeError,
+                        ) as e:
                             logging.debug(f"Failed to select bond {b}: {e}")
                 event.accept()
                 return
@@ -718,8 +746,6 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
             return
 
         super().mouseDoubleClickEvent(event)
-
-    
 
     def purge_deleted_items(self):
         """Purge and release any held deleted-wrapper references during shutdown."""
@@ -743,14 +769,9 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
             logging.debug(f"Error clearing _deleted_items list: {e}")
             self._deleted_items = []
 
-    
-
     def leaveEvent(self, event):
         self.template_preview.hide()
 
     def set_hovered_item(self, item):
         """Record currently hovered item"""
         self.hovered_item = item
-
-    
-    

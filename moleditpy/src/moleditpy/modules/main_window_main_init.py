@@ -21,7 +21,6 @@ import contextlib
 import json
 import math
 import os
-import subprocess
 import sys
 
 # RDKit imports (explicit to satisfy flake8 and used features)
@@ -42,7 +41,6 @@ from PyQt6.QtGui import (
     QPen,
     QPixmap,
     QPolygonF,
-    QShortcut,
 )
 from PyQt6.QtWidgets import (
     QApplication,
@@ -65,8 +63,6 @@ try:
 except ImportError:
     from modules import OBABEL_AVAILABLE
 
-
-import platform
 
 try:
     import winreg
@@ -119,14 +115,14 @@ class MainWindowMainInit:
 
     # __init__ is copied from main_window.py
 
-    def __init__(self, initial_file=None, safe_mode=False):  
+    def __init__(self, initial_file=None, safe_mode=False):
         # This helper is not used as a mixin in this project; initialization
         # happens on the `QMainWindow` base class in
         # `MainWindow.__init__` directly.
         self.setAcceptDrops(True)
         self.settings_dir = os.path.join(os.path.expanduser("~"), ".moleditpy")
         self.settings_file = os.path.join(self.settings_dir, "settings.json")
-        self.settings = {} # Will be populated by load_settings
+        self.settings = {}  # Will be populated by load_settings
         self.load_settings()
         self.initial_settings = self.settings.copy()
         self.setWindowTitle("MoleditPy Ver. " + VERSION)
@@ -141,7 +137,9 @@ class MainWindowMainInit:
         self.dragged_atom_info = None
         self.atom_actor = None
         self.is_2d_editable = True
-        self.is_xyz_derived = False  # Flag indicating if the molecule is derived from XYZ
+        self.is_xyz_derived = (
+            False  # Flag indicating if the molecule is derived from XYZ
+        )
         # Chemical check flags: whether a chemical/sanitization check was attempted and whether it failed
         self.chem_check_tried = False
         self.chem_check_failed = False
@@ -222,13 +220,13 @@ class MainWindowMainInit:
         if initial_file:
             self.load_command_line_file(initial_file)
 
-        QTimer.singleShot(0, self.apply_initial_settings)  
+        QTimer.singleShot(0, self.apply_initial_settings)
         # Camera initialization flag (permits reset only during the first draw)
         self._camera_initialized = False
 
         # Set initial menu text and state
         self.update_atom_id_menu_text()
-        self.update_atom_id_menu_state()  
+        self.update_atom_id_menu_state()
 
         # Set initialization complete
         self.initialization_complete = True
@@ -239,9 +237,11 @@ class MainWindowMainInit:
         try:
             QTimer.singleShot(0, self.view_2d.setFocus)
         except (AttributeError, RuntimeError, ValueError, TypeError) as e:
-            logging.debug(f"Suppressed exception: {e}")  # Suppress non-critical UI/menu initialization errors
+            logging.debug(
+                f"Suppressed exception: {e}"
+            )  # Suppress non-critical UI/menu initialization errors
 
-    def init_ui(self):  
+    def init_ui(self):
         # 1. Get the path to the directory where the current script is located
         script_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -268,7 +268,7 @@ class MainWindowMainInit:
 
         self._setup_action_groups(self.toolbar, self.toolbar_bottom)
 
-    def init_menu_bar(self):  
+    def init_menu_bar(self):
         menu_bar = self.menuBar()
 
         self._init_file_menu(menu_bar)
@@ -284,9 +284,9 @@ class MainWindowMainInit:
         self._enable_3d_features(False)
 
         # Finally, populate plugins now that all menus are created
-        self.update_plugin_menu(self.plugin_menu)  
+        self.update_plugin_menu(self.plugin_menu)
 
-    def init_worker_thread(self):  
+    def init_worker_thread(self):
         # Initialize shared state for calculation runs.
         self.halt_ids = set()
         self.next_conversion_id = 1
@@ -297,7 +297,7 @@ class MainWindowMainInit:
         except (AttributeError, RuntimeError, ValueError, TypeError):
             self._active_calc_threads = []
 
-    def load_command_line_file(self, file_path):  
+    def load_command_line_file(self, file_path):
         """Open file specified by command-line argument"""
         if not file_path or not os.path.exists(file_path):
             return
@@ -337,13 +337,15 @@ class MainWindowMainInit:
         else:
             self.statusBar().showMessage(f"Unsupported file type: {file_ext}")
 
-    def apply_initial_settings(self):  
+    def apply_initial_settings(self):
         """Apply saved settings to the 3D view after UI initialization is complete."""
 
         try:
             self.update_cpk_colors_from_settings()
         except (AttributeError, RuntimeError, ValueError, TypeError) as e:
-            logging.debug(f"Suppressed exception: {e}")  # Suppress non-critical UI/menu/settings sync errors
+            logging.debug(
+                f"Suppressed exception: {e}"
+            )  # Suppress non-critical UI/menu/settings sync errors
 
         if self.plotter and self.plotter.renderer:
             bg_color = self.settings.get("background_color", "#919191")
@@ -363,7 +365,9 @@ class MainWindowMainInit:
                 for v in list(self.scene.views()):
                     v.viewport().update()
         except (AttributeError, RuntimeError, ValueError, TypeError) as e:
-            logging.debug(f"Suppressed exception: {e}")  # Suppress non-critical UI/menu/settings sync errors
+            logging.debug(
+                f"Suppressed exception: {e}"
+            )  # Suppress non-critical UI/menu/settings sync errors
 
     def update_cpk_colors_from_settings(self):
         """Update global CPK_COLORS and CPK_COLORS_PV from saved settings overrides.
@@ -404,12 +408,12 @@ class MainWindowMainInit:
         except (AttributeError, RuntimeError, TypeError, ValueError) as e:
             print(f"Failed to update CPK colors from settings: {e}")
 
-    def open_settings_dialog(self):  
+    def open_settings_dialog(self):
         dialog = SettingsDialog(self.settings, self)
         # Settings application and 3D view updates are handled by the accept() method.
         dialog.exec()
 
-    def reset_all_settings_menu(self):  
+    def reset_all_settings_menu(self):
         """Prompt the user and reset all application settings to defaults."""
         if not self._confirm_settings_reset():
             return
@@ -425,11 +429,15 @@ class MainWindowMainInit:
 
     def _confirm_settings_reset(self):
         """Show a confirmation dialog for resetting settings."""
-        return QMessageBox.question(
-            self, "Reset All Settings", 
-            "Are you sure you want to reset all settings to defaults?",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
-        ) == QMessageBox.StandardButton.Yes
+        return (
+            QMessageBox.question(
+                self,
+                "Reset All Settings",
+                "Are you sure you want to reset all settings to defaults?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            )
+            == QMessageBox.StandardButton.Yes
+        )
 
     def _perform_settings_reset(self):
         """Delete the settings file and reload defaults."""
@@ -449,7 +457,9 @@ class MainWindowMainInit:
                     w.update_ui_from_settings(self.settings)
 
         # 2. Update internal state and sync CPK colors
-        self.optimization_method = self.settings.get("optimization_method", "MMFF_RDKIT")
+        self.optimization_method = self.settings.get(
+            "optimization_method", "MMFF_RDKIT"
+        )
         try:
             self.update_cpk_colors_from_settings()
         except (AttributeError, RuntimeError, ValueError, TypeError) as e:
@@ -461,27 +471,29 @@ class MainWindowMainInit:
         # 4. Refresh 2D and 3D views
         self._refresh_views_after_reset()
 
-    def _sync_settings_to_menu_actions(self): 
-        """Synchronize menu action checked states with current settings.""" 
-        with contextlib.suppress(AttributeError, RuntimeError, TypeError): 
-            # Optimization actions 
-            if hasattr(self, "opt3d_actions"): 
-                current_method = (self.optimization_method or "").upper() 
-                for key, action in self.opt3d_actions.items(): 
+    def _sync_settings_to_menu_actions(self):
+        """Synchronize menu action checked states with current settings."""
+        with contextlib.suppress(AttributeError, RuntimeError, TypeError):
+            # Optimization actions
+            if hasattr(self, "opt3d_actions"):
+                current_method = (self.optimization_method or "").upper()
+                for key, action in self.opt3d_actions.items():
                     # Use case-insensitive comparison for robustness
-                    action.setChecked(key.upper() == current_method) 
+                    action.setChecked(key.upper() == current_method)
 
-            # Conversion actions 
-            if hasattr(self, "conv_actions"): 
-                mode = (self.settings.get("3d_conversion_mode", "fallback") or "").lower()
+            # Conversion actions
+            if hasattr(self, "conv_actions"):
+                mode = (
+                    self.settings.get("3d_conversion_mode", "fallback") or ""
+                ).lower()
                 for key, action in self.conv_actions.items():
                     action.setChecked(key.lower() == mode)
 
-            # Intermolecular interaction 
-            if hasattr(self, "intermolecular_rdkit_action"): 
-                self.intermolecular_rdkit_action.setChecked( 
-                    self.settings.get("optimize_intermolecular_interaction_rdkit", True) 
-                ) 
+            # Intermolecular interaction
+            if hasattr(self, "intermolecular_rdkit_action"):
+                self.intermolecular_rdkit_action.setChecked(
+                    self.settings.get("optimize_intermolecular_interaction_rdkit", True)
+                )
 
     def _refresh_views_after_reset(self):
         """Refresh 2D and 3D views after settings reset."""
@@ -492,7 +504,7 @@ class MainWindowMainInit:
                 self.draw_molecule_3d(self.current_mol)
         except (AttributeError, RuntimeError, ValueError, TypeError) as e:
             logging.debug(f"Suppressed exception: {e}")
-        
+
         # Refresh 2D View
         if hasattr(self, "scene") and self.scene:
             try:
@@ -508,7 +520,7 @@ class MainWindowMainInit:
             except (AttributeError, RuntimeError, ValueError, TypeError) as e:
                 logging.debug(f"Suppressed exception: {e}")
 
-    def load_settings(self):  
+    def load_settings(self):
         """Load settings from a JSON file, or use defaults if the file is missing."""
         # 1. Start with default settings
         self.settings = self._get_default_settings()
@@ -518,13 +530,13 @@ class MainWindowMainInit:
             if hasattr(self, "settings_file") and os.path.exists(self.settings_file):
                 with open(self.settings_file, "r", encoding="utf-8") as f:
                     loaded_settings = json.load(f)
-                    
+
                     # 3. Handle legacy settings migration
                     self._migrate_legacy_settings(loaded_settings)
-                    
+
                     # 4. Update settings with loaded values
                     self.settings.update(loaded_settings)
-        except (AttributeError, RuntimeError, ValueError, TypeError, IOError):  
+        except (AttributeError, RuntimeError, ValueError, TypeError, IOError):
             # Use defaults on any error
             pass
 
@@ -534,7 +546,7 @@ class MainWindowMainInit:
         if "optimization_method" in self.settings:
             self.optimization_method = self.settings["optimization_method"]
 
-    def save_settings(self):  
+    def save_settings(self):
         try:
             if not os.path.exists(self.settings_dir):
                 os.makedirs(self.settings_dir)
@@ -544,7 +556,7 @@ class MainWindowMainInit:
         except (AttributeError, RuntimeError, ValueError) as e:
             print(f"Error saving settings: {e}")
 
-    def update_plugin_menu(self, plugin_menu):  
+    def update_plugin_menu(self, plugin_menu):
         """Discovers plugins and updates the plugin menu actions."""
         if not self.plugin_manager:
             return
@@ -554,7 +566,9 @@ class MainWindowMainInit:
 
         # 2. Re-add Manager
         manage_plugins_action = QAction("Plugin Manager...", self)
-        manage_plugins_action.triggered.connect(lambda: self._show_plugin_manager(plugin_menu))
+        manage_plugins_action.triggered.connect(
+            lambda: self._show_plugin_manager(plugin_menu)
+        )
         plugin_menu.addAction(manage_plugins_action)
         plugin_menu.addSeparator()
 
@@ -573,9 +587,12 @@ class MainWindowMainInit:
     def _show_plugin_manager(self, plugin_menu):
         """Displays the plugin manager window and refreshes the menu."""
         if not self.plugin_manager:
-            QMessageBox.information(self, "Safe Mode", "Plugins are disabled (safe mode).")
+            QMessageBox.information(
+                self, "Safe Mode", "Plugins are disabled (safe mode)."
+            )
             return
         from .plugin_manager_window import PluginManagerWindow
+
         dlg = PluginManagerWindow(self.plugin_manager, self)
         dlg.exec()
         self.update_plugin_menu(plugin_menu)
@@ -585,7 +602,8 @@ class MainWindowMainInit:
         PLUGIN_ACTION_TAG = "plugin_managed"
 
         def clear_menu(menu):
-            if not menu: return
+            if not menu:
+                return
             for act in list(menu.actions()):
                 if act.data() == PLUGIN_ACTION_TAG:
                     menu.removeAction(act)
@@ -604,9 +622,11 @@ class MainWindowMainInit:
         """Update the 3D style menu with custom styles from plugins."""
         if not hasattr(self, "style_button") or not self.style_button.menu():
             return
-        
+
         style_menu = self.style_button.menu()
-        style_group = next((a.actionGroup() for a in style_menu.actions() if a.actionGroup()), None)
+        style_group = next(
+            (a.actionGroup() for a in style_menu.actions() if a.actionGroup()), None
+        )
 
         if style_group and self.plugin_manager.custom_3d_styles:
             if not style_menu.actions()[-1].isSeparator():
@@ -615,7 +635,9 @@ class MainWindowMainInit:
             for style_name in self.plugin_manager.custom_3d_styles:
                 if not any(a.text() == style_name for a in style_menu.actions()):
                     action = QAction(style_name, self, checkable=True)
-                    action.triggered.connect(lambda checked=False, s=style_name: self.set_3d_style(s))
+                    action.triggered.connect(
+                        lambda checked=False, s=style_name: self.set_3d_style(s)
+                    )
                     style_menu.addAction(action)
                     style_group.addAction(action)
 
@@ -629,20 +651,38 @@ class MainWindowMainInit:
             path = action_def["path"]
             callback = action_def["callback"]
             text = action_def["text"]
-            
+
             parts = path.split("/")
             top_level_title = parts[0]
-            current_menu = next((a.menu() for a in self.menuBar().actions() if a.menu() and a.text().replace("&", "") == top_level_title), None)
+            current_menu = next(
+                (
+                    a.menu()
+                    for a in self.menuBar().actions()
+                    if a.menu() and a.text().replace("&", "") == top_level_title
+                ),
+                None,
+            )
 
             if not current_menu:
                 current_menu = self.menuBar().addMenu(top_level_title)
 
             for part in parts[1:-1]:
-                sub = next((a.menu() for a in current_menu.actions() if a.menu() and a.text().replace("&", "") == part), None)
+                sub = next(
+                    (
+                        a.menu()
+                        for a in current_menu.actions()
+                        if a.menu() and a.text().replace("&", "") == part
+                    ),
+                    None,
+                )
                 current_menu = sub if sub else current_menu.addMenu(part)
 
             actions = current_menu.actions()
-            if actions and not actions[-1].isSeparator() and actions[-1].data() != PLUGIN_ACTION_TAG:
+            if (
+                actions
+                and not actions[-1].isSeparator()
+                and actions[-1].data() != PLUGIN_ACTION_TAG
+            ):
                 sep = current_menu.addSeparator()
                 sep.setData(PLUGIN_ACTION_TAG)
 
@@ -657,7 +697,7 @@ class MainWindowMainInit:
         """Add toolbar actions registered by plugins."""
         if not hasattr(self, "plugin_toolbar"):
             return
-            
+
         self.plugin_toolbar.clear()
         if self.plugin_manager.toolbar_actions:
             self.plugin_toolbar.show()
@@ -695,31 +735,54 @@ class MainWindowMainInit:
         for cat in sorted(categorized.keys()):
             current_parent = plugin_menu
             for part in cat.split(os.sep):
-                sub = next((a.menu() for a in current_parent.actions() if a.menu() and a.text().replace("&", "") == part), None)
+                sub = next(
+                    (
+                        a.menu()
+                        for a in current_parent.actions()
+                        if a.menu() and a.text().replace("&", "") == part
+                    ),
+                    None,
+                )
                 current_parent = sub if sub else current_parent.addMenu(part)
-            
+
             for p in sorted(categorized[cat], key=lambda x: x["name"]):
                 a = QAction(p["name"], self)
-                a.triggered.connect(lambda checked, mod=p["module"]: self.plugin_manager.run_plugin(mod, self))
+                a.triggered.connect(
+                    lambda checked, mod=p["module"]: self.plugin_manager.run_plugin(
+                        mod, self
+                    )
+                )
                 current_parent.addAction(a)
 
         # Add root items
         for p in sorted(root, key=lambda x: x["name"]):
             a = QAction(p["name"], self)
-            a.triggered.connect(lambda checked, mod=p["module"]: self.plugin_manager.run_plugin(mod, self))
+            a.triggered.connect(
+                lambda checked, mod=p["module"]: self.plugin_manager.run_plugin(
+                    mod, self
+                )
+            )
             plugin_menu.addAction(a)
 
     def _integrate_plugin_export_actions(self):
         """Add plugin-provided export actions to the export menu."""
         if not self.plugin_manager.export_actions:
             return
-            
+
         PLUGIN_ACTION_TAG = "plugin_managed"
         main_export_menu = None
         for top_action in self.menuBar().actions():
             if top_action.menu() and top_action.text().replace("&", "") == "File":
-                main_export_menu = next((a.menu() for a in top_action.menu().actions() if a.menu() and a.text().replace("&", "") == "Export"), None)
-                if main_export_menu: break
+                main_export_menu = next(
+                    (
+                        a.menu()
+                        for a in top_action.menu().actions()
+                        if a.menu() and a.text().replace("&", "") == "Export"
+                    ),
+                    None,
+                )
+                if main_export_menu:
+                    break
 
         targets = []
         if hasattr(self, "export_button") and self.export_button.menu():
@@ -740,7 +803,7 @@ class MainWindowMainInit:
         """Add plugin-provided file openers to the import menu."""
         if not hasattr(self, "import_menu") or not self.plugin_manager.file_openers:
             return
-            
+
         PLUGIN_ACTION_TAG = "plugin_managed"
         sep = self.import_menu.addSeparator()
         sep.setData(PLUGIN_ACTION_TAG)
@@ -748,7 +811,9 @@ class MainWindowMainInit:
         plugin_map = {}
         for ext, openers in self.plugin_manager.file_openers.items():
             for info in openers:
-                plugin_map.setdefault(info.get("plugin", "Plugin"), {})[ext] = info["callback"]
+                plugin_map.setdefault(info.get("plugin", "Plugin"), {})[ext] = info[
+                    "callback"
+                ]
 
         for p_name, ext_map in sorted(plugin_map.items()):
             exts = sorted(ext_map.keys())
@@ -756,18 +821,23 @@ class MainWindowMainInit:
             if len(ext_str) > 30:
                 cutoff = ext_str.rfind("/", 0, 30)
                 ext_str = (ext_str[:cutoff] if cutoff != -1 else ext_str[:30]) + "/..."
-            
-            filter_str = f"{p_name} Files ({' '.join(['*'+e for e in exts])});;All Files (*)"
-            
+
+            filter_str = (
+                f"{p_name} Files ({' '.join(['*' + e for e in exts])});;All Files (*)"
+            )
+
             def make_cb(m, f, n):
                 def _cb():
-                    fpath, _ = QFileDialog.getOpenFileName(self, f"Import {n} Files", "", f)
+                    fpath, _ = QFileDialog.getOpenFileName(
+                        self, f"Import {n} Files", "", f
+                    )
                     if fpath:
                         ext = os.path.splitext(fpath)[1].lower()
                         if ext in m:
                             m[ext](fpath)
                             self.current_file_path = fpath
                             self.update_window_title()
+
                 return _cb
 
             a = QAction(f"Import {ext_str} ({p_name})...", self)
@@ -777,7 +847,14 @@ class MainWindowMainInit:
 
     def _integrate_plugin_analysis_tools(self):
         """Add plugin-provided analysis tools to the analysis menu."""
-        analysis_menu = next((a.menu() for a in self.menuBar().actions() if a.text().replace("&", "") == "Analysis"), None)
+        analysis_menu = next(
+            (
+                a.menu()
+                for a in self.menuBar().actions()
+                if a.text().replace("&", "") == "Analysis"
+            ),
+            None,
+        )
         if analysis_menu and self.plugin_manager.analysis_tools:
             PLUGIN_ACTION_TAG = "plugin_managed"
             sep = analysis_menu.addSeparator()
@@ -872,7 +949,6 @@ class MainWindowMainInit:
                 loaded_settings["optimization_method"] = "MMFF94_OBABEL"
             del loaded_settings["use_obabel_optimization"]
 
-
     def _clear_plugin_ui_elements(self, plugin_menu):
         """Clean up tagged plugin actions from menus and toolbars."""
         # 1. Clear plugin-specific actions from Plugin menu (excluding the Manager)
@@ -884,6 +960,7 @@ class MainWindowMainInit:
         if hasattr(self, "plugin_toolbar"):
             self.plugin_toolbar.clear()
             self.plugin_toolbar.hide()
+
     def _init_left_panel(self, left_layout):
         """Initialize the left panel (2D view and buttons)."""
         self.scene = MoleculeScene(self.data, self)
@@ -916,14 +993,18 @@ class MainWindowMainInit:
                 self.show_convert_menu
             )
         except (AttributeError, RuntimeError, ValueError, TypeError) as e:
-            logging.debug(f"Suppressed exception: {e}")  # Suppress non-critical UI/menu initialization errors
+            logging.debug(
+                f"Suppressed exception: {e}"
+            )  # Suppress non-critical UI/menu initialization errors
 
         left_buttons_layout.addWidget(self.convert_button)
         left_layout.addLayout(left_buttons_layout)
 
     def _init_right_panel(self, right_layout):
         """Initialize the right panel (3D view and buttons)."""
-        self.plotter = CustomQtInteractor(right_layout.parentWidget(), main_window=self, lighting="none")
+        self.plotter = CustomQtInteractor(
+            right_layout.parentWidget(), main_window=self, lighting="none"
+        )
         self.plotter.setAcceptDrops(False)
         self.plotter.setSizePolicy(
             QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
@@ -953,7 +1034,9 @@ class MainWindowMainInit:
                 self.show_optimize_menu
             )
         except (AttributeError, RuntimeError, ValueError, TypeError) as e:
-            logging.debug(f"Suppressed exception: {e}")  # Suppress non-critical UI/menu initialization errors
+            logging.debug(
+                f"Suppressed exception: {e}"
+            )  # Suppress non-critical UI/menu initialization errors
 
         right_buttons_layout.addWidget(self.optimize_3d_button)
 
@@ -984,6 +1067,7 @@ class MainWindowMainInit:
 
         # 4. Add horizontal layout to vertical layout
         right_layout.addLayout(right_buttons_layout)
+
     def _init_toolbars(self):
         """Initialize and organize toolbars."""
         # Row 1: Main Toolbar
@@ -1023,17 +1107,27 @@ class MainWindowMainInit:
         """Add standard atom selection actions to the toolbar."""
         actions_data = [
             ("Select", "select", "Space"),
-            ("C", "atom_C", "c"), ("H", "atom_H", "h"), ("B", "atom_B", "b"),
-            ("N", "atom_N", "n"), ("O", "atom_O", "o"), ("S", "atom_S", "s"),
-            ("Si", "atom_Si", "Shift+S"), ("P", "atom_P", "p"), ("F", "atom_F", "f"),
-            ("Cl", "atom_Cl", "Shift+C"), ("Br", "atom_Br", "Shift+B"), ("I", "atom_I", "i"),
+            ("C", "atom_C", "c"),
+            ("H", "atom_H", "h"),
+            ("B", "atom_B", "b"),
+            ("N", "atom_N", "n"),
+            ("O", "atom_O", "o"),
+            ("S", "atom_S", "s"),
+            ("Si", "atom_Si", "Shift+S"),
+            ("P", "atom_P", "p"),
+            ("F", "atom_F", "f"),
+            ("Cl", "atom_Cl", "Shift+C"),
+            ("Br", "atom_Br", "Shift+B"),
+            ("I", "atom_I", "i"),
             ("Other...", "atom_other", ""),
         ]
 
         for text, mode, shortcut in actions_data:
-            if text == "C": toolbar.addSeparator()
+            if text == "C":
+                toolbar.addSeparator()
             action = QAction(text, self, checkable=(mode != "atom_other"))
-            if shortcut: action.setToolTip(f"{text} ({shortcut})")
+            if shortcut:
+                action.setToolTip(f"{text} ({shortcut})")
 
             if mode == "atom_other":
                 action.triggered.connect(self.open_periodic_table_dialog)
@@ -1069,9 +1163,11 @@ class MainWindowMainInit:
 
     def _add_charge_radical_actions(self, toolbar):
         """Add charge and radical modification actions."""
-        ops = [("+ Charge", "charge_plus", "Increase Atom Charge (+)"),
-               ("- Charge", "charge_minus", "Decrease Atom Charge (-)"),
-               ("Radical", "radical", "Toggle Radical (0/1/2) (.)")]
+        ops = [
+            ("+ Charge", "charge_plus", "Increase Atom Charge (+)"),
+            ("- Charge", "charge_minus", "Decrease Atom Charge (-)"),
+            ("Radical", "radical", "Toggle Radical (0/1/2) (.)"),
+        ]
 
         for text, mode, tooltip in ops:
             action = QAction(text, self, checkable=True)
@@ -1084,14 +1180,18 @@ class MainWindowMainInit:
     def _add_template_actions(self, toolbar_bottom):
         """Add structural template actions (rings, etc.) to the bottom toolbar."""
         toolbar_bottom.addWidget(QLabel(" Templates:"))
-        templates = [("Benzene", "template_benzene", 6)] + [(f"{i}-Ring", f"template_{i}", i) for i in range(3, 10)]
+        templates = [("Benzene", "template_benzene", 6)] + [
+            (f"{i}-Ring", f"template_{i}", i) for i in range(3, 10)
+        ]
 
         for text, mode, n in templates:
             action = QAction(self)
             action.setCheckable(True)
             is_benzene = text == "Benzene"
             action.setIcon(self._create_template_icon(n, is_benzene=is_benzene))
-            action.setToolTip(f"{text} Template (4)" if is_benzene else f"{text} Template")
+            action.setToolTip(
+                f"{text} Template (4)" if is_benzene else f"{text} Template"
+            )
             action.triggered.connect(lambda c, m=mode: self.set_mode(m))
             self.mode_actions[mode] = action
             toolbar_bottom.addAction(action)
@@ -1111,12 +1211,16 @@ class MainWindowMainInit:
         toolbar.addWidget(spacer)
 
         self.measurement_action = QAction("3D Select", self, checkable=True)
-        self.measurement_action.setToolTip("Enable distance, angle, and dihedral measurement in 3D view")
+        self.measurement_action.setToolTip(
+            "Enable distance, angle, and dihedral measurement in 3D view"
+        )
         self.measurement_action.triggered.connect(self.toggle_measurement_mode)
         toolbar.addAction(self.measurement_action)
 
         self.edit_3d_action = QAction("3D Drag", self, checkable=True)
-        self.edit_3d_action.setToolTip("Toggle 3D atom dragging mode (Hold Alt for temporary mode)")
+        self.edit_3d_action.setToolTip(
+            "Toggle 3D atom dragging mode (Hold Alt for temporary mode)"
+        )
         self.edit_3d_action.toggled.connect(self.toggle_3d_edit_mode)
         toolbar.addAction(self.edit_3d_action)
 
@@ -1130,10 +1234,15 @@ class MainWindowMainInit:
         style_group = QActionGroup(self)
         style_group.setExclusive(True)
 
-        for name, key in [("Ball & Stick", "ball_and_stick"), ("CPK (Space-filling)", "cpk"),
-                          ("Wireframe", "wireframe"), ("Stick", "stick")]:
+        for name, key in [
+            ("Ball & Stick", "ball_and_stick"),
+            ("CPK (Space-filling)", "cpk"),
+            ("Wireframe", "wireframe"),
+            ("Stick", "stick"),
+        ]:
             action = QAction(name, self, checkable=True)
-            if key == "ball_and_stick": action.setChecked(True)
+            if key == "ball_and_stick":
+                action.setChecked(True)
             action.triggered.connect(lambda checked=False, k=key: self.set_3d_style(k))
             style_menu.addAction(action)
             style_group.addAction(action)
@@ -1143,7 +1252,9 @@ class MainWindowMainInit:
             for style_name in self.plugin_manager.custom_3d_styles:
                 if not any(a.text() == style_name for a in style_menu.actions()):
                     action = QAction(style_name, self, checkable=True)
-                    action.triggered.connect(lambda checked=False, s=style_name: self.set_3d_style(s))
+                    action.triggered.connect(
+                        lambda checked=False, s=style_name: self.set_3d_style(s)
+                    )
                     style_menu.addAction(action)
                     style_group.addAction(action)
 
@@ -1154,7 +1265,7 @@ class MainWindowMainInit:
         pixmap.fill(Qt.GlobalColor.transparent)
         painter = QPainter(pixmap)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-        p1, p2 = QPointF(6, size/2), QPointF(size-6, size/2)
+        p1, p2 = QPointF(6, size / 2), QPointF(size - 6, size / 2)
         line = QLineF(p1, p2)
         painter.setPen(QPen(fg, 2))
         painter.setBrush(QBrush(fg))
@@ -1185,15 +1296,19 @@ class MainWindowMainInit:
                 painter.setPen(QPen(fg, 1.5))
                 painter.drawLine(start - offset, start + offset)
         elif bond_type == "ez_toggle":
-            p1z, p2z = QPointF(6, size*0.75), QPointF(size-6, size*0.75)
+            p1z, p2z = QPointF(6, size * 0.75), QPointF(size - 6, size * 0.75)
             linez = QLineF(p1z, p2z)
             v = linez.unitVector().normalVector()
             offset = QPointF(v.dx(), v.dy()) * 2.0
             painter.drawLine(linez.translated(offset))
             painter.drawLine(linez.translated(-offset))
             font = painter.font()
-            font.setPointSize(10); font.setBold(True); painter.setFont(font)
-            painter.drawText(QRectF(0, 0, size, size*0.6), Qt.AlignmentFlag.AlignCenter, "Z⇌E")
+            font.setPointSize(10)
+            font.setBold(True)
+            painter.setFont(font)
+            painter.drawText(
+                QRectF(0, 0, size, size * 0.6), Qt.AlignmentFlag.AlignCenter, "Z⇌E"
+            )
 
         painter.end()
         return QIcon(pixmap)
@@ -1206,21 +1321,28 @@ class MainWindowMainInit:
         painter = QPainter(pixmap)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         painter.setPen(QPen(fg, 2))
-        center = QPointF(size/2, size/2)
-        radius = size/2 - 4
+        center = QPointF(size / 2, size / 2)
+        radius = size / 2 - 4
         points = []
         angle_step = 2 * math.pi / n
-        start_angle = -math.pi/2 if n%2 != 0 else -math.pi/2 - angle_step/2
+        start_angle = -math.pi / 2 if n % 2 != 0 else -math.pi / 2 - angle_step / 2
         for i in range(n):
             angle = start_angle + i * angle_step
-            points.append(QPointF(center.x() + radius * math.cos(angle), center.y() + radius * math.sin(angle)))
+            points.append(
+                QPointF(
+                    center.x() + radius * math.cos(angle),
+                    center.y() + radius * math.sin(angle),
+                )
+            )
         painter.drawPolygon(QPolygonF(points))
         if is_benzene:
             painter.drawEllipse(center, radius * 0.6, radius * 0.6)
         if n in [7, 8, 9]:
             painter.setFont(QFont("Arial", 10, QFont.Weight.Bold))
             painter.setPen(QPen(fg, 1))
-            painter.drawText(QRectF(0, 0, size, size), Qt.AlignmentFlag.AlignCenter, str(n))
+            painter.drawText(
+                QRectF(0, 0, size, size), Qt.AlignmentFlag.AlignCenter, str(n)
+            )
         painter.end()
         return QIcon(pixmap)
 
@@ -1228,16 +1350,18 @@ class MainWindowMainInit:
         """Determine appropriate icon foreground color based on theme/settings."""
         with contextlib.suppress(Exception):
             fg = self.settings.get("icon_foreground")
-            if fg and QColor(fg).isValid(): return QColor(fg)
+            if fg and QColor(fg).isValid():
+                return QColor(fg)
 
         with contextlib.suppress(Exception):
             os_pref = detect_system_dark_mode()
-            if os_pref is not None: return QColor("#FFFFFF") if os_pref else QColor("#000000")
+            if os_pref is not None:
+                return QColor("#FFFFFF") if os_pref else QColor("#000000")
 
         with contextlib.suppress(Exception):
             bg = QColor(self.settings.get("background_color", "#FFFFFF"))
             if bg.isValid():
-                lum = (0.2126 * bg.redF() + 0.7152 * bg.greenF() + 0.0722 * bg.blueF())
+                lum = 0.2126 * bg.redF() + 0.7152 * bg.greenF() + 0.0722 * bg.blueF()
                 return QColor("#FFFFFF") if lum < 0.5 else QColor("#000000")
         return QColor("#000000")
 
@@ -1374,7 +1498,9 @@ class MainWindowMainInit:
 
         edit_menu.addSeparator()
         add_hydrogen_action = QAction("Add Hydrogens", self)
-        add_hydrogen_action.setToolTip("Add explicit hydrogens based on RDKit implicit counts")
+        add_hydrogen_action.setToolTip(
+            "Add explicit hydrogens based on RDKit implicit counts"
+        )
         add_hydrogen_action.triggered.connect(self.add_hydrogen_atoms)
         edit_menu.addAction(add_hydrogen_action)
 
@@ -1440,7 +1566,9 @@ class MainWindowMainInit:
 
         view_menu.addSeparator()
         reset_3d_view_action = QAction("Reset 3D View", self)
-        reset_3d_view_action.triggered.connect(lambda: self.plotter.reset_camera() if hasattr(self, "plotter") else None)
+        reset_3d_view_action.triggered.connect(
+            lambda: self.plotter.reset_camera() if hasattr(self, "plotter") else None
+        )
         reset_3d_view_action.setShortcut(QKeySequence("Ctrl+Shift+R"))
         view_menu.addAction(reset_3d_view_action)
 
@@ -1479,20 +1607,34 @@ class MainWindowMainInit:
 
         view_menu.addSeparator()
         atom_info_menu = view_menu.addMenu("3D Atom Info Display")
-        self.show_atom_id_action = QAction("Show Original ID / Index", self, checkable=True)
-        self.show_atom_id_action.triggered.connect(lambda: self.toggle_atom_info_display("id"))
+        self.show_atom_id_action = QAction(
+            "Show Original ID / Index", self, checkable=True
+        )
+        self.show_atom_id_action.triggered.connect(
+            lambda: self.toggle_atom_info_display("id")
+        )
         atom_info_menu.addAction(self.show_atom_id_action)
 
         self.show_rdkit_id_action = QAction("Show RDKit Index", self, checkable=True)
-        self.show_rdkit_id_action.triggered.connect(lambda: self.toggle_atom_info_display("rdkit_id"))
+        self.show_rdkit_id_action.triggered.connect(
+            lambda: self.toggle_atom_info_display("rdkit_id")
+        )
         atom_info_menu.addAction(self.show_rdkit_id_action)
 
-        self.show_atom_coords_action = QAction("Show Coordinates (X,Y,Z)", self, checkable=True)
-        self.show_atom_coords_action.triggered.connect(lambda: self.toggle_atom_info_display("coords"))
+        self.show_atom_coords_action = QAction(
+            "Show Coordinates (X,Y,Z)", self, checkable=True
+        )
+        self.show_atom_coords_action.triggered.connect(
+            lambda: self.toggle_atom_info_display("coords")
+        )
         atom_info_menu.addAction(self.show_atom_coords_action)
 
-        self.show_atom_symbol_action = QAction("Show Element Symbol", self, checkable=True)
-        self.show_atom_symbol_action.triggered.connect(lambda: self.toggle_atom_info_display("symbol"))
+        self.show_atom_symbol_action = QAction(
+            "Show Element Symbol", self, checkable=True
+        )
+        self.show_atom_symbol_action.triggered.connect(
+            lambda: self.toggle_atom_info_display("symbol")
+        )
         atom_info_menu.addAction(self.show_atom_symbol_action)
 
     def _init_analysis_menu(self, menu_bar):
@@ -1544,19 +1686,25 @@ class MainWindowMainInit:
 
         plane_align_menu = align_menu.addMenu("Plane")
         alignplane_xy_action = QAction("XY-plane", self)
-        alignplane_xy_action.triggered.connect(lambda: self.open_align_plane_dialog("xy"))
+        alignplane_xy_action.triggered.connect(
+            lambda: self.open_align_plane_dialog("xy")
+        )
         alignplane_xy_action.setEnabled(False)
         plane_align_menu.addAction(alignplane_xy_action)
         self.alignplane_xy_action = alignplane_xy_action
 
         alignplane_xz_action = QAction("XZ-plane", self)
-        alignplane_xz_action.triggered.connect(lambda: self.open_align_plane_dialog("xz"))
+        alignplane_xz_action.triggered.connect(
+            lambda: self.open_align_plane_dialog("xz")
+        )
         alignplane_xz_action.setEnabled(False)
         plane_align_menu.addAction(alignplane_xz_action)
         self.alignplane_xz_action = alignplane_xz_action
 
         alignplane_yz_action = QAction("YZ-plane", self)
-        alignplane_yz_action.triggered.connect(lambda: self.open_align_plane_dialog("yz"))
+        alignplane_yz_action.triggered.connect(
+            lambda: self.open_align_plane_dialog("yz")
+        )
         alignplane_yz_action.setEnabled(False)
         plane_align_menu.addAction(alignplane_yz_action)
         self.alignplane_yz_action = alignplane_yz_action
@@ -1596,7 +1744,9 @@ class MainWindowMainInit:
 
         edit_3d_menu.addSeparator()
         constrained_opt_action = QAction("Constrained Optimization...", self)
-        constrained_opt_action.triggered.connect(self.open_constrained_optimization_dialog)
+        constrained_opt_action.triggered.connect(
+            self.open_constrained_optimization_dialog
+        )
         constrained_opt_action.setEnabled(False)
         edit_3d_menu.addAction(constrained_opt_action)
         self.constrained_opt_action = constrained_opt_action
@@ -1605,14 +1755,19 @@ class MainWindowMainInit:
         """Initialize the Plugin menu."""
         self.plugin_menu = menu_bar.addMenu("&Plugin")
         manage_plugins_action = QAction("Plugin Manager...", self)
+
         def show_plugin_manager():
             if not self.plugin_manager:
-                QMessageBox.information(self, "Safe Mode", "Plugins are disabled (safe mode).")
+                QMessageBox.information(
+                    self, "Safe Mode", "Plugins are disabled (safe mode)."
+                )
                 return
             from .plugin_manager_window import PluginManagerWindow
+
             dlg = PluginManagerWindow(self.plugin_manager, self)
             dlg.exec()
             self.update_plugin_menu(self.plugin_menu)
+
         manage_plugins_action.triggered.connect(show_plugin_manager)
         self.plugin_menu.addAction(manage_plugins_action)
         self.plugin_menu.addSeparator()
@@ -1625,7 +1780,9 @@ class MainWindowMainInit:
         settings_menu.addAction(view_settings_action)
 
         color_action = QAction("CPK Colors...", self)
-        color_action.triggered.connect(lambda: ColorSettingsDialog(self.settings, parent=self).exec_())
+        color_action.triggered.connect(
+            lambda: ColorSettingsDialog(self.settings, parent=self).exec_()
+        )
         settings_menu.addAction(color_action)
 
         conversion_menu = settings_menu.addMenu("3D Conversion")
@@ -1637,32 +1794,51 @@ class MainWindowMainInit:
                 self.settings["3d_conversion_mode"] = mode
                 self.settings_dirty = True
                 self.statusBar().showMessage(f"3D conversion mode set to: {mode}")
-            except Exception as e: logging.debug(f"Suppressed exception: {e}")
+            except Exception as e:
+                logging.debug(f"Suppressed exception: {e}")
 
-        conv_options = [("Fallback", "fallback"), ("RDKit only", "rdkit"), ("Open Babel only", "obabel"), ("Direct (use 2D coords + add H)", "direct")]
+        conv_options = [
+            ("Fallback", "fallback"),
+            ("RDKit only", "rdkit"),
+            ("Open Babel only", "obabel"),
+            ("Direct (use 2D coords + add H)", "direct"),
+        ]
         self.conv_actions = {}
         for label, key in conv_options:
             a = QAction(label, self)
             a.setCheckable(True)
-            if key == "obabel" and not OBABEL_AVAILABLE: a.setEnabled(False)
+            if key == "obabel" and not OBABEL_AVAILABLE:
+                a.setEnabled(False)
             a.triggered.connect(lambda checked, m=key: _set_conv_mode(m))
             conversion_menu.addAction(a)
             conv_group.addAction(a)
             self.conv_actions[key] = a
 
         saved_conv = self.settings.get("3d_conversion_mode", "fallback")
-        if saved_conv not in self.conv_actions or not self.conv_actions[saved_conv].isEnabled():
-            saved_conv = "rdkit" if self.conv_actions.get("rdkit", QAction(self)).isEnabled() else "fallback"
-        
+        if (
+            saved_conv not in self.conv_actions
+            or not self.conv_actions[saved_conv].isEnabled()
+        ):
+            saved_conv = (
+                "rdkit"
+                if self.conv_actions.get("rdkit", QAction(self)).isEnabled()
+                else "fallback"
+            )
+
         if saved_conv in self.conv_actions:
             self.conv_actions[saved_conv].setChecked(True)
         self.settings["3d_conversion_mode"] = saved_conv
 
         optimization_menu = settings_menu.addMenu("3D Optimization Settings")
         opt_methods = [
-            ("MMFF94s (RDKit)", "MMFF_RDKIT"), ("MMFF94 (RDKit)", "MMFF94_RDKIT"), ("UFF (RDKit)", "UFF_RDKIT"),
-            ("MMFF94s (Open Babel)", "MMFF94s_OBABEL"), ("MMFF94 (Open Babel)", "MMFF94_OBABEL"), ("UFF (Open Babel)", "UFF_OBABEL"),
-            ("GAFF (Open Babel)", "GAFF_OBABEL"), ("Ghemical (Open Babel)", "GHEMICAL_OBABEL"),
+            ("MMFF94s (RDKit)", "MMFF_RDKIT"),
+            ("MMFF94 (RDKit)", "MMFF94_RDKIT"),
+            ("UFF (RDKit)", "UFF_RDKIT"),
+            ("MMFF94s (Open Babel)", "MMFF94s_OBABEL"),
+            ("MMFF94 (Open Babel)", "MMFF94_OBABEL"),
+            ("UFF (Open Babel)", "UFF_OBABEL"),
+            ("GAFF (Open Babel)", "GAFF_OBABEL"),
+            ("Ghemical (Open Babel)", "GHEMICAL_OBABEL"),
         ]
         self.opt3d_method_labels = {key.upper(): label for (label, key) in opt_methods}
         opt_group = QActionGroup(self)
@@ -1671,21 +1847,33 @@ class MainWindowMainInit:
         for label, key in opt_methods:
             action = QAction(label, self)
             action.setCheckable(True)
-            if key.endswith("_OBABEL") and not OBABEL_AVAILABLE: action.setEnabled(False)
-            action.triggered.connect(lambda checked, m=key: self.set_optimization_method(m))
+            if key.endswith("_OBABEL") and not OBABEL_AVAILABLE:
+                action.setEnabled(False)
+            action.triggered.connect(
+                lambda checked, m=key: self.set_optimization_method(m)
+            )
             optimization_menu.addAction(action)
             opt_group.addAction(action)
             self.opt3d_actions[key] = action
-        
+
         optimization_menu.addSeparator()
-        self.intermolecular_rdkit_action = QAction("Consider Intermolecular Interaction for RDKit", self)
+        self.intermolecular_rdkit_action = QAction(
+            "Consider Intermolecular Interaction for RDKit", self
+        )
         self.intermolecular_rdkit_action.setCheckable(True)
-        self.intermolecular_rdkit_action.setChecked(self.settings.get("optimize_intermolecular_interaction_rdkit", True))
-        self.intermolecular_rdkit_action.triggered.connect(self.toggle_intermolecular_interaction_rdkit)
+        self.intermolecular_rdkit_action.setChecked(
+            self.settings.get("optimize_intermolecular_interaction_rdkit", True)
+        )
+        self.intermolecular_rdkit_action.triggered.connect(
+            self.toggle_intermolecular_interaction_rdkit
+        )
         optimization_menu.addAction(self.intermolecular_rdkit_action)
 
         saved_opt = (self.settings.get("optimization_method") or "MMFF_RDKIT").upper()
-        if saved_opt in self.opt3d_actions and self.opt3d_actions[saved_opt].isEnabled():
+        if (
+            saved_opt in self.opt3d_actions
+            and self.opt3d_actions[saved_opt].isEnabled()
+        ):
             self.opt3d_actions[saved_opt].setChecked(True)
             self.optimization_method = saved_opt
         else:
@@ -1705,13 +1893,27 @@ class MainWindowMainInit:
         help_menu.addAction(about_action)
 
         github_action = QAction("GitHub", self)
-        github_action.triggered.connect(lambda: QDesktopServices.openUrl(QUrl("https://github.com/HiroYokoyama/python_molecular_editor")))
+        github_action.triggered.connect(
+            lambda: QDesktopServices.openUrl(
+                QUrl("https://github.com/HiroYokoyama/python_molecular_editor")
+            )
+        )
         help_menu.addAction(github_action)
 
         github_wiki_action = QAction("GitHub Wiki", self)
-        github_wiki_action.triggered.connect(lambda: QDesktopServices.openUrl(QUrl("https://github.com/HiroYokoyama/python_molecular_editor/wiki")))
+        github_wiki_action.triggered.connect(
+            lambda: QDesktopServices.openUrl(
+                QUrl("https://github.com/HiroYokoyama/python_molecular_editor/wiki")
+            )
+        )
         help_menu.addAction(github_wiki_action)
 
         manual_action = QAction("User Manual", self)
-        manual_action.triggered.connect(lambda: QDesktopServices.openUrl(QUrl("https://hiroyokoyama.github.io/python_molecular_editor/manual/manual")))
+        manual_action.triggered.connect(
+            lambda: QDesktopServices.openUrl(
+                QUrl(
+                    "https://hiroyokoyama.github.io/python_molecular_editor/manual/manual"
+                )
+            )
+        )
         help_menu.addAction(manual_action)

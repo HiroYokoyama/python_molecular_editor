@@ -12,9 +12,10 @@ DOI: 10.5281/zenodo.17268532
 
 """
 main_window_ui_manager.py
-Functional class separated from main_window.py
+Mixin class separated from main_window.py
 """
 
+import contextlib
 import vtk
 
 # PyQt6 Modules
@@ -29,6 +30,7 @@ from PyQt6.QtWidgets import (
 
 try:
     from PyQt6 import sip as _sip  # type: ignore
+
     _sip_isdeleted = getattr(_sip, "isdeleted", None)
 except ImportError:
     _sip = None
@@ -43,14 +45,21 @@ except ImportError:
 
 
 # --- Classes ---
-class MainWindowUiManager(object):
-    """Functional class separated from main_window.py."""
+class MainWindowUiManager:
+    """Mixin class separated from main_window.py."""
 
     def update_status_bar(self, message):
         """Update status bar with worker messages."""
         self.statusBar().showMessage(message)
 
     def set_mode(self, mode_str):
+        if isinstance(mode_str, tuple):
+            mode_str = (
+                f"bond_{mode_str[0]}_{mode_str[1]}"
+                if len(mode_str) == 2
+                else str(mode_str[0])
+            )
+
         prev_mode = getattr(self.scene, "mode", None)
         self.scene.mode = mode_str
         self.view_2d.setMouseTracking(True)
@@ -163,21 +172,22 @@ class MainWindowUiManager(object):
             self.view_2d.setFocus()
         return super().eventFilter(obj, event)
 
-    def closeEvent(self, event):
-        # Persist settings on exit only when explicitly modified (deferred save)
+    def closeEvent(self, event):  # 1. Persist settings
         try:
-            if (
-                getattr(self, "settings_dirty", False)
-                or self.settings != self.initial_settings
-            ):
+            modified = getattr(self, "settings_dirty", False) or (
+                hasattr(self, "settings")
+                and hasattr(self, "initial_settings")
+                and self.settings != self.initial_settings
+            )
+            if modified and hasattr(self, "save_settings"):
                 self.save_settings()
                 self.settings_dirty = False
-        except (AttributeError, RuntimeError, TypeError, OSError):  
-            import traceback
-            traceback.print_exc()
+        except (AttributeError, RuntimeError, TypeError, ValueError, OSError):
+            # Suppress non-critical settings persistence errors during application shutdown
+            pass
 
-        # Handle unsaved changes
-        if self.has_unsaved_changes:
+        # 2. Handle unsaved changes
+        if getattr(self, "has_unsaved_changes", False):
             reply = QMessageBox.question(
                 self,
                 "Unsaved Changes",
@@ -189,54 +199,47 @@ class MainWindowUiManager(object):
             )
 
             if reply == QMessageBox.StandardButton.Yes:
-                # Save project
-                self.save_project()
-
-                # Cancel exit if save was cancelled
-                if self.has_unsaved_changes:
+                if hasattr(self, "save_project"):
+                    self.save_project()
+                if getattr(self, "has_unsaved_changes", False):
                     event.ignore()
                     return
-
             elif reply == QMessageBox.StandardButton.Cancel:
                 event.ignore()
                 return
-            # Proceed to exit if "No"
 
-        # Close all open dialogs
+        # 3. Gracefully close child windows and cleanup threads
         try:
+            # Close dialogs
             for widget in QApplication.topLevelWidgets():
                 if widget != self and isinstance(widget, (QDialog, QMainWindow)):
                     try:
                         widget.close()
-                    except (AttributeError, RuntimeError, TypeError):  
-                        import traceback
-                        traceback.print_exc()
-        except (AttributeError, RuntimeError, TypeError):  
-            import traceback
-            traceback.print_exc()
+                    except (RuntimeError, TypeError):
+                        # Suppress errors if a thread is already terminated or non-responsive during bulk teardown.
+                        pass
+            # Stop calculation threads
+            active_threads = list(getattr(self, "_active_calc_threads", []) or [])
+            for thr in active_threads:
+                try:
+                    if hasattr(thr, "quit"):
+                        thr.quit()
+                    if hasattr(thr, "wait"):
+                        thr.wait(200)
+                except (RuntimeError, TypeError):
+                    # Suppress errors if a thread is already terminated or non-responsive during bulk teardown.
+                    pass
+        except (AttributeError, RuntimeError, TypeError, ValueError):
+            # Suppress non-critical thread/widget cleanup errors during application shutdown
+            pass
 
-        # Final cleanup
-        if self.scene and self.scene.template_preview:
-            self.scene.template_preview.hide()
-
-        # Clean up any active per-run calculation threads we spawned.
+        # 4. Standard framework cleanup
         try:
-            for thr in list(getattr(self, "_active_calc_threads", []) or []):
-                try:
-                    thr.quit()
-                except (AttributeError, RuntimeError, TypeError):  
-                    import traceback
-                    traceback.print_exc()
-                try:
-                    thr.wait(200)
-                except (AttributeError, RuntimeError, TypeError):  
-                    import traceback
-                    traceback.print_exc()
-        except (AttributeError, RuntimeError, TypeError):  
-            import traceback
-            traceback.print_exc()
-
-        event.accept()
+            super().closeEvent(event)
+        except (TypeError, RuntimeError):
+            # Fallback for unit tests using mock events or if C++ object is already gone
+            with contextlib.suppress(AttributeError):
+                event.accept()
 
     def toggle_3d_edit_mode(self, checked):
         """Toggle 3D Drag mode."""
@@ -266,94 +269,82 @@ class MainWindowUiManager(object):
 
     def dragEnterEvent(self, event):
         """Handle drag enter event."""
-        # Accept if any dragged local file has a supported extension
-        if event.mimeData().hasUrls():
-            urls = event.mimeData().urls()
-            for url in urls:
-                try:
-                    if url.isLocalFile():
-                        file_path = url.toLocalFile()
-                        file_lower = file_path.lower()
+        self.handle_drag_enter_event(event)
 
-                        # Built-in extensions
-                        if file_lower.endswith(
-                            (".pmeraw", ".pmeprj", ".mol", ".sdf", ".xyz")
-                        ):
-                            event.acceptProposedAction()
-                            return
+    def handle_drag_enter_event(self, event):
+        """Internal handler for drag enter event (bypasses PyQt type checks in tests)."""
+        if not event.mimeData().hasUrls():
+            event.ignore()
+            return
 
-                        # 2. Plugin drop handlers
-                        # Only if plugin explicitly accepts drop
+        for url in event.mimeData().urls():
+            if not url.isLocalFile():
+                continue
 
-                        # Plugin drop handlers (accept more liberally for custom logic)
-                        # A plugin drop handler might handle it, so accept
-                        if self.plugin_manager and hasattr(
-                            self.plugin_manager, "drop_handlers"
-                        ):
-                            if len(self.plugin_manager.drop_handlers) > 0:
-                                # Accept any file if drop handlers are registered
-                                # They will check the file type in dropEvent
-                                event.acceptProposedAction()
-                                return
-                except (AttributeError, RuntimeError, TypeError):
-                    continue
+            file_lower = url.toLocalFile().lower()
+            # 1. Built-in extensions
+            if file_lower.endswith((".pmeraw", ".pmeprj", ".mol", ".sdf", ".xyz")):
+                event.acceptProposedAction()
+                return
+
+            # 2. Plugin drop handlers (accept if any handlers exist)
+            plugin_mgr = getattr(self, "plugin_manager", None)
+            if plugin_mgr and getattr(plugin_mgr, "drop_handlers", []):
+                event.acceptProposedAction()
+                return
+
         event.ignore()
 
     def dropEvent(self, event):
         """Handle file drop event."""
-        urls = event.mimeData().urls()
-        # Find the first local file from the dropped URLs
-        file_path = None
-        if urls:
-            for url in urls:
-                try:
-                    if url.isLocalFile():
-                        file_path = url.toLocalFile()
-                        break
-                except (AttributeError, RuntimeError, TypeError):
-                    continue
+        self.handle_drop_event(event)
 
-        if file_path:
-            # 1. Custom Plugin Handlers
-            if self.plugin_manager and hasattr(self.plugin_manager, "drop_handlers"):
-                for handler_def in self.plugin_manager.drop_handlers:
-                    try:
-                        callback = handler_def["callback"]
-                        handled = callback(file_path)
-                        if handled:
-                            event.acceptProposedAction()
-                            return
-                    except (AttributeError, RuntimeError, TypeError, ValueError) as e:
-                        print(f"Error in plugin drop handler: {e}")
-            # Get drop position
-            drop_pos = event.position().toPoint()
-            # Dispatch based on extension
-            if file_path.lower().endswith((".pmeraw", ".pmeprj")):
-                self.open_project_file(file_path=file_path)
-                QTimer.singleShot(100, self.fit_to_view)  # Delayed Fit
-                event.acceptProposedAction()
-            elif file_path.lower().endswith((".mol", ".sdf")):
-                plotter_widget = self.splitter.widget(1)  # 3D viewer widget
-                plotter_rect = plotter_widget.geometry()
-                if plotter_rect.contains(drop_pos):
-                    self.load_mol_file_for_3d_viewing(file_path=file_path)
-                else:
-                    if hasattr(self, "load_mol_file"):
-                        self.load_mol_file(file_path=file_path)
-                    else:
-                        self.statusBar().showMessage(
-                            "MOL file import not implemented for 2D editor."
-                        )
-                QTimer.singleShot(100, self.fit_to_view)  # Delayed Fit
-                event.acceptProposedAction()
-            elif file_path.lower().endswith(".xyz"):
-                self.load_xyz_for_3d_viewing(file_path=file_path)
-                QTimer.singleShot(100, self.fit_to_view)  # Delayed Fit
-                event.acceptProposedAction()
+    def handle_drop_event(self, event):
+        """Internal handler for file drop event (bypasses PyQt type checks in tests)."""
+        urls = event.mimeData().urls()
+        file_path = next((u.toLocalFile() for u in urls if u.isLocalFile()), None)
+        if not file_path:
+            event.ignore()
+            return
+
+        # 1. Plugin Handlers
+        plugin_mgr = getattr(self, "plugin_manager", None)
+        for handler_def in getattr(plugin_mgr, "drop_handlers", []):
+            try:
+                if handler_def["callback"](file_path):
+                    event.acceptProposedAction()
+                    return
+            except (AttributeError, RuntimeError, TypeError, ValueError) as e:
+                # Log but suppress plugin-specific drop handler errors to prevent app-wide crash
+                print(f"Error in plugin drop handler: {e}")
+
+        # 2. Built-in Handlers
+        file_lower = file_path.lower()
+        if file_lower.endswith((".pmeraw", ".pmeprj")):
+            self.open_project_file(file_path=file_path)
+            QTimer.singleShot(100, self.fit_to_view)
+            event.acceptProposedAction()
+        elif file_lower.endswith((".mol", ".sdf")):
+            # Check if dropped on 3D viewer
+            plotter_widget = self.splitter.widget(1)
+            drag_point = event.position().toPoint()
+            if plotter_widget and plotter_widget.geometry().contains(drag_point):
+                self.load_mol_file_for_3d_viewing(file_path=file_path)
+            elif hasattr(self, "load_mol_file"):
+                self.load_mol_file(file_path=file_path)
             else:
-                self.statusBar().showMessage(f"Unsupported file type: {file_path}")
-                event.ignore()
+                self.statusBar().showMessage(
+                    "MOL file import not implemented for 2D editor."
+                )
+
+            QTimer.singleShot(100, self.fit_to_view)
+            event.acceptProposedAction()
+        elif file_lower.endswith(".xyz"):
+            self.load_xyz_for_3d_viewing(file_path=file_path)
+            QTimer.singleShot(100, self.fit_to_view)
+            event.acceptProposedAction()
         else:
+            self.statusBar().showMessage(f"Unsupported file type: {file_path}")
             event.ignore()
 
     def _enable_3d_edit_actions(self, enabled=True):
@@ -388,55 +379,37 @@ class MainWindowUiManager(object):
 
     def _enable_3d_features(self, enabled=True):
         """Enable/disable 3D features."""
-        # Basic 3D features (excluding 3D Select and Edit, which are always enabled)
+        # Basic 3D features
         basic_3d_actions = ["optimize_3d_button", "export_button", "analysis_action"]
 
         for action_name in basic_3d_actions:
-            if hasattr(self, action_name):
+            obj = getattr(self, action_name, None)
+            if obj is None:
+                continue
+
+            try:
                 if action_name == "optimize_3d_button":
-                    try:
-                        # If we're disabling all 3D features, ensure Optimize is disabled
-                        if not enabled:
-                            getattr(self, action_name).setEnabled(False)
-                            continue
+                    # Optimization is disabled for XYZ-derived or failed-chem-check molecules
+                    is_xyz = getattr(self, "is_xyz_derived", False)
+                    chem_failed = getattr(self, "chem_check_tried", False) and getattr(
+                        self, "chem_check_failed", False
+                    )
 
-                        # If the current molecule was marked as XYZ-derived (skip path), keep Optimize disabled
-                        if getattr(self, "is_xyz_derived", False):
-                            getattr(self, action_name).setEnabled(False)
-                            continue
-
-                        # If a chemistry check was tried and failed, keep Optimize disabled
-                        if getattr(self, "chem_check_tried", False) and getattr(
-                            self, "chem_check_failed", False
-                        ):
-                            getattr(self, action_name).setEnabled(False)
-                            continue
-
-                        # Otherwise enable/disable according to the requested global flag
-                        getattr(self, action_name).setEnabled(bool(enabled))
-                    except (AttributeError, RuntimeError, TypeError):  
-                        import traceback
-                        traceback.print_exc()
+                    can_optimize = enabled and not (is_xyz or chem_failed)
+                    obj.setEnabled(can_optimize)
                 else:
-                    try:
-                        getattr(self, action_name).setEnabled(enabled)
-                    except (AttributeError, RuntimeError, TypeError):  
-                        import traceback
-                        traceback.print_exc()
+                    obj.setEnabled(enabled)
+            except (AttributeError, RuntimeError, TypeError, ValueError):
+                # Suppress non-critical 3D feature state update errors if widgets are not fully initialized
+                pass
 
-        # Keep measurement action enabled
-        if hasattr(self, "measurement_action"):
-            self.measurement_action.setEnabled(True)
+        # Always enable these core 3D interactors
+        for core_act in ["measurement_action", "edit_3d_action"]:
+            obj = getattr(self, core_act, None)
+            if obj:
+                obj.setEnabled(True)
 
-        # Keep 3D edit action enabled
-        if hasattr(self, "edit_3d_action"):
-            self.edit_3d_action.setEnabled(True)
-
-        # Also include edit actions
-        if enabled:
-            self._enable_3d_edit_actions(True)
-        else:
-            self._enable_3d_edit_actions(False)
+        self._enable_3d_edit_actions(enabled)
 
     def _enter_3d_viewer_ui_mode(self):
         """Set UI mode to 3D viewer."""

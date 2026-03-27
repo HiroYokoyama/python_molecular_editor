@@ -30,19 +30,20 @@ def setup_logging():
         format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
         stream=sys.stdout,
     )
- 
- 
+
+
 def main():
     # Setup logging as early as possible
     setup_logging()
-    
+
     # --- Additional handling for Windows taskbar icon ---
     if sys.platform == "win32":
         myappid = "hyoko.moleditpy.1.0"  # Application-specific ID (arbitrary)
         ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
 
-
-    parser = argparse.ArgumentParser(prog="moleditpy", description="MoleditPy molecular editor")
+    parser = argparse.ArgumentParser(
+        prog="moleditpy", description="MoleditPy molecular editor"
+    )
     parser.add_argument("file", nargs="?", default=None, help="File to open on startup")
     parser.add_argument(
         "--safe",

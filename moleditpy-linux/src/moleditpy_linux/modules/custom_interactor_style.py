@@ -1,3 +1,4 @@
+import logging
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
@@ -23,6 +24,8 @@ try:
     from .move_group_dialog import MoveGroupDialog
 except ImportError:
     from modules.move_group_dialog import MoveGroupDialog
+
+from rdkit import Geometry
 
 
 class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
@@ -57,14 +60,14 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
 
         # Check Move Group dialog
         move_group_dialog = None
-        try:
-            for widget in QApplication.topLevelWidgets():
+        for widget in QApplication.topLevelWidgets():
+            try:
                 if isinstance(widget, MoveGroupDialog) and widget.isVisible():
                     move_group_dialog = widget
                     break
-        except (AttributeError, RuntimeError, TypeError):  
-            import traceback
-            traceback.print_exc()
+            except (AttributeError, RuntimeError, TypeError):
+                # Ignore stale top-level widgets
+                pass
 
         if move_group_dialog and move_group_dialog.group_atoms:
             # Group drag if selected
@@ -267,9 +270,10 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                 if isinstance(widget, MoveGroupDialog) and widget.isVisible():
                     move_group_dialog = widget
                     break
-        except (AttributeError, RuntimeError, TypeError):  
-            import traceback
-            traceback.print_exc()
+        except (AttributeError, RuntimeError, TypeError) as e:
+            logging.debug(
+                f"Suppressed exception: {e}"
+            )  # Suppress non-critical widget search noise
 
         if move_group_dialog and move_group_dialog.group_atoms:
             # Start rotation drag if group selected
@@ -343,10 +347,9 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                 if isinstance(widget, MoveGroupDialog) and widget.isVisible():
                     move_group_dialog = widget
                     break
-        except (AttributeError, RuntimeError, TypeError):  
-            import traceback
-            traceback.print_exc()
-
+        except (AttributeError, RuntimeError, TypeError):
+            # Suppress traceback
+            pass
         if move_group_dialog and getattr(
             move_group_dialog, "_is_dragging_group_vtk", False
         ):
@@ -427,10 +430,9 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                 if isinstance(widget, MoveGroupDialog) and widget.isVisible():
                     move_group_dialog = widget
                     break
-        except (AttributeError, RuntimeError, TypeError):  
-            import traceback
-            traceback.print_exc()
-
+        except (AttributeError, RuntimeError, TypeError):
+            # Suppress traceback
+            pass
         # Prevent multi-click issues
         if move_group_dialog:
             if getattr(
@@ -493,7 +495,12 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                     for atom_idx in move_group_dialog.group_atoms:
                         initial_pos = move_group_dialog._initial_positions[atom_idx]
                         new_pos = initial_pos + translation_vector
-                        conf.SetAtomPosition(atom_idx, new_pos.tolist())
+                        conf.SetAtomPosition(
+                            atom_idx,
+                            Geometry.Point3D(
+                                float(new_pos[0]), float(new_pos[1]), float(new_pos[2])
+                            ),
+                        )
                         mw.atom_positions_3d[atom_idx] = new_pos
 
                     # Update 3D display
@@ -573,41 +580,50 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                                 new_world_coords_tuple = renderer.GetWorldPoint()
                                 new_world_coords = list(new_world_coords_tuple)[:3]
                                 # Ensure container supports assignment
-                                try:
-                                    mw.atom_positions_3d[atom_id] = new_world_coords
-                                except (AttributeError, KeyError, TypeError, ValueError, IndexError):
+                                if isinstance(
+                                    mw.atom_positions_3d, (list, np.ndarray)
+                                ) and atom_id < len(mw.atom_positions_3d):
                                     try:
-                                        ap = list(mw.atom_positions_3d)
-                                        ap[atom_id] = new_world_coords
-                                        mw.atom_positions_3d = ap
-                                    except (AttributeError, RuntimeError, ValueError, TypeError):  
-                                        import traceback
-                                        traceback.print_exc()
-                            except (AttributeError, RuntimeError, TypeError, ValueError):  
-                                import traceback
-                                traceback.print_exc()
+                                        mw.atom_positions_3d[atom_id] = new_world_coords
+                                    except (
+                                        AttributeError,
+                                        RuntimeError,
+                                        ValueError,
+                                        TypeError,
+                                    ):
+                                        # Suppress non-critical assignment noise
+                                        pass
+                            except (
+                                AttributeError,
+                                RuntimeError,
+                                TypeError,
+                                ValueError,
+                            ):
+                                # Suppress non-critical coordinate sync noise
+                                pass
                         conf = mw.current_mol.GetConformer()
-                        for i in range(mw.current_mol.GetNumAtoms()):
-                            try:
-                                pos = mw.atom_positions_3d[i]
-                                conf.SetAtomPosition(i, pos.tolist())
-                            except (AttributeError, KeyError, TypeError, ValueError):
-                                # Skip individual failures but continue applying
-                                # other atom positions.
-                                import traceback
-                                traceback.print_exc()
+                        pos_count = (
+                            len(mw.atom_positions_3d)
+                            if isinstance(mw.atom_positions_3d, (list, np.ndarray))
+                            else 0
+                        )
+                        for i in range(min(mw.current_mol.GetNumAtoms(), pos_count)):
+                            pos = mw.atom_positions_3d[i]
+                            conf.SetAtomPosition(
+                                i,
+                                Geometry.Point3D(
+                                    float(pos[0]), float(pos[1]), float(pos[2])
+                                ),
+                            )
                     except (AttributeError, RuntimeError, ValueError, TypeError):
-                        # If applying positions fails, continue to redraw from
-                        # whatever authoritative state is available.
-                        import traceback
-                        traceback.print_exc()
+                        # Ignore major coordinate refresh failure
+                        pass
 
-                    # Redraw and push undo state
                     try:
                         mw.draw_molecule_3d(mw.current_mol)
-                    except (AttributeError, RuntimeError, ValueError, TypeError):  
-                        import traceback
-                        traceback.print_exc()
+                    except (AttributeError, RuntimeError, ValueError, TypeError):
+                        # Ignore 3D redraw failure during drag
+                        pass
 
                     mw.push_undo_state()
             mw.dragged_atom_info = None
@@ -620,9 +636,9 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
             ]:
                 try:
                     update_call()
-                except (AttributeError, RuntimeError, ValueError, TypeError):  
-                    import traceback
-                    traceback.print_exc()
+                except (AttributeError, RuntimeError, ValueError, TypeError):
+                    # Suppress transient UI update noise during release
+                    pass
         else:
             # Delegate cleanup to parent
             super().OnLeftButtonUp()
@@ -643,16 +659,16 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                     delattr(move_group_dialog, "_initial_positions")
                 if hasattr(move_group_dialog, "_drag_atom_idx"):
                     delattr(move_group_dialog, "_drag_atom_idx")
-        except (AttributeError, RuntimeError, ValueError, TypeError):  
-            import traceback
-            traceback.print_exc()
+        except (AttributeError, RuntimeError, ValueError, TypeError):
+            # Suppress non-critical state cleanup noise
+            pass
 
         # Update cursor after release
         try:
             mw.plotter.setCursor(Qt.CursorShape.ArrowCursor)
-        except (AttributeError, RuntimeError, ValueError, TypeError):  
-            import traceback
-            traceback.print_exc()
+        except (AttributeError, RuntimeError, ValueError, TypeError):
+            # Suppress non-critical cursor update noise
+            pass
 
         # Restore focus to 2D view
         if mw and mw.view_2d:
@@ -671,10 +687,9 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                 if isinstance(widget, MoveGroupDialog) and widget.isVisible():
                     move_group_dialog = widget
                     break
-        except (AttributeError, RuntimeError, TypeError):  
-            import traceback
-            traceback.print_exc()
-
+        except (AttributeError, RuntimeError, TypeError):
+            # Suppress traceback
+            pass
         if move_group_dialog and getattr(
             move_group_dialog, "_is_rotating_group_vtk", False
         ):
@@ -771,7 +786,14 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                                 # Restore absolute position
                                 new_pos = rotated_pos + centroid
 
-                                conf.SetAtomPosition(atom_idx, new_pos.tolist())
+                                conf.SetAtomPosition(
+                                    atom_idx,
+                                    Geometry.Point3D(
+                                        float(new_pos[0]),
+                                        float(new_pos[1]),
+                                        float(new_pos[2]),
+                                    ),
+                                )
                                 mw.atom_positions_3d[atom_idx] = new_pos
 
                             # Update 3D display
@@ -792,12 +814,6 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                 delattr(move_group_dialog, "_group_centroid")
             if hasattr(move_group_dialog, "_rotation_atom_idx"):
                 delattr(move_group_dialog, "_rotation_atom_idx")
-
-            try:
-                mw.plotter.setCursor(Qt.CursorShape.ArrowCursor)
-            except (AttributeError, RuntimeError, ValueError, TypeError):  
-                import traceback
-                traceback.print_exc()
 
             return
 

@@ -11,11 +11,12 @@ DOI: 10.5281/zenodo.17268532
 """
 
 # PyQt6 Modules
-from PyQt6.QtCore import pyqtSignal, pyqtSlot
+from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtWidgets import QMainWindow
 
 try:
     from PyQt6 import sip as _sip  # type: ignore
+
     _sip_isdeleted = getattr(_sip, "isdeleted", None)
 except ImportError:
     _sip = None
@@ -74,10 +75,10 @@ class MainWindow(
 
     def __init__(self, initial_file=None, safe_mode=False):
         QMainWindow.__init__(self)
-        
+
         # Initialize properties
         self._is_restoring_state = False
-        
+
         # Initialize features via Mixins
         # MainWindowMainInit handles the bulk of the UI and data setup
         MainWindowMainInit.__init__(self, initial_file, safe_mode=safe_mode)
@@ -86,11 +87,19 @@ class MainWindow(
 
         # Backwards compatibility for legacy plugins using delegation attributes
         for attr in [
-            "main_window_app_state", "main_window_compute", "main_window_dialog_manager",
-            "main_window_edit_3d", "main_window_edit_actions", "main_window_export",
-            "main_window_main_init", "main_window_molecular_parsers", "main_window_project_io",
-            "main_window_string_importers", "main_window_ui_manager", "main_window_view_3d",
-            "main_window_view_loaders"
+            "main_window_app_state",
+            "main_window_compute",
+            "main_window_dialog_manager",
+            "main_window_edit_3d",
+            "main_window_edit_actions",
+            "main_window_export",
+            "main_window_main_init",
+            "main_window_molecular_parsers",
+            "main_window_project_io",
+            "main_window_string_importers",
+            "main_window_ui_manager",
+            "main_window_view_3d",
+            "main_window_view_loaders",
         ]:
             setattr(self, attr, self)
 

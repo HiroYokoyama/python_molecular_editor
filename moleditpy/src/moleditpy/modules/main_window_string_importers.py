@@ -24,6 +24,7 @@ from PyQt6.QtWidgets import QInputDialog
 
 try:
     from PyQt6 import sip as _sip  # type: ignore
+
     _sip_isdeleted = getattr(_sip, "isdeleted", None)
 except ImportError:
     _sip = None
@@ -72,7 +73,6 @@ class MainWindowStringImporters:
         except (RuntimeError, TypeError, AttributeError) as e:
             self.statusBar().showMessage(f"Error parsing SMILES: {e}")
             return
-
 
         try:
             self.restore_ui_for_editing()
@@ -147,8 +147,6 @@ class MainWindowStringImporters:
         except (AttributeError, RuntimeError, ValueError, TypeError) as e:
             self.statusBar().showMessage(f"Error loading from SMILES: {e}")
 
-
-
     def load_from_inchi(self, inchi_string):
         """Load molecule from InChI string to 2D editor."""
         if not self.check_unsaved_changes():
@@ -175,7 +173,6 @@ class MainWindowStringImporters:
         except (RuntimeError, TypeError, AttributeError) as e:
             self.statusBar().showMessage(f"Error parsing InChI: {e}")
             return
-
 
         try:
             self.restore_ui_for_editing()
@@ -249,5 +246,3 @@ class MainWindowStringImporters:
 
         except (AttributeError, RuntimeError, ValueError, TypeError) as e:
             self.statusBar().showMessage(f"Error loading from InChI: {e}")
-
-

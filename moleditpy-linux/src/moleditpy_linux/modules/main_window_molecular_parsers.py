@@ -16,13 +16,12 @@ DOI: 10.5281/zenodo.17268532
 """
 
 import contextlib
-import io
 import os
-import traceback
 
 # RDKit imports (explicit to satisfy flake8 and used features)
 from rdkit import Chem
 from rdkit.Chem import AllChem, Descriptors, rdGeometry, rdMolTransforms
+from .constants import VERSION
 
 # PyQt6 Modules
 from PyQt6.QtCore import QPointF, QTimer
@@ -31,7 +30,6 @@ from PyQt6.QtWidgets import (
     QDialogButtonBox,
     QFileDialog,
     QHBoxLayout,
-    QInputDialog,
     QLabel,
     QLineEdit,
     QPushButton,
@@ -40,6 +38,7 @@ from PyQt6.QtWidgets import (
 
 try:
     from PyQt6 import sip as _sip  # type: ignore
+
     _sip_isdeleted = getattr(_sip, "isdeleted", None)
 except ImportError:
     _sip = None
@@ -47,20 +46,37 @@ except ImportError:
 
 try:
     # package relative imports (preferred when running as `python -m moleditpy`)
-    from .constants import VERSION
+    from .constants import (
+        VERSION,
+        COVALENT_RADII,
+        BOND_ESTIMATION_MAX_DIST,
+        BOND_ESTIMATION_MIN_DIST,
+        BOND_ESTIMATION_TOLERANCE,
+    )
 except ImportError:
     # Fallback to absolute imports for script-style execution
-    from modules.constants import VERSION
+    from modules.constants import (
+        VERSION,
+        COVALENT_RADII,
+    )
+
+
+def _set_mol_prop_safe(mol, key, val):
+    """Set an integer property on an RDKit mol, silently ignoring failures."""
+    # Suppress potential RDKit-specific crashes when setting properties on invalid/malformed atoms
+    with contextlib.suppress(RuntimeError, TypeError, ValueError):
+        mol.SetIntProp(key, int(val))
 
 
 # --- Class Definition ---
-class MainWindowMolecularParsers(object):
-    """Functional class separated from main_window.py"""
+class MainWindowMolecularParsers:
+    """Mixin class separated from main_window.py"""
 
     def load_mol_file(self, file_path=None):
         if not self.check_unsaved_changes():
-            return  # Do nothing if user cancels
-        if not file_path:  
+            return
+
+        if not file_path:
             file_path, _ = QFileDialog.getOpenFileName(
                 self,
                 "Import MOL File",
@@ -70,60 +86,54 @@ class MainWindowMolecularParsers(object):
             if not file_path:
                 return
 
+        if not os.path.exists(file_path):
+            self.statusBar().showMessage(f"File not found: {file_path}")
+            return
+
         try:
             self.dragged_atom_info = None
-            # If this is a single-record .mol file, read & fix the counts line
-            # before parsing. For multi-record .sdf files, keep using SDMolSupplier.
             _, ext = os.path.splitext(file_path)
             ext = ext.lower() if ext else ""
+
             if ext == ".mol":
-                # Read file text, fix CTAB counts line if needed, then parse
                 with open(file_path, "r", encoding="utf-8", errors="replace") as fh:
                     raw = fh.read()
                 fixed_block = self.fix_mol_block(raw)
                 mol = Chem.MolFromMolBlock(fixed_block, sanitize=True, removeHs=False)
-                if mol is None:
-                    raise ValueError(
-                        "Failed to read molecule from .mol file after fixing counts line."
-                    )
             else:
                 suppl = Chem.SDMolSupplier(file_path, removeHs=False)
                 mol = next(suppl, None)
-                if mol is None:
-                    raise ValueError("Failed to read molecule from file.")
+
+            if mol is None:
+                raise ValueError("Failed to read molecule from file.")
 
             Chem.Kekulize(mol)
-
             self.restore_ui_for_editing()
             self.clear_2d_editor(push_to_undo=False)
             self.current_mol = None
             self.plotter.clear()
             self.analysis_action.setEnabled(False)
 
-            # 1. Generate 2D coords if missing
+            # Generate 2D coords if missing
             if mol.GetNumConformers() == 0:
                 AllChem.Compute2DCoords(mol)
 
-            # 2. Assign stereochem and wedge bonds for 2D
-            # Ensures correct 2D stereo from 3D MOL files
             AllChem.AssignStereochemistry(mol, cleanIt=True, force=True)
             conf = mol.GetConformer()
             AllChem.WedgeMolBonds(mol, conf)
 
-            conf = mol.GetConformer()
-
             SCALE_FACTOR = 50.0
-
             view_center = self.view_2d.mapToScene(
                 self.view_2d.viewport().rect().center()
             )
 
             positions = [conf.GetAtomPosition(i) for i in range(mol.GetNumAtoms())]
-            if positions:
-                mol_center_x = sum(p.x for p in positions) / len(positions)
-                mol_center_y = sum(p.y for p in positions) / len(positions)
-            else:
-                mol_center_x, mol_center_y = 0.0, 0.0
+            mol_center_x = (
+                sum(p.x for p in positions) / len(positions) if positions else 0.0
+            )
+            mol_center_y = (
+                sum(p.y for p in positions) / len(positions) if positions else 0.0
+            )
 
             rdkit_idx_to_my_id = {}
             for i in range(mol.GetNumAtoms()):
@@ -131,11 +141,8 @@ class MainWindowMolecularParsers(object):
                 pos = conf.GetAtomPosition(i)
                 charge = atom.GetFormalCharge()
 
-                relative_x = pos.x - mol_center_x
-                relative_y = pos.y - mol_center_y
-
-                scene_x = (relative_x * SCALE_FACTOR) + view_center.x()
-                scene_y = (-relative_y * SCALE_FACTOR) + view_center.y()
+                scene_x = ((pos.x - mol_center_x) * SCALE_FACTOR) + view_center.x()
+                scene_y = (-(pos.y - mol_center_y) * SCALE_FACTOR) + view_center.y()
 
                 atom_id = self.scene.create_atom(
                     atom.GetSymbol(), QPointF(scene_x, scene_y), charge=charge
@@ -147,774 +154,237 @@ class MainWindowMolecularParsers(object):
                 b_type = bond.GetBondTypeAsDouble()
                 b_dir = bond.GetBondDir()
                 stereo = 0
-                # Check for single bond Wedge/Dash
                 if b_dir == Chem.BondDir.BEGINWEDGE:
                     stereo = 1
                 elif b_dir == Chem.BondDir.BEGINDASH:
                     stereo = 2
-                # Check double bond E/Z stereo
+
                 if bond.GetBondType() == Chem.BondType.DOUBLE:
                     if bond.GetStereo() == Chem.BondStereo.STEREOZ:
-                        stereo = 3  # Z
+                        stereo = 3
                     elif bond.GetStereo() == Chem.BondStereo.STEREOE:
-                        stereo = 4  # E
+                        stereo = 4
 
                 a1_id, a2_id = rdkit_idx_to_my_id[b_idx], rdkit_idx_to_my_id[e_idx]
                 a1_item, a2_item = (
                     self.data.atoms[a1_id]["item"],
                     self.data.atoms[a2_id]["item"],
                 )
-
                 self.scene.create_bond(
                     a1_item, a2_item, bond_order=int(b_type), bond_stereo=stereo
                 )
 
-            self.statusBar().showMessage(
-                f"Successfully loaded {file_path}"
-            )  
+            self.statusBar().showMessage(f"Successfully loaded {file_path}")
             self.reset_undo_stack()
-            # Treat as NEW file: clear path and reset unsaved changes
             self.current_file_path = file_path
             self.has_unsaved_changes = False
             self.update_window_title()
+            # Request scene update and ring re-analysis
+            self.scene.update_all_items()
             QTimer.singleShot(0, self.fit_to_view)
 
-        except FileNotFoundError:  
-            self.statusBar().showMessage(f"File not found: {file_path}")
-        except ValueError as e:  
-            self.statusBar().showMessage(f"Invalid MOL file format: {e}")
-        except (AttributeError, RuntimeError, ValueError, TypeError) as e:
+        except (RuntimeError, ValueError, TypeError, UnicodeDecodeError) as e:
+            # File loading or coordinate validation error reported to user via status bar.
+            # We catch RuntimeError/ValueError for RDKit parsing and UnicodeDecodeError for encoding issues.
+            import logging
+
+            logging.error(f"Error loading MOL/SDF file: {e}", exc_info=True)
             self.statusBar().showMessage(f"Error loading file: {e}")
+
+    def _set_mol_prop(self, mol, prop_name, value):
+        """Internal helper to set molecule properties safely."""
+        try:
+            if isinstance(value, int):
+                mol.SetIntProp(prop_name, value)
+            elif isinstance(value, float):
+                mol.SetDoubleProp(prop_name, value)
+            else:
+                mol.SetProp(prop_name, str(value))
+        except (
+            AttributeError,
+            RuntimeError,
+            TypeError,
+            ValueError,
+            Chem.rdchem.MolPropException,
+        ):
+            # Suppress errors if RDKit property setter fails (e.g., invalid type or concurrent mol access).
+            # These properties are metadata and should not block core molecule loading logic.
+            pass  # Metadata failure is non-critical
+
+    def _get_mol_prop(self, mol, prop_name, default=None):
+        """Internal helper to get molecule properties safely."""
+        try:
+            if not mol.HasProp(prop_name):
+                return default
+            # Try specific types first, then string fallback
+            for getter in [mol.GetIntProp, mol.GetDoubleProp, mol.GetProp]:
+                try:
+                    return getter(prop_name)
+                except (AttributeError, RuntimeError, TypeError, ValueError):
+                    # If one getter fails, try the next one in the sequence.
+                    continue
+            return default
+        except (AttributeError, RuntimeError, TypeError, ValueError):
+            # Property retrieval failure returns the default value.
+            return default
+
+    def prompt_for_charge(self):
+        """Helper dialog to prompt for charge or skip chemistry."""
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Import XYZ Charge")
+        layout = QVBoxLayout(dialog)
+        line_edit = QLineEdit(dialog)
+        line_edit.setText("0")
+        btn_box = QDialogButtonBox(
+            QDialogButtonBox.Ok | QDialogButtonBox.Cancel, parent=dialog
+        )
+        skip_btn = QPushButton("Skip chemistry", dialog)
+
+        hl = QHBoxLayout()
+        hl.addWidget(btn_box)
+        hl.addWidget(skip_btn)
+        layout.addWidget(QLabel("Enter total molecular charge:"))
+        layout.addWidget(line_edit)
+        layout.addLayout(hl)
+
+        result = {"accepted": False, "skip": False}
+        btn_box.accepted.connect(dialog.accept)
+        btn_box.rejected.connect(dialog.reject)
+        skip_btn.clicked.connect(
+            lambda: (result.update({"skip": True}), dialog.accept())
+        )
+
+        if dialog.exec() != QDialog.Accepted:
+            return None, False, False
+
+        if result["skip"]:
+            return 0, True, True
+
+        try:
+            val = int(float(line_edit.text().strip() or "0"))
+            return val, True, False
+        except ValueError:
+            return 0, True, False
 
     def load_xyz_file(self, file_path):
         """Load XYZ file and create RDKit Mol."""
-
         if not self.check_unsaved_changes():
-            return  # Do nothing if user cancels
+            return
 
         try:
-            # We will attempt one silent load with default charge=0 (no dialog).
-            def prompt_for_charge():  
-                """Helper dialog to prompt for charge or skip chemistry."""
-                try:
-                    dialog = QDialog(self)
-                    dialog.setWindowTitle("Import XYZ Charge")
-                    layout = QVBoxLayout(dialog)
-
-                    label = QLabel("Enter total molecular charge:")
-                    line_edit = QLineEdit(dialog)
-                    line_edit.setText("")
-
-                    # Standard OK/Cancel buttons
-                    btn_box = QDialogButtonBox(
-                        QDialogButtonBox.Ok | QDialogButtonBox.Cancel, parent=dialog
-                    )
-
-                    # Additional Skip chemistry button
-                    skip_btn = QPushButton("Skip chemistry", dialog)
-
-                    # Horizontal layout for buttons
-                    hl = QHBoxLayout()
-                    hl.addWidget(btn_box)
-                    hl.addWidget(skip_btn)
-
-                    layout.addWidget(label)
-                    layout.addWidget(line_edit)
-                    layout.addLayout(hl)
-
-                    result = {"accepted": False, "skip": False}
-
-                    def on_ok():
-                        result["accepted"] = True
-                        dialog.accept()
-
-                    def on_cancel():
-                        dialog.reject()
-
-                    def on_skip():
-                        # Mark skip and accept so caller can proceed with skip behavior
-                        result["skip"] = True
-                        dialog.accept()
-
-                    try:
-                        btn_box.button(QDialogButtonBox.Ok).clicked.connect(on_ok)
-                        btn_box.button(QDialogButtonBox.Cancel).clicked.connect(
-                            on_cancel
-                        )
-                    except (AttributeError, RuntimeError, ValueError, TypeError):
-                        # Fallback if button lookup fails
-                        btn_box.accepted.connect(on_ok)
-                        btn_box.rejected.connect(on_cancel)
-
-                    skip_btn.clicked.connect(on_skip)
-
-                    # Execute modal dialog
-                    if dialog.exec() != QDialog.Accepted:
-                        return None, False, False
-
-                    if result["skip"]:
-                        # Return skip flag if requested
-                        return 0, True, True
-
-                    if not result["accepted"]:
-                        return None, False, False
-
-                    charge_text = line_edit.text()
-                except (AttributeError, RuntimeError, ValueError, TypeError):
-                    # Fallback to simple input dialog on error
-                    try:
-                        charge_text, ok = QInputDialog.getText(
-                            self,
-                            "Import XYZ Charge",
-                            "Enter total molecular charge:",
-                            text="0",
-                        )
-                    except (AttributeError, RuntimeError, ValueError, TypeError):
-                        return 0, True, False
-                    if not ok:
-                        return None, False, False
-                    try:
-                        return int(str(charge_text).strip()), True, False
-                    except (AttributeError, RuntimeError, ValueError, TypeError):
-                        try:
-                            return int(float(str(charge_text).strip())), True, False
-                        except (AttributeError, RuntimeError, ValueError, TypeError):
-                            return 0, True, False
-
-                if charge_text is None:
-                    return None, False, False
-
-                try:
-                    return int(str(charge_text).strip()), True, False
-                except (AttributeError, RuntimeError, ValueError, TypeError):
-                    try:
-                        return int(float(str(charge_text).strip())), True, False
-                    except (AttributeError, RuntimeError, ValueError, TypeError):
-                        return 0, True, False
-
             with open(file_path, "r", encoding="utf-8") as f:
-                lines = f.readlines()
+                raw_lines = f.readlines()
 
-            # Remove empty/comment lines (keep first 2)
-            non_empty_lines = []
-            for i, line in enumerate(lines):
-                stripped = line.strip()
-                if i < 2:  # Keep first 2 lines (count/comment)
-                    non_empty_lines.append(stripped)
-                elif stripped and not stripped.startswith("#"):
-                    # Skip empty/comment lines
-                    non_empty_lines.append(stripped)
+            # Filter out comment lines ONLY if they start with #
+            # (Standard XYZ doesn't use # but some extended versions do)
+            lines = [ln.strip() for ln in raw_lines if not ln.strip().startswith("#")]
+            # Remove any leading empty lines to find the atom count
+            while lines and not lines[0]:
+                lines.pop(0)
 
-            if len(non_empty_lines) < 2:
+            if len(lines) < 2:
                 raise ValueError("XYZ file format error: too few lines")
 
-            # Read atom count
-            try:
-                num_atoms = int(non_empty_lines[0])
-            except ValueError:
-                raise ValueError("XYZ file format error: invalid atom count")
-
-            if num_atoms <= 0:
-                raise ValueError("XYZ file format error: atom count must be positive")
-
-            # Comment line (2nd)
-            comment = non_empty_lines[1] if len(non_empty_lines) > 1 else ""
-
-            # Read atom data
+            num_atoms = int(lines[0])
             atoms_data = []
-            data_lines = non_empty_lines[2:]
-
-            if len(data_lines) < num_atoms:
-                raise ValueError(
-                    f"XYZ file format error: expected {num_atoms} atom lines, found {len(data_lines)}"
-                )
-
-            for i, line in enumerate(data_lines[:num_atoms]):
+            # In XYZ, lines[0] is count, lines[1] is title, lines[2...] are atoms
+            for i, line in enumerate(lines[2 : 2 + num_atoms]):
                 parts = line.split()
                 if len(parts) < 4:
-                    raise ValueError(
-                        f"XYZ file format error: invalid atom data at line {i + 3}"
-                    )
-
-                symbol = parts[0].strip()
-
-                # Validate element symbol
+                    raise ValueError(f"Invalid atom data at line {i + 3}")
+                symbol = parts[0].capitalize()
                 try:
-                    # Check if RDKit recognizes element
-                    test_atom = Chem.Atom(symbol)
-                except (AttributeError, RuntimeError, ValueError, TypeError):
-                    # Retry with capitalized symbol if unrecognized
-                    symbol = symbol.capitalize()
-                    try:
-                        test_atom = Chem.Atom(symbol)
-                    except (AttributeError, RuntimeError, ValueError, TypeError):
-                        # Coerce unknown symbols to 'C' if skipping checks
-                        if self.settings.get("skip_chemistry_checks", False):
-                            symbol = "C"
-                        else:
-                            raise ValueError(
-                                f"Unrecognized element symbol: {parts[0]} at line {i + 3}"
-                            )
+                    Chem.Atom(symbol)
+                except (RuntimeError, ValueError):
+                    # Catch RDKit atom creation failures due to unrecognized symbols.
+                    if self.settings.get("skip_chemistry_checks", False):
+                        symbol = "C"
+                    else:
+                        raise ValueError(f"Unrecognized element symbol: {parts[0]}")
+                atoms_data.append(
+                    (symbol, float(parts[1]), float(parts[2]), float(parts[3]))
+                )
 
-                try:
-                    x, y, z = float(parts[1]), float(parts[2]), float(parts[3])
-                except ValueError:
-                    raise ValueError(
-                        f"XYZ file format error: invalid coordinates at line {i + 3}"
-                    )
-
-                atoms_data.append((symbol, x, y, z))
-
-            if len(atoms_data) == 0:
-                raise ValueError("XYZ file format error: no atoms found")
-
-            # Create RDKit Mol
             mol = Chem.RWMol()
-
-            # Add atoms
-            for i, (symbol, x, y, z) in enumerate(atoms_data):
-                atom = Chem.Atom(symbol)
-                # Save 0-based index
-                atom.SetIntProp("xyz_unique_id", i)
-                mol.AddAtom(atom)
-
-            # Set 3D coordinates
             conf = Chem.Conformer(len(atoms_data))
             for i, (symbol, x, y, z) in enumerate(atoms_data):
+                atom = Chem.Atom(symbol)
+                atom.SetIntProp("xyz_unique_id", i)
+                mol.AddAtom(atom)
                 conf.SetAtomPosition(i, rdGeometry.Point3D(x, y, z))
             mol.AddConformer(conf)
-            try:
-                skip_checks = bool(self.settings.get("skip_chemistry_checks", False))
-            except (AttributeError, RuntimeError, ValueError, TypeError, KeyError):
-                skip_checks = False
 
-            if skip_checks:
-                used_rd_determine = False
-                try:
-                    # Use the conservative distance-based heuristic to add bonds
-                    self.estimate_bonds_from_distances(mol)
-                except (AttributeError, RuntimeError, ValueError, TypeError):  
-                    import traceback
-                    traceback.print_exc()
+            skip_checks = bool(self.settings.get("skip_chemistry_checks", False))
 
-                # Finalize and return a plain Mol object
-                try:
-                    candidate_mol = mol.GetMol()
-                except (RuntimeError, ValueError, AttributeError):
-                    try:
-                        candidate_mol = Chem.Mol(mol)
-                    except (RuntimeError, ValueError, AttributeError):
-                        candidate_mol = None
-
-                if candidate_mol is None:
-                    raise ValueError(
-                        "Failed to create valid molecule object when skip_chemistry_checks=True"
-                    )
-
-                # Attach a default charge property
-                try:
-                    candidate_mol.SetIntProp("_xyz_charge", 0)
-                except (AttributeError, RuntimeError, ValueError, TypeError):
-                    try:
-                        candidate_mol._xyz_charge = 0
-                    except (AttributeError, RuntimeError, ValueError, TypeError):  
-                        import traceback
-                        traceback.print_exc()
-
-                # Mark as skip-chemistry product
-                try:
-                    candidate_mol.SetIntProp("_xyz_skip_checks", 1)
-                except (AttributeError, RuntimeError, ValueError, TypeError):
-                    try:
-                        candidate_mol._xyz_skip_checks = True
-                    except (AttributeError, RuntimeError, ValueError, TypeError):  
-                        import traceback
-                        traceback.print_exc()
-
-                # Set UI flags (XYZ-derived, disable optimize)
-                try:
-                    self.current_mol = candidate_mol
-                    self.is_xyz_derived = True
-                    if hasattr(self, "optimize_3d_button"):
-                        try:
-                            self.optimize_3d_button.setEnabled(False)
-                        except (AttributeError, RuntimeError, ValueError, TypeError):  
-                            import traceback
-                            traceback.print_exc()
-                except (AttributeError, RuntimeError, ValueError, TypeError):  
-                    import traceback
-                    traceback.print_exc()
-
-                # Store atom data
-                candidate_mol._xyz_atom_data = atoms_data
-                return candidate_mol
-            used_rd_determine = False
             final_mol = None
+            used_rd_determine = False
 
-            def _process_with_charge(charge_val):
-                """Helper: finalize molecule with given charge."""
+            def _process(charge_val, use_rd_determine=True):
                 nonlocal used_rd_determine
-                buf = io.StringIO()
-                determine_failed = False
-                with contextlib.redirect_stderr(buf):
-                    # Try DetermineBonds if available
+                if use_rd_determine:
                     try:
                         from rdkit.Chem import rdDetermineBonds
 
-                        try:
-                            try:
-                                mol_candidate = Chem.RWMol(Chem.Mol(mol))
-                            except (AttributeError, RuntimeError, ValueError, TypeError):
-                                mol_candidate = Chem.RWMol(mol)
-
-                            # Proceed if DetermineBonds succeeds
-                            rdDetermineBonds.DetermineBonds(
-                                mol_candidate, charge=charge_val
-                            )
-                            mol_to_finalize = mol_candidate
-                            used_rd_determine = True
-                        except (AttributeError, RuntimeError, ValueError, TypeError):
-                            # Handle DetermineBonds failure
-                            determine_failed = True
-                            used_rd_determine = False
-                            mol_to_finalize = mol
-                            # Raise a sentinel exception to indicate DetermineBonds failure
-                            raise RuntimeError("DetermineBondsFailed")
-                    except RuntimeError:
-                        # Propagate our sentinel so outer code can catch it.
-                        raise
-                    except (AttributeError, RuntimeError, ValueError, TypeError):
-                        # rdDetermineBonds not available or import failed; use
-                        # distance-based fallback below.
+                        mol_copy = Chem.RWMol(mol)
+                        rdDetermineBonds.DetermineBonds(mol_copy, charge=charge_val)
+                        candidate = mol_copy.GetMol()
+                        used_rd_determine = True
+                        self._apply_chem_check_and_set_flags(
+                            candidate, source_desc="XYZ"
+                        )
+                        if getattr(self, "chem_check_failed", False):
+                            raise ValueError("Sanitization failed")
+                        _set_mol_prop_safe(candidate, "_xyz_charge", charge_val)
+                        return candidate
+                    except (RuntimeError, ValueError, TypeError) as e:
+                        # Catch RDKit bond determination failures (e.g., valence overflow).
                         used_rd_determine = False
-                        mol_to_finalize = mol
-
-                    if not used_rd_determine:
-                        # distance-based fallback
-                        self.estimate_bonds_from_distances(mol_to_finalize)
-
-                    # Finalize molecule
-                    try:
-                        candidate_mol = mol_to_finalize.GetMol()
-                    except (AttributeError, RuntimeError, ValueError, TypeError):
-                        candidate_mol = None
-
-                    if candidate_mol is None:
-                        # Try salvage path
-                        try:
-                            candidate_mol = mol.GetMol()
-                        except (AttributeError, RuntimeError, ValueError, TypeError):
-                            candidate_mol = None
-
-                    if candidate_mol is None:
-                        raise ValueError("Failed to create valid molecule object")
-
-                    # Attach charge property if possible
-                    try:
-                        try:
-                            candidate_mol.SetIntProp("_xyz_charge", int(charge_val))
-                        except (AttributeError, RuntimeError, ValueError, TypeError):
-                            try:
-                                candidate_mol._xyz_charge = int(charge_val)
-                            except (AttributeError, RuntimeError, ValueError, TypeError):  
-                                import traceback
-                                traceback.print_exc()
-
-                    except (AttributeError, RuntimeError, ValueError, TypeError):  
-                        import traceback
-                        traceback.print_exc()
-                    # Preserve whether the user requested skip_chemistry_checks
-                    try:
-                        if bool(self.settings.get("skip_chemistry_checks", False)):
-                            try:
-                                candidate_mol.SetIntProp("_xyz_skip_checks", 1)
-                            except (AttributeError, RuntimeError, ValueError, TypeError):
-                                try:
-                                    candidate_mol._xyz_skip_checks = True
-                                except (AttributeError, RuntimeError, ValueError, TypeError):  
-                                    import traceback
-                                    traceback.print_exc()
-
-                    except (AttributeError, RuntimeError, ValueError, TypeError):  
-                        import traceback
-                        traceback.print_exc()
-                    # Run chemistry checks which may emit warnings to stderr
+                        raise e
+                else:
+                    self.estimate_bonds_from_distances(mol)
+                    candidate = mol.GetMol()
+                    used_rd_determine = False
                     self._apply_chem_check_and_set_flags(
-                        candidate_mol, source_desc="XYZ"
+                        candidate, source_desc="XYZ (Skipped)", force_skip=True
                     )
+                    _set_mol_prop_safe(candidate, "_xyz_charge", charge_val)
+                    return candidate
 
-                    # Accept the candidate
-                    return candidate_mol
-
-            # Decide whether to prompt or try charge=0
-            always_ask = bool(self.settings.get("always_ask_charge", False))
-
-            try:
-                if not always_ask:
-                    # Silent first attempt (existing behavior)
-                    try:
-                        final_mol = _process_with_charge(0)
-                    except (RuntimeError, ValueError, TypeError):
-                    # Loop prompt on failure
-                        while True:  
-                            charge_val, ok, skip_flag = prompt_for_charge()
-                            if not ok:
-                                # user cancelled the prompt -> abort
-                                return None
-                            if skip_flag:
-                                # User selected Skip chemistry: attempt distance-based salvage
-                                try:
-                                    self.estimate_bonds_from_distances(mol)
-                                except (AttributeError, RuntimeError, ValueError, TypeError):  
-                                    import traceback
-                                    traceback.print_exc()
-                                salvaged = None
-                                try:
-                                    salvaged = mol.GetMol()
-                                except (AttributeError, RuntimeError, ValueError, TypeError):
-                                    salvaged = None
-
-                                if salvaged is not None:
-                                    try:
-                                        salvaged.SetIntProp("_xyz_skip_checks", 1)
-                                    except (AttributeError, RuntimeError, ValueError, TypeError):
-                                        try:
-                                            salvaged._xyz_skip_checks = True
-                                        except (AttributeError, RuntimeError, ValueError, TypeError):  
-                                            import traceback
-                                            traceback.print_exc()
-                                    final_mol = salvaged
-                                    break
-                                else:
-                                    # Could not salvage; abort
-                                    try:
-                                        self.statusBar().showMessage(
-                                            "Skip chemistry selected but failed to create salvaged molecule."
-                                        )
-                                    except (AttributeError, RuntimeError, ValueError, TypeError):  
-                                        import traceback
-                                        traceback.print_exc()
-                                    return None
-
-                            try:
-                                final_mol = _process_with_charge(charge_val)
-                                # success -> break out of prompt loop
-                                break
-                            except RuntimeError:
-                                # DetermineBonds still failing for this charge -> loop again
-                                try:
-                                    self.statusBar().showMessage(
-                                        "DetermineBonds failed for that charge; please try a different total charge or cancel."
-                                    )
-                                except (AttributeError, RuntimeError, ValueError, TypeError):  
-                                    import traceback
-                                    traceback.print_exc()
-                                continue
-                            except (AttributeError, RuntimeError, ValueError, TypeError) as e_prompt:
-                                # Some other failure occurred after DetermineBonds or in
-                                # finalization. If skip_chemistry_checks is enabled we
-                                # try the salvaged mol once; otherwise prompt again.
-                                try:
-                                    skip_checks = bool(
-                                        self.settings.get(
-                                            "skip_chemistry_checks", False
-                                        )
-                                    )
-                                except (AttributeError, RuntimeError, ValueError, TypeError):
-                                    skip_checks = False
-                                salvaged = None
-                                try:
-                                    salvaged = mol.GetMol()
-                                except (AttributeError, RuntimeError, ValueError, TypeError):
-                                    salvaged = None
-                                if skip_checks and salvaged is not None:
-                                    final_mol = salvaged
-                                    # mark salvaged molecule as produced under skip_checks
-                                    try:
-                                        final_mol.SetIntProp("_xyz_skip_checks", 1)
-                                    except (AttributeError, RuntimeError, ValueError, TypeError):
-                                        try:
-                                            final_mol._xyz_skip_checks = True
-                                        except (AttributeError, RuntimeError, ValueError, TypeError):  
-                                            import traceback
-                                            traceback.print_exc()
-                                    break
-                                else:
-                                    try:
-                                        self.statusBar().showMessage(
-                                            f"Retry failed: {e_prompt}"
-                                        )
-                                    except (AttributeError, RuntimeError, ValueError, TypeError):  
-                                        import traceback
-                                        traceback.print_exc()
-                                    # Continue prompting
-                                    continue
-                else:  
-                    while True:
-                        charge_val, ok, skip_flag = prompt_for_charge()
-                        if not ok:
-                            # user cancelled the prompt -> abort
-                            return None
-                        if skip_flag:
-                            # User selected Skip chemistry: attempt distance-based salvage
-                            try:
-                                self.estimate_bonds_from_distances(mol)
-                            except (AttributeError, RuntimeError, ValueError, TypeError):  
-                                import traceback
-                                traceback.print_exc()
-                            salvaged = None
-                            try:
-                                salvaged = mol.GetMol()
-                            except (AttributeError, RuntimeError, ValueError, TypeError):
-                                salvaged = None
-
-                            if salvaged is not None:
-                                try:
-                                    salvaged.SetIntProp("_xyz_skip_checks", 1)
-                                except (AttributeError, RuntimeError, ValueError, TypeError):
-                                    try:
-                                        salvaged._xyz_skip_checks = True
-                                    except (AttributeError, RuntimeError, ValueError, TypeError):  
-                                        import traceback
-                                        traceback.print_exc()
-                                final_mol = salvaged
-                                break
-                            else:
-                                try:
-                                    self.statusBar().showMessage(
-                                        "Skip chemistry selected but failed to create salvaged molecule."
-                                    )
-                                except (AttributeError, RuntimeError, ValueError, TypeError):  
-                                    import traceback
-                                    traceback.print_exc()
-                                return None
-
-                        try:
-                            final_mol = _process_with_charge(charge_val)
-                            # success -> break out of prompt loop
-                            break
-                        except RuntimeError:
-                            # DetermineBonds still failing for this charge -> loop again
-                            try:
-                                self.statusBar().showMessage(
-                                    "DetermineBonds failed for that charge; please try a different total charge or cancel."
-                                )
-                            except (AttributeError, RuntimeError, ValueError, TypeError):  
-                                import traceback
-                                traceback.print_exc()
-                            continue
-                        except (AttributeError, RuntimeError, ValueError, TypeError) as e_prompt:
-                            try:
-                                skip_checks = bool(
-                                    self.settings.get("skip_chemistry_checks", False)
-                                )
-                            except (AttributeError, RuntimeError, ValueError, TypeError):
-                                skip_checks = False
-                            salvaged = None
-                            try:
-                                salvaged = mol.GetMol()
-                            except (AttributeError, RuntimeError, ValueError, TypeError):
-                                salvaged = None
-                            if skip_checks and salvaged is not None:
-                                final_mol = salvaged
-                                try:
-                                    final_mol.SetIntProp("_xyz_skip_checks", 1)
-                                except (AttributeError, RuntimeError, ValueError, TypeError):
-                                    try:
-                                        final_mol._xyz_skip_checks = True
-                                    except (AttributeError, RuntimeError, ValueError, TypeError):  
-                                        import traceback
-                                        traceback.print_exc()
-                                break
-                            else:
-                                try:
-                                    self.statusBar().showMessage(
-                                        f"Retry failed: {e_prompt}"
-                                    )
-                                except (AttributeError, RuntimeError, ValueError, TypeError):  
-                                    import traceback
-                                    traceback.print_exc()
-                                continue
-            except (AttributeError, RuntimeError, ValueError, TypeError):
-                # If the silent attempt failed for reasons other than
-                # DetermineBonds failing (e.g., finalization errors), fall
-                # back to salvaging or prompting depending on settings.
-                salvaged = None
-                try:
-                    salvaged = mol.GetMol()
-                except (AttributeError, RuntimeError, ValueError, TypeError):
-                    salvaged = None
-                try:
-                    skip_checks = bool(
-                        self.settings.get("skip_chemistry_checks", False)
-                    )
-                except (AttributeError, RuntimeError, ValueError, TypeError):
-                    skip_checks = False
-                if skip_checks and salvaged is not None:
-                    final_mol = salvaged
-                else:  
-                    # Repeatedly prompt until the user cancels or processing
-                    # succeeds.
-                    while True:
-                        charge_val, ok, skip_flag = prompt_for_charge()
-                        if not ok:
-                            # user cancelled the prompt -> abort
-                            return None
-                        if skip_flag:
-                            # User selected Skip chemistry: attempt distance-based salvage
-                            try:
-                                self.estimate_bonds_from_distances(mol)
-                            except (AttributeError, RuntimeError, ValueError, TypeError):  
-                                import traceback
-                                traceback.print_exc()
-                            salvaged = None
-                            try:
-                                salvaged = mol.GetMol()
-                            except (AttributeError, RuntimeError, ValueError, TypeError):
-                                salvaged = None
-                            if salvaged is not None:
-                                try:
-                                    salvaged.SetIntProp("_xyz_skip_checks", 1)
-                                except (AttributeError, RuntimeError, ValueError, TypeError):
-                                    try:
-                                        salvaged._xyz_skip_checks = True
-                                    except (AttributeError, RuntimeError, ValueError, TypeError):  
-                                        import traceback
-                                        traceback.print_exc()
-                                final_mol = salvaged
-                                break
-                            else:
-                                try:
-                                    self.statusBar().showMessage(
-                                        "Skip chemistry selected but failed to create salvaged molecule."
-                                    )
-                                except (AttributeError, RuntimeError, ValueError, TypeError):  
-                                    import traceback
-                                    traceback.print_exc()
-                                return None
-                        try:
-                            final_mol = _process_with_charge(charge_val)
-                            # success -> break out of prompt loop
-                            break
-                        except RuntimeError:
-                            # DetermineBonds failed for this charge -> let the
-                            # user try another
-                            try:
-                                self.statusBar().showMessage(
-                                    "DetermineBonds failed for that charge; please try a different total charge or cancel."
-                                )
-                            except (AttributeError, RuntimeError, ValueError, TypeError):  
-                                import traceback
-                                traceback.print_exc()
-                            continue
-                        except (AttributeError, RuntimeError, ValueError, TypeError) as e_prompt:
-                            try:
-                                self.statusBar().showMessage(
-                                    f"Retry failed: {e_prompt}"
-                                )
-                            except (AttributeError, RuntimeError, ValueError, TypeError):  
-                                import traceback
-                                traceback.print_exc()
-                            continue
-            # Apply UI flags to finalized molecule
-            if final_mol is not None:
-                mol = final_mol
-                try:
-                    self.current_mol = mol
-
-                    self.is_xyz_derived = not used_rd_determine
-                    if hasattr(self, "optimize_3d_button"):
-                        try:
-                            has_bonds = mol.GetNumBonds() > 0
-                            # Respect the XYZ-derived flag: if the molecule is XYZ-derived,
-                            # keep Optimize disabled regardless of bond detection.
-                            if getattr(self, "is_xyz_derived", False):
-                                self.optimize_3d_button.setEnabled(False)
-                            else:
-                                self.optimize_3d_button.setEnabled(bool(has_bonds))
-                        except (AttributeError, RuntimeError, ValueError, TypeError):  
-                            import traceback
-                            traceback.print_exc()
-                except (AttributeError, RuntimeError, ValueError, TypeError):  
-                    import traceback
-                    traceback.print_exc()
-                # Store original atom data for analysis
-                mol._xyz_atom_data = atoms_data
-                return mol
-
-            # Save original XYZ data (for analysis)
-            mol._xyz_atom_data = atoms_data
-
-            return mol
-
-        except (OSError, IOError) as e:  
-            raise ValueError(f"File I/O error: {e}")
-        except (AttributeError, RuntimeError, ValueError) as e:
-            if "XYZ file format error" in str(e) or "Unrecognized element" in str(e):
-                raise e
+            if skip_checks:
+                # Skip chemistry: just estimate bonds, no dialog
+                final_mol = _process(0, use_rd_determine=False)
+                _set_mol_prop_safe(final_mol, "_xyz_skip_checks", 1)
             else:
-                raise ValueError(f"Error parsing XYZ file: {e}")
+                # Always ask user for charge (dialog defaults to 0)
+                while True:
+                    charge_val, ok, skip_flag = self.prompt_for_charge()
+                    if not ok:
+                        return None
+                    if skip_flag:
+                        final_mol = _process(0, use_rd_determine=False)
+                        _set_mol_prop_safe(final_mol, "_xyz_skip_checks", 1)
+                        break
+                    try:
+                        final_mol = _process(charge_val, use_rd_determine=True)
+                        break
+                    except (RuntimeError, ValueError, TypeError) as e:
+                        # Catch chemistry failures and prompt the user to adjust charge or skip.
+                        self.statusBar().showMessage(
+                            f"Chemistry failed for charge {charge_val}: {e}. Try a different charge or skip."
+                        )
+            return final_mol
+
+        except (RuntimeError, TypeError, ValueError, UnicodeDecodeError) as e:
+            # XYZ parsing error reported to user via status bar.
+            # We catch RuntimeError/ValueError for parsing and UnicodeDecodeError for file encoding.
+            import logging
+
+            logging.error(f"Error parsing XYZ file: {e}", exc_info=True)
+            self.statusBar().showMessage(f"Error parsing XYZ file: {e}")
+            return None
 
     def estimate_bonds_from_distances(self, mol):
         """Estimate bonds based on interatomic distances."""
-
-        # Covalent radii (Angstrom)
-        covalent_radii = {
-            "H": 0.31,
-            "He": 0.28,
-            "Li": 1.28,
-            "Be": 0.96,
-            "B": 0.84,
-            "C": 0.76,
-            "N": 0.75,
-            "O": 0.73,
-            "F": 0.71,
-            "Ne": 0.58,
-            "Na": 1.66,
-            "Mg": 1.41,
-            "Al": 1.21,
-            "Si": 1.11,
-            "P": 1.07,
-            "S": 1.05,
-            "Cl": 1.02,
-            "Ar": 1.06,
-            "K": 2.03,
-            "Ca": 1.76,
-            "Sc": 1.70,
-            "Ti": 1.60,
-            "V": 1.53,
-            "Cr": 1.39,
-            "Mn": 1.39,
-            "Fe": 1.32,
-            "Co": 1.26,
-            "Ni": 1.24,
-            "Cu": 1.32,
-            "Zn": 1.22,
-            "Ga": 1.22,
-            "Ge": 1.20,
-            "As": 1.19,
-            "Se": 1.20,
-            "Br": 1.14,
-            "Kr": 1.16,
-            "Rb": 2.20,
-            "Sr": 1.95,
-            "Y": 1.90,
-            "Zr": 1.75,
-            "Nb": 1.64,
-            "Mo": 1.54,
-            "Tc": 1.47,
-            "Ru": 1.46,
-            "Rh": 1.42,
-            "Pd": 1.39,
-            "Ag": 1.45,
-            "Cd": 1.44,
-            "In": 1.42,
-            "Sn": 1.39,
-            "Sb": 1.39,
-            "Te": 1.38,
-            "I": 1.33,
-            "Xe": 1.40,
-        }
 
         conf = mol.GetConformer()
         num_atoms = mol.GetNumAtoms()
@@ -932,28 +402,35 @@ class MainWindowMolecularParsers(object):
                 symbol_i = atom_i.GetSymbol()
                 symbol_j = atom_j.GetSymbol()
 
-                radius_i = covalent_radii.get(symbol_i, 1.0)  # Default
-                radius_j = covalent_radii.get(symbol_j, 1.0)
+                radius_i = COVALENT_RADII.get(symbol_i, 1.0)  # Default
+                radius_j = COVALENT_RADII.get(symbol_j, 1.0)
 
                 expected_bond_length = radius_i + radius_j
 
                 if symbol_i == "H" or symbol_j == "H":
-                    tolerance_factor = 1.2   # H bonds often shorter
+                    tolerance_factor = 1.2  # H bonds often shorter
                 else:
                     tolerance_factor = 1.3  # Margin for others
 
                 max_bond_length = expected_bond_length * tolerance_factor
                 min_bond_length = expected_bond_length * 0.5
 
-                # Add bond if within range
                 if min_bond_length <= distance <= max_bond_length:
-                    try:
-                        mol.AddBond(i, j, Chem.BondType.SINGLE)
-                        bonds_added.append((i, j, distance))
-                    except (AttributeError, RuntimeError, ValueError, TypeError):
-                        # Skip if bond exists
-                        import traceback
-                        traceback.print_exc()
+                    if mol.GetBondBetweenAtoms(i, j) is None:
+                        # Limit Hydrogen to only one bond
+                        if (
+                            symbol_i == "H" and mol.GetAtomWithIdx(i).GetDegree() >= 1
+                        ) or (
+                            symbol_j == "H" and mol.GetAtomWithIdx(j).GetDegree() >= 1
+                        ):
+                            continue
+                        try:
+                            mol.AddBond(i, j, Chem.BondType.SINGLE)
+                            bonds_added.append((i, j, distance))
+                        except (RuntimeError, ValueError, TypeError):
+                            # Best-effort: ignore bond adding errors for invalid distances
+                            # or if the molecule state becomes inconsistent during loop.
+                            pass
 
         # Debug information (optional)
         # Added bonds based on distance analysis
@@ -997,7 +474,7 @@ class MainWindowMolecularParsers(object):
                 "Save 2D MOL File",
                 default_path,
                 "MOL Files (*.mol);;All Files (*)",
-            )  
+            )
             if not file_path:
                 return
 
@@ -1006,80 +483,87 @@ class MainWindowMolecularParsers(object):
 
             with open(file_path, "w", encoding="utf-8") as f:
                 f.write(modified_mol_block)
-            self.statusBar().showMessage(
-                f"2D data saved to {file_path}"
-            )  
+            self.statusBar().showMessage(f"2D data saved to {file_path}")
 
-        except (OSError, IOError) as e:  
+        except (OSError, IOError) as e:
             self.statusBar().showMessage(f"File I/O error: {e}")
-        except UnicodeEncodeError as e:  
+        except UnicodeEncodeError as e:
             self.statusBar().showMessage(f"Text encoding error: {e}")
-        except (AttributeError, RuntimeError, ValueError) as e:
+        except (AttributeError, RuntimeError, ValueError, TypeError) as e:
+            import logging
+
+            logging.error(f"Error saving MOL file: {e}", exc_info=True)
             self.statusBar().showMessage(f"Error saving file: {e}")
 
     def save_as_xyz(self):
-        if not self.current_mol:  
+        if not self.current_mol:
             self.statusBar().showMessage("Error: Please generate a 3D structure first.")
             return
-        # default filename based on current file
-        default_name = "untitled"
-        try:
-            if self.current_file_path:
-                base = os.path.basename(self.current_file_path)
-                name = os.path.splitext(base)[0]
-                default_name = f"{name}"
-        except (AttributeError, RuntimeError, ValueError, TypeError):
-            default_name = "untitled"
 
-        # prefer same directory as current file when available
+        default_name = "untitled"
+        if self.current_file_path:
+            with contextlib.suppress(
+                AttributeError, RuntimeError, ValueError, TypeError
+            ):
+                default_name = os.path.splitext(
+                    os.path.basename(self.current_file_path)
+                )[0]
+
         default_path = default_name
-        try:
-            if self.current_file_path:
+        if self.current_file_path:
+            with contextlib.suppress(
+                AttributeError, RuntimeError, ValueError, TypeError
+            ):
                 default_path = os.path.join(
                     os.path.dirname(self.current_file_path), default_name
                 )
-        except (AttributeError, RuntimeError, ValueError, TypeError):
-            default_path = default_name
 
         file_path, _ = QFileDialog.getSaveFileName(
             self, "Save 3D XYZ File", default_path, "XYZ Files (*.xyz);;All Files (*)"
-        )  
-        if file_path:
-            if not file_path.lower().endswith(".xyz"):
-                file_path += ".xyz"
-            try:
-                conf = self.current_mol.GetConformer()
-                num_atoms = self.current_mol.GetNumAtoms()
-                xyz_lines = [str(num_atoms)]
-                # Calculate charge and multiplicity
-                try:
+        )
+        if not file_path:
+            return
+        if not file_path.lower().endswith(".xyz"):
+            file_path += ".xyz"
+
+        try:
+            conf = self.current_mol.GetConformer()
+            num_atoms = self.current_mol.GetNumAtoms()
+            xyz_lines = [str(num_atoms)]
+
+            charge = 0
+            if hasattr(self.current_mol, "HasProp") and self.current_mol.HasProp(
+                "_xyz_charge"
+            ):
+                charge = self.current_mol.GetIntProp("_xyz_charge")
+            else:
+                # Suppress potential errors during formal charge calculation for unvalidated RDKit mools
+                with contextlib.suppress(AttributeError, RuntimeError, TypeError):
                     charge = Chem.GetFormalCharge(self.current_mol)
-                except (AttributeError, RuntimeError, ValueError, TypeError):
-                    charge = 0  # Default to 0
 
-                try:
-                    # Get total radical electrons
-                    num_radicals = Descriptors.NumRadicalElectrons(self.current_mol)
-                    # Multiplicity (M = N + 1)
-                    multiplicity = num_radicals + 1
-                except (AttributeError, RuntimeError, ValueError, TypeError):
-                    multiplicity = 1  # Default to 1 (singlet)
+            multiplicity = 1
+            with contextlib.suppress(
+                AttributeError, RuntimeError, TypeError, ValueError
+            ):
+                multiplicity = Descriptors.NumRadicalElectrons(self.current_mol) + 1
 
-                #smiles = Chem.MolToSmiles(Chem.RemoveHs(self.current_mol))
-                xyz_lines.append(
-                    f"chrg = {charge}  mult = {multiplicity} | Generated by MoleditPy Ver. {VERSION}"
-                )
-                for i in range(num_atoms):
-                    pos = conf.GetAtomPosition(i)
-                    symbol = self.current_mol.GetAtomWithIdx(i).GetSymbol()
-                    xyz_lines.append(f"{symbol} {pos.x:.6f} {pos.y:.6f} {pos.z:.6f}")
-                with open(file_path, "w") as f:
-                    f.write("\n".join(xyz_lines) + "\n")
-                self.statusBar().showMessage(
-                    f"Successfully saved to {file_path}"
-                )  
-            except (AttributeError, RuntimeError, ValueError) as e:
-                self.statusBar().showMessage(f"Error saving file: {e}")
+            xyz_lines.append(
+                f"chrg = {charge}  mult = {multiplicity} | Generated by MoleditPy Ver. {VERSION}"
+            )
+            for i in range(num_atoms):
+                pos = conf.GetAtomPosition(i)
+                symbol = self.current_mol.GetAtomWithIdx(i).GetSymbol()
+                xyz_lines.append(f"{symbol} {pos.x:.6f} {pos.y:.6f} {pos.z:.6f}")
+
+            with open(file_path, "w", encoding="utf-8") as f:
+                f.write("\n".join(xyz_lines) + "\n")
+            self.statusBar().showMessage(f"Successfully saved to {file_path}")
+        except (IOError, OSError, RuntimeError, ValueError, TypeError) as e:
+            # Catch I/O errors and RDKit serialization failures (RuntimeError/ValueError).
+            import logging
+
+            logging.error(f"Error saving XYZ file: {e}", exc_info=True)
+            self.statusBar().showMessage(f"Error saving file: {e}")
 
     def fix_mol_counts_line(self, line: str) -> str:
         """

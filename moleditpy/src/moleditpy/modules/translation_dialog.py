@@ -28,7 +28,7 @@ from rdkit import Geometry
 from .dialog_3d_picking_mixin import Dialog3DPickingMixin
 
 
-class TranslationDialog(Dialog3DPickingMixin, QDialog):  
+class TranslationDialog(Dialog3DPickingMixin, QDialog):
     def __init__(self, mol, main_window, parent=None):
         QDialog.__init__(self, parent)
         Dialog3DPickingMixin.__init__(self)
@@ -190,7 +190,6 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog):
 
         return np.mean(positions, axis=0)
 
-        
     def apply_translation(self):
         """Apply the translation to either the selected atoms or the entire molecule."""
         if not self.selected_atoms:
@@ -198,7 +197,9 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog):
             return
 
         if not self.mol or self.mol.GetNumConformers() == 0:
-            QMessageBox.warning(self, "Warning", "No valid molecule or conformer available.")
+            QMessageBox.warning(
+                self, "Warning", "No valid molecule or conformer available."
+            )
             return
 
         try:
@@ -224,8 +225,13 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog):
                 if not translate_selected or i in self.selected_atoms:
                     atom_pos = np.array(conf.GetAtomPosition(i))
                     new_pos = atom_pos + translation_vector
-                    conf.SetAtomPosition(i, Geometry.Point3D(float(new_pos[0]), float(new_pos[1]), float(new_pos[2])))
-                    
+                    conf.SetAtomPosition(
+                        i,
+                        Geometry.Point3D(
+                            float(new_pos[0]), float(new_pos[1]), float(new_pos[2])
+                        ),
+                    )
+
                     # Update cache in main window
                     if i in atom_positions:
                         atom_positions[i] = new_pos
@@ -233,7 +239,7 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog):
             # Update visualization and state
             if hasattr(self.main_window, "draw_molecule_3d"):
                 self.main_window.draw_molecule_3d(self.mol)
-            
+
             if hasattr(self.main_window, "update_chiral_labels"):
                 self.main_window.update_chiral_labels()
 
@@ -246,7 +252,9 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog):
             # Suppress non-critical errors during translation application to avoid crash.
             # User is notified via QMessageBox below if critical logic failed.
             pass
-            QMessageBox.critical(self, "Error", f"Failed to apply translation: {str(e)}")
+            QMessageBox.critical(
+                self, "Error", f"Failed to apply translation: {str(e)}"
+            )
 
     def clear_selection(self):
         """Clear the current atom selection and labels."""
@@ -311,7 +319,7 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog):
     def clear_atom_labels(self):
         """Clear atom labels and force a re-render of the 3D scene."""
         super().clear_atom_labels()
-        
+
         # Force re-render
         if hasattr(self.main_window, "plotter"):
             try:
@@ -319,6 +327,7 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog):
             except (RuntimeError, ValueError, TypeError):
                 # Suppress non-critical renderer errors during label picking cleanup.
                 pass
+
     def closeEvent(self, event):
         """Clean up when the dialog is closed directly."""
         self.clear_atom_labels()

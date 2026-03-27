@@ -29,7 +29,7 @@ from PyQt6.QtWidgets import (
 )
 
 
-class PluginManagerWindow(QDialog):  
+class PluginManagerWindow(QDialog):
     def __init__(self, plugin_manager, parent=None):
         super().__init__(parent)
         self.plugin_manager = plugin_manager

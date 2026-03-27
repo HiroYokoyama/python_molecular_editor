@@ -1,3 +1,4 @@
+import logging
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
@@ -10,9 +11,8 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
-import traceback
-
 from rdkit import Chem
+from PyQt6.QtCore import QPointF
 
 try:
     from .constants import ANGSTROM_PER_PIXEL
@@ -26,7 +26,6 @@ class MolecularData:
         self.bonds = {}
         self._next_atom_id = 0
         self.adjacency_list = {}
-
 
     def add_atom(self, symbol, pos, charge=0, radical=0):
         atom_id = self._next_atom_id
@@ -64,8 +63,6 @@ class MolecularData:
             self.bonds[(id1, id2)] = bond_data
             return (id1, id2), "created"
 
-
-
     def remove_atom(self, atom_id):
         if atom_id in self.atoms:
             # Safely get neighbors before deleting the atom's own entry
@@ -77,12 +74,10 @@ class MolecularData:
                         and atom_id in self.adjacency_list[neighbor_id]
                     ):
                         self.adjacency_list[neighbor_id].remove(atom_id)
-                except (ValueError, KeyError, TypeError):
-                    # Handle cases where adjacency list might be inconsistent
-                    import traceback
-                    traceback.print_exc()
-                    continue
-
+                except (ValueError, KeyError, TypeError) as e:
+                    logging.debug(
+                        f"Suppressed exception: {e}"
+                    )  # Ignore adjacency list inconsistencies during atom removal
 
             # Now, safely delete the atom's own entry from the adjacency list
             if atom_id in self.adjacency_list:
@@ -96,11 +91,10 @@ class MolecularData:
                 bonds_to_remove = [key for key in self.bonds if atom_id in key]
                 for key in bonds_to_remove:
                     del self.bonds[key]
-            except (RuntimeError, KeyError):
-                # Handle potential dictionary mutation issues
-                import traceback
-                traceback.print_exc()
-
+            except (RuntimeError, KeyError) as e:
+                logging.debug(
+                    f"Suppressed exception: {e}"
+                )  # Ignore mutation issues during batch bond removal
 
     def remove_bond(self, id1, id2):
         # Look for directional stereo bonds (forward/reverse) and normalized non-stereo bond keys.
@@ -117,11 +111,10 @@ class MolecularData:
                 if id2 in self.adjacency_list and id1 in self.adjacency_list[id2]:
                     self.adjacency_list[id2].remove(id1)
                 del self.bonds[key_to_remove]
-            except (ValueError, KeyError):
-                # Ignore if already removed or inconsistent
-                import traceback
-                traceback.print_exc()
-
+            except (ValueError, KeyError) as e:
+                logging.debug(
+                    f"Suppressed exception: {e}"
+                )  # Ignore if bond already removed or inconsistent
 
     def to_rdkit_mol(self, use_2d_stereo=True):
         """
@@ -176,13 +169,9 @@ class MolecularData:
         final_mol = mol.GetMol()
         try:
             Chem.SanitizeMol(final_mol)
-        except (RuntimeError, ValueError, TypeError) as e:
-            # RDKit sanitization failed.
-            import traceback
-            traceback.print_exc()
+        except (RuntimeError, ValueError, TypeError):
+            # Sanitization failure: return None to trigger manual MOL block fallback
             return None
-
-
 
         # --- Step 4: add 2D conformer ---
         # Convert from scene pixels to angstroms when creating RDKit conformer.
@@ -301,15 +290,97 @@ class MolecularData:
             Chem.AssignStereochemistry(final_mol, cleanIt=False, force=False)
         return final_mol
 
+    def update_ring_info_2d(self):
+        """Update is_in_ring and ring_center for all BondItems based on 2D topology."""
+        if not self.atoms or not self.bonds:
+            return
+
+        # 1. Generate RDKit molecule for topology analysis
+        mol = self.to_rdkit_mol(use_2d_stereo=False)
+        if not mol:
+            # Fallback: reset all ring info if molecule generation fails
+            for bond_data in self.bonds.values():
+                bond_item = bond_data.get("item")
+                if bond_item:
+                    bond_item.is_in_ring = False
+                    bond_item.ring_center = None
+            return
+
+        # 2. Extract ring information
+        ring_info = mol.GetRingInfo()
+        atom_rings = ring_info.AtomRings()
+        bond_rings = ring_info.BondRings()
+
+        # 3. Create mapping from RDKit atom index to editor atom item
+        rdkit_idx_to_item = {}
+        for atom in mol.GetAtoms():
+            if atom.HasProp("_original_atom_id"):
+                orig_id = atom.GetIntProp("_original_atom_id")
+                if orig_id in self.atoms:
+                    rdkit_idx_to_item[atom.GetIdx()] = self.atoms[orig_id]["item"]
+
+        # 4. Map RDKit bond index to editor bond item
+        rdkit_bond_idx_to_item = {}
+        for bidx, rdkit_bond in enumerate(mol.GetBonds()):
+            a1_idx = rdkit_bond.GetBeginAtomIdx()
+            a2_idx = rdkit_bond.GetEndAtomIdx()
+            if a1_idx in rdkit_idx_to_item and a2_idx in rdkit_idx_to_item:
+                # Find corresponding editor bond item
+                # This is slightly expensive but done once per update
+                item1 = rdkit_idx_to_item[a1_idx]
+                item2 = rdkit_idx_to_item[a2_idx]
+                id1, id2 = item1.atom_id, item2.atom_id
+                key = (id1, id2) if (id1, id2) in self.bonds else (id2, id1)
+                if key in self.bonds:
+                    rdkit_bond_idx_to_item[bidx] = self.bonds[key].get("item")
+
+        # 5. Initialize/Reset all bond items
+        for bond_data in self.bonds.values():
+            bond_item = bond_data.get("item")
+            if bond_item:
+                bond_item.is_in_ring = False
+                bond_item.ring_center = None
+
+        # 6. Apply ring information
+        for a_ring, b_ring in zip(atom_rings, bond_rings):
+            # Calculate ring center (geometric mean of atom positions)
+            positions = []
+            for aidx in a_ring:
+                item = rdkit_idx_to_item.get(aidx)
+                if item:
+                    try:
+                        positions.append(item.pos())
+                    except (AttributeError, RuntimeError) as e:
+                        logging.debug(f"Suppressed exception: {e}")
+
+            if not positions:
+                continue
+
+            center_x = sum(p.x() for p in positions) / len(positions)
+            center_y = sum(p.y() for p in positions) / len(positions)
+            ring_center = QPointF(center_x, center_y)
+
+            # Update all bonds in this ring
+            for bidx in b_ring:
+                bond_item = rdkit_bond_idx_to_item.get(bidx)
+                if bond_item:
+                    bond_item.is_in_ring = True
+                    # Note: Simplified; a bond might be part of multiple rings.
+                    # The inner-bond logic usually picks the smallest ring.
+                    # Since we iterate through all rings, the last one wins.
+                    # RDKit's AtomRings returns SSSR (Smallest Set of Smallest Rings),
+                    # so this is usually correct for 2D drawing.
+                    bond_item.ring_center = ring_center
 
     def to_mol_block(self):
         mol = self.to_rdkit_mol()
         if mol:
             try:
                 return Chem.MolToMolBlock(mol, includeStereo=True)
-            except (RuntimeError, ValueError, TypeError):  
-                import traceback
-                traceback.print_exc()
+            except (RuntimeError, ValueError, TypeError) as e:
+                logging.debug(
+                    f"Suppressed exception: {e}"
+                )  # Suppress errors during RDKit MolBlock generation
 
         if not self.atoms:
             return None

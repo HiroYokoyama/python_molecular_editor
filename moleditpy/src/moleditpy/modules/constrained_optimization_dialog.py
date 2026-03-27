@@ -31,7 +31,7 @@ from rdkit.Chem import AllChem, rdMolTransforms
 from .dialog_3d_picking_mixin import Dialog3DPickingMixin
 
 
-class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):  
+class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
     """Dialog for constrained optimization."""
 
     def __init__(self, mol, main_window, parent=None):
@@ -432,7 +432,9 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
             try:
                 self.main_window.plotter.remove_actor(label_actor)
             except (AttributeError, RuntimeError, TypeError) as e:
-                logging.debug(f"Suppressed exception: {e}")  # Suppress errors during constraint label removal
+                logging.debug(
+                    f"Suppressed exception: {e}"
+                )  # Suppress errors during constraint label removal
 
         self.constraint_labels = []
 
@@ -445,15 +447,24 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
         conf = self.mol.GetConformer()
 
         try:
-            ignore_interfrag = not self.main_window.settings.get("optimize_intermolecular_interaction_rdkit", True)
+            ignore_interfrag = not self.main_window.settings.get(
+                "optimize_intermolecular_interaction_rdkit", True
+            )
             if ff_name.startswith("MMFF"):
                 props = AllChem.MMFFGetMoleculeProperties(self.mol, mmffVariant=ff_name)
-                ff = AllChem.MMFFGetMoleculeForceField(self.mol, props, confId=0, ignoreInterfragInteractions=ignore_interfrag)
+                ff = AllChem.MMFFGetMoleculeForceField(
+                    self.mol,
+                    props,
+                    confId=0,
+                    ignoreInterfragInteractions=ignore_interfrag,
+                )
                 add_dist_constraint = ff.MMFFAddDistanceConstraint
                 add_angle_constraint = ff.MMFFAddAngleConstraint
                 add_torsion_constraint = ff.MMFFAddTorsionConstraint
             else:  # UFF
-                ff = AllChem.UFFGetMoleculeForceField(self.mol, confId=0, ignoreInterfragInteractions=ignore_interfrag)
+                ff = AllChem.UFFGetMoleculeForceField(
+                    self.mol, confId=0, ignoreInterfragInteractions=ignore_interfrag
+                )
                 add_dist_constraint = ff.UFFAddDistanceConstraint
                 add_angle_constraint = ff.UFFAddAngleConstraint
                 add_torsion_constraint = ff.UFFAddTorsionConstraint
@@ -599,9 +610,7 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
             # Update MainWindow only if changed
             if self.main_window.constraints_3d != json_safe_constraints:
                 self.main_window.constraints_3d = json_safe_constraints
-                self.main_window.has_unsaved_changes = (
-                    True  # Mark as unsaved changes
-                )
+                self.main_window.has_unsaved_changes = True  # Mark as unsaved changes
                 self.main_window.update_window_title()
 
         except (AttributeError, RuntimeError, ValueError, TypeError) as e:
@@ -735,7 +744,9 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
                 self, "Invalid Value", "Please enter a valid floating-point number."
             )
         except IndexError as e:
-            logging.debug(f"Suppressed exception: {e}")  # Suppress sync errors between table and constraints list
+            logging.debug(
+                f"Suppressed exception: {e}"
+            )  # Suppress sync errors between table and constraints list
 
     def keyPressEvent(self, event):
         """Handle keyboard events (Delete/Backspace to remove, Enter to optimize)."""

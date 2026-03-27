@@ -25,6 +25,7 @@ from PyQt6.QtWidgets import QInputDialog, QMessageBox
 
 try:
     from PyQt6 import sip as _sip  # type: ignore
+
     _sip_isdeleted = getattr(_sip, "isdeleted", None)
 except (AttributeError, RuntimeError, TypeError):
     _sip = None
@@ -68,7 +69,7 @@ except ImportError:
 
 # --- Class Definition ---
 class MainWindowDialogManager:
-    """Mixin class separated from main_window.py """
+    """Mixin class separated from main_window.py"""
 
     _cls = None
 
@@ -431,9 +432,7 @@ class MainWindowDialogManager:
             lambda: self.statusBar().showMessage("Dihedral angle adjusted.")
         )
         dialog.accepted.connect(self.push_undo_state)
-        dialog.finished.connect(
-            lambda: self.remove_dialog_from_list(dialog)
-        )
+        dialog.finished.connect(lambda: self.remove_dialog_from_list(dialog))
 
     def open_mirror_dialog(self):
         """Open mirror function dialog"""
@@ -464,5 +463,6 @@ class MainWindowDialogManager:
         self.active_3d_dialogs.append(dialog)
         dialog.show()
         dialog.finished.connect(lambda: self.remove_dialog_from_list(dialog))
+
 
 MainWindowDialogManager._cls = MainWindowDialogManager

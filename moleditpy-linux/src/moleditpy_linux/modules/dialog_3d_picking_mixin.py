@@ -68,11 +68,8 @@ class Dialog3DPickingMixin:
                             click_threshold = vdw_radius * 1.5
 
                             if distances[closest_atom_idx] < click_threshold:
-                                try:
+                                if hasattr(self.main_window, "_picking_consumed"):
                                     self.main_window._picking_consumed = True
-                                except (AttributeError, RuntimeError, TypeError):  
-                                    import traceback
-                                    traceback.print_exc()
                                 self.on_atom_picked(int(closest_atom_idx))
 
                                 # We picked an atom, so stop tracking for background click
@@ -124,24 +121,16 @@ class Dialog3DPickingMixin:
         self.main_window.plotter.interactor.installEventFilter(self)
         self.picking_enabled = True
         # Ensure the main window flag exists
-        try:
+        if hasattr(self.main_window, "_picking_consumed"):
             self.main_window._picking_consumed = False
-        except (AttributeError, RuntimeError, TypeError):  
-            import traceback
-            traceback.print_exc()
 
     def disable_picking(self):
         """Disable atom selection in the 3D view."""
         if hasattr(self, "picking_enabled") and self.picking_enabled:
             self.main_window.plotter.interactor.removeEventFilter(self)
             self.picking_enabled = False
-        try:
-            # Clear any leftover flag when picking is disabled
-            if hasattr(self.main_window, "_picking_consumed"):
-                self.main_window._picking_consumed = False
-        except (AttributeError, RuntimeError, TypeError):  
-            import traceback
-            traceback.print_exc()
+        if hasattr(self.main_window, "_picking_consumed"):
+            self.main_window._picking_consumed = False
 
     def try_alternative_picking(self, x, y):
         """Alternative picking method (unused)."""
@@ -155,10 +144,11 @@ class Dialog3DPickingMixin:
         if hasattr(self, "selection_labels"):
             for label_actor in self.selection_labels:
                 try:
-                    self.main_window.plotter.remove_actor(label_actor)
-                except (AttributeError, RuntimeError, TypeError):  
-                    import traceback
-                    traceback.print_exc()
+                    if label_actor is not None:
+                        self.main_window.plotter.remove_actor(label_actor)
+                except (AttributeError, RuntimeError, TypeError):
+                    # Ignore actor removal failure on stale plotter
+                    pass
 
             self.selection_labels = []
 

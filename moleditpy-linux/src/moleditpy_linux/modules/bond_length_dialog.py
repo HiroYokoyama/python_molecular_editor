@@ -1,3 +1,4 @@
+import logging
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
@@ -24,12 +25,13 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+from rdkit import Geometry
 
-from .dialog3_d_picking_mixin import Dialog3DPickingMixin
+from .dialog_3d_picking_mixin import Dialog3DPickingMixin
 from .mol_geometry import calc_distance, get_connected_group
 
 
-class BondLengthDialog(Dialog3DPickingMixin, QDialog):  
+class BondLengthDialog(Dialog3DPickingMixin, QDialog):
     def __init__(self, mol, main_window, preselected_atoms=None, parent=None):
         QDialog.__init__(self, parent)
         Dialog3DPickingMixin.__init__(self)
@@ -75,9 +77,9 @@ class BondLengthDialog(Dialog3DPickingMixin, QDialog):
         distance_layout.addWidget(self.distance_input)
 
         self.distance_slider = QSlider(Qt.Orientation.Horizontal)
-        self.distance_slider.setMinimum(10)   # 0.1 A
-        self.distance_slider.setMaximum(1000) # 10.0 A
-        self.distance_slider.setValue(154)    # 1.54 A
+        self.distance_slider.setMinimum(10)  # 0.1 A
+        self.distance_slider.setMaximum(1000)  # 10.0 A
+        self.distance_slider.setValue(154)  # 1.54 A
         self.distance_slider.setTickPosition(QSlider.TickPosition.TicksBelow)
         self.distance_slider.setTickInterval(100)
         self.distance_slider.setEnabled(False)
@@ -208,9 +210,10 @@ class BondLengthDialog(Dialog3DPickingMixin, QDialog):
                 self.distance_slider.setValue(154)
                 self.distance_slider.setEnabled(False)
                 self.distance_slider.blockSignals(False)
-            except (AttributeError, RuntimeError, ValueError, TypeError):
-                import traceback
-                traceback.print_exc()
+            except (AttributeError, RuntimeError, ValueError, TypeError) as e:
+                logging.debug(
+                    f"Suppressed exception: {e}"
+                )  # Suppress non-critical UI update errors (distance input/slider)
 
         elif self.atom2_idx is None:
             symbol1 = self.mol.GetAtomWithIdx(self.atom1_idx).GetSymbol()
@@ -230,9 +233,10 @@ class BondLengthDialog(Dialog3DPickingMixin, QDialog):
                 self.distance_slider.setValue(154)
                 self.distance_slider.setEnabled(False)
                 self.distance_slider.blockSignals(False)
-            except (AttributeError, RuntimeError, ValueError, TypeError):
-                import traceback
-                traceback.print_exc()
+            except (AttributeError, RuntimeError, ValueError, TypeError) as e:
+                logging.debug(
+                    f"Suppressed exception: {e}"
+                )  # Suppress non-critical UI update errors (distance input/slider)
         else:
             symbol1 = self.mol.GetAtomWithIdx(self.atom1_idx).GetSymbol()
             symbol2 = self.mol.GetAtomWithIdx(self.atom2_idx).GetSymbol()
@@ -259,9 +263,10 @@ class BondLengthDialog(Dialog3DPickingMixin, QDialog):
                 self.distance_slider.setValue(slider_val)
                 self.distance_slider.setEnabled(True)
                 self.distance_slider.blockSignals(False)
-            except (AttributeError, RuntimeError, TypeError):  
-                import traceback
-                traceback.print_exc()
+            except (AttributeError, RuntimeError, TypeError) as e:
+                logging.debug(
+                    f"Suppressed exception: {e}"
+                )  # Suppress errors during distance UI sync
 
             # Add labels
             self.add_selection_label(self.atom1_idx, "1")
@@ -277,9 +282,10 @@ class BondLengthDialog(Dialog3DPickingMixin, QDialog):
                 self.distance_slider.blockSignals(True)
                 self.distance_slider.setValue(int(val * 100))
                 self.distance_slider.blockSignals(False)
-        except ValueError:
-            import traceback
-            traceback.print_exc()
+        except ValueError as e:
+            logging.debug(
+                f"Suppressed exception: {e}"
+            )  # Ignore invalid numeric input during typing
 
     def on_slider_pressed(self):
         """Remember the state before slider dragging starts."""
@@ -292,12 +298,12 @@ class BondLengthDialog(Dialog3DPickingMixin, QDialog):
         """Update geometry in real-time while dragging."""
         if self.atom1_idx is None or self.atom2_idx is None:
             return
-        
+
         new_distance = value / 100.0
         self.distance_input.blockSignals(True)
         self.distance_input.setText(f"{new_distance:.3f}")
         self.distance_input.blockSignals(False)
-        
+
         self.adjust_bond_length(new_distance)
 
     def on_slider_released(self):
@@ -383,20 +389,35 @@ class BondLengthDialog(Dialog3DPickingMixin, QDialog):
             for atom_idx in group1_atoms:
                 current_pos = np.array(conf.GetAtomPosition(atom_idx))
                 new_pos = current_pos + displacement1
-                conf.SetAtomPosition(atom_idx, new_pos.tolist())
+                conf.SetAtomPosition(
+                    atom_idx,
+                    Geometry.Point3D(
+                        float(new_pos[0]), float(new_pos[1]), float(new_pos[2])
+                    ),
+                )
                 self.main_window.atom_positions_3d[atom_idx] = new_pos
 
             # Move group 2
             for atom_idx in group2_atoms:
                 current_pos = np.array(conf.GetAtomPosition(atom_idx))
                 new_pos = current_pos + displacement2
-                conf.SetAtomPosition(atom_idx, new_pos.tolist())
+                conf.SetAtomPosition(
+                    atom_idx,
+                    Geometry.Point3D(
+                        float(new_pos[0]), float(new_pos[1]), float(new_pos[2])
+                    ),
+                )
                 self.main_window.atom_positions_3d[atom_idx] = new_pos
 
         elif self.atom1_fix_radio.isChecked():
             # Move only the second atom
             new_pos2 = pos1 + direction * new_distance
-            conf.SetAtomPosition(self.atom2_idx, new_pos2.tolist())
+            conf.SetAtomPosition(
+                self.atom2_idx,
+                Geometry.Point3D(
+                    float(new_pos2[0]), float(new_pos2[1]), float(new_pos2[2])
+                ),
+            )
             self.main_window.atom_positions_3d[self.atom2_idx] = new_pos2
         else:
             # Move the connected group (default behavior)
@@ -409,7 +430,12 @@ class BondLengthDialog(Dialog3DPickingMixin, QDialog):
             for atom_idx in atoms_to_move:
                 current_pos = np.array(conf.GetAtomPosition(atom_idx))
                 new_pos = current_pos + displacement
-                conf.SetAtomPosition(atom_idx, new_pos.tolist())
+                conf.SetAtomPosition(
+                    atom_idx,
+                    Geometry.Point3D(
+                        float(new_pos[0]), float(new_pos[1]), float(new_pos[2])
+                    ),
+                )
                 self.main_window.atom_positions_3d[atom_idx] = new_pos
 
         # Update the 3D view
@@ -423,6 +449,7 @@ class BondLengthDialog(Dialog3DPickingMixin, QDialog):
         try:
             if self.main_window.current_mol:
                 self.main_window.draw_molecule_3d(self.main_window.current_mol)
-        except (AttributeError, RuntimeError, ValueError, TypeError):
-            import traceback
-            traceback.print_exc()
+        except (AttributeError, RuntimeError, ValueError, TypeError) as e:
+            logging.debug(
+                f"Suppressed exception: {e}"
+            )  # Suppress errors during dialog teardown

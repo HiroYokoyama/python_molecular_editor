@@ -29,10 +29,11 @@ from rdkit import Chem
 import pyvista as pv
 from PyQt6.QtCore import QRectF, Qt
 from PyQt6.QtGui import QColor, QTransform
-from PyQt6.QtWidgets import QApplication, QGraphicsView
+from PyQt6.QtWidgets import QGraphicsView
 
 try:
     from PyQt6 import sip as _sip  # type: ignore
+
     _sip_isdeleted = getattr(_sip, "isdeleted", None)
 except (ImportError, AttributeError, TypeError):
     _sip = None
@@ -44,7 +45,7 @@ try:
     from .template_preview_item import TemplatePreviewItem
 except ImportError:
     # Fallback to absolute imports for script-style execution
-    from modules.constants import CPK_COLORS_PV, DEFAULT_CPK_COLORS, VDW_RADII, pt
+    from modules.constants import CPK_COLORS_PV, VDW_RADII, pt
     from modules.template_preview_item import TemplatePreviewItem
 
 
@@ -108,7 +109,7 @@ class MainWindowView3d:
 
         # Re-entrancy guard: prevent overlapping draws that cause ghost
         # bonds when slider events are processed mid-render.
-        if getattr(self, '_drawing_3d', False):
+        if getattr(self, "_drawing_3d", False):
             return
         self._drawing_3d = True
 
@@ -129,7 +130,7 @@ class MainWindowView3d:
                 with contextlib.suppress(AttributeError, RuntimeError, TypeError):
                     self.statusBar().showMessage(f"Kekulize failed: {e}")
         return mol
-        
+
     def _draw_standard_3d_style_body(self, mol, style_override=None):
         current_style = (
             style_override
@@ -213,10 +214,15 @@ class MainWindowView3d:
                     try:
                         c = QColor(hex_color)
                         col[atom_idx] = [c.redF(), c.greenF(), c.blueF()]
-                    except (AttributeError, RuntimeError, TypeError, ValueError, KeyError):  
+                    except (
+                        AttributeError,
+                        RuntimeError,
+                        TypeError,
+                        ValueError,
+                        KeyError,
+                    ):
                         # Suppress traceback
                         pass
-
 
         # Define common mesh properties
         mesh_props = dict(
@@ -227,7 +233,9 @@ class MainWindowView3d:
         )
 
         # --- Mod: Extract variables for delegates ---
-        self._add_3d_atom_glyphs(mol_to_draw, conf, sym, col, current_style, is_lighting_enabled, mesh_props)
+        self._add_3d_atom_glyphs(
+            mol_to_draw, conf, sym, col, current_style, is_lighting_enabled, mesh_props
+        )
         self._add_3d_bond_cylinders(mol_to_draw, conf, col, current_style, mesh_props)
         self._add_3d_aromatic_rings(mol_to_draw, current_style, mesh_props)
         self._add_3d_labels(mol, mol_to_draw)
@@ -236,14 +244,16 @@ class MainWindowView3d:
         # Update projection mode and force render
         settings = getattr(self, "settings", {})
         proj_mode = settings.get("projection_mode", "Perspective")
-        if hasattr(self.plotter, "renderer") and hasattr(self.plotter.renderer, "GetActiveCamera"):
+        if hasattr(self.plotter, "renderer") and hasattr(
+            self.plotter.renderer, "GetActiveCamera"
+        ):
             vcam = self.plotter.renderer.GetActiveCamera()
             if vcam:
                 vcam.SetParallelProjection(proj_mode == "Orthographic")
                 try:
                     # Force a render so the change is visible immediately
                     self.plotter.render()
-                except (AttributeError, RuntimeError, TypeError):  
+                except (AttributeError, RuntimeError, TypeError):
                     # Suppress non-critical 3D rendering errors
                     pass
 
@@ -258,7 +268,16 @@ class MainWindowView3d:
         self.update_atom_id_menu_text()
         self.update_atom_id_menu_state()
 
-    def _add_3d_atom_glyphs(self, mol_to_draw, conf, sym, col, current_style, is_lighting_enabled, mesh_props):
+    def _add_3d_atom_glyphs(
+        self,
+        mol_to_draw,
+        conf,
+        sym,
+        col,
+        current_style,
+        is_lighting_enabled,
+        mesh_props,
+    ):
         # Set atom radii based on style
         if current_style == "cpk":
             atom_scale = self.settings.get("cpk_atom_scale", 1.0)
@@ -291,7 +310,6 @@ class MainWindowView3d:
         self.glyph_source = pv.PolyData(self.atom_positions_3d)
         self.glyph_source["colors"] = col
         self.glyph_source["radii"] = rad
-
 
         # Do not draw atoms in wireframe mode
         if current_style != "wireframe":
@@ -375,7 +393,12 @@ class MainWindowView3d:
 
                                         # Same calculation as bond drawing
                                         sphere_radius = cyl_radius * radius_factor
-                                    except (AttributeError, RuntimeError, TypeError, ValueError):
+                                    except (
+                                        AttributeError,
+                                        RuntimeError,
+                                        TypeError,
+                                        ValueError,
+                                    ):
                                         sphere_radius = 0.09  # Default values
                                         offset_distance = 0.15  # Default values
 
@@ -463,7 +486,6 @@ class MainWindowView3d:
                 atom_rgb = [int(c * 255) for c in atom_color]
                 self._3d_color_map[f"atom_{i}"] = atom_rgb
 
-
     def _add_3d_bond_cylinders(self, mol_to_draw, conf, col, current_style, mesh_props):
         # Draw bonds (ball_and_stick, wireframe, stick)
         if current_style in ["ball_and_stick", "wireframe", "stick"]:
@@ -485,7 +507,7 @@ class MainWindowView3d:
                     bs_hex = self.settings.get("ball_stick_bond_color", "#7F7F7F")
                     q = QColor(bs_hex)
                     bs_bond_rgb = [q.red(), q.green(), q.blue()]
-                except (AttributeError, RuntimeError, TypeError, ValueError):  
+                except (AttributeError, RuntimeError, TypeError, ValueError):
                     # Suppress non-critical bond drawing color fallback noise
                     pass
 
@@ -529,7 +551,13 @@ class MainWindowView3d:
                         ov_rgb = [c_obj.red(), c_obj.green(), c_obj.blue()]
                         begin_color_rgb = ov_rgb
                         end_color_rgb = ov_rgb
-                    except (AttributeError, RuntimeError, TypeError, ValueError, KeyError):  
+                    except (
+                        AttributeError,
+                        RuntimeError,
+                        TypeError,
+                        ValueError,
+                        KeyError,
+                    ):
                         # Suppress traceback
                         pass
 
@@ -553,7 +581,6 @@ class MainWindowView3d:
                     all_radii.append(radius)
                     all_colors.append(color_rgb)
                     current_point_idx += 2
-
 
                 # Get CPK bond color setting once for all bond types
                 use_cpk_bond = self.settings.get("ball_stick_use_cpk_bond_color", False)
@@ -777,7 +804,6 @@ class MainWindowView3d:
                 # Add to plotter
                 self.plotter.add_mesh(tube, scalars="colors", rgb=True, **mesh_props)
 
-
     def _add_3d_aromatic_rings(self, mol_to_draw, current_style, mesh_props):
         # Aromatic ring circles display
         if self.settings.get("display_aromatic_circles_3d", False):
@@ -926,7 +952,6 @@ class MainWindowView3d:
             except (AttributeError, RuntimeError, TypeError, ValueError) as e:
                 logging.error(f"Error rendering aromatic circles: {e}")
 
-
     def _add_3d_labels(self, mol, mol_to_draw):
         if getattr(self, "show_chiral_labels", False):
             try:
@@ -943,7 +968,9 @@ class MainWindowView3d:
                     try:
                         self.plotter.remove_actor("chiral_labels")
                     except (AttributeError, RuntimeError, TypeError) as e:
-                        logging.debug(f"Suppressed exception: {e}")  # Suppress non-critical 3D label update errors
+                        logging.debug(
+                            f"Suppressed exception: {e}"
+                        )  # Suppress non-critical 3D label update errors
                     self.plotter.add_point_labels(
                         np.array(pts),
                         labels,
@@ -967,7 +994,6 @@ class MainWindowView3d:
                 self.show_ez_labels_3d(mol)
             except (AttributeError, RuntimeError, TypeError, ValueError) as e:
                 self.statusBar().showMessage(f"3D E/Z label drawing error: {e}")
-
 
     def _calculate_double_bond_offset(self, mol, bond, conf):
         """
@@ -1064,10 +1090,13 @@ class MainWindowView3d:
             return
 
         # Remove existing E/Z labels
-        if hasattr(self.plotter, "renderer") and "ez_labels" in self.plotter.renderer.actors:
+        if (
+            hasattr(self.plotter, "renderer")
+            and "ez_labels" in self.plotter.renderer.actors
+        ):
             try:
                 self.plotter.remove_actor("ez_labels")
-            except (AttributeError, RuntimeError, TypeError):  
+            except (AttributeError, RuntimeError, TypeError):
                 # Ignore label removal failure on stale plotter
                 pass
 
@@ -1087,7 +1116,7 @@ class MainWindowView3d:
             Chem.AssignStereochemistry(
                 mol, cleanIt=True, force=True, flagPossibleStereoCenters=True
             )
-        except (AttributeError, RuntimeError, TypeError, ValueError):  
+        except (AttributeError, RuntimeError, TypeError, ValueError):
             # Suppress non-critical stereochemistry assignment noise during 3D label update
             pass
 
@@ -1176,7 +1205,7 @@ class MainWindowView3d:
                 # Set chiral tags from 3D coordinates using confId=0
                 try:
                     Chem.AssignAtomChiralTagsFromStructure(mol_for_chirality, confId=0)
-                except (AttributeError, RuntimeError, TypeError, ValueError):  
+                except (AttributeError, RuntimeError, TypeError, ValueError):
                     # Guard for older RDKit versions or invalid coordinates
                     pass
 
@@ -1249,11 +1278,11 @@ class MainWindowView3d:
             return False
         if not self.current_mol or self.current_mol.GetNumAtoms() == 0:
             return False
-            
+
         try:
             # Check if the first atom has xyz_unique_id property
             return self.current_mol.GetAtomWithIdx(0).HasProp("xyz_unique_id")
-        except (AttributeError, RuntimeError, TypeError, ValueError):  
+        except (AttributeError, RuntimeError, TypeError, ValueError):
             # Suppress non-critical property access noise
             return False
 
@@ -1271,7 +1300,7 @@ class MainWindowView3d:
                 atom = self.current_mol.GetAtomWithIdx(atom_idx)
                 if atom.HasProp("_original_atom_id"):
                     return True
-        except (AttributeError, RuntimeError, TypeError, ValueError):  
+        except (AttributeError, RuntimeError, TypeError, ValueError):
             # Suppress non-critical property access noise
             pass
         return False
@@ -1452,7 +1481,9 @@ class MainWindowView3d:
                     try:
                         self.plotter.remove_actor(nm)
                     except (AttributeError, RuntimeError, TypeError) as e:
-                        logging.debug(f"Suppressed exception: {e}")  # Suppress non-critical 3D rendering/actor update errors
+                        logging.debug(
+                            f"Suppressed exception: {e}"
+                        )  # Suppress non-critical 3D rendering/actor update errors
             self.atom_label_legend_names = []
 
             legend_entries = []
@@ -1495,16 +1526,20 @@ class MainWindowView3d:
                             tp = actor.GetTextProperty()
                             try:
                                 tp.SetBold(True)
-                            except (AttributeError, RuntimeError, TypeError):  
+                            except (AttributeError, RuntimeError, TypeError):
                                 # Suppress non-critical actor property update noise
                                 pass
                     except (AttributeError, RuntimeError, TypeError) as e:
-                        logging.debug(f"Suppressed exception: {e}")  # Suppress non-critical 3D rendering/actor update errors
+                        logging.debug(
+                            f"Suppressed exception: {e}"
+                        )  # Suppress non-critical 3D rendering/actor update errors
                 except (AttributeError, RuntimeError, TypeError):
                     continue
 
         except (AttributeError, RuntimeError, ValueError, TypeError) as e:
-            logging.debug(f"Suppressed exception: {e}")  # Suppress legend addition errors
+            logging.debug(
+                f"Suppressed exception: {e}"
+            )  # Suppress legend addition errors
 
     def clear_all_atom_info_labels(self):
         """Clear all atom info labels"""
@@ -1518,16 +1553,20 @@ class MainWindowView3d:
                     for a in list(self.current_atom_info_labels):
                         try:
                             self.plotter.remove_actor(a)
-                        except (AttributeError, RuntimeError, TypeError):  
+                        except (AttributeError, RuntimeError, TypeError):
                             # Suppress non-critical actor removal noise
                             pass
                 else:
                     try:
                         self.plotter.remove_actor(self.current_atom_info_labels)
                     except (AttributeError, RuntimeError, TypeError) as e:
-                        logging.debug(f"Suppressed exception: {e}")  # Suppress non-critical 3D rendering/actor update errors
+                        logging.debug(
+                            f"Suppressed exception: {e}"
+                        )  # Suppress non-critical 3D rendering/actor update errors
         except (AttributeError, RuntimeError, TypeError) as e:
-            logging.debug(f"Suppressed exception: {e}")  # Suppress non-critical 3D state update errors
+            logging.debug(
+                f"Suppressed exception: {e}"
+            )  # Suppress non-critical 3D state update errors
         finally:
             self.current_atom_info_labels = None
 
@@ -1541,9 +1580,13 @@ class MainWindowView3d:
                     try:
                         self.plotter.remove_actor(nm)
                     except (AttributeError, RuntimeError, TypeError) as e:
-                        logging.debug(f"Suppressed exception: {e}")  # Suppress non-critical 3D rendering/actor update errors
+                        logging.debug(
+                            f"Suppressed exception: {e}"
+                        )  # Suppress non-critical 3D rendering/actor update errors
         except (AttributeError, RuntimeError, TypeError) as e:
-            logging.debug(f"Suppressed exception: {e}")  # Suppress non-critical 3D state update errors
+            logging.debug(
+                f"Suppressed exception: {e}"
+            )  # Suppress non-critical 3D state update errors
         finally:
             self.atom_label_legend_names = []
 
@@ -1616,8 +1659,9 @@ class MainWindowView3d:
                 if old_ra is not None:
                     self.view_2d.setResizeAnchor(old_ra)
             except (AttributeError, RuntimeError, TypeError) as e:
-                logging.debug(f"Suppressed exception: {e}")  # Suppress non-critical 3D view/actor cleanup errors
-
+                logging.debug(
+                    f"Suppressed exception: {e}"
+                )  # Suppress non-critical 3D view/actor cleanup errors
 
     def apply_3d_settings(self, redraw=True):
         """Apply 3D view visual settings"""
@@ -1642,7 +1686,9 @@ class MainWindowView3d:
             try:
                 renderer.SetNumberOfLayers(2)  # Layer 0: 3D, Layer 1: 2D Overlay
             except (AttributeError, RuntimeError, TypeError) as e:
-                logging.debug(f"Suppressed exception: {e}")  # May not be supported depending on PyVista version
+                logging.debug(
+                    f"Suppressed exception: {e}"
+                )  # May not be supported depending on PyVista version
 
         # --- 3D Axis Widget Settings ---
         show_axes = self.settings.get("show_3d_axes", True)
@@ -1674,7 +1720,9 @@ class MainWindowView3d:
             try:
                 self.plotter.reset_camera()
             except (AttributeError, RuntimeError, TypeError) as e:
-                logging.debug(f"Suppressed exception: {e}")  # Suppress non-critical 3D view/actor cleanup errors
+                logging.debug(
+                    f"Suppressed exception: {e}"
+                )  # Suppress non-critical 3D view/actor cleanup errors
 
             self._camera_initialized = True
 
@@ -1684,7 +1732,9 @@ class MainWindowView3d:
             if hasattr(self.plotter, "update"):
                 self.plotter.update()
         except (AttributeError, RuntimeError, TypeError) as e:
-            logging.debug(f"Suppressed exception: {e}")  # Suppress non-critical 3D state update errors
+            logging.debug(
+                f"Suppressed exception: {e}"
+            )  # Suppress non-critical 3D state update errors
 
     def update_bond_color_override(self, bond_idx, hex_color):
         """Plugin API helper to override bond color."""

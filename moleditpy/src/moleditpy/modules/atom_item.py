@@ -46,7 +46,7 @@ def sip_isdeleted_safe(obj):
     try:
         return sip.isdeleted(obj)
     except (AttributeError, TypeError, RuntimeError):
-        # If the object does not support sip.isdeleted or is already in a state 
+        # If the object does not support sip.isdeleted or is already in a state
         # where the check fails, we assume it's unsafe or "deleted" for our purposes.
         return True
 
@@ -81,7 +81,7 @@ class AtomItem(QGraphicsItem):
         # Allow updating font preference dynamically
         font_size = 20
         font_family = FONT_FAMILY
-        
+
         scene = self.scene()
         if hasattr(scene, "get_setting"):
             font_size = scene.get_setting("atom_font_size_2d", 20)
@@ -148,7 +148,7 @@ class AtomItem(QGraphicsItem):
                     if partner_pos is None:
                         continue
                     total_dx += partner_pos.x() - my_pos_x
-                except (AttributeError, RuntimeError, TypeError) as e:
+                except (AttributeError, RuntimeError, TypeError):
                     # Skip any bond that raises while inspecting; keep UI tolerant.
                     # This happens if the underlying C++ object is being destroyed.
                     continue
@@ -235,7 +235,9 @@ class AtomItem(QGraphicsItem):
         color = CPK_COLORS.get(self.symbol, CPK_COLORS["DEFAULT"])
         # Use bond color if specified in settings
         scene = self.scene()
-        if hasattr(scene, "get_setting") and (self.symbol == "H" or scene.get_setting("atom_use_bond_color_2d", False)):
+        if hasattr(scene, "get_setting") and (
+            self.symbol == "H" or scene.get_setting("atom_use_bond_color_2d", False)
+        ):
             custom_color = scene.get_setting("bond_color_2d", "#222222")
             if isinstance(custom_color, str):
                 color = QColor(custom_color)
@@ -423,7 +425,6 @@ class AtomItem(QGraphicsItem):
             painter.setBrush(Qt.BrushStyle.NoBrush)
             painter.setPen(pen)
             painter.drawRect(self.boundingRect())
-
 
     def itemChange(self, change, value):
         res = super().itemChange(change, value)

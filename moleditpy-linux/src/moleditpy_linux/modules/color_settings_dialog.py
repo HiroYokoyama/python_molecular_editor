@@ -28,7 +28,7 @@ except (AttributeError, RuntimeError, TypeError):
     from modules.constants import CPK_COLORS, DEFAULT_CPK_COLORS
 
 
-class ColorSettingsDialog(QDialog):  
+class ColorSettingsDialog(QDialog):
     """Dialog to customize CPK element colors.
 
     - Click an element to pick a new color for the element (CPK colors).
@@ -46,9 +46,7 @@ class ColorSettingsDialog(QDialog):
 
         layout = QVBoxLayout(self)
 
-        # Color picking for CPK is available in the periodic table and CPK dialog
-
-        # Periodic table grid (buttons like PeriodicTableDialog)
+        # Periodic table grid
         grid = QGridLayout()
         self.element_buttons = {}
         elements = [
@@ -195,48 +193,35 @@ class ColorSettingsDialog(QDialog):
 
         layout.addLayout(grid)
 
-        # Ball & Stick bond color (3D) picker - placed near the periodic table for CPK settings
+        # Ball & Stick bond color (3D) picker
         self.changed_bs_color = None
-        try:
-            bs_h = QHBoxLayout()
-            bs_label = QLabel("Ball & Stick bond color:")
-            self.bs_button = QPushButton()
-            self.bs_button.setFixedSize(36, 24)
-            # initialize from current settings (if provided)
-            try:
-                cur_bs = (
-                    self.current_settings.get("ball_stick_bond_color")
-                    if self.current_settings
-                    else None
-                )
-            except (AttributeError, RuntimeError, TypeError):
-                cur_bs = None
-            if (
-                not cur_bs
-                and self.parent_window
-                and hasattr(self.parent_window, "settings")
-            ):
-                cur_bs = self.parent_window.settings.get(
-                    "ball_stick_bond_color", "#7F7F7F"
-                )
-            try:
-                self.bs_button.setStyleSheet(
-                    f"background-color: {cur_bs}; border: 1px solid #888;"
-                )
-                self.bs_button.setToolTip(cur_bs)
-            except (AttributeError, RuntimeError, TypeError):  
-                import traceback
-                traceback.print_exc()
-            self.bs_button.clicked.connect(self.pick_bs_bond_color)
-            bs_h.addWidget(bs_label)
-            bs_h.addWidget(self.bs_button)
-            bs_h.addStretch(1)
-            layout.addLayout(bs_h)
-        except (AttributeError, RuntimeError, TypeError):  
-            import traceback
-            traceback.print_exc()
+        bs_h = QHBoxLayout()
+        bs_label = QLabel("Ball & Stick bond color:")
+        self.bs_button = QPushButton()
+        self.bs_button.setFixedSize(36, 24)
 
-        # Reset button and action buttons
+        # Safe initialization from settings
+        settings = self.current_settings or {}
+        cur_bs = settings.get("ball_stick_bond_color")
+
+        if not cur_bs and self.parent_window:
+            parent_settings = getattr(self.parent_window, "settings", {})
+            cur_bs = parent_settings.get("ball_stick_bond_color", "#7F7F7F")
+
+        cur_bs = cur_bs or "#7F7F7F"
+
+        self.bs_button.setStyleSheet(
+            f"background-color: {cur_bs}; border: 1px solid #888;"
+        )
+        self.bs_button.setToolTip(cur_bs)
+        self.bs_button.clicked.connect(self.pick_bs_bond_color)
+
+        bs_h.addWidget(bs_label)
+        bs_h.addWidget(self.bs_button)
+        bs_h.addStretch(1)
+        layout.addLayout(bs_h)
+
+        # Action buttons
         h = QHBoxLayout()
         reset_button = QPushButton("Reset All")
         reset_button.clicked.connect(self.reset_all)
@@ -255,42 +240,27 @@ class ColorSettingsDialog(QDialog):
         layout.addLayout(h)
 
     def on_element_clicked(self):
-        b = self.sender()
-        symbol = b.text()
-        # get current color (override if exists else default)
+        btn = self.sender()
+        symbol = btn.text()
         cur = self.current_settings.get("cpk_colors", {}).get(symbol)
         if not cur:
             cur = CPK_COLORS.get(symbol, CPK_COLORS["DEFAULT"]).name()
         color = QColorDialog.getColor(QColor(cur), self)
         if color.isValid():
             self.changed_cpk[symbol] = color.name()
-            # Update button appearance
             brightness = (
                 color.red() * 299 + color.green() * 587 + color.blue() * 114
             ) / 1000
             text_color = "white" if brightness < 128 else "black"
-            b.setStyleSheet(
+            btn.setStyleSheet(
                 f"background-color: {color.name()}; color: {text_color}; border: 1px solid #555; font-weight: bold;"
             )
 
     def reset_all(self):
-        # Clear overrides
         self.changed_cpk = {}
         self._reset_all_flag = True
 
-        # 1. Set B&S bond color to default during reset
-        try:
-            self.changed_bs_color = (
-                self.parent_window.default_settings.get(
-                    "ball_stick_bond_color", "#7F7F7F"
-                )
-                if hasattr(self.parent_window, "default_settings")
-                else "#7F7F7F"
-            )
-        except (AttributeError, RuntimeError, TypeError):
-            self.changed_bs_color = "#7F7F7F"
-
-        # 2. Restore CPK button displays in the dialog to defaults
+        # Restore CPK button displays to defaults
         for s, btn in self.element_buttons.items():
             q_color = DEFAULT_CPK_COLORS.get(s, DEFAULT_CPK_COLORS["DEFAULT"])
             brightness = (
@@ -301,224 +271,134 @@ class ColorSettingsDialog(QDialog):
                 f"background-color: {q_color.name()}; color: {text_color}; border: 1px solid #555; font-weight: bold;"
             )
 
-        # 3. 3D preview update logic removed (previously L.3337-L.3386)
+        # Restore B&S bond color
+        hexv = "#7F7F7F"
+        if self.parent_window:
+            default_settings = getattr(self.parent_window, "default_settings", {})
+            hexv = default_settings.get("ball_stick_bond_color", "#7F7F7F")
 
-        # 4. Restore B&S bond color button display in the dialog to default
-        try:
-            if hasattr(self, "bs_button"):
-                # Reflect fixed default value in self.changed_bs_color
-                hexv = self.changed_bs_color
-                self.bs_button.setStyleSheet(
-                    f"background-color: {hexv}; border: 1px solid #888;"
-                )
-                self.bs_button.setToolTip(hexv)
-        except (AttributeError, RuntimeError, TypeError):  
-            import traceback
-            traceback.print_exc()
+        self.changed_bs_color = hexv
+        if hasattr(self, "bs_button"):
+            self.bs_button.setStyleSheet(
+                f"background-color: {hexv}; border: 1px solid #888;"
+            )
+            self.bs_button.setToolTip(hexv)
 
     def apply_changes(self):
-        # Persist only changed keys
-        if self.parent_window:
-            if self._reset_all_flag:
-                # Remove any cpk overrides
+        if not self.parent_window:
+            return
+
+        settings = getattr(self.parent_window, "settings", {})
+
+        if self._reset_all_flag:
+            if "cpk_colors" in settings:
                 try:
-                    if "cpk_colors" in self.parent_window.settings:
-                        del self.parent_window.settings["cpk_colors"]
-                except (AttributeError, RuntimeError, TypeError):  
-                    import traceback
-                    traceback.print_exc()
+                    del settings["cpk_colors"]
+                except KeyError:
+                    # Suppress if cpk_colors key is already missing or removed during reset.
+                    pass
+        if self.changed_cpk:
+            cdict = settings.get("cpk_colors", {}).copy()
+            cdict.update(self.changed_cpk)
+            settings["cpk_colors"] = cdict
+            self.parent_window.settings_dirty = True
 
-            if self.changed_cpk:
-                # Merge with existing overrides
-                cdict = self.parent_window.settings.get("cpk_colors", {}).copy()
-                cdict.update(self.changed_cpk)
-                self.parent_window.settings["cpk_colors"] = cdict
-                self.parent_window.settings_dirty = True
-            # After changing settings, update global CPK color map and refresh views
-            try:
-                self.parent_window.update_cpk_colors_from_settings()
-            except (AttributeError, RuntimeError, TypeError):  
-                import traceback
-                traceback.print_exc()
+        if hasattr(self.parent_window, "update_cpk_colors_from_settings"):
+            self.parent_window.update_cpk_colors_from_settings()
 
-            try:
-                self.parent_window.apply_3d_settings(redraw=False)
-            except (AttributeError, RuntimeError, TypeError):  
-                import traceback
-                traceback.print_exc()
+        if hasattr(self.parent_window, "apply_3d_settings"):
+            self.parent_window.apply_3d_settings(redraw=False)
 
-            try:
-                if (
-                    hasattr(self.parent_window, "current_mol")
-                    and self.parent_window.current_mol
-                ):
-                    self.parent_window.draw_molecule_3d(self.parent_window.current_mol)
-            except (AttributeError, RuntimeError, TypeError):  
-                import traceback
-                traceback.print_exc()
+        current_mol = getattr(self.parent_window, "current_mol", None)
+        if current_mol and hasattr(self.parent_window, "draw_molecule_3d"):
+            self.parent_window.draw_molecule_3d(current_mol)
 
-            # update 2D scene objects
-            try:
-                if hasattr(self.parent_window, "scene"):
-                    for it in self.parent_window.scene.items():
-                        try:
-                            if hasattr(it, "update_style"):
-                                it.update_style()
-                        except (AttributeError, RuntimeError, TypeError):  
-                            import traceback
-                            traceback.print_exc()
-            except (AttributeError, RuntimeError, TypeError):  
-                import traceback
-                traceback.print_exc()
-
-            # update periodic table button styles in the dialog to reflect any overrides
-            try:
-                for s, btn in self.element_buttons.items():
+        # Update 2D scene
+        scene = getattr(self.parent_window, "scene", None)
+        if scene:
+            for it in scene.items():
+                if hasattr(it, "update_style"):
                     try:
-                        q_color = QColor(
-                            self.parent_window.settings.get("cpk_colors", {}).get(
-                                s, CPK_COLORS.get(s, CPK_COLORS["DEFAULT"]).name()
-                            )
-                        )
-                        brightness = (
-                            q_color.red() * 299
-                            + q_color.green() * 587
-                            + q_color.blue() * 114
-                        ) / 1000
-                        text_color = "white" if brightness < 128 else "black"
-                        btn.setStyleSheet(
-                            f"background-color: {q_color.name()}; color: {text_color}; border: 1px solid #555; font-weight: bold;"
-                        )
-                    except (AttributeError, RuntimeError, TypeError):  
-                        import traceback
-                        traceback.print_exc()
-            except (AttributeError, RuntimeError, TypeError):  
-                import traceback
-                traceback.print_exc()
+                        it.update_style()
+                    except (AttributeError, RuntimeError, TypeError):
+                        # Suppress non-critical error
+                        pass
+        # Update button styles
+        for s, btn in self.element_buttons.items():
+            overrides = settings.get("cpk_colors", {})
+            q_color = QColor(
+                overrides.get(s, CPK_COLORS.get(s, CPK_COLORS["DEFAULT"]).name())
+            )
+            brightness = (
+                q_color.red() * 299 + q_color.green() * 587 + q_color.blue() * 114
+            ) / 1000
+            text_color = "white" if brightness < 128 else "black"
+            btn.setStyleSheet(
+                f"background-color: {q_color.name()}; color: {text_color}; border: 1px solid #555; font-weight: bold;"
+            )
 
-            # Refresh any open SettingsDialog instances so the ball & stick color preview updates
+        # Refresh SettingsDialog
+        try:
+            from .settings_dialog import SettingsDialog
+        except (ImportError, ValueError):
             try:
-                # Avoid circular import at module level; import SettingsDialog on demand
-                import importlib
+                from modules.settings_dialog import SettingsDialog
+            except ImportError:
+                SettingsDialog = None
 
-                try:
-                    mod = importlib.import_module(
-                        ".settings_dialog", package="moleditpy.modules"
-                    )
-                except ImportError:
-                    mod = importlib.import_module("modules.settings_dialog")
-                SettingsDialog = mod.SettingsDialog
+        if SettingsDialog:
+            for w in QApplication.topLevelWidgets():
+                if isinstance(w, SettingsDialog):
+                    if hasattr(w, "update_ui_from_settings"):
+                        w.update_ui_from_settings(settings)
 
-                for w in QApplication.topLevelWidgets():
-                    try:
-                        if isinstance(w, SettingsDialog):
-                            try:
-                                w.update_ui_from_settings(self.parent_window.settings)
-                            except (AttributeError, RuntimeError, TypeError):  
-                                import traceback
-                                traceback.print_exc()
-                    except (AttributeError, RuntimeError, TypeError):  
-                        import traceback
-                        traceback.print_exc()
-            except (AttributeError, RuntimeError, TypeError):  
-                import traceback
-                traceback.print_exc()
-
-            # Persist changed Ball & Stick color if the user changed it from the CPK dialog
-            if getattr(self, "changed_bs_color", None):
-                try:
-                    self.parent_window.settings["ball_stick_bond_color"] = (
-                        self.changed_bs_color
-                    )
-                    try:
-                        self.parent_window.settings_dirty = True
-                    except (AttributeError, RuntimeError, TypeError):  
-                        import traceback
-                        traceback.print_exc()
-                    # After changing ball-stick color, ensure 3D view updates
-                    try:
-                        self.parent_window.apply_3d_settings()
-                    except (AttributeError, RuntimeError, TypeError):  
-                        import traceback
-                        traceback.print_exc()
-                    try:
-                        if (
-                            hasattr(self.parent_window, "current_mol")
-                            and self.parent_window.current_mol
-                        ):
-                            self.parent_window.draw_molecule_3d(
-                                self.parent_window.current_mol
-                            )
-                    except (AttributeError, RuntimeError, TypeError):  
-                        import traceback
-                        traceback.print_exc()
-                except (AttributeError, RuntimeError, TypeError):  
-                    import traceback
-                    traceback.print_exc()
-
-            # Removed 2D bond color control — nothing to persist here
-            elif self._reset_all_flag:
-                # Reset Ball & Stick 3D bond color to default
-                try:
-                    # Use a stable default instead of relying on parent_window.default_settings
-                    self.parent_window.settings["ball_stick_bond_color"] = "#7F7F7F"
-                    try:
-                        self.parent_window.settings_dirty = True
-                    except (AttributeError, RuntimeError, TypeError):  
-                        import traceback
-                        traceback.print_exc()
-                except (AttributeError, RuntimeError, TypeError):  
-                    import traceback
-                    traceback.print_exc()
-
-                self.parent_window.update_cpk_colors_from_settings()
+        # Persist B&S color
+        if getattr(self, "changed_bs_color", None):
+            settings["ball_stick_bond_color"] = self.changed_bs_color
+            self.parent_window.settings_dirty = True
+            if hasattr(self.parent_window, "apply_3d_settings"):
                 self.parent_window.apply_3d_settings()
-                if (
-                    hasattr(self.parent_window, "current_mol")
-                    and self.parent_window.current_mol
-                ):
-                    self.parent_window.draw_molecule_3d(self.parent_window.current_mol)
+            if current_mol and hasattr(self.parent_window, "draw_molecule_3d"):
+                self.parent_window.draw_molecule_3d(current_mol)
+        elif self._reset_all_flag:
+            settings["ball_stick_bond_color"] = "#7F7F7F"
+            self.parent_window.settings_dirty = True
+            if hasattr(self.parent_window, "update_cpk_colors_from_settings"):
+                self.parent_window.update_cpk_colors_from_settings()
+            if hasattr(self.parent_window, "apply_3d_settings"):
+                self.parent_window.apply_3d_settings()
+            if current_mol and hasattr(self.parent_window, "draw_molecule_3d"):
+                self.parent_window.draw_molecule_3d(current_mol)
 
-            # update 2D scene
-            try:
-                if hasattr(self.parent_window, "scene"):
-                    for it in self.parent_window.scene.items():
-                        try:
-                            # AtomItem.update_style uses CPK_COLORS map
-                            if hasattr(it, "update_style"):
-                                it.update_style()
-                        except (AttributeError, RuntimeError, TypeError):  
-                            import traceback
-                            traceback.print_exc()
-            except (AttributeError, RuntimeError, TypeError):  
-                import traceback
-                traceback.print_exc()
+        if scene:
+            for it in scene.items():
+                if hasattr(it, "update_style"):
+                    try:
+                        it.update_style()
+                    except (AttributeError, RuntimeError, TypeError):
+                        # Suppress non-critical error
+                        pass
 
     def accept(self):
         self.apply_changes()
         super().accept()
 
     def pick_bs_bond_color(self):
-        """Pick Ball & Stick 3D bond color from the CPK dialog and update preview immediately."""
-        try:
-            cur = getattr(self, "changed_bs_color", None) or (
-                self.current_settings.get("ball_stick_bond_color")
-                if self.current_settings
-                else None
-            )
-        except (AttributeError, RuntimeError, TypeError):
-            cur = None
-        if not cur and self.parent_window and hasattr(self.parent_window, "settings"):
-            cur = self.parent_window.settings.get("ball_stick_bond_color", "#7F7F7F")
+        settings = self.current_settings or {}
+        cur = getattr(self, "changed_bs_color", None) or settings.get(
+            "ball_stick_bond_color"
+        )
+        if not cur and self.parent_window:
+            parent_settings = getattr(self.parent_window, "settings", {})
+            cur = parent_settings.get("ball_stick_bond_color", "#7F7F7F")
+
+        cur = cur or "#7F7F7F"
         color = QColorDialog.getColor(QColor(cur), self)
         if color.isValid():
             hexv = color.name()
             self.changed_bs_color = hexv
-            try:
+            if hasattr(self, "bs_button"):
                 self.bs_button.setStyleSheet(
                     f"background-color: {hexv}; border: 1px solid #888;"
                 )
                 self.bs_button.setToolTip(hexv)
-            except (AttributeError, RuntimeError, TypeError):  
-                import traceback
-                traceback.print_exc()

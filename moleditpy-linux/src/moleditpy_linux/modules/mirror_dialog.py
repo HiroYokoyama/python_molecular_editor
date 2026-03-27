@@ -24,7 +24,7 @@ from rdkit import Chem
 from rdkit.Geometry import Point3D
 
 
-class MirrorDialog(QDialog):  
+class MirrorDialog(QDialog):
     """Dialog to create a mirror image of the molecule."""
 
     def __init__(self, mol, main_window, parent=None):
@@ -106,7 +106,8 @@ class MirrorDialog(QDialog):
 
                 # Set new coordinates
                 conf.SetAtomPosition(
-                    atom_idx, Point3D(new_pos[0], new_pos[1], new_pos[2])
+                    atom_idx,
+                    Point3D(float(new_pos[0]), float(new_pos[1]), float(new_pos[2])),
                 )
 
             # Force recalculation of chiral tags after mirror transform (required before 3D rendering)

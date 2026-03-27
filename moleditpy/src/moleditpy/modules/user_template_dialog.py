@@ -37,7 +37,7 @@ import logging
 import os
 
 
-class UserTemplateDialog(QDialog):  
+class UserTemplateDialog(QDialog):
     """Dialog for managing user-defined molecular templates."""
 
     def __init__(self, main_window, parent=None):

@@ -20,14 +20,15 @@ from PyQt6.QtWidgets import (
     QPushButton,
     QVBoxLayout,
 )
+from rdkit import Geometry
 
 try:
-    from .dialog3_d_picking_mixin import Dialog3DPickingMixin
+    from .dialog_3d_picking_mixin import Dialog3DPickingMixin
 except ImportError:
-    from modules.dialog3_d_picking_mixin import Dialog3DPickingMixin
+    from modules.dialog_3d_picking_mixin import Dialog3DPickingMixin
 
 
-class AlignPlaneDialog(Dialog3DPickingMixin, QDialog):  
+class AlignPlaneDialog(Dialog3DPickingMixin, QDialog):
     def __init__(self, mol, main_window, plane, preselected_atoms=None, parent=None):
         QDialog.__init__(self, parent)
         Dialog3DPickingMixin.__init__(self)
@@ -218,7 +219,9 @@ class AlignPlaneDialog(Dialog3DPickingMixin, QDialog):
             eigenvalues, eigenvectors = np.linalg.eigh(cov_matrix)
 
             # Normal vector of the plane corresponds to the smallest eigenvalue
-            normal_vector = eigenvectors[:, 0]  # Normal vector of the plane corresponds to the smallest eigenvalue
+            normal_vector = eigenvectors[
+                :, 0
+            ]  # Normal vector of the plane corresponds to the smallest eigenvalue
 
             # Define target plane normal vector
             if self.plane == "xy":
@@ -264,7 +267,12 @@ class AlignPlaneDialog(Dialog3DPickingMixin, QDialog):
                         centered_pos, rotation_axis, rotation_angle
                     )
                     new_pos = rotated_pos + centroid
-                    conf.SetAtomPosition(i, new_pos.tolist())
+                    conf.SetAtomPosition(
+                        i,
+                        Geometry.Point3D(
+                            float(new_pos[0]), float(new_pos[1]), float(new_pos[2])
+                        ),
+                    )
                     self.main_window.atom_positions_3d[i] = new_pos
 
             # Update 3D visualization

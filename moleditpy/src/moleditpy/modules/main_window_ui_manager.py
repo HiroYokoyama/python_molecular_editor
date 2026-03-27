@@ -30,6 +30,7 @@ from PyQt6.QtWidgets import (
 
 try:
     from PyQt6 import sip as _sip  # type: ignore
+
     _sip_isdeleted = getattr(_sip, "isdeleted", None)
 except ImportError:
     _sip = None
@@ -53,8 +54,12 @@ class MainWindowUiManager:
 
     def set_mode(self, mode_str):
         if isinstance(mode_str, tuple):
-            mode_str = f"bond_{mode_str[0]}_{mode_str[1]}" if len(mode_str) == 2 else str(mode_str[0])
-            
+            mode_str = (
+                f"bond_{mode_str[0]}_{mode_str[1]}"
+                if len(mode_str) == 2
+                else str(mode_str[0])
+            )
+
         prev_mode = getattr(self.scene, "mode", None)
         self.scene.mode = mode_str
         self.view_2d.setMouseTracking(True)
@@ -167,9 +172,13 @@ class MainWindowUiManager:
             self.view_2d.setFocus()
         return super().eventFilter(obj, event)
 
-    def closeEvent(self, event):        # 1. Persist settings
+    def closeEvent(self, event):  # 1. Persist settings
         try:
-            modified = getattr(self, "settings_dirty", False) or (hasattr(self, "settings") and hasattr(self, "initial_settings") and self.settings != self.initial_settings)
+            modified = getattr(self, "settings_dirty", False) or (
+                hasattr(self, "settings")
+                and hasattr(self, "initial_settings")
+                and self.settings != self.initial_settings
+            )
             if modified and hasattr(self, "save_settings"):
                 self.save_settings()
                 self.settings_dirty = False
@@ -213,15 +222,16 @@ class MainWindowUiManager:
             active_threads = list(getattr(self, "_active_calc_threads", []) or [])
             for thr in active_threads:
                 try:
-                    if hasattr(thr, "quit"): thr.quit()
-                    if hasattr(thr, "wait"): thr.wait(200)
+                    if hasattr(thr, "quit"):
+                        thr.quit()
+                    if hasattr(thr, "wait"):
+                        thr.wait(200)
                 except (RuntimeError, TypeError):
                     # Suppress errors if a thread is already terminated or non-responsive during bulk teardown.
                     pass
         except (AttributeError, RuntimeError, TypeError, ValueError):
             # Suppress non-critical thread/widget cleanup errors during application shutdown
             pass
-
 
         # 4. Standard framework cleanup
         try:
@@ -256,6 +266,7 @@ class MainWindowUiManager:
         # Set interactor style
         self.plotter.interactor.SetInteractorStyle(style)
         self.plotter.interactor.Initialize()
+
     def dragEnterEvent(self, event):
         """Handle drag enter event."""
         self.handle_drag_enter_event(event)
@@ -269,7 +280,7 @@ class MainWindowUiManager:
         for url in event.mimeData().urls():
             if not url.isLocalFile():
                 continue
-            
+
             file_lower = url.toLocalFile().lower()
             # 1. Built-in extensions
             if file_lower.endswith((".pmeraw", ".pmeprj", ".mol", ".sdf", ".xyz")):
@@ -322,8 +333,10 @@ class MainWindowUiManager:
             elif hasattr(self, "load_mol_file"):
                 self.load_mol_file(file_path=file_path)
             else:
-                self.statusBar().showMessage("MOL file import not implemented for 2D editor.")
-            
+                self.statusBar().showMessage(
+                    "MOL file import not implemented for 2D editor."
+                )
+
             QTimer.singleShot(100, self.fit_to_view)
             event.acceptProposedAction()
         elif file_lower.endswith(".xyz"):
@@ -333,7 +346,6 @@ class MainWindowUiManager:
         else:
             self.statusBar().showMessage(f"Unsupported file type: {file_path}")
             event.ignore()
-
 
     def _enable_3d_edit_actions(self, enabled=True):
         """Enable/disable 3D edit actions."""
@@ -364,6 +376,7 @@ class MainWindowUiManager:
         for menu_name in menus:
             if hasattr(self, menu_name):
                 getattr(self, menu_name).setEnabled(enabled)
+
     def _enable_3d_features(self, enabled=True):
         """Enable/disable 3D features."""
         # Basic 3D features
@@ -378,8 +391,10 @@ class MainWindowUiManager:
                 if action_name == "optimize_3d_button":
                     # Optimization is disabled for XYZ-derived or failed-chem-check molecules
                     is_xyz = getattr(self, "is_xyz_derived", False)
-                    chem_failed = getattr(self, "chem_check_tried", False) and getattr(self, "chem_check_failed", False)
-                    
+                    chem_failed = getattr(self, "chem_check_tried", False) and getattr(
+                        self, "chem_check_failed", False
+                    )
+
                     can_optimize = enabled and not (is_xyz or chem_failed)
                     obj.setEnabled(can_optimize)
                 else:
@@ -395,7 +410,6 @@ class MainWindowUiManager:
                 obj.setEnabled(True)
 
         self._enable_3d_edit_actions(enabled)
-
 
     def _enter_3d_viewer_ui_mode(self):
         """Set UI mode to 3D viewer."""

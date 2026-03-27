@@ -37,7 +37,7 @@ import logging
 import os
 
 
-class UserTemplateDialog(QDialog):  
+class UserTemplateDialog(QDialog):
     """Dialog for managing user-defined molecular templates."""
 
     def __init__(self, main_window, parent=None):
@@ -218,7 +218,7 @@ class UserTemplateDialog(QDialog):
         try:
             with open(filepath, "r", encoding="utf-8") as f:
                 return json.load(f)
-        except (AttributeError, RuntimeError, ValueError) as e:
+        except (OSError, json.JSONDecodeError) as e:
             logging.error(f"Error loading template file {filepath}: {e}")
             return None
 
@@ -228,7 +228,7 @@ class UserTemplateDialog(QDialog):
             with open(filepath, "w", encoding="utf-8") as f:
                 json.dump(template_data, f, indent=2, ensure_ascii=False)
             return True
-        except (AttributeError, RuntimeError, ValueError) as e:
+        except OSError as e:
             logging.error(f"Error saving template file {filepath}: {e}")
             return False
 
@@ -517,6 +517,43 @@ class UserTemplateDialog(QDialog):
             except (AttributeError, RuntimeError, ValueError, TypeError):
                 continue
 
+    def _activate_template_mode(self, template_data):
+        """Switch the main window into template placement mode for the given template."""
+        template_name = template_data.get("name", "user_template")
+        mode_name = f"template_user_{template_name}"
+
+        # Store template data on the scene
+        if hasattr(self.main_window, "scene") and self.main_window.scene is not None:
+            self.main_window.scene.user_template_data = template_data
+
+        try:
+            # Uncheck all mode actions first
+            if hasattr(self.main_window, "mode_actions") and isinstance(
+                self.main_window.mode_actions, dict
+            ):
+                for act in self.main_window.mode_actions.values():
+                    act.setChecked(False)
+
+            # Switch mode
+            if hasattr(self.main_window, "set_mode") and callable(
+                self.main_window.set_mode
+            ):
+                self.main_window.set_mode(mode_name)
+            else:
+                setattr(self.main_window, "mode", mode_name)
+
+            self.main_window.statusBar().showMessage(f"Template mode: {template_name}")
+
+            # Check the matching action if present
+            if (
+                hasattr(self.main_window, "mode_actions")
+                and mode_name in self.main_window.mode_actions
+            ):
+                self.main_window.mode_actions[mode_name].setChecked(True)
+
+        except (AttributeError, RuntimeError, ValueError) as e:
+            logging.warning(f"Failed to switch main window to template mode: {e}")
+
     def select_template(self, template_data, widget):
         """Select a template and activate template placement mode."""
         # Clear previous selection styling
@@ -535,7 +572,7 @@ class UserTemplateDialog(QDialog):
                     }
                 """)
 
-        # Highlight selected widget - only border, no background change
+        # Highlight selected widget
         widget.setStyleSheet("""
             QWidget {
                 border: 3px solid #007acc;
@@ -546,117 +583,13 @@ class UserTemplateDialog(QDialog):
 
         self.selected_template = template_data
         self.delete_button.setEnabled(True)
-
-        # Automatically switch to template mode when template is selected
-        template_name = template_data.get("name", "user_template")
-        mode_name = f"template_user_{template_name}"
-
-        # Store template data for the scene to use
-        try:
-            self.main_window.scene.user_template_data = template_data
-        except (AttributeError, RuntimeError, ValueError, TypeError):  
-            # Best-effort: ignore if scene or attribute missing
-            import traceback
-            traceback.print_exc()
-
-        # Force the main window into the template mode.
-        # Clear or uncheck any existing mode actions if present to avoid staying in another mode.
-        try:
-            # Uncheck all mode actions first (if a dict of QAction exists)
-            if hasattr(self.main_window, "mode_actions") and isinstance(
-                self.main_window.mode_actions, dict
-            ):
-                for act in self.main_window.mode_actions.values():
-                    try:
-                        act.setChecked(False)
-                    except (AttributeError, RuntimeError, ValueError, TypeError):
-                        continue
-
-            # If main_window has a set_mode method, call it. Otherwise, try to set a mode attribute.
-            if hasattr(self.main_window, "set_mode") and callable(
-                self.main_window.set_mode
-            ):
-                self.main_window.set_mode(mode_name)
-            else:
-                # Fallback: set an attribute and try to update UI
-                setattr(self.main_window, "mode", mode_name)
-
-            # Update UI
-            try:
-                self.main_window.statusBar().showMessage(
-                    f"Template mode: {template_name}"
-                )
-            except (AttributeError, RuntimeError, ValueError, TypeError):  
-                # ignore status bar failures
-                import traceback
-                traceback.print_exc()
-
-            # If there is a matching QAction in mode_actions, check it
-            try:
-                if (
-                    hasattr(self.main_window, "mode_actions")
-                    and f"template_user_{template_name}"
-                    in self.main_window.mode_actions
-                ):
-                    self.main_window.mode_actions[
-                        f"template_user_{template_name}"
-                    ].setChecked(True)
-            except (AttributeError, RuntimeError, ValueError, TypeError):  
-                import traceback
-                traceback.print_exc()
-        except (AttributeError, RuntimeError, ValueError) as e:
-            logging.warning(
-                f"Warning: Failed to switch main window to template mode: {e}"
-            )
+        self._activate_template_mode(template_data)
 
     def use_template(self, template_data):
         """Apply the selected template to the main editor."""
         try:
-            # Switch to template mode
-            template_name = template_data.get("name", "user_template")
-            mode_name = f"template_user_{template_name}"
-
-            # Store template data for the scene to use
-            try:
-                self.main_window.scene.user_template_data = template_data
-            except (AttributeError, RuntimeError, ValueError, TypeError):  
-                import traceback
-                traceback.print_exc()
-            # Force the main window into the template mode (same approach as select_template)
-            try:
-                if hasattr(self.main_window, "mode_actions") and isinstance(
-                    self.main_window.mode_actions, dict
-                ):
-                    for act in self.main_window.mode_actions.values():
-                        try:
-                            act.setChecked(False)
-                        except (AttributeError, RuntimeError, ValueError, TypeError):
-                            continue
-
-                if hasattr(self.main_window, "set_mode") and callable(
-                    self.main_window.set_mode
-                ):
-                    self.main_window.set_mode(mode_name)
-                else:
-                    setattr(self.main_window, "mode", mode_name)
-
-                try:
-                    self.main_window.statusBar().showMessage(
-                        f"Template mode: {template_name}"
-                    )
-                except (AttributeError, RuntimeError, ValueError, TypeError):  
-                    import traceback
-                    traceback.print_exc()
-                # Mark selected and keep dialog open
-                self.selected_template = template_data
-            except (AttributeError, RuntimeError, ValueError) as e:
-                logging.warning(
-                    f"Warning: Failed to switch main window to template mode: {e}"
-                )
-
-            # Don't close dialog - keep it open for easy template switching
-            # self.accept()
-
+            self._activate_template_mode(template_data)
+            self.selected_template = template_data
         except (AttributeError, RuntimeError, ValueError) as e:
             QMessageBox.critical(self, "Error", f"Failed to apply template: {str(e)}")
 

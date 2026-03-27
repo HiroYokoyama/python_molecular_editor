@@ -36,7 +36,7 @@ from PyQt6.QtWidgets import QMessageBox
 from rdkit import Geometry
 
 
-class DihedralDialog(Dialog3DPickingMixin, QDialog):  
+class DihedralDialog(Dialog3DPickingMixin, QDialog):
     def __init__(self, mol, main_window, preselected_atoms=None, parent=None):
         QDialog.__init__(self, parent)
         Dialog3DPickingMixin.__init__(self)
@@ -234,7 +234,9 @@ class DihedralDialog(Dialog3DPickingMixin, QDialog):
                 self.dihedral_slider.setEnabled(False)
                 self.dihedral_slider.blockSignals(False)
             except (AttributeError, RuntimeError, TypeError) as e:
-                logging.debug(f"Suppressed exception: {e}")  # Suppress errors during dihedral input clearing
+                logging.debug(
+                    f"Suppressed exception: {e}"
+                )  # Suppress errors during dihedral input clearing
 
         elif selected_count < 4:
             selected_atoms = [
@@ -265,7 +267,9 @@ class DihedralDialog(Dialog3DPickingMixin, QDialog):
                 self.dihedral_slider.setEnabled(False)
                 self.dihedral_slider.blockSignals(False)
             except (AttributeError, RuntimeError, TypeError) as e:
-                logging.debug(f"Suppressed exception: {e}")  # Suppress non-critical UI update errors
+                logging.debug(
+                    f"Suppressed exception: {e}"
+                )  # Suppress non-critical UI update errors
         else:
             selected_atoms = [
                 self.atom1_idx,
@@ -303,7 +307,9 @@ class DihedralDialog(Dialog3DPickingMixin, QDialog):
                 self.dihedral_slider.setEnabled(True)
                 self.dihedral_slider.blockSignals(False)
             except (AttributeError, RuntimeError, TypeError) as e:
-                logging.debug(f"Suppressed exception: {e}")  # Suppress non-critical UI update errors
+                logging.debug(
+                    f"Suppressed exception: {e}"
+                )  # Suppress non-critical UI update errors
 
     def on_dihedral_input_changed(self, text):
         """Line edit text changed, update slider."""
@@ -316,24 +322,32 @@ class DihedralDialog(Dialog3DPickingMixin, QDialog):
             self.dihedral_slider.setValue(int(round(wrapped_val)))
             self.dihedral_slider.blockSignals(False)
         except ValueError as e:
-            logging.debug(f"Suppressed exception: {e}")  # Ignore invalid numeric input during typing
+            logging.debug(
+                f"Suppressed exception: {e}"
+            )  # Ignore invalid numeric input during typing
 
     def on_slider_pressed(self):
         """Remember the state before slider dragging starts."""
-        if any(idx is None for idx in [self.atom1_idx, self.atom2_idx, self.atom3_idx, self.atom4_idx]):
+        if any(
+            idx is None
+            for idx in [self.atom1_idx, self.atom2_idx, self.atom3_idx, self.atom4_idx]
+        ):
             return
         self._slider_dragging = True
         self.main_window.push_undo_state()
 
     def on_slider_moved(self, value):
         """Update geometry in real-time while dragging."""
-        if any(idx is None for idx in [self.atom1_idx, self.atom2_idx, self.atom3_idx, self.atom4_idx]):
+        if any(
+            idx is None
+            for idx in [self.atom1_idx, self.atom2_idx, self.atom3_idx, self.atom4_idx]
+        ):
             return
-        
+
         self.dihedral_input.blockSignals(True)
         self.dihedral_input.setText(f"{value}")
         self.dihedral_input.blockSignals(False)
-        
+
         self.adjust_dihedral(float(value))
 
     def on_slider_released(self):
@@ -346,7 +360,10 @@ class DihedralDialog(Dialog3DPickingMixin, QDialog):
         """Handle click-to-position on the slider track."""
         if self._slider_dragging:
             return
-        if any(idx is None for idx in [self.atom1_idx, self.atom2_idx, self.atom3_idx, self.atom4_idx]):
+        if any(
+            idx is None
+            for idx in [self.atom1_idx, self.atom2_idx, self.atom3_idx, self.atom4_idx]
+        ):
             return
         self.main_window.push_undo_state()
         self.dihedral_input.blockSignals(True)
@@ -367,7 +384,7 @@ class DihedralDialog(Dialog3DPickingMixin, QDialog):
             raw_dihedral = float(self.dihedral_input.text())
             # Automatic Range Wrapping
             new_dihedral = (raw_dihedral + 180) % 360 - 180
-            
+
             # Formally update the input to reflect wrapping
             self.dihedral_input.blockSignals(True)
             self.dihedral_input.setText(f"{new_dihedral:.2f}")
@@ -490,14 +507,24 @@ class DihedralDialog(Dialog3DPickingMixin, QDialog):
                 new_pos = rotate_point_around_axis(
                     current_pos, pos2, rotation_axis, rotation_angle_rad
                 )
-                conf.SetAtomPosition(atom_idx, Geometry.Point3D(float(new_pos[0]), float(new_pos[1]), float(new_pos[2])))
+                conf.SetAtomPosition(
+                    atom_idx,
+                    Geometry.Point3D(
+                        float(new_pos[0]), float(new_pos[1]), float(new_pos[2])
+                    ),
+                )
                 self.main_window.atom_positions_3d[atom_idx] = new_pos
         else:
             # Move only atom4
             new_pos4 = rotate_point_around_axis(
                 pos4, pos2, rotation_axis, rotation_angle_rad
             )
-            conf.SetAtomPosition(self.atom4_idx, Geometry.Point3D(float(new_pos4[0]), float(new_pos4[1]), float(new_pos4[2])))
+            conf.SetAtomPosition(
+                self.atom4_idx,
+                Geometry.Point3D(
+                    float(new_pos4[0]), float(new_pos4[1]), float(new_pos4[2])
+                ),
+            )
             self.main_window.atom_positions_3d[self.atom4_idx] = new_pos4
 
         # Update the 3D view
@@ -512,4 +539,6 @@ class DihedralDialog(Dialog3DPickingMixin, QDialog):
             if self.main_window.current_mol:
                 self.main_window.draw_molecule_3d(self.main_window.current_mol)
         except (AttributeError, RuntimeError, TypeError) as e:
-            logging.debug(f"Suppressed exception: {e}")  # Suppress errors during dialog teardown
+            logging.debug(
+                f"Suppressed exception: {e}"
+            )  # Suppress errors during dialog teardown

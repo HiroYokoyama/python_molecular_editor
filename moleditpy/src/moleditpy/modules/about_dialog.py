@@ -23,7 +23,7 @@ except ImportError:
     from modules.constants import VERSION
 
 
-class AboutDialog(QDialog):  
+class AboutDialog(QDialog):
     def __init__(self, main_window, parent=None):
         super().__init__(parent)
         self.main_window = main_window
@@ -62,7 +62,9 @@ class AboutDialog(QDialog):
         try:
             self.image_label.setCursor(QCursor(Qt.CursorShape.ArrowCursor))
         except (AttributeError, RuntimeError, ValueError, TypeError) as e:
-            logging.debug(f"Suppressed exception: {e}")  # Suppress cursor setting errors on about image
+            logging.debug(
+                f"Suppressed exception: {e}"
+            )  # Suppress cursor setting errors on about image
 
         self.image_label.mousePressEvent = self.image_mouse_press_event
 
@@ -108,4 +110,6 @@ class AboutDialog(QDialog):
             try:
                 event.ignore()
             except (AttributeError, RuntimeError, ValueError, TypeError) as e:
-                logging.debug(f"Suppressed exception: {e}")  # Suppress nested event errors
+                logging.debug(
+                    f"Suppressed exception: {e}"
+                )  # Suppress nested event errors

@@ -132,7 +132,7 @@ class BondItem(QGraphicsItem):
             p1 = self.atom1.pos()
             p2 = self.atom2.pos()
             return QLineF(QPointF(0, 0), p2 - p1)
-        except (AttributeError, RuntimeError, ValueError, TypeError) as e:
+        except (AttributeError, RuntimeError, ValueError, TypeError):
             # Fallback for inconsistent/deleted atom references
             # return zero line to prevent downstream crashes.
             return QLineF(0, 0, 0, 0)
@@ -148,7 +148,11 @@ class BondItem(QGraphicsItem):
         bond_offset = 3.5
         if hasattr(scene, "get_setting"):
             # Use specific spacing based on bond order
-            key = "bond_spacing_triple_2d" if getattr(self, "order", 1) == 3 else "bond_spacing_double_2d"
+            key = (
+                "bond_spacing_triple_2d"
+                if getattr(self, "order", 1) == 3
+                else "bond_spacing_double_2d"
+            )
             val = scene.get_setting(key, 3.5)
             if isinstance(val, (int, float)):
                 bond_offset = val
@@ -210,7 +214,7 @@ class BondItem(QGraphicsItem):
             if label_rect:
                 path.addRect(label_rect)
 
-        except (AttributeError, RuntimeError, TypeError, ValueError) as e:
+        except (AttributeError, RuntimeError, TypeError, ValueError):
             # Fallback to a small rect around the origin if calculation fails
             # This is non-critical for collision detection if points are missing.
             path.addRect(QRectF(-5, -5, 10, 10))
@@ -264,11 +268,11 @@ class BondItem(QGraphicsItem):
                     custom_color = scene.get_setting("bond_color_2d", "#222222")
                     if isinstance(custom_color, str):
                         bond_color = QColor(custom_color)
-                    
+
                     custom_width = scene.get_setting("bond_width_2d", 2.0)
                     if isinstance(custom_width, (int, float)):
                         bond_width = float(custom_width)
-                    
+
                     custom_cap = scene.get_setting("bond_cap_style_2d", "Round")
                     if isinstance(custom_cap, str):
                         cap_style_str = custom_cap
@@ -429,7 +433,7 @@ class BondItem(QGraphicsItem):
                                     font_family = win.settings.get(
                                         "atom_font_family_2d", FONT_FAMILY
                                     )
-                        except (AttributeError, RuntimeError, TypeError, ValueError) as e:
+                        except (AttributeError, RuntimeError, TypeError, ValueError):
                             # Silent failure for non-critical 2D atom font setting
                             # If we can't get custom settings, we just use defaults.
                             pass
@@ -490,7 +494,7 @@ class BondItem(QGraphicsItem):
                 hover_pen.setCapStyle(Qt.PenCapStyle.RoundCap)
                 painter.setPen(hover_pen)
                 painter.drawLine(line)
-            except (AttributeError, RuntimeError, TypeError, ValueError) as e:
+            except (AttributeError, RuntimeError, TypeError, ValueError):
                 # Silent failure for non-critical hover highlight drawing.
                 # If highlight fails, it's just a visual artifact.
                 pass

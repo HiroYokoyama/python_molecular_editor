@@ -19,14 +19,15 @@ from PyQt6.QtWidgets import (
     QPushButton,
     QVBoxLayout,
 )
+from rdkit import Geometry
 
 try:
-    from .dialog3_d_picking_mixin import Dialog3DPickingMixin
+    from .dialog_3d_picking_mixin import Dialog3DPickingMixin
 except ImportError:
-    from modules.dialog3_d_picking_mixin import Dialog3DPickingMixin
+    from modules.dialog_3d_picking_mixin import Dialog3DPickingMixin
 
 
-class AlignmentDialog(Dialog3DPickingMixin, QDialog):  
+class AlignmentDialog(Dialog3DPickingMixin, QDialog):
     def __init__(self, mol, main_window, axis, preselected_atoms=None, parent=None):
         QDialog.__init__(self, parent)
         Dialog3DPickingMixin.__init__(self)
@@ -221,7 +222,14 @@ class AlignmentDialog(Dialog3DPickingMixin, QDialog):
                         rotated_pos = rodrigues_rotation(
                             current_pos, rotation_axis, rotation_angle
                         )
-                        conf.SetAtomPosition(i, rotated_pos.tolist())
+                        conf.SetAtomPosition(
+                            i,
+                            Geometry.Point3D(
+                                float(rotated_pos[0]),
+                                float(rotated_pos[1]),
+                                float(rotated_pos[2]),
+                            ),
+                        )
 
             # Update 3D positions
             self.main_window.atom_positions_3d = np.array(

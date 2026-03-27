@@ -19,9 +19,17 @@ Mixin class separated from main_window.py
 import numpy as np
 
 try:
-    from .mol_geometry import calc_angle_deg, calc_distance, calculate_dihedral as _calculate_dihedral
+    from .mol_geometry import (
+        calc_angle_deg,
+        calc_distance,
+        calculate_dihedral as _calculate_dihedral,
+    )
 except ImportError:
-    from modules.mol_geometry import calc_angle_deg, calc_distance, calculate_dihedral as _calculate_dihedral
+    from modules.mol_geometry import (
+        calc_angle_deg,
+        calc_distance,
+        calculate_dihedral as _calculate_dihedral,
+    )
 
 # RDKit imports (explicit to satisfy flake8 and used features)
 try:
@@ -37,6 +45,7 @@ from PyQt6.QtWidgets import QGraphicsTextItem
 
 try:
     from PyQt6 import sip as _sip  # type: ignore
+
     _sip_isdeleted = getattr(_sip, "isdeleted", None)
 except ImportError:
     _sip = None
@@ -86,7 +95,7 @@ class MainWindowEdit3d:
         for dialog in dialogs_to_close:
             try:
                 dialog.close()
-            except (AttributeError, RuntimeError) as e:
+            except (AttributeError, RuntimeError):
                 # Suppress non-critical 3D edit/UI sync errors during bulk dialog teardown.
                 # If a dialog is already closed or its C++ object is gone, we ignore it.
                 pass
@@ -126,7 +135,7 @@ class MainWindowEdit3d:
         try:
             # Remove existing labels
             self.plotter.remove_actor("measurement_labels")
-        except (AttributeError, RuntimeError):  
+        except (AttributeError, RuntimeError):
             # Suppress if the actor is already destroyed or not found.
             pass
 
@@ -315,7 +324,9 @@ class MainWindowEdit3d:
 
     def calculate_distance(self, atom1_idx, atom2_idx):
         """Calculate distance between two atoms."""
-        return calc_distance(self.atom_positions_3d[atom1_idx], self.atom_positions_3d[atom2_idx])
+        return calc_distance(
+            self.atom_positions_3d[atom1_idx], self.atom_positions_3d[atom2_idx]
+        )
 
     def calculate_angle(self, atom1_idx, atom2_idx, atom3_idx):
         """Calculate angle (center is vertex)."""
@@ -337,7 +348,7 @@ class MainWindowEdit3d:
         if self.measurement_text_actor:
             try:
                 self.plotter.remove_actor(self.measurement_text_actor)
-            except (AttributeError, RuntimeError, ValueError, TypeError):  
+            except (AttributeError, RuntimeError, ValueError, TypeError):
                 # Suppress non-critical 3D edit/UI sync errors if the plotter or actor is already destroyed
                 pass
 
@@ -357,7 +368,7 @@ class MainWindowEdit3d:
                 text_color = "black" if luminance > 128 else "white"
             else:
                 text_color = "white"
-        except (AttributeError, RuntimeError, ValueError, TypeError) as e:
+        except (AttributeError, RuntimeError, ValueError, TypeError):
             # Fallback for determining text contrast; suppress if settings or plotter state is inconsistent.
             text_color = "white"
 
@@ -393,7 +404,7 @@ class MainWindowEdit3d:
         try:
             # Remove existing highlight
             self.plotter.remove_actor("selection_highlight")
-        except (AttributeError, RuntimeError, ValueError, TypeError) as e:
+        except (AttributeError, RuntimeError, ValueError, TypeError):
             # Suppress non-critical UI/rendering/measurement noise if the plotter or actor is already destroyed.
             pass
 
@@ -436,5 +447,6 @@ class MainWindowEdit3d:
         """Remove dialog from active list."""
         if dialog in self.active_3d_dialogs:
             self.active_3d_dialogs.remove(dialog)
+
 
 MainWindowEdit3d._cls = MainWindowEdit3d

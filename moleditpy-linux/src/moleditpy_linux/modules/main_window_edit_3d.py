@@ -12,16 +12,24 @@ DOI: 10.5281/zenodo.17268532
 
 """
 main_window_edit_3d.py
-Functional class separated from main_window.py
+Mixin class separated from main_window.py
 """
 
 
 import numpy as np
 
 try:
-    from .mol_geometry import calc_angle_deg, calc_distance, calculate_dihedral as _calculate_dihedral
+    from .mol_geometry import (
+        calc_angle_deg,
+        calc_distance,
+        calculate_dihedral as _calculate_dihedral,
+    )
 except ImportError:
-    from modules.mol_geometry import calc_angle_deg, calc_distance, calculate_dihedral as _calculate_dihedral
+    from modules.mol_geometry import (
+        calc_angle_deg,
+        calc_distance,
+        calculate_dihedral as _calculate_dihedral,
+    )
 
 # RDKit imports (explicit to satisfy flake8 and used features)
 try:
@@ -37,6 +45,7 @@ from PyQt6.QtWidgets import QGraphicsTextItem
 
 try:
     from PyQt6 import sip as _sip  # type: ignore
+
     _sip_isdeleted = getattr(_sip, "isdeleted", None)
 except ImportError:
     _sip = None
@@ -51,8 +60,10 @@ except ImportError:
 
 
 # --- Classes ---
-class MainWindowEdit3d(object):
-    """Functional class separated from main_window.py."""
+class MainWindowEdit3d:
+    """Mixin class separated from main_window.py."""
+
+    _cls = None
 
     def toggle_measurement_mode(self, checked):
         """Toggle measurement mode on/off."""
@@ -84,9 +95,10 @@ class MainWindowEdit3d(object):
         for dialog in dialogs_to_close:
             try:
                 dialog.close()
-            except (AttributeError, RuntimeError, ValueError, TypeError):  
-                import traceback
-                traceback.print_exc()
+            except (AttributeError, RuntimeError):
+                # Suppress non-critical 3D edit/UI sync errors during bulk dialog teardown.
+                # If a dialog is already closed or its C++ object is gone, we ignore it.
+                pass
 
         self.active_3d_dialogs.clear()
 
@@ -123,9 +135,9 @@ class MainWindowEdit3d(object):
         try:
             # Remove existing labels
             self.plotter.remove_actor("measurement_labels")
-        except (AttributeError, RuntimeError, ValueError, TypeError):  
-            import traceback
-            traceback.print_exc()
+        except (AttributeError, RuntimeError):
+            # Suppress if the actor is already destroyed or not found.
+            pass
 
         if not self.measurement_labels or not self.current_mol:
             return
@@ -161,9 +173,9 @@ class MainWindowEdit3d(object):
         self.measurement_labels.clear()
         try:
             self.plotter.remove_actor("measurement_labels")
-        except (AttributeError, RuntimeError, ValueError, TypeError):  
-            import traceback
-            traceback.print_exc()
+        except (AttributeError, RuntimeError):
+            # Suppress if the actor is already destroyed or not found.
+            pass
 
         # Remove 2D labels
         self.clear_2d_measurement_labels()
@@ -173,9 +185,9 @@ class MainWindowEdit3d(object):
             try:
                 self.plotter.remove_actor(self.measurement_text_actor)
                 self.measurement_text_actor = None
-            except (AttributeError, RuntimeError, ValueError, TypeError):  
-                import traceback
-                traceback.print_exc()
+            except (AttributeError, RuntimeError):
+                # Suppress if the actor is already destroyed or not found.
+                pass
 
         self.plotter.render()
 
@@ -245,15 +257,16 @@ class MainWindowEdit3d(object):
                     try:
                         if label_item.scene():
                             self.scene.removeItem(label_item)
-                    except (AttributeError, RuntimeError, ValueError, TypeError):
-                        # Scene access or removal failed; skip
-                        continue
-                except (AttributeError, RuntimeError, ValueError, TypeError):
+                    except (AttributeError, RuntimeError):
+                        # Scene access or removal failed; skip this item.
+                        pass
+                except (AttributeError, RuntimeError):
                     # If sip check itself fails, fall back to best-effort removal
                     try:
                         if label_item.scene():
                             self.scene.removeItem(label_item)
                     except (AttributeError, RuntimeError, ValueError, TypeError):
+                        # Best-effort removal failed after sip check failed; skip.
                         continue
             self.measurement_label_items_2d.clear()
 
@@ -311,7 +324,9 @@ class MainWindowEdit3d(object):
 
     def calculate_distance(self, atom1_idx, atom2_idx):
         """Calculate distance between two atoms."""
-        return calc_distance(self.atom_positions_3d[atom1_idx], self.atom_positions_3d[atom2_idx])
+        return calc_distance(
+            self.atom_positions_3d[atom1_idx], self.atom_positions_3d[atom2_idx]
+        )
 
     def calculate_angle(self, atom1_idx, atom2_idx, atom3_idx):
         """Calculate angle (center is vertex)."""
@@ -327,14 +342,15 @@ class MainWindowEdit3d(object):
             self.atom_positions_3d, atom1_idx, atom2_idx, atom3_idx, atom4_idx
         )
 
+    def display_measurement_text(self, measurement_lines):
         """Display results text on 3D view."""
         # Remove existing text
         if self.measurement_text_actor:
             try:
                 self.plotter.remove_actor(self.measurement_text_actor)
-            except (AttributeError, RuntimeError, ValueError, TypeError):  
-                import traceback
-                traceback.print_exc()
+            except (AttributeError, RuntimeError, ValueError, TypeError):
+                # Suppress non-critical 3D edit/UI sync errors if the plotter or actor is already destroyed
+                pass
 
         if not measurement_lines:
             self.measurement_text_actor = None
@@ -353,6 +369,7 @@ class MainWindowEdit3d(object):
             else:
                 text_color = "white"
         except (AttributeError, RuntimeError, ValueError, TypeError):
+            # Fallback for determining text contrast; suppress if settings or plotter state is inconsistent.
             text_color = "white"
 
         # Display upper-left
@@ -387,9 +404,9 @@ class MainWindowEdit3d(object):
         try:
             # Remove existing highlight
             self.plotter.remove_actor("selection_highlight")
-        except (AttributeError, RuntimeError, ValueError, TypeError):  
-            import traceback
-            traceback.print_exc()
+        except (AttributeError, RuntimeError, ValueError, TypeError):
+            # Suppress non-critical UI/rendering/measurement noise if the plotter or actor is already destroyed.
+            pass
 
         if not self.selected_atoms_3d or not self.current_mol:
             self.plotter.render()
@@ -430,3 +447,6 @@ class MainWindowEdit3d(object):
         """Remove dialog from active list."""
         if dialog in self.active_3d_dialogs:
             self.active_3d_dialogs.remove(dialog)
+
+
+MainWindowEdit3d._cls = MainWindowEdit3d

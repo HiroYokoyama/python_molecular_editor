@@ -79,12 +79,9 @@ class BondItem(QGraphicsItem):
             self.update()
 
             if self.scene() and self.scene().views():
-                try:
-                    self.scene().views()[0].viewport().update()
-                except (IndexError, RuntimeError):
-                    # Handle case where views are being destroyed
-                    import traceback
-                    traceback.print_exc()
+                view = self.scene().views()[0]
+                if view and view.viewport():
+                    view.viewport().update()
 
         except (AttributeError, RuntimeError, TypeError) as e:
             print(f"Error in BondItem.set_stereo: {e}")
@@ -97,6 +94,11 @@ class BondItem(QGraphicsItem):
         self.update()
         if self.scene() and self.scene().views():
             self.scene().views()[0].viewport().update()
+
+    def update_style(self):
+        """Force internal state refresh and redraw (primarily from settings)."""
+        self.prepareGeometryChange()
+        self.update()
 
     def __init__(self, atom1_item, atom2_item, order=1, stereo=0):
         super().__init__()
@@ -118,6 +120,8 @@ class BondItem(QGraphicsItem):
         self.hovered = False
         self.order = order
         self.stereo = stereo
+        self.is_in_ring = False
+        self.ring_center = None
 
     def get_line_in_local_coords(self):
         if self.atom1 is None or self.atom2 is None:
@@ -129,6 +133,8 @@ class BondItem(QGraphicsItem):
             p2 = self.atom2.pos()
             return QLineF(QPointF(0, 0), p2 - p1)
         except (AttributeError, RuntimeError, ValueError, TypeError):
+            # Fallback for inconsistent/deleted atom references
+            # return zero line to prevent downstream crashes.
             return QLineF(0, 0, 0, 0)
 
     def boundingRect(self):
@@ -138,29 +144,23 @@ class BondItem(QGraphicsItem):
             line = QLineF(0, 0, 0, 0)
 
         # Get dynamic bond offset (spacing)
+        scene = self.scene()
         bond_offset = 3.5
-        try:
-            if self.scene() and hasattr(self.scene(), "views") and self.scene().views():
-                win = self.scene().views()[0].window()
-                if win and hasattr(win, "settings"):
-                    # Use specific spacing based on bond order
-                    if getattr(self, "order", 1) == 3:
-                        bond_offset = win.settings.get("bond_spacing_triple_2d", 3.5)
-                    else:
-                        bond_offset = win.settings.get("bond_spacing_double_2d", 3.5)
-        except (AttributeError, RuntimeError, TypeError, ValueError):
-            bond_offset = globals().get("BOND_OFFSET", 3.5)
+        if hasattr(scene, "get_setting"):
+            # Use specific spacing based on bond order
+            key = (
+                "bond_spacing_triple_2d"
+                if getattr(self, "order", 1) == 3
+                else "bond_spacing_double_2d"
+            )
+            val = scene.get_setting(key, 3.5)
+            if isinstance(val, (int, float)):
+                bond_offset = val
 
         # Get dynamic wedge width
         wedge_width = 6.0
-        try:
-            if self.scene() and self.scene().views():
-                win = self.scene().views()[0].window()
-                if win and hasattr(win, "settings"):
-                    wedge_width = win.settings.get("bond_wedge_width_2d", 6.0)
-        except (AttributeError, RuntimeError, TypeError, ValueError):  
-            import traceback
-            traceback.print_exc()
+        if hasattr(scene, "get_setting"):
+            wedge_width = scene.get_setting("bond_wedge_width_2d", 6.0)
 
         extra = (getattr(self, "order", 1) - 1) * bond_offset + 50 + wedge_width
         rect = (
@@ -173,17 +173,9 @@ class BondItem(QGraphicsItem):
         if self.order == 2 and self.stereo in [3, 4]:
             font_size = 20
             font_family = FONT_FAMILY
-            try:
-                if self.scene() and self.scene().views():
-                    win = self.scene().views()[0].window()
-                    if win and hasattr(win, "settings"):
-                        font_size = win.settings.get("atom_font_size_2d", 20)
-                        font_family = win.settings.get(
-                            "atom_font_family_2d", FONT_FAMILY
-                        )
-            except (AttributeError, RuntimeError, TypeError, ValueError):  
-                import traceback
-                traceback.print_exc()
+            if hasattr(scene, "get_setting"):
+                font_size = scene.get_setting("atom_font_size_2d", 20)
+                font_family = scene.get_setting("atom_font_family_2d", FONT_FAMILY)
 
             font = QFont(font_family, font_size, FONT_WEIGHT_BOLD)
             font.setItalic(True)
@@ -224,6 +216,7 @@ class BondItem(QGraphicsItem):
 
         except (AttributeError, RuntimeError, TypeError, ValueError):
             # Fallback to a small rect around the origin if calculation fails
+            # This is non-critical for collision detection if points are missing.
             path.addRect(QRectF(-5, -5, 10, 10))
 
         return path
@@ -266,11 +259,25 @@ class BondItem(QGraphicsItem):
                 # Get settings
                 settings = sc.window.settings
 
-                # Width
-                width_2d = settings.get("bond_width_2d", 2.0)
+                # Use bond color if specified in settings
+                scene = self.scene()
+                bond_color = QColor("#222222")
+                bond_width = 2.0
+                cap_style_str = "Round"
+                if hasattr(scene, "get_setting"):
+                    custom_color = scene.get_setting("bond_color_2d", "#222222")
+                    if isinstance(custom_color, str):
+                        bond_color = QColor(custom_color)
+
+                    custom_width = scene.get_setting("bond_width_2d", 2.0)
+                    if isinstance(custom_width, (int, float)):
+                        bond_width = float(custom_width)
+
+                    custom_cap = scene.get_setting("bond_cap_style_2d", "Round")
+                    if isinstance(custom_cap, str):
+                        cap_style_str = custom_cap
 
                 # Cap Style logic
-                cap_style_str = settings.get("bond_cap_style_2d", "Round")
                 cap_style = Qt.PenCapStyle.RoundCap  # Default
 
                 if cap_style_str == "Flat":
@@ -285,7 +292,7 @@ class BondItem(QGraphicsItem):
                     bond_hex = settings.get("bond_color_2d", "#222222")
                     bond_color = QColor(bond_hex)
 
-                pen = QPen(bond_color, width_2d)
+                pen = QPen(bond_color, bond_width)
                 pen.setCapStyle(cap_style)
                 painter.setPen(pen)
 
@@ -364,89 +371,9 @@ class BondItem(QGraphicsItem):
                 offset = QPointF(v.dx(), v.dy()) * bond_offset
 
                 if self.order == 2:
-                    # Determine if part of a ring structure to adjust drawing style
-                    is_in_ring = False
-                    ring_center = None
-
-                    try:
-                        # Get RDKit molecule from scene
-                        sc = self.scene()
-                        if sc and hasattr(sc, "window") and sc.window:
-                            # Generate RDKit molecule from 2D data
-                            mol = sc.window.data.to_rdkit_mol(use_2d_stereo=False)
-                            if mol:
-                                # Find RDKit bond corresponding to this editor bond
-                                atom1_id = self.atom1.atom_id
-                                atom2_id = self.atom2.atom_id
-
-                                # Get RDKit indices
-                                rdkit_idx1 = None
-                                rdkit_idx2 = None
-                                for atom in mol.GetAtoms():
-                                    if atom.HasProp("_original_atom_id"):
-                                        orig_id = atom.GetIntProp("_original_atom_id")
-                                        if orig_id == atom1_id:
-                                            rdkit_idx1 = atom.GetIdx()
-                                        elif orig_id == atom2_id:
-                                            rdkit_idx2 = atom.GetIdx()
-
-                                if rdkit_idx1 is not None and rdkit_idx2 is not None:
-                                    bond = mol.GetBondBetweenAtoms(
-                                        rdkit_idx1, rdkit_idx2
-                                    )
-                                    if bond and bond.IsInRing():
-                                        is_in_ring = True
-                                        # Calculate ring center (smallest ring containing this bond)
-                                        ring_info = mol.GetRingInfo()
-                                        for ring in ring_info.AtomRings():
-                                            if (
-                                                rdkit_idx1 in ring
-                                                and rdkit_idx2 in ring
-                                            ):
-                                                # Calculate average position of atoms in ring
-                                                ring_positions = []
-                                                for atom_idx in ring:
-                                                    # Find corresponding atom in editor
-                                                    rdkit_atom = mol.GetAtomWithIdx(
-                                                        atom_idx
-                                                    )
-                                                    if rdkit_atom.HasProp(
-                                                        "_original_atom_id"
-                                                    ):
-                                                        editor_atom_id = (
-                                                            rdkit_atom.GetIntProp(
-                                                                "_original_atom_id"
-                                                            )
-                                                        )
-                                                        if (
-                                                            editor_atom_id
-                                                            in sc.window.data.atoms
-                                                        ):
-                                                            atom_item = (
-                                                                sc.window.data.atoms[
-                                                                    editor_atom_id
-                                                                ]["item"]
-                                                            )
-                                                            if atom_item:
-                                                                ring_positions.append(
-                                                                    atom_item.pos()
-                                                                )
-
-                                                if ring_positions:
-                                                    # Calculate ring center
-                                                    center_x = sum(
-                                                        p.x() for p in ring_positions
-                                                    ) / len(ring_positions)
-                                                    center_y = sum(
-                                                        p.y() for p in ring_positions
-                                                    ) / len(ring_positions)
-                                                    ring_center = QPointF(
-                                                        center_x, center_y
-                                                    )
-                                                    break
-                    except (AttributeError, RuntimeError, TypeError, ValueError) as e:
-                        # Fallback to default drawing on error
-                        is_in_ring = False
+                    # Use cached ring info
+                    is_in_ring = self.is_in_ring
+                    ring_center = self.ring_center
 
                     v = line.unitVector().normalVector()
                     # Re-calculate offset in case loop variable scope issue, though strictly not needed if offset defined above works
@@ -506,9 +433,10 @@ class BondItem(QGraphicsItem):
                                     font_family = win.settings.get(
                                         "atom_font_family_2d", FONT_FAMILY
                                     )
-                        except (AttributeError, RuntimeError, TypeError, ValueError):  
-                            import traceback
-                            traceback.print_exc()
+                        except (AttributeError, RuntimeError, TypeError, ValueError):
+                            # Silent failure for non-critical 2D atom font setting
+                            # If we can't get custom settings, we just use defaults.
+                            pass
 
                         font = QFont(font_family, font_size, FONT_WEIGHT_BOLD)
                         font.setItalic(True)
@@ -566,9 +494,10 @@ class BondItem(QGraphicsItem):
                 hover_pen.setCapStyle(Qt.PenCapStyle.RoundCap)
                 painter.setPen(hover_pen)
                 painter.drawLine(line)
-            except (AttributeError, RuntimeError, TypeError, ValueError):  
-                import traceback
-                traceback.print_exc()
+            except (AttributeError, RuntimeError, TypeError, ValueError):
+                # Silent failure for non-critical hover highlight drawing.
+                # If highlight fails, it's just a visual artifact.
+                pass
 
     def update_position(self, notify=True):
         try:

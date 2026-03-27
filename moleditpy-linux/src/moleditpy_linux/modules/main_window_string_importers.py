@@ -12,10 +12,8 @@ DOI: 10.5281/zenodo.17268532
 
 """
 main_window_string_importers.py
-Functional class separated from main_window.py
+Mixin class separated from main_window.py
 """
-import traceback
-
 # RDKit imports (explicit to satisfy flake8 and used features)
 from rdkit import Chem
 from rdkit.Chem import AllChem
@@ -26,6 +24,7 @@ from PyQt6.QtWidgets import QInputDialog
 
 try:
     from PyQt6 import sip as _sip  # type: ignore
+
     _sip_isdeleted = getattr(_sip, "isdeleted", None)
 except ImportError:
     _sip = None
@@ -33,8 +32,8 @@ except ImportError:
 
 
 # --- Classes ---
-class MainWindowStringImporters(object):
-    """Functional class separated from main_window.py."""
+class MainWindowStringImporters:
+    """Mixin class separated from main_window.py."""
 
     def import_smiles_dialog(self):
         """Dialog for SMILES input."""
@@ -73,10 +72,7 @@ class MainWindowStringImporters(object):
             return
         except (RuntimeError, TypeError, AttributeError) as e:
             self.statusBar().showMessage(f"Error parsing SMILES: {e}")
-            import traceback
-            traceback.print_exc()
             return
-
 
         try:
             self.restore_ui_for_editing()
@@ -142,6 +138,7 @@ class MainWindowStringImporters(object):
                     )
 
             self.statusBar().showMessage("Successfully loaded from SMILES.")
+            self.scene.update_all_items()
             self.reset_undo_stack()
             self.has_unsaved_changes = False
             self.update_window_title()
@@ -149,10 +146,6 @@ class MainWindowStringImporters(object):
 
         except (AttributeError, RuntimeError, ValueError, TypeError) as e:
             self.statusBar().showMessage(f"Error loading from SMILES: {e}")
-            import traceback
-            traceback.print_exc()
-
-
 
     def load_from_inchi(self, inchi_string):
         """Load molecule from InChI string to 2D editor."""
@@ -179,10 +172,7 @@ class MainWindowStringImporters(object):
             return
         except (RuntimeError, TypeError, AttributeError) as e:
             self.statusBar().showMessage(f"Error parsing InChI: {e}")
-            import traceback
-            traceback.print_exc()
             return
-
 
         try:
             self.restore_ui_for_editing()
@@ -248,6 +238,7 @@ class MainWindowStringImporters(object):
                     )
 
             self.statusBar().showMessage("Successfully loaded from InChI.")
+            self.scene.update_all_items()
             self.reset_undo_stack()
             self.has_unsaved_changes = False
             self.update_window_title()
@@ -255,5 +246,3 @@ class MainWindowStringImporters(object):
 
         except (AttributeError, RuntimeError, ValueError, TypeError) as e:
             self.statusBar().showMessage(f"Error loading from InChI: {e}")
-
-
