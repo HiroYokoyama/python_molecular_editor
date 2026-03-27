@@ -85,6 +85,44 @@ _Empty state should produce valid structure with no atoms/bonds._
 - assert state['atoms'] == {}
 - assert state['bonds'] == {}
 
+## tests/unit/test_app_state_persistence.py
+
+### test_pmeprj_serialization_roundtrip
+_Test full project serialization/deserialization (PMEPRJ)._
+
+- assert json_data['format'] == 'PME Project'
+- assert '2d_structure' in json_data
+- assert '3d_structure' in json_data
+- assert json_data['3d_structure']['num_conformers'] == 1
+- assert len(mw.data.atoms) == 2
+- assert mw.data.atoms[aid1]['symbol'] == 'C'
+- assert mw.data.atoms[aid2]['symbol'] == 'O'
+- assert mw.data.atoms[aid1]['pos'].x() == 10
+- assert mw.current_mol is not None
+- assert mw.current_mol.GetNumAtoms() == mol.GetNumAtoms()
+- assert mw.current_mol.GetAtomWithIdx(0).GetIntProp('_original_atom_id') == aid1
+- assert mw.current_mol.GetAtomWithIdx(1).GetIntProp('_original_atom_id') == aid2
+- assert mw.atom_positions_3d is not None
+- assert mw.atom_positions_3d.shape == (mol.GetNumAtoms(), 3)
+- assert len(mw.constraints_3d) == 1
+- assert mw.constraints_3d[0][0] == 'DISTANCE'
+- assert mw.constraints_3d[0][2] == 1.43
+- assert mw.last_successful_optimization_method == 'MMFF94s'
+- assert mw._preserved_plugin_data['TestPlugin']['val'] == 42
+
+### test_undo_state_binary_roundtrip
+_Test the internal binary state serialization used for Undo/Redo._
+
+- assert 'mol_3d' in state
+- assert isinstance(state['mol_3d'], bytes)
+- assert state['mol_3d_atom_ids'][0] == aid
+- assert mw.data.atoms[aid]['symbol'] == 'N'
+- assert mw.current_mol.GetAtomWithIdx(0).GetIntProp('_original_atom_id') == aid
+
+### test_legacy_version_handling
+_Verify that version mismatch warnings are triggered (but don't crash)._
+
+
 ## tests/unit/test_atom_bond_items.py
 
 ### TestAtomItem.test_init
@@ -2666,6 +2704,64 @@ _Test the low-level settings reset (file deletion and reload)._
 - assert not settings_file.exists()
 - window.load_settings.assert_called_once()
 - assert window.settings_dirty is True
+
+## tests/gui/test_main_window_ui_integration.py
+
+### test_plugin_menu_actions_population
+_Test that menu actions registered by plugins are correctly added to the menu bar._
+
+- assert plugins_action is not None
+- assert plugins_menu is not None
+- assert sub_menu_action is not None
+- assert sub_menu is not None
+- assert test_action is not None
+- assert test_action.shortcut().toString() == 'Ctrl+Shift+P'
+- assert plugin_analysis_action is not None
+
+### test_plugin_toolbar_actions_visibility
+_Test that the plugin toolbar is shown/hidden and populated correctly._
+
+- assert window.plugin_toolbar.isHidden()
+- assert not window.plugin_toolbar.isHidden()
+- assert len(toolbar_actions) == 1
+- assert toolbar_actions[0].text() == 'ToolBtn'
+- assert toolbar_actions[0].toolTip() == 'Hint'
+
+### test_ui_sync_after_reset
+_Test that UI elements (background, checked states) sync correctly after settings reset._
+
+- assert window.scene is not None
+- assert actual_bg == '#0000FF'
+- assert window.opt3d_actions['MMFF_RDKIT'].isChecked()
+- assert window.conv_actions['rdkit'].isChecked()
+
+### test_custom_3d_style_integration
+_Test that custom 3D styles from plugins appear in the style menu._
+
+- assert style_action is not None
+- assert style_action.actionGroup() is not None
+
+### test_integrate_plugin_export_actions
+_Test that export actions are added to File/Export menu._
+
+- assert file_action is not None
+- assert export_action is not None
+- assert any(('Export to Fax' in a.text() for a in btn_menu.actions()))
+- assert any(('Export to Fax' in a.text() for a in export_menu.actions()))
+
+### test_integrate_plugin_analysis_tools
+_Test integration into the Analysis menu._
+
+- assert analysis_action is not None
+- assert found
+
+### test_integrate_plugin_file_openers_ui
+_Test integration of plugin openers into the Import menu._
+
+- assert import_action is not None
+- assert 'Import .fake' in import_action.text()
+- cb.assert_called_once_with('data.fake')
+- assert window.current_file_path == 'data.fake'
 
 ## tests/gui/test_molecule_scene_events.py
 

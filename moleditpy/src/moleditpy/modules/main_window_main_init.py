@@ -461,26 +461,27 @@ class MainWindowMainInit:
         # 4. Refresh 2D and 3D views
         self._refresh_views_after_reset()
 
-    def _sync_settings_to_menu_actions(self):
-        """Synchronize menu action checked states with current settings."""
-        with contextlib.suppress(AttributeError, RuntimeError, TypeError):
-            # Optimization actions
-            if hasattr(self, "opt3d_actions"):
-                method = (self.optimization_method or "").upper()
-                for key, action in self.opt3d_actions.items():
-                    action.setChecked(key == method)
-            
-            # Conversion actions
-            if hasattr(self, "conv_actions"):
-                mode = self.settings.get("3d_conversion_mode", "fallback")
-                if mode in self.conv_actions:
-                    self.conv_actions[mode].setChecked(True)
-            
-            # Intermolecular interaction
-            if hasattr(self, "intermolecular_rdkit_action"):
-                self.intermolecular_rdkit_action.setChecked(
-                    self.settings.get("optimize_intermolecular_interaction_rdkit", True)
-                )
+    def _sync_settings_to_menu_actions(self): 
+        """Synchronize menu action checked states with current settings.""" 
+        with contextlib.suppress(AttributeError, RuntimeError, TypeError): 
+            # Optimization actions 
+            if hasattr(self, "opt3d_actions"): 
+                current_method = (self.optimization_method or "").upper() 
+                for key, action in self.opt3d_actions.items(): 
+                    # Use case-insensitive comparison for robustness
+                    action.setChecked(key.upper() == current_method) 
+
+            # Conversion actions 
+            if hasattr(self, "conv_actions"): 
+                mode = (self.settings.get("3d_conversion_mode", "fallback") or "").lower()
+                for key, action in self.conv_actions.items():
+                    action.setChecked(key.lower() == mode)
+
+            # Intermolecular interaction 
+            if hasattr(self, "intermolecular_rdkit_action"): 
+                self.intermolecular_rdkit_action.setChecked( 
+                    self.settings.get("optimize_intermolecular_interaction_rdkit", True) 
+                ) 
 
     def _refresh_views_after_reset(self):
         """Refresh 2D and 3D views after settings reset."""
@@ -870,6 +871,7 @@ class MainWindowMainInit:
             if loaded_settings["use_obabel_optimization"]:
                 loaded_settings["optimization_method"] = "MMFF94_OBABEL"
             del loaded_settings["use_obabel_optimization"]
+
 
     def _clear_plugin_ui_elements(self, plugin_menu):
         """Clean up tagged plugin actions from menus and toolbars."""
