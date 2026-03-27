@@ -350,8 +350,8 @@ class MainWindowAppState:
                 "atoms": {
                     k: (
                         v["symbol"],
-                        v["pos"][0],
-                        v["pos"][1],
+                        v["pos"].x() if hasattr(v["pos"], "x") else v["pos"][0],
+                        v["pos"].y() if hasattr(v["pos"], "y") else v["pos"][1],
                         v.get("charge", 0),
                         v.get("radical", 0),
                     )

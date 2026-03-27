@@ -1024,7 +1024,7 @@ class EditActionsManager:
                     sy = (-(rdkit_pos.y - rdkit_cy) * SCALE) + view_center.y()
                     new_scene_pos = QPointF(sx, sy)
                     item.setPos(new_scene_pos)
-                    self.host.data.atoms[atom_id]["pos"] = new_scene_pos
+                    self.host.data.set_atom_pos(atom_id, new_scene_pos)
 
             # Update all bond positions
             # Guard against partially-deleted Qt wrappers: skip items that
@@ -1207,7 +1207,7 @@ class EditActionsManager:
                 item = self.host.data.atoms[atom_id]["item"]
                 new_pos = item.pos() + vector
                 item.setPos(new_pos)
-                self.host.data.atoms[atom_id]["pos"] = new_pos
+                self.host.data.set_atom_pos(atom_id, new_pos)
 
         # Step 5: Update display and state
         for bond_data in self.host.data.bonds.values():
