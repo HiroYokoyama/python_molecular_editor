@@ -6,6 +6,7 @@ This document provides a detailed overview of the various dialogs and custom UI 
 
 ### SettingsDialog (`settings_dialog.py`)
 The central configuration hub for the application.
+- **Organization**: Logic is organized into specialized tab-creation methods (e.g., `create_2d_settings_tab`, `create_scene_tab`), significantly improving code organization.
 - **Tabs**:
     - **2D Settings**: Atom/Bond colors, fonts, bond width/spacing.
     - **3D Scene**: Background color, projection mode (Perspective/Orthographic), lighting, fog.
@@ -123,6 +124,7 @@ Manages user-defined structural templates.
 
 ### MoleculeScene (`molecule_scene.py`)
 The core 2D editing canvas (`QGraphicsScene` subclass).
+- **Architecture**: Inherits from specialized mixins in `molecular_scene_handler.py` (`TemplateMixin`, `KeyboardMixin`, `SceneQueryMixin`).
 - **Role**: Manages all 2D items (atoms, bonds) and handles mouse events for drawing, selecting, and modifying structure.
 
 ### ZoomableView (`zoomable_view.py`)
@@ -144,6 +146,6 @@ Custom VTK interaction style for the 3D viewer.
 
 ## Helpers & Mixins
 
-### Dialog3DPickingMixin (`dialog3_d_picking_mixin.py`)
+### Dialog3DPickingMixin (`dialog_3d_picking_mixin.py`)
 A mixin class used by various 3D dialogs (like `TranslationDialog`, `AlignPlaneDialog`).
 - **Role**: Provides common functionality to handle "picking" atoms in the 3D view and updating the dialog's state (e.g., "Selected: Atom 5") when the user clicks in the 3D window.

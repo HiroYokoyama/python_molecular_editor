@@ -16,8 +16,8 @@ Use this map to find the code responsible for specific features.
 | **MOL/XYZ I/O** | `main_window_molecular_parsers.py` | `load_mol_file`, `save_as_mol`, `save_as_xyz` |
 | **SMILES/InChI Import** | `main_window_string_importers.py` | `load_from_smiles`, `load_from_inchi` |
 | **View Loading** | `main_window_view_loaders.py` | `load_xyz_for_3d_viewing`, `save_3d_as_mol` |
-| **3D Rendering** | `main_window_view_3d.py` | `draw_standard_3d_style`, `fit_to_view` |
-| **3D Optimization** | `main_window_compute.py`, `calculation_worker.py` | `optimize_3d_structure`, `run_optimization` |
+| **3D Rendering** | `main_window_view_3d.py` | `draw_standard_3d_style`, `fit_to_view`, `_add_3d_atom_glyphs` |
+| **3D Optimization** | `main_window_compute.py`, `calculation_worker.py` | `optimize_3d_structure`, `trigger_conversion`, `_perform_obabel_conversion` |
 | **2D Edit Operations** | `main_window_edit_actions.py` | `copy_selection`, `clean_up_2d_structure` |
 | **3D Edit Dialogs** | `main_window_dialog_manager.py` | `open_planarize_dialog`, `open_alignment_dialog` |
 | **3D Measurements** | `main_window_edit_3d.py` | `calculate_distance`, `toggle_measurement_mode` |
@@ -68,7 +68,11 @@ Holds the pure chemical data state.
 The editor uses `QGraphicsScene` for the 2D editing canvas.
 
 ###### `molecule_scene.py` available as `MoleculeScene`
-Inherits from `QGraphicsScene`. It manages user interactions for editing molecules in 2D.
+Inherits from `QGraphicsScene` and several mixins in `molecular_scene_handler.py`. It manages user interactions for editing molecules in 2D.
+- **Mixins**:
+    - **`TemplateMixin`**: Logic for previewing and adding ring templates (Benzene, etc.) and fragment insertion.
+    - **`KeyboardMixin`**: Handles all keyboard events (shortcuts for atoms, bonds, etc.).
+    - **`SceneQueryMixin`**: Spatial queries (find atom near) and basic item lifecycle (create/delete).
 - **Modes**: The scene operates in various modes (e.g., `select`, `bond_1_0` (single bond), `atom_C` (Carbon atom), `charge_plus`).
 - **Events**: Handles `mousePress`, `mouseMove`, `mouseRelease` for:
     - Drawing atoms and bonds.
@@ -157,10 +161,11 @@ Handles the core UI setup and event management.
 - **3D Selection**: Handling selection of atoms in the 3D utility for operations like alignment and measurements.
 
 ##### `main_window_view_3d.py`
-**Purpose**: Handles the rendering and visualization capabilities of the 3D viewer.
+**Purpose**: Handles the rendering and visualization capabilities of the 3D viewer, strictly matching the Linux reference implementation.
 **Key Responsibilities**:
-- **Drawing Styles**: Implements 3D representation styles: Ball & Stick, Stick, Wireframe, and CPK (`draw_standard_3d_style`).
-- **Visualization Logic**: Uses `pyvista` and `vtk` to render atoms and bonds based on the current style settings.
+- **High-Fidelity Rendering**: Implements 3D representation styles: Ball & Stick, Stick, Wireframe, and CPK with proper lighting and material properties.
+- **Modularized Drawing**: Decomposes rendering into logical helpers (`_add_3d_atom_glyphs`, `_add_3d_bond_cylinders`, etc.).
+- **Visual Parity**: Ensures atom and bond colors and sizes match established scientific visualization standards.
 - **Camera & Zoom**: Manages camera controls, zooming, and view fitting (`fit_to_view`).
 
 ##### `main_window_export.py`
@@ -221,7 +226,9 @@ A comprehensive list of all source files in `moleditpy/modules/` and their purpo
 ### Visualization (2D/3D)
 | File | Description |
 | :--- | :--- |
+| `mol_geometry.py` | Pure-logic molecular-geometry helpers. |
 | `molecule_scene.py` | `QGraphicsScene` for 2D editing. |
+| `molecular_scene_handler.py` | Mixins for `MoleculeScene` (Template, Keyboard, Query). |
 | `zoomable_view.py` | `QGraphicsView` wrapper for 2D zooming/panning. |
 | `atom_item.py` | 2D Atom graphics item. |
 | `bond_item.py` | 2D Bond graphics item. |
@@ -249,7 +256,7 @@ A comprehensive list of all source files in `moleditpy/modules/` and their purpo
 | `angle_dialog.py` | Adjust bond angles. |
 | `dihedral_dialog.py` | Adjust torsion angles. |
 | `constrained_optimization_dialog.py` | Setup for constrained FF minimization. |
-| `dialog3_d_picking_mixin.py` | Helper for dialogs that need 3D atom picking. |
+| `dialog_3d_picking_mixin.py` | Helper for dialogs that need 3D atom picking. |
 
 ### Background & Plugins
 | File | Description |

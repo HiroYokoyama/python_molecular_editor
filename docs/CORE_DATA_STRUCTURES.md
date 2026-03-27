@@ -46,7 +46,12 @@ This is the **critical bridge** between the 2D drawing and RDKit's chemical logi
 
 ## 2. The Scene (`molecule_scene.py`)
 
-`MoleculeScene` inherits from `QGraphicsScene` and orchestrates all user interactions in the 2D editor.
+`MoleculeScene` inherits from `QGraphicsScene` and several specialized mixin classes defined in `molecular_scene_handler.py`. This decomposition keeps the core scene logic manageable and separates concerns like template handling and keyboard events.
+
+### Mixins
+- **`TemplateMixin`**: Manages the template preview system and fragment insertion logic.
+- **`KeyboardMixin`**: Centralizes keyboard event handling and shortcuts.
+- **`SceneQueryMixin`**: Utility methods for spatial queries and basic item CRUD operations.
 
 ### Interaction Modes
 The scene behaves differently based on `self.mode`:

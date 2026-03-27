@@ -27,7 +27,25 @@ The `CalculationWorker` class inherits from `QObject` and is designed to run in 
     - **Embedding**: Generates 3D coordinates.
         - *Modes*: `rdkit` (ETKDGv2), `direct` (2D coords + Z-offset), `fallback` (tries RDKit then others).
     - **Optimization**: Minimizes energy using force fields (MMFF94, MMFF94s, UFF).
+        - *Robustness*: RDKit optimization failures are treated as non-fatal warnings, ensuring the pipeline continues even if specific algorithms fail.
 4.  **Output**: Emits `finished` with the resulting RDKit molecule, or `error` if failed.
+
+---
+
+## 2. Stability and Isolation
+
+To ensure application stability, heavy or potentially unstable third-party library calls are isolated.
+
+### Open Babel Subprocess Isolation
+Calculations involving Open Babel's `make3D()` are executed within a dedicated Python subprocess.
+- **Reasoning**: Open Babel's C++ core can occasionally trigger hard crashes (segfaults) that would otherwise terminate the entire PyQt application.
+- **Implementation**: The `CalculationWorker` spawns a subprocess using `sys.executable` and passes the molecular data via stdin.
+- **Timeout**: A 20-second timeout is enforced to prevent zombie processes in case of infinite loops or hangs during 3D embedding.
+
+### Non-Fatal Optimization
+When performing Force Field (FF) optimizations (MMFF94, UFF):
+- The worker treats failures to converge or missing parameters as non-fatal.
+- If optimization fails, the worker provides the unoptimized (but valid) coordinate set to the user rather than crashing the pipeline.
 
 ### Key Logic
 - **Explicit Stereo Preservation**: The worker aggressively enforces stereochemistry defined in the 2D editor (e.g., specific E/Z configurations) by setting `BondStereo` tags and using distance constraints during embedding if necessary.
@@ -39,7 +57,7 @@ The `CalculationWorker` class inherits from `QObject` and is designed to run in 
 
 ---
 
-## 2. Main Window Integration (`main_window_compute.py`)
+## 3. Main Window Integration (`main_window_compute.py`)
 
 This mixin integrates the computation logic into the main application window.
 
@@ -55,7 +73,7 @@ This mixin integrates the computation logic into the main application window.
 
 ---
 
-## 3. Property Analysis (`analysis_window.py`)
+## 4. Property Analysis (`analysis_window.py`)
 
 The `AnalysisWindow` provides a summary of molecular properties.
 
