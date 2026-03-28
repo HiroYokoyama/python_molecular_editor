@@ -29,7 +29,7 @@ PyQt6.QtWidgets.QMessageBox.information = lambda *args, **kwargs: None
 PyQt6.QtWidgets.QMessageBox.question = lambda *args, **kwargs: 65536  # No
 
 # Patch target module namespace
-import moleditpy.core.molecular_parsers as mwm
+import moleditpy.ui.molecular_parsers as mwm
 
 mwm.QDialog = PyQt6.QtWidgets.QDialog
 mwm.QInputDialog = PyQt6.QtWidgets.QInputDialog
@@ -38,7 +38,7 @@ mwm.QMessageBox = PyQt6.QtWidgets.QMessageBox
 
 from rdkit import Chem
 from rdkit.Chem import AllChem
-from moleditpy.core.molecular_parsers import MainWindowMolecularParsers
+from moleditpy.ui.molecular_parsers import MainWindowMolecularParsers
 from PyQt6.QtCore import QPointF, QTimer
 from PyQt6.QtWidgets import QWidget, QApplication, QDialog
 

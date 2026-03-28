@@ -2,8 +2,8 @@ import os
 import json
 from rdkit import Chem
 from rdkit.Chem import AllChem
-from moleditpy.core.project_io import MainWindowProjectIo
-from moleditpy.core.molecular_parsers import MainWindowMolecularParsers
+from moleditpy.ui.project_io import MainWindowProjectIo
+from moleditpy.ui.molecular_parsers import MainWindowMolecularParsers
 from PyQt6.QtCore import QPointF
 from unittest.mock import MagicMock, patch
 

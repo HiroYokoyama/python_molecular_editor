@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import MagicMock, patch
 from rdkit import Chem
-from moleditpy.core.molecular_parsers import MainWindowMolecularParsers
+from moleditpy.ui.molecular_parsers import MainWindowMolecularParsers
 
 class MockMainWindow(MainWindowMolecularParsers):
     def __init__(self):
@@ -18,7 +18,7 @@ class MockMainWindow(MainWindowMolecularParsers):
 
 def test_set_mol_prop_safe_robustness():
     """Test that _set_mol_prop handles RDKit exceptions by narrowing."""
-    from moleditpy.core.molecular_parsers import _set_mol_prop_safe
+    from moleditpy.ui.molecular_parsers import _set_mol_prop_safe
     mol = Chem.MolFromSmiles("C")
     # This should not raise even if an invalid value is passed (it's suppressed)
     _set_mol_prop_safe(mol, "test_prop", "not_an_int")

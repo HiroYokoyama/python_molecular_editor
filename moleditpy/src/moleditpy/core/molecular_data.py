@@ -19,6 +19,13 @@ except ImportError:
     from moleditpy.utils.constants import ANGSTROM_PER_PIXEL
 
 
+class PointTuple(tuple):
+    """Backward-compatible tuple that allows .x() and .y() access like QPointF."""
+    def x(self):
+        return self[0]
+    def y(self):
+        return self[1]
+
 class MolecularData:
     def __init__(self):
         self.atoms = {}
@@ -30,9 +37,9 @@ class MolecularData:
         atom_id = self._next_atom_id
         # Internalize position as raw floats to decouple from UI types (QPointF)
         if hasattr(pos, "x") and hasattr(pos, "y"):
-            raw_pos = (float(pos.x()), float(pos.y()))
+            raw_pos = PointTuple((float(pos.x()), float(pos.y())))
         else:
-            raw_pos = (float(pos[0]), float(pos[1]))
+            raw_pos = PointTuple((float(pos[0]), float(pos[1])))
 
         self.atoms[atom_id] = {
             "symbol": symbol,
@@ -49,9 +56,9 @@ class MolecularData:
         """Update atom position using raw floats or QPointF."""
         if atom_id in self.atoms:
             if hasattr(pos, "x") and hasattr(pos, "y"):
-                self.atoms[atom_id]["pos"] = (float(pos.x()), float(pos.y()))
+                self.atoms[atom_id]["pos"] = PointTuple((float(pos.x()), float(pos.y())))
             else:
-                self.atoms[atom_id]["pos"] = (float(pos[0]), float(pos[1]))
+                self.atoms[atom_id]["pos"] = PointTuple((float(pos[0]), float(pos[1])))
 
     def add_bond(self, id1, id2, order=1, stereo=0):
         # For stereo bonds, do not sort because ID order determines direction.

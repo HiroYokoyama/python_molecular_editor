@@ -3,7 +3,7 @@ import pickle
 import pytest
 from unittest.mock import MagicMock, patch
 from PyQt6.QtCore import QPointF
-from moleditpy.core.project_io import MainWindowProjectIo
+from moleditpy.ui.project_io import MainWindowProjectIo
 
 class DummyProjectIo(MainWindowProjectIo):
     def __init__(self):

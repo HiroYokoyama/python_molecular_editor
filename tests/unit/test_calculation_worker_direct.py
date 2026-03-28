@@ -2,7 +2,7 @@ import pytest
 from PyQt6.QtCore import QObject, pyqtSignal
 from rdkit import Chem
 from rdkit.Chem import AllChem
-from moleditpy.core.calculation_worker import CalculationWorker
+from moleditpy.ui.calculation_worker import CalculationWorker
 from unittest.mock import MagicMock, patch
 
 
@@ -160,9 +160,9 @@ def test_calculation_worker_rdkit_embedding_fail_fallback(worker):
 
     # If EmbedMolecule returns -1, it doesn't raise Exception, so it proceeds to constraint embedding
     with (
-        patch("moleditpy.core.calculation_worker.AllChem.EmbedMolecule", return_value=-1),
+        patch("moleditpy.ui.calculation_worker.AllChem.EmbedMolecule", return_value=-1),
         patch(
-            "moleditpy.core.calculation_worker.AllChem.GetMoleculeBoundsMatrix",
+            "moleditpy.ui.calculation_worker.AllChem.GetMoleculeBoundsMatrix",
             side_effect=RuntimeError("Bounds fail"),
         ),
     ):

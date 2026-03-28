@@ -3,7 +3,7 @@
 import pytest
 from rdkit import Chem
 from rdkit.Chem import AllChem, Descriptors, rdMolDescriptors
-from moleditpy.core.string_importers import MainWindowStringImporters
+from moleditpy.ui.string_importers import MainWindowStringImporters
 from moleditpy.core.molecular_data import MolecularData
 from PyQt6.QtCore import QPointF, QTimer
 from unittest.mock import MagicMock, patch

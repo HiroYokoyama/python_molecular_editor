@@ -34,8 +34,8 @@ except ImportError:
 
 try:
     # package relative imports (preferred when running as `python -m moleditpy`)
-    from ..ui.atom_item import AtomItem
-    from ..ui.bond_item import BondItem
+    from .atom_item import AtomItem
+    from .bond_item import BondItem
     from ..utils.constants import VERSION
 except ImportError:
     # Fallback to absolute imports for script-style execution

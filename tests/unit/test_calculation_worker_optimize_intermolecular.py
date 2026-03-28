@@ -2,7 +2,7 @@ import pytest
 from rdkit import Chem
 from rdkit.Chem import AllChem
 import numpy as np
-from moleditpy.core.calculation_worker import _iterative_optimize
+from moleditpy.ui.calculation_worker import _iterative_optimize
 
 def test_intermolecular_interaction_toggle():
     """Test that ignoreInterfragInteractions is correctly toggled via options."""

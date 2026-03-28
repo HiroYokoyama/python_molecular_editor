@@ -365,7 +365,7 @@ def window(app, qtbot, monkeypatch):
             QTimer.singleShot(0, lambda: self_compute.on_calculation_finished(None))
 
     monkeypatch.setattr(
-        "moleditpy.core.compute_engine.MainWindowCompute.trigger_conversion",
+        "moleditpy.ui.compute_engine.MainWindowCompute.trigger_conversion",
         sync_trigger_conversion,
     )
 

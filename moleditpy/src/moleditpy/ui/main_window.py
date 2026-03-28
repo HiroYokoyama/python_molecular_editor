@@ -24,29 +24,29 @@ except ImportError:
 
 try:
     # package relative imports (preferred when running as `python -m moleditpy`)
-    from ..core.app_state import MainWindowAppState
+    from .app_state import MainWindowAppState
     from .compute_logic import ComputeManager
     from .dialog_logic import DialogManager
     from .edit_3d_logic import Edit3DManager
     from .edit_actions_logic import EditActionsManager
     from .export_logic import ExportManager
     from .main_window_init import MainWindowMainInit
-    from ..core.molecular_parsers import MainWindowMolecularParsers
-    from ..core.project_io import MainWindowProjectIo
-    from ..core.string_importers import MainWindowStringImporters
+    from .molecular_parsers import MainWindowMolecularParsers
+    from .project_io import MainWindowProjectIo
+    from .string_importers import MainWindowStringImporters
     from .ui_manager import MainWindowUiManager
     from .view_3d_logic import View3DManager
     from .view_loaders import MainWindowViewLoaders
 except (AttributeError, RuntimeError, TypeError):
     # Fallback to absolute imports for script-style execution
-    from moleditpy.core.app_state import MainWindowAppState
+    from moleditpy.ui.app_state import MainWindowAppState
     from moleditpy.ui.edit_3d_logic import Edit3DManager
     from moleditpy.ui.edit_actions_logic import EditActionsManager
     from moleditpy.ui.export_logic import ExportManager
     from moleditpy.ui.main_window_init import MainWindowMainInit
-    from moleditpy.core.molecular_parsers import MainWindowMolecularParsers
-    from moleditpy.core.project_io import MainWindowProjectIo
-    from moleditpy.core.string_importers import MainWindowStringImporters
+    from moleditpy.ui.molecular_parsers import MainWindowMolecularParsers
+    from moleditpy.ui.project_io import MainWindowProjectIo
+    from moleditpy.ui.string_importers import MainWindowStringImporters
     from moleditpy.ui.ui_manager import MainWindowUiManager
     from moleditpy.ui.view_3d_logic import View3DManager
     from moleditpy.ui.view_loaders import MainWindowViewLoaders

@@ -1,6 +1,6 @@
 import pytest
 from rdkit import Chem
-from moleditpy.core.calculation_worker import CalculationWorker
+from moleditpy.ui.calculation_worker import CalculationWorker
 from moleditpy.core.molecular_data import MolecularData
 from PyQt6.QtCore import QPointF
 

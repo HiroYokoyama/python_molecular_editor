@@ -815,7 +815,7 @@ def window(app, qtbot, monkeypatch):
     # `current_mol` on the host window. This keeps conversion tests simple
     # and avoids GL/VTK calls.
     try:
-        import moleditpy.core.compute_engine as _mwcomp
+        import moleditpy.ui.compute_engine as _mwcomp
 
         orig_on_calc = getattr(
             _mwcomp.MainWindowCompute, "on_calculation_finished", None
@@ -895,7 +895,7 @@ def window(app, qtbot, monkeypatch):
                 return None
 
         monkeypatch.setattr(
-            "moleditpy.core.compute_engine.MainWindowCompute.on_calculation_finished",
+            "moleditpy.ui.compute_engine.MainWindowCompute.on_calculation_finished",
             _safe_on_calculation_finished,
             raising=False,
         )
@@ -908,7 +908,7 @@ def window(app, qtbot, monkeypatch):
     # The real method spawns threads and can race with VTK/GL teardown,
     # causing intermittent CI aborts.  This mock does pure RDKit work only.
     try:
-        import moleditpy.core.compute_engine as _mwcomp2
+        import moleditpy.ui.compute_engine as _mwcomp2
         from rdkit import Chem
         from rdkit.Chem import AllChem as _AllChem
         import numpy as _np
@@ -1288,7 +1288,7 @@ def window(app, qtbot, monkeypatch):
 
     # Patch 3D optimization to set the status message reliably so tests can assert success
     try:
-        import moleditpy.core.compute_engine as _mwcomp
+        import moleditpy.ui.compute_engine as _mwcomp
 
         orig_opt = getattr(_mwcomp.MainWindowCompute, "optimize_3d_structure", None)
 
@@ -1312,7 +1312,7 @@ def window(app, qtbot, monkeypatch):
             return result
 
         monkeypatch.setattr(
-            "moleditpy.core.compute_engine.MainWindowCompute.optimize_3d_structure",
+            "moleditpy.ui.compute_engine.MainWindowCompute.optimize_3d_structure",
             _safe_optimize,
             raising=False,
         )
