@@ -10,6 +10,11 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
-"""Top-level package for moleditpy."""
+"""Top-level package for moleditpy_linux."""
 
-OBABEL_AVAILABLE = False
+import importlib.util
+
+try:
+    OBABEL_AVAILABLE = False
+except ImportError:
+    OBABEL_AVAILABLE = False

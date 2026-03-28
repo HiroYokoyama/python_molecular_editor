@@ -55,7 +55,7 @@ from PyQt6.QtWidgets import (
 try:
     from .. import OBABEL_AVAILABLE
 except ImportError:
-    from moleditpy import OBABEL_AVAILABLE
+    from moleditpy_linux import OBABEL_AVAILABLE
 
 
 try:
@@ -66,13 +66,13 @@ except ImportError:
 try:
     from ..plugins.plugin_manager import PluginManager
 except ImportError:
-    from moleditpy.plugins.plugin_manager import PluginManager
+    from moleditpy_linux.plugins.plugin_manager import PluginManager
 
 
 try:
     from ..utils.system_utils import detect_system_dark_mode
 except ImportError:
-    from moleditpy.utils.system_utils import detect_system_dark_mode
+    from moleditpy_linux.utils.system_utils import detect_system_dark_mode
 
 
 try:
@@ -94,13 +94,13 @@ try:
     from .zoomable_view import ZoomableView
 except (AttributeError, RuntimeError, TypeError):
     # Fallback to absolute imports for script-style execution
-    from moleditpy.ui.color_settings_dialog import ColorSettingsDialog
-    from moleditpy.utils.constants import NUM_DASHES, VERSION
-    from moleditpy.ui.custom_qt_interactor import CustomQtInteractor
-    from moleditpy.core.molecular_data import MolecularData
-    from moleditpy.ui.molecule_scene import MoleculeScene
-    from moleditpy.ui.settings_dialog import SettingsDialog
-    from moleditpy.ui.zoomable_view import ZoomableView
+    from moleditpy_linux.ui.color_settings_dialog import ColorSettingsDialog
+    from moleditpy_linux.utils.constants import NUM_DASHES, VERSION
+    from moleditpy_linux.ui.custom_qt_interactor import CustomQtInteractor
+    from moleditpy_linux.core.molecular_data import MolecularData
+    from moleditpy_linux.ui.molecule_scene import MoleculeScene
+    from moleditpy_linux.ui.settings_dialog import SettingsDialog
+    from moleditpy_linux.ui.zoomable_view import ZoomableView
 
 
 class MainWindowMainInit:
@@ -352,7 +352,7 @@ class MainWindowMainInit:
         try:
             # Overridden CPK settings are stored in self.settings['cpk_colors'].
             # To ensure that 2D modules (e.g., atom_item.py) which imported the
-            # `CPK_COLORS` mapping from `moleditpy.utils.constants` at import time see
+            # `CPK_COLORS` mapping from `moleditpy_linux.utils.constants` at import time see
             # updates, mutate the mapping in-place on the constants module
             # instead of rebinding a new local variable here.
             overrides = self.settings.get("cpk_colors", {}) or {}
@@ -361,7 +361,7 @@ class MainWindowMainInit:
             try:
                 from . import constants as constants_mod
             except ImportError:
-                import moleditpy.utils.constants as constants_mod
+                import moleditpy_linux.utils.constants as constants_mod
 
             # Reset constants.CPK_COLORS to defaults but keep the same dict
             constants_mod.CPK_COLORS.clear()

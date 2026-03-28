@@ -21,20 +21,34 @@ from PyQt6.QtWidgets import QApplication
 try:
     from .ui.main_window import MainWindow
 except ImportError:
-    # Add the parent directory (src) to sys.path so 'moleditpy.*' imports work
+    # Add the parent directory (src) to sys.path so 'moleditpy_linux.*' imports work
     src_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
     if src_dir not in sys.path:
         sys.path.insert(0, src_dir)
-    from moleditpy.ui.main_window import MainWindow
+    from moleditpy_linux.ui.main_window import MainWindow
 
 
 def setup_logging():
-    """Configure global logging to standard output."""
     logging.basicConfig(
         level=logging.INFO,
-        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+        format="%(asctime)s [%(levelname)s] %(name)s (%(pathname)s:%(lineno)d): %(message)s",
         stream=sys.stdout,
+        force=True,
     )
+
+    def handle_exception(exc_type, exc_value, exc_traceback):
+        """Log unhandled exceptions using the configured logging system."""
+        if issubclass(exc_type, KeyboardInterrupt):
+            # Allow keyboard interrupt to exit normally
+            sys.__excepthook__(exc_type, exc_value, exc_traceback)
+            return
+
+        logging.error(
+            "Uncaught exception", exc_info=(exc_type, exc_value, exc_traceback)
+        )
+
+    sys.excepthook = handle_exception
+
 
 
 def main():
@@ -43,7 +57,7 @@ def main():
 
     # --- Additional handling for Windows taskbar icon ---
     if sys.platform == "win32":
-        myappid = "hyoko.moleditpy.1.0"  # Application-specific ID (arbitrary)
+        myappid = "hyoko.moleditpy_linux.1.0"  # Application-specific ID (arbitrary)
         ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
 
     parser = argparse.ArgumentParser(

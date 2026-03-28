@@ -16,7 +16,7 @@ from PyQt6.QtCore import QEvent, Qt
 try:
     from ..utils.constants import pt
 except ImportError:
-    from moleditpy.utils.constants import pt
+    from moleditpy_linux.utils.constants import pt
 
 
 class Dialog3DPickingMixin:

@@ -11,7 +11,7 @@ DOI: 10.5281/zenodo.17268532
 """
 
 """
-Backward compatibility layer for moleditpy.modules
+Backward compatibility layer for moleditpy_linux.modules
 """
 
 import sys
@@ -22,62 +22,62 @@ import types
 # Format: { 'old_module_name': 'new_full_import_path' }
 _MAPPINGS = {
     # UI Components
-    "about_dialog": "moleditpy.ui.about_dialog",
-    "align_plane_dialog": "moleditpy.ui.align_plane_dialog",
-    "alignment_dialog": "moleditpy.ui.alignment_dialog",
-    "analysis_window": "moleditpy.ui.analysis_window",
-    "angle_dialog": "moleditpy.ui.angle_dialog",
-    "atom_item": "moleditpy.ui.atom_item",
-    "bond_item": "moleditpy.ui.bond_item",
-    "bond_length_dialog": "moleditpy.ui.bond_length_dialog",
-    "color_settings_dialog": "moleditpy.ui.color_settings_dialog",
-    "constrained_optimization_dialog": "moleditpy.ui.constrained_optimization_dialog",
-    "custom_interactor_style": "moleditpy.ui.custom_interactor_style",
-    "custom_qt_interactor": "moleditpy.ui.custom_qt_interactor",
-    "dialog_3d_picking_mixin": "moleditpy.ui.dialog_3d_picking_mixin",
-    "dialog_logic": "moleditpy.ui.dialog_logic",
-    "dialog_manager": "moleditpy.ui.dialog_manager",
-    "dihedral_dialog": "moleditpy.ui.dihedral_dialog",
-    "main_window": "moleditpy.ui.main_window",
-    "mirror_dialog": "moleditpy.ui.mirror_dialog",
-    "molecular_scene_handler": "moleditpy.ui.molecular_scene_handler",
-    "molecule_scene": "moleditpy.ui.molecule_scene",
-    "move_group_dialog": "moleditpy.ui.move_group_dialog",
-    "periodic_table_dialog": "moleditpy.ui.periodic_table_dialog",
-    "planarize_dialog": "moleditpy.ui.planarize_dialog",
-    "settings_dialog": "moleditpy.ui.settings_dialog",
-    "template_preview_item": "moleditpy.ui.template_preview_item",
-    "template_preview_view": "moleditpy.ui.template_preview_view",
-    "translation_dialog": "moleditpy.ui.translation_dialog",
-    "user_template_dialog": "moleditpy.ui.user_template_dialog",
-    "zoomable_view": "moleditpy.ui.zoomable_view",
-    "view_2d": "moleditpy.ui.zoomable_view",  # Alias for ZoomableView
+    "about_dialog": "moleditpy_linux.ui.about_dialog",
+    "align_plane_dialog": "moleditpy_linux.ui.align_plane_dialog",
+    "alignment_dialog": "moleditpy_linux.ui.alignment_dialog",
+    "analysis_window": "moleditpy_linux.ui.analysis_window",
+    "angle_dialog": "moleditpy_linux.ui.angle_dialog",
+    "atom_item": "moleditpy_linux.ui.atom_item",
+    "bond_item": "moleditpy_linux.ui.bond_item",
+    "bond_length_dialog": "moleditpy_linux.ui.bond_length_dialog",
+    "color_settings_dialog": "moleditpy_linux.ui.color_settings_dialog",
+    "constrained_optimization_dialog": "moleditpy_linux.ui.constrained_optimization_dialog",
+    "custom_interactor_style": "moleditpy_linux.ui.custom_interactor_style",
+    "custom_qt_interactor": "moleditpy_linux.ui.custom_qt_interactor",
+    "dialog_3d_picking_mixin": "moleditpy_linux.ui.dialog_3d_picking_mixin",
+    "dialog_logic": "moleditpy_linux.ui.dialog_logic",
+    "dialog_manager": "moleditpy_linux.ui.dialog_manager",
+    "dihedral_dialog": "moleditpy_linux.ui.dihedral_dialog",
+    "main_window": "moleditpy_linux.ui.main_window",
+    "mirror_dialog": "moleditpy_linux.ui.mirror_dialog",
+    "molecular_scene_handler": "moleditpy_linux.ui.molecular_scene_handler",
+    "molecule_scene": "moleditpy_linux.ui.molecule_scene",
+    "move_group_dialog": "moleditpy_linux.ui.move_group_dialog",
+    "periodic_table_dialog": "moleditpy_linux.ui.periodic_table_dialog",
+    "planarize_dialog": "moleditpy_linux.ui.planarize_dialog",
+    "settings_dialog": "moleditpy_linux.ui.settings_dialog",
+    "template_preview_item": "moleditpy_linux.ui.template_preview_item",
+    "template_preview_view": "moleditpy_linux.ui.template_preview_view",
+    "translation_dialog": "moleditpy_linux.ui.translation_dialog",
+    "user_template_dialog": "moleditpy_linux.ui.user_template_dialog",
+    "zoomable_view": "moleditpy_linux.ui.zoomable_view",
+    "view_2d": "moleditpy_linux.ui.zoomable_view",  # Alias for ZoomableView
     # Renamed UI Mixins
-    "main_window_dialog_manager": "moleditpy.ui.dialog_manager",
-    "main_window_edit_3d": "moleditpy.ui.edit_3d",
-    "main_window_edit_actions": "moleditpy.ui.edit_actions",
-    "main_window_export": "moleditpy.ui.export_logic",
-    "main_window_main_init": "moleditpy.ui.main_window_init",
-    "main_window_ui_manager": "moleditpy.ui.ui_manager",
-    "main_window_view_3d": "moleditpy.ui.view_3d",
-    "main_window_view_loaders": "moleditpy.ui.view_loaders",
+    "main_window_dialog_manager": "moleditpy_linux.ui.dialog_manager",
+    "main_window_edit_3d": "moleditpy_linux.ui.edit_3d",
+    "main_window_edit_actions": "moleditpy_linux.ui.edit_actions",
+    "main_window_export": "moleditpy_linux.ui.export_logic",
+    "main_window_main_init": "moleditpy_linux.ui.main_window_init",
+    "main_window_ui_manager": "moleditpy_linux.ui.ui_manager",
+    "main_window_view_3d": "moleditpy_linux.ui.view_3d",
+    "main_window_view_loaders": "moleditpy_linux.ui.view_loaders",
     # Core Logic
-    "calculation_worker": "moleditpy.ui.calculation_worker",
-    "mol_geometry": "moleditpy.core.mol_geometry",
-    "molecular_data": "moleditpy.core.molecular_data",
-    "main_window_compute": "moleditpy.ui.compute_engine",
-    "main_window_app_state": "moleditpy.ui.app_state",
-    "main_window_molecular_parsers": "moleditpy.ui.molecular_parsers",
-    "main_window_project_io": "moleditpy.ui.project_io",
-    "main_window_string_importers": "moleditpy.ui.string_importers",
+    "calculation_worker": "moleditpy_linux.ui.calculation_worker",
+    "mol_geometry": "moleditpy_linux.core.mol_geometry",
+    "molecular_data": "moleditpy_linux.core.molecular_data",
+    "main_window_compute": "moleditpy_linux.ui.compute_engine",
+    "main_window_app_state": "moleditpy_linux.ui.app_state",
+    "main_window_molecular_parsers": "moleditpy_linux.ui.molecular_parsers",
+    "main_window_project_io": "moleditpy_linux.ui.project_io",
+    "main_window_string_importers": "moleditpy_linux.ui.string_importers",
     # Utils
-    "constants": "moleditpy.utils.constants",
-    "sip_isdeleted_safe": "moleditpy.utils.sip_isdeleted_safe",
-    "system_utils": "moleditpy.utils.system_utils",
+    "constants": "moleditpy_linux.utils.constants",
+    "sip_isdeleted_safe": "moleditpy_linux.utils.sip_isdeleted_safe",
+    "system_utils": "moleditpy_linux.utils.system_utils",
     # Plugins
-    "plugin_interface": "moleditpy.plugins.plugin_interface",
-    "plugin_manager": "moleditpy.plugins.plugin_manager",
-    "plugin_manager_window": "moleditpy.plugins.plugin_manager_window",
+    "plugin_interface": "moleditpy_linux.plugins.plugin_interface",
+    "plugin_manager": "moleditpy_linux.plugins.plugin_manager",
+    "plugin_manager_window": "moleditpy_linux.plugins.plugin_manager_window",
 }
 
 
@@ -115,7 +115,7 @@ for name, target in _MAPPINGS.items():
 
 # Re-export key utilities directly in the package root
 try:
-    from moleditpy.utils.sip_isdeleted_safe import sip_isdeleted_safe
+    from moleditpy_linux.utils.sip_isdeleted_safe import sip_isdeleted_safe
 except ImportError:
 
     def sip_isdeleted_safe(obj):

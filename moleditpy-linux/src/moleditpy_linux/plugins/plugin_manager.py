@@ -26,7 +26,7 @@ try:
     from .plugin_interface import PluginContext
 except ImportError:
     # Fallback if running as script
-    from moleditpy.plugins.plugin_interface import PluginContext
+    from moleditpy_linux.plugins.plugin_interface import PluginContext
 
 
 class PluginManager:

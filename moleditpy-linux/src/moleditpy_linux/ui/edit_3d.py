@@ -19,7 +19,7 @@ try:
         calculate_dihedral as _calculate_dihedral,
     )
 except ImportError:
-    from moleditpy.core.mol_geometry import (
+    from moleditpy_linux.core.mol_geometry import (
         calc_angle_deg,
         calc_distance,
         calculate_dihedral as _calculate_dihedral,
@@ -50,7 +50,7 @@ try:
     from .constants import VDW_RADII
 except ImportError:
     # Fallback to absolute imports for script-style execution
-    from moleditpy.utils.constants import VDW_RADII
+    from moleditpy_linux.utils.constants import VDW_RADII
 
 
 # --- Classes ---

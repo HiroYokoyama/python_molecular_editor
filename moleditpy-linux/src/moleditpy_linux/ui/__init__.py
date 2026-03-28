@@ -14,7 +14,10 @@ DOI: 10.5281/zenodo.17268532
 try:
     from moleditpy_linux import OBABEL_AVAILABLE
 except ImportError:
-    OBABEL_AVAILABLE = False
+    # Use fallback if package layout is not yet fully initialized or during tests
+    import importlib.util
+
+    OBABEL_AVAILABLE = importlib.util.find_spec("openbabel") is not None
 
 # Re-export core UI utilities
 from .sip_isdeleted_safe import sip_isdeleted_safe

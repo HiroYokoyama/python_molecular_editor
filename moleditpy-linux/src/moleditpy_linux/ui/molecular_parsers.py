@@ -50,7 +50,7 @@ try:
     )
 except ImportError:
     # Fallback to absolute imports for script-style execution
-    from moleditpy.utils.constants import (
+    from moleditpy_linux.utils.constants import (
         VERSION,
         COVALENT_RADII,
     )

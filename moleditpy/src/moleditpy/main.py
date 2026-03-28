@@ -29,12 +29,26 @@ except ImportError:
 
 
 def setup_logging():
-    """Configure global logging to standard output."""
     logging.basicConfig(
         level=logging.INFO,
-        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+        format="%(asctime)s [%(levelname)s] %(name)s (%(pathname)s:%(lineno)d): %(message)s",
         stream=sys.stdout,
+        force=True,
     )
+
+    def handle_exception(exc_type, exc_value, exc_traceback):
+        """Log unhandled exceptions using the configured logging system."""
+        if issubclass(exc_type, KeyboardInterrupt):
+            # Allow keyboard interrupt to exit normally
+            sys.__excepthook__(exc_type, exc_value, exc_traceback)
+            return
+
+        logging.error(
+            "Uncaught exception", exc_info=(exc_type, exc_value, exc_traceback)
+        )
+
+    sys.excepthook = handle_exception
+
 
 
 def main():

@@ -37,28 +37,28 @@ try:
     from .user_template_dialog import UserTemplateDialog
 except ImportError:
     # Fallback to absolute imports for script-style execution
-    from moleditpy.ui.about_dialog import AboutDialog
-    from moleditpy.ui.align_plane_dialog import AlignPlaneDialog
-    from moleditpy.ui.alignment_dialog import AlignmentDialog
-    from moleditpy.ui.analysis_window import AnalysisWindow
-    from moleditpy.ui.angle_dialog import AngleDialog
-    from moleditpy.ui.bond_length_dialog import BondLengthDialog
-    from moleditpy.ui.constrained_optimization_dialog import (
+    from moleditpy_linux.ui.about_dialog import AboutDialog
+    from moleditpy_linux.ui.align_plane_dialog import AlignPlaneDialog
+    from moleditpy_linux.ui.alignment_dialog import AlignmentDialog
+    from moleditpy_linux.ui.analysis_window import AnalysisWindow
+    from moleditpy_linux.ui.angle_dialog import AngleDialog
+    from moleditpy_linux.ui.bond_length_dialog import BondLengthDialog
+    from moleditpy_linux.ui.constrained_optimization_dialog import (
         ConstrainedOptimizationDialog,
     )
-    from moleditpy.ui.dihedral_dialog import DihedralDialog
-    from moleditpy.ui.mirror_dialog import MirrorDialog
-    from moleditpy.ui.move_group_dialog import MoveGroupDialog
-    from moleditpy.ui.periodic_table_dialog import PeriodicTableDialog
-    from moleditpy.ui.planarize_dialog import PlanarizeDialog
-    from moleditpy.ui.translation_dialog import TranslationDialog
-    from moleditpy.ui.user_template_dialog import UserTemplateDialog
+    from moleditpy_linux.ui.dihedral_dialog import DihedralDialog
+    from moleditpy_linux.ui.mirror_dialog import MirrorDialog
+    from moleditpy_linux.ui.move_group_dialog import MoveGroupDialog
+    from moleditpy_linux.ui.periodic_table_dialog import PeriodicTableDialog
+    from moleditpy_linux.ui.planarize_dialog import PlanarizeDialog
+    from moleditpy_linux.ui.translation_dialog import TranslationDialog
+    from moleditpy_linux.ui.user_template_dialog import UserTemplateDialog
 
 # Import VERSION from constants
 try:
     from .constants import VERSION
 except ImportError:
-    from moleditpy.utils.constants import VERSION
+    from moleditpy_linux.utils.constants import VERSION
 
 
 class DialogManager:

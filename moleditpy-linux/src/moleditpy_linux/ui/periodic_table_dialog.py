@@ -16,7 +16,7 @@ from PyQt6.QtWidgets import QDialog, QGridLayout, QPushButton
 try:
     from ..utils.constants import CPK_COLORS
 except ImportError:
-    from moleditpy.utils.constants import CPK_COLORS
+    from moleditpy_linux.utils.constants import CPK_COLORS
 
 from PyQt6.QtCore import pyqtSignal
 

@@ -34,7 +34,7 @@ try:
     from ..utils.constants import VERSION
 except ImportError:
     # Fallback to absolute imports for script-style execution
-    from moleditpy.utils.constants import VERSION
+    from moleditpy_linux.utils.constants import VERSION
 
 
 # --- Class Definition ---

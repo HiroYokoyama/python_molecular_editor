@@ -23,7 +23,7 @@ from rdkit import Chem
 try:
     from .. import OBABEL_AVAILABLE
 except ImportError:
-    from moleditpy import OBABEL_AVAILABLE
+    from moleditpy_linux import OBABEL_AVAILABLE
 
 
 try:
@@ -43,8 +43,8 @@ try:
     )
 except ImportError:
     # Fallback to absolute imports for script-style execution
-    from moleditpy.ui.calculation_worker import CalculationWorker
-    from moleditpy.core.mol_geometry import (
+    from moleditpy_linux.ui.calculation_worker import CalculationWorker
+    from moleditpy_linux.core.mol_geometry import (
         identify_valence_problems,
         inject_ez_stereo_to_mol_block,
     )

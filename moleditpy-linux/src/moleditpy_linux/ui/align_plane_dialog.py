@@ -25,7 +25,7 @@ from rdkit import Geometry
 try:
     from .dialog_3d_picking_mixin import Dialog3DPickingMixin
 except ImportError:
-    from moleditpy.ui.dialog_3d_picking_mixin import Dialog3DPickingMixin
+    from moleditpy_linux.ui.dialog_3d_picking_mixin import Dialog3DPickingMixin
 
 
 class AlignPlaneDialog(Dialog3DPickingMixin, QDialog):

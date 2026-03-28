@@ -20,18 +20,18 @@ try:
     from .atom_item import AtomItem
     from .bond_item import BondItem
 except ImportError:
-    from moleditpy.ui.atom_item import AtomItem
-    from moleditpy.ui.bond_item import BondItem
+    from moleditpy_linux.ui.atom_item import AtomItem
+    from moleditpy_linux.ui.bond_item import BondItem
 
 try:
     from ..utils.sip_isdeleted_safe import sip_isdeleted_safe
 except ImportError:
-    from moleditpy.utils.sip_isdeleted_safe import sip_isdeleted_safe
+    from moleditpy_linux.utils.sip_isdeleted_safe import sip_isdeleted_safe
 
 try:
     from ..utils.constants import DEFAULT_BOND_LENGTH, SNAP_DISTANCE, SUM_TOLERANCE
 except ImportError:
-    from moleditpy.utils.constants import (
+    from moleditpy_linux.utils.constants import (
         DEFAULT_BOND_LENGTH,
         SNAP_DISTANCE,
         SUM_TOLERANCE,

@@ -27,7 +27,7 @@ from rdkit.DistanceGeometry import DoTriangleSmoothing
 try:
     from .. import OBABEL_AVAILABLE
 except ImportError:
-    from moleditpy import OBABEL_AVAILABLE
+    from moleditpy_linux import OBABEL_AVAILABLE
 
 # Only import pybel on demand
 if OBABEL_AVAILABLE:

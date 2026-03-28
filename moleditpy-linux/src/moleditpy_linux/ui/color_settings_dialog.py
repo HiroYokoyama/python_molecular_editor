@@ -25,7 +25,7 @@ from PyQt6.QtWidgets import (
 try:
     from ..utils.constants import CPK_COLORS, DEFAULT_CPK_COLORS
 except (AttributeError, RuntimeError, TypeError):
-    from moleditpy.utils.constants import CPK_COLORS, DEFAULT_CPK_COLORS
+    from moleditpy_linux.utils.constants import CPK_COLORS, DEFAULT_CPK_COLORS
 
 
 class ColorSettingsDialog(QDialog):
@@ -342,7 +342,7 @@ class ColorSettingsDialog(QDialog):
             from .settings_dialog import SettingsDialog
         except (ImportError, ValueError):
             try:
-                from moleditpy.ui.settings_dialog import SettingsDialog
+                from moleditpy_linux.ui.settings_dialog import SettingsDialog
             except ImportError:
                 SettingsDialog = None
 

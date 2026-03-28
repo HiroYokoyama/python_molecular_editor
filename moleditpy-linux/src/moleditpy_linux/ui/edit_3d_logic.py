@@ -25,7 +25,7 @@ try:
         calculate_dihedral as _calculate_dihedral,
     )
 except ImportError:
-    from moleditpy.core.mol_geometry import (
+    from moleditpy_linux.core.mol_geometry import (
         calc_angle_deg,
         calc_distance,
         calculate_dihedral as _calculate_dihedral,
@@ -35,7 +35,7 @@ except ImportError:
 try:
     from . import sip_isdeleted_safe
 except ImportError:
-    from moleditpy.utils import sip_isdeleted_safe
+    from moleditpy_linux.utils import sip_isdeleted_safe
 
 # PyQt6 Modules
 import pyvista as pv
@@ -56,7 +56,7 @@ try:
     from .constants import VDW_RADII
 except ImportError:
     # Fallback to absolute imports for script-style execution
-    from moleditpy.utils.constants import VDW_RADII
+    from moleditpy_linux.utils.constants import VDW_RADII
 
 
 # --- Classes ---

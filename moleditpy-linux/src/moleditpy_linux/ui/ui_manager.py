@@ -36,7 +36,7 @@ try:
     from .custom_interactor_style import CustomInteractorStyle
 except ImportError:
     # Fallback to absolute imports for script-style execution
-    from moleditpy.ui.custom_interactor_style import CustomInteractorStyle
+    from moleditpy_linux.ui.custom_interactor_style import CustomInteractorStyle
 
 
 # --- Classes ---

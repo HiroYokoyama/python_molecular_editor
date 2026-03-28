@@ -20,11 +20,11 @@ from vtkmodules.vtkInteractionStyle import vtkInteractorStyleTrackballCamera  # 
 try:
     from ..utils.constants import pt
 except ImportError:
-    from moleditpy.utils.constants import pt
+    from moleditpy_linux.utils.constants import pt
 try:
     from .move_group_dialog import MoveGroupDialog
 except ImportError:
-    from moleditpy.ui.move_group_dialog import MoveGroupDialog
+    from moleditpy_linux.ui.move_group_dialog import MoveGroupDialog
 
 from rdkit import Geometry
 

@@ -16,7 +16,7 @@ from rdkit import Chem
 try:
     from ..utils.constants import ANGSTROM_PER_PIXEL
 except ImportError:
-    from moleditpy.utils.constants import ANGSTROM_PER_PIXEL
+    from moleditpy_linux.utils.constants import ANGSTROM_PER_PIXEL
 
 
 class PointTuple(tuple):

@@ -20,7 +20,7 @@ from rdkit import Chem
 try:
     from . import OBABEL_AVAILABLE
 except ImportError:
-    from moleditpy.ui import OBABEL_AVAILABLE
+    from moleditpy_linux.ui import OBABEL_AVAILABLE
 
 try:
     # package relative imports
@@ -30,8 +30,8 @@ try:
         inject_ez_stereo_to_mol_block,
     )
 except ImportError:
-    from moleditpy.ui.calculation_worker import CalculationWorker
-    from moleditpy.core.mol_geometry import (
+    from moleditpy_linux.ui.calculation_worker import CalculationWorker
+    from moleditpy_linux.core.mol_geometry import (
         identify_valence_problems,
         inject_ez_stereo_to_mol_block,
     )

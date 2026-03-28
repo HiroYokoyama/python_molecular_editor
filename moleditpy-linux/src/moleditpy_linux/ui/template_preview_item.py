@@ -17,7 +17,7 @@ from PyQt6.QtWidgets import QGraphicsItem
 try:
     from ..utils.constants import CPK_COLORS
 except ImportError:
-    from moleditpy.utils.constants import CPK_COLORS
+    from moleditpy_linux.utils.constants import CPK_COLORS
 
 
 class TemplatePreviewItem(QGraphicsItem):

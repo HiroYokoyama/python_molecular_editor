@@ -31,7 +31,7 @@ from .template_preview_view import TemplatePreviewView
 try:
     from ..utils.constants import CPK_COLORS, VERSION
 except ImportError:
-    from moleditpy.utils.constants import CPK_COLORS, VERSION
+    from moleditpy_linux.utils.constants import CPK_COLORS, VERSION
 import json
 import logging
 import os

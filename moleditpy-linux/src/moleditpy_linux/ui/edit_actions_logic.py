@@ -21,7 +21,7 @@ import numpy as np
 try:
     from .mol_geometry import is_problematic_valence, identify_valence_problems
 except ImportError:
-    from moleditpy.core.mol_geometry import identify_valence_problems
+    from moleditpy_linux.core.mol_geometry import identify_valence_problems
 
 # RDKit imports (explicit to satisfy flake8 and used features)
 from PyQt6.QtCore import QByteArray, QMimeData, QPointF, Qt, QTimer
@@ -100,10 +100,10 @@ try:
     from .molecular_data import MolecularData
 except ImportError:
     # Fallback to absolute imports for script-style execution
-    from moleditpy.ui.atom_item import AtomItem
-    from moleditpy.ui.bond_item import BondItem
-    from moleditpy.utils.constants import CLIPBOARD_MIME_TYPE
-    from moleditpy.core.molecular_data import MolecularData
+    from moleditpy_linux.ui.atom_item import AtomItem
+    from moleditpy_linux.ui.bond_item import BondItem
+    from moleditpy_linux.utils.constants import CLIPBOARD_MIME_TYPE
+    from moleditpy_linux.core.molecular_data import MolecularData
 
 
 try:
@@ -111,7 +111,7 @@ try:
     # defined in modules/__init__.py and centralizes sip.isdeleted checks.
     from . import sip_isdeleted_safe
 except ImportError:
-    from moleditpy.utils import sip_isdeleted_safe
+    from moleditpy_linux.utils import sip_isdeleted_safe
 
 
 # --- Class Definition ---
@@ -656,7 +656,7 @@ class EditActionsManager:
                 atom.atom_id: (atom.pos().x(), atom.pos().y()) for atom in target_atoms
             }
 
-            from moleditpy.core.mol_geometry import rotate_2d_points
+            from moleditpy_linux.core.mol_geometry import rotate_2d_points
 
             new_positions = rotate_2d_points(
                 points_map, center_x, center_y, angle_degrees
@@ -972,7 +972,7 @@ class EditActionsManager:
             return
 
         try:
-            from moleditpy.core.mol_geometry import optimize_2d_coords
+            from moleditpy_linux.core.mol_geometry import optimize_2d_coords
 
             new_positions = optimize_2d_coords(mol)
 
@@ -1064,7 +1064,7 @@ class EditActionsManager:
             return  # Step 1-3: Handled by core logic
         positions_map = {aid: data["pos"] for aid, data in self.host.data.atoms.items()}
 
-        from moleditpy.core.mol_geometry import resolve_2d_overlaps
+        from moleditpy_linux.core.mol_geometry import resolve_2d_overlaps
 
         def has_bond_check(id1, id2):
             item1 = self.host.data.atoms[id1]["item"]

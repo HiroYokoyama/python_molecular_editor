@@ -24,7 +24,7 @@ from rdkit import Geometry
 try:
     from .dialog_3d_picking_mixin import Dialog3DPickingMixin
 except ImportError:
-    from moleditpy.ui.dialog_3d_picking_mixin import Dialog3DPickingMixin
+    from moleditpy_linux.ui.dialog_3d_picking_mixin import Dialog3DPickingMixin
 
 
 class PlanarizeDialog(Dialog3DPickingMixin, QDialog):
@@ -179,7 +179,7 @@ class PlanarizeDialog(Dialog3DPickingMixin, QDialog):
             centroid = np.mean(selected_positions, axis=0)
             centered_positions = selected_positions - centroid
 
-            from moleditpy.core.mol_geometry import calculate_best_fit_plane_projection
+            from moleditpy_linux.core.mol_geometry import calculate_best_fit_plane_projection
 
             # Get normal of the least-squares plane via SVD
             u, s, vh = np.linalg.svd(centered_positions, full_matrices=False)
