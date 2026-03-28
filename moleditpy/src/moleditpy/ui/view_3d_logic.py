@@ -269,8 +269,6 @@ class View3DManager:
                     # Force a render so the change is visible immediately
                     self.plotter.render()
                 except (AttributeError, RuntimeError, TypeError):
-                    import logging
-
                     logging.error("Caught exception in " + __file__, exc_info=True)
 
         # Re-display if AtomID or other atom info is shown
@@ -524,8 +522,6 @@ class View3DManager:
                     q = QColor(bs_hex)
                     bs_bond_rgb = [q.red(), q.green(), q.blue()]
                 except (AttributeError, RuntimeError, TypeError, ValueError):
-                    import logging
-
                     logging.error("Caught exception in " + __file__, exc_info=True)
 
             # Lists for batch processing
@@ -1114,8 +1110,6 @@ class View3DManager:
             try:
                 self.plotter.remove_actor("ez_labels")
             except (AttributeError, RuntimeError, TypeError):
-                import logging
-
                 logging.error("Caught exception in " + __file__, exc_info=True)
 
         pts, labels = [], []
@@ -1135,8 +1129,6 @@ class View3DManager:
                 mol, cleanIt=True, force=True, flagPossibleStereoCenters=True
             )
         except (AttributeError, RuntimeError, TypeError, ValueError):
-            import logging
-
             logging.error("Caught exception in " + __file__, exc_info=True)
 
         for bond in mol.GetBonds():
@@ -1225,8 +1217,6 @@ class View3DManager:
                 try:
                     Chem.AssignAtomChiralTagsFromStructure(mol_for_chirality, confId=0)
                 except (AttributeError, RuntimeError, TypeError, ValueError):
-                    import logging
-
                     logging.error("Caught exception in " + __file__, exc_info=True)
 
             # Get chiral centers (list of (idx, 'R'/'S'/'?'))
@@ -1321,8 +1311,6 @@ class View3DManager:
                 if atom.HasProp("_original_atom_id"):
                     return True
         except (AttributeError, RuntimeError, TypeError, ValueError):
-            import logging
-
             logging.error("Caught exception in " + __file__, exc_info=True)
         return False
 
@@ -1548,8 +1536,6 @@ class View3DManager:
                             try:
                                 tp.SetBold(True)
                             except (AttributeError, RuntimeError, TypeError):
-                                import logging
-
                                 logging.error(
                                     "Caught exception in " + __file__, exc_info=True
                                 )
@@ -1578,8 +1564,6 @@ class View3DManager:
                         try:
                             self.plotter.remove_actor(a)
                         except (AttributeError, RuntimeError, TypeError):
-                            import logging
-
                             logging.error(
                                 "Caught exception in " + __file__, exc_info=True
                             )
