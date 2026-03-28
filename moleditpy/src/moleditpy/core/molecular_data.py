@@ -88,16 +88,11 @@ class MolecularData:
             # Safely get neighbors before deleting the atom's own entry
             neighbors = self.adjacency_list.get(atom_id, [])
             for neighbor_id in neighbors:
-                try:
-                    if (
-                        neighbor_id in self.adjacency_list
-                        and atom_id in self.adjacency_list[neighbor_id]
-                    ):
-                        self.adjacency_list[neighbor_id].remove(atom_id)
-                except (ValueError, KeyError, TypeError) as e:
-                    logging.debug(
-                        f"Suppressed exception: {e}"
-                    )  # Ignore adjacency list inconsistencies during atom removal
+                if (
+                    neighbor_id in self.adjacency_list
+                    and atom_id in self.adjacency_list[neighbor_id]
+                ):
+                    self.adjacency_list[neighbor_id].remove(atom_id)
 
             # Now, safely delete the atom's own entry from the adjacency list
             if atom_id in self.adjacency_list:
@@ -107,14 +102,9 @@ class MolecularData:
                 del self.atoms[atom_id]
 
             # Remove bonds involving this atom
-            try:
-                bonds_to_remove = [key for key in self.bonds if atom_id in key]
-                for key in bonds_to_remove:
-                    del self.bonds[key]
-            except (RuntimeError, KeyError) as e:
-                logging.debug(
-                    f"Suppressed exception: {e}"
-                )  # Ignore mutation issues during batch bond removal
+            bonds_to_remove = [key for key in self.bonds if atom_id in key]
+            for key in bonds_to_remove:
+                self.bonds.pop(key, None)
 
     def remove_bond(self, id1, id2):
         # Look for directional stereo bonds (forward/reverse) and normalized non-stereo bond keys.
@@ -125,16 +115,11 @@ class MolecularData:
             key_to_remove = (id2, id1)
 
         if key_to_remove:
-            try:
-                if id1 in self.adjacency_list and id2 in self.adjacency_list[id1]:
-                    self.adjacency_list[id1].remove(id2)
-                if id2 in self.adjacency_list and id1 in self.adjacency_list[id2]:
-                    self.adjacency_list[id2].remove(id1)
-                del self.bonds[key_to_remove]
-            except (ValueError, KeyError) as e:
-                logging.debug(
-                    f"Suppressed exception: {e}"
-                )  # Ignore if bond already removed or inconsistent
+            if id1 in self.adjacency_list and id2 in self.adjacency_list[id1]:
+                self.adjacency_list[id1].remove(id2)
+            if id2 in self.adjacency_list and id1 in self.adjacency_list[id2]:
+                self.adjacency_list[id2].remove(id1)
+            self.bonds.pop(key_to_remove, None)
 
     def to_rdkit_mol(self, use_2d_stereo=True):
         """
@@ -372,11 +357,10 @@ class MolecularData:
             positions = []
             for aidx in a_ring:
                 item = rdkit_idx_to_item.get(aidx)
-                if item:
-                    try:
-                        positions.append(item.pos())
-                    except (AttributeError, RuntimeError) as e:
-                        logging.debug(f"Suppressed exception: {e}")
+                if item and hasattr(item, "pos"):
+                    pos = item.pos()
+                    if pos is not None:
+                        positions.append(pos)
 
             if not positions:
                 continue
@@ -403,9 +387,9 @@ class MolecularData:
             try:
                 return Chem.MolToMolBlock(mol, includeStereo=True)
             except (RuntimeError, ValueError, TypeError) as e:
-                logging.debug(
-                    f"Suppressed exception: {e}"
-                )  # Suppress errors during RDKit MolBlock generation
+                logging.warning(
+                    f"RDKit MolBlock generation failed: {e}"
+                )  # Fallback to manual MolBlock generation if RDKit fails
 
         if not self.atoms:
             return None

@@ -56,18 +56,27 @@ class DummyAxesWidget:
     def Off(self): pass
     def SetInteractive(self, v): pass
 
+class DummyInteractorStyle:
+    def __init__(self, *a, **k): pass
+    def AddObserver(self, *a, **k): pass
+    def OnLeftButtonDown(self, *a, **k): pass
+    def OnLeftButtonUp(self, *a, **k): pass
+    def OnRightButtonDown(self, *a, **k): pass
+    def OnRightButtonUp(self, *a, **k): pass
+    def OnMouseMove(self, *a, **k): pass
+
 # Attach to vtk
 vtk = sys.modules["vtk"]
 vtk.vtkCellPicker = DummyCellPicker
 vtk.vtkAxesActor = mock.MagicMock
 vtk.vtkOrientationMarkerWidget = DummyAxesWidget
-vtk.vtkInteractorStyleTrackballCamera = mock.MagicMock
+vtk.vtkInteractorStyleTrackballCamera = DummyInteractorStyle
 
 # Attach to specific vtkmodules submodules
 if "vtkmodules.vtkRenderingCore" in sys.modules:
     sys.modules["vtkmodules.vtkRenderingCore"].vtkCellPicker = DummyCellPicker
 if "vtkmodules.vtkInteractionStyle" in sys.modules:
-    sys.modules["vtkmodules.vtkInteractionStyle"].vtkInteractorStyleTrackballCamera = mock.MagicMock
+    sys.modules["vtkmodules.vtkInteractionStyle"].vtkInteractorStyleTrackballCamera = DummyInteractorStyle
 
 # PyVista mocks
 pyv = sys.modules["pyvista"]

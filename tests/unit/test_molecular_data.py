@@ -121,6 +121,39 @@ def test_remove_bond_reverse_lookup():
     assert len(data.bonds) == 0
 
 
+def test_remove_atom_non_existent():
+    """remove_atom gracefully handles removing an atom that doesn't exist."""
+    data = MolecularData()
+    data.add_atom("C", QPointF(0, 0))
+    # Should not raise exception
+    data.remove_atom(999)
+    assert len(data.atoms) == 1
+
+
+def test_remove_bond_non_existent():
+    """remove_bond gracefully handles removing a bond that doesn't exist."""
+    data = MolecularData()
+    data.add_atom("C", QPointF(0, 0))
+    data.add_atom("O", QPointF(10, 0))
+    # Should not raise exception
+    data.remove_bond(0, 1)
+    assert len(data.bonds) == 0
+
+
+def test_to_mol_block_handles_sanitization_failure(monkeypatch):
+    """to_mol_block falls back if RDKit molecule generation fails."""
+    data = MolecularData()
+    data.add_atom("C", QPointF(0, 0))
+    
+    # Mock to_rdkit_mol to simulate RDKit sanitization failure (returns None)
+    monkeypatch.setattr(data, "to_rdkit_mol", lambda **kwargs: None)
+    
+    mol_block = data.to_mol_block()
+    assert mol_block is not None
+    assert "MoleditPy" in mol_block
+    assert "V2000" in mol_block
+
+
 # =============================================================================
 # RDKit round-trip: compare against RDKit reference values
 # =============================================================================

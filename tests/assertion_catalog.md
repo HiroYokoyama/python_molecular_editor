@@ -1,5 +1,25 @@
 # Test Assertions Catalog
 
+## tests/unit/test_about_dialog.py
+
+### test_about_dialog_initialization
+_Verify AboutDialog initializes correctly with the injected host._
+
+- assert dialog.windowTitle() == 'About MoleditPy'
+- assert dialog.image_label is not None
+
+### test_about_dialog_easter_egg
+_Verify the easter egg triggers correctly on right click._
+
+- mock_parser_host.clear_all.assert_called_once()
+- mock_parser_host.load_from_smiles.assert_called_once_with('C1=CN=C(N=C1)C2=NC=CC=N2')
+
+### test_about_dialog_ignore_left_click
+_Verify left clicks do not trigger the easter egg._
+
+- mock_parser_host.clear_all.assert_not_called()
+- event.ignore.assert_called_once()
+
 ## tests/unit/test_app_logic.py
 
 ### test_ez_preservation_logic
@@ -366,6 +386,34 @@ _Test UFF path as well._
 
 - assert abs(dist_off - 6.0) < 1e-05
 
+## tests/unit/test_color_settings_dialog.py
+
+### test_color_settings_dialog_initialization
+_Verify ColorSettingsDialog initializes and parses settings correctly._
+
+- assert dialog.windowTitle() == 'CPK Colors'
+- assert 'C' in dialog.element_buttons
+- assert dialog.changed_cpk == {}
+
+### test_color_settings_dialog_pick_color
+_Verify that clicking an element button updates the changed_cpk dictionary._
+
+- assert dialog.changed_cpk['C'] == '#ff0000'
+- assert 'background-color: #ff0000' in btn.styleSheet()
+
+### test_color_settings_dialog_reset_all
+_Verify reset_all clears changes and sets the reset flag._
+
+- assert dialog._reset_all_flag is True
+- assert dialog.changed_cpk == {}
+
+### test_color_settings_dialog_apply_changes
+_Verify that apply_changes pushes updates to the parent window settings._
+
+- assert mock_parser_host.settings_dirty is True
+- assert mock_parser_host.settings['cpk_colors']['O'] == '#00ff00'
+- assert mock_parser_host.settings['ball_stick_bond_color'] == '#112233'
+
 ## tests/unit/test_compute_logic.py
 
 ### test_on_calculation_error_stale
@@ -610,6 +658,21 @@ _Verify that UFF fallback uses _temp_optimization_method and doesn't change pers
 - assert compute._temp_optimization_method == 'UFF_RDKIT'
 - assert mock_optimize.called
 - assert compute.optimization_method == 'MMFF_RDKIT'
+
+## tests/unit/test_custom_interactor_style.py
+
+### test_custom_interactor_style_left_click_atom_selection
+_Verify that left-clicking an atom in 3D edit mode successfully selects it._
+
+- assert interactor_style._is_dragging_atom is True
+- mock_parser_host.plotter.setCursor.assert_called_once_with(Qt.CursorShape.ClosedHandCursor)
+- assert mock_parser_host.dragged_atom_info['id'] == 0
+
+### test_custom_interactor_style_background_click
+_Verify that clicking the background (no atom selected) allows VTK trackball rotation._
+
+- assert interactor_style._is_dragging_atom is False
+- mock_super_down.assert_called_once()
 
 ## tests/unit/test_dialog_logic.py
 
@@ -1201,6 +1264,23 @@ _Removing a bond should update adjacency but leave atoms intact._
 _remove_bond should find bond regardless of key order._
 
 - assert len(data.bonds) == 0
+
+### test_remove_atom_non_existent
+_remove_atom gracefully handles removing an atom that doesn't exist._
+
+- assert len(data.atoms) == 1
+
+### test_remove_bond_non_existent
+_remove_bond gracefully handles removing a bond that doesn't exist._
+
+- assert len(data.bonds) == 0
+
+### test_to_mol_block_handles_sanitization_failure
+_to_mol_block falls back if RDKit molecule generation fails._
+
+- assert mol_block is not None
+- assert 'MoleditPy' in mol_block
+- assert 'V2000' in mol_block
 
 ### test_to_rdkit_mol_ethanol
 _Build ethanol in MolecularData and compare RDKit molecular formula._
@@ -2203,6 +2283,26 @@ _Test safe check when an exception occurs._
 _Test safe check when _sip_isdeleted is None (sip import failed)._
 
 - assert result is False
+
+## tests/unit/test_view_3d.py
+
+### test_view_3d_draw_standard_3d_style
+_Verify that draw_standard_3d_style clears the plotter and constructs the correct VTK meshes._
+
+- mock_parser_host.plotter.clear.assert_called()
+- mock_parser_host.plotter.set_background.assert_called_once_with('#ffffff')
+- assert mock_parser_host.plotter.add_mesh.call_count >= 1
+- mock_parser_host.plotter.render.assert_called()
+- assert hasattr(mock_parser_host, 'atom_positions_3d')
+- assert isinstance(mock_parser_host.atom_positions_3d, np.ndarray)
+- assert len(mock_parser_host.atom_positions_3d) == 3
+
+### test_view_3d_draw_none
+_No description provided._
+
+- mock_parser_host.plotter.clear.assert_called()
+- mock_parser_host.plotter.render.assert_called()
+- assert mock_parser_host.current_mol is None
 
 ## tests/unit/test_worker_robustness.py
 

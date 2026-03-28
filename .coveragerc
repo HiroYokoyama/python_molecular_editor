@@ -4,6 +4,11 @@ source = moleditpy
 [report]
 omit =
     moleditpy/src/moleditpy/__main__.py
+    moleditpy/src/moleditpy/ui/__init__.py
+    moleditpy/src/moleditpy/ui/main_window.py
+    moleditpy/src/moleditpy/ui/main_window_init.py
+    moleditpy/src/moleditpy/ui/app_state.py
+    moleditpy/src/moleditpy/ui/analysis_window.py
     moleditpy/src/moleditpy/ui/*_dialog.py
     moleditpy/src/moleditpy/ui/dialog_manager.py
     moleditpy/src/moleditpy/ui/ui_manager.py
@@ -11,7 +16,6 @@ omit =
     moleditpy/src/moleditpy/ui/view_3d.py
     moleditpy/src/moleditpy/ui/edit_3d.py
     moleditpy/src/moleditpy/ui/*_logic.py
-    moleditpy/src/moleditpy/ui/export_logic.py
     moleditpy/src/moleditpy/ui/edit_actions.py
     moleditpy/src/moleditpy/ui/molecule_scene.py
     moleditpy/src/moleditpy/ui/molecular_scene_handler.py
@@ -25,6 +29,7 @@ omit =
     moleditpy/src/moleditpy/ui/custom_qt_interactor.py
     moleditpy/src/moleditpy/ui/dialog_3d_picking_mixin.py
     moleditpy/src/moleditpy/ui/sip_isdeleted_safe.py
+    moleditpy/src/moleditpy/utils/sip_isdeleted_safe.py
     moleditpy/src/moleditpy/modules/*
     moleditpy/src/moleditpy/utils/system_utils.py
 

@@ -246,8 +246,8 @@ class MainWindowView3d:
                     # Force a render so the change is visible immediately
                     self.plotter.render()
                 except (AttributeError, RuntimeError, TypeError):
-                    # Suppress non-critical 3D rendering errors
-                    pass
+                    import logging
+                    logging.error(f"Caught exception in " + __file__, exc_info=True)
 
         # Re-display if AtomID or other atom info is shown
         if (
@@ -500,8 +500,8 @@ class MainWindowView3d:
                     q = QColor(bs_hex)
                     bs_bond_rgb = [q.red(), q.green(), q.blue()]
                 except (AttributeError, RuntimeError, TypeError, ValueError):
-                    # Suppress non-critical bond drawing color fallback noise
-                    pass
+                    import logging
+                    logging.error(f"Caught exception in " + __file__, exc_info=True)
 
             # Lists for batch processing
             all_points = []
@@ -1089,8 +1089,8 @@ class MainWindowView3d:
             try:
                 self.plotter.remove_actor("ez_labels")
             except (AttributeError, RuntimeError, TypeError):
-                # Ignore label removal failure on stale plotter
-                pass
+                import logging
+                logging.error(f"Caught exception in " + __file__, exc_info=True)
 
         pts, labels = [], []
 
@@ -1109,8 +1109,8 @@ class MainWindowView3d:
                 mol, cleanIt=True, force=True, flagPossibleStereoCenters=True
             )
         except (AttributeError, RuntimeError, TypeError, ValueError):
-            # Suppress non-critical stereochemistry assignment noise during 3D label update
-            pass
+            import logging
+            logging.error(f"Caught exception in " + __file__, exc_info=True)
 
         for bond in mol.GetBonds():
             if bond.GetBondType() == Chem.BondType.DOUBLE:
@@ -1198,8 +1198,8 @@ class MainWindowView3d:
                 try:
                     Chem.AssignAtomChiralTagsFromStructure(mol_for_chirality, confId=0)
                 except (AttributeError, RuntimeError, TypeError, ValueError):
-                    # Guard for older RDKit versions or invalid coordinates
-                    pass
+                    import logging
+                    logging.error(f"Caught exception in " + __file__, exc_info=True)
 
             # Get chiral centers (list of (idx, 'R'/'S'/'?'))
             chiral_centers = Chem.FindMolChiralCenters(
@@ -1293,8 +1293,8 @@ class MainWindowView3d:
                 if atom.HasProp("_original_atom_id"):
                     return True
         except (AttributeError, RuntimeError, TypeError, ValueError):
-            # Suppress non-critical property access noise
-            pass
+            import logging
+            logging.error(f"Caught exception in " + __file__, exc_info=True)
         return False
 
         return False
@@ -1519,8 +1519,8 @@ class MainWindowView3d:
                             try:
                                 tp.SetBold(True)
                             except (AttributeError, RuntimeError, TypeError):
-                                # Suppress non-critical actor property update noise
-                                pass
+                                import logging
+                                logging.error(f"Caught exception in " + __file__, exc_info=True)
                     except (AttributeError, RuntimeError, TypeError) as e:
                         logging.debug(
                             f"Suppressed exception: {e}"
@@ -1546,8 +1546,8 @@ class MainWindowView3d:
                         try:
                             self.plotter.remove_actor(a)
                         except (AttributeError, RuntimeError, TypeError):
-                            # Suppress non-critical actor removal noise
-                            pass
+                            import logging
+                            logging.error(f"Caught exception in " + __file__, exc_info=True)
                 else:
                     try:
                         self.plotter.remove_actor(self.current_atom_info_labels)

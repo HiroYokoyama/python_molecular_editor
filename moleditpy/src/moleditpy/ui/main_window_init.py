@@ -1222,7 +1222,12 @@ class MainWindowMainInit:
             action = QAction(name, self, checkable=True)
             if key == "ball_and_stick":
                 action.setChecked(True)
-            action.triggered.connect(lambda checked=False, k=key: self.set_3d_style(k))
+            action.triggered.connect(
+                lambda checked=False, k=key: (
+                    self.set_3d_style(k),
+                    self.draw_molecule_3d(self.current_mol) if getattr(self, "current_mol", None) else None
+                )
+            )
             style_menu.addAction(action)
             style_group.addAction(action)
 
@@ -1232,7 +1237,10 @@ class MainWindowMainInit:
                 if not any(a.text() == style_name for a in style_menu.actions()):
                     action = QAction(style_name, self, checkable=True)
                     action.triggered.connect(
-                        lambda checked=False, s=style_name: self.set_3d_style(s)
+                        lambda checked=False, s=style_name: (
+                            self.set_3d_style(s),
+                            self.draw_molecule_3d(self.current_mol) if getattr(self, "current_mol", None) else None
+                        )
                     )
                     style_menu.addAction(action)
                     style_group.addAction(action)

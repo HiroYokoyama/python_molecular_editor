@@ -30,8 +30,8 @@ from rdkit import Geometry
 
 
 class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
-    def __init__(self, main_window):
-        super().__init__()
+    def __init__(self, main_window=None, **kwargs):
+        super().__init__(**kwargs)
         self.main_window = main_window
         # Custom state flags
         self._is_dragging_atom = False
@@ -67,8 +67,8 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                     move_group_dialog = widget
                     break
             except (AttributeError, RuntimeError, TypeError):
-                # Ignore stale top-level widgets
-                pass
+                import logging
+                logging.error(f"Caught exception in " + __file__, exc_info=True)
 
         if move_group_dialog and move_group_dialog.group_atoms:
             # Group drag if selected
@@ -349,8 +349,8 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                     move_group_dialog = widget
                     break
         except (AttributeError, RuntimeError, TypeError):
-            # Suppress traceback
-            pass
+            import logging
+            logging.error(f"Caught exception in " + __file__, exc_info=True)
         if move_group_dialog and getattr(
             move_group_dialog, "_is_dragging_group_vtk", False
         ):
@@ -432,8 +432,8 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                     move_group_dialog = widget
                     break
         except (AttributeError, RuntimeError, TypeError):
-            # Suppress traceback
-            pass
+            import logging
+            logging.error(f"Caught exception in " + __file__, exc_info=True)
         # Prevent multi-click issues
         if move_group_dialog:
             if getattr(
@@ -617,14 +617,14 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                                 ),
                             )
                     except (AttributeError, RuntimeError, ValueError, TypeError):
-                        # Ignore major coordinate refresh failure
-                        pass
+                        import logging
+                        logging.error(f"Caught exception in " + __file__, exc_info=True)
 
                     try:
                         mw.draw_molecule_3d(mw.current_mol)
                     except (AttributeError, RuntimeError, ValueError, TypeError):
-                        # Ignore 3D redraw failure during drag
-                        pass
+                        import logging
+                        logging.error(f"Caught exception in " + __file__, exc_info=True)
 
                     mw.push_undo_state()
             mw.dragged_atom_info = None
@@ -638,8 +638,8 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                 try:
                     update_call()
                 except (AttributeError, RuntimeError, ValueError, TypeError):
-                    # Suppress transient UI update noise during release
-                    pass
+                    import logging
+                    logging.error(f"Caught exception in " + __file__, exc_info=True)
         else:
             # Delegate cleanup to parent
             super().OnLeftButtonUp()
@@ -661,15 +661,15 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                 if hasattr(move_group_dialog, "_drag_atom_idx"):
                     delattr(move_group_dialog, "_drag_atom_idx")
         except (AttributeError, RuntimeError, ValueError, TypeError):
-            # Suppress non-critical state cleanup noise
-            pass
+            import logging
+            logging.error(f"Caught exception in " + __file__, exc_info=True)
 
         # Update cursor after release
         try:
             mw.plotter.setCursor(Qt.CursorShape.ArrowCursor)
         except (AttributeError, RuntimeError, ValueError, TypeError):
-            # Suppress non-critical cursor update noise
-            pass
+            import logging
+            logging.error(f"Caught exception in " + __file__, exc_info=True)
 
         # Restore focus to 2D view
         if mw and mw.view_2d:
@@ -689,8 +689,8 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                     move_group_dialog = widget
                     break
         except (AttributeError, RuntimeError, TypeError):
-            # Suppress traceback
-            pass
+            import logging
+            logging.error(f"Caught exception in " + __file__, exc_info=True)
         if move_group_dialog and getattr(
             move_group_dialog, "_is_rotating_group_vtk", False
         ):
