@@ -21,10 +21,13 @@ except ImportError:
 
 class PointTuple(tuple):
     """Backward-compatible tuple that allows .x() and .y() access like QPointF."""
+
     def x(self):
         return self[0]
+
     def y(self):
         return self[1]
+
 
 class MolecularData:
     def __init__(self):
@@ -56,7 +59,9 @@ class MolecularData:
         """Update atom position using raw floats or QPointF."""
         if atom_id in self.atoms:
             if hasattr(pos, "x") and hasattr(pos, "y"):
-                self.atoms[atom_id]["pos"] = PointTuple((float(pos.x()), float(pos.y())))
+                self.atoms[atom_id]["pos"] = PointTuple(
+                    (float(pos.x()), float(pos.y()))
+                )
             else:
                 self.atoms[atom_id]["pos"] = PointTuple((float(pos[0]), float(pos[1])))
 

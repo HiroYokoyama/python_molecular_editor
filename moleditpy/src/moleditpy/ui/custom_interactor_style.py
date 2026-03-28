@@ -68,7 +68,8 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                     break
             except (AttributeError, RuntimeError, TypeError):
                 import logging
-                logging.error(f"Caught exception in " + __file__, exc_info=True)
+
+                logging.error("Caught exception in " + __file__, exc_info=True)
 
         if move_group_dialog and move_group_dialog.group_atoms:
             # Group drag if selected
@@ -350,7 +351,8 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                     break
         except (AttributeError, RuntimeError, TypeError):
             import logging
-            logging.error(f"Caught exception in " + __file__, exc_info=True)
+
+            logging.error("Caught exception in " + __file__, exc_info=True)
         if move_group_dialog and getattr(
             move_group_dialog, "_is_dragging_group_vtk", False
         ):
@@ -433,7 +435,8 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                     break
         except (AttributeError, RuntimeError, TypeError):
             import logging
-            logging.error(f"Caught exception in " + __file__, exc_info=True)
+
+            logging.error("Caught exception in " + __file__, exc_info=True)
         # Prevent multi-click issues
         if move_group_dialog:
             if getattr(
@@ -618,13 +621,15 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                             )
                     except (AttributeError, RuntimeError, ValueError, TypeError):
                         import logging
-                        logging.error(f"Caught exception in " + __file__, exc_info=True)
+
+                        logging.error("Caught exception in " + __file__, exc_info=True)
 
                     try:
                         mw.draw_molecule_3d(mw.current_mol)
                     except (AttributeError, RuntimeError, ValueError, TypeError):
                         import logging
-                        logging.error(f"Caught exception in " + __file__, exc_info=True)
+
+                        logging.error("Caught exception in " + __file__, exc_info=True)
 
                     mw.push_undo_state()
             mw.dragged_atom_info = None
@@ -639,7 +644,8 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                     update_call()
                 except (AttributeError, RuntimeError, ValueError, TypeError):
                     import logging
-                    logging.error(f"Caught exception in " + __file__, exc_info=True)
+
+                    logging.error("Caught exception in " + __file__, exc_info=True)
         else:
             # Delegate cleanup to parent
             super().OnLeftButtonUp()
@@ -662,14 +668,16 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                     delattr(move_group_dialog, "_drag_atom_idx")
         except (AttributeError, RuntimeError, ValueError, TypeError):
             import logging
-            logging.error(f"Caught exception in " + __file__, exc_info=True)
+
+            logging.error("Caught exception in " + __file__, exc_info=True)
 
         # Update cursor after release
         try:
             mw.plotter.setCursor(Qt.CursorShape.ArrowCursor)
         except (AttributeError, RuntimeError, ValueError, TypeError):
             import logging
-            logging.error(f"Caught exception in " + __file__, exc_info=True)
+
+            logging.error("Caught exception in " + __file__, exc_info=True)
 
         # Restore focus to 2D view
         if mw and mw.view_2d:
@@ -690,7 +698,8 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                     break
         except (AttributeError, RuntimeError, TypeError):
             import logging
-            logging.error(f"Caught exception in " + __file__, exc_info=True)
+
+            logging.error("Caught exception in " + __file__, exc_info=True)
         if move_group_dialog and getattr(
             move_group_dialog, "_is_rotating_group_vtk", False
         ):

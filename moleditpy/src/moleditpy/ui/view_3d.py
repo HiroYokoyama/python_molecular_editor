@@ -247,7 +247,8 @@ class MainWindowView3d:
                     self.plotter.render()
                 except (AttributeError, RuntimeError, TypeError):
                     import logging
-                    logging.error(f"Caught exception in " + __file__, exc_info=True)
+
+                    logging.error("Caught exception in " + __file__, exc_info=True)
 
         # Re-display if AtomID or other atom info is shown
         if (
@@ -501,7 +502,8 @@ class MainWindowView3d:
                     bs_bond_rgb = [q.red(), q.green(), q.blue()]
                 except (AttributeError, RuntimeError, TypeError, ValueError):
                     import logging
-                    logging.error(f"Caught exception in " + __file__, exc_info=True)
+
+                    logging.error("Caught exception in " + __file__, exc_info=True)
 
             # Lists for batch processing
             all_points = []
@@ -1090,7 +1092,8 @@ class MainWindowView3d:
                 self.plotter.remove_actor("ez_labels")
             except (AttributeError, RuntimeError, TypeError):
                 import logging
-                logging.error(f"Caught exception in " + __file__, exc_info=True)
+
+                logging.error("Caught exception in " + __file__, exc_info=True)
 
         pts, labels = [], []
 
@@ -1110,7 +1113,8 @@ class MainWindowView3d:
             )
         except (AttributeError, RuntimeError, TypeError, ValueError):
             import logging
-            logging.error(f"Caught exception in " + __file__, exc_info=True)
+
+            logging.error("Caught exception in " + __file__, exc_info=True)
 
         for bond in mol.GetBonds():
             if bond.GetBondType() == Chem.BondType.DOUBLE:
@@ -1199,7 +1203,8 @@ class MainWindowView3d:
                     Chem.AssignAtomChiralTagsFromStructure(mol_for_chirality, confId=0)
                 except (AttributeError, RuntimeError, TypeError, ValueError):
                     import logging
-                    logging.error(f"Caught exception in " + __file__, exc_info=True)
+
+                    logging.error("Caught exception in " + __file__, exc_info=True)
 
             # Get chiral centers (list of (idx, 'R'/'S'/'?'))
             chiral_centers = Chem.FindMolChiralCenters(
@@ -1294,7 +1299,8 @@ class MainWindowView3d:
                     return True
         except (AttributeError, RuntimeError, TypeError, ValueError):
             import logging
-            logging.error(f"Caught exception in " + __file__, exc_info=True)
+
+            logging.error("Caught exception in " + __file__, exc_info=True)
         return False
 
         return False
@@ -1520,7 +1526,10 @@ class MainWindowView3d:
                                 tp.SetBold(True)
                             except (AttributeError, RuntimeError, TypeError):
                                 import logging
-                                logging.error(f"Caught exception in " + __file__, exc_info=True)
+
+                                logging.error(
+                                    "Caught exception in " + __file__, exc_info=True
+                                )
                     except (AttributeError, RuntimeError, TypeError) as e:
                         logging.debug(
                             f"Suppressed exception: {e}"
@@ -1547,7 +1556,10 @@ class MainWindowView3d:
                             self.plotter.remove_actor(a)
                         except (AttributeError, RuntimeError, TypeError):
                             import logging
-                            logging.error(f"Caught exception in " + __file__, exc_info=True)
+
+                            logging.error(
+                                "Caught exception in " + __file__, exc_info=True
+                            )
                 else:
                     try:
                         self.plotter.remove_actor(self.current_atom_info_labels)

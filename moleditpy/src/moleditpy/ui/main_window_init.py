@@ -1225,7 +1225,9 @@ class MainWindowMainInit:
             action.triggered.connect(
                 lambda checked=False, k=key: (
                     self.set_3d_style(k),
-                    self.draw_molecule_3d(self.current_mol) if getattr(self, "current_mol", None) else None
+                    self.draw_molecule_3d(self.current_mol)
+                    if getattr(self, "current_mol", None)
+                    else None,
                 )
             )
             style_menu.addAction(action)
@@ -1239,7 +1241,9 @@ class MainWindowMainInit:
                     action.triggered.connect(
                         lambda checked=False, s=style_name: (
                             self.set_3d_style(s),
-                            self.draw_molecule_3d(self.current_mol) if getattr(self, "current_mol", None) else None
+                            self.draw_molecule_3d(self.current_mol)
+                            if getattr(self, "current_mol", None)
+                            else None,
                         )
                     )
                     style_menu.addAction(action)
