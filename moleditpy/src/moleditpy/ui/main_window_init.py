@@ -103,7 +103,6 @@ except (AttributeError, RuntimeError, TypeError):
     from moleditpy.ui.zoomable_view import ZoomableView
 
 
-# --- Class Definition ---
 class MainWindowMainInit:
     """Feature class separated from main_window.py"""
 
@@ -178,7 +177,7 @@ class MainWindowMainInit:
         self.init_worker_thread()
         self._setup_3d_picker()
 
-        # --- RDKit Warm-up (initial execution cost) ---
+        # RDKit Warm-up (initial execution cost)
         try:
             # Create a molecule with a variety of common atoms to ensure
             # the valence/H-count machinery is fully initialized.
@@ -221,21 +220,17 @@ class MainWindowMainInit:
             )  # Suppress non-critical UI/menu initialization errors
 
     def init_ui(self):
-        # 1. Get the path to the directory where the current script is located
         script_dir = os.path.dirname(os.path.abspath(__file__))
-
-        # 2. Build the full path to the icon file in the 'assets' folder
-        # Windows taskbar prefers .ico; fall back to .png on other platforms
         if sys.platform == "win32":
             icon_path = os.path.join(script_dir, "..", "assets", "icon.ico")
         else:
             icon_path = os.path.join(script_dir, "..", "assets", "icon.png")
 
-        # 3. Create a QIcon object directly from the file path
-        if os.path.exists(icon_path):  # Check if file exists
+        # Create a QIcon object directly from the file path
+        if os.path.exists(icon_path):
             app_icon = QIcon(icon_path)
 
-            # 4. Set the icon for both the window and the application
+            # Set the icon for both the window and the application
             self.setWindowIcon(app_icon)
             QApplication.instance().setWindowIcon(app_icon)
         else:
@@ -540,10 +535,10 @@ class MainWindowMainInit:
         if not self.plugin_manager:
             return
 
-        # 1. Cleanup
+        # Cleanup
         self._clear_all_plugin_actions(plugin_menu)
 
-        # 2. Re-add Manager
+        # Re-add Manager
         manage_plugins_action = QAction("Plugin Manager...", self)
         manage_plugins_action.triggered.connect(
             lambda: self._show_plugin_manager(plugin_menu)
@@ -551,10 +546,10 @@ class MainWindowMainInit:
         plugin_menu.addAction(manage_plugins_action)
         plugin_menu.addSeparator()
 
-        # 3. Discover
+        # Discover
         plugins = self.plugin_manager.discover_plugins(self)
 
-        # 4. Integrate
+        # Integrate
         self._update_style_menu_with_plugins()
         self._add_registered_plugin_actions()
         self._add_plugin_toolbar_actions()

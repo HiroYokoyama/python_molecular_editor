@@ -1516,9 +1516,9 @@ def window(app, qtbot, monkeypatch):
 
         traceback.print_exc()
     try:
-        import moleditpy.ui.view_3d as _mw3d
+        import moleditpy.ui.view_3d_logic as _mw3d
 
-        orig_draw = getattr(_mw3d.MainWindowView3d, "draw_molecule_3d", None)
+        orig_draw = getattr(_mw3d.View3DManager, "draw_molecule_3d", None)
         if orig_draw is not None:
 
             def safe_draw(self, *a, **k):
@@ -1528,7 +1528,7 @@ def window(app, qtbot, monkeypatch):
                     return None
 
             monkeypatch.setattr(
-                "moleditpy.ui.view_3d.MainWindowView3d.draw_molecule_3d",
+                "moleditpy.ui.view_3d_logic.View3DManager.draw_molecule_3d",
                 safe_draw,
                 raising=False,
             )

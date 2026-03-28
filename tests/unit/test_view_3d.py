@@ -6,7 +6,7 @@ from rdkit.Chem import AllChem
 
 def test_view_3d_draw_standard_3d_style(app, mock_parser_host):
     """Verify that draw_standard_3d_style clears the plotter and constructs the correct VTK meshes."""
-    from moleditpy.ui.view_3d import MainWindowView3d
+    from moleditpy.ui.view_3d_logic import View3DManager as MainWindowView3d
     
     # Mixin the methods to our mock host
     for attr in dir(MainWindowView3d):
@@ -28,7 +28,7 @@ def test_view_3d_draw_standard_3d_style(app, mock_parser_host):
     }
     
     # We must patch pyvista PolyData so it doesn't try to open X11/OpenGL contexts
-    with patch('moleditpy.ui.view_3d.pv') as mock_pv:
+    with patch('moleditpy.ui.view_3d_logic.pv') as mock_pv:
         mock_pv.PolyData.return_value.glyph.return_value = MagicMock()
         mock_pv.PolyData.return_value.tube.return_value = MagicMock()
         mock_pv.Light.return_value = MagicMock()
@@ -51,7 +51,7 @@ def test_view_3d_draw_none(app, mock_parser_host):
     mock_parser_host._drawing_3d = False
 
     """Verify that calling draw with None safely cleats the renderer."""
-    from moleditpy.ui.view_3d import MainWindowView3d
+    from moleditpy.ui.view_3d_logic import View3DManager as MainWindowView3d
     for attr in dir(MainWindowView3d):
         if not attr.startswith('__') and callable(getattr(MainWindowView3d, attr)):
             setattr(mock_parser_host, attr, types.MethodType(getattr(MainWindowView3d, attr), mock_parser_host))

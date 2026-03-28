@@ -43,7 +43,7 @@ try:
     )
 except ImportError:
     # Fallback to absolute imports for script-style execution
-    from moleditpy.core.calculation_worker import CalculationWorker
+    from moleditpy.ui.calculation_worker import CalculationWorker
     from moleditpy.core.mol_geometry import (
         identify_valence_problems,
         inject_ez_stereo_to_mol_block,

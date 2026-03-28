@@ -19,6 +19,16 @@ except ImportError:
     from moleditpy.utils.constants import ANGSTROM_PER_PIXEL
 
 
+class PointTuple(tuple):
+    """Backward-compatible tuple that allows .x() and .y() access like QPointF."""
+
+    def x(self):
+        return self[0]
+
+    def y(self):
+        return self[1]
+
+
 class MolecularData:
     def __init__(self):
         self.atoms = {}
@@ -30,9 +40,9 @@ class MolecularData:
         atom_id = self._next_atom_id
         # Internalize position as raw floats to decouple from UI types (QPointF)
         if hasattr(pos, "x") and hasattr(pos, "y"):
-            raw_pos = (float(pos.x()), float(pos.y()))
+            raw_pos = PointTuple((float(pos.x()), float(pos.y())))
         else:
-            raw_pos = (float(pos[0]), float(pos[1]))
+            raw_pos = PointTuple((float(pos[0]), float(pos[1])))
 
         self.atoms[atom_id] = {
             "symbol": symbol,
@@ -49,9 +59,11 @@ class MolecularData:
         """Update atom position using raw floats or QPointF."""
         if atom_id in self.atoms:
             if hasattr(pos, "x") and hasattr(pos, "y"):
-                self.atoms[atom_id]["pos"] = (float(pos.x()), float(pos.y()))
+                self.atoms[atom_id]["pos"] = PointTuple(
+                    (float(pos.x()), float(pos.y()))
+                )
             else:
-                self.atoms[atom_id]["pos"] = (float(pos[0]), float(pos[1]))
+                self.atoms[atom_id]["pos"] = PointTuple((float(pos[0]), float(pos[1])))
 
     def add_bond(self, id1, id2, order=1, stereo=0):
         # For stereo bonds, do not sort because ID order determines direction.
@@ -81,16 +93,11 @@ class MolecularData:
             # Safely get neighbors before deleting the atom's own entry
             neighbors = self.adjacency_list.get(atom_id, [])
             for neighbor_id in neighbors:
-                try:
-                    if (
-                        neighbor_id in self.adjacency_list
-                        and atom_id in self.adjacency_list[neighbor_id]
-                    ):
-                        self.adjacency_list[neighbor_id].remove(atom_id)
-                except (ValueError, KeyError, TypeError) as e:
-                    logging.debug(
-                        f"Suppressed exception: {e}"
-                    )  # Ignore adjacency list inconsistencies during atom removal
+                if (
+                    neighbor_id in self.adjacency_list
+                    and atom_id in self.adjacency_list[neighbor_id]
+                ):
+                    self.adjacency_list[neighbor_id].remove(atom_id)
 
             # Now, safely delete the atom's own entry from the adjacency list
             if atom_id in self.adjacency_list:
@@ -100,14 +107,9 @@ class MolecularData:
                 del self.atoms[atom_id]
 
             # Remove bonds involving this atom
-            try:
-                bonds_to_remove = [key for key in self.bonds if atom_id in key]
-                for key in bonds_to_remove:
-                    del self.bonds[key]
-            except (RuntimeError, KeyError) as e:
-                logging.debug(
-                    f"Suppressed exception: {e}"
-                )  # Ignore mutation issues during batch bond removal
+            bonds_to_remove = [key for key in self.bonds if atom_id in key]
+            for key in bonds_to_remove:
+                self.bonds.pop(key, None)
 
     def remove_bond(self, id1, id2):
         # Look for directional stereo bonds (forward/reverse) and normalized non-stereo bond keys.
@@ -118,16 +120,11 @@ class MolecularData:
             key_to_remove = (id2, id1)
 
         if key_to_remove:
-            try:
-                if id1 in self.adjacency_list and id2 in self.adjacency_list[id1]:
-                    self.adjacency_list[id1].remove(id2)
-                if id2 in self.adjacency_list and id1 in self.adjacency_list[id2]:
-                    self.adjacency_list[id2].remove(id1)
-                del self.bonds[key_to_remove]
-            except (ValueError, KeyError) as e:
-                logging.debug(
-                    f"Suppressed exception: {e}"
-                )  # Ignore if bond already removed or inconsistent
+            if id1 in self.adjacency_list and id2 in self.adjacency_list[id1]:
+                self.adjacency_list[id1].remove(id2)
+            if id2 in self.adjacency_list and id1 in self.adjacency_list[id2]:
+                self.adjacency_list[id2].remove(id1)
+            self.bonds.pop(key_to_remove, None)
 
     def to_rdkit_mol(self, use_2d_stereo=True):
         """
@@ -138,7 +135,7 @@ class MolecularData:
             return None
         mol = Chem.RWMol()
 
-        # atoms ---
+        # atoms
         atom_id_to_idx_map = {}
         for atom_id, data in self.atoms.items():
             try:
@@ -153,7 +150,7 @@ class MolecularData:
             idx = mol.AddAtom(atom)
             atom_id_to_idx_map[atom_id] = idx
 
-        # save bonds & stereo info (label info is kept here) ---
+        # save bonds & stereo info (label info is kept here)
         bond_stereo_info = {}  # bond_idx -> {'type': int, 'atom_ids': (id1,id2), 'bond_data': bond_data}
         for (id1, id2), bond_data in self.bonds.items():
             if id1 not in atom_id_to_idx_map or id2 not in atom_id_to_idx_map:
@@ -178,7 +175,7 @@ class MolecularData:
                     "bond_data": bond_data,
                 }
 
-        # sanitize ---
+        # sanitize
         final_mol = mol.GetMol()
         try:
             Chem.SanitizeMol(final_mol)
@@ -186,7 +183,7 @@ class MolecularData:
             # Sanitization failure: return None to trigger manual MOL block fallback
             return None
 
-        # add 2D conformer ---
+        # add 2D conformer
         # Convert from scene pixels to angstroms when creating RDKit conformer.
         conf = Chem.Conformer(final_mol.GetNumAtoms())
         conf.Set3D(False)
@@ -365,11 +362,10 @@ class MolecularData:
             positions = []
             for aidx in a_ring:
                 item = rdkit_idx_to_item.get(aidx)
-                if item:
-                    try:
-                        positions.append(item.pos())
-                    except (AttributeError, RuntimeError) as e:
-                        logging.debug(f"Suppressed exception: {e}")
+                if item and hasattr(item, "pos"):
+                    pos = item.pos()
+                    if pos is not None:
+                        positions.append(pos)
 
             if not positions:
                 continue
@@ -396,9 +392,9 @@ class MolecularData:
             try:
                 return Chem.MolToMolBlock(mol, includeStereo=True)
             except (RuntimeError, ValueError, TypeError) as e:
-                logging.debug(
-                    f"Suppressed exception: {e}"
-                )  # Suppress errors during RDKit MolBlock generation
+                logging.warning(
+                    f"RDKit MolBlock generation failed: {e}"
+                )  # Fallback to manual MolBlock generation if RDKit fails
 
         if not self.atoms:
             return None

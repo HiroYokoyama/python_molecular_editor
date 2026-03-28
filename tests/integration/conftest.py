@@ -341,7 +341,7 @@ def window(app, qtbot, monkeypatch):
         lambda *a, **k: None,
     )
     monkeypatch.setattr(
-        "moleditpy.ui.view_3d.MainWindowView3d.apply_3d_settings",
+        "moleditpy.ui.view_3d_logic.View3DManager.apply_3d_settings",
         lambda *a, **k: None,
     )
 

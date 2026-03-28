@@ -12,12 +12,9 @@ DOI: 10.5281/zenodo.17268532
 
 # Import OBABEL_AVAILABLE from the top-level package and re-export it
 try:
-    from .. import OBABEL_AVAILABLE
+    from moleditpy_linux import OBABEL_AVAILABLE
 except ImportError:
-    # Use fallback if package layout is not yet fully initialized or during tests
-    import importlib.util
-
-    OBABEL_AVAILABLE = importlib.util.find_spec("openbabel") is not None
+    OBABEL_AVAILABLE = False
 
 # Re-export core UI utilities
 from .sip_isdeleted_safe import sip_isdeleted_safe

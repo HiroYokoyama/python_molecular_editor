@@ -135,7 +135,7 @@ class MolecularData:
             return None
         mol = Chem.RWMol()
 
-        # atoms ---
+        # atoms
         atom_id_to_idx_map = {}
         for atom_id, data in self.atoms.items():
             try:
@@ -150,7 +150,7 @@ class MolecularData:
             idx = mol.AddAtom(atom)
             atom_id_to_idx_map[atom_id] = idx
 
-        # save bonds & stereo info (label info is kept here) ---
+        # save bonds & stereo info (label info is kept here)
         bond_stereo_info = {}  # bond_idx -> {'type': int, 'atom_ids': (id1,id2), 'bond_data': bond_data}
         for (id1, id2), bond_data in self.bonds.items():
             if id1 not in atom_id_to_idx_map or id2 not in atom_id_to_idx_map:
@@ -175,7 +175,7 @@ class MolecularData:
                     "bond_data": bond_data,
                 }
 
-        # sanitize ---
+        # sanitize
         final_mol = mol.GetMol()
         try:
             Chem.SanitizeMol(final_mol)
@@ -183,7 +183,7 @@ class MolecularData:
             # Sanitization failure: return None to trigger manual MOL block fallback
             return None
 
-        # add 2D conformer ---
+        # add 2D conformer
         # Convert from scene pixels to angstroms when creating RDKit conformer.
         conf = Chem.Conformer(final_mol.GetNumAtoms())
         conf.Set3D(False)

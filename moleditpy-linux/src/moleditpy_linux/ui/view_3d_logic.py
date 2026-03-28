@@ -43,7 +43,6 @@ except ImportError:
     from moleditpy.ui.template_preview_item import TemplatePreviewItem
 
 
-# --- Class Definition ---
 class View3DManager:
     """Independent manager for 3D rendering logic, ported from MainWindowView3d mixin."""
 
@@ -165,8 +164,7 @@ class View3DManager:
         # 1. Camera state and clear
         camera_state = self.plotter.camera.copy()
 
-        # **Force removal to prevent residue**
-        # Pylint: access-member-before-definition fix
+        # Force removal to prevent ghost actor residues
         old_axes_actor = getattr(self, "axes_actor", None)
         if old_axes_actor is not None:
             with contextlib.suppress(AttributeError, RuntimeError, TypeError):
@@ -247,7 +245,6 @@ class View3DManager:
             lighting=is_lighting_enabled,
         )
 
-        # --- Mod: Extract variables for delegates ---
         self._add_3d_atom_glyphs(
             mol_to_draw, conf, sym, col, current_style, is_lighting_enabled, mesh_props
         )
@@ -268,9 +265,8 @@ class View3DManager:
                 try:
                     # Force a render so the change is visible immediately
                     self.plotter.render()
-                except (AttributeError, RuntimeError, TypeError):
-                    # Suppress non-critical 3D rendering errors
-                    pass
+                except (AttributeError, RuntimeError, TypeError) as e:
+                    logging.error(f"Render failed: {e}")
 
         # Re-display if AtomID or other atom info is shown
         if (
@@ -522,9 +518,8 @@ class View3DManager:
                     bs_hex = self.settings.get("ball_stick_bond_color", "#7F7F7F")
                     q = QColor(bs_hex)
                     bs_bond_rgb = [q.red(), q.green(), q.blue()]
-                except (AttributeError, RuntimeError, TypeError, ValueError):
-                    # Suppress non-critical bond drawing color fallback noise
-                    pass
+                except (AttributeError, RuntimeError, TypeError, ValueError) as e:
+                    logging.error(f"Failed to load bond color from settings: {e}")
 
             # Lists for batch processing
             all_points = []
@@ -1111,9 +1106,8 @@ class View3DManager:
         ):
             try:
                 self.plotter.remove_actor("ez_labels")
-            except (AttributeError, RuntimeError, TypeError):
-                # Ignore label removal failure on stale plotter
-                pass
+            except (AttributeError, RuntimeError, TypeError) as e:
+                logging.error(f"Failed to remove EZ labels: {e}")
 
         pts, labels = [], []
 
@@ -1132,8 +1126,7 @@ class View3DManager:
                 mol, cleanIt=True, force=True, flagPossibleStereoCenters=True
             )
         except (AttributeError, RuntimeError, TypeError, ValueError):
-            # Suppress non-critical stereochemistry assignment noise during 3D label update
-            pass
+            logging.error("Caught exception in " + __file__, exc_info=True)
 
         for bond in mol.GetBonds():
             if bond.GetBondType() == Chem.BondType.DOUBLE:
@@ -1220,9 +1213,8 @@ class View3DManager:
                 # Set chiral tags from 3D coordinates using confId=0
                 try:
                     Chem.AssignAtomChiralTagsFromStructure(mol_for_chirality, confId=0)
-                except (AttributeError, RuntimeError, TypeError, ValueError):
-                    # Guard for older RDKit versions or invalid coordinates
-                    pass
+                except (AttributeError, RuntimeError, TypeError, ValueError) as e:
+                    logging.error(f"AssignAtomChiralTagsFromStructure failed: {e}")
 
             # Get chiral centers (list of (idx, 'R'/'S'/'?'))
             chiral_centers = Chem.FindMolChiralCenters(
@@ -1305,9 +1297,7 @@ class View3DManager:
 
     def has_original_atom_ids(self):
         """Determine if the current molecule has Original Atom IDs"""
-        if not self.current_mol:
-            return False
-        if not self.current_mol:
+        if not self.current_mol or self.current_mol.GetNumAtoms() == 0:
             return False
         try:
             # Check if any atom has _original_atom_id property
@@ -1315,11 +1305,8 @@ class View3DManager:
                 atom = self.current_mol.GetAtomWithIdx(atom_idx)
                 if atom.HasProp("_original_atom_id"):
                     return True
-        except (AttributeError, RuntimeError, TypeError, ValueError):
-            # Suppress non-critical property access noise
-            pass
-        return False
-
+        except (AttributeError, RuntimeError, TypeError, ValueError) as e:
+            logging.error(f"Failed to check original atom IDs: {e}")
         return False
 
     def update_atom_id_menu_text(self):
@@ -1484,7 +1471,7 @@ class View3DManager:
                 )
                 self.current_atom_info_labels.append(a)
         except (AttributeError, RuntimeError, TypeError, ValueError) as e:
-            print(f"Error adding atom info labels: {e}")
+            logging.error(f"Error adding atom info labels: {e}")
 
         # Display legend in the top-right (remove existing legends)
         try:
@@ -1541,9 +1528,8 @@ class View3DManager:
                             tp = actor.GetTextProperty()
                             try:
                                 tp.SetBold(True)
-                            except (AttributeError, RuntimeError, TypeError):
-                                # Suppress non-critical actor property update noise
-                                pass
+                            except (AttributeError, RuntimeError, TypeError) as e:
+                                logging.debug(f"Failed to set bold font: {e}")
                     except (AttributeError, RuntimeError, TypeError) as e:
                         logging.debug(
                             f"Suppressed exception: {e}"
@@ -1568,9 +1554,8 @@ class View3DManager:
                     for a in list(self.current_atom_info_labels):
                         try:
                             self.plotter.remove_actor(a)
-                        except (AttributeError, RuntimeError, TypeError):
-                            # Suppress non-critical actor removal noise
-                            pass
+                        except (AttributeError, RuntimeError, TypeError) as e:
+                            logging.debug(f"Failed to remove actor: {e}")
                 else:
                     try:
                         self.plotter.remove_actor(self.current_atom_info_labels)
