@@ -18,7 +18,7 @@ from moleditpy.ui.bond_length_dialog import BondLengthDialog
 from moleditpy.core.mol_geometry import calculate_dihedral, adjust_bond_angle
 from moleditpy.ui.alignment_dialog import AlignmentDialog
 from moleditpy.ui.align_plane_dialog import AlignPlaneDialog
-from moleditpy.ui.edit_3d import MainWindowEdit3d
+from moleditpy.ui.edit_3d_logic import Edit3DManager
 from moleditpy.ui.custom_interactor_style import CustomInteractorStyle
 
 def setup_test_molecule(smiles: str):
@@ -99,7 +99,7 @@ def test_main_window_edit_3d_angle_logic_matches_rdkit():
         2: conf.GetAtomPosition(2)
     }
     
-    editor = MainWindowEdit3d()
+    editor = Edit3DManager(host=mock_main_window)
     editor.atom_positions_3d = mock_main_window.atom_positions_3d
     
     # _calculate_angle(atom1_idx, vertex_idx, atom3_idx)
@@ -179,7 +179,7 @@ def test_main_window_edit_3d_distance_logic_matches_rdkit():
         1: conf.GetAtomPosition(1)
     }
     
-    editor = MainWindowEdit3d()
+    editor = Edit3DManager(host=mock_main_window)
     editor.atom_positions_3d = mock_main_window.atom_positions_3d
     # _calculate_distance(atom1_idx, atom2_idx)
     app_calculated_dist = editor.calculate_distance(0, 1)

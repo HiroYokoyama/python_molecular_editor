@@ -10,23 +10,19 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
-"""Pure-logic molecular-geometry helpers.
-
-This module is intentionally free of any GUI imports so that it can
-be unit-tested in isolation and shared across dialogs and main-window
-submodules without circular dependencies.
-"""
+from __future__ import annotations
+import math
+import logging
+from collections import deque
+from typing import Any, Dict, Iterable, List, Optional, Set, Tuple, Union
 
 import numpy as np
-import math
-from collections import deque
 
 # ------------------------------------------------------------------
 # Primitive geometry helpers
 # ------------------------------------------------------------------
 
-
-def calc_distance(pos1, pos2) -> float:
+def calc_distance(pos1: Union[np.ndarray, Tuple[float, float, float], List[float]], pos2: Union[np.ndarray, Tuple[float, float, float], List[float]]) -> float:
     """Return the Euclidean distance between two 3-D positions.
 
     Parameters
@@ -44,7 +40,11 @@ def calc_distance(pos1, pos2) -> float:
     )
 
 
-def calc_angle_deg(pos1, pos2_vertex, pos3) -> float:
+def calc_angle_deg(
+    pos1: Union[np.ndarray, Tuple[float, float, float], List[float]],
+    pos2_vertex: Union[np.ndarray, Tuple[float, float, float], List[float]],
+    pos3: Union[np.ndarray, Tuple[float, float, float], List[float]],
+) -> float:
     """Return the angle pos1–pos2_vertex–pos3 in degrees.
 
     The angle is measured at *pos2_vertex* and is always in [0, 180].
@@ -78,7 +78,7 @@ def calc_angle_deg(pos1, pos2_vertex, pos3) -> float:
 # ------------------------------------------------------------------
 
 
-def get_connected_group(mol, start_atom, exclude=None):
+def get_connected_group(mol: Any, start_atom: int, exclude: Optional[int] = None) -> Set[int]:
     """Return the set of atom indices reachable from *start_atom*
     without passing through *exclude*.
 
@@ -124,7 +124,7 @@ def get_connected_group(mol, start_atom, exclude=None):
 # ------------------------------------------------------------------
 
 
-def rodrigues_rotate(v, axis, angle):
+def rodrigues_rotate(v: np.ndarray, axis: np.ndarray, angle: float) -> np.ndarray:
     """Rotate vector *v* around a unit *axis* by *angle* radians.
 
     Implements Rodrigues' rotation formula:
@@ -151,8 +151,13 @@ def rodrigues_rotate(v, axis, angle):
 
 
 def adjust_bond_angle(
-    positions, idx_a, idx_b, idx_c, target_angle_deg, atom_indices_to_move
-):
+    positions: np.ndarray,
+    idx_a: int,
+    idx_b: int,
+    idx_c: int,
+    target_angle_deg: float,
+    atom_indices_to_move: Iterable[int],
+) -> float:
     """Adjust the A–B–C bond angle to *target_angle_deg* using a
     difference-based rotation.
 
@@ -244,7 +249,7 @@ def adjust_bond_angle(
 # ------------------------------------------------------------------
 
 
-def calculate_dihedral(positions, i1, i2, i3, i4):
+def calculate_dihedral(positions: Any, i1: int, i2: int, i3: int, i4: int) -> float:
     """Compute the dihedral angle defined by four atom indices.
 
     Parameters
@@ -314,7 +319,7 @@ _VALENCE_LIMITS = {
 }
 
 
-def is_problematic_valence(symbol, bond_count, charge=0):
+def is_problematic_valence(symbol: str, bond_count: Union[int, float], charge: int = 0) -> bool:
     """Return ``True`` if the atom's total bond order exceeds its
     typical maximum valence.
 
@@ -406,7 +411,7 @@ def inject_ez_stereo_to_mol_block(mol_block, rdkit_mol, bonds_data):
     return "\n".join(mol_lines)
 
 
-def identify_valence_problems(atoms_data, bonds_data):
+def identify_valence_problems(atoms_data: Dict[int, Any], bonds_data: Dict[Tuple[int, int], Any]) -> List[int]:
     """Identify atoms with problematic valence.
 
     Parameters
@@ -441,7 +446,7 @@ def identify_valence_problems(atoms_data, bonds_data):
     return problem_atom_ids
 
 
-def optimize_2d_coords(mol):
+def optimize_2d_coords(mol: Any) -> Dict[int, Tuple[float, float]]:
     """Generate 2D coordinates using RDKit and return a map of (x, y) tuples."""
     from rdkit.Chem import AllChem
 
@@ -571,12 +576,12 @@ def resolve_2d_overlaps(
                 rep_id1, rep_id2 = i1, i2
                 break
 
-        if not rep_id1:
+        if rep_id1 is None:
             continue
 
         frag1 = next((f for f in fragments if rep_id1 in f), None)
         frag2 = next((f for f in fragments if rep_id2 in f), None)
-        if not frag1 or not frag2 or frag1 == frag2:
+        if frag1 is None or frag2 is None or frag1 == frag2:
             continue
 
         ids_to_move = frag1 if rep_id1 > rep_id2 else frag2

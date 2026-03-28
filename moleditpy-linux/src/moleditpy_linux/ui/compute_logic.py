@@ -10,9 +10,12 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
+from __future__ import annotations
 import logging
 import contextlib
-from PyQt6.QtCore import QThread, QTimer
+from typing import Any, Dict, List, Optional, Set, Tuple, Union
+
+from PyQt6.QtCore import QThread, QTimer, QPoint
 from PyQt6.QtGui import QAction, QColor
 from PyQt6.QtWidgets import QMenu, QMessageBox
 from rdkit import Chem
@@ -23,30 +26,30 @@ except ImportError:
     from moleditpy_linux.ui import OBABEL_AVAILABLE
 
 try:
-    # package relative imports
+    # package relative imports (preferred when running as `python -m moleditpy`)
     from .calculation_worker import CalculationWorker
     from .mol_geometry import (
         identify_valence_problems,
         inject_ez_stereo_to_mol_block,
     )
 except ImportError:
+    # Fallback to absolute imports for script-style execution
     from moleditpy_linux.ui.calculation_worker import CalculationWorker
     from moleditpy_linux.core.mol_geometry import (
         identify_valence_problems,
         inject_ez_stereo_to_mol_block,
     )
 
-
 class ComputeManager:
     """Independent manager for molecular computations, ported from MainWindowCompute mixin."""
 
-    def __init__(self, host):
+    def __init__(self, host: Any) -> None:
         self.host = host
-        self.last_successful_optimization_method = None
-        self._active_calc_threads = []
-        self.halt_ids = set()
+        self.last_successful_optimization_method: Optional[str] = None
+        self._active_calc_threads: List[QThread] = []
+        self.halt_ids: Set[int] = set()
 
-    def __getattr__(self, name):
+    def __getattr__(self, name: str) -> Any:
         """Delegate back to host for attributes not found on this manager."""
         if name == "host":
             raise AttributeError(name)
@@ -199,7 +202,7 @@ class ComputeManager:
         self.host._temp_optimization_method = method_key
         QTimer.singleShot(0, self.host.optimize_3d_structure)
 
-    def trigger_conversion(self):
+    def trigger_conversion(self) -> None:
         """Main entry point for 2D to 3D conversion."""
         self.last_successful_optimization_method = None
         self.host.constraints_3d = []
@@ -298,7 +301,7 @@ class ComputeManager:
         self._remove_calculating_text()
         self.host.statusBar().showMessage("Halted")
 
-    def optimize_3d_structure(self):
+    def optimize_3d_structure(self) -> None:
         """Optimize 3D structure."""
         if not self.host.current_mol:
             self.host.statusBar().showMessage("No 3D molecule to optimize.")
@@ -416,7 +419,7 @@ class ComputeManager:
         QTimer.singleShot(10, lambda: worker.start_work.emit(mol_block, options))
         self._active_calc_threads.append(thread)
 
-    def on_calculation_finished(self, result):
+    def on_calculation_finished(self, result: Union[Chem.Mol, Tuple[int, Chem.Mol]]) -> None:
         worker_id, mol = result if isinstance(result, tuple) else (None, result)
         if worker_id is not None:
             active_ids = getattr(self.host, "active_worker_ids", set())
@@ -444,7 +447,7 @@ class ComputeManager:
         self.host.push_undo_state()
         self.host.plotter.reset_camera()
 
-    def on_calculation_error(self, message):
+    def on_calculation_error(self, message: str) -> None:
         self._remove_calculating_text()
         self._restore_button_ui()
         self.host.statusBar().showMessage(f"Calculation Error: {message}")

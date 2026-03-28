@@ -10,6 +10,9 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
+from __future__ import annotations
+from typing import Any, Dict, List, Optional, Set, Tuple, Union
+
 from PyQt6.QtCore import QPointF, QRectF, Qt
 from PyQt6.QtGui import (
     QBrush,
@@ -38,32 +41,29 @@ except ImportError:
         FONT_FAMILY,
         FONT_WEIGHT_BOLD,
     )
-
 from PyQt6 import sip
 
-
-def sip_isdeleted_safe(obj):
+def sip_isdeleted_safe(obj: Any) -> bool:
     try:
         return sip.isdeleted(obj)
-    except (AttributeError, TypeError, RuntimeError):
+    except (AttributeError, TypeError, ImportError, RuntimeError):
         # If the object does not support sip.isdeleted or is already in a state
         # where the check fails, we assume it's unsafe or "deleted" for our purposes.
         return True
 
 
 class AtomItem(QGraphicsItem):
-    def __init__(self, atom_id, symbol, pos, charge=0, radical=0):
+    def __init__(self, atom_id: int, symbol: str, pos: QPointF, charge: int = 0, radical: int = 0) -> None:
         super().__init__()
-        (
-            self.atom_id,
-            self.symbol,
-            self.charge,
-            self.radical,
-            self.bonds,
-            self.chiral_label,
-        ) = atom_id, symbol, charge, radical, [], None
+        self.atom_id: int = atom_id
+        self.symbol: str = symbol
+        self.charge: int = charge
+        self.radical: int = radical
+        self.bonds: List[Any] = []
+        self.chiral_label: Optional[str] = None
+        
         self.setPos(pos)
-        self.implicit_h_count = 0
+        self.implicit_h_count: int = 0
         self.setFlags(
             QGraphicsItem.GraphicsItemFlag.ItemIsMovable
             | QGraphicsItem.GraphicsItemFlag.ItemIsSelectable
@@ -71,13 +71,12 @@ class AtomItem(QGraphicsItem):
         self.setZValue(1)
         self.update_style()
         self.setAcceptHoverEvents(True)
-        self.hovered = False
-        self.hovered = False
-        self.has_problem = False
-        self.is_visible = True
-        self.font = QFont(FONT_FAMILY, 20, FONT_WEIGHT_BOLD)
+        self.hovered: bool = False
+        self.has_problem: bool = False
+        self.is_visible: bool = True
+        self.font: QFont = QFont(FONT_FAMILY, 20, FONT_WEIGHT_BOLD)
 
-    def update_style(self):
+    def update_style(self) -> None:
         if sip_isdeleted_safe(self):
             return
         # Allow updating font preference dynamically
@@ -100,7 +99,8 @@ class AtomItem(QGraphicsItem):
         )
         self.update()
 
-    def boundingRect(self):
+    def boundingRect(self) -> QRectF:
+        """Calculate the bounding rectangle for the atom item."""
         # --- Calculate text position and size using logic matching paint() ---
         # Get dynamic font size and family
         font_size = 20
@@ -215,7 +215,8 @@ class AtomItem(QGraphicsItem):
         # 3. Add final margins for selection highlights, etc.
         return full_visual_rect.adjusted(-3, -3, 3, 3)
 
-    def shape(self):
+    def shape(self) -> QPainterPath:
+        """Define the shape of the atom item for collision detection."""
         scene = self.scene()
         if not scene or not scene.views():
             path = QPainterPath()
@@ -232,7 +233,13 @@ class AtomItem(QGraphicsItem):
         path.addEllipse(QPointF(0, 0), scene_radius, scene_radius)
         return path
 
-    def paint(self, painter, option, widget):
+    def paint(
+        self,
+        painter: QPainter,
+        option: Any,
+        widget: Optional[QWidget] = None,
+    ) -> None:
+        """Paint the atom symbol and its associated labels (charge, radical)."""
         # Color logic: check if we should use bond color (uniform) or CPK (element-specific)
         color = CPK_COLORS.get(self.symbol, CPK_COLORS["DEFAULT"])
         # Use bond color if specified in settings
@@ -428,7 +435,7 @@ class AtomItem(QGraphicsItem):
             painter.setPen(pen)
             painter.drawRect(self.boundingRect())
 
-    def itemChange(self, change, value):
+    def itemChange(self, change: QGraphicsItem.GraphicsItemChange, value: Any) -> Any:
         res = super().itemChange(change, value)
         if change == QGraphicsItem.GraphicsItemChange.ItemPositionHasChanged:
             if self.flags() & QGraphicsItem.GraphicsItemFlag.ItemIsMovable:
@@ -438,13 +445,13 @@ class AtomItem(QGraphicsItem):
 
         return res
 
-    def hoverEnterEvent(self, event):
+    def hoverEnterEvent(self, event: Any) -> None:
         # Enable highlight on hover regardless of scene mode
         self.hovered = True
         self.update()
         super().hoverEnterEvent(event)
 
-    def hoverLeaveEvent(self, event):
+    def hoverLeaveEvent(self, event: Any) -> None:
         if self.hovered:
             self.hovered = False
             self.update()

@@ -10,11 +10,13 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
+from __future__ import annotations
 import contextlib
 import io
 import logging
 import math
 import pickle
+from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
 import numpy as np
 
@@ -42,7 +44,7 @@ from rdkit import Chem
 
 
 class Rotate2DDialog(QDialog):
-    def __init__(self, parent=None, initial_angle=0):
+    def __init__(self, parent: Optional[QWidget] = None, initial_angle: float = 0) -> None:
         super().__init__(parent)
         self.setWindowTitle("Rotate 2D")
         self.setFixedWidth(300)
@@ -80,7 +82,7 @@ class Rotate2DDialog(QDialog):
         btn_layout.addWidget(cancel_btn)
         layout.addLayout(btn_layout)
 
-    def get_angle(self):
+    def get_angle(self) -> float:
         return self.angle_spin.value()
 
 
@@ -120,18 +122,18 @@ class EditActionsManager:
 
     _cls = None
 
-    def __init__(self, host):
+    def __init__(self, host: Any) -> None:
         self.host = host
         # State variables previously held by mixin
-        self.last_rotation_angle = 0
+        self.last_rotation_angle: float = 0
 
-    def __getattr__(self, name):
+    def __getattr__(self, name: str) -> Any:
         """Delegate back to host for attributes not found on this manager."""
         if name == "host":
             raise AttributeError(name)
         return getattr(self.host, name)
 
-    def copy_selection(self):
+    def copy_selection(self) -> None:
         """Copy selected atoms and bonds to clipboard"""
         try:
             selected_atoms = [
@@ -198,7 +200,7 @@ class EditActionsManager:
             print(f"Error during copy operation: {e}")
             self.host.statusBar().showMessage(f"Error during copy operation: {e}")
 
-    def cut_selection(self):
+    def cut_selection(self) -> None:
         """Cut selected items (copy then delete)"""
         try:
             selected_items = self.host.scene.selectedItems()
@@ -216,7 +218,7 @@ class EditActionsManager:
             print(f"Error during cut operation: {e}")
             self.host.statusBar().showMessage(f"Error during cut operation: {e}")
 
-    def paste_from_clipboard(self):
+    def paste_from_clipboard(self) -> None:
         """Paste molecular fragment from clipboard"""
         try:
             clipboard = QApplication.clipboard()
@@ -276,7 +278,7 @@ class EditActionsManager:
         self.activate_select_mode()
         self.host.scene.update_all_items()
 
-    def remove_hydrogen_atoms(self):
+    def remove_hydrogen_atoms(self) -> None:
         """Delete hydrogen atoms and their bonds in 2D view"""
         try:
             # Collect hydrogen atom items robustly (store atom_id -> item)
@@ -409,7 +411,7 @@ class EditActionsManager:
                 # Suppress transient errors during UI status reporting.
                 self.host.statusBar().showMessage(f"Error removing hydrogen atoms: {e}")
 
-    def add_hydrogen_atoms(self):
+    def add_hydrogen_atoms(self) -> None:
         """Compute and add explicit hydrogens in 2D view using RDKit."""
 
         try:
@@ -593,7 +595,7 @@ class EditActionsManager:
             print(f"Error during hydrogen addition: {e}")
             self.host.statusBar().showMessage(f"Error adding hydrogen atoms: {e}")
 
-    def update_edit_menu_actions(self):
+    def update_edit_menu_actions(self) -> None:
         """Update edit menu based on selection and clipboard"""
         try:
             has_selection = len(self.host.scene.selectedItems()) > 0
@@ -609,7 +611,7 @@ class EditActionsManager:
             # Suppress non-critical error
             pass
 
-    def open_rotate_2d_dialog(self):
+    def open_rotate_2d_dialog(self) -> None:
         """Open 2D rotation dialog"""
         # Initialize last_rotation_angle if not present
         if not hasattr(self, "last_rotation_angle"):
@@ -621,7 +623,7 @@ class EditActionsManager:
             self.last_rotation_angle = angle  # Remember for next time
             self.rotate_molecule_2d(angle)
 
-    def rotate_molecule_2d(self, angle_degrees):
+    def rotate_molecule_2d(self, angle_degrees: float) -> None:
         """Rotate 2D molecule (selection or entire)"""
         try:
             # Determine target atoms
@@ -682,12 +684,12 @@ class EditActionsManager:
             print(f"Error rotating molecule: {e}")
             self.host.statusBar().showMessage(f"Error rotating: {e}")
 
-    def select_all(self):
+    def select_all(self) -> None:
         for item in self.host.scene.items():
             if isinstance(item, (AtomItem, BondItem)):
                 item.setSelected(True)
 
-    def clear_all(self):
+    def clear_all(self) -> bool:
         # Check for unsaved changes
         if not self.check_unsaved_changes():
             # Cancel if requested
@@ -756,7 +758,7 @@ class EditActionsManager:
         self.host.statusBar().showMessage("Cleared all data.")
         return True
 
-    def clear_2d_editor(self, push_to_undo=True):
+    def clear_2d_editor(self, push_to_undo: bool = True) -> None:
         # Clear 2D editor (no undo push)
         self.host.data = MolecularData()
         self.host.scene.data = self.host.data
@@ -778,7 +780,7 @@ class EditActionsManager:
         if push_to_undo:
             self.host.push_undo_state()
 
-    def _compute_h_counts(self, mol):
+    def _compute_h_counts(self, mol: Any) -> Dict[int, int]:
         """Build a mapping of original_id -> hydrogen count without touching Qt items."""
         h_count_map = {}
         if mol is None:
@@ -808,7 +810,7 @@ class EditActionsManager:
                 continue
         return h_count_map
 
-    def _detect_chemistry_problems(self, mol):
+    def _detect_chemistry_problems(self, mol: Optional[Chem.Mol]) -> Dict[int, bool]:
         """Compute a per-atom problem map (original_id -> bool)."""
         problem_map = {}
         try:
@@ -840,7 +842,7 @@ class EditActionsManager:
 
         return problem_map
 
-    def _apply_ui_h_counts(self, h_count_map, problem_map, my_token):
+    def _apply_ui_h_counts(self, h_count_map: Dict[int, int], problem_map: Dict[int, bool], my_token: int) -> None:
         """Apply the computed H counts and problem flags to UI items on the main thread."""
         # If the global counter changed since this closure was
         # created, bail out — the update is stale.

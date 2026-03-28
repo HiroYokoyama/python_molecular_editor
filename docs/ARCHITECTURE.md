@@ -12,7 +12,7 @@ The application has undergone a significant architectural modernization, moving 
 ### 1. Composition-Based MainWindow
 The `MainWindow` (the application's heartbeat) is no longer a single, massive class. It is now a **Composition Hub** that orchestrates specialized **Managers** and **Mixins**:
 
-- **Managers (Delegation)**: These are independent objects (e.g., `View3DManager`, `ComputeManager`) that own specific functional areas. They are instantiated within `MainWindow` and handle complex state transitions and external library coordination (e.g., VTK and RDKit).
+- **Managers (Delegation)**: These are independent objects (e.g., `View3DManager`, `EditActionsManager`, `Edit3DManager`) that own specific functional areas. They are instantiated within `MainWindow` and handle complex state transitions and external library coordination (e.g., VTK and RDKit).
 - **Mixins (Traits)**: These are behavioral classes (e.g., `MainWindowAppState`, `MainWindowMolecularParsers`) that provide standardized features like Undo/Redo or File I/O. The `MainWindow` inherits from these "traits" to gain their capabilities.
 
 ### 2. Backward Compatibility Layer (`moleditpy.modules`)
@@ -48,8 +48,8 @@ To prevent the major directory refactoring from breaking existing plugins, the a
 | **File I/O** | | `project_io.py` | |
 | **MOL/XYZ/SMILES** | | `molecular_parsers.py` | |
 | **3D Rendering** | | `view_3d.py` | `view_3d_logic.py` |
-| **2D Editing** | | `edit_actions.py` | `edit_actions_logic.py` |
-| **3D Editing** | | `edit_3d.py` | `edit_3d_logic.py` |
+| **2D Editing** | | `edit_actions_logic.py` | |
+| **3D Editing** | | `edit_3d_logic.py` | |
 | **Undo/Redo** | | `app_state.py` | (Integrated into `MainWindow`) |
 | **Dialogs** | | `dialog_manager.py` | `dialog_logic.py` |
 

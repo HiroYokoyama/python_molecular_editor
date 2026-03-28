@@ -10,7 +10,9 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
+from __future__ import annotations
 import logging
+from typing import Any, Dict, List, Optional, Set, Tuple, Union
 from rdkit import Chem
 
 try:
@@ -22,21 +24,26 @@ except ImportError:
 class PointTuple(tuple):
     """Backward-compatible tuple that allows .x() and .y() access like QPointF."""
 
-    def x(self):
+    def x(self) -> float:
         return self[0]
 
-    def y(self):
+    def y(self) -> float:
         return self[1]
 
 
 class MolecularData:
-    def __init__(self):
+    atoms: Dict[int, Dict[str, Any]]
+    bonds: Dict[Tuple[int, int], Dict[str, Any]]
+    adjacency_list: Dict[int, List[int]]
+    _next_atom_id: int
+
+    def __init__(self) -> None:
         self.atoms = {}
         self.bonds = {}
         self._next_atom_id = 0
         self.adjacency_list = {}
 
-    def add_atom(self, symbol, pos, charge=0, radical=0):
+    def add_atom(self, symbol: str, pos: Union[Any, Tuple[float, float]], charge: int = 0, radical: int = 0) -> int:
         atom_id = self._next_atom_id
         # Internalize position as raw floats to decouple from UI types (QPointF)
         if hasattr(pos, "x") and hasattr(pos, "y"):
@@ -55,7 +62,7 @@ class MolecularData:
         self._next_atom_id += 1
         return atom_id
 
-    def set_atom_pos(self, atom_id, pos):
+    def set_atom_pos(self, atom_id: int, pos: Union[Any, Tuple[float, float]]) -> None:
         """Update atom position using raw floats or QPointF."""
         if atom_id in self.atoms:
             if hasattr(pos, "x") and hasattr(pos, "y"):
@@ -65,7 +72,7 @@ class MolecularData:
             else:
                 self.atoms[atom_id]["pos"] = PointTuple((float(pos[0]), float(pos[1])))
 
-    def add_bond(self, id1, id2, order=1, stereo=0):
+    def add_bond(self, id1: int, id2: int, order: Union[int, float] = 1, stereo: int = 0) -> Tuple[Tuple[int, int], str]:
         # For stereo bonds, do not sort because ID order determines direction.
         # For non-stereo bonds, sort to normalize the key.
         if stereo == 0:
@@ -88,7 +95,7 @@ class MolecularData:
             self.bonds[(id1, id2)] = bond_data
             return (id1, id2), "created"
 
-    def remove_atom(self, atom_id):
+    def remove_atom(self, atom_id: int) -> None:
         if atom_id in self.atoms:
             # Safely get neighbors before deleting the atom's own entry
             neighbors = self.adjacency_list.get(atom_id, [])
@@ -111,7 +118,7 @@ class MolecularData:
             for key in bonds_to_remove:
                 self.bonds.pop(key, None)
 
-    def remove_bond(self, id1, id2):
+    def remove_bond(self, id1: int, id2: int) -> None:
         # Look for directional stereo bonds (forward/reverse) and normalized non-stereo bond keys.
         key_to_remove = None
         if (id1, id2) in self.bonds:
@@ -126,7 +133,7 @@ class MolecularData:
                 self.adjacency_list[id2].remove(id1)
             self.bonds.pop(key_to_remove, None)
 
-    def to_rdkit_mol(self, use_2d_stereo=True):
+    def to_rdkit_mol(self, use_2d_stereo: bool = True) -> Optional[Chem.Mol]:
         """
         use_2d_stereo: True estimates E/Z from 2D coordinates (as before). False prioritizes E/Z labels.
         Call with use_2d_stereo=False for 3D conversion.
@@ -227,7 +234,7 @@ class MolecularData:
                 )
 
         # Helper: Pick neighbors prioritizing heavy atoms
-        def pick_preferred_neighbor(atom, exclude_idx):
+        def pick_preferred_neighbor(atom: Chem.Atom, exclude_idx: int) -> Optional[int]:
             for nbr in atom.GetNeighbors():
                 if nbr.GetIdx() == exclude_idx:
                     continue
@@ -305,7 +312,7 @@ class MolecularData:
             Chem.AssignStereochemistry(final_mol, cleanIt=False, force=False)
         return final_mol
 
-    def update_ring_info_2d(self):
+    def update_ring_info_2d(self) -> None:
         """Update is_in_ring and ring_center for all BondItems based on 2D topology."""
         if not self.atoms or not self.bonds:
             return
@@ -386,7 +393,7 @@ class MolecularData:
                     # so this is usually correct for 2D drawing.
                     bond_item.ring_center = ring_center
 
-    def to_mol_block(self):
+    def to_mol_block(self) -> Optional[str]:
         mol = self.to_rdkit_mol()
         if mol:
             try:
@@ -449,7 +456,7 @@ class MolecularData:
         mol_block += "M  END\n"
         return mol_block
 
-    def to_template_dict(self, name, version="1.0", application_version=""):
+    def to_template_dict(self, name: str, version: str = "1.0", application_version: str = "") -> Dict[str, Any]:
         """Convert current structure to a dictionary for template storage."""
         import datetime
 

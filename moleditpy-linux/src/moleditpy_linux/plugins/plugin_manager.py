@@ -10,6 +10,7 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
+from __future__ import annotations
 import ast
 import importlib.util
 import logging
@@ -17,6 +18,7 @@ import os
 import shutil
 import sys
 import zipfile
+from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union
 
 from PyQt6.QtCore import QUrl
 from PyQt6.QtGui import QDesktopServices
@@ -28,35 +30,34 @@ except ImportError:
     # Fallback if running as script
     from moleditpy_linux.plugins.plugin_interface import PluginContext
 
-
 class PluginManager:
-    def __init__(self, main_window=None):
-        self.plugin_dir = os.path.join(os.path.expanduser("~"), ".moleditpy", "plugins")
-        self.plugins = []  # List of dicts
-        self.main_window = main_window
+    def __init__(self, main_window: Any = None) -> None:
+        self.plugin_dir: str = os.path.join(os.path.expanduser("~"), ".moleditpy", "plugins")
+        self.plugins: List[Dict[str, Any]] = []  # List of dicts
+        self.main_window: Any = main_window
 
         # Registries for actions
-        self.menu_actions = []  # List of (plugin_name, path, callback, text, icon, shortcut)
-        self.toolbar_actions = []
-        self.drop_handlers = []  # List of (priority, plugin_name, callback)
+        self.menu_actions: List[Dict[str, Any]] = []
+        self.toolbar_actions: List[Dict[str, Any]] = []
+        self.drop_handlers: List[Dict[str, Any]] = []
 
-        # Extended Registries (Added to prevent lazy initialization "monkey patching")
-        self.export_actions = []
-        self.optimization_methods = {}
-        self.file_openers = {}  # ext -> list of {'plugin':..., 'callback':..., 'priority':...}
-        self.analysis_tools = []
-        self.save_handlers = {}
-        self.load_handlers = {}
-        self.custom_3d_styles = {}  # style_name -> {'plugin': name, 'callback': func}
-        self.document_reset_handlers = []  # List of callbacks to call on new document
+        # Extended Registries
+        self.export_actions: List[Dict[str, Any]] = []
+        self.optimization_methods: Dict[str, Dict[str, Any]] = {}
+        self.file_openers: Dict[str, List[Dict[str, Any]]] = {}
+        self.analysis_tools: List[Dict[str, Any]] = []
+        self.save_handlers: Dict[str, Callable] = {}
+        self.load_handlers: Dict[str, Callable] = {}
+        self.custom_3d_styles: Dict[str, Dict[str, Any]] = {}
+        self.document_reset_handlers: List[Dict[str, Any]] = []
 
-    def get_main_window(self):
+    def get_main_window(self) -> Any:
         return self.main_window
 
-    def set_main_window(self, mw):
+    def set_main_window(self, mw: Any) -> None:
         self.main_window = mw
 
-    def ensure_plugin_dir(self):
+    def ensure_plugin_dir(self) -> None:
         """Creates the plugin directory if it doesn't exist."""
         if not os.path.exists(self.plugin_dir):
             try:
@@ -64,12 +65,12 @@ class PluginManager:
             except OSError as e:
                 logging.error(f"Error creating plugin directory: {e}")
 
-    def open_plugin_folder(self):
+    def open_plugin_folder(self) -> None:
         """Opens the plugin directory in the OS file explorer."""
         self.ensure_plugin_dir()
         QDesktopServices.openUrl(QUrl.fromLocalFile(self.plugin_dir))
 
-    def install_plugin(self, file_path):
+    def install_plugin(self, file_path: str) -> Tuple[bool, str]:
         """Copies a plugin file to the plugin directory. Supports .py and .zip."""
         self.ensure_plugin_dir()
         try:
@@ -169,7 +170,7 @@ class PluginManager:
         ) as e:
             return False, str(e)
 
-    def discover_plugins(self, parent=None):
+    def discover_plugins(self, parent: Any = None) -> List[Dict[str, Any]]:
         """
         Hybrid discovery:
         - Folders with '__init__.py' -> Treated as single package plugin.
@@ -233,7 +234,7 @@ class PluginManager:
 
         return self.plugins
 
-    def _load_single_plugin(self, filepath, module_name, category):
+    def _load_single_plugin(self, filepath: str, module_name: str, category: str) -> None:
         """Common loading logic for both single-file and package plugins."""
         try:
             # Ensure unique module name by including category path
@@ -350,7 +351,7 @@ class PluginManager:
             # crashing the entire discovery process.
             logging.error(f"Failed to load plugin {module_name}: {e}")
 
-    def run_plugin(self, module, main_window):
+    def run_plugin(self, module: Any, main_window: Any) -> None:
         """Executes the plugin's run method (Legacy manual trigger)."""
         try:
             module.run(main_window)
@@ -369,7 +370,7 @@ class PluginManager:
             )
 
     # --- Registration Callbacks ---
-    def register_menu_action(self, plugin_name, path, callback, text, icon, shortcut):
+    def register_menu_action(self, plugin_name: str, path: str, callback: Callable, text: str, icon: str, shortcut: str) -> None:
         self.menu_actions.append(
             {
                 "plugin": plugin_name,
@@ -381,7 +382,7 @@ class PluginManager:
             }
         )
 
-    def register_toolbar_action(self, plugin_name, callback, text, icon, tooltip):
+    def register_toolbar_action(self, plugin_name: str, callback: Callable, text: str, icon: str, tooltip: str) -> None:
         self.toolbar_actions.append(
             {
                 "plugin": plugin_name,
@@ -392,7 +393,7 @@ class PluginManager:
             }
         )
 
-    def register_drop_handler(self, plugin_name, callback, priority):
+    def register_drop_handler(self, plugin_name: str, callback: Callable, priority: int) -> None:
         self.drop_handlers.append(
             {"priority": priority, "plugin": plugin_name, "callback": callback}
         )
@@ -453,7 +454,7 @@ class PluginManager:
             {"plugin": plugin_name, "callback": callback}
         )
 
-    def invoke_document_reset_handlers(self):
+    def invoke_document_reset_handlers(self) -> None:
         """Call all registered document reset handlers."""
         for handler in self.document_reset_handlers:
             try:

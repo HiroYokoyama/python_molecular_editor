@@ -10,8 +10,11 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
+from __future__ import annotations
 import contextlib
 import os
+import logging
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 # RDKit imports (explicit to satisfy flake8 and used features)
 from rdkit import Chem
@@ -55,17 +58,19 @@ except ImportError:
         COVALENT_RADII,
     )
 
-
-def _set_mol_prop_safe(mol, key, val):
-    """Set an integer property on an RDKit mol, silently ignoring failures."""
+def _set_mol_prop_safe(mol: Chem.Mol, key: str, val: Union[int, float]) -> None:
+    """Set an integer or double property on an RDKit mol, silently ignoring non-numeric or failing values."""
     # Suppress potential RDKit-specific crashes when setting properties on invalid/malformed atoms
     with contextlib.suppress(RuntimeError, TypeError, ValueError):
-        mol.SetIntProp(key, int(val))
+        if isinstance(val, int):
+            mol.SetIntProp(key, val)
+        elif isinstance(val, float):
+            mol.SetDoubleProp(key, val)
 
 
-# --- Class Definition ---
 class MainWindowMolecularParsers:
-    def load_mol_file(self, file_path=None):
+    """Mixin for molecular file parsing and export."""
+    def load_mol_file(self, file_path: Optional[str] = None) -> None:
         if not self.check_unsaved_changes():
             return
 
@@ -259,7 +264,7 @@ class MainWindowMolecularParsers:
         except ValueError:
             return 0, True, False
 
-    def load_xyz_file(self, file_path):
+    def load_xyz_file(self, file_path: str) -> Optional[Chem.Mol]:
         """Load XYZ file and create RDKit Mol."""
         if not self.check_unsaved_changes():
             return
@@ -430,7 +435,7 @@ class MainWindowMolecularParsers:
 
         return len(bonds_added)
 
-    def save_as_mol(self):
+    def save_as_mol(self) -> None:
         try:
             mol_block = self.data.to_mol_block()
             if not mol_block:
@@ -488,7 +493,7 @@ class MainWindowMolecularParsers:
             logging.error(f"Error saving MOL file: {e}", exc_info=True)
             self.statusBar().showMessage(f"Error saving file: {e}")
 
-    def save_as_xyz(self):
+    def save_as_xyz(self) -> None:
         if not self.current_mol:
             self.statusBar().showMessage("Error: Please generate a 3D structure first.")
             return

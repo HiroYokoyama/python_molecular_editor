@@ -1,12 +1,13 @@
 import pytest
-from moleditpy.ui.edit_actions import MainWindowEditActions
+from moleditpy.ui.edit_actions_logic import EditActionsManager
 from moleditpy.core.molecular_data import MolecularData
 from PyQt6.QtCore import QPointF
 from unittest.mock import MagicMock, patch
 
 
-class DummyEditActions(MainWindowEditActions):
+class DummyEditActions(EditActionsManager):
     def __init__(self, host):
+        super().__init__(host)
         self._host = host
         self.data = host.data
         self.scene = host.scene
@@ -59,7 +60,7 @@ def test_remove_hydrogen_atoms_app_logic(mock_parser_host):
     )
 
     # We need to ensure sip_isdeleted_safe doesn't block deletion in test
-    with patch("moleditpy.ui.edit_actions.sip_isdeleted_safe", return_value=False):
+    with patch("moleditpy.ui.edit_actions_logic.sip_isdeleted_safe", return_value=False):
         actions.remove_hydrogen_atoms()
 
     # Should call scene.delete_items with a set containing the H item

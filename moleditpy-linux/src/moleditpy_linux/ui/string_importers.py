@@ -10,6 +10,9 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
+from __future__ import annotations
+from typing import Any, Dict, List, Optional, Tuple, Union
+
 # RDKit imports (explicit to satisfy flake8 and used features)
 from rdkit import Chem
 from rdkit.Chem import AllChem
@@ -29,19 +32,21 @@ except ImportError:
 
 # --- Classes ---
 class MainWindowStringImporters:
-    def import_smiles_dialog(self):
+    """Mixin for string-based molecular input (SMILES, InChI)."""
+
+    def import_smiles_dialog(self) -> None:
         """Dialog for SMILES input."""
         smiles, ok = QInputDialog.getText(self, "Import SMILES", "Enter SMILES string:")
         if ok and smiles:
             self.load_from_smiles(smiles)
 
-    def import_inchi_dialog(self):
+    def import_inchi_dialog(self) -> None:
         """Dialog for InChI input."""
         inchi, ok = QInputDialog.getText(self, "Import InChI", "Enter InChI string:")
         if ok and inchi:
             self.load_from_inchi(inchi)
 
-    def load_from_smiles(self, smiles_string):
+    def load_from_smiles(self, smiles_string: str) -> None:
         """Load molecule from SMILES string to 2D editor."""
         if not self.check_unsaved_changes():
             return  # User cancelled
@@ -141,7 +146,7 @@ class MainWindowStringImporters:
         except (AttributeError, RuntimeError, ValueError, TypeError) as e:
             self.statusBar().showMessage(f"Error loading from SMILES: {e}")
 
-    def load_from_inchi(self, inchi_string):
+    def load_from_inchi(self, inchi_string: str) -> None:
         """Load molecule from InChI string to 2D editor."""
         if not self.check_unsaved_changes():
             return  # User cancelled

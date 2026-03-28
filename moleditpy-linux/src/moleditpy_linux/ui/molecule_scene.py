@@ -10,8 +10,11 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
+from __future__ import annotations
 import logging
-from PyQt6.QtCore import QLineF, Qt
+from typing import Any, Dict, List, Optional, Set, Tuple, Union
+
+from PyQt6.QtCore import QLineF, Qt, QPointF
 from PyQt6.QtGui import QPen
 from PyQt6.QtWidgets import (
     QApplication,
@@ -55,18 +58,22 @@ except ImportError:
         SceneQueryMixin,
     )
 
-
 class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScene):
-    def __init__(self, data, window):
+    def __init__(self, data: Any, window: Any) -> None:
         super().__init__()
         self.data, self.window = data, window
-        self.mode, self.current_atom_symbol = "select", "C"
-        self.bond_order, self.bond_stereo = 1, 0
-        self.start_atom, self.temp_line, self.start_pos = None, None, None
-        self.press_pos = None
-        self.mouse_moved_since_press = False
-        self.data_changed_in_event = False
-        self.hovered_item = None
+        self.mode: str = "select"
+        self.current_atom_symbol: str = "C"
+        self.bond_order: int = 1
+        self.bond_stereo: int = 0
+        self.start_atom: Optional[AtomItem] = None
+        self.temp_line: Optional[QGraphicsLineItem] = None
+        self.start_pos: Optional[QPointF] = None
+        self.press_pos: Optional[QPointF] = None
+        self.mouse_moved_since_press: bool = False
+        self.data_changed_in_event: bool = False
+        self.hovered_item: Optional[QGraphicsItem] = None
+# ... (rest of __init__)
 
         self.key_to_symbol_map = {
             Qt.Key.Key_C: "C",

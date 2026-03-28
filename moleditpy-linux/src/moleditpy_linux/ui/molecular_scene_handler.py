@@ -10,8 +10,11 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
+from __future__ import annotations
 import math
 import logging
+from typing import Any, Dict, List, Optional, Set, Tuple, Union
+
 from PyQt6.QtCore import Qt, QPointF, QLineF, QRectF
 from PyQt6.QtGui import QCursor
 from PyQt6.QtWidgets import QGraphicsItem, QGraphicsLineItem, QApplication
@@ -37,14 +40,13 @@ except ImportError:
         SUM_TOLERANCE,
     )
 
-
 class TemplateMixin:
     """
     Mixin class that handles all template and fragment insertion logic for MoleculeScene.
     Because this is a Mixin, `self` refers directly to the MoleculeScene instance.
     """
 
-    def clear_template_preview(self):
+    def clear_template_preview(self) -> None:
         """Remove all ghost lines for template preview."""
         for item in list(self.items()):
             if isinstance(item, QGraphicsLineItem) and getattr(
@@ -65,7 +67,7 @@ class TemplateMixin:
         if hasattr(self, "template_preview"):
             self.template_preview.hide()
 
-    def _calculate_6ring_rotation(self, num_points, bonds_info, atom_items):
+    def _calculate_6ring_rotation(self, num_points: int, bonds_info: List[Tuple[int, int, int]], atom_items: List[Optional[AtomItem]]) -> int:
         """
         Calculate the best rotation for a 6-ring template (like benzene)
         to match existing bond orders and ensure chemical safety.
@@ -187,8 +189,12 @@ class TemplateMixin:
         return not atom1_has_other_double and not atom2_has_other_double
 
     def add_molecule_fragment(
-        self, points, bonds_info, existing_items=None, symbol="C"
-    ):
+        self,
+        points: List[Union[QPointF, Tuple[float, float]]],
+        bonds_info: List[Tuple[int, int, int]],
+        existing_items: Optional[List[AtomItem]] = None,
+        symbol: str = "C",
+    ) -> List[AtomItem]:
         """Add a molecular fragment (e.g., benzene template) to the scene.
 
         - Enforce policy of not changing existing bond orders.
@@ -338,7 +344,7 @@ class TemplateMixin:
 
         return atom_items
 
-    def update_template_preview(self, pos):
+    def update_template_preview(self, pos: QPointF) -> None:
         mode_parts = self.mode.split("_")
 
         # Check if this is a user template
@@ -418,8 +424,13 @@ class TemplateMixin:
                 self.views()[0].viewport().update()
 
     def _calculate_polygon_from_edge(
-        self, p0, p1, n, cursor_pos=None, use_existing_length=False
-    ):
+        self,
+        p0: QPointF,
+        p1: QPointF,
+        n: int,
+        cursor_pos: Optional[QPointF] = None,
+        use_existing_length: bool = False,
+    ) -> List[QPointF]:
         if n < 3:
             return []
         v_edge = p1 - p0
@@ -706,7 +717,7 @@ class KeyboardMixin:
 
         return new_pos_offset
 
-    def keyPressEvent(self, event):
+    def keyPressEvent(self, event: Any) -> None:
         view = self.views()[0]
         cursor_pos = view.mapToScene(view.mapFromGlobal(QCursor.pos()))
         item_at_cursor = self.itemAt(cursor_pos, view.transform())

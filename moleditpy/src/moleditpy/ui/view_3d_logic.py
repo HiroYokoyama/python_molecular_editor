@@ -10,8 +10,10 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
+from __future__ import annotations
 import logging
 import contextlib
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import vtk
@@ -46,30 +48,30 @@ except ImportError:
 class View3DManager:
     """Independent manager for 3D rendering logic, ported from MainWindowView3d mixin."""
 
-    _cls = None  # Class-level reference for plugin patching accessibility
+    _cls: Optional[type[View3DManager]] = None  # Class-level reference for plugin patching accessibility
 
-    def __init__(self, host):
+    def __init__(self, host: Any) -> None:
         self.host = host
         # State variables previously held by mixin
-        self._drawing_3d = False
-        self._3d_color_map = {}
-        self.current_3d_style = "ball_and_stick"
-        self.atom_positions_3d = None
-        self.glyph_source = None
-        self.atom_actor = None
-        self.axes_actor = None
-        self.axes_widget = None
-        self.atom_info_display_mode = None
-        self.show_chiral_labels = False
-        self.current_atom_info_labels = None
-        self.atom_label_legend_names = []
-        self._camera_initialized = False
+        self._drawing_3d: bool = False
+        self._3d_color_map: Dict[int, Any] = {}
+        self.current_3d_style: str = "ball_and_stick"
+        self.atom_positions_3d: Optional[np.ndarray] = None
+        self.glyph_source: Optional[pv.PolyData] = None
+        self.atom_actor: Optional[pv.Actor] = None
+        self.axes_actor: Optional[vtk.vtkProp] = None
+        self.axes_widget: Optional[vtk.vtkOrientationMarkerWidget] = None
+        self.atom_info_display_mode: Optional[str] = None
+        self.show_chiral_labels: bool = False
+        self.current_atom_info_labels: Optional[List[pv.Actor]] = None
+        self.atom_label_legend_names: List[str] = []
+        self._camera_initialized: bool = False
 
-    def __getattr__(self, name):
+    def __getattr__(self, name: str) -> Any:
         """Delegate back to host for attributes not found on this manager."""
         return getattr(self.host, name)
 
-    def set_3d_style(self, style_name):
+    def set_3d_style(self, style_name: str) -> None:
         """Set 3D display style and update view"""
         current_stored_style = getattr(self, "current_3d_style", None)
         if current_stored_style == style_name:
@@ -94,7 +96,7 @@ class View3DManager:
         if self.current_mol:
             self.draw_molecule_3d(self.current_mol)
 
-    def draw_molecule_3d(self, mol):
+    def draw_molecule_3d(self, mol: Chem.Mol) -> None:
         """Dispatch to custom style or standard drawing."""
         mw = self
 
@@ -1094,7 +1096,7 @@ class View3DManager:
         off_dir /= np.linalg.norm(off_dir)
         return off_dir
 
-    def show_ez_labels_3d(self, mol):
+    def show_ez_labels_3d(self, mol: Chem.Mol) -> None:
         """Display E/Z labels in 3D view (using RDKit stereochemistry determination)"""
         if not mol:
             return
@@ -1134,24 +1136,42 @@ class View3DManager:
 
                 if new_stereo in [Chem.BondStereo.STEREOE, Chem.BondStereo.STEREOZ]:
                     # Calculate bond center coordinates
-                    begin_pos = np.array(conf.GetAtomPosition(bond.GetBeginAtomIdx()))
-                    end_pos = np.array(conf.GetAtomPosition(bond.GetEndAtomIdx()))
+                    # Explicitly extract x,y,z for cross-platform/version robustness
+                    p1 = conf.GetAtomPosition(bond.GetBeginAtomIdx())
+                    p2 = conf.GetAtomPosition(bond.GetEndAtomIdx())
+                    begin_pos = np.array([p1.x, p1.y, p1.z])
+                    end_pos = np.array([p2.x, p2.y, p2.z])
                     center_pos = (begin_pos + end_pos) / 2
 
-                    # Determine label
+                    # Determine 3D label
                     label = "E" if new_stereo == Chem.BondStereo.STEREOE else "Z"
 
-                    # Check for discrepancy with 2D
-                    # Get 2D-derived stereochemistry property saved in main_window_compute.py
+                    # Check for discrepancy with 2D intent from self.host.data
                     try:
-                        old_stereo = bond.GetIntProp("_original_2d_stereo")
-                    except KeyError:
-                        old_stereo = Chem.BondStereo.STEREONONE
-
-                    # Set to "?" if 2D also has E/Z specified but it differs from 3D
-                    if old_stereo in [Chem.BondStereo.STEREOE, Chem.BondStereo.STEREOZ]:
-                        if old_stereo != new_stereo:
-                            label = "?"
+                        # Get original atom IDs
+                        idx1 = bond.GetBeginAtom().GetIntProp("_original_atom_id")
+                        idx2 = bond.GetEndAtom().GetIntProp("_original_atom_id")
+                        
+                        # Find corresponding bond in 2D data
+                        bond_key = (min(idx1, idx2), max(idx1, idx2))
+                        two_d_bond = self.host.data.bonds.get(bond_key)
+                        
+                        if two_d_bond:
+                            two_d_stereo = two_d_bond.get("stereo", 0)
+                            # 3 = Z, 4 = E
+                            if two_d_stereo in [3, 4]:
+                                expected_stereo = Chem.BondStereo.STEREOZ if two_d_stereo == 3 else Chem.BondStereo.STEREOE
+                                if expected_stereo != new_stereo:
+                                    label = "?"
+                    except (AttributeError, KeyError, ValueError, TypeError):
+                        # Fallback to the saved property if direct access fails
+                        try:
+                            old_stereo = bond.GetIntProp("_original_2d_stereo")
+                            if old_stereo in [Chem.BondStereo.STEREOE, Chem.BondStereo.STEREOZ]:
+                                if old_stereo != new_stereo:
+                                    label = "?"
+                        except (KeyError, RuntimeError, TypeError):
+                            pass
 
                     pts.append(center_pos)
                     labels.append(label)

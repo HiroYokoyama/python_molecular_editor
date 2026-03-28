@@ -10,6 +10,9 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
+from __future__ import annotations
+from typing import Any, Optional, Tuple, Union
+
 from PyQt6.QtCore import QLineF, QPointF, QRectF, Qt
 from PyQt6.QtGui import (
     QBrush,
@@ -21,7 +24,7 @@ from PyQt6.QtGui import (
     QPen,
     QPolygonF,
 )
-from PyQt6.QtWidgets import QGraphicsItem, QGraphicsScene
+from PyQt6.QtWidgets import QGraphicsItem, QGraphicsScene, QWidget
 
 try:
     from ..utils.constants import (
@@ -46,7 +49,9 @@ except ImportError:
 
 
 class BondItem(QGraphicsItem):
-    def get_ez_label_rect(self):
+    """Visual representation of a molecular bond in the 2D scene."""
+
+    def get_ez_label_rect(self) -> Optional[QRectF]:
         """Returns the drawing range for E/Z labels (scene coords). Returns None if no label."""
         if self.order != 2 or self.stereo not in [3, 4]:
             return None
@@ -63,7 +68,8 @@ class BondItem(QGraphicsItem):
         # Convert to scene coordinates
         return self.mapToScene(label_rect).boundingRect()
 
-    def set_stereo(self, new_stereo):
+    def set_stereo(self, new_stereo: int) -> None:
+        """Update the stereochemical state of the bond."""
         try:
             # Invalidate scene area when removing label
             if new_stereo == 0 and self.stereo in [3, 4] and self.scene():
@@ -88,42 +94,39 @@ class BondItem(QGraphicsItem):
             # Continue without crashing
             self.stereo = new_stereo
 
-    def set_order(self, new_order):
+    def set_order(self, new_order: int) -> None:
+        """Update the bond order."""
         self.prepareGeometryChange()
         self.order = new_order
         self.update()
         if self.scene() and self.scene().views():
             self.scene().views()[0].viewport().update()
 
-    def update_style(self):
+    def update_style(self) -> None:
         """Force internal state refresh and redraw (primarily from settings)."""
         self.prepareGeometryChange()
         self.update()
 
-    def __init__(self, atom1_item, atom2_item, order=1, stereo=0):
+    def __init__(self, atom1_item: Any, atom2_item: Any, order: int = 1, stereo: int = 0) -> None:
         super().__init__()
         # Validate input parameters
         if atom1_item is None or atom2_item is None:
             raise ValueError("BondItem requires non-None atom items")
-        self.atom1, self.atom2, self.order, self.stereo = (
-            atom1_item,
-            atom2_item,
-            order,
-            stereo,
-        )
+        self.atom1: Any = atom1_item
+        self.atom2: Any = atom2_item
+        self.order: int = order
+        self.stereo: int = stereo
+        
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable)
-        self.pen = QPen(Qt.GlobalColor.black, 2)
+        self.pen: QPen = QPen(Qt.GlobalColor.black, 2)
         self.setZValue(0)
         self.update_position()
         self.setAcceptHoverEvents(True)
-        self.setAcceptHoverEvents(True)
-        self.hovered = False
-        self.order = order
-        self.stereo = stereo
-        self.is_in_ring = False
-        self.ring_center = None
+        self.hovered: bool = False
+        self.is_in_ring: bool = False
+        self.ring_center: Optional[Union[QPointF, Tuple[float, float]]] = None
 
-    def get_line_in_local_coords(self):
+    def get_line_in_local_coords(self) -> QLineF:
         if self.atom1 is None or self.atom2 is None:
             return QLineF(0, 0, 0, 0)
         try:
@@ -137,7 +140,7 @@ class BondItem(QGraphicsItem):
             # return zero line to prevent downstream crashes.
             return QLineF(0, 0, 0, 0)
 
-    def boundingRect(self):
+    def boundingRect(self) -> QRectF:
         try:
             line = self.get_line_in_local_coords()
         except (AttributeError, RuntimeError, ValueError, TypeError):
@@ -194,8 +197,8 @@ class BondItem(QGraphicsItem):
             rect = rect.united(label_rect)
         return rect
 
-    def shape(self):
-        """Define the precise collision/selection area, separate from the drawing area (boundingRect)."""
+    def shape(self) -> QPainterPath:
+        """Define the precise collision/selection area."""
         path = QPainterPath()
         try:
             line = self.get_line_in_local_coords()
@@ -221,7 +224,7 @@ class BondItem(QGraphicsItem):
 
         return path
 
-    def get_ez_label_local_rect(self):
+    def get_ez_label_local_rect(self) -> Optional[QRectF]:
         """Helper to get E/Z label rect in local coordinates."""
         if self.order != 2 or self.stereo not in [3, 4]:
             return None
@@ -240,7 +243,12 @@ class BondItem(QGraphicsItem):
         except (AttributeError, RuntimeError, TypeError, ValueError):
             return None
 
-    def paint(self, painter, option, widget):
+    def paint(
+        self,
+        painter: QPainter,
+        option: Any,
+        widget: Optional[QWidget] = None,
+    ) -> None:
         if self.atom1 is None or self.atom2 is None:
             return
         line = self.get_line_in_local_coords()
@@ -506,7 +514,7 @@ class BondItem(QGraphicsItem):
                 # If highlight fails, it's just a visual artifact.
                 pass
 
-    def update_position(self, notify=True):
+    def update_position(self, notify: bool = True) -> None:
         try:
             if notify:
                 self.prepareGeometryChange()
@@ -517,7 +525,7 @@ class BondItem(QGraphicsItem):
             print(f"Error updating bond position: {e}")
             # Continue without crashing
 
-    def hoverEnterEvent(self, event):
+    def hoverEnterEvent(self, event: Any) -> None:
         scene = self.scene()
         mode = getattr(scene, "mode", "")
         self.hovered = True
@@ -526,7 +534,7 @@ class BondItem(QGraphicsItem):
             self.scene().set_hovered_item(self)
         super().hoverEnterEvent(event)
 
-    def hoverLeaveEvent(self, event):
+    def hoverLeaveEvent(self, event: Any) -> None:
         if self.hovered:
             self.hovered = False
             self.update()

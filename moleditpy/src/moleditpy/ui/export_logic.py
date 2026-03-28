@@ -10,8 +10,10 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
+from __future__ import annotations
 import math
 import os
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 
@@ -44,17 +46,16 @@ except ImportError:
 class ExportManager:
     """Independent manager for export logic, ported from MainWindowExport mixin."""
 
-    _cls = None
+    _cls: Optional[type[ExportManager]] = None
 
-    def __init__(self, host):
+    def __init__(self, host: Any) -> None:
         self.host = host
 
-    def __getattr__(self, name):
+    def __getattr__(self, name: str) -> Any:
         """Delegate back to host for attributes not found on this manager."""
         return getattr(self.host, name)
 
-    def export_stl(self):
-        """Export as STL (no color)."""
+    def export_stl(self) -> None:
         if not self.current_mol:
             self.statusBar().showMessage("Error: Please generate a 3D structure first.")
             return
@@ -68,7 +69,7 @@ class ExportManager:
             default_dir = ""
 
         file_path, _ = QFileDialog.getSaveFileName(
-            self, "Export as STL", default_dir, "STL Files (*.stl);;All Files (*)"
+            self.host, "Export as STL", default_dir, "STL Files (*.stl);;All Files (*)"
         )
 
         if not file_path:
@@ -91,7 +92,7 @@ class ExportManager:
         except (AttributeError, RuntimeError, ValueError) as e:
             self.statusBar().showMessage(f"Error exporting STL: {e}")
 
-    def export_obj_mtl(self):
+    def export_obj_mtl(self) -> None:
         """Export as OBJ/MTL (with colors)."""
         if not self.current_mol:
             self.statusBar().showMessage("Error: Please generate a 3D structure first.")
@@ -106,7 +107,7 @@ class ExportManager:
             default_dir = ""
 
         file_path, _ = QFileDialog.getSaveFileName(
-            self,
+            self.host,
             "Export as OBJ/MTL (with colors)",
             default_dir,
             "OBJ Files (*.obj);;All Files (*)",
@@ -139,8 +140,10 @@ class ExportManager:
         except (AttributeError, RuntimeError, ValueError) as e:
             self.statusBar().showMessage(f"Error exporting OBJ/MTL: {e}")
 
-    def create_multi_material_obj(self, meshes_with_colors, obj_path, mtl_path):
-        """Create multi-material OBJ/MTL files."""
+    def create_multi_material_obj(self, meshes_with_colors: List[Dict[str, Any]], obj_path: str, mtl_path: str) -> None:
+        """Create multi-material OBJ/MTL files.
+        meshes_with_colors: list of dicts with 'mesh', 'color', 'name'
+        """
         try:
             # Create MTL file
             with open(mtl_path, "w") as mtl_file:
@@ -235,7 +238,7 @@ class ExportManager:
         except (AttributeError, RuntimeError, ValueError) as e:
             raise Exception(f"Failed to create multi-material OBJ: {e}")
 
-    def export_color_stl(self):
+    def export_color_stl(self) -> None:
         """Export as Color STL."""
         if not self.current_mol:
             self.statusBar().showMessage("Error: Please generate a 3D structure first.")
@@ -250,7 +253,7 @@ class ExportManager:
             default_dir = ""
 
         file_path, _ = QFileDialog.getSaveFileName(
-            self, "Export as Color STL", default_dir, "STL Files (*.stl);;All Files (*)"
+            self.host, "Export as Color STL", default_dir, "STL Files (*.stl);;All Files (*)"
         )
 
         if not file_path:
@@ -273,7 +276,7 @@ class ExportManager:
         except (AttributeError, RuntimeError, ValueError) as e:
             self.statusBar().showMessage(f"Error exporting STL: {e}")
 
-    def export_from_3d_view(self):
+    def export_from_3d_view(self) -> Optional[pv.PolyData]:
         """Get mesh data from 3D view."""
         try:
             # Get all actors from PyVista plotter
@@ -373,7 +376,7 @@ class ExportManager:
         except (AttributeError, RuntimeError, ValueError, TypeError):
             return None
 
-    def export_from_3d_view_no_color(self):
+    def export_from_3d_view_no_color(self) -> Optional[pv.PolyData]:
         """Get mesh data from 3D view (no color)."""
         try:
             # Get actors from PyVista plotter
@@ -441,7 +444,7 @@ class ExportManager:
         except (AttributeError, RuntimeError, ValueError, TypeError):
             return None
 
-    def export_from_3d_view_with_colors(self):
+    def export_from_3d_view_with_colors(self) -> List[Dict[str, Any]]:
         """Get mesh data with colors from 3D view."""
         try:
             meshes_with_colors = []
@@ -669,7 +672,7 @@ class ExportManager:
             print(f"Error in export_from_3d_view_with_colors: {e}")
             return []
 
-    def export_2d_png(self):
+    def export_2d_png(self) -> None:
         if not self.data.atoms:
             self.statusBar().showMessage("Nothing to export.")
             return
@@ -695,7 +698,7 @@ class ExportManager:
             default_path = default_name
 
         filePath, _ = QFileDialog.getSaveFileName(
-            self, "Export 2D as PNG", default_path, "PNG Files (*.png)"
+            self.host, "Export 2D as PNG", default_path, "PNG Files (*.png)"
         )
         if not filePath:
             return
@@ -704,7 +707,7 @@ class ExportManager:
             filePath += ".png"
 
         reply = QMessageBox.question(
-            self,
+            self.host,
             "Choose Background",
             'Do you want a transparent background?\n(Choose "No" to use the current background color)',
             QMessageBox.StandardButton.Yes
@@ -801,7 +804,7 @@ class ExportManager:
             if self.view_2d:
                 self.view_2d.viewport().update()
 
-    def export_2d_svg(self):
+    def export_2d_svg(self) -> None:
         """Export 2D drawing as SVG."""
         if not self.data.atoms:
             self.statusBar().showMessage("Nothing to export.")
@@ -828,7 +831,7 @@ class ExportManager:
             default_path = default_name
 
         filePath, _ = QFileDialog.getSaveFileName(
-            self, "Export 2D as SVG", default_path, "SVG Files (*.svg)"
+            self.host, "Export 2D as SVG", default_path, "SVG Files (*.svg)"
         )
         if not filePath:
             return
@@ -838,7 +841,7 @@ class ExportManager:
 
         # Ask about transparency
         reply = QMessageBox.question(
-            self,
+            self.host,
             "Choose Background",
             'Do you want a transparent background?\n(Choose "No" to use the current background color)',
             QMessageBox.StandardButton.Yes
@@ -922,7 +925,7 @@ class ExportManager:
             if self.view_2d:
                 self.view_2d.viewport().update()
 
-    def export_3d_png(self):
+    def export_3d_png(self) -> None:
         """Export 3D view as PNG."""
         if not self.current_mol:
             self.statusBar().showMessage("No 3D molecule to export.", 2000)
@@ -949,7 +952,7 @@ class ExportManager:
             default_path = default_name
 
         filePath, _ = QFileDialog.getSaveFileName(
-            self, "Export 3D as PNG", default_path, "PNG Files (*.png)"
+            self.host, "Export 3D as PNG", default_path, "PNG Files (*.png)"
         )
         if not filePath:
             return
@@ -958,7 +961,7 @@ class ExportManager:
             filePath += ".png"
 
         reply = QMessageBox.question(
-            self,
+            self.host,
             "Choose Background",
             'Do you want a transparent background?\n(Choose "No" for current background)',
             QMessageBox.StandardButton.Yes

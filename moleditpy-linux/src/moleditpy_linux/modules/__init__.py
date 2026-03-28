@@ -54,8 +54,8 @@ _MAPPINGS = {
     "view_2d": "moleditpy_linux.ui.zoomable_view",  # Alias for ZoomableView
     # Renamed UI Mixins
     "main_window_dialog_manager": "moleditpy_linux.ui.dialog_manager",
-    "main_window_edit_3d": "moleditpy_linux.ui.edit_3d",
-    "main_window_edit_actions": "moleditpy_linux.ui.edit_actions",
+    "main_window_edit_3d_logic": "moleditpy_linux.ui.edit_3d_logic",
+    "main_window_edit_actions_logic": "moleditpy_linux.ui.edit_actions_logic",
     "main_window_export": "moleditpy_linux.ui.export_logic",
     "main_window_main_init": "moleditpy_linux.ui.main_window_init",
     "main_window_ui_manager": "moleditpy_linux.ui.ui_manager",
