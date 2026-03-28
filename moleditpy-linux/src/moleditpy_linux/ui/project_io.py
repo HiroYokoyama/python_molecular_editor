@@ -15,6 +15,7 @@ import copy
 import json
 import os
 import pickle
+from typing import Optional
 
 # PyQt6 Modules
 from PyQt6.QtCore import QTimer
@@ -31,7 +32,7 @@ except ImportError:
 
 # --- Classes ---
 class MainWindowProjectIo:
-    def save_project(self):
+    def save_project(self) -> None:
         """Save (Ctrl+S) - Defaults to PMEPRJ format."""
         if not self.data.atoms and not self.current_mol:
             self.statusBar().showMessage("Error: Nothing to save.")
@@ -74,7 +75,7 @@ class MainWindowProjectIo:
             # Force "Save As" for non-native formats
             self.save_project_as()
 
-    def save_project_as(self):
+    def save_project_as(self) -> None:
         """Save As (Ctrl+Shift+S) - Defaults to PMEPRJ format."""
         if not self.data.atoms and not self.current_mol:
             self.statusBar().showMessage("Error: Nothing to save.")
@@ -137,7 +138,7 @@ class MainWindowProjectIo:
         except (AttributeError, RuntimeError, ValueError) as e:
             self.statusBar().showMessage(f"Error saving project file: {e}")
 
-    def save_raw_data(self):
+    def save_raw_data(self) -> None:
         if not self.data.atoms and not self.current_mol:
             self.statusBar().showMessage("Error: Nothing to save.")
             return
@@ -198,7 +199,7 @@ class MainWindowProjectIo:
         except (AttributeError, RuntimeError, ValueError) as e:
             self.statusBar().showMessage(f"Error saving project file: {e}")
 
-    def load_raw_data(self, file_path=None):
+    def load_raw_data(self, file_path: Optional[str] = None) -> None:
         if not file_path:
             file_path, _ = QFileDialog.getOpenFileName(
                 self, "Open Project File", "", "Project Files (*.pmeraw);;All Files (*)"
@@ -239,7 +240,7 @@ class MainWindowProjectIo:
         except (AttributeError, RuntimeError, ValueError) as e:
             self.statusBar().showMessage(f"Error loading project file: {e}")
 
-    def save_as_json(self):
+    def save_as_json(self) -> None:
         """Save as PMEProject (JSON) with 3D info."""
         if not self.data.atoms and not self.current_mol:
             self.statusBar().showMessage("Error: Nothing to save.")
@@ -297,7 +298,7 @@ class MainWindowProjectIo:
         except (AttributeError, RuntimeError, ValueError) as e:
             self.statusBar().showMessage(f"Error saving PME Project file: {e}")
 
-    def load_json_data(self, file_path=None):
+    def load_json_data(self, file_path: Optional[str] = None) -> None:
         """Load PME Project file."""
         if not file_path:
             file_path, _ = QFileDialog.getOpenFileName(
@@ -356,7 +357,7 @@ class MainWindowProjectIo:
         except (KeyError, TypeError, ValueError, AttributeError) as e:
             self.statusBar().showMessage(f"Data corruption in PME Project file: {e}")
 
-    def open_project_file(self, file_path=None):
+    def open_project_file(self, file_path: Optional[str] = None) -> None:
         """Open project file (.pmeprj or .pmeraw)."""
         if not file_path:
             file_path, _ = QFileDialog.getOpenFileName(

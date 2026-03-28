@@ -55,14 +55,14 @@ class ComputeManager:
             raise AttributeError(name)
         return getattr(self.host, name)
 
-    def _safe_disconnect(self, signal):
+    def _safe_disconnect(self, signal: Any) -> None:
         """Safely disconnect a signal, silently ignoring RuntimeError."""
         try:
             signal.disconnect()
         except RuntimeError:
             pass
 
-    def _remove_calculating_text(self):
+    def _remove_calculating_text(self) -> None:
         """Safely remove the 'Calculating...' text actor from the plotter."""
         actor = getattr(self.host, "_calculating_text_actor", None)
         if (
@@ -75,7 +75,7 @@ class ComputeManager:
         if hasattr(self.host, "_calculating_text_actor"):
             delattr(self.host, "_calculating_text_actor")
 
-    def _restore_button_ui(self):
+    def _restore_button_ui(self) -> None:
         """Restore the Convert and Optimize buttons to their default state."""
         self._safe_disconnect(self.host.convert_button.clicked)
         self.host.convert_button.setText("Convert 2D to 3D")
@@ -90,7 +90,7 @@ class ComputeManager:
             )
             self.host.optimize_3d_button.setEnabled(True)
 
-    def _refresh_ui_state(self):
+    def _refresh_ui_state(self) -> None:
         """Consolidate UI state updates."""
         try:
             has_mol = self.host.current_mol is not None
@@ -121,7 +121,7 @@ class ComputeManager:
         except (AttributeError, RuntimeError, TypeError) as e:
             logging.debug(f"Non-critical UI refresh error: {e}")
 
-    def set_optimization_method(self, method_name):
+    def set_optimization_method(self, method_name: str) -> None:
         """Set preferred 3D optimization method."""
         if not method_name:
             return
@@ -137,7 +137,7 @@ class ComputeManager:
         label = getattr(self.host, "opt3d_method_labels", {}).get(method, method)
         self.host.statusBar().showMessage(f"3D optimization method set to: {label}")
 
-    def toggle_intermolecular_interaction_rdkit(self, checked):
+    def toggle_intermolecular_interaction_rdkit(self, checked: bool) -> None:
         """Toggle intermolecular interactions for RDKit optimization."""
         self.host.settings["optimize_intermolecular_interaction_rdkit"] = checked
         self.host.settings_dirty = True
@@ -146,7 +146,7 @@ class ComputeManager:
             f"Intermolecular interaction for RDKit: {state_str}"
         )
 
-    def show_convert_menu(self, pos):
+    def show_convert_menu(self, pos: QPoint) -> None:
         """Temporary 3D conversion menu (right-click)."""
         if not self.host.convert_button.isEnabled():
             return
@@ -168,11 +168,11 @@ class ComputeManager:
             menu.addAction(a)
         menu.exec(self.host.convert_button.mapToGlobal(pos))
 
-    def _trigger_conversion_with_temp_mode(self, mode_key):
+    def _trigger_conversion_with_temp_mode(self, mode_key: str) -> None:
         self.host._temp_conv_mode = mode_key
         QTimer.singleShot(0, self.host.trigger_conversion)
 
-    def show_optimize_menu(self, pos):
+    def show_optimize_menu(self, pos: QPoint) -> None:
         """Temporary 3D optimization menu (right-click)."""
         if not self.host.optimize_3d_button.isEnabled():
             return
@@ -198,7 +198,7 @@ class ComputeManager:
             menu.addAction(a)
         menu.exec(self.host.optimize_3d_button.mapToGlobal(pos))
 
-    def _trigger_optimize_with_temp_method(self, method_key):
+    def _trigger_optimize_with_temp_method(self, method_key: str) -> None:
         self.host._temp_optimization_method = method_key
         QTimer.singleShot(0, self.host.optimize_3d_structure)
 

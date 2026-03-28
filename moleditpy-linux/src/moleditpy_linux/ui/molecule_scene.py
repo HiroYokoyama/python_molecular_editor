@@ -102,13 +102,13 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
 
         self.reinitialize_items()
 
-    def get_setting(self, key, default=None):
+    def get_setting(self, key: str, default: Any = None) -> Any:
         """Safe gateway to access MainWindow settings without deep traversal from items."""
         if hasattr(self, "window") and self.window and hasattr(self.window, "settings"):
             return self.window.settings.get(key, default)
         return default
 
-    def update_connected_bonds(self, atoms):
+    def update_connected_bonds(self, atoms: List[AtomItem]) -> None:
         """Update the positions of all bonds connected to the specified atom list."""
         bonds_to_update = set()
         for atom in atoms:
@@ -123,7 +123,7 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
                     except (RuntimeError, ValueError, TypeError) as e:
                         logging.debug(f"Failed to update bond position for {bond}: {e}")
 
-    def update_all_items(self):
+    def update_all_items(self) -> None:
         """Force redraw of all items."""
         if hasattr(self.data, "update_ring_info_2d"):
             self.data.update_ring_info_2d()
@@ -134,7 +134,7 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
         if self.views():
             self.views()[0].viewport().update()
 
-    def reinitialize_items(self):
+    def reinitialize_items(self) -> None:
         self.template_preview = TemplatePreviewItem()
         self.addItem(self.template_preview)
         self.template_preview.hide()

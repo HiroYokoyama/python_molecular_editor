@@ -120,7 +120,7 @@ class View3DManager:
 
         self.draw_standard_3d_style(mol)
 
-    def draw_standard_3d_style(self, mol, style_override=None):
+    def draw_standard_3d_style(self, mol: Chem.Mol, style_override: Optional[str] = None) -> None:
         """Draw 3D molecule and clear axis actor reference (re-controlled by apply_3d_settings)"""
 
         # Re-entrancy guard: prevent overlapping draws that cause ghost
@@ -134,7 +134,7 @@ class View3DManager:
         finally:
             self._drawing_3d = False
 
-    def _prepare_3d_kekule_mol(self, mol):
+    def _prepare_3d_kekule_mol(self, mol: Chem.Mol) -> Chem.Mol:
         """Optionally kekulize aromatic systems for 3D visualization."""
         if self.settings.get("display_kekule_3d", False):
             try:
@@ -147,7 +147,7 @@ class View3DManager:
                     self.statusBar().showMessage(f"Kekulize failed: {e}")
         return mol
 
-    def _draw_standard_3d_style_body(self, mol, style_override=None):
+    def _draw_standard_3d_style_body(self, mol: Chem.Mol, style_override: Optional[str] = None) -> None:
         current_style = (
             style_override
             if style_override

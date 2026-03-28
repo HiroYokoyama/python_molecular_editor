@@ -49,9 +49,7 @@ src/moleditpy/ui/dialog_3d_picking_mixin.py
 src/moleditpy/ui/dialog_logic.py
 src/moleditpy/ui/dialog_manager.py
 src/moleditpy/ui/dihedral_dialog.py
-src/moleditpy/ui/edit_3d.py
 src/moleditpy/ui/edit_3d_logic.py
-src/moleditpy/ui/edit_actions.py
 src/moleditpy/ui/edit_actions_logic.py
 src/moleditpy/ui/export_logic.py
 src/moleditpy/ui/main_window.py

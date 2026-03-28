@@ -1,6 +1,6 @@
 # MoleditPy Coverage Report
 
-- **Overall Project Coverage (Full)**: **64.88%**
+- **Overall Project Coverage (Full)**: **64.89%**
 - **Core Molecular Logic Coverage**: **80.01%**
 
 > [!NOTE]
@@ -18,10 +18,10 @@
 | moleditpy\src\moleditpy\ui\calculation_worker.py        |    535 |     86 |   83.9% |
 | moleditpy\src\moleditpy\ui\compute_engine.py            |    482 |    119 |   75.3% |
 | moleditpy\src\moleditpy\ui\molecular_parsers.py         |    355 |     88 |   75.2% |
-| moleditpy\src\moleditpy\ui\project_io.py                |    232 |     79 |   65.9% |
+| moleditpy\src\moleditpy\ui\project_io.py                |    233 |     79 |   66.1% |
 | moleditpy\src\moleditpy\ui\string_importers.py          |    163 |     26 |   84.0% |
 | moleditpy\src\moleditpy\utils\constants.py              |     31 |      0 |  100.0% |
-| **TOTAL** | **2676** | **535** | **80.01%** |
+| **TOTAL** | **2677** | **535** | **80.01%** |
 
 ### Full Application Breakdown
 
@@ -64,7 +64,7 @@
 | moleditpy\src\moleditpy\ui\move_group_dialog.py         |    376 |    215 |   42.8% |
 | moleditpy\src\moleditpy\ui\periodic_table_dialog.py     |     33 |      7 |   78.8% |
 | moleditpy\src\moleditpy\ui\planarize_dialog.py          |    129 |     37 |   71.3% |
-| moleditpy\src\moleditpy\ui\project_io.py                |    232 |     79 |   65.9% |
+| moleditpy\src\moleditpy\ui\project_io.py                |    233 |     79 |   66.1% |
 | moleditpy\src\moleditpy\ui\settings_dialog.py           |     98 |     38 |   61.2% |
 | moleditpy\src\moleditpy\ui\sip_isdeleted_safe.py        |     13 |      4 |   69.2% |
 | moleditpy\src\moleditpy\ui\string_importers.py          |    163 |     26 |   84.0% |
@@ -83,7 +83,7 @@
 | moleditpy\src\moleditpy\utils\constants.py              |     31 |      0 |  100.0% |
 | moleditpy\src\moleditpy\utils\sip_isdeleted_safe.py     |     19 |      8 |   57.9% |
 | moleditpy\src\moleditpy\utils\system_utils.py           |     34 |     18 |   47.1% |
-| **TOTAL** | **14281** | **5015** | **64.88%** |
+| **TOTAL** | **14282** | **5015** | **64.89%** |
 
 ## Test Suite Status
 - **Unit tests**: PASSED
