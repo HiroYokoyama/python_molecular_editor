@@ -1296,6 +1296,7 @@ class View3DManager:
 
             # Display info for all atoms
             self.show_all_atom_info()
+            self.host.plotter.render()
 
     def is_xyz_derived_molecule(self):
         """Determine if the current molecule is derived from an XYZ file"""

@@ -493,13 +493,8 @@ class TemplateMixin:
             charge = atom_data.get("charge", 0)
             radical = atom_data.get("radical", 0)
 
-            atom_id = self.data.add_atom(symbol, pos, charge, radical)
+            atom_id = self.create_atom(symbol, pos, charge, radical)
             atom_id_map[atom_data["id"]] = atom_id
-
-            # Create visual atom item
-            atom_item = AtomItem(atom_id, symbol, pos, charge, radical)
-            self.data.atoms[atom_id]["item"] = atom_item
-            self.addItem(atom_item)
 
         # Create bonds (bonds_info is always id-based)
         # Create index-to-id conversion table first
@@ -534,18 +529,11 @@ class TemplateMixin:
                         existing_bond = (atom2_id, atom1_id)
 
                     if not existing_bond:
-                        bond_key, _ = self.data.add_bond(
-                            atom1_id, atom2_id, order, stereo
-                        )
-                        # Create visual bond item
+                        # Use the centralized create_bond method
                         atom1_item = self.data.atoms[atom1_id]["item"]
                         atom2_item = self.data.atoms[atom2_id]["item"]
                         if atom1_item and atom2_item:
-                            bond_item = BondItem(atom1_item, atom2_item, order, stereo)
-                            self.data.bonds[bond_key]["item"] = bond_item
-                            self.addItem(bond_item)
-                            atom1_item.bonds.append(bond_item)
-                            atom2_item.bonds.append(bond_item)
+                            self.create_bond(atom1_item, atom2_item, bond_order=order, bond_stereo=stereo)
 
         # Update atom visuals
         for atom_id in atom_id_map.values():
