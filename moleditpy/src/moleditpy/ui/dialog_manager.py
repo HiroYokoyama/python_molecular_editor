@@ -227,7 +227,7 @@ class MainWindowDialogManager:
         # Disable measurement mode
         if self.measurement_mode:
             self.measurement_action.setChecked(False)
-            self.toggle_measurement_mode(False)
+            self.edit_3d_manager.toggle_measurement_mode(False)
 
         dialog = TranslationDialog(self.current_mol, self, parent=self)
         self.active_3d_dialogs.append(dialog)  # Keep reference
@@ -237,7 +237,7 @@ class MainWindowDialogManager:
         )
         dialog.accepted.connect(self.push_undo_state)
         dialog.finished.connect(
-            lambda: self.remove_dialog_from_list(dialog)
+            lambda: self.edit_3d_manager.remove_dialog_from_list(dialog)
         )  # Remove from list when dialog is closed
 
     def open_move_group_dialog(self):
@@ -245,7 +245,7 @@ class MainWindowDialogManager:
         # Disable measurement mode
         if self.measurement_mode:
             self.measurement_action.setChecked(False)
-            self.toggle_measurement_mode(False)
+            self.edit_3d_manager.toggle_measurement_mode(False)
 
         dialog = MoveGroupDialog(self.current_mol, self, parent=self)
         self.active_3d_dialogs.append(dialog)
@@ -254,7 +254,7 @@ class MainWindowDialogManager:
             lambda: self.statusBar().showMessage("Group transformation applied.")
         )
         dialog.accepted.connect(self.push_undo_state)
-        dialog.finished.connect(lambda: self.remove_dialog_from_list(dialog))
+        dialog.finished.connect(lambda: self.edit_3d_manager.remove_dialog_from_list(dialog))
 
     def open_align_plane_dialog(self, plane):
         """Open align dialog"""
@@ -271,7 +271,7 @@ class MainWindowDialogManager:
         # Disable measurement mode
         if self.measurement_mode:
             self.measurement_action.setChecked(False)
-            self.toggle_measurement_mode(False)
+            self.edit_3d_manager.toggle_measurement_mode(False)
 
         dialog = AlignPlaneDialog(
             self.current_mol, self, plane, preselected_atoms, parent=self
@@ -285,7 +285,7 @@ class MainWindowDialogManager:
         )
         dialog.accepted.connect(self.push_undo_state)
         dialog.finished.connect(
-            lambda: self.remove_dialog_from_list(dialog)
+            lambda: self.edit_3d_manager.remove_dialog_from_list(dialog)
         )  # Remove from list when dialog is closed
 
     def open_planarize_dialog(self, plane=None):
@@ -303,7 +303,7 @@ class MainWindowDialogManager:
         # Disable measurement mode
         if self.measurement_mode:
             self.measurement_action.setChecked(False)
-            self.toggle_measurement_mode(False)
+            self.edit_3d_manager.toggle_measurement_mode(False)
 
         dialog = PlanarizeDialog(self.current_mol, self, preselected_atoms, parent=self)
         self.active_3d_dialogs.append(dialog)
@@ -314,7 +314,7 @@ class MainWindowDialogManager:
             )
         )
         dialog.accepted.connect(self.push_undo_state)
-        dialog.finished.connect(lambda: self.remove_dialog_from_list(dialog))
+        dialog.finished.connect(lambda: self.edit_3d_manager.remove_dialog_from_list(dialog))
 
     def open_alignment_dialog(self, axis):
         """Open alignment dialog"""
@@ -331,7 +331,7 @@ class MainWindowDialogManager:
         # Disable measurement mode
         if self.measurement_mode:
             self.measurement_action.setChecked(False)
-            self.toggle_measurement_mode(False)
+            self.edit_3d_manager.toggle_measurement_mode(False)
 
         dialog = AlignmentDialog(
             self.current_mol, self, axis, preselected_atoms, parent=self
@@ -345,7 +345,7 @@ class MainWindowDialogManager:
         )
         dialog.accepted.connect(self.push_undo_state)
         dialog.finished.connect(
-            lambda: self.remove_dialog_from_list(dialog)
+            lambda: self.edit_3d_manager.remove_dialog_from_list(dialog)
         )  # Remove from list when dialog is closed
 
     def open_bond_length_dialog(self):
@@ -363,7 +363,7 @@ class MainWindowDialogManager:
         # Disable measurement mode
         if self.measurement_mode:
             self.measurement_action.setChecked(False)
-            self.toggle_measurement_mode(False)
+            self.edit_3d_manager.toggle_measurement_mode(False)
 
         dialog = BondLengthDialog(
             self.current_mol, self, preselected_atoms, parent=self
@@ -375,7 +375,7 @@ class MainWindowDialogManager:
         )
         dialog.accepted.connect(self.push_undo_state)
         dialog.finished.connect(
-            lambda: self.remove_dialog_from_list(dialog)
+            lambda: self.edit_3d_manager.remove_dialog_from_list(dialog)
         )  # Remove from list when dialog is closed
 
     def open_angle_dialog(self):
@@ -393,7 +393,7 @@ class MainWindowDialogManager:
         # Disable measurement mode
         if self.measurement_mode:
             self.measurement_action.setChecked(False)
-            self.toggle_measurement_mode(False)
+            self.edit_3d_manager.toggle_measurement_mode(False)
 
         dialog = AngleDialog(self.current_mol, self, preselected_atoms, parent=self)
         self.active_3d_dialogs.append(dialog)  # Keep reference
@@ -401,7 +401,7 @@ class MainWindowDialogManager:
         dialog.accepted.connect(lambda: self.statusBar().showMessage("Angle adjusted."))
         dialog.accepted.connect(self.push_undo_state)
         dialog.finished.connect(
-            lambda: self.remove_dialog_from_list(dialog)
+            lambda: self.edit_3d_manager.remove_dialog_from_list(dialog)
         )  # Remove from list when dialog is closed
 
     def open_dihedral_dialog(self):
@@ -419,7 +419,7 @@ class MainWindowDialogManager:
         # Disable measurement mode
         if self.measurement_mode:
             self.measurement_action.setChecked(False)
-            self.toggle_measurement_mode(False)
+            self.edit_3d_manager.toggle_measurement_mode(False)
 
         dialog = DihedralDialog(self.current_mol, self, preselected_atoms, parent=self)
         self.active_3d_dialogs.append(dialog)  # Keep reference
@@ -428,7 +428,7 @@ class MainWindowDialogManager:
             lambda: self.statusBar().showMessage("Dihedral angle adjusted.")
         )
         dialog.accepted.connect(self.push_undo_state)
-        dialog.finished.connect(lambda: self.remove_dialog_from_list(dialog))
+        dialog.finished.connect(lambda: self.edit_3d_manager.remove_dialog_from_list(dialog))
 
     def open_mirror_dialog(self):
         """Open mirror function dialog"""
@@ -439,7 +439,7 @@ class MainWindowDialogManager:
         # Disable measurement mode
         if self.measurement_mode:
             self.measurement_action.setChecked(False)
-            self.toggle_measurement_mode(False)
+            self.edit_3d_manager.toggle_measurement_mode(False)
 
         dialog = MirrorDialog(self.current_mol, self)
         dialog.exec()  # Display as modal dialog
@@ -453,12 +453,12 @@ class MainWindowDialogManager:
         # Disable measurement mode
         if self.measurement_mode:
             self.measurement_action.setChecked(False)
-            self.toggle_measurement_mode(False)
+            self.edit_3d_manager.toggle_measurement_mode(False)
 
         dialog = ConstrainedOptimizationDialog(self.current_mol, self, parent=self)
         self.active_3d_dialogs.append(dialog)
         dialog.show()
-        dialog.finished.connect(lambda: self.remove_dialog_from_list(dialog))
+        dialog.finished.connect(lambda: self.edit_3d_manager.remove_dialog_from_list(dialog))
 
 
 MainWindowDialogManager._cls = MainWindowDialogManager

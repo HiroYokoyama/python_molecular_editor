@@ -49,7 +49,7 @@ class Dialog3DPickingMixin:
                 if picker.GetActor() is self.main_window.atom_actor:
                     picked_position = np.array(picker.GetPickPosition())
                     distances = np.linalg.norm(
-                        self.main_window.atom_positions_3d - picked_position, axis=1
+                        self.main_window.view_3d_manager.atom_positions_3d - picked_position, axis=1
                     )
                     closest_atom_idx = np.argmin(distances)
 
@@ -161,7 +161,7 @@ class Dialog3DPickingMixin:
         Parameters
         ----------
         atom_idx : int
-            Index into ``self.main_window.atom_positions_3d``.
+            Index into ``self.main_window.view_3d_manager.atom_positions_3d``.
         label_text : str
             Text shown next to the atom.
         color : str, optional
@@ -170,7 +170,7 @@ class Dialog3DPickingMixin:
         if not hasattr(self, "selection_labels"):
             self.selection_labels = []
 
-        pos = self.main_window.atom_positions_3d[atom_idx]
+        pos = self.main_window.view_3d_manager.atom_positions_3d[atom_idx]
 
         label_actor = self.main_window.plotter.add_point_labels(
             [pos],
@@ -198,7 +198,7 @@ class Dialog3DPickingMixin:
             self.selection_labels = []
 
         for atom_idx, label_text in atoms_and_labels:
-            pos = self.main_window.atom_positions_3d[atom_idx]
+            pos = self.main_window.view_3d_manager.atom_positions_3d[atom_idx]
             label_actor = self.main_window.plotter.add_point_labels(
                 [pos],
                 [label_text],

@@ -57,7 +57,7 @@ class MainWindowViewLoaders:
 
             # Clear 2D editor
             if hasattr(self, "clear_2d_editor"):
-                self.clear_2d_editor(push_to_undo=False)
+                self.edit_actions_manager.clear_2d_editor(push_to_undo=False)
 
             self.current_mol = mol
             self.atom_id_to_rdkit_idx_map = {}
@@ -79,7 +79,7 @@ class MainWindowViewLoaders:
 
             # Update visualization and UI mode
             if hasattr(self, "draw_molecule_3d"):
-                self.draw_molecule_3d(self.current_mol)
+                self.view_3d_manager.draw_molecule_3d(self.current_mol)
 
             if hasattr(self, "plotter"):
                 self.plotter.reset_camera()
@@ -91,9 +91,9 @@ class MainWindowViewLoaders:
                 self._enable_3d_features(True)
 
             if hasattr(self, "update_atom_id_menu_text"):
-                self.update_atom_id_menu_text()
+                self.view_3d_manager.update_atom_id_menu_text()
             if hasattr(self, "update_atom_id_menu_state"):
-                self.update_atom_id_menu_state()
+                self.view_3d_manager.update_atom_id_menu_state()
 
             self.statusBar().showMessage(
                 f"3D Viewer Mode: Loaded {os.path.basename(file_path)}"
@@ -242,16 +242,16 @@ class MainWindowViewLoaders:
 
             self.current_mol = mol
             if hasattr(self, "draw_molecule_3d"):
-                self.draw_molecule_3d(mol)
+                self.view_3d_manager.draw_molecule_3d(mol)
             if hasattr(self, "plotter"):
                 self.plotter.reset_camera()
             if hasattr(self, "_enter_3d_viewer_ui_mode"):
                 self._enter_3d_viewer_ui_mode()
 
             if hasattr(self, "update_atom_id_menu_text"):
-                self.update_atom_id_menu_text()
+                self.view_3d_manager.update_atom_id_menu_text()
             if hasattr(self, "update_atom_id_menu_state"):
-                self.update_atom_id_menu_state()
+                self.view_3d_manager.update_atom_id_menu_state()
 
             self.statusBar().showMessage(f"Loaded {file_path} in 3D viewer")
             if hasattr(self, "reset_undo_stack"):

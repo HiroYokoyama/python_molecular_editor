@@ -202,9 +202,9 @@ class DialogManager:
     def open_translation_dialog(self):
         """Open the translation dialog"""
         # Disable measurement mode
-        if self.host.measurement_mode:
+        if self.host.edit_3d_manager.measurement_mode:
             self.host.measurement_action.setChecked(False)
-            self.host.toggle_measurement_mode(False)
+            self.host.edit_3d_manager.toggle_measurement_mode(False)
 
         dialog = TranslationDialog(self.host.current_mol, self.host, parent=self.host)
         self.host.active_3d_dialogs.append(dialog)  # Keep reference
@@ -218,9 +218,9 @@ class DialogManager:
     def open_move_group_dialog(self):
         """Open Move Group dialog"""
         # Disable measurement mode
-        if self.host.measurement_mode:
+        if self.host.edit_3d_manager.measurement_mode:
             self.host.measurement_action.setChecked(False)
-            self.host.toggle_measurement_mode(False)
+            self.host.edit_3d_manager.toggle_measurement_mode(False)
 
         dialog = MoveGroupDialog(self.host.current_mol, self.host, parent=self.host)
         self.host.active_3d_dialogs.append(dialog)
@@ -244,9 +244,9 @@ class DialogManager:
             preselected_atoms = list(self.host.selected_atoms_for_measurement)
 
         # Disable measurement mode
-        if self.host.measurement_mode:
+        if self.host.edit_3d_manager.measurement_mode:
             self.host.measurement_action.setChecked(False)
-            self.host.toggle_measurement_mode(False)
+            self.host.edit_3d_manager.toggle_measurement_mode(False)
 
         dialog = AlignPlaneDialog(
             self.host.current_mol, self.host, plane, preselected_atoms, parent=self.host
@@ -274,9 +274,9 @@ class DialogManager:
             preselected_atoms = list(self.host.selected_atoms_for_measurement)
 
         # Disable measurement mode
-        if self.host.measurement_mode:
+        if self.host.edit_3d_manager.measurement_mode:
             self.host.measurement_action.setChecked(False)
-            self.host.toggle_measurement_mode(False)
+            self.host.edit_3d_manager.toggle_measurement_mode(False)
 
         dialog = PlanarizeDialog(
             self.host.current_mol, self.host, preselected_atoms, parent=self.host
@@ -304,9 +304,9 @@ class DialogManager:
             preselected_atoms = list(self.host.selected_atoms_for_measurement)
 
         # Disable measurement mode
-        if self.host.measurement_mode:
+        if self.host.edit_3d_manager.measurement_mode:
             self.host.measurement_action.setChecked(False)
-            self.host.toggle_measurement_mode(False)
+            self.host.edit_3d_manager.toggle_measurement_mode(False)
 
         dialog = AlignmentDialog(
             self.host.current_mol, self.host, axis, preselected_atoms, parent=self.host
@@ -334,9 +334,9 @@ class DialogManager:
             preselected_atoms = list(self.host.selected_atoms_for_measurement)
 
         # Disable measurement mode
-        if self.host.measurement_mode:
+        if self.host.edit_3d_manager.measurement_mode:
             self.host.measurement_action.setChecked(False)
-            self.host.toggle_measurement_mode(False)
+            self.host.edit_3d_manager.toggle_measurement_mode(False)
 
         dialog = BondLengthDialog(
             self.host.current_mol, self.host, preselected_atoms, parent=self.host
@@ -362,9 +362,9 @@ class DialogManager:
             preselected_atoms = list(self.host.selected_atoms_for_measurement)
 
         # Disable measurement mode
-        if self.host.measurement_mode:
+        if self.host.edit_3d_manager.measurement_mode:
             self.host.measurement_action.setChecked(False)
-            self.host.toggle_measurement_mode(False)
+            self.host.edit_3d_manager.toggle_measurement_mode(False)
 
         dialog = AngleDialog(
             self.host.current_mol, self.host, preselected_atoms, parent=self.host
@@ -390,9 +390,9 @@ class DialogManager:
             preselected_atoms = list(self.host.selected_atoms_for_measurement)
 
         # Disable measurement mode
-        if self.host.measurement_mode:
+        if self.host.edit_3d_manager.measurement_mode:
             self.host.measurement_action.setChecked(False)
-            self.host.toggle_measurement_mode(False)
+            self.host.edit_3d_manager.toggle_measurement_mode(False)
 
         dialog = DihedralDialog(
             self.host.current_mol, self.host, preselected_atoms, parent=self.host
@@ -412,9 +412,9 @@ class DialogManager:
             return
 
         # Disable measurement mode
-        if self.host.measurement_mode:
+        if self.host.edit_3d_manager.measurement_mode:
             self.host.measurement_action.setChecked(False)
-            self.host.toggle_measurement_mode(False)
+            self.host.edit_3d_manager.toggle_measurement_mode(False)
 
         dialog = MirrorDialog(self.host.current_mol, self.host)
         dialog.exec()
@@ -426,9 +426,9 @@ class DialogManager:
             return
 
         # Disable measurement mode
-        if self.host.measurement_mode:
+        if self.host.edit_3d_manager.measurement_mode:
             self.host.measurement_action.setChecked(False)
-            self.host.toggle_measurement_mode(False)
+            self.host.edit_3d_manager.toggle_measurement_mode(False)
 
         dialog = ConstrainedOptimizationDialog(
             self.host.current_mol, self.host, parent=self.host

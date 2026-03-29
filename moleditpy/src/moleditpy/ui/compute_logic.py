@@ -79,14 +79,14 @@ class ComputeManager:
         """Restore the Convert and Optimize buttons to their default state."""
         self._safe_disconnect(self.host.convert_button.clicked)
         self.host.convert_button.setText("Convert 2D to 3D")
-        self.host.convert_button.clicked.connect(self.host.trigger_conversion)
+        self.host.convert_button.clicked.connect(self.trigger_conversion)
         self.host.convert_button.setEnabled(True)
 
         if hasattr(self.host, "optimize_3d_button"):
             self._safe_disconnect(self.host.optimize_3d_button.clicked)
             self.host.optimize_3d_button.setText("Optimize 3D")
             self.host.optimize_3d_button.clicked.connect(
-                self.host.optimize_3d_structure
+                self.optimize_3d_structure
             )
             self.host.optimize_3d_button.setEnabled(True)
 
@@ -170,7 +170,7 @@ class ComputeManager:
 
     def _trigger_conversion_with_temp_mode(self, mode_key: str) -> None:
         self.host._temp_conv_mode = mode_key
-        QTimer.singleShot(0, self.host.trigger_conversion)
+        QTimer.singleShot(0, self.trigger_conversion)
 
     def show_optimize_menu(self, pos: QPoint) -> None:
         """Temporary 3D optimization menu (right-click)."""
@@ -200,7 +200,7 @@ class ComputeManager:
 
     def _trigger_optimize_with_temp_method(self, method_key: str) -> None:
         self.host._temp_optimization_method = method_key
-        QTimer.singleShot(0, self.host.optimize_3d_structure)
+        QTimer.singleShot(0, self.optimize_3d_structure)
 
     def trigger_conversion(self) -> None:
         """Main entry point for 2D to 3D conversion."""
@@ -216,10 +216,10 @@ class ComputeManager:
             return
 
         # Reset modes
-        if self.host.measurement_mode:
+        if self.host.edit_3d_manager.measurement_mode:
             self.host.measurement_action.setChecked(False)
-            self.host.toggle_measurement_mode(False)
-        if self.host.is_3d_edit_mode:
+            self.host.edit_3d_manager.toggle_measurement_mode(False)
+        if self.host.edit_3d_manager.is_3d_edit_mode:
             self.host.edit_3d_action.setChecked(False)
             self.host.toggle_3d_edit_mode(False)
 
@@ -285,7 +285,7 @@ class ComputeManager:
 
         self._start_calculation_worker(mol_block, options, run_id)
         self.host.push_undo_state()
-        self.host.update_chiral_labels()
+        self.host.view_3d_manager.update_chiral_labels()
         self.host.view_2d.setFocus()
 
     def halt_conversion(self):
@@ -439,9 +439,9 @@ class ComputeManager:
                 if i < mol.GetNumAtoms():
                     mol.GetAtomWithIdx(i).SetIntProp("_original_atom_id", orig_id)
 
-        self.host.create_atom_id_mapping()
-        self.host.update_chiral_labels()
-        self.host.draw_molecule_3d(mol)
+        self.create_atom_id_mapping()
+        self.host.view_3d_manager.update_chiral_labels()
+        self.host.view_3d_manager.draw_molecule_3d(mol)
         self._remove_calculating_text()
         self._refresh_ui_state()
         self.host.push_undo_state()

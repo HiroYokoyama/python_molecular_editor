@@ -367,8 +367,8 @@ class AngleDialog(Dialog3DPickingMixin, QDialog):
         self._slider_dragging = False
         # Do NOT clear snapshot here. Keep it to preserve the turning direction
         # even if they approach ±180°. It gets cleared when selection is changed.
-        self.main_window.draw_molecule_3d(self.mol)
-        self.main_window.update_chiral_labels()
+        self.main_window.view_3d_manager.draw_molecule_3d(self.mol)
+        self.main_window.view_3d_manager.update_chiral_labels()
 
     def on_slider_value_changed(self, value):
         """Handle click-to-position on the slider track."""
@@ -386,7 +386,7 @@ class AngleDialog(Dialog3DPickingMixin, QDialog):
         self.angle_input.setText(f"{value}")
         self.angle_input.blockSignals(False)
         self.adjust_angle(float(value))
-        self.main_window.update_chiral_labels()
+        self.main_window.view_3d_manager.update_chiral_labels()
 
     def apply_changes(self):
         """Apply the angle changes to the molecule."""
@@ -413,7 +413,7 @@ class AngleDialog(Dialog3DPickingMixin, QDialog):
         self.adjust_angle(new_angle)
 
         # Update chirality labels
-        self.main_window.update_chiral_labels()
+        self.main_window.view_3d_manager.update_chiral_labels()
 
     def adjust_angle(self, new_angle_deg):
         """Adjust the bond angle (with options for group rotation).
@@ -498,10 +498,10 @@ class AngleDialog(Dialog3DPickingMixin, QDialog):
             conf.SetAtomPosition(
                 i, Geometry.Point3D(float(p[0]), float(p[1]), float(p[2]))
             )
-            self.main_window.atom_positions_3d[i] = positions[i]
+            self.main_window.view_3d_manager.atom_positions_3d[i] = positions[i]
 
         # Update the 3D view
-        self.main_window.draw_molecule_3d(self.mol)
+        self.main_window.view_3d_manager.draw_molecule_3d(self.mol)
 
     def reject(self):
         """Handle cancellation event."""
@@ -510,7 +510,7 @@ class AngleDialog(Dialog3DPickingMixin, QDialog):
         super().reject()
         try:
             if self.main_window.current_mol:
-                self.main_window.draw_molecule_3d(self.main_window.current_mol)
+                self.main_window.view_3d_manager.draw_molecule_3d(self.main_window.current_mol)
         except (AttributeError, RuntimeError, ValueError, TypeError):
             # Suppress errors during dialog teardown to ensure the window closes smoothly.
             pass

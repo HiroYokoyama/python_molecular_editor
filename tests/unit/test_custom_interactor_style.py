@@ -6,8 +6,8 @@ from PyQt6.QtCore import Qt
 def test_custom_interactor_style_left_click_atom_selection(app, mock_parser_host):
     """Verify that left-clicking an atom in 3D edit mode successfully selects it."""
     # Ensure no MoveGroupDialog interferes
-    mock_parser_host.is_3d_edit_mode = True
-    
+    mock_parser_host.edit_3d_manager.is_3d_edit_mode = True
+
     interactor_style = CustomInteractorStyle(mock_parser_host)
     
     # Mocking VTK methods
@@ -15,8 +15,8 @@ def test_custom_interactor_style_left_click_atom_selection(app, mock_parser_host
     mock_interactor.GetEventPosition.return_value = (100, 100)
     interactor_style.GetInteractor = MagicMock(return_value=mock_interactor)
     
-    mock_parser_host.measurement_mode = False
-    
+    mock_parser_host.edit_3d_manager.measurement_mode = False
+
     # Setup mock RDKit Mol
     mock_mol = MagicMock()
     mock_mol.GetNumAtoms.return_value = 1
@@ -33,7 +33,7 @@ def test_custom_interactor_style_left_click_atom_selection(app, mock_parser_host
     mock_picker.GetPickPosition.return_value = (0, 0, 0)
     
     import numpy as np
-    mock_parser_host.atom_positions_3d = np.array([[0.0, 0.0, 0.0]])
+    mock_parser_host.view_3d_manager.atom_positions_3d = np.array([[0.0, 0.0, 0.0]])
     
     with patch('moleditpy.ui.custom_interactor_style.QApplication') as mock_qapp, \
          patch('vtkmodules.vtkInteractionStyle.vtkInteractorStyleTrackballCamera.OnLeftButtonDown'):

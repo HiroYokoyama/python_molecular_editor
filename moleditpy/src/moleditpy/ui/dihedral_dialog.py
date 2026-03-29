@@ -354,8 +354,8 @@ class DihedralDialog(Dialog3DPickingMixin, QDialog):
     def on_slider_released(self):
         """Finalize slider dragging."""
         self._slider_dragging = False
-        self.main_window.draw_molecule_3d(self.mol)
-        self.main_window.update_chiral_labels()
+        self.main_window.view_3d_manager.draw_molecule_3d(self.mol)
+        self.main_window.view_3d_manager.update_chiral_labels()
 
     def on_slider_value_changed(self, value):
         """Handle click-to-position on the slider track."""
@@ -371,7 +371,7 @@ class DihedralDialog(Dialog3DPickingMixin, QDialog):
         self.dihedral_input.setText(f"{value}")
         self.dihedral_input.blockSignals(False)
         self.adjust_dihedral(float(value))
-        self.main_window.update_chiral_labels()
+        self.main_window.view_3d_manager.update_chiral_labels()
 
     def apply_changes(self):
         """Apply changes."""
@@ -398,7 +398,7 @@ class DihedralDialog(Dialog3DPickingMixin, QDialog):
         self.adjust_dihedral(new_dihedral)
 
         # Update chiral labels
-        self.main_window.update_chiral_labels()
+        self.main_window.view_3d_manager.update_chiral_labels()
 
         # Save undo state
         self.main_window.push_undo_state()
@@ -484,7 +484,7 @@ class DihedralDialog(Dialog3DPickingMixin, QDialog):
                     current_pos, pos2, rotation_axis, -half_rotation
                 )
                 conf.SetAtomPosition(atom_idx, new_pos.tolist())
-                self.main_window.atom_positions_3d[atom_idx] = new_pos
+                self.main_window.view_3d_manager.atom_positions_3d[atom_idx] = new_pos
 
             # Rotate group4 (atom4 side) by +half_rotation
             for atom_idx in group4_atoms:
@@ -493,7 +493,7 @@ class DihedralDialog(Dialog3DPickingMixin, QDialog):
                     current_pos, pos2, rotation_axis, half_rotation
                 )
                 conf.SetAtomPosition(atom_idx, new_pos.tolist())
-                self.main_window.atom_positions_3d[atom_idx] = new_pos
+                self.main_window.view_3d_manager.atom_positions_3d[atom_idx] = new_pos
 
         elif self.move_group_radio.isChecked():
             # Move the connected group containing atom4
@@ -514,7 +514,7 @@ class DihedralDialog(Dialog3DPickingMixin, QDialog):
                         float(new_pos[0]), float(new_pos[1]), float(new_pos[2])
                     ),
                 )
-                self.main_window.atom_positions_3d[atom_idx] = new_pos
+                self.main_window.view_3d_manager.atom_positions_3d[atom_idx] = new_pos
         else:
             # Move only atom4
             new_pos4 = rotate_point_around_axis(
@@ -526,10 +526,10 @@ class DihedralDialog(Dialog3DPickingMixin, QDialog):
                     float(new_pos4[0]), float(new_pos4[1]), float(new_pos4[2])
                 ),
             )
-            self.main_window.atom_positions_3d[self.atom4_idx] = new_pos4
+            self.main_window.view_3d_manager.atom_positions_3d[self.atom4_idx] = new_pos4
 
         # Update the 3D view
-        self.main_window.draw_molecule_3d(self.mol)
+        self.main_window.view_3d_manager.draw_molecule_3d(self.mol)
 
     def reject(self):
         """Handle cancel action."""
@@ -538,7 +538,7 @@ class DihedralDialog(Dialog3DPickingMixin, QDialog):
         super().reject()
         try:
             if self.main_window.current_mol:
-                self.main_window.draw_molecule_3d(self.main_window.current_mol)
+                self.main_window.view_3d_manager.draw_molecule_3d(self.main_window.current_mol)
         except (AttributeError, RuntimeError, TypeError) as e:
             logging.debug(
                 f"Suppressed exception: {e}"

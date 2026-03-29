@@ -53,7 +53,9 @@ class DummyEdit3d(Edit3DManager):
 def test_calculate_distance_logic(mock_parser_host):
     """Verify calculation of distance between 3D points."""
     edit3d = DummyEdit3d(mock_parser_host)
-    edit3d.atom_positions_3d = [[0.0, 0.0, 0.0], [1.5, 0.0, 0.0]]
+    positions = [[0.0, 0.0, 0.0], [1.5, 0.0, 0.0]]
+    edit3d.atom_positions_3d = positions
+    mock_parser_host.view_3d_manager.atom_positions_3d = positions
     dist = edit3d.calculate_distance(0, 1)
     assert dist == pytest.approx(1.5)
 
@@ -61,7 +63,9 @@ def test_calculate_distance_logic(mock_parser_host):
 def test_calculate_angle_logic(mock_parser_host):
     """Verify calculation of angle between three 3D points."""
     edit3d = DummyEdit3d(mock_parser_host)
-    edit3d.atom_positions_3d = [[1.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 1.0, 0.0]]
+    positions = [[1.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 1.0, 0.0]]
+    edit3d.atom_positions_3d = positions
+    mock_parser_host.view_3d_manager.atom_positions_3d = positions
     angle = edit3d.calculate_angle(0, 1, 2)
     assert angle == pytest.approx(90.0)
 
@@ -70,12 +74,14 @@ def test_calculate_dihedral_logic(mock_parser_host):
     """Verify calculation of dihedral angle between four 3D points."""
     edit3d = DummyEdit3d(mock_parser_host)
     # Ensure 3D vectors (non-collinear for cross product)
-    edit3d.atom_positions_3d = [
+    positions = [
         [-1.0, 1.0, 0.0],
         [0.0, 0.0, 0.0],
         [1.0, 0.0, 0.0],
         [2.0, 1.0, 1.0],
     ]
+    edit3d.atom_positions_3d = positions
+    mock_parser_host.view_3d_manager.atom_positions_3d = positions
     dihedral = edit3d.calculate_dihedral(0, 1, 2, 3)
     # For these coordinates, the dihedral is exactly 45.0°
     assert abs(dihedral - 45.0) < 0.01, f"Expected 45.0°, got {dihedral}°"

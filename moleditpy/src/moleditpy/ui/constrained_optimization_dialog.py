@@ -414,7 +414,7 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
         positions = []
         texts = []
         for i, atom_idx in enumerate(atom_indices):
-            positions.append(self.main_window.atom_positions_3d[atom_idx])
+            positions.append(self.main_window.view_3d_manager.atom_positions_3d[atom_idx])
             texts.append(labels[i])
 
         if positions:
@@ -535,11 +535,11 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
             # Apply optimized coordinates to the main window's numpy array
             for i in range(self.mol.GetNumAtoms()):
                 pos = conf.GetAtomPosition(i)
-                self.main_window.atom_positions_3d[i] = [pos.x, pos.y, pos.z]
+                self.main_window.view_3d_manager.atom_positions_3d[i] = [pos.x, pos.y, pos.z]
 
             # Update 3D view
-            self.main_window.draw_molecule_3d(self.mol)
-            self.main_window.update_chiral_labels()
+            self.main_window.view_3d_manager.draw_molecule_3d(self.mol)
+            self.main_window.view_3d_manager.update_chiral_labels()
             self.main_window.push_undo_state()
             self.main_window.statusBar().showMessage(
                 "Constrained optimization finished."
@@ -633,18 +633,18 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
             self.selection_labels = []
 
         if (
-            not hasattr(self.main_window, "atom_positions_3d")
-            or self.main_window.atom_positions_3d is None
+            self.main_window.view_3d_manager.atom_positions_3d is None
+            or self.main_window.view_3d_manager.atom_positions_3d is None
         ):
             return  # Do nothing if 3D coordinates are missing
 
-        max_idx = len(self.main_window.atom_positions_3d) - 1
+        max_idx = len(self.main_window.view_3d_manager.atom_positions_3d) - 1
         positions = []
         texts = []
 
         for i, atom_idx in enumerate(self.selected_atoms):
             if atom_idx is not None and 0 <= atom_idx <= max_idx:
-                positions.append(self.main_window.atom_positions_3d[atom_idx])
+                positions.append(self.main_window.view_3d_manager.atom_positions_3d[atom_idx])
                 texts.append(f"A{i + 1}")
             elif atom_idx is not None:
                 # Log invalid index (for debugging)

@@ -75,7 +75,7 @@ class MainWindowStringImporters:
 
         try:
             self.restore_ui_for_editing()
-            self.clear_2d_editor(push_to_undo=False)
+            self.edit_actions_manager.clear_2d_editor(push_to_undo=False)
             self.current_mol = None
             self.plotter.clear()
             self.analysis_action.setEnabled(False)
@@ -141,7 +141,7 @@ class MainWindowStringImporters:
             self.reset_undo_stack()
             self.has_unsaved_changes = False
             self.update_window_title()
-            QTimer.singleShot(0, self.fit_to_view)
+            QTimer.singleShot(0, self.view_3d_manager.fit_to_view)
 
         except (AttributeError, RuntimeError, ValueError, TypeError) as e:
             self.statusBar().showMessage(f"Error loading from SMILES: {e}")
@@ -175,7 +175,7 @@ class MainWindowStringImporters:
 
         try:
             self.restore_ui_for_editing()
-            self.clear_2d_editor(push_to_undo=False)
+            self.edit_actions_manager.clear_2d_editor(push_to_undo=False)
             self.current_mol = None
             self.plotter.clear()
             self.analysis_action.setEnabled(False)
@@ -241,7 +241,7 @@ class MainWindowStringImporters:
             self.reset_undo_stack()
             self.has_unsaved_changes = False
             self.update_window_title()
-            QTimer.singleShot(0, self.fit_to_view)
+            QTimer.singleShot(0, self.view_3d_manager.fit_to_view)
 
         except (AttributeError, RuntimeError, ValueError, TypeError) as e:
             self.statusBar().showMessage(f"Error loading from InChI: {e}")

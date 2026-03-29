@@ -207,7 +207,7 @@ class MainWindowProjectIo:
             if not file_path:
                 return
 
-        if not self.clear_all():
+        if not self.edit_actions_manager.clear_all():
             return
 
         try:
@@ -229,7 +229,7 @@ class MainWindowProjectIo:
                 )  # Suppress undo-state deepcopy errors
             self.statusBar().showMessage(f"Project loaded from {file_path}")
 
-            QTimer.singleShot(0, self.fit_to_view)
+            QTimer.singleShot(0, self.view_3d_manager.fit_to_view)
 
         except FileNotFoundError:
             self.statusBar().showMessage(f"File not found: {file_path}")
@@ -310,7 +310,7 @@ class MainWindowProjectIo:
             if not file_path:
                 return
 
-        if not self.clear_all():
+        if not self.edit_actions_manager.clear_all():
             return
 
         try:
@@ -346,7 +346,7 @@ class MainWindowProjectIo:
 
             self.statusBar().showMessage(f"PME Project loaded from {file_path}")
 
-            QTimer.singleShot(0, self.fit_to_view)
+            QTimer.singleShot(0, self.view_3d_manager.fit_to_view)
 
         except FileNotFoundError:
             self.statusBar().showMessage(f"File not found: {file_path}")

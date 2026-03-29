@@ -204,7 +204,7 @@ class MoveGroupDialog(Dialog3DPickingMixin, QDialog):
                     if picker.GetActor() is self.main_window.atom_actor:
                         picked_position = np.array(picker.GetPickPosition())
                         distances = np.linalg.norm(
-                            self.main_window.atom_positions_3d - picked_position, axis=1
+                            self.main_window.view_3d_manager.atom_positions_3d - picked_position, axis=1
                         )
                         closest_atom_idx = np.argmin(distances)
 
@@ -334,7 +334,7 @@ class MoveGroupDialog(Dialog3DPickingMixin, QDialog):
                         if picker.GetActor() is self.main_window.atom_actor:
                             picked_position = np.array(picker.GetPickPosition())
                             distances = np.linalg.norm(
-                                self.main_window.atom_positions_3d - picked_position,
+                                self.main_window.view_3d_manager.atom_positions_3d - picked_position,
                                 axis=1,
                             )
                             closest_atom_idx = np.argmin(distances)
@@ -497,7 +497,7 @@ class MoveGroupDialog(Dialog3DPickingMixin, QDialog):
         selected_indices = list(self.group_atoms)
 
         # Get positions of selected atoms
-        selected_positions = self.main_window.atom_positions_3d[selected_indices]
+        selected_positions = self.main_window.view_3d_manager.atom_positions_3d[selected_indices]
 
         # Highlight atoms with slightly larger radii
         selected_radii = np.array(
@@ -589,10 +589,10 @@ class MoveGroupDialog(Dialog3DPickingMixin, QDialog):
                     float(new_pos[0]), float(new_pos[1]), float(new_pos[2])
                 ),
             )
-            self.main_window.atom_positions_3d[atom_idx] = new_pos
+            self.main_window.view_3d_manager.atom_positions_3d[atom_idx] = new_pos
 
-        self.main_window.draw_molecule_3d(self.mol)
-        self.main_window.update_chiral_labels()
+        self.main_window.view_3d_manager.draw_molecule_3d(self.mol)
+        self.main_window.view_3d_manager.update_chiral_labels()
         self.show_atom_labels()  # Redraw labels
         self.main_window.push_undo_state()
 
@@ -673,10 +673,10 @@ class MoveGroupDialog(Dialog3DPickingMixin, QDialog):
                     float(new_pos[0]), float(new_pos[1]), float(new_pos[2])
                 ),
             )
-            self.main_window.atom_positions_3d[atom_idx] = new_pos
+            self.main_window.view_3d_manager.atom_positions_3d[atom_idx] = new_pos
 
-        self.main_window.draw_molecule_3d(self.mol)
-        self.main_window.update_chiral_labels()
+        self.main_window.view_3d_manager.draw_molecule_3d(self.mol)
+        self.main_window.view_3d_manager.update_chiral_labels()
         self.show_atom_labels()  # Redraw labels
         self.main_window.push_undo_state()
 

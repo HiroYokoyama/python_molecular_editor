@@ -82,7 +82,7 @@ class View3DManager:
             self.measurement_action.setChecked(False)
             self.toggle_measurement_mode(False)  # Disable measurement mode
 
-        if self.is_3d_edit_mode:
+        if self.host.edit_3d_manager.is_3d_edit_mode:
             self.edit_3d_action.setChecked(False)
             self.toggle_3d_edit_mode(False)  # Disable 3D edit mode
 

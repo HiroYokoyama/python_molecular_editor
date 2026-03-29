@@ -28,8 +28,24 @@ class DummyMainWindow(MainWindowAppState):
         self.initialization_complete = True
         self._preserved_plugin_data = {}
         self.formula_label = MagicMock()
-        self.atom_positions_3d = None
         self.last_successful_optimization_method = None
+
+        # Manager mocks
+        self.view_3d_manager = MagicMock()
+        self.view_3d_manager.atom_positions_3d = None
+
+        self.edit_3d_manager = MagicMock()
+        self.edit_3d_manager.measurement_mode = False
+        self.edit_3d_manager.is_3d_edit_mode = False
+
+        self.edit_actions_manager = MagicMock()
+        self.edit_actions_manager.clear_2d_editor.side_effect = self._do_clear_2d_editor
+        self.edit_actions_manager.update_implicit_hydrogens = MagicMock()
+
+    def _do_clear_2d_editor(self, push_to_undo=True):
+        self.data.atoms.clear()
+        self.data.bonds.clear()
+        self.data._next_atom_id = 0
         
     def statusBar(self):
         return MagicMock()
@@ -62,9 +78,7 @@ class DummyMainWindow(MainWindowAppState):
         pass
         
     def clear_2d_editor(self, push_to_undo=True):
-        self.data.atoms.clear()
-        self.data.bonds.clear()
-        self.data._next_atom_id = 0
+        self._do_clear_2d_editor(push_to_undo)
         
     def restore_ui_for_editing(self):
         pass
@@ -136,8 +150,8 @@ def test_pmeprj_serialization_roundtrip(dummy_window):
     assert mw.current_mol.GetAtomWithIdx(1).GetIntProp("_original_atom_id") == aid2
     
     # 7. Verify helper data (atom_positions_3d)
-    assert mw.atom_positions_3d is not None
-    assert mw.atom_positions_3d.shape == (mol.GetNumAtoms(), 3)
+    assert mw.view_3d_manager.atom_positions_3d is not None
+    assert mw.view_3d_manager.atom_positions_3d.shape == (mol.GetNumAtoms(), 3)
     
     # 8. Verify Constraints and Metadata
     assert len(mw.constraints_3d) == 1

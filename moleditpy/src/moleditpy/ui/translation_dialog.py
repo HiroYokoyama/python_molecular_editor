@@ -217,7 +217,7 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog):
             translation_vector = target_pos - current_centroid
 
             conf = self.mol.GetConformer()
-            atom_positions = getattr(self.main_window, "atom_positions_3d", {})
+            atom_positions = getattr(self.main_window.view_3d_manager, "atom_positions_3d", {})
 
             # Apply translation
             translate_selected = self.translate_selected_only_checkbox.isChecked()
@@ -238,10 +238,10 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog):
 
             # Update visualization and state
             if hasattr(self.main_window, "draw_molecule_3d"):
-                self.main_window.draw_molecule_3d(self.mol)
+                self.main_window.view_3d_manager.draw_molecule_3d(self.mol)
 
             if hasattr(self.main_window, "update_chiral_labels"):
-                self.main_window.update_chiral_labels()
+                self.main_window.view_3d_manager.update_chiral_labels()
 
             self.clear_selection()
 
@@ -290,7 +290,7 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog):
             labels = []
 
             for i, atom_idx in enumerate(sorted(self.selected_atoms)):
-                pos = self.main_window.atom_positions_3d[atom_idx]
+                pos = self.main_window.view_3d_manager.atom_positions_3d[atom_idx]
                 positions.append(pos)
                 labels.append(f"S{i + 1}")
 

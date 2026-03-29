@@ -111,7 +111,7 @@ class MainWindowAppState:
 
     def set_state_from_data(self, state_data):
         self.dragged_atom_info = None
-        self.clear_2d_editor(push_to_undo=False)
+        self.edit_actions_manager.clear_2d_editor(push_to_undo=False)
 
         loaded_data = copy.deepcopy(state_data)
 
@@ -244,11 +244,11 @@ class MainWindowAppState:
                     # Sync 2D atoms with 3D actors
                     if hasattr(self, "create_atom_id_mapping"):
                         try:
-                            self.create_atom_id_mapping()
+                            self.compute_manager.create_atom_id_mapping()
                             if hasattr(self, "update_atom_id_menu_text"):
-                                self.update_atom_id_menu_text()
+                                self.view_3d_manager.update_atom_id_menu_text()
                             if hasattr(self, "update_atom_id_menu_state"):
-                                self.update_atom_id_menu_state()
+                                self.view_3d_manager.update_atom_id_menu_state()
                         except Exception as e:
                             logging.debug(
                                 f"Partial failure during ID mapping restoration: {e}"
@@ -256,7 +256,7 @@ class MainWindowAppState:
 
                     # draw_molecule_3d will use restored IDs
                     if hasattr(self, "draw_molecule_3d"):
-                        self.draw_molecule_3d(self.current_mol)
+                        self.view_3d_manager.draw_molecule_3d(self.current_mol)
                     if (
                         hasattr(self, "plotter")
                         and self.plotter
@@ -266,7 +266,7 @@ class MainWindowAppState:
 
                     self._enable_3d_features(True)
                     if hasattr(self, "setup_3d_hover"):
-                        self.setup_3d_hover()
+                        self.view_3d_manager.setup_3d_hover()
                 else:
                     self.current_mol = None
                     if hasattr(self, "plotter") and self.plotter:
@@ -287,8 +287,8 @@ class MainWindowAppState:
             # Disable 3D features
             self._enable_3d_features(False)
 
-        self.update_implicit_hydrogens()
-        self.update_chiral_labels()
+        self.edit_actions_manager.update_implicit_hydrogens()
+        self.view_3d_manager.update_chiral_labels()
 
         if loaded_data.get("is_3d_viewer_mode", False):
             self._enter_3d_viewer_ui_mode()
@@ -300,7 +300,7 @@ class MainWindowAppState:
                 self._enable_3d_edit_actions(True)
 
         # Update labels after undo/redo
-        self.update_2d_measurement_labels()
+        self.edit_3d_manager.update_2d_measurement_labels()
 
     def push_undo_state(self):
         if self._is_restoring_state:
@@ -373,7 +373,7 @@ class MainWindowAppState:
                 self.has_unsaved_changes = True
                 self.update_window_title()
 
-        self.update_implicit_hydrogens()
+        self.edit_actions_manager.update_implicit_hydrogens()
         self.update_realtime_info()
         self.update_undo_redo_actions()
 
@@ -699,7 +699,7 @@ class MainWindowAppState:
     def load_from_json_data(self, json_data):
         """Restore state from JSON."""
         self.dragged_atom_info = None
-        self.clear_2d_editor(push_to_undo=False)
+        self.edit_actions_manager.clear_2d_editor(push_to_undo=False)
         self._enable_3d_edit_actions(False)
         self._enable_3d_features(False)
 
@@ -833,11 +833,11 @@ class MainWindowAppState:
                             # Ensure numpy array size matches atoms in file
                             num_atoms_file = len(atoms_3d)
                             if num_atoms_file > 0:
-                                self.atom_positions_3d = np.zeros((num_atoms_file, 3))
+                                self.view_3d_manager.atom_positions_3d = np.zeros((num_atoms_file, 3))
                                 for atom_data in atoms_3d:
                                     idx = atom_data.get("index", -1)
                                     if 0 <= idx < num_atoms_file:
-                                        self.atom_positions_3d[idx] = [
+                                        self.view_3d_manager.atom_positions_3d[idx] = [
                                             atom_data.get("x", 0.0),
                                             atom_data.get("y", 0.0),
                                             atom_data.get("z", 0.0),
@@ -865,17 +865,17 @@ class MainWindowAppState:
                             # Build mapping
                             if hasattr(self, "create_atom_id_mapping"):
                                 try:
-                                    self.create_atom_id_mapping()
+                                    self.compute_manager.create_atom_id_mapping()
                                     if hasattr(self, "update_atom_id_menu_text"):
-                                        self.update_atom_id_menu_text()
+                                        self.view_3d_manager.update_atom_id_menu_text()
                                     if hasattr(self, "update_atom_id_menu_state"):
-                                        self.update_atom_id_menu_state()
+                                        self.view_3d_manager.update_atom_id_menu_state()
                                 except (RuntimeError, TypeError, AttributeError):
                                     pass
 
                         # Always show 3D if 3D molecule exists
                         if hasattr(self, "draw_molecule_3d"):
-                            self.draw_molecule_3d(self.current_mol)
+                            self.view_3d_manager.draw_molecule_3d(self.current_mol)
 
                         # Switch UI in Viewer mode
                         if is_3d_mode and hasattr(self, "_enter_3d_viewer_ui_mode"):

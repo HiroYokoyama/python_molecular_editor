@@ -240,9 +240,9 @@ class MainWindowUiManager:
             # Disable measurement mode when 3D Drag is on
             if self.measurement_mode:
                 self.measurement_action.setChecked(False)
-                self.toggle_measurement_mode(False)
+                self.edit_3d_manager.toggle_measurement_mode(False)
 
-        self.is_3d_edit_mode = checked
+        self.edit_3d_manager.is_3d_edit_mode = checked
         if checked:
             self.statusBar().showMessage("3D Drag Mode: ON.")
         else:
@@ -315,7 +315,7 @@ class MainWindowUiManager:
         file_lower = file_path.lower()
         if file_lower.endswith((".pmeraw", ".pmeprj")):
             self.open_project_file(file_path=file_path)
-            QTimer.singleShot(100, self.fit_to_view)
+            QTimer.singleShot(100, self.view_3d_manager.fit_to_view)
             event.acceptProposedAction()
         elif file_lower.endswith((".mol", ".sdf")):
             # Check if dropped on 3D viewer
@@ -330,11 +330,11 @@ class MainWindowUiManager:
                     "MOL file import not implemented for 2D editor."
                 )
 
-            QTimer.singleShot(100, self.fit_to_view)
+            QTimer.singleShot(100, self.view_3d_manager.fit_to_view)
             event.acceptProposedAction()
         elif file_lower.endswith(".xyz"):
             self.load_xyz_for_3d_viewing(file_path=file_path)
-            QTimer.singleShot(100, self.fit_to_view)
+            QTimer.singleShot(100, self.view_3d_manager.fit_to_view)
             event.acceptProposedAction()
         else:
             self.statusBar().showMessage(f"Unsupported file type: {file_path}")

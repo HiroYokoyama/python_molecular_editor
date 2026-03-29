@@ -392,8 +392,8 @@ class MainWindowCompute:
         # Reset states
         if self.measurement_mode:
             self.measurement_action.setChecked(False)
-            self.toggle_measurement_mode(False)
-        if self.is_3d_edit_mode:
+            self.edit_3d_manager.toggle_measurement_mode(False)
+        if self.edit_3d_manager.is_3d_edit_mode:
             self.edit_3d_action.setChecked(False)
             self.toggle_3d_edit_mode(False)
 
@@ -461,7 +461,7 @@ class MainWindowCompute:
 
         self._start_calculation_worker(mol_block, options, run_id)
         self.push_undo_state()
-        self.update_chiral_labels()
+        self.view_3d_manager.update_chiral_labels()
         self.view_2d.setFocus()
 
     def halt_conversion(self):
@@ -561,7 +561,7 @@ class MainWindowCompute:
                             f"Optimization method '{method}' returned failure."
                         )
                     else:
-                        self.draw_molecule_3d(self.current_mol)
+                        self.view_3d_manager.draw_molecule_3d(self.current_mol)
                         self.statusBar().showMessage(
                             f"Optimization ({method}) successful."
                         )
@@ -756,11 +756,11 @@ class MainWindowCompute:
                     # Assign stereochemistry respecting 2D info
                     Chem.AssignStereochemistry(mol, cleanIt=False, force=True)
 
-                self.update_chiral_labels()
+                self.view_3d_manager.update_chiral_labels()
             except (AttributeError, RuntimeError, TypeError):
                 # Suppress non-critical stereochemistry assignment errors for malformed fragments.
                 pass
-        self.draw_molecule_3d(mol)
+        self.view_3d_manager.draw_molecule_3d(mol)
 
         # Collision avoidance handled by worker
         if mol is not None:
@@ -787,13 +787,13 @@ class MainWindowCompute:
 
         # Setup 3D hover
         if hasattr(self, "setup_3d_hover"):
-            self.setup_3d_hover()
+            self.view_3d_manager.setup_3d_hover()
 
         # Update menu items
         if hasattr(self, "update_atom_id_menu_text"):
-            self.update_atom_id_menu_text()
+            self.view_3d_manager.update_atom_id_menu_text()
         if hasattr(self, "update_atom_id_menu_state"):
-            self.update_atom_id_menu_state()
+            self.view_3d_manager.update_atom_id_menu_state()
 
     def create_atom_id_mapping(self):
         """Map 2D atom IDs to 3D RDKit indices."""

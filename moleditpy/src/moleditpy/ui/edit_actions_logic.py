@@ -698,16 +698,16 @@ class EditActionsManager:
         self.restore_ui_for_editing()
 
         # Reset 3D mode
-        if self.measurement_mode:
-            self.measurement_action.setChecked(False)
-            self.toggle_measurement_mode(False)
+        if self.host.edit_3d_manager.measurement_mode:
+            self.host.measurement_action.setChecked(False)
+            self.host.edit_3d_manager.toggle_measurement_mode(False)
 
-        if self.is_3d_edit_mode:
+        if self.host.edit_3d_manager.is_3d_edit_mode:
             self.edit_3d_action.setChecked(False)
             self.toggle_3d_edit_mode(False)
 
         # Clear 3D selection
-        self.clear_3d_selection()
+        self.host.edit_3d_manager.clear_3d_selection()
 
         self.dragged_atom_info = None
 
@@ -745,8 +745,8 @@ class EditActionsManager:
         self.host.plotter.render()
 
         # Update menu text and state
-        self.update_atom_id_menu_text()
-        self.update_atom_id_menu_state()
+        self.host.view_3d_manager.update_atom_id_menu_text()
+        self.host.view_3d_manager.update_atom_id_menu_state()
 
         # Force UI event processing
         QApplication.processEvents()
@@ -1041,7 +1041,7 @@ class EditActionsManager:
     def redraw_molecule_3d(self):
         """Manually trigger redraw of the 3D molecule."""
         if hasattr(self, "current_mol") and self.host.current_mol:
-            self.draw_molecule_3d(self.host.current_mol)
+            self.host.view_3d_manager.draw_molecule_3d(self.host.current_mol)
             self.host.statusBar().showMessage("Redraw complete.", 2000)
         else:
             self.host.statusBar().showMessage("No 3D molecule to redraw.")

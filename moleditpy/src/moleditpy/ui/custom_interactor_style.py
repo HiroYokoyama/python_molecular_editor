@@ -81,7 +81,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
             if picker.GetActor() is mw.atom_actor:
                 picked_position = np.array(picker.GetPickPosition())
                 distances = np.linalg.norm(
-                    mw.atom_positions_3d - picked_position, axis=1
+                    mw.view_3d_manager.atom_positions_3d - picked_position, axis=1
                 )
                 closest_atom_idx = np.argmin(distances)
 
@@ -172,7 +172,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
         is_temp_mode = bool(
             QApplication.keyboardModifiers() & Qt.KeyboardModifier.AltModifier
         )
-        is_edit_active = mw.is_3d_edit_mode or is_temp_mode
+        is_edit_active = mw.edit_3d_manager.is_3d_edit_mode or is_temp_mode
 
         # Ctrl+Click for atom selection (3D edit)
         is_ctrl_click = bool(
@@ -180,7 +180,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
         )
 
         # Handle measurement mode
-        if mw.measurement_mode and mw.current_mol:
+        if mw.edit_3d_manager.measurement_mode and mw.current_mol:
             click_pos = self.GetInteractor().GetEventPosition()
             self._mouse_moved_during_drag = False
 
@@ -193,7 +193,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
             if picker.GetActor() is mw.atom_actor:
                 picked_position = np.array(picker.GetPickPosition())
                 distances = np.linalg.norm(
-                    mw.atom_positions_3d - picked_position, axis=1
+                    mw.view_3d_manager.atom_positions_3d - picked_position, axis=1
                 )
                 closest_atom_idx = np.argmin(distances)
 
@@ -230,7 +230,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
             if picker.GetActor() is mw.atom_actor:
                 picked_position = np.array(picker.GetPickPosition())
                 distances = np.linalg.norm(
-                    mw.atom_positions_3d - picked_position, axis=1
+                    mw.view_3d_manager.atom_positions_3d - picked_position, axis=1
                 )
                 closest_atom_idx = np.argmin(distances)
 
@@ -287,7 +287,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
             if picker.GetActor() is mw.atom_actor:
                 picked_position = np.array(picker.GetPickPosition())
                 distances = np.linalg.norm(
-                    mw.atom_positions_3d - picked_position, axis=1
+                    mw.view_3d_manager.atom_positions_3d - picked_position, axis=1
                 )
                 closest_atom_idx = np.argmin(distances)
 
@@ -403,7 +403,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
             super().OnMouseMove()
 
             # Update cursor display
-            is_edit_active = mw.is_3d_edit_mode or interactor.GetAltKey()
+            is_edit_active = mw.edit_3d_manager.is_3d_edit_mode or interactor.GetAltKey()
             if is_edit_active:
                 # Hover check if edit active
                 atom_under_cursor = False
@@ -505,7 +505,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                                 float(new_pos[0]), float(new_pos[1]), float(new_pos[2])
                             ),
                         )
-                        mw.atom_positions_3d[atom_idx] = new_pos
+                        mw.view_3d_manager.atom_positions_3d[atom_idx] = new_pos
 
                     # Update 3D display
                     mw.draw_molecule_3d(mw.current_mol)
@@ -536,7 +536,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
 
         # Measurement mode click handling
         if (
-            mw.measurement_mode
+            mw.edit_3d_manager.measurement_mode
             and not self._mouse_moved_during_drag
             and self._mouse_press_pos is not None
         ):
@@ -585,10 +585,10 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                                 new_world_coords = list(new_world_coords_tuple)[:3]
                                 # Ensure container supports assignment
                                 if isinstance(
-                                    mw.atom_positions_3d, (list, np.ndarray)
-                                ) and atom_id < len(mw.atom_positions_3d):
+                                    mw.view_3d_manager.atom_positions_3d, (list, np.ndarray)
+                                ) and atom_id < len(mw.view_3d_manager.atom_positions_3d):
                                     try:
-                                        mw.atom_positions_3d[atom_id] = new_world_coords
+                                        mw.view_3d_manager.atom_positions_3d[atom_id] = new_world_coords
                                     except (
                                         AttributeError,
                                         RuntimeError,
@@ -607,12 +607,12 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                                 pass
                         conf = mw.current_mol.GetConformer()
                         pos_count = (
-                            len(mw.atom_positions_3d)
-                            if isinstance(mw.atom_positions_3d, (list, np.ndarray))
+                            len(mw.view_3d_manager.atom_positions_3d)
+                            if isinstance(mw.view_3d_manager.atom_positions_3d, (list, np.ndarray))
                             else 0
                         )
                         for i in range(min(mw.current_mol.GetNumAtoms(), pos_count)):
-                            pos = mw.atom_positions_3d[i]
+                            pos = mw.view_3d_manager.atom_positions_3d[i]
                             conf.SetAtomPosition(
                                 i,
                                 Geometry.Point3D(
@@ -804,7 +804,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                                         float(new_pos[2]),
                                     ),
                                 )
-                                mw.atom_positions_3d[atom_idx] = new_pos
+                                mw.view_3d_manager.atom_positions_3d[atom_idx] = new_pos
 
                             # Update 3D display
                             mw.draw_molecule_3d(mw.current_mol)

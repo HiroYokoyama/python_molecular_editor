@@ -165,8 +165,8 @@ class Edit3DManager:
         # Prepare label positions and text
         pts, labels = [], []
         for atom_idx, label_text in self.measurement_labels:
-            if atom_idx < len(self.atom_positions_3d):
-                coord = self.atom_positions_3d[atom_idx].copy()
+            if atom_idx < len(self.host.view_3d_manager.atom_positions_3d):
+                coord = self.host.view_3d_manager.atom_positions_3d[atom_idx].copy()
                 # Place at atom center
                 pts.append(coord)
                 labels.append(label_text)
@@ -349,21 +349,21 @@ class Edit3DManager:
     def calculate_distance(self, atom1_idx, atom2_idx):
         """Calculate distance between two atoms."""
         return calc_distance(
-            self.atom_positions_3d[atom1_idx], self.atom_positions_3d[atom2_idx]
+            self.host.view_3d_manager.atom_positions_3d[atom1_idx], self.host.view_3d_manager.atom_positions_3d[atom2_idx]
         )
 
     def calculate_angle(self, atom1_idx, atom2_idx, atom3_idx):
         """Calculate angle (center is vertex)."""
         return calc_angle_deg(
-            self.atom_positions_3d[atom1_idx],
-            self.atom_positions_3d[atom2_idx],  # vertex
-            self.atom_positions_3d[atom3_idx],
+            self.host.view_3d_manager.atom_positions_3d[atom1_idx],
+            self.host.view_3d_manager.atom_positions_3d[atom2_idx],  # vertex
+            self.host.view_3d_manager.atom_positions_3d[atom3_idx],
         )
 
     def calculate_dihedral(self, atom1_idx, atom2_idx, atom3_idx, atom4_idx):
         """Calculate dihedral angle."""
         return _calculate_dihedral(
-            self.atom_positions_3d, atom1_idx, atom2_idx, atom3_idx, atom4_idx
+            self.host.view_3d_manager.atom_positions_3d, atom1_idx, atom2_idx, atom3_idx, atom4_idx
         )
 
     def display_measurement_text(self, measurement_lines):
@@ -440,7 +440,7 @@ class Edit3DManager:
         selected_indices = list(self.selected_atoms_3d)
 
         # Get atom positions
-        selected_positions = self.atom_positions_3d[selected_indices]
+        selected_positions = self.host.view_3d_manager.atom_positions_3d[selected_indices]
 
         # Highlight with slightly larger radius
         selected_radii = np.array(

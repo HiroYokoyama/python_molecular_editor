@@ -22,6 +22,12 @@ class DummyProjectIo(MainWindowProjectIo):
         self.fit_to_view = MagicMock()
         self.get_current_state = MagicMock(return_value={"atoms": "mock"})
 
+        self.edit_actions_manager = MagicMock()
+        self.edit_actions_manager.clear_all.return_value = True
+
+        self.view_3d_manager = MagicMock()
+        self.edit_3d_manager = MagicMock()
+
     def statusBar(self):
         return self.statusBar_mock
 

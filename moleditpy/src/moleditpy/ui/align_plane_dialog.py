@@ -203,7 +203,7 @@ class AlignPlaneDialog(Dialog3DPickingMixin, QDialog):
         try:
             # Get positions of selected atoms
             selected_indices = list(self.selected_atoms)
-            selected_positions = self.main_window.atom_positions_3d[
+            selected_positions = self.main_window.view_3d_manager.atom_positions_3d[
                 selected_indices
             ].copy()
 
@@ -273,13 +273,13 @@ class AlignPlaneDialog(Dialog3DPickingMixin, QDialog):
                             float(new_pos[0]), float(new_pos[1]), float(new_pos[2])
                         ),
                     )
-                    self.main_window.atom_positions_3d[i] = new_pos
+                    self.main_window.view_3d_manager.atom_positions_3d[i] = new_pos
 
             # Update 3D visualization
-            self.main_window.draw_molecule_3d(self.mol)
+            self.main_window.view_3d_manager.draw_molecule_3d(self.mol)
 
             # Update chirality labels
-            self.main_window.update_chiral_labels()
+            self.main_window.view_3d_manager.update_chiral_labels()
 
             # Save state for Undo
             self.main_window.push_undo_state()

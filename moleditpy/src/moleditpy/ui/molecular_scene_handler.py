@@ -1114,7 +1114,7 @@ class KeyboardMixin:
                 if self.mode != "select":
                     self.window.activate_select_mode()
                 else:
-                    self.window.select_all()
+                    self.window.edit_actions_manager.select_all()
                 event.accept()
                 return
 

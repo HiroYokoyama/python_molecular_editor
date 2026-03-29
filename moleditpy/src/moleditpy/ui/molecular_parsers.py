@@ -107,7 +107,7 @@ class MainWindowMolecularParsers:
 
             Chem.Kekulize(mol)
             self.restore_ui_for_editing()
-            self.clear_2d_editor(push_to_undo=False)
+            self.edit_actions_manager.clear_2d_editor(push_to_undo=False)
             self.current_mol = None
             self.plotter.clear()
             self.analysis_action.setEnabled(False)
@@ -179,7 +179,7 @@ class MainWindowMolecularParsers:
             self.update_window_title()
             # Request scene update and ring re-analysis
             self.scene.update_all_items()
-            QTimer.singleShot(0, self.fit_to_view)
+            QTimer.singleShot(0, self.view_3d_manager.fit_to_view)
 
         except (RuntimeError, ValueError, TypeError, UnicodeDecodeError) as e:
             # File loading or coordinate validation error reported to user via status bar.

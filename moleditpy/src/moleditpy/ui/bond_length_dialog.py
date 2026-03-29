@@ -310,8 +310,8 @@ class BondLengthDialog(Dialog3DPickingMixin, QDialog):
     def on_slider_released(self):
         """Finalize slider dragging."""
         self._slider_dragging = False
-        self.main_window.draw_molecule_3d(self.mol)
-        self.main_window.update_chiral_labels()
+        self.main_window.view_3d_manager.draw_molecule_3d(self.mol)
+        self.main_window.view_3d_manager.update_chiral_labels()
 
     def on_slider_value_changed(self, value):
         """Handle click-to-position on the slider track."""
@@ -325,7 +325,7 @@ class BondLengthDialog(Dialog3DPickingMixin, QDialog):
         self.distance_input.setText(f"{new_distance:.3f}")
         self.distance_input.blockSignals(False)
         self.adjust_bond_length(new_distance)
-        self.main_window.update_chiral_labels()
+        self.main_window.view_3d_manager.update_chiral_labels()
 
     def apply_changes(self):
         """Apply the bond length changes to the molecule."""
@@ -348,7 +348,7 @@ class BondLengthDialog(Dialog3DPickingMixin, QDialog):
         self.adjust_bond_length(new_distance)
 
         # Update chirality labels
-        self.main_window.update_chiral_labels()
+        self.main_window.view_3d_manager.update_chiral_labels()
 
     def adjust_bond_length(self, new_distance):
         """Adjust the bond length."""
@@ -396,7 +396,7 @@ class BondLengthDialog(Dialog3DPickingMixin, QDialog):
                         float(new_pos[0]), float(new_pos[1]), float(new_pos[2])
                     ),
                 )
-                self.main_window.atom_positions_3d[atom_idx] = new_pos
+                self.main_window.view_3d_manager.atom_positions_3d[atom_idx] = new_pos
 
             # Move group 2
             for atom_idx in group2_atoms:
@@ -408,7 +408,7 @@ class BondLengthDialog(Dialog3DPickingMixin, QDialog):
                         float(new_pos[0]), float(new_pos[1]), float(new_pos[2])
                     ),
                 )
-                self.main_window.atom_positions_3d[atom_idx] = new_pos
+                self.main_window.view_3d_manager.atom_positions_3d[atom_idx] = new_pos
 
         elif self.atom1_fix_radio.isChecked():
             # Move only the second atom
@@ -419,7 +419,7 @@ class BondLengthDialog(Dialog3DPickingMixin, QDialog):
                     float(new_pos2[0]), float(new_pos2[1]), float(new_pos2[2])
                 ),
             )
-            self.main_window.atom_positions_3d[self.atom2_idx] = new_pos2
+            self.main_window.view_3d_manager.atom_positions_3d[self.atom2_idx] = new_pos2
         else:
             # Move the connected group (default behavior)
             new_pos2 = pos1 + direction * new_distance
@@ -437,10 +437,10 @@ class BondLengthDialog(Dialog3DPickingMixin, QDialog):
                         float(new_pos[0]), float(new_pos[1]), float(new_pos[2])
                     ),
                 )
-                self.main_window.atom_positions_3d[atom_idx] = new_pos
+                self.main_window.view_3d_manager.atom_positions_3d[atom_idx] = new_pos
 
         # Update the 3D view
-        self.main_window.draw_molecule_3d(self.mol)
+        self.main_window.view_3d_manager.draw_molecule_3d(self.mol)
 
     def reject(self):
         """Handle cancellation event."""
@@ -449,7 +449,7 @@ class BondLengthDialog(Dialog3DPickingMixin, QDialog):
         super().reject()
         try:
             if self.main_window.current_mol:
-                self.main_window.draw_molecule_3d(self.main_window.current_mol)
+                self.main_window.view_3d_manager.draw_molecule_3d(self.main_window.current_mol)
         except (AttributeError, RuntimeError, ValueError, TypeError) as e:
             logging.debug(
                 f"Suppressed exception: {e}"
