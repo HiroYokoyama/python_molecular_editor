@@ -42,9 +42,10 @@ except ImportError:
 
 # --- Classes ---
 class UIManager(QObject):
-    def __init__(self, host):
-        super().__init__(host)
-        self.host = host
+    def __init__(self, host=None):
+        super().__init__()
+        if host is not None:
+            self.host = host
 
     def update_status_bar(self, message):
         """Update status bar with worker messages."""

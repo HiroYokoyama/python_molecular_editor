@@ -19,7 +19,7 @@ class MockMainWindow(MainWindowMolecularParsers):
 
 def test_set_mol_prop_safe_robustness():
     """Test that _set_mol_prop handles RDKit exceptions by narrowing."""
-    from moleditpy.ui.molecular_parsers import _set_mol_prop_safe
+    from moleditpy.ui.io_logic import _set_mol_prop_safe
     mol = Chem.MolFromSmiles("C")
     # This should not raise even if an invalid value is passed (it's suppressed)
     _set_mol_prop_safe(mol, "test_prop", "not_an_int")

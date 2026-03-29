@@ -57,7 +57,7 @@ def test_radical_toggle_selected(scene):
     assert scene.data.atoms[2]["radical"] == 2
     a1.update_style.assert_called_once()
     a2.update_style.assert_called_once()
-    scene.window.push_undo_state.assert_called_once()
+    scene.window.edit_actions_manager.push_undo_state.assert_called_once()
     event.accept.assert_called_once()
 
 def test_radical_toggle_at_cursor(scene):
@@ -76,7 +76,7 @@ def test_radical_toggle_at_cursor(scene):
     
     assert a1.radical == 0
     assert scene.data.atoms[1]["radical"] == 0
-    scene.window.push_undo_state.assert_called_once()
+    scene.window.edit_actions_manager.push_undo_state.assert_called_once()
 
 def test_radical_toggle_no_target(scene):
     """Test that nothing happens if no atoms are selected or at the cursor."""

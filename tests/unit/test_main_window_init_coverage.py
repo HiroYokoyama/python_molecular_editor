@@ -11,21 +11,19 @@ def test_imports_mainwindow():
     """Ensure MainWindow and its init submodule can be imported without crashing."""
     # Importing is the primary verification here; if it fails, test runner raises error.
     from moleditpy.ui.main_window import MainWindow
-    from moleditpy.ui.main_window_init import MainWindowMainInit
-    
-    # Verify they have expected core methods/attributes
+    from moleditpy.ui.main_window_init import MainInitManager# Verify they have expected core methods/attributes
     assert "__init__" in MainWindow.__dict__  # has a custom constructor
-    assert hasattr(MainWindowMainInit, "init_ui")
+    assert hasattr(MainInitManager, "init_ui")
 
 
 def test_mainwindow_init_with_mocks():
     """Verify MainWindow delegates init_ui and init_menu_bar to mixin wrappers."""
     with patch("PyQt6.QtWidgets.QMainWindow.__init__", return_value=None):
         with patch(
-            "moleditpy.ui.main_window_init.MainWindowMainInit.init_ui"
+            "moleditpy.ui.main_window_init.MainInitManager.init_ui"
         ):
             with patch(
-                "moleditpy.ui.main_window_init.MainWindowMainInit.init_menu_bar"
+                "moleditpy.ui.main_window_init.MainInitManager.init_menu_bar"
             ):
                 from moleditpy.ui.main_window import MainWindow
 
