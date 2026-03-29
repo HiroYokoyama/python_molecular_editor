@@ -115,12 +115,6 @@ class MainInitManager:
         self.host.setGeometry(100, 100, 1400, 800)
         self.host.data = MolecularData()
         self.host.current_mol = None
-        # self.host.view_3d_manager.current_3d_style is now in View3DManager
-        # self.host.view_3d_manager.atom_info_display_mode is now in View3DManager
-        # self.current_atom_info_labels is now in View3DManager
-        # self.host.edit_3d_manager.is_3d_edit_mode is now in Edit3DManager
-        # self.dragged_atom_info is now in Edit3DManager
-        # self.atom_actor is now in View3DManager
         self.host.is_2d_editable = True
         self.host.is_xyz_derived = (
             False  # Flag indicating if the molecule is derived from XYZ
@@ -128,29 +122,15 @@ class MainInitManager:
         # Chemical check flags: whether a chemical/sanitization check was attempted and whether it failed
         self.host.chem_check_tried = False
         self.host.chem_check_failed = False
-        # self.axes_actor and self.axes_widget are now in View3DManager
         self.host._template_dialog = None  # Reference to the template dialog
-        # self.host.constraints_3d is now in Edit3DManager
         self.host.mode_actions = {}
 
         # Variable tracking the saved state
         self.host.has_unsaved_changes = False
-        # Flag to delay disk writes of the settings file
-        # If set to True, settings are updated in memory and saved together upon application exit.
         self.host.settings_dirty = True
         self.host.current_file_path = None  # Path of the currently open file
         self.host.initialization_complete = False  # Initialization completion flag
-        # Token to invalidate pending implicit-hydrogen UI updates
         self.host._ih_update_counter = 0
-
-        # Variables for measurement functionality and 3D selection are now managed by Edit3DManager
-        # self.measurement_mode is now in Edit3DManager
-        # self.selected_atoms_for_measurement is now in Edit3DManager
-        # self.measurement_labels is now in Edit3DManager
-        # self.measurement_text_actor is now in Edit3DManager
-        # self.measurement_label_items_2d is now in Edit3DManager
-        # self.selected_atoms_3d is now in Edit3DManager
-        # self.host.active_3d_dialogs is now in Edit3DManager
 
         # Initialization of the plugin manager
         if safe_mode:

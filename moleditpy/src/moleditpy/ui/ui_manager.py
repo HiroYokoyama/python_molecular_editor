@@ -62,6 +62,10 @@ class UIManager(QObject):
         prev_mode = getattr(self.host.scene, "mode", None)
         self.host.scene.mode = mode_str
         self.host.view_2d.setMouseTracking(True)
+        
+        # Trigger immediate scene refresh to show/update template previews
+        if hasattr(self.host.scene, "refresh_mode_state"):
+            self.host.scene.refresh_mode_state()
         # Clear ghost when leaving template mode
         if (
             prev_mode

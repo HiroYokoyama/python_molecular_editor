@@ -531,13 +531,11 @@ class UserTemplateDialog(QDialog):
                 for act in self.main_window.mode_actions.values():
                     act.setChecked(False)
 
-            # Switch mode
-            if hasattr(self.main_window, "set_mode") and callable(
-                self.main_window.ui_manager.set_mode
+            # Switch mode via UIManager
+            if hasattr(self.main_window, "ui_manager") and hasattr(
+                self.main_window.ui_manager, "set_mode"
             ):
                 self.main_window.ui_manager.set_mode(mode_name)
-            else:
-                setattr(self.main_window, "mode", mode_name)
 
             self.main_window.statusBar().showMessage(f"Template mode: {template_name}")
 

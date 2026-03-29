@@ -779,6 +779,24 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
     def leaveEvent(self, event):
         self.template_preview.hide()
 
+    def refresh_mode_state(self):
+        """Immediately update scene state and previews based on the current mouse position."""
+        import PyQt6.QtGui
+        global_pos = PyQt6.QtGui.QCursor.pos()
+        
+        # Find the active view for this scene
+        for view in self.views():
+            if view.isVisible():
+                # Map global cursor position to scene coordinates
+                local_pos = view.mapFromGlobal(global_pos)
+                scene_pos = view.mapToScene(local_pos)
+                
+                # If the mouse is within the viewport, trigger the preview update
+                if view.viewport().rect().contains(local_pos):
+                    if hasattr(self, "update_template_preview") and self.mode.startswith("template"):
+                        self.update_template_preview(scene_pos)
+                    return
+
     def set_hovered_item(self, item):
         """Record currently hovered item"""
         self.hovered_item = item
