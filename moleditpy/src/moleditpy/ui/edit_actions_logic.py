@@ -44,7 +44,6 @@ from PyQt6.QtWidgets import (
 )
 from rdkit import Chem
 
-
 class Rotate2DDialog(QDialog):
     def __init__(self, parent: Optional[QWidget] = None, initial_angle: float = 0) -> None:
         super().__init__(parent)
@@ -87,7 +86,6 @@ class Rotate2DDialog(QDialog):
     def get_angle(self) -> float:
         return self.angle_spin.value()
 
-
 try:
     from PyQt6 import sip as _sip  # type: ignore
 
@@ -109,14 +107,12 @@ except ImportError:
     from moleditpy.utils.constants import CLIPBOARD_MIME_TYPE
     from moleditpy.core.molecular_data import MolecularData
 
-
 try:
     # Import the shared SIP helper used across the package. This is
     # defined in modules/__init__.py and centralizes sip.isdeleted checks.
     from . import sip_isdeleted_safe
 except ImportError:
     from moleditpy.utils import sip_isdeleted_safe
-
 
 # --- Class Definition ---
 class EditActionsManager:
@@ -259,13 +255,6 @@ class EditActionsManager:
             self.host.undo_action.setEnabled(len(self.undo_stack) > 1)
         if hasattr(self.host, "redo_action"):
             self.host.redo_action.setEnabled(len(self.redo_stack) > 0)
-
-
-    def __getattr__(self, name: str) -> Any:
-        """Delegate back to host for attributes not found on this manager."""
-        if name == "host":
-            raise AttributeError(name)
-        return getattr(self.host, name)
 
     def copy_selection(self) -> None:
         """Copy selected atoms and bonds to clipboard"""
@@ -733,12 +722,12 @@ class EditActionsManager:
         """Update edit menu based on selection and clipboard"""
         try:
             has_selection = len(self.host.scene.selectedItems()) > 0
-            self.cut_action.setEnabled(has_selection)
-            self.copy_action.setEnabled(has_selection)
+            self.host.cut_action.setEnabled(has_selection)
+            self.host.copy_action.setEnabled(has_selection)
 
             clipboard = QApplication.clipboard()
             mime_data = clipboard.mimeData()
-            self.paste_action.setEnabled(
+            self.host.paste_action.setEnabled(
                 mime_data is not None and mime_data.hasFormat(CLIPBOARD_MIME_TYPE)
             )
         except RuntimeError:
@@ -837,7 +826,7 @@ class EditActionsManager:
             self.host.edit_3d_manager.toggle_measurement_mode(False)
 
         if self.host.edit_3d_manager.is_3d_edit_mode:
-            self.edit_3d_action.setChecked(False)
+            self.host.edit_3d_action.setChecked(False)
             self.toggle_3d_edit_mode(False)
 
         # Clear 3D selection
@@ -1403,8 +1392,8 @@ class EditActionsManager:
         is disabled. If the user setting 'skip_chemistry_checks' is True, no
         sanitization is attempted and both flags remain False.
         """
-        self.chem_check_tried = False
-        self.chem_check_failed = False
+        self.host.chem_check_tried = False
+        self.host.chem_check_failed = False
 
         if force_skip or self.settings.get("skip_chemistry_checks", False):
             # User asked to skip chemistry checks entirely
@@ -1412,11 +1401,11 @@ class EditActionsManager:
 
         try:
             Chem.SanitizeMol(mol)
-            self.chem_check_tried = True
-            self.chem_check_failed = False
+            self.host.chem_check_tried = True
+            self.host.chem_check_failed = False
         except (AttributeError, RuntimeError, ValueError, TypeError):
-            self.chem_check_tried = True
-            self.chem_check_failed = True
+            self.host.chem_check_tried = True
+            self.host.chem_check_failed = True
             desc = f" ({source_desc})" if source_desc else ""
             # Suppress potential status bar or button state errors if the window is being closed or destroyed
             with contextlib.suppress(AttributeError, RuntimeError, TypeError):
@@ -1426,7 +1415,7 @@ class EditActionsManager:
             # Disable 3D optimization UI to prevent running on invalid molecules
             if hasattr(self, "optimize_3d_button"):
                 with contextlib.suppress(AttributeError, RuntimeError, TypeError):
-                    self.optimize_3d_button.setEnabled(False)
+                    self.host.optimize_3d_button.setEnabled(False)
 
     def _clear_xyz_flags(self, mol=None):
         """Clear XYZ-derived markers from a molecule (or current_mol) and
@@ -1452,15 +1441,14 @@ class EditActionsManager:
             target.__dict__.pop("_xyz_atom_data", None)
 
         # Reset UI flag
-        self.is_xyz_derived = False
+        self.host.is_xyz_derived = False
 
         # Enable Optimize 3D unless sanitization failed
         if hasattr(self, "optimize_3d_button"):
             with contextlib.suppress(AttributeError, RuntimeError, TypeError):
                 # Suppress error if optimize_3d_button is partially destroyed.
-                self.optimize_3d_button.setEnabled(
+                self.host.optimize_3d_button.setEnabled(
                     not getattr(self, "chem_check_failed", False)
                 )
-
 
 EditActionsManager._cls = EditActionsManager

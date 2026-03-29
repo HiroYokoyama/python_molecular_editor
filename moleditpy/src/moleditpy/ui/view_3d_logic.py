@@ -44,7 +44,6 @@ except ImportError:
     from moleditpy.utils.constants import CPK_COLORS_PV, VDW_RADII, pt
     from moleditpy.ui.template_preview_item import TemplatePreviewItem
 
-
 class View3DManager:
     """Independent manager for 3D rendering logic, ported from MainWindowView3d mixin."""
 
@@ -68,10 +67,6 @@ class View3DManager:
         self._camera_initialized: bool = False
         self.atom_actor_original_opacity: float = 1.0
 
-    def __getattr__(self, name: str) -> Any:
-        """Delegate back to host for attributes not found on this manager."""
-        return getattr(self.host, name)
-
     def set_3d_style(self, style_name: str) -> None:
         """Set 3D display style and update view"""
         current_stored_style = getattr(self, "current_3d_style", None)
@@ -80,11 +75,11 @@ class View3DManager:
 
         # Reset measurement and 3D edit modes on style change
         if self.host.edit_3d_manager.measurement_mode:
-            self.measurement_action.setChecked(False)
+            self.host.measurement_action.setChecked(False)
             self.host.edit_3d_manager.toggle_measurement_mode(False)  # Disable measurement mode
 
         if self.host.edit_3d_manager.is_3d_edit_mode:
-            self.edit_3d_action.setChecked(False)
+            self.host.edit_3d_action.setChecked(False)
             self.host.ui_manager.toggle_3d_edit_mode(False)  # Disable 3D edit mode
 
         # Clear 3D selection
@@ -1784,7 +1779,6 @@ class View3DManager:
 
         if self.current_mol:
             self.draw_molecule_3d(self.current_mol)
-
 
 # Set class-level marker for plugin compatibility
 View3DManager._cls = View3DManager

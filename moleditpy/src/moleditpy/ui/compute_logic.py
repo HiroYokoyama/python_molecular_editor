@@ -49,12 +49,6 @@ class ComputeManager:
         self._active_calc_threads: List[QThread] = []
         self.halt_ids: Set[int] = set()
 
-    def __getattr__(self, name: str) -> Any:
-        """Delegate back to host for attributes not found on this manager."""
-        if name == "host":
-            raise AttributeError(name)
-        return getattr(self.host, name)
-
     def _safe_disconnect(self, signal: Any) -> None:
         """Safely disconnect a signal, silently ignoring RuntimeError."""
         try:

@@ -522,3 +522,7 @@ class UIManager(QObject):
             )
             # Show initial ratio
             self.on_splitter_moved(0, 0)
+
+
+# Backward-compat aliases
+MainWindowUiManager = UIManager

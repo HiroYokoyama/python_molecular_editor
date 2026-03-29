@@ -81,7 +81,7 @@ class StringImporterManager:
             self.host.edit_actions_manager.clear_2d_editor(push_to_undo=False)
             self.host.current_mol = None
             self.host.plotter.clear()
-            self.analysis_action.setEnabled(False)
+            self.host.analysis_action.setEnabled(False)
 
             conf = mol.GetConformer()
             SCALE_FACTOR = 50.0
@@ -181,7 +181,7 @@ class StringImporterManager:
             self.host.edit_actions_manager.clear_2d_editor(push_to_undo=False)
             self.host.current_mol = None
             self.host.plotter.clear()
-            self.analysis_action.setEnabled(False)
+            self.host.analysis_action.setEnabled(False)
 
             conf = mol.GetConformer()
             SCALE_FACTOR = 50.0
@@ -248,3 +248,7 @@ class StringImporterManager:
 
         except (AttributeError, RuntimeError, ValueError, TypeError) as e:
             self.host.statusBar().showMessage(f"Error loading from InChI: {e}")
+
+
+# Backward-compat aliases
+MainWindowStringImporters = StringImporterManager

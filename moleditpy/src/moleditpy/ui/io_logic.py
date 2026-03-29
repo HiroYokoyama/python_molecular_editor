@@ -24,9 +24,6 @@ class IOManager:
     def __init__(self, host: Any) -> None:
         self.host = host
 
-    def __getattr__(self, name: str) -> Any:
-        return getattr(self.host, name)
-
     def fix_mol_counts_line(self, line: str) -> str:
         if "V3000" in line or "V2000" in line: return line
         prefix = line.rstrip().ljust(33)[0:33]
@@ -175,7 +172,7 @@ class IOManager:
             if file_path.lower().endswith(".mol"):
                 with open(file_path, "r", encoding="utf-8", errors="replace") as fh:
                     raw = fh.read()
-                fixed_block = self.host.fix_mol_block(raw)
+                fixed_block = self.fix_mol_block(raw)
                 mol = Chem.MolFromMolBlock(fixed_block, sanitize=True, removeHs=False)
             else:
                 suppl = Chem.SDMolSupplier(file_path, removeHs=False)
@@ -262,7 +259,7 @@ class IOManager:
             if not file_path: return
 
         try:
-            mol = self.host.load_xyz_file(file_path)
+            mol = self.load_xyz_file(file_path)
             if mol is None: raise ValueError("Failed to create molecule from XYZ file.")
             
             self.host.edit_actions_manager.clear_2d_editor(push_to_undo=False)
@@ -293,7 +290,7 @@ class IOManager:
             else:
                 with open(file_path, "r", encoding="utf-8", errors="replace") as fh:
                     raw = fh.read()
-                fixed_block = self.host.fix_mol_block(raw)
+                fixed_block = self.fix_mol_block(raw)
                 mol = Chem.MolFromMolBlock(fixed_block, sanitize=True, removeHs=False)
             
             if mol is None: raise ValueError("Failed to load molecule.")
@@ -368,3 +365,8 @@ class IOManager:
                 self.host.statusBar().showMessage(f"Successfully saved to {file_path}")
             except Exception as e:
                 self.host.statusBar().showMessage(f"Error saving XYZ: {e}")
+
+# Backward-compat aliases
+MainWindowProjectIo = IOManager
+MainWindowMolecularParsers = IOManager
+MainWindowViewLoaders = IOManager

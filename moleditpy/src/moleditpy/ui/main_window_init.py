@@ -1627,10 +1627,10 @@ class MainInitManager:
     def _init_analysis_menu(self, menu_bar):
         """Initialize the Analysis menu."""
         analysis_menu = menu_bar.addMenu("&Analysis")
-        self.analysis_action = QAction("Show Analysis...", self.host)
-        self.analysis_action.triggered.connect(self.host.dialog_manager.open_analysis_window)
-        self.analysis_action.setEnabled(False)
-        analysis_menu.addAction(self.analysis_action)
+        self.host.analysis_action = QAction("Show Analysis...", self.host)
+        self.host.analysis_action.triggered.connect(self.host.dialog_manager.open_analysis_window)
+        self.host.analysis_action.setEnabled(False)
+        analysis_menu.addAction(self.host.analysis_action)
 
     def _init_edit_3d_menu(self, menu_bar):
         """Initialize the 3D Edit menu."""

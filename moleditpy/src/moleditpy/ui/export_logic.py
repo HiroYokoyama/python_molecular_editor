@@ -41,7 +41,6 @@ except ImportError:
     from moleditpy.ui.atom_item import AtomItem
     from moleditpy.ui.bond_item import BondItem
 
-
 # --- Class Definition ---
 class ExportManager:
     """Independent manager for export logic, ported from MainWindowExport mixin."""
@@ -50,10 +49,6 @@ class ExportManager:
 
     def __init__(self, host: Any) -> None:
         self.host = host
-
-    def __getattr__(self, name: str) -> Any:
-        """Delegate back to host for attributes not found on this manager."""
-        return getattr(self.host, name)
 
     def export_stl(self) -> None:
         if not self.current_mol:
@@ -981,6 +976,5 @@ class ExportManager:
             self.host.statusBar().showMessage(f"3D view exported to {filePath}", 3000)
         except (AttributeError, RuntimeError, ValueError) as e:
             self.host.statusBar().showMessage(f"Error exporting 3D PNG: {e}")
-
 
 ExportManager._cls = ExportManager

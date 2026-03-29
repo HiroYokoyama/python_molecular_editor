@@ -283,7 +283,7 @@ class StateManager:
         else:
             self.host.current_mol = None
             self.host.plotter.clear()
-            self.analysis_action.setEnabled(False)
+            self.host.analysis_action.setEnabled(False)
             self.host.optimize_3d_button.setEnabled(False)
             # Disable 3D features
             self.host.ui_manager._enable_3d_features(False)
@@ -792,3 +792,7 @@ class StateManager:
 
 
 StateManager._cls = StateManager
+
+
+# Backward-compat aliases
+MainWindowAppState = StateManager

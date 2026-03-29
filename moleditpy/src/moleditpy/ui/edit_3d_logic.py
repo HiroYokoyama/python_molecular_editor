@@ -15,7 +15,6 @@ main_window_edit_3d.py
 Mixin class separated from main_window.py
 """
 
-
 import numpy as np
 
 try:
@@ -58,7 +57,6 @@ except ImportError:
     # Fallback to absolute imports for script-style execution
     from moleditpy.utils.constants import VDW_RADII
 
-
 # --- Classes ---
 class Edit3DManager:
     """Independent manager for 3D editing logic, ported from MainWindowEdit3d mixin."""
@@ -78,12 +76,6 @@ class Edit3DManager:
         self.is_3d_edit_mode = False
         self.dragged_atom_info = None
         self.constraints_3d = []
-
-    def __getattr__(self, name):
-        """Delegate back to host for attributes not found on this manager."""
-        if name == "host":
-            raise AttributeError(name)
-        return getattr(self.host, name)
 
     def toggle_measurement_mode(self, checked):
         """Toggle measurement mode on/off."""
@@ -473,6 +465,5 @@ class Edit3DManager:
         """Remove dialog from active list."""
         if dialog in self.active_3d_dialogs:
             self.active_3d_dialogs.remove(dialog)
-
 
 Edit3DManager._cls = Edit3DManager

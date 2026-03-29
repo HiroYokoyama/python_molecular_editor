@@ -8,7 +8,14 @@
       "Bash(python -m pytest tests/unit/ -x --tb=short -q)",
       "Bash(python -m pytest tests/unit/ --tb=short -q)",
       "Bash(python -m pytest tests/unit/ --tb=long -q)",
-      "Bash(python -m pytest tests/unit/ --tb=line -q)"
+      "Bash(python -m pytest tests/unit/ --tb=line -q)",
+      "Bash(python -m pytest tests/ -x --tb=short)",
+      "Bash(python -m pytest tests/unit -x --tb=short)",
+      "Bash(python -m pytest tests/unit --collect-only)",
+      "Bash(python -m pytest tests/unit -x --ignore=tests/unit/test_app_state.py --tb=short)",
+      "Bash(grep:*)",
+      "Bash(python scripts/fix_broken_links.py)",
+      "Bash(python scripts/fix_broken_links.py --apply --aliases)"
     ]
   }
 }
