@@ -199,16 +199,16 @@ class SettingsDialog(QDialog):
         if hasattr(self.parent_window, "settings_dirty"):
             self.parent_window.settings_dirty = True
 
-        if hasattr(self.parent_window, "apply_3d_settings"):
-            self.parent_window.apply_3d_settings()
+        if hasattr(self.parent_window.view_3d_manager, "apply_3d_settings"):
+            self.parent_window.view_3d_manager.apply_3d_settings()
 
-        if hasattr(self.parent_window, "update_cpk_colors_from_settings"):
-            self.parent_window.update_cpk_colors_from_settings()
+        if hasattr(self.parent_window.init_manager, "update_cpk_colors_from_settings"):
+            self.parent_window.init_manager.update_cpk_colors_from_settings()
 
         # Redraw molecule
         current_mol = getattr(self.parent_window, "current_mol", None)
-        if current_mol and hasattr(self.parent_window, "draw_molecule_3d"):
-            self.parent_window.draw_molecule_3d(current_mol)
+        if current_mol and hasattr(self.parent_window.view_3d_manager, "draw_molecule_3d"):
+            self.parent_window.view_3d_manager.draw_molecule_3d(current_mol)
 
         # Apply 2D view settings
         scene = getattr(self.parent_window, "scene", None)

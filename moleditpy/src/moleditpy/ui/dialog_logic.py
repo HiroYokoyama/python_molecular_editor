@@ -33,6 +33,8 @@ try:
     from .move_group_dialog import MoveGroupDialog
     from .periodic_table_dialog import PeriodicTableDialog
     from .planarize_dialog import PlanarizeDialog
+    from .settings_dialog import SettingsDialog
+    from .color_settings_dialog import ColorSettingsDialog
     from .translation_dialog import TranslationDialog
     from .user_template_dialog import UserTemplateDialog
 except ImportError:
@@ -51,6 +53,8 @@ except ImportError:
     from moleditpy.ui.move_group_dialog import MoveGroupDialog
     from moleditpy.ui.periodic_table_dialog import PeriodicTableDialog
     from moleditpy.ui.planarize_dialog import PlanarizeDialog
+    from moleditpy.ui.settings_dialog import SettingsDialog
+    from moleditpy.ui.color_settings_dialog import ColorSettingsDialog
     from moleditpy.ui.translation_dialog import TranslationDialog
     from moleditpy.ui.user_template_dialog import UserTemplateDialog
 
@@ -417,6 +421,16 @@ class DialogManager:
             self.host.edit_3d_manager.toggle_measurement_mode(False)
 
         dialog = MirrorDialog(self.host.current_mol, self.host)
+        dialog.exec()
+
+    def open_settings_dialog(self):
+        """Open the application settings dialog."""
+        dialog = SettingsDialog(self.host.settings, parent=self.host)
+        dialog.exec()
+
+    def open_color_settings_dialog(self):
+        """Open the CPK color settings dialog."""
+        dialog = ColorSettingsDialog(self.host.settings, parent=self.host)
         dialog.exec()
 
     def open_constrained_optimization_dialog(self):

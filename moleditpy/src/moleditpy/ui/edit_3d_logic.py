@@ -91,7 +91,8 @@ class Edit3DManager:
             # Disable 3D Drag mode when measurement mode is on
             if self.is_3d_edit_mode:
                 self.edit_3d_action.setChecked(False)
-                self.toggle_3d_edit_mode(False)
+                if hasattr(self.host, "ui_manager"):
+                    self.host.ui_manager.toggle_3d_edit_mode(False)
 
             # Close active 3D edit dialogs
             self.close_all_3d_edit_dialogs()

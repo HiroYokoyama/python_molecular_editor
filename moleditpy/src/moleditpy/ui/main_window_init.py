@@ -111,14 +111,14 @@ class MainInitManager:
         # This helper is not used as a mixin in this project; initialization
         # happens on the `QMainWindow` base class in
         # `MainWindow.__init__` directly.
-        self.setAcceptDrops(True)
+        self.host.setAcceptDrops(True)
         self.host.settings_dir = os.path.join(os.path.expanduser("~"), ".moleditpy")
         self.host.settings_file = os.path.join(self.host.settings_dir, "settings.json")
         self.host.settings = {}  # Will be populated by load_settings
         self.load_settings()
         self.host.initial_settings = self.host.settings.copy()
-        self.setWindowTitle("MoleditPy Ver. " + VERSION)
-        self.setGeometry(100, 100, 1400, 800)
+        self.host.setWindowTitle("MoleditPy Ver. " + VERSION)
+        self.host.setGeometry(100, 100, 1400, 800)
         self.host.data = MolecularData()
         self.host.current_mol = None
         # self.host.view_3d_manager.current_3d_style is now in View3DManager
@@ -232,7 +232,7 @@ class MainInitManager:
             app_icon = QIcon(icon_path)
 
             # Set the icon for both the window and the application
-            self.setWindowIcon(app_icon)
+            self.host.setWindowIcon(app_icon)
             QApplication.instance().setWindowIcon(app_icon)
         else:
             print(f"Warning: Icon file not found: {icon_path}")
@@ -244,7 +244,7 @@ class MainInitManager:
         self._setup_action_groups(self.toolbar, self.toolbar_bottom)
 
     def init_menu_bar(self):
-        menu_bar = self.menuBar()
+        menu_bar = self.host.menuBar()
 
         self._init_file_menu(menu_bar)
         self._init_edit_menu(menu_bar)
@@ -328,7 +328,7 @@ class MainInitManager:
             self.host.view_3d_manager.apply_3d_settings()
 
         try:
-            if hasattr(self, "scene") and self.host.scene:
+            if hasattr(self.host, "scene") and self.host.scene:
                 # Apply 2D background color
                 bg_color_2d = self.host.settings.get("background_color_2d", "#FFFFFF")
                 self.host.scene.setBackgroundBrush(QBrush(QColor(bg_color_2d)))
@@ -384,7 +384,7 @@ class MainInitManager:
             print(f"Failed to update CPK colors from settings: {e}")
 
     def open_settings_dialog(self):
-        dialog = SettingsDialog(self.host.settings, self)
+        dialog = SettingsDialog(self.host.settings, self.host)
         # Settings application and 3D view updates are handled by the accept() method.
         dialog.exec()
 
@@ -397,7 +397,7 @@ class MainInitManager:
             self._perform_settings_reset()
             self._refresh_ui_after_reset()
             QMessageBox.information(
-                self, "Reset Complete", "All settings have been reset to defaults."
+                self.host, "Reset Complete", "All settings have been reset to defaults."
             )
         except (AttributeError, RuntimeError, ValueError) as e:
             QMessageBox.warning(self, "Reset Failed", f"Could not reset settings: {e}")
@@ -406,7 +406,7 @@ class MainInitManager:
         """Show a confirmation dialog for resetting settings."""
         return (
             QMessageBox.question(
-                self,
+                self.host,
                 "Reset All Settings",
                 "Are you sure you want to reset all settings to defaults?",
                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
@@ -475,13 +475,13 @@ class MainInitManager:
         # Refresh 3D View
         try:
             self.host.view_3d_manager.apply_3d_settings()
-            if hasattr(self, "current_mol") and self.host.current_mol:
+            if hasattr(self.host, "current_mol") and self.host.current_mol:
                 self.host.view_3d_manager.draw_molecule_3d(self.host.current_mol)
         except (AttributeError, RuntimeError, ValueError, TypeError) as e:
             logging.debug(f"Suppressed exception: {e}")
 
         # Refresh 2D View
-        if hasattr(self, "scene") and self.host.scene:
+        if hasattr(self.host, "scene") and self.host.scene:
             try:
                 bg_c = self.host.settings.get("background_color_2d", "#FFFFFF")
                 self.host.scene.setBackgroundBrush(QBrush(QColor(bg_c)))
@@ -502,7 +502,7 @@ class MainInitManager:
 
         # 2. Try to load from user's settings file
         try:
-            if hasattr(self, "settings_file") and os.path.exists(self.host.settings_file):
+            if hasattr(self.host, "settings_file") and os.path.exists(self.host.settings_file):
                 with open(self.host.settings_file, "r", encoding="utf-8") as f:
                     loaded_settings = json.load(f)
 
@@ -540,7 +540,7 @@ class MainInitManager:
         self._clear_all_plugin_actions(plugin_menu)
 
         # Re-add Manager
-        manage_plugins_action = QAction("Plugin Manager...", self)
+        manage_plugins_action = QAction("Plugin Manager...", self.host)
         manage_plugins_action.triggered.connect(
             lambda: self._show_plugin_manager(plugin_menu)
         )
@@ -563,12 +563,12 @@ class MainInitManager:
         """Displays the plugin manager window and refreshes the menu."""
         if not self.host.plugin_manager:
             QMessageBox.information(
-                self, "Safe Mode", "Plugins are disabled (safe mode)."
+                self.host, "Safe Mode", "Plugins are disabled (safe mode)."
             )
             return
         from ..plugins.plugin_manager_window import PluginManagerWindow
 
-        dlg = PluginManagerWindow(self.host.plugin_manager, self)
+        dlg = PluginManagerWindow(self.host.plugin_manager, self.host)
         dlg.exec()
         self.update_plugin_menu(plugin_menu)
 
@@ -586,7 +586,7 @@ class MainInitManager:
                     clear_menu(act.menu())
 
         plugin_menu.clear()
-        for top_action in self.menuBar().actions():
+        for top_action in self.host.menuBar().actions():
             if top_action.menu():
                 clear_menu(top_action.menu())
 
@@ -609,7 +609,7 @@ class MainInitManager:
 
             for style_name in self.host.plugin_manager.custom_3d_styles:
                 if not any(a.text() == style_name for a in style_menu.actions()):
-                    action = QAction(style_name, self, checkable=True)
+                    action = QAction(style_name, self.host, checkable=True)
                     action.triggered.connect(
                         lambda checked=False, s=style_name: self.host.view_3d_manager.set_3d_style(s)
                     )
@@ -632,14 +632,14 @@ class MainInitManager:
             current_menu = next(
                 (
                     a.menu()
-                    for a in self.menuBar().actions()
+                    for a in self.host.menuBar().actions()
                     if a.menu() and a.text().replace("&", "") == top_level_title
                 ),
                 None,
             )
 
             if not current_menu:
-                current_menu = self.menuBar().addMenu(top_level_title)
+                current_menu = self.host.menuBar().addMenu(top_level_title)
 
             for part in parts[1:-1]:
                 sub = next(
@@ -661,7 +661,7 @@ class MainInitManager:
                 sep = current_menu.addSeparator()
                 sep.setData(PLUGIN_ACTION_TAG)
 
-            action = QAction(text or parts[-1], self)
+            action = QAction(text or parts[-1], self.host)
             action.triggered.connect(callback)
             if action_def.get("shortcut"):
                 action.setShortcut(QKeySequence(action_def["shortcut"]))
@@ -677,7 +677,7 @@ class MainInitManager:
         if self.host.plugin_manager.toolbar_actions:
             self.plugin_toolbar.show()
             for action_def in self.host.plugin_manager.toolbar_actions:
-                action = QAction(action_def["text"], self)
+                action = QAction(action_def["text"], self.host)
                 action.triggered.connect(action_def["callback"])
                 if action_def["icon"] and os.path.exists(action_def["icon"]):
                     action.setIcon(QIcon(action_def["icon"]))
@@ -690,7 +690,7 @@ class MainInitManager:
     def _add_legacy_plugin_actions(self, plugin_menu, plugins):
         """Add folder-based legacy plugin actions to the plugin menu."""
         if not plugins:
-            no_plugin = QAction("(No plugins found)", self)
+            no_plugin = QAction("(No plugins found)", self.host)
             no_plugin.setEnabled(False)
             plugin_menu.addAction(no_plugin)
             return
@@ -721,7 +721,7 @@ class MainInitManager:
                 current_parent = sub if sub else current_parent.addMenu(part)
 
             for p in sorted(categorized[cat], key=lambda x: x["name"]):
-                a = QAction(p["name"], self)
+                a = QAction(p["name"], self.host)
                 a.triggered.connect(
                     lambda checked, mod=p["module"]: self.host.plugin_manager.run_plugin(
                         mod, self
@@ -731,7 +731,7 @@ class MainInitManager:
 
         # Add root items
         for p in sorted(root, key=lambda x: x["name"]):
-            a = QAction(p["name"], self)
+            a = QAction(p["name"], self.host)
             a.triggered.connect(
                 lambda checked, mod=p["module"]: self.host.plugin_manager.run_plugin(
                     mod, self
@@ -746,7 +746,7 @@ class MainInitManager:
 
         PLUGIN_ACTION_TAG = "plugin_managed"
         main_export_menu = None
-        for top_action in self.menuBar().actions():
+        for top_action in self.host.menuBar().actions():
             if top_action.menu() and top_action.text().replace("&", "") == "File":
                 main_export_menu = next(
                     (
@@ -769,7 +769,7 @@ class MainInitManager:
             sep = menu.addSeparator()
             sep.setData(PLUGIN_ACTION_TAG)
             for exp in self.host.plugin_manager.export_actions:
-                a = QAction(exp["label"], self)
+                a = QAction(exp["label"], self.host)
                 a.triggered.connect(exp["callback"])
                 a.setData(PLUGIN_ACTION_TAG)
                 menu.addAction(a)
@@ -804,7 +804,7 @@ class MainInitManager:
             def make_cb(m, f, n):
                 def _cb():
                     fpath, _ = QFileDialog.getOpenFileName(
-                        self, f"Import {n} Files", "", f
+                        self.host, f"Import {n} Files", "", f
                     )
                     if fpath:
                         ext = os.path.splitext(fpath)[1].lower()
@@ -815,7 +815,7 @@ class MainInitManager:
 
                 return _cb
 
-            a = QAction(f"Import {ext_str} ({p_name})...", self)
+            a = QAction(f"Import {ext_str} ({p_name})...", self.host)
             a.triggered.connect(make_cb(ext_map, filter_str, p_name))
             a.setData(PLUGIN_ACTION_TAG)
             self.import_menu.addAction(a)
@@ -825,7 +825,7 @@ class MainInitManager:
         analysis_menu = next(
             (
                 a.menu()
-                for a in self.menuBar().actions()
+                for a in self.host.menuBar().actions()
                 if a.text().replace("&", "") == "Analysis"
             ),
             None,
@@ -835,7 +835,7 @@ class MainInitManager:
             sep = analysis_menu.addSeparator()
             sep.setData(PLUGIN_ACTION_TAG)
             for tool in self.host.plugin_manager.analysis_tools:
-                a = QAction(f"{tool['label']} ({tool.get('plugin', 'Plugin')})", self)
+                a = QAction(f"{tool['label']} ({tool.get('plugin', 'Plugin')})", self.host)
                 a.triggered.connect(tool["callback"])
                 a.setData(PLUGIN_ACTION_TAG)
                 analysis_menu.addAction(a)
@@ -861,7 +861,7 @@ class MainInitManager:
                 background-color: #888;
             }
         """)
-        self.setCentralWidget(self.host.splitter)
+        self.host.setCentralWidget(self.host.splitter)
 
         left_pane = QWidget()
         left_pane.setAcceptDrops(True)
@@ -938,11 +938,11 @@ class MainInitManager:
 
     def _init_left_panel(self, left_layout):
         """Initialize the left panel (2D view and buttons)."""
-        self.host.scene = MoleculeScene(self.host.data, self)
+        self.host.scene = MoleculeScene(self.host.data, self.host)
         self.host.scene.setSceneRect(-4000, -4000, 4000, 4000)
         self.host.scene.setBackgroundBrush(QColor("#FFFFFF"))
 
-        self.host.view_2d = ZoomableView(self.host.scene, self)
+        self.host.view_2d = ZoomableView(self.host.scene, self.host)
         self.host.view_2d.setRenderHint(QPainter.RenderHint.Antialiasing)
         self.host.view_2d.setSizePolicy(
             QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
@@ -978,7 +978,7 @@ class MainInitManager:
     def _init_right_panel(self, right_layout):
         """Initialize the right panel (3D view and buttons)."""
         self.host.plotter = CustomQtInteractor(
-            right_layout.parentWidget(), main_window=self, lighting="none"
+            right_layout.parentWidget(), main_window=self.host, lighting="none"
         )
         self.host.plotter.setAcceptDrops(False)
         self.host.plotter.setSizePolicy(
@@ -1024,17 +1024,17 @@ class MainInitManager:
         self.host.export_button.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
         self.host.export_button.setEnabled(False)  # Initially disabled
 
-        export_menu = QMenu(self)
-        export_mol_action = QAction("Export as MOL...", self)
+        export_menu = QMenu(self.host)
+        export_mol_action = QAction("Export as MOL...", self.host)
         export_mol_action.triggered.connect(self.host.io_manager.save_3d_as_mol)
         export_menu.addAction(export_mol_action)
 
-        export_xyz_action = QAction("Export as XYZ...", self)
+        export_xyz_action = QAction("Export as XYZ...", self.host)
         export_xyz_action.triggered.connect(self.host.io_manager.save_as_xyz)
         export_menu.addAction(export_xyz_action)
 
-        export_png_action = QAction("Export as PNG...", self)
-        export_png_action.triggered.connect(self.export_manager.export_3d_png)
+        export_png_action = QAction("Export as PNG...", self.host)
+        export_png_action.triggered.connect(self.host.export_manager.export_3d_png)
         export_menu.addAction(export_png_action)
 
         self.host.export_button.setMenu(export_menu)
@@ -1047,24 +1047,24 @@ class MainInitManager:
         """Initialize and organize toolbars."""
         # Row 1: Main Toolbar
         self.toolbar = QToolBar("Main Toolbar")
-        self.addToolBar(self.toolbar)
+        self.host.addToolBar(self.toolbar)
 
         # Row 2: Templates
         with contextlib.suppress(AttributeError):
-            self.addToolBarBreak(Qt.ToolBarArea.TopToolBarArea)
+            self.host.addToolBarBreak(Qt.ToolBarArea.TopToolBarArea)
         self.toolbar_bottom = QToolBar("Templates Toolbar")
-        self.addToolBar(Qt.ToolBarArea.TopToolBarArea, self.toolbar_bottom)
+        self.host.addToolBar(Qt.ToolBarArea.TopToolBarArea, self.toolbar_bottom)
 
         # Row 3: Plugins
         with contextlib.suppress(AttributeError):
-            self.addToolBarBreak(Qt.ToolBarArea.TopToolBarArea)
+            self.host.addToolBarBreak(Qt.ToolBarArea.TopToolBarArea)
         self.plugin_toolbar = QToolBar("Plugin Toolbar")
-        self.addToolBar(Qt.ToolBarArea.TopToolBarArea, self.plugin_toolbar)
+        self.host.addToolBar(Qt.ToolBarArea.TopToolBarArea, self.plugin_toolbar)
         self.plugin_toolbar.hide()
 
     def _setup_action_groups(self, toolbar, toolbar_bottom):
         """Set up action groups and tool actions."""
-        self.host.tool_group = QActionGroup(self)
+        self.host.tool_group = QActionGroup(self.host)
         self.host.tool_group.setExclusive(True)
 
         self._add_atom_actions(toolbar)
@@ -1100,7 +1100,7 @@ class MainInitManager:
         for text, mode, shortcut in actions_data:
             if text == "C":
                 toolbar.addSeparator()
-            action = QAction(text, self, checkable=(mode != "atom_other"))
+            action = QAction(text, self.host, checkable=(mode != "atom_other"))
             if shortcut:
                 action.setToolTip(f"{text} ({shortcut})")
 
@@ -1126,7 +1126,7 @@ class MainInitManager:
         ]
 
         for text, mode, shortcut, icon_type in bonds:
-            action = QAction(self)
+            action = QAction(self.host)
             action.setIcon(self._create_bond_icon(icon_type))
             action.setToolTip(f"{text} ({shortcut})")
             action.setCheckable(True)
@@ -1145,7 +1145,7 @@ class MainInitManager:
         ]
 
         for text, mode, tooltip in ops:
-            action = QAction(text, self, checkable=True)
+            action = QAction(text, self.host, checkable=True)
             action.setToolTip(tooltip)
             action.triggered.connect(lambda c, m=mode: self.host.ui_manager.set_mode(m))
             self.host.mode_actions[mode] = action
@@ -1160,7 +1160,7 @@ class MainInitManager:
         ]
 
         for text, mode, n in templates:
-            action = QAction(self)
+            action = QAction(self.host)
             action.setCheckable(True)
             is_benzene = text == "Benzene"
             action.setIcon(self._create_template_icon(n, is_benzene=is_benzene))
@@ -1172,7 +1172,7 @@ class MainInitManager:
             toolbar_bottom.addAction(action)
             self.host.tool_group.addAction(action)
 
-        user_action = QAction("USER", self, checkable=True)
+        user_action = QAction("USER", self.host, checkable=True)
         user_action.setToolTip("Open User Templates Dialog")
         user_action.triggered.connect(self.host.dialog_manager.open_template_dialog_and_activate)
         self.host.mode_actions["template_user"] = user_action
@@ -1185,14 +1185,14 @@ class MainInitManager:
         spacer.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         toolbar.addWidget(spacer)
 
-        self.host.measurement_action = QAction("3D Select", self, checkable=True)
+        self.host.measurement_action = QAction("3D Select", self.host, checkable=True)
         self.host.measurement_action.setToolTip(
             "Enable distance, angle, and dihedral measurement in 3D view"
         )
         self.host.measurement_action.triggered.connect(self.host.edit_3d_manager.toggle_measurement_mode)
         toolbar.addAction(self.host.measurement_action)
 
-        self.host.edit_3d_action = QAction("3D Drag", self, checkable=True)
+        self.host.edit_3d_action = QAction("3D Drag", self.host, checkable=True)
         self.host.edit_3d_action.setToolTip(
             "Toggle 3D atom dragging mode (Hold Alt for temporary mode)"
         )
@@ -1204,9 +1204,9 @@ class MainInitManager:
         self.host.style_button.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
         toolbar.addWidget(self.host.style_button)
 
-        style_menu = QMenu(self)
+        style_menu = QMenu(self.host)
         self.host.style_button.setMenu(style_menu)
-        style_group = QActionGroup(self)
+        style_group = QActionGroup(self.host)
         style_group.setExclusive(True)
 
         for name, key in [
@@ -1215,14 +1215,14 @@ class MainInitManager:
             ("Wireframe", "wireframe"),
             ("Stick", "stick"),
         ]:
-            action = QAction(name, self, checkable=True)
+            action = QAction(name, self.host, checkable=True)
             if key == "ball_and_stick":
                 action.setChecked(True)
             action.triggered.connect(
                 lambda checked=False, k=key: (
                     self.host.view_3d_manager.set_3d_style(k),
                     self.host.view_3d_manager.draw_molecule_3d(self.host.current_mol)
-                    if getattr(self, "current_mol", None)
+                    if getattr(self.host, "current_mol", None)
                     else None,
                 )
             )
@@ -1233,12 +1233,12 @@ class MainInitManager:
             style_menu.addSeparator()
             for style_name in self.host.plugin_manager.custom_3d_styles:
                 if not any(a.text() == style_name for a in style_menu.actions()):
-                    action = QAction(style_name, self, checkable=True)
+                    action = QAction(style_name, self.host, checkable=True)
                     action.triggered.connect(
                         lambda checked=False, s=style_name: (
                             self.host.view_3d_manager.set_3d_style(s),
                             self.host.view_3d_manager.draw_molecule_3d(self.host.current_mol)
-                            if getattr(self, "current_mol", None)
+                            if getattr(self.host, "current_mol", None)
                             else None,
                         )
                     )
@@ -1358,27 +1358,27 @@ class MainInitManager:
         file_menu = menu_bar.addMenu("&File")
 
         # === Project Operations ===
-        new_action = QAction("&New", self)
+        new_action = QAction("&New", self.host)
         new_action.setShortcut("Ctrl+N")
         new_action.triggered.connect(self.host.edit_actions_manager.clear_all)
         file_menu.addAction(new_action)
 
-        load_project_action = QAction("&Open Project...", self)
+        load_project_action = QAction("&Open Project...", self.host)
         load_project_action.setShortcut("Ctrl+O")
         load_project_action.triggered.connect(self.host.io_manager.open_project)
         file_menu.addAction(load_project_action)
 
-        save_action = QAction("&Save Project", self)
+        save_action = QAction("&Save Project", self.host)
         save_action.setShortcut("Ctrl+S")
         save_action.triggered.connect(self.host.io_manager.save_project)
         file_menu.addAction(save_action)
 
-        save_as_action = QAction("Save Project &As...", self)
+        save_as_action = QAction("Save Project &As...", self.host)
         save_as_action.setShortcut("Ctrl+Shift+S")
         save_as_action.triggered.connect(self.host.io_manager.save_project_as)
         file_menu.addAction(save_as_action)
 
-        save_template_action = QAction("Save 2D as Template...", self)
+        save_template_action = QAction("Save 2D as Template...", self.host)
         save_template_action.triggered.connect(self.host.dialog_manager.save_2d_as_template)
         file_menu.addAction(save_template_action)
 
@@ -1386,144 +1386,144 @@ class MainInitManager:
 
         # === Import ===
         self.import_menu = file_menu.addMenu("Import")
-        load_mol_action = QAction("MOL/SDF File...", self)
+        load_mol_action = QAction("MOL/SDF File...", self.host)
         load_mol_action.triggered.connect(self.host.io_manager.load_mol_file)
         self.import_menu.addAction(load_mol_action)
 
-        import_smiles_action = QAction("SMILES...", self)
+        import_smiles_action = QAction("SMILES...", self.host)
         import_smiles_action.triggered.connect(self.host.string_importer_manager.import_smiles_dialog)
         self.import_menu.addAction(import_smiles_action)
 
-        import_inchi_action = QAction("InChI...", self)
+        import_inchi_action = QAction("InChI...", self.host)
         import_inchi_action.triggered.connect(self.host.string_importer_manager.import_inchi_dialog)
         self.import_menu.addAction(import_inchi_action)
 
         self.import_menu.addSeparator()
-        load_3d_mol_action = QAction("3D MOL/SDF (3D View Only)...", self)
+        load_3d_mol_action = QAction("3D MOL/SDF (3D View Only)...", self.host)
         load_3d_mol_action.triggered.connect(self.host.io_manager.load_mol_file_for_3d_viewing)
         self.import_menu.addAction(load_3d_mol_action)
 
-        load_3d_xyz_action = QAction("3D XYZ (3D View Only)...", self)
+        load_3d_xyz_action = QAction("3D XYZ (3D View Only)...", self.host)
         load_3d_xyz_action.triggered.connect(self.host.io_manager.load_xyz_for_3d_viewing)
         self.import_menu.addAction(load_3d_xyz_action)
 
         # === Export ===
         export_menu = file_menu.addMenu("Export")
-        export_pmeraw_action = QAction("PME Raw Format...", self)
+        export_pmeraw_action = QAction("PME Raw Format...", self.host)
         export_pmeraw_action.triggered.connect(self.host.io_manager.save_raw_data)
         export_menu.addAction(export_pmeraw_action)
         export_menu.addSeparator()
 
         export_2d_menu = export_menu.addMenu("2D Formats")
-        save_mol_action = QAction("MOL File...", self)
+        save_mol_action = QAction("MOL File...", self.host)
         save_mol_action.triggered.connect(self.host.io_manager.save_as_mol)
         export_2d_menu.addAction(save_mol_action)
 
-        export_2d_png_action = QAction("PNG Image...", self)
-        export_2d_png_action.triggered.connect(self.export_manager.export_2d_png)
+        export_2d_png_action = QAction("PNG Image...", self.host)
+        export_2d_png_action.triggered.connect(self.host.export_manager.export_2d_png)
         export_2d_menu.addAction(export_2d_png_action)
 
-        export_2d_svg_action = QAction("SVG Image...", self)
-        export_2d_svg_action.triggered.connect(self.export_manager.export_2d_svg)
+        export_2d_svg_action = QAction("SVG Image...", self.host)
+        export_2d_svg_action.triggered.connect(self.host.export_manager.export_2d_svg)
         export_2d_menu.addAction(export_2d_svg_action)
 
         export_3d_menu = export_menu.addMenu("3D Formats")
-        save_3d_mol_action = QAction("MOL File...", self)
+        save_3d_mol_action = QAction("MOL File...", self.host)
         save_3d_mol_action.triggered.connect(self.host.io_manager.save_3d_as_mol)
         export_3d_menu.addAction(save_3d_mol_action)
 
-        save_xyz_action = QAction("XYZ File...", self)
+        save_xyz_action = QAction("XYZ File...", self.host)
         save_xyz_action.triggered.connect(self.host.io_manager.save_as_xyz)
         export_3d_menu.addAction(save_xyz_action)
 
-        export_3d_png_action = QAction("PNG Image...", self)
-        export_3d_png_action.triggered.connect(self.export_manager.export_3d_png)
+        export_3d_png_action = QAction("PNG Image...", self.host)
+        export_3d_png_action.triggered.connect(self.host.export_manager.export_3d_png)
         export_3d_menu.addAction(export_3d_png_action)
         export_3d_menu.addSeparator()
 
-        export_stl_action = QAction("STL File...", self)
-        export_stl_action.triggered.connect(self.export_manager.export_stl)
+        export_stl_action = QAction("STL File...", self.host)
+        export_stl_action.triggered.connect(self.host.export_manager.export_stl)
         export_3d_menu.addAction(export_stl_action)
 
-        export_obj_action = QAction("OBJ/MTL (with colors)...", self)
-        export_obj_action.triggered.connect(self.export_manager.export_obj_mtl)
+        export_obj_action = QAction("OBJ/MTL (with colors)...", self.host)
+        export_obj_action.triggered.connect(self.host.export_manager.export_obj_mtl)
         export_3d_menu.addAction(export_obj_action)
 
         file_menu.addSeparator()
-        quit_action = QAction("Quit", self)
-        quit_action.triggered.connect(self.close)
+        quit_action = QAction("Quit", self.host)
+        quit_action.triggered.connect(self.host.close)
         file_menu.addAction(quit_action)
 
     def _init_edit_menu(self, menu_bar):
         """Initialize the Edit menu."""
         edit_menu = menu_bar.addMenu("&Edit")
-        self.host.undo_action = QAction("Undo", self)
+        self.host.undo_action = QAction("Undo", self.host)
         self.host.undo_action.setShortcut(QKeySequence.StandardKey.Undo)
         self.host.undo_action.triggered.connect(self.host.edit_actions_manager.undo)
         edit_menu.addAction(self.host.undo_action)
 
-        self.host.redo_action = QAction("Redo", self)
+        self.host.redo_action = QAction("Redo", self.host)
         self.host.redo_action.setShortcut(QKeySequence.StandardKey.Redo)
         self.host.redo_action.triggered.connect(self.host.edit_actions_manager.redo)
         edit_menu.addAction(self.host.redo_action)
 
         edit_menu.addSeparator()
-        self.host.cut_action = QAction("Cut", self)
+        self.host.cut_action = QAction("Cut", self.host)
         self.host.cut_action.setShortcut(QKeySequence.StandardKey.Cut)
         self.host.cut_action.triggered.connect(self.host.edit_actions_manager.cut_selection)
         edit_menu.addAction(self.host.cut_action)
 
-        self.host.copy_action = QAction("Copy", self)
+        self.host.copy_action = QAction("Copy", self.host)
         self.host.copy_action.setShortcut(QKeySequence.StandardKey.Copy)
         self.host.copy_action.triggered.connect(self.host.edit_actions_manager.copy_selection)
         edit_menu.addAction(self.host.copy_action)
 
-        self.host.paste_action = QAction("Paste", self)
+        self.host.paste_action = QAction("Paste", self.host)
         self.host.paste_action.setShortcut(QKeySequence.StandardKey.Paste)
         self.host.paste_action.triggered.connect(self.host.edit_actions_manager.paste_from_clipboard)
         edit_menu.addAction(self.host.paste_action)
 
         edit_menu.addSeparator()
-        add_hydrogen_action = QAction("Add Hydrogens", self)
+        add_hydrogen_action = QAction("Add Hydrogens", self.host)
         add_hydrogen_action.setToolTip(
             "Add explicit hydrogens based on RDKit implicit counts"
         )
         add_hydrogen_action.triggered.connect(self.host.edit_actions_manager.add_hydrogen_atoms)
         edit_menu.addAction(add_hydrogen_action)
 
-        remove_hydrogen_action = QAction("Remove Hydrogens", self)
+        remove_hydrogen_action = QAction("Remove Hydrogens", self.host)
         remove_hydrogen_action.triggered.connect(self.host.edit_actions_manager.remove_hydrogen_atoms)
         edit_menu.addAction(remove_hydrogen_action)
 
         edit_menu.addSeparator()
-        rotate_2d_action = QAction("Rotate 2D...", self)
+        rotate_2d_action = QAction("Rotate 2D...", self.host)
         rotate_2d_action.setShortcut(QKeySequence("Ctrl+R"))
         rotate_2d_action.triggered.connect(self.host.edit_actions_manager.open_rotate_2d_dialog)
         edit_menu.addAction(rotate_2d_action)
 
         edit_menu.addSeparator()
-        optimize_2d_action = QAction("Clean Up 2D", self)
+        optimize_2d_action = QAction("Clean Up 2D", self.host)
         optimize_2d_action.setShortcut(QKeySequence("Ctrl+J"))
         optimize_2d_action.triggered.connect(self.host.edit_actions_manager.clean_up_2d_structure)
         edit_menu.addAction(optimize_2d_action)
 
-        convert_3d_action = QAction("Convert 2D to 3D", self)
+        convert_3d_action = QAction("Convert 2D to 3D", self.host)
         convert_3d_action.setShortcut(QKeySequence("Ctrl+K"))
         convert_3d_action.triggered.connect(self.host.compute_manager.trigger_conversion)
         edit_menu.addAction(convert_3d_action)
 
-        optimize_3d_action = QAction("Optimize 3D", self)
+        optimize_3d_action = QAction("Optimize 3D", self.host)
         optimize_3d_action.setShortcut(QKeySequence("Ctrl+L"))
         optimize_3d_action.triggered.connect(self.host.compute_manager.optimize_3d_structure)
         edit_menu.addAction(optimize_3d_action)
 
         edit_menu.addSeparator()
-        select_all_action = QAction("Select All", self)
+        select_all_action = QAction("Select All", self.host)
         select_all_action.setShortcut(QKeySequence.StandardKey.SelectAll)
         select_all_action.triggered.connect(self.host.edit_actions_manager.select_all)
         edit_menu.addAction(select_all_action)
 
-        clear_all_action = QAction("Clear All", self)
+        clear_all_action = QAction("Clear All", self.host)
         clear_all_action.setShortcut(QKeySequence("Ctrl+Shift+C"))
         clear_all_action.triggered.connect(self.host.edit_actions_manager.clear_all)
         edit_menu.addAction(clear_all_action)
@@ -1531,63 +1531,63 @@ class MainInitManager:
     def _init_view_menu(self, menu_bar):
         """Initialize the View menu."""
         view_menu = menu_bar.addMenu("&View")
-        zoom_in_action = QAction("Zoom In", self)
+        zoom_in_action = QAction("Zoom In", self.host)
         zoom_in_action.setShortcut(QKeySequence.StandardKey.ZoomIn)
         zoom_in_action.triggered.connect(self.host.view_3d_manager.zoom_in)
         view_menu.addAction(zoom_in_action)
 
-        zoom_out_action = QAction("Zoom Out", self)
+        zoom_out_action = QAction("Zoom Out", self.host)
         zoom_out_action.setShortcut(QKeySequence.StandardKey.ZoomOut)
         zoom_out_action.triggered.connect(self.host.view_3d_manager.zoom_out)
         view_menu.addAction(zoom_out_action)
 
-        reset_zoom_action = QAction("Reset Zoom", self)
+        reset_zoom_action = QAction("Reset Zoom", self.host)
         reset_zoom_action.setShortcut(QKeySequence("Ctrl+0"))
         reset_zoom_action.triggered.connect(self.host.view_3d_manager.reset_zoom)
         view_menu.addAction(reset_zoom_action)
 
-        fit_action = QAction("Fit to View", self)
+        fit_action = QAction("Fit to View", self.host)
         fit_action.setShortcut(QKeySequence("Ctrl+9"))
         fit_action.triggered.connect(self.host.view_3d_manager.fit_to_view)
         view_menu.addAction(fit_action)
 
         view_menu.addSeparator()
-        reset_3d_view_action = QAction("Reset 3D View", self)
+        reset_3d_view_action = QAction("Reset 3D View", self.host)
         reset_3d_view_action.triggered.connect(
-            lambda: self.host.plotter.reset_camera() if hasattr(self, "plotter") else None
+            lambda: self.host.plotter.reset_camera() if hasattr(self.host, "plotter") else None
         )
         reset_3d_view_action.setShortcut(QKeySequence("Ctrl+Shift+R"))
         view_menu.addAction(reset_3d_view_action)
 
-        self.redraw_menu_action = QAction("Redraw 3D Molecule", self)
+        self.redraw_menu_action = QAction("Redraw 3D Molecule", self.host)
         self.redraw_menu_action.triggered.connect(self.host.edit_actions_manager.redraw_molecule_3d)
         view_menu.addAction(self.redraw_menu_action)
 
         view_menu.addSeparator()
         layout_menu = view_menu.addMenu("Panel Layout")
-        equal_panels_action = QAction("Equal Panels (50:50)", self)
+        equal_panels_action = QAction("Equal Panels (50:50)", self.host)
         equal_panels_action.setShortcut(QKeySequence("Ctrl+1"))
         equal_panels_action.triggered.connect(lambda: self.host.ui_manager.set_panel_layout(50, 50))
         layout_menu.addAction(equal_panels_action)
 
-        layout_2d_focus_action = QAction("2D Focus (70:30)", self)
+        layout_2d_focus_action = QAction("2D Focus (70:30)", self.host)
         layout_2d_focus_action.setShortcut(QKeySequence("Ctrl+2"))
         layout_2d_focus_action.triggered.connect(lambda: self.host.ui_manager.set_panel_layout(70, 30))
         layout_menu.addAction(layout_2d_focus_action)
 
-        layout_3d_focus_action = QAction("3D Focus (30:70)", self)
+        layout_3d_focus_action = QAction("3D Focus (30:70)", self.host)
         layout_3d_focus_action.setShortcut(QKeySequence("Ctrl+3"))
         layout_3d_focus_action.triggered.connect(lambda: self.host.ui_manager.set_panel_layout(30, 70))
         layout_menu.addAction(layout_3d_focus_action)
 
         layout_menu.addSeparator()
-        toggle_2d_panel_action = QAction("Toggle 2D Panel", self)
+        toggle_2d_panel_action = QAction("Toggle 2D Panel", self.host)
         toggle_2d_panel_action.setShortcut(QKeySequence("Ctrl+H"))
         toggle_2d_panel_action.triggered.connect(self.host.ui_manager.toggle_2d_panel)
         layout_menu.addAction(toggle_2d_panel_action)
 
         view_menu.addSeparator()
-        self.toggle_chiral_action = QAction("Show Chiral Labels", self, checkable=True)
+        self.toggle_chiral_action = QAction("Show Chiral Labels", self.host, checkable=True)
         self.toggle_chiral_action.setChecked(self.host.view_3d_manager.show_chiral_labels)
         self.toggle_chiral_action.triggered.connect(self.host.view_3d_manager.toggle_chiral_labels_display)
         view_menu.addAction(self.toggle_chiral_action)
@@ -1595,21 +1595,21 @@ class MainInitManager:
         view_menu.addSeparator()
         atom_info_menu = view_menu.addMenu("3D Atom Info Display")
         self.show_atom_id_action = QAction(
-            "Show Original ID / Index", self, checkable=True
+            "Show Original ID / Index", self.host, checkable=True
         )
         self.show_atom_id_action.triggered.connect(
             lambda: self.host.view_3d_manager.toggle_atom_info_display("id")
         )
         atom_info_menu.addAction(self.show_atom_id_action)
 
-        self.show_rdkit_id_action = QAction("Show RDKit Index", self, checkable=True)
+        self.show_rdkit_id_action = QAction("Show RDKit Index", self.host, checkable=True)
         self.show_rdkit_id_action.triggered.connect(
             lambda: self.host.view_3d_manager.toggle_atom_info_display("rdkit_id")
         )
         atom_info_menu.addAction(self.show_rdkit_id_action)
 
         self.show_atom_coords_action = QAction(
-            "Show Coordinates (X,Y,Z)", self, checkable=True
+            "Show Coordinates (X,Y,Z)", self.host, checkable=True
         )
         self.show_atom_coords_action.triggered.connect(
             lambda: self.host.view_3d_manager.toggle_atom_info_display("coords")
@@ -1617,7 +1617,7 @@ class MainInitManager:
         atom_info_menu.addAction(self.show_atom_coords_action)
 
         self.show_atom_symbol_action = QAction(
-            "Show Element Symbol", self, checkable=True
+            "Show Element Symbol", self.host, checkable=True
         )
         self.show_atom_symbol_action.triggered.connect(
             lambda: self.host.view_3d_manager.toggle_atom_info_display("symbol")
@@ -1627,7 +1627,7 @@ class MainInitManager:
     def _init_analysis_menu(self, menu_bar):
         """Initialize the Analysis menu."""
         analysis_menu = menu_bar.addMenu("&Analysis")
-        self.analysis_action = QAction("Show Analysis...", self)
+        self.analysis_action = QAction("Show Analysis...", self.host)
         self.analysis_action.triggered.connect(self.host.dialog_manager.open_analysis_window)
         self.analysis_action.setEnabled(False)
         analysis_menu.addAction(self.analysis_action)
@@ -1635,13 +1635,13 @@ class MainInitManager:
     def _init_edit_3d_menu(self, menu_bar):
         """Initialize the 3D Edit menu."""
         edit_3d_menu = menu_bar.addMenu("3D &Edit")
-        translation_action = QAction("Translation...", self)
+        translation_action = QAction("Translation...", self.host)
         translation_action.triggered.connect(self.host.dialog_manager.open_translation_dialog)
         translation_action.setEnabled(False)
         edit_3d_menu.addAction(translation_action)
         self.translation_action = translation_action
 
-        move_group_action = QAction("Move Group...", self)
+        move_group_action = QAction("Move Group...", self.host)
         move_group_action.triggered.connect(self.host.dialog_manager.open_move_group_dialog)
         move_group_action.setEnabled(False)
         edit_3d_menu.addAction(move_group_action)
@@ -1653,26 +1653,26 @@ class MainInitManager:
         self.align_menu = align_menu
 
         axis_align_menu = align_menu.addMenu("Axis")
-        align_x_action = QAction("X-axis", self)
+        align_x_action = QAction("X-axis", self.host)
         align_x_action.triggered.connect(lambda: self.host.dialog_manager.open_alignment_dialog("x"))
         align_x_action.setEnabled(False)
         axis_align_menu.addAction(align_x_action)
         self.align_x_action = align_x_action
 
-        align_y_action = QAction("Y-axis", self)
+        align_y_action = QAction("Y-axis", self.host)
         align_y_action.triggered.connect(lambda: self.host.dialog_manager.open_alignment_dialog("y"))
         align_y_action.setEnabled(False)
         axis_align_menu.addAction(align_y_action)
         self.align_y_action = align_y_action
 
-        align_z_action = QAction("Z-axis", self)
+        align_z_action = QAction("Z-axis", self.host)
         align_z_action.triggered.connect(lambda: self.host.dialog_manager.open_alignment_dialog("z"))
         align_z_action.setEnabled(False)
         axis_align_menu.addAction(align_z_action)
         self.align_z_action = align_z_action
 
         plane_align_menu = align_menu.addMenu("Plane")
-        alignplane_xy_action = QAction("XY-plane", self)
+        alignplane_xy_action = QAction("XY-plane", self.host)
         alignplane_xy_action.triggered.connect(
             lambda: self.host.dialog_manager.open_align_plane_dialog("xy")
         )
@@ -1680,7 +1680,7 @@ class MainInitManager:
         plane_align_menu.addAction(alignplane_xy_action)
         self.alignplane_xy_action = alignplane_xy_action
 
-        alignplane_xz_action = QAction("XZ-plane", self)
+        alignplane_xz_action = QAction("XZ-plane", self.host)
         alignplane_xz_action.triggered.connect(
             lambda: self.host.dialog_manager.open_align_plane_dialog("xz")
         )
@@ -1688,7 +1688,7 @@ class MainInitManager:
         plane_align_menu.addAction(alignplane_xz_action)
         self.alignplane_xz_action = alignplane_xz_action
 
-        alignplane_yz_action = QAction("YZ-plane", self)
+        alignplane_yz_action = QAction("YZ-plane", self.host)
         alignplane_yz_action.triggered.connect(
             lambda: self.host.dialog_manager.open_align_plane_dialog("yz")
         )
@@ -1697,40 +1697,40 @@ class MainInitManager:
         self.alignplane_yz_action = alignplane_yz_action
 
         edit_3d_menu.addSeparator()
-        mirror_action = QAction("Mirror...", self)
+        mirror_action = QAction("Mirror...", self.host)
         mirror_action.triggered.connect(self.host.dialog_manager.open_mirror_dialog)
         mirror_action.setEnabled(False)
         edit_3d_menu.addAction(mirror_action)
         self.mirror_action = mirror_action
 
         edit_3d_menu.addSeparator()
-        planarize_action = QAction("Planarize...", self)
+        planarize_action = QAction("Planarize...", self.host)
         planarize_action.triggered.connect(lambda: self.host.dialog_manager.open_planarize_dialog(None))
         planarize_action.setEnabled(False)
         edit_3d_menu.addAction(planarize_action)
         self.planarize_action = planarize_action
 
         edit_3d_menu.addSeparator()
-        bond_length_action = QAction("Adjust Bond Length...", self)
+        bond_length_action = QAction("Adjust Bond Length...", self.host)
         bond_length_action.triggered.connect(self.host.dialog_manager.open_bond_length_dialog)
         bond_length_action.setEnabled(False)
         edit_3d_menu.addAction(bond_length_action)
         self.bond_length_action = bond_length_action
 
-        angle_action = QAction("Adjust Angle...", self)
+        angle_action = QAction("Adjust Angle...", self.host)
         angle_action.triggered.connect(self.host.dialog_manager.open_angle_dialog)
         angle_action.setEnabled(False)
         edit_3d_menu.addAction(angle_action)
         self.angle_action = angle_action
 
-        dihedral_action = QAction("Adjust Dihedral Angle...", self)
+        dihedral_action = QAction("Adjust Dihedral Angle...", self.host)
         dihedral_action.triggered.connect(self.host.dialog_manager.open_dihedral_dialog)
         dihedral_action.setEnabled(False)
         edit_3d_menu.addAction(dihedral_action)
         self.dihedral_action = dihedral_action
 
         edit_3d_menu.addSeparator()
-        constrained_opt_action = QAction("Constrained Optimization...", self)
+        constrained_opt_action = QAction("Constrained Optimization...", self.host)
         constrained_opt_action.triggered.connect(
             self.host.dialog_manager.open_constrained_optimization_dialog
         )
@@ -1741,17 +1741,17 @@ class MainInitManager:
     def _init_plugin_menu(self, menu_bar):
         """Initialize the Plugin menu."""
         self.plugin_menu = menu_bar.addMenu("&Plugin")
-        manage_plugins_action = QAction("Plugin Manager...", self)
+        manage_plugins_action = QAction("Plugin Manager...", self.host)
 
         def show_plugin_manager():
             if not self.host.plugin_manager:
                 QMessageBox.information(
-                    self, "Safe Mode", "Plugins are disabled (safe mode)."
+                    self.host, "Safe Mode", "Plugins are disabled (safe mode)."
                 )
                 return
             from ..plugins.plugin_manager_window import PluginManagerWindow
 
-            dlg = PluginManagerWindow(self.host.plugin_manager, self)
+            dlg = PluginManagerWindow(self.host.plugin_manager, self.host)
             dlg.exec()
             self.update_plugin_menu(self.plugin_menu)
 
@@ -1762,18 +1762,16 @@ class MainInitManager:
     def _init_settings_menu(self, menu_bar):
         """Initialize the Settings menu."""
         settings_menu = menu_bar.addMenu("&Settings")
-        view_settings_action = QAction("Settings...", self)
+        view_settings_action = QAction("Settings...", self.host)
         view_settings_action.triggered.connect(self.host.dialog_manager.open_settings_dialog)
         settings_menu.addAction(view_settings_action)
 
-        color_action = QAction("CPK Colors...", self)
-        color_action.triggered.connect(
-            lambda: ColorSettingsDialog(self.host.settings, parent=self).exec_()
-        )
+        color_action = QAction("CPK Colors...", self.host)
+        color_action.triggered.connect(self.host.dialog_manager.open_color_settings_dialog)
         settings_menu.addAction(color_action)
 
         conversion_menu = settings_menu.addMenu("3D Conversion")
-        conv_group = QActionGroup(self)
+        conv_group = QActionGroup(self.host)
         conv_group.setExclusive(True)
 
         def _set_conv_mode(mode):
@@ -1792,7 +1790,7 @@ class MainInitManager:
         ]
         self.conv_actions = {}
         for label, key in conv_options:
-            a = QAction(label, self)
+            a = QAction(label, self.host)
             a.setCheckable(True)
             if key == "obabel" and not OBABEL_AVAILABLE:
                 a.setEnabled(False)
@@ -1808,7 +1806,7 @@ class MainInitManager:
         ):
             saved_conv = (
                 "rdkit"
-                if self.conv_actions.get("rdkit", QAction(self)).isEnabled()
+                if self.conv_actions.get("rdkit", QAction(self.host)).isEnabled()
                 else "fallback"
             )
 
@@ -1828,11 +1826,11 @@ class MainInitManager:
             ("Ghemical (Open Babel)", "GHEMICAL_OBABEL"),
         ]
         self.opt3d_method_labels = {key.upper(): label for (label, key) in opt_methods}
-        opt_group = QActionGroup(self)
+        opt_group = QActionGroup(self.host)
         opt_group.setExclusive(True)
         self.opt3d_actions = {}
         for label, key in opt_methods:
-            action = QAction(label, self)
+            action = QAction(label, self.host)
             action.setCheckable(True)
             if key.endswith("_OBABEL") and not OBABEL_AVAILABLE:
                 action.setEnabled(False)
@@ -1845,7 +1843,7 @@ class MainInitManager:
 
         optimization_menu.addSeparator()
         self.intermolecular_rdkit_action = QAction(
-            "Consider Intermolecular Interaction for RDKit", self
+            "Consider Intermolecular Interaction for RDKit", self.host
         )
         self.intermolecular_rdkit_action.setCheckable(True)
         self.intermolecular_rdkit_action.setChecked(
@@ -1868,18 +1866,18 @@ class MainInitManager:
             self.optimization_method = "MMFF_RDKIT"
 
         settings_menu.addSeparator()
-        reset_settings_action = QAction("Reset All Settings", self)
+        reset_settings_action = QAction("Reset All Settings", self.host)
         reset_settings_action.triggered.connect(self.reset_all_settings_menu)
         settings_menu.addAction(reset_settings_action)
 
     def _init_help_menu(self, menu_bar):
         """Initialize the Help menu."""
         help_menu = menu_bar.addMenu("&Help")
-        about_action = QAction("About", self)
+        about_action = QAction("About", self.host)
         about_action.triggered.connect(self.host.dialog_manager.show_about_dialog)
         help_menu.addAction(about_action)
 
-        github_action = QAction("GitHub", self)
+        github_action = QAction("GitHub", self.host)
         github_action.triggered.connect(
             lambda: QDesktopServices.openUrl(
                 QUrl("https://github.com/HiroYokoyama/python_molecular_editor")
@@ -1887,7 +1885,7 @@ class MainInitManager:
         )
         help_menu.addAction(github_action)
 
-        github_wiki_action = QAction("GitHub Wiki", self)
+        github_wiki_action = QAction("GitHub Wiki", self.host)
         github_wiki_action.triggered.connect(
             lambda: QDesktopServices.openUrl(
                 QUrl("https://github.com/HiroYokoyama/python_molecular_editor/wiki")
@@ -1895,7 +1893,7 @@ class MainInitManager:
         )
         help_menu.addAction(github_wiki_action)
 
-        manual_action = QAction("User Manual", self)
+        manual_action = QAction("User Manual", self.host)
         manual_action.triggered.connect(
             lambda: QDesktopServices.openUrl(
                 QUrl(

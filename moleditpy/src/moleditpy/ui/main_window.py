@@ -58,7 +58,6 @@ class MainWindow(QMainWindow):
         # Initialize properties
         self._is_restoring_state = False
 
-        # Initialize Managers (Composition)
         self.export_manager = ExportManager(self)
         self.view_3d_manager = View3DManager(self)
         self.edit_3d_manager = Edit3DManager(self)
@@ -67,17 +66,9 @@ class MainWindow(QMainWindow):
         self.dialog_manager = DialogManager(self)
         self.io_manager = IOManager(self)
         self.state_manager = StateManager(self)
-        self.init_manager = MainInitManager(self)
         self.string_importer_manager = StringImporterManager(self)
         self.ui_manager = UIManager(self)
 
-        # Handle all logic via Event Filter (including Close events)
         self.installEventFilter(self.ui_manager)
 
-        # Initialize features via Mixins
-        # MainWindowMainInit handles the bulk of the UI and data setup
-        self.init_manager.__init__(self, initial_file, safe_mode=safe_mode)
-        # MainWindowAppState handles undo/redo stack and app-wide state tracking
-        self.state_manager.__init__(self)
-
-
+        self.init_manager = MainInitManager(self, initial_file=initial_file, safe_mode=safe_mode)

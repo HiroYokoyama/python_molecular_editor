@@ -14,13 +14,14 @@ import contextlib
 import vtk
 
 # PyQt6 Modules
-from PyQt6.QtCore import QEvent, Qt, QTimer
+from PyQt6.QtCore import QEvent, Qt, QTimer, QObject
 from PyQt6.QtWidgets import (
     QApplication,
     QDialog,
     QGraphicsView,
     QMainWindow,
     QMessageBox,
+    QWidget,
 )
 
 try:
@@ -40,8 +41,9 @@ except ImportError:
 
 
 # --- Classes ---
-class UIManager:
+class UIManager(QObject):
     def __init__(self, host):
+        super().__init__(host)
         self.host = host
 
     def update_status_bar(self, message):
@@ -131,7 +133,7 @@ class UIManager:
     def set_mode_and_update_toolbar(self, mode_str):
         self.set_mode(mode_str)
         # Map QAction to QToolButton
-        toolbar = getattr(self, "toolbar", None)
+        toolbar = getattr(self.host, "toolbar", None)
         action_to_button = {}
         if toolbar:
             for key, action in self.host.mode_actions.items():
@@ -168,7 +170,7 @@ class UIManager:
         self.set_mode(f"atom_{symbol}")
 
     def eventFilter(self, obj, event):
-        if obj is self.host.plotter and event.type() == QEvent.Type.MouseButtonPress:
+        if hasattr(self.host, "plotter") and obj is self.host.plotter and event.type() == QEvent.Type.MouseButtonPress:
             self.host.view_2d.setFocus()
         
         # Handle Window Close via event filter
@@ -219,7 +221,7 @@ class UIManager:
         # 3. Gracefully close child windows and cleanup threads
         try:
             for widget in QApplication.topLevelWidgets():
-                if widget != self.host and isinstance(widget, (QWidget, QMainWindow)):
+                if widget is not None and widget != self.host and isinstance(widget, (QWidget, QMainWindow)):
                     try:
                         widget.close()
                     except (RuntimeError, TypeError):
@@ -265,7 +267,7 @@ class UIManager:
         self.host.plotter.picker.SetTolerance(0.025)
 
         # Create CustomInteractorStyle
-        style = CustomInteractorStyle(self)
+        style = CustomInteractorStyle(self.host)
 
         # Set interactor style
         self.host.plotter.interactor.SetInteractorStyle(style)
@@ -292,7 +294,7 @@ class UIManager:
                 return
 
             # 2. Plugin drop handlers (accept if any handlers exist)
-            plugin_mgr = getattr(self, "plugin_manager", None)
+            plugin_mgr = getattr(self.host, "plugin_manager", None)
             if plugin_mgr and getattr(plugin_mgr, "drop_handlers", []):
                 event.acceptProposedAction()
                 return
@@ -312,7 +314,7 @@ class UIManager:
             return
 
         # 1. Plugin Handlers
-        plugin_mgr = getattr(self, "plugin_manager", None)
+        plugin_mgr = getattr(self.host, "plugin_manager", None)
         for handler_def in getattr(plugin_mgr, "drop_handlers", []):
             try:
                 if handler_def["callback"](file_path):
@@ -334,7 +336,7 @@ class UIManager:
             drag_point = event.position().toPoint()
             if plotter_widget and plotter_widget.geometry().contains(drag_point):
                 self.load_mol_file_for_3d_viewing(file_path=file_path)
-            elif hasattr(self, "load_mol_file"):
+            elif hasattr(self.host, "load_mol_file"):
                 self.load_mol_file(file_path=file_path)
             else:
                 self.host.statusBar().showMessage(
@@ -374,12 +376,12 @@ class UIManager:
         menus = ["align_menu"]
 
         for action_name in actions:
-            if hasattr(self, action_name):
-                getattr(self, action_name).setEnabled(enabled)
+            if hasattr(self.host, action_name):
+                getattr(self.host, action_name).setEnabled(enabled)
 
         for menu_name in menus:
-            if hasattr(self, menu_name):
-                getattr(self, menu_name).setEnabled(enabled)
+            if hasattr(self.host, menu_name):
+                getattr(self.host, menu_name).setEnabled(enabled)
 
     def _enable_3d_features(self, enabled=True):
         """Enable/disable 3D features."""
@@ -387,16 +389,16 @@ class UIManager:
         basic_3d_actions = ["optimize_3d_button", "export_button", "analysis_action"]
 
         for action_name in basic_3d_actions:
-            obj = getattr(self, action_name, None)
+            obj = getattr(self.host, action_name, None)
             if obj is None:
                 continue
 
             try:
                 if action_name == "optimize_3d_button":
                     # Optimization is disabled for XYZ-derived or failed-chem-check molecules
-                    is_xyz = getattr(self, "is_xyz_derived", False)
-                    chem_failed = getattr(self, "chem_check_tried", False) and getattr(
-                        self, "chem_check_failed", False
+                    is_xyz = getattr(self.host, "is_xyz_derived", False)
+                    chem_failed = getattr(self.host, "chem_check_tried", False) and getattr(
+                        self.host, "chem_check_failed", False
                     )
 
                     can_optimize = enabled and not (is_xyz or chem_failed)
@@ -422,8 +424,8 @@ class UIManager:
         self.host.convert_button.setEnabled(False)
         for action in self.host.tool_group.actions():
             action.setEnabled(False)
-        if hasattr(self, "other_atom_action"):
-            self.other_atom_action.setEnabled(False)
+        if hasattr(self.host, "other_atom_action"):
+            self.host.other_atom_action.setEnabled(False)
 
         self.host.ui_manager.minimize_2d_panel()
 
@@ -440,8 +442,8 @@ class UIManager:
         for action in self.host.tool_group.actions():
             action.setEnabled(True)
 
-        if hasattr(self, "other_atom_action"):
-            self.other_atom_action.setEnabled(True)
+        if hasattr(self.host, "other_atom_action"):
+            self.host.other_atom_action.setEnabled(True)
 
         # Collectively disable 3D edit functions when returning to 2D mode
         self.host.ui_manager._enable_3d_edit_actions(False)

@@ -319,7 +319,7 @@ class StateManager:
             title = f"Untitled - {base_title}"
             if self.host.has_unsaved_changes:
                 title = f"*{title}"
-        self.setWindowTitle(title)
+        self.host.setWindowTitle(title)
 
     def check_unsaved_changes(self):
         """Check for unsaved changes and show warning."""
@@ -791,4 +791,4 @@ class StateManager:
                 self.host.current_mol = None
 
 
-MainWindowAppState._cls = MainWindowAppState
+StateManager._cls = StateManager

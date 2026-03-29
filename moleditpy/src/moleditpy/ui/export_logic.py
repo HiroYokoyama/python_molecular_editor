@@ -57,7 +57,7 @@ class ExportManager:
 
     def export_stl(self) -> None:
         if not self.current_mol:
-            self.statusBar().showMessage("Error: Please generate a 3D structure first.")
+            self.host.statusBar().showMessage("Error: Please generate a 3D structure first.")
             return
 
         # prefer same directory as current file when available
@@ -80,22 +80,22 @@ class ExportManager:
             combined_mesh = self.export_from_3d_view_no_color()
 
             if combined_mesh is None or combined_mesh.n_points == 0:
-                self.statusBar().showMessage("No 3D geometry to export.")
+                self.host.statusBar().showMessage("No 3D geometry to export.")
                 return
 
             if not file_path.lower().endswith(".stl"):
                 file_path += ".stl"
 
             combined_mesh.save(file_path, binary=True)
-            self.statusBar().showMessage(f"STL exported to {file_path}")
+            self.host.statusBar().showMessage(f"STL exported to {file_path}")
 
         except (AttributeError, RuntimeError, ValueError) as e:
-            self.statusBar().showMessage(f"Error exporting STL: {e}")
+            self.host.statusBar().showMessage(f"Error exporting STL: {e}")
 
     def export_obj_mtl(self) -> None:
         """Export as OBJ/MTL (with colors)."""
         if not self.current_mol:
-            self.statusBar().showMessage("Error: Please generate a 3D structure first.")
+            self.host.statusBar().showMessage("Error: Please generate a 3D structure first.")
             return
 
         # prefer same directory as current file when available
@@ -121,7 +121,7 @@ class ExportManager:
             meshes_with_colors = self.export_from_3d_view_with_colors()
 
             if not meshes_with_colors:
-                self.statusBar().showMessage("No 3D geometry to export.")
+                self.host.statusBar().showMessage("No 3D geometry to export.")
                 return
 
             # Ensure file extension
@@ -133,12 +133,12 @@ class ExportManager:
 
             self.create_multi_material_obj(meshes_with_colors, file_path, mtl_path)
 
-            self.statusBar().showMessage(
+            self.host.statusBar().showMessage(
                 f"OBJ+MTL files with individual colors exported to {file_path} and {mtl_path}"
             )
 
         except (AttributeError, RuntimeError, ValueError) as e:
-            self.statusBar().showMessage(f"Error exporting OBJ/MTL: {e}")
+            self.host.statusBar().showMessage(f"Error exporting OBJ/MTL: {e}")
 
     def create_multi_material_obj(self, meshes_with_colors: List[Dict[str, Any]], obj_path: str, mtl_path: str) -> None:
         """Create multi-material OBJ/MTL files.
@@ -241,7 +241,7 @@ class ExportManager:
     def export_color_stl(self) -> None:
         """Export as Color STL."""
         if not self.current_mol:
-            self.statusBar().showMessage("Error: Please generate a 3D structure first.")
+            self.host.statusBar().showMessage("Error: Please generate a 3D structure first.")
             return
 
         # prefer same directory as current file when available
@@ -264,17 +264,17 @@ class ExportManager:
             combined_mesh = self.export_from_3d_view()
 
             if combined_mesh is None or combined_mesh.n_points == 0:
-                self.statusBar().showMessage("No 3D geometry to export.")
+                self.host.statusBar().showMessage("No 3D geometry to export.")
                 return
 
             # Save as STL
             if not file_path.lower().endswith(".stl"):
                 file_path += ".stl"
             combined_mesh.save(file_path, binary=True)
-            self.statusBar().showMessage(f"STL exported to {file_path}")
+            self.host.statusBar().showMessage(f"STL exported to {file_path}")
 
         except (AttributeError, RuntimeError, ValueError) as e:
-            self.statusBar().showMessage(f"Error exporting STL: {e}")
+            self.host.statusBar().showMessage(f"Error exporting STL: {e}")
 
     def export_from_3d_view(self) -> Optional[pv.PolyData]:
         """Get mesh data from 3D view."""
@@ -674,7 +674,7 @@ class ExportManager:
 
     def export_2d_png(self) -> None:
         if not self.data.atoms:
-            self.statusBar().showMessage("Nothing to export.")
+            self.host.statusBar().showMessage("Nothing to export.")
             return
 
         # default filename: based on current file, append -2d for 2D exports
@@ -717,7 +717,7 @@ class ExportManager:
         )
 
         if reply == QMessageBox.StandardButton.Cancel:
-            self.statusBar().showMessage("Export cancelled.", 2000)
+            self.host.statusBar().showMessage("Export cancelled.", 2000)
             return
 
         is_transparent = reply == QMessageBox.StandardButton.Yes
@@ -746,7 +746,7 @@ class ExportManager:
                     molecule_bounds = molecule_bounds.united(item.sceneBoundingRect())
 
             if molecule_bounds.isEmpty() or not molecule_bounds.isValid():
-                self.statusBar().showMessage(
+                self.host.statusBar().showMessage(
                     "Error: Could not determine molecule bounds for export."
                 )
                 return
@@ -761,7 +761,7 @@ class ExportManager:
             h = max(1, int(math.ceil(rect_to_render.height())))
 
             if w <= 0 or h <= 0:
-                self.statusBar().showMessage("Error: Invalid image size calculated.")
+                self.host.statusBar().showMessage("Error: Invalid image size calculated.")
                 return
 
             image = QImage(w, h, QImage.Format.Format_ARGB32_Premultiplied)
@@ -771,7 +771,7 @@ class ExportManager:
             painter = QPainter()
             ok = painter.begin(image)
             if not ok or not painter.isActive():
-                self.statusBar().showMessage(
+                self.host.statusBar().showMessage(
                     "Failed to start QPainter for image rendering."
                 )
                 return
@@ -786,14 +786,14 @@ class ExportManager:
 
             saved = image.save(filePath, "PNG")
             if saved:
-                self.statusBar().showMessage(f"2D view exported to {filePath}")
+                self.host.statusBar().showMessage(f"2D view exported to {filePath}")
             else:
-                self.statusBar().showMessage(
+                self.host.statusBar().showMessage(
                     "Failed to save image. Check file path or permissions."
                 )
 
         except (AttributeError, RuntimeError, ValueError) as e:
-            self.statusBar().showMessage(
+            self.host.statusBar().showMessage(
                 f"An unexpected error occurred during 2D export: {e}"
             )
 
@@ -807,7 +807,7 @@ class ExportManager:
     def export_2d_svg(self) -> None:
         """Export 2D drawing as SVG."""
         if not self.data.atoms:
-            self.statusBar().showMessage("Nothing to export.")
+            self.host.statusBar().showMessage("Nothing to export.")
             return
 
         # default filename
@@ -851,7 +851,7 @@ class ExportManager:
         )
 
         if reply == QMessageBox.StandardButton.Cancel:
-            self.statusBar().showMessage("Export cancelled.", 2000)
+            self.host.statusBar().showMessage("Export cancelled.", 2000)
             return
 
         is_transparent = reply == QMessageBox.StandardButton.Yes
@@ -877,7 +877,7 @@ class ExportManager:
                     molecule_bounds = molecule_bounds.united(item.sceneBoundingRect())
 
             if molecule_bounds.isEmpty() or not molecule_bounds.isValid():
-                self.statusBar().showMessage(
+                self.host.statusBar().showMessage(
                     "Error: Could not determine molecule bounds for export."
                 )
                 # Restore
@@ -909,10 +909,10 @@ class ExportManager:
             finally:
                 painter.end()
 
-            self.statusBar().showMessage(f"2D view exported to {filePath}")
+            self.host.statusBar().showMessage(f"2D view exported to {filePath}")
 
         except (AttributeError, RuntimeError, ValueError) as e:
-            self.statusBar().showMessage(
+            self.host.statusBar().showMessage(
                 f"An unexpected error occurred during SVG export: {e}"
             )
 
@@ -928,7 +928,7 @@ class ExportManager:
     def export_3d_png(self) -> None:
         """Export 3D view as PNG."""
         if not self.current_mol:
-            self.statusBar().showMessage("No 3D molecule to export.", 2000)
+            self.host.statusBar().showMessage("No 3D molecule to export.", 2000)
             return
 
         # Default filename: {name}.png
@@ -971,16 +971,16 @@ class ExportManager:
         )
 
         if reply == QMessageBox.StandardButton.Cancel:
-            self.statusBar().showMessage("Export cancelled.", 2000)
+            self.host.statusBar().showMessage("Export cancelled.", 2000)
             return
 
         is_transparent = reply == QMessageBox.StandardButton.Yes
 
         try:
             self.plotter.screenshot(filePath, transparent_background=is_transparent)
-            self.statusBar().showMessage(f"3D view exported to {filePath}", 3000)
+            self.host.statusBar().showMessage(f"3D view exported to {filePath}", 3000)
         except (AttributeError, RuntimeError, ValueError) as e:
-            self.statusBar().showMessage(f"Error exporting 3D PNG: {e}")
+            self.host.statusBar().showMessage(f"Error exporting 3D PNG: {e}")
 
 
 ExportManager._cls = ExportManager

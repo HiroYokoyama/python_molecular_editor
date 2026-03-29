@@ -91,7 +91,7 @@ class View3DManager:
         self.host.edit_3d_manager.clear_3d_selection()
 
         self.current_3d_style = style_name
-        self.statusBar().showMessage(f"3D style set to: {style_name}")
+        self.host.statusBar().showMessage(f"3D style set to: {style_name}")
 
         # Redraw if molecule is displayed
         if self.current_mol:
@@ -145,7 +145,7 @@ class View3DManager:
             except (AttributeError, RuntimeError, TypeError, ValueError) as e:
                 # Kekulize failed; keep original and warn user
                 with contextlib.suppress(AttributeError, RuntimeError, TypeError):
-                    self.statusBar().showMessage(f"Kekulize failed: {e}")
+                    self.host.statusBar().showMessage(f"Kekulize failed: {e}")
         return mol
 
     def _draw_standard_3d_style_body(self, mol: Chem.Mol, style_override: Optional[str] = None) -> None:
@@ -207,7 +207,7 @@ class View3DManager:
             except (AttributeError, RuntimeError, TypeError, ValueError) as e:
                 # Kekulize failed; keep original and warn user
                 with contextlib.suppress(AttributeError, RuntimeError, TypeError):
-                    self.statusBar().showMessage(f"Kekulize failed: {e}")
+                    self.host.statusBar().showMessage(f"Kekulize failed: {e}")
                 mol_to_draw = mol
 
         # Use the original molecule's conformer (positions) to ensure coordinates
@@ -996,7 +996,7 @@ class View3DManager:
                         show_points=False,
                     )
             except (AttributeError, RuntimeError, TypeError, ValueError) as e:
-                self.statusBar().showMessage(f"3D chiral label drawing error: {e}")
+                self.host.statusBar().showMessage(f"3D chiral label drawing error: {e}")
 
         # Also display E/Z labels
         if getattr(self, "show_chiral_labels", False):
@@ -1006,7 +1006,7 @@ class View3DManager:
                 # molecule to scan for bond stereochemistry.
                 self.show_ez_labels_3d(mol)
             except (AttributeError, RuntimeError, TypeError, ValueError) as e:
-                self.statusBar().showMessage(f"3D E/Z label drawing error: {e}")
+                self.host.statusBar().showMessage(f"3D E/Z label drawing error: {e}")
 
     def _calculate_double_bond_offset(self, mol, bond, conf):
         """
@@ -1198,11 +1198,11 @@ class View3DManager:
             self.draw_molecule_3d(self.current_mol)
 
         if checked:
-            self.statusBar().showMessage(
+            self.host.statusBar().showMessage(
                 "Chiral labels: will be (re)computed after Convert→3D."
             )
         else:
-            self.statusBar().showMessage("Chiral labels disabled.")
+            self.host.statusBar().showMessage("Chiral labels disabled.")
 
     def update_chiral_labels(self):
         """Calculate chiral centers and set/clear R/S labels on 2D AtomItems.
@@ -1261,7 +1261,7 @@ class View3DManager:
                         self.data.atoms[atom_id]["item"].chiral_label = label
 
         except (AttributeError, RuntimeError, TypeError, ValueError) as e:
-            self.statusBar().showMessage(f"Update chiral labels error: {e}")
+            self.host.statusBar().showMessage(f"Update chiral labels error: {e}")
 
         # Finally redraw 2D scene
         self.scene.update()
@@ -1279,7 +1279,7 @@ class View3DManager:
             self.show_rdkit_id_action.setChecked(False)
             self.show_atom_coords_action.setChecked(False)
             self.show_atom_symbol_action.setChecked(False)
-            self.statusBar().showMessage("Atom info display disabled.")
+            self.host.statusBar().showMessage("Atom info display disabled.")
         else:
             # Set new mode
             self.atom_info_display_mode = mode
@@ -1295,7 +1295,7 @@ class View3DManager:
                 "coords": "Coordinates",
                 "symbol": "Element Symbol",
             }
-            self.statusBar().showMessage(f"Displaying: {mode_names[mode]}")
+            self.host.statusBar().showMessage(f"Displaying: {mode_names[mode]}")
 
             # Display info for all atoms
             self.show_all_atom_info()
