@@ -335,7 +335,7 @@ class DihedralDialog(Dialog3DPickingMixin, QDialog):
         ):
             return
         self._slider_dragging = True
-        self.main_window.state_manager.push_undo_state()
+        self.main_window.edit_actions_manager.push_undo_state()
 
     def on_slider_moved(self, value):
         """Update geometry in real-time while dragging."""
@@ -366,7 +366,7 @@ class DihedralDialog(Dialog3DPickingMixin, QDialog):
             for idx in [self.atom1_idx, self.atom2_idx, self.atom3_idx, self.atom4_idx]
         ):
             return
-        self.main_window.state_manager.push_undo_state()
+        self.main_window.edit_actions_manager.push_undo_state()
         self.dihedral_input.blockSignals(True)
         self.dihedral_input.setText(f"{value}")
         self.dihedral_input.blockSignals(False)

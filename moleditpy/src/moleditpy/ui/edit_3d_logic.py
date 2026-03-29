@@ -82,7 +82,7 @@ class Edit3DManager:
         if checked:
             # Disable 3D Drag mode when measurement mode is on
             if self.is_3d_edit_mode:
-                self.edit_3d_action.setChecked(False)
+                self.host.edit_3d_action.setChecked(False)
                 if hasattr(self.host, "ui_manager"):
                     self.host.ui_manager.toggle_3d_edit_mode(False)
 
@@ -212,8 +212,8 @@ class Edit3DManager:
         # Create atom-to-AtomItem mapping
         if (
             not self.host.current_mol
-            or not hasattr(self, "data")
-            or not self.data.atoms
+            or not hasattr(self.host, "data")
+            or not self.host.data.atoms
         ):
             return
 
@@ -221,8 +221,8 @@ class Edit3DManager:
         atom_idx_to_item = {}
 
         # Get AtomItems from scene
-        if hasattr(self, "scene"):
-            for item in self.scene.items():
+        if hasattr(self.host, "scene"):
+            for item in self.host.scene.items():
                 if hasattr(item, "atom_id") and hasattr(
                     item, "symbol"
                 ):  # Check if AtomItem
@@ -260,7 +260,7 @@ class Edit3DManager:
         label_item.setPos(label_pos)
 
         # Add to scene
-        self.scene.addItem(label_item)
+        self.host.scene.addItem(label_item)
         self.measurement_label_items_2d.append(label_item)
 
     def clear_2d_measurement_labels(self):
@@ -273,7 +273,7 @@ class Edit3DManager:
                         continue
                     try:
                         if label_item.scene():
-                            self.scene.removeItem(label_item)
+                            self.host.scene.removeItem(label_item)
                     except (AttributeError, RuntimeError):
                         # Scene access or removal failed; skip this item.
                         pass
@@ -281,7 +281,7 @@ class Edit3DManager:
                     # If sip check itself fails, fall back to best-effort removal
                     try:
                         if label_item.scene():
-                            self.scene.removeItem(label_item)
+                            self.host.scene.removeItem(label_item)
                     except (AttributeError, RuntimeError, ValueError, TypeError):
                         # Best-effort removal failed after sip check failed; skip.
                         continue
@@ -294,10 +294,10 @@ class Edit3DManager:
 
         # Use mapping dictionary
         if (
-            hasattr(self, "atom_id_to_rdkit_idx_map")
-            and atom_item.atom_id in self.atom_id_to_rdkit_idx_map
+            hasattr(self.host, "atom_id_to_rdkit_idx_map")
+            and atom_item.atom_id in self.host.atom_id_to_rdkit_idx_map
         ):
-            return self.atom_id_to_rdkit_idx_map[atom_item.atom_id]
+            return self.host.atom_id_to_rdkit_idx_map[atom_item.atom_id]
 
         # Return None if no mapping exists
         return None
@@ -378,7 +378,7 @@ class Edit3DManager:
 
         # Determine text color from background
         try:
-            bg_color_hex = self.settings.get("background_color", "#919191")
+            bg_color_hex = self.host.settings.get("background_color", "#919191")
             bg_qcolor = QColor(bg_color_hex)
             if bg_qcolor.isValid():
                 luminance = bg_qcolor.toHsl().lightness()

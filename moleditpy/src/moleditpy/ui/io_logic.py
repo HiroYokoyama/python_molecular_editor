@@ -24,6 +24,39 @@ class IOManager:
     def __init__(self, host: Any) -> None:
         self.host = host
 
+    # --- Manager delegation methods ---
+    # These let tests patch io.X and have the save/load methods call self.X().
+
+    def create_json_data(self):
+        return self.host.state_manager.create_json_data()
+
+    def load_from_json_data(self, json_data):
+        return self.host.state_manager.load_from_json_data(json_data)
+
+    def set_state_from_data(self, state_data):
+        return self.host.state_manager.set_state_from_data(state_data)
+
+    def get_current_state(self):
+        return self.host.state_manager.get_current_state()
+
+    def update_window_title(self):
+        return self.host.state_manager.update_window_title()
+
+    def reset_undo_stack(self):
+        return self.host.edit_actions_manager.reset_undo_stack()
+
+    def restore_ui_for_editing(self):
+        return self.host.ui_manager.restore_ui_for_editing()
+
+    def clear_all(self):
+        return self.host.edit_actions_manager.clear_all()
+
+    def fit_to_view(self):
+        return self.host.view_3d_manager.fit_to_view()
+
+    def check_unsaved_changes(self):
+        return self.host.state_manager.check_unsaved_changes()
+
     def fix_mol_counts_line(self, line: str) -> str:
         if "V3000" in line or "V2000" in line: return line
         prefix = line.rstrip().ljust(33)[0:33]
@@ -71,86 +104,265 @@ class IOManager:
         if not self.host.data.atoms and not self.host.current_mol:
             self.host.statusBar().showMessage("Error: Nothing to save.")
             return
-            
+
         native_exts = [".pmeprj", ".pmeraw"]
         if self.host.current_file_path and any(
             self.host.current_file_path.lower().endswith(ext) for ext in native_exts
         ):
             try:
                 if self.host.current_file_path.lower().endswith(".pmeraw"):
-                    save_data = self.host.state_manager.get_current_state()
+                    save_data = self.get_current_state()
                     with open(self.host.current_file_path, "wb") as f:
                         pickle.dump(save_data, f)
                 else:
-                    json_data = self.host.state_manager.create_json_data()
+                    json_data = self.create_json_data()
                     with open(self.host.current_file_path, "w", encoding="utf-8") as f:
                         json.dump(json_data, f, indent=2, ensure_ascii=False)
 
                 self.host.has_unsaved_changes = False
-                self.host.state_manager.update_window_title()
+                self.update_window_title()
                 self.host.statusBar().showMessage(f"Project saved to {self.host.current_file_path}")
+            except (OSError, IOError) as e:
+                self.host.statusBar().showMessage(f"File I/O error: {e}")
             except Exception as e:
                 self.host.statusBar().showMessage(f"Error saving project: {e}")
         else:
             self.save_project_as()
 
     def save_project_as(self) -> None:
-        """Save As (Ctrl+Shift+S)"""
+        """Save As (Ctrl+Shift+S) — always saves in PMEPRJ format."""
+        import copy
         if not self.host.data.atoms and not self.host.current_mol:
             self.host.statusBar().showMessage("Error: Nothing to save.")
             return
 
-        default_dir = os.path.dirname(self.host.current_file_path) if self.host.current_file_path else ""
+        default_name = "untitled"
+        try:
+            if self.host.current_file_path:
+                base = os.path.basename(self.host.current_file_path)
+                default_name = os.path.splitext(base)[0]
+        except (AttributeError, RuntimeError, ValueError, TypeError):
+            default_name = "untitled"
+
+        default_path = default_name
+        try:
+            if self.host.current_file_path:
+                default_path = os.path.join(
+                    os.path.dirname(self.host.current_file_path), default_name
+                )
+        except (AttributeError, RuntimeError, ValueError, TypeError):
+            default_path = default_name
+
         file_path, _ = QFileDialog.getSaveFileName(
-            self.host, "Save Project As", default_dir, "PME Project (*.pmeprj);;PME Raw (*.pmeraw);;All Files (*)"
-        )
-
-        if file_path:
-            self.host.current_file_path = file_path
-            self.save_project()
-
-    def open_project(self) -> None:
-        """Open an existing project file."""
-        if not self.host.state_manager.check_unsaved_changes():
-            return
-
-        file_path, _ = QFileDialog.getOpenFileName(
-            self.host, "Open Project", "", "Project Files (*.pmeprj *.pmeraw);;All Files (*)"
+            self.host, "Save Project As", default_path,
+            "PME Project Files (*.pmeprj);;All Files (*)"
         )
         if not file_path:
             return
 
-        try:
-            if file_path.lower().endswith(".pmeraw"):
-                with open(file_path, "rb") as f:
-                    state_data = pickle.load(f)
-                self.host.state_manager.set_state_from_data(state_data)
-            else:
-                with open(file_path, "r", encoding="utf-8") as f:
-                    json_data = json.load(f)
-                self.host.state_manager.load_from_json_data(json_data)
+        if not file_path.lower().endswith(".pmeprj"):
+            file_path += ".pmeprj"
 
-            self.host.current_file_path = file_path
+        try:
+            json_data = self.create_json_data()
+            with open(file_path, "w", encoding="utf-8") as f:
+                json.dump(json_data, f, indent=2, ensure_ascii=False)
+
             self.host.has_unsaved_changes = False
-            self.host.state_manager.update_window_title()
-            self.host.edit_actions_manager.reset_undo_stack()
-            self.host.statusBar().showMessage(f"Loaded {os.path.basename(file_path)}")
+            self.host.current_file_path = file_path
+            self.update_window_title()
+            try:
+                self.host._saved_state = copy.deepcopy(self.get_current_state())
+            except Exception:
+                pass
+            self.host.statusBar().showMessage(f"Project saved to {file_path}")
+        except (OSError, IOError) as e:
+            self.host.statusBar().showMessage(f"File I/O error: {e}")
         except Exception as e:
-            QMessageBox.critical(self.host, "Load Error", f"Could not load project: {e}")
+            self.host.statusBar().showMessage(f"Error saving project: {e}")
+
+    def open_project(self) -> None:
+        """Open an existing project file (legacy name — delegates to open_project_file)."""
+        self.open_project_file()
+
+    def open_project_file(self, file_path: Optional[str] = None) -> None:
+        """Open project file (.pmeprj or .pmeraw)."""
+        if not self.check_unsaved_changes():
+            return
+
+        if not file_path:
+            file_path, _ = QFileDialog.getOpenFileName(
+                self.host, "Open Project File", "",
+                "PME Project Files (*.pmeprj);;PME Raw Files (*.pmeraw);;All Files (*)"
+            )
+            if not file_path:
+                return
+
+        if file_path.lower().endswith(".pmeprj"):
+            self.load_json_data(file_path)
+        elif file_path.lower().endswith(".pmeraw"):
+            self.load_raw_data(file_path)
+        else:
+            try:
+                self.load_json_data(file_path)
+            except Exception:
+                try:
+                    self.load_raw_data(file_path)
+                except Exception:
+                    self.host.statusBar().showMessage(
+                        "Error: Unable to determine file format or file corrupted."
+                    )
+
+    def save_as_json(self) -> None:
+        """Save as PME Project (JSON) format."""
+        if not self.host.data.atoms and not self.host.current_mol:
+            self.host.statusBar().showMessage("Error: Nothing to save.")
+            return
+
+        default_name = "untitled"
+        try:
+            if self.host.current_file_path:
+                base = os.path.basename(self.host.current_file_path)
+                default_name = os.path.splitext(base)[0]
+        except (AttributeError, RuntimeError, ValueError, TypeError):
+            default_name = "untitled"
+
+        default_path = default_name
+        try:
+            if self.host.current_file_path:
+                default_path = os.path.join(
+                    os.path.dirname(self.host.current_file_path), default_name
+                )
+        except (AttributeError, RuntimeError, ValueError, TypeError):
+            default_path = default_name
+
+        try:
+            file_path, _ = QFileDialog.getSaveFileName(
+                self.host, "Save as PME Project", default_path,
+                "PME Project Files (*.pmeprj);;All Files (*)"
+            )
+            if not file_path:
+                return
+
+            if not file_path.lower().endswith(".pmeprj"):
+                file_path += ".pmeprj"
+
+            json_data = self.create_json_data()
+            with open(file_path, "w", encoding="utf-8") as f:
+                json.dump(json_data, f, indent=2, ensure_ascii=False)
+
+            self.host.has_unsaved_changes = False
+            self.host.current_file_path = file_path
+            self.update_window_title()
+            self.host.statusBar().showMessage(f"PME Project saved to {file_path}")
+        except (OSError, IOError) as e:
+            self.host.statusBar().showMessage(f"File I/O error: {e}")
+        except Exception as e:
+            self.host.statusBar().showMessage(f"Error saving PME Project file: {e}")
+
+    def load_json_data(self, file_path: Optional[str] = None) -> None:
+        """Load PME Project (.pmeprj) file."""
+        if not file_path:
+            file_path, _ = QFileDialog.getOpenFileName(
+                self.host, "Open PME Project File", "",
+                "PME Project Files (*.pmeprj);;All Files (*)"
+            )
+            if not file_path:
+                return
+
+        if not self.clear_all():
+            return
+
+        try:
+            with open(file_path, "r", encoding="utf-8") as f:
+                json_data = json.load(f)
+
+            if json_data.get("format") != "PME Project":
+                QMessageBox.warning(
+                    self.host, "Invalid Format",
+                    "This file is not a valid PME Project format."
+                )
+                return
+
+            file_version = json_data.get("version", "1.0")
+            if file_version != "1.0":
+                QMessageBox.information(
+                    self.host, "Version Notice",
+                    f"This file was created with PME Project version {file_version}.\n"
+                    "Loading will be attempted but some features may not work correctly."
+                )
+
+            self.restore_ui_for_editing()
+            self.load_from_json_data(json_data)
+            self.reset_undo_stack()
+            self.host.has_unsaved_changes = False
+            self.host.current_file_path = file_path
+            self.update_window_title()
+            self.host.statusBar().showMessage(f"PME Project loaded from {file_path}")
+
+            from PyQt6.QtCore import QTimer
+            QTimer.singleShot(0, self.fit_to_view)
+
+        except FileNotFoundError:
+            self.host.statusBar().showMessage(f"File not found: {file_path}")
+        except json.JSONDecodeError as e:
+            self.host.statusBar().showMessage(f"Invalid JSON format: {e}")
+        except (OSError, IOError) as e:
+            self.host.statusBar().showMessage(f"File I/O error: {e}")
+        except Exception as e:
+            self.host.statusBar().showMessage(f"Data corruption in PME Project file: {e}")
 
     def save_raw_data(self) -> None:
-        """Export as PME Raw pickle format."""
-        file_path, _ = QFileDialog.getSaveFileName(
-            self.host, "Export Raw Data", "", "PME Raw (*.pmeraw);;All Files (*)"
-        )
-        if file_path:
+        """Save as PME Raw (pickle) format."""
+        import copy
+        if not self.host.data.atoms and not self.host.current_mol:
+            self.host.statusBar().showMessage("Error: Nothing to save.")
+            return
+
+        default_name = "untitled"
+        try:
+            if self.host.current_file_path:
+                base = os.path.basename(self.host.current_file_path)
+                default_name = os.path.splitext(base)[0]
+        except (AttributeError, RuntimeError, ValueError, TypeError):
+            default_name = "untitled"
+
+        default_path = default_name
+        try:
+            if self.host.current_file_path:
+                default_path = os.path.join(
+                    os.path.dirname(self.host.current_file_path), default_name
+                )
+        except (AttributeError, RuntimeError, ValueError, TypeError):
+            default_path = default_name
+
+        try:
+            file_path, _ = QFileDialog.getSaveFileName(
+                self.host, "Save Project File", default_path,
+                "Project Files (*.pmeraw);;All Files (*)"
+            )
+            if not file_path:
+                return
+
+            if not file_path.lower().endswith(".pmeraw"):
+                file_path += ".pmeraw"
+
+            save_data = self.get_current_state()
+            with open(file_path, "wb") as f:
+                pickle.dump(save_data, f)
+
+            self.host.has_unsaved_changes = False
+            self.host.current_file_path = file_path
+            self.update_window_title()
             try:
-                state = self.host.state_manager.get_current_state()
-                with open(file_path, "wb") as f:
-                    pickle.dump(state, f)
-                self.host.statusBar().showMessage(f"Raw data exported to {file_path}")
-            except Exception as e:
-                self.host.statusBar().showMessage(f"Export error: {e}")
+                self.host._saved_state = copy.deepcopy(self.get_current_state())
+            except Exception:
+                pass
+            self.host.statusBar().showMessage(f"Project saved to {file_path}")
+        except (OSError, IOError) as e:
+            self.host.statusBar().showMessage(f"File I/O error: {e}")
+        except Exception as e:
+            self.host.statusBar().showMessage(f"Export error: {e}")
 
     def load_mol_file(self, file_path: Optional[str] = None) -> None:
         """Regular 2D MOL file loading logic."""
@@ -265,7 +477,7 @@ class IOManager:
             self.host.edit_actions_manager.clear_2d_editor(push_to_undo=False)
             self.host.current_mol = mol
             
-            if hasattr(self.host, "draw_molecule_3d"):
+            if hasattr(self.host.view_3d_manager, "draw_molecule_3d"):
                 self.host.view_3d_manager.draw_molecule_3d(self.host.current_mol)
             if hasattr(self.host, "_enter_3d_viewer_ui_mode"):
                 self.host.ui_manager._enter_3d_viewer_ui_mode()
@@ -338,7 +550,8 @@ class IOManager:
                 file_path += ".xyz"
             try:
                 from moleditpy.utils.constants import VERSION
-                from rdkit.Chem import Descriptors, Chem
+                from rdkit import Chem
+                from rdkit.Chem import Descriptors
                 conf = self.host.current_mol.GetConformer()
                 num_atoms = self.host.current_mol.GetNumAtoms()
                 xyz_lines = [str(num_atoms)]
@@ -365,6 +578,79 @@ class IOManager:
                 self.host.statusBar().showMessage(f"Successfully saved to {file_path}")
             except Exception as e:
                 self.host.statusBar().showMessage(f"Error saving XYZ: {e}")
+
+    def load_raw_data(self, file_path: Optional[str] = None) -> None:
+        """Open a .pmeraw pickle project file."""
+        import copy
+        from PyQt6.QtCore import QTimer
+        if not file_path:
+            file_path, _ = QFileDialog.getOpenFileName(
+                self.host, "Open Project File", "", "Project Files (*.pmeraw);;All Files (*)"
+            )
+            if not file_path:
+                return
+
+        if not self.clear_all():
+            return
+
+        try:
+            with open(file_path, "rb") as f:
+                loaded_data = pickle.load(f)
+            self.restore_ui_for_editing()
+            self.set_state_from_data(loaded_data)
+            self.reset_undo_stack()
+            self.host.has_unsaved_changes = False
+            self.host.current_file_path = file_path
+            self.update_window_title()
+            self.host.statusBar().showMessage(f"Project loaded from {file_path}")
+            QTimer.singleShot(0, self.fit_to_view)
+        except FileNotFoundError:
+            self.host.statusBar().showMessage(f"File not found: {file_path}")
+        except (OSError, IOError) as e:
+            self.host.statusBar().showMessage(f"File I/O error: {e}")
+        except pickle.UnpicklingError as e:
+            self.host.statusBar().showMessage(f"Invalid project file format: {e}")
+        except Exception as e:
+            self.host.statusBar().showMessage(f"Error loading project file: {e}")
+
+    def _set_mol_prop(self, mol: Any, prop_name: str, value: Any) -> None:
+        """Set an RDKit molecule property safely."""
+        from rdkit import Chem
+        try:
+            if isinstance(value, int):
+                mol.SetIntProp(prop_name, value)
+            elif isinstance(value, float):
+                mol.SetDoubleProp(prop_name, value)
+            else:
+                mol.SetProp(prop_name, str(value))
+        except Exception:
+            pass
+
+    def _get_mol_prop(self, mol: Any, prop_name: str, default: Any = None) -> Any:
+        """Get an RDKit molecule property safely, trying int/float/str in order."""
+        try:
+            if not mol.HasProp(prop_name):
+                return default
+            from rdkit import Chem
+            for getter in [mol.GetIntProp, mol.GetDoubleProp, mol.GetProp]:
+                try:
+                    return getter(prop_name)
+                except Exception:
+                    continue
+            return default
+        except Exception:
+            return default
+
+
+def _set_mol_prop_safe(mol: Any, key: str, val: Any) -> None:
+    """Module-level helper: set an int or float property on an RDKit mol silently."""
+    import contextlib
+    with contextlib.suppress(RuntimeError, TypeError, ValueError, AttributeError):
+        if isinstance(val, int):
+            mol.SetIntProp(key, val)
+        elif isinstance(val, float):
+            mol.SetDoubleProp(key, val)
+
 
 # Backward-compat aliases
 MainWindowProjectIo = IOManager

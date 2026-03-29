@@ -14,16 +14,19 @@ class DummyProjectIo(MainWindowProjectIo):
         self.has_unsaved_changes = False
         self._saved_state = None
         self.statusBar_mock = MagicMock()
-        self.update_window_title = MagicMock()
-        self.reset_undo_stack = MagicMock()
-        self.restore_ui_for_editing = MagicMock()
-        self.set_state_from_data = MagicMock()
-        self.clear_all = MagicMock(return_value=True)
-        self.fit_to_view = MagicMock()
-        self.get_current_state = MagicMock(return_value={"atoms": "mock"})
+        self.host = self  # required by IOManager (manager architecture)
+
+        # Manager mocks used by IOManager methods via self.host.MANAGER.X
+        self.state_manager = MagicMock()
+        self.state_manager.get_current_state.return_value = {"atoms": "mock"}
+        self.state_manager.update_window_title = MagicMock()
+        self.state_manager.set_state_from_data = MagicMock()
+        self.ui_manager = MagicMock()
+        self.ui_manager.restore_ui_for_editing = MagicMock()
 
         self.edit_actions_manager = MagicMock()
         self.edit_actions_manager.clear_all.return_value = True
+        self.edit_actions_manager.reset_undo_stack = MagicMock()
 
         self.view_3d_manager = MagicMock()
         self.edit_3d_manager = MagicMock()
@@ -76,7 +79,7 @@ def test_load_raw_data_dialog_success(io, tmp_path):
     with patch("PyQt6.QtWidgets.QFileDialog.getOpenFileName", return_value=(load_path, "Project Files (*.pmeraw)")):
         io.load_raw_data()
         
-        io.set_state_from_data.assert_called_with(sample_data)
+        io.state_manager.set_state_from_data.assert_called_with(sample_data)
         assert io.current_file_path == load_path
         assert io.has_unsaved_changes is False
         io.statusBar().showMessage.assert_called_with(f"Project loaded from {load_path}")
@@ -85,7 +88,7 @@ def test_load_raw_data_cancel(io):
     """Verify that nothing happens if the user cancels the load dialog."""
     with patch("PyQt6.QtWidgets.QFileDialog.getOpenFileName", return_value=("", "")):
         io.load_raw_data()
-        io.set_state_from_data.assert_not_called()
+        io.state_manager.set_state_from_data.assert_not_called()
 
 def test_load_raw_data_io_error(io, tmp_path):
     """Verify handling of I/O errors during load."""

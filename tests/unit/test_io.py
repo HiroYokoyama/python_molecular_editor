@@ -8,9 +8,10 @@ from PyQt6.QtCore import QPointF
 from unittest.mock import MagicMock, patch
 
 
-class DummyProjectIo(MainWindowProjectIo, MainWindowMolecularParsers):
+class DummyProjectIo(MainWindowProjectIo):  # MainWindowMolecularParsers is same class
     def __init__(self, host):
         self._host = host
+        self.host = self  # self-referential so host-attr writes land on io
         self.data = host.data
         self.scene = host.scene
 

@@ -46,7 +46,7 @@ class Dialog3DPickingMixin:
                     click_pos[0], click_pos[1], 0, self.main_window.plotter.renderer
                 )
 
-                if picker.GetActor() is self.main_window.atom_actor:
+                if picker.GetActor() is self.main_window.view_3d_manager.atom_actor:
                     picked_position = np.array(picker.GetPickPosition())
                     distances = np.linalg.norm(
                         self.main_window.view_3d_manager.atom_positions_3d - picked_position, axis=1

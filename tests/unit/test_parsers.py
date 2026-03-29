@@ -9,6 +9,7 @@ from unittest.mock import MagicMock, patch
 class DummyParser(MainWindowMolecularParsers):
     def __init__(self, host):
         self._host = host
+        self.host = host  # required by IOManager (manager architecture)
         self.data = host.data
         self.scene = host.scene
 

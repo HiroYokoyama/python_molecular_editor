@@ -54,25 +54,19 @@ from PyQt6.QtWidgets import (
 
 try:
     from .. import OBABEL_AVAILABLE
+    from ..utils.default_settings import DEFAULT_SETTINGS
+    from ..plugins.plugin_manager import PluginManager
+    from ..utils.system_utils import detect_system_dark_mode
 except ImportError:
     from moleditpy import OBABEL_AVAILABLE
-
+    from moleditpy.utils.default_settings import DEFAULT_SETTINGS
+    from moleditpy.plugins.plugin_manager import PluginManager
+    from moleditpy.utils.system_utils import detect_system_dark_mode
 
 try:
     import winreg
 except ImportError:
     winreg = None
-
-try:
-    from ..plugins.plugin_manager import PluginManager
-except ImportError:
-    from moleditpy.plugins.plugin_manager import PluginManager
-
-
-try:
-    from ..utils.system_utils import detect_system_dark_mode
-except ImportError:
-    from moleditpy.utils.system_utils import detect_system_dark_mode
 
 
 try:
@@ -177,6 +171,8 @@ class MainInitManager:
         self.init_ui()
         self.init_worker_thread()
         self.host.ui_manager._setup_3d_picker()
+        # Install event filter to capture window close events (handled in UIManager)
+        self.host.installEventFilter(self.host.ui_manager)
 
         # RDKit Warm-up (initial execution cost)
         try:
@@ -450,23 +446,23 @@ class MainInitManager:
         """Synchronize menu action checked states with current settings."""
         with contextlib.suppress(AttributeError, RuntimeError, TypeError):
             # Optimization actions
-            if hasattr(self, "opt3d_actions"):
-                current_method = (self.optimization_method or "").upper()
-                for key, action in self.opt3d_actions.items():
+            if hasattr(self.host, "opt3d_actions"):
+                current_method = (getattr(self, "optimization_method", "") or "").upper()
+                for key, action in self.host.opt3d_actions.items():
                     # Use case-insensitive comparison for robustness
                     action.setChecked(key.upper() == current_method)
 
             # Conversion actions
-            if hasattr(self, "conv_actions"):
+            if hasattr(self.host, "conv_actions"):
                 mode = (
                     self.host.settings.get("3d_conversion_mode", "fallback") or ""
                 ).lower()
-                for key, action in self.conv_actions.items():
+                for key, action in self.host.conv_actions.items():
                     action.setChecked(key.lower() == mode)
 
             # Intermolecular interaction
-            if hasattr(self, "intermolecular_rdkit_action"):
-                self.intermolecular_rdkit_action.setChecked(
+            if hasattr(self.host, "intermolecular_rdkit_action"):
+                self.host.intermolecular_rdkit_action.setChecked(
                     self.host.settings.get("optimize_intermolecular_interaction_rdkit", True)
                 )
 
@@ -590,12 +586,12 @@ class MainInitManager:
             if top_action.menu():
                 clear_menu(top_action.menu())
 
-        if hasattr(self, "export_button") and self.host.export_button.menu():
+        if hasattr(self.host, "export_button") and self.host.export_button.menu():
             clear_menu(self.host.export_button.menu())
 
     def _update_style_menu_with_plugins(self):
         """Update the 3D style menu with custom styles from plugins."""
-        if not hasattr(self, "style_button") or not self.host.style_button.menu():
+        if not hasattr(self.host, "style_button") or not self.host.style_button.menu():
             return
 
         style_menu = self.host.style_button.menu()
@@ -670,12 +666,12 @@ class MainInitManager:
 
     def _add_plugin_toolbar_actions(self):
         """Add toolbar actions registered by plugins."""
-        if not hasattr(self, "plugin_toolbar"):
+        if not hasattr(self.host, "plugin_toolbar"):
             return
 
-        self.plugin_toolbar.clear()
+        self.host.plugin_toolbar.clear()
         if self.host.plugin_manager.toolbar_actions:
-            self.plugin_toolbar.show()
+            self.host.plugin_toolbar.show()
             for action_def in self.host.plugin_manager.toolbar_actions:
                 action = QAction(action_def["text"], self.host)
                 action.triggered.connect(action_def["callback"])
@@ -683,9 +679,9 @@ class MainInitManager:
                     action.setIcon(QIcon(action_def["icon"]))
                 if action_def["tooltip"]:
                     action.setToolTip(action_def["tooltip"])
-                self.plugin_toolbar.addAction(action)
+                self.host.plugin_toolbar.addAction(action)
         else:
-            self.plugin_toolbar.hide()
+            self.host.plugin_toolbar.hide()
 
     def _add_legacy_plugin_actions(self, plugin_menu, plugins):
         """Add folder-based legacy plugin actions to the plugin menu."""
@@ -760,7 +756,7 @@ class MainInitManager:
                     break
 
         targets = []
-        if hasattr(self, "export_button") and self.host.export_button.menu():
+        if hasattr(self.host, "export_button") and self.host.export_button.menu():
             targets.append(self.host.export_button.menu())
         if main_export_menu:
             targets.append(main_export_menu)
@@ -776,7 +772,7 @@ class MainInitManager:
 
     def _integrate_plugin_file_openers(self):
         """Add plugin-provided file openers to the import menu."""
-        if not hasattr(self, "import_menu") or not self.host.plugin_manager.file_openers:
+        if not hasattr(self.host, "import_menu") or not self.host.plugin_manager.file_openers:
             return
 
         PLUGIN_ACTION_TAG = "plugin_managed"
@@ -892,23 +888,7 @@ class MainInitManager:
     # --- Settings and Plugin Helpers ---
     def _get_default_settings(self):
         """Return a dictionary of default application settings."""
-        return {
-            "background_color": "#FFFFFF",
-            "atom_label_color": "#000000",
-            "bond_color": "#808080",
-            "show_chiral_labels": False,
-            "theme": "light",
-            "window_size": [1200, 800],
-            "window_position": [100, 100],
-            "splitter_sizes": [600, 600],
-            "last_dir": "",
-            "3d_conversion_mode": "rdkit",
-            "optimization_method": "MMFF_RDKIT",
-            "optimize_intermolecular_interaction_rdkit": True,
-            "use_high_fidelity_selection": True,
-            "selection_color": "#FFD700",
-            "high_quality_meshing": True,
-        }
+        return DEFAULT_SETTINGS.copy()
 
     def _migrate_legacy_settings(self, loaded_settings):
         """Handle migration of legacy settings keys."""
@@ -1346,7 +1326,7 @@ class MainInitManager:
                 return QColor("#FFFFFF") if os_pref else QColor("#000000")
 
         with contextlib.suppress(Exception):
-            bg = QColor(self.host.settings.get("background_color", "#FFFFFF"))
+            bg = QColor(self.host.settings.get("background_color", "#919191"))
             if bg.isValid():
                 lum = 0.2126 * bg.redF() + 0.7152 * bg.greenF() + 0.0722 * bg.blueF()
                 return QColor("#FFFFFF") if lum < 0.5 else QColor("#000000")
@@ -1639,37 +1619,37 @@ class MainInitManager:
         translation_action.triggered.connect(self.host.dialog_manager.open_translation_dialog)
         translation_action.setEnabled(False)
         edit_3d_menu.addAction(translation_action)
-        self.translation_action = translation_action
+        self.host.translation_action = translation_action
 
         move_group_action = QAction("Move Group...", self.host)
         move_group_action.triggered.connect(self.host.dialog_manager.open_move_group_dialog)
         move_group_action.setEnabled(False)
         edit_3d_menu.addAction(move_group_action)
-        self.move_group_action = move_group_action
+        self.host.move_group_action = move_group_action
 
         edit_3d_menu.addSeparator()
         align_menu = edit_3d_menu.addMenu("Align to")
         align_menu.setEnabled(False)
-        self.align_menu = align_menu
+        self.host.align_menu = align_menu
 
         axis_align_menu = align_menu.addMenu("Axis")
         align_x_action = QAction("X-axis", self.host)
         align_x_action.triggered.connect(lambda: self.host.dialog_manager.open_alignment_dialog("x"))
         align_x_action.setEnabled(False)
         axis_align_menu.addAction(align_x_action)
-        self.align_x_action = align_x_action
+        self.host.align_x_action = align_x_action
 
         align_y_action = QAction("Y-axis", self.host)
         align_y_action.triggered.connect(lambda: self.host.dialog_manager.open_alignment_dialog("y"))
         align_y_action.setEnabled(False)
         axis_align_menu.addAction(align_y_action)
-        self.align_y_action = align_y_action
+        self.host.align_y_action = align_y_action
 
         align_z_action = QAction("Z-axis", self.host)
         align_z_action.triggered.connect(lambda: self.host.dialog_manager.open_alignment_dialog("z"))
         align_z_action.setEnabled(False)
         axis_align_menu.addAction(align_z_action)
-        self.align_z_action = align_z_action
+        self.host.align_z_action = align_z_action
 
         plane_align_menu = align_menu.addMenu("Plane")
         alignplane_xy_action = QAction("XY-plane", self.host)
@@ -1678,7 +1658,7 @@ class MainInitManager:
         )
         alignplane_xy_action.setEnabled(False)
         plane_align_menu.addAction(alignplane_xy_action)
-        self.alignplane_xy_action = alignplane_xy_action
+        self.host.alignplane_xy_action = alignplane_xy_action
 
         alignplane_xz_action = QAction("XZ-plane", self.host)
         alignplane_xz_action.triggered.connect(
@@ -1686,7 +1666,7 @@ class MainInitManager:
         )
         alignplane_xz_action.setEnabled(False)
         plane_align_menu.addAction(alignplane_xz_action)
-        self.alignplane_xz_action = alignplane_xz_action
+        self.host.alignplane_xz_action = alignplane_xz_action
 
         alignplane_yz_action = QAction("YZ-plane", self.host)
         alignplane_yz_action.triggered.connect(
@@ -1694,40 +1674,40 @@ class MainInitManager:
         )
         alignplane_yz_action.setEnabled(False)
         plane_align_menu.addAction(alignplane_yz_action)
-        self.alignplane_yz_action = alignplane_yz_action
+        self.host.alignplane_yz_action = alignplane_yz_action
 
         edit_3d_menu.addSeparator()
         mirror_action = QAction("Mirror...", self.host)
         mirror_action.triggered.connect(self.host.dialog_manager.open_mirror_dialog)
         mirror_action.setEnabled(False)
         edit_3d_menu.addAction(mirror_action)
-        self.mirror_action = mirror_action
+        self.host.mirror_action = mirror_action
 
         edit_3d_menu.addSeparator()
         planarize_action = QAction("Planarize...", self.host)
         planarize_action.triggered.connect(lambda: self.host.dialog_manager.open_planarize_dialog(None))
         planarize_action.setEnabled(False)
         edit_3d_menu.addAction(planarize_action)
-        self.planarize_action = planarize_action
+        self.host.planarize_action = planarize_action
 
         edit_3d_menu.addSeparator()
         bond_length_action = QAction("Adjust Bond Length...", self.host)
         bond_length_action.triggered.connect(self.host.dialog_manager.open_bond_length_dialog)
         bond_length_action.setEnabled(False)
         edit_3d_menu.addAction(bond_length_action)
-        self.bond_length_action = bond_length_action
+        self.host.bond_length_action = bond_length_action
 
         angle_action = QAction("Adjust Angle...", self.host)
         angle_action.triggered.connect(self.host.dialog_manager.open_angle_dialog)
         angle_action.setEnabled(False)
         edit_3d_menu.addAction(angle_action)
-        self.angle_action = angle_action
+        self.host.angle_action = angle_action
 
         dihedral_action = QAction("Adjust Dihedral Angle...", self.host)
         dihedral_action.triggered.connect(self.host.dialog_manager.open_dihedral_dialog)
         dihedral_action.setEnabled(False)
         edit_3d_menu.addAction(dihedral_action)
-        self.dihedral_action = dihedral_action
+        self.host.dihedral_action = dihedral_action
 
         edit_3d_menu.addSeparator()
         constrained_opt_action = QAction("Constrained Optimization...", self.host)
@@ -1736,7 +1716,7 @@ class MainInitManager:
         )
         constrained_opt_action.setEnabled(False)
         edit_3d_menu.addAction(constrained_opt_action)
-        self.constrained_opt_action = constrained_opt_action
+        self.host.constrained_opt_action = constrained_opt_action
 
     def _init_plugin_menu(self, menu_bar):
         """Initialize the Plugin menu."""

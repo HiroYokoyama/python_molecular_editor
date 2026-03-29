@@ -22,8 +22,10 @@ from .settings_tabs.settings_other_tab import SettingsOtherTab
 
 try:
     from ..utils.constants import CPK_COLORS
+    from ..utils.default_settings import DEFAULT_SETTINGS
 except ImportError:
-    pass
+    from moleditpy.utils.constants import CPK_COLORS
+    from moleditpy.utils.default_settings import DEFAULT_SETTINGS
 
 
 class SettingsDialog(QDialog):
@@ -33,57 +35,7 @@ class SettingsDialog(QDialog):
         self.setMinimumSize(650, 750)
         self.parent_window = parent
 
-        self.default_settings = {
-            "background_color": "#919191",
-            "projection_mode": "Perspective",
-            "lighting_enabled": True,
-            "specular": 0.20,
-            "specular_power": 20,
-            "light_intensity": 1.0,
-            "show_3d_axes": True,
-            "ball_stick_atom_scale": 1.0,
-            "ball_stick_bond_radius": 0.1,
-            "ball_stick_resolution": 16,
-            "cpk_atom_scale": 1.0,
-            "cpk_resolution": 32,
-            "wireframe_bond_radius": 0.01,
-            "wireframe_resolution": 6,
-            "stick_bond_radius": 0.15,
-            "stick_resolution": 16,
-            "ball_stick_double_bond_offset_factor": 2.0,
-            "ball_stick_triple_bond_offset_factor": 2.0,
-            "ball_stick_double_bond_radius_factor": 0.8,
-            "ball_stick_triple_bond_radius_factor": 0.75,
-            "wireframe_double_bond_offset_factor": 3.0,
-            "wireframe_triple_bond_offset_factor": 3.0,
-            "wireframe_double_bond_radius_factor": 0.8,
-            "wireframe_triple_bond_radius_factor": 0.75,
-            "stick_double_bond_offset_factor": 1.5,
-            "stick_triple_bond_offset_factor": 1.0,
-            "stick_double_bond_radius_factor": 0.6,
-            "stick_triple_bond_radius_factor": 0.4,
-            "aromatic_torus_thickness_factor": 0.6,
-            "display_aromatic_circles_3d": False,
-            "skip_chemistry_checks": False,
-            "always_ask_charge": False,
-            "3d_conversion_mode": "fallback",
-            "optimization_method": "MMFF_RDKIT",
-            "ball_stick_bond_color": "#7F7F7F",
-            "cpk_colors": {},
-            "display_kekule_3d": False,
-            "ball_stick_use_cpk_bond_color": False,
-            "bond_width_2d": 2.0,
-            "bond_spacing_double_2d": 3.5,
-            "bond_spacing_triple_2d": 3.5,
-            "atom_font_size_2d": 20,
-            "background_color_2d": "#FFFFFF",
-            "bond_color_2d": "#222222",
-            "atom_use_bond_color_2d": False,
-            "bond_cap_style_2d": "Round",
-            "bond_wedge_width_2d": 6.0,
-            "bond_dash_count_2d": 8,
-            "atom_font_family_2d": "Arial",
-        }
+        self.default_settings = DEFAULT_SETTINGS.copy()
 
         self._setup_ui(current_settings)
 
@@ -198,6 +150,10 @@ class SettingsDialog(QDialog):
 
         if hasattr(self.parent_window, "settings_dirty"):
             self.parent_window.settings_dirty = True
+        
+        # Persist to disk immediately
+        if hasattr(self.parent_window, "init_manager"):
+            self.parent_window.init_manager.save_settings()
 
         if hasattr(self.parent_window.view_3d_manager, "apply_3d_settings"):
             self.parent_window.view_3d_manager.apply_3d_settings()

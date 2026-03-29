@@ -148,15 +148,21 @@ class UIManager(QObject):
             if btn:
                 btn.setStyleSheet("")
 
-        # Apply style to template buttons
+        # Apply style to matching mode buttons (exact match or prefix for user templates)
+        matched_key = None
         if mode_str in self.host.mode_actions:
-            action = self.host.mode_actions[mode_str]
+            matched_key = mode_str
+        elif mode_str.startswith("template_user"):
+            matched_key = "template_user"
+
+        if matched_key and matched_key in self.host.mode_actions:
+            action = self.host.mode_actions[matched_key]
             action.setChecked(True)
             btn = action_to_button.get(action)
             if btn:
-                # Blue for templates, clear otherwise
+                # Highlight templates with specific color
                 if mode_str.startswith("template"):
-                    btn.setStyleSheet("background-color: #2196F3; color: white;")
+                    btn.setStyleSheet("background-color: #2196F3; color: white; border-radius: 4px;")
                 else:
                     btn.setStyleSheet("")
 
@@ -327,26 +333,33 @@ class UIManager(QObject):
         # 2. Built-in Handlers
         file_lower = file_path.lower()
         if file_lower.endswith((".pmeraw", ".pmeprj")):
-            self.open_project_file(file_path=file_path)
+            self.host.io_manager.open_project_file(file_path=file_path)
             QTimer.singleShot(100, self.host.view_3d_manager.fit_to_view)
             event.acceptProposedAction()
         elif file_lower.endswith((".mol", ".sdf")):
-            # Check if dropped on 3D viewer
-            plotter_widget = self.host.splitter.widget(1)
+            # Robust check for drop target using childAt
             drag_point = event.position().toPoint()
-            if plotter_widget and plotter_widget.geometry().contains(drag_point):
-                self.load_mol_file_for_3d_viewing(file_path=file_path)
-            elif hasattr(self.host, "load_mol_file"):
-                self.load_mol_file(file_path=file_path)
+            target_widget = self.host.childAt(drag_point)
+            
+            # Identify if the target widget is the plotter (or one of its children)
+            is_on_3d = False
+            if hasattr(self.host, "plotter"):
+                plotter_widget = self.host.splitter.widget(1)
+                if target_widget == plotter_widget or plotter_widget.isAncestorOf(target_widget):
+                    is_on_3d = True
+            
+            if is_on_3d:
+                self.host.io_manager.load_mol_file_for_3d_viewing(file_path=file_path)
+                # Ensure 3D viewer zooms and renders the dropped molecule
+                QTimer.singleShot(100, lambda: self.host.plotter.view_isometric())
+                QTimer.singleShot(150, lambda: self.host.plotter.render())
             else:
-                self.host.statusBar().showMessage(
-                    "MOL file import not implemented for 2D editor."
-                )
+                self.host.io_manager.load_mol_file(file_path=file_path)
+                QTimer.singleShot(100, self.host.view_3d_manager.fit_to_view)
 
-            QTimer.singleShot(100, self.host.view_3d_manager.fit_to_view)
             event.acceptProposedAction()
         elif file_lower.endswith(".xyz"):
-            self.load_xyz_for_3d_viewing(file_path=file_path)
+            self.host.io_manager.load_xyz_for_3d_viewing(file_path=file_path)
             QTimer.singleShot(100, self.host.view_3d_manager.fit_to_view)
             event.acceptProposedAction()
         else:
@@ -411,11 +424,11 @@ class UIManager(QObject):
 
         # Always enable these core 3D interactors
         for core_act in ["measurement_action", "edit_3d_action"]:
-            obj = getattr(self, core_act, None)
+            obj = getattr(self.host, core_act, None)
             if obj:
-                obj.setEnabled(True)
+                obj.setEnabled(enabled)
 
-        self.host.ui_manager._enable_3d_edit_actions(enabled)
+        self._enable_3d_edit_actions(enabled)
 
     def _enter_3d_viewer_ui_mode(self):
         """Set UI mode to 3D viewer."""

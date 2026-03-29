@@ -237,16 +237,16 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog):
                         atom_positions[i] = new_pos
 
             # Update visualization and state
-            if hasattr(self.main_window, "draw_molecule_3d"):
+            if hasattr(self.main_window.view_3d_manager, "draw_molecule_3d"):
                 self.main_window.view_3d_manager.draw_molecule_3d(self.mol)
 
-            if hasattr(self.main_window, "update_chiral_labels"):
+            if hasattr(self.main_window.view_3d_manager, "update_chiral_labels"):
                 self.main_window.view_3d_manager.update_chiral_labels()
 
             self.clear_selection()
 
-            if hasattr(self.main_window, "push_undo_state"):
-                self.main_window.state_manager.push_undo_state()
+            if hasattr(self.main_window.edit_actions_manager, "push_undo_state"):
+                self.main_window.edit_actions_manager.push_undo_state()
 
         except (AttributeError, RuntimeError, ValueError) as e:
             # Suppress non-critical errors during translation application to avoid crash.

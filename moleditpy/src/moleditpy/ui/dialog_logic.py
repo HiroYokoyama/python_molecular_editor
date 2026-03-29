@@ -204,7 +204,7 @@ class DialogManager:
             self.host.edit_3d_manager.toggle_measurement_mode(False)
 
         dialog = TranslationDialog(self.host.current_mol, self.host, parent=self.host)
-        self.host.active_3d_dialogs.append(dialog)  # Keep reference
+        self.host.edit_3d_manager.active_3d_dialogs.append(dialog)  # Keep reference
         dialog.show()  # Use show for modeless display
         dialog.accepted.connect(
             lambda: self.host.statusBar().showMessage("Translation applied.")
@@ -220,7 +220,7 @@ class DialogManager:
             self.host.edit_3d_manager.toggle_measurement_mode(False)
 
         dialog = MoveGroupDialog(self.host.current_mol, self.host, parent=self.host)
-        self.host.active_3d_dialogs.append(dialog)
+        self.host.edit_3d_manager.active_3d_dialogs.append(dialog)
         dialog.show()
         dialog.accepted.connect(
             lambda: self.host.statusBar().showMessage("Group transformation applied.")
@@ -248,7 +248,7 @@ class DialogManager:
         dialog = AlignPlaneDialog(
             self.host.current_mol, self.host, plane, preselected_atoms, parent=self.host
         )
-        self.host.active_3d_dialogs.append(dialog)
+        self.host.edit_3d_manager.active_3d_dialogs.append(dialog)
         dialog.show()
         dialog.accepted.connect(
             lambda: self.host.statusBar().showMessage(
@@ -278,7 +278,7 @@ class DialogManager:
         dialog = PlanarizeDialog(
             self.host.current_mol, self.host, preselected_atoms, parent=self.host
         )
-        self.host.active_3d_dialogs.append(dialog)
+        self.host.edit_3d_manager.active_3d_dialogs.append(dialog)
         dialog.show()
         dialog.accepted.connect(
             lambda: self.host.statusBar().showMessage(
@@ -308,7 +308,7 @@ class DialogManager:
         dialog = AlignmentDialog(
             self.host.current_mol, self.host, axis, preselected_atoms, parent=self.host
         )
-        self.host.active_3d_dialogs.append(dialog)
+        self.host.edit_3d_manager.active_3d_dialogs.append(dialog)
         dialog.show()
         dialog.accepted.connect(
             lambda: self.host.statusBar().showMessage(
@@ -338,7 +338,7 @@ class DialogManager:
         dialog = BondLengthDialog(
             self.host.current_mol, self.host, preselected_atoms, parent=self.host
         )
-        self.host.active_3d_dialogs.append(dialog)
+        self.host.edit_3d_manager.active_3d_dialogs.append(dialog)
         dialog.show()
         dialog.accepted.connect(
             lambda: self.host.statusBar().showMessage("Bond length adjusted.")
@@ -366,7 +366,7 @@ class DialogManager:
         dialog = AngleDialog(
             self.host.current_mol, self.host, preselected_atoms, parent=self.host
         )
-        self.host.active_3d_dialogs.append(dialog)
+        self.host.edit_3d_manager.active_3d_dialogs.append(dialog)
         dialog.show()
         dialog.accepted.connect(
             lambda: self.host.statusBar().showMessage("Angle adjusted.")
@@ -394,7 +394,7 @@ class DialogManager:
         dialog = DihedralDialog(
             self.host.current_mol, self.host, preselected_atoms, parent=self.host
         )
-        self.host.active_3d_dialogs.append(dialog)
+        self.host.edit_3d_manager.active_3d_dialogs.append(dialog)
         dialog.show()
         dialog.accepted.connect(
             lambda: self.host.statusBar().showMessage("Dihedral angle adjusted.")
@@ -440,6 +440,6 @@ class DialogManager:
         dialog = ConstrainedOptimizationDialog(
             self.host.current_mol, self.host, parent=self.host
         )
-        self.host.active_3d_dialogs.append(dialog)
+        self.host.edit_3d_manager.active_3d_dialogs.append(dialog)
         dialog.show()
         dialog.finished.connect(lambda: self.host.edit_3d_manager.remove_dialog_from_list(dialog))

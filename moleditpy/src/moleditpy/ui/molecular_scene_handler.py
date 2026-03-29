@@ -765,11 +765,11 @@ class KeyboardMixin:
                             points, bonds_info, existing_items=existing_items
                         )
                         self.update_all_items()
-                        self.window.push_undo_state()
+                        self.window.edit_actions_manager.push_undo_state()
 
                 # Case 2: Cursor over empty space (mode switch)
                 else:
-                    self.window.set_mode_and_update_toolbar("template_benzene")
+                    self.window.ui_manager.set_mode_and_update_toolbar("template_benzene")
 
                 event.accept()
                 return
@@ -793,7 +793,7 @@ class KeyboardMixin:
                         self.data.atoms[atom.atom_id]["radical"] = atom.radical
                         atom.update_style()
                     self.update_all_items()
-                    self.window.push_undo_state()
+                    self.window.edit_actions_manager.push_undo_state()
                     event.accept()
                     return
 
@@ -816,7 +816,7 @@ class KeyboardMixin:
                         self.data.atoms[atom.atom_id]["charge"] = atom.charge
                         atom.update_style()
                     self.update_all_items()
-                    self.window.push_undo_state()
+                    self.window.edit_actions_manager.push_undo_state()
                     event.accept()
                     return
 
@@ -856,7 +856,7 @@ class KeyboardMixin:
                             atom.update_style()
 
                         self.update_all_items()
-                        self.window.push_undo_state()
+                        self.window.edit_actions_manager.push_undo_state()
                         event.accept()
                         return
                     except (AttributeError, RuntimeError, ValueError, TypeError) as e:
@@ -952,7 +952,7 @@ class KeyboardMixin:
 
                 if any_bond_changed:
                     self.update_all_items()
-                    self.window.push_undo_state()
+                    self.window.edit_actions_manager.push_undo_state()
 
                 if key in [
                     Qt.Key.Key_1,
@@ -968,13 +968,13 @@ class KeyboardMixin:
                 if event.key() == Qt.Key.Key_Z:
                     self.update_bond_stereo(self.hovered_item, 3)  # Z-isomer
                     self.update_all_items()
-                    self.window.push_undo_state()
+                    self.window.edit_actions_manager.push_undo_state()
                     event.accept()
                     return
                 elif event.key() == Qt.Key.Key_E:
                     self.update_bond_stereo(self.hovered_item, 4)  # E-isomer
                     self.update_all_items()
-                    self.window.push_undo_state()
+                    self.window.edit_actions_manager.push_undo_state()
                     event.accept()
                     return
 
@@ -1030,7 +1030,7 @@ class KeyboardMixin:
 
                     self.clearSelection()
                     self.update_all_items()
-                    self.window.push_undo_state()
+                    self.window.edit_actions_manager.push_undo_state()
                     event.accept()
                     return
 
@@ -1081,7 +1081,7 @@ class KeyboardMixin:
 
                 if self.delete_items(items_to_process):
                     self.update_all_items()
-                    self.window.push_undo_state()
+                    self.window.edit_actions_manager.push_undo_state()
                     self.window.statusBar().showMessage("Deleted selected items.")
 
                 # Clear scene if no atoms left
@@ -1112,7 +1112,7 @@ class KeyboardMixin:
 
             if key == Qt.Key.Key_Space:
                 if self.mode != "select":
-                    self.window.activate_select_mode()
+                    self.window.ui_manager.activate_select_mode()
                 else:
                     self.window.edit_actions_manager.select_all()
                 event.accept()
@@ -1146,9 +1146,8 @@ class KeyboardMixin:
                 mode_to_set = f"bond_{bond_data[0]}_{bond_data[1]}"
 
             # Execute mode change
-            if mode_to_set:
-                if hasattr(self.window, "set_mode_and_update_toolbar"):
-                    self.window.set_mode_and_update_toolbar(mode_to_set)
+                if hasattr(self.window.ui_manager, "set_mode_and_update_toolbar"):
+                    self.window.ui_manager.set_mode_and_update_toolbar(mode_to_set)
                     event.accept()
                     return
 

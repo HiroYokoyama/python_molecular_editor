@@ -13,11 +13,11 @@ import copy
 class DummyProjectIo(MainWindowProjectIo):
     def __init__(self, host):
         self._host = host
+        self.host = self  # self-referential so host-attr writes land on io
         self.data = host.data
         self.scene = host.scene
         self.current_file_path = None
         self.has_unsaved_changes = False
-        self.current_mol = None
         self.current_mol = None
         self._saved_state = None
         self.statusBar_mock = MagicMock()

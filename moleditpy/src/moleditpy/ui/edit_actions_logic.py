@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-MoleditPy — A Python-based molecular editing software
+MoleditPy  EA Python-based molecular editing software
 
 Author: Hiromichi Yokoyama
 License: GPL-3.0 license
@@ -359,8 +359,8 @@ class EditActionsManager:
                 )
                 return
 
-            paste_center_pos = self.view_2d.mapToScene(
-                self.view_2d.mapFromGlobal(QCursor.pos())
+            paste_center_pos = self.host.view_2d.mapToScene(
+                self.host.view_2d.mapFromGlobal(QCursor.pos())
             )
             self.host.scene.clearSelection()
 
@@ -818,7 +818,7 @@ class EditActionsManager:
             # Cancel if requested
             return False
 
-        self.restore_ui_for_editing()
+        self.host.restore_ui_for_editing()
 
         # Reset 3D mode
         if self.host.edit_3d_manager.measurement_mode:
@@ -843,14 +843,14 @@ class EditActionsManager:
         self.constraints_3d = []
 
         # Disable 3D features
-        self._enable_3d_features(False)
+        self.host.ui_manager._enable_3d_features(False)
 
         # Reset undo/redo stack
         self.reset_undo_stack()
 
         # Reset file state
         self.host.has_unsaved_changes = False
-        self.current_file_path = None
+        self.host.current_file_path = None
         self.host.state_manager.update_window_title()
 
         # Reset 2D zoom
@@ -858,11 +858,11 @@ class EditActionsManager:
 
         # Update scene and view
         self.host.scene.update()
-        if self.view_2d:
-            self.view_2d.viewport().update()
+        if self.host.view_2d:
+            self.host.view_2d.viewport().update()
 
         # Disable 3D features
-        self._enable_3d_features(False)
+        self.host.ui_manager._enable_3d_features(False)
 
         # Redraw 3D plotter
         self.host.plotter.render()
@@ -875,8 +875,8 @@ class EditActionsManager:
         QApplication.processEvents()
 
         # Call plugin document reset handlers
-        if hasattr(self, "plugin_manager") and self.plugin_manager:
-            self.plugin_manager.invoke_document_reset_handlers()
+        if hasattr(self.host, "plugin_manager") and self.host.plugin_manager:
+            self.host.plugin_manager.invoke_document_reset_handlers()
 
         self.host.statusBar().showMessage("Cleared all data.")
         return True
@@ -898,7 +898,7 @@ class EditActionsManager:
         self.host.current_mol = None
         self.host.plotter.clear()
         # Disable 3D features
-        self._enable_3d_features(False)
+        self.host.ui_manager._enable_3d_features(False)
 
         if push_to_undo:
             self.host.state_manager.push_undo_state()
@@ -968,16 +968,16 @@ class EditActionsManager:
     def _apply_ui_h_counts(self, h_count_map: Dict[int, int], problem_map: Dict[int, bool], my_token: int) -> None:
         """Apply the computed H counts and problem flags to UI items on the main thread."""
         # If the global counter changed since this closure was
-        # created, bail out — the update is stale.
+        # created, bail out  Ethe update is stale.
         try:
-            if my_token != getattr(self, "_ih_update_counter", None):
+            if my_token != getattr(self.host, "_ih_update_counter", None):
                 return
         except (AttributeError, RuntimeError, ValueError, TypeError):
             return
 
         atoms_snapshot = (
             dict(self.host.data.atoms)
-            if (hasattr(self, "data") and hasattr(self.host.data, "atoms"))
+            if (hasattr(self.host, "data") and hasattr(self.host.data, "atoms"))
             else {}
         )
         is_deleted_func = sip_isdeleted_safe
@@ -1052,10 +1052,10 @@ class EditActionsManager:
 
         try:
             try:
-                self._ih_update_counter += 1
+                self.host._ih_update_counter += 1
             except (AttributeError, RuntimeError, ValueError, TypeError):
-                self._ih_update_counter = getattr(self, "_ih_update_counter", 0) or 1
-            my_token = self._ih_update_counter
+                self.host._ih_update_counter = getattr(self.host, "_ih_update_counter", 0) or 1
+            my_token = self.host._ih_update_counter
 
             mol = None
             try:
@@ -1093,7 +1093,8 @@ class EditActionsManager:
         mol = self.host.data.to_rdkit_mol()
         if mol is None or mol.GetNumAtoms() == 0:
             # If RDKit conversion fails, check for chemistry problems
-            self.check_chemistry_problems_fallback()
+            if hasattr(self.host, "compute_manager") and hasattr(self.host.compute_manager, "check_chemistry_problems_fallback"):
+                self.host.compute_manager.check_chemistry_problems_fallback()
             return
 
         try:
@@ -1108,8 +1109,8 @@ class EditActionsManager:
                 return
 
             # Centering logic: identify 2D view center and RDKit molecule centroid
-            view_center = self.view_2d.mapToScene(
-                self.view_2d.viewport().rect().center()
+            view_center = self.host.view_2d.mapToScene(
+                self.host.view_2d.viewport().rect().center()
             )
 
             coords = list(new_positions.values())
@@ -1148,7 +1149,8 @@ class EditActionsManager:
             self.resolve_overlapping_groups()
 
             # Update measurement labels
-            self.update_2d_measurement_labels()
+            if hasattr(self.host.edit_3d_manager, "update_2d_measurement_labels"):
+                self.host.edit_3d_manager.update_2d_measurement_labels()
 
             # Request scene update and ring re-analysis
             self.host.scene.update_all_items()
@@ -1159,11 +1161,11 @@ class EditActionsManager:
         except (AttributeError, RuntimeError, ValueError) as e:
             self.host.statusBar().showMessage(f"Error during 2D optimization: {e}")
         finally:
-            self.view_2d.setFocus()
+            self.host.view_2d.setFocus()
 
     def redraw_molecule_3d(self):
         """Manually trigger redraw of the 3D molecule."""
-        if hasattr(self, "current_mol") and self.host.current_mol:
+        if hasattr(self.host, "current_mol") and self.host.current_mol:
             self.host.view_3d_manager.draw_molecule_3d(self.host.current_mol)
             self.host.statusBar().showMessage("Redraw complete.", 2000)
         else:
@@ -1232,7 +1234,8 @@ class EditActionsManager:
                 logging.debug(f"Bond position update suppressed: {e}")
 
         # Update labels after resolution
-        self.update_2d_measurement_labels()
+        if hasattr(self.host.edit_3d_manager, "update_2d_measurement_labels"):
+            self.host.edit_3d_manager.update_2d_measurement_labels()
 
         self.host.scene.update()
         self.host.state_manager.push_undo_state()
@@ -1395,7 +1398,7 @@ class EditActionsManager:
         self.host.chem_check_tried = False
         self.host.chem_check_failed = False
 
-        if force_skip or self.settings.get("skip_chemistry_checks", False):
+        if force_skip or self.host.settings.get("skip_chemistry_checks", False):
             # User asked to skip chemistry checks entirely
             return
 
@@ -1413,7 +1416,7 @@ class EditActionsManager:
                     f"Molecule sanitization failed{desc}; file may be malformed."
                 )
             # Disable 3D optimization UI to prevent running on invalid molecules
-            if hasattr(self, "optimize_3d_button"):
+            if hasattr(self.host, "optimize_3d_button"):
                 with contextlib.suppress(AttributeError, RuntimeError, TypeError):
                     self.host.optimize_3d_button.setEnabled(False)
 
@@ -1424,11 +1427,11 @@ class EditActionsManager:
         This is a best-effort cleanup to remove properties like
         _xyz_skip_checks and _xyz_atom_data that may have been attached when
         an XYZ file was previously loaded. After clearing molecule-level
-        markers, the UI flag self.is_xyz_derived is set to False and the
+        markers, the UI flag self.host.is_xyz_derived is set to False and the
         Optimize 3D button is re-evaluated (enabled unless chem_check_failed
         is True).
         """
-        target = mol if mol is not None else getattr(self, "current_mol", None)
+        target = mol if mol is not None else getattr(self.host, "current_mol", None)
         if target is not None:
             # Remove RDKit property _xyz_skip_checks
             with contextlib.suppress(AttributeError, RuntimeError, TypeError):
@@ -1444,11 +1447,11 @@ class EditActionsManager:
         self.host.is_xyz_derived = False
 
         # Enable Optimize 3D unless sanitization failed
-        if hasattr(self, "optimize_3d_button"):
+        if hasattr(self.host, "optimize_3d_button"):
             with contextlib.suppress(AttributeError, RuntimeError, TypeError):
                 # Suppress error if optimize_3d_button is partially destroyed.
                 self.host.optimize_3d_button.setEnabled(
-                    not getattr(self, "chem_check_failed", False)
+                    not getattr(self.host, "chem_check_failed", False)
                 )
 
 EditActionsManager._cls = EditActionsManager

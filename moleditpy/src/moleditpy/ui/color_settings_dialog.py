@@ -299,19 +299,22 @@ class ColorSettingsDialog(QDialog):
                     pass
         if self.changed_cpk:
             cdict = settings.get("cpk_colors", {}).copy()
-            cdict.update(self.changed_cpk)
             settings["cpk_colors"] = cdict
             self.parent_window.settings_dirty = True
+            
+            # Persist to disk immediately
+            if hasattr(self.parent_window, "init_manager"):
+                self.parent_window.init_manager.save_settings()
 
-        if hasattr(self.parent_window, "update_cpk_colors_from_settings"):
-            self.parent_window.update_cpk_colors_from_settings()
+        if hasattr(self.parent_window.init_manager, "update_cpk_colors_from_settings"):
+            self.parent_window.init_manager.update_cpk_colors_from_settings()
 
-        if hasattr(self.parent_window, "apply_3d_settings"):
-            self.parent_window.apply_3d_settings(redraw=False)
+        if hasattr(self.parent_window.view_3d_manager, "apply_3d_settings"):
+            self.parent_window.view_3d_manager.apply_3d_settings(redraw=False)
 
         current_mol = getattr(self.parent_window, "current_mol", None)
-        if current_mol and hasattr(self.parent_window, "draw_molecule_3d"):
-            self.parent_window.draw_molecule_3d(current_mol)
+        if current_mol and hasattr(self.parent_window.view_3d_manager, "draw_molecule_3d"):
+            self.parent_window.view_3d_manager.draw_molecule_3d(current_mol)
 
         # Update 2D scene
         scene = getattr(self.parent_window, "scene", None)
@@ -356,19 +359,19 @@ class ColorSettingsDialog(QDialog):
         if getattr(self, "changed_bs_color", None):
             settings["ball_stick_bond_color"] = self.changed_bs_color
             self.parent_window.settings_dirty = True
-            if hasattr(self.parent_window, "apply_3d_settings"):
-                self.parent_window.apply_3d_settings()
-            if current_mol and hasattr(self.parent_window, "draw_molecule_3d"):
-                self.parent_window.draw_molecule_3d(current_mol)
+            if hasattr(self.parent_window.view_3d_manager, "apply_3d_settings"):
+                self.parent_window.view_3d_manager.apply_3d_settings()
+            if current_mol and hasattr(self.parent_window.view_3d_manager, "draw_molecule_3d"):
+                self.parent_window.view_3d_manager.draw_molecule_3d(current_mol)
         elif self._reset_all_flag:
             settings["ball_stick_bond_color"] = "#7F7F7F"
             self.parent_window.settings_dirty = True
-            if hasattr(self.parent_window, "update_cpk_colors_from_settings"):
-                self.parent_window.update_cpk_colors_from_settings()
-            if hasattr(self.parent_window, "apply_3d_settings"):
-                self.parent_window.apply_3d_settings()
-            if current_mol and hasattr(self.parent_window, "draw_molecule_3d"):
-                self.parent_window.draw_molecule_3d(current_mol)
+            if hasattr(self.parent_window.init_manager, "update_cpk_colors_from_settings"):
+                self.parent_window.init_manager.update_cpk_colors_from_settings()
+            if hasattr(self.parent_window.view_3d_manager, "apply_3d_settings"):
+                self.parent_window.view_3d_manager.apply_3d_settings()
+            if current_mol and hasattr(self.parent_window.view_3d_manager, "draw_molecule_3d"):
+                self.parent_window.view_3d_manager.draw_molecule_3d(current_mol)
 
         if scene:
             for it in scene.items():

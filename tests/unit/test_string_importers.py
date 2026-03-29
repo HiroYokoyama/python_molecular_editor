@@ -14,6 +14,7 @@ class DummyImporter(MainWindowStringImporters):
 
     def __init__(self, host):
         self._host = host
+        self.host = host  # required by StringImporterManager (manager architecture)
         self.data = host.data
         self.scene = host.scene
 

@@ -69,6 +69,12 @@ class MainWindow(QMainWindow):
         self.string_importer_manager = StringImporterManager(self)
         self.ui_manager = UIManager(self)
 
-        self.installEventFilter(self.ui_manager)
-
         self.init_manager = MainInitManager(self, initial_file=initial_file, safe_mode=safe_mode)
+
+    def dragEnterEvent(self, event):
+        """Delegate drag enter event to UI manager."""
+        self.ui_manager.dragEnterEvent(event)
+
+    def dropEvent(self, event):
+        """Delegate drop event to UI manager."""
+        self.ui_manager.dropEvent(event)

@@ -138,14 +138,14 @@ class StateManager:
 
         # Warn if file version is newer than app version
         if file_version_parts > app_version_parts:
-            if hasattr(self, "warning_message_box"):  # Use helper if available
-                self.warning_message_box(
+            if hasattr(self.host, "warning_message_box"):
+                self.host.warning_message_box(
                     "Version Mismatch",
                     f"The file you are opening was saved with a newer version of MoleditPy (ver. {file_version_str}).",
                 )
             else:
                 QMessageBox.warning(
-                    self,
+                    self.host,
                     "Version Mismatch",
                     f"The file you are opening was saved with a newer version of MoleditPy (ver. {file_version_str}).\n\n"
                     f"Your current version is {VERSION}.\n\n"
@@ -243,12 +243,12 @@ class StateManager:
                                         pass
 
                     # Sync 2D atoms with 3D actors
-                    if hasattr(self, "create_atom_id_mapping"):
+                    if hasattr(self.host.compute_manager, "create_atom_id_mapping"):
                         try:
                             self.host.compute_manager.create_atom_id_mapping()
-                            if hasattr(self, "update_atom_id_menu_text"):
+                            if hasattr(self.host.view_3d_manager, "update_atom_id_menu_text"):
                                 self.host.view_3d_manager.update_atom_id_menu_text()
-                            if hasattr(self, "update_atom_id_menu_state"):
+                            if hasattr(self.host.view_3d_manager, "update_atom_id_menu_state"):
                                 self.host.view_3d_manager.update_atom_id_menu_state()
                         except Exception as e:
                             logging.debug(
@@ -256,26 +256,26 @@ class StateManager:
                             )
 
                     # draw_molecule_3d will use restored IDs
-                    if hasattr(self, "draw_molecule_3d"):
+                    if hasattr(self.host.view_3d_manager, "draw_molecule_3d"):
                         self.host.view_3d_manager.draw_molecule_3d(self.host.current_mol)
                     if (
-                        hasattr(self, "plotter")
+                        hasattr(self.host, "plotter")
                         and self.host.plotter
                         and hasattr(self.host.plotter, "reset_camera")
                     ):
                         self.host.plotter.reset_camera()
 
                     self.host.ui_manager._enable_3d_features(True)
-                    if hasattr(self, "setup_3d_hover"):
+                    if hasattr(self.host.view_3d_manager, "setup_3d_hover"):
                         self.host.view_3d_manager.setup_3d_hover()
                 else:
                     self.host.current_mol = None
-                    if hasattr(self, "plotter") and self.host.plotter:
+                    if hasattr(self.host, "plotter") and self.host.plotter:
                         self.host.plotter.clear()
                     self.host.ui_manager._enable_3d_features(False)
             except (RuntimeError, ValueError, TypeError) as e:
                 logging.error(f"Could not load 3D model from state data: {e}")
-                if hasattr(self, "statusBar") and self.host.statusBar():
+                if hasattr(self.host, "statusBar") and self.host.statusBar():
                     self.host.statusBar().showMessage(f"Error loading 3D model: {e}", 5000)
                 self.host.current_mol = None
                 self.host.ui_manager._enable_3d_features(False)
@@ -330,7 +330,7 @@ class StateManager:
             return True  # Empty document
 
         reply = QMessageBox.question(
-            self,
+            self.host,
             "Unsaved Changes",
             "You have unsaved changes. Do you want to save them?",
             QMessageBox.StandardButton.Yes
@@ -374,7 +374,7 @@ class StateManager:
             self.host.formula_label.setText("")  # Clear label if no atoms
             return
 
-        if hasattr(self, "data") and self.host.data and hasattr(self.host.data, "to_rdkit_mol"):
+        if hasattr(self.host, "data") and self.host.data and hasattr(self.host.data, "to_rdkit_mol"):
             try:
                 mol = self.host.data.to_rdkit_mol()
                 if mol:
@@ -384,7 +384,7 @@ class StateManager:
                     # Get atom count with Hs
                     num_atoms = mol_with_hs.GetNumAtoms()
                     # Update label text
-                    if hasattr(self, "formula_label") and self.host.formula_label:
+                    if hasattr(self.host, "formula_label") and self.host.formula_label:
                         self.host.formula_label.setText(
                             f"Formula: {mol_formula}   |   Atoms: {num_atoms}"
                         )
@@ -392,7 +392,7 @@ class StateManager:
                 logging.debug(
                     f"Molecular info update suppressed for unstable structure: {e}"
                 )
-                if hasattr(self, "formula_label") and self.host.formula_label:
+                if hasattr(self.host, "formula_label") and self.host.formula_label:
                     self.host.formula_label.setText("Invalid structure")
 
     def create_json_data(self):
@@ -556,11 +556,9 @@ class StateManager:
             )
 
         # Record the last-successful optimization method (if any)
-        # This is a convenience field so saved projects remember which
-        # optimizer variant was last used (e.g. "MMFF94s", "MMFF94", "UFF").
         try:
             json_data["last_successful_optimization_method"] = getattr(
-                self, "last_successful_optimization_method", None
+                self.host.compute_manager, "last_successful_optimization_method", None
             )
         except (AttributeError, RuntimeError, TypeError):
             json_data["last_successful_optimization_method"] = None
@@ -753,28 +751,28 @@ class StateManager:
                                                 pass
 
                             # Build mapping
-                            if hasattr(self, "create_atom_id_mapping"):
+                            if hasattr(self.host.compute_manager, "create_atom_id_mapping"):
                                 try:
                                     self.host.compute_manager.create_atom_id_mapping()
-                                    if hasattr(self, "update_atom_id_menu_text"):
+                                    if hasattr(self.host.view_3d_manager, "update_atom_id_menu_text"):
                                         self.host.view_3d_manager.update_atom_id_menu_text()
-                                    if hasattr(self, "update_atom_id_menu_state"):
+                                    if hasattr(self.host.view_3d_manager, "update_atom_id_menu_state"):
                                         self.host.view_3d_manager.update_atom_id_menu_state()
                                 except (RuntimeError, TypeError, AttributeError):
                                     pass
 
                         # Always show 3D if 3D molecule exists
-                        if hasattr(self, "draw_molecule_3d"):
+                        if hasattr(self.host.view_3d_manager, "draw_molecule_3d"):
                             self.host.view_3d_manager.draw_molecule_3d(self.host.current_mol)
 
                         # Switch UI in Viewer mode
-                        if is_3d_mode and hasattr(self, "_enter_3d_viewer_ui_mode"):
+                        if is_3d_mode and hasattr(self.host.ui_manager, "_enter_3d_viewer_ui_mode"):
                             self.host.ui_manager._enter_3d_viewer_ui_mode()
                         else:
                             self.host.is_2d_editable = True
 
                         if (
-                            hasattr(self, "plotter")
+                            hasattr(self.host, "plotter")
                             and self.host.plotter
                             and hasattr(self.host.plotter, "reset_camera")
                         ):

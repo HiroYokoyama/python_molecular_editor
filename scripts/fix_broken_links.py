@@ -73,6 +73,69 @@ ALL_MANAGER_FILES: List[Path] = MANAGER_FILES_WITH_PROXY + [
 ]
 
 # ---------------------------------------------------------------------------
+# Host (MainWindow) attribute names that must be accessed via self.host.X
+# in manager files.  Derived from MW_ATTRS in the old refactor script.
+# ---------------------------------------------------------------------------
+MW_HOST_ATTRS: List[str] = [
+    # Data / scene
+    "data", "scene", "view_2d", "current_mol", "plotter",
+    # Methods that are bound to host
+    "statusBar",
+    # Settings / state
+    "settings", "current_file_path", "has_unsaved_changes", "plugin_manager",
+    "settings_file", "settings_dir", "initial_settings", "settings_dirty",
+    "initialization_complete", "_ih_update_counter", "_active_calc_threads",
+    "_is_restoring_state",
+    # UI state flags
+    "is_2d_editable", "is_xyz_derived", "chem_check_tried", "chem_check_failed",
+    # Actions & buttons
+    "measurement_action", "edit_3d_action", "analysis_action",
+    "style_button", "optimize_3d_button", "export_button", "cleanup_button",
+    "convert_button", "formula_label", "tool_group", "splitter", "mode_actions",
+    "undo_action", "redo_action", "cut_action", "copy_action", "paste_action",
+    # Layout helpers
+    "minimize_2d_panel", "restore_2d_panel",
+    # Manager UI methods (on host but delegate to UIManager)
+    "update_window_title", "_enter_3d_viewer_ui_mode", "restore_ui_for_editing",
+    "_enable_3d_features", "_enable_3d_edit_actions",
+    # 3D view state
+    "show_chiral_labels",
+]
+
+# Per-manager: attributes OWNED by each manager's own __init__ (NOT host).
+# These must NOT be prefixed with self.host.
+MANAGER_OWNED_ATTRS: Dict[str, Set[str]] = {
+    "view_3d_logic.py": {
+        "host", "current_3d_style", "atom_positions_3d",
+        "atom_info_display_mode", "show_chiral_labels",
+        "_camera_initialized", "atom_actor_original_opacity",
+    },
+    "edit_3d_logic.py": {
+        "host", "is_3d_edit_mode", "dragged_atom_info",
+        "constraints_3d", "active_3d_dialogs",
+    },
+    "export_logic.py": {"host"},
+    "compute_logic.py": {"host", "_active_calc_threads", "halt_ids"},
+    "dialog_logic.py": {"host"},
+    "io_logic.py": {"host"},
+    "edit_actions_logic.py": {
+        "host", "undo_stack", "redo_stack",
+    },
+    "app_state.py": {"host", "_cls"},
+    "string_importers.py": {"host"},
+    "ui_manager.py": {"host"},
+    "main_window_init.py": {"host"},
+}
+
+# Files (non-manager) that access MainWindow via a different variable
+# (e.g. self.window, self.main_window, mw)
+SCENE_WINDOW_METHODS_REMAP: Dict[str, str] = {
+    # molecule_scene.py uses self.window.METHOD() where METHOD is on a manager
+    "push_undo_state":              "edit_actions_manager.push_undo_state",
+    "update_2d_measurement_labels": "edit_3d_manager.update_2d_measurement_labels",
+}
+
+# ---------------------------------------------------------------------------
 # Test import aliases: old mixin name → (module_path, new_class_name)
 # ---------------------------------------------------------------------------
 TEST_IMPORT_FIXES: Dict[str, Tuple[str, str]] = {
@@ -379,6 +442,72 @@ def build_all_method_maps() -> Dict[str, str]:
     return method_map
 
 
+def fix_host_attrs_comprehensive(dry_run: bool) -> None:
+    """
+    For each manager file that previously relied on __getattr__ to delegate
+    self.X → self.host.X, replace every remaining self.ATTR with self.host.ATTR
+    for all attrs in MW_HOST_ATTRS that the manager does NOT own itself.
+
+    This is the main fix for the 'data', 'scene', 'plotter', 'current_mol',
+    'settings', etc. accesses still using bare self.X after __getattr__ removal.
+    """
+    print("\n=== Step 4: Comprehensive host-attr fix (self.X -> self.host.X) ===")
+    for fpath in MANAGER_FILES_WITH_PROXY:
+        if not fpath.exists():
+            continue
+        owned = MANAGER_OWNED_ATTRS.get(fpath.name, set())
+        original = text = _read(fpath)
+        fixed_attrs = []
+        for attr in MW_HOST_ATTRS:
+            if attr in owned:
+                continue
+            # Match  self.ATTR  but NOT  self.host.ATTR  or  self.something_else.ATTR
+            # Also NOT when ATTR is being defined as a function parameter or docstring word
+            pattern = (
+                r"(?<!\w)"                    # not preceded by word char
+                r"\bself\."                   # self.
+                r"(?!host\.)"                 # not already self.host.
+                rf"({re.escape(attr)})"       # the attribute name
+                r"\b"                         # word boundary
+                r"(?!\w)"                     # not followed by word char (handled by \b)
+            )
+            new_text = re.sub(pattern, r"self.host.\1", text)
+            if new_text != text:
+                fixed_attrs.append(attr)
+                text = new_text
+        if text != original:
+            count = sum(text.count(f"self.host.{a}") - original.count(f"self.host.{a}")
+                        for a in fixed_attrs)
+            print(f"  {fpath.name}: fixed {count} refs to {fixed_attrs}")
+            _show_diff(fpath, original, text)
+            _write(fpath, text, dry_run)
+        else:
+            print(f"  {fpath.name}: no host-attr fixes needed")
+
+
+def fix_scene_window_calls(dry_run: bool) -> None:
+    """
+    Fix molecule_scene.py calls: self.window.METHOD() → self.window.MANAGER.METHOD()
+    where METHOD was previously on MainWindow via __getattr__ delegation but now lives
+    on a specific manager.
+    """
+    scene_file = UI_DIR / "molecule_scene.py"
+    if not scene_file.exists():
+        return
+    print("\n=== Fixing molecule_scene.py window.METHOD() calls ===")
+    original = text = _read(scene_file)
+    for method, new_target in SCENE_WINDOW_METHODS_REMAP.items():
+        old = f"self.window.{method}("
+        new = f"self.window.{new_target}("
+        count = text.count(old)
+        if count:
+            text = text.replace(old, new)
+            print(f"  Fixed {count}x self.window.{method}() -> self.window.{new_target}()")
+    if text != original:
+        _show_diff(scene_file, original, text)
+        _write(scene_file, text, dry_run)
+
+
 def fix_host_attr_accesses(dry_run: bool) -> None:
     """
     Fix self.HOST_ATTR → self.host.HOST_ATTR in manager files.
@@ -585,8 +714,14 @@ def main() -> None:
         if fpath.exists():
             cleanup_any_import(fpath, dry_run)
 
-    # --- Step 4a: Fix host-attribute accesses in manager files ---
+    # --- Step 4: Comprehensive host-attr fix (self.X -> self.host.X) ---
+    fix_host_attrs_comprehensive(dry_run)
+
+    # --- Step 4a: Fix specific known host-attribute accesses ---
     fix_host_attr_accesses(dry_run)
+
+    # --- Step 4c: Fix molecule_scene.py window method calls ---
+    fix_scene_window_calls(dry_run)
 
     # --- Step 4b: Fix known cross-manager proxy leaks ---
     fix_known_cross_manager_leaks(dry_run)

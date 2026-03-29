@@ -9,7 +9,8 @@ class MockMainWindow(MainWindowMolecularParsers):
         self.current_file_path = None
         self.current_mol = None
         self._statusBar = MagicMock()
-        
+        self.host = self  # required by IOManager (manager architecture)
+
     def statusBar(self):
         return self._statusBar
 

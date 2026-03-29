@@ -166,6 +166,26 @@ def mock_parser_host(app):
     host._enable_3d_edit_actions = MagicMock()
     host.check_unsaved_changes = MagicMock(return_value=True)
 
+    # Manager sub-mocks used by the new composition architecture.
+    # State manager: delegates JSON/undo operations.
+    host.state_manager = MagicMock()
+    host.state_manager.create_json_data.side_effect = create_json_data
+    host.state_manager.load_from_json_data.side_effect = load_from_json_data
+    host.state_manager.check_unsaved_changes.return_value = True
+    host.state_manager.update_window_title = MagicMock()
+    host.state_manager.push_undo_state = MagicMock()
+    # Edit-actions manager
+    host.edit_actions_manager = MagicMock()
+    host.edit_actions_manager.clear_2d_editor = MagicMock()
+    host.edit_actions_manager.reset_undo_stack = MagicMock()
+    # UI manager
+    host.ui_manager = MagicMock()
+    host.ui_manager.restore_ui_for_editing = MagicMock()
+    # View-3D manager
+    host.view_3d_manager = MagicMock()
+    # IO manager
+    host.io_manager = MagicMock()
+
     # Scene helpers
     host.scene.find_bond_between.return_value = None
 

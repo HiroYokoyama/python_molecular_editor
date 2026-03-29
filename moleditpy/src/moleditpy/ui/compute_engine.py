@@ -105,10 +105,11 @@ class MainWindowCompute:
             if hasattr(self, "export_button"):
                 self.export_button.setEnabled(has_mol)
 
-            if hasattr(self, "_enable_3d_features"):
-                self._enable_3d_features(has_mol)
-            if hasattr(self, "_enable_3d_edit_actions"):
-                self._enable_3d_edit_actions(has_mol)
+            if hasattr(self, "ui_manager"):
+                if hasattr(self.ui_manager, "_enable_3d_features"):
+                    self.ui_manager._enable_3d_features(has_mol)
+                if hasattr(self.ui_manager, "_enable_3d_edit_actions"):
+                    self.ui_manager._enable_3d_edit_actions(has_mol)
 
             if hasattr(self, "analysis_action"):
                 self.analysis_action.setEnabled(has_mol)

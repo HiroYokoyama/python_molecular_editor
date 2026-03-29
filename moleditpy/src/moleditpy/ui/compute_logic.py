@@ -99,9 +99,9 @@ class ComputeManager:
             if hasattr(self.host, "export_button"):
                 self.host.export_button.setEnabled(has_mol)
 
-            if hasattr(self.host, "_enable_3d_features"):
+            if hasattr(self.host.ui_manager, "_enable_3d_features"):
                 self.host.ui_manager._enable_3d_features(has_mol)
-            if hasattr(self.host, "_enable_3d_edit_actions"):
+            if hasattr(self.host.ui_manager, "_enable_3d_edit_actions"):
                 self.host.ui_manager._enable_3d_edit_actions(has_mol)
 
             if hasattr(self.host, "analysis_action"):

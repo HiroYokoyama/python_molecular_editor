@@ -51,15 +51,15 @@ class ExportManager:
         self.host = host
 
     def export_stl(self) -> None:
-        if not self.current_mol:
+        if not self.host.current_mol:
             self.host.statusBar().showMessage("Error: Please generate a 3D structure first.")
             return
 
         # prefer same directory as current file when available
         default_dir = ""
         try:
-            if self.current_file_path:
-                default_dir = os.path.dirname(self.current_file_path)
+            if self.host.current_file_path:
+                default_dir = os.path.dirname(self.host.current_file_path)
         except (AttributeError, RuntimeError, ValueError, TypeError):
             default_dir = ""
 
@@ -89,15 +89,15 @@ class ExportManager:
 
     def export_obj_mtl(self) -> None:
         """Export as OBJ/MTL (with colors)."""
-        if not self.current_mol:
+        if not self.host.current_mol:
             self.host.statusBar().showMessage("Error: Please generate a 3D structure first.")
             return
 
         # prefer same directory as current file when available
         default_dir = ""
         try:
-            if self.current_file_path:
-                default_dir = os.path.dirname(self.current_file_path)
+            if self.host.current_file_path:
+                default_dir = os.path.dirname(self.host.current_file_path)
         except (AttributeError, RuntimeError, ValueError, TypeError):
             default_dir = ""
 
@@ -235,15 +235,15 @@ class ExportManager:
 
     def export_color_stl(self) -> None:
         """Export as Color STL."""
-        if not self.current_mol:
+        if not self.host.current_mol:
             self.host.statusBar().showMessage("Error: Please generate a 3D structure first.")
             return
 
         # prefer same directory as current file when available
         default_dir = ""
         try:
-            if self.current_file_path:
-                default_dir = os.path.dirname(self.current_file_path)
+            if self.host.current_file_path:
+                default_dir = os.path.dirname(self.host.current_file_path)
         except (AttributeError, RuntimeError, ValueError, TypeError):
             default_dir = ""
 
@@ -278,7 +278,7 @@ class ExportManager:
             combined_mesh = pv.PolyData()
 
             # Get actors from renderer
-            renderer = self.plotter.renderer
+            renderer = self.host.plotter.renderer
             actors = renderer.actors
 
             for actor_name, actor in actors.items():
@@ -305,8 +305,8 @@ class ExportManager:
                             mesh = mapper.GetInputAsDataSet()
 
                     # Method 2: Get from PyVista plotter internal data
-                    if mesh is None and actor_name in self.plotter.mesh:
-                        mesh = self.plotter.mesh[actor_name]
+                    if mesh is None and actor_name in self.host.plotter.mesh:
+                        mesh = self.host.plotter.mesh[actor_name]
 
                     if (
                         mesh is not None
@@ -378,7 +378,7 @@ class ExportManager:
             combined_mesh = pv.PolyData()
 
             # Get actors from renderer
-            renderer = self.plotter.renderer
+            renderer = self.host.plotter.renderer
             actors = renderer.actors
 
             for actor_name, actor in actors.items():
@@ -405,8 +405,8 @@ class ExportManager:
                             mesh = mapper.GetInputAsDataSet()
 
                     # Method 2: Get from PyVista plotter internal data
-                    if mesh is None and actor_name in self.plotter.mesh:
-                        mesh = self.plotter.mesh[actor_name]
+                    if mesh is None and actor_name in self.host.plotter.mesh:
+                        mesh = self.host.plotter.mesh[actor_name]
 
                     # Method 3: Removed unsafe fallback
 
@@ -445,7 +445,7 @@ class ExportManager:
             meshes_with_colors = []
 
             # Get actors from PyVista plotter
-            renderer = self.plotter.renderer
+            renderer = self.host.plotter.renderer
             actors = renderer.actors
 
             actor_count = 0
@@ -474,8 +474,8 @@ class ExportManager:
                             mesh = mapper.GetInputAsDataSet()
 
                     # Method 2: Get from PyVista plotter internal data
-                    if mesh is None and actor_name in self.plotter.mesh:
-                        mesh = self.plotter.mesh[actor_name]
+                    if mesh is None and actor_name in self.host.plotter.mesh:
+                        mesh = self.host.plotter.mesh[actor_name]
 
                     if (
                         mesh is not None
@@ -668,15 +668,15 @@ class ExportManager:
             return []
 
     def export_2d_png(self) -> None:
-        if not self.data.atoms:
+        if not self.host.data.atoms:
             self.host.statusBar().showMessage("Nothing to export.")
             return
 
         # default filename: based on current file, append -2d for 2D exports
         default_name = "untitled-2d"
         try:
-            if self.current_file_path:
-                base = os.path.basename(self.current_file_path)
+            if self.host.current_file_path:
+                base = os.path.basename(self.host.current_file_path)
                 name = os.path.splitext(base)[0]
                 default_name = f"{name}-2d"
         except (AttributeError, RuntimeError, ValueError, TypeError):
@@ -685,9 +685,9 @@ class ExportManager:
         # prefer same directory as current file when available
         default_path = default_name
         try:
-            if self.current_file_path:
+            if self.host.current_file_path:
                 default_path = os.path.join(
-                    os.path.dirname(self.current_file_path), default_name
+                    os.path.dirname(self.host.current_file_path), default_name
                 )
         except (AttributeError, RuntimeError, ValueError, TypeError):
             default_path = default_name
@@ -722,13 +722,13 @@ class ExportManager:
         items_to_restore = {}
         original_background = None
         try:
-            original_background = self.scene.backgroundBrush()
+            original_background = self.host.scene.backgroundBrush()
         except (AttributeError, RuntimeError, ValueError, TypeError):
             # Minimal risk; keep default brush
             pass
 
         try:
-            all_items = list(self.scene.items())
+            all_items = list(self.host.scene.items())
             for item in all_items:
                 is_mol_part = isinstance(item, (AtomItem, BondItem))
                 if not (is_mol_part and item.isVisible()):
@@ -736,7 +736,7 @@ class ExportManager:
                     item.hide()
 
             molecule_bounds = QRectF()
-            for item in self.scene.items():
+            for item in self.host.scene.items():
                 if isinstance(item, (AtomItem, BondItem)) and item.isVisible():
                     molecule_bounds = molecule_bounds.united(item.sceneBoundingRect())
 
@@ -748,7 +748,7 @@ class ExportManager:
 
             # Handle transparency
             if is_transparent:
-                self.scene.setBackgroundBrush(QBrush(Qt.BrushStyle.NoBrush))
+                self.host.scene.setBackgroundBrush(QBrush(Qt.BrushStyle.NoBrush))
 
             rect_to_render = molecule_bounds.adjusted(-20, -20, 20, 20)
 
@@ -775,7 +775,7 @@ class ExportManager:
                 painter.setRenderHint(QPainter.RenderHint.Antialiasing)
                 target_rect = QRectF(0, 0, w, h)
                 source_rect = rect_to_render
-                self.scene.render(painter, target_rect, source_rect)
+                self.host.scene.render(painter, target_rect, source_rect)
             finally:
                 painter.end()
 
@@ -795,21 +795,21 @@ class ExportManager:
         finally:
             for item, was_visible in items_to_restore.items():
                 item.setVisible(was_visible)
-            self.scene.setBackgroundBrush(original_background)
-            if self.view_2d:
-                self.view_2d.viewport().update()
+            self.host.scene.setBackgroundBrush(original_background)
+            if self.host.view_2d:
+                self.host.view_2d.viewport().update()
 
     def export_2d_svg(self) -> None:
         """Export 2D drawing as SVG."""
-        if not self.data.atoms:
+        if not self.host.data.atoms:
             self.host.statusBar().showMessage("Nothing to export.")
             return
 
         # default filename
         default_name = "untitled-2d"
         try:
-            if self.current_file_path:
-                base = os.path.basename(self.current_file_path)
+            if self.host.current_file_path:
+                base = os.path.basename(self.host.current_file_path)
                 name = os.path.splitext(base)[0]
                 default_name = f"{name}-2d"
         except (AttributeError, RuntimeError, ValueError, TypeError):
@@ -818,9 +818,9 @@ class ExportManager:
         # prefer same directory
         default_path = default_name
         try:
-            if self.current_file_path:
+            if self.host.current_file_path:
                 default_path = os.path.join(
-                    os.path.dirname(self.current_file_path), default_name
+                    os.path.dirname(self.host.current_file_path), default_name
                 )
         except (AttributeError, RuntimeError, ValueError, TypeError):
             default_path = default_name
@@ -855,9 +855,9 @@ class ExportManager:
         try:
             # 1. Hide non-molecular items
             items_to_restore = {}
-            original_background = self.scene.backgroundBrush()
+            original_background = self.host.scene.backgroundBrush()
 
-            all_items = list(self.scene.items())
+            all_items = list(self.host.scene.items())
             for item in all_items:
                 is_mol_part = isinstance(item, (AtomItem, BondItem))
                 if not (is_mol_part and item.isVisible()):
@@ -867,7 +867,7 @@ class ExportManager:
 
             # 2. Calculate bounds
             molecule_bounds = QRectF()
-            for item in self.scene.items():
+            for item in self.host.scene.items():
                 if isinstance(item, (AtomItem, BondItem)) and item.isVisible():
                     molecule_bounds = molecule_bounds.united(item.sceneBoundingRect())
 
@@ -881,7 +881,7 @@ class ExportManager:
                 return
 
             if is_transparent:
-                self.scene.setBackgroundBrush(QBrush(Qt.BrushStyle.NoBrush))
+                self.host.scene.setBackgroundBrush(QBrush(Qt.BrushStyle.NoBrush))
 
             # Margin
             rect_to_render = molecule_bounds.adjusted(-20, -20, 20, 20)
@@ -900,7 +900,7 @@ class ExportManager:
             painter = QPainter()
             painter.begin(generator)
             try:
-                self.scene.render(painter, rect_to_render, rect_to_render)
+                self.host.scene.render(painter, rect_to_render, rect_to_render)
             finally:
                 painter.end()
 
@@ -916,21 +916,21 @@ class ExportManager:
             for item, was_visible in items_to_restore.items():
                 item.setVisible(was_visible)
             if original_background is not None:
-                self.scene.setBackgroundBrush(original_background)
-            if self.view_2d:
-                self.view_2d.viewport().update()
+                self.host.scene.setBackgroundBrush(original_background)
+            if self.host.view_2d:
+                self.host.view_2d.viewport().update()
 
     def export_3d_png(self) -> None:
         """Export 3D view as PNG."""
-        if not self.current_mol:
+        if not self.host.current_mol:
             self.host.statusBar().showMessage("No 3D molecule to export.", 2000)
             return
 
         # Default filename: {name}.png
         default_name = "untitled"
         try:
-            if self.current_file_path:
-                base = os.path.basename(self.current_file_path)
+            if self.host.current_file_path:
+                base = os.path.basename(self.host.current_file_path)
                 name = os.path.splitext(base)[0]
                 default_name = f"{name}"
         except (AttributeError, RuntimeError, ValueError, TypeError):
@@ -939,9 +939,9 @@ class ExportManager:
         # prefer same directory as current file when available
         default_path = default_name
         try:
-            if self.current_file_path:
+            if self.host.current_file_path:
                 default_path = os.path.join(
-                    os.path.dirname(self.current_file_path), default_name
+                    os.path.dirname(self.host.current_file_path), default_name
                 )
         except (AttributeError, RuntimeError, ValueError, TypeError):
             default_path = default_name
@@ -972,7 +972,7 @@ class ExportManager:
         is_transparent = reply == QMessageBox.StandardButton.Yes
 
         try:
-            self.plotter.screenshot(filePath, transparent_background=is_transparent)
+            self.host.plotter.screenshot(filePath, transparent_background=is_transparent)
             self.host.statusBar().showMessage(f"3D view exported to {filePath}", 3000)
         except (AttributeError, RuntimeError, ValueError) as e:
             self.host.statusBar().showMessage(f"Error exporting 3D PNG: {e}")

@@ -212,7 +212,7 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
                 data_changed = self.delete_items(set(selected_items))
                 if data_changed:
                     self.update_all_items()
-                    self.window.push_undo_state()
+                    self.window.edit_actions_manager.push_undo_state()
                 self.press_pos = None
                 event.accept()
                 return
@@ -228,7 +228,7 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
                                 if bdata.get("item") is item:
                                     bdata["stereo"] = 0
                                     break
-                            self.window.push_undo_state()
+                            self.window.edit_actions_manager.push_undo_state()
                             data_changed = False  # Already added to undo stack, so skip redundant pushes later
                     except (AttributeError, RuntimeError, ValueError, TypeError) as e:
                         logging.error(
@@ -267,7 +267,7 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
 
             if data_changed:
                 self.update_all_items()
-                self.window.push_undo_state()
+                self.window.edit_actions_manager.push_undo_state()
             self.press_pos = None
             event.accept()
             return  # Complete right-click processing and prevent proceeding to left-click logic
@@ -391,7 +391,7 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
                 self.press_pos = None
                 if self.data_changed_in_event:
                     self.update_all_items()
-                    self.window.push_undo_state()
+                    self.window.edit_actions_manager.push_undo_state()
                 return
 
         released_item = self.itemAt(end_pos, self.views()[0].transform())
@@ -400,7 +400,7 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
         if (self.mode == "delete") and is_click and released_item is not None:
             # Safe deletion via unified handler
             if self.delete_items({released_item}):
-                self.window.push_undo_state()
+                self.window.edit_actions_manager.push_undo_state()
             self.press_pos = None
             return
 
@@ -421,7 +421,7 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
             self.start_pos = None
             self.press_pos = None
             if self.data_changed_in_event:
-                self.window.push_undo_state()
+                self.window.edit_actions_manager.push_undo_state()
             return
         elif (
             (self.mode == "charge_plus" or self.mode == "charge_minus")
@@ -440,7 +440,7 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
             self.start_pos = None
             self.press_pos = None
             if self.data_changed_in_event:
-                self.window.push_undo_state()
+                self.window.edit_actions_manager.push_undo_state()
             return
 
         elif (
@@ -463,7 +463,7 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
                         if hasattr(self, "update_bond_stereo"):
                             self.update_bond_stereo(b, new_stereo)
                             self.update_all_items()  # Force redraw
-                            self.window.push_undo_state()  # Push to undo stack here
+                            self.window.edit_actions_manager.push_undo_state()  # Push to undo stack here
                 except (AttributeError, RuntimeError, ValueError, TypeError) as e:
                     logging.error(
                         f"Error in E/Z stereo toggle (mouseReleaseEvent): {e}",
@@ -617,7 +617,7 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
             for bond in bonds_to_update:
                 bond.update_position()
             # Update measurement label positions after atom move
-            self.window.update_2d_measurement_labels()
+            self.window.edit_3d_manager.update_2d_measurement_labels()
             if self.views():
                 self.views()[0].viewport().update()
 
@@ -628,12 +628,10 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
         self.start_pos = None
         self.press_pos = None
         self.temp_line = None
+        # Clear template context but NOT the template data itself to allow multiple placements
         self.template_context = {}
-        # Clear user template data when switching modes
-        if hasattr(self, "user_template_data"):
-            self.user_template_data = None
         if getattr(self, "data_changed_in_event", False):
-            self.window.push_undo_state()
+            self.window.edit_actions_manager.push_undo_state()
 
     def mouseDoubleClickEvent(self, event):
         """Handle double click events."""
@@ -655,7 +653,7 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
                 item.update_style()
 
             self.update_all_items()
-            self.window.push_undo_state()
+            self.window.edit_actions_manager.push_undo_state()
 
             event.accept()
             return
