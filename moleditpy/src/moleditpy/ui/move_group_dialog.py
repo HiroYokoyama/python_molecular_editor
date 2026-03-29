@@ -15,7 +15,6 @@ import numpy as np
 import pyvista as pv
 from PyQt6.QtCore import QEvent, Qt
 from PyQt6.QtWidgets import (
-    QDialog,
     QGridLayout,
     QHBoxLayout,
     QLabel,
@@ -27,24 +26,18 @@ from PyQt6.QtWidgets import (
 from rdkit import Geometry
 
 try:
+    from .base_picking_dialog import BasePickingDialog
     from ..utils.constants import VDW_RADII, pt
 except ImportError:
+    from moleditpy.ui.base_picking_dialog import BasePickingDialog
     from moleditpy.utils.constants import VDW_RADII, pt
 
-try:
-    from .dialog_3d_picking_mixin import Dialog3DPickingMixin
-except ImportError:
-    from moleditpy.ui.dialog_3d_picking_mixin import Dialog3DPickingMixin
 
-
-class MoveGroupDialog(Dialog3DPickingMixin, QDialog):
+class MoveGroupDialog(BasePickingDialog):
     """Dialog to select a connected molecular group and perform translation/rotation."""
 
     def __init__(self, mol, main_window, parent=None):
-        QDialog.__init__(self, parent)
-        Dialog3DPickingMixin.__init__(self)
-        self.mol = mol
-        self.main_window = main_window
+        super().__init__(mol, main_window, parent)
         self.selected_atoms = set()
         self.group_atoms = set()  # All atoms connected to selected atoms
         self.init_ui()
@@ -194,7 +187,7 @@ class MoveGroupDialog(Dialog3DPickingMixin, QDialog):
                     interactor = self.main_window.plotter.interactor
                     click_pos = interactor.GetEventPosition()
 
-                    # Pick to identify which atom was clicked
+                    # Pick via plotter
                     picker = self.main_window.plotter.picker
                     picker.Pick(
                         click_pos[0], click_pos[1], 0, self.main_window.plotter.renderer
@@ -217,12 +210,7 @@ class MoveGroupDialog(Dialog3DPickingMixin, QDialog):
                                     vdw_radius = pt.GetRvdw(atomic_num)
                                     if vdw_radius < 0.1:
                                         vdw_radius = 1.5
-                                except (
-                                    AttributeError,
-                                    RuntimeError,
-                                    ValueError,
-                                    TypeError,
-                                ):
+                                except (AttributeError, RuntimeError, ValueError, TypeError):
                                     vdw_radius = 1.5
                                 click_threshold = vdw_radius * 1.5
 
@@ -237,24 +225,19 @@ class MoveGroupDialog(Dialog3DPickingMixin, QDialog):
                             self.drag_start_pos = click_pos
                             self.drag_atom_idx = clicked_atom_idx
                             self.mouse_moved_during_drag = False
-                            self.potential_drag = True  # Potential drag start
-                            self.clicked_atom_for_toggle = (
-                                clicked_atom_idx  # Save for toggling
-                            )
-                            # Allow camera operation (start drag if threshold exceeded)
+                            self.potential_drag = True
+                            self.clicked_atom_for_toggle = clicked_atom_idx
                             return False
                         else:
                             # Atom outside group - select new group
-                            # Manually call on_atom_picked from parent Mixin
                             self.on_atom_picked(clicked_atom_idx)
                             return True
                     else:
                         # Clicked outside atoms
-                        # Allow normal camera operation even if a group exists
                         return False
 
                 except (AttributeError, RuntimeError, ValueError) as e:
-                    print(f"Error in mouse press: {e}")
+                    logging.debug(f"Error in mouse press: {e}")
                     return False
 
             elif event.type() == QEvent.Type.MouseMove:
@@ -264,7 +247,6 @@ class MoveGroupDialog(Dialog3DPickingMixin, QDialog):
                     and self.drag_start_pos
                     and not self.is_dragging_group
                 ):
-                    # potential_drag state: threshold check
                     try:
                         interactor = self.main_window.plotter.interactor
                         current_pos = interactor.GetEventPosition()
@@ -274,68 +256,46 @@ class MoveGroupDialog(Dialog3DPickingMixin, QDialog):
                         # Start drag if threshold is exceeded
                         drag_threshold = 5  # pixels
                         if abs(dx) > drag_threshold or abs(dy) > drag_threshold:
-                            # Confirm drag start
                             self.is_dragging_group = True
                             self.potential_drag = False
                             try:
                                 self.main_window.plotter.setCursor(
                                     Qt.CursorShape.ClosedHandCursor
                                 )
-                            except (
-                                AttributeError,
-                                RuntimeError,
-                                ValueError,
-                                TypeError,
-                            ) as e:
-                                logging.debug(
-                                    f"Suppressed exception: {e}"
-                                )  # Suppress cursor setting errors
-                    except (AttributeError, RuntimeError, ValueError, TypeError) as e:
-                        logging.debug(
-                            f"Suppressed exception: {e}"
-                        )  # Suppress threshold check errors during mouse move
+                            except (AttributeError, RuntimeError, ValueError, TypeError):
+                                pass
+                    except (AttributeError, RuntimeError, ValueError, TypeError):
+                        pass
 
-                    # Allow camera operation if below threshold
                     if not self.is_dragging_group:
                         return False
 
                 if self.is_dragging_group and self.drag_start_pos:
-                    # In drag mode - just record distance (no real-time update)
                     try:
                         interactor = self.main_window.plotter.interactor
                         current_pos = interactor.GetEventPosition()
-
                         dx = current_pos[0] - self.drag_start_pos[0]
                         dy = current_pos[1] - self.drag_start_pos[1]
-
                         if abs(dx) > 2 or abs(dy) > 2:
                             self.mouse_moved_during_drag = True
-                    except (AttributeError, RuntimeError, ValueError, TypeError) as e:
-                        logging.debug(
-                            f"Suppressed exception: {e}"
-                        )  # Suppress drag distance tracking errors
-
-                    # Consume event during drag to prevent camera rotation
+                    except (AttributeError, RuntimeError, ValueError, TypeError):
+                        pass
                     return True
 
-                # Hover handling (when not dragging)
+                # Hover handling
                 if self.group_atoms:
                     try:
                         interactor = self.main_window.plotter.interactor
                         current_pos = interactor.GetEventPosition()
                         picker = self.main_window.plotter.picker
                         picker.Pick(
-                            current_pos[0],
-                            current_pos[1],
-                            0,
-                            self.main_window.plotter.renderer,
+                            current_pos[0], current_pos[1], 0, self.main_window.plotter.renderer
                         )
 
                         if picker.GetActor() is self.main_window.view_3d_manager.atom_actor:
                             picked_position = np.array(picker.GetPickPosition())
                             distances = np.linalg.norm(
-                                self.main_window.view_3d_manager.atom_positions_3d - picked_position,
-                                axis=1,
+                                self.main_window.view_3d_manager.atom_positions_3d - picked_position, axis=1
                             )
                             closest_atom_idx = np.argmin(distances)
 
@@ -351,98 +311,63 @@ class MoveGroupDialog(Dialog3DPickingMixin, QDialog):
                             self.main_window.plotter.setCursor(
                                 Qt.CursorShape.ArrowCursor
                             )
-                    except (AttributeError, RuntimeError, ValueError, TypeError) as e:
-                        logging.debug(
-                            f"Suppressed exception: {e}"
-                        )  # Suppress hover-state cursor updates
+                    except (AttributeError, RuntimeError, ValueError, TypeError):
+                        pass
 
-                # Allow camera rotation if not dragging
                 return False
 
             elif (
                 event.type() == QEvent.Type.MouseButtonRelease
                 and event.button() == Qt.MouseButton.LeftButton
             ):
-                # Mouse release handling
                 if getattr(self, "potential_drag", False) or (
                     self.is_dragging_group and self.drag_start_pos
                 ):
                     try:
-                        if self.is_dragging_group and self.mouse_moved_during_drag:
-                            # Drag executed - delegate to CustomInteractorStyle (do nothing)
-                            pass
-                        else:
-                            # Mouse move below threshold = simple click
-                            # Toggle selection if an atom within the group is clicked
+                        if not (self.is_dragging_group and self.mouse_moved_during_drag):
+                            # Mouse move below threshold = simple click (toggle)
                             if hasattr(self, "clicked_atom_for_toggle"):
                                 clicked_atom = self.clicked_atom_for_toggle
                                 delattr(self, "clicked_atom_for_toggle")
-                                # Reset drag state before toggling
                                 self.is_dragging_group = False
                                 self.drag_start_pos = None
                                 self.mouse_moved_during_drag = False
                                 self.potential_drag = False
-                                if hasattr(self, "last_drag_positions"):
-                                    delattr(self, "last_drag_positions")
-                                # Execute toggle process
                                 self.on_atom_picked(clicked_atom)
                                 try:
                                     self.main_window.plotter.setCursor(
                                         Qt.CursorShape.ArrowCursor
                                     )
-                                except (
-                                    AttributeError,
-                                    RuntimeError,
-                                    ValueError,
-                                    TypeError,
-                                ) as e:
-                                    logging.debug(
-                                        f"Suppressed exception: {e}"
-                                    )  # Suppress cursor reset errors
+                                except (AttributeError, RuntimeError, ValueError, TypeError):
+                                    pass
                                 return True
 
-                    except (AttributeError, RuntimeError, ValueError, TypeError) as e:
-                        logging.debug(
-                            f"Suppressed exception: {e}"
-                        )  # Suppress release event toggle errors
+                    except (AttributeError, RuntimeError, ValueError, TypeError):
+                        pass
                     finally:
-                        # Reset drag state
                         self.is_dragging_group = False
                         self.drag_start_pos = None
                         self.mouse_moved_during_drag = False
                         self.potential_drag = False
-                        # Clear saved position data
-                        if hasattr(self, "last_drag_positions"):
-                            delattr(self, "last_drag_positions")
                         try:
                             self.main_window.plotter.setCursor(
                                 Qt.CursorShape.ArrowCursor
                             )
-                        except (
-                            AttributeError,
-                            RuntimeError,
-                            ValueError,
-                            TypeError,
-                        ) as e:
-                            logging.debug(
-                                f"Suppressed exception: {e}"
-                            )  # Suppress cursor cleanup on release
+                        except (AttributeError, RuntimeError, ValueError, TypeError):
+                            pass
 
-                    return True  # Consume event
+                    return True
 
-                # Normal release processing if not dragging
                 return False
 
-        # Pass other events to parent class
         return super().eventFilter(obj, event)
 
     def on_atom_picked(self, atom_idx):
-        """Select the entire connected component the atom belongs to (supports multiple groups)."""
-        # Do not change selection during drag (toggling on release is allowed)
+        """Select the entire connected component the atom belongs to."""
         if getattr(self, "is_dragging_group", False):
             return
 
-        # Search connected component via BFS/DFS
+        # BFS for connected atoms
         visited = set()
         queue = [atom_idx]
         visited.add(atom_idx)
@@ -461,12 +386,10 @@ class MoveGroupDialog(Dialog3DPickingMixin, QDialog):
                     visited.add(begin_idx)
                     queue.append(begin_idx)
 
-        # Add or remove as a new group
+        # Toggle group
         if visited.issubset(self.group_atoms):
-            # Already selected - remove
             self.group_atoms -= visited
         else:
-            # Add new group
             self.group_atoms |= visited
 
         self.selected_atoms.add(atom_idx)
@@ -487,19 +410,14 @@ class MoveGroupDialog(Dialog3DPickingMixin, QDialog):
             )
 
     def show_atom_labels(self):
-        """Highlight atoms in the selected group (same style as Ctrl+Click)."""
+        """Highlight atoms in the selected group."""
         self.clear_atom_labels()
 
         if not self.group_atoms:
             return
 
-        # Create list of selected atom indices
         selected_indices = list(self.group_atoms)
-
-        # Get positions of selected atoms
         selected_positions = self.main_window.view_3d_manager.atom_positions_3d[selected_indices]
-
-        # Highlight atoms with slightly larger radii
         selected_radii = np.array(
             [
                 VDW_RADII.get(self.mol.GetAtomWithIdx(i).GetSymbol(), 0.4) * 1.3
@@ -507,56 +425,48 @@ class MoveGroupDialog(Dialog3DPickingMixin, QDialog):
             ]
         )
 
-        # Create dataset for highlighting
         highlight_source = pv.PolyData(selected_positions)
         highlight_source["radii"] = selected_radii
-
-        # Highlight with semi-transparent yellow spheres
         highlight_glyphs = highlight_source.glyph(
             scale="radii",
             geom=pv.Sphere(radius=1.0, theta_resolution=16, phi_resolution=16),
             orient=False,
         )
 
-        # Add and save highlight actor (set as non-pickable)
         self.highlight_actor = self.main_window.plotter.add_mesh(
             highlight_glyphs,
             color="yellow",
             opacity=0.3,
             name="move_group_highlight",
-            pickable=False,  # Disable picking
+            pickable=False,
         )
 
         self.main_window.plotter.render()
 
     def clear_atom_labels(self):
-        """Clear atom highlights (including MoveGroup specific highlights)."""
+        """Clear highlights."""
+        # Call base which clears selection_labels (standard labels)
         super().clear_atom_labels()
+        
+        # Clear MoveGroup specific highlight
         try:
             self.main_window.plotter.remove_actor("move_group_highlight")
-        except (AttributeError, RuntimeError, ValueError, TypeError) as e:
-            logging.debug(
-                f"Suppressed exception: {e}"
-            )  # Suppress actor removal errors for move_group_highlight
+        except (AttributeError, RuntimeError, ValueError, TypeError):
+            pass
 
-        if hasattr(self, "highlight_actor"):
+        if hasattr(self, "highlight_actor") and self.highlight_actor:
             try:
                 self.main_window.plotter.remove_actor(self.highlight_actor)
-            except (AttributeError, RuntimeError, ValueError, TypeError) as e:
-                logging.debug(
-                    f"Suppressed exception: {e}"
-                )  # Suppress errors during actor cleanup
-
+            except (AttributeError, RuntimeError, ValueError, TypeError):
+                pass
             self.highlight_actor = None
+        
         try:
             self.main_window.plotter.render()
-        except (AttributeError, RuntimeError, ValueError, TypeError) as e:
-            logging.debug(
-                f"Suppressed exception: {e}"
-            )  # Suppress render errors during clearing
+        except (AttributeError, RuntimeError, ValueError, TypeError):
+            pass
 
     def reset_translation_inputs(self):
-        """Reset Translation input fields."""
         self.x_trans_input.setText("0.0")
         self.y_trans_input.setText("0.0")
         self.z_trans_input.setText("0.0")
@@ -572,32 +482,33 @@ class MoveGroupDialog(Dialog3DPickingMixin, QDialog):
             dy = float(self.y_trans_input.text())
             dz = float(self.z_trans_input.text())
         except ValueError:
-            QMessageBox.warning(
-                self, "Warning", "Please enter valid translation values."
-            )
+            QMessageBox.warning(self, "Warning", "Please enter valid translation values.")
             return
 
         translation_vector = np.array([dx, dy, dz])
-
         conf = self.mol.GetConformer()
+        
+        # Push Undo state
+        if hasattr(self.main_window, "state_manager"):
+            self.main_window.state_manager.push_undo_state()
+        elif hasattr(self.main_window, "edit_actions_manager"):
+            self.main_window.edit_actions_manager.push_undo_state()
+
         for atom_idx in self.group_atoms:
             atom_pos = np.array(conf.GetAtomPosition(atom_idx))
             new_pos = atom_pos + translation_vector
             conf.SetAtomPosition(
                 atom_idx,
-                Geometry.Point3D(
-                    float(new_pos[0]), float(new_pos[1]), float(new_pos[2])
-                ),
+                Geometry.Point3D(float(new_pos[0]), float(new_pos[1]), float(new_pos[2])),
             )
             self.main_window.view_3d_manager.atom_positions_3d[atom_idx] = new_pos
 
         self.main_window.view_3d_manager.draw_molecule_3d(self.mol)
-        self.main_window.view_3d_manager.update_chiral_labels()
-        self.show_atom_labels()  # Redraw labels
-        self.main_window.state_manager.push_undo_state()
+        if hasattr(self.main_window.view_3d_manager, "update_chiral_labels"):
+            self.main_window.view_3d_manager.update_chiral_labels()
+        self.show_atom_labels()
 
     def reset_rotation_inputs(self):
-        """Reset Rotation input fields."""
         self.x_rot_input.setText("0.0")
         self.y_rot_input.setText("0.0")
         self.z_rot_input.setText("0.0")
@@ -616,69 +527,38 @@ class MoveGroupDialog(Dialog3DPickingMixin, QDialog):
             QMessageBox.warning(self, "Warning", "Please enter valid rotation values.")
             return
 
-        # Convert degrees to radians
-        rx_rad = np.radians(rx)
-        ry_rad = np.radians(ry)
-        rz_rad = np.radians(rz)
+        rx_rad, ry_rad, rz_rad = np.radians([rx, ry, rz])
 
-        # Calculate group centroid
         conf = self.mol.GetConformer()
-        positions = []
-        for atom_idx in self.group_atoms:
-            pos = conf.GetAtomPosition(atom_idx)
-            positions.append([pos.x, pos.y, pos.z])
+        positions = [conf.GetAtomPosition(i) for i in self.group_atoms]
+        positions = np.array([[p.x, p.y, p.z] for p in positions])
         centroid = np.mean(positions, axis=0)
 
-        # Create rotation matrices
-        # Around X-axis
-        Rx = np.array(
-            [
-                [1, 0, 0],
-                [0, np.cos(rx_rad), -np.sin(rx_rad)],
-                [0, np.sin(rx_rad), np.cos(rx_rad)],
-            ]
-        )
-        # Around Y-axis
-        Ry = np.array(
-            [
-                [np.cos(ry_rad), 0, np.sin(ry_rad)],
-                [0, 1, 0],
-                [-np.sin(ry_rad), 0, np.cos(ry_rad)],
-            ]
-        )
-        # Around Z-axis
-        Rz = np.array(
-            [
-                [np.cos(rz_rad), -np.sin(rz_rad), 0],
-                [np.sin(rz_rad), np.cos(rz_rad), 0],
-                [0, 0, 1],
-            ]
-        )
-
-        # Composite rotation matrix (Z * Y * X)
+        # Rotation matrices
+        Rx = np.array([[1, 0, 0], [0, np.cos(rx_rad), -np.sin(rx_rad)], [0, np.sin(rx_rad), np.cos(rx_rad)]])
+        Ry = np.array([[np.cos(ry_rad), 0, np.sin(ry_rad)], [0, 1, 0], [-np.sin(ry_rad), 0, np.cos(ry_rad)]])
+        Rz = np.array([[np.cos(rz_rad), -np.sin(rz_rad), 0], [np.sin(rz_rad), np.cos(rz_rad), 0], [0, 0, 1]])
         R = Rz @ Ry @ Rx
 
-        # Rotate each atom
+        # Push Undo state
+        if hasattr(self.main_window, "state_manager"):
+            self.main_window.state_manager.push_undo_state()
+        elif hasattr(self.main_window, "edit_actions_manager"):
+            self.main_window.edit_actions_manager.push_undo_state()
+
         for atom_idx in self.group_atoms:
             atom_pos = np.array(conf.GetAtomPosition(atom_idx))
-            # Move centroid to origin
-            centered_pos = atom_pos - centroid
-            # Rotate
-            rotated_pos = R @ centered_pos
-            # Restore centroid
-            new_pos = rotated_pos + centroid
+            new_pos = R @ (atom_pos - centroid) + centroid
             conf.SetAtomPosition(
                 atom_idx,
-                Geometry.Point3D(
-                    float(new_pos[0]), float(new_pos[1]), float(new_pos[2])
-                ),
+                Geometry.Point3D(float(new_pos[0]), float(new_pos[1]), float(new_pos[2])),
             )
             self.main_window.view_3d_manager.atom_positions_3d[atom_idx] = new_pos
 
         self.main_window.view_3d_manager.draw_molecule_3d(self.mol)
-        self.main_window.view_3d_manager.update_chiral_labels()
-        self.show_atom_labels()  # Redraw labels
-        self.main_window.state_manager.push_undo_state()
+        if hasattr(self.main_window.view_3d_manager, "update_chiral_labels"):
+            self.main_window.view_3d_manager.update_chiral_labels()
+        self.show_atom_labels()
 
     def clear_selection(self):
         """Clear selection."""
@@ -686,18 +566,5 @@ class MoveGroupDialog(Dialog3DPickingMixin, QDialog):
         self.group_atoms.clear()
         self.clear_atom_labels()
         self.update_display()
-        # Reset drag-related flags
         self.is_dragging_group = False
         self.drag_start_pos = None
-        if hasattr(self, "last_drag_positions"):
-            delattr(self, "last_drag_positions")
-
-    def closeEvent(self, event):
-        self.clear_atom_labels()
-        self.disable_picking()
-        super().closeEvent(event)
-
-    def reject(self):
-        self.clear_atom_labels()
-        self.disable_picking()
-        super().reject()

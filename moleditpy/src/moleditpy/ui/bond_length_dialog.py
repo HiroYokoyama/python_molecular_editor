@@ -11,11 +11,9 @@ DOI: 10.5281/zenodo.17268532
 """
 
 import logging
-
 import numpy as np
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
-    QDialog,
     QHBoxLayout,
     QLabel,
     QLineEdit,
@@ -28,16 +26,17 @@ from PyQt6.QtWidgets import (
 )
 from rdkit import Geometry
 
-from .dialog_3d_picking_mixin import Dialog3DPickingMixin
-from ..core.mol_geometry import calc_distance, get_connected_group
+try:
+    from .geometry_base_dialog import GeometryBaseDialog
+    from ..core.mol_geometry import calc_distance, get_connected_group
+except ImportError:
+    from moleditpy.ui.geometry_base_dialog import GeometryBaseDialog
+    from moleditpy.core.mol_geometry import calc_distance, get_connected_group
 
 
-class BondLengthDialog(Dialog3DPickingMixin, QDialog):
+class BondLengthDialog(GeometryBaseDialog):
     def __init__(self, mol, main_window, preselected_atoms=None, parent=None):
-        QDialog.__init__(self, parent)
-        Dialog3DPickingMixin.__init__(self)
-        self.mol = mol
-        self.main_window = main_window
+        super().__init__(mol, main_window, parent)
         self.atom1_idx = None
         self.atom2_idx = None
 
@@ -84,11 +83,17 @@ class BondLengthDialog(Dialog3DPickingMixin, QDialog):
         self.distance_slider.setTickPosition(QSlider.TickPosition.TicksBelow)
         self.distance_slider.setTickInterval(100)
         self.distance_slider.setEnabled(False)
+        
+        # Connect to base class real-time handlers
         self.distance_slider.sliderPressed.connect(self.on_slider_pressed)
-        self.distance_slider.sliderMoved.connect(self.on_slider_moved)
+        self.distance_slider.sliderMoved.connect(
+            lambda v: self.on_slider_moved_realtime(v, self.distance_input, 100.0)
+        )
         self.distance_slider.sliderReleased.connect(self.on_slider_released)
-        self.distance_slider.valueChanged.connect(self.on_slider_value_changed)
-        self._slider_dragging = False
+        self.distance_slider.valueChanged.connect(
+            lambda v: self.on_slider_value_changed_click(v, self.distance_input, 100.0)
+        )
+        
         layout.addLayout(distance_layout)
         layout.addWidget(self.distance_slider)
 
@@ -156,27 +161,6 @@ class BondLengthDialog(Dialog3DPickingMixin, QDialog):
         self.show_atom_labels()
         self.update_display()
 
-    def keyPressEvent(self, event):
-        """Handle keyboard events."""
-        if event.key() == Qt.Key.Key_Return or event.key() == Qt.Key.Key_Enter:
-            if self.apply_button.isEnabled():
-                self.apply_changes()
-            event.accept()
-        else:
-            QDialog.keyPressEvent(self, event)
-
-    def closeEvent(self, event):
-        """Handle dialog close event."""
-        self.clear_atom_labels()
-        self.disable_picking()
-        super().closeEvent(event)
-
-    def accept(self):
-        """Handle OK event."""
-        self.clear_atom_labels()
-        self.disable_picking()
-        super().accept()
-
     def clear_selection(self):
         """Clear the current atom selection."""
         self.atom1_idx = None
@@ -211,10 +195,8 @@ class BondLengthDialog(Dialog3DPickingMixin, QDialog):
                 self.distance_slider.setValue(154)
                 self.distance_slider.setEnabled(False)
                 self.distance_slider.blockSignals(False)
-            except (AttributeError, RuntimeError, ValueError, TypeError) as e:
-                logging.debug(
-                    f"Suppressed exception: {e}"
-                )  # Suppress non-critical UI update errors (distance input/slider)
+            except (AttributeError, RuntimeError, ValueError, TypeError):
+                pass
 
         elif self.atom2_idx is None:
             symbol1 = self.mol.GetAtomWithIdx(self.atom1_idx).GetSymbol()
@@ -234,10 +216,8 @@ class BondLengthDialog(Dialog3DPickingMixin, QDialog):
                 self.distance_slider.setValue(154)
                 self.distance_slider.setEnabled(False)
                 self.distance_slider.blockSignals(False)
-            except (AttributeError, RuntimeError, ValueError, TypeError) as e:
-                logging.debug(
-                    f"Suppressed exception: {e}"
-                )  # Suppress non-critical UI update errors (distance input/slider)
+            except (AttributeError, RuntimeError, ValueError, TypeError):
+                pass
         else:
             symbol1 = self.mol.GetAtomWithIdx(self.atom1_idx).GetSymbol()
             symbol2 = self.mol.GetAtomWithIdx(self.atom2_idx).GetSymbol()
@@ -253,7 +233,7 @@ class BondLengthDialog(Dialog3DPickingMixin, QDialog):
             )
             self.distance_label.setText(f"Current distance: {current_distance:.3f} Å")
             self.apply_button.setEnabled(True)
-            # Update the distance input box to show current distance
+            # Update the distance input box and slider
             try:
                 self.distance_input.blockSignals(True)
                 self.distance_input.setText(f"{current_distance:.3f}")
@@ -264,10 +244,8 @@ class BondLengthDialog(Dialog3DPickingMixin, QDialog):
                 self.distance_slider.setValue(slider_val)
                 self.distance_slider.setEnabled(True)
                 self.distance_slider.blockSignals(False)
-            except (AttributeError, RuntimeError, TypeError) as e:
-                logging.debug(
-                    f"Suppressed exception: {e}"
-                )  # Suppress errors during distance UI sync
+            except (AttributeError, RuntimeError, TypeError):
+                pass
 
             # Add labels
             self.add_selection_label(self.atom1_idx, "1")
@@ -277,59 +255,11 @@ class BondLengthDialog(Dialog3DPickingMixin, QDialog):
         """Line edit text changed, update slider."""
         if not self.distance_input.isEnabled() or not self.apply_button.isEnabled():
             return
-        try:
-            val = float(text)
-            if 0.1 <= val <= 10.0:
-                self.distance_slider.blockSignals(True)
-                self.distance_slider.setValue(int(val * 100))
-                self.distance_slider.blockSignals(False)
-        except ValueError as e:
-            logging.debug(
-                f"Suppressed exception: {e}"
-            )  # Ignore invalid numeric input during typing
-
-    def on_slider_pressed(self):
-        """Remember the state before slider dragging starts."""
-        if self.atom1_idx is None or self.atom2_idx is None:
-            return
-        self._slider_dragging = True
-        self.main_window.state_manager.push_undo_state()
-
-    def on_slider_moved(self, value):
-        """Update geometry in real-time while dragging."""
-        if self.atom1_idx is None or self.atom2_idx is None:
-            return
-
-        new_distance = value / 100.0
-        self.distance_input.blockSignals(True)
-        self.distance_input.setText(f"{new_distance:.3f}")
-        self.distance_input.blockSignals(False)
-
-        self.adjust_bond_length(new_distance)
-
-    def on_slider_released(self):
-        """Finalize slider dragging."""
-        self._slider_dragging = False
-        self.main_window.view_3d_manager.draw_molecule_3d(self.mol)
-        self.main_window.view_3d_manager.update_chiral_labels()
-
-    def on_slider_value_changed(self, value):
-        """Handle click-to-position on the slider track."""
-        if self._slider_dragging:
-            return  # Already handled by on_slider_moved
-        if self.atom1_idx is None or self.atom2_idx is None:
-            return
-        self.main_window.state_manager.push_undo_state()
-        new_distance = value / 100.0
-        self.distance_input.blockSignals(True)
-        self.distance_input.setText(f"{new_distance:.3f}")
-        self.distance_input.blockSignals(False)
-        self.adjust_bond_length(new_distance)
-        self.main_window.view_3d_manager.update_chiral_labels()
+        self._sync_input_to_slider(text, self.distance_slider, 100.0)
 
     def apply_changes(self):
         """Apply the bond length changes to the molecule."""
-        if self.atom1_idx is None or self.atom2_idx is None:
+        if not self._is_selection_complete():
             return
 
         try:
@@ -342,15 +272,22 @@ class BondLengthDialog(Dialog3DPickingMixin, QDialog):
             return
 
         # Save undo state
-        self.main_window.state_manager.push_undo_state()
+        if hasattr(self.main_window, "state_manager"):
+            self.main_window.state_manager.push_undo_state()
+        elif hasattr(self.main_window, "edit_actions_manager"):
+            self.main_window.edit_actions_manager.push_undo_state()
 
         # Apply the bond length change
-        self.adjust_bond_length(new_distance)
+        self.apply_geometry_update(new_distance)
 
         # Update chirality labels
-        self.main_window.view_3d_manager.update_chiral_labels()
+        if hasattr(self.main_window.view_3d_manager, "update_chiral_labels"):
+            self.main_window.view_3d_manager.update_chiral_labels()
 
-    def adjust_bond_length(self, new_distance):
+    def _is_selection_complete(self):
+        return self.atom1_idx is not None and self.atom2_idx is not None
+
+    def apply_geometry_update(self, new_distance):
         """Adjust the bond length."""
         conf = self.mol.GetConformer()
         pos1 = np.array(conf.GetAtomPosition(self.atom1_idx))
@@ -441,16 +378,3 @@ class BondLengthDialog(Dialog3DPickingMixin, QDialog):
 
         # Update the 3D view
         self.main_window.view_3d_manager.draw_molecule_3d(self.mol)
-
-    def reject(self):
-        """Handle cancellation event."""
-        self.clear_atom_labels()
-        self.disable_picking()
-        super().reject()
-        try:
-            if self.main_window.current_mol:
-                self.main_window.view_3d_manager.draw_molecule_3d(self.main_window.current_mol)
-        except (AttributeError, RuntimeError, ValueError, TypeError) as e:
-            logging.debug(
-                f"Suppressed exception: {e}"
-            )  # Suppress errors during dialog teardown

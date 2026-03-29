@@ -12,7 +12,6 @@ DOI: 10.5281/zenodo.17268532
 
 import numpy as np
 from PyQt6.QtWidgets import (
-    QDialog,
     QHBoxLayout,
     QLabel,
     QMessageBox,
@@ -22,25 +21,19 @@ from PyQt6.QtWidgets import (
 from rdkit import Geometry
 
 try:
-    from .dialog_3d_picking_mixin import Dialog3DPickingMixin
+    from .base_picking_dialog import BasePickingDialog
 except ImportError:
-    from moleditpy.ui.dialog_3d_picking_mixin import Dialog3DPickingMixin
+    from moleditpy.ui.base_picking_dialog import BasePickingDialog
 
 
-class PlanarizeDialog(Dialog3DPickingMixin, QDialog):
-    """Dialog to planarize a selected set of atoms by projecting them onto a best-fit plane.
-    Has a selection UI similar to AlignPlane, and projects selected atoms orthogonally onto the plane via the Apply button.
-    """
+class PlanarizeDialog(BasePickingDialog):
+    """Dialog to planarize a selected set of atoms by projecting them onto a best-fit plane."""
 
     def __init__(self, mol, main_window, preselected_atoms=None, parent=None):
-        QDialog.__init__(self, parent)
-        Dialog3DPickingMixin.__init__(self)
-        self.mol = mol
-        self.main_window = main_window
+        super().__init__(mol, main_window, parent)
         self.selected_atoms = set()
 
         if preselected_atoms:
-            # Add pre-selected atoms
             self.selected_atoms.update(preselected_atoms)
 
         self.init_ui()
@@ -125,30 +118,18 @@ class PlanarizeDialog(Dialog3DPickingMixin, QDialog):
             self.apply_button.setEnabled(count >= 3)
 
     def select_all_atoms(self):
-        """Select all atoms in the current molecule (or fallback) and update labels/UI."""
+        """Select all atoms in the current molecule."""
         try:
-            # Prefer RDKit molecule if available
             if hasattr(self, "mol") and self.mol is not None:
-                try:
-                    n = self.mol.GetNumAtoms()
-                    # create a set of indices [0..n-1]
-                    self.selected_atoms = set(range(n))
-                except (AttributeError, RuntimeError, ValueError, TypeError):
-                    # fallback to main_window data map
-                    self.selected_atoms = (
-                        set(self.main_window.data.atoms.keys())
-                        if hasattr(self.main_window, "data")
-                        else set()
-                    )
+                n = self.mol.GetNumAtoms()
+                self.selected_atoms = set(range(n))
             else:
-                # fallback to main_window data map
                 self.selected_atoms = (
                     set(self.main_window.data.atoms.keys())
                     if hasattr(self.main_window, "data")
                     else set()
                 )
 
-            # Update labels and display
             self.show_atom_labels()
             self.update_display()
 
@@ -211,8 +192,14 @@ class PlanarizeDialog(Dialog3DPickingMixin, QDialog):
 
             # Update 3D view
             self.main_window.view_3d_manager.draw_molecule_3d(self.mol)
-            self.main_window.view_3d_manager.update_chiral_labels()
-            self.main_window.state_manager.push_undo_state()
+            if hasattr(self.main_window.view_3d_manager, "update_chiral_labels"):
+                self.main_window.view_3d_manager.update_chiral_labels()
+
+            # Push Undo state
+            if hasattr(self.main_window, "state_manager"):
+                self.main_window.state_manager.push_undo_state()
+            elif hasattr(self.main_window, "edit_actions_manager"):
+                self.main_window.edit_actions_manager.push_undo_state()
 
             QMessageBox.information(
                 self,
@@ -222,18 +209,3 @@ class PlanarizeDialog(Dialog3DPickingMixin, QDialog):
 
         except (AttributeError, RuntimeError, ValueError) as e:
             QMessageBox.critical(self, "Error", f"Failed to planarize: {e}")
-
-    def closeEvent(self, event):
-        self.clear_atom_labels()
-        self.disable_picking()
-        super().closeEvent(event)
-
-    def reject(self):
-        self.clear_atom_labels()
-        self.disable_picking()
-        super().reject()
-
-    def accept(self):
-        self.clear_atom_labels()
-        self.disable_picking()
-        super().accept()

@@ -13,27 +13,24 @@ DOI: 10.5281/zenodo.17268532
 import numpy as np
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
-    QDialog,
     QHBoxLayout,
     QLabel,
     QMessageBox,
     QPushButton,
     QVBoxLayout,
+    QWidget,
 )
 from rdkit import Geometry
 
 try:
-    from .dialog_3d_picking_mixin import Dialog3DPickingMixin
+    from .base_picking_dialog import BasePickingDialog
 except ImportError:
-    from moleditpy.ui.dialog_3d_picking_mixin import Dialog3DPickingMixin
+    from moleditpy.ui.base_picking_dialog import BasePickingDialog
 
 
-class AlignPlaneDialog(Dialog3DPickingMixin, QDialog):
+class AlignPlaneDialog(BasePickingDialog):
     def __init__(self, mol, main_window, plane, preselected_atoms=None, parent=None):
-        QDialog.__init__(self, parent)
-        Dialog3DPickingMixin.__init__(self)
-        self.mol = mol
-        self.main_window = main_window
+        super().__init__(mol, main_window, parent)
         self.plane = plane
         self.selected_atoms = set()
 
@@ -96,17 +93,6 @@ class AlignPlaneDialog(Dialog3DPickingMixin, QDialog):
         self.picker_connection = None
         self.enable_picking()
 
-    def enable_picking(self):
-        """Enable atom selection in the 3D view."""
-        self.main_window.plotter.interactor.installEventFilter(self)
-        self.picking_enabled = True
-
-    def disable_picking(self):
-        """Disable atom selection in the 3D view."""
-        if hasattr(self, "picking_enabled") and self.picking_enabled:
-            self.main_window.plotter.interactor.removeEventFilter(self)
-            self.picking_enabled = False
-
     def on_atom_picked(self, atom_idx):
         """Handle the event when an atom is picked in the 3D view."""
         if atom_idx in self.selected_atoms:
@@ -117,15 +103,6 @@ class AlignPlaneDialog(Dialog3DPickingMixin, QDialog):
         # Display labels on the atoms
         self.show_atom_labels()
         self.update_display()
-
-    def keyPressEvent(self, event):
-        """Handle keyboard shortcut events."""
-        if event.key() == Qt.Key.Key_Return or event.key() == Qt.Key.Key_Enter:
-            if self.apply_button.isEnabled():
-                self.apply_PlaneAlign()
-            event.accept()
-        else:
-            QDialog.keyPressEvent(self, event)
 
     def clear_selection(self):
         """Clear the current atom selection."""
@@ -138,17 +115,8 @@ class AlignPlaneDialog(Dialog3DPickingMixin, QDialog):
         try:
             # Prefer RDKit molecule if available
             if hasattr(self, "mol") and self.mol is not None:
-                try:
-                    n = self.mol.GetNumAtoms()
-                    # create a set of indices [0..n-1]
-                    self.selected_atoms = set(range(n))
-                except (AttributeError, RuntimeError, ValueError, TypeError):
-                    # fallback to main_window data map
-                    self.selected_atoms = (
-                        set(self.main_window.data.atoms.keys())
-                        if hasattr(self.main_window, "data")
-                        else set()
-                    )
+                n = self.mol.GetNumAtoms()
+                self.selected_atoms = set(range(n))
             else:
                 # fallback to main_window data map
                 self.selected_atoms = (
@@ -214,14 +182,11 @@ class AlignPlaneDialog(Dialog3DPickingMixin, QDialog):
             centered_positions = selected_positions - centroid
 
             # Find optimal plane using PCA
-            # Calculate covariance matrix for centered coordinates
             cov_matrix = np.cov(centered_positions.T)
             eigenvalues, eigenvectors = np.linalg.eigh(cov_matrix)
 
             # Normal vector of the plane corresponds to the smallest eigenvalue
-            normal_vector = eigenvectors[
-                :, 0
-            ]  # Normal vector of the plane corresponds to the smallest eigenvalue
+            normal_vector = eigenvectors[:, 0]
 
             # Define target plane normal vector
             if self.plane == "xy":
@@ -233,7 +198,7 @@ class AlignPlaneDialog(Dialog3DPickingMixin, QDialog):
             else:
                 target_normal = np.array([0, 0, 1])  # Default to Z-axis (XY plane)
 
-            # Adjust normal vector direction (ensure it's in the target direction)
+            # Adjust normal vector direction
             if np.dot(normal_vector, target_normal) < 0:
                 normal_vector = -normal_vector
 
@@ -241,13 +206,13 @@ class AlignPlaneDialog(Dialog3DPickingMixin, QDialog):
             rotation_axis = np.cross(normal_vector, target_normal)
             rotation_axis_norm = np.linalg.norm(rotation_axis)
 
-            if rotation_axis_norm > 1e-10:  # If rotation is necessary
+            if rotation_axis_norm > 1e-10:
                 rotation_axis = rotation_axis / rotation_axis_norm
                 cos_angle = np.dot(normal_vector, target_normal)
                 cos_angle = np.clip(cos_angle, -1.0, 1.0)
                 rotation_angle = np.arccos(cos_angle)
 
-                # Rotate the entire molecule using Rodrigues' rotation formula
+                # Rodrigues' rotation formula
                 def rodrigues_rotation(v, axis, angle):
                     cos_a = np.cos(angle)
                     sin_a = np.sin(angle)
@@ -261,7 +226,6 @@ class AlignPlaneDialog(Dialog3DPickingMixin, QDialog):
                 conf = self.mol.GetConformer()
                 for i in range(self.mol.GetNumAtoms()):
                     current_pos = np.array(conf.GetAtomPosition(i))
-                    # Rotate relative to centroid
                     centered_pos = current_pos - centroid
                     rotated_pos = rodrigues_rotation(
                         centered_pos, rotation_axis, rotation_angle
@@ -279,28 +243,14 @@ class AlignPlaneDialog(Dialog3DPickingMixin, QDialog):
             self.main_window.view_3d_manager.draw_molecule_3d(self.mol)
 
             # Update chirality labels
-            self.main_window.view_3d_manager.update_chiral_labels()
+            if hasattr(self.main_window.view_3d_manager, "update_chiral_labels"):
+                self.main_window.view_3d_manager.update_chiral_labels()
 
             # Save state for Undo
-            self.main_window.state_manager.push_undo_state()
+            if hasattr(self.main_window, "state_manager"):
+                self.main_window.state_manager.push_undo_state()
+            elif hasattr(self.main_window, "edit_actions_manager"):
+                self.main_window.edit_actions_manager.push_undo_state()
 
         except (AttributeError, RuntimeError, ValueError, TypeError) as e:
             QMessageBox.critical(self, "Error", f"Failed to apply align: {str(e)}")
-
-    def closeEvent(self, event):
-        """Clean up labels and picking when closed."""
-        self.clear_atom_labels()
-        self.disable_picking()
-        super().closeEvent(event)
-
-    def reject(self):
-        """Handle cancellation or manual closing."""
-        self.clear_atom_labels()
-        self.disable_picking()
-        super().reject()
-
-    def accept(self):
-        """Handle acceptance (Apply/OK)."""
-        self.clear_atom_labels()
-        self.disable_picking()
-        super().accept()

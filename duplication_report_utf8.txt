@@ -1,0 +1,46 @@
+﻿Scanning directory: moleditpy/src/moleditpy/ui
+Fuzzy mode: ENABLED
+============================================================
+[3 Matches] AST Hash: b645918f...
+  - moleditpy/src/moleditpy/ui\angle_dialog.py:0 -> keyPressEvent (7 lines)
+  - moleditpy/src/moleditpy/ui\bond_length_dialog.py:0 -> keyPressEvent (7 lines)
+  - moleditpy/src/moleditpy/ui\dihedral_dialog.py:0 -> keyPressEvent (7 lines)
+----------------------------------------
+[3 Matches] AST Hash: 178d4988...
+  - moleditpy/src/moleditpy/ui\angle_dialog.py:0 -> closeEvent (4 lines)
+  - moleditpy/src/moleditpy/ui\bond_length_dialog.py:0 -> closeEvent (4 lines)
+  - moleditpy/src/moleditpy/ui\dihedral_dialog.py:0 -> closeEvent (4 lines)
+----------------------------------------
+[3 Matches] AST Hash: 7c620c8c...
+  - moleditpy/src/moleditpy/ui\angle_dialog.py:0 -> on_slider_released (6 lines)
+  - moleditpy/src/moleditpy/ui\bond_length_dialog.py:0 -> on_slider_released (4 lines)
+  - moleditpy/src/moleditpy/ui\dihedral_dialog.py:0 -> on_slider_released (4 lines)
+----------------------------------------
+[2 Matches] AST Hash: a5b46180...
+  - moleditpy/src/moleditpy/ui\align_plane_dialog.py:0 -> on_atom_picked (9 lines)
+  - moleditpy/src/moleditpy/ui\translation_dialog.py:0 -> on_atom_picked (7 lines)
+----------------------------------------
+[2 Matches] AST Hash: 28dbcf41...
+  - moleditpy/src/moleditpy/ui\align_plane_dialog.py:0 -> keyPressEvent (7 lines)
+  - moleditpy/src/moleditpy/ui\translation_dialog.py:0 -> keyPressEvent (7 lines)
+----------------------------------------
+[2 Matches] AST Hash: f6f388ad...
+  - moleditpy/src/moleditpy/ui\angle_dialog.py:0 -> accept (4 lines)
+  - moleditpy/src/moleditpy/ui\bond_length_dialog.py:0 -> accept (4 lines)
+----------------------------------------
+[2 Matches] AST Hash: 9218bd96...
+  - moleditpy/src/moleditpy/ui\color_settings_dialog.py:0 -> accept (2 lines)
+  - moleditpy/src/moleditpy/ui\settings_dialog.py:0 -> accept (2 lines)
+----------------------------------------
+[2 Matches] AST Hash: a972963f...
+  - moleditpy/src/moleditpy/ui\move_group_dialog.py:0 -> closeEvent (3 lines)
+  - moleditpy/src/moleditpy/ui\planarize_dialog.py:0 -> closeEvent (3 lines)
+----------------------------------------
+[2 Matches] AST Hash: 739b0a4b...
+  - moleditpy/src/moleditpy/ui\move_group_dialog.py:0 -> reject (3 lines)
+  - moleditpy/src/moleditpy/ui\planarize_dialog.py:0 -> reject (3 lines)
+----------------------------------------
+[2 Matches] AST Hash: e3336230...
+  - moleditpy/src/moleditpy/ui\settings_tabs\settings_2d_tab.py:0 -> _create_separator (4 lines)
+  - moleditpy/src/moleditpy/ui\settings_tabs\settings_3d_tabs.py:0 -> _create_separator (4 lines)
+----------------------------------------

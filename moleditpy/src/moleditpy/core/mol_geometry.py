@@ -300,6 +300,70 @@ def calculate_dihedral(positions: Any, i1: int, i2: int, i3: int, i4: int) -> fl
     return float(np.degrees(angle_rad))
 
 
+def adjust_dihedral(
+    positions: np.ndarray,
+    i1: int,
+    i2: int,
+    i3: int,
+    i4: int,
+    target_dihedral_deg: float,
+    atom_indices_to_move: Iterable[int],
+) -> float:
+    """Adjust the dihedral angle defined by i1-i2-i3-i4 to target_dihedral_deg.
+    The rotation is performed around the i2-i3 bond axis.
+
+    Parameters
+    ----------
+    positions : ndarray, shape (N, 3)
+        Atom coordinates. **Modified in-place.**
+    i1, i2, i3, i4 : int
+        Atom indices defining the dihedral.
+    target_dihedral_deg : float
+        Target dihedral angle in degrees.
+    atom_indices_to_move : iterable of int
+        Indices of atoms to be rotated.
+
+    Returns
+    -------
+    float
+        Applied rotation in radians.
+    """
+    # Current dihedral
+    current_dihedral = calculate_dihedral(positions, i1, i2, i3, i4)
+
+    # Rotation angle needed
+    delta_deg = target_dihedral_deg - current_dihedral
+
+    # Shortest rotation path
+    if delta_deg > 180:
+        delta_deg -= 360
+    elif delta_deg < -180:
+        delta_deg += 360
+
+    delta_rad = np.radians(delta_deg)
+
+    if abs(delta_rad) < 1e-9:
+        return 0.0
+
+    # Rotation axis (i2 -> i3)
+    pos2 = positions[i2]
+    pos3 = positions[i3]
+    axis = pos3 - pos2
+    axis_norm = np.linalg.norm(axis)
+
+    if axis_norm < 1e-12:
+        return 0.0
+
+    axis_unit = axis / axis_norm
+
+    # Rotate each movable atom
+    for idx in atom_indices_to_move:
+        rel = positions[idx] - pos2
+        positions[idx] = pos2 + rodrigues_rotate(rel, axis_unit, delta_rad)
+
+    return float(delta_rad)
+
+
 # ------------------------------------------------------------------
 # Valence sanity check
 # ------------------------------------------------------------------
