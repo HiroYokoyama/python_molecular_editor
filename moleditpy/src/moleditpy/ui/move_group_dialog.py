@@ -22,6 +22,7 @@ from PyQt6.QtWidgets import (
     QMessageBox,
     QPushButton,
     QVBoxLayout,
+    QWidget,
 )
 from rdkit import Geometry
 
@@ -486,26 +487,15 @@ class MoveGroupDialog(BasePickingDialog):
             return
 
         translation_vector = np.array([dx, dy, dz])
-        conf = self.mol.GetConformer()
-        
-        # Push Undo state
-        if hasattr(self.main_window, "state_manager"):
-            self.main_window.state_manager.push_undo_state()
-        elif hasattr(self.main_window, "edit_actions_manager"):
-            self.main_window.edit_actions_manager.push_undo_state()
-
+        positions = self.mol.GetConformer().GetPositions()
         for atom_idx in self.group_atoms:
-            atom_pos = np.array(conf.GetAtomPosition(atom_idx))
-            new_pos = atom_pos + translation_vector
-            conf.SetAtomPosition(
-                atom_idx,
-                Geometry.Point3D(float(new_pos[0]), float(new_pos[1]), float(new_pos[2])),
-            )
-            self.main_window.view_3d_manager.atom_positions_3d[atom_idx] = new_pos
-
-        self.main_window.view_3d_manager.draw_molecule_3d(self.mol)
-        if hasattr(self.main_window.view_3d_manager, "update_chiral_labels"):
-            self.main_window.view_3d_manager.update_chiral_labels()
+            positions[atom_idx] += translation_vector
+ 
+        # Write updated positions back using inherited helper
+        self._update_molecule_geometry(positions)
+ 
+        # Push Undo state AFTER modification
+        self._push_undo()
         self.show_atom_labels()
 
     def reset_rotation_inputs(self):
@@ -528,36 +518,29 @@ class MoveGroupDialog(BasePickingDialog):
             return
 
         rx_rad, ry_rad, rz_rad = np.radians([rx, ry, rz])
-
-        conf = self.mol.GetConformer()
-        positions = [conf.GetAtomPosition(i) for i in self.group_atoms]
-        positions = np.array([[p.x, p.y, p.z] for p in positions])
-        centroid = np.mean(positions, axis=0)
+        positions = self.mol.GetConformer().GetPositions()
+        
+        # Calculate centroid of the group
+        group_indices = list(self.group_atoms)
+        group_positions = positions[group_indices]
+        centroid = np.mean(group_positions, axis=0)
 
         # Rotation matrices
         Rx = np.array([[1, 0, 0], [0, np.cos(rx_rad), -np.sin(rx_rad)], [0, np.sin(rx_rad), np.cos(rx_rad)]])
         Ry = np.array([[np.cos(ry_rad), 0, np.sin(ry_rad)], [0, 1, 0], [-np.sin(ry_rad), 0, np.cos(ry_rad)]])
         Rz = np.array([[np.cos(rz_rad), -np.sin(rz_rad), 0], [np.sin(rz_rad), np.cos(rz_rad), 0], [0, 0, 1]])
         R = Rz @ Ry @ Rx
-
-        # Push Undo state
-        if hasattr(self.main_window, "state_manager"):
-            self.main_window.state_manager.push_undo_state()
-        elif hasattr(self.main_window, "edit_actions_manager"):
-            self.main_window.edit_actions_manager.push_undo_state()
-
+ 
         for atom_idx in self.group_atoms:
-            atom_pos = np.array(conf.GetAtomPosition(atom_idx))
-            new_pos = R @ (atom_pos - centroid) + centroid
-            conf.SetAtomPosition(
-                atom_idx,
-                Geometry.Point3D(float(new_pos[0]), float(new_pos[1]), float(new_pos[2])),
-            )
-            self.main_window.view_3d_manager.atom_positions_3d[atom_idx] = new_pos
-
-        self.main_window.view_3d_manager.draw_molecule_3d(self.mol)
-        if hasattr(self.main_window.view_3d_manager, "update_chiral_labels"):
-            self.main_window.view_3d_manager.update_chiral_labels()
+            pos = positions[atom_idx]
+            new_pos = R @ (pos - centroid) + centroid
+            positions[atom_idx] = new_pos
+ 
+        # Write updated positions back using inherited helper
+        self._update_molecule_geometry(positions)
+ 
+        # Push Undo state AFTER modification
+        self._push_undo()
         self.show_atom_labels()
 
     def clear_selection(self):

@@ -195,9 +195,16 @@ class View3DManager:
             self.host.plotter.add_light(light)
 
         # 5. Molecule drawing logic
+        # Mutually exclusive: Kekulé display or Aromatic Circle display (Kekulé takes priority)
+        display_kekule = self.host.settings.get("display_kekule_3d", False)
+        display_aromatic = self.host.settings.get("display_aromatic_circles_3d", False)
+        if display_kekule and display_aromatic:
+            logging.debug("view_3d_logic: display_kekule_3d and display_aromatic_circles_3d are both enabled. Kekulé takes priority.")
+            display_aromatic = False
+
         # Optionally kekulize aromatic systems for 3D visualization.
         mol_to_draw = mol
-        if self.host.settings.get("display_kekule_3d", False):
+        if display_kekule:
             try:
                 mol_to_draw = Chem.Mol(mol)
                 Chem.Kekulize(mol_to_draw, clearAromaticFlags=True)
@@ -816,7 +823,12 @@ class View3DManager:
 
     def _add_3d_aromatic_rings(self, mol_to_draw, current_style, mesh_props):
         # Aromatic ring circles display
-        if self.host.settings.get("display_aromatic_circles_3d", False):
+        display_aromatic = self.host.settings.get("display_aromatic_circles_3d", False)
+        # Check if Kekulé is enabled (safety check, should be already handled in draw_molecule_3d)
+        if self.host.settings.get("display_kekule_3d", False):
+            display_aromatic = False
+
+        if display_aromatic:
             try:
                 ring_info = mol_to_draw.GetRingInfo()
                 aromatic_rings = []

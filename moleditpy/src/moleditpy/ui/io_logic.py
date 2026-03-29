@@ -44,7 +44,7 @@ class IOManager:
         return self.host.state_manager.update_window_title()
 
     def reset_undo_stack(self):
-        return self.host.edit_actions_manager.reset_undo_stack()
+        return self.host.state_manager.reset_undo_stack()
 
     def restore_ui_for_editing(self):
         return self.host.ui_manager.restore_ui_for_editing()
@@ -436,7 +436,7 @@ class IOManager:
                                           bond_order=int(bond.GetBondTypeAsDouble()), bond_stereo=stereo)
 
             self.host.statusBar().showMessage(f"Successfully loaded {file_path}")
-            self.host.edit_actions_manager.reset_undo_stack()
+            self.host.state_manager.reset_undo_stack()
             self.host.current_file_path = file_path
             self.host.has_unsaved_changes = False
             self.host.state_manager.update_window_title()

@@ -278,7 +278,6 @@ class ComputeManager:
         }
 
         self._start_calculation_worker(mol_block, options, run_id)
-        self.host.state_manager.push_undo_state()
         self.host.view_3d_manager.update_chiral_labels()
         self.host.view_2d.setFocus()
 

@@ -49,12 +49,14 @@ class SettingsOtherTab(SettingsTabBase):
         self.kekule_3d_checkbox.setToolTip(
             "Enable alternating single/double bonds in 3D view for aromatic rings."
         )
+        self.kekule_3d_checkbox.toggled.connect(self._on_kekule_toggled)
         form_layout.addRow("Display Kekulé bonds in 3D:", self.kekule_3d_checkbox)
 
         self.aromatic_circle_checkbox = QCheckBox()
         self.aromatic_circle_checkbox.setToolTip(
             "Display a circle inside aromatic rings in 3D view."
         )
+        self.aromatic_circle_checkbox.toggled.connect(self._on_aromatic_toggled)
         form_layout.addRow(
             "Display aromatic rings as circles in 3D:", self.aromatic_circle_checkbox
         )
@@ -71,6 +73,12 @@ class SettingsOtherTab(SettingsTabBase):
         atl.addWidget(self.aromatic_torus_thickness_label)
         form_layout.addRow("Aromatic torus thickness (× bond radius):", atl)
 
+    def _on_kekule_toggled(self, checked):
+        self.aromatic_circle_checkbox.setEnabled(not checked)
+
+    def _on_aromatic_toggled(self, checked):
+        self.kekule_3d_checkbox.setEnabled(not checked)
+
     def update_ui(self, settings_dict):
         self.skip_chem_checks_checkbox.setChecked(
             settings_dict.get("skip_chemistry_checks", False)
@@ -78,12 +86,16 @@ class SettingsOtherTab(SettingsTabBase):
         self.always_ask_charge_checkbox.setChecked(
             settings_dict.get("always_ask_charge", False)
         )
-        self.kekule_3d_checkbox.setChecked(
-            settings_dict.get("display_kekule_3d", False)
-        )
-        self.aromatic_circle_checkbox.setChecked(
-            settings_dict.get("display_aromatic_circles_3d", False)
-        )
+        
+        display_kekule = settings_dict.get("display_kekule_3d", False)
+        display_aromatic = settings_dict.get("display_aromatic_circles_3d", False)
+        
+        self.kekule_3d_checkbox.setChecked(display_kekule)
+        self.aromatic_circle_checkbox.setChecked(display_aromatic)
+        
+        # Set initial enabled state
+        self.aromatic_circle_checkbox.setEnabled(not display_kekule)
+        self.kekule_3d_checkbox.setEnabled(not display_aromatic)
 
         thick = settings_dict.get("aromatic_torus_thickness_factor", 0.6)
         self.aromatic_torus_thickness_slider.setValue(int(thick * 100))

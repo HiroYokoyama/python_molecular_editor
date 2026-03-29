@@ -171,9 +171,8 @@ class AlignPlaneDialog(BasePickingDialog):
         try:
             # Get positions of selected atoms
             selected_indices = list(self.selected_atoms)
-            selected_positions = self.main_window.view_3d_manager.atom_positions_3d[
-                selected_indices
-            ].copy()
+            positions = self.mol.GetConformer().GetPositions()
+            selected_positions = positions[selected_indices]
 
             # Calculate centroid
             centroid = np.mean(selected_positions, axis=0)
@@ -231,26 +230,9 @@ class AlignPlaneDialog(BasePickingDialog):
                         centered_pos, rotation_axis, rotation_angle
                     )
                     new_pos = rotated_pos + centroid
-                    conf.SetAtomPosition(
-                        i,
-                        Geometry.Point3D(
-                            float(new_pos[0]), float(new_pos[1]), float(new_pos[2])
-                        ),
-                    )
-                    self.main_window.view_3d_manager.atom_positions_3d[i] = new_pos
+                    positions[i] = new_pos
 
-            # Update 3D visualization
-            self.main_window.view_3d_manager.draw_molecule_3d(self.mol)
-
-            # Update chirality labels
-            if hasattr(self.main_window.view_3d_manager, "update_chiral_labels"):
-                self.main_window.view_3d_manager.update_chiral_labels()
-
-            # Save state for Undo
-            if hasattr(self.main_window, "state_manager"):
-                self.main_window.state_manager.push_undo_state()
-            elif hasattr(self.main_window, "edit_actions_manager"):
-                self.main_window.edit_actions_manager.push_undo_state()
+            self._update_molecule_geometry(positions)
 
         except (AttributeError, RuntimeError, ValueError, TypeError) as e:
             QMessageBox.critical(self, "Error", f"Failed to apply align: {str(e)}")

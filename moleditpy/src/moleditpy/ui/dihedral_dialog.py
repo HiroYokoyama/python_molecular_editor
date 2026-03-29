@@ -328,18 +328,11 @@ class DihedralDialog(GeometryBaseDialog):
             QMessageBox.warning(self, "Invalid Input", "Please enter a valid number.")
             return
 
-        # Save undo state
-        if hasattr(self.main_window, "state_manager"):
-            self.main_window.state_manager.push_undo_state()
-        elif hasattr(self.main_window, "edit_actions_manager"):
-            self.main_window.edit_actions_manager.push_undo_state()
-
         # Apply the update
         self.apply_geometry_update(new_dihedral)
 
-        # Update chirality labels
-        if hasattr(self.main_window.view_3d_manager, "update_chiral_labels"):
-            self.main_window.view_3d_manager.update_chiral_labels()
+        # Push Undo state AFTER modification
+        self._push_undo()
 
     def apply_geometry_update(self, new_dihedral_deg):
         """Adjust the dihedral angle."""
@@ -395,27 +388,6 @@ class DihedralDialog(GeometryBaseDialog):
             adjust_dihedral(
                 positions, idx1, idx2, idx3, idx4, new_dihedral_deg, atoms_to_move
             )
-
-        # Write updated positions back to the conformer and 3D cache
-        for i in range(conf.GetNumAtoms()):
-            p = positions[i]
-            conf.SetAtomPosition(
-                i, Geometry.Point3D(float(p[0]), float(p[1]), float(p[2]))
-            )
-            self.main_window.view_3d_manager.atom_positions_3d[i] = positions[i]
-
-        # Update the 3D view
-        self.main_window.view_3d_manager.draw_molecule_3d(self.mol)
-
-    def reject(self):
-        """Handle cancel action."""
-        self.clear_atom_labels()
-        self.disable_picking()
-        super().reject()
-        try:
-            if self.main_window.current_mol:
-                self.main_window.view_3d_manager.draw_molecule_3d(self.main_window.current_mol)
-        except (AttributeError, RuntimeError, TypeError) as e:
-            logging.debug(
-                f"Suppressed exception: {e}"
-            )  # Suppress errors during dialog teardown
+ 
+        # Write updated positions back using inherited helper
+        self._update_molecule_geometry(positions)

@@ -317,22 +317,16 @@ class AngleDialog(GeometryBaseDialog):
             self.angle_input.blockSignals(True)
             self.angle_input.setText(f"{new_angle:.2f}")
             self.angle_input.blockSignals(False)
+            self._snapshot_positions = None
         except ValueError:
             QMessageBox.warning(self, "Invalid Input", "Please enter a valid number.")
             return
 
-        # Save undo state
-        if hasattr(self.main_window, "state_manager"):
-            self.main_window.state_manager.push_undo_state()
-        elif hasattr(self.main_window, "edit_actions_manager"):
-            self.main_window.edit_actions_manager.push_undo_state()
-
-        # Apply the angle change
+        # Apply the update
         self.apply_geometry_update(new_angle)
 
-        # Update chirality labels
-        if hasattr(self.main_window.view_3d_manager, "update_chiral_labels"):
-            self.main_window.view_3d_manager.update_chiral_labels()
+        # Push Undo state AFTER modification
+        self._push_undo()
 
     def _is_selection_complete(self):
         return (
@@ -364,7 +358,7 @@ class AngleDialog(GeometryBaseDialog):
             group1 = get_connected_group(self.mol, idx_a, exclude=idx_b)
             group3 = get_connected_group(self.mol, idx_c, exclude=idx_b)
 
-            # Arm 1 rotates by -half
+            # Arm 1 rotates by -half relative to C-B-A
             adjust_bond_angle(
                 positions,
                 idx_c,
@@ -373,13 +367,13 @@ class AngleDialog(GeometryBaseDialog):
                 current_angle + half_delta_deg,
                 group1,
             )
-            # Arm 3 rotates by +half
+            # Arm 3 rotates to the FINAL angle (relative to the now-moved Arm 1)
             adjust_bond_angle(
                 positions,
                 idx_a,
                 idx_b,
                 idx_c,
-                current_angle + half_delta_deg,
+                new_angle_deg,
                 group3,
             )
         elif self.rotate_atom_radio.isChecked():
@@ -408,13 +402,5 @@ class AngleDialog(GeometryBaseDialog):
                 atoms_to_move,
             )
 
-        # Write updated positions back to the conformer and 3D cache
-        for i in range(conf.GetNumAtoms()):
-            p = positions[i]
-            conf.SetAtomPosition(
-                i, Geometry.Point3D(float(p[0]), float(p[1]), float(p[2]))
-            )
-            self.main_window.view_3d_manager.atom_positions_3d[i] = positions[i]
-
-        # Update the 3D view
-        self.main_window.view_3d_manager.draw_molecule_3d(self.mol)
+        # Write updated positions back using inherited helper
+        self._update_molecule_geometry(positions)

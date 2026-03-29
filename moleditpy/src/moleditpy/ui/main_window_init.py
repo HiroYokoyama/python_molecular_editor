@@ -130,8 +130,6 @@ class MainInitManager:
         self.host.chem_check_failed = False
         # self.axes_actor and self.axes_widget are now in View3DManager
         self.host._template_dialog = None  # Reference to the template dialog
-        self.host.undo_stack = []
-        self.host.redo_stack = []
         # self.host.constraints_3d is now in Edit3DManager
         self.host.mode_actions = {}
 

@@ -177,27 +177,18 @@ class TranslationDialog(BasePickingDialog):
         if dx == 0 and dy == 0 and dz == 0:
             return
 
-        conf = self.mol.GetConformer()
         translation_vec = np.array([dx, dy, dz])
 
-        # Push Undo state
-        if hasattr(self.main_window, "state_manager"):
-            self.main_window.state_manager.push_undo_state()
-        elif hasattr(self.main_window, "edit_actions_manager"):
-            self.main_window.edit_actions_manager.push_undo_state()
-
         # Update positions
+        positions = self.mol.GetConformer().GetPositions()
         for atom_idx in self.selected_atoms:
-            old_pos = np.array(conf.GetAtomPosition(atom_idx))
-            new_pos = old_pos + translation_vec
-            conf.SetAtomPosition(
-                atom_idx,
-                Geometry.Point3D(float(new_pos[0]), float(new_pos[1]), float(new_pos[2])),
-            )
-            self.main_window.view_3d_manager.atom_positions_3d[atom_idx] = new_pos
+            positions[atom_idx] += translation_vec
+ 
+        # Write updated positions back using inherited helper
+        self._update_molecule_geometry(positions)
 
-        # Redraw
-        self.main_window.view_3d_manager.draw_molecule_3d(self.mol)
+        # Push Undo state AFTER modification
+        self._push_undo()
 
         # Update labels
         self.show_atom_labels()

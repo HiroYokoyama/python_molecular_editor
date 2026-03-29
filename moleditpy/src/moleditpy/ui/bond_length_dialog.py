@@ -271,18 +271,11 @@ class BondLengthDialog(GeometryBaseDialog):
             QMessageBox.warning(self, "Invalid Input", "Please enter a valid number.")
             return
 
-        # Save undo state
-        if hasattr(self.main_window, "state_manager"):
-            self.main_window.state_manager.push_undo_state()
-        elif hasattr(self.main_window, "edit_actions_manager"):
-            self.main_window.edit_actions_manager.push_undo_state()
+        # Apply the update
+        self.apply_geometry_update(float(new_distance))
 
-        # Apply the bond length change
-        self.apply_geometry_update(new_distance)
-
-        # Update chirality labels
-        if hasattr(self.main_window.view_3d_manager, "update_chiral_labels"):
-            self.main_window.view_3d_manager.update_chiral_labels()
+        # Push Undo state AFTER modification
+        self._push_undo()
 
     def _is_selection_complete(self):
         return self.atom1_idx is not None and self.atom2_idx is not None
@@ -290,91 +283,74 @@ class BondLengthDialog(GeometryBaseDialog):
     def apply_geometry_update(self, new_distance):
         """Adjust the bond length."""
         conf = self.mol.GetConformer()
-        pos1 = np.array(conf.GetAtomPosition(self.atom1_idx))
-        pos2 = np.array(conf.GetAtomPosition(self.atom2_idx))
+        
+        # Use snapshot if available (slider dragging) to keep base positions stable and accurate
+        # Reverting to dictionary per user request for clarity/consistency
+        snapshot = self._snapshot_positions
+        if snapshot is not None:
+            # If snapshot is a numpy array (from base class), convert to dict or use as is
+            if isinstance(snapshot, dict):
+                positions = snapshot.copy()
+            else:
+                positions = {i: snapshot[i].copy() for i in range(len(snapshot))}
+        else:
+            positions = {i: np.array(conf.GetAtomPosition(i)) for i in range(self.mol.GetNumAtoms())}
 
+        idx1, idx2 = self.atom1_idx, self.atom2_idx
+        pos1 = positions[idx1]
+        pos2 = positions[idx2]
+ 
         # Direction vector from atom1 to atom2
         direction = pos2 - pos1
         current_distance = calc_distance(pos1, pos2)
-
+ 
         if current_distance == 0:
             return
-
+ 
         direction = direction / current_distance
-
+ 
         if self.both_groups_radio.isChecked():
             # Both groups move towards center equally
             bond_center = (pos1 + pos2) / 2
             half_distance = new_distance / 2
-
+ 
             # New positions for both atoms
             new_pos1 = bond_center - direction * half_distance
             new_pos2 = bond_center + direction * half_distance
-
+ 
             # Get both connected groups
             group1_atoms = get_connected_group(
-                self.mol, self.atom1_idx, exclude=self.atom2_idx
+                self.mol, idx1, exclude=idx2
             )
             group2_atoms = get_connected_group(
-                self.mol, self.atom2_idx, exclude=self.atom1_idx
+                self.mol, idx2, exclude=idx1
             )
-
+ 
             # Calculate displacements
             displacement1 = new_pos1 - pos1
             displacement2 = new_pos2 - pos2
-
+ 
             # Move group 1
             for atom_idx in group1_atoms:
-                current_pos = np.array(conf.GetAtomPosition(atom_idx))
-                new_pos = current_pos + displacement1
-                conf.SetAtomPosition(
-                    atom_idx,
-                    Geometry.Point3D(
-                        float(new_pos[0]), float(new_pos[1]), float(new_pos[2])
-                    ),
-                )
-                self.main_window.view_3d_manager.atom_positions_3d[atom_idx] = new_pos
-
+                positions[atom_idx] += displacement1
+ 
             # Move group 2
             for atom_idx in group2_atoms:
-                current_pos = np.array(conf.GetAtomPosition(atom_idx))
-                new_pos = current_pos + displacement2
-                conf.SetAtomPosition(
-                    atom_idx,
-                    Geometry.Point3D(
-                        float(new_pos[0]), float(new_pos[1]), float(new_pos[2])
-                    ),
-                )
-                self.main_window.view_3d_manager.atom_positions_3d[atom_idx] = new_pos
-
+                positions[atom_idx] += displacement2
         elif self.atom1_fix_radio.isChecked():
             # Move only the second atom
             new_pos2 = pos1 + direction * new_distance
-            conf.SetAtomPosition(
-                self.atom2_idx,
-                Geometry.Point3D(
-                    float(new_pos2[0]), float(new_pos2[1]), float(new_pos2[2])
-                ),
-            )
-            self.main_window.view_3d_manager.atom_positions_3d[self.atom2_idx] = new_pos2
+            positions[idx2] = new_pos2
         else:
             # Move the connected group (default behavior)
             new_pos2 = pos1 + direction * new_distance
             atoms_to_move = get_connected_group(
-                self.mol, self.atom2_idx, exclude=self.atom1_idx
+                self.mol, idx2, exclude=idx1
             )
             displacement = new_pos2 - pos2
-
+ 
             for atom_idx in atoms_to_move:
-                current_pos = np.array(conf.GetAtomPosition(atom_idx))
-                new_pos = current_pos + displacement
-                conf.SetAtomPosition(
-                    atom_idx,
-                    Geometry.Point3D(
-                        float(new_pos[0]), float(new_pos[1]), float(new_pos[2])
-                    ),
-                )
-                self.main_window.view_3d_manager.atom_positions_3d[atom_idx] = new_pos
-
-        # Update the 3D view
-        self.main_window.view_3d_manager.draw_molecule_3d(self.mol)
+                positions[atom_idx] += displacement
+ 
+        # Write updated positions back using inherited helper
+        self._update_molecule_geometry(positions)

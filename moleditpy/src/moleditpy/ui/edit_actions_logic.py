@@ -840,13 +840,13 @@ class EditActionsManager:
         # Clear 3D model
         self.host.current_mol = None
         self.host.plotter.clear()
-        self.constraints_3d = []
+        self.host.constraints_3d = []
 
         # Disable 3D features
         self.host.ui_manager._enable_3d_features(False)
 
         # Reset undo/redo stack
-        self.reset_undo_stack()
+        self.host.state_manager.reset_undo_stack()
 
         # Reset file state
         self.host.has_unsaved_changes = False

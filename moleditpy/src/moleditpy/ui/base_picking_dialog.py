@@ -31,6 +31,7 @@ class BasePickingDialog(Dialog3DPickingMixin, QDialog):
         Dialog3DPickingMixin.__init__(self)
         self.mol = mol
         self.main_window = main_window
+        self._molecule_modified = False  # Track if any modifications were made during this session
 
     def keyPressEvent(self, event):
         """Standard keyboard handler: Enter/Return triggers 'Apply'."""
@@ -59,3 +60,57 @@ class BasePickingDialog(Dialog3DPickingMixin, QDialog):
         self.clear_atom_labels()
         self.disable_picking()
         super().accept()
+
+    def _update_molecule_geometry(self, positions):
+        """
+        Update the molecule's conformer and the 3D position cache, then redraw.
+        :param positions: A numpy array or dictionary of all atom positions.
+        """
+        from rdkit import Geometry
+        conf = self.mol.GetConformer()
+        num_atoms = conf.GetNumAtoms()
+
+        # 1. Update RDKit Conformer
+        if isinstance(positions, dict):
+            for i, p in positions.items():
+                conf.SetAtomPosition(
+                    i, Geometry.Point3D(float(p[0]), float(p[1]), float(p[2]))
+                )
+        else:
+            for i in range(num_atoms):
+                p = positions[i]
+                conf.SetAtomPosition(
+                    i, Geometry.Point3D(float(p[0]), float(p[1]), float(p[2]))
+                )
+
+        # 2. Update 3D Visualization cache
+        try:
+            if isinstance(positions, dict):
+                for i, p in positions.items():
+                    self.main_window.view_3d_manager.atom_positions_3d[i] = p
+            else:
+                self.main_window.view_3d_manager.atom_positions_3d[:] = positions[:]
+        except (AttributeError, ValueError, TypeError, IndexError):
+            # If for some reason the cache is incompatible, draw_molecule_3d below will rebuild it
+            pass
+
+        # 3. Redraw
+        self.main_window.view_3d_manager.draw_molecule_3d(self.mol)
+        self._molecule_modified = True
+        
+        # 4. Refresh chiral/cis-trans labels if applicable
+        if hasattr(self.main_window.view_3d_manager, "update_chiral_labels"):
+            self.main_window.view_3d_manager.update_chiral_labels()
+
+    def _push_undo(self):
+        """Centralized undo logic to push current state to the undo stack."""
+        if hasattr(self.main_window, "state_manager"):
+            self.main_window.state_manager.push_undo_state()
+            self._molecule_modified = False
+
+    def done(self, result):
+        """Override done to push a final undo state if the molecule was modified and accepted."""
+        # result == 1 is QDialog.DialogCode.Accepted
+        if result == 1 and self._molecule_modified:
+            self._push_undo()
+        super().done(result)

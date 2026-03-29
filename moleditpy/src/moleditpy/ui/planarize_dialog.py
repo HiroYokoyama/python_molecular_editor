@@ -152,6 +152,7 @@ class PlanarizeDialog(BasePickingDialog):
             return
 
         try:
+            # Get positions of selected atoms
             selected_indices = list(sorted(self.selected_atoms))
             selected_positions = self.main_window.view_3d_manager.atom_positions_3d[
                 selected_indices
@@ -180,26 +181,15 @@ class PlanarizeDialog(BasePickingDialog):
             )
 
             # Update molecular coordinates
-            conf = self.mol.GetConformer()
+            positions = self.mol.GetConformer().GetPositions()
             for i, new_pos in zip(selected_indices, new_positions):
-                conf.SetAtomPosition(
-                    int(i),
-                    Geometry.Point3D(
-                        float(new_pos[0]), float(new_pos[1]), float(new_pos[2])
-                    ),
-                )
-                self.main_window.view_3d_manager.atom_positions_3d[int(i)] = new_pos
+                positions[int(i)] = new_pos
+ 
+            # Write updated positions back using inherited helper
+            self._update_molecule_geometry(positions)
 
-            # Update 3D view
-            self.main_window.view_3d_manager.draw_molecule_3d(self.mol)
-            if hasattr(self.main_window.view_3d_manager, "update_chiral_labels"):
-                self.main_window.view_3d_manager.update_chiral_labels()
-
-            # Push Undo state
-            if hasattr(self.main_window, "state_manager"):
-                self.main_window.state_manager.push_undo_state()
-            elif hasattr(self.main_window, "edit_actions_manager"):
-                self.main_window.edit_actions_manager.push_undo_state()
+            # Push Undo state AFTER modification
+            self._push_undo()
 
             QMessageBox.information(
                 self,

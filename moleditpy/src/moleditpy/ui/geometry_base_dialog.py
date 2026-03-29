@@ -45,16 +45,11 @@ class GeometryBaseDialog(BasePickingDialog):
             pass
 
     def on_slider_pressed(self):
-        """Prepare for a slider drag operation by saving undo state and a geometry snapshot."""
+        """Prepare for a slider drag operation by saving a geometry snapshot."""
         if not self._is_selection_complete():
             return
             
         self._slider_dragging = True
-        # Save undo state before human starts dragging
-        if hasattr(self.main_window, "state_manager"):
-            self.main_window.state_manager.push_undo_state()
-        elif hasattr(self.main_window, "edit_actions_manager"):
-            self.main_window.edit_actions_manager.push_undo_state()
 
         # Capture geometry snapshot to ensure stable axes during rotation/dragging
         self._snapshot_positions = self.mol.GetConformer().GetPositions().copy()
@@ -78,12 +73,6 @@ class GeometryBaseDialog(BasePickingDialog):
             
         if not self._is_selection_complete():
             return
-
-        # Discrete changes also need undo states
-        if hasattr(self.main_window, "state_manager"):
-            self.main_window.state_manager.push_undo_state()
-        elif hasattr(self.main_window, "edit_actions_manager"):
-            self.main_window.edit_actions_manager.push_undo_state()
 
         # Ensure snapshot exists for consistency
         if self._snapshot_positions is None:
