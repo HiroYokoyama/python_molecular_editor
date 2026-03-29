@@ -1025,11 +1025,11 @@ class MainWindowMainInit:
 
         export_menu = QMenu(self)
         export_mol_action = QAction("Export as MOL...", self)
-        export_mol_action.triggered.connect(self.save_3d_as_mol)
+        export_mol_action.triggered.connect(self.io_manager.save_3d_as_mol)
         export_menu.addAction(export_mol_action)
 
         export_xyz_action = QAction("Export as XYZ...", self)
-        export_xyz_action.triggered.connect(self.save_as_xyz)
+        export_xyz_action.triggered.connect(self.io_manager.save_as_xyz)
         export_menu.addAction(export_xyz_action)
 
         export_png_action = QAction("Export as PNG...", self)
@@ -1364,17 +1364,17 @@ class MainWindowMainInit:
 
         load_project_action = QAction("&Open Project...", self)
         load_project_action.setShortcut("Ctrl+O")
-        load_project_action.triggered.connect(self.open_project_file)
+        load_project_action.triggered.connect(self.io_manager.open_project)
         file_menu.addAction(load_project_action)
 
         save_action = QAction("&Save Project", self)
         save_action.setShortcut("Ctrl+S")
-        save_action.triggered.connect(self.save_project)
+        save_action.triggered.connect(self.io_manager.save_project)
         file_menu.addAction(save_action)
 
         save_as_action = QAction("Save Project &As...", self)
         save_as_action.setShortcut("Ctrl+Shift+S")
-        save_as_action.triggered.connect(self.save_project_as)
+        save_as_action.triggered.connect(self.io_manager.save_project_as)
         file_menu.addAction(save_as_action)
 
         save_template_action = QAction("Save 2D as Template...", self)
@@ -1386,7 +1386,7 @@ class MainWindowMainInit:
         # === Import ===
         self.import_menu = file_menu.addMenu("Import")
         load_mol_action = QAction("MOL/SDF File...", self)
-        load_mol_action.triggered.connect(self.load_mol_file)
+        load_mol_action.triggered.connect(self.io_manager.load_mol_file)
         self.import_menu.addAction(load_mol_action)
 
         import_smiles_action = QAction("SMILES...", self)
@@ -1399,23 +1399,23 @@ class MainWindowMainInit:
 
         self.import_menu.addSeparator()
         load_3d_mol_action = QAction("3D MOL/SDF (3D View Only)...", self)
-        load_3d_mol_action.triggered.connect(self.load_mol_file_for_3d_viewing)
+        load_3d_mol_action.triggered.connect(self.io_manager.load_mol_file_for_3d_viewing)
         self.import_menu.addAction(load_3d_mol_action)
 
         load_3d_xyz_action = QAction("3D XYZ (3D View Only)...", self)
-        load_3d_xyz_action.triggered.connect(self.load_xyz_for_3d_viewing)
+        load_3d_xyz_action.triggered.connect(self.io_manager.load_xyz_for_3d_viewing)
         self.import_menu.addAction(load_3d_xyz_action)
 
         # === Export ===
         export_menu = file_menu.addMenu("Export")
         export_pmeraw_action = QAction("PME Raw Format...", self)
-        export_pmeraw_action.triggered.connect(self.save_raw_data)
+        export_pmeraw_action.triggered.connect(self.io_manager.save_raw_data)
         export_menu.addAction(export_pmeraw_action)
         export_menu.addSeparator()
 
         export_2d_menu = export_menu.addMenu("2D Formats")
         save_mol_action = QAction("MOL File...", self)
-        save_mol_action.triggered.connect(self.save_as_mol)
+        save_mol_action.triggered.connect(self.io_manager.save_as_mol)
         export_2d_menu.addAction(save_mol_action)
 
         export_2d_png_action = QAction("PNG Image...", self)
@@ -1428,11 +1428,11 @@ class MainWindowMainInit:
 
         export_3d_menu = export_menu.addMenu("3D Formats")
         save_3d_mol_action = QAction("MOL File...", self)
-        save_3d_mol_action.triggered.connect(self.save_3d_as_mol)
+        save_3d_mol_action.triggered.connect(self.io_manager.save_3d_as_mol)
         export_3d_menu.addAction(save_3d_mol_action)
 
         save_xyz_action = QAction("XYZ File...", self)
-        save_xyz_action.triggered.connect(self.save_as_xyz)
+        save_xyz_action.triggered.connect(self.io_manager.save_as_xyz)
         export_3d_menu.addAction(save_xyz_action)
 
         export_3d_png_action = QAction("PNG Image...", self)
@@ -1458,12 +1458,12 @@ class MainWindowMainInit:
         edit_menu = menu_bar.addMenu("&Edit")
         self.undo_action = QAction("Undo", self)
         self.undo_action.setShortcut(QKeySequence.StandardKey.Undo)
-        self.undo_action.triggered.connect(self.undo)
+        self.undo_action.triggered.connect(self.edit_actions_manager.undo)
         edit_menu.addAction(self.undo_action)
 
         self.redo_action = QAction("Redo", self)
         self.redo_action.setShortcut(QKeySequence.StandardKey.Redo)
-        self.redo_action.triggered.connect(self.redo)
+        self.redo_action.triggered.connect(self.edit_actions_manager.redo)
         edit_menu.addAction(self.redo_action)
 
         edit_menu.addSeparator()
@@ -1762,7 +1762,7 @@ class MainWindowMainInit:
         """Initialize the Settings menu."""
         settings_menu = menu_bar.addMenu("&Settings")
         view_settings_action = QAction("Settings...", self)
-        view_settings_action.triggered.connect(self.open_settings_dialog)
+        view_settings_action.triggered.connect(self.dialog_manager.open_settings_dialog)
         settings_menu.addAction(view_settings_action)
 
         color_action = QAction("CPK Colors...", self)

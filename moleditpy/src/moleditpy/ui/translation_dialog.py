@@ -129,7 +129,7 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog):
                 self.apply_translation()
             event.accept()
         else:
-            super().keyPressEvent(event)
+            QDialog.keyPressEvent(self, event)
 
     def update_display(self):
         """Update the UI labels and button state based on the current selection."""

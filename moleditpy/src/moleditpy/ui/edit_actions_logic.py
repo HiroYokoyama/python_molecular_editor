@@ -13,6 +13,7 @@ DOI: 10.5281/zenodo.17268532
 from __future__ import annotations
 import contextlib
 import io
+import copy
 import logging
 import math
 import pickle
@@ -39,6 +40,7 @@ from PyQt6.QtWidgets import (
     QSlider,
     QSpinBox,
     QVBoxLayout,
+    QWidget,
 )
 from rdkit import Chem
 
@@ -126,6 +128,138 @@ class EditActionsManager:
         self.host = host
         # State variables previously held by mixin
         self.last_rotation_angle: float = 0
+        self.undo_stack: List[Dict[str, Any]] = []
+        self.redo_stack: List[Dict[str, Any]] = []
+
+    def push_undo_state(self) -> None:
+        """Saves current molecular state to undo stack for history tracking."""
+        if getattr(self.host, "_is_restoring_state", False):
+            return
+
+        current_state_for_comparison = {
+            "atoms": {
+                k: (
+                    v["symbol"],
+                    v["pos"].x() if hasattr(v["pos"], "x") else v["pos"][0],
+                    v["pos"].y() if hasattr(v["pos"], "y") else v["pos"][1],
+                    v.get("charge", 0),
+                    v.get("radical", 0),
+                )
+                for k, v in self.host.data.atoms.items()
+            },
+            "bonds": {
+                k: (v["order"], v.get("stereo", 0)) for k, v in self.host.data.bonds.items()
+            },
+            "_next_atom_id": self.host.data._next_atom_id,
+            "mol_3d": self.host.current_mol.ToBinary() if self.host.current_mol else None,
+            "mol_3d_atom_ids": [
+                (
+                    a.GetIntProp("_original_atom_id")
+                    if a and a.HasProp("_original_atom_id")
+                    else None
+                )
+                for a in self.host.current_mol.GetAtoms()
+            ]
+            if self.host.current_mol
+            else None,
+        }
+
+        last_state_for_comparison = None
+        if self.undo_stack:
+            last_state = self.undo_stack[-1]
+            last_atoms = last_state.get("atoms", {})
+            last_bonds = last_state.get("bonds", {})
+            last_state_for_comparison = {
+                "atoms": {
+                    k: (
+                        v["symbol"],
+                        v["pos"].x() if hasattr(v["pos"], "x") else v["pos"][0],
+                        v["pos"].y() if hasattr(v["pos"], "y") else v["pos"][1],
+                        v.get("charge", 0),
+                        v.get("radical", 0),
+                    )
+                    for k, v in last_atoms.items()
+                },
+                "bonds": {
+                    k: (v["order"], v.get("stereo", 0)) for k, v in last_bonds.items()
+                },
+                "_next_atom_id": last_state.get("_next_atom_id"),
+                "mol_3d": last_state.get("mol_3d", None),
+                "mol_3d_atom_ids": last_state.get("mol_3d_atom_ids", None),
+            }
+
+        if (
+            not last_state_for_comparison
+            or current_state_for_comparison != last_state_for_comparison
+        ):
+            # Deepcopy state via pickling or explicit get_current_state call
+            state = copy.deepcopy(self.host.get_current_state())
+            self.undo_stack.append(state)
+
+            self.redo_stack.clear()
+            # Record changes after initialization
+            if getattr(self.host, "initialization_complete", False):
+                self.host.has_unsaved_changes = True
+                self.host.update_window_title()
+
+        self.update_implicit_hydrogens()
+        if hasattr(self.host, "update_realtime_info"):
+            self.host.update_realtime_info()
+        self.update_undo_redo_actions()
+
+    def undo(self) -> None:
+        """Revert to the previous molecular state."""
+        if len(self.undo_stack) > 1:
+            self.redo_stack.append(self.undo_stack.pop())
+            state = self.undo_stack[-1]
+            self.host._is_restoring_state = True
+            try:
+                self.host.set_state_from_data(state)
+            finally:
+                self.host._is_restoring_state = False
+
+            # Re-evaluate menu states based on 3D structure after Undo
+            if self.host.current_mol and self.host.current_mol.GetNumAtoms() > 0:
+                self.host._enable_3d_edit_actions(True)
+            else:
+                self.host._enable_3d_edit_actions(False)
+
+        self.update_undo_redo_actions()
+        if hasattr(self.host, "update_realtime_info"):
+            self.host.update_realtime_info()
+        if hasattr(self.host, "view_2d") and self.host.view_2d:
+            self.host.view_2d.setFocus()
+
+    def redo(self) -> None:
+        """Restore the previously undone molecular state."""
+        if self.redo_stack:
+            state = self.redo_stack.pop()
+            self.undo_stack.append(state)
+            self.host._is_restoring_state = True
+            try:
+                self.host.set_state_from_data(state)
+            finally:
+                self.host._is_restoring_state = False
+
+            # Re-evaluate menu states based on 3D structure after Redo
+            if self.host.current_mol and self.host.current_mol.GetNumAtoms() > 0:
+                self.host._enable_3d_edit_actions(True)
+            else:
+                self.host._enable_3d_edit_actions(False)
+
+        self.update_undo_redo_actions()
+        if hasattr(self.host, "update_realtime_info"):
+            self.host.update_realtime_info()
+        if hasattr(self.host, "view_2d") and self.host.view_2d:
+            self.host.view_2d.setFocus()
+
+    def update_undo_redo_actions(self) -> None:
+        """Enable or disable Undo/Redo UI actions based on stack counts."""
+        if hasattr(self.host, "undo_action"):
+            self.host.undo_action.setEnabled(len(self.undo_stack) > 1)
+        if hasattr(self.host, "redo_action"):
+            self.host.redo_action.setEnabled(len(self.redo_stack) > 0)
+
 
     def __getattr__(self, name: str) -> Any:
         """Delegate back to host for attributes not found on this manager."""

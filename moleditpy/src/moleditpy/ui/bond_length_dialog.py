@@ -163,7 +163,7 @@ class BondLengthDialog(Dialog3DPickingMixin, QDialog):
                 self.apply_changes()
             event.accept()
         else:
-            super().keyPressEvent(event)
+            QDialog.keyPressEvent(self, event)
 
     def closeEvent(self, event):
         """Handle dialog close event."""

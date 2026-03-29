@@ -66,6 +66,7 @@ class View3DManager:
         self.current_atom_info_labels: Optional[List[pv.Actor]] = None
         self.atom_label_legend_names: List[str] = []
         self._camera_initialized: bool = False
+        self.atom_actor_original_opacity: float = 1.0
 
     def __getattr__(self, name: str) -> Any:
         """Delegate back to host for attributes not found on this manager."""
@@ -78,16 +79,16 @@ class View3DManager:
             return
 
         # Reset measurement and 3D edit modes on style change
-        if self.measurement_mode:
+        if self.host.edit_3d_manager.measurement_mode:
             self.measurement_action.setChecked(False)
-            self.toggle_measurement_mode(False)  # Disable measurement mode
+            self.host.edit_3d_manager.toggle_measurement_mode(False)  # Disable measurement mode
 
         if self.host.edit_3d_manager.is_3d_edit_mode:
             self.edit_3d_action.setChecked(False)
-            self.toggle_3d_edit_mode(False)  # Disable 3D edit mode
+            self.host.toggle_3d_edit_mode(False)  # Disable 3D edit mode
 
         # Clear 3D selection
-        self.clear_3d_selection()
+        self.host.edit_3d_manager.clear_3d_selection()
 
         self.current_3d_style = style_name
         self.statusBar().showMessage(f"3D style set to: {style_name}")

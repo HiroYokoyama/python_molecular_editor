@@ -238,7 +238,7 @@ class MainWindowUiManager:
         """Toggle 3D Drag mode."""
         if checked:
             # Disable measurement mode when 3D Drag is on
-            if self.measurement_mode:
+            if self.edit_3d_manager.measurement_mode:
                 self.measurement_action.setChecked(False)
                 self.edit_3d_manager.toggle_measurement_mode(False)
 

@@ -78,7 +78,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
             picker.Pick(click_pos[0], click_pos[1], 0, mw.plotter.renderer)
 
             clicked_atom_idx = None
-            if picker.GetActor() is mw.atom_actor:
+            if picker.GetActor() is mw.view_3d_manager.atom_actor:
                 picked_position = np.array(picker.GetPickPosition())
                 distances = np.linalg.norm(
                     mw.view_3d_manager.atom_positions_3d - picked_position, axis=1
@@ -190,7 +190,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
             picker.Pick(click_pos[0], click_pos[1], 0, mw.plotter.renderer)
 
             # Special handling if atom clicked
-            if picker.GetActor() is mw.atom_actor:
+            if picker.GetActor() is mw.view_3d_manager.atom_actor:
                 picked_position = np.array(picker.GetPickPosition())
                 distances = np.linalg.norm(
                     mw.view_3d_manager.atom_positions_3d - picked_position, axis=1
@@ -212,7 +212,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                         click_threshold = vdw_radius * 1.5
 
                         if distances[closest_atom_idx] < click_threshold:
-                            mw.handle_measurement_atom_selection(int(closest_atom_idx))
+                            mw.edit_3d_manager.handle_measurement_atom_selection(int(closest_atom_idx))
                             return  # Selection complete, disable camera rotation
 
             # Clear measurement if not dragging
@@ -227,7 +227,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
             picker = mw.plotter.picker
             picker.Pick(click_pos[0], click_pos[1], 0, mw.plotter.renderer)
 
-            if picker.GetActor() is mw.atom_actor:
+            if picker.GetActor() is mw.view_3d_manager.atom_actor:
                 picked_position = np.array(picker.GetPickPosition())
                 distances = np.linalg.norm(
                     mw.view_3d_manager.atom_positions_3d - picked_position, axis=1
@@ -284,7 +284,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
             picker.Pick(click_pos[0], click_pos[1], 0, mw.plotter.renderer)
 
             clicked_atom_idx = None
-            if picker.GetActor() is mw.atom_actor:
+            if picker.GetActor() is mw.view_3d_manager.atom_actor:
                 picked_position = np.array(picker.GetPickPosition())
                 distances = np.linalg.norm(
                     mw.view_3d_manager.atom_positions_3d - picked_position, axis=1
@@ -410,7 +410,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                 click_pos = interactor.GetEventPosition()
                 picker = mw.plotter.picker
                 picker.Pick(click_pos[0], click_pos[1], 0, mw.plotter.renderer)
-                if picker.GetActor() is mw.atom_actor:
+                if picker.GetActor() is mw.view_3d_manager.atom_actor:
                     atom_under_cursor = True
 
                 if atom_under_cursor:
@@ -508,10 +508,10 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                         mw.view_3d_manager.atom_positions_3d[atom_idx] = new_pos
 
                     # Update 3D display
-                    mw.draw_molecule_3d(mw.current_mol)
-                    mw.update_chiral_labels()
+                    mw.view_3d_manager.draw_molecule_3d(mw.current_mol)
+                    mw.view_3d_manager.update_chiral_labels()
                     move_group_dialog.show_atom_labels()
-                    mw.push_undo_state()
+                    mw.edit_actions_manager.push_undo_state()
                 except (AttributeError, RuntimeError, TypeError, ValueError) as e:
                     print(f"Error finalizing group drag: {e}")
             else:
@@ -541,7 +541,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
             and self._mouse_press_pos is not None
         ):
             # Background click -> clear selection
-            mw.clear_measurement_selection()
+            mw.edit_3d_manager.clear_measurement_selection()
 
         if self._is_dragging_atom:
             # Finalize custom drag
@@ -625,20 +625,20 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                         logging.error("Caught exception in " + __file__, exc_info=True)
 
                     try:
-                        mw.draw_molecule_3d(mw.current_mol)
+                        mw.view_3d_manager.draw_molecule_3d(mw.current_mol)
                     except (AttributeError, RuntimeError, ValueError, TypeError):
                         import logging
 
                         logging.error("Caught exception in " + __file__, exc_info=True)
 
-                    mw.push_undo_state()
+                    mw.edit_actions_manager.push_undo_state()
             mw.dragged_atom_info = None
             # Update all relevant UI displays and labels
             for update_call in [
-                mw.update_3d_selection_display,
-                mw.update_measurement_labels_display,
-                mw.update_2d_measurement_labels,
-                mw.show_all_atom_info,
+                mw.edit_3d_manager.update_3d_selection_display,
+                mw.edit_3d_manager.update_measurement_labels_display,
+                mw.edit_3d_manager.update_2d_measurement_labels,
+                mw.view_3d_manager.show_all_atom_info,
             ]:
                 try:
                     update_call()
@@ -807,10 +807,10 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                                 mw.view_3d_manager.atom_positions_3d[atom_idx] = new_pos
 
                             # Update 3D display
-                            mw.draw_molecule_3d(mw.current_mol)
-                            mw.update_chiral_labels()
+                            mw.view_3d_manager.draw_molecule_3d(mw.current_mol)
+                            mw.view_3d_manager.update_chiral_labels()
                             move_group_dialog.show_atom_labels()
-                            mw.push_undo_state()
+                            mw.edit_actions_manager.push_undo_state()
                 except (AttributeError, RuntimeError, TypeError, ValueError) as e:
                     print(f"Error finalizing group rotation: {e}")
 

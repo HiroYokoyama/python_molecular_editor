@@ -125,7 +125,7 @@ class AlignPlaneDialog(Dialog3DPickingMixin, QDialog):
                 self.apply_PlaneAlign()
             event.accept()
         else:
-            super().keyPressEvent(event)
+            QDialog.keyPressEvent(self, event)
 
     def clear_selection(self):
         """Clear the current atom selection."""

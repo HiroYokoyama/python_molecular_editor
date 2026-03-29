@@ -1152,8 +1152,10 @@ class KeyboardMixin:
                     event.accept()
                     return
 
-            # Fallback
-            super().keyPressEvent(event)
+            # Correctly delegate to the base class (QGraphicsScene) directly
+            # to avoid MRO issues in complex Mixin inheritance structures.
+            from PyQt6.QtWidgets import QGraphicsScene
+            QGraphicsScene.keyPressEvent(self, event)
 
         except (AttributeError, RuntimeError, ValueError, TypeError) as e:
             logging.error(

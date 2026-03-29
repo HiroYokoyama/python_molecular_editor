@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python scripts/remove_proxy_structure.py)",
+      "Bash(python -c \":*)",
+      "Bash(python -c \"import sys; sys.path.insert\\(0, ''moleditpy/src''\\); from moleditpy.ui.main_window import MainWindow\")",
+      "Bash(python -m pytest tests/ -x --tb=short -q)",
+      "Bash(python -m pytest tests/unit/ -x --tb=short -q)",
+      "Bash(python -m pytest tests/unit/ --tb=short -q)",
+      "Bash(python -m pytest tests/unit/ --tb=long -q)",
+      "Bash(python -m pytest tests/unit/ --tb=line -q)"
+    ]
+  }
+}

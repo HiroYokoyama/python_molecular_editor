@@ -29,37 +29,30 @@ try:
     from .dialog_logic import DialogManager
     from .edit_3d_logic import Edit3DManager
     from .edit_actions_logic import EditActionsManager
+    from .io_logic import IOManager
     from .export_logic import ExportManager
     from .main_window_init import MainWindowMainInit
-    from .molecular_parsers import MainWindowMolecularParsers
-    from .project_io import MainWindowProjectIo
     from .string_importers import MainWindowStringImporters
     from .ui_manager import MainWindowUiManager
     from .view_3d_logic import View3DManager
-    from .view_loaders import MainWindowViewLoaders
 except (AttributeError, RuntimeError, TypeError):
     # Fallback to absolute imports for script-style execution
     from moleditpy.ui.app_state import MainWindowAppState
     from moleditpy.ui.edit_3d_logic import Edit3DManager
     from moleditpy.ui.edit_actions_logic import EditActionsManager
+    from moleditpy.ui.io_logic import IOManager
     from moleditpy.ui.export_logic import ExportManager
     from moleditpy.ui.main_window_init import MainWindowMainInit
-    from moleditpy.ui.molecular_parsers import MainWindowMolecularParsers
-    from moleditpy.ui.project_io import MainWindowProjectIo
     from moleditpy.ui.string_importers import MainWindowStringImporters
     from moleditpy.ui.ui_manager import MainWindowUiManager
     from moleditpy.ui.view_3d_logic import View3DManager
-    from moleditpy.ui.view_loaders import MainWindowViewLoaders
 
 
 class MainWindow(
     MainWindowAppState,
     MainWindowMainInit,
-    MainWindowMolecularParsers,
-    MainWindowProjectIo,
     MainWindowStringImporters,
     MainWindowUiManager,
-    MainWindowViewLoaders,
     QMainWindow,
 ):
     # start_calculation carries the MOL block and an options object (second arg)
@@ -78,6 +71,7 @@ class MainWindow(
         self.edit_actions_manager = EditActionsManager(self)
         self.compute_manager = ComputeManager(self)
         self.dialog_manager = DialogManager(self)
+        self.io_manager = IOManager(self)
 
         # Initialize features via Mixins
         # MainWindowMainInit handles the bulk of the UI and data setup

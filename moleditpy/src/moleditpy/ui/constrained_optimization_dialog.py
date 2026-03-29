@@ -774,4 +774,4 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
                 return
 
         # Default processing for other keys
-        super().keyPressEvent(event)
+        QDialog.keyPressEvent(self, event)

@@ -303,79 +303,7 @@ class MainWindowAppState:
         self.edit_3d_manager.update_2d_measurement_labels()
 
     def push_undo_state(self):
-        if self._is_restoring_state:
-            return
-
-        current_state_for_comparison = {
-            "atoms": {
-                k: (
-                    v["symbol"],
-                    v["pos"].x() if hasattr(v["pos"], "x") else v["pos"][0],
-                    v["pos"].y() if hasattr(v["pos"], "y") else v["pos"][1],
-                    v.get("charge", 0),
-                    v.get("radical", 0),
-                )
-                for k, v in self.data.atoms.items()
-            },
-            "bonds": {
-                k: (v["order"], v.get("stereo", 0)) for k, v in self.data.bonds.items()
-            },
-            "_next_atom_id": self.data._next_atom_id,
-            "mol_3d": self.current_mol.ToBinary() if self.current_mol else None,
-            "mol_3d_atom_ids": [
-                (
-                    a.GetIntProp("_original_atom_id")
-                    if a and a.HasProp("_original_atom_id")
-                    else None
-                )
-                for a in self.current_mol.GetAtoms()
-            ]
-            if self.current_mol
-            else None,
-        }
-
-        last_state_for_comparison = None
-        if self.undo_stack:
-            last_state = self.undo_stack[-1]
-            last_atoms = last_state.get("atoms", {})
-            last_bonds = last_state.get("bonds", {})
-            last_state_for_comparison = {
-                "atoms": {
-                    k: (
-                        v["symbol"],
-                        v["pos"].x() if hasattr(v["pos"], "x") else v["pos"][0],
-                        v["pos"].y() if hasattr(v["pos"], "y") else v["pos"][1],
-                        v.get("charge", 0),
-                        v.get("radical", 0),
-                    )
-                    for k, v in last_atoms.items()
-                },
-                "bonds": {
-                    k: (v["order"], v.get("stereo", 0)) for k, v in last_bonds.items()
-                },
-                "_next_atom_id": last_state.get("_next_atom_id"),
-                "mol_3d": last_state.get("mol_3d", None),
-                "mol_3d_atom_ids": last_state.get("mol_3d_atom_ids", None),
-            }
-
-        if (
-            not last_state_for_comparison
-            or current_state_for_comparison != last_state_for_comparison
-        ):
-            # Deepcopy state to ensure saved states are immutable and not affected
-            # by later modifications to objects referenced from the state.
-            state = copy.deepcopy(self.get_current_state())
-            self.undo_stack.append(state)
-
-            self.redo_stack.clear()
-            # Record changes after initialization
-            if self.initialization_complete:
-                self.has_unsaved_changes = True
-                self.update_window_title()
-
-        self.edit_actions_manager.update_implicit_hydrogens()
-        self.update_realtime_info()
-        self.update_undo_redo_actions()
+        self.edit_actions_manager.push_undo_state()
 
     def update_window_title(self):
         """Update window title to reflect save state."""
@@ -426,57 +354,18 @@ class MainWindowAppState:
             return False  # Cancel
 
     def reset_undo_stack(self):
-        self.undo_stack.clear()
-        self.redo_stack.clear()
+        self.edit_actions_manager.undo_stack.clear()
+        self.edit_actions_manager.redo_stack.clear()
         self.push_undo_state()
 
     def undo(self):
-        if len(self.undo_stack) > 1:
-            self.redo_stack.append(self.undo_stack.pop())
-            state = self.undo_stack[-1]
-            self._is_restoring_state = True
-            try:
-                self.set_state_from_data(state)
-            finally:
-                self._is_restoring_state = False
-
-            # Re-evaluate menu states based on 3D structure after Undo
-            if self.current_mol and self.current_mol.GetNumAtoms() > 0:
-                # 3D structure exists: enable 3D edit features
-                self._enable_3d_edit_actions(True)
-            else:
-                # No 3D structure: disable 3D edit features
-                self._enable_3d_edit_actions(False)
-
-        self.update_undo_redo_actions()
-        self.update_realtime_info()
-        self.view_2d.setFocus()
+        self.edit_actions_manager.undo()
 
     def redo(self):
-        if self.redo_stack:
-            state = self.redo_stack.pop()
-            self.undo_stack.append(state)
-            self._is_restoring_state = True
-            try:
-                self.set_state_from_data(state)
-            finally:
-                self._is_restoring_state = False
-
-            # Re-evaluate menu states based on 3D structure after Redo
-            if self.current_mol and self.current_mol.GetNumAtoms() > 0:
-                # 3D structure exists: enable 3D edit features
-                self._enable_3d_edit_actions(True)
-            else:
-                # No 3D structure: disable 3D edit features
-                self._enable_3d_edit_actions(False)
-
-        self.update_undo_redo_actions()
-        self.update_realtime_info()
-        self.view_2d.setFocus()
+        self.edit_actions_manager.redo()
 
     def update_undo_redo_actions(self):
-        self.undo_action.setEnabled(len(self.undo_stack) > 1)
-        self.redo_action.setEnabled(len(self.redo_stack) > 0)
+        self.edit_actions_manager.update_undo_redo_actions()
 
     def update_realtime_info(self):
         """Show molecular info in status bar."""
