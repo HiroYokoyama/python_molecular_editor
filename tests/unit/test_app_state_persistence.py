@@ -11,6 +11,7 @@ from unittest.mock import MagicMock
 
 class DummyMainWindow(MainWindowAppState):
     def __init__(self):
+        self.host = self  # StateManager methods use self.host; DummyMainWindow IS the host
         self.data = MolecularData()
         self.scene = MagicMock()
         self.view_2d = MagicMock()

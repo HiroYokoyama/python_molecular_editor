@@ -243,21 +243,18 @@ class StateManager:
                                         pass
 
                     # Sync 2D atoms with 3D actors
-                    if hasattr(self.host.compute_manager, "create_atom_id_mapping"):
+                    if self.host.compute_manager:
                         try:
                             self.host.compute_manager.create_atom_id_mapping()
-                            if hasattr(self.host.view_3d_manager, "update_atom_id_menu_text"):
-                                self.host.view_3d_manager.update_atom_id_menu_text()
-                            if hasattr(self.host.view_3d_manager, "update_atom_id_menu_state"):
-                                self.host.view_3d_manager.update_atom_id_menu_state()
+                            self.host.view_3d_manager.update_atom_id_menu_text()
+                            self.host.view_3d_manager.update_atom_id_menu_state()
                         except Exception as e:
                             logging.debug(
                                 f"Partial failure during ID mapping restoration: {e}"
                             )
 
                     # draw_molecule_3d will use restored IDs
-                    if hasattr(self.host.view_3d_manager, "draw_molecule_3d"):
-                        self.host.view_3d_manager.draw_molecule_3d(self.host.current_mol)
+                    self.host.view_3d_manager.draw_molecule_3d(self.host.current_mol)
                     if (
                         hasattr(self.host, "plotter")
                         and self.host.plotter
@@ -266,8 +263,7 @@ class StateManager:
                         self.host.plotter.reset_camera()
 
                     self.host.ui_manager._enable_3d_features(True)
-                    if hasattr(self.host.view_3d_manager, "setup_3d_hover"):
-                        self.host.view_3d_manager.setup_3d_hover()
+                    self.host.view_3d_manager.setup_3d_hover()
                 else:
                     self.host.current_mol = None
                     if hasattr(self.host, "plotter") and self.host.plotter:

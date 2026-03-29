@@ -37,10 +37,16 @@ except ImportError:
 class MoveGroupDialog(BasePickingDialog):
     """Dialog to select a connected molecular group and perform translation/rotation."""
 
-    def __init__(self, mol, main_window, parent=None):
+    def __init__(self, mol, main_window, preselected_atoms=None, parent=None):
         super().__init__(mol, main_window, parent)
         self.selected_atoms = set()
         self.group_atoms = set()  # All atoms connected to selected atoms
+
+        # Add preselected atoms
+        if preselected_atoms:
+            # For MoveGroup, we pick the first atom and select its connected group
+            self.on_atom_picked(preselected_atoms[0])
+
         self.init_ui()
 
     def init_ui(self):

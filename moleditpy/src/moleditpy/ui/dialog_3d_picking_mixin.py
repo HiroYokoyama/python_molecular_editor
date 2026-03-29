@@ -25,6 +25,9 @@ class Dialog3DPickingMixin:
     def __init__(self):
         """Initialize the Mixin."""
         self.picking_enabled = False
+        self._mouse_press_pos = None
+        self._mouse_moved = False
+        self.selection_labels = []
 
     def eventFilter(self, obj, event):
         """Capture mouse clicks in the 3D view (reproducibly mimicking the original 3D edit logic)."""
@@ -92,7 +95,7 @@ class Dialog3DPickingMixin:
             obj == self.main_window.plotter.interactor
             and event.type() == QEvent.Type.MouseMove
         ):
-            if hasattr(self, "_mouse_press_pos") and self._mouse_press_pos is not None:
+            if self._mouse_press_pos is not None:
                 # Check if moved significantly
                 diff = event.pos() - self._mouse_press_pos
                 if diff.manhattanLength() > 3:
@@ -104,8 +107,8 @@ class Dialog3DPickingMixin:
             and event.type() == QEvent.Type.MouseButtonRelease
             and event.button() == Qt.MouseButton.LeftButton
         ):
-            if hasattr(self, "_mouse_press_pos") and self._mouse_press_pos is not None:
-                if not getattr(self, "_mouse_moved", False):
+            if self._mouse_press_pos is not None:
+                if not self._mouse_moved:
                     # Pure click (no drag) on background -> Clear selection
                     if hasattr(self, "clear_selection"):
                         self.clear_selection()
@@ -126,7 +129,7 @@ class Dialog3DPickingMixin:
 
     def disable_picking(self):
         """Disable atom selection in the 3D view."""
-        if hasattr(self, "picking_enabled") and self.picking_enabled:
+        if self.picking_enabled:
             self.main_window.plotter.interactor.removeEventFilter(self)
             self.picking_enabled = False
         if hasattr(self.main_window, "_picking_consumed"):
@@ -141,16 +144,15 @@ class Dialog3DPickingMixin:
 
     def clear_atom_labels(self):
         """Remove all label actors from the plotter."""
-        if hasattr(self, "selection_labels"):
-            for label_actor in self.selection_labels:
-                try:
-                    if label_actor is not None:
-                        self.main_window.plotter.remove_actor(label_actor)
-                except (AttributeError, RuntimeError, TypeError):
-                    # Ignore actor removal failure on stale plotter
-                    pass
+        for label_actor in self.selection_labels:
+            try:
+                if label_actor is not None:
+                    self.main_window.plotter.remove_actor(label_actor)
+            except (AttributeError, RuntimeError, TypeError):
+                # Ignore actor removal failure on stale plotter
+                pass
 
-            self.selection_labels = []
+        self.selection_labels = []
 
     # Alias — some dialogs use this name instead.
     clear_selection_labels = clear_atom_labels
@@ -167,9 +169,6 @@ class Dialog3DPickingMixin:
         color : str, optional
             Label colour (default ``'yellow'``).
         """
-        if not hasattr(self, "selection_labels"):
-            self.selection_labels = []
-
         pos = self.main_window.view_3d_manager.atom_positions_3d[atom_idx]
 
         label_actor = self.main_window.plotter.add_point_labels(
@@ -193,9 +192,6 @@ class Dialog3DPickingMixin:
             Label colour (default ``'yellow'``).
         """
         self.clear_atom_labels()
-
-        if not hasattr(self, "selection_labels"):
-            self.selection_labels = []
 
         for atom_idx, label_text in atoms_and_labels:
             pos = self.main_window.view_3d_manager.atom_positions_3d[atom_idx]

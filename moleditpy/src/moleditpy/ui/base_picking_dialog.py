@@ -109,8 +109,7 @@ class BasePickingDialog(Dialog3DPickingMixin, QDialog):
             self._molecule_modified = False
 
     def done(self, result):
-        """Override done to push a final undo state if the molecule was modified and accepted."""
-        # result == 1 is QDialog.DialogCode.Accepted
-        if result == 1 and self._molecule_modified:
+        """Override done to push a final undo state if the molecule was modified."""
+        if self._molecule_modified:
             self._push_undo()
         super().done(result)

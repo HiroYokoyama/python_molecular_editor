@@ -892,7 +892,8 @@ class EditActionsManager:
         # but usually it's handled in clear_all.
 
         # Also clear measurement labels
-        self.clear_2d_measurement_labels()
+        if hasattr(self.host, "edit_3d_manager"):
+            self.host.edit_3d_manager.clear_2d_measurement_labels()
 
         # Clear 3D data and disable 3D-related menus
         self.host.current_mol = None

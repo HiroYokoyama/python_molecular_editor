@@ -115,12 +115,11 @@ class UserTemplateDialog(QDialog):
         # 2. Reset Main Window Mode (UI/Toolbar)
         target_mode = "atom_C"
         try:
-            if hasattr(self.main_window, "set_mode_and_update_toolbar"):
+            # ui_manager is the authoritative source for mode/toolbar synchronization
+            if hasattr(self.main_window, "ui_manager") and self.main_window.ui_manager:
                 self.main_window.ui_manager.set_mode_and_update_toolbar(target_mode)
-            elif hasattr(self.main_window, "set_mode"):
-                self.main_window.ui_manager.set_mode(target_mode)
-
-            # Fallback: set attribute directly if methods fail/don't exist
+            
+            # Ensure the mode attribute itself is synced
             if hasattr(self.main_window, "mode"):
                 self.main_window.mode = target_mode
         except (AttributeError, RuntimeError, ValueError) as e:
@@ -135,11 +134,9 @@ class UserTemplateDialog(QDialog):
                 scene.mode = target_mode
                 scene.current_atom_symbol = "C"
 
-                # B. Clear Data
-                if hasattr(scene, "user_template_data"):
-                    scene.user_template_data = None
-                if hasattr(scene, "template_context"):
-                    scene.template_context = {}
+                # B. Clear Data (guaranteed attributes on MoleculeScene)
+                scene.user_template_data = None
+                scene.template_context = {}
 
                 # C. Clear/Hide Preview Item
                 if hasattr(scene, "clear_template_preview"):

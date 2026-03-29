@@ -99,17 +99,18 @@ class ComputeManager:
             if hasattr(self.host, "export_button"):
                 self.host.export_button.setEnabled(has_mol)
 
-            if hasattr(self.host.ui_manager, "_enable_3d_features"):
-                self.host.ui_manager._enable_3d_features(has_mol)
-            if hasattr(self.host.ui_manager, "_enable_3d_edit_actions"):
-                self.host.ui_manager._enable_3d_edit_actions(has_mol)
+            # ui_manager and its methods are guaranteed on the host
+            self.host.ui_manager._enable_3d_features(has_mol)
+            self.host.ui_manager._enable_3d_edit_actions(has_mol)
 
             if hasattr(self.host, "analysis_action"):
                 self.host.analysis_action.setEnabled(has_mol)
             if hasattr(self.host, "edit_3d_action"):
                 self.host.edit_3d_action.setEnabled(has_mol)
 
-            self.host.plotter.render()
+            # plotter and view_2d are fundamental host components
+            if self.host.plotter:
+                self.host.plotter.render()
             if self.host.view_2d:
                 self.host.view_2d.setFocus()
         except (AttributeError, RuntimeError, TypeError) as e:

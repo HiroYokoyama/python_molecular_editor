@@ -70,6 +70,14 @@ class DialogManager:
     def __init__(self, host):
         self.host = host
 
+    def _get_preselected_atoms_3d(self):
+        """Helper to collect preselected atoms from measurement mode (3D Select)."""
+        preselected_atoms = []
+        if hasattr(self.host, "edit_3d_manager"):
+            if self.host.edit_3d_manager.selected_atoms_for_measurement:
+                preselected_atoms = list(self.host.edit_3d_manager.selected_atoms_for_measurement)
+        return preselected_atoms
+
     def show_about_dialog(self):
         """Show the custom About dialog with Easter egg functionality"""
         dialog = AboutDialog(self.host, self.host)
@@ -203,7 +211,12 @@ class DialogManager:
             self.host.measurement_action.setChecked(False)
             self.host.edit_3d_manager.toggle_measurement_mode(False)
 
-        dialog = TranslationDialog(self.host.current_mol, self.host, parent=self.host)
+        # Get preselected atoms
+        preselected_atoms = self._get_preselected_atoms_3d()
+
+        dialog = TranslationDialog(
+            self.host.current_mol, self.host, preselected_atoms, parent=self.host
+        )
         self.host.edit_3d_manager.active_3d_dialogs.append(dialog)  # Keep reference
         dialog.show()  # Use show for modeless display
         dialog.accepted.connect(
@@ -219,7 +232,12 @@ class DialogManager:
             self.host.measurement_action.setChecked(False)
             self.host.edit_3d_manager.toggle_measurement_mode(False)
 
-        dialog = MoveGroupDialog(self.host.current_mol, self.host, parent=self.host)
+        # Get preselected atoms
+        preselected_atoms = self._get_preselected_atoms_3d()
+
+        dialog = MoveGroupDialog(
+            self.host.current_mol, self.host, preselected_atoms, parent=self.host
+        )
         self.host.edit_3d_manager.active_3d_dialogs.append(dialog)
         dialog.show()
         dialog.accepted.connect(
@@ -231,14 +249,7 @@ class DialogManager:
     def open_align_plane_dialog(self, plane):
         """Open align dialog"""
         # Get pre-selected atoms
-        preselected_atoms = []
-        if hasattr(self.host, "selected_atoms_3d") and self.host.selected_atoms_3d:
-            preselected_atoms = list(self.host.selected_atoms_3d)
-        elif (
-            hasattr(self.host, "selected_atoms_for_measurement")
-            and self.host.selected_atoms_for_measurement
-        ):
-            preselected_atoms = list(self.host.selected_atoms_for_measurement)
+        preselected_atoms = self._get_preselected_atoms_3d()
 
         # Disable measurement mode
         if self.host.edit_3d_manager.measurement_mode:
@@ -261,14 +272,7 @@ class DialogManager:
     def open_planarize_dialog(self, plane=None):
         """Open dialog to project selected atoms to the best-fit plane"""
         # Get pre-selected atoms
-        preselected_atoms = []
-        if hasattr(self.host, "selected_atoms_3d") and self.host.selected_atoms_3d:
-            preselected_atoms = list(self.host.selected_atoms_3d)
-        elif (
-            hasattr(self.host, "selected_atoms_for_measurement")
-            and self.host.selected_atoms_for_measurement
-        ):
-            preselected_atoms = list(self.host.selected_atoms_for_measurement)
+        preselected_atoms = self._get_preselected_atoms_3d()
 
         # Disable measurement mode
         if self.host.edit_3d_manager.measurement_mode:
@@ -291,14 +295,7 @@ class DialogManager:
     def open_alignment_dialog(self, axis):
         """Open alignment dialog"""
         # Get pre-selected atoms
-        preselected_atoms = []
-        if hasattr(self.host, "selected_atoms_3d") and self.host.selected_atoms_3d:
-            preselected_atoms = list(self.host.selected_atoms_3d)
-        elif (
-            hasattr(self.host, "selected_atoms_for_measurement")
-            and self.host.selected_atoms_for_measurement
-        ):
-            preselected_atoms = list(self.host.selected_atoms_for_measurement)
+        preselected_atoms = self._get_preselected_atoms_3d()
 
         # Disable measurement mode
         if self.host.edit_3d_manager.measurement_mode:
@@ -321,14 +318,7 @@ class DialogManager:
     def open_bond_length_dialog(self):
         """Open bond length adjustment dialog"""
         # Get pre-selected atoms
-        preselected_atoms = []
-        if hasattr(self.host, "selected_atoms_3d") and self.host.selected_atoms_3d:
-            preselected_atoms = list(self.host.selected_atoms_3d)
-        elif (
-            hasattr(self.host, "selected_atoms_for_measurement")
-            and self.host.selected_atoms_for_measurement
-        ):
-            preselected_atoms = list(self.host.selected_atoms_for_measurement)
+        preselected_atoms = self._get_preselected_atoms_3d()
 
         # Disable measurement mode
         if self.host.edit_3d_manager.measurement_mode:
@@ -349,14 +339,7 @@ class DialogManager:
     def open_angle_dialog(self):
         """Open angle adjustment dialog"""
         # Get pre-selected atoms
-        preselected_atoms = []
-        if hasattr(self.host, "selected_atoms_3d") and self.host.selected_atoms_3d:
-            preselected_atoms = list(self.host.selected_atoms_3d)
-        elif (
-            hasattr(self.host, "selected_atoms_for_measurement")
-            and self.host.selected_atoms_for_measurement
-        ):
-            preselected_atoms = list(self.host.selected_atoms_for_measurement)
+        preselected_atoms = self._get_preselected_atoms_3d()
 
         # Disable measurement mode
         if self.host.edit_3d_manager.measurement_mode:
@@ -377,14 +360,7 @@ class DialogManager:
     def open_dihedral_dialog(self):
         """Open dihedral angle adjustment dialog"""
         # Get pre-selected atoms
-        preselected_atoms = []
-        if hasattr(self.host, "selected_atoms_3d") and self.host.selected_atoms_3d:
-            preselected_atoms = list(self.host.selected_atoms_3d)
-        elif (
-            hasattr(self.host, "selected_atoms_for_measurement")
-            and self.host.selected_atoms_for_measurement
-        ):
-            preselected_atoms = list(self.host.selected_atoms_for_measurement)
+        preselected_atoms = self._get_preselected_atoms_3d()
 
         # Disable measurement mode
         if self.host.edit_3d_manager.measurement_mode:

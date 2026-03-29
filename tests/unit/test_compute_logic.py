@@ -10,6 +10,7 @@ from unittest.mock import MagicMock, patch
 
 class DummyCompute(MainWindowCompute):
     def __init__(self, host):
+        self.host = self
         self._host = host
         self.data = host.data
         self.scene = host.scene
