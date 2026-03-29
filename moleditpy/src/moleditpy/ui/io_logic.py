@@ -81,16 +81,16 @@ class IOManager:
         ):
             try:
                 if self.host.current_file_path.lower().endswith(".pmeraw"):
-                    save_data = self.host.get_current_state()
+                    save_data = self.host.state_manager.get_current_state()
                     with open(self.host.current_file_path, "wb") as f:
                         pickle.dump(save_data, f)
                 else:
-                    json_data = self.host.create_json_data()
+                    json_data = self.host.state_manager.create_json_data()
                     with open(self.host.current_file_path, "w", encoding="utf-8") as f:
                         json.dump(json_data, f, indent=2, ensure_ascii=False)
 
                 self.host.has_unsaved_changes = False
-                self.host.update_window_title()
+                self.host.state_manager.update_window_title()
                 self.host.statusBar().showMessage(f"Project saved to {self.host.current_file_path}")
             except Exception as e:
                 self.host.statusBar().showMessage(f"Error saving project: {e}")
@@ -114,7 +114,7 @@ class IOManager:
 
     def open_project(self) -> None:
         """Open an existing project file."""
-        if not self.host.check_unsaved_changes():
+        if not self.host.state_manager.check_unsaved_changes():
             return
 
         file_path, _ = QFileDialog.getOpenFileName(
@@ -127,15 +127,15 @@ class IOManager:
             if file_path.lower().endswith(".pmeraw"):
                 with open(file_path, "rb") as f:
                     state_data = pickle.load(f)
-                self.host.set_state_from_data(state_data)
+                self.host.state_manager.set_state_from_data(state_data)
             else:
                 with open(file_path, "r", encoding="utf-8") as f:
                     json_data = json.load(f)
-                self.host.load_from_json_data(json_data)
+                self.host.state_manager.load_from_json_data(json_data)
 
             self.host.current_file_path = file_path
             self.host.has_unsaved_changes = False
-            self.host.update_window_title()
+            self.host.state_manager.update_window_title()
             self.host.edit_actions_manager.reset_undo_stack()
             self.host.statusBar().showMessage(f"Loaded {os.path.basename(file_path)}")
         except Exception as e:
@@ -148,7 +148,7 @@ class IOManager:
         )
         if file_path:
             try:
-                state = self.host.get_current_state()
+                state = self.host.state_manager.get_current_state()
                 with open(file_path, "wb") as f:
                     pickle.dump(state, f)
                 self.host.statusBar().showMessage(f"Raw data exported to {file_path}")
@@ -157,7 +157,7 @@ class IOManager:
 
     def load_mol_file(self, file_path: Optional[str] = None) -> None:
         """Regular 2D MOL file loading logic."""
-        if not self.host.check_unsaved_changes():
+        if not self.host.state_manager.check_unsaved_changes():
             return
 
         if not file_path:
@@ -185,7 +185,7 @@ class IOManager:
                 raise ValueError("Failed to read molecule from file.")
 
             Chem.Kekulize(mol)
-            self.host.restore_ui_for_editing()
+            self.host.ui_manager.restore_ui_for_editing()
             self.host.edit_actions_manager.clear_2d_editor(push_to_undo=False)
             self.host.current_mol = None
             self.host.plotter.clear()
@@ -229,7 +229,7 @@ class IOManager:
             self.host.edit_actions_manager.reset_undo_stack()
             self.host.current_file_path = file_path
             self.host.has_unsaved_changes = False
-            self.host.update_window_title()
+            self.host.state_manager.update_window_title()
             self.host.scene.update_all_items()
             QTimer.singleShot(0, self.host.view_3d_manager.fit_to_view)
         except Exception as e:
@@ -271,16 +271,16 @@ class IOManager:
             if hasattr(self.host, "draw_molecule_3d"):
                 self.host.view_3d_manager.draw_molecule_3d(self.host.current_mol)
             if hasattr(self.host, "_enter_3d_viewer_ui_mode"):
-                self.host._enter_3d_viewer_ui_mode()
+                self.host.ui_manager._enter_3d_viewer_ui_mode()
             self.host.statusBar().showMessage(f"3D Viewer Mode: Loaded {os.path.basename(file_path)}")
             self.host.current_file_path = file_path
-            self.host.update_window_title()
+            self.host.state_manager.update_window_title()
         except Exception as e:
             self.host.statusBar().showMessage(f"XYZ Load failed: {e}")
 
     def load_mol_file_for_3d_viewing(self, file_path: Optional[str] = None) -> None:
         """Open MOL/SDF file in 3D viewer."""
-        if not self.host.check_unsaved_changes(): return
+        if not self.host.state_manager.check_unsaved_changes(): return
         if not file_path:
             file_path, _ = QFileDialog.getOpenFileName(self.host, "Open MOL/SDF File", "", "MOL/SDF Files (*.mol *.sdf);;All Files (*)")
             if not file_path: return
@@ -302,10 +302,10 @@ class IOManager:
             
             self.host.current_mol = mol
             self.host.view_3d_manager.draw_molecule_3d(mol)
-            self.host._enter_3d_viewer_ui_mode()
+            self.host.ui_manager._enter_3d_viewer_ui_mode()
             self.host.statusBar().showMessage(f"Loaded {file_path} in 3D viewer")
             self.host.current_file_path = file_path
-            self.host.update_window_title()
+            self.host.state_manager.update_window_title()
         except Exception as e:
             self.host.statusBar().showMessage(f"3D MOL Load failed: {e}")
 

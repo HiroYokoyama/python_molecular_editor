@@ -95,7 +95,7 @@ class AboutDialog(QDialog):
         self.main_window.edit_actions_manager.clear_all()
 
         bipyrimidine_smiles = "C1=CN=C(N=C1)C2=NC=CC=N2"
-        self.main_window.load_from_smiles(bipyrimidine_smiles)
+        self.main_window.string_importer_manager.load_from_smiles(bipyrimidine_smiles)
 
         # Close the dialog
         self.accept()

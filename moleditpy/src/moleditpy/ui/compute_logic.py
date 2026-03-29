@@ -106,9 +106,9 @@ class ComputeManager:
                 self.host.export_button.setEnabled(has_mol)
 
             if hasattr(self.host, "_enable_3d_features"):
-                self.host._enable_3d_features(has_mol)
+                self.host.ui_manager._enable_3d_features(has_mol)
             if hasattr(self.host, "_enable_3d_edit_actions"):
-                self.host._enable_3d_edit_actions(has_mol)
+                self.host.ui_manager._enable_3d_edit_actions(has_mol)
 
             if hasattr(self.host, "analysis_action"):
                 self.host.analysis_action.setEnabled(has_mol)
@@ -221,7 +221,7 @@ class ComputeManager:
             self.host.edit_3d_manager.toggle_measurement_mode(False)
         if self.host.edit_3d_manager.is_3d_edit_mode:
             self.host.edit_3d_action.setChecked(False)
-            self.host.toggle_3d_edit_mode(False)
+            self.host.ui_manager.toggle_3d_edit_mode(False)
 
         mol = self._prepare_rdkit_mol_for_conversion()
         if not mol:
@@ -248,7 +248,7 @@ class ComputeManager:
         self._safe_disconnect(self.host.convert_button.clicked)
         self.host.convert_button.clicked.connect(self.halt_conversion)
         self.host.cleanup_button.setEnabled(False)
-        self.host._enable_3d_features(False)
+        self.host.ui_manager._enable_3d_features(False)
         self.host.plotter.clear()
         self.host.current_mol = None
 
@@ -284,7 +284,7 @@ class ComputeManager:
         }
 
         self._start_calculation_worker(mol_block, options, run_id)
-        self.host.push_undo_state()
+        self.host.state_manager.push_undo_state()
         self.host.view_3d_manager.update_chiral_labels()
         self.host.view_2d.setFocus()
 
@@ -337,7 +337,7 @@ class ComputeManager:
             self._safe_disconnect(self.host.optimize_3d_button.clicked)
             self.host.optimize_3d_button.clicked.connect(self.halt_conversion)
 
-        self.host._enable_3d_features(False)
+        self.host.ui_manager._enable_3d_features(False)
         self._start_calculation_worker(mol_block, options, run_id)
 
     def _prepare_rdkit_mol_for_conversion(self):
@@ -392,7 +392,7 @@ class ComputeManager:
         worker = CalculationWorker()
         worker.halt_ids = self.halt_ids
         worker.moveToThread(thread)
-        worker.status_update.connect(self.host.update_status_bar)
+        worker.status_update.connect(self.host.ui_manager.update_status_bar)
 
         def _cleanup():
             thread.quit()
@@ -444,7 +444,7 @@ class ComputeManager:
         self.host.view_3d_manager.draw_molecule_3d(mol)
         self._remove_calculating_text()
         self._refresh_ui_state()
-        self.host.push_undo_state()
+        self.host.state_manager.push_undo_state()
         self.host.plotter.reset_camera()
 
     def on_calculation_error(self, message: str) -> None:

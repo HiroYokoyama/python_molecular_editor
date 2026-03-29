@@ -293,7 +293,7 @@ class BondLengthDialog(Dialog3DPickingMixin, QDialog):
         if self.atom1_idx is None or self.atom2_idx is None:
             return
         self._slider_dragging = True
-        self.main_window.push_undo_state()
+        self.main_window.state_manager.push_undo_state()
 
     def on_slider_moved(self, value):
         """Update geometry in real-time while dragging."""
@@ -319,7 +319,7 @@ class BondLengthDialog(Dialog3DPickingMixin, QDialog):
             return  # Already handled by on_slider_moved
         if self.atom1_idx is None or self.atom2_idx is None:
             return
-        self.main_window.push_undo_state()
+        self.main_window.state_manager.push_undo_state()
         new_distance = value / 100.0
         self.distance_input.blockSignals(True)
         self.distance_input.setText(f"{new_distance:.3f}")
@@ -342,7 +342,7 @@ class BondLengthDialog(Dialog3DPickingMixin, QDialog):
             return
 
         # Save undo state
-        self.main_window.push_undo_state()
+        self.main_window.state_manager.push_undo_state()
 
         # Apply the bond length change
         self.adjust_bond_length(new_distance)

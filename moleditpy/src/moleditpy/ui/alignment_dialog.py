@@ -243,7 +243,7 @@ class AlignmentDialog(Dialog3DPickingMixin, QDialog):
             self.main_window.view_3d_manager.update_chiral_labels()
 
             # Save state for Undo
-            self.main_window.push_undo_state()
+            self.main_window.state_manager.push_undo_state()
 
             QMessageBox.information(
                 self, "Success", f"Alignment to {self.axis.upper()}-axis completed."

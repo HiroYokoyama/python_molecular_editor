@@ -594,7 +594,7 @@ class MoveGroupDialog(Dialog3DPickingMixin, QDialog):
         self.main_window.view_3d_manager.draw_molecule_3d(self.mol)
         self.main_window.view_3d_manager.update_chiral_labels()
         self.show_atom_labels()  # Redraw labels
-        self.main_window.push_undo_state()
+        self.main_window.state_manager.push_undo_state()
 
     def reset_rotation_inputs(self):
         """Reset Rotation input fields."""
@@ -678,7 +678,7 @@ class MoveGroupDialog(Dialog3DPickingMixin, QDialog):
         self.main_window.view_3d_manager.draw_molecule_3d(self.mol)
         self.main_window.view_3d_manager.update_chiral_labels()
         self.show_atom_labels()  # Redraw labels
-        self.main_window.push_undo_state()
+        self.main_window.state_manager.push_undo_state()
 
     def clear_selection(self):
         """Clear selection."""

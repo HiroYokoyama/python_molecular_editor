@@ -345,7 +345,7 @@ class AngleDialog(Dialog3DPickingMixin, QDialog):
         if self.atom1_idx is None or self.atom2_idx is None or self.atom3_idx is None:
             return
         self._slider_dragging = True
-        self.main_window.push_undo_state()
+        self.main_window.state_manager.push_undo_state()
         # Snapshot positions so the rotation axis stays stable during drag
         # Only take snapshot if one doesn't exist to preserve directional info
         if getattr(self, "_snapshot_positions", None) is None:
@@ -376,7 +376,7 @@ class AngleDialog(Dialog3DPickingMixin, QDialog):
             return
         if self.atom1_idx is None or self.atom2_idx is None or self.atom3_idx is None:
             return
-        self.main_window.push_undo_state()
+        self.main_window.state_manager.push_undo_state()
 
         # Ensure we have a snapshot for click-to-position as well to maintain direction
         if getattr(self, "_snapshot_positions", None) is None:
@@ -407,7 +407,7 @@ class AngleDialog(Dialog3DPickingMixin, QDialog):
             return
 
         # Save undo state
-        self.main_window.push_undo_state()
+        self.main_window.state_manager.push_undo_state()
 
         # Apply the angle change
         self.adjust_angle(new_angle)

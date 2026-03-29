@@ -31,8 +31,11 @@ except ImportError:
 
 
 # --- Classes ---
-class MainWindowStringImporters:
+class StringImporterManager:
     """Mixin for string-based molecular input (SMILES, InChI)."""
+    def __init__(self, host):
+        self.host = host
+
 
     def import_smiles_dialog(self) -> None:
         """Dialog for SMILES input."""
@@ -48,7 +51,7 @@ class MainWindowStringImporters:
 
     def load_from_smiles(self, smiles_string: str) -> None:
         """Load molecule from SMILES string to 2D editor."""
-        if not self.check_unsaved_changes():
+        if not self.host.state_manager.check_unsaved_changes():
             return  # User cancelled
 
         cleaned_smiles = smiles_string.strip()
@@ -67,24 +70,24 @@ class MainWindowStringImporters:
             conf = mol.GetConformer()
             AllChem.WedgeMolBonds(mol, conf)
         except ValueError as e:
-            self.statusBar().showMessage(f"Invalid SMILES: {e}")
+            self.host.statusBar().showMessage(f"Invalid SMILES: {e}")
             return
         except (RuntimeError, TypeError, AttributeError) as e:
-            self.statusBar().showMessage(f"Error parsing SMILES: {e}")
+            self.host.statusBar().showMessage(f"Error parsing SMILES: {e}")
             return
 
         try:
-            self.restore_ui_for_editing()
-            self.edit_actions_manager.clear_2d_editor(push_to_undo=False)
-            self.current_mol = None
-            self.plotter.clear()
+            self.host.ui_manager.restore_ui_for_editing()
+            self.host.edit_actions_manager.clear_2d_editor(push_to_undo=False)
+            self.host.current_mol = None
+            self.host.plotter.clear()
             self.analysis_action.setEnabled(False)
 
             conf = mol.GetConformer()
             SCALE_FACTOR = 50.0
 
-            view_center = self.view_2d.mapToScene(
-                self.view_2d.viewport().rect().center()
+            view_center = self.host.view_2d.mapToScene(
+                self.host.view_2d.viewport().rect().center()
             )
             positions = [conf.GetAtomPosition(i) for i in range(mol.GetNumAtoms())]
             mol_center_x = (
@@ -106,7 +109,7 @@ class MainWindowStringImporters:
                 scene_x = (relative_x * SCALE_FACTOR) + view_center.x()
                 scene_y = (-relative_y * SCALE_FACTOR) + view_center.y()
 
-                atom_id = self.scene.create_atom(
+                atom_id = self.host.scene.create_atom(
                     atom.GetSymbol(), QPointF(scene_x, scene_y), charge=charge
                 )
                 rdkit_idx_to_my_id[i] = atom_id
@@ -130,25 +133,25 @@ class MainWindowStringImporters:
 
                 if b_idx in rdkit_idx_to_my_id and e_idx in rdkit_idx_to_my_id:
                     a1_id, a2_id = rdkit_idx_to_my_id[b_idx], rdkit_idx_to_my_id[e_idx]
-                    a1_item = self.data.atoms[a1_id]["item"]
-                    a2_item = self.data.atoms[a2_id]["item"]
-                    self.scene.create_bond(
+                    a1_item = self.host.data.atoms[a1_id]["item"]
+                    a2_item = self.host.data.atoms[a2_id]["item"]
+                    self.host.scene.create_bond(
                         a1_item, a2_item, bond_order=int(b_type), bond_stereo=stereo
                     )
 
-            self.statusBar().showMessage("Successfully loaded from SMILES.")
-            self.scene.update_all_items()
-            self.reset_undo_stack()
-            self.has_unsaved_changes = False
-            self.update_window_title()
-            QTimer.singleShot(0, self.view_3d_manager.fit_to_view)
+            self.host.statusBar().showMessage("Successfully loaded from SMILES.")
+            self.host.scene.update_all_items()
+            self.host.state_manager.reset_undo_stack()
+            self.host.has_unsaved_changes = False
+            self.host.state_manager.update_window_title()
+            QTimer.singleShot(0, self.host.view_3d_manager.fit_to_view)
 
         except (AttributeError, RuntimeError, ValueError, TypeError) as e:
-            self.statusBar().showMessage(f"Error loading from SMILES: {e}")
+            self.host.statusBar().showMessage(f"Error loading from SMILES: {e}")
 
     def load_from_inchi(self, inchi_string: str) -> None:
         """Load molecule from InChI string to 2D editor."""
-        if not self.check_unsaved_changes():
+        if not self.host.state_manager.check_unsaved_changes():
             return  # User cancelled
 
         cleaned_inchi = inchi_string.strip()
@@ -167,24 +170,24 @@ class MainWindowStringImporters:
             conf = mol.GetConformer()
             AllChem.WedgeMolBonds(mol, conf)
         except ValueError as e:
-            self.statusBar().showMessage(f"Invalid InChI: {e}")
+            self.host.statusBar().showMessage(f"Invalid InChI: {e}")
             return
         except (RuntimeError, TypeError, AttributeError) as e:
-            self.statusBar().showMessage(f"Error parsing InChI: {e}")
+            self.host.statusBar().showMessage(f"Error parsing InChI: {e}")
             return
 
         try:
-            self.restore_ui_for_editing()
-            self.edit_actions_manager.clear_2d_editor(push_to_undo=False)
-            self.current_mol = None
-            self.plotter.clear()
+            self.host.ui_manager.restore_ui_for_editing()
+            self.host.edit_actions_manager.clear_2d_editor(push_to_undo=False)
+            self.host.current_mol = None
+            self.host.plotter.clear()
             self.analysis_action.setEnabled(False)
 
             conf = mol.GetConformer()
             SCALE_FACTOR = 50.0
 
-            view_center = self.view_2d.mapToScene(
-                self.view_2d.viewport().rect().center()
+            view_center = self.host.view_2d.mapToScene(
+                self.host.view_2d.viewport().rect().center()
             )
             positions = [conf.GetAtomPosition(i) for i in range(mol.GetNumAtoms())]
             mol_center_x = (
@@ -206,7 +209,7 @@ class MainWindowStringImporters:
                 scene_x = (relative_x * SCALE_FACTOR) + view_center.x()
                 scene_y = (-relative_y * SCALE_FACTOR) + view_center.y()
 
-                atom_id = self.scene.create_atom(
+                atom_id = self.host.scene.create_atom(
                     atom.GetSymbol(), QPointF(scene_x, scene_y), charge=charge
                 )
                 rdkit_idx_to_my_id[i] = atom_id
@@ -230,18 +233,18 @@ class MainWindowStringImporters:
 
                 if b_idx in rdkit_idx_to_my_id and e_idx in rdkit_idx_to_my_id:
                     a1_id, a2_id = rdkit_idx_to_my_id[b_idx], rdkit_idx_to_my_id[e_idx]
-                    a1_item = self.data.atoms[a1_id]["item"]
-                    a2_item = self.data.atoms[a2_id]["item"]
-                    self.scene.create_bond(
+                    a1_item = self.host.data.atoms[a1_id]["item"]
+                    a2_item = self.host.data.atoms[a2_id]["item"]
+                    self.host.scene.create_bond(
                         a1_item, a2_item, bond_order=int(b_type), bond_stereo=stereo
                     )
 
-            self.statusBar().showMessage("Successfully loaded from InChI.")
-            self.scene.update_all_items()
-            self.reset_undo_stack()
-            self.has_unsaved_changes = False
-            self.update_window_title()
-            QTimer.singleShot(0, self.view_3d_manager.fit_to_view)
+            self.host.statusBar().showMessage("Successfully loaded from InChI.")
+            self.host.scene.update_all_items()
+            self.host.state_manager.reset_undo_stack()
+            self.host.has_unsaved_changes = False
+            self.host.state_manager.update_window_title()
+            QTimer.singleShot(0, self.host.view_3d_manager.fit_to_view)
 
         except (AttributeError, RuntimeError, ValueError, TypeError) as e:
-            self.statusBar().showMessage(f"Error loading from InChI: {e}")
+            self.host.statusBar().showMessage(f"Error loading from InChI: {e}")

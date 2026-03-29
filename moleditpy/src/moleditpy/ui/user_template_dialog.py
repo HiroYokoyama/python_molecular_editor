@@ -116,9 +116,9 @@ class UserTemplateDialog(QDialog):
         target_mode = "atom_C"
         try:
             if hasattr(self.main_window, "set_mode_and_update_toolbar"):
-                self.main_window.set_mode_and_update_toolbar(target_mode)
+                self.main_window.ui_manager.set_mode_and_update_toolbar(target_mode)
             elif hasattr(self.main_window, "set_mode"):
-                self.main_window.set_mode(target_mode)
+                self.main_window.ui_manager.set_mode(target_mode)
 
             # Fallback: set attribute directly if methods fail/don't exist
             if hasattr(self.main_window, "mode"):
@@ -536,9 +536,9 @@ class UserTemplateDialog(QDialog):
 
             # Switch mode
             if hasattr(self.main_window, "set_mode") and callable(
-                self.main_window.set_mode
+                self.main_window.ui_manager.set_mode
             ):
-                self.main_window.set_mode(mode_name)
+                self.main_window.ui_manager.set_mode(mode_name)
             else:
                 setattr(self.main_window, "mode", mode_name)
 
@@ -627,7 +627,7 @@ class UserTemplateDialog(QDialog):
             if self.save_template_file(filepath, template_data):
                 # Mark main window as saved
                 self.main_window.has_unsaved_changes = False
-                self.main_window.update_window_title()
+                self.main_window.state_manager.update_window_title()
 
                 QMessageBox.information(
                     self, "Success", f"Template '{name}' saved successfully."

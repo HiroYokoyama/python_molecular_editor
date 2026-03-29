@@ -540,7 +540,7 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
             # Update 3D view
             self.main_window.view_3d_manager.draw_molecule_3d(self.mol)
             self.main_window.view_3d_manager.update_chiral_labels()
-            self.main_window.push_undo_state()
+            self.main_window.state_manager.push_undo_state()
             self.main_window.statusBar().showMessage(
                 "Constrained optimization finished."
             )
@@ -575,7 +575,7 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
                     self.main_window.has_unsaved_changes = (
                         True  # Mark as unsaved changes
                     )
-                    self.main_window.update_window_title()
+                    self.main_window.state_manager.update_window_title()
 
             except (AttributeError, RuntimeError, ValueError, TypeError) as e:
                 print(f"Failed to save constraints post-optimization: {e}")
@@ -612,7 +612,7 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
             if self.main_window.constraints_3d != json_safe_constraints:
                 self.main_window.constraints_3d = json_safe_constraints
                 self.main_window.has_unsaved_changes = True  # Mark as unsaved changes
-                self.main_window.update_window_title()
+                self.main_window.state_manager.update_window_title()
 
         except (AttributeError, RuntimeError, ValueError, TypeError) as e:
             print(f"Failed to save constraints to main window: {e}")

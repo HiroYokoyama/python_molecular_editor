@@ -85,7 +85,7 @@ class View3DManager:
 
         if self.host.edit_3d_manager.is_3d_edit_mode:
             self.edit_3d_action.setChecked(False)
-            self.host.toggle_3d_edit_mode(False)  # Disable 3D edit mode
+            self.host.ui_manager.toggle_3d_edit_mode(False)  # Disable 3D edit mode
 
         # Clear 3D selection
         self.host.edit_3d_manager.clear_3d_selection()

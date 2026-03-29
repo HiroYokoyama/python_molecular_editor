@@ -246,7 +246,7 @@ class TranslationDialog(Dialog3DPickingMixin, QDialog):
             self.clear_selection()
 
             if hasattr(self.main_window, "push_undo_state"):
-                self.main_window.push_undo_state()
+                self.main_window.state_manager.push_undo_state()
 
         except (AttributeError, RuntimeError, ValueError) as e:
             # Suppress non-critical errors during translation application to avoid crash.

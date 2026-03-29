@@ -80,7 +80,7 @@ class DialogManager:
 
     def open_periodic_table_dialog(self):
         dialog = PeriodicTableDialog(self.host)
-        dialog.element_selected.connect(self.host.set_atom_from_periodic_table)
+        dialog.element_selected.connect(self.host.ui_manager.set_atom_from_periodic_table)
         checked_action = self.host.tool_group.checkedAction()
         if checked_action:
             self.host.tool_group.setExclusive(False)
@@ -135,7 +135,7 @@ class DialogManager:
                 self.host.scene.user_template_data = (
                     self.host._template_dialog.selected_template
                 )
-                self.host.set_mode(mode_name)
+                self.host.ui_manager.set_mode(mode_name)
 
                 # Update status
                 self.host.statusBar().showMessage(f"Template mode: {template_name}")
@@ -188,7 +188,7 @@ class DialogManager:
 
             # Mark as saved (no unsaved changes for this operation)
             self.host.has_unsaved_changes = False
-            self.host.update_window_title()
+            self.host.state_manager.update_window_title()
 
             QMessageBox.information(
                 self.host, "Success", f"Template '{name}' saved successfully."
@@ -212,7 +212,7 @@ class DialogManager:
         dialog.accepted.connect(
             lambda: self.host.statusBar().showMessage("Translation applied.")
         )
-        dialog.accepted.connect(self.host.push_undo_state)
+        dialog.accepted.connect(self.host.state_manager.push_undo_state)
         dialog.finished.connect(lambda: self.host.remove_dialog_from_list(dialog))
 
     def open_move_group_dialog(self):
@@ -228,7 +228,7 @@ class DialogManager:
         dialog.accepted.connect(
             lambda: self.host.statusBar().showMessage("Group transformation applied.")
         )
-        dialog.accepted.connect(self.host.push_undo_state)
+        dialog.accepted.connect(self.host.state_manager.push_undo_state)
         dialog.finished.connect(lambda: self.host.remove_dialog_from_list(dialog))
 
     def open_align_plane_dialog(self, plane):
@@ -258,7 +258,7 @@ class DialogManager:
                 f"Atoms aligned to {plane.upper()} plane."
             )
         )
-        dialog.accepted.connect(self.host.push_undo_state)
+        dialog.accepted.connect(self.host.state_manager.push_undo_state)
         dialog.finished.connect(lambda: self.host.remove_dialog_from_list(dialog))
 
     def open_planarize_dialog(self, plane=None):
@@ -288,7 +288,7 @@ class DialogManager:
                 "Selection planarized to best-fit plane."
             )
         )
-        dialog.accepted.connect(self.host.push_undo_state)
+        dialog.accepted.connect(self.host.state_manager.push_undo_state)
         dialog.finished.connect(lambda: self.host.remove_dialog_from_list(dialog))
 
     def open_alignment_dialog(self, axis):
@@ -318,7 +318,7 @@ class DialogManager:
                 f"Atoms aligned to {axis.upper()}-axis."
             )
         )
-        dialog.accepted.connect(self.host.push_undo_state)
+        dialog.accepted.connect(self.host.state_manager.push_undo_state)
         dialog.finished.connect(lambda: self.host.remove_dialog_from_list(dialog))
 
     def open_bond_length_dialog(self):
@@ -346,7 +346,7 @@ class DialogManager:
         dialog.accepted.connect(
             lambda: self.host.statusBar().showMessage("Bond length adjusted.")
         )
-        dialog.accepted.connect(self.host.push_undo_state)
+        dialog.accepted.connect(self.host.state_manager.push_undo_state)
         dialog.finished.connect(lambda: self.host.remove_dialog_from_list(dialog))
 
     def open_angle_dialog(self):
@@ -374,7 +374,7 @@ class DialogManager:
         dialog.accepted.connect(
             lambda: self.host.statusBar().showMessage("Angle adjusted.")
         )
-        dialog.accepted.connect(self.host.push_undo_state)
+        dialog.accepted.connect(self.host.state_manager.push_undo_state)
         dialog.finished.connect(lambda: self.host.remove_dialog_from_list(dialog))
 
     def open_dihedral_dialog(self):
@@ -402,7 +402,7 @@ class DialogManager:
         dialog.accepted.connect(
             lambda: self.host.statusBar().showMessage("Dihedral angle adjusted.")
         )
-        dialog.accepted.connect(self.host.push_undo_state)
+        dialog.accepted.connect(self.host.state_manager.push_undo_state)
         dialog.finished.connect(lambda: self.host.remove_dialog_from_list(dialog))
 
     def open_mirror_dialog(self):

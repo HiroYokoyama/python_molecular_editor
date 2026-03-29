@@ -193,18 +193,18 @@ class EditActionsManager:
             or current_state_for_comparison != last_state_for_comparison
         ):
             # Deepcopy state via pickling or explicit get_current_state call
-            state = copy.deepcopy(self.host.get_current_state())
+            state = copy.deepcopy(self.host.state_manager.get_current_state())
             self.undo_stack.append(state)
 
             self.redo_stack.clear()
             # Record changes after initialization
             if getattr(self.host, "initialization_complete", False):
                 self.host.has_unsaved_changes = True
-                self.host.update_window_title()
+                self.host.state_manager.update_window_title()
 
         self.update_implicit_hydrogens()
         if hasattr(self.host, "update_realtime_info"):
-            self.host.update_realtime_info()
+            self.host.state_manager.update_realtime_info()
         self.update_undo_redo_actions()
 
     def undo(self) -> None:
@@ -214,19 +214,19 @@ class EditActionsManager:
             state = self.undo_stack[-1]
             self.host._is_restoring_state = True
             try:
-                self.host.set_state_from_data(state)
+                self.host.state_manager.set_state_from_data(state)
             finally:
                 self.host._is_restoring_state = False
 
             # Re-evaluate menu states based on 3D structure after Undo
             if self.host.current_mol and self.host.current_mol.GetNumAtoms() > 0:
-                self.host._enable_3d_edit_actions(True)
+                self.host.ui_manager._enable_3d_edit_actions(True)
             else:
-                self.host._enable_3d_edit_actions(False)
+                self.host.ui_manager._enable_3d_edit_actions(False)
 
         self.update_undo_redo_actions()
         if hasattr(self.host, "update_realtime_info"):
-            self.host.update_realtime_info()
+            self.host.state_manager.update_realtime_info()
         if hasattr(self.host, "view_2d") and self.host.view_2d:
             self.host.view_2d.setFocus()
 
@@ -237,19 +237,19 @@ class EditActionsManager:
             self.undo_stack.append(state)
             self.host._is_restoring_state = True
             try:
-                self.host.set_state_from_data(state)
+                self.host.state_manager.set_state_from_data(state)
             finally:
                 self.host._is_restoring_state = False
 
             # Re-evaluate menu states based on 3D structure after Redo
             if self.host.current_mol and self.host.current_mol.GetNumAtoms() > 0:
-                self.host._enable_3d_edit_actions(True)
+                self.host.ui_manager._enable_3d_edit_actions(True)
             else:
-                self.host._enable_3d_edit_actions(False)
+                self.host.ui_manager._enable_3d_edit_actions(False)
 
         self.update_undo_redo_actions()
         if hasattr(self.host, "update_realtime_info"):
-            self.host.update_realtime_info()
+            self.host.state_manager.update_realtime_info()
         if hasattr(self.host, "view_2d") and self.host.view_2d:
             self.host.view_2d.setFocus()
 
@@ -345,7 +345,7 @@ class EditActionsManager:
             self.copy_selection()
 
             if self.host.scene.delete_items(set(selected_items)):
-                self.host.push_undo_state()
+                self.host.state_manager.push_undo_state()
                 self.host.statusBar().showMessage("Cut selection.", 2000)
 
         except (AttributeError, RuntimeError, ValueError) as e:
@@ -400,7 +400,7 @@ class EditActionsManager:
                     ),  # Restore E/Z stereochemistry information as well
                 )
 
-            self.host.push_undo_state()
+            self.host.state_manager.push_undo_state()
             self.host.statusBar().showMessage(
                 f"Pasted {len(fragment_data['atoms'])} atoms and {len(fragment_data['bonds'])} bonds.",
                 2000,
@@ -523,7 +523,7 @@ class EditActionsManager:
 
             if removed_count > 0:
                 # Only push a single undo state once for the whole operation
-                self.host.push_undo_state()
+                self.host.state_manager.push_undo_state()
                 self.host.statusBar().showMessage(
                     f"Removed {removed_count} hydrogen atoms.", 2000
                 )
@@ -711,7 +711,7 @@ class EditActionsManager:
 
             if added_count > 0:
                 self.host.scene.update_all_items()
-                self.host.push_undo_state()
+                self.host.state_manager.push_undo_state()
                 self.host.statusBar().showMessage(
                     f"Added {added_count} hydrogen atoms.", 2000
                 )
@@ -809,7 +809,7 @@ class EditActionsManager:
             self.host.scene.update_connected_bonds(target_atoms)
             self.host.scene.update_all_items()
 
-            self.host.push_undo_state()
+            self.host.state_manager.push_undo_state()
             self.host.statusBar().showMessage(
                 f"Rotated {len(target_atoms)} atoms by {angle_degrees} degrees."
             )
@@ -862,7 +862,7 @@ class EditActionsManager:
         # Reset file state
         self.host.has_unsaved_changes = False
         self.current_file_path = None
-        self.host.update_window_title()
+        self.host.state_manager.update_window_title()
 
         # Reset 2D zoom
         self.reset_zoom()
@@ -912,7 +912,7 @@ class EditActionsManager:
         self._enable_3d_features(False)
 
         if push_to_undo:
-            self.host.push_undo_state()
+            self.host.state_manager.push_undo_state()
 
     def _compute_h_counts(self, mol: Any) -> Dict[int, int]:
         """Build a mapping of original_id -> hydrogen count without touching Qt items."""
@@ -1165,7 +1165,7 @@ class EditActionsManager:
             self.host.scene.update_all_items()
 
             self.host.statusBar().showMessage("2D structure optimization successful.")
-            self.host.push_undo_state()
+            self.host.state_manager.push_undo_state()
 
         except (AttributeError, RuntimeError, ValueError) as e:
             self.host.statusBar().showMessage(f"Error during 2D optimization: {e}")
@@ -1246,7 +1246,7 @@ class EditActionsManager:
         self.update_2d_measurement_labels()
 
         self.host.scene.update()
-        self.host.push_undo_state()
+        self.host.state_manager.push_undo_state()
         self.host.statusBar().showMessage("Resolved overlapping groups.", 2000)
 
     def adjust_molecule_positions_to_avoid_collisions(self, mol, frags):
