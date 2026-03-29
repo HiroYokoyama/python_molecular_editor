@@ -21,8 +21,9 @@ from PyQt6.QtWidgets import QFileDialog, QMessageBox
 class IOManager:
     """Independent manager for IO actions (Load/Save), ported from Mixins."""
 
-    def __init__(self, host: Any) -> None:
-        self.host = host
+    def __init__(self, host: Any = None) -> None:
+        if host is not None:
+            self.host = host
 
     # --- Manager delegation methods ---
     # These let tests patch io.X and have the save/load methods call self.X().
@@ -479,7 +480,7 @@ class IOManager:
             
             if hasattr(self.host.view_3d_manager, "draw_molecule_3d"):
                 self.host.view_3d_manager.draw_molecule_3d(self.host.current_mol)
-            if hasattr(self.host, "_enter_3d_viewer_ui_mode"):
+            if hasattr(self.host.ui_manager, "_enter_3d_viewer_ui_mode"):
                 self.host.ui_manager._enter_3d_viewer_ui_mode()
             self.host.statusBar().showMessage(f"3D Viewer Mode: Loaded {os.path.basename(file_path)}")
             self.host.current_file_path = file_path

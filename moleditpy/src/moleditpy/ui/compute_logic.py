@@ -124,7 +124,7 @@ class ComputeManager:
         self.host.settings["optimization_method"] = method
         self.host.settings_dirty = True
 
-        if hasattr(self.host, "opt3d_actions") and self.host.opt3d_actions:
+        if hasattr(self.host.init_manager, "opt3d_actions") and self.host.init_manager.opt3d_actions:
             for k, act in self.host.opt3d_actions.items():
                 act.setChecked(k.upper() == method)
 
@@ -184,8 +184,8 @@ class ComputeManager:
         ]
         for label, key in opt_list:
             a = QAction(label, self.host)
-            if hasattr(self.host, "opt3d_actions") and key in self.host.opt3d_actions:
-                a.setEnabled(self.host.opt3d_actions[key].isEnabled())
+            if hasattr(self.host.init_manager, "opt3d_actions") and key in self.host.init_manager.opt3d_actions:
+                a.setEnabled(self.host.init_manager.opt3d_actions[key].isEnabled())
             a.triggered.connect(
                 lambda checked=False, k=key: self._trigger_optimize_with_temp_method(k)
             )

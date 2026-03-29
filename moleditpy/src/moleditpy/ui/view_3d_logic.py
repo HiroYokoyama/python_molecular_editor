@@ -1332,9 +1332,9 @@ class View3DManager:
         """Update Atom ID menu text based on molecule type"""
         if hasattr(self.host, "show_atom_id_action"):
             if self.is_xyz_derived_molecule():
-                self.host.show_atom_id_action.setText("Show XYZ Unique ID")
+                self.host.init_manager.show_atom_id_action.setText("Show XYZ Unique ID")
             else:
-                self.host.show_atom_id_action.setText("Show Original ID / Index")
+                self.host.init_manager.show_atom_id_action.setText("Show Original ID / Index")
 
     def update_atom_id_menu_state(self):
         """Update Atom ID menu enabled/disabled state"""
@@ -1717,10 +1717,10 @@ class View3DManager:
 
         try:
             # First, remove existing axes widget if it exists
-            if hasattr(self.host, "axes_widget") and self.host.axes_widget:
+            if hasattr(self, "axes_widget") and self.axes_widget:
                 try:
-                    self.host.axes_widget.SetEnabled(False)
-                    self.host.axes_widget = None
+                    self.axes_widget.SetEnabled(False)
+                    self.axes_widget = None
                 except (AttributeError, RuntimeError):
                     pass
 
@@ -1747,12 +1747,12 @@ class View3DManager:
                         tp.ShadowOff()
 
                 # Add orientation marker widget
-                self.host.axes_widget = vtk.vtkOrientationMarkerWidget()
-                self.host.axes_widget.SetOrientationMarker(axes)
-                self.host.axes_widget.SetInteractor(self.host.plotter.interactor)
-                self.host.axes_widget.SetViewport(0.0, 0.0, 0.2, 0.2)
-                self.host.axes_widget.SetEnabled(True)
-                self.host.axes_widget.InteractiveOff()
+                self.axes_widget = vtk.vtkOrientationMarkerWidget()
+                self.axes_widget.SetOrientationMarker(axes)
+                self.axes_widget.SetInteractor(self.host.plotter.interactor)
+                self.axes_widget.SetViewport(0.0, 0.0, 0.2, 0.2)
+                self.axes_widget.SetEnabled(True)
+                self.axes_widget.InteractiveOff()
             else:
                 self.host.plotter.hide_axes()
             

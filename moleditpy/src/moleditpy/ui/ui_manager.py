@@ -437,8 +437,8 @@ class UIManager(QObject):
         self.host.convert_button.setEnabled(False)
         for action in self.host.tool_group.actions():
             action.setEnabled(False)
-        if hasattr(self.host, "other_atom_action"):
-            self.host.other_atom_action.setEnabled(False)
+        if hasattr(self.host.init_manager, "other_atom_action"):
+            self.host.init_manager.other_atom_action.setEnabled(False)
 
         self.host.ui_manager.minimize_2d_panel()
 
@@ -455,8 +455,8 @@ class UIManager(QObject):
         for action in self.host.tool_group.actions():
             action.setEnabled(True)
 
-        if hasattr(self.host, "other_atom_action"):
-            self.host.other_atom_action.setEnabled(True)
+        if hasattr(self.host.init_manager, "other_atom_action"):
+            self.host.init_manager.other_atom_action.setEnabled(True)
 
         # Collectively disable 3D edit functions when returning to 2D mode
         self.host.ui_manager._enable_3d_edit_actions(False)

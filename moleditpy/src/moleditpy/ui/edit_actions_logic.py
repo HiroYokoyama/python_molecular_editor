@@ -199,7 +199,7 @@ class EditActionsManager:
                 self.host.state_manager.update_window_title()
 
         self.update_implicit_hydrogens()
-        if hasattr(self.host, "update_realtime_info"):
+        if hasattr(self.host.state_manager, "update_realtime_info"):
             self.host.state_manager.update_realtime_info()
         self.update_undo_redo_actions()
 
@@ -221,7 +221,7 @@ class EditActionsManager:
                 self.host.ui_manager._enable_3d_edit_actions(False)
 
         self.update_undo_redo_actions()
-        if hasattr(self.host, "update_realtime_info"):
+        if hasattr(self.host.state_manager, "update_realtime_info"):
             self.host.state_manager.update_realtime_info()
         if hasattr(self.host, "view_2d") and self.host.view_2d:
             self.host.view_2d.setFocus()
@@ -244,7 +244,7 @@ class EditActionsManager:
                 self.host.ui_manager._enable_3d_edit_actions(False)
 
         self.update_undo_redo_actions()
-        if hasattr(self.host, "update_realtime_info"):
+        if hasattr(self.host.state_manager, "update_realtime_info"):
             self.host.state_manager.update_realtime_info()
         if hasattr(self.host, "view_2d") and self.host.view_2d:
             self.host.view_2d.setFocus()
@@ -818,7 +818,7 @@ class EditActionsManager:
             # Cancel if requested
             return False
 
-        self.host.restore_ui_for_editing()
+        self.host.ui_manager.restore_ui_for_editing()
 
         # Reset 3D mode
         if self.host.edit_3d_manager.measurement_mode:

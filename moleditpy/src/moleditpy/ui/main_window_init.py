@@ -129,7 +129,7 @@ class MainInitManager:
         self.host.chem_check_tried = False
         self.host.chem_check_failed = False
         # self.axes_actor and self.axes_widget are now in View3DManager
-        self._template_dialog = None  # Reference to the template dialog
+        self.host._template_dialog = None  # Reference to the template dialog
         self.host.undo_stack = []
         self.host.redo_stack = []
         # self.host.constraints_3d is now in Edit3DManager
@@ -446,23 +446,23 @@ class MainInitManager:
         """Synchronize menu action checked states with current settings."""
         with contextlib.suppress(AttributeError, RuntimeError, TypeError):
             # Optimization actions
-            if hasattr(self.host, "opt3d_actions"):
+            if hasattr(self, "opt3d_actions"):
                 current_method = (getattr(self, "optimization_method", "") or "").upper()
-                for key, action in self.host.opt3d_actions.items():
+                for key, action in self.opt3d_actions.items():
                     # Use case-insensitive comparison for robustness
                     action.setChecked(key.upper() == current_method)
 
             # Conversion actions
-            if hasattr(self.host, "conv_actions"):
+            if hasattr(self, "conv_actions"):
                 mode = (
                     self.host.settings.get("3d_conversion_mode", "fallback") or ""
                 ).lower()
-                for key, action in self.host.conv_actions.items():
+                for key, action in self.conv_actions.items():
                     action.setChecked(key.lower() == mode)
 
             # Intermolecular interaction
-            if hasattr(self.host, "intermolecular_rdkit_action"):
-                self.host.intermolecular_rdkit_action.setChecked(
+            if hasattr(self, "intermolecular_rdkit_action"):
+                self.intermolecular_rdkit_action.setChecked(
                     self.host.settings.get("optimize_intermolecular_interaction_rdkit", True)
                 )
 
@@ -666,12 +666,12 @@ class MainInitManager:
 
     def _add_plugin_toolbar_actions(self):
         """Add toolbar actions registered by plugins."""
-        if not hasattr(self.host, "plugin_toolbar"):
+        if not hasattr(self, "plugin_toolbar"):
             return
 
-        self.host.plugin_toolbar.clear()
+        self.plugin_toolbar.clear()
         if self.host.plugin_manager.toolbar_actions:
-            self.host.plugin_toolbar.show()
+            self.plugin_toolbar.show()
             for action_def in self.host.plugin_manager.toolbar_actions:
                 action = QAction(action_def["text"], self.host)
                 action.triggered.connect(action_def["callback"])
@@ -679,9 +679,9 @@ class MainInitManager:
                     action.setIcon(QIcon(action_def["icon"]))
                 if action_def["tooltip"]:
                     action.setToolTip(action_def["tooltip"])
-                self.host.plugin_toolbar.addAction(action)
+                self.plugin_toolbar.addAction(action)
         else:
-            self.host.plugin_toolbar.hide()
+            self.plugin_toolbar.hide()
 
     def _add_legacy_plugin_actions(self, plugin_menu, plugins):
         """Add folder-based legacy plugin actions to the plugin menu."""
