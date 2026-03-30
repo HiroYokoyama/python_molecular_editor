@@ -39,13 +39,13 @@ class StringImporterManager:
 
     def import_smiles_dialog(self) -> None:
         """Dialog for SMILES input."""
-        smiles, ok = QInputDialog.getText(self, "Import SMILES", "Enter SMILES string:")
+        smiles, ok = QInputDialog.getText(self.host, "Import SMILES", "Enter SMILES string:")
         if ok and smiles:
             self.load_from_smiles(smiles)
 
     def import_inchi_dialog(self) -> None:
         """Dialog for InChI input."""
-        inchi, ok = QInputDialog.getText(self, "Import InChI", "Enter InChI string:")
+        inchi, ok = QInputDialog.getText(self.host, "Import InChI", "Enter InChI string:")
         if ok and inchi:
             self.load_from_inchi(inchi)
 

@@ -1459,7 +1459,7 @@ class EditActionsManager:
         Optimize 3D button is re-evaluated (enabled unless chem_check_failed
         is True).
         """
-        target = mol if mol is not None else getattr(self.host, "current_mol", None)
+        target = mol if mol is not None else getattr(self.host.view_3d_manager, "current_mol", None)
         if target is not None:
             # Remove RDKit property _xyz_skip_checks
             with contextlib.suppress(AttributeError, RuntimeError, TypeError):

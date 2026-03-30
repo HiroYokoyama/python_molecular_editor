@@ -141,7 +141,7 @@ class UIManager(QObject):
     def set_mode_and_update_toolbar(self, mode_str):
         self.set_mode(mode_str)
         # Map QAction to QToolButton
-        toolbar = getattr(self.host, "toolbar", None)
+        toolbar = getattr(self.host.init_manager, "toolbar", None)
         action_to_button = {}
         if toolbar:
             for key, action in self.host.init_manager.mode_actions.items():
@@ -202,10 +202,8 @@ class UIManager(QObject):
         """
         # 1. Persist settings
         try:
-            modified = getattr(self.host, "settings_dirty", False) or (
-                hasattr(self.host, "settings")
-                and hasattr(self.host, "initial_settings")
-                and self.host.init_manager.settings != self.host.initial_settings
+            modified = getattr(self.host.init_manager, "settings_dirty", False) or (
+                self.host.init_manager.settings != self.host.initial_settings
             )
             if modified:
                 self.host.init_manager.save_settings()
@@ -214,7 +212,7 @@ class UIManager(QObject):
             pass
 
         # 2. Handle unsaved changes
-        if getattr(self.host, "has_unsaved_changes", False):
+        if getattr(self.host.state_manager, "has_unsaved_changes", False):
             reply = QMessageBox.question(
                 self.host,
                 "Unsaved Changes",
@@ -227,7 +225,7 @@ class UIManager(QObject):
 
             if reply == QMessageBox.StandardButton.Yes:
                 self.host.io_manager.save_project()
-                if getattr(self.host, "has_unsaved_changes", False):
+                if getattr(self.host.state_manager, "has_unsaved_changes", False):
                     return False
             elif reply == QMessageBox.StandardButton.Cancel:
                 return False
@@ -242,7 +240,7 @@ class UIManager(QObject):
                         pass
             
             # Stop calculation threads
-            active_threads = list(getattr(self.host, "_active_calc_threads", []) or [])
+            active_threads = list(getattr(self.host.compute_manager, "_active_calc_threads", []) or [])
             for thr in active_threads:
                 try:
                     if hasattr(thr, "quit"): thr.quit()

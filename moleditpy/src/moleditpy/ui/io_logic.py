@@ -79,7 +79,7 @@ class IOManager:
                 try:
                     Chem.Atom(symbol)
                 except (RuntimeError, ValueError):
-                    settings = getattr(self.host, "settings", {}) or {}
+                    settings = getattr(self.host.init_manager, "settings", {}) or {}
                     if settings.get("skip_chemistry_checks", False):
                         symbol = "C"
                     else:
@@ -98,7 +98,7 @@ class IOManager:
                 conf.SetAtomPosition(i, rdGeometry.Point3D(x, y, z))
             mol.AddConformer(conf)
 
-            settings = getattr(self.host, "settings", {}) or {}
+            settings = getattr(self.host.init_manager, "settings", {}) or {}
             skip_checks = bool(settings.get("skip_chemistry_checks", False))
 
             def _set_prop(m, key, val):
@@ -133,7 +133,7 @@ class IOManager:
             else:
                 final_mol = None
                 while True:
-                    prompt_fn = getattr(self, "prompt_for_charge", None) or getattr(self.host, "prompt_for_charge", None)
+                    prompt_fn = getattr(self, "prompt_for_charge", None)
                     if callable(prompt_fn):
                         result = prompt_fn()
                         if isinstance(result, tuple) and len(result) == 3:

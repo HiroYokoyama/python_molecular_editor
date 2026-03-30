@@ -507,8 +507,8 @@ class MainInitManager:
 
     def save_settings(self):
         try:
-            if not os.path.exists(self.host.settings_dir):
-                os.makedirs(self.host.settings_dir)
+            if not os.path.exists(self.host.init_manager.settings_dir):
+                os.makedirs(self.host.init_manager.settings_dir)
             with open(self.host.init_manager.settings_file, "w", encoding="utf-8") as f:
                 json.dump(self.host.init_manager.settings, f, indent=4)
             self.host.init_manager.settings_dirty = False
@@ -1194,7 +1194,7 @@ class MainInitManager:
                 lambda checked=False, k=key: (
                     self.host.view_3d_manager.set_3d_style(k),
                     self.host.view_3d_manager.draw_molecule_3d(self.host.view_3d_manager.current_mol)
-                    if getattr(self.host, "current_mol", None)
+                    if getattr(self.host.view_3d_manager, "current_mol", None)
                     else None,
                 )
             )
@@ -1210,7 +1210,7 @@ class MainInitManager:
                         lambda checked=False, s=style_name: (
                             self.host.view_3d_manager.set_3d_style(s),
                             self.host.view_3d_manager.draw_molecule_3d(self.host.view_3d_manager.current_mol)
-                            if getattr(self.host, "current_mol", None)
+                            if getattr(self.host.view_3d_manager, "current_mol", None)
                             else None,
                         )
                     )

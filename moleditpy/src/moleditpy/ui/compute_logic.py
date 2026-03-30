@@ -60,7 +60,7 @@ class ComputeManager:
 
     def _remove_calculating_text(self) -> None:
         """Safely remove the 'Calculating...' text actor from the plotter."""
-        actor = getattr(self.host, "_calculating_text_actor", None)
+        actor = getattr(self, "_calculating_text_actor", None)
         if (
             actor
             and hasattr(self.host.view_3d_manager.plotter, "renderer")
@@ -141,11 +141,10 @@ class ComputeManager:
         self.host.init_manager.settings_dirty = True
 
         if hasattr(self.host.init_manager, "opt3d_actions") and self.host.init_manager.opt3d_actions:
-            for k, act in self.host.opt3d_actions.items():
+            for k, act in self.host.init_manager.opt3d_actions.items():
                 act.setChecked(k.upper() == method)
 
-        _init_mgr = getattr(self.host, "init_manager", None)
-        label = (getattr(_init_mgr, "opt3d_method_labels", None) or getattr(self.host, "opt3d_method_labels", {})).get(method, method)
+        label = self.host.init_manager.opt3d_method_labels.get(method, method)
         self.host.statusBar().showMessage(f"3D optimization method set to: {label}")
 
     def toggle_intermolecular_interaction_rdkit(self, checked: bool) -> None:
@@ -350,8 +349,8 @@ class ComputeManager:
             ),
         }
 
-        run_id = int(getattr(self.host, "next_conversion_id", 1))
-        self.host.compute_manager.next_conversion_id = run_id + 1
+        run_id = int(getattr(self, "next_conversion_id", 1))
+        self.next_conversion_id = run_id + 1
         options["worker_id"] = run_id
 
         if hasattr(self.host, "active_worker_ids"):
@@ -482,14 +481,9 @@ class ComputeManager:
             if mol and mol.HasProp("_pme_optimization_method"):
                 method_key = mol.GetProp("_pme_optimization_method")
             if not method_key:
-                method_key = getattr(self, "optimization_method", None) or getattr(self.host, "optimization_method", None)
+                method_key = getattr(self, "optimization_method", None) or getattr(self.host.init_manager, "optimization_method", None)
             if method_key:
-                _init_mgr2 = getattr(self.host, "init_manager", None)
-                labels = (
-                    getattr(self, "opt3d_method_labels", None)
-                    or getattr(_init_mgr2, "opt3d_method_labels", None)
-                    or getattr(self.host, "opt3d_method_labels", {})
-                )
+                labels = getattr(self.host.init_manager, "opt3d_method_labels", {})
                 self.last_successful_optimization_method = labels.get(method_key, method_key)
         except (AttributeError, TypeError):
             pass
