@@ -10,14 +10,14 @@ def test_chiral_labels_toggle_3d(window, qtbot):
     """
     Test that toggling 'Show Chiral Labels' correctly displays/hides labels in 3D.
     """
-    window.load_from_smiles("C[C@H](O)CC")
-    window.trigger_conversion()
+    window.string_importer_manager.load_from_smiles("C[C@H](O)CC")
+    window.compute_manager.trigger_conversion()
     qtbot.waitUntil(lambda: window.current_mol is not None, timeout=15000)
 
     # Reset mock to clear any initialization calls
     window.plotter.add_point_labels.reset_mock()
 
-    assert window.show_chiral_labels is False
+    assert window.view_3d_manager.show_chiral_labels is False
 
     def labels_drawn():
         return any(
@@ -27,10 +27,10 @@ def test_chiral_labels_toggle_3d(window, qtbot):
 
     assert not labels_drawn()
 
-    window.toggle_chiral_action.setChecked(True)
-    window.toggle_chiral_action.triggered.emit(True)
+    window.init_manager.toggle_chiral_action.setChecked(True)
+    window.init_manager.toggle_chiral_action.triggered.emit(True)
 
-    assert window.show_chiral_labels is True
+    assert window.view_3d_manager.show_chiral_labels is True
 
     mol = window.current_mol
     chiral_centers = Chem.FindMolChiralCenters(mol, includeUnassigned=True)
@@ -58,12 +58,12 @@ def test_chiral_labels_mirror_inversion_3d(window, qtbot):
     """
     Test that mirror transformation inverts the chiral label in 3D.
     """
-    window.load_from_smiles("C[C@H](O)CC")
-    window.trigger_conversion()
+    window.string_importer_manager.load_from_smiles("C[C@H](O)CC")
+    window.compute_manager.trigger_conversion()
     qtbot.waitUntil(lambda: window.current_mol is not None, timeout=15000)
 
-    window.toggle_chiral_action.setChecked(True)
-    window.toggle_chiral_action.triggered.emit(True)
+    window.init_manager.toggle_chiral_action.setChecked(True)
+    window.init_manager.toggle_chiral_action.triggered.emit(True)
 
     qtbot.waitUntil(
         lambda: any(

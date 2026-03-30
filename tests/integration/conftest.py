@@ -268,7 +268,7 @@ def window(app, qtbot, monkeypatch):
 
     # Pre-patch init_worker_thread to avoid QThread creation
     monkeypatch.setattr(
-        "moleditpy.ui.main_window_init.MainWindowMainInit.init_worker_thread",
+        "moleditpy.ui.main_window_init.MainInitManager.init_worker_thread",
         lambda self: None,
         raising=False,
     )
@@ -337,8 +337,9 @@ def window(app, qtbot, monkeypatch):
 
     # 3. Disable complex initializations to avoid crashes
     monkeypatch.setattr(
-        "moleditpy.ui.main_window.MainWindow.apply_initial_settings",
+        "moleditpy.ui.main_window_init.MainInitManager.apply_initial_settings",
         lambda *a, **k: None,
+        raising=False,
     )
     monkeypatch.setattr(
         "moleditpy.ui.view_3d_logic.View3DManager.apply_3d_settings",
@@ -351,7 +352,7 @@ def window(app, qtbot, monkeypatch):
         from rdkit.Chem import AllChem
         from PyQt6.QtCore import QTimer
 
-        mol = self_compute.data.to_rdkit_mol(use_2d_stereo=False)
+        mol = self_compute.host.data.to_rdkit_mol(use_2d_stereo=False)
         if mol and mol.GetNumAtoms() > 0:
             mol = Chem.AddHs(mol)
             params = AllChem.ETKDG()
@@ -365,7 +366,7 @@ def window(app, qtbot, monkeypatch):
             QTimer.singleShot(0, lambda: self_compute.on_calculation_finished(None))
 
     monkeypatch.setattr(
-        "moleditpy.ui.compute_engine.MainWindowCompute.trigger_conversion",
+        "moleditpy.ui.compute_logic.ComputeManager.trigger_conversion",
         sync_trigger_conversion,
     )
 
