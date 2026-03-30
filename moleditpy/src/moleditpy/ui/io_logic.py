@@ -38,6 +38,17 @@ class IOManager:
         if host is not None:
             self.host = host
 
+    def _get_default_basename(self) -> str:
+        """Helper to get a default filename base from the current file path."""
+        try:
+            if hasattr(self.host.init_manager, "current_file_path") and self.host.init_manager.current_file_path:
+                base = os.path.basename(self.host.init_manager.current_file_path)
+                name = os.path.splitext(base)[0]
+                if name: return name
+        except (AttributeError, RuntimeError, ValueError, TypeError):
+            pass
+        return "untitled"
+
 
     def fix_mol_counts_line(self, line: str) -> str:
         if "V3000" in line or "V2000" in line: return line
@@ -159,6 +170,8 @@ class IOManager:
                         if not callable(prompt_fn):
                             raise e
 
+                if final_mol:
+                    final_mol._xyz_atom_data = atoms_data
             return final_mol
 
         except (RuntimeError, TypeError, ValueError, UnicodeDecodeError) as e:
@@ -269,14 +282,7 @@ class IOManager:
             self.host.statusBar().showMessage("Error: Nothing to save.")
             return
 
-        default_name = "untitled"
-        try:
-            if self.host.init_manager.current_file_path:
-                base = os.path.basename(self.host.init_manager.current_file_path)
-                default_name = os.path.splitext(base)[0]
-        except (AttributeError, RuntimeError, ValueError, TypeError):
-            default_name = "untitled"
-
+        default_name = self._get_default_basename()
         default_path = default_name
         try:
             if self.host.init_manager.current_file_path:
@@ -352,14 +358,7 @@ class IOManager:
             self.host.statusBar().showMessage("Error: Nothing to save.")
             return
 
-        default_name = "untitled"
-        try:
-            if self.host.init_manager.current_file_path:
-                base = os.path.basename(self.host.init_manager.current_file_path)
-                default_name = os.path.splitext(base)[0]
-        except (AttributeError, RuntimeError, ValueError, TypeError):
-            default_name = "untitled"
-
+        default_name = self._get_default_basename()
         default_path = default_name
         try:
             if self.host.init_manager.current_file_path:
@@ -403,7 +402,7 @@ class IOManager:
             if not file_path:
                 return
 
-        if not self.host.edit_actions_manager.clear_all():
+        if not self.host.edit_actions_manager.clear_all(skip_check=True):
             return
 
         try:
@@ -451,14 +450,7 @@ class IOManager:
             self.host.statusBar().showMessage("Error: Nothing to save.")
             return
 
-        default_name = "untitled"
-        try:
-            if self.host.init_manager.current_file_path:
-                base = os.path.basename(self.host.init_manager.current_file_path)
-                default_name = os.path.splitext(base)[0]
-        except (AttributeError, RuntimeError, ValueError, TypeError):
-            default_name = "untitled"
-
+        default_name = self._get_default_basename()
         default_path = default_name
         try:
             if self.host.init_manager.current_file_path:
@@ -586,7 +578,18 @@ class IOManager:
             lines = mol_block.split("\n")
             if len(lines) > 1 and "RDKit" in lines[1]:
                 lines[1] = f"  MoleditPy Ver. {VERSION}  2D"
-            file_path, _ = QFileDialog.getSaveFileName(self.host, "Save 2D MOL File", "", "MOL Files (*.mol);;All Files (*)")
+            
+            default_name = self._get_default_basename()
+            default_path = default_name
+            try:
+                if self.host.init_manager.current_file_path:
+                    default_path = os.path.join(
+                        os.path.dirname(self.host.init_manager.current_file_path), default_name
+                    )
+            except (AttributeError, RuntimeError, ValueError, TypeError):
+                pass
+
+            file_path, _ = QFileDialog.getSaveFileName(self.host, "Save 2D MOL File", default_path, "MOL Files (*.mol);;All Files (*)")
             if file_path:
                 if not file_path.lower().endswith(".mol"): file_path += ".mol"
                 with open(file_path, "w", encoding="utf-8") as f:
@@ -605,7 +608,7 @@ class IOManager:
             mol = self.load_xyz_file(file_path)
             if mol is None: raise ValueError("Failed to create molecule from XYZ file.")
 
-            self.host.edit_actions_manager.clear_all()
+            self.host.edit_actions_manager.clear_all(skip_check=True)
             self.host.view_3d_manager.current_mol = mol
             self.host.view_3d_manager.atom_id_to_rdkit_idx_map = {}
 
@@ -623,7 +626,8 @@ class IOManager:
                 logging.error(f"REPORT ERROR: Missing attribute 'draw_molecule_3d' on object")
 
             # Reset camera/zoom after drawing
-            QTimer.singleShot(0, self.host.view_3d_manager.fit_to_view)
+            QTimer.singleShot(50, lambda: self.host.view_3d_manager.plotter.view_isometric())
+            QTimer.singleShot(100, lambda: self.host.view_3d_manager.plotter.render())
 
             if hasattr(self.host.ui_manager, "_enter_3d_viewer_ui_mode"):
                 self.host.ui_manager._enter_3d_viewer_ui_mode()
@@ -644,12 +648,14 @@ class IOManager:
             else:  # [REPORT ERROR MISSING ATTRIBUTE]
                 logging.error(f"REPORT ERROR: Missing attribute 'update_atom_id_menu_state' on object")
 
-            self.host.statusBar().showMessage(f"3D Viewer Mode: Loaded {os.path.basename(file_path)}")
+            if hasattr(self.host, "statusBar") and self.host.statusBar():
+                self.host.statusBar().showMessage(f"3D Viewer Mode: Loaded {os.path.basename(file_path)}")
             self.host.init_manager.current_file_path = file_path
             self.host.state_manager.has_unsaved_changes = False
             self.host.state_manager.update_window_title()
         except Exception as e:
-            self.host.statusBar().showMessage(f"XYZ Load failed: {e}")
+            if hasattr(self.host, "statusBar") and self.host.statusBar():
+                self.host.statusBar().showMessage(f"XYZ Load failed: {e}")
 
     def load_mol_file_for_3d_viewing(self, file_path: Optional[str] = None) -> None:
         """Open MOL/SDF file in 3D viewer."""
@@ -762,7 +768,7 @@ class IOManager:
             if not file_path:
                 return
 
-        if not self.host.edit_actions_manager.clear_all():
+        if not self.host.edit_actions_manager.clear_all(skip_check=True):
             return
 
         try:

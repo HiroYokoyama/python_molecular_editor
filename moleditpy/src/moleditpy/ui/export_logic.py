@@ -51,21 +51,34 @@ class ExportManager:
     def __init__(self, host: Any) -> None:
         self.host = host
 
+    def _get_default_basename(self) -> str:
+        """Helper to get a default filename base from the current file path."""
+        try:
+            if hasattr(self.host.init_manager, "current_file_path") and self.host.init_manager.current_file_path:
+                base = os.path.basename(self.host.init_manager.current_file_path)
+                name = os.path.splitext(base)[0]
+                if name: return name
+        except (AttributeError, RuntimeError, ValueError, TypeError):
+            pass
+        return "untitled"
+
     def export_stl(self) -> None:
         if not self.host.view_3d_manager.current_mol:
             self.host.statusBar().showMessage("Error: Please generate a 3D structure first.")
             return
 
-        # prefer same directory as current file when available
-        default_dir = ""
+        default_name = self._get_default_basename()
+        default_path = default_name
         try:
             if self.host.init_manager.current_file_path:
-                default_dir = os.path.dirname(self.host.init_manager.current_file_path)
+                default_path = os.path.join(
+                    os.path.dirname(self.host.init_manager.current_file_path), default_name
+                )
         except (AttributeError, RuntimeError, ValueError, TypeError):
-            default_dir = ""
+            default_path = default_name
 
         file_path, _ = QFileDialog.getSaveFileName(
-            self.host, "Export as STL", default_dir, "STL Files (*.stl);;All Files (*)"
+            self.host, "Export as STL", default_path, "STL Files (*.stl);;All Files (*)"
         )
 
         if not file_path:
@@ -94,18 +107,20 @@ class ExportManager:
             self.host.statusBar().showMessage("Error: Please generate a 3D structure first.")
             return
 
-        # prefer same directory as current file when available
-        default_dir = ""
+        default_name = self._get_default_basename()
+        default_path = default_name
         try:
             if self.host.init_manager.current_file_path:
-                default_dir = os.path.dirname(self.host.init_manager.current_file_path)
+                default_path = os.path.join(
+                    os.path.dirname(self.host.init_manager.current_file_path), default_name
+                )
         except (AttributeError, RuntimeError, ValueError, TypeError):
-            default_dir = ""
+            default_path = default_name
 
         file_path, _ = QFileDialog.getSaveFileName(
             self.host,
             "Export as OBJ/MTL (with colors)",
-            default_dir,
+            default_path,
             "OBJ Files (*.obj);;All Files (*)",
         )
 
@@ -240,16 +255,18 @@ class ExportManager:
             self.host.statusBar().showMessage("Error: Please generate a 3D structure first.")
             return
 
-        # prefer same directory as current file when available
-        default_dir = ""
+        default_name = self._get_default_basename()
+        default_path = default_name
         try:
             if self.host.init_manager.current_file_path:
-                default_dir = os.path.dirname(self.host.init_manager.current_file_path)
+                default_path = os.path.join(
+                    os.path.dirname(self.host.init_manager.current_file_path), default_name
+                )
         except (AttributeError, RuntimeError, ValueError, TypeError):
-            default_dir = ""
+            default_path = default_name
 
         file_path, _ = QFileDialog.getSaveFileName(
-            self.host, "Export as Color STL", default_dir, "STL Files (*.stl);;All Files (*)"
+            self.host, "Export as Color STL", default_path, "STL Files (*.stl);;All Files (*)"
         )
 
         if not file_path:
@@ -688,16 +705,7 @@ class ExportManager:
             return
 
         # default filename: based on current file, append -2d for 2D exports
-        default_name = "untitled-2d"
-        try:
-            if self.host.init_manager.current_file_path:
-                base = os.path.basename(self.host.init_manager.current_file_path)
-                name = os.path.splitext(base)[0]
-                default_name = f"{name}-2d"
-        except (AttributeError, RuntimeError, ValueError, TypeError):
-            default_name = "untitled-2d"
-
-        # prefer same directory as current file when available
+        default_name = f"{self._get_default_basename()}-2d"
         default_path = default_name
         try:
             if self.host.init_manager.current_file_path:

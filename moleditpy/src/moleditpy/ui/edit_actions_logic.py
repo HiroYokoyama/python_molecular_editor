@@ -822,9 +822,9 @@ class EditActionsManager:
             if isinstance(item, (AtomItem, BondItem)):
                 item.setSelected(True)
 
-    def clear_all(self) -> bool:
+    def clear_all(self, skip_check: bool = False) -> bool:
         # Check for unsaved changes
-        if hasattr(self.host, "state_manager") and self.host.state_manager:
+        if not skip_check and hasattr(self.host, "state_manager") and self.host.state_manager:
             if not self.host.state_manager.check_unsaved_changes():
                 # Cancel if requested
                 return False
@@ -838,7 +838,7 @@ class EditActionsManager:
 
         if self.host.edit_3d_manager.is_3d_edit_mode:
             self.host.init_manager.edit_3d_action.setChecked(False)
-            self.toggle_3d_edit_mode(False)
+            self.host.ui_manager.toggle_3d_edit_mode(False)
 
         # Clear 3D selection
         self.host.edit_3d_manager.clear_3d_selection()

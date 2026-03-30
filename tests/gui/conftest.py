@@ -235,7 +235,11 @@ try:
                     )
                     self.clear = _mock.MagicMock()
                     self.render = _mock.MagicMock()
+                    self.view_isometric = _mock.MagicMock()
                     self.reset_camera = _mock.MagicMock()
+                    self.view_yz = _mock.MagicMock()
+                    self.view_xz = _mock.MagicMock()
+                    self.view_xy = _mock.MagicMock()
                     self.setAcceptDrops = _mock.MagicMock()
                     # Debug print to verify instantiation
                     print("DEBUGGING: DummyQtInteractor (Headless Mock) Initialized")
@@ -628,20 +632,31 @@ def window(app, qtbot, monkeypatch):
 
     def _patch_mainwindow_compat(cls):
         """Add property proxies to the class so legacy tests can access managers."""
+        def _get_safe(self, manager_name, attr_name, default=None):
+            manager = getattr(self, manager_name, None)
+            if manager:
+                return getattr(manager, attr_name, default)
+            return default
+
+        def _set_safe(self, manager_name, attr_name, value):
+            manager = getattr(self, manager_name, None)
+            if manager:
+                setattr(manager, attr_name, value)
+
         # Standard attributes
         cls.host = property(lambda self: self)
 
         # MainInitManager proxies
-        cls.settings = property(lambda self: self.init_manager.settings, 
-                               lambda self, v: setattr(self.init_manager, 'settings', v))
-        cls.current_file_path = property(lambda self: self.init_manager.current_file_path,
-                                        lambda self, v: setattr(self.init_manager, 'current_file_path', v))
-        cls.settings_dir = property(lambda self: self.init_manager.settings_dir,
-                                   lambda self, v: setattr(self.init_manager, 'settings_dir', v))
-        cls.settings_file = property(lambda self: self.init_manager.settings_file,
-                                    lambda self, v: setattr(self.init_manager, 'settings_file', v))
-        cls.settings_dirty = property(lambda self: self.init_manager.settings_dirty,
-                                     lambda self, v: setattr(self.init_manager, 'settings_dirty', v))
+        cls.settings = property(lambda self: _get_safe(self, 'init_manager', 'settings', {}), 
+                               lambda self, v: _set_safe(self, 'init_manager', 'settings', v))
+        cls.current_file_path = property(lambda self: _get_safe(self, 'init_manager', 'current_file_path'),
+                                        lambda self, v: _set_safe(self, 'init_manager', 'current_file_path', v))
+        cls.settings_dir = property(lambda self: _get_safe(self, 'init_manager', 'settings_dir'),
+                                   lambda self, v: _set_safe(self, 'init_manager', 'settings_dir', v))
+        cls.settings_file = property(lambda self: _get_safe(self, 'init_manager', 'settings_file'),
+                                    lambda self, v: _set_safe(self, 'init_manager', 'settings_file', v))
+        cls.settings_dirty = property(lambda self: _get_safe(self, 'init_manager', 'settings_dirty', False),
+                                     lambda self, v: _set_safe(self, 'init_manager', 'settings_dirty', v))
         cls.initial_settings = property(lambda self: self.init_manager.initial_settings,
                                        lambda self, v: setattr(self.init_manager, 'initial_settings', v))
         cls.scene = property(lambda self: self.init_manager.scene,
@@ -660,6 +675,8 @@ def window(app, qtbot, monkeypatch):
                                        lambda self, v: setattr(self.edit_3d_manager, 'measurement_mode', v))
         cls.is_3d_edit_mode = property(lambda self: self.edit_3d_manager.is_3d_edit_mode,
                                       lambda self, v: setattr(self.edit_3d_manager, 'is_3d_edit_mode', v))
+        cls.active_3d_dialogs = property(lambda self: self.edit_3d_manager.active_3d_dialogs,
+                                        lambda self, v: setattr(self.edit_3d_manager, 'active_3d_dialogs', v))
         cls.close_all_3d_edit_dialogs = lambda self: self.edit_3d_manager.close_all_3d_edit_dialogs()
 
         # IOManager proxies
@@ -688,6 +705,21 @@ def window(app, qtbot, monkeypatch):
                                   lambda self, v: setattr(self.init_manager, 'plugin_menu', v))
         cls.style_button = property(lambda self: self.init_manager.style_button,
                                    lambda self, v: setattr(self.init_manager, 'style_button', v))
+        cls.optimize_3d_button = property(lambda self: self.init_manager.optimize_3d_button,
+                                         lambda self, v: setattr(self.init_manager, 'optimize_3d_button', v))
+        cls.export_button = property(lambda self: self.init_manager.export_button,
+                                    lambda self, v: setattr(self.init_manager, 'export_button', v))
+        cls.analysis_action = property(lambda self: self.init_manager.analysis_action,
+                                      lambda self, v: setattr(self.init_manager, 'analysis_action', v))
+        cls.cleanup_button = property(lambda self: self.init_manager.cleanup_button,
+                                     lambda self, v: setattr(self.init_manager, 'cleanup_button', v))
+        cls.convert_button = property(lambda self: self.init_manager.convert_button,
+                                     lambda self, v: setattr(self.init_manager, 'convert_button', v))
+        
+        # Method proxies
+        cls.statusBar = lambda self: self._statusBar_mock if hasattr(self, '_statusBar_mock') else self.super_statusBar()
+        cls.fit_to_view = lambda self: self.view_3d_manager.fit_to_view()
+        cls.redraw_molecule_3d = lambda self: self.view_3d_manager.draw_molecule_3d(self.view_3d_manager.current_mol)
 
     global _CACHED_MAIN_WINDOW_CLASS
 

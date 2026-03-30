@@ -418,7 +418,11 @@ class UIManager(QObject):
         basic_3d_actions = ["optimize_3d_button", "export_button", "analysis_action"]
 
         for action_name in basic_3d_actions:
+            # Check both host and init_manager for these UI components
             obj = getattr(self.host, action_name, None)
+            if obj is None:
+                obj = getattr(self.host.init_manager, action_name, None)
+            
             if obj is None:
                 continue
 

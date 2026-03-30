@@ -147,12 +147,12 @@ class SettingsDialog(QDialog):
             return
 
         settings = self.get_settings()
-        self.parent_window.settings.update(settings)
+        self.parent_window.init_manager.settings.update(settings)
 
-        if hasattr(self.parent_window, "settings_dirty"):
-            self.parent_window.settings_dirty = True
+        if hasattr(self.parent_window.init_manager, "settings_dirty"):
+            self.parent_window.init_manager.settings_dirty = True
         else:  # [REPORT ERROR MISSING ATTRIBUTE]
-            logging.error(f"REPORT ERROR: Missing attribute 'settings_dirty' on self.parent_window")
+            logging.error(f"REPORT ERROR: Missing attribute 'settings_dirty' on self.parent_window.init_manager")
         
         # Persist to disk immediately
         if hasattr(self.parent_window, "init_manager"):
@@ -171,12 +171,12 @@ class SettingsDialog(QDialog):
             logging.error(f"REPORT ERROR: Missing attribute 'update_cpk_colors_from_settings' on object")
 
         # Redraw molecule
-        current_mol = getattr(self.parent_window, "current_mol", None)
+        current_mol = getattr(self.parent_window.view_3d_manager, "current_mol", None)
         if current_mol and hasattr(self.parent_window.view_3d_manager, "draw_molecule_3d"):
             self.parent_window.view_3d_manager.draw_molecule_3d(current_mol)
 
         # Apply 2D view settings
-        scene = getattr(self.parent_window, "scene", None)
+        scene = getattr(self.parent_window.init_manager, "scene", None)
         if scene:
             bg_col_2d = settings.get("background_color_2d", "#FFFFFF")
             scene.setBackgroundBrush(QColor(bg_col_2d))

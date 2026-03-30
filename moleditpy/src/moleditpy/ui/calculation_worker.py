@@ -588,13 +588,10 @@ def _perform_optimize_only(
         with contextlib.suppress(Exception):
             mol.ClearProp("_pme_optimization_method")
 
-    if _check_halted():
-        raise WorkerHaltError("Halted")
-    _safe_finished((worker_id, mol))
-
-    # Final status message showing both conversion (Existing 3D) and optimization info
+    # Final status message before finishing (to ensure it doesn't overwrite error/halt messages)
     opt_label = _OPT_METHOD_LABELS.get(opt_method, opt_method)
     _safe_status(f"Process completed (Existing 3D Structure / {opt_label}).")
+    _safe_finished((worker_id, mol))
 
 
 def _perform_obabel_conversion(
@@ -687,11 +684,10 @@ print(ob_mol.write("mol"))
 
         if _check_halted():
             raise WorkerHaltError("Halted")
-        _safe_finished((worker_id, rd_mol))
-
-        # Final status message showing both conversion (Open Babel) and optimization info
+        # Final status message before finishing (to ensure it doesn't overwrite error/halt messages)
         opt_label = _OPT_METHOD_LABELS.get(opt_method, opt_method)
         _safe_status(f"Process completed (Open Babel Conversion / {opt_label}).")
+        _safe_finished((worker_id, rd_mol))
         return True
     except WorkerHaltError:
         raise
@@ -743,8 +739,16 @@ class CalculationWorker(QObject):
                 self.finished.emit(payload)
 
         def _safe_error(msg):
-            if msg != "Halted" and _check_halted():
+            # If we're already halting, don't raise another error
+            if msg == "Halted":
+                with contextlib.suppress(AttributeError, RuntimeError, TypeError):
+                    self.error.emit((w_id, "Halted"))
+                return
+            
+            # If a new halt was requested during an error, raise it to the local handler
+            if _check_halted():
                 raise WorkerHaltError("Halted")
+                
             with contextlib.suppress(AttributeError, RuntimeError, TypeError):
                 self.error.emit((w_id, msg))
 
@@ -803,7 +807,9 @@ class CalculationWorker(QObject):
                 self._run_direct_workflow(mol_block, mol, options, helpers)
 
         except WorkerHaltError:
-            _safe_error("Halted")
+            # Swallow here; the loop has already been notified
+            with contextlib.suppress(AttributeError, RuntimeError, TypeError):
+                self.error.emit((w_id, "Halted"))
         except (
             Exception,
             RuntimeError,
@@ -814,7 +820,12 @@ class CalculationWorker(QObject):
             OSError,
             UnicodeDecodeError,
         ) as e:
-            _safe_error(str(e))
+            try:
+                _safe_error(str(e))
+            except WorkerHaltError:
+                # Swallowed if safe_error itself detected a halt
+                with contextlib.suppress(AttributeError, RuntimeError, TypeError):
+                    self.error.emit((w_id, "Halted"))
 
     def _prepare_molecule_for_calc(self, mol_block, helpers):
         """Parse MOL block and extract explicit stereochemistry info."""
@@ -938,11 +949,10 @@ class CalculationWorker(QObject):
 
         if _check_halted():
             raise WorkerHaltError("Halted")
-        _safe_finished((w_id, mol))
-
-        # Final status message showing both conversion (RDKit) and optimization info
+        # Final status message before finishing (to ensure it doesn't overwrite error/halt messages)
         opt_label = _OPT_METHOD_LABELS.get(opt_method, opt_method)
         _safe_status(f"Process completed (RDKit Conversion / {opt_label}).")
+        _safe_finished((w_id, mol))
         return True
 
     def _run_obabel_workflow(self, mol_block, options, helpers):
@@ -963,8 +973,12 @@ class CalculationWorker(QObject):
         mol = _perform_direct_conversion(
             mol_block, mol, options, helpers["check_halted"], helpers["status"]
         )
-        helpers["finished"]((options.get("worker_id"), mol))
-
-        # Final status message showing conversion (Direct) info
+        # Final status message before finishing (to ensure it doesn't overwrite error/halt messages)
         _safe_status = helpers["status"]
-        _safe_status("Process completed (Direct 2D->3D Conversion).")
+        opt_method = (options or {}).get("optimization_method", "MMFF94s_RDKIT")
+        if (options or {}).get("do_optimize", True):
+            opt_label = _OPT_METHOD_LABELS.get(opt_method, opt_method)
+            _safe_status(f"Process completed (Direct 2D->3D Conversion / {opt_label}).")
+        else:
+            _safe_status("Process completed (Direct 2D->3D Conversion).")
+        helpers["finished"]((options.get("worker_id"), mol))

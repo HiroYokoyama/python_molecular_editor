@@ -366,6 +366,10 @@ class ComputeManager:
             logging.error(f"REPORT ERROR: Missing attribute 'optimize_3d_button' on object")
 
         self.host.ui_manager._enable_3d_features(False)
+        # Re-enable the button so it can be clicked to Halt
+        if hasattr(self.host.init_manager, "optimize_3d_button"):
+            self.host.init_manager.optimize_3d_button.setEnabled(True)
+
         self._start_calculation_worker(mol_block, options, run_id)
 
     def _prepare_rdkit_mol_for_conversion(self):
@@ -454,6 +458,8 @@ class ComputeManager:
         worker_id, mol = result if isinstance(result, tuple) else (None, result)
         if worker_id is not None:
             if worker_id not in self.active_worker_ids:
+                # Still show something if the user wants to see 'staled' result
+                self.host.statusBar().showMessage(f"Ignored halted worker result (ID = {worker_id})")
                 return  # stale worker, ignore
             self.active_worker_ids.discard(worker_id)
             self.halt_ids.discard(worker_id)
@@ -498,15 +504,26 @@ class ComputeManager:
         if isinstance(message, tuple) and len(message) == 2:
             worker_id, msg = message
             if worker_id not in self.active_worker_ids:
+                # Still cleanup overlay/buttons even if stale
                 self._remove_calculating_text()
                 self._restore_button_ui()
+                # If it was a halt or error from a stale worker, show with ID
+                if msg == "Halt" or msg == "Halted":
+                    self.host.statusBar().showMessage(f"Ignored halted worker (ID = {worker_id})")
+                else:
+                    self.host.statusBar().showMessage(f"Ignored stale worker error: {msg} (ID = {worker_id})")
                 return  # stale worker, ignore
             self.active_worker_ids.discard(worker_id)
         else:
             msg = str(message)
+        
         self._remove_calculating_text()
         self._restore_button_ui()
-        self.host.statusBar().showMessage(f"Calculation Error: {msg}")
+        
+        if msg == "Halt" or msg == "Halted":
+            self.host.statusBar().showMessage("Halted")
+        else:
+            self.host.statusBar().showMessage(f"Calculation Error: {msg}")
 
         # Offer UFF fallback when MMFF fails
         if "MMFF" in msg.upper() and "fail" in msg.lower():

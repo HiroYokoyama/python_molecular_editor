@@ -154,6 +154,7 @@ class MolecularData:
             atom.SetFormalCharge(data.get("charge", 0))
             atom.SetNumRadicalElectrons(data.get("radical", 0))
             atom.SetIntProp("_original_atom_id", atom_id)
+            atom.SetNoImplicit(False)  # Allow RDKit to perceive implicit valence
             idx = mol.AddAtom(atom)
             atom_id_to_idx_map[atom_id] = idx
 
