@@ -106,6 +106,14 @@ def ast_collect_methods(fpath: Path) -> set:
             for item in node.body:
                 if isinstance(item, ast.FunctionDef) and not item.name.startswith("__"):
                     methods.add(item.name)
+                    # メソッド内で定義される self.XXX = ... の属性も収集
+                    for sub_node in ast.walk(item):
+                        if isinstance(sub_node, ast.Assign):
+                            for target in sub_node.targets:
+                                if isinstance(target, ast.Attribute) and \
+                                   isinstance(target.value, ast.Name) and \
+                                   target.value.id == "self":
+                                    methods.add(target.attr)
     return methods
 
 
@@ -135,7 +143,7 @@ def build_per_manager_methods() -> dict:
 # ---------------------------------------------------------------------------
 
 SELF_HOST_ATTR_RE = re.compile(
-    r"\bself\.host\."               # self.host.
+    r"\bself\.(?:host\.)?"          # self. または self.host.
     r"([a-zA-Z_]\w*)"               # ATTR
 )
 
@@ -144,9 +152,8 @@ HASATTR_RE = re.compile(
 )
 
 SELF_HOST_MANAGER_METHOD_RE = re.compile(
-    r"\bself\.host\.([a-zA-Z_]\w+)\.([a-zA-Z_]\w+)"
+    r"\bself\.(?:host\.)?([a-zA-Z_]\w+)\.([a-zA-Z_]\w+)"
 )
-
 
 def scan_file(fpath: Path, full_method_map: dict, per_mgr: dict,
               verbose: bool) -> list:
@@ -237,6 +244,16 @@ def scan_file(fpath: Path, full_method_map: dict, per_mgr: dict,
                     "count":   text.count(f"self.host.{attr}"),
                 })
             # else: unknown attr — skip unless verbose (could be a Qt attribute etc.)
+            else:
+                findings.append({
+                    "kind":    "UNKNOWN_ATTRIBUTE",
+                    "lineno":  lineno,
+                    "attr":    attr,
+                    "extra":   "",
+                    "line":    stripped,
+                    "soft":    False,
+                    "old":     m.group(0) # 実際にマッチした文字列 (self.XXX など)
+                })
 
         # ---- C) hasattr(self[.host], "ATTR") — soft connections ----
         if verbose:
@@ -319,7 +336,9 @@ def main():
             elif kind == "MISSING_MANAGER_METHOD":
                 print(f"    self.host.{f['attr']}()  -- method not found in manager")
             elif kind == "UNKNOWN_MANAGER":
-                print(f"    self.host.{f['attr']}.{f['extra']}  -- unknown manager attr '{f['attr']}'")
+                print(f"    {f.get('old', 'self.host.' + f['attr'] + '.' + f['extra'])}  -- unknown manager attr '{f['attr']}'")
+            elif kind == "UNKNOWN_ATTRIBUTE":
+                print(f"    {f['old']}  -- unknown attribute or method '{f['attr']}'")
             print(f"    Context: {f['line'][:90]}")
 
         if args.verbose and soft:

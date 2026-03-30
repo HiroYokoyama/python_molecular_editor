@@ -188,7 +188,7 @@ class UserTemplateDialog(QDialog):
 
     def get_template_directory(self):
         """Get or create the user templates directory path."""
-        template_dir = os.path.join(self.main_window.settings_dir, "user-templates")
+        template_dir = os.path.join(self.main_window.init_manager.settings_dir, "user-templates")
         if not os.path.exists(template_dir):
             os.makedirs(template_dir)
         return template_dir

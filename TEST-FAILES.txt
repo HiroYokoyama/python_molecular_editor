@@ -1,0 +1,97 @@
+_________________ test_load_xyz_robustness[1\nTitle\nX 0 0 0] _________________
+C:\Users\hiro2\AppData\Local\Programs\Python\Python313\Lib\unittest\mock.py:948: in assert_called
+    raise AssertionError(msg)
+E   AssertionError: Expected 'showMessage' to have been called.
+
+During handling of the above exception, another exception occurred:
+tests\unit\test_parser_robustness.py:131: in test_load_xyz_robustness
+    win.statusBar().showMessage.assert_called()
+E   AssertionError: Expected 'showMessage' to have been called.
+---------------------------- Captured stderr call -----------------------------
+[21:31:01]
+
+****
+Post-condition Violation
+Element 'X' not found
+Violation occurred on line 93 in file C:\rdkit\build\temp.win-amd64-cpython-313\Release\rdkit\Code\GraphMol\PeriodicTable.h
+Failed Expression: anum > -1
+****
+
+
+=================================== ERRORS ====================================
+___________ ERROR at teardown of test_drag_drop_mol_file_on_3d_view ___________
+TEARDOWN ERROR: Exceptions caught in Qt event loop:
+________________________________________________________________________________
+Traceback (most recent call last):
+  File "E:\Research\Calculation\moleditpy\DEV_MAIN\python_molecular_editor\moleditpy\src\moleditpy\ui\ui_manager.py", line 366, in <lambda>
+    QTimer.singleShot(100, lambda: self.host.view_3d_manager.plotter.view_isometric())
+                                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'DummyPlotter' object has no attribute 'view_isometric'
+________________________________________________________________________________
+
+-------------------------- Captured stderr teardown ---------------------------
+Exceptions caught in Qt event loop:
+________________________________________________________________________________
+Traceback (most recent call last):
+  File "E:\Research\Calculation\moleditpy\DEV_MAIN\python_molecular_editor\moleditpy\src\moleditpy\ui\ui_manager.py", line 366, in <lambda>
+    QTimer.singleShot(100, lambda: self.host.view_3d_manager.plotter.view_isometric())
+                                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'DummyPlotter' object has no attribute 'view_isometric'
+________________________________________________________________________________
+================================== FAILURES ===================================
+__________________________ test_add_remove_hydrogens __________________________
+tests\gui\test_main_app.py:991: in test_add_remove_hydrogens
+    assert len(window.state_manager.data.atoms) == 5  # C + 4H
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   AssertionError: assert 1 == 5
+E    +  where 1 = len({0: {'charge': 0, 'item': <moleditpy.ui.atom_item.AtomItem object at 0x000001C5A6D67930>, 'pos': (0.0, 0.0), 'radical': 0, ...}})
+E    +    where {0: {'charge': 0, 'item': <moleditpy.ui.atom_item.AtomItem object at 0x000001C5A6D67930>, 'pos': (0.0, 0.0), 'radical': 0, ...}} = <moleditpy.core.molecular_data.MolecularData object at 0x000001C5A8935710>.atoms
+E    +      where <moleditpy.core.molecular_data.MolecularData object at 0x000001C5A8935710> = <moleditpy.ui.app_state.StateManager object at 0x000001C5A8936040>.data
+E    +        where <moleditpy.ui.app_state.StateManager object at 0x000001C5A8936040> = <moleditpy.ui.main_window.MainWindow object at 0x000001C5A8898F50>.state_manager
+___________________________ test_3d_viewer_mode_mol ___________________________
+tests\gui\test_main_app.py:1128: in test_3d_viewer_mode_mol
+    assert window.init_manager.optimize_3d_button.isEnabled() == True
+E   assert False == True
+E    +  where False = <built-in method isEnabled of QPushButton object at 0x000001C5A0DC1DB0>()
+E    +    where <built-in method isEnabled of QPushButton object at 0x000001C5A0DC1DB0> = <PyQt6.QtWidgets.QPushButton object at 0x000001C5A0DC1DB0>.isEnabled
+E    +      where <PyQt6.QtWidgets.QPushButton object at 0x000001C5A0DC1DB0> = <moleditpy.ui.main_window_init.MainInitManager object at 0x000001C5A0E2D450>.optimize_3d_button
+E    +        where <moleditpy.ui.main_window_init.MainInitManager object at 0x000001C5A0E2D450> = <moleditpy.ui.main_window.MainWindow object at 0x000001C5A6DFFE30>.init_manager
+__________________________ test_open_3d_edit_dialogs __________________________
+tests\gui\test_main_app.py:1154: in test_open_3d_edit_dialogs
+    assert len(window.active_3d_dialogs) == 0
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+E   AttributeError: 'MainWindow' object has no attribute 'active_3d_dialogs'
+__________________________ test_toggle_3d_atom_info ___________________________
+tests\gui\test_main_app.py:1308: in test_toggle_3d_atom_info
+    assert window.atom_info_display_mode == "id"
+E   AssertionError: assert None == 'id'
+E    +  where None = <moleditpy.ui.main_window.MainWindow object at 0x000001C5A6D66350>.atom_info_display_mode
+___________________ test_user_template_dialog_save_and_use ____________________
+C:\Users\hiro2\AppData\Local\Programs\Python\Python313\Lib\unittest\mock.py:958: in assert_called_once
+    raise AssertionError(msg)
+E   AssertionError: Expected 'mock' to have been called once. Called 0 times.
+
+During handling of the above exception, another exception occurred:
+tests\gui\test_main_app.py:1365: in test_user_template_dialog_save_and_use
+    mocker_json_dump.assert_called_once()
+E   AssertionError: Expected 'mock' to have been called once. Called 0 times.
+---------------------------- Captured stdout call -----------------------------
+DEBUG: click_scene viewport_pos=PyQt6.QtCore.QPoint(667, 620) for scene pos=PyQt6.QtCore.QPointF(10.0, 10.0)
+_____________________ test_drag_drop_mol_file_on_3d_view ______________________
+C:\Users\hiro2\AppData\Local\Programs\Python\Python313\Lib\unittest\mock.py:990: in assert_called_once_with
+    raise AssertionError(msg)
+E   AssertionError: Expected 'mock' to be called once. Called 0 times.
+
+During handling of the above exception, another exception occurred:
+tests\gui\test_main_app.py:1494: in test_drag_drop_mol_file_on_3d_view
+    mock_load_3d.assert_called_once_with(file_path="/fake/drop.mol")
+E   AssertionError: Expected 'mock' to be called once. Called 0 times.
+_____________________ test_drag_drop_mol_file_on_2d_view ______________________
+C:\Users\hiro2\AppData\Local\Programs\Python\Python313\Lib\unittest\mock.py:990: in assert_called_once_with
+    raise AssertionError(msg)
+E   AssertionError: Expected 'mock' to be called once. Called 0 times.
+
+During handling of the above exception, another exception occurred:
+tests\gui\test_main_app.py:1526: in test_drag_drop_mol_file_on_2d_view
+    mock_load_2d.assert_called_once_with(file_path="/fake/drop.mol")
+E   AssertionError: Expected 'mock' to be called once. Called 0 times.

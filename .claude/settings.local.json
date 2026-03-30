@@ -42,7 +42,9 @@
       "Bash(find E:ResearchCalculationmoleditpyDEV_MAIN -path *linux* -name *.py)",
       "Bash(python -m pytest tests/unit/ -q --tb=short)",
       "Bash(python -m pytest tests/gui/ -q --tb=short)",
-      "Bash(python -m pytest tests/gui/ -q --tb=line)"
+      "Bash(python -m pytest tests/gui/ -q --tb=line)",
+      "Bash(python scripts/scan_disconnections_v2.py)",
+      "Bash(python scripts/scan_disconnections_v2.py --dialogs)"
     ]
   }
 }
