@@ -352,7 +352,7 @@ def window(app, qtbot, monkeypatch):
         from rdkit.Chem import AllChem
         from PyQt6.QtCore import QTimer
 
-        mol = self_compute.host.data.to_rdkit_mol(use_2d_stereo=False)
+        mol = self_compute.host.state_manager.data.to_rdkit_mol(use_2d_stereo=False)
         if mol and mol.GetNumAtoms() > 0:
             mol = Chem.AddHs(mol)
             params = AllChem.ETKDG()

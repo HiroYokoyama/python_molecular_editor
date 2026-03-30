@@ -60,13 +60,13 @@ class UIManager(QObject):
                 else str(mode_str[0])
             )
 
-        prev_mode = getattr(self.host.scene, "mode", None)
-        self.host.scene.mode = mode_str
-        self.host.view_2d.setMouseTracking(True)
+        prev_mode = getattr(self.host.init_manager.scene, "mode", None)
+        self.host.init_manager.scene.mode = mode_str
+        self.host.init_manager.view_2d.setMouseTracking(True)
         
         # Trigger immediate scene refresh to show/update template previews
-        if hasattr(self.host.scene, "refresh_mode_state"):
-            self.host.scene.refresh_mode_state()
+        if hasattr(self.host.init_manager.scene, "refresh_mode_state"):
+            self.host.init_manager.scene.refresh_mode_state()
         else:  # [REPORT ERROR MISSING ATTRIBUTE]
             logging.error(f"REPORT ERROR: Missing attribute 'refresh_mode_state' on object")
         # Clear ghost when leaving template mode
@@ -75,42 +75,42 @@ class UIManager(QObject):
             and prev_mode.startswith("template")
             and not mode_str.startswith("template")
         ):
-            self.host.scene.clear_template_preview()
+            self.host.init_manager.scene.clear_template_preview()
         elif not mode_str.startswith("template"):
-            self.host.scene.template_preview.hide()
+            self.host.init_manager.scene.template_preview.hide()
 
         # Set cursor shape
         if mode_str == "select":
-            self.host.view_2d.setCursor(Qt.CursorShape.ArrowCursor)
+            self.host.init_manager.view_2d.setCursor(Qt.CursorShape.ArrowCursor)
         elif mode_str.startswith(("atom", "bond", "template")):
-            self.host.view_2d.setCursor(Qt.CursorShape.CrossCursor)
+            self.host.init_manager.view_2d.setCursor(Qt.CursorShape.CrossCursor)
         elif mode_str.startswith(("charge", "radical")):
-            self.host.view_2d.setCursor(Qt.CursorShape.CrossCursor)
+            self.host.init_manager.view_2d.setCursor(Qt.CursorShape.CrossCursor)
         else:
-            self.host.view_2d.setCursor(Qt.CursorShape.ArrowCursor)
+            self.host.init_manager.view_2d.setCursor(Qt.CursorShape.ArrowCursor)
 
         if mode_str.startswith("atom"):
-            self.host.scene.current_atom_symbol = mode_str.split("_")[1]
+            self.host.init_manager.scene.current_atom_symbol = mode_str.split("_")[1]
             self.host.statusBar().showMessage(
-                f"Mode: Draw Atom ({self.host.scene.current_atom_symbol})"
+                f"Mode: Draw Atom ({self.host.init_manager.scene.current_atom_symbol})"
             )
-            self.host.view_2d.setDragMode(QGraphicsView.DragMode.NoDrag)
-            self.host.view_2d.setMouseTracking(True)
-            self.host.scene.bond_order = 1
-            self.host.scene.bond_stereo = 0
+            self.host.init_manager.view_2d.setDragMode(QGraphicsView.DragMode.NoDrag)
+            self.host.init_manager.view_2d.setMouseTracking(True)
+            self.host.init_manager.scene.bond_order = 1
+            self.host.init_manager.scene.bond_stereo = 0
         elif mode_str.startswith("bond"):
-            self.host.scene.current_atom_symbol = "C"
+            self.host.init_manager.scene.current_atom_symbol = "C"
             parts = mode_str.split("_")
-            self.host.scene.bond_order = int(parts[1])
-            self.host.scene.bond_stereo = int(parts[2]) if len(parts) > 2 else 0
+            self.host.init_manager.scene.bond_order = int(parts[1])
+            self.host.init_manager.scene.bond_stereo = int(parts[2]) if len(parts) > 2 else 0
             stereo_text = {0: "", 1: " (Wedge)", 2: " (Dash)"}.get(
-                self.host.scene.bond_stereo, ""
+                self.host.init_manager.scene.bond_stereo, ""
             )
             self.host.statusBar().showMessage(
-                f"Mode: Draw Bond (Order: {self.host.scene.bond_order}{stereo_text})"
+                f"Mode: Draw Bond (Order: {self.host.init_manager.scene.bond_order}{stereo_text})"
             )
-            self.host.view_2d.setDragMode(QGraphicsView.DragMode.NoDrag)
-            self.host.view_2d.setMouseTracking(True)
+            self.host.init_manager.view_2d.setDragMode(QGraphicsView.DragMode.NoDrag)
+            self.host.init_manager.view_2d.setMouseTracking(True)
         elif mode_str.startswith("template"):
             if mode_str.startswith("template_user"):
                 # User template mode
@@ -121,22 +121,22 @@ class UIManager(QObject):
                 self.host.statusBar().showMessage(
                     f"Mode: {mode_str.split('_')[1].capitalize()} Template"
                 )
-            self.host.view_2d.setDragMode(QGraphicsView.DragMode.NoDrag)
+            self.host.init_manager.view_2d.setDragMode(QGraphicsView.DragMode.NoDrag)
         elif mode_str == "charge_plus":
             self.host.statusBar().showMessage("Mode: Increase Charge (Click on Atom)")
-            self.host.view_2d.setDragMode(QGraphicsView.DragMode.NoDrag)
+            self.host.init_manager.view_2d.setDragMode(QGraphicsView.DragMode.NoDrag)
         elif mode_str == "charge_minus":
             self.host.statusBar().showMessage("Mode: Decrease Charge (Click on Atom)")
-            self.host.view_2d.setDragMode(QGraphicsView.DragMode.NoDrag)
+            self.host.init_manager.view_2d.setDragMode(QGraphicsView.DragMode.NoDrag)
         elif mode_str == "radical":
             self.host.statusBar().showMessage("Mode: Toggle Radical (Click on Atom)")
-            self.host.view_2d.setDragMode(QGraphicsView.DragMode.NoDrag)
+            self.host.init_manager.view_2d.setDragMode(QGraphicsView.DragMode.NoDrag)
 
         else:  # Select mode
             self.host.statusBar().showMessage("Mode: Select")
-            self.host.view_2d.setDragMode(QGraphicsView.DragMode.RubberBandDrag)
-            self.host.scene.bond_order = 1
-            self.host.scene.bond_stereo = 0
+            self.host.init_manager.view_2d.setDragMode(QGraphicsView.DragMode.RubberBandDrag)
+            self.host.init_manager.scene.bond_order = 1
+            self.host.init_manager.scene.bond_stereo = 0
 
     def set_mode_and_update_toolbar(self, mode_str):
         self.set_mode(mode_str)
@@ -144,13 +144,13 @@ class UIManager(QObject):
         toolbar = getattr(self.host, "toolbar", None)
         action_to_button = {}
         if toolbar:
-            for key, action in self.host.mode_actions.items():
+            for key, action in self.host.init_manager.mode_actions.items():
                 btn = toolbar.widgetForAction(action)
                 if btn:
                     action_to_button[action] = btn
 
         # Reset all mode buttons
-        for key, action in self.host.mode_actions.items():
+        for key, action in self.host.init_manager.mode_actions.items():
             action.setChecked(False)
             btn = action_to_button.get(action)
             if btn:
@@ -158,13 +158,13 @@ class UIManager(QObject):
 
         # Apply style to matching mode buttons (exact match or prefix for user templates)
         matched_key = None
-        if mode_str in self.host.mode_actions:
+        if mode_str in self.host.init_manager.mode_actions:
             matched_key = mode_str
         elif mode_str.startswith("template_user"):
             matched_key = "template_user"
 
-        if matched_key and matched_key in self.host.mode_actions:
-            action = self.host.mode_actions[matched_key]
+        if matched_key and matched_key in self.host.init_manager.mode_actions:
+            action = self.host.init_manager.mode_actions[matched_key]
             action.setChecked(True)
             btn = action_to_button.get(action)
             if btn:
@@ -176,16 +176,16 @@ class UIManager(QObject):
 
     def activate_select_mode(self):
         self.set_mode("select")
-        if "select" in self.host.mode_actions:
-            self.host.mode_actions["select"].setChecked(True)
+        if "select" in self.host.init_manager.mode_actions:
+            self.host.init_manager.mode_actions["select"].setChecked(True)
 
     def set_atom_from_periodic_table(self, symbol: str) -> None:
         """Helper to set the current mode from periodic table selection."""
         self.set_mode(f"atom_{symbol}")
 
     def eventFilter(self, obj, event):
-        if hasattr(self.host, "plotter") and obj is self.host.plotter and event.type() == QEvent.Type.MouseButtonPress:
-            self.host.view_2d.setFocus()
+        if hasattr(self.host.view_3d_manager, 'plotter') and obj is self.host.view_3d_manager.plotter and event.type() == QEvent.Type.MouseButtonPress:
+            self.host.init_manager.view_2d.setFocus()
         
         # Handle Window Close via event filter
         if obj is self.host and event.type() == QEvent.Type.Close:
@@ -205,11 +205,11 @@ class UIManager(QObject):
             modified = getattr(self.host, "settings_dirty", False) or (
                 hasattr(self.host, "settings")
                 and hasattr(self.host, "initial_settings")
-                and self.host.settings != self.host.initial_settings
+                and self.host.init_manager.settings != self.host.initial_settings
             )
             if modified:
                 self.host.init_manager.save_settings()
-                self.host.settings_dirty = False
+                self.host.init_manager.settings_dirty = False
         except (AttributeError, RuntimeError, TypeError, ValueError, OSError):
             pass
 
@@ -270,7 +270,7 @@ class UIManager(QObject):
         if checked:
             # Disable measurement mode when 3D Drag is on
             if self.host.edit_3d_manager.measurement_mode:
-                self.host.measurement_action.setChecked(False)
+                self.host.init_manager.measurement_action.setChecked(False)
                 self.host.edit_3d_manager.toggle_measurement_mode(False)
 
         self.host.edit_3d_manager.is_3d_edit_mode = checked
@@ -278,18 +278,18 @@ class UIManager(QObject):
             self.host.statusBar().showMessage("3D Drag Mode: ON.")
         else:
             self.host.statusBar().showMessage("3D Drag Mode: OFF.")
-        self.host.view_2d.setFocus()
+        self.host.init_manager.view_2d.setFocus()
 
     def _setup_3d_picker(self):
-        self.host.plotter.picker = vtk.vtkCellPicker()
-        self.host.plotter.picker.SetTolerance(0.025)
+        self.host.view_3d_manager.plotter.picker = vtk.vtkCellPicker()
+        self.host.view_3d_manager.plotter.picker.SetTolerance(0.025)
 
         # Create CustomInteractorStyle
         style = CustomInteractorStyle(self.host)
 
         # Set interactor style
-        self.host.plotter.interactor.SetInteractorStyle(style)
-        self.host.plotter.interactor.Initialize()
+        self.host.view_3d_manager.plotter.interactor.SetInteractorStyle(style)
+        self.host.view_3d_manager.plotter.interactor.Initialize()
 
     def dragEnterEvent(self, event):
         """Handle drag enter event."""
@@ -355,18 +355,18 @@ class UIManager(QObject):
             
             # Identify if the target widget is the plotter (or one of its children)
             is_on_3d = False
-            if hasattr(self.host, "plotter"):
-                plotter_widget = self.host.splitter.widget(1)
+            if hasattr(self.host.view_3d_manager, 'plotter'):
+                plotter_widget = self.host.init_manager.splitter.widget(1)
                 if target_widget == plotter_widget or plotter_widget.isAncestorOf(target_widget):
                     is_on_3d = True
             else:  # [REPORT ERROR MISSING ATTRIBUTE]
-                logging.error(f"REPORT ERROR: Missing attribute 'plotter' on self.host")
+                logging.error(f"REPORT ERROR: Missing attribute 'plotter' on object")
             
             if is_on_3d:
                 self.host.io_manager.load_mol_file_for_3d_viewing(file_path=file_path)
                 # Ensure 3D viewer zooms and renders the dropped molecule
-                QTimer.singleShot(100, lambda: self.host.plotter.view_isometric())
-                QTimer.singleShot(150, lambda: self.host.plotter.render())
+                QTimer.singleShot(100, lambda: self.host.view_3d_manager.plotter.view_isometric())
+                QTimer.singleShot(150, lambda: self.host.view_3d_manager.plotter.render())
             else:
                 self.host.io_manager.load_mol_file(file_path=file_path)
                 QTimer.singleShot(100, self.host.view_3d_manager.fit_to_view)
@@ -450,10 +450,10 @@ class UIManager(QObject):
 
     def _enter_3d_viewer_ui_mode(self):
         """Set UI mode to 3D viewer."""
-        self.host.is_2d_editable = False
-        self.host.cleanup_button.setEnabled(False)
-        self.host.convert_button.setEnabled(False)
-        for action in self.host.tool_group.actions():
+        self.host.ui_manager.is_2d_editable = False
+        self.host.init_manager.cleanup_button.setEnabled(False)
+        self.host.init_manager.convert_button.setEnabled(False)
+        for action in self.host.init_manager.tool_group.actions():
             action.setEnabled(False)
         if hasattr(self.host.init_manager, "other_atom_action"):
             self.host.init_manager.other_atom_action.setEnabled(False)
@@ -467,16 +467,16 @@ class UIManager(QObject):
 
     def restore_ui_for_editing(self):
         """Enables all 2D editing UI elements."""
-        self.host.is_2d_editable = True
+        self.host.ui_manager.is_2d_editable = True
         self.host.ui_manager.restore_2d_panel()
-        self.host.cleanup_button.setEnabled(True)
-        self.host.convert_button.setEnabled(True)
+        self.host.init_manager.cleanup_button.setEnabled(True)
+        self.host.init_manager.convert_button.setEnabled(True)
 
-        for action in self.host.tool_group.actions():
+        for action in self.host.init_manager.tool_group.actions():
             action.setEnabled(True)
 
         if hasattr(self.host, "other_atom_action"):
-            self.host.other_atom_action.setEnabled(True)
+            self.host.init_manager.other_atom_action.setEnabled(True)
         else:  # [REPORT ERROR MISSING ATTRIBUTE]
             logging.error(f"REPORT ERROR: Missing attribute 'other_atom_action' on self.host")
 
@@ -485,33 +485,33 @@ class UIManager(QObject):
 
     def minimize_2d_panel(self):
         """Minimize (hide) 2D panel."""
-        sizes = self.host.splitter.sizes()
+        sizes = self.host.init_manager.splitter.sizes()
         # Only if not already minimized
         if sizes[0] > 0:
             total_width = sum(sizes)
-            self.host.splitter.setSizes([0, total_width])
+            self.host.init_manager.splitter.setSizes([0, total_width])
 
     def restore_2d_panel(self):
         """Restore 2D panel."""
-        sizes = self.host.splitter.sizes()
+        sizes = self.host.init_manager.splitter.sizes()
 
         # Check sizes list before access
         if sizes and sizes[0] == 0:
-            self.host.splitter.setSizes([600, 600])
+            self.host.init_manager.splitter.setSizes([600, 600])
 
     def set_panel_layout(self, left_percent, right_percent):
         """Set panel layout ratio."""
         if left_percent + right_percent != 100:
             return
 
-        total_width = self.host.splitter.width()
+        total_width = self.host.init_manager.splitter.width()
         if total_width <= 0:
             total_width = 1200  # Default width
 
         left_width = int(total_width * left_percent / 100)
         right_width = int(total_width * right_percent / 100)
 
-        self.host.splitter.setSizes([left_width, right_width])
+        self.host.init_manager.splitter.setSizes([left_width, right_width])
 
         # Show feedback
         self.host.statusBar().showMessage(
@@ -520,7 +520,7 @@ class UIManager(QObject):
 
     def toggle_2d_panel(self):
         """Toggle 2D panel visibility."""
-        sizes = self.host.splitter.sizes()
+        sizes = self.host.init_manager.splitter.sizes()
         if not sizes:
             return
 
@@ -535,7 +535,7 @@ class UIManager(QObject):
 
     def on_splitter_moved(self, pos, index):
         """Feedback for splitter movement."""
-        sizes = self.host.splitter.sizes()
+        sizes = self.host.init_manager.splitter.sizes()
         if len(sizes) >= 2:
             total = sum(sizes)
             if total > 0:
@@ -543,8 +543,8 @@ class UIManager(QObject):
                 right_percent = round(sizes[1] * 100 / total)
 
                 # Show ratio in tooltip
-                if hasattr(self.host.splitter, "handle"):
-                    handle = self.host.splitter.handle(1)
+                if hasattr(self.host.init_manager.splitter, "handle"):
+                    handle = self.host.init_manager.splitter.handle(1)
                     if handle:
                         handle.setToolTip(f"2D: {left_percent}% | 3D: {right_percent}%")
                 else:  # [REPORT ERROR MISSING ATTRIBUTE]
@@ -552,7 +552,7 @@ class UIManager(QObject):
 
     def setup_splitter_tooltip(self):
         """Set initial splitter tooltip."""
-        handle = self.host.splitter.handle(1)
+        handle = self.host.init_manager.splitter.handle(1)
         if handle:
             handle.setToolTip(
                 "Drag to resize panels | Ctrl+1/2/3 for presets | Ctrl+H to toggle 2D panel"

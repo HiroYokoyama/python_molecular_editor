@@ -79,15 +79,15 @@ class StringImporterManager:
         try:
             self.host.ui_manager.restore_ui_for_editing()
             self.host.edit_actions_manager.clear_2d_editor(push_to_undo=False)
-            self.host.current_mol = None
-            self.host.plotter.clear()
-            self.host.analysis_action.setEnabled(False)
+            self.host.view_3d_manager.current_mol = None
+            self.host.view_3d_manager.plotter.clear()
+            self.host.init_manager.analysis_action.setEnabled(False)
 
             conf = mol.GetConformer()
             SCALE_FACTOR = 50.0
 
-            view_center = self.host.view_2d.mapToScene(
-                self.host.view_2d.viewport().rect().center()
+            view_center = self.host.init_manager.view_2d.mapToScene(
+                self.host.init_manager.view_2d.viewport().rect().center()
             )
             positions = [conf.GetAtomPosition(i) for i in range(mol.GetNumAtoms())]
             mol_center_x = (
@@ -109,7 +109,7 @@ class StringImporterManager:
                 scene_x = (relative_x * SCALE_FACTOR) + view_center.x()
                 scene_y = (-relative_y * SCALE_FACTOR) + view_center.y()
 
-                atom_id = self.host.scene.create_atom(
+                atom_id = self.host.init_manager.scene.create_atom(
                     atom.GetSymbol(), QPointF(scene_x, scene_y), charge=charge
                 )
                 rdkit_idx_to_my_id[i] = atom_id
@@ -133,14 +133,14 @@ class StringImporterManager:
 
                 if b_idx in rdkit_idx_to_my_id and e_idx in rdkit_idx_to_my_id:
                     a1_id, a2_id = rdkit_idx_to_my_id[b_idx], rdkit_idx_to_my_id[e_idx]
-                    a1_item = self.host.data.atoms[a1_id]["item"]
-                    a2_item = self.host.data.atoms[a2_id]["item"]
-                    self.host.scene.create_bond(
+                    a1_item = self.host.state_manager.data.atoms[a1_id]["item"]
+                    a2_item = self.host.state_manager.data.atoms[a2_id]["item"]
+                    self.host.init_manager.scene.create_bond(
                         a1_item, a2_item, bond_order=int(b_type), bond_stereo=stereo
                     )
 
             self.host.statusBar().showMessage("Successfully loaded from SMILES.")
-            self.host.scene.update_all_items()
+            self.host.init_manager.scene.update_all_items()
             self.host.state_manager.reset_undo_stack()
             self.host.has_unsaved_changes = False
             self.host.state_manager.update_window_title()
@@ -179,15 +179,15 @@ class StringImporterManager:
         try:
             self.host.ui_manager.restore_ui_for_editing()
             self.host.edit_actions_manager.clear_2d_editor(push_to_undo=False)
-            self.host.current_mol = None
-            self.host.plotter.clear()
-            self.host.analysis_action.setEnabled(False)
+            self.host.view_3d_manager.current_mol = None
+            self.host.view_3d_manager.plotter.clear()
+            self.host.init_manager.analysis_action.setEnabled(False)
 
             conf = mol.GetConformer()
             SCALE_FACTOR = 50.0
 
-            view_center = self.host.view_2d.mapToScene(
-                self.host.view_2d.viewport().rect().center()
+            view_center = self.host.init_manager.view_2d.mapToScene(
+                self.host.init_manager.view_2d.viewport().rect().center()
             )
             positions = [conf.GetAtomPosition(i) for i in range(mol.GetNumAtoms())]
             mol_center_x = (
@@ -209,7 +209,7 @@ class StringImporterManager:
                 scene_x = (relative_x * SCALE_FACTOR) + view_center.x()
                 scene_y = (-relative_y * SCALE_FACTOR) + view_center.y()
 
-                atom_id = self.host.scene.create_atom(
+                atom_id = self.host.init_manager.scene.create_atom(
                     atom.GetSymbol(), QPointF(scene_x, scene_y), charge=charge
                 )
                 rdkit_idx_to_my_id[i] = atom_id
@@ -233,14 +233,14 @@ class StringImporterManager:
 
                 if b_idx in rdkit_idx_to_my_id and e_idx in rdkit_idx_to_my_id:
                     a1_id, a2_id = rdkit_idx_to_my_id[b_idx], rdkit_idx_to_my_id[e_idx]
-                    a1_item = self.host.data.atoms[a1_id]["item"]
-                    a2_item = self.host.data.atoms[a2_id]["item"]
-                    self.host.scene.create_bond(
+                    a1_item = self.host.state_manager.data.atoms[a1_id]["item"]
+                    a2_item = self.host.state_manager.data.atoms[a2_id]["item"]
+                    self.host.init_manager.scene.create_bond(
                         a1_item, a2_item, bond_order=int(b_type), bond_stereo=stereo
                     )
 
             self.host.statusBar().showMessage("Successfully loaded from InChI.")
-            self.host.scene.update_all_items()
+            self.host.init_manager.scene.update_all_items()
             self.host.state_manager.reset_undo_stack()
             self.host.has_unsaved_changes = False
             self.host.state_manager.update_window_title()

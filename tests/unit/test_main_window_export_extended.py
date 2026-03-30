@@ -123,7 +123,7 @@ def test_export_stl_cancel(window, mock_file_dialog):
 
 def test_export_stl_no_molecule(window):
     """Test export_stl with no molecule."""
-    window.current_mol = None
+    window.view_3d_manager.current_mol = None
     window.export_stl()
     window.statusBar().showMessage.assert_called_with(
         "Error: Please generate a 3D structure first."
@@ -232,8 +232,8 @@ def test_export_from_3d_view_logic(window):
     mock_actor.prop = Mock()
     mock_actor.prop.color = [1.0, 1.0, 1.0]
 
-    window.plotter.renderer.actors = {"actor1": mock_actor}
-    window.plotter.mesh = {"actor1": mock_mesh_data}
+    window.view_3d_manager.plotter.renderer.actors = {"actor1": mock_actor}
+    window.view_3d_manager.plotter.mesh = {"actor1": mock_mesh_data}
 
     with patch("moleditpy.ui.export_logic.pv") as mock_pv:
         mock_pv.PolyData = TinyMesh # Class-like
@@ -246,7 +246,7 @@ def test_export_from_3d_view_logic(window):
 
 def test_export_2d_png_success(window, mock_file_dialog, mock_message_box):
     """Test export_2d_png success path."""
-    window.data.atoms = [MagicMock()]
+    window.state_manager.data.atoms = [MagicMock()]
     mock_file_dialog.getSaveFileName.return_value = (
         "/path/to/image.png",
         "PNG Files (*.png)",
@@ -271,7 +271,7 @@ def test_export_2d_png_success(window, mock_file_dialog, mock_message_box):
         mock_painter.isActive.return_value = True
 
         atom_instance = DummyAtomItem()
-        window.scene.items.return_value = [atom_instance]
+        window.init_manager.scene.items.return_value = [atom_instance]
 
         window.export_2d_png()
         mock_image.save.assert_called_with("/path/to/image.png", "PNG")
@@ -282,7 +282,7 @@ def test_export_2d_png_success(window, mock_file_dialog, mock_message_box):
 
 def test_export_2d_svg_success(window, mock_file_dialog, mock_message_box):
     """Test export_2d_svg success path."""
-    window.data.atoms = [MagicMock()]
+    window.state_manager.data.atoms = [MagicMock()]
     mock_file_dialog.getSaveFileName.return_value = (
         "/path/to/image.svg",
         "SVG Files (*.svg)",
@@ -306,7 +306,7 @@ def test_export_2d_svg_success(window, mock_file_dialog, mock_message_box):
         mock_painter.isActive.return_value = True
 
         atom_instance = DummyAtomItem()
-        window.scene.items.return_value = [atom_instance]
+        window.init_manager.scene.items.return_value = [atom_instance]
 
         window.export_2d_svg()
         mock_svg.setFileName.assert_called_with("/path/to/image.svg")
@@ -325,8 +325,8 @@ def test_export_from_3d_view_no_color_logic(window):
     mock_actor.prop = Mock()
     mock_actor.prop.color = [1.0, 1.0, 1.0]
 
-    window.plotter.renderer.actors = {"actor1": mock_actor}
-    window.plotter.mesh = {"actor1": mock_mesh_data}
+    window.view_3d_manager.plotter.renderer.actors = {"actor1": mock_actor}
+    window.view_3d_manager.plotter.mesh = {"actor1": mock_mesh_data}
 
     with patch("moleditpy.ui.export_logic.pv") as mock_pv:
         mock_pv.PolyData = TinyMesh
@@ -348,7 +348,7 @@ def test_export_from_3d_view_with_colors_logic(window):
     mock_actor.prop = Mock()
     mock_actor.prop.color = [1.0, 1.0, 1.0]
 
-    window.plotter.renderer.actors = {"actor1": mock_actor}
+    window.view_3d_manager.plotter.renderer.actors = {"actor1": mock_actor}
 
     with patch("moleditpy.ui.export_logic.pv") as mock_pv:
         mock_pv.PolyData = TinyMesh

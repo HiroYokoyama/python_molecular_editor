@@ -106,7 +106,7 @@ def test_export_2d_svg_trigger(mock_parser_host, tmp_path):
 def test_export_stl_error_no_mol(mock_parser_host):
     """Verify that export_stl shows an error message when no molecule is present."""
     exporter = DummyExport(mock_parser_host)
-    exporter.host.current_mol = None
+    exporter.host.view_3d_manager.current_mol = None
     exporter.export_stl()
     exporter.statusBar().showMessage.assert_any_call(
         "Error: Please generate a 3D structure first."
@@ -116,7 +116,7 @@ def test_export_stl_error_no_mol(mock_parser_host):
 def test_export_obj_mtl_error_no_mol(mock_parser_host):
     """Verify that export_obj_mtl shows an error message when no molecule is present."""
     exporter = DummyExport(mock_parser_host)
-    exporter.host.current_mol = None
+    exporter.host.view_3d_manager.current_mol = None
     exporter.export_obj_mtl()
     exporter.statusBar().showMessage.assert_any_call(
         "Error: Please generate a 3D structure first."
@@ -128,7 +128,7 @@ def test_export_stl_success_trigger(mock_parser_host, tmp_path):
     exporter = DummyExport(mock_parser_host)
     mol = Chem.MolFromSmiles("C")
     AllChem.EmbedMolecule(mol)
-    exporter.host.current_mol = mol
+    exporter.host.view_3d_manager.current_mol = mol
     save_path = str(tmp_path / "test.stl")
     mesh = MagicMock()
     mesh.n_points = 100  # Ensure it has points
@@ -153,7 +153,7 @@ def test_export_obj_mtl_success_trigger(mock_parser_host, tmp_path):
     exporter = DummyExport(mock_parser_host)
     mol = Chem.MolFromSmiles("C")
     AllChem.EmbedMolecule(mol)
-    exporter.host.current_mol = mol
+    exporter.host.view_3d_manager.current_mol = mol
     save_path = str(tmp_path / "test.obj")
     with (
         patch(
@@ -176,10 +176,10 @@ def test_export_3d_png_logic(mock_parser_host, tmp_path):
     """Verify that export_3d_png triggers the plotter screenshot logic."""
     exporter = DummyExport(mock_parser_host)
     mol = Chem.MolFromSmiles("C")
-    exporter.host.current_mol = mol
+    exporter.host.view_3d_manager.current_mol = mol
     save_path = str(tmp_path / "test3d.png")
     mock_plotter = MagicMock()
-    exporter.host.plotter = mock_plotter
+    exporter.host.view_3d_manager.plotter = mock_plotter
     with patch(
         "PyQt6.QtWidgets.QFileDialog.getSaveFileName", return_value=(save_path, "*.png")
     ):
@@ -196,7 +196,7 @@ def test_export_color_stl_logic(mock_parser_host, tmp_path):
     exporter = DummyExport(mock_parser_host)
     mol = Chem.MolFromSmiles("C")
     AllChem.EmbedMolecule(mol)
-    exporter.host.current_mol = mol
+    exporter.host.view_3d_manager.current_mol = mol
     save_path = str(tmp_path / "color.stl")
     mesh = MagicMock()
     mesh.n_points = 100

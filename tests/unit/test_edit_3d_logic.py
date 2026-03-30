@@ -12,13 +12,13 @@ class DummyEdit3d(Edit3DManager):
     def __init__(self, host):
         super().__init__(host)
         self._host = host
-        self.data = host.data
-        self.scene = host.scene
-        self.view_2d = host.view_2d
-        self.view_3d = host.view_3d
-        self.settings = host.settings
-        self.current_mol = host.current_mol
-        self.plotter = host.plotter
+        self.data = host.state_manager.data
+        self.scene = host.init_manager.scene
+        self.view_2d = host.init_manager.view_2d
+        self.view_3d = host.view_3d_manager.view_3d
+        self.settings = host.init_manager.settings
+        self.current_mol = host.view_3d_manager.current_mol
+        self.plotter = host.view_3d_manager.plotter
         self.selected_atoms_for_measurement = []
         self.measurement_mode = False
         self.atom_positions_3d = []

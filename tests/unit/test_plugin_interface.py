@@ -11,7 +11,7 @@ class TestPluginInterface:
     @pytest.fixture
     def mock_main_window(self):
         mw = MagicMock()
-        mw.current_mol = "mock_molecule"
+        mw.view_3d_manager.current_mol = "mock_molecule"
         return mw
 
     def test_plugin_context_init(self, mock_manager):

@@ -38,22 +38,22 @@ mwm.QMessageBox = PyQt6.QtWidgets.QMessageBox
 
 from rdkit import Chem
 from rdkit.Chem import AllChem
-from moleditpy.ui.molecular_parsers import MainWindowMolecularParsers
+from moleditpy.ui.molecular_parsers import IOManager
 from PyQt6.QtCore import QPointF, QTimer
 from PyQt6.QtWidgets import QWidget, QApplication, QDialog
 
 
-class DummyParser(QWidget, MainWindowMolecularParsers):
+class DummyParser(QWidget, IOManager):
     def __init__(self, host):
         super().__init__()
         self._host = host
         self.host = self  # IOManager methods use self.host; DummyParser IS the host
-        self.data = host.data
-        self.scene = host.scene
+        self.data = host.state_manager.data
+        self.scene = host.init_manager.scene
         # Settings as real dict to avoid MagicMock behavior
         self.settings = {"always_ask_charge": False, "skip_chemistry_checks": False}
-        self.view_2d = host.view_2d
-        self.plotter = host.plotter
+        self.view_2d = host.init_manager.view_2d
+        self.plotter = host.view_3d_manager.plotter
         self.statusBar_mock = MagicMock()
         self.current_mol = None
         self.is_xyz_derived = False

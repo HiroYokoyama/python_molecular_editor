@@ -9,7 +9,7 @@ from moleditpy.ui.bond_item import BondItem
 class MockScene(KeyboardMixin):
     def __init__(self):
         self.window = MagicMock()
-        self.window.is_2d_editable = True
+        self.window.ui_manager.is_2d_editable = True
         self.data = MagicMock()
         self._selected_items = []
         self._item_at_cursor = None

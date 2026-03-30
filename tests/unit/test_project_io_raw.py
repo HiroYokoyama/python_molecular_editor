@@ -3,9 +3,9 @@ import pickle
 import pytest
 from unittest.mock import MagicMock, patch
 from PyQt6.QtCore import QPointF
-from moleditpy.ui.project_io import MainWindowProjectIo
+from moleditpy.ui.project_io import IOManager
 
-class DummyProjectIo(MainWindowProjectIo):
+class DummyProjectIo(IOManager):
     def __init__(self):
         self.data = MagicMock()
         self.data.atoms = {}

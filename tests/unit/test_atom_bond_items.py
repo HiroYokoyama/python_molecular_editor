@@ -374,7 +374,7 @@ class TestBondItem:
 
         mock_mol.GetAtomWithIdx.side_effect = get_atom_with_idx
 
-        # Setup scene.window.data.atoms dictionary
+        # Setup scene.window.state_manager.data.atoms dictionary
         atom3_item = MagicMock()
         atom3_item.pos.return_value = QPointF(5.0, 5.0)
 

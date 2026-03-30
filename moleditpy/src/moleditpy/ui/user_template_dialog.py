@@ -125,8 +125,8 @@ class UserTemplateDialog(QDialog):
 
         # 3. Reset Scene State (The Source of Truth)
         try:
-            if hasattr(self.main_window, "scene") and self.main_window.scene:
-                scene = self.main_window.scene
+            if hasattr(self.main_window.init_manager, 'scene') and self.main_window.init_manager.scene:
+                scene = self.main_window.init_manager.scene
 
                 # A. FORCE MODE
                 scene.mode = target_mode
@@ -522,15 +522,15 @@ class UserTemplateDialog(QDialog):
         mode_name = f"template_user_{template_name}"
 
         # Store template data on the scene
-        if hasattr(self.main_window, "scene") and self.main_window.scene is not None:
-            self.main_window.scene.user_template_data = template_data
+        if hasattr(self.main_window.init_manager, 'scene') and self.main_window.init_manager.scene is not None:
+            self.main_window.init_manager.scene.user_template_data = template_data
 
         try:
             # Uncheck all mode actions first
             if hasattr(self.main_window, "mode_actions") and isinstance(
-                self.main_window.mode_actions, dict
+                self.main_window.init_manager.mode_actions, dict
             ):
-                for act in self.main_window.mode_actions.values():
+                for act in self.main_window.init_manager.mode_actions.values():
                     act.setChecked(False)
 
             # Switch mode via UIManager
@@ -544,9 +544,9 @@ class UserTemplateDialog(QDialog):
             # Check the matching action if present
             if (
                 hasattr(self.main_window, "mode_actions")
-                and mode_name in self.main_window.mode_actions
+                and mode_name in self.main_window.init_manager.mode_actions
             ):
-                self.main_window.mode_actions[mode_name].setChecked(True)
+                self.main_window.init_manager.mode_actions[mode_name].setChecked(True)
 
         except (AttributeError, RuntimeError, ValueError) as e:
             logging.warning(f"Failed to switch main window to template mode: {e}")
@@ -592,7 +592,7 @@ class UserTemplateDialog(QDialog):
 
     def save_current_as_template(self):
         """Save the current editor structure as a new user template."""
-        if not self.main_window.data.atoms:
+        if not self.main_window.state_manager.data.atoms:
             QMessageBox.warning(self, "Warning", "No structure to save as template.")
             return
 
@@ -642,7 +642,7 @@ class UserTemplateDialog(QDialog):
         bonds_data = []
 
         # Convert atoms
-        for atom_id, atom_info in self.main_window.data.atoms.items():
+        for atom_id, atom_info in self.main_window.state_manager.data.atoms.items():
             pos = atom_info["pos"]
             atoms_data.append(
                 {
@@ -656,7 +656,7 @@ class UserTemplateDialog(QDialog):
             )
 
         # Convert bonds
-        for (atom1_id, atom2_id), bond_info in self.main_window.data.bonds.items():
+        for (atom1_id, atom2_id), bond_info in self.main_window.state_manager.data.bonds.items():
             bonds_data.append(
                 {
                     "atom1": atom1_id,

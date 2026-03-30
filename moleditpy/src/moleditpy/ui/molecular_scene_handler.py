@@ -714,7 +714,7 @@ class KeyboardMixin:
         key = event.key()
         modifiers = event.modifiers()
 
-        if not self.window.is_2d_editable:
+        if not self.window.ui_manager.is_2d_editable:
             return
 
         try:

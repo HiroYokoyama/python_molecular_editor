@@ -47,11 +47,11 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
         self.enable_picking()
 
         # Load existing constraints from MainWindow
-        if self.main_window.constraints_3d:
+        if self.main_window.edit_3d_manager.constraints_3d:
             self.constraint_table.blockSignals(True)  # Block signals during loading
             try:
                 # Load into self.constraints as (Type, (Idx...), Value, Force) tuples
-                for const_data in self.main_window.constraints_3d:
+                for const_data in self.main_window.edit_3d_manager.constraints_3d:
                     # Support 3- or 4-element constraints for backward compatibility
                     if len(const_data) == 4:
                         const_type, atom_indices, value, force_const = const_data
@@ -104,7 +104,7 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
             # <<< Load current optimization settings from MainWindow as defaults >>>
         try:
             # Add fallback for None case
-            current_method_str = self.main_window.optimization_method or "MMFF_RDKIT"
+            current_method_str = self.main_window.init_manager.optimization_method or "MMFF_RDKIT"
             current_method = current_method_str.upper()
 
             # 1. UFF_RDKIT
@@ -418,7 +418,7 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
             texts.append(labels[i])
 
         if positions:
-            label_actor = self.main_window.plotter.add_point_labels(
+            label_actor = self.main_window.view_3d_manager.plotter.add_point_labels(
                 positions,
                 texts,
                 point_size=20,
@@ -431,7 +431,7 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
     def clear_constraint_labels(self):
         for label_actor in self.constraint_labels:
             try:
-                self.main_window.plotter.remove_actor(label_actor)
+                self.main_window.view_3d_manager.plotter.remove_actor(label_actor)
             except (AttributeError, RuntimeError, TypeError) as e:
                 logging.debug(
                     f"Suppressed exception: {e}"
@@ -448,7 +448,7 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
         conf = self.mol.GetConformer()
 
         try:
-            ignore_interfrag = not self.main_window.settings.get(
+            ignore_interfrag = not self.main_window.init_manager.settings.get(
                 "optimize_intermolecular_interaction_rdkit", True
             )
             if ff_name.startswith("MMFF"):
@@ -547,7 +547,7 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
 
             try:
                 constrained_method_name = f"Constrained_{ff_name}"
-                self.main_window.last_successful_optimization_method = (
+                self.main_window.compute_manager.last_successful_optimization_method = (
                     constrained_method_name
                 )
             except (AttributeError, RuntimeError, ValueError, TypeError) as e:
@@ -570,8 +570,8 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
                         )
 
                 # Update MainWindow only if changed
-                if self.main_window.constraints_3d != json_safe_constraints:
-                    self.main_window.constraints_3d = json_safe_constraints
+                if self.main_window.edit_3d_manager.constraints_3d != json_safe_constraints:
+                    self.main_window.edit_3d_manager.constraints_3d = json_safe_constraints
                     self.main_window.has_unsaved_changes = (
                         True  # Mark as unsaved changes
                     )
@@ -609,8 +609,8 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
                     )
 
             # Update MainWindow only if changed
-            if self.main_window.constraints_3d != json_safe_constraints:
-                self.main_window.constraints_3d = json_safe_constraints
+            if self.main_window.edit_3d_manager.constraints_3d != json_safe_constraints:
+                self.main_window.edit_3d_manager.constraints_3d = json_safe_constraints
                 self.main_window.has_unsaved_changes = True  # Mark as unsaved changes
                 self.main_window.state_manager.update_window_title()
 
@@ -653,7 +653,7 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
                 )
 
         if positions:
-            label_actor = self.main_window.plotter.add_point_labels(
+            label_actor = self.main_window.view_3d_manager.plotter.add_point_labels(
                 positions,
                 texts,
                 point_size=20,

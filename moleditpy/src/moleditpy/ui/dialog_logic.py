@@ -89,17 +89,17 @@ class DialogManager:
     def open_periodic_table_dialog(self):
         dialog = PeriodicTableDialog(self.host)
         dialog.element_selected.connect(self.host.ui_manager.set_atom_from_periodic_table)
-        checked_action = self.host.tool_group.checkedAction()
+        checked_action = self.host.init_manager.tool_group.checkedAction()
         if checked_action:
-            self.host.tool_group.setExclusive(False)
+            self.host.init_manager.tool_group.setExclusive(False)
             checked_action.setChecked(False)
-            self.host.tool_group.setExclusive(True)
+            self.host.init_manager.tool_group.setExclusive(True)
         dialog.exec()
 
     def open_analysis_window(self):
-        if self.host.current_mol:
+        if self.host.view_3d_manager.current_mol:
             dialog = AnalysisWindow(
-                self.host.current_mol,
+                self.host.view_3d_manager.current_mol,
                 self.host,
                 is_xyz_derived=self.host.is_xyz_derived,
             )
@@ -140,7 +140,7 @@ class DialogManager:
                 mode_name = f"template_user_{template_name}"
 
                 # Store template data for the scene to use
-                self.host.scene.user_template_data = (
+                self.host.init_manager.scene.user_template_data = (
                     self.host._template_dialog.selected_template
                 )
                 self.host.ui_manager.set_mode(mode_name)
@@ -152,7 +152,7 @@ class DialogManager:
 
     def save_2d_as_template(self):
         """Save current 2D structure as a template"""
-        if not self.host.data.atoms:
+        if not self.host.state_manager.data.atoms:
             QMessageBox.warning(
                 self.host, "Warning", "No structure to save as template."
             )
@@ -173,7 +173,7 @@ class DialogManager:
             if not os.path.exists(template_dir):
                 os.makedirs(template_dir)
             # Convert current structure to template format using core method
-            template_data = self.host.data.to_template_dict(
+            template_data = self.host.state_manager.data.to_template_dict(
                 name, application_version=VERSION
             )
 
@@ -211,14 +211,14 @@ class DialogManager:
         """Open the translation dialog"""
         # Disable measurement mode
         if self.host.edit_3d_manager.measurement_mode:
-            self.host.measurement_action.setChecked(False)
+            self.host.init_manager.measurement_action.setChecked(False)
             self.host.edit_3d_manager.toggle_measurement_mode(False)
 
         # Get preselected atoms
         preselected_atoms = self._get_preselected_atoms_3d()
 
         dialog = TranslationDialog(
-            self.host.current_mol, self.host, preselected_atoms, parent=self.host
+            self.host.view_3d_manager.current_mol, self.host, preselected_atoms, parent=self.host
         )
         self.host.edit_3d_manager.active_3d_dialogs.append(dialog)  # Keep reference
         dialog.show()  # Use show for modeless display
@@ -232,14 +232,14 @@ class DialogManager:
         """Open Move Group dialog"""
         # Disable measurement mode
         if self.host.edit_3d_manager.measurement_mode:
-            self.host.measurement_action.setChecked(False)
+            self.host.init_manager.measurement_action.setChecked(False)
             self.host.edit_3d_manager.toggle_measurement_mode(False)
 
         # Get preselected atoms
         preselected_atoms = self._get_preselected_atoms_3d()
 
         dialog = MoveGroupDialog(
-            self.host.current_mol, self.host, preselected_atoms, parent=self.host
+            self.host.view_3d_manager.current_mol, self.host, preselected_atoms, parent=self.host
         )
         self.host.edit_3d_manager.active_3d_dialogs.append(dialog)
         dialog.show()
@@ -256,11 +256,11 @@ class DialogManager:
 
         # Disable measurement mode
         if self.host.edit_3d_manager.measurement_mode:
-            self.host.measurement_action.setChecked(False)
+            self.host.init_manager.measurement_action.setChecked(False)
             self.host.edit_3d_manager.toggle_measurement_mode(False)
 
         dialog = AlignPlaneDialog(
-            self.host.current_mol, self.host, plane, preselected_atoms, parent=self.host
+            self.host.view_3d_manager.current_mol, self.host, plane, preselected_atoms, parent=self.host
         )
         self.host.edit_3d_manager.active_3d_dialogs.append(dialog)
         dialog.show()
@@ -279,11 +279,11 @@ class DialogManager:
 
         # Disable measurement mode
         if self.host.edit_3d_manager.measurement_mode:
-            self.host.measurement_action.setChecked(False)
+            self.host.init_manager.measurement_action.setChecked(False)
             self.host.edit_3d_manager.toggle_measurement_mode(False)
 
         dialog = PlanarizeDialog(
-            self.host.current_mol, self.host, preselected_atoms, parent=self.host
+            self.host.view_3d_manager.current_mol, self.host, preselected_atoms, parent=self.host
         )
         self.host.edit_3d_manager.active_3d_dialogs.append(dialog)
         dialog.show()
@@ -302,11 +302,11 @@ class DialogManager:
 
         # Disable measurement mode
         if self.host.edit_3d_manager.measurement_mode:
-            self.host.measurement_action.setChecked(False)
+            self.host.init_manager.measurement_action.setChecked(False)
             self.host.edit_3d_manager.toggle_measurement_mode(False)
 
         dialog = AlignmentDialog(
-            self.host.current_mol, self.host, axis, preselected_atoms, parent=self.host
+            self.host.view_3d_manager.current_mol, self.host, axis, preselected_atoms, parent=self.host
         )
         self.host.edit_3d_manager.active_3d_dialogs.append(dialog)
         dialog.show()
@@ -325,11 +325,11 @@ class DialogManager:
 
         # Disable measurement mode
         if self.host.edit_3d_manager.measurement_mode:
-            self.host.measurement_action.setChecked(False)
+            self.host.init_manager.measurement_action.setChecked(False)
             self.host.edit_3d_manager.toggle_measurement_mode(False)
 
         dialog = BondLengthDialog(
-            self.host.current_mol, self.host, preselected_atoms, parent=self.host
+            self.host.view_3d_manager.current_mol, self.host, preselected_atoms, parent=self.host
         )
         self.host.edit_3d_manager.active_3d_dialogs.append(dialog)
         dialog.show()
@@ -346,11 +346,11 @@ class DialogManager:
 
         # Disable measurement mode
         if self.host.edit_3d_manager.measurement_mode:
-            self.host.measurement_action.setChecked(False)
+            self.host.init_manager.measurement_action.setChecked(False)
             self.host.edit_3d_manager.toggle_measurement_mode(False)
 
         dialog = AngleDialog(
-            self.host.current_mol, self.host, preselected_atoms, parent=self.host
+            self.host.view_3d_manager.current_mol, self.host, preselected_atoms, parent=self.host
         )
         self.host.edit_3d_manager.active_3d_dialogs.append(dialog)
         dialog.show()
@@ -367,11 +367,11 @@ class DialogManager:
 
         # Disable measurement mode
         if self.host.edit_3d_manager.measurement_mode:
-            self.host.measurement_action.setChecked(False)
+            self.host.init_manager.measurement_action.setChecked(False)
             self.host.edit_3d_manager.toggle_measurement_mode(False)
 
         dialog = DihedralDialog(
-            self.host.current_mol, self.host, preselected_atoms, parent=self.host
+            self.host.view_3d_manager.current_mol, self.host, preselected_atoms, parent=self.host
         )
         self.host.edit_3d_manager.active_3d_dialogs.append(dialog)
         dialog.show()
@@ -383,41 +383,41 @@ class DialogManager:
 
     def open_mirror_dialog(self):
         """Open mirror function dialog"""
-        if not self.host.current_mol:
+        if not self.host.view_3d_manager.current_mol:
             self.host.statusBar().showMessage("No 3D molecule loaded.")
             return
 
         # Disable measurement mode
         if self.host.edit_3d_manager.measurement_mode:
-            self.host.measurement_action.setChecked(False)
+            self.host.init_manager.measurement_action.setChecked(False)
             self.host.edit_3d_manager.toggle_measurement_mode(False)
 
-        dialog = MirrorDialog(self.host.current_mol, self.host)
+        dialog = MirrorDialog(self.host.view_3d_manager.current_mol, self.host)
         dialog.exec()
 
     def open_settings_dialog(self):
         """Open the application settings dialog."""
-        dialog = SettingsDialog(self.host.settings, parent=self.host)
+        dialog = SettingsDialog(self.host.init_manager.settings, parent=self.host)
         dialog.exec()
 
     def open_color_settings_dialog(self):
         """Open the CPK color settings dialog."""
-        dialog = ColorSettingsDialog(self.host.settings, parent=self.host)
+        dialog = ColorSettingsDialog(self.host.init_manager.settings, parent=self.host)
         dialog.exec()
 
     def open_constrained_optimization_dialog(self):
         """Open constrained optimization dialog"""
-        if not self.host.current_mol:
+        if not self.host.view_3d_manager.current_mol:
             self.host.statusBar().showMessage("No 3D molecule loaded.")
             return
 
         # Disable measurement mode
         if self.host.edit_3d_manager.measurement_mode:
-            self.host.measurement_action.setChecked(False)
+            self.host.init_manager.measurement_action.setChecked(False)
             self.host.edit_3d_manager.toggle_measurement_mode(False)
 
         dialog = ConstrainedOptimizationDialog(
-            self.host.current_mol, self.host, parent=self.host
+            self.host.view_3d_manager.current_mol, self.host, parent=self.host
         )
         self.host.edit_3d_manager.active_3d_dialogs.append(dialog)
         dialog.show()

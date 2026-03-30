@@ -29,7 +29,7 @@ def setup_scene_with_view(mock_parser_host):
     mock_view.mapFromGlobal.return_value = QPointF(0, 0)
     scene.views = MagicMock(return_value=[mock_view])
     scene.template_preview = MagicMock()
-    scene.window.is_2d_editable = True
+    scene.window.ui_manager.is_2d_editable = True
     scene.mode = "select"
     return scene
 

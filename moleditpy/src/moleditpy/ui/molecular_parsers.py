@@ -10,6 +10,6 @@ Import from there:
 from moleditpy.ui.io_logic import IOManager
 
 # Backward-compat alias
-MainWindowMolecularParsers = IOManager
+IOManager = IOManager
 
-__all__ = ["IOManager", "MainWindowMolecularParsers"]
+__all__ = ["IOManager", "IOManager"]

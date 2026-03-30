@@ -104,13 +104,13 @@ def test_pmeprj_serialization_roundtrip(dummy_window):
     mw = dummy_window
     
     # 1. Setup a complex state with 2D, 3D, and constraints
-    aid1 = mw.data.add_atom("C", QPointF(10, 20))
-    aid2 = mw.data.add_atom("O", QPointF(30, 40))
-    mw.data.add_bond(aid1, aid2, order=1)
+    aid1 = mw.state_manager.data.add_atom("C", QPointF(10, 20))
+    aid2 = mw.state_manager.data.add_atom("O", QPointF(30, 40))
+    mw.state_manager.data.add_bond(aid1, aid2, order=1)
     
     # Mock visual items for 2D serialization
-    mw.data.atoms[aid1]["item"] = MagicMock(pos=lambda: QPointF(10, 20))
-    mw.data.atoms[aid2]["item"] = MagicMock(pos=lambda: QPointF(30, 40))
+    mw.state_manager.data.atoms[aid1]["item"] = MagicMock(pos=lambda: QPointF(10, 20))
+    mw.state_manager.data.atoms[aid2]["item"] = MagicMock(pos=lambda: QPointF(30, 40))
     
     # 3D structure (Methanol)
     mol = Chem.MolFromSmiles("CO")
@@ -119,10 +119,10 @@ def test_pmeprj_serialization_roundtrip(dummy_window):
     # Tag atoms with editor IDs
     mol.GetAtomWithIdx(0).SetIntProp("_original_atom_id", aid1)
     mol.GetAtomWithIdx(1).SetIntProp("_original_atom_id", aid2)
-    mw.current_mol = mol
+    mw.view_3d_manager.current_mol = mol
     
     # Constraints and metadata
-    mw.constraints_3d = [("DISTANCE", (0, 1), 1.43, 8.0e5)]
+    mw.edit_3d_manager.constraints_3d = [("DISTANCE", (0, 1), 1.43, 8.0e5)]
     mw.compute_manager.last_successful_optimization_method = "MMFF94s"
     mw._preserved_plugin_data = {"TestPlugin": {"val": 42}}
     
@@ -137,32 +137,32 @@ def test_pmeprj_serialization_roundtrip(dummy_window):
     
     # 4. Clear and Restore
     mw.clear_2d_editor(push_to_undo=False)
-    mw.current_mol = None
-    mw.constraints_3d = []
+    mw.view_3d_manager.current_mol = None
+    mw.edit_3d_manager.constraints_3d = []
     
     mw.load_from_json_data(json_data)
     
     # 5. Verify 2D Restored
-    assert len(mw.data.atoms) == 2
-    assert mw.data.atoms[aid1]["symbol"] == "C"
-    assert mw.data.atoms[aid2]["symbol"] == "O"
-    assert mw.data.atoms[aid1]["pos"][0] == 10
+    assert len(mw.state_manager.data.atoms) == 2
+    assert mw.state_manager.data.atoms[aid1]["symbol"] == "C"
+    assert mw.state_manager.data.atoms[aid2]["symbol"] == "O"
+    assert mw.state_manager.data.atoms[aid1]["pos"][0] == 10
     
     # 6. Verify 3D Restored
-    assert mw.current_mol is not None
-    assert mw.current_mol.GetNumAtoms() == mol.GetNumAtoms()
+    assert mw.view_3d_manager.current_mol is not None
+    assert mw.view_3d_manager.current_mol.GetNumAtoms() == mol.GetNumAtoms()
     # Check property round-trip
-    assert mw.current_mol.GetAtomWithIdx(0).GetIntProp("_original_atom_id") == aid1
-    assert mw.current_mol.GetAtomWithIdx(1).GetIntProp("_original_atom_id") == aid2
+    assert mw.view_3d_manager.current_mol.GetAtomWithIdx(0).GetIntProp("_original_atom_id") == aid1
+    assert mw.view_3d_manager.current_mol.GetAtomWithIdx(1).GetIntProp("_original_atom_id") == aid2
     
     # 7. Verify helper data (atom_positions_3d)
     assert mw.view_3d_manager.atom_positions_3d is not None
     assert mw.view_3d_manager.atom_positions_3d.shape == (mol.GetNumAtoms(), 3)
     
     # 8. Verify Constraints and Metadata
-    assert len(mw.constraints_3d) == 1
-    assert mw.constraints_3d[0][0] == "DISTANCE"
-    assert mw.constraints_3d[0][2] == 1.43
+    assert len(mw.edit_3d_manager.constraints_3d) == 1
+    assert mw.edit_3d_manager.constraints_3d[0][0] == "DISTANCE"
+    assert mw.edit_3d_manager.constraints_3d[0][2] == 1.43
     assert mw.compute_manager.last_successful_optimization_method == "MMFF94s"
     assert mw._preserved_plugin_data["TestPlugin"]["val"] == 42
 
@@ -171,15 +171,15 @@ def test_undo_state_binary_roundtrip(dummy_window):
     mw = dummy_window
     
     # Setup state
-    aid = mw.data.add_atom("N", QPointF(5, 5))
-    mw.data.atoms[aid]["item"] = MagicMock(pos=lambda: QPointF(5, 5))
+    aid = mw.state_manager.data.add_atom("N", QPointF(5, 5))
+    mw.state_manager.data.atoms[aid]["item"] = MagicMock(pos=lambda: QPointF(5, 5))
     
     # 3D with property
     mol = Chem.MolFromSmiles("N")
     mol = Chem.AddHs(mol)
     AllChem.EmbedMolecule(mol)
     mol.GetAtomWithIdx(0).SetIntProp("_original_atom_id", aid)
-    mw.current_mol = mol
+    mw.view_3d_manager.current_mol = mol
     
     # Get internal state
     state = mw.get_current_state()
@@ -194,8 +194,8 @@ def test_undo_state_binary_roundtrip(dummy_window):
     mw.set_state_from_data(state)
     
     # Verify
-    assert mw.data.atoms[aid]["symbol"] == "N"
-    assert mw.current_mol.GetAtomWithIdx(0).GetIntProp("_original_atom_id") == aid
+    assert mw.state_manager.data.atoms[aid]["symbol"] == "N"
+    assert mw.view_3d_manager.current_mol.GetAtomWithIdx(0).GetIntProp("_original_atom_id") == aid
 
 def test_legacy_version_handling(dummy_window):
     """Verify that version mismatch warnings are triggered (but don't crash)."""

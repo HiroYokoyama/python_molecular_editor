@@ -75,11 +75,11 @@ class View3DManager:
 
         # Reset measurement and 3D edit modes on style change
         if self.host.edit_3d_manager.measurement_mode:
-            self.host.measurement_action.setChecked(False)
+            self.host.init_manager.measurement_action.setChecked(False)
             self.host.edit_3d_manager.toggle_measurement_mode(False)  # Disable measurement mode
 
         if self.host.edit_3d_manager.is_3d_edit_mode:
-            self.host.edit_3d_action.setChecked(False)
+            self.host.init_manager.edit_3d_action.setChecked(False)
             self.host.ui_manager.toggle_3d_edit_mode(False)  # Disable 3D edit mode
 
         # Clear 3D selection
@@ -89,8 +89,8 @@ class View3DManager:
         self.host.statusBar().showMessage(f"3D style set to: {style_name}")
 
         # Redraw if molecule is displayed
-        if self.host.current_mol:
-            self.draw_molecule_3d(self.host.current_mol)
+        if self.host.view_3d_manager.current_mol:
+            self.draw_molecule_3d(self.host.view_3d_manager.current_mol)
 
     def draw_molecule_3d(self, mol: Chem.Mol) -> None:
         """Dispatch to custom style or standard drawing."""
@@ -134,7 +134,7 @@ class View3DManager:
 
     def _prepare_3d_kekule_mol(self, mol: Chem.Mol) -> Chem.Mol:
         """Optionally kekulize aromatic systems for 3D visualization."""
-        if self.host.settings.get("display_kekule_3d", False):
+        if self.host.init_manager.settings.get("display_kekule_3d", False):
             try:
                 mol_to_draw = Chem.Mol(mol)
                 Chem.Kekulize(mol_to_draw, clearAromaticFlags=True)
@@ -164,42 +164,42 @@ class View3DManager:
         self._3d_color_map.clear()
 
         # 1. Camera state and clear
-        camera_state = self.host.plotter.camera.copy()
+        camera_state = self.host.view_3d_manager.plotter.camera.copy()
 
         # Force removal to prevent ghost actor residues
         old_axes_actor = getattr(self, "axes_actor", None)
         if old_axes_actor is not None:
             with contextlib.suppress(AttributeError, RuntimeError, TypeError):
-                self.host.plotter.remove_actor(old_axes_actor)
+                self.host.view_3d_manager.plotter.remove_actor(old_axes_actor)
             self.axes_actor = None
 
-        self.host.plotter.clear()
+        self.host.view_3d_manager.plotter.clear()
 
         # 2. Background color setting
-        self.host.plotter.set_background(self.host.settings.get("background_color", "#919191"))
+        self.host.view_3d_manager.plotter.set_background(self.host.init_manager.settings.get("background_color", "#919191"))
 
         # 3. End with background and axes if mol is None or empty
         if mol is None or mol.GetNumAtoms() == 0:
             self.atom_actor = None
-            self.host.current_mol = None
-            self.host.plotter.render()
+            self.host.view_3d_manager.current_mol = None
+            self.host.view_3d_manager.plotter.render()
             return
 
         # 4. Lighting setting
-        is_lighting_enabled = self.host.settings.get("lighting_enabled", True)
+        is_lighting_enabled = self.host.init_manager.settings.get("lighting_enabled", True)
 
         if is_lighting_enabled:
             light = pv.Light(
                 position=(1, 1, 2),
                 light_type="cameralight",
-                intensity=self.host.settings.get("light_intensity", 1.2),
+                intensity=self.host.init_manager.settings.get("light_intensity", 1.2),
             )
-            self.host.plotter.add_light(light)
+            self.host.view_3d_manager.plotter.add_light(light)
 
         # 5. Molecule drawing logic
         # Mutually exclusive: Kekulé display or Aromatic Circle display (Kekulé takes priority)
-        display_kekule = self.host.settings.get("display_kekule_3d", False)
-        display_aromatic = self.host.settings.get("display_aromatic_circles_3d", False)
+        display_kekule = self.host.init_manager.settings.get("display_kekule_3d", False)
+        display_aromatic = self.host.init_manager.settings.get("display_aromatic_circles_3d", False)
         if display_kekule and display_aromatic:
             logging.debug("view_3d_logic: display_kekule_3d and display_aromatic_circles_3d are both enabled. Kekulé takes priority.")
             display_aromatic = False
@@ -249,8 +249,8 @@ class View3DManager:
         # Define common mesh properties
         mesh_props = dict(
             smooth_shading=True,
-            specular=self.host.settings.get("specular", 0.2),
-            specular_power=self.host.settings.get("specular_power", 20),
+            specular=self.host.init_manager.settings.get("specular", 0.2),
+            specular_power=self.host.init_manager.settings.get("specular_power", 20),
             lighting=is_lighting_enabled,
         )
 
@@ -260,20 +260,20 @@ class View3DManager:
         self._add_3d_bond_cylinders(mol_to_draw, conf, col, current_style, mesh_props)
         self._add_3d_aromatic_rings(mol_to_draw, current_style, mesh_props)
         self._add_3d_labels(mol, mol_to_draw)
-        self.host.plotter.camera = camera_state
+        self.host.view_3d_manager.plotter.camera = camera_state
 
         # Update projection mode and force render
         settings = getattr(self, "settings", {})
         proj_mode = settings.get("projection_mode", "Perspective")
-        if hasattr(self.host.plotter, "renderer") and hasattr(
-            self.host.plotter.renderer, "GetActiveCamera"
+        if hasattr(self.host.view_3d_manager.plotter, "renderer") and hasattr(
+            self.host.view_3d_manager.plotter.renderer, "GetActiveCamera"
         ):
-            vcam = self.host.plotter.renderer.GetActiveCamera()
+            vcam = self.host.view_3d_manager.plotter.renderer.GetActiveCamera()
             if vcam:
                 vcam.SetParallelProjection(proj_mode == "Orthographic")
                 try:
                     # Force a render so the change is visible immediately
-                    self.host.plotter.render()
+                    self.host.view_3d_manager.plotter.render()
                 except (AttributeError, RuntimeError, TypeError) as e:
                     logging.error(f"Render failed: {e}")
 
@@ -300,8 +300,8 @@ class View3DManager:
     ):
         # Set atom radii based on style
         if current_style == "cpk":
-            atom_scale = self.host.settings.get("cpk_atom_scale", 1.0)
-            resolution = self.host.settings.get("cpk_resolution", 32)
+            atom_scale = self.host.init_manager.settings.get("cpk_atom_scale", 1.0)
+            resolution = self.host.init_manager.settings.get("cpk_resolution", 32)
 
             # Safe VDW lookup to handle custom elements like 'Bq'
             def get_safe_rvdw(s):
@@ -314,17 +314,17 @@ class View3DManager:
             rad = np.array([get_safe_rvdw(s) * atom_scale for s in sym])
         elif current_style == "wireframe":
             # Atoms not drawn in wireframe mode
-            resolution = self.host.settings.get("wireframe_resolution", 6)
+            resolution = self.host.init_manager.settings.get("wireframe_resolution", 6)
             rad = np.array([0.01 for s in sym])  # Minimal value (not used)
         elif current_style == "stick":
-            atom_radius = self.host.settings.get(
+            atom_radius = self.host.init_manager.settings.get(
                 "stick_bond_radius", 0.15
             )  # Use bond radius for atoms
-            resolution = self.host.settings.get("stick_resolution", 16)
+            resolution = self.host.init_manager.settings.get("stick_resolution", 16)
             rad = np.array([atom_radius for s in sym])
         else:  # ball_and_stick
-            atom_scale = self.host.settings.get("ball_stick_atom_scale", 1.0)
-            resolution = self.host.settings.get("ball_stick_resolution", 16)
+            atom_scale = self.host.init_manager.settings.get("ball_stick_atom_scale", 1.0)
+            resolution = self.host.init_manager.settings.get("ball_stick_resolution", 16)
             rad = np.array([VDW_RADII.get(s, 0.4) * atom_scale for s in sym])
 
         self.glyph_source = pv.PolyData(self.atom_positions_3d)
@@ -387,14 +387,14 @@ class View3DManager:
 
                                     # Get offset and radius for multiple bonds (matching bond drawing)
                                     try:
-                                        cyl_radius = self.host.settings.get(
+                                        cyl_radius = self.host.init_manager.settings.get(
                                             "stick_bond_radius", 0.15
                                         )
                                         if bond_type == Chem.BondType.DOUBLE:
-                                            radius_factor = self.host.settings.get(
+                                            radius_factor = self.host.init_manager.settings.get(
                                                 "stick_double_bond_radius_factor", 0.60
                                             )
-                                            offset_factor = self.host.settings.get(
+                                            offset_factor = self.host.init_manager.settings.get(
                                                 "stick_double_bond_offset_factor", 1.5
                                             )
                                             # Double bond: use s_double / 2
@@ -402,10 +402,10 @@ class View3DManager:
                                                 cyl_radius * offset_factor / 2
                                             )
                                         else:  # TRIPLE
-                                            radius_factor = self.host.settings.get(
+                                            radius_factor = self.host.init_manager.settings.get(
                                                 "stick_triple_bond_radius_factor", 0.40
                                             )
-                                            offset_factor = self.host.settings.get(
+                                            offset_factor = self.host.init_manager.settings.get(
                                                 "stick_triple_bond_offset_factor", 1.0
                                             )
                                             # Triple bond: use s_triple without division
@@ -486,11 +486,11 @@ class View3DManager:
             )
 
             if is_lighting_enabled:
-                self.atom_actor = self.host.plotter.add_mesh(
+                self.atom_actor = self.host.view_3d_manager.plotter.add_mesh(
                     glyphs, scalars="colors", rgb=True, **mesh_props
                 )
             else:
-                self.atom_actor = self.host.plotter.add_mesh(
+                self.atom_actor = self.host.view_3d_manager.plotter.add_mesh(
                     glyphs,
                     scalars="colors",
                     rgb=True,
@@ -511,20 +511,20 @@ class View3DManager:
         if current_style in ["ball_and_stick", "wireframe", "stick"]:
             # Set bond radius and resolution based on style
             if current_style == "wireframe":
-                cyl_radius = self.host.settings.get("wireframe_bond_radius", 0.01)
-                bond_resolution = self.host.settings.get("wireframe_resolution", 6)
+                cyl_radius = self.host.init_manager.settings.get("wireframe_bond_radius", 0.01)
+                bond_resolution = self.host.init_manager.settings.get("wireframe_resolution", 6)
             elif current_style == "stick":
-                cyl_radius = self.host.settings.get("stick_bond_radius", 0.15)
-                bond_resolution = self.host.settings.get("stick_resolution", 16)
+                cyl_radius = self.host.init_manager.settings.get("stick_bond_radius", 0.15)
+                bond_resolution = self.host.init_manager.settings.get("stick_resolution", 16)
             else:  # ball_and_stick
-                cyl_radius = self.host.settings.get("ball_stick_bond_radius", 0.1)
-                bond_resolution = self.host.settings.get("ball_stick_resolution", 16)
+                cyl_radius = self.host.init_manager.settings.get("ball_stick_bond_radius", 0.1)
+                bond_resolution = self.host.init_manager.settings.get("ball_stick_resolution", 16)
 
             # Common color for Ball and Stick
             bs_bond_rgb = [127, 127, 127]
             if current_style == "ball_and_stick":
                 try:
-                    bs_hex = self.host.settings.get("ball_stick_bond_color", "#7F7F7F")
+                    bs_hex = self.host.init_manager.settings.get("ball_stick_bond_color", "#7F7F7F")
                     q = QColor(bs_hex)
                     bs_bond_rgb = [q.red(), q.green(), q.blue()]
                 except (AttributeError, RuntimeError, TypeError, ValueError) as e:
@@ -602,7 +602,7 @@ class View3DManager:
                     current_point_idx += 2
 
                 # Get CPK bond color setting once for all bond types
-                use_cpk_bond = self.host.settings.get("ball_stick_use_cpk_bond_color", False)
+                use_cpk_bond = self.host.init_manager.settings.get("ball_stick_use_cpk_bond_color", False)
                 # If overwritten, treat as if we want to show that color (effectively behave like CPK_Split but with same color, or Uniform).
                 # To be robust, if overwritten, we can force "use_cpk_bond" logic but with our same colors?
                 # Actually, if overridden, we probably want the whole bond to be that color.
@@ -640,24 +640,24 @@ class View3DManager:
                     v1 = d / h
                     # Apply radius factor per model
                     if current_style == "ball_and_stick":
-                        double_radius_factor = self.host.settings.get(
+                        double_radius_factor = self.host.init_manager.settings.get(
                             "ball_stick_double_bond_radius_factor", 0.8
                         )
-                        triple_radius_factor = self.host.settings.get(
+                        triple_radius_factor = self.host.init_manager.settings.get(
                             "ball_stick_triple_bond_radius_factor", 0.75
                         )
                     elif current_style == "wireframe":
-                        double_radius_factor = self.host.settings.get(
+                        double_radius_factor = self.host.init_manager.settings.get(
                             "wireframe_double_bond_radius_factor", 0.8
                         )
-                        triple_radius_factor = self.host.settings.get(
+                        triple_radius_factor = self.host.init_manager.settings.get(
                             "wireframe_triple_bond_radius_factor", 0.75
                         )
                     elif current_style == "stick":
-                        double_radius_factor = self.host.settings.get(
+                        double_radius_factor = self.host.init_manager.settings.get(
                             "stick_double_bond_radius_factor", 0.60
                         )
-                        triple_radius_factor = self.host.settings.get(
+                        triple_radius_factor = self.host.init_manager.settings.get(
                             "stick_triple_bond_radius_factor", 0.40
                         )
                     else:
@@ -666,24 +666,24 @@ class View3DManager:
 
                     # Get offset factor from settings (per model)
                     if current_style == "ball_and_stick":
-                        double_offset_factor = self.host.settings.get(
+                        double_offset_factor = self.host.init_manager.settings.get(
                             "ball_stick_double_bond_offset_factor", 2.0
                         )
-                        triple_offset_factor = self.host.settings.get(
+                        triple_offset_factor = self.host.init_manager.settings.get(
                             "ball_stick_triple_bond_offset_factor", 2.0
                         )
                     elif current_style == "wireframe":
-                        double_offset_factor = self.host.settings.get(
+                        double_offset_factor = self.host.init_manager.settings.get(
                             "wireframe_double_bond_offset_factor", 3.0
                         )
-                        triple_offset_factor = self.host.settings.get(
+                        triple_offset_factor = self.host.init_manager.settings.get(
                             "wireframe_triple_bond_offset_factor", 3.0
                         )
                     elif current_style == "stick":
-                        double_offset_factor = self.host.settings.get(
+                        double_offset_factor = self.host.init_manager.settings.get(
                             "stick_double_bond_offset_factor", 1.5
                         )
-                        triple_offset_factor = self.host.settings.get(
+                        triple_offset_factor = self.host.init_manager.settings.get(
                             "stick_triple_bond_offset_factor", 1.0
                         )
                     else:
@@ -821,13 +821,13 @@ class View3DManager:
                 )
 
                 # Add to plotter
-                self.host.plotter.add_mesh(tube, scalars="colors", rgb=True, **mesh_props)
+                self.host.view_3d_manager.plotter.add_mesh(tube, scalars="colors", rgb=True, **mesh_props)
 
     def _add_3d_aromatic_rings(self, mol_to_draw, current_style, mesh_props):
         # Aromatic ring circles display
-        display_aromatic = self.host.settings.get("display_aromatic_circles_3d", False)
+        display_aromatic = self.host.init_manager.settings.get("display_aromatic_circles_3d", False)
         # Check if Kekulé is enabled (safety check, should be already handled in draw_molecule_3d)
-        if self.host.settings.get("display_kekule_3d", False):
+        if self.host.init_manager.settings.get("display_kekule_3d", False):
             display_aromatic = False
 
         if display_aromatic:
@@ -875,15 +875,15 @@ class View3DManager:
 
                     # Get bond radius from current style settings for torus thickness
                     if current_style == "stick":
-                        bond_radius = self.host.settings.get("stick_bond_radius", 0.15)
+                        bond_radius = self.host.init_manager.settings.get("stick_bond_radius", 0.15)
                     elif current_style == "ball_and_stick":
-                        bond_radius = self.host.settings.get("ball_stick_bond_radius", 0.1)
+                        bond_radius = self.host.init_manager.settings.get("ball_stick_bond_radius", 0.1)
                     elif current_style == "wireframe":
-                        bond_radius = self.host.settings.get("wireframe_bond_radius", 0.01)
+                        bond_radius = self.host.init_manager.settings.get("wireframe_bond_radius", 0.01)
                     else:
                         bond_radius = 0.1  # Default
                     # Apply user-defined thickness factor (default 0.6)
-                    thickness_factor = self.host.settings.get(
+                    thickness_factor = self.host.init_manager.settings.get(
                         "aromatic_torus_thickness_factor", 0.6
                     )
                     tube_radius = bond_radius * thickness_factor
@@ -938,7 +938,7 @@ class View3DManager:
 
                     if current_style == "ball_and_stick":
                         # Check if using CPK bond colors
-                        use_cpk = self.host.settings.get(
+                        use_cpk = self.host.init_manager.settings.get(
                             "ball_stick_use_cpk_bond_color", False
                         )
                         if use_cpk:
@@ -952,7 +952,7 @@ class View3DManager:
                                 torus_color = [0.5, 0.5, 0.5]
                         else:
                             # Use Ball & Stick bond color setting
-                            bond_hex = self.host.settings.get(
+                            bond_hex = self.host.init_manager.settings.get(
                                 "ball_stick_bond_color", "#7F7F7F"
                             )
                             q = QColor(bond_hex)
@@ -971,7 +971,7 @@ class View3DManager:
                         else:
                             torus_color = [0.5, 0.5, 0.5]
 
-                    self.host.plotter.add_mesh(circle_line, color=torus_color, **mesh_props)
+                    self.host.view_3d_manager.plotter.add_mesh(circle_line, color=torus_color, **mesh_props)
 
             except (AttributeError, RuntimeError, TypeError, ValueError) as e:
                 logging.error(f"Error rendering aromatic circles: {e}")
@@ -990,12 +990,12 @@ class View3DManager:
                         pts.append(coord)
                         labels.append(lbl if lbl is not None else "?")
                     try:
-                        self.host.plotter.remove_actor("chiral_labels")
+                        self.host.view_3d_manager.plotter.remove_actor("chiral_labels")
                     except (AttributeError, RuntimeError, TypeError) as e:
                         logging.debug(
                             f"Suppressed exception: {e}"
                         )  # Suppress non-critical 3D label update errors
-                    self.host.plotter.add_point_labels(
+                    self.host.view_3d_manager.plotter.add_point_labels(
                         np.array(pts),
                         labels,
                         font_size=20,
@@ -1115,11 +1115,11 @@ class View3DManager:
 
         # Remove existing E/Z labels
         if (
-            hasattr(self.host.plotter, "renderer")
-            and "ez_labels" in self.host.plotter.renderer.actors
+            hasattr(self.host.view_3d_manager.plotter, "renderer")
+            and "ez_labels" in self.host.view_3d_manager.plotter.renderer.actors
         ):
             try:
-                self.host.plotter.remove_actor("ez_labels")
+                self.host.view_3d_manager.plotter.remove_actor("ez_labels")
             except (AttributeError, RuntimeError, TypeError) as e:
                 logging.error(f"Failed to remove EZ labels: {e}")
 
@@ -1158,7 +1158,7 @@ class View3DManager:
                     # Determine 3D label
                     label = "E" if new_stereo == Chem.BondStereo.STEREOE else "Z"
 
-                    # Check for discrepancy with 2D intent from self.host.data
+                    # Check for discrepancy with 2D intent from self.host.state_manager.data
                     try:
                         # Get original atom IDs
                         idx1 = bond.GetBeginAtom().GetIntProp("_original_atom_id")
@@ -1166,7 +1166,7 @@ class View3DManager:
                         
                         # Find corresponding bond in 2D data
                         bond_key = (min(idx1, idx2), max(idx1, idx2))
-                        two_d_bond = self.host.data.bonds.get(bond_key)
+                        two_d_bond = self.host.state_manager.data.bonds.get(bond_key)
                         
                         if two_d_bond:
                             two_d_stereo = two_d_bond.get("stereo", 0)
@@ -1189,7 +1189,7 @@ class View3DManager:
                     labels.append(label)
 
         if pts and labels:
-            self.host.plotter.add_point_labels(
+            self.host.view_3d_manager.plotter.add_point_labels(
                 np.array(pts),
                 labels,
                 font_size=18,
@@ -1205,8 +1205,8 @@ class View3DManager:
         """Toggle chiral label display based on View menu action"""
         self.show_chiral_labels = checked
 
-        if self.host.current_mol:
-            self.draw_molecule_3d(self.host.current_mol)
+        if self.host.view_3d_manager.current_mol:
+            self.draw_molecule_3d(self.host.view_3d_manager.current_mol)
 
         if checked:
             self.host.statusBar().showMessage(
@@ -1217,26 +1217,26 @@ class View3DManager:
 
     def update_chiral_labels(self):
         """Calculate chiral centers and set/clear R/S labels on 2D AtomItems.
-        Prefer 3D (self.host.current_mol) if available; otherwise use RDKit mol from 2D.
+        Prefer 3D (self.host.view_3d_manager.current_mol) if available; otherwise use RDKit mol from 2D.
         """
         # First clear labels from all items
-        for atom_data in self.host.data.atoms.values():
+        for atom_data in self.host.state_manager.data.atoms.values():
             if atom_data.get("item"):
                 atom_data["item"].chiral_label = None
 
         if not self.show_chiral_labels:
-            self.host.scene.update()
+            self.host.init_manager.scene.update()
             return
 
         # Use 3D RDKit Mol with conformer
         mol_for_chirality = None
         if getattr(self, "current_mol", None) is not None:
-            mol_for_chirality = self.host.current_mol
+            mol_for_chirality = self.host.view_3d_manager.current_mol
         else:
             return
 
         if mol_for_chirality is None or mol_for_chirality.GetNumAtoms() == 0:
-            self.host.scene.update()
+            self.host.init_manager.scene.update()
             return
 
         try:
@@ -1265,17 +1265,17 @@ class View3DManager:
             for idx, label in chiral_centers:
                 if idx in rdkit_idx_to_my_id:
                     atom_id = rdkit_idx_to_my_id[idx]
-                    if atom_id in self.host.data.atoms and self.host.data.atoms[atom_id].get(
+                    if atom_id in self.host.state_manager.data.atoms and self.host.state_manager.data.atoms[atom_id].get(
                         "item"
                     ):
                         # 'R' / 'S' / '?'
-                        self.host.data.atoms[atom_id]["item"].chiral_label = label
+                        self.host.state_manager.data.atoms[atom_id]["item"].chiral_label = label
 
         except (AttributeError, RuntimeError, TypeError, ValueError) as e:
             self.host.statusBar().showMessage(f"Update chiral labels error: {e}")
 
         # Finally redraw 2D scene
-        self.host.scene.update()
+        self.host.init_manager.scene.update()
 
     def toggle_atom_info_display(self, mode):
         """Toggle atom info display mode"""
@@ -1334,18 +1334,18 @@ class View3DManager:
 
             # Display info for all atoms
             self.show_all_atom_info()
-            self.host.plotter.render()
+            self.host.view_3d_manager.plotter.render()
 
     def is_xyz_derived_molecule(self):
         """Determine if the current molecule is derived from an XYZ file"""
-        if not self.host.current_mol:
+        if not self.host.view_3d_manager.current_mol:
             return False
-        if not self.host.current_mol or self.host.current_mol.GetNumAtoms() == 0:
+        if not self.host.view_3d_manager.current_mol or self.host.view_3d_manager.current_mol.GetNumAtoms() == 0:
             return False
 
         try:
             # Check if the first atom has xyz_unique_id property
-            return self.host.current_mol.GetAtomWithIdx(0).HasProp("xyz_unique_id")
+            return self.host.view_3d_manager.current_mol.GetAtomWithIdx(0).HasProp("xyz_unique_id")
         except (AttributeError, RuntimeError, TypeError, ValueError):
             # Suppress non-critical property access noise
             return False
@@ -1354,12 +1354,12 @@ class View3DManager:
 
     def has_original_atom_ids(self):
         """Determine if the current molecule has Original Atom IDs"""
-        if not self.host.current_mol or self.host.current_mol.GetNumAtoms() == 0:
+        if not self.host.view_3d_manager.current_mol or self.host.view_3d_manager.current_mol.GetNumAtoms() == 0:
             return False
         try:
             # Check if any atom has _original_atom_id property
-            for atom_idx in range(self.host.current_mol.GetNumAtoms()):
-                atom = self.host.current_mol.GetAtomWithIdx(atom_idx)
+            for atom_idx in range(self.host.view_3d_manager.current_mol.GetNumAtoms()):
+                atom = self.host.view_3d_manager.current_mol.GetAtomWithIdx(atom_idx)
                 if atom.HasProp("_original_atom_id"):
                     return True
         except (AttributeError, RuntimeError, TypeError, ValueError) as e:
@@ -1429,8 +1429,8 @@ class View3DManager:
             if self.atom_info_display_mode == "id":
                 # Display Original ID if available, otherwise XYZ unique ID, finally RDKit index
                 try:
-                    if self.host.current_mol:
-                        atom = self.host.current_mol.GetAtomWithIdx(atom_idx)
+                    if self.host.view_3d_manager.current_mol:
+                        atom = self.host.view_3d_manager.current_mol.GetAtomWithIdx(atom_idx)
                         if atom.HasProp("_original_atom_id"):
                             original_id = atom.GetIntProp("_original_atom_id")
                             # Remove prefix and display only the number
@@ -1459,8 +1459,8 @@ class View3DManager:
                 other_texts.append(f"({pos[0]:.2f},{pos[1]:.2f},{pos[2]:.2f})")
 
             elif self.atom_info_display_mode == "symbol":
-                if self.host.current_mol:
-                    symbol = self.host.current_mol.GetAtomWithIdx(atom_idx).GetSymbol()
+                if self.host.view_3d_manager.current_mol:
+                    symbol = self.host.view_3d_manager.current_mol.GetAtomWithIdx(atom_idx).GetSymbol()
                     other_positions.append(pos)
                     other_texts.append(symbol)
                 else:
@@ -1480,7 +1480,7 @@ class View3DManager:
         self.current_atom_info_labels = []
         try:
             if rdkit_positions:
-                a = self.host.plotter.add_point_labels(
+                a = self.host.view_3d_manager.plotter.add_point_labels(
                     np.array(rdkit_positions),
                     rdkit_texts,
                     point_size=12,
@@ -1494,7 +1494,7 @@ class View3DManager:
                 self.current_atom_info_labels.append(a)
 
             if id_positions:
-                a = self.host.plotter.add_point_labels(
+                a = self.host.view_3d_manager.plotter.add_point_labels(
                     np.array(id_positions),
                     id_texts,
                     point_size=12,
@@ -1508,7 +1508,7 @@ class View3DManager:
                 self.current_atom_info_labels.append(a)
 
             if xyz_positions:
-                a = self.host.plotter.add_point_labels(
+                a = self.host.view_3d_manager.plotter.add_point_labels(
                     np.array(xyz_positions),
                     xyz_texts,
                     point_size=12,
@@ -1522,7 +1522,7 @@ class View3DManager:
                 self.current_atom_info_labels.append(a)
 
             if other_positions:
-                a = self.host.plotter.add_point_labels(
+                a = self.host.view_3d_manager.plotter.add_point_labels(
                     np.array(other_positions),
                     other_texts,
                     point_size=12,
@@ -1545,7 +1545,7 @@ class View3DManager:
             ):
                 for nm in self.atom_label_legend_names:
                     try:
-                        self.host.plotter.remove_actor(nm)
+                        self.host.view_3d_manager.plotter.remove_actor(nm)
                     except (AttributeError, RuntimeError, TypeError) as e:
                         logging.debug(
                             f"Suppressed exception: {e}"
@@ -1577,7 +1577,7 @@ class View3DManager:
                 except (AttributeError, RuntimeError, TypeError):
                     x_offset = 0.0
                 try:
-                    actor = self.host.plotter.add_text(
+                    actor = self.host.view_3d_manager.plotter.add_text(
                         label_text,
                         position=(0.0 + x_offset, y),
                         font_size=12,
@@ -1619,12 +1619,12 @@ class View3DManager:
                 if isinstance(self.current_atom_info_labels, (list, tuple)):
                     for a in list(self.current_atom_info_labels):
                         try:
-                            self.host.plotter.remove_actor(a)
+                            self.host.view_3d_manager.plotter.remove_actor(a)
                         except (AttributeError, RuntimeError, TypeError) as e:
                             logging.debug(f"Failed to remove actor: {e}")
                 else:
                     try:
-                        self.host.plotter.remove_actor(self.current_atom_info_labels)
+                        self.host.view_3d_manager.plotter.remove_actor(self.current_atom_info_labels)
                     except (AttributeError, RuntimeError, TypeError) as e:
                         logging.debug(
                             f"Suppressed exception: {e}"
@@ -1644,7 +1644,7 @@ class View3DManager:
             ):
                 for nm in list(self.atom_label_legend_names):
                     try:
-                        self.host.plotter.remove_actor(nm)
+                        self.host.view_3d_manager.plotter.remove_actor(nm)
                     except (AttributeError, RuntimeError, TypeError) as e:
                         logging.debug(
                             f"Suppressed exception: {e}"
@@ -1663,27 +1663,27 @@ class View3DManager:
 
     def zoom_in(self):
         """Zoom in by 20%"""
-        self.host.view_2d.scale(1.2, 1.2)
+        self.host.init_manager.view_2d.scale(1.2, 1.2)
 
     def zoom_out(self):
         """Zoom out by 20%"""
-        self.host.view_2d.scale(1 / 1.2, 1 / 1.2)
+        self.host.init_manager.view_2d.scale(1 / 1.2, 1 / 1.2)
 
     def reset_zoom(self):
         """Reset zoom to default (75%)"""
         transform = QTransform()
         transform.scale(0.75, 0.75)
-        self.host.view_2d.setTransform(transform)
+        self.host.init_manager.view_2d.setTransform(transform)
 
     def fit_to_view(self):
         """Fit all items in the scene into the view"""
-        if not self.host.scene.items():
+        if not self.host.init_manager.scene.items():
             self.reset_zoom()
             return
 
         # Calculate total bounding rect of visible items
         visible_items_rect = QRectF()
-        for item in self.host.scene.items():
+        for item in self.host.init_manager.scene.items():
             if item.isVisible() and not isinstance(item, TemplatePreviewItem):
                 if visible_items_rect.isEmpty():
                     visible_items_rect = item.sceneBoundingRect()
@@ -1706,24 +1706,24 @@ class View3DManager:
 
         # Temporarily set anchor to center before calling fitInView
         try:
-            old_ta = self.host.view_2d.transformationAnchor()
-            old_ra = self.host.view_2d.resizeAnchor()
+            old_ta = self.host.init_manager.view_2d.transformationAnchor()
+            old_ra = self.host.init_manager.view_2d.resizeAnchor()
         except (AttributeError, RuntimeError, TypeError):
             old_ta = old_ra = None
 
         try:
-            self.host.view_2d.setTransformationAnchor(
+            self.host.init_manager.view_2d.setTransformationAnchor(
                 QGraphicsView.ViewportAnchor.AnchorViewCenter
             )
-            self.host.view_2d.setResizeAnchor(QGraphicsView.ViewportAnchor.AnchorViewCenter)
-            self.host.view_2d.fitInView(padded, Qt.AspectRatioMode.KeepAspectRatio)
+            self.host.init_manager.view_2d.setResizeAnchor(QGraphicsView.ViewportAnchor.AnchorViewCenter)
+            self.host.init_manager.view_2d.fitInView(padded, Qt.AspectRatioMode.KeepAspectRatio)
         finally:
             # Restore original anchor
             try:
                 if old_ta is not None:
-                    self.host.view_2d.setTransformationAnchor(old_ta)
+                    self.host.init_manager.view_2d.setTransformationAnchor(old_ta)
                 if old_ra is not None:
-                    self.host.view_2d.setResizeAnchor(old_ra)
+                    self.host.init_manager.view_2d.setResizeAnchor(old_ra)
             except (AttributeError, RuntimeError, TypeError) as e:
                 logging.debug(
                     f"Suppressed exception: {e}"
@@ -1732,25 +1732,25 @@ class View3DManager:
     def apply_3d_settings(self, redraw=True):
         """Apply 3D view visual settings"""
         # Projection mode
-        proj_mode = self.host.settings.get("projection_mode", "Perspective")
-        if hasattr(self.host.plotter, "renderer") and hasattr(
-            self.host.plotter.renderer, "GetActiveCamera"
+        proj_mode = self.host.init_manager.settings.get("projection_mode", "Perspective")
+        if hasattr(self.host.view_3d_manager.plotter, "renderer") and hasattr(
+            self.host.view_3d_manager.plotter.renderer, "GetActiveCamera"
         ):
-            cam = self.host.plotter.renderer.GetActiveCamera()
+            cam = self.host.view_3d_manager.plotter.renderer.GetActiveCamera()
             if cam:
                 if proj_mode == "Orthographic":
                     cam.SetParallelProjection(True)
-        if not hasattr(self.host, "plotter"):
+        if not hasattr(self.host.view_3d_manager, 'plotter'):
             return
 
         # Enable renderer layers (for text overlay)
         # --- Background Color ---
-        self.host.plotter.set_background(
-            self.host.settings.get("background_color", "#919191")
+        self.host.view_3d_manager.plotter.set_background(
+            self.host.init_manager.settings.get("background_color", "#919191")
         )
 
         # --- Renderer Layers ---
-        renderer = self.host.plotter.renderer
+        renderer = self.host.view_3d_manager.plotter.renderer
         if renderer and hasattr(renderer, "SetNumberOfLayers"):
             try:
                 renderer.SetNumberOfLayers(2)  # Layer 0: 3D, Layer 1: 2D Overlay
@@ -1760,7 +1760,7 @@ class View3DManager:
                 )  # May not be supported depending on PyVista version
 
         # --- 3D Axis Widget Settings ---
-        show_axes = self.host.settings.get("show_3d_axes", True)
+        show_axes = self.host.init_manager.settings.get("show_3d_axes", True)
 
         try:
             # First, remove existing axes widget if it exists
@@ -1773,7 +1773,7 @@ class View3DManager:
 
             if show_axes:
                 # Calculate contrast color from background for labels
-                bg_color_hex = self.host.settings.get("background_color", "#919191")
+                bg_color_hex = self.host.init_manager.settings.get("background_color", "#919191")
                 bg_qcolor = QColor(bg_color_hex)
                 label_rgb = (0, 0, 0)  # Default to black
                 if bg_qcolor.isValid():
@@ -1796,29 +1796,29 @@ class View3DManager:
                 # Add orientation marker widget
                 self.axes_widget = vtk.vtkOrientationMarkerWidget()
                 self.axes_widget.SetOrientationMarker(axes)
-                self.axes_widget.SetInteractor(self.host.plotter.interactor)
+                self.axes_widget.SetInteractor(self.host.view_3d_manager.plotter.interactor)
                 self.axes_widget.SetViewport(0.0, 0.0, 0.2, 0.2)
                 self.axes_widget.SetEnabled(True)
                 self.axes_widget.InteractiveOff()
             else:
-                self.host.plotter.hide_axes()
+                self.host.view_3d_manager.plotter.hide_axes()
             
             # Re-render to show axes
-            self.host.plotter.render()
+            self.host.view_3d_manager.plotter.render()
         except (AttributeError, RuntimeError, TypeError, vtk.vtkException if hasattr(vtk, "vtkException") else Exception) as e:
             logging.debug(f"Failed to toggle 3D axes: {e}")
 
 
             # Explicitly render to show change
-            self.host.plotter.render()
+            self.host.view_3d_manager.plotter.render()
 
         if redraw:
-            self.draw_molecule_3d(self.host.current_mol)
+            self.draw_molecule_3d(self.host.view_3d_manager.current_mol)
 
         # Do not reset camera on settings change (reset only once)
         if not getattr(self, "_camera_initialized", False):
             try:
-                self.host.plotter.reset_camera()
+                self.host.view_3d_manager.plotter.reset_camera()
             except (AttributeError, RuntimeError, TypeError) as e:
                 logging.debug(
                     f"Suppressed exception: {e}"
@@ -1828,9 +1828,9 @@ class View3DManager:
 
         # Force plotter update
         try:
-            self.host.plotter.render()
-            if hasattr(self.host.plotter, "update"):
-                self.host.plotter.update()
+            self.host.view_3d_manager.plotter.render()
+            if hasattr(self.host.view_3d_manager.plotter, "update"):
+                self.host.view_3d_manager.plotter.update()
             else:  # [REPORT ERROR MISSING ATTRIBUTE]
                 logging.error(f"REPORT ERROR: Missing attribute 'update' on object")
         except (AttributeError, RuntimeError, TypeError) as e:
@@ -1849,8 +1849,8 @@ class View3DManager:
         else:
             self._plugin_bond_color_overrides[bond_idx] = hex_color
 
-        if self.host.current_mol:
-            self.draw_molecule_3d(self.host.current_mol)
+        if self.host.view_3d_manager.current_mol:
+            self.draw_molecule_3d(self.host.view_3d_manager.current_mol)
 
     def update_atom_color_override(self, atom_index, color_hex):
         """Plugin helper to update specific atom color override."""
@@ -1863,8 +1863,8 @@ class View3DManager:
         else:
             self._plugin_color_overrides[atom_index] = color_hex
 
-        if self.host.current_mol:
-            self.draw_molecule_3d(self.host.current_mol)
+        if self.host.view_3d_manager.current_mol:
+            self.draw_molecule_3d(self.host.view_3d_manager.current_mol)
 
 # Set class-level marker for plugin compatibility
 View3DManager._cls = View3DManager

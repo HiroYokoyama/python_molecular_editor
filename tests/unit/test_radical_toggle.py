@@ -17,7 +17,7 @@ def MockAtom(atom_id, radical=0):
 class MockScene(KeyboardMixin):
     def __init__(self):
         self.window = MagicMock()
-        self.window.is_2d_editable = True
+        self.window.ui_manager.is_2d_editable = True
         self.data = MagicMock()
         self.data.atoms = {}
         self._selected_items = []
@@ -90,5 +90,5 @@ def test_radical_toggle_no_target(scene):
         mock_cursor.return_value = QPointF(0,0)
         scene.keyPressEvent(event)
     
-    scene.window.push_undo_state.assert_not_called()
+    scene.window.state_manager.push_undo_state.assert_not_called()
     event.accept.assert_not_called()

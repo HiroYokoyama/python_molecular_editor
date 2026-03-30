@@ -272,7 +272,7 @@ class BondItem(QGraphicsItem):
             sc = self.scene()
             if sc is not None and hasattr(sc, "window") and sc.window is not None:
                 # Get settings
-                settings = sc.window.settings
+                settings = sc.window.init_manager.settings
 
                 # Use bond color if specified in settings
                 scene = self.scene()

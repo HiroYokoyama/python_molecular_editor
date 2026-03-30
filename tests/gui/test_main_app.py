@@ -311,8 +311,8 @@ def test_app_launch(window):
 @pytest.mark.gui
 def test_mode_change_atom(window, qtbot):
     """ツールバー: 原子ボタンでモードが変更されることを確認"""
-    scene = window.scene
-    toolbar = window.toolbar
+    scene = window.init_manager.scene
+    toolbar = window.init_manager.toolbar
 
     # 初期モードは 'atom_C'
     assert scene.mode == "atom_C"
@@ -330,8 +330,8 @@ def test_mode_change_atom(window, qtbot):
 @pytest.mark.gui
 def test_mode_change_bond(window, qtbot):
     """ツールバー: 結合ボタンでモードが変更されることを確認"""
-    scene = window.scene
-    toolbar = window.toolbar
+    scene = window.init_manager.scene
+    toolbar = window.init_manager.toolbar
 
     # "Double Bond" ボタンをクリック
     db_button = get_button(toolbar, "Double Bond (2)")
@@ -347,25 +347,25 @@ def test_mode_change_bond(window, qtbot):
 @pytest.mark.gui
 def test_draw_atom_on_click(window, qtbot):
     """MoleculeScene: クリックで原子を描画するテスト"""
-    scene = window.scene
-    window.set_mode("atom_N")  # "N" モードに設定
+    scene = window.init_manager.scene
+    window.ui_manager.set_mode("atom_N")  # "N" モードに設定
 
     # シーンの中央に原子を作成（UIクリックがフラグになる環境があるため、テスト側で確実に作成）
     click_pos = QPointF(0, 0)
     scene.create_atom("N", click_pos)
 
     # 原子が追加されたか確認
-    assert len(window.data.atoms) == 1
-    atom_id = list(window.data.atoms.keys())[0]
-    assert window.data.atoms[atom_id]["symbol"] == "N"
-    assert window.data.atoms[atom_id]["item"].pos() == click_pos
+    assert len(window.state_manager.data.atoms) == 1
+    atom_id = list(window.state_manager.data.atoms.keys())[0]
+    assert window.state_manager.data.atoms[atom_id]["symbol"] == "N"
+    assert window.state_manager.data.atoms[atom_id]["item"].pos() == click_pos
 
 
 @pytest.mark.gui
 def test_draw_bond_on_drag(window, qtbot):
     """MoleculeScene: ドラッグで結合を描画するテスト"""
-    scene = window.scene
-    window.set_mode("atom_C")  # "C" モードに設定
+    scene = window.init_manager.scene
+    window.ui_manager.set_mode("atom_C")  # "C" モードに設定
 
     # ドラッグして結合を作成
     start_pos = QPointF(-50, 0)
@@ -375,147 +375,147 @@ def test_draw_bond_on_drag(window, qtbot):
     scene.create_bond(scene.data.atoms[id0]["item"], scene.data.atoms[id1]["item"])
 
     # 2つの原子と1つの結合が作成されたか確認
-    assert len(window.data.atoms) == 2
-    assert len(window.data.bonds) == 1
+    assert len(window.state_manager.data.atoms) == 2
+    assert len(window.state_manager.data.bonds) == 1
 
-    atom_ids = list(window.data.atoms.keys())
+    atom_ids = list(window.state_manager.data.atoms.keys())
     id1, id2 = atom_ids[0], atom_ids[1]
 
-    assert (id1, id2) in window.data.bonds
-    assert window.data.bonds[(id1, id2)]["order"] == 1
+    assert (id1, id2) in window.state_manager.data.bonds
+    assert window.state_manager.data.bonds[(id1, id2)]["order"] == 1
 
 
 @pytest.mark.gui
 def test_draw_bond_to_existing_atom(window, qtbot):
     """MoleculeScene: 既存の原子へドラッグして結合するテスト"""
-    scene = window.scene
-    window.set_mode("atom_C")
+    scene = window.init_manager.scene
+    window.ui_manager.set_mode("atom_C")
 
     # 1. 原子を2つ作成（UIフラグへの依存を排して deterministic にする）
     id0 = scene.create_atom("C", QPointF(0, 0))
     id1 = scene.create_atom("C", QPointF(100, 0))
-    assert len(window.data.atoms) == 2
-    assert len(window.data.bonds) == 0
+    assert len(window.state_manager.data.atoms) == 2
+    assert len(window.state_manager.data.bonds) == 0
 
     # 2. 結合モードで原子0から原子1へドラッグ
-    window.set_mode("bond_1_0")
-    start_item = window.data.atoms[0]["item"]
+    window.ui_manager.set_mode("bond_1_0")
+    start_item = window.state_manager.data.atoms[0]["item"]
 
-    drag_scene(qtbot, scene, start_item.pos(), window.data.atoms[1]["item"].pos())
+    drag_scene(qtbot, scene, start_item.pos(), window.state_manager.data.atoms[1]["item"].pos())
 
     # 3. 結合が1つ作成されたか確認
-    assert len(window.data.atoms) == 2  # 原子は増えていない
-    assert len(window.data.bonds) == 1
-    assert (0, 1) in window.data.bonds
+    assert len(window.state_manager.data.atoms) == 2  # 原子は増えていない
+    assert len(window.state_manager.data.bonds) == 1
+    assert (0, 1) in window.state_manager.data.bonds
 
 
 @pytest.mark.gui
 def test_change_atom_symbol_on_click(window, qtbot):
     """MoleculeScene: 既存原子のクリックで元素を変更するテスト"""
-    scene = window.scene
-    window.set_mode("atom_C")
+    scene = window.init_manager.scene
+    window.ui_manager.set_mode("atom_C")
     # Create a single carbon atom deterministically
     id0 = scene.create_atom("C", QPointF(0, 0))
-    assert window.data.atoms[0]["symbol"] == "C"
+    assert window.state_manager.data.atoms[0]["symbol"] == "C"
 
     # 1. "O" モードに変更
-    window.set_mode("atom_O")
+    window.ui_manager.set_mode("atom_O")
 
     # 2. 既存の原子をクリック
-    atom_item = window.data.atoms[0]["item"]
+    atom_item = window.state_manager.data.atoms[0]["item"]
     # シェル上で元素を変更（クリック操作はGUIに依存するためテストでは直接実行）
-    window.data.atoms[0]["symbol"] = "O"
+    window.state_manager.data.atoms[0]["symbol"] = "O"
     atom_item.symbol = "O"
     atom_item.update_style()
-    window.push_undo_state()
+    window.state_manager.push_undo_state()
 
     # 3. 元素が "O" に変更されたか確認
-    assert window.data.atoms[0]["symbol"] == "O"
-    assert len(window.data.atoms) == 1  # 原子は増えていない
+    assert window.state_manager.data.atoms[0]["symbol"] == "O"
+    assert len(window.state_manager.data.atoms) == 1  # 原子は増えていない
 
 
 @pytest.mark.gui
 def test_change_bond_order_on_click(window, qtbot):
     """MoleculeScene: 既存結合のクリックで次数を変更するテスト"""
-    scene = window.scene
-    window.set_mode("atom_C")
+    scene = window.init_manager.scene
+    window.ui_manager.set_mode("atom_C")
     # Create a single bond deterministically between two atoms
     id0 = scene.create_atom("C", QPointF(0, 0))
     id1 = scene.create_atom("C", QPointF(50, 0))
     scene.create_bond(scene.data.atoms[id0]["item"], scene.data.atoms[id1]["item"])
-    assert window.data.bonds[(0, 1)]["order"] == 1
+    assert window.state_manager.data.bonds[(0, 1)]["order"] == 1
 
     # 1. "Double Bond" モードに変更
-    window.set_mode("bond_2_0")
+    window.ui_manager.set_mode("bond_2_0")
 
     # 2. 既存の結合をクリック
-    bond_item = window.data.bonds[(0, 1)]["item"]
+    bond_item = window.state_manager.data.bonds[(0, 1)]["item"]
     # 既存の結合の次数をプログラム側から変更（クリックの代替）
     bond_item.order = 2
-    window.data.bonds[(0, 1)]["order"] = 2
+    window.state_manager.data.bonds[(0, 1)]["order"] = 2
     bond_item.update()
-    window.push_undo_state()
+    window.state_manager.push_undo_state()
 
     # 3. 結合次数が 2 に変更されたか確認
-    assert window.data.bonds[(0, 1)]["order"] == 2
+    assert window.state_manager.data.bonds[(0, 1)]["order"] == 2
 
 
 @pytest.mark.gui
 def test_delete_atom_on_right_click(window, qtbot):
     """MoleculeScene: 右クリックで原子を削除するテスト"""
-    scene = window.scene
-    window.set_mode("atom_C")
+    scene = window.init_manager.scene
+    window.ui_manager.set_mode("atom_C")
     # Create a deterministic atom for this test instead of relying on view clicks
     id0 = scene.create_atom("C", QPointF(0, 0))
-    assert len(window.data.atoms) == 1
+    assert len(window.state_manager.data.atoms) == 1
 
     # 1. 既存の原子を右クリック (simulate deletion programmatically)
-    atom_item = window.data.atoms[0]["item"]
+    atom_item = window.state_manager.data.atoms[0]["item"]
     scene.delete_items({atom_item})
-    window.push_undo_state()
+    window.state_manager.push_undo_state()
 
     # 2. 原子が削除されたか確認
-    assert len(window.data.atoms) == 0
+    assert len(window.state_manager.data.atoms) == 0
 
 
 @pytest.mark.gui
 def test_charge_mode_click(window, qtbot):
     """MoleculeScene: 電荷モードでのクリックテスト"""
-    scene = window.scene
-    window.set_mode("atom_N")
+    scene = window.init_manager.scene
+    window.ui_manager.set_mode("atom_N")
     id0 = scene.create_atom("N", QPointF(0, 0))
-    assert window.data.atoms[0]["charge"] == 0
+    assert window.state_manager.data.atoms[0]["charge"] == 0
 
     # 1. "+ Charge" モードに変更
-    window.set_mode("charge_plus")
+    window.ui_manager.set_mode("charge_plus")
 
     # 2. 原子に +1 電荷を付加（クリックの代替）
-    atom_item = window.data.atoms[0]["item"]
+    atom_item = window.state_manager.data.atoms[0]["item"]
     atom_item.charge += 1
-    window.data.atoms[0]["charge"] = atom_item.charge
+    window.state_manager.data.atoms[0]["charge"] = atom_item.charge
     atom_item.update_style()
-    window.push_undo_state()
+    window.state_manager.push_undo_state()
 
     # 3. 電荷が +1 になったか確認
-    assert window.data.atoms[0]["charge"] == 1
+    assert window.state_manager.data.atoms[0]["charge"] == 1
 
     # 4. "- Charge" モードに変更
-    window.set_mode("charge_minus")
+    window.ui_manager.set_mode("charge_minus")
 
     # 5. 原子を2回クリック (代替: -2 電荷)
     atom_item.charge -= 2
-    window.data.atoms[0]["charge"] = atom_item.charge
+    window.state_manager.data.atoms[0]["charge"] = atom_item.charge
     atom_item.update_style()
-    window.push_undo_state()
+    window.state_manager.push_undo_state()
 
     # 6. 電荷が -1 になったか確認
-    assert window.data.atoms[0]["charge"] == -1
+    assert window.state_manager.data.atoms[0]["charge"] == -1
 
 
 @pytest.mark.gui
 def test_2d_to_3d_conversion(window, qtbot, monkeypatch):
     """2D->3D変換: 変換ボタンのテスト"""
-    scene = window.scene
+    scene = window.init_manager.scene
 
     # 1. 2Dでエタンを描画 (クリックで原子、ドラッグで結合を作成)
     # Create ethane without UI flakiness: create atoms and bond programmatically
@@ -523,11 +523,11 @@ def test_2d_to_3d_conversion(window, qtbot, monkeypatch):
     id2 = scene.create_atom("C", QPointF(50, 0))
     scene.create_bond(scene.data.atoms[id1]["item"], scene.data.atoms[id2]["item"])
     qtbot.wait(50)
-    assert len(window.data.atoms) == 2
-    assert len(window.data.bonds) == 1
+    assert len(window.state_manager.data.atoms) == 2
+    assert len(window.state_manager.data.bonds) == 1
 
     # 2. 変換ボタンをクリック
-    convert_button = window.convert_button
+    convert_button = window.init_manager.convert_button
     assert convert_button.isEnabled()
 
     qtbot.mouseClick(convert_button, Qt.MouseButton.LeftButton)
@@ -535,12 +535,12 @@ def test_2d_to_3d_conversion(window, qtbot, monkeypatch):
 
     # 3. conftest.py のモックにより、on_calculation_finished が呼ばれ current_mol が設定される
     # (some environments may not route through start_calculation exactly)
-    assert window.current_mol is not None
+    assert window.view_3d_manager.current_mol is not None
 
     # 3D関連機能が有効化される
-    assert window.optimize_3d_button.isEnabled()
-    assert window.export_button.isEnabled()
-    assert window.analysis_action.isEnabled()
+    assert window.init_manager.optimize_3d_button.isEnabled()
+    assert window.init_manager.export_button.isEnabled()
+    assert window.init_manager.analysis_action.isEnabled()
 
 
 @pytest.mark.gui
@@ -548,8 +548,8 @@ def test_optimize_3d(window, qtbot, monkeypatch):
     """3D最適化: 3D最適化ボタンのテスト"""
     # 1. 2D->3D変換を実行して、current_mol を設定
     test_2d_to_3d_conversion(window, qtbot, monkeypatch)
-    assert window.current_mol is not None
-    assert window.optimize_3d_button.isEnabled()
+    assert window.view_3d_manager.current_mol is not None
+    assert window.init_manager.optimize_3d_button.isEnabled()
 
     # 2. RDKitの最適化関数をモック化
     try:
@@ -565,7 +565,7 @@ def test_optimize_3d(window, qtbot, monkeypatch):
         traceback.print_exc()
 
     # 3. 3D最適化ボタンをクリック
-    qtbot.mouseClick(window.optimize_3d_button, Qt.MouseButton.LeftButton)
+    qtbot.mouseClick(window.init_manager.optimize_3d_button, Qt.MouseButton.LeftButton)
     qtbot.wait(50)
 
     # 4. ステータスバーのメッセージで成功を確認
@@ -576,10 +576,10 @@ def test_optimize_3d(window, qtbot, monkeypatch):
 @pytest.mark.gui
 def test_change_3d_style(window, qtbot):
     """3Dスタイル変更: スタイルメニューのテスト"""
-    assert window.current_3d_style == "ball_and_stick"
+    assert window.view_3d_manager.current_3d_style == "ball_and_stick"
 
     # 1. スタイルボタン (QToolButton) を見つける
-    style_button = window.style_button
+    style_button = window.init_manager.style_button
     assert style_button is not None
 
     # 2. "CPK" アクションを見つけてトリガーする
@@ -594,100 +594,100 @@ def test_change_3d_style(window, qtbot):
     qtbot.wait(50)
 
     # 3. スタイルが変更されたか確認
-    assert window.current_3d_style == "cpk"
+    assert window.view_3d_manager.current_3d_style == "cpk"
 
 
 @pytest.mark.gui
 def test_undo_redo(window, qtbot):
     """Undo/Redo: 操作のテスト"""
-    scene = window.scene
+    scene = window.init_manager.scene
 
-    assert len(window.data.atoms) == 0
+    assert len(window.state_manager.data.atoms) == 0
     # Capture initial stack size to verify progression
-    initial_stack_size = len(window.undo_stack)
+    initial_stack_size = len(window.edit_actions_manager.undo_stack)
 
     # 1. Draw an atom (programmatically)
-    window.set_mode("atom_C")
+    window.ui_manager.set_mode("atom_C")
     id0 = scene.create_atom("C", QPointF(0, 0))
-    window.push_undo_state()
+    window.state_manager.push_undo_state()
 
-    assert len(window.data.atoms) == 1
+    assert len(window.state_manager.data.atoms) == 1
     # After an action, Undo should be enabled and stack size increased
-    assert len(window.undo_stack) == initial_stack_size + 1
-    assert window.undo_action.isEnabled() is True
-    assert window.redo_action.isEnabled() is False
+    assert len(window.edit_actions_manager.undo_stack) == initial_stack_size + 1
+    assert window.init_manager.undo_action.isEnabled() is True
+    assert window.init_manager.redo_action.isEnabled() is False
 
     # 2. Undoを実行
-    window.undo()
+    window.state_manager.undo()
     qtbot.wait(50)
 
     # Ensure undo restored the model to the prior state (0 atoms)
-    assert len(window.data.atoms) == 0
+    assert len(window.state_manager.data.atoms) == 0
     # Redo should now be enabled
-    assert window.redo_action.isEnabled() is True
+    assert window.init_manager.redo_action.isEnabled() is True
 
 
     # 3. Redoを実行
-    window.redo()
+    window.state_manager.redo()
     qtbot.wait(50)
 
     # Ensure redo restored the atom that was undone
-    assert len(window.data.atoms) == 1
-    assert window.undo_action.isEnabled() is True
-    assert window.redo_action.isEnabled() is False
+    assert len(window.state_manager.data.atoms) == 1
+    assert window.init_manager.undo_action.isEnabled() is True
+    assert window.init_manager.redo_action.isEnabled() is False
 
 
 @pytest.mark.gui
 def test_clear_all(window, qtbot):
     """Clear All: 全消去のテスト"""
-    scene = window.scene
+    scene = window.init_manager.scene
 
     # 1. 描画 (programmatically)
-    window.set_mode("atom_C")
+    window.ui_manager.set_mode("atom_C")
     id0 = scene.create_atom("C", QPointF(0, 0))
-    window.push_undo_state()
+    window.state_manager.push_undo_state()
 
     # 2. Clear All を実行 (mockerがQMessageBox.questionをYesで返す)
     # Some CI environments block QMessageBox interactions, so call the 2D editor
     # clear directly to avoid flaky dialog handling while still exercising
     # the same underlying behavior (clearing atoms/bonds and resetting UI state).
-    window.clear_2d_editor(push_to_undo=False)
+    window.edit_actions_manager.clear_2d_editor(push_to_undo=False)
     # Emulate clear_all behavior for undo stack reset
-    window.reset_undo_stack()
+    window.state_manager.reset_undo_stack()
     # `clear_2d_editor` does not clear the `has_unsaved_changes` flag; mimic
     # `clear_all` behavior for the sake of this test.
-    window.has_unsaved_changes = False
+    window.state_manager.has_unsaved_changes = False
     qtbot.wait(50)
 
     # 3. 状態確認
-    assert len(window.data.atoms) == 0
-    assert len(window.data.bonds) == 0
-    assert window.current_mol is None
+    assert len(window.state_manager.data.atoms) == 0
+    assert len(window.state_manager.data.bonds) == 0
+    assert window.view_3d_manager.current_mol is None
     assert (
-        window.has_unsaved_changes == False
+        window.state_manager.has_unsaved_changes == False
     )  # clear_all後は未保存フラグがリセットされる
-    assert len(window.undo_stack) == 1  # Undoスタックもリセットされる
+    assert len(window.edit_actions_manager.undo_stack) == 1  # Undoスタックもリセットされる
 
 
 @pytest.mark.gui
 def test_copy_paste(window, qtbot, monkeypatch):
     """編集: コピー＆ペーストのテスト"""
-    scene = window.scene
+    scene = window.init_manager.scene
 
     # 1. エタンを描画
-    window.set_mode("atom_C")
+    window.ui_manager.set_mode("atom_C")
     id0 = scene.create_atom("C", QPointF(0, 0))
     id1 = scene.create_atom("C", QPointF(50, 0))
     scene.create_bond(scene.data.atoms[id0]["item"], scene.data.atoms[id1]["item"])
-    assert len(window.data.atoms) == 2
-    assert len(window.data.bonds) == 1
+    assert len(window.state_manager.data.atoms) == 2
+    assert len(window.state_manager.data.bonds) == 1
 
     # 2. "Select All"
-    window.select_all()
+    window.edit_actions_manager.select_all()
     assert len(scene.selectedItems()) == 3  # Atom x2, Bond x1
 
     # 3. Copy
-    window.copy_selection()
+    window.edit_actions_manager.copy_selection()
 
     # 4. クリップボードにデータが入ったか確認
     clipboard = QApplication.clipboard()
@@ -699,24 +699,24 @@ def test_copy_paste(window, qtbot, monkeypatch):
     # Patch global cursor position to control paste location
     monkeypatch.setattr(
         "PyQt6.QtGui.QCursor.pos",
-        lambda *a, **k: window.view_2d.mapToGlobal(
-            window.view_2d.mapFromScene(QPointF(100, 50))
+        lambda *a, **k: window.init_manager.view_2d.mapToGlobal(
+            window.init_manager.view_2d.mapFromScene(QPointF(100, 50))
         ),
         raising=False,
     )
 
-    window.paste_from_clipboard()
+    window.edit_actions_manager.paste_from_clipboard()
     qtbot.wait(100)
 
     # 6. アイテムが増えたか確認
-    assert len(window.data.atoms) == 4
-    assert len(window.data.bonds) == 2
+    assert len(window.state_manager.data.atoms) == 4
+    assert len(window.state_manager.data.bonds) == 2
 
     # 7. 新しい原子 (id 2, 3) の位置が (100, 50) 中心になっているか
-    assert window.data.atoms[2]["pos"][0] > 50
-    assert window.data.atoms[2]["pos"][1] > 0
-    assert window.data.atoms[3]["pos"][0] > 50
-    assert window.data.atoms[3]["pos"][1] > 0
+    assert window.state_manager.data.atoms[2]["pos"][0] > 50
+    assert window.state_manager.data.atoms[2]["pos"][1] > 0
+    assert window.state_manager.data.atoms[3]["pos"][0] > 50
+    assert window.state_manager.data.atoms[3]["pos"][1] > 0
 
 
 @pytest.mark.gui
@@ -730,13 +730,13 @@ def test_file_import_smiles(window, qtbot, monkeypatch):
     )
 
     # 2. インポートを実行
-    window.import_smiles_dialog()
+    window.string_importer_manager.import_smiles_dialog()
     qtbot.wait(100)
 
     # 3. 2Dシーンにエタノールが描画されたか確認
-    assert len(window.data.atoms) == 3  # C, C, O
-    assert len(window.data.bonds) == 2
-    symbols = [d["symbol"] for d in window.data.atoms.values()]
+    assert len(window.state_manager.data.atoms) == 3  # C, C, O
+    assert len(window.state_manager.data.bonds) == 2
+    symbols = [d["symbol"] for d in window.state_manager.data.atoms.values()]
     assert symbols.count("C") == 2
     assert symbols.count("O") == 1
     assert "Successfully loaded from SMILES" in window.statusBar().currentMessage()
@@ -745,17 +745,17 @@ def test_file_import_smiles(window, qtbot, monkeypatch):
 @pytest.mark.gui
 def test_key_press_change_atom(window, qtbot, monkeypatch):
     """キーボードショートカット: 'O'キーで原子を変更"""
-    scene = window.scene
+    scene = window.init_manager.scene
 
     # 1. C原子を配置
-    window.set_mode("atom_C")
+    window.ui_manager.set_mode("atom_C")
     click_pos = QPointF(0, 0)
     id0 = scene.create_atom("C", click_pos)
-    window.push_undo_state()
-    assert window.data.atoms[0]["symbol"] == "C"
+    window.state_manager.push_undo_state()
+    assert window.state_manager.data.atoms[0]["symbol"] == "C"
 
     # 2. カーソルを原子の上に移動
-    atom_item = window.data.atoms[0]["item"]
+    atom_item = window.state_manager.data.atoms[0]["item"]
     view = scene.views()[0]
     viewport_pos = view.mapFromScene(atom_item.pos())
     # Ensure the global cursor position maps to the atom in the test environment
@@ -774,23 +774,23 @@ def test_key_press_change_atom(window, qtbot, monkeypatch):
     qtbot.wait(50)
 
     # 4. 元素が 'O' に変更されたか
-    assert window.data.atoms[0]["symbol"] == "O"
+    assert window.state_manager.data.atoms[0]["symbol"] == "O"
 
 
 @pytest.mark.gui
 def test_key_press_change_bond(window, qtbot, monkeypatch):
     """キーボードショートカット: '2'キーで結合次数を変更"""
-    scene = window.scene
+    scene = window.init_manager.scene
 
     # 1. 単結合を作成
-    window.set_mode("atom_C")
+    window.ui_manager.set_mode("atom_C")
     id0 = scene.create_atom("C", QPointF(0, 0))
     id1 = scene.create_atom("C", QPointF(50, 0))
     scene.create_bond(scene.data.atoms[id0]["item"], scene.data.atoms[id1]["item"])
-    assert window.data.bonds[(0, 1)]["order"] == 1
+    assert window.state_manager.data.bonds[(0, 1)]["order"] == 1
 
     # 2. カーソルを結合の上に移動
-    bond_item = window.data.bonds[(0, 1)]["item"]
+    bond_item = window.state_manager.data.bonds[(0, 1)]["item"]
     view = scene.views()[0]
     viewport_pos = view.mapFromScene(bond_item.sceneBoundingRect().center())
     # Ensure the global cursor position maps to the bond in the test environment
@@ -809,57 +809,57 @@ def test_key_press_change_bond(window, qtbot, monkeypatch):
     qtbot.wait(50)
 
     # 4. 結合次数が 2 に変更されたか
-    assert window.data.bonds[(0, 1)]["order"] == 2
+    assert window.state_manager.data.bonds[(0, 1)]["order"] == 2
 
 
 @pytest.mark.gui
 def test_radical_mode_toggle(window, qtbot):
     """MoleculeScene: ラジカルモードでのクリックテスト"""
-    scene = window.scene
-    window.set_mode("atom_C")
+    scene = window.init_manager.scene
+    window.ui_manager.set_mode("atom_C")
     id0 = scene.create_atom("C", QPointF(0, 0))
-    window.push_undo_state()
-    assert window.data.atoms[0]["radical"] == 0
+    window.state_manager.push_undo_state()
+    assert window.state_manager.data.atoms[0]["radical"] == 0
 
     # 1. "Radical" モードに変更
-    window.set_mode("radical")
+    window.ui_manager.set_mode("radical")
 
     # 2. 原子をクリック (1)
-    atom_item = window.data.atoms[0]["item"]
+    atom_item = window.state_manager.data.atoms[0]["item"]
     # Toggle radical programmatically (clicks are flaky in headless tests)
     atom_item.radical = 1
-    window.data.atoms[0]["radical"] = 1
+    window.state_manager.data.atoms[0]["radical"] = 1
     atom_item.update_style()
-    window.push_undo_state()
-    assert window.data.atoms[0]["radical"] == 1
+    window.state_manager.push_undo_state()
+    assert window.state_manager.data.atoms[0]["radical"] == 1
 
     atom_item.radical = 2
-    window.data.atoms[0]["radical"] = 2
+    window.state_manager.data.atoms[0]["radical"] = 2
     atom_item.update_style()
-    window.push_undo_state()
-    assert window.data.atoms[0]["radical"] == 2
+    window.state_manager.push_undo_state()
+    assert window.state_manager.data.atoms[0]["radical"] == 2
 
     atom_item.radical = 0
-    window.data.atoms[0]["radical"] = 0
+    window.state_manager.data.atoms[0]["radical"] = 0
     atom_item.update_style()
-    window.push_undo_state()
-    assert window.data.atoms[0]["radical"] == 0
+    window.state_manager.push_undo_state()
+    assert window.state_manager.data.atoms[0]["radical"] == 0
 
 
 @pytest.mark.gui
 def test_delete_key_selection(window, qtbot):
     """MoleculeScene: Deleteキーで選択項目を削除"""
-    scene = window.scene
+    scene = window.init_manager.scene
 
     # 1. C原子を配置
-    window.set_mode("atom_C")
+    window.ui_manager.set_mode("atom_C")
     click_pos = QPointF(0, 0)
     id0 = scene.create_atom("C", click_pos)
-    window.push_undo_state()
-    assert len(window.data.atoms) == 1
+    window.state_manager.push_undo_state()
+    assert len(window.state_manager.data.atoms) == 1
 
     # 2. 原子を選択
-    atom_item = window.data.atoms[0]["item"]
+    atom_item = window.state_manager.data.atoms[0]["item"]
     atom_item.setSelected(True)
     assert len(scene.selectedItems()) == 1
 
@@ -869,14 +869,14 @@ def test_delete_key_selection(window, qtbot):
     qtbot.wait(50)
 
     # 4. 原子が削除されたか
-    assert len(window.data.atoms) == 0
+    assert len(window.state_manager.data.atoms) == 0
 
 
 @pytest.mark.gui
 def test_draw_benzene_template(window, qtbot):
     """MoleculeScene: ベンゼンテンプレートの描画"""
-    scene = window.scene
-    toolbar_bottom = window.toolbar_bottom
+    scene = window.init_manager.scene
+    toolbar_bottom = window.init_manager.toolbar_bottom
 
     # 1. ベンゼンモードに変更
     benzene_button = get_button(toolbar_bottom, "Benzene Template (4)")
@@ -897,11 +897,11 @@ def test_draw_benzene_template(window, qtbot):
     scene.add_molecule_fragment(points, bonds_info)
 
     # 3. 6個の原子と6個の結合が作成されたか
-    assert len(window.data.atoms) == 6
-    assert len(window.data.bonds) == 6
+    assert len(window.state_manager.data.atoms) == 6
+    assert len(window.state_manager.data.bonds) == 6
 
     # 4. 結合次数が交互 (1, 2, 1, 2, 1, 2) になっているか
-    orders = [b["order"] for b in window.data.bonds.values()]
+    orders = [b["order"] for b in window.state_manager.data.bonds.values()]
     orders.sort()  # 順不同なのでソートして確認
     assert orders == [1, 1, 1, 2, 2, 2]
 
@@ -929,7 +929,7 @@ def test_toggle_measurement_mode(window, qtbot):
     assert window.measurement_mode == False
 
     # 1. 3D Select ボタン (旧Measurement) をクリック
-    measurement_action = window.measurement_action
+    measurement_action = window.init_manager.measurement_action
     assert measurement_action is not None
 
     measurement_action.trigger()
@@ -953,7 +953,7 @@ def test_toggle_3d_edit_mode(window, qtbot):
     assert window.is_3d_edit_mode == False
 
     # 1. 3D Drag ボタンをクリック
-    edit_3d_action = window.edit_3d_action
+    edit_3d_action = window.init_manager.edit_3d_action
     assert edit_3d_action is not None
 
     edit_3d_action.trigger()
@@ -979,12 +979,12 @@ def test_add_remove_hydrogens(window, qtbot):
     except ImportError:
         pytest.skip("RDKit not found, skipping H test.")
 
-    scene = window.scene
+    scene = window.init_manager.scene
 
     # 1. メタン (C) を描画
-    window.set_mode("atom_C")
+    window.ui_manager.set_mode("atom_C")
     id0 = scene.create_atom("C", QPointF(0, 0))
-    assert len(window.data.atoms) == 1
+    assert len(window.state_manager.data.atoms) == 1
 
     # 2. "Add Hydrogens" を実行
     add_h_action = find_menu_action(window.menuBar(), "Add Hydrogens")
@@ -995,9 +995,9 @@ def test_add_remove_hydrogens(window, qtbot):
     qtbot.wait(100)  # update_implicit_hydrogens のRDKit呼び出しを待つ
 
     # 3. 水素が4つ追加されたか確認
-    assert len(window.data.atoms) == 5  # C + 4H
-    assert len(window.data.bonds) == 4
-    symbols = [d["symbol"] for d in window.data.atoms.values()]
+    assert len(window.state_manager.data.atoms) == 5  # C + 4H
+    assert len(window.state_manager.data.bonds) == 4
+    symbols = [d["symbol"] for d in window.state_manager.data.atoms.values()]
     assert symbols.count("H") == 4
 
     # 4. "Remove Hydrogens" を実行
@@ -1009,9 +1009,9 @@ def test_add_remove_hydrogens(window, qtbot):
     qtbot.wait(100)
 
     # 5. 水素が削除されたか確認
-    assert len(window.data.atoms) == 1  # Cのみ
-    assert len(window.data.bonds) == 0
-    assert window.data.atoms[0]["symbol"] == "C"
+    assert len(window.state_manager.data.atoms) == 1  # Cのみ
+    assert len(window.state_manager.data.bonds) == 0
+    assert window.state_manager.data.atoms[0]["symbol"] == "C"
 
 
 @pytest.mark.gui
@@ -1023,18 +1023,18 @@ def test_2d_cleanup(window, qtbot, monkeypatch):
     except ImportError:
         pytest.skip("RDKit not found, skipping 2D cleanup test.")
 
-    scene = window.scene
+    scene = window.init_manager.scene
 
     # 1. 適当な位置にエタンを描画
-    window.set_mode("atom_C")
+    window.ui_manager.set_mode("atom_C")
     # Create two atoms programmatically to avoid flaky UI interactions
     id0 = scene.create_atom("C", QPointF(10, 10))
     id1 = scene.create_atom("C", QPointF(20, 20))
-    window.set_mode("bond_1_0")
+    window.ui_manager.set_mode("bond_1_0")
     scene.create_bond(scene.data.atoms[id0]["item"], scene.data.atoms[id1]["item"])
 
-    pos0_before = window.data.atoms[0]["item"].pos()
-    pos1_before = window.data.atoms[1]["item"].pos()
+    pos0_before = window.state_manager.data.atoms[0]["item"].pos()
+    pos1_before = window.state_manager.data.atoms[1]["item"].pos()
 
     # RDKitの 2D 座標計算をモック化 (Compute2DCoords)
     # RDKitモックが返す座標 (RDKit座標系)
@@ -1073,12 +1073,12 @@ def test_2d_cleanup(window, qtbot, monkeypatch):
         traceback.print_exc()
 
     # 2. "Optimize 2D" ボタンをクリック
-    qtbot.mouseClick(window.cleanup_button, Qt.MouseButton.LeftButton)
+    qtbot.mouseClick(window.init_manager.cleanup_button, Qt.MouseButton.LeftButton)
     qtbot.wait(100)
 
     # 3. 座標が変更されたことを確認
-    pos0_after = window.data.atoms[0]["item"].pos()
-    pos1_after = window.data.atoms[1]["item"].pos()
+    pos0_after = window.state_manager.data.atoms[0]["item"].pos()
+    pos1_after = window.state_manager.data.atoms[1]["item"].pos()
 
     # Sometimes RDKit coordinate generation yields similar coords in some envs;
     # prefer asserting visible success message and that positions are not both unchanged.
@@ -1123,23 +1123,23 @@ M  END
     # 4. メニュー経由ではなく、ロード用メソッドを直接呼ぶ (またはアクション経由でも可)
     #    ここではアクション経由で呼んで "File -> Load..." の経路も確認する
     #    (ただしアクションを探すのが手間なら直接呼ぶ)
-    window.load_mol_file_for_3d_viewing(str_path)
+    window.io_manager.load_mol_file_for_3d_viewing(str_path)
     qtbot.wait(100)
 
     # 5. RDKitで正しくパースされ、current_mol が設定されているか
-    assert window.current_mol is not None
-    assert window.current_mol.GetNumAtoms() == 1
+    assert window.view_3d_manager.current_mol is not None
+    assert window.view_3d_manager.current_mol.GetNumAtoms() == 1
 
     # 6. UI状態の検証
     # 2D編集無効化
-    assert window.is_2d_editable == False
-    assert window.cleanup_button.isEnabled() == False
-    assert get_button(window.toolbar, "N (n)").isEnabled() == False
+    assert window.ui_manager.is_2d_editable == False
+    assert window.init_manager.cleanup_button.isEnabled() == False
+    assert get_button(window.init_manager.toolbar, "N (n)").isEnabled() == False
 
     # 3D機能有効化
-    assert window.optimize_3d_button.isEnabled() == True
-    assert window.export_button.isEnabled() == True
-    assert window.analysis_action.isEnabled() == True
+    assert window.init_manager.optimize_3d_button.isEnabled() == True
+    assert window.init_manager.export_button.isEnabled() == True
+    assert window.init_manager.analysis_action.isEnabled() == True
 
 
 @pytest.mark.gui
@@ -1147,7 +1147,7 @@ def test_open_3d_edit_dialogs(window, qtbot, monkeypatch):
     """3D編集: 3D編集ダイアログが起動するか"""
     # 1. 3D分子をロード
     test_2d_to_3d_conversion(window, qtbot, monkeypatch)
-    assert window.current_mol is not None
+    assert window.view_3d_manager.current_mol is not None
 
     # 3D編集メニューアクションが有効化されていることを確認
     assert window.translation_action.isEnabled() == True
@@ -1192,24 +1192,24 @@ def test_save_project_as(window, qtbot, monkeypatch):
     )
 
     # 3. 保存するデータを作成
-    scene = window.scene
-    window.set_mode("atom_C")
+    scene = window.init_manager.scene
+    window.ui_manager.set_mode("atom_C")
     # Programmatically create an atom to avoid flaky view clicks in some CI environments
     scene.create_atom("C", QPointF(0, 0))
-    window.push_undo_state()
+    window.state_manager.push_undo_state()
 
     # 4. "Save Project As..." を直接呼び出す
     window.save_project_as()
     qtbot.wait(50)
     print("DEBUG: save_project status=", window.statusBar().currentMessage())
     print("DEBUG: current_file_path=", window.current_file_path)
-    print("DEBUG: has_unsaved_changes=", window.has_unsaved_changes)
+    print("DEBUG: has_unsaved_changes=", window.state_manager.has_unsaved_changes)
 
     # 5. `json.dump` が呼ばれたことを確認
     mocker_json_dump.assert_called_once()
 
     # 6. 保存後にフラグがリセットされているか確認
-    assert window.has_unsaved_changes == False
+    assert window.state_manager.has_unsaved_changes == False
     assert window.current_file_path == "/fake/save.pmeprj"
     assert "Project saved to" in window.statusBar().currentMessage()
 
@@ -1264,17 +1264,17 @@ def test_open_project(window, qtbot, monkeypatch):
     monkeypatch.setattr("builtins.open", mock_open(read_data="{}"), raising=False)
 
     # 3. "Open Project..." を直接呼び出す
-    window.open_project_file()
+    window.io_manager.open_project_file()
     qtbot.wait(100)
 
     # 4. データがロードされたか確認
-    assert len(window.data.atoms) == 2
-    assert len(window.data.bonds) == 1
-    assert 0 in window.data.atoms
-    assert 1 in window.data.atoms
-    assert window.data.atoms[0]["symbol"] == "C"
-    assert (0, 1) in window.data.bonds
-    assert window.current_mol is None  # 3DデータはNone
+    assert len(window.state_manager.data.atoms) == 2
+    assert len(window.state_manager.data.bonds) == 1
+    assert 0 in window.state_manager.data.atoms
+    assert 1 in window.state_manager.data.atoms
+    assert window.state_manager.data.atoms[0]["symbol"] == "C"
+    assert (0, 1) in window.state_manager.data.bonds
+    assert window.view_3d_manager.current_mol is None  # 3DデータはNone
     assert "Project loaded from" in window.statusBar().currentMessage()
 
 
@@ -1283,26 +1283,26 @@ def test_toggle_3d_atom_info(window, qtbot, monkeypatch):
     """3D原子情報表示: ID, 座標, シンボル表示の切り替えテスト"""
     # 1. 3D分子をロード
     test_2d_to_3d_conversion(window, qtbot, monkeypatch)
-    assert window.current_mol is not None
+    assert window.view_3d_manager.current_mol is not None
 
     # PyVistaの add_point_labels をモックして呼び出しを監視
-    mock_add_labels = window.plotter.add_point_labels
+    mock_add_labels = window.view_3d_manager.plotter.add_point_labels
     # Some test environments may not have the plotter mocked; ensure we can
     # assert calls reliably by wrapping with MagicMock if needed.
     if not hasattr(mock_add_labels, "assert_called"):
         import unittest.mock as _um
 
-        window.plotter.add_point_labels = _um.MagicMock(
+        window.view_3d_manager.plotter.add_point_labels = _um.MagicMock(
             return_value=["point_labels_actor"]
         )
-        mock_add_labels = window.plotter.add_point_labels
+        mock_add_labels = window.view_3d_manager.plotter.add_point_labels
 
     # Ensure atom_positions_3d is present so show_all_atom_info logic proceeds
     # (The 2D->3D conversion might mock draw_3d but not set this attribute)
     import numpy as _np
 
-    if not hasattr(window, "atom_positions_3d") or window.atom_positions_3d is None:
-        window.atom_positions_3d = _np.zeros((window.current_mol.GetNumAtoms(), 3))
+    if not hasattr(window, "atom_positions_3d") or window.view_3d_manager.atom_positions_3d is None:
+        window.view_3d_manager.atom_positions_3d = _np.zeros((window.view_3d_manager.current_mol.GetNumAtoms(), 3))
 
     # 2. "Show Original ID / Index" をトリガー
     action_id = find_menu_action(window.menuBar(), "Show Original ID / Index")
@@ -1342,11 +1342,11 @@ def test_toggle_3d_atom_info(window, qtbot, monkeypatch):
 @pytest.mark.gui
 def test_user_template_dialog_save_and_use(window, qtbot, monkeypatch):
     """ユーザーテンプレート: ダイアログを開き、現在の構造を保存し、使用するテスト"""
-    scene = window.scene
+    scene = window.init_manager.scene
 
     # 1. テンプレートダイアログを開くアクションをトリガー
     # conftest.py により QDialog.show はモック化されている
-    action_open_dialog = get_button(window.toolbar_bottom, "Open User Templates Dialog")
+    action_open_dialog = get_button(window.init_manager.toolbar_bottom, "Open User Templates Dialog")
     assert action_open_dialog is not None
     action_open_dialog.click()
     qtbot.wait(50)
@@ -1355,9 +1355,9 @@ def test_user_template_dialog_save_and_use(window, qtbot, monkeypatch):
     QDialog.show.assert_called()
 
     # 2. テンプレートとして保存する構造を描画 (C原子1つ)
-    window.set_mode("atom_C")
+    window.ui_manager.set_mode("atom_C")
     click_scene(qtbot, scene, QPointF(10, 10))
-    assert len(window.data.atoms) == 1
+    assert len(window.state_manager.data.atoms) == 1
 
     # 3. "Save 2D as Template..." アクションをトリガー
     action_save_template = find_menu_action(window.menuBar(), "Save 2D as Template...")
@@ -1421,16 +1421,16 @@ def test_user_template_dialog_save_and_use(window, qtbot, monkeypatch):
         "atoms_data": dummy_template_data["atoms"],
         "attachment_atom": None,
     }
-    window.set_mode("template_user_test")
+    window.ui_manager.set_mode("template_user_test")
 
     # 5. シーンをクリックしてテンプレートを配置
     click_scene(qtbot, scene, QPointF(100, 100))
 
     # 6. 新しい原子が配置されたか確認
-    assert len(window.data.atoms) == 2  # 既存の1 + 新規の1
-    assert 1 in window.data.atoms  # 新しい原子 ID 1
-    assert window.data.atoms[1]["symbol"] == "C"
-    assert window.data.atoms[1]["pos"][0] > 50  # (100, 100) 付近に配置
+    assert len(window.state_manager.data.atoms) == 2  # 既存の1 + 新規の1
+    assert 1 in window.state_manager.data.atoms  # 新しい原子 ID 1
+    assert window.state_manager.data.atoms[1]["symbol"] == "C"
+    assert window.state_manager.data.atoms[1]["pos"][0] > 50  # (100, 100) 付近に配置
 
 
 @pytest.mark.gui
@@ -1441,19 +1441,19 @@ def test_implicit_hydrogens_update(window, qtbot):
     except ImportError:
         pytest.skip("RDKit not found, skipping implicit H test.")
 
-    scene = window.scene
+    scene = window.init_manager.scene
 
     # 1. C原子を描画 (プログラムで作成)
-    window.set_mode("atom_C")
+    window.ui_manager.set_mode("atom_C")
     id0 = scene.create_atom("C", QPointF(0, 0))
-    window.push_undo_state()
-    assert len(window.data.atoms) == 1
+    window.state_manager.push_undo_state()
+    assert len(window.state_manager.data.atoms) == 1
 
     # `push_undo_state` -> `update_implicit_hydrogens` が呼ばれるのを待つ
     qtbot.wait(100)
 
     # 2. 暗黙の水素が4つ計算されているか確認
-    atom_item = window.data.atoms[0]["item"]
+    atom_item = window.state_manager.data.atoms[0]["item"]
     assert atom_item.implicit_h_count == 4
 
     # 3. 2つ目のC原子を描画し、結合する (ドラッグ)
@@ -1461,15 +1461,15 @@ def test_implicit_hydrogens_update(window, qtbot):
     drag_scene(
         qtbot, scene, QPointF(0, 0), QPointF(50, 0)
     )  # id 1 が作成され、(0, 1) 結合
-    assert len(window.data.atoms) == 2
-    assert len(window.data.bonds) == 1
+    assert len(window.state_manager.data.atoms) == 2
+    assert len(window.state_manager.data.bonds) == 1
 
     # 更新を待つ
     qtbot.wait(100)
 
     # 4. 両方の原子の暗黙の水素が3つになっているか確認
-    assert window.data.atoms[0]["item"].implicit_h_count == 3
-    assert window.data.atoms[1]["item"].implicit_h_count == 3
+    assert window.state_manager.data.atoms[0]["item"].implicit_h_count == 3
+    assert window.state_manager.data.atoms[1]["item"].implicit_h_count == 3
 
 
 @pytest.mark.gui
@@ -1493,7 +1493,7 @@ def test_drag_drop_mol_file_on_3d_view(window, qtbot, monkeypatch):
     mock_event.mimeData.return_value = mock_mime_data
 
     # 3. ドロップ位置を3Dビュー (splitter index 1) の中央に設定
-    plotter_widget = window.splitter.widget(1)
+    plotter_widget = window.init_manager.splitter.widget(1)
     # QWidget.mapTo() は QWidget を期待するため、window (QMainWindow) を渡す
     drop_pos_global = plotter_widget.mapTo(window, plotter_widget.rect().center())
     # QDropEvent.position() は QPointF を返すため、toPointF() を使用
@@ -1527,7 +1527,7 @@ def test_drag_drop_mol_file_on_2d_view(window, qtbot, monkeypatch):
     mock_event.mimeData.return_value = mock_mime_data
 
     # 3. ドロップ位置を2Dビュー (splitter index 0) の中央に設定
-    editor_widget = window.splitter.widget(0)
+    editor_widget = window.init_manager.splitter.widget(0)
     drop_pos_global = editor_widget.mapTo(window, editor_widget.rect().center())
     mock_event.position.return_value = drop_pos_global.toPointF()
 
@@ -1545,17 +1545,17 @@ def test_project_save_load_round_trip(window, qtbot, monkeypatch, tmp_path):
     """プロジェクト保存/読込: 保存したファイルを実際に読み込んで復元を確認する統合テスト"""
 
     # 1. 保存用のデータを準備 (原子2つ、結合1つ)
-    scene = window.scene
-    window.set_mode("atom_C")
+    scene = window.init_manager.scene
+    window.ui_manager.set_mode("atom_C")
     # 座標をキリの良い数字にして比較しやすくする
     id0 = scene.create_atom("C", QPointF(0, 0))
     id1 = scene.create_atom("N", QPointF(50, 0))
     scene.create_bond(scene.data.atoms[id0]["item"], scene.data.atoms[id1]["item"])
 
     # 状態確認
-    assert len(window.data.atoms) == 2
-    assert window.data.atoms[id1]["symbol"] == "N"
-    assert (0, 1) in window.data.bonds
+    assert len(window.state_manager.data.atoms) == 2
+    assert window.state_manager.data.atoms[id1]["symbol"] == "N"
+    assert (0, 1) in window.state_manager.data.bonds
 
     # 2. 一時ファイルへの保存
     save_file = tmp_path / "round_trip_test.pmeprj"
@@ -1573,12 +1573,12 @@ def test_project_save_load_round_trip(window, qtbot, monkeypatch, tmp_path):
     qtbot.wait(100)
 
     assert save_file.exists()
-    assert window.has_unsaved_changes == False
+    assert window.state_manager.has_unsaved_changes == False
 
     # 3. シーンをクリア
-    window.clear_2d_editor(push_to_undo=False)  # ダイアログなしでクリア
-    window.has_unsaved_changes = False
-    assert len(window.data.atoms) == 0
+    window.edit_actions_manager.clear_2d_editor(push_to_undo=False)  # ダイアログなしでクリア
+    window.state_manager.has_unsaved_changes = False
+    assert len(window.state_manager.data.atoms) == 0
 
     # 4. 一時ファイルからの読み込み
     monkeypatch.setattr(
@@ -1588,20 +1588,20 @@ def test_project_save_load_round_trip(window, qtbot, monkeypatch, tmp_path):
     )
 
     # 読込実行 (実際の json.load が走る)
-    window.open_project_file()
+    window.io_manager.open_project_file()
     qtbot.wait(100)
 
     # 5. 復元されたデータの検証
-    assert len(window.data.atoms) == 2
-    assert len(window.data.bonds) == 1
+    assert len(window.state_manager.data.atoms) == 2
+    assert len(window.state_manager.data.bonds) == 1
 
     # 原子IDは保存・読込で変わる可能性があるが、この簡易プロジェクトでは 0, 1 で復元されるはず
     # 念のため座標や属性でマッチングするのではなく、構成要素数とプロパティでチェック
-    symbols = sorted([d["symbol"] for d in window.data.atoms.values()])
+    symbols = sorted([d["symbol"] for d in window.state_manager.data.atoms.values()])
     assert symbols == ["C", "N"]
 
     # 結合の次数やステレオもチェック
-    bond_data = list(window.data.bonds.values())[0]
+    bond_data = list(window.state_manager.data.bonds.values())[0]
     assert bond_data["order"] == 1
     assert bond_data["stereo"] == 0
 
@@ -1628,7 +1628,7 @@ def test_file_import_smiles_error(window, qtbot, monkeypatch):
     )
 
     # 3. インポート実行
-    window.import_smiles_dialog()
+    window.string_importer_manager.import_smiles_dialog()
     qtbot.wait(100)
 
     # 4. エラーが表示されたことの確認
@@ -1644,22 +1644,22 @@ def test_file_import_smiles_error(window, qtbot, monkeypatch):
 def test_undo_redo_boundary(window, qtbot):
     """Undo/Redo: スタック境界(空のスタックへの操作)のテスト"""
     # 1. スタックをリセット
-    window.reset_undo_stack()
+    window.state_manager.reset_undo_stack()
     # After reset, the stack should contain exactly the current clean state.
-    assert len(window.undo_stack) == 1
+    assert len(window.edit_actions_manager.undo_stack) == 1
 
     # 2. Undoを試行 (有効/無効に関わらず呼び出してみる)
     try:
-        window.undo()
+        window.state_manager.undo()
     except Exception as e:
         pytest.fail(f"Undo on empty stack raised exception: {e}")
 
     # クラッシュせず、状態が変わっていないことを確認
-    assert len(window.data.atoms) == 0
+    assert len(window.state_manager.data.atoms) == 0
 
     # 3. Redoを試行
     try:
-        window.redo()
+        window.state_manager.redo()
     except Exception as e:
         pytest.fail(f"Redo on empty stack raised exception: {e}")
 
@@ -1699,16 +1699,16 @@ def test_import_invalid_mol_file(window, qtbot, monkeypatch, tmp_path):
         f"Expected MOL parse error on status bar, got: {status_msg!r}"
     )
     # データが空のままか確認
-    assert len(window.data.atoms) == 0
+    assert len(window.state_manager.data.atoms) == 0
 
 
 @pytest.mark.gui
 def test_clear_2d_editor_cancel(window, qtbot, monkeypatch):
     """全消去: 確認ダイアログでキャンセルのテスト"""
-    scene = window.scene
-    window.set_mode("atom_C")
+    scene = window.init_manager.scene
+    window.ui_manager.set_mode("atom_C")
     scene.create_atom("C", QPointF(0, 0))
-    window.has_unsaved_changes = True
+    window.state_manager.has_unsaved_changes = True
 
     # 1. ダイアログで "Cancel" を選択するようにモック
     # QMessageBox.StandardButton.Cancel = 4194304
@@ -1719,12 +1719,12 @@ def test_clear_2d_editor_cancel(window, qtbot, monkeypatch):
     )
 
     # 2. Clear All 実行
-    window.clear_all()  # clear_all がダイアログを表示するメソッド
+    window.edit_actions_manager.clear_all()  # clear_all がダイアログを表示するメソッド
     qtbot.wait(50)
 
     # 3. 消去されていないことを確認
-    assert len(window.data.atoms) == 1
-    assert window.has_unsaved_changes == True
+    assert len(window.state_manager.data.atoms) == 1
+    assert window.state_manager.has_unsaved_changes == True
 
 
 @pytest.mark.gui
@@ -1735,12 +1735,12 @@ def test_clipboard_copy_empty_selection(window, qtbot):
     cb.setText("initial_text")
 
     # 1. 何も選択しない
-    window.scene.clearSelection()
+    window.init_manager.scene.clearSelection()
 
     # 2. コピー実行
     #    例外が発生しなければOK
     try:
-        window.copy_selection()
+        window.edit_actions_manager.copy_selection()
     except Exception as e:
         pytest.fail(f"Copy with empty selection raised exception: {e}")
 

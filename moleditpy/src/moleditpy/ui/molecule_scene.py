@@ -105,7 +105,7 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
     def get_setting(self, key: str, default: Any = None) -> Any:
         """Safe gateway to access MainWindow settings without deep traversal from items."""
         if hasattr(self, "window") and self.window and hasattr(self.window, "settings"):
-            return self.window.settings.get(key, default)
+            return self.window.init_manager.settings.get(key, default)
         return default
 
     def update_connected_bonds(self, atoms: List[AtomItem]) -> None:
@@ -183,7 +183,7 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
                     # Skip if the object is inaccessible
                     continue
 
-        if not self.window.is_2d_editable:
+        if not self.window.ui_manager.is_2d_editable:
             return
 
         if event.button() == Qt.MouseButton.RightButton:
@@ -318,7 +318,7 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
             super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event):
-        if not self.window.is_2d_editable:
+        if not self.window.ui_manager.is_2d_editable:
             return
 
         if self.mode.startswith("template"):
@@ -358,7 +358,7 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
             super().mouseMoveEvent(event)
 
     def mouseReleaseEvent(self, event):
-        if not self.window.is_2d_editable:
+        if not self.window.ui_manager.is_2d_editable:
             return
 
         end_pos = event.scenePos()

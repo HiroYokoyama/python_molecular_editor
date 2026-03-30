@@ -63,13 +63,13 @@ def test_plugin_toolbar_actions_visibility(window, qtbot):
     """Test that the plugin toolbar is shown/hidden and populated correctly."""
     # Ensure toolbar exists
     if not hasattr(window, "plugin_toolbar"):
-        window.plugin_toolbar = QToolBar("Plugins", window)
-        window.addToolBar(window.plugin_toolbar)
+        window.init_manager.plugin_toolbar = QToolBar("Plugins", window)
+        window.addToolBar(window.init_manager.plugin_toolbar)
         
     # 1. Empty plugins -> Toolbar hidden
     window.plugin_manager.toolbar_actions = []
     window._add_plugin_toolbar_actions()
-    assert window.plugin_toolbar.isHidden()
+    assert window.init_manager.plugin_toolbar.isHidden()
     
     # 2. With plugins -> Toolbar shown
     mock_cb = MagicMock()
@@ -77,10 +77,10 @@ def test_plugin_toolbar_actions_visibility(window, qtbot):
         {"text": "ToolBtn", "callback": mock_cb, "icon": None, "tooltip": "Hint"}
     ]
     window._add_plugin_toolbar_actions()
-    assert not window.plugin_toolbar.isHidden()
+    assert not window.init_manager.plugin_toolbar.isHidden()
     
     # Verify action
-    toolbar_actions = window.plugin_toolbar.actions()
+    toolbar_actions = window.init_manager.plugin_toolbar.actions()
     assert len(toolbar_actions) == 1
     assert toolbar_actions[0].text() == "ToolBtn"
     assert toolbar_actions[0].toolTip() == "Hint"
@@ -88,22 +88,22 @@ def test_plugin_toolbar_actions_visibility(window, qtbot):
 def test_ui_sync_after_reset(window, qtbot):
     """Test that UI elements (background, checked states) sync correctly after settings reset."""
     # 1. Setup stale state
-    window.settings["background_color_2d"] = "#FF0000"
-    window.settings["optimization_method"] = "UFF_RDKIT"
+    window.init_manager.settings["background_color_2d"] = "#FF0000"
+    window.init_manager.settings["optimization_method"] = "UFF_RDKIT"
     
     # Ensure scene exists and is a real MoleculeScene
-    assert window.scene is not None
+    assert window.init_manager.scene is not None
     
     # 2. Simulate new settings arrival
-    window.settings["background_color_2d"] = "#0000FF" 
-    window.settings["optimization_method"] = "MMFF_RDKIT"
-    window.settings["3d_conversion_mode"] = "rdkit"
+    window.init_manager.settings["background_color_2d"] = "#0000FF" 
+    window.init_manager.settings["optimization_method"] = "MMFF_RDKIT"
+    window.init_manager.settings["3d_conversion_mode"] = "rdkit"
     
     # 3. Trigger UI refresh
-    window._refresh_ui_after_reset()
+    window.init_manager._refresh_ui_after_reset()
     
     # 4. Verify Scene Background
-    actual_bg = window.scene.backgroundBrush().color().name().upper()
+    actual_bg = window.init_manager.scene.backgroundBrush().color().name().upper()
     assert actual_bg == "#0000FF", f"Scene background should be #0000FF, but got {actual_bg}"
     
     # 5. Verify Menu Checkstates (using existing window.opt3d_actions if available)
@@ -118,12 +118,12 @@ def test_ui_sync_after_reset(window, qtbot):
 def test_custom_3d_style_integration(window, qtbot):
     """Test that custom 3D styles from plugins appear in the style menu."""
     # Ensure style_button and menu exist
-    if not hasattr(window, "style_button") or not window.style_button.menu():
+    if not hasattr(window, "style_button") or not window.init_manager.style_button.menu():
         # Fallback for headless/mocked plotter where style_button might not be fully initialized
-        window.style_button = QToolButton(window)
-        window.style_button.setMenu(QMenu(window))
+        window.init_manager.style_button = QToolButton(window)
+        window.init_manager.style_button.setMenu(QMenu(window))
     
-    style_menu = window.style_button.menu()
+    style_menu = window.init_manager.style_button.menu()
     style_group = QActionGroup(window)
     style_group.setExclusive(True)
     
@@ -153,10 +153,10 @@ def test_integrate_plugin_export_actions(window, qtbot):
     export_menu = export_action.menu()
     
     # Mock Toolbar Export Button if missing
-    if not hasattr(window, "export_button"):
-        window.export_button = QToolButton(window)
-        window.export_button.setMenu(QMenu(window))
-    btn_menu = window.export_button.menu()
+    if not hasattr(window.init_manager, 'export_button'):
+        window.init_manager.export_button = QToolButton(window)
+        window.init_manager.export_button.setMenu(QMenu(window))
+    btn_menu = window.init_manager.export_button.menu()
     
     window.plugin_manager.export_actions = [
         {"plugin": "Xerox", "label": "Export to Fax", "callback": MagicMock()}
@@ -202,7 +202,7 @@ def test_integrate_plugin_file_openers_ui(window, qtbot):
     # We can't easily test the QFileDialog trigger without mocking QFileDialog.getOpenFileName
     with patch.object(QFileDialog, "getOpenFileName", return_value=("data.fake", "All Files (*.)")):
         # Mock update_window_title to avoid side effects
-        window.update_window_title = MagicMock()
+        window.state_manager.update_window_title = MagicMock()
         import_action.trigger()
         cb.assert_called_once_with("data.fake")
         assert window.current_file_path == "data.fake"

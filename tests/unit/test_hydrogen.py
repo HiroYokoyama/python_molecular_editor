@@ -9,12 +9,12 @@ class DummyEditActions(EditActionsManager):
     def __init__(self, host):
         super().__init__(host)
         self._host = host
-        self.data = host.data
-        self.scene = host.scene
-        self.view_2d = host.view_2d
-        self.plotter = host.plotter
-        self.settings = host.settings
-        self.current_mol = host.current_mol
+        self.data = host.state_manager.data
+        self.scene = host.init_manager.scene
+        self.view_2d = host.init_manager.view_2d
+        self.plotter = host.view_3d_manager.plotter
+        self.settings = host.init_manager.settings
+        self.current_mol = host.view_3d_manager.current_mol
         self.current_file_path = host.current_file_path
         self.has_unsaved_changes = host.has_unsaved_changes
         self.main_window_edit_actions = self
@@ -66,7 +66,7 @@ def test_remove_hydrogen_atoms_app_logic(mock_parser_host):
     # Should call scene.delete_items with a set containing the H item
     actions.scene.delete_items.assert_called()
     deleted_set = actions.scene.delete_items.call_args[0][0]
-    # In mock_parser_host, host.data.atoms[h_id]['item'] is a MagicMock
+    # In mock_parser_host, host.state_manager.data.atoms[h_id]['item'] is a MagicMock
     h_item = actions.data.atoms[h_id]["item"]
     assert h_item in deleted_set
     assert actions.data.atoms[c_id]["item"] not in deleted_set

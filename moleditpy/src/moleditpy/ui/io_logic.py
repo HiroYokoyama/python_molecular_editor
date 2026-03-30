@@ -229,7 +229,7 @@ class IOManager:
 
     def save_project(self) -> None:
         """Save (Ctrl+S) - Defaults to PMEPRJ format."""
-        if not self.host.data.atoms and not self.host.current_mol:
+        if not self.host.state_manager.data.atoms and not self.host.view_3d_manager.current_mol:
             self.host.statusBar().showMessage("Error: Nothing to save.")
             return
 
@@ -260,7 +260,7 @@ class IOManager:
     def save_project_as(self) -> None:
         """Save As (Ctrl+Shift+S) — always saves in PMEPRJ format."""
         import copy
-        if not self.host.data.atoms and not self.host.current_mol:
+        if not self.host.state_manager.data.atoms and not self.host.view_3d_manager.current_mol:
             self.host.statusBar().showMessage("Error: Nothing to save.")
             return
 
@@ -343,7 +343,7 @@ class IOManager:
 
     def save_as_json(self) -> None:
         """Save as PME Project (JSON) format."""
-        if not self.host.data.atoms and not self.host.current_mol:
+        if not self.host.state_manager.data.atoms and not self.host.view_3d_manager.current_mol:
             self.host.statusBar().showMessage("Error: Nothing to save.")
             return
 
@@ -442,7 +442,7 @@ class IOManager:
     def save_raw_data(self) -> None:
         """Save as PME Raw (pickle) format."""
         import copy
-        if not self.host.data.atoms and not self.host.current_mol:
+        if not self.host.state_manager.data.atoms and not self.host.view_3d_manager.current_mol:
             self.host.statusBar().showMessage("Error: Nothing to save.")
             return
 
@@ -523,9 +523,9 @@ class IOManager:
             Chem.Kekulize(mol)
             self.host.ui_manager.restore_ui_for_editing()
             self.host.edit_actions_manager.clear_2d_editor(push_to_undo=False)
-            self.host.current_mol = None
-            self.host.plotter.clear()
-            self.host.analysis_action.setEnabled(False)
+            self.host.view_3d_manager.current_mol = None
+            self.host.view_3d_manager.plotter.clear()
+            self.host.init_manager.analysis_action.setEnabled(False)
 
             if mol.GetNumConformers() == 0:
                 AllChem.Compute2DCoords(mol)
@@ -535,7 +535,7 @@ class IOManager:
             AllChem.WedgeMolBonds(mol, conf)
 
             SCALE_FACTOR = 50.0
-            view_center = self.host.view_2d.mapToScene(self.host.view_2d.viewport().rect().center())
+            view_center = self.host.init_manager.view_2d.mapToScene(self.host.init_manager.view_2d.viewport().rect().center())
             positions = [conf.GetAtomPosition(i) for i in range(mol.GetNumAtoms())]
             mol_center_x = sum(p.x for p in positions) / len(positions) if positions else 0.0
             mol_center_y = sum(p.y for p in positions) / len(positions) if positions else 0.0
@@ -546,7 +546,7 @@ class IOManager:
                 pos = conf.GetAtomPosition(i)
                 scene_x = ((pos.x - mol_center_x) * SCALE_FACTOR) + view_center.x()
                 scene_y = (-(pos.y - mol_center_y) * SCALE_FACTOR) + view_center.y()
-                atom_id = self.host.scene.create_atom(atom.GetSymbol(), QPointF(scene_x, scene_y), charge=atom.GetFormalCharge())
+                atom_id = self.host.init_manager.scene.create_atom(atom.GetSymbol(), QPointF(scene_x, scene_y), charge=atom.GetFormalCharge())
                 rdkit_idx_to_my_id[i] = atom_id
 
             for bond in mol.GetBonds():
@@ -557,8 +557,8 @@ class IOManager:
                 if bond.GetBondType() == Chem.BondType.DOUBLE:
                     if bond.GetStereo() == Chem.BondStereo.STEREOZ: stereo = 3
                     elif bond.GetStereo() == Chem.BondStereo.STEREOE: stereo = 4
-                self.host.scene.create_bond(self.host.data.atoms[rdkit_idx_to_my_id[bond.GetBeginAtomIdx()]]["item"],
-                                          self.host.data.atoms[rdkit_idx_to_my_id[bond.GetEndAtomIdx()]]["item"],
+                self.host.init_manager.scene.create_bond(self.host.state_manager.data.atoms[rdkit_idx_to_my_id[bond.GetBeginAtomIdx()]]["item"],
+                                          self.host.state_manager.data.atoms[rdkit_idx_to_my_id[bond.GetEndAtomIdx()]]["item"],
                                           bond_order=int(bond.GetBondTypeAsDouble()), bond_stereo=stereo)
 
             self.host.statusBar().showMessage(f"Successfully loaded {file_path}")
@@ -566,7 +566,7 @@ class IOManager:
             self.host.current_file_path = file_path
             self.host.has_unsaved_changes = False
             self.host.state_manager.update_window_title()
-            self.host.scene.update_all_items()
+            self.host.init_manager.scene.update_all_items()
             QTimer.singleShot(0, self.host.view_3d_manager.fit_to_view)
         except Exception as e:
             self.host.statusBar().showMessage(f"Error loading file: {e}")
@@ -574,7 +574,7 @@ class IOManager:
     def save_as_mol(self) -> None:
         """Save current 2D structure as MOL file."""
         try:
-            mol_block = self.host.data.to_mol_block()
+            mol_block = self.host.state_manager.data.to_mol_block()
             if not mol_block:
                 self.host.statusBar().showMessage("Error: No 2D data to save.")
                 return
@@ -601,10 +601,10 @@ class IOManager:
             if mol is None: raise ValueError("Failed to create molecule from XYZ file.")
             
             self.host.edit_actions_manager.clear_2d_editor(push_to_undo=False)
-            self.host.current_mol = mol
+            self.host.view_3d_manager.current_mol = mol
             
             if hasattr(self.host.view_3d_manager, "draw_molecule_3d"):
-                self.host.view_3d_manager.draw_molecule_3d(self.host.current_mol)
+                self.host.view_3d_manager.draw_molecule_3d(self.host.view_3d_manager.current_mol)
             else:  # [REPORT ERROR MISSING ATTRIBUTE]
                 logging.error(f"REPORT ERROR: Missing attribute 'draw_molecule_3d' on object")
             if hasattr(self.host.ui_manager, "_enter_3d_viewer_ui_mode"):
@@ -637,7 +637,7 @@ class IOManager:
             if mol.GetNumConformers() == 0:
                 AllChem.EmbedMolecule(mol)
             
-            self.host.current_mol = mol
+            self.host.view_3d_manager.current_mol = mol
             self.host.view_3d_manager.draw_molecule_3d(mol)
             self.host.ui_manager._enter_3d_viewer_ui_mode()
             self.host.statusBar().showMessage(f"Loaded {file_path} in 3D viewer")
@@ -648,13 +648,13 @@ class IOManager:
 
     def save_3d_as_mol(self) -> None:
         """Save current 3D structure as MOL file."""
-        if not self.host.current_mol:
+        if not self.host.view_3d_manager.current_mol:
             self.host.statusBar().showMessage("Error: No 3D structure to save.")
             return
         file_path, _ = QFileDialog.getSaveFileName(self.host, "Save 3D MOL File", "", "MOL Files (*.mol);;All Files (*)")
         if file_path:
             try:
-                mol_block = Chem.MolToMolBlock(self.host.current_mol, includeStereo=True)
+                mol_block = Chem.MolToMolBlock(self.host.view_3d_manager.current_mol, includeStereo=True)
                 lines = mol_block.split("\n")
                 if len(lines) > 1 and "RDKit" in lines[1]:
                     lines[1] = f"  MoleditPy Ver. {VERSION}  3D"
@@ -666,7 +666,7 @@ class IOManager:
 
     def save_as_xyz(self) -> None:
         """Save current 3D structure as XYZ file."""
-        if not self.host.current_mol:
+        if not self.host.view_3d_manager.current_mol:
             self.host.statusBar().showMessage("Error: Please generate a 3D structure first.")
             return
 
@@ -675,25 +675,25 @@ class IOManager:
             if not file_path.lower().endswith(".xyz"):
                 file_path += ".xyz"
             try:
-                conf = self.host.current_mol.GetConformer()
-                num_atoms = self.host.current_mol.GetNumAtoms()
+                conf = self.host.view_3d_manager.current_mol.GetConformer()
+                num_atoms = self.host.view_3d_manager.current_mol.GetNumAtoms()
                 xyz_lines = [str(num_atoms)]
                 
                 charge = 0
-                if self.host.current_mol.HasProp("_xyz_charge"):
-                    charge = self.host.current_mol.GetIntProp("_xyz_charge")
+                if self.host.view_3d_manager.current_mol.HasProp("_xyz_charge"):
+                    charge = self.host.view_3d_manager.current_mol.GetIntProp("_xyz_charge")
                 else:
-                    try: charge = Chem.GetFormalCharge(self.host.current_mol)
+                    try: charge = Chem.GetFormalCharge(self.host.view_3d_manager.current_mol)
                     except: pass
                 
                 multiplicity = 1
-                try: multiplicity = Descriptors.NumRadicalElectrons(self.host.current_mol) + 1
+                try: multiplicity = Descriptors.NumRadicalElectrons(self.host.view_3d_manager.current_mol) + 1
                 except: pass
 
                 xyz_lines.append(f"chrg = {charge}  mult = {multiplicity} | Generated by MoleditPy Ver. {VERSION}")
                 for i in range(num_atoms):
                     pos = conf.GetAtomPosition(i)
-                    symbol = self.host.current_mol.GetAtomWithIdx(i).GetSymbol()
+                    symbol = self.host.view_3d_manager.current_mol.GetAtomWithIdx(i).GetSymbol()
                     xyz_lines.append(f"{symbol} {pos.x:.6f} {pos.y:.6f} {pos.z:.6f}")
 
                 with open(file_path, "w", encoding="utf-8") as f:
@@ -773,6 +773,6 @@ def _set_mol_prop_safe(mol: Any, key: str, val: Any) -> None:
 
 
 # Backward-compat aliases
-MainWindowProjectIo = IOManager
-MainWindowMolecularParsers = IOManager
-MainWindowViewLoaders = IOManager
+IOManager = IOManager
+IOManager = IOManager
+IOManager = IOManager

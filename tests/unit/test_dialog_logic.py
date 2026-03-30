@@ -23,7 +23,7 @@ def test_bond_length_adjustment_logic(mock_parser_host, mol):
     """Test the geometric logic of bond length adjustment directly."""
     window = mock_parser_host
     conf = mol.GetConformer()
-    window.atom_positions_3d = np.array(
+    window.view_3d_manager.atom_positions_3d = np.array(
         [list(conf.GetAtomPosition(i)) for i in range(mol.GetNumAtoms())]
     )
     
@@ -51,7 +51,7 @@ def test_alignment_logic(mock_parser_host, mol):
     """Test the geometry logic for aligning a bond to a specific axis."""
     window = mock_parser_host
     conf = mol.GetConformer()
-    window.atom_positions_3d = np.array(
+    window.view_3d_manager.atom_positions_3d = np.array(
         [list(conf.GetAtomPosition(i)) for i in range(mol.GetNumAtoms())]
     )
     
@@ -79,7 +79,7 @@ def test_angle_adjustment_logic(mock_parser_host):
     AllChem.EmbedMolecule(mol)
     
     conf = mol.GetConformer()
-    window.atom_positions_3d = np.array(
+    window.view_3d_manager.atom_positions_3d = np.array(
         [list(conf.GetAtomPosition(i)) for i in range(mol.GetNumAtoms())]
     )
     
@@ -113,7 +113,7 @@ def test_dihedral_adjustment_logic(mock_parser_host):
     AllChem.EmbedMolecule(mol)
     
     conf = mol.GetConformer()
-    window.atom_positions_3d = np.array(
+    window.view_3d_manager.atom_positions_3d = np.array(
         [list(conf.GetAtomPosition(i)) for i in range(mol.GetNumAtoms())]
     )
     
@@ -144,7 +144,7 @@ def test_translation_logic(mock_parser_host, mol):
     """Test the geometric logic of centroid-based translation."""
     window = mock_parser_host
     conf = mol.GetConformer()
-    window.atom_positions_3d = np.array(
+    window.view_3d_manager.atom_positions_3d = np.array(
         [list(conf.GetAtomPosition(i)) for i in range(mol.GetNumAtoms())]
     )
     
@@ -177,7 +177,7 @@ def test_move_group_logic(mock_parser_host, mol):
     """Test the translation and rotation logic in MoveGroupDialog."""
     window = mock_parser_host
     conf = mol.GetConformer()
-    window.atom_positions_3d = np.array(
+    window.view_3d_manager.atom_positions_3d = np.array(
         [list(conf.GetAtomPosition(i)) for i in range(mol.GetNumAtoms())]
     )
     

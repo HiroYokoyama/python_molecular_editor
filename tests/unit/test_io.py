@@ -2,18 +2,18 @@ import os
 import json
 from rdkit import Chem
 from rdkit.Chem import AllChem
-from moleditpy.ui.project_io import MainWindowProjectIo
-from moleditpy.ui.molecular_parsers import MainWindowMolecularParsers
+from moleditpy.ui.project_io import IOManager
+from moleditpy.ui.molecular_parsers import IOManager
 from PyQt6.QtCore import QPointF
 from unittest.mock import MagicMock, patch
 
 
-class DummyProjectIo(MainWindowProjectIo):  # MainWindowMolecularParsers is same class
+class DummyProjectIo(IOManager):  # IOManager is same class
     def __init__(self, host):
         self._host = host
         self.host = self  # self-referential so host-attr writes land on io
-        self.data = host.data
-        self.scene = host.scene
+        self.data = host.state_manager.data
+        self.scene = host.init_manager.scene
 
     def __getattr__(self, name):
         return getattr(self._host, name)

@@ -1,17 +1,17 @@
 import os
 from rdkit import Chem
-from moleditpy.ui.molecular_parsers import MainWindowMolecularParsers
+from moleditpy.ui.molecular_parsers import IOManager
 from moleditpy.core.molecular_data import MolecularData
 from PyQt6.QtCore import QPointF
 from unittest.mock import MagicMock, patch
 
 
-class DummyParser(MainWindowMolecularParsers):
+class DummyParser(IOManager):
     def __init__(self, host):
         self._host = host
         self.host = host  # required by IOManager (manager architecture)
-        self.data = host.data
-        self.scene = host.scene
+        self.data = host.state_manager.data
+        self.scene = host.init_manager.scene
 
     def __getattr__(self, name):
         # Delegate to host for any status bar, actions, or other main window methods

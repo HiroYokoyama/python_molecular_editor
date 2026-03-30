@@ -15,15 +15,15 @@ def _make_state_manager(host):
 
 
 def _add_atom(host, symbol, x, y, charge=0, radical=0):
-    """Add a real atom to host.data and return its id."""
-    aid = host.data.add_atom(symbol, QPointF(x, y), charge=charge, radical=radical)
+    """Add a real atom to host.state_manager.data and return its id."""
+    aid = host.state_manager.data.add_atom(symbol, QPointF(x, y), charge=charge, radical=radical)
     # add a mock item so JSON serialization (which accesses item.pos()) works
-    host.data.atoms[aid]["item"] = MagicMock(pos=lambda: QPointF(x, y))
+    host.state_manager.data.atoms[aid]["item"] = MagicMock(pos=lambda: QPointF(x, y))
     return aid
 
 
 def _add_bond(host, id1, id2, order=1, stereo=0):
-    host.data.add_bond(id1, id2, order=order, stereo=stereo)
+    host.state_manager.data.add_bond(id1, id2, order=order, stereo=stereo)
 
 
 # =============================================================================

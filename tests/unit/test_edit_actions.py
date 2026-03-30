@@ -12,9 +12,9 @@ class DummyEditActions(EditActionsManager):
     def __init__(self, host):
         super().__init__(host)
         self._host = host
-        self.data = host.data
-        self.scene = host.scene
-        self.view_2d = host.view_2d
+        self.data = host.state_manager.data
+        self.scene = host.init_manager.scene
+        self.view_2d = host.init_manager.view_2d
         self.undo_stack = MagicMock()
         self.is_xyz_derived = False
         self.main_window_edit_actions = self

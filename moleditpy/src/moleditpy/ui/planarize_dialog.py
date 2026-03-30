@@ -126,8 +126,8 @@ class PlanarizeDialog(BasePickingDialog):
                 self.selected_atoms = set(range(n))
             else:
                 self.selected_atoms = (
-                    set(self.main_window.data.atoms.keys())
-                    if hasattr(self.main_window, "data")
+                    set(self.main_window.state_manager.data.atoms.keys())
+                    if hasattr(self.main_window.state_manager, 'data')
                     else set()
                 )
 

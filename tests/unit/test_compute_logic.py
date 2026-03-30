@@ -12,12 +12,12 @@ class DummyCompute(MainWindowCompute):
     def __init__(self, host):
         self.host = self
         self._host = host
-        self.data = host.data
-        self.scene = host.scene
-        self.view_2d = host.view_2d
-        self.view_3d = host.view_3d
-        self.settings = host.settings
-        self.current_mol = host.current_mol
+        self.data = host.state_manager.data
+        self.scene = host.init_manager.scene
+        self.view_2d = host.init_manager.view_2d
+        self.view_3d = host.view_3d_manager.view_3d
+        self.settings = host.init_manager.settings
+        self.current_mol = host.view_3d_manager.current_mol
         self.active_worker_ids = set()
         self.halt_ids = set()
         self.convert_button = MagicMock()

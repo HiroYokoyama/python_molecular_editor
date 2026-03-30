@@ -1,9 +1,9 @@
 import pytest
 from unittest.mock import MagicMock, patch
 from rdkit import Chem
-from moleditpy.ui.molecular_parsers import MainWindowMolecularParsers
+from moleditpy.ui.molecular_parsers import IOManager
 
-class MockMainWindow(MainWindowMolecularParsers):
+class MockMainWindow(IOManager):
     def __init__(self):
         self.settings = {}
         self.current_file_path = None

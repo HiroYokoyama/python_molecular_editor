@@ -691,7 +691,7 @@ def window(app, qtbot, monkeypatch):
         # Some imports reference the module as `moleditpy.modules...`, others
         # as `modules...`. Patch both to be robust in all import paths.
         monkeypatch.setattr(
-            "moleditpy.ui.ui_manager.MainWindowUiManager._setup_3d_picker",
+            "moleditpy.ui.ui_manager.UIManager._setup_3d_picker",
             lambda self: None,
             raising=False,
         )
@@ -700,7 +700,7 @@ def window(app, qtbot, monkeypatch):
             self._active_calc_threads = []
 
         monkeypatch.setattr(
-            "moleditpy.ui.main_window_init.MainWindowMainInit.init_worker_thread",
+            "moleditpy.ui.main_window_init.MainInitManager.init_worker_thread",
             _mock_init_worker,
             raising=False,
         )
@@ -815,10 +815,10 @@ def window(app, qtbot, monkeypatch):
     # `current_mol` on the host window. This keeps conversion tests simple
     # and avoids GL/VTK calls.
     try:
-        import moleditpy.ui.compute_engine as _mwcomp
+        import moleditpy.ui.compute_logic as _mwcomp
 
         orig_on_calc = getattr(
-            _mwcomp.MainWindowCompute, "on_calculation_finished", None
+            _mwcomp.ComputeManager, "on_calculation_finished", None
         )
 
         def _safe_on_calculation_finished(self, result):
@@ -827,16 +827,16 @@ def window(app, qtbot, monkeypatch):
                 if host is not None:
                     # In tests we send (worker_id, mol)
                     if isinstance(result, tuple) and len(result) >= 2:
-                        host.current_mol = result[1]
+                        host.view_3d_manager.current_mol = result[1]
                     else:
-                        host.current_mol = result
+                        host.view_3d_manager.current_mol = result
 
                     # Ensure atom_positions_3d is set so show_all_atom_info doesn't return early
-                    if host.current_mol is not None:
+                    if host.view_3d_manager.current_mol is not None:
                         import numpy as _np
 
                         # Provide dummy positions for one atom if not present
-                        host.atom_positions_3d = _np.zeros((1, 3))
+                        host.view_3d_manager.atom_positions_3d = _np.zeros((1, 3))
                         # Update UI state so menu items reflect the new molecule
                         try:
                             host.update_atom_id_menu_state()
@@ -847,7 +847,7 @@ def window(app, qtbot, monkeypatch):
                         # Add minimal RDKit-like API to dummy mols so UI features
                         # (e.g., Original ID display) detect properties as expected.
                         try:
-                            mol = host.current_mol
+                            mol = host.view_3d_manager.current_mol
                             if mol is not None:
                                 # Ensure HasProp/GetIntProp/GetAtomWithIdx are present
                                 if not hasattr(mol, "HasProp"):
@@ -895,7 +895,7 @@ def window(app, qtbot, monkeypatch):
                 return None
 
         monkeypatch.setattr(
-            "moleditpy.ui.compute_engine.MainWindowCompute.on_calculation_finished",
+            "moleditpy.ui.compute_logic.ComputeManager.on_calculation_finished",
             _safe_on_calculation_finished,
             raising=False,
         )
@@ -908,7 +908,7 @@ def window(app, qtbot, monkeypatch):
     # The real method spawns threads and can race with VTK/GL teardown,
     # causing intermittent CI aborts.  This mock does pure RDKit work only.
     try:
-        import moleditpy.ui.compute_engine as _mwcomp2
+        import moleditpy.ui.compute_logic as _mwcomp2
         from rdkit import Chem
         from rdkit.Chem import AllChem as _AllChem
         import numpy as _np
@@ -916,36 +916,41 @@ def window(app, qtbot, monkeypatch):
         def _sync_trigger_conversion(self):
             """Synchronous, VTK-free trigger_conversion for tests."""
             try:
-                if not self.data.atoms:
-                    self.plotter.clear()
-                    self.current_mol = None
-                    self.statusBar().showMessage("3D view cleared.")
+                # In ComputeManager, self.host is the window
+                host = getattr(self, "host", None)
+                if not host:
                     return
 
-                mol = self.data.to_rdkit_mol(use_2d_stereo=False)
+                if not host.state_manager.data.atoms:
+                    host.view_3d_manager.plotter.clear()
+                    host.view_3d_manager.current_mol = None
+                    host.statusBar().showMessage("3D view cleared.")
+                    return
+
+                mol = host.state_manager.data.to_rdkit_mol(use_2d_stereo=False)
                 if mol is None or mol.GetNumAtoms() == 0:
-                    self.statusBar().showMessage("Error: Invalid chemical structure.")
+                    host.statusBar().showMessage("Error: Invalid chemical structure.")
                     return
 
                 try:
                     Chem.SanitizeMol(mol)
                 except Exception:
-                    self.statusBar().showMessage("Error: Invalid chemical structure.")
+                    host.statusBar().showMessage("Error: Invalid chemical structure.")
                     return
 
                 mol_h = Chem.AddHs(mol)
                 _AllChem.EmbedMolecule(mol_h, _AllChem.ETKDG())
-                self.current_mol = mol_h
-                self.atom_positions_3d = _np.zeros((mol_h.GetNumAtoms(), 3))
-                self.statusBar().showMessage("3D conversion complete.")
+                host.view_3d_manager.current_mol = mol_h
+                host.view_3d_manager.atom_positions_3d = _np.zeros((mol_h.GetNumAtoms(), 3))
+                host.statusBar().showMessage("3D conversion complete.")
 
                 # Enable 3D-related UI elements
                 try:
-                    self.optimize_3d_button.setEnabled(True)
-                    self.export_button.setEnabled(True)
-                    self.analysis_action.setEnabled(True)
-                    if hasattr(self, "_enable_3d_edit_actions"):
-                        self._enable_3d_edit_actions(True)
+                    host.init_manager.optimize_3d_button.setEnabled(True)
+                    host.init_manager.export_button.setEnabled(True)
+                    host.init_manager.analysis_action.setEnabled(True)
+                    if hasattr(host.ui_manager, "_enable_3d_edit_actions"):
+                        host.ui_manager._enable_3d_edit_actions(True)
                 except Exception:
                     pass
             except Exception:
@@ -953,7 +958,7 @@ def window(app, qtbot, monkeypatch):
                 traceback.print_exc()
 
         monkeypatch.setattr(
-            _mwcomp2.MainWindowCompute,
+            _mwcomp2.ComputeManager,
             "trigger_conversion",
             _sync_trigger_conversion,
             raising=False,
@@ -1101,14 +1106,14 @@ def window(app, qtbot, monkeypatch):
         from PyQt6.QtWidgets import QWidget, QPushButton, QToolBar
         from PyQt6.QtGui import QAction
 
-        main_window.toolbar = QToolBar()
-        main_window.toolbar_bottom = QToolBar()
-        main_window.measurement_action = QAction(checkable=True)
-        main_window.measurement_action.triggered.connect(
-            main_window.toggle_measurement_mode
+        main_window.init_manager.toolbar = QToolBar()
+        main_window.init_manager.toolbar_bottom = QToolBar()
+        main_window.init_manager.measurement_action = QAction(checkable=True)
+        main_window.init_manager.measurement_action.triggered.connect(
+            main_window.edit_3d_manager.toggle_measurement_mode
         )
-        main_window.edit_3d_action = QAction(checkable=True)
-        main_window.edit_3d_action.triggered.connect(main_window.toggle_3d_edit_mode)
+        main_window.init_manager.edit_3d_action = QAction(checkable=True)
+        main_window.init_manager.edit_3d_action.triggered.connect(main_window.ui_manager.toggle_3d_edit_mode)
 
         # Dummy splitter with widget() method
         class DummyWidget(QWidget):
@@ -1135,7 +1140,7 @@ def window(app, qtbot, monkeypatch):
             def sizes(self):
                 return [100, 100]
 
-        main_window.splitter = DummySplitter()
+        main_window.init_manager.splitter = DummySplitter()
         # ... (rest of the headless-specific mocks and patches) ...
         # Keep running to the common yield below so teardown/cleanup are
         # handled in a single place for both headless and GUI.
@@ -1231,7 +1236,7 @@ def window(app, qtbot, monkeypatch):
     # Ensure push_undo_state reliably marks the document as changed in tests.
     try:
         if hasattr(main_window, "push_undo_state"):
-            orig_push = main_window.push_undo_state
+            orig_push = main_window.state_manager.push_undo_state
 
             def _push_and_mark(*a, **k):
                 try:
@@ -1265,9 +1270,9 @@ def window(app, qtbot, monkeypatch):
                         try:
                             if (
                                 hasattr(main_window, "undo_stack")
-                                and len(main_window.undo_stack) > 2
+                                and len(main_window.edit_actions_manager.undo_stack) > 2
                             ):
-                                main_window.undo_stack[:] = main_window.undo_stack[-2:]
+                                main_window.edit_actions_manager.undo_stack[:] = main_window.edit_actions_manager.undo_stack[-2:]
                         except Exception:
                             import traceback
 
@@ -1288,9 +1293,9 @@ def window(app, qtbot, monkeypatch):
 
     # Patch 3D optimization to set the status message reliably so tests can assert success
     try:
-        import moleditpy.ui.compute_engine as _mwcomp
+        import moleditpy.ui.compute_logic as _mwcomp
 
-        orig_opt = getattr(_mwcomp.MainWindowCompute, "optimize_3d_structure", None)
+        orig_opt = getattr(_mwcomp.ComputeManager, "optimize_3d_structure", None)
 
         def _safe_optimize(self, *a, **k):
             try:
@@ -1312,7 +1317,7 @@ def window(app, qtbot, monkeypatch):
             return result
 
         monkeypatch.setattr(
-            "moleditpy.ui.compute_engine.MainWindowCompute.optimize_3d_structure",
+            "moleditpy.ui.compute_logic.ComputeManager.optimize_3d_structure",
             _safe_optimize,
             raising=False,
         )
@@ -1323,10 +1328,10 @@ def window(app, qtbot, monkeypatch):
     try:
         # Ensure clicking the optimize button sets a success message quickly
         if (
-            hasattr(main_window, "optimize_3d_button")
-            and main_window.optimize_3d_button is not None
+            hasattr(main_window.init_manager, 'optimize_3d_button')
+            and main_window.init_manager.optimize_3d_button is not None
         ):
-            main_window.optimize_3d_button.clicked.connect(
+            main_window.init_manager.optimize_3d_button.clicked.connect(
                 lambda: main_window.statusBar().showMessage("Optimization completed.")
             )
     except Exception:
@@ -1427,8 +1432,8 @@ def window(app, qtbot, monkeypatch):
 
     # If the main window exposes a 'plotter' object (CustomQtInteractor), ensure it has the plotting API used
     try:
-        if hasattr(main_window, "plotter") and main_window.plotter is not None:
-            p = main_window.plotter
+        if hasattr(main_window.view_3d_manager, 'plotter') and main_window.view_3d_manager.plotter is not None:
+            p = main_window.view_3d_manager.plotter
             from unittest import mock as _mock
 
             if not hasattr(p, "add_text"):
@@ -1478,8 +1483,8 @@ def window(app, qtbot, monkeypatch):
                 # If the UI manager has a host window with a plotter, make sure
                 # a non-null picker exists with the required API.
                 host = getattr(self, "_host", None)
-                if host is not None and hasattr(host, "plotter"):
-                    p = getattr(host.plotter, "picker", None)
+                if host is not None and hasattr(host.view_3d_manager, 'plotter'):
+                    p = getattr(host.view_3d_manager.plotter, "picker", None)
                     if p is None:
 
                         class _Picker:
@@ -1487,7 +1492,7 @@ def window(app, qtbot, monkeypatch):
                                 self._tol = v
 
                         try:
-                            host.plotter.picker = _Picker()
+                            host.view_3d_manager.plotter.picker = _Picker()
                         except Exception:
                             import traceback
 
@@ -1507,7 +1512,7 @@ def window(app, qtbot, monkeypatch):
                 traceback.print_exc()
 
         monkeypatch.setattr(
-            "moleditpy.ui.ui_manager.MainWindowUiManager._setup_3d_picker",
+            "moleditpy.ui.ui_manager.UIManager._setup_3d_picker",
             _safe_setup_3d_picker,
             raising=False,
         )
@@ -1742,7 +1747,7 @@ def window(app, qtbot, monkeypatch):
 
     def side_effect_start_calc(mol_block, options):
         # (worker_id, mol) のタプルで渡す
-        main_window.on_calculation_finished((options.get("worker_id", 1), dummy_mol))
+        main_window.compute_manager.on_calculation_finished((options.get("worker_id", 1), dummy_mol))
 
     # `start_calculation` may be a Zoomed subclass or a Qt signal; try to
     # attach our side-effect in a way that is compatible with either.

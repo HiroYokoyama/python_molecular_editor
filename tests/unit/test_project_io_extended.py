@@ -3,19 +3,19 @@ import json
 import pickle
 import pytest
 from rdkit import Chem
-from moleditpy.ui.project_io import MainWindowProjectIo
+from moleditpy.ui.project_io import IOManager
 from PyQt6.QtCore import QPointF
 from PyQt6.QtWidgets import QMessageBox
 from unittest.mock import MagicMock, patch
 import copy
 
 
-class DummyProjectIo(MainWindowProjectIo):
+class DummyProjectIo(IOManager):
     def __init__(self, host):
         self._host = host
         self.host = self  # self-referential so host-attr writes land on io
-        self.data = host.data
-        self.scene = host.scene
+        self.data = host.state_manager.data
+        self.scene = host.init_manager.scene
         self.current_file_path = None
         self.has_unsaved_changes = False
         self.current_mol = None

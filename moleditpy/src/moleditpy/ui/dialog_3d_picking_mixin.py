@@ -33,7 +33,7 @@ class Dialog3DPickingMixin:
     def eventFilter(self, obj, event):
         """Capture mouse clicks in the 3D view (reproducibly mimicking the original 3D edit logic)."""
         if (
-            obj == self.main_window.plotter.interactor
+            obj == self.main_window.view_3d_manager.plotter.interactor
             and event.type() == QEvent.Type.MouseButtonPress
             and event.button() == Qt.MouseButton.LeftButton
         ):
@@ -43,11 +43,11 @@ class Dialog3DPickingMixin:
 
             try:
                 # Retrieve VTK event coordinates (matches original logic)
-                interactor = self.main_window.plotter.interactor
+                interactor = self.main_window.view_3d_manager.plotter.interactor
                 click_pos = interactor.GetEventPosition()
-                picker = self.main_window.plotter.picker
+                picker = self.main_window.view_3d_manager.plotter.picker
                 picker.Pick(
-                    click_pos[0], click_pos[1], 0, self.main_window.plotter.renderer
+                    click_pos[0], click_pos[1], 0, self.main_window.view_3d_manager.plotter.renderer
                 )
 
                 if picker.GetActor() is self.main_window.view_3d_manager.atom_actor:
@@ -95,7 +95,7 @@ class Dialog3DPickingMixin:
 
         # Add movement tracking for smart selection
         elif (
-            obj == self.main_window.plotter.interactor
+            obj == self.main_window.view_3d_manager.plotter.interactor
             and event.type() == QEvent.Type.MouseMove
         ):
             if self._mouse_press_pos is not None:
@@ -106,7 +106,7 @@ class Dialog3DPickingMixin:
 
         # Add release handling for smart selection
         elif (
-            obj == self.main_window.plotter.interactor
+            obj == self.main_window.view_3d_manager.plotter.interactor
             and event.type() == QEvent.Type.MouseButtonRelease
             and event.button() == Qt.MouseButton.LeftButton
         ):
@@ -126,7 +126,7 @@ class Dialog3DPickingMixin:
 
     def enable_picking(self):
         """Enable atom selection in the 3D view."""
-        self.main_window.plotter.interactor.installEventFilter(self)
+        self.main_window.view_3d_manager.plotter.interactor.installEventFilter(self)
         self.picking_enabled = True
         # Ensure the main window flag exists
         if hasattr(self.main_window, "_picking_consumed"):
@@ -137,7 +137,7 @@ class Dialog3DPickingMixin:
     def disable_picking(self):
         """Disable atom selection in the 3D view."""
         if self.picking_enabled:
-            self.main_window.plotter.interactor.removeEventFilter(self)
+            self.main_window.view_3d_manager.plotter.interactor.removeEventFilter(self)
             self.picking_enabled = False
         if hasattr(self.main_window, "_picking_consumed"):
             self.main_window._picking_consumed = False
@@ -156,7 +156,7 @@ class Dialog3DPickingMixin:
         for label_actor in self.selection_labels:
             try:
                 if label_actor is not None:
-                    self.main_window.plotter.remove_actor(label_actor)
+                    self.main_window.view_3d_manager.plotter.remove_actor(label_actor)
             except (AttributeError, RuntimeError, TypeError):
                 # Ignore actor removal failure on stale plotter
                 pass
@@ -180,7 +180,7 @@ class Dialog3DPickingMixin:
         """
         pos = self.main_window.view_3d_manager.atom_positions_3d[atom_idx]
 
-        label_actor = self.main_window.plotter.add_point_labels(
+        label_actor = self.main_window.view_3d_manager.plotter.add_point_labels(
             [pos],
             [label_text],
             point_size=20,
@@ -204,7 +204,7 @@ class Dialog3DPickingMixin:
 
         for atom_idx, label_text in atoms_and_labels:
             pos = self.main_window.view_3d_manager.atom_positions_3d[atom_idx]
-            label_actor = self.main_window.plotter.add_point_labels(
+            label_actor = self.main_window.view_3d_manager.plotter.add_point_labels(
                 [pos],
                 [label_text],
                 point_size=20,

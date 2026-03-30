@@ -101,7 +101,7 @@ class AlignmentDialog(Dialog3DPickingMixin, QDialog):
 
     def on_atom_picked(self, atom_idx):
         """Handle atom selection event."""
-        if self.main_window.current_mol is None:
+        if self.main_window.view_3d_manager.current_mol is None:
             return
 
         if atom_idx in self.selected_atoms:

@@ -7,14 +7,14 @@ def _make_ui_manager():
     """Create a UIManager with a mock host in the new manager pattern."""
     host = MagicMock()
     host.has_unsaved_changes = False
-    host.scene = MagicMock()
-    host.scene.mode = "select"
-    host.scene.template_preview = MagicMock()
-    host.view_2d = MagicMock()
-    host.splitter = MagicMock()
-    host.tool_group = MagicMock()
-    host.mode_actions = {}
-    host.settings = {}
+    host.init_manager.scene = MagicMock()
+    host.init_manager.scene.mode = "select"
+    host.init_manager.scene.template_preview = MagicMock()
+    host.init_manager.view_2d = MagicMock()
+    host.init_manager.splitter = MagicMock()
+    host.init_manager.tool_group = MagicMock()
+    host.init_manager.mode_actions = {}
+    host.init_manager.settings = {}
     host.initial_settings = {}
     host.edit_actions_manager = MagicMock()
     host.state_manager = MagicMock()
@@ -44,8 +44,8 @@ def test_enable_3d_features_robustness():
 def test_set_mode_robustness():
     """Test that set_mode handles template preview visibility."""
     ui = _make_ui_manager()
-    ui.host.scene.mode = "select"
+    ui.host.init_manager.scene.mode = "select"
 
     ui.set_mode("atom_C")
-    assert ui.host.scene.mode == "atom_C"
-    assert ui.host.scene.template_preview.hide.called
+    assert ui.host.init_manager.scene.mode == "atom_C"
+    assert ui.host.init_manager.scene.template_preview.hide.called

@@ -116,9 +116,9 @@ def test_stereo_confirmation(qtbot):
     main_window.statusBar = MagicMock()
     main_window.statusBar.return_value = MagicMock()
     main_window.view_3d_manager = MagicMock()
-    main_window.draw_molecule_3d = MagicMock()
-    main_window.update_chiral_labels = MagicMock()
-    main_window.push_undo_state = MagicMock()
+    main_window.view_3d_manager.draw_molecule_3d = MagicMock()
+    main_window.view_3d_manager.update_chiral_labels = MagicMock()
+    main_window.state_manager.push_undo_state = MagicMock()
 
     # 3. Instantiate MirrorDialog
     dialog = MirrorDialog(mol, main_window)
@@ -151,13 +151,13 @@ def test_stereo_loss_on_planarize(qtbot):
     # 2. Mock main_window
     main_window = QWidget()
     positions = mol.GetConformer().GetPositions()
-    main_window.atom_positions_3d = positions
+    main_window.view_3d_manager.atom_positions_3d = positions
     main_window.view_3d_manager = MagicMock()
     main_window.view_3d_manager.atom_positions_3d = positions
-    main_window.plotter = MagicMock()
-    main_window.draw_molecule_3d = MagicMock()
-    main_window.update_chiral_labels = MagicMock()
-    main_window.push_undo_state = MagicMock()
+    main_window.view_3d_manager.plotter = MagicMock()
+    main_window.view_3d_manager.draw_molecule_3d = MagicMock()
+    main_window.view_3d_manager.update_chiral_labels = MagicMock()
+    main_window.state_manager.push_undo_state = MagicMock()
 
     # 3. Planarize only the chiral center and its neighbors
     # This should effectively make it achiral
