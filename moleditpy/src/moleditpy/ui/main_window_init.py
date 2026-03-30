@@ -302,6 +302,11 @@ class MainInitManager:
             bg_color = self.host.init_manager.settings.get("background_color", "#919191")
             self.host.view_3d_manager.plotter.set_background(bg_color)
             self.host.view_3d_manager.apply_3d_settings()
+            
+            # Redraw if molecule exists
+            mol = getattr(self.host.view_3d_manager, "current_mol", None)
+            if mol:
+                self.host.view_3d_manager.draw_molecule_3d(mol)
 
         try:
             if hasattr(self.host.init_manager, 'scene') and self.host.init_manager.scene:
@@ -327,35 +332,39 @@ class MainInitManager:
         Only keys present in self.host.init_manager.settings['cpk_colors'] are changed; other elements keep the defaults.
         """
         try:
-            # Overridden CPK settings are stored in self.host.init_manager.settings['cpk_colors'].
-            # To ensure that 2D modules (e.g., atom_item.py) which imported the
-            # `CPK_COLORS` mapping from `moleditpy.utils.constants` at import time see
-            # updates, mutate the mapping in-place on the constants module
-            # instead of rebinding a new local variable here.
             overrides = self.host.init_manager.settings.get("cpk_colors", {}) or {}
 
-            # Import the constants module so we can update mappings directly
-            try:
-                from . import constants as constants_mod
-            except ImportError:
-                import moleditpy.utils.constants as constants_mod
+            modules_to_update = []
+            for name, mod in sys.modules.items():
+                if (name.endswith("utils.constants") or name == "constants" or "moleditpy.utils.constants" in name):
+                    if hasattr(mod, "CPK_COLORS") and isinstance(mod.CPK_COLORS, dict):
+                        modules_to_update.append(mod)
+            
+            if not modules_to_update:
+                try:
+                    from . import constants as constants_mod
+                    modules_to_update.append(constants_mod)
+                except ImportError:
+                    import moleditpy.utils.constants as constants_mod
+                    modules_to_update.append(constants_mod)
 
-            # Reset constants.CPK_COLORS to defaults but keep the same dict
-            constants_mod.CPK_COLORS.clear()
-            for k, v in DEFAULT_CPK_COLORS.items():
-                constants_mod.CPK_COLORS[k] = (
-                    QColor(v) if not isinstance(v, QColor) else v
-                )
+            for constants_mod in modules_to_update:
+                constants_mod.CPK_COLORS.clear()
+                for k, v in DEFAULT_CPK_COLORS.items():
+                    constants_mod.CPK_COLORS[k] = (
+                        QColor(v) if not isinstance(v, QColor) else v
+                    )
+                
+                # Apply overrides from settings
+                for k, hexv in overrides.items():
+                    if isinstance(hexv, str) and hexv:
+                        constants_mod.CPK_COLORS[k] = QColor(hexv)
 
-            # Apply overrides from settings
-            for k, hexv in overrides.items():
-                if isinstance(hexv, str) and hexv:
-                    constants_mod.CPK_COLORS[k] = QColor(hexv)
-
-            # Rebuild the PV representation in-place too
-            constants_mod.CPK_COLORS_PV.clear()
-            for k, c in constants_mod.CPK_COLORS.items():
-                constants_mod.CPK_COLORS_PV[k] = [c.redF(), c.greenF(), c.blueF()]
+                # Rebuild the PV representation in-place too
+                if hasattr(constants_mod, "CPK_COLORS_PV"):
+                    constants_mod.CPK_COLORS_PV.clear()
+                    for k, c in constants_mod.CPK_COLORS.items():
+                        constants_mod.CPK_COLORS_PV[k] = [c.redF(), c.greenF(), c.blueF()]
         except (AttributeError, RuntimeError, TypeError, ValueError) as e:
             print(f"Failed to update CPK colors from settings: {e}")
 
@@ -486,7 +495,7 @@ class MainInitManager:
 
         # 2. Try to load from user's settings file
         try:
-            if hasattr(self.host, "settings_file") and os.path.exists(self.host.init_manager.settings_file):
+            if os.path.exists(self.host.init_manager.settings_file):
                 with open(self.host.init_manager.settings_file, "r", encoding="utf-8") as f:
                     loaded_settings = json.load(f)
 
@@ -499,11 +508,14 @@ class MainInitManager:
             # Use defaults on any error
             pass
 
+        # 4.5 Save initial settings copy for change detection
+        self.host.initial_settings = self.host.init_manager.settings.copy()
+
         # 5. Apply loaded settings to application state
         self.host.view_3d_manager.show_chiral_labels = self.host.init_manager.settings.get("show_chiral_labels", False)
         # Apply optimization method
         if "optimization_method" in self.host.init_manager.settings:
-            self.optimization_method = self.host.init_manager.settings["optimization_method"]
+            self.host.init_manager.optimization_method = self.host.init_manager.settings["optimization_method"]
 
     def save_settings(self):
         try:

@@ -62,20 +62,23 @@ class ExportManager:
             pass
         return "untitled"
 
+    def _get_default_path(self, suffix: str = "") -> str:
+        """Get the full default path (dir + basename + suffix) based on the current file."""
+        basename = self._get_default_basename() + suffix
+        try:
+            cur_path = self.host.init_manager.current_file_path
+            if cur_path:
+                return os.path.join(os.path.dirname(cur_path), basename)
+        except (AttributeError, RuntimeError, ValueError, TypeError):
+            pass
+        return basename
+
     def export_stl(self) -> None:
         if not self.host.view_3d_manager.current_mol:
             self.host.statusBar().showMessage("Error: Please generate a 3D structure first.")
             return
 
-        default_name = self._get_default_basename()
-        default_path = default_name
-        try:
-            if self.host.init_manager.current_file_path:
-                default_path = os.path.join(
-                    os.path.dirname(self.host.init_manager.current_file_path), default_name
-                )
-        except (AttributeError, RuntimeError, ValueError, TypeError):
-            default_path = default_name
+        default_path = self._get_default_path()
 
         file_path, _ = QFileDialog.getSaveFileName(
             self.host, "Export as STL", default_path, "STL Files (*.stl);;All Files (*)"
@@ -107,15 +110,7 @@ class ExportManager:
             self.host.statusBar().showMessage("Error: Please generate a 3D structure first.")
             return
 
-        default_name = self._get_default_basename()
-        default_path = default_name
-        try:
-            if self.host.init_manager.current_file_path:
-                default_path = os.path.join(
-                    os.path.dirname(self.host.init_manager.current_file_path), default_name
-                )
-        except (AttributeError, RuntimeError, ValueError, TypeError):
-            default_path = default_name
+        default_path = self._get_default_path()
 
         file_path, _ = QFileDialog.getSaveFileName(
             self.host,
@@ -255,15 +250,7 @@ class ExportManager:
             self.host.statusBar().showMessage("Error: Please generate a 3D structure first.")
             return
 
-        default_name = self._get_default_basename()
-        default_path = default_name
-        try:
-            if self.host.init_manager.current_file_path:
-                default_path = os.path.join(
-                    os.path.dirname(self.host.init_manager.current_file_path), default_name
-                )
-        except (AttributeError, RuntimeError, ValueError, TypeError):
-            default_path = default_name
+        default_path = self._get_default_path()
 
         file_path, _ = QFileDialog.getSaveFileName(
             self.host, "Export as Color STL", default_path, "STL Files (*.stl);;All Files (*)"
@@ -705,15 +692,7 @@ class ExportManager:
             return
 
         # default filename: based on current file, append -2d for 2D exports
-        default_name = f"{self._get_default_basename()}-2d"
-        default_path = default_name
-        try:
-            if self.host.init_manager.current_file_path:
-                default_path = os.path.join(
-                    os.path.dirname(self.host.init_manager.current_file_path), default_name
-                )
-        except (AttributeError, RuntimeError, ValueError, TypeError):
-            default_path = default_name
+        default_path = self._get_default_path(suffix="-2d")
 
         filePath, _ = QFileDialog.getSaveFileName(
             self.host, "Export 2D as PNG", default_path, "PNG Files (*.png)"
@@ -828,25 +807,8 @@ class ExportManager:
             self.host.statusBar().showMessage("Nothing to export.")
             return
 
-        # default filename
-        default_name = "untitled-2d"
-        try:
-            if self.host.init_manager.current_file_path:
-                base = os.path.basename(self.host.init_manager.current_file_path)
-                name = os.path.splitext(base)[0]
-                default_name = f"{name}-2d"
-        except (AttributeError, RuntimeError, ValueError, TypeError):
-            default_name = "untitled-2d"
-
         # prefer same directory
-        default_path = default_name
-        try:
-            if self.host.init_manager.current_file_path:
-                default_path = os.path.join(
-                    os.path.dirname(self.host.init_manager.current_file_path), default_name
-                )
-        except (AttributeError, RuntimeError, ValueError, TypeError):
-            default_path = default_name
+        default_path = self._get_default_path(suffix="-2d")
 
         filePath, _ = QFileDialog.getSaveFileName(
             self.host, "Export 2D as SVG", default_path, "SVG Files (*.svg)"
@@ -950,24 +912,7 @@ class ExportManager:
             return
 
         # Default filename: {name}.png
-        default_name = "untitled"
-        try:
-            if self.host.init_manager.current_file_path:
-                base = os.path.basename(self.host.init_manager.current_file_path)
-                name = os.path.splitext(base)[0]
-                default_name = f"{name}"
-        except (AttributeError, RuntimeError, ValueError, TypeError):
-            default_name = "untitled"
-
-        # prefer same directory as current file when available
-        default_path = default_name
-        try:
-            if self.host.init_manager.current_file_path:
-                default_path = os.path.join(
-                    os.path.dirname(self.host.init_manager.current_file_path), default_name
-                )
-        except (AttributeError, RuntimeError, ValueError, TypeError):
-            default_path = default_name
+        default_path = self._get_default_path()
 
         filePath, _ = QFileDialog.getSaveFileName(
             self.host, "Export 3D as PNG", default_path, "PNG Files (*.png)"

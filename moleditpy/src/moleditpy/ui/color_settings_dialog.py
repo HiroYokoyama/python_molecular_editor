@@ -288,10 +288,10 @@ class ColorSettingsDialog(QDialog):
             logging.error(f"REPORT ERROR: Missing attribute 'bs_button' on self")
 
     def apply_changes(self):
-        if not self.parent_window:
+        if not self.parent_window or not hasattr(self.parent_window, "init_manager"):
             return
 
-        settings = getattr(self.parent_window, "settings", {})
+        settings = self.parent_window.init_manager.settings
 
         if self._reset_all_flag:
             if "cpk_colors" in settings:
@@ -317,27 +317,31 @@ class ColorSettingsDialog(QDialog):
         else:  # [REPORT ERROR MISSING ATTRIBUTE]
             logging.error(f"REPORT ERROR: Missing attribute 'update_cpk_colors_from_settings' on object")
 
-        if hasattr(self.parent_window.view_3d_manager, "apply_3d_settings"):
-            self.parent_window.view_3d_manager.apply_3d_settings(redraw=False)
-        else:  # [REPORT ERROR MISSING ATTRIBUTE]
-            logging.error(f"REPORT ERROR: Missing attribute 'apply_3d_settings' on object")
-
-        current_mol = getattr(self.parent_window, "current_mol", None)
-        if current_mol and hasattr(self.parent_window.view_3d_manager, "draw_molecule_3d"):
-            self.parent_window.view_3d_manager.draw_molecule_3d(current_mol)
+        # Redraw 3D scene
+        if hasattr(self.parent_window, "view_3d_manager"):
+            vm = self.parent_window.view_3d_manager
+            if hasattr(vm, "apply_3d_settings"):
+                vm.apply_3d_settings(redraw=False)
+            
+            mol = getattr(vm, "current_mol", None)
+            if mol and hasattr(vm, "draw_molecule_3d"):
+                vm.draw_molecule_3d(mol)
 
         # Update 2D scene
-        scene = getattr(self.parent_window, "scene", None)
+        scene = getattr(self.parent_window.init_manager, "scene", None)
         if scene:
             for it in scene.items():
                 if hasattr(it, "update_style"):
                     try:
                         it.update_style()
                     except (AttributeError, RuntimeError, TypeError):
-                        # Suppress non-critical error
                         pass
-                else:  # [REPORT ERROR MISSING ATTRIBUTE]
-                    logging.error(f"REPORT ERROR: Missing attribute 'update_style' on it")
+                elif hasattr(it, "update"):
+                    try:
+                        it.update()
+                    except (AttributeError, RuntimeError, TypeError):
+                        pass
+        
         # Update button styles
         for s, btn in self.element_buttons.items():
             overrides = settings.get("cpk_colors", {})
@@ -366,43 +370,29 @@ class ColorSettingsDialog(QDialog):
                 if isinstance(w, SettingsDialog):
                     if hasattr(w, "update_ui_from_settings"):
                         w.update_ui_from_settings(settings)
-                    else:  # [REPORT ERROR MISSING ATTRIBUTE]
-                        logging.error(f"REPORT ERROR: Missing attribute 'update_ui_from_settings' on w")
 
         # Persist B&S color
         if getattr(self, "changed_bs_color", None):
             settings["ball_stick_bond_color"] = self.changed_bs_color
-            self.parent_window.settings_dirty = True
+            self.parent_window.init_manager.settings_dirty = True
             if hasattr(self.parent_window.view_3d_manager, "apply_3d_settings"):
                 self.parent_window.view_3d_manager.apply_3d_settings()
-            else:  # [REPORT ERROR MISSING ATTRIBUTE]
-                logging.error(f"REPORT ERROR: Missing attribute 'apply_3d_settings' on object")
-            if current_mol and hasattr(self.parent_window.view_3d_manager, "draw_molecule_3d"):
-                self.parent_window.view_3d_manager.draw_molecule_3d(current_mol)
+            
+            mol = getattr(self.parent_window.view_3d_manager, "current_mol", None)
+            if mol and hasattr(self.parent_window.view_3d_manager, "draw_molecule_3d"):
+                self.parent_window.view_3d_manager.draw_molecule_3d(mol)
         elif self._reset_all_flag:
             settings["ball_stick_bond_color"] = "#7F7F7F"
-            self.parent_window.settings_dirty = True
+            self.parent_window.init_manager.settings_dirty = True
             if hasattr(self.parent_window.init_manager, "update_cpk_colors_from_settings"):
                 self.parent_window.init_manager.update_cpk_colors_from_settings()
-            else:  # [REPORT ERROR MISSING ATTRIBUTE]
-                logging.error(f"REPORT ERROR: Missing attribute 'update_cpk_colors_from_settings' on object")
+            
             if hasattr(self.parent_window.view_3d_manager, "apply_3d_settings"):
                 self.parent_window.view_3d_manager.apply_3d_settings()
-            else:  # [REPORT ERROR MISSING ATTRIBUTE]
-                logging.error(f"REPORT ERROR: Missing attribute 'apply_3d_settings' on object")
-            if current_mol and hasattr(self.parent_window.view_3d_manager, "draw_molecule_3d"):
-                self.parent_window.view_3d_manager.draw_molecule_3d(current_mol)
-
-        if scene:
-            for it in scene.items():
-                if hasattr(it, "update_style"):
-                    try:
-                        it.update_style()
-                    except (AttributeError, RuntimeError, TypeError):
-                        # Suppress non-critical error
-                        pass
-                else:  # [REPORT ERROR MISSING ATTRIBUTE]
-                    logging.error(f"REPORT ERROR: Missing attribute 'update_style' on it")
+            
+            mol = getattr(self.parent_window.view_3d_manager, "current_mol", None)
+            if mol and hasattr(self.parent_window.view_3d_manager, "draw_molecule_3d"):
+                self.parent_window.view_3d_manager.draw_molecule_3d(mol)
 
     def accept(self):
         self.apply_changes()

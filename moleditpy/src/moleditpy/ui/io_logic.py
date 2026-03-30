@@ -49,6 +49,17 @@ class IOManager:
             pass
         return "untitled"
 
+    def _get_default_path(self, suffix: str = "") -> str:
+        """Get the full default path (dir + basename + suffix) based on the current file."""
+        basename = self._get_default_basename() + suffix
+        try:
+            cur_path = self.host.init_manager.current_file_path
+            if cur_path:
+                return os.path.join(os.path.dirname(cur_path), basename)
+        except (AttributeError, RuntimeError, ValueError, TypeError):
+            pass
+        return basename
+
 
     def fix_mol_counts_line(self, line: str) -> str:
         if "V3000" in line or "V2000" in line: return line
@@ -282,15 +293,7 @@ class IOManager:
             self.host.statusBar().showMessage("Error: Nothing to save.")
             return
 
-        default_name = self._get_default_basename()
-        default_path = default_name
-        try:
-            if self.host.init_manager.current_file_path:
-                default_path = os.path.join(
-                    os.path.dirname(self.host.init_manager.current_file_path), default_name
-                )
-        except (AttributeError, RuntimeError, ValueError, TypeError):
-            default_path = default_name
+        default_path = self._get_default_path()
 
         file_path, _ = QFileDialog.getSaveFileName(
             self.host, "Save Project As", default_path,
@@ -330,8 +333,9 @@ class IOManager:
             return None
 
         if not file_path:
+            default_dir = os.path.dirname(self.host.init_manager.current_file_path) if self.host.init_manager.current_file_path else ""
             file_path, _ = QFileDialog.getOpenFileName(
-                self.host, "Open Project File", "",
+                self.host, "Open Project File", default_dir,
                 "PME Project Files (*.pmeprj);;PME Raw Files (*.pmeraw);;All Files (*)"
             )
             if not file_path:
@@ -358,15 +362,7 @@ class IOManager:
             self.host.statusBar().showMessage("Error: Nothing to save.")
             return
 
-        default_name = self._get_default_basename()
-        default_path = default_name
-        try:
-            if self.host.init_manager.current_file_path:
-                default_path = os.path.join(
-                    os.path.dirname(self.host.init_manager.current_file_path), default_name
-                )
-        except (AttributeError, RuntimeError, ValueError, TypeError):
-            default_path = default_name
+        default_path = self._get_default_path()
 
         try:
             file_path, _ = QFileDialog.getSaveFileName(
@@ -395,8 +391,9 @@ class IOManager:
     def load_json_data(self, file_path: Optional[str] = None) -> None:
         """Load PME Project (.pmeprj) file."""
         if not file_path:
+            default_dir = os.path.dirname(self.host.init_manager.current_file_path) if self.host.init_manager.current_file_path else ""
             file_path, _ = QFileDialog.getOpenFileName(
-                self.host, "Open PME Project File", "",
+                self.host, "Open PME Project File", default_dir,
                 "PME Project Files (*.pmeprj);;All Files (*)"
             )
             if not file_path:
@@ -431,8 +428,10 @@ class IOManager:
             self.host.init_manager.current_file_path = file_path
             self.host.state_manager.update_window_title()
             self.host.statusBar().showMessage(f"PME Project loaded from {file_path}")
-
-            QTimer.singleShot(0, self.host.view_3d_manager.fit_to_view)
+            
+            # Reset camera/zoom after drawing
+            QTimer.singleShot(50, lambda: self.host.view_3d_manager.plotter.view_isometric())
+            QTimer.singleShot(100, lambda: self.host.view_3d_manager.plotter.render())
 
         except FileNotFoundError:
             self.host.statusBar().showMessage(f"File not found: {file_path}")
@@ -450,15 +449,7 @@ class IOManager:
             self.host.statusBar().showMessage("Error: Nothing to save.")
             return
 
-        default_name = self._get_default_basename()
-        default_path = default_name
-        try:
-            if self.host.init_manager.current_file_path:
-                default_path = os.path.join(
-                    os.path.dirname(self.host.init_manager.current_file_path), default_name
-                )
-        except (AttributeError, RuntimeError, ValueError, TypeError):
-            default_path = default_name
+        default_path = self._get_default_path()
 
         try:
             file_path, _ = QFileDialog.getSaveFileName(
@@ -494,8 +485,9 @@ class IOManager:
             return
 
         if not file_path:
+            default_dir = os.path.dirname(self.host.init_manager.current_file_path) if self.host.init_manager.current_file_path else ""
             file_path, _ = QFileDialog.getOpenFileName(
-                self.host, "Import MOL File", "", "Chemical Files (*.mol *.sdf);;All Files (*)"
+                self.host, "Import MOL File", default_dir, "Chemical Files (*.mol *.sdf);;All Files (*)"
             )
             if not file_path:
                 return
@@ -564,7 +556,10 @@ class IOManager:
             self.host.state_manager.has_unsaved_changes = False
             self.host.state_manager.update_window_title()
             self.host.init_manager.scene.update_all_items()
-            QTimer.singleShot(0, self.host.view_3d_manager.fit_to_view)
+            
+            # Reset camera/zoom after drawing
+            QTimer.singleShot(50, lambda: self.host.view_3d_manager.plotter.view_isometric())
+            QTimer.singleShot(100, lambda: self.host.view_3d_manager.plotter.render())
         except Exception as e:
             self.host.statusBar().showMessage(f"Error loading file: {e}")
 
@@ -579,15 +574,7 @@ class IOManager:
             if len(lines) > 1 and "RDKit" in lines[1]:
                 lines[1] = f"  MoleditPy Ver. {VERSION}  2D"
             
-            default_name = self._get_default_basename()
-            default_path = default_name
-            try:
-                if self.host.init_manager.current_file_path:
-                    default_path = os.path.join(
-                        os.path.dirname(self.host.init_manager.current_file_path), default_name
-                    )
-            except (AttributeError, RuntimeError, ValueError, TypeError):
-                pass
+            default_path = self._get_default_path(suffix="-2d")
 
             file_path, _ = QFileDialog.getSaveFileName(self.host, "Save 2D MOL File", default_path, "MOL Files (*.mol);;All Files (*)")
             if file_path:
@@ -601,7 +588,8 @@ class IOManager:
     def load_xyz_for_3d_viewing(self, file_path: Optional[str] = None) -> None:
         """Load XYZ file and display in 3D viewer."""
         if not file_path:
-            file_path, _ = QFileDialog.getOpenFileName(self.host, "Load 3D XYZ (View Only)", "", "XYZ Files (*.xyz);;All Files (*)")
+            default_dir = os.path.dirname(self.host.init_manager.current_file_path) if self.host.init_manager.current_file_path else ""
+            file_path, _ = QFileDialog.getOpenFileName(self.host, "Load 3D XYZ (View Only)", default_dir, "XYZ Files (*.xyz);;All Files (*)")
             if not file_path: return
 
         try:
@@ -661,7 +649,8 @@ class IOManager:
         """Open MOL/SDF file in 3D viewer."""
         if not self.host.state_manager.check_unsaved_changes(): return
         if not file_path:
-            file_path, _ = QFileDialog.getOpenFileName(self.host, "Open MOL/SDF File", "", "MOL/SDF Files (*.mol *.sdf);;All Files (*)")
+            default_dir = os.path.dirname(self.host.init_manager.current_file_path) if self.host.init_manager.current_file_path else ""
+            file_path, _ = QFileDialog.getOpenFileName(self.host, "Open MOL/SDF File", default_dir, "MOL/SDF Files (*.mol *.sdf);;All Files (*)")
             if not file_path: return
         try:
             if file_path.lower().endswith(".sdf"):
@@ -677,11 +666,16 @@ class IOManager:
             if mol.GetNumConformers() == 0:
                 AllChem.EmbedMolecule(mol)
             
+            self.host.edit_actions_manager.clear_all(skip_check=True)
             self.host.view_3d_manager.current_mol = mol
             self.host.view_3d_manager.atom_id_to_rdkit_idx_map = {}
             self.host.is_xyz_derived = False
             self.host.view_3d_manager.draw_molecule_3d(mol)
-            QTimer.singleShot(0, self.host.view_3d_manager.fit_to_view)
+
+            # Reset camera/zoom after drawing
+            QTimer.singleShot(50, lambda: self.host.view_3d_manager.plotter.view_isometric())
+            QTimer.singleShot(100, lambda: self.host.view_3d_manager.plotter.render())
+
             self.host.ui_manager._enter_3d_viewer_ui_mode()
             if hasattr(self.host.ui_manager, "_enable_3d_features"):
                 self.host.ui_manager._enable_3d_features(True)
@@ -707,7 +701,8 @@ class IOManager:
         if not self.host.view_3d_manager.current_mol:
             self.host.statusBar().showMessage("Error: No 3D structure to save.")
             return
-        file_path, _ = QFileDialog.getSaveFileName(self.host, "Save 3D MOL File", "", "MOL Files (*.mol);;All Files (*)")
+        default_path = self._get_default_path()
+        file_path, _ = QFileDialog.getSaveFileName(self.host, "Save 3D MOL File", default_path, "MOL Files (*.mol);;All Files (*)")
         if file_path:
             try:
                 mol_block = Chem.MolToMolBlock(self.host.view_3d_manager.current_mol, includeStereo=True)
@@ -726,7 +721,8 @@ class IOManager:
             self.host.statusBar().showMessage("Error: Please generate a 3D structure first.")
             return
 
-        file_path, _ = QFileDialog.getSaveFileName(self.host, "Save 3D XYZ File", "", "XYZ Files (*.xyz);;All Files (*)")
+        default_path = self._get_default_path()
+        file_path, _ = QFileDialog.getSaveFileName(self.host, "Save 3D XYZ File", default_path, "XYZ Files (*.xyz);;All Files (*)")
         if file_path:
             if not file_path.lower().endswith(".xyz"):
                 file_path += ".xyz"
@@ -762,8 +758,9 @@ class IOManager:
         """Open a .pmeraw pickle project file."""
         import copy
         if not file_path:
+            default_dir = os.path.dirname(self.host.init_manager.current_file_path) if self.host.init_manager.current_file_path else ""
             file_path, _ = QFileDialog.getOpenFileName(
-                self.host, "Open Project File", "", "Project Files (*.pmeraw);;All Files (*)"
+                self.host, "Open Project File", default_dir, "Project Files (*.pmeraw);;All Files (*)"
             )
             if not file_path:
                 return
@@ -781,7 +778,11 @@ class IOManager:
             self.host.init_manager.current_file_path = file_path
             self.host.state_manager.update_window_title()
             self.host.statusBar().showMessage(f"Project loaded from {file_path}")
-            QTimer.singleShot(0, self.host.view_3d_manager.fit_to_view)
+            
+            # Reset camera/zoom after drawing
+            QTimer.singleShot(50, lambda: self.host.view_3d_manager.plotter.view_isometric())
+            QTimer.singleShot(100, lambda: self.host.view_3d_manager.plotter.render())
+            
         except FileNotFoundError:
             self.host.statusBar().showMessage(f"File not found: {file_path}")
         except (OSError, IOError) as e:
