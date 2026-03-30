@@ -365,6 +365,8 @@ class MainInitManager:
                     constants_mod.CPK_COLORS_PV.clear()
                     for k, c in constants_mod.CPK_COLORS.items():
                         constants_mod.CPK_COLORS_PV[k] = [c.redF(), c.greenF(), c.blueF()]
+                else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                    logging.error(f"REPORT ERROR: Missing attribute 'CPK_COLORS_PV' on constants_mod")
         except (AttributeError, RuntimeError, TypeError, ValueError) as e:
             print(f"Failed to update CPK colors from settings: {e}")
 

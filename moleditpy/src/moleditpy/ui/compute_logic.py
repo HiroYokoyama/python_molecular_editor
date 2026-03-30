@@ -369,6 +369,8 @@ class ComputeManager:
         # Re-enable the button so it can be clicked to Halt
         if hasattr(self.host.init_manager, "optimize_3d_button"):
             self.host.init_manager.optimize_3d_button.setEnabled(True)
+        else:  # [REPORT ERROR MISSING ATTRIBUTE]
+            logging.error(f"REPORT ERROR: Missing attribute 'optimize_3d_button' on object")
 
         self._start_calculation_worker(mol_block, options, run_id)
 

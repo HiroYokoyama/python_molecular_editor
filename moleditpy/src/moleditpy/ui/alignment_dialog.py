@@ -129,7 +129,7 @@ class AlignmentDialog(Dialog3DPickingMixin, QDialog):
             selected_list = list(self.selected_atoms)
             atom = self.mol.GetAtomWithIdx(selected_list[0])
             self.selection_label.setText(
-                f"Selected 1 atom: {atom.GetSymbol()}{selected_list[0] + 1}"
+                f"Selected 1 atom: {atom.GetSymbol()}"
             )
             self.apply_button.setEnabled(False)
         elif len(self.selected_atoms) == 2:
@@ -137,7 +137,7 @@ class AlignmentDialog(Dialog3DPickingMixin, QDialog):
             atom1 = self.mol.GetAtomWithIdx(selected_list[0])
             atom2 = self.mol.GetAtomWithIdx(selected_list[1])
             self.selection_label.setText(
-                f"Selected 2 atoms: {atom1.GetSymbol()}{selected_list[0] + 1}, {atom2.GetSymbol()}{selected_list[1] + 1}"
+                f"Selected 2 atoms: {atom1.GetSymbol()}, {atom2.GetSymbol()}"
             )
             self.apply_button.setEnabled(True)
 

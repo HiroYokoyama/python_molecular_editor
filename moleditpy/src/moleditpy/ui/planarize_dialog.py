@@ -108,14 +108,8 @@ class PlanarizeDialog(BasePickingDialog):
             )
             self.apply_button.setEnabled(False)
         else:
-            atom_list = sorted(self.selected_atoms)
-            atom_display = []
-            for i, atom_idx in enumerate(atom_list):
-                symbol = self.mol.GetAtomWithIdx(atom_idx).GetSymbol()
-                atom_display.append(f"#{i + 1}: {symbol}({atom_idx})")
-            self.selection_label.setText(
-                f"Selected {count} atoms: {', '.join(atom_display)}"
-            )
+            # Show only the count to ensure window stability
+            self.selection_label.setText(f"Selected {count} atoms")
             self.apply_button.setEnabled(count >= 3)
 
     def select_all_atoms(self):

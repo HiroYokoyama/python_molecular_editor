@@ -104,7 +104,7 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
 
     def get_setting(self, key: str, default: Any = None) -> Any:
         """Safe gateway to access MainWindow settings without deep traversal from items."""
-        if hasattr(self, "window") and self.window and hasattr(self.window, "settings"):
+        if hasattr(self, "window") and self.window and hasattr(self.window, "init_manager"):
             return self.window.init_manager.settings.get(key, default)
         return default
 

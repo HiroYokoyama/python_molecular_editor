@@ -11,6 +11,7 @@ DOI: 10.5281/zenodo.17268532
 """
 
 from __future__ import annotations
+import logging  # [REPORT ERROR MISSING ATTRIBUTE]
 from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
 from PyQt6.QtCore import QPointF, QRectF, Qt
@@ -84,9 +85,11 @@ class AtomItem(QGraphicsItem):
         font_family = FONT_FAMILY
 
         scene = self.scene()
-        if scene and hasattr(scene, "host") and scene.host:
-            font_size = scene.host.init_manager.settings.get("atom_font_size_2d", 20)
-            font_family = scene.host.init_manager.settings.get("atom_font_family_2d", FONT_FAMILY)
+        if hasattr(scene, "get_setting"):
+            font_size = scene.get_setting("atom_font_size_2d", 20)
+            font_family = scene.get_setting("atom_font_family_2d", FONT_FAMILY)
+        else:  # [REPORT ERROR MISSING ATTRIBUTE]
+            logging.error(f"REPORT ERROR: Missing attribute 'get_setting' on scene")
         
         self.font = QFont(font_family, font_size, FONT_WEIGHT_BOLD)
         self.prepareGeometryChange()
@@ -106,9 +109,11 @@ class AtomItem(QGraphicsItem):
         font_size = 20
         font_family = FONT_FAMILY
         scene = self.scene()
-        if scene and hasattr(scene, "host") and scene.host:
-            font_size = scene.host.init_manager.settings.get("atom_font_size_2d", 20)
-            font_family = scene.host.init_manager.settings.get("atom_font_family_2d", FONT_FAMILY)
+        if hasattr(scene, "get_setting"):
+            font_size = scene.get_setting("atom_font_size_2d", 20)
+            font_family = scene.get_setting("atom_font_family_2d", FONT_FAMILY)
+        else:  # [REPORT ERROR MISSING ATTRIBUTE]
+            logging.error(f"REPORT ERROR: Missing attribute 'get_setting' on scene")
 
         font = QFont(font_family, font_size, FONT_WEIGHT_BOLD)
         fm = QFontMetricsF(font)

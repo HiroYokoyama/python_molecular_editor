@@ -70,7 +70,7 @@ class MainWindow(QMainWindow):
         self.ui_manager = UIManager(self)
 
         self.init_manager = MainInitManager(self, initial_file=initial_file, safe_mode=safe_mode)
-
+    
     def dragEnterEvent(self, event):
         """Delegate drag enter event to UI manager."""
         self.ui_manager.dragEnterEvent(event)

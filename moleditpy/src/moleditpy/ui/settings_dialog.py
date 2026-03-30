@@ -152,7 +152,7 @@ class SettingsDialog(QDialog):
         if hasattr(self.parent_window.init_manager, "settings_dirty"):
             self.parent_window.init_manager.settings_dirty = True
         else:  # [REPORT ERROR MISSING ATTRIBUTE]
-            logging.error(f"REPORT ERROR: Missing attribute 'settings_dirty' on self.parent_window.init_manager")
+            logging.error(f"REPORT ERROR: Missing attribute 'settings_dirty' on object")
         
         # Persist to disk immediately
         if hasattr(self.parent_window, "init_manager"):

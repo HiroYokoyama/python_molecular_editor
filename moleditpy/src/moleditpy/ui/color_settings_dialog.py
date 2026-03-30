@@ -322,10 +322,14 @@ class ColorSettingsDialog(QDialog):
             vm = self.parent_window.view_3d_manager
             if hasattr(vm, "apply_3d_settings"):
                 vm.apply_3d_settings(redraw=False)
+            else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                logging.error(f"REPORT ERROR: Missing attribute 'apply_3d_settings' on vm")
             
             mol = getattr(vm, "current_mol", None)
             if mol and hasattr(vm, "draw_molecule_3d"):
                 vm.draw_molecule_3d(mol)
+        else:  # [REPORT ERROR MISSING ATTRIBUTE]
+            logging.error(f"REPORT ERROR: Missing attribute 'view_3d_manager' on self.parent_window")
 
         # Update 2D scene
         scene = getattr(self.parent_window.init_manager, "scene", None)
@@ -341,6 +345,8 @@ class ColorSettingsDialog(QDialog):
                         it.update()
                     except (AttributeError, RuntimeError, TypeError):
                         pass
+                else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                    logging.error(f"REPORT ERROR: Missing attribute 'update' on it")
         
         # Update button styles
         for s, btn in self.element_buttons.items():
@@ -370,6 +376,8 @@ class ColorSettingsDialog(QDialog):
                 if isinstance(w, SettingsDialog):
                     if hasattr(w, "update_ui_from_settings"):
                         w.update_ui_from_settings(settings)
+                    else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                        logging.error(f"REPORT ERROR: Missing attribute 'update_ui_from_settings' on w")
 
         # Persist B&S color
         if getattr(self, "changed_bs_color", None):
@@ -377,6 +385,8 @@ class ColorSettingsDialog(QDialog):
             self.parent_window.init_manager.settings_dirty = True
             if hasattr(self.parent_window.view_3d_manager, "apply_3d_settings"):
                 self.parent_window.view_3d_manager.apply_3d_settings()
+            else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                logging.error(f"REPORT ERROR: Missing attribute 'apply_3d_settings' on object")
             
             mol = getattr(self.parent_window.view_3d_manager, "current_mol", None)
             if mol and hasattr(self.parent_window.view_3d_manager, "draw_molecule_3d"):
@@ -386,9 +396,13 @@ class ColorSettingsDialog(QDialog):
             self.parent_window.init_manager.settings_dirty = True
             if hasattr(self.parent_window.init_manager, "update_cpk_colors_from_settings"):
                 self.parent_window.init_manager.update_cpk_colors_from_settings()
+            else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                logging.error(f"REPORT ERROR: Missing attribute 'update_cpk_colors_from_settings' on object")
             
             if hasattr(self.parent_window.view_3d_manager, "apply_3d_settings"):
                 self.parent_window.view_3d_manager.apply_3d_settings()
+            else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                logging.error(f"REPORT ERROR: Missing attribute 'apply_3d_settings' on object")
             
             mol = getattr(self.parent_window.view_3d_manager, "current_mol", None)
             if mol and hasattr(self.parent_window.view_3d_manager, "draw_molecule_3d"):
