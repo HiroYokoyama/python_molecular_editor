@@ -7,61 +7,56 @@ from moleditpy.ui.io_logic import IOManager
 
 class DummyProjectIo(IOManager):
     def __init__(self, host=None):
-        self._host = host or MagicMock()
-        IOManager.__init__(self, self._host)
+        self.host = host or MagicMock()
+        IOManager.__init__(self, self.host)
         
-        # Internal mocks for self-contained testing
-        self._host.data = MagicMock()
-        self._host.data.atoms = {}
-        self._host.state_manager = MagicMock()
-        self._host.state_manager.data = self._host.data
-        self._host.view_3d_manager = MagicMock()
-        self._host.view_3d_manager.current_mol = None
-
-        self.state_manager = MagicMock()
-        self.state_manager.get_current_state.return_value = {"atoms": "mock"}
-        self.state_manager.update_window_title = MagicMock()
-        self.state_manager.set_state_from_data = MagicMock()
+        # 1. Initialize Managers on host to mirror production architecture
+        self.host.state_manager = MagicMock()
+        self.host.init_manager = MagicMock()
+        self.host.ui_manager = MagicMock()
+        self.host.edit_actions_manager = MagicMock()
+        self.host.view_3d_manager = MagicMock()
+        self.host.compute_manager = MagicMock()
         
-        self.ui_manager = MagicMock()
-        self.ui_manager.restore_ui_for_editing = MagicMock()
+        # 2. Setup standard mock behaviors
+        from moleditpy.core.molecular_data import MolecularData
+        self.host.state_manager.data = MolecularData()
+        self.host.view_3d_manager.current_mol = None
+        self.host.init_manager.current_file_path = None
+        self.host.state_manager.has_unsaved_changes = False
         
-        self.edit_actions_manager = MagicMock()
-        self.edit_actions_manager.clear_all.return_value = True
-        self.edit_actions_manager.reset_undo_stack = MagicMock()
+        self.host.state_manager.get_current_state.return_value = {"atoms": "mock"}
+        self.host.state_manager.update_window_title = MagicMock()
+        self.host.state_manager.set_state_from_data = MagicMock()
         
-        self.view_3d_manager = MagicMock()
-        self.edit_3d_manager = MagicMock()
+        self.host.ui_manager.restore_ui_for_editing = MagicMock()
+        self.host.edit_actions_manager.clear_all.return_value = True
+        self.host.edit_actions_manager.reset_undo_stack = MagicMock()
         
         self.statusBar_mock = MagicMock()
-        self._host.statusBar.return_value = self.statusBar_mock
+        self.host.statusBar.return_value = self.statusBar_mock
 
     def __getattr__(self, name):
-        return getattr(self._host, name)
+        """Allow legacy access to host attributes for test convenience."""
+        return getattr(self.host, name)
 
     @property
-    def data(self): return self._host.data
+    def data(self): return self.host.state_manager.data
     @property
-    def current_mol(self): return getattr(self._host, "current_mol", None)
+    def current_mol(self): return self.host.view_3d_manager.current_mol
     @current_mol.setter
-    def current_mol(self, v): self._host.current_mol = v
+    def current_mol(self, v): self.host.view_3d_manager.current_mol = v
     @property
-    def current_file_path(self): return getattr(self._host, "current_file_path", None)
+    def current_file_path(self): return self.host.init_manager.current_file_path
     @current_file_path.setter
-    def current_file_path(self, v): self._host.current_file_path = v
+    def current_file_path(self, v): self.host.init_manager.current_file_path = v
     @property
-    def has_unsaved_changes(self): return getattr(self._host, "has_unsaved_changes", False)
+    def has_unsaved_changes(self): return self.host.state_manager.has_unsaved_changes
     @has_unsaved_changes.setter
-    def has_unsaved_changes(self, v): self._host.has_unsaved_changes = v
+    def has_unsaved_changes(self, v): self.host.state_manager.has_unsaved_changes = v
 
     def statusBar(self):
         return self.statusBar_mock
-
-    def get_current_state(self):
-        return self.state_manager.get_current_state()
-
-    def set_state_from_data(self, data):
-        self.state_manager.set_state_from_data(data)
 
 @pytest.fixture
 def io():
@@ -108,7 +103,7 @@ def test_load_raw_data_dialog_success(io, tmp_path):
     with patch("PyQt6.QtWidgets.QFileDialog.getOpenFileName", return_value=(load_path, "Project Files (*.pmeraw)")):
         io.load_raw_data()
         
-        io.state_manager.set_state_from_data.assert_called_with(sample_data)
+        io.host.state_manager.set_state_from_data.assert_called_with(sample_data)
         assert io.host.init_manager.current_file_path == load_path
         assert io.host.state_manager.has_unsaved_changes is False
         io.statusBar().showMessage.assert_called_with(f"Project loaded from {load_path}")
@@ -117,7 +112,7 @@ def test_load_raw_data_cancel(io):
     """Verify that nothing happens if the user cancels the load dialog."""
     with patch("PyQt6.QtWidgets.QFileDialog.getOpenFileName", return_value=("", "")):
         io.load_raw_data()
-        io.state_manager.set_state_from_data.assert_not_called()
+        io.host.state_manager.set_state_from_data.assert_not_called()
 
 def test_load_raw_data_io_error(io, tmp_path):
     """Verify handling of I/O errors during load."""
@@ -126,7 +121,7 @@ def test_load_raw_data_io_error(io, tmp_path):
         f.write("not a pickle")
     
     io.load_raw_data(bad_path)
+    # The message comes from io_logic.py: "Invalid project file format: ..."
     io.statusBar().showMessage.assert_called()
-    # Should show invalid format error
     msg = io.statusBar().showMessage.call_args[0][0]
-    assert "Invalid project file format" in msg or "Error loading project file" in msg
+    assert "Invalid project file format" in msg

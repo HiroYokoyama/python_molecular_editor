@@ -15,6 +15,36 @@ class DummyProjectIo(IOManager):
         self.host = host
         IOManager.__init__(self, host)
 
+    def __getattr__(self, name):
+        """Allow legacy access to host attributes for test convenience."""
+        return getattr(self.host, name)
+
+    @property
+    def data(self): return self.host.state_manager.data
+    @property
+    def scene(self): return self.host.init_manager.scene
+    @property
+    def settings(self): return self.host.init_manager.settings
+    @property
+    def view_2d(self): return self.host.init_manager.view_2d
+    @property
+    def plotter(self): return self.host.view_3d_manager.plotter
+
+    @property
+    def current_mol(self): return self.host.view_3d_manager.current_mol
+    @current_mol.setter
+    def current_mol(self, v): self.host.view_3d_manager.current_mol = v
+
+    @property
+    def current_file_path(self): return self.host.init_manager.current_file_path
+    @current_file_path.setter
+    def current_file_path(self, v): self.host.init_manager.current_file_path = v
+
+    @property
+    def has_unsaved_changes(self): return self.host.state_manager.has_unsaved_changes
+    @has_unsaved_changes.setter
+    def has_unsaved_changes(self, v): self.host.state_manager.has_unsaved_changes = v
+
     def statusBar(self):
         return self.host.statusBar()
 
@@ -37,8 +67,8 @@ class DummyProjectIo(IOManager):
 def test_save_project_no_data(mock_parser_host):
     """Verify error message when trying to save an empty project."""
     io = DummyProjectIo(mock_parser_host)
-    io.data.atoms = {}
-    io.current_mol = None
+    io.host.state_manager.data.atoms = {}
+    io.host.view_3d_manager.current_mol = None
     io.save_project()
     io.statusBar().showMessage.assert_called_with("Error: Nothing to save.")
 
@@ -48,9 +78,9 @@ def test_save_project_overwrite_json(mock_parser_host, tmp_path):
     io = DummyProjectIo(mock_parser_host)
     project_file = str(tmp_path / "existing.pmeprj")
     io.host.init_manager.current_file_path = project_file
-    io.data.atoms = {1: {"symbol": "C"}}
+    io.host.state_manager.data.atoms = {1: {"symbol": "C"}}
 
-    with patch.object(io, "create_json_data", return_value={"format": "PME Project"}):
+    with patch.object(io.host.state_manager, "create_json_data", return_value={"format": "PME Project"}):
         io.save_project()
         assert os.path.exists(project_file)
         with open(project_file, "r") as f:
@@ -64,9 +94,9 @@ def test_save_project_overwrite_raw(mock_parser_host, tmp_path):
     io = DummyProjectIo(mock_parser_host)
     raw_file = str(tmp_path / "existing.pmeraw")
     io.host.init_manager.current_file_path = raw_file
-    io.data.atoms = {1: {"symbol": "C"}}
+    io.host.state_manager.data.atoms = {1: {"symbol": "C"}}
 
-    with patch.object(io, "get_current_state", return_value={"atoms": "mock"}):
+    with patch.object(io.host.state_manager, "get_current_state", return_value={"atoms": "mock"}):
         io.save_project()
         assert os.path.exists(raw_file)
         with open(raw_file, "rb") as f:
@@ -78,7 +108,7 @@ def test_save_project_redirect_to_save_as(mock_parser_host):
     """Verify that 'save' redirects to 'save as' if the current file is not a project file."""
     io = DummyProjectIo(mock_parser_host)
     io.host.init_manager.current_file_path = "some_molecule.mol"
-    io.data.atoms = {1: {"symbol": "C"}}
+    io.host.state_manager.data.atoms = {1: {"symbol": "C"}}
 
     with patch.object(io, "save_project_as") as mock_save_as:
         io.save_project()
@@ -93,7 +123,7 @@ def test_load_raw_data_success(mock_parser_host, tmp_path):
     with open(raw_file, "wb") as f:
         pickle.dump(sample_data, f)
 
-    with patch.object(io, "set_state_from_data") as mock_set_state:
+    with patch.object(io.host.state_manager, "set_state_from_data") as mock_set_state:
         io.load_raw_data(raw_file)
         assert mock_set_state.called
         assert io.host.init_manager.current_file_path == raw_file
@@ -128,7 +158,7 @@ def test_open_project_file_dispatch(mock_parser_host):
 def test_save_as_json_trigger(mock_parser_host, tmp_path):
     """Verify triggering of 'save as' for JSON format."""
     io = DummyProjectIo(mock_parser_host)
-    io.data.atoms = {1: "C"}
+    io.host.state_manager.data.atoms = {1: "C"}
     save_path = str(tmp_path / "exported.pmeprj")
 
     with (
@@ -136,7 +166,7 @@ def test_save_as_json_trigger(mock_parser_host, tmp_path):
             "PyQt6.QtWidgets.QFileDialog.getSaveFileName",
             return_value=(save_path, "*.pmeprj"),
         ),
-        patch.object(io, "create_json_data", return_value={"format": "PME Project"}),
+        patch.object(io.host.state_manager, "create_json_data", return_value={"format": "PME Project"}),
     ):
         io.save_as_json()
         assert os.path.exists(save_path)
@@ -164,9 +194,7 @@ def test_open_project_file_unsaved_check(mock_parser_host):
     """Verify that 'open project' checks for unsaved changes before proceeding."""
     io = DummyProjectIo(mock_parser_host)
     # Mock check_unsaved_changes to return False (cancel)
-    # Note: DummyProjectIo mocks check_unsaved_changes to return True by default.
-    # We need to override that.
-    with patch.object(io, "check_unsaved_changes", return_value=False):
+    with patch.object(io.host.state_manager, "check_unsaved_changes", return_value=False):
         io.open_project_file()
         # Should return early, not opening dialog
         with patch("PyQt6.QtWidgets.QFileDialog.getOpenFileName") as mock_open:
@@ -177,11 +205,11 @@ def test_save_project_io_error(mock_parser_host, tmp_path):
     """Verify handling of I/O errors during save."""
     io = DummyProjectIo(mock_parser_host)
     io.host.init_manager.current_file_path = str(tmp_path / "readonly.pmeprj")
-    io.data.atoms = {1: "C"}
+    io.host.state_manager.data.atoms = {1: "C"}
 
     with patch("builtins.open", side_effect=IOError("Permission denied")):
         with patch.object(
-            io, "create_json_data", return_value={"format": "PME Project"}
+            io.host.state_manager, "create_json_data", return_value={"format": "PME Project"}
         ):
             io.save_project()
             io.statusBar().showMessage.assert_called_with(
@@ -205,13 +233,12 @@ def test_load_json_data_version_mismatch(mock_parser_host, tmp_path):
 
 def test_project_save_load_full_cycle(mock_parser_host, tmp_path):
     """Verify a complete save-load cycle for a project."""
-    """Test full cycle of project save and load."""
     io = DummyProjectIo(mock_parser_host)
     # Populate some data
-    io.data.add_atom("C", QPointF(10, 20), charge=1)
+    io.host.state_manager.data.add_atom("C", QPointF(10, 20), charge=1)
     # Ensure item mock is present for coordinate extraction if needed
-    io.data.atoms[0]["item"] = MagicMock()
-    io.data.atoms[0]["item"].pos.return_value = QPointF(10, 20)
+    io.host.state_manager.data.atoms[0]["item"] = MagicMock()
+    io.host.state_manager.data.atoms[0]["item"].pos.return_value = QPointF(10, 20)
 
     project_file = str(tmp_path / "full_cycle.pmeprj")
 
@@ -224,8 +251,8 @@ def test_project_save_load_full_cycle(mock_parser_host, tmp_path):
     assert os.path.exists(project_file)
 
     # Load
-    io.data.atoms.clear()
-    with patch.object(io, "load_from_json_data") as mock_load_json:
+    io.host.state_manager.data.atoms.clear()
+    with patch.object(io.host.state_manager, "load_from_json_data") as mock_load_json:
         io.load_json_data(project_file)
         assert mock_load_json.called
         # Verify the data passed to load_from_json_data contains our atom
@@ -239,9 +266,8 @@ def test_project_save_load_full_cycle(mock_parser_host, tmp_path):
 
 def test_save_project_default_filename(mock_parser_host, tmp_path):
     """Verify that 'save as' suggests a reasonable default filename."""
-    """Test save_project_as uses current_file_path to suggest filename."""
     io = DummyProjectIo(mock_parser_host)
-    io.data.atoms = {1: {"symbol": "C"}}
+    io.host.state_manager.data.atoms = {1: {"symbol": "C"}}
 
     # 1. With existing path
     io.host.init_manager.current_file_path = str(tmp_path / "subdir" / "my_molecule.pmeprj")
@@ -270,9 +296,8 @@ def test_save_project_default_filename(mock_parser_host, tmp_path):
 
 def test_save_project_extension_enforcement(mock_parser_host, tmp_path):
     """Verify that correct file extensions are enforced when saving."""
-    """Test that extensions are enforced in save_project_as."""
     io = DummyProjectIo(mock_parser_host)
-    io.data.atoms = {1: {"symbol": "C"}}
+    io.host.state_manager.data.atoms = {1: {"symbol": "C"}}
 
     # User types "test" without extension
     save_path_input = str(tmp_path / "test")
@@ -284,7 +309,7 @@ def test_save_project_extension_enforcement(mock_parser_host, tmp_path):
             "PyQt6.QtWidgets.QFileDialog.getSaveFileName",
             return_value=(save_path_input, "PME Project Files (*.pmeprj)"),
         ),
-        patch.object(io, "create_json_data", return_value={}),
+        patch.object(io.host.state_manager, "create_json_data", return_value={}),
     ):
         io.save_project_as()
 
@@ -294,11 +319,10 @@ def test_save_project_extension_enforcement(mock_parser_host, tmp_path):
 
 def test_save_project_success_state_update(mock_parser_host, tmp_path):
     """Verify that application state is updated correctly after a successful save."""
-    """Test state updates after successful save."""
     io = DummyProjectIo(mock_parser_host)
-    io.data.atoms = {1: {"symbol": "C"}}
+    io.host.state_manager.data.atoms = {1: {"symbol": "C"}}
     io.host.state_manager.has_unsaved_changes = True
-    io.update_window_title = MagicMock()
+    io.host.state_manager.update_window_title = MagicMock()
 
     save_path = str(tmp_path / "saved.pmeprj")
 
@@ -307,13 +331,13 @@ def test_save_project_success_state_update(mock_parser_host, tmp_path):
         patch(
             "PyQt6.QtWidgets.QFileDialog.getSaveFileName", return_value=(save_path, "")
         ),
-        patch.object(io, "create_json_data", return_value={}),
-        patch.object(io, "get_current_state", return_value={"test": 1}),
+        patch.object(io.host.state_manager, "create_json_data", return_value={}),
+        patch.object(io.host.state_manager, "get_current_state", return_value={"test": 1}),
         patch("copy.deepcopy", side_effect=lambda x: x),
     ):
         io.save_project_as()
 
         assert io.host.state_manager.has_unsaved_changes is False
         assert io.host.init_manager.current_file_path == save_path
-        assert io.update_window_title.called
-        assert io._saved_state is not None
+        assert io.host.state_manager.update_window_title.called
+        assert io.host.state_manager._saved_state is not None

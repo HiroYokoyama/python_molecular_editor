@@ -50,7 +50,7 @@ class StateManager:
 
     def __init__(self, host):
         self.host = host
-        self.host.state_manager.has_unsaved_changes = False
+        self.has_unsaved_changes = False
         self._preserved_plugin_data = {}
 
     def get_current_state(self):

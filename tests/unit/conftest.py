@@ -103,7 +103,7 @@ def mock_parser_host(app):
     )
 
     # 3. Manager proxies on host for convenience
-    # Some older code (or tests) still expects host.init_manager.settings, host.state_manager.data, etc.
+    # These are allowed in test files to keep tests readable and backward compatible.
     type(host).settings = property(lambda self: self.init_manager.settings)
     type(host).data = property(lambda self: self.state_manager.data)
     type(host).scene = property(lambda self: self.init_manager.scene)
