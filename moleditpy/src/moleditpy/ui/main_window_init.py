@@ -123,14 +123,15 @@ class MainInitManager:
         # Chemical check flags: whether a chemical/sanitization check was attempted and whether it failed
         self.host.chem_check_tried = False
         self.host.chem_check_failed = False
-        self.host._template_dialog = None  # Reference to the template dialog
+        self.host._template_dialog = None
+        self.host._picking_consumed = False
         self.host.mode_actions = {}
 
         # Variable tracking the saved state
         self.host.has_unsaved_changes = False
         self.host.settings_dirty = True
-        self.host.current_file_path = None  # Path of the currently open file
-        self.host.initialization_complete = False  # Initialization completion flag
+        self.host.current_file_path = None
+        self.host.initialization_complete = False
         self.host._ih_update_counter = 0
 
         # Initialization of the plugin manager

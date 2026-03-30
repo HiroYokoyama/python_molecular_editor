@@ -66,10 +66,8 @@ class ComputeManager:
         ):
             with contextlib.suppress(AttributeError, RuntimeError, TypeError):
                 self.host.plotter.renderer.RemoveActor(actor)
-        if hasattr(self.host, "_calculating_text_actor"):
+        if hasattr(self.host, "_calculating_text_actor"):  # [SAFE]
             delattr(self.host, "_calculating_text_actor")
-        else:  # [REPORT ERROR MISSING ATTRIBUTE]
-            logging.error(f"REPORT ERROR: Missing attribute '_calculating_text_actor' on self.host")
 
     def _restore_button_ui(self) -> None:
         """Restore the Convert and Optimize buttons to their default state."""
@@ -162,10 +160,10 @@ class ComputeManager:
 
         menu = QMenu(self.host)
         conv_options = [
-            ("RDKit -> Open Babel -> Direct (fallback)", "fallback"),
+            ("Fallback", "fallback"),
             ("RDKit only", "rdkit"),
             ("Open Babel only", "obabel"),
-            ("Direct (use 2D coords + add H)", "direct"),
+            ("Direct", "direct"),
         ]
         for label, key in conv_options:
             a = QAction(label, self.host)

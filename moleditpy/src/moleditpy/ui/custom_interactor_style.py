@@ -67,8 +67,6 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                     move_group_dialog = widget
                     break
             except (AttributeError, RuntimeError, TypeError):
-                import logging
-
                 logging.error("Caught exception in " + __file__, exc_info=True)
 
         if move_group_dialog and move_group_dialog.group_atoms:
@@ -350,8 +348,6 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                     move_group_dialog = widget
                     break
         except (AttributeError, RuntimeError, TypeError):
-            import logging
-
             logging.error("Caught exception in " + __file__, exc_info=True)
         if move_group_dialog and getattr(
             move_group_dialog, "_is_dragging_group_vtk", False
@@ -434,8 +430,6 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                     move_group_dialog = widget
                     break
         except (AttributeError, RuntimeError, TypeError):
-            import logging
-
             logging.error("Caught exception in " + __file__, exc_info=True)
         # Prevent multi-click issues
         if move_group_dialog:
@@ -446,10 +440,8 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                 move_group_dialog._is_dragging_group_vtk = False
                 move_group_dialog._drag_start_pos = None
                 move_group_dialog._mouse_moved = False
-                if hasattr(move_group_dialog, "_initial_positions"):
+                if hasattr(move_group_dialog, "_initial_positions"):  # [SAFE]
                     delattr(move_group_dialog, "_initial_positions")
-                else:  # [REPORT ERROR MISSING ATTRIBUTE]
-                    logging.error(f"REPORT ERROR: Missing attribute '_initial_positions' on move_group_dialog")
 
         if move_group_dialog and getattr(
             move_group_dialog, "_is_dragging_group_vtk", False
@@ -518,14 +510,12 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                     print(f"Error finalizing group drag: {e}")
             else:
                 # No drag = click only -> toggle
-                if hasattr(move_group_dialog, "_drag_atom_idx"):
+                if hasattr(move_group_dialog, "_drag_atom_idx"):  # [SAFE]
                     clicked_atom = move_group_dialog._drag_atom_idx
                     try:
                         move_group_dialog.on_atom_picked(clicked_atom)
                     except (AttributeError, RuntimeError, TypeError, ValueError) as e:
                         print(f"Error in toggle: {e}")
-                else:  # [REPORT ERROR MISSING ATTRIBUTE]
-                    logging.error(f"REPORT ERROR: Missing attribute '_drag_atom_idx' on move_group_dialog")
 
         # Background click: deselect
         if move_group_dialog and not getattr(
@@ -624,15 +614,11 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                                 ),
                             )
                     except (AttributeError, RuntimeError, ValueError, TypeError):
-                        import logging
-
                         logging.error("Caught exception in " + __file__, exc_info=True)
 
                     try:
                         mw.view_3d_manager.draw_molecule_3d(mw.current_mol)
                     except (AttributeError, RuntimeError, ValueError, TypeError):
-                        import logging
-
                         logging.error("Caught exception in " + __file__, exc_info=True)
 
                     mw.edit_actions_manager.push_undo_state()
@@ -647,8 +633,6 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                 try:
                     update_call()
                 except (AttributeError, RuntimeError, ValueError, TypeError):
-                    import logging
-
                     logging.error("Caught exception in " + __file__, exc_info=True)
         else:
             # Delegate cleanup to parent
@@ -666,25 +650,17 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                 move_group_dialog._is_dragging_group_vtk = False
                 move_group_dialog._drag_start_pos = None
                 move_group_dialog._mouse_moved = False
-                if hasattr(move_group_dialog, "_initial_positions"):
+                if hasattr(move_group_dialog, "_initial_positions"):  # [SAFE]
                     delattr(move_group_dialog, "_initial_positions")
-                else:  # [REPORT ERROR MISSING ATTRIBUTE]
-                    logging.error(f"REPORT ERROR: Missing attribute '_initial_positions' on move_group_dialog")
-                if hasattr(move_group_dialog, "_drag_atom_idx"):
+                if hasattr(move_group_dialog, "_drag_atom_idx"):  # [SAFE]
                     delattr(move_group_dialog, "_drag_atom_idx")
-                else:  # [REPORT ERROR MISSING ATTRIBUTE]
-                    logging.error(f"REPORT ERROR: Missing attribute '_drag_atom_idx' on move_group_dialog")
         except (AttributeError, RuntimeError, ValueError, TypeError):
-            import logging
-
             logging.error("Caught exception in " + __file__, exc_info=True)
 
         # Update cursor after release
         try:
             mw.plotter.setCursor(Qt.CursorShape.ArrowCursor)
         except (AttributeError, RuntimeError, ValueError, TypeError):
-            import logging
-
             logging.error("Caught exception in " + __file__, exc_info=True)
 
         # Restore focus to 2D view
@@ -705,8 +681,6 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                     move_group_dialog = widget
                     break
         except (AttributeError, RuntimeError, TypeError):
-            import logging
-
             logging.error("Caught exception in " + __file__, exc_info=True)
         if move_group_dialog and getattr(
             move_group_dialog, "_is_rotating_group_vtk", False
@@ -826,18 +800,12 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
             move_group_dialog._is_rotating_group_vtk = False
             move_group_dialog._rotation_start_pos = None
             move_group_dialog._rotation_mouse_moved = False
-            if hasattr(move_group_dialog, "_initial_positions"):
+            if hasattr(move_group_dialog, "_initial_positions"):  # [SAFE]
                 delattr(move_group_dialog, "_initial_positions")
-            else:  # [REPORT ERROR MISSING ATTRIBUTE]
-                logging.error(f"REPORT ERROR: Missing attribute '_initial_positions' on move_group_dialog")
-            if hasattr(move_group_dialog, "_group_centroid"):
+            if hasattr(move_group_dialog, "_group_centroid"):  # [SAFE]
                 delattr(move_group_dialog, "_group_centroid")
-            else:  # [REPORT ERROR MISSING ATTRIBUTE]
-                logging.error(f"REPORT ERROR: Missing attribute '_group_centroid' on move_group_dialog")
-            if hasattr(move_group_dialog, "_rotation_atom_idx"):
+            if hasattr(move_group_dialog, "_rotation_atom_idx"):  # [SAFE]
                 delattr(move_group_dialog, "_rotation_atom_idx")
-            else:  # [REPORT ERROR MISSING ATTRIBUTE]
-                logging.error(f"REPORT ERROR: Missing attribute '_rotation_atom_idx' on move_group_dialog")
 
             return
 

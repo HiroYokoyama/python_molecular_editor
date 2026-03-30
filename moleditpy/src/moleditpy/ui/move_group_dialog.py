@@ -47,6 +47,12 @@ class MoveGroupDialog(BasePickingDialog):
             # For MoveGroup, we pick the first atom and select its connected group
             self.on_atom_picked(preselected_atoms[0])
 
+        # State for group movement
+        self.clicked_atom_for_toggle = None
+        self._initial_positions = {}
+        self._is_dragging_group_vtk = False
+        self._is_rotating_group_vtk = False
+
         self.init_ui()
 
     def init_ui(self):
@@ -172,10 +178,8 @@ class MoveGroupDialog(BasePickingDialog):
                 self.drag_start_pos = None
                 self.mouse_moved_during_drag = False
                 self.potential_drag = False
-                if hasattr(self, "clicked_atom_for_toggle"):
+                if hasattr(self, "clicked_atom_for_toggle"):  # [SAFE]
                     delattr(self, "clicked_atom_for_toggle")
-                else:  # [REPORT ERROR MISSING ATTRIBUTE]
-                    logging.error(f"REPORT ERROR: Missing attribute 'clicked_atom_for_toggle' on self")
                 return False
 
             if (
@@ -185,10 +189,8 @@ class MoveGroupDialog(BasePickingDialog):
                 # Clean up previous state (triple-click countermeasure)
                 self.is_dragging_group = False
                 self.potential_drag = False
-                if hasattr(self, "clicked_atom_for_toggle"):
+                if hasattr(self, "clicked_atom_for_toggle"):  # [SAFE]
                     delattr(self, "clicked_atom_for_toggle")
-                else:  # [REPORT ERROR MISSING ATTRIBUTE]
-                    logging.error(f"REPORT ERROR: Missing attribute 'clicked_atom_for_toggle' on self")
                 # Delegate to CustomInteractorStyle if a group is already selected
                 if self.group_atoms:
                     return False

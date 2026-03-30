@@ -1286,19 +1286,43 @@ class View3DManager:
         if self.atom_info_display_mode == mode:
             self.atom_info_display_mode = None
             # Uncheck all actions
-            self.show_atom_id_action.setChecked(False)
-            self.show_rdkit_id_action.setChecked(False)
-            self.show_atom_coords_action.setChecked(False)
-            self.show_atom_symbol_action.setChecked(False)
+            if hasattr(self.host.init_manager, "show_atom_id_action"):
+                self.host.init_manager.show_atom_id_action.setChecked(False)
+            else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                logging.error(f"REPORT ERROR: Missing attribute 'show_atom_id_action' on object")
+            if hasattr(self.host.init_manager, "show_rdkit_id_action"):
+                self.host.init_manager.show_rdkit_id_action.setChecked(False)
+            else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                logging.error(f"REPORT ERROR: Missing attribute 'show_rdkit_id_action' on object")
+            if hasattr(self.host.init_manager, "show_atom_coords_action"):
+                self.host.init_manager.show_atom_coords_action.setChecked(False)
+            else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                logging.error(f"REPORT ERROR: Missing attribute 'show_atom_coords_action' on object")
+            if hasattr(self.host.init_manager, "show_atom_symbol_action"):
+                self.host.init_manager.show_atom_symbol_action.setChecked(False)
+            else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                logging.error(f"REPORT ERROR: Missing attribute 'show_atom_symbol_action' on object")
             self.host.statusBar().showMessage("Atom info display disabled.")
         else:
             # Set new mode
             self.atom_info_display_mode = mode
             # Check only the relevant action
-            self.show_atom_id_action.setChecked(mode == "id")
-            self.show_rdkit_id_action.setChecked(mode == "rdkit_id")
-            self.show_atom_coords_action.setChecked(mode == "coords")
-            self.show_atom_symbol_action.setChecked(mode == "symbol")
+            if hasattr(self.host.init_manager, "show_atom_id_action"):
+                self.host.init_manager.show_atom_id_action.setChecked(mode == "id")
+            else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                logging.error(f"REPORT ERROR: Missing attribute 'show_atom_id_action' on object")
+            if hasattr(self.host.init_manager, "show_rdkit_id_action"):
+                self.host.init_manager.show_rdkit_id_action.setChecked(mode == "rdkit_id")
+            else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                logging.error(f"REPORT ERROR: Missing attribute 'show_rdkit_id_action' on object")
+            if hasattr(self.host.init_manager, "show_atom_coords_action"):
+                self.host.init_manager.show_atom_coords_action.setChecked(mode == "coords")
+            else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                logging.error(f"REPORT ERROR: Missing attribute 'show_atom_coords_action' on object")
+            if hasattr(self.host.init_manager, "show_atom_symbol_action"):
+                self.host.init_manager.show_atom_symbol_action.setChecked(mode == "symbol")
+            else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                logging.error(f"REPORT ERROR: Missing attribute 'show_atom_symbol_action' on object")
 
             mode_names = {
                 "id": "Atom ID",
@@ -1367,7 +1391,10 @@ class View3DManager:
                 and self.atom_info_display_mode == "id"
             ):
                 self.atom_info_display_mode = None
-                self.show_atom_id_action.setChecked(False)
+                if hasattr(self.host.init_manager, "show_atom_id_action"):
+                    self.host.init_manager.show_atom_id_action.setChecked(False)
+                else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                    logging.error(f"REPORT ERROR: Missing attribute 'show_atom_id_action' on object")
                 self.clear_all_atom_info_labels()
         else:  # [REPORT ERROR MISSING ATTRIBUTE]
             logging.error(f"REPORT ERROR: Missing attribute 'show_atom_id_action' on object")
