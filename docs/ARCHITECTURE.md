@@ -9,19 +9,20 @@ The application has undergone a significant architectural modernization, moving 
 
 ## Technical Strategy
 
-### 1. Composition-Based MainWindow
-The `MainWindow` (the application's heartbeat) is no longer a single, massive class. It is now a **Composition Hub** that orchestrates specialized **Managers** and **Mixins**:
+### 1. Composition-Based Manager Architecture
+The `MainWindow` (the application's heartbeat) is no longer a collection of inheritance-heavy mixins. It is now a **Composition Hub** that delegates functional responsibilities to specialized **Managers**:
 
-- **Managers (Delegation)**: These are independent objects (e.g., `View3DManager`, `EditActionsManager`, `Edit3DManager`) that own specific functional areas. They are instantiated within `MainWindow` and handle complex state transitions and external library coordination (e.g., VTK and RDKit).
-- **Mixins (Traits)**: These are behavioral classes (e.g., `MainWindowAppState`, `MainWindowMolecularParsers`) that provide standardized features like Undo/Redo or File I/O. The `MainWindow` inherits from these "traits" to gain their capabilities.
+- **Composition-over-Inheritance**: Functional logic (e.g., File I/O, 3D Rendering, Scientific Editing) is encapsulated within independent Manager classes (`IOManager`, `View3DManager`, `StateManager`, etc.).
+- **Host-Centric Delegation**: Managers reference the `MainWindow` via a `self.host` property, ensuring clear boundaries and preventing the "massive object" anti-pattern.
+- **Unified State**: Application state (undo stacks, current selection, mode configuration) is centralized in `StateManager`, ensuring absolute synchronization across decoupled components.
 
-### 2. Backward Compatibility Layer (`moleditpy.modules`)
-To prevent the major directory refactoring from breaking existing plugins, the application includes a **dynamic proxy layer**. Any plugin importing from legacy paths (e.g., `moleditpy.molecular_data`) is transparently redirected to the new location (e.g., `moleditpy.core.molecular_data`) via the `moleditpy.modules` system.
+### 2. "Never Hide Errors" Diagnostic Strategy
+To ensure stability in the hybrid Python/C++ environment (PyQt6/VTK), the application employs a **Diagnostic Hardening** strategy:
 
-### 3. Application Lifecycle and Safety
-- **Centralized Entry Point**: `main.py` serves as the unified bootstrapper.
-- **Global Error Capture**: A custom `sys.excepthook` catches unhandled exceptions globally, logging them as `ERROR` entries with full tracebacks before a crash.
-- **Enhanced Traceability**: Logging is configured with absolute system paths (`%(pathname)s`) for one-click navigation to failing code during development.
+- **Visible Failures**: We prioritize "loud" failures over silent inconsistencies. Every `hasattr()` check or `try-except` block used for architectural routing must include a diagnostic `logging.error()` or re-raise.
+- **Active Hardening**: The codebase is instrumented with defensive `else: logging.error()` branches for missing attributes, providing high-fidelity tracebacks directly from the architectural surface.
+- **Global Error Capture**: A custom `sys.excepthook` in `main.py` catches unhandled exceptions, ensuring that even unpredicted GUI crashes leave a clear audit trail.
+- **Path-Aware Logging**: Logs include absolute system paths (`%(pathname)s`) for immediate navigation to failing architectural disconnections.
 
 ---
 
@@ -58,17 +59,19 @@ To prevent the major directory refactoring from breaking existing plugins, the a
 ## Architectural Patterns
 
 ### 1. Separation of Concerns (Logic-UI Decoupling)
-The project actively migrates business logic out of UI classes. 
-- **Pattern**: A UI class (e.g., `MainWindow`) inherits from a mixin (e.g., `MainWindowCompute`), which in turn delegates complex operations to a logic-only module (e.g., `ui/compute_logic.py` or `core/compute_engine.py`).
-- **Benefit**: This allows the core chemical logic to be tested without instantiating heavy GUI components.
+The project identifies a strict boundary between UI presentation and scientific logic:
+- **Pattern**: A UI Manager (e.g., `ComputeManager`) aggregates complex scientific algorithms and interacts with the GUI host via the `self.host` property.
+- **Benefit**: This allows the core chemical logic to be compartmentalized, preventing the intermingling of VTK/RDKit operations with PyQt6 boilerplate.
 
-### 2. Defensive GUI Management
-To avoid crashes in the hybrid Python/C++ environment:
-- **Rule**: Always check if a C++ object still exists using `sip_isdeleted_safe` before access.
-- **Rule**: Wrap UI-triggered computations in logged exception handlers. The application also benefits from a **global exception hook** in `main.py` that captures crashes in GUI slots or background threads as a secondary safety net.
+### 2. State Management (Single Source of Truth)
+Instead of distributing application states (undo stacks, mode flags, molecule data) across multiple mixins, the application uses a unified **StateManager**:
+- **Consistency**: All cross-component interactions (e.g., updating the 3D view after a 2D edit) are mediated by the `StateManager` to ensure functional synchronization.
+- **Undo/Redo Integrity**: All state transitions are captured in a centralized undo stack, ensuring that the application can always return to a known-good configuration.
 
-### 3. Trait-based MainWindow
-The `MainWindow` class is a thin wrapper that inherits from over a dozen mixins (located in `moleditpy/src/moleditpy/ui/`). This "traits" pattern keeps feature areas (Export, Edit, Compute, IO) isolated while providing a unified API for the user.
+### 3. Manager-Host Delegation (The 'Host' Pattern)
+The `MainWindow` acts as a pure container for specialized Managers.
+- **Explicit Access**: Managers communicate with the host explicitly through `self.host`, avoiding the ambiguity of legacy method inheritance.
+- **Lifecycle Control**: Managers are initialized by the `MainInitManager`, ensuring a clear startup and shutdown sequence.
 
 ---
 

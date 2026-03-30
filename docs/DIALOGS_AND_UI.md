@@ -4,14 +4,16 @@ MoleditPy contains over a dozen specialized dialogs for chemical editing and app
 
 ## Overview
 
-All dialogs follow a standard pattern:
-- **UI Logic Separation**: The visual form (typically PyQt6) is kept as simple as possible, delegating complex calculations to the `MainWindow` or specialized manager modules.
-- **Session Persistence**: Dialog states (last used values, window positions) are often serialized.
+Post-v3.0, all dialogs have been refactored to prioritize **State Isolation** and **Diagnostic Visibility**:
+
+- **Scientific Base Classes**: Most editing dialogs inherit from `BasePickingDialog` or `Dialog3DPickingMixin` to ensure consistent 3D interaction logic and synchronized lifecycle management.
+- **UI Logic Delegation**: Presentation logic is strictly separated from scientific state; dialogs delegate compute tasks back to the host's specialized Managers (e.g., `ComputeManager`).
+- **Never Hide Interaction Errors**: To prevent silent failures during 3D picking or coordinate transforms, all interaction methods use explicit `try-except` blocks or `hasattr` checks that **never fail silently**. Every deviation is logged via `logging.error` to ensure developers maintain absolute visibility into the UI/Logic interface.
 
 | Component | Responsibility |
 | :--- | :--- |
-| **`DialogManager`**| Central hub for instantiating and showing application-wide dialogs. |
-| **`MainWindowUiManager`**| Manages the high-level layout, toolbar visibility, and coordinate overlays. |
+| **`DialogManager`**| Unified registry for instantiating and lifecycle-tracking all application-wide dialogs. |
+| **`UIManager`**| Manages the high-level layout, toolbar state, and coordinate system synchronization. |
 
 ---
 
