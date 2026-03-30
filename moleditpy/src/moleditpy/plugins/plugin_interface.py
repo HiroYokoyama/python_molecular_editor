@@ -83,22 +83,45 @@ class PluginContext:
         return self._manager.get_main_window()
 
     @property
-    def current_molecule(self) -> Any:
+    def current_mol(self) -> Any:
         """
-        Get or set the current molecule (RDKit Mol object).
+        Get or set the current molecule (RDKit Mol object). Shortcut for current_molecule.
         """
-        mw = self._manager.get_main_window()
+        mw = self.get_main_window()
+        return mw.current_mol if mw else None
+
+    @current_mol.setter
+    def current_mol(self, mol: Any):
+        mw = self.get_main_window()
         if mw:
-            return mw.view_3d_manager.current_mol
-        return None
+            mw.current_mol = mol
+            if hasattr(mw.view_3d_manager, "draw_molecule_3d"):
+                mw.view_3d_manager.draw_molecule_3d(mol)
+
+    @property
+    def current_molecule(self) -> Any:
+        """Alias for current_mol for backward compatibility."""
+        return self.current_mol
 
     @current_molecule.setter
     def current_molecule(self, mol: Any):
-        mw = self._manager.get_main_window()
-        if mw:
-            mw.view_3d_manager.current_mol = mol
-            if hasattr(mw.view_3d_manager, "draw_molecule_3d"):
-                mw.view_3d_manager.draw_molecule_3d(mol)
+        self.current_mol = mol
+
+    @property
+    def plotter(self) -> Any:
+        """
+        Returns the PyVista plotter from the MainWindow.
+        """
+        mw = self.get_main_window()
+        return mw.plotter if mw else None
+
+    @property
+    def scene(self) -> Any:
+        """
+        Returns the 2D MoleculeScene from the MainWindow.
+        """
+        mw = self.get_main_window()
+        return mw.scene if mw else None
 
     def add_export_action(self, label: str, callback: Callable):
         """
