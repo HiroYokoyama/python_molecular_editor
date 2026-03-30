@@ -70,6 +70,31 @@ class MainWindow(QMainWindow):
         self.ui_manager = UIManager(self)
 
         self.init_manager = MainInitManager(self, initial_file=initial_file, safe_mode=safe_mode)
+
+    # --- Core Proxy Properties ---
+    @property
+    def current_mol(self):
+        return self.view_3d_manager.current_mol
+
+    @current_mol.setter
+    def current_mol(self, value):
+        self.view_3d_manager.current_mol = value
+
+    @property
+    def plotter(self):
+        return self.view_3d_manager.plotter
+
+    @plotter.setter
+    def plotter(self, value):
+        self.view_3d_manager.plotter = value
+
+    @property
+    def scene(self):
+        return self.init_manager.scene
+
+    @scene.setter
+    def scene(self, value):
+        self.init_manager.scene = value
     
     def dragEnterEvent(self, event):
         """Delegate drag enter event to UI manager."""
