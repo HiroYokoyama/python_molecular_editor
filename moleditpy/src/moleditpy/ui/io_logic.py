@@ -271,22 +271,22 @@ class IOManager:
             return
 
         native_exts = [".pmeprj", ".pmeraw"]
-        if self.host.current_file_path and any(
-            self.host.current_file_path.lower().endswith(ext) for ext in native_exts
+        if self.host.init_manager.current_file_path and any(
+            self.host.init_manager.current_file_path.lower().endswith(ext) for ext in native_exts
         ):
             try:
-                if self.host.current_file_path.lower().endswith(".pmeraw"):
+                if self.host.init_manager.current_file_path.lower().endswith(".pmeraw"):
                     save_data = self.get_current_state()
-                    with open(self.host.current_file_path, "wb") as f:
+                    with open(self.host.init_manager.current_file_path, "wb") as f:
                         pickle.dump(save_data, f)
                 else:
                     json_data = self.create_json_data()
-                    with open(self.host.current_file_path, "w", encoding="utf-8") as f:
+                    with open(self.host.init_manager.current_file_path, "w", encoding="utf-8") as f:
                         json.dump(json_data, f, indent=2, ensure_ascii=False)
 
-                self.host.has_unsaved_changes = False
+                self.host.state_manager.has_unsaved_changes = False
                 self.update_window_title()
-                self.host.statusBar().showMessage(f"Project saved to {self.host.current_file_path}")
+                self.host.statusBar().showMessage(f"Project saved to {self.host.init_manager.current_file_path}")
             except (OSError, IOError) as e:
                 self.host.statusBar().showMessage(f"File I/O error: {e}")
             except Exception as e:
@@ -460,8 +460,8 @@ class IOManager:
             self.restore_ui_for_editing()
             self.load_from_json_data(json_data)
             self.reset_undo_stack()
-            self.host.has_unsaved_changes = False
-            self.host.current_file_path = file_path
+            self.host.state_manager.has_unsaved_changes = False
+            self.host.init_manager.current_file_path = file_path
             self.update_window_title()
             self.host.statusBar().showMessage(f"PME Project loaded from {file_path}")
 
@@ -515,8 +515,8 @@ class IOManager:
             with open(file_path, "wb") as f:
                 pickle.dump(save_data, f)
 
-            self.host.has_unsaved_changes = False
-            self.host.current_file_path = file_path
+            self.host.state_manager.has_unsaved_changes = False
+            self.host.init_manager.current_file_path = file_path
             self.update_window_title()
             try:
                 self.host._saved_state = copy.deepcopy(self.get_current_state())
@@ -600,8 +600,8 @@ class IOManager:
 
             self.host.statusBar().showMessage(f"Successfully loaded {file_path}")
             self.host.state_manager.reset_undo_stack()
-            self.host.current_file_path = file_path
-            self.host.has_unsaved_changes = False
+            self.host.init_manager.current_file_path = file_path
+            self.host.state_manager.has_unsaved_changes = False
             self.host.state_manager.update_window_title()
             self.host.init_manager.scene.update_all_items()
             QTimer.singleShot(0, self.host.view_3d_manager.fit_to_view)
@@ -671,8 +671,8 @@ class IOManager:
                 self.host.view_3d_manager.update_atom_id_menu_state()
 
             self.host.statusBar().showMessage(f"3D Viewer Mode: Loaded {os.path.basename(file_path)}")
-            self.host.current_file_path = file_path
-            self.host.has_unsaved_changes = False
+            self.host.init_manager.current_file_path = file_path
+            self.host.state_manager.has_unsaved_changes = False
             self.host.state_manager.update_window_title()
         except Exception as e:
             self.host.statusBar().showMessage(f"XYZ Load failed: {e}")
@@ -710,8 +710,8 @@ class IOManager:
             if hasattr(self.host.view_3d_manager, "update_atom_id_menu_state"):
                 self.host.view_3d_manager.update_atom_id_menu_state()
             self.host.statusBar().showMessage(f"Loaded {file_path} in 3D viewer")
-            self.host.current_file_path = file_path
-            self.host.has_unsaved_changes = False
+            self.host.init_manager.current_file_path = file_path
+            self.host.state_manager.has_unsaved_changes = False
             self.host.state_manager.update_window_title()
         except Exception as e:
             self.host.statusBar().showMessage(f"3D MOL Load failed: {e}")
@@ -791,8 +791,8 @@ class IOManager:
             self.restore_ui_for_editing()
             self.set_state_from_data(loaded_data)
             self.reset_undo_stack()
-            self.host.has_unsaved_changes = False
-            self.host.current_file_path = file_path
+            self.host.state_manager.has_unsaved_changes = False
+            self.host.init_manager.current_file_path = file_path
             self.update_window_title()
             self.host.statusBar().showMessage(f"Project loaded from {file_path}")
             QTimer.singleShot(0, self.fit_to_view)

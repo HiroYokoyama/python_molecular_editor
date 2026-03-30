@@ -620,7 +620,34 @@ def window(app, qtbot, monkeypatch):
     time-consuming operations and external windows.
     """
     import os
+    import sys
     import traceback
+
+    def _patch_mainwindow_compat(cls):
+        """Add property proxies to the class so legacy tests can access managers."""
+        # MainInitManager proxies
+        cls.settings = property(lambda self: self.init_manager.settings, 
+                               lambda self, v: setattr(self.init_manager, 'settings', v))
+        cls.current_file_path = property(lambda self: self.init_manager.current_file_path,
+                                        lambda self, v: setattr(self.init_manager, 'current_file_path', v))
+        cls.settings_dir = property(lambda self: self.init_manager.settings_dir,
+                                   lambda self, v: setattr(self.init_manager, 'settings_dir', v))
+        cls.settings_file = property(lambda self: self.init_manager.settings_file,
+                                    lambda self, v: setattr(self.init_manager, 'settings_file', v))
+        cls.settings_dirty = property(lambda self: self.init_manager.settings_dirty,
+                                     lambda self, v: setattr(self.init_manager, 'settings_dirty', v))
+        cls.initial_settings = property(lambda self: self.init_manager.initial_settings,
+                                       lambda self, v: setattr(self.init_manager, 'initial_settings', v))
+        cls.scene = property(lambda self: self.init_manager.scene,
+                            lambda self, v: setattr(self.init_manager, 'scene', v))
+        
+        # StateManager proxies
+        cls.data = property(lambda self: self.state_manager.data,
+                           lambda self, v: setattr(self.state_manager, 'data', v))
+        cls.undo_stack = property(lambda self: self.state_manager.undo_stack,
+                                 lambda self, v: setattr(self.state_manager, 'undo_stack', v))
+        cls.has_unsaved_changes = property(lambda self: self.state_manager.has_unsaved_changes,
+                                          lambda self, v: setattr(self.state_manager, 'has_unsaved_changes', v))
 
     global _CACHED_MAIN_WINDOW_CLASS
 
@@ -678,6 +705,8 @@ def window(app, qtbot, monkeypatch):
             except Exception:
                 MainWindowClass = None
         _CACHED_MAIN_WINDOW_CLASS = MainWindowClass
+        if MainWindowClass:
+            _patch_mainwindow_compat(MainWindowClass)
 
     MainWindowClass = _CACHED_MAIN_WINDOW_CLASS
     if MainWindowClass is None:
@@ -1787,6 +1816,14 @@ def window(app, qtbot, monkeypatch):
         import traceback
 
         traceback.print_exc()
+
+    # --- Add Dynamic Property Proxies for Test Compatibility (NO PROXY in main code) ---
+    # These proxies allow legacy tests to access manager-based state directly
+    # on the window instance without polluting the production MainWindow class.
+    
+    # InitManager proxies
+    # Final fallback: ensure the instance's type is also patched (usually redundant now)
+    _patch_mainwindow_compat(type(main_window))
 
     # Yield once for both modes
     try:

@@ -107,11 +107,11 @@ class MainInitManager:
         # happens on the `QMainWindow` base class in
         # `MainWindow.__init__` directly.
         self.host.setAcceptDrops(True)
-        self.host.settings_dir = os.path.join(os.path.expanduser("~"), ".moleditpy")
-        self.host.init_manager.settings_file = os.path.join(self.host.settings_dir, "settings.json")
-        self.host.init_manager.settings = {}  # Will be populated by load_settings
+        self.settings_dir = os.path.join(os.path.expanduser("~"), ".moleditpy")
+        self.settings_file = os.path.join(self.settings_dir, "settings.json")
+        self.settings = {}  # Will be populated by load_settings
         self.load_settings()
-        self.host.initial_settings = self.host.init_manager.settings.copy()
+        self.host.initial_settings = self.settings.copy()
         self.host.setWindowTitle("MoleditPy Ver. " + VERSION)
         self.host.setGeometry(100, 100, 1400, 800)
         self.host.state_manager.data = MolecularData()
@@ -128,9 +128,9 @@ class MainInitManager:
         self.host.init_manager.mode_actions = {}
 
         # Variable tracking the saved state
-        self.host.has_unsaved_changes = False
-        self.host.init_manager.settings_dirty = True
-        self.host.current_file_path = None
+        self.host.state_manager.has_unsaved_changes = False
+        self.settings_dirty = True
+        self.current_file_path = None
         self.host.initialization_complete = False
         self.host._ih_update_counter = 0
 
@@ -269,7 +269,7 @@ class MainInitManager:
                     # Try to call the opener
                     callback(file_path)
 
-                    self.host.current_file_path = file_path
+                    self.current_file_path = file_path
                     self.host.state_manager.update_window_title()
                     return  # Success
                 except (AttributeError, RuntimeError, ValueError) as e:
@@ -280,11 +280,11 @@ class MainInitManager:
                     continue
 
         if file_ext in ["mol", "sdf"]:
-            self.load_mol_file_for_3d_viewing(file_path)
+            self.host.io_manager.load_mol_file_for_3d_viewing(file_path)
         elif file_ext == "xyz":
-            self.load_xyz_for_3d_viewing(file_path)
+            self.host.io_manager.load_xyz_for_3d_viewing(file_path)
         elif file_ext in ["pmeraw", "pmeprj"]:
-            self.open_project_file(file_path=file_path)
+            self.host.io_manager.open_project_file(file_path=file_path)
         else:
             self.host.statusBar().showMessage(f"Unsupported file type: {file_ext}")
 
@@ -796,7 +796,7 @@ class MainInitManager:
                         ext = os.path.splitext(fpath)[1].lower()
                         if ext in m:
                             m[ext](fpath)
-                            self.host.current_file_path = fpath
+                            self.current_file_path = fpath
                             self.host.state_manager.update_window_title()
 
                 return _cb

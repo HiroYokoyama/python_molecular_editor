@@ -50,6 +50,7 @@ class StateManager:
 
     def __init__(self, host):
         self.host = host
+        self.has_unsaved_changes = False
         self._preserved_plugin_data = {}
 
     def get_current_state(self):
@@ -304,21 +305,21 @@ class StateManager:
     def update_window_title(self):
         """Update window title to reflect save state."""
         base_title = f"MoleditPy Ver. {VERSION}"
-        if self.host.current_file_path:
-            filename = os.path.basename(self.host.current_file_path)
+        if self.host.init_manager.current_file_path:
+            filename = os.path.basename(self.host.init_manager.current_file_path)
             title = f"{filename} - {base_title}"
-            if self.host.has_unsaved_changes:
+            if self.has_unsaved_changes:
                 title = f"*{title}"
         else:
             # Handle as Untitled
             title = f"Untitled - {base_title}"
-            if self.host.has_unsaved_changes:
+            if self.has_unsaved_changes:
                 title = f"*{title}"
         self.host.setWindowTitle(title)
 
     def check_unsaved_changes(self):
         """Check for unsaved changes and show warning."""
-        if not self.host.has_unsaved_changes:
+        if not self.has_unsaved_changes:
             return True  # Saved or no changes
 
         if not self.host.state_manager.data.atoms and self.host.view_3d_manager.current_mol is None:
@@ -342,7 +343,7 @@ class StateManager:
             else:
                 self.save_project()
             return (
-                not self.host.has_unsaved_changes
+                not self.has_unsaved_changes
             )  # Return True only if save was successful
         elif reply == QMessageBox.StandardButton.No:
             return True  # Continue without saving
