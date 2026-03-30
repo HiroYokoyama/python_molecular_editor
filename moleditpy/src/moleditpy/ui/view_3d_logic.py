@@ -1342,7 +1342,7 @@ class View3DManager:
 
     def update_atom_id_menu_text(self):
         """Update Atom ID menu text based on molecule type"""
-        if hasattr(self.host, "show_atom_id_action"):
+        if hasattr(self.host.init_manager, "show_atom_id_action"):
             if self.is_xyz_derived_molecule():
                 self.host.init_manager.show_atom_id_action.setText("Show XYZ Unique ID")
             else:
@@ -1350,12 +1350,12 @@ class View3DManager:
 
     def update_atom_id_menu_state(self):
         """Update Atom ID menu enabled/disabled state"""
-        if hasattr(self, "show_atom_id_action"):
+        if hasattr(self.host.init_manager, "show_atom_id_action"):
             has_original_ids = self.has_original_atom_ids()
             has_xyz_ids = self.is_xyz_derived_molecule()
 
             # Enable only if Original ID or XYZ ID exists
-            self.show_atom_id_action.setEnabled(has_original_ids or has_xyz_ids)
+            self.host.init_manager.show_atom_id_action.setEnabled(has_original_ids or has_xyz_ids)
 
             # Disable selection if the currently selected mode is no longer valid
             if (

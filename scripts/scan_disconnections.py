@@ -41,8 +41,8 @@ MANAGER_FILES = {
     "init_manager":              SRC / "main_window_init.py",
 }
 
-# Files to scan for disconnections
-SCAN_FILES = list(MANAGER_FILES.values()) + [SRC / "molecule_scene.py"]
+# Files to scan for disconnections (Now expanded to check all logic and dialog files)
+SCAN_FILES = [f for f in SRC.glob("*.py") if f.name not in ["__init__.py", "molecular_parsers.py", "sip_isdeleted_safe.py", "project_io.py"]]
 
 # MainWindow's direct attributes (not delegated to managers)
 MAINWINDOW_DIRECT_ATTRS = {
@@ -73,6 +73,10 @@ MAINWINDOW_DIRECT_ATTRS = {
     # Per-manager attrs stored on host
     "opt3d_actions", "opt3d_method_labels", "settings_dirty",
     "undo_stack", "redo_stack",
+    # Unified UI actions on host
+    "other_atom_action", "redraw_menu_action", "show_atom_id_action",
+    "show_atom_coords_action", "show_atom_symbol_action",
+    "intermolecular_rdkit_action",
     # Manager attrs (correct routing)
     "state_manager", "edit_actions_manager", "ui_manager", "view_3d_manager",
     "edit_3d_manager", "dialog_manager", "compute_manager", "export_manager",

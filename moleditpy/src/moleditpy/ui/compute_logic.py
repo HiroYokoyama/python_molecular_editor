@@ -441,6 +441,11 @@ class ComputeManager:
         self.host.state_manager.push_undo_state()
         self.host.plotter.reset_camera()
 
+        # Update 3D interactive features (hovers, menus)
+        self.host.view_3d_manager.setup_3d_hover()
+        self.host.view_3d_manager.update_atom_id_menu_text()
+        self.host.view_3d_manager.update_atom_id_menu_state()
+
     def on_calculation_error(self, message: str) -> None:
         self._remove_calculating_text()
         self._restore_button_ui()

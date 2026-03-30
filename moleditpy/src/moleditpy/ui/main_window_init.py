@@ -1064,7 +1064,7 @@ class MainInitManager:
 
             if mode == "atom_other":
                 action.triggered.connect(self.host.dialog_manager.open_periodic_table_dialog)
-                self.other_atom_action = action
+                self.host.other_atom_action = action
             else:
                 action.triggered.connect(lambda c, m=mode: self.host.ui_manager.set_mode(m))
                 self.host.mode_actions[mode] = action
@@ -1517,9 +1517,10 @@ class MainInitManager:
         reset_3d_view_action.setShortcut(QKeySequence("Ctrl+Shift+R"))
         view_menu.addAction(reset_3d_view_action)
 
-        self.redraw_menu_action = QAction("Redraw 3D Molecule", self.host)
-        self.redraw_menu_action.triggered.connect(self.host.edit_actions_manager.redraw_molecule_3d)
-        view_menu.addAction(self.redraw_menu_action)
+        redraw_menu_action = QAction("Redraw 3D Molecule", self.host)
+        redraw_menu_action.triggered.connect(self.host.edit_actions_manager.redraw_molecule_3d)
+        self.host.redraw_menu_action = redraw_menu_action
+        view_menu.addAction(self.host.redraw_menu_action)
 
         view_menu.addSeparator()
         layout_menu = view_menu.addMenu("Panel Layout")
@@ -1800,17 +1801,17 @@ class MainInitManager:
             self.opt3d_actions[key] = action
 
         optimization_menu.addSeparator()
-        self.intermolecular_rdkit_action = QAction(
+        self.host.intermolecular_rdkit_action = QAction(
             "Consider Intermolecular Interaction for RDKit", self.host
         )
-        self.intermolecular_rdkit_action.setCheckable(True)
-        self.intermolecular_rdkit_action.setChecked(
+        self.host.intermolecular_rdkit_action.setCheckable(True)
+        self.host.intermolecular_rdkit_action.setChecked(
             self.host.settings.get("optimize_intermolecular_interaction_rdkit", True)
         )
-        self.intermolecular_rdkit_action.triggered.connect(
+        self.host.intermolecular_rdkit_action.triggered.connect(
             self.host.compute_manager.toggle_intermolecular_interaction_rdkit
         )
-        optimization_menu.addAction(self.intermolecular_rdkit_action)
+        optimization_menu.addAction(self.host.intermolecular_rdkit_action)
 
         saved_opt = (self.host.settings.get("optimization_method") or "MMFF_RDKIT").upper()
         if (
