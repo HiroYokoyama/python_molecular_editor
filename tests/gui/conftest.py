@@ -369,7 +369,7 @@ if moleditpy is None:
             import __main__ as moleditpy
         except Exception as e2:
             print(f"DEBUG: Failed to import __main__ as moleditpy: {e2}")
-            # pytestがカレントディレクトリをパスに追加していない場合
+            # If pytest hasn't added the current directory to sys.path
             sys.path.append(".")
             try:
                 import moleditpy
@@ -546,12 +546,12 @@ if moleditpy is not None:
 @pytest.fixture(scope="session")
 def app(request):
     """
-    QApplication のセッションワイドなインスタンスを作成し、プラットフォームに応じたクリーンアップを行います。
+    Creates a session-wide QApplication instance and performs platform-aware cleanup.
     """
     is_headless = os.environ.get("MOLEDITPY_HEADLESS", "0") == "1"
     is_offscreen = os.environ.get("QT_QPA_PLATFORM") == "offscreen"
 
-    # QApplication.instance() が None の場合のみ新しいインスタンスを作成
+    # Create a new QApplication instance only if one does not already exist
     q_app = QApplication.instance()
     if q_app is None:
         q_app = QApplication(sys.argv)
@@ -616,8 +616,8 @@ _CACHED_MAIN_WINDOW_CLASS = None
 @pytest.fixture
 def window(app, qtbot, monkeypatch):
     """
-    テストごとに新しい MainWindow インスタンスを作成し、
-    時間のかかる処理や外部ウィンドウをモック化します。
+    Creates a new MainWindow instance for each test and mocks
+    time-consuming operations and external windows.
     """
     import os
     import traceback
@@ -1733,9 +1733,9 @@ def window(app, qtbot, monkeypatch):
                 a.triggered.connect(lambda: QDialog().exec())
         main_window.menuBar().addAction(a)
 
-    # --- テスト用のダミーオブジェクトをウィンドウに設定 ---
-    # `trigger_conversion` が `start_calculation` を呼んだときに
-    # すぐに `on_calculation_finished` がダミーMolで呼ばれるように設定
+    # --- Set up dummy objects for testing ---
+    # When `trigger_conversion` calls `start_calculation`,
+    # ensure `on_calculation_finished` is immediately called with a dummy molecule.
     dummy_mol = _mock.MagicMock()
     dummy_mol.GetNumAtoms.return_value = 1
     dummy_mol.HasProp.return_value = True
@@ -1746,10 +1746,10 @@ def window(app, qtbot, monkeypatch):
     dummy_mol.GetAtomWithIdx.return_value = dummy_atom
 
     def side_effect_start_calc(mol_block, options):
-        # (worker_id, mol) のタプルで渡す
+        # Pass as a tuple: (worker_id, mol)
         main_window.compute_manager.on_calculation_finished((options.get("worker_id", 1), dummy_mol))
 
-    # `start_calculation` may be a Zoomed subclass or a Qt signal; try to
+    # `start_calculation` may be a signal or regular method;
     # attach our side-effect in a way that is compatible with either.
     try:
         sc = getattr(main_window, "start_calculation", None)
@@ -1792,12 +1792,31 @@ def window(app, qtbot, monkeypatch):
     try:
         yield main_window
     finally:
-        # --- クリーンアップ ---
+        # --- Cleanup ---
         try:
-            # Stop any active threads explicitly before closing
-            active_threads = list(
-                getattr(main_window, "_active_calc_threads", []) or []
-            )
+            # 1. Stop any active background calculations
+            if hasattr(main_window, "halt_all_calculations"):
+                try:
+                    main_window.halt_all_calculations()
+                except Exception:
+                    pass
+
+            # 2. Close any lingering 3D edit dialogs
+            if hasattr(main_window, "close_all_3d_edit_dialogs"):
+                try:
+                    main_window.close_all_3d_edit_dialogs()
+                except Exception:
+                    pass
+
+            # 3. Cleanup 3D view manager (PyVista/VTK resources)
+            if hasattr(main_window, "view_3d_manager") and hasattr(main_window.view_3d_manager, "cleanup"):
+                try:
+                    main_window.view_3d_manager.cleanup()
+                except Exception:
+                    pass
+
+            # 4. Stop any active threads explicitly before closing
+            active_threads = list(getattr(main_window, "_active_calc_threads", []) or [])
             for thr in active_threads:
                 try:
                     if hasattr(thr, "isRunning") and thr.isRunning():

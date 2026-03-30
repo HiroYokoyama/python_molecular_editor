@@ -267,10 +267,6 @@ def test_discover_plugins_package(tmp_path):
 
 def test_discover_plugins_ignores_dunder_files(tmp_path):
     """Files starting with __ should be ignored, and root __init__.py shouldn't count as a plugin."""
-    # Create a subfolder with __init__.py to test if we can ignore dunder names there if needed,
-    # but more importantly, verify that a root __init__.py doesn't accidentally load the root as a plugin
-    # if we don't want it to. (Actually, current implementation treats any folder with __init__.py as a package).
-    # To test pure 'ignoring', let's use a non-dunder folder but dunder file inside.
     cat_dir = tmp_path / "category"
     cat_dir.mkdir()
     (cat_dir / "__init__.py").write_text("# Not a plugin")
@@ -279,12 +275,8 @@ def test_discover_plugins_ignores_dunder_files(tmp_path):
     pm.plugin_dir = str(tmp_path)
     plugins = pm.discover_plugins()
 
-    # If the root has no __init__.py, and category has __init__.py, category is loaded as 1 plugin.
-    # To test ignoring files:
     (cat_dir / "__trash.py").write_text("# ignore me")
     assert len(plugins) == 1  # The 'category' package itself
-
-    # Let's verify it doesn't find __trash.py as a separate one
     names = [p["name"] for p in plugins]
     assert "__trash" not in names
 

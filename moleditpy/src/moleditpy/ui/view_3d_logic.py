@@ -799,15 +799,9 @@ class View3DManager:
             if all_points:
                 # Create PolyData
                 bond_pd = pv.PolyData(np.array(all_points), lines=np.hstack(all_lines))
-                # lines needs to be a flat array with padding indicating number of points per cell
-                # all_lines is [[2, i, j], [2, k, l], ...], flatten it
 
                 # Add data
                 bond_pd.point_data["radii"] = np.array(all_radii)
-
-                # Convert colors to 0-1 range for PyVista if needed, but add_mesh with rgb=True expects uint8 if using direct array?
-                # Actually pyvista scalars usually prefer float 0-1 or uint8 0-255.
-                # Let's use uint8 0-255 and rgb=True.
                 bond_pd.cell_data["colors"] = np.array(all_colors, dtype=np.uint8)
 
                 # Tube filter
