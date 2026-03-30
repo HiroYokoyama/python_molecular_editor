@@ -28,8 +28,8 @@ def test_custom_interactor_style_left_click_atom_selection(app, mock_parser_host
     # Mock VTK Picker
     mock_picker = MagicMock()
     mock_parser_host.plotter.picker = mock_picker
-    mock_parser_host.atom_actor = MagicMock()
-    mock_picker.GetActor.return_value = mock_parser_host.atom_actor
+    mock_parser_host.view_3d_manager.atom_actor = MagicMock()
+    mock_picker.GetActor.return_value = mock_parser_host.view_3d_manager.atom_actor
     mock_picker.GetPickPosition.return_value = (0, 0, 0)
     
     import numpy as np

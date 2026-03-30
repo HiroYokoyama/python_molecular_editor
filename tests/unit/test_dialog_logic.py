@@ -96,7 +96,7 @@ def test_angle_adjustment_logic(mock_parser_host):
         initial_angle = calc_angle_deg(conf.GetAtomPosition(1), conf.GetAtomPosition(0), conf.GetAtomPosition(2))
         assert initial_angle != pytest.approx(120.0)
         
-        dialog.adjust_angle(120.0)
+        dialog.apply_geometry_update(120.0)
         
         final_angle = calc_angle_deg(
             mol.GetConformer().GetAtomPosition(1),
@@ -125,10 +125,14 @@ def test_dihedral_adjustment_logic(mock_parser_host):
         dialog.atom4_idx = 3
         dialog.both_groups_radio = MagicMock()
         dialog.both_groups_radio.isChecked.return_value = False
-        dialog.move_group_radio = MagicMock()
-        dialog.move_group_radio.isChecked.return_value = True
+        dialog.rotate_atom_radio = MagicMock()
+        dialog.rotate_atom_radio.isChecked.return_value = False
+        dialog.rotate_group_radio = MagicMock()
+        dialog.rotate_group_radio.isChecked.return_value = True
+        dialog.both_groups_radio = MagicMock()
+        dialog.both_groups_radio.isChecked.return_value = False
         
-        dialog.adjust_dihedral(180.0)
+        dialog.apply_geometry_update(180.0)
         
         final_dihedral = calculate_dihedral(
             mol.GetConformer().GetPositions(),
@@ -147,27 +151,27 @@ def test_translation_logic(mock_parser_host, mol):
     with patch("moleditpy.ui.translation_dialog.TranslationDialog.init_ui"):
         dialog = TranslationDialog(mol, window)
         dialog.selected_atoms = {0, 1}
-        dialog.x_input = MagicMock()
-        dialog.y_input = MagicMock()
-        dialog.z_input = MagicMock()
-        dialog.x_input.text.return_value = "10.0"
-        dialog.y_input.text.return_value = "10.0"
-        dialog.z_input.text.return_value = "10.0"
-        dialog.translate_selected_only_checkbox = MagicMock()
-        dialog.translate_selected_only_checkbox.isChecked.return_value = False
-        
+        dialog.dx_input = MagicMock()
+        dialog.dy_input = MagicMock()
+        dialog.dz_input = MagicMock()
+        dialog.dx_input.text.return_value = "10.0"
+        dialog.dy_input.text.return_value = "10.0"
+        dialog.dz_input.text.return_value = "10.0"
+        p0_initial = np.array(conf.GetAtomPosition(0))
         p5_initial = np.array(conf.GetAtomPosition(5))
-        p0 = np.array(conf.GetAtomPosition(0))
-        p1 = np.array(conf.GetAtomPosition(1))
-        centroid = (p0 + p1) / 2.0
-        translation = np.array([10.0, 10.0, 10.0]) - centroid
-        expected_pos5 = p5_initial + translation
+        translation_vec = np.array([10.0, 10.0, 10.0])
+        expected_pos0 = p0_initial + translation_vec
         
         with patch("moleditpy.ui.translation_dialog.QMessageBox"):
             dialog.apply_translation()
         
+        new_pos0 = np.array(mol.GetConformer().GetAtomPosition(0))
         new_pos5 = np.array(mol.GetConformer().GetAtomPosition(5))
-        assert np.allclose(new_pos5, expected_pos5, atol=1e-7)
+        
+        # Atom 0 should have moved by delta
+        assert np.allclose(new_pos0, expected_pos0, atol=1e-7)
+        # Atom 5 (not selected) should NOT have moved
+        assert np.allclose(new_pos5, p5_initial, atol=1e-7)
 
 def test_move_group_logic(mock_parser_host, mol):
     """Test the translation and rotation logic in MoveGroupDialog."""

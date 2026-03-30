@@ -7,6 +7,8 @@ from unittest.mock import MagicMock
 def test_angle_dialog_wrapping(qtbot):
     mol = Chem.MolFromSmiles("CCO")
     main_window = MagicMock()
+    from rdkit.Chem import AllChem
+    AllChem.EmbedMolecule(mol)
     dialog = AngleDialog(mol, main_window)
     qtbot.addWidget(dialog)
 
@@ -17,16 +19,18 @@ def test_angle_dialog_wrapping(qtbot):
 
     # Set text and apply
     dialog.angle_input.setText("190")
-    dialog.adjust_angle = MagicMock()
+    dialog.apply_geometry_update = MagicMock()
     
     dialog.apply_changes()
     
     assert dialog.angle_input.text() == "-170.00"
-    dialog.adjust_angle.assert_called_once_with(-170.0)
+    dialog.apply_geometry_update.assert_called_once_with(-170.0)
 
 def test_dihedral_dialog_wrapping(qtbot):
     mol = Chem.MolFromSmiles("CCCC")
     main_window = MagicMock()
+    from rdkit.Chem import AllChem
+    AllChem.EmbedMolecule(mol)
     dialog = DihedralDialog(mol, main_window)
     qtbot.addWidget(dialog)
 
@@ -38,9 +42,9 @@ def test_dihedral_dialog_wrapping(qtbot):
 
     # Set text and apply
     dialog.dihedral_input.setText("-200")
-    dialog.adjust_dihedral = MagicMock()
+    dialog.apply_geometry_update = MagicMock()
     
     dialog.apply_changes()
     
     assert dialog.dihedral_input.text() == "160.00"
-    dialog.adjust_dihedral.assert_called_once_with(160.0)
+    dialog.apply_geometry_update.assert_called_once_with(160.0)

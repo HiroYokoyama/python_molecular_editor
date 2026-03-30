@@ -80,7 +80,7 @@ def test_mirror_dialog_logic(qtbot):
     main_window.view_3d_manager = MagicMock()
     main_window.draw_molecule_3d = MagicMock()
     main_window.update_chiral_labels = MagicMock()
-    main_window.push_undo_state = MagicMock()
+    main_window.state_manager = MagicMock()
 
     # Initial state
     conf = mol.GetConformer()
@@ -103,7 +103,7 @@ def test_mirror_dialog_logic(qtbot):
     # Verify MoleditPy specific recovery calls
     assert main_window.view_3d_manager.draw_molecule_3d.called
     assert main_window.view_3d_manager.update_chiral_labels.called
-    assert main_window.push_undo_state.called
+    assert main_window.state_manager.push_undo_state.called
 
 
 from moleditpy.ui.planarize_dialog import PlanarizeDialog
@@ -127,7 +127,7 @@ def test_planarize_logic(qtbot):
     main_window.plotter = MagicMock()
     main_window.draw_molecule_3d = MagicMock()
     main_window.update_chiral_labels = MagicMock()
-    main_window.push_undo_state = MagicMock()
+    main_window.state_manager = MagicMock()
 
     # Instantiate dialog with all atoms selected
     dialog = PlanarizeDialog(
@@ -151,7 +151,7 @@ def test_planarize_logic(qtbot):
     # Also verify that main_window methods were called
     assert main_window.view_3d_manager.draw_molecule_3d.called
     assert main_window.view_3d_manager.update_chiral_labels.called
-    assert main_window.push_undo_state.called
+    assert main_window.state_manager.push_undo_state.called
 
 
 # ------------------------------------------------------------------
