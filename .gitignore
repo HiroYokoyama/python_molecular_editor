@@ -57,6 +57,7 @@ cov_combined.json
 coverage_html/
 # Test output files
 test_output*.txt
+tmp/
 
 # Translations
 *.mo

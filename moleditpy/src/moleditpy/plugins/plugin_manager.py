@@ -50,6 +50,7 @@ class PluginManager:
         self.load_handlers: Dict[str, Callable] = {}
         self.custom_3d_styles: Dict[str, Dict[str, Any]] = {}
         self.document_reset_handlers: List[Dict[str, Any]] = []
+        self.plugin_windows: Dict[str, Dict[str, Any]] = {} # Map of plugin_name -> {window_id -> window}
 
     def get_main_window(self) -> Any:
         return self.main_window
@@ -453,6 +454,82 @@ class PluginManager:
         self.document_reset_handlers.append(
             {"plugin": plugin_name, "callback": callback}
         )
+
+    # --- New API Implementation ---
+    def show_status_message(self, message: str, timeout: int = 3000) -> None:
+        """Display a message in the MainWindow status bar."""
+        if self.main_window and hasattr(self.main_window, "statusBar"):
+            status_bar = self.main_window.statusBar()
+            if status_bar:
+                status_bar.showMessage(message, timeout)
+
+    def push_undo_checkpoint(self) -> None:
+        """Triggers an undo checkpoint in the application state."""
+        if self.main_window and hasattr(self.main_window, "state_manager"):
+            self.main_window.state_manager.push_undo_state()
+
+    def refresh_3d_view(self) -> None:
+        """Force a re-render of the 3D scene."""
+        if self.main_window and hasattr(self.main_window, "plotter") and self.main_window.plotter:
+            self.main_window.plotter.render()
+
+    def reset_3d_camera(self) -> None:
+        """Reset the 3D camera to fit the current molecule."""
+        if self.main_window and hasattr(self.main_window, "plotter") and self.main_window.plotter:
+            self.main_window.plotter.reset_camera()
+            self.main_window.plotter.render()
+
+    def get_selected_atom_indices(self) -> List[int]:
+        """Retrieve RDKit atom indices currently selected in the 2D scene."""
+        selected_indices = []
+        if not self.main_window:
+            return []
+
+        # Check 2D selection
+        try:
+            from .plugin_interface import PluginContext
+            # We need to access the scene items.
+            # In MoleditPy, atoms in the scene are AtomItem objects which have an 'atom_id'.
+            # These atom_ids map to entries in state_manager.data.atoms.
+            # RDKit molecule atoms have an '_original_atom_id' property.
+            
+            scene = getattr(self.main_window, "scene", None)
+            if scene:
+                selected_items = scene.selectedItems()
+                selected_atom_ids = set()
+                for item in selected_items:
+                    # Relying on duck-typing for AtomItem
+                    if hasattr(item, "atom_id"):
+                        selected_atom_ids.add(item.atom_id)
+                
+                # Now map these editor IDs to RDKit indices
+                mol = getattr(self.main_window, "current_mol", None)
+                if mol and selected_atom_ids:
+                    for i in range(mol.GetNumAtoms()):
+                        atom = mol.GetAtomWithIdx(i)
+                        if atom.HasProp("_original_atom_id"):
+                            try:
+                                orig_id = atom.GetIntProp("_original_atom_id")
+                                if orig_id in selected_atom_ids:
+                                    selected_indices.append(i)
+                            except (RuntimeError, ValueError, TypeError):
+                                continue
+        except ImportError:
+            pass
+        except Exception as e:
+            logging.error(f"Error retrieving selected atom indices: {e}")
+
+        return selected_indices
+
+    def register_window(self, plugin_name: str, window_id: str, window: Any) -> None:
+        """Register a plugin window to keep it alive and manageable."""
+        if plugin_name not in self.plugin_windows:
+            self.plugin_windows[plugin_name] = {}
+        self.plugin_windows[plugin_name][window_id] = window
+
+    def get_window(self, plugin_name: str, window_id: str) -> Optional[Any]:
+        """Retrieve a registered plugin window."""
+        return self.plugin_windows.get(plugin_name, {}).get(window_id)
 
     def invoke_document_reset_handlers(self) -> None:
         """Call all registered document reset handlers."""

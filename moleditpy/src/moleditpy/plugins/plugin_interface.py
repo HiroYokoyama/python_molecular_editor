@@ -10,7 +10,7 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
-from typing import Any, Callable, Optional
+from typing import Any, Callable, List, Optional, Union
 
 
 class PluginContext:
@@ -74,6 +74,53 @@ class PluginContext:
         Returns a controller to manipulate the 3D scene (e.g. colors).
         """
         return Plugin3DController(self._manager.get_main_window())
+
+    def show_status_message(self, message: str, timeout: int = 3000) -> None:
+        """
+        Display a message in the application status bar.
+        """
+        self._manager.show_status_message(message, timeout)
+
+    def push_undo_checkpoint(self) -> None:
+        """
+        Create an undo checkpoint for the current state.
+        Call this AFTER making modifications to the molecule to ensure the 
+        new state is saved to the undo history.
+        """
+        self._manager.push_undo_checkpoint()
+
+    def refresh_3d_view(self) -> None:
+        """
+        Force a refresh (re-render) of the 3D scene.
+        """
+        self._manager.refresh_3d_view()
+
+    def reset_3d_camera(self) -> None:
+        """
+        Resets the 3D camera to fit the current molecule.
+        """
+        self._manager.reset_3d_camera()
+
+    def get_selected_atom_indices(self) -> List[int]:
+        """
+        Returns a list of RDKit atom indices currently selected in the 2D or 3D view.
+        Note: RDKit indices are returned, which map to the current_mol.
+        """
+        return self._manager.get_selected_atom_indices()
+
+    def register_window(self, window_id: str, window: Any) -> None:
+        """
+        Register a custom plugin window/dialog with the application.
+        This allows the application to manage the window lifecycle.
+        Windows are namespaced by the plugin name automatically.
+        """
+        self._manager.register_window(self._plugin_name, window_id, window)
+
+    def get_window(self, window_id: str) -> Optional[Any]:
+        """
+        Retrieve a previously registered window by its ID.
+        """
+        return self._manager.get_window(self._plugin_name, window_id)
 
     def get_main_window(self) -> Any:
         """
@@ -225,6 +272,10 @@ class Plugin3DController:
     def __init__(self, main_window):
         self._mw = main_window
 
+    def _get_v3d(self):
+        """Helper to get the 3D manager."""
+        return getattr(self._mw, "view_3d_manager", None)
+
     def set_atom_color(self, atom_index: int, color_hex: str):
         """
         Set the color of a specific atom in the 3D view.
@@ -232,11 +283,11 @@ class Plugin3DController:
             atom_index: RDKit atom index.
             color_hex: Hex string e.g., "#FF0000".
         """
-        if hasattr(self._mw, "main_window_view_3d"):
-            self._mw.main_window_view_3d.update_atom_color_override(
-                atom_index, color_hex
-            )
-            self._mw.plotter.render()
+        v3d = self._get_v3d()
+        if v3d:
+            v3d.update_atom_color_override(atom_index, color_hex)
+            if hasattr(self._mw, "plotter") and self._mw.plotter:
+                self._mw.plotter.render()
 
     def set_bond_color(self, bond_index: int, color_hex: str):
         """
@@ -246,8 +297,25 @@ class Plugin3DController:
              bond_index: RDKit bond index.
              color_hex: Hex string e.g., "#00FF00".
         """
-        if hasattr(self._mw, "main_window_view_3d"):
-            self._mw.main_window_view_3d.update_bond_color_override(
-                bond_index, color_hex
-            )
-            self._mw.plotter.render()
+        v3d = self._get_v3d()
+        if v3d:
+            v3d.update_bond_color_override(bond_index, color_hex)
+            if hasattr(self._mw, "plotter") and self._mw.plotter:
+                self._mw.plotter.render()
+
+    def set_bond_color_by_atoms(self, atom_idx1: int, atom_idx2: int, color_hex: str):
+        """
+        Set the color of the bond between two atoms.
+
+        Args:
+            atom_idx1: First RDKit atom index.
+            atom_idx2: Second RDKit atom index.
+            color_hex: Hex string e.g., "#00FF00".
+        """
+        mol = getattr(self._mw, "current_mol", None)
+        if not mol:
+            return
+
+        bond = mol.GetBondBetweenAtoms(atom_idx1, atom_idx2)
+        if bond:
+            self.set_bond_color(bond.GetIdx(), color_hex)

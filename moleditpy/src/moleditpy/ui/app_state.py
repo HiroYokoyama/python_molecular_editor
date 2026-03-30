@@ -556,7 +556,7 @@ class StateManager:
             self._preserved_plugin_data.copy() if self._preserved_plugin_data else {}
         )
 
-        pm = getattr(self, "plugin_manager", None)
+        pm = getattr(self.host, "plugin_manager", None)
         if pm and hasattr(pm, "save_handlers") and pm.save_handlers:
             for name, callback in pm.save_handlers.items():
                 if callable(callback):
@@ -592,7 +592,7 @@ class StateManager:
 
         # Plugin State Restoration (Phase 3)
         self._preserved_plugin_data = {}  # Reset preserved data on new load
-        pm = getattr(self, "plugin_manager", None)
+        pm = getattr(self.host, "plugin_manager", None)
         if "plugins" in json_data:
             plugin_data = json_data["plugins"]
             if isinstance(plugin_data, dict):
