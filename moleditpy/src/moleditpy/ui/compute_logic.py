@@ -117,11 +117,11 @@ class ComputeManager:
             if hasattr(self.host.init_manager, "analysis_action"):
                 self.host.init_manager.analysis_action.setEnabled(has_mol)
             else:  # [REPORT ERROR MISSING ATTRIBUTE]
-                logging.error(f"REPORT ERROR: Missing attribute 'analysis_action' on self.host")
+                logging.error(f"REPORT ERROR: Missing attribute 'analysis_action' on object")
             if hasattr(self.host.init_manager, "edit_3d_action"):
                 self.host.init_manager.edit_3d_action.setEnabled(has_mol)
             else:  # [REPORT ERROR MISSING ATTRIBUTE]
-                logging.error(f"REPORT ERROR: Missing attribute 'edit_3d_action' on self.host")
+                logging.error(f"REPORT ERROR: Missing attribute 'edit_3d_action' on object")
 
             # plotter and view_2d are fundamental host components
             if self.host.view_3d_manager.plotter:
