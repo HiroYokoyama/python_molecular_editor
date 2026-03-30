@@ -2,7 +2,7 @@
 import os
 import sys
 import pytest
-from PyQt6.QtWidgets import QApplication
+from PyQt6.QtWidgets import QApplication, QMenu, QToolBar, QToolButton, QFileDialog
 import importlib
 import importlib.util
 
@@ -275,6 +275,9 @@ except Exception:
     import traceback
 
     traceback.print_exc()
+
+try:
+    import types
 
     if "pyvista" not in sys.modules:
         import types
@@ -625,6 +628,9 @@ def window(app, qtbot, monkeypatch):
 
     def _patch_mainwindow_compat(cls):
         """Add property proxies to the class so legacy tests can access managers."""
+        # Standard attributes
+        cls.host = property(lambda self: self)
+
         # MainInitManager proxies
         cls.settings = property(lambda self: self.init_manager.settings, 
                                lambda self, v: setattr(self.init_manager, 'settings', v))
@@ -648,6 +654,40 @@ def window(app, qtbot, monkeypatch):
                                  lambda self, v: setattr(self.state_manager, 'undo_stack', v))
         cls.has_unsaved_changes = property(lambda self: self.state_manager.has_unsaved_changes,
                                           lambda self, v: setattr(self.state_manager, 'has_unsaved_changes', v))
+
+        # Edit3DManager proxies
+        cls.measurement_mode = property(lambda self: self.edit_3d_manager.measurement_mode,
+                                       lambda self, v: setattr(self.edit_3d_manager, 'measurement_mode', v))
+        cls.is_3d_edit_mode = property(lambda self: self.edit_3d_manager.is_3d_edit_mode,
+                                      lambda self, v: setattr(self.edit_3d_manager, 'is_3d_edit_mode', v))
+        cls.close_all_3d_edit_dialogs = lambda self: self.edit_3d_manager.close_all_3d_edit_dialogs()
+
+        # IOManager proxies
+        cls.save_project_as = lambda self, *a, **k: self.io_manager.save_project_as(*a, **k)
+        cls.load_mol_file = lambda self, *a, **k: self.io_manager.load_mol_file(*a, **k)
+
+        # View3DManager proxies
+        cls.atom_info_display_mode = property(lambda self: self.view_3d_manager.atom_info_display_mode,
+                                             lambda self, v: setattr(self.view_3d_manager, 'atom_info_display_mode', v))
+        cls.current_mol = property(lambda self: self.view_3d_manager.current_mol,
+                                  lambda self, v: setattr(self.view_3d_manager, 'current_mol', v))
+        cls.atom_positions_3d = property(lambda self: self.view_3d_manager.atom_positions_3d,
+                                        lambda self, v: setattr(self.view_3d_manager, 'atom_positions_3d', v))
+
+        # UIManager proxies
+        cls.handle_drop_event = lambda self, event: self.ui_manager.handle_drop_event(event)
+
+        # Additional proxies for integration tests
+        cls.import_menu = property(lambda self: self.init_manager.import_menu,
+                                  lambda self, v: setattr(self.init_manager, 'import_menu', v))
+        cls.opt3d_actions = property(lambda self: self.init_manager.opt3d_actions,
+                                    lambda self, v: setattr(self.init_manager, 'opt3d_actions', v))
+        cls.conv_actions = property(lambda self: self.init_manager.conv_actions,
+                                   lambda self, v: setattr(self.init_manager, 'conv_actions', v))
+        cls.plugin_menu = property(lambda self: self.init_manager.plugin_menu,
+                                  lambda self, v: setattr(self.init_manager, 'plugin_menu', v))
+        cls.style_button = property(lambda self: self.init_manager.style_button,
+                                   lambda self, v: setattr(self.init_manager, 'style_button', v))
 
     global _CACHED_MAIN_WINDOW_CLASS
 
@@ -1503,6 +1543,7 @@ def window(app, qtbot, monkeypatch):
 
     # Make the called internal helpers tolerant to test stubs so the event loop
     # doesn't throw during background/compute callbacks.
+
     try:
         # Replace _setup_3d_picker with a tolerant function that ensures a
         # plotter picker exists (and provides SetTolerance) so tests do not

@@ -169,7 +169,7 @@ class DialogManager:
 
         try:
             # Template directory
-            template_dir = os.path.join(self.host.settings_dir, "user-templates")
+            template_dir = os.path.join(self.host.init_manager.settings_dir, "user-templates")
             if not os.path.exists(template_dir):
                 os.makedirs(template_dir)
             # Convert current structure to template format using core method

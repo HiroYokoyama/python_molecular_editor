@@ -750,7 +750,7 @@ class EditActionsManager:
         if not hasattr(self, "last_rotation_angle"):
             self.last_rotation_angle = 0
 
-        dialog = Rotate2DDialog(self, initial_angle=self.last_rotation_angle)
+        dialog = Rotate2DDialog(self.host, initial_angle=self.last_rotation_angle)
         if dialog.exec() == QDialog.DialogCode.Accepted:
             angle = dialog.get_angle()
             self.last_rotation_angle = angle  # Remember for next time
@@ -824,8 +824,8 @@ class EditActionsManager:
 
     def clear_all(self) -> bool:
         # Check for unsaved changes
-        if hasattr(self.host, "io_manager") and self.host.io_manager:
-            if not self.host.io_manager.check_unsaved_changes():
+        if hasattr(self.host, "state_manager") and self.host.state_manager:
+            if not self.host.state_manager.check_unsaved_changes():
                 # Cancel if requested
                 return False
 
@@ -1184,8 +1184,13 @@ class EditActionsManager:
 
     def redraw_molecule_3d(self):
         """Manually trigger redraw of the 3D molecule."""
-        if hasattr(self.host, "current_mol") and self.host.view_3d_manager.current_mol:
-            self.host.view_3d_manager.draw_molecule_3d(self.host.view_3d_manager.current_mol)
+        if (
+            hasattr(self.host, "view_3d_manager")
+            and self.host.view_3d_manager.current_mol
+        ):
+            self.host.view_3d_manager.draw_molecule_3d(
+                self.host.view_3d_manager.current_mol
+            )
             self.host.statusBar().showMessage("Redraw complete.", 2000)
         else:
             self.host.statusBar().showMessage("No 3D molecule to redraw.")

@@ -3,7 +3,7 @@ import os
 from unittest.mock import MagicMock, patch
 from PyQt6.QtCore import Qt, QPointF
 from PyQt6.QtGui import QAction, QActionGroup, QColor, QBrush
-from PyQt6.QtWidgets import QMenu, QToolBar, QApplication, QFileDialog
+from PyQt6.QtWidgets import QMenu, QToolBar, QApplication, QFileDialog, QToolButton
 
 def test_plugin_menu_actions_population(window, qtbot):
     """Test that menu actions registered by plugins are correctly added to the menu bar."""
