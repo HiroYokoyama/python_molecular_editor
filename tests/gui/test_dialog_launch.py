@@ -48,7 +48,7 @@ def test_translation_dialog_launch(window, qtbot, mol):
     dialog = TranslationDialog(mol, window)
     qtbot.add_widget(dialog)
     dialog.show()
-    assert dialog.windowTitle() == "Translation"
+    assert dialog.windowTitle() == "Translate Atoms"
     dialog.close()
 
 def test_move_group_dialog_launch(window, qtbot, mol):

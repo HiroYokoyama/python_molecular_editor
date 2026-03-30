@@ -105,7 +105,7 @@ class ComputeManager:
                 self.host.init_manager.optimize_3d_button.setEnabled(has_mol)
             else:  # [REPORT ERROR MISSING ATTRIBUTE]
                 logging.error(f"REPORT ERROR: Missing attribute 'optimize_3d_button' on object")
-            if hasattr(self.host.init_manager, 'export_button'):
+            if hasattr(self.host.init_manager, "export_button"):
                 self.host.init_manager.export_button.setEnabled(has_mol)
             else:  # [REPORT ERROR MISSING ATTRIBUTE]
                 logging.error(f"REPORT ERROR: Missing attribute 'export_button' on object")
@@ -114,11 +114,11 @@ class ComputeManager:
             self.host.ui_manager._enable_3d_features(has_mol)
             self.host.ui_manager._enable_3d_edit_actions(has_mol)
 
-            if hasattr(self.host, "analysis_action"):
+            if hasattr(self.host.init_manager, "analysis_action"):
                 self.host.init_manager.analysis_action.setEnabled(has_mol)
             else:  # [REPORT ERROR MISSING ATTRIBUTE]
                 logging.error(f"REPORT ERROR: Missing attribute 'analysis_action' on self.host")
-            if hasattr(self.host, "edit_3d_action"):
+            if hasattr(self.host.init_manager, "edit_3d_action"):
                 self.host.init_manager.edit_3d_action.setEnabled(has_mol)
             else:  # [REPORT ERROR MISSING ATTRIBUTE]
                 logging.error(f"REPORT ERROR: Missing attribute 'edit_3d_action' on self.host")
@@ -473,7 +473,7 @@ class ComputeManager:
         self.host.view_3d_manager.draw_molecule_3d(mol)
         self._remove_calculating_text()
         self._refresh_ui_state()
-        self.host.state_manager.push_undo_state()
+        self.host.edit_actions_manager.push_undo_state()
         self.host.view_3d_manager.plotter.reset_camera()
 
         # Record the successful optimization method from mol property or current setting

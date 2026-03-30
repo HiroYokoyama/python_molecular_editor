@@ -225,7 +225,7 @@ class DialogManager:
         dialog.accepted.connect(
             lambda: self.host.statusBar().showMessage("Translation applied.")
         )
-        dialog.accepted.connect(self.host.state_manager.push_undo_state)
+        dialog.accepted.connect(self.host.edit_actions_manager.push_undo_state)
         dialog.finished.connect(lambda: self.host.edit_3d_manager.remove_dialog_from_list(dialog))
 
     def open_move_group_dialog(self):
@@ -246,7 +246,7 @@ class DialogManager:
         dialog.accepted.connect(
             lambda: self.host.statusBar().showMessage("Group transformation applied.")
         )
-        dialog.accepted.connect(self.host.state_manager.push_undo_state)
+        dialog.accepted.connect(self.host.edit_actions_manager.push_undo_state)
         dialog.finished.connect(lambda: self.host.edit_3d_manager.remove_dialog_from_list(dialog))
 
     def open_align_plane_dialog(self, plane):
@@ -269,7 +269,7 @@ class DialogManager:
                 f"Atoms aligned to {plane.upper()} plane."
             )
         )
-        dialog.accepted.connect(self.host.state_manager.push_undo_state)
+        dialog.accepted.connect(self.host.edit_actions_manager.push_undo_state)
         dialog.finished.connect(lambda: self.host.edit_3d_manager.remove_dialog_from_list(dialog))
 
     def open_planarize_dialog(self, plane=None):
@@ -292,7 +292,7 @@ class DialogManager:
                 "Selection planarized to best-fit plane."
             )
         )
-        dialog.accepted.connect(self.host.state_manager.push_undo_state)
+        dialog.accepted.connect(self.host.edit_actions_manager.push_undo_state)
         dialog.finished.connect(lambda: self.host.edit_3d_manager.remove_dialog_from_list(dialog))
 
     def open_alignment_dialog(self, axis):
@@ -315,7 +315,7 @@ class DialogManager:
                 f"Atoms aligned to {axis.upper()}-axis."
             )
         )
-        dialog.accepted.connect(self.host.state_manager.push_undo_state)
+        dialog.accepted.connect(self.host.edit_actions_manager.push_undo_state)
         dialog.finished.connect(lambda: self.host.edit_3d_manager.remove_dialog_from_list(dialog))
 
     def open_bond_length_dialog(self):
@@ -336,7 +336,7 @@ class DialogManager:
         dialog.accepted.connect(
             lambda: self.host.statusBar().showMessage("Bond length adjusted.")
         )
-        dialog.accepted.connect(self.host.state_manager.push_undo_state)
+        dialog.accepted.connect(self.host.edit_actions_manager.push_undo_state)
         dialog.finished.connect(lambda: self.host.edit_3d_manager.remove_dialog_from_list(dialog))
 
     def open_angle_dialog(self):
@@ -357,7 +357,7 @@ class DialogManager:
         dialog.accepted.connect(
             lambda: self.host.statusBar().showMessage("Angle adjusted.")
         )
-        dialog.accepted.connect(self.host.state_manager.push_undo_state)
+        dialog.accepted.connect(self.host.edit_actions_manager.push_undo_state)
         dialog.finished.connect(lambda: self.host.edit_3d_manager.remove_dialog_from_list(dialog))
 
     def open_dihedral_dialog(self):
@@ -378,7 +378,7 @@ class DialogManager:
         dialog.accepted.connect(
             lambda: self.host.statusBar().showMessage("Dihedral angle adjusted.")
         )
-        dialog.accepted.connect(self.host.state_manager.push_undo_state)
+        dialog.accepted.connect(self.host.edit_actions_manager.push_undo_state)
         dialog.finished.connect(lambda: self.host.edit_3d_manager.remove_dialog_from_list(dialog))
 
     def open_mirror_dialog(self):

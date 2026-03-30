@@ -15,7 +15,7 @@ class DummyEditActions(EditActionsManager):
         self.data = host.state_manager.data
         self.scene = host.init_manager.scene
         self.view_2d = host.init_manager.view_2d
-        self.undo_stack = MagicMock()
+        self.edit_actions_manager.undo_stack = MagicMock()
         self.is_xyz_derived = False
         self.main_window_edit_actions = self
         self._ih_update_counter = 0

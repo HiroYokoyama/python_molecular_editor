@@ -107,7 +107,7 @@ class BasePickingDialog(Dialog3DPickingMixin, QDialog):
     def _push_undo(self):
         """Centralized undo logic to push current state to the undo stack."""
         if hasattr(self.main_window, "state_manager"):
-            self.main_window.state_manager.push_undo_state()
+            self.main_window.edit_actions_manager.push_undo_state()
             self._molecule_modified = False
         else:  # [REPORT ERROR MISSING ATTRIBUTE]
             logging.error(f"REPORT ERROR: Missing attribute 'state_manager' on self.main_window")

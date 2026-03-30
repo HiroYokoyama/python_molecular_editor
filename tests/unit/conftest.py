@@ -156,7 +156,7 @@ def mock_parser_host(app):
     host.create_json_data.side_effect = create_json_data
     host.load_from_json_data.side_effect = load_from_json_data
 
-    host.state_manager.push_undo_state = MagicMock()
+    host.edit_actions_manager.push_undo_state = MagicMock()
     host.reset_undo_stack = MagicMock()
     host.state_manager.update_window_title = MagicMock()
     host.clear_2d_editor = MagicMock()
@@ -173,7 +173,7 @@ def mock_parser_host(app):
     host.state_manager.load_from_json_data.side_effect = load_from_json_data
     host.state_manager.check_unsaved_changes.return_value = True
     host.state_manager.update_window_title = MagicMock()
-    host.state_manager.push_undo_state = MagicMock()
+    host.edit_actions_manager.push_undo_state = MagicMock()
     # Edit-actions manager
     host.edit_actions_manager = MagicMock()
     host.edit_actions_manager.clear_2d_editor = MagicMock()

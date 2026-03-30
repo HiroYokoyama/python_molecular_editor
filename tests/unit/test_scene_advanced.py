@@ -66,18 +66,18 @@ def scene_setup(qapp):
     class MockWindow:
         def __init__(self):
             self.is_2d_editable = True
-            self.undo_stack = []
-            self.redo_stack = []
+            self.edit_actions_manager.undo_stack = []
+            self.edit_actions_manager.redo_stack = []
             self.statusBar_msg = ""
             from unittest.mock import MagicMock
             self.edit_actions_manager = MagicMock()
-            self.edit_actions_manager.push_undo_state.side_effect = lambda: self.undo_stack.append("state")
+            self.edit_actions_manager.push_undo_state.side_effect = lambda: self.edit_actions_manager.undo_stack.append("state")
             self.edit_3d_manager = MagicMock()
             self.ui_manager = MagicMock()
 
         def push_undo_state(self):
             # Simple simulation
-            self.undo_stack.append("state")
+            self.edit_actions_manager.undo_stack.append("state")
 
         def statusBar(self):
             class Bar:
@@ -220,5 +220,5 @@ def test_undo_redo(scene_setup, monkeypatch):
     # The mocked event pipeline does not trigger full atom-creation → undo-push.
     # Verify that push_undo_state correctly adds to the stack (mechanism test).
     initial_len = len(window.edit_actions_manager.undo_stack)
-    window.state_manager.push_undo_state()
+    window.edit_actions_manager.push_undo_state()
     assert len(window.edit_actions_manager.undo_stack) == initial_len + 1

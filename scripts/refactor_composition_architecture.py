@@ -77,12 +77,7 @@ REDIRECTS = [
     (r"\b((?:self\.)?(?:host|main_window|window|mw))\.active_worker_ids\b", r"\1.compute_manager.active_worker_ids", "workers -> compute_manager"),
     (r"\b((?:self\.)?(?:host|main_window|window|mw))\.halt_ids\b", r"\1.compute_manager.halt_ids", "halt_ids -> compute_manager"),
     (r"\b((?:self\.)?(?:host|main_window|window|mw))\.settings_dirty\b", r"\1.init_manager.settings_dirty", "dirty -> init_manager"),
-    (r"\b((?:self\.)?(?:host|main_window|window|mw))\.undo_stack\b", r"\1.edit_actions_manager.undo_stack", "undo_stack -> edit_actions"),
-    (r"\b((?:self\.)?(?:host|main_window|window|mw))\.redo_stack\b", r"\1.edit_actions_manager.redo_stack", "redo_stack -> edit_actions"),
-    (r"\b((?:self\.)?(?:host|main_window|window|mw))\.state_manager\.undo_stack\b", r"\1.edit_actions_manager.undo_stack", "fix_undo_stack_ref"),
-    (r"\b((?:self\.)?(?:host|main_window|window|mw))\.state_manager\.redo_stack\b", r"\1.edit_actions_manager.redo_stack", "fix_redo_stack_ref"),
-
-    # 2. Host Methods -> Manager Methods
+    (r"\b((?:self\.)?(?:host|main_window|window|mw))(?:\.state_manager)?\.(undo_stack|redo_stack|push_undo_state|undo|redo)\b", r"\1.edit_actions_manager.\2", "undo/redo -> edit_actions"),
     (r"\b((?:self\.)?(?:host|main_window|window|mw))\.save_to_file\b", r"\1.io_manager.save_to_file", "save -> io_manager"),
     (r"\b((?:self\.)?(?:host|main_window|window|mw))\.load_from_file\b", r"\1.io_manager.load_from_file", "load -> io_manager"),
     (r"\b((?:self\.)?(?:host|main_window|window|mw))\.set_mode\b", r"\1.ui_manager.set_mode", "set_mode -> ui_manager"),

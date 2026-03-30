@@ -90,5 +90,5 @@ def test_radical_toggle_no_target(scene):
         mock_cursor.return_value = QPointF(0,0)
         scene.keyPressEvent(event)
     
-    scene.window.state_manager.push_undo_state.assert_not_called()
+    scene.window.edit_actions_manager.push_undo_state.assert_not_called()
     event.accept.assert_not_called()

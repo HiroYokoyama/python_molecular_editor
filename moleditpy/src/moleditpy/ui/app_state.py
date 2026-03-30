@@ -60,16 +60,16 @@ class StateManager:
                 "charge": data.get("charge", 0),
                 "radical": data.get("radical", 0),
             }
-            for atom_id, data in self.host.state_manager.data.atoms.items()
+            for atom_id, data in self.data.atoms.items()
         }
         bonds = {
             key: {"order": data["order"], "stereo": data.get("stereo", 0)}
-            for key, data in self.host.state_manager.data.bonds.items()
+            for key, data in self.data.bonds.items()
         }
         state = {
             "atoms": atoms,
             "bonds": bonds,
-            "_next_atom_id": self.host.state_manager.data._next_atom_id,
+            "_next_atom_id": self.data._next_atom_id,
         }
 
         state["version"] = VERSION
@@ -93,7 +93,7 @@ class StateManager:
         state["is_3d_viewer_mode"] = not self.host.ui_manager.is_2d_editable
 
         json_safe_constraints = []
-        constraints = getattr(self.host, "constraints_3d", [])
+        constraints = self.host.edit_3d_manager.constraints_3d
         for const in constraints:
             # (Type, (Idx...), Value, Force) -> [Type, [Idx...], Value, Force]
             if len(const) == 4:
@@ -352,26 +352,17 @@ class StateManager:
     def reset_undo_stack(self):
         self.host.edit_actions_manager.undo_stack.clear()
         self.host.edit_actions_manager.redo_stack.clear()
-        self.push_undo_state()
-
-    def undo(self):
-        self.host.edit_actions_manager.undo()
-
-    def redo(self):
-        self.host.edit_actions_manager.redo()
-
-    def update_undo_redo_actions(self):
-        self.host.edit_actions_manager.update_undo_redo_actions()
+        self.host.edit_actions_manager.push_undo_state()
 
     def update_realtime_info(self):
         """Show molecular info in status bar."""
-        if not self.host.state_manager.data.atoms:
+        if not self.data.atoms:
             self.host.init_manager.formula_label.setText("")  # Clear label if no atoms
             return
 
-        if hasattr(self.host.state_manager, 'data') and self.host.state_manager.data and hasattr(self.host.state_manager.data, "to_rdkit_mol"):
+        if hasattr(self, 'data') and self.data and hasattr(self.data, "to_rdkit_mol"):
             try:
-                mol = self.host.state_manager.data.to_rdkit_mol()
+                mol = self.data.to_rdkit_mol()
                 if mol:
                     # Generate mol with explicit Hs
                     mol_with_hs = Chem.AddHs(mol)
@@ -379,7 +370,7 @@ class StateManager:
                     # Get atom count with Hs
                     num_atoms = mol_with_hs.GetNumAtoms()
                     # Update label text
-                    if hasattr(self.host, "formula_label") and self.host.init_manager.formula_label:
+                    if self.host.init_manager.formula_label:
                         self.host.init_manager.formula_label.setText(
                             f"Formula: {mol_formula}   |   Atoms: {num_atoms}"
                         )

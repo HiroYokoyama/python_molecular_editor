@@ -540,7 +540,7 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
             # Update 3D view
             self.main_window.view_3d_manager.draw_molecule_3d(self.mol)
             self.main_window.view_3d_manager.update_chiral_labels()
-            self.main_window.state_manager.push_undo_state()
+            self.main_window.edit_actions_manager.push_undo_state()
             self.main_window.statusBar().showMessage(
                 "Constrained optimization finished."
             )

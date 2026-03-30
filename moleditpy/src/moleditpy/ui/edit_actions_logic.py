@@ -344,7 +344,7 @@ class EditActionsManager:
             self.copy_selection()
 
             if self.host.init_manager.scene.delete_items(set(selected_items)):
-                self.host.state_manager.push_undo_state()
+                self.host.edit_actions_manager.push_undo_state()
                 self.host.statusBar().showMessage("Cut selection.", 2000)
 
         except (AttributeError, RuntimeError, ValueError) as e:
@@ -399,7 +399,7 @@ class EditActionsManager:
                     ),  # Restore E/Z stereochemistry information as well
                 )
 
-            self.host.state_manager.push_undo_state()
+            self.host.edit_actions_manager.push_undo_state()
             self.host.statusBar().showMessage(
                 f"Pasted {len(fragment_data['atoms'])} atoms and {len(fragment_data['bonds'])} bonds.",
                 2000,
@@ -522,7 +522,7 @@ class EditActionsManager:
 
             if removed_count > 0:
                 # Only push a single undo state once for the whole operation
-                self.host.state_manager.push_undo_state()
+                self.host.edit_actions_manager.push_undo_state()
                 self.host.statusBar().showMessage(
                     f"Removed {removed_count} hydrogen atoms.", 2000
                 )
@@ -710,7 +710,7 @@ class EditActionsManager:
 
             if added_count > 0:
                 self.host.init_manager.scene.update_all_items()
-                self.host.state_manager.push_undo_state()
+                self.host.edit_actions_manager.push_undo_state()
                 self.host.statusBar().showMessage(
                     f"Added {added_count} hydrogen atoms.", 2000
                 )
@@ -808,7 +808,7 @@ class EditActionsManager:
             self.host.init_manager.scene.update_connected_bonds(target_atoms)
             self.host.init_manager.scene.update_all_items()
 
-            self.host.state_manager.push_undo_state()
+            self.host.edit_actions_manager.push_undo_state()
             self.host.statusBar().showMessage(
                 f"Rotated {len(target_atoms)} atoms by {angle_degrees} degrees."
             )
@@ -916,7 +916,7 @@ class EditActionsManager:
         self.host.ui_manager._enable_3d_features(False)
 
         if push_to_undo:
-            self.host.state_manager.push_undo_state()
+            self.host.edit_actions_manager.push_undo_state()
 
     def _compute_h_counts(self, mol: Any) -> Dict[int, int]:
         """Build a mapping of original_id -> hydrogen count without touching Qt items."""
@@ -1175,7 +1175,7 @@ class EditActionsManager:
             self.host.init_manager.scene.update_all_items()
 
             self.host.statusBar().showMessage("2D structure optimization successful.")
-            self.host.state_manager.push_undo_state()
+            self.host.edit_actions_manager.push_undo_state()
 
         except (AttributeError, RuntimeError, ValueError) as e:
             self.host.statusBar().showMessage(f"Error during 2D optimization: {e}")
@@ -1259,7 +1259,7 @@ class EditActionsManager:
             logging.error(f"REPORT ERROR: Missing attribute 'update_2d_measurement_labels' on object")
 
         self.host.init_manager.scene.update()
-        self.host.state_manager.push_undo_state()
+        self.host.edit_actions_manager.push_undo_state()
         self.host.statusBar().showMessage("Resolved overlapping groups.", 2000)
 
     def adjust_molecule_positions_to_avoid_collisions(self, mol, frags):

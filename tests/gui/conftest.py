@@ -1236,7 +1236,7 @@ def window(app, qtbot, monkeypatch):
     # Ensure push_undo_state reliably marks the document as changed in tests.
     try:
         if hasattr(main_window, "push_undo_state"):
-            orig_push = main_window.state_manager.push_undo_state
+            orig_push = main_window.edit_actions_manager.push_undo_state
 
             def _push_and_mark(*a, **k):
                 try:
@@ -1260,7 +1260,7 @@ def window(app, qtbot, monkeypatch):
             # Also make `redo` tolerant to duplicated undo entries in mocked UI
             try:
                 if hasattr(main_window, "redo"):
-                    orig_redo = main_window.redo
+                    orig_redo = main_window.edit_actions_manager.redo
 
                     def _redo_and_trim(*a, **k):
                         try:

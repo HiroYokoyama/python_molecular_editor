@@ -127,7 +127,7 @@ class MirrorDialog(QDialog):
             # Update 2D chiral labels
             self.main_window.view_3d_manager.update_chiral_labels()
 
-            self.main_window.state_manager.push_undo_state()
+            self.main_window.edit_actions_manager.push_undo_state()
 
             plane_names = ["XY", "XZ", "YZ"]
             self.main_window.statusBar().showMessage(

@@ -103,7 +103,7 @@ def test_mirror_dialog_logic(qtbot):
     # Verify MoleditPy specific recovery calls
     assert main_window.view_3d_manager.draw_molecule_3d.called
     assert main_window.view_3d_manager.update_chiral_labels.called
-    assert main_window.state_manager.push_undo_state.called
+    assert main_window.edit_actions_manager.push_undo_state.called
 
 
 from moleditpy.ui.planarize_dialog import PlanarizeDialog
@@ -151,7 +151,7 @@ def test_planarize_logic(qtbot):
     # Also verify that main_window methods were called
     assert main_window.view_3d_manager.draw_molecule_3d.called
     assert main_window.view_3d_manager.update_chiral_labels.called
-    assert main_window.state_manager.push_undo_state.called
+    assert main_window.edit_actions_manager.push_undo_state.called
 
 
 # ------------------------------------------------------------------

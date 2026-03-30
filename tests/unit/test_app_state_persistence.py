@@ -23,8 +23,8 @@ class DummyMainWindow(MainWindowAppState):
         self.has_unsaved_changes = False
         self.constraints_3d = []
         self.is_2d_editable = True
-        self.undo_stack = []
-        self.redo_stack = []
+        self.edit_actions_manager.undo_stack = []
+        self.edit_actions_manager.redo_stack = []
         self._is_restoring_state = False
         self.initialization_complete = True
         self._preserved_plugin_data = {}

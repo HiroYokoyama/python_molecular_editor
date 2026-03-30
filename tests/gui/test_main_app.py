@@ -427,7 +427,7 @@ def test_change_atom_symbol_on_click(window, qtbot):
     window.state_manager.data.atoms[0]["symbol"] = "O"
     atom_item.symbol = "O"
     atom_item.update_style()
-    window.state_manager.push_undo_state()
+    window.edit_actions_manager.push_undo_state()
 
     # 3. 元素が "O" に変更されたか確認
     assert window.state_manager.data.atoms[0]["symbol"] == "O"
@@ -454,7 +454,7 @@ def test_change_bond_order_on_click(window, qtbot):
     bond_item.order = 2
     window.state_manager.data.bonds[(0, 1)]["order"] = 2
     bond_item.update()
-    window.state_manager.push_undo_state()
+    window.edit_actions_manager.push_undo_state()
 
     # 3. 結合次数が 2 に変更されたか確認
     assert window.state_manager.data.bonds[(0, 1)]["order"] == 2
@@ -472,7 +472,7 @@ def test_delete_atom_on_right_click(window, qtbot):
     # 1. 既存の原子を右クリック (simulate deletion programmatically)
     atom_item = window.state_manager.data.atoms[0]["item"]
     scene.delete_items({atom_item})
-    window.state_manager.push_undo_state()
+    window.edit_actions_manager.push_undo_state()
 
     # 2. 原子が削除されたか確認
     assert len(window.state_manager.data.atoms) == 0
@@ -494,7 +494,7 @@ def test_charge_mode_click(window, qtbot):
     atom_item.charge += 1
     window.state_manager.data.atoms[0]["charge"] = atom_item.charge
     atom_item.update_style()
-    window.state_manager.push_undo_state()
+    window.edit_actions_manager.push_undo_state()
 
     # 3. 電荷が +1 になったか確認
     assert window.state_manager.data.atoms[0]["charge"] == 1
@@ -506,7 +506,7 @@ def test_charge_mode_click(window, qtbot):
     atom_item.charge -= 2
     window.state_manager.data.atoms[0]["charge"] = atom_item.charge
     atom_item.update_style()
-    window.state_manager.push_undo_state()
+    window.edit_actions_manager.push_undo_state()
 
     # 6. 電荷が -1 になったか確認
     assert window.state_manager.data.atoms[0]["charge"] == -1
@@ -609,7 +609,7 @@ def test_undo_redo(window, qtbot):
     # 1. Draw an atom (programmatically)
     window.ui_manager.set_mode("atom_C")
     id0 = scene.create_atom("C", QPointF(0, 0))
-    window.state_manager.push_undo_state()
+    window.edit_actions_manager.push_undo_state()
 
     assert len(window.state_manager.data.atoms) == 1
     # After an action, Undo should be enabled and stack size increased
@@ -618,7 +618,7 @@ def test_undo_redo(window, qtbot):
     assert window.init_manager.redo_action.isEnabled() is False
 
     # 2. Undoを実行
-    window.state_manager.undo()
+    window.edit_actions_manager.undo()
     qtbot.wait(50)
 
     # Ensure undo restored the model to the prior state (0 atoms)
@@ -628,7 +628,7 @@ def test_undo_redo(window, qtbot):
 
 
     # 3. Redoを実行
-    window.state_manager.redo()
+    window.edit_actions_manager.redo()
     qtbot.wait(50)
 
     # Ensure redo restored the atom that was undone
@@ -645,7 +645,7 @@ def test_clear_all(window, qtbot):
     # 1. 描画 (programmatically)
     window.ui_manager.set_mode("atom_C")
     id0 = scene.create_atom("C", QPointF(0, 0))
-    window.state_manager.push_undo_state()
+    window.edit_actions_manager.push_undo_state()
 
     # 2. Clear All を実行 (mockerがQMessageBox.questionをYesで返す)
     # Some CI environments block QMessageBox interactions, so call the 2D editor
@@ -751,7 +751,7 @@ def test_key_press_change_atom(window, qtbot, monkeypatch):
     window.ui_manager.set_mode("atom_C")
     click_pos = QPointF(0, 0)
     id0 = scene.create_atom("C", click_pos)
-    window.state_manager.push_undo_state()
+    window.edit_actions_manager.push_undo_state()
     assert window.state_manager.data.atoms[0]["symbol"] == "C"
 
     # 2. カーソルを原子の上に移動
@@ -818,7 +818,7 @@ def test_radical_mode_toggle(window, qtbot):
     scene = window.init_manager.scene
     window.ui_manager.set_mode("atom_C")
     id0 = scene.create_atom("C", QPointF(0, 0))
-    window.state_manager.push_undo_state()
+    window.edit_actions_manager.push_undo_state()
     assert window.state_manager.data.atoms[0]["radical"] == 0
 
     # 1. "Radical" モードに変更
@@ -830,19 +830,19 @@ def test_radical_mode_toggle(window, qtbot):
     atom_item.radical = 1
     window.state_manager.data.atoms[0]["radical"] = 1
     atom_item.update_style()
-    window.state_manager.push_undo_state()
+    window.edit_actions_manager.push_undo_state()
     assert window.state_manager.data.atoms[0]["radical"] == 1
 
     atom_item.radical = 2
     window.state_manager.data.atoms[0]["radical"] = 2
     atom_item.update_style()
-    window.state_manager.push_undo_state()
+    window.edit_actions_manager.push_undo_state()
     assert window.state_manager.data.atoms[0]["radical"] == 2
 
     atom_item.radical = 0
     window.state_manager.data.atoms[0]["radical"] = 0
     atom_item.update_style()
-    window.state_manager.push_undo_state()
+    window.edit_actions_manager.push_undo_state()
     assert window.state_manager.data.atoms[0]["radical"] == 0
 
 
@@ -855,7 +855,7 @@ def test_delete_key_selection(window, qtbot):
     window.ui_manager.set_mode("atom_C")
     click_pos = QPointF(0, 0)
     id0 = scene.create_atom("C", click_pos)
-    window.state_manager.push_undo_state()
+    window.edit_actions_manager.push_undo_state()
     assert len(window.state_manager.data.atoms) == 1
 
     # 2. 原子を選択
@@ -1196,7 +1196,7 @@ def test_save_project_as(window, qtbot, monkeypatch):
     window.ui_manager.set_mode("atom_C")
     # Programmatically create an atom to avoid flaky view clicks in some CI environments
     scene.create_atom("C", QPointF(0, 0))
-    window.state_manager.push_undo_state()
+    window.edit_actions_manager.push_undo_state()
 
     # 4. "Save Project As..." を直接呼び出す
     window.save_project_as()
@@ -1446,7 +1446,7 @@ def test_implicit_hydrogens_update(window, qtbot):
     # 1. C原子を描画 (プログラムで作成)
     window.ui_manager.set_mode("atom_C")
     id0 = scene.create_atom("C", QPointF(0, 0))
-    window.state_manager.push_undo_state()
+    window.edit_actions_manager.push_undo_state()
     assert len(window.state_manager.data.atoms) == 1
 
     # `push_undo_state` -> `update_implicit_hydrogens` が呼ばれるのを待つ
@@ -1650,7 +1650,7 @@ def test_undo_redo_boundary(window, qtbot):
 
     # 2. Undoを試行 (有効/無効に関わらず呼び出してみる)
     try:
-        window.state_manager.undo()
+        window.edit_actions_manager.undo()
     except Exception as e:
         pytest.fail(f"Undo on empty stack raised exception: {e}")
 
@@ -1659,7 +1659,7 @@ def test_undo_redo_boundary(window, qtbot):
 
     # 3. Redoを試行
     try:
-        window.state_manager.redo()
+        window.edit_actions_manager.redo()
     except Exception as e:
         pytest.fail(f"Redo on empty stack raised exception: {e}")
 
