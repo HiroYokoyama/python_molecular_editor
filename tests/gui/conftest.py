@@ -1272,7 +1272,7 @@ def window(app, qtbot, monkeypatch):
                     return orig_push(*a, **k)
                 finally:
                     try:
-                        main_window.has_unsaved_changes = True
+                        main_window.state_manager.has_unsaved_changes = True
                     except Exception:
                         import traceback
 

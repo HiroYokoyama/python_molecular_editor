@@ -195,7 +195,7 @@ class EditActionsManager:
             self.redo_stack.clear()
             # Record changes after initialization
             if getattr(self.host, "initialization_complete", False):
-                self.host.has_unsaved_changes = True
+                self.host.state_manager.has_unsaved_changes = True
                 self.host.state_manager.update_window_title()
 
         self.update_implicit_hydrogens()
@@ -860,8 +860,8 @@ class EditActionsManager:
         self.host.state_manager.reset_undo_stack()
 
         # Reset file state
-        self.host.has_unsaved_changes = False
-        self.host.current_file_path = None
+        self.host.state_manager.has_unsaved_changes = False
+        self.host.init_manager.current_file_path = None
         self.host.state_manager.update_window_title()
 
         # Reset 2D zoom

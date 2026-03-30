@@ -59,8 +59,8 @@ class ExportManager:
         # prefer same directory as current file when available
         default_dir = ""
         try:
-            if self.host.current_file_path:
-                default_dir = os.path.dirname(self.host.current_file_path)
+            if self.host.init_manager.current_file_path:
+                default_dir = os.path.dirname(self.host.init_manager.current_file_path)
         except (AttributeError, RuntimeError, ValueError, TypeError):
             default_dir = ""
 
@@ -97,8 +97,8 @@ class ExportManager:
         # prefer same directory as current file when available
         default_dir = ""
         try:
-            if self.host.current_file_path:
-                default_dir = os.path.dirname(self.host.current_file_path)
+            if self.host.init_manager.current_file_path:
+                default_dir = os.path.dirname(self.host.init_manager.current_file_path)
         except (AttributeError, RuntimeError, ValueError, TypeError):
             default_dir = ""
 
@@ -243,8 +243,8 @@ class ExportManager:
         # prefer same directory as current file when available
         default_dir = ""
         try:
-            if self.host.current_file_path:
-                default_dir = os.path.dirname(self.host.current_file_path)
+            if self.host.init_manager.current_file_path:
+                default_dir = os.path.dirname(self.host.init_manager.current_file_path)
         except (AttributeError, RuntimeError, ValueError, TypeError):
             default_dir = ""
 
@@ -690,8 +690,8 @@ class ExportManager:
         # default filename: based on current file, append -2d for 2D exports
         default_name = "untitled-2d"
         try:
-            if self.host.current_file_path:
-                base = os.path.basename(self.host.current_file_path)
+            if self.host.init_manager.current_file_path:
+                base = os.path.basename(self.host.init_manager.current_file_path)
                 name = os.path.splitext(base)[0]
                 default_name = f"{name}-2d"
         except (AttributeError, RuntimeError, ValueError, TypeError):
@@ -700,9 +700,9 @@ class ExportManager:
         # prefer same directory as current file when available
         default_path = default_name
         try:
-            if self.host.current_file_path:
+            if self.host.init_manager.current_file_path:
                 default_path = os.path.join(
-                    os.path.dirname(self.host.current_file_path), default_name
+                    os.path.dirname(self.host.init_manager.current_file_path), default_name
                 )
         except (AttributeError, RuntimeError, ValueError, TypeError):
             default_path = default_name
@@ -823,8 +823,8 @@ class ExportManager:
         # default filename
         default_name = "untitled-2d"
         try:
-            if self.host.current_file_path:
-                base = os.path.basename(self.host.current_file_path)
+            if self.host.init_manager.current_file_path:
+                base = os.path.basename(self.host.init_manager.current_file_path)
                 name = os.path.splitext(base)[0]
                 default_name = f"{name}-2d"
         except (AttributeError, RuntimeError, ValueError, TypeError):
@@ -833,9 +833,9 @@ class ExportManager:
         # prefer same directory
         default_path = default_name
         try:
-            if self.host.current_file_path:
+            if self.host.init_manager.current_file_path:
                 default_path = os.path.join(
-                    os.path.dirname(self.host.current_file_path), default_name
+                    os.path.dirname(self.host.init_manager.current_file_path), default_name
                 )
         except (AttributeError, RuntimeError, ValueError, TypeError):
             default_path = default_name
@@ -944,8 +944,8 @@ class ExportManager:
         # Default filename: {name}.png
         default_name = "untitled"
         try:
-            if self.host.current_file_path:
-                base = os.path.basename(self.host.current_file_path)
+            if self.host.init_manager.current_file_path:
+                base = os.path.basename(self.host.init_manager.current_file_path)
                 name = os.path.splitext(base)[0]
                 default_name = f"{name}"
         except (AttributeError, RuntimeError, ValueError, TypeError):
@@ -954,9 +954,9 @@ class ExportManager:
         # prefer same directory as current file when available
         default_path = default_name
         try:
-            if self.host.current_file_path:
+            if self.host.init_manager.current_file_path:
                 default_path = os.path.join(
-                    os.path.dirname(self.host.current_file_path), default_name
+                    os.path.dirname(self.host.init_manager.current_file_path), default_name
                 )
         except (AttributeError, RuntimeError, ValueError, TypeError):
             default_path = default_name

@@ -50,7 +50,7 @@ class StateManager:
 
     def __init__(self, host):
         self.host = host
-        self.has_unsaved_changes = False
+        self.host.state_manager.has_unsaved_changes = False
         self._preserved_plugin_data = {}
 
     def get_current_state(self):
@@ -308,18 +308,18 @@ class StateManager:
         if self.host.init_manager.current_file_path:
             filename = os.path.basename(self.host.init_manager.current_file_path)
             title = f"{filename} - {base_title}"
-            if self.has_unsaved_changes:
+            if self.host.state_manager.has_unsaved_changes:
                 title = f"*{title}"
         else:
             # Handle as Untitled
             title = f"Untitled - {base_title}"
-            if self.has_unsaved_changes:
+            if self.host.state_manager.has_unsaved_changes:
                 title = f"*{title}"
         self.host.setWindowTitle(title)
 
     def check_unsaved_changes(self):
         """Check for unsaved changes and show warning."""
-        if not self.has_unsaved_changes:
+        if not self.host.state_manager.has_unsaved_changes:
             return True  # Saved or no changes
 
         if not self.host.state_manager.data.atoms and self.host.view_3d_manager.current_mol is None:
@@ -337,13 +337,13 @@ class StateManager:
 
         if reply == QMessageBox.StandardButton.Yes:
             # 'Save As' if not PMEPRJ
-            file_path = self.host.current_file_path
+            file_path = self.host.init_manager.current_file_path
             if not file_path or not file_path.lower().endswith(".pmeprj"):
                 self.save_project_as()
             else:
                 self.save_project()
             return (
-                not self.has_unsaved_changes
+                not self.host.state_manager.has_unsaved_changes
             )  # Return True only if save was successful
         elif reply == QMessageBox.StandardButton.No:
             return True  # Continue without saving

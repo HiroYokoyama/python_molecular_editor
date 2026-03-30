@@ -39,8 +39,8 @@ class DummyMainWindow(StateManager):
         self.view_3d_manager.current_mol = None
         self.view_3d_manager.atom_positions_3d = None
         
-        self.current_file_path = None
-        self.has_unsaved_changes = False
+        self.host.init_manager.current_file_path = None
+        self.host.state_manager.has_unsaved_changes = False
         self.edit_3d_manager.constraints_3d = []
         self.is_2d_editable = True
         self.edit_actions_manager.undo_stack = []

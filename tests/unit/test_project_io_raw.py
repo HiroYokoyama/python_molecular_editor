@@ -87,8 +87,8 @@ def test_save_raw_data_success(io, tmp_path):
             data = pickle.load(f)
             assert data == {"atoms": "mock"}
         
-        assert io.current_file_path == save_path
-        assert io.has_unsaved_changes is False
+        assert io.host.init_manager.current_file_path == save_path
+        assert io.host.state_manager.has_unsaved_changes is False
         io.statusBar().showMessage.assert_called_with(f"Project saved to {save_path}")
 
 def test_save_raw_data_cancel(io):
@@ -109,8 +109,8 @@ def test_load_raw_data_dialog_success(io, tmp_path):
         io.load_raw_data()
         
         io.state_manager.set_state_from_data.assert_called_with(sample_data)
-        assert io.current_file_path == load_path
-        assert io.has_unsaved_changes is False
+        assert io.host.init_manager.current_file_path == load_path
+        assert io.host.state_manager.has_unsaved_changes is False
         io.statusBar().showMessage.assert_called_with(f"Project loaded from {load_path}")
 
 def test_load_raw_data_cancel(io):

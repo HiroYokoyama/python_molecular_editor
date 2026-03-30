@@ -8,7 +8,7 @@ from moleditpy.ui.bond_item import BondItem
 def test_bond_stereo_toggle_keys(window, qtbot):
     """Test Z and E keys toggle double bond stereochemistry."""
     scene = window.init_manager.scene
-    data = scene.data
+    data = window.state_manager.data
     
     # Create two atoms and a double bond
     a1_id = scene.create_atom("C", QPointF(0, 0))
@@ -36,7 +36,7 @@ def test_bond_stereo_toggle_keys(window, qtbot):
 def test_atom_addition_keys(window, qtbot):
     """Test 1, 2, 3 keys add atoms/bonds from selected atom."""
     scene = window.init_manager.scene
-    data = scene.data
+    data = window.state_manager.data
     
     # Place initial atom and select it
     a1_id = scene.create_atom("C", QPointF(0, 0))
@@ -74,7 +74,7 @@ def test_atom_addition_keys(window, qtbot):
 def test_delete_items_keys(window, qtbot):
     """Test Delete and Backspace keys remove selected items."""
     scene = window.init_manager.scene
-    data = scene.data
+    data = window.state_manager.data
     
     # Create some items
     a1_id = scene.create_atom("C", QPointF(0, 0))
@@ -102,7 +102,7 @@ def test_delete_items_keys(window, qtbot):
 def test_temp_line_cancellation(window, qtbot):
     """Test Delete key cancels an active temp_line (bond drawing)."""
     scene = window.init_manager.scene
-    data = scene.data
+    data = window.state_manager.data
     
     a1_id = scene.create_atom("C", QPointF(0, 0))
     a1_item = data.atoms[a1_id]["item"]
@@ -123,7 +123,7 @@ def test_temp_line_cancellation(window, qtbot):
 def test_bonding_to_existing_atom(window, qtbot):
     """Test that pressing 1, 2, 3 bonds to an existing atom if it's nearby."""
     scene = window.init_manager.scene
-    data = scene.data
+    data = window.state_manager.data
     from moleditpy.utils.constants import DEFAULT_BOND_LENGTH
     
     # Create two atoms separated by DEFAULT_BOND_LENGTH

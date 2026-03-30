@@ -69,7 +69,7 @@ class MockMainWindow(ExportManager, QMainWindow):
         self.export_manager = self
         
         self.view_3d_manager.current_mol = MagicMock()
-        self.current_file_path = "/path/to/molecule.xyz"
+        self.host.init_manager.current_file_path = "/path/to/molecule.xyz"
         self.view_3d_manager.plotter = MagicMock()
         self.init_manager.scene = MagicMock()
         self._status_bar = MagicMock()

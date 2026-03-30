@@ -130,7 +130,7 @@ class MainInitManager:
         # Variable tracking the saved state
         self.host.state_manager.has_unsaved_changes = False
         self.settings_dirty = True
-        self.current_file_path = None
+        self.host.init_manager.current_file_path = None
         self.host.initialization_complete = False
         self.host._ih_update_counter = 0
 
@@ -269,7 +269,7 @@ class MainInitManager:
                     # Try to call the opener
                     callback(file_path)
 
-                    self.current_file_path = file_path
+                    self.host.init_manager.current_file_path = file_path
                     self.host.state_manager.update_window_title()
                     return  # Success
                 except (AttributeError, RuntimeError, ValueError) as e:
@@ -796,7 +796,7 @@ class MainInitManager:
                         ext = os.path.splitext(fpath)[1].lower()
                         if ext in m:
                             m[ext](fpath)
-                            self.current_file_path = fpath
+                            self.host.init_manager.current_file_path = fpath
                             self.host.state_manager.update_window_title()
 
                 return _cb

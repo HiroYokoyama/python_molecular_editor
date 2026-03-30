@@ -6,7 +6,7 @@ from moleditpy.ui.ui_manager import UIManager
 def _make_ui_manager():
     """Create a UIManager with a mock host in the new manager pattern."""
     host = MagicMock()
-    host.has_unsaved_changes = False
+    host.state_manager.has_unsaved_changes = False
     host.init_manager.scene = MagicMock()
     host.init_manager.scene.mode = "select"
     host.init_manager.scene.template_preview = MagicMock()

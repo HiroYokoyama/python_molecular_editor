@@ -142,7 +142,7 @@ class StringImporterManager:
             self.host.statusBar().showMessage("Successfully loaded from SMILES.")
             self.host.init_manager.scene.update_all_items()
             self.host.state_manager.reset_undo_stack()
-            self.host.has_unsaved_changes = False
+            self.host.state_manager.has_unsaved_changes = False
             self.host.state_manager.update_window_title()
             QTimer.singleShot(0, self.host.view_3d_manager.fit_to_view)
 
@@ -242,7 +242,7 @@ class StringImporterManager:
             self.host.statusBar().showMessage("Successfully loaded from InChI.")
             self.host.init_manager.scene.update_all_items()
             self.host.state_manager.reset_undo_stack()
-            self.host.has_unsaved_changes = False
+            self.host.state_manager.has_unsaved_changes = False
             self.host.state_manager.update_window_title()
             QTimer.singleShot(0, self.host.view_3d_manager.fit_to_view)
 

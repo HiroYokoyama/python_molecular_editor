@@ -15,8 +15,8 @@ class DummyEditActions(EditActionsManager):
         self.plotter = host.view_3d_manager.plotter
         self.settings = host.init_manager.settings
         self.current_mol = host.view_3d_manager.current_mol
-        self.current_file_path = host.current_file_path
-        self.has_unsaved_changes = host.has_unsaved_changes
+        self.host.init_manager.current_file_path = host.init_manager.current_file_path
+        self.host.state_manager.has_unsaved_changes = host.state_manager.has_unsaved_changes
         self.main_window_edit_actions = self
 
     def statusBar(self):

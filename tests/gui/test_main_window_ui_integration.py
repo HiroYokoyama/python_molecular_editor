@@ -206,4 +206,4 @@ def test_integrate_plugin_file_openers_ui(window, qtbot):
         import_action.trigger()
         cb.assert_called_once_with("data.fake")
         # Attributes are still proxied on host for now, but we check via io_manager if available
-        assert window.current_file_path == "data.fake"
+        assert window.init_manager.current_file_path == "data.fake"

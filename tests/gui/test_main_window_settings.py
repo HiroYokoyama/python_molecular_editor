@@ -19,7 +19,7 @@ def test_load_command_line_file_with_plugin(window, monkeypatch):
     window.init_manager.load_command_line_file(test_file)
     
     mock_callback.assert_called_once_with(test_file)
-    assert window.current_file_path == test_file
+    assert window.init_manager.current_file_path == test_file
 
 def test_load_command_line_file_default_extensions(window, monkeypatch):
     """Test that load_command_line_file handles standard extensions."""
@@ -48,7 +48,7 @@ def test_update_cpk_colors_from_settings(window):
     overrides = {"C": "#FF0000"}  # Carbon as Red
     window.init_manager.settings["cpk_colors"] = overrides
     
-    window.ui_manager.update_cpk_colors_from_settings()
+    window.init_manager.update_cpk_colors_from_settings()
     
     # Verify constants.CPK_COLORS["C"] is now Red
     assert constants.CPK_COLORS["C"] == QColor("#FF0000")
@@ -57,7 +57,7 @@ def test_update_cpk_colors_from_settings(window):
     
     # Reset to defaults for other tests (important since constants are global)
     window.init_manager.settings["cpk_colors"] = {}
-    window.ui_manager.update_cpk_colors_from_settings()
+    window.init_manager.update_cpk_colors_from_settings()
 
 def test_apply_initial_settings(window, monkeypatch):
     """Test that apply_initial_settings updates scene background and style."""
@@ -67,7 +67,7 @@ def test_apply_initial_settings(window, monkeypatch):
     # Mock plotter if it exists
     if window.view_3d_manager.plotter:
         window.view_3d_manager.plotter.set_background = MagicMock()
-        window.apply_3d_settings = MagicMock()
+        window.view_3d_manager.apply_3d_settings = MagicMock()
     
     window.init_manager.apply_initial_settings()
     
@@ -102,7 +102,7 @@ def test_perform_settings_reset_logic(window, monkeypatch, tmp_path):
     settings_file = settings_dir / "settings.json"
     settings_file.write_text("{}")
     
-    window.settings_dir = str(settings_dir)
+    window.init_manager.settings_dir = str(settings_dir)
     window.init_manager.settings_file = str(settings_file)
     window.init_manager.load_settings = MagicMock()
     

@@ -657,7 +657,7 @@ def test_clear_all(window, qtbot):
     assert len(window.state_manager.data.bonds) == 0
     assert window.view_3d_manager.current_mol is None
     assert (
-        window.host.has_unsaved_changes == False
+        window.host.state_manager.has_unsaved_changes == False
     )  # Flag should be reset after clear_all
     assert len(window.edit_actions_manager.undo_stack) == 1  # Undo stack should be reset
 
@@ -1190,7 +1190,7 @@ def test_save_project_as(window, qtbot, monkeypatch):
     window.save_project_as()
     qtbot.wait(50)
     print("DEBUG: save_project status=", window.statusBar().currentMessage())
-    print("DEBUG: current_file_path=", window.current_file_path)
+    print("DEBUG: current_file_path=", window.init_manager.current_file_path)
     print("DEBUG: has_unsaved_changes=", window.state_manager.has_unsaved_changes)
 
     # 5. Verify json.dump was called
@@ -1198,7 +1198,7 @@ def test_save_project_as(window, qtbot, monkeypatch):
 
     # 6. Verify flag is reset after saving
     assert window.state_manager.has_unsaved_changes == False
-    assert window.current_file_path == "/fake/save.pmeprj"
+    assert window.init_manager.current_file_path == "/fake/save.pmeprj"
     assert "Project saved to" in window.statusBar().currentMessage()
 
 
@@ -1560,11 +1560,11 @@ def test_project_save_load_round_trip(window, qtbot, monkeypatch, tmp_path):
     qtbot.wait(100)
 
     assert save_file.exists()
-    assert window.host.has_unsaved_changes == False
+    assert window.host.state_manager.has_unsaved_changes == False
 
     # 3. Clear scene
     window.edit_actions_manager.clear_2d_editor(push_to_undo=False)  # Clear without dialog
-    window.host.has_unsaved_changes = False
+    window.host.state_manager.has_unsaved_changes = False
     assert len(window.state_manager.data.atoms) == 0
 
     # 4. Load from temporary file
@@ -1693,7 +1693,7 @@ def test_clear_2d_editor_cancel(window, qtbot, monkeypatch):
     scene = window.init_manager.scene
     window.ui_manager.set_mode("atom_C")
     scene.create_atom("C", QPointF(0, 0))
-    window.host.has_unsaved_changes = True
+    window.host.state_manager.has_unsaved_changes = True
 
     # 1. Mock "Cancel" selection in dialog
     # QMessageBox.StandardButton.Cancel = 4194304
@@ -1709,7 +1709,7 @@ def test_clear_2d_editor_cancel(window, qtbot, monkeypatch):
 
     # 3. Verify no deletion occurred
     assert len(window.state_manager.data.atoms) == 1
-    assert window.host.has_unsaved_changes == True
+    assert window.host.state_manager.has_unsaved_changes == True
 
 
 @pytest.mark.gui

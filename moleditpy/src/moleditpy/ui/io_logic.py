@@ -38,38 +38,6 @@ class IOManager:
         if host is not None:
             self.host = host
 
-    # --- Manager delegation methods ---
-    # These let tests patch io.X and have the save/load methods call self.X().
-
-    def create_json_data(self):
-        return self.host.state_manager.create_json_data()
-
-    def load_from_json_data(self, json_data):
-        return self.host.state_manager.load_from_json_data(json_data)
-
-    def set_state_from_data(self, state_data):
-        return self.host.state_manager.set_state_from_data(state_data)
-
-    def get_current_state(self):
-        return self.host.state_manager.get_current_state()
-
-    def update_window_title(self):
-        return self.host.state_manager.update_window_title()
-
-    def reset_undo_stack(self):
-        return self.host.state_manager.reset_undo_stack()
-
-    def restore_ui_for_editing(self):
-        return self.host.ui_manager.restore_ui_for_editing()
-
-    def clear_all(self):
-        return self.host.edit_actions_manager.clear_all()
-
-    def fit_to_view(self):
-        return self.host.view_3d_manager.fit_to_view()
-
-    def check_unsaved_changes(self):
-        return self.host.state_manager.check_unsaved_changes()
 
     def fix_mol_counts_line(self, line: str) -> str:
         if "V3000" in line or "V2000" in line: return line
@@ -84,7 +52,7 @@ class IOManager:
 
     def load_xyz_file(self, file_path: str) -> Optional[Any]:
         """Load XYZ file and create RDKit Mol with charge prompt and bond determination."""
-        if not self.check_unsaved_changes():
+        if not self.host.state_manager.check_unsaved_changes():
             return None
 
         try:
@@ -276,16 +244,16 @@ class IOManager:
         ):
             try:
                 if self.host.init_manager.current_file_path.lower().endswith(".pmeraw"):
-                    save_data = self.get_current_state()
+                    save_data = self.host.state_manager.get_current_state()
                     with open(self.host.init_manager.current_file_path, "wb") as f:
                         pickle.dump(save_data, f)
                 else:
-                    json_data = self.create_json_data()
+                    json_data = self.host.state_manager.create_json_data()
                     with open(self.host.init_manager.current_file_path, "w", encoding="utf-8") as f:
                         json.dump(json_data, f, indent=2, ensure_ascii=False)
 
                 self.host.state_manager.has_unsaved_changes = False
-                self.update_window_title()
+                self.host.state_manager.update_window_title()
                 self.host.statusBar().showMessage(f"Project saved to {self.host.init_manager.current_file_path}")
             except (OSError, IOError) as e:
                 self.host.statusBar().showMessage(f"File I/O error: {e}")
@@ -303,17 +271,17 @@ class IOManager:
 
         default_name = "untitled"
         try:
-            if self.host.current_file_path:
-                base = os.path.basename(self.host.current_file_path)
+            if self.host.init_manager.current_file_path:
+                base = os.path.basename(self.host.init_manager.current_file_path)
                 default_name = os.path.splitext(base)[0]
         except (AttributeError, RuntimeError, ValueError, TypeError):
             default_name = "untitled"
 
         default_path = default_name
         try:
-            if self.host.current_file_path:
+            if self.host.init_manager.current_file_path:
                 default_path = os.path.join(
-                    os.path.dirname(self.host.current_file_path), default_name
+                    os.path.dirname(self.host.init_manager.current_file_path), default_name
                 )
         except (AttributeError, RuntimeError, ValueError, TypeError):
             default_path = default_name
@@ -329,15 +297,15 @@ class IOManager:
             file_path += ".pmeprj"
 
         try:
-            json_data = self.create_json_data()
+            json_data = self.host.state_manager.create_json_data()
             with open(file_path, "w", encoding="utf-8") as f:
                 json.dump(json_data, f, indent=2, ensure_ascii=False)
 
-            self.host.has_unsaved_changes = False
-            self.host.current_file_path = file_path
-            self.update_window_title()
+            self.host.state_manager.has_unsaved_changes = False
+            self.host.init_manager.current_file_path = file_path
+            self.host.state_manager.update_window_title()
             try:
-                self.host._saved_state = copy.deepcopy(self.get_current_state())
+                self.host.state_manager._saved_state = copy.deepcopy(self.host.state_manager.get_current_state())
             except Exception:
                 pass
             self.host.statusBar().showMessage(f"Project saved to {file_path}")
@@ -352,8 +320,8 @@ class IOManager:
 
     def open_project_file(self, file_path: Optional[str] = None) -> None:
         """Open project file (.pmeprj or .pmeraw)."""
-        if not self.check_unsaved_changes():
-            return
+        if not self.host.state_manager.check_unsaved_changes():
+            return None
 
         if not file_path:
             file_path, _ = QFileDialog.getOpenFileName(
@@ -386,17 +354,17 @@ class IOManager:
 
         default_name = "untitled"
         try:
-            if self.host.current_file_path:
-                base = os.path.basename(self.host.current_file_path)
+            if self.host.init_manager.current_file_path:
+                base = os.path.basename(self.host.init_manager.current_file_path)
                 default_name = os.path.splitext(base)[0]
         except (AttributeError, RuntimeError, ValueError, TypeError):
             default_name = "untitled"
 
         default_path = default_name
         try:
-            if self.host.current_file_path:
+            if self.host.init_manager.current_file_path:
                 default_path = os.path.join(
-                    os.path.dirname(self.host.current_file_path), default_name
+                    os.path.dirname(self.host.init_manager.current_file_path), default_name
                 )
         except (AttributeError, RuntimeError, ValueError, TypeError):
             default_path = default_name
@@ -412,13 +380,13 @@ class IOManager:
             if not file_path.lower().endswith(".pmeprj"):
                 file_path += ".pmeprj"
 
-            json_data = self.create_json_data()
+            json_data = self.host.state_manager.create_json_data()
             with open(file_path, "w", encoding="utf-8") as f:
                 json.dump(json_data, f, indent=2, ensure_ascii=False)
 
-            self.host.has_unsaved_changes = False
-            self.host.current_file_path = file_path
-            self.update_window_title()
+            self.host.state_manager.has_unsaved_changes = False
+            self.host.init_manager.current_file_path = file_path
+            self.host.state_manager.update_window_title()
             self.host.statusBar().showMessage(f"PME Project saved to {file_path}")
         except (OSError, IOError) as e:
             self.host.statusBar().showMessage(f"File I/O error: {e}")
@@ -435,7 +403,7 @@ class IOManager:
             if not file_path:
                 return
 
-        if not self.clear_all():
+        if not self.host.edit_actions_manager.clear_all():
             return
 
         try:
@@ -457,15 +425,15 @@ class IOManager:
                     "Loading will be attempted but some features may not work correctly."
                 )
 
-            self.restore_ui_for_editing()
-            self.load_from_json_data(json_data)
-            self.reset_undo_stack()
+            self.host.ui_manager.restore_ui_for_editing()
+            self.host.state_manager.load_from_json_data(json_data)
+            self.host.state_manager.reset_undo_stack()
             self.host.state_manager.has_unsaved_changes = False
             self.host.init_manager.current_file_path = file_path
-            self.update_window_title()
+            self.host.state_manager.update_window_title()
             self.host.statusBar().showMessage(f"PME Project loaded from {file_path}")
 
-            QTimer.singleShot(0, self.fit_to_view)
+            QTimer.singleShot(0, self.host.view_3d_manager.fit_to_view)
 
         except FileNotFoundError:
             self.host.statusBar().showMessage(f"File not found: {file_path}")
@@ -485,17 +453,17 @@ class IOManager:
 
         default_name = "untitled"
         try:
-            if self.host.current_file_path:
-                base = os.path.basename(self.host.current_file_path)
+            if self.host.init_manager.current_file_path:
+                base = os.path.basename(self.host.init_manager.current_file_path)
                 default_name = os.path.splitext(base)[0]
         except (AttributeError, RuntimeError, ValueError, TypeError):
             default_name = "untitled"
 
         default_path = default_name
         try:
-            if self.host.current_file_path:
+            if self.host.init_manager.current_file_path:
                 default_path = os.path.join(
-                    os.path.dirname(self.host.current_file_path), default_name
+                    os.path.dirname(self.host.init_manager.current_file_path), default_name
                 )
         except (AttributeError, RuntimeError, ValueError, TypeError):
             default_path = default_name
@@ -511,15 +479,15 @@ class IOManager:
             if not file_path.lower().endswith(".pmeraw"):
                 file_path += ".pmeraw"
 
-            save_data = self.get_current_state()
+            save_data = self.host.state_manager.get_current_state()
             with open(file_path, "wb") as f:
                 pickle.dump(save_data, f)
 
             self.host.state_manager.has_unsaved_changes = False
             self.host.init_manager.current_file_path = file_path
-            self.update_window_title()
+            self.host.state_manager.update_window_title()
             try:
-                self.host._saved_state = copy.deepcopy(self.get_current_state())
+                self.host.state_manager._saved_state = copy.deepcopy(self.host.state_manager.get_current_state())
             except Exception:
                 pass
             self.host.statusBar().showMessage(f"Project saved to {file_path}")
@@ -637,7 +605,7 @@ class IOManager:
             mol = self.load_xyz_file(file_path)
             if mol is None: raise ValueError("Failed to create molecule from XYZ file.")
 
-            self.host.edit_actions_manager.clear_2d_editor(push_to_undo=False)
+            self.host.edit_actions_manager.clear_all()
             self.host.view_3d_manager.current_mol = mol
             self.host.view_3d_manager.atom_id_to_rdkit_idx_map = {}
 
@@ -655,7 +623,7 @@ class IOManager:
                 logging.error(f"REPORT ERROR: Missing attribute 'draw_molecule_3d' on object")
 
             # Reset camera/zoom after drawing
-            QTimer.singleShot(0, self.fit_to_view)
+            QTimer.singleShot(0, self.host.view_3d_manager.fit_to_view)
 
             if hasattr(self.host.ui_manager, "_enter_3d_viewer_ui_mode"):
                 self.host.ui_manager._enter_3d_viewer_ui_mode()
@@ -701,7 +669,7 @@ class IOManager:
             self.host.view_3d_manager.atom_id_to_rdkit_idx_map = {}
             self.host.is_xyz_derived = False
             self.host.view_3d_manager.draw_molecule_3d(mol)
-            QTimer.singleShot(0, self.fit_to_view)
+            QTimer.singleShot(0, self.host.view_3d_manager.fit_to_view)
             self.host.ui_manager._enter_3d_viewer_ui_mode()
             if hasattr(self.host.ui_manager, "_enable_3d_features"):
                 self.host.ui_manager._enable_3d_features(True)
@@ -782,20 +750,20 @@ class IOManager:
             if not file_path:
                 return
 
-        if not self.clear_all():
+        if not self.host.edit_actions_manager.clear_all():
             return
 
         try:
             with open(file_path, "rb") as f:
                 loaded_data = pickle.load(f)
-            self.restore_ui_for_editing()
-            self.set_state_from_data(loaded_data)
-            self.reset_undo_stack()
+            self.host.ui_manager.restore_ui_for_editing()
+            self.host.state_manager.set_state_from_data(loaded_data)
+            self.host.state_manager.reset_undo_stack()
             self.host.state_manager.has_unsaved_changes = False
             self.host.init_manager.current_file_path = file_path
-            self.update_window_title()
+            self.host.state_manager.update_window_title()
             self.host.statusBar().showMessage(f"Project loaded from {file_path}")
-            QTimer.singleShot(0, self.fit_to_view)
+            QTimer.singleShot(0, self.host.view_3d_manager.fit_to_view)
         except FileNotFoundError:
             self.host.statusBar().showMessage(f"File not found: {file_path}")
         except (OSError, IOError) as e:

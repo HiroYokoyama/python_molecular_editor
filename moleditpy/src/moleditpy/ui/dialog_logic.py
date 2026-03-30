@@ -195,7 +195,7 @@ class DialogManager:
                 json.dump(template_data, f, indent=2, ensure_ascii=False)
 
             # Mark as saved (no unsaved changes for this operation)
-            self.host.has_unsaved_changes = False
+            self.host.state_manager.has_unsaved_changes = False
             self.host.state_manager.update_window_title()
 
             QMessageBox.information(

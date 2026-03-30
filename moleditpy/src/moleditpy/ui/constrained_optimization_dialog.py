@@ -572,7 +572,7 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
                 # Update MainWindow only if changed
                 if self.main_window.edit_3d_manager.constraints_3d != json_safe_constraints:
                     self.main_window.edit_3d_manager.constraints_3d = json_safe_constraints
-                    self.main_window.has_unsaved_changes = (
+                    self.main_window.state_manager.has_unsaved_changes = (
                         True  # Mark as unsaved changes
                     )
                     self.main_window.state_manager.update_window_title()
@@ -611,7 +611,7 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
             # Update MainWindow only if changed
             if self.main_window.edit_3d_manager.constraints_3d != json_safe_constraints:
                 self.main_window.edit_3d_manager.constraints_3d = json_safe_constraints
-                self.main_window.has_unsaved_changes = True  # Mark as unsaved changes
+                self.main_window.state_manager.has_unsaved_changes = True  # Mark as unsaved changes
                 self.main_window.state_manager.update_window_title()
 
         except (AttributeError, RuntimeError, ValueError, TypeError) as e:

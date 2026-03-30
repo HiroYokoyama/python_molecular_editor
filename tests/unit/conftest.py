@@ -103,7 +103,7 @@ def mock_parser_host(app):
     )
 
     # 3. Manager proxies on host for convenience
-    # Some older code (or tests) still expects host.settings, host.data, etc.
+    # Some older code (or tests) still expects host.init_manager.settings, host.state_manager.data, etc.
     type(host).settings = property(lambda self: self.init_manager.settings)
     type(host).data = property(lambda self: self.state_manager.data)
     type(host).scene = property(lambda self: self.init_manager.scene)
@@ -113,8 +113,8 @@ def mock_parser_host(app):
 
     # 4. State variables
     host.ui_manager.is_2d_editable = True
-    host.current_file_path = None
-    host.has_unsaved_changes = False
+    host.init_manager.current_file_path = None
+    host.state_manager.has_unsaved_changes = False
     host.edit_3d_manager.constraints_3d = []
     host.is_xyz_derived = False
     host.compute_manager.active_worker_ids = set()
