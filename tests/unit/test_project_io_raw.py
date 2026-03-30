@@ -6,30 +6,49 @@ from PyQt6.QtCore import QPointF
 from moleditpy.ui.io_logic import IOManager
 
 class DummyProjectIo(IOManager):
-    def __init__(self):
-        self.data = MagicMock()
-        self.data.atoms = {}
-        self.current_mol = None
-        self.current_file_path = None
-        self.has_unsaved_changes = False
-        self._saved_state = None
-        self.statusBar_mock = MagicMock()
-        self.host = self  # required by IOManager (manager architecture)
-
-        # Manager mocks used by IOManager methods via self.host.MANAGER.X
+    def __init__(self, host=None):
+        self._host = host or MagicMock()
+        IOManager.__init__(self, self._host)
+        
+        # Internal mocks for self-contained testing
+        self._host.data = MagicMock()
+        self._host.data.atoms = {}
+        
         self.state_manager = MagicMock()
         self.state_manager.get_current_state.return_value = {"atoms": "mock"}
         self.state_manager.update_window_title = MagicMock()
         self.state_manager.set_state_from_data = MagicMock()
+        
         self.ui_manager = MagicMock()
         self.ui_manager.restore_ui_for_editing = MagicMock()
-
+        
         self.edit_actions_manager = MagicMock()
         self.edit_actions_manager.clear_all.return_value = True
         self.edit_actions_manager.reset_undo_stack = MagicMock()
-
+        
         self.view_3d_manager = MagicMock()
         self.edit_3d_manager = MagicMock()
+        
+        self.statusBar_mock = MagicMock()
+        self._host.statusBar.return_value = self.statusBar_mock
+
+    def __getattr__(self, name):
+        return getattr(self._host, name)
+
+    @property
+    def data(self): return self._host.data
+    @property
+    def current_mol(self): return getattr(self._host, "current_mol", None)
+    @current_mol.setter
+    def current_mol(self, v): self._host.current_mol = v
+    @property
+    def current_file_path(self): return getattr(self._host, "current_file_path", None)
+    @current_file_path.setter
+    def current_file_path(self, v): self._host.current_file_path = v
+    @property
+    def has_unsaved_changes(self): return getattr(self._host, "has_unsaved_changes", False)
+    @has_unsaved_changes.setter
+    def has_unsaved_changes(self, v): self._host.has_unsaved_changes = v
 
     def statusBar(self):
         return self.statusBar_mock

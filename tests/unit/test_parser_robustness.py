@@ -4,12 +4,43 @@ from rdkit import Chem
 from moleditpy.ui.io_logic import IOManager
 
 class MockMainWindow(IOManager):
-    def __init__(self):
-        self.settings = {}
-        self.current_file_path = None
-        self.current_mol = None
+    def __init__(self, host=None):
+        self._host = host or MagicMock()
+        IOManager.__init__(self, self._host)
+        
+        # Managers if host is fresh MagicMock
+        if not hasattr(self._host, "state_manager"):
+            self._host.state_manager = MagicMock()
+        if not hasattr(self._host, "init_manager"):
+            self._host.init_manager = MagicMock()
+        if not hasattr(self._host, "view_3d_manager"):
+            self._host.view_3d_manager = MagicMock()
+
         self._statusBar = MagicMock()
-        self.host = self  # required by IOManager (manager architecture)
+
+    def __getattr__(self, name):
+        return getattr(self._host, name)
+
+    @property
+    def data(self): return self.host.state_manager.data
+    @property
+    def scene(self): return self.host.init_manager.scene
+    @property
+    def settings(self): return self.host.init_manager.settings
+    @property
+    def view_2d(self): return self.host.init_manager.view_2d
+    @property
+    def plotter(self): return self.host.view_3d_manager.plotter
+
+    @property
+    def current_mol(self): return self.host.view_3d_manager.current_mol
+    @current_mol.setter
+    def current_mol(self, v): self.host.view_3d_manager.current_mol = v
+
+    @property
+    def current_file_path(self): return getattr(self._host, "current_file_path", None)
+    @current_file_path.setter
+    def current_file_path(self, v): self._host.current_file_path = v
 
     def statusBar(self):
         return self._statusBar

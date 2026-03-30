@@ -46,40 +46,50 @@ from PyQt6.QtWidgets import QWidget, QApplication, QDialog
 class DummyParser(IOManager):
     def __init__(self, host):
         self._host = host
-        self.host = host  # required by IOManager (manager architecture)
+        IOManager.__init__(self, host)
         
         # Required attributes (as properties to reflect host state)
-        self.statusBar_mock = MagicMock()
         self.chem_check_failed = False
         self.chem_check_tried = False
         self.is_xyz_derived = False
 
-    @property
-    def data(self): return self.state_manager.data
-    @property
-    def scene(self): return self.init_manager.scene
-    @property
-    def settings(self): return self.init_manager.settings
-    @property
-    def view_2d(self): return self.init_manager.view_2d
-    @property
-    def plotter(self): return self.view_3d_manager.plotter
+    def __getattr__(self, name):
+        # Prefer properties, then delegate to host
+        return getattr(self._host, name)
 
     @property
-    def current_mol(self): return self.view_3d_manager.current_mol
+    def state_manager(self): return self.host.state_manager
+    @property
+    def init_manager(self): return self.host.init_manager
+    @property
+    def view_3d_manager(self): return self.host.view_3d_manager
+    @property
+    def ui_manager(self): return self.host.ui_manager
+    @property
+    def edit_actions_manager(self): return self.host.edit_actions_manager
+    @property
+    def edit_3d_manager(self): return self.host.edit_3d_manager
+
+    @property
+    def data(self): return self.host.state_manager.data
+    @property
+    def scene(self): return self.host.init_manager.scene
+    @property
+    def settings(self): return self.host.init_manager.settings
+    @property
+    def view_2d(self): return self.host.init_manager.view_2d
+    @property
+    def plotter(self): return self.host.view_3d_manager.plotter
+
+    @property
+    def current_mol(self): return self.host.view_3d_manager.current_mol
     @current_mol.setter
-    def current_mol(self, v): self.view_3d_manager.current_mol = v
+    def current_mol(self, v): self.host.view_3d_manager.current_mol = v
 
     @property
     def current_file_path(self): return getattr(self._host, "current_file_path", None)
     @current_file_path.setter
     def current_file_path(self, v): self._host.current_file_path = v
-
-    def __getattr__(self, name):
-        return getattr(self._host, name)
-
-    def statusBar(self):
-        return self.statusBar_mock
 
     def check_unsaved_changes(self):
         return True
@@ -152,7 +162,8 @@ def test_load_xyz_always_ask_charge(mock_parser_host, tmp_path):
     xyz_path.write_text("1\nC\nC 0 0 0\n")
     mock_rd_mod.DetermineBonds.side_effect = None
     mock_rd_mod.DetermineBonds.return_value = None
-    parser.prompt_for_charge = lambda: (1, True, False)
+    parser.settings["skip_chemistry_checks"] = False
+    parser.host.prompt_for_charge = lambda: (1, True, False)
     mol = parser.load_xyz_file(str(xyz_path))
     assert mol is not None
     assert mol.GetIntProp("_xyz_charge") == 1
@@ -163,7 +174,8 @@ def test_load_xyz_charge_loop_cancel(mock_parser_host, tmp_path):
     parser = DummyParser(mock_parser_host)
     path = tmp_path / "cancel.xyz"
     path.write_text("1\nC\nC 0 0 0\n")
-    # Default prompt_for_charge returns cancel (None, False, False)
+    # Mock prompt to return cancel (ok=False)
+    parser.host.prompt_for_charge.return_value = (0, False, False)
     result = parser.load_xyz_file(str(path))
     assert result is None
 
@@ -215,9 +227,8 @@ def test_load_xyz_recovery_loop_retries(mock_parser_host, tmp_path):
     parser = DummyParser(mock_parser_host)
     path = tmp_path / "retry.xyz"
     path.write_text("1\nC\nC 0 0 0\n")
-    mock_rd_mod.DetermineBonds.side_effect = [RuntimeError("Fail"), None]
-    parser.settings["force_fallback_fail"] = True
-    parser.prompt_for_charge = lambda: (1, True, False)
+    # Ensure it fails first, then succeeds after user input
+    parser.host.prompt_for_charge.side_effect = [(0, True, False), (0, True, False)]
     mol = parser.load_xyz_file(str(path))
     assert mol is not None
     assert mol.GetIntProp("_xyz_charge") == 1
@@ -285,7 +296,7 @@ def test_load_xyz_complex_recovery_branches(mock_parser_host, tmp_path):
     mock_rd_mod.DetermineBonds.side_effect = RuntimeError("Fail")
     # First call fails with charge 1, second call chooses skip chemistry
     calls = iter([(1, True, False), (0, True, True)])
-    parser.prompt_for_charge = lambda: next(calls)
+    parser.host.prompt_for_charge = lambda: next(calls)
     mol = parser.load_xyz_file(str(path))
     assert mol is not None
     assert mol.HasProp("_xyz_skip_checks") or getattr(mol, "_xyz_skip_checks", False)

@@ -2,40 +2,40 @@ import pytest
 import os
 from rdkit import Chem
 from rdkit.Chem import AllChem
-from moleditpy.ui.compute_logic import ComputeManager as MainWindowCompute
-from PyQt6.QtCore import Qt, QPointF
-from PyQt6.QtWidgets import QMessageBox
+from moleditpy.ui.compute_logic import ComputeManager
+from moleditpy.core.molecular_data import MolecularData
+from PyQt6.QtCore import QPointF, QPoint, QTimer, QThread
+from PyQt6.QtGui import QColor, QAction
+from PyQt6.QtWidgets import QMenu, QMessageBox
 from unittest.mock import MagicMock, patch
 
 
-class DummyCompute(MainWindowCompute):
+class DummyCompute(ComputeManager):
     def __init__(self, host):
-        MainWindowCompute.__init__(self, host)
+        self._host = host
+        ComputeManager.__init__(self, host)
         
-        # Ensure managers exist on host
-        if not hasattr(host, "start_calculation"): host.start_calculation = MagicMock()
-        if not hasattr(host, "init_manager"): host.init_manager = MagicMock()
-        if not hasattr(host, "view_3d_manager"): host.view_3d_manager = MagicMock()
-        if not hasattr(host, "ui_manager"): host.ui_manager = MagicMock()
-        if not hasattr(host, "state_manager"): host.state_manager = MagicMock()
+        # Force populate host if it's a MagicMock or missing managers
+        if not hasattr(host, "init_manager"):
+            host.init_manager = MagicMock()
         
-        # Link references
-        self.active_worker_ids = set()
-        self.halt_ids = set()
-        self.waiting_worker_id = None
-        self.is_xyz_derived = False
-        self.opt3d_method_labels = {
+        # Always set these to ensure they are real objects, not MagicMocks
+        host.init_manager.settings = getattr(host.init_manager, "settings", {}) or {}
+        host.init_manager.opt3d_method_labels = {
             "MMFF_RDKIT": "MMFF94s (RDKit)",
             "UFF_RDKIT": "UFF (RDKit)",
         }
+        if not hasattr(host, "view_3d_manager"): host.view_3d_manager = MagicMock()
+        if not hasattr(host, "state_manager"): host.state_manager = MagicMock()
+        if not hasattr(host, "ui_manager"): host.ui_manager = MagicMock()
         
-        # Buttons/Actions on init_manager
+        # Ensure buttons/actions exist for UI transition tests
         for btn in ["convert_button", "cleanup_button", "optimize_3d_button", "export_button", "analysis_action", "edit_3d_action"]:
             if not hasattr(host.init_manager, btn):
                 setattr(host.init_manager, btn, MagicMock())
-        
-        if not hasattr(host.view_3d_manager, 'plotter'):
-            host.view_3d_manager.plotter = MagicMock()
+
+    def __getattr__(self, name):
+        return getattr(self._host, name)
 
     @property
     def data(self): return self.host.state_manager.data
@@ -58,26 +58,28 @@ class DummyCompute(MainWindowCompute):
     def view_3d(self, v): self.host.view_3d_manager.view_3d = v
 
     @property
+    def plotter(self): return self.host.view_3d_manager.plotter
+    @plotter.setter
+    def plotter(self, v): self.host.view_3d_manager.plotter = v
+
+    @property
     def settings(self): return self.host.init_manager.settings
     @settings.setter
     def settings(self, v): self.host.init_manager.settings = v
-
     @property
     def current_mol(self): return self.host.view_3d_manager.current_mol
     @current_mol.setter
     def current_mol(self, v): self.host.view_3d_manager.current_mol = v
 
     @property
-    def optimization_method(self): return self.host.init_manager.optimization_method
+    def optimization_method(self): 
+        return self.host.init_manager.settings.get("optimization_method", "MMFF_RDKIT")
     @optimization_method.setter
-    def optimization_method(self, v): self.host.init_manager.optimization_method = v
-
-    @property
-    def plotter(self): return self.host.view_3d_manager.plotter
-    @plotter.setter
-    def plotter(self, v): self.host.view_3d_manager.plotter = v
+    def optimization_method(self, v): 
+        self.host.init_manager.settings["optimization_method"] = v
 
     def statusBar(self):
+        return self._host.statusBar()
         return self.host.statusBar()
 
     def get_status_messages(self):

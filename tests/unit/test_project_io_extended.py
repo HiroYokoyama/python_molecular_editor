@@ -13,21 +13,33 @@ import copy
 class DummyProjectIo(IOManager):
     def __init__(self, host):
         self._host = host
-        self.host = self  # self-referential so host-attr writes land on io
-        self.data = host.state_manager.data
-        self.scene = host.init_manager.scene
-        self.current_file_path = None
-        self.has_unsaved_changes = False
-        self.current_mol = None
-        self._saved_state = None
+        IOManager.__init__(self, host)
+        
         self.statusBar_mock = MagicMock()
 
     def __getattr__(self, name):
-        if (
-            name == "_saved_state"
-        ):  # explicit check to avoid recursion if init didn't run or something
-            return self.__dict__.get("_saved_state", None)
         return getattr(self._host, name)
+
+    @property
+    def data(self): return self.host.state_manager.data
+    @property
+    def scene(self): return self.host.init_manager.scene
+    @property
+    def settings(self): return self.host.init_manager.settings
+    @property
+    def view_2d(self): return self.host.init_manager.view_2d
+    @property
+    def plotter(self): return self.host.view_3d_manager.plotter
+
+    @property
+    def current_mol(self): return self.host.view_3d_manager.current_mol
+    @current_mol.setter
+    def current_mol(self, v): self.host.view_3d_manager.current_mol = v
+
+    @property
+    def current_file_path(self): return getattr(self._host, "current_file_path", None)
+    @current_file_path.setter
+    def current_file_path(self, v): self._host.current_file_path = v
 
     def statusBar(self):
         return self.statusBar_mock
