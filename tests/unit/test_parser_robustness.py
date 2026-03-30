@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import MagicMock, patch
 from rdkit import Chem
-from moleditpy.ui.molecular_parsers import IOManager
+from moleditpy.ui.io_logic import IOManager
 
 class MockMainWindow(IOManager):
     def __init__(self):

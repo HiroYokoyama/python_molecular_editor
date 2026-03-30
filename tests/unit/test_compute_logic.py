@@ -10,47 +10,75 @@ from unittest.mock import MagicMock, patch
 
 class DummyCompute(MainWindowCompute):
     def __init__(self, host):
-        self.host = self
-        self._host = host
-        self.data = host.state_manager.data
-        self.scene = host.init_manager.scene
-        self.view_2d = host.init_manager.view_2d
-        self.view_3d = host.view_3d_manager.view_3d
-        self.settings = host.init_manager.settings
-        self.current_mol = host.view_3d_manager.current_mol
+        MainWindowCompute.__init__(self, host)
+        
+        # Ensure managers exist on host
+        if not hasattr(host, "start_calculation"): host.start_calculation = MagicMock()
+        if not hasattr(host, "init_manager"): host.init_manager = MagicMock()
+        if not hasattr(host, "view_3d_manager"): host.view_3d_manager = MagicMock()
+        if not hasattr(host, "ui_manager"): host.ui_manager = MagicMock()
+        if not hasattr(host, "state_manager"): host.state_manager = MagicMock()
+        
+        # Link references
         self.active_worker_ids = set()
         self.halt_ids = set()
-        self.convert_button = MagicMock()
-        self.cleanup_button = MagicMock()
-        self.optimize_3d_button = MagicMock()
-        self.export_button = MagicMock()
-        self.molecule_3d_action = MagicMock()
-        self.analysis_action = MagicMock()
-        self.edit_3d_action = MagicMock()
-        self.is_xyz_derived = False
-        self.plotter = MagicMock()
         self.waiting_worker_id = None
-        self.optimization_method = "MMFF_RDKIT"
+        self.is_xyz_derived = False
         self.opt3d_method_labels = {
             "MMFF_RDKIT": "MMFF94s (RDKit)",
             "UFF_RDKIT": "UFF (RDKit)",
         }
-        self._active_calc_threads = []
-        self.main_window_compute = self
-        self.main_window_edit_actions = self
-        self.chem_check_tried = False
-        self.chem_check_failed = False
-        self.last_successful_optimization_method = None
-        self._temp_optimization_method = None
+        
+        # Buttons/Actions on init_manager
+        for btn in ["convert_button", "cleanup_button", "optimize_3d_button", "export_button", "analysis_action", "edit_3d_action"]:
+            if not hasattr(host.init_manager, btn):
+                setattr(host.init_manager, btn, MagicMock())
+        
+        if not hasattr(host.view_3d_manager, 'plotter'):
+            host.view_3d_manager.plotter = MagicMock()
 
-    def __getattr__(self, name):
-        # Prevent MagicMock from producing truthy results for standard MainWindow attributes we haven't mocked
-        if name in ("_temp_optimization_method", "plugin_manager"):
-            return None
-        return getattr(self._host, name)
+    @property
+    def data(self): return self.host.state_manager.data
+    @data.setter
+    def data(self, v): self.host.state_manager.data = v
+
+    @property
+    def scene(self): return self.host.init_manager.scene
+    @scene.setter
+    def scene(self, v): self.host.init_manager.scene = v
+
+    @property
+    def view_2d(self): return self.host.init_manager.view_2d
+    @view_2d.setter
+    def view_2d(self, v): self.host.init_manager.view_2d = v
+
+    @property
+    def view_3d(self): return self.host.view_3d_manager.view_3d
+    @view_3d.setter
+    def view_3d(self, v): self.host.view_3d_manager.view_3d = v
+
+    @property
+    def settings(self): return self.host.init_manager.settings
+    @settings.setter
+    def settings(self, v): self.host.init_manager.settings = v
+
+    @property
+    def current_mol(self): return self.host.view_3d_manager.current_mol
+    @current_mol.setter
+    def current_mol(self, v): self.host.view_3d_manager.current_mol = v
+
+    @property
+    def optimization_method(self): return self.host.init_manager.optimization_method
+    @optimization_method.setter
+    def optimization_method(self, v): self.host.init_manager.optimization_method = v
+
+    @property
+    def plotter(self): return self.host.view_3d_manager.plotter
+    @plotter.setter
+    def plotter(self, v): self.host.view_3d_manager.plotter = v
 
     def statusBar(self):
-        return self._host.statusBar()
+        return self.host.statusBar()
 
     def get_status_messages(self):
         """Helper to get all messages sent to the status bar."""
@@ -122,12 +150,12 @@ def test_compute_set_optimization_method(mock_parser_host):
     """Verify that setting the optimization method updates both settings and internal state."""
     compute = DummyCompute(mock_parser_host)
     compute.set_optimization_method("GAFF_OBABEL")
-    assert compute.settings["optimization_method"] == "GAFF_OBABEL"
+    assert compute.host.init_manager.settings["optimization_method"] == "GAFF_OBABEL"
     assert compute.statusBar().showMessage.called
     msg = compute.statusBar().showMessage.call_args[0][0]
     assert "Optimization" in msg or "GAFF_OBABEL" in msg
     # Verify internal state that actually affects calculation
-    assert compute.optimization_method == "GAFF_OBABEL"
+    assert compute.host.init_manager.optimization_method == "GAFF_OBABEL"
 
 
 def test_compute_halt_logic(mock_parser_host):
@@ -150,7 +178,7 @@ def test_on_calculation_finished_basic(mock_parser_host):
     result = (worker_id, mol)
     with patch.object(compute, "draw_molecule_3d") as mock_draw:
         compute.on_calculation_finished(result)
-        assert compute.current_mol == mol
+        assert compute.host.view_3d_manager.current_mol == mol
         assert worker_id not in compute.active_worker_ids
 
 
@@ -211,7 +239,7 @@ def test_on_calculation_finished_worker_id_mismatch(mock_parser_host):
     mol = Chem.AddHs(mol)
     result = ("invalid_id", mol)
     compute.on_calculation_finished(result)
-    assert compute.current_mol is None
+    assert compute.host.view_3d_manager.current_mol is None
 
 
 def test_trigger_conversion_chemistry_problems(mock_parser_host):
@@ -637,7 +665,7 @@ def test_trigger_conversion_early_exits(mock_parser_host):
 
     # 1. Empty data
     compute.trigger_conversion()
-    assert compute.current_mol is None
+    assert compute.host.view_3d_manager.current_mol is None
     assert any("3D view cleared" in msg for msg in compute.get_status_messages())
 
     # 2. RDKit conversion failure (triggers fallback check)

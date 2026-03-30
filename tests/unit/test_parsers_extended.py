@@ -29,7 +29,7 @@ PyQt6.QtWidgets.QMessageBox.information = lambda *args, **kwargs: None
 PyQt6.QtWidgets.QMessageBox.question = lambda *args, **kwargs: 65536  # No
 
 # Patch target module namespace
-import moleditpy.ui.molecular_parsers as mwm
+import moleditpy.ui.io_logic as mwm
 
 mwm.QDialog = PyQt6.QtWidgets.QDialog
 mwm.QInputDialog = PyQt6.QtWidgets.QInputDialog
@@ -38,29 +38,42 @@ mwm.QMessageBox = PyQt6.QtWidgets.QMessageBox
 
 from rdkit import Chem
 from rdkit.Chem import AllChem
-from moleditpy.ui.molecular_parsers import IOManager
+from moleditpy.ui.io_logic import IOManager
 from PyQt6.QtCore import QPointF, QTimer
 from PyQt6.QtWidgets import QWidget, QApplication, QDialog
 
 
-class DummyParser(QWidget, IOManager):
+class DummyParser(IOManager):
     def __init__(self, host):
-        super().__init__()
         self._host = host
-        self.host = self  # IOManager methods use self.host; DummyParser IS the host
-        self.data = host.state_manager.data
-        self.scene = host.init_manager.scene
-        # Settings as real dict to avoid MagicMock behavior
-        self.settings = {"always_ask_charge": False, "skip_chemistry_checks": False}
-        self.view_2d = host.init_manager.view_2d
-        self.plotter = host.view_3d_manager.plotter
+        self.host = host  # required by IOManager (manager architecture)
+        
+        # Required attributes (as properties to reflect host state)
         self.statusBar_mock = MagicMock()
-        self.current_mol = None
-        self.is_xyz_derived = False
-        self.chem_check_failed = False  # Prevent MagicMock truthy resolution
+        self.chem_check_failed = False
         self.chem_check_tried = False
-        self.dragged_atom_info = None
-        self.current_file_path = None
+        self.is_xyz_derived = False
+
+    @property
+    def data(self): return self.state_manager.data
+    @property
+    def scene(self): return self.init_manager.scene
+    @property
+    def settings(self): return self.init_manager.settings
+    @property
+    def view_2d(self): return self.init_manager.view_2d
+    @property
+    def plotter(self): return self.view_3d_manager.plotter
+
+    @property
+    def current_mol(self): return self.view_3d_manager.current_mol
+    @current_mol.setter
+    def current_mol(self, v): self.view_3d_manager.current_mol = v
+
+    @property
+    def current_file_path(self): return getattr(self._host, "current_file_path", None)
+    @current_file_path.setter
+    def current_file_path(self, v): self._host.current_file_path = v
 
     def __getattr__(self, name):
         return getattr(self._host, name)

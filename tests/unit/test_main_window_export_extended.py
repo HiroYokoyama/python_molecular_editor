@@ -57,13 +57,24 @@ class MockMainWindow(ExportManager, QMainWindow):
     def __init__(self):
         # Initialize ExportManager with self as host
         ExportManager.__init__(self, self)
-        self.current_mol = MagicMock()
+        
+        # Initialize all managers to avoid AttributeErrors
+        self.view_3d_manager = MagicMock()
+        self.edit_3d_manager = MagicMock()
+        self.state_manager = MagicMock()
+        self.init_manager = MagicMock()
+        self.io_manager = MagicMock()
+        self.compute_manager = MagicMock()
+        self.ui_manager = MagicMock()
+        self.export_manager = self
+        
+        self.view_3d_manager.current_mol = MagicMock()
         self.current_file_path = "/path/to/molecule.xyz"
-        self.plotter = MagicMock()
-        self.scene = MagicMock()
+        self.view_3d_manager.plotter = MagicMock()
+        self.init_manager.scene = MagicMock()
         self._status_bar = MagicMock()
-        self.view_2d = MagicMock()
-        self.data = MagicMock()
+        self.init_manager.view_2d = MagicMock()
+        self.state_manager.data = MagicMock()
 
     def statusBar(self):
         return self._status_bar
