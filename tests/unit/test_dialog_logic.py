@@ -39,7 +39,7 @@ def test_bond_length_adjustment_logic(mock_parser_host, mol):
         dialog.both_groups_radio = MagicMock()
         dialog.both_groups_radio.isChecked.return_value = False
         
-        dialog.adjust_bond_length(2.0)
+        dialog.apply_geometry_update(2.0)
         
         final_dist = calc_distance(
             mol.GetConformer().GetAtomPosition(0),

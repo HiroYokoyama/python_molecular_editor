@@ -2,7 +2,7 @@ import pytest
 import os
 from rdkit import Chem
 from rdkit.Chem import AllChem
-from moleditpy.ui.compute_engine import MainWindowCompute
+from moleditpy.ui.compute_logic import ComputeManager as MainWindowCompute
 from PyQt6.QtCore import Qt, QPointF
 from PyQt6.QtWidgets import QMessageBox
 from unittest.mock import MagicMock, patch
@@ -184,8 +184,8 @@ def test_trigger_conversion_with_atoms(mock_parser_host):
     compute.data.atoms = {1: {"symbol": "C", "item": MagicMock()}}
     compute.settings["conversion_target"] = "all"
     with (
-        patch("moleditpy.ui.compute_engine.CalculationWorker"),
-        patch("moleditpy.ui.compute_engine.QThread"),
+        patch("moleditpy.ui.compute_logic.CalculationWorker"),
+        patch("moleditpy.ui.compute_logic.QThread"),
         patch("PyQt6.QtCore.QTimer.singleShot"),
     ):
         compute.trigger_conversion()
@@ -275,8 +275,8 @@ def test_trigger_conversion_multiple_frags(mock_parser_host):
         patch("rdkit.Chem.DetectChemistryProblems", return_value=[]),
         patch("rdkit.Chem.SanitizeMol"),
         patch.object(compute.data, "to_rdkit_mol", return_value=mol),
-        patch("moleditpy.ui.compute_engine.CalculationWorker"),
-        patch("moleditpy.ui.compute_engine.QThread"),
+        patch("moleditpy.ui.compute_logic.CalculationWorker"),
+        patch("moleditpy.ui.compute_logic.QThread"),
         patch("PyQt6.QtCore.QTimer.singleShot"),
     ):
         compute.trigger_conversion()
@@ -319,8 +319,8 @@ def test_optimize_3d_temp_method_override(mock_parser_host):
     compute._temp_optimization_method = "MMFF_RDKIT"
 
     with (
-        patch("moleditpy.ui.compute_engine.CalculationWorker") as MockWorker,
-        patch("moleditpy.ui.compute_engine.QThread"),
+        patch("moleditpy.ui.compute_logic.CalculationWorker") as MockWorker,
+        patch("moleditpy.ui.compute_logic.QThread"),
         patch("PyQt6.QtCore.QTimer.singleShot"),
     ):
         mock_worker = MockWorker.return_value
@@ -392,8 +392,8 @@ def test_optimize_3d_mmff_exception_handling(mock_parser_host):
     compute.optimization_method = "MMFF_RDKIT"
 
     with (
-        patch("moleditpy.ui.compute_engine.CalculationWorker") as MockWorker,
-        patch("moleditpy.ui.compute_engine.QThread"),
+        patch("moleditpy.ui.compute_logic.CalculationWorker") as MockWorker,
+        patch("moleditpy.ui.compute_logic.QThread"),
         patch("PyQt6.QtCore.QTimer.singleShot"),
     ):
         compute.optimize_3d_structure()
@@ -410,8 +410,8 @@ def test_optimize_3d_uff_exception_handling(mock_parser_host):
     compute.optimization_method = "UFF_RDKIT"
 
     with (
-        patch("moleditpy.ui.compute_engine.CalculationWorker") as MockWorker,
-        patch("moleditpy.ui.compute_engine.QThread"),
+        patch("moleditpy.ui.compute_logic.CalculationWorker") as MockWorker,
+        patch("moleditpy.ui.compute_logic.QThread"),
         patch("PyQt6.QtCore.QTimer.singleShot"),
     ):
         compute.optimize_3d_structure()
@@ -419,44 +419,41 @@ def test_optimize_3d_uff_exception_handling(mock_parser_host):
 
 
 def test_optimize_3d_plugin_method(mock_parser_host):
-    """Test plugin optimization method."""
+    """Test plugin optimization method — worker should be started (not rejected)."""
     compute = DummyCompute(mock_parser_host)
     mol = Chem.MolFromSmiles("C")
     mol = Chem.AddHs(mol)
     AllChem.EmbedMolecule(mol, randomSeed=42)
     compute.current_mol = mol
 
-    mock_callback = MagicMock(return_value=True)
     compute.plugin_manager = MagicMock()
-    compute.plugin_manager.optimization_methods = {
-        "CUSTOM": {"callback": mock_callback}
-    }
+    compute.plugin_manager.optimization_methods = {"CUSTOM": {"callback": MagicMock()}}
     compute.optimization_method = "CUSTOM"
 
-    compute.optimize_3d_structure()
+    with (
+        patch("moleditpy.ui.compute_logic.CalculationWorker"),
+        patch("moleditpy.ui.compute_logic.QThread"),
+        patch("PyQt6.QtCore.QTimer.singleShot"),
+    ):
+        compute.optimize_3d_structure()
     msgs = compute.get_status_messages()
+    # Plugin method is valid — should not show "not available" and should show "Optimizing"
     assert not any("not available" in msg for msg in msgs)
-    assert mock_callback.called
+    assert any("Optimizing" in msg for msg in msgs)
 
 
 def test_optimize_3d_plugin_failure(mock_parser_host):
-    """Test plugin optimization returning False."""
+    """Test unavailable/unknown method shows correct error."""
     compute = DummyCompute(mock_parser_host)
     mol = Chem.MolFromSmiles("C")
     mol = Chem.AddHs(mol)
     AllChem.EmbedMolecule(mol, randomSeed=42)
     compute.current_mol = mol
-
-    mock_callback = MagicMock(return_value=False)  # Failure
-    compute.plugin_manager = MagicMock()
-    compute.plugin_manager.optimization_methods = {
-        "CUSTOM": {"callback": mock_callback}
-    }
-    compute.optimization_method = "CUSTOM"
+    compute.optimization_method = "NONEXISTENT_CUSTOM"
 
     compute.optimize_3d_structure()
     msgs = compute.get_status_messages()
-    assert any("returned failure" in msg for msg in msgs)
+    assert any("not available" in msg for msg in msgs)
 
 
 def test_optimize_3d_mmff_fallback_success(mock_parser_host):
@@ -491,8 +488,8 @@ def test_optimize_3d_uff_fallback_failure(mock_parser_host):
     compute.optimization_method = "MMFF_RDKIT"
 
     with (
-        patch("moleditpy.ui.compute_engine.CalculationWorker") as MockWorker,
-        patch("moleditpy.ui.compute_engine.QThread"),
+        patch("moleditpy.ui.compute_logic.CalculationWorker") as MockWorker,
+        patch("moleditpy.ui.compute_logic.QThread"),
         patch("PyQt6.QtCore.QTimer.singleShot"),
     ):
         compute.optimize_3d_structure()
@@ -706,8 +703,11 @@ def test_trigger_conversion_happy_path(mock_parser_host):
                     compute.start_calculation = MagicMock()
                     compute.worker_thread = MagicMock()
 
-                    # Mock QThread to prevent actual thread creation in main_window_compute namespace
-                    with patch("moleditpy.ui.compute_engine.QThread"):
+                    with (
+                        patch("moleditpy.ui.compute_logic.QThread"),
+                        patch("moleditpy.ui.compute_logic.CalculationWorker"),
+                        patch("PyQt6.QtCore.QTimer.singleShot"),
+                    ):
                         compute.trigger_conversion()
                         msgs = compute.get_status_messages()
                         assert any("Calculating 3D structure" in msg for msg in msgs)
@@ -730,8 +730,8 @@ def test_trigger_conversion_stereo_enhancement(mock_parser_host):
         with patch.object(compute.data, "to_mol_block", return_value=mol_block):
             with patch("rdkit.Chem.DetectChemistryProblems", return_value=[]):
                 # Mock QThread to prevent actual thread creation in main_window_compute namespace
-                with patch("moleditpy.ui.compute_engine.QThread"):
-                    with patch("moleditpy.ui.compute_engine.CalculationWorker"):
+                with patch("moleditpy.ui.compute_logic.QThread"):
+                    with patch("moleditpy.ui.compute_logic.CalculationWorker"):
                         with patch("PyQt6.QtCore.QTimer.singleShot") as mock_timer:
                             compute.trigger_conversion()
                             assert mock_timer.called
@@ -823,8 +823,8 @@ def test_trigger_conversion_fragment_message_exact(mock_parser_host):
         patch("rdkit.Chem.DetectChemistryProblems", return_value=[]),
         patch("rdkit.Chem.SanitizeMol"),
         patch.object(compute.data, "to_rdkit_mol", return_value=mol),
-        patch("moleditpy.ui.compute_engine.CalculationWorker"),
-        patch("moleditpy.ui.compute_engine.QThread"),
+        patch("moleditpy.ui.compute_logic.CalculationWorker"),
+        patch("moleditpy.ui.compute_logic.QThread"),
     ):
         compute.trigger_conversion()
         all_messages = [
@@ -853,8 +853,8 @@ def test_trigger_conversion_to_mol_block_priority(mock_parser_host):
             compute.data, "to_mol_block", return_value=custom_block
         ) as mock_to_block,
         patch("rdkit.Chem.MolToMolBlock") as mock_rdkit_block,
-        patch("moleditpy.ui.compute_engine.CalculationWorker") as MockWorker,
-        patch("moleditpy.ui.compute_engine.QThread"),
+        patch("moleditpy.ui.compute_logic.CalculationWorker") as MockWorker,
+        patch("moleditpy.ui.compute_logic.QThread"),
     ):
         # Setup worker mock to capture the start_work signal payload
         mock_worker_instance = MockWorker.return_value
@@ -921,8 +921,8 @@ def test_trigger_conversion_ez_stereo_injection(mock_parser_host):
         patch("rdkit.Chem.DetectChemistryProblems", return_value=[]),
         patch("rdkit.Chem.SanitizeMol"),
         patch.object(compute.data, "to_mol_block", return_value=base_block),
-        patch("moleditpy.ui.compute_engine.CalculationWorker") as MockWorker,
-        patch("moleditpy.ui.compute_engine.QThread"),
+        patch("moleditpy.ui.compute_logic.CalculationWorker") as MockWorker,
+        patch("moleditpy.ui.compute_logic.QThread"),
     ):
         mock_worker_instance = MockWorker.return_value
         mock_start_work = MagicMock()
@@ -957,7 +957,7 @@ def test_on_calculation_error_uff_fallback_temporary(mock_parser_host):
     # Mocking QMessageBox.question to return Yes
     # QMessageBox.StandardButton.Yes is usually 16384 (0x4000)
     with patch(
-        "moleditpy.ui.compute_engine.QMessageBox.question",
+        "moleditpy.ui.compute_logic.QMessageBox.question",
         return_value=QMessageBox.StandardButton.Yes,
     ):
         with patch.object(compute, "optimize_3d_structure") as mock_optimize:

@@ -17,7 +17,7 @@ from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
 from PyQt6.QtCore import QThread, QTimer, QPoint
 from PyQt6.QtGui import QAction, QColor
-from PyQt6.QtWidgets import QMenu, QMessageBox
+from PyQt6.QtWidgets import QMenu, QMessageBox, QWidget
 from rdkit import Chem
 
 try:
@@ -66,8 +66,9 @@ class ComputeManager:
         ):
             with contextlib.suppress(AttributeError, RuntimeError, TypeError):
                 self.host.plotter.renderer.RemoveActor(actor)
-        if hasattr(self.host, "_calculating_text_actor"):  # [SAFE]
-            delattr(self.host, "_calculating_text_actor")
+        with contextlib.suppress(AttributeError):
+            if "_calculating_text_actor" in self.host.__dict__:
+                delattr(self.host, "_calculating_text_actor")
 
     def _restore_button_ui(self) -> None:
         """Restore the Convert and Optimize buttons to their default state."""
@@ -141,7 +142,8 @@ class ComputeManager:
             for k, act in self.host.opt3d_actions.items():
                 act.setChecked(k.upper() == method)
 
-        label = getattr(self.host, "opt3d_method_labels", {}).get(method, method)
+        _init_mgr = getattr(self.host, "init_manager", None)
+        label = (getattr(_init_mgr, "opt3d_method_labels", None) or getattr(self.host, "opt3d_method_labels", {})).get(method, method)
         self.host.statusBar().showMessage(f"3D optimization method set to: {label}")
 
     def toggle_intermolecular_interaction_rdkit(self, checked: bool) -> None:
@@ -315,10 +317,28 @@ class ComputeManager:
             self.host.statusBar().showMessage("No 3D molecule to optimize.")
             return
 
+        if self.host.current_mol.GetNumConformers() == 0:
+            self.host.statusBar().showMessage("No conformer found. Generate 3D structure first.")
+            return
+
         method = self.host.__dict__.pop("_temp_optimization_method", None) or getattr(
             self.host, "optimization_method", "MMFF_RDKIT"
         )
         method = method.upper() if method else "MMFF_RDKIT"
+
+        # Validate method against known labels (from init_manager) and registered plugins
+        _init_mgr = getattr(self.host, "init_manager", None)
+        _init_methods = set(
+            getattr(_init_mgr, "opt3d_method_labels", None)
+            or getattr(self.host, "opt3d_method_labels", None)
+            or {}
+        )
+        _plugin_mgr = getattr(self, "plugin_manager", None) or getattr(self.host, "plugin_manager", None)
+        _plugin_methods = set(getattr(_plugin_mgr, "optimization_methods", {}) or {})
+        _all_known = _init_methods | _plugin_methods | {"OPTIMIZE_ONLY"}
+        if _all_known and method not in _all_known:
+            self.host.statusBar().showMessage(f"Selected optimization method '{method}' is not available.")
+            return
 
         self.host.statusBar().showMessage(f"Optimizing 3D structure ({method})...")
 
@@ -457,16 +477,64 @@ class ComputeManager:
         self.host.state_manager.push_undo_state()
         self.host.plotter.reset_camera()
 
+        # Record the successful optimization method from mol property or current setting
+        try:
+            method_key = None
+            if mol and mol.HasProp("_pme_optimization_method"):
+                method_key = mol.GetProp("_pme_optimization_method")
+            if not method_key:
+                method_key = getattr(self, "optimization_method", None) or getattr(self.host, "optimization_method", None)
+            if method_key:
+                _init_mgr2 = getattr(self.host, "init_manager", None)
+                labels = (
+                    getattr(self, "opt3d_method_labels", None)
+                    or getattr(_init_mgr2, "opt3d_method_labels", None)
+                    or getattr(self.host, "opt3d_method_labels", {})
+                )
+                self.last_successful_optimization_method = labels.get(method_key, method_key)
+        except (AttributeError, TypeError):
+            pass
+
         # Update 3D interactive features (hovers, menus)
         self.host.view_3d_manager.setup_3d_hover()
         self.host.view_3d_manager.update_atom_id_menu_text()
         self.host.view_3d_manager.update_atom_id_menu_state()
 
-    def on_calculation_error(self, message: str) -> None:
+    def on_calculation_error(self, message) -> None:
+        # Accept either a string or (worker_id, message) tuple from the worker signal
+        if isinstance(message, tuple) and len(message) == 2:
+            worker_id, msg = message
+            active_ids = getattr(self.host, "active_worker_ids", set())
+            if worker_id not in active_ids:
+                self._remove_calculating_text()
+                self._restore_button_ui()
+                return  # stale worker, ignore
+            active_ids.discard(worker_id)
+        else:
+            msg = str(message)
         self._remove_calculating_text()
         self._restore_button_ui()
-        self.host.statusBar().showMessage(f"Calculation Error: {message}")
-        QMessageBox.critical(self.host, "Calculation Error", message)
+        self.host.statusBar().showMessage(f"Calculation Error: {msg}")
+
+        # Offer UFF fallback when MMFF fails
+        if "MMFF" in msg.upper() and "fail" in msg.lower():
+            try:
+                reply = QMessageBox.question(
+                    self.host if isinstance(self.host, QWidget) else None,
+                    "Retry with UFF?",
+                    f"{msg}\n\nWould you like to retry using UFF (RDKit) instead?",
+                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                    QMessageBox.StandardButton.No,
+                )
+                if reply == QMessageBox.StandardButton.Yes:
+                    self._temp_optimization_method = "UFF_RDKIT"
+                    self.optimize_3d_structure()
+                    return
+            except (TypeError, RuntimeError):
+                pass
+
+        with contextlib.suppress(TypeError, RuntimeError):
+            QMessageBox.critical(self.host, "Calculation Error", msg)
 
     def create_atom_id_mapping(self):
         """Map 2D atom IDs to 3D RDKit indices."""

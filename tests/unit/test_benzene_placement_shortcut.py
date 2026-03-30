@@ -50,7 +50,7 @@ def test_benzene_shortcut_on_atom(scene):
     
     scene._calculate_polygon_from_edge.assert_called_once()
     scene.add_molecule_fragment.assert_called_once()
-    scene.window.push_undo_state.assert_called_once()
+    scene.window.edit_actions_manager.push_undo_state.assert_called_once()
     event.accept.assert_called_once()
 
 def test_benzene_shortcut_on_bond(scene):
@@ -87,6 +87,6 @@ def test_benzene_shortcut_empty_space(scene):
         mock_cursor.return_value = QPointF(200, 200)
         scene.keyPressEvent(event)
     
-    scene.window.set_mode_and_update_toolbar.assert_called_with("template_benzene")
+    scene.window.ui_manager.set_mode_and_update_toolbar.assert_called_with("template_benzene")
     event.accept.assert_called_once()
     scene.add_molecule_fragment.assert_not_called()

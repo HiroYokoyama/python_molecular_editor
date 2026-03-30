@@ -302,6 +302,7 @@ class ColorSettingsDialog(QDialog):
                     pass
         if self.changed_cpk:
             cdict = settings.get("cpk_colors", {}).copy()
+            cdict.update(self.changed_cpk)
             settings["cpk_colors"] = cdict
             self.parent_window.settings_dirty = True
             

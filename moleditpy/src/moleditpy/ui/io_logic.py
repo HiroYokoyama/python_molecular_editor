@@ -16,7 +16,20 @@ import json
 import pickle
 from typing import Any, Optional
 
+from PyQt6.QtCore import QPointF, QTimer
 from PyQt6.QtWidgets import QFileDialog, QMessageBox
+
+from rdkit import Chem
+from rdkit.Chem import AllChem, rdGeometry, rdMolTransforms, Descriptors
+
+try:
+    from moleditpy.utils.constants import COVALENT_RADII, VERSION
+except ImportError:
+    try:
+        from moleditpy_linux.utils.constants import COVALENT_RADII, VERSION
+    except ImportError:
+        COVALENT_RADII = {}
+        VERSION = "unknown"
 
 class IOManager:
     """Independent manager for IO actions (Load/Save), ported from Mixins."""
@@ -70,35 +83,149 @@ class IOManager:
         return "\n".join(lines)
 
     def load_xyz_file(self, file_path: str) -> Optional[Any]:
-        # Implementation from molecular_parsers.py
+        """Load XYZ file and create RDKit Mol with charge prompt and bond determination."""
+        if not self.host.check_unsaved_changes():
+            return None
+
         try:
-            from rdkit import Chem
-            from rdkit.Chem import AllChem, rdGeometry
             with open(file_path, "r", encoding="utf-8") as f:
                 raw_lines = f.readlines()
+
             lines = [ln.strip() for ln in raw_lines if not ln.strip().startswith("#")]
-            while lines and not lines[0]: lines.pop(0)
-            if len(lines) < 2: return None
+            while lines and not lines[0]:
+                lines.pop(0)
+
+            if len(lines) < 2:
+                raise ValueError("XYZ file format error: too few lines")
+
             num_atoms = int(lines[0])
+            if num_atoms == 0:
+                raise ValueError("XYZ file has zero atoms")
+
             atoms_data = []
-            for i, line in enumerate(lines[2 : 2 + num_atoms]):
+            for i, line in enumerate(lines[2: 2 + num_atoms]):
                 parts = line.split()
-                if len(parts) < 4: continue
+                if len(parts) < 4:
+                    raise ValueError(f"Invalid atom data at line {i + 3}")
                 symbol = parts[0].capitalize()
+                try:
+                    Chem.Atom(symbol)
+                except (RuntimeError, ValueError):
+                    settings = getattr(self.host, "settings", {}) or {}
+                    if settings.get("skip_chemistry_checks", False):
+                        symbol = "C"
+                    else:
+                        raise ValueError(f"Unrecognized element symbol: {parts[0]}")
                 atoms_data.append((symbol, float(parts[1]), float(parts[2]), float(parts[3])))
+
+            if not atoms_data:
+                raise ValueError("No valid atoms found in XYZ file")
+
             mol = Chem.RWMol()
             conf = Chem.Conformer(len(atoms_data))
             for i, (symbol, x, y, z) in enumerate(atoms_data):
                 atom = Chem.Atom(symbol)
+                atom.SetIntProp("xyz_unique_id", i)
                 mol.AddAtom(atom)
                 conf.SetAtomPosition(i, rdGeometry.Point3D(x, y, z))
             mol.AddConformer(conf)
-            # Simplified bond estimation for XYV Load
-            from rdkit.Chem import rdDetermineBonds
-            try: rdDetermineBonds.DetermineBonds(mol, charge=0)
-            except: pass
-            return mol.GetMol()
-        except: return None
+
+            settings = getattr(self.host, "settings", {}) or {}
+            skip_checks = bool(settings.get("skip_chemistry_checks", False))
+
+            def _set_prop(m, key, val):
+                try:
+                    if isinstance(val, int):
+                        m.SetIntProp(key, val)
+                    elif isinstance(val, float):
+                        m.SetDoubleProp(key, val)
+                except (RuntimeError, TypeError, ValueError):
+                    pass
+
+            def _process(charge_val, use_rd_determine=True):
+                if use_rd_determine:
+                    try:
+                        from rdkit.Chem import rdDetermineBonds
+                        mol_copy = Chem.RWMol(mol)
+                        rdDetermineBonds.DetermineBonds(mol_copy, charge=charge_val)
+                        candidate = mol_copy.GetMol()
+                        _set_prop(candidate, "_xyz_charge", charge_val)
+                        return candidate
+                    except (RuntimeError, ValueError, TypeError) as e:
+                        raise e
+                else:
+                    self.estimate_bonds_from_distances(mol)
+                    candidate = mol.GetMol()
+                    _set_prop(candidate, "_xyz_charge", charge_val)
+                    return candidate
+
+            if skip_checks:
+                final_mol = _process(0, use_rd_determine=False)
+                _set_prop(final_mol, "_xyz_skip_checks", 1)
+            else:
+                final_mol = None
+                while True:
+                    prompt_fn = getattr(self.host, "prompt_for_charge", None)
+                    if callable(prompt_fn):
+                        result = prompt_fn()
+                        if isinstance(result, tuple) and len(result) == 3:
+                            charge_val, ok, skip_flag = result
+                        else:
+                            charge_val, ok, skip_flag = 0, True, False
+                    else:
+                        charge_val, ok, skip_flag = 0, True, False
+
+                    if not ok:
+                        return None
+                    if skip_flag:
+                        final_mol = _process(0, use_rd_determine=False)
+                        _set_prop(final_mol, "_xyz_skip_checks", 1)
+                        break
+                    try:
+                        final_mol = _process(charge_val, use_rd_determine=True)
+                        break
+                    except (RuntimeError, ValueError, TypeError) as e:
+                        self.host.statusBar().showMessage(
+                            f"Chemistry failed for charge {charge_val}: {e}. Try a different charge or skip."
+                        )
+                        if not callable(prompt_fn):
+                            raise e
+
+            return final_mol
+
+        except (RuntimeError, TypeError, ValueError, UnicodeDecodeError) as e:
+            self.host.statusBar().showMessage(f"Error parsing XYZ file: {e}")
+            return None
+
+    def estimate_bonds_from_distances(self, mol) -> int:
+        """Estimate bonds based on interatomic distances using covalent radii."""
+        conf = mol.GetConformer()
+        num_atoms = mol.GetNumAtoms()
+        bonds_added = []
+
+        for i in range(num_atoms):
+            for j in range(i + 1, num_atoms):
+                atom_i = mol.GetAtomWithIdx(i)
+                atom_j = mol.GetAtomWithIdx(j)
+                distance = rdMolTransforms.GetBondLength(conf, i, j)
+                symbol_i = atom_i.GetSymbol()
+                symbol_j = atom_j.GetSymbol()
+                radius_i = COVALENT_RADII.get(symbol_i, 1.0)
+                radius_j = COVALENT_RADII.get(symbol_j, 1.0)
+                expected = radius_i + radius_j
+                tolerance = 1.2 if (symbol_i == "H" or symbol_j == "H") else 1.3
+                if expected * 0.5 <= distance <= expected * tolerance:
+                    if mol.GetBondBetweenAtoms(i, j) is None:
+                        if (symbol_i == "H" and mol.GetAtomWithIdx(i).GetDegree() >= 1) or \
+                           (symbol_j == "H" and mol.GetAtomWithIdx(j).GetDegree() >= 1):
+                            continue
+                        try:
+                            mol.AddBond(i, j, Chem.BondType.SINGLE)
+                            bonds_added.append((i, j, distance))
+                        except (RuntimeError, ValueError, TypeError):
+                            pass
+
+        return len(bonds_added)
 
     def save_project(self) -> None:
         """Save (Ctrl+S) - Defaults to PMEPRJ format."""
@@ -301,7 +428,6 @@ class IOManager:
             self.update_window_title()
             self.host.statusBar().showMessage(f"PME Project loaded from {file_path}")
 
-            from PyQt6.QtCore import QTimer
             QTimer.singleShot(0, self.fit_to_view)
 
         except FileNotFoundError:
@@ -377,11 +503,11 @@ class IOManager:
             if not file_path:
                 return
 
-        try:
-            from rdkit import Chem
-            from rdkit.Chem import AllChem
-            from PyQt6.QtCore import QPointF, QTimer
+        if not os.path.exists(file_path):
+            self.host.statusBar().showMessage(f"File not found: {file_path}")
+            return
 
+        try:
             if file_path.lower().endswith(".mol"):
                 with open(file_path, "r", encoding="utf-8", errors="replace") as fh:
                     raw = fh.read()
@@ -448,7 +574,6 @@ class IOManager:
     def save_as_mol(self) -> None:
         """Save current 2D structure as MOL file."""
         try:
-            from moleditpy.utils.constants import VERSION
             mol_block = self.host.data.to_mol_block()
             if not mol_block:
                 self.host.statusBar().showMessage("Error: No 2D data to save.")
@@ -499,8 +624,6 @@ class IOManager:
             file_path, _ = QFileDialog.getOpenFileName(self.host, "Open MOL/SDF File", "", "MOL/SDF Files (*.mol *.sdf);;All Files (*)")
             if not file_path: return
         try:
-            from rdkit import Chem
-            from rdkit.Chem import AllChem
             if file_path.lower().endswith(".sdf"):
                 suppl = Chem.SDMolSupplier(file_path, removeHs=False)
                 mol = next(suppl, None)
@@ -528,8 +651,6 @@ class IOManager:
         if not self.host.current_mol:
             self.host.statusBar().showMessage("Error: No 3D structure to save.")
             return
-        from moleditpy.utils.constants import VERSION
-        from rdkit import Chem
         file_path, _ = QFileDialog.getSaveFileName(self.host, "Save 3D MOL File", "", "MOL Files (*.mol);;All Files (*)")
         if file_path:
             try:
@@ -554,9 +675,6 @@ class IOManager:
             if not file_path.lower().endswith(".xyz"):
                 file_path += ".xyz"
             try:
-                from moleditpy.utils.constants import VERSION
-                from rdkit import Chem
-                from rdkit.Chem import Descriptors
                 conf = self.host.current_mol.GetConformer()
                 num_atoms = self.host.current_mol.GetNumAtoms()
                 xyz_lines = [str(num_atoms)]
@@ -587,7 +705,6 @@ class IOManager:
     def load_raw_data(self, file_path: Optional[str] = None) -> None:
         """Open a .pmeraw pickle project file."""
         import copy
-        from PyQt6.QtCore import QTimer
         if not file_path:
             file_path, _ = QFileDialog.getOpenFileName(
                 self.host, "Open Project File", "", "Project Files (*.pmeraw);;All Files (*)"
@@ -620,7 +737,6 @@ class IOManager:
 
     def _set_mol_prop(self, mol: Any, prop_name: str, value: Any) -> None:
         """Set an RDKit molecule property safely."""
-        from rdkit import Chem
         try:
             if isinstance(value, int):
                 mol.SetIntProp(prop_name, value)
@@ -636,7 +752,6 @@ class IOManager:
         try:
             if not mol.HasProp(prop_name):
                 return default
-            from rdkit import Chem
             for getter in [mol.GetIntProp, mol.GetDoubleProp, mol.GetProp]:
                 try:
                     return getter(prop_name)

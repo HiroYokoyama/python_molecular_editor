@@ -43,6 +43,11 @@ class DummyMainWindow(MainWindowAppState):
         self.edit_actions_manager.clear_2d_editor.side_effect = self._do_clear_2d_editor
         self.edit_actions_manager.update_implicit_hydrogens = MagicMock()
 
+        self.ui_manager = MagicMock()
+        self.compute_manager = MagicMock()
+        self.state_manager = MagicMock()
+        self.state_manager.reset_undo_stack = MagicMock()
+
     def _do_clear_2d_editor(self, push_to_undo=True):
         self.data.atoms.clear()
         self.data.bonds.clear()
@@ -118,7 +123,7 @@ def test_pmeprj_serialization_roundtrip(dummy_window):
     
     # Constraints and metadata
     mw.constraints_3d = [("DISTANCE", (0, 1), 1.43, 8.0e5)]
-    mw.last_successful_optimization_method = "MMFF94s"
+    mw.compute_manager.last_successful_optimization_method = "MMFF94s"
     mw._preserved_plugin_data = {"TestPlugin": {"val": 42}}
     
     # 2. Serialize
@@ -158,7 +163,7 @@ def test_pmeprj_serialization_roundtrip(dummy_window):
     assert len(mw.constraints_3d) == 1
     assert mw.constraints_3d[0][0] == "DISTANCE"
     assert mw.constraints_3d[0][2] == 1.43
-    assert mw.last_successful_optimization_method == "MMFF94s"
+    assert mw.compute_manager.last_successful_optimization_method == "MMFF94s"
     assert mw._preserved_plugin_data["TestPlugin"]["val"] == 42
 
 def test_undo_state_binary_roundtrip(dummy_window):

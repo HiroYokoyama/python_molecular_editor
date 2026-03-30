@@ -185,6 +185,14 @@ def mock_parser_host(app):
     host.view_3d_manager = MagicMock()
     # IO manager
     host.io_manager = MagicMock()
+    # Compute manager
+    host.compute_manager = MagicMock()
+    # Init manager (opt3d_method_labels must be None so compute_logic falls back correctly)
+    host.init_manager = MagicMock()
+    host.init_manager.opt3d_method_labels = None
+    # Edit-3D manager
+    host.edit_3d_manager = MagicMock()
+    host.edit_3d_manager.update_2d_measurement_labels = MagicMock()
 
     # Scene helpers
     host.scene.find_bond_between.return_value = None

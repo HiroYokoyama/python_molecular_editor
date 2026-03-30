@@ -47,7 +47,7 @@ def test_scene_keypress_modes(mock_parser_host):
     def mock_set_mode(mode):
         scene.mode = mode
 
-    scene.window.set_mode_and_update_toolbar.side_effect = mock_set_mode
+    scene.window.ui_manager.set_mode_and_update_toolbar.side_effect = mock_set_mode
 
     # Test space -> activate_select_mode
     scene.mode = "atom_C"
@@ -59,7 +59,7 @@ def test_scene_keypress_modes(mock_parser_host):
             QKeyEvent.Type.KeyPress, Qt.Key.Key_Space, Qt.KeyboardModifier.NoModifier
         )
         scene.keyPressEvent(event)
-        assert scene.window.activate_select_mode.called
+        assert scene.window.ui_manager.activate_select_mode.called
 
     key_map = {
         Qt.Key.Key_C: "atom_C",
@@ -91,7 +91,7 @@ def test_scene_keypress_special_symbols(mock_parser_host):
     def mock_set_mode(mode):
         scene.mode = mode
 
-    scene.window.set_mode_and_update_toolbar.side_effect = mock_set_mode
+    scene.window.ui_manager.set_mode_and_update_toolbar.side_effect = mock_set_mode
 
     with (
         patch.object(MoleculeScene, "itemAt", return_value=None),
@@ -237,7 +237,7 @@ def test_scene_mouse_click_create_single_atom(mock_parser_host):
 
     # Verify an 'O' atom was created and undo state pushed
     assert any(a["symbol"] == "O" for a in scene.data.atoms.values())
-    assert mock_parser_host.push_undo_state.called
+    assert mock_parser_host.edit_actions_manager.push_undo_state.called
 
 
 def test_scene_right_click_bond_delete(qtbot, mock_parser_host):
@@ -261,7 +261,7 @@ def test_scene_right_click_bond_delete(qtbot, mock_parser_host):
         scene.mousePressEvent(event)
         mock_del.assert_called()
         assert len(mock_parser_host.data.bonds) == 0
-        assert mock_parser_host.push_undo_state.called
+        assert mock_parser_host.edit_actions_manager.push_undo_state.called
 
     # Safety for headless environments: ensure any popup menus are closed
     # before the test finishes to avoid segmentation faults during teardown.
@@ -305,7 +305,7 @@ def test_scene_drag_and_drop_atom(mock_parser_host):
 
     assert atom_item.pos() == new_pos
     assert mock_parser_host.data.atoms[aid]["pos"] == (new_pos.x(), new_pos.y())
-    assert mock_parser_host.push_undo_state.called
+    assert mock_parser_host.edit_actions_manager.push_undo_state.called
 
 
 def test_scene_delete_mixed_selection(mock_parser_host):

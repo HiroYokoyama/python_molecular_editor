@@ -50,8 +50,7 @@ class StateManager:
 
     def __init__(self, host):
         self.host = host
-        """Initialize class. 'self' is MainWindow instance."""
-        pass
+        self._preserved_plugin_data = {}
 
     def get_current_state(self):
         atoms = {
@@ -591,11 +590,11 @@ class StateManager:
         is_3d_mode = json_data.get("is_3d_viewer_mode", False)
         # Restore last successful optimization method if present in file
         try:
-            self.last_successful_optimization_method = json_data.get(
-                "last_successful_optimization_method", None
-            )
+            method = json_data.get("last_successful_optimization_method", None)
+            if hasattr(self.host, "compute_manager"):
+                self.host.compute_manager.last_successful_optimization_method = method
         except (AttributeError, RuntimeError, TypeError):
-            self.last_successful_optimization_method = None
+            pass
 
         # Plugin State Restoration (Phase 3)
         self._preserved_plugin_data = {}  # Reset preserved data on new load

@@ -69,6 +69,11 @@ def scene_setup(qapp):
             self.undo_stack = []
             self.redo_stack = []
             self.statusBar_msg = ""
+            from unittest.mock import MagicMock
+            self.edit_actions_manager = MagicMock()
+            self.edit_actions_manager.push_undo_state.side_effect = lambda: self.undo_stack.append("state")
+            self.edit_3d_manager = MagicMock()
+            self.ui_manager = MagicMock()
 
         def push_undo_state(self):
             # Simple simulation

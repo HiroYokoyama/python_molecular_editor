@@ -21,7 +21,7 @@ def test_about_dialog_easter_egg(app, mock_parser_host):
     
     # Assert that it cleared the scene and loaded the specific SMILES
     mock_parser_host.edit_actions_manager.clear_all.assert_called_once()
-    mock_parser_host.load_from_smiles.assert_called_once_with("C1=CN=C(N=C1)C2=NC=CC=N2")
+    mock_parser_host.string_importer_manager.load_from_smiles.assert_called_once_with("C1=CN=C(N=C1)C2=NC=CC=N2")
 
 def test_about_dialog_ignore_left_click(app, mock_parser_host):
     """Verify left clicks do not trigger the easter egg."""

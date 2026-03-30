@@ -23,7 +23,12 @@
       "Bash(python -m pytest tests/unit/test_string_importers.py tests/unit/test_project_io_raw.py tests/unit/test_project_io_extended.py tests/unit/test_io.py -x -q)",
       "Bash(python -m pytest tests/unit/test_io.py::test_xyz_export_logic -x -q -s)",
       "Bash(python -m pytest tests/unit/ -q --tb=short --ignore=tests/unit/test_io.py)",
-      "Bash(python -c \"import moleditpy.ui.molecular_parsers as m; print\\(dir\\(m\\)\\)\")"
+      "Bash(python -c \"import moleditpy.ui.molecular_parsers as m; print\\(dir\\(m\\)\\)\")",
+      "Bash(python -m pytest tests/unit/test_app_state.py tests/unit/test_app_state_persistence.py -q --tb=short)",
+      "Bash(python -m pytest tests/unit/test_app_state.py::test_json_roundtrip_preserves_atoms -q --tb=short)",
+      "Bash(python -m pytest tests/unit/ -q --tb=no)",
+      "Bash(python -m pytest tests/unit/test_compute_logic.py -q --tb=short)",
+      "Bash(python -m pytest tests/unit/test_compute_logic.py -q --tb=line)"
     ]
   }
 }

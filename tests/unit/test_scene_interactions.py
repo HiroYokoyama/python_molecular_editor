@@ -193,7 +193,7 @@ def test_scene_key_event_dispatch(mock_kp, mock_parser_host):
         scene.keyPressEvent(event)
 
         # Verify mode switched to 'template_benzene'
-        mock_parser_host.set_mode_and_update_toolbar.assert_called_with(
+        mock_parser_host.ui_manager.set_mode_and_update_toolbar.assert_called_with(
             "template_benzene"
         )
 

@@ -47,6 +47,7 @@ class DummyParser(QWidget, MainWindowMolecularParsers):
     def __init__(self, host):
         super().__init__()
         self._host = host
+        self.host = self  # IOManager methods use self.host; DummyParser IS the host
         self.data = host.data
         self.scene = host.scene
         # Settings as real dict to avoid MagicMock behavior

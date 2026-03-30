@@ -1136,6 +1136,7 @@ class KeyboardMixin:
                 mode_to_set = f"bond_{bond_data[0]}_{bond_data[1]}"
 
             # Execute mode change
+            if mode_to_set is not None:
                 if hasattr(self.window.ui_manager, "set_mode_and_update_toolbar"):
                     self.window.ui_manager.set_mode_and_update_toolbar(mode_to_set)
                     event.accept()

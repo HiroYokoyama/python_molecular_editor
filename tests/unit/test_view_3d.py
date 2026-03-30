@@ -11,6 +11,7 @@ def _make_view3d(mock_host):
     view3d.host = mock_host
     view3d._drawing_3d = False
     view3d.current_3d_style = "Ball and Stick"
+    view3d.atom_info_display_mode = None
     return view3d
 
 
