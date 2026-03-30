@@ -89,16 +89,16 @@ class PluginContext:
         """
         mw = self._manager.get_main_window()
         if mw:
-            return mw.current_mol
+            return mw.view_3d_manager.current_mol
         return None
 
     @current_molecule.setter
     def current_molecule(self, mol: Any):
         mw = self._manager.get_main_window()
         if mw:
-            mw.current_mol = mol
-            if hasattr(mw, "draw_molecule_3d"):
-                mw.draw_molecule_3d(mol)
+            mw.view_3d_manager.current_mol = mol
+            if hasattr(mw.view_3d_manager, "draw_molecule_3d"):
+                mw.view_3d_manager.draw_molecule_3d(mol)
 
     def add_export_action(self, label: str, callback: Callable):
         """

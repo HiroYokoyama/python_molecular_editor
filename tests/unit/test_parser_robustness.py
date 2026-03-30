@@ -16,7 +16,10 @@ class MockMainWindow(IOManager):
         if not hasattr(self._host, "view_3d_manager"):
             self._host.view_3d_manager = MagicMock()
 
+        self._host.view_3d_manager.current_mol = None
+        self._host.settings = {}  # Prevent truthy MagicMock from bypassing chemistry checks
         self._statusBar = MagicMock()
+        self._host.statusBar.return_value = self._statusBar
 
     def __getattr__(self, name):
         return getattr(self._host, name)

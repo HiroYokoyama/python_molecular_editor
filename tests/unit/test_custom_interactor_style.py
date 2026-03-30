@@ -23,7 +23,7 @@ def test_custom_interactor_style_left_click_atom_selection(app, mock_parser_host
     mock_atom = MagicMock()
     mock_atom.GetAtomicNum.return_value = 6  # Carbon
     mock_mol.GetAtomWithIdx.return_value = mock_atom
-    mock_parser_host.current_mol = mock_mol
+    mock_parser_host.view_3d_manager.current_mol = mock_mol
     
     # Mock VTK Picker
     mock_picker = MagicMock()

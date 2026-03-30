@@ -11,7 +11,9 @@ from unittest.mock import MagicMock
 
 def _make_state_manager(host):
     """Create a StateManager with host properly set."""
-    return StateManager(host)
+    sm = StateManager(host)
+    sm.data = host.state_manager.data  # mirror conftest setup
+    return sm
 
 
 def _add_atom(host, symbol, x, y, charge=0, radical=0):
@@ -67,7 +69,7 @@ def test_get_current_state_with_3d_mol(mock_parser_host):
     AllChem.EmbedMolecule(mol, AllChem.ETKDG())
     for i in range(mol.GetNumAtoms()):
         mol.GetAtomWithIdx(i).SetIntProp("_original_atom_id", i)
-    mock_parser_host.current_mol = mol
+    mock_parser_host.view_3d_manager.current_mol = mol
 
     state = sm.get_current_state()
 
@@ -88,7 +90,7 @@ def test_get_current_state_includes_version(mock_parser_host):
 def test_get_current_state_captures_constraints(mock_parser_host):
     """3D constraints should be serialized in JSON-safe format."""
     sm = _make_state_manager(mock_parser_host)
-    mock_parser_host.constraints_3d = [
+    mock_parser_host.edit_3d_manager.constraints_3d = [
         ("Distance", (0, 1), 1.5, 1.0e5),
         ("Angle", (0, 1, 2), 109.5, 1.0e5),
     ]

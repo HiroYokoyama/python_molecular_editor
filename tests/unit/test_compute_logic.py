@@ -11,6 +11,8 @@ from unittest.mock import MagicMock, patch
 
 
 class DummyCompute(ComputeManager):
+    opt3d_method_labels = None  # Prevent __getattr__ from shadowing init_manager.opt3d_method_labels
+
     def __init__(self, host):
         self._host = host
         ComputeManager.__init__(self, host)
@@ -72,15 +74,20 @@ class DummyCompute(ComputeManager):
     def current_mol(self, v): self.host.view_3d_manager.current_mol = v
 
     @property
-    def optimization_method(self): 
+    def optimization_method(self):
         return self.host.init_manager.settings.get("optimization_method", "MMFF_RDKIT")
     @optimization_method.setter
-    def optimization_method(self, v): 
+    def optimization_method(self, v):
         self.host.init_manager.settings["optimization_method"] = v
+        self.host.init_manager.optimization_method = v
+
+    @property
+    def constraints_3d(self): return self.host.edit_3d_manager.constraints_3d
+    @constraints_3d.setter
+    def constraints_3d(self, v): self.host.edit_3d_manager.constraints_3d = v
 
     def statusBar(self):
         return self._host.statusBar()
-        return self.host.statusBar()
 
     def get_status_messages(self):
         """Helper to get all messages sent to the status bar."""
@@ -346,7 +353,7 @@ def test_optimize_3d_temp_method_override(mock_parser_host):
     AllChem.EmbedMolecule(mol, randomSeed=42)
     compute.current_mol = mol
     compute.optimization_method = "UFF_RDKIT"
-    compute._temp_optimization_method = "MMFF_RDKIT"
+    compute.host._temp_optimization_method = "MMFF_RDKIT"
 
     with (
         patch("moleditpy.ui.compute_logic.CalculationWorker") as MockWorker,
@@ -456,8 +463,8 @@ def test_optimize_3d_plugin_method(mock_parser_host):
     AllChem.EmbedMolecule(mol, randomSeed=42)
     compute.current_mol = mol
 
-    compute.plugin_manager = MagicMock()
-    compute.plugin_manager.optimization_methods = {"CUSTOM": {"callback": MagicMock()}}
+    compute.host.plugin_manager = MagicMock()
+    compute.host.plugin_manager.optimization_methods = {"CUSTOM": {"callback": MagicMock()}}
     compute.optimization_method = "CUSTOM"
 
     with (
@@ -772,12 +779,12 @@ def test_halt_conversion(mock_parser_host):
     compute = DummyCompute(mock_parser_host)
     compute.active_worker_ids = {1, 2}
     compute.halt_ids = set()
-    compute.convert_button = MagicMock()
+    compute.host.init_manager.convert_button = MagicMock()
 
     compute.halt_conversion()
     assert compute.active_worker_ids == set()
     assert 1 in compute.halt_ids
-    assert compute.convert_button.setText.called
+    assert compute.host.init_manager.convert_button.setText.called
     # Note: halt_conversion doesn't show status message directly
 
 

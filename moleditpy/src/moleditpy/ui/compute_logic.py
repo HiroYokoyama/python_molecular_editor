@@ -335,7 +335,6 @@ class ComputeManager:
         _plugin_mgr = getattr(self.host, "plugin_manager", None)
         _plugin_methods = set(getattr(_plugin_mgr, "optimization_methods", {}) or {})
         _all_known = _init_methods | _plugin_methods | {"OPTIMIZE_ONLY"}
-        print(f"DEBUG: optimize_3d_structure method={method}, all_known={_all_known}")
         if _all_known and method not in _all_known:
             self.host.statusBar().showMessage(f"Selected optimization method '{method}' is not available.")
             return

@@ -84,7 +84,7 @@ class IOManager:
 
     def load_xyz_file(self, file_path: str) -> Optional[Any]:
         """Load XYZ file and create RDKit Mol with charge prompt and bond determination."""
-        if not self.host.check_unsaved_changes():
+        if not self.check_unsaved_changes():
             return None
 
         try:
@@ -165,7 +165,7 @@ class IOManager:
             else:
                 final_mol = None
                 while True:
-                    prompt_fn = getattr(self.host, "prompt_for_charge", None)
+                    prompt_fn = getattr(self, "prompt_for_charge", None) or getattr(self.host, "prompt_for_charge", None)
                     if callable(prompt_fn):
                         result = prompt_fn()
                         if isinstance(result, tuple) and len(result) == 3:
@@ -196,6 +196,43 @@ class IOManager:
         except (RuntimeError, TypeError, ValueError, UnicodeDecodeError) as e:
             self.host.statusBar().showMessage(f"Error parsing XYZ file: {e}")
             return None
+
+    def prompt_for_charge(self):
+        """Show dialog to prompt user for molecular charge when loading XYZ files."""
+        from PyQt6.QtWidgets import (
+            QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit,
+            QDialogButtonBox, QPushButton
+        )
+        dialog = QDialog(self.host)
+        dialog.setWindowTitle("Import XYZ Charge")
+        layout = QVBoxLayout(dialog)
+        line_edit = QLineEdit(dialog)
+        line_edit.setText("0")
+        btn_box = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel,
+            parent=dialog
+        )
+        skip_btn = QPushButton("Skip chemistry", dialog)
+        hl = QHBoxLayout()
+        hl.addWidget(btn_box)
+        hl.addWidget(skip_btn)
+        layout.addWidget(QLabel("Enter total molecular charge:"))
+        layout.addWidget(line_edit)
+        layout.addLayout(hl)
+        result = {"accepted": False, "skip": False}
+        btn_box.accepted.connect(dialog.accept)
+        btn_box.rejected.connect(dialog.reject)
+        skip_btn.clicked.connect(lambda: (result.update({"skip": True}), dialog.accept()))
+        from PyQt6.QtWidgets import QDialog as _QD
+        if dialog.exec() != _QD.DialogCode.Accepted:
+            return None, False, False
+        if result["skip"]:
+            return 0, True, True
+        try:
+            val = int(float(line_edit.text().strip() or "0"))
+            return val, True, False
+        except ValueError:
+            return 0, True, False
 
     def estimate_bonds_from_distances(self, mol) -> int:
         """Estimate bonds based on interatomic distances using covalent radii."""
@@ -599,20 +636,43 @@ class IOManager:
         try:
             mol = self.load_xyz_file(file_path)
             if mol is None: raise ValueError("Failed to create molecule from XYZ file.")
-            
+
             self.host.edit_actions_manager.clear_2d_editor(push_to_undo=False)
             self.host.view_3d_manager.current_mol = mol
-            
+            self.host.view_3d_manager.atom_id_to_rdkit_idx_map = {}
+
+            # Determine is_xyz_derived: True only when bond estimation was skipped
+            import contextlib
+            skip_flag = False
+            with contextlib.suppress(AttributeError, KeyError, RuntimeError, TypeError):
+                if mol.HasProp("_xyz_skip_checks"):
+                    skip_flag = bool(mol.GetIntProp("_xyz_skip_checks"))
+            self.host.is_xyz_derived = skip_flag or (mol.GetNumBonds() == 0)
+
             if hasattr(self.host.view_3d_manager, "draw_molecule_3d"):
-                self.host.view_3d_manager.draw_molecule_3d(self.host.view_3d_manager.current_mol)
-            else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                self.host.view_3d_manager.draw_molecule_3d(mol)
+            else:
                 logging.error(f"REPORT ERROR: Missing attribute 'draw_molecule_3d' on object")
+
+            # Reset camera/zoom after drawing
+            QTimer.singleShot(0, self.fit_to_view)
+
             if hasattr(self.host.ui_manager, "_enter_3d_viewer_ui_mode"):
                 self.host.ui_manager._enter_3d_viewer_ui_mode()
-            else:  # [REPORT ERROR MISSING ATTRIBUTE]
+            else:
                 logging.error(f"REPORT ERROR: Missing attribute '_enter_3d_viewer_ui_mode' on object")
+
+            if hasattr(self.host.ui_manager, "_enable_3d_features"):
+                self.host.ui_manager._enable_3d_features(True)
+
+            if hasattr(self.host.view_3d_manager, "update_atom_id_menu_text"):
+                self.host.view_3d_manager.update_atom_id_menu_text()
+            if hasattr(self.host.view_3d_manager, "update_atom_id_menu_state"):
+                self.host.view_3d_manager.update_atom_id_menu_state()
+
             self.host.statusBar().showMessage(f"3D Viewer Mode: Loaded {os.path.basename(file_path)}")
             self.host.current_file_path = file_path
+            self.host.has_unsaved_changes = False
             self.host.state_manager.update_window_title()
         except Exception as e:
             self.host.statusBar().showMessage(f"XYZ Load failed: {e}")
@@ -638,10 +698,20 @@ class IOManager:
                 AllChem.EmbedMolecule(mol)
             
             self.host.view_3d_manager.current_mol = mol
+            self.host.view_3d_manager.atom_id_to_rdkit_idx_map = {}
+            self.host.is_xyz_derived = False
             self.host.view_3d_manager.draw_molecule_3d(mol)
+            QTimer.singleShot(0, self.fit_to_view)
             self.host.ui_manager._enter_3d_viewer_ui_mode()
+            if hasattr(self.host.ui_manager, "_enable_3d_features"):
+                self.host.ui_manager._enable_3d_features(True)
+            if hasattr(self.host.view_3d_manager, "update_atom_id_menu_text"):
+                self.host.view_3d_manager.update_atom_id_menu_text()
+            if hasattr(self.host.view_3d_manager, "update_atom_id_menu_state"):
+                self.host.view_3d_manager.update_atom_id_menu_state()
             self.host.statusBar().showMessage(f"Loaded {file_path} in 3D viewer")
             self.host.current_file_path = file_path
+            self.host.has_unsaved_changes = False
             self.host.state_manager.update_window_title()
         except Exception as e:
             self.host.statusBar().showMessage(f"3D MOL Load failed: {e}")

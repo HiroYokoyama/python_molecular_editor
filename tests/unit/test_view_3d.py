@@ -17,12 +17,12 @@ def _make_view3d(mock_host):
 
 def test_view_3d_draw_standard_3d_style(app, mock_parser_host):
     """Verify that draw_standard_3d_style clears the plotter and constructs the correct VTK meshes."""
-    mock_parser_host.plotter = MagicMock()
-    mock_parser_host.settings = {
+    mock_parser_host.view_3d_manager.plotter = MagicMock()
+    mock_parser_host.init_manager.settings.update({
         "projection_mode": "Perspective",
         "background_color": "#ffffff",
         "display_kekule_3d": False
-    }
+    })
     mock_parser_host.edit_3d_manager = MagicMock()
 
     view3d = _make_view3d(mock_parser_host)
@@ -37,10 +37,10 @@ def test_view_3d_draw_standard_3d_style(app, mock_parser_host):
 
         view3d.draw_standard_3d_style(mol)
 
-        mock_parser_host.plotter.clear.assert_called()
-        mock_parser_host.plotter.set_background.assert_called_with("#ffffff")
-        assert mock_parser_host.plotter.add_mesh.call_count >= 1
-        mock_parser_host.plotter.render.assert_called()
+        mock_parser_host.view_3d_manager.plotter.clear.assert_called()
+        mock_parser_host.view_3d_manager.plotter.set_background.assert_called_with("#ffffff")
+        assert mock_parser_host.view_3d_manager.plotter.add_mesh.call_count >= 1
+        mock_parser_host.view_3d_manager.plotter.render.assert_called()
 
         import numpy as np
         assert hasattr(view3d, "atom_positions_3d")
@@ -50,14 +50,14 @@ def test_view_3d_draw_standard_3d_style(app, mock_parser_host):
 
 def test_view_3d_draw_none(app, mock_parser_host):
     """Verify that calling draw with None safely clears the renderer."""
-    mock_parser_host.plotter = MagicMock()
-    mock_parser_host.settings = {"background_color": "#000000"}
+    mock_parser_host.view_3d_manager.plotter = MagicMock()
+    mock_parser_host.init_manager.settings.update({"background_color": "#000000"})
     mock_parser_host.edit_3d_manager = MagicMock()
 
     view3d = _make_view3d(mock_parser_host)
 
     view3d.draw_standard_3d_style(None)
 
-    mock_parser_host.plotter.clear.assert_called()
-    mock_parser_host.plotter.render.assert_called()
-    assert mock_parser_host.current_mol is None
+    mock_parser_host.view_3d_manager.plotter.clear.assert_called()
+    mock_parser_host.view_3d_manager.plotter.render.assert_called()
+    assert mock_parser_host.view_3d_manager.current_mol is None

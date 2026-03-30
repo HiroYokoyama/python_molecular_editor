@@ -28,7 +28,21 @@
       "Bash(python -m pytest tests/unit/test_app_state.py::test_json_roundtrip_preserves_atoms -q --tb=short)",
       "Bash(python -m pytest tests/unit/ -q --tb=no)",
       "Bash(python -m pytest tests/unit/test_compute_logic.py -q --tb=short)",
-      "Bash(python -m pytest tests/unit/test_compute_logic.py -q --tb=line)"
+      "Bash(python -m pytest tests/unit/test_compute_logic.py -q --tb=line)",
+      "Bash(python -m pytest tests/unit/test_compute_logic.py tests/unit/test_view_3d.py tests/unit/test_edit_actions.py tests/unit/test_export_logic.py --tb=short -q)",
+      "Bash(python -m pytest tests/unit/test_parser_robustness.py tests/unit/test_parsers_extended.py tests/unit/test_plugin_interface.py tests/unit/test_project_io_extended.py tests/unit/test_project_io_raw.py tests/unit/test_stereochemistry.py tests/unit/test_custom_interactor_style.py --tb=short -q)",
+      "Bash(python -m pytest tests/unit/test_compute_logic.py::test_halt_conversion tests/unit/test_compute_logic.py::test_optimize_3d_mmff94s_success tests/unit/test_compute_logic.py::test_check_chemistry_problems_fallback_detects --tb=short -q)",
+      "Bash(python -m pytest tests/unit/test_parsers_extended.py::test_load_xyz_charge_loop_cancel tests/unit/test_parsers_extended.py::test_load_xyz_recovery_loop_retries tests/unit/test_parser_robustness.py::test_save_as_xyz_no_mol tests/unit/test_parser_robustness.py::test_load_xyz_robustness --tb=short -q)",
+      "Bash(python -m pytest tests/unit/test_parsers_extended.py::test_load_xyz_charge_loop_cancel tests/unit/test_parsers_extended.py::test_load_xyz_recovery_loop_retries --tb=long -q)",
+      "Bash(python -m pytest tests/unit/test_plugin_interface.py::TestPluginInterface::test_current_molecule_property tests/unit/test_custom_interactor_style.py --tb=short -q)",
+      "Bash(python -m pytest tests/unit/test_compute_logic.py::test_app_state_radical_and_constraint_preservation --tb=short -q)",
+      "Bash(python -m pytest tests/unit/test_compute_logic.py::test_optimize_3d_method_persistence tests/unit/test_compute_logic.py::test_optimize_3d_mmff94s_success --tb=short -q)",
+      "Bash(find E:ResearchCalculationmoleditpyDEV_MAIN -name io_logic.py -not -path *DEV_MAINpython_molecular_editor*)",
+      "Bash(find E:ResearchCalculationmoleditpyDEV_MAIN -name *.py -path *linux*)",
+      "Bash(find E:ResearchCalculationmoleditpyDEV_MAIN -path *linux* -name *.py)",
+      "Bash(python -m pytest tests/unit/ -q --tb=short)",
+      "Bash(python -m pytest tests/gui/ -q --tb=short)",
+      "Bash(python -m pytest tests/gui/ -q --tb=line)"
     ]
   }
 }

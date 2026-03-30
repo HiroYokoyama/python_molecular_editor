@@ -14,8 +14,6 @@ class DummyProjectIo(IOManager):
     def __init__(self, host):
         self._host = host
         IOManager.__init__(self, host)
-        
-        self.statusBar_mock = MagicMock()
 
     def __getattr__(self, name):
         return getattr(self._host, name)
@@ -41,8 +39,13 @@ class DummyProjectIo(IOManager):
     @current_file_path.setter
     def current_file_path(self, v): self._host.current_file_path = v
 
+    @property
+    def has_unsaved_changes(self): return getattr(self._host, "has_unsaved_changes", False)
+    @has_unsaved_changes.setter
+    def has_unsaved_changes(self, v): self._host.has_unsaved_changes = v
+
     def statusBar(self):
-        return self.statusBar_mock
+        return self._host.statusBar()
 
     def update_window_title(self):
         pass

@@ -118,6 +118,7 @@ def test_stereo_confirmation(qtbot):
     main_window.view_3d_manager = MagicMock()
     main_window.view_3d_manager.draw_molecule_3d = MagicMock()
     main_window.view_3d_manager.update_chiral_labels = MagicMock()
+    main_window.edit_actions_manager = MagicMock()
     main_window.edit_actions_manager.push_undo_state = MagicMock()
 
     # 3. Instantiate MirrorDialog
@@ -151,12 +152,12 @@ def test_stereo_loss_on_planarize(qtbot):
     # 2. Mock main_window
     main_window = QWidget()
     positions = mol.GetConformer().GetPositions()
-    main_window.view_3d_manager.atom_positions_3d = positions
     main_window.view_3d_manager = MagicMock()
     main_window.view_3d_manager.atom_positions_3d = positions
     main_window.view_3d_manager.plotter = MagicMock()
     main_window.view_3d_manager.draw_molecule_3d = MagicMock()
     main_window.view_3d_manager.update_chiral_labels = MagicMock()
+    main_window.edit_actions_manager = MagicMock()
     main_window.edit_actions_manager.push_undo_state = MagicMock()
 
     # 3. Planarize only the chiral center and its neighbors

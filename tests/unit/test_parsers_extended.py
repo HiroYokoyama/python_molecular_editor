@@ -163,7 +163,7 @@ def test_load_xyz_always_ask_charge(mock_parser_host, tmp_path):
     mock_rd_mod.DetermineBonds.side_effect = None
     mock_rd_mod.DetermineBonds.return_value = None
     parser.settings["skip_chemistry_checks"] = False
-    parser.host.prompt_for_charge = lambda: (1, True, False)
+    parser.prompt_for_charge = lambda: (1, True, False)
     mol = parser.load_xyz_file(str(xyz_path))
     assert mol is not None
     assert mol.GetIntProp("_xyz_charge") == 1
@@ -174,8 +174,8 @@ def test_load_xyz_charge_loop_cancel(mock_parser_host, tmp_path):
     parser = DummyParser(mock_parser_host)
     path = tmp_path / "cancel.xyz"
     path.write_text("1\nC\nC 0 0 0\n")
-    # Mock prompt to return cancel (ok=False)
-    parser.host.prompt_for_charge.return_value = (0, False, False)
+    parser.settings["skip_chemistry_checks"] = False
+    # DummyParser.prompt_for_charge returns (None, False, False) which means cancel
     result = parser.load_xyz_file(str(path))
     assert result is None
 
@@ -224,11 +224,14 @@ def test_load_mol_file_with_v2000_fix(mock_parser_host, tmp_path):
 
 def test_load_xyz_recovery_loop_retries(mock_parser_host, tmp_path):
     """Verify that the XYZ load recovery loop handles retries correctly."""
+    from unittest.mock import MagicMock as _MM
     parser = DummyParser(mock_parser_host)
     path = tmp_path / "retry.xyz"
     path.write_text("1\nC\nC 0 0 0\n")
-    # Ensure it fails first, then succeeds after user input
-    parser.host.prompt_for_charge.side_effect = [(0, True, False), (0, True, False)]
+    parser.settings["skip_chemistry_checks"] = False
+    # First call fails (charge=0 → DetermineBonds raises), second call succeeds (charge=1)
+    mock_rd_mod.DetermineBonds.side_effect = [RuntimeError("first fail"), None]
+    parser.prompt_for_charge = _MM(side_effect=[(0, True, False), (1, True, False)])
     mol = parser.load_xyz_file(str(path))
     assert mol is not None
     assert mol.GetIntProp("_xyz_charge") == 1
@@ -296,7 +299,7 @@ def test_load_xyz_complex_recovery_branches(mock_parser_host, tmp_path):
     mock_rd_mod.DetermineBonds.side_effect = RuntimeError("Fail")
     # First call fails with charge 1, second call chooses skip chemistry
     calls = iter([(1, True, False), (0, True, True)])
-    parser.host.prompt_for_charge = lambda: next(calls)
+    parser.prompt_for_charge = lambda: next(calls)
     mol = parser.load_xyz_file(str(path))
     assert mol is not None
     assert mol.HasProp("_xyz_skip_checks") or getattr(mol, "_xyz_skip_checks", False)

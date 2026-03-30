@@ -28,6 +28,8 @@ class DummyMainWindow(StateManager):
         self.export_manager = MagicMock()
         self.dialog_manager = MagicMock()
         self.plugin_manager = MagicMock()
+        self.plugin_manager.save_handlers = {}
+        self.plugin_manager.load_handlers = {}
 
         self.init_manager.scene = MagicMock()
         self.init_manager.view_2d = MagicMock()

@@ -106,6 +106,7 @@ def mock_parser_host(app):
     # Some older code (or tests) still expects host.settings, host.data, etc.
     type(host).settings = property(lambda self: self.init_manager.settings)
     type(host).data = property(lambda self: self.state_manager.data)
+    type(host).scene = property(lambda self: self.init_manager.scene)
     type(host).view_2d = property(lambda self: self.init_manager.view_2d)
     type(host).view_3d = property(lambda self: self.view_3d_manager.view_3d)
     type(host).plotter = property(lambda self: self.view_3d_manager.plotter)

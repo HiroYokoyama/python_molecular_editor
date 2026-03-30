@@ -13,7 +13,11 @@ class DummyProjectIo(IOManager):
         # Internal mocks for self-contained testing
         self._host.data = MagicMock()
         self._host.data.atoms = {}
-        
+        self._host.state_manager = MagicMock()
+        self._host.state_manager.data = self._host.data
+        self._host.view_3d_manager = MagicMock()
+        self._host.view_3d_manager.current_mol = None
+
         self.state_manager = MagicMock()
         self.state_manager.get_current_state.return_value = {"atoms": "mock"}
         self.state_manager.update_window_title = MagicMock()
@@ -52,6 +56,12 @@ class DummyProjectIo(IOManager):
 
     def statusBar(self):
         return self.statusBar_mock
+
+    def get_current_state(self):
+        return self.state_manager.get_current_state()
+
+    def set_state_from_data(self, data):
+        self.state_manager.set_state_from_data(data)
 
 @pytest.fixture
 def io():

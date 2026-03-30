@@ -475,10 +475,10 @@ class UIManager(QObject):
         for action in self.host.init_manager.tool_group.actions():
             action.setEnabled(True)
 
-        if hasattr(self.host, "other_atom_action"):
+        if hasattr(self.host.init_manager, "other_atom_action"):
             self.host.init_manager.other_atom_action.setEnabled(True)
-        else:  # [REPORT ERROR MISSING ATTRIBUTE]
-            logging.error(f"REPORT ERROR: Missing attribute 'other_atom_action' on self.host")
+        else:
+            logging.error(f"REPORT ERROR: Missing attribute 'other_atom_action' on self.host.init_manager")
 
         # Collectively disable 3D edit functions when returning to 2D mode
         self.host.ui_manager._enable_3d_edit_actions(False)
