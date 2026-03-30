@@ -57,15 +57,31 @@ def mock_parser_host(app):
     from moleditpy.ui.atom_item import AtomItem
 
     host = MagicMock()
-    # Data and Scene
+    
+    # 0. Initialize Managers first to avoid overwriting attributes later
+    host.state_manager = MagicMock()
+    host.init_manager = MagicMock()
+    host.ui_manager = MagicMock()
+    host.edit_actions_manager = MagicMock()
+    host.view_3d_manager = MagicMock()
+    host.edit_3d_manager = MagicMock()
+    host.compute_manager = MagicMock()
+    host.io_manager = MagicMock()
+    host.export_manager = MagicMock()
+    host.dialog_manager = MagicMock()
+    host.plugin_manager = MagicMock()
+
+    # 1. Data and Scene
     host.state_manager.data = MolecularData()
     host.init_manager.scene = MagicMock()
+    # Ensure scene.data is the same object
     host.init_manager.scene.data = host.state_manager.data
 
-    # UI and Settings
+    # 2. UI and Settings
     host.init_manager.view_2d = MagicMock()
     host.view_3d_manager.view_3d = MagicMock()
     host.view_3d_manager.plotter = MagicMock()
+    host.view_3d_manager.current_mol = None
 
     # Robust settings mock (dict-like)
     class MockSettings(dict):
@@ -86,8 +102,8 @@ def mock_parser_host(app):
         }
     )
 
+    # 3. State variables
     host.ui_manager.is_2d_editable = True
-    host.view_3d_manager.current_mol = None
     host.current_file_path = None
     host.has_unsaved_changes = False
     host.edit_3d_manager.constraints_3d = []
@@ -153,46 +169,23 @@ def mock_parser_host(app):
             )
         host.state_manager.data._next_atom_id = s2d.get("next_atom_id", 0)
 
+    # Apply side effects to both host and state_manager for maximum compatibility
     host.create_json_data.side_effect = create_json_data
     host.load_from_json_data.side_effect = load_from_json_data
-
-    host.edit_actions_manager.push_undo_state = MagicMock()
-    host.reset_undo_stack = MagicMock()
-    host.state_manager.update_window_title = MagicMock()
-    host.clear_2d_editor = MagicMock()
-    host.restore_ui_for_editing = MagicMock()
-    host.ui_manager.activate_select_mode = MagicMock()
-    host.ui_manager._enable_3d_features = MagicMock()
-    host.ui_manager._enable_3d_edit_actions = MagicMock()
-    host.check_unsaved_changes = MagicMock(return_value=True)
-
-    # Manager sub-mocks used by the new composition architecture.
-    # State manager: delegates JSON/undo operations.
-    host.state_manager = MagicMock()
     host.state_manager.create_json_data.side_effect = create_json_data
     host.state_manager.load_from_json_data.side_effect = load_from_json_data
+
+    # Common mock behaviors
     host.state_manager.check_unsaved_changes.return_value = True
     host.state_manager.update_window_title = MagicMock()
     host.edit_actions_manager.push_undo_state = MagicMock()
-    # Edit-actions manager
-    host.edit_actions_manager = MagicMock()
     host.edit_actions_manager.clear_2d_editor = MagicMock()
     host.edit_actions_manager.reset_undo_stack = MagicMock()
-    # UI manager
-    host.ui_manager = MagicMock()
     host.ui_manager.restore_ui_for_editing = MagicMock()
-    # View-3D manager
-    host.view_3d_manager = MagicMock()
-    # IO manager
-    host.io_manager = MagicMock()
-    # Compute manager
-    host.compute_manager = MagicMock()
-    # Init manager (opt3d_method_labels must be None so compute_logic falls back correctly)
-    host.init_manager = MagicMock()
-    host.init_manager.opt3d_method_labels = None
-    # Edit-3D manager
-    host.edit_3d_manager = MagicMock()
-    host.edit_3d_manager.update_2d_measurement_labels = MagicMock()
+    host.ui_manager.activate_select_mode = MagicMock()
+    host.ui_manager._enable_3d_features = MagicMock()
+    host.ui_manager._enable_3d_edit_actions = MagicMock()
+    host.check_unsaved_changes.return_value = True
 
     # Scene helpers
     host.init_manager.scene.find_bond_between.return_value = None

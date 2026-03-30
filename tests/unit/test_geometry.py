@@ -77,10 +77,17 @@ def test_mirror_dialog_logic(qtbot):
     main_window = QWidget()
     main_window.statusBar = MagicMock()
     main_window.statusBar.return_value = MagicMock()
+    
+    # Initialize all managers to avoid AttributeErrors
     main_window.view_3d_manager = MagicMock()
     main_window.view_3d_manager.draw_molecule_3d = MagicMock()
     main_window.view_3d_manager.update_chiral_labels = MagicMock()
+    
     main_window.state_manager = MagicMock()
+    main_window.edit_actions_manager = MagicMock()
+    main_window.init_manager = MagicMock()
+    main_window.ui_manager = MagicMock()
+    main_window.compute_manager = MagicMock()
 
     # Initial state
     conf = mol.GetConformer()
@@ -121,13 +128,19 @@ def test_planarize_logic(qtbot):
     # Mock main_window
     main_window = QWidget()
     positions = mol.GetConformer().GetPositions()
-    main_window.view_3d_manager.atom_positions_3d = positions
+    
+    # Initialize all managers
     main_window.view_3d_manager = MagicMock()
+    main_window.state_manager = MagicMock()
+    main_window.edit_actions_manager = MagicMock()
+    main_window.init_manager = MagicMock()
+    main_window.ui_manager = MagicMock()
+    main_window.compute_manager = MagicMock()
+    
     main_window.view_3d_manager.atom_positions_3d = positions
     main_window.view_3d_manager.plotter = MagicMock()
     main_window.view_3d_manager.draw_molecule_3d = MagicMock()
     main_window.view_3d_manager.update_chiral_labels = MagicMock()
-    main_window.state_manager = MagicMock()
 
     # Instantiate dialog with all atoms selected
     dialog = PlanarizeDialog(

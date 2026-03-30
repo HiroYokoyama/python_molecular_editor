@@ -65,19 +65,25 @@ def scene_setup(qapp):
     # Mock window with minimal interface
     class MockWindow:
         def __init__(self):
+            from unittest.mock import MagicMock
             self.is_2d_editable = True
+            
+            # Initialize managers first
+            self.state_manager = MagicMock()
+            self.edit_actions_manager = MagicMock()
+            self.edit_3d_manager = MagicMock()
+            self.ui_manager = MagicMock()
+            self.init_manager = MagicMock()
+            self.view_3d_manager = MagicMock()
+            
             self.edit_actions_manager.undo_stack = []
             self.edit_actions_manager.redo_stack = []
             self.statusBar_msg = ""
-            from unittest.mock import MagicMock
-            self.edit_actions_manager = MagicMock()
             self.edit_actions_manager.push_undo_state.side_effect = lambda: self.edit_actions_manager.undo_stack.append("state")
-            self.edit_3d_manager = MagicMock()
-            self.ui_manager = MagicMock()
 
         def push_undo_state(self):
             # Simple simulation
-            self.edit_actions_manager.undo_stack.append("state")
+            self.edit_actions_manager.push_undo_state()
 
         def statusBar(self):
             class Bar:

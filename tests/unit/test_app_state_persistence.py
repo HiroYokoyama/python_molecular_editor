@@ -4,49 +4,52 @@ import json
 import numpy as np
 from rdkit import Chem
 from rdkit.Chem import AllChem
-from moleditpy.ui.app_state import MainWindowAppState
+from moleditpy.ui.app_state import StateManager
 from moleditpy.core.molecular_data import MolecularData
 from PyQt6.QtCore import QPointF, Qt
 from unittest.mock import MagicMock
 
-class DummyMainWindow(MainWindowAppState):
+class DummyMainWindow(StateManager):
     def __init__(self):
-        self.host = self  # StateManager methods use self.host; DummyMainWindow IS the host
+        # Initialize as StateManager, which expects a 'host'
+        # In this dummy, we act as both StateManager and the host
+        self.host = self
         self.data = MolecularData()
-        self.scene = MagicMock()
-        self.view_2d = MagicMock()
-        self.view_3d = MagicMock()
-        self.plotter = MagicMock()
-        self.settings = MagicMock()
-        self.current_mol = None
+        
+        # Initialize all managers first
+        self.state_manager = self # We are the state manager
+        self.init_manager = MagicMock()
+        self.ui_manager = MagicMock()
+        self.edit_actions_manager = MagicMock()
+        self.view_3d_manager = MagicMock()
+        self.edit_3d_manager = MagicMock()
+        self.compute_manager = MagicMock()
+        self.io_manager = MagicMock()
+        self.export_manager = MagicMock()
+        self.dialog_manager = MagicMock()
+        self.plugin_manager = MagicMock()
+
+        self.init_manager.scene = MagicMock()
+        self.init_manager.view_2d = MagicMock()
+        self.init_manager.settings = MagicMock()
+        self.view_3d_manager.view_3d = MagicMock()
+        self.view_3d_manager.plotter = MagicMock()
+        self.view_3d_manager.current_mol = None
+        self.view_3d_manager.atom_positions_3d = None
+        
         self.current_file_path = None
         self.has_unsaved_changes = False
-        self.constraints_3d = []
+        self.edit_3d_manager.constraints_3d = []
         self.is_2d_editable = True
         self.edit_actions_manager.undo_stack = []
         self.edit_actions_manager.redo_stack = []
         self._is_restoring_state = False
         self.initialization_complete = True
         self._preserved_plugin_data = {}
-        self.formula_label = MagicMock()
-        self.last_successful_optimization_method = None
-
-        # Manager mocks
-        self.view_3d_manager = MagicMock()
-        self.view_3d_manager.atom_positions_3d = None
-
-        self.edit_3d_manager = MagicMock()
-        self.edit_3d_manager.measurement_mode = False
-        self.edit_3d_manager.is_3d_edit_mode = False
-
-        self.edit_actions_manager = MagicMock()
+        self.init_manager.formula_label = MagicMock()
+        self.compute_manager.last_successful_optimization_method = None
         self.edit_actions_manager.clear_2d_editor.side_effect = self._do_clear_2d_editor
         self.edit_actions_manager.update_implicit_hydrogens = MagicMock()
-
-        self.ui_manager = MagicMock()
-        self.compute_manager = MagicMock()
-        self.state_manager = MagicMock()
-        self.state_manager.reset_undo_stack = MagicMock()
 
     def _do_clear_2d_editor(self, push_to_undo=True):
         self.data.atoms.clear()
