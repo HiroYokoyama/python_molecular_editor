@@ -155,6 +155,8 @@ class View3DManager:
         # Clear measurement selection (molecule changed)
         if hasattr(self.host.edit_3d_manager, "measurement_mode"):
             self.host.edit_3d_manager.clear_measurement_selection()
+        else:  # [REPORT ERROR MISSING ATTRIBUTE]
+            logging.error(f"REPORT ERROR: Missing attribute 'measurement_mode' on object")
 
         # Initialize 3D color map
         if not hasattr(self, "_3d_color_map"):
@@ -1347,6 +1349,8 @@ class View3DManager:
                 self.host.init_manager.show_atom_id_action.setText("Show XYZ Unique ID")
             else:
                 self.host.init_manager.show_atom_id_action.setText("Show Original ID / Index")
+        else:  # [REPORT ERROR MISSING ATTRIBUTE]
+            logging.error(f"REPORT ERROR: Missing attribute 'show_atom_id_action' on object")
 
     def update_atom_id_menu_state(self):
         """Update Atom ID menu enabled/disabled state"""
@@ -1365,6 +1369,8 @@ class View3DManager:
                 self.atom_info_display_mode = None
                 self.show_atom_id_action.setChecked(False)
                 self.clear_all_atom_info_labels()
+        else:  # [REPORT ERROR MISSING ATTRIBUTE]
+            logging.error(f"REPORT ERROR: Missing attribute 'show_atom_id_action' on object")
 
     def show_all_atom_info(self):
         """Display info for all atoms"""
@@ -1561,6 +1567,8 @@ class View3DManager:
                                 tp.SetBold(True)
                             except (AttributeError, RuntimeError, TypeError) as e:
                                 logging.debug(f"Failed to set bold font: {e}")
+                        else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                            logging.error(f"REPORT ERROR: Missing attribute 'GetTextProperty' on actor")
                     except (AttributeError, RuntimeError, TypeError) as e:
                         logging.debug(
                             f"Suppressed exception: {e}"
@@ -1750,7 +1758,7 @@ class View3DManager:
                 axes = vtk.vtkAxesActor()
                 # Set label text properties (normalize RGB to 0-1)
                 for axis_cap in [axes.GetXAxisCaptionActor2D(), axes.GetYAxisCaptionActor2D(), axes.GetZAxisCaptionActor2D()]:
-                    if hasattr(axis_cap, "GetTextProperty"):
+                    if axis_cap and hasattr(axis_cap, "GetTextProperty"):
                         tp = axis_cap.GetTextProperty()
                         tp.SetColor(label_rgb)
                         tp.SetFontFamilyToArial()
@@ -1796,6 +1804,8 @@ class View3DManager:
             self.host.plotter.render()
             if hasattr(self.host.plotter, "update"):
                 self.host.plotter.update()
+            else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                logging.error(f"REPORT ERROR: Missing attribute 'update' on object")
         except (AttributeError, RuntimeError, TypeError) as e:
             logging.debug(
                 f"Suppressed exception: {e}"

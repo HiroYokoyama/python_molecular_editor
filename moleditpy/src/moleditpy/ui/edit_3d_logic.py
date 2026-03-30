@@ -14,6 +14,7 @@ DOI: 10.5281/zenodo.17268532
 main_window_edit_3d.py
 Mixin class separated from main_window.py
 """
+import logging  # [REPORT ERROR MISSING ATTRIBUTE]
 
 import numpy as np
 
@@ -85,6 +86,8 @@ class Edit3DManager:
                 self.host.edit_3d_action.setChecked(False)
                 if hasattr(self.host, "ui_manager"):
                     self.host.ui_manager.toggle_3d_edit_mode(False)
+                else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                    logging.error(f"REPORT ERROR: Missing attribute 'ui_manager' on self.host")
 
             # Close active 3D edit dialogs
             self.close_all_3d_edit_dialogs()
@@ -230,6 +233,8 @@ class Edit3DManager:
                     rdkit_idx = self.find_rdkit_atom_index(item)
                     if rdkit_idx is not None:
                         atom_idx_to_item[rdkit_idx] = item
+        else:  # [REPORT ERROR MISSING ATTRIBUTE]
+            logging.error(f"REPORT ERROR: Missing attribute 'scene' on self.host")
 
         # Add to 2D view
         if not hasattr(self, "measurement_label_items_2d"):
@@ -286,6 +291,8 @@ class Edit3DManager:
                         # Best-effort removal failed after sip check failed; skip.
                         continue
             self.measurement_label_items_2d.clear()
+        else:  # [REPORT ERROR MISSING ATTRIBUTE]
+            logging.error(f"REPORT ERROR: Missing attribute 'measurement_label_items_2d' on self")
 
     def find_rdkit_atom_index(self, atom_item):
         """Find RDKit index from AtomItem."""

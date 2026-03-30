@@ -448,6 +448,8 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                 move_group_dialog._mouse_moved = False
                 if hasattr(move_group_dialog, "_initial_positions"):
                     delattr(move_group_dialog, "_initial_positions")
+                else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                    logging.error(f"REPORT ERROR: Missing attribute '_initial_positions' on move_group_dialog")
 
         if move_group_dialog and getattr(
             move_group_dialog, "_is_dragging_group_vtk", False
@@ -522,6 +524,8 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                         move_group_dialog.on_atom_picked(clicked_atom)
                     except (AttributeError, RuntimeError, TypeError, ValueError) as e:
                         print(f"Error in toggle: {e}")
+                else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                    logging.error(f"REPORT ERROR: Missing attribute '_drag_atom_idx' on move_group_dialog")
 
         # Background click: deselect
         if move_group_dialog and not getattr(
@@ -664,8 +668,12 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                 move_group_dialog._mouse_moved = False
                 if hasattr(move_group_dialog, "_initial_positions"):
                     delattr(move_group_dialog, "_initial_positions")
+                else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                    logging.error(f"REPORT ERROR: Missing attribute '_initial_positions' on move_group_dialog")
                 if hasattr(move_group_dialog, "_drag_atom_idx"):
                     delattr(move_group_dialog, "_drag_atom_idx")
+                else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                    logging.error(f"REPORT ERROR: Missing attribute '_drag_atom_idx' on move_group_dialog")
         except (AttributeError, RuntimeError, ValueError, TypeError):
             import logging
 
@@ -820,10 +828,16 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
             move_group_dialog._rotation_mouse_moved = False
             if hasattr(move_group_dialog, "_initial_positions"):
                 delattr(move_group_dialog, "_initial_positions")
+            else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                logging.error(f"REPORT ERROR: Missing attribute '_initial_positions' on move_group_dialog")
             if hasattr(move_group_dialog, "_group_centroid"):
                 delattr(move_group_dialog, "_group_centroid")
+            else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                logging.error(f"REPORT ERROR: Missing attribute '_group_centroid' on move_group_dialog")
             if hasattr(move_group_dialog, "_rotation_atom_idx"):
                 delattr(move_group_dialog, "_rotation_atom_idx")
+            else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                logging.error(f"REPORT ERROR: Missing attribute '_rotation_atom_idx' on move_group_dialog")
 
             return
 

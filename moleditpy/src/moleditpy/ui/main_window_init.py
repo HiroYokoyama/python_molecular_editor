@@ -102,6 +102,7 @@ class MainInitManager:
 
     def __init__(self, host, initial_file=None, safe_mode=False):
         self.host = host
+        self.host.init_manager = self
         # This helper is not used as a mixin in this project; initialization
         # happens on the `QMainWindow` base class in
         # `MainWindow.__init__` directly.
@@ -308,7 +309,7 @@ class MainInitManager:
                 self.host.scene.setBackgroundBrush(QBrush(QColor(bg_color_2d)))
 
                 for it in list(self.host.scene.items()):
-                    if hasattr(it, "update_style"):
+                    if hasattr(it, "update_style"):  # [SAFE]
                         it.update_style()
                 self.host.scene.update()
                 for v in list(self.host.scene.views()):
@@ -429,6 +430,8 @@ class MainInitManager:
                 for key, action in self.opt3d_actions.items():
                     # Use case-insensitive comparison for robustness
                     action.setChecked(key.upper() == current_method)
+            else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                logging.error(f"REPORT ERROR: Missing attribute 'opt3d_actions' on self")
 
             # Conversion actions
             if hasattr(self, "conv_actions"):
@@ -437,12 +440,16 @@ class MainInitManager:
                 ).lower()
                 for key, action in self.conv_actions.items():
                     action.setChecked(key.lower() == mode)
+            else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                logging.error(f"REPORT ERROR: Missing attribute 'conv_actions' on self")
 
             # Intermolecular interaction
             if hasattr(self, "intermolecular_rdkit_action"):
                 self.intermolecular_rdkit_action.setChecked(
                     self.host.settings.get("optimize_intermolecular_interaction_rdkit", True)
                 )
+            else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                logging.error(f"REPORT ERROR: Missing attribute 'intermolecular_rdkit_action' on self")
 
     def _refresh_views_after_reset(self):
         """Refresh 2D and 3D views after settings reset."""
@@ -463,6 +470,8 @@ class MainInitManager:
                     with contextlib.suppress(AttributeError, RuntimeError, TypeError):
                         if hasattr(item, "update_style"):
                             item.update_style()
+                        else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                            logging.error(f"REPORT ERROR: Missing attribute 'update_style' on item")
                 self.host.scene.update()
                 for v in self.host.scene.views():
                     v.viewport().update()
@@ -679,6 +688,8 @@ class MainInitManager:
                     categorized.setdefault(cat, []).append(p)
                 else:
                     root.append(p)
+            else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                logging.error(f"REPORT ERROR: Missing attribute 'run' on object")
 
         # Build categorized menus
         for cat in sorted(categorized.keys()):
@@ -893,6 +904,8 @@ class MainInitManager:
         if hasattr(self, "plugin_toolbar"):
             self.plugin_toolbar.clear()
             self.plugin_toolbar.hide()
+        else:  # [REPORT ERROR MISSING ATTRIBUTE]
+            logging.error(f"REPORT ERROR: Missing attribute 'plugin_toolbar' on self")
 
     def _init_left_panel(self, left_layout):
         """Initialize the left panel (2D view and buttons)."""

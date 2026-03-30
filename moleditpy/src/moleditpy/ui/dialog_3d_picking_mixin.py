@@ -9,6 +9,7 @@ License: GPL-3.0 license
 Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
+import logging  # [REPORT ERROR MISSING ATTRIBUTE]
 
 import numpy as np
 from PyQt6.QtCore import QEvent, Qt
@@ -73,6 +74,8 @@ class Dialog3DPickingMixin:
                             if distances[closest_atom_idx] < click_threshold:
                                 if hasattr(self.main_window, "_picking_consumed"):
                                     self.main_window._picking_consumed = True
+                                else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                                    logging.error(f"REPORT ERROR: Missing attribute '_picking_consumed' on self.main_window")
                                 self.on_atom_picked(int(closest_atom_idx))
 
                                 # We picked an atom, so stop tracking for background click
@@ -112,6 +115,8 @@ class Dialog3DPickingMixin:
                     # Pure click (no drag) on background -> Clear selection
                     if hasattr(self, "clear_selection"):
                         self.clear_selection()
+                    else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                        logging.error(f"REPORT ERROR: Missing attribute 'clear_selection' on self")
 
                 # Reset state
                 self._mouse_press_pos = None
@@ -126,6 +131,8 @@ class Dialog3DPickingMixin:
         # Ensure the main window flag exists
         if hasattr(self.main_window, "_picking_consumed"):
             self.main_window._picking_consumed = False
+        else:  # [REPORT ERROR MISSING ATTRIBUTE]
+            logging.error(f"REPORT ERROR: Missing attribute '_picking_consumed' on self.main_window")
 
     def disable_picking(self):
         """Disable atom selection in the 3D view."""
@@ -134,6 +141,8 @@ class Dialog3DPickingMixin:
             self.picking_enabled = False
         if hasattr(self.main_window, "_picking_consumed"):
             self.main_window._picking_consumed = False
+        else:  # [REPORT ERROR MISSING ATTRIBUTE]
+            logging.error(f"REPORT ERROR: Missing attribute '_picking_consumed' on self.main_window")
 
     def try_alternative_picking(self, x, y):
         """Alternative picking method (unused)."""

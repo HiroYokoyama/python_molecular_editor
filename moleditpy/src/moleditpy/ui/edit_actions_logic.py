@@ -201,6 +201,8 @@ class EditActionsManager:
         self.update_implicit_hydrogens()
         if hasattr(self.host.state_manager, "update_realtime_info"):
             self.host.state_manager.update_realtime_info()
+        else:  # [REPORT ERROR MISSING ATTRIBUTE]
+            logging.error(f"REPORT ERROR: Missing attribute 'update_realtime_info' on object")
         self.update_undo_redo_actions()
 
     def undo(self) -> None:
@@ -223,6 +225,8 @@ class EditActionsManager:
         self.update_undo_redo_actions()
         if hasattr(self.host.state_manager, "update_realtime_info"):
             self.host.state_manager.update_realtime_info()
+        else:  # [REPORT ERROR MISSING ATTRIBUTE]
+            logging.error(f"REPORT ERROR: Missing attribute 'update_realtime_info' on object")
         if hasattr(self.host, "view_2d") and self.host.view_2d:
             self.host.view_2d.setFocus()
 
@@ -246,6 +250,8 @@ class EditActionsManager:
         self.update_undo_redo_actions()
         if hasattr(self.host.state_manager, "update_realtime_info"):
             self.host.state_manager.update_realtime_info()
+        else:  # [REPORT ERROR MISSING ATTRIBUTE]
+            logging.error(f"REPORT ERROR: Missing attribute 'update_realtime_info' on object")
         if hasattr(self.host, "view_2d") and self.host.view_2d:
             self.host.view_2d.setFocus()
 
@@ -253,8 +259,12 @@ class EditActionsManager:
         """Enable or disable Undo/Redo UI actions based on stack counts."""
         if hasattr(self.host, "undo_action"):
             self.host.undo_action.setEnabled(len(self.undo_stack) > 1)
+        else:  # [REPORT ERROR MISSING ATTRIBUTE]
+            logging.error(f"REPORT ERROR: Missing attribute 'undo_action' on self.host")
         if hasattr(self.host, "redo_action"):
             self.host.redo_action.setEnabled(len(self.redo_stack) > 0)
+        else:  # [REPORT ERROR MISSING ATTRIBUTE]
+            logging.error(f"REPORT ERROR: Missing attribute 'redo_action' on self.host")
 
     def copy_selection(self) -> None:
         """Copy selected atoms and bonds to clipboard"""
@@ -814,9 +824,10 @@ class EditActionsManager:
 
     def clear_all(self) -> bool:
         # Check for unsaved changes
-        if not self.check_unsaved_changes():
-            # Cancel if requested
-            return False
+        if hasattr(self.host, "io_manager") and self.host.io_manager:
+            if not self.host.io_manager.check_unsaved_changes():
+                # Cancel if requested
+                return False
 
         self.host.ui_manager.restore_ui_for_editing()
 
@@ -854,7 +865,8 @@ class EditActionsManager:
         self.host.state_manager.update_window_title()
 
         # Reset 2D zoom
-        self.reset_zoom()
+        if hasattr(self.host, "view_2d") and self.host.view_2d:
+            self.host.view_2d.resetTransform()
 
         # Update scene and view
         self.host.scene.update()
@@ -894,6 +906,8 @@ class EditActionsManager:
         # Also clear measurement labels
         if hasattr(self.host, "edit_3d_manager"):
             self.host.edit_3d_manager.clear_2d_measurement_labels()
+        else:  # [REPORT ERROR MISSING ATTRIBUTE]
+            logging.error(f"REPORT ERROR: Missing attribute 'edit_3d_manager' on self.host")
 
         # Clear 3D data and disable 3D-related menus
         self.host.current_mol = None
@@ -1041,6 +1055,8 @@ class EditActionsManager:
                     with contextlib.suppress(AttributeError, RuntimeError, TypeError):
                         # Suppress transient errors during item update.
                         it.update()
+                else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                    logging.error(f"REPORT ERROR: Missing attribute 'update' on it")
             except (AttributeError, RuntimeError, ValueError, TypeError):
                 # Ignore any unexpected errors when touching the item
                 continue
@@ -1152,6 +1168,8 @@ class EditActionsManager:
             # Update measurement labels
             if hasattr(self.host.edit_3d_manager, "update_2d_measurement_labels"):
                 self.host.edit_3d_manager.update_2d_measurement_labels()
+            else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                logging.error(f"REPORT ERROR: Missing attribute 'update_2d_measurement_labels' on object")
 
             # Request scene update and ring re-analysis
             self.host.scene.update_all_items()
@@ -1237,6 +1255,8 @@ class EditActionsManager:
         # Update labels after resolution
         if hasattr(self.host.edit_3d_manager, "update_2d_measurement_labels"):
             self.host.edit_3d_manager.update_2d_measurement_labels()
+        else:  # [REPORT ERROR MISSING ATTRIBUTE]
+            logging.error(f"REPORT ERROR: Missing attribute 'update_2d_measurement_labels' on object")
 
         self.host.scene.update()
         self.host.state_manager.push_undo_state()
@@ -1420,6 +1440,8 @@ class EditActionsManager:
             if hasattr(self.host, "optimize_3d_button"):
                 with contextlib.suppress(AttributeError, RuntimeError, TypeError):
                     self.host.optimize_3d_button.setEnabled(False)
+            else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                logging.error(f"REPORT ERROR: Missing attribute 'optimize_3d_button' on self.host")
 
     def _clear_xyz_flags(self, mol=None):
         """Clear XYZ-derived markers from a molecule (or current_mol) and
@@ -1444,7 +1466,11 @@ class EditActionsManager:
             target.__dict__.pop("_xyz_skip_checks", None)
             target.__dict__.pop("_xyz_atom_data", None)
 
-        # Reset UI flag
+        if hasattr(self.host.view_3d_manager, "reset_zoom"):
+            self.host.view_3d_manager.reset_zoom()
+        else:  # [REPORT ERROR MISSING ATTRIBUTE]
+            logging.error(f"REPORT ERROR: Missing attribute 'reset_zoom' on object")
+
         self.host.is_xyz_derived = False
 
         # Enable Optimize 3D unless sanitization failed
@@ -1454,5 +1480,7 @@ class EditActionsManager:
                 self.host.optimize_3d_button.setEnabled(
                     not getattr(self.host, "chem_check_failed", False)
                 )
+        else:  # [REPORT ERROR MISSING ATTRIBUTE]
+            logging.error(f"REPORT ERROR: Missing attribute 'optimize_3d_button' on self.host")
 
 EditActionsManager._cls = EditActionsManager

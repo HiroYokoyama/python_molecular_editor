@@ -480,8 +480,12 @@ class IOManager:
             
             if hasattr(self.host.view_3d_manager, "draw_molecule_3d"):
                 self.host.view_3d_manager.draw_molecule_3d(self.host.current_mol)
+            else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                logging.error(f"REPORT ERROR: Missing attribute 'draw_molecule_3d' on object")
             if hasattr(self.host.ui_manager, "_enter_3d_viewer_ui_mode"):
                 self.host.ui_manager._enter_3d_viewer_ui_mode()
+            else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                logging.error(f"REPORT ERROR: Missing attribute '_enter_3d_viewer_ui_mode' on object")
             self.host.statusBar().showMessage(f"3D Viewer Mode: Loaded {os.path.basename(file_path)}")
             self.host.current_file_path = file_path
             self.host.state_manager.update_window_title()

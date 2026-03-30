@@ -9,6 +9,7 @@ License: GPL-3.0 license
 Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
+import logging  # [REPORT ERROR MISSING ATTRIBUTE]
 
 import json
 import os
@@ -76,6 +77,8 @@ class DialogManager:
         if hasattr(self.host, "edit_3d_manager"):
             if self.host.edit_3d_manager.selected_atoms_for_measurement:
                 preselected_atoms = list(self.host.edit_3d_manager.selected_atoms_for_measurement)
+        else:  # [REPORT ERROR MISSING ATTRIBUTE]
+            logging.error(f"REPORT ERROR: Missing attribute 'edit_3d_manager' on self.host")
         return preselected_atoms
 
     def show_about_dialog(self):

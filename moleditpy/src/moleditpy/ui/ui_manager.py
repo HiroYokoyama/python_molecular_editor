@@ -9,6 +9,7 @@ License: GPL-3.0 license
 Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
+import logging  # [REPORT ERROR MISSING ATTRIBUTE]
 
 import contextlib
 import vtk
@@ -66,6 +67,8 @@ class UIManager(QObject):
         # Trigger immediate scene refresh to show/update template previews
         if hasattr(self.host.scene, "refresh_mode_state"):
             self.host.scene.refresh_mode_state()
+        else:  # [REPORT ERROR MISSING ATTRIBUTE]
+            logging.error(f"REPORT ERROR: Missing attribute 'refresh_mode_state' on object")
         # Clear ghost when leaving template mode
         if (
             prev_mode
@@ -243,7 +246,11 @@ class UIManager(QObject):
             for thr in active_threads:
                 try:
                     if hasattr(thr, "quit"): thr.quit()
+                    else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                        logging.error(f"REPORT ERROR: Missing attribute 'quit' on thr")
                     if hasattr(thr, "wait"): thr.wait(200)
+                    else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                        logging.error(f"REPORT ERROR: Missing attribute 'wait' on thr")
                 except (RuntimeError, TypeError):
                     pass
         except (AttributeError, RuntimeError, TypeError, ValueError):
@@ -352,6 +359,8 @@ class UIManager(QObject):
                 plotter_widget = self.host.splitter.widget(1)
                 if target_widget == plotter_widget or plotter_widget.isAncestorOf(target_widget):
                     is_on_3d = True
+            else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                logging.error(f"REPORT ERROR: Missing attribute 'plotter' on self.host")
             
             if is_on_3d:
                 self.host.io_manager.load_mol_file_for_3d_viewing(file_path=file_path)
@@ -396,10 +405,14 @@ class UIManager(QObject):
         for action_name in actions:
             if hasattr(self.host, action_name):
                 getattr(self.host, action_name).setEnabled(enabled)
+            else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                logging.error(f"REPORT ERROR: Missing attribute {action_name} on self.host")
 
         for menu_name in menus:
             if hasattr(self.host, menu_name):
                 getattr(self.host, menu_name).setEnabled(enabled)
+            else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                logging.error(f"REPORT ERROR: Missing attribute {menu_name} on self.host")
 
     def _enable_3d_features(self, enabled=True):
         """Enable/disable 3D features."""
@@ -444,6 +457,8 @@ class UIManager(QObject):
             action.setEnabled(False)
         if hasattr(self.host.init_manager, "other_atom_action"):
             self.host.init_manager.other_atom_action.setEnabled(False)
+        else:  # [REPORT ERROR MISSING ATTRIBUTE]
+            logging.error(f"REPORT ERROR: Missing attribute 'other_atom_action' on object")
 
         self.host.ui_manager.minimize_2d_panel()
 
@@ -460,8 +475,10 @@ class UIManager(QObject):
         for action in self.host.tool_group.actions():
             action.setEnabled(True)
 
-        if hasattr(self.host.init_manager, "other_atom_action"):
-            self.host.init_manager.other_atom_action.setEnabled(True)
+        if hasattr(self.host, "other_atom_action"):
+            self.host.other_atom_action.setEnabled(True)
+        else:  # [REPORT ERROR MISSING ATTRIBUTE]
+            logging.error(f"REPORT ERROR: Missing attribute 'other_atom_action' on self.host")
 
         # Collectively disable 3D edit functions when returning to 2D mode
         self.host.ui_manager._enable_3d_edit_actions(False)
@@ -530,6 +547,8 @@ class UIManager(QObject):
                     handle = self.host.splitter.handle(1)
                     if handle:
                         handle.setToolTip(f"2D: {left_percent}% | 3D: {right_percent}%")
+                else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                    logging.error(f"REPORT ERROR: Missing attribute 'handle' on object")
 
     def setup_splitter_tooltip(self):
         """Set initial splitter tooltip."""

@@ -101,12 +101,16 @@ class BasePickingDialog(Dialog3DPickingMixin, QDialog):
         # 4. Refresh chiral/cis-trans labels if applicable
         if hasattr(self.main_window.view_3d_manager, "update_chiral_labels"):
             self.main_window.view_3d_manager.update_chiral_labels()
+        else:  # [REPORT ERROR MISSING ATTRIBUTE]
+            logging.error(f"REPORT ERROR: Missing attribute 'update_chiral_labels' on object")
 
     def _push_undo(self):
         """Centralized undo logic to push current state to the undo stack."""
         if hasattr(self.main_window, "state_manager"):
             self.main_window.state_manager.push_undo_state()
             self._molecule_modified = False
+        else:  # [REPORT ERROR MISSING ATTRIBUTE]
+            logging.error(f"REPORT ERROR: Missing attribute 'state_manager' on self.main_window")
 
     def done(self, result):
         """Override done to push a final undo state if the molecule was modified."""

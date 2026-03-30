@@ -11,6 +11,7 @@ DOI: 10.5281/zenodo.17268532
 """
 
 from __future__ import annotations
+import logging  # [REPORT ERROR MISSING ATTRIBUTE]
 from typing import Any, Optional, Tuple, Union
 
 from PyQt6.QtCore import QLineF, QPointF, QRectF, Qt
@@ -159,11 +160,15 @@ class BondItem(QGraphicsItem):
             val = scene.get_setting(key, 3.5)
             if isinstance(val, (int, float)):
                 bond_offset = val
+        else:  # [REPORT ERROR MISSING ATTRIBUTE]
+            logging.error(f"REPORT ERROR: Missing attribute 'get_setting' on scene")
 
         # Get dynamic wedge width
         wedge_width = 6.0
         if hasattr(scene, "get_setting"):
             wedge_width = scene.get_setting("bond_wedge_width_2d", 6.0)
+        else:  # [REPORT ERROR MISSING ATTRIBUTE]
+            logging.error(f"REPORT ERROR: Missing attribute 'get_setting' on scene")
 
         extra = (getattr(self, "order", 1) - 1) * bond_offset + 50 + wedge_width
         rect = (
@@ -179,6 +184,8 @@ class BondItem(QGraphicsItem):
             if hasattr(scene, "get_setting"):
                 font_size = scene.get_setting("atom_font_size_2d", 20)
                 font_family = scene.get_setting("atom_font_family_2d", FONT_FAMILY)
+            else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                logging.error(f"REPORT ERROR: Missing attribute 'get_setting' on scene")
 
             font = QFont(font_family, font_size, FONT_WEIGHT_BOLD)
             font.setItalic(True)
@@ -284,6 +291,8 @@ class BondItem(QGraphicsItem):
                     custom_cap = scene.get_setting("bond_cap_style_2d", "Round")
                     if isinstance(custom_cap, str):
                         cap_style_str = custom_cap
+                else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                    logging.error(f"REPORT ERROR: Missing attribute 'get_setting' on scene")
 
                 # Cap Style logic
                 cap_style = Qt.PenCapStyle.RoundCap  # Default

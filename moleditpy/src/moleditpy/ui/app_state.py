@@ -752,14 +752,22 @@ class StateManager:
                                     self.host.compute_manager.create_atom_id_mapping()
                                     if hasattr(self.host.view_3d_manager, "update_atom_id_menu_text"):
                                         self.host.view_3d_manager.update_atom_id_menu_text()
+                                    else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                                        logging.error(f"REPORT ERROR: Missing attribute 'update_atom_id_menu_text' on object")
                                     if hasattr(self.host.view_3d_manager, "update_atom_id_menu_state"):
                                         self.host.view_3d_manager.update_atom_id_menu_state()
+                                    else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                                        logging.error(f"REPORT ERROR: Missing attribute 'update_atom_id_menu_state' on object")
                                 except (RuntimeError, TypeError, AttributeError):
                                     pass
+                            else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                                logging.error(f"REPORT ERROR: Missing attribute 'create_atom_id_mapping' on object")
 
                         # Always show 3D if 3D molecule exists
                         if hasattr(self.host.view_3d_manager, "draw_molecule_3d"):
                             self.host.view_3d_manager.draw_molecule_3d(self.host.current_mol)
+                        else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                            logging.error(f"REPORT ERROR: Missing attribute 'draw_molecule_3d' on object")
 
                         # Switch UI in Viewer mode
                         if is_3d_mode and hasattr(self.host.ui_manager, "_enter_3d_viewer_ui_mode"):

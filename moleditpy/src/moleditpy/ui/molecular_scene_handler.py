@@ -66,6 +66,8 @@ class TemplateMixin:
         self.template_context = {}
         if hasattr(self, "template_preview"):
             self.template_preview.hide()
+        else:  # [REPORT ERROR MISSING ATTRIBUTE]
+            logging.error(f"REPORT ERROR: Missing attribute 'template_preview' on self")
 
     def _calculate_6ring_rotation(self, num_points: int, bonds_info: List[Tuple[int, int, int]], atom_items: List[Optional[AtomItem]]) -> int:
         """
@@ -1138,6 +1140,8 @@ class KeyboardMixin:
                     self.window.ui_manager.set_mode_and_update_toolbar(mode_to_set)
                     event.accept()
                     return
+                else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                    logging.error(f"REPORT ERROR: Missing attribute 'set_mode_and_update_toolbar' on object")
 
             # Correctly delegate to the base class (QGraphicsScene) directly
             # to avoid MRO issues in complex Mixin inheritance structures.
@@ -1188,14 +1192,22 @@ class SceneQueryMixin:
                 self.data.bonds[key]["item"] = bond_item
                 if hasattr(start_atom, "bonds"):
                     start_atom.bonds.append(bond_item)
+                else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                    logging.error(f"REPORT ERROR: Missing attribute 'bonds' on start_atom")
                 if hasattr(end_atom, "bonds"):
                     end_atom.bonds.append(bond_item)
+                else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                    logging.error(f"REPORT ERROR: Missing attribute 'bonds' on end_atom")
                 self.addItem(bond_item)
 
             if hasattr(start_atom, "update_style"):
                 start_atom.update_style()
+            else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                logging.error(f"REPORT ERROR: Missing attribute 'update_style' on start_atom")
             if hasattr(end_atom, "update_style"):
                 end_atom.update_style()
+            else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                logging.error(f"REPORT ERROR: Missing attribute 'update_style' on end_atom")
 
         except (AttributeError, RuntimeError, ValueError) as e:
             logging.error(f"Error creating bond: {e}", exc_info=True)
@@ -1253,6 +1265,8 @@ class SceneQueryMixin:
 
                 if hasattr(atom, "update_style"):
                     atom.update_style()
+                else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                    logging.error(f"REPORT ERROR: Missing attribute 'update_style' on atom")
 
             # 3. Remove from data model
             for bond in list(bonds_to_delete):
@@ -1318,6 +1332,8 @@ class SceneQueryMixin:
             for atom in list(atoms_to_update):
                 if hasattr(atom, "update_style"):
                     atom.update_style()
+                else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                    logging.error(f"REPORT ERROR: Missing attribute 'update_style' on atom")
 
             self.update_all_items()
             return True
@@ -1376,6 +1392,8 @@ class SceneQueryMixin:
                         self.window.statusBar().showMessage(
                             f"Warning: Bond {id1}-{id2} not found in model.", 3000
                         )
+                    else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                        logging.error(f"REPORT ERROR: Missing attribute 'statusBar' on self.window")
                     return
 
             # Update data model and visual representation
@@ -1389,4 +1407,6 @@ class SceneQueryMixin:
             )
             if hasattr(self.window, "statusBar"):
                 self.window.statusBar().showMessage(f"Error: {e}", 5000)
+            else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                logging.error(f"REPORT ERROR: Missing attribute 'statusBar' on self.window")
             self.update_all_items()

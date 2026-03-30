@@ -114,6 +114,8 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
         for atom in atoms:
             if hasattr(atom, "bonds"):
                 bonds_to_update.update(atom.bonds)
+            else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                logging.error(f"REPORT ERROR: Missing attribute 'bonds' on atom")
 
         for bond in bonds_to_update:
             if not sip_isdeleted_safe(bond):
@@ -122,11 +124,15 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
                         bond.update_position()
                     except (RuntimeError, ValueError, TypeError) as e:
                         logging.debug(f"Failed to update bond position for {bond}: {e}")
+                else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                    logging.error(f"REPORT ERROR: Missing attribute 'update_position' on bond")
 
     def update_all_items(self) -> None:
         """Force redraw of all items."""
         if hasattr(self.data, "update_ring_info_2d"):
             self.data.update_ring_info_2d()
+        else:  # [REPORT ERROR MISSING ATTRIBUTE]
+            logging.error(f"REPORT ERROR: Missing attribute 'update_ring_info_2d' on self.data")
 
         for item in self.items():
             if isinstance(item, (AtomItem, BondItem)):
@@ -239,6 +245,8 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
                             sb = self.window.statusBar()
                             if sb:
                                 sb.showMessage(f"Error clearing E/Z label: {e}", 5000)
+                        else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                            logging.error(f"REPORT ERROR: Missing attribute 'statusBar' on self.window")
                         self.update_all_items()  # Redraw even on error to maintain consistency
                 # AtomItem does nothing
             # --- Normal processing ---
@@ -464,6 +472,8 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
                             self.update_bond_stereo(b, new_stereo)
                             self.update_all_items()  # Force redraw
                             self.window.edit_actions_manager.push_undo_state()  # Push to undo stack here
+                        else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                            logging.error(f"REPORT ERROR: Missing attribute 'update_bond_stereo' on self")
                 except (AttributeError, RuntimeError, ValueError, TypeError) as e:
                     logging.error(
                         f"Error in E/Z stereo toggle (mouseReleaseEvent): {e}",
@@ -475,6 +485,8 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
                             sb.showMessage(
                                 f"Error changing E/Z stereochemistry: {e}", 5000
                             )
+                    else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                        logging.error(f"REPORT ERROR: Missing attribute 'statusBar' on self.window")
                     self.update_all_items()  # Redraw even on error to maintain consistency
                 return  # Do not proceed further
             elif (
@@ -764,9 +776,13 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
                 try:
                     if hasattr(obj, "hide"):
                         obj.hide()
+                    else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                        logging.error(f"REPORT ERROR: Missing attribute 'hide' on obj")
                     if hasattr(obj, "bonds") and obj.bonds is not None:
                         if hasattr(obj.bonds, "clear"):
                             obj.bonds.clear()
+                        else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                            logging.error(f"REPORT ERROR: Missing attribute 'clear' on object")
                 except (AttributeError, RuntimeError, ValueError, TypeError) as e:
                     logging.debug(f"Error purging item {obj} in MoleculeScene: {e}")
 

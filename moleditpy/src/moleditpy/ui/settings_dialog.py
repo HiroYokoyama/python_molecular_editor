@@ -5,6 +5,7 @@
 MoleditPy — A Python-based molecular editing software
 Refactored SettingsDialog (Phase 2)
 """
+import logging  # [REPORT ERROR MISSING ATTRIBUTE]
 
 from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import (
@@ -150,16 +151,24 @@ class SettingsDialog(QDialog):
 
         if hasattr(self.parent_window, "settings_dirty"):
             self.parent_window.settings_dirty = True
+        else:  # [REPORT ERROR MISSING ATTRIBUTE]
+            logging.error(f"REPORT ERROR: Missing attribute 'settings_dirty' on self.parent_window")
         
         # Persist to disk immediately
         if hasattr(self.parent_window, "init_manager"):
             self.parent_window.init_manager.save_settings()
+        else:  # [REPORT ERROR MISSING ATTRIBUTE]
+            logging.error(f"REPORT ERROR: Missing attribute 'init_manager' on self.parent_window")
 
         if hasattr(self.parent_window.view_3d_manager, "apply_3d_settings"):
             self.parent_window.view_3d_manager.apply_3d_settings()
+        else:  # [REPORT ERROR MISSING ATTRIBUTE]
+            logging.error(f"REPORT ERROR: Missing attribute 'apply_3d_settings' on object")
 
         if hasattr(self.parent_window.init_manager, "update_cpk_colors_from_settings"):
             self.parent_window.init_manager.update_cpk_colors_from_settings()
+        else:  # [REPORT ERROR MISSING ATTRIBUTE]
+            logging.error(f"REPORT ERROR: Missing attribute 'update_cpk_colors_from_settings' on object")
 
         # Redraw molecule
         current_mol = getattr(self.parent_window, "current_mol", None)
@@ -176,6 +185,8 @@ class SettingsDialog(QDialog):
                     item.update_style()
                 elif hasattr(item, "update"):
                     item.update()
+                else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                    logging.error(f"REPORT ERROR: Missing attribute 'update' on item")
 
         if hasattr(self.parent_window, "statusBar") and self.parent_window.statusBar():
             self.parent_window.statusBar().showMessage("Settings applied successfully")

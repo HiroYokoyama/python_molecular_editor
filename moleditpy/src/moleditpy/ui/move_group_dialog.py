@@ -174,6 +174,8 @@ class MoveGroupDialog(BasePickingDialog):
                 self.potential_drag = False
                 if hasattr(self, "clicked_atom_for_toggle"):
                     delattr(self, "clicked_atom_for_toggle")
+                else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                    logging.error(f"REPORT ERROR: Missing attribute 'clicked_atom_for_toggle' on self")
                 return False
 
             if (
@@ -185,6 +187,8 @@ class MoveGroupDialog(BasePickingDialog):
                 self.potential_drag = False
                 if hasattr(self, "clicked_atom_for_toggle"):
                     delattr(self, "clicked_atom_for_toggle")
+                else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                    logging.error(f"REPORT ERROR: Missing attribute 'clicked_atom_for_toggle' on self")
                 # Delegate to CustomInteractorStyle if a group is already selected
                 if self.group_atoms:
                     return False
@@ -348,6 +352,8 @@ class MoveGroupDialog(BasePickingDialog):
                                 except (AttributeError, RuntimeError, ValueError, TypeError):
                                     pass
                                 return True
+                            else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                                logging.error(f"REPORT ERROR: Missing attribute 'clicked_atom_for_toggle' on self")
 
                     except (AttributeError, RuntimeError, ValueError, TypeError):
                         pass

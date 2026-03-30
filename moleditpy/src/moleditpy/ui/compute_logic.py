@@ -68,6 +68,8 @@ class ComputeManager:
                 self.host.plotter.renderer.RemoveActor(actor)
         if hasattr(self.host, "_calculating_text_actor"):
             delattr(self.host, "_calculating_text_actor")
+        else:  # [REPORT ERROR MISSING ATTRIBUTE]
+            logging.error(f"REPORT ERROR: Missing attribute '_calculating_text_actor' on self.host")
 
     def _restore_button_ui(self) -> None:
         """Restore the Convert and Optimize buttons to their default state."""
@@ -83,6 +85,8 @@ class ComputeManager:
                 self.optimize_3d_structure
             )
             self.host.optimize_3d_button.setEnabled(True)
+        else:  # [REPORT ERROR MISSING ATTRIBUTE]
+            logging.error(f"REPORT ERROR: Missing attribute 'optimize_3d_button' on self.host")
 
     def _refresh_ui_state(self) -> None:
         """Consolidate UI state updates."""
@@ -91,13 +95,19 @@ class ComputeManager:
 
             if hasattr(self.host, "cleanup_button"):
                 self.host.cleanup_button.setEnabled(True)
+            else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                logging.error(f"REPORT ERROR: Missing attribute 'cleanup_button' on self.host")
 
             self._restore_button_ui()
 
             if hasattr(self.host, "optimize_3d_button"):
                 self.host.optimize_3d_button.setEnabled(has_mol)
+            else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                logging.error(f"REPORT ERROR: Missing attribute 'optimize_3d_button' on self.host")
             if hasattr(self.host, "export_button"):
                 self.host.export_button.setEnabled(has_mol)
+            else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                logging.error(f"REPORT ERROR: Missing attribute 'export_button' on self.host")
 
             # ui_manager and its methods are guaranteed on the host
             self.host.ui_manager._enable_3d_features(has_mol)
@@ -105,8 +115,12 @@ class ComputeManager:
 
             if hasattr(self.host, "analysis_action"):
                 self.host.analysis_action.setEnabled(has_mol)
+            else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                logging.error(f"REPORT ERROR: Missing attribute 'analysis_action' on self.host")
             if hasattr(self.host, "edit_3d_action"):
                 self.host.edit_3d_action.setEnabled(has_mol)
+            else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                logging.error(f"REPORT ERROR: Missing attribute 'edit_3d_action' on self.host")
 
             # plotter and view_2d are fundamental host components
             if self.host.plotter:
@@ -289,6 +303,8 @@ class ComputeManager:
             self.halt_ids.update(wids_to_halt)
         if hasattr(self.host, "active_worker_ids"):
             self.host.active_worker_ids.clear()
+        else:  # [REPORT ERROR MISSING ATTRIBUTE]
+            logging.error(f"REPORT ERROR: Missing attribute 'active_worker_ids' on self.host")
 
         self._restore_button_ui()
         self.host.cleanup_button.setEnabled(True)
@@ -330,6 +346,8 @@ class ComputeManager:
             self.host.optimize_3d_button.setText("Halt optimize")
             self._safe_disconnect(self.host.optimize_3d_button.clicked)
             self.host.optimize_3d_button.clicked.connect(self.halt_conversion)
+        else:  # [REPORT ERROR MISSING ATTRIBUTE]
+            logging.error(f"REPORT ERROR: Missing attribute 'optimize_3d_button' on self.host")
 
         self.host.ui_manager._enable_3d_features(False)
         self._start_calculation_worker(mol_block, options, run_id)
@@ -510,6 +528,8 @@ class ComputeManager:
         for item in selected_items:
             if hasattr(item, "atom_id"):
                 atom_ids.add(item.atom_id)
+            else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                logging.error(f"REPORT ERROR: Missing attribute 'atom_id' on item")
 
         if not atom_ids:
             return

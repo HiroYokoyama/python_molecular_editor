@@ -11,6 +11,7 @@ DOI: 10.5281/zenodo.17268532
 """
 
 from __future__ import annotations
+import logging  # [REPORT ERROR MISSING ATTRIBUTE]
 import math
 import os
 from typing import Any, Dict, List, Optional, Tuple, Union
@@ -292,6 +293,8 @@ class ExportManager:
                         mapper = actor.mapper
                     elif hasattr(actor, "GetMapper"):
                         mapper = actor.GetMapper()
+                    else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                        logging.error(f"REPORT ERROR: Missing attribute 'GetMapper' on actor")
 
                     if mapper is not None:
                         if hasattr(mapper, "input") and mapper.input is not None:
@@ -303,6 +306,8 @@ class ExportManager:
                             mesh = mapper.GetInput()
                         elif hasattr(mapper, "GetInputAsDataSet"):
                             mesh = mapper.GetInputAsDataSet()
+                        else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                            logging.error(f"REPORT ERROR: Missing attribute 'GetInputAsDataSet' on mapper")
 
                     # Method 2: Get from PyVista plotter internal data
                     if mesh is None and actor_name in self.host.plotter.mesh:
@@ -392,6 +397,8 @@ class ExportManager:
                         mapper = actor.mapper
                     elif hasattr(actor, "GetMapper"):
                         mapper = actor.GetMapper()
+                    else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                        logging.error(f"REPORT ERROR: Missing attribute 'GetMapper' on actor")
 
                     if mapper is not None:
                         if hasattr(mapper, "input") and mapper.input is not None:
@@ -403,6 +410,8 @@ class ExportManager:
                             mesh = mapper.GetInput()
                         elif hasattr(mapper, "GetInputAsDataSet"):
                             mesh = mapper.GetInputAsDataSet()
+                        else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                            logging.error(f"REPORT ERROR: Missing attribute 'GetInputAsDataSet' on mapper")
 
                     # Method 2: Get from PyVista plotter internal data
                     if mesh is None and actor_name in self.host.plotter.mesh:
@@ -461,6 +470,8 @@ class ExportManager:
                         mapper = actor.mapper
                     elif hasattr(actor, "GetMapper"):
                         mapper = actor.GetMapper()
+                    else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                        logging.error(f"REPORT ERROR: Missing attribute 'GetMapper' on actor")
 
                     if mapper is not None:
                         if hasattr(mapper, "input") and mapper.input is not None:
@@ -472,6 +483,8 @@ class ExportManager:
                             mesh = mapper.GetInput()
                         elif hasattr(mapper, "GetInputAsDataSet"):
                             mesh = mapper.GetInputAsDataSet()
+                        else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                            logging.error(f"REPORT ERROR: Missing attribute 'GetInputAsDataSet' on mapper")
 
                     # Method 2: Get from PyVista plotter internal data
                     if mesh is None and actor_name in self.host.plotter.mesh:
@@ -502,6 +515,8 @@ class ExportManager:
                                 if prop is not None:
                                     vtk_color = prop.GetColor()
                                     color = [int(c * 255) for c in vtk_color]
+                            else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                                logging.error(f"REPORT ERROR: Missing attribute 'GetProperty' on actor")
                         except (AttributeError, RuntimeError, TypeError):
                             # Use default color on failure to avoid console noise during complex mesh export
                             pass
