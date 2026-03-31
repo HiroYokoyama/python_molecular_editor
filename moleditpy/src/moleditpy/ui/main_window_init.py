@@ -701,6 +701,9 @@ class MainInitManager:
         categorized = {}
         root = []
         for p in plugins:
+            # Skip V3 plugins that manage their own menus via initialize(context)/add_menu_action
+            if hasattr(p["module"], "initialize"):
+                continue
             if hasattr(p["module"], "run"):
                 cat = p.get("category", p.get("rel_folder", "")).strip()
                 if cat:

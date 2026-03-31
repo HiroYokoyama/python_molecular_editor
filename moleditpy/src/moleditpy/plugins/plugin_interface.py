@@ -63,6 +63,32 @@ class PluginContext:
             # Old style: (path, text, callback)
             self.add_menu_action(path, callback, text_or_callback, icon, shortcut)
 
+    def add_plugin_menu(
+        self,
+        path: str,
+        callback: Callable,
+        text: Optional[str] = None,
+        icon: Optional[str] = None,
+        shortcut: Optional[str] = None,
+    ):
+        """
+        Register an action nested inside the Plugin menu.
+
+        Equivalent to add_menu_action("Plugin/<path>", ...).
+        Use this instead of add_menu_action when you want your plugin to appear
+        as a nested folder inside the Plugin menu rather than as a top-level menu.
+
+        Args:
+            path: Sub-path within the Plugin menu, e.g. "Utility/My Tool"
+                  results in Plugin > Utility > My Tool.
+            callback: Function to call when triggered.
+            text: Label override (defaults to last part of path).
+            icon: Path to icon (optional).
+            shortcut: Keyboard shortcut (optional).
+        """
+        full_path = f"Plugin/{path.lstrip('/')}"
+        self.add_menu_action(full_path, callback, text, icon, shortcut)
+
     def add_toolbar_action(
         self,
         callback: Callable,
@@ -282,6 +308,41 @@ class PluginContext:
             callback: Function with no arguments that resets plugin state.
         """
         self._manager.register_document_reset_handler(self._plugin_name, callback)
+
+    def get_setting(self, key: str, default: Any = None) -> Any:
+        """
+        Get a plugin-specific persistent setting.
+
+        Settings are stored in the app settings dict under 'plugin.<plugin_name>.<key>'
+        and are persisted across sessions with the application settings.
+
+        Args:
+            key: Setting key name.
+            default: Value to return if the setting is not found.
+        """
+        mw = self.get_main_window()
+        if mw and hasattr(mw, 'init_manager') and hasattr(mw.init_manager, 'settings'):
+            namespaced = f"plugin.{self._plugin_name}.{key}"
+            return mw.init_manager.settings.get(namespaced, default)
+        return default
+
+    def set_setting(self, key: str, value: Any) -> None:
+        """
+        Save a plugin-specific persistent setting.
+
+        Settings are stored in the app settings dict under 'plugin.<plugin_name>.<key>'
+        and are saved when the application saves its settings.
+
+        Args:
+            key: Setting key name.
+            value: Value to store (must be JSON-serializable).
+        """
+        mw = self.get_main_window()
+        if mw and hasattr(mw, 'init_manager') and hasattr(mw.init_manager, 'settings'):
+            namespaced = f"plugin.{self._plugin_name}.{key}"
+            mw.init_manager.settings[namespaced] = value
+            if hasattr(mw.init_manager, 'settings_dirty'):
+                mw.init_manager.settings_dirty = True
 
 
 class Plugin3DController:

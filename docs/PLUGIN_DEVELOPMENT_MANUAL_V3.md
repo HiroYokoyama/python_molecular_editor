@@ -108,6 +108,20 @@ Add a button to the dedicated **Plugin Toolbar**.
 - **icon** (`str`, optional): Icon path.
 - **tooltip** (`str`, optional): Hover text.
 
+#### `add_plugin_menu(path, callback, text=None, icon=None, shortcut=None)`
+Register an action nested inside the built-in **Plugin** menu. Equivalent to calling `add_menu_action("Plugin/<path>", ...)`.
+Use this instead of `add_menu_action` when you want your plugin to appear in the shared **Plugin** menu hierarchy rather than creating a new top-level menu.
+- **path** (`str`): Sub-path within the Plugin menu (e.g., `"Utility/My Tool"` → **Plugin > Utility > My Tool**).
+- Other parameters: same as `add_menu_action`.
+
+```python
+# Preferred — appears in Plugin > Analysis > My Viewer
+context.add_plugin_menu("Analysis/My Viewer...", lambda: launch(context))
+
+# Equivalent long form:
+context.add_menu_action("Plugin/Analysis/My Viewer...", lambda: launch(context))
+```
+
 #### `add_analysis_tool(label, callback)`
 Register a tool in the top-level **Analysis** menu. This is the preferred location for non-modifying data processing tools.
 - **label** (`str`): Text to display in the menu.
@@ -178,7 +192,39 @@ Register a callback to be invoked when a new document is created (**File > New**
 
 ---
 
-### 2.5 3D Visualization & Engine
+### 2.5 Plugin-Specific Settings (Persistent)
+
+These methods store plugin-specific preferences that survive application restarts. Settings are written into the application's own settings file under a namespaced key (`plugin.<PLUGIN_NAME>.<key>`), so they require no extra files.
+
+#### `get_setting(key, default=None)`
+Read a previously saved setting.
+- **key** (`str`): Setting name.
+- **default**: Value returned if the key has never been saved. Defaults to `None`.
+
+#### `set_setting(key, value)`
+Save a setting persistently. The value must be JSON-serializable (`str`, `int`, `float`, `bool`, `list`, `dict`).
+- **key** (`str`): Setting name.
+- **value**: The value to persist.
+
+```python
+def initialize(context):
+    def open_dialog():
+        # Restore the last-used method, default to "MMFF_RDKIT"
+        method = context.get_setting("optimization_method", "MMFF_RDKIT")
+        dlg = MyDialog(method)
+        if dlg.exec():
+            # Persist the user's choice for next time
+            context.set_setting("optimization_method", dlg.selected_method)
+
+    context.add_plugin_menu("Optimization/My Optimizer...", open_dialog)
+```
+
+> [!NOTE]
+> Settings are written to the app settings dict immediately and marked dirty for auto-save. They do not require a separate `register_save_handler`.
+
+---
+
+### 2.6 3D Visualization & Engine (Rendering)
 
 These methods and properties allow your plugin to extend the core rendering and computational capabilities of MoleditPy.
 
@@ -212,7 +258,7 @@ Returns the raw `MainWindow` instance. **Use with caution** — prefer specific 
 
 ---
 
-### 2.6 Window & State Management (Namespaced)
+### 2.7 Window & State Management (Namespaced)
 
 In V2, plugins often attached windows directly to `mw`. In V3, use the **Namespaced Registry**. This keeps your windows alive in memory and prevents ID collisions with other plugins.
 
@@ -300,8 +346,10 @@ def highlight_selection(context):
 | `mw.current_mol` | `context.current_molecule` |
 | `mw.plotter.reset_camera()` | `context.reset_3d_camera()` |
 | `mw.my_tool = win` | `context.register_window("my_tool", win)` |
-| `mw.draw_molecule_3d(...)` | `context.refresh_3d_view()` |
+| `mw.draw_molecule_3d(mol)` | `context.current_mol = mol` *(triggers full redraw)* |
+| `context.refresh_3d_view()` | Use after in-place conformer edits (re-renders without full rebuild) |
 | `context.register_menu_action(path, text, cb)` | `context.add_menu_action(path, cb, text)` |
+| `add_menu_action("Plugin/X/...", cb)` | `context.add_plugin_menu("X/...", cb)` *(preferred shorthand)* |
 
 > [!NOTE]
 > `mw.trigger_conversion()` is still accessible via `context.get_main_window()` and delegates to the internal compute manager. Prefer `context.add_menu_action` or `context.add_analysis_tool` for triggering computation workflows from menus.
@@ -314,14 +362,20 @@ While V3 encourages using `context`, sometimes you need direct access to the `Ma
 
 | Attribute / Method | Type | Description |
 | :--- | :--- | :--- |
-| `mw.settings` | `dict` | Global application settings (colors, defaults). |
 | `mw.plotter` | `pv.Plotter` | The raw PyVista plotter instance. |
 | `mw.scene` | `MoleculeScene` | The 2D editor graphics scene. |
-| `mw.current_mol` | `rdkit.Chem.Mol` | The active molecule (same as `context.current_molecule`). |
-| `mw.splitter` | `QSplitter` | The UI divider between 2D and 3D views. |
-| `mw.load_mol_file(path)` | — | Standard file loader. |
-| `mw.set_mode(mode_str)` | — | Switch editor mode (e.g., `'select'`, `'erase'`, `'atom_C'`). |
-| `mw.trigger_conversion()` | — | Trigger the built-in structure conversion (delegates to `compute_manager`). |
+| `mw.current_mol` | `rdkit.Chem.Mol` | The active 3D molecule (get/set). Setting updates `view_3d_manager` only — use `context.current_mol = mol` to also trigger redraw. |
+| `mw.init_manager.settings` | `dict` | Global application settings (colors, font sizes, etc.). Use `context.get_setting()`/`set_setting()` for plugin-specific keys. |
+| `mw.init_manager.splitter` | `QSplitter` | The UI divider between 2D and 3D views. |
+| `mw.init_manager.view_2d` | `ZoomableView` | The 2D editor QGraphicsView. |
+| `mw.init_manager.current_file_path` | `str` | Path to the currently open file (used for export suggestions). |
+| `mw.view_3d_manager.draw_molecule_3d(mol)` | — | Full 3D rebuild from an RDKit mol. Prefer `context.current_mol = mol`. |
+| `mw.view_3d_manager.current_mol` | `rdkit.Chem.Mol` | The molecule loaded in the 3D view. |
+| `mw.edit_actions_manager.push_undo_state()` | — | Low-level undo push. Prefer `context.push_undo_checkpoint()`. |
+| `mw.ui_manager.activate_select_mode()` | — | Switch 2D editor to select mode. |
+| `mw.compute_manager.check_chemistry_problems_fallback()` | — | Runs chemistry validation checks. |
+| `mw.state_manager.data` | `MoleculeData` | Raw data object (atoms, bonds, properties). |
+| `mw.trigger_conversion()` | — | Trigger the built-in 2D→3D structure conversion (delegates to `compute_manager`). |
 
 ---
 
