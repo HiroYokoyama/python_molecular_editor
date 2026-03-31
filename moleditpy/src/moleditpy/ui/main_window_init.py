@@ -701,17 +701,15 @@ class MainInitManager:
         categorized = {}
         root = []
         for p in plugins:
-            # Skip V3 plugins that manage their own menus via initialize(context)/add_menu_action
-            if hasattr(p["module"], "initialize"):
-                continue
+            # If 'run' is detected, add it to the menu via the legacy scanner.
+            # This applies to both pure legacy and dual-mode (V3 + legacy) plugins.
             if hasattr(p["module"], "run"):
                 cat = p.get("category", p.get("rel_folder", "")).strip()
                 if cat:
                     categorized.setdefault(cat, []).append(p)
                 else:
                     root.append(p)
-            else:  # [REPORT ERROR MISSING ATTRIBUTE]
-                logging.error(f"REPORT ERROR: Missing attribute 'run' on object")
+            # Pure V3 plugins (initialize only) are skipped here and handle their own menu registration.
 
         # Build categorized menus
         for cat in sorted(categorized.keys()):
@@ -731,7 +729,7 @@ class MainInitManager:
                 a = QAction(p["name"], self.host)
                 a.triggered.connect(
                     lambda checked, mod=p["module"]: self.host.plugin_manager.run_plugin(
-                        mod, self
+                        mod, self.host
                     )
                 )
                 current_parent.addAction(a)
@@ -741,7 +739,7 @@ class MainInitManager:
             a = QAction(p["name"], self.host)
             a.triggered.connect(
                 lambda checked, mod=p["module"]: self.host.plugin_manager.run_plugin(
-                    mod, self
+                    mod, self.host
                 )
             )
             plugin_menu.addAction(a)
