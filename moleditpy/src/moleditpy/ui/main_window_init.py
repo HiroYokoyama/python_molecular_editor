@@ -546,7 +546,7 @@ class MainInitManager:
         plugin_menu.addSeparator()
 
         # Discover
-        plugins = self.host.plugin_manager.discover_plugins(self)
+        plugins = self.host.plugin_manager.discover_plugins(self.host)
 
         # Integrate
         self._update_style_menu_with_plugins()
