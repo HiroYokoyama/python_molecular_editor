@@ -85,11 +85,12 @@ class AtomItem(QGraphicsItem):
         font_family = FONT_FAMILY
 
         scene = self.scene()
-        if hasattr(scene, "get_setting"):
-            font_size = scene.get_setting("atom_font_size_2d", 20)
-            font_family = scene.get_setting("atom_font_family_2d", FONT_FAMILY)
-        else:  # [REPORT ERROR MISSING ATTRIBUTE]
-            logging.error(f"REPORT ERROR: Missing attribute 'get_setting' on scene")
+        if scene is not None:
+            if hasattr(scene, "get_setting"):
+                font_size = scene.get_setting("atom_font_size_2d", 20)
+                font_family = scene.get_setting("atom_font_family_2d", FONT_FAMILY)
+            else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                logging.error(f"REPORT ERROR: Missing attribute 'get_setting' on scene of type {type(scene)}")
         
         self.font = QFont(font_family, font_size, FONT_WEIGHT_BOLD)
         self.prepareGeometryChange()
@@ -109,11 +110,12 @@ class AtomItem(QGraphicsItem):
         font_size = 20
         font_family = FONT_FAMILY
         scene = self.scene()
-        if hasattr(scene, "get_setting"):
-            font_size = scene.get_setting("atom_font_size_2d", 20)
-            font_family = scene.get_setting("atom_font_family_2d", FONT_FAMILY)
-        else:  # [REPORT ERROR MISSING ATTRIBUTE]
-            logging.error(f"REPORT ERROR: Missing attribute 'get_setting' on scene")
+        if scene is not None:
+            if hasattr(scene, "get_setting"):
+                font_size = scene.get_setting("atom_font_size_2d", 20)
+                font_family = scene.get_setting("atom_font_family_2d", FONT_FAMILY)
+            else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                logging.error(f"REPORT ERROR: Missing attribute 'get_setting' on scene of type {type(scene)}")
 
         font = QFont(font_family, font_size, FONT_WEIGHT_BOLD)
         fm = QFontMetricsF(font)

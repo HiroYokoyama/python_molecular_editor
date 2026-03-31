@@ -44,7 +44,10 @@
       "Bash(python -m pytest tests/gui/ -q --tb=short)",
       "Bash(python -m pytest tests/gui/ -q --tb=line)",
       "Bash(python scripts/scan_disconnections_v2.py)",
-      "Bash(python scripts/scan_disconnections_v2.py --dialogs)"
+      "Bash(python scripts/scan_disconnections_v2.py --dialogs)",
+      "Bash(python -m pytest tests/gui/test_main_app.py::test_add_remove_hydrogens tests/gui/test_main_app.py::test_user_template_dialog_save_and_use --tb=short)",
+      "Bash(python -m pytest tests/unit/test_compute_logic.py::test_on_calculation_error_stale --tb=long)",
+      "Bash(python -m pytest tests/gui/ tests/unit/ --tb=short -q)"
     ]
   }
 }

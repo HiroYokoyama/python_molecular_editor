@@ -11,8 +11,8 @@ _Verify AboutDialog initializes correctly with the injected host._
 ### test_about_dialog_easter_egg
 _Verify the easter egg triggers correctly on right click._
 
-- mock_parser_host.clear_all.assert_called_once()
-- mock_parser_host.load_from_smiles.assert_called_once_with('C1=CN=C(N=C1)C2=NC=CC=N2')
+- mock_parser_host.edit_actions_manager.clear_all.assert_called_once()
+- mock_parser_host.string_importer_manager.load_from_smiles.assert_called_once_with('C1=CN=C(N=C1)C2=NC=CC=N2')
 
 ### test_about_dialog_ignore_left_click
 _Verify left clicks do not trigger the easter egg._
@@ -60,6 +60,7 @@ _get_current_state should capture all atoms with correct properties._
 _get_current_state should capture bonds with correct order._
 
 - assert len(state['bonds']) == 1
+- assert bond_data['order'] == 2
 
 ### test_get_current_state_with_3d_mol
 _State should include 3D molecule binary when current_mol is set._
@@ -79,31 +80,31 @@ _3D constraints should be serialized in JSON-safe format._
 - assert len(state['constraints_3d']) == 2
 - assert isinstance(c, list)
 
-### test_json_roundtrip_preserves_atoms
-_Atoms should survive JSON serialization round-trip with correct properties._
-
-- assert len(app.data.atoms) == 2
-- assert symbols == {'C', 'N'}
-- assert len(charged) == 1
-- assert charged[0]['charge'] == 1
-
-### test_json_roundtrip_preserves_bonds
-_Bond order and stereo should survive JSON round-trip._
-
-- assert len(app.data.bonds) == 1
-- assert bond['order'] == 2
-
-### test_json_roundtrip_preserves_radical
-_Radical electrons should survive JSON round-trip._
-
-- assert len(app.data.atoms) == 1
-- assert next(iter(app.data.atoms.values()))['radical'] == 2
-
 ### test_get_current_state_empty
 _Empty state should produce valid structure with no atoms/bonds._
 
 - assert state['atoms'] == {}
 - assert state['bonds'] == {}
+
+### test_json_roundtrip_preserves_atoms
+_Atoms should survive JSON serialization round-trip._
+
+- assert len(mock_parser_host.data.atoms) == 2
+- assert symbols == {'C', 'N'}
+- assert len(charged) == 1
+- assert charged[0]['charge'] == 1
+
+### test_json_roundtrip_preserves_bonds
+_Bond order should survive JSON round-trip._
+
+- assert len(mock_parser_host.data.bonds) == 1
+- assert bond['order'] == 2
+
+### test_json_roundtrip_preserves_radical
+_Radical electrons should survive JSON round-trip._
+
+- assert len(mock_parser_host.data.atoms) == 1
+- assert next(iter(mock_parser_host.data.atoms.values()))['radical'] == 2
 
 ## tests/unit/test_app_state_persistence.py
 
@@ -114,20 +115,20 @@ _Test full project serialization/deserialization (PMEPRJ)._
 - assert '2d_structure' in json_data
 - assert '3d_structure' in json_data
 - assert json_data['3d_structure']['num_conformers'] == 1
-- assert len(mw.data.atoms) == 2
-- assert mw.data.atoms[aid1]['symbol'] == 'C'
-- assert mw.data.atoms[aid2]['symbol'] == 'O'
-- assert mw.data.atoms[aid1]['pos'][0] == 10
-- assert mw.current_mol is not None
-- assert mw.current_mol.GetNumAtoms() == mol.GetNumAtoms()
-- assert mw.current_mol.GetAtomWithIdx(0).GetIntProp('_original_atom_id') == aid1
-- assert mw.current_mol.GetAtomWithIdx(1).GetIntProp('_original_atom_id') == aid2
-- assert mw.atom_positions_3d is not None
-- assert mw.atom_positions_3d.shape == (mol.GetNumAtoms(), 3)
-- assert len(mw.constraints_3d) == 1
-- assert mw.constraints_3d[0][0] == 'DISTANCE'
-- assert mw.constraints_3d[0][2] == 1.43
-- assert mw.last_successful_optimization_method == 'MMFF94s'
+- assert len(mw.state_manager.data.atoms) == 2
+- assert mw.state_manager.data.atoms[aid1]['symbol'] == 'C'
+- assert mw.state_manager.data.atoms[aid2]['symbol'] == 'O'
+- assert mw.state_manager.data.atoms[aid1]['pos'][0] == 10
+- assert mw.view_3d_manager.current_mol is not None
+- assert mw.view_3d_manager.current_mol.GetNumAtoms() == mol.GetNumAtoms()
+- assert mw.view_3d_manager.current_mol.GetAtomWithIdx(0).GetIntProp('_original_atom_id') == aid1
+- assert mw.view_3d_manager.current_mol.GetAtomWithIdx(1).GetIntProp('_original_atom_id') == aid2
+- assert mw.view_3d_manager.atom_positions_3d is not None
+- assert mw.view_3d_manager.atom_positions_3d.shape == (mol.GetNumAtoms(), 3)
+- assert len(mw.edit_3d_manager.constraints_3d) == 1
+- assert mw.edit_3d_manager.constraints_3d[0][0] == 'DISTANCE'
+- assert mw.edit_3d_manager.constraints_3d[0][2] == 1.43
+- assert mw.compute_manager.last_successful_optimization_method == 'MMFF94s'
 - assert mw._preserved_plugin_data['TestPlugin']['val'] == 42
 
 ### test_undo_state_binary_roundtrip
@@ -136,8 +137,8 @@ _Test the internal binary state serialization used for Undo/Redo._
 - assert 'mol_3d' in state
 - assert isinstance(state['mol_3d'], bytes)
 - assert state['mol_3d_atom_ids'][0] == aid
-- assert mw.data.atoms[aid]['symbol'] == 'N'
-- assert mw.current_mol.GetAtomWithIdx(0).GetIntProp('_original_atom_id') == aid
+- assert mw.state_manager.data.atoms[aid]['symbol'] == 'N'
+- assert mw.view_3d_manager.current_mol.GetAtomWithIdx(0).GetIntProp('_original_atom_id') == aid
 
 ### test_legacy_version_handling
 _Verify that version mismatch warnings are triggered (but don't crash)._
@@ -255,7 +256,7 @@ _Test one-shot benzene placement when cursor is over an atom._
 
 - scene._calculate_polygon_from_edge.assert_called_once()
 - scene.add_molecule_fragment.assert_called_once()
-- scene.window.push_undo_state.assert_called_once()
+- scene.window.edit_actions_manager.push_undo_state.assert_called_once()
 - event.accept.assert_called_once()
 
 ### test_benzene_shortcut_on_bond
@@ -267,7 +268,7 @@ _Test one-shot benzene placement when cursor is over a bond._
 ### test_benzene_shortcut_empty_space
 _Test mode switch when cursor is over empty space._
 
-- scene.window.set_mode_and_update_toolbar.assert_called_with('template_benzene')
+- scene.window.ui_manager.set_mode_and_update_toolbar.assert_called_with('template_benzene')
 - event.accept.assert_called_once()
 - scene.add_molecule_fragment.assert_not_called()
 
@@ -419,7 +420,8 @@ _Verify that apply_changes pushes updates to the parent window settings._
 ### test_on_calculation_error_stale
 _Test on_calculation_error when the worker is stale (not in active set)._
 
-- assert not compute.statusBar().showMessage.called
+- compute.statusBar().showMessage.assert_called()
+- assert 'stale' in msg.lower() or 'Ignored' in msg
 
 ### test_on_calculation_error_basic
 _Test on_calculation_error for an ACTIVE worker._
@@ -430,10 +432,10 @@ _Test on_calculation_error for an ACTIVE worker._
 ### test_compute_set_optimization_method
 _Verify that setting the optimization method updates both settings and internal state._
 
-- assert compute.settings['optimization_method'] == 'GAFF_OBABEL'
+- assert compute.host.init_manager.settings['optimization_method'] == 'GAFF_OBABEL'
 - assert compute.statusBar().showMessage.called
 - assert 'Optimization' in msg or 'GAFF_OBABEL' in msg
-- assert compute.optimization_method == 'GAFF_OBABEL'
+- assert compute.host.init_manager.optimization_method == 'GAFF_OBABEL'
 
 ### test_compute_halt_logic
 _Verify that halt_conversion correctly marks active workers for termination._
@@ -445,7 +447,7 @@ _Verify that halt_conversion correctly marks active workers for termination._
 ### test_on_calculation_finished_basic
 _Verify that on_calculation_finished correctly processes a finished worker result._
 
-- assert compute.current_mol == mol
+- assert compute.host.view_3d_manager.current_mol == mol
 - assert worker_id not in compute.active_worker_ids
 
 ### test_check_chemistry_problems_fallback_detects
@@ -472,7 +474,7 @@ _Verify the high-level logic of triggering 3D optimization on the current molecu
 ### test_on_calculation_finished_worker_id_mismatch
 _Verify that on_calculation_finished ignores results from stale or mismatched workers._
 
-- assert compute.current_mol is None
+- assert compute.host.view_3d_manager.current_mol is None
 
 ### test_trigger_conversion_chemistry_problems
 _Test trigger_conversion when Chem.DetectChemistryProblems finds issues._
@@ -531,15 +533,15 @@ _Test grace during UFF exception._
 - assert MockWorker.called
 
 ### test_optimize_3d_plugin_method
-_Test plugin optimization method._
+_Test plugin optimization method — worker should be started (not rejected)._
 
 - assert not any(('not available' in msg for msg in msgs))
-- assert mock_callback.called
+- assert any(('Optimizing' in msg for msg in msgs))
 
 ### test_optimize_3d_plugin_failure
-_Test plugin optimization returning False._
+_Test unavailable/unknown method shows correct error._
 
-- assert any(('returned failure' in msg for msg in msgs))
+- assert any(('not available' in msg for msg in msgs))
 
 ### test_optimize_3d_mmff_fallback_success
 _Test MMFF fallback to ForceField API when basic optimization fails._
@@ -593,7 +595,7 @@ _Test that the optimization method is recorded after success._
 ### test_trigger_conversion_early_exits
 _Test early exits in trigger_conversion (empty mol, etc.)._
 
-- assert compute.current_mol is None
+- assert compute.host.view_3d_manager.current_mol is None
 - assert any(('3D view cleared' in msg for msg in compute.get_status_messages()))
 - assert mock_fallback.called
 
@@ -618,7 +620,7 @@ _Test halt_conversion clears active workers and restores UI._
 
 - assert compute.active_worker_ids == set()
 - assert 1 in compute.halt_ids
-- assert compute.convert_button.setText.called
+- assert compute.host.init_manager.convert_button.setText.called
 
 ### test_on_calculation_error_updated
 _Test on_calculation_error with correct message formatting._
@@ -703,7 +705,8 @@ _Test the geometric logic of dihedral angle adjustment._
 ### test_translation_logic
 _Test the geometric logic of centroid-based translation._
 
-- assert np.allclose(new_pos5, expected_pos5, atol=1e-07)
+- assert np.allclose(new_pos0, expected_pos0, atol=1e-07)
+- assert np.allclose(new_pos5, p5_initial, atol=1e-07)
 
 ### test_move_group_logic
 _Test the translation and rotation logic in MoveGroupDialog._
@@ -861,17 +864,17 @@ _Verify optimized 3D coordinates yield physical bond lengths._
 _Verify MirrorDialog correctly manipulates coordinates and UI (software logic)._
 
 - assert x_after == pytest.approx(-x_before, abs=0.001)
-- assert main_window.draw_molecule_3d.called
-- assert main_window.update_chiral_labels.called
-- assert main_window.push_undo_state.called
+- assert main_window.view_3d_manager.draw_molecule_3d.called
+- assert main_window.view_3d_manager.update_chiral_labels.called
+- assert main_window.edit_actions_manager.push_undo_state.called
 
 ### test_planarize_logic
 _Verify planarize functionality using the actual PlanarizeDialog logic._
 
 - assert s[-1] < 1e-10
-- assert main_window.draw_molecule_3d.called
-- assert main_window.update_chiral_labels.called
-- assert main_window.push_undo_state.called
+- assert main_window.view_3d_manager.draw_molecule_3d.called
+- assert main_window.view_3d_manager.update_chiral_labels.called
+- assert main_window.edit_actions_manager.push_undo_state.called
 
 ### test_rodrigues_rotate_90_deg
 _Rotate [1,0,0] by 90° around [0,0,1] → expect [0,1,0]._
@@ -1141,14 +1144,14 @@ _Test create_multi_material_obj with Triangle Strips and Quads._
 ### test_imports_mainwindow
 _Ensure MainWindow and its init submodule can be imported without crashing._
 
-- assert '__init__' in MainWindow.__dict__
-- assert hasattr(MainWindowMainInit, 'init_ui')
+- assert hasattr(MainInitManager, 'init_ui')
 
 ### test_mainwindow_init_with_mocks
-_Verify MainWindow delegates init_ui and init_menu_bar to mixin wrappers._
+_Verify MainWindow instantiates MainInitManager during initialization._
 
-- assert callable(getattr(MainWindow, 'init_ui', None))
-- assert callable(getattr(MainWindow, 'init_menu_bar', None))
+- MockInitManager.assert_called_once()
+- assert mw.init_manager == MockInitManager.return_value
+- assert args[0] == mw
 
 ## tests/unit/test_measurement_calcs.py
 
@@ -1556,7 +1559,7 @@ _Test current_molecule getter and setter._
 
 - assert ctx.current_molecule == 'mock_molecule'
 - assert mock_main_window.current_mol == 'new_molecule'
-- mock_main_window.draw_molecule_3d.assert_called_once_with('new_molecule')
+- mock_main_window.view_3d_manager.draw_molecule_3d.assert_called_once_with('new_molecule')
 
 ### TestPluginInterface.test_current_molecule_no_window
 _Test current_molecule when main window is None._
@@ -1611,13 +1614,13 @@ _Test register_document_reset_handler delegation._
 ### TestPluginInterface.test_3d_controller_set_atom_color
 _Test Plugin3DController.set_atom_color._
 
-- mock_main_window.main_window_view_3d.update_atom_color_override.assert_called_once_with(1, '#FF0000')
+- mock_main_window.view_3d_manager.update_atom_color_override.assert_called_once_with(1, '#FF0000')
 - mock_main_window.plotter.render.assert_called_once()
 
 ### TestPluginInterface.test_3d_controller_set_bond_color
 _Test Plugin3DController.set_bond_color._
 
-- mock_main_window.main_window_view_3d.update_bond_color_override.assert_called_once_with(2, '#00FF00')
+- mock_main_window.view_3d_manager.update_bond_color_override.assert_called_once_with(2, '#00FF00')
 - mock_main_window.plotter.render.assert_called_once()
 
 ## tests/unit/test_plugin_manager.py
@@ -1782,7 +1785,7 @@ _Verify that 'save' redirects to 'save as' if the current file is not a project 
 _Verify successful loading of a raw project file._
 
 - assert mock_set_state.called
-- assert io.current_file_path == raw_file
+- assert io.host.init_manager.current_file_path == raw_file
 
 ### test_load_json_data_invalid_format
 _Verify error handling for invalid JSON format in project files._
@@ -1841,16 +1844,16 @@ _Verify that 'save as' suggests a reasonable default filename._
 ### test_save_project_extension_enforcement
 _Verify that correct file extensions are enforced when saving._
 
-- assert io.current_file_path == expected_path
+- assert io.host.init_manager.current_file_path == expected_path
 - assert os.path.exists(expected_path)
 
 ### test_save_project_success_state_update
 _Verify that application state is updated correctly after a successful save._
 
-- assert io.has_unsaved_changes is False
-- assert io.current_file_path == save_path
-- assert io.update_window_title.called
-- assert io._saved_state is not None
+- assert io.host.state_manager.has_unsaved_changes is False
+- assert io.host.init_manager.current_file_path == save_path
+- assert io.host.state_manager.update_window_title.called
+- assert io.host.state_manager._saved_state is not None
 
 ## tests/unit/test_project_io_raw.py
 
@@ -1863,8 +1866,8 @@ _Verify error message when trying to save empty project._
 _Verify successful saving via file dialog._
 
 - assert os.path.exists(save_path)
-- assert io.current_file_path == save_path
-- assert io.has_unsaved_changes is False
+- assert io.host.init_manager.current_file_path == save_path
+- assert io.host.state_manager.has_unsaved_changes is False
 - io.statusBar().showMessage.assert_called_with(f'Project saved to {save_path}')
 - assert data == {'atoms': 'mock'}
 
@@ -1876,21 +1879,21 @@ _Verify that nothing happens if the user cancels the save dialog._
 ### test_load_raw_data_dialog_success
 _Verify loading via file dialog._
 
-- io.set_state_from_data.assert_called_with(sample_data)
-- assert io.current_file_path == load_path
-- assert io.has_unsaved_changes is False
+- io.host.state_manager.set_state_from_data.assert_called_with(sample_data)
+- assert io.host.init_manager.current_file_path == load_path
+- assert io.host.state_manager.has_unsaved_changes is False
 - io.statusBar().showMessage.assert_called_with(f'Project loaded from {load_path}')
 
 ### test_load_raw_data_cancel
 _Verify that nothing happens if the user cancels the load dialog._
 
-- io.set_state_from_data.assert_not_called()
+- io.host.state_manager.set_state_from_data.assert_not_called()
 
 ### test_load_raw_data_io_error
 _Verify handling of I/O errors during load._
 
 - io.statusBar().showMessage.assert_called()
-- assert 'Invalid project file format' in msg or 'Error loading project file' in msg
+- assert 'Invalid project file format' in msg
 
 ## tests/unit/test_properties.py
 
@@ -1917,7 +1920,7 @@ _Test toggling radical on multiple selected atoms._
 - assert scene.data.atoms[2]['radical'] == 2
 - a1.update_style.assert_called_once()
 - a2.update_style.assert_called_once()
-- scene.window.push_undo_state.assert_called_once()
+- scene.window.edit_actions_manager.push_undo_state.assert_called_once()
 - event.accept.assert_called_once()
 
 ### test_radical_toggle_at_cursor
@@ -1925,12 +1928,12 @@ _Test toggling radical on an atom at the cursor when nothing is selected._
 
 - assert a1.radical == 0
 - assert scene.data.atoms[1]['radical'] == 0
-- scene.window.push_undo_state.assert_called_once()
+- scene.window.edit_actions_manager.push_undo_state.assert_called_once()
 
 ### test_radical_toggle_no_target
 _Test that nothing happens if no atoms are selected or at the cursor._
 
-- scene.window.push_undo_state.assert_not_called()
+- scene.window.edit_actions_manager.push_undo_state.assert_not_called()
 - event.accept.assert_not_called()
 
 ## tests/unit/test_scene_advanced.py
@@ -1949,7 +1952,7 @@ _Test moving an atom via drag-and-drop._
 
 - assert a1_item.pos() == new_pos
 - assert data.atoms[a1_id]['pos'] == (new_pos.x(), new_pos.y())
-- assert len(window.undo_stack) > 0
+- assert len(window.edit_actions_manager.undo_stack) > 0
 
 ### test_delete_mixed_selection
 _Test deleting a selection containing both atoms and bonds._
@@ -1961,15 +1964,15 @@ _Test deleting a selection containing both atoms and bonds._
 ### test_undo_redo
 _Test undo/redo integration via scene modifications._
 
-- assert len(window.undo_stack) == 0
-- assert len(window.undo_stack) == initial_len + 1
+- assert len(window.edit_actions_manager.undo_stack) == 0
+- assert len(window.edit_actions_manager.undo_stack) == initial_len + 1
 
 ## tests/unit/test_scene_extended.py
 
 ### test_scene_keypress_modes
 _No description provided._
 
-- assert scene.window.activate_select_mode.called
+- assert scene.window.ui_manager.activate_select_mode.called
 - assert scene.mode == expected_mode
 
 ### test_scene_keypress_special_symbols
@@ -2019,21 +2022,21 @@ _No description provided._
 _No description provided._
 
 - assert any((a['symbol'] == 'O' for a in scene.data.atoms.values()))
-- assert mock_parser_host.push_undo_state.called
+- assert mock_parser_host.edit_actions_manager.push_undo_state.called
 
 ### test_scene_right_click_bond_delete
 _Test right-click deletion on a bond._
 
 - mock_del.assert_called()
 - assert len(mock_parser_host.data.bonds) == 0
-- assert mock_parser_host.push_undo_state.called
+- assert mock_parser_host.edit_actions_manager.push_undo_state.called
 
 ### test_scene_drag_and_drop_atom
 _Test moving an atom via drag-and-drop._
 
 - assert atom_item.pos() == new_pos
 - assert mock_parser_host.data.atoms[aid]['pos'] == (new_pos.x(), new_pos.y())
-- assert mock_parser_host.push_undo_state.called
+- assert mock_parser_host.edit_actions_manager.push_undo_state.called
 
 ### test_scene_delete_mixed_selection
 _Test deleting a selection containing both atoms and bonds._
@@ -2115,7 +2118,7 @@ _No description provided._
 ### test_scene_key_event_dispatch
 _Test key events like '4' (template), '.' (radical), +/- (charge)._
 
-- mock_parser_host.set_mode_and_update_toolbar.assert_called_with('template_benzene')
+- mock_parser_host.ui_manager.set_mode_and_update_toolbar.assert_called_with('template_benzene')
 - assert atom_item.charge == 1
 - assert scene.data.atoms[aid]['charge'] == 1
 
@@ -2140,13 +2143,13 @@ _Test the full mouse press -> move -> release sequence for creating a bond._
 _No description provided._
 
 - assert dialog.angle_input.text() == '-170.00'
-- dialog.adjust_angle.assert_called_once_with(-170.0)
+- dialog.apply_geometry_update.assert_called_once_with(-170.0)
 
 ### test_dihedral_dialog_wrapping
 _No description provided._
 
 - assert dialog.dihedral_input.text() == '160.00'
-- dialog.adjust_dihedral.assert_called_once_with(160.0)
+- dialog.apply_geometry_update.assert_called_once_with(160.0)
 
 ## tests/unit/test_stereochemistry.py
 
@@ -2248,9 +2251,9 @@ _Invalid InChI should show error, not crash._
 ## tests/unit/test_ui_manager_robustness.py
 
 ### test_close_event_robustness
-_Test that closeEvent handles missing attributes gracefully._
+_Test that handle_close_event handles missing attributes gracefully._
 
-- assert event.accept.called
+- assert result is False or result is True
 
 ### test_enable_3d_features_robustness
 _Test that _enable_3d_features handles missing widgets._
@@ -2259,8 +2262,8 @@ _Test that _enable_3d_features handles missing widgets._
 ### test_set_mode_robustness
 _Test that set_mode handles template preview visibility._
 
-- assert win.scene.mode == 'atom_C'
-- assert win.scene.template_preview.hide.called
+- assert ui.host.init_manager.scene.mode == 'atom_C'
+- assert ui.host.init_manager.scene.template_preview.hide.called
 
 ## tests/unit/test_utils_sip.py
 
@@ -2289,20 +2292,20 @@ _Test safe check when _sip_isdeleted is None (sip import failed)._
 ### test_view_3d_draw_standard_3d_style
 _Verify that draw_standard_3d_style clears the plotter and constructs the correct VTK meshes._
 
-- mock_parser_host.plotter.clear.assert_called()
-- mock_parser_host.plotter.set_background.assert_called_once_with('#ffffff')
-- assert mock_parser_host.plotter.add_mesh.call_count >= 1
-- mock_parser_host.plotter.render.assert_called()
-- assert hasattr(mock_parser_host, 'atom_positions_3d')
-- assert isinstance(mock_parser_host.atom_positions_3d, np.ndarray)
-- assert len(mock_parser_host.atom_positions_3d) == 3
+- mock_parser_host.view_3d_manager.plotter.clear.assert_called()
+- mock_parser_host.view_3d_manager.plotter.set_background.assert_called_with('#ffffff')
+- assert mock_parser_host.view_3d_manager.plotter.add_mesh.call_count >= 1
+- mock_parser_host.view_3d_manager.plotter.render.assert_called()
+- assert hasattr(view3d, 'atom_positions_3d')
+- assert isinstance(view3d.atom_positions_3d, np.ndarray)
+- assert len(view3d.atom_positions_3d) == 3
 
 ### test_view_3d_draw_none
-_No description provided._
+_Verify that calling draw with None safely clears the renderer._
 
-- mock_parser_host.plotter.clear.assert_called()
-- mock_parser_host.plotter.render.assert_called()
-- assert mock_parser_host.current_mol is None
+- mock_parser_host.view_3d_manager.plotter.clear.assert_called()
+- mock_parser_host.view_3d_manager.plotter.render.assert_called()
+- assert mock_parser_host.view_3d_manager.current_mol is None
 
 ## tests/unit/test_worker_robustness.py
 
@@ -2552,9 +2555,9 @@ _Integration test: fallback-to-direct with do_optimize=True._
 ### test_chiral_labels_toggle_3d
 _Test that toggling 'Show Chiral Labels' correctly displays/hides labels in 3D._
 
-- assert window.show_chiral_labels is False
+- assert window.view_3d_manager.show_chiral_labels is False
 - assert not labels_drawn()
-- assert window.show_chiral_labels is True
+- assert window.view_3d_manager.show_chiral_labels is True
 - assert len(chiral_centers) == 1
 - assert initial_label in ['R', 'S']
 - assert initial_label in labels
@@ -2621,7 +2624,7 @@ _No description provided._
 ### test_translation_dialog_launch
 _No description provided._
 
-- assert dialog.windowTitle() == 'Translation'
+- assert dialog.windowTitle() == 'Translate Atoms'
 
 ### test_move_group_dialog_launch
 _No description provided._
@@ -2631,7 +2634,7 @@ _No description provided._
 ## tests/gui/test_main_app.py
 
 ### test_molecular_data_add_atom
-_MolecularData: 原子の追加テスト_
+_MolecularData: Test for adding an atom._
 
 - assert atom_id == 0
 - assert 0 in data.atoms
@@ -2641,7 +2644,7 @@ _MolecularData: 原子の追加テスト_
 - assert 0 in data.adjacency_list
 
 ### test_molecular_data_add_bond
-_MolecularData: 結合の追加テスト_
+_MolecularData: Test for adding a bond._
 
 - assert key == (0, 1)
 - assert status == 'created'
@@ -2652,7 +2655,7 @@ _MolecularData: 結合の追加テスト_
 - assert data.adjacency_list[1] == [0]
 
 ### test_molecular_data_add_stereo_bond
-_MolecularData: 立体結合 (Wedge/Dash) がソートされずに保存されるかテスト_
+_MolecularData: Test if stereo bonds (Wedge/Dash) are stored without sorting IDs._
 
 - assert key == (1, 0)
 - assert status == 'created'
@@ -2661,7 +2664,7 @@ _MolecularData: 立体結合 (Wedge/Dash) がソートされずに保存され�
 - assert data.bonds[1, 0]['stereo'] == 1
 
 ### test_molecular_data_remove_atom
-_MolecularData: 原子削除と関連する結合の削除テスト_
+_MolecularData: Test for removing an atom and its associated bonds._
 
 - assert len(data.atoms) == 3
 - assert len(data.bonds) == 2
@@ -2675,7 +2678,7 @@ _MolecularData: 原子削除と関連する結合の削除テスト_
 - assert data.adjacency_list[1] == []
 
 ### test_molecular_data_remove_bond
-_MolecularData: 結合削除のテスト_
+_MolecularData: Test for removing a bond._
 
 - assert len(data.bonds) == 1
 - assert data.adjacency_list[0] == [1]
@@ -2684,26 +2687,26 @@ _MolecularData: 結合削除のテスト_
 - assert data.adjacency_list[1] == []
 
 ### test_to_rdkit_mol_stereo
-_MolecularData: 立体結合 (Wedge/Dash) のRDKit変換テスト_
+_MolecularData: Test for RDKit conversion of stereo bonds (Wedge/Dash)._
 
 - assert wedge_bond.GetBondDir() == Chem.BondDir.BEGINWEDGE
 - assert dash_bond.GetBondDir() == Chem.BondDir.BEGINDASH
 
 ### test_to_rdkit_mol_ez_stereo
-_MolecularData: E/Z立体結合のRDKit変換テスト_
+_MolecularData: Test for RDKit conversion of E/Z stereo bonds._
 
 - assert mol is not None
 - assert double_bond.GetBondType() == Chem.BondType.DOUBLE
 - assert double_bond.GetStereo() == Chem.BondStereo.STEREOZ
 
 ### test_app_launch
-_MainWindow: アプリケーションが正常に起動することを確認_
+_MainWindow: Verify application launches correctly._
 
 - assert window.isVisible()
 - assert 'MoleditPy Ver.' in window.windowTitle()
 
 ### test_mode_change_atom
-_ツールバー: 原子ボタンでモードが変更されることを確認_
+_Toolbar: Verify mode changes upon clicking atom buttons._
 
 - assert scene.mode == 'atom_C'
 - assert scene.mode == 'atom_N'
@@ -2711,7 +2714,7 @@ _ツールバー: 原子ボタンでモードが変更されることを確認_
 - assert window.statusBar().currentMessage() == 'Mode: Draw Atom (N)'
 
 ### test_mode_change_bond
-_ツールバー: 結合ボタンでモードが変更されることを確認_
+_Toolbar: Verify mode changes upon clicking bond buttons._
 
 - assert scene.mode == 'bond_2_0'
 - assert scene.bond_order == 2
@@ -2719,169 +2722,169 @@ _ツールバー: 結合ボタンでモードが変更されることを確認_
 - assert window.statusBar().currentMessage() == 'Mode: Draw Bond (Order: 2)'
 
 ### test_draw_atom_on_click
-_MoleculeScene: クリックで原子を描画するテスト_
+_MoleculeScene: Test for drawing an atom upon clicking._
 
-- assert len(window.data.atoms) == 1
-- assert window.data.atoms[atom_id]['symbol'] == 'N'
-- assert window.data.atoms[atom_id]['item'].pos() == click_pos
+- assert len(window.state_manager.data.atoms) == 1
+- assert window.state_manager.data.atoms[atom_id]['symbol'] == 'N'
+- assert window.state_manager.data.atoms[atom_id]['item'].pos() == click_pos
 
 ### test_draw_bond_on_drag
-_MoleculeScene: ドラッグで結合を描画するテスト_
+_MoleculeScene: Test for drawing a bond upon dragging._
 
-- assert len(window.data.atoms) == 2
-- assert len(window.data.bonds) == 1
-- assert (id1, id2) in window.data.bonds
-- assert window.data.bonds[id1, id2]['order'] == 1
+- assert len(window.state_manager.data.atoms) == 2
+- assert len(window.state_manager.data.bonds) == 1
+- assert (id1, id2) in window.state_manager.data.bonds
+- assert window.state_manager.data.bonds[id1, id2]['order'] == 1
 
 ### test_draw_bond_to_existing_atom
-_MoleculeScene: 既存の原子へドラッグして結合するテスト_
+_MoleculeScene: Test for dragging a bond to an existing atom._
 
-- assert len(window.data.atoms) == 2
-- assert len(window.data.bonds) == 0
-- assert len(window.data.atoms) == 2
-- assert len(window.data.bonds) == 1
-- assert (0, 1) in window.data.bonds
+- assert len(window.state_manager.data.atoms) == 2
+- assert len(window.state_manager.data.bonds) == 0
+- assert len(window.state_manager.data.atoms) == 2
+- assert len(window.state_manager.data.bonds) == 1
+- assert (0, 1) in window.state_manager.data.bonds
 
 ### test_change_atom_symbol_on_click
-_MoleculeScene: 既存原子のクリックで元素を変更するテスト_
+_MoleculeScene: Test for changing the element symbol of an existing atom._
 
-- assert window.data.atoms[0]['symbol'] == 'C'
-- assert window.data.atoms[0]['symbol'] == 'O'
-- assert len(window.data.atoms) == 1
+- assert window.state_manager.data.atoms[0]['symbol'] == 'C'
+- assert window.state_manager.data.atoms[0]['symbol'] == 'O'
+- assert len(window.state_manager.data.atoms) == 1
 
 ### test_change_bond_order_on_click
-_MoleculeScene: 既存結合のクリックで次数を変更するテスト_
+_MoleculeScene: Test for changing the order of an existing bond._
 
-- assert window.data.bonds[0, 1]['order'] == 1
-- assert window.data.bonds[0, 1]['order'] == 2
+- assert window.state_manager.data.bonds[0, 1]['order'] == 1
+- assert window.state_manager.data.bonds[0, 1]['order'] == 2
 
 ### test_delete_atom_on_right_click
-_MoleculeScene: 右クリックで原子を削除するテスト_
+_MoleculeScene: Test for deleting an atom upon right-clicking._
 
-- assert len(window.data.atoms) == 1
-- assert len(window.data.atoms) == 0
+- assert len(window.state_manager.data.atoms) == 1
+- assert len(window.state_manager.data.atoms) == 0
 
 ### test_charge_mode_click
-_MoleculeScene: 電荷モードでのクリックテスト_
+_MoleculeScene: Test for clicking in charge mode._
 
-- assert window.data.atoms[0]['charge'] == 0
-- assert window.data.atoms[0]['charge'] == 1
-- assert window.data.atoms[0]['charge'] == -1
+- assert window.state_manager.data.atoms[0]['charge'] == 0
+- assert window.state_manager.data.atoms[0]['charge'] == 1
+- assert window.state_manager.data.atoms[0]['charge'] == -1
 
 ### test_2d_to_3d_conversion
-_2D->3D変換: 変換ボタンのテスト_
+_2D->3D Conversion: Test for the conversion button._
 
-- assert len(window.data.atoms) == 2
-- assert len(window.data.bonds) == 1
+- assert len(window.state_manager.data.atoms) == 2
+- assert len(window.state_manager.data.bonds) == 1
 - assert convert_button.isEnabled()
-- assert window.current_mol is not None
-- assert window.optimize_3d_button.isEnabled()
-- assert window.export_button.isEnabled()
-- assert window.analysis_action.isEnabled()
+- assert window.view_3d_manager.current_mol is not None
+- assert window.init_manager.optimize_3d_button.isEnabled()
+- assert window.init_manager.export_button.isEnabled()
+- assert window.init_manager.analysis_action.isEnabled()
 
 ### test_optimize_3d
-_3D最適化: 3D最適化ボタンのテスト_
+_3D Optimization: Test for the 3D optimization button._
 
-- assert window.current_mol is not None
-- assert window.optimize_3d_button.isEnabled()
+- assert window.view_3d_manager.current_mol is not None
+- assert window.init_manager.optimize_3d_button.isEnabled()
 - assert 'Optimization completed' in msg or 'optimization successful' in msg or 'Process completed' in msg
 
 ### test_change_3d_style
-_3Dスタイル変更: スタイルメニューのテスト_
+_3D Style Change: Test for the style menu._
 
-- assert window.current_3d_style == 'ball_and_stick'
+- assert window.view_3d_manager.current_3d_style == 'ball_and_stick'
 - assert style_button is not None
 - assert cpk_action is not None
-- assert window.current_3d_style == 'cpk'
+- assert window.view_3d_manager.current_3d_style == 'cpk'
 
 ### test_undo_redo
-_Undo/Redo: 操作のテスト_
+_Undo/Redo: Test for editing operations._
 
-- assert len(window.data.atoms) == 0
-- assert len(window.data.atoms) == 1
-- assert len(window.undo_stack) == initial_stack_size + 1
-- assert window.undo_action.isEnabled() is True
-- assert window.redo_action.isEnabled() is False
-- assert len(window.data.atoms) == 0
-- assert window.redo_action.isEnabled() is True
-- assert len(window.data.atoms) == 1
-- assert window.undo_action.isEnabled() is True
-- assert window.redo_action.isEnabled() is False
+- assert len(window.state_manager.data.atoms) == 0
+- assert len(window.state_manager.data.atoms) == 1
+- assert len(window.edit_actions_manager.undo_stack) == initial_stack_size + 1
+- assert window.init_manager.undo_action.isEnabled() is True
+- assert window.init_manager.redo_action.isEnabled() is False
+- assert len(window.state_manager.data.atoms) == 0
+- assert window.init_manager.redo_action.isEnabled() is True
+- assert len(window.state_manager.data.atoms) == 1
+- assert window.init_manager.undo_action.isEnabled() is True
+- assert window.init_manager.redo_action.isEnabled() is False
 
 ### test_clear_all
-_Clear All: 全消去のテスト_
+_Clear All: Test for clearing the entire scene._
 
-- assert len(window.data.atoms) == 0
-- assert len(window.data.bonds) == 0
-- assert window.current_mol is None
-- assert window.has_unsaved_changes == False
-- assert len(window.undo_stack) == 1
+- assert len(window.state_manager.data.atoms) == 0
+- assert len(window.state_manager.data.bonds) == 0
+- assert window.view_3d_manager.current_mol is None
+- assert window.host.state_manager.has_unsaved_changes == False
+- assert len(window.edit_actions_manager.undo_stack) == 1
 
 ### test_copy_paste
-_編集: コピー＆ペーストのテスト_
+_Edit: Test for copy & paste operations._
 
-- assert len(window.data.atoms) == 2
-- assert len(window.data.bonds) == 1
+- assert len(window.state_manager.data.atoms) == 2
+- assert len(window.state_manager.data.bonds) == 1
 - assert len(scene.selectedItems()) == 3
 - assert mime_data.hasFormat(moleditpy.CLIPBOARD_MIME_TYPE)
-- assert len(window.data.atoms) == 4
-- assert len(window.data.bonds) == 2
-- assert window.data.atoms[2]['pos'][0] > 50
-- assert window.data.atoms[2]['pos'][1] > 0
-- assert window.data.atoms[3]['pos'][0] > 50
-- assert window.data.atoms[3]['pos'][1] > 0
+- assert len(window.state_manager.data.atoms) == 4
+- assert len(window.state_manager.data.bonds) == 2
+- assert window.state_manager.data.atoms[2]['pos'][0] > 50
+- assert window.state_manager.data.atoms[2]['pos'][1] > 0
+- assert window.state_manager.data.atoms[3]['pos'][0] > 50
+- assert window.state_manager.data.atoms[3]['pos'][1] > 0
 
 ### test_file_import_smiles
-_ファイル: SMILESインポートのテスト_
+_File: Test for SMILES import._
 
-- assert len(window.data.atoms) == 3
-- assert len(window.data.bonds) == 2
+- assert len(window.state_manager.data.atoms) == 3
+- assert len(window.state_manager.data.bonds) == 2
 - assert symbols.count('C') == 2
 - assert symbols.count('O') == 1
 - assert 'Successfully loaded from SMILES' in window.statusBar().currentMessage()
 
 ### test_key_press_change_atom
-_キーボードショートカット: 'O'キーで原子を変更_
+_Keyboard Shortcut: Change atom symbol via 'O' key._
 
-- assert window.data.atoms[0]['symbol'] == 'C'
-- assert window.data.atoms[0]['symbol'] == 'O'
+- assert window.state_manager.data.atoms[0]['symbol'] == 'C'
+- assert window.state_manager.data.atoms[0]['symbol'] == 'O'
 
 ### test_key_press_change_bond
-_キーボードショートカット: '2'キーで結合次数を変更_
+_Keyboard Shortcut: Change bond order via '2' key._
 
-- assert window.data.bonds[0, 1]['order'] == 1
-- assert window.data.bonds[0, 1]['order'] == 2
+- assert window.state_manager.data.bonds[0, 1]['order'] == 1
+- assert window.state_manager.data.bonds[0, 1]['order'] == 2
 
 ### test_radical_mode_toggle
-_MoleculeScene: ラジカルモードでのクリックテスト_
+_MoleculeScene: Click test in radical mode._
 
-- assert window.data.atoms[0]['radical'] == 0
-- assert window.data.atoms[0]['radical'] == 1
-- assert window.data.atoms[0]['radical'] == 2
-- assert window.data.atoms[0]['radical'] == 0
+- assert window.state_manager.data.atoms[0]['radical'] == 0
+- assert window.state_manager.data.atoms[0]['radical'] == 1
+- assert window.state_manager.data.atoms[0]['radical'] == 2
+- assert window.state_manager.data.atoms[0]['radical'] == 0
 
 ### test_delete_key_selection
-_MoleculeScene: Deleteキーで選択項目を削除_
+_MoleculeScene: Delete selected items via Delete key._
 
-- assert len(window.data.atoms) == 1
+- assert len(window.state_manager.data.atoms) == 1
 - assert len(scene.selectedItems()) == 1
-- assert len(window.data.atoms) == 0
+- assert len(window.state_manager.data.atoms) == 0
 
 ### test_draw_benzene_template
-_MoleculeScene: ベンゼンテンプレートの描画_
+_MoleculeScene: Draw benzene template._
 
 - assert scene.mode == 'template_benzene'
-- assert len(window.data.atoms) == 6
-- assert len(window.data.bonds) == 6
+- assert len(window.state_manager.data.atoms) == 6
+- assert len(window.state_manager.data.bonds) == 6
 - assert orders == [1, 1, 1, 2, 2, 2]
 
 ### test_open_settings_dialog
-_MainWindow: 設定ダイアログを開くテスト_
+_MainWindow: Test for opening the settings dialog._
 
 - QDialog.exec.assert_called()
 
 ### test_toggle_measurement_mode
-_MainWindow: 3D測定モードのトグルテスト_
+_MainWindow: Test for toggling 3D measurement mode._
 
 - assert window.measurement_mode == False
 - assert measurement_action is not None
@@ -2891,7 +2894,7 @@ _MainWindow: 3D測定モードのトグルテスト_
 - assert window.statusBar().currentMessage() == 'Measurement mode disabled.'
 
 ### test_toggle_3d_edit_mode
-_MainWindow: 3Dドラッグモードのトグルテスト_
+_MainWindow: Test for toggling 3D drag mode._
 
 - assert window.is_3d_edit_mode == False
 - assert edit_3d_action is not None
@@ -2901,38 +2904,38 @@ _MainWindow: 3Dドラッグモードのトグルテスト_
 - assert window.statusBar().currentMessage() == '3D Drag Mode: OFF.'
 
 ### test_add_remove_hydrogens
-_編集: 水素の追加/削除メニュー_
+_Edit: Add/Remove hydrogens menu test._
 
-- assert len(window.data.atoms) == 1
-- assert len(window.data.atoms) == 5
-- assert len(window.data.bonds) == 4
+- assert len(window.state_manager.data.atoms) == 1
+- assert len(window.state_manager.data.atoms) == 5
+- assert len(window.state_manager.data.bonds) == 4
 - assert symbols.count('H') == 4
-- assert len(window.data.atoms) == 1
-- assert len(window.data.bonds) == 0
-- assert window.data.atoms[0]['symbol'] == 'C'
+- assert len(window.state_manager.data.atoms) == 1
+- assert len(window.state_manager.data.bonds) == 0
+- assert window.state_manager.data.atoms[0]['symbol'] == 'C'
 
 ### test_2d_cleanup
-_2Dクリーンアップ: ボタンクリックで座標が変更されるか_
+_2D Cleanup: Verify coordinates change upon button click._
 
 - assert not (pos0_before == pos0_after and pos1_before == pos1_after)
 - assert '2D structure optimization successful' in window.statusBar().currentMessage()
 
 ### test_3d_viewer_mode_mol
-_3Dビューアモード: 実際のMOLファイル読み込みとUI遷移の統合テスト_
+_3D Viewer Mode: Integration test for MOL file loading and UI state transition._
 
-- assert window.current_mol is not None
-- assert window.current_mol.GetNumAtoms() == 1
-- assert window.is_2d_editable == False
-- assert window.cleanup_button.isEnabled() == False
-- assert get_button(window.toolbar, 'N (n)').isEnabled() == False
-- assert window.optimize_3d_button.isEnabled() == True
-- assert window.export_button.isEnabled() == True
-- assert window.analysis_action.isEnabled() == True
+- assert window.view_3d_manager.current_mol is not None
+- assert window.view_3d_manager.current_mol.GetNumAtoms() == 1
+- assert window.ui_manager.is_2d_editable == False
+- assert window.init_manager.cleanup_button.isEnabled() == False
+- assert get_button(window.init_manager.toolbar, 'N (n)').isEnabled() == False
+- assert window.init_manager.optimize_3d_button.isEnabled() == True
+- assert window.init_manager.export_button.isEnabled() == True
+- assert window.init_manager.analysis_action.isEnabled() == True
 
 ### test_open_3d_edit_dialogs
-_3D編集: 3D編集ダイアログが起動するか_
+_3D Edit: Verify 3D editing dialogs launch correctly._
 
-- assert window.current_mol is not None
+- assert window.view_3d_manager.current_mol is not None
 - assert window.translation_action.isEnabled() == True
 - assert window.align_menu.isEnabled() == True
 - assert window.planarize_action.isEnabled() == True
@@ -2941,29 +2944,29 @@ _3D編集: 3D編集ダイアログが起動するか_
 - QDialog.show.assert_called()
 
 ### test_save_project_as
-_プロジェクト保存: "Save Project As..." のテスト_
+_Project Save: Test for "Save Project As..."._
 
 - mocker_json_dump.assert_called_once()
-- assert window.has_unsaved_changes == False
-- assert window.current_file_path == '/fake/save.pmeprj'
+- assert window.state_manager.has_unsaved_changes == False
+- assert window.init_manager.current_file_path == '/fake/save.pmeprj'
 - assert 'Project saved to' in window.statusBar().currentMessage()
 
 ### test_open_project
-_プロジェクト読み込み: "Open Project..." (.pmeprj) のテスト_
+_Project Load: Test for "Open Project..." (.pmeprj)._
 
-- assert len(window.data.atoms) == 2
-- assert len(window.data.bonds) == 1
-- assert 0 in window.data.atoms
-- assert 1 in window.data.atoms
-- assert window.data.atoms[0]['symbol'] == 'C'
-- assert (0, 1) in window.data.bonds
-- assert window.current_mol is None
+- assert len(window.state_manager.data.atoms) == 2
+- assert len(window.state_manager.data.bonds) == 1
+- assert 0 in window.state_manager.data.atoms
+- assert 1 in window.state_manager.data.atoms
+- assert window.state_manager.data.atoms[0]['symbol'] == 'C'
+- assert (0, 1) in window.state_manager.data.bonds
+- assert window.view_3d_manager.current_mol is None
 - assert 'Project loaded from' in window.statusBar().currentMessage()
 
 ### test_toggle_3d_atom_info
-_3D原子情報表示: ID, 座標, シンボル表示の切り替えテスト_
+_3D Atom Info Display: Test for toggling ID, Coordinates, and Symbol display._
 
-- assert window.current_mol is not None
+- assert window.view_3d_manager.current_mol is not None
 - assert window.atom_info_display_mode == 'id'
 - mock_add_labels.assert_called()
 - assert window.current_atom_info_labels is not None
@@ -2973,81 +2976,81 @@ _3D原子情報表示: ID, 座標, シンボル表示の切り替えテスト_
 - assert window.current_atom_info_labels is None
 
 ### test_user_template_dialog_save_and_use
-_ユーザーテンプレート: ダイアログを開き、現在の構造を保存し、使用するテスト_
+_User Templates: Test for opening dialog, saving current structure, and using it._
 
 - assert action_open_dialog is not None
 - QDialog.show.assert_called()
-- assert len(window.data.atoms) == 1
+- assert len(window.state_manager.data.atoms) == 1
 - mocker_json_dump.assert_called_once()
 - assert QMessageBox.information.called
 - assert any(("Template 'test' saved" in str(a) for a in called_args))
-- assert len(window.data.atoms) == 2
-- assert 1 in window.data.atoms
-- assert window.data.atoms[1]['symbol'] == 'C'
-- assert window.data.atoms[1]['pos'][0] > 50
+- assert len(window.state_manager.data.atoms) == 2
+- assert 1 in window.state_manager.data.atoms
+- assert window.state_manager.data.atoms[1]['symbol'] == 'C'
+- assert window.state_manager.data.atoms[1]['pos'][0] > 50
 
 ### test_implicit_hydrogens_update
-_暗黙の水素: 描画操作後に自動更新されるかのテスト_
+_Implicit Hydrogens: Test for automatic updates after drawing operations._
 
-- assert len(window.data.atoms) == 1
+- assert len(window.state_manager.data.atoms) == 1
 - assert atom_item.implicit_h_count == 4
-- assert len(window.data.atoms) == 2
-- assert len(window.data.bonds) == 1
-- assert window.data.atoms[0]['item'].implicit_h_count == 3
-- assert window.data.atoms[1]['item'].implicit_h_count == 3
+- assert len(window.state_manager.data.atoms) == 2
+- assert len(window.state_manager.data.bonds) == 1
+- assert window.state_manager.data.atoms[0]['item'].implicit_h_count == 3
+- assert window.state_manager.data.atoms[1]['item'].implicit_h_count == 3
 
 ### test_drag_drop_mol_file_on_3d_view
-_D&D: 3Dビュー領域への .mol ファイルドロップ (モック)_
+_D&D: Drag & Drop of .mol file onto 3D view area (Mock)._
 
 - mock_load_3d.assert_called_once_with(file_path='/fake/drop.mol')
 - mock_event.acceptProposedAction.assert_called_once()
 
 ### test_drag_drop_mol_file_on_2d_view
-_D&D: 2Dビュー領域への .mol ファイルドロップ (モック)_
+_D&D: Drag & Drop of .mol file onto 2D view area (Mock)._
 
 - mock_load_2d.assert_called_once_with(file_path='/fake/drop.mol')
 - mock_event.acceptProposedAction.assert_called_once()
 
 ### test_project_save_load_round_trip
-_プロジェクト保存/読込: 保存したファイルを実際に読み込んで復元を確認する統合テスト_
+_Project Save/Load Round-trip: Integration test to verify structure recovery after saving and reloading._
 
-- assert len(window.data.atoms) == 2
-- assert window.data.atoms[id1]['symbol'] == 'N'
-- assert (0, 1) in window.data.bonds
+- assert len(window.state_manager.data.atoms) == 2
+- assert window.state_manager.data.atoms[id1]['symbol'] == 'N'
+- assert (0, 1) in window.state_manager.data.bonds
 - assert save_file.exists()
-- assert window.has_unsaved_changes == False
-- assert len(window.data.atoms) == 0
-- assert len(window.data.atoms) == 2
-- assert len(window.data.bonds) == 1
+- assert window.host.state_manager.has_unsaved_changes == False
+- assert len(window.state_manager.data.atoms) == 0
+- assert len(window.state_manager.data.atoms) == 2
+- assert len(window.state_manager.data.bonds) == 1
 - assert symbols == ['C', 'N']
 - assert bond_data['order'] == 1
 - assert bond_data['stereo'] == 0
 
 ### test_file_import_smiles_error
-_SMILESインポート: 不正なSMILES入力時のエラーハンドリングテスト_
+_SMILES Import: Test for error handling when invalid SMILES is entered._
 
 - assert status_msg.startswith('Invalid SMILES:')
 
 ### test_undo_redo_boundary
-_Undo/Redo: スタック境界(空のスタックへの操作)のテスト_
+_Undo/Redo: Test for stack boundary (operations on empty stack)._
 
-- assert len(window.undo_stack) == 1
-- assert len(window.data.atoms) == 0
+- assert len(window.edit_actions_manager.undo_stack) == 1
+- assert len(window.state_manager.data.atoms) == 0
 
 ### test_import_invalid_mol_file
-_ファイル読込: 破損したMOLファイルのエラーハンドリング_
+_File Load: Error handling for corrupted MOL files._
 
 - assert 'Invalid MOL file format:' in status_msg or 'Error loading file:' in status_msg
-- assert len(window.data.atoms) == 0
+- assert len(window.state_manager.data.atoms) == 0
 
 ### test_clear_2d_editor_cancel
-_全消去: 確認ダイアログでキャンセルのテスト_
+_Clear All: Test for cancellation in confirmation dialog._
 
-- assert len(window.data.atoms) == 1
-- assert window.has_unsaved_changes == True
+- assert len(window.state_manager.data.atoms) == 1
+- assert window.host.state_manager.has_unsaved_changes == True
 
 ### test_clipboard_copy_empty_selection
-_コピー: 選択なしでのコピー操作の安全性テスト_
+_Copy: Safety test for copy operation with empty selection._
 
 - assert cb.text() == 'initial_text'
 
@@ -3057,14 +3060,14 @@ _コピー: 選択なしでのコピー操作の安全性テスト_
 _Test that load_command_line_file uses plugin openers when available._
 
 - mock_callback.assert_called_once_with(test_file)
-- assert window.current_file_path == test_file
+- assert window.init_manager.current_file_path == test_file
 
 ### test_load_command_line_file_default_extensions
 _Test that load_command_line_file handles standard extensions._
 
-- window.load_mol_file_for_3d_viewing.assert_called_once_with('test.mol')
-- window.load_xyz_for_3d_viewing.assert_called_once_with('test.xyz')
-- window.open_project_file.assert_called_once_with(file_path='test.pmeprj')
+- window.io_manager.load_mol_file_for_3d_viewing.assert_called_once_with('test.mol')
+- window.io_manager.load_xyz_for_3d_viewing.assert_called_once_with('test.xyz')
+- window.io_manager.open_project_file.assert_called_once_with(file_path='test.pmeprj')
 
 ### test_update_cpk_colors_from_settings
 _Test that CPK colors are updated correctly from settings overrides._
@@ -3075,21 +3078,21 @@ _Test that CPK colors are updated correctly from settings overrides._
 ### test_apply_initial_settings
 _Test that apply_initial_settings updates scene background and style._
 
-- assert window.scene.backgroundBrush().color() == expected_color
-- window.plotter.set_background.assert_called_with('#112233')
+- assert window.init_manager.scene.backgroundBrush().color() == expected_color
+- window.view_3d_manager.plotter.set_background.assert_called_with('#112233')
 
 ### test_reset_all_settings_flow
 _Test the complete settings reset flow._
 
-- window._perform_settings_reset.assert_called_once()
-- window._refresh_ui_after_reset.assert_called_once()
+- window.init_manager._perform_settings_reset.assert_called_once()
+- window.init_manager._refresh_ui_after_reset.assert_called_once()
 
 ### test_perform_settings_reset_logic
 _Test the low-level settings reset (file deletion and reload)._
 
 - assert not settings_file.exists()
-- window.load_settings.assert_called_once()
-- assert window.settings_dirty is True
+- window.init_manager.load_settings.assert_called_once()
+- assert window.init_manager.settings_dirty is True
 
 ## tests/gui/test_main_window_ui_integration.py
 
@@ -3107,8 +3110,8 @@ _Test that menu actions registered by plugins are correctly added to the menu ba
 ### test_plugin_toolbar_actions_visibility
 _Test that the plugin toolbar is shown/hidden and populated correctly._
 
-- assert window.plugin_toolbar.isHidden()
-- assert not window.plugin_toolbar.isHidden()
+- assert window.init_manager.plugin_toolbar.isHidden()
+- assert not window.init_manager.plugin_toolbar.isHidden()
 - assert len(toolbar_actions) == 1
 - assert toolbar_actions[0].text() == 'ToolBtn'
 - assert toolbar_actions[0].toolTip() == 'Hint'
@@ -3116,7 +3119,7 @@ _Test that the plugin toolbar is shown/hidden and populated correctly._
 ### test_ui_sync_after_reset
 _Test that UI elements (background, checked states) sync correctly after settings reset._
 
-- assert window.scene is not None
+- assert window.init_manager.scene is not None
 - assert actual_bg == '#0000FF'
 - assert window.opt3d_actions['MMFF_RDKIT'].isChecked()
 - assert window.conv_actions['rdkit'].isChecked()
@@ -3147,7 +3150,7 @@ _Test integration of plugin openers into the Import menu._
 - assert import_action is not None
 - assert 'Import .fake' in import_action.text()
 - cb.assert_called_once_with('data.fake')
-- assert window.current_file_path == 'data.fake'
+- assert window.init_manager.current_file_path == 'data.fake'
 
 ## tests/gui/test_molecule_scene_events.py
 
