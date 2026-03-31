@@ -45,6 +45,24 @@ class PluginContext:
             self._plugin_name, path, callback, text, icon, shortcut
         )
 
+    def register_menu_action(
+        self,
+        path: str,
+        text_or_callback: Union[str, Callable],
+        callback: Optional[Callable] = None,
+        icon: Optional[str] = None,
+        shortcut: Optional[str] = None,
+    ):
+        """Backward-compatible alias for add_menu_action.
+        Supports old 3-arg style: register_menu_action(path, text, callback).
+        """
+        if callable(text_or_callback):
+            # New style: (path, callback, ...)
+            self.add_menu_action(path, text_or_callback, None, icon, shortcut)
+        else:
+            # Old style: (path, text, callback)
+            self.add_menu_action(path, callback, text_or_callback, icon, shortcut)
+
     def add_toolbar_action(
         self,
         callback: Callable,

@@ -87,7 +87,7 @@ class MainWindow(QMainWindow):
     @property
     def scene(self):
         return self.init_manager.scene
-    
+
     def dragEnterEvent(self, event):
         """Delegate drag enter event to UI manager."""
         self.ui_manager.dragEnterEvent(event)

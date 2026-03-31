@@ -637,6 +637,10 @@ class MainInitManager:
             )
 
             if not current_menu:
+                # Add a separator before the first plugin-owned top-level menu
+                if not getattr(self, '_plugin_menubar_separator_added', False):
+                    self.host.menuBar().addSeparator()
+                    self._plugin_menubar_separator_added = True
                 current_menu = self.host.menuBar().addMenu(top_level_title)
 
             for part in parts[1:-1]:

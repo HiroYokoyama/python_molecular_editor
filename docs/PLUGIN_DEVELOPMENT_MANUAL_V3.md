@@ -11,17 +11,17 @@ Welcome to the **Version 3.0** of the MoleditPy Plugin API. This version introdu
 
 A MoleditPy plugin is a Python script (or folder package) that defines metadata and an `initialize(context)` entry point.
 
-## 1.1 Plugin Metadata
+### 1.1 Plugin Metadata
 Define these at the top of your script. They are used for the UI and the internal registry.
 
 | Variable | Description |
 | :--- | :--- |
 | `PLUGIN_NAME` | **(Required)** The human-readable name of the plugin. |
-| `PLUGIN_VERSION` | Version string (e.g., "1.0.2"). |
+| `PLUGIN_VERSION` | Version string (e.g., `"1.0.2"` or `"2026.03.31"`). |
 | `PLUGIN_AUTHOR` | Name of the developer. |
 | `PLUGIN_DESCRIPTION` | A short summary shown in the Plugin Manager. |
 
-## 1.2 Folder-based Plugins (Packages)
+### 1.2 Folder-based Plugins (Packages)
 For complex plugins, use a folder structure. MoleditPy will treat the folder as a single plugin if it contains an `__init__.py`.
 
 **Structure:**
@@ -48,6 +48,8 @@ def initialize(context):
 
 ## 2. Core API: The PluginContext Reference
 
+The `context` object passed to `initialize(context)` is your safe proxy to the application's core logic.
+
 ```python
 PLUGIN_NAME = "System Diagnostic Tool"
 PLUGIN_VERSION = "3.0.1"
@@ -61,7 +63,7 @@ def initialize(context):
     """
     # Add a menu item
     context.add_menu_action("Tools/Run Diagnostic", lambda: run_diag(context))
-    
+
     # Add a toolbar button
     context.add_toolbar_action(
         callback=lambda: run_diag(context),
@@ -71,10 +73,6 @@ def initialize(context):
 ```
 
 ---
-
-## 2. Core API: The PluginContext Reference
-
-The `context` object is your safe proxy to the application's core logic.
 
 ### 2.1 UI & Feedback
 
@@ -87,13 +85,21 @@ Display a temporary message in the application's bottom status bar.
 
 #### `add_menu_action(path, callback, text=None, icon=None, shortcut=None)`
 Register a custom item in the main menu. MoleditPy will automatically create any sub-menus defined in the path.
-- **path** (`str`): The full menu path. 
+- **path** (`str`): The full menu path.
     - Use `File/My Action` to add to existing menus.
     - Use `MyPlugin/Action` to create a new top-level menu.
 - **callback** (`Callable`): Function to execute when the action is triggered.
 - **text** (`str`, optional): The label of the menu item. Defaults to the last part of `path`.
 - **icon** (`str`, optional): Path to an image file or a standard icon name.
 - **shortcut** (`str`, optional): Keyboard shortcut (e.g., `"Ctrl+Shift+X"`).
+
+#### `register_menu_action(path, text_or_callback, callback=None, icon=None, shortcut=None)`
+Backward-compatible alias for `add_menu_action`. Supports two calling styles:
+- **New style** (preferred): `register_menu_action(path, callback)` — equivalent to `add_menu_action`.
+- **Old style** (V2 compat): `register_menu_action(path, text, callback)` — text and callback positions are swapped.
+
+> [!NOTE]
+> New plugins should use `add_menu_action` instead of `register_menu_action`.
 
 #### `add_toolbar_action(callback, text, icon=None, tooltip=None)`
 Add a button to the dedicated **Plugin Toolbar**.
@@ -112,6 +118,8 @@ Register an action in the **Export** menu. Use this for custom file formats or d
 - **label** (`str`): Text to display (e.g., `"Export as MyFormat..."`).
 - **callback** (`Callable`): Function to execute.
 
+---
+
 ### 2.2 Files & Interoperability
 
 These methods allow your plugin to handle external files and drag-and-drop events.
@@ -127,6 +135,8 @@ Register a handler for files dropped onto the main 2D/3D editor window.
 - **callback** (`Callable[[str], bool]`): Function that receives the dropped file path. Must return `True` if it successfully handled the file, `False` otherwise.
 - **priority** (`int`): Handlers with higher priority are checked first.
 
+---
+
 ### 2.3 Molecular State & Undo
 
 Methods for interacting with the active molecule and managing the undo stack.
@@ -136,6 +146,9 @@ Get or set the active RDKit molecule object.
 - **Getter**: Returns the `rdkit.Chem.Mol` currently loaded in the editor.
 - **Setter**: Replaces the active molecule. Automatically triggers 2D/3D redrawing of the scene.
 
+> [!NOTE]
+> `current_mol` is an alias for `current_molecule` — both are available.
+
 #### `get_selected_atom_indices()`
 Returns the RDKit indices of atoms currently selected by the user in either the 2D canvas or the 3D viewer.
 
@@ -143,6 +156,8 @@ Returns the RDKit indices of atoms currently selected by the user in either the 
 Snapshots the current application state and adds it to the Undo history.
 > [!IMPORTANT]
 > **Usage Timing**: You should call this method **AFTER** you have finished modifying the molecule. The system only pushes a new state if it detects a difference from the previous one.
+
+---
 
 ### 2.4 Lifecycle & Project Data
 
@@ -161,12 +176,14 @@ Register a callback to be invoked when a new document is created (**File > New**
 - **callback** (`Callable[[], None]`): Function with no arguments that resets plugin state.
 - **Note**: This handler is called AFTER the main application has cleared all molecular data but BEFORE the "Cleared" message.
 
+---
+
 ### 2.5 3D Visualization & Engine
 
 These methods and properties allow your plugin to extend the core rendering and computational capabilities of MoleditPy.
 
 #### `refresh_3d_view()`
-Force the 3D window to redraw. Use this after performing minor visual changes (like color overrides) or manual coordinates updates.
+Force the 3D window to redraw. Use this after performing minor visual changes (like color overrides) or manual coordinate updates.
 
 #### `reset_3d_camera()`
 Zoom in and re-center the 3D viewport to perfectly fit the current molecule.
@@ -191,9 +208,12 @@ Direct access to the `pyvista.Plotter` instance. Use for adding custom actors, t
 Direct access to the 2D `MoleculeScene`.
 
 #### `get_main_window()`
-Returns the raw `MainWindow` instance. **Use with caution** for specialized Qt operations not covered by the API.
+Returns the raw `MainWindow` instance. **Use with caution** — prefer specific context methods when available.
 
-### 2.4 Window & State Management (Namespaced)
+---
+
+### 2.6 Window & State Management (Namespaced)
+
 In V2, plugins often attached windows directly to `mw`. In V3, use the **Namespaced Registry**. This keeps your windows alive in memory and prevents ID collisions with other plugins.
 
 | Method | Description |
@@ -207,9 +227,9 @@ In V2, plugins often attached windows directly to `mw`. In V3, use the **Namespa
 
 Obtain a controller via `ctrl = context.get_3d_controller()`. These overrides are temporary visual changes that do not modify the actual RDKit molecule coordinates or properties.
 
-- `set_atom_color(atom_index: int, color_hex: str)`: Override the color of a specific atom (e.g., `"#FF0000"` for red). Pass `None` to reset.
-- `set_bond_color(bond_index: int, color_hex: str)`: Override the color of a specific RDKit bond.
-- `set_bond_color_by_atoms(idx1: int, idx2: int, color_hex: str)`: Helpers to find and color the bond connecting two atom indices.
+- `set_atom_color(atom_index: int, color_hex: str)`: Override the color of a specific atom (e.g., `"#FF0000"` for red).
+- `set_bond_color(bond_index: int, color_hex: str)`: Override the color of a specific RDKit bond by its index.
+- `set_bond_color_by_atoms(idx1: int, idx2: int, color_hex: str)`: Helper to find and color the bond connecting two atom indices.
 
 ---
 
@@ -222,7 +242,7 @@ Always check if your window is already open before creating a new one.
 def toggle_viewer(context):
     # 1. Try to get existing window
     win = context.get_window("main_panel")
-    
+
     if win:
         win.show()
         win.raise_()
@@ -241,16 +261,16 @@ Correct ordering is essential for the Undo/Redo system to function.
 def center_molecule(context):
     mol = context.current_molecule
     if not mol: return
-    
+
     # 1. Modify the molecule coordinates
     AllChem.ComputeCanonicalTransform(mol)
-    
+
     # 2. Update the application state
     context.current_molecule = mol
-    
+
     # 3. Save to History (Must come after setting the mol)
     context.push_undo_checkpoint()
-    
+
     # 4. Success feedback
     context.show_status_message("Molecule centered.", 2000)
 ```
@@ -262,20 +282,16 @@ Color atoms that the user has selected.
 def highlight_selection(context):
     indices = context.get_selected_atom_indices()
     ctrl = context.get_3d_controller()
-    
+
     for idx in indices:
-        ctrl.set_atom_color(idx, "#00FF00") # Highlight green
-    
+        ctrl.set_atom_color(idx, "#00FF00")  # Highlight green
+
     context.refresh_3d_view()
 ```
 
 ---
 
-- [ ] **Atom Indices**: Always remember that MoleditPy uses **0-based RDKit indices**.
-
----
-
-## 7. Migration Guide (V2 to V3)
+## 5. Migration Guide (V2 to V3)
 
 | Legacy Pattern (Avoid) | Modern Pattern (Use This) |
 | :--- | :--- |
@@ -285,6 +301,39 @@ def highlight_selection(context):
 | `mw.plotter.reset_camera()` | `context.reset_3d_camera()` |
 | `mw.my_tool = win` | `context.register_window("my_tool", win)` |
 | `mw.draw_molecule_3d(...)` | `context.refresh_3d_view()` |
+| `context.register_menu_action(path, text, cb)` | `context.add_menu_action(path, cb, text)` |
+
+> [!NOTE]
+> `mw.trigger_conversion()` is still accessible via `context.get_main_window()` and delegates to the internal compute manager. Prefer `context.add_menu_action` or `context.add_analysis_tool` for triggering computation workflows from menus.
+
+---
+
+## 6. Advanced: MainWindow Internals (Low-Level)
+
+While V3 encourages using `context`, sometimes you need direct access to the `MainWindow` (`mw`) for specialized Qt or PyVista operations. Obtain it via `mw = context.get_main_window()`.
+
+| Attribute / Method | Type | Description |
+| :--- | :--- | :--- |
+| `mw.settings` | `dict` | Global application settings (colors, defaults). |
+| `mw.plotter` | `pv.Plotter` | The raw PyVista plotter instance. |
+| `mw.scene` | `MoleculeScene` | The 2D editor graphics scene. |
+| `mw.current_mol` | `rdkit.Chem.Mol` | The active molecule (same as `context.current_molecule`). |
+| `mw.splitter` | `QSplitter` | The UI divider between 2D and 3D views. |
+| `mw.load_mol_file(path)` | — | Standard file loader. |
+| `mw.set_mode(mode_str)` | — | Switch editor mode (e.g., `'select'`, `'erase'`, `'atom_C'`). |
+| `mw.trigger_conversion()` | — | Trigger the built-in structure conversion (delegates to `compute_manager`). |
+
+---
+
+## 7. Legacy Support (Compatibility Mode)
+
+MoleditPy 3.0 remains compatible with older plugin patterns, though they are considered deprecated.
+
+### 7.1 The `run(mw)` Function
+If you define a function `run(main_window)`, MoleditPy will add your plugin to the standard "Plugins" menu. This is useful for simple scripts that don't need the advanced V3 ecosystem.
+
+### 7.2 The `autorun(mw)` Function
+Will be executed immediately on startup. Use `initialize(context)` for modern equivalents.
 
 ---
 
@@ -302,15 +351,29 @@ All plugin callbacks run in the Main UI Thread. Performance-heavy tasks will fre
 
 ---
 
-## 9. Legacy Support (Compatibility Mode)
+## 9. Best Practices & Troubleshooting
 
-MoleditPy 3.0 remains compatible with older plugin patterns, though they are considered deprecated.
+### 9.1 Thread Safety
+**CRITICAL**: All plugin callbacks run in the Main UI Thread.
+- **Fast operations** (< 100ms) are fine.
+- **Slow operations** (heavy QM, large loops) will **freeze the entire application**.
+- **Solution**: Use `QThread` or Python's `threading` for heavy work and return results via signals.
 
-### 9.1 The `run(mw)` Function
-If you define a function `run(main_window)`, MoleditPy will add your plugin to the standard "Plugins" menu. This is useful for simple scripts that don't need the advanced V3 ecosystem.
+### 9.2 Error Handling
+Always wrap your logic in `try...except` blocks. An uncaught exception in a plugin can cause the entire application to hang or crash silently.
+```python
+def my_callback(context):
+    try:
+        # unsafe logic
+    except Exception as e:
+        context.show_status_message(f"Plugin Error: {e}", 5000)
+```
 
-### 9.2 The `autorun(mw)` Function
-Will be executed immediately on startup. Use `initialize(context)` for modern equivalents.
+### 9.3 Memory Safety
+Use `context.register_window()` for all persistent UI elements (dialogs, panels). If you don't register them, Python's garbage collector might delete the window while it's still being used by the user.
+
+### 9.4 Atom Indices
+Remember that MoleditPy uses **0-based RDKit indices**. These may differ from "Atom Numbers" in some chemical file formats. Always verify your mappings.
 
 ---
 
@@ -327,7 +390,7 @@ PLUGIN_VERSION = "3.1.0"
 def initialize(context):
     # 1. Add tool to menu
     context.add_menu_action("Research/Analyze Selection", lambda: process(context))
-    
+
     # 2. Register for specific file types
     context.register_file_opener(".res", lambda path: load_research(path, context))
 
@@ -336,7 +399,7 @@ def process(context):
     if not indices:
         context.show_status_message("Select atoms first!", 2000)
         return
-        
+
     context.show_status_message(f"Analyzing {len(indices)} atoms...")
     # Logic goes here...
 
@@ -351,9 +414,9 @@ def load_research(path, context):
 
 ---
 
-## 11. Cookbook & Examples (Refactored for V3.0)
+## 11. Cookbook & Examples
 
-### 7.1 Analysis Tool: Molecular Weight
+### 11.1 Analysis Tool: Molecular Weight
 A tool that calculates properties and shows them in a popup. Use `context.current_molecule` and `context.show_status_message`.
 
 ```python
@@ -371,18 +434,18 @@ def initialize(context):
 
         weight = Descriptors.MolWt(mol)
         num_atoms = mol.GetNumAtoms()
-        
+
         QMessageBox.information(
-            context.get_main_window(), 
-            "Stats", 
+            context.get_main_window(),
+            "Stats",
             f"Molecular Weight: {weight:.2f}\nAtoms: {num_atoms}"
         )
 
     context.add_analysis_tool("Show Molecular Weight", run_calc)
 ```
 
-### 7.2 Custom 3D Component: Add Sphere
-Use the `plotter` object (accessed via `context.get_main_window()`) to add persistent custom 3D geometries.
+### 11.2 Custom 3D Component: Add Sphere
+Use the `plotter` object to add persistent custom 3D geometries.
 
 ```python
 import pyvista as pv
@@ -395,16 +458,16 @@ def initialize(context):
 def add_sphere(context):
     mw = context.get_main_window()
     plotter = mw.plotter
-    
+
     # Create and add a sphere mesh
     sphere = pv.Sphere(radius=2.0)
     plotter.add_mesh(sphere, color="red", opacity=0.3, name="custom_plugin_sphere")
-    
+
     context.refresh_3d_view()
     context.show_status_message("Sphere added to scene.")
 ```
 
-### 7.3 Persistent Dock Panel (Singleton)
+### 11.3 Persistent Dock Panel (Singleton)
 V3 uses `register_window` to keep panels alive and manage their unique identity across the entire session.
 
 ```python
@@ -431,15 +494,15 @@ def toggle_panel(context):
     layout = QVBoxLayout(content)
     layout.addWidget(QLabel("Telemetry Active..."))
     dock.setWidget(content)
-    
+
     mw.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, dock)
-    
+
     # 3. Register it so context.get_window() works next time
     context.register_window("main_dock", dock)
     dock.show()
 ```
 
-### 7.4 Custom File Importer
+### 11.4 Custom File Importer
 Refactor your loaders to use `current_molecule` and `push_undo_checkpoint()` to ensure the user can revert the import.
 
 ```python
@@ -448,24 +511,23 @@ from rdkit import Chem
 PLUGIN_NAME = "Simple SMILES Loader"
 
 def initialize(context):
-    # Register for .smiles files
     context.register_file_opener(".smiles", lambda path: load_smiles(path, context))
 
 def load_smiles(path, context):
     try:
         with open(path, 'r') as f:
             smiles = f.read().strip()
-        
+
         mol = Chem.MolFromSmiles(smiles)
         if mol:
-            mol = Chem.AddHs(mol) # Always good practice
-            
+            mol = Chem.AddHs(mol)
+
             # 1. Update the app
             context.current_molecule = mol
-            
+
             # 2. Save to Undo history (MANDATORY for importers)
             context.push_undo_checkpoint()
-            
+
             # 3. Adjust View
             context.reset_3d_camera()
             context.show_status_message(f"Imported {path} successfully.")
@@ -473,7 +535,7 @@ def load_smiles(path, context):
         context.show_status_message(f"Import Failed: {e}")
 ```
 
-### 7.5 Custom 3D Style (Dynamic Overrides)
+### 11.5 Custom 3D Style (Dynamic Overrides)
 Custom styles in V3 should combine standard drawing with custom elements.
 
 ```python
@@ -485,17 +547,17 @@ def initialize(context):
 def draw_hc_style(mw, mol):
     # 1. Get the plotter from the window passed by the engine
     plotter = mw.plotter
-    
+
     # 2. Add a background gradient or text
     plotter.set_background("black", top="gray")
     plotter.add_text("HIGH CONTRAST MODE", position='upper_left', color='yellow')
-    
-    # 3. Trigger a standard draw but with a specific override
+
+    # 3. Trigger standard draw with a style override
     # Note: Accessing view_3d_manager on mw is allowed in style callbacks
     mw.view_3d_manager.draw_standard_3d_style(mol, style_override='stick')
 ```
 
-### 7.6 Custom Optimization Method
+### 11.6 Custom Optimization Method
 Optimization callbacks must modify the molecule **in-place**.
 
 ```python
@@ -508,13 +570,12 @@ def initialize(context):
 
 def run_uff(mol):
     """
-    Called by the 'Optimize' logic. 
+    Called by the 'Optimize' logic.
     Modify 'mol' in-place. Return True on success.
     """
     if mol.GetNumAtoms() == 0:
         return False
-        
-    # Standard RDKit UFF
+
     AllChem.UFFOptimizeMolecule(mol, maxIters=500)
     return True
 ```
@@ -526,7 +587,7 @@ def run_uff(mol):
 To ensure your plugin feels like a native part of MoleditPy, follow these design principles:
 
 ### 12.1 Color Palette
-MoleditPy uses a specific "Sleek Dark" theme. If you build custom widgets, use these QColor hints:
+MoleditPy uses a "Sleek Dark" theme. If you build custom widgets, use these QColor hints:
 - **Background**: `QColor(30, 30, 35)`
 - **Accent**: `QColor(0, 120, 215)`
 - **Secondary Text**: `QColor(180, 180, 180)`
@@ -550,10 +611,10 @@ class TestMyPlugin(unittest.TestCase):
         # 1. Create a mock context
         context = MagicMock()
         context.current_molecule = Chem.MolFromSmiles("CCO")
-        
+
         # 2. Run your logic
         my_plugin_function(context)
-        
+
         # 3. Verify side effects
         context.push_undo_checkpoint.assert_called_once()
 ```
@@ -575,46 +636,3 @@ If you want your plugin to be listed in the official **Community Plugin Browser*
 Thank you for contributing to the MoleditPy ecosystem! If you encounter any bugs or need new API features, please reach out via GitHub Issues.
 
 **Happy Coding!**
-
----
-
-## 8. Advanced: MainWindow Internals (Low-Level)
-
-While V3 encourages using `context`, sometimes you need direct access to the `MainWindow` (`mw`) for specialized Qt or PyVista operations.
-
-| Attribute | Type | Description |
-| :--- | :--- | :--- |
-| `mw.settings` | `dict` | Global application settings (colors, defaults). |
-| `mw.plotter` | `pv.Plotter` | The raw PyVista plotter instance. |
-| `mw.scene` | `MoleculeScene` | The 2D editor graphics scene. |
-| `mw.splitter` | `QSplitter` | The UI divider between 2D and 3D views. |
-
-### Useful Internal Methods
-- `mw.load_mol_file(path)`: Standard file loader.
-- `mw.set_mode(mode_str)`: Switch editor mode (e.g., `'select'`, `'erase'`, `'atom_C'`).
-
----
-
-## 9. Best Practices & Troubleshooting
-
-### 9.1 Thread Safety
-**CRITICAL**: All plugin callbacks run in the Main UI Thread.
-- **Fast operations** (< 100ms) are fine.
-- **Slow operations** (Heavy QM, large loops) will **freeze the entire application**.
-- **Solution**: Use `QThread` or Python's `threading` for heavy work and return results via signals.
-
-### 9.2 Error Handling
-Always wrap your logic in `try...except` blocks. An uncapped exception in a plugin can cause the entire application to hang or crash silently.
-```python
-def my_callback(context):
-    try:
-        # unsafe logic
-    except Exception as e:
-        context.show_status_message(f"Plugin Error: {e}", 5000)
-```
-
-### 9.3 Memory Safety
-Use `context.register_window()` for all persistent UI elements (dialogs, panels). If you don't register them, Python's garbage collector might delete the window while it's still being used by the user.
-
-### 9.4 Atom Indices
-Remember that MoleditPy uses **0-based RDKit indices**. These may differ from "Atom Numbers" in some chemical file formats. Always verify your mappings.

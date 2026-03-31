@@ -58,6 +58,7 @@ coverage_html/
 # Test output files
 test_output*.txt
 tmp/
+.claude/settings.local.json
 
 # Translations
 *.mo
