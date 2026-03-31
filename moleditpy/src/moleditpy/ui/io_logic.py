@@ -23,10 +23,12 @@ from rdkit import Chem
 from rdkit.Chem import AllChem, rdGeometry, rdMolTransforms, Descriptors
 
 try:
-    from moleditpy.utils.constants import COVALENT_RADII, VERSION
-except ImportError:
+    # package relative imports
+    from ..utils.constants import COVALENT_RADII, VERSION
+except (ImportError, ValueError, AttributeError):
+    # Fallback to absolute imports
     try:
-        from moleditpy_linux.utils.constants import COVALENT_RADII, VERSION
+        from moleditpy.utils.constants import COVALENT_RADII, VERSION
     except ImportError:
         COVALENT_RADII = {}
         VERSION = "unknown"

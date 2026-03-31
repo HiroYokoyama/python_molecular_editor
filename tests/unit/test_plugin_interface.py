@@ -192,3 +192,130 @@ class TestPluginInterface:
             2, "#00FF00"
         )
         mock_main_window.plotter.render.assert_called_once()
+
+    # ------------------------------------------------------------------
+    # Tests for methods added in V3.1
+    # ------------------------------------------------------------------
+
+    def test_add_plugin_menu(self, mock_manager):
+        """add_plugin_menu prepends 'Plugin/' to the path."""
+        ctx = PluginContext(mock_manager, "TestPlugin")
+        callback = MagicMock()
+        ctx.add_plugin_menu("Utility/My Tool...", callback)
+        mock_manager.register_menu_action.assert_called_once_with(
+            "TestPlugin", "Plugin/Utility/My Tool...", callback, None, None, None
+        )
+
+    def test_add_plugin_menu_strips_leading_slash(self, mock_manager):
+        """add_plugin_menu strips a leading slash from the path."""
+        ctx = PluginContext(mock_manager, "TestPlugin")
+        callback = MagicMock()
+        ctx.add_plugin_menu("/Analysis/Viewer", callback)
+        mock_manager.register_menu_action.assert_called_once_with(
+            "TestPlugin", "Plugin/Analysis/Viewer", callback, None, None, None
+        )
+
+    def test_add_plugin_menu_with_text_and_shortcut(self, mock_manager):
+        """add_plugin_menu passes optional text/icon/shortcut through."""
+        ctx = PluginContext(mock_manager, "TestPlugin")
+        callback = MagicMock()
+        ctx.add_plugin_menu("File/Export...", callback, text="Export", shortcut="Ctrl+E")
+        mock_manager.register_menu_action.assert_called_once_with(
+            "TestPlugin", "Plugin/File/Export...", callback, "Export", None, "Ctrl+E"
+        )
+
+    def test_register_menu_action_new_style(self, mock_manager):
+        """register_menu_action (new style: path, callback) delegates correctly."""
+        ctx = PluginContext(mock_manager, "TestPlugin")
+        callback = MagicMock()
+        ctx.register_menu_action("File/Open", callback)
+        mock_manager.register_menu_action.assert_called_once_with(
+            "TestPlugin", "File/Open", callback, None, None, None
+        )
+
+    def test_register_menu_action_old_style(self, mock_manager):
+        """register_menu_action (old style: path, text, callback) delegates correctly."""
+        ctx = PluginContext(mock_manager, "TestPlugin")
+        callback = MagicMock()
+        ctx.register_menu_action("File/Import", "Import PubChem...", callback)
+        mock_manager.register_menu_action.assert_called_once_with(
+            "TestPlugin", "File/Import", callback, "Import PubChem...", None, None
+        )
+
+    # ------------------------------------------------------------------
+    # get_setting / set_setting
+    # ------------------------------------------------------------------
+
+    def _ctx_with_settings(self, settings_dict=None):
+        """Helper: build a PluginContext whose main_window has init_manager.settings."""
+        manager = MagicMock()
+        mw = MagicMock()
+        mw.init_manager.settings = settings_dict if settings_dict is not None else {}
+        mw.init_manager.settings_dirty = False
+        manager.get_main_window.return_value = mw
+        ctx = PluginContext(manager, "MyPlugin")
+        return ctx, mw
+
+    def test_get_setting_returns_default_when_missing(self):
+        """get_setting returns the default if the key is absent."""
+        ctx, _ = self._ctx_with_settings({})
+        assert ctx.get_setting("theme", "light") == "light"
+
+    def test_get_setting_returns_stored_value(self):
+        """get_setting returns the stored value when the namespaced key exists."""
+        ctx, _ = self._ctx_with_settings({"plugin.MyPlugin.theme": "dark"})
+        assert ctx.get_setting("theme", "light") == "dark"
+
+    def test_get_setting_namespacing(self):
+        """get_setting is namespaced — same key for different plugins is independent."""
+        manager = MagicMock()
+        mw = MagicMock()
+        mw.init_manager.settings = {
+            "plugin.PluginA.color": "red",
+            "plugin.PluginB.color": "blue",
+        }
+        manager.get_main_window.return_value = mw
+
+        ctx_a = PluginContext(manager, "PluginA")
+        ctx_b = PluginContext(manager, "PluginB")
+
+        assert ctx_a.get_setting("color") == "red"
+        assert ctx_b.get_setting("color") == "blue"
+
+    def test_get_setting_no_main_window(self):
+        """get_setting returns default when main window is None."""
+        manager = MagicMock()
+        manager.get_main_window.return_value = None
+        ctx = PluginContext(manager, "MyPlugin")
+        assert ctx.get_setting("key", "fallback") == "fallback"
+
+    def test_set_setting_writes_namespaced_key(self):
+        """set_setting writes to init_manager.settings with correct namespace."""
+        ctx, mw = self._ctx_with_settings({})
+        ctx.set_setting("theme", "dark")
+        assert mw.init_manager.settings["plugin.MyPlugin.theme"] == "dark"
+
+    def test_set_setting_marks_dirty(self):
+        """set_setting sets settings_dirty = True."""
+        ctx, mw = self._ctx_with_settings({})
+        ctx.set_setting("x", 42)
+        assert mw.init_manager.settings_dirty is True
+
+    def test_set_setting_overwrites_existing(self):
+        """set_setting overwrites an existing value."""
+        ctx, mw = self._ctx_with_settings({"plugin.MyPlugin.x": 1})
+        ctx.set_setting("x", 99)
+        assert mw.init_manager.settings["plugin.MyPlugin.x"] == 99
+
+    def test_set_setting_no_main_window(self):
+        """set_setting is a no-op when main window is None."""
+        manager = MagicMock()
+        manager.get_main_window.return_value = None
+        ctx = PluginContext(manager, "MyPlugin")
+        ctx.set_setting("key", "value")  # Must not raise
+
+    def test_get_after_set_roundtrip(self):
+        """Value written with set_setting can be read back with get_setting."""
+        ctx, _ = self._ctx_with_settings({})
+        ctx.set_setting("count", 7)
+        assert ctx.get_setting("count", 0) == 7

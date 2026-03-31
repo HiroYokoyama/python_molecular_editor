@@ -779,6 +779,119 @@ _Test copy selection MimeData generation._
 
 - assert mock_clipboard.setMimeData.called
 
+## tests/unit/test_edit_actions_extended.py
+
+### TestEditActionsExtended.test_apply_chem_check_force_skip
+_No description provided._
+
+- assert manager.host.chem_check_tried is False
+- assert manager.host.chem_check_failed is False
+
+### TestEditActionsExtended.test_apply_chem_check_settings_skip
+_No description provided._
+
+- assert manager.host.chem_check_tried is False
+- assert manager.host.chem_check_failed is False
+
+### TestEditActionsExtended.test_apply_chem_check_success
+_No description provided._
+
+- assert manager.host.chem_check_tried is True
+- assert manager.host.chem_check_failed is False
+
+### TestEditActionsExtended.test_apply_chem_check_failure
+_No description provided._
+
+- assert manager.host.chem_check_tried is True
+- assert manager.host.chem_check_failed is True
+- assert manager.host.init_manager.optimize_3d_button.setEnabled.called
+- manager.host.init_manager.optimize_3d_button.setEnabled.assert_called_with(False)
+
+### TestEditActionsExtended.test_clear_xyz_flags_with_mol_arg
+_No description provided._
+
+- assert not mol.HasProp('_xyz_skip_checks')
+- assert not hasattr(mol, '_xyz_skip_checks')
+- assert manager.host.is_xyz_derived is False
+- manager.host.init_manager.optimize_3d_button.setEnabled.assert_called_with(True)
+
+### TestEditActionsExtended.test_update_edit_menu_actions
+_No description provided._
+
+- manager.host.init_manager.cut_action.setEnabled.assert_called_with(True)
+- manager.host.init_manager.copy_action.setEnabled.assert_called_with(True)
+- manager.host.init_manager.paste_action.setEnabled.assert_called_with(True)
+
+### TestEditActionsExtended.test_open_rotate_2d_dialog
+_No description provided._
+
+- manager.rotate_molecule_2d.assert_called_with(45.0)
+- assert manager.last_rotation_angle == 45.0
+
+### TestEditActionsExtended.test_rotate_molecule_2d_full
+_No description provided._
+
+- atom1.setPos.assert_called()
+- manager.host.state_manager.data.set_atom_pos.assert_called()
+
+### TestEditActionsExtended.test_select_all
+_No description provided._
+
+- atom.setSelected.assert_called_with(True)
+- bond.setSelected.assert_called_with(True)
+
+### TestEditActionsExtended.test_clear_all
+_No description provided._
+
+- assert result is True
+- manager.host.statusBar().showMessage.assert_called_with('Cleared all data.')
+
+### TestEditActionsExtended.test_cut_selection
+_No description provided._
+
+- manager.copy_selection.assert_called()
+- manager.host.init_manager.scene.delete_items.assert_called()
+- manager.host.statusBar().showMessage.assert_called_with('Cut selection.', 2000)
+
+### TestEditActionsExtended.test_cut_selection_no_selection
+_No description provided._
+
+- manager.copy_selection.assert_not_called()
+
+### TestEditActionsExtended.test_adjust_molecule_positions_no_collision
+_No description provided._
+
+- assert list(conf.GetAtomPosition(0)) == pos0_before
+- assert list(conf.GetAtomPosition(1)) == pos1_before
+
+### TestEditActionsExtended.test_adjust_molecule_positions_with_collision
+_No description provided._
+
+- assert not np.array_equal(pos0_before, pos0_after)
+- assert not np.array_equal(pos1_before, pos1_after)
+- assert np.linalg.norm(pos0_after - pos1_after) > np.linalg.norm(pos0_before - pos1_before)
+
+### TestEditActionsExtended.test_adjust_molecule_positions_single_fragment
+_No description provided._
+
+- assert list(conf.GetAtomPosition(0)) == pos_before
+
+### TestEditActionsExtended.test_apply_chem_check_missing_button
+_No description provided._
+
+- mock_log.assert_called()
+
+### TestEditActionsExtended.test_clear_xyz_flags_current_mol
+_No description provided._
+
+- assert not mol.HasProp('_xyz_skip_checks')
+- assert manager.host.is_xyz_derived is False
+
+### TestEditActionsExtended.test_clear_xyz_flags_missing_zoom
+_No description provided._
+
+- mock_log.assert_called()
+
 ## tests/unit/test_export_logic.py
 
 ### test_create_multi_material_obj_advanced
@@ -1623,6 +1736,76 @@ _Test Plugin3DController.set_bond_color._
 - mock_main_window.view_3d_manager.update_bond_color_override.assert_called_once_with(2, '#00FF00')
 - mock_main_window.plotter.render.assert_called_once()
 
+### TestPluginInterface.test_add_plugin_menu
+_add_plugin_menu prepends 'Plugin/' to the path._
+
+- mock_manager.register_menu_action.assert_called_once_with('TestPlugin', 'Plugin/Utility/My Tool...', callback, None, None, None)
+
+### TestPluginInterface.test_add_plugin_menu_strips_leading_slash
+_add_plugin_menu strips a leading slash from the path._
+
+- mock_manager.register_menu_action.assert_called_once_with('TestPlugin', 'Plugin/Analysis/Viewer', callback, None, None, None)
+
+### TestPluginInterface.test_add_plugin_menu_with_text_and_shortcut
+_add_plugin_menu passes optional text/icon/shortcut through._
+
+- mock_manager.register_menu_action.assert_called_once_with('TestPlugin', 'Plugin/File/Export...', callback, 'Export', None, 'Ctrl+E')
+
+### TestPluginInterface.test_register_menu_action_new_style
+_register_menu_action (new style: path, callback) delegates correctly._
+
+- mock_manager.register_menu_action.assert_called_once_with('TestPlugin', 'File/Open', callback, None, None, None)
+
+### TestPluginInterface.test_register_menu_action_old_style
+_register_menu_action (old style: path, text, callback) delegates correctly._
+
+- mock_manager.register_menu_action.assert_called_once_with('TestPlugin', 'File/Import', callback, 'Import PubChem...', None, None)
+
+### TestPluginInterface.test_get_setting_returns_default_when_missing
+_get_setting returns the default if the key is absent._
+
+- assert ctx.get_setting('theme', 'light') == 'light'
+
+### TestPluginInterface.test_get_setting_returns_stored_value
+_get_setting returns the stored value when the namespaced key exists._
+
+- assert ctx.get_setting('theme', 'light') == 'dark'
+
+### TestPluginInterface.test_get_setting_namespacing
+_get_setting is namespaced — same key for different plugins is independent._
+
+- assert ctx_a.get_setting('color') == 'red'
+- assert ctx_b.get_setting('color') == 'blue'
+
+### TestPluginInterface.test_get_setting_no_main_window
+_get_setting returns default when main window is None._
+
+- assert ctx.get_setting('key', 'fallback') == 'fallback'
+
+### TestPluginInterface.test_set_setting_writes_namespaced_key
+_set_setting writes to init_manager.settings with correct namespace._
+
+- assert mw.init_manager.settings['plugin.MyPlugin.theme'] == 'dark'
+
+### TestPluginInterface.test_set_setting_marks_dirty
+_set_setting sets settings_dirty = True._
+
+- assert mw.init_manager.settings_dirty is True
+
+### TestPluginInterface.test_set_setting_overwrites_existing
+_set_setting overwrites an existing value._
+
+- assert mw.init_manager.settings['plugin.MyPlugin.x'] == 99
+
+### TestPluginInterface.test_set_setting_no_main_window
+_set_setting is a no-op when main window is None._
+
+
+### TestPluginInterface.test_get_after_set_roundtrip
+_Value written with set_setting can be read back with get_setting._
+
+- assert ctx.get_setting('count', 0) == 7
+
 ## tests/unit/test_plugin_manager.py
 
 ### test_plugin_info_extracts_all_fields
@@ -2307,6 +2490,72 @@ _Verify that calling draw with None safely clears the renderer._
 - mock_parser_host.view_3d_manager.plotter.render.assert_called()
 - assert mock_parser_host.view_3d_manager.current_mol is None
 
+## tests/unit/test_view_3d_logic_extended.py
+
+### test_add_3d_atom_glyphs_styles
+_Verify radii and resolutions for different styles in _add_3d_atom_glyphs._
+
+- assert mock_pv.PolyData.call_count >= 1
+- assert 'radii' in mock_poly.__setitem__.call_args_list[1][0]
+- assert np.isclose(rad_array[0], 0.51)
+- assert rad_array[0] > 1.5
+- assert np.isclose(rad_array[0], 0.15)
+
+### test_add_3d_atom_glyphs_stick_split
+_Verify that terminal multiple bonds lead to atom splitting in stick mode._
+
+- assert mock_pv.PolyData.call_count >= 2
+- assert len(new_positions) == 4
+
+### test_add_3d_bond_cylinders_basic
+_Verify single, double, and triple bond generation._
+
+- assert mock_pv.PolyData.call_count >= 1
+- assert len(points) == 14
+
+### test_add_3d_bond_cylinders_styles
+_Check style-dependent factors (radius/offset factors) in bond drawing._
+
+- assert np.allclose(radii, 0.08)
+- assert np.allclose(radii, 0.09)
+
+### test_add_3d_bond_cylinders_overrides
+_Verify plugin bond color overrides._
+
+- assert np.array_equal(colors[0], [255, 0, 0])
+
+### test_add_3d_aromatic_rings
+_Verify aromatic torus generation._
+
+- assert mock_pv.Spline.call_count == 1
+- assert mock_parser_host.view_3d_manager.plotter.add_mesh.call_count == 1
+
+### test_calculate_double_bond_offset
+_Verify neighbor-based plane calculation for double bond offset._
+
+- assert len(offset) == 3
+- assert np.isclose(np.linalg.norm(offset), 1.0)
+
+### test_show_ez_labels_3d
+_Verify EZ label detection and discrepancy marking._
+
+- assert 'E' in args[1]
+- assert '?' in args[1]
+
+### test_chiral_labels_logic
+_Verify chiral label toggling and update._
+
+- assert view3d.show_chiral_labels is True
+- assert atom_item.chiral_label == 'S'
+
+### test_color_overrides
+_Verify color override API functions._
+
+- assert view3d._plugin_bond_color_overrides[0] == '#FF0000'
+- view3d.draw_molecule_3d.assert_called()
+- assert view3d._plugin_color_overrides[0] == '#00FF00'
+- assert view3d.draw_molecule_3d.call_count == 2
+
 ## tests/unit/test_worker_robustness.py
 
 ### test_worker_halt_logic
@@ -2630,6 +2879,18 @@ _No description provided._
 _No description provided._
 
 - assert dialog.windowTitle() == 'Move Group'
+
+## tests/gui/test_edit_actions_gui_extended.py
+
+### test_rotate_2d_dialog_init
+_Test Rotate2DDialog GUI initialization in the GUI test environment._
+
+- assert dialog.windowTitle() == 'Rotate 2D'
+- assert dialog.angle_spin.value() == 45
+- assert dialog.slider.value() == 45
+- assert dialog.slider.value() == 90
+- assert dialog.angle_spin.value() == -30
+- assert dialog.get_angle() == -30.0
 
 ## tests/gui/test_main_app.py
 

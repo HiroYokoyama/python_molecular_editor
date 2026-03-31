@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-MoleditPy  EA Python-based molecular editing software
+MoleditPy — A Python-based molecular editing software
 
 Author: Hiromichi Yokoyama
 License: GPL-3.0 license
