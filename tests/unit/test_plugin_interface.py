@@ -64,14 +64,15 @@ class TestPluginInterface:
     def test_current_molecule_property(self, mock_manager, mock_main_window):
         """Test current_molecule getter and setter."""
         mock_manager.get_main_window.return_value = mock_main_window
+        mock_main_window.current_mol = "mock_molecule"
         ctx = PluginContext(mock_manager, "TestPlugin")
 
-        # Test getter
+        # Test getter (PluginContext.current_mol accesses mw.current_mol directly)
         assert ctx.current_molecule == "mock_molecule"
 
-        # Test setter
+        # Test setter (sets mw.current_mol and calls view_3d_manager.draw_molecule_3d)
         ctx.current_molecule = "new_molecule"
-        assert mock_main_window.view_3d_manager.current_mol == "new_molecule"
+        assert mock_main_window.current_mol == "new_molecule"
         mock_main_window.view_3d_manager.draw_molecule_3d.assert_called_once_with("new_molecule")
 
     def test_current_molecule_no_window(self, mock_manager):
@@ -167,13 +168,13 @@ class TestPluginInterface:
     def test_3d_controller_set_atom_color(self, mock_main_window):
         """Test Plugin3DController.set_atom_color."""
         controller = Plugin3DController(mock_main_window)
-        # Mock the view_3d and plotter
-        mock_main_window.main_window_view_3d = MagicMock()
+        # Mock the view_3d_manager and plotter
+        mock_main_window.view_3d_manager = MagicMock()
         mock_main_window.plotter = MagicMock()
 
         controller.set_atom_color(1, "#FF0000")
 
-        mock_main_window.main_window_view_3d.update_atom_color_override.assert_called_once_with(
+        mock_main_window.view_3d_manager.update_atom_color_override.assert_called_once_with(
             1, "#FF0000"
         )
         mock_main_window.plotter.render.assert_called_once()
@@ -181,13 +182,13 @@ class TestPluginInterface:
     def test_3d_controller_set_bond_color(self, mock_main_window):
         """Test Plugin3DController.set_bond_color."""
         controller = Plugin3DController(mock_main_window)
-        # Mock the view_3d and plotter
-        mock_main_window.main_window_view_3d = MagicMock()
+        # Mock the view_3d_manager and plotter
+        mock_main_window.view_3d_manager = MagicMock()
         mock_main_window.plotter = MagicMock()
 
         controller.set_bond_color(2, "#00FF00")
 
-        mock_main_window.main_window_view_3d.update_bond_color_override.assert_called_once_with(
+        mock_main_window.view_3d_manager.update_bond_color_override.assert_called_once_with(
             2, "#00FF00"
         )
         mock_main_window.plotter.render.assert_called_once()

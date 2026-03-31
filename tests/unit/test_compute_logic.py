@@ -142,7 +142,10 @@ def test_on_calculation_error_stale(mock_parser_host):
     compute = DummyCompute(mock_parser_host)
     compute.active_worker_ids = {"new_worker_id"}
     compute.on_calculation_error(("stale_id", "Ignore this error"))
-    assert not compute.statusBar().showMessage.called
+    # Stale workers still show a status message (informational, not an error)
+    compute.statusBar().showMessage.assert_called()
+    msg = compute.statusBar().showMessage.call_args[0][0]
+    assert "stale" in msg.lower() or "Ignored" in msg
 
 
 def test_on_calculation_error_basic(mock_parser_host):

@@ -1354,9 +1354,16 @@ def test_user_template_dialog_save_and_use(window, qtbot, monkeypatch):
 
     # Mock json.dump and file operations
     monkeypatch.setattr("os.makedirs", lambda *a, **k: None, raising=False)
+    monkeypatch.setattr("os.path.exists", lambda *a, **k: False, raising=False)
     monkeypatch.setattr("builtins.open", mock_open(), raising=False)
     mocker_json_dump = _mock.MagicMock()
     monkeypatch.setattr(json, "dump", mocker_json_dump, raising=False)
+    # Patch QInputDialog in dialog_logic module directly (C++ methods can't be
+    # patched on the class itself in headless mode)
+    import moleditpy.ui.dialog_logic as _dl
+    mock_qinput = _mock.MagicMock()
+    mock_qinput.getText.return_value = ("test", True)
+    monkeypatch.setattr(_dl, "QInputDialog", mock_qinput, raising=False)
 
     action_save_template.trigger()
     qtbot.wait(50)
@@ -1465,7 +1472,7 @@ def test_drag_drop_mol_file_on_3d_view(window, qtbot, monkeypatch):
     # 1. Mock load_mol_file_for_3d_viewing and monitor calls
     mock_load_3d = _mock.MagicMock()
     monkeypatch.setattr(
-        window, "load_mol_file_for_3d_viewing", mock_load_3d, raising=False
+        window.io_manager, "load_mol_file_for_3d_viewing", mock_load_3d, raising=False
     )
 
     # 2. Create dummy QDropEvent
@@ -1500,7 +1507,7 @@ def test_drag_drop_mol_file_on_2d_view(window, qtbot, monkeypatch):
     """D&D: Drag & Drop of .mol file onto 2D view area (Mock)."""
     # 1. Mock load_mol_file (2D load) and monitor calls
     mock_load_2d = _mock.MagicMock()
-    monkeypatch.setattr(window, "load_mol_file", mock_load_2d, raising=False)
+    monkeypatch.setattr(window.io_manager, "load_mol_file", mock_load_2d, raising=False)
 
     # 2. Create dummy QDropEvent (same MIME data as above)
     mock_mime_data = _mock.MagicMock(spec=QMimeData)

@@ -265,6 +265,7 @@ try:
                     self.enable_parallel_projection = _mock.MagicMock()
                     self.disable_parallel_projection = _mock.MagicMock()
                     self.add_orientation_widget = _mock.MagicMock()
+                    self.remove_actor = _mock.MagicMock()
         except Exception:
             # If PyQt classes not importable for some reason, fall back to
             # a simple dummy object to avoid breaking tests that only import
@@ -686,6 +687,9 @@ def window(app, qtbot, monkeypatch):
         # View3DManager proxies
         cls.atom_info_display_mode = property(lambda self: self.view_3d_manager.atom_info_display_mode,
                                              lambda self, v: setattr(self.view_3d_manager, 'atom_info_display_mode', v))
+        cls.current_atom_info_labels = property(lambda self: self.view_3d_manager.current_atom_info_labels,
+                                               lambda self, v: setattr(self.view_3d_manager, 'current_atom_info_labels', v))
+        cls.toggle_atom_info_display = lambda self, mode: self.view_3d_manager.toggle_atom_info_display(mode)
         cls.current_mol = property(lambda self: self.view_3d_manager.current_mol,
                                   lambda self, v: setattr(self.view_3d_manager, 'current_mol', v))
         cls.atom_positions_3d = property(lambda self: self.view_3d_manager.atom_positions_3d,
@@ -716,8 +720,17 @@ def window(app, qtbot, monkeypatch):
         cls.convert_button = property(lambda self: self.init_manager.convert_button,
                                      lambda self, v: setattr(self.init_manager, 'convert_button', v))
         
+        # EditActionsManager proxies (accept and ignore triggered bool arg)
+        cls.add_hydrogen_atoms = lambda self, *a: self.edit_actions_manager.add_hydrogen_atoms()
+        cls.remove_hydrogen_atoms = lambda self, *a: self.edit_actions_manager.remove_hydrogen_atoms()
+
+        # DialogManager proxies (accept and ignore triggered bool arg)
+        cls.save_2d_as_template = lambda self, *a: self.dialog_manager.save_2d_as_template()
+
         # Method proxies
-        cls.statusBar = lambda self: self._statusBar_mock if hasattr(self, '_statusBar_mock') else self.super_statusBar()
+        from PyQt6.QtWidgets import QMainWindow as _QMainWindow
+        _orig_statusBar = _QMainWindow.statusBar
+        cls.statusBar = lambda self: self._statusBar_mock if hasattr(self, '_statusBar_mock') else _orig_statusBar(self)
         cls.fit_to_view = lambda self: self.view_3d_manager.fit_to_view()
         cls.redraw_molecule_3d = lambda self: self.view_3d_manager.draw_molecule_3d(self.view_3d_manager.current_mol)
 
@@ -1136,6 +1149,8 @@ def window(app, qtbot, monkeypatch):
                 self.camera = _mock.MagicMock()
                 self.camera.copy = _mock.MagicMock(return_value={})
                 self.add_light = _mock.MagicMock(return_value="light_actor")
+                self.view_isometric = _mock.MagicMock()
+                self.remove_actor = _mock.MagicMock()
 
         try:
             monkeypatch.setattr(
@@ -1241,6 +1256,9 @@ def window(app, qtbot, monkeypatch):
             def sizes(self):
                 return [100, 100]
 
+            def setSizes(self, sizes):
+                pass
+
         main_window.init_manager.splitter = DummySplitter()
         # ... (rest of the headless-specific mocks and patches) ...
         # Keep running to the common yield below so teardown/cleanup are
@@ -1280,6 +1298,8 @@ def window(app, qtbot, monkeypatch):
                 self.camera = _mock.MagicMock()
                 self.camera.copy = _mock.MagicMock(return_value={})
                 self.add_light = _mock.MagicMock(return_value="light_actor")
+                self.view_isometric = _mock.MagicMock()
+                self.remove_actor = _mock.MagicMock()
 
         try:
             monkeypatch.setattr(
@@ -1741,7 +1761,7 @@ def window(app, qtbot, monkeypatch):
             ):
                 try:
                     a.triggered.connect(
-                        lambda t=toggle_map[
+                        lambda checked, t=toggle_map[
                             attr_name
                         ]: main_window.toggle_atom_info_display(t)
                     )
@@ -1825,7 +1845,7 @@ def window(app, qtbot, monkeypatch):
             ):
                 try:
                     a.triggered.connect(
-                        lambda t=toggle_map[
+                        lambda checked, t=toggle_map[
                             attr_name
                         ]: main_window.toggle_atom_info_display(t)
                     )

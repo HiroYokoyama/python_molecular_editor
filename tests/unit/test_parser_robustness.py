@@ -17,7 +17,8 @@ class MockMainWindow(IOManager):
             self._host.view_3d_manager = MagicMock()
 
         self._host.view_3d_manager.current_mol = None
-        self._host.settings = {}  # Prevent truthy MagicMock from bypassing chemistry checks
+        self._host.init_manager.settings = {}  # Prevent truthy MagicMock from bypassing chemistry checks
+        self._host.settings = {}
         self._statusBar = MagicMock()
         self._host.statusBar.return_value = self._statusBar
 
