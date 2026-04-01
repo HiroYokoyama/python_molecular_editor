@@ -18,7 +18,7 @@ import os
 import shutil
 import sys
 import zipfile
-from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from PyQt6.QtCore import QUrl
 from PyQt6.QtGui import QDesktopServices
@@ -30,9 +30,12 @@ except ImportError:
     # Fallback if running as script
     from moleditpy.plugins.plugin_interface import PluginContext
 
+
 class PluginManager:
     def __init__(self, main_window: Any = None) -> None:
-        self.plugin_dir: str = os.path.join(os.path.expanduser("~"), ".moleditpy", "plugins")
+        self.plugin_dir: str = os.path.join(
+            os.path.expanduser("~"), ".moleditpy", "plugins"
+        )
         self.plugins: List[Dict[str, Any]] = []  # List of dicts
         self.main_window: Any = main_window
 
@@ -50,7 +53,9 @@ class PluginManager:
         self.load_handlers: Dict[str, Callable] = {}
         self.custom_3d_styles: Dict[str, Dict[str, Any]] = {}
         self.document_reset_handlers: List[Dict[str, Any]] = []
-        self.plugin_windows: Dict[str, Dict[str, Any]] = {} # Map of plugin_name -> {window_id -> window}
+        self.plugin_windows: Dict[
+            str, Dict[str, Any]
+        ] = {}  # Map of plugin_name -> {window_id -> window}
 
     def get_main_window(self) -> Any:
         return self.main_window
@@ -235,7 +240,9 @@ class PluginManager:
 
         return self.plugins
 
-    def _load_single_plugin(self, filepath: str, module_name: str, category: str) -> None:
+    def _load_single_plugin(
+        self, filepath: str, module_name: str, category: str
+    ) -> None:
         """Common loading logic for both single-file and package plugins."""
         try:
             # Ensure unique module name by including category path
@@ -371,7 +378,15 @@ class PluginManager:
             )
 
     # --- Registration Callbacks ---
-    def register_menu_action(self, plugin_name: str, path: str, callback: Callable, text: str, icon: str, shortcut: str) -> None:
+    def register_menu_action(
+        self,
+        plugin_name: str,
+        path: str,
+        callback: Callable,
+        text: str,
+        icon: str,
+        shortcut: str,
+    ) -> None:
         self.menu_actions.append(
             {
                 "plugin": plugin_name,
@@ -383,7 +398,9 @@ class PluginManager:
             }
         )
 
-    def register_toolbar_action(self, plugin_name: str, callback: Callable, text: str, icon: str, tooltip: str) -> None:
+    def register_toolbar_action(
+        self, plugin_name: str, callback: Callable, text: str, icon: str, tooltip: str
+    ) -> None:
         self.toolbar_actions.append(
             {
                 "plugin": plugin_name,
@@ -394,7 +411,9 @@ class PluginManager:
             }
         )
 
-    def register_drop_handler(self, plugin_name: str, callback: Callable, priority: int) -> None:
+    def register_drop_handler(
+        self, plugin_name: str, callback: Callable, priority: int
+    ) -> None:
         self.drop_handlers.append(
             {"priority": priority, "plugin": plugin_name, "callback": callback}
         )
@@ -470,12 +489,20 @@ class PluginManager:
 
     def refresh_3d_view(self) -> None:
         """Force a re-render of the 3D scene."""
-        if self.main_window and hasattr(self.main_window, "plotter") and self.main_window.plotter:
+        if (
+            self.main_window
+            and hasattr(self.main_window, "plotter")
+            and self.main_window.plotter
+        ):
             self.main_window.plotter.render()
 
     def reset_3d_camera(self) -> None:
         """Reset the 3D camera to fit the current molecule."""
-        if self.main_window and hasattr(self.main_window, "plotter") and self.main_window.plotter:
+        if (
+            self.main_window
+            and hasattr(self.main_window, "plotter")
+            and self.main_window.plotter
+        ):
             self.main_window.plotter.reset_camera()
             self.main_window.plotter.render()
 
@@ -492,7 +519,7 @@ class PluginManager:
             # In MoleditPy, atoms in the scene are AtomItem objects which have an 'atom_id'.
             # These atom_ids map to entries in state_manager.data.atoms.
             # RDKit molecule atoms have an '_original_atom_id' property.
-            
+
             scene = getattr(self.main_window, "scene", None)
             if scene:
                 selected_items = scene.selectedItems()
@@ -501,7 +528,7 @@ class PluginManager:
                     # Relying on duck-typing for AtomItem
                     if hasattr(item, "atom_id"):
                         selected_atom_ids.add(item.atom_id)
-                
+
                 # Now map these editor IDs to RDKit indices
                 mol = getattr(self.main_window, "current_mol", None)
                 if mol and selected_atom_ids:

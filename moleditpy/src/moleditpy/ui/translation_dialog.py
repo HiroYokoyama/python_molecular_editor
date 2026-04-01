@@ -11,7 +11,6 @@ DOI: 10.5281/zenodo.17268532
 """
 
 import numpy as np
-from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
     QHBoxLayout,
     QLabel,
@@ -19,9 +18,7 @@ from PyQt6.QtWidgets import (
     QMessageBox,
     QPushButton,
     QVBoxLayout,
-    QWidget,
 )
-from rdkit import Geometry
 
 try:
     from .base_picking_dialog import BasePickingDialog
@@ -132,7 +129,7 @@ class TranslationDialog(BasePickingDialog):
             else:
                 self.selected_atoms = (
                     set(self.main_window.state_manager.data.atoms.keys())
-                    if hasattr(self.main_window.state_manager, 'data')
+                    if hasattr(self.main_window.state_manager, "data")
                     else set()
                 )
 
@@ -171,7 +168,9 @@ class TranslationDialog(BasePickingDialog):
             dy = float(self.dy_input.text())
             dz = float(self.dz_input.text())
         except ValueError:
-            QMessageBox.warning(self, "Warning", "Please enter valid numbers for dx, dy, dz.")
+            QMessageBox.warning(
+                self, "Warning", "Please enter valid numbers for dx, dy, dz."
+            )
             return
 
         if dx == 0 and dy == 0 and dz == 0:
@@ -183,7 +182,7 @@ class TranslationDialog(BasePickingDialog):
         positions = self.mol.GetConformer().GetPositions()
         for atom_idx in self.selected_atoms:
             positions[atom_idx] += translation_vec
- 
+
         # Write updated positions back using inherited helper
         self._update_molecule_geometry(positions)
 

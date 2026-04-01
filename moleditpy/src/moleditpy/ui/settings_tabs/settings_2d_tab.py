@@ -10,7 +10,6 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
-from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QColor, QFont
 from PyQt6.QtWidgets import (
     QPushButton,
@@ -52,8 +51,8 @@ class Settings2DTab(SettingsTabBase):
         form_layout.addRow("Bond Color:", self.bond_color_2d_button)
 
         # Bond Width
-        self.bond_width_2d_slider, self.bond_width_2d_label = (
-            self._create_slider(10, 200, 10.0)
+        self.bond_width_2d_slider, self.bond_width_2d_label = self._create_slider(
+            10, 200, 10.0
         )
         form_layout.addRow(
             "Bond Width:",

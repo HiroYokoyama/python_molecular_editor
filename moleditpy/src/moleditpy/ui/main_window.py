@@ -69,7 +69,9 @@ class MainWindow(QMainWindow):
         self.string_importer_manager = StringImporterManager(self)
         self.ui_manager = UIManager(self)
 
-        self.init_manager = MainInitManager(self, initial_file=initial_file, safe_mode=safe_mode)
+        self.init_manager = MainInitManager(
+            self, initial_file=initial_file, safe_mode=safe_mode
+        )
 
     # --- Core Proxy Properties ---
     @property

@@ -86,13 +86,13 @@ class SettingsOtherTab(SettingsTabBase):
         self.always_ask_charge_checkbox.setChecked(
             settings_dict.get("always_ask_charge", False)
         )
-        
+
         display_kekule = settings_dict.get("display_kekule_3d", False)
         display_aromatic = settings_dict.get("display_aromatic_circles_3d", False)
-        
+
         self.kekule_3d_checkbox.setChecked(display_kekule)
         self.aromatic_circle_checkbox.setChecked(display_aromatic)
-        
+
         # Set initial enabled state
         self.aromatic_circle_checkbox.setEnabled(not display_kekule)
         self.kekule_3d_checkbox.setEnabled(not display_aromatic)

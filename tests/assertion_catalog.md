@@ -715,6 +715,247 @@ _Test the translation and rotation logic in MoveGroupDialog._
 - assert np.allclose(np.array(mol.GetConformer().GetAtomPosition(5)), initial_pos5)
 - assert np.allclose(new_pos0, expected_rotated, atol=1e-07)
 
+## tests/unit/test_dialog_manager.py
+
+### TestGetPreselectedAtoms3D.test_returns_empty_when_no_selection
+_No description provided._
+
+- assert dm._get_preselected_atoms_3d() == []
+
+### TestGetPreselectedAtoms3D.test_returns_selected_atoms
+_No description provided._
+
+- assert result == [1, 2, 3]
+
+### TestGetPreselectedAtoms3D.test_logs_error_when_edit_3d_manager_missing
+_No description provided._
+
+- assert result == []
+- mock_log.assert_called_once()
+
+### TestShowAboutDialog.test_creates_and_execs_dialog
+_No description provided._
+
+- MockAbout.assert_called_once_with(dm.host, dm.host)
+- instance.exec.assert_called_once()
+
+### TestOpenPeriodicTableDialog.test_creates_connects_and_execs
+_No description provided._
+
+- MockPT.assert_called_once_with(dm.host)
+- instance.element_selected.connect.assert_called_once_with(dm.host.ui_manager.set_atom_from_periodic_table)
+- instance.exec.assert_called_once()
+
+### TestOpenPeriodicTableDialog.test_unchecks_tool_group_action
+_No description provided._
+
+- checked.setChecked.assert_called_with(False)
+
+### TestOpenAnalysisWindow.test_opens_when_mol_exists
+_No description provided._
+
+- MockAW.assert_called_once_with(dm.host.view_3d_manager.current_mol, dm.host, is_xyz_derived=dm.host.is_xyz_derived)
+- instance.exec.assert_called_once()
+
+### TestOpenAnalysisWindow.test_shows_error_when_no_mol
+_No description provided._
+
+- MockAW.assert_not_called()
+- dm.host.statusBar_mock.showMessage.assert_called_once()
+- assert '3D' in msg or 'generate' in msg.lower()
+
+### TestOpenTemplateDialog.test_creates_and_execs
+_No description provided._
+
+- MockUT.assert_called_once_with(dm.host, dm.host)
+- instance.exec.assert_called_once()
+
+### TestOpenTemplateDialogAndActivate.test_creates_new_dialog_when_none_exists
+_No description provided._
+
+- MockUT.assert_called_once_with(dm.host, dm.host)
+- instance.show.assert_called_once()
+- instance.finished.connect.assert_called_once()
+
+### TestOpenTemplateDialogAndActivate.test_raises_existing_visible_dialog
+_No description provided._
+
+- MockUT.assert_not_called()
+- existing.raise_.assert_called_once()
+- existing.activateWindow.assert_called_once()
+
+### TestOpenTemplateDialogAndActivate.test_on_finished_sets_mode_when_template_selected
+_No description provided._
+
+- assert captured_cb
+- dm.host.ui_manager.set_mode.assert_called_once_with('template_user_benzene')
+- dm.host.statusBar_mock.showMessage.assert_called_once()
+
+### TestOpenTemplateDialogAndActivate.test_on_finished_noop_when_no_template_selected
+_No description provided._
+
+- dm.host.ui_manager.set_mode.assert_not_called()
+
+### TestSave2DAsTemplate.test_warns_when_no_atoms
+_No description provided._
+
+- mock_warn.assert_called_once()
+- assert 'No structure' in args[2] or 'template' in args[2].lower()
+
+### TestSave2DAsTemplate.test_noop_on_cancelled_input
+_No description provided._
+
+- dm.host.state_manager.data.to_template_dict.assert_not_called()
+
+### TestSave2DAsTemplate.test_noop_on_blank_name
+_No description provided._
+
+- dm.host.state_manager.data.to_template_dict.assert_not_called()
+
+### TestSave2DAsTemplate.test_saves_template_file
+_No description provided._
+
+- assert saved.exists()
+- assert json.loads(saved.read_text())['name'] == 'mytemplate'
+
+### TestSave2DAsTemplate.test_overwrites_after_yes_confirmation
+_No description provided._
+
+- assert 'atoms' in json.loads(f.read_text())
+
+### TestSave2DAsTemplate.test_skips_overwrite_on_no_confirmation
+_No description provided._
+
+- assert json.loads(f.read_text()) == {'original': True}
+
+### TestSave2DAsTemplate.test_shows_error_on_exception
+_No description provided._
+
+- mock_crit.assert_called_once()
+
+### TestModelessGeometryDialogs.test_open_translation_dialog
+_No description provided._
+
+- _assert_modeless(dm, 'open_translation_dialog', 'TranslationDialog')
+
+### TestModelessGeometryDialogs.test_translation_disables_measurement_mode
+_No description provided._
+
+- host.edit_3d_manager.toggle_measurement_mode.assert_called_with(False)
+
+### TestModelessGeometryDialogs.test_open_move_group_dialog
+_No description provided._
+
+- _assert_modeless(dm, 'open_move_group_dialog', 'MoveGroupDialog')
+
+### TestModelessGeometryDialogs.test_open_align_plane_dialog
+_No description provided._
+
+- _assert_modeless(dm, 'open_align_plane_dialog', 'AlignPlaneDialog', 'xy')
+
+### TestModelessGeometryDialogs.test_align_plane_message_contains_plane
+_No description provided._
+
+- assert 'XZ' in host.statusBar_mock.showMessage.call_args[0][0]
+
+### TestModelessGeometryDialogs.test_open_planarize_dialog
+_No description provided._
+
+- _assert_modeless(dm, 'open_planarize_dialog', 'PlanarizeDialog')
+
+### TestModelessGeometryDialogs.test_open_alignment_dialog
+_No description provided._
+
+- _assert_modeless(dm, 'open_alignment_dialog', 'AlignmentDialog', 'x')
+
+### TestModelessGeometryDialogs.test_alignment_message_contains_axis
+_No description provided._
+
+- assert 'Y' in host.statusBar_mock.showMessage.call_args[0][0]
+
+### TestModelessGeometryDialogs.test_open_bond_length_dialog
+_No description provided._
+
+- _assert_modeless(dm, 'open_bond_length_dialog', 'BondLengthDialog')
+
+### TestModelessGeometryDialogs.test_open_angle_dialog
+_No description provided._
+
+- _assert_modeless(dm, 'open_angle_dialog', 'AngleDialog')
+
+### TestModelessGeometryDialogs.test_open_dihedral_dialog
+_No description provided._
+
+- _assert_modeless(dm, 'open_dihedral_dialog', 'DihedralDialog')
+
+### TestModelessGeometryDialogs.test_accepted_status_messages
+_Each dialog's first accepted lambda posts the right status bar message._
+
+- assert actual == expected
+
+### TestModelessGeometryDialogs.test_accepted_pushes_undo_state
+_Second accepted lambda calls push_undo_state._
+
+- host.edit_actions_manager.push_undo_state.assert_called_once()
+
+### TestModelessGeometryDialogs.test_finished_removes_dialog_from_list
+_finished lambda calls remove_dialog_from_list with this dialog._
+
+- host.edit_3d_manager.remove_dialog_from_list.assert_called_once_with(instance)
+
+### TestOpenMirrorDialog.test_opens_when_mol_exists
+_No description provided._
+
+- MockM.assert_called_once_with(dm.host.view_3d_manager.current_mol, dm.host)
+- instance.exec.assert_called_once()
+
+### TestOpenMirrorDialog.test_shows_error_when_no_mol
+_No description provided._
+
+- MockM.assert_not_called()
+- dm.host.statusBar_mock.showMessage.assert_called_with('No 3D molecule loaded.')
+
+### TestOpenMirrorDialog.test_disables_measurement_mode
+_No description provided._
+
+- host.edit_3d_manager.toggle_measurement_mode.assert_called_with(False)
+
+### TestOpenSettingsDialog.test_creates_and_execs
+_No description provided._
+
+- MockSD.assert_called_once_with(dm.host.init_manager.settings, parent=dm.host)
+- instance.exec.assert_called_once()
+
+### TestOpenColorSettingsDialog.test_creates_and_execs
+_No description provided._
+
+- MockCD.assert_called_once_with(dm.host.init_manager.settings, parent=dm.host)
+- instance.exec.assert_called_once()
+
+### TestOpenConstrainedOptimizationDialog.test_opens_when_mol_exists
+_No description provided._
+
+- MockCO.assert_called_once_with(dm.host.view_3d_manager.current_mol, dm.host, parent=dm.host)
+- instance.show.assert_called_once()
+- instance.finished.connect.assert_called_once()
+- assert instance in dm.host.edit_3d_manager.active_3d_dialogs
+
+### TestOpenConstrainedOptimizationDialog.test_shows_error_when_no_mol
+_No description provided._
+
+- MockCO.assert_not_called()
+- dm.host.statusBar_mock.showMessage.assert_called_with('No 3D molecule loaded.')
+
+### TestOpenConstrainedOptimizationDialog.test_disables_measurement_mode
+_No description provided._
+
+- host.edit_3d_manager.toggle_measurement_mode.assert_called_with(False)
+
+### TestOpenConstrainedOptimizationDialog.test_finished_removes_from_active_dialogs
+_No description provided._
+
+- dm.host.edit_3d_manager.remove_dialog_from_list.assert_called_once_with(instance)
+
 ## tests/unit/test_edit_3d_logic.py
 
 ### test_calculate_distance_logic
@@ -1071,6 +1312,132 @@ _Verify XYZ export logic._
 
 - assert os.path.exists(xyz_file)
 - assert xyz_mol.GetNumAtoms() == mol.GetNumAtoms()
+
+## tests/unit/test_io_manager.py
+
+### TestPromptForCharge.test_accept_with_default_charge
+_Accept with default text '0' → (0, True, False)._
+
+- assert charge == 0
+- assert ok is True
+- assert skip is False
+
+### TestPromptForCharge.test_accept_with_positive_charge
+_Text '2' → charge 2._
+
+- assert charge == 2
+- assert ok is True
+- assert skip is False
+
+### TestPromptForCharge.test_accept_with_negative_charge
+_Text '-1' → charge -1._
+
+- assert charge == -1
+- assert ok is True
+- assert skip is False
+
+### TestPromptForCharge.test_invalid_text_falls_back_to_zero
+_Non-numeric text 'abc' → charge falls back to 0._
+
+- assert charge == 0
+- assert ok is True
+- assert skip is False
+
+### TestPromptForCharge.test_cancel_returns_none_false_false
+_Rejected exec → (None, False, False)._
+
+- assert charge is None
+- assert ok is False
+- assert skip is False
+
+### TestPromptForCharge.test_skip_chemistry_returns_zero_true_true
+_Skip button fires callback before exec returns Accepted → (0, True, True)._
+
+- assert charge == 0
+- assert ok is True
+- assert skip is True
+
+### TestLoadXYZFor3DViewing.test_explicit_path_skips_dialog
+_Passing file_path directly bypasses the file dialog._
+
+- io.load_xyz_file.assert_called_once_with(str(xyz))
+- host.edit_actions_manager.clear_all.assert_called_once_with(skip_check=True)
+- assert host.view_3d_manager.current_mol is mol
+
+### TestLoadXYZFor3DViewing.test_dialog_provides_path
+_Without explicit path, QFileDialog is shown and its result used._
+
+- io.load_xyz_file.assert_called_once_with(str(xyz))
+- assert host.view_3d_manager.current_mol is mol
+
+### TestLoadXYZFor3DViewing.test_dialog_cancelled_is_noop
+_Empty string from dialog → early return, no state change._
+
+- io.load_xyz_file.assert_not_called()
+- assert host.view_3d_manager.current_mol is None
+
+### TestLoadXYZFor3DViewing.test_load_failure_shows_error
+_load_xyz_file returning None shows error on status bar._
+
+- host.statusBar_mock.showMessage.assert_called()
+- assert host.view_3d_manager.current_mol is None
+
+### TestLoadXYZFor3DViewing.test_ui_modes_enabled_on_success
+_3D viewer UI mode methods are called after successful load._
+
+- host.ui_manager._enter_3d_viewer_ui_mode.assert_called_once()
+- host.ui_manager._enable_3d_features.assert_called_once_with(True)
+
+### TestLoadXYZFor3DViewing.test_is_xyz_derived_with_skip_prop
+_is_xyz_derived=True when _xyz_skip_checks property is set on mol._
+
+- assert host.is_xyz_derived is True
+
+### TestLoadXYZFor3DViewing.test_is_xyz_derived_from_zero_bonds
+_is_xyz_derived=True when molecule has 0 bonds (no skip flag)._
+
+- assert host.is_xyz_derived is True
+
+### TestLoadXYZFor3DViewing.test_current_file_path_updated
+_init_manager.current_file_path is updated to the loaded file._
+
+- assert host.init_manager.current_file_path == str(xyz)
+
+### TestSave3DAsMol.test_no_mol_shows_error_no_dialog
+_current_mol is None → error message, dialog never opened._
+
+- mock_dlg.assert_not_called()
+- host.statusBar_mock.showMessage.assert_called_with('Error: No 3D structure to save.')
+
+### TestSave3DAsMol.test_dialog_cancelled_writes_nothing
+_Empty path from dialog → no file written._
+
+- assert not out.exists()
+
+### TestSave3DAsMol.test_mol_file_written
+_MOL file is created and non-empty._
+
+- assert out.exists()
+- assert out.stat().st_size > 0
+
+### TestSave3DAsMol.test_header_line_replaced
+_Second line is replaced with 'MoleditPy Ver. ... 3D'._
+
+- assert len(lines) > 1
+- assert 'MoleditPy Ver.' in lines[1]
+- assert '3D' in lines[1]
+
+### TestSave3DAsMol.test_success_status_message
+_Status bar shows success message after saving._
+
+- host.statusBar_mock.showMessage.assert_called()
+- assert 'saved' in msg.lower() or '3D' in msg
+
+### TestSave3DAsMol.test_exception_shows_error_message
+_RuntimeError during MolToMolBlock shows error on status bar._
+
+- host.statusBar_mock.showMessage.assert_called()
+- assert 'error' in msg.lower()
 
 ## tests/unit/test_items_visual.py
 

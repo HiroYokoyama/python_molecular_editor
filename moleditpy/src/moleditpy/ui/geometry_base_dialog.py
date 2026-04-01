@@ -11,8 +11,6 @@ DOI: 10.5281/zenodo.17268532
 """
 
 import logging
-from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QMessageBox
 
 try:
     from .base_picking_dialog import BasePickingDialog
@@ -37,7 +35,7 @@ class GeometryBaseDialog(BasePickingDialog):
             f_val = float(val)
             if wrap:
                 f_val = (f_val + 180) % 360 - 180
-            
+
             slider.blockSignals(True)
             slider.setValue(int(round(f_val * scale)))
             slider.blockSignals(False)
@@ -48,7 +46,7 @@ class GeometryBaseDialog(BasePickingDialog):
         """Prepare for a slider drag operation by saving a geometry snapshot."""
         if not self._is_selection_complete():
             return
-            
+
         self._slider_dragging = True
 
         # Capture geometry snapshot to ensure stable axes during rotation/dragging
@@ -63,7 +61,9 @@ class GeometryBaseDialog(BasePickingDialog):
         if hasattr(self.main_window.view_3d_manager, "update_chiral_labels"):
             self.main_window.view_3d_manager.update_chiral_labels()
         else:  # [REPORT ERROR MISSING ATTRIBUTE]
-            logging.error(f"REPORT ERROR: Missing attribute 'update_chiral_labels' on object")
+            logging.error(
+                "REPORT ERROR: Missing attribute 'update_chiral_labels' on object"
+            )
 
     def on_slider_value_changed_click(self, value, input_box, scale=1.0):
         """
@@ -72,7 +72,7 @@ class GeometryBaseDialog(BasePickingDialog):
         """
         if self._slider_dragging:
             return  # Handled by on_slider_moved
-            
+
         if not self._is_selection_complete():
             return
 
@@ -83,13 +83,15 @@ class GeometryBaseDialog(BasePickingDialog):
         input_box.blockSignals(True)
         input_box.setText(f"{value / scale:.3f}")
         input_box.blockSignals(False)
-        
+
         self.apply_geometry_update(float(value / scale))
-        
+
         if hasattr(self.main_window.view_3d_manager, "update_chiral_labels"):
             self.main_window.view_3d_manager.update_chiral_labels()
         else:  # [REPORT ERROR MISSING ATTRIBUTE]
-            logging.error(f"REPORT ERROR: Missing attribute 'update_chiral_labels' on object")
+            logging.error(
+                "REPORT ERROR: Missing attribute 'update_chiral_labels' on object"
+            )
 
     def on_slider_moved_realtime(self, value, input_box, scale=1.0):
         """Update geometry in real-time as the slider is dragged."""

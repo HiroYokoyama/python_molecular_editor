@@ -112,7 +112,7 @@ class UserTemplateDialog(QDialog):
         if hasattr(self, "delete_button"):
             self.delete_button.setEnabled(False)
         else:  # [REPORT ERROR MISSING ATTRIBUTE]
-            logging.error(f"REPORT ERROR: Missing attribute 'delete_button' on self")
+            logging.error("REPORT ERROR: Missing attribute 'delete_button' on self")
 
         # 2. Reset Main Window Mode (UI/Toolbar)
         target_mode = "atom_C"
@@ -125,7 +125,10 @@ class UserTemplateDialog(QDialog):
 
         # 3. Reset Scene State (The Source of Truth)
         try:
-            if hasattr(self.main_window.init_manager, 'scene') and self.main_window.init_manager.scene:
+            if (
+                hasattr(self.main_window.init_manager, "scene")
+                and self.main_window.init_manager.scene
+            ):
                 scene = self.main_window.init_manager.scene
 
                 # A. FORCE MODE
@@ -140,7 +143,9 @@ class UserTemplateDialog(QDialog):
                 if hasattr(scene, "clear_template_preview"):
                     scene.clear_template_preview()
                 else:  # [REPORT ERROR MISSING ATTRIBUTE]
-                    logging.error(f"REPORT ERROR: Missing attribute 'clear_template_preview' on scene")
+                    logging.error(
+                        "REPORT ERROR: Missing attribute 'clear_template_preview' on scene"
+                    )
 
                 if hasattr(scene, "template_preview") and scene.template_preview:
                     scene.template_preview.hide()
@@ -176,7 +181,9 @@ class UserTemplateDialog(QDialog):
                         elif hasattr(child, "refit_view"):
                             child.refit_view()
                         else:  # [REPORT ERROR MISSING ATTRIBUTE]
-                            logging.error(f"REPORT ERROR: Missing attribute 'refit_view' on child")
+                            logging.error(
+                                "REPORT ERROR: Missing attribute 'refit_view' on child"
+                            )
         except (AttributeError, RuntimeError, ValueError) as e:
             logging.warning(f"Warning: Failed to refit template previews: {e}")
 
@@ -188,7 +195,9 @@ class UserTemplateDialog(QDialog):
 
     def get_template_directory(self):
         """Get or create the user templates directory path."""
-        template_dir = os.path.join(self.main_window.init_manager.settings_dir, "user-templates")
+        template_dir = os.path.join(
+            self.main_window.init_manager.settings_dir, "user-templates"
+        )
         if not os.path.exists(template_dir):
             os.makedirs(template_dir)
         return template_dir
@@ -522,7 +531,10 @@ class UserTemplateDialog(QDialog):
         mode_name = f"template_user_{template_name}"
 
         # Store template data on the scene
-        if hasattr(self.main_window.init_manager, 'scene') and self.main_window.init_manager.scene is not None:
+        if (
+            hasattr(self.main_window.init_manager, "scene")
+            and self.main_window.init_manager.scene is not None
+        ):
             self.main_window.init_manager.scene.user_template_data = template_data
 
         try:
@@ -656,7 +668,10 @@ class UserTemplateDialog(QDialog):
             )
 
         # Convert bonds
-        for (atom1_id, atom2_id), bond_info in self.main_window.state_manager.data.bonds.items():
+        for (
+            atom1_id,
+            atom2_id,
+        ), bond_info in self.main_window.state_manager.data.bonds.items():
             bonds_data.append(
                 {
                     "atom1": atom1_id,

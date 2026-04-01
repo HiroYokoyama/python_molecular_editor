@@ -744,11 +744,11 @@ class CalculationWorker(QObject):
                 with contextlib.suppress(AttributeError, RuntimeError, TypeError):
                     self.error.emit((w_id, "Halted"))
                 return
-            
+
             # If a new halt was requested during an error, raise it to the local handler
             if _check_halted():
                 raise WorkerHaltError("Halted")
-                
+
             with contextlib.suppress(AttributeError, RuntimeError, TypeError):
                 self.error.emit((w_id, msg))
 

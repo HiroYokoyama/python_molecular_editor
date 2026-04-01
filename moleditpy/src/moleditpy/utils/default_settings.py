@@ -20,7 +20,6 @@ DEFAULT_SETTINGS = {
     "light_intensity": 1.0,
     "show_3d_axes": True,
     "show_chiral_labels": False,
-
     # --- 3D Model Parameters (Ball and Stick) ---
     "ball_stick_atom_scale": 1.0,
     "ball_stick_bond_radius": 0.1,
@@ -31,12 +30,10 @@ DEFAULT_SETTINGS = {
     "ball_stick_triple_bond_offset_factor": 2.0,
     "ball_stick_double_bond_radius_factor": 0.8,
     "ball_stick_triple_bond_radius_factor": 0.75,
-
     # --- 3D Model Parameters (CPK) ---
     "cpk_atom_scale": 1.0,
     "cpk_resolution": 32,
     "cpk_colors": {},
-
     # --- 3D Model Parameters (Wireframe) ---
     "wireframe_bond_radius": 0.01,
     "wireframe_resolution": 6,
@@ -44,7 +41,6 @@ DEFAULT_SETTINGS = {
     "wireframe_triple_bond_offset_factor": 3.0,
     "wireframe_double_bond_radius_factor": 0.8,
     "wireframe_triple_bond_radius_factor": 0.75,
-
     # --- 3D Model Parameters (Stick) ---
     "stick_bond_radius": 0.15,
     "stick_resolution": 16,
@@ -52,26 +48,22 @@ DEFAULT_SETTINGS = {
     "stick_triple_bond_offset_factor": 1.0,
     "stick_double_bond_radius_factor": 0.6,
     "stick_triple_bond_radius_factor": 0.4,
-
     # --- Other 3D Rendering Options ---
     "aromatic_torus_thickness_factor": 0.6,
     "display_aromatic_circles_3d": False,
     "display_kekule_3d": False,
-
     # --- 3D Conversion and Optimization ---
     "3d_conversion_mode": "rdkit",
     "optimization_method": "MMFF_RDKIT",
     "optimize_intermolecular_interaction_rdkit": True,
     "skip_chemistry_checks": False,
     "always_ask_charge": False,
-
     # --- Interaction and Selection ---
     "use_high_fidelity_selection": True,
     "selection_color": "#FFD700",
     "high_quality_meshing": True,
     "atom_label_color": "#000000",
     "bond_color": "#808080",
-
     # --- 2D Settings ---
     "bond_width_2d": 2.0,
     "bond_spacing_double_2d": 3.5,
@@ -84,7 +76,6 @@ DEFAULT_SETTINGS = {
     "bond_wedge_width_2d": 6.0,
     "bond_dash_count_2d": 8,
     "atom_font_family_2d": "Arial",
-
     # --- Application Session / UI State ---
     "theme": "light",
     "window_size": [1200, 800],

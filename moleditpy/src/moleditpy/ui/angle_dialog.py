@@ -10,7 +10,6 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
-import logging
 from PyQt6.QtWidgets import (
     QHBoxLayout,
     QLabel,
@@ -23,7 +22,6 @@ from PyQt6.QtWidgets import (
     QMessageBox,
 )
 from PyQt6.QtCore import Qt
-from rdkit import Geometry
 
 try:
     from .geometry_base_dialog import GeometryBaseDialog
@@ -91,7 +89,7 @@ class AngleDialog(GeometryBaseDialog):
         self.angle_slider.setTickPosition(QSlider.TickPosition.TicksBelow)
         self.angle_slider.setTickInterval(45)
         self.angle_slider.setEnabled(False)
-        
+
         # Connect to base class real-time handlers
         self.angle_slider.sliderPressed.connect(self.on_slider_pressed)
         self.angle_slider.sliderMoved.connect(
@@ -101,7 +99,7 @@ class AngleDialog(GeometryBaseDialog):
         self.angle_slider.valueChanged.connect(
             lambda v: self.on_slider_value_changed_click(v, self.angle_input, 1.0)
         )
-        
+
         layout.addLayout(angle_layout)
         layout.addWidget(self.angle_slider)
 

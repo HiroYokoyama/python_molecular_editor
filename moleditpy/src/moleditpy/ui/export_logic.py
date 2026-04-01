@@ -14,7 +14,7 @@ from __future__ import annotations
 import logging  # [REPORT ERROR MISSING ATTRIBUTE]
 import math
 import os
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional
 
 import numpy as np
 
@@ -42,6 +42,7 @@ except ImportError:
     from moleditpy.ui.atom_item import AtomItem
     from moleditpy.ui.bond_item import BondItem
 
+
 # --- Class Definition ---
 class ExportManager:
     """Independent manager for export logic, ported from MainWindowExport mixin."""
@@ -54,10 +55,14 @@ class ExportManager:
     def _get_default_basename(self) -> str:
         """Helper to get a default filename base from the current file path."""
         try:
-            if hasattr(self.host.init_manager, "current_file_path") and self.host.init_manager.current_file_path:
+            if (
+                hasattr(self.host.init_manager, "current_file_path")
+                and self.host.init_manager.current_file_path
+            ):
                 base = os.path.basename(self.host.init_manager.current_file_path)
                 name = os.path.splitext(base)[0]
-                if name: return name
+                if name:
+                    return name
         except (AttributeError, RuntimeError, ValueError, TypeError):
             pass
         return "untitled"
@@ -75,7 +80,9 @@ class ExportManager:
 
     def export_stl(self) -> None:
         if not self.host.view_3d_manager.current_mol:
-            self.host.statusBar().showMessage("Error: Please generate a 3D structure first.")
+            self.host.statusBar().showMessage(
+                "Error: Please generate a 3D structure first."
+            )
             return
 
         default_path = self._get_default_path()
@@ -107,7 +114,9 @@ class ExportManager:
     def export_obj_mtl(self) -> None:
         """Export as OBJ/MTL (with colors)."""
         if not self.host.view_3d_manager.current_mol:
-            self.host.statusBar().showMessage("Error: Please generate a 3D structure first.")
+            self.host.statusBar().showMessage(
+                "Error: Please generate a 3D structure first."
+            )
             return
 
         default_path = self._get_default_path()
@@ -146,7 +155,9 @@ class ExportManager:
         except (AttributeError, RuntimeError, ValueError) as e:
             self.host.statusBar().showMessage(f"Error exporting OBJ/MTL: {e}")
 
-    def create_multi_material_obj(self, meshes_with_colors: List[Dict[str, Any]], obj_path: str, mtl_path: str) -> None:
+    def create_multi_material_obj(
+        self, meshes_with_colors: List[Dict[str, Any]], obj_path: str, mtl_path: str
+    ) -> None:
         """Create multi-material OBJ/MTL files.
         meshes_with_colors: list of dicts with 'mesh', 'color', 'name'
         """
@@ -247,13 +258,18 @@ class ExportManager:
     def export_color_stl(self) -> None:
         """Export as Color STL."""
         if not self.host.view_3d_manager.current_mol:
-            self.host.statusBar().showMessage("Error: Please generate a 3D structure first.")
+            self.host.statusBar().showMessage(
+                "Error: Please generate a 3D structure first."
+            )
             return
 
         default_path = self._get_default_path()
 
         file_path, _ = QFileDialog.getSaveFileName(
-            self.host, "Export as Color STL", default_path, "STL Files (*.stl);;All Files (*)"
+            self.host,
+            "Export as Color STL",
+            default_path,
+            "STL Files (*.stl);;All Files (*)",
         )
 
         if not file_path:
@@ -298,7 +314,9 @@ class ExportManager:
                     elif hasattr(actor, "GetMapper"):
                         mapper = actor.GetMapper()
                     else:  # [REPORT ERROR MISSING ATTRIBUTE]
-                        logging.error(f"REPORT ERROR: Missing attribute 'GetMapper' on actor")
+                        logging.error(
+                            "REPORT ERROR: Missing attribute 'GetMapper' on actor"
+                        )
 
                     if mapper is not None:
                         if hasattr(mapper, "input") and mapper.input is not None:
@@ -311,10 +329,15 @@ class ExportManager:
                         elif hasattr(mapper, "GetInputAsDataSet"):
                             mesh = mapper.GetInputAsDataSet()
                         else:  # [REPORT ERROR MISSING ATTRIBUTE]
-                            logging.error(f"REPORT ERROR: Missing attribute 'GetInputAsDataSet' on mapper")
+                            logging.error(
+                                "REPORT ERROR: Missing attribute 'GetInputAsDataSet' on mapper"
+                            )
 
                     # Method 2: Get from PyVista plotter internal data
-                    if mesh is None and actor_name in self.host.view_3d_manager.plotter.mesh:
+                    if (
+                        mesh is None
+                        and actor_name in self.host.view_3d_manager.plotter.mesh
+                    ):
                         mesh = self.host.view_3d_manager.plotter.mesh[actor_name]
 
                     if (
@@ -402,7 +425,9 @@ class ExportManager:
                     elif hasattr(actor, "GetMapper"):
                         mapper = actor.GetMapper()
                     else:  # [REPORT ERROR MISSING ATTRIBUTE]
-                        logging.error(f"REPORT ERROR: Missing attribute 'GetMapper' on actor")
+                        logging.error(
+                            "REPORT ERROR: Missing attribute 'GetMapper' on actor"
+                        )
 
                     if mapper is not None:
                         if hasattr(mapper, "input") and mapper.input is not None:
@@ -415,10 +440,15 @@ class ExportManager:
                         elif hasattr(mapper, "GetInputAsDataSet"):
                             mesh = mapper.GetInputAsDataSet()
                         else:  # [REPORT ERROR MISSING ATTRIBUTE]
-                            logging.error(f"REPORT ERROR: Missing attribute 'GetInputAsDataSet' on mapper")
+                            logging.error(
+                                "REPORT ERROR: Missing attribute 'GetInputAsDataSet' on mapper"
+                            )
 
                     # Method 2: Get from PyVista plotter internal data
-                    if mesh is None and actor_name in self.host.view_3d_manager.plotter.mesh:
+                    if (
+                        mesh is None
+                        and actor_name in self.host.view_3d_manager.plotter.mesh
+                    ):
                         mesh = self.host.view_3d_manager.plotter.mesh[actor_name]
 
                     # Method 3: Removed unsafe fallback
@@ -475,7 +505,9 @@ class ExportManager:
                     elif hasattr(actor, "GetMapper"):
                         mapper = actor.GetMapper()
                     else:  # [REPORT ERROR MISSING ATTRIBUTE]
-                        logging.error(f"REPORT ERROR: Missing attribute 'GetMapper' on actor")
+                        logging.error(
+                            "REPORT ERROR: Missing attribute 'GetMapper' on actor"
+                        )
 
                     if mapper is not None:
                         if hasattr(mapper, "input") and mapper.input is not None:
@@ -488,10 +520,15 @@ class ExportManager:
                         elif hasattr(mapper, "GetInputAsDataSet"):
                             mesh = mapper.GetInputAsDataSet()
                         else:  # [REPORT ERROR MISSING ATTRIBUTE]
-                            logging.error(f"REPORT ERROR: Missing attribute 'GetInputAsDataSet' on mapper")
+                            logging.error(
+                                "REPORT ERROR: Missing attribute 'GetInputAsDataSet' on mapper"
+                            )
 
                     # Method 2: Get from PyVista plotter internal data
-                    if mesh is None and actor_name in self.host.view_3d_manager.plotter.mesh:
+                    if (
+                        mesh is None
+                        and actor_name in self.host.view_3d_manager.plotter.mesh
+                    ):
                         mesh = self.host.view_3d_manager.plotter.mesh[actor_name]
 
                     if (
@@ -520,7 +557,9 @@ class ExportManager:
                                     vtk_color = prop.GetColor()
                                     color = [int(c * 255) for c in vtk_color]
                             else:  # [REPORT ERROR MISSING ATTRIBUTE]
-                                logging.error(f"REPORT ERROR: Missing attribute 'GetProperty' on actor")
+                                logging.error(
+                                    "REPORT ERROR: Missing attribute 'GetProperty' on actor"
+                                )
                         except (AttributeError, RuntimeError, TypeError):
                             # Use default color on failure to avoid console noise during complex mesh export
                             pass
@@ -750,7 +789,9 @@ class ExportManager:
 
             # Handle transparency
             if is_transparent:
-                self.host.init_manager.scene.setBackgroundBrush(QBrush(Qt.BrushStyle.NoBrush))
+                self.host.init_manager.scene.setBackgroundBrush(
+                    QBrush(Qt.BrushStyle.NoBrush)
+                )
 
             rect_to_render = molecule_bounds.adjusted(-20, -20, 20, 20)
 
@@ -758,7 +799,9 @@ class ExportManager:
             h = max(1, int(math.ceil(rect_to_render.height())))
 
             if w <= 0 or h <= 0:
-                self.host.statusBar().showMessage("Error: Invalid image size calculated.")
+                self.host.statusBar().showMessage(
+                    "Error: Invalid image size calculated."
+                )
                 return
 
             image = QImage(w, h, QImage.Format.Format_ARGB32_Premultiplied)
@@ -866,7 +909,9 @@ class ExportManager:
                 return
 
             if is_transparent:
-                self.host.init_manager.scene.setBackgroundBrush(QBrush(Qt.BrushStyle.NoBrush))
+                self.host.init_manager.scene.setBackgroundBrush(
+                    QBrush(Qt.BrushStyle.NoBrush)
+                )
 
             # Margin
             rect_to_render = molecule_bounds.adjusted(-20, -20, 20, 20)
@@ -885,7 +930,9 @@ class ExportManager:
             painter = QPainter()
             painter.begin(generator)
             try:
-                self.host.init_manager.scene.render(painter, rect_to_render, rect_to_render)
+                self.host.init_manager.scene.render(
+                    painter, rect_to_render, rect_to_render
+                )
             finally:
                 painter.end()
 
@@ -940,9 +987,12 @@ class ExportManager:
         is_transparent = reply == QMessageBox.StandardButton.Yes
 
         try:
-            self.host.view_3d_manager.plotter.screenshot(filePath, transparent_background=is_transparent)
+            self.host.view_3d_manager.plotter.screenshot(
+                filePath, transparent_background=is_transparent
+            )
             self.host.statusBar().showMessage(f"3D view exported to {filePath}", 3000)
         except (AttributeError, RuntimeError, ValueError) as e:
             self.host.statusBar().showMessage(f"Error exporting 3D PNG: {e}")
+
 
 ExportManager._cls = ExportManager

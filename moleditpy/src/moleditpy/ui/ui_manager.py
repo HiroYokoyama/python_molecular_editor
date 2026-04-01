@@ -9,16 +9,15 @@ License: GPL-3.0 license
 Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
+
 import logging  # [REPORT ERROR MISSING ATTRIBUTE]
 
-import contextlib
 import vtk
 
 # PyQt6 Modules
 from PyQt6.QtCore import QEvent, Qt, QTimer, QObject
 from PyQt6.QtWidgets import (
     QApplication,
-    QDialog,
     QGraphicsView,
     QMainWindow,
     QMessageBox,
@@ -63,12 +62,14 @@ class UIManager(QObject):
         prev_mode = getattr(self.host.init_manager.scene, "mode", None)
         self.host.init_manager.scene.mode = mode_str
         self.host.init_manager.view_2d.setMouseTracking(True)
-        
+
         # Trigger immediate scene refresh to show/update template previews
         if hasattr(self.host.init_manager.scene, "refresh_mode_state"):
             self.host.init_manager.scene.refresh_mode_state()
         else:  # [REPORT ERROR MISSING ATTRIBUTE]
-            logging.error(f"REPORT ERROR: Missing attribute 'refresh_mode_state' on object")
+            logging.error(
+                "REPORT ERROR: Missing attribute 'refresh_mode_state' on object"
+            )
         # Clear ghost when leaving template mode
         if (
             prev_mode
@@ -102,7 +103,9 @@ class UIManager(QObject):
             self.host.init_manager.scene.current_atom_symbol = "C"
             parts = mode_str.split("_")
             self.host.init_manager.scene.bond_order = int(parts[1])
-            self.host.init_manager.scene.bond_stereo = int(parts[2]) if len(parts) > 2 else 0
+            self.host.init_manager.scene.bond_stereo = (
+                int(parts[2]) if len(parts) > 2 else 0
+            )
             stereo_text = {0: "", 1: " (Wedge)", 2: " (Dash)"}.get(
                 self.host.init_manager.scene.bond_stereo, ""
             )
@@ -115,7 +118,9 @@ class UIManager(QObject):
             if mode_str.startswith("template_user"):
                 # User template mode
                 template_name = mode_str.replace("template_user_", "")
-                self.host.statusBar().showMessage(f"Mode: User Template ({template_name})")
+                self.host.statusBar().showMessage(
+                    f"Mode: User Template ({template_name})"
+                )
             else:
                 # Built-in template mode
                 self.host.statusBar().showMessage(
@@ -134,7 +139,9 @@ class UIManager(QObject):
 
         else:  # Select mode
             self.host.statusBar().showMessage("Mode: Select")
-            self.host.init_manager.view_2d.setDragMode(QGraphicsView.DragMode.RubberBandDrag)
+            self.host.init_manager.view_2d.setDragMode(
+                QGraphicsView.DragMode.RubberBandDrag
+            )
             self.host.init_manager.scene.bond_order = 1
             self.host.init_manager.scene.bond_stereo = 0
 
@@ -170,7 +177,9 @@ class UIManager(QObject):
             if btn:
                 # Highlight templates with specific color
                 if mode_str.startswith("template"):
-                    btn.setStyleSheet("background-color: #2196F3; color: white; border-radius: 4px;")
+                    btn.setStyleSheet(
+                        "background-color: #2196F3; color: white; border-radius: 4px;"
+                    )
                 else:
                     btn.setStyleSheet("")
 
@@ -184,20 +193,24 @@ class UIManager(QObject):
         self.set_mode(f"atom_{symbol}")
 
     def eventFilter(self, obj, event):
-        if hasattr(self.host.view_3d_manager, 'plotter') and obj is self.host.view_3d_manager.plotter and event.type() == QEvent.Type.MouseButtonPress:
+        if (
+            hasattr(self.host.view_3d_manager, "plotter")
+            and obj is self.host.view_3d_manager.plotter
+            and event.type() == QEvent.Type.MouseButtonPress
+        ):
             self.host.init_manager.view_2d.setFocus()
-        
+
         # Handle Window Close via event filter
         if obj is self.host and event.type() == QEvent.Type.Close:
             if not self.handle_close_event(event):
                 event.ignore()
-                return True # Stop propagation
-        
+                return True  # Stop propagation
+
         return super().eventFilter(obj, event)
 
     def handle_close_event(self, event) -> bool:
         """
-        Handle application close logic. 
+        Handle application close logic.
         Returns True if close should proceed, False if it should be cancelled.
         """
         # 1. Persist settings
@@ -233,22 +246,30 @@ class UIManager(QObject):
         # 3. Gracefully close child windows and cleanup threads
         try:
             for widget in QApplication.topLevelWidgets():
-                if widget is not None and widget != self.host and isinstance(widget, (QWidget, QMainWindow)):
+                if (
+                    widget is not None
+                    and widget != self.host
+                    and isinstance(widget, (QWidget, QMainWindow))
+                ):
                     try:
                         widget.close()
                     except (RuntimeError, TypeError):
                         pass
-            
+
             # Stop calculation threads
-            active_threads = list(getattr(self.host.compute_manager, "_active_calc_threads", []) or [])
+            active_threads = list(
+                getattr(self.host.compute_manager, "_active_calc_threads", []) or []
+            )
             for thr in active_threads:
                 try:
-                    if hasattr(thr, "quit"): thr.quit()
+                    if hasattr(thr, "quit"):
+                        thr.quit()
                     else:  # [REPORT ERROR MISSING ATTRIBUTE]
-                        logging.error(f"REPORT ERROR: Missing attribute 'quit' on thr")
-                    if hasattr(thr, "wait"): thr.wait(200)
+                        logging.error("REPORT ERROR: Missing attribute 'quit' on thr")
+                    if hasattr(thr, "wait"):
+                        thr.wait(200)
                     else:  # [REPORT ERROR MISSING ATTRIBUTE]
-                        logging.error(f"REPORT ERROR: Missing attribute 'wait' on thr")
+                        logging.error("REPORT ERROR: Missing attribute 'wait' on thr")
                 except (RuntimeError, TypeError):
                     pass
         except (AttributeError, RuntimeError, TypeError, ValueError):
@@ -350,21 +371,27 @@ class UIManager(QObject):
             # Robust check for drop target using childAt
             drag_point = event.position().toPoint()
             target_widget = self.host.childAt(drag_point)
-            
+
             # Identify if the target widget is the plotter (or one of its children)
             is_on_3d = False
-            if hasattr(self.host.view_3d_manager, 'plotter'):
+            if hasattr(self.host.view_3d_manager, "plotter"):
                 plotter_widget = self.host.init_manager.splitter.widget(1)
-                if target_widget == plotter_widget or plotter_widget.isAncestorOf(target_widget):
+                if target_widget == plotter_widget or plotter_widget.isAncestorOf(
+                    target_widget
+                ):
                     is_on_3d = True
             else:  # [REPORT ERROR MISSING ATTRIBUTE]
-                logging.error(f"REPORT ERROR: Missing attribute 'plotter' on object")
-            
+                logging.error("REPORT ERROR: Missing attribute 'plotter' on object")
+
             if is_on_3d:
                 self.host.io_manager.load_mol_file_for_3d_viewing(file_path=file_path)
                 # Ensure 3D viewer zooms and renders the dropped molecule
-                QTimer.singleShot(100, lambda: self.host.view_3d_manager.plotter.view_isometric())
-                QTimer.singleShot(150, lambda: self.host.view_3d_manager.plotter.render())
+                QTimer.singleShot(
+                    100, lambda: self.host.view_3d_manager.plotter.view_isometric()
+                )
+                QTimer.singleShot(
+                    150, lambda: self.host.view_3d_manager.plotter.render()
+                )
             else:
                 self.host.io_manager.load_mol_file(file_path=file_path)
                 QTimer.singleShot(100, self.host.view_3d_manager.fit_to_view)
@@ -404,13 +431,17 @@ class UIManager(QObject):
             if hasattr(self.host, action_name):
                 getattr(self.host, action_name).setEnabled(enabled)
             else:  # [REPORT ERROR MISSING ATTRIBUTE]
-                logging.error(f"REPORT ERROR: Missing attribute {action_name} on self.host")
+                logging.error(
+                    f"REPORT ERROR: Missing attribute {action_name} on self.host"
+                )
 
         for menu_name in menus:
             if hasattr(self.host, menu_name):
                 getattr(self.host, menu_name).setEnabled(enabled)
             else:  # [REPORT ERROR MISSING ATTRIBUTE]
-                logging.error(f"REPORT ERROR: Missing attribute {menu_name} on self.host")
+                logging.error(
+                    f"REPORT ERROR: Missing attribute {menu_name} on self.host"
+                )
 
     def _enable_3d_features(self, enabled=True):
         """Enable/disable 3D features."""
@@ -422,7 +453,7 @@ class UIManager(QObject):
             obj = getattr(self.host, action_name, None)
             if obj is None:
                 obj = getattr(self.host.init_manager, action_name, None)
-            
+
             if obj is None:
                 continue
 
@@ -430,9 +461,9 @@ class UIManager(QObject):
                 if action_name == "optimize_3d_button":
                     # Optimization is disabled for XYZ-derived or failed-chem-check molecules
                     is_xyz = getattr(self.host, "is_xyz_derived", False)
-                    chem_failed = getattr(self.host, "chem_check_tried", False) and getattr(
-                        self.host, "chem_check_failed", False
-                    )
+                    chem_failed = getattr(
+                        self.host, "chem_check_tried", False
+                    ) and getattr(self.host, "chem_check_failed", False)
 
                     can_optimize = enabled and not (is_xyz or chem_failed)
                     obj.setEnabled(can_optimize)
@@ -460,7 +491,9 @@ class UIManager(QObject):
         if hasattr(self.host.init_manager, "other_atom_action"):
             self.host.init_manager.other_atom_action.setEnabled(False)
         else:  # [REPORT ERROR MISSING ATTRIBUTE]
-            logging.error(f"REPORT ERROR: Missing attribute 'other_atom_action' on object")
+            logging.error(
+                "REPORT ERROR: Missing attribute 'other_atom_action' on object"
+            )
 
         self.host.ui_manager.minimize_2d_panel()
 
@@ -480,7 +513,9 @@ class UIManager(QObject):
         if hasattr(self.host.init_manager, "other_atom_action"):
             self.host.init_manager.other_atom_action.setEnabled(True)
         else:
-            logging.error(f"REPORT ERROR: Missing attribute 'other_atom_action' on self.host.init_manager")
+            logging.error(
+                "REPORT ERROR: Missing attribute 'other_atom_action' on self.host.init_manager"
+            )
 
         # Collectively disable 3D edit functions when returning to 2D mode
         self.host.ui_manager._enable_3d_edit_actions(False)
@@ -550,7 +585,7 @@ class UIManager(QObject):
                     if handle:
                         handle.setToolTip(f"2D: {left_percent}% | 3D: {right_percent}%")
                 else:  # [REPORT ERROR MISSING ATTRIBUTE]
-                    logging.error(f"REPORT ERROR: Missing attribute 'handle' on object")
+                    logging.error("REPORT ERROR: Missing attribute 'handle' on object")
 
     def setup_splitter_tooltip(self):
         """Set initial splitter tooltip."""

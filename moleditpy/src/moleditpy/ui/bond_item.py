@@ -20,6 +20,7 @@ from PyQt6.QtGui import (
     QColor,
     QFont,
     QFontMetricsF,
+    QPainter,
     QPainterPath,
     QPainterPathStroker,
     QPen,
@@ -108,7 +109,9 @@ class BondItem(QGraphicsItem):
         self.prepareGeometryChange()
         self.update()
 
-    def __init__(self, atom1_item: Any, atom2_item: Any, order: int = 1, stereo: int = 0) -> None:
+    def __init__(
+        self, atom1_item: Any, atom2_item: Any, order: int = 1, stereo: int = 0
+    ) -> None:
         super().__init__()
         # Validate input parameters
         if atom1_item is None or atom2_item is None:
@@ -117,7 +120,7 @@ class BondItem(QGraphicsItem):
         self.atom2: Any = atom2_item
         self.order: int = order
         self.stereo: int = stereo
-        
+
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable)
         self.pen: QPen = QPen(Qt.GlobalColor.black, 2)
         self.setZValue(0)
@@ -162,7 +165,9 @@ class BondItem(QGraphicsItem):
                 bond_offset = scene.get_setting(key, 3.5)
                 wedge_width = scene.get_setting("bond_wedge_width_2d", 6.0)
             else:  # [REPORT ERROR MISSING ATTRIBUTE]
-                logging.error(f"REPORT ERROR: Missing attribute 'get_setting' on scene of type {type(scene)}")
+                logging.error(
+                    f"REPORT ERROR: Missing attribute 'get_setting' on scene of type {type(scene)}"
+                )
 
         extra = (getattr(self, "order", 1) - 1) * bond_offset + 50 + wedge_width
         rect = (
@@ -180,7 +185,9 @@ class BondItem(QGraphicsItem):
                     font_size = scene.get_setting("atom_font_size_2d", 20)
                     font_family = scene.get_setting("atom_font_family_2d", FONT_FAMILY)
                 else:  # [REPORT ERROR MISSING ATTRIBUTE]
-                    logging.error(f"REPORT ERROR: Missing attribute 'get_setting' on scene of type {type(scene)}")
+                    logging.error(
+                        f"REPORT ERROR: Missing attribute 'get_setting' on scene of type {type(scene)}"
+                    )
 
             font = QFont(font_family, font_size, FONT_WEIGHT_BOLD)
             font.setItalic(True)
@@ -277,7 +284,7 @@ class BondItem(QGraphicsItem):
                     # Width and Cap Style
                     bond_width = scene.get_setting("bond_width_2d", 2.0)
                     cap_style_str = scene.get_setting("bond_cap_style_2d", "Round")
-                    
+
                     # Wedge/Dash settings
                     wedge_width_half = scene.get_setting("bond_wedge_width_2d", 6.0)
                     num_dashes = int(scene.get_setting("bond_dash_count_2d", 8))
@@ -294,7 +301,9 @@ class BondItem(QGraphicsItem):
                     painter.setPen(pen)
                     painter.setBrush(QBrush(bond_color))
                 else:  # [REPORT ERROR MISSING ATTRIBUTE]
-                    logging.error(f"REPORT ERROR: Missing attribute 'get_setting' on scene of type {type(scene)}")
+                    logging.error(
+                        f"REPORT ERROR: Missing attribute 'get_setting' on scene of type {type(scene)}"
+                    )
         except (AttributeError, RuntimeError, TypeError, ValueError):
             # Fallback
             painter.setPen(self.pen)
@@ -342,10 +351,16 @@ class BondItem(QGraphicsItem):
                 scene = self.scene()
                 if scene is not None:
                     if hasattr(scene, "get_setting"):
-                        key = "bond_spacing_triple_2d" if self.order == 3 else "bond_spacing_double_2d"
+                        key = (
+                            "bond_spacing_triple_2d"
+                            if self.order == 3
+                            else "bond_spacing_double_2d"
+                        )
                         bond_offset = scene.get_setting(key, 3.5)
                     else:  # [REPORT ERROR MISSING ATTRIBUTE]
-                        logging.error(f"REPORT ERROR: Missing attribute 'get_setting' on scene of type {type(scene)}")
+                        logging.error(
+                            f"REPORT ERROR: Missing attribute 'get_setting' on scene of type {type(scene)}"
+                        )
 
                 offset = QPointF(v.dx(), v.dy()) * bond_offset
 

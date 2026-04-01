@@ -17,7 +17,7 @@ import copy
 import logging
 import math
 import pickle
-from typing import Any, Dict, List, Optional, Set, Tuple, Union
+from typing import Any, Dict, List, Optional
 
 import numpy as np
 
@@ -44,8 +44,11 @@ from PyQt6.QtWidgets import (
 )
 from rdkit import Chem
 
+
 class Rotate2DDialog(QDialog):
-    def __init__(self, parent: Optional[QWidget] = None, initial_angle: float = 0) -> None:
+    def __init__(
+        self, parent: Optional[QWidget] = None, initial_angle: float = 0
+    ) -> None:
         super().__init__(parent)
         self.setWindowTitle("Rotate 2D")
         self.setFixedWidth(300)
@@ -86,6 +89,7 @@ class Rotate2DDialog(QDialog):
     def get_angle(self) -> float:
         return self.angle_spin.value()
 
+
 try:
     from PyQt6 import sip as _sip  # type: ignore
 
@@ -113,6 +117,7 @@ try:
     from . import sip_isdeleted_safe
 except ImportError:
     from moleditpy.utils import sip_isdeleted_safe
+
 
 # --- Class Definition ---
 class EditActionsManager:
@@ -144,10 +149,13 @@ class EditActionsManager:
                 for k, v in self.host.state_manager.data.atoms.items()
             },
             "bonds": {
-                k: (v["order"], v.get("stereo", 0)) for k, v in self.host.state_manager.data.bonds.items()
+                k: (v["order"], v.get("stereo", 0))
+                for k, v in self.host.state_manager.data.bonds.items()
             },
             "_next_atom_id": self.host.state_manager.data._next_atom_id,
-            "mol_3d": self.host.view_3d_manager.current_mol.ToBinary() if self.host.view_3d_manager.current_mol else None,
+            "mol_3d": self.host.view_3d_manager.current_mol.ToBinary()
+            if self.host.view_3d_manager.current_mol
+            else None,
             "mol_3d_atom_ids": [
                 (
                     a.GetIntProp("_original_atom_id")
@@ -202,7 +210,9 @@ class EditActionsManager:
         if hasattr(self.host.state_manager, "update_realtime_info"):
             self.host.state_manager.update_realtime_info()
         else:  # [REPORT ERROR MISSING ATTRIBUTE]
-            logging.error(f"REPORT ERROR: Missing attribute 'update_realtime_info' on object")
+            logging.error(
+                "REPORT ERROR: Missing attribute 'update_realtime_info' on object"
+            )
         self.update_undo_redo_actions()
 
     def undo(self) -> None:
@@ -217,7 +227,10 @@ class EditActionsManager:
                 self.host._is_restoring_state = False
 
             # Re-evaluate menu states based on 3D structure after Undo
-            if self.host.view_3d_manager.current_mol and self.host.view_3d_manager.current_mol.GetNumAtoms() > 0:
+            if (
+                self.host.view_3d_manager.current_mol
+                and self.host.view_3d_manager.current_mol.GetNumAtoms() > 0
+            ):
                 self.host.ui_manager._enable_3d_edit_actions(True)
             else:
                 self.host.ui_manager._enable_3d_edit_actions(False)
@@ -226,8 +239,13 @@ class EditActionsManager:
         if hasattr(self.host.state_manager, "update_realtime_info"):
             self.host.state_manager.update_realtime_info()
         else:  # [REPORT ERROR MISSING ATTRIBUTE]
-            logging.error(f"REPORT ERROR: Missing attribute 'update_realtime_info' on object")
-        if hasattr(self.host.init_manager, 'view_2d') and self.host.init_manager.view_2d:
+            logging.error(
+                "REPORT ERROR: Missing attribute 'update_realtime_info' on object"
+            )
+        if (
+            hasattr(self.host.init_manager, "view_2d")
+            and self.host.init_manager.view_2d
+        ):
             self.host.init_manager.view_2d.setFocus()
 
     def redo(self) -> None:
@@ -242,7 +260,10 @@ class EditActionsManager:
                 self.host._is_restoring_state = False
 
             # Re-evaluate menu states based on 3D structure after Redo
-            if self.host.view_3d_manager.current_mol and self.host.view_3d_manager.current_mol.GetNumAtoms() > 0:
+            if (
+                self.host.view_3d_manager.current_mol
+                and self.host.view_3d_manager.current_mol.GetNumAtoms() > 0
+            ):
                 self.host.ui_manager._enable_3d_edit_actions(True)
             else:
                 self.host.ui_manager._enable_3d_edit_actions(False)
@@ -251,20 +272,25 @@ class EditActionsManager:
         if hasattr(self.host.state_manager, "update_realtime_info"):
             self.host.state_manager.update_realtime_info()
         else:  # [REPORT ERROR MISSING ATTRIBUTE]
-            logging.error(f"REPORT ERROR: Missing attribute 'update_realtime_info' on object")
-        if hasattr(self.host.init_manager, 'view_2d') and self.host.init_manager.view_2d:
+            logging.error(
+                "REPORT ERROR: Missing attribute 'update_realtime_info' on object"
+            )
+        if (
+            hasattr(self.host.init_manager, "view_2d")
+            and self.host.init_manager.view_2d
+        ):
             self.host.init_manager.view_2d.setFocus()
 
     def update_undo_redo_actions(self) -> None:
         """Enable or disable Undo/Redo UI actions based on stack counts."""
-        if hasattr(self.host.init_manager, 'undo_action'):
+        if hasattr(self.host.init_manager, "undo_action"):
             self.host.init_manager.undo_action.setEnabled(len(self.undo_stack) > 1)
         else:  # [REPORT ERROR MISSING ATTRIBUTE]
-            logging.error(f"REPORT ERROR: Missing attribute 'undo_action' on object")
-        if hasattr(self.host.init_manager, 'redo_action'):
+            logging.error("REPORT ERROR: Missing attribute 'undo_action' on object")
+        if hasattr(self.host.init_manager, "redo_action"):
             self.host.init_manager.redo_action.setEnabled(len(self.redo_stack) > 0)
         else:  # [REPORT ERROR MISSING ATTRIBUTE]
-            logging.error(f"REPORT ERROR: Missing attribute 'redo_action' on object")
+            logging.error("REPORT ERROR: Missing attribute 'redo_action' on object")
 
     def copy_selection(self) -> None:
         """Copy selected atoms and bonds to clipboard"""
@@ -483,7 +509,9 @@ class EditActionsManager:
                         for it in list(batch):
                             try:
                                 # Use scene.delete_items for single-item as well
-                                ok = bool(self.host.init_manager.scene.delete_items({it}))
+                                ok = bool(
+                                    self.host.init_manager.scene.delete_items({it})
+                                )
                                 if ok:
                                     deleted_any = True
                             except (
@@ -603,7 +631,10 @@ class EditActionsManager:
                     for (a1, a2), bdata in self.host.state_manager.data.bonds.items():
                         # Collect neighboring atom angles (ignore H)
                         try:
-                            if a1 == orig_id and a2 in self.host.state_manager.data.atoms:
+                            if (
+                                a1 == orig_id
+                                and a2 in self.host.state_manager.data.atoms
+                            ):
                                 neigh = self.host.state_manager.data.atoms[a2]
                                 if neigh.get("symbol") == "H":
                                     continue
@@ -613,7 +644,10 @@ class EditActionsManager:
                                     continue
                                 vec = neigh["item"].pos() - parent_pos
                                 neighbor_angles.append(math.atan2(vec.y(), vec.x()))
-                            elif a2 == orig_id and a1 in self.host.state_manager.data.atoms:
+                            elif (
+                                a2 == orig_id
+                                and a1 in self.host.state_manager.data.atoms
+                            ):
                                 neigh = self.host.state_manager.data.atoms[a1]
                                 if neigh.get("symbol") == "H":
                                     continue
@@ -824,7 +858,11 @@ class EditActionsManager:
 
     def clear_all(self, skip_check: bool = False) -> bool:
         # Check for unsaved changes
-        if not skip_check and hasattr(self.host, "state_manager") and self.host.state_manager:
+        if (
+            not skip_check
+            and hasattr(self.host, "state_manager")
+            and self.host.state_manager
+        ):
             if not self.host.state_manager.check_unsaved_changes():
                 # Cancel if requested
                 return False
@@ -865,7 +903,10 @@ class EditActionsManager:
         self.host.state_manager.update_window_title()
 
         # Reset 2D zoom
-        if hasattr(self.host.init_manager, 'view_2d') and self.host.init_manager.view_2d:
+        if (
+            hasattr(self.host.init_manager, "view_2d")
+            and self.host.init_manager.view_2d
+        ):
             self.host.init_manager.view_2d.resetTransform()
 
         # Update scene and view
@@ -907,7 +948,9 @@ class EditActionsManager:
         if hasattr(self.host, "edit_3d_manager"):
             self.host.edit_3d_manager.clear_2d_measurement_labels()
         else:  # [REPORT ERROR MISSING ATTRIBUTE]
-            logging.error(f"REPORT ERROR: Missing attribute 'edit_3d_manager' on self.host")
+            logging.error(
+                "REPORT ERROR: Missing attribute 'edit_3d_manager' on self.host"
+            )
 
         # Clear 3D data and disable 3D-related menus
         self.host.view_3d_manager.current_mol = None
@@ -972,7 +1015,8 @@ class EditActionsManager:
             else:
                 # Fallback: use the pure-logic valence heuristic from mol_geometry
                 for atom_id in identify_valence_problems(
-                    self.host.state_manager.data.atoms, self.host.state_manager.data.bonds
+                    self.host.state_manager.data.atoms,
+                    self.host.state_manager.data.bonds,
                 ):
                     problem_map[atom_id] = True
         except (AttributeError, RuntimeError, ValueError, TypeError) as e:
@@ -980,7 +1024,9 @@ class EditActionsManager:
 
         return problem_map
 
-    def _apply_ui_h_counts(self, h_count_map: Dict[int, int], problem_map: Dict[int, bool], my_token: int) -> None:
+    def _apply_ui_h_counts(
+        self, h_count_map: Dict[int, int], problem_map: Dict[int, bool], my_token: int
+    ) -> None:
         """Apply the computed H counts and problem flags to UI items on the main thread."""
         # If the global counter changed since this closure was
         # created, bail out  Ethe update is stale.
@@ -992,7 +1038,10 @@ class EditActionsManager:
 
         atoms_snapshot = (
             dict(self.host.state_manager.data.atoms)
-            if (hasattr(self.host.state_manager, 'data') and hasattr(self.host.state_manager.data, "atoms"))
+            if (
+                hasattr(self.host.state_manager, "data")
+                and hasattr(self.host.state_manager.data, "atoms")
+            )
             else {}
         )
         is_deleted_func = sip_isdeleted_safe
@@ -1056,7 +1105,7 @@ class EditActionsManager:
                         # Suppress transient errors during item update.
                         it.update()
                 else:  # [REPORT ERROR MISSING ATTRIBUTE]
-                    logging.error(f"REPORT ERROR: Missing attribute 'update' on it")
+                    logging.error("REPORT ERROR: Missing attribute 'update' on it")
             except (AttributeError, RuntimeError, ValueError, TypeError):
                 # Ignore any unexpected errors when touching the item
                 continue
@@ -1071,7 +1120,9 @@ class EditActionsManager:
             try:
                 self.host._ih_update_counter += 1
             except (AttributeError, RuntimeError, ValueError, TypeError):
-                self.host._ih_update_counter = getattr(self.host, "_ih_update_counter", 0) or 1
+                self.host._ih_update_counter = (
+                    getattr(self.host, "_ih_update_counter", 0) or 1
+                )
             my_token = self.host._ih_update_counter
 
             mol = None
@@ -1110,7 +1161,9 @@ class EditActionsManager:
         mol = self.host.state_manager.data.to_rdkit_mol()
         if mol is None or mol.GetNumAtoms() == 0:
             # If RDKit conversion fails, check for chemistry problems
-            if hasattr(self.host, "compute_manager") and hasattr(self.host.compute_manager, "check_chemistry_problems_fallback"):
+            if hasattr(self.host, "compute_manager") and hasattr(
+                self.host.compute_manager, "check_chemistry_problems_fallback"
+            ):
                 self.host.compute_manager.check_chemistry_problems_fallback()
             return
 
@@ -1169,7 +1222,9 @@ class EditActionsManager:
             if hasattr(self.host.edit_3d_manager, "update_2d_measurement_labels"):
                 self.host.edit_3d_manager.update_2d_measurement_labels()
             else:  # [REPORT ERROR MISSING ATTRIBUTE]
-                logging.error(f"REPORT ERROR: Missing attribute 'update_2d_measurement_labels' on object")
+                logging.error(
+                    "REPORT ERROR: Missing attribute 'update_2d_measurement_labels' on object"
+                )
 
             # Request scene update and ring re-analysis
             self.host.init_manager.scene.update_all_items()
@@ -1213,14 +1268,18 @@ class EditActionsManager:
 
         if len(all_atom_items) < 2:
             return  # Step 1-3: Handled by core logic
-        positions_map = {aid: data["pos"] for aid, data in self.host.state_manager.data.atoms.items()}
+        positions_map = {
+            aid: data["pos"] for aid, data in self.host.state_manager.data.atoms.items()
+        }
 
         from moleditpy.core.mol_geometry import resolve_2d_overlaps
 
         def has_bond_check(id1, id2):
             item1 = self.host.state_manager.data.atoms[id1]["item"]
             item2 = self.host.state_manager.data.atoms[id2]["item"]
-            return self.host.init_manager.scene.find_bond_between(item1, item2) is not None
+            return (
+                self.host.init_manager.scene.find_bond_between(item1, item2) is not None
+            )
 
         move_operations = resolve_2d_overlaps(
             set(self.host.state_manager.data.atoms.keys()),
@@ -1261,7 +1320,9 @@ class EditActionsManager:
         if hasattr(self.host.edit_3d_manager, "update_2d_measurement_labels"):
             self.host.edit_3d_manager.update_2d_measurement_labels()
         else:  # [REPORT ERROR MISSING ATTRIBUTE]
-            logging.error(f"REPORT ERROR: Missing attribute 'update_2d_measurement_labels' on object")
+            logging.error(
+                "REPORT ERROR: Missing attribute 'update_2d_measurement_labels' on object"
+            )
 
         self.host.init_manager.scene.update()
         self.host.edit_actions_manager.push_undo_state()
@@ -1424,7 +1485,9 @@ class EditActionsManager:
         self.host.chem_check_tried = False
         self.host.chem_check_failed = False
 
-        if force_skip or self.host.init_manager.settings.get("skip_chemistry_checks", False):
+        if force_skip or self.host.init_manager.settings.get(
+            "skip_chemistry_checks", False
+        ):
             # User asked to skip chemistry checks entirely
             return
 
@@ -1442,11 +1505,13 @@ class EditActionsManager:
                     f"Molecule sanitization failed{desc}; file may be malformed."
                 )
             # Disable 3D optimization UI to prevent running on invalid molecules
-            if hasattr(self.host.init_manager, 'optimize_3d_button'):
+            if hasattr(self.host.init_manager, "optimize_3d_button"):
                 with contextlib.suppress(AttributeError, RuntimeError, TypeError):
                     self.host.init_manager.optimize_3d_button.setEnabled(False)
             else:  # [REPORT ERROR MISSING ATTRIBUTE]
-                logging.error(f"REPORT ERROR: Missing attribute 'optimize_3d_button' on object")
+                logging.error(
+                    "REPORT ERROR: Missing attribute 'optimize_3d_button' on object"
+                )
 
     def _clear_xyz_flags(self, mol=None):
         """Clear XYZ-derived markers from a molecule (or current_mol) and
@@ -1459,7 +1524,11 @@ class EditActionsManager:
         Optimize 3D button is re-evaluated (enabled unless chem_check_failed
         is True).
         """
-        target = mol if mol is not None else getattr(self.host.view_3d_manager, "current_mol", None)
+        target = (
+            mol
+            if mol is not None
+            else getattr(self.host.view_3d_manager, "current_mol", None)
+        )
         if target is not None:
             # Remove RDKit property _xyz_skip_checks
             with contextlib.suppress(AttributeError, RuntimeError, TypeError):
@@ -1474,18 +1543,21 @@ class EditActionsManager:
         if hasattr(self.host.view_3d_manager, "reset_zoom"):
             self.host.view_3d_manager.reset_zoom()
         else:  # [REPORT ERROR MISSING ATTRIBUTE]
-            logging.error(f"REPORT ERROR: Missing attribute 'reset_zoom' on object")
+            logging.error("REPORT ERROR: Missing attribute 'reset_zoom' on object")
 
         self.host.is_xyz_derived = False
 
         # Enable Optimize 3D unless sanitization failed
-        if hasattr(self.host.init_manager, 'optimize_3d_button'):
+        if hasattr(self.host.init_manager, "optimize_3d_button"):
             with contextlib.suppress(AttributeError, RuntimeError, TypeError):
                 # Suppress error if optimize_3d_button is partially destroyed.
                 self.host.init_manager.optimize_3d_button.setEnabled(
                     not getattr(self.host, "chem_check_failed", False)
                 )
         else:  # [REPORT ERROR MISSING ATTRIBUTE]
-            logging.error(f"REPORT ERROR: Missing attribute 'optimize_3d_button' on object")
+            logging.error(
+                "REPORT ERROR: Missing attribute 'optimize_3d_button' on object"
+            )
+
 
 EditActionsManager._cls = EditActionsManager

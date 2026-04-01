@@ -10,7 +10,6 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
-from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import (
     QPushButton,
@@ -44,13 +43,24 @@ class Settings3DSceneTab(SettingsTabBase):
         form_layout.addRow("Enable Lighting:", self.light_checkbox)
 
         self.intensity_slider, self.intensity_label = self._create_slider(0, 200, 100.0)
-        form_layout.addRow("Light Intensity:", self._wrap_layout(self.intensity_slider, self.intensity_label))
+        form_layout.addRow(
+            "Light Intensity:",
+            self._wrap_layout(self.intensity_slider, self.intensity_label),
+        )
 
         self.specular_slider, self.specular_label = self._create_slider(0, 100, 100.0)
-        form_layout.addRow("Shininess (Specular):", self._wrap_layout(self.specular_slider, self.specular_label))
+        form_layout.addRow(
+            "Shininess (Specular):",
+            self._wrap_layout(self.specular_slider, self.specular_label),
+        )
 
-        self.spec_power_slider, self.spec_power_label = self._create_slider(0, 100, 1.0, is_int=True)
-        form_layout.addRow("Shininess Power:", self._wrap_layout(self.spec_power_slider, self.spec_power_label))
+        self.spec_power_slider, self.spec_power_label = self._create_slider(
+            0, 100, 1.0, is_int=True
+        )
+        form_layout.addRow(
+            "Shininess Power:",
+            self._wrap_layout(self.spec_power_slider, self.spec_power_label),
+        )
 
         self.projection_combo = QComboBox()
         self.projection_combo.addItems(["Perspective", "Orthographic"])

@@ -22,9 +22,7 @@ from PyQt6.QtWidgets import (
     QMessageBox,
     QPushButton,
     QVBoxLayout,
-    QWidget,
 )
-from rdkit import Geometry
 
 try:
     from .base_picking_dialog import BasePickingDialog
@@ -203,14 +201,19 @@ class MoveGroupDialog(BasePickingDialog):
                     # Pick via plotter
                     picker = self.main_window.view_3d_manager.plotter.picker
                     picker.Pick(
-                        click_pos[0], click_pos[1], 0, self.main_window.view_3d_manager.plotter.renderer
+                        click_pos[0],
+                        click_pos[1],
+                        0,
+                        self.main_window.view_3d_manager.plotter.renderer,
                     )
 
                     clicked_atom_idx = None
                     if picker.GetActor() is self.main_window.view_3d_manager.atom_actor:
                         picked_position = np.array(picker.GetPickPosition())
                         distances = np.linalg.norm(
-                            self.main_window.view_3d_manager.atom_positions_3d - picked_position, axis=1
+                            self.main_window.view_3d_manager.atom_positions_3d
+                            - picked_position,
+                            axis=1,
                         )
                         closest_atom_idx = np.argmin(distances)
 
@@ -223,7 +226,12 @@ class MoveGroupDialog(BasePickingDialog):
                                     vdw_radius = pt.GetRvdw(atomic_num)
                                     if vdw_radius < 0.1:
                                         vdw_radius = 1.5
-                                except (AttributeError, RuntimeError, ValueError, TypeError):
+                                except (
+                                    AttributeError,
+                                    RuntimeError,
+                                    ValueError,
+                                    TypeError,
+                                ):
                                     vdw_radius = 1.5
                                 click_threshold = vdw_radius * 1.5
 
@@ -275,7 +283,12 @@ class MoveGroupDialog(BasePickingDialog):
                                 self.main_window.view_3d_manager.plotter.setCursor(
                                     Qt.CursorShape.ClosedHandCursor
                                 )
-                            except (AttributeError, RuntimeError, ValueError, TypeError):
+                            except (
+                                AttributeError,
+                                RuntimeError,
+                                ValueError,
+                                TypeError,
+                            ):
                                 pass
                     except (AttributeError, RuntimeError, ValueError, TypeError):
                         pass
@@ -302,13 +315,21 @@ class MoveGroupDialog(BasePickingDialog):
                         current_pos = interactor.GetEventPosition()
                         picker = self.main_window.view_3d_manager.plotter.picker
                         picker.Pick(
-                            current_pos[0], current_pos[1], 0, self.main_window.view_3d_manager.plotter.renderer
+                            current_pos[0],
+                            current_pos[1],
+                            0,
+                            self.main_window.view_3d_manager.plotter.renderer,
                         )
 
-                        if picker.GetActor() is self.main_window.view_3d_manager.atom_actor:
+                        if (
+                            picker.GetActor()
+                            is self.main_window.view_3d_manager.atom_actor
+                        ):
                             picked_position = np.array(picker.GetPickPosition())
                             distances = np.linalg.norm(
-                                self.main_window.view_3d_manager.atom_positions_3d - picked_position, axis=1
+                                self.main_window.view_3d_manager.atom_positions_3d
+                                - picked_position,
+                                axis=1,
                             )
                             closest_atom_idx = np.argmin(distances)
 
@@ -337,7 +358,9 @@ class MoveGroupDialog(BasePickingDialog):
                     self.is_dragging_group and self.drag_start_pos
                 ):
                     try:
-                        if not (self.is_dragging_group and self.mouse_moved_during_drag):
+                        if not (
+                            self.is_dragging_group and self.mouse_moved_during_drag
+                        ):
                             # Mouse move below threshold = simple click (toggle)
                             if hasattr(self, "clicked_atom_for_toggle"):
                                 clicked_atom = self.clicked_atom_for_toggle
@@ -351,11 +374,18 @@ class MoveGroupDialog(BasePickingDialog):
                                     self.main_window.view_3d_manager.plotter.setCursor(
                                         Qt.CursorShape.ArrowCursor
                                     )
-                                except (AttributeError, RuntimeError, ValueError, TypeError):
+                                except (
+                                    AttributeError,
+                                    RuntimeError,
+                                    ValueError,
+                                    TypeError,
+                                ):
                                     pass
                                 return True
                             else:  # [REPORT ERROR MISSING ATTRIBUTE]
-                                logging.error(f"REPORT ERROR: Missing attribute 'clicked_atom_for_toggle' on self")
+                                logging.error(
+                                    "REPORT ERROR: Missing attribute 'clicked_atom_for_toggle' on self"
+                                )
 
                     except (AttributeError, RuntimeError, ValueError, TypeError):
                         pass
@@ -432,7 +462,9 @@ class MoveGroupDialog(BasePickingDialog):
             return
 
         selected_indices = list(self.group_atoms)
-        selected_positions = self.main_window.view_3d_manager.atom_positions_3d[selected_indices]
+        selected_positions = self.main_window.view_3d_manager.atom_positions_3d[
+            selected_indices
+        ]
         selected_radii = np.array(
             [
                 VDW_RADII.get(self.mol.GetAtomWithIdx(i).GetSymbol(), 0.4) * 1.3
@@ -462,20 +494,24 @@ class MoveGroupDialog(BasePickingDialog):
         """Clear highlights."""
         # Call base which clears selection_labels (standard labels)
         super().clear_atom_labels()
-        
+
         # Clear MoveGroup specific highlight
         try:
-            self.main_window.view_3d_manager.plotter.remove_actor("move_group_highlight")
+            self.main_window.view_3d_manager.plotter.remove_actor(
+                "move_group_highlight"
+            )
         except (AttributeError, RuntimeError, ValueError, TypeError):
             pass
 
         if hasattr(self, "highlight_actor") and self.highlight_actor:
             try:
-                self.main_window.view_3d_manager.plotter.remove_actor(self.highlight_actor)
+                self.main_window.view_3d_manager.plotter.remove_actor(
+                    self.highlight_actor
+                )
             except (AttributeError, RuntimeError, ValueError, TypeError):
                 pass
             self.highlight_actor = None
-        
+
         try:
             self.main_window.view_3d_manager.plotter.render()
         except (AttributeError, RuntimeError, ValueError, TypeError):
@@ -497,17 +533,19 @@ class MoveGroupDialog(BasePickingDialog):
             dy = float(self.y_trans_input.text())
             dz = float(self.z_trans_input.text())
         except ValueError:
-            QMessageBox.warning(self, "Warning", "Please enter valid translation values.")
+            QMessageBox.warning(
+                self, "Warning", "Please enter valid translation values."
+            )
             return
 
         translation_vector = np.array([dx, dy, dz])
         positions = self.mol.GetConformer().GetPositions()
         for atom_idx in self.group_atoms:
             positions[atom_idx] += translation_vector
- 
+
         # Write updated positions back using inherited helper
         self._update_molecule_geometry(positions)
- 
+
         # Push Undo state AFTER modification
         self._push_undo()
         self.show_atom_labels()
@@ -533,26 +571,44 @@ class MoveGroupDialog(BasePickingDialog):
 
         rx_rad, ry_rad, rz_rad = np.radians([rx, ry, rz])
         positions = self.mol.GetConformer().GetPositions()
-        
+
         # Calculate centroid of the group
         group_indices = list(self.group_atoms)
         group_positions = positions[group_indices]
         centroid = np.mean(group_positions, axis=0)
 
         # Rotation matrices
-        Rx = np.array([[1, 0, 0], [0, np.cos(rx_rad), -np.sin(rx_rad)], [0, np.sin(rx_rad), np.cos(rx_rad)]])
-        Ry = np.array([[np.cos(ry_rad), 0, np.sin(ry_rad)], [0, 1, 0], [-np.sin(ry_rad), 0, np.cos(ry_rad)]])
-        Rz = np.array([[np.cos(rz_rad), -np.sin(rz_rad), 0], [np.sin(rz_rad), np.cos(rz_rad), 0], [0, 0, 1]])
+        Rx = np.array(
+            [
+                [1, 0, 0],
+                [0, np.cos(rx_rad), -np.sin(rx_rad)],
+                [0, np.sin(rx_rad), np.cos(rx_rad)],
+            ]
+        )
+        Ry = np.array(
+            [
+                [np.cos(ry_rad), 0, np.sin(ry_rad)],
+                [0, 1, 0],
+                [-np.sin(ry_rad), 0, np.cos(ry_rad)],
+            ]
+        )
+        Rz = np.array(
+            [
+                [np.cos(rz_rad), -np.sin(rz_rad), 0],
+                [np.sin(rz_rad), np.cos(rz_rad), 0],
+                [0, 0, 1],
+            ]
+        )
         R = Rz @ Ry @ Rx
- 
+
         for atom_idx in self.group_atoms:
             pos = positions[atom_idx]
             new_pos = R @ (pos - centroid) + centroid
             positions[atom_idx] = new_pos
- 
+
         # Write updated positions back using inherited helper
         self._update_molecule_geometry(positions)
- 
+
         # Push Undo state AFTER modification
         self._push_undo()
         self.show_atom_labels()

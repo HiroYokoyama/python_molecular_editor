@@ -12,7 +12,6 @@ DOI: 10.5281/zenodo.17268532
 
 from __future__ import annotations
 import math
-import logging
 from collections import deque
 from typing import Any, Dict, Iterable, List, Optional, Set, Tuple, Union
 
@@ -22,7 +21,11 @@ import numpy as np
 # Primitive geometry helpers
 # ------------------------------------------------------------------
 
-def calc_distance(pos1: Union[np.ndarray, Tuple[float, float, float], List[float]], pos2: Union[np.ndarray, Tuple[float, float, float], List[float]]) -> float:
+
+def calc_distance(
+    pos1: Union[np.ndarray, Tuple[float, float, float], List[float]],
+    pos2: Union[np.ndarray, Tuple[float, float, float], List[float]],
+) -> float:
     """Return the Euclidean distance between two 3-D positions.
 
     Parameters
@@ -78,7 +81,9 @@ def calc_angle_deg(
 # ------------------------------------------------------------------
 
 
-def get_connected_group(mol: Any, start_atom: int, exclude: Optional[int] = None) -> Set[int]:
+def get_connected_group(
+    mol: Any, start_atom: int, exclude: Optional[int] = None
+) -> Set[int]:
     """Return the set of atom indices reachable from *start_atom*
     without passing through *exclude*.
 
@@ -383,7 +388,9 @@ _VALENCE_LIMITS = {
 }
 
 
-def is_problematic_valence(symbol: str, bond_count: Union[int, float], charge: int = 0) -> bool:
+def is_problematic_valence(
+    symbol: str, bond_count: Union[int, float], charge: int = 0
+) -> bool:
     """Return ``True`` if the atom's total bond order exceeds its
     typical maximum valence.
 
@@ -475,7 +482,9 @@ def inject_ez_stereo_to_mol_block(mol_block, rdkit_mol, bonds_data):
     return "\n".join(mol_lines)
 
 
-def identify_valence_problems(atoms_data: Dict[int, Any], bonds_data: Dict[Tuple[int, int], Any]) -> List[int]:
+def identify_valence_problems(
+    atoms_data: Dict[int, Any], bonds_data: Dict[Tuple[int, int], Any]
+) -> List[int]:
     """Identify atoms with problematic valence.
 
     Parameters

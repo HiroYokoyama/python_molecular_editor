@@ -10,18 +10,14 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
-import logging
 import numpy as np
-from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QMessageBox,
     QPushButton,
     QVBoxLayout,
-    QWidget,
 )
-from rdkit import Geometry
 
 try:
     from .base_picking_dialog import BasePickingDialog
@@ -122,7 +118,7 @@ class AlignPlaneDialog(BasePickingDialog):
                 # fallback to main_window data map
                 self.selected_atoms = (
                     set(self.main_window.state_manager.data.atoms.keys())
-                    if hasattr(self.main_window.state_manager, 'data')
+                    if hasattr(self.main_window.state_manager, "data")
                     else set()
                 )
 

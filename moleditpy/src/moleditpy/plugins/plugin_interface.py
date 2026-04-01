@@ -128,7 +128,7 @@ class PluginContext:
     def push_undo_checkpoint(self) -> None:
         """
         Create an undo checkpoint for the current state.
-        Call this AFTER making modifications to the molecule to ensure the 
+        Call this AFTER making modifications to the molecule to ensure the
         new state is saved to the undo history.
         """
         self._manager.push_undo_checkpoint()
@@ -321,7 +321,7 @@ class PluginContext:
             default: Value to return if the setting is not found.
         """
         mw = self.get_main_window()
-        if mw and hasattr(mw, 'init_manager') and hasattr(mw.init_manager, 'settings'):
+        if mw and hasattr(mw, "init_manager") and hasattr(mw.init_manager, "settings"):
             namespaced = f"plugin.{self._plugin_name}.{key}"
             return mw.init_manager.settings.get(namespaced, default)
         return default
@@ -338,10 +338,10 @@ class PluginContext:
             value: Value to store (must be JSON-serializable).
         """
         mw = self.get_main_window()
-        if mw and hasattr(mw, 'init_manager') and hasattr(mw.init_manager, 'settings'):
+        if mw and hasattr(mw, "init_manager") and hasattr(mw.init_manager, "settings"):
             namespaced = f"plugin.{self._plugin_name}.{key}"
             mw.init_manager.settings[namespaced] = value
-            if hasattr(mw.init_manager, 'settings_dirty'):
+            if hasattr(mw.init_manager, "settings_dirty"):
                 mw.init_manager.settings_dirty = True
 
 

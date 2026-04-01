@@ -1,7 +1,7 @@
 # MoleditPy Coverage Report
 
-- **Overall Project Coverage (Full)**: **66.57%**
-- **Core Molecular Logic Coverage**: **74.03%**
+- **Overall Project Coverage (Full)**: **67.93%**
+- **Core Molecular Logic Coverage**: **75.77%**
 
 > [!NOTE]
 > **Core Molecular Logic Coverage** excludes UI boilerplate (dialogs, view managers, and interactor styles) to focus on scientific algorithm reliability.
@@ -26,12 +26,12 @@
 | moleditpy\src\moleditpy\ui\calculation_worker.py        |    546 |     91 |   83.3% |
 | moleditpy\src\moleditpy\ui\color_settings_dialog.py     |    197 |     65 |   67.0% |
 | moleditpy\src\moleditpy\ui\compute_logic.py             |    401 |     96 |   76.1% |
-| moleditpy\src\moleditpy\ui\dialog_logic.py              |    232 |    140 |   39.7% |
+| moleditpy\src\moleditpy\ui\dialog_logic.py              |    232 |     33 |   85.8% |
 | moleditpy\src\moleditpy\ui\dihedral_dialog.py           |    222 |     88 |   60.4% |
 | moleditpy\src\moleditpy\ui\edit_3d_logic.py             |    236 |    128 |   45.8% |
 | moleditpy\src\moleditpy\ui\edit_actions_logic.py        |    852 |    215 |   74.8% |
 | moleditpy\src\moleditpy\ui\export_logic.py              |    511 |    150 |   70.6% |
-| moleditpy\src\moleditpy\ui\io_logic.py                  |    621 |    201 |   67.6% |
+| moleditpy\src\moleditpy\ui\io_logic.py                  |    619 |    121 |   80.5% |
 | moleditpy\src\moleditpy\ui\main_window_init.py          |   1182 |    164 |   86.1% |
 | moleditpy\src\moleditpy\ui\molecular_scene_handler.py   |    860 |    180 |   79.1% |
 | moleditpy\src\moleditpy\ui\molecule_scene.py            |    506 |    187 |   63.0% |
@@ -42,7 +42,7 @@
 | moleditpy\src\moleditpy\utils\constants.py              |     31 |      0 |  100.0% |
 | moleditpy\src\moleditpy\utils\default_settings.py       |      1 |      0 |  100.0% |
 | moleditpy\src\moleditpy\utils\sip_isdeleted_safe.py     |     19 |      8 |   57.9% |
-| **TOTAL** | **10688** | **2776** | **74.03%** |
+| **TOTAL** | **10686** | **2589** | **75.77%** |
 
 ### Full Application Breakdown
 
@@ -71,13 +71,13 @@
 | moleditpy\src\moleditpy\ui\custom_interactor_style.py   |    456 |    392 |   14.0% |
 | moleditpy\src\moleditpy\ui\custom_qt_interactor.py      |     43 |     35 |   18.6% |
 | moleditpy\src\moleditpy\ui\dialog_3d_picking_mixin.py   |     95 |     52 |   45.3% |
-| moleditpy\src\moleditpy\ui\dialog_logic.py              |    232 |    140 |   39.7% |
+| moleditpy\src\moleditpy\ui\dialog_logic.py              |    232 |     33 |   85.8% |
 | moleditpy\src\moleditpy\ui\dihedral_dialog.py           |    222 |     88 |   60.4% |
 | moleditpy\src\moleditpy\ui\edit_3d_logic.py             |    236 |    128 |   45.8% |
 | moleditpy\src\moleditpy\ui\edit_actions_logic.py        |    852 |    215 |   74.8% |
 | moleditpy\src\moleditpy\ui\export_logic.py              |    511 |    150 |   70.6% |
 | moleditpy\src\moleditpy\ui\geometry_base_dialog.py      |     58 |     41 |   29.3% |
-| moleditpy\src\moleditpy\ui\io_logic.py                  |    621 |    201 |   67.6% |
+| moleditpy\src\moleditpy\ui\io_logic.py                  |    619 |    121 |   80.5% |
 | moleditpy\src\moleditpy\ui\main_window.py               |     62 |     19 |   69.4% |
 | moleditpy\src\moleditpy\ui\main_window_init.py          |   1182 |    164 |   86.1% |
 | moleditpy\src\moleditpy\ui\mirror_dialog.py             |     70 |      7 |   90.0% |
@@ -104,7 +104,7 @@
 | moleditpy\src\moleditpy\utils\default_settings.py       |      1 |      0 |  100.0% |
 | moleditpy\src\moleditpy\utils\sip_isdeleted_safe.py     |     19 |      8 |   57.9% |
 | moleditpy\src\moleditpy\utils\system_utils.py           |     34 |     18 |   47.1% |
-| **TOTAL** | **13686** | **4575** | **66.57%** |
+| **TOTAL** | **13684** | **4388** | **67.93%** |
 
 ## Test Suite Status
 - **Unit tests**: PASSED

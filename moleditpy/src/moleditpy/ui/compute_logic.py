@@ -13,7 +13,7 @@ DOI: 10.5281/zenodo.17268532
 from __future__ import annotations
 import logging
 import contextlib
-from typing import Any, Dict, List, Optional, Set, Tuple, Union
+from typing import Any, List, Optional, Set, Tuple, Union
 
 from PyQt6.QtCore import QThread, QTimer, QPoint
 from PyQt6.QtGui import QAction, QColor
@@ -39,6 +39,7 @@ except ImportError:
         identify_valence_problems,
         inject_ez_stereo_to_mol_block,
     )
+
 
 class ComputeManager:
     """Independent manager for molecular computations, ported from MainWindowCompute mixin."""
@@ -79,7 +80,7 @@ class ComputeManager:
         self.host.init_manager.convert_button.clicked.connect(self.trigger_conversion)
         self.host.init_manager.convert_button.setEnabled(True)
 
-        if hasattr(self.host.init_manager, 'optimize_3d_button'):
+        if hasattr(self.host.init_manager, "optimize_3d_button"):
             self._safe_disconnect(self.host.init_manager.optimize_3d_button.clicked)
             self.host.init_manager.optimize_3d_button.setText("Optimize 3D")
             self.host.init_manager.optimize_3d_button.clicked.connect(
@@ -87,28 +88,36 @@ class ComputeManager:
             )
             self.host.init_manager.optimize_3d_button.setEnabled(True)
         else:  # [REPORT ERROR MISSING ATTRIBUTE]
-            logging.error(f"REPORT ERROR: Missing attribute 'optimize_3d_button' on object")
+            logging.error(
+                "REPORT ERROR: Missing attribute 'optimize_3d_button' on object"
+            )
 
     def _refresh_ui_state(self) -> None:
         """Consolidate UI state updates."""
         try:
             has_mol = self.host.view_3d_manager.current_mol is not None
 
-            if hasattr(self.host.init_manager, 'cleanup_button'):
+            if hasattr(self.host.init_manager, "cleanup_button"):
                 self.host.init_manager.cleanup_button.setEnabled(True)
             else:  # [REPORT ERROR MISSING ATTRIBUTE]
-                logging.error(f"REPORT ERROR: Missing attribute 'cleanup_button' on object")
+                logging.error(
+                    "REPORT ERROR: Missing attribute 'cleanup_button' on object"
+                )
 
             self._restore_button_ui()
 
-            if hasattr(self.host.init_manager, 'optimize_3d_button'):
+            if hasattr(self.host.init_manager, "optimize_3d_button"):
                 self.host.init_manager.optimize_3d_button.setEnabled(has_mol)
             else:  # [REPORT ERROR MISSING ATTRIBUTE]
-                logging.error(f"REPORT ERROR: Missing attribute 'optimize_3d_button' on object")
+                logging.error(
+                    "REPORT ERROR: Missing attribute 'optimize_3d_button' on object"
+                )
             if hasattr(self.host.init_manager, "export_button"):
                 self.host.init_manager.export_button.setEnabled(has_mol)
             else:  # [REPORT ERROR MISSING ATTRIBUTE]
-                logging.error(f"REPORT ERROR: Missing attribute 'export_button' on object")
+                logging.error(
+                    "REPORT ERROR: Missing attribute 'export_button' on object"
+                )
 
             # ui_manager and its methods are guaranteed on the host
             self.host.ui_manager._enable_3d_features(has_mol)
@@ -117,11 +126,15 @@ class ComputeManager:
             if hasattr(self.host.init_manager, "analysis_action"):
                 self.host.init_manager.analysis_action.setEnabled(has_mol)
             else:  # [REPORT ERROR MISSING ATTRIBUTE]
-                logging.error(f"REPORT ERROR: Missing attribute 'analysis_action' on object")
+                logging.error(
+                    "REPORT ERROR: Missing attribute 'analysis_action' on object"
+                )
             if hasattr(self.host.init_manager, "edit_3d_action"):
                 self.host.init_manager.edit_3d_action.setEnabled(has_mol)
             else:  # [REPORT ERROR MISSING ATTRIBUTE]
-                logging.error(f"REPORT ERROR: Missing attribute 'edit_3d_action' on object")
+                logging.error(
+                    "REPORT ERROR: Missing attribute 'edit_3d_action' on object"
+                )
 
             # plotter and view_2d are fundamental host components
             if self.host.view_3d_manager.plotter:
@@ -140,7 +153,10 @@ class ComputeManager:
         self.host.init_manager.settings["optimization_method"] = method
         self.host.init_manager.settings_dirty = True
 
-        if hasattr(self.host.init_manager, "opt3d_actions") and self.host.init_manager.opt3d_actions:
+        if (
+            hasattr(self.host.init_manager, "opt3d_actions")
+            and self.host.init_manager.opt3d_actions
+        ):
             for k, act in self.host.init_manager.opt3d_actions.items():
                 act.setChecked(k.upper() == method)
 
@@ -149,7 +165,9 @@ class ComputeManager:
 
     def toggle_intermolecular_interaction_rdkit(self, checked: bool) -> None:
         """Toggle intermolecular interactions for RDKit optimization."""
-        self.host.init_manager.settings["optimize_intermolecular_interaction_rdkit"] = checked
+        self.host.init_manager.settings["optimize_intermolecular_interaction_rdkit"] = (
+            checked
+        )
         self.host.init_manager.settings_dirty = True
         state_str = "Enabled" if checked else "Disabled"
         self.host.statusBar().showMessage(
@@ -200,7 +218,10 @@ class ComputeManager:
         ]
         for label, key in opt_list:
             a = QAction(label, self.host)
-            if hasattr(self.host.init_manager, "opt3d_actions") and key in self.host.init_manager.opt3d_actions:
+            if (
+                hasattr(self.host.init_manager, "opt3d_actions")
+                and key in self.host.init_manager.opt3d_actions
+            ):
                 a.setEnabled(self.host.init_manager.opt3d_actions[key].isEnabled())
             a.triggered.connect(
                 lambda checked=False, k=key: self._trigger_optimize_with_temp_method(k)
@@ -264,18 +285,22 @@ class ComputeManager:
         self.host.view_3d_manager.current_mol = None
 
         # Add 'Calculating...' overlay
-        bg_qcolor = QColor(self.host.init_manager.settings.get("background_color", "#919191"))
+        bg_qcolor = QColor(
+            self.host.init_manager.settings.get("background_color", "#919191")
+        )
         text_color = (
             "black"
             if (bg_qcolor.isValid() and bg_qcolor.toHsl().lightness() > 128)
             else "white"
         )
-        self.host.compute_manager._calculating_text_actor = self.host.view_3d_manager.plotter.add_text(
-            "Calculating...",
-            position="lower_right",
-            font_size=15,
-            color=text_color,
-            name="calculating_text",
+        self.host.compute_manager._calculating_text_actor = (
+            self.host.view_3d_manager.plotter.add_text(
+                "Calculating...",
+                position="lower_right",
+                font_size=15,
+                color=text_color,
+                name="calculating_text",
+            )
         )
         self.host.view_3d_manager.plotter.render()
 
@@ -317,7 +342,9 @@ class ComputeManager:
             return
 
         if self.host.view_3d_manager.current_mol.GetNumConformers() == 0:
-            self.host.statusBar().showMessage("No conformer found. Generate 3D structure first.")
+            self.host.statusBar().showMessage(
+                "No conformer found. Generate 3D structure first."
+            )
             return
 
         method = self.host.__dict__.pop("_temp_optimization_method", None) or getattr(
@@ -327,20 +354,21 @@ class ComputeManager:
 
         # Validate method against known labels (from init_manager) and registered plugins
         _init_mgr = getattr(self.host, "init_manager", None)
-        _init_methods = set(
-            getattr(_init_mgr, "opt3d_method_labels", None)
-            or {}
-        )
+        _init_methods = set(getattr(_init_mgr, "opt3d_method_labels", None) or {})
         _plugin_mgr = getattr(self.host, "plugin_manager", None)
         _plugin_methods = set(getattr(_plugin_mgr, "optimization_methods", {}) or {})
         _all_known = _init_methods | _plugin_methods | {"OPTIMIZE_ONLY"}
         if _all_known and method not in _all_known:
-            self.host.statusBar().showMessage(f"Selected optimization method '{method}' is not available.")
+            self.host.statusBar().showMessage(
+                f"Selected optimization method '{method}' is not available."
+            )
             return
 
         self.host.statusBar().showMessage(f"Optimizing 3D structure ({method})...")
 
-        mol_block = Chem.MolToMolBlock(self.host.view_3d_manager.current_mol, includeStereo=True)
+        mol_block = Chem.MolToMolBlock(
+            self.host.view_3d_manager.current_mol, includeStereo=True
+        )
         options = {
             "conversion_mode": "optimize_only",
             "optimization_method": method,
@@ -358,19 +386,25 @@ class ComputeManager:
         else:
             self.host.compute_manager.active_worker_ids = {run_id}
 
-        if hasattr(self.host.init_manager, 'optimize_3d_button'):
+        if hasattr(self.host.init_manager, "optimize_3d_button"):
             self.host.init_manager.optimize_3d_button.setText("Halt optimize")
             self._safe_disconnect(self.host.init_manager.optimize_3d_button.clicked)
-            self.host.init_manager.optimize_3d_button.clicked.connect(self.halt_conversion)
+            self.host.init_manager.optimize_3d_button.clicked.connect(
+                self.halt_conversion
+            )
         else:  # [REPORT ERROR MISSING ATTRIBUTE]
-            logging.error(f"REPORT ERROR: Missing attribute 'optimize_3d_button' on object")
+            logging.error(
+                "REPORT ERROR: Missing attribute 'optimize_3d_button' on object"
+            )
 
         self.host.ui_manager._enable_3d_features(False)
         # Re-enable the button so it can be clicked to Halt
         if hasattr(self.host.init_manager, "optimize_3d_button"):
             self.host.init_manager.optimize_3d_button.setEnabled(True)
         else:  # [REPORT ERROR MISSING ATTRIBUTE]
-            logging.error(f"REPORT ERROR: Missing attribute 'optimize_3d_button' on object")
+            logging.error(
+                "REPORT ERROR: Missing attribute 'optimize_3d_button' on object"
+            )
 
         self._start_calculation_worker(mol_block, options, run_id)
 
@@ -404,7 +438,7 @@ class ComputeManager:
         self.host.init_manager.scene.clear_all_problem_flags()
         msg = f"Error: {len(problems)} chemistry problem(s) found (e.g., hypervalency). Fix the 2D layout before converting."
         self.host.statusBar().showMessage(msg)
-        
+
         with contextlib.suppress(Exception):
             QMessageBox.critical(self.host, "Chemistry Problem", msg)
 
@@ -422,7 +456,9 @@ class ComputeManager:
         mol_block = self.host.state_manager.data.to_mol_block()
         if not mol_block:
             mol_block = Chem.MolToMolBlock(mol, includeStereo=True)
-        return inject_ez_stereo_to_mol_block(mol_block, mol, self.host.state_manager.data.bonds)
+        return inject_ez_stereo_to_mol_block(
+            mol_block, mol, self.host.state_manager.data.bonds
+        )
 
     def _start_calculation_worker(self, mol_block, options, run_id):
         thread = QThread()
@@ -456,12 +492,16 @@ class ComputeManager:
         QTimer.singleShot(10, lambda: worker.start_work.emit(mol_block, options))
         self._active_calc_threads.append(thread)
 
-    def on_calculation_finished(self, result: Union[Chem.Mol, Tuple[int, Chem.Mol]]) -> None:
+    def on_calculation_finished(
+        self, result: Union[Chem.Mol, Tuple[int, Chem.Mol]]
+    ) -> None:
         worker_id, mol = result if isinstance(result, tuple) else (None, result)
         if worker_id is not None:
             if worker_id not in self.active_worker_ids:
                 # Still show something if the user wants to see 'staled' result
-                self.host.statusBar().showMessage(f"Ignored halted worker result (ID = {worker_id})")
+                self.host.statusBar().showMessage(
+                    f"Ignored halted worker result (ID = {worker_id})"
+                )
                 return  # stale worker, ignore
             self.active_worker_ids.discard(worker_id)
             self.halt_ids.discard(worker_id)
@@ -489,10 +529,14 @@ class ComputeManager:
             if mol and mol.HasProp("_pme_optimization_method"):
                 method_key = mol.GetProp("_pme_optimization_method")
             if not method_key:
-                method_key = getattr(self, "optimization_method", None) or getattr(self.host.init_manager, "optimization_method", None)
+                method_key = getattr(self, "optimization_method", None) or getattr(
+                    self.host.init_manager, "optimization_method", None
+                )
             if method_key:
                 labels = getattr(self.host.init_manager, "opt3d_method_labels", {})
-                self.last_successful_optimization_method = labels.get(method_key, method_key)
+                self.last_successful_optimization_method = labels.get(
+                    method_key, method_key
+                )
         except (AttributeError, TypeError):
             pass
 
@@ -511,17 +555,21 @@ class ComputeManager:
                 self._restore_button_ui()
                 # If it was a halt or error from a stale worker, show with ID
                 if msg == "Halt" or msg == "Halted":
-                    self.host.statusBar().showMessage(f"Ignored halted worker (ID = {worker_id})")
+                    self.host.statusBar().showMessage(
+                        f"Ignored halted worker (ID = {worker_id})"
+                    )
                 else:
-                    self.host.statusBar().showMessage(f"Ignored stale worker error: {msg} (ID = {worker_id})")
+                    self.host.statusBar().showMessage(
+                        f"Ignored stale worker error: {msg} (ID = {worker_id})"
+                    )
                 return  # stale worker, ignore
             self.active_worker_ids.discard(worker_id)
         else:
             msg = str(message)
-        
+
         self._remove_calculating_text()
         self._restore_button_ui()
-        
+
         if msg == "Halt" or msg == "Halted":
             self.host.statusBar().showMessage("Halted")
         else:
@@ -606,7 +654,7 @@ class ComputeManager:
             if hasattr(item, "atom_id"):
                 atom_ids.add(item.atom_id)
             else:  # [REPORT ERROR MISSING ATTRIBUTE]
-                logging.error(f"REPORT ERROR: Missing attribute 'atom_id' on item")
+                logging.error("REPORT ERROR: Missing attribute 'atom_id' on item")
 
         if not atom_ids:
             return

@@ -58,6 +58,7 @@ except ImportError:
     # Fallback to absolute imports for script-style execution
     from moleditpy.utils.constants import VDW_RADII
 
+
 # --- Classes ---
 class Edit3DManager:
     """Independent manager for 3D editing logic, ported from MainWindowEdit3d mixin."""
@@ -87,7 +88,9 @@ class Edit3DManager:
                 if hasattr(self.host, "ui_manager"):
                     self.host.ui_manager.toggle_3d_edit_mode(False)
                 else:  # [REPORT ERROR MISSING ATTRIBUTE]
-                    logging.error(f"REPORT ERROR: Missing attribute 'ui_manager' on self.host")
+                    logging.error(
+                        "REPORT ERROR: Missing attribute 'ui_manager' on self.host"
+                    )
 
             # Close active 3D edit dialogs
             self.close_all_3d_edit_dialogs()
@@ -134,7 +137,10 @@ class Edit3DManager:
 
     def add_measurement_label(self, atom_idx, label_number):
         """Add numeric labels to atoms."""
-        if not self.host.view_3d_manager.current_mol or atom_idx >= self.host.view_3d_manager.current_mol.GetNumAtoms():
+        if (
+            not self.host.view_3d_manager.current_mol
+            or atom_idx >= self.host.view_3d_manager.current_mol.GetNumAtoms()
+        ):
             return
 
         # Update label list
@@ -199,7 +205,9 @@ class Edit3DManager:
         # Remove result text
         if self.measurement_text_actor:
             try:
-                self.host.view_3d_manager.plotter.remove_actor(self.measurement_text_actor)
+                self.host.view_3d_manager.plotter.remove_actor(
+                    self.measurement_text_actor
+                )
                 self.measurement_text_actor = None
             except (AttributeError, RuntimeError):
                 # Suppress if the actor is already destroyed or not found.
@@ -215,7 +223,7 @@ class Edit3DManager:
         # Create atom-to-AtomItem mapping
         if (
             not self.host.view_3d_manager.current_mol
-            or not hasattr(self.host.state_manager, 'data')
+            or not hasattr(self.host.state_manager, "data")
             or not self.host.state_manager.data.atoms
         ):
             return
@@ -224,7 +232,7 @@ class Edit3DManager:
         atom_idx_to_item = {}
 
         # Get AtomItems from scene
-        if hasattr(self.host.init_manager, 'scene'):
+        if hasattr(self.host.init_manager, "scene"):
             for item in self.host.init_manager.scene.items():
                 if hasattr(item, "atom_id") and hasattr(
                     item, "symbol"
@@ -234,7 +242,7 @@ class Edit3DManager:
                     if rdkit_idx is not None:
                         atom_idx_to_item[rdkit_idx] = item
         else:  # [REPORT ERROR MISSING ATTRIBUTE]
-            logging.error(f"REPORT ERROR: Missing attribute 'scene' on object")
+            logging.error("REPORT ERROR: Missing attribute 'scene' on object")
 
         # Add to 2D view
         if not hasattr(self, "measurement_label_items_2d"):
@@ -292,7 +300,9 @@ class Edit3DManager:
                         continue
             self.measurement_label_items_2d.clear()
         else:  # [REPORT ERROR MISSING ATTRIBUTE]
-            logging.error(f"REPORT ERROR: Missing attribute 'measurement_label_items_2d' on self")
+            logging.error(
+                "REPORT ERROR: Missing attribute 'measurement_label_items_2d' on self"
+            )
 
     def find_rdkit_atom_index(self, atom_item):
         """Find RDKit index from AtomItem."""
@@ -349,7 +359,8 @@ class Edit3DManager:
     def calculate_distance(self, atom1_idx, atom2_idx):
         """Calculate distance between two atoms."""
         return calc_distance(
-            self.host.view_3d_manager.atom_positions_3d[atom1_idx], self.host.view_3d_manager.atom_positions_3d[atom2_idx]
+            self.host.view_3d_manager.atom_positions_3d[atom1_idx],
+            self.host.view_3d_manager.atom_positions_3d[atom2_idx],
         )
 
     def calculate_angle(self, atom1_idx, atom2_idx, atom3_idx):
@@ -363,7 +374,11 @@ class Edit3DManager:
     def calculate_dihedral(self, atom1_idx, atom2_idx, atom3_idx, atom4_idx):
         """Calculate dihedral angle."""
         return _calculate_dihedral(
-            self.host.view_3d_manager.atom_positions_3d, atom1_idx, atom2_idx, atom3_idx, atom4_idx
+            self.host.view_3d_manager.atom_positions_3d,
+            atom1_idx,
+            atom2_idx,
+            atom3_idx,
+            atom4_idx,
         )
 
     def display_measurement_text(self, measurement_lines):
@@ -371,7 +386,9 @@ class Edit3DManager:
         # Remove existing text
         if self.measurement_text_actor:
             try:
-                self.host.view_3d_manager.plotter.remove_actor(self.measurement_text_actor)
+                self.host.view_3d_manager.plotter.remove_actor(
+                    self.measurement_text_actor
+                )
             except (AttributeError, RuntimeError, ValueError, TypeError):
                 # Suppress non-critical 3D edit/UI sync errors if the plotter or actor is already destroyed
                 pass
@@ -385,7 +402,9 @@ class Edit3DManager:
 
         # Determine text color from background
         try:
-            bg_color_hex = self.host.init_manager.settings.get("background_color", "#919191")
+            bg_color_hex = self.host.init_manager.settings.get(
+                "background_color", "#919191"
+            )
             bg_qcolor = QColor(bg_color_hex)
             if bg_qcolor.isValid():
                 luminance = bg_qcolor.toHsl().lightness()
@@ -440,12 +459,17 @@ class Edit3DManager:
         selected_indices = list(self.selected_atoms_3d)
 
         # Get atom positions
-        selected_positions = self.host.view_3d_manager.atom_positions_3d[selected_indices]
+        selected_positions = self.host.view_3d_manager.atom_positions_3d[
+            selected_indices
+        ]
 
         # Highlight with slightly larger radius
         selected_radii = np.array(
             [
-                VDW_RADII.get(self.host.view_3d_manager.current_mol.GetAtomWithIdx(i).GetSymbol(), 0.4)
+                VDW_RADII.get(
+                    self.host.view_3d_manager.current_mol.GetAtomWithIdx(i).GetSymbol(),
+                    0.4,
+                )
                 * 1.3
                 for i in selected_indices
             ]
@@ -472,5 +496,6 @@ class Edit3DManager:
         """Remove dialog from active list."""
         if dialog in self.active_3d_dialogs:
             self.active_3d_dialogs.remove(dialog)
+
 
 Edit3DManager._cls = Edit3DManager

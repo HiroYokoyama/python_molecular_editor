@@ -13,7 +13,7 @@ DOI: 10.5281/zenodo.17268532
 from __future__ import annotations
 import logging
 import contextlib
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional
 
 import numpy as np
 import vtk
@@ -44,10 +44,13 @@ except ImportError:
     from moleditpy.utils.constants import CPK_COLORS_PV, VDW_RADII, pt
     from moleditpy.ui.template_preview_item import TemplatePreviewItem
 
+
 class View3DManager:
     """Independent manager for 3D rendering logic, ported from MainWindowView3d mixin."""
 
-    _cls: Optional[type[View3DManager]] = None  # Class-level reference for plugin patching accessibility
+    _cls: Optional[type[View3DManager]] = (
+        None  # Class-level reference for plugin patching accessibility
+    )
 
     def __init__(self, host: Any) -> None:
         self.host = host
@@ -76,7 +79,9 @@ class View3DManager:
         # Reset measurement and 3D edit modes on style change
         if self.host.edit_3d_manager.measurement_mode:
             self.host.init_manager.measurement_action.setChecked(False)
-            self.host.edit_3d_manager.toggle_measurement_mode(False)  # Disable measurement mode
+            self.host.edit_3d_manager.toggle_measurement_mode(
+                False
+            )  # Disable measurement mode
 
         if self.host.edit_3d_manager.is_3d_edit_mode:
             self.host.init_manager.edit_3d_action.setChecked(False)
@@ -116,7 +121,9 @@ class View3DManager:
 
         self.draw_standard_3d_style(mol)
 
-    def draw_standard_3d_style(self, mol: Chem.Mol, style_override: Optional[str] = None) -> None:
+    def draw_standard_3d_style(
+        self, mol: Chem.Mol, style_override: Optional[str] = None
+    ) -> None:
         """Draw 3D molecule and clear axis actor reference (re-controlled by apply_3d_settings)"""
 
         # Re-entrancy guard: prevent overlapping draws that cause ghost
@@ -145,7 +152,9 @@ class View3DManager:
                     self.host.statusBar().showMessage(f"Kekulize failed: {e}")
         return mol
 
-    def _draw_standard_3d_style_body(self, mol: Chem.Mol, style_override: Optional[str] = None) -> None:
+    def _draw_standard_3d_style_body(
+        self, mol: Chem.Mol, style_override: Optional[str] = None
+    ) -> None:
         current_style = (
             style_override
             if style_override
@@ -156,7 +165,9 @@ class View3DManager:
         if hasattr(self.host.edit_3d_manager, "measurement_mode"):
             self.host.edit_3d_manager.clear_measurement_selection()
         else:  # [REPORT ERROR MISSING ATTRIBUTE]
-            logging.error(f"REPORT ERROR: Missing attribute 'measurement_mode' on object")
+            logging.error(
+                "REPORT ERROR: Missing attribute 'measurement_mode' on object"
+            )
 
         # Initialize 3D color map
         if not hasattr(self, "_3d_color_map"):
@@ -176,7 +187,9 @@ class View3DManager:
         self.host.view_3d_manager.plotter.clear()
 
         # 2. Background color setting
-        self.host.view_3d_manager.plotter.set_background(self.host.init_manager.settings.get("background_color", "#919191"))
+        self.host.view_3d_manager.plotter.set_background(
+            self.host.init_manager.settings.get("background_color", "#919191")
+        )
 
         # 3. End with background and axes if mol is None or empty
         if mol is None or mol.GetNumAtoms() == 0:
@@ -186,7 +199,9 @@ class View3DManager:
             return
 
         # 4. Lighting setting
-        is_lighting_enabled = self.host.init_manager.settings.get("lighting_enabled", True)
+        is_lighting_enabled = self.host.init_manager.settings.get(
+            "lighting_enabled", True
+        )
 
         if is_lighting_enabled:
             light = pv.Light(
@@ -199,9 +214,13 @@ class View3DManager:
         # 5. Molecule drawing logic
         # Mutually exclusive: Kekulé display or Aromatic Circle display (Kekulé takes priority)
         display_kekule = self.host.init_manager.settings.get("display_kekule_3d", False)
-        display_aromatic = self.host.init_manager.settings.get("display_aromatic_circles_3d", False)
+        display_aromatic = self.host.init_manager.settings.get(
+            "display_aromatic_circles_3d", False
+        )
         if display_kekule and display_aromatic:
-            logging.debug("view_3d_logic: display_kekule_3d and display_aromatic_circles_3d are both enabled. Kekulé takes priority.")
+            logging.debug(
+                "view_3d_logic: display_kekule_3d and display_aromatic_circles_3d are both enabled. Kekulé takes priority."
+            )
             display_aromatic = False
 
         # Optionally kekulize aromatic systems for 3D visualization.
@@ -323,8 +342,12 @@ class View3DManager:
             resolution = self.host.init_manager.settings.get("stick_resolution", 16)
             rad = np.array([atom_radius for s in sym])
         else:  # ball_and_stick
-            atom_scale = self.host.init_manager.settings.get("ball_stick_atom_scale", 1.0)
-            resolution = self.host.init_manager.settings.get("ball_stick_resolution", 16)
+            atom_scale = self.host.init_manager.settings.get(
+                "ball_stick_atom_scale", 1.0
+            )
+            resolution = self.host.init_manager.settings.get(
+                "ball_stick_resolution", 16
+            )
             rad = np.array([VDW_RADII.get(s, 0.4) * atom_scale for s in sym])
 
         self.glyph_source = pv.PolyData(self.atom_positions_3d)
@@ -387,26 +410,40 @@ class View3DManager:
 
                                     # Get offset and radius for multiple bonds (matching bond drawing)
                                     try:
-                                        cyl_radius = self.host.init_manager.settings.get(
-                                            "stick_bond_radius", 0.15
+                                        cyl_radius = (
+                                            self.host.init_manager.settings.get(
+                                                "stick_bond_radius", 0.15
+                                            )
                                         )
                                         if bond_type == Chem.BondType.DOUBLE:
-                                            radius_factor = self.host.init_manager.settings.get(
-                                                "stick_double_bond_radius_factor", 0.60
+                                            radius_factor = (
+                                                self.host.init_manager.settings.get(
+                                                    "stick_double_bond_radius_factor",
+                                                    0.60,
+                                                )
                                             )
-                                            offset_factor = self.host.init_manager.settings.get(
-                                                "stick_double_bond_offset_factor", 1.5
+                                            offset_factor = (
+                                                self.host.init_manager.settings.get(
+                                                    "stick_double_bond_offset_factor",
+                                                    1.5,
+                                                )
                                             )
                                             # Double bond: use s_double / 2
                                             offset_distance = (
                                                 cyl_radius * offset_factor / 2
                                             )
                                         else:  # TRIPLE
-                                            radius_factor = self.host.init_manager.settings.get(
-                                                "stick_triple_bond_radius_factor", 0.40
+                                            radius_factor = (
+                                                self.host.init_manager.settings.get(
+                                                    "stick_triple_bond_radius_factor",
+                                                    0.40,
+                                                )
                                             )
-                                            offset_factor = self.host.init_manager.settings.get(
-                                                "stick_triple_bond_offset_factor", 1.0
+                                            offset_factor = (
+                                                self.host.init_manager.settings.get(
+                                                    "stick_triple_bond_offset_factor",
+                                                    1.0,
+                                                )
                                             )
                                             # Triple bond: use s_triple without division
                                             offset_distance = cyl_radius * offset_factor
@@ -511,20 +548,34 @@ class View3DManager:
         if current_style in ["ball_and_stick", "wireframe", "stick"]:
             # Set bond radius and resolution based on style
             if current_style == "wireframe":
-                cyl_radius = self.host.init_manager.settings.get("wireframe_bond_radius", 0.01)
-                bond_resolution = self.host.init_manager.settings.get("wireframe_resolution", 6)
+                cyl_radius = self.host.init_manager.settings.get(
+                    "wireframe_bond_radius", 0.01
+                )
+                bond_resolution = self.host.init_manager.settings.get(
+                    "wireframe_resolution", 6
+                )
             elif current_style == "stick":
-                cyl_radius = self.host.init_manager.settings.get("stick_bond_radius", 0.15)
-                bond_resolution = self.host.init_manager.settings.get("stick_resolution", 16)
+                cyl_radius = self.host.init_manager.settings.get(
+                    "stick_bond_radius", 0.15
+                )
+                bond_resolution = self.host.init_manager.settings.get(
+                    "stick_resolution", 16
+                )
             else:  # ball_and_stick
-                cyl_radius = self.host.init_manager.settings.get("ball_stick_bond_radius", 0.1)
-                bond_resolution = self.host.init_manager.settings.get("ball_stick_resolution", 16)
+                cyl_radius = self.host.init_manager.settings.get(
+                    "ball_stick_bond_radius", 0.1
+                )
+                bond_resolution = self.host.init_manager.settings.get(
+                    "ball_stick_resolution", 16
+                )
 
             # Common color for Ball and Stick
             bs_bond_rgb = [127, 127, 127]
             if current_style == "ball_and_stick":
                 try:
-                    bs_hex = self.host.init_manager.settings.get("ball_stick_bond_color", "#7F7F7F")
+                    bs_hex = self.host.init_manager.settings.get(
+                        "ball_stick_bond_color", "#7F7F7F"
+                    )
                     q = QColor(bs_hex)
                     bs_bond_rgb = [q.red(), q.green(), q.blue()]
                 except (AttributeError, RuntimeError, TypeError, ValueError) as e:
@@ -602,7 +653,9 @@ class View3DManager:
                     current_point_idx += 2
 
                 # Get CPK bond color setting once for all bond types
-                use_cpk_bond = self.host.init_manager.settings.get("ball_stick_use_cpk_bond_color", False)
+                use_cpk_bond = self.host.init_manager.settings.get(
+                    "ball_stick_use_cpk_bond_color", False
+                )
                 # If overwritten, treat as if we want to show that color (effectively behave like CPK_Split but with same color, or Uniform).
                 # To be robust, if overwritten, we can force "use_cpk_bond" logic but with our same colors?
                 # Actually, if overridden, we probably want the whole bond to be that color.
@@ -815,11 +868,15 @@ class View3DManager:
                 )
 
                 # Add to plotter
-                self.host.view_3d_manager.plotter.add_mesh(tube, scalars="colors", rgb=True, **mesh_props)
+                self.host.view_3d_manager.plotter.add_mesh(
+                    tube, scalars="colors", rgb=True, **mesh_props
+                )
 
     def _add_3d_aromatic_rings(self, mol_to_draw, current_style, mesh_props):
         # Aromatic ring circles display
-        display_aromatic = self.host.init_manager.settings.get("display_aromatic_circles_3d", False)
+        display_aromatic = self.host.init_manager.settings.get(
+            "display_aromatic_circles_3d", False
+        )
         # Check if Kekulé is enabled (safety check, should be already handled in draw_molecule_3d)
         if self.host.init_manager.settings.get("display_kekule_3d", False):
             display_aromatic = False
@@ -869,11 +926,17 @@ class View3DManager:
 
                     # Get bond radius from current style settings for torus thickness
                     if current_style == "stick":
-                        bond_radius = self.host.init_manager.settings.get("stick_bond_radius", 0.15)
+                        bond_radius = self.host.init_manager.settings.get(
+                            "stick_bond_radius", 0.15
+                        )
                     elif current_style == "ball_and_stick":
-                        bond_radius = self.host.init_manager.settings.get("ball_stick_bond_radius", 0.1)
+                        bond_radius = self.host.init_manager.settings.get(
+                            "ball_stick_bond_radius", 0.1
+                        )
                     elif current_style == "wireframe":
-                        bond_radius = self.host.init_manager.settings.get("wireframe_bond_radius", 0.01)
+                        bond_radius = self.host.init_manager.settings.get(
+                            "wireframe_bond_radius", 0.01
+                        )
                     else:
                         bond_radius = 0.1  # Default
                     # Apply user-defined thickness factor (default 0.6)
@@ -965,7 +1028,9 @@ class View3DManager:
                         else:
                             torus_color = [0.5, 0.5, 0.5]
 
-                    self.host.view_3d_manager.plotter.add_mesh(circle_line, color=torus_color, **mesh_props)
+                    self.host.view_3d_manager.plotter.add_mesh(
+                        circle_line, color=torus_color, **mesh_props
+                    )
 
             except (AttributeError, RuntimeError, TypeError, ValueError) as e:
                 logging.error(f"Error rendering aromatic circles: {e}")
@@ -1157,23 +1222,30 @@ class View3DManager:
                         # Get original atom IDs
                         idx1 = bond.GetBeginAtom().GetIntProp("_original_atom_id")
                         idx2 = bond.GetEndAtom().GetIntProp("_original_atom_id")
-                        
+
                         # Find corresponding bond in 2D data
                         bond_key = (min(idx1, idx2), max(idx1, idx2))
                         two_d_bond = self.host.state_manager.data.bonds.get(bond_key)
-                        
+
                         if two_d_bond:
                             two_d_stereo = two_d_bond.get("stereo", 0)
                             # 3 = Z, 4 = E
                             if two_d_stereo in [3, 4]:
-                                expected_stereo = Chem.BondStereo.STEREOZ if two_d_stereo == 3 else Chem.BondStereo.STEREOE
+                                expected_stereo = (
+                                    Chem.BondStereo.STEREOZ
+                                    if two_d_stereo == 3
+                                    else Chem.BondStereo.STEREOE
+                                )
                                 if expected_stereo != new_stereo:
                                     label = "?"
                     except (AttributeError, KeyError, ValueError, TypeError):
                         # Fallback to the saved property if direct access fails
                         try:
                             old_stereo = bond.GetIntProp("_original_2d_stereo")
-                            if old_stereo in [Chem.BondStereo.STEREOE, Chem.BondStereo.STEREOZ]:
+                            if old_stereo in [
+                                Chem.BondStereo.STEREOE,
+                                Chem.BondStereo.STEREOZ,
+                            ]:
                                 if old_stereo != new_stereo:
                                     label = "?"
                         except (KeyError, RuntimeError, TypeError):
@@ -1259,11 +1331,14 @@ class View3DManager:
             for idx, label in chiral_centers:
                 if idx in rdkit_idx_to_my_id:
                     atom_id = rdkit_idx_to_my_id[idx]
-                    if atom_id in self.host.state_manager.data.atoms and self.host.state_manager.data.atoms[atom_id].get(
-                        "item"
+                    if (
+                        atom_id in self.host.state_manager.data.atoms
+                        and self.host.state_manager.data.atoms[atom_id].get("item")
                     ):
                         # 'R' / 'S' / '?'
-                        self.host.state_manager.data.atoms[atom_id]["item"].chiral_label = label
+                        self.host.state_manager.data.atoms[atom_id][
+                            "item"
+                        ].chiral_label = label
 
         except (AttributeError, RuntimeError, TypeError, ValueError) as e:
             self.host.statusBar().showMessage(f"Update chiral labels error: {e}")
@@ -1283,19 +1358,27 @@ class View3DManager:
             if hasattr(self.host.init_manager, "show_atom_id_action"):
                 self.host.init_manager.show_atom_id_action.setChecked(False)
             else:  # [REPORT ERROR MISSING ATTRIBUTE]
-                logging.error(f"REPORT ERROR: Missing attribute 'show_atom_id_action' on object")
+                logging.error(
+                    "REPORT ERROR: Missing attribute 'show_atom_id_action' on object"
+                )
             if hasattr(self.host.init_manager, "show_rdkit_id_action"):
                 self.host.init_manager.show_rdkit_id_action.setChecked(False)
             else:  # [REPORT ERROR MISSING ATTRIBUTE]
-                logging.error(f"REPORT ERROR: Missing attribute 'show_rdkit_id_action' on object")
+                logging.error(
+                    "REPORT ERROR: Missing attribute 'show_rdkit_id_action' on object"
+                )
             if hasattr(self.host.init_manager, "show_atom_coords_action"):
                 self.host.init_manager.show_atom_coords_action.setChecked(False)
             else:  # [REPORT ERROR MISSING ATTRIBUTE]
-                logging.error(f"REPORT ERROR: Missing attribute 'show_atom_coords_action' on object")
+                logging.error(
+                    "REPORT ERROR: Missing attribute 'show_atom_coords_action' on object"
+                )
             if hasattr(self.host.init_manager, "show_atom_symbol_action"):
                 self.host.init_manager.show_atom_symbol_action.setChecked(False)
             else:  # [REPORT ERROR MISSING ATTRIBUTE]
-                logging.error(f"REPORT ERROR: Missing attribute 'show_atom_symbol_action' on object")
+                logging.error(
+                    "REPORT ERROR: Missing attribute 'show_atom_symbol_action' on object"
+                )
             self.host.statusBar().showMessage("Atom info display disabled.")
         else:
             # Set new mode
@@ -1304,19 +1387,33 @@ class View3DManager:
             if hasattr(self.host.init_manager, "show_atom_id_action"):
                 self.host.init_manager.show_atom_id_action.setChecked(mode == "id")
             else:  # [REPORT ERROR MISSING ATTRIBUTE]
-                logging.error(f"REPORT ERROR: Missing attribute 'show_atom_id_action' on object")
+                logging.error(
+                    "REPORT ERROR: Missing attribute 'show_atom_id_action' on object"
+                )
             if hasattr(self.host.init_manager, "show_rdkit_id_action"):
-                self.host.init_manager.show_rdkit_id_action.setChecked(mode == "rdkit_id")
+                self.host.init_manager.show_rdkit_id_action.setChecked(
+                    mode == "rdkit_id"
+                )
             else:  # [REPORT ERROR MISSING ATTRIBUTE]
-                logging.error(f"REPORT ERROR: Missing attribute 'show_rdkit_id_action' on object")
+                logging.error(
+                    "REPORT ERROR: Missing attribute 'show_rdkit_id_action' on object"
+                )
             if hasattr(self.host.init_manager, "show_atom_coords_action"):
-                self.host.init_manager.show_atom_coords_action.setChecked(mode == "coords")
+                self.host.init_manager.show_atom_coords_action.setChecked(
+                    mode == "coords"
+                )
             else:  # [REPORT ERROR MISSING ATTRIBUTE]
-                logging.error(f"REPORT ERROR: Missing attribute 'show_atom_coords_action' on object")
+                logging.error(
+                    "REPORT ERROR: Missing attribute 'show_atom_coords_action' on object"
+                )
             if hasattr(self.host.init_manager, "show_atom_symbol_action"):
-                self.host.init_manager.show_atom_symbol_action.setChecked(mode == "symbol")
+                self.host.init_manager.show_atom_symbol_action.setChecked(
+                    mode == "symbol"
+                )
             else:  # [REPORT ERROR MISSING ATTRIBUTE]
-                logging.error(f"REPORT ERROR: Missing attribute 'show_atom_symbol_action' on object")
+                logging.error(
+                    "REPORT ERROR: Missing attribute 'show_atom_symbol_action' on object"
+                )
 
             mode_names = {
                 "id": "Atom ID",
@@ -1334,12 +1431,17 @@ class View3DManager:
         """Determine if the current molecule is derived from an XYZ file"""
         if not self.host.view_3d_manager.current_mol:
             return False
-        if not self.host.view_3d_manager.current_mol or self.host.view_3d_manager.current_mol.GetNumAtoms() == 0:
+        if (
+            not self.host.view_3d_manager.current_mol
+            or self.host.view_3d_manager.current_mol.GetNumAtoms() == 0
+        ):
             return False
 
         try:
             # Check if the first atom has xyz_unique_id property
-            return self.host.view_3d_manager.current_mol.GetAtomWithIdx(0).HasProp("xyz_unique_id")
+            return self.host.view_3d_manager.current_mol.GetAtomWithIdx(0).HasProp(
+                "xyz_unique_id"
+            )
         except (AttributeError, RuntimeError, TypeError, ValueError):
             # Suppress non-critical property access noise
             return False
@@ -1348,7 +1450,10 @@ class View3DManager:
 
     def has_original_atom_ids(self):
         """Determine if the current molecule has Original Atom IDs"""
-        if not self.host.view_3d_manager.current_mol or self.host.view_3d_manager.current_mol.GetNumAtoms() == 0:
+        if (
+            not self.host.view_3d_manager.current_mol
+            or self.host.view_3d_manager.current_mol.GetNumAtoms() == 0
+        ):
             return False
         try:
             # Check if any atom has _original_atom_id property
@@ -1366,9 +1471,13 @@ class View3DManager:
             if self.is_xyz_derived_molecule():
                 self.host.init_manager.show_atom_id_action.setText("Show XYZ Unique ID")
             else:
-                self.host.init_manager.show_atom_id_action.setText("Show Original ID / Index")
+                self.host.init_manager.show_atom_id_action.setText(
+                    "Show Original ID / Index"
+                )
         else:  # [REPORT ERROR MISSING ATTRIBUTE]
-            logging.error(f"REPORT ERROR: Missing attribute 'show_atom_id_action' on object")
+            logging.error(
+                "REPORT ERROR: Missing attribute 'show_atom_id_action' on object"
+            )
 
     def update_atom_id_menu_state(self):
         """Update Atom ID menu enabled/disabled state"""
@@ -1377,7 +1486,9 @@ class View3DManager:
             has_xyz_ids = self.is_xyz_derived_molecule()
 
             # Enable only if Original ID or XYZ ID exists
-            self.host.init_manager.show_atom_id_action.setEnabled(has_original_ids or has_xyz_ids)
+            self.host.init_manager.show_atom_id_action.setEnabled(
+                has_original_ids or has_xyz_ids
+            )
 
             # Disable selection if the currently selected mode is no longer valid
             if (
@@ -1388,10 +1499,14 @@ class View3DManager:
                 if hasattr(self.host.init_manager, "show_atom_id_action"):
                     self.host.init_manager.show_atom_id_action.setChecked(False)
                 else:  # [REPORT ERROR MISSING ATTRIBUTE]
-                    logging.error(f"REPORT ERROR: Missing attribute 'show_atom_id_action' on object")
+                    logging.error(
+                        "REPORT ERROR: Missing attribute 'show_atom_id_action' on object"
+                    )
                 self.clear_all_atom_info_labels()
         else:  # [REPORT ERROR MISSING ATTRIBUTE]
-            logging.error(f"REPORT ERROR: Missing attribute 'show_atom_id_action' on object")
+            logging.error(
+                "REPORT ERROR: Missing attribute 'show_atom_id_action' on object"
+            )
 
     def show_all_atom_info(self):
         """Display info for all atoms"""
@@ -1424,7 +1539,9 @@ class View3DManager:
                 # Display Original ID if available, otherwise XYZ unique ID, finally RDKit index
                 try:
                     if self.host.view_3d_manager.current_mol:
-                        atom = self.host.view_3d_manager.current_mol.GetAtomWithIdx(atom_idx)
+                        atom = self.host.view_3d_manager.current_mol.GetAtomWithIdx(
+                            atom_idx
+                        )
                         if atom.HasProp("_original_atom_id"):
                             original_id = atom.GetIntProp("_original_atom_id")
                             # Remove prefix and display only the number
@@ -1454,7 +1571,9 @@ class View3DManager:
 
             elif self.atom_info_display_mode == "symbol":
                 if self.host.view_3d_manager.current_mol:
-                    symbol = self.host.view_3d_manager.current_mol.GetAtomWithIdx(atom_idx).GetSymbol()
+                    symbol = self.host.view_3d_manager.current_mol.GetAtomWithIdx(
+                        atom_idx
+                    ).GetSymbol()
                     other_positions.append(pos)
                     other_texts.append(symbol)
                 else:
@@ -1589,7 +1708,9 @@ class View3DManager:
                             except (AttributeError, RuntimeError, TypeError) as e:
                                 logging.debug(f"Failed to set bold font: {e}")
                         else:  # [REPORT ERROR MISSING ATTRIBUTE]
-                            logging.error(f"REPORT ERROR: Missing attribute 'GetTextProperty' on actor")
+                            logging.error(
+                                "REPORT ERROR: Missing attribute 'GetTextProperty' on actor"
+                            )
                     except (AttributeError, RuntimeError, TypeError) as e:
                         logging.debug(
                             f"Suppressed exception: {e}"
@@ -1618,7 +1739,9 @@ class View3DManager:
                             logging.debug(f"Failed to remove actor: {e}")
                 else:
                     try:
-                        self.host.view_3d_manager.plotter.remove_actor(self.current_atom_info_labels)
+                        self.host.view_3d_manager.plotter.remove_actor(
+                            self.current_atom_info_labels
+                        )
                     except (AttributeError, RuntimeError, TypeError) as e:
                         logging.debug(
                             f"Suppressed exception: {e}"
@@ -1709,8 +1832,12 @@ class View3DManager:
             self.host.init_manager.view_2d.setTransformationAnchor(
                 QGraphicsView.ViewportAnchor.AnchorViewCenter
             )
-            self.host.init_manager.view_2d.setResizeAnchor(QGraphicsView.ViewportAnchor.AnchorViewCenter)
-            self.host.init_manager.view_2d.fitInView(padded, Qt.AspectRatioMode.KeepAspectRatio)
+            self.host.init_manager.view_2d.setResizeAnchor(
+                QGraphicsView.ViewportAnchor.AnchorViewCenter
+            )
+            self.host.init_manager.view_2d.fitInView(
+                padded, Qt.AspectRatioMode.KeepAspectRatio
+            )
         finally:
             # Restore original anchor
             try:
@@ -1726,7 +1853,9 @@ class View3DManager:
     def apply_3d_settings(self, redraw=True):
         """Apply 3D view visual settings"""
         # Projection mode
-        proj_mode = self.host.init_manager.settings.get("projection_mode", "Perspective")
+        proj_mode = self.host.init_manager.settings.get(
+            "projection_mode", "Perspective"
+        )
         if hasattr(self.host.view_3d_manager.plotter, "renderer") and hasattr(
             self.host.view_3d_manager.plotter.renderer, "GetActiveCamera"
         ):
@@ -1734,7 +1863,7 @@ class View3DManager:
             if cam:
                 if proj_mode == "Orthographic":
                     cam.SetParallelProjection(True)
-        if not hasattr(self.host.view_3d_manager, 'plotter'):
+        if not hasattr(self.host.view_3d_manager, "plotter"):
             return
 
         # Enable renderer layers (for text overlay)
@@ -1767,18 +1896,28 @@ class View3DManager:
 
             if show_axes:
                 # Calculate contrast color from background for labels
-                bg_color_hex = self.host.init_manager.settings.get("background_color", "#919191")
+                bg_color_hex = self.host.init_manager.settings.get(
+                    "background_color", "#919191"
+                )
                 bg_qcolor = QColor(bg_color_hex)
                 label_rgb = (0, 0, 0)  # Default to black
                 if bg_qcolor.isValid():
-                    lum = (0.299 * bg_qcolor.red() + 0.587 * bg_qcolor.green() + 0.114 * bg_qcolor.blue())
+                    lum = (
+                        0.299 * bg_qcolor.red()
+                        + 0.587 * bg_qcolor.green()
+                        + 0.114 * bg_qcolor.blue()
+                    )
                     if lum < 128:
                         label_rgb = (1, 1, 1)  # White for dark backgrounds
 
                 # Create custom vtkAxesActor for label control
                 axes = vtk.vtkAxesActor()
                 # Set label text properties (normalize RGB to 0-1)
-                for axis_cap in [axes.GetXAxisCaptionActor2D(), axes.GetYAxisCaptionActor2D(), axes.GetZAxisCaptionActor2D()]:
+                for axis_cap in [
+                    axes.GetXAxisCaptionActor2D(),
+                    axes.GetYAxisCaptionActor2D(),
+                    axes.GetZAxisCaptionActor2D(),
+                ]:
                     if axis_cap and hasattr(axis_cap, "GetTextProperty"):
                         tp = axis_cap.GetTextProperty()
                         tp.SetColor(label_rgb)
@@ -1790,18 +1929,24 @@ class View3DManager:
                 # Add orientation marker widget
                 self.axes_widget = vtk.vtkOrientationMarkerWidget()
                 self.axes_widget.SetOrientationMarker(axes)
-                self.axes_widget.SetInteractor(self.host.view_3d_manager.plotter.interactor)
+                self.axes_widget.SetInteractor(
+                    self.host.view_3d_manager.plotter.interactor
+                )
                 self.axes_widget.SetViewport(0.0, 0.0, 0.2, 0.2)
                 self.axes_widget.SetEnabled(True)
                 self.axes_widget.InteractiveOff()
             else:
                 self.host.view_3d_manager.plotter.hide_axes()
-            
+
             # Re-render to show axes
             self.host.view_3d_manager.plotter.render()
-        except (AttributeError, RuntimeError, TypeError, vtk.vtkException if hasattr(vtk, "vtkException") else Exception) as e:
+        except (
+            AttributeError,
+            RuntimeError,
+            TypeError,
+            vtk.vtkException if hasattr(vtk, "vtkException") else Exception,
+        ) as e:
             logging.debug(f"Failed to toggle 3D axes: {e}")
-
 
             # Explicitly render to show change
             self.host.view_3d_manager.plotter.render()
@@ -1826,7 +1971,7 @@ class View3DManager:
             if hasattr(self.host.view_3d_manager.plotter, "update"):
                 self.host.view_3d_manager.plotter.update()
             else:  # [REPORT ERROR MISSING ATTRIBUTE]
-                logging.error(f"REPORT ERROR: Missing attribute 'update' on object")
+                logging.error("REPORT ERROR: Missing attribute 'update' on object")
         except (AttributeError, RuntimeError, TypeError) as e:
             logging.debug(
                 f"Suppressed exception: {e}"
@@ -1859,6 +2004,7 @@ class View3DManager:
 
         if self.host.view_3d_manager.current_mol:
             self.draw_molecule_3d(self.host.view_3d_manager.current_mol)
+
 
 # Set class-level marker for plugin compatibility
 View3DManager._cls = View3DManager

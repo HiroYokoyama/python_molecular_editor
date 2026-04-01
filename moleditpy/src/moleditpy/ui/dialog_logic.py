@@ -66,6 +66,7 @@ try:
 except ImportError:
     from moleditpy.utils.constants import VERSION
 
+
 class DialogManager:
     """Independent manager for UI dialogs, ported from MainWindowDialogManager mixin."""
 
@@ -77,9 +78,13 @@ class DialogManager:
         preselected_atoms = []
         if hasattr(self.host, "edit_3d_manager"):
             if self.host.edit_3d_manager.selected_atoms_for_measurement:
-                preselected_atoms = list(self.host.edit_3d_manager.selected_atoms_for_measurement)
+                preselected_atoms = list(
+                    self.host.edit_3d_manager.selected_atoms_for_measurement
+                )
         else:  # [REPORT ERROR MISSING ATTRIBUTE]
-            logging.error(f"REPORT ERROR: Missing attribute 'edit_3d_manager' on self.host")
+            logging.error(
+                "REPORT ERROR: Missing attribute 'edit_3d_manager' on self.host"
+            )
         return preselected_atoms
 
     def show_about_dialog(self):
@@ -89,7 +94,9 @@ class DialogManager:
 
     def open_periodic_table_dialog(self):
         dialog = PeriodicTableDialog(self.host)
-        dialog.element_selected.connect(self.host.ui_manager.set_atom_from_periodic_table)
+        dialog.element_selected.connect(
+            self.host.ui_manager.set_atom_from_periodic_table
+        )
         checked_action = self.host.init_manager.tool_group.checkedAction()
         if checked_action:
             self.host.init_manager.tool_group.setExclusive(False)
@@ -170,7 +177,9 @@ class DialogManager:
 
         try:
             # Template directory
-            template_dir = os.path.join(self.host.init_manager.settings_dir, "user-templates")
+            template_dir = os.path.join(
+                self.host.init_manager.settings_dir, "user-templates"
+            )
             if not os.path.exists(template_dir):
                 os.makedirs(template_dir)
             # Convert current structure to template format using core method
@@ -219,7 +228,10 @@ class DialogManager:
         preselected_atoms = self._get_preselected_atoms_3d()
 
         dialog = TranslationDialog(
-            self.host.view_3d_manager.current_mol, self.host, preselected_atoms, parent=self.host
+            self.host.view_3d_manager.current_mol,
+            self.host,
+            preselected_atoms,
+            parent=self.host,
         )
         self.host.edit_3d_manager.active_3d_dialogs.append(dialog)  # Keep reference
         dialog.show()  # Use show for modeless display
@@ -227,7 +239,9 @@ class DialogManager:
             lambda: self.host.statusBar().showMessage("Translation applied.")
         )
         dialog.accepted.connect(self.host.edit_actions_manager.push_undo_state)
-        dialog.finished.connect(lambda: self.host.edit_3d_manager.remove_dialog_from_list(dialog))
+        dialog.finished.connect(
+            lambda: self.host.edit_3d_manager.remove_dialog_from_list(dialog)
+        )
 
     def open_move_group_dialog(self):
         """Open Move Group dialog"""
@@ -240,7 +254,10 @@ class DialogManager:
         preselected_atoms = self._get_preselected_atoms_3d()
 
         dialog = MoveGroupDialog(
-            self.host.view_3d_manager.current_mol, self.host, preselected_atoms, parent=self.host
+            self.host.view_3d_manager.current_mol,
+            self.host,
+            preselected_atoms,
+            parent=self.host,
         )
         self.host.edit_3d_manager.active_3d_dialogs.append(dialog)
         dialog.show()
@@ -248,7 +265,9 @@ class DialogManager:
             lambda: self.host.statusBar().showMessage("Group transformation applied.")
         )
         dialog.accepted.connect(self.host.edit_actions_manager.push_undo_state)
-        dialog.finished.connect(lambda: self.host.edit_3d_manager.remove_dialog_from_list(dialog))
+        dialog.finished.connect(
+            lambda: self.host.edit_3d_manager.remove_dialog_from_list(dialog)
+        )
 
     def open_align_plane_dialog(self, plane):
         """Open align dialog"""
@@ -261,7 +280,11 @@ class DialogManager:
             self.host.edit_3d_manager.toggle_measurement_mode(False)
 
         dialog = AlignPlaneDialog(
-            self.host.view_3d_manager.current_mol, self.host, plane, preselected_atoms, parent=self.host
+            self.host.view_3d_manager.current_mol,
+            self.host,
+            plane,
+            preselected_atoms,
+            parent=self.host,
         )
         self.host.edit_3d_manager.active_3d_dialogs.append(dialog)
         dialog.show()
@@ -271,7 +294,9 @@ class DialogManager:
             )
         )
         dialog.accepted.connect(self.host.edit_actions_manager.push_undo_state)
-        dialog.finished.connect(lambda: self.host.edit_3d_manager.remove_dialog_from_list(dialog))
+        dialog.finished.connect(
+            lambda: self.host.edit_3d_manager.remove_dialog_from_list(dialog)
+        )
 
     def open_planarize_dialog(self, plane=None):
         """Open dialog to project selected atoms to the best-fit plane"""
@@ -284,7 +309,10 @@ class DialogManager:
             self.host.edit_3d_manager.toggle_measurement_mode(False)
 
         dialog = PlanarizeDialog(
-            self.host.view_3d_manager.current_mol, self.host, preselected_atoms, parent=self.host
+            self.host.view_3d_manager.current_mol,
+            self.host,
+            preselected_atoms,
+            parent=self.host,
         )
         self.host.edit_3d_manager.active_3d_dialogs.append(dialog)
         dialog.show()
@@ -294,7 +322,9 @@ class DialogManager:
             )
         )
         dialog.accepted.connect(self.host.edit_actions_manager.push_undo_state)
-        dialog.finished.connect(lambda: self.host.edit_3d_manager.remove_dialog_from_list(dialog))
+        dialog.finished.connect(
+            lambda: self.host.edit_3d_manager.remove_dialog_from_list(dialog)
+        )
 
     def open_alignment_dialog(self, axis):
         """Open alignment dialog"""
@@ -307,7 +337,11 @@ class DialogManager:
             self.host.edit_3d_manager.toggle_measurement_mode(False)
 
         dialog = AlignmentDialog(
-            self.host.view_3d_manager.current_mol, self.host, axis, preselected_atoms, parent=self.host
+            self.host.view_3d_manager.current_mol,
+            self.host,
+            axis,
+            preselected_atoms,
+            parent=self.host,
         )
         self.host.edit_3d_manager.active_3d_dialogs.append(dialog)
         dialog.show()
@@ -317,7 +351,9 @@ class DialogManager:
             )
         )
         dialog.accepted.connect(self.host.edit_actions_manager.push_undo_state)
-        dialog.finished.connect(lambda: self.host.edit_3d_manager.remove_dialog_from_list(dialog))
+        dialog.finished.connect(
+            lambda: self.host.edit_3d_manager.remove_dialog_from_list(dialog)
+        )
 
     def open_bond_length_dialog(self):
         """Open bond length adjustment dialog"""
@@ -330,7 +366,10 @@ class DialogManager:
             self.host.edit_3d_manager.toggle_measurement_mode(False)
 
         dialog = BondLengthDialog(
-            self.host.view_3d_manager.current_mol, self.host, preselected_atoms, parent=self.host
+            self.host.view_3d_manager.current_mol,
+            self.host,
+            preselected_atoms,
+            parent=self.host,
         )
         self.host.edit_3d_manager.active_3d_dialogs.append(dialog)
         dialog.show()
@@ -338,7 +377,9 @@ class DialogManager:
             lambda: self.host.statusBar().showMessage("Bond length adjusted.")
         )
         dialog.accepted.connect(self.host.edit_actions_manager.push_undo_state)
-        dialog.finished.connect(lambda: self.host.edit_3d_manager.remove_dialog_from_list(dialog))
+        dialog.finished.connect(
+            lambda: self.host.edit_3d_manager.remove_dialog_from_list(dialog)
+        )
 
     def open_angle_dialog(self):
         """Open angle adjustment dialog"""
@@ -351,7 +392,10 @@ class DialogManager:
             self.host.edit_3d_manager.toggle_measurement_mode(False)
 
         dialog = AngleDialog(
-            self.host.view_3d_manager.current_mol, self.host, preselected_atoms, parent=self.host
+            self.host.view_3d_manager.current_mol,
+            self.host,
+            preselected_atoms,
+            parent=self.host,
         )
         self.host.edit_3d_manager.active_3d_dialogs.append(dialog)
         dialog.show()
@@ -359,7 +403,9 @@ class DialogManager:
             lambda: self.host.statusBar().showMessage("Angle adjusted.")
         )
         dialog.accepted.connect(self.host.edit_actions_manager.push_undo_state)
-        dialog.finished.connect(lambda: self.host.edit_3d_manager.remove_dialog_from_list(dialog))
+        dialog.finished.connect(
+            lambda: self.host.edit_3d_manager.remove_dialog_from_list(dialog)
+        )
 
     def open_dihedral_dialog(self):
         """Open dihedral angle adjustment dialog"""
@@ -372,7 +418,10 @@ class DialogManager:
             self.host.edit_3d_manager.toggle_measurement_mode(False)
 
         dialog = DihedralDialog(
-            self.host.view_3d_manager.current_mol, self.host, preselected_atoms, parent=self.host
+            self.host.view_3d_manager.current_mol,
+            self.host,
+            preselected_atoms,
+            parent=self.host,
         )
         self.host.edit_3d_manager.active_3d_dialogs.append(dialog)
         dialog.show()
@@ -380,7 +429,9 @@ class DialogManager:
             lambda: self.host.statusBar().showMessage("Dihedral angle adjusted.")
         )
         dialog.accepted.connect(self.host.edit_actions_manager.push_undo_state)
-        dialog.finished.connect(lambda: self.host.edit_3d_manager.remove_dialog_from_list(dialog))
+        dialog.finished.connect(
+            lambda: self.host.edit_3d_manager.remove_dialog_from_list(dialog)
+        )
 
     def open_mirror_dialog(self):
         """Open mirror function dialog"""
@@ -422,4 +473,6 @@ class DialogManager:
         )
         self.host.edit_3d_manager.active_3d_dialogs.append(dialog)
         dialog.show()
-        dialog.finished.connect(lambda: self.host.edit_3d_manager.remove_dialog_from_list(dialog))
+        dialog.finished.connect(
+            lambda: self.host.edit_3d_manager.remove_dialog_from_list(dialog)
+        )

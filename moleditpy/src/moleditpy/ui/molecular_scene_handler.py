@@ -13,7 +13,7 @@ DOI: 10.5281/zenodo.17268532
 from __future__ import annotations
 import math
 import logging
-from typing import Any, Dict, List, Optional, Set, Tuple, Union
+from typing import Any, List, Optional, Tuple, Union
 
 from PyQt6.QtCore import Qt, QPointF, QLineF, QRectF
 from PyQt6.QtGui import QCursor
@@ -39,6 +39,7 @@ except ImportError:
         SNAP_DISTANCE,
         SUM_TOLERANCE,
     )
+
 
 class TemplateMixin:
     """
@@ -67,9 +68,14 @@ class TemplateMixin:
         if hasattr(self, "template_preview"):
             self.template_preview.hide()
         else:  # [REPORT ERROR MISSING ATTRIBUTE]
-            logging.error(f"REPORT ERROR: Missing attribute 'template_preview' on self")
+            logging.error("REPORT ERROR: Missing attribute 'template_preview' on self")
 
-    def _calculate_6ring_rotation(self, num_points: int, bonds_info: List[Tuple[int, int, int]], atom_items: List[Optional[AtomItem]]) -> int:
+    def _calculate_6ring_rotation(
+        self,
+        num_points: int,
+        bonds_info: List[Tuple[int, int, int]],
+        atom_items: List[Optional[AtomItem]],
+    ) -> int:
         """
         Calculate the best rotation for a 6-ring template (like benzene)
         to match existing bond orders and ensure chemical safety.
@@ -535,7 +541,12 @@ class TemplateMixin:
                         atom1_item = self.data.atoms[atom1_id]["item"]
                         atom2_item = self.data.atoms[atom2_id]["item"]
                         if atom1_item and atom2_item:
-                            self.create_bond(atom1_item, atom2_item, bond_order=order, bond_stereo=stereo)
+                            self.create_bond(
+                                atom1_item,
+                                atom2_item,
+                                bond_order=order,
+                                bond_stereo=stereo,
+                            )
 
         # Update atom visuals
         for atom_id in atom_id_map.values():
@@ -759,7 +770,9 @@ class KeyboardMixin:
 
                 # Case 2: Cursor over empty space (mode switch)
                 else:
-                    self.window.ui_manager.set_mode_and_update_toolbar("template_benzene")
+                    self.window.ui_manager.set_mode_and_update_toolbar(
+                        "template_benzene"
+                    )
 
                 event.accept()
                 return
@@ -1142,11 +1155,14 @@ class KeyboardMixin:
                     event.accept()
                     return
                 else:  # [REPORT ERROR MISSING ATTRIBUTE]
-                    logging.error(f"REPORT ERROR: Missing attribute 'set_mode_and_update_toolbar' on object")
+                    logging.error(
+                        "REPORT ERROR: Missing attribute 'set_mode_and_update_toolbar' on object"
+                    )
 
             # Correctly delegate to the base class (QGraphicsScene) directly
             # to avoid MRO issues in complex Mixin inheritance structures.
             from PyQt6.QtWidgets import QGraphicsScene
+
             QGraphicsScene.keyPressEvent(self, event)
 
         except (AttributeError, RuntimeError, ValueError, TypeError) as e:
@@ -1194,21 +1210,27 @@ class SceneQueryMixin:
                 if hasattr(start_atom, "bonds"):
                     start_atom.bonds.append(bond_item)
                 else:  # [REPORT ERROR MISSING ATTRIBUTE]
-                    logging.error(f"REPORT ERROR: Missing attribute 'bonds' on start_atom")
+                    logging.error(
+                        "REPORT ERROR: Missing attribute 'bonds' on start_atom"
+                    )
                 if hasattr(end_atom, "bonds"):
                     end_atom.bonds.append(bond_item)
                 else:  # [REPORT ERROR MISSING ATTRIBUTE]
-                    logging.error(f"REPORT ERROR: Missing attribute 'bonds' on end_atom")
+                    logging.error("REPORT ERROR: Missing attribute 'bonds' on end_atom")
                 self.addItem(bond_item)
 
             if hasattr(start_atom, "update_style"):
                 start_atom.update_style()
             else:  # [REPORT ERROR MISSING ATTRIBUTE]
-                logging.error(f"REPORT ERROR: Missing attribute 'update_style' on start_atom")
+                logging.error(
+                    "REPORT ERROR: Missing attribute 'update_style' on start_atom"
+                )
             if hasattr(end_atom, "update_style"):
                 end_atom.update_style()
             else:  # [REPORT ERROR MISSING ATTRIBUTE]
-                logging.error(f"REPORT ERROR: Missing attribute 'update_style' on end_atom")
+                logging.error(
+                    "REPORT ERROR: Missing attribute 'update_style' on end_atom"
+                )
 
         except (AttributeError, RuntimeError, ValueError) as e:
             logging.error(f"Error creating bond: {e}", exc_info=True)
@@ -1267,7 +1289,9 @@ class SceneQueryMixin:
                 if hasattr(atom, "update_style"):
                     atom.update_style()
                 else:  # [REPORT ERROR MISSING ATTRIBUTE]
-                    logging.error(f"REPORT ERROR: Missing attribute 'update_style' on atom")
+                    logging.error(
+                        "REPORT ERROR: Missing attribute 'update_style' on atom"
+                    )
 
             # 3. Remove from data model
             for bond in list(bonds_to_delete):
@@ -1334,7 +1358,9 @@ class SceneQueryMixin:
                 if hasattr(atom, "update_style"):
                     atom.update_style()
                 else:  # [REPORT ERROR MISSING ATTRIBUTE]
-                    logging.error(f"REPORT ERROR: Missing attribute 'update_style' on atom")
+                    logging.error(
+                        "REPORT ERROR: Missing attribute 'update_style' on atom"
+                    )
 
             self.update_all_items()
             return True
@@ -1394,7 +1420,9 @@ class SceneQueryMixin:
                             f"Warning: Bond {id1}-{id2} not found in model.", 3000
                         )
                     else:  # [REPORT ERROR MISSING ATTRIBUTE]
-                        logging.error(f"REPORT ERROR: Missing attribute 'statusBar' on self.window")
+                        logging.error(
+                            "REPORT ERROR: Missing attribute 'statusBar' on self.window"
+                        )
                     return
 
             # Update data model and visual representation
@@ -1409,5 +1437,7 @@ class SceneQueryMixin:
             if hasattr(self.window, "statusBar"):
                 self.window.statusBar().showMessage(f"Error: {e}", 5000)
             else:  # [REPORT ERROR MISSING ATTRIBUTE]
-                logging.error(f"REPORT ERROR: Missing attribute 'statusBar' on self.window")
+                logging.error(
+                    "REPORT ERROR: Missing attribute 'statusBar' on self.window"
+                )
             self.update_all_items()

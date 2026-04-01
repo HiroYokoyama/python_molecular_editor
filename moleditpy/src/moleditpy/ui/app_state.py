@@ -195,12 +195,18 @@ class StateManager:
             self.host.init_manager.scene.addItem(atom_item)
 
         self.host.state_manager.data._next_atom_id = loaded_data.get(
-            "_next_atom_id", max(self.host.state_manager.data.atoms.keys()) + 1 if self.host.state_manager.data.atoms else 0
+            "_next_atom_id",
+            max(self.host.state_manager.data.atoms.keys()) + 1
+            if self.host.state_manager.data.atoms
+            else 0,
         )
 
         for key_tuple, data in raw_bonds.items():
             id1, id2 = key_tuple
-            if id1 in self.host.state_manager.data.atoms and id2 in self.host.state_manager.data.atoms:
+            if (
+                id1 in self.host.state_manager.data.atoms
+                and id2 in self.host.state_manager.data.atoms
+            ):
                 atom1_item = self.host.state_manager.data.atoms[id1]["item"]
                 atom2_item = self.host.state_manager.data.atoms[id2]["item"]
                 bond_item = BondItem(
@@ -224,16 +230,22 @@ class StateManager:
             try:
                 self.host.view_3d_manager.current_mol = Chem.Mol(mol_3d_data)
                 # Debug: check if 3D structure is valid
-                if self.host.view_3d_manager.current_mol and self.host.view_3d_manager.current_mol.GetNumAtoms() > 0:
+                if (
+                    self.host.view_3d_manager.current_mol
+                    and self.host.view_3d_manager.current_mol.GetNumAtoms() > 0
+                ):
                     # Restore _original_atom_id if present in saved state
                     mol_3d_atom_ids = loaded_data.get("mol_3d_atom_ids")
                     if (
                         mol_3d_atom_ids
-                        and len(mol_3d_atom_ids) == self.host.view_3d_manager.current_mol.GetNumAtoms()
+                        and len(mol_3d_atom_ids)
+                        == self.host.view_3d_manager.current_mol.GetNumAtoms()
                     ):
                         for i, aid in enumerate(mol_3d_atom_ids):
                             if aid is not None:
-                                rd_atom = self.host.view_3d_manager.current_mol.GetAtomWithIdx(i)
+                                rd_atom = self.host.view_3d_manager.current_mol.GetAtomWithIdx(
+                                    i
+                                )
                                 if rd_atom:
                                     try:
                                         rd_atom.SetIntProp(
@@ -254,9 +266,11 @@ class StateManager:
                             )
 
                     # draw_molecule_3d will use restored IDs
-                    self.host.view_3d_manager.draw_molecule_3d(self.host.view_3d_manager.current_mol)
+                    self.host.view_3d_manager.draw_molecule_3d(
+                        self.host.view_3d_manager.current_mol
+                    )
                     if (
-                        hasattr(self.host.view_3d_manager, 'plotter')
+                        hasattr(self.host.view_3d_manager, "plotter")
                         and self.host.view_3d_manager.plotter
                         and hasattr(self.host.view_3d_manager.plotter, "reset_camera")
                     ):
@@ -266,13 +280,18 @@ class StateManager:
                     self.host.view_3d_manager.setup_3d_hover()
                 else:
                     self.host.view_3d_manager.current_mol = None
-                    if hasattr(self.host.view_3d_manager, 'plotter') and self.host.view_3d_manager.plotter:
+                    if (
+                        hasattr(self.host.view_3d_manager, "plotter")
+                        and self.host.view_3d_manager.plotter
+                    ):
                         self.host.view_3d_manager.plotter.clear()
                     self.host.ui_manager._enable_3d_features(False)
             except (RuntimeError, ValueError, TypeError) as e:
                 logging.error(f"Could not load 3D model from state data: {e}")
                 if hasattr(self.host, "statusBar") and self.host.statusBar():
-                    self.host.statusBar().showMessage(f"Error loading 3D model: {e}", 5000)
+                    self.host.statusBar().showMessage(
+                        f"Error loading 3D model: {e}", 5000
+                    )
                 self.host.view_3d_manager.current_mol = None
                 self.host.ui_manager._enable_3d_features(False)
 
@@ -293,7 +312,10 @@ class StateManager:
         else:
             self.host.ui_manager.restore_ui_for_editing()
             # Enable 3D edit features even in 2D editor mode if 3D molecule exists
-            if self.host.view_3d_manager.current_mol and self.host.view_3d_manager.current_mol.GetNumAtoms() > 0:
+            if (
+                self.host.view_3d_manager.current_mol
+                and self.host.view_3d_manager.current_mol.GetNumAtoms() > 0
+            ):
                 self.host.ui_manager._enable_3d_edit_actions(True)
 
         # Update labels after undo/redo
@@ -322,7 +344,10 @@ class StateManager:
         if not self.host.state_manager.has_unsaved_changes:
             return True  # Saved or no changes
 
-        if not self.host.state_manager.data.atoms and self.host.view_3d_manager.current_mol is None:
+        if (
+            not self.host.state_manager.data.atoms
+            and self.host.view_3d_manager.current_mol is None
+        ):
             return True  # Empty document
 
         reply = QMessageBox.question(
@@ -361,7 +386,7 @@ class StateManager:
             self.host.init_manager.formula_label.setText("")  # Clear label if no atoms
             return
 
-        if hasattr(self, 'data') and self.data and hasattr(self.data, "to_rdkit_mol"):
+        if hasattr(self, "data") and self.data and hasattr(self.data, "to_rdkit_mol"):
             try:
                 mol = self.data.to_rdkit_mol()
                 if mol:
@@ -379,7 +404,10 @@ class StateManager:
                 logging.debug(
                     f"Molecular info update suppressed for unstable structure: {e}"
                 )
-                if hasattr(self.host, "formula_label") and self.host.init_manager.formula_label:
+                if (
+                    hasattr(self.host, "formula_label")
+                    and self.host.init_manager.formula_label
+                ):
                     self.host.init_manager.formula_label.setText("Invalid structure")
 
     def create_json_data(self):
@@ -410,7 +438,10 @@ class StateManager:
                 atoms_2d.append(atom_data)
 
             bonds_2d = []
-            for (atom1_id, atom2_id), bond_data in self.host.state_manager.data.bonds.items():
+            for (
+                atom1_id,
+                atom2_id,
+            ), bond_data in self.host.state_manager.data.bonds.items():
                 bond_info = {
                     "atom1": atom1_id,
                     "atom2": atom2_id,
@@ -426,7 +457,10 @@ class StateManager:
             }
 
         # 3D data
-        if self.host.view_3d_manager.current_mol and self.host.view_3d_manager.current_mol.GetNumConformers() > 0:
+        if (
+            self.host.view_3d_manager.current_mol
+            and self.host.view_3d_manager.current_mol.GetNumConformers() > 0
+        ):
             try:
                 # Save as Base64 encoded binary
                 mol_binary = self.host.view_3d_manager.current_mol.ToBinary()
@@ -507,14 +541,20 @@ class StateManager:
                 json_data["molecular_info"] = {
                     "num_atoms": self.host.view_3d_manager.current_mol.GetNumAtoms(),
                     "num_bonds": self.host.view_3d_manager.current_mol.GetNumBonds(),
-                    "molecular_weight": Descriptors.MolWt(self.host.view_3d_manager.current_mol),
-                    "formula": rdMolDescriptors.CalcMolFormula(self.host.view_3d_manager.current_mol),
+                    "molecular_weight": Descriptors.MolWt(
+                        self.host.view_3d_manager.current_mol
+                    ),
+                    "formula": rdMolDescriptors.CalcMolFormula(
+                        self.host.view_3d_manager.current_mol
+                    ),
                 }
 
                 # Identifiers (SMILES/InChI)
                 try:
                     json_data["identifiers"] = {
-                        "smiles": Chem.MolToSmiles(self.host.view_3d_manager.current_mol),
+                        "smiles": Chem.MolToSmiles(
+                            self.host.view_3d_manager.current_mol
+                        ),
                         "canonical_smiles": Chem.MolToSmiles(
                             self.host.view_3d_manager.current_mol, canonical=True
                         ),
@@ -523,7 +563,9 @@ class StateManager:
                     # Attempt InChI generation
                     try:
                         inchi = Chem.MolToInchi(self.host.view_3d_manager.current_mol)
-                        inchi_key = Chem.MolToInchiKey(self.host.view_3d_manager.current_mol)
+                        inchi_key = Chem.MolToInchiKey(
+                            self.host.view_3d_manager.current_mol
+                        )
                         json_data["identifiers"]["inchi"] = inchi
                         json_data["identifiers"]["inchi_key"] = inchi_key
                     except (AttributeError, RuntimeError, TypeError, ValueError):
@@ -586,7 +628,9 @@ class StateManager:
             if hasattr(self.host, "compute_manager"):
                 self.host.compute_manager.last_successful_optimization_method = method
             else:  # [REPORT ERROR MISSING ATTRIBUTE]
-                logging.error(f"REPORT ERROR: Missing attribute 'compute_manager' on self.host")
+                logging.error(
+                    "REPORT ERROR: Missing attribute 'compute_manager' on self.host"
+                )
         except (AttributeError, RuntimeError, TypeError):
             pass
 
@@ -649,7 +693,10 @@ class StateManager:
                 atom1_id = bond_data["atom1"]
                 atom2_id = bond_data["atom2"]
 
-                if atom1_id in self.host.state_manager.data.atoms and atom2_id in self.host.state_manager.data.atoms:
+                if (
+                    atom1_id in self.host.state_manager.data.atoms
+                    and atom2_id in self.host.state_manager.data.atoms
+                ):
                     atom1_item = self.host.state_manager.data.atoms[atom1_id]["item"]
                     atom2_item = self.host.state_manager.data.atoms[atom2_id]["item"]
 
@@ -710,11 +757,15 @@ class StateManager:
                             # Ensure numpy array size matches atoms in file
                             num_atoms_file = len(atoms_3d)
                             if num_atoms_file > 0:
-                                self.host.view_3d_manager.atom_positions_3d = np.zeros((num_atoms_file, 3))
+                                self.host.view_3d_manager.atom_positions_3d = np.zeros(
+                                    (num_atoms_file, 3)
+                                )
                                 for atom_data in atoms_3d:
                                     idx = atom_data.get("index", -1)
                                     if 0 <= idx < num_atoms_file:
-                                        self.host.view_3d_manager.atom_positions_3d[idx] = [
+                                        self.host.view_3d_manager.atom_positions_3d[
+                                            idx
+                                        ] = [
                                             atom_data.get("x", 0.0),
                                             atom_data.get("y", 0.0),
                                             atom_data.get("z", 0.0),
@@ -723,8 +774,8 @@ class StateManager:
                                         original_id = atom_data.get("original_id")
                                         if original_id is not None:
                                             try:
-                                                rd_atom = (
-                                                    self.host.view_3d_manager.current_mol.GetAtomWithIdx(idx)
+                                                rd_atom = self.host.view_3d_manager.current_mol.GetAtomWithIdx(
+                                                    idx
                                                 )
                                                 if rd_atom:
                                                     rd_atom.SetIntProp(
@@ -740,38 +791,60 @@ class StateManager:
                                                 pass
 
                             # Build mapping
-                            if hasattr(self.host.compute_manager, "create_atom_id_mapping"):
+                            if hasattr(
+                                self.host.compute_manager, "create_atom_id_mapping"
+                            ):
                                 try:
                                     self.host.compute_manager.create_atom_id_mapping()
-                                    if hasattr(self.host.view_3d_manager, "update_atom_id_menu_text"):
+                                    if hasattr(
+                                        self.host.view_3d_manager,
+                                        "update_atom_id_menu_text",
+                                    ):
                                         self.host.view_3d_manager.update_atom_id_menu_text()
                                     else:  # [REPORT ERROR MISSING ATTRIBUTE]
-                                        logging.error(f"REPORT ERROR: Missing attribute 'update_atom_id_menu_text' on object")
-                                    if hasattr(self.host.view_3d_manager, "update_atom_id_menu_state"):
+                                        logging.error(
+                                            "REPORT ERROR: Missing attribute 'update_atom_id_menu_text' on object"
+                                        )
+                                    if hasattr(
+                                        self.host.view_3d_manager,
+                                        "update_atom_id_menu_state",
+                                    ):
                                         self.host.view_3d_manager.update_atom_id_menu_state()
                                     else:  # [REPORT ERROR MISSING ATTRIBUTE]
-                                        logging.error(f"REPORT ERROR: Missing attribute 'update_atom_id_menu_state' on object")
+                                        logging.error(
+                                            "REPORT ERROR: Missing attribute 'update_atom_id_menu_state' on object"
+                                        )
                                 except (RuntimeError, TypeError, AttributeError):
                                     pass
                             else:  # [REPORT ERROR MISSING ATTRIBUTE]
-                                logging.error(f"REPORT ERROR: Missing attribute 'create_atom_id_mapping' on object")
+                                logging.error(
+                                    "REPORT ERROR: Missing attribute 'create_atom_id_mapping' on object"
+                                )
 
                         # Always show 3D if 3D molecule exists
                         if hasattr(self.host.view_3d_manager, "draw_molecule_3d"):
-                            self.host.view_3d_manager.draw_molecule_3d(self.host.view_3d_manager.current_mol)
+                            self.host.view_3d_manager.draw_molecule_3d(
+                                self.host.view_3d_manager.current_mol
+                            )
                         else:  # [REPORT ERROR MISSING ATTRIBUTE]
-                            logging.error(f"REPORT ERROR: Missing attribute 'draw_molecule_3d' on object")
+                            logging.error(
+                                "REPORT ERROR: Missing attribute 'draw_molecule_3d' on object"
+                            )
 
                         # Switch UI in Viewer mode
-                        if is_3d_mode and hasattr(self.host.ui_manager, "_enter_3d_viewer_ui_mode"):
+                        if is_3d_mode and hasattr(
+                            self.host.ui_manager, "_enter_3d_viewer_ui_mode"
+                        ):
                             self.host.ui_manager._enter_3d_viewer_ui_mode()
                         else:
                             self.host.ui_manager.is_2d_editable = True
 
                         if (
-                            hasattr(self.host.view_3d_manager, 'plotter')
+                            hasattr(self.host.view_3d_manager, "plotter")
                             and self.host.view_3d_manager.plotter
-                            and hasattr(self.host.view_3d_manager.plotter, "reset_camera")
+                            and hasattr(
+                                self.host.view_3d_manager.plotter, "reset_camera"
+                            )
                         ):
                             self.host.view_3d_manager.plotter.reset_camera()
 

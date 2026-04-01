@@ -6,10 +6,10 @@
 [![Python Versions](https://img.shields.io/pypi/pyversions/MoleditPy.svg)](https://pypi.org/project/MoleditPy/)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![Build Status](https://github.com/HiroYokoyama/python_molecular_editor/actions/workflows/tests.yml/badge.svg)](https://github.com/HiroYokoyama/python_molecular_editor/actions)
-![Core Logic Coverage](https://img.shields.io/badge/core_logic_coverage-80%25-green)
-![Overall Coverage](https://img.shields.io/badge/coverage-64%25-green)
+![Core Logic Coverage](https://img.shields.io/badge/core_logic_coverage-75%25-green)
+![Overall Coverage](https://img.shields.io/badge/coverage-67%25-green)
 ![GUI Status](https://img.shields.io/badge/GUI-Manually_Verified-blue)
-![Pylint Score](https://img.shields.io/badge/pylint-8.93%2F10-brightgreen)
+![Pylint Score](https://img.shields.io/badge/pylint-9%2F10-brightgreen)
 [![PyPI Downloads](https://static.pepy.tech/personalized-badge/moleditpy?period=total&units=INTERNATIONAL_SYSTEM&left_color=BLACK&right_color=GREEN&left_text=downloads)](https://pepy.tech/projects/moleditpy)
 
 [🇯🇵 日本語 (Japanese)](#japanese)

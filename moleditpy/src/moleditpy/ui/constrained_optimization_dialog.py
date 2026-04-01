@@ -104,7 +104,9 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
             # <<< Load current optimization settings from MainWindow as defaults >>>
         try:
             # Add fallback for None case
-            current_method_str = self.main_window.init_manager.optimization_method or "MMFF_RDKIT"
+            current_method_str = (
+                self.main_window.init_manager.optimization_method or "MMFF_RDKIT"
+            )
             current_method = current_method_str.upper()
 
             # 1. UFF_RDKIT
@@ -414,7 +416,9 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
         positions = []
         texts = []
         for i, atom_idx in enumerate(atom_indices):
-            positions.append(self.main_window.view_3d_manager.atom_positions_3d[atom_idx])
+            positions.append(
+                self.main_window.view_3d_manager.atom_positions_3d[atom_idx]
+            )
             texts.append(labels[i])
 
         if positions:
@@ -535,7 +539,11 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
             # Apply optimized coordinates to the main window's numpy array
             for i in range(self.mol.GetNumAtoms()):
                 pos = conf.GetAtomPosition(i)
-                self.main_window.view_3d_manager.atom_positions_3d[i] = [pos.x, pos.y, pos.z]
+                self.main_window.view_3d_manager.atom_positions_3d[i] = [
+                    pos.x,
+                    pos.y,
+                    pos.z,
+                ]
 
             # Update 3D view
             self.main_window.view_3d_manager.draw_molecule_3d(self.mol)
@@ -570,8 +578,13 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
                         )
 
                 # Update MainWindow only if changed
-                if self.main_window.edit_3d_manager.constraints_3d != json_safe_constraints:
-                    self.main_window.edit_3d_manager.constraints_3d = json_safe_constraints
+                if (
+                    self.main_window.edit_3d_manager.constraints_3d
+                    != json_safe_constraints
+                ):
+                    self.main_window.edit_3d_manager.constraints_3d = (
+                        json_safe_constraints
+                    )
                     self.main_window.state_manager.has_unsaved_changes = (
                         True  # Mark as unsaved changes
                     )
@@ -611,7 +624,9 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
             # Update MainWindow only if changed
             if self.main_window.edit_3d_manager.constraints_3d != json_safe_constraints:
                 self.main_window.edit_3d_manager.constraints_3d = json_safe_constraints
-                self.main_window.state_manager.has_unsaved_changes = True  # Mark as unsaved changes
+                self.main_window.state_manager.has_unsaved_changes = (
+                    True  # Mark as unsaved changes
+                )
                 self.main_window.state_manager.update_window_title()
 
         except (AttributeError, RuntimeError, ValueError, TypeError) as e:
@@ -644,7 +659,9 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
 
         for i, atom_idx in enumerate(self.selected_atoms):
             if atom_idx is not None and 0 <= atom_idx <= max_idx:
-                positions.append(self.main_window.view_3d_manager.atom_positions_3d[atom_idx])
+                positions.append(
+                    self.main_window.view_3d_manager.atom_positions_3d[atom_idx]
+                )
                 texts.append(f"A{i + 1}")
             elif atom_idx is not None:
                 # Log invalid index (for debugging)

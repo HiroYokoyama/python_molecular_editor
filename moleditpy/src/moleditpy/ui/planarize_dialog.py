@@ -10,7 +10,6 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
-import logging
 import numpy as np
 from PyQt6.QtWidgets import (
     QHBoxLayout,
@@ -19,7 +18,6 @@ from PyQt6.QtWidgets import (
     QPushButton,
     QVBoxLayout,
 )
-from rdkit import Geometry
 
 try:
     from .base_picking_dialog import BasePickingDialog
@@ -121,7 +119,7 @@ class PlanarizeDialog(BasePickingDialog):
             else:
                 self.selected_atoms = (
                     set(self.main_window.state_manager.data.atoms.keys())
-                    if hasattr(self.main_window.state_manager, 'data')
+                    if hasattr(self.main_window.state_manager, "data")
                     else set()
                 )
 
@@ -179,7 +177,7 @@ class PlanarizeDialog(BasePickingDialog):
             positions = self.mol.GetConformer().GetPositions()
             for i, new_pos in zip(selected_indices, new_positions):
                 positions[int(i)] = new_pos
- 
+
             # Write updated positions back using inherited helper
             self._update_molecule_geometry(positions)
 

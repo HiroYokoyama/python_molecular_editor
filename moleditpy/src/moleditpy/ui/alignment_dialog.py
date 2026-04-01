@@ -10,7 +10,6 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
-import logging
 import numpy as np
 from PyQt6.QtWidgets import (
     QDialog,
@@ -128,9 +127,7 @@ class AlignmentDialog(Dialog3DPickingMixin, QDialog):
         elif len(self.selected_atoms) == 1:
             selected_list = list(self.selected_atoms)
             atom = self.mol.GetAtomWithIdx(selected_list[0])
-            self.selection_label.setText(
-                f"Selected 1 atom: {atom.GetSymbol()}"
-            )
+            self.selection_label.setText(f"Selected 1 atom: {atom.GetSymbol()}")
             self.apply_button.setEnabled(False)
         elif len(self.selected_atoms) == 2:
             selected_list = sorted(list(self.selected_atoms))

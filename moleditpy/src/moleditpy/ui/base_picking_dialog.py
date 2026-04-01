@@ -31,7 +31,9 @@ class BasePickingDialog(Dialog3DPickingMixin, QDialog):
         Dialog3DPickingMixin.__init__(self)
         self.mol = mol
         self.main_window = main_window
-        self._molecule_modified = False  # Track if any modifications were made during this session
+        self._molecule_modified = (
+            False  # Track if any modifications were made during this session
+        )
 
     def keyPressEvent(self, event):
         """Standard keyboard handler: Enter/Return triggers 'Apply'."""
@@ -67,6 +69,7 @@ class BasePickingDialog(Dialog3DPickingMixin, QDialog):
         :param positions: A numpy array or dictionary of all atom positions.
         """
         from rdkit import Geometry
+
         conf = self.mol.GetConformer()
         num_atoms = conf.GetNumAtoms()
 
@@ -97,12 +100,14 @@ class BasePickingDialog(Dialog3DPickingMixin, QDialog):
         # 3. Redraw
         self.main_window.view_3d_manager.draw_molecule_3d(self.mol)
         self._molecule_modified = True
-        
+
         # 4. Refresh chiral/cis-trans labels if applicable
         if hasattr(self.main_window.view_3d_manager, "update_chiral_labels"):
             self.main_window.view_3d_manager.update_chiral_labels()
         else:  # [REPORT ERROR MISSING ATTRIBUTE]
-            logging.error(f"REPORT ERROR: Missing attribute 'update_chiral_labels' on object")
+            logging.error(
+                "REPORT ERROR: Missing attribute 'update_chiral_labels' on object"
+            )
 
     def _push_undo(self):
         """Centralized undo logic to push current state to the undo stack."""
@@ -110,7 +115,9 @@ class BasePickingDialog(Dialog3DPickingMixin, QDialog):
             self.main_window.edit_actions_manager.push_undo_state()
             self._molecule_modified = False
         else:  # [REPORT ERROR MISSING ATTRIBUTE]
-            logging.error(f"REPORT ERROR: Missing attribute 'state_manager' on self.main_window")
+            logging.error(
+                "REPORT ERROR: Missing attribute 'state_manager' on self.main_window"
+            )
 
     def done(self, result):
         """Override done to push a final undo state if the molecule was modified."""

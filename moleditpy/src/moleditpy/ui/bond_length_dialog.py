@@ -10,7 +10,6 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
-import logging
 import numpy as np
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
@@ -24,7 +23,6 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-from rdkit import Geometry
 
 try:
     from .geometry_base_dialog import GeometryBaseDialog
@@ -83,7 +81,7 @@ class BondLengthDialog(GeometryBaseDialog):
         self.distance_slider.setTickPosition(QSlider.TickPosition.TicksBelow)
         self.distance_slider.setTickInterval(100)
         self.distance_slider.setEnabled(False)
-        
+
         # Connect to base class real-time handlers
         self.distance_slider.sliderPressed.connect(self.on_slider_pressed)
         self.distance_slider.sliderMoved.connect(
@@ -93,7 +91,7 @@ class BondLengthDialog(GeometryBaseDialog):
         self.distance_slider.valueChanged.connect(
             lambda v: self.on_slider_value_changed_click(v, self.distance_input, 100.0)
         )
-        
+
         layout.addLayout(distance_layout)
         layout.addWidget(self.distance_slider)
 
@@ -283,7 +281,7 @@ class BondLengthDialog(GeometryBaseDialog):
     def apply_geometry_update(self, new_distance):
         """Adjust the bond length."""
         conf = self.mol.GetConformer()
-        
+
         # Use snapshot if available (slider dragging) to keep base positions stable and accurate
         # Reverting to dictionary per user request for clarity/consistency
         snapshot = self._snapshot_positions
@@ -294,46 +292,45 @@ class BondLengthDialog(GeometryBaseDialog):
             else:
                 positions = {i: snapshot[i].copy() for i in range(len(snapshot))}
         else:
-            positions = {i: np.array(conf.GetAtomPosition(i)) for i in range(self.mol.GetNumAtoms())}
+            positions = {
+                i: np.array(conf.GetAtomPosition(i))
+                for i in range(self.mol.GetNumAtoms())
+            }
 
         idx1, idx2 = self.atom1_idx, self.atom2_idx
         pos1 = positions[idx1]
         pos2 = positions[idx2]
- 
+
         # Direction vector from atom1 to atom2
         direction = pos2 - pos1
         current_distance = calc_distance(pos1, pos2)
- 
+
         if current_distance == 0:
             return
- 
+
         direction = direction / current_distance
- 
+
         if self.both_groups_radio.isChecked():
             # Both groups move towards center equally
             bond_center = (pos1 + pos2) / 2
             half_distance = new_distance / 2
- 
+
             # New positions for both atoms
             new_pos1 = bond_center - direction * half_distance
             new_pos2 = bond_center + direction * half_distance
- 
+
             # Get both connected groups
-            group1_atoms = get_connected_group(
-                self.mol, idx1, exclude=idx2
-            )
-            group2_atoms = get_connected_group(
-                self.mol, idx2, exclude=idx1
-            )
- 
+            group1_atoms = get_connected_group(self.mol, idx1, exclude=idx2)
+            group2_atoms = get_connected_group(self.mol, idx2, exclude=idx1)
+
             # Calculate displacements
             displacement1 = new_pos1 - pos1
             displacement2 = new_pos2 - pos2
- 
+
             # Move group 1
             for atom_idx in group1_atoms:
                 positions[atom_idx] += displacement1
- 
+
             # Move group 2
             for atom_idx in group2_atoms:
                 positions[atom_idx] += displacement2
@@ -344,13 +341,11 @@ class BondLengthDialog(GeometryBaseDialog):
         else:
             # Move the connected group (default behavior)
             new_pos2 = pos1 + direction * new_distance
-            atoms_to_move = get_connected_group(
-                self.mol, idx2, exclude=idx1
-            )
+            atoms_to_move = get_connected_group(self.mol, idx2, exclude=idx1)
             displacement = new_pos2 - pos2
- 
+
             for atom_idx in atoms_to_move:
                 positions[atom_idx] += displacement
- 
+
         # Write updated positions back using inherited helper
         self._update_molecule_geometry(positions)

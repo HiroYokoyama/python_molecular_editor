@@ -10,7 +10,6 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
-import logging
 from PyQt6.QtWidgets import (
     QHBoxLayout,
     QLabel,
@@ -23,7 +22,6 @@ from PyQt6.QtWidgets import (
     QMessageBox,
 )
 from PyQt6.QtCore import Qt
-from rdkit import Geometry
 
 try:
     from .geometry_base_dialog import GeometryBaseDialog
@@ -93,7 +91,7 @@ class DihedralDialog(GeometryBaseDialog):
         self.dihedral_slider.setTickPosition(QSlider.TickPosition.TicksBelow)
         self.dihedral_slider.setTickInterval(45)
         self.dihedral_slider.setEnabled(False)
-        
+
         # Connect to base class real-time handlers
         self.dihedral_slider.sliderPressed.connect(self.on_slider_pressed)
         self.dihedral_slider.sliderMoved.connect(
@@ -103,7 +101,7 @@ class DihedralDialog(GeometryBaseDialog):
         self.dihedral_slider.valueChanged.connect(
             lambda v: self.on_slider_value_changed_click(v, self.dihedral_input, 1.0)
         )
-        
+
         layout.addLayout(dihedral_layout)
         layout.addWidget(self.dihedral_slider)
 
@@ -123,7 +121,9 @@ class DihedralDialog(GeometryBaseDialog):
         )
         group_layout.addWidget(self.rotate_atom_radio)
 
-        self.both_groups_radio = QRadioButton("Bond (2-3) fixed: Both ends rotate equally")
+        self.both_groups_radio = QRadioButton(
+            "Bond (2-3) fixed: Both ends rotate equally"
+        )
         group_layout.addWidget(self.both_groups_radio)
 
         layout.addWidget(group_box)
@@ -192,7 +192,12 @@ class DihedralDialog(GeometryBaseDialog):
 
     def show_atom_labels(self):
         """Display labels on the selected atoms."""
-        selected_atoms = [self.atom1_idx, self.atom2_idx, self.atom3_idx, self.atom4_idx]
+        selected_atoms = [
+            self.atom1_idx,
+            self.atom2_idx,
+            self.atom3_idx,
+            self.atom4_idx,
+        ]
         labels = ["1st", "2nd", "3rd", "4th"]
         pairs = [
             (idx, labels[i]) for i, idx in enumerate(selected_atoms) if idx is not None
@@ -222,9 +227,7 @@ class DihedralDialog(GeometryBaseDialog):
                 pass
         elif self.atom2_idx is None:
             symbol1 = self.mol.GetAtomWithIdx(self.atom1_idx).GetSymbol()
-            self.selection_label.setText(
-                f"Selected: {symbol1}({self.atom1_idx}) - ?"
-            )
+            self.selection_label.setText(f"Selected: {symbol1}({self.atom1_idx}) - ?")
             self.dihedral_label.setText("")
             self.apply_button.setEnabled(False)
             self.add_selection_label(self.atom1_idx, "1")
@@ -360,24 +363,34 @@ class DihedralDialog(GeometryBaseDialog):
             # We use adjust_dihedral twice: once for the 4th-atom side, once for the 1st-atom side.
             current_dihedral = calculate_dihedral(positions, idx1, idx2, idx3, idx4)
             delta = new_dihedral_deg - current_dihedral
-            
+
             # Shortest Path Wrapping for total delta
-            if delta > 180: delta -= 360
-            elif delta < -180: delta += 360
+            if delta > 180:
+                delta -= 360
+            elif delta < -180:
+                delta += 360
 
             # 1. Rotate group 4 by +half delta around 2->3
             adjust_dihedral(
-                positions, idx1, idx2, idx3, idx4, 
-                current_dihedral + delta/2.0, 
-                get_connected_group(self.mol, idx3, exclude=idx2)
+                positions,
+                idx1,
+                idx2,
+                idx3,
+                idx4,
+                current_dihedral + delta / 2.0,
+                get_connected_group(self.mol, idx3, exclude=idx2),
             )
             # 2. Rotate group 1 by -half delta around 2->3 (which is +half around 3->2)
             # Recalculate Dihedral(4,3,2,1) which is now (current + delta/2)
             # Target (current + delta)
             adjust_dihedral(
-                positions, idx4, idx3, idx2, idx1,
+                positions,
+                idx4,
+                idx3,
+                idx2,
+                idx1,
                 current_dihedral + delta,
-                get_connected_group(self.mol, idx2, exclude=idx3)
+                get_connected_group(self.mol, idx2, exclude=idx3),
             )
         elif self.rotate_atom_radio.isChecked():
             # Move only atom 4
@@ -388,6 +401,6 @@ class DihedralDialog(GeometryBaseDialog):
             adjust_dihedral(
                 positions, idx1, idx2, idx3, idx4, new_dihedral_deg, atoms_to_move
             )
- 
+
         # Write updated positions back using inherited helper
         self._update_molecule_geometry(positions)

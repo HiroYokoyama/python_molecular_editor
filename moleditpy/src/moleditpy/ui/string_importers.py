@@ -11,7 +11,6 @@ DOI: 10.5281/zenodo.17268532
 """
 
 from __future__ import annotations
-from typing import Any, Dict, List, Optional, Tuple, Union
 
 # RDKit imports (explicit to satisfy flake8 and used features)
 from rdkit import Chem
@@ -33,19 +32,23 @@ except ImportError:
 # --- Classes ---
 class StringImporterManager:
     """Mixin for string-based molecular input (SMILES, InChI)."""
+
     def __init__(self, host):
         self.host = host
 
-
     def import_smiles_dialog(self) -> None:
         """Dialog for SMILES input."""
-        smiles, ok = QInputDialog.getText(self.host, "Import SMILES", "Enter SMILES string:")
+        smiles, ok = QInputDialog.getText(
+            self.host, "Import SMILES", "Enter SMILES string:"
+        )
         if ok and smiles:
             self.load_from_smiles(smiles)
 
     def import_inchi_dialog(self) -> None:
         """Dialog for InChI input."""
-        inchi, ok = QInputDialog.getText(self.host, "Import InChI", "Enter InChI string:")
+        inchi, ok = QInputDialog.getText(
+            self.host, "Import InChI", "Enter InChI string:"
+        )
         if ok and inchi:
             self.load_from_inchi(inchi)
 
