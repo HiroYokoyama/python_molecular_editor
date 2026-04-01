@@ -200,11 +200,20 @@ class UIManager(QObject):
         ):
             self.host.init_manager.view_2d.setFocus()
 
-        # Handle Window Close via event filter
-        if obj is self.host and event.type() == QEvent.Type.Close:
-            if not self.handle_close_event(event):
-                event.ignore()
-                return True  # Stop propagation
+        if obj is self.host:
+            # Handle Drag and Drop via event filter
+            if event.type() == QEvent.Type.DragEnter:
+                self.handle_drag_enter_event(event)
+                return True
+            if event.type() == QEvent.Type.Drop:
+                self.handle_drop_event(event)
+                return True
+
+            # Handle Window Close via event filter
+            if event.type() == QEvent.Type.Close:
+                if not self.handle_close_event(event):
+                    event.ignore()
+                    return True  # Stop propagation
 
         return super().eventFilter(obj, event)
 
@@ -310,9 +319,6 @@ class UIManager(QObject):
         self.host.view_3d_manager.plotter.interactor.SetInteractorStyle(style)
         self.host.view_3d_manager.plotter.interactor.Initialize()
 
-    def dragEnterEvent(self, event):
-        """Handle drag enter event."""
-        self.handle_drag_enter_event(event)
 
     def handle_drag_enter_event(self, event):
         """Internal handler for drag enter event (bypasses PyQt type checks in tests)."""
@@ -338,9 +344,6 @@ class UIManager(QObject):
 
         event.ignore()
 
-    def dropEvent(self, event):
-        """Handle file drop event."""
-        self.handle_drop_event(event)
 
     def handle_drop_event(self, event):
         """Internal handler for file drop event (bypasses PyQt type checks in tests)."""

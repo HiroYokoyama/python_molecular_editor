@@ -90,10 +90,7 @@ class MainWindow(QMainWindow):
     def scene(self):
         return self.init_manager.scene
 
-    def dragEnterEvent(self, event):
-        """Delegate drag enter event to UI manager."""
-        self.ui_manager.dragEnterEvent(event)
+    def draw_molecule_3d(self, mol):
+        self.current_mol = mol
+        self.view_3d_manager.draw_molecule_3d(mol)
 
-    def dropEvent(self, event):
-        """Delegate drop event to UI manager."""
-        self.ui_manager.dropEvent(event)
