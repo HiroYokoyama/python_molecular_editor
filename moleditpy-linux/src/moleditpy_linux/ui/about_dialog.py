@@ -92,10 +92,10 @@ class AboutDialog(QDialog):
     def image_clicked(self, event):
         """Easter egg: Clear all and load bipyrimidine from SMILES"""
         # Clear the current scene
-        self.main_window.clear_all()
+        self.main_window.edit_actions_manager.clear_all()
 
         bipyrimidine_smiles = "C1=CN=C(N=C1)C2=NC=CC=N2"
-        self.main_window.load_from_smiles(bipyrimidine_smiles)
+        self.main_window.string_importer_manager.load_from_smiles(bipyrimidine_smiles)
 
         # Close the dialog
         self.accept()

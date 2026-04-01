@@ -10,10 +10,7 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
-import logging
-
 from PyQt6.QtWidgets import (
-    QDialog,
     QHBoxLayout,
     QLabel,
     QLineEdit,
@@ -22,35 +19,29 @@ from PyQt6.QtWidgets import (
     QSlider,
     QVBoxLayout,
     QWidget,
+    QMessageBox,
 )
+from PyQt6.QtCore import Qt
 
 try:
-    from .dialog_3d_picking_mixin import Dialog3DPickingMixin
+    from .geometry_base_dialog import GeometryBaseDialog
     from ..core.mol_geometry import (
         adjust_bond_angle,
         calc_angle_deg,
         get_connected_group,
-        rodrigues_rotate,
     )
 except ImportError:
-    from moleditpy_linux.ui.dialog_3d_picking_mixin import Dialog3DPickingMixin
+    from moleditpy_linux.ui.geometry_base_dialog import GeometryBaseDialog
     from moleditpy_linux.core.mol_geometry import (
         adjust_bond_angle,
         calc_angle_deg,
         get_connected_group,
     )
 
-from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QMessageBox
-from rdkit import Geometry
 
-
-class AngleDialog(Dialog3DPickingMixin, QDialog):
+class AngleDialog(GeometryBaseDialog):
     def __init__(self, mol, main_window, preselected_atoms=None, parent=None):
-        QDialog.__init__(self, parent)
-        Dialog3DPickingMixin.__init__(self)
-        self.mol = mol
-        self.main_window = main_window
+        super().__init__(mol, main_window, parent)
         self.atom1_idx = None
         self.atom2_idx = None  # vertex atom
         self.atom3_idx = None
@@ -98,11 +89,17 @@ class AngleDialog(Dialog3DPickingMixin, QDialog):
         self.angle_slider.setTickPosition(QSlider.TickPosition.TicksBelow)
         self.angle_slider.setTickInterval(45)
         self.angle_slider.setEnabled(False)
+
+        # Connect to base class real-time handlers
         self.angle_slider.sliderPressed.connect(self.on_slider_pressed)
-        self.angle_slider.sliderMoved.connect(self.on_slider_moved)
+        self.angle_slider.sliderMoved.connect(
+            lambda v: self.on_slider_moved_realtime(v, self.angle_input, 1.0)
+        )
         self.angle_slider.sliderReleased.connect(self.on_slider_released)
-        self.angle_slider.valueChanged.connect(self.on_slider_value_changed)
-        self._slider_dragging = False
+        self.angle_slider.valueChanged.connect(
+            lambda v: self.on_slider_value_changed_click(v, self.angle_input, 1.0)
+        )
+
         layout.addLayout(angle_layout)
         layout.addWidget(self.angle_slider)
 
@@ -146,7 +143,7 @@ class AngleDialog(Dialog3DPickingMixin, QDialog):
 
         layout.addLayout(button_layout)
 
-        # Connect to main window's picker for AngleDialog
+        # Connect to main window's picker
         self.picker_connection = None
         self.enable_picking()
 
@@ -164,7 +161,6 @@ class AngleDialog(Dialog3DPickingMixin, QDialog):
         elif self.atom3_idx is None:
             self.atom3_idx = atom_idx
             # Take a fresh snapshot immediately upon completing the triad selection
-            # This locks in the "original" initial geometry the user started modifying from
             self._snapshot_positions = self.mol.GetConformer().GetPositions().copy()
         else:
             # Reset and start over
@@ -176,27 +172,6 @@ class AngleDialog(Dialog3DPickingMixin, QDialog):
         # Display atom labels
         self.show_atom_labels()
         self.update_display()
-
-    def keyPressEvent(self, event):
-        """Handle keyboard events."""
-        if event.key() == Qt.Key.Key_Return or event.key() == Qt.Key.Key_Enter:
-            if self.apply_button.isEnabled():
-                self.apply_changes()
-            event.accept()
-        else:
-            super().keyPressEvent(event)
-
-    def closeEvent(self, event):
-        """Handle dialog close event."""
-        self.clear_atom_labels()
-        self.disable_picking()
-        super().closeEvent(event)
-
-    def accept(self):
-        """Handle OK event."""
-        self.clear_atom_labels()
-        self.disable_picking()
-        super().accept()
 
     def clear_selection(self):
         """Clear the current atom selection."""
@@ -236,7 +211,6 @@ class AngleDialog(Dialog3DPickingMixin, QDialog):
                 self.angle_slider.setEnabled(False)
                 self.angle_slider.blockSignals(False)
             except (AttributeError, RuntimeError, ValueError, TypeError):
-                # Suppress non-critical error
                 pass
         elif self.atom2_idx is None:
             symbol1 = self.mol.GetAtomWithIdx(self.atom1_idx).GetSymbol()
@@ -258,7 +232,6 @@ class AngleDialog(Dialog3DPickingMixin, QDialog):
                 self.angle_slider.setEnabled(False)
                 self.angle_slider.blockSignals(False)
             except (AttributeError, RuntimeError, ValueError, TypeError):
-                # Suppress non-critical error
                 pass
         elif self.atom3_idx is None:
             symbol1 = self.mol.GetAtomWithIdx(self.atom1_idx).GetSymbol()
@@ -282,7 +255,6 @@ class AngleDialog(Dialog3DPickingMixin, QDialog):
                 self.angle_slider.setEnabled(False)
                 self.angle_slider.blockSignals(False)
             except (AttributeError, RuntimeError, ValueError, TypeError):
-                # Suppress non-critical error
                 pass
         else:
             symbol1 = self.mol.GetAtomWithIdx(self.atom1_idx).GetSymbol()
@@ -307,10 +279,8 @@ class AngleDialog(Dialog3DPickingMixin, QDialog):
                 self.angle_slider.setValue(slider_val)
                 self.angle_slider.setEnabled(True)
                 self.angle_slider.blockSignals(False)
-            except (AttributeError, RuntimeError, TypeError) as e:
-                logging.debug(
-                    f"Suppressed exception: {e}"
-                )  # Suppress non-critical UI updates
+            except (AttributeError, RuntimeError, TypeError):
+                pass
 
             # Add labels
             self.add_selection_label(self.atom1_idx, "1")
@@ -329,68 +299,11 @@ class AngleDialog(Dialog3DPickingMixin, QDialog):
         """Line edit text changed, update slider."""
         if not self.angle_input.isEnabled() or not self.apply_button.isEnabled():
             return
-        try:
-            val = float(text)
-            wrapped_val = (val + 180) % 360 - 180
-            self.angle_slider.blockSignals(True)
-            self.angle_slider.setValue(int(round(wrapped_val)))
-            self.angle_slider.blockSignals(False)
-        except ValueError as e:
-            logging.debug(
-                f"Suppressed exception: {e}"
-            )  # Ignore invalid numeric input during typing
-
-    def on_slider_pressed(self):
-        """Remember the state before slider dragging starts."""
-        if self.atom1_idx is None or self.atom2_idx is None or self.atom3_idx is None:
-            return
-        self._slider_dragging = True
-        self.main_window.push_undo_state()
-        # Snapshot positions so the rotation axis stays stable during drag
-        # Only take snapshot if one doesn't exist to preserve directional info
-        if getattr(self, "_snapshot_positions", None) is None:
-            self._snapshot_positions = self.mol.GetConformer().GetPositions().copy()
-
-    def on_slider_moved(self, value):
-        """Update geometry in real-time while dragging."""
-        if self.atom1_idx is None or self.atom2_idx is None or self.atom3_idx is None:
-            return
-
-        self.angle_input.blockSignals(True)
-        self.angle_input.setText(f"{value}")
-        self.angle_input.blockSignals(False)
-
-        self.adjust_angle(float(value))
-
-    def on_slider_released(self):
-        """Finalize slider dragging."""
-        self._slider_dragging = False
-        # Do NOT clear snapshot here. Keep it to preserve the turning direction
-        # even if they approach ±180°. It gets cleared when selection is changed.
-        self.main_window.draw_molecule_3d(self.mol)
-        self.main_window.update_chiral_labels()
-
-    def on_slider_value_changed(self, value):
-        """Handle click-to-position on the slider track."""
-        if self._slider_dragging:
-            return
-        if self.atom1_idx is None or self.atom2_idx is None or self.atom3_idx is None:
-            return
-        self.main_window.push_undo_state()
-
-        # Ensure we have a snapshot for click-to-position as well to maintain direction
-        if getattr(self, "_snapshot_positions", None) is None:
-            self._snapshot_positions = self.mol.GetConformer().GetPositions().copy()
-
-        self.angle_input.blockSignals(True)
-        self.angle_input.setText(f"{value}")
-        self.angle_input.blockSignals(False)
-        self.adjust_angle(float(value))
-        self.main_window.update_chiral_labels()
+        self._sync_input_to_slider(text, self.angle_slider, 1.0, wrap=True)
 
     def apply_changes(self):
         """Apply the angle changes to the molecule."""
-        if self.atom1_idx is None or self.atom2_idx is None or self.atom3_idx is None:
+        if not self._is_selection_complete():
             return
 
         try:
@@ -402,39 +315,34 @@ class AngleDialog(Dialog3DPickingMixin, QDialog):
             self.angle_input.blockSignals(True)
             self.angle_input.setText(f"{new_angle:.2f}")
             self.angle_input.blockSignals(False)
+            self._snapshot_positions = None
         except ValueError:
             QMessageBox.warning(self, "Invalid Input", "Please enter a valid number.")
             return
 
-        # Save undo state
-        self.main_window.push_undo_state()
+        # Apply the update
+        self.apply_geometry_update(new_angle)
 
-        # Apply the angle change
-        self.adjust_angle(new_angle)
+        # Push Undo state AFTER modification
+        self._push_undo()
 
-        # Update chirality labels
-        self.main_window.update_chiral_labels()
+    def _is_selection_complete(self):
+        return (
+            self.atom1_idx is not None
+            and self.atom2_idx is not None
+            and self.atom3_idx is not None
+        )
 
-    def adjust_angle(self, new_angle_deg):
-        """Adjust the bond angle (with options for group rotation).
-
-        Uses the difference-based rotation approach via
-        :func:`~mol_geometry.adjust_bond_angle` to avoid 3D
-        rotational ambiguity.
-
-        During slider dragging, positions are restored from a snapshot
-        taken at press-time so that the rotation axis (cross product)
-        never flips direction.
-        """
+    def apply_geometry_update(self, new_angle_deg):
+        """Adjust the bond angle."""
         conf = self.mol.GetConformer()
 
-        # Use snapshot if available (slider dragging) to keep the
-        # rotation axis stable; otherwise use current positions.
-        snapshot = getattr(self, "_snapshot_positions", None)
+        # Use snapshot if available (slider dragging) to keep the rotation axis stable
+        snapshot = self._snapshot_positions
         if snapshot is not None:
             positions = snapshot.copy()
         else:
-            positions = conf.GetPositions()  # N×3 ndarray (copy)
+            positions = conf.GetPositions()
 
         idx_a = self.atom1_idx
         idx_b = self.atom2_idx  # vertex
@@ -448,7 +356,7 @@ class AngleDialog(Dialog3DPickingMixin, QDialog):
             group1 = get_connected_group(self.mol, idx_a, exclude=idx_b)
             group3 = get_connected_group(self.mol, idx_c, exclude=idx_b)
 
-            # Arm 1 rotates by −half (note: reversed A/C roles)
+            # Arm 1 rotates by -half relative to C-B-A
             adjust_bond_angle(
                 positions,
                 idx_c,
@@ -457,13 +365,13 @@ class AngleDialog(Dialog3DPickingMixin, QDialog):
                 current_angle + half_delta_deg,
                 group1,
             )
-            # Arm 3 rotates by +half
+            # Arm 3 rotates to the FINAL angle (relative to the now-moved Arm 1)
             adjust_bond_angle(
                 positions,
                 idx_a,
                 idx_b,
                 idx_c,
-                current_angle + half_delta_deg,
+                new_angle_deg,
                 group3,
             )
         elif self.rotate_atom_radio.isChecked():
@@ -492,25 +400,5 @@ class AngleDialog(Dialog3DPickingMixin, QDialog):
                 atoms_to_move,
             )
 
-        # Write updated positions back to the conformer and 3D cache
-        for i in range(conf.GetNumAtoms()):
-            p = positions[i]
-            conf.SetAtomPosition(
-                i, Geometry.Point3D(float(p[0]), float(p[1]), float(p[2]))
-            )
-            self.main_window.atom_positions_3d[i] = positions[i]
-
-        # Update the 3D view
-        self.main_window.draw_molecule_3d(self.mol)
-
-    def reject(self):
-        """Handle cancellation event."""
-        self.clear_atom_labels()
-        self.disable_picking()
-        super().reject()
-        try:
-            if self.main_window.current_mol:
-                self.main_window.draw_molecule_3d(self.main_window.current_mol)
-        except (AttributeError, RuntimeError, ValueError, TypeError):
-            # Suppress errors during dialog teardown to ensure the window closes smoothly.
-            pass
+        # Write updated positions back using inherited helper
+        self._update_molecule_geometry(positions)

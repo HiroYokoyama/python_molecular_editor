@@ -10,10 +10,7 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
-import logging
-
 from PyQt6.QtWidgets import (
-    QDialog,
     QHBoxLayout,
     QLabel,
     QLineEdit,
@@ -22,37 +19,39 @@ from PyQt6.QtWidgets import (
     QSlider,
     QVBoxLayout,
     QWidget,
+    QMessageBox,
 )
+from PyQt6.QtCore import Qt
 
 try:
-    from .dialog_3d_picking_mixin import Dialog3DPickingMixin
-    from ..core.mol_geometry import calculate_dihedral, get_connected_group
+    from .geometry_base_dialog import GeometryBaseDialog
+    from ..core.mol_geometry import (
+        adjust_dihedral,
+        calculate_dihedral,
+        get_connected_group,
+    )
 except ImportError:
-    from moleditpy_linux.ui.dialog_3d_picking_mixin import Dialog3DPickingMixin
-    from moleditpy_linux.core.mol_geometry import calculate_dihedral, get_connected_group
+    from moleditpy_linux.ui.geometry_base_dialog import GeometryBaseDialog
+    from moleditpy_linux.core.mol_geometry import (
+        adjust_dihedral,
+        calculate_dihedral,
+        get_connected_group,
+    )
 
-import numpy as np
-from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QMessageBox
-from rdkit import Geometry
 
-
-class DihedralDialog(Dialog3DPickingMixin, QDialog):
+class DihedralDialog(GeometryBaseDialog):
     def __init__(self, mol, main_window, preselected_atoms=None, parent=None):
-        QDialog.__init__(self, parent)
-        Dialog3DPickingMixin.__init__(self)
-        self.mol = mol
-        self.main_window = main_window
+        super().__init__(mol, main_window, parent)
         self.atom1_idx = None
-        self.atom2_idx = None  # central bond start
-        self.atom3_idx = None  # central bond end
+        self.atom2_idx = None
+        self.atom3_idx = None
         self.atom4_idx = None
 
-        # Set pre-selected atoms
+        # Set preselected atoms
         if preselected_atoms and len(preselected_atoms) >= 4:
             self.atom1_idx = preselected_atoms[0]
-            self.atom2_idx = preselected_atoms[1]  # central bond start
-            self.atom3_idx = preselected_atoms[2]  # central bond end
+            self.atom2_idx = preselected_atoms[1]
+            self.atom3_idx = preselected_atoms[2]
             self.atom4_idx = preselected_atoms[3]
 
         self.init_ui()
@@ -64,7 +63,7 @@ class DihedralDialog(Dialog3DPickingMixin, QDialog):
 
         # Instructions
         instruction_label = QLabel(
-            "Click four atoms in order to define a dihedral angle. The rotation will be around the bond between the 2nd and 3rd atoms."
+            "Click four atoms in order (1-2-3-4). The dihedral angle around the 2-3 bond will be adjusted."
         )
         instruction_label.setWordWrap(True)
         layout.addWidget(instruction_label)
@@ -73,13 +72,13 @@ class DihedralDialog(Dialog3DPickingMixin, QDialog):
         self.selection_label = QLabel("No atoms selected")
         layout.addWidget(self.selection_label)
 
-        # Current dihedral angle display
+        # Current dihedral display
         self.dihedral_label = QLabel("")
         layout.addWidget(self.dihedral_label)
 
-        # New dihedral angle input
+        # New dihedral input
         dihedral_layout = QHBoxLayout()
-        dihedral_layout.addWidget(QLabel("New dihedral angle (degrees):"))
+        dihedral_layout.addWidget(QLabel("New dihedral (degrees):"))
         self.dihedral_input = QLineEdit()
         self.dihedral_input.setPlaceholderText("180.0")
         self.dihedral_input.textChanged.connect(self.on_dihedral_input_changed)
@@ -92,30 +91,38 @@ class DihedralDialog(Dialog3DPickingMixin, QDialog):
         self.dihedral_slider.setTickPosition(QSlider.TickPosition.TicksBelow)
         self.dihedral_slider.setTickInterval(45)
         self.dihedral_slider.setEnabled(False)
+
+        # Connect to base class real-time handlers
         self.dihedral_slider.sliderPressed.connect(self.on_slider_pressed)
-        self.dihedral_slider.sliderMoved.connect(self.on_slider_moved)
+        self.dihedral_slider.sliderMoved.connect(
+            lambda v: self.on_slider_moved_realtime(v, self.dihedral_input, 1.0)
+        )
         self.dihedral_slider.sliderReleased.connect(self.on_slider_released)
-        self.dihedral_slider.valueChanged.connect(self.on_slider_value_changed)
-        self._slider_dragging = False
+        self.dihedral_slider.valueChanged.connect(
+            lambda v: self.on_slider_value_changed_click(v, self.dihedral_input, 1.0)
+        )
+
         layout.addLayout(dihedral_layout)
         layout.addWidget(self.dihedral_slider)
 
         # Movement options
         group_box = QWidget()
         group_layout = QVBoxLayout(group_box)
-        group_layout.addWidget(QLabel("Move:"))
+        group_layout.addWidget(QLabel("Rotation Options:"))
 
-        self.move_group_radio = QRadioButton("Atom 1,2,3: Fixed, Atom 4 group: Rotate")
-        self.move_group_radio.setChecked(True)
-        group_layout.addWidget(self.move_group_radio)
-
-        self.move_atom_radio = QRadioButton(
-            "Atom 1,2,3: Fixed, Atom 4: Rotate atom only"
+        self.rotate_group_radio = QRadioButton(
+            "Atoms 1,2,3: Fixed, Atom 4: Rotate connected group"
         )
-        group_layout.addWidget(self.move_atom_radio)
+        self.rotate_group_radio.setChecked(True)
+        group_layout.addWidget(self.rotate_group_radio)
+
+        self.rotate_atom_radio = QRadioButton(
+            "Atoms 1,2,3: Fixed, Atom 4: Rotate atom only"
+        )
+        group_layout.addWidget(self.rotate_atom_radio)
 
         self.both_groups_radio = QRadioButton(
-            "Central bond fixed: Both groups rotate equally"
+            "Bond (2-3) fixed: Both ends rotate equally"
         )
         group_layout.addWidget(self.both_groups_radio)
 
@@ -140,17 +147,17 @@ class DihedralDialog(Dialog3DPickingMixin, QDialog):
 
         layout.addLayout(button_layout)
 
-        # Connect to main window's picker for DihedralDialog
+        # Connect to main window's picker
         self.picker_connection = None
         self.enable_picking()
 
-        # Update initial display if atoms are pre-selected
+        # Update display if atoms are preselected
         if self.atom1_idx is not None:
             self.show_atom_labels()
             self.update_display()
 
     def on_atom_picked(self, atom_idx):
-        """Handle atom picked event."""
+        """Handle atom picking event in the 3D view."""
         if self.atom1_idx is None:
             self.atom1_idx = atom_idx
         elif self.atom2_idx is None:
@@ -159,73 +166,55 @@ class DihedralDialog(Dialog3DPickingMixin, QDialog):
             self.atom3_idx = atom_idx
         elif self.atom4_idx is None:
             self.atom4_idx = atom_idx
+            # Take a fresh snapshot immediately upon completing the selection
+            self._snapshot_positions = self.mol.GetConformer().GetPositions().copy()
         else:
             # Reset and start over
             self.atom1_idx = atom_idx
             self.atom2_idx = None
             self.atom3_idx = None
             self.atom4_idx = None
+            self._snapshot_positions = None
 
         # Display atom labels
         self.show_atom_labels()
         self.update_display()
 
-    def keyPressEvent(self, event):
-        """Handle keyboard events."""
-        if event.key() == Qt.Key.Key_Return or event.key() == Qt.Key.Key_Enter:
-            if self.apply_button.isEnabled():
-                self.apply_changes()
-            event.accept()
-        else:
-            super().keyPressEvent(event)
-
-    def closeEvent(self, event):
-        """Handle dialog close event."""
-        self.clear_atom_labels()
-        self.disable_picking()
-        super().closeEvent(event)
-
-    def accept(self):
-        """Handle OK action."""
-        self.clear_atom_labels()
-        self.disable_picking()
-        super().accept()
-
     def clear_selection(self):
-        """Clear selection."""
+        """Clear the current atom selection."""
         self.atom1_idx = None
-        self.atom2_idx = None  # central bond start
-        self.atom3_idx = None  # central bond end
+        self.atom2_idx = None
+        self.atom3_idx = None
         self.atom4_idx = None
-        self.clear_atom_labels()
+        self._snapshot_positions = None
+        self.clear_selection_labels()
         self.update_display()
 
     def show_atom_labels(self):
-        """Display labels on selected atoms."""
+        """Display labels on the selected atoms."""
         selected_atoms = [
             self.atom1_idx,
             self.atom2_idx,
             self.atom3_idx,
             self.atom4_idx,
         ]
-        labels = ["1st", "2nd (bond start)", "3rd (bond end)", "4th"]
+        labels = ["1st", "2nd", "3rd", "4th"]
         pairs = [
             (idx, labels[i]) for i, idx in enumerate(selected_atoms) if idx is not None
         ]
         self.show_atom_labels_for(pairs)
 
     def update_display(self):
-        """Update display."""
-        selected_count = sum(
-            x is not None
-            for x in [self.atom1_idx, self.atom2_idx, self.atom3_idx, self.atom4_idx]
-        )
+        """Update the UI display."""
+        # Clear existing labels
+        self.clear_selection_labels()
 
-        if selected_count == 0:
+        if self.atom1_idx is None:
             self.selection_label.setText("No atoms selected")
             self.dihedral_label.setText("")
             self.apply_button.setEnabled(False)
-            # Clear dihedral input when no selection
+            self._snapshot_positions = None
+            # Clear input
             try:
                 self.dihedral_input.blockSignals(True)
                 self.dihedral_input.clear()
@@ -234,69 +223,50 @@ class DihedralDialog(Dialog3DPickingMixin, QDialog):
                 self.dihedral_slider.setValue(180)
                 self.dihedral_slider.setEnabled(False)
                 self.dihedral_slider.blockSignals(False)
-            except (AttributeError, RuntimeError, TypeError) as e:
-                logging.debug(
-                    f"Suppressed exception: {e}"
-                )  # Suppress errors during dihedral input clearing
-
-        elif selected_count < 4:
-            selected_atoms = [
-                self.atom1_idx,
-                self.atom2_idx,
-                self.atom3_idx,
-                self.atom4_idx,
-            ]
-
-            display_parts = []
-            for atom_idx in selected_atoms:
-                if atom_idx is not None:
-                    symbol = self.mol.GetAtomWithIdx(atom_idx).GetSymbol()
-                    display_parts.append(f"{symbol}({atom_idx})")
-                else:
-                    display_parts.append("?")
-
-            self.selection_label.setText(" - ".join(display_parts))
+            except (AttributeError, RuntimeError, ValueError, TypeError):
+                pass
+        elif self.atom2_idx is None:
+            symbol1 = self.mol.GetAtomWithIdx(self.atom1_idx).GetSymbol()
+            self.selection_label.setText(f"Selected: {symbol1}({self.atom1_idx}) - ?")
             self.dihedral_label.setText("")
             self.apply_button.setEnabled(False)
-            # Clear dihedral input while selection is incomplete
-            try:
-                self.dihedral_input.blockSignals(True)
-                self.dihedral_input.clear()
-                self.dihedral_input.blockSignals(False)
-                self.dihedral_slider.blockSignals(True)
-                self.dihedral_slider.setValue(180)
-                self.dihedral_slider.setEnabled(False)
-                self.dihedral_slider.blockSignals(False)
-            except (AttributeError, RuntimeError, TypeError) as e:
-                logging.debug(
-                    f"Suppressed exception: {e}"
-                )  # Suppress non-critical UI update errors
-        else:
-            selected_atoms = [
-                self.atom1_idx,
-                self.atom2_idx,
-                self.atom3_idx,
-                self.atom4_idx,
-            ]
-
-            display_parts = []
-            for atom_idx in selected_atoms:
-                symbol = self.mol.GetAtomWithIdx(atom_idx).GetSymbol()
-                display_parts.append(f"{symbol}({atom_idx})")
-
-            self.selection_label.setText(" - ".join(display_parts))
-
-            # Calculate current dihedral angle
-            current_dihedral = calculate_dihedral(
-                self.mol.GetConformer().GetPositions(),
-                self.atom1_idx,
-                self.atom2_idx,
-                self.atom3_idx,
-                self.atom4_idx,
+            self.add_selection_label(self.atom1_idx, "1")
+        elif self.atom3_idx is None:
+            symbol1 = self.mol.GetAtomWithIdx(self.atom1_idx).GetSymbol()
+            symbol2 = self.mol.GetAtomWithIdx(self.atom2_idx).GetSymbol()
+            self.selection_label.setText(
+                f"Selected: {symbol1}({self.atom1_idx}) - {symbol2}({self.atom2_idx}) - ?"
             )
+            self.dihedral_label.setText("")
+            self.apply_button.setEnabled(False)
+            self.add_selection_label(self.atom1_idx, "1")
+            self.add_selection_label(self.atom2_idx, "2")
+        elif self.atom4_idx is None:
+            symbol1 = self.mol.GetAtomWithIdx(self.atom1_idx).GetSymbol()
+            symbol2 = self.mol.GetAtomWithIdx(self.atom2_idx).GetSymbol()
+            symbol3 = self.mol.GetAtomWithIdx(self.atom3_idx).GetSymbol()
+            self.selection_label.setText(
+                f"Selected: {symbol1}({self.atom1_idx}) - {symbol2}({self.atom2_idx}) - {symbol3}({self.atom3_idx}) - ?"
+            )
+            self.dihedral_label.setText("")
+            self.apply_button.setEnabled(False)
+            self.add_selection_label(self.atom1_idx, "1")
+            self.add_selection_label(self.atom2_idx, "2")
+            self.add_selection_label(self.atom3_idx, "3")
+        else:
+            symbol1 = self.mol.GetAtomWithIdx(self.atom1_idx).GetSymbol()
+            symbol2 = self.mol.GetAtomWithIdx(self.atom2_idx).GetSymbol()
+            symbol3 = self.mol.GetAtomWithIdx(self.atom3_idx).GetSymbol()
+            symbol4 = self.mol.GetAtomWithIdx(self.atom4_idx).GetSymbol()
+            self.selection_label.setText(
+                f"Dihedral: {symbol1}({self.atom1_idx})-{symbol2}({self.atom2_idx})-{symbol3}({self.atom3_idx})-{symbol4}({self.atom4_idx})"
+            )
+
+            # Calculate current dihedral
+            current_dihedral = self.calculate_dihedral()
             self.dihedral_label.setText(f"Current dihedral: {current_dihedral:.2f}°")
             self.apply_button.setEnabled(True)
-            # Update dihedral input box with current dihedral
+            # Update input box and slider
             try:
                 self.dihedral_input.blockSignals(True)
                 self.dihedral_input.setText(f"{current_dihedral:.2f}")
@@ -307,78 +277,45 @@ class DihedralDialog(Dialog3DPickingMixin, QDialog):
                 self.dihedral_slider.setValue(slider_val)
                 self.dihedral_slider.setEnabled(True)
                 self.dihedral_slider.blockSignals(False)
-            except (AttributeError, RuntimeError, TypeError) as e:
-                logging.debug(
-                    f"Suppressed exception: {e}"
-                )  # Suppress non-critical UI update errors
+            except (AttributeError, RuntimeError, TypeError):
+                pass
+
+            # Add labels
+            self.add_selection_label(self.atom1_idx, "1")
+            self.add_selection_label(self.atom2_idx, "2")
+            self.add_selection_label(self.atom3_idx, "3")
+            self.add_selection_label(self.atom4_idx, "4")
+
+    def calculate_dihedral(self):
+        """Calculate the current dihedral angle."""
+        if not self._is_selection_complete():
+            return 0.0
+        return calculate_dihedral(
+            self.mol.GetConformer().GetPositions(),
+            self.atom1_idx,
+            self.atom2_idx,
+            self.atom3_idx,
+            self.atom4_idx,
+        )
+
+    def _is_selection_complete(self):
+        """Check if all four atoms required for a dihedral are selected."""
+        return (
+            self.atom1_idx is not None
+            and self.atom2_idx is not None
+            and self.atom3_idx is not None
+            and self.atom4_idx is not None
+        )
 
     def on_dihedral_input_changed(self, text):
         """Line edit text changed, update slider."""
         if not self.dihedral_input.isEnabled() or not self.apply_button.isEnabled():
             return
-        try:
-            val = float(text)
-            wrapped_val = (val + 180) % 360 - 180
-            self.dihedral_slider.blockSignals(True)
-            self.dihedral_slider.setValue(int(round(wrapped_val)))
-            self.dihedral_slider.blockSignals(False)
-        except ValueError as e:
-            logging.debug(
-                f"Suppressed exception: {e}"
-            )  # Ignore invalid numeric input during typing
-
-    def on_slider_pressed(self):
-        """Remember the state before slider dragging starts."""
-        if any(
-            idx is None
-            for idx in [self.atom1_idx, self.atom2_idx, self.atom3_idx, self.atom4_idx]
-        ):
-            return
-        self._slider_dragging = True
-        self.main_window.push_undo_state()
-
-    def on_slider_moved(self, value):
-        """Update geometry in real-time while dragging."""
-        if any(
-            idx is None
-            for idx in [self.atom1_idx, self.atom2_idx, self.atom3_idx, self.atom4_idx]
-        ):
-            return
-
-        self.dihedral_input.blockSignals(True)
-        self.dihedral_input.setText(f"{value}")
-        self.dihedral_input.blockSignals(False)
-
-        self.adjust_dihedral(float(value))
-
-    def on_slider_released(self):
-        """Finalize slider dragging."""
-        self._slider_dragging = False
-        self.main_window.draw_molecule_3d(self.mol)
-        self.main_window.update_chiral_labels()
-
-    def on_slider_value_changed(self, value):
-        """Handle click-to-position on the slider track."""
-        if self._slider_dragging:
-            return
-        if any(
-            idx is None
-            for idx in [self.atom1_idx, self.atom2_idx, self.atom3_idx, self.atom4_idx]
-        ):
-            return
-        self.main_window.push_undo_state()
-        self.dihedral_input.blockSignals(True)
-        self.dihedral_input.setText(f"{value}")
-        self.dihedral_input.blockSignals(False)
-        self.adjust_dihedral(float(value))
-        self.main_window.update_chiral_labels()
+        self._sync_input_to_slider(text, self.dihedral_slider, 1.0, wrap=True)
 
     def apply_changes(self):
-        """Apply changes."""
-        if any(
-            idx is None
-            for idx in [self.atom1_idx, self.atom2_idx, self.atom3_idx, self.atom4_idx]
-        ):
+        """Apply the dihedral changes to the molecule."""
+        if not self._is_selection_complete():
             return
 
         try:
@@ -394,152 +331,76 @@ class DihedralDialog(Dialog3DPickingMixin, QDialog):
             QMessageBox.warning(self, "Invalid Input", "Please enter a valid number.")
             return
 
-        # Apply the dihedral angle change
-        self.adjust_dihedral(new_dihedral)
+        # Apply the update
+        self.apply_geometry_update(new_dihedral)
 
-        # Update chiral labels
-        self.main_window.update_chiral_labels()
+        # Push Undo state AFTER modification
+        self._push_undo()
 
-        # Save undo state
-        self.main_window.push_undo_state()
+    def apply_geometry_update(self, new_dihedral_deg):
+        """Adjust the dihedral angle."""
+        if not self._is_selection_complete():
+            return
 
-    def adjust_dihedral(self, new_dihedral_deg):
-        """Adjust dihedral angle (improved algorithm)."""
         conf = self.mol.GetConformer()
-        pos1 = np.array(conf.GetAtomPosition(self.atom1_idx))
-        pos2 = np.array(conf.GetAtomPosition(self.atom2_idx))
-        pos3 = np.array(conf.GetAtomPosition(self.atom3_idx))
-        pos4 = np.array(conf.GetAtomPosition(self.atom4_idx))
 
-        # Current dihedral angle
-        current_dihedral = calculate_dihedral(
-            self.mol.GetConformer().GetPositions(),
+        # Use snapshot if available (slider dragging) to keep the rotation axis stable
+        snapshot = self._snapshot_positions
+        if snapshot is not None:
+            positions = snapshot.copy()
+        else:
+            positions = conf.GetPositions()
+
+        idx1, idx2, idx3, idx4 = (
             self.atom1_idx,
             self.atom2_idx,
             self.atom3_idx,
             self.atom4_idx,
         )
 
-        # Calculate rotation angle needed
-        rotation_angle_deg = new_dihedral_deg - current_dihedral
-
-        # Handle angle wrapping for shortest rotation
-        if rotation_angle_deg > 180:
-            rotation_angle_deg -= 360
-        elif rotation_angle_deg < -180:
-            rotation_angle_deg += 360
-
-        rotation_angle_rad = np.radians(rotation_angle_deg)
-
-        # Skip if no rotation needed
-        if abs(rotation_angle_rad) < 1e-6:
-            return
-
-        # Rotation axis is the bond between atom2 and atom3
-        rotation_axis = pos3 - pos2
-        axis_length = np.linalg.norm(rotation_axis)
-
-        if axis_length == 0:
-            return  # Atoms are at the same position
-
-        rotation_axis = rotation_axis / axis_length
-
-        # Rodrigues' rotation formula implementation
-        def rotate_point_around_axis(point, axis_point, axis_direction, angle):
-            """Rotate a point around an axis using Rodrigues' formula"""
-            # Translate point so axis passes through origin
-            translated_point = point - axis_point
-
-            # Apply Rodrigues' rotation formula
-            cos_a = np.cos(angle)
-            sin_a = np.sin(angle)
-
-            rotated = (
-                translated_point * cos_a
-                + np.cross(axis_direction, translated_point) * sin_a
-                + axis_direction
-                * np.dot(axis_direction, translated_point)
-                * (1 - cos_a)
-            )
-
-            # Translate back to original coordinate system
-            return rotated + axis_point
-
         if self.both_groups_radio.isChecked():
-            # Both groups rotate equally around the central bond (half angle each in opposite directions)
-            half_rotation = rotation_angle_rad / 2
+            # Both ends rotate equally.
+            # We use adjust_dihedral twice: once for the 4th-atom side, once for the 1st-atom side.
+            current_dihedral = calculate_dihedral(positions, idx1, idx2, idx3, idx4)
+            delta = new_dihedral_deg - current_dihedral
 
-            # Get both connected groups
-            group1_atoms = get_connected_group(
-                self.mol, self.atom2_idx, exclude=self.atom3_idx
+            # Shortest Path Wrapping for total delta
+            if delta > 180:
+                delta -= 360
+            elif delta < -180:
+                delta += 360
+
+            # 1. Rotate group 4 by +half delta around 2->3
+            adjust_dihedral(
+                positions,
+                idx1,
+                idx2,
+                idx3,
+                idx4,
+                current_dihedral + delta / 2.0,
+                get_connected_group(self.mol, idx3, exclude=idx2),
             )
-            group4_atoms = get_connected_group(
-                self.mol, self.atom3_idx, exclude=self.atom2_idx
+            # 2. Rotate group 1 by -half delta around 2->3 (which is +half around 3->2)
+            # Recalculate Dihedral(4,3,2,1) which is now (current + delta/2)
+            # Target (current + delta)
+            adjust_dihedral(
+                positions,
+                idx4,
+                idx3,
+                idx2,
+                idx1,
+                current_dihedral + delta,
+                get_connected_group(self.mol, idx2, exclude=idx3),
             )
-
-            # Rotate group1 (atom1 side) by -half_rotation
-            for atom_idx in group1_atoms:
-                current_pos = np.array(conf.GetAtomPosition(atom_idx))
-                new_pos = rotate_point_around_axis(
-                    current_pos, pos2, rotation_axis, -half_rotation
-                )
-                conf.SetAtomPosition(atom_idx, new_pos.tolist())
-                self.main_window.atom_positions_3d[atom_idx] = new_pos
-
-            # Rotate group4 (atom4 side) by +half_rotation
-            for atom_idx in group4_atoms:
-                current_pos = np.array(conf.GetAtomPosition(atom_idx))
-                new_pos = rotate_point_around_axis(
-                    current_pos, pos2, rotation_axis, half_rotation
-                )
-                conf.SetAtomPosition(atom_idx, new_pos.tolist())
-                self.main_window.atom_positions_3d[atom_idx] = new_pos
-
-        elif self.move_group_radio.isChecked():
-            # Move the connected group containing atom4
-            # Find all atoms connected to atom3 (excluding atom2 side)
-            atoms_to_rotate = get_connected_group(
-                self.mol, self.atom3_idx, exclude=self.atom2_idx
-            )
-
-            # Rotate all atoms in the group
-            for atom_idx in atoms_to_rotate:
-                current_pos = np.array(conf.GetAtomPosition(atom_idx))
-                new_pos = rotate_point_around_axis(
-                    current_pos, pos2, rotation_axis, rotation_angle_rad
-                )
-                conf.SetAtomPosition(
-                    atom_idx,
-                    Geometry.Point3D(
-                        float(new_pos[0]), float(new_pos[1]), float(new_pos[2])
-                    ),
-                )
-                self.main_window.atom_positions_3d[atom_idx] = new_pos
+        elif self.rotate_atom_radio.isChecked():
+            # Move only atom 4
+            adjust_dihedral(positions, idx1, idx2, idx3, idx4, new_dihedral_deg, {idx4})
         else:
-            # Move only atom4
-            new_pos4 = rotate_point_around_axis(
-                pos4, pos2, rotation_axis, rotation_angle_rad
+            # Default: rotate atom 4 and its connected sub-structure
+            atoms_to_move = get_connected_group(self.mol, idx3, exclude=idx2)
+            adjust_dihedral(
+                positions, idx1, idx2, idx3, idx4, new_dihedral_deg, atoms_to_move
             )
-            conf.SetAtomPosition(
-                self.atom4_idx,
-                Geometry.Point3D(
-                    float(new_pos4[0]), float(new_pos4[1]), float(new_pos4[2])
-                ),
-            )
-            self.main_window.atom_positions_3d[self.atom4_idx] = new_pos4
 
-        # Update the 3D view
-        self.main_window.draw_molecule_3d(self.mol)
-
-    def reject(self):
-        """Handle cancel action."""
-        self.clear_atom_labels()
-        self.disable_picking()
-        super().reject()
-        try:
-            if self.main_window.current_mol:
-                self.main_window.draw_molecule_3d(self.main_window.current_mol)
-        except (AttributeError, RuntimeError, TypeError) as e:
-            logging.debug(
-                f"Suppressed exception: {e}"
-            )  # Suppress errors during dialog teardown
+        # Write updated positions back using inherited helper
+        self._update_molecule_geometry(positions)

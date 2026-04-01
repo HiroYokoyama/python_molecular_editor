@@ -10,19 +10,14 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
-from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import (
     QPushButton,
-    QSlider,
     QComboBox,
     QCheckBox,
     QFormLayout,
-    QHBoxLayout,
     QLabel,
-    QWidget,
     QColorDialog,
-    QFrame,
 )
 from .settings_tab_base import SettingsTabBase
 
@@ -47,41 +42,25 @@ class Settings3DSceneTab(SettingsTabBase):
         self.light_checkbox = QCheckBox()
         form_layout.addRow("Enable Lighting:", self.light_checkbox)
 
-        self.intensity_slider = QSlider(Qt.Orientation.Horizontal)
-        self.intensity_slider.setRange(0, 200)
-        self.intensity_label = QLabel("1.0")
-        self.intensity_slider.valueChanged.connect(
-            lambda v: self.intensity_label.setText(f"{v / 100:.2f}")
+        self.intensity_slider, self.intensity_label = self._create_slider(0, 200, 100.0)
+        form_layout.addRow(
+            "Light Intensity:",
+            self._wrap_layout(self.intensity_slider, self.intensity_label),
         )
 
-        il = QHBoxLayout()
-        il.addWidget(self.intensity_slider)
-        il.addWidget(self.intensity_label)
-        form_layout.addRow("Light Intensity:", il)
-
-        self.specular_slider = QSlider(Qt.Orientation.Horizontal)
-        self.specular_slider.setRange(0, 100)
-        self.specular_label = QLabel("0.20")
-        self.specular_slider.valueChanged.connect(
-            lambda v: self.specular_label.setText(f"{v / 100:.2f}")
+        self.specular_slider, self.specular_label = self._create_slider(0, 100, 100.0)
+        form_layout.addRow(
+            "Shininess (Specular):",
+            self._wrap_layout(self.specular_slider, self.specular_label),
         )
 
-        sl = QHBoxLayout()
-        sl.addWidget(self.specular_slider)
-        sl.addWidget(self.specular_label)
-        form_layout.addRow("Shininess (Specular):", sl)
-
-        self.spec_power_slider = QSlider(Qt.Orientation.Horizontal)
-        self.spec_power_slider.setRange(0, 100)
-        self.spec_power_label = QLabel("20")
-        self.spec_power_slider.valueChanged.connect(
-            lambda v: self.spec_power_label.setText(str(v))
+        self.spec_power_slider, self.spec_power_label = self._create_slider(
+            0, 100, 1.0, is_int=True
         )
-
-        spl = QHBoxLayout()
-        spl.addWidget(self.spec_power_slider)
-        spl.addWidget(self.spec_power_label)
-        form_layout.addRow("Shininess Power:", spl)
+        form_layout.addRow(
+            "Shininess Power:",
+            self._wrap_layout(self.spec_power_slider, self.spec_power_label),
+        )
 
         self.projection_combo = QComboBox()
         self.projection_combo.addItems(["Perspective", "Orthographic"])
@@ -150,11 +129,11 @@ class SettingsModelTab(SettingsTabBase):
         # Common Atom Scale (for BS and CPK)
         if self.prefix in ["ball_stick", "cpk"]:
             self.atom_scale_slider, self.atom_scale_label = self._create_slider(
-                50, 200, 100
+                50, 200, 100.0
             )
             form_layout.addRow(
                 "Atom Size Scale:",
-                self._wrap(self.atom_scale_slider, self.atom_scale_label),
+                self._wrap_layout(self.atom_scale_slider, self.atom_scale_label),
             )
 
         # Common Bond Radius (for BS, WF, Stick)
@@ -162,46 +141,46 @@ class SettingsModelTab(SettingsTabBase):
             ranges = {"ball_stick": (1, 50), "wireframe": (1, 10), "stick": (5, 50)}
             r_min, r_max = ranges[self.prefix]
             self.bond_radius_slider, self.bond_radius_label = self._create_slider(
-                r_min, r_max, 100
+                r_min, r_max, 100.0
             )
             form_layout.addRow(
                 "Bond Radius:",
-                self._wrap(self.bond_radius_slider, self.bond_radius_label),
+                self._wrap_layout(self.bond_radius_slider, self.bond_radius_label),
             )
 
         # Model-specific multi-bond offsets
         if self.prefix in ["ball_stick", "wireframe", "stick"]:
             form_layout.addRow(self._create_separator())
             self.db_offset_slider, self.db_offset_label = self._create_slider(
-                50, 400, 100
+                50, 400, 100.0
             )
             form_layout.addRow(
                 "Double Bond Offset:",
-                self._wrap(self.db_offset_slider, self.db_offset_label),
+                self._wrap_layout(self.db_offset_slider, self.db_offset_label),
             )
 
             self.tr_offset_slider, self.tr_offset_label = self._create_slider(
-                50, 400, 100
+                50, 400, 100.0
             )
             form_layout.addRow(
                 "Triple Bond Offset:",
-                self._wrap(self.tr_offset_slider, self.tr_offset_label),
+                self._wrap_layout(self.tr_offset_slider, self.tr_offset_label),
             )
 
             self.db_radius_slider, self.db_radius_label = self._create_slider(
-                20, 100, 100
+                20, 100, 100.0
             )
             form_layout.addRow(
                 "Double Bond Thickness:",
-                self._wrap(self.db_radius_slider, self.db_radius_label),
+                self._wrap_layout(self.db_radius_slider, self.db_radius_label),
             )
 
             self.tr_radius_slider, self.tr_radius_label = self._create_slider(
-                20, 100, 100
+                20, 100, 100.0
             )
             form_layout.addRow(
                 "Triple Bond Thickness:",
-                self._wrap(self.tr_radius_slider, self.tr_radius_label),
+                self._wrap_layout(self.tr_radius_slider, self.tr_radius_label),
             )
 
         # Common Resolution
@@ -214,10 +193,10 @@ class SettingsModelTab(SettingsTabBase):
         }
         r_min, r_max = res_ranges[self.prefix]
         self.res_slider, self.res_label = self._create_slider(
-            r_min, r_max, 1, is_int=True
+            r_min, r_max, 1.0, is_int=True
         )
         form_layout.addRow(
-            "Resolution (Quality):", self._wrap(self.res_slider, self.res_label)
+            "Resolution (Quality):", self._wrap_layout(self.res_slider, self.res_label)
         )
 
         # Ball & Stick specific color options
@@ -230,30 +209,6 @@ class SettingsModelTab(SettingsTabBase):
 
             self.use_cpk_checkbox = QCheckBox("Use CPK colors for bonds")
             form_layout.addRow(self.use_cpk_checkbox)
-
-    def _create_slider(self, min_val, max_val, scale, is_int=False):
-        slider = QSlider(Qt.Orientation.Horizontal)
-        slider.setRange(min_val, max_val)
-        label = QLabel()
-        if is_int:
-            slider.valueChanged.connect(lambda v: label.setText(str(v)))
-        else:
-            slider.valueChanged.connect(lambda v: label.setText(f"{v / scale:.2f}"))
-        return slider, label
-
-    def _wrap(self, slider, label):
-        h = QHBoxLayout()
-        h.addWidget(slider)
-        h.addWidget(label)
-        w = QWidget()
-        w.setLayout(h)
-        return w
-
-    def _create_separator(self):
-        line = QFrame()
-        line.setFrameShape(QFrame.Shape.HLine)
-        line.setFrameShadow(QFrame.Shadow.Sunken)
-        return line
 
     def _pick_bond_color(self):
         cur = getattr(self, "current_bond_color", "#7F7F7F")

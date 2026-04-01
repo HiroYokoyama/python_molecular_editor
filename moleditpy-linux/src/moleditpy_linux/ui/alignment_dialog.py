@@ -100,7 +100,7 @@ class AlignmentDialog(Dialog3DPickingMixin, QDialog):
 
     def on_atom_picked(self, atom_idx):
         """Handle atom selection event."""
-        if self.main_window.current_mol is None:
+        if self.main_window.view_3d_manager.current_mol is None:
             return
 
         if atom_idx in self.selected_atoms:
@@ -127,16 +127,14 @@ class AlignmentDialog(Dialog3DPickingMixin, QDialog):
         elif len(self.selected_atoms) == 1:
             selected_list = list(self.selected_atoms)
             atom = self.mol.GetAtomWithIdx(selected_list[0])
-            self.selection_label.setText(
-                f"Selected 1 atom: {atom.GetSymbol()}{selected_list[0] + 1}"
-            )
+            self.selection_label.setText(f"Selected 1 atom: {atom.GetSymbol()}")
             self.apply_button.setEnabled(False)
         elif len(self.selected_atoms) == 2:
             selected_list = sorted(list(self.selected_atoms))
             atom1 = self.mol.GetAtomWithIdx(selected_list[0])
             atom2 = self.mol.GetAtomWithIdx(selected_list[1])
             self.selection_label.setText(
-                f"Selected 2 atoms: {atom1.GetSymbol()}{selected_list[0] + 1}, {atom2.GetSymbol()}{selected_list[1] + 1}"
+                f"Selected 2 atoms: {atom1.GetSymbol()}, {atom2.GetSymbol()}"
             )
             self.apply_button.setEnabled(True)
 
@@ -232,18 +230,18 @@ class AlignmentDialog(Dialog3DPickingMixin, QDialog):
                         )
 
             # Update 3D positions
-            self.main_window.atom_positions_3d = np.array(
+            self.main_window.view_3d_manager.atom_positions_3d = np.array(
                 [list(conf.GetAtomPosition(i)) for i in range(self.mol.GetNumAtoms())]
             )
 
             # Update 3D visualization
-            self.main_window.draw_molecule_3d(self.mol)
+            self.main_window.view_3d_manager.draw_molecule_3d(self.mol)
 
             # Update chirality labels
-            self.main_window.update_chiral_labels()
+            self.main_window.view_3d_manager.update_chiral_labels()
 
             # Save state for Undo
-            self.main_window.push_undo_state()
+            self.main_window.edit_actions_manager.push_undo_state()
 
             QMessageBox.information(
                 self, "Success", f"Alignment to {self.axis.upper()}-axis completed."

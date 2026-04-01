@@ -10,7 +10,7 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
-from typing import Any, Callable, Optional
+from typing import Any, Callable, List, Optional, Union
 
 
 class PluginContext:
@@ -45,6 +45,50 @@ class PluginContext:
             self._plugin_name, path, callback, text, icon, shortcut
         )
 
+    def register_menu_action(
+        self,
+        path: str,
+        text_or_callback: Union[str, Callable],
+        callback: Optional[Callable] = None,
+        icon: Optional[str] = None,
+        shortcut: Optional[str] = None,
+    ):
+        """Backward-compatible alias for add_menu_action.
+        Supports old 3-arg style: register_menu_action(path, text, callback).
+        """
+        if callable(text_or_callback):
+            # New style: (path, callback, ...)
+            self.add_menu_action(path, text_or_callback, None, icon, shortcut)
+        else:
+            # Old style: (path, text, callback)
+            self.add_menu_action(path, callback, text_or_callback, icon, shortcut)
+
+    def add_plugin_menu(
+        self,
+        path: str,
+        callback: Callable,
+        text: Optional[str] = None,
+        icon: Optional[str] = None,
+        shortcut: Optional[str] = None,
+    ):
+        """
+        Register an action nested inside the Plugin menu.
+
+        Equivalent to add_menu_action("Plugin/<path>", ...).
+        Use this instead of add_menu_action when you want your plugin to appear
+        as a nested folder inside the Plugin menu rather than as a top-level menu.
+
+        Args:
+            path: Sub-path within the Plugin menu, e.g. "Utility/My Tool"
+                  results in Plugin > Utility > My Tool.
+            callback: Function to call when triggered.
+            text: Label override (defaults to last part of path).
+            icon: Path to icon (optional).
+            shortcut: Keyboard shortcut (optional).
+        """
+        full_path = f"Plugin/{path.lstrip('/')}"
+        self.add_menu_action(full_path, callback, text, icon, shortcut)
+
     def add_toolbar_action(
         self,
         callback: Callable,
@@ -75,6 +119,53 @@ class PluginContext:
         """
         return Plugin3DController(self._manager.get_main_window())
 
+    def show_status_message(self, message: str, timeout: int = 3000) -> None:
+        """
+        Display a message in the application status bar.
+        """
+        self._manager.show_status_message(message, timeout)
+
+    def push_undo_checkpoint(self) -> None:
+        """
+        Create an undo checkpoint for the current state.
+        Call this AFTER making modifications to the molecule to ensure the
+        new state is saved to the undo history.
+        """
+        self._manager.push_undo_checkpoint()
+
+    def refresh_3d_view(self) -> None:
+        """
+        Force a refresh (re-render) of the 3D scene.
+        """
+        self._manager.refresh_3d_view()
+
+    def reset_3d_camera(self) -> None:
+        """
+        Resets the 3D camera to fit the current molecule.
+        """
+        self._manager.reset_3d_camera()
+
+    def get_selected_atom_indices(self) -> List[int]:
+        """
+        Returns a list of RDKit atom indices currently selected in the 2D or 3D view.
+        Note: RDKit indices are returned, which map to the current_mol.
+        """
+        return self._manager.get_selected_atom_indices()
+
+    def register_window(self, window_id: str, window: Any) -> None:
+        """
+        Register a custom plugin window/dialog with the application.
+        This allows the application to manage the window lifecycle.
+        Windows are namespaced by the plugin name automatically.
+        """
+        self._manager.register_window(self._plugin_name, window_id, window)
+
+    def get_window(self, window_id: str) -> Optional[Any]:
+        """
+        Retrieve a previously registered window by its ID.
+        """
+        return self._manager.get_window(self._plugin_name, window_id)
+
     def get_main_window(self) -> Any:
         """
         Returns the raw MainWindow instance.
@@ -83,22 +174,45 @@ class PluginContext:
         return self._manager.get_main_window()
 
     @property
-    def current_molecule(self) -> Any:
+    def current_mol(self) -> Any:
         """
-        Get or set the current molecule (RDKit Mol object).
+        Get or set the current molecule (RDKit Mol object). Shortcut for current_molecule.
         """
-        mw = self._manager.get_main_window()
+        mw = self.get_main_window()
+        return mw.current_mol if mw else None
+
+    @current_mol.setter
+    def current_mol(self, mol: Any):
+        mw = self.get_main_window()
         if mw:
-            return mw.current_mol
-        return None
+            mw.current_mol = mol
+            if hasattr(mw.view_3d_manager, "draw_molecule_3d"):
+                mw.view_3d_manager.draw_molecule_3d(mol)
+
+    @property
+    def current_molecule(self) -> Any:
+        """Alias for current_mol for backward compatibility."""
+        return self.current_mol
 
     @current_molecule.setter
     def current_molecule(self, mol: Any):
-        mw = self._manager.get_main_window()
-        if mw:
-            mw.current_mol = mol
-            if hasattr(mw, "draw_molecule_3d"):
-                mw.draw_molecule_3d(mol)
+        self.current_mol = mol
+
+    @property
+    def plotter(self) -> Any:
+        """
+        Returns the PyVista plotter from the MainWindow.
+        """
+        mw = self.get_main_window()
+        return mw.plotter if mw else None
+
+    @property
+    def scene(self) -> Any:
+        """
+        Returns the 2D MoleculeScene from the MainWindow.
+        """
+        mw = self.get_main_window()
+        return mw.scene if mw else None
 
     def add_export_action(self, label: str, callback: Callable):
         """
@@ -195,12 +309,51 @@ class PluginContext:
         """
         self._manager.register_document_reset_handler(self._plugin_name, callback)
 
+    def get_setting(self, key: str, default: Any = None) -> Any:
+        """
+        Get a plugin-specific persistent setting.
+
+        Settings are stored in the app settings dict under 'plugin.<plugin_name>.<key>'
+        and are persisted across sessions with the application settings.
+
+        Args:
+            key: Setting key name.
+            default: Value to return if the setting is not found.
+        """
+        mw = self.get_main_window()
+        if mw and hasattr(mw, "init_manager") and hasattr(mw.init_manager, "settings"):
+            namespaced = f"plugin.{self._plugin_name}.{key}"
+            return mw.init_manager.settings.get(namespaced, default)
+        return default
+
+    def set_setting(self, key: str, value: Any) -> None:
+        """
+        Save a plugin-specific persistent setting.
+
+        Settings are stored in the app settings dict under 'plugin.<plugin_name>.<key>'
+        and are saved when the application saves its settings.
+
+        Args:
+            key: Setting key name.
+            value: Value to store (must be JSON-serializable).
+        """
+        mw = self.get_main_window()
+        if mw and hasattr(mw, "init_manager") and hasattr(mw.init_manager, "settings"):
+            namespaced = f"plugin.{self._plugin_name}.{key}"
+            mw.init_manager.settings[namespaced] = value
+            if hasattr(mw.init_manager, "settings_dirty"):
+                mw.init_manager.settings_dirty = True
+
 
 class Plugin3DController:
     """Helper to manipulate the 3D scene."""
 
     def __init__(self, main_window):
         self._mw = main_window
+
+    def _get_v3d(self):
+        """Helper to get the 3D manager."""
+        return getattr(self._mw, "view_3d_manager", None)
 
     def set_atom_color(self, atom_index: int, color_hex: str):
         """
@@ -209,11 +362,11 @@ class Plugin3DController:
             atom_index: RDKit atom index.
             color_hex: Hex string e.g., "#FF0000".
         """
-        if hasattr(self._mw, "main_window_view_3d"):
-            self._mw.main_window_view_3d.update_atom_color_override(
-                atom_index, color_hex
-            )
-            self._mw.plotter.render()
+        v3d = self._get_v3d()
+        if v3d:
+            v3d.update_atom_color_override(atom_index, color_hex)
+            if hasattr(self._mw, "plotter") and self._mw.plotter:
+                self._mw.plotter.render()
 
     def set_bond_color(self, bond_index: int, color_hex: str):
         """
@@ -223,8 +376,25 @@ class Plugin3DController:
              bond_index: RDKit bond index.
              color_hex: Hex string e.g., "#00FF00".
         """
-        if hasattr(self._mw, "main_window_view_3d"):
-            self._mw.main_window_view_3d.update_bond_color_override(
-                bond_index, color_hex
-            )
-            self._mw.plotter.render()
+        v3d = self._get_v3d()
+        if v3d:
+            v3d.update_bond_color_override(bond_index, color_hex)
+            if hasattr(self._mw, "plotter") and self._mw.plotter:
+                self._mw.plotter.render()
+
+    def set_bond_color_by_atoms(self, atom_idx1: int, atom_idx2: int, color_hex: str):
+        """
+        Set the color of the bond between two atoms.
+
+        Args:
+            atom_idx1: First RDKit atom index.
+            atom_idx2: Second RDKit atom index.
+            color_hex: Hex string e.g., "#00FF00".
+        """
+        mol = getattr(self._mw, "current_mol", None)
+        if not mol:
+            return
+
+        bond = mol.GetBondBetweenAtoms(atom_idx1, atom_idx2)
+        if bond:
+            self.set_bond_color(bond.GetIdx(), color_hex)

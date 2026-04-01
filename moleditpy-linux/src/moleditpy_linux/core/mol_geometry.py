@@ -12,7 +12,6 @@ DOI: 10.5281/zenodo.17268532
 
 from __future__ import annotations
 import math
-import logging
 from collections import deque
 from typing import Any, Dict, Iterable, List, Optional, Set, Tuple, Union
 
@@ -22,7 +21,11 @@ import numpy as np
 # Primitive geometry helpers
 # ------------------------------------------------------------------
 
-def calc_distance(pos1: Union[np.ndarray, Tuple[float, float, float], List[float]], pos2: Union[np.ndarray, Tuple[float, float, float], List[float]]) -> float:
+
+def calc_distance(
+    pos1: Union[np.ndarray, Tuple[float, float, float], List[float]],
+    pos2: Union[np.ndarray, Tuple[float, float, float], List[float]],
+) -> float:
     """Return the Euclidean distance between two 3-D positions.
 
     Parameters
@@ -78,7 +81,9 @@ def calc_angle_deg(
 # ------------------------------------------------------------------
 
 
-def get_connected_group(mol: Any, start_atom: int, exclude: Optional[int] = None) -> Set[int]:
+def get_connected_group(
+    mol: Any, start_atom: int, exclude: Optional[int] = None
+) -> Set[int]:
     """Return the set of atom indices reachable from *start_atom*
     without passing through *exclude*.
 
@@ -300,6 +305,70 @@ def calculate_dihedral(positions: Any, i1: int, i2: int, i3: int, i4: int) -> fl
     return float(np.degrees(angle_rad))
 
 
+def adjust_dihedral(
+    positions: np.ndarray,
+    i1: int,
+    i2: int,
+    i3: int,
+    i4: int,
+    target_dihedral_deg: float,
+    atom_indices_to_move: Iterable[int],
+) -> float:
+    """Adjust the dihedral angle defined by i1-i2-i3-i4 to target_dihedral_deg.
+    The rotation is performed around the i2-i3 bond axis.
+
+    Parameters
+    ----------
+    positions : ndarray, shape (N, 3)
+        Atom coordinates. **Modified in-place.**
+    i1, i2, i3, i4 : int
+        Atom indices defining the dihedral.
+    target_dihedral_deg : float
+        Target dihedral angle in degrees.
+    atom_indices_to_move : iterable of int
+        Indices of atoms to be rotated.
+
+    Returns
+    -------
+    float
+        Applied rotation in radians.
+    """
+    # Current dihedral
+    current_dihedral = calculate_dihedral(positions, i1, i2, i3, i4)
+
+    # Rotation angle needed
+    delta_deg = target_dihedral_deg - current_dihedral
+
+    # Shortest rotation path
+    if delta_deg > 180:
+        delta_deg -= 360
+    elif delta_deg < -180:
+        delta_deg += 360
+
+    delta_rad = np.radians(delta_deg)
+
+    if abs(delta_rad) < 1e-9:
+        return 0.0
+
+    # Rotation axis (i2 -> i3)
+    pos2 = positions[i2]
+    pos3 = positions[i3]
+    axis = pos3 - pos2
+    axis_norm = np.linalg.norm(axis)
+
+    if axis_norm < 1e-12:
+        return 0.0
+
+    axis_unit = axis / axis_norm
+
+    # Rotate each movable atom
+    for idx in atom_indices_to_move:
+        rel = positions[idx] - pos2
+        positions[idx] = pos2 + rodrigues_rotate(rel, axis_unit, delta_rad)
+
+    return float(delta_rad)
+
+
 # ------------------------------------------------------------------
 # Valence sanity check
 # ------------------------------------------------------------------
@@ -319,7 +388,9 @@ _VALENCE_LIMITS = {
 }
 
 
-def is_problematic_valence(symbol: str, bond_count: Union[int, float], charge: int = 0) -> bool:
+def is_problematic_valence(
+    symbol: str, bond_count: Union[int, float], charge: int = 0
+) -> bool:
     """Return ``True`` if the atom's total bond order exceeds its
     typical maximum valence.
 
@@ -411,7 +482,9 @@ def inject_ez_stereo_to_mol_block(mol_block, rdkit_mol, bonds_data):
     return "\n".join(mol_lines)
 
 
-def identify_valence_problems(atoms_data: Dict[int, Any], bonds_data: Dict[Tuple[int, int], Any]) -> List[int]:
+def identify_valence_problems(
+    atoms_data: Dict[int, Any], bonds_data: Dict[Tuple[int, int], Any]
+) -> List[int]:
     """Identify atoms with problematic valence.
 
     Parameters

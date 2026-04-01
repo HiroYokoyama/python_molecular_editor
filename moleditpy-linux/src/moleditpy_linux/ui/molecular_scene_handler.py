@@ -13,7 +13,7 @@ DOI: 10.5281/zenodo.17268532
 from __future__ import annotations
 import math
 import logging
-from typing import Any, Dict, List, Optional, Set, Tuple, Union
+from typing import Any, List, Optional, Tuple, Union
 
 from PyQt6.QtCore import Qt, QPointF, QLineF, QRectF
 from PyQt6.QtGui import QCursor
@@ -39,6 +39,7 @@ except ImportError:
         SNAP_DISTANCE,
         SUM_TOLERANCE,
     )
+
 
 class TemplateMixin:
     """
@@ -66,8 +67,15 @@ class TemplateMixin:
         self.template_context = {}
         if hasattr(self, "template_preview"):
             self.template_preview.hide()
+        else:  # [REPORT ERROR MISSING ATTRIBUTE]
+            logging.error("REPORT ERROR: Missing attribute 'template_preview' on self")
 
-    def _calculate_6ring_rotation(self, num_points: int, bonds_info: List[Tuple[int, int, int]], atom_items: List[Optional[AtomItem]]) -> int:
+    def _calculate_6ring_rotation(
+        self,
+        num_points: int,
+        bonds_info: List[Tuple[int, int, int]],
+        atom_items: List[Optional[AtomItem]],
+    ) -> int:
         """
         Calculate the best rotation for a 6-ring template (like benzene)
         to match existing bond orders and ensure chemical safety.
@@ -493,13 +501,8 @@ class TemplateMixin:
             charge = atom_data.get("charge", 0)
             radical = atom_data.get("radical", 0)
 
-            atom_id = self.data.add_atom(symbol, pos, charge, radical)
+            atom_id = self.create_atom(symbol, pos, charge, radical)
             atom_id_map[atom_data["id"]] = atom_id
-
-            # Create visual atom item
-            atom_item = AtomItem(atom_id, symbol, pos, charge, radical)
-            self.data.atoms[atom_id]["item"] = atom_item
-            self.addItem(atom_item)
 
         # Create bonds (bonds_info is always id-based)
         # Create index-to-id conversion table first
@@ -534,18 +537,16 @@ class TemplateMixin:
                         existing_bond = (atom2_id, atom1_id)
 
                     if not existing_bond:
-                        bond_key, _ = self.data.add_bond(
-                            atom1_id, atom2_id, order, stereo
-                        )
-                        # Create visual bond item
+                        # Use the centralized create_bond method
                         atom1_item = self.data.atoms[atom1_id]["item"]
                         atom2_item = self.data.atoms[atom2_id]["item"]
                         if atom1_item and atom2_item:
-                            bond_item = BondItem(atom1_item, atom2_item, order, stereo)
-                            self.data.bonds[bond_key]["item"] = bond_item
-                            self.addItem(bond_item)
-                            atom1_item.bonds.append(bond_item)
-                            atom2_item.bonds.append(bond_item)
+                            self.create_bond(
+                                atom1_item,
+                                atom2_item,
+                                bond_order=order,
+                                bond_stereo=stereo,
+                            )
 
         # Update atom visuals
         for atom_id in atom_id_map.values():
@@ -724,7 +725,7 @@ class KeyboardMixin:
         key = event.key()
         modifiers = event.modifiers()
 
-        if not self.window.is_2d_editable:
+        if not self.window.ui_manager.is_2d_editable:
             return
 
         try:
@@ -765,11 +766,13 @@ class KeyboardMixin:
                             points, bonds_info, existing_items=existing_items
                         )
                         self.update_all_items()
-                        self.window.push_undo_state()
+                        self.window.edit_actions_manager.push_undo_state()
 
                 # Case 2: Cursor over empty space (mode switch)
                 else:
-                    self.window.set_mode_and_update_toolbar("template_benzene")
+                    self.window.ui_manager.set_mode_and_update_toolbar(
+                        "template_benzene"
+                    )
 
                 event.accept()
                 return
@@ -793,7 +796,7 @@ class KeyboardMixin:
                         self.data.atoms[atom.atom_id]["radical"] = atom.radical
                         atom.update_style()
                     self.update_all_items()
-                    self.window.push_undo_state()
+                    self.window.edit_actions_manager.push_undo_state()
                     event.accept()
                     return
 
@@ -816,7 +819,7 @@ class KeyboardMixin:
                         self.data.atoms[atom.atom_id]["charge"] = atom.charge
                         atom.update_style()
                     self.update_all_items()
-                    self.window.push_undo_state()
+                    self.window.edit_actions_manager.push_undo_state()
                     event.accept()
                     return
 
@@ -856,7 +859,7 @@ class KeyboardMixin:
                             atom.update_style()
 
                         self.update_all_items()
-                        self.window.push_undo_state()
+                        self.window.edit_actions_manager.push_undo_state()
                         event.accept()
                         return
                     except (AttributeError, RuntimeError, ValueError, TypeError) as e:
@@ -952,7 +955,7 @@ class KeyboardMixin:
 
                 if any_bond_changed:
                     self.update_all_items()
-                    self.window.push_undo_state()
+                    self.window.edit_actions_manager.push_undo_state()
 
                 if key in [
                     Qt.Key.Key_1,
@@ -968,13 +971,13 @@ class KeyboardMixin:
                 if event.key() == Qt.Key.Key_Z:
                     self.update_bond_stereo(self.hovered_item, 3)  # Z-isomer
                     self.update_all_items()
-                    self.window.push_undo_state()
+                    self.window.edit_actions_manager.push_undo_state()
                     event.accept()
                     return
                 elif event.key() == Qt.Key.Key_E:
                     self.update_bond_stereo(self.hovered_item, 4)  # E-isomer
                     self.update_all_items()
-                    self.window.push_undo_state()
+                    self.window.edit_actions_manager.push_undo_state()
                     event.accept()
                     return
 
@@ -1030,7 +1033,7 @@ class KeyboardMixin:
 
                     self.clearSelection()
                     self.update_all_items()
-                    self.window.push_undo_state()
+                    self.window.edit_actions_manager.push_undo_state()
                     event.accept()
                     return
 
@@ -1081,7 +1084,7 @@ class KeyboardMixin:
 
                 if self.delete_items(items_to_process):
                     self.update_all_items()
-                    self.window.push_undo_state()
+                    self.window.edit_actions_manager.push_undo_state()
                     self.window.statusBar().showMessage("Deleted selected items.")
 
                 # Clear scene if no atoms left
@@ -1112,9 +1115,9 @@ class KeyboardMixin:
 
             if key == Qt.Key.Key_Space:
                 if self.mode != "select":
-                    self.window.activate_select_mode()
+                    self.window.ui_manager.activate_select_mode()
                 else:
-                    self.window.select_all()
+                    self.window.edit_actions_manager.select_all()
                 event.accept()
                 return
 
@@ -1146,14 +1149,21 @@ class KeyboardMixin:
                 mode_to_set = f"bond_{bond_data[0]}_{bond_data[1]}"
 
             # Execute mode change
-            if mode_to_set:
-                if hasattr(self.window, "set_mode_and_update_toolbar"):
-                    self.window.set_mode_and_update_toolbar(mode_to_set)
+            if mode_to_set is not None:
+                if hasattr(self.window.ui_manager, "set_mode_and_update_toolbar"):
+                    self.window.ui_manager.set_mode_and_update_toolbar(mode_to_set)
                     event.accept()
                     return
+                else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                    logging.error(
+                        "REPORT ERROR: Missing attribute 'set_mode_and_update_toolbar' on object"
+                    )
 
-            # Fallback
-            super().keyPressEvent(event)
+            # Correctly delegate to the base class (QGraphicsScene) directly
+            # to avoid MRO issues in complex Mixin inheritance structures.
+            from PyQt6.QtWidgets import QGraphicsScene
+
+            QGraphicsScene.keyPressEvent(self, event)
 
         except (AttributeError, RuntimeError, ValueError, TypeError) as e:
             logging.error(
@@ -1199,14 +1209,28 @@ class SceneQueryMixin:
                 self.data.bonds[key]["item"] = bond_item
                 if hasattr(start_atom, "bonds"):
                     start_atom.bonds.append(bond_item)
+                else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                    logging.error(
+                        "REPORT ERROR: Missing attribute 'bonds' on start_atom"
+                    )
                 if hasattr(end_atom, "bonds"):
                     end_atom.bonds.append(bond_item)
+                else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                    logging.error("REPORT ERROR: Missing attribute 'bonds' on end_atom")
                 self.addItem(bond_item)
 
             if hasattr(start_atom, "update_style"):
                 start_atom.update_style()
+            else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                logging.error(
+                    "REPORT ERROR: Missing attribute 'update_style' on start_atom"
+                )
             if hasattr(end_atom, "update_style"):
                 end_atom.update_style()
+            else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                logging.error(
+                    "REPORT ERROR: Missing attribute 'update_style' on end_atom"
+                )
 
         except (AttributeError, RuntimeError, ValueError) as e:
             logging.error(f"Error creating bond: {e}", exc_info=True)
@@ -1264,6 +1288,10 @@ class SceneQueryMixin:
 
                 if hasattr(atom, "update_style"):
                     atom.update_style()
+                else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                    logging.error(
+                        "REPORT ERROR: Missing attribute 'update_style' on atom"
+                    )
 
             # 3. Remove from data model
             for bond in list(bonds_to_delete):
@@ -1329,6 +1357,10 @@ class SceneQueryMixin:
             for atom in list(atoms_to_update):
                 if hasattr(atom, "update_style"):
                     atom.update_style()
+                else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                    logging.error(
+                        "REPORT ERROR: Missing attribute 'update_style' on atom"
+                    )
 
             self.update_all_items()
             return True
@@ -1387,6 +1419,10 @@ class SceneQueryMixin:
                         self.window.statusBar().showMessage(
                             f"Warning: Bond {id1}-{id2} not found in model.", 3000
                         )
+                    else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                        logging.error(
+                            "REPORT ERROR: Missing attribute 'statusBar' on self.window"
+                        )
                     return
 
             # Update data model and visual representation
@@ -1400,4 +1436,8 @@ class SceneQueryMixin:
             )
             if hasattr(self.window, "statusBar"):
                 self.window.statusBar().showMessage(f"Error: {e}", 5000)
+            else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                logging.error(
+                    "REPORT ERROR: Missing attribute 'statusBar' on self.window"
+                )
             self.update_all_items()

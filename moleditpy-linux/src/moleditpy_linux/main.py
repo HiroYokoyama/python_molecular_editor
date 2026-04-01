@@ -50,7 +50,6 @@ def setup_logging():
     sys.excepthook = handle_exception
 
 
-
 def main():
     # Setup logging as early as possible
     setup_logging()

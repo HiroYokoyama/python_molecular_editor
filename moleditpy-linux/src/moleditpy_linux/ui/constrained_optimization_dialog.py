@@ -47,11 +47,11 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
         self.enable_picking()
 
         # Load existing constraints from MainWindow
-        if self.main_window.constraints_3d:
+        if self.main_window.edit_3d_manager.constraints_3d:
             self.constraint_table.blockSignals(True)  # Block signals during loading
             try:
                 # Load into self.constraints as (Type, (Idx...), Value, Force) tuples
-                for const_data in self.main_window.constraints_3d:
+                for const_data in self.main_window.edit_3d_manager.constraints_3d:
                     # Support 3- or 4-element constraints for backward compatibility
                     if len(const_data) == 4:
                         const_type, atom_indices, value, force_const = const_data
@@ -104,7 +104,9 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
             # <<< Load current optimization settings from MainWindow as defaults >>>
         try:
             # Add fallback for None case
-            current_method_str = self.main_window.optimization_method or "MMFF_RDKIT"
+            current_method_str = (
+                self.main_window.init_manager.optimization_method or "MMFF_RDKIT"
+            )
             current_method = current_method_str.upper()
 
             # 1. UFF_RDKIT
@@ -414,11 +416,13 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
         positions = []
         texts = []
         for i, atom_idx in enumerate(atom_indices):
-            positions.append(self.main_window.atom_positions_3d[atom_idx])
+            positions.append(
+                self.main_window.view_3d_manager.atom_positions_3d[atom_idx]
+            )
             texts.append(labels[i])
 
         if positions:
-            label_actor = self.main_window.plotter.add_point_labels(
+            label_actor = self.main_window.view_3d_manager.plotter.add_point_labels(
                 positions,
                 texts,
                 point_size=20,
@@ -431,7 +435,7 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
     def clear_constraint_labels(self):
         for label_actor in self.constraint_labels:
             try:
-                self.main_window.plotter.remove_actor(label_actor)
+                self.main_window.view_3d_manager.plotter.remove_actor(label_actor)
             except (AttributeError, RuntimeError, TypeError) as e:
                 logging.debug(
                     f"Suppressed exception: {e}"
@@ -448,7 +452,7 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
         conf = self.mol.GetConformer()
 
         try:
-            ignore_interfrag = not self.main_window.settings.get(
+            ignore_interfrag = not self.main_window.init_manager.settings.get(
                 "optimize_intermolecular_interaction_rdkit", True
             )
             if ff_name.startswith("MMFF"):
@@ -535,19 +539,23 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
             # Apply optimized coordinates to the main window's numpy array
             for i in range(self.mol.GetNumAtoms()):
                 pos = conf.GetAtomPosition(i)
-                self.main_window.atom_positions_3d[i] = [pos.x, pos.y, pos.z]
+                self.main_window.view_3d_manager.atom_positions_3d[i] = [
+                    pos.x,
+                    pos.y,
+                    pos.z,
+                ]
 
             # Update 3D view
-            self.main_window.draw_molecule_3d(self.mol)
-            self.main_window.update_chiral_labels()
-            self.main_window.push_undo_state()
+            self.main_window.view_3d_manager.draw_molecule_3d(self.mol)
+            self.main_window.view_3d_manager.update_chiral_labels()
+            self.main_window.edit_actions_manager.push_undo_state()
             self.main_window.statusBar().showMessage(
                 "Constrained optimization finished."
             )
 
             try:
                 constrained_method_name = f"Constrained_{ff_name}"
-                self.main_window.last_successful_optimization_method = (
+                self.main_window.compute_manager.last_successful_optimization_method = (
                     constrained_method_name
                 )
             except (AttributeError, RuntimeError, ValueError, TypeError) as e:
@@ -570,12 +578,17 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
                         )
 
                 # Update MainWindow only if changed
-                if self.main_window.constraints_3d != json_safe_constraints:
-                    self.main_window.constraints_3d = json_safe_constraints
-                    self.main_window.has_unsaved_changes = (
+                if (
+                    self.main_window.edit_3d_manager.constraints_3d
+                    != json_safe_constraints
+                ):
+                    self.main_window.edit_3d_manager.constraints_3d = (
+                        json_safe_constraints
+                    )
+                    self.main_window.state_manager.has_unsaved_changes = (
                         True  # Mark as unsaved changes
                     )
-                    self.main_window.update_window_title()
+                    self.main_window.state_manager.update_window_title()
 
             except (AttributeError, RuntimeError, ValueError, TypeError) as e:
                 print(f"Failed to save constraints post-optimization: {e}")
@@ -609,10 +622,12 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
                     )
 
             # Update MainWindow only if changed
-            if self.main_window.constraints_3d != json_safe_constraints:
-                self.main_window.constraints_3d = json_safe_constraints
-                self.main_window.has_unsaved_changes = True  # Mark as unsaved changes
-                self.main_window.update_window_title()
+            if self.main_window.edit_3d_manager.constraints_3d != json_safe_constraints:
+                self.main_window.edit_3d_manager.constraints_3d = json_safe_constraints
+                self.main_window.state_manager.has_unsaved_changes = (
+                    True  # Mark as unsaved changes
+                )
+                self.main_window.state_manager.update_window_title()
 
         except (AttributeError, RuntimeError, ValueError, TypeError) as e:
             print(f"Failed to save constraints to main window: {e}")
@@ -633,18 +648,20 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
             self.selection_labels = []
 
         if (
-            not hasattr(self.main_window, "atom_positions_3d")
-            or self.main_window.atom_positions_3d is None
+            self.main_window.view_3d_manager.atom_positions_3d is None
+            or self.main_window.view_3d_manager.atom_positions_3d is None
         ):
             return  # Do nothing if 3D coordinates are missing
 
-        max_idx = len(self.main_window.atom_positions_3d) - 1
+        max_idx = len(self.main_window.view_3d_manager.atom_positions_3d) - 1
         positions = []
         texts = []
 
         for i, atom_idx in enumerate(self.selected_atoms):
             if atom_idx is not None and 0 <= atom_idx <= max_idx:
-                positions.append(self.main_window.atom_positions_3d[atom_idx])
+                positions.append(
+                    self.main_window.view_3d_manager.atom_positions_3d[atom_idx]
+                )
                 texts.append(f"A{i + 1}")
             elif atom_idx is not None:
                 # Log invalid index (for debugging)
@@ -653,7 +670,7 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
                 )
 
         if positions:
-            label_actor = self.main_window.plotter.add_point_labels(
+            label_actor = self.main_window.view_3d_manager.plotter.add_point_labels(
                 positions,
                 texts,
                 point_size=20,
@@ -774,4 +791,4 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
                 return
 
         # Default processing for other keys
-        super().keyPressEvent(event)
+        QDialog.keyPressEvent(self, event)

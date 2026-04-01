@@ -111,39 +111,41 @@ class UserTemplateDialog(QDialog):
         self.selected_template = None
         if hasattr(self, "delete_button"):
             self.delete_button.setEnabled(False)
+        else:  # [REPORT ERROR MISSING ATTRIBUTE]
+            logging.error("REPORT ERROR: Missing attribute 'delete_button' on self")
 
         # 2. Reset Main Window Mode (UI/Toolbar)
         target_mode = "atom_C"
         try:
-            if hasattr(self.main_window, "set_mode_and_update_toolbar"):
-                self.main_window.set_mode_and_update_toolbar(target_mode)
-            elif hasattr(self.main_window, "set_mode"):
-                self.main_window.set_mode(target_mode)
-
-            # Fallback: set attribute directly if methods fail/don't exist
-            if hasattr(self.main_window, "mode"):
-                self.main_window.mode = target_mode
+            # ui_manager is the authoritative source for mode/toolbar synchronization
+            if hasattr(self.main_window, "ui_manager") and self.main_window.ui_manager:
+                self.main_window.ui_manager.set_mode_and_update_toolbar(target_mode)
         except (AttributeError, RuntimeError, ValueError) as e:
             logging.error(f"Error resetting main window mode: {e}")
 
         # 3. Reset Scene State (The Source of Truth)
         try:
-            if hasattr(self.main_window, "scene") and self.main_window.scene:
-                scene = self.main_window.scene
+            if (
+                hasattr(self.main_window.init_manager, "scene")
+                and self.main_window.init_manager.scene
+            ):
+                scene = self.main_window.init_manager.scene
 
                 # A. FORCE MODE
                 scene.mode = target_mode
                 scene.current_atom_symbol = "C"
 
-                # B. Clear Data
-                if hasattr(scene, "user_template_data"):
-                    scene.user_template_data = None
-                if hasattr(scene, "template_context"):
-                    scene.template_context = {}
+                # B. Clear Data (guaranteed attributes on MoleculeScene)
+                scene.user_template_data = None
+                scene.template_context = {}
 
                 # C. Clear/Hide Preview Item
                 if hasattr(scene, "clear_template_preview"):
                     scene.clear_template_preview()
+                else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                    logging.error(
+                        "REPORT ERROR: Missing attribute 'clear_template_preview' on scene"
+                    )
 
                 if hasattr(scene, "template_preview") and scene.template_preview:
                     scene.template_preview.hide()
@@ -178,6 +180,10 @@ class UserTemplateDialog(QDialog):
                             child.redraw_with_current_size()
                         elif hasattr(child, "refit_view"):
                             child.refit_view()
+                        else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                            logging.error(
+                                "REPORT ERROR: Missing attribute 'refit_view' on child"
+                            )
         except (AttributeError, RuntimeError, ValueError) as e:
             logging.warning(f"Warning: Failed to refit template previews: {e}")
 
@@ -189,7 +195,9 @@ class UserTemplateDialog(QDialog):
 
     def get_template_directory(self):
         """Get or create the user templates directory path."""
-        template_dir = os.path.join(self.main_window.settings_dir, "user-templates")
+        template_dir = os.path.join(
+            self.main_window.init_manager.settings_dir, "user-templates"
+        )
         if not os.path.exists(template_dir):
             os.makedirs(template_dir)
         return template_dir
@@ -523,33 +531,34 @@ class UserTemplateDialog(QDialog):
         mode_name = f"template_user_{template_name}"
 
         # Store template data on the scene
-        if hasattr(self.main_window, "scene") and self.main_window.scene is not None:
-            self.main_window.scene.user_template_data = template_data
+        if (
+            hasattr(self.main_window.init_manager, "scene")
+            and self.main_window.init_manager.scene is not None
+        ):
+            self.main_window.init_manager.scene.user_template_data = template_data
 
         try:
             # Uncheck all mode actions first
             if hasattr(self.main_window, "mode_actions") and isinstance(
-                self.main_window.mode_actions, dict
+                self.main_window.init_manager.mode_actions, dict
             ):
-                for act in self.main_window.mode_actions.values():
+                for act in self.main_window.init_manager.mode_actions.values():
                     act.setChecked(False)
 
-            # Switch mode
-            if hasattr(self.main_window, "set_mode") and callable(
-                self.main_window.set_mode
+            # Switch mode via UIManager
+            if hasattr(self.main_window, "ui_manager") and hasattr(
+                self.main_window.ui_manager, "set_mode"
             ):
-                self.main_window.set_mode(mode_name)
-            else:
-                setattr(self.main_window, "mode", mode_name)
+                self.main_window.ui_manager.set_mode(mode_name)
 
             self.main_window.statusBar().showMessage(f"Template mode: {template_name}")
 
             # Check the matching action if present
             if (
                 hasattr(self.main_window, "mode_actions")
-                and mode_name in self.main_window.mode_actions
+                and mode_name in self.main_window.init_manager.mode_actions
             ):
-                self.main_window.mode_actions[mode_name].setChecked(True)
+                self.main_window.init_manager.mode_actions[mode_name].setChecked(True)
 
         except (AttributeError, RuntimeError, ValueError) as e:
             logging.warning(f"Failed to switch main window to template mode: {e}")
@@ -595,7 +604,7 @@ class UserTemplateDialog(QDialog):
 
     def save_current_as_template(self):
         """Save the current editor structure as a new user template."""
-        if not self.main_window.data.atoms:
+        if not self.main_window.state_manager.data.atoms:
             QMessageBox.warning(self, "Warning", "No structure to save as template.")
             return
 
@@ -626,8 +635,8 @@ class UserTemplateDialog(QDialog):
 
             if self.save_template_file(filepath, template_data):
                 # Mark main window as saved
-                self.main_window.has_unsaved_changes = False
-                self.main_window.update_window_title()
+                self.main_window.state_manager.has_unsaved_changes = False
+                self.main_window.state_manager.update_window_title()
 
                 QMessageBox.information(
                     self, "Success", f"Template '{name}' saved successfully."
@@ -645,7 +654,7 @@ class UserTemplateDialog(QDialog):
         bonds_data = []
 
         # Convert atoms
-        for atom_id, atom_info in self.main_window.data.atoms.items():
+        for atom_id, atom_info in self.main_window.state_manager.data.atoms.items():
             pos = atom_info["pos"]
             atoms_data.append(
                 {
@@ -659,7 +668,10 @@ class UserTemplateDialog(QDialog):
             )
 
         # Convert bonds
-        for (atom1_id, atom2_id), bond_info in self.main_window.data.bonds.items():
+        for (
+            atom1_id,
+            atom2_id,
+        ), bond_info in self.main_window.state_manager.data.bonds.items():
             bonds_data.append(
                 {
                     "atom1": atom1_id,

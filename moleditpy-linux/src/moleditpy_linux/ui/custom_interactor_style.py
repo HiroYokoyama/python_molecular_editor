@@ -67,26 +67,28 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                     move_group_dialog = widget
                     break
             except (AttributeError, RuntimeError, TypeError):
-                import logging
-
                 logging.error("Caught exception in " + __file__, exc_info=True)
 
         if move_group_dialog and move_group_dialog.group_atoms:
             # Group drag if selected
             click_pos = self.GetInteractor().GetEventPosition()
-            picker = mw.plotter.picker
-            picker.Pick(click_pos[0], click_pos[1], 0, mw.plotter.renderer)
+            picker = mw.view_3d_manager.plotter.picker
+            picker.Pick(
+                click_pos[0], click_pos[1], 0, mw.view_3d_manager.plotter.renderer
+            )
 
             clicked_atom_idx = None
-            if picker.GetActor() is mw.atom_actor:
+            if picker.GetActor() is mw.view_3d_manager.atom_actor:
                 picked_position = np.array(picker.GetPickPosition())
                 distances = np.linalg.norm(
-                    mw.atom_positions_3d - picked_position, axis=1
+                    mw.view_3d_manager.atom_positions_3d - picked_position, axis=1
                 )
                 closest_atom_idx = np.argmin(distances)
 
-                if 0 <= closest_atom_idx < mw.current_mol.GetNumAtoms():
-                    atom = mw.current_mol.GetAtomWithIdx(int(closest_atom_idx))
+                if 0 <= closest_atom_idx < mw.view_3d_manager.current_mol.GetNumAtoms():
+                    atom = mw.view_3d_manager.current_mol.GetAtomWithIdx(
+                        int(closest_atom_idx)
+                    )
                     if atom:
                         try:
                             atomic_num = atom.GetAtomicNum()
@@ -110,13 +112,15 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                     move_group_dialog._mouse_moved = False
                     # Save initial positions
                     move_group_dialog._initial_positions = {}
-                    conf = mw.current_mol.GetConformer()
+                    conf = mw.view_3d_manager.current_mol.GetConformer()
                     for atom_idx in move_group_dialog.group_atoms:
                         pos = conf.GetAtomPosition(atom_idx)
                         move_group_dialog._initial_positions[atom_idx] = np.array(
                             [pos.x, pos.y, pos.z]
                         )
-                    mw.plotter.setCursor(Qt.CursorShape.ClosedHandCursor)
+                    mw.view_3d_manager.plotter.setCursor(
+                        Qt.CursorShape.ClosedHandCursor
+                    )
                     return  # Disable camera rotation
                 else:
                     # Clicked outside group - Search connected component
@@ -126,8 +130,12 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
 
                     while queue:
                         current_idx = queue.pop(0)
-                        for bond_idx in range(mw.current_mol.GetNumBonds()):
-                            bond = mw.current_mol.GetBondWithIdx(bond_idx)
+                        for bond_idx in range(
+                            mw.view_3d_manager.current_mol.GetNumBonds()
+                        ):
+                            bond = mw.view_3d_manager.current_mol.GetBondWithIdx(
+                                bond_idx
+                            )
                             begin_idx = bond.GetBeginAtomIdx()
                             end_idx = bond.GetEndAtomIdx()
 
@@ -172,7 +180,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
         is_temp_mode = bool(
             QApplication.keyboardModifiers() & Qt.KeyboardModifier.AltModifier
         )
-        is_edit_active = mw.is_3d_edit_mode or is_temp_mode
+        is_edit_active = mw.edit_3d_manager.is_3d_edit_mode or is_temp_mode
 
         # Ctrl+Click for atom selection (3D edit)
         is_ctrl_click = bool(
@@ -180,27 +188,31 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
         )
 
         # Handle measurement mode
-        if mw.measurement_mode and mw.current_mol:
+        if mw.edit_3d_manager.measurement_mode and mw.view_3d_manager.current_mol:
             click_pos = self.GetInteractor().GetEventPosition()
             self._mouse_moved_during_drag = False
 
-            picker = mw.plotter.picker
+            picker = mw.view_3d_manager.plotter.picker
 
             # Run pick process
-            picker.Pick(click_pos[0], click_pos[1], 0, mw.plotter.renderer)
+            picker.Pick(
+                click_pos[0], click_pos[1], 0, mw.view_3d_manager.plotter.renderer
+            )
 
             # Special handling if atom clicked
-            if picker.GetActor() is mw.atom_actor:
+            if picker.GetActor() is mw.view_3d_manager.atom_actor:
                 picked_position = np.array(picker.GetPickPosition())
                 distances = np.linalg.norm(
-                    mw.atom_positions_3d - picked_position, axis=1
+                    mw.view_3d_manager.atom_positions_3d - picked_position, axis=1
                 )
                 closest_atom_idx = np.argmin(distances)
 
                 # Add range check
-                if 0 <= closest_atom_idx < mw.current_mol.GetNumAtoms():
+                if 0 <= closest_atom_idx < mw.view_3d_manager.current_mol.GetNumAtoms():
                     # Check click threshold
-                    atom = mw.current_mol.GetAtomWithIdx(int(closest_atom_idx))
+                    atom = mw.view_3d_manager.current_mol.GetAtomWithIdx(
+                        int(closest_atom_idx)
+                    )
                     if atom:
                         try:
                             atomic_num = atom.GetAtomicNum()
@@ -212,7 +224,9 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                         click_threshold = vdw_radius * 1.5
 
                         if distances[closest_atom_idx] < click_threshold:
-                            mw.handle_measurement_atom_selection(int(closest_atom_idx))
+                            mw.edit_3d_manager.handle_measurement_atom_selection(
+                                int(closest_atom_idx)
+                            )
                             return  # Selection complete, disable camera rotation
 
             # Clear measurement if not dragging
@@ -222,22 +236,26 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
             return
 
         # Handle selection if 3D mol exists
-        if is_edit_active and mw.current_mol:
+        if is_edit_active and mw.view_3d_manager.current_mol:
             click_pos = self.GetInteractor().GetEventPosition()
-            picker = mw.plotter.picker
-            picker.Pick(click_pos[0], click_pos[1], 0, mw.plotter.renderer)
+            picker = mw.view_3d_manager.plotter.picker
+            picker.Pick(
+                click_pos[0], click_pos[1], 0, mw.view_3d_manager.plotter.renderer
+            )
 
-            if picker.GetActor() is mw.atom_actor:
+            if picker.GetActor() is mw.view_3d_manager.atom_actor:
                 picked_position = np.array(picker.GetPickPosition())
                 distances = np.linalg.norm(
-                    mw.atom_positions_3d - picked_position, axis=1
+                    mw.view_3d_manager.atom_positions_3d - picked_position, axis=1
                 )
                 closest_atom_idx = np.argmin(distances)
 
                 # Add range check
-                if 0 <= closest_atom_idx < mw.current_mol.GetNumAtoms():
+                if 0 <= closest_atom_idx < mw.view_3d_manager.current_mol.GetNumAtoms():
                     # Get atom safely from RDKit Mol
-                    atom = mw.current_mol.GetAtomWithIdx(int(closest_atom_idx))
+                    atom = mw.view_3d_manager.current_mol.GetAtomWithIdx(
+                        int(closest_atom_idx)
+                    )
                     if atom:
                         try:
                             atomic_num = atom.GetAtomicNum()
@@ -253,7 +271,9 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                             self._is_dragging_atom = True
                         self.is_dragging = False
                         mw.dragged_atom_info = {"id": int(closest_atom_idx)}
-                        mw.plotter.setCursor(Qt.CursorShape.ClosedHandCursor)
+                        mw.view_3d_manager.plotter.setCursor(
+                            Qt.CursorShape.ClosedHandCursor
+                        )
                         return  # Prevent camera rotation
 
         self._is_dragging_atom = False
@@ -280,19 +300,23 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
         if move_group_dialog and move_group_dialog.group_atoms:
             # Start rotation drag if group selected
             click_pos = self.GetInteractor().GetEventPosition()
-            picker = mw.plotter.picker
-            picker.Pick(click_pos[0], click_pos[1], 0, mw.plotter.renderer)
+            picker = mw.view_3d_manager.plotter.picker
+            picker.Pick(
+                click_pos[0], click_pos[1], 0, mw.view_3d_manager.plotter.renderer
+            )
 
             clicked_atom_idx = None
-            if picker.GetActor() is mw.atom_actor:
+            if picker.GetActor() is mw.view_3d_manager.atom_actor:
                 picked_position = np.array(picker.GetPickPosition())
                 distances = np.linalg.norm(
-                    mw.atom_positions_3d - picked_position, axis=1
+                    mw.view_3d_manager.atom_positions_3d - picked_position, axis=1
                 )
                 closest_atom_idx = np.argmin(distances)
 
-                if 0 <= closest_atom_idx < mw.current_mol.GetNumAtoms():
-                    atom = mw.current_mol.GetAtomWithIdx(int(closest_atom_idx))
+                if 0 <= closest_atom_idx < mw.view_3d_manager.current_mol.GetNumAtoms():
+                    atom = mw.view_3d_manager.current_mol.GetAtomWithIdx(
+                        int(closest_atom_idx)
+                    )
                     if atom:
                         try:
                             atomic_num = atom.GetAtomicNum()
@@ -320,7 +344,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
 
                 # Save initial positions and centroid
                 move_group_dialog._initial_positions = {}
-                conf = mw.current_mol.GetConformer()
+                conf = mw.view_3d_manager.current_mol.GetConformer()
                 centroid = np.zeros(3)
                 for atom_idx in move_group_dialog.group_atoms:
                     pos = conf.GetAtomPosition(atom_idx)
@@ -330,7 +354,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                 centroid /= len(move_group_dialog.group_atoms)
                 move_group_dialog._group_centroid = centroid
 
-                mw.plotter.setCursor(Qt.CursorShape.ClosedHandCursor)
+                mw.view_3d_manager.plotter.setCursor(Qt.CursorShape.ClosedHandCursor)
                 return  # Disable camera rotation
 
         # Standard right-click
@@ -350,8 +374,6 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                     move_group_dialog = widget
                     break
         except (AttributeError, RuntimeError, TypeError):
-            import logging
-
             logging.error("Caught exception in " + __file__, exc_info=True)
         if move_group_dialog and getattr(
             move_group_dialog, "_is_dragging_group_vtk", False
@@ -403,22 +425,26 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
             super().OnMouseMove()
 
             # Update cursor display
-            is_edit_active = mw.is_3d_edit_mode or interactor.GetAltKey()
+            is_edit_active = (
+                mw.edit_3d_manager.is_3d_edit_mode or interactor.GetAltKey()
+            )
             if is_edit_active:
                 # Hover check if edit active
                 atom_under_cursor = False
                 click_pos = interactor.GetEventPosition()
-                picker = mw.plotter.picker
-                picker.Pick(click_pos[0], click_pos[1], 0, mw.plotter.renderer)
-                if picker.GetActor() is mw.atom_actor:
+                picker = mw.view_3d_manager.plotter.picker
+                picker.Pick(
+                    click_pos[0], click_pos[1], 0, mw.view_3d_manager.plotter.renderer
+                )
+                if picker.GetActor() is mw.view_3d_manager.atom_actor:
                     atom_under_cursor = True
 
                 if atom_under_cursor:
-                    mw.plotter.setCursor(Qt.CursorShape.OpenHandCursor)
+                    mw.view_3d_manager.plotter.setCursor(Qt.CursorShape.OpenHandCursor)
                 else:
-                    mw.plotter.setCursor(Qt.CursorShape.ArrowCursor)
+                    mw.view_3d_manager.plotter.setCursor(Qt.CursorShape.ArrowCursor)
             else:
-                mw.plotter.setCursor(Qt.CursorShape.ArrowCursor)
+                mw.view_3d_manager.plotter.setCursor(Qt.CursorShape.ArrowCursor)
 
     def on_left_button_up(self, obj, event):
         """
@@ -434,8 +460,6 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                     move_group_dialog = widget
                     break
         except (AttributeError, RuntimeError, TypeError):
-            import logging
-
             logging.error("Caught exception in " + __file__, exc_info=True)
         # Prevent multi-click issues
         if move_group_dialog:
@@ -446,7 +470,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                 move_group_dialog._is_dragging_group_vtk = False
                 move_group_dialog._drag_start_pos = None
                 move_group_dialog._mouse_moved = False
-                if hasattr(move_group_dialog, "_initial_positions"):
+                if hasattr(move_group_dialog, "_initial_positions"):  # [SAFE]
                     delattr(move_group_dialog, "_initial_positions")
 
         if move_group_dialog and getattr(
@@ -456,9 +480,9 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                 # Update coordinates on release if dragged
                 try:
                     interactor = self.GetInteractor()
-                    renderer = mw.plotter.renderer
+                    renderer = mw.view_3d_manager.plotter.renderer
                     current_pos = interactor.GetEventPosition()
-                    conf = mw.current_mol.GetConformer()
+                    conf = mw.view_3d_manager.current_mol.GetConformer()
 
                     # Initial position of dragged atom
                     drag_atom_initial_pos = move_group_dialog._initial_positions[
@@ -505,18 +529,18 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                                 float(new_pos[0]), float(new_pos[1]), float(new_pos[2])
                             ),
                         )
-                        mw.atom_positions_3d[atom_idx] = new_pos
+                        mw.view_3d_manager.atom_positions_3d[atom_idx] = new_pos
 
                     # Update 3D display
-                    mw.draw_molecule_3d(mw.current_mol)
-                    mw.update_chiral_labels()
+                    mw.view_3d_manager.draw_molecule_3d(mw.view_3d_manager.current_mol)
+                    mw.view_3d_manager.update_chiral_labels()
                     move_group_dialog.show_atom_labels()
-                    mw.push_undo_state()
+                    mw.edit_actions_manager.push_undo_state()
                 except (AttributeError, RuntimeError, TypeError, ValueError) as e:
                     print(f"Error finalizing group drag: {e}")
             else:
                 # No drag = click only -> toggle
-                if hasattr(move_group_dialog, "_drag_atom_idx"):
+                if hasattr(move_group_dialog, "_drag_atom_idx"):  # [SAFE]
                     clicked_atom = move_group_dialog._drag_atom_idx
                     try:
                         move_group_dialog.on_atom_picked(clicked_atom)
@@ -536,17 +560,20 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
 
         # Measurement mode click handling
         if (
-            mw.measurement_mode
+            mw.edit_3d_manager.measurement_mode
             and not self._mouse_moved_during_drag
             and self._mouse_press_pos is not None
         ):
             # Background click -> clear selection
-            mw.clear_measurement_selection()
+            mw.edit_3d_manager.clear_measurement_selection()
 
         if self._is_dragging_atom:
             # Finalize custom drag
             if self.is_dragging:
-                if mw.current_mol and mw.current_mol.GetNumConformers() > 0:
+                if (
+                    mw.view_3d_manager.current_mol
+                    and mw.view_3d_manager.current_mol.GetNumConformers() > 0
+                ):
                     try:
                         atom_id = None
                         try:
@@ -561,9 +588,9 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                         if atom_id is not None:
                             try:
                                 interactor = self.GetInteractor()
-                                renderer = mw.plotter.renderer
+                                renderer = mw.view_3d_manager.plotter.renderer
                                 current_display_pos = interactor.GetEventPosition()
-                                conf = mw.current_mol.GetConformer()
+                                conf = mw.view_3d_manager.current_mol.GetConformer()
                                 pos_3d = conf.GetAtomPosition(atom_id)
                                 renderer.SetWorldPoint(
                                     pos_3d.x, pos_3d.y, pos_3d.z, 1.0
@@ -585,10 +612,15 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                                 new_world_coords = list(new_world_coords_tuple)[:3]
                                 # Ensure container supports assignment
                                 if isinstance(
-                                    mw.atom_positions_3d, (list, np.ndarray)
-                                ) and atom_id < len(mw.atom_positions_3d):
+                                    mw.view_3d_manager.atom_positions_3d,
+                                    (list, np.ndarray),
+                                ) and atom_id < len(
+                                    mw.view_3d_manager.atom_positions_3d
+                                ):
                                     try:
-                                        mw.atom_positions_3d[atom_id] = new_world_coords
+                                        mw.view_3d_manager.atom_positions_3d[
+                                            atom_id
+                                        ] = new_world_coords
                                     except (
                                         AttributeError,
                                         RuntimeError,
@@ -605,14 +637,18 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                             ):
                                 # Suppress non-critical coordinate sync noise
                                 pass
-                        conf = mw.current_mol.GetConformer()
+                        conf = mw.view_3d_manager.current_mol.GetConformer()
                         pos_count = (
-                            len(mw.atom_positions_3d)
-                            if isinstance(mw.atom_positions_3d, (list, np.ndarray))
+                            len(mw.view_3d_manager.atom_positions_3d)
+                            if isinstance(
+                                mw.view_3d_manager.atom_positions_3d, (list, np.ndarray)
+                            )
                             else 0
                         )
-                        for i in range(min(mw.current_mol.GetNumAtoms(), pos_count)):
-                            pos = mw.atom_positions_3d[i]
+                        for i in range(
+                            min(mw.view_3d_manager.current_mol.GetNumAtoms(), pos_count)
+                        ):
+                            pos = mw.view_3d_manager.atom_positions_3d[i]
                             conf.SetAtomPosition(
                                 i,
                                 Geometry.Point3D(
@@ -620,31 +656,27 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                                 ),
                             )
                     except (AttributeError, RuntimeError, ValueError, TypeError):
-                        import logging
-
                         logging.error("Caught exception in " + __file__, exc_info=True)
 
                     try:
-                        mw.draw_molecule_3d(mw.current_mol)
+                        mw.view_3d_manager.draw_molecule_3d(
+                            mw.view_3d_manager.current_mol
+                        )
                     except (AttributeError, RuntimeError, ValueError, TypeError):
-                        import logging
-
                         logging.error("Caught exception in " + __file__, exc_info=True)
 
-                    mw.push_undo_state()
+                    mw.edit_actions_manager.push_undo_state()
             mw.dragged_atom_info = None
             # Update all relevant UI displays and labels
             for update_call in [
-                mw.update_3d_selection_display,
-                mw.update_measurement_labels_display,
-                mw.update_2d_measurement_labels,
-                mw.show_all_atom_info,
+                mw.edit_3d_manager.update_3d_selection_display,
+                mw.edit_3d_manager.update_measurement_labels_display,
+                mw.edit_3d_manager.update_2d_measurement_labels,
+                mw.view_3d_manager.show_all_atom_info,
             ]:
                 try:
                     update_call()
                 except (AttributeError, RuntimeError, ValueError, TypeError):
-                    import logging
-
                     logging.error("Caught exception in " + __file__, exc_info=True)
         else:
             # Delegate cleanup to parent
@@ -662,26 +694,22 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                 move_group_dialog._is_dragging_group_vtk = False
                 move_group_dialog._drag_start_pos = None
                 move_group_dialog._mouse_moved = False
-                if hasattr(move_group_dialog, "_initial_positions"):
+                if hasattr(move_group_dialog, "_initial_positions"):  # [SAFE]
                     delattr(move_group_dialog, "_initial_positions")
-                if hasattr(move_group_dialog, "_drag_atom_idx"):
+                if hasattr(move_group_dialog, "_drag_atom_idx"):  # [SAFE]
                     delattr(move_group_dialog, "_drag_atom_idx")
         except (AttributeError, RuntimeError, ValueError, TypeError):
-            import logging
-
             logging.error("Caught exception in " + __file__, exc_info=True)
 
         # Update cursor after release
         try:
-            mw.plotter.setCursor(Qt.CursorShape.ArrowCursor)
+            mw.view_3d_manager.plotter.setCursor(Qt.CursorShape.ArrowCursor)
         except (AttributeError, RuntimeError, ValueError, TypeError):
-            import logging
-
             logging.error("Caught exception in " + __file__, exc_info=True)
 
         # Restore focus to 2D view
-        if mw and mw.view_2d:
-            mw.view_2d.setFocus()
+        if mw and mw.init_manager.view_2d:
+            mw.init_manager.view_2d.setFocus()
 
     def on_right_button_up(self, obj, event):
         """
@@ -697,8 +725,6 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                     move_group_dialog = widget
                     break
         except (AttributeError, RuntimeError, TypeError):
-            import logging
-
             logging.error("Caught exception in " + __file__, exc_info=True)
         if move_group_dialog and getattr(
             move_group_dialog, "_is_rotating_group_vtk", False
@@ -708,9 +734,9 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                 # Apply rotation on release if moved
                 try:
                     interactor = self.GetInteractor()
-                    renderer = mw.plotter.renderer
+                    renderer = mw.view_3d_manager.plotter.renderer
                     current_pos = interactor.GetEventPosition()
-                    conf = mw.current_mol.GetConformer()
+                    conf = mw.view_3d_manager.current_mol.GetConformer()
                     centroid = move_group_dialog._group_centroid
 
                     # Save initial grabbed atom index
@@ -804,13 +830,15 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                                         float(new_pos[2]),
                                     ),
                                 )
-                                mw.atom_positions_3d[atom_idx] = new_pos
+                                mw.view_3d_manager.atom_positions_3d[atom_idx] = new_pos
 
                             # Update 3D display
-                            mw.draw_molecule_3d(mw.current_mol)
-                            mw.update_chiral_labels()
+                            mw.view_3d_manager.draw_molecule_3d(
+                                mw.view_3d_manager.current_mol
+                            )
+                            mw.view_3d_manager.update_chiral_labels()
                             move_group_dialog.show_atom_labels()
-                            mw.push_undo_state()
+                            mw.edit_actions_manager.push_undo_state()
                 except (AttributeError, RuntimeError, TypeError, ValueError) as e:
                     print(f"Error finalizing group rotation: {e}")
 
@@ -818,11 +846,11 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
             move_group_dialog._is_rotating_group_vtk = False
             move_group_dialog._rotation_start_pos = None
             move_group_dialog._rotation_mouse_moved = False
-            if hasattr(move_group_dialog, "_initial_positions"):
+            if hasattr(move_group_dialog, "_initial_positions"):  # [SAFE]
                 delattr(move_group_dialog, "_initial_positions")
-            if hasattr(move_group_dialog, "_group_centroid"):
+            if hasattr(move_group_dialog, "_group_centroid"):  # [SAFE]
                 delattr(move_group_dialog, "_group_centroid")
-            if hasattr(move_group_dialog, "_rotation_atom_idx"):
+            if hasattr(move_group_dialog, "_rotation_atom_idx"):  # [SAFE]
                 delattr(move_group_dialog, "_rotation_atom_idx")
 
             return

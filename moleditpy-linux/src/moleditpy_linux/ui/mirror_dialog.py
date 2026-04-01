@@ -122,12 +122,12 @@ class MirrorDialog(QDialog):
                 print(f"Error updating chiral tags: {e}")
 
             # Update 3D view (which also draws 3D chiral labels)
-            self.main_window.draw_molecule_3d(self.mol)
+            self.main_window.view_3d_manager.draw_molecule_3d(self.mol)
 
             # Update 2D chiral labels
-            self.main_window.update_chiral_labels()
+            self.main_window.view_3d_manager.update_chiral_labels()
 
-            self.main_window.push_undo_state()
+            self.main_window.edit_actions_manager.push_undo_state()
 
             plane_names = ["XY", "XZ", "YZ"]
             self.main_window.statusBar().showMessage(

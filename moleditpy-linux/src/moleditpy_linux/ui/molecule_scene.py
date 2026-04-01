@@ -12,12 +12,13 @@ DOI: 10.5281/zenodo.17268532
 
 from __future__ import annotations
 import logging
-from typing import Any, Dict, List, Optional, Set, Tuple, Union
+from typing import Any, List, Optional
 
 from PyQt6.QtCore import QLineF, Qt, QPointF
 from PyQt6.QtGui import QPen
 from PyQt6.QtWidgets import (
     QApplication,
+    QGraphicsItem,
     QGraphicsLineItem,
     QGraphicsScene,
 )
@@ -58,6 +59,7 @@ except ImportError:
         SceneQueryMixin,
     )
 
+
 class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScene):
     def __init__(self, data: Any, window: Any) -> None:
         super().__init__()
@@ -73,7 +75,7 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
         self.mouse_moved_since_press: bool = False
         self.data_changed_in_event: bool = False
         self.hovered_item: Optional[QGraphicsItem] = None
-# ... (rest of __init__)
+        # ... (rest of __init__)
 
         self.key_to_symbol_map = {
             Qt.Key.Key_C: "C",
@@ -104,8 +106,12 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
 
     def get_setting(self, key: str, default: Any = None) -> Any:
         """Safe gateway to access MainWindow settings without deep traversal from items."""
-        if hasattr(self, "window") and self.window and hasattr(self.window, "settings"):
-            return self.window.settings.get(key, default)
+        if (
+            hasattr(self, "window")
+            and self.window
+            and hasattr(self.window, "init_manager")
+        ):
+            return self.window.init_manager.settings.get(key, default)
         return default
 
     def update_connected_bonds(self, atoms: List[AtomItem]) -> None:
@@ -114,6 +120,8 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
         for atom in atoms:
             if hasattr(atom, "bonds"):
                 bonds_to_update.update(atom.bonds)
+            else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                logging.error("REPORT ERROR: Missing attribute 'bonds' on atom")
 
         for bond in bonds_to_update:
             if not sip_isdeleted_safe(bond):
@@ -122,11 +130,19 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
                         bond.update_position()
                     except (RuntimeError, ValueError, TypeError) as e:
                         logging.debug(f"Failed to update bond position for {bond}: {e}")
+                else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                    logging.error(
+                        "REPORT ERROR: Missing attribute 'update_position' on bond"
+                    )
 
     def update_all_items(self) -> None:
         """Force redraw of all items."""
         if hasattr(self.data, "update_ring_info_2d"):
             self.data.update_ring_info_2d()
+        else:  # [REPORT ERROR MISSING ATTRIBUTE]
+            logging.error(
+                "REPORT ERROR: Missing attribute 'update_ring_info_2d' on self.data"
+            )
 
         for item in self.items():
             if isinstance(item, (AtomItem, BondItem)):
@@ -177,7 +193,7 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
                     # Skip if the object is inaccessible
                     continue
 
-        if not self.window.is_2d_editable:
+        if not self.window.ui_manager.is_2d_editable:
             return
 
         if event.button() == Qt.MouseButton.RightButton:
@@ -212,7 +228,7 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
                 data_changed = self.delete_items(set(selected_items))
                 if data_changed:
                     self.update_all_items()
-                    self.window.push_undo_state()
+                    self.window.edit_actions_manager.push_undo_state()
                 self.press_pos = None
                 event.accept()
                 return
@@ -228,7 +244,7 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
                                 if bdata.get("item") is item:
                                     bdata["stereo"] = 0
                                     break
-                            self.window.push_undo_state()
+                            self.window.edit_actions_manager.push_undo_state()
                             data_changed = False  # Already added to undo stack, so skip redundant pushes later
                     except (AttributeError, RuntimeError, ValueError, TypeError) as e:
                         logging.error(
@@ -239,6 +255,10 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
                             sb = self.window.statusBar()
                             if sb:
                                 sb.showMessage(f"Error clearing E/Z label: {e}", 5000)
+                        else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                            logging.error(
+                                "REPORT ERROR: Missing attribute 'statusBar' on self.window"
+                            )
                         self.update_all_items()  # Redraw even on error to maintain consistency
                 # AtomItem does nothing
             # --- Normal processing ---
@@ -267,7 +287,7 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
 
             if data_changed:
                 self.update_all_items()
-                self.window.push_undo_state()
+                self.window.edit_actions_manager.push_undo_state()
             self.press_pos = None
             event.accept()
             return  # Complete right-click processing and prevent proceeding to left-click logic
@@ -310,7 +330,7 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
             super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event):
-        if not self.window.is_2d_editable:
+        if not self.window.ui_manager.is_2d_editable:
             return
 
         if self.mode.startswith("template"):
@@ -350,7 +370,7 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
             super().mouseMoveEvent(event)
 
     def mouseReleaseEvent(self, event):
-        if not self.window.is_2d_editable:
+        if not self.window.ui_manager.is_2d_editable:
             return
 
         end_pos = event.scenePos()
@@ -391,7 +411,7 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
                 self.press_pos = None
                 if self.data_changed_in_event:
                     self.update_all_items()
-                    self.window.push_undo_state()
+                    self.window.edit_actions_manager.push_undo_state()
                 return
 
         released_item = self.itemAt(end_pos, self.views()[0].transform())
@@ -400,7 +420,7 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
         if (self.mode == "delete") and is_click and released_item is not None:
             # Safe deletion via unified handler
             if self.delete_items({released_item}):
-                self.window.push_undo_state()
+                self.window.edit_actions_manager.push_undo_state()
             self.press_pos = None
             return
 
@@ -421,7 +441,7 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
             self.start_pos = None
             self.press_pos = None
             if self.data_changed_in_event:
-                self.window.push_undo_state()
+                self.window.edit_actions_manager.push_undo_state()
             return
         elif (
             (self.mode == "charge_plus" or self.mode == "charge_minus")
@@ -440,7 +460,7 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
             self.start_pos = None
             self.press_pos = None
             if self.data_changed_in_event:
-                self.window.push_undo_state()
+                self.window.edit_actions_manager.push_undo_state()
             return
 
         elif (
@@ -463,7 +483,11 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
                         if hasattr(self, "update_bond_stereo"):
                             self.update_bond_stereo(b, new_stereo)
                             self.update_all_items()  # Force redraw
-                            self.window.push_undo_state()  # Push to undo stack here
+                            self.window.edit_actions_manager.push_undo_state()  # Push to undo stack here
+                        else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                            logging.error(
+                                "REPORT ERROR: Missing attribute 'update_bond_stereo' on self"
+                            )
                 except (AttributeError, RuntimeError, ValueError, TypeError) as e:
                     logging.error(
                         f"Error in E/Z stereo toggle (mouseReleaseEvent): {e}",
@@ -475,6 +499,10 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
                             sb.showMessage(
                                 f"Error changing E/Z stereochemistry: {e}", 5000
                             )
+                    else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                        logging.error(
+                            "REPORT ERROR: Missing attribute 'statusBar' on self.window"
+                        )
                     self.update_all_items()  # Redraw even on error to maintain consistency
                 return  # Do not proceed further
             elif (
@@ -617,7 +645,7 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
             for bond in bonds_to_update:
                 bond.update_position()
             # Update measurement label positions after atom move
-            self.window.update_2d_measurement_labels()
+            self.window.edit_3d_manager.update_2d_measurement_labels()
             if self.views():
                 self.views()[0].viewport().update()
 
@@ -628,12 +656,10 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
         self.start_pos = None
         self.press_pos = None
         self.temp_line = None
+        # Clear template context but NOT the template data itself to allow multiple placements
         self.template_context = {}
-        # Clear user template data when switching modes
-        if hasattr(self, "user_template_data"):
-            self.user_template_data = None
         if getattr(self, "data_changed_in_event", False):
-            self.window.push_undo_state()
+            self.window.edit_actions_manager.push_undo_state()
 
     def mouseDoubleClickEvent(self, event):
         """Handle double click events."""
@@ -655,7 +681,7 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
                 item.update_style()
 
             self.update_all_items()
-            self.window.push_undo_state()
+            self.window.edit_actions_manager.push_undo_state()
 
             event.accept()
             return
@@ -766,9 +792,15 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
                 try:
                     if hasattr(obj, "hide"):
                         obj.hide()
+                    else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                        logging.error("REPORT ERROR: Missing attribute 'hide' on obj")
                     if hasattr(obj, "bonds") and obj.bonds is not None:
                         if hasattr(obj.bonds, "clear"):
                             obj.bonds.clear()
+                        else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                            logging.error(
+                                "REPORT ERROR: Missing attribute 'clear' on object"
+                            )
                 except (AttributeError, RuntimeError, ValueError, TypeError) as e:
                     logging.debug(f"Error purging item {obj} in MoleculeScene: {e}")
 
@@ -780,6 +812,27 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
 
     def leaveEvent(self, event):
         self.template_preview.hide()
+
+    def refresh_mode_state(self):
+        """Immediately update scene state and previews based on the current mouse position."""
+        import PyQt6.QtGui
+
+        global_pos = PyQt6.QtGui.QCursor.pos()
+
+        # Find the active view for this scene
+        for view in self.views():
+            if view.isVisible():
+                # Map global cursor position to scene coordinates
+                local_pos = view.mapFromGlobal(global_pos)
+                scene_pos = view.mapToScene(local_pos)
+
+                # If the mouse is within the viewport, trigger the preview update
+                if view.viewport().rect().contains(local_pos):
+                    if hasattr(
+                        self, "update_template_preview"
+                    ) and self.mode.startswith("template"):
+                        self.update_template_preview(scene_pos)
+                    return
 
     def set_hovered_item(self, item):
         """Record currently hovered item"""

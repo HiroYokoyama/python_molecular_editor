@@ -10,18 +10,13 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
-from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QColor, QFont
 from PyQt6.QtWidgets import (
     QPushButton,
-    QSlider,
     QComboBox,
     QFontComboBox,
     QFormLayout,
-    QFrame,
-    QHBoxLayout,
     QLabel,
-    QWidget,
     QColorDialog,
 )
 from .settings_tab_base import SettingsTabBase
@@ -56,8 +51,8 @@ class Settings2DTab(SettingsTabBase):
         form_layout.addRow("Bond Color:", self.bond_color_2d_button)
 
         # Bond Width
-        self.bond_width_2d_slider, self.bond_width_2d_label = (
-            self._create_slider_with_label(10, 200, 10.0)
+        self.bond_width_2d_slider, self.bond_width_2d_label = self._create_slider(
+            10, 200, 10.0
         )
         form_layout.addRow(
             "Bond Width:",
@@ -66,7 +61,7 @@ class Settings2DTab(SettingsTabBase):
 
         # Double Bond Spacing
         self.bond_spacing_double_2d_slider, self.bond_spacing_double_2d_label = (
-            self._create_slider_with_label(10, 200, 10.0)
+            self._create_slider(10, 200, 10.0)
         )
         form_layout.addRow(
             "Double Bond Spacing:",
@@ -77,7 +72,7 @@ class Settings2DTab(SettingsTabBase):
 
         # Triple Bond Spacing
         self.bond_spacing_triple_2d_slider, self.bond_spacing_triple_2d_label = (
-            self._create_slider_with_label(10, 200, 10.0)
+            self._create_slider(10, 200, 10.0)
         )
         form_layout.addRow(
             "Triple Bond Spacing:",
@@ -92,7 +87,7 @@ class Settings2DTab(SettingsTabBase):
 
         # Wedge Bond Width
         self.bond_wedge_width_2d_slider, self.bond_wedge_width_2d_label = (
-            self._create_slider_with_label(10, 300, 10.0)
+            self._create_slider(10, 300, 10.0)
         )
         form_layout.addRow(
             "Wedge Bond Width:",
@@ -103,7 +98,7 @@ class Settings2DTab(SettingsTabBase):
 
         # Dash Count
         self.bond_dash_count_2d_slider, self.bond_dash_count_2d_label = (
-            self._create_slider_with_label(3, 20, 1.0, is_int=True)
+            self._create_slider(3, 20, 1.0, is_int=True)
         )
         form_layout.addRow(
             "Dash Count:",
@@ -125,7 +120,7 @@ class Settings2DTab(SettingsTabBase):
         form_layout.addRow("Atom Label Font Family:", self.atom_font_family_2d_combo)
 
         self.atom_font_size_2d_slider, self.atom_font_size_2d_label = (
-            self._create_slider_with_label(8, 72, 1.0, is_int=True)
+            self._create_slider(8, 72, 1.0, is_int=True)
         )
         form_layout.addRow(
             "Atom Label Font Size:",
@@ -143,30 +138,6 @@ class Settings2DTab(SettingsTabBase):
         form_layout.addRow(
             "Use Bond Color for Atoms:", self.atom_use_bond_color_2d_checkbox
         )
-
-    def _create_separator(self):
-        line = QFrame()
-        line.setFrameShape(QFrame.Shape.HLine)
-        line.setFrameShadow(QFrame.Shadow.Sunken)
-        return line
-
-    def _create_slider_with_label(self, min_val, max_val, scale=1.0, is_int=False):
-        slider = QSlider(Qt.Orientation.Horizontal)
-        slider.setRange(min_val, max_val)
-        label = QLabel()
-        if is_int:
-            slider.valueChanged.connect(lambda v: label.setText(str(v)))
-        else:
-            slider.valueChanged.connect(lambda v: label.setText(f"{v / scale:.1f}"))
-        return slider, label
-
-    def _wrap_layout(self, slider, label):
-        layout = QHBoxLayout()
-        layout.addWidget(slider)
-        layout.addWidget(label)
-        container = QWidget()
-        container.setLayout(layout)
-        return container
 
     def _pick_bg_color_2d(self):
         color = QColorDialog.getColor(

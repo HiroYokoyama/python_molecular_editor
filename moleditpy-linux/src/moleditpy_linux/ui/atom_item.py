@@ -11,7 +11,8 @@ DOI: 10.5281/zenodo.17268532
 """
 
 from __future__ import annotations
-from typing import Any, Dict, List, Optional, Set, Tuple, Union
+import logging  # [REPORT ERROR MISSING ATTRIBUTE]
+from typing import Any, List, Optional
 
 from PyQt6.QtCore import QPointF, QRectF, Qt
 from PyQt6.QtGui import (
@@ -23,7 +24,7 @@ from PyQt6.QtGui import (
     QPainterPath,
     QPen,
 )
-from PyQt6.QtWidgets import QGraphicsItem
+from PyQt6.QtWidgets import QGraphicsItem, QWidget
 
 try:
     from ..utils.constants import (
@@ -43,6 +44,7 @@ except ImportError:
     )
 from PyQt6 import sip
 
+
 def sip_isdeleted_safe(obj: Any) -> bool:
     try:
         return sip.isdeleted(obj)
@@ -53,7 +55,9 @@ def sip_isdeleted_safe(obj: Any) -> bool:
 
 
 class AtomItem(QGraphicsItem):
-    def __init__(self, atom_id: int, symbol: str, pos: QPointF, charge: int = 0, radical: int = 0) -> None:
+    def __init__(
+        self, atom_id: int, symbol: str, pos: QPointF, charge: int = 0, radical: int = 0
+    ) -> None:
         super().__init__()
         self.atom_id: int = atom_id
         self.symbol: str = symbol
@@ -61,7 +65,7 @@ class AtomItem(QGraphicsItem):
         self.radical: int = radical
         self.bonds: List[Any] = []
         self.chiral_label: Optional[str] = None
-        
+
         self.setPos(pos)
         self.implicit_h_count: int = 0
         self.setFlags(
@@ -84,9 +88,14 @@ class AtomItem(QGraphicsItem):
         font_family = FONT_FAMILY
 
         scene = self.scene()
-        if hasattr(scene, "get_setting"):
-            font_size = scene.get_setting("atom_font_size_2d", 20)
-            font_family = scene.get_setting("atom_font_family_2d", FONT_FAMILY)
+        if scene is not None:
+            if hasattr(scene, "get_setting"):
+                font_size = scene.get_setting("atom_font_size_2d", 20)
+                font_family = scene.get_setting("atom_font_family_2d", FONT_FAMILY)
+            else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                logging.error(
+                    f"REPORT ERROR: Missing attribute 'get_setting' on scene of type {type(scene)}"
+                )
 
         self.font = QFont(font_family, font_size, FONT_WEIGHT_BOLD)
         self.prepareGeometryChange()
@@ -106,13 +115,14 @@ class AtomItem(QGraphicsItem):
         font_size = 20
         font_family = FONT_FAMILY
         scene = self.scene()
-        if hasattr(scene, "get_setting"):
-            font_size = scene.get_setting("atom_font_size_2d", 20)
-            if not isinstance(font_size, (int, float)):
-                font_size = 20
-            font_family = scene.get_setting("atom_font_family_2d", FONT_FAMILY)
-            if not isinstance(font_family, str):
-                font_family = FONT_FAMILY
+        if scene is not None:
+            if hasattr(scene, "get_setting"):
+                font_size = scene.get_setting("atom_font_size_2d", 20)
+                font_family = scene.get_setting("atom_font_family_2d", FONT_FAMILY)
+            else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                logging.error(
+                    f"REPORT ERROR: Missing attribute 'get_setting' on scene of type {type(scene)}"
+                )
 
         font = QFont(font_family, font_size, FONT_WEIGHT_BOLD)
         fm = QFontMetricsF(font)

@@ -10,7 +10,8 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
-from PyQt6.QtWidgets import QWidget
+from PyQt6.QtWidgets import QWidget, QFrame, QSlider, QHBoxLayout, QLabel
+from PyQt6.QtCore import Qt
 
 
 class SettingsTabBase(QWidget):
@@ -31,3 +32,32 @@ class SettingsTabBase(QWidget):
     def reset_to_defaults(self):
         """Reset only the settings of the current tab to defaults."""
         self.update_ui(self.default_settings)
+
+    def _create_separator(self):
+        """Create a horizontal separator line."""
+        line = QFrame()
+        line.setFrameShape(QFrame.Shape.HLine)
+        line.setFrameShadow(QFrame.Shadow.Sunken)
+        return line
+
+    def _create_slider(self, min_val, max_val, scale=1.0, is_int=False):
+        """Create a slider with a linked label showing the value."""
+        slider = QSlider(Qt.Orientation.Horizontal)
+        slider.setRange(min_val, max_val)
+        label = QLabel()
+        if is_int:
+            slider.valueChanged.connect(lambda v: label.setText(str(v)))
+            label.setText(str(slider.value()))
+        else:
+            slider.valueChanged.connect(lambda v: label.setText(f"{v / scale:.2f}"))
+            label.setText(f"{slider.value() / scale:.2f}")
+        return slider, label
+
+    def _wrap_layout(self, slider, label):
+        """Wrap a slider and its label in a horizontal layout/widget."""
+        layout = QHBoxLayout()
+        layout.addWidget(slider)
+        layout.addWidget(label)
+        container = QWidget()
+        container.setLayout(layout)
+        return container

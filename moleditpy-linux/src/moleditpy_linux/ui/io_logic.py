@@ -38,7 +38,7 @@ try:
 except (ImportError, ValueError, AttributeError):
     # Fallback to absolute imports
     try:
-        from moleditpy.utils.constants import COVALENT_RADII, VERSION
+        from moleditpy_linux.utils.constants import COVALENT_RADII, VERSION
     except ImportError:
         COVALENT_RADII = {}
         VERSION = "unknown"

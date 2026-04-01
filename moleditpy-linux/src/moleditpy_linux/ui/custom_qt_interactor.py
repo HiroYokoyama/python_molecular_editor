@@ -31,8 +31,8 @@ class CustomQtInteractor(QtInteractor):
         super().wheelEvent(event)
 
         # Force focus back to the 2D view after zoom processing
-        if self.main_window and hasattr(self.main_window, "view_2d"):
-            self.main_window.view_2d.setFocus()
+        if self.main_window and hasattr(self.main_window.init_manager, "view_2d"):
+            self.main_window.init_manager.view_2d.setFocus()
 
     def mouseReleaseEvent(self, event):
         """
@@ -46,8 +46,8 @@ class CustomQtInteractor(QtInteractor):
             return
 
         super().mouseReleaseEvent(event)  # Process parent class event first
-        if self.main_window and hasattr(self.main_window, "view_2d"):
-            self.main_window.view_2d.setFocus()
+        if self.main_window and hasattr(self.main_window.init_manager, "view_2d"):
+            self.main_window.init_manager.view_2d.setFocus()
 
     def mousePressEvent(self, event):
         """

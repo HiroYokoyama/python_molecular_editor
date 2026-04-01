@@ -11,6 +11,7 @@ DOI: 10.5281/zenodo.17268532
 """
 
 from __future__ import annotations
+import logging  # [REPORT ERROR MISSING ATTRIBUTE]
 from typing import Any, Optional, Tuple, Union
 
 from PyQt6.QtCore import QLineF, QPointF, QRectF, Qt
@@ -19,6 +20,7 @@ from PyQt6.QtGui import (
     QColor,
     QFont,
     QFontMetricsF,
+    QPainter,
     QPainterPath,
     QPainterPathStroker,
     QPen,
@@ -107,7 +109,9 @@ class BondItem(QGraphicsItem):
         self.prepareGeometryChange()
         self.update()
 
-    def __init__(self, atom1_item: Any, atom2_item: Any, order: int = 1, stereo: int = 0) -> None:
+    def __init__(
+        self, atom1_item: Any, atom2_item: Any, order: int = 1, stereo: int = 0
+    ) -> None:
         super().__init__()
         # Validate input parameters
         if atom1_item is None or atom2_item is None:
@@ -116,7 +120,7 @@ class BondItem(QGraphicsItem):
         self.atom2: Any = atom2_item
         self.order: int = order
         self.stereo: int = stereo
-        
+
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable)
         self.pen: QPen = QPen(Qt.GlobalColor.black, 2)
         self.setZValue(0)
@@ -149,21 +153,21 @@ class BondItem(QGraphicsItem):
         # Get dynamic bond offset (spacing)
         scene = self.scene()
         bond_offset = 3.5
-        if hasattr(scene, "get_setting"):
-            # Use specific spacing based on bond order
-            key = (
-                "bond_spacing_triple_2d"
-                if getattr(self, "order", 1) == 3
-                else "bond_spacing_double_2d"
-            )
-            val = scene.get_setting(key, 3.5)
-            if isinstance(val, (int, float)):
-                bond_offset = val
-
-        # Get dynamic wedge width
         wedge_width = 6.0
-        if hasattr(scene, "get_setting"):
-            wedge_width = scene.get_setting("bond_wedge_width_2d", 6.0)
+        if scene is not None:
+            if hasattr(scene, "get_setting"):
+                # Use specific spacing based on bond order
+                key = (
+                    "bond_spacing_triple_2d"
+                    if getattr(self, "order", 1) == 3
+                    else "bond_spacing_double_2d"
+                )
+                bond_offset = scene.get_setting(key, 3.5)
+                wedge_width = scene.get_setting("bond_wedge_width_2d", 6.0)
+            else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                logging.error(
+                    f"REPORT ERROR: Missing attribute 'get_setting' on scene of type {type(scene)}"
+                )
 
         extra = (getattr(self, "order", 1) - 1) * bond_offset + 50 + wedge_width
         rect = (
@@ -176,9 +180,14 @@ class BondItem(QGraphicsItem):
         if self.order == 2 and self.stereo in [3, 4]:
             font_size = 20
             font_family = FONT_FAMILY
-            if hasattr(scene, "get_setting"):
-                font_size = scene.get_setting("atom_font_size_2d", 20)
-                font_family = scene.get_setting("atom_font_family_2d", FONT_FAMILY)
+            if scene is not None:
+                if hasattr(scene, "get_setting"):
+                    font_size = scene.get_setting("atom_font_size_2d", 20)
+                    font_family = scene.get_setting("atom_font_family_2d", FONT_FAMILY)
+                else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                    logging.error(
+                        f"REPORT ERROR: Missing attribute 'get_setting' on scene of type {type(scene)}"
+                    )
 
             font = QFont(font_family, font_size, FONT_WEIGHT_BOLD)
             font.setItalic(True)
@@ -262,54 +271,39 @@ class BondItem(QGraphicsItem):
         bond_color = QColor("#222222")
 
         try:
-            sc = self.scene()
-            if sc is not None and hasattr(sc, "window") and sc.window is not None:
-                # Get settings
-                settings = sc.window.settings
-
-                # Use bond color if specified in settings
-                scene = self.scene()
-                bond_color = QColor("#222222")
-                bond_width = 2.0
-                cap_style_str = "Round"
+            scene = self.scene()
+            if scene is not None:
                 if hasattr(scene, "get_setting"):
-                    custom_color = scene.get_setting("bond_color_2d", "#222222")
-                    if isinstance(custom_color, str):
-                        bond_color = QColor(custom_color)
+                    # Color
+                    if self.isSelected():
+                        bond_color = QColor("blue")
+                    else:
+                        color_hex = scene.get_setting("bond_color_2d", "#222222")
+                        bond_color = QColor(color_hex)
 
-                    custom_width = scene.get_setting("bond_width_2d", 2.0)
-                    if isinstance(custom_width, (int, float)):
-                        bond_width = float(custom_width)
+                    # Width and Cap Style
+                    bond_width = scene.get_setting("bond_width_2d", 2.0)
+                    cap_style_str = scene.get_setting("bond_cap_style_2d", "Round")
 
-                    custom_cap = scene.get_setting("bond_cap_style_2d", "Round")
-                    if isinstance(custom_cap, str):
-                        cap_style_str = custom_cap
+                    # Wedge/Dash settings
+                    wedge_width_half = scene.get_setting("bond_wedge_width_2d", 6.0)
+                    num_dashes = int(scene.get_setting("bond_dash_count_2d", 8))
 
-                # Cap Style logic
-                cap_style = Qt.PenCapStyle.RoundCap  # Default
+                    # Cap Style logic
+                    cap_style = Qt.PenCapStyle.RoundCap
+                    if cap_style_str == "Flat":
+                        cap_style = Qt.PenCapStyle.FlatCap
+                    elif cap_style_str == "Square":
+                        cap_style = Qt.PenCapStyle.SquareCap
 
-                if cap_style_str == "Flat":
-                    cap_style = Qt.PenCapStyle.FlatCap
-                elif cap_style_str == "Square":
-                    cap_style = Qt.PenCapStyle.SquareCap
-
-                # Color
-                if self.isSelected():
-                    bond_color = QColor("blue")  # Selection color
-                else:
-                    bond_hex = settings.get("bond_color_2d", "#222222")
-                    bond_color = QColor(bond_hex)
-
-                pen = QPen(bond_color, bond_width)
-                pen.setCapStyle(cap_style)
-                painter.setPen(pen)
-
-                # Wedge/Dash Specific Settings
-                wedge_width_half = settings.get("bond_wedge_width_2d", 6.0)
-                num_dashes = int(settings.get("bond_dash_count_2d", 8))
-
-            # Use bond color for fill
-            painter.setBrush(QBrush(bond_color))
+                    pen = QPen(bond_color, bond_width)
+                    pen.setCapStyle(cap_style)
+                    painter.setPen(pen)
+                    painter.setBrush(QBrush(bond_color))
+                else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                    logging.error(
+                        f"REPORT ERROR: Missing attribute 'get_setting' on scene of type {type(scene)}"
+                    )
         except (AttributeError, RuntimeError, TypeError, ValueError):
             # Fallback
             painter.setPen(self.pen)
@@ -354,27 +348,19 @@ class BondItem(QGraphicsItem):
                 v = line.unitVector().normalVector()
                 # Use dynamic offset
                 bond_offset = 3.5
-                try:
-                    sc = self.scene()
-                    if (
-                        sc
-                        and sc.views()
-                        and hasattr(sc.views()[0].window(), "settings")
-                    ):
-                        if self.order == 3:
-                            bond_offset = (
-                                sc.views()[0]
-                                .window()
-                                .settings.get("bond_spacing_triple_2d", 3.5)
-                            )
-                        else:
-                            bond_offset = (
-                                sc.views()[0]
-                                .window()
-                                .settings.get("bond_spacing_double_2d", 3.5)
-                            )
-                except (AttributeError, RuntimeError, TypeError, ValueError):
-                    bond_offset = globals().get("BOND_OFFSET", 3.5)
+                scene = self.scene()
+                if scene is not None:
+                    if hasattr(scene, "get_setting"):
+                        key = (
+                            "bond_spacing_triple_2d"
+                            if self.order == 3
+                            else "bond_spacing_double_2d"
+                        )
+                        bond_offset = scene.get_setting(key, 3.5)
+                    else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                        logging.error(
+                            f"REPORT ERROR: Missing attribute 'get_setting' on scene of type {type(scene)}"
+                        )
 
                 offset = QPointF(v.dx(), v.dy()) * bond_offset
 

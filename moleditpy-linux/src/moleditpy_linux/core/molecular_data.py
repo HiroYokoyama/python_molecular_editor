@@ -12,7 +12,7 @@ DOI: 10.5281/zenodo.17268532
 
 from __future__ import annotations
 import logging
-from typing import Any, Dict, List, Optional, Set, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 from rdkit import Chem
 
 try:
@@ -43,7 +43,13 @@ class MolecularData:
         self._next_atom_id = 0
         self.adjacency_list = {}
 
-    def add_atom(self, symbol: str, pos: Union[Any, Tuple[float, float]], charge: int = 0, radical: int = 0) -> int:
+    def add_atom(
+        self,
+        symbol: str,
+        pos: Union[Any, Tuple[float, float]],
+        charge: int = 0,
+        radical: int = 0,
+    ) -> int:
         atom_id = self._next_atom_id
         # Internalize position as raw floats to decouple from UI types (QPointF)
         if hasattr(pos, "x") and hasattr(pos, "y"):
@@ -72,7 +78,9 @@ class MolecularData:
             else:
                 self.atoms[atom_id]["pos"] = PointTuple((float(pos[0]), float(pos[1])))
 
-    def add_bond(self, id1: int, id2: int, order: Union[int, float] = 1, stereo: int = 0) -> Tuple[Tuple[int, int], str]:
+    def add_bond(
+        self, id1: int, id2: int, order: Union[int, float] = 1, stereo: int = 0
+    ) -> Tuple[Tuple[int, int], str]:
         # For stereo bonds, do not sort because ID order determines direction.
         # For non-stereo bonds, sort to normalize the key.
         if stereo == 0:
@@ -154,6 +162,7 @@ class MolecularData:
             atom.SetFormalCharge(data.get("charge", 0))
             atom.SetNumRadicalElectrons(data.get("radical", 0))
             atom.SetIntProp("_original_atom_id", atom_id)
+            atom.SetNoImplicit(False)  # Allow RDKit to perceive implicit valence
             idx = mol.AddAtom(atom)
             atom_id_to_idx_map[atom_id] = idx
 
@@ -456,7 +465,9 @@ class MolecularData:
         mol_block += "M  END\n"
         return mol_block
 
-    def to_template_dict(self, name: str, version: str = "1.0", application_version: str = "") -> Dict[str, Any]:
+    def to_template_dict(
+        self, name: str, version: str = "1.0", application_version: str = ""
+    ) -> Dict[str, Any]:
         """Convert current structure to a dictionary for template storage."""
         import datetime
 
