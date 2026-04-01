@@ -64,15 +64,16 @@ class TestPluginInterface:
     def test_current_molecule_property(self, mock_manager, mock_main_window):
         """Test current_molecule getter and setter."""
         mock_manager.get_main_window.return_value = mock_main_window
-        mock_main_window.current_mol = "mock_molecule"
+        # Ensure view_3d_manager has the value
+        mock_main_window.view_3d_manager.current_mol = "mock_molecule"
         ctx = PluginContext(mock_manager, "TestPlugin")
 
-        # Test getter (PluginContext.current_mol accesses mw.current_mol directly)
+        # Test getter (PluginContext.current_mol accesses mw.view_3d_manager.current_mol)
         assert ctx.current_molecule == "mock_molecule"
 
-        # Test setter (sets mw.current_mol and calls view_3d_manager.draw_molecule_3d)
+        # Test setter (sets mw.view_3d_manager.current_mol and calls view_3d_manager.draw_molecule_3d)
         ctx.current_molecule = "new_molecule"
-        assert mock_main_window.current_mol == "new_molecule"
+        assert mock_main_window.view_3d_manager.current_mol == "new_molecule"
         mock_main_window.view_3d_manager.draw_molecule_3d.assert_called_once_with("new_molecule")
 
     def test_current_molecule_no_window(self, mock_manager):

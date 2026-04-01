@@ -31,6 +31,7 @@ import os
 import sys
 import json
 import pytest
+import tempfile
 from unittest.mock import MagicMock, patch
 
 from PyQt6.QtWidgets import QApplication, QMessageBox
@@ -65,7 +66,7 @@ class DummyHost:
         self._template_dialog = None
 
         self.init_manager = MagicMock()
-        self.init_manager.settings_dir = "/tmp/moleditpy_test_settings"
+        self.init_manager.settings_dir = os.path.join(tempfile.gettempdir(), "moleditpy_test_settings")
         self.init_manager.settings = {}
 
         self.state_manager = MagicMock()

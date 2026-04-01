@@ -2038,7 +2038,7 @@ _Test get_main_window delegation._
 _Test current_molecule getter and setter._
 
 - assert ctx.current_molecule == 'mock_molecule'
-- assert mock_main_window.current_mol == 'new_molecule'
+- assert mock_main_window.view_3d_manager.current_mol == 'new_molecule'
 - mock_main_window.view_3d_manager.draw_molecule_3d.assert_called_once_with('new_molecule')
 
 ### TestPluginInterface.test_current_molecule_no_window
