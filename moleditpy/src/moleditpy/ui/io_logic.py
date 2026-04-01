@@ -17,7 +17,10 @@ import pickle
 from typing import Any, Optional
 
 from PyQt6.QtCore import QPointF, QTimer
-from PyQt6.QtWidgets import QFileDialog, QMessageBox
+from PyQt6.QtWidgets import (
+    QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit,
+    QDialogButtonBox, QPushButton, QFileDialog, QMessageBox
+)
 
 from rdkit import Chem
 from rdkit.Chem import AllChem, rdGeometry, rdMolTransforms, Descriptors
@@ -193,10 +196,6 @@ class IOManager:
 
     def prompt_for_charge(self):
         """Show dialog to prompt user for molecular charge when loading XYZ files."""
-        from PyQt6.QtWidgets import (
-            QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit,
-            QDialogButtonBox, QPushButton
-        )
         dialog = QDialog(self.host)
         dialog.setWindowTitle("Import XYZ Charge")
         layout = QVBoxLayout(dialog)
@@ -217,8 +216,7 @@ class IOManager:
         btn_box.accepted.connect(dialog.accept)
         btn_box.rejected.connect(dialog.reject)
         skip_btn.clicked.connect(lambda: (result.update({"skip": True}), dialog.accept()))
-        from PyQt6.QtWidgets import QDialog as _QD
-        if dialog.exec() != _QD.DialogCode.Accepted:
+        if dialog.exec() != QDialog.DialogCode.Accepted:
             return None, False, False
         if result["skip"]:
             return 0, True, True
