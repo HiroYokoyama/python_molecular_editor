@@ -1,21 +1,23 @@
 import pytest
-from moleditpy.modules.main_window_edit_actions import MainWindowEditActions
-from moleditpy.modules.molecular_data import MolecularData
+from moleditpy.ui.edit_actions_logic import EditActionsManager
+from moleditpy.core.molecular_data import MolecularData
 from PyQt6.QtCore import QPointF
 from unittest.mock import MagicMock, patch
 
 
-class DummyEditActions(MainWindowEditActions):
+class DummyEditActions(EditActionsManager):
     def __init__(self, host):
+        super().__init__(host)
         self._host = host
-        self.data = host.data
-        self.scene = host.scene
-        self.view_2d = host.view_2d
-        self.plotter = host.plotter
-        self.settings = host.settings
-        self.current_mol = host.current_mol
-        self.current_file_path = host.current_file_path
-        self.has_unsaved_changes = host.has_unsaved_changes
+        self.data = host.state_manager.data
+        self.scene = host.init_manager.scene
+        self.view_2d = host.init_manager.view_2d
+        self.plotter = host.view_3d_manager.plotter
+        self.settings = host.init_manager.settings
+        self.current_mol = host.view_3d_manager.current_mol
+        self.host.init_manager.current_file_path = host.init_manager.current_file_path
+        self.host.state_manager.has_unsaved_changes = host.state_manager.has_unsaved_changes
+        self.main_window_edit_actions = self
 
     def statusBar(self):
         return self._host.statusBar()
@@ -58,13 +60,13 @@ def test_remove_hydrogen_atoms_app_logic(mock_parser_host):
     )
 
     # We need to ensure sip_isdeleted_safe doesn't block deletion in test
-    with patch("moleditpy.modules.sip_isdeleted_safe", return_value=False):
+    with patch("moleditpy.ui.edit_actions_logic.sip_isdeleted_safe", return_value=False):
         actions.remove_hydrogen_atoms()
 
     # Should call scene.delete_items with a set containing the H item
     actions.scene.delete_items.assert_called()
     deleted_set = actions.scene.delete_items.call_args[0][0]
-    # In mock_parser_host, host.data.atoms[h_id]['item'] is a MagicMock
+    # In mock_parser_host, host.state_manager.data.atoms[h_id]['item'] is a MagicMock
     h_item = actions.data.atoms[h_id]["item"]
     assert h_item in deleted_set
     assert actions.data.atoms[c_id]["item"] not in deleted_set

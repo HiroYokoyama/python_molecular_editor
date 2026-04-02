@@ -2,7 +2,7 @@
 import os
 import sys
 import pytest
-from PyQt6.QtWidgets import QApplication
+from PyQt6.QtWidgets import QApplication, QMenu, QToolBar, QToolButton, QFileDialog
 import importlib
 import importlib.util
 
@@ -235,7 +235,11 @@ try:
                     )
                     self.clear = _mock.MagicMock()
                     self.render = _mock.MagicMock()
+                    self.view_isometric = _mock.MagicMock()
                     self.reset_camera = _mock.MagicMock()
+                    self.view_yz = _mock.MagicMock()
+                    self.view_xz = _mock.MagicMock()
+                    self.view_xy = _mock.MagicMock()
                     self.setAcceptDrops = _mock.MagicMock()
                     # Debug print to verify instantiation
                     print("DEBUGGING: DummyQtInteractor (Headless Mock) Initialized")
@@ -261,6 +265,7 @@ try:
                     self.enable_parallel_projection = _mock.MagicMock()
                     self.disable_parallel_projection = _mock.MagicMock()
                     self.add_orientation_widget = _mock.MagicMock()
+                    self.remove_actor = _mock.MagicMock()
         except Exception:
             # If PyQt classes not importable for some reason, fall back to
             # a simple dummy object to avoid breaking tests that only import
@@ -275,6 +280,9 @@ except Exception:
     import traceback
 
     traceback.print_exc()
+
+try:
+    import types
 
     if "pyvista" not in sys.modules:
         import types
@@ -369,7 +377,7 @@ if moleditpy is None:
             import __main__ as moleditpy
         except Exception as e2:
             print(f"DEBUG: Failed to import __main__ as moleditpy: {e2}")
-            # pytestがカレントディレクトリをパスに追加していない場合
+            # If pytest hasn't added the current directory to sys.path
             sys.path.append(".")
             try:
                 import moleditpy
@@ -424,7 +432,7 @@ def _attach_symbol_on_main_and_package(name, value):
 if moleditpy is not None:
     try:
         # expose MainWindow for tests
-        from moleditpy.modules.main_window import MainWindow as _MainWindow
+        from moleditpy.ui.main_window import MainWindow as _MainWindow
 
         _attach_symbol_on_main_and_package("MainWindow", _MainWindow)
     except Exception:
@@ -432,15 +440,16 @@ if moleditpy is not None:
         # not be a package; in that case import the module directly from the
         # project `src` layout as a fallback.
         try:
-            proj_root = os.path.dirname(__file__)
+            # Get the real project root (two levels up from tests/gui)
+            proj_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
             mm_path = os.path.join(
-                proj_root, "src", "moleditpy", "modules", "main_window.py"
+                proj_root, "moleditpy", "src", "moleditpy", "ui", "main_window.py"
             )
             if os.path.exists(mm_path):
                 import importlib.util as _il
 
                 spec = _il.spec_from_file_location(
-                    "moleditpy.modules.main_window", mm_path
+                    "moleditpy.ui.main_window", mm_path
                 )
                 mod = _il.module_from_spec(spec)
                 spec.loader.exec_module(mod)
@@ -451,7 +460,7 @@ if moleditpy is not None:
             traceback.print_exc()
     try:
         # expose MolecularData
-        from moleditpy.modules.molecular_data import MolecularData as _MolecularData
+        from moleditpy.core.molecular_data import MolecularData as _MolecularData
 
         _attach_symbol_on_main_and_package("MolecularData", _MolecularData)
     except Exception:
@@ -460,20 +469,20 @@ if moleditpy is not None:
         traceback.print_exc()
     try:
         # expose constants used in tests
-        from moleditpy.modules.constants import CLIPBOARD_MIME_TYPE as _CLIP
+        from moleditpy.utils.constants import CLIPBOARD_MIME_TYPE as _CLIP
 
         _attach_symbol_on_main_and_package("CLIPBOARD_MIME_TYPE", _CLIP)
     except Exception:
         try:
-            proj_root = os.path.dirname(__file__)
+            proj_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
             md_path = os.path.join(
-                proj_root, "src", "moleditpy", "modules", "molecular_data.py"
+                proj_root, "moleditpy", "src", "moleditpy", "core", "molecular_data.py"
             )
             if os.path.exists(md_path):
                 import importlib.util as _il
 
                 spec = _il.spec_from_file_location(
-                    "moleditpy.modules.molecular_data", md_path
+                    "moleditpy.core.molecular_data", md_path
                 )
                 mod = _il.module_from_spec(spec)
                 spec.loader.exec_module(mod)
@@ -484,7 +493,7 @@ if moleditpy is not None:
             traceback.print_exc()
     try:
         # expose CustomQtInteractor for conftest monkeypatching
-        from moleditpy.modules.custom_qt_interactor import CustomQtInteractor as _CQI
+        from moleditpy.ui.custom_qt_interactor import CustomQtInteractor as _CQI
 
         _attach_symbol_on_main_and_package("CustomQtInteractor", _CQI)
         # Ensure tests don't crash when calling setAcceptDrops on the plotter
@@ -519,15 +528,15 @@ if moleditpy is not None:
             traceback.print_exc()
     except Exception:
         try:
-            proj_root = os.path.dirname(__file__)
+            proj_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
             const_path = os.path.join(
-                proj_root, "src", "moleditpy", "modules", "constants.py"
+                proj_root, "moleditpy", "src", "moleditpy", "utils", "constants.py"
             )
             if os.path.exists(const_path):
                 import importlib.util as _il
 
                 spec = _il.spec_from_file_location(
-                    "moleditpy.modules.constants", const_path
+                    "moleditpy.utils.constants", const_path
                 )
                 mod = _il.module_from_spec(spec)
                 spec.loader.exec_module(mod)
@@ -545,12 +554,12 @@ if moleditpy is not None:
 @pytest.fixture(scope="session")
 def app(request):
     """
-    QApplication のセッションワイドなインスタンスを作成し、プラットフォームに応じたクリーンアップを行います。
+    Creates a session-wide QApplication instance and performs platform-aware cleanup.
     """
     is_headless = os.environ.get("MOLEDITPY_HEADLESS", "0") == "1"
     is_offscreen = os.environ.get("QT_QPA_PLATFORM") == "offscreen"
 
-    # QApplication.instance() が None の場合のみ新しいインスタンスを作成
+    # Create a new QApplication instance only if one does not already exist
     q_app = QApplication.instance()
     if q_app is None:
         q_app = QApplication(sys.argv)
@@ -615,11 +624,115 @@ _CACHED_MAIN_WINDOW_CLASS = None
 @pytest.fixture
 def window(app, qtbot, monkeypatch):
     """
-    テストごとに新しい MainWindow インスタンスを作成し、
-    時間のかかる処理や外部ウィンドウをモック化します。
+    Creates a new MainWindow instance for each test and mocks
+    time-consuming operations and external windows.
     """
     import os
+    import sys
     import traceback
+
+    def _patch_mainwindow_compat(cls):
+        """Add property proxies to the class so legacy tests can access managers."""
+        def _get_safe(self, manager_name, attr_name, default=None):
+            manager = getattr(self, manager_name, None)
+            if manager:
+                return getattr(manager, attr_name, default)
+            return default
+
+        def _set_safe(self, manager_name, attr_name, value):
+            manager = getattr(self, manager_name, None)
+            if manager:
+                setattr(manager, attr_name, value)
+
+        # Standard attributes
+        cls.host = property(lambda self: self)
+
+        # MainInitManager proxies
+        cls.settings = property(lambda self: _get_safe(self, 'init_manager', 'settings', {}), 
+                               lambda self, v: _set_safe(self, 'init_manager', 'settings', v))
+        cls.current_file_path = property(lambda self: _get_safe(self, 'init_manager', 'current_file_path'),
+                                        lambda self, v: _set_safe(self, 'init_manager', 'current_file_path', v))
+        cls.settings_dir = property(lambda self: _get_safe(self, 'init_manager', 'settings_dir'),
+                                   lambda self, v: _set_safe(self, 'init_manager', 'settings_dir', v))
+        cls.settings_file = property(lambda self: _get_safe(self, 'init_manager', 'settings_file'),
+                                    lambda self, v: _set_safe(self, 'init_manager', 'settings_file', v))
+        cls.settings_dirty = property(lambda self: _get_safe(self, 'init_manager', 'settings_dirty', False),
+                                     lambda self, v: _set_safe(self, 'init_manager', 'settings_dirty', v))
+        cls.initial_settings = property(lambda self: self.init_manager.initial_settings,
+                                       lambda self, v: setattr(self.init_manager, 'initial_settings', v))
+        cls.scene = property(lambda self: self.init_manager.scene,
+                            lambda self, v: setattr(self.init_manager, 'scene', v))
+        
+        # StateManager proxies
+        cls.data = property(lambda self: self.state_manager.data,
+                           lambda self, v: setattr(self.state_manager, 'data', v))
+        cls.undo_stack = property(lambda self: self.state_manager.undo_stack,
+                                 lambda self, v: setattr(self.state_manager, 'undo_stack', v))
+        cls.has_unsaved_changes = property(lambda self: self.state_manager.has_unsaved_changes,
+                                          lambda self, v: setattr(self.state_manager, 'has_unsaved_changes', v))
+
+        # Edit3DManager proxies
+        cls.measurement_mode = property(lambda self: self.edit_3d_manager.measurement_mode,
+                                       lambda self, v: setattr(self.edit_3d_manager, 'measurement_mode', v))
+        cls.is_3d_edit_mode = property(lambda self: self.edit_3d_manager.is_3d_edit_mode,
+                                      lambda self, v: setattr(self.edit_3d_manager, 'is_3d_edit_mode', v))
+        cls.active_3d_dialogs = property(lambda self: self.edit_3d_manager.active_3d_dialogs,
+                                        lambda self, v: setattr(self.edit_3d_manager, 'active_3d_dialogs', v))
+        cls.close_all_3d_edit_dialogs = lambda self: self.edit_3d_manager.close_all_3d_edit_dialogs()
+
+        # IOManager proxies
+        cls.save_project_as = lambda self, *a, **k: self.io_manager.save_project_as(*a, **k)
+        cls.load_mol_file = lambda self, *a, **k: self.io_manager.load_mol_file(*a, **k)
+
+        # View3DManager proxies
+        cls.atom_info_display_mode = property(lambda self: self.view_3d_manager.atom_info_display_mode,
+                                             lambda self, v: setattr(self.view_3d_manager, 'atom_info_display_mode', v))
+        cls.current_atom_info_labels = property(lambda self: self.view_3d_manager.current_atom_info_labels,
+                                               lambda self, v: setattr(self.view_3d_manager, 'current_atom_info_labels', v))
+        cls.toggle_atom_info_display = lambda self, mode: self.view_3d_manager.toggle_atom_info_display(mode)
+        cls.current_mol = property(lambda self: self.view_3d_manager.current_mol,
+                                  lambda self, v: setattr(self.view_3d_manager, 'current_mol', v))
+        cls.atom_positions_3d = property(lambda self: self.view_3d_manager.atom_positions_3d,
+                                        lambda self, v: setattr(self.view_3d_manager, 'atom_positions_3d', v))
+
+        # UIManager proxies
+        cls.handle_drop_event = lambda self, event: self.ui_manager.handle_drop_event(event)
+
+        # Additional proxies for integration tests
+        cls.import_menu = property(lambda self: self.init_manager.import_menu,
+                                  lambda self, v: setattr(self.init_manager, 'import_menu', v))
+        cls.opt3d_actions = property(lambda self: self.init_manager.opt3d_actions,
+                                    lambda self, v: setattr(self.init_manager, 'opt3d_actions', v))
+        cls.conv_actions = property(lambda self: self.init_manager.conv_actions,
+                                   lambda self, v: setattr(self.init_manager, 'conv_actions', v))
+        cls.plugin_menu = property(lambda self: self.init_manager.plugin_menu,
+                                  lambda self, v: setattr(self.init_manager, 'plugin_menu', v))
+        cls.style_button = property(lambda self: self.init_manager.style_button,
+                                   lambda self, v: setattr(self.init_manager, 'style_button', v))
+        cls.optimize_3d_button = property(lambda self: self.init_manager.optimize_3d_button,
+                                         lambda self, v: setattr(self.init_manager, 'optimize_3d_button', v))
+        cls.export_button = property(lambda self: self.init_manager.export_button,
+                                    lambda self, v: setattr(self.init_manager, 'export_button', v))
+        cls.analysis_action = property(lambda self: self.init_manager.analysis_action,
+                                      lambda self, v: setattr(self.init_manager, 'analysis_action', v))
+        cls.cleanup_button = property(lambda self: self.init_manager.cleanup_button,
+                                     lambda self, v: setattr(self.init_manager, 'cleanup_button', v))
+        cls.convert_button = property(lambda self: self.init_manager.convert_button,
+                                     lambda self, v: setattr(self.init_manager, 'convert_button', v))
+        
+        # EditActionsManager proxies (accept and ignore triggered bool arg)
+        cls.add_hydrogen_atoms = lambda self, *a: self.edit_actions_manager.add_hydrogen_atoms()
+        cls.remove_hydrogen_atoms = lambda self, *a: self.edit_actions_manager.remove_hydrogen_atoms()
+
+        # DialogManager proxies (accept and ignore triggered bool arg)
+        cls.save_2d_as_template = lambda self, *a: self.dialog_manager.save_2d_as_template()
+
+        # Method proxies
+        from PyQt6.QtWidgets import QMainWindow as _QMainWindow
+        _orig_statusBar = _QMainWindow.statusBar
+        cls.statusBar = lambda self: self._statusBar_mock if hasattr(self, '_statusBar_mock') else _orig_statusBar(self)
+        cls.fit_to_view = lambda self: self.view_3d_manager.fit_to_view()
+        cls.redraw_molecule_3d = lambda self: self.view_3d_manager.draw_molecule_3d(self.view_3d_manager.current_mol)
 
     global _CACHED_MAIN_WINDOW_CLASS
 
@@ -642,7 +755,7 @@ def window(app, qtbot, monkeypatch):
                 MainWindowClass = getattr(app_mod, "MainWindow", None)
                 if MainWindowClass is None:
                     try:
-                        from moleditpy.modules.main_window import (
+                        from moleditpy.ui.main_window import (
                             MainWindow as _MainWindowClass,
                         )
 
@@ -652,18 +765,18 @@ def window(app, qtbot, monkeypatch):
 
                         traceback.print_exc()
                     try:
-                        proj_root = os.path.dirname(__file__)
+                        proj_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
                         mm_path = os.path.join(
-                            proj_root, "src", "moleditpy", "modules", "main_window.py"
+                            proj_root, "moleditpy", "src", "moleditpy", "ui", "main_window.py"
                         )
                         import importlib.util as _il
 
                         spec = _il.spec_from_file_location(
-                            "moleditpy.modules.main_window", mm_path
+                            "moleditpy.ui.main_window", mm_path
                         )
                         mod = _il.module_from_spec(spec)
                         # We must set the module in sys.modules manually for relative imports to work
-                        sys.modules["moleditpy.modules.main_window"] = mod
+                        sys.modules["moleditpy.ui.main_window"] = mod
                         spec.loader.exec_module(mod)
                         MainWindowClass = getattr(mod, "MainWindow", None)
                     except Exception:
@@ -677,6 +790,8 @@ def window(app, qtbot, monkeypatch):
             except Exception:
                 MainWindowClass = None
         _CACHED_MAIN_WINDOW_CLASS = MainWindowClass
+        if MainWindowClass:
+            _patch_mainwindow_compat(MainWindowClass)
 
     MainWindowClass = _CACHED_MAIN_WINDOW_CLASS
     if MainWindowClass is None:
@@ -690,28 +805,19 @@ def window(app, qtbot, monkeypatch):
         # Some imports reference the module as `moleditpy.modules...`, others
         # as `modules...`. Patch both to be robust in all import paths.
         monkeypatch.setattr(
-            "moleditpy.modules.main_window_ui_manager.MainWindowUiManager._setup_3d_picker",
+            "moleditpy.ui.ui_manager.UIManager._setup_3d_picker",
             lambda self: None,
             raising=False,
         )
-        monkeypatch.setattr(
-            "modules.main_window_ui_manager.MainWindowUiManager._setup_3d_picker",
-            lambda self: None,
-            raising=False,
-        )
+        def _mock_init_worker(self):
+            self.halt_ids = set()
+            self._active_calc_threads = []
 
-        # Patch init_worker_thread to prevent QThread creation which can cause hangs
         monkeypatch.setattr(
-            "moleditpy.modules.main_window_main_init.MainWindowMainInit.init_worker_thread",
-            lambda self: None,
+            "moleditpy.ui.main_window_init.MainInitManager.init_worker_thread",
+            _mock_init_worker,
             raising=False,
         )
-        monkeypatch.setattr(
-            "modules.main_window_main_init.MainWindowMainInit.init_worker_thread",
-            lambda self: None,
-            raising=False,
-        )
-
         # Patch RDKit warmup to save time
         # We can't easily patch the try/except block in __init__, but we can try to
         # patch the descriptors or just accept that it runs once.
@@ -722,16 +828,16 @@ def window(app, qtbot, monkeypatch):
 
         traceback.print_exc()
     try:
-        import moleditpy.modules.main_window_view_3d as _mw3d
+        import moleditpy.ui.view_3d_logic as _mw3d
 
         def _safe_draw(*a, **k):
             try:
-                return _mw3d.MainWindowView3d.draw_molecule_3d(*a, **k)
+                return _mw3d.View3DManager.draw_molecule_3d(*a, **k)
             except Exception:
                 return None
 
         monkeypatch.setattr(
-            "moleditpy.modules.main_window_view_3d.MainWindowView3d.draw_molecule_3d",
+            "moleditpy.ui.view_3d_logic.View3DManager.draw_molecule_3d",
             _safe_draw,
             raising=False,
         )
@@ -809,12 +915,9 @@ def window(app, qtbot, monkeypatch):
                 pass
 
         monkeypatch.setattr(
-            "moleditpy.modules.plugin_manager.PluginManager",
+            "moleditpy.plugins.plugin_manager.PluginManager",
             DummyPluginManager,
             raising=False,
-        )
-        monkeypatch.setattr(
-            "modules.plugin_manager.PluginManager", DummyPluginManager, raising=False
         )
     except Exception:
         import traceback
@@ -826,10 +929,10 @@ def window(app, qtbot, monkeypatch):
     # `current_mol` on the host window. This keeps conversion tests simple
     # and avoids GL/VTK calls.
     try:
-        import moleditpy.modules.main_window_compute as _mwcomp
+        import moleditpy.ui.compute_logic as _mwcomp
 
         orig_on_calc = getattr(
-            _mwcomp.MainWindowCompute, "on_calculation_finished", None
+            _mwcomp.ComputeManager, "on_calculation_finished", None
         )
 
         def _safe_on_calculation_finished(self, result):
@@ -838,51 +941,16 @@ def window(app, qtbot, monkeypatch):
                 if host is not None:
                     # In tests we send (worker_id, mol)
                     if isinstance(result, tuple) and len(result) >= 2:
-                        host.current_mol = result[1]
+                        host.view_3d_manager.current_mol = result[1]
                     else:
-                        host.current_mol = result
+                        host.view_3d_manager.current_mol = result
 
                     # Ensure atom_positions_3d is set so show_all_atom_info doesn't return early
-                    if host.current_mol is not None:
+                    if host.view_3d_manager.current_mol is not None:
                         import numpy as _np
 
                         # Provide dummy positions for one atom if not present
-                        host.atom_positions_3d = _np.zeros((1, 3))
-                # Add minimal RDKit-like API to dummy mols so UI features
-                # (e.g., Original ID display) detect properties as expected.
-                try:
-                    mol = host.current_mol
-                    if mol is not None:
-                        # Ensure HasProp/GetIntProp/GetAtomWithIdx are present
-                        if not hasattr(mol, "HasProp"):
-                            mol.HasProp = (
-                                lambda prop: True
-                                if prop == "_original_atom_id"
-                                else False
-                            )
-                        if not hasattr(mol, "GetIntProp"):
-                            mol.GetIntProp = lambda p: 0
-                        if not hasattr(mol, "GetAtomWithIdx"):
-
-                            class _FakeAtom:
-                                def __init__(self, idx):
-                                    self._idx = idx
-
-                                def HasProp(self, p):
-                                    return p == "_original_atom_id"
-
-                                def GetIntProp(self, p):
-                                    return self._idx
-
-                            mol.GetAtomWithIdx = lambda i: _FakeAtom(i)
-                        # Ensure menu action is enabled so test can trigger it
-                        try:
-                            if hasattr(host, "show_atom_id_action"):
-                                host.show_atom_id_action.setEnabled(True)
-                        except Exception:
-                            import traceback
-
-                            traceback.print_exc()
+                        host.view_3d_manager.atom_positions_3d = _np.zeros((1, 3))
                         # Update UI state so menu items reflect the new molecule
                         try:
                             host.update_atom_id_menu_state()
@@ -890,10 +958,45 @@ def window(app, qtbot, monkeypatch):
                             import traceback
 
                             traceback.print_exc()
-                except Exception:
-                    import traceback
+                        # Add minimal RDKit-like API to dummy mols so UI features
+                        # (e.g., Original ID display) detect properties as expected.
+                        try:
+                            mol = host.view_3d_manager.current_mol
+                            if mol is not None:
+                                # Ensure HasProp/GetIntProp/GetAtomWithIdx are present
+                                if not hasattr(mol, "HasProp"):
+                                    mol.HasProp = (
+                                        lambda prop: True
+                                        if prop == "_original_atom_id"
+                                        else False
+                                    )
+                                if not hasattr(mol, "GetIntProp"):
+                                    mol.GetIntProp = lambda p: 0
+                                if not hasattr(mol, "GetAtomWithIdx"):
 
-                    traceback.print_exc()
+                                    class _FakeAtom:
+                                        def __init__(self, idx):
+                                            self._idx = idx
+
+                                        def HasProp(self, p):
+                                            return p == "_original_atom_id"
+
+                                        def GetIntProp(self, p):
+                                            return self._idx
+
+                                    mol.GetAtomWithIdx = lambda i: _FakeAtom(i)
+                                # Ensure menu action is enabled so test can trigger it
+                                try:
+                                    if hasattr(host, "show_atom_id_action"):
+                                        host.show_atom_id_action.setEnabled(True)
+                                except Exception:
+                                    import traceback
+
+                                    traceback.print_exc()
+                        except Exception:
+                            import traceback
+
+                            traceback.print_exc()
             except Exception:
                 import traceback
 
@@ -906,12 +1009,7 @@ def window(app, qtbot, monkeypatch):
                 return None
 
         monkeypatch.setattr(
-            "moleditpy.modules.main_window_compute.MainWindowCompute.on_calculation_finished",
-            _safe_on_calculation_finished,
-            raising=False,
-        )
-        monkeypatch.setattr(
-            "modules.main_window_compute.MainWindowCompute.on_calculation_finished",
+            "moleditpy.ui.compute_logic.ComputeManager.on_calculation_finished",
             _safe_on_calculation_finished,
             raising=False,
         )
@@ -924,7 +1022,7 @@ def window(app, qtbot, monkeypatch):
     # The real method spawns threads and can race with VTK/GL teardown,
     # causing intermittent CI aborts.  This mock does pure RDKit work only.
     try:
-        import moleditpy.modules.main_window_compute as _mwcomp2
+        import moleditpy.ui.compute_logic as _mwcomp2
         from rdkit import Chem
         from rdkit.Chem import AllChem as _AllChem
         import numpy as _np
@@ -932,34 +1030,41 @@ def window(app, qtbot, monkeypatch):
         def _sync_trigger_conversion(self):
             """Synchronous, VTK-free trigger_conversion for tests."""
             try:
-                if not self.data.atoms:
-                    self.plotter.clear()
-                    self.current_mol = None
-                    self.statusBar().showMessage("3D view cleared.")
+                # In ComputeManager, self.host is the window
+                host = getattr(self, "host", None)
+                if not host:
                     return
 
-                mol = self.data.to_rdkit_mol(use_2d_stereo=False)
+                if not host.state_manager.data.atoms:
+                    host.view_3d_manager.plotter.clear()
+                    host.view_3d_manager.current_mol = None
+                    host.statusBar().showMessage("3D view cleared.")
+                    return
+
+                mol = host.state_manager.data.to_rdkit_mol(use_2d_stereo=False)
                 if mol is None or mol.GetNumAtoms() == 0:
-                    self.statusBar().showMessage("Error: Invalid chemical structure.")
+                    host.statusBar().showMessage("Error: Invalid chemical structure.")
                     return
 
                 try:
                     Chem.SanitizeMol(mol)
                 except Exception:
-                    self.statusBar().showMessage("Error: Invalid chemical structure.")
+                    host.statusBar().showMessage("Error: Invalid chemical structure.")
                     return
 
                 mol_h = Chem.AddHs(mol)
                 _AllChem.EmbedMolecule(mol_h, _AllChem.ETKDG())
-                self.current_mol = mol_h
-                self.atom_positions_3d = _np.zeros((mol_h.GetNumAtoms(), 3))
-                self.statusBar().showMessage("3D conversion complete.")
+                host.view_3d_manager.current_mol = mol_h
+                host.view_3d_manager.atom_positions_3d = _np.zeros((mol_h.GetNumAtoms(), 3))
+                host.statusBar().showMessage("3D conversion complete.")
 
                 # Enable 3D-related UI elements
                 try:
-                    self.optimize_3d_button.setEnabled(True)
-                    self.export_button.setEnabled(True)
-                    self.analysis_action.setEnabled(True)
+                    host.init_manager.optimize_3d_button.setEnabled(True)
+                    host.init_manager.export_button.setEnabled(True)
+                    host.init_manager.analysis_action.setEnabled(True)
+                    if hasattr(host.ui_manager, "_enable_3d_edit_actions"):
+                        host.ui_manager._enable_3d_edit_actions(True)
                 except Exception:
                     pass
             except Exception:
@@ -967,7 +1072,7 @@ def window(app, qtbot, monkeypatch):
                 traceback.print_exc()
 
         monkeypatch.setattr(
-            _mwcomp2.MainWindowCompute,
+            _mwcomp2.ComputeManager,
             "trigger_conversion",
             _sync_trigger_conversion,
             raising=False,
@@ -1044,20 +1149,17 @@ def window(app, qtbot, monkeypatch):
                 self.camera = _mock.MagicMock()
                 self.camera.copy = _mock.MagicMock(return_value={})
                 self.add_light = _mock.MagicMock(return_value="light_actor")
+                self.view_isometric = _mock.MagicMock()
+                self.remove_actor = _mock.MagicMock()
 
         try:
             monkeypatch.setattr(
-                "moleditpy.modules.custom_qt_interactor.CustomQtInteractor",
+                "moleditpy.ui.custom_qt_interactor.CustomQtInteractor",
                 DummyPlotter,
                 raising=False,
             )
             monkeypatch.setattr(
-                "moleditpy.modules.main_window_main_init.CustomQtInteractor",
-                DummyPlotter,
-                raising=False,
-            )
-            monkeypatch.setattr(
-                "modules.custom_qt_interactor.CustomQtInteractor",
+                "moleditpy.ui.main_window_init.CustomQtInteractor",
                 DummyPlotter,
                 raising=False,
             )
@@ -1077,12 +1179,7 @@ def window(app, qtbot, monkeypatch):
     try:
         if "DummyPluginManager" in locals():
             monkeypatch.setattr(
-                "moleditpy.modules.main_window_main_init.PluginManager",
-                DummyPluginManager,
-                raising=False,
-            )
-            monkeypatch.setattr(
-                "modules.main_window_main_init.PluginManager",
+                "moleditpy.ui.main_window_init.PluginManager",
                 DummyPluginManager,
                 raising=False,
             )
@@ -1125,14 +1222,14 @@ def window(app, qtbot, monkeypatch):
         from PyQt6.QtWidgets import QWidget, QPushButton, QToolBar
         from PyQt6.QtGui import QAction
 
-        main_window.toolbar = QToolBar()
-        main_window.toolbar_bottom = QToolBar()
-        main_window.measurement_action = QAction(checkable=True)
-        main_window.measurement_action.triggered.connect(
-            main_window.toggle_measurement_mode
+        main_window.init_manager.toolbar = QToolBar()
+        main_window.init_manager.toolbar_bottom = QToolBar()
+        main_window.init_manager.measurement_action = QAction(checkable=True)
+        main_window.init_manager.measurement_action.triggered.connect(
+            main_window.edit_3d_manager.toggle_measurement_mode
         )
-        main_window.edit_3d_action = QAction(checkable=True)
-        main_window.edit_3d_action.triggered.connect(main_window.toggle_3d_edit_mode)
+        main_window.init_manager.edit_3d_action = QAction(checkable=True)
+        main_window.init_manager.edit_3d_action.triggered.connect(main_window.ui_manager.toggle_3d_edit_mode)
 
         # Dummy splitter with widget() method
         class DummyWidget(QWidget):
@@ -1159,7 +1256,10 @@ def window(app, qtbot, monkeypatch):
             def sizes(self):
                 return [100, 100]
 
-        main_window.splitter = DummySplitter()
+            def setSizes(self, sizes):
+                pass
+
+        main_window.init_manager.splitter = DummySplitter()
         # ... (rest of the headless-specific mocks and patches) ...
         # Keep running to the common yield below so teardown/cleanup are
         # handled in a single place for both headless and GUI.
@@ -1198,20 +1298,17 @@ def window(app, qtbot, monkeypatch):
                 self.camera = _mock.MagicMock()
                 self.camera.copy = _mock.MagicMock(return_value={})
                 self.add_light = _mock.MagicMock(return_value="light_actor")
+                self.view_isometric = _mock.MagicMock()
+                self.remove_actor = _mock.MagicMock()
 
         try:
             monkeypatch.setattr(
-                "moleditpy.modules.custom_qt_interactor.CustomQtInteractor",
+                "moleditpy.ui.custom_qt_interactor.CustomQtInteractor",
                 DummyPlotter,
                 raising=False,
             )
             monkeypatch.setattr(
-                "moleditpy.modules.main_window_main_init.CustomQtInteractor",
-                DummyPlotter,
-                raising=False,
-            )
-            monkeypatch.setattr(
-                "modules.custom_qt_interactor.CustomQtInteractor",
+                "moleditpy.ui.main_window_init.CustomQtInteractor",
                 DummyPlotter,
                 raising=False,
             )
@@ -1260,14 +1357,14 @@ def window(app, qtbot, monkeypatch):
     # Ensure push_undo_state reliably marks the document as changed in tests.
     try:
         if hasattr(main_window, "push_undo_state"):
-            orig_push = main_window.push_undo_state
+            orig_push = main_window.edit_actions_manager.push_undo_state
 
             def _push_and_mark(*a, **k):
                 try:
                     return orig_push(*a, **k)
                 finally:
                     try:
-                        main_window.has_unsaved_changes = True
+                        main_window.state_manager.has_unsaved_changes = True
                     except Exception:
                         import traceback
 
@@ -1284,7 +1381,7 @@ def window(app, qtbot, monkeypatch):
             # Also make `redo` tolerant to duplicated undo entries in mocked UI
             try:
                 if hasattr(main_window, "redo"):
-                    orig_redo = main_window.redo
+                    orig_redo = main_window.edit_actions_manager.redo
 
                     def _redo_and_trim(*a, **k):
                         try:
@@ -1294,9 +1391,9 @@ def window(app, qtbot, monkeypatch):
                         try:
                             if (
                                 hasattr(main_window, "undo_stack")
-                                and len(main_window.undo_stack) > 2
+                                and len(main_window.edit_actions_manager.undo_stack) > 2
                             ):
-                                main_window.undo_stack[:] = main_window.undo_stack[-2:]
+                                main_window.edit_actions_manager.undo_stack[:] = main_window.edit_actions_manager.undo_stack[-2:]
                         except Exception:
                             import traceback
 
@@ -1317,9 +1414,9 @@ def window(app, qtbot, monkeypatch):
 
     # Patch 3D optimization to set the status message reliably so tests can assert success
     try:
-        import moleditpy.modules.main_window_compute as _mwcomp
+        import moleditpy.ui.compute_logic as _mwcomp
 
-        orig_opt = getattr(_mwcomp.MainWindowCompute, "optimize_3d_structure", None)
+        orig_opt = getattr(_mwcomp.ComputeManager, "optimize_3d_structure", None)
 
         def _safe_optimize(self, *a, **k):
             try:
@@ -1341,12 +1438,7 @@ def window(app, qtbot, monkeypatch):
             return result
 
         monkeypatch.setattr(
-            "moleditpy.modules.main_window_compute.MainWindowCompute.optimize_3d_structure",
-            _safe_optimize,
-            raising=False,
-        )
-        monkeypatch.setattr(
-            "modules.main_window_compute.MainWindowCompute.optimize_3d_structure",
+            "moleditpy.ui.compute_logic.ComputeManager.optimize_3d_structure",
             _safe_optimize,
             raising=False,
         )
@@ -1357,10 +1449,10 @@ def window(app, qtbot, monkeypatch):
     try:
         # Ensure clicking the optimize button sets a success message quickly
         if (
-            hasattr(main_window, "optimize_3d_button")
-            and main_window.optimize_3d_button is not None
+            hasattr(main_window.init_manager, 'optimize_3d_button')
+            and main_window.init_manager.optimize_3d_button is not None
         ):
-            main_window.optimize_3d_button.clicked.connect(
+            main_window.init_manager.optimize_3d_button.clicked.connect(
                 lambda: main_window.statusBar().showMessage("Optimization completed.")
             )
     except Exception:
@@ -1461,8 +1553,8 @@ def window(app, qtbot, monkeypatch):
 
     # If the main window exposes a 'plotter' object (CustomQtInteractor), ensure it has the plotting API used
     try:
-        if hasattr(main_window, "plotter") and main_window.plotter is not None:
-            p = main_window.plotter
+        if hasattr(main_window.view_3d_manager, 'plotter') and main_window.view_3d_manager.plotter is not None:
+            p = main_window.view_3d_manager.plotter
             from unittest import mock as _mock
 
             if not hasattr(p, "add_text"):
@@ -1503,6 +1595,7 @@ def window(app, qtbot, monkeypatch):
 
     # Make the called internal helpers tolerant to test stubs so the event loop
     # doesn't throw during background/compute callbacks.
+
     try:
         # Replace _setup_3d_picker with a tolerant function that ensures a
         # plotter picker exists (and provides SetTolerance) so tests do not
@@ -1512,8 +1605,8 @@ def window(app, qtbot, monkeypatch):
                 # If the UI manager has a host window with a plotter, make sure
                 # a non-null picker exists with the required API.
                 host = getattr(self, "_host", None)
-                if host is not None and hasattr(host, "plotter"):
-                    p = getattr(host.plotter, "picker", None)
+                if host is not None and hasattr(host.view_3d_manager, 'plotter'):
+                    p = getattr(host.view_3d_manager.plotter, "picker", None)
                     if p is None:
 
                         class _Picker:
@@ -1521,7 +1614,7 @@ def window(app, qtbot, monkeypatch):
                                 self._tol = v
 
                         try:
-                            host.plotter.picker = _Picker()
+                            host.view_3d_manager.plotter.picker = _Picker()
                         except Exception:
                             import traceback
 
@@ -1541,12 +1634,7 @@ def window(app, qtbot, monkeypatch):
                 traceback.print_exc()
 
         monkeypatch.setattr(
-            "moleditpy.modules.main_window_ui_manager.MainWindowUiManager._setup_3d_picker",
-            _safe_setup_3d_picker,
-            raising=False,
-        )
-        monkeypatch.setattr(
-            "modules.main_window_ui_manager.MainWindowUiManager._setup_3d_picker",
+            "moleditpy.ui.ui_manager.UIManager._setup_3d_picker",
             _safe_setup_3d_picker,
             raising=False,
         )
@@ -1555,9 +1643,9 @@ def window(app, qtbot, monkeypatch):
 
         traceback.print_exc()
     try:
-        import moleditpy.modules.main_window_view_3d as _mw3d
+        import moleditpy.ui.view_3d_logic as _mw3d
 
-        orig_draw = getattr(_mw3d.MainWindowView3d, "draw_molecule_3d", None)
+        orig_draw = getattr(_mw3d.View3DManager, "draw_molecule_3d", None)
         if orig_draw is not None:
 
             def safe_draw(self, *a, **k):
@@ -1567,7 +1655,7 @@ def window(app, qtbot, monkeypatch):
                     return None
 
             monkeypatch.setattr(
-                "moleditpy.modules.main_window_view_3d.MainWindowView3d.draw_molecule_3d",
+                "moleditpy.ui.view_3d_logic.View3DManager.draw_molecule_3d",
                 safe_draw,
                 raising=False,
             )
@@ -1673,7 +1761,7 @@ def window(app, qtbot, monkeypatch):
             ):
                 try:
                     a.triggered.connect(
-                        lambda t=toggle_map[
+                        lambda checked, t=toggle_map[
                             attr_name
                         ]: main_window.toggle_atom_info_display(t)
                     )
@@ -1757,7 +1845,7 @@ def window(app, qtbot, monkeypatch):
             ):
                 try:
                     a.triggered.connect(
-                        lambda t=toggle_map[
+                        lambda checked, t=toggle_map[
                             attr_name
                         ]: main_window.toggle_atom_info_display(t)
                     )
@@ -1767,9 +1855,9 @@ def window(app, qtbot, monkeypatch):
                 a.triggered.connect(lambda: QDialog().exec())
         main_window.menuBar().addAction(a)
 
-    # --- テスト用のダミーオブジェクトをウィンドウに設定 ---
-    # `trigger_conversion` が `start_calculation` を呼んだときに
-    # すぐに `on_calculation_finished` がダミーMolで呼ばれるように設定
+    # --- Set up dummy objects for testing ---
+    # When `trigger_conversion` calls `start_calculation`,
+    # ensure `on_calculation_finished` is immediately called with a dummy molecule.
     dummy_mol = _mock.MagicMock()
     dummy_mol.GetNumAtoms.return_value = 1
     dummy_mol.HasProp.return_value = True
@@ -1780,10 +1868,10 @@ def window(app, qtbot, monkeypatch):
     dummy_mol.GetAtomWithIdx.return_value = dummy_atom
 
     def side_effect_start_calc(mol_block, options):
-        # (worker_id, mol) のタプルで渡す
-        main_window.on_calculation_finished((options.get("worker_id", 1), dummy_mol))
+        # Pass as a tuple: (worker_id, mol)
+        main_window.compute_manager.on_calculation_finished((options.get("worker_id", 1), dummy_mol))
 
-    # `start_calculation` may be a Zoomed subclass or a Qt signal; try to
+    # `start_calculation` may be a signal or regular method;
     # attach our side-effect in a way that is compatible with either.
     try:
         sc = getattr(main_window, "start_calculation", None)
@@ -1822,16 +1910,43 @@ def window(app, qtbot, monkeypatch):
 
         traceback.print_exc()
 
+    # --- Add Dynamic Property Proxies for Test Compatibility (NO PROXY in main code) ---
+    # These proxies allow legacy tests to access manager-based state directly
+    # on the window instance without polluting the production MainWindow class.
+    
+    # InitManager proxies
+    # Final fallback: ensure the instance's type is also patched (usually redundant now)
+    _patch_mainwindow_compat(type(main_window))
+
     # Yield once for both modes
     try:
         yield main_window
     finally:
-        # --- クリーンアップ ---
+        # --- Cleanup ---
         try:
-            # Stop any active threads explicitly before closing
-            active_threads = list(
-                getattr(main_window, "_active_calc_threads", []) or []
-            )
+            # 1. Stop any active background calculations
+            if hasattr(main_window, "halt_all_calculations"):
+                try:
+                    main_window.halt_all_calculations()
+                except Exception:
+                    pass
+
+            # 2. Close any lingering 3D edit dialogs
+            if hasattr(main_window, "close_all_3d_edit_dialogs"):
+                try:
+                    main_window.close_all_3d_edit_dialogs()
+                except Exception:
+                    pass
+
+            # 3. Cleanup 3D view manager (PyVista/VTK resources)
+            if hasattr(main_window, "view_3d_manager") and hasattr(main_window.view_3d_manager, "cleanup"):
+                try:
+                    main_window.view_3d_manager.cleanup()
+                except Exception:
+                    pass
+
+            # 4. Stop any active threads explicitly before closing
+            active_threads = list(getattr(main_window, "_active_calc_threads", []) or [])
             for thr in active_threads:
                 try:
                     if hasattr(thr, "isRunning") and thr.isRunning():

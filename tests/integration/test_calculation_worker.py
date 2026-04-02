@@ -1,13 +1,14 @@
 import pytest
+import sys
 from rdkit import Chem
 import numpy as np
 from rdkit.Chem import AllChem, rdMolTransforms
-from moleditpy.modules.calculation_worker import CalculationWorker
-from moleditpy.modules.calculation_worker import CalculationWorker
-from moleditpy.modules.mol_geometry import calculate_dihedral
-from moleditpy.modules.molecular_data import MolecularData
-from moleditpy.modules.angle_dialog import AngleDialog
-from moleditpy.modules.bond_length_dialog import BondLengthDialog
+from moleditpy.ui.calculation_worker import CalculationWorker
+from moleditpy.ui.calculation_worker import CalculationWorker
+from moleditpy.core.mol_geometry import calculate_dihedral
+from moleditpy.core.molecular_data import MolecularData
+from moleditpy.ui.angle_dialog import AngleDialog
+from moleditpy.ui.bond_length_dialog import BondLengthDialog
 from PyQt6.QtCore import QPointF
 from unittest.mock import patch, MagicMock
 
@@ -371,7 +372,7 @@ def test_calculation_worker_constraint_embedding_fallback(qtbot, app):
     worker = CalculationWorker()
 
     with patch(
-        "moleditpy.modules.calculation_worker.AllChem.EmbedMolecule"
+        "moleditpy.ui.calculation_worker.AllChem.EmbedMolecule"
     ) as mock_embed:
         # First (standard) fails (-1), second (constraint) succeeds (1)
         mock_embed.side_effect = [-1, 1]
@@ -401,13 +402,15 @@ def test_calculation_worker_opt_failure_emits_error(qtbot, app):
             return_value=None
         ) as mock_mmff_props,
     ):
-        # We need to wait for the error signal now
-        with qtbot.waitSignal(worker.error, timeout=10000) as blocker:
+        # We now wait for the finished signal because optimization failure is non-fatal
+        with qtbot.waitSignal(worker.finished, timeout=10000) as blocker:
             worker.run_calculation(mol_block, {"conversion_mode": "rdkit"})
 
         assert mock_mmff_props.called
-        err_id, err_msg = blocker.args[0]
-        assert "Optimization with" in err_msg and "failed" in err_msg
+        res_id, res_mol = blocker.args[0]
+        assert res_mol is not None
+        # Check that it tried to set the optimization method property but maybe cleared it or didn't set it
+        # The key is that it didn't emit an error and returned a molecule.
 
 
 def test_calculation_worker_mmff_variants(qtbot, app):
@@ -421,7 +424,7 @@ def test_calculation_worker_mmff_variants(qtbot, app):
     worker = CalculationWorker()
 
     with patch(
-        "moleditpy.modules.calculation_worker.AllChem.MMFFGetMoleculeProperties"
+        "moleditpy.ui.calculation_worker.AllChem.MMFFGetMoleculeProperties"
     ) as mock_props:
         # Test MMFF94
         worker.run_calculation(mol_block, {"optimization_method": "MMFF94_RDKIT"})
@@ -446,18 +449,21 @@ def test_calculation_worker_obabel_fallback_mocked(qtbot, app):
 
     with (
         patch(
-            "moleditpy.modules.calculation_worker.AllChem.EmbedMolecule",
+            "moleditpy.ui.calculation_worker.AllChem.EmbedMolecule",
             return_value=-1,
         ),
-        patch("moleditpy.modules.calculation_worker.OBABEL_AVAILABLE", True),
-        patch("moleditpy.modules.calculation_worker.pybel") as mock_pybel,
+        patch("moleditpy.ui.calculation_worker.OBABEL_AVAILABLE", True),
+        patch("moleditpy.ui.calculation_worker.pybel", spec=True) as mock_pybel,
+        patch("moleditpy.ui.calculation_worker.subprocess.run") as mock_run,
         patch(
-            "moleditpy.modules.calculation_worker.Chem.MolFromMolBlock"
+            "moleditpy.ui.calculation_worker.Chem.MolFromMolBlock"
         ) as mock_rd_parse,
     ):
-        mock_ob_mol = MagicMock()
-        mock_pybel.readstring.return_value = mock_ob_mol
-        mock_ob_mol.write.return_value = "dummy_mol_block"
+        # Mock subprocess result
+        mock_result = MagicMock()
+        mock_result.returncode = 0
+        mock_result.stdout = "dummy_mol_block"
+        mock_run.return_value = mock_result
 
         # Mock RDKit back-parse
         mock_rd_mol = Chem.MolFromSmiles("C")
@@ -466,8 +472,10 @@ def test_calculation_worker_obabel_fallback_mocked(qtbot, app):
         with qtbot.waitSignal(worker.finished, timeout=10000):
             worker.run_calculation(mol_block, {"conversion_mode": "fallback"})
 
-        assert mock_pybel.readstring.called
-        assert mock_ob_mol.make3D.called
+        assert mock_run.called
+        # Check if first arg to subprocess.run contains sys.executable
+        args, kwargs = mock_run.call_args
+        assert sys.executable in args[0]
 
 
 def test_calculation_worker_complex_direct_h_placement(qtbot, app):
@@ -500,7 +508,7 @@ def test_calculation_worker_complex_direct_h_placement(qtbot, app):
 # ---------------------------------------------------------------------------
 # Unit tests for module-level helpers and new code paths
 # ---------------------------------------------------------------------------
-from moleditpy.modules.calculation_worker import (
+from moleditpy.ui.calculation_worker import (
     WorkerHaltError,
     _iterative_optimize,
     _adjust_collision_avoidance,
@@ -595,9 +603,15 @@ def test_iterative_optimize_props_none(app):
     mol = Chem.AddHs(mol)
     AllChem.EmbedMolecule(mol, AllChem.ETKDGv2())
 
-    with patch(
-        "moleditpy.modules.calculation_worker.AllChem.MMFFGetMoleculeProperties",
-        return_value=None,
+    with (
+        patch(
+            "moleditpy.ui.calculation_worker.AllChem.MMFFGetMoleculeProperties",
+            return_value=None,
+        ),
+        patch(
+            "moleditpy.ui.calculation_worker.AllChem.UFFGetMoleculeForceField",
+            return_value=None,
+        ),
     ):
         result = _iterative_optimize(
             mol, "MMFF94s", lambda: False, lambda m: None
@@ -612,7 +626,7 @@ def test_iterative_optimize_ff_none(app):
     AllChem.EmbedMolecule(mol, AllChem.ETKDGv2())
 
     with patch(
-        "moleditpy.modules.calculation_worker.AllChem.UFFGetMoleculeForceField",
+        "moleditpy.ui.calculation_worker.AllChem.UFFGetMoleculeForceField",
         return_value=None,
     ):
         result = _iterative_optimize(
@@ -924,9 +938,9 @@ def test_calculation_worker_fallback_to_direct_no_obabel(qtbot, app):
 
     # Mock OBABEL_AVAILABLE to False and force EmbedMolecule to return -1
     with patch(
-        "moleditpy.modules.calculation_worker.OBABEL_AVAILABLE", False
+        "moleditpy.ui.calculation_worker.OBABEL_AVAILABLE", False
     ), patch(
-        "moleditpy.modules.calculation_worker.AllChem.EmbedMolecule", return_value=-1
+        "moleditpy.ui.calculation_worker.AllChem.EmbedMolecule", return_value=-1
     ):
         with qtbot.waitSignal(worker.finished, timeout=10000) as blocker:
             worker.run_calculation(
@@ -954,9 +968,9 @@ def test_calculation_worker_fallback_to_direct_with_optimize(qtbot, app):
     worker = CalculationWorker()
 
     with patch(
-        "moleditpy.modules.calculation_worker.OBABEL_AVAILABLE", False
+        "moleditpy.ui.calculation_worker.OBABEL_AVAILABLE", False
     ), patch(
-        "moleditpy.modules.calculation_worker.AllChem.EmbedMolecule", return_value=-1
+        "moleditpy.ui.calculation_worker.AllChem.EmbedMolecule", return_value=-1
     ):
         with qtbot.waitSignal(worker.finished, timeout=10000) as blocker:
             worker.run_calculation(

@@ -3,8 +3,8 @@
 import pytest
 from rdkit import Chem
 from rdkit.Chem import AllChem, Descriptors, rdMolDescriptors
-from moleditpy.modules.main_window_string_importers import MainWindowStringImporters
-from moleditpy.modules.molecular_data import MolecularData
+from moleditpy.ui.string_importers import MainWindowStringImporters
+from moleditpy.core.molecular_data import MolecularData
 from PyQt6.QtCore import QPointF, QTimer
 from unittest.mock import MagicMock, patch
 
@@ -14,8 +14,9 @@ class DummyImporter(MainWindowStringImporters):
 
     def __init__(self, host):
         self._host = host
-        self.data = host.data
-        self.scene = host.scene
+        self.host = host  # required by StringImporterManager (manager architecture)
+        self.data = host.state_manager.data
+        self.scene = host.init_manager.scene
 
     def __getattr__(self, name):
         return getattr(self._host, name)

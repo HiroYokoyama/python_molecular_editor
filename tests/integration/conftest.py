@@ -268,12 +268,12 @@ def window(app, qtbot, monkeypatch):
 
     # Pre-patch init_worker_thread to avoid QThread creation
     monkeypatch.setattr(
-        "moleditpy.modules.main_window_main_init.MainWindowMainInit.init_worker_thread",
+        "moleditpy.ui.main_window_init.MainInitManager.init_worker_thread",
         lambda self: None,
         raising=False,
     )
 
-    from moleditpy.modules.main_window import MainWindow
+    from moleditpy.ui.main_window import MainWindow
 
     # 1. Mock PluginManager
     class DummyPluginManager:
@@ -304,7 +304,7 @@ def window(app, qtbot, monkeypatch):
             pass
 
     monkeypatch.setattr(
-        "moleditpy.modules.main_window_main_init.PluginManager",
+        "moleditpy.ui.main_window_init.PluginManager",
         DummyPluginManager,
         raising=False,
     )
@@ -330,18 +330,19 @@ def window(app, qtbot, monkeypatch):
             self.remove_actor = _mock.MagicMock()
 
     monkeypatch.setattr(
-        "moleditpy.modules.main_window_main_init.CustomQtInteractor",
+        "moleditpy.ui.main_window_init.CustomQtInteractor",
         DummyPlotter,
         raising=False,
     )
 
     # 3. Disable complex initializations to avoid crashes
     monkeypatch.setattr(
-        "moleditpy.modules.main_window.MainWindow.apply_initial_settings",
+        "moleditpy.ui.main_window_init.MainInitManager.apply_initial_settings",
         lambda *a, **k: None,
+        raising=False,
     )
     monkeypatch.setattr(
-        "moleditpy.modules.main_window_view_3d.MainWindowView3d.apply_3d_settings",
+        "moleditpy.ui.view_3d_logic.View3DManager.apply_3d_settings",
         lambda *a, **k: None,
     )
 
@@ -351,7 +352,7 @@ def window(app, qtbot, monkeypatch):
         from rdkit.Chem import AllChem
         from PyQt6.QtCore import QTimer
 
-        mol = self_compute.data.to_rdkit_mol(use_2d_stereo=False)
+        mol = self_compute.host.state_manager.data.to_rdkit_mol(use_2d_stereo=False)
         if mol and mol.GetNumAtoms() > 0:
             mol = Chem.AddHs(mol)
             params = AllChem.ETKDG()
@@ -365,7 +366,7 @@ def window(app, qtbot, monkeypatch):
             QTimer.singleShot(0, lambda: self_compute.on_calculation_finished(None))
 
     monkeypatch.setattr(
-        "moleditpy.modules.main_window_compute.MainWindowCompute.trigger_conversion",
+        "moleditpy.ui.compute_logic.ComputeManager.trigger_conversion",
         sync_trigger_conversion,
     )
 

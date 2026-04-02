@@ -12,16 +12,14 @@ if app is None:
     app = QApplication(sys.argv)
 
 # Import all geometry measuring logics from the application:
-from moleditpy.modules.angle_dialog import AngleDialog
-from moleditpy.modules.dihedral_dialog import DihedralDialog
-from moleditpy.modules.bond_length_dialog import BondLengthDialog
-from moleditpy.modules.mol_geometry import calculate_dihedral, adjust_bond_angle
-from moleditpy.modules.alignment_dialog import AlignmentDialog
-from moleditpy.modules.align_plane_dialog import AlignPlaneDialog
-from moleditpy.modules.main_window_edit_3d import MainWindowEdit3d
-from moleditpy.modules.custom_interactor_style import CustomInteractorStyle
-from moleditpy.modules.alignment_dialog import AlignmentDialog
-from moleditpy.modules.align_plane_dialog import AlignPlaneDialog
+from moleditpy.ui.angle_dialog import AngleDialog
+from moleditpy.ui.dihedral_dialog import DihedralDialog
+from moleditpy.ui.bond_length_dialog import BondLengthDialog
+from moleditpy.core.mol_geometry import calculate_dihedral, adjust_bond_angle
+from moleditpy.ui.alignment_dialog import AlignmentDialog
+from moleditpy.ui.align_plane_dialog import AlignPlaneDialog
+from moleditpy.ui.edit_3d_logic import Edit3DManager
+from moleditpy.ui.custom_interactor_style import CustomInteractorStyle
 
 def setup_test_molecule(smiles: str):
     """Creates an optimized 3D RDKit molecule from SMILES for testing."""
@@ -91,19 +89,21 @@ def test_main_window_edit_3d_angle_logic_matches_rdkit():
     mol = setup_test_molecule("CCC")
     conf = mol.GetConformer()
     rdkit_ref_angle = rdMolTransforms.GetAngleDeg(conf, 0, 1, 2)
-    
+
     # Needs a mock parent that has atom_positions_3d and current_mol
     mock_main_window = MagicMock()
     mock_main_window.current_mol = mol
-    mock_main_window.atom_positions_3d = {
+    positions = {
         0: conf.GetAtomPosition(0),
         1: conf.GetAtomPosition(1),
         2: conf.GetAtomPosition(2)
     }
-    
-    editor = MainWindowEdit3d()
-    editor.atom_positions_3d = mock_main_window.atom_positions_3d
-    
+    mock_main_window.atom_positions_3d = positions
+    mock_main_window.view_3d_manager.atom_positions_3d = positions
+
+    editor = Edit3DManager(host=mock_main_window)
+    editor.atom_positions_3d = positions
+
     # _calculate_angle(atom1_idx, vertex_idx, atom3_idx)
     app_calculated_angle = editor.calculate_angle(0, 1, 2)
     assert app_calculated_angle == pytest.approx(rdkit_ref_angle, abs=0.01)
@@ -172,17 +172,19 @@ def test_main_window_edit_3d_distance_logic_matches_rdkit():
     mol = setup_test_molecule("CC")
     conf = mol.GetConformer()
     rdkit_ref_dist = rdMolTransforms.GetBondLength(conf, 0, 1)
-    
+
     # Needs a mock parent that has atom_positions_3d
     mock_main_window = MagicMock()
     mock_main_window.current_mol = mol
-    mock_main_window.atom_positions_3d = {
+    positions = {
         0: conf.GetAtomPosition(0),
         1: conf.GetAtomPosition(1)
     }
-    
-    editor = MainWindowEdit3d()
-    editor.atom_positions_3d = mock_main_window.atom_positions_3d
+    mock_main_window.atom_positions_3d = positions
+    mock_main_window.view_3d_manager.atom_positions_3d = positions
+
+    editor = Edit3DManager(host=mock_main_window)
+    editor.atom_positions_3d = positions
     # _calculate_distance(atom1_idx, atom2_idx)
     app_calculated_dist = editor.calculate_distance(0, 1)
     assert app_calculated_dist == pytest.approx(rdkit_ref_dist, abs=0.0001)
@@ -250,9 +252,11 @@ def test_align_plane_dialog_logic(mock_warning, mock_info):
     conf = mol.GetConformer()
     
     mock_main_window = MagicMock()
-    mock_main_window.atom_positions_3d = np.array([list(conf.GetAtomPosition(i)) for i in range(mol.GetNumAtoms())])
+    positions = np.array([list(conf.GetAtomPosition(i)) for i in range(mol.GetNumAtoms())])
+    mock_main_window.atom_positions_3d = positions
+    mock_main_window.view_3d_manager.atom_positions_3d = positions
     mock_main_window.current_mol = mol
-    
+
     # Test aligning to XY plane
     dialog = AlignPlaneDialog(mol, mock_main_window, "xy")
     

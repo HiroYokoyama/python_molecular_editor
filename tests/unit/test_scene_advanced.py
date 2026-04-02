@@ -3,10 +3,10 @@ from PyQt6.QtWidgets import QApplication, QGraphicsScene, QGraphicsView, QMenu
 from PyQt6.QtCore import Qt, QPointF, QRectF, QMimeData
 from PyQt6.QtGui import QClipboard
 
-from moleditpy.modules.molecule_scene import MoleculeScene
-from moleditpy.modules.molecular_data import MolecularData
-from moleditpy.modules.atom_item import AtomItem
-from moleditpy.modules.bond_item import BondItem
+from moleditpy.ui.molecule_scene import MoleculeScene
+from moleditpy.core.molecular_data import MolecularData
+from moleditpy.ui.atom_item import AtomItem
+from moleditpy.ui.bond_item import BondItem
 
 # Helper for mouse events
 from unittest.mock import MagicMock, patch
@@ -65,14 +65,25 @@ def scene_setup(qapp):
     # Mock window with minimal interface
     class MockWindow:
         def __init__(self):
+            from unittest.mock import MagicMock
             self.is_2d_editable = True
-            self.undo_stack = []
-            self.redo_stack = []
+            
+            # Initialize managers first
+            self.state_manager = MagicMock()
+            self.edit_actions_manager = MagicMock()
+            self.edit_3d_manager = MagicMock()
+            self.ui_manager = MagicMock()
+            self.init_manager = MagicMock()
+            self.view_3d_manager = MagicMock()
+            
+            self.edit_actions_manager.undo_stack = []
+            self.edit_actions_manager.redo_stack = []
             self.statusBar_msg = ""
+            self.edit_actions_manager.push_undo_state.side_effect = lambda: self.edit_actions_manager.undo_stack.append("state")
 
         def push_undo_state(self):
             # Simple simulation
-            self.undo_stack.append("state")
+            self.edit_actions_manager.push_undo_state()
 
         def statusBar(self):
             class Bar:
@@ -155,9 +166,9 @@ def test_drag_and_drop_atom(scene_setup, monkeypatch):
     # Verify position updated
     assert a1_item.pos() == new_pos
     # Verify data model updated
-    assert data.atoms[a1_id]["pos"] == new_pos
+    assert data.atoms[a1_id]["pos"] == (new_pos.x(), new_pos.y())
     # Verify undo state pushed
-    assert len(window.undo_stack) > 0
+    assert len(window.edit_actions_manager.undo_stack) > 0
 
 
 def test_delete_mixed_selection(scene_setup):
@@ -190,7 +201,7 @@ def test_delete_mixed_selection(scene_setup):
     assert a2_id in data.atoms
 
     # Note: direct call to delete_items does NOT push undo state (that's handled in mouseReleaseEvent)
-    # so we don't assert window.undo_stack here.
+    # so we don't assert window.edit_actions_manager.undo_stack here.
 
 
 def test_undo_redo(scene_setup, monkeypatch):
@@ -198,7 +209,7 @@ def test_undo_redo(scene_setup, monkeypatch):
     scene, window, view, data = scene_setup
 
     # Initial state
-    assert len(window.undo_stack) == 0
+    assert len(window.edit_actions_manager.undo_stack) == 0
 
     # Action 1: Create atom
     scene.mode = "atom_C"
@@ -214,6 +225,6 @@ def test_undo_redo(scene_setup, monkeypatch):
 
     # The mocked event pipeline does not trigger full atom-creation → undo-push.
     # Verify that push_undo_state correctly adds to the stack (mechanism test).
-    initial_len = len(window.undo_stack)
-    window.push_undo_state()
-    assert len(window.undo_stack) == initial_len + 1
+    initial_len = len(window.edit_actions_manager.undo_stack)
+    window.edit_actions_manager.push_undo_state()
+    assert len(window.edit_actions_manager.undo_stack) == initial_len + 1

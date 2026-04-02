@@ -2,63 +2,56 @@
 
 This document explains the internal architecture of the MoleditPy plugin system. For a guide on *how to write* plugins, please refer to the **Plugin Development Manual**.
 
-## Core Components
+## Overview
 
-The plugin system is composed of three main classes:
+The MoleditPy plugin system allows developers to extend the application's functionality without modifying the core codebase. It provides a managed API surface and a backward-compatibility layer to ensure stability across architectural refactors.
 
-| Class | File | Role |
-| :--- | :--- | :--- |
-| **`PluginManager`** | `plugin_manager.py` | The backend engine. Discovers, loads, and manages the lifecycle of plugins. Maintains registries for all extension points. |
-| **`PluginContext`** | `plugin_interface.py` | The API surface exposed to plugins. It wraps the manager's internal methods to provide a safe, scoped interface for developers. |
-| **`PluginManagerWindow`** | `plugin_manager_window.py` | The frontend UI. Allows users to view, install (drag & drop), and remove plugins. |
+| Component | Responsibility | Key Class | Location |
+| :--- | :--- | :--- | :--- |
+| **`PluginManager`** | The backend engine. Discovers, loads, and manages the lifecycle of plugins. | `PluginManager` | `plugins/plugin_manager.py` |
+| **`PluginContext`** | The API surface exposed to plugins. Scoped interface for developers. | `PluginContext` | `plugins/plugin_interface.py` |
+| **`PluginManagerWindow`** | The frontend UI. Allows users to view, install, and remove plugins. | `PluginManagerWindow` | `plugins/plugin_manager_window.py` |
 
 ---
 
-## 1. Discovery and Loading (`PluginManager`)
+## 1. Discovery and Loading
 
 ### Location
-Plugins are loaded from `~/.moleditpy/plugins` (User Home Directory).
+Plugins are discovered from the `~/.moleditpy/plugins` directory in the user's home folder.
 
-### Discovery Process (`discover_plugins`)
-The manager scans the plugin directory recursively:
-1.  **Packages**: If a folder contains `__init__.py`, it is treated as a single "Package Plugin". The folder name becomes the module name.
-2.  **Scripts**: If a folder does *not* contain `__init__.py`, it is treated as a "Category Folder". The manager scans it for individual `.py` files.
-    - Example: `plugins/Analysis/docking.py` -> Category: `Analysis`, Module: `docking`.
+### Discovery Strategy
+The `PluginManager` scans the directory for two types of extensions:
+1.  **Package Plugins**: Folders containing an `__init__.py` file. The folder name serves as the module name.
+2.  **Script Plugins**: Individual `.py` files within "Category Folders" (e.g., `plugins/Analysis/calc.py`).
 
-### Metadata Extraction
-Before importing, the manager uses Python's `ast` (Abstract Syntax Tree) module to safely parse the file without executing code. It looks for global variables:
-- `PLUGIN_NAME`
-- `PLUGIN_VERSION`
-- `PLUGIN_AUTHOR`
-- `PLUGIN_DESCRIPTION`
-- `PLUGIN_CATEGORY`
-
-### Initialization
-1.  **`initialize(context)`**: The preferred entry point. The manager passes a `PluginContext` instance tailored to that plugin.
-2.  **`autorun(main_window)`**: (Legacy) Called with the raw MainWindow.
-3.  **`run(main_window)`**: (Legacy) Manually triggered via menu.
+### Metadata Parsing
+The manager uses Python's `ast` (Abstract Syntax Tree) module to safely extract metadata (e.g., `PLUGIN_NAME`, `PLUGIN_VERSION`) without executing the plugin's code. This allows the Plugin Manager UI to display information even for plugins that might have syntax errors or missing dependencies.
 
 ---
 
-## 2. API Surface (`PluginContext`)
+## 2. Backward Compatibility Layer (`moleditpy.modules`)
 
-The `PluginContext` acts as a facade. When a plugin calls `context.add_menu_action(...)`, the context forwards this to `PluginManager.register_menu_action(...)`, automatically injecting the plugin's name.
+A critical part of the modern MoleditPy architecture is the **Import Proxy Layer**. When the internal package structure was refactored (e.g., moving `MolecularData` to `core/`), a compatibility shim was added in `moleditpy.modules`.
 
-### Extension Points
-Plugins can register into specific registries in the `PluginManager`:
-- **Menus & Toolbars**: `add_menu_action`, `add_toolbar_action`.
-- **File I/O**: `register_file_opener` (for custom extensions), `add_export_action`.
-- **Analysis**: `add_analysis_tool`.
-- **3D Compute**: `register_optimization_method`.
-- **State Persistence**: `register_save_handler` / `register_load_handler` (saved into the `.molproj` JSON).
-- **Drag & Drop**: `register_drop_handler`.
+- **Proxy Mechanism**: When a legacy plugin attempts to import from `moleditpy.molecular_data`, the `moleditpy.modules` hook intercepts the request and transparently redirects it to the new location in `moleditpy.core.molecular_data`.
+- **Longevity**: This ensures that community-developed plugins remain functional even as the core architecture evolves toward a more decoupled design.
 
 ---
 
-## 3. Management UI (`PluginManagerWindow`)
+## 3. Extension Points
 
-- **Table View**: Lists all discovered plugins with their status (Loaded, Error, etc.).
-- **Installation**:
-    - Accepts Drag & Drop of `.py` files or `.zip` archives.
-    - **Smart Unzipping**: Auto-detects if a ZIP contains a single root folder or flat files and handles extraction accordingly to keep the plugin folder clean.
-- **Removal**: Deletes the plugin file or folder and triggers a hot reload.
+Plugins interact with the application through the `PluginContext`. Key extension points include:
+
+- **UI Customization**: Adding actions to the main menu or toolbars.
+- **File I/O**: Registering custom file openers or exporters for specialized chemical formats.
+- **Analysis**: Adding new tools to the Analysis window or the 3D viewer.
+- **State Persistence**: Registering custom save/load handlers for plugin-specific data within the `.pmeprj` project file.
+
+---
+
+## 4. Plugin Management UI
+
+The `PluginManagerWindow` (`plugins/plugin_manager_window.py`) provides a user-friendly interface for:
+- **Status Monitoring**: Viewing which plugins are successfully loaded and which encountered errors.
+- **Installation**: Drag-and-drop support for `.py` or `.zip` files, including smart unzipping logic.
+- **Hot Reloading**: Removing a plugin or adding a new one triggers an immediate refresh of the application menus.

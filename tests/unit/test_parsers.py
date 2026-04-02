@@ -1,20 +1,34 @@
 import os
 from rdkit import Chem
-from moleditpy.modules.main_window_molecular_parsers import MainWindowMolecularParsers
-from moleditpy.modules.molecular_data import MolecularData
+from moleditpy.ui.io_logic import IOManager
+from moleditpy.core.molecular_data import MolecularData
 from PyQt6.QtCore import QPointF
 from unittest.mock import MagicMock, patch
 
 
-class DummyParser(MainWindowMolecularParsers):
+class DummyParser(IOManager):
     def __init__(self, host):
         self._host = host
-        self.data = host.data
-        self.scene = host.scene
-
+        IOManager.__init__(self, host)
+        
     def __getattr__(self, name):
-        # Delegate to host for any status bar, actions, or other main window methods
         return getattr(self._host, name)
+
+    @property
+    def data(self): return self.host.state_manager.data
+    @property
+    def scene(self): return self.host.init_manager.scene
+    @property
+    def settings(self): return self.host.init_manager.settings
+    @property
+    def view_2d(self): return self.host.init_manager.view_2d
+    @property
+    def plotter(self): return self.host.view_3d_manager.plotter
+
+    @property
+    def current_mol(self): return self.host.view_3d_manager.current_mol
+    @current_mol.setter
+    def current_mol(self, v): self.host.view_3d_manager.current_mol = v
 
     def check_unsaved_changes(self):
         return self._host.check_unsaved_changes()

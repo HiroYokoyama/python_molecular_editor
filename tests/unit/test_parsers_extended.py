@@ -29,7 +29,7 @@ PyQt6.QtWidgets.QMessageBox.information = lambda *args, **kwargs: None
 PyQt6.QtWidgets.QMessageBox.question = lambda *args, **kwargs: 65536  # No
 
 # Patch target module namespace
-import moleditpy.modules.main_window_molecular_parsers as mwm
+import moleditpy.ui.io_logic as mwm
 
 mwm.QDialog = PyQt6.QtWidgets.QDialog
 mwm.QInputDialog = PyQt6.QtWidgets.QInputDialog
@@ -38,32 +38,58 @@ mwm.QMessageBox = PyQt6.QtWidgets.QMessageBox
 
 from rdkit import Chem
 from rdkit.Chem import AllChem
-from moleditpy.modules.main_window_molecular_parsers import MainWindowMolecularParsers
+from moleditpy.ui.io_logic import IOManager
 from PyQt6.QtCore import QPointF, QTimer
 from PyQt6.QtWidgets import QWidget, QApplication, QDialog
 
 
-class DummyParser(QWidget, MainWindowMolecularParsers):
+class DummyParser(IOManager):
     def __init__(self, host):
-        super().__init__()
         self._host = host
-        self.data = host.data
-        self.scene = host.scene
-        # Settings as real dict to avoid MagicMock behavior
-        self.settings = {"always_ask_charge": False, "skip_chemistry_checks": False}
-        self.view_2d = host.view_2d
-        self.plotter = host.plotter
-        self.statusBar_mock = MagicMock()
-        self.current_mol = None
+        IOManager.__init__(self, host)
+        
+        # Required attributes (as properties to reflect host state)
+        self.chem_check_failed = False
+        self.chem_check_tried = False
         self.is_xyz_derived = False
-        self.dragged_atom_info = None
-        self.current_file_path = None
 
     def __getattr__(self, name):
+        # Prefer properties, then delegate to host
         return getattr(self._host, name)
 
-    def statusBar(self):
-        return self.statusBar_mock
+    @property
+    def state_manager(self): return self.host.state_manager
+    @property
+    def init_manager(self): return self.host.init_manager
+    @property
+    def view_3d_manager(self): return self.host.view_3d_manager
+    @property
+    def ui_manager(self): return self.host.ui_manager
+    @property
+    def edit_actions_manager(self): return self.host.edit_actions_manager
+    @property
+    def edit_3d_manager(self): return self.host.edit_3d_manager
+
+    @property
+    def data(self): return self.host.state_manager.data
+    @property
+    def scene(self): return self.host.init_manager.scene
+    @property
+    def settings(self): return self.host.init_manager.settings
+    @property
+    def view_2d(self): return self.host.init_manager.view_2d
+    @property
+    def plotter(self): return self.host.view_3d_manager.plotter
+
+    @property
+    def current_mol(self): return self.host.view_3d_manager.current_mol
+    @current_mol.setter
+    def current_mol(self, v): self.host.view_3d_manager.current_mol = v
+
+    @property
+    def current_file_path(self): return getattr(self._host, "current_file_path", None)
+    @current_file_path.setter
+    def current_file_path(self, v): self._host.current_file_path = v
 
     def check_unsaved_changes(self):
         return True
@@ -80,8 +106,12 @@ class DummyParser(QWidget, MainWindowMolecularParsers):
     def fit_to_view(self):
         pass
 
-    def _apply_chem_check_and_set_flags(self, mol, source_desc=""):
+    def _apply_chem_check_and_set_flags(self, mol, source_desc=None, force_skip=False):
         pass
+
+    def prompt_for_charge(self):
+        """Default: cancel (return None) so tests don't block on real dialog."""
+        return None, False, False
 
     def estimate_bonds_from_distances(self, mol):
         if self.settings.get("force_fallback_fail", False):
@@ -126,18 +156,18 @@ def test_load_mol_file_fallback_to_sd_supplier(mock_parser_host, tmp_path):
 
 
 def test_load_xyz_always_ask_charge(mock_parser_host, tmp_path):
-    """Verify that charge is requested from user when 'always_ask_charge' is enabled."""
+    """Verify that charge dialog is shown when loading XYZ."""
     parser = DummyParser(mock_parser_host)
-    parser.settings["always_ask_charge"] = True
     xyz_path = tmp_path / "ask.xyz"
     xyz_path.write_text("1\nC\nC 0 0 0\n")
     mock_rd_mod.DetermineBonds.side_effect = None
     mock_rd_mod.DetermineBonds.return_value = None
-    with patch.object(mwm.QInputDialog, "getText", return_value=("1", True)):
-        with patch.object(mwm, "QDialog", side_effect=Exception("Force Fallback")):
-            mol = parser.load_xyz_file(str(xyz_path))
-            assert mol is not None
-            assert mol.GetIntProp("_xyz_charge") == 1
+    parser.settings["skip_chemistry_checks"] = False
+    parser.settings["always_ask_charge"] = True
+    parser.prompt_for_charge = lambda: (1, True, False)
+    mol = parser.load_xyz_file(str(xyz_path))
+    assert mol is not None
+    assert mol.GetIntProp("_xyz_charge") == 1
 
 
 def test_load_xyz_charge_loop_cancel(mock_parser_host, tmp_path):
@@ -145,12 +175,11 @@ def test_load_xyz_charge_loop_cancel(mock_parser_host, tmp_path):
     parser = DummyParser(mock_parser_host)
     path = tmp_path / "cancel.xyz"
     path.write_text("1\nC\nC 0 0 0\n")
-    mock_rd_mod.DetermineBonds.side_effect = RuntimeError("Fail")
-    parser.settings["force_fallback_fail"] = True
-    with patch.object(mwm.QInputDialog, "getText", return_value=("", False)):
-        with patch.object(mwm, "QDialog", side_effect=Exception("Force Fallback")):
-            result = parser.load_xyz_file(str(path))
-            assert result is None
+    parser.settings["skip_chemistry_checks"] = False
+    parser.settings["always_ask_charge"] = True
+    # DummyParser.prompt_for_charge returns (None, False, False) which means cancel
+    result = parser.load_xyz_file(str(path))
+    assert result is None
 
 
 def test_load_xyz_unrecognized_symbol(mock_parser_host, tmp_path):
@@ -159,8 +188,11 @@ def test_load_xyz_unrecognized_symbol(mock_parser_host, tmp_path):
     xyz_path = tmp_path / "unknown.xyz"
     xyz_path.write_text("1\nUnknown\nXx 0.0 0.0 0.0\n")
     parser.settings["skip_chemistry_checks"] = False
-    with pytest.raises(ValueError, match="Unrecognized element symbol"):
-        parser.load_xyz_file(str(xyz_path))
+    mol = parser.load_xyz_file(str(xyz_path))
+    assert mol is None
+    # Verify status bar message (approximate check)
+    msgs = [str(c.args[0]) for c in parser.statusBar().showMessage.call_args_list if c.args]
+    assert any("Unrecognized element symbol" in m for m in msgs)
 
 
 def test_save_as_xyz_logic(mock_parser_host, tmp_path):
@@ -194,16 +226,20 @@ def test_load_mol_file_with_v2000_fix(mock_parser_host, tmp_path):
 
 def test_load_xyz_recovery_loop_retries(mock_parser_host, tmp_path):
     """Verify that the XYZ load recovery loop handles retries correctly."""
+    from unittest.mock import MagicMock as _MM
     parser = DummyParser(mock_parser_host)
     path = tmp_path / "retry.xyz"
     path.write_text("1\nC\nC 0 0 0\n")
-    mock_rd_mod.DetermineBonds.side_effect = [RuntimeError("Fail"), None]
-    parser.settings["force_fallback_fail"] = True
-    with patch.object(mwm.QInputDialog, "getText", return_value=("1", True)):
-        with patch.object(mwm, "QDialog", side_effect=Exception("Force Fallback")):
-            mol = parser.load_xyz_file(str(path))
-            assert mol is not None
-            assert mol.GetIntProp("_xyz_charge") == 1
+    parser.settings["skip_chemistry_checks"] = False
+    # New logic: 
+    # 1. Automatic try 0 -> fails (1st side effect: RuntimeError)
+    # 2. Prompt cycle 1: user says 0 -> fails (2nd side effect: RuntimeError)
+    # 3. Prompt cycle 2: user says 1 -> succeeds (3rd side effect: None)
+    mock_rd_mod.DetermineBonds.side_effect = [RuntimeError("auto fail"), RuntimeError("prompt fail"), None]
+    parser.prompt_for_charge = _MM(side_effect=[(0, True, False), (1, True, False)])
+    mol = parser.load_xyz_file(str(path))
+    assert mol is not None
+    assert mol.GetIntProp("_xyz_charge") == 1
 
 
 def test_load_mol_file_not_found(mock_parser_host):
@@ -266,18 +302,12 @@ def test_load_xyz_complex_recovery_branches(mock_parser_host, tmp_path):
     path = tmp_path / "complex.xyz"
     path.write_text("1\nC\nC 0 0 0\n")
     mock_rd_mod.DetermineBonds.side_effect = RuntimeError("Fail")
-    parser.settings["force_fallback_fail"] = True
-    with patch.object(
-        mwm.QInputDialog, "getText", side_effect=[("1", True), ("", False)]
-    ):
-        with patch.object(mwm, "QDialog", side_effect=Exception("Force Fallback")):
-            assert parser.load_xyz_file(str(path)) is None
-            msgs = [
-                str(c.args[0])
-                for c in parser.statusBar().showMessage.call_args_list
-                if c.args
-            ]
-            assert any("failed for that charge" in m for m in msgs)
+    # First call fails with charge 1, second call chooses skip chemistry
+    calls = iter([(1, True, False), (0, True, True)])
+    parser.prompt_for_charge = lambda: next(calls)
+    mol = parser.load_xyz_file(str(path))
+    assert mol is not None
+    assert mol.HasProp("_xyz_skip_checks") or getattr(mol, "_xyz_skip_checks", False)
 
 
 def test_save_as_mol_no_current_path(mock_parser_host, tmp_path):

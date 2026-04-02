@@ -3,19 +3,21 @@ from PyQt6.QtCore import Qt, QPointF, QTimer
 from PyQt6.QtWidgets import QMainWindow
 from unittest.mock import MagicMock, patch
 
-from moleditpy.modules.main_window_edit_actions import MainWindowEditActions
-from moleditpy.modules.molecular_data import MolecularData
-from moleditpy.modules.atom_item import AtomItem
+from moleditpy.ui.edit_actions_logic import EditActionsManager
+from moleditpy.core.molecular_data import MolecularData
+from moleditpy.ui.atom_item import AtomItem
 
 
-class DummyEditActions(MainWindowEditActions):
+class DummyEditActions(EditActionsManager):
     def __init__(self, host):
+        super().__init__(host)
         self._host = host
-        self.data = host.data
-        self.scene = host.scene
-        self.view_2d = host.view_2d
-        self.undo_stack = MagicMock()
+        self.data = host.state_manager.data
+        self.scene = host.init_manager.scene
+        self.view_2d = host.init_manager.view_2d
+        self.edit_actions_manager.undo_stack = MagicMock()
         self.is_xyz_derived = False
+        self.main_window_edit_actions = self
         self._ih_update_counter = 0
 
     def __getattr__(self, name):
@@ -51,7 +53,7 @@ def test_rotate_molecule_2d_basic(mock_parser_host):
     editor.scene.selectedItems.return_value = []
 
     with patch(
-        "moleditpy.modules.main_window_edit_actions.sip_isdeleted_safe",
+        "moleditpy.ui.edit_actions_logic.sip_isdeleted_safe",
         return_value=False,
     ):
         editor.rotate_molecule_2d(180)
@@ -75,7 +77,7 @@ def test_resolve_overlapping_groups_basic(mock_parser_host):
     editor.scene.items.return_value = [a1, a2]
 
     with patch(
-        "moleditpy.modules.main_window_edit_actions.sip_isdeleted_safe",
+        "moleditpy.ui.edit_actions_logic.sip_isdeleted_safe",
         return_value=False,
     ):
         editor.resolve_overlapping_groups()

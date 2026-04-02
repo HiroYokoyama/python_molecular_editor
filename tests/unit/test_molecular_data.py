@@ -3,8 +3,8 @@
 import pytest
 from rdkit import Chem
 from rdkit.Chem import Descriptors, AllChem, rdMolDescriptors
-from moleditpy.modules.molecular_data import MolecularData
-from moleditpy.modules.constants import ANGSTROM_PER_PIXEL
+from moleditpy.core.molecular_data import MolecularData
+from moleditpy.utils.constants import ANGSTROM_PER_PIXEL
 from PyQt6.QtCore import QPointF
 
 
@@ -29,8 +29,8 @@ def test_add_atom_stores_properties():
     aid = data.add_atom("N", QPointF(5.5, -3.2), charge=-1, radical=1)
     atom = data.atoms[aid]
     assert atom["symbol"] == "N"
-    assert atom["pos"].x() == pytest.approx(5.5)
-    assert atom["pos"].y() == pytest.approx(-3.2)
+    assert atom["pos"][0] == pytest.approx(5.5)
+    assert atom["pos"][1] == pytest.approx(-3.2)
     assert atom["charge"] == -1
     assert atom["radical"] == 1
 
@@ -119,6 +119,39 @@ def test_remove_bond_reverse_lookup():
 
     data.remove_bond(b, a)  # Reversed order
     assert len(data.bonds) == 0
+
+
+def test_remove_atom_non_existent():
+    """remove_atom gracefully handles removing an atom that doesn't exist."""
+    data = MolecularData()
+    data.add_atom("C", QPointF(0, 0))
+    # Should not raise exception
+    data.remove_atom(999)
+    assert len(data.atoms) == 1
+
+
+def test_remove_bond_non_existent():
+    """remove_bond gracefully handles removing a bond that doesn't exist."""
+    data = MolecularData()
+    data.add_atom("C", QPointF(0, 0))
+    data.add_atom("O", QPointF(10, 0))
+    # Should not raise exception
+    data.remove_bond(0, 1)
+    assert len(data.bonds) == 0
+
+
+def test_to_mol_block_handles_sanitization_failure(monkeypatch):
+    """to_mol_block falls back if RDKit molecule generation fails."""
+    data = MolecularData()
+    data.add_atom("C", QPointF(0, 0))
+    
+    # Mock to_rdkit_mol to simulate RDKit sanitization failure (returns None)
+    monkeypatch.setattr(data, "to_rdkit_mol", lambda **kwargs: None)
+    
+    mol_block = data.to_mol_block()
+    assert mol_block is not None
+    assert "MoleditPy" in mol_block
+    assert "V2000" in mol_block
 
 
 # =============================================================================
@@ -301,3 +334,31 @@ def test_molecular_weight_matches_rdkit():
     assert Descriptors.HeavyAtomMolWt(mol) == pytest.approx(
         Descriptors.HeavyAtomMolWt(ref), abs=0.01
     )
+
+
+def test_to_template_dict():
+    """Verify template serialization dictionary format and content."""
+    data = MolecularData()
+    c = data.add_atom("C", QPointF(1.0, 2.0), charge=1, radical=0)
+    o = data.add_atom("O", QPointF(10.0, 20.0))
+    data.add_bond(c, o, order=1, stereo=1)  # Wedge
+
+    tmpl = data.to_template_dict(
+        "Test Template", version="2.0", application_version="1.2.3"
+    )
+
+    assert tmpl["format"] == "PME Template"
+    assert tmpl["version"] == "2.0"
+    assert tmpl["application_version"] == "1.2.3"
+    assert tmpl["name"] == "Test Template"
+    assert "created" in tmpl
+
+    assert len(tmpl["atoms"]) == 2
+    assert tmpl["atoms"][0]["symbol"] == "C"
+    assert tmpl["atoms"][0]["x"] == 1.0
+    assert tmpl["atoms"][0]["y"] == 2.0
+    assert tmpl["atoms"][0]["charge"] == 1
+
+    assert len(tmpl["bonds"]) == 1
+    assert tmpl["bonds"][0]["order"] == 1
+    assert tmpl["bonds"][0]["stereo"] == 1

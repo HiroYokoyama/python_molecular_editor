@@ -8,10 +8,10 @@ This is the Linux version of MoleditPy. The Open Babel fallback is disabled due 
 [![Python Versions](https://img.shields.io/pypi/pyversions/MoleditPy.svg)](https://pypi.org/project/MoleditPy/)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![Build Status](https://github.com/HiroYokoyama/python_molecular_editor/actions/workflows/tests.yml/badge.svg)](https://github.com/HiroYokoyama/python_molecular_editor/actions)
-![Core Logic Coverage](https://img.shields.io/badge/core_logic_coverage-72%25-green)
-![Overall Coverage](https://img.shields.io/badge/coverage-50%25-orange)
+![Core Logic Coverage](https://img.shields.io/badge/core_logic_coverage-75%25-green)
+![Overall Coverage](https://img.shields.io/badge/coverage-67%25-green)
 ![GUI Status](https://img.shields.io/badge/GUI-Manually_Verified-blue)
-![Pylint Score](https://img.shields.io/badge/pylint-8.64%2F10-brightgreen)
+![Pylint Score](https://img.shields.io/badge/pylint-9%2F10-brightgreen)
 [![PyPI Downloads](https://static.pepy.tech/personalized-badge/moleditpy?period=total&units=INTERNATIONAL_SYSTEM&left_color=BLACK&right_color=GREEN&left_text=downloads)](https://pepy.tech/projects/moleditpy)
 
 [🇯🇵 日本語 (Japanese)](#japanese)
@@ -132,6 +132,7 @@ moleditpy
   * **GUI and 2D Drawing (PyQt6):** The editor is built on a `QGraphicsScene`, where custom `AtomItem` and `BondItem` objects are interactively manipulated. The Undo/Redo feature is implemented by serializing the application state.
   * **Chemical Calculations (RDKit / Open Babel):** RDKit is used to generate molecule objects from 2D data, perform 3D coordinate generation, and calculate properties. Open Babel serves as a fallback for 3D conversion. All heavy computations are run on a separate `QThread` to keep the GUI responsive.
   * **3D Visualization (PyVista / pyvistaqt):** 3D rendering is achieved by generating PyVista meshes (spheres and cylinders) from RDKit conformer coordinates. A custom `vtkInteractorStyle` enables direct drag-and-drop editing of atoms in the 3D view.
+  * **Modular Architecture:** The codebase is organized into dedicated packages for `core` logic, `ui` components, and `utils`. The main application logic is decomposed into reusable mixins, ensuring long-term maintainability and easier verification.
 
 ## License
 

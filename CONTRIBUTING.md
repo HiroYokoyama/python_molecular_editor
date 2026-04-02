@@ -2,7 +2,7 @@
 
 Thank you for your interest in contributing to **MoleditPy**! We welcome contributions from the community to make this molecular editor more robust and feature-rich for scientific research.
 
-To maintain the high quality and stability of the application (Pylint > 8.0, Core Logic Coverage > 70%), please review the following guidelines.
+To maintain the high quality and stability of the application (Pylint > 8.0, Core Logic Coverage > 80%), please review the following guidelines.
 
 ## 1. How to Report Bugs
 
@@ -21,7 +21,7 @@ When opening an Issue, please include:
     ```bash
     # Standard install
     pip install .
-    
+
     # Or for active development (changes reflect immediately)
     # pip install -e .
     ```
@@ -45,13 +45,40 @@ We maintain a strict code quality standard. Before submitting a Pull Request (PR
 MoleditPy uses a hybrid approach to quality assurance: **Automated Unit Tests** for logic and **Manual Checklists** for UI.
 
 ### A. Core Molecular Logic (Automated)
-* Files in `modules/` related to calculation, parsing, or data structure (e.g., `molecular_data.py`, `calculation_worker.py`) **MUST** have unit tests.
-* **Target Coverage:** Maintain or exceed **70%** coverage for logic modules.
+* Files in `core/` related to calculation, parsing, or data structure (e.g., `molecular_data.py`, `calculation_worker.py`) **MUST** have unit tests.
+* **Target Coverage:** Maintain or exceed **80%** coverage for logic modules.
+* Any new public method added to `plugin_interface.py` (`PluginContext` or `Plugin3DController`) **MUST** have a corresponding test in `tests/unit/test_plugin_interface.py`.
 
-### B. GUI & Interaction (Manual + Defensive)
-* **Defensive Programming:** We prefer catching exceptions over crashing the application.
-    * Use `try-except Exception` blocks in UI slots (`*_dialog.py`, `view_3d.py`).
-    * **CRITICAL:** Never leave an `except` block empty (`pass`). You **MUST** log the traceback or show a user notification.
+### B. Error Handling — No Hiding, No Crashing
+
+MoleditPy's stability policy is: **never hide errors, never crash.**
+
+| Situation | Rule |
+|-----------|------|
+| UI slot / event handler | Wrap in `try/except`, log the traceback, show a status message or dialog |
+| Plugin `initialize()` / `run()` | Same — always log; optionally show a warning to the user |
+| Internal helper (non-UI) | Let exceptions propagate; do NOT swallow them |
+| C-extension boundary (RDKit, PyVista, PyQt6) | Broad `except Exception` is acceptable **only here**; must still log |
+
+**Critical rule:** an `except` block that contains only `pass` is **never** acceptable. You must at minimum write to the log:
+
+```python
+# WRONG
+try:
+    do_something()
+except Exception:
+    pass
+
+# CORRECT
+try:
+    do_something()
+except Exception:
+    import traceback
+    print(traceback.format_exc())   # or use the app logger
+```
+
+### C. GUI & Interaction (Manual + Defensive)
+* **Avoid Broad Exceptions:** Minimize the use of `try-except Exception` blocks. Always prefer granular, specific exception types (e.g., `AttributeError`, `ValueError`, `RuntimeError`, `OSError`) to prevent masking unexpected bugs. Use broad `Exception` only at the highest level of a UI slot or when interfacing with unpredictable C-extensions.
 * **Manual Testing:** For UI changes, you must verify the behavior using the **Manual Test Checklist**. Please confirm in your PR description that you have manually verified the fix.
 
 ## 5. Pull Request Process

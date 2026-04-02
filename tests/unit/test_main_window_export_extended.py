@@ -3,7 +3,7 @@ from unittest.mock import MagicMock, Mock, patch, mock_open
 import os
 import numpy as np
 from PyQt6.QtWidgets import QMainWindow
-from moleditpy.modules.main_window_export import MainWindowExport
+from moleditpy.ui.export_logic import ExportManager
 from PyQt6.QtCore import QRectF
 
 
@@ -52,16 +52,29 @@ class TinyMesh:
         return TinyMesh(self.n_points // 2)
 
 
-# Create a mock class that mixes in MainWindowExport
-class MockMainWindow(MainWindowExport, QMainWindow):
+# Create a mock class that uses ExportManager
+class MockMainWindow(ExportManager, QMainWindow):
     def __init__(self):
-        self.current_mol = MagicMock()
-        self.current_file_path = "/path/to/molecule.xyz"
-        self.plotter = MagicMock()
-        self.scene = MagicMock()
+        # Initialize ExportManager with self as host
+        ExportManager.__init__(self, self)
+        
+        # Initialize all managers to avoid AttributeErrors
+        self.view_3d_manager = MagicMock()
+        self.edit_3d_manager = MagicMock()
+        self.state_manager = MagicMock()
+        self.init_manager = MagicMock()
+        self.io_manager = MagicMock()
+        self.compute_manager = MagicMock()
+        self.ui_manager = MagicMock()
+        self.export_manager = self
+        
+        self.view_3d_manager.current_mol = MagicMock()
+        self.host.init_manager.current_file_path = "/path/to/molecule.xyz"
+        self.view_3d_manager.plotter = MagicMock()
+        self.init_manager.scene = MagicMock()
         self._status_bar = MagicMock()
-        self.view_2d = MagicMock()
-        self.data = MagicMock()
+        self.init_manager.view_2d = MagicMock()
+        self.state_manager.data = MagicMock()
 
     def statusBar(self):
         return self._status_bar
@@ -74,19 +87,19 @@ def window():
 
 @pytest.fixture
 def mock_file_dialog():
-    with patch("moleditpy.modules.main_window_export.QFileDialog") as mock:
+    with patch("moleditpy.ui.export_logic.QFileDialog") as mock:
         yield mock
 
 
 @pytest.fixture
 def mock_message_box():
-    with patch("moleditpy.modules.main_window_export.QMessageBox") as mock:
+    with patch("moleditpy.ui.export_logic.QMessageBox") as mock:
         yield mock
 
 
 @pytest.fixture
 def mock_pv_polydata():
-    with patch("moleditpy.modules.main_window_export.pv.PolyData", create=True) as mock:
+    with patch("moleditpy.ui.export_logic.pv.PolyData", create=True) as mock:
         yield mock
 
 
@@ -121,7 +134,7 @@ def test_export_stl_cancel(window, mock_file_dialog):
 
 def test_export_stl_no_molecule(window):
     """Test export_stl with no molecule."""
-    window.current_mol = None
+    window.view_3d_manager.current_mol = None
     window.export_stl()
     window.statusBar().showMessage.assert_called_with(
         "Error: Please generate a 3D structure first."
@@ -230,10 +243,10 @@ def test_export_from_3d_view_logic(window):
     mock_actor.prop = Mock()
     mock_actor.prop.color = [1.0, 1.0, 1.0]
 
-    window.plotter.renderer.actors = {"actor1": mock_actor}
-    window.plotter.mesh = {"actor1": mock_mesh_data}
+    window.view_3d_manager.plotter.renderer.actors = {"actor1": mock_actor}
+    window.view_3d_manager.plotter.mesh = {"actor1": mock_mesh_data}
 
-    with patch("moleditpy.modules.main_window_export.pv") as mock_pv:
+    with patch("moleditpy.ui.export_logic.pv") as mock_pv:
         mock_pv.PolyData = TinyMesh # Class-like
         mock_pv.wrap.side_effect = lambda x: x # Wrap returns input if already TinyMesh
 
@@ -244,7 +257,7 @@ def test_export_from_3d_view_logic(window):
 
 def test_export_2d_png_success(window, mock_file_dialog, mock_message_box):
     """Test export_2d_png success path."""
-    window.data.atoms = [MagicMock()]
+    window.state_manager.data.atoms = [MagicMock()]
     mock_file_dialog.getSaveFileName.return_value = (
         "/path/to/image.png",
         "PNG Files (*.png)",
@@ -254,10 +267,10 @@ def test_export_2d_png_success(window, mock_file_dialog, mock_message_box):
     )
 
     with (
-        patch("moleditpy.modules.main_window_export.AtomItem", DummyAtomItem),
-        patch("moleditpy.modules.main_window_export.BondItem", DummyBondItem),
-        patch("moleditpy.modules.main_window_export.QImage") as mock_qimage_cls,
-        patch("moleditpy.modules.main_window_export.QPainter") as mock_painter_cls,
+        patch("moleditpy.ui.export_logic.AtomItem", DummyAtomItem),
+        patch("moleditpy.ui.export_logic.BondItem", DummyBondItem),
+        patch("moleditpy.ui.export_logic.QImage") as mock_qimage_cls,
+        patch("moleditpy.ui.export_logic.QPainter") as mock_painter_cls,
     ):
         mock_image = MagicMock()
         mock_qimage_cls.return_value = mock_image
@@ -269,7 +282,7 @@ def test_export_2d_png_success(window, mock_file_dialog, mock_message_box):
         mock_painter.isActive.return_value = True
 
         atom_instance = DummyAtomItem()
-        window.scene.items.return_value = [atom_instance]
+        window.init_manager.scene.items.return_value = [atom_instance]
 
         window.export_2d_png()
         mock_image.save.assert_called_with("/path/to/image.png", "PNG")
@@ -280,7 +293,7 @@ def test_export_2d_png_success(window, mock_file_dialog, mock_message_box):
 
 def test_export_2d_svg_success(window, mock_file_dialog, mock_message_box):
     """Test export_2d_svg success path."""
-    window.data.atoms = [MagicMock()]
+    window.state_manager.data.atoms = [MagicMock()]
     mock_file_dialog.getSaveFileName.return_value = (
         "/path/to/image.svg",
         "SVG Files (*.svg)",
@@ -290,10 +303,10 @@ def test_export_2d_svg_success(window, mock_file_dialog, mock_message_box):
     )
 
     with (
-        patch("moleditpy.modules.main_window_export.QSvgGenerator") as mock_svg_gen_cls,
-        patch("moleditpy.modules.main_window_export.QPainter") as mock_painter_cls,
-        patch("moleditpy.modules.main_window_export.AtomItem", DummyAtomItem),
-        patch("moleditpy.modules.main_window_export.BondItem", DummyBondItem),
+        patch("moleditpy.ui.export_logic.QSvgGenerator") as mock_svg_gen_cls,
+        patch("moleditpy.ui.export_logic.QPainter") as mock_painter_cls,
+        patch("moleditpy.ui.export_logic.AtomItem", DummyAtomItem),
+        patch("moleditpy.ui.export_logic.BondItem", DummyBondItem),
     ):
         mock_svg = MagicMock()
         mock_svg_gen_cls.return_value = mock_svg
@@ -304,7 +317,7 @@ def test_export_2d_svg_success(window, mock_file_dialog, mock_message_box):
         mock_painter.isActive.return_value = True
 
         atom_instance = DummyAtomItem()
-        window.scene.items.return_value = [atom_instance]
+        window.init_manager.scene.items.return_value = [atom_instance]
 
         window.export_2d_svg()
         mock_svg.setFileName.assert_called_with("/path/to/image.svg")
@@ -323,10 +336,10 @@ def test_export_from_3d_view_no_color_logic(window):
     mock_actor.prop = Mock()
     mock_actor.prop.color = [1.0, 1.0, 1.0]
 
-    window.plotter.renderer.actors = {"actor1": mock_actor}
-    window.plotter.mesh = {"actor1": mock_mesh_data}
+    window.view_3d_manager.plotter.renderer.actors = {"actor1": mock_actor}
+    window.view_3d_manager.plotter.mesh = {"actor1": mock_mesh_data}
 
-    with patch("moleditpy.modules.main_window_export.pv") as mock_pv:
+    with patch("moleditpy.ui.export_logic.pv") as mock_pv:
         mock_pv.PolyData = TinyMesh
         mock_pv.wrap.side_effect = lambda x: x
 
@@ -346,9 +359,9 @@ def test_export_from_3d_view_with_colors_logic(window):
     mock_actor.prop = Mock()
     mock_actor.prop.color = [1.0, 1.0, 1.0]
 
-    window.plotter.renderer.actors = {"actor1": mock_actor}
+    window.view_3d_manager.plotter.renderer.actors = {"actor1": mock_actor}
 
-    with patch("moleditpy.modules.main_window_export.pv") as mock_pv:
+    with patch("moleditpy.ui.export_logic.pv") as mock_pv:
         mock_pv.PolyData = TinyMesh
         mock_pv.wrap.side_effect = lambda x: x
 

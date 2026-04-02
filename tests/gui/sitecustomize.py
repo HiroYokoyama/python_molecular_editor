@@ -1,7 +1,3 @@
-# sitecustomize.py runs very early when the Python interpreter starts and
-# can be used to modify import behavior before pytest collects modules.
-# We'll stub out `mocker_shim_test` if present to avoid running developer
-# helper code that modifies builtins.open during collection.
 import os
 import sys
 import types
@@ -14,10 +10,6 @@ try:
     root = os.path.dirname(__file__)
     shim_path = os.path.join(root, "mocker_shim_test.py")
 
-    # If a local shim file exists, protect pytest by preplacing it with a
-    # harmless stub module so imports won't execute the shim.
-    # Prevent imports of a local mocker shim by inserting a meta-path
-    # finder that returns a harmless stub instead of executing the shim.
     class _StubLoader(importlib.abc.Loader):
         def create_module(self, spec):
             return types.ModuleType(spec.name)

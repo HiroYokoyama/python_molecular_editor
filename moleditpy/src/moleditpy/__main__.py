@@ -16,7 +16,7 @@ print("-----------------------------------------------------\n")
 
 try:
     from .main import main
-except Exception:
+except ImportError:
     from main import main
 
 # --- Application Execution ---

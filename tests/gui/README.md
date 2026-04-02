@@ -68,6 +68,12 @@ This is the primary integration test suite, executing user workflows in a headle
 | **`test_delete_atom_on_right_click`** | **Data Integrity** | Verifies cascading deletion logic: ensuring that removing an atom also cleanly removes its incident bonds and updates neighbor lists. |
 | **`test_key_press_change_atom`** | **Shortcuts & Hotkeys** | Verifies that keyboard inputs are correctly intercepted and mapped to element changes or tool switches. |
 | **`test_add_remove_hydrogens`** | **Algorithmic Utilities** | Verifies that the 'Add/Remove Hydrogens' UI commands correctly invoke the backend valency algorithms and update the visualization. |
+| **`test_additional_dialogs_launch.py`** | **Secondary Dialogs** | Smoke tests for less common dialogs (e.g., Mirror, Align Plane). |
+| **`test_dialog_launch.py`** | **Dialog Smoke Tests** | Ensures all primary dialogs can be instantiated and shown without errors. |
+| **`test_main_window_settings.py`** | **Settings Integration** | Verifies that settings applied in the dialog correctly propagate to the main application. |
+| **`test_main_window_ui_integration.py`** | **UI/Data Sync** | Verifies consistent state between the data model and multiple UI views. |
+| **`test_molecule_scene_events.py`** | **Scene Events** | Detailed verification of mouse and keyboard event filtering in the 2D scene. |
+| **`test_plugin_manager_redundant.py`** | **Plugin Edge Cases** | Tests for redundant plugin registration and error handling in plugin loading. |
 
 ## 4\. Setup & Running
 

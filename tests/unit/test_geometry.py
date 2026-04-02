@@ -2,8 +2,8 @@ import pytest
 import math
 from rdkit import Chem
 from rdkit.Chem import AllChem, rdMolTransforms
-from moleditpy.modules.calculation_worker import CalculationWorker
-from moleditpy.modules.molecular_data import MolecularData
+from moleditpy.ui.calculation_worker import CalculationWorker
+from moleditpy.core.molecular_data import MolecularData
 from PyQt6.QtCore import QPointF
 from unittest import mock as _mock
 
@@ -60,7 +60,7 @@ def test_3d_bond_lengths(qtbot):
         assert 107 < angle < 112
 
 
-from moleditpy.modules.mirror_dialog import MirrorDialog
+from moleditpy.ui.mirror_dialog import MirrorDialog
 from unittest.mock import MagicMock
 from rdkit.Geometry import Point3D
 from PyQt6.QtWidgets import QWidget
@@ -77,9 +77,17 @@ def test_mirror_dialog_logic(qtbot):
     main_window = QWidget()
     main_window.statusBar = MagicMock()
     main_window.statusBar.return_value = MagicMock()
-    main_window.draw_molecule_3d = MagicMock()
-    main_window.update_chiral_labels = MagicMock()
-    main_window.push_undo_state = MagicMock()
+    
+    # Initialize all managers to avoid AttributeErrors
+    main_window.view_3d_manager = MagicMock()
+    main_window.view_3d_manager.draw_molecule_3d = MagicMock()
+    main_window.view_3d_manager.update_chiral_labels = MagicMock()
+    
+    main_window.state_manager = MagicMock()
+    main_window.edit_actions_manager = MagicMock()
+    main_window.init_manager = MagicMock()
+    main_window.ui_manager = MagicMock()
+    main_window.compute_manager = MagicMock()
 
     # Initial state
     conf = mol.GetConformer()
@@ -100,12 +108,12 @@ def test_mirror_dialog_logic(qtbot):
     assert x_after == pytest.approx(-x_before, abs=1e-3)
 
     # Verify MoleditPy specific recovery calls
-    assert main_window.draw_molecule_3d.called
-    assert main_window.update_chiral_labels.called
-    assert main_window.push_undo_state.called
+    assert main_window.view_3d_manager.draw_molecule_3d.called
+    assert main_window.view_3d_manager.update_chiral_labels.called
+    assert main_window.edit_actions_manager.push_undo_state.called
 
 
-from moleditpy.modules.planarize_dialog import PlanarizeDialog
+from moleditpy.ui.planarize_dialog import PlanarizeDialog
 import numpy as np
 
 
@@ -119,11 +127,20 @@ def test_planarize_logic(qtbot):
 
     # Mock main_window
     main_window = QWidget()
-    main_window.atom_positions_3d = mol.GetConformer().GetPositions()
-    main_window.plotter = MagicMock()
-    main_window.draw_molecule_3d = MagicMock()
-    main_window.update_chiral_labels = MagicMock()
-    main_window.push_undo_state = MagicMock()
+    positions = mol.GetConformer().GetPositions()
+    
+    # Initialize all managers
+    main_window.view_3d_manager = MagicMock()
+    main_window.state_manager = MagicMock()
+    main_window.edit_actions_manager = MagicMock()
+    main_window.init_manager = MagicMock()
+    main_window.ui_manager = MagicMock()
+    main_window.compute_manager = MagicMock()
+    
+    main_window.view_3d_manager.atom_positions_3d = positions
+    main_window.view_3d_manager.plotter = MagicMock()
+    main_window.view_3d_manager.draw_molecule_3d = MagicMock()
+    main_window.view_3d_manager.update_chiral_labels = MagicMock()
 
     # Instantiate dialog with all atoms selected
     dialog = PlanarizeDialog(
@@ -145,15 +162,15 @@ def test_planarize_logic(qtbot):
     assert s[-1] < 1e-10
 
     # Also verify that main_window methods were called
-    assert main_window.draw_molecule_3d.called
-    assert main_window.update_chiral_labels.called
-    assert main_window.push_undo_state.called
+    assert main_window.view_3d_manager.draw_molecule_3d.called
+    assert main_window.view_3d_manager.update_chiral_labels.called
+    assert main_window.edit_actions_manager.push_undo_state.called
 
 
 # ------------------------------------------------------------------
 # rodrigues_rotate & adjust_bond_angle tests
 # ------------------------------------------------------------------
-from moleditpy.modules.mol_geometry import adjust_bond_angle, rodrigues_rotate
+from moleditpy.core.mol_geometry import adjust_bond_angle, rodrigues_rotate
 
 
 def test_rodrigues_rotate_90_deg():
@@ -244,3 +261,68 @@ def test_adjust_bond_angle_collinear():
 
     # Bond length of C from B should be preserved (was 1.0)
     assert np.linalg.norm(positions[2] - positions[1]) == pytest.approx(1.0, abs=1e-12)
+
+
+def test_optimize_2d_coords():
+    """Verify 2D coordinate optimization generating coordinates for a simple molecule."""
+    from rdkit import Chem
+    from moleditpy.core.mol_geometry import optimize_2d_coords
+
+    mol = Chem.MolFromSmiles("C1=CC=CC=C1")
+    for i, atom in enumerate(mol.GetAtoms()):
+        atom.SetIntProp("_original_atom_id", i)
+
+    new_pos = optimize_2d_coords(mol)
+    assert len(new_pos) == 6
+    for pos in new_pos.values():
+        assert len(pos) == 2
+
+
+def test_calculate_best_fit_plane_projection():
+    """Verify orthogonal projection onto a best-fit plane."""
+    import numpy as np
+    from moleditpy.core.mol_geometry import calculate_best_fit_plane_projection
+
+    points = np.array([[1, 1, 1], [2, 2, 2], [3, 3, 3], [1, 2, 3]])
+    centroid = np.mean(points, axis=0)
+    centered = points - centroid
+    u, s, vh = np.linalg.svd(centered)
+    normal = vh[-1]
+    projected = calculate_best_fit_plane_projection(centered, normal, centroid)
+
+    # Check planarity: SVD of centered projected points should have s[-1] approx 0
+    p_centered = projected - np.mean(projected, axis=0)
+    pu, ps, pvh = np.linalg.svd(p_centered)
+    assert ps[-1] < 1e-10
+
+
+def test_rotate_2d_points():
+    """Verify 2D rotation of point maps."""
+    import numpy as np
+    from moleditpy.core.mol_geometry import rotate_2d_points
+
+    points = {1: (1, 0), 2: (0, 1)}
+    rotated = rotate_2d_points(points, 0, 0, 90)
+    np.testing.assert_allclose(rotated[1], [0, 1], atol=1e-12)
+    np.testing.assert_allclose(rotated[2], [-1, 0], atol=1e-12)
+
+
+def test_resolve_2d_overlaps():
+    """Verify 2D overlap resolution logic handles collisions correctly."""
+    from moleditpy.core.mol_geometry import resolve_2d_overlaps
+
+    atom_ids = {1, 2}
+    positions = {1: (0, 0), 2: (0, 0.1)}  # Overlapping if threshold > 0.1
+    adj = {1: [], 2: []}  # Not connected
+    # If they are NOT bonded, they should move
+    moves = resolve_2d_overlaps(
+        atom_ids,
+        positions,
+        adj,
+        overlap_threshold=0.5,
+        move_distance=1.0,
+        has_bond_check_func=lambda i, j: False,
+    )
+    assert len(moves) > 0
+    # One fragment should be planned to move
+    assert len(moves[0][0]) == 1

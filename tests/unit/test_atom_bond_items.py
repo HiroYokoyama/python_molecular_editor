@@ -2,8 +2,8 @@ import pytest
 from unittest.mock import MagicMock, patch
 from PyQt6.QtCore import QPointF, QRectF, Qt
 from PyQt6.QtGui import QColor, QPen, QBrush
-from moleditpy.modules.atom_item import AtomItem
-from moleditpy.modules.bond_item import BondItem
+from moleditpy.ui.atom_item import AtomItem
+from moleditpy.ui.bond_item import BondItem
 
 
 # Mock MainWindow and Scene
@@ -165,7 +165,7 @@ class TestAtomItem:
 
         # Patch sip_isdeleted_safe to avoid issues with Mock objects not being C++ pointers
         with patch(
-            "moleditpy.modules.atom_item.sip_isdeleted_safe", return_value=False
+            "moleditpy.ui.atom_item.sip_isdeleted_safe", return_value=False
         ):
             # 1. Test Implicit Hydrogens (e.g. CH3)
             atom_item.implicit_h_count = 3
@@ -374,7 +374,7 @@ class TestBondItem:
 
         mock_mol.GetAtomWithIdx.side_effect = get_atom_with_idx
 
-        # Setup scene.window.data.atoms dictionary
+        # Setup scene.window.state_manager.data.atoms dictionary
         atom3_item = MagicMock()
         atom3_item.pos.return_value = QPointF(5.0, 5.0)
 

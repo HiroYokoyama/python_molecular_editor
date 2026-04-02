@@ -1,6 +1,6 @@
 from rdkit import Chem
 from rdkit.Chem import AllChem
-from moleditpy.modules.molecular_data import MolecularData
+from moleditpy.core.molecular_data import MolecularData
 from PyQt6.QtCore import QPointF
 
 
@@ -94,7 +94,7 @@ def test_chiral_r_s_consistency():
     assert found_wedge
 
 
-from moleditpy.modules.mirror_dialog import MirrorDialog
+from moleditpy.ui.mirror_dialog import MirrorDialog
 from unittest import mock as _mock
 from unittest.mock import MagicMock
 from PyQt6.QtWidgets import QWidget
@@ -115,9 +115,11 @@ def test_stereo_confirmation(qtbot):
     main_window = QWidget()
     main_window.statusBar = MagicMock()
     main_window.statusBar.return_value = MagicMock()
-    main_window.draw_molecule_3d = MagicMock()
-    main_window.update_chiral_labels = MagicMock()
-    main_window.push_undo_state = MagicMock()
+    main_window.view_3d_manager = MagicMock()
+    main_window.view_3d_manager.draw_molecule_3d = MagicMock()
+    main_window.view_3d_manager.update_chiral_labels = MagicMock()
+    main_window.edit_actions_manager = MagicMock()
+    main_window.edit_actions_manager.push_undo_state = MagicMock()
 
     # 3. Instantiate MirrorDialog
     dialog = MirrorDialog(mol, main_window)
@@ -138,7 +140,7 @@ def test_stereo_confirmation(qtbot):
 
 def test_stereo_loss_on_planarize(qtbot):
     """Verify that planarizing a chiral center removes its chirality."""
-    from moleditpy.modules.planarize_dialog import PlanarizeDialog
+    from moleditpy.ui.planarize_dialog import PlanarizeDialog
 
     # 1. Create (S)-2-butanol
     mol = Chem.MolFromSmiles("C[C@H](O)CC")
@@ -149,11 +151,14 @@ def test_stereo_loss_on_planarize(qtbot):
 
     # 2. Mock main_window
     main_window = QWidget()
-    main_window.atom_positions_3d = mol.GetConformer().GetPositions()
-    main_window.plotter = MagicMock()
-    main_window.draw_molecule_3d = MagicMock()
-    main_window.update_chiral_labels = MagicMock()
-    main_window.push_undo_state = MagicMock()
+    positions = mol.GetConformer().GetPositions()
+    main_window.view_3d_manager = MagicMock()
+    main_window.view_3d_manager.atom_positions_3d = positions
+    main_window.view_3d_manager.plotter = MagicMock()
+    main_window.view_3d_manager.draw_molecule_3d = MagicMock()
+    main_window.view_3d_manager.update_chiral_labels = MagicMock()
+    main_window.edit_actions_manager = MagicMock()
+    main_window.edit_actions_manager.push_undo_state = MagicMock()
 
     # 3. Planarize only the chiral center and its neighbors
     # This should effectively make it achiral
