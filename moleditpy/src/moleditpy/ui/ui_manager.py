@@ -573,9 +573,33 @@ class UIManager(QObject):
             self.host.ui_manager.minimize_2d_panel()
             self.host.statusBar().showMessage("2D panel minimized", 1500)
 
+    def _get_live_splitter(self):
+        """Return splitter only when wrapper and C++ object are still alive."""
+        init_manager = getattr(self.host, "init_manager", None)
+        splitter = getattr(init_manager, "splitter", None)
+        if splitter is None:
+            return None
+
+        if _sip_isdeleted is not None:
+            try:
+                if _sip_isdeleted(splitter):
+                    return None
+            except (AttributeError, RuntimeError, TypeError):
+                return None
+
+        return splitter
+
     def on_splitter_moved(self, pos, index):
         """Feedback for splitter movement."""
-        sizes = self.host.init_manager.splitter.sizes()
+        splitter = self._get_live_splitter()
+        if splitter is None:
+            return
+
+        try:
+            sizes = splitter.sizes()
+        except (AttributeError, RuntimeError, TypeError):
+            return
+
         if len(sizes) >= 2:
             total = sum(sizes)
             if total > 0:
@@ -583,20 +607,39 @@ class UIManager(QObject):
                 right_percent = round(sizes[1] * 100 / total)
 
                 # Show ratio in tooltip
-                if hasattr(self.host.init_manager.splitter, "handle"):
-                    handle = self.host.init_manager.splitter.handle(1)
+                if hasattr(splitter, "handle"):
+                    try:
+                        handle = splitter.handle(1)
+                    except (AttributeError, RuntimeError, TypeError):
+                        return
                     if handle:
-                        handle.setToolTip(f"2D: {left_percent}% | 3D: {right_percent}%")
+                        try:
+                            handle.setToolTip(
+                                f"2D: {left_percent}% | 3D: {right_percent}%"
+                            )
+                        except (AttributeError, RuntimeError, TypeError):
+                            return
                 else:  # [REPORT ERROR MISSING ATTRIBUTE]
                     logging.error("REPORT ERROR: Missing attribute 'handle' on object")
 
     def setup_splitter_tooltip(self):
         """Set initial splitter tooltip."""
-        handle = self.host.init_manager.splitter.handle(1)
+        splitter = self._get_live_splitter()
+        if splitter is None:
+            return
+
+        try:
+            handle = splitter.handle(1)
+        except (AttributeError, RuntimeError, TypeError):
+            return
+
         if handle:
-            handle.setToolTip(
-                "Drag to resize panels | Ctrl+1/2/3 for presets | Ctrl+H to toggle 2D panel"
-            )
+            try:
+                handle.setToolTip(
+                    "Drag to resize panels | Ctrl+1/2/3 for presets | Ctrl+H to toggle 2D panel"
+                )
+            except (AttributeError, RuntimeError, TypeError):
+                return
             # Show initial ratio
             self.on_splitter_moved(0, 0)
 
