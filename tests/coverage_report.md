@@ -32,7 +32,7 @@
 | moleditpy\src\moleditpy\ui\edit_actions_logic.py        |    852 |    215 |   74.8% |
 | moleditpy\src\moleditpy\ui\export_logic.py              |    512 |    150 |   70.7% |
 | moleditpy\src\moleditpy\ui\io_logic.py                  |    641 |    131 |   79.6% |
-| moleditpy\src\moleditpy\ui\main_window_init.py          |   1182 |    164 |   86.1% |
+| moleditpy\src\moleditpy\ui\main_window_init.py          |   1185 |    165 |   86.1% |
 | moleditpy\src\moleditpy\ui\molecular_scene_handler.py   |    860 |    180 |   79.1% |
 | moleditpy\src\moleditpy\ui\molecule_scene.py            |    506 |    187 |   63.0% |
 | moleditpy\src\moleditpy\ui\sip_isdeleted_safe.py        |     13 |      4 |   69.2% |
@@ -42,7 +42,7 @@
 | moleditpy\src\moleditpy\utils\constants.py              |     31 |      0 |  100.0% |
 | moleditpy\src\moleditpy\utils\default_settings.py       |      1 |      0 |  100.0% |
 | moleditpy\src\moleditpy\utils\sip_isdeleted_safe.py     |     19 |      8 |   57.9% |
-| **TOTAL** | **10703** | **2605** | **75.66%** |
+| **TOTAL** | **10706** | **2606** | **75.66%** |
 
 ### Full Application Breakdown
 
@@ -79,7 +79,7 @@
 | moleditpy\src\moleditpy\ui\geometry_base_dialog.py      |     56 |     41 |   26.8% |
 | moleditpy\src\moleditpy\ui\io_logic.py                  |    641 |    131 |   79.6% |
 | moleditpy\src\moleditpy\ui\main_window.py               |     64 |     20 |   68.8% |
-| moleditpy\src\moleditpy\ui\main_window_init.py          |   1182 |    164 |   86.1% |
+| moleditpy\src\moleditpy\ui\main_window_init.py          |   1185 |    165 |   86.1% |
 | moleditpy\src\moleditpy\ui\mirror_dialog.py             |     70 |      7 |   90.0% |
 | moleditpy\src\moleditpy\ui\molecular_scene_handler.py   |    860 |    180 |   79.1% |
 | moleditpy\src\moleditpy\ui\molecule_scene.py            |    506 |    187 |   63.0% |
@@ -104,7 +104,7 @@
 | moleditpy\src\moleditpy\utils\default_settings.py       |      1 |      0 |  100.0% |
 | moleditpy\src\moleditpy\utils\sip_isdeleted_safe.py     |     19 |      8 |   57.9% |
 | moleditpy\src\moleditpy\utils\system_utils.py           |     34 |     18 |   47.1% |
-| **TOTAL** | **13693** | **4404** | **67.84%** |
+| **TOTAL** | **13696** | **4405** | **67.84%** |
 
 ## Test Suite Status
 - **Unit tests**: PASSED
