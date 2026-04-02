@@ -1,4 +1,4 @@
-﻿# MoleditPy Plugin Development Manual (Version 3.1)
+﻿# MoleditPy Plugin Development Manual (Version 3)
 
 This manual describes the current plugin API for the composition-based MoleditPy architecture.
 It replaces the old direct-`mw.<method>` style with the safer `PluginContext` interface.
