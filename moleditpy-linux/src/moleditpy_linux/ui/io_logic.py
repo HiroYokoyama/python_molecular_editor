@@ -175,32 +175,44 @@ class IOManager:
                 _set_prop(final_mol, "_xyz_skip_checks", 1)
             else:
                 final_mol = None
-                while True:
-                    prompt_fn = getattr(self, "prompt_for_charge", None)
-                    if callable(prompt_fn):
-                        result = prompt_fn()
-                        if isinstance(result, tuple) and len(result) == 3:
-                            charge_val, ok, skip_flag = result
+                settings = getattr(self.host.init_manager, "settings", {}) or {}
+                # First try with charge 0 (per user's 'first try with 0 then ask' requirement)
+                # but only if "Always ask" is not explicitly enabled in settings.
+                if not settings.get("always_ask_charge", False):
+                    try:
+                        final_mol = _process(0, use_rd_determine=True)
+                    except (RuntimeError, ValueError, TypeError):
+                        final_mol = None
+
+                # If still no final_mol (because always_ask is True, or charge 0 failed)
+                if final_mol is None:
+                    while True:
+                        prompt_fn = getattr(self, "prompt_for_charge", None)
+                        if callable(prompt_fn):
+                            result = prompt_fn()
+                            if isinstance(result, tuple) and len(result) == 3:
+                                charge_val, ok, skip_flag = result
+                            else:
+                                charge_val, ok, skip_flag = 0, True, False
                         else:
                             charge_val, ok, skip_flag = 0, True, False
-                    else:
-                        charge_val, ok, skip_flag = 0, True, False
 
-                    if not ok:
-                        return None
-                    if skip_flag:
-                        final_mol = _process(0, use_rd_determine=False)
-                        _set_prop(final_mol, "_xyz_skip_checks", 1)
-                        break
-                    try:
-                        final_mol = _process(charge_val, use_rd_determine=True)
-                        break
-                    except (RuntimeError, ValueError, TypeError) as e:
-                        self.host.statusBar().showMessage(
-                            f"Chemistry failed for charge {charge_val}: {e}. Try a different charge or skip."
-                        )
-                        if not callable(prompt_fn):
-                            raise e
+                        if not ok:
+                            return None
+                        if skip_flag:
+                            final_mol = _process(0, use_rd_determine=False)
+                            _set_prop(final_mol, "_xyz_skip_checks", 1)
+                            break
+                        try:
+                            final_mol = _process(charge_val, use_rd_determine=True)
+                            break
+                        except (RuntimeError, ValueError, TypeError) as e:
+                            if hasattr(self.host, "statusBar") and self.host.statusBar():
+                                self.host.statusBar().showMessage(
+                                    f"Chemistry failed for charge {charge_val}: {e}. Try a different charge or skip."
+                                )
+                            if not callable(prompt_fn):
+                                raise e
 
                 if final_mol:
                     final_mol._xyz_atom_data = atoms_data

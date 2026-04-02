@@ -87,6 +87,10 @@ class MainWindow(QMainWindow):
         return self.view_3d_manager.plotter
 
     @property
+    def data(self):
+        return self.state_manager.data
+
+    @property
     def scene(self):
         return self.init_manager.scene
 

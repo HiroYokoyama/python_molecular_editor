@@ -842,14 +842,17 @@ class MainInitManager:
 
     def _integrate_plugin_file_openers(self):
         """Add plugin-provided file openers to the import menu."""
-        if (
-            not hasattr(self.host, "import_menu")
-            or not self.host.plugin_manager.file_openers
-        ):
+        if not self.host.plugin_manager.file_openers:
+            return
+
+        import_menu = getattr(self, "import_menu", None) or getattr(
+            self.host, "import_menu", None
+        )
+        if import_menu is None:
             return
 
         PLUGIN_ACTION_TAG = "plugin_managed"
-        sep = self.import_menu.addSeparator()
+        sep = import_menu.addSeparator()
         sep.setData(PLUGIN_ACTION_TAG)
 
         plugin_map = {}
@@ -887,7 +890,7 @@ class MainInitManager:
             a = QAction(f"Import {ext_str} ({p_name})...", self.host)
             a.triggered.connect(make_cb(ext_map, filter_str, p_name))
             a.setData(PLUGIN_ACTION_TAG)
-            self.import_menu.addAction(a)
+            import_menu.addAction(a)
 
     def _integrate_plugin_analysis_tools(self):
         """Add plugin-provided analysis tools to the analysis menu."""
