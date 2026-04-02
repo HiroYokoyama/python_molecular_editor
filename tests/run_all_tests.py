@@ -3,6 +3,7 @@ import os
 import re
 import argparse
 import subprocess
+import time
 
 # Robust path setup
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -114,24 +115,42 @@ def run_suite(name, path, env_vars=None, extra_args=None, enable_cov=True):
         sys.path.insert(0, SRC_DIR)
 
     try:
-        result = subprocess.run(
-            cmd, env=env, check=False,
-            stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-            text=True, errors="replace",
-        )
-        # Always print the captured output
-        if result.stdout:
-            print(result.stdout, end="", flush=True)
+        start_ts = time.time()
+        print(f"  [START] {name}: {' '.join(cmd)}", flush=True)
 
-        if result.returncode != 0:
-            if _is_teardown_crash(result.returncode, result.stdout or ""):
+        process = subprocess.Popen(
+            cmd,
+            env=env,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            errors="replace",
+            bufsize=1,
+        )
+        output_lines = []
+        assert process.stdout is not None
+        for line in process.stdout:
+            output_lines.append(line)
+            # Stream immediately so CI logs show live progress / last test before freeze
+            print(line, end="", flush=True)
+
+        returncode = process.wait()
+        duration = time.time() - start_ts
+        print(
+            f"  [END] {name}: exit={returncode} elapsed={duration:.1f}s",
+            flush=True,
+        )
+
+        combined_output = "".join(output_lines)
+        if returncode != 0:
+            if _is_teardown_crash(returncode, combined_output):
                 print(
                     f"  [NOTE] {name}: Ignoring post-test teardown crash "
-                    f"(exit code {result.returncode}). All tests passed.",
+                    f"(exit code {returncode}). All tests passed.",
                     flush=True,
                 )
                 return 0
-        return result.returncode
+        return returncode
     except Exception as e:
         print(f"Error running {name} tests: {e}")
         return 1
