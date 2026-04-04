@@ -34,7 +34,7 @@ When opening an Issue, please include:
 
 We maintain a strict code quality standard. Before submitting a Pull Request (PR), ensure your code meets the following:
 
-* **Pylint Score:** The project maintains a score of **> 8.0/10**.
+* **Pylint Score:** The project maintains a score of **> 9.0/10**.
     * Run `pylint src/moleditpy` and fix warnings.
     * Do not suppress warnings locally without a valid reason.
 * **Style:** Follow [PEP 8](https://www.python.org/dev/peps/pep-0008/).
