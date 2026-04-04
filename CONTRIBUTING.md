@@ -2,7 +2,7 @@
 
 Thank you for your interest in contributing to **MoleditPy**! We welcome contributions from the community to make this molecular editor more robust and feature-rich for scientific research.
 
-To maintain the high quality and stability of the application (Pylint > 8.0, Core Logic Coverage > 75%), please review the following guidelines.
+To maintain the high quality and stability of the application (Pylint > 9.0, Core Logic Coverage > 75%), please review the following guidelines.
 
 ## 1. How to Report Bugs
 
