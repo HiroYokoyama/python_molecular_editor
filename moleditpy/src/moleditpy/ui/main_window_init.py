@@ -490,8 +490,8 @@ class MainInitManager:
                 logging.error("REPORT ERROR: Missing attribute 'conv_actions' on self")
 
             # Intermolecular interaction
-            if hasattr(self, "intermolecular_rdkit_action"):
-                self.intermolecular_rdkit_action.setChecked(
+            if hasattr(self.host, "intermolecular_rdkit_action"):
+                self.host.intermolecular_rdkit_action.setChecked(
                     self.host.init_manager.settings.get(
                         "optimize_intermolecular_interaction_rdkit", True
                     )
@@ -525,6 +525,8 @@ class MainInitManager:
                 self.host.init_manager.scene.setBackgroundBrush(QBrush(QColor(bg_c)))
                 for item in self.host.init_manager.scene.items():
                     with contextlib.suppress(AttributeError, RuntimeError, TypeError):
+                        if type(item).__name__ not in ("AtomItem", "BondItem"):
+                            continue
                         if hasattr(item, "update_style"):
                             item.update_style()
                         else:  # [REPORT ERROR MISSING ATTRIBUTE]
