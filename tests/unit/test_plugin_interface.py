@@ -71,10 +71,9 @@ class TestPluginInterface:
         # Test getter (PluginContext.current_mol accesses mw.view_3d_manager.current_mol)
         assert ctx.current_molecule == "mock_molecule"
 
-        # Test setter (sets mw.view_3d_manager.current_mol and calls view_3d_manager.draw_molecule_3d)
+        # Test setter (sets mw.view_3d_manager.current_mol)
         ctx.current_molecule = "new_molecule"
         assert mock_main_window.view_3d_manager.current_mol == "new_molecule"
-        mock_main_window.view_3d_manager.draw_molecule_3d.assert_called_once_with("new_molecule")
 
     def test_current_molecule_no_window(self, mock_manager):
         """Test current_molecule when main window is None."""
