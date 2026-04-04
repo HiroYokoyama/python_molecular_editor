@@ -3,7 +3,9 @@
 Welcome to the **Version 3.0** of the MoleditPy Plugin API. This version introduces a fully decoupled, namespaced architecture designed for high stability, clean memory management, and long-term maintainability.
 
 > [!IMPORTANT]
-> **API PHILOSOPHY**: In V3, you MUST avoid accessing the `MainWindow` directly via monkey-patching or unverified attributes. Instead, use the methods provided by the `PluginContext`. This ensures your plugin remains functional even if the main application's internal structure is refactored.
+> **API PHILOSOPHY**: In Version 3.0, it is strongly recommended that you avoid accessing the `MainWindow` directly via monkey-patching or unverified attributes. Instead, you should use the stable methods provided by the `PluginContext`. 
+> 
+> While we aim to maintain internal stability as much as possible, the application's core structure (e.g., manager names, attribute paths) may change significantly between major versions. By using the `PluginContext`, your plugin is protected by a stable abstraction layer that ensures long-term compatibility even when the core application is refactored.
 
 ---
 
@@ -20,6 +22,7 @@ Define these at the top of your script. They are used for the UI and the interna
 | `PLUGIN_VERSION` | Version string (e.g., `"1.0.2"` or `"2026.03.31"`). |
 | `PLUGIN_AUTHOR` | Name of the developer. |
 | `PLUGIN_DESCRIPTION` | A short summary shown in the Plugin Manager. |
+| `PLUGIN_CATEGORY` | Optional category (e.g., `"Analysis"`, `"Visualization"`). |
 
 ### 1.2 Folder-based Plugins (Packages)
 For complex plugins, use a folder structure. MoleditPy will treat the folder as a single plugin if it contains an `__init__.py`.
@@ -100,6 +103,14 @@ Backward-compatible alias for `add_menu_action`. Supports two calling styles:
 
 > [!NOTE]
 > New plugins should use `add_menu_action` instead of `register_menu_action`.
+
+#### `add_plugin_menu(path, callback, text=None, icon=None, shortcut=None)`
+Register an action nested inside the **Plugins** menu. This is the preferred way to keep the main menu bar clean if your plugin has many tools.
+- **path** (`str`): The sub-path within the Plugin menu (e.g., `"Utils/My Tool"`).
+- **callback** (`Callable`): Function to execute.
+- **text** (`str`, optional): Label for the action.
+- **icon** (`str`, optional): Icon path.
+- **shortcut** (`str`, optional): Keyboard shortcut.
 
 #### `add_toolbar_action(callback, text, icon=None, tooltip=None)`
 Add a button to the dedicated **Plugin Toolbar**.
@@ -185,6 +196,10 @@ These methods and properties allow your plugin to extend the core rendering and 
 #### `refresh_3d_view()`
 Force the 3D window to redraw. Use this after performing minor visual changes (like color overrides) or manual coordinate updates.
 
+#### `draw_molecule_3d(mol)`
+Directly trigger a full redraw of the 3D scene using a specific RDKit molecule. This is more intensive than `refresh_3d_view()` as it rebuilds all 3D actors.
+- **mol** (`rdkit.Chem.Mol`): The molecule to render.
+
 #### `reset_3d_camera()`
 Zoom in and re-center the 3D viewport to perfectly fit the current molecule.
 
@@ -211,6 +226,51 @@ Direct access to the 2D `MoleculeScene`.
 Returns the raw `MainWindow` instance. **Use with caution** — prefer specific context methods when available.
 
 ---
+
+### 2.7 Settings & Persistence
+
+Plugins can store persistent settings that are saved in the global application configuration.
+
+#### `get_setting(key, default=None)`
+Retrieve a plugin-specific setting. The key is automatically namespaced by your plugin name.
+- **key** (`str`): The setting name.
+- **default** (`Any`): Value to return if the setting is not found.
+
+#### `set_setting(key, value)`
+Save a plugin-specific setting. These are saved to the user's disk when the application closes.
+- **key** (`str`): The setting name.
+- **value** (`Any`): The value to store (must be JSON-serializable).
+
+> [!CAUTION]
+> **Persistence Limit**: Settings saved via `set_setting` reside in the application's global `settings.json`. If the user triggers **"Reset All Settings"** via the main menu, these settings will be **REMOVED**.
+
+#### Isolated Storage (Companion JSON)
+If your plugin needs to persist data that must survive an application-wide reset, or if you have complex data structures, use a separate JSON file in your plugin's directory.
+
+**Implementation Pattern**:
+```python
+import os, json
+
+def get_config_path():
+    # Use __file__ to locate the plugin's own folder and script name
+    script_path = os.path.abspath(__file__)
+    plugin_dir = os.path.dirname(script_path)
+    base_name = os.path.splitext(os.path.basename(script_path))[0]
+    
+    # Use script_name.json to avoid overlaps
+    return os.path.join(plugin_dir, f"{base_name}.json")
+
+def load_config():
+    path = get_config_path()
+    if os.path.exists(path):
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    return {"my_prop": 42} # Default
+
+def save_config(data):
+    with open(get_config_path(), "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=4)
+```
 
 ### 2.6 Window & State Management (Namespaced)
 
@@ -293,15 +353,16 @@ def highlight_selection(context):
 
 ## 5. Migration Guide (V2 to V3)
 
-| Legacy Pattern (Avoid) | Modern Pattern (Use This) |
+| Legacy Pattern (Direct Access) | Modern Pattern (Best Practice) |
 | :--- | :--- |
 | `mw.statusBar().showMessage(m)` | `context.show_status_message(m)` |
 | `mw.push_undo_state()` | `context.push_undo_checkpoint()` |
 | `mw.current_mol` | `context.current_molecule` |
 | `mw.plotter.reset_camera()` | `context.reset_3d_camera()` |
 | `mw.my_tool = win` | `context.register_window("my_tool", win)` |
-| `mw.draw_molecule_3d(...)` | `context.refresh_3d_view()` |
+| `mw.draw_molecule_3d(...)` | `context.refresh_3d_view()` or `context.draw_molecule_3d(mol)` |
 | `context.register_menu_action(path, text, cb)` | `context.add_menu_action(path, cb, text)` |
+| `mw.settings.get(key)` | `context.get_setting(key)` |
 
 > [!NOTE]
 > `mw.trigger_conversion()` is still accessible via `context.get_main_window()` and delegates to the internal compute manager. Prefer `context.add_menu_action` or `context.add_analysis_tool` for triggering computation workflows from menus.
@@ -312,16 +373,42 @@ def highlight_selection(context):
 
 While V3 encourages using `context`, sometimes you need direct access to the `MainWindow` (`mw`) for specialized Qt or PyVista operations. Obtain it via `mw = context.get_main_window()`.
 
-| Attribute / Method | Type | Description |
+### 6.1 Core Proxy Properties (Convenience)
+V3 maintains several proxy properties on `mw` for backward compatibility and convenience.
+
+| Attribute / Method | Description |
+| :--- | :--- |
+| `mw.plotter` | Proxy for `mw.view_3d_manager.plotter`. Direct PyVista plotter access. |
+| `mw.scene` | Proxy for `mw.init_manager.scene`. Direct 2D graphics scene access. |
+| `mw.current_mol` | Proxy for `mw.view_3d_manager.current_mol`. The active RDKit molecule. |
+| `mw.draw_molecule_3d(mol)` | Proxy method to trigger a full 3D redraw of the scene. |
+
+### 6.2 The Managed Architecture (V3)
+In Version 3.0, most core logic is separated into specialized **Managers**. If a feature is not available as a proxy on `mw`, you should look in the corresponding manager.
+
+| Attribute Path | Type | Description |
 | :--- | :--- | :--- |
-| `mw.settings` | `dict` | Global application settings (colors, defaults). |
-| `mw.plotter` | `pv.Plotter` | The raw PyVista plotter instance. |
-| `mw.scene` | `MoleculeScene` | The 2D editor graphics scene. |
-| `mw.current_mol` | `rdkit.Chem.Mol` | The active molecule (same as `context.current_molecule`). |
-| `mw.splitter` | `QSplitter` | The UI divider between 2D and 3D views. |
-| `mw.load_mol_file(path)` | — | Standard file loader. |
-| `mw.set_mode(mode_str)` | — | Switch editor mode (e.g., `'select'`, `'erase'`, `'atom_C'`). |
-| `mw.trigger_conversion()` | — | Trigger the built-in structure conversion (delegates to `compute_manager`). |
+| `mw.init_manager.settings` | `dict` | Global application settings (stored in `settings.json`). |
+| `mw.init_manager.splitter` | `QSplitter` | The UI divider between the 2D and 3D editor panels. |
+| `mw.ui_manager` | `UIManager` | Handles status bar messages, editor modes, and UI state updates. |
+| `mw.io_manager` | `IOManager` | Handles loading/saving molecules and project files. |
+| `mw.compute_manager` | `ComputeManager` | Manages 3D coordinate conversion and background calculations. |
+| `mw.view_3d_manager` | `View3DManager` | Manages the PyVista engine, styles, and 3D visualization. |
+| `mw.state_manager` | `StateManager` | Manages the undo/redo stack and molecular data lifecycle. |
+
+#### Example: Setting the Editor Mode
+```python
+mw = context.get_main_window()
+# Correct V3 way to switch to Carbon draw mode
+mw.ui_manager.set_mode("atom_C")
+```
+
+#### Example: Triggering Coordinate Conversion (2D to 3D)
+```python
+mw = context.get_main_window()
+# Correct V3 way to trigger the internal conversion logic (if molecule is already loaded)
+mw.compute_manager.trigger_conversion()
+```
 
 ---
 
@@ -580,7 +667,30 @@ def run_uff(mol):
     return True
 ```
 
----
+### 11.7 Persistent User Preferences
+Use `get_setting` and `set_setting` to remember user choices across sessions.
+
+```python
+PLUGIN_NAME = "Smart Labels"
+
+def initialize(context):
+    # Load user preference (default to True)
+    show_labels = context.get_setting("show_labels", True)
+    
+    context.add_menu_action("Labels/Toggle", lambda: toggle_labels(context))
+    context.show_status_message(f"Labels are {'on' if show_labels else 'off'}")
+
+def toggle_labels(context):
+    current = context.get_setting("show_labels", True)
+    new_state = not current
+    
+    # Save the new state
+    context.set_setting("show_labels", new_state)
+    
+    context.show_status_message(f"Labels toggled to: {new_state}")
+    # ... trigger re-draw logic ...
+```
+
 
 ## 12. UI & UX Style Guide
 
@@ -621,17 +731,7 @@ class TestMyPlugin(unittest.TestCase):
 
 ---
 
-## 14. Distribution & Sharing
-
-### 14.1 The `.mpp` Format (Future)
-We are working on a unified plugin package format (`.mpp`). For now, simply zip your plugin folder and share it with other users.
-
-### 14.2 Repository Registry
-If you want your plugin to be listed in the official **Community Plugin Browser**, please submit a Pull Request to the main MoleditPy repository with your plugin added to the `contrib/` directory.
-
----
-
-## 15. Conclusion & Support
+## 14. Conclusion & Support
 
 Thank you for contributing to the MoleditPy ecosystem! If you encounter any bugs or need new API features, please reach out via GitHub Issues.
 
