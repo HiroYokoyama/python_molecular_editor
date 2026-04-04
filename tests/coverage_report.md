@@ -1,7 +1,7 @@
 # MoleditPy Coverage Report
 
-- **Overall Project Coverage (Full)**: **67.41%**
-- **Core Molecular Logic Coverage**: **75.30%**
+- **Overall Project Coverage (Full)**: **67.34%**
+- **Core Molecular Logic Coverage**: **75.22%**
 
 > [!NOTE]
 > **Core Molecular Logic Coverage** excludes UI boilerplate (dialogs, view managers, and interactor styles) to focus on scientific algorithm reliability.
@@ -13,7 +13,7 @@
 | moleditpy\src\moleditpy\__init__.py                     |      6 |      2 |   66.7% |
 | moleditpy\src\moleditpy\core\mol_geometry.py            |    260 |     19 |   92.7% |
 | moleditpy\src\moleditpy\core\molecular_data.py          |    302 |     55 |   81.8% |
-| moleditpy\src\moleditpy\plugins\plugin_interface.py     |    118 |     20 |   83.1% |
+| moleditpy\src\moleditpy\plugins\plugin_interface.py     |    135 |     33 |   75.6% |
 | moleditpy\src\moleditpy\plugins\plugin_manager.py       |    325 |    108 |   66.8% |
 | moleditpy\src\moleditpy\ui\about_dialog.py              |     64 |     15 |   76.6% |
 | moleditpy\src\moleditpy\ui\align_plane_dialog.py        |    122 |     42 |   65.6% |
@@ -42,7 +42,7 @@
 | moleditpy\src\moleditpy\utils\constants.py              |     31 |      0 |  100.0% |
 | moleditpy\src\moleditpy\utils\default_settings.py       |      1 |      0 |  100.0% |
 | moleditpy\src\moleditpy\utils\sip_isdeleted_safe.py     |     19 |      8 |   57.9% |
-| **TOTAL** | **10744** | **2654** | **75.30%** |
+| **TOTAL** | **10761** | **2667** | **75.22%** |
 
 ### Full Application Breakdown
 
@@ -51,7 +51,7 @@
 | moleditpy\src\moleditpy\__init__.py                     |      6 |      2 |   66.7% |
 | moleditpy\src\moleditpy\core\mol_geometry.py            |    260 |     19 |   92.7% |
 | moleditpy\src\moleditpy\core\molecular_data.py          |    302 |     55 |   81.8% |
-| moleditpy\src\moleditpy\plugins\plugin_interface.py     |    118 |     20 |   83.1% |
+| moleditpy\src\moleditpy\plugins\plugin_interface.py     |    135 |     33 |   75.6% |
 | moleditpy\src\moleditpy\plugins\plugin_manager.py       |    325 |    108 |   66.8% |
 | moleditpy\src\moleditpy\ui\__init__.py                  |      7 |      3 |   57.1% |
 | moleditpy\src\moleditpy\ui\about_dialog.py              |     64 |     15 |   76.6% |
@@ -95,7 +95,7 @@
 | moleditpy\src\moleditpy\ui\ui_manager.py                |    372 |    137 |   63.2% |
 | moleditpy\src\moleditpy\ui\user_template_dialog.py      |    366 |    155 |   57.7% |
 | moleditpy\src\moleditpy\ui\view_3d_logic.py             |    986 |    246 |   75.1% |
-| moleditpy\src\moleditpy\ui\zoomable_view.py             |     72 |     37 |   48.6% |
+| moleditpy\src\moleditpy\ui\zoomable_view.py             |     72 |     39 |   45.8% |
 | moleditpy\src\moleditpy\ui\settings_tabs\settings_2d_tab.py |     79 |     68 |   13.9% |
 | moleditpy\src\moleditpy\ui\settings_tabs\settings_3d_tabs.py |    135 |    119 |   11.9% |
 | moleditpy\src\moleditpy\ui\settings_tabs\settings_other_tab.py |     52 |     42 |   19.2% |
@@ -104,7 +104,7 @@
 | moleditpy\src\moleditpy\utils\default_settings.py       |      1 |      0 |  100.0% |
 | moleditpy\src\moleditpy\utils\sip_isdeleted_safe.py     |     19 |      8 |   57.9% |
 | moleditpy\src\moleditpy\utils\system_utils.py           |     34 |     18 |   47.1% |
-| **TOTAL** | **13734** | **4476** | **67.41%** |
+| **TOTAL** | **13751** | **4491** | **67.34%** |
 
 ## Test Suite Status
 - **Unit tests**: PASSED

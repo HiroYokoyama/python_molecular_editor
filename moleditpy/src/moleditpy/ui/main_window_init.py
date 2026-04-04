@@ -1317,12 +1317,7 @@ class MainInitManager:
                 action.setChecked(True)
             action.triggered.connect(
                 lambda checked=False, k=key: (
-                    self.host.view_3d_manager.set_3d_style(k),
-                    self.host.view_3d_manager.draw_molecule_3d(
-                        self.host.view_3d_manager.current_mol
-                    )
-                    if getattr(self.host.view_3d_manager, "current_mol", None)
-                    else None,
+                    self.host.view_3d_manager.set_3d_style(k)
                 )
             )
             style_menu.addAction(action)
@@ -1335,12 +1330,7 @@ class MainInitManager:
                     action = QAction(style_name, self.host, checkable=True)
                     action.triggered.connect(
                         lambda checked=False, s=style_name: (
-                            self.host.view_3d_manager.set_3d_style(s),
-                            self.host.view_3d_manager.draw_molecule_3d(
-                                self.host.view_3d_manager.current_mol
-                            )
-                            if getattr(self.host.view_3d_manager, "current_mol", None)
-                            else None,
+                            self.host.view_3d_manager.set_3d_style(s)
                         )
                     )
                     style_menu.addAction(action)
