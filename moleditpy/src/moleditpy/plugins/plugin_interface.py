@@ -186,8 +186,6 @@ class PluginContext:
         mw = self.get_main_window()
         if mw and hasattr(mw, "view_3d_manager"):
             mw.view_3d_manager.current_mol = mol
-            if hasattr(mw.view_3d_manager, "draw_molecule_3d"):
-                mw.view_3d_manager.draw_molecule_3d(mol)
 
     @property
     def current_molecule(self) -> Any:
@@ -213,6 +211,12 @@ class PluginContext:
         """
         mw = self.get_main_window()
         return mw.init_manager.scene if mw and hasattr(mw, "init_manager") else None
+
+    def draw_molecule_3d(self, mol: Any) -> None:
+        """Draw a molecule in the 3D scene (Direct manager call)."""
+        mw = self.get_main_window()
+        if mw and hasattr(mw, "view_3d_manager"):
+            mw.view_3d_manager.draw_molecule_3d(mol)
 
     def add_export_action(self, label: str, callback: Callable):
         """
