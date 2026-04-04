@@ -289,6 +289,7 @@ class MainInitManager:
             self.host.io_manager.load_xyz_for_3d_viewing(file_path)
         elif file_ext in ["pmeraw", "pmeprj"]:
             self.host.io_manager.open_project_file(file_path=file_path)
+            QTimer.singleShot(100, self.host.view_3d_manager.fit_to_view)
         else:
             self.host.statusBar().showMessage(f"Unsupported file type: {file_ext}")
 
