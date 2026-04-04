@@ -173,6 +173,14 @@ class PluginContext:
         """
         return self._manager.get_main_window()
 
+    def show_status_message(self, message: str, timeout: int = 3000) -> None:
+        """
+        Display a temporary message in the status bar of the main window.
+        """
+        mw = self.get_main_window()
+        if mw and hasattr(mw, "ui_manager"):
+            mw.ui_manager.update_status_bar(message)
+
     @property
     def current_mol(self) -> Any:
         """
@@ -186,8 +194,7 @@ class PluginContext:
         mw = self.get_main_window()
         if mw and hasattr(mw, "view_3d_manager"):
             mw.view_3d_manager.current_mol = mol
-            if hasattr(mw.view_3d_manager, "draw_molecule_3d"):
-                mw.view_3d_manager.draw_molecule_3d(mol)
+            mw.view_3d_manager.draw_molecule_3d(mol)
 
     @property
     def current_molecule(self) -> Any:
@@ -213,6 +220,30 @@ class PluginContext:
         """
         mw = self.get_main_window()
         return mw.init_manager.scene if mw and hasattr(mw, "init_manager") else None
+
+    def draw_molecule_3d(self, mol: Any) -> None:
+        """Draw a molecule in the 3D scene (Direct manager call)."""
+        mw = self.get_main_window()
+        if mw and hasattr(mw, "view_3d_manager"):
+            mw.view_3d_manager.draw_molecule_3d(mol)
+
+    def refresh_3d_view(self) -> None:
+        """Force the 3D window to redraw using the current molecule."""
+        mw = self.get_main_window()
+        if mw and hasattr(mw, "view_3d_manager"):
+            mol = getattr(mw.view_3d_manager, "current_mol", None)
+            if mol:
+                mw.view_3d_manager.draw_molecule_3d(mol)
+            else:
+                # Also redraw/clear plotter if no molecule
+                if hasattr(mw.view_3d_manager, "plotter") and mw.view_3d_manager.plotter:
+                    mw.view_3d_manager.plotter.render()
+
+    def reset_3d_camera(self) -> None:
+        """Zoom in and re-center the 3D viewport to fit the current molecule."""
+        mw = self.get_main_window()
+        if mw and hasattr(mw, "view_3d_manager") and mw.view_3d_manager.plotter:
+            mw.view_3d_manager.plotter.reset_camera()
 
     def add_export_action(self, label: str, callback: Callable):
         """

@@ -549,7 +549,7 @@ class View3DManager:
             # Set bond radius and resolution based on style
             if current_style == "wireframe":
                 cyl_radius = self.host.init_manager.settings.get(
-                    "wireframe_bond_radius", 0.01
+                    "wireframe_bond_radius", 0.02
                 )
                 bond_resolution = self.host.init_manager.settings.get(
                     "wireframe_resolution", 6
@@ -935,7 +935,7 @@ class View3DManager:
                         )
                     elif current_style == "wireframe":
                         bond_radius = self.host.init_manager.settings.get(
-                            "wireframe_bond_radius", 0.01
+                            "wireframe_bond_radius", 0.02
                         )
                     else:
                         bond_radius = 0.1  # Default

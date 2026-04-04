@@ -1,6 +1,6 @@
 # MoleditPy Coverage Report
 
-- **Overall Project Coverage (Full)**: **67.34%**
+- **Overall Project Coverage (Full)**: **67.35%**
 - **Core Molecular Logic Coverage**: **75.22%**
 
 > [!NOTE]
@@ -97,14 +97,14 @@
 | moleditpy\src\moleditpy\ui\view_3d_logic.py             |    986 |    246 |   75.1% |
 | moleditpy\src\moleditpy\ui\zoomable_view.py             |     72 |     39 |   45.8% |
 | moleditpy\src\moleditpy\ui\settings_tabs\settings_2d_tab.py |     79 |     68 |   13.9% |
-| moleditpy\src\moleditpy\ui\settings_tabs\settings_3d_tabs.py |    135 |    119 |   11.9% |
+| moleditpy\src\moleditpy\ui\settings_tabs\settings_3d_tabs.py |    133 |    117 |   12.0% |
 | moleditpy\src\moleditpy\ui\settings_tabs\settings_other_tab.py |     52 |     42 |   19.2% |
 | moleditpy\src\moleditpy\ui\settings_tabs\settings_tab_base.py |     34 |     24 |   29.4% |
 | moleditpy\src\moleditpy\utils\constants.py              |     31 |      0 |  100.0% |
 | moleditpy\src\moleditpy\utils\default_settings.py       |      1 |      0 |  100.0% |
 | moleditpy\src\moleditpy\utils\sip_isdeleted_safe.py     |     19 |      8 |   57.9% |
 | moleditpy\src\moleditpy\utils\system_utils.py           |     34 |     18 |   47.1% |
-| **TOTAL** | **13751** | **4491** | **67.34%** |
+| **TOTAL** | **13749** | **4489** | **67.35%** |
 
 ## Test Suite Status
 - **Unit tests**: PASSED
