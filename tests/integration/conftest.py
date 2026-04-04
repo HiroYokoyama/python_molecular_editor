@@ -212,6 +212,31 @@ def app():
     # Platform-aware teardown: prevent 0x80010108/0x8001010d on Windows but avoid CI segfaults
     if not (is_headless or is_offscreen):
         try:
+            # Aggressively neutralize blocking dialogs/filters before bulk closure
+            # This prevents 0xc0000374 (heap corruption) on Windows during rapid teardown.
+            for widget in QApplication.topLevelWidgets():
+                try:
+                    # 1. Force has_unsaved_changes to False to skip "Save?" prompts
+                    if hasattr(widget, "state_manager"):
+                        try:
+                            widget.state_manager.has_unsaved_changes = False
+                        except Exception:
+                            pass
+                    elif hasattr(widget, "has_unsaved_changes"):
+                        widget.has_unsaved_changes = False
+
+                    # 2. Detach UIManager filters to prevent recursive/blocking logic
+                    if hasattr(widget, "ui_manager"):
+                        try:
+                            widget.removeEventFilter(widget.ui_manager)
+                        except Exception:
+                            pass
+
+                    # 3. Fast-path closeEvent
+                    widget.closeEvent = lambda event: event.accept()
+                except Exception:
+                    pass
+
             q_app.closeAllWindows()
             for _ in range(10):
                 q_app.processEvents()
@@ -427,19 +452,35 @@ def window(app, qtbot, monkeypatch):
 
             # Aggressive auto-close: ensure all top-level widgets are closed
             # to satisfy "auto close window" request and prevent COM hangs.
-            win.hide()
-            try:
-                win.close()
-            except Exception:
-                import traceback
+            # In headless mode, we must detach event filters or use event.accept()
+            # to avoid infinite recursion (CloseEvent -> close() -> CloseEvent).
+            for widget in QApplication.topLevelWidgets():
+                try:
+                    # 1. Detach UIManager filter from host to prevent handle_close_event recursion
+                    if hasattr(win, "ui_manager") and widget == win:
+                        try:
+                            widget.removeEventFilter(win.ui_manager)
+                        except Exception:
+                            pass
+                    
+                    # 2. Override closeEvent to simply accept (Solution 1)
+                    # This ensures that calling widget.close() below terminates safely.
+                    try:
+                        widget.closeEvent = lambda event: event.accept()
+                    except Exception:
+                        pass
 
-                traceback.print_exc()
-            try:
-                win.deleteLater()
-            except Exception:
-                import traceback
+                    widget.close()
+                    try:
+                        widget.deleteLater()
+                    except Exception:
+                        import traceback
 
-                traceback.print_exc()
+                        traceback.print_exc()
+                except Exception:
+                    import traceback
+
+                    traceback.print_exc()
 
             from PyQt6.QtWidgets import QApplication
 

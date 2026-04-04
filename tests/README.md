@@ -2,6 +2,14 @@
 
 This directory contains the testing infrastructure for MoleditPy.
 
+## Quick Start: Prerequisites
+
+Before running the tests, ensure you have the required `pytest` plugins installed:
+
+```bash
+pip install pytest pytest-qt pytest-cov pytest-timeout
+```
+
 ## Quick Start: Running Tests
 
 The recommended way to run tests is using the **Unified Runner**, which handles environment setup and executes suites in the correct order (Unit -> Integration -> GUI).
