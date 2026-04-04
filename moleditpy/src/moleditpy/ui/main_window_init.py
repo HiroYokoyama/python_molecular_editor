@@ -289,6 +289,7 @@ class MainInitManager:
             self.host.io_manager.load_xyz_for_3d_viewing(file_path)
         elif file_ext in ["pmeraw", "pmeprj"]:
             self.host.io_manager.open_project_file(file_path=file_path)
+            QTimer.singleShot(100, self.host.view_3d_manager.fit_to_view)
         else:
             self.host.statusBar().showMessage(f"Unsupported file type: {file_ext}")
 
@@ -489,8 +490,8 @@ class MainInitManager:
                 logging.error("REPORT ERROR: Missing attribute 'conv_actions' on self")
 
             # Intermolecular interaction
-            if hasattr(self, "intermolecular_rdkit_action"):
-                self.intermolecular_rdkit_action.setChecked(
+            if hasattr(self.host, "intermolecular_rdkit_action"):
+                self.host.intermolecular_rdkit_action.setChecked(
                     self.host.init_manager.settings.get(
                         "optimize_intermolecular_interaction_rdkit", True
                     )
@@ -524,6 +525,8 @@ class MainInitManager:
                 self.host.init_manager.scene.setBackgroundBrush(QBrush(QColor(bg_c)))
                 for item in self.host.init_manager.scene.items():
                     with contextlib.suppress(AttributeError, RuntimeError, TypeError):
+                        if type(item).__name__ not in ("AtomItem", "BondItem"):
+                            continue
                         if hasattr(item, "update_style"):
                             item.update_style()
                         else:  # [REPORT ERROR MISSING ATTRIBUTE]
@@ -1316,12 +1319,7 @@ class MainInitManager:
                 action.setChecked(True)
             action.triggered.connect(
                 lambda checked=False, k=key: (
-                    self.host.view_3d_manager.set_3d_style(k),
-                    self.host.view_3d_manager.draw_molecule_3d(
-                        self.host.view_3d_manager.current_mol
-                    )
-                    if getattr(self.host.view_3d_manager, "current_mol", None)
-                    else None,
+                    self.host.view_3d_manager.set_3d_style(k)
                 )
             )
             style_menu.addAction(action)
@@ -1334,12 +1332,7 @@ class MainInitManager:
                     action = QAction(style_name, self.host, checkable=True)
                     action.triggered.connect(
                         lambda checked=False, s=style_name: (
-                            self.host.view_3d_manager.set_3d_style(s),
-                            self.host.view_3d_manager.draw_molecule_3d(
-                                self.host.view_3d_manager.current_mol
-                            )
-                            if getattr(self.host.view_3d_manager, "current_mol", None)
-                            else None,
+                            self.host.view_3d_manager.set_3d_style(s)
                         )
                     )
                     style_menu.addAction(action)

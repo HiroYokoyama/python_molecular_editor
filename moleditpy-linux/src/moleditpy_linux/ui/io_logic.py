@@ -502,6 +502,7 @@ class IOManager:
                 50, lambda: self.host.view_3d_manager.plotter.view_isometric()
             )
             QTimer.singleShot(100, lambda: self.host.view_3d_manager.plotter.render())
+            QTimer.singleShot(100, self.host.view_3d_manager.fit_to_view)
 
         except FileNotFoundError:
             self.host.statusBar().showMessage(f"File not found: {file_path}")
@@ -670,6 +671,7 @@ class IOManager:
                 50, lambda: self.host.view_3d_manager.plotter.view_isometric()
             )
             QTimer.singleShot(100, lambda: self.host.view_3d_manager.plotter.render())
+            QTimer.singleShot(100, self.host.view_3d_manager.fit_to_view)
         except Exception as e:
             self.host.statusBar().showMessage(f"Error loading file: {e}")
 

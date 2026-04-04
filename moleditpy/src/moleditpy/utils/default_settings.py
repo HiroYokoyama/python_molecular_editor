@@ -35,7 +35,7 @@ DEFAULT_SETTINGS = {
     "cpk_resolution": 32,
     "cpk_colors": {},
     # --- 3D Model Parameters (Wireframe) ---
-    "wireframe_bond_radius": 0.01,
+    "wireframe_bond_radius": 0.02,
     "wireframe_resolution": 6,
     "wireframe_double_bond_offset_factor": 3.0,
     "wireframe_triple_bond_offset_factor": 3.0,

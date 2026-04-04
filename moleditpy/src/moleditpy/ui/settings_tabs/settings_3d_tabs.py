@@ -225,8 +225,7 @@ class SettingsModelTab(SettingsTabBase):
             val = settings_dict.get(f"{p}_atom_scale", 1.0)
             self.atom_scale_slider.setValue(int(val * 100))
         if p in ["ball_stick", "wireframe", "stick"]:
-            prefix = "wf" if p == "wireframe" else p
-            val = settings_dict.get(f"{prefix}_bond_radius", 0.1)
+            val = settings_dict.get(f"{p}_bond_radius", 0.1)
             self.bond_radius_slider.setValue(int(val * 100))
 
             self.db_offset_slider.setValue(
@@ -261,8 +260,7 @@ class SettingsModelTab(SettingsTabBase):
         if p in ["ball_stick", "cpk"]:
             s[f"{p}_atom_scale"] = self.atom_scale_slider.value() / 100.0
         if p in ["ball_stick", "wireframe", "stick"]:
-            prefix = "wireframe" if p == "wireframe" else p
-            s[f"{prefix}_bond_radius"] = self.bond_radius_slider.value() / 100.0
+            s[f"{p}_bond_radius"] = self.bond_radius_slider.value() / 100.0
             s[f"{p}_double_bond_offset_factor"] = self.db_offset_slider.value() / 100.0
             s[f"{p}_triple_bond_offset_factor"] = self.tr_offset_slider.value() / 100.0
             s[f"{p}_double_bond_radius_factor"] = self.db_radius_slider.value() / 100.0

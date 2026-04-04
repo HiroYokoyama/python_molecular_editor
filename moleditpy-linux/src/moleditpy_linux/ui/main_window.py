@@ -73,28 +73,33 @@ class MainWindow(QMainWindow):
             self, initial_file=initial_file, safe_mode=safe_mode
         )
 
-    # --- Core Proxy Properties ---
+    # --- Core Proxy Properties (Legacy Plugin Support Only. Bypassed by Core Logics) ---
     @property
     def current_mol(self):
+        """Proxy for current molecule. Not for core logic use."""
         return self.view_3d_manager.current_mol
 
     @current_mol.setter
     def current_mol(self, value):
+        """Proxy for current molecule setter. Not for core logic use."""
         self.view_3d_manager.current_mol = value
 
     @property
     def plotter(self):
+        """Proxy for 3D plotter. Not for core logic use."""
         return self.view_3d_manager.plotter
 
     @property
     def data(self):
+        """Proxy for state data. Not for core logic use."""
         return self.state_manager.data
 
     @property
     def scene(self):
+        """Proxy for 2D scene. Not for core logic use."""
         return self.init_manager.scene
 
     def draw_molecule_3d(self, mol):
+        """Proxy for 3D rendering. Not for core logic use."""
         self.current_mol = mol
         self.view_3d_manager.draw_molecule_3d(mol)
-
