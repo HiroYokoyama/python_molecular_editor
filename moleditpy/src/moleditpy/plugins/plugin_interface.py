@@ -186,6 +186,7 @@ class PluginContext:
         mw = self.get_main_window()
         if mw and hasattr(mw, "view_3d_manager"):
             mw.view_3d_manager.current_mol = mol
+            mw.view_3d_manager.draw_molecule_3d(mol)
 
     @property
     def current_molecule(self) -> Any:
