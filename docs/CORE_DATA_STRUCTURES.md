@@ -9,8 +9,8 @@ The application maintains a strict separation between the persistent chemical da
 | Component | Responsibility | Key Class | Location |
 | :--- | :--- | :--- | :--- |
 | **Data Model** | Pure chemical state (atoms, bonds, connectivity). | `MolecularData` | `core/molecular_data.py` |
-| **State Manager**| Undo/Redo tracking and state serialization. | `MainWindowAppState` | `ui/app_state.py` |
-| **Persistent IO** | Project saving and loading logic. | `MainWindowProjectIo` | `ui/project_io.py` |
+| **State Manager**| Undo/Redo tracking and state serialization. | `StateManager` | `ui/app_state.py` |
+| **Persistent IO** | Project saving and loading logic. | `IOManager` | `ui/io_logic.py` |
 | **Scene Graph** | 2D visualization and interaction logic. | `MoleculeScene` | `ui/molecule_scene.py` |
 | **Visual Items** | Rendering individual atoms and bonds. | `AtomItem`, `BondItem` | `ui/` package |
 

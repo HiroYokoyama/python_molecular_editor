@@ -85,5 +85,5 @@ You can regenerate the coverage report at any time using the provided utility:
 
 ```powershell
 # From the project root
-python tests/print_cov.py
+python tests/utils/print_cov.py
 ```

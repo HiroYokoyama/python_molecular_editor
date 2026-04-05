@@ -27,6 +27,13 @@ python tests/run_all_tests.py --integration
 python -m pytest tests/integration -v
 ```
 
+## Test Descriptions
+
+| Test File | Component | Verification Scope |
+| :--- | :--- | :--- |
+| **`test_calculation_worker.py`** | **CalculationWorker Pipeline** | Validates real 3D geometry against physics-based reference values.<br>• **Bond Lengths**: Measured against RDKit MMFF94s reference values.<br>• **Bond Angles**: Verified against ideal or reference optimized geometries.<br>• **Dihedral Angles**: Checked for convergence to stable staggered conformations (e.g., n-Butane). |
+| **`test_chiral_labels_integration.py`** | **Chiral Label Display** | Integration tests for the chiral label lifecycle in the 3D viewer.<br>• **Show/Hide Toggle**: Verifies that "Show Chiral Labels" correctly creates and removes R/S label actors.<br>• **Mirror Inversion**: Confirms that R/S assignments are correctly inverted after a mirror transformation. |
+
 ## Requirements
 
 - **PyQt6**: Required for the `CalculationWorker` signals and event loop.

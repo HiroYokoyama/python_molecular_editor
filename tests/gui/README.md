@@ -74,6 +74,7 @@ This is the primary integration test suite, executing user workflows in a headle
 | **`test_main_window_ui_integration.py`** | **UI/Data Sync** | Verifies consistent state between the data model and multiple UI views. |
 | **`test_molecule_scene_events.py`** | **Scene Events** | Detailed verification of mouse and keyboard event filtering in the 2D scene. |
 | **`test_plugin_manager_redundant.py`** | **Plugin Edge Cases** | Tests for redundant plugin registration and error handling in plugin loading. |
+| **`test_edit_actions_gui_extended.py`** | **Edit Actions GUI** | Verifies the `Rotate2DDialog` GUI in a full PyQt6 context.<br>• **Angle Sync**: Confirms the spinbox and slider remain synchronized during initialization and value changes. |
 
 ## 4\. Setup & Running
 

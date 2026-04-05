@@ -10,10 +10,10 @@ Post-v3.0, all dialogs have been refactored to prioritize **State Isolation** an
 - **UI Logic Delegation**: Presentation logic is strictly separated from scientific state; dialogs delegate compute tasks back to the host's specialized Managers (e.g., `ComputeManager`).
 - **Never Hide Interaction Errors**: To prevent silent failures during 3D picking or coordinate transforms, all interaction methods use explicit `try-except` blocks or `hasattr` checks that **never fail silently**. Every deviation is logged via `logging.error` to ensure developers maintain absolute visibility into the UI/Logic interface.
 
-| Component | Responsibility |
-| :--- | :--- |
-| **`DialogManager`**| Unified registry for instantiating and lifecycle-tracking all application-wide dialogs. |
-| **`UIManager`**| Manages the high-level layout, toolbar state, and coordinate system synchronization. |
+| Component | Responsibility | Location |
+| :--- | :--- | :--- |
+| **`DialogManager`**| Unified registry for instantiating and lifecycle-tracking all application-wide dialogs. | `ui/dialog_logic.py` |
+| **`UIManager`**| Manages the high-level layout, toolbar state, and coordinate system synchronization. | `ui/ui_manager.py` |
 
 ---
 

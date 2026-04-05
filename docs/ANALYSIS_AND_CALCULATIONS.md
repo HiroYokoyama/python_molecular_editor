@@ -9,8 +9,7 @@ Computational tasks in MoleditPy are designed to keep the main UI thread respons
 | Component | Responsibility | Key Class | Location |
 | :--- | :--- | :--- | :--- |
 | **Worker** | Executes heavy calculations (conformer generation, energy minimization). | `CalculationWorker` | `ui/calculation_worker.py` |
-| **Compute Engine**| Orchestrates 3D embedding algorithms and force-field coordination. | `ComputeEngine` | `ui/compute_engine.py` |
-| **Compute Manager**| Manages thread lifecycles, UI feedback, and results synchronization. | `ComputeManager` | `ui/compute_logic.py` |
+| **Compute Manager**| Orchestrates 3D embedding, thread lifecycles, UI feedback, and results synchronization. | `ComputeManager` | `ui/compute_logic.py` |
 | **Analysis** | Calculates physiochemical properties (MW, LogP, etc.). | `AnalysisWindow` | `ui/analysis_window.py` |
 
 ---
