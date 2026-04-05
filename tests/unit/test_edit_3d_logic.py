@@ -3,7 +3,8 @@ import os
 from rdkit import Chem
 from rdkit.Chem import AllChem
 from moleditpy.ui.edit_3d_logic import Edit3DManager
-from PyQt6.QtCore import Qt, QPointF
+from PyQt6.QtCore import Qt, QPointF, QRectF
+from PyQt6.QtWidgets import QGraphicsTextItem
 from unittest.mock import MagicMock, patch
 import numpy as np
 
@@ -132,3 +133,206 @@ def test_calculate_and_display_measurements_trigger(mock_parser_host):
         assert mock_display.called
         # It passes a list of strings
         assert "Distance" in mock_display.call_args[0][0][0]
+
+
+def test_add_2d_measurement_label_adds_item(mock_parser_host):
+    """Verify add_2d_measurement_label creates a label and registers it."""
+    edit3d = DummyEdit3d(mock_parser_host)
+
+    atom_item = MagicMock()
+    atom_item.pos.return_value = QPointF(10.0, 20.0)
+    atom_item.boundingRect.return_value = QRectF(0, 0, 16.0, 16.0)
+
+    edit3d.add_2d_measurement_label(atom_item, "1.234 Å")
+
+    # Item must be registered
+    assert len(edit3d.measurement_label_items_2d) == 1
+    label = edit3d.measurement_label_items_2d[0]
+    assert isinstance(label, QGraphicsTextItem)
+
+    # Correct text
+    assert label.toPlainText() == "1.234 Å"
+
+    # Z-value must be 2000 for top-most display
+    assert label.zValue() == 2000
+
+    # Must have been added to the scene
+    mock_parser_host.init_manager.scene.addItem.assert_called_once_with(label)
+
+    # Position offset: x = 10 + 16/4 + 2 = 16, y = 20 - 16/4 - 8 = 8
+    pos = label.pos()
+    assert pos.x() == pytest.approx(16.0)
+    assert pos.y() == pytest.approx(8.0)
+
+
+def test_add_2d_measurement_label_accumulates(mock_parser_host):
+    """Verify multiple labels are each appended to measurement_label_items_2d."""
+    edit3d = DummyEdit3d(mock_parser_host)
+
+    for i in range(3):
+        atom_item = MagicMock()
+        atom_item.pos.return_value = QPointF(float(i * 10), 0.0)
+        atom_item.boundingRect.return_value = QRectF(0, 0, 8.0, 8.0)
+        edit3d.add_2d_measurement_label(atom_item, f"label_{i}")
+
+    assert len(edit3d.measurement_label_items_2d) == 3
+    assert mock_parser_host.init_manager.scene.addItem.call_count == 3
+
+
+def test_clear_2d_measurement_labels_removes_items(mock_parser_host):
+    """Verify clear_2d_measurement_labels removes all items from the scene."""
+    edit3d = DummyEdit3d(mock_parser_host)
+
+    mock_label = MagicMock(spec=QGraphicsTextItem)
+    mock_label.scene.return_value = mock_parser_host.init_manager.scene
+    edit3d.measurement_label_items_2d = [mock_label]
+
+    with patch("moleditpy.ui.edit_3d_logic.sip_isdeleted_safe", return_value=False):
+        edit3d.clear_2d_measurement_labels()
+
+    mock_parser_host.init_manager.scene.removeItem.assert_called_once_with(mock_label)
+    assert edit3d.measurement_label_items_2d == []
+
+
+def test_clear_2d_measurement_labels_skips_deleted(mock_parser_host):
+    """Verify clear_2d_measurement_labels skips sip-deleted items."""
+    edit3d = DummyEdit3d(mock_parser_host)
+
+    mock_label = MagicMock(spec=QGraphicsTextItem)
+    edit3d.measurement_label_items_2d = [mock_label]
+
+    with patch("moleditpy.ui.edit_3d_logic.sip_isdeleted_safe", return_value=True):
+        edit3d.clear_2d_measurement_labels()
+
+    mock_parser_host.init_manager.scene.removeItem.assert_not_called()
+    assert edit3d.measurement_label_items_2d == []
+
+
+def test_clear_2d_measurement_labels_skips_unscened(mock_parser_host):
+    """Verify that items not attached to a scene are not passed to removeItem."""
+    edit3d = DummyEdit3d(mock_parser_host)
+
+    mock_label = MagicMock(spec=QGraphicsTextItem)
+    mock_label.scene.return_value = None  # item has no scene
+    edit3d.measurement_label_items_2d = [mock_label]
+
+    with patch("moleditpy.ui.edit_3d_logic.sip_isdeleted_safe", return_value=False):
+        edit3d.clear_2d_measurement_labels()
+
+    mock_parser_host.init_manager.scene.removeItem.assert_not_called()
+    assert edit3d.measurement_label_items_2d == []
+
+
+def test_find_rdkit_atom_index_no_mol(mock_parser_host):
+    """Verify find_rdkit_atom_index returns None when no molecule is loaded."""
+    edit3d = DummyEdit3d(mock_parser_host)
+    mock_parser_host.view_3d_manager.current_mol = None
+
+    atom_item = MagicMock()
+    assert edit3d.find_rdkit_atom_index(atom_item) is None
+
+
+def test_find_rdkit_atom_index_no_item(mock_parser_host):
+    """Verify find_rdkit_atom_index returns None for a None atom_item."""
+    edit3d = DummyEdit3d(mock_parser_host)
+    mock_parser_host.view_3d_manager.current_mol = MagicMock()
+
+    assert edit3d.find_rdkit_atom_index(None) is None
+
+
+def test_find_rdkit_atom_index_with_map(mock_parser_host):
+    """Verify find_rdkit_atom_index returns the mapped RDKit index."""
+    edit3d = DummyEdit3d(mock_parser_host)
+    mock_parser_host.view_3d_manager.current_mol = MagicMock()
+    mock_parser_host.atom_id_to_rdkit_idx_map = {5: 2}
+
+    atom_item = MagicMock()
+    atom_item.atom_id = 5
+
+    assert edit3d.find_rdkit_atom_index(atom_item) == 2
+
+
+def test_find_rdkit_atom_index_missing_map_entry(mock_parser_host):
+    """Verify find_rdkit_atom_index returns None when atom_id not in map."""
+    edit3d = DummyEdit3d(mock_parser_host)
+    mock_parser_host.view_3d_manager.current_mol = MagicMock()
+    mock_parser_host.atom_id_to_rdkit_idx_map = {5: 2}
+
+    atom_item = MagicMock()
+    atom_item.atom_id = 99  # not in map
+
+    assert edit3d.find_rdkit_atom_index(atom_item) is None
+
+
+def test_display_measurement_text_empty_clears_actor(mock_parser_host):
+    """Verify display_measurement_text with empty list removes existing actor."""
+    edit3d = DummyEdit3d(mock_parser_host)
+    edit3d.measurement_text_actor = MagicMock()
+
+    edit3d.display_measurement_text([])
+
+    mock_parser_host.view_3d_manager.plotter.remove_actor.assert_called_once()
+    assert edit3d.measurement_text_actor is None
+
+
+def test_display_measurement_text_adds_actor(mock_parser_host):
+    """Verify display_measurement_text calls add_text with joined lines."""
+    edit3d = DummyEdit3d(mock_parser_host)
+    edit3d.measurement_text_actor = None
+    mock_parser_host.init_manager.settings["background_color"] = "#000000"  # dark
+
+    edit3d.display_measurement_text(["Distance 1-2: 1.540 Å", "Angle: 109.5°"])
+
+    call_kwargs = mock_parser_host.view_3d_manager.plotter.add_text.call_args
+    text_arg = call_kwargs[0][0]
+    assert "Distance 1-2: 1.540 Å" in text_arg
+    assert "Angle: 109.5°" in text_arg
+    assert call_kwargs[1].get("color") == "white"
+
+
+def test_display_measurement_text_light_background(mock_parser_host):
+    """Verify display_measurement_text uses black text on a light background."""
+    edit3d = DummyEdit3d(mock_parser_host)
+    edit3d.measurement_text_actor = None
+    mock_parser_host.init_manager.settings["background_color"] = "#FFFFFF"  # light
+
+    edit3d.display_measurement_text(["Distance: 1.0 Å"])
+
+    call_kwargs = mock_parser_host.view_3d_manager.plotter.add_text.call_args
+    assert call_kwargs[1].get("color") == "black"
+
+
+def test_toggle_atom_selection_3d_add(mock_parser_host):
+    """Verify toggle_atom_selection_3d adds an atom not yet selected."""
+    edit3d = DummyEdit3d(mock_parser_host)
+    edit3d.selected_atoms_3d = set()
+
+    with patch.object(edit3d, "update_3d_selection_display") as mock_update:
+        edit3d.toggle_atom_selection_3d(3)
+
+    assert 3 in edit3d.selected_atoms_3d
+    mock_update.assert_called_once()
+
+
+def test_toggle_atom_selection_3d_remove(mock_parser_host):
+    """Verify toggle_atom_selection_3d removes an already-selected atom."""
+    edit3d = DummyEdit3d(mock_parser_host)
+    edit3d.selected_atoms_3d = {3}
+
+    with patch.object(edit3d, "update_3d_selection_display") as mock_update:
+        edit3d.toggle_atom_selection_3d(3)
+
+    assert 3 not in edit3d.selected_atoms_3d
+    mock_update.assert_called_once()
+
+
+def test_toggle_atom_selection_3d_idempotent_add(mock_parser_host):
+    """Verify toggling different atoms accumulates them independently."""
+    edit3d = DummyEdit3d(mock_parser_host)
+    edit3d.selected_atoms_3d = set()
+
+    with patch.object(edit3d, "update_3d_selection_display"):
+        edit3d.toggle_atom_selection_3d(1)
+        edit3d.toggle_atom_selection_3d(2)
+
+    assert edit3d.selected_atoms_3d == {1, 2}
