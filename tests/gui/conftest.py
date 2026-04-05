@@ -843,6 +843,12 @@ def window(app, qtbot, monkeypatch):
             _mock_init_worker,
             raising=False,
         )
+        # Prevent tests from writing settings to the real user settings.json
+        monkeypatch.setattr(
+            "moleditpy.ui.main_window_init.MainInitManager.save_settings",
+            lambda self: None,
+            raising=False,
+        )
         # Patch RDKit warmup to save time
         # We can't easily patch the try/except block in __init__, but we can try to
         # patch the descriptors or just accept that it runs once.
@@ -1289,65 +1295,6 @@ def window(app, qtbot, monkeypatch):
         # Keep running to the common yield below so teardown/cleanup are
         # handled in a single place for both headless and GUI.
         pass
-    # GUI mode (default): just create and show the window
-    # Ensure CustomQtInteractor is mockable/compatible; replace it with a simple
-    # widget that provides the plotting API used by the app to avoid real GL calls.
-    try:
-        from PyQt6.QtWidgets import QWidget
-        from unittest import mock as _mock
-
-        class DummyPlotter(QWidget):
-            def __init__(self, parent=None, *a, **k):
-                super().__init__(parent)
-                self.renderer = _mock.MagicMock()
-                self.add_mesh = _mock.MagicMock(return_value="dummy")
-                self.add_text = _mock.MagicMock()
-                self.add_point_labels = _mock.MagicMock(return_value=["point_labels"])
-                self.clear = _mock.MagicMock()
-                self.reset_camera = _mock.MagicMock()
-                self.render = _mock.MagicMock()
-                self.set_background = _mock.MagicMock()
-                self.setAcceptDrops = _mock.MagicMock()
-                self.interactor = _mock.MagicMock()
-
-                # Provide a picker that looks like VTK's cell picker
-                class DummyPicker:
-                    def __init__(self):
-                        pass
-
-                    def SetTolerance(self, v):
-                        self._tol = v
-
-                self.picker = DummyPicker()
-                # Provide a camera placeholder expected by draw_molecule_3d
-                self.camera = _mock.MagicMock()
-                self.camera.copy = _mock.MagicMock(return_value={})
-                self.add_light = _mock.MagicMock(return_value="light_actor")
-                self.view_isometric = _mock.MagicMock()
-                self.remove_actor = _mock.MagicMock()
-
-        try:
-            monkeypatch.setattr(
-                "moleditpy.ui.custom_qt_interactor.CustomQtInteractor",
-                DummyPlotter,
-                raising=False,
-            )
-            monkeypatch.setattr(
-                "moleditpy.ui.main_window_init.CustomQtInteractor",
-                DummyPlotter,
-                raising=False,
-            )
-            monkeypatch.setattr(
-                "moleditpy.CustomQtInteractor", DummyPlotter, raising=False
-            )
-        except Exception:
-            import traceback
-
-            traceback.print_exc()
-    except Exception:
-        import traceback
-
-        traceback.print_exc()
     main_window = MainWindowClass()
     qtbot.addWidget(main_window)
     main_window.show()
@@ -1720,90 +1667,6 @@ def window(app, qtbot, monkeypatch):
         import traceback
 
         traceback.print_exc()
-    # Ensure certain menu actions exist for all UI builds. Some builds may
-    # conditionally omit actions; tests rely on these items so add simple
-    # fallback actions if missing. We use findChildren to be robust to nested
-    # submenus (searches recursively).
-    from PyQt6.QtGui import QAction
-
-    def _find_action(menu_bar, text):
-        for act in menu_bar.findChildren(QAction):
-            try:
-                if act.text().replace("&", "") == text.replace("&", ""):
-                    return act
-            except Exception:
-                continue
-        return None
-
-    # Map menu label -> attribute name on main_window to use
-    # We keep strings here and evaluate getattr at runtime. If the attribute
-    # is a QAction instance we'll add that action object; if it's a callable
-    # function we'll create a QAction that triggers it.
-    menu_actions = {
-        "3D View Settings...": "open_settings_dialog",
-        "Add Hydrogens": "add_hydrogen_atoms",
-        "Remove Hydrogens": "remove_hydrogen_atoms",
-        "3D MOL/SDF (3D View Only)...": "load_mol_file_for_3d_viewing",
-        "Save Project &As...": "save_project_as",
-        "&Open Project...": "open_project_file",
-        "Show Original ID / Index": "show_atom_id_action",
-        "Show Coordinates (X,Y,Z)": "show_atom_coords_action",
-        "Show RDKit Index": "show_rdkit_id_action",
-        "Show Element Symbol": "show_atom_symbol_action",
-        "Save 2D as Template...": "save_2d_as_template",
-    }
-
-    for title, attr_name in menu_actions.items():
-        if _find_action(main_window.menuBar(), title) is not None:
-            continue
-
-        val = getattr(main_window, attr_name, None)
-        if isinstance(val, QAction):
-            # If main_window already exposes the QAction object, add it
-            # directly to the main menu bar so find_menu_action can find it.
-            main_window.menuBar().addAction(val)
-            continue
-
-        a = QAction(title, main_window)
-        if callable(val):
-            try:
-                a.triggered.connect(val)
-            except Exception:
-                # best-effort fallback to safer no-op dialog when connect fails
-                a.triggered.connect(lambda: QDialog().exec())
-        else:
-            # fallback: show a QDialog which is already mocked in conftest
-            # Prefer to connect auto-generated actions to the corresponding
-            # toggle handlers if available so we can test UI state changes.
-            toggle_map = {
-                "show_atom_id_action": "id",
-                "show_atom_coords_action": "coords",
-                "show_rdkit_id_action": "rdkit_id",
-                "show_atom_symbol_action": "symbol",
-            }
-            if attr_name in toggle_map and hasattr(
-                main_window, "toggle_atom_info_display"
-            ):
-                try:
-                    a.triggered.connect(
-                        lambda checked, t=toggle_map[
-                            attr_name
-                        ]: main_window.toggle_atom_info_display(t)
-                    )
-                except Exception:
-                    a.triggered.connect(lambda: QDialog().exec())
-            else:
-                a.triggered.connect(lambda: QDialog().exec())
-        main_window.menuBar().addAction(a)
-
-    # Teardown: try to close the main window and cleanup state
-    try:
-        main_window.close()
-    except Exception:
-        import traceback
-
-        traceback.print_exc()
-
     # Ensure certain menu actions exist for all UI builds. Some builds may
     # conditionally omit actions; tests rely on these items so add simple
     # fallback actions if missing. We use findChildren to be robust to nested

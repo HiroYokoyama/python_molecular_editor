@@ -38,5 +38,4 @@ jobs:
         MOLEDITPY_HEADLESS: "1"
         QT_QPA_PLATFORM: "offscreen"
       run: |
-        # Run only unit + integration suites in CI (skip GUI for stability)
-        python tests/run_all_tests.py --no-cov --no-report --unit --integration
+        python tests/run_all_tests.py --no-cov --no-report
