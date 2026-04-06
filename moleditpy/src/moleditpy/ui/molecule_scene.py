@@ -32,10 +32,6 @@ except ImportError:
     from moleditpy.ui.bond_item import BondItem
     from moleditpy.ui.template_preview_item import TemplatePreviewItem
 
-try:
-    from ..utils.constants import DEFAULT_BOND_LENGTH, SNAP_DISTANCE, SUM_TOLERANCE
-except ImportError:
-    pass
 
 try:
     from PyQt6 import sip as _sip  # type: ignore

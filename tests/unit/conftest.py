@@ -81,7 +81,7 @@ def mock_parser_host(app):
     from moleditpy.ui.atom_item import AtomItem
 
     host = MagicMock()
-    
+
     # 0. Initialize Managers first to avoid overwriting attributes later
     host.state_manager = MagicMock()
     host.init_manager = MagicMock()
@@ -224,7 +224,9 @@ def mock_parser_host(app):
     host.init_manager.scene.find_bond_between.return_value = None
 
     def default_create_atom(symbol, pos, charge=0, radical=0):
-        aid = host.state_manager.data.add_atom(symbol, pos, charge=charge, radical=radical)
+        aid = host.state_manager.data.add_atom(
+            symbol, pos, charge=charge, radical=radical
+        )
         item = MagicMock(spec=AtomItem)
         item.pos.return_value = pos
         item.atom_id = aid
@@ -240,7 +242,9 @@ def mock_parser_host(app):
     def default_create_bond(a1_item, a2_item, bond_order=1, bond_stereo=0):
         id1 = a1_item.atom_id if hasattr(a1_item, "atom_id") else a1_item
         id2 = a2_item.atom_id if hasattr(a2_item, "atom_id") else a2_item
-        return host.state_manager.data.add_bond(id1, id2, order=bond_order, stereo=bond_stereo)
+        return host.state_manager.data.add_bond(
+            id1, id2, order=bond_order, stereo=bond_stereo
+        )
 
     host.init_manager.scene.create_atom.side_effect = default_create_atom
     host.init_manager.scene.create_bond.side_effect = default_create_bond

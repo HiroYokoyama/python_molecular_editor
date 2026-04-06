@@ -508,7 +508,7 @@ class UserTemplateDialog(QDialog):
                     brush = QBrush(Qt.GlobalColor.white)
                     ellipse_x = pos.x() - ellipse_width / 2
                     ellipse_y = pos.y() - ellipse_height / 2
-                    ellipse = scene.addEllipse(
+                    scene.addEllipse(
                         ellipse_x, ellipse_y, ellipse_width, ellipse_height, pen, brush
                     )
 

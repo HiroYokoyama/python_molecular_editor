@@ -3,10 +3,12 @@ from moleditpy.ui.dihedral_dialog import DihedralDialog
 from rdkit import Chem
 from unittest.mock import MagicMock
 
+
 def test_angle_dialog_wrapping(qtbot):
     mol = Chem.MolFromSmiles("CCO")
     main_window = MagicMock()
     from rdkit.Chem import AllChem
+
     AllChem.EmbedMolecule(mol)
     dialog = AngleDialog(mol, main_window)
     qtbot.addWidget(dialog)
@@ -25,10 +27,12 @@ def test_angle_dialog_wrapping(qtbot):
     assert dialog.angle_input.text() == "-170.00"
     dialog.apply_geometry_update.assert_called_once_with(-170.0)
 
+
 def test_dihedral_dialog_wrapping(qtbot):
     mol = Chem.MolFromSmiles("CCCC")
     main_window = MagicMock()
     from rdkit.Chem import AllChem
+
     AllChem.EmbedMolecule(mol)
     dialog = DihedralDialog(mol, main_window)
     qtbot.addWidget(dialog)

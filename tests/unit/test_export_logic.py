@@ -43,10 +43,10 @@ def test_create_multi_material_obj_advanced(mock_parser_host, tmp_path):
     assert os.path.exists(mtl_path)
     assert os.path.getsize(obj_path) > 0
     assert os.path.getsize(mtl_path) > 0
-    with open(obj_path, 'r') as f:
+    with open(obj_path, "r") as f:
         content = f.read()
-        assert 'mtllib' in content
-        assert 'v ' in content
+        assert "mtllib" in content
+        assert "v " in content
 
 
 def test_export_2d_png_basic_trigger(mock_parser_host, tmp_path):
@@ -97,8 +97,8 @@ def test_export_2d_svg_trigger(mock_parser_host, tmp_path):
             exporter.export_2d_svg()
     assert os.path.exists(save_path)
     assert os.path.getsize(save_path) > 0
-    with open(save_path, 'r') as f:
-        assert '<svg' in f.read().lower()
+    with open(save_path, "r") as f:
+        assert "<svg" in f.read().lower()
 
 
 def test_export_stl_error_no_mol(mock_parser_host):
@@ -166,7 +166,7 @@ def test_export_obj_mtl_success_trigger(mock_parser_host, tmp_path):
         patch.object(exporter, "create_multi_material_obj") as mock_create,
     ):
         exporter.export_obj_mtl()
-        assert mock_file_dialog.called # Explicit assert for file dialog call
+        assert mock_file_dialog.called  # Explicit assert for file dialog call
         assert mock_create.called
 
 

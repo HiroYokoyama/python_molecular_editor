@@ -733,7 +733,7 @@ class KeyboardMixin:
                 # Case 1: Cursor over atom/bond (one-shot placement)
                 if isinstance(item_at_cursor, (AtomItem, BondItem)):
                     # Set benzene template parameters
-                    n, is_aromatic = 6, True
+                    n = 6
                     points, bonds_info, existing_items = [], [], []
 
                     # Calculate placement like update_template_preview
@@ -903,7 +903,6 @@ class KeyboardMixin:
                             self.data.bonds[new_key] = bond_data
                             bond.atom1, bond.atom2 = bond.atom2, bond.atom1
                             bond.update_position()
-                            was_reversed = True
                         else:
                             bond.order = 1
                             bond.stereo = 1
@@ -915,7 +914,6 @@ class KeyboardMixin:
                             self.data.bonds[new_key] = bond_data
                             bond.atom1, bond.atom2 = bond.atom2, bond.atom1
                             bond.update_position()
-                            was_reversed = True
                         else:
                             bond.order = 1
                             bond.stereo = 2

@@ -7,6 +7,7 @@ from unittest.mock import MagicMock, patch
 
 # Needs a QApplication before instantiating widgets like QDialogs
 from PyQt6.QtWidgets import QApplication
+
 app = QApplication.instance()
 if app is None:
     app = QApplication(sys.argv)
@@ -20,6 +21,7 @@ from moleditpy.ui.alignment_dialog import AlignmentDialog
 from moleditpy.ui.align_plane_dialog import AlignPlaneDialog
 from moleditpy.ui.edit_3d_logic import Edit3DManager
 
+
 def setup_test_molecule(smiles: str):
     """Creates an optimized 3D RDKit molecule from SMILES for testing."""
     mol = Chem.MolFromSmiles(smiles)
@@ -30,12 +32,13 @@ def setup_test_molecule(smiles: str):
     AllChem.MMFFOptimizeMolecule(mol)
     return mol
 
+
 # ==========================================
 # Angle Dialog Tests
 # ==========================================
 def test_angle_dialog_logic_matches_rdkit():
     """Verify AngleDialog's native calculation against RDKit."""
-    mol = setup_test_molecule("CCC") # Propane
+    mol = setup_test_molecule("CCC")  # Propane
     conf = mol.GetConformer()
 
     # 0, 1, 2 correspond to the three carbons in CCC
@@ -49,6 +52,7 @@ def test_angle_dialog_logic_matches_rdkit():
 
     app_calculated_angle = dialog.calculate_angle()
     assert app_calculated_angle == pytest.approx(rdkit_ref_angle, abs=0.01)
+
 
 # ==========================================
 # Mol Geometry (adjust_bond_angle) angle calc logic
@@ -80,6 +84,7 @@ def test_adjust_bond_angle_internal_calc_matches_rdkit():
 
     assert app_calculated_angle == pytest.approx(rdkit_ref_angle, abs=0.01)
 
+
 # ==========================================
 # MainWindowEdit3d angle calc logic
 # ==========================================
@@ -95,7 +100,7 @@ def test_main_window_edit_3d_angle_logic_matches_rdkit():
     positions = {
         0: conf.GetAtomPosition(0),
         1: conf.GetAtomPosition(1),
-        2: conf.GetAtomPosition(2)
+        2: conf.GetAtomPosition(2),
     }
     mock_main_window.atom_positions_3d = positions
     mock_main_window.view_3d_manager.atom_positions_3d = positions
@@ -107,12 +112,13 @@ def test_main_window_edit_3d_angle_logic_matches_rdkit():
     app_calculated_angle = editor.calculate_angle(0, 1, 2)
     assert app_calculated_angle == pytest.approx(rdkit_ref_angle, abs=0.01)
 
+
 # ==========================================
 # Dihedral Dialog & mol_geometry Tests
 # ==========================================
 def test_dihedral_logic_matches_rdkit():
     """Verify calculate_dihedral native calculation against RDKit."""
-    mol = setup_test_molecule("CCCC") # Butane
+    mol = setup_test_molecule("CCCC")  # Butane
     conf = mol.GetConformer()
 
     # 0, 1, 2, 3 correspond to the four carbons in CCCC
@@ -132,14 +138,17 @@ def test_dihedral_logic_matches_rdkit():
 
     if dialog.dihedral_input.text() != "":
         dialog_calculated_text = dialog.dihedral_input.text()
-        assert float(dialog_calculated_text) == pytest.approx(rdkit_ref_dihedral, abs=0.05)
+        assert float(dialog_calculated_text) == pytest.approx(
+            rdkit_ref_dihedral, abs=0.05
+        )
+
 
 # ==========================================
 # Bond Length Dialog Tests
 # ==========================================
 def test_bond_length_dialog_logic_matches_rdkit():
     """Verify BondLengthDialog's distance calculation against RDKit."""
-    mol = setup_test_molecule("CC") # Ethane
+    mol = setup_test_molecule("CC")  # Ethane
     conf = mol.GetConformer()
 
     # 0, 1 correspond to the two carbons in CC
@@ -149,7 +158,7 @@ def test_bond_length_dialog_logic_matches_rdkit():
     dialog = BondLengthDialog(mol, main_window)
     dialog.atom1_idx = 0
     dialog.atom2_idx = 1
-    dialog.update_display() # This triggers the distance calculation
+    dialog.update_display()  # This triggers the distance calculation
 
     if dialog.distance_input.text() != "":
         dialog_calculated_text = dialog.distance_input.text()
@@ -160,8 +169,11 @@ def test_bond_length_dialog_logic_matches_rdkit():
     # Manual logic inside the dialog fallback
     p1 = conf.GetAtomPosition(0)
     p2 = conf.GetAtomPosition(1)
-    manual_distance = ((p1.x - p2.x)**2 + (p1.y - p2.y)**2 + (p1.z - p2.z)**2)**0.5
+    manual_distance = (
+        (p1.x - p2.x) ** 2 + (p1.y - p2.y) ** 2 + (p1.z - p2.z) ** 2
+    ) ** 0.5
     assert manual_distance == pytest.approx(rdkit_ref_dist, abs=0.0001)
+
 
 # ==========================================
 # MainWindowEdit3D distance calc logic
@@ -175,10 +187,7 @@ def test_main_window_edit_3d_distance_logic_matches_rdkit():
     # Needs a mock parent that has atom_positions_3d
     mock_main_window = MagicMock()
     mock_main_window.current_mol = mol
-    positions = {
-        0: conf.GetAtomPosition(0),
-        1: conf.GetAtomPosition(1)
-    }
+    positions = {0: conf.GetAtomPosition(0), 1: conf.GetAtomPosition(1)}
     mock_main_window.atom_positions_3d = positions
     mock_main_window.view_3d_manager.atom_positions_3d = positions
 
@@ -187,6 +196,7 @@ def test_main_window_edit_3d_distance_logic_matches_rdkit():
     # _calculate_distance(atom1_idx, atom2_idx)
     app_calculated_dist = editor.calculate_distance(0, 1)
     assert app_calculated_dist == pytest.approx(rdkit_ref_dist, abs=0.0001)
+
 
 # ==========================================
 # CustomInteractorStyle distance calc logic
@@ -204,6 +214,7 @@ def test_custom_interactor_style_distance_logic_matches_rdkit():
 
     assert app_calculated_dist == pytest.approx(rdkit_ref_dist, abs=0.0001)
 
+
 # ==========================================
 # Alignment Dialog logic
 # ==========================================
@@ -211,11 +222,13 @@ def test_custom_interactor_style_distance_logic_matches_rdkit():
 @patch("PyQt6.QtWidgets.QMessageBox.warning")
 def test_alignment_dialog_logic(mock_warning, mock_info):
     """Verify AlignmentDialog properly aligns given atoms to the target axis."""
-    mol = setup_test_molecule("CC") # Ethane
+    mol = setup_test_molecule("CC")  # Ethane
     conf = mol.GetConformer()
 
     mock_main_window = MagicMock()
-    mock_main_window.atom_positions_3d = np.array([list(conf.GetAtomPosition(i)) for i in range(mol.GetNumAtoms())])
+    mock_main_window.atom_positions_3d = np.array(
+        [list(conf.GetAtomPosition(i)) for i in range(mol.GetNumAtoms())]
+    )
     mock_main_window.current_mol = mol
 
     # We test X-axis alignment
@@ -239,6 +252,7 @@ def test_alignment_dialog_logic(mock_warning, mock_info):
     assert pos1[1] == pytest.approx(0.0, abs=1e-5)
     assert pos1[2] == pytest.approx(0.0, abs=1e-5)
 
+
 # ==========================================
 # Align Plane Dialog logic
 # ==========================================
@@ -251,7 +265,9 @@ def test_align_plane_dialog_logic(mock_warning, mock_info):
     conf = mol.GetConformer()
 
     mock_main_window = MagicMock()
-    positions = np.array([list(conf.GetAtomPosition(i)) for i in range(mol.GetNumAtoms())])
+    positions = np.array(
+        [list(conf.GetAtomPosition(i)) for i in range(mol.GetNumAtoms())]
+    )
     mock_main_window.atom_positions_3d = positions
     mock_main_window.view_3d_manager.atom_positions_3d = positions
     mock_main_window.current_mol = mol

@@ -18,6 +18,7 @@ from moleditpy.ui.atom_item import AtomItem
 from moleditpy.ui.bond_item import BondItem
 from rdkit import Chem
 
+
 class DummyHost:
     def __init__(self):
         self.statusBar_mock = MagicMock()
@@ -36,7 +37,7 @@ class DummyHost:
         self.view_3d_manager = MagicMock()
         self.edit_3d_manager = MagicMock()
         self.plugin_manager = MagicMock()
-        self.edit_actions_manager = None # Set by fixture
+        self.edit_actions_manager = None  # Set by fixture
 
         # Shortcuts for frequently accessed items on managers
         self.init_manager.scene = MagicMock()
@@ -102,6 +103,7 @@ class DummyHost:
     def update_2d_measurement_labels(self):
         pass
 
+
 class TestEditActionsExtended:
     @pytest.fixture
     def manager(self):
@@ -111,7 +113,11 @@ class TestEditActionsExtended:
 
         # CLIPBOARD_MIME_TYPE must be available
         if not hasattr(sys.modules[mgr.__module__], "CLIPBOARD_MIME_TYPE"):
-            setattr(sys.modules[mgr.__module__], "CLIPBOARD_MIME_TYPE", "application/x-moleditpy-pme")
+            setattr(
+                sys.modules[mgr.__module__],
+                "CLIPBOARD_MIME_TYPE",
+                "application/x-moleditpy-pme",
+            )
 
         return mgr
 
@@ -138,14 +144,18 @@ class TestEditActionsExtended:
     def test_apply_chem_check_failure(self, manager):
         manager.host.init_manager.settings["skip_chemistry_checks"] = False
         mol = Chem.MolFromSmiles("C")
-        with patch("rdkit.Chem.SanitizeMol", side_effect=ValueError("Invalid molecule")):
+        with patch(
+            "rdkit.Chem.SanitizeMol", side_effect=ValueError("Invalid molecule")
+        ):
             manager._apply_chem_check_and_set_flags(mol, source_desc="Test")
 
         assert manager.host.chem_check_tried is True
         assert manager.host.chem_check_failed is True
         # Verify optimize_3d_button is disabled
         assert manager.host.init_manager.optimize_3d_button.setEnabled.called
-        manager.host.init_manager.optimize_3d_button.setEnabled.assert_called_with(False)
+        manager.host.init_manager.optimize_3d_button.setEnabled.assert_called_with(
+            False
+        )
 
     def test_clear_xyz_flags_with_mol_arg(self, manager):
         mol = Chem.MolFromSmiles("C")
@@ -170,7 +180,9 @@ class TestEditActionsExtended:
         mock_mime.hasFormat.return_value = True
         mock_clipboard.mimeData.return_value = mock_mime
 
-        with patch("PyQt6.QtWidgets.QApplication.clipboard", return_value=mock_clipboard):
+        with patch(
+            "PyQt6.QtWidgets.QApplication.clipboard", return_value=mock_clipboard
+        ):
             manager.update_edit_menu_actions()
 
         manager.host.init_manager.cut_action.setEnabled.assert_called_with(True)
@@ -183,7 +195,9 @@ class TestEditActionsExtended:
         mock_dialog.exec.return_value = QDialog.DialogCode.Accepted
         mock_dialog.get_angle.return_value = 45.0
 
-        with patch("moleditpy.ui.edit_actions_logic.Rotate2DDialog", return_value=mock_dialog):
+        with patch(
+            "moleditpy.ui.edit_actions_logic.Rotate2DDialog", return_value=mock_dialog
+        ):
             manager.open_rotate_2d_dialog()
 
         manager.rotate_molecule_2d.assert_called_with(45.0)
@@ -194,10 +208,16 @@ class TestEditActionsExtended:
         atom1 = MagicMock(spec=AtomItem)
         atom1.atom_id = 1
         atom1.pos.return_value = QPointF(0, 0)
-        manager.host.state_manager.data.atoms = {1: {"item": atom1, "symbol": "C", "pos": QPointF(0, 0)}}
+        manager.host.state_manager.data.atoms = {
+            1: {"item": atom1, "symbol": "C", "pos": QPointF(0, 0)}
+        }
 
-        with patch("moleditpy.core.mol_geometry.rotate_2d_points", return_value={1: (10, 10)}):
-            with patch("moleditpy.ui.edit_actions_logic.sip_isdeleted_safe", return_value=False):
+        with patch(
+            "moleditpy.core.mol_geometry.rotate_2d_points", return_value={1: (10, 10)}
+        ):
+            with patch(
+                "moleditpy.ui.edit_actions_logic.sip_isdeleted_safe", return_value=False
+            ):
                 manager.rotate_molecule_2d(90.0)
 
         atom1.setPos.assert_called()
@@ -245,6 +265,7 @@ class TestEditActionsExtended:
     def test_adjust_molecule_positions_no_collision(self, manager):
         mol = Chem.MolFromSmiles("C.C")
         from rdkit.Chem import AllChem
+
         AllChem.EmbedMultipleConfs(mol, numConfs=1)
         conf = mol.GetConformer()
 
@@ -264,6 +285,7 @@ class TestEditActionsExtended:
     def test_adjust_molecule_positions_with_collision(self, manager):
         mol = Chem.MolFromSmiles("C.C")
         from rdkit.Chem import AllChem
+
         AllChem.EmbedMultipleConfs(mol, numConfs=1)
         conf = mol.GetConformer()
 
@@ -282,11 +304,14 @@ class TestEditActionsExtended:
 
         assert not np.array_equal(pos0_before, pos0_after)
         assert not np.array_equal(pos1_before, pos1_after)
-        assert np.linalg.norm(pos0_after - pos1_after) > np.linalg.norm(pos0_before - pos1_before)
+        assert np.linalg.norm(pos0_after - pos1_after) > np.linalg.norm(
+            pos0_before - pos1_before
+        )
 
     def test_adjust_molecule_positions_single_fragment(self, manager):
         mol = Chem.MolFromSmiles("C")
         from rdkit.Chem import AllChem
+
         AllChem.EmbedMolecule(mol)
         conf = mol.GetConformer()
 
@@ -316,7 +341,7 @@ class TestEditActionsExtended:
         manager.host.view_3d_manager.current_mol = mol
         manager.host.is_xyz_derived = True
 
-        manager._clear_xyz_flags(mol=None) # Use current_mol
+        manager._clear_xyz_flags(mol=None)  # Use current_mol
 
         assert not mol.HasProp("_xyz_skip_checks")
         assert manager.host.is_xyz_derived is False

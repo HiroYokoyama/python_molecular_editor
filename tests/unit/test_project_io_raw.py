@@ -4,6 +4,7 @@ import pytest
 from unittest.mock import MagicMock, patch
 from moleditpy.ui.io_logic import IOManager
 
+
 class DummyProjectIo(IOManager):
     def __init__(self, host=None):
         self.host = host or MagicMock()
@@ -19,6 +20,7 @@ class DummyProjectIo(IOManager):
 
         # 2. Setup standard mock behaviors
         from moleditpy.core.molecular_data import MolecularData
+
         self.host.state_manager.data = MolecularData()
         self.host.view_3d_manager.current_mol = None
         self.host.init_manager.current_file_path = None
@@ -40,26 +42,41 @@ class DummyProjectIo(IOManager):
         return getattr(self.host, name)
 
     @property
-    def data(self): return self.host.state_manager.data
+    def data(self):
+        return self.host.state_manager.data
+
     @property
-    def current_mol(self): return self.host.view_3d_manager.current_mol
+    def current_mol(self):
+        return self.host.view_3d_manager.current_mol
+
     @current_mol.setter
-    def current_mol(self, v): self.host.view_3d_manager.current_mol = v
+    def current_mol(self, v):
+        self.host.view_3d_manager.current_mol = v
+
     @property
-    def current_file_path(self): return self.host.init_manager.current_file_path
+    def current_file_path(self):
+        return self.host.init_manager.current_file_path
+
     @current_file_path.setter
-    def current_file_path(self, v): self.host.init_manager.current_file_path = v
+    def current_file_path(self, v):
+        self.host.init_manager.current_file_path = v
+
     @property
-    def has_unsaved_changes(self): return self.host.state_manager.has_unsaved_changes
+    def has_unsaved_changes(self):
+        return self.host.state_manager.has_unsaved_changes
+
     @has_unsaved_changes.setter
-    def has_unsaved_changes(self, v): self.host.state_manager.has_unsaved_changes = v
+    def has_unsaved_changes(self, v):
+        self.host.state_manager.has_unsaved_changes = v
 
     def statusBar(self):
         return self.statusBar_mock
 
+
 @pytest.fixture
 def io():
     return DummyProjectIo()
+
 
 def test_save_raw_data_no_data(io):
     """Verify error message when trying to save empty project."""
@@ -68,12 +85,16 @@ def test_save_raw_data_no_data(io):
     io.save_raw_data()
     io.statusBar().showMessage.assert_called_with("Error: Nothing to save.")
 
+
 def test_save_raw_data_success(io, tmp_path):
     """Verify successful saving via file dialog."""
     io.data.atoms = {1: "C"}
     save_path = str(tmp_path / "test.pmeraw")
 
-    with patch("PyQt6.QtWidgets.QFileDialog.getSaveFileName", return_value=(save_path, "Project Files (*.pmeraw)")):
+    with patch(
+        "PyQt6.QtWidgets.QFileDialog.getSaveFileName",
+        return_value=(save_path, "Project Files (*.pmeraw)"),
+    ):
         io.save_raw_data()
 
         assert os.path.exists(save_path)
@@ -85,12 +106,14 @@ def test_save_raw_data_success(io, tmp_path):
         assert io.host.state_manager.has_unsaved_changes is False
         io.statusBar().showMessage.assert_called_with(f"Project saved to {save_path}")
 
+
 def test_save_raw_data_cancel(io):
     """Verify that nothing happens if the user cancels the save dialog."""
     io.data.atoms = {1: "C"}
     with patch("PyQt6.QtWidgets.QFileDialog.getSaveFileName", return_value=("", "")):
         io.save_raw_data()
         io.statusBar().showMessage.assert_not_called()
+
 
 def test_load_raw_data_dialog_success(io, tmp_path):
     """Verify loading via file dialog."""
@@ -99,19 +122,26 @@ def test_load_raw_data_dialog_success(io, tmp_path):
     with open(load_path, "wb") as f:
         pickle.dump(sample_data, f)
 
-    with patch("PyQt6.QtWidgets.QFileDialog.getOpenFileName", return_value=(load_path, "Project Files (*.pmeraw)")):
+    with patch(
+        "PyQt6.QtWidgets.QFileDialog.getOpenFileName",
+        return_value=(load_path, "Project Files (*.pmeraw)"),
+    ):
         io.load_raw_data()
 
         io.host.state_manager.set_state_from_data.assert_called_with(sample_data)
         assert io.host.init_manager.current_file_path == load_path
         assert io.host.state_manager.has_unsaved_changes is False
-        io.statusBar().showMessage.assert_called_with(f"Project loaded from {load_path}")
+        io.statusBar().showMessage.assert_called_with(
+            f"Project loaded from {load_path}"
+        )
+
 
 def test_load_raw_data_cancel(io):
     """Verify that nothing happens if the user cancels the load dialog."""
     with patch("PyQt6.QtWidgets.QFileDialog.getOpenFileName", return_value=("", "")):
         io.load_raw_data()
         io.host.state_manager.set_state_from_data.assert_not_called()
+
 
 def test_load_raw_data_io_error(io, tmp_path):
     """Verify handling of I/O errors during load."""

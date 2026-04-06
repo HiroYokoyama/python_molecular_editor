@@ -8,7 +8,9 @@ from unittest.mock import MagicMock, patch
 
 
 class DummyCompute(ComputeManager):
-    opt3d_method_labels = None  # Prevent __getattr__ from shadowing init_manager.opt3d_method_labels
+    opt3d_method_labels = (
+        None  # Prevent __getattr__ from shadowing init_manager.opt3d_method_labels
+    )
 
     def __init__(self, host):
         self._host = host
@@ -24,12 +26,22 @@ class DummyCompute(ComputeManager):
             "MMFF_RDKIT": "MMFF94s (RDKit)",
             "UFF_RDKIT": "UFF (RDKit)",
         }
-        if not hasattr(host, "view_3d_manager"): host.view_3d_manager = MagicMock()
-        if not hasattr(host, "state_manager"): host.state_manager = MagicMock()
-        if not hasattr(host, "ui_manager"): host.ui_manager = MagicMock()
+        if not hasattr(host, "view_3d_manager"):
+            host.view_3d_manager = MagicMock()
+        if not hasattr(host, "state_manager"):
+            host.state_manager = MagicMock()
+        if not hasattr(host, "ui_manager"):
+            host.ui_manager = MagicMock()
 
         # Ensure buttons/actions exist for UI transition tests
-        for btn in ["convert_button", "cleanup_button", "optimize_3d_button", "export_button", "analysis_action", "edit_3d_action"]:
+        for btn in [
+            "convert_button",
+            "cleanup_button",
+            "optimize_3d_button",
+            "export_button",
+            "analysis_action",
+            "edit_3d_action",
+        ]:
             if not hasattr(host.init_manager, btn):
                 setattr(host.init_manager, btn, MagicMock())
 
@@ -37,51 +49,77 @@ class DummyCompute(ComputeManager):
         return getattr(self._host, name)
 
     @property
-    def data(self): return self.host.state_manager.data
+    def data(self):
+        return self.host.state_manager.data
+
     @data.setter
-    def data(self, v): self.host.state_manager.data = v
+    def data(self, v):
+        self.host.state_manager.data = v
 
     @property
-    def scene(self): return self.host.init_manager.scene
+    def scene(self):
+        return self.host.init_manager.scene
+
     @scene.setter
-    def scene(self, v): self.host.init_manager.scene = v
+    def scene(self, v):
+        self.host.init_manager.scene = v
 
     @property
-    def view_2d(self): return self.host.init_manager.view_2d
+    def view_2d(self):
+        return self.host.init_manager.view_2d
+
     @view_2d.setter
-    def view_2d(self, v): self.host.init_manager.view_2d = v
+    def view_2d(self, v):
+        self.host.init_manager.view_2d = v
 
     @property
-    def view_3d(self): return self.host.view_3d_manager.view_3d
+    def view_3d(self):
+        return self.host.view_3d_manager.view_3d
+
     @view_3d.setter
-    def view_3d(self, v): self.host.view_3d_manager.view_3d = v
+    def view_3d(self, v):
+        self.host.view_3d_manager.view_3d = v
 
     @property
-    def plotter(self): return self.host.view_3d_manager.plotter
+    def plotter(self):
+        return self.host.view_3d_manager.plotter
+
     @plotter.setter
-    def plotter(self, v): self.host.view_3d_manager.plotter = v
+    def plotter(self, v):
+        self.host.view_3d_manager.plotter = v
 
     @property
-    def settings(self): return self.host.init_manager.settings
+    def settings(self):
+        return self.host.init_manager.settings
+
     @settings.setter
-    def settings(self, v): self.host.init_manager.settings = v
+    def settings(self, v):
+        self.host.init_manager.settings = v
+
     @property
-    def current_mol(self): return self.host.view_3d_manager.current_mol
+    def current_mol(self):
+        return self.host.view_3d_manager.current_mol
+
     @current_mol.setter
-    def current_mol(self, v): self.host.view_3d_manager.current_mol = v
+    def current_mol(self, v):
+        self.host.view_3d_manager.current_mol = v
 
     @property
     def optimization_method(self):
         return self.host.init_manager.settings.get("optimization_method", "MMFF_RDKIT")
+
     @optimization_method.setter
     def optimization_method(self, v):
         self.host.init_manager.settings["optimization_method"] = v
         self.host.init_manager.optimization_method = v
 
     @property
-    def constraints_3d(self): return self.host.edit_3d_manager.constraints_3d
+    def constraints_3d(self):
+        return self.host.edit_3d_manager.constraints_3d
+
     @constraints_3d.setter
-    def constraints_3d(self, v): self.host.edit_3d_manager.constraints_3d = v
+    def constraints_3d(self, v):
+        self.host.edit_3d_manager.constraints_3d = v
 
     def statusBar(self):
         return self._host.statusBar()
@@ -464,7 +502,9 @@ def test_optimize_3d_plugin_method(mock_parser_host):
     compute.current_mol = mol
 
     compute.host.plugin_manager = MagicMock()
-    compute.host.plugin_manager.optimization_methods = {"CUSTOM": {"callback": MagicMock()}}
+    compute.host.plugin_manager.optimization_methods = {
+        "CUSTOM": {"callback": MagicMock()}
+    }
     compute.optimization_method = "CUSTOM"
 
     with (
@@ -998,9 +1038,7 @@ def test_on_calculation_error_uff_fallback_temporary(mock_parser_host):
         return_value=QMessageBox.StandardButton.Yes,
     ):
         with patch.object(compute, "optimize_3d_structure") as mock_optimize:
-            compute.on_calculation_error(
-                (worker_id, "Optimization with MMFF94 failed")
-            )
+            compute.on_calculation_error((worker_id, "Optimization with MMFF94 failed"))
 
             # Check if temp override was set
             assert compute._temp_optimization_method == "UFF_RDKIT"

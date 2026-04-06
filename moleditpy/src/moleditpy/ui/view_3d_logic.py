@@ -37,7 +37,7 @@ except (ImportError, AttributeError, TypeError):
 
 try:
     # package relative imports (preferred when running as `python -m moleditpy`)
-    from .constants import CPK_COLORS_PV, DEFAULT_CPK_COLORS, VDW_RADII, pt
+    from .constants import CPK_COLORS_PV, VDW_RADII, pt
     from .template_preview_item import TemplatePreviewItem
 except ImportError:
     # Fallback to absolute imports for script-style execution

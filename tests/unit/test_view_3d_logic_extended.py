@@ -6,6 +6,7 @@ from rdkit.Chem import AllChem
 
 from moleditpy.ui.view_3d_logic import View3DManager
 
+
 def _make_view3d(mock_host):
     """Create a View3DManager instance with the given mock host."""
     view3d = View3DManager(mock_host)
@@ -14,9 +15,10 @@ def _make_view3d(mock_host):
     view3d.current_3d_style = "ball_and_stick"
     return view3d
 
+
 @pytest.fixture
 def mock_pv():
-    with patch('moleditpy.ui.view_3d_logic.pv') as mock:
+    with patch("moleditpy.ui.view_3d_logic.pv") as mock:
         # Mock PolyData and its glyph/tube methods
         mock_poly = MagicMock()
         mock.PolyData.return_value = mock_poly
@@ -32,6 +34,7 @@ def mock_pv():
         mock.Light.return_value = MagicMock()
 
         yield mock
+
 
 def test_add_3d_atom_glyphs_styles(app, mock_parser_host, mock_pv):
     """Verify radii and resolutions for different styles in _add_3d_atom_glyphs."""
@@ -59,7 +62,7 @@ def test_add_3d_atom_glyphs_styles(app, mock_parser_host, mock_pv):
     mock_poly = mock_pv.PolyData.return_value
     assert "radii" in mock_poly.__setitem__.call_args_list[1][0]
     rad_array = mock_poly.__setitem__.call_args_list[1][0][1]
-    assert np.isclose(rad_array[0], 0.51) # Default VDW for C (1.7 * 0.3)
+    assert np.isclose(rad_array[0], 0.51)  # Default VDW for C (1.7 * 0.3)
 
     # Check CPK
     mock_pv.PolyData.reset_mock()
@@ -75,6 +78,7 @@ def test_add_3d_atom_glyphs_styles(app, mock_parser_host, mock_pv):
     view3d._add_3d_atom_glyphs(mol, conf, sym, col, "stick", True, mesh_props)
     rad_array = mock_pv.PolyData.return_value.__setitem__.call_args_list[1][0][1]
     assert np.isclose(rad_array[0], 0.15)
+
 
 def test_add_3d_atom_glyphs_stick_split(app, mock_parser_host, mock_pv):
     """Verify that terminal multiple bonds lead to atom splitting in stick mode."""
@@ -109,6 +113,7 @@ def test_add_3d_atom_glyphs_stick_split(app, mock_parser_host, mock_pv):
     new_positions = mock_pv.PolyData.call_args_list[-1][0][0]
     assert len(new_positions) == 4
 
+
 def test_add_3d_bond_cylinders_basic(app, mock_parser_host, mock_pv):
     """Verify single, double, and triple bond generation."""
     view3d = _make_view3d(mock_parser_host)
@@ -139,6 +144,7 @@ def test_add_3d_bond_cylinders_basic(app, mock_parser_host, mock_pv):
     # Each segment has 2 points
     assert len(points) == 14
 
+
 def test_add_3d_bond_cylinders_styles(app, mock_parser_host, mock_pv):
     """Check style-dependent factors (radius/offset factors) in bond drawing."""
     view3d = _make_view3d(mock_parser_host)
@@ -150,11 +156,13 @@ def test_add_3d_bond_cylinders_styles(app, mock_parser_host, mock_pv):
     mesh_props = {"smooth_shading": True}
 
     # 1. Ball and Stick
-    mock_parser_host.init_manager.settings.update({
-        "ball_stick_bond_radius": 0.1,
-        "ball_stick_double_bond_radius_factor": 0.8,
-        "ball_stick_double_bond_offset_factor": 2.0
-    })
+    mock_parser_host.init_manager.settings.update(
+        {
+            "ball_stick_bond_radius": 0.1,
+            "ball_stick_double_bond_radius_factor": 0.8,
+            "ball_stick_double_bond_offset_factor": 2.0,
+        }
+    )
     view3d._add_3d_bond_cylinders(mol, conf, col, "ball_and_stick", mesh_props)
     # Double bond radius should be 0.1 * 0.8 = 0.08
     # radii are set on PolyData.point_data["radii"]
@@ -165,15 +173,18 @@ def test_add_3d_bond_cylinders_styles(app, mock_parser_host, mock_pv):
     # 2. Stick
     mock_pv.PolyData.reset_mock()
     mock_pd.point_data.reset_mock()
-    mock_parser_host.init_manager.settings.update({
-        "stick_bond_radius": 0.15,
-        "stick_double_bond_radius_factor": 0.6,
-        "stick_double_bond_offset_factor": 1.5
-    })
+    mock_parser_host.init_manager.settings.update(
+        {
+            "stick_bond_radius": 0.15,
+            "stick_double_bond_radius_factor": 0.6,
+            "stick_double_bond_offset_factor": 1.5,
+        }
+    )
     view3d._add_3d_bond_cylinders(mol, conf, col, "stick", mesh_props)
     # Double bond radius should be 0.15 * 0.6 = 0.09
     radii = mock_pd.point_data.__setitem__.call_args_list[0][0][1]
     assert np.allclose(radii, 0.09)
+
 
 def test_add_3d_bond_cylinders_overrides(app, mock_parser_host, mock_pv):
     """Verify plugin bond color overrides."""
@@ -182,11 +193,11 @@ def test_add_3d_bond_cylinders_overrides(app, mock_parser_host, mock_pv):
     mol = Chem.MolFromSmiles("CC")
     AllChem.EmbedMolecule(mol)
     conf = mol.GetConformer()
-    col = np.array([[1.0, 1.0, 1.0], [1.0, 1.0, 1.0]]) # White atoms
+    col = np.array([[1.0, 1.0, 1.0], [1.0, 1.0, 1.0]])  # White atoms
     mesh_props = {"smooth_shading": True}
 
     # Set override for bond 0
-    view3d._plugin_bond_color_overrides = {0: "#FF0000"} # Red
+    view3d._plugin_bond_color_overrides = {0: "#FF0000"}  # Red
 
     view3d._add_3d_bond_cylinders(mol, conf, col, "stick", mesh_props)
 
@@ -196,6 +207,7 @@ def test_add_3d_bond_cylinders_overrides(app, mock_parser_host, mock_pv):
     # Red is [255, 0, 0]
     assert np.array_equal(colors[0], [255, 0, 0])
 
+
 def test_add_3d_aromatic_rings(app, mock_parser_host, mock_pv):
     """Verify aromatic torus generation."""
     view3d = _make_view3d(mock_parser_host)
@@ -203,7 +215,9 @@ def test_add_3d_aromatic_rings(app, mock_parser_host, mock_pv):
     # Benzene
     mol = Chem.MolFromSmiles("c1ccccc1")
     AllChem.EmbedMolecule(mol)
-    view3d.atom_positions_3d = np.array([list(mol.GetConformer().GetAtomPosition(i)) for i in range(6)])
+    view3d.atom_positions_3d = np.array(
+        [list(mol.GetConformer().GetAtomPosition(i)) for i in range(6)]
+    )
 
     mock_parser_host.init_manager.settings["display_aromatic_circles_3d"] = True
     mock_parser_host.view_3d_manager.plotter.add_mesh = MagicMock()
@@ -215,6 +229,7 @@ def test_add_3d_aromatic_rings(app, mock_parser_host, mock_pv):
     assert mock_pv.Spline.call_count == 1
     # Check that add_mesh was called for the torus
     assert mock_parser_host.view_3d_manager.plotter.add_mesh.call_count == 1
+
 
 def test_calculate_double_bond_offset(app, mock_parser_host):
     """Verify neighbor-based plane calculation for double bond offset."""
@@ -235,11 +250,12 @@ def test_calculate_double_bond_offset(app, mock_parser_host):
     mol = Chem.MolFromSmiles("C=C(C)C")
     AllChem.EmbedMolecule(mol)
     conf = mol.GetConformer()
-    bond = mol.GetBondWithIdx(0) # The C=C bond
+    bond = mol.GetBondWithIdx(0)  # The C=C bond
 
     offset = view3d._calculate_double_bond_offset(mol, bond, conf)
     assert len(offset) == 3
     assert np.isclose(np.linalg.norm(offset), 1.0)
+
 
 def test_show_ez_labels_3d(app, mock_parser_host):
     """Verify EZ label detection and discrepancy marking."""
@@ -259,7 +275,7 @@ def test_show_ez_labels_3d(app, mock_parser_host):
 
     # Test discrepancy
     # Mock 2D metadata to say it's Z (3)
-    mock_parser_host.state_manager.data.bonds = { (1, 2): {"stereo": 3} }
+    mock_parser_host.state_manager.data.bonds = {(1, 2): {"stereo": 3}}
     # We need to make sure the atoms have _original_atom_id
     for i, atom in enumerate(mol.GetAtoms()):
         atom.SetIntProp("_original_atom_id", i)
@@ -268,6 +284,7 @@ def test_show_ez_labels_3d(app, mock_parser_host):
     view3d.show_ez_labels_3d(mol)
     args, kwargs = mock_parser_host.view_3d_manager.plotter.add_point_labels.call_args
     assert "?" in args[1]
+
 
 def test_chiral_labels_logic(app, mock_parser_host, mock_pv):
     """Verify chiral label toggling and update."""
@@ -298,11 +315,14 @@ def test_chiral_labels_logic(app, mock_parser_host, mock_pv):
     atom_item = MagicMock()
     # RDKit idx 1 is the chiral center in C[C@H](F)Cl (atoms: C0, C1, F2, Cl3)
     # Its _original_atom_id is 1+1 = 2
-    mock_parser_host.state_manager.data.atoms = { 2: {"item": atom_item, "symbol": "C"} }
+    mock_parser_host.state_manager.data.atoms = {2: {"item": atom_item, "symbol": "C"}}
 
-    with patch('moleditpy.ui.view_3d_logic.Chem.FindMolChiralCenters', return_value=[(1, 'S')]):
+    with patch(
+        "moleditpy.ui.view_3d_logic.Chem.FindMolChiralCenters", return_value=[(1, "S")]
+    ):
         view3d.update_chiral_labels()
-        assert atom_item.chiral_label == 'S'
+        assert atom_item.chiral_label == "S"
+
 
 def test_color_overrides(app, mock_parser_host, mock_pv):
     """Verify color override API functions."""

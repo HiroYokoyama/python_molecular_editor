@@ -4,6 +4,7 @@ from rdkit.Chem import AllChem
 from moleditpy.ui.calculation_worker import CalculationWorker
 from unittest.mock import patch
 
+
 # Helper to capture signal emissions
 class SignalCaptor:
     def __init__(self):
@@ -15,9 +16,11 @@ class SignalCaptor:
         else:
             self.emitted_values.append(args)
 
+
 @pytest.fixture
 def worker():
     return CalculationWorker()
+
 
 def test_optimize_only_mmff94s(worker):
     """Test optimize_only mode with MMFF94s."""
@@ -32,7 +35,7 @@ def test_optimize_only_mmff94s(worker):
     options = {
         "conversion_mode": "optimize_only",
         "optimization_method": "MMFF94s_RDKIT",
-        "worker_id": 1
+        "worker_id": 1,
     }
 
     worker.run_calculation(mol_block, options)
@@ -43,6 +46,7 @@ def test_optimize_only_mmff94s(worker):
 
     assert res_mol.HasProp("_pme_optimization_method")
     assert res_mol.GetProp("_pme_optimization_method").upper() == "MMFF94S_RDKIT"
+
 
 def test_optimize_only_uff(worker):
     """Test optimize_only mode with UFF."""
@@ -57,7 +61,7 @@ def test_optimize_only_uff(worker):
     options = {
         "conversion_mode": "optimize_only",
         "optimization_method": "UFF_RDKIT",
-        "worker_id": 2
+        "worker_id": 2,
     }
 
     worker.run_calculation(mol_block, options)
@@ -67,6 +71,7 @@ def test_optimize_only_uff(worker):
     res_mol = result[1] if isinstance(result, tuple) else result
 
     assert res_mol.GetProp("_pme_optimization_method") == "UFF_RDKIT"
+
 
 def test_collision_avoidance_trigger(worker):
     """Test that collision avoidance is called in direct mode."""
@@ -87,19 +92,23 @@ def test_collision_avoidance_trigger(worker):
     options = {"conversion_mode": "direct", "do_optimize": True}
 
     # Mock _iterative_optimize to avoid actual optimization and just check collision avoidance
-    with patch("moleditpy.ui.calculation_worker._iterative_optimize", return_value=True):
+    with patch(
+        "moleditpy.ui.calculation_worker._iterative_optimize", return_value=True
+    ):
         worker.run_calculation(mol_block, options)
 
     assert len(finish_captor.emitted_values) > 0
     res_mol = finish_captor.emitted_values[0]
-    if isinstance(res_mol, tuple): res_mol = res_mol[1]
+    if isinstance(res_mol, tuple):
+        res_mol = res_mol[1]
 
     # Atoms should have been moved apart
     conf = res_mol.GetConformer()
     p1 = conf.GetAtomPosition(0)
     p2 = conf.GetAtomPosition(1)
-    dist = (p1.x-p2.x)**2 + (p1.y-p2.y)**2 + (p1.z-p2.z)**2
+    dist = (p1.x - p2.x) ** 2 + (p1.y - p2.y) ** 2 + (p1.z - p2.z) ** 2
     assert dist > 0.01
+
 
 def test_iterative_optimize_halt(worker):
     """Test that iterative optimization respects halt signals."""
@@ -120,6 +129,7 @@ def test_iterative_optimize_halt(worker):
     with pytest.raises(WorkerHaltError):
         _iterative_optimize(mol, "MMFF94s", check_halted, safe_status)
 
+
 def test_obabel_optimization_flow(worker):
     """Test the flow of OpenBabel optimization (mocked)."""
     mol = Chem.MolFromSmiles("C")
@@ -133,12 +143,17 @@ def test_obabel_optimization_flow(worker):
     options = {
         "conversion_mode": "optimize_only",
         "optimization_method": "UFF_OBABEL",
-        "worker_id": 3
+        "worker_id": 3,
     }
 
     # Mock both availability and the iterative function
-    with patch("moleditpy.ui.calculation_worker.OBABEL_AVAILABLE", True), \
-         patch("moleditpy.ui.calculation_worker._iterative_optimize_obabel", return_value=True) as mock_opt:
+    with (
+        patch("moleditpy.ui.calculation_worker.OBABEL_AVAILABLE", True),
+        patch(
+            "moleditpy.ui.calculation_worker._iterative_optimize_obabel",
+            return_value=True,
+        ) as mock_opt,
+    ):
         worker.run_calculation(mol_block, options)
 
     assert mock_opt.called

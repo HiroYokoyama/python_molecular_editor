@@ -182,11 +182,6 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
         )
         is_edit_active = mw.edit_3d_manager.is_3d_edit_mode or is_temp_mode
 
-        # Ctrl+Click for atom selection (3D edit)
-        is_ctrl_click = bool(
-            QApplication.keyboardModifiers() & Qt.KeyboardModifier.ControlModifier
-        )
-
         # Handle measurement mode
         if mw.edit_3d_manager.measurement_mode and mw.view_3d_manager.current_mol:
             click_pos = self.GetInteractor().GetEventPosition()
@@ -419,7 +414,6 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
         if self._is_dragging_atom and mw.dragged_atom_info is not None:
             # Custom atom drag
             self.is_dragging = True
-            atom_id = mw.dragged_atom_info["id"]
         else:
             # Delegate camera rotation to parent
             super().OnMouseMove()

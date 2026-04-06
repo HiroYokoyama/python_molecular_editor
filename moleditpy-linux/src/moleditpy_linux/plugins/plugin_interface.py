@@ -119,12 +119,6 @@ class PluginContext:
         """
         return Plugin3DController(self._manager.get_main_window())
 
-    def show_status_message(self, message: str, timeout: int = 3000) -> None:
-        """
-        Display a message in the application status bar.
-        """
-        self._manager.show_status_message(message, timeout)
-
     def push_undo_checkpoint(self) -> None:
         """
         Create an undo checkpoint for the current state.
@@ -132,18 +126,6 @@ class PluginContext:
         new state is saved to the undo history.
         """
         self._manager.push_undo_checkpoint()
-
-    def refresh_3d_view(self) -> None:
-        """
-        Force a refresh (re-render) of the 3D scene.
-        """
-        self._manager.refresh_3d_view()
-
-    def reset_3d_camera(self) -> None:
-        """
-        Resets the 3D camera to fit the current molecule.
-        """
-        self._manager.reset_3d_camera()
 
     def get_selected_atom_indices(self) -> List[int]:
         """
@@ -177,9 +159,7 @@ class PluginContext:
         """
         Display a temporary message in the status bar of the main window.
         """
-        mw = self.get_main_window()
-        if mw and hasattr(mw, "ui_manager"):
-            mw.ui_manager.update_status_bar(message)
+        self._manager.show_status_message(message, timeout)
 
     @property
     def current_mol(self) -> Any:
@@ -187,7 +167,11 @@ class PluginContext:
         Get or set the current molecule (RDKit Mol object). Shortcut for current_molecule.
         """
         mw = self.get_main_window()
-        return mw.view_3d_manager.current_mol if mw and hasattr(mw, "view_3d_manager") else None
+        return (
+            mw.view_3d_manager.current_mol
+            if mw and hasattr(mw, "view_3d_manager")
+            else None
+        )
 
     @current_mol.setter
     def current_mol(self, mol: Any):
@@ -211,7 +195,11 @@ class PluginContext:
         Returns the PyVista plotter from the MainWindow.
         """
         mw = self.get_main_window()
-        return mw.view_3d_manager.plotter if mw and hasattr(mw, "view_3d_manager") else None
+        return (
+            mw.view_3d_manager.plotter
+            if mw and hasattr(mw, "view_3d_manager")
+            else None
+        )
 
     @property
     def scene(self) -> Any:
@@ -236,7 +224,10 @@ class PluginContext:
                 mw.view_3d_manager.draw_molecule_3d(mol)
             else:
                 # Also redraw/clear plotter if no molecule
-                if hasattr(mw.view_3d_manager, "plotter") and mw.view_3d_manager.plotter:
+                if (
+                    hasattr(mw.view_3d_manager, "plotter")
+                    and mw.view_3d_manager.plotter
+                ):
                     mw.view_3d_manager.plotter.render()
 
     def reset_3d_camera(self) -> None:

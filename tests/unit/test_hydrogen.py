@@ -14,7 +14,9 @@ class DummyEditActions(EditActionsManager):
         self.settings = host.init_manager.settings
         self.current_mol = host.view_3d_manager.current_mol
         self.host.init_manager.current_file_path = host.init_manager.current_file_path
-        self.host.state_manager.has_unsaved_changes = host.state_manager.has_unsaved_changes
+        self.host.state_manager.has_unsaved_changes = (
+            host.state_manager.has_unsaved_changes
+        )
         self.main_window_edit_actions = self
 
     def statusBar(self):
@@ -58,7 +60,9 @@ def test_remove_hydrogen_atoms_app_logic(mock_parser_host):
     )
 
     # We need to ensure sip_isdeleted_safe doesn't block deletion in test
-    with patch("moleditpy.ui.edit_actions_logic.sip_isdeleted_safe", return_value=False):
+    with patch(
+        "moleditpy.ui.edit_actions_logic.sip_isdeleted_safe", return_value=False
+    ):
         actions.remove_hydrogen_atoms()
 
     # Should call scene.delete_items with a set containing the H item

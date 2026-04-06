@@ -371,30 +371,28 @@ class MainInitManager:
 
                     modules_to_update.append(constants_mod)
 
-            for constants_mod in modules_to_update:
-                constants_mod.CPK_COLORS.clear()
+            for mod in modules_to_update:
+                mod.CPK_COLORS.clear()
                 for k, v in DEFAULT_CPK_COLORS.items():
-                    constants_mod.CPK_COLORS[k] = (
-                        QColor(v) if not isinstance(v, QColor) else v
-                    )
+                    mod.CPK_COLORS[k] = QColor(v) if not isinstance(v, QColor) else v
 
                 # Apply overrides from settings
                 for k, hexv in overrides.items():
                     if isinstance(hexv, str) and hexv:
-                        constants_mod.CPK_COLORS[k] = QColor(hexv)
+                        mod.CPK_COLORS[k] = QColor(hexv)
 
                 # Rebuild the PV representation in-place too
-                if hasattr(constants_mod, "CPK_COLORS_PV"):
-                    constants_mod.CPK_COLORS_PV.clear()
-                    for k, c in constants_mod.CPK_COLORS.items():
-                        constants_mod.CPK_COLORS_PV[k] = [
+                if hasattr(mod, "CPK_COLORS_PV"):
+                    mod.CPK_COLORS_PV.clear()
+                    for k, c in mod.CPK_COLORS.items():
+                        mod.CPK_COLORS_PV[k] = [
                             c.redF(),
                             c.greenF(),
                             c.blueF(),
                         ]
                 else:  # [REPORT ERROR MISSING ATTRIBUTE]
                     logging.error(
-                        "REPORT ERROR: Missing attribute 'CPK_COLORS_PV' on constants_mod"
+                        "REPORT ERROR: Missing attribute 'CPK_COLORS_PV' on constants module"
                     )
         except (AttributeError, RuntimeError, TypeError, ValueError) as e:
             print(f"Failed to update CPK colors from settings: {e}")
@@ -1318,9 +1316,7 @@ class MainInitManager:
             if key == "ball_and_stick":
                 action.setChecked(True)
             action.triggered.connect(
-                lambda checked=False, k=key: (
-                    self.host.view_3d_manager.set_3d_style(k)
-                )
+                lambda checked=False, k=key: (self.host.view_3d_manager.set_3d_style(k))
             )
             style_menu.addAction(action)
             style_group.addAction(action)

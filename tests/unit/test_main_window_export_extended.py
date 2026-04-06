@@ -37,16 +37,21 @@ class DummyBondItem:
 
 class TinyMesh:
     """Very simple class to avoid mock equality/isinstance issues."""
+
     def __init__(self, n_points=0):
         self.n_points = n_points
         self.point_data = {}
+
     def copy(self):
         # Return a NEW TinyMesh with same points
         return TinyMesh(self.n_points)
+
     def merge(self, other):
         return TinyMesh(self.n_points + getattr(other, "n_points", 0))
+
     def save(self, *args, **kwargs):
         pass
+
     def extract_points(self, *args, **kwargs):
         return TinyMesh(self.n_points // 2)
 
@@ -246,8 +251,8 @@ def test_export_from_3d_view_logic(window):
     window.view_3d_manager.plotter.mesh = {"actor1": mock_mesh_data}
 
     with patch("moleditpy.ui.export_logic.pv") as mock_pv:
-        mock_pv.PolyData = TinyMesh # Class-like
-        mock_pv.wrap.side_effect = lambda x: x # Wrap returns input if already TinyMesh
+        mock_pv.PolyData = TinyMesh  # Class-like
+        mock_pv.wrap.side_effect = lambda x: x  # Wrap returns input if already TinyMesh
 
         result = window.export_from_3d_view()
         assert result is not None
@@ -261,9 +266,7 @@ def test_export_2d_png_success(window, mock_file_dialog, mock_message_box):
         "/path/to/image.png",
         "PNG Files (*.png)",
     )
-    mock_message_box.question.return_value = (
-        mock_message_box.StandardButton.Yes
-    )
+    mock_message_box.question.return_value = mock_message_box.StandardButton.Yes
 
     with (
         patch("moleditpy.ui.export_logic.AtomItem", DummyAtomItem),
@@ -297,9 +300,7 @@ def test_export_2d_svg_success(window, mock_file_dialog, mock_message_box):
         "/path/to/image.svg",
         "SVG Files (*.svg)",
     )
-    mock_message_box.question.return_value = (
-        mock_message_box.StandardButton.No
-    )
+    mock_message_box.question.return_value = mock_message_box.StandardButton.No
 
     with (
         patch("moleditpy.ui.export_logic.QSvgGenerator") as mock_svg_gen_cls,

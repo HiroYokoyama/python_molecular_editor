@@ -16,7 +16,9 @@ def _make_state_manager(host):
 
 def _add_atom(host, symbol, x, y, charge=0, radical=0):
     """Add a real atom to host.state_manager.data and return its id."""
-    aid = host.state_manager.data.add_atom(symbol, QPointF(x, y), charge=charge, radical=radical)
+    aid = host.state_manager.data.add_atom(
+        symbol, QPointF(x, y), charge=charge, radical=radical
+    )
     # add a mock item so JSON serialization (which accesses item.pos()) works
     host.state_manager.data.atoms[aid]["item"] = MagicMock(pos=lambda: QPointF(x, y))
     return aid
@@ -128,7 +130,9 @@ def test_json_roundtrip_preserves_atoms(mock_parser_host):
     assert len(mock_parser_host.data.atoms) == 2
     symbols = {d["symbol"] for d in mock_parser_host.data.atoms.values()}
     assert symbols == {"C", "N"}
-    charged = [d for d in mock_parser_host.data.atoms.values() if d.get("charge", 0) != 0]
+    charged = [
+        d for d in mock_parser_host.data.atoms.values() if d.get("charge", 0) != 0
+    ]
     assert len(charged) == 1
     assert charged[0]["charge"] == 1
 

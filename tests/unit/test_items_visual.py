@@ -323,4 +323,6 @@ def test_bond_update_position_resilience(mock_parser_host):
     assert bond.atom2 is None
     # Verify the bond didn't crash and returns a zero-length line for missing atom
     line = bond.get_line_in_local_coords()
-    assert line.length() == 0.0, f"Expected zero-length line, got length={line.length()}"
+    assert line.length() == 0.0, (
+        f"Expected zero-length line, got length={line.length()}"
+    )

@@ -2,6 +2,7 @@ from unittest.mock import MagicMock, patch
 from PyQt6.QtGui import QAction, QActionGroup
 from PyQt6.QtWidgets import QMenu, QToolBar, QFileDialog, QToolButton
 
+
 def test_plugin_menu_actions_population(window, qtbot):
     """Test that menu actions registered by plugins are correctly added to the menu bar."""
     # 1. Setup mock plugin data
@@ -18,7 +19,7 @@ def test_plugin_menu_actions_population(window, qtbot):
             "callback": MagicMock(),
             "text": "Click Me",
             "icon": None,
-            "shortcut": "Ctrl+Shift+P"
+            "shortcut": "Ctrl+Shift+P",
         },
         {
             "plugin": "TestPlugin",
@@ -26,35 +27,52 @@ def test_plugin_menu_actions_population(window, qtbot):
             "callback": MagicMock(),
             "text": "Plugin Analysis",
             "icon": None,
-            "shortcut": None
-        }
+            "shortcut": None,
+        },
     ]
 
     # 2. Trigger update
     window.init_manager.update_plugin_menu(window.init_manager.plugin_menu)
 
     # 3. Verify top-level "Plugins" menu was found/created
-    plugins_action = next((a for a in menu_bar.actions() if "Plugins" in a.text().replace("&", "")), None)
+    plugins_action = next(
+        (a for a in menu_bar.actions() if "Plugins" in a.text().replace("&", "")), None
+    )
     assert plugins_action is not None
     plugins_menu = plugins_action.menu()
     assert plugins_menu is not None
 
     # 4. Verify SubMenu
-    sub_menu_action = next((a for a in plugins_menu.actions() if "SubMenu" in a.text().replace("&", "")), None)
+    sub_menu_action = next(
+        (a for a in plugins_menu.actions() if "SubMenu" in a.text().replace("&", "")),
+        None,
+    )
     assert sub_menu_action is not None
     sub_menu = sub_menu_action.menu()
     assert sub_menu is not None
 
     # 5. Verify Action
-    test_action = next((a for a in sub_menu.actions() if "Click Me" in a.text().replace("&", "")), None)
+    test_action = next(
+        (a for a in sub_menu.actions() if "Click Me" in a.text().replace("&", "")), None
+    )
     assert test_action is not None
     assert test_action.shortcut().toString() == "Ctrl+Shift+P"
 
     # 6. Verify merging into existing Analysis menu
-    analysis_action = next((a for a in menu_bar.actions() if "Analysis" in a.text().replace("&", "")), None)
+    analysis_action = next(
+        (a for a in menu_bar.actions() if "Analysis" in a.text().replace("&", "")), None
+    )
     analysis_menu = analysis_action.menu()
-    plugin_analysis_action = next((a for a in analysis_menu.actions() if "Plugin Analysis" in a.text().replace("&", "")), None)
+    plugin_analysis_action = next(
+        (
+            a
+            for a in analysis_menu.actions()
+            if "Plugin Analysis" in a.text().replace("&", "")
+        ),
+        None,
+    )
     assert plugin_analysis_action is not None
+
 
 def test_plugin_toolbar_actions_visibility(window, qtbot):
     """Test that the plugin toolbar is shown/hidden and populated correctly."""
@@ -82,6 +100,7 @@ def test_plugin_toolbar_actions_visibility(window, qtbot):
     assert toolbar_actions[0].text() == "ToolBtn"
     assert toolbar_actions[0].toolTip() == "Hint"
 
+
 def test_ui_sync_after_reset(window, qtbot):
     """Test that UI elements (background, checked states) sync correctly after settings reset."""
     # 1. Setup stale state
@@ -101,21 +120,31 @@ def test_ui_sync_after_reset(window, qtbot):
 
     # 4. Verify Scene Background
     actual_bg = window.init_manager.scene.backgroundBrush().color().name().upper()
-    assert actual_bg == "#0000FF", f"Scene background should be #0000FF, but got {actual_bg}"
+    assert actual_bg == "#0000FF", (
+        f"Scene background should be #0000FF, but got {actual_bg}"
+    )
 
     # 5. Verify Menu Checkstates (using existing window.opt3d_actions if available)
     if hasattr(window, "opt3d_actions"):
         if "MMFF_RDKIT" in window.opt3d_actions:
-            assert window.opt3d_actions["MMFF_RDKIT"].isChecked(), "MMFF action should be checked"
+            assert window.opt3d_actions["MMFF_RDKIT"].isChecked(), (
+                "MMFF action should be checked"
+            )
 
     if hasattr(window, "conv_actions"):
         if "rdkit" in window.conv_actions:
-            assert window.conv_actions["rdkit"].isChecked(), "RDKit conversion should be checked"
+            assert window.conv_actions["rdkit"].isChecked(), (
+                "RDKit conversion should be checked"
+            )
+
 
 def test_custom_3d_style_integration(window, qtbot):
     """Test that custom 3D styles from plugins appear in the style menu."""
     # Ensure style_button and menu exist
-    if not hasattr(window, "style_button") or not window.init_manager.style_button.menu():
+    if (
+        not hasattr(window, "style_button")
+        or not window.init_manager.style_button.menu()
+    ):
         # Fallback for headless/mocked plotter where style_button might not be fully initialized
         window.init_manager.style_button = QToolButton(window)
         window.init_manager.style_button.setMenu(QMenu(window))
@@ -129,28 +158,45 @@ def test_custom_3d_style_integration(window, qtbot):
     existing_style.setActionGroup(style_group)
     style_menu.addAction(existing_style)
 
-    window.plugin_manager.custom_3d_styles = {"Vantablack": {"plugin": "CoolPlugin", "callback": MagicMock()}}
+    window.plugin_manager.custom_3d_styles = {
+        "Vantablack": {"plugin": "CoolPlugin", "callback": MagicMock()}
+    }
     window.init_manager._update_style_menu_with_plugins()
 
-    style_action = next((a for a in style_menu.actions() if "Vantablack" in a.text()), None)
-    assert style_action is not None, f"Vantablack style not found in {[a.text() for a in style_menu.actions()]}"
+    style_action = next(
+        (a for a in style_menu.actions() if "Vantablack" in a.text()), None
+    )
+    assert style_action is not None, (
+        f"Vantablack style not found in {[a.text() for a in style_menu.actions()]}"
+    )
 
     # Verify it joins a group if one exists in the menu
     assert style_action.actionGroup() is not None
 
+
 def test_integrate_plugin_export_actions(window, qtbot):
     """Test that export actions are added to File/Export menu."""
     # Find existing menus
-    file_action = next((a for a in window.menuBar().actions() if "File" in a.text().replace("&", "")), None)
+    file_action = next(
+        (a for a in window.menuBar().actions() if "File" in a.text().replace("&", "")),
+        None,
+    )
     assert file_action is not None
     file_menu = file_action.menu()
 
-    export_action = next((a for a in file_menu.actions() if a.menu() and "Export" in a.text().replace("&", "")), None)
+    export_action = next(
+        (
+            a
+            for a in file_menu.actions()
+            if a.menu() and "Export" in a.text().replace("&", "")
+        ),
+        None,
+    )
     assert export_action is not None
     export_menu = export_action.menu()
 
     # Mock Toolbar Export Button if missing
-    if not hasattr(window.init_manager, 'export_button'):
+    if not hasattr(window.init_manager, "export_button"):
         window.init_manager.export_button = QToolButton(window)
         window.init_manager.export_button.setMenu(QMenu(window))
     btn_menu = window.init_manager.export_button.menu()
@@ -161,12 +207,24 @@ def test_integrate_plugin_export_actions(window, qtbot):
 
     window.init_manager._integrate_plugin_export_actions()
 
-    assert any("Export to Fax" in a.text() for a in btn_menu.actions()), "Missing in button menu"
-    assert any("Export to Fax" in a.text() for a in export_menu.actions()), "Missing in Export menu"
+    assert any("Export to Fax" in a.text() for a in btn_menu.actions()), (
+        "Missing in button menu"
+    )
+    assert any("Export to Fax" in a.text() for a in export_menu.actions()), (
+        "Missing in Export menu"
+    )
+
 
 def test_integrate_plugin_analysis_tools(window, qtbot):
     """Test integration into the Analysis menu."""
-    analysis_action = next((a for a in window.menuBar().actions() if "Analysis" in a.text().replace("&", "")), None)
+    analysis_action = next(
+        (
+            a
+            for a in window.menuBar().actions()
+            if "Analysis" in a.text().replace("&", "")
+        ),
+        None,
+    )
     assert analysis_action is not None
     analysis_menu = analysis_action.menu()
 
@@ -177,7 +235,10 @@ def test_integrate_plugin_analysis_tools(window, qtbot):
     window.init_manager._integrate_plugin_analysis_tools()
 
     found = any("Calculate Karma" in a.text() for a in analysis_menu.actions())
-    assert found, f"Karma tool not found in {[a.text() for a in analysis_menu.actions()]}"
+    assert found, (
+        f"Karma tool not found in {[a.text() for a in analysis_menu.actions()]}"
+    )
+
 
 def test_integrate_plugin_file_openers_ui(window, qtbot):
     """Test integration of plugin openers into the Import menu."""
@@ -192,12 +253,16 @@ def test_integrate_plugin_file_openers_ui(window, qtbot):
     window.init_manager._integrate_plugin_file_openers()
 
     # Verify action existence
-    import_action = next((a for a in window.import_menu.actions() if "FakePlugin" in a.text()), None)
+    import_action = next(
+        (a for a in window.import_menu.actions() if "FakePlugin" in a.text()), None
+    )
     assert import_action is not None
     assert "Import .fake" in import_action.text()
 
     # We can't easily test the QFileDialog trigger without mocking QFileDialog.getOpenFileName
-    with patch.object(QFileDialog, "getOpenFileName", return_value=("data.fake", "All Files (*.)")):
+    with patch.object(
+        QFileDialog, "getOpenFileName", return_value=("data.fake", "All Files (*.)")
+    ):
         # Mock update_window_title to avoid side effects
         window.state_manager.update_window_title = MagicMock()
         import_action.trigger()

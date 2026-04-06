@@ -2,6 +2,7 @@ from unittest.mock import MagicMock, patch
 from moleditpy.ui.custom_interactor_style import CustomInteractorStyle
 from PyQt6.QtCore import Qt
 
+
 def test_custom_interactor_style_left_click_atom_selection(app, mock_parser_host):
     """Verify that left-clicking an atom in 3D edit mode successfully selects it."""
     # Ensure no MoveGroupDialog interferes
@@ -32,11 +33,15 @@ def test_custom_interactor_style_left_click_atom_selection(app, mock_parser_host
     mock_picker.GetPickPosition.return_value = (0, 0, 0)
 
     import numpy as np
+
     mock_parser_host.view_3d_manager.atom_positions_3d = np.array([[0.0, 0.0, 0.0]])
 
-    with patch('moleditpy.ui.custom_interactor_style.QApplication') as mock_qapp, \
-         patch('vtkmodules.vtkInteractionStyle.vtkInteractorStyleTrackballCamera.OnLeftButtonDown'):
-
+    with (
+        patch("moleditpy.ui.custom_interactor_style.QApplication") as mock_qapp,
+        patch(
+            "vtkmodules.vtkInteractionStyle.vtkInteractorStyleTrackballCamera.OnLeftButtonDown"
+        ),
+    ):
         mock_qapp.topLevelWidgets.return_value = []
         mock_qapp.keyboardModifiers.return_value = Qt.KeyboardModifier.NoModifier
 
@@ -44,8 +49,11 @@ def test_custom_interactor_style_left_click_atom_selection(app, mock_parser_host
 
         # Verify the atom was selected
         assert interactor_style._is_dragging_atom is True
-        mock_parser_host.plotter.setCursor.assert_called_once_with(Qt.CursorShape.ClosedHandCursor)
+        mock_parser_host.plotter.setCursor.assert_called_once_with(
+            Qt.CursorShape.ClosedHandCursor
+        )
         assert mock_parser_host.dragged_atom_info["id"] == 0
+
 
 def test_custom_interactor_style_background_click(app, mock_parser_host):
     """Verify that clicking the background (no atom selected) allows VTK trackball rotation."""
@@ -61,9 +69,12 @@ def test_custom_interactor_style_background_click(app, mock_parser_host):
     mock_parser_host.plotter.picker = mock_picker
     mock_picker.GetActor.return_value = None
 
-    with patch('moleditpy.ui.custom_interactor_style.QApplication') as mock_qapp, \
-         patch('vtkmodules.vtkInteractionStyle.vtkInteractorStyleTrackballCamera.OnLeftButtonDown') as mock_super_down:
-
+    with (
+        patch("moleditpy.ui.custom_interactor_style.QApplication") as mock_qapp,
+        patch(
+            "vtkmodules.vtkInteractionStyle.vtkInteractorStyleTrackballCamera.OnLeftButtonDown"
+        ) as mock_super_down,
+    ):
         mock_qapp.topLevelWidgets.return_value = []
         mock_qapp.keyboardModifiers.return_value = Qt.KeyboardModifier.NoModifier
 

@@ -92,10 +92,10 @@ class TestAtomItem:
         # Verify correct text "C" is drawn
         text_drawn = False
         for args, _ in mock_painter.drawText.call_args_list:
-             # drawText args vary, but usually the last arg or one of strings is text
-             if "C" in args:
-                 text_drawn = True
-                 break
+            # drawText args vary, but usually the last arg or one of strings is text
+            if "C" in args:
+                text_drawn = True
+                break
         assert text_drawn, "Atom symbol 'C' should be found in drawText calls"
 
     def test_paint_radical(self, atom_item):
@@ -163,9 +163,7 @@ class TestAtomItem:
         mock_fm.boundingRect.side_effect = lambda *args: TolerantQRectF(0, 0, 20, 20)
 
         # Patch sip_isdeleted_safe to avoid issues with Mock objects not being C++ pointers
-        with patch(
-            "moleditpy.ui.atom_item.sip_isdeleted_safe", return_value=False
-        ):
+        with patch("moleditpy.ui.atom_item.sip_isdeleted_safe", return_value=False):
             # 1. Test Implicit Hydrogens (e.g. CH3)
             atom_item.implicit_h_count = 3
             atom_item.paint(mock_painter, option, widget)

@@ -3,6 +3,7 @@ from rdkit.Chem import AllChem
 import numpy as np
 from moleditpy.ui.calculation_worker import _iterative_optimize
 
+
 def test_intermolecular_interaction_toggle():
     """Test that ignoreInterfragInteractions is correctly toggled via options."""
     # Create two methane molecules
@@ -24,27 +25,39 @@ def test_intermolecular_interaction_toggle():
         pos = conf.GetAtomPosition(i)
         conf.SetAtomPosition(i, (pos.x + 6.0, pos.y, pos.z))
 
-    def check_halted(): return False
-    def safe_status(msg): pass
+    def check_halted():
+        return False
+
+    def safe_status(msg):
+        pass
 
     # --- Case 1: Intermolecular Interaction ON (Default) ---
     mol_on = Chem.Mol(combined)
     options_on = {"optimize_intermolecular_interaction_rdkit": True}
-    _iterative_optimize(mol_on, "MMFF94s", check_halted, safe_status, options=options_on, max_iters=500)
+    _iterative_optimize(
+        mol_on, "MMFF94s", check_halted, safe_status, options=options_on, max_iters=500
+    )
 
     dist_on = np.linalg.norm(
-        np.array(mol_on.GetConformer().GetAtomPosition(0)) -
-        np.array(mol_on.GetConformer().GetAtomPosition(mol1.GetNumAtoms()))
+        np.array(mol_on.GetConformer().GetAtomPosition(0))
+        - np.array(mol_on.GetConformer().GetAtomPosition(mol1.GetNumAtoms()))
     )
 
     # --- Case 2: Intermolecular Interaction OFF ---
     mol_off = Chem.Mol(combined)
     options_off = {"optimize_intermolecular_interaction_rdkit": False}
-    _iterative_optimize(mol_off, "MMFF94s", check_halted, safe_status, options=options_off, max_iters=500)
+    _iterative_optimize(
+        mol_off,
+        "MMFF94s",
+        check_halted,
+        safe_status,
+        options=options_off,
+        max_iters=500,
+    )
 
     dist_off = np.linalg.norm(
-        np.array(mol_off.GetConformer().GetAtomPosition(0)) -
-        np.array(mol_off.GetConformer().GetAtomPosition(mol1.GetNumAtoms()))
+        np.array(mol_off.GetConformer().GetAtomPosition(0))
+        - np.array(mol_off.GetConformer().GetAtomPosition(mol1.GetNumAtoms()))
     )
 
     print(f"Dist ON: {dist_on:.6f}")
@@ -55,6 +68,7 @@ def test_intermolecular_interaction_toggle():
 
     # With interaction ON, it should have changed (pulled together)
     assert dist_on < 5.0
+
 
 def test_intermolecular_interaction_uff():
     """Test UFF path as well."""
@@ -74,17 +88,22 @@ def test_intermolecular_interaction_uff():
         pos = conf.GetAtomPosition(i)
         conf.SetAtomPosition(i, (pos.x + 6.0, pos.y, pos.z))
 
-    def check_halted(): return False
-    def safe_status(msg): pass
+    def check_halted():
+        return False
+
+    def safe_status(msg):
+        pass
 
     # OFF
     mol_off = Chem.Mol(combined)
     options_off = {"optimize_intermolecular_interaction_rdkit": False}
-    _iterative_optimize(mol_off, "UFF", check_halted, safe_status, options=options_off, max_iters=500)
+    _iterative_optimize(
+        mol_off, "UFF", check_halted, safe_status, options=options_off, max_iters=500
+    )
 
     dist_off = np.linalg.norm(
-        np.array(mol_off.GetConformer().GetAtomPosition(0)) -
-        np.array(mol_off.GetConformer().GetAtomPosition(mol1.GetNumAtoms()))
+        np.array(mol_off.GetConformer().GetAtomPosition(0))
+        - np.array(mol_off.GetConformer().GetAtomPosition(mol1.GetNumAtoms()))
     )
 
     assert abs(dist_off - 6.0) < 1e-5

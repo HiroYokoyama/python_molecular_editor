@@ -42,18 +42,20 @@ except Exception:
 #
 # Unix exit codes (negative = killed by signal):
 #   -11 → SIGSEGV    -6 → SIGABRT    -5 → SIGTRAP
-_KNOWN_CRASH_CODES = frozenset({
-    # Windows (signed and unsigned representations)
-    -1073741819,   # access violation (0xC0000005)
-    -2147417848,   # RPC_E_DISCONNECTED (0x80010108)
-    -1073741558,   # STATUS_CONTROL_C_EXIT (0xC000013A)
-    3221225477,    # unsigned 0xC0000005 on some Python versions
-    2147549704,    # unsigned 0x80010108 on some Python versions
-    # Unix signals (subprocess returns -signal_number)
-    -11,           # SIGSEGV
-    -6,            # SIGABRT
-    -5,            # SIGTRAP
-})
+_KNOWN_CRASH_CODES = frozenset(
+    {
+        # Windows (signed and unsigned representations)
+        -1073741819,  # access violation (0xC0000005)
+        -2147417848,  # RPC_E_DISCONNECTED (0x80010108)
+        -1073741558,  # STATUS_CONTROL_C_EXIT (0xC000013A)
+        3221225477,  # unsigned 0xC0000005 on some Python versions
+        2147549704,  # unsigned 0x80010108 on some Python versions
+        # Unix signals (subprocess returns -signal_number)
+        -11,  # SIGSEGV
+        -6,  # SIGABRT
+        -5,  # SIGTRAP
+    }
+)
 
 # Pattern to extract pytest summary line, e.g. "5 passed, 1 warning in 0.52s"
 _PYTEST_PASSED_RE = re.compile(r"(\d+) passed")

@@ -2,6 +2,7 @@ import pytest
 from unittest.mock import MagicMock
 from moleditpy.ui.molecular_scene_handler import TemplateMixin
 
+
 class MockScene(TemplateMixin):
     def __init__(self):
         self.data = MagicMock()
@@ -17,9 +18,11 @@ class MockScene(TemplateMixin):
                 return b
         return None
 
+
 @pytest.fixture
 def scene():
     return MockScene()
+
 
 def test_calculate_6ring_rotation_empty(scene):
     """Test with no existing bonds."""
@@ -31,6 +34,7 @@ def test_calculate_6ring_rotation_empty(scene):
 
     rot = scene._calculate_6ring_rotation(num_points, bonds_info, atom_items)
     assert rot == 0
+
 
 def test_calculate_6ring_rotation_single_edge_single(scene):
     """Test fusing on a single bond (order 1). Should prefer alternating (template double)."""
@@ -56,6 +60,7 @@ def test_calculate_6ring_rotation_single_edge_single(scene):
     # rot=1 -> template_ord = bonds_info[1].order = 1. Score 0.
     assert rot % 2 == 0  # Should be 0, 2, or 4
 
+
 def test_calculate_6ring_rotation_single_edge_double(scene):
     """Test fusing on a double bond. Should prefer 1 or 2 (alternating or matching)."""
     num_points = 6
@@ -78,6 +83,7 @@ def test_calculate_6ring_rotation_single_edge_double(scene):
     # If rot=0: template_ord=2. score 100. adj are 1 and 1. (50+50 bonus for adjacent single bonds if exist_order=2)
     # Total rot=0: 100 + 50 + 50 = 200.
     assert rot % 2 == 0
+
 
 def test_calculate_6ring_rotation_multi_edge_fused(scene):
     """Test fusing on two adjacent edges (naphthalene-like)."""
@@ -117,6 +123,7 @@ def test_calculate_6ring_rotation_multi_edge_fused(scene):
     # Connection safety factor (5000) also applies.
     assert rot == 0
 
+
 def test_calculate_6ring_rotation_connection_safety(scene):
     """Verify that 'safe connection' scoring prioritizes rotations where template single bonds connect to fusion points."""
     num_points = 6
@@ -128,11 +135,19 @@ def test_calculate_6ring_rotation_connection_safety(scene):
 
     # Multi-fuse on 0-1 and 2-3 (non-adjacent)
     # k=0 (0-1) and k=2 (2-3)
-    b1 = MagicMock(); b1.order = 1; b1.atom1 = atom_items[0]; b1.atom2 = atom_items[1]
-    atom_items[0].bonds.append(b1); atom_items[1].bonds.append(b1)
+    b1 = MagicMock()
+    b1.order = 1
+    b1.atom1 = atom_items[0]
+    b1.atom2 = atom_items[1]
+    atom_items[0].bonds.append(b1)
+    atom_items[1].bonds.append(b1)
 
-    b2 = MagicMock(); b2.order = 1; b2.atom1 = atom_items[2]; b2.atom2 = atom_items[3]
-    atom_items[2].bonds.append(b2); atom_items[3].bonds.append(b2)
+    b2 = MagicMock()
+    b2.order = 1
+    b2.atom1 = atom_items[2]
+    b2.atom2 = atom_items[3]
+    atom_items[2].bonds.append(b2)
+    atom_items[3].bonds.append(b2)
 
     rot = scene._calculate_6ring_rotation(num_points, bonds_info, atom_items)
     # Safe connections (adj template edges are single bonds) have massive 5000 pts bonus.

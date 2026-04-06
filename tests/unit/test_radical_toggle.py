@@ -5,14 +5,16 @@ from PyQt6.QtGui import QKeyEvent
 from moleditpy.ui.molecular_scene_handler import KeyboardMixin
 from moleditpy.ui.atom_item import AtomItem
 
+
 def MockAtom(atom_id, radical=0):
     atom = MagicMock(spec=AtomItem)
     atom.atom_id = atom_id
     atom.radical = radical
     atom.prepareGeometryChange = MagicMock()
     atom.update_style = MagicMock()
-    atom.pos = MagicMock(return_value=QPointF(0,0))
+    atom.pos = MagicMock(return_value=QPointF(0, 0))
     return atom
+
 
 class MockScene(KeyboardMixin):
     def __init__(self):
@@ -31,9 +33,11 @@ class MockScene(KeyboardMixin):
     def itemAt(self, pos, transformCase):
         return self._item_at_cursor
 
+
 @pytest.fixture
 def scene():
     return MockScene()
+
 
 def test_radical_toggle_selected(scene):
     """Test toggling radical on multiple selected atoms."""
@@ -48,7 +52,7 @@ def test_radical_toggle_selected(scene):
 
     # We need to patch QCursor.pos() inside KeyboardMixin.keyPressEvent
     with patch("moleditpy.ui.molecular_scene_handler.QCursor.pos") as mock_cursor:
-        mock_cursor.return_value = QPointF(0,0)
+        mock_cursor.return_value = QPointF(0, 0)
         scene.keyPressEvent(event)
 
     assert a1.radical == 1
@@ -59,6 +63,7 @@ def test_radical_toggle_selected(scene):
     a2.update_style.assert_called_once()
     scene.window.edit_actions_manager.push_undo_state.assert_called_once()
     event.accept.assert_called_once()
+
 
 def test_radical_toggle_at_cursor(scene):
     """Test toggling radical on an atom at the cursor when nothing is selected."""
@@ -71,12 +76,13 @@ def test_radical_toggle_at_cursor(scene):
     event.key.return_value = Qt.Key.Key_Period
 
     with patch("moleditpy.ui.molecular_scene_handler.QCursor.pos") as mock_cursor:
-        mock_cursor.return_value = QPointF(0,0)
+        mock_cursor.return_value = QPointF(0, 0)
         scene.keyPressEvent(event)
 
     assert a1.radical == 0
     assert scene.data.atoms[1]["radical"] == 0
     scene.window.edit_actions_manager.push_undo_state.assert_called_once()
+
 
 def test_radical_toggle_no_target(scene):
     """Test that nothing happens if no atoms are selected or at the cursor."""
@@ -87,7 +93,7 @@ def test_radical_toggle_no_target(scene):
     event.key.return_value = Qt.Key.Key_Period
 
     with patch("moleditpy.ui.molecular_scene_handler.QCursor.pos") as mock_cursor:
-        mock_cursor.return_value = QPointF(0,0)
+        mock_cursor.return_value = QPointF(0, 0)
         scene.keyPressEvent(event)
 
     scene.window.edit_actions_manager.push_undo_state.assert_not_called()
