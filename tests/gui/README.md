@@ -87,3 +87,17 @@ pip install pytest pytest-qt pytest-mock
 ```
 
 You will also need the application's main dependencies, such as `PyQt6`.
+
+## 5\. Headless Mode Limitations
+
+GUI tests in this directory interact with real `PyQt6` widgets and simulate mouse/keyboard events through the view's coordinate system. Some tests may fail or behave inconsistently when run in a headless or offscreen environment (e.g., `QT_QPA_PLATFORM=offscreen`, CI without a display, or `MOLEDITPY_HEADLESS=1`).
+
+**Known limitations in headless mode:**
+
+- **Viewport coordinate mapping**: Tests that use `drag_scene()` rely on `view.mapFromScene()` to convert scene coordinates to viewport pixel positions. In headless mode, the view may have no physical size, causing the reverse mapping (`event.scenePos()`) to return incorrect scene coordinates. This can cause drag-based bonding tests to create a new atom instead of bonding to an existing one.
+
+- **3D rendering tests**: Tests that verify chiral labels or 3D molecule rendering (`test_chiral_labels_integration.py`) depend on `waitUntil` callbacks that may time out if PyVista/VTK mocks do not fully replicate the rendering pipeline.
+
+- **Teardown dialogs**: The save-prompt bypass (`has_unsaved_changes = False`) in the `app` fixture teardown is skipped in headless/offscreen mode to prevent segfaults. If a test leaves unsaved state, teardown may emit warnings.
+
+**Recommendation**: Run GUI tests on a machine with a display server, or use a virtual framebuffer such as `Xvfb` on Linux. Unit tests in `tests/unit/` are fully headless-safe.
