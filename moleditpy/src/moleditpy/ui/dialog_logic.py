@@ -16,10 +16,6 @@ import json
 import os
 from PyQt6.QtWidgets import QInputDialog, QMessageBox
 
-try:
-    from . import sip_isdeleted_safe
-except ImportError:
-    pass
 
 try:
     # package relative imports (preferred when running as `python -m moleditpy`)

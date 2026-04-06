@@ -22,7 +22,7 @@ from typing import Any, Dict, List, Optional
 import numpy as np
 
 try:
-    from .mol_geometry import is_problematic_valence, identify_valence_problems
+    from .mol_geometry import identify_valence_problems
 except ImportError:
     from moleditpy.core.mol_geometry import identify_valence_problems
 

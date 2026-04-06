@@ -752,7 +752,6 @@ class StateManager:
                     if self.host.view_3d_manager.current_mol:
                         # Set 3D coordinates
                         if self.host.view_3d_manager.current_mol.GetNumConformers() > 0:
-                            conf = self.host.view_3d_manager.current_mol.GetConformer()
                             atoms_3d = structure_3d.get("atoms", [])
                             # Ensure numpy array size matches atoms in file
                             num_atoms_file = len(atoms_3d)
