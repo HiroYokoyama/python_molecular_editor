@@ -159,9 +159,7 @@ class PluginContext:
         """
         Display a temporary message in the status bar of the main window.
         """
-        mw = self.get_main_window()
-        if mw and hasattr(mw, "ui_manager"):
-            mw.ui_manager.update_status_bar(message)
+        self._manager.show_status_message(message, timeout)
 
     @property
     def current_mol(self) -> Any:
