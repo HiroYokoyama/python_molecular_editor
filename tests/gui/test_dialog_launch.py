@@ -10,8 +10,6 @@ from moleditpy.ui.move_group_dialog import MoveGroupDialog
 
 
 @pytest.fixture
-
-
 def mol():
     m = Chem.MolFromSmiles("CCCCCOC")
     m = Chem.AddHs(m)

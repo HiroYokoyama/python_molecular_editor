@@ -391,7 +391,9 @@ def test_draw_bond_to_existing_atom(window, qtbot):
     window.ui_manager.set_mode("bond_1_0")
     start_item = window.state_manager.data.atoms[0]["item"]
 
-    drag_scene(qtbot, scene, start_item.pos(), window.state_manager.data.atoms[1]["item"].pos())
+    drag_scene(
+        qtbot, scene, start_item.pos(), window.state_manager.data.atoms[1]["item"].pos()
+    )
 
     # 3. Verify bond addition
     assert len(window.state_manager.data.atoms) == 2  # No new atoms
@@ -558,7 +560,11 @@ def test_optimize_3d(window, qtbot, monkeypatch):
 
     # 4. Verify success via status bar message
     msg = window.statusBar().currentMessage()
-    assert "Optimization completed" in msg or "optimization successful" in msg or "Process completed" in msg
+    assert (
+        "Optimization completed" in msg
+        or "optimization successful" in msg
+        or "Process completed" in msg
+    )
 
 
 @pytest.mark.gui
@@ -614,7 +620,6 @@ def test_undo_redo(window, qtbot):
     # Redo should now be enabled
     assert window.init_manager.redo_action.isEnabled() is True
 
-
     # 3. Trigger Redo
     window.edit_actions_manager.redo()
     qtbot.wait(50)
@@ -654,7 +659,9 @@ def test_clear_all(window, qtbot):
     assert (
         window.host.state_manager.has_unsaved_changes is False
     )  # Flag should be reset after clear_all
-    assert len(window.edit_actions_manager.undo_stack) == 1  # Undo stack should be reset
+    assert (
+        len(window.edit_actions_manager.undo_stack) == 1
+    )  # Undo stack should be reset
 
 
 @pytest.mark.gui
@@ -1273,8 +1280,13 @@ def test_toggle_3d_atom_info(window, qtbot, monkeypatch):
     # (The 2D->3D conversion might mock draw_3d but not set this attribute)
     import numpy as _np
 
-    if not hasattr(window, "atom_positions_3d") or window.view_3d_manager.atom_positions_3d is None:
-        window.view_3d_manager.atom_positions_3d = _np.zeros((window.view_3d_manager.current_mol.GetNumAtoms(), 3))
+    if (
+        not hasattr(window, "atom_positions_3d")
+        or window.view_3d_manager.atom_positions_3d is None
+    ):
+        window.view_3d_manager.atom_positions_3d = _np.zeros(
+            (window.view_3d_manager.current_mol.GetNumAtoms(), 3)
+        )
 
     # 2. Trigger "Show Original ID / Index"
     action_id = find_menu_action(window.menuBar(), "Show Original ID / Index")
@@ -1318,7 +1330,9 @@ def test_user_template_dialog_save_and_use(window, qtbot, monkeypatch):
 
     # 1. Trigger action to open templates dialog
     # QDialog.show is mocked in conftest.py
-    action_open_dialog = get_button(window.init_manager.toolbar_bottom, "Open User Templates Dialog")
+    action_open_dialog = get_button(
+        window.init_manager.toolbar_bottom, "Open User Templates Dialog"
+    )
     assert action_open_dialog is not None
     action_open_dialog.click()
     qtbot.wait(50)
@@ -1345,6 +1359,7 @@ def test_user_template_dialog_save_and_use(window, qtbot, monkeypatch):
     # Patch QInputDialog in dialog_logic module directly (C++ methods can't be
     # patched on the class itself in headless mode)
     import moleditpy.ui.dialog_logic as _dl
+
     mock_qinput = _mock.MagicMock()
     mock_qinput.getText.return_value = ("test", True)
     monkeypatch.setattr(_dl, "QInputDialog", mock_qinput, raising=False)
@@ -1436,9 +1451,7 @@ def test_implicit_hydrogens_update(window, qtbot):
 
     # 3. Draw second C atom and bond (drag)
     # Note: dragging in atom_C mode creates a bond and a new atom at the end point.
-    drag_scene(
-        qtbot, scene, QPointF(0, 0), QPointF(50, 0)
-    )  # id 1 created, (0, 1) bond
+    drag_scene(qtbot, scene, QPointF(0, 0), QPointF(50, 0))  # id 1 created, (0, 1) bond
     assert len(window.state_manager.data.atoms) == 2
     assert len(window.state_manager.data.bonds) == 1
 
@@ -1554,7 +1567,9 @@ def test_project_save_load_round_trip(window, qtbot, monkeypatch, tmp_path):
     assert window.host.state_manager.has_unsaved_changes is False
 
     # 3. Clear scene
-    window.edit_actions_manager.clear_2d_editor(push_to_undo=False)  # Clear without dialog
+    window.edit_actions_manager.clear_2d_editor(
+        push_to_undo=False
+    )  # Clear without dialog
     window.host.state_manager.has_unsaved_changes = False
     assert len(window.state_manager.data.atoms) == 0
 
@@ -1671,9 +1686,9 @@ def test_import_invalid_mol_file(window, qtbot, monkeypatch, tmp_path):
     # 4. Verify error
     # RDKit returns None -> ValueError -> "Invalid MOL file format: ..." on status bar
     status_msg = window.statusBar().currentMessage()
-    assert "Invalid MOL file format:" in status_msg or "Error loading file:" in status_msg, (
-        f"Expected MOL parse error on status bar, got: {status_msg!r}"
-    )
+    assert (
+        "Invalid MOL file format:" in status_msg or "Error loading file:" in status_msg
+    ), f"Expected MOL parse error on status bar, got: {status_msg!r}"
     # Verify data remains empty
     assert len(window.state_manager.data.atoms) == 0
 

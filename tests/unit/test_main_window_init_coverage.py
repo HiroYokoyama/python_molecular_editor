@@ -1,9 +1,12 @@
 from unittest.mock import patch
 
+
 def test_imports_mainwindow():
     """Ensure MainWindow and its init submodule can be imported without crashing."""
     from moleditpy.ui.main_window_init import MainInitManager
+
     assert hasattr(MainInitManager, "init_ui")
+
 
 def test_mainwindow_init_with_mocks():
     """Verify MainWindow instantiates MainInitManager during initialization."""

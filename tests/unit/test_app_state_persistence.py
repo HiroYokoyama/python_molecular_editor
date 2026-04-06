@@ -6,6 +6,7 @@ from moleditpy.core.molecular_data import MolecularData
 from PyQt6.QtCore import QPointF
 from unittest.mock import MagicMock
 
+
 class DummyMainWindow(StateManager):
     def __init__(self):
         # Initialize as StateManager, which expects a 'host'
@@ -14,7 +15,7 @@ class DummyMainWindow(StateManager):
         self.data = MolecularData()
 
         # Initialize all managers first
-        self.state_manager = self # We are the state manager
+        self.state_manager = self  # We are the state manager
         self.init_manager = MagicMock()
         self.ui_manager = MagicMock()
         self.edit_actions_manager = MagicMock()
@@ -97,9 +98,11 @@ class DummyMainWindow(StateManager):
     def draw_molecule_3d(self, mol):
         pass
 
+
 @pytest.fixture
 def dummy_window(app):
     return DummyMainWindow()
+
 
 def test_pmeprj_serialization_roundtrip(dummy_window):
     """Test full project serialization/deserialization (PMEPRJ)."""
@@ -154,8 +157,14 @@ def test_pmeprj_serialization_roundtrip(dummy_window):
     assert mw.view_3d_manager.current_mol is not None
     assert mw.view_3d_manager.current_mol.GetNumAtoms() == mol.GetNumAtoms()
     # Check property round-trip
-    assert mw.view_3d_manager.current_mol.GetAtomWithIdx(0).GetIntProp("_original_atom_id") == aid1
-    assert mw.view_3d_manager.current_mol.GetAtomWithIdx(1).GetIntProp("_original_atom_id") == aid2
+    assert (
+        mw.view_3d_manager.current_mol.GetAtomWithIdx(0).GetIntProp("_original_atom_id")
+        == aid1
+    )
+    assert (
+        mw.view_3d_manager.current_mol.GetAtomWithIdx(1).GetIntProp("_original_atom_id")
+        == aid2
+    )
 
     # 7. Verify helper data (atom_positions_3d)
     assert mw.view_3d_manager.atom_positions_3d is not None
@@ -167,6 +176,7 @@ def test_pmeprj_serialization_roundtrip(dummy_window):
     assert mw.edit_3d_manager.constraints_3d[0][2] == 1.43
     assert mw.compute_manager.last_successful_optimization_method == "MMFF94s"
     assert mw._preserved_plugin_data["TestPlugin"]["val"] == 42
+
 
 def test_undo_state_binary_roundtrip(dummy_window):
     """Test the internal binary state serialization used for Undo/Redo."""
@@ -197,7 +207,11 @@ def test_undo_state_binary_roundtrip(dummy_window):
 
     # Verify
     assert mw.state_manager.data.atoms[aid]["symbol"] == "N"
-    assert mw.view_3d_manager.current_mol.GetAtomWithIdx(0).GetIntProp("_original_atom_id") == aid
+    assert (
+        mw.view_3d_manager.current_mol.GetAtomWithIdx(0).GetIntProp("_original_atom_id")
+        == aid
+    )
+
 
 def test_legacy_version_handling(dummy_window):
     """Verify that version mismatch warnings are triggered (but don't crash)."""
@@ -207,7 +221,7 @@ def test_legacy_version_handling(dummy_window):
     json_data = {
         "format": "PME Project",
         "version": "99.0.0",
-        "2d_structure": {"atoms": [], "bonds": []}
+        "2d_structure": {"atoms": [], "bonds": []},
     }
 
     # This should trigger QMessageBox call (which we might want to mock if it's annoying)

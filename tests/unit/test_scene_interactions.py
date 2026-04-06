@@ -24,9 +24,7 @@ def create_mock_event(pos=QPointF(100, 100), button=Qt.MouseButton.LeftButton):
 
 @patch("PyQt6.QtWidgets.QGraphicsScene.mousePressEvent")
 @patch("PyQt6.QtWidgets.QGraphicsScene.mouseReleaseEvent")
-@patch(
-    "moleditpy.ui.molecule_scene.QApplication.startDragDistance", return_value=1000
-)
+@patch("moleditpy.ui.molecule_scene.QApplication.startDragDistance", return_value=1000)
 def test_scene_toggle_radical(mock_drag, mock_release, mock_press, mock_parser_host):
     scene = setup_scene_with_view(mock_parser_host)
     scene.mode = "radical"
@@ -54,9 +52,7 @@ def test_scene_toggle_radical(mock_drag, mock_release, mock_press, mock_parser_h
 
 @patch("PyQt6.QtWidgets.QGraphicsScene.mousePressEvent")
 @patch("PyQt6.QtWidgets.QGraphicsScene.mouseReleaseEvent")
-@patch(
-    "moleditpy.ui.molecule_scene.QApplication.startDragDistance", return_value=1000
-)
+@patch("moleditpy.ui.molecule_scene.QApplication.startDragDistance", return_value=1000)
 def test_scene_toggle_charge(mock_drag, mock_release, mock_press, mock_parser_host):
     scene = setup_scene_with_view(mock_parser_host)
     scene.mode = "charge_plus"

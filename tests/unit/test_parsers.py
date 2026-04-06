@@ -14,20 +14,32 @@ class DummyParser(IOManager):
         return getattr(self._host, name)
 
     @property
-    def data(self): return self.host.state_manager.data
-    @property
-    def scene(self): return self.host.init_manager.scene
-    @property
-    def settings(self): return self.host.init_manager.settings
-    @property
-    def view_2d(self): return self.host.init_manager.view_2d
-    @property
-    def plotter(self): return self.host.view_3d_manager.plotter
+    def data(self):
+        return self.host.state_manager.data
 
     @property
-    def current_mol(self): return self.host.view_3d_manager.current_mol
+    def scene(self):
+        return self.host.init_manager.scene
+
+    @property
+    def settings(self):
+        return self.host.init_manager.settings
+
+    @property
+    def view_2d(self):
+        return self.host.init_manager.view_2d
+
+    @property
+    def plotter(self):
+        return self.host.view_3d_manager.plotter
+
+    @property
+    def current_mol(self):
+        return self.host.view_3d_manager.current_mol
+
     @current_mol.setter
-    def current_mol(self, v): self.host.view_3d_manager.current_mol = v
+    def current_mol(self, v):
+        self.host.view_3d_manager.current_mol = v
 
     def check_unsaved_changes(self):
         return self._host.check_unsaved_changes()

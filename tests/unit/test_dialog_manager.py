@@ -50,6 +50,7 @@ from moleditpy.ui.dialog_logic import DialogManager
 # Shared QApplication (session-scoped)
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture(scope="session")
 def qapp():
     return QApplication.instance() or QApplication([])
@@ -59,6 +60,7 @@ def qapp():
 # DummyHost
 # ---------------------------------------------------------------------------
 
+
 class DummyHost:
     def __init__(self):
         self.statusBar_mock = MagicMock()
@@ -66,12 +68,14 @@ class DummyHost:
         self._template_dialog = None
 
         self.init_manager = MagicMock()
-        self.init_manager.settings_dir = os.path.join(tempfile.gettempdir(), "moleditpy_test_settings")
+        self.init_manager.settings_dir = os.path.join(
+            tempfile.gettempdir(), "moleditpy_test_settings"
+        )
         self.init_manager.settings = {}
 
         self.state_manager = MagicMock()
         self.state_manager.data = MagicMock()
-        self.state_manager.data.atoms = {"a1": {}}     # non-empty by default
+        self.state_manager.data.atoms = {"a1": {}}  # non-empty by default
         self.state_manager.has_unsaved_changes = False
 
         self.view_3d_manager = MagicMock()
@@ -93,6 +97,7 @@ class DummyHost:
 # Fixture
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture
 def dm(qapp):
     return DialogManager(DummyHost())
@@ -102,8 +107,8 @@ def dm(qapp):
 # _get_preselected_atoms_3d
 # ===========================================================================
 
-class TestGetPreselectedAtoms3D:
 
+class TestGetPreselectedAtoms3D:
     def test_returns_empty_when_no_selection(self, dm):
         dm.host.edit_3d_manager.selected_atoms_for_measurement = []
         assert dm._get_preselected_atoms_3d() == []
@@ -127,8 +132,8 @@ class TestGetPreselectedAtoms3D:
 # show_about_dialog
 # ===========================================================================
 
-class TestShowAboutDialog:
 
+class TestShowAboutDialog:
     def test_creates_and_execs_dialog(self, dm):
         with patch("moleditpy.ui.dialog_logic.AboutDialog") as MockAbout:
             instance = MagicMock()
@@ -142,8 +147,8 @@ class TestShowAboutDialog:
 # open_periodic_table_dialog
 # ===========================================================================
 
-class TestOpenPeriodicTableDialog:
 
+class TestOpenPeriodicTableDialog:
     def test_creates_connects_and_execs(self, dm):
         with patch("moleditpy.ui.dialog_logic.PeriodicTableDialog") as MockPT:
             instance = MagicMock()
@@ -167,8 +172,8 @@ class TestOpenPeriodicTableDialog:
 # open_analysis_window
 # ===========================================================================
 
-class TestOpenAnalysisWindow:
 
+class TestOpenAnalysisWindow:
     def test_opens_when_mol_exists(self, dm):
         with patch("moleditpy.ui.dialog_logic.AnalysisWindow") as MockAW:
             instance = MagicMock()
@@ -195,8 +200,8 @@ class TestOpenAnalysisWindow:
 # open_template_dialog
 # ===========================================================================
 
-class TestOpenTemplateDialog:
 
+class TestOpenTemplateDialog:
     def test_creates_and_execs(self, dm):
         with patch("moleditpy.ui.dialog_logic.UserTemplateDialog") as MockUT:
             instance = MagicMock()
@@ -210,8 +215,8 @@ class TestOpenTemplateDialog:
 # open_template_dialog_and_activate
 # ===========================================================================
 
-class TestOpenTemplateDialogAndActivate:
 
+class TestOpenTemplateDialogAndActivate:
     def test_creates_new_dialog_when_none_exists(self, dm):
         dm.host._template_dialog = None
         with patch("moleditpy.ui.dialog_logic.UserTemplateDialog") as MockUT:
@@ -269,8 +274,8 @@ class TestOpenTemplateDialogAndActivate:
 # save_2d_as_template
 # ===========================================================================
 
-class TestSave2DAsTemplate:
 
+class TestSave2DAsTemplate:
     def test_warns_when_no_atoms(self, qapp):
         host = DummyHost()
         host.state_manager.data.atoms = {}
@@ -282,23 +287,32 @@ class TestSave2DAsTemplate:
         assert "No structure" in args[2] or "template" in args[2].lower()
 
     def test_noop_on_cancelled_input(self, dm):
-        with patch("moleditpy.ui.dialog_logic.QInputDialog.getText",
-                   return_value=("", False)):
+        with patch(
+            "moleditpy.ui.dialog_logic.QInputDialog.getText", return_value=("", False)
+        ):
             dm.save_2d_as_template()
         dm.host.state_manager.data.to_template_dict.assert_not_called()
 
     def test_noop_on_blank_name(self, dm):
-        with patch("moleditpy.ui.dialog_logic.QInputDialog.getText",
-                   return_value=("   ", True)):
+        with patch(
+            "moleditpy.ui.dialog_logic.QInputDialog.getText", return_value=("   ", True)
+        ):
             dm.save_2d_as_template()
         dm.host.state_manager.data.to_template_dict.assert_not_called()
 
     def test_saves_template_file(self, dm, tmp_path):
         dm.host.init_manager.settings_dir = str(tmp_path)
-        dm.host.state_manager.data.to_template_dict.return_value = {"name": "mytemplate", "atoms": []}
-        with patch("moleditpy.ui.dialog_logic.QInputDialog.getText",
-                   return_value=("mytemplate", True)), \
-             patch("moleditpy.ui.dialog_logic.QMessageBox.information"):
+        dm.host.state_manager.data.to_template_dict.return_value = {
+            "name": "mytemplate",
+            "atoms": [],
+        }
+        with (
+            patch(
+                "moleditpy.ui.dialog_logic.QInputDialog.getText",
+                return_value=("mytemplate", True),
+            ),
+            patch("moleditpy.ui.dialog_logic.QMessageBox.information"),
+        ):
             dm.save_2d_as_template()
         saved = tmp_path / "user-templates" / "mytemplate.pmetmplt"
         assert saved.exists()
@@ -310,12 +324,21 @@ class TestSave2DAsTemplate:
         tpl_dir.mkdir()
         f = tpl_dir / "mytemplate.pmetmplt"
         f.write_text("{}")
-        dm.host.state_manager.data.to_template_dict.return_value = {"name": "mytemplate", "atoms": []}
-        with patch("moleditpy.ui.dialog_logic.QInputDialog.getText",
-                   return_value=("mytemplate", True)), \
-             patch("moleditpy.ui.dialog_logic.QMessageBox.question",
-                   return_value=QMessageBox.StandardButton.Yes), \
-             patch("moleditpy.ui.dialog_logic.QMessageBox.information"):
+        dm.host.state_manager.data.to_template_dict.return_value = {
+            "name": "mytemplate",
+            "atoms": [],
+        }
+        with (
+            patch(
+                "moleditpy.ui.dialog_logic.QInputDialog.getText",
+                return_value=("mytemplate", True),
+            ),
+            patch(
+                "moleditpy.ui.dialog_logic.QMessageBox.question",
+                return_value=QMessageBox.StandardButton.Yes,
+            ),
+            patch("moleditpy.ui.dialog_logic.QMessageBox.information"),
+        ):
             dm.save_2d_as_template()
         assert "atoms" in json.loads(f.read_text())
 
@@ -325,19 +348,32 @@ class TestSave2DAsTemplate:
         tpl_dir.mkdir()
         f = tpl_dir / "mytemplate.pmetmplt"
         f.write_text('{"original": true}')
-        dm.host.state_manager.data.to_template_dict.return_value = {"name": "mytemplate", "atoms": []}
-        with patch("moleditpy.ui.dialog_logic.QInputDialog.getText",
-                   return_value=("mytemplate", True)), \
-             patch("moleditpy.ui.dialog_logic.QMessageBox.question",
-                   return_value=QMessageBox.StandardButton.No):
+        dm.host.state_manager.data.to_template_dict.return_value = {
+            "name": "mytemplate",
+            "atoms": [],
+        }
+        with (
+            patch(
+                "moleditpy.ui.dialog_logic.QInputDialog.getText",
+                return_value=("mytemplate", True),
+            ),
+            patch(
+                "moleditpy.ui.dialog_logic.QMessageBox.question",
+                return_value=QMessageBox.StandardButton.No,
+            ),
+        ):
             dm.save_2d_as_template()
         assert json.loads(f.read_text()) == {"original": True}
 
     def test_shows_error_on_exception(self, dm):
         dm.host.state_manager.data.to_template_dict.side_effect = AttributeError("boom")
-        with patch("moleditpy.ui.dialog_logic.QInputDialog.getText",
-                   return_value=("mytemplate", True)), \
-             patch("moleditpy.ui.dialog_logic.QMessageBox.critical") as mock_crit:
+        with (
+            patch(
+                "moleditpy.ui.dialog_logic.QInputDialog.getText",
+                return_value=("mytemplate", True),
+            ),
+            patch("moleditpy.ui.dialog_logic.QMessageBox.critical") as mock_crit,
+        ):
             dm.save_2d_as_template()
         mock_crit.assert_called_once()
 
@@ -345,6 +381,7 @@ class TestSave2DAsTemplate:
 # ===========================================================================
 # Modeless geometry dialogs — shared helper
 # ===========================================================================
+
 
 def _assert_modeless(dm, method, cls_name, *args):
     """Assert dialog is appended, shown, and all 3 signals connected."""
@@ -359,7 +396,6 @@ def _assert_modeless(dm, method, cls_name, *args):
 
 
 class TestModelessGeometryDialogs:
-
     def test_open_translation_dialog(self, dm):
         _assert_modeless(dm, "open_translation_dialog", "TranslationDialog")
 
@@ -419,12 +455,32 @@ class TestModelessGeometryDialogs:
     def test_accepted_status_messages(self, qapp):
         """Each dialog's first accepted lambda posts the right status bar message."""
         cases = [
-            ("open_translation_dialog",   "TranslationDialog", [],     "Translation applied."),
-            ("open_move_group_dialog",     "MoveGroupDialog",   [],     "Group transformation applied."),
-            ("open_bond_length_dialog",    "BondLengthDialog",  [],     "Bond length adjusted."),
-            ("open_angle_dialog",          "AngleDialog",       [],     "Angle adjusted."),
-            ("open_dihedral_dialog",       "DihedralDialog",    [],     "Dihedral angle adjusted."),
-            ("open_planarize_dialog",      "PlanarizeDialog",   [],     "Selection planarized to best-fit plane."),
+            (
+                "open_translation_dialog",
+                "TranslationDialog",
+                [],
+                "Translation applied.",
+            ),
+            (
+                "open_move_group_dialog",
+                "MoveGroupDialog",
+                [],
+                "Group transformation applied.",
+            ),
+            (
+                "open_bond_length_dialog",
+                "BondLengthDialog",
+                [],
+                "Bond length adjusted.",
+            ),
+            ("open_angle_dialog", "AngleDialog", [], "Angle adjusted."),
+            ("open_dihedral_dialog", "DihedralDialog", [], "Dihedral angle adjusted."),
+            (
+                "open_planarize_dialog",
+                "PlanarizeDialog",
+                [],
+                "Selection planarized to best-fit plane.",
+            ),
         ]
         for method, cls, args, expected in cases:
             host = DummyHost()
@@ -470,8 +526,8 @@ class TestModelessGeometryDialogs:
 # open_mirror_dialog
 # ===========================================================================
 
-class TestOpenMirrorDialog:
 
+class TestOpenMirrorDialog:
     def test_opens_when_mol_exists(self, dm):
         with patch("moleditpy.ui.dialog_logic.MirrorDialog") as MockM:
             instance = MagicMock()
@@ -500,8 +556,8 @@ class TestOpenMirrorDialog:
 # open_settings_dialog
 # ===========================================================================
 
-class TestOpenSettingsDialog:
 
+class TestOpenSettingsDialog:
     def test_creates_and_execs(self, dm):
         with patch("moleditpy.ui.dialog_logic.SettingsDialog") as MockSD:
             instance = MagicMock()
@@ -515,8 +571,8 @@ class TestOpenSettingsDialog:
 # open_color_settings_dialog
 # ===========================================================================
 
-class TestOpenColorSettingsDialog:
 
+class TestOpenColorSettingsDialog:
     def test_creates_and_execs(self, dm):
         with patch("moleditpy.ui.dialog_logic.ColorSettingsDialog") as MockCD:
             instance = MagicMock()
@@ -530,8 +586,8 @@ class TestOpenColorSettingsDialog:
 # open_constrained_optimization_dialog
 # ===========================================================================
 
-class TestOpenConstrainedOptimizationDialog:
 
+class TestOpenConstrainedOptimizationDialog:
     def test_opens_when_mol_exists(self, dm):
         with patch("moleditpy.ui.dialog_logic.ConstrainedOptimizationDialog") as MockCO:
             instance = MagicMock()
@@ -567,4 +623,6 @@ class TestOpenConstrainedOptimizationDialog:
             instance.finished.connect.side_effect = lambda cb: fin_cbs.append(cb)
             dm.open_constrained_optimization_dialog()
         fin_cbs[0]()
-        dm.host.edit_3d_manager.remove_dialog_from_list.assert_called_once_with(instance)
+        dm.host.edit_3d_manager.remove_dialog_from_list.assert_called_once_with(
+            instance
+        )

@@ -8,7 +8,9 @@ def test_chiral_labels_toggle_3d(window, qtbot):
     """
     window.string_importer_manager.load_from_smiles("C[C@H](O)CC")
     window.compute_manager.trigger_conversion()
-    qtbot.waitUntil(lambda: window.view_3d_manager.current_mol is not None, timeout=15000)
+    qtbot.waitUntil(
+        lambda: window.view_3d_manager.current_mol is not None, timeout=15000
+    )
 
     # Reset mock to clear any initialization calls
     window.view_3d_manager.plotter.add_point_labels.reset_mock()
@@ -41,7 +43,9 @@ def test_chiral_labels_toggle_3d(window, qtbot):
         for call in window.view_3d_manager.plotter.add_point_labels.call_args_list
         if call.kwargs.get("name") == "chiral_labels"
     )
-    assert len(chiral_call.args) > 1, "add_point_labels was not called with a labels argument"
+    assert len(chiral_call.args) > 1, (
+        "add_point_labels was not called with a labels argument"
+    )
     labels = chiral_call.args[1]
     assert initial_label in labels
 
@@ -57,7 +61,9 @@ def test_chiral_labels_mirror_inversion_3d(window, qtbot):
     """
     window.string_importer_manager.load_from_smiles("C[C@H](O)CC")
     window.compute_manager.trigger_conversion()
-    qtbot.waitUntil(lambda: window.view_3d_manager.current_mol is not None, timeout=15000)
+    qtbot.waitUntil(
+        lambda: window.view_3d_manager.current_mol is not None, timeout=15000
+    )
 
     window.init_manager.toggle_chiral_action.setChecked(True)
     window.init_manager.toggle_chiral_action.triggered.emit(True)
@@ -101,7 +107,9 @@ def test_chiral_labels_mirror_inversion_3d(window, qtbot):
         for call in window.view_3d_manager.plotter.add_point_labels.call_args_list
         if call.kwargs.get("name") == "chiral_labels"
     )
-    assert len(chiral_call.args) > 1, "add_point_labels was not called with a labels argument"
+    assert len(chiral_call.args) > 1, (
+        "add_point_labels was not called with a labels argument"
+    )
     labels = chiral_call.args[1]
     assert new_label in labels
     assert initial_label not in labels

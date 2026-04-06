@@ -1,5 +1,5 @@
-
 from moleditpy.ui.edit_actions_logic import Rotate2DDialog
+
 
 def test_rotate_2d_dialog_init(window, qtbot):
     """Test Rotate2DDialog GUI initialization in the GUI test environment."""

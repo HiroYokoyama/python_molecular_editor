@@ -2,7 +2,7 @@
 import os
 import sys
 import pytest
-from PyQt6.QtWidgets import QApplication, QMenu, QToolBar, QToolButton, QFileDialog
+from PyQt6.QtWidgets import QApplication
 import importlib
 import importlib.util
 
@@ -442,16 +442,16 @@ if moleditpy is not None:
         # project `src` layout as a fallback.
         try:
             # Get the real project root (two levels up from tests/gui)
-            proj_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+            proj_root = os.path.abspath(
+                os.path.join(os.path.dirname(__file__), "..", "..")
+            )
             mm_path = os.path.join(
                 proj_root, "moleditpy", "src", "moleditpy", "ui", "main_window.py"
             )
             if os.path.exists(mm_path):
                 import importlib.util as _il
 
-                spec = _il.spec_from_file_location(
-                    "moleditpy.ui.main_window", mm_path
-                )
+                spec = _il.spec_from_file_location("moleditpy.ui.main_window", mm_path)
                 mod = _il.module_from_spec(spec)
                 spec.loader.exec_module(mod)
                 setattr(moleditpy, "MainWindow", getattr(mod, "MainWindow", None))
@@ -475,7 +475,9 @@ if moleditpy is not None:
         _attach_symbol_on_main_and_package("CLIPBOARD_MIME_TYPE", _CLIP)
     except Exception:
         try:
-            proj_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+            proj_root = os.path.abspath(
+                os.path.join(os.path.dirname(__file__), "..", "..")
+            )
             md_path = os.path.join(
                 proj_root, "moleditpy", "src", "moleditpy", "core", "molecular_data.py"
             )
@@ -529,7 +531,9 @@ if moleditpy is not None:
             traceback.print_exc()
     except Exception:
         try:
-            proj_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+            proj_root = os.path.abspath(
+                os.path.join(os.path.dirname(__file__), "..", "..")
+            )
             const_path = os.path.join(
                 proj_root, "moleditpy", "src", "moleditpy", "utils", "constants.py"
             )
@@ -637,6 +641,7 @@ def app(request):
     if sys.platform == "win32":
         try:
             import faulthandler
+
             faulthandler.disable()
         except Exception:
             pass
@@ -655,10 +660,10 @@ def window(app, qtbot, monkeypatch):
     """
     import os
     import sys
-    import traceback
 
     def _patch_mainwindow_compat(cls):
         """Add property proxies to the class so legacy tests can access managers."""
+
         def _get_safe(self, manager_name, attr_name, default=None):
             manager = getattr(self, manager_name, None)
             if manager:
@@ -674,91 +679,168 @@ def window(app, qtbot, monkeypatch):
         cls.host = property(lambda self: self)
 
         # MainInitManager proxies
-        cls.settings = property(lambda self: _get_safe(self, 'init_manager', 'settings', {}), 
-                               lambda self, v: _set_safe(self, 'init_manager', 'settings', v))
-        cls.current_file_path = property(lambda self: _get_safe(self, 'init_manager', 'current_file_path'),
-                                        lambda self, v: _set_safe(self, 'init_manager', 'current_file_path', v))
-        cls.settings_dir = property(lambda self: _get_safe(self, 'init_manager', 'settings_dir'),
-                                   lambda self, v: _set_safe(self, 'init_manager', 'settings_dir', v))
-        cls.settings_file = property(lambda self: _get_safe(self, 'init_manager', 'settings_file'),
-                                    lambda self, v: _set_safe(self, 'init_manager', 'settings_file', v))
-        cls.settings_dirty = property(lambda self: _get_safe(self, 'init_manager', 'settings_dirty', False),
-                                     lambda self, v: _set_safe(self, 'init_manager', 'settings_dirty', v))
-        cls.initial_settings = property(lambda self: self.init_manager.initial_settings,
-                                       lambda self, v: setattr(self.init_manager, 'initial_settings', v))
-        cls.scene = property(lambda self: self.init_manager.scene,
-                            lambda self, v: setattr(self.init_manager, 'scene', v))
-        
+        cls.settings = property(
+            lambda self: _get_safe(self, "init_manager", "settings", {}),
+            lambda self, v: _set_safe(self, "init_manager", "settings", v),
+        )
+        cls.current_file_path = property(
+            lambda self: _get_safe(self, "init_manager", "current_file_path"),
+            lambda self, v: _set_safe(self, "init_manager", "current_file_path", v),
+        )
+        cls.settings_dir = property(
+            lambda self: _get_safe(self, "init_manager", "settings_dir"),
+            lambda self, v: _set_safe(self, "init_manager", "settings_dir", v),
+        )
+        cls.settings_file = property(
+            lambda self: _get_safe(self, "init_manager", "settings_file"),
+            lambda self, v: _set_safe(self, "init_manager", "settings_file", v),
+        )
+        cls.settings_dirty = property(
+            lambda self: _get_safe(self, "init_manager", "settings_dirty", False),
+            lambda self, v: _set_safe(self, "init_manager", "settings_dirty", v),
+        )
+        cls.initial_settings = property(
+            lambda self: self.init_manager.initial_settings,
+            lambda self, v: setattr(self.init_manager, "initial_settings", v),
+        )
+        cls.scene = property(
+            lambda self: self.init_manager.scene,
+            lambda self, v: setattr(self.init_manager, "scene", v),
+        )
+
         # StateManager proxies
-        cls.data = property(lambda self: self.state_manager.data,
-                           lambda self, v: setattr(self.state_manager, 'data', v))
-        cls.undo_stack = property(lambda self: self.state_manager.undo_stack,
-                                 lambda self, v: setattr(self.state_manager, 'undo_stack', v))
-        cls.has_unsaved_changes = property(lambda self: self.state_manager.has_unsaved_changes,
-                                          lambda self, v: setattr(self.state_manager, 'has_unsaved_changes', v))
+        cls.data = property(
+            lambda self: self.state_manager.data,
+            lambda self, v: setattr(self.state_manager, "data", v),
+        )
+        cls.undo_stack = property(
+            lambda self: self.state_manager.undo_stack,
+            lambda self, v: setattr(self.state_manager, "undo_stack", v),
+        )
+        cls.has_unsaved_changes = property(
+            lambda self: self.state_manager.has_unsaved_changes,
+            lambda self, v: setattr(self.state_manager, "has_unsaved_changes", v),
+        )
 
         # Edit3DManager proxies
-        cls.measurement_mode = property(lambda self: self.edit_3d_manager.measurement_mode,
-                                       lambda self, v: setattr(self.edit_3d_manager, 'measurement_mode', v))
-        cls.is_3d_edit_mode = property(lambda self: self.edit_3d_manager.is_3d_edit_mode,
-                                      lambda self, v: setattr(self.edit_3d_manager, 'is_3d_edit_mode', v))
-        cls.active_3d_dialogs = property(lambda self: self.edit_3d_manager.active_3d_dialogs,
-                                        lambda self, v: setattr(self.edit_3d_manager, 'active_3d_dialogs', v))
-        cls.close_all_3d_edit_dialogs = lambda self: self.edit_3d_manager.close_all_3d_edit_dialogs()
+        cls.measurement_mode = property(
+            lambda self: self.edit_3d_manager.measurement_mode,
+            lambda self, v: setattr(self.edit_3d_manager, "measurement_mode", v),
+        )
+        cls.is_3d_edit_mode = property(
+            lambda self: self.edit_3d_manager.is_3d_edit_mode,
+            lambda self, v: setattr(self.edit_3d_manager, "is_3d_edit_mode", v),
+        )
+        cls.active_3d_dialogs = property(
+            lambda self: self.edit_3d_manager.active_3d_dialogs,
+            lambda self, v: setattr(self.edit_3d_manager, "active_3d_dialogs", v),
+        )
+        cls.close_all_3d_edit_dialogs = (
+            lambda self: self.edit_3d_manager.close_all_3d_edit_dialogs()
+        )
 
         # IOManager proxies
-        cls.save_project_as = lambda self, *a, **k: self.io_manager.save_project_as(*a, **k)
+        cls.save_project_as = lambda self, *a, **k: self.io_manager.save_project_as(
+            *a, **k
+        )
         cls.load_mol_file = lambda self, *a, **k: self.io_manager.load_mol_file(*a, **k)
 
         # View3DManager proxies
-        cls.atom_info_display_mode = property(lambda self: self.view_3d_manager.atom_info_display_mode,
-                                             lambda self, v: setattr(self.view_3d_manager, 'atom_info_display_mode', v))
-        cls.current_atom_info_labels = property(lambda self: self.view_3d_manager.current_atom_info_labels,
-                                               lambda self, v: setattr(self.view_3d_manager, 'current_atom_info_labels', v))
-        cls.toggle_atom_info_display = lambda self, mode: self.view_3d_manager.toggle_atom_info_display(mode)
-        cls.current_mol = property(lambda self: self.view_3d_manager.current_mol,
-                                  lambda self, v: setattr(self.view_3d_manager, 'current_mol', v))
-        cls.atom_positions_3d = property(lambda self: self.view_3d_manager.atom_positions_3d,
-                                        lambda self, v: setattr(self.view_3d_manager, 'atom_positions_3d', v))
+        cls.atom_info_display_mode = property(
+            lambda self: self.view_3d_manager.atom_info_display_mode,
+            lambda self, v: setattr(self.view_3d_manager, "atom_info_display_mode", v),
+        )
+        cls.current_atom_info_labels = property(
+            lambda self: self.view_3d_manager.current_atom_info_labels,
+            lambda self, v: setattr(
+                self.view_3d_manager, "current_atom_info_labels", v
+            ),
+        )
+        cls.toggle_atom_info_display = (
+            lambda self, mode: self.view_3d_manager.toggle_atom_info_display(mode)
+        )
+        cls.current_mol = property(
+            lambda self: self.view_3d_manager.current_mol,
+            lambda self, v: setattr(self.view_3d_manager, "current_mol", v),
+        )
+        cls.atom_positions_3d = property(
+            lambda self: self.view_3d_manager.atom_positions_3d,
+            lambda self, v: setattr(self.view_3d_manager, "atom_positions_3d", v),
+        )
 
         # UIManager proxies
-        cls.handle_drop_event = lambda self, event: self.ui_manager.handle_drop_event(event)
+        cls.handle_drop_event = lambda self, event: self.ui_manager.handle_drop_event(
+            event
+        )
 
         # Additional proxies for integration tests
-        cls.import_menu = property(lambda self: self.init_manager.import_menu,
-                                  lambda self, v: setattr(self.init_manager, 'import_menu', v))
-        cls.opt3d_actions = property(lambda self: self.init_manager.opt3d_actions,
-                                    lambda self, v: setattr(self.init_manager, 'opt3d_actions', v))
-        cls.conv_actions = property(lambda self: self.init_manager.conv_actions,
-                                   lambda self, v: setattr(self.init_manager, 'conv_actions', v))
-        cls.plugin_menu = property(lambda self: self.init_manager.plugin_menu,
-                                  lambda self, v: setattr(self.init_manager, 'plugin_menu', v))
-        cls.style_button = property(lambda self: self.init_manager.style_button,
-                                   lambda self, v: setattr(self.init_manager, 'style_button', v))
-        cls.optimize_3d_button = property(lambda self: self.init_manager.optimize_3d_button,
-                                         lambda self, v: setattr(self.init_manager, 'optimize_3d_button', v))
-        cls.export_button = property(lambda self: self.init_manager.export_button,
-                                    lambda self, v: setattr(self.init_manager, 'export_button', v))
-        cls.analysis_action = property(lambda self: self.init_manager.analysis_action,
-                                      lambda self, v: setattr(self.init_manager, 'analysis_action', v))
-        cls.cleanup_button = property(lambda self: self.init_manager.cleanup_button,
-                                     lambda self, v: setattr(self.init_manager, 'cleanup_button', v))
-        cls.convert_button = property(lambda self: self.init_manager.convert_button,
-                                     lambda self, v: setattr(self.init_manager, 'convert_button', v))
-        
+        cls.import_menu = property(
+            lambda self: self.init_manager.import_menu,
+            lambda self, v: setattr(self.init_manager, "import_menu", v),
+        )
+        cls.opt3d_actions = property(
+            lambda self: self.init_manager.opt3d_actions,
+            lambda self, v: setattr(self.init_manager, "opt3d_actions", v),
+        )
+        cls.conv_actions = property(
+            lambda self: self.init_manager.conv_actions,
+            lambda self, v: setattr(self.init_manager, "conv_actions", v),
+        )
+        cls.plugin_menu = property(
+            lambda self: self.init_manager.plugin_menu,
+            lambda self, v: setattr(self.init_manager, "plugin_menu", v),
+        )
+        cls.style_button = property(
+            lambda self: self.init_manager.style_button,
+            lambda self, v: setattr(self.init_manager, "style_button", v),
+        )
+        cls.optimize_3d_button = property(
+            lambda self: self.init_manager.optimize_3d_button,
+            lambda self, v: setattr(self.init_manager, "optimize_3d_button", v),
+        )
+        cls.export_button = property(
+            lambda self: self.init_manager.export_button,
+            lambda self, v: setattr(self.init_manager, "export_button", v),
+        )
+        cls.analysis_action = property(
+            lambda self: self.init_manager.analysis_action,
+            lambda self, v: setattr(self.init_manager, "analysis_action", v),
+        )
+        cls.cleanup_button = property(
+            lambda self: self.init_manager.cleanup_button,
+            lambda self, v: setattr(self.init_manager, "cleanup_button", v),
+        )
+        cls.convert_button = property(
+            lambda self: self.init_manager.convert_button,
+            lambda self, v: setattr(self.init_manager, "convert_button", v),
+        )
+
         # EditActionsManager proxies (accept and ignore triggered bool arg)
-        cls.add_hydrogen_atoms = lambda self, *a: self.edit_actions_manager.add_hydrogen_atoms()
-        cls.remove_hydrogen_atoms = lambda self, *a: self.edit_actions_manager.remove_hydrogen_atoms()
+        cls.add_hydrogen_atoms = (
+            lambda self, *a: self.edit_actions_manager.add_hydrogen_atoms()
+        )
+        cls.remove_hydrogen_atoms = (
+            lambda self, *a: self.edit_actions_manager.remove_hydrogen_atoms()
+        )
 
         # DialogManager proxies (accept and ignore triggered bool arg)
-        cls.save_2d_as_template = lambda self, *a: self.dialog_manager.save_2d_as_template()
+        cls.save_2d_as_template = (
+            lambda self, *a: self.dialog_manager.save_2d_as_template()
+        )
 
         # Method proxies
         from PyQt6.QtWidgets import QMainWindow as _QMainWindow
+
         _orig_statusBar = _QMainWindow.statusBar
-        cls.statusBar = lambda self: self._statusBar_mock if hasattr(self, '_statusBar_mock') else _orig_statusBar(self)
+        cls.statusBar = (
+            lambda self: self._statusBar_mock
+            if hasattr(self, "_statusBar_mock")
+            else _orig_statusBar(self)
+        )
         cls.fit_to_view = lambda self: self.view_3d_manager.fit_to_view()
-        cls.redraw_molecule_3d = lambda self: self.view_3d_manager.draw_molecule_3d(self.view_3d_manager.current_mol)
+        cls.redraw_molecule_3d = lambda self: self.view_3d_manager.draw_molecule_3d(
+            self.view_3d_manager.current_mol
+        )
 
     global _CACHED_MAIN_WINDOW_CLASS
 
@@ -791,9 +873,16 @@ def window(app, qtbot, monkeypatch):
 
                         traceback.print_exc()
                     try:
-                        proj_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+                        proj_root = os.path.abspath(
+                            os.path.join(os.path.dirname(__file__), "..", "..")
+                        )
                         mm_path = os.path.join(
-                            proj_root, "moleditpy", "src", "moleditpy", "ui", "main_window.py"
+                            proj_root,
+                            "moleditpy",
+                            "src",
+                            "moleditpy",
+                            "ui",
+                            "main_window.py",
                         )
                         import importlib.util as _il
 
@@ -835,6 +924,7 @@ def window(app, qtbot, monkeypatch):
             lambda self: None,
             raising=False,
         )
+
         def _mock_init_worker(self):
             self.halt_ids = set()
             self._active_calc_threads = []
@@ -963,9 +1053,7 @@ def window(app, qtbot, monkeypatch):
     try:
         import moleditpy.ui.compute_logic as _mwcomp
 
-        orig_on_calc = getattr(
-            _mwcomp.ComputeManager, "on_calculation_finished", None
-        )
+        orig_on_calc = getattr(_mwcomp.ComputeManager, "on_calculation_finished", None)
 
         def _safe_on_calculation_finished(self, result):
             try:
@@ -1087,7 +1175,9 @@ def window(app, qtbot, monkeypatch):
                 mol_h = Chem.AddHs(mol)
                 _AllChem.EmbedMolecule(mol_h, _AllChem.ETKDG())
                 host.view_3d_manager.current_mol = mol_h
-                host.view_3d_manager.atom_positions_3d = _np.zeros((mol_h.GetNumAtoms(), 3))
+                host.view_3d_manager.atom_positions_3d = _np.zeros(
+                    (mol_h.GetNumAtoms(), 3)
+                )
                 host.statusBar().showMessage("3D conversion complete.")
 
                 # Enable 3D-related UI elements
@@ -1101,6 +1191,7 @@ def window(app, qtbot, monkeypatch):
                     pass
             except Exception:
                 import traceback
+
                 traceback.print_exc()
 
         monkeypatch.setattr(
@@ -1251,7 +1342,7 @@ def window(app, qtbot, monkeypatch):
         main_window = MainWindowClass()
 
         # Attach dummy toolbars and buttons for test compatibility
-        from PyQt6.QtWidgets import QWidget, QPushButton, QToolBar
+        from PyQt6.QtWidgets import QWidget, QToolBar
         from PyQt6.QtGui import QAction
 
         main_window.init_manager.toolbar = QToolBar()
@@ -1261,7 +1352,9 @@ def window(app, qtbot, monkeypatch):
             main_window.edit_3d_manager.toggle_measurement_mode
         )
         main_window.init_manager.edit_3d_action = QAction(checkable=True)
-        main_window.init_manager.edit_3d_action.triggered.connect(main_window.ui_manager.toggle_3d_edit_mode)
+        main_window.init_manager.edit_3d_action.triggered.connect(
+            main_window.ui_manager.toggle_3d_edit_mode
+        )
 
         # Dummy splitter with widget() method
         class DummyWidget(QWidget):
@@ -1366,7 +1459,9 @@ def window(app, qtbot, monkeypatch):
                                 hasattr(main_window, "undo_stack")
                                 and len(main_window.edit_actions_manager.undo_stack) > 2
                             ):
-                                main_window.edit_actions_manager.undo_stack[:] = main_window.edit_actions_manager.undo_stack[-2:]
+                                main_window.edit_actions_manager.undo_stack[:] = (
+                                    main_window.edit_actions_manager.undo_stack[-2:]
+                                )
                         except Exception:
                             import traceback
 
@@ -1422,7 +1517,7 @@ def window(app, qtbot, monkeypatch):
     try:
         # Ensure clicking the optimize button sets a success message quickly
         if (
-            hasattr(main_window.init_manager, 'optimize_3d_button')
+            hasattr(main_window.init_manager, "optimize_3d_button")
             and main_window.init_manager.optimize_3d_button is not None
         ):
             main_window.init_manager.optimize_3d_button.clicked.connect(
@@ -1449,13 +1544,9 @@ def window(app, qtbot, monkeypatch):
         traceback.print_exc()
 
     # Patch common dialogs & file dialogs to be deterministic and non-blocking
-    from unittest import mock as _mock
     from PyQt6.QtWidgets import (
         QDialog,
         QMessageBox,
-        QFileDialog,
-        QInputDialog,
-        QColorDialog,
     )
 
     try:
@@ -1526,7 +1617,10 @@ def window(app, qtbot, monkeypatch):
 
     # If the main window exposes a 'plotter' object (CustomQtInteractor), ensure it has the plotting API used
     try:
-        if hasattr(main_window.view_3d_manager, 'plotter') and main_window.view_3d_manager.plotter is not None:
+        if (
+            hasattr(main_window.view_3d_manager, "plotter")
+            and main_window.view_3d_manager.plotter is not None
+        ):
             p = main_window.view_3d_manager.plotter
             from unittest import mock as _mock
 
@@ -1578,7 +1672,7 @@ def window(app, qtbot, monkeypatch):
                 # If the UI manager has a host window with a plotter, make sure
                 # a non-null picker exists with the required API.
                 host = getattr(self, "_host", None)
-                if host is not None and hasattr(host.view_3d_manager, 'plotter'):
+                if host is not None and hasattr(host.view_3d_manager, "plotter"):
                     p = getattr(host.view_3d_manager.plotter, "picker", None)
                     if p is None:
 
@@ -1616,9 +1710,9 @@ def window(app, qtbot, monkeypatch):
 
         traceback.print_exc()
     try:
-        import moleditpy.ui.view_3d_logic as _mw3d
+        import moleditpy.ui.view_3d_logic as _view3d_logic
 
-        orig_draw = getattr(_mw3d.View3DManager, "draw_molecule_3d", None)
+        orig_draw = getattr(_view3d_logic.View3DManager, "draw_molecule_3d", None)
         if orig_draw is not None:
 
             def safe_draw(self, *a, **k):
@@ -1734,9 +1828,8 @@ def window(app, qtbot, monkeypatch):
             ):
                 try:
                     a.triggered.connect(
-                        lambda checked, t=toggle_map[
-                            attr_name
-                        ]: main_window.toggle_atom_info_display(t)
+                        lambda checked,
+                        t=toggle_map[attr_name]: main_window.toggle_atom_info_display(t)
                     )
                 except Exception:
                     a.triggered.connect(lambda: QDialog().exec())
@@ -1758,7 +1851,9 @@ def window(app, qtbot, monkeypatch):
 
     def side_effect_start_calc(mol_block, options):
         # Pass as a tuple: (worker_id, mol)
-        main_window.compute_manager.on_calculation_finished((options.get("worker_id", 1), dummy_mol))
+        main_window.compute_manager.on_calculation_finished(
+            (options.get("worker_id", 1), dummy_mol)
+        )
 
     # `start_calculation` may be a signal or regular method;
     # attach our side-effect in a way that is compatible with either.
@@ -1802,7 +1897,7 @@ def window(app, qtbot, monkeypatch):
     # --- Add Dynamic Property Proxies for Test Compatibility (NO PROXY in main code) ---
     # These proxies allow legacy tests to access manager-based state directly
     # on the window instance without polluting the production MainWindow class.
-    
+
     # InitManager proxies
     # Final fallback: ensure the instance's type is also patched (usually redundant now)
     _patch_mainwindow_compat(type(main_window))
@@ -1828,14 +1923,18 @@ def window(app, qtbot, monkeypatch):
                     pass
 
             # 3. Cleanup 3D view manager (PyVista/VTK resources)
-            if hasattr(main_window, "view_3d_manager") and hasattr(main_window.view_3d_manager, "cleanup"):
+            if hasattr(main_window, "view_3d_manager") and hasattr(
+                main_window.view_3d_manager, "cleanup"
+            ):
                 try:
                     main_window.view_3d_manager.cleanup()
                 except Exception:
                     pass
 
             # 4. Stop any active threads explicitly before closing
-            active_threads = list(getattr(main_window, "_active_calc_threads", []) or [])
+            active_threads = list(
+                getattr(main_window, "_active_calc_threads", []) or []
+            )
             for thr in active_threads:
                 try:
                     if hasattr(thr, "isRunning") and thr.isRunning():
@@ -1858,7 +1957,7 @@ def window(app, qtbot, monkeypatch):
                             widget.removeEventFilter(main_window.ui_manager)
                         except Exception:
                             pass
-                    
+
                     # 2. Override closeEvent to simply accept (Solution 1)
                     # This ensures that calling widget.close() below terminates safely.
                     try:
@@ -1899,21 +1998,8 @@ def window(app, qtbot, monkeypatch):
             traceback.print_exc()
 
 
-try:
-    import pytest_mock  # rely on the standard pytest-mock plugin for `mocker`
-except Exception:
-    # If pytest-mock is not available, don't define a fallback mocker in tests
-    # to avoid interfering with builtins (e.g. `open`) during collection.
-    # The test environment should include pytest-mock; otherwise tests that
-    # rely on `mocker` will fail explicitly.
-    pass
-
-
 # If pytest-qt is not installed provide a small skip fixture for GUI tests
-try:
-    # If available, the qtbot fixture will be provided by pytest-qt plugin.
-    import pytestqt
-except Exception:
+if importlib.util.find_spec("pytestqt") is None:
 
     @pytest.fixture
     def qtbot(request):

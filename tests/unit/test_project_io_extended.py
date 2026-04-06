@@ -16,30 +16,48 @@ class DummyProjectIo(IOManager):
         return getattr(self.host, name)
 
     @property
-    def data(self): return self.host.state_manager.data
-    @property
-    def scene(self): return self.host.init_manager.scene
-    @property
-    def settings(self): return self.host.init_manager.settings
-    @property
-    def view_2d(self): return self.host.init_manager.view_2d
-    @property
-    def plotter(self): return self.host.view_3d_manager.plotter
+    def data(self):
+        return self.host.state_manager.data
 
     @property
-    def current_mol(self): return self.host.view_3d_manager.current_mol
+    def scene(self):
+        return self.host.init_manager.scene
+
+    @property
+    def settings(self):
+        return self.host.init_manager.settings
+
+    @property
+    def view_2d(self):
+        return self.host.init_manager.view_2d
+
+    @property
+    def plotter(self):
+        return self.host.view_3d_manager.plotter
+
+    @property
+    def current_mol(self):
+        return self.host.view_3d_manager.current_mol
+
     @current_mol.setter
-    def current_mol(self, v): self.host.view_3d_manager.current_mol = v
+    def current_mol(self, v):
+        self.host.view_3d_manager.current_mol = v
 
     @property
-    def current_file_path(self): return self.host.init_manager.current_file_path
+    def current_file_path(self):
+        return self.host.init_manager.current_file_path
+
     @current_file_path.setter
-    def current_file_path(self, v): self.host.init_manager.current_file_path = v
+    def current_file_path(self, v):
+        self.host.init_manager.current_file_path = v
 
     @property
-    def has_unsaved_changes(self): return self.host.state_manager.has_unsaved_changes
+    def has_unsaved_changes(self):
+        return self.host.state_manager.has_unsaved_changes
+
     @has_unsaved_changes.setter
-    def has_unsaved_changes(self, v): self.host.state_manager.has_unsaved_changes = v
+    def has_unsaved_changes(self, v):
+        self.host.state_manager.has_unsaved_changes = v
 
     def statusBar(self):
         return self.host.statusBar()
@@ -76,7 +94,11 @@ def test_save_project_overwrite_json(mock_parser_host, tmp_path):
     io.host.init_manager.current_file_path = project_file
     io.host.state_manager.data.atoms = {1: {"symbol": "C"}}
 
-    with patch.object(io.host.state_manager, "create_json_data", return_value={"format": "PME Project"}):
+    with patch.object(
+        io.host.state_manager,
+        "create_json_data",
+        return_value={"format": "PME Project"},
+    ):
         io.save_project()
         assert os.path.exists(project_file)
         with open(project_file, "r") as f:
@@ -92,7 +114,9 @@ def test_save_project_overwrite_raw(mock_parser_host, tmp_path):
     io.host.init_manager.current_file_path = raw_file
     io.host.state_manager.data.atoms = {1: {"symbol": "C"}}
 
-    with patch.object(io.host.state_manager, "get_current_state", return_value={"atoms": "mock"}):
+    with patch.object(
+        io.host.state_manager, "get_current_state", return_value={"atoms": "mock"}
+    ):
         io.save_project()
         assert os.path.exists(raw_file)
         with open(raw_file, "rb") as f:
@@ -162,7 +186,11 @@ def test_save_as_json_trigger(mock_parser_host, tmp_path):
             "PyQt6.QtWidgets.QFileDialog.getSaveFileName",
             return_value=(save_path, "*.pmeprj"),
         ),
-        patch.object(io.host.state_manager, "create_json_data", return_value={"format": "PME Project"}),
+        patch.object(
+            io.host.state_manager,
+            "create_json_data",
+            return_value={"format": "PME Project"},
+        ),
     ):
         io.save_as_json()
         assert os.path.exists(save_path)
@@ -190,7 +218,9 @@ def test_open_project_file_unsaved_check(mock_parser_host):
     """Verify that 'open project' checks for unsaved changes before proceeding."""
     io = DummyProjectIo(mock_parser_host)
     # Mock check_unsaved_changes to return False (cancel)
-    with patch.object(io.host.state_manager, "check_unsaved_changes", return_value=False):
+    with patch.object(
+        io.host.state_manager, "check_unsaved_changes", return_value=False
+    ):
         io.open_project_file()
         # Should return early, not opening dialog
         with patch("PyQt6.QtWidgets.QFileDialog.getOpenFileName") as mock_open:
@@ -205,7 +235,9 @@ def test_save_project_io_error(mock_parser_host, tmp_path):
 
     with patch("builtins.open", side_effect=IOError("Permission denied")):
         with patch.object(
-            io.host.state_manager, "create_json_data", return_value={"format": "PME Project"}
+            io.host.state_manager,
+            "create_json_data",
+            return_value={"format": "PME Project"},
         ):
             io.save_project()
             io.statusBar().showMessage.assert_called_with(
@@ -266,7 +298,9 @@ def test_save_project_default_filename(mock_parser_host, tmp_path):
     io.host.state_manager.data.atoms = {1: {"symbol": "C"}}
 
     # 1. With existing path
-    io.host.init_manager.current_file_path = str(tmp_path / "subdir" / "my_molecule.pmeprj")
+    io.host.init_manager.current_file_path = str(
+        tmp_path / "subdir" / "my_molecule.pmeprj"
+    )
 
     with patch(
         "PyQt6.QtWidgets.QFileDialog.getSaveFileName", return_value=("", "")
@@ -328,7 +362,9 @@ def test_save_project_success_state_update(mock_parser_host, tmp_path):
             "PyQt6.QtWidgets.QFileDialog.getSaveFileName", return_value=(save_path, "")
         ),
         patch.object(io.host.state_manager, "create_json_data", return_value={}),
-        patch.object(io.host.state_manager, "get_current_state", return_value={"test": 1}),
+        patch.object(
+            io.host.state_manager, "get_current_state", return_value={"test": 1}
+        ),
         patch("copy.deepcopy", side_effect=lambda x: x),
     ):
         io.save_project_as()

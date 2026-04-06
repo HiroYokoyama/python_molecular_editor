@@ -34,6 +34,7 @@ from rdkit.Chem import AllChem
 # Shared QApplication fixture (session-scoped — one instance for all tests)
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture(scope="session")
 def qapp():
     app = QApplication.instance() or QApplication([])
@@ -43,6 +44,7 @@ def qapp():
 # ---------------------------------------------------------------------------
 # DummyHost — mirrors DummyHost in test_edit_actions_extended.py
 # ---------------------------------------------------------------------------
+
 
 class DummyHost:
     def __init__(self):
@@ -88,6 +90,7 @@ class DummyHost:
 # the MockDialog; so we must return MockDialog.DialogCode.Accepted from exec()
 # to pass the "Accepted" branch.  Returning anything else → Rejected path.
 
+
 class TestPromptForCharge:
     """Tests for IOManager.prompt_for_charge()."""
 
@@ -109,14 +112,15 @@ class TestPromptForCharge:
         le = MagicMock()
         le.text.return_value = "0"
 
-        with patch("moleditpy.ui.io_logic.QDialog") as MockDlg, \
-             patch("moleditpy.ui.io_logic.QLineEdit", return_value=le), \
-             patch("moleditpy.ui.io_logic.QVBoxLayout"), \
-             patch("moleditpy.ui.io_logic.QHBoxLayout"), \
-             patch("moleditpy.ui.io_logic.QLabel"), \
-             patch("moleditpy.ui.io_logic.QDialogButtonBox"), \
-             patch("moleditpy.ui.io_logic.QPushButton"):
-
+        with (
+            patch("moleditpy.ui.io_logic.QDialog") as MockDlg,
+            patch("moleditpy.ui.io_logic.QLineEdit", return_value=le),
+            patch("moleditpy.ui.io_logic.QVBoxLayout"),
+            patch("moleditpy.ui.io_logic.QHBoxLayout"),
+            patch("moleditpy.ui.io_logic.QLabel"),
+            patch("moleditpy.ui.io_logic.QDialogButtonBox"),
+            patch("moleditpy.ui.io_logic.QPushButton"),
+        ):
             dlg = MagicMock()
             dlg.exec.return_value = MockDlg.DialogCode.Accepted  # same sentinel
             MockDlg.return_value = dlg
@@ -133,14 +137,15 @@ class TestPromptForCharge:
         le = MagicMock()
         le.text.return_value = "2"
 
-        with patch("moleditpy.ui.io_logic.QDialog") as MockDlg, \
-             patch("moleditpy.ui.io_logic.QLineEdit", return_value=le), \
-             patch("moleditpy.ui.io_logic.QVBoxLayout"), \
-             patch("moleditpy.ui.io_logic.QHBoxLayout"), \
-             patch("moleditpy.ui.io_logic.QLabel"), \
-             patch("moleditpy.ui.io_logic.QDialogButtonBox"), \
-             patch("moleditpy.ui.io_logic.QPushButton"):
-
+        with (
+            patch("moleditpy.ui.io_logic.QDialog") as MockDlg,
+            patch("moleditpy.ui.io_logic.QLineEdit", return_value=le),
+            patch("moleditpy.ui.io_logic.QVBoxLayout"),
+            patch("moleditpy.ui.io_logic.QHBoxLayout"),
+            patch("moleditpy.ui.io_logic.QLabel"),
+            patch("moleditpy.ui.io_logic.QDialogButtonBox"),
+            patch("moleditpy.ui.io_logic.QPushButton"),
+        ):
             dlg = MagicMock()
             dlg.exec.return_value = MockDlg.DialogCode.Accepted
             MockDlg.return_value = dlg
@@ -157,14 +162,15 @@ class TestPromptForCharge:
         le = MagicMock()
         le.text.return_value = "-1"
 
-        with patch("moleditpy.ui.io_logic.QDialog") as MockDlg, \
-             patch("moleditpy.ui.io_logic.QLineEdit", return_value=le), \
-             patch("moleditpy.ui.io_logic.QVBoxLayout"), \
-             patch("moleditpy.ui.io_logic.QHBoxLayout"), \
-             patch("moleditpy.ui.io_logic.QLabel"), \
-             patch("moleditpy.ui.io_logic.QDialogButtonBox"), \
-             patch("moleditpy.ui.io_logic.QPushButton"):
-
+        with (
+            patch("moleditpy.ui.io_logic.QDialog") as MockDlg,
+            patch("moleditpy.ui.io_logic.QLineEdit", return_value=le),
+            patch("moleditpy.ui.io_logic.QVBoxLayout"),
+            patch("moleditpy.ui.io_logic.QHBoxLayout"),
+            patch("moleditpy.ui.io_logic.QLabel"),
+            patch("moleditpy.ui.io_logic.QDialogButtonBox"),
+            patch("moleditpy.ui.io_logic.QPushButton"),
+        ):
             dlg = MagicMock()
             dlg.exec.return_value = MockDlg.DialogCode.Accepted
             MockDlg.return_value = dlg
@@ -181,14 +187,15 @@ class TestPromptForCharge:
         le = MagicMock()
         le.text.return_value = "abc"
 
-        with patch("moleditpy.ui.io_logic.QDialog") as MockDlg, \
-             patch("moleditpy.ui.io_logic.QLineEdit", return_value=le), \
-             patch("moleditpy.ui.io_logic.QVBoxLayout"), \
-             patch("moleditpy.ui.io_logic.QHBoxLayout"), \
-             patch("moleditpy.ui.io_logic.QLabel"), \
-             patch("moleditpy.ui.io_logic.QDialogButtonBox"), \
-             patch("moleditpy.ui.io_logic.QPushButton"):
-
+        with (
+            patch("moleditpy.ui.io_logic.QDialog") as MockDlg,
+            patch("moleditpy.ui.io_logic.QLineEdit", return_value=le),
+            patch("moleditpy.ui.io_logic.QVBoxLayout"),
+            patch("moleditpy.ui.io_logic.QHBoxLayout"),
+            patch("moleditpy.ui.io_logic.QLabel"),
+            patch("moleditpy.ui.io_logic.QDialogButtonBox"),
+            patch("moleditpy.ui.io_logic.QPushButton"),
+        ):
             dlg = MagicMock()
             dlg.exec.return_value = MockDlg.DialogCode.Accepted
             MockDlg.return_value = dlg
@@ -205,14 +212,15 @@ class TestPromptForCharge:
         le = MagicMock()
         le.text.return_value = "0"
 
-        with patch("moleditpy.ui.io_logic.QDialog") as MockDlg, \
-             patch("moleditpy.ui.io_logic.QLineEdit", return_value=le), \
-             patch("moleditpy.ui.io_logic.QVBoxLayout"), \
-             patch("moleditpy.ui.io_logic.QHBoxLayout"), \
-             patch("moleditpy.ui.io_logic.QLabel"), \
-             patch("moleditpy.ui.io_logic.QDialogButtonBox"), \
-             patch("moleditpy.ui.io_logic.QPushButton"):
-
+        with (
+            patch("moleditpy.ui.io_logic.QDialog") as MockDlg,
+            patch("moleditpy.ui.io_logic.QLineEdit", return_value=le),
+            patch("moleditpy.ui.io_logic.QVBoxLayout"),
+            patch("moleditpy.ui.io_logic.QHBoxLayout"),
+            patch("moleditpy.ui.io_logic.QLabel"),
+            patch("moleditpy.ui.io_logic.QDialogButtonBox"),
+            patch("moleditpy.ui.io_logic.QPushButton"),
+        ):
             dlg = MagicMock()
             # Return something that is != MockDlg.DialogCode.Accepted
             dlg.exec.return_value = MockDlg.DialogCode.Rejected
@@ -235,28 +243,31 @@ class TestPromptForCharge:
         class FakeSkipBtn:
             def __init__(self, *a, **k):
                 pass
+
             @property
             def clicked(self):
                 class _Sig:
                     def connect(self_, cb):
                         captured_cb.append(cb)
+
                 return _Sig()
 
-        with patch("moleditpy.ui.io_logic.QDialog") as MockDlg, \
-             patch("moleditpy.ui.io_logic.QLineEdit", return_value=le), \
-             patch("moleditpy.ui.io_logic.QVBoxLayout"), \
-             patch("moleditpy.ui.io_logic.QHBoxLayout"), \
-             patch("moleditpy.ui.io_logic.QLabel"), \
-             patch("moleditpy.ui.io_logic.QDialogButtonBox"), \
-             patch("moleditpy.ui.io_logic.QPushButton", FakeSkipBtn):
-
+        with (
+            patch("moleditpy.ui.io_logic.QDialog") as MockDlg,
+            patch("moleditpy.ui.io_logic.QLineEdit", return_value=le),
+            patch("moleditpy.ui.io_logic.QVBoxLayout"),
+            patch("moleditpy.ui.io_logic.QHBoxLayout"),
+            patch("moleditpy.ui.io_logic.QLabel"),
+            patch("moleditpy.ui.io_logic.QDialogButtonBox"),
+            patch("moleditpy.ui.io_logic.QPushButton", FakeSkipBtn),
+        ):
             dlg = MagicMock()
             accepted = MockDlg.DialogCode.Accepted  # capture before exec fires
 
             def _exec():
                 if captured_cb:
-                    captured_cb[0]()          # fire skip callback
-                return accepted               # return the same sentinel
+                    captured_cb[0]()  # fire skip callback
+                return accepted  # return the same sentinel
 
             dlg.exec.side_effect = _exec
             MockDlg.return_value = dlg
@@ -271,6 +282,7 @@ class TestPromptForCharge:
 # ===========================================================================
 # Tests for load_xyz_for_3d_viewing
 # ===========================================================================
+
 
 class TestLoadXYZFor3DViewing:
     """Tests for IOManager.load_xyz_for_3d_viewing()."""
@@ -309,9 +321,13 @@ class TestLoadXYZFor3DViewing:
         mol = self._dummy_mol()
         io.load_xyz_file = MagicMock(return_value=mol)
 
-        with patch("moleditpy.ui.io_logic.QFileDialog.getOpenFileName",
-                   return_value=(str(xyz), None)), \
-             patch("moleditpy.ui.io_logic.QTimer"):
+        with (
+            patch(
+                "moleditpy.ui.io_logic.QFileDialog.getOpenFileName",
+                return_value=(str(xyz), None),
+            ),
+            patch("moleditpy.ui.io_logic.QTimer"),
+        ):
             io.load_xyz_for_3d_viewing()
 
         io.load_xyz_file.assert_called_once_with(str(xyz))
@@ -323,8 +339,9 @@ class TestLoadXYZFor3DViewing:
         io = IOManager(host)
         io.load_xyz_file = MagicMock()
 
-        with patch("moleditpy.ui.io_logic.QFileDialog.getOpenFileName",
-                   return_value=("", None)):
+        with patch(
+            "moleditpy.ui.io_logic.QFileDialog.getOpenFileName", return_value=("", None)
+        ):
             io.load_xyz_for_3d_viewing()
 
         io.load_xyz_file.assert_not_called()
@@ -415,6 +432,7 @@ class TestLoadXYZFor3DViewing:
 # Tests for save_3d_as_mol
 # ===========================================================================
 
+
 class TestSave3DAsMol:
     """Tests for IOManager.save_3d_as_mol()."""
 
@@ -446,8 +464,9 @@ class TestSave3DAsMol:
         io, host = self._make_io_with_mol()
         out = tmp_path / "out.mol"
 
-        with patch("moleditpy.ui.io_logic.QFileDialog.getSaveFileName",
-                   return_value=("", None)):
+        with patch(
+            "moleditpy.ui.io_logic.QFileDialog.getSaveFileName", return_value=("", None)
+        ):
             io.save_3d_as_mol()
 
         assert not out.exists()
@@ -457,8 +476,10 @@ class TestSave3DAsMol:
         io, host = self._make_io_with_mol("CCO")
         out = tmp_path / "out.mol"
 
-        with patch("moleditpy.ui.io_logic.QFileDialog.getSaveFileName",
-                   return_value=(str(out), None)):
+        with patch(
+            "moleditpy.ui.io_logic.QFileDialog.getSaveFileName",
+            return_value=(str(out), None),
+        ):
             io.save_3d_as_mol()
 
         assert out.exists()
@@ -469,8 +490,10 @@ class TestSave3DAsMol:
         io, host = self._make_io_with_mol("C")
         out = tmp_path / "header.mol"
 
-        with patch("moleditpy.ui.io_logic.QFileDialog.getSaveFileName",
-                   return_value=(str(out), None)):
+        with patch(
+            "moleditpy.ui.io_logic.QFileDialog.getSaveFileName",
+            return_value=(str(out), None),
+        ):
             io.save_3d_as_mol()
 
         lines = out.read_text(encoding="utf-8").splitlines()
@@ -483,8 +506,10 @@ class TestSave3DAsMol:
         io, host = self._make_io_with_mol("C")
         out = tmp_path / "success.mol"
 
-        with patch("moleditpy.ui.io_logic.QFileDialog.getSaveFileName",
-                   return_value=(str(out), None)):
+        with patch(
+            "moleditpy.ui.io_logic.QFileDialog.getSaveFileName",
+            return_value=(str(out), None),
+        ):
             io.save_3d_as_mol()
 
         host.statusBar_mock.showMessage.assert_called()
@@ -496,10 +521,16 @@ class TestSave3DAsMol:
         io, host = self._make_io_with_mol("C")
         out = tmp_path / "err.mol"
 
-        with patch("moleditpy.ui.io_logic.QFileDialog.getSaveFileName",
-                   return_value=(str(out), None)), \
-             patch("moleditpy.ui.io_logic.Chem.MolToMolBlock",
-                   side_effect=RuntimeError("boom")):
+        with (
+            patch(
+                "moleditpy.ui.io_logic.QFileDialog.getSaveFileName",
+                return_value=(str(out), None),
+            ),
+            patch(
+                "moleditpy.ui.io_logic.Chem.MolToMolBlock",
+                side_effect=RuntimeError("boom"),
+            ),
+        ):
             io.save_3d_as_mol()
 
         host.statusBar_mock.showMessage.assert_called()

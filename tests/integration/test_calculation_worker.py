@@ -367,9 +367,7 @@ def test_calculation_worker_constraint_embedding_fallback(qtbot, app):
 
     worker = CalculationWorker()
 
-    with patch(
-        "moleditpy.ui.calculation_worker.AllChem.EmbedMolecule"
-    ) as mock_embed:
+    with patch("moleditpy.ui.calculation_worker.AllChem.EmbedMolecule") as mock_embed:
         # First (standard) fails (-1), second (constraint) succeeds (1);
         # extend list to avoid StopIteration if called more than twice
         mock_embed.side_effect = [-1] + [1] * 5
@@ -395,8 +393,7 @@ def test_calculation_worker_opt_failure_emits_error(qtbot, app):
 
     with (
         patch(
-            "rdkit.Chem.AllChem.MMFFGetMoleculeProperties",
-            return_value=None
+            "rdkit.Chem.AllChem.MMFFGetMoleculeProperties", return_value=None
         ) as mock_mmff_props,
     ):
         # We now wait for the finished signal because optimization failure is non-fatal
@@ -452,9 +449,7 @@ def test_calculation_worker_obabel_fallback_mocked(qtbot, app):
         patch("moleditpy.ui.calculation_worker.OBABEL_AVAILABLE", True),
         patch("moleditpy.ui.calculation_worker.pybel", spec=True),
         patch("moleditpy.ui.calculation_worker.subprocess.run") as mock_run,
-        patch(
-            "moleditpy.ui.calculation_worker.Chem.MolFromMolBlock"
-        ) as mock_rd_parse,
+        patch("moleditpy.ui.calculation_worker.Chem.MolFromMolBlock") as mock_rd_parse,
     ):
         # Mock subprocess result
         mock_result = MagicMock()
@@ -570,9 +565,7 @@ def test_iterative_optimize_unknown_method(app):
     mol = Chem.AddHs(mol)
     AllChem.EmbedMolecule(mol, AllChem.ETKDGv2())
 
-    result = _iterative_optimize(
-        mol, "INVALID", lambda: False, lambda m: None
-    )
+    result = _iterative_optimize(mol, "INVALID", lambda: False, lambda m: None)
     assert result is False
 
 
@@ -610,9 +603,7 @@ def test_iterative_optimize_props_none(app):
             return_value=None,
         ),
     ):
-        result = _iterative_optimize(
-            mol, "MMFF94s", lambda: False, lambda m: None
-        )
+        result = _iterative_optimize(mol, "MMFF94s", lambda: False, lambda m: None)
     assert result is False
 
 
@@ -626,9 +617,7 @@ def test_iterative_optimize_ff_none(app):
         "moleditpy.ui.calculation_worker.AllChem.UFFGetMoleculeForceField",
         return_value=None,
     ):
-        result = _iterative_optimize(
-            mol, "UFF", lambda: False, lambda m: None
-        )
+        result = _iterative_optimize(mol, "UFF", lambda: False, lambda m: None)
     assert result is False
 
 
@@ -723,7 +712,9 @@ def test_calculation_worker_optimized_result_better(qtbot, app):
     worker = CalculationWorker()
 
     with qtbot.waitSignal(worker.finished, timeout=10000) as blocker:
-        worker.run_calculation(mol_block, {"conversion_mode": "rdkit", "do_optimize": True})
+        worker.run_calculation(
+            mol_block, {"conversion_mode": "rdkit", "do_optimize": True}
+        )
 
     mol_3d = blocker.args[0][1]
     conf = mol_3d.GetConformer()
@@ -810,7 +801,10 @@ def test_calculation_worker_optimize_only_mmff94_variant(qtbot, app):
     mol_block = Chem.MolToMolBlock(mol)
 
     worker = CalculationWorker()
-    settings = {"conversion_mode": "optimize_only", "optimization_method": "MMFF94_RDKIT"}
+    settings = {
+        "conversion_mode": "optimize_only",
+        "optimization_method": "MMFF94_RDKIT",
+    }
 
     with qtbot.waitSignal(worker.finished, timeout=10000) as blocker:
         worker.run_calculation(mol_block, settings)
@@ -834,7 +828,9 @@ def test_calculation_worker_status_signals(qtbot, app):
     worker.status_update.connect(lambda msg: status_messages.append(msg))
 
     with qtbot.waitSignal(worker.finished, timeout=10000):
-        worker.run_calculation(mol_block, {"conversion_mode": "rdkit", "do_optimize": True})
+        worker.run_calculation(
+            mol_block, {"conversion_mode": "rdkit", "do_optimize": True}
+        )
 
     # Should have received at least one status update
     assert len(status_messages) >= 1
@@ -856,12 +852,16 @@ def test_calculation_worker_multi_fragment_rdkit(qtbot, app):
     worker.status_update.connect(lambda msg: status_messages.append(msg))
 
     with qtbot.waitSignal(worker.finished, timeout=10000) as blocker:
-        worker.run_calculation(mol_block, {"conversion_mode": "rdkit", "do_optimize": True})
+        worker.run_calculation(
+            mol_block, {"conversion_mode": "rdkit", "do_optimize": True}
+        )
 
     mol_3d = blocker.args[0][1]
     assert mol_3d is not None
     # Multi-fragment should trigger collision avoidance status messages
-    collision_msgs = [m for m in status_messages if "collision" in m.lower() or "Resolving" in m]
+    collision_msgs = [
+        m for m in status_messages if "collision" in m.lower() or "Resolving" in m
+    ]
     assert len(collision_msgs) >= 1
 
 
@@ -934,10 +934,9 @@ def test_calculation_worker_fallback_to_direct_no_obabel(qtbot, app):
     worker.status_update.connect(lambda msg: status_messages.append(msg))
 
     # Mock OBABEL_AVAILABLE to False and force EmbedMolecule to return -1
-    with patch(
-        "moleditpy.ui.calculation_worker.OBABEL_AVAILABLE", False
-    ), patch(
-        "moleditpy.ui.calculation_worker.AllChem.EmbedMolecule", return_value=-1
+    with (
+        patch("moleditpy.ui.calculation_worker.OBABEL_AVAILABLE", False),
+        patch("moleditpy.ui.calculation_worker.AllChem.EmbedMolecule", return_value=-1),
     ):
         with qtbot.waitSignal(worker.finished, timeout=10000) as blocker:
             worker.run_calculation(
@@ -964,10 +963,9 @@ def test_calculation_worker_fallback_to_direct_with_optimize(qtbot, app):
 
     worker = CalculationWorker()
 
-    with patch(
-        "moleditpy.ui.calculation_worker.OBABEL_AVAILABLE", False
-    ), patch(
-        "moleditpy.ui.calculation_worker.AllChem.EmbedMolecule", return_value=-1
+    with (
+        patch("moleditpy.ui.calculation_worker.OBABEL_AVAILABLE", False),
+        patch("moleditpy.ui.calculation_worker.AllChem.EmbedMolecule", return_value=-1),
     ):
         with qtbot.waitSignal(worker.finished, timeout=10000) as blocker:
             worker.run_calculation(

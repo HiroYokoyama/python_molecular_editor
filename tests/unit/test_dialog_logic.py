@@ -10,14 +10,20 @@ from moleditpy.ui.angle_dialog import AngleDialog
 from moleditpy.ui.dihedral_dialog import DihedralDialog
 from moleditpy.ui.translation_dialog import TranslationDialog
 from moleditpy.ui.move_group_dialog import MoveGroupDialog
-from moleditpy.core.mol_geometry import calc_distance, calculate_dihedral, calc_angle_deg
+from moleditpy.core.mol_geometry import (
+    calc_distance,
+    calculate_dihedral,
+    calc_angle_deg,
+)
+
 
 @pytest.fixture
 def mol():
-    m = Chem.MolFromSmiles("CCCCCO") # Hexanol-like
+    m = Chem.MolFromSmiles("CCCCCO")  # Hexanol-like
     m = Chem.AddHs(m)
     AllChem.EmbedMolecule(m)
     return m
+
 
 def test_bond_length_adjustment_logic(mock_parser_host, mol):
     """Test the geometric logic of bond length adjustment directly."""
@@ -42,10 +48,10 @@ def test_bond_length_adjustment_logic(mock_parser_host, mol):
         dialog.apply_geometry_update(2.0)
 
         final_dist = calc_distance(
-            mol.GetConformer().GetAtomPosition(0),
-            mol.GetConformer().GetAtomPosition(1)
+            mol.GetConformer().GetAtomPosition(0), mol.GetConformer().GetAtomPosition(1)
         )
         assert pytest.approx(final_dist, abs=1e-3) == 2.0
+
 
 def test_alignment_logic(mock_parser_host, mol):
     """Test the geometry logic for aligning a bond to a specific axis."""
@@ -71,6 +77,7 @@ def test_alignment_logic(mock_parser_host, mol):
         assert pytest.approx(p1[1], abs=1e-7) == 0
         assert pytest.approx(p1[2], abs=1e-7) == 0
 
+
 def test_angle_adjustment_logic(mock_parser_host):
     """Test the geometric logic of bond angle adjustment directly."""
     window = mock_parser_host
@@ -93,7 +100,9 @@ def test_angle_adjustment_logic(mock_parser_host):
         dialog.rotate_atom_radio = MagicMock()
         dialog.rotate_atom_radio.isChecked.return_value = False
 
-        initial_angle = calc_angle_deg(conf.GetAtomPosition(1), conf.GetAtomPosition(0), conf.GetAtomPosition(2))
+        initial_angle = calc_angle_deg(
+            conf.GetAtomPosition(1), conf.GetAtomPosition(0), conf.GetAtomPosition(2)
+        )
         assert initial_angle != pytest.approx(120.0)
 
         dialog.apply_geometry_update(120.0)
@@ -101,9 +110,10 @@ def test_angle_adjustment_logic(mock_parser_host):
         final_angle = calc_angle_deg(
             mol.GetConformer().GetAtomPosition(1),
             mol.GetConformer().GetAtomPosition(0),
-            mol.GetConformer().GetAtomPosition(2)
+            mol.GetConformer().GetAtomPosition(2),
         )
         assert pytest.approx(final_angle, abs=1e-2) == 120.0
+
 
 def test_dihedral_adjustment_logic(mock_parser_host):
     """Test the geometric logic of dihedral angle adjustment."""
@@ -135,10 +145,10 @@ def test_dihedral_adjustment_logic(mock_parser_host):
         dialog.apply_geometry_update(180.0)
 
         final_dihedral = calculate_dihedral(
-            mol.GetConformer().GetPositions(),
-            2, 0, 1, 3
+            mol.GetConformer().GetPositions(), 2, 0, 1, 3
         )
         assert pytest.approx(abs(final_dihedral), abs=1e-2) == 180.0
+
 
 def test_translation_logic(mock_parser_host, mol):
     """Test the geometric logic of centroid-based translation."""
@@ -173,6 +183,7 @@ def test_translation_logic(mock_parser_host, mol):
         # Atom 5 (not selected) should NOT have moved
         assert np.allclose(new_pos5, p5_initial, atol=1e-7)
 
+
 def test_move_group_logic(mock_parser_host, mol):
     """Test the translation and rotation logic in MoveGroupDialog."""
     window = mock_parser_host
@@ -181,8 +192,10 @@ def test_move_group_logic(mock_parser_host, mol):
         [list(conf.GetAtomPosition(i)) for i in range(mol.GetNumAtoms())]
     )
 
-    with patch("moleditpy.ui.move_group_dialog.MoveGroupDialog.init_ui"), \
-         patch("moleditpy.ui.move_group_dialog.MoveGroupDialog.show_atom_labels"):
+    with (
+        patch("moleditpy.ui.move_group_dialog.MoveGroupDialog.init_ui"),
+        patch("moleditpy.ui.move_group_dialog.MoveGroupDialog.show_atom_labels"),
+    ):
         dialog = MoveGroupDialog(mol, window)
         dialog.group_atoms = {0, 1, 2}
 
@@ -199,8 +212,12 @@ def test_move_group_logic(mock_parser_host, mol):
         with patch("moleditpy.ui.move_group_dialog.QMessageBox"):
             dialog.apply_translation()
 
-        assert np.allclose(np.array(mol.GetConformer().GetAtomPosition(0)), initial_pos0 + [5, 0, 0])
-        assert np.allclose(np.array(mol.GetConformer().GetAtomPosition(5)), initial_pos5)
+        assert np.allclose(
+            np.array(mol.GetConformer().GetAtomPosition(0)), initial_pos0 + [5, 0, 0]
+        )
+        assert np.allclose(
+            np.array(mol.GetConformer().GetAtomPosition(5)), initial_pos5
+        )
 
         dialog.x_rot_input = MagicMock()
         dialog.y_rot_input = MagicMock()
@@ -219,5 +236,7 @@ def test_move_group_logic(mock_parser_host, mol):
 
         new_pos0 = np.array(mol.GetConformer().GetAtomPosition(0))
         relative_pos = pos0 - centroid
-        expected_rotated = np.array([-relative_pos[1], relative_pos[0], relative_pos[2]]) + centroid
+        expected_rotated = (
+            np.array([-relative_pos[1], relative_pos[0], relative_pos[2]]) + centroid
+        )
         assert np.allclose(new_pos0, expected_rotated, atol=1e-7)

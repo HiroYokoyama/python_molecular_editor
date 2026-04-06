@@ -58,38 +58,64 @@ class DummyParser(IOManager):
         return getattr(self._host, name)
 
     @property
-    def state_manager(self): return self.host.state_manager
-    @property
-    def init_manager(self): return self.host.init_manager
-    @property
-    def view_3d_manager(self): return self.host.view_3d_manager
-    @property
-    def ui_manager(self): return self.host.ui_manager
-    @property
-    def edit_actions_manager(self): return self.host.edit_actions_manager
-    @property
-    def edit_3d_manager(self): return self.host.edit_3d_manager
+    def state_manager(self):
+        return self.host.state_manager
 
     @property
-    def data(self): return self.host.state_manager.data
-    @property
-    def scene(self): return self.host.init_manager.scene
-    @property
-    def settings(self): return self.host.init_manager.settings
-    @property
-    def view_2d(self): return self.host.init_manager.view_2d
-    @property
-    def plotter(self): return self.host.view_3d_manager.plotter
+    def init_manager(self):
+        return self.host.init_manager
 
     @property
-    def current_mol(self): return self.host.view_3d_manager.current_mol
+    def view_3d_manager(self):
+        return self.host.view_3d_manager
+
+    @property
+    def ui_manager(self):
+        return self.host.ui_manager
+
+    @property
+    def edit_actions_manager(self):
+        return self.host.edit_actions_manager
+
+    @property
+    def edit_3d_manager(self):
+        return self.host.edit_3d_manager
+
+    @property
+    def data(self):
+        return self.host.state_manager.data
+
+    @property
+    def scene(self):
+        return self.host.init_manager.scene
+
+    @property
+    def settings(self):
+        return self.host.init_manager.settings
+
+    @property
+    def view_2d(self):
+        return self.host.init_manager.view_2d
+
+    @property
+    def plotter(self):
+        return self.host.view_3d_manager.plotter
+
+    @property
+    def current_mol(self):
+        return self.host.view_3d_manager.current_mol
+
     @current_mol.setter
-    def current_mol(self, v): self.host.view_3d_manager.current_mol = v
+    def current_mol(self, v):
+        self.host.view_3d_manager.current_mol = v
 
     @property
-    def current_file_path(self): return getattr(self._host, "current_file_path", None)
+    def current_file_path(self):
+        return getattr(self._host, "current_file_path", None)
+
     @current_file_path.setter
-    def current_file_path(self, v): self._host.current_file_path = v
+    def current_file_path(self, v):
+        self._host.current_file_path = v
 
     def check_unsaved_changes(self):
         return True
@@ -191,7 +217,9 @@ def test_load_xyz_unrecognized_symbol(mock_parser_host, tmp_path):
     mol = parser.load_xyz_file(str(xyz_path))
     assert mol is None
     # Verify status bar message (approximate check)
-    msgs = [str(c.args[0]) for c in parser.statusBar().showMessage.call_args_list if c.args]
+    msgs = [
+        str(c.args[0]) for c in parser.statusBar().showMessage.call_args_list if c.args
+    ]
     assert any("Unrecognized element symbol" in m for m in msgs)
 
 
@@ -227,6 +255,7 @@ def test_load_mol_file_with_v2000_fix(mock_parser_host, tmp_path):
 def test_load_xyz_recovery_loop_retries(mock_parser_host, tmp_path):
     """Verify that the XYZ load recovery loop handles retries correctly."""
     from unittest.mock import MagicMock as _MM
+
     parser = DummyParser(mock_parser_host)
     path = tmp_path / "retry.xyz"
     path.write_text("1\nC\nC 0 0 0\n")
@@ -235,7 +264,11 @@ def test_load_xyz_recovery_loop_retries(mock_parser_host, tmp_path):
     # 1. Automatic try 0 -> fails (1st side effect: RuntimeError)
     # 2. Prompt cycle 1: user says 0 -> fails (2nd side effect: RuntimeError)
     # 3. Prompt cycle 2: user says 1 -> succeeds (3rd side effect: None)
-    mock_rd_mod.DetermineBonds.side_effect = [RuntimeError("auto fail"), RuntimeError("prompt fail"), None]
+    mock_rd_mod.DetermineBonds.side_effect = [
+        RuntimeError("auto fail"),
+        RuntimeError("prompt fail"),
+        None,
+    ]
     parser.prompt_for_charge = _MM(side_effect=[(0, True, False), (1, True, False)])
     mol = parser.load_xyz_file(str(path))
     assert mol is not None

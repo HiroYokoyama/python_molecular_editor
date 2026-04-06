@@ -5,18 +5,20 @@ from moleditpy.ui.atom_item import AtomItem
 from moleditpy.ui.bond_item import BondItem
 from unittest.mock import MagicMock, patch
 
+
 @pytest.fixture
 def scene_setup(app):
     mock_window = MagicMock()
     mock_window.is_2d_editable = True
+
     # Mock settings as a dict with value() method
     class MockSettings(dict):
-        def value(self, key, default=None): return self.get(key, default)
-    mock_window.settings = MockSettings({
-        "atom_label_font_size": 10,
-        "bond_width": 2.0,
-        "atom_color_C": "#000000"
-    })
+        def value(self, key, default=None):
+            return self.get(key, default)
+
+    mock_window.settings = MockSettings(
+        {"atom_label_font_size": 10, "bond_width": 2.0, "atom_color_C": "#000000"}
+    )
 
     # Use real dicts for data
     data = MagicMock()
@@ -33,12 +35,14 @@ def scene_setup(app):
 
     yield scene, data, mock_window
 
+
 def create_mock_event(pos, button=Qt.MouseButton.LeftButton):
     event = MagicMock()
     event.button.return_value = button
     event.pos.return_value = pos
     event.scenePos.return_value = pos
     return event
+
 
 def test_scene_ez_toggle_logic(scene_setup):
     """Test E/Z stereo toggling logic in mouseReleaseEvent."""
@@ -54,14 +58,17 @@ def test_scene_ez_toggle_logic(scene_setup):
     pos = QPointF(25, 0)
     event = create_mock_event(pos)
 
-    with patch.object(MoleculeScene, 'itemAt', return_value=bond):
-        scene.press_pos = pos # Manually set to ensure is_click
+    with patch.object(MoleculeScene, "itemAt", return_value=bond):
+        scene.press_pos = pos  # Manually set to ensure is_click
         scene.mouseReleaseEvent(event)
 
     assert bond.stereo == 3
     assert data.bonds[(0, 1)]["stereo"] == 3
 
-@pytest.mark.skip(reason="Mocking artifact in deletion path; manually verified with debug prints.")
+
+@pytest.mark.skip(
+    reason="Mocking artifact in deletion path; manually verified with debug prints."
+)
 def test_scene_item_deletion_path(scene_setup):
     """Test item deletion logic in mouseReleaseEvent."""
     scene, data, win = scene_setup
@@ -74,12 +81,13 @@ def test_scene_item_deletion_path(scene_setup):
     pos = QPointF(0, 0)
     event = create_mock_event(pos)
 
-    scene.press_pos = pos # Manually set to ensure is_click
+    scene.press_pos = pos  # Manually set to ensure is_click
 
-    with patch.object(MoleculeScene, 'itemAt', return_value=atom):
+    with patch.object(MoleculeScene, "itemAt", return_value=atom):
         scene.mouseReleaseEvent(event)
 
     assert scene.delete_items.called
+
 
 def test_scene_bond_inversion(scene_setup):
     """Test bond inversion logic in mouseReleaseEvent."""
@@ -98,28 +106,34 @@ def test_scene_bond_inversion(scene_setup):
         bid = (id1, id2)
         data.bonds[bid] = {"order": order, "stereo": stereo}
         return (bid, True)
+
     data.add_bond.side_effect = mock_add_bond
 
     pos = QPointF(25, 0)
     event = create_mock_event(pos)
 
-    with patch.object(MoleculeScene, 'itemAt', return_value=bond):
-        scene.press_pos = pos # Manually set to ensure is_click
+    with patch.object(MoleculeScene, "itemAt", return_value=bond):
+        scene.press_pos = pos  # Manually set to ensure is_click
         scene.mouseReleaseEvent(event)
 
     assert data.remove_bond.called
     assert (1, 0) in data.bonds
 
+
 def test_update_user_template_preview(scene_setup):
     """Test Template preview logic."""
     scene, data, win = scene_setup
     scene.user_template_data = {
-        "atoms": [{"x": 0, "y": 0, "symbol": "C", "id": 0}, {"x": 50, "y": 0, "symbol": "C", "id": 1}],
-        "bonds": [{"atom1": 0, "atom2": 1, "order": 1}]
+        "atoms": [
+            {"x": 0, "y": 0, "symbol": "C", "id": 0},
+            {"x": 50, "y": 0, "symbol": "C", "id": 1},
+        ],
+        "bonds": [{"atom1": 0, "atom2": 1, "order": 1}],
     }
     scene.template_preview = MagicMock()
     scene.update_user_template_preview(QPointF(100, 100))
     assert "points" in scene.template_context
+
 
 def test_benzene_template_rotation_logic(scene_setup):
     """Test benzene template rotation alignment."""
@@ -135,11 +149,21 @@ def test_benzene_template_rotation_logic(scene_setup):
     scene.find_bond_between = MagicMock(return_value=bond)
     scene.items = MagicMock(return_value=[bond])
 
-    bonds_info = [(0,1,2), (1,2,1), (2,3,2), (3,4,1), (4,5,2), (5,0,1)]
-    points = [QPointF(0,0), QPointF(50,0), QPointF(75,43), QPointF(50,86), QPointF(0,86), QPointF(-25,43)]
-    atoms_data = [{"symbol":"C", "id": i} for i in range(6)]
+    bonds_info = [(0, 1, 2), (1, 2, 1), (2, 3, 2), (3, 4, 1), (4, 5, 2), (5, 0, 1)]
+    points = [
+        QPointF(0, 0),
+        QPointF(50, 0),
+        QPointF(75, 43),
+        QPointF(50, 86),
+        QPointF(0, 86),
+        QPointF(-25, 43),
+    ]
+    atoms_data = [{"symbol": "C", "id": i} for i in range(6)]
     context = {
-        "points": points, "bonds_info": bonds_info, "atoms_data": atoms_data, "attachment_atom": None
+        "points": points,
+        "bonds_info": bonds_info,
+        "atoms_data": atoms_data,
+        "attachment_atom": None,
     }
 
     def mock_add_atom(symbol, pos, charge=0, radical=0):
@@ -148,10 +172,12 @@ def test_benzene_template_rotation_logic(scene_setup):
         return new_id
 
     data.add_atom.side_effect = mock_add_atom
+
     def mock_add_bond(id1, id2, order=1, stereo=0):
         bid = (id1, id2)
         data.bonds[bid] = {"order": order, "stereo": stereo}
         return (bid, True)
+
     data.add_bond.side_effect = mock_add_bond
 
     scene.add_user_template_fragment(context)

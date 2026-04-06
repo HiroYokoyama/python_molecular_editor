@@ -1,6 +1,7 @@
 from unittest.mock import patch, MagicMock
 from moleditpy.ui.color_settings_dialog import ColorSettingsDialog
 
+
 def test_color_settings_dialog_initialization(app, mock_parser_host):
     """Verify ColorSettingsDialog initializes and parses settings correctly."""
     settings = {"cpk_colors": {"C": "#123456"}, "ball_stick_bond_color": "#aabbcc"}
@@ -14,7 +15,8 @@ def test_color_settings_dialog_initialization(app, mock_parser_host):
     # Initial color parsing check usually relies on btn styles, we just ensure it didn't crash
     assert dialog.changed_cpk == {}
 
-@patch('moleditpy.ui.color_settings_dialog.QColorDialog.getColor')
+
+@patch("moleditpy.ui.color_settings_dialog.QColorDialog.getColor")
 def test_color_settings_dialog_pick_color(mock_get_color, app, mock_parser_host):
     """Verify that clicking an element button updates the changed_cpk dictionary."""
     dialog = ColorSettingsDialog(current_settings={}, parent=None)
@@ -33,11 +35,12 @@ def test_color_settings_dialog_pick_color(mock_get_color, app, mock_parser_host)
 
     btn = dialog.element_buttons["C"]
 
-    with patch.object(dialog, 'sender', return_value=btn):
+    with patch.object(dialog, "sender", return_value=btn):
         dialog.on_element_clicked()
 
     assert dialog.changed_cpk["C"] == "#ff0000"
     assert "background-color: #ff0000" in btn.styleSheet()
+
 
 def test_color_settings_dialog_reset_all(app, mock_parser_host):
     """Verify reset_all clears changes and sets the reset flag."""
@@ -51,6 +54,7 @@ def test_color_settings_dialog_reset_all(app, mock_parser_host):
 
     assert dialog._reset_all_flag is True
     assert dialog.changed_cpk == {}
+
 
 def test_color_settings_dialog_apply_changes(app, mock_parser_host):
     """Verify that apply_changes pushes updates to the parent window settings."""

@@ -253,7 +253,7 @@ def app():
                 colorama.deinit()
             except (ImportError, Exception):
                 pass
-                
+
             # Wait for any lingering background threads to finish.
             import threading
             import time
@@ -277,6 +277,7 @@ def app():
     if sys.platform == "win32":
         try:
             import faulthandler
+
             faulthandler.disable()
         except Exception:
             pass
@@ -462,7 +463,7 @@ def window(app, qtbot, monkeypatch):
                             widget.removeEventFilter(win.ui_manager)
                         except Exception:
                             pass
-                    
+
                     # 2. Override closeEvent to simply accept (Solution 1)
                     # This ensures that calling widget.close() below terminates safely.
                     try:

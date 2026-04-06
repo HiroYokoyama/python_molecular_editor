@@ -190,11 +190,13 @@ def test_rodrigues_rotate_identity():
 def test_adjust_bond_angle_simple():
     """Set a 90° angle to 120° and verify."""
     # A at (1,0,0), B at origin, C at (0,1,0) → 90°
-    positions = np.array([
-        [1.0, 0.0, 0.0],  # A (idx 0)
-        [0.0, 0.0, 0.0],  # B (idx 1)
-        [0.0, 1.0, 0.0],  # C (idx 2)
-    ])
+    positions = np.array(
+        [
+            [1.0, 0.0, 0.0],  # A (idx 0)
+            [0.0, 0.0, 0.0],  # B (idx 1)
+            [0.0, 1.0, 0.0],  # C (idx 2)
+        ]
+    )
     target = 120.0
     adjust_bond_angle(positions, 0, 1, 2, target, {2})
 
@@ -215,12 +217,14 @@ def test_adjust_bond_angle_simple():
 def test_adjust_bond_angle_with_group():
     """Move multiple atoms; verify relative geometry is preserved."""
     # A(0), B(1) at origin, C(2), D(3) attached to C
-    positions = np.array([
-        [1.0, 0.0, 0.0],   # A
-        [0.0, 0.0, 0.0],   # B (vertex)
-        [0.0, 1.0, 0.0],   # C
-        [0.0, 2.0, 0.0],   # D (attached to C)
-    ])
+    positions = np.array(
+        [
+            [1.0, 0.0, 0.0],  # A
+            [0.0, 0.0, 0.0],  # B (vertex)
+            [0.0, 1.0, 0.0],  # C
+            [0.0, 2.0, 0.0],  # D (attached to C)
+        ]
+    )
     cd_before = np.linalg.norm(positions[3] - positions[2])
 
     adjust_bond_angle(positions, 0, 1, 2, 60.0, {2, 3})
@@ -239,11 +243,13 @@ def test_adjust_bond_angle_with_group():
 
 def test_adjust_bond_angle_collinear():
     """Collinear atoms → fallback axis is used, rotation still succeeds."""
-    positions = np.array([
-        [2.0, 0.0, 0.0],  # A
-        [0.0, 0.0, 0.0],  # B
-        [-1.0, 0.0, 0.0], # C  (collinear with A-B, angle = 180°)
-    ])
+    positions = np.array(
+        [
+            [2.0, 0.0, 0.0],  # A
+            [0.0, 0.0, 0.0],  # B
+            [-1.0, 0.0, 0.0],  # C  (collinear with A-B, angle = 180°)
+        ]
+    )
     target = 90.0
     delta = adjust_bond_angle(positions, 0, 1, 2, target, {2})
 
