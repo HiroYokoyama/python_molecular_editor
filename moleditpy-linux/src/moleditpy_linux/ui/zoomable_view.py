@@ -117,9 +117,6 @@ class ZoomableView(QGraphicsView):
                 # (positive for zoom-in, negative for zoom-out)
                 factor = 1.0 + event.value()
 
-                current_scale = self.transform().m11()
-                min_scale, max_scale = 0.05, 20.0
-
                 # Apply scaling if within limits
                 self.scale(factor, factor)
                 return True

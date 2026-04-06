@@ -242,7 +242,6 @@ class BondItem(QGraphicsItem):
             center = line.center()
 
             # Logic similar to boundingRect but returning just the label box
-            font_size = 20
             # ... (Simpler logic: just return a box around center)
             # Standard size estimate
             box_size = 30
@@ -265,7 +264,6 @@ class BondItem(QGraphicsItem):
             return
 
         # Default values
-        width_2d = 2.0
         wedge_width_half = 6.0
         num_dashes = 8
         bond_color = QColor("#222222")
@@ -375,9 +373,6 @@ class BondItem(QGraphicsItem):
 
                     if is_in_ring and ring_center:
                         # Ring structure: 1 central line (single bond pos) + 1 short inner line
-                        # Calculate direction from bond center to ring center
-                        bond_center = line.center()
-
                         # Ring center direction in local coords
                         # ring_center may be QPointF (from old/legacy code) or tuple (from new decoupled core)
                         if isinstance(ring_center, (list, tuple)):
@@ -512,8 +507,6 @@ class BondItem(QGraphicsItem):
             # Continue without crashing
 
     def hoverEnterEvent(self, event: Any) -> None:
-        scene = self.scene()
-        mode = getattr(scene, "mode", "")
         self.hovered = True
         self.update()
         if self.scene():

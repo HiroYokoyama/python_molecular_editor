@@ -319,7 +319,6 @@ class UIManager(QObject):
         self.host.view_3d_manager.plotter.interactor.SetInteractorStyle(style)
         self.host.view_3d_manager.plotter.interactor.Initialize()
 
-
     def handle_drag_enter_event(self, event):
         """Internal handler for drag enter event (bypasses PyQt type checks in tests)."""
         if not event.mimeData().hasUrls():
@@ -343,7 +342,6 @@ class UIManager(QObject):
                 return
 
         event.ignore()
-
 
     def handle_drop_event(self, event):
         """Internal handler for file drop event (bypasses PyQt type checks in tests)."""

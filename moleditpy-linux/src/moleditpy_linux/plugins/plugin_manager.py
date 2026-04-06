@@ -514,7 +514,6 @@ class PluginManager:
 
         # Check 2D selection
         try:
-            from .plugin_interface import PluginContext
             # We need to access the scene items.
             # In MoleditPy, atoms in the scene are AtomItem objects which have an 'atom_id'.
             # These atom_ids map to entries in state_manager.data.atoms.
