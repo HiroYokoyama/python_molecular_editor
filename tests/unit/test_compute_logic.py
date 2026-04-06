@@ -1,12 +1,9 @@
 import pytest
-import os
 from rdkit import Chem
 from rdkit.Chem import AllChem
 from moleditpy.ui.compute_logic import ComputeManager
-from moleditpy.core.molecular_data import MolecularData
-from PyQt6.QtCore import QPointF, QPoint, QTimer, QThread
-from PyQt6.QtGui import QColor, QAction
-from PyQt6.QtWidgets import QMenu, QMessageBox
+from PyQt6.QtCore import QPointF
+from PyQt6.QtWidgets import QMessageBox
 from unittest.mock import MagicMock, patch
 
 
@@ -16,11 +13,11 @@ class DummyCompute(ComputeManager):
     def __init__(self, host):
         self._host = host
         ComputeManager.__init__(self, host)
-        
+
         # Force populate host if it's a MagicMock or missing managers
         if not hasattr(host, "init_manager"):
             host.init_manager = MagicMock()
-        
+
         # Always set these to ensure they are real objects, not MagicMocks
         host.init_manager.settings = getattr(host.init_manager, "settings", {}) or {}
         host.init_manager.opt3d_method_labels = {
@@ -30,7 +27,7 @@ class DummyCompute(ComputeManager):
         if not hasattr(host, "view_3d_manager"): host.view_3d_manager = MagicMock()
         if not hasattr(host, "state_manager"): host.state_manager = MagicMock()
         if not hasattr(host, "ui_manager"): host.ui_manager = MagicMock()
-        
+
         # Ensure buttons/actions exist for UI transition tests
         for btn in ["convert_button", "cleanup_button", "optimize_3d_button", "export_button", "analysis_action", "edit_3d_action"]:
             if not hasattr(host.init_manager, btn):
@@ -188,7 +185,7 @@ def test_on_calculation_finished_basic(mock_parser_host):
     mol = Chem.MolFromSmiles("C")
     mol = Chem.AddHs(mol)
     result = (worker_id, mol)
-    with patch.object(compute, "draw_molecule_3d") as mock_draw:
+    with patch.object(compute, "draw_molecule_3d"):
         compute.on_calculation_finished(result)
         assert compute.host.view_3d_manager.current_mol == mol
         assert worker_id not in compute.active_worker_ids
@@ -363,9 +360,9 @@ def test_optimize_3d_temp_method_override(mock_parser_host):
         patch("moleditpy.ui.compute_logic.QThread"),
         patch("PyQt6.QtCore.QTimer.singleShot"),
     ):
-        mock_worker = MockWorker.return_value
+        MockWorker.return_value
         compute.optimize_3d_structure()
-        
+
         # In the new async implementation, it should create a worker
         assert MockWorker.called
         # Verify it uses the temp override method (MMFF_RDKIT)
@@ -755,7 +752,7 @@ def test_trigger_conversion_happy_path(mock_parser_host):
 
 def test_trigger_conversion_stereo_enhancement(mock_parser_host):
     """Test trigger_conversion stereo enhancement logic for E/Z bonds."""
-    from PyQt6.QtCore import QPointF, QTimer
+    from PyQt6.QtCore import QPointF
 
     compute = DummyCompute(mock_parser_host)
     compute.data.add_atom("C", QPointF(0, 0))

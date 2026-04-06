@@ -1,7 +1,5 @@
 import pytest
-import math
 from unittest.mock import MagicMock
-from PyQt6.QtCore import QPointF
 from moleditpy.ui.molecular_scene_handler import TemplateMixin
 
 class MockScene(TemplateMixin):
@@ -30,7 +28,7 @@ def test_calculate_6ring_rotation_empty(scene):
     atom_items = [MagicMock() for _ in range(6)]
     for a in atom_items:
         a.bonds = []
-        
+
     rot = scene._calculate_6ring_rotation(num_points, bonds_info, atom_items)
     assert rot == 0
 
@@ -42,16 +40,16 @@ def test_calculate_6ring_rotation_single_edge_single(scene):
     atom_items = [MagicMock() for _ in range(6)]
     for a in atom_items:
         a.bonds = []
-        
+
     # Fuse on edge k=0 (between atoms 0 and 1) with existing single bond
     bond = MagicMock()
     bond.order = 1
     bond.atom1, bond.atom2 = atom_items[0], atom_items[1]
     atom_items[0].bonds.append(bond)
     atom_items[1].bonds.append(bond)
-    
+
     rot = scene._calculate_6ring_rotation(num_points, bonds_info, atom_items)
-    # Case B logic: 1-edge fuse. 
+    # Case B logic: 1-edge fuse.
     # exist_order=1. template_ord at (k_fuse+rot)%6.
     # Score 100 if (exist_order=1 and template_ord=2).
     # rot=0 -> template_ord = bonds_info[0].order = 2. Score 100.
@@ -65,14 +63,14 @@ def test_calculate_6ring_rotation_single_edge_double(scene):
     atom_items = [MagicMock() for _ in range(6)]
     for a in atom_items:
         a.bonds = []
-        
+
     # Existing double bond on edge k=0
     bond = MagicMock()
     bond.order = 2
     bond.atom1, bond.atom2 = atom_items[0], atom_items[1]
     atom_items[0].bonds.append(bond)
     atom_items[1].bonds.append(bond)
-    
+
     rot = scene._calculate_6ring_rotation(num_points, bonds_info, atom_items)
     # Case B logic: if exist_order == 2:
     # 100 if template_ord == 1 or 2
@@ -89,33 +87,33 @@ def test_calculate_6ring_rotation_multi_edge_fused(scene):
     atom_items = [MagicMock() for _ in range(6)]
     for a in atom_items:
         a.bonds = []
-        
+
     # Edge k=0 (atoms 0,1) and k=1 (atoms 1,2)
     b1 = MagicMock()
     b1.order = 2
     b1.atom1, b1.atom2 = atom_items[0], atom_items[1]
     atom_items[0].bonds.append(b1)
     atom_items[1].bonds.append(b1)
-    
+
     b2 = MagicMock()
     b2.order = 1
     b2.atom1, b2.atom2 = atom_items[1], atom_items[2]
     atom_items[1].bonds.append(b2)
     atom_items[2].bonds.append(b2)
-    
+
     rot = scene._calculate_6ring_rotation(num_points, bonds_info, atom_items)
-    
+
     # Case A logic: >= 2 edges.
     # Base scoring: 1000 per matched double bond, 100 bonus for matches, -50 for mismatch.
     # rot=0:
     # k=0 (exist 2): template_ord = bonds_info[0]=2. match_double_count=1, match_bonus=100.
     # k=1 (exist 1): template_ord = bonds_info[1]=1. match_bonus=100.
     # Total = 1000 + 200 = 1200.
-    
+
     # rot=1:
     # k=0 (exist 2): template_ord = bonds_info[1]=1. mismatch_penalty=-50.
     # k=1 (exist 1): template_ord = bonds_info[2]=2. mismatch_penalty=-50.
-    
+
     # Connection safety factor (5000) also applies.
     assert rot == 0
 
@@ -127,18 +125,18 @@ def test_calculate_6ring_rotation_connection_safety(scene):
     atom_items = [MagicMock() for _ in range(6)]
     for a in atom_items:
         a.bonds = []
-    
+
     # Multi-fuse on 0-1 and 2-3 (non-adjacent)
     # k=0 (0-1) and k=2 (2-3)
     b1 = MagicMock(); b1.order = 1; b1.atom1 = atom_items[0]; b1.atom2 = atom_items[1]
     atom_items[0].bonds.append(b1); atom_items[1].bonds.append(b1)
-    
+
     b2 = MagicMock(); b2.order = 1; b2.atom1 = atom_items[2]; b2.atom2 = atom_items[3]
     atom_items[2].bonds.append(b2); atom_items[3].bonds.append(b2)
-    
+
     rot = scene._calculate_6ring_rotation(num_points, bonds_info, atom_items)
     # Safe connections (adj template edges are single bonds) have massive 5000 pts bonus.
     # In benzene (2-1-2-1-2-1), double bonds (0, 2, 4) have single-bond neighbors.
     # Single bonds (1, 3, 5) have double-bond neighbors.
     # Thus, the score heavily favors aligning fusion edges k=0,2 with template double bonds at 0,2,4.
-    assert rot % 2 == 0 
+    assert rot % 2 == 0

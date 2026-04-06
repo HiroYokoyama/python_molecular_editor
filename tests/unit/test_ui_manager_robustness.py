@@ -1,4 +1,3 @@
-import pytest
 from unittest.mock import MagicMock
 from moleditpy.ui.ui_manager import UIManager
 

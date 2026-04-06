@@ -1,6 +1,5 @@
 import ast
 import os
-import sys
 
 
 def extract_assertions(filepath):
@@ -67,7 +66,7 @@ def generate_catalog():
     # Adjusted for tests/utils/ location
     utils_dir = os.path.dirname(os.path.abspath(__file__))
     tests_dir = os.path.dirname(utils_dir)
-    root_dir = os.path.dirname(tests_dir)
+    os.path.dirname(tests_dir)
     output_file = os.path.join(tests_dir, "assertion_catalog.md")
 
     subdirs = ["unit", "integration", "gui"]

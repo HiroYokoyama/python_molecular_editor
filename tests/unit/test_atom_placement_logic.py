@@ -1,5 +1,4 @@
 import pytest
-import math
 from unittest.mock import MagicMock
 from PyQt6.QtCore import QPointF
 from moleditpy.ui.molecular_scene_handler import KeyboardMixin
@@ -40,7 +39,7 @@ def test_placement_1_neighbor(scene):
     other_atom = MockAtom(QPointF(80, 100)) # Neighbor at Left (existing vector is Right 20, 0)
     bond = MockBond(start_atom, other_atom)
     start_atom.bonds = [bond]
-    
+
     offset = scene._calculate_new_atom_position(start_atom, L)
     # Existing vector (start - other): (20, 0)
     # 60 deg CW rotation: (20*cos60 - 0*sin60, 20*sin60 + 0*cos60) = (10, 17.32)
@@ -55,9 +54,9 @@ def test_placement_3_neighbors_balanced(scene):
     a1 = MockAtom(QPointF(1, 0))
     a2 = MockAtom(QPointF(-0.5, 0.866))
     a3 = MockAtom(QPointF(-0.5, -0.866))
-    
+
     start_atom.bonds = [MockBond(start_atom, a1), MockBond(start_atom, a2), MockBond(start_atom, a3)]
-    
+
     offset = scene._calculate_new_atom_position(start_atom, L)
     # Sum is ~0. Fallback is (L*0.7071, -L*0.7071)
     assert offset.x() == pytest.approx(L * 0.7071)
@@ -70,9 +69,9 @@ def test_placement_3_neighbors_unbalanced(scene):
     a1 = MockAtom(QPointF(1, 0))
     a2 = MockAtom(QPointF(0, 1))
     a3 = MockAtom(QPointF(-1, 0))
-    
+
     start_atom.bonds = [MockBond(start_atom, a1), MockBond(start_atom, a2), MockBond(start_atom, a3)]
-    
+
     offset = scene._calculate_new_atom_position(start_atom, L)
     # Vector sum: (1,0) + (0,1) + (-1,0) = (0, 1)
     # Opposite: (0, -1)
@@ -86,9 +85,9 @@ def test_placement_2_neighbors_skeleton(scene):
     # "V" shape at bottom
     a1 = MockAtom(QPointF(-0.866, 0.5))
     a2 = MockAtom(QPointF(0.866, 0.5))
-    
+
     start_atom.bonds = [MockBond(start_atom, a1), MockBond(start_atom, a2)]
-    
+
     offset = scene._calculate_new_atom_position(start_atom, L)
     # Unit vectors to neighbors: (-0.866, 0.5) and (0.866, 0.5)
     # Sum: (0, 1.0). Opposite: (0, -1.0). Scaled: (0, -L)

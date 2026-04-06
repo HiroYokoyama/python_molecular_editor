@@ -49,14 +49,14 @@ def test_calculation_worker_bond_length_validation(qtbot, app):
 
     # Get optimized distance from the result conformer
     conf = mol_3d.GetConformer()
-    
+
     # Use BondLengthDialog logic via importing
     main_window = MagicMock()
     dialog = BondLengthDialog(mol_3d, main_window)
     dialog.atom1_idx = target_bond.GetBeginAtomIdx()
     dialog.atom2_idx = target_bond.GetEndAtomIdx()
     dialog.update_display()
-    
+
     # Dialog distance text holds the value formatted to 3 decimal places
     dist_measured_text = dialog.distance_input.text()
     if dist_measured_text == "":
@@ -100,7 +100,7 @@ def test_calculation_worker_angle_validation(qtbot, app):
         worker.run_calculation(mol_block, settings)
 
     mol_3d = blocker.args[0][1]
-    conf = mol_3d.GetConformer()
+    mol_3d.GetConformer()
 
     # Find C-C-C triplet by symbol and connectivity
     # Central carbon has 2 carbon neighbors.
@@ -117,7 +117,7 @@ def test_calculation_worker_angle_validation(qtbot, app):
                 break
 
     assert central != -1, "Could not find central carbon in propane"
-    
+
     # Use AngleDialog logic via importing
     main_window = MagicMock()
     dialog = AngleDialog(mol_3d, main_window)
@@ -125,7 +125,7 @@ def test_calculation_worker_angle_validation(qtbot, app):
     dialog.atom2_idx = central
     dialog.atom3_idx = neighbors[1]
     dialog.update_display()
-    
+
     angle_measured_text = dialog.angle_input.text()
     if angle_measured_text == "":
         current_angle = dialog.calculate_angle()
@@ -374,7 +374,7 @@ def test_calculation_worker_constraint_embedding_fallback(qtbot, app):
         # extend list to avoid StopIteration if called more than twice
         mock_embed.side_effect = [-1] + [1] * 5
 
-        with qtbot.waitSignal(worker.finished, timeout=10000) as blocker:
+        with qtbot.waitSignal(worker.finished, timeout=10000):
             worker.run_calculation(mol_block, {"conversion_mode": "rdkit"})
 
         assert mock_embed.call_count >= 2
@@ -450,7 +450,7 @@ def test_calculation_worker_obabel_fallback_mocked(qtbot, app):
             return_value=-1,
         ),
         patch("moleditpy.ui.calculation_worker.OBABEL_AVAILABLE", True),
-        patch("moleditpy.ui.calculation_worker.pybel", spec=True) as mock_pybel,
+        patch("moleditpy.ui.calculation_worker.pybel", spec=True),
         patch("moleditpy.ui.calculation_worker.subprocess.run") as mock_run,
         patch(
             "moleditpy.ui.calculation_worker.Chem.MolFromMolBlock"
@@ -977,4 +977,3 @@ def test_calculation_worker_fallback_to_direct_with_optimize(qtbot, app):
     mol_3d = blocker.args[0][1]
     assert mol_3d is not None
     assert mol_3d.GetNumConformers() >= 1
-

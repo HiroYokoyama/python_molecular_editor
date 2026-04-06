@@ -1,8 +1,6 @@
-import pytest
 from moleditpy.ui.edit_actions_logic import EditActionsManager
-from moleditpy.core.molecular_data import MolecularData
 from PyQt6.QtCore import QPointF
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 
 class DummyEditActions(EditActionsManager):
@@ -30,7 +28,7 @@ def test_add_hydrogen_atoms_app_logic(mock_parser_host):
     """Verify add_hydrogen_atoms creates items in the scene based on RDKit logic."""
     actions = DummyEditActions(mock_parser_host)
     # Add a Carbon atom via scene to trigger item mock setup
-    c_id = actions.scene.create_atom("C", QPointF(100, 100))
+    actions.scene.create_atom("C", QPointF(100, 100))
 
     # Run the app logic
     actions.add_hydrogen_atoms()

@@ -482,8 +482,6 @@ def window(app, qtbot, monkeypatch):
 
                     traceback.print_exc()
 
-            from PyQt6.QtWidgets import QApplication
-
             QApplication.closeAllWindows()
 
             # Thoroughly process events to clear any pending COM calls or slots

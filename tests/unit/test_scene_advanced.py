@@ -1,12 +1,9 @@
 import pytest
-from PyQt6.QtWidgets import QApplication, QGraphicsScene, QGraphicsView, QMenu
-from PyQt6.QtCore import Qt, QPointF, QRectF, QMimeData
-from PyQt6.QtGui import QClipboard
+from PyQt6.QtWidgets import QApplication, QGraphicsView
+from PyQt6.QtCore import Qt, QPointF
 
 from moleditpy.ui.molecule_scene import MoleculeScene
 from moleditpy.core.molecular_data import MolecularData
-from moleditpy.ui.atom_item import AtomItem
-from moleditpy.ui.bond_item import BondItem
 
 # Helper for mouse events
 from unittest.mock import MagicMock, patch
@@ -67,7 +64,7 @@ def scene_setup(qapp):
         def __init__(self):
             from unittest.mock import MagicMock
             self.is_2d_editable = True
-            
+
             # Initialize managers first
             self.state_manager = MagicMock()
             self.edit_actions_manager = MagicMock()
@@ -75,7 +72,7 @@ def scene_setup(qapp):
             self.ui_manager = MagicMock()
             self.init_manager = MagicMock()
             self.view_3d_manager = MagicMock()
-            
+
             self.edit_actions_manager.undo_stack = []
             self.edit_actions_manager.redo_stack = []
             self.statusBar_msg = ""

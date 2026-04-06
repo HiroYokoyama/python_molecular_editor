@@ -1,10 +1,8 @@
 """Tests for StateManager — get_current_state, JSON serialization round-trip."""
 
-import pytest
 from rdkit import Chem
 from rdkit.Chem import AllChem
 from moleditpy.ui.app_state import StateManager
-from moleditpy.core.molecular_data import MolecularData
 from PyQt6.QtCore import QPointF
 from unittest.mock import MagicMock
 

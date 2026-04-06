@@ -1,11 +1,7 @@
-import pytest
-from PyQt6.QtCore import Qt, QPointF, QTimer
-from PyQt6.QtWidgets import QMainWindow
+from PyQt6.QtCore import QPointF
 from unittest.mock import MagicMock, patch
 
 from moleditpy.ui.edit_actions_logic import EditActionsManager
-from moleditpy.core.molecular_data import MolecularData
-from moleditpy.ui.atom_item import AtomItem
 
 
 class DummyEditActions(EditActionsManager):

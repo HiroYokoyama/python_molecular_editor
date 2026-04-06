@@ -1,4 +1,3 @@
-import pytest
 from moleditpy.ui.angle_dialog import AngleDialog
 from moleditpy.ui.dihedral_dialog import DihedralDialog
 from rdkit import Chem
@@ -20,9 +19,9 @@ def test_angle_dialog_wrapping(qtbot):
     # Set text and apply
     dialog.angle_input.setText("190")
     dialog.apply_geometry_update = MagicMock()
-    
+
     dialog.apply_changes()
-    
+
     assert dialog.angle_input.text() == "-170.00"
     dialog.apply_geometry_update.assert_called_once_with(-170.0)
 
@@ -43,8 +42,8 @@ def test_dihedral_dialog_wrapping(qtbot):
     # Set text and apply
     dialog.dihedral_input.setText("-200")
     dialog.apply_geometry_update = MagicMock()
-    
+
     dialog.apply_changes()
-    
+
     assert dialog.dihedral_input.text() == "160.00"
     dialog.apply_geometry_update.assert_called_once_with(160.0)

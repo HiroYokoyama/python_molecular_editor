@@ -1,6 +1,5 @@
 import pytest
 from unittest.mock import MagicMock, Mock, patch, mock_open
-import os
 import numpy as np
 from PyQt6.QtWidgets import QMainWindow
 from moleditpy.ui.export_logic import ExportManager
@@ -57,7 +56,7 @@ class MockMainWindow(ExportManager, QMainWindow):
     def __init__(self):
         # Initialize ExportManager with self as host
         ExportManager.__init__(self, self)
-        
+
         # Initialize all managers to avoid AttributeErrors
         self.view_3d_manager = MagicMock()
         self.edit_3d_manager = MagicMock()
@@ -67,7 +66,7 @@ class MockMainWindow(ExportManager, QMainWindow):
         self.compute_manager = MagicMock()
         self.ui_manager = MagicMock()
         self.export_manager = self
-        
+
         self.view_3d_manager.current_mol = MagicMock()
         self.host.init_manager.current_file_path = "/path/to/molecule.xyz"
         self.view_3d_manager.plotter = MagicMock()
@@ -235,7 +234,7 @@ def test_create_multi_material_obj_logic(window):
 def test_export_from_3d_view_logic(window):
     """Test export_from_3d_view to ensure it iterates actors and extracts meshes."""
     mock_mesh_data = TinyMesh(10)
-    
+
     # actor setup using Mock to avoid auto-creating methods like extract_surface
     mock_actor = Mock(name="Actor")
     mock_actor.mapper = Mock()
@@ -329,7 +328,7 @@ def test_export_2d_svg_success(window, mock_file_dialog, mock_message_box):
 def test_export_from_3d_view_no_color_logic(window):
     """Test the logic of extracting mesh without colors."""
     mock_mesh_data = TinyMesh(10)
-    
+
     mock_actor = Mock(name="ActorNC")
     mock_actor.mapper = Mock()
     mock_actor.mapper.input = mock_mesh_data
@@ -352,7 +351,7 @@ def test_export_from_3d_view_with_colors_logic(window):
     """Test logic of extracting mesh with colors and splitting."""
     mock_mesh_data = TinyMesh(10)
     mock_mesh_data.point_data["colors"] = np.zeros((10, 3), dtype=np.uint8)
-    
+
     mock_actor = Mock(name="ActorWC")
     mock_actor.mapper = Mock()
     mock_actor.mapper.input = mock_mesh_data

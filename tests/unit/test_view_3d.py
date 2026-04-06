@@ -1,4 +1,3 @@
-import pytest
 from unittest.mock import MagicMock, patch
 from rdkit import Chem
 from rdkit.Chem import AllChem

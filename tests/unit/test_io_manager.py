@@ -16,7 +16,7 @@ import sys
 import pytest
 from unittest.mock import MagicMock, patch
 
-from PyQt6.QtWidgets import QApplication, QDialog
+from PyQt6.QtWidgets import QApplication
 
 # Make the local moleditpy package discoverable
 workspace_src_path = os.path.abspath(

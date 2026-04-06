@@ -41,16 +41,16 @@ def test_radical_toggle_selected(scene):
     a2 = MockAtom(2, 1)
     scene._selected_items = [a1, a2]
     scene.data.atoms = {1: {"radical": 0}, 2: {"radical": 1}}
-    
+
     # Create Period key event
     event = MagicMock(spec=QKeyEvent)
     event.key.return_value = Qt.Key.Key_Period
-    
+
     # We need to patch QCursor.pos() inside KeyboardMixin.keyPressEvent
     with patch("moleditpy.ui.molecular_scene_handler.QCursor.pos") as mock_cursor:
         mock_cursor.return_value = QPointF(0,0)
         scene.keyPressEvent(event)
-    
+
     assert a1.radical == 1
     assert a2.radical == 2
     assert scene.data.atoms[1]["radical"] == 1
@@ -66,14 +66,14 @@ def test_radical_toggle_at_cursor(scene):
     scene._selected_items = []
     scene._item_at_cursor = a1
     scene.data.atoms = {1: {"radical": 2}}
-    
+
     event = MagicMock(spec=QKeyEvent)
     event.key.return_value = Qt.Key.Key_Period
-    
+
     with patch("moleditpy.ui.molecular_scene_handler.QCursor.pos") as mock_cursor:
         mock_cursor.return_value = QPointF(0,0)
         scene.keyPressEvent(event)
-    
+
     assert a1.radical == 0
     assert scene.data.atoms[1]["radical"] == 0
     scene.window.edit_actions_manager.push_undo_state.assert_called_once()
@@ -82,13 +82,13 @@ def test_radical_toggle_no_target(scene):
     """Test that nothing happens if no atoms are selected or at the cursor."""
     scene._selected_items = []
     scene._item_at_cursor = None
-    
+
     event = MagicMock(spec=QKeyEvent)
     event.key.return_value = Qt.Key.Key_Period
-    
+
     with patch("moleditpy.ui.molecular_scene_handler.QCursor.pos") as mock_cursor:
         mock_cursor.return_value = QPointF(0,0)
         scene.keyPressEvent(event)
-    
+
     scene.window.edit_actions_manager.push_undo_state.assert_not_called()
     event.accept.assert_not_called()

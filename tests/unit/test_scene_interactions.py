@@ -1,8 +1,6 @@
-import pytest
 import math
 from PyQt6.QtCore import Qt, QPointF
-from PyQt6.QtWidgets import QApplication
-from PyQt6.QtGui import QMouseEvent, QTransform
+from PyQt6.QtGui import QTransform
 from moleditpy.ui.molecule_scene import MoleculeScene
 from moleditpy.ui.atom_item import AtomItem
 from moleditpy.ui.bond_item import BondItem

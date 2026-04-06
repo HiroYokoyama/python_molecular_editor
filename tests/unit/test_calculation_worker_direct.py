@@ -1,9 +1,8 @@
 import pytest
-from PyQt6.QtCore import QObject, pyqtSignal
 from rdkit import Chem
 from rdkit.Chem import AllChem
 from moleditpy.ui.calculation_worker import CalculationWorker
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 
 # Helper to capture signal emissions

@@ -1,16 +1,15 @@
 import os
 from rdkit import Chem
 from moleditpy.ui.io_logic import IOManager
-from moleditpy.core.molecular_data import MolecularData
 from PyQt6.QtCore import QPointF
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 
 class DummyParser(IOManager):
     def __init__(self, host):
         self._host = host
         IOManager.__init__(self, host)
-        
+
     def __getattr__(self, name):
         return getattr(self._host, name)
 

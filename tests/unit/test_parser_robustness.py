@@ -7,7 +7,7 @@ class MockMainWindow(IOManager):
     def __init__(self, host=None):
         self._host = host or MagicMock()
         IOManager.__init__(self, self._host)
-        
+
         # Managers if host is fresh MagicMock
         if not hasattr(self._host, "state_manager"):
             self._host.state_manager = MagicMock()
@@ -64,15 +64,15 @@ def test_get_set_mol_prop_instance():
     """Test instance versions of prop helpers."""
     win = MockMainWindow()
     mol = Chem.MolFromSmiles("C")
-    
+
     # Valid int
     win._set_mol_prop(mol, "int_prop", 123)
     assert win._get_mol_prop(mol, "int_prop") == 123
-    
+
     # Valid float
     win._set_mol_prop(mol, "float_prop", 1.23)
     assert pytest.approx(win._get_mol_prop(mol, "float_prop")) == 1.23
-    
+
     # Fallback to string
     win._set_mol_prop(mol, "str_prop", "hello")
     assert win._get_mol_prop(mol, "str_prop") == "hello"
@@ -90,11 +90,11 @@ def test_save_as_xyz_logic(tmp_path):
     from rdkit.Chem import AllChem
     AllChem.EmbedMolecule(mol)
     win.current_mol = mol
-    
+
     save_path = str(tmp_path / "test.xyz")
     with patch("PyQt6.QtWidgets.QFileDialog.getSaveFileName", return_value=(save_path, "XYZ")):
         win.save_as_xyz()
-        
+
     import os
     assert os.path.exists(save_path)
     with open(save_path, "r") as f:
@@ -110,7 +110,7 @@ def test_load_mol_counts_fix():
     fixed = win.fix_mol_counts_line(line)
     assert "V2000" in fixed
     assert len(fixed) == 39
-    
+
     # Already V2000
     line_v2 = "  1  0  0  0  0  0  0  0  0  0  1 V2000"
     assert win.fix_mol_counts_line(line_v2) == line_v2
@@ -125,9 +125,9 @@ def test_load_xyz_robustness(invalid_xyz, tmp_path):
     win = MockMainWindow()
     xyz_file = tmp_path / "bad.xyz"
     xyz_file.write_text(invalid_xyz)
-    
+
     win.load_xyz_file(str(xyz_file))
-        
+
     # Should have shown an error in statusBar
     win.statusBar().showMessage.assert_called()
     args, _ = win.statusBar().showMessage.call_args

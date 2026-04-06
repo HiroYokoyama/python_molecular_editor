@@ -1,5 +1,5 @@
 import pytest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 from rdkit import Chem
 from moleditpy.ui.calculation_worker import CalculationWorker, WorkerHaltError
 
@@ -13,14 +13,14 @@ def test_worker_halt_logic():
     """Test that worker correctly identifies halt requests."""
     worker = MockWorker()
     worker.halt_all = True
-    
+
     # Internal _check_halted logic check via mock run
     with pytest.raises(WorkerHaltError):
         # We simulate the _safe_status which checks for halt
         def _check_halted(): return worker.halt_all
         def _safe_status(msg):
             if _check_halted(): raise WorkerHaltError("Halted")
-        
+
         _safe_status("testing halt")
 
 def test_iterative_optimize_robustness():
@@ -42,10 +42,10 @@ def test_run_calculation_empty_input():
     worker = MockWorker()
     error_handler = MagicMock()
     worker.error.connect(error_handler)
-    
+
     # Should not raise, but emit error signal
     worker.run_calculation("")
-    
+
     assert error_handler.called
     args, _ = error_handler.call_args
     # First arg is (worker_id, error_msg)

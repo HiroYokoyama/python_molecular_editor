@@ -15,11 +15,10 @@ if app is None:
 from moleditpy.ui.angle_dialog import AngleDialog
 from moleditpy.ui.dihedral_dialog import DihedralDialog
 from moleditpy.ui.bond_length_dialog import BondLengthDialog
-from moleditpy.core.mol_geometry import calculate_dihedral, adjust_bond_angle
+from moleditpy.core.mol_geometry import calculate_dihedral
 from moleditpy.ui.alignment_dialog import AlignmentDialog
 from moleditpy.ui.align_plane_dialog import AlignPlaneDialog
 from moleditpy.ui.edit_3d_logic import Edit3DManager
-from moleditpy.ui.custom_interactor_style import CustomInteractorStyle
 
 def setup_test_molecule(smiles: str):
     """Creates an optimized 3D RDKit molecule from SMILES for testing."""
@@ -38,16 +37,16 @@ def test_angle_dialog_logic_matches_rdkit():
     """Verify AngleDialog's native calculation against RDKit."""
     mol = setup_test_molecule("CCC") # Propane
     conf = mol.GetConformer()
-    
+
     # 0, 1, 2 correspond to the three carbons in CCC
     rdkit_ref_angle = rdMolTransforms.GetAngleDeg(conf, 0, 1, 2)
-    
+
     main_window = MagicMock()
     dialog = AngleDialog(mol, main_window)
     dialog.atom1_idx = 0
     dialog.atom2_idx = 1
     dialog.atom3_idx = 2
-    
+
     app_calculated_angle = dialog.calculate_angle()
     assert app_calculated_angle == pytest.approx(rdkit_ref_angle, abs=0.01)
 
@@ -59,9 +58,9 @@ def test_adjust_bond_angle_internal_calc_matches_rdkit():
     mol = setup_test_molecule("CCC")
     conf = mol.GetConformer()
     rdkit_ref_angle = rdMolTransforms.GetAngleDeg(conf, 0, 1, 2)
-    
+
     positions = conf.GetPositions()
-    
+
     # We replicate the specific internal math from adjust_bond_angle manually as it doesn't expose a 'get_angle'
     # but we test the math used inside that function.
     idx_a = 0
@@ -78,7 +77,7 @@ def test_adjust_bond_angle_internal_calc_matches_rdkit():
     cos_current = np.clip(cos_current, -1.0, 1.0)
     current_angle_rad = np.arccos(cos_current)
     app_calculated_angle = np.degrees(current_angle_rad)
-    
+
     assert app_calculated_angle == pytest.approx(rdkit_ref_angle, abs=0.01)
 
 # ==========================================
@@ -115,14 +114,14 @@ def test_dihedral_logic_matches_rdkit():
     """Verify calculate_dihedral native calculation against RDKit."""
     mol = setup_test_molecule("CCCC") # Butane
     conf = mol.GetConformer()
-    
+
     # 0, 1, 2, 3 correspond to the four carbons in CCCC
     rdkit_ref_dihedral = rdMolTransforms.GetDihedralDeg(conf, 0, 1, 2, 3)
-    
+
     positions = conf.GetPositions()
     app_calculated_dihedral = calculate_dihedral(positions, 0, 1, 2, 3)
     assert app_calculated_dihedral == pytest.approx(rdkit_ref_dihedral, abs=0.05)
-    
+
     main_window = MagicMock()
     dialog = DihedralDialog(mol, main_window)
     dialog.atom1_idx = 0
@@ -130,7 +129,7 @@ def test_dihedral_logic_matches_rdkit():
     dialog.atom3_idx = 2
     dialog.atom4_idx = 3
     dialog.update_display()
-    
+
     if dialog.dihedral_input.text() != "":
         dialog_calculated_text = dialog.dihedral_input.text()
         assert float(dialog_calculated_text) == pytest.approx(rdkit_ref_dihedral, abs=0.05)
@@ -142,19 +141,19 @@ def test_bond_length_dialog_logic_matches_rdkit():
     """Verify BondLengthDialog's distance calculation against RDKit."""
     mol = setup_test_molecule("CC") # Ethane
     conf = mol.GetConformer()
-    
+
     # 0, 1 correspond to the two carbons in CC
     rdkit_ref_dist = rdMolTransforms.GetBondLength(conf, 0, 1)
-    
+
     main_window = MagicMock()
     dialog = BondLengthDialog(mol, main_window)
     dialog.atom1_idx = 0
     dialog.atom2_idx = 1
     dialog.update_display() # This triggers the distance calculation
-    
+
     if dialog.distance_input.text() != "":
         dialog_calculated_text = dialog.distance_input.text()
-    
+
         # Check dialog formatted text matches RDKit
         assert float(dialog_calculated_text) == pytest.approx(rdkit_ref_dist, abs=0.01)
 
@@ -197,12 +196,12 @@ def test_custom_interactor_style_distance_logic_matches_rdkit():
     mol = setup_test_molecule("CC")
     conf = mol.GetConformer()
     rdkit_ref_dist = rdMolTransforms.GetBondLength(conf, 0, 1)
-    
+
     # We replicate the logic from lines 80-82 in CustomInteractorStyle: np.linalg.norm
     pos1 = np.array(list(conf.GetAtomPosition(0)))
     pos2 = np.array(list(conf.GetAtomPosition(1)))
     app_calculated_dist = float(np.linalg.norm(pos1 - pos2))
-    
+
     assert app_calculated_dist == pytest.approx(rdkit_ref_dist, abs=0.0001)
 
 # ==========================================
@@ -214,26 +213,26 @@ def test_alignment_dialog_logic(mock_warning, mock_info):
     """Verify AlignmentDialog properly aligns given atoms to the target axis."""
     mol = setup_test_molecule("CC") # Ethane
     conf = mol.GetConformer()
-    
+
     mock_main_window = MagicMock()
     mock_main_window.atom_positions_3d = np.array([list(conf.GetAtomPosition(i)) for i in range(mol.GetNumAtoms())])
     mock_main_window.current_mol = mol
-    
+
     # We test X-axis alignment
     dialog = AlignmentDialog(mol, mock_main_window, "x")
-    
+
     # Select carbon 0 and 1
     dialog.selected_atoms.add(0)
     dialog.selected_atoms.add(1)
-    
+
     # Execute the alignment
     dialog.apply_alignment()
-    
+
     # Verify mathematically
     # atom 0 should be at origin
     pos0 = np.array(conf.GetAtomPosition(0))
     assert np.allclose(pos0, [0, 0, 0], atol=1e-5)
-    
+
     # atom 1 should be on the X-axis (y=0, z=0) and x > 0
     pos1 = np.array(conf.GetAtomPosition(1))
     assert pos1[0] > 0
@@ -250,7 +249,7 @@ def test_align_plane_dialog_logic(mock_warning, mock_info):
     # Build cyclopropane, which is planar
     mol = setup_test_molecule("C1CC1")
     conf = mol.GetConformer()
-    
+
     mock_main_window = MagicMock()
     positions = np.array([list(conf.GetAtomPosition(i)) for i in range(mol.GetNumAtoms())])
     mock_main_window.atom_positions_3d = positions
@@ -259,20 +258,20 @@ def test_align_plane_dialog_logic(mock_warning, mock_info):
 
     # Test aligning to XY plane
     dialog = AlignPlaneDialog(mol, mock_main_window, "xy")
-    
+
     # Select the 3 carbon atoms (0, 1, 2) which form a plane
     dialog.selected_atoms.add(0)
     dialog.selected_atoms.add(1)
     dialog.selected_atoms.add(2)
-    
+
     # Execute plane alignment
     dialog.apply_PlaneAlign()
-    
+
     # Verify mathematically
     pos0 = np.array(conf.GetAtomPosition(0))
     pos1 = np.array(conf.GetAtomPosition(1))
     pos2 = np.array(conf.GetAtomPosition(2))
-    
+
     # Since aligned to XY plane, all Z coordinates of the planar ring should be roughly equal
     # The application centers them around origin, so they should be near 0
     assert pos0[2] == pytest.approx(pos1[2], abs=1e-5)

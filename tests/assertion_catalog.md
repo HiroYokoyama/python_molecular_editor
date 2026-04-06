@@ -997,6 +997,96 @@ _Verify triggering of measurement calculation and display._
 - assert mock_display.called
 - assert 'Distance' in mock_display.call_args[0][0][0]
 
+### test_add_2d_measurement_label_adds_item
+_Verify add_2d_measurement_label creates a label and registers it._
+
+- assert len(edit3d.measurement_label_items_2d) == 1
+- assert isinstance(label, QGraphicsTextItem)
+- assert label.toPlainText() == '1.234 Å'
+- assert label.zValue() == 2000
+- mock_parser_host.init_manager.scene.addItem.assert_called_once_with(label)
+- assert pos.x() == pytest.approx(16.0)
+- assert pos.y() == pytest.approx(8.0)
+
+### test_add_2d_measurement_label_accumulates
+_Verify multiple labels are each appended to measurement_label_items_2d._
+
+- assert len(edit3d.measurement_label_items_2d) == 3
+- assert mock_parser_host.init_manager.scene.addItem.call_count == 3
+
+### test_clear_2d_measurement_labels_removes_items
+_Verify clear_2d_measurement_labels removes all items from the scene._
+
+- mock_parser_host.init_manager.scene.removeItem.assert_called_once_with(mock_label)
+- assert edit3d.measurement_label_items_2d == []
+
+### test_clear_2d_measurement_labels_skips_deleted
+_Verify clear_2d_measurement_labels skips sip-deleted items._
+
+- mock_parser_host.init_manager.scene.removeItem.assert_not_called()
+- assert edit3d.measurement_label_items_2d == []
+
+### test_clear_2d_measurement_labels_skips_unscened
+_Verify that items not attached to a scene are not passed to removeItem._
+
+- mock_parser_host.init_manager.scene.removeItem.assert_not_called()
+- assert edit3d.measurement_label_items_2d == []
+
+### test_find_rdkit_atom_index_no_mol
+_Verify find_rdkit_atom_index returns None when no molecule is loaded._
+
+- assert edit3d.find_rdkit_atom_index(atom_item) is None
+
+### test_find_rdkit_atom_index_no_item
+_Verify find_rdkit_atom_index returns None for a None atom_item._
+
+- assert edit3d.find_rdkit_atom_index(None) is None
+
+### test_find_rdkit_atom_index_with_map
+_Verify find_rdkit_atom_index returns the mapped RDKit index._
+
+- assert edit3d.find_rdkit_atom_index(atom_item) == 2
+
+### test_find_rdkit_atom_index_missing_map_entry
+_Verify find_rdkit_atom_index returns None when atom_id not in map._
+
+- assert edit3d.find_rdkit_atom_index(atom_item) is None
+
+### test_display_measurement_text_empty_clears_actor
+_Verify display_measurement_text with empty list removes existing actor._
+
+- mock_parser_host.view_3d_manager.plotter.remove_actor.assert_called_once()
+- assert edit3d.measurement_text_actor is None
+
+### test_display_measurement_text_adds_actor
+_Verify display_measurement_text calls add_text with joined lines._
+
+- assert 'Distance 1-2: 1.540 Å' in text_arg
+- assert 'Angle: 109.5°' in text_arg
+- assert call_kwargs[1].get('color') == 'white'
+
+### test_display_measurement_text_light_background
+_Verify display_measurement_text uses black text on a light background._
+
+- assert call_kwargs[1].get('color') == 'black'
+
+### test_toggle_atom_selection_3d_add
+_Verify toggle_atom_selection_3d adds an atom not yet selected._
+
+- assert 3 in edit3d.selected_atoms_3d
+- mock_update.assert_called_once()
+
+### test_toggle_atom_selection_3d_remove
+_Verify toggle_atom_selection_3d removes an already-selected atom._
+
+- assert 3 not in edit3d.selected_atoms_3d
+- mock_update.assert_called_once()
+
+### test_toggle_atom_selection_3d_idempotent_add
+_Verify toggling different atoms accumulates them independently._
+
+- assert edit3d.selected_atoms_3d == {1, 2}
+
 ## tests/unit/test_edit_actions.py
 
 ### test_rotate_molecule_2d_basic
@@ -3176,6 +3266,7 @@ _Test that toggling 'Show Chiral Labels' correctly displays/hides labels in 3D._
 - assert window.view_3d_manager.show_chiral_labels is True
 - assert len(chiral_centers) == 1
 - assert initial_label in ['R', 'S']
+- assert len(chiral_call.args) > 1
 - assert initial_label in labels
 
 ### test_chiral_labels_mirror_inversion_3d
@@ -3185,6 +3276,7 @@ _Test that mirror transformation inverts the chiral label in 3D._
 - assert len(chiral_centers) == 1
 - assert new_label != initial_label
 - assert new_label in ['R', 'S']
+- assert len(chiral_call.args) > 1
 - assert new_label in labels
 - assert initial_label not in labels
 
@@ -3445,7 +3537,7 @@ _Clear All: Test for clearing the entire scene._
 - assert len(window.state_manager.data.atoms) == 0
 - assert len(window.state_manager.data.bonds) == 0
 - assert window.view_3d_manager.current_mol is None
-- assert window.host.state_manager.has_unsaved_changes == False
+- assert window.host.state_manager.has_unsaved_changes is False
 - assert len(window.edit_actions_manager.undo_stack) == 1
 
 ### test_copy_paste
@@ -3514,21 +3606,21 @@ _MainWindow: Test for opening the settings dialog._
 ### test_toggle_measurement_mode
 _MainWindow: Test for toggling 3D measurement mode._
 
-- assert window.measurement_mode == False
+- assert window.measurement_mode is False
 - assert measurement_action is not None
-- assert window.measurement_mode == True
+- assert window.measurement_mode is True
 - assert window.statusBar().currentMessage().startswith('Measurement mode enabled')
-- assert window.measurement_mode == False
+- assert window.measurement_mode is False
 - assert window.statusBar().currentMessage() == 'Measurement mode disabled.'
 
 ### test_toggle_3d_edit_mode
 _MainWindow: Test for toggling 3D drag mode._
 
-- assert window.is_3d_edit_mode == False
+- assert window.is_3d_edit_mode is False
 - assert edit_3d_action is not None
-- assert window.is_3d_edit_mode == True
+- assert window.is_3d_edit_mode is True
 - assert window.statusBar().currentMessage() == '3D Drag Mode: ON.'
-- assert window.is_3d_edit_mode == False
+- assert window.is_3d_edit_mode is False
 - assert window.statusBar().currentMessage() == '3D Drag Mode: OFF.'
 
 ### test_add_remove_hydrogens
@@ -3553,20 +3645,20 @@ _3D Viewer Mode: Integration test for MOL file loading and UI state transition._
 
 - assert window.view_3d_manager.current_mol is not None
 - assert window.view_3d_manager.current_mol.GetNumAtoms() == 1
-- assert window.ui_manager.is_2d_editable == False
-- assert window.init_manager.cleanup_button.isEnabled() == False
-- assert get_button(window.init_manager.toolbar, 'N (n)').isEnabled() == False
-- assert window.init_manager.optimize_3d_button.isEnabled() == True
-- assert window.init_manager.export_button.isEnabled() == True
-- assert window.init_manager.analysis_action.isEnabled() == True
+- assert window.ui_manager.is_2d_editable is False
+- assert window.init_manager.cleanup_button.isEnabled() is False
+- assert get_button(window.init_manager.toolbar, 'N (n)').isEnabled() is False
+- assert window.init_manager.optimize_3d_button.isEnabled() is True
+- assert window.init_manager.export_button.isEnabled() is True
+- assert window.init_manager.analysis_action.isEnabled() is True
 
 ### test_open_3d_edit_dialogs
 _3D Edit: Verify 3D editing dialogs launch correctly._
 
 - assert window.view_3d_manager.current_mol is not None
-- assert window.translation_action.isEnabled() == True
-- assert window.align_menu.isEnabled() == True
-- assert window.planarize_action.isEnabled() == True
+- assert window.translation_action.isEnabled() is True
+- assert window.align_menu.isEnabled() is True
+- assert window.planarize_action.isEnabled() is True
 - QDialog.show.assert_called()
 - assert len(window.active_3d_dialogs) == 0
 - QDialog.show.assert_called()
@@ -3575,7 +3667,7 @@ _3D Edit: Verify 3D editing dialogs launch correctly._
 _Project Save: Test for "Save Project As..."._
 
 - mocker_json_dump.assert_called_once()
-- assert window.state_manager.has_unsaved_changes == False
+- assert window.state_manager.has_unsaved_changes is False
 - assert window.init_manager.current_file_path == '/fake/save.pmeprj'
 - assert 'Project saved to' in window.statusBar().currentMessage()
 
@@ -3646,7 +3738,7 @@ _Project Save/Load Round-trip: Integration test to verify structure recovery aft
 - assert window.state_manager.data.atoms[id1]['symbol'] == 'N'
 - assert (0, 1) in window.state_manager.data.bonds
 - assert save_file.exists()
-- assert window.host.state_manager.has_unsaved_changes == False
+- assert window.host.state_manager.has_unsaved_changes is False
 - assert len(window.state_manager.data.atoms) == 0
 - assert len(window.state_manager.data.atoms) == 2
 - assert len(window.state_manager.data.bonds) == 1
@@ -3675,7 +3767,7 @@ _File Load: Error handling for corrupted MOL files._
 _Clear All: Test for cancellation in confirmation dialog._
 
 - assert len(window.state_manager.data.atoms) == 1
-- assert window.host.state_manager.has_unsaved_changes == True
+- assert window.host.state_manager.has_unsaved_changes is True
 
 ### test_clipboard_copy_empty_selection
 _Copy: Safety test for copy operation with empty selection._
@@ -3702,6 +3794,7 @@ _Test that CPK colors are updated correctly from settings overrides._
 
 - assert constants.CPK_COLORS['C'] == QColor('#FF0000')
 - assert constants.CPK_COLORS_PV['C'] == [1.0, 0.0, 0.0]
+- assert constants.CPK_COLORS['C'] == DEFAULT_CPK_COLORS.get('C', constants.CPK_COLORS['C'])
 
 ### test_apply_initial_settings
 _Test that apply_initial_settings updates scene background and style._
@@ -3796,6 +3889,7 @@ _Test 1, 2, 3 keys add atoms/bonds from selected atom._
 - assert len(data.atoms) == 2
 - assert len(data.bonds) == 1
 - assert data.bonds[bond_key]['order'] == 1
+- assert len(other_atom_ids) == 1
 - assert len(data.atoms) == 3
 - assert len(data.bonds) == 2
 - assert b_data['order'] == 2

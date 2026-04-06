@@ -40,14 +40,14 @@ from rdkit import Chem
 from rdkit.Chem import AllChem
 from moleditpy.ui.io_logic import IOManager
 from PyQt6.QtCore import QPointF, QTimer
-from PyQt6.QtWidgets import QWidget, QApplication, QDialog
+from PyQt6.QtWidgets import QApplication, QDialog
 
 
 class DummyParser(IOManager):
     def __init__(self, host):
         self._host = host
         IOManager.__init__(self, host)
-        
+
         # Required attributes (as properties to reflect host state)
         self.chem_check_failed = False
         self.chem_check_tried = False
@@ -231,7 +231,7 @@ def test_load_xyz_recovery_loop_retries(mock_parser_host, tmp_path):
     path = tmp_path / "retry.xyz"
     path.write_text("1\nC\nC 0 0 0\n")
     parser.settings["skip_chemistry_checks"] = False
-    # New logic: 
+    # New logic:
     # 1. Automatic try 0 -> fails (1st side effect: RuntimeError)
     # 2. Prompt cycle 1: user says 0 -> fails (2nd side effect: RuntimeError)
     # 3. Prompt cycle 2: user says 1 -> succeeds (3rd side effect: None)
@@ -335,6 +335,3 @@ def test_load_xyz_skip_chemistry_via_button(mock_parser_host, tmp_path):
     mol = parser.load_xyz_file(str(xyz_path))
     assert mol is not None
     assert mol.HasProp("_xyz_skip_checks") or getattr(mol, "_xyz_skip_checks", False)
-
-
-

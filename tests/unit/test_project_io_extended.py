@@ -1,13 +1,9 @@
 import os
 import json
 import pickle
-import pytest
-from rdkit import Chem
 from moleditpy.ui.io_logic import IOManager
 from PyQt6.QtCore import QPointF
-from PyQt6.QtWidgets import QMessageBox
 from unittest.mock import MagicMock, patch
-import copy
 
 
 class DummyProjectIo(IOManager):

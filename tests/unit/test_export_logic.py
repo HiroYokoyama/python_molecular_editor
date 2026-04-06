@@ -1,10 +1,8 @@
-import pytest
 import os
 from rdkit import Chem
 from rdkit.Chem import AllChem
 from moleditpy.ui.export_logic import ExportManager
 from moleditpy.ui.atom_item import AtomItem
-from moleditpy.ui.bond_item import BondItem
 from PyQt6.QtCore import QPointF, QRectF
 from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import QMessageBox

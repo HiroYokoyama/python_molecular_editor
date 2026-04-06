@@ -1,9 +1,8 @@
 import os
 import sys
 import pytest
-import json
 from PyQt6.QtWidgets import QApplication
-from PyQt6.QtCore import QPointF, QDateTime, Qt
+from PyQt6.QtCore import QPointF
 
 # Minimal path setup to ensure moleditpy is discoverable
 src_path = os.path.abspath(

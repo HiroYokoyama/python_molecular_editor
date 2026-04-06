@@ -1,11 +1,9 @@
 import pytest
-import math
-from PyQt6.QtCore import Qt, QPointF, QLineF
-from PyQt6.QtGui import QKeyEvent, QTransform, QMouseEvent
-from PyQt6.QtWidgets import QApplication, QGraphicsLineItem
+from PyQt6.QtCore import Qt, QPointF
+from PyQt6.QtGui import QKeyEvent, QTransform
+from PyQt6.QtWidgets import QApplication
 from moleditpy.ui.molecule_scene import MoleculeScene
 from moleditpy.ui.atom_item import AtomItem
-from moleditpy.ui.bond_item import BondItem
 from unittest.mock import MagicMock, patch
 
 

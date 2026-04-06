@@ -1,12 +1,10 @@
 """Tests for SMILES/InChI import — verifying atom counts, bonds, and properties against RDKit reference."""
 
-import pytest
 from rdkit import Chem
-from rdkit.Chem import AllChem, Descriptors, rdMolDescriptors
+from rdkit.Chem import rdMolDescriptors
 from moleditpy.ui.string_importers import MainWindowStringImporters
-from moleditpy.core.molecular_data import MolecularData
 from PyQt6.QtCore import QPointF, QTimer
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 
 class DummyImporter(MainWindowStringImporters):

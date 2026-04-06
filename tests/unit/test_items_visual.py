@@ -1,16 +1,13 @@
-import pytest
 from PyQt6.QtCore import Qt, QPointF, QRectF
-from PyQt6.QtGui import QPainter, QTransform, QPainterPath, QBrush
+from PyQt6.QtGui import QPainter, QPainterPath
 from PyQt6.QtWidgets import (
     QGraphicsScene,
     QStyleOptionGraphicsItem,
     QGraphicsItem,
-    QGraphicsSceneHoverEvent,
 )
 from moleditpy.ui.atom_item import AtomItem
 from moleditpy.ui.bond_item import BondItem
 from unittest.mock import MagicMock, patch
-from rdkit import Chem
 
 
 def test_atom_item_visual_states(mock_parser_host):
@@ -51,9 +48,9 @@ def test_atom_item_hover(mock_parser_host):
 
 def test_atom_item_h_label_flip(mock_parser_host):
     """Test AtomItem flips H label position based on neighbor orientation."""
-    atom_left = AtomItem(0, "C", QPointF(0, 0))
+    AtomItem(0, "C", QPointF(0, 0))
     atom_center = AtomItem(1, "N", QPointF(50, 0))
-    atom_right = AtomItem(2, "H", QPointF(100, 0))
+    AtomItem(2, "H", QPointF(100, 0))
 
     # Mock neighbor relationships
     atom_center.bonds = []

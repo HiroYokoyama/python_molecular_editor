@@ -38,16 +38,16 @@ def test_benzene_shortcut_on_atom(scene):
     atom = MagicMock(spec=AtomItem)
     atom.pos.return_value = QPointF(100, 100)
     scene._item_at_cursor = atom
-    
+
     event = MagicMock(spec=QKeyEvent)
     event.key.return_value = Qt.Key.Key_4
-    
+
     # Needs to match the view's mapToScene etc. logic
     # In MockScene, itemAt returns self._item_at_cursor regardless of pos argument
     with patch("moleditpy.ui.molecular_scene_handler.QCursor.pos") as mock_cursor:
         mock_cursor.return_value = QPointF(150, 100) # Simulated global cursor pos
         scene.keyPressEvent(event)
-    
+
     scene._calculate_polygon_from_edge.assert_called_once()
     scene.add_molecule_fragment.assert_called_once()
     scene.window.edit_actions_manager.push_undo_state.assert_called_once()
@@ -61,15 +61,15 @@ def test_benzene_shortcut_on_bond(scene):
     bond.atom1.pos.return_value = QPointF(100, 100)
     bond.atom2.pos.return_value = QPointF(100, 120)
     scene._item_at_cursor = bond
-    
+
     event = MagicMock(spec=QKeyEvent)
     event.key.return_value = Qt.Key.Key_4
-    
+
     with patch("moleditpy.ui.molecular_scene_handler.QCursor.pos") as mock_cursor:
         mock_cursor.return_value = QPointF(120, 110)
         print(f"DEBUG: item_at_cursor type: {type(scene._item_at_cursor)}")
         scene.keyPressEvent(event)
-    
+
     # Check that use_existing_length=True was passed for bond placement
     # We use ANY for variable geometric args
     called_args, called_kwargs = scene._calculate_polygon_from_edge.call_args
@@ -79,14 +79,14 @@ def test_benzene_shortcut_on_bond(scene):
 def test_benzene_shortcut_empty_space(scene):
     """Test mode switch when cursor is over empty space."""
     scene._item_at_cursor = None
-    
+
     event = MagicMock(spec=QKeyEvent)
     event.key.return_value = Qt.Key.Key_4
-    
+
     with patch("moleditpy.ui.molecular_scene_handler.QCursor.pos") as mock_cursor:
         mock_cursor.return_value = QPointF(200, 200)
         scene.keyPressEvent(event)
-    
+
     scene.window.ui_manager.set_mode_and_update_toolbar.assert_called_with("template_benzene")
     event.accept.assert_called_once()
     scene.add_molecule_fragment.assert_not_called()

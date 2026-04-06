@@ -1,12 +1,8 @@
 import pytest
-import os
-from rdkit import Chem
-from rdkit.Chem import AllChem
 from moleditpy.ui.edit_3d_logic import Edit3DManager
-from PyQt6.QtCore import Qt, QPointF, QRectF
+from PyQt6.QtCore import QPointF, QRectF
 from PyQt6.QtWidgets import QGraphicsTextItem
 from unittest.mock import MagicMock, patch
-import numpy as np
 
 
 class DummyEdit3d(Edit3DManager):

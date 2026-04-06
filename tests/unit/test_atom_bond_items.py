@@ -1,7 +1,6 @@
 import pytest
 from unittest.mock import MagicMock, patch
-from PyQt6.QtCore import QPointF, QRectF, Qt
-from PyQt6.QtGui import QColor, QPen, QBrush
+from PyQt6.QtCore import QPointF, QRectF
 from moleditpy.ui.atom_item import AtomItem
 from moleditpy.ui.bond_item import BondItem
 
@@ -405,7 +404,7 @@ class TestBondItem:
         mock_scene.views.return_value[0].window.return_value = mock_window
         mock_scene.window = mock_window
 
-        rect = bond_item.boundingRect()
+        bond_item.boundingRect()
 
         bond_item.stereo = 0
         rect_no_stereo = bond_item.boundingRect()

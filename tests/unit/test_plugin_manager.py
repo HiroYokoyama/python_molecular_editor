@@ -1,8 +1,6 @@
 """Tests for PluginManager — metadata extraction, registration, and discovery."""
 
 import os
-import pytest
-import tempfile
 import textwrap
 from moleditpy.plugins.plugin_manager import PluginManager
 from unittest.mock import MagicMock
@@ -23,7 +21,7 @@ def test_plugin_info_extracts_all_fields(tmp_path):
         PLUGIN_AUTHOR = "Test Author"
         PLUGIN_DESCRIPTION = "Does amazing things"
         PLUGIN_CATEGORY = "Analysis"
-        
+
         def run(ctx):
             pass
     """)
@@ -226,7 +224,7 @@ def test_discover_plugins_single_file(tmp_path):
         textwrap.dedent("""\
         PLUGIN_NAME = "Hello"
         PLUGIN_VERSION = "1.0"
-        
+
         def register(ctx):
             pass
     """)
@@ -250,7 +248,7 @@ def test_discover_plugins_package(tmp_path):
         textwrap.dedent("""\
         PLUGIN_NAME = "Package Plugin"
         PLUGIN_VERSION = "2.0"
-        
+
         def register(ctx):
             pass
     """)

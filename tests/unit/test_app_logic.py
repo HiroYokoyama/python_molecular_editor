@@ -1,4 +1,3 @@
-import pytest
 from rdkit import Chem
 from moleditpy.ui.calculation_worker import CalculationWorker
 from moleditpy.core.molecular_data import MolecularData
@@ -91,7 +90,6 @@ def test_coordinate_mapping_primary():
 def test_coordinate_mapping_fallback():
     """Verify fallback serialization (reverted logic) uses atom['item'].pos()."""
     from moleditpy.utils.constants import ANGSTROM_PER_PIXEL
-    from unittest.mock import MagicMock
 
     data = MolecularData()
     data.add_atom("X", QPointF(0, 0))

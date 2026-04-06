@@ -1,16 +1,12 @@
 # -*- coding: utf-8 -*-
 import pytest
-from PyQt6.QtCore import QPointF, Qt, QByteArray, QMimeData, QUrl
+from PyQt6.QtCore import QPointF, Qt, QMimeData, QUrl
 from PyQt6.QtGui import QDropEvent
 from unittest.mock import mock_open
 from unittest import mock as _mock
-from PyQt6.QtWidgets import QToolButton, QDialog, QApplication, QMessageBox
+from PyQt6.QtWidgets import QDialog, QApplication, QMessageBox
 from PyQt6.QtGui import QAction
-from PyQt6.QtGui import QKeySequence
-import time
-import pickle
 import json
-import os
 
 # Import application modules directly (avoiding dependency on conftest side-effects)
 from conftest import moleditpy
@@ -386,8 +382,8 @@ def test_draw_bond_to_existing_atom(window, qtbot):
     window.ui_manager.set_mode("atom_C")
 
     # 1. Create two atoms deterministically
-    id0 = scene.create_atom("C", QPointF(0, 0))
-    id1 = scene.create_atom("C", QPointF(100, 0))
+    scene.create_atom("C", QPointF(0, 0))
+    scene.create_atom("C", QPointF(100, 0))
     assert len(window.state_manager.data.atoms) == 2
     assert len(window.state_manager.data.bonds) == 0
 
@@ -409,7 +405,7 @@ def test_change_atom_symbol_on_click(window, qtbot):
     scene = window.init_manager.scene
     window.ui_manager.set_mode("atom_C")
     # Create a single carbon atom deterministically
-    id0 = scene.create_atom("C", QPointF(0, 0))
+    scene.create_atom("C", QPointF(0, 0))
     assert window.state_manager.data.atoms[0]["symbol"] == "C"
 
     # 1. Change mode to "O"
@@ -460,7 +456,7 @@ def test_delete_atom_on_right_click(window, qtbot):
     scene = window.init_manager.scene
     window.ui_manager.set_mode("atom_C")
     # Create a deterministic atom for this test instead of relying on view clicks
-    id0 = scene.create_atom("C", QPointF(0, 0))
+    scene.create_atom("C", QPointF(0, 0))
     assert len(window.state_manager.data.atoms) == 1
 
     # 1. Right-click existing atom (simulate deletion programmatically)
@@ -477,7 +473,7 @@ def test_charge_mode_click(window, qtbot):
     """MoleculeScene: Test for clicking in charge mode."""
     scene = window.init_manager.scene
     window.ui_manager.set_mode("atom_N")
-    id0 = scene.create_atom("N", QPointF(0, 0))
+    scene.create_atom("N", QPointF(0, 0))
     assert window.state_manager.data.atoms[0]["charge"] == 0
 
     # 1. Change mode to "+ Charge"
@@ -600,7 +596,7 @@ def test_undo_redo(window, qtbot):
 
     # 1. Draw an atom (programmatically)
     window.ui_manager.set_mode("atom_C")
-    id0 = scene.create_atom("C", QPointF(0, 0))
+    scene.create_atom("C", QPointF(0, 0))
     window.edit_actions_manager.push_undo_state()
 
     assert len(window.state_manager.data.atoms) == 1
@@ -636,7 +632,7 @@ def test_clear_all(window, qtbot):
 
     # 1. Draw something (programmatically)
     window.ui_manager.set_mode("atom_C")
-    id0 = scene.create_atom("C", QPointF(0, 0))
+    scene.create_atom("C", QPointF(0, 0))
     window.edit_actions_manager.push_undo_state()
 
     # 2. Trigger Clear All
@@ -742,7 +738,7 @@ def test_key_press_change_atom(window, qtbot, monkeypatch):
     # 1. Place a Carbon atom
     window.ui_manager.set_mode("atom_C")
     click_pos = QPointF(0, 0)
-    id0 = scene.create_atom("C", click_pos)
+    scene.create_atom("C", click_pos)
     window.edit_actions_manager.push_undo_state()
     assert window.state_manager.data.atoms[0]["symbol"] == "C"
 
@@ -809,7 +805,7 @@ def test_radical_mode_toggle(window, qtbot):
     """MoleculeScene: Click test in radical mode."""
     scene = window.init_manager.scene
     window.ui_manager.set_mode("atom_C")
-    id0 = scene.create_atom("C", QPointF(0, 0))
+    scene.create_atom("C", QPointF(0, 0))
     window.edit_actions_manager.push_undo_state()
     assert window.state_manager.data.atoms[0]["radical"] == 0
 
@@ -846,7 +842,7 @@ def test_delete_key_selection(window, qtbot):
     # 1. Place a Carbon atom
     window.ui_manager.set_mode("atom_C")
     click_pos = QPointF(0, 0)
-    id0 = scene.create_atom("C", click_pos)
+    scene.create_atom("C", click_pos)
     window.edit_actions_manager.push_undo_state()
     assert len(window.state_manager.data.atoms) == 1
 
@@ -967,7 +963,7 @@ def test_toggle_3d_edit_mode(window, qtbot):
 def test_add_remove_hydrogens(window, qtbot):
     """Edit: Add/Remove hydrogens menu test."""
     try:
-        from rdkit import Chem
+        pass
     except ImportError:
         pytest.skip("RDKit not found, skipping H test.")
 
@@ -975,7 +971,7 @@ def test_add_remove_hydrogens(window, qtbot):
 
     # 1. Draw methane (C)
     window.ui_manager.set_mode("atom_C")
-    id0 = scene.create_atom("C", QPointF(0, 0))
+    scene.create_atom("C", QPointF(0, 0))
     assert len(window.state_manager.data.atoms) == 1
 
     # 2. Execute "Add Hydrogens"
@@ -1010,8 +1006,7 @@ def test_add_remove_hydrogens(window, qtbot):
 def test_2d_cleanup(window, qtbot, monkeypatch):
     """2D Cleanup: Verify coordinates change upon button click."""
     try:
-        from rdkit import Chem
-        from rdkit.Chem import AllChem
+        pass
     except ImportError:
         pytest.skip("RDKit not found, skipping 2D cleanup test.")
 
@@ -1082,7 +1077,7 @@ def test_2d_cleanup(window, qtbot, monkeypatch):
 def test_3d_viewer_mode_mol(window, qtbot, monkeypatch, tmp_path):
     """3D Viewer Mode: Integration test for MOL file loading and UI state transition."""
     try:
-        from rdkit import Chem
+        pass
     except ImportError:
         pytest.skip("RDKit not found, skipping real file load test.")
 
@@ -1420,7 +1415,7 @@ def test_user_template_dialog_save_and_use(window, qtbot, monkeypatch):
 def test_implicit_hydrogens_update(window, qtbot):
     """Implicit Hydrogens: Test for automatic updates after drawing operations."""
     try:
-        from rdkit import Chem
+        pass
     except ImportError:
         pytest.skip("RDKit not found, skipping implicit H test.")
 
@@ -1428,7 +1423,7 @@ def test_implicit_hydrogens_update(window, qtbot):
 
     # 1. Draw C atom (programmatically)
     window.ui_manager.set_mode("atom_C")
-    id0 = scene.create_atom("C", QPointF(0, 0))
+    scene.create_atom("C", QPointF(0, 0))
     window.edit_actions_manager.push_undo_state()
     assert len(window.state_manager.data.atoms) == 1
 
