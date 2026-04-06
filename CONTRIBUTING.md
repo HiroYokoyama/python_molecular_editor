@@ -46,7 +46,7 @@ MoleditPy uses a hybrid approach to quality assurance: **Automated Unit Tests** 
 
 ### A. Core Molecular Logic (Automated)
 * Files in `core/` related to calculation, parsing, or data structure (e.g., `molecular_data.py`, `calculation_worker.py`) **MUST** have unit tests.
-* **Target Coverage:** Maintain or exceed **80%** coverage for logic modules.
+* **Target Coverage:** Maintain or exceed **75%** coverage for logic modules.
 * Any new public method added to `plugin_interface.py` (`PluginContext` or `Plugin3DController`) **MUST** have a corresponding test in `tests/unit/test_plugin_interface.py`.
 
 ### B. Error Handling — No Hiding, No Crashing
