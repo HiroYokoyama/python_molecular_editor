@@ -1,9 +1,6 @@
 # -*- coding: utf-8 -*-
-import pytest
 from PyQt6.QtCore import Qt, QPointF
 from PyQt6.QtGui import QKeyEvent
-from moleditpy.ui.atom_item import AtomItem
-from moleditpy.ui.bond_item import BondItem
 
 def test_bond_stereo_toggle_keys(window, qtbot):
     """Test Z and E keys toggle double bond stereochemistry."""

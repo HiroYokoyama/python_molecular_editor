@@ -1,6 +1,3 @@
-import pytest
-from unittest.mock import MagicMock
-from PyQt6.QtWidgets import QDialog
 
 from moleditpy.ui.edit_actions_logic import Rotate2DDialog
 

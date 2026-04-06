@@ -1,10 +1,8 @@
 # -*- coding: utf-8 -*-
-import pytest
 import os
-from unittest.mock import MagicMock, patch
-from PyQt6.QtCore import Qt, QPointF
+from unittest.mock import MagicMock
 from PyQt6.QtGui import QColor
-from PyQt6.QtWidgets import QMessageBox, QApplication
+from PyQt6.QtWidgets import QMessageBox
 from moleditpy.utils.constants import DEFAULT_CPK_COLORS
 
 def test_load_command_line_file_with_plugin(window, monkeypatch):

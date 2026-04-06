@@ -1,8 +1,4 @@
-import pytest
-import sys
-import numpy as np
 from rdkit import Chem
-from PyQt6.QtCore import Qt
 from moleditpy.ui.mirror_dialog import MirrorDialog
 
 

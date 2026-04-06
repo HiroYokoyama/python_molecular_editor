@@ -153,6 +153,7 @@ except Exception:
 
 try:
     import types
+    from unittest.mock import MagicMock as _MagicMock
 
     if "pyvista" not in sys.modules:
         pyv = types.ModuleType("pyvista")
@@ -196,7 +197,7 @@ try:
                 self._data[key] = value
 
             def __getitem__(self, key):
-                return self._data.get(key, _mock.MagicMock())
+                return self._data.get(key, _MagicMock())
 
             def tube(self, *a, **k):
                 return self
