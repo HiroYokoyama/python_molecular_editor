@@ -73,7 +73,6 @@ def click_scene(
         pass
 
     viewport_pos = view.mapFromScene(pos)
-    print(f"DEBUG: click_scene viewport_pos={viewport_pos} for scene pos={pos}")
 
     # Explicitly perform press and release
     qtbot.mousePress(view.viewport(), button, modifier, viewport_pos)
@@ -657,7 +656,7 @@ def test_clear_all(window, qtbot):
     assert len(window.state_manager.data.bonds) == 0
     assert window.view_3d_manager.current_mol is None
     assert (
-        window.host.state_manager.has_unsaved_changes == False
+        window.host.state_manager.has_unsaved_changes is False
     )  # Flag should be reset after clear_all
     assert len(window.edit_actions_manager.undo_stack) == 1  # Undo stack should be reset
 
@@ -919,7 +918,7 @@ def test_open_settings_dialog(window, qtbot):
 @pytest.mark.gui
 def test_toggle_measurement_mode(window, qtbot):
     """MainWindow: Test for toggling 3D measurement mode."""
-    assert window.measurement_mode == False
+    assert window.measurement_mode is False
 
     # 1. Click 3D Select button (formerly Measurement)
     measurement_action = window.init_manager.measurement_action
@@ -929,21 +928,21 @@ def test_toggle_measurement_mode(window, qtbot):
     qtbot.wait(50)
 
     # 2. Verify mode enabled
-    assert window.measurement_mode == True
+    assert window.measurement_mode is True
     assert window.statusBar().currentMessage().startswith("Measurement mode enabled")
 
     # 3. Click again to disable
     measurement_action.trigger()
     qtbot.wait(50)
 
-    assert window.measurement_mode == False
+    assert window.measurement_mode is False
     assert window.statusBar().currentMessage() == "Measurement mode disabled."
 
 
 @pytest.mark.gui
 def test_toggle_3d_edit_mode(window, qtbot):
     """MainWindow: Test for toggling 3D drag mode."""
-    assert window.is_3d_edit_mode == False
+    assert window.is_3d_edit_mode is False
 
     # 1. Click 3D Drag button
     edit_3d_action = window.init_manager.edit_3d_action
@@ -953,14 +952,14 @@ def test_toggle_3d_edit_mode(window, qtbot):
     qtbot.wait(50)
 
     # 2. Verify mode enabled
-    assert window.is_3d_edit_mode == True
+    assert window.is_3d_edit_mode is True
     assert window.statusBar().currentMessage() == "3D Drag Mode: ON."
 
     # 3. Click again to disable
     edit_3d_action.trigger()
     qtbot.wait(50)
 
-    assert window.is_3d_edit_mode == False
+    assert window.is_3d_edit_mode is False
     assert window.statusBar().currentMessage() == "3D Drag Mode: OFF."
 
 
@@ -1120,14 +1119,14 @@ M  END
 
     # 6. Verify UI state
     # 2D editing disabled
-    assert window.ui_manager.is_2d_editable == False
-    assert window.init_manager.cleanup_button.isEnabled() == False
-    assert get_button(window.init_manager.toolbar, "N (n)").isEnabled() == False
+    assert window.ui_manager.is_2d_editable is False
+    assert window.init_manager.cleanup_button.isEnabled() is False
+    assert get_button(window.init_manager.toolbar, "N (n)").isEnabled() is False
 
     # 3D features enabled
-    assert window.init_manager.optimize_3d_button.isEnabled() == True
-    assert window.init_manager.export_button.isEnabled() == True
-    assert window.init_manager.analysis_action.isEnabled() == True
+    assert window.init_manager.optimize_3d_button.isEnabled() is True
+    assert window.init_manager.export_button.isEnabled() is True
+    assert window.init_manager.analysis_action.isEnabled() is True
 
 
 @pytest.mark.gui
@@ -1138,9 +1137,9 @@ def test_open_3d_edit_dialogs(window, qtbot, monkeypatch):
     assert window.view_3d_manager.current_mol is not None
 
     # Verify 3D edit menu actions are enabled
-    assert window.translation_action.isEnabled() == True
-    assert window.align_menu.isEnabled() == True
-    assert window.planarize_action.isEnabled() == True
+    assert window.translation_action.isEnabled() is True
+    assert window.align_menu.isEnabled() is True
+    assert window.planarize_action.isEnabled() is True
 
     # 2. QDialog.show is mocked in conftest.py
 
@@ -1171,13 +1170,6 @@ def test_save_project_as(window, qtbot, monkeypatch):
     monkeypatch.setattr(json, "dump", mocker_json_dump, raising=False)
     # Patch `open` so writing to the fake path doesn't raise on Windows
     monkeypatch.setattr("builtins.open", mock_open(), raising=False)
-    import builtins as _builtins
-
-    print(
-        "DEBUG: builtins.open in test after patch ->",
-        _builtins.open,
-        type(_builtins.open),
-    )
 
     # 3. Create data to save
     scene = window.init_manager.scene
@@ -1189,15 +1181,12 @@ def test_save_project_as(window, qtbot, monkeypatch):
     # 4. Directly call save_project_as
     window.save_project_as()
     qtbot.wait(50)
-    print("DEBUG: save_project status=", window.statusBar().currentMessage())
-    print("DEBUG: current_file_path=", window.init_manager.current_file_path)
-    print("DEBUG: has_unsaved_changes=", window.state_manager.has_unsaved_changes)
 
     # 5. Verify json.dump was called
     mocker_json_dump.assert_called_once()
 
     # 6. Verify flag is reset after saving
-    assert window.state_manager.has_unsaved_changes == False
+    assert window.state_manager.has_unsaved_changes is False
     assert window.init_manager.current_file_path == "/fake/save.pmeprj"
     assert "Project saved to" in window.statusBar().currentMessage()
 
@@ -1567,7 +1556,7 @@ def test_project_save_load_round_trip(window, qtbot, monkeypatch, tmp_path):
     qtbot.wait(100)
 
     assert save_file.exists()
-    assert window.host.state_manager.has_unsaved_changes == False
+    assert window.host.state_manager.has_unsaved_changes is False
 
     # 3. Clear scene
     window.edit_actions_manager.clear_2d_editor(push_to_undo=False)  # Clear without dialog
@@ -1716,7 +1705,7 @@ def test_clear_2d_editor_cancel(window, qtbot, monkeypatch):
 
     # 3. Verify no deletion occurred
     assert len(window.state_manager.data.atoms) == 1
-    assert window.host.state_manager.has_unsaved_changes == True
+    assert window.host.state_manager.has_unsaved_changes is True
 
 
 @pytest.mark.gui

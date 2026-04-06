@@ -54,7 +54,9 @@ def test_atom_addition_keys(window, qtbot):
     assert data.bonds[bond_key]["order"] == 1
     
     # Select the new atom
-    new_atom_id = [aid for aid in data.atoms if aid != a1_id][0]
+    other_atom_ids = [aid for aid in data.atoms if aid != a1_id]
+    assert len(other_atom_ids) == 1, "Expected exactly one new atom after pressing '1'"
+    new_atom_id = other_atom_ids[0]
     new_atom_item = data.atoms[new_atom_id]["item"]
     scene.clearSelection()
     new_atom_item.setSelected(True)

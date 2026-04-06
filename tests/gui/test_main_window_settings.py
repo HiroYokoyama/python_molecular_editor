@@ -3,7 +3,7 @@ import pytest
 import os
 from unittest.mock import MagicMock, patch
 from PyQt6.QtCore import Qt, QPointF
-from PyQt6.QtGui import QColor, QBrush
+from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import QMessageBox, QApplication
 from moleditpy.utils.constants import DEFAULT_CPK_COLORS
 
@@ -58,26 +58,24 @@ def test_update_cpk_colors_from_settings(window):
     # Reset to defaults for other tests (important since constants are global)
     window.init_manager.settings["cpk_colors"] = {}
     window.init_manager.update_cpk_colors_from_settings()
+    assert constants.CPK_COLORS["C"] == DEFAULT_CPK_COLORS.get("C", constants.CPK_COLORS["C"])
 
 def test_apply_initial_settings(window, monkeypatch):
     """Test that apply_initial_settings updates scene background and style."""
     window.init_manager.settings["background_color_2d"] = "#FFEECC"
     window.init_manager.settings["background_color"] = "#112233"
     
-    # Mock plotter if it exists
-    if window.view_3d_manager.plotter:
-        window.view_3d_manager.plotter.set_background = MagicMock()
-        window.view_3d_manager.apply_3d_settings = MagicMock()
-    
+    window.view_3d_manager.plotter.set_background = MagicMock()
+    window.view_3d_manager.apply_3d_settings = MagicMock()
+
     window.init_manager.apply_initial_settings()
-    
+
     # Check 2D scene background
     expected_color = QColor("#FFEECC")
     assert window.init_manager.scene.backgroundBrush().color() == expected_color
-    
-    # Check 3D background if plotter was mocked
-    if window.view_3d_manager.plotter:
-        window.view_3d_manager.plotter.set_background.assert_called_with("#112233")
+
+    # Check 3D background
+    window.view_3d_manager.plotter.set_background.assert_called_with("#112233")
 
 def test_reset_all_settings_flow(window, monkeypatch):
     """Test the complete settings reset flow."""

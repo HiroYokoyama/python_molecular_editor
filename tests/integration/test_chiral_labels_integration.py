@@ -45,6 +45,7 @@ def test_chiral_labels_toggle_3d(window, qtbot):
         for call in window.view_3d_manager.plotter.add_point_labels.call_args_list
         if call.kwargs.get("name") == "chiral_labels"
     )
+    assert len(chiral_call.args) > 1, "add_point_labels was not called with a labels argument"
     labels = chiral_call.args[1]
     assert initial_label in labels
 
@@ -104,6 +105,7 @@ def test_chiral_labels_mirror_inversion_3d(window, qtbot):
         for call in window.view_3d_manager.plotter.add_point_labels.call_args_list
         if call.kwargs.get("name") == "chiral_labels"
     )
+    assert len(chiral_call.args) > 1, "add_point_labels was not called with a labels argument"
     labels = chiral_call.args[1]
     assert new_label in labels
     assert initial_label not in labels

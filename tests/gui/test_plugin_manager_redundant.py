@@ -1,14 +1,6 @@
 import pytest
 import os
-import shutil
 import zipfile
-from unittest import mock
-from PyQt6.QtWidgets import QApplication
-
-# Adjust import path to finding modules
-import sys
-
-sys.path.append(os.path.abspath("src"))
 
 from moleditpy.plugins.plugin_manager import PluginManager
 

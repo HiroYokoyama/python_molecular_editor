@@ -4,7 +4,6 @@ from rdkit import Chem
 import numpy as np
 from rdkit.Chem import AllChem, rdMolTransforms
 from moleditpy.ui.calculation_worker import CalculationWorker
-from moleditpy.ui.calculation_worker import CalculationWorker
 from moleditpy.core.mol_geometry import calculate_dihedral
 from moleditpy.core.molecular_data import MolecularData
 from moleditpy.ui.angle_dialog import AngleDialog
@@ -78,7 +77,6 @@ def test_calculation_worker_bond_length_validation(qtbot, app):
     # In ref_mol (from "CC"), C-C bond is between atoms 0 and 1
     dist_ref = rdMolTransforms.GetBondLength(ref_conf, 0, 1)
 
-    print(f"DEBUG: Measured C-C = {dist_measured:.4f}, Reference C-C = {dist_ref:.4f}")
     assert dist_measured == pytest.approx(dist_ref, rel=1e-2)
 
 
@@ -146,7 +144,6 @@ def test_calculation_worker_angle_validation(qtbot, app):
     # In ref_mol (from SMILES "CCC"), C atoms are 0, 1, 2. Central is 1.
     angle_ref = rdMolTransforms.GetAngleDeg(ref_mol.GetConformer(), 0, 1, 2)
 
-    print(f"DEBUG: Measured C-C-C = {angle_measured:.4f}, Reference = {angle_ref:.4f}")
     assert angle_measured == pytest.approx(angle_ref, abs=5.0), (
         f"Angle mismatch: measured {angle_measured:.2f} vs ref {angle_ref:.2f}"
     )
@@ -184,7 +181,6 @@ def test_calculation_worker_dihedral_validation(qtbot, app):
     # We check if it is NOT eclipsed (near 0, 120).
     is_staggered = (40 < abs(dihedral) < 80) or (160 < abs(dihedral) <= 180)
 
-    print(f"DEBUG: n-Butane Dihedral = {dihedral:.4f}")
     assert is_staggered
 
 
@@ -374,8 +370,9 @@ def test_calculation_worker_constraint_embedding_fallback(qtbot, app):
     with patch(
         "moleditpy.ui.calculation_worker.AllChem.EmbedMolecule"
     ) as mock_embed:
-        # First (standard) fails (-1), second (constraint) succeeds (1)
-        mock_embed.side_effect = [-1, 1]
+        # First (standard) fails (-1), second (constraint) succeeds (1);
+        # extend list to avoid StopIteration if called more than twice
+        mock_embed.side_effect = [-1] + [1] * 5
 
         with qtbot.waitSignal(worker.finished, timeout=10000) as blocker:
             worker.run_calculation(mol_block, {"conversion_mode": "rdkit"})
@@ -589,7 +586,7 @@ def test_iterative_optimize_halt_during_optimization(app):
 
     def check_halted():
         call_count[0] += 1
-        return call_count[0] >= 2  # Halt after 1st chunk
+        return call_count[0] >= 2  # Halt on 2nd check (after 1st chunk completes)
 
     with pytest.raises(WorkerHaltError):
         _iterative_optimize(

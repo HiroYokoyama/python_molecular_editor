@@ -1,15 +1,6 @@
-import os
-import sys
 import pytest
 from unittest.mock import MagicMock
 from PyQt6.QtWidgets import QDialog
-
-# Ensure local moleditpy is discoverable
-workspace_src_path = os.path.abspath(
-    os.path.join(os.path.dirname(__file__), "..", "..", "moleditpy", "src")
-)
-if os.path.isdir(workspace_src_path) and workspace_src_path not in sys.path:
-    sys.path.insert(0, workspace_src_path)
 
 from moleditpy.ui.edit_actions_logic import Rotate2DDialog
 
