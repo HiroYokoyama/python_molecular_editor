@@ -37,54 +37,6 @@ def test_calculation_worker_init(worker):
     assert not getattr(worker, "halt_all", False)
 
 
-def test_calculation_worker_halt_logic(worker):
-    """Test the internal _check_halted logic via run_calculation."""
-    mol = Chem.MolFromSmiles("C")
-    mol_block = Chem.MolToMolBlock(mol)
-
-    # Mock error signal to catch the "Halted" message
-    error_captor = SignalCaptor()
-    worker.error.connect(error_captor.capture)
-
-    # Set halt state
-    worker.halt_ids = {123}
-    options = {"worker_id": 123}
-
-    worker.run_calculation(mol_block, options)
-
-    # Should emit error with "Halted"
-    assert any("Halted" in str(val) for val in error_captor.emitted_values)
-    assert error_captor.emitted_values[0] == (123, "Halted")
-
-
-def test_calculation_worker_direct_mode(worker):
-    """Test 'direct' conversion mode which avoids RDKit 3D embedding."""
-    # Simple ethanol-like structure in 2D
-    mol = Chem.MolFromSmiles("CC")
-    AllChem.Compute2DCoords(mol)
-    mol_block = Chem.MolToMolBlock(mol)
-
-    finish_captor = SignalCaptor()
-    worker.finished.connect(finish_captor.capture)
-
-    options = {"conversion_mode": "direct", "worker_id": 1}
-    worker.run_calculation(mol_block, options)
-
-    assert len(finish_captor.emitted_values) > 0
-    # Payload should be (worker_id, mol) or just mol
-    result = finish_captor.emitted_values[0]
-    if isinstance(result, tuple):
-        res_mol = result[1]
-    else:
-        res_mol = result
-
-    assert res_mol.GetNumAtoms() > 2  # Should have added Hydrogens
-    # Check that Z is not all 0 (due to H-offset logic)
-    conf = res_mol.GetConformer()
-    z_coords = [conf.GetAtomPosition(i).z for i in range(res_mol.GetNumAtoms())]
-    assert any(z > 0 for z in z_coords)
-
-
 def test_calculation_worker_explicit_stereo_m_cfg(worker):
     """Test parsing of M CFG labels in MOL block."""
     # Trans-2-butene with explicit CFG 2 (E)

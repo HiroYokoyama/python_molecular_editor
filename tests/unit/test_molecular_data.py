@@ -1,6 +1,7 @@
 """Tests for MolecularData — CRUD operations, adjacency, RDKit round-trip, and value validation."""
 
 import pytest
+from unittest.mock import MagicMock
 from rdkit import Chem
 from rdkit.Chem import Descriptors, rdMolDescriptors
 from moleditpy.core.molecular_data import MolecularData
@@ -362,3 +363,62 @@ def test_to_template_dict():
     assert len(tmpl["bonds"]) == 1
     assert tmpl["bonds"][0]["order"] == 1
     assert tmpl["bonds"][0]["stereo"] == 1
+
+
+# =============================================================================
+# Stereo bond RDKit round-trip (moved from test_main_app)
+# =============================================================================
+
+
+def test_to_rdkit_mol_stereo_wedge_dash():
+    """Verify wedge/dash stereo bonds map to BEGINWEDGE/BEGINDASH in RDKit."""
+    data = MolecularData()
+    c1_id = data.add_atom("C", QPointF(0, 0))
+    h1_id = data.add_atom("H", QPointF(0, 50))
+    h2_id = data.add_atom("H", QPointF(0, -50))
+    h3_id = data.add_atom("H", QPointF(50, 0))
+    h4_id = data.add_atom("H", QPointF(-50, 0))
+
+    data.add_bond(c1_id, h1_id, order=1, stereo=0)
+    data.add_bond(c1_id, h2_id, order=1, stereo=0)
+    data.add_bond(c1_id, h3_id, order=1, stereo=1)  # Wedge
+    data.add_bond(c1_id, h4_id, order=1, stereo=2)  # Dash
+
+    mol = data.to_rdkit_mol(use_2d_stereo=True)
+    assert mol is not None
+
+    atom_map = {
+        atom.GetIntProp("_original_atom_id"): atom.GetIdx() for atom in mol.GetAtoms()
+    }
+    wedge_bond = mol.GetBondBetweenAtoms(atom_map[c1_id], atom_map[h3_id])
+    dash_bond = mol.GetBondBetweenAtoms(atom_map[c1_id], atom_map[h4_id])
+
+    assert wedge_bond.GetBondDir() == Chem.BondDir.BEGINWEDGE
+    assert dash_bond.GetBondDir() == Chem.BondDir.BEGINDASH
+
+
+def test_to_rdkit_mol_ez_stereo():
+    """Verify E/Z stereo double bond maps to STEREOZ in RDKit."""
+    data = MolecularData()
+    c1 = data.add_atom("C", QPointF(-100, 50))
+    c2 = data.add_atom("C", QPointF(-50, 0))
+    c3 = data.add_atom("C", QPointF(50, 0))
+    c4 = data.add_atom("C", QPointF(100, 50))
+
+    data.add_bond(c1, c2, order=1, stereo=0)
+    data.add_bond(c3, c4, order=1, stereo=0)
+    data.add_bond(c2, c3, order=2, stereo=3)  # Z
+
+    for atom_id, atom_data in data.atoms.items():
+        atom_data["item"] = MagicMock(atom_id=atom_id)
+
+    mol = data.to_rdkit_mol(use_2d_stereo=False)
+    assert mol is not None
+
+    atom_map = {
+        atom.GetIntProp("_original_atom_id"): atom.GetIdx() for atom in mol.GetAtoms()
+    }
+    double_bond = mol.GetBondBetweenAtoms(atom_map[c2], atom_map[c3])
+
+    assert double_bond.GetBondType() == Chem.BondType.DOUBLE
+    assert double_bond.GetStereo() == Chem.BondStereo.STEREOZ

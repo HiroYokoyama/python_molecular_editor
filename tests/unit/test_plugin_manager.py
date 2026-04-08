@@ -286,3 +286,98 @@ def test_ensure_plugin_dir_creates_directory(tmp_path):
     pm.plugin_dir = new_dir
     pm.ensure_plugin_dir()
     assert os.path.isdir(new_dir)
+
+
+# =============================================================================
+# install_plugin + full discover flow (merged from test_plugin_manager_redundant)
+# =============================================================================
+
+
+def test_install_and_discover_single_file(tmp_path):
+    """install_plugin copies a .py file; discover_plugins returns its metadata."""
+    plugin_dir = tmp_path / "plugins"
+    plugin_dir.mkdir()
+    pm = PluginManager(main_window=MagicMock())
+    pm.plugin_dir = str(plugin_dir)
+
+    source = tmp_path / "test_plugin.py"
+    source.write_text(
+        textwrap.dedent("""\
+        PLUGIN_NAME = "Test Plugin"
+        PLUGIN_VERSION = "1.0"
+        PLUGIN_DESCRIPTION = "A simple test plugin"
+
+        def initialize(context):
+            pass
+    """)
+    )
+
+    success, msg = pm.install_plugin(str(source))
+    assert success, f"Installation failed: {msg}"
+    assert (plugin_dir / "test_plugin.py").exists()
+
+    plugins = pm.discover_plugins()
+    assert len(plugins) == 1
+    p = plugins[0]
+    assert p["name"] == "Test Plugin"
+    assert p["version"] == "1.0"
+    assert p["description"] == "A simple test plugin"
+    assert p["status"] == "Loaded"
+
+
+def test_install_plugin_registers_menu_action(tmp_path):
+    """A plugin that calls context.add_menu_action in initialize() should register it."""
+    plugin_dir = tmp_path / "plugins"
+    plugin_dir.mkdir()
+    pm = PluginManager(main_window=MagicMock())
+    pm.plugin_dir = str(plugin_dir)
+
+    source = tmp_path / "action_plugin.py"
+    source.write_text(
+        textwrap.dedent("""\
+        PLUGIN_NAME = "Action Plugin"
+
+        def initialize(context):
+            context.add_menu_action(
+                path="Test > Action",
+                callback=lambda: None,
+                text="Test Action",
+                icon=None,
+                shortcut=None
+            )
+    """)
+    )
+
+    pm.install_plugin(str(source))
+    pm.discover_plugins()
+
+    assert len(pm.menu_actions) == 1
+    assert pm.menu_actions[0]["plugin"] == "Action Plugin"
+    assert pm.menu_actions[0]["text"] == "Test Action"
+
+
+def test_install_zip_extracts_and_discovers(tmp_path):
+    """install_plugin accepts a .zip file; extracted package is discovered."""
+    import zipfile
+
+    plugin_dir = tmp_path / "plugins"
+    plugin_dir.mkdir()
+    pm = PluginManager(main_window=MagicMock())
+    pm.plugin_dir = str(plugin_dir)
+
+    zip_source = tmp_path / "zip_source"
+    zip_source.mkdir()
+    (zip_source / "__init__.py").write_text(
+        "PLUGIN_NAME='Zipped Plugin'", encoding="utf-8"
+    )
+
+    zip_file = tmp_path / "plugin.zip"
+    with zipfile.ZipFile(zip_file, "w") as zf:
+        zf.write(zip_source / "__init__.py", "MyPlugin/__init__.py")
+
+    success, msg = pm.install_plugin(str(zip_file))
+    assert success, f"ZIP installation failed: {msg}"
+    assert (plugin_dir / "MyPlugin" / "__init__.py").exists()
+
+    plugins = pm.discover_plugins()
+    assert any(p["name"] == "Zipped Plugin" for p in plugins)

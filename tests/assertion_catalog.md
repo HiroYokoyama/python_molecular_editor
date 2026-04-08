@@ -308,19 +308,6 @@ _Verify the initial state of the CalculationWorker._
 - assert getattr(worker, 'halt_ids', None) is None
 - assert not getattr(worker, 'halt_all', False)
 
-### test_calculation_worker_halt_logic
-_Test the internal _check_halted logic via run_calculation._
-
-- assert any(('Halted' in str(val) for val in error_captor.emitted_values))
-- assert error_captor.emitted_values[0] == (123, 'Halted')
-
-### test_calculation_worker_direct_mode
-_Test 'direct' conversion mode which avoids RDKit 3D embedding._
-
-- assert len(finish_captor.emitted_values) > 0
-- assert res_mol.GetNumAtoms() > 2
-- assert any((z > 0 for z in z_coords))
-
 ### test_calculation_worker_explicit_stereo_m_cfg
 _Test parsing of M CFG labels in MOL block._
 
@@ -1940,6 +1927,20 @@ _Verify template serialization dictionary format and content._
 - assert tmpl['bonds'][0]['order'] == 1
 - assert tmpl['bonds'][0]['stereo'] == 1
 
+### test_to_rdkit_mol_stereo_wedge_dash
+_Verify wedge/dash stereo bonds map to BEGINWEDGE/BEGINDASH in RDKit._
+
+- assert mol is not None
+- assert wedge_bond.GetBondDir() == Chem.BondDir.BEGINWEDGE
+- assert dash_bond.GetBondDir() == Chem.BondDir.BEGINDASH
+
+### test_to_rdkit_mol_ez_stereo
+_Verify E/Z stereo double bond maps to STEREOZ in RDKit._
+
+- assert mol is not None
+- assert double_bond.GetBondType() == Chem.BondType.DOUBLE
+- assert double_bond.GetStereo() == Chem.BondStereo.STEREOZ
+
 ## tests/unit/test_parser_robustness.py
 
 ### test_set_mol_prop_safe_robustness
@@ -2395,6 +2396,31 @@ _Files starting with __ should be ignored, and root __init__.py shouldn't count 
 _ensure_plugin_dir should create the directory if it doesn't exist._
 
 - assert os.path.isdir(new_dir)
+
+### test_install_and_discover_single_file
+_install_plugin copies a .py file; discover_plugins returns its metadata._
+
+- assert success
+- assert (plugin_dir / 'test_plugin.py').exists()
+- assert len(plugins) == 1
+- assert p['name'] == 'Test Plugin'
+- assert p['version'] == '1.0'
+- assert p['description'] == 'A simple test plugin'
+- assert p['status'] == 'Loaded'
+
+### test_install_plugin_registers_menu_action
+_A plugin that calls context.add_menu_action in initialize() should register it._
+
+- assert len(pm.menu_actions) == 1
+- assert pm.menu_actions[0]['plugin'] == 'Action Plugin'
+- assert pm.menu_actions[0]['text'] == 'Test Action'
+
+### test_install_zip_extracts_and_discovers
+_install_plugin accepts a .zip file; extracted package is discovered._
+
+- assert success
+- assert (plugin_dir / 'MyPlugin' / '__init__.py').exists()
+- assert any((p['name'] == 'Zipped Plugin' for p in plugins))
 
 ## tests/unit/test_project_io_extended.py
 
@@ -3353,72 +3379,6 @@ _Test Rotate2DDialog GUI initialization in the GUI test environment._
 
 ## tests/gui/test_main_app.py
 
-### test_molecular_data_add_atom
-_MolecularData: Test for adding an atom._
-
-- assert atom_id == 0
-- assert 0 in data.atoms
-- assert data.atoms[0]['symbol'] == 'C'
-- assert data.atoms[0]['pos'] == (0.0, 0.0)
-- assert data._next_atom_id == 1
-- assert 0 in data.adjacency_list
-
-### test_molecular_data_add_bond
-_MolecularData: Test for adding a bond._
-
-- assert key == (0, 1)
-- assert status == 'created'
-- assert (0, 1) in data.bonds
-- assert data.bonds[0, 1]['order'] == 2
-- assert data.bonds[0, 1]['stereo'] == 0
-- assert data.adjacency_list[0] == [1]
-- assert data.adjacency_list[1] == [0]
-
-### test_molecular_data_add_stereo_bond
-_MolecularData: Test if stereo bonds (Wedge/Dash) are stored without sorting IDs._
-
-- assert key == (1, 0)
-- assert status == 'created'
-- assert (1, 0) in data.bonds
-- assert (0, 1) not in data.bonds
-- assert data.bonds[1, 0]['stereo'] == 1
-
-### test_molecular_data_remove_atom
-_MolecularData: Test for removing an atom and its associated bonds._
-
-- assert len(data.atoms) == 3
-- assert len(data.bonds) == 2
-- assert len(data.atoms) == 2
-- assert 0 not in data.atoms
-- assert 1 in data.atoms
-- assert 2 in data.atoms
-- assert len(data.bonds) == 0
-- assert 0 not in data.adjacency_list
-- assert 1 in data.adjacency_list
-- assert data.adjacency_list[1] == []
-
-### test_molecular_data_remove_bond
-_MolecularData: Test for removing a bond._
-
-- assert len(data.bonds) == 1
-- assert data.adjacency_list[0] == [1]
-- assert len(data.bonds) == 0
-- assert data.adjacency_list[0] == []
-- assert data.adjacency_list[1] == []
-
-### test_to_rdkit_mol_stereo
-_MolecularData: Test for RDKit conversion of stereo bonds (Wedge/Dash)._
-
-- assert wedge_bond.GetBondDir() == Chem.BondDir.BEGINWEDGE
-- assert dash_bond.GetBondDir() == Chem.BondDir.BEGINDASH
-
-### test_to_rdkit_mol_ez_stereo
-_MolecularData: Test for RDKit conversion of E/Z stereo bonds._
-
-- assert mol is not None
-- assert double_bond.GetBondType() == Chem.BondType.DOUBLE
-- assert double_bond.GetStereo() == Chem.BondStereo.STEREOZ
-
 ### test_app_launch
 _MainWindow: Verify application launches correctly._
 
@@ -3915,44 +3875,3 @@ _Test that pressing 1, 2, 3 bonds to an existing atom if it's nearby._
 - assert bond_key in data.bonds
 
 ## tests/gui/test_plugin_manager_redundant.py
-
-### test_init
-_Test initialization of PluginManager._
-
-- assert os.path.exists(plugin_manager.plugin_dir)
-- assert plugin_manager.plugins == []
-
-### test_install_and_discover_single_file
-_Test installing and discovering a single-file plugin._
-
-- assert success
-- assert (tmp_path / 'plugins' / 'test_plugin.py').exists()
-- assert len(plugins) == 1
-- assert p['name'] == 'Test Plugin'
-- assert p['version'] == '1.0'
-- assert p['description'] == 'A simple test plugin'
-- assert p['status'] == 'Loaded'
-
-### test_plugin_registration
-_Test that a plugin can register actions via the context._
-
-- assert len(plugin_manager.menu_actions) == 1
-- assert action['plugin'] == 'Action Plugin'
-- assert action['text'] == 'Test Action'
-
-### test_install_zip
-_Test installing a plugin from a ZIP file._
-
-- assert success
-- assert extracted_dir.exists()
-- assert (extracted_dir / '__init__.py').exists()
-- assert len(plugins) == 1
-- assert plugins[0]['name'] == 'Zipped Plugin'
-
-### test_ast_metadata_parsing
-_Test the safe metadata extraction using AST._
-
-- assert info['name'] == 'AST Plugin'
-- assert info['version'] == '1.2.3'
-- assert info['author'] == 'Test Author'
-- assert info['description'] == 'Docstring description.'
