@@ -28,8 +28,8 @@ def test_close_event_robustness():
     event = MagicMock()
     # Should not raise even if attributes are missing or malformed
     result = ui.handle_close_event(event)
-    # Returns False when no unsaved changes (event accepted by caller)
-    assert result is False or result is True  # just check it doesn't raise
+    # No unsaved changes in mock setup — function should allow close
+    assert result is True
 
 
 def test_enable_3d_features_robustness():
