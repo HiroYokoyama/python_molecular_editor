@@ -702,6 +702,53 @@ _Test the translation and rotation logic in MoveGroupDialog._
 - assert np.allclose(np.array(mol.GetConformer().GetAtomPosition(5)), initial_pos5)
 - assert np.allclose(new_pos0, expected_rotated, atol=1e-07)
 
+### test_abs_single_atom_enforcement
+_Clicking a second atom in Absolute tab replaces the first selection._
+
+- assert dialog.selected_atoms == {0}
+- assert dialog.selected_atoms == {3}
+
+### test_abs_coordinate_inputs_populated_on_pick
+_Selecting an atom auto-fills X/Y/Z inputs with its current position._
+
+- dialog.abs_x_input.setText.assert_called_once_with(f'{pos.x:.4f}')
+- dialog.abs_y_input.setText.assert_called_once_with(f'{pos.y:.4f}')
+- dialog.abs_z_input.setText.assert_called_once_with(f'{pos.z:.4f}')
+
+### test_abs_apply_moves_entire_molecule_by_default
+_apply_absolute with move_mol=True shifts every atom by the same delta._
+
+- assert np.allclose(new_pos0, atom0_pos + [5, 0, 0], atol=0.0001)
+- assert np.allclose(new_pos5, atom5_pos + [5, 0, 0], atol=0.0001)
+
+### test_abs_apply_moves_only_selected_atom
+_apply_absolute with move_mol=False moves only the selected atom._
+
+- assert np.allclose(new_pos0, atom0_pos + [0, 3, 0], atol=0.0001)
+- assert np.allclose(new_pos5, atom5_pos, atol=0.0001)
+
+### test_abs_apply_noop_when_no_delta
+_apply_absolute does nothing when target equals current position._
+
+- assert np.allclose(mol.GetConformer().GetPositions(), original_positions, atol=1e-07)
+
+### test_abs_apply_requires_one_atom
+_apply_absolute shows a warning and does nothing when no atom is selected._
+
+- assert np.allclose(mol.GetConformer().GetPositions(), original_positions, atol=1e-07)
+- mock_mb.warning.assert_called_once()
+
+### test_tab_switch_clears_selection
+_Switching tabs clears selected_atoms and atom labels._
+
+- assert dialog.selected_atoms == set()
+- mock_clear.assert_called_once()
+
+### test_delta_tab_atom_pick_toggles
+_In Delta tab, picking an already-selected atom deselects it._
+
+- assert 0 not in dialog.selected_atoms
+
 ## tests/unit/test_dialog_manager.py
 
 ### TestGetPreselectedAtoms3D.test_returns_empty_when_no_selection
