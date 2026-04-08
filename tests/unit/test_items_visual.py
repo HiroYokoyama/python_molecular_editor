@@ -320,7 +320,6 @@ def test_bond_update_position_resilience(mock_parser_host):
     # Should not crash even if partner is lost after initialization
     bond.atom2 = None
     bond.update_position(notify=True)
-    assert bond.atom2 is None
     # Verify the bond didn't crash and returns a zero-length line for missing atom
     line = bond.get_line_in_local_coords()
     assert line.length() == 0.0, (

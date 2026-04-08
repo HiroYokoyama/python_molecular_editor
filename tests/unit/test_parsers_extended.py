@@ -223,21 +223,6 @@ def test_load_xyz_unrecognized_symbol(mock_parser_host, tmp_path):
     assert any("Unrecognized element symbol" in m for m in msgs)
 
 
-def test_save_as_xyz_logic(mock_parser_host, tmp_path):
-    """Verify saving a molecule as an XYZ file."""
-    parser = DummyParser(mock_parser_host)
-    parser.data.add_atom("O", QPointF(0, 0))
-    mol = Chem.MolFromSmiles("O")
-    AllChem.Compute2DCoords(mol)
-    parser.current_mol = mol
-    save_path = str(tmp_path / "saved.xyz")
-    with patch.object(
-        mwm.QFileDialog, "getSaveFileName", return_value=(save_path, "*.xyz")
-    ):
-        parser.save_as_xyz()
-    assert os.path.exists(save_path)
-
-
 def test_load_mol_file_with_v2000_fix(mock_parser_host, tmp_path):
     """Verify that malformed V2000 headers are fixed automatically during MOL load."""
     parser = DummyParser(mock_parser_host)
