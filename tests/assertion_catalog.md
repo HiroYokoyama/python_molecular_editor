@@ -1616,7 +1616,6 @@ _Test get_ez_label_local_rect() calculates correct label geometry._
 ### test_bond_update_position_resilience
 _Test BondItem.update_position resilience when atoms exist._
 
-- assert bond.atom2 is None
 - assert line.length() == 0.0
 
 ## tests/unit/test_main_window_export_extended.py
@@ -2037,11 +2036,6 @@ _Test load_xyz_file raises ValueError for unrecognized element symbols._
 
 - assert mol is None
 - assert any(('Unrecognized element symbol' in m for m in msgs))
-
-### test_save_as_xyz_logic
-_Verify saving a molecule as an XYZ file._
-
-- assert os.path.exists(save_path)
 
 ### test_load_mol_file_with_v2000_fix
 _Verify that malformed V2000 headers are fixed automatically during MOL load._
@@ -2919,7 +2913,7 @@ _Invalid InChI should show error, not crash._
 ### test_close_event_robustness
 _Test that handle_close_event handles missing attributes gracefully._
 
-- assert result is False or result is True
+- assert result is True
 
 ### test_enable_3d_features_robustness
 _Test that _enable_3d_features handles missing widgets._
