@@ -140,6 +140,8 @@ class DummyPlotterMinimal:
     def add_light(self, *a, **k):
         return mock.MagicMock()
 
+    camera_position = [(0, 0, 5), (0, 0, 0), (0, 1, 0)]
+
     @property
     def camera(self):
         c = mock.MagicMock()
