@@ -53,7 +53,7 @@ DEFAULT_SETTINGS = {
     "display_aromatic_circles_3d": False,
     "display_kekule_3d": False,
     # --- 3D Conversion and Optimization ---
-    "3d_conversion_mode": "rdkit",
+    "3d_conversion_mode": "fallback",
     "optimization_method": "MMFF_RDKIT",
     "optimize_intermolecular_interaction_rdkit": True,
     "skip_chemistry_checks": False,
