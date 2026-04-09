@@ -1,6 +1,6 @@
 # MoleditPy Coverage Report
 
-- **Overall Project Coverage (Full)**: **68.14%**
+- **Overall Project Coverage (Full)**: **68.36%**
 - **Core Molecular Logic Coverage**: **76.00%**
 
 > [!NOTE]
@@ -91,7 +91,7 @@
 | moleditpy\src\moleditpy\ui\string_importers.py          |    165 |     26 |   84.2% |
 | moleditpy\src\moleditpy\ui\template_preview_item.py     |    101 |     77 |   23.8% |
 | moleditpy\src\moleditpy\ui\template_preview_view.py     |     42 |     14 |   66.7% |
-| moleditpy\src\moleditpy\ui\translation_dialog.py        |    108 |     35 |   67.6% |
+| moleditpy\src\moleditpy\ui\translation_dialog.py        |    226 |     42 |   81.4% |
 | moleditpy\src\moleditpy\ui\ui_manager.py                |    372 |    112 |   69.9% |
 | moleditpy\src\moleditpy\ui\user_template_dialog.py      |    366 |    130 |   64.5% |
 | moleditpy\src\moleditpy\ui\view_3d_logic.py             |    986 |    246 |   75.1% |
@@ -104,7 +104,7 @@
 | moleditpy\src\moleditpy\utils\default_settings.py       |      1 |      0 |  100.0% |
 | moleditpy\src\moleditpy\utils\sip_isdeleted_safe.py     |     19 |      8 |   57.9% |
 | moleditpy\src\moleditpy\utils\system_utils.py           |     34 |     18 |   47.1% |
-| **TOTAL** | **13721** | **4371** | **68.14%** |
+| **TOTAL** | **13839** | **4378** | **68.36%** |
 
 ## Test Suite Status
 - **Unit tests**: PASSED

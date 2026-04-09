@@ -12,12 +12,15 @@ DOI: 10.5281/zenodo.17268532
 
 import numpy as np
 from PyQt6.QtWidgets import (
+    QCheckBox,
     QHBoxLayout,
     QLabel,
     QLineEdit,
     QMessageBox,
     QPushButton,
+    QTabWidget,
     QVBoxLayout,
+    QWidget,
 )
 
 try:
@@ -25,140 +28,260 @@ try:
 except ImportError:
     from moleditpy_linux.ui.base_picking_dialog import BasePickingDialog
 
+_TAB_ABSOLUTE = 0
+_TAB_DELTA = 1
+
 
 class TranslationDialog(BasePickingDialog):
     def __init__(self, mol, main_window, preselected_atoms=None, parent=None):
         super().__init__(mol, main_window, parent)
         self.selected_atoms = set()
 
-        # Add preselected atoms
         if preselected_atoms:
             self.selected_atoms.update(preselected_atoms)
 
         self.init_ui()
 
-        # Add labels to preselected atoms
         if self.selected_atoms:
             self.show_atom_labels()
             self.update_display()
+
+    # ------------------------------------------------------------------
+    # UI construction
+    # ------------------------------------------------------------------
 
     def init_ui(self):
         self.setWindowTitle("Translate Atoms")
         self.setModal(False)
         layout = QVBoxLayout(self)
 
-        # Instructions
-        instruction_label = QLabel(
-            "Click atoms in the 3D view to select them for translation. Specify the translation vector in Å."
+        self.tabs = QTabWidget()
+        self.tabs.addTab(self._build_absolute_tab(), "Absolute")
+        self.tabs.addTab(self._build_delta_tab(), "Delta")
+        self.tabs.currentChanged.connect(self._on_tab_changed)
+        layout.addWidget(self.tabs)
+
+        # Shared Close button row
+        close_row = QHBoxLayout()
+        close_row.addStretch()
+        close_btn = QPushButton("Close")
+        close_btn.clicked.connect(self.reject)
+        close_row.addWidget(close_btn)
+        layout.addLayout(close_row)
+
+        self.enable_picking()
+
+    def _build_absolute_tab(self):
+        widget = QWidget()
+        layout = QVBoxLayout(widget)
+
+        instr = QLabel(
+            "Click one atom to select it, then specify its target absolute coordinates (Å)."
         )
-        instruction_label.setWordWrap(True)
-        layout.addWidget(instruction_label)
+        instr.setWordWrap(True)
+        layout.addWidget(instr)
 
-        # Selected atoms display
-        self.selection_label = QLabel("No atoms selected")
-        layout.addWidget(self.selection_label)
+        self.abs_selection_label = QLabel("No atom selected")
+        layout.addWidget(self.abs_selection_label)
 
-        # Translation vector input
-        vector_layout = QHBoxLayout()
-        vector_layout.addWidget(QLabel("dX:"))
+        coord_row = QHBoxLayout()
+        coord_row.addWidget(QLabel("X:"))
+        self.abs_x_input = QLineEdit("0.000")
+        coord_row.addWidget(self.abs_x_input)
+        coord_row.addWidget(QLabel("Y:"))
+        self.abs_y_input = QLineEdit("0.000")
+        coord_row.addWidget(self.abs_y_input)
+        coord_row.addWidget(QLabel("Z:"))
+        self.abs_z_input = QLineEdit("0.000")
+        coord_row.addWidget(self.abs_z_input)
+        layout.addLayout(coord_row)
+
+        self.move_mol_checkbox = QCheckBox("Move entire molecule")
+        self.move_mol_checkbox.setChecked(True)
+        self.move_mol_checkbox.stateChanged.connect(self._on_move_mol_toggled)
+        layout.addWidget(self.move_mol_checkbox)
+
+        btn_row = QHBoxLayout()
+        abs_clear_btn = QPushButton("Clear Selection")
+        abs_clear_btn.clicked.connect(self._abs_clear_selection)
+        btn_row.addWidget(abs_clear_btn)
+        origin_btn = QPushButton("Set to Origin")
+        origin_btn.setToolTip("Set target coordinates to the origin")
+        origin_btn.clicked.connect(self._set_origin)
+        btn_row.addWidget(origin_btn)
+        btn_row.addStretch()
+        self.abs_apply_btn = QPushButton("Move Molecule")
+        self.abs_apply_btn.clicked.connect(self.apply_absolute)
+        self.abs_apply_btn.setEnabled(False)
+        btn_row.addWidget(self.abs_apply_btn)
+        layout.addLayout(btn_row)
+
+        layout.addStretch()
+        return widget
+
+    def _build_delta_tab(self):
+        widget = QWidget()
+        layout = QVBoxLayout(widget)
+
+        instr = QLabel(
+            "Click atoms in the 3D view to select them, then specify the translation vector (Å)."
+        )
+        instr.setWordWrap(True)
+        layout.addWidget(instr)
+
+        self.delta_selection_label = QLabel("No atoms selected")
+        layout.addWidget(self.delta_selection_label)
+
+        vector_row = QHBoxLayout()
+        vector_row.addWidget(QLabel("dX:"))
         self.dx_input = QLineEdit("0.0")
-        vector_layout.addWidget(self.dx_input)
-
-        vector_layout.addWidget(QLabel("dY:"))
+        vector_row.addWidget(self.dx_input)
+        vector_row.addWidget(QLabel("dY:"))
         self.dy_input = QLineEdit("0.0")
-        vector_layout.addWidget(self.dy_input)
-
-        vector_layout.addWidget(QLabel("dZ:"))
+        vector_row.addWidget(self.dy_input)
+        vector_row.addWidget(QLabel("dZ:"))
         self.dz_input = QLineEdit("0.0")
-        vector_layout.addWidget(self.dz_input)
+        vector_row.addWidget(self.dz_input)
+        layout.addLayout(vector_row)
 
-        layout.addLayout(vector_layout)
+        btn_row = QHBoxLayout()
+        clear_btn = QPushButton("Clear Selection")
+        clear_btn.clicked.connect(self.clear_selection)
+        btn_row.addWidget(clear_btn)
 
-        # Buttons
-        button_layout = QHBoxLayout()
-        self.clear_button = QPushButton("Clear Selection")
-        self.clear_button.clicked.connect(self.clear_selection)
-        button_layout.addWidget(self.clear_button)
+        select_all_btn = QPushButton("Select All Atoms")
+        select_all_btn.setToolTip("Select all atoms in the molecule")
+        select_all_btn.clicked.connect(self.select_all_atoms)
+        btn_row.addWidget(select_all_btn)
 
-        # Select all atoms button
-        self.select_all_button = QPushButton("Select All Atoms")
-        self.select_all_button.setToolTip("Select all atoms in the molecule")
-        self.select_all_button.clicked.connect(self.select_all_atoms)
-        button_layout.addWidget(self.select_all_button)
-
-        button_layout.addStretch()
-
+        btn_row.addStretch()
         self.apply_button = QPushButton("Apply Translation")
         self.apply_button.clicked.connect(self.apply_translation)
         self.apply_button.setEnabled(False)
-        button_layout.addWidget(self.apply_button)
+        btn_row.addWidget(self.apply_button)
+        layout.addLayout(btn_row)
 
-        close_button = QPushButton("Close")
-        close_button.clicked.connect(self.reject)
-        button_layout.addWidget(close_button)
+        layout.addStretch()
+        return widget
 
-        layout.addLayout(button_layout)
+    # ------------------------------------------------------------------
+    # Tab switching
+    # ------------------------------------------------------------------
 
-        # Connect to main window's picker
-        self.picker_connection = None
-        self.enable_picking()
+    def _on_tab_changed(self, index):
+        self.selected_atoms.clear()
+        self.clear_atom_labels()
+        self.update_display()
+
+    # ------------------------------------------------------------------
+    # Atom picking dispatch
+    # ------------------------------------------------------------------
 
     def on_atom_picked(self, atom_idx):
-        """Handle the event when an atom is picked in the 3D view."""
+        if self.tabs.currentIndex() == _TAB_ABSOLUTE:
+            self._abs_on_atom_picked(atom_idx)
+        else:
+            self._delta_on_atom_picked(atom_idx)
+
+    def _abs_on_atom_picked(self, atom_idx):
+        # Enforce single selection: replace previous atom
+        self.selected_atoms = {atom_idx}
+        self._populate_abs_inputs_from_atom(atom_idx)
+        self.show_atom_labels()
+        self.update_display()
+
+    def _delta_on_atom_picked(self, atom_idx):
         if atom_idx in self.selected_atoms:
             self.selected_atoms.remove(atom_idx)
         else:
             self.selected_atoms.add(atom_idx)
-
-        # Display labels on the atoms
         self.show_atom_labels()
         self.update_display()
 
+    # ------------------------------------------------------------------
+    # Absolute tab helpers
+    # ------------------------------------------------------------------
+
+    def _populate_abs_inputs_from_atom(self, atom_idx):
+        pos = self.main_window.view_3d_manager.current_mol.GetConformer().GetPositions()[atom_idx]
+        self.abs_x_input.setText(f"{pos[0]:.4f}")
+        self.abs_y_input.setText(f"{pos[1]:.4f}")
+        self.abs_z_input.setText(f"{pos[2]:.4f}")
+
+    def _abs_clear_selection(self):
+        self.selected_atoms.clear()
+        self.clear_atom_labels()
+        self.abs_x_input.setText("0.000")
+        self.abs_y_input.setText("0.000")
+        self.abs_z_input.setText("0.000")
+        self.update_display()
+
+    def _set_origin(self):
+        self.abs_x_input.setText("0.0000")
+        self.abs_y_input.setText("0.0000")
+        self.abs_z_input.setText("0.0000")
+
+    def _on_move_mol_toggled(self, state):
+        label = "Move Molecule" if self.move_mol_checkbox.isChecked() else "Move Atom"
+        self.abs_apply_btn.setText(label)
+
+    def apply_absolute(self):
+        self.mol = self.main_window.view_3d_manager.current_mol
+        if len(self.selected_atoms) != 1:
+            QMessageBox.warning(self, "Warning", "Please select exactly one atom.")
+            return
+
+        try:
+            tx = float(self.abs_x_input.text())
+            ty = float(self.abs_y_input.text())
+            tz = float(self.abs_z_input.text())
+        except ValueError:
+            QMessageBox.warning(self, "Warning", "Please enter valid numbers for X, Y, Z.")
+            return
+
+        atom_idx = next(iter(self.selected_atoms))
+        positions = self.mol.GetConformer().GetPositions()
+        current = positions[atom_idx]
+        delta = np.array([tx, ty, tz]) - current
+
+        if np.allclose(delta, 0):
+            return
+
+        if self.move_mol_checkbox.isChecked():
+            positions += delta
+        else:
+            positions[atom_idx] += delta
+
+        self._update_molecule_geometry(positions)
+        self._push_undo()
+        self.show_atom_labels()
+
+    # ------------------------------------------------------------------
+    # Delta tab methods (unchanged logic)
+    # ------------------------------------------------------------------
+
     def clear_selection(self):
-        """Clear the current atom selection."""
         self.selected_atoms.clear()
         self.clear_atom_labels()
         self.update_display()
 
     def select_all_atoms(self):
-        """Select all atoms in the current molecule."""
         try:
             if hasattr(self, "mol") and self.mol is not None:
-                n = self.mol.GetNumAtoms()
-                self.selected_atoms = set(range(n))
+                self.selected_atoms = set(range(self.mol.GetNumAtoms()))
             else:
                 self.selected_atoms = (
                     set(self.main_window.state_manager.data.atoms.keys())
                     if hasattr(self.main_window.state_manager, "data")
                     else set()
                 )
-
             self.show_atom_labels()
             self.update_display()
         except (AttributeError, RuntimeError, TypeError, KeyError) as e:
             QMessageBox.warning(self, "Warning", f"Failed to select all atoms: {e}")
 
-    def update_display(self):
-        """Update the UI display with current selection info."""
-        count = len(self.selected_atoms)
-        if count == 0:
-            self.selection_label.setText("Click atoms to select (minimum 1 required)")
-            self.apply_button.setEnabled(False)
-        else:
-            self.selection_label.setText(f"Selected {count} atoms")
-            self.apply_button.setEnabled(True)
-
-    def show_atom_labels(self):
-        """Show numeric labels for the selected atoms."""
-        if self.selected_atoms:
-            sorted_atoms = sorted(self.selected_atoms)
-            pairs = [(idx, str(i + 1)) for i, idx in enumerate(sorted_atoms)]
-            self.show_atom_labels_for(pairs)
-        else:
-            self.clear_atom_labels()
-
     def apply_translation(self):
-        """Apply the translation to selected atoms."""
+        self.mol = self.main_window.view_3d_manager.current_mol
         if not self.selected_atoms:
             QMessageBox.warning(self, "Warning", "Please select at least one atom.")
             return
@@ -168,26 +291,50 @@ class TranslationDialog(BasePickingDialog):
             dy = float(self.dy_input.text())
             dz = float(self.dz_input.text())
         except ValueError:
-            QMessageBox.warning(
-                self, "Warning", "Please enter valid numbers for dx, dy, dz."
-            )
+            QMessageBox.warning(self, "Warning", "Please enter valid numbers for dx, dy, dz.")
             return
 
         if dx == 0 and dy == 0 and dz == 0:
             return
 
         translation_vec = np.array([dx, dy, dz])
-
-        # Update positions
         positions = self.mol.GetConformer().GetPositions()
         for atom_idx in self.selected_atoms:
             positions[atom_idx] += translation_vec
 
-        # Write updated positions back using inherited helper
         self._update_molecule_geometry(positions)
-
-        # Push Undo state AFTER modification
         self._push_undo()
-
-        # Update labels
         self.show_atom_labels()
+
+    # ------------------------------------------------------------------
+    # Shared display update
+    # ------------------------------------------------------------------
+
+    def update_display(self):
+        tab = self.tabs.currentIndex()
+        count = len(self.selected_atoms)
+
+        if tab == _TAB_ABSOLUTE:
+            if count == 0:
+                self.abs_selection_label.setText("Click one atom to select it")
+                self.abs_apply_btn.setEnabled(False)
+            else:
+                atom_idx = next(iter(self.selected_atoms))
+                sym = self.mol.GetAtomWithIdx(atom_idx).GetSymbol()
+                self.abs_selection_label.setText(f"Selected: atom {atom_idx} ({sym})")
+                self.abs_apply_btn.setEnabled(True)
+        else:
+            if count == 0:
+                self.delta_selection_label.setText("Click atoms to select (minimum 1 required)")
+                self.apply_button.setEnabled(False)
+            else:
+                self.delta_selection_label.setText(f"Selected {count} atom{'s' if count != 1 else ''}")
+                self.apply_button.setEnabled(True)
+
+    def show_atom_labels(self):
+        if self.selected_atoms:
+            sorted_atoms = sorted(self.selected_atoms)
+            pairs = [(idx, str(i + 1)) for i, idx in enumerate(sorted_atoms)]
+            self.show_atom_labels_for(pairs)
+        else:
+            self.clear_atom_labels()
