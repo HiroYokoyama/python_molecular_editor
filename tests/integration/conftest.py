@@ -96,7 +96,7 @@ pyv = force_mock_module("pyvista")
 
 class DummyPlotterMinimal:
     def __init__(self, *a, **k):
-        pass
+        self.camera_position = [(0, 0, 5), (0, 0, 0), (0, 1, 0)]
 
     def add_mesh(self, *a, **k):
         return _mock.MagicMock()
@@ -352,6 +352,7 @@ def window(app, qtbot, monkeypatch):
             self.picker = _mock.MagicMock()
             self.camera = _mock.MagicMock()
             self.camera.copy = _mock.MagicMock(return_value={})
+            self.camera_position = [(0, 0, 5), (0, 0, 0), (0, 1, 0)]
             self.add_light = _mock.MagicMock(return_value="light_actor")
             self.remove_actor = _mock.MagicMock()
 

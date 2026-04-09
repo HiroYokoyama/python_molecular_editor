@@ -160,7 +160,7 @@ try:
 
         class DummyPlotterMinimal:
             def __init__(self, *a, **k):
-                pass
+                self.camera_position = [(0, 0, 5), (0, 0, 0), (0, 1, 0)]
 
             def add_mesh(self, *a, **k):
                 return None
@@ -293,7 +293,7 @@ try:
         # Minimal Plotter/Light/PolyData for import compatibility
         class DummyPlotterMinimal:
             def __init__(self, *a, **k):
-                pass
+                self.camera_position = [(0, 0, 5), (0, 0, 0), (0, 1, 0)]
 
             def add_mesh(self, *a, **k):
                 return None
@@ -1271,6 +1271,7 @@ def window(app, qtbot, monkeypatch):
                 # Provide a camera placeholder expected by draw_molecule_3d
                 self.camera = _mock.MagicMock()
                 self.camera.copy = _mock.MagicMock(return_value={})
+                self.camera_position = [(0, 0, 5), (0, 0, 0), (0, 1, 0)]
                 self.add_light = _mock.MagicMock(return_value="light_actor")
                 self.view_isometric = _mock.MagicMock()
                 self.remove_actor = _mock.MagicMock()

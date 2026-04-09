@@ -175,7 +175,7 @@ class View3DManager:
         self._3d_color_map.clear()
 
         # 1. Camera state and clear
-        camera_state = self.host.view_3d_manager.plotter.camera.copy()
+        camera_state = self.host.view_3d_manager.plotter.camera_position
 
         # Force removal to prevent ghost actor residues
         old_axes_actor = getattr(self, "axes_actor", None)
@@ -279,7 +279,7 @@ class View3DManager:
         self._add_3d_bond_cylinders(mol_to_draw, conf, col, current_style, mesh_props)
         self._add_3d_aromatic_rings(mol_to_draw, current_style, mesh_props)
         self._add_3d_labels(mol, mol_to_draw)
-        self.host.view_3d_manager.plotter.camera = camera_state
+        self.host.view_3d_manager.plotter.camera_position = camera_state
 
         # Update projection mode and force render
         settings = getattr(self, "settings", {})
