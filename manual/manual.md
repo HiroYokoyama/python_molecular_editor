@@ -47,6 +47,14 @@ You can launch it with the following command.
 moleditpy
 ```
 
+**Command-line Options:**
+
+| Option | Description |
+| :--- | :--- |
+| `moleditpy [file]` | Open the specified file on startup |
+| `moleditpy --version` | Print the version number and exit |
+| `moleditpy --safe` | Start in **safe mode**: all plugins are skipped on launch. Use this if a plugin is causing a crash or preventing startup. |
+
 **Windows Installer**
 
 MoleditPy offers a Windows installer. This allows you to easily install MoleditPy without manually setting up a Python environment.

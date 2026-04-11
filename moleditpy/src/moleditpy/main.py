@@ -16,15 +16,22 @@ import argparse
 import logging
 import os
 
-from PyQt6.QtWidgets import QApplication
-
 try:
-    from .ui.main_window import MainWindow
+    from .utils.constants import VERSION
 except ImportError:
     # Add the parent directory (src) to sys.path so 'moleditpy.*' imports work
     src_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
     if src_dir not in sys.path:
         sys.path.insert(0, src_dir)
+    from moleditpy.utils.constants import VERSION
+
+# VERSION is resolved above (before Qt) so --version works without launching the app.
+
+from PyQt6.QtWidgets import QApplication
+
+try:
+    from .ui.main_window import MainWindow
+except ImportError:
     from moleditpy.ui.main_window import MainWindow
 
 
@@ -63,6 +70,9 @@ def main():
         prog="moleditpy", description="MoleditPy molecular editor"
     )
     parser.add_argument("file", nargs="?", default=None, help="File to open on startup")
+    parser.add_argument(
+        "--version", action="version", version=f"%(prog)s {VERSION}"
+    )
     parser.add_argument(
         "--safe",
         action="store_true",
