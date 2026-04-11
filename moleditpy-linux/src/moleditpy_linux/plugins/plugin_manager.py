@@ -254,7 +254,27 @@ class PluginManager:
             )
             unique_module_name = unique_module_name.strip(".")
 
-            spec = importlib.util.spec_from_file_location(unique_module_name, filepath)
+            is_package = os.path.basename(filepath) == "__init__.py"
+            pkg_dir = os.path.dirname(filepath) if is_package else None
+
+            # For package plugins, register stub parent packages so that
+            # relative imports (e.g. "from . import parser") resolve correctly.
+            if is_package and "." in unique_module_name:
+                parts = unique_module_name.split(".")
+                for i in range(1, len(parts)):
+                    parent_name = ".".join(parts[:i])
+                    if parent_name not in sys.modules:
+                        import types as _types
+                        stub = _types.ModuleType(parent_name)
+                        stub.__path__ = []
+                        stub.__package__ = parent_name
+                        sys.modules[parent_name] = stub
+
+            spec = importlib.util.spec_from_file_location(
+                unique_module_name,
+                filepath,
+                submodule_search_locations=([pkg_dir] if is_package else None),
+            )
             if spec and spec.loader:
                 module = importlib.util.module_from_spec(spec)
                 sys.modules[spec.name] = module
