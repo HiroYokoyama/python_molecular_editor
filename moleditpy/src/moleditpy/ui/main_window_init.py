@@ -276,9 +276,10 @@ class MainInitManager:
                     self.host.init_manager.current_file_path = file_path
                     self.host.state_manager.update_window_title()
                     return  # Success
-                except (AttributeError, RuntimeError, ValueError, ImportError, ModuleNotFoundError) as e:
-                    print(
-                        f"Plugin opener failed for '{opener_info.get('plugin', 'Unknown')}': {e}"
+                except Exception as e:
+                    logging.warning(
+                        "Plugin opener failed for '%s': %s",
+                        opener_info.get('plugin', 'Unknown'), e
                     )
                     # If this opener fails, try the next one or fall through to default
                     continue
