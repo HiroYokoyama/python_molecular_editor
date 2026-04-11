@@ -264,7 +264,7 @@ class MainInitManager:
         file_ext = ext_with_dot.lstrip(".")
 
         # 1. Custom Plugin Openers
-        if ext_with_dot in self.host.plugin_manager.file_openers:
+        if self.host.plugin_manager and ext_with_dot in self.host.plugin_manager.file_openers:
             openers = self.host.plugin_manager.file_openers[ext_with_dot]
             # Iterate through openers (already sorted by priority)
             for opener_info in openers:
@@ -276,9 +276,10 @@ class MainInitManager:
                     self.host.init_manager.current_file_path = file_path
                     self.host.state_manager.update_window_title()
                     return  # Success
-                except (AttributeError, RuntimeError, ValueError) as e:
-                    print(
-                        f"Plugin opener failed for '{opener_info.get('plugin', 'Unknown')}': {e}"
+                except Exception as e:
+                    logging.warning(
+                        "Plugin opener failed for '%s': %s",
+                        opener_info.get('plugin', 'Unknown'), e
                     )
                     # If this opener fails, try the next one or fall through to default
                     continue
