@@ -72,7 +72,7 @@ class AboutDialog(QDialog):
         layout.addWidget(self.image_label)
 
         # Add text information
-        _variant = " (Linux)" if "linux" in (__package__ or "") else ""
+        _variant = " (Linux)" if "moleditpy_linux" in (__file__ or "") else ""
         info_text = f"MoleditPy{_variant} Ver. {VERSION}\nAuthor: Hiromichi Yokoyama\nLicense: GPL-3.0 license"
         info_label = QLabel(info_text)
         info_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
