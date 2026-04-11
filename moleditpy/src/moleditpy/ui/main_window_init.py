@@ -264,7 +264,7 @@ class MainInitManager:
         file_ext = ext_with_dot.lstrip(".")
 
         # 1. Custom Plugin Openers
-        if ext_with_dot in self.host.plugin_manager.file_openers:
+        if self.host.plugin_manager and ext_with_dot in self.host.plugin_manager.file_openers:
             openers = self.host.plugin_manager.file_openers[ext_with_dot]
             # Iterate through openers (already sorted by priority)
             for opener_info in openers:
