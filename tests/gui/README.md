@@ -93,3 +93,8 @@ You will also need the application's main dependencies, such as `PyQt6`.
 GUI tests in this directory interact with real `PyQt6` widgets and simulate mouse/keyboard events through the view's coordinate system. Some tests may fail or behave inconsistently when run in a headless or offscreen environment (e.g., `QT_QPA_PLATFORM=offscreen`, CI without a display, or `MOLEDITPY_HEADLESS=1`).
 
 **Recommendation**: Run GUI tests on a machine with a display server, or use a virtual framebuffer such as `Xvfb` on Linux. Unit tests in `tests/unit/` are fully headless-safe.
+
+## 6\. GUI Testing Notice
+
+> [!WARNING]
+> Please **do not touch the mouse or keyboard** while the GUI test suite is running interacting with `pytest-qt`. Interacting with the system may hijack the active window focus or intercept simulated mouse/drag events, causing spurious test failures across the suite.
