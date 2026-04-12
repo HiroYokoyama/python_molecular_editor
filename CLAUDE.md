@@ -62,7 +62,7 @@ All code changes go inside `moleditpy/` only. Never edit `moleditpy-linux/` — 
 
 - Pylint > 9.0/10, PEP 8
 - Type hints in `core/` and any new logic modules
-- **Core Molecular Logic coverage ≥ 70%** (tracked in `tests/coverage_report.md`). This metric covers `core/`, `plugins/`, logic-heavy `ui/` modules, and `utils/` — excluding pure UI boilerplate (3D interactors, settings tabs, template dialogs)
+- **Core Molecular Logic coverage ≥ 75%** (tracked in `tests/coverage_report.md`). This metric covers `core/`, `plugins/`, logic-heavy `ui/` modules, and `utils/` — excluding pure UI boilerplate (3D interactors, settings tabs, template dialogs)
 - All new public methods in `plugins/` must have tests
 - Error handling: use `logging.exception()` or `logging.error()` in `except` blocks — never `print`, never bare `pass`
 - No unnecessary comments — only add comments where logic is genuinely non-obvious
