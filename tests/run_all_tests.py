@@ -60,6 +60,8 @@ _KNOWN_CRASH_CODES = frozenset(
 # Pattern to extract pytest summary line, e.g. "5 passed, 1 warning in 0.52s"
 _PYTEST_PASSED_RE = re.compile(r"(\d+) passed")
 _PYTEST_FAILED_RE = re.compile(r"(\d+) failed")
+# Individual test result lines from -vv output, e.g. "test_foo.py::test_bar PASSED"
+_PYTEST_PASSED_LINE_RE = re.compile(r"\bPASSED\b")
 
 
 def _is_teardown_crash(returncode, combined_output):
@@ -67,13 +69,19 @@ def _is_teardown_crash(returncode, combined_output):
 
     Returns True if the exit code matches a known crash AND pytest
     reported at least 1 passed test with 0 failures.
+    Handles cases where the crash interrupts pytest before it prints the
+    summary line by falling back to counting individual PASSED lines.
     """
     if returncode in _KNOWN_CRASH_CODES:
-        passed = _PYTEST_PASSED_RE.search(combined_output)
         failed = _PYTEST_FAILED_RE.search(combined_output)
-        has_passed = passed and int(passed.group(1)) > 0
         has_failed = failed and int(failed.group(1)) > 0
-        if has_passed and not has_failed:
+        if has_failed:
+            return False
+        passed_summary = _PYTEST_PASSED_RE.search(combined_output)
+        if passed_summary and int(passed_summary.group(1)) > 0:
+            return True
+        # Crash interrupted pytest before summary — check individual PASSED lines
+        if len(_PYTEST_PASSED_LINE_RE.findall(combined_output)) > 0:
             return True
     return False
 
