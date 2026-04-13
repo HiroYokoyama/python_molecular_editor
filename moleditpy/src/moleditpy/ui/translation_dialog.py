@@ -40,7 +40,9 @@ class TranslationDialog(BasePickingDialog):
         if preselected_atoms:
             self.selected_atoms.update(preselected_atoms)
 
+        self._is_initializing = True
         self.init_ui()
+        self._is_initializing = False
 
         if self.selected_atoms:
             self.tabs.blockSignals(True)
@@ -176,6 +178,8 @@ class TranslationDialog(BasePickingDialog):
     # ------------------------------------------------------------------
 
     def _on_tab_changed(self, index):
+        if hasattr(self, "_is_initializing") and self._is_initializing:
+            return
         self.selected_atoms.clear()
         self.clear_atom_labels()
         self.update_display()
