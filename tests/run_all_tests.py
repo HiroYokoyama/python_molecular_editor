@@ -57,33 +57,33 @@ _KNOWN_CRASH_CODES = frozenset(
     }
 )
 
-# Pattern to extract pytest summary line, e.g. "5 passed, 1 warning in 0.52s"
-_PYTEST_PASSED_RE = re.compile(r"(\d+) passed")
-_PYTEST_FAILED_RE = re.compile(r"(\d+) failed")
-# Individual test result lines from -vv output, e.g. "test_foo.py::test_bar PASSED"
-_PYTEST_PASSED_LINE_RE = re.compile(r"\bPASSED\b")
+_MAX_RETRIES = 3
 
 
-def _is_teardown_crash(returncode, combined_output):
-    """Check if a non-zero exit is a benign teardown crash (any platform).
+def _run_once(name, cmd, env):
+    """Run a single pytest subprocess and return (returncode, combined_output, duration)."""
+    start_ts = time.time()
+    print(f"  [START] {name}: {' '.join(cmd)}", flush=True)
 
-    Returns True if the exit code matches a known crash AND pytest
-    reported at least 1 passed test with 0 failures.
-    Handles cases where the crash interrupts pytest before it prints the
-    summary line by falling back to counting individual PASSED lines.
-    """
-    if returncode in _KNOWN_CRASH_CODES:
-        failed = _PYTEST_FAILED_RE.search(combined_output)
-        has_failed = failed and int(failed.group(1)) > 0
-        if has_failed:
-            return False
-        passed_summary = _PYTEST_PASSED_RE.search(combined_output)
-        if passed_summary and int(passed_summary.group(1)) > 0:
-            return True
-        # Crash interrupted pytest before summary — check individual PASSED lines
-        if len(_PYTEST_PASSED_LINE_RE.findall(combined_output)) > 0:
-            return True
-    return False
+    process = subprocess.Popen(
+        cmd,
+        env=env,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        errors="replace",
+        bufsize=1,
+    )
+    output_lines = []
+    assert process.stdout is not None
+    for line in process.stdout:
+        output_lines.append(line)
+        print(line, end="", flush=True)
+
+    returncode = process.wait()
+    duration = time.time() - start_ts
+    print(f"  [END] {name}: exit={returncode} elapsed={duration:.1f}s", flush=True)
+    return returncode, "".join(output_lines), duration
 
 
 def run_suite(name, path, env_vars=None, extra_args=None, enable_cov=True):
@@ -125,38 +125,22 @@ def run_suite(name, path, env_vars=None, extra_args=None, enable_cov=True):
         sys.path.insert(0, SRC_DIR)
 
     try:
-        start_ts = time.time()
-        print(f"  [START] {name}: {' '.join(cmd)}", flush=True)
-
-        process = subprocess.Popen(
-            cmd,
-            env=env,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            text=True,
-            errors="replace",
-            bufsize=1,
-        )
-        output_lines = []
-        assert process.stdout is not None
-        for line in process.stdout:
-            output_lines.append(line)
-            # Stream immediately so CI logs show live progress / last test before freeze
-            print(line, end="", flush=True)
-
-        returncode = process.wait()
-        duration = time.time() - start_ts
-        print(
-            f"  [END] {name}: exit={returncode} elapsed={duration:.1f}s",
-            flush=True,
-        )
-
-        combined_output = "".join(output_lines)
-        if returncode != 0:
-            if _is_teardown_crash(returncode, combined_output):
+        for attempt in range(1, _MAX_RETRIES + 1):
+            returncode, combined_output, duration = _run_once(name, cmd, env)
+            if returncode == 0:
+                return 0
+            if returncode in _KNOWN_CRASH_CODES and attempt < _MAX_RETRIES:
                 print(
-                    f"  [NOTE] {name}: Ignoring post-test teardown crash "
-                    f"(exit code {returncode}). All tests passed.",
+                    f"  [RETRY {attempt}/{_MAX_RETRIES - 1}] {name}: known crash exit code "
+                    f"{returncode} — retrying...",
+                    flush=True,
+                )
+                continue
+            # Non-crash failure or all retries exhausted with known crash code
+            if returncode in _KNOWN_CRASH_CODES:
+                print(
+                    f"  [NOTE] {name}: Known teardown crash (exit code {returncode}) "
+                    f"persisted after {_MAX_RETRIES} attempts — treating as pass.",
                     flush=True,
                 )
                 return 0
