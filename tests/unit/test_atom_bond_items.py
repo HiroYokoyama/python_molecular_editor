@@ -41,7 +41,7 @@ class TolerantQRectF(QRectF):
 
 
 # Helper for mocking scene() and isSelected() on AtomItem
-class TestableAtomItem(AtomItem):
+class MockableAtomItem(AtomItem):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._selected_mock = False
@@ -61,7 +61,7 @@ class TestableAtomItem(AtomItem):
 class TestAtomItem:
     @pytest.fixture
     def atom_item(self, mock_main_window, mock_scene):
-        item = TestableAtomItem(1, "C", QPointF(0.0, 0.0))
+        item = MockableAtomItem(1, "C", QPointF(0.0, 0.0))
         return item
 
     def test_init(self, atom_item):
@@ -240,7 +240,7 @@ class TestAtomItem:
 
 
 # Helper for mocking scene() on BondItem
-class TestableBondItem(BondItem):
+class MockableBondItem(BondItem):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._mock_scene = MagicMock()
@@ -255,8 +255,8 @@ class TestBondItem:
         atom1 = AtomItem(1, "C", QPointF(0.0, 0.0))
         atom2 = AtomItem(2, "C", QPointF(10.0, 10.0))
 
-        # Use TestableBondItem to allow scene() mocking
-        bond = TestableBondItem(atom1, atom2)
+        # Use MockableBondItem to allow scene() mocking
+        bond = MockableBondItem(atom1, atom2)
         return bond
 
     def test_init(self, bond_item):
@@ -321,7 +321,7 @@ class TestBondItem:
         option = MagicMock()
         widget = MagicMock()
 
-        # Mock scene and RDKit interaction (via TestableBondItem's mock_scene)
+        # Mock scene and RDKit interaction (via MockableBondItem's mock_scene)
         mock_scene = bond_item.scene()
 
         # Setup window and data

@@ -334,18 +334,20 @@ class TestPluginInterface:
         ctx = PluginContext(mock_manager, "TestPlugin")
         ctx.get_selected_atom_indices()
         mock_manager.get_selected_atom_indices.assert_called_once()
-        
+
     def test_register_window(self, mock_manager):
         ctx = PluginContext(mock_manager, "TestPlugin")
         window = MagicMock()
         ctx.register_window("win1", window)
-        mock_manager.register_window.assert_called_once_with("TestPlugin", "win1", window)
-        
+        mock_manager.register_window.assert_called_once_with(
+            "TestPlugin", "win1", window
+        )
+
     def test_get_window(self, mock_manager):
         ctx = PluginContext(mock_manager, "TestPlugin")
         ctx.get_window("win1")
         mock_manager.get_window.assert_called_once_with("TestPlugin", "win1")
-        
+
     def test_show_status_message(self, mock_manager):
         ctx = PluginContext(mock_manager, "TestPlugin")
         ctx.show_status_message("hello", 1000)
@@ -356,7 +358,7 @@ class TestPluginInterface:
         mock_main_window.view_3d_manager.plotter = "mock_plotter"
         ctx = PluginContext(mock_manager, "TestPlugin")
         assert ctx.plotter == "mock_plotter"
-        
+
         # Test no window
         mock_manager.get_main_window.return_value = None
         assert ctx.plotter is None
@@ -367,7 +369,7 @@ class TestPluginInterface:
         mock_main_window.init_manager.scene = "mock_scene"
         ctx = PluginContext(mock_manager, "TestPlugin")
         assert ctx.scene == "mock_scene"
-        
+
         # Test no window
         mock_manager.get_main_window.return_value = None
         assert ctx.scene is None
@@ -377,7 +379,7 @@ class TestPluginInterface:
         ctx = PluginContext(mock_manager, "TestPlugin")
         ctx.draw_molecule_3d("mol")
         mock_main_window.view_3d_manager.draw_molecule_3d.assert_called_once_with("mol")
-        
+
         mock_manager.get_main_window.return_value = None
         ctx.draw_molecule_3d("mol")  # should not raise
 
@@ -387,13 +389,13 @@ class TestPluginInterface:
         ctx = PluginContext(mock_manager, "TestPlugin")
         ctx.refresh_3d_view()
         mock_main_window.view_3d_manager.draw_molecule_3d.assert_called_once_with("mol")
-        
+
         # No mol, has plotter
         mock_main_window.view_3d_manager.current_mol = None
         mock_main_window.view_3d_manager.plotter = MagicMock()
         ctx.refresh_3d_view()
         mock_main_window.view_3d_manager.plotter.render.assert_called_once()
-        
+
         # No window
         mock_manager.get_main_window.return_value = None
         ctx.refresh_3d_view()
@@ -411,17 +413,18 @@ class TestPluginInterface:
         mock_bond = MagicMock()
         mock_bond.GetIdx.return_value = 5
         mock_mol.GetBondBetweenAtoms.return_value = mock_bond
-        
+
         mock_main_window.current_mol = mock_mol
         mock_main_window.view_3d_manager = MagicMock()
         mock_main_window.plotter = MagicMock()
-        
+
         controller.set_bond_color_by_atoms(1, 2, "#112233")
         mock_mol.GetBondBetweenAtoms.assert_called_once_with(1, 2)
-        mock_main_window.view_3d_manager.update_bond_color_override.assert_called_once_with(5, "#112233")
+        mock_main_window.view_3d_manager.update_bond_color_override.assert_called_once_with(
+            5, "#112233"
+        )
         mock_main_window.plotter.render.assert_called_once()
-        
+
         # test no mol
         mock_main_window.current_mol = None
         controller.set_bond_color_by_atoms(1, 2, "#112233")
-
