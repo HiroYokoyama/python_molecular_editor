@@ -136,14 +136,7 @@ def run_suite(name, path, env_vars=None, extra_args=None, enable_cov=True):
                     flush=True,
                 )
                 continue
-            # Non-crash failure or all retries exhausted with known crash code
-            if returncode in _KNOWN_CRASH_CODES:
-                print(
-                    f"  [NOTE] {name}: Known teardown crash (exit code {returncode}) "
-                    f"persisted after {_MAX_RETRIES} attempts — treating as pass.",
-                    flush=True,
-                )
-                return 0
+            # All retries exhausted — report the actual failure
         return returncode
     except Exception as e:
         print(f"Error running {name} tests: {e}")
