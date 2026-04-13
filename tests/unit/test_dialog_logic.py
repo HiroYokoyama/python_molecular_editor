@@ -247,6 +247,7 @@ def test_move_group_logic(mock_parser_host, mol):
 # TranslationDialog — Absolute tab
 # ---------------------------------------------------------------------------
 
+
 def _make_abs_dialog(mol, window):
     """Create a TranslationDialog with init_ui patched, tabs mocked for Absolute tab."""
     window.view_3d_manager.current_mol = mol
@@ -449,7 +450,10 @@ def test_delta_tab_atom_pick_toggles(mock_parser_host, mol):
     dialog.apply_button = MagicMock()
     dialog.selected_atoms = {0}
 
-    with patch.object(dialog, "show_atom_labels"), patch.object(dialog, "update_display"):
+    with (
+        patch.object(dialog, "show_atom_labels"),
+        patch.object(dialog, "update_display"),
+    ):
         dialog.on_atom_picked(0)
 
     assert 0 not in dialog.selected_atoms, "Re-picking selected atom should deselect it"

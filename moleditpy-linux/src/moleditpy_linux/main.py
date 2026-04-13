@@ -80,8 +80,68 @@ def main():
         default=False,
         help="Start in safe mode: skip loading all plugins",
     )
+    parser.add_argument(
+        "--install-plugin",
+        metavar="PATH",
+        help="Install a plugin from a .py file, .zip, or folder (Headless)",
+    )
     # parse_known_args so Qt's own argv flags (e.g. -platform) are passed through
     args, remaining = parser.parse_known_args()
+
+    # --- Headless Plugin Installation ---
+    if args.install_plugin:
+        plugin_path = os.path.abspath(args.install_plugin)
+        if not os.path.exists(plugin_path):
+            print(f"Error: Plugin path not found: {plugin_path}")
+            sys.exit(1)
+
+        try:
+            from moleditpy_linux.plugins.plugin_manager import PluginManager
+        except ImportError:
+            from .plugins.plugin_manager import PluginManager
+
+        pm = PluginManager()
+        sha256 = pm._compute_sha256(plugin_path)
+
+        # Extract metadata
+        metadata_file = plugin_path
+        if os.path.isdir(plugin_path):
+            init_py = os.path.join(plugin_path, "__init__.py")
+            if os.path.exists(init_py):
+                metadata_file = init_py
+
+        info = (
+            pm.get_plugin_info_safe(metadata_file)
+            if metadata_file.endswith(".py")
+            else {}
+        )
+
+        print("\n" + "=" * 40)
+        print("      PLUGIN INSTALLATION (HEADLESS)")
+        print("=" * 40)
+        print(f" Name:        {info.get('name', os.path.basename(plugin_path))}")
+        print(f" Author:      {info.get('author', 'Unknown')}")
+        print(f" Version:     {info.get('version', 'Unknown')}")
+        print(f" Description: {info.get('description', 'No description')}")
+        print("-" * 40)
+        print(f" Path:        {plugin_path}")
+        print(f" SHA-256:     {sha256}")
+        print("=" * 40)
+
+        confirm = (
+            input("\nDo you want to proceed with installation? (y/N): ").strip().lower()
+        )
+        if confirm == "y":
+            success, msg = pm.install_plugin(plugin_path)
+            if success:
+                print(f"Success: {msg}")
+                sys.exit(0)
+            else:
+                print(f"Error: {msg}")
+                sys.exit(1)
+        else:
+            print("Installation aborted.")
+            sys.exit(0)
 
     app = QApplication([sys.argv[0]] + remaining)
     window = MainWindow(initial_file=args.file, safe_mode=args.safe)

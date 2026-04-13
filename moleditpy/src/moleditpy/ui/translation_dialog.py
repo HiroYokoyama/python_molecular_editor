@@ -40,11 +40,20 @@ class TranslationDialog(BasePickingDialog):
         if preselected_atoms:
             self.selected_atoms.update(preselected_atoms)
 
+        self._is_initializing = True
         self.init_ui()
+        self._is_initializing = False
 
         if self.selected_atoms:
-            self.show_atom_labels()
+            self.tabs.blockSignals(True)
+            if len(self.selected_atoms) == 1:
+                self.tabs.setCurrentIndex(_TAB_ABSOLUTE)
+                self._populate_abs_inputs_from_atom(next(iter(self.selected_atoms)))
+            else:
+                self.tabs.setCurrentIndex(_TAB_DELTA)
+            self.tabs.blockSignals(False)
             self.update_display()
+            self.show_atom_labels()
 
     # ------------------------------------------------------------------
     # UI construction
@@ -169,6 +178,8 @@ class TranslationDialog(BasePickingDialog):
     # ------------------------------------------------------------------
 
     def _on_tab_changed(self, index):
+        if hasattr(self, "_is_initializing") and self._is_initializing:
+            return
         self.selected_atoms.clear()
         self.clear_atom_labels()
         self.update_display()
@@ -187,23 +198,27 @@ class TranslationDialog(BasePickingDialog):
         # Enforce single selection: replace previous atom
         self.selected_atoms = {atom_idx}
         self._populate_abs_inputs_from_atom(atom_idx)
-        self.show_atom_labels()
         self.update_display()
+        self.show_atom_labels()
 
     def _delta_on_atom_picked(self, atom_idx):
         if atom_idx in self.selected_atoms:
             self.selected_atoms.remove(atom_idx)
         else:
             self.selected_atoms.add(atom_idx)
-        self.show_atom_labels()
         self.update_display()
+        self.show_atom_labels()
 
     # ------------------------------------------------------------------
     # Absolute tab helpers
     # ------------------------------------------------------------------
 
     def _populate_abs_inputs_from_atom(self, atom_idx):
-        pos = self.main_window.view_3d_manager.current_mol.GetConformer().GetPositions()[atom_idx]
+        pos = (
+            self.main_window.view_3d_manager.current_mol.GetConformer().GetPositions()[
+                atom_idx
+            ]
+        )
         self.abs_x_input.setText(f"{pos[0]:.4f}")
         self.abs_y_input.setText(f"{pos[1]:.4f}")
         self.abs_z_input.setText(f"{pos[2]:.4f}")
@@ -236,7 +251,9 @@ class TranslationDialog(BasePickingDialog):
             ty = float(self.abs_y_input.text())
             tz = float(self.abs_z_input.text())
         except ValueError:
-            QMessageBox.warning(self, "Warning", "Please enter valid numbers for X, Y, Z.")
+            QMessageBox.warning(
+                self, "Warning", "Please enter valid numbers for X, Y, Z."
+            )
             return
 
         atom_idx = next(iter(self.selected_atoms))
@@ -291,7 +308,9 @@ class TranslationDialog(BasePickingDialog):
             dy = float(self.dy_input.text())
             dz = float(self.dz_input.text())
         except ValueError:
-            QMessageBox.warning(self, "Warning", "Please enter valid numbers for dx, dy, dz.")
+            QMessageBox.warning(
+                self, "Warning", "Please enter valid numbers for dx, dy, dz."
+            )
             return
 
         if dx == 0 and dy == 0 and dz == 0:
@@ -325,10 +344,14 @@ class TranslationDialog(BasePickingDialog):
                 self.abs_apply_btn.setEnabled(True)
         else:
             if count == 0:
-                self.delta_selection_label.setText("Click atoms to select (minimum 1 required)")
+                self.delta_selection_label.setText(
+                    "Click atoms to select (minimum 1 required)"
+                )
                 self.apply_button.setEnabled(False)
             else:
-                self.delta_selection_label.setText(f"Selected {count} atom{'s' if count != 1 else ''}")
+                self.delta_selection_label.setText(
+                    f"Selected {count} atom{'s' if count != 1 else ''}"
+                )
                 self.apply_button.setEnabled(True)
 
     def show_atom_labels(self):

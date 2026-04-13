@@ -3,7 +3,7 @@
 import os
 import textwrap
 from moleditpy.plugins.plugin_manager import PluginManager
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 
 # =============================================================================
@@ -381,3 +381,37 @@ def test_install_zip_extracts_and_discovers(tmp_path):
 
     plugins = pm.discover_plugins()
     assert any(p["name"] == "Zipped Plugin" for p in plugins)
+
+
+# =============================================================================
+# SHA-256 Calculation
+# =============================================================================
+
+
+def test_compute_sha256(tmp_path):
+    """Test SHA-256 calculation for files and directories."""
+    pm = PluginManager()
+
+    # 1. Non-existent path
+    assert pm._compute_sha256("/non/existent/path") == "N/A"
+
+    # 2. Single file
+    f = tmp_path / "test.txt"
+    f.write_text("hello-sha256", encoding="utf-8")
+    sha1 = pm._compute_sha256(str(f))
+    assert sha1 != "N/A"
+    assert len(sha1) == 64
+
+    # 3. Directory
+    d = tmp_path / "sha_dir"
+    d.mkdir()
+    (d / "a.txt").write_text("data-a", encoding="utf-8")
+    (d / "b.txt").write_text("data-b", encoding="utf-8")
+    sha_dir = pm._compute_sha256(str(d))
+    assert sha_dir != "N/A"
+    assert len(sha_dir) == 64
+
+    # 4. Error handling (OSError)
+    with patch("builtins.open", side_effect=OSError):
+        assert pm._sha256_for_file(str(f)) == "N/A"
+        assert pm._sha256_for_directory(str(d)) == "N/A"

@@ -215,13 +215,13 @@ class DialogManager:
 
     def open_translation_dialog(self):
         """Open the translation dialog"""
+        # Get preselected atoms
+        preselected_atoms = self._get_preselected_atoms_3d()
+
         # Disable measurement mode
         if self.host.edit_3d_manager.measurement_mode:
             self.host.init_manager.measurement_action.setChecked(False)
             self.host.edit_3d_manager.toggle_measurement_mode(False)
-
-        # Get preselected atoms
-        preselected_atoms = self._get_preselected_atoms_3d()
 
         dialog = TranslationDialog(
             self.host.view_3d_manager.current_mol,
@@ -241,13 +241,13 @@ class DialogManager:
 
     def open_move_group_dialog(self):
         """Open Move Group dialog"""
+        # Get preselected atoms
+        preselected_atoms = self._get_preselected_atoms_3d()
+
         # Disable measurement mode
         if self.host.edit_3d_manager.measurement_mode:
             self.host.init_manager.measurement_action.setChecked(False)
             self.host.edit_3d_manager.toggle_measurement_mode(False)
-
-        # Get preselected atoms
-        preselected_atoms = self._get_preselected_atoms_3d()
 
         dialog = MoveGroupDialog(
             self.host.view_3d_manager.current_mol,

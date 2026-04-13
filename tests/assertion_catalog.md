@@ -2523,6 +2523,17 @@ _install_plugin accepts a .zip file; extracted package is discovered._
 - assert (plugin_dir / 'MyPlugin' / '__init__.py').exists()
 - assert any((p['name'] == 'Zipped Plugin' for p in plugins))
 
+### test_compute_sha256
+_Test SHA-256 calculation for files and directories._
+
+- assert pm._compute_sha256('/non/existent/path') == 'N/A'
+- assert sha1 != 'N/A'
+- assert len(sha1) == 64
+- assert sha_dir != 'N/A'
+- assert len(sha_dir) == 64
+- assert pm._sha256_for_file(str(f)) == 'N/A'
+- assert pm._sha256_for_directory(str(d)) == 'N/A'
+
 ## tests/unit/test_plugin_manager_extended.py
 
 ### TestPluginManagerExtended.test_imports_fallback
@@ -2743,15 +2754,6 @@ _No description provided._
 _No description provided._
 
 - mock_plugin_manager.install_plugin.assert_called_with('/some/plugin_folder')
-
-### test_compute_sha256
-_No description provided._
-
-- assert window._compute_sha256('/non/existent/path') == 'N/A'
-- assert sha != 'N/A'
-- assert sha_dir != 'N/A'
-- assert window._sha256_for_file(str(f)) == 'N/A'
-- assert window._sha256_for_directory(str(d)) == 'N/A'
 
 ## tests/unit/test_project_io_extended.py
 
@@ -3636,6 +3638,29 @@ _Test that mirror transformation inverts the chiral label in 3D._
 - assert len(chiral_call.args) > 1
 - assert new_label in labels
 - assert initial_label not in labels
+
+## tests/integration/test_headless_install.py
+
+### test_headless_install_success
+_Test successful headless plugin installation._
+
+- assert 'PLUGIN INSTALLATION (HEADLESS)' in captured.out
+- assert 'CLI Test Plugin' in captured.out
+- assert 'Success:' in captured.out
+- assert cm.value.code == 0
+
+### test_headless_install_abort
+_Test aborted headless plugin installation (answering 'n')._
+
+- mock_pm.install_plugin.assert_not_called()
+- assert 'Installation aborted.' in captured.out
+- assert cm.value.code == 0
+
+### test_headless_install_invalid_path
+_Test error message when plugin path is invalid._
+
+- assert 'Error: Plugin path not found' in captured.out
+- assert cm.value.code == 1
 
 ## tests/gui/test_additional_dialogs_launch.py
 

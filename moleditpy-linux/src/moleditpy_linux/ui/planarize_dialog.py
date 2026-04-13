@@ -90,7 +90,6 @@ class PlanarizeDialog(BasePickingDialog):
             self.selected_atoms.remove(atom_idx)
         else:
             self.selected_atoms.add(atom_idx)
-        self.show_atom_labels()
         self.update_display()
 
     def clear_selection(self):

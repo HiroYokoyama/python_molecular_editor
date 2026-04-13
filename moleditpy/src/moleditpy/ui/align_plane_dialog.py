@@ -97,8 +97,6 @@ class AlignPlaneDialog(BasePickingDialog):
         else:
             self.selected_atoms.add(atom_idx)
 
-        # Display labels on the atoms
-        self.show_atom_labels()
         self.update_display()
 
     def clear_selection(self):

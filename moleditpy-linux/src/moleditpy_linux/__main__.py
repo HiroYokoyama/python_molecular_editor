@@ -11,7 +11,7 @@ DOI: 10.5281/zenodo.17268532
 """
 
 print("-----------------------------------------------------")
-print("MoleditPy — A Python-based molecular editing software")
+print("MoleditPy - A Python-based molecular editing software")
 print("-----------------------------------------------------\n")
 
 try:
