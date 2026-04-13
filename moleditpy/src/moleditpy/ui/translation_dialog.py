@@ -43,8 +43,15 @@ class TranslationDialog(BasePickingDialog):
         self.init_ui()
 
         if self.selected_atoms:
-            self.show_atom_labels()
+            self.tabs.blockSignals(True)
+            if len(self.selected_atoms) == 1:
+                self.tabs.setCurrentIndex(_TAB_ABSOLUTE)
+                self._populate_abs_inputs_from_atom(next(iter(self.selected_atoms)))
+            else:
+                self.tabs.setCurrentIndex(_TAB_DELTA)
+            self.tabs.blockSignals(False)
             self.update_display()
+            self.show_atom_labels()
 
     # ------------------------------------------------------------------
     # UI construction
@@ -187,16 +194,16 @@ class TranslationDialog(BasePickingDialog):
         # Enforce single selection: replace previous atom
         self.selected_atoms = {atom_idx}
         self._populate_abs_inputs_from_atom(atom_idx)
-        self.show_atom_labels()
         self.update_display()
+        self.show_atom_labels()
 
     def _delta_on_atom_picked(self, atom_idx):
         if atom_idx in self.selected_atoms:
             self.selected_atoms.remove(atom_idx)
         else:
             self.selected_atoms.add(atom_idx)
-        self.show_atom_labels()
         self.update_display()
+        self.show_atom_labels()
 
     # ------------------------------------------------------------------
     # Absolute tab helpers

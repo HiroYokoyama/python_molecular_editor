@@ -169,8 +169,6 @@ class AngleDialog(GeometryBaseDialog):
             self.atom3_idx = None
             self._snapshot_positions = None
 
-        # Display atom labels
-        self.show_atom_labels()
         self.update_display()
 
     def clear_selection(self):
