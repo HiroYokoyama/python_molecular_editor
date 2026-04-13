@@ -2305,6 +2305,66 @@ _Value written with set_setting can be read back with get_setting._
 
 - assert ctx.get_setting('count', 0) == 7
 
+### TestPluginInterface.test_push_undo_checkpoint
+_No description provided._
+
+- mock_manager.push_undo_checkpoint.assert_called_once()
+
+### TestPluginInterface.test_get_selected_atom_indices
+_No description provided._
+
+- mock_manager.get_selected_atom_indices.assert_called_once()
+
+### TestPluginInterface.test_register_window
+_No description provided._
+
+- mock_manager.register_window.assert_called_once_with('TestPlugin', 'win1', window)
+
+### TestPluginInterface.test_get_window
+_No description provided._
+
+- mock_manager.get_window.assert_called_once_with('TestPlugin', 'win1')
+
+### TestPluginInterface.test_show_status_message
+_No description provided._
+
+- mock_manager.show_status_message.assert_called_once_with('hello', 1000)
+
+### TestPluginInterface.test_plotter
+_No description provided._
+
+- assert ctx.plotter == 'mock_plotter'
+- assert ctx.plotter is None
+
+### TestPluginInterface.test_scene
+_No description provided._
+
+- assert ctx.scene == 'mock_scene'
+- assert ctx.scene is None
+
+### TestPluginInterface.test_draw_molecule_3d
+_No description provided._
+
+- mock_main_window.view_3d_manager.draw_molecule_3d.assert_called_once_with('mol')
+
+### TestPluginInterface.test_refresh_3d_view
+_No description provided._
+
+- mock_main_window.view_3d_manager.draw_molecule_3d.assert_called_once_with('mol')
+- mock_main_window.view_3d_manager.plotter.render.assert_called_once()
+
+### TestPluginInterface.test_reset_3d_camera
+_No description provided._
+
+- mock_main_window.view_3d_manager.plotter.reset_camera.assert_called_once()
+
+### TestPluginInterface.test_set_bond_color_by_atoms
+_No description provided._
+
+- mock_mol.GetBondBetweenAtoms.assert_called_once_with(1, 2)
+- mock_main_window.view_3d_manager.update_bond_color_override.assert_called_once_with(5, '#112233')
+- mock_main_window.plotter.render.assert_called_once()
+
 ## tests/unit/test_plugin_manager.py
 
 ### test_plugin_info_extracts_all_fields
@@ -2462,6 +2522,236 @@ _install_plugin accepts a .zip file; extracted package is discovered._
 - assert success
 - assert (plugin_dir / 'MyPlugin' / '__init__.py').exists()
 - assert any((p['name'] == 'Zipped Plugin' for p in plugins))
+
+## tests/unit/test_plugin_manager_extended.py
+
+### TestPluginManagerExtended.test_imports_fallback
+_No description provided._
+
+
+### TestPluginManagerExtended.test_get_set_main_window
+_No description provided._
+
+- assert pm.get_main_window() == 'mw'
+
+### TestPluginManagerExtended.test_ensure_plugin_dir_error
+_No description provided._
+
+- mock_log.assert_called_with('Error creating plugin directory: test mkdir err')
+
+### TestPluginManagerExtended.test_open_plugin_folder
+_No description provided._
+
+- mock_open_url.assert_called_once()
+
+### TestPluginManagerExtended.test_install_plugin_folder
+_No description provided._
+
+- assert success
+- assert 'package' in msg
+- mock_rmtree.assert_called()
+- mock_remove.assert_called()
+
+### TestPluginManagerExtended.test_install_plugin_file_existing_dir
+_No description provided._
+
+- mock_rmtree.assert_called()
+
+### TestPluginManagerExtended.test_install_plugin_exception
+_No description provided._
+
+- assert not success
+- assert 'Install err' in msg
+
+### TestPluginManagerExtended.test_zip_extraction
+_No description provided._
+
+- assert success
+- assert success
+- assert success
+- assert success
+- assert success
+
+### TestPluginManagerExtended.test_discover_plugins_not_exists
+_No description provided._
+
+- assert pm.discover_plugins() == []
+
+### TestPluginManagerExtended.test_load_single_plugin_exceptions_and_stub
+_No description provided._
+
+- assert 'Cat' in sys.modules
+- assert 'Cat.SubCat' in sys.modules
+- mock_log.assert_called()
+
+### TestPluginManagerExtended.test_plugin_init_exceptions
+_No description provided._
+
+- assert plugin and 'Error (Init): INIT_ERR' in plugin['status']
+- assert plugin2 and 'Error (Autorun): AUTO_ERR' in plugin2['status']
+
+### TestPluginManagerExtended.test_load_plugin_version_tuple
+_No description provided._
+
+- assert pm.plugins[0]['version'] == '3.1.4'
+
+### TestPluginManagerExtended.test_run_plugin_exceptions
+_No description provided._
+
+- mock_crit.assert_called_once()
+
+### TestPluginManagerExtended.test_register_drop_handler
+_No description provided._
+
+- assert pm.drop_handlers[0]['plugin'] == 'B'
+
+### TestPluginManagerExtended.test_manager_api_helpers
+_No description provided._
+
+- mw.statusBar().showMessage.assert_called_with('test', 1000)
+- mw.state_manager.push_undo_state.assert_called()
+- mw.plotter.render.assert_called()
+- mw.plotter.reset_camera.assert_called()
+- mw.plotter.render.assert_called()
+
+### TestPluginManagerExtended.test_get_selected_atom_indices_complex
+_No description provided._
+
+- assert pm.get_selected_atom_indices() == []
+- assert indices == [0]
+- assert pm.get_selected_atom_indices() == []
+- assert pm.get_selected_atom_indices() == []
+
+### TestPluginManagerExtended.test_register_get_window
+_No description provided._
+
+- assert pm.plugin_windows['P1']['w1'] == 'WIN'
+- assert pm.get_window('P1', 'w1') == 'WIN'
+
+### TestPluginManagerExtended.test_invoke_document_reset_handlers
+_No description provided._
+
+- mock_log.assert_called()
+
+### TestPluginManagerExtended.test_get_plugin_info_safe_exceptions_and_ast
+_No description provided._
+
+- assert info['version'] == 'Unknown'
+
+## tests/unit/test_plugin_manager_window.py
+
+### test_init_and_refresh
+_No description provided._
+
+- assert window.windowTitle() == 'Plugin Manager'
+- assert window.table.rowCount() == 3
+- assert window.table.item(0, 0).text() == 'Loaded'
+- assert window.table.item(0, 0).foreground().color() == Qt.GlobalColor.darkGreen
+- assert window.table.item(1, 0).text() == 'Error'
+- assert window.table.item(1, 0).foreground().color() == Qt.GlobalColor.red
+- assert window.table.item(2, 0).text() == 'No Entry Point'
+- assert window.table.item(2, 0).foreground().color() == Qt.GlobalColor.gray
+- assert window.table.item(0, 4).text() == 'plugin1.py'
+
+### test_refresh_relative_path_error
+_No description provided._
+
+- assert window.table.item(0, 4).text() == 'plugin3.py'
+
+### test_update_button_state
+_No description provided._
+
+- assert not window.btn_remove.isEnabled()
+- assert window.btn_remove.isEnabled()
+
+### test_on_reload_main_window_present
+_No description provided._
+
+- mock_plugin_manager.discover_plugins.assert_called_with(mock_plugin_manager.main_window)
+- mock_info.assert_called_once()
+- mock_info.assert_not_called()
+
+### test_on_reload_no_main_window
+_No description provided._
+
+- mock_plugin_manager.discover_plugins.assert_called_with()
+
+### test_explore_plugins_online
+_No description provided._
+
+- mock_open_url.assert_called_once()
+- assert 'https://hiroyokoyama.github.io/moleditpy-plugins/explorer/' in mock_open_url.call_args[0][0].url()
+
+### test_on_remove_plugin_no_selection
+_No description provided._
+
+- mock_warn.assert_called_with(window, 'Warning', 'Please select a plugin to remove.')
+
+### test_on_remove_plugin_single_file
+_No description provided._
+
+- mock_remove.assert_called_with('/fake/plugins/plugin1.py')
+- mock_info.assert_called()
+
+### test_on_remove_plugin_package
+_No description provided._
+
+- mock_rmtree.assert_called_with('/fake/plugins/pkg_plugin')
+- mock_info.assert_called()
+
+### test_on_remove_plugin_error
+_No description provided._
+
+- mock_critical.assert_called_with(window, 'Error', 'Failed to delete plugin: Remove error')
+
+### test_on_remove_plugin_not_exists
+_No description provided._
+
+- mock_warn.assert_called()
+
+### test_show_plugin_details
+_No description provided._
+
+- mock_info.assert_called_once()
+- assert 'Test Plugin 1' in mock_info.call_args[0][2]
+
+### test_drag_enter_event
+_No description provided._
+
+- event.accept.assert_called_once()
+- event.ignore.assert_called_once()
+
+### test_drop_event_valid_files
+_No description provided._
+
+- mock_plugin_manager.install_plugin.assert_called_once_with('/some/file.py')
+- mock_info.assert_called_once()
+- assert 'Installed fine' in mock_info.call_args[0][2]
+
+### test_drop_event_init_py_package
+_No description provided._
+
+- mock_plugin_manager.install_plugin.assert_called_once_with('/some/folder')
+- assert 'Error inst' in mock_info.call_args[0][2]
+
+### test_drop_event_zip_file
+_No description provided._
+
+- mock_plugin_manager.install_plugin.assert_called_with('/some/file.zip')
+
+### test_drop_event_pure_folder
+_No description provided._
+
+- mock_plugin_manager.install_plugin.assert_called_with('/some/plugin_folder')
+
+### test_compute_sha256
+_No description provided._
+
+- assert window._compute_sha256('/non/existent/path') == 'N/A'
+- assert sha != 'N/A'
+- assert sha_dir != 'N/A'
+- assert window._sha256_for_file(str(f)) == 'N/A'
+- assert window._sha256_for_directory(str(d)) == 'N/A'
 
 ## tests/unit/test_project_io_extended.py
 
