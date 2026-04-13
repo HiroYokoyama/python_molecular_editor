@@ -12,6 +12,7 @@ DOI: 10.5281/zenodo.17268532
 
 from __future__ import annotations
 import ast
+import hashlib
 import importlib.util
 import logging
 import os
@@ -32,6 +33,46 @@ except ImportError:
 
 
 class PluginManager:
+    def _compute_sha256(self, path: str) -> str:
+        """Computes SHA-256 for a file or a directory (concatenated hashes of all files)."""
+        if os.path.isfile(path):
+            return self._sha256_for_file(path)
+        if os.path.isdir(path):
+            return self._sha256_for_directory(path)
+        return "N/A"
+
+    def _sha256_for_file(self, path: str) -> str:
+        """Computes SHA-256 for a single file."""
+        hasher = hashlib.sha256()
+        try:
+            with open(path, "rb") as f:
+                for chunk in iter(lambda: f.read(8192), b""):
+                    hasher.update(chunk)
+            return hasher.hexdigest()
+        except (AttributeError, OSError, RuntimeError, ValueError, TypeError):
+            return "N/A"
+
+    def _sha256_for_directory(self, dir_path: str) -> str:
+        """Computes SHA-256 for a directory by hashing all files in sorted order."""
+        hasher = hashlib.sha256()
+        try:
+            root = os.path.abspath(dir_path)
+            for current_root, _dirs, files in os.walk(root):
+                rel_root = os.path.relpath(current_root, root)
+                for filename in sorted(files):
+                    file_path = os.path.join(current_root, filename)
+                    rel_path = os.path.normpath(os.path.join(rel_root, filename))
+                    # Hash the path to ensure directory structure is captured
+                    hasher.update(rel_path.encode("utf-8", errors="replace"))
+                    hasher.update(b"\0")
+                    with open(file_path, "rb") as f:
+                        for chunk in iter(lambda: f.read(8192), b""):
+                            hasher.update(chunk)
+                    hasher.update(b"\0")
+            return hasher.hexdigest()
+        except (AttributeError, OSError, RuntimeError, ValueError, TypeError):
+            return "N/A"
+
     def __init__(self, main_window: Any = None) -> None:
         self.plugin_dir: str = os.path.join(
             os.path.expanduser("~"), ".moleditpy", "plugins"
@@ -265,6 +306,7 @@ class PluginManager:
                     parent_name = ".".join(parts[:i])
                     if parent_name not in sys.modules:
                         import types as _types
+
                         stub = _types.ModuleType(parent_name)
                         stub.__path__ = []
                         stub.__package__ = parent_name

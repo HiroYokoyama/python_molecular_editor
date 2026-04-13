@@ -12,7 +12,7 @@ DOI: 10.5281/zenodo.17268532
 
 import os
 import shutil
-import hashlib
+
 
 from PyQt6.QtCore import Qt, QUrl
 from PyQt6.QtGui import QDesktopServices, QDragEnterEvent, QDropEvent
@@ -259,7 +259,7 @@ class PluginManagerWindow(QDialog):
                 is_folder = True
 
             if is_valid:
-                sha256_value = self._compute_sha256(file_path)
+                sha256_value = self.plugin_manager._compute_sha256(file_path)
                 # Extract info and confirm
                 info = {
                     "name": os.path.basename(file_path),
@@ -314,39 +314,3 @@ class PluginManagerWindow(QDialog):
                 summary += "Errors:\n" + "\n".join(errors)
 
             QMessageBox.information(self, "Plugin Installation", summary)
-
-    def _compute_sha256(self, path):
-        if os.path.isfile(path):
-            return self._sha256_for_file(path)
-        if os.path.isdir(path):
-            return self._sha256_for_directory(path)
-        return "N/A"
-
-    def _sha256_for_file(self, path):
-        hasher = hashlib.sha256()
-        try:
-            with open(path, "rb") as f:
-                for chunk in iter(lambda: f.read(8192), b""):
-                    hasher.update(chunk)
-            return hasher.hexdigest()
-        except (AttributeError, OSError, RuntimeError, ValueError, TypeError):
-            return "N/A"
-
-    def _sha256_for_directory(self, dir_path):
-        hasher = hashlib.sha256()
-        try:
-            root = os.path.abspath(dir_path)
-            for current_root, _dirs, files in os.walk(root):
-                rel_root = os.path.relpath(current_root, root)
-                for filename in sorted(files):
-                    file_path = os.path.join(current_root, filename)
-                    rel_path = os.path.normpath(os.path.join(rel_root, filename))
-                    hasher.update(rel_path.encode("utf-8", errors="replace"))
-                    hasher.update(b"\0")
-                    with open(file_path, "rb") as f:
-                        for chunk in iter(lambda: f.read(8192), b""):
-                            hasher.update(chunk)
-                    hasher.update(b"\0")
-            return hasher.hexdigest()
-        except (AttributeError, OSError, RuntimeError, ValueError, TypeError):
-            return "N/A"

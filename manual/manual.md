@@ -54,6 +54,7 @@ moleditpy
 | `moleditpy [file]` | Open the specified file on startup |
 | `moleditpy --version` | Print the version number and exit |
 | `moleditpy --safe` | Start in **safe mode**: all plugins are skipped on launch. Use this if a plugin is causing a crash or preventing startup. |
+| `moleditpy --install-plugin [PATH]` | Install a plugin from a `.py`, `.zip`, or folder in headless mode (requires manual confirmation). |
 
 **Windows Installer**
 

@@ -155,8 +155,6 @@ class BondLengthDialog(GeometryBaseDialog):
             self.atom1_idx = atom_idx
             self.atom2_idx = None
 
-        # Display atom labels
-        self.show_atom_labels()
         self.update_display()
 
     def clear_selection(self):

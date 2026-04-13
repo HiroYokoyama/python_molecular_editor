@@ -192,9 +192,14 @@ class Dialog3DPickingMixin:
         color : str, optional
             Label colour (default ``'yellow'``).
         """
-        pos = self.main_window.view_3d_manager.atom_positions_3d[atom_idx]
+        plotter = self.main_window.view_3d_manager.plotter
+        try:
+            cam = plotter.camera_position
+        except (AttributeError, RuntimeError, TypeError):
+            cam = None
 
-        label_actor = self.main_window.view_3d_manager.plotter.add_point_labels(
+        pos = self.main_window.view_3d_manager.atom_positions_3d[atom_idx]
+        label_actor = plotter.add_point_labels(
             [pos],
             [label_text],
             point_size=20,
@@ -203,6 +208,12 @@ class Dialog3DPickingMixin:
             always_visible=True,
         )
         self.selection_labels.append(label_actor)
+
+        if cam is not None:
+            try:
+                plotter.camera_position = cam
+            except (AttributeError, RuntimeError, TypeError):
+                pass
 
     def show_atom_labels_for(self, atoms_and_labels, color="yellow"):
         """Clear existing labels and add new ones for each *(idx, text)* pair.
@@ -214,11 +225,17 @@ class Dialog3DPickingMixin:
         color : str, optional
             Label colour (default ``'yellow'``).
         """
+        plotter = self.main_window.view_3d_manager.plotter
+        try:
+            cam = plotter.camera_position
+        except (AttributeError, RuntimeError, TypeError):
+            cam = None
+
         self.clear_atom_labels()
 
         for atom_idx, label_text in atoms_and_labels:
             pos = self.main_window.view_3d_manager.atom_positions_3d[atom_idx]
-            label_actor = self.main_window.view_3d_manager.plotter.add_point_labels(
+            label_actor = plotter.add_point_labels(
                 [pos],
                 [label_text],
                 point_size=20,
@@ -227,3 +244,9 @@ class Dialog3DPickingMixin:
                 always_visible=True,
             )
             self.selection_labels.append(label_actor)
+
+        if cam is not None:
+            try:
+                plotter.camera_position = cam
+            except (AttributeError, RuntimeError, TypeError):
+                pass
