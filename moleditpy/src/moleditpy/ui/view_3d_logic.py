@@ -282,7 +282,9 @@ class View3DManager:
         self.host.view_3d_manager.plotter.camera_position = camera_state
 
         # Update projection mode and force render
-        proj_mode = self.host.init_manager.settings.get("projection_mode", "Perspective")
+        proj_mode = self.host.init_manager.settings.get(
+            "projection_mode", "Perspective"
+        )
         if hasattr(self.host.view_3d_manager.plotter, "renderer") and hasattr(
             self.host.view_3d_manager.plotter.renderer, "GetActiveCamera"
         ):
