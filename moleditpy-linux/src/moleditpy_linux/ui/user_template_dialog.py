@@ -634,10 +634,6 @@ class UserTemplateDialog(QDialog):
                     return
 
             if self.save_template_file(filepath, template_data):
-                # Mark main window as saved
-                self.main_window.state_manager.has_unsaved_changes = False
-                self.main_window.state_manager.update_window_title()
-
                 QMessageBox.information(
                     self, "Success", f"Template '{name}' saved successfully."
                 )

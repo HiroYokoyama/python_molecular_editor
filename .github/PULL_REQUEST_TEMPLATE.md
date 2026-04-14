@@ -24,7 +24,7 @@
 
 <!-- How did you verify the change works? -->
 
-- [ ] Ran `python -m pytest tests/unit/ tests/integration/` — all pass
+- [ ] Ran `MOLEDITPY_HEADLESS=1 QT_QPA_PLATFORM=offscreen python tests/run_all_tests.py --no-cov --no-report --unit --integration` — all pass
 - [ ] Manually tested in the GUI (describe what you tested below)
 - [ ] Added new unit tests
 

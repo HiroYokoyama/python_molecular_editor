@@ -364,9 +364,9 @@ class StateManager:
             # 'Save As' if not PMEPRJ
             file_path = self.host.init_manager.current_file_path
             if not file_path or not file_path.lower().endswith(".pmeprj"):
-                self.save_project_as()
+                self.host.io_manager.save_project_as()
             else:
-                self.save_project()
+                self.host.io_manager.save_project()
             return (
                 not self.host.state_manager.has_unsaved_changes
             )  # Return True only if save was successful
