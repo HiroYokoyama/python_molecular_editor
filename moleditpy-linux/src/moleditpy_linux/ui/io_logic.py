@@ -564,10 +564,7 @@ class IOManager:
             self.host.statusBar().showMessage(f"Export error: {e}")
 
     def load_mol_file(self, file_path: Optional[str] = None) -> None:
-        """Regular 2D MOL file loading logic."""
-        if not self.host.state_manager.check_unsaved_changes():
-            return
-
+        """Import a MOL/SDF file and add its contents to the 2D editor."""
         if not file_path:
             default_dir = (
                 os.path.dirname(self.host.init_manager.current_file_path)
@@ -601,11 +598,6 @@ class IOManager:
                 raise ValueError("Failed to read molecule from file.")
 
             Chem.Kekulize(mol)
-            self.host.ui_manager.restore_ui_for_editing()
-            self.host.edit_actions_manager.clear_2d_editor(push_to_undo=False)
-            self.host.view_3d_manager.current_mol = None
-            self.host.view_3d_manager.plotter.clear()
-            self.host.init_manager.analysis_action.setEnabled(False)
 
             if mol.GetNumConformers() == 0:
                 AllChem.Compute2DCoords(mol)
@@ -615,9 +607,22 @@ class IOManager:
             AllChem.WedgeMolBonds(mol, conf)
 
             SCALE_FACTOR = 50.0
-            view_center = self.host.init_manager.view_2d.mapToScene(
-                self.host.init_manager.view_2d.viewport().rect().center()
-            )
+            existing_atoms = self.host.state_manager.data.atoms
+            if existing_atoms:
+                max_x = max(
+                    v["pos"].x() if hasattr(v["pos"], "x") else v["pos"][0]
+                    for v in existing_atoms.values()
+                )
+                avg_y = sum(
+                    v["pos"].y() if hasattr(v["pos"], "y") else v["pos"][1]
+                    for v in existing_atoms.values()
+                ) / len(existing_atoms)
+                place_center = QPointF(max_x + 80.0, avg_y)
+            else:
+                place_center = self.host.init_manager.view_2d.mapToScene(
+                    self.host.init_manager.view_2d.viewport().rect().center()
+                )
+
             positions = [conf.GetAtomPosition(i) for i in range(mol.GetNumAtoms())]
             mol_center_x = (
                 sum(p.x for p in positions) / len(positions) if positions else 0.0
@@ -630,8 +635,8 @@ class IOManager:
             for i in range(mol.GetNumAtoms()):
                 atom = mol.GetAtomWithIdx(i)
                 pos = conf.GetAtomPosition(i)
-                scene_x = ((pos.x - mol_center_x) * SCALE_FACTOR) + view_center.x()
-                scene_y = (-(pos.y - mol_center_y) * SCALE_FACTOR) + view_center.y()
+                scene_x = ((pos.x - mol_center_x) * SCALE_FACTOR) + place_center.x()
+                scene_y = (-(pos.y - mol_center_y) * SCALE_FACTOR) + place_center.y()
                 atom_id = self.host.init_manager.scene.create_atom(
                     atom.GetSymbol(),
                     QPointF(scene_x, scene_y),
@@ -662,18 +667,9 @@ class IOManager:
                     bond_stereo=stereo,
                 )
 
-            self.host.statusBar().showMessage(f"Successfully loaded {file_path}")
-            self.host.state_manager.reset_undo_stack()
-            self.host.init_manager.current_file_path = file_path
-            self.host.state_manager.has_unsaved_changes = False
-            self.host.state_manager.update_window_title()
+            self.host.statusBar().showMessage(f"Successfully imported {file_path}")
             self.host.init_manager.scene.update_all_items()
-
-            # Reset camera/zoom after drawing
-            QTimer.singleShot(
-                50, lambda: self.host.view_3d_manager.plotter.view_isometric()
-            )
-            QTimer.singleShot(100, lambda: self.host.view_3d_manager.plotter.render())
+            self.host.edit_actions_manager.push_undo_state()
             QTimer.singleShot(100, self.host.view_3d_manager.fit_to_view)
         except Exception as e:
             self.host.statusBar().showMessage(f"Error loading file: {e}")
