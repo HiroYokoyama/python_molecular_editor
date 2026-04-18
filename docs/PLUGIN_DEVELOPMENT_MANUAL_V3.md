@@ -464,10 +464,10 @@ For operations not yet wrapped by `PluginContext`, access `mw` directly:
 
 | Task | Code |
 |---|---|
-| Load a MOL/SDF file | `mw.load_mol_file("path/to/file.mol")` |
-| Load XYZ for 3D viewing only | `mw.load_xyz_for_3d_viewing("path/to/file.xyz")` |
+| Load a MOL/SDF file | `mw.io_manager.load_mol_file("path/to/file.mol")` |
+| Load XYZ for 3D viewing only | `mw.io_manager.load_xyz_for_3d_viewing("path/to/file.xyz")` |
 | Clear the 3D scene | `mw.plotter.clear()` |
-| Re-apply the current 3D style | `mw.view_3d_manager.update_3d_style()` |
+| Switch the active 3D style | `mw.view_3d_manager.set_3d_style("ball_and_stick")` |
 | Center the 3D camera | `mw.plotter.reset_camera()` |
 | Show a status message | `mw.statusBar().showMessage("msg", 3000)` |
 | Switch 2D editor mode | `mw.ui_manager.set_mode("atom_C")` |
