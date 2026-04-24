@@ -20,6 +20,179 @@ _Verify left clicks do not trigger the easter egg._
 - mock_parser_host.clear_all.assert_not_called()
 - event.ignore.assert_called_once()
 
+## tests/unit/test_align_plane_dialog.py
+
+### TestOnAtomPicked.test_pick_adds_atom
+_No description provided._
+
+- assert 0 in dlg.selected_atoms
+
+### TestOnAtomPicked.test_repick_removes_atom
+_No description provided._
+
+- assert 0 not in dlg.selected_atoms
+
+### TestOnAtomPicked.test_multiple_picks_accumulate
+_No description provided._
+
+- assert dlg.selected_atoms == {0, 1, 2, 3}
+
+### TestPreselectedAtoms.test_preselected_atoms_loaded
+_No description provided._
+
+- assert dlg.selected_atoms == {0, 1, 2}
+
+### TestClearSelection.test_clear_empties_selection
+_No description provided._
+
+- assert len(dlg.selected_atoms) == 0
+- assert not dlg.apply_button.isEnabled()
+
+### TestSelectAllAtoms.test_select_all_selects_every_atom
+_No description provided._
+
+- assert dlg.selected_atoms == set(range(mol.GetNumAtoms()))
+
+### TestSelectAllAtoms.test_select_all_enables_apply
+_No description provided._
+
+- assert dlg.apply_button.isEnabled()
+
+### TestUpdateDisplay.test_zero_atoms_disables_apply
+_No description provided._
+
+- assert not dlg.apply_button.isEnabled()
+
+### TestUpdateDisplay.test_two_atoms_disables_apply
+_No description provided._
+
+- assert not dlg.apply_button.isEnabled()
+
+### TestUpdateDisplay.test_three_atoms_enables_apply
+_No description provided._
+
+- assert dlg.apply_button.isEnabled()
+
+### TestUpdateDisplay.test_count_shown_in_label
+_No description provided._
+
+- assert '4' in dlg.selection_label.text()
+
+### TestApplyPlaneAlignGuard.test_fewer_than_three_atoms_shows_warning
+_No description provided._
+
+- mb.warning.assert_called_once()
+
+### TestApplyPlaneAlignGuard.test_zero_atoms_shows_warning
+_No description provided._
+
+- mb.warning.assert_called_once()
+
+### TestApplyPlaneAlignMath.test_xy_align_reduces_z_variance
+_Atoms already in XY plane aligned to XY: z-coords should stay ~0._
+
+- assert abs(after[i][2]) < 0.5
+
+### TestApplyPlaneAlignMath.test_apply_calls_draw_molecule_3d
+_No description provided._
+
+- mw.view_3d_manager.draw_molecule_3d.assert_called()
+
+## tests/unit/test_alignment_dialog.py
+
+### TestOnAtomPicked.test_first_pick_adds_atom
+_No description provided._
+
+- assert 0 in dlg.selected_atoms
+
+### TestOnAtomPicked.test_second_pick_adds_atom
+_No description provided._
+
+- assert dlg.selected_atoms == {0, 1}
+
+### TestOnAtomPicked.test_third_pick_capped_at_two
+_No description provided._
+
+- assert len(dlg.selected_atoms) == 2
+- assert 2 not in dlg.selected_atoms
+
+### TestOnAtomPicked.test_repick_deselects
+_No description provided._
+
+- assert 0 not in dlg.selected_atoms
+
+### TestOnAtomPicked.test_enables_apply_when_two_atoms
+_No description provided._
+
+- assert dlg.apply_button.isEnabled()
+
+### TestPreselectedAtoms.test_preselected_loaded
+_No description provided._
+
+- assert dlg.selected_atoms == {0, 1}
+
+### TestPreselectedAtoms.test_preselected_capped_at_two
+_No description provided._
+
+- assert len(dlg.selected_atoms) == 2
+
+### TestClearSelection.test_clears_atoms_and_disables_apply
+_No description provided._
+
+- assert len(dlg.selected_atoms) == 0
+- assert not dlg.apply_button.isEnabled()
+
+### TestUpdateDisplay.test_zero_atoms_label
+_No description provided._
+
+- assert not dlg.apply_button.isEnabled()
+
+### TestUpdateDisplay.test_one_atom_label_contains_symbol
+_No description provided._
+
+- assert sym in dlg.selection_label.text()
+- assert not dlg.apply_button.isEnabled()
+
+### TestUpdateDisplay.test_two_atoms_enables_apply
+_No description provided._
+
+- assert dlg.apply_button.isEnabled()
+- assert '2' in dlg.selection_label.text()
+
+### TestApplyAlignmentGuard.test_fewer_than_two_atoms_shows_warning
+_No description provided._
+
+- mb.warning.assert_called_once()
+
+### TestApplyAlignmentGuard.test_zero_atoms_shows_warning
+_No description provided._
+
+- mb.warning.assert_called_once()
+
+### TestApplyAlignmentMath.test_x_axis_alignment_atom1_at_origin
+_After X-alignment, atom1 must be at origin._
+
+- assert pos[0] == pytest.approx([0.0, 0.0, 0.0], abs=1e-05)
+
+### TestApplyAlignmentMath.test_x_axis_alignment_atom2_on_x_axis
+_After X-alignment, atom2 must lie on positive X-axis (y=0, z=0)._
+
+- assert pos[1][1] == pytest.approx(0.0, abs=1e-05)
+- assert pos[1][2] == pytest.approx(0.0, abs=1e-05)
+- assert pos[1][0] > 0
+
+### TestApplyAlignmentMath.test_z_axis_alignment_atom2_on_z_axis
+_After Z-alignment, atom2 must lie on Z-axis (x=0, y=0)._
+
+- assert pos[1][0] == pytest.approx(0.0, abs=1e-05)
+- assert pos[1][1] == pytest.approx(0.0, abs=1e-05)
+- assert pos[1][2] > 0
+
+### TestApplyAlignmentMath.test_apply_pushes_undo
+_No description provided._
+
+- mw.edit_actions_manager.push_undo_state.assert_called()
+
 ## tests/unit/test_app_logic.py
 
 ### test_ez_preservation_logic
@@ -2918,6 +3091,89 @@ _Verify skip chemistry check flag is set when user chooses to skip._
 - assert mol is not None
 - assert mol.HasProp('_xyz_skip_checks') or getattr(mol, '_xyz_skip_checks', False)
 
+## tests/unit/test_planarize_dialog.py
+
+### TestOnAtomPicked.test_pick_adds_atom
+_No description provided._
+
+- assert 0 in dlg.selected_atoms
+
+### TestOnAtomPicked.test_repick_removes_atom
+_No description provided._
+
+- assert 0 not in dlg.selected_atoms
+
+### TestOnAtomPicked.test_multiple_picks_accumulate
+_No description provided._
+
+- assert dlg.selected_atoms == {0, 1, 2, 3}
+
+### TestPreselectedAtoms.test_preselected_atoms_loaded
+_No description provided._
+
+- assert dlg.selected_atoms == {0, 1, 2}
+
+### TestClearSelection.test_clear_empties_and_disables
+_No description provided._
+
+- assert len(dlg.selected_atoms) == 0
+- assert not dlg.apply_button.isEnabled()
+
+### TestSelectAllAtoms.test_select_all_selects_every_atom
+_No description provided._
+
+- assert dlg.selected_atoms == set(range(mol.GetNumAtoms()))
+
+### TestSelectAllAtoms.test_select_all_enables_apply
+_No description provided._
+
+- assert dlg.apply_button.isEnabled()
+
+### TestUpdateDisplay.test_zero_atoms_disables_apply
+_No description provided._
+
+- assert not dlg.apply_button.isEnabled()
+
+### TestUpdateDisplay.test_two_atoms_disables_apply
+_No description provided._
+
+- assert not dlg.apply_button.isEnabled()
+
+### TestUpdateDisplay.test_three_atoms_enables_apply
+_No description provided._
+
+- assert dlg.apply_button.isEnabled()
+
+### TestUpdateDisplay.test_count_shown_in_label
+_No description provided._
+
+- assert '4' in dlg.selection_label.text()
+
+### TestApplyPlanarizeGuard.test_fewer_than_three_atoms_shows_warning
+_No description provided._
+
+- mb.warning.assert_called_once()
+
+### TestApplyPlanarizeGuard.test_zero_atoms_shows_warning
+_No description provided._
+
+- mb.warning.assert_called_once()
+
+### TestApplyPlanarizeGeometry.test_planarize_reduces_z_spread
+_No description provided._
+
+- assert after_z_var <= before_z_var + 1e-06
+
+### TestApplyPlanarizeGeometry.test_planarize_pushes_undo
+_No description provided._
+
+- mw.edit_actions_manager.push_undo_state.assert_called()
+
+### TestApplyPlanarizeGeometry.test_apply_calls_draw_molecule_3d
+_No description provided._
+
+- mw.view_3d_manager.draw_molecule_3d.assert_called()
+
 ## tests/unit/test_plugin_interface.py
 
 ### TestPluginInterface.test_plugin_context_init
@@ -4154,6 +4410,155 @@ _No description provided._
 _No description provided._
 
 - assert detect_system_dark_mode() is None
+
+## tests/unit/test_translation_dialog.py
+
+### TestTabSwitching.test_tab_change_clears_selection
+_No description provided._
+
+- assert len(dlg.selected_atoms) == 0
+
+### TestTabSwitching.test_tab_change_during_init_is_noop
+_No description provided._
+
+- assert 0 in dlg.selected_atoms
+
+### TestAbsolutePicking.test_abs_pick_enforces_single_atom
+_No description provided._
+
+- assert dlg.selected_atoms == {1}
+
+### TestAbsolutePicking.test_abs_pick_populates_inputs
+_No description provided._
+
+- assert dlg.abs_x_input.text() == f'{pos[0][0]:.4f}'
+- assert dlg.abs_y_input.text() == f'{pos[0][1]:.4f}'
+- assert dlg.abs_z_input.text() == f'{pos[0][2]:.4f}'
+
+### TestAbsoluteHelpers.test_abs_clear_resets_inputs
+_No description provided._
+
+- assert dlg.abs_x_input.text() == '0.000'
+- assert dlg.abs_y_input.text() == '0.000'
+- assert dlg.abs_z_input.text() == '0.000'
+- assert len(dlg.selected_atoms) == 0
+
+### TestAbsoluteHelpers.test_set_origin_fills_zeros
+_No description provided._
+
+- assert dlg.abs_x_input.text() == '0.0000'
+- assert dlg.abs_y_input.text() == '0.0000'
+- assert dlg.abs_z_input.text() == '0.0000'
+
+### TestAbsoluteHelpers.test_move_mol_toggled_changes_button_label
+_No description provided._
+
+- assert dlg.abs_apply_btn.text() == 'Move Atom'
+- assert dlg.abs_apply_btn.text() == 'Move Molecule'
+
+### TestApplyAbsolute.test_no_atom_shows_warning
+_No description provided._
+
+- mb.warning.assert_called_once()
+
+### TestApplyAbsolute.test_bad_input_shows_warning
+_No description provided._
+
+- mb.warning.assert_called_once()
+
+### TestApplyAbsolute.test_move_molecule_shifts_all_atoms
+_No description provided._
+
+- assert after[i] == pytest.approx(before[i] + delta, abs=0.0001)
+
+### TestApplyAbsolute.test_move_atom_only_shifts_one_atom
+_No description provided._
+
+- assert after[0] == pytest.approx([0.0, 0.0, 0.0], abs=0.0001)
+- assert after[i] == pytest.approx(before[i], abs=0.0001)
+
+### TestApplyAbsolute.test_apply_absolute_pushes_undo
+_No description provided._
+
+- mw.edit_actions_manager.push_undo_state.assert_called()
+
+### TestDeltaPicking.test_delta_pick_adds_atom
+_No description provided._
+
+- assert 0 in dlg.selected_atoms
+
+### TestDeltaPicking.test_delta_repick_removes_atom
+_No description provided._
+
+- assert 0 not in dlg.selected_atoms
+
+### TestDeltaPicking.test_delta_picks_accumulate
+_No description provided._
+
+- assert dlg.selected_atoms == {0, 1, 2}
+
+### TestSelectAllAtoms.test_select_all_selects_every_atom
+_No description provided._
+
+- assert dlg.selected_atoms == set(range(mol.GetNumAtoms()))
+
+### TestApplyTranslation.test_no_atoms_shows_warning
+_No description provided._
+
+- mb.warning.assert_called_once()
+
+### TestApplyTranslation.test_bad_input_shows_warning
+_No description provided._
+
+- mb.warning.assert_called_once()
+
+### TestApplyTranslation.test_zero_vector_is_noop
+_No description provided._
+
+- assert after == pytest.approx(before, abs=1e-06)
+
+### TestApplyTranslation.test_delta_shifts_selected_atoms
+_No description provided._
+
+- assert after[idx] == pytest.approx(before[idx] + [1.0, 2.0, 3.0], abs=0.0001)
+- assert after[idx] == pytest.approx(before[idx], abs=0.0001)
+
+### TestApplyTranslation.test_apply_translation_pushes_undo
+_No description provided._
+
+- mw.edit_actions_manager.push_undo_state.assert_called()
+
+### TestUpdateDisplay.test_abs_tab_no_atom_disables_button
+_No description provided._
+
+- assert not dlg.abs_apply_btn.isEnabled()
+
+### TestUpdateDisplay.test_abs_tab_one_atom_enables_button
+_No description provided._
+
+- assert dlg.abs_apply_btn.isEnabled()
+
+### TestUpdateDisplay.test_delta_tab_no_atom_disables_button
+_No description provided._
+
+- assert not dlg.apply_button.isEnabled()
+
+### TestUpdateDisplay.test_delta_tab_one_atom_enables_button
+_No description provided._
+
+- assert dlg.apply_button.isEnabled()
+
+### TestPreselectedAtoms.test_single_preselected_goes_to_abs_tab
+_No description provided._
+
+- assert dlg.tabs.currentIndex() == 0
+- assert dlg.selected_atoms == {0}
+
+### TestPreselectedAtoms.test_multiple_preselected_goes_to_delta_tab
+_No description provided._
+
+- assert dlg.tabs.currentIndex() == 1
+- assert {0, 1, 2}.issubset(dlg.selected_atoms)
 
 ## tests/unit/test_ui_manager_robustness.py
 
