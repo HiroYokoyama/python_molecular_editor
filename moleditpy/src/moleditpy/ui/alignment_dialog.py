@@ -88,16 +88,6 @@ class AlignmentDialog(Dialog3DPickingMixin, QDialog):
         self.picker_connection = None
         self.enable_picking()
 
-    def enable_picking(self):
-        """Enable atom selection in the 3D window."""
-        # Use functionality from Dialog3DPickingMixin
-        super().enable_picking()
-
-    def disable_picking(self):
-        """Disable atom selection in the 3D window."""
-        # Use functionality from Dialog3DPickingMixin
-        super().disable_picking()
-
     def on_atom_picked(self, atom_idx):
         """Handle atom selection event."""
         if self.main_window.view_3d_manager.current_mol is None:

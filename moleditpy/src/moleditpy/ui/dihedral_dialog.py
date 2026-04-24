@@ -335,7 +335,7 @@ class DihedralDialog(GeometryBaseDialog):
         # Push Undo state AFTER modification
         self._push_undo()
 
-    def apply_geometry_update(self, new_dihedral_deg):
+    def apply_geometry_update(self, new_dihedral_deg):  # pylint: disable=arguments-renamed
         """Adjust the dihedral angle."""
         if not self._is_selection_complete():
             return

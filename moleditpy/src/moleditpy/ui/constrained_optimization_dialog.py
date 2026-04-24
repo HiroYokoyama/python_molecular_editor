@@ -397,7 +397,7 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
         # Get the constraint from the selected row (first selection only)
         try:
             row = selected_items[0].row()
-            constraint_type, atom_indices, value, force_const = self.constraints[row]
+            constraint_type, atom_indices, _, __ = self.constraints[row]
         except (IndexError, TypeError, ValueError):
             # Unpack 3-element tuple for old format constraints
             try:

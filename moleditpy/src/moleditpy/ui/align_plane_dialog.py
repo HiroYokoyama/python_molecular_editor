@@ -170,7 +170,7 @@ class AlignPlaneDialog(BasePickingDialog):
 
             # Find optimal plane using PCA
             cov_matrix = np.cov(centered_positions.T)
-            eigenvalues, eigenvectors = np.linalg.eigh(cov_matrix)
+            _, eigenvectors = np.linalg.eigh(cov_matrix)
 
             # Normal vector of the plane corresponds to the smallest eigenvalue
             normal_vector = eigenvectors[:, 0]

@@ -108,6 +108,6 @@ class GeometryBaseDialog(BasePickingDialog):
         """Must be implemented by subclass to check if enough atoms are picked."""
         raise NotImplementedError
 
-    def apply_geometry_update(self, new_value):
+    def apply_geometry_update(self, new_value):  # pylint: disable=arguments-renamed
         """Must be implemented by subclass to perform the actual RdKit/Numpy update."""
         raise NotImplementedError

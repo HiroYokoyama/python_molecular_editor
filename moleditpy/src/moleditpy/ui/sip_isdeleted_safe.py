@@ -26,6 +26,8 @@ def sip_isdeleted_safe(obj) -> bool:
     occurs while checking, it returns False (i.e. not deleted) so that the
     caller can continue other lightweight guards (like checking scene()).
     """
+    if obj is None:
+        return True
     try:
         if _sip_isdeleted is None:
             return False

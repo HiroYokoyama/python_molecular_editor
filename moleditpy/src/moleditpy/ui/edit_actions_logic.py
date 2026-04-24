@@ -628,7 +628,7 @@ class EditActionsManager:
                 # Determine angles based on neighbors to avoid collisions
                 neighbor_angles = []
                 try:
-                    for (a1, a2), bdata in self.host.state_manager.data.bonds.items():
+                    for (a1, a2), _ in self.host.state_manager.data.bonds.items():
                         # Collect neighboring atom angles (ignore H)
                         try:
                             if (
@@ -709,7 +709,7 @@ class EditActionsManager:
 
                         # Select largest gap and space hydrogens evenly
                         gaps.sort(key=lambda x: x[0], reverse=True)
-                        max_gap, gstart, gend = gaps[0]
+                        max_gap, gstart, _ = gaps[0]
                         for i in range(implicit_h):
                             seg = max_gap / (implicit_h + 1)
                             angle = gstart + (i + 1) * seg
@@ -1432,11 +1432,11 @@ class EditActionsManager:
                     vdw_i_all = frag_i["vdw_radii_np"]
                     vdw_j_all = frag_j["vdw_radii_np"]
 
-                    for k, idx_i in enumerate(frag_i["indices"]):
+                    for k, _ in enumerate(frag_i["indices"]):
                         pos_i = positions_i[k]
                         vdw_i = vdw_i_all[k]
 
-                        for l, idx_j in enumerate(frag_j["indices"]):
+                        for l, _ in enumerate(frag_j["indices"]):
                             pos_j = positions_j[l]
                             vdw_j = vdw_j_all[l]
 

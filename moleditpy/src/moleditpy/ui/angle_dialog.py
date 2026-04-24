@@ -331,7 +331,7 @@ class AngleDialog(GeometryBaseDialog):
             and self.atom3_idx is not None
         )
 
-    def apply_geometry_update(self, new_angle_deg):
+    def apply_geometry_update(self, new_angle_deg):  # pylint: disable=arguments-renamed
         """Adjust the bond angle."""
         conf = self.mol.GetConformer()
 

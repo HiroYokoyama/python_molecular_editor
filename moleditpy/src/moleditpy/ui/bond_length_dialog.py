@@ -276,7 +276,7 @@ class BondLengthDialog(GeometryBaseDialog):
     def _is_selection_complete(self):
         return self.atom1_idx is not None and self.atom2_idx is not None
 
-    def apply_geometry_update(self, new_distance):
+    def apply_geometry_update(self, new_distance):  # pylint: disable=arguments-renamed
         """Adjust the bond length."""
         conf = self.mol.GetConformer()
 
