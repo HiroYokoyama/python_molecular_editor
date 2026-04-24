@@ -648,6 +648,213 @@ _Verify that UFF fallback uses _temp_optimization_method and doesn't change pers
 - assert mock_optimize.called
 - assert compute.optimization_method == 'MMFF_RDKIT'
 
+## tests/unit/test_constrained_optimization_dialog.py
+
+### TestAtomSelection.test_pick_adds_atom
+_No description provided._
+
+- assert dlg.selected_atoms == [3]
+
+### TestAtomSelection.test_pick_same_atom_toggles_off
+_No description provided._
+
+- assert dlg.selected_atoms == []
+
+### TestAtomSelection.test_pick_four_atoms
+_No description provided._
+
+- assert dlg.selected_atoms == [0, 1, 2, 3]
+
+### TestAtomSelection.test_fifth_atom_evicts_first_fifo
+_Adding a 5th atom should drop the oldest (index 0)._
+
+- assert dlg.selected_atoms == [1, 2, 3, 4]
+
+### TestAtomSelection.test_display_zero_atoms
+_No description provided._
+
+- assert not dlg.add_button.isEnabled()
+- assert 'None' in dlg.selection_label.text()
+
+### TestAtomSelection.test_display_one_atom
+_No description provided._
+
+- assert not dlg.add_button.isEnabled()
+
+### TestAtomSelection.test_display_two_atoms_enables_add
+_No description provided._
+
+- assert dlg.add_button.isEnabled()
+- assert 'Distance' in dlg.selection_label.text()
+
+### TestAtomSelection.test_display_three_atoms
+_No description provided._
+
+- assert dlg.add_button.isEnabled()
+- assert 'Angle' in dlg.selection_label.text()
+
+### TestAtomSelection.test_display_four_atoms
+_No description provided._
+
+- assert dlg.add_button.isEnabled()
+- assert 'Torsion' in dlg.selection_label.text()
+
+### TestAddConstraint.test_distance_constraint_added
+_No description provided._
+
+- assert len(dlg.constraints) == 1
+- assert ctype == 'Distance'
+- assert cidx == (0, 1)
+- assert cval > 0.0
+- assert cforce == pytest.approx(100000.0)
+
+### TestAddConstraint.test_distance_constraint_clears_selection
+_No description provided._
+
+- assert dlg.selected_atoms == []
+
+### TestAddConstraint.test_angle_constraint_added
+_No description provided._
+
+- assert len(dlg.constraints) == 1
+- assert ctype == 'Angle'
+- assert cidx == (2, 0, 1)
+- assert 90.0 <= cval <= 130.0
+
+### TestAddConstraint.test_torsion_constraint_added
+_No description provided._
+
+- assert len(dlg.constraints) == 1
+- assert ctype == 'Torsion'
+- assert cidx == (2, 0, 1, 5)
+
+### TestAddConstraint.test_duplicate_constraint_rejected
+_Adding the same constraint twice should not append a second entry._
+
+- assert len(dlg.constraints) == 1
+
+### TestAddConstraint.test_table_row_added_on_constraint
+_No description provided._
+
+- assert dlg.constraint_table.rowCount() == 1
+
+### TestAddConstraint.test_custom_force_constant_used
+_No description provided._
+
+- assert cforce == pytest.approx(500.0)
+
+### TestAddConstraint.test_invalid_force_constant_defaults
+_Non-numeric force constant falls back to 1.0e5 (shows warning)._
+
+- assert cforce == pytest.approx(100000.0)
+
+### TestRemoveConstraint.test_remove_selected_row
+_No description provided._
+
+- assert len(dlg.constraints) == 1
+- assert dlg.constraint_table.rowCount() == 1
+- assert dlg.constraints[0][1] == (0, 2)
+
+### TestRemoveConstraint.test_remove_all
+_No description provided._
+
+- assert dlg.constraints == []
+- assert dlg.constraint_table.rowCount() == 0
+
+### TestRemoveConstraint.test_remove_all_on_empty_is_noop
+_No description provided._
+
+- assert dlg.constraints == []
+
+### TestRemoveConstraint.test_remove_button_disabled_after_remove_all
+_No description provided._
+
+- assert not dlg.remove_button.isEnabled()
+
+### TestCellChanged.test_edit_value_column_updates_constraint
+_No description provided._
+
+- assert dlg.constraints[0][2] == pytest.approx(2.0)
+- assert dlg.constraints[0][0] == original_type
+
+### TestCellChanged.test_edit_force_column_updates_constraint
+_No description provided._
+
+- assert dlg.constraints[0][3] == pytest.approx(25000.0)
+
+### TestCellChanged.test_invalid_value_reverts_to_original
+_No description provided._
+
+- assert dlg.constraints[0][2] == pytest.approx(original_val)
+
+### TestCellChanged.test_non_value_column_ignored
+_No description provided._
+
+- assert dlg.constraints[0] == original
+
+### TestCellChanged.test_3element_constraint_upgraded_on_edit
+_on_cell_changed must upgrade a legacy 3-element tuple to 4-element._
+
+- assert len(dlg.constraints[0]) == 4
+- assert dlg.constraints[0][2] == pytest.approx(1.8)
+- assert dlg.constraints[0][3] == pytest.approx(100000.0)
+
+### TestConstraintLoading.test_loads_4element_constraints
+_No description provided._
+
+- assert len(dlg.constraints) == 1
+- assert ctype == 'Distance'
+- assert cidx == (0, 1)
+- assert cval == pytest.approx(1.54)
+- assert cforce == pytest.approx(25000.0)
+
+### TestConstraintLoading.test_loads_3element_constraints_with_default_force
+_Legacy 3-element constraints should get default force 1.0e5._
+
+- assert len(dlg.constraints) == 1
+- assert ctype == 'Angle'
+- assert cval == pytest.approx(109.5)
+- assert cforce == pytest.approx(100000.0)
+
+### TestConstraintLoading.test_loads_multiple_constraint_types
+_No description provided._
+
+- assert len(dlg.constraints) == 3
+- assert dlg.constraint_table.rowCount() == 3
+
+### TestConstraintLoading.test_table_populated_on_load
+_No description provided._
+
+- assert dlg.constraint_table.rowCount() == 1
+- assert dlg.constraint_table.item(0, 0).text() == 'Distance'
+
+### TestForceFieldMapping.test_ff_combo_set_from_opt_method
+_No description provided._
+
+- assert dlg.ff_combo.currentText() == expected_text
+
+### TestForceFieldMapping.test_unknown_method_defaults_to_mmff94s
+_No description provided._
+
+- assert dlg.ff_combo.currentText() == 'MMFF94s'
+
+### TestReject.test_reject_converts_tuples_to_lists
+_No description provided._
+
+- assert isinstance(saved, list)
+- assert isinstance(saved[0], list)
+- assert isinstance(saved[0][1], list)
+
+### TestReject.test_reject_3element_constraint_gets_default_force
+_Legacy 3-element tuples in constraints list must be serialised with default force._
+
+- assert saved[0][3] == pytest.approx(100000.0)
+
+### TestReject.test_reject_no_change_skips_state_update
+_If saved constraints haven't changed, has_unsaved_changes must NOT be set._
+
+- dlg.main_window.state_manager.update_window_title.assert_not_called()
+
 ## tests/unit/test_custom_interactor_style.py
 
 ### test_custom_interactor_style_left_click_atom_selection
