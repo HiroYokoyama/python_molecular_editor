@@ -69,6 +69,15 @@ class View3DManager:
         self.atom_label_legend_names: List[str] = []
         self._camera_initialized: bool = False
         self.atom_actor_original_opacity: float = 1.0
+        self.current_mol: Optional[Chem.Mol] = None
+
+    def cleanup(self) -> None:
+        """Cleanup resources used by the 3D manager."""
+        if hasattr(self, "plotter") and self.plotter:
+            with contextlib.suppress(Exception):
+                self.plotter.clear()
+                self.plotter.close()
+        self.current_mol = None
 
     def set_3d_style(self, style_name: str) -> None:
         """Set 3D display style and update view"""

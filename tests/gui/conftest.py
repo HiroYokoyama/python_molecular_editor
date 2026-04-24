@@ -828,6 +828,9 @@ def window(app, qtbot, monkeypatch):
             lambda self, *a: self.dialog_manager.save_2d_as_template()
         )
 
+        # ComputeManager proxies
+        cls.halt_all_calculations = lambda self: self.compute_manager.halt_conversion()
+
         # Method proxies
         from PyQt6.QtWidgets import QMainWindow as _QMainWindow
 

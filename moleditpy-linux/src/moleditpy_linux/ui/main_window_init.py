@@ -125,7 +125,7 @@ class MainInitManager:
         self.host.chem_check_failed = False
         self.host._template_dialog = None
         self.host._picking_consumed = False
-        self.host.init_manager.mode_actions = {}
+        self.mode_actions = {}
 
         # Variable tracking the saved state
         self.host.state_manager.has_unsaved_changes = False

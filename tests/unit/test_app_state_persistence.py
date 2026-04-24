@@ -98,6 +98,18 @@ class DummyMainWindow(StateManager):
     def draw_molecule_3d(self, mol):
         pass
 
+    def create_json_data(self):
+        return super().create_json_data()
+
+    def load_from_json_data(self, data):
+        return super().load_from_json_data(data)
+
+    def get_current_state(self):
+        return super().get_current_state()
+
+    def set_state_from_data(self, data):
+        return super().set_state_from_data(data)
+
 
 @pytest.fixture
 def dummy_window(app):
