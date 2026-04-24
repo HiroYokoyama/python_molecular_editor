@@ -1108,7 +1108,7 @@ class EditActionsManager:
                 # Ignore any unexpected errors when touching the item
                 continue
 
-    def update_implicit_hydrogens(self):
+    def update_implicit_hydrogens(self) -> None:
         """Update implicit hydrogen counts on AtomItems."""
         # Quick guards: nothing to do if no atoms or no QApplication
         if not self.host.state_manager.data.atoms:
@@ -1145,7 +1145,7 @@ class EditActionsManager:
         except (AttributeError, RuntimeError, TypeError, ValueError) as e:
             logging.exception(f"Unexpected error in update_implicit_hydrogens: {e}")
 
-    def clean_up_2d_structure(self):
+    def clean_up_2d_structure(self) -> None:
         self.host.statusBar().showMessage("Optimizing 2D structure...")
 
         # Clear existing problem flags
@@ -1235,7 +1235,7 @@ class EditActionsManager:
         finally:
             self.host.init_manager.view_2d.setFocus()
 
-    def redraw_molecule_3d(self):
+    def redraw_molecule_3d(self) -> None:
         """Manually trigger redraw of the 3D molecule."""
         if (
             hasattr(self.host, "view_3d_manager")
@@ -1248,7 +1248,7 @@ class EditActionsManager:
         else:
             self.host.statusBar().showMessage("No 3D molecule to redraw.")
 
-    def resolve_overlapping_groups(self):
+    def resolve_overlapping_groups(self) -> None:
         """Detect and resolve overlapping atom groups."""
 
         # --- Parameters ---
@@ -1326,7 +1326,9 @@ class EditActionsManager:
         self.host.edit_actions_manager.push_undo_state()
         self.host.statusBar().showMessage("Resolved overlapping groups.", 2000)
 
-    def adjust_molecule_positions_to_avoid_collisions(self, mol, frags):
+    def adjust_molecule_positions_to_avoid_collisions(
+        self, mol: Any, frags: Any
+    ) -> None:
         """Adjust molecule positions to avoid collisions (BBox optimized)."""
         if len(frags) <= 1:
             return
@@ -1472,7 +1474,9 @@ class EditActionsManager:
 
                         moved = True
 
-    def _apply_chem_check_and_set_flags(self, mol, source_desc=None, force_skip=False):
+    def _apply_chem_check_and_set_flags(
+        self, mol: Any, source_desc: Optional[str] = None, force_skip: bool = False
+    ) -> None:
         """Central helper to apply chemical sanitization (or skip it) and set
         chem_check_tried / chem_check_failed flags consistently.
 
@@ -1511,7 +1515,7 @@ class EditActionsManager:
                     "REPORT ERROR: Missing attribute 'optimize_3d_button' on object"
                 )
 
-    def _clear_xyz_flags(self, mol=None):
+    def _clear_xyz_flags(self, mol: Optional[Any] = None) -> None:
         """Clear XYZ-derived markers from a molecule (or current_mol) and
         reset UI flags accordingly.
 

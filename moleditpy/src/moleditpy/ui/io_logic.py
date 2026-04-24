@@ -10,11 +10,13 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
+from __future__ import annotations
+
 import logging
 import os
 import json
 import pickle
-from typing import Any, Optional
+from typing import Any, Optional, Tuple
 
 from PyQt6.QtCore import QPointF, QTimer
 from PyQt6.QtWidgets import (
@@ -225,7 +227,7 @@ class IOManager:
             self.host.statusBar().showMessage(f"Error parsing XYZ file: {e}")
             return None
 
-    def prompt_for_charge(self):
+    def prompt_for_charge(self) -> Tuple[Optional[int], bool, bool]:
         """Show dialog to prompt user for molecular charge when loading XYZ files."""
         dialog = QDialog(self.host)
         dialog.setWindowTitle("Import XYZ Charge")
