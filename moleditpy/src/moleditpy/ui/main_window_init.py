@@ -10,12 +10,15 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
+from __future__ import annotations
+
 import logging
 import contextlib
 import json
 import math
 import os
 import sys
+from typing import Any, Dict, List, Optional
 
 # RDKit imports (explicit to satisfy flake8 and used features)
 from rdkit import Chem
@@ -100,7 +103,9 @@ except (AttributeError, RuntimeError, TypeError):
 class MainInitManager:
     """Feature class separated from main_window.py"""
 
-    def __init__(self, host, initial_file=None, safe_mode=False):
+    def __init__(
+        self, host: Any, initial_file: Optional[str] = None, safe_mode: bool = False
+    ) -> None:
         self.host = host
         self.host.init_manager = self
         # This helper is not used as a mixin in this project; initialization
@@ -200,7 +205,7 @@ class MainInitManager:
                 f"Suppressed exception: {e}"
             )  # Suppress non-critical UI/menu initialization errors
 
-    def init_ui(self):
+    def init_ui(self) -> None:
         script_dir = os.path.dirname(os.path.abspath(__file__))
         if sys.platform == "win32":
             icon_path = os.path.join(script_dir, "..", "assets", "icon.ico")
@@ -223,7 +228,7 @@ class MainInitManager:
 
         self._setup_action_groups(self.toolbar, self.toolbar_bottom)
 
-    def init_menu_bar(self):
+    def init_menu_bar(self) -> None:
         menu_bar = self.host.menuBar()
 
         self._init_file_menu(menu_bar)
@@ -241,7 +246,7 @@ class MainInitManager:
         # Finally, populate plugins now that all menus are created
         self.update_plugin_menu(self.plugin_menu)
 
-    def init_worker_thread(self):
+    def init_worker_thread(self) -> None:
         # Initialize shared state for calculation runs.
         self.halt_ids = set()
         self.next_conversion_id = 1
@@ -252,7 +257,7 @@ class MainInitManager:
         except (AttributeError, RuntimeError, ValueError, TypeError):
             self.host.compute_manager._active_calc_threads = []
 
-    def load_command_line_file(self, file_path):
+    def load_command_line_file(self, file_path: str) -> None:
         """Open file specified by command-line argument"""
         if not file_path or not os.path.exists(file_path):
             return
@@ -298,7 +303,7 @@ class MainInitManager:
         else:
             self.host.statusBar().showMessage(f"Unsupported file type: {file_ext}")
 
-    def apply_initial_settings(self):
+    def apply_initial_settings(self) -> None:
         """Apply saved settings to the 3D view after UI initialization is complete."""
 
         try:
@@ -347,7 +352,7 @@ class MainInitManager:
                 f"Suppressed exception: {e}"
             )  # Suppress non-critical UI/menu/settings sync errors
 
-    def update_cpk_colors_from_settings(self):
+    def update_cpk_colors_from_settings(self) -> None:
         """Update global CPK_COLORS and CPK_COLORS_PV from saved settings overrides.
 
         This modifies the in-memory CPK_COLORS mapping (not persisted until settings are saved).
@@ -402,12 +407,12 @@ class MainInitManager:
         except (AttributeError, RuntimeError, TypeError, ValueError) as e:
             print(f"Failed to update CPK colors from settings: {e}")
 
-    def open_settings_dialog(self):
+    def open_settings_dialog(self) -> None:
         dialog = SettingsDialog(self.host.init_manager.settings, self.host)
         # Settings application and 3D view updates are handled by the accept() method.
         dialog.exec()
 
-    def reset_all_settings_menu(self):
+    def reset_all_settings_menu(self) -> None:
         """Prompt the user and reset all application settings to defaults."""
         if not self._confirm_settings_reset():
             return
@@ -421,7 +426,7 @@ class MainInitManager:
         except (AttributeError, RuntimeError, ValueError) as e:
             QMessageBox.warning(self, "Reset Failed", f"Could not reset settings: {e}")
 
-    def _confirm_settings_reset(self):
+    def _confirm_settings_reset(self) -> bool:
         """Show a confirmation dialog for resetting settings."""
         return (
             QMessageBox.question(
@@ -433,14 +438,14 @@ class MainInitManager:
             == QMessageBox.StandardButton.Yes
         )
 
-    def _perform_settings_reset(self):
+    def _perform_settings_reset(self) -> None:
         """Delete the settings file and reload defaults."""
         if os.path.exists(self.host.init_manager.settings_file):
             os.remove(self.host.init_manager.settings_file)
         self.load_settings()
         self.host.init_manager.settings_dirty = True
 
-    def _refresh_ui_after_reset(self):
+    def _refresh_ui_after_reset(self) -> None:
         """Update all UI components to reflect the reset settings."""
         # 1. Refresh related dialogs if open
         for w in QApplication.topLevelWidgets():
@@ -465,7 +470,7 @@ class MainInitManager:
         # 4. Refresh 2D and 3D views
         self._refresh_views_after_reset()
 
-    def _sync_settings_to_menu_actions(self):
+    def _sync_settings_to_menu_actions(self) -> None:
         """Synchronize menu action checked states with current settings."""
         with contextlib.suppress(AttributeError, RuntimeError, TypeError):
             # Optimization actions
@@ -504,7 +509,7 @@ class MainInitManager:
                     "REPORT ERROR: Missing attribute 'intermolecular_rdkit_action' on self"
                 )
 
-    def _refresh_views_after_reset(self):
+    def _refresh_views_after_reset(self) -> None:
         """Refresh 2D and 3D views after settings reset."""
         # Refresh 3D View
         try:
@@ -542,7 +547,7 @@ class MainInitManager:
             except (AttributeError, RuntimeError, ValueError, TypeError) as e:
                 logging.debug(f"Suppressed exception: {e}")
 
-    def load_settings(self):
+    def load_settings(self) -> None:
         """Load settings from a JSON file, or use defaults if the file is missing."""
         # 1. Start with default settings
         self.host.init_manager.settings = self._get_default_settings()
@@ -577,7 +582,7 @@ class MainInitManager:
                 self.host.init_manager.settings["optimization_method"]
             )
 
-    def save_settings(self):
+    def save_settings(self) -> None:
         try:
             if not os.path.exists(self.host.init_manager.settings_dir):
                 os.makedirs(self.host.init_manager.settings_dir)
@@ -587,7 +592,7 @@ class MainInitManager:
         except (AttributeError, RuntimeError, ValueError) as e:
             print(f"Error saving settings: {e}")
 
-    def update_plugin_menu(self, plugin_menu):
+    def update_plugin_menu(self, plugin_menu: QMenu) -> None:
         """Discovers plugins and updates the plugin menu actions."""
         if not self.host.plugin_manager:
             return
@@ -615,7 +620,7 @@ class MainInitManager:
         self._integrate_plugin_file_openers()
         self._integrate_plugin_analysis_tools()
 
-    def _show_plugin_manager(self, plugin_menu):
+    def _show_plugin_manager(self, plugin_menu: QMenu) -> None:
         """Displays the plugin manager window and refreshes the menu."""
         if not self.host.plugin_manager:
             QMessageBox.information(
@@ -628,7 +633,7 @@ class MainInitManager:
         dlg.exec()
         self.update_plugin_menu(plugin_menu)
 
-    def _clear_all_plugin_actions(self, plugin_menu):
+    def _clear_all_plugin_actions(self, plugin_menu: QMenu) -> None:
         """Clear all plugin actions from the plugin menu and other UI components."""
         PLUGIN_ACTION_TAG = "plugin_managed"
 
@@ -652,7 +657,7 @@ class MainInitManager:
         ):
             clear_menu(self.host.init_manager.export_button.menu())
 
-    def _update_style_menu_with_plugins(self):
+    def _update_style_menu_with_plugins(self) -> None:
         """Update the 3D style menu with custom styles from plugins."""
         if (
             not hasattr(self.host, "style_button")
@@ -679,7 +684,7 @@ class MainInitManager:
                     style_menu.addAction(action)
                     style_group.addAction(action)
 
-    def _add_registered_plugin_actions(self):
+    def _add_registered_plugin_actions(self) -> None:
         """Add actions that have been explicitly registered via the plugin manager."""
         PLUGIN_ACTION_TAG = "plugin_managed"
         if not self.host.plugin_manager.menu_actions:
@@ -735,7 +740,7 @@ class MainInitManager:
             action.setData(PLUGIN_ACTION_TAG)
             current_menu.addAction(action)
 
-    def _add_plugin_toolbar_actions(self):
+    def _add_plugin_toolbar_actions(self) -> None:
         """Add toolbar actions registered by plugins."""
         if not hasattr(self, "plugin_toolbar"):
             return
@@ -754,7 +759,9 @@ class MainInitManager:
         else:
             self.plugin_toolbar.hide()
 
-    def _add_legacy_plugin_actions(self, plugin_menu, plugins):
+    def _add_legacy_plugin_actions(
+        self, plugin_menu: QMenu, plugins: List[Any]
+    ) -> None:
         """Add folder-based legacy plugin actions to the plugin menu."""
         if not plugins:
             no_plugin = QAction("(No plugins found)", self.host)
@@ -808,7 +815,7 @@ class MainInitManager:
             )
             plugin_menu.addAction(a)
 
-    def _integrate_plugin_export_actions(self):
+    def _integrate_plugin_export_actions(self) -> None:
         """Add plugin-provided export actions to the export menu."""
         if not self.host.plugin_manager.export_actions:
             return
@@ -846,7 +853,7 @@ class MainInitManager:
                 a.setData(PLUGIN_ACTION_TAG)
                 menu.addAction(a)
 
-    def _integrate_plugin_file_openers(self):
+    def _integrate_plugin_file_openers(self) -> None:
         """Add plugin-provided file openers to the import menu."""
         if not self.host.plugin_manager.file_openers:
             return
@@ -898,7 +905,7 @@ class MainInitManager:
             a.setData(PLUGIN_ACTION_TAG)
             import_menu.addAction(a)
 
-    def _integrate_plugin_analysis_tools(self):
+    def _integrate_plugin_analysis_tools(self) -> None:
         """Add plugin-provided analysis tools to the analysis menu."""
         analysis_menu = next(
             (
@@ -921,7 +928,7 @@ class MainInitManager:
                 analysis_menu.addAction(a)
 
     # --- UI Initialization Helpers ---
-    def _init_main_layout(self):
+    def _init_main_layout(self) -> None:
         """Initialize the main layout with splitter and panels."""
         self.host.init_manager.splitter = QSplitter(Qt.Orientation.Horizontal)
         # Make splitter handle thicker for visibility
@@ -974,11 +981,11 @@ class MainInitManager:
         self.status_bar.addPermanentWidget(self.host.init_manager.formula_label)
 
     # --- Settings and Plugin Helpers ---
-    def _get_default_settings(self):
+    def _get_default_settings(self) -> Dict[str, Any]:
         """Return a dictionary of default application settings."""
         return DEFAULT_SETTINGS.copy()
 
-    def _migrate_legacy_settings(self, loaded_settings):
+    def _migrate_legacy_settings(self, loaded_settings: Dict[str, Any]) -> None:
         """Handle migration of legacy settings keys."""
         # Migrate old key 'clean_up_2d_on_conversion'
         if "clean_up_2d_on_conversion" in loaded_settings:
@@ -992,7 +999,7 @@ class MainInitManager:
                 loaded_settings["optimization_method"] = "MMFF94_OBABEL"
             del loaded_settings["use_obabel_optimization"]
 
-    def _clear_plugin_ui_elements(self, plugin_menu):
+    def _clear_plugin_ui_elements(self, plugin_menu: QMenu) -> None:
         """Clean up tagged plugin actions from menus and toolbars."""
         # 1. Clear plugin-specific actions from Plugin menu (excluding the Manager)
         for action in plugin_menu.actions():
@@ -1006,7 +1013,7 @@ class MainInitManager:
         else:  # [REPORT ERROR MISSING ATTRIBUTE]
             logging.error("REPORT ERROR: Missing attribute 'plugin_toolbar' on self")
 
-    def _init_left_panel(self, left_layout):
+    def _init_left_panel(self, left_layout: Any) -> None:
         """Initialize the left panel (2D view and buttons)."""
         self.host.init_manager.scene = MoleculeScene(
             self.host.state_manager.data, self.host
@@ -1053,7 +1060,7 @@ class MainInitManager:
         left_buttons_layout.addWidget(self.host.init_manager.convert_button)
         left_layout.addLayout(left_buttons_layout)
 
-    def _init_right_panel(self, right_layout):
+    def _init_right_panel(self, right_layout: Any) -> None:
         """Initialize the right panel (3D view and buttons)."""
         self.host.view_3d_manager.plotter = CustomQtInteractor(
             right_layout.parentWidget(), main_window=self.host, lighting="none"
@@ -1127,7 +1134,7 @@ class MainInitManager:
         # 4. Add horizontal layout to vertical layout
         right_layout.addLayout(right_buttons_layout)
 
-    def _init_toolbars(self):
+    def _init_toolbars(self) -> None:
         """Initialize and organize toolbars."""
         # Row 1: Main Toolbar
         self.toolbar = QToolBar("Main Toolbar")
@@ -1146,7 +1153,7 @@ class MainInitManager:
         self.host.addToolBar(Qt.ToolBarArea.TopToolBarArea, self.plugin_toolbar)
         self.plugin_toolbar.hide()
 
-    def _setup_action_groups(self, toolbar, toolbar_bottom):
+    def _setup_action_groups(self, toolbar: QToolBar, toolbar_bottom: QToolBar) -> None:
         """Set up action groups and tool actions."""
         self.host.init_manager.tool_group = QActionGroup(self.host)
         self.host.init_manager.tool_group.setExclusive(True)
@@ -1162,7 +1169,7 @@ class MainInitManager:
         if "atom_C" in self.host.init_manager.mode_actions:
             self.host.init_manager.mode_actions["atom_C"].setChecked(True)
 
-    def _add_atom_actions(self, toolbar):
+    def _add_atom_actions(self, toolbar: QToolBar) -> None:
         """Add standard atom selection actions to the toolbar."""
         actions_data = [
             ("Select", "select", "Space"),
@@ -1202,7 +1209,7 @@ class MainInitManager:
             toolbar.addAction(action)
         toolbar.addSeparator()
 
-    def _add_bond_actions(self, toolbar):
+    def _add_bond_actions(self, toolbar: QToolBar) -> None:
         """Add bond type selection actions with custom icons."""
         bonds = [
             ("Single Bond", "bond_1_0", "1", "single"),
@@ -1226,7 +1233,7 @@ class MainInitManager:
             self.host.init_manager.tool_group.addAction(action)
         toolbar.addSeparator()
 
-    def _add_charge_radical_actions(self, toolbar):
+    def _add_charge_radical_actions(self, toolbar: QToolBar) -> None:
         """Add charge and radical modification actions."""
         ops = [
             ("+ Charge", "charge_plus", "Increase Atom Charge (+)"),
@@ -1242,7 +1249,7 @@ class MainInitManager:
             toolbar.addAction(action)
             self.host.init_manager.tool_group.addAction(action)
 
-    def _add_template_actions(self, toolbar_bottom):
+    def _add_template_actions(self, toolbar_bottom: QToolBar) -> None:
         """Add structural template actions (rings, etc.) to the bottom toolbar."""
         toolbar_bottom.addWidget(QLabel(" Templates:"))
         templates = [("Benzene", "template_benzene", 6)] + [
@@ -1271,7 +1278,7 @@ class MainInitManager:
         toolbar_bottom.addAction(user_action)
         self.host.init_manager.tool_group.addAction(user_action)
 
-    def _add_3d_edit_actions(self, toolbar):
+    def _add_3d_edit_actions(self, toolbar: QToolBar) -> None:
         """Add 3D-specific selection and manipulation actions."""
         spacer = QWidget()
         spacer.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
@@ -1339,7 +1346,7 @@ class MainInitManager:
                     style_menu.addAction(action)
                     style_group.addAction(action)
 
-    def _create_bond_icon(self, bond_type, size=32):
+    def _create_bond_icon(self, bond_type: int, size: int = 32) -> QIcon:
         """Generate a QIcon for a specific bond type."""
         fg = self._get_icon_foreground_color()
         pixmap = QPixmap(size, size)
@@ -1394,7 +1401,9 @@ class MainInitManager:
         painter.end()
         return QIcon(pixmap)
 
-    def _create_template_icon(self, n, is_benzene=False, size=32):
+    def _create_template_icon(
+        self, n: int, is_benzene: bool = False, size: int = 32
+    ) -> QIcon:
         """Generate a QIcon for a structural template (ring)."""
         fg = self._get_icon_foreground_color()
         pixmap = QPixmap(size, size)
@@ -1427,7 +1436,7 @@ class MainInitManager:
         painter.end()
         return QIcon(pixmap)
 
-    def _get_icon_foreground_color(self):
+    def _get_icon_foreground_color(self) -> QColor:
         """Determine appropriate icon foreground color based on theme/settings."""
         with contextlib.suppress(Exception):
             fg = self.host.init_manager.settings.get("icon_foreground")
@@ -1449,7 +1458,7 @@ class MainInitManager:
         return QColor("#000000")
 
     # --- Menu Bar Initialization Helpers ---
-    def _init_file_menu(self, menu_bar):
+    def _init_file_menu(self, menu_bar: Any) -> None:
         """Initialize the File menu."""
         file_menu = menu_bar.addMenu("&File")
 
@@ -1560,7 +1569,7 @@ class MainInitManager:
         quit_action.triggered.connect(self.host.close)
         file_menu.addAction(quit_action)
 
-    def _init_edit_menu(self, menu_bar):
+    def _init_edit_menu(self, menu_bar: Any) -> None:
         """Initialize the Edit menu."""
         edit_menu = menu_bar.addMenu("&Edit")
         self.host.init_manager.undo_action = QAction("Undo", self.host)
@@ -1656,7 +1665,7 @@ class MainInitManager:
         clear_all_action.triggered.connect(self.host.edit_actions_manager.clear_all)
         edit_menu.addAction(clear_all_action)
 
-    def _init_view_menu(self, menu_bar):
+    def _init_view_menu(self, menu_bar: Any) -> None:
         """Initialize the View menu."""
         view_menu = menu_bar.addMenu("&View")
         zoom_in_action = QAction("Zoom In", self.host)
@@ -1771,7 +1780,7 @@ class MainInitManager:
         )
         atom_info_menu.addAction(self.show_atom_symbol_action)
 
-    def _init_analysis_menu(self, menu_bar):
+    def _init_analysis_menu(self, menu_bar: Any) -> None:
         """Initialize the Analysis menu."""
         analysis_menu = menu_bar.addMenu("&Analysis")
         self.host.init_manager.analysis_action = QAction("Show Analysis...", self.host)
@@ -1781,7 +1790,7 @@ class MainInitManager:
         self.host.init_manager.analysis_action.setEnabled(False)
         analysis_menu.addAction(self.host.init_manager.analysis_action)
 
-    def _init_edit_3d_menu(self, menu_bar):
+    def _init_edit_3d_menu(self, menu_bar: Any) -> None:
         """Initialize the 3D Edit menu."""
         edit_3d_menu = menu_bar.addMenu("3D &Edit")
         translation_action = QAction("Translation...", self.host)
@@ -1901,7 +1910,7 @@ class MainInitManager:
         edit_3d_menu.addAction(constrained_opt_action)
         self.host.constrained_opt_action = constrained_opt_action
 
-    def _init_plugin_menu(self, menu_bar):
+    def _init_plugin_menu(self, menu_bar: Any) -> None:
         """Initialize the Plugin menu."""
         self.plugin_menu = menu_bar.addMenu("&Plugin")
         manage_plugins_action = QAction("Plugin Manager...", self.host)
@@ -1922,7 +1931,7 @@ class MainInitManager:
         self.plugin_menu.addAction(manage_plugins_action)
         self.plugin_menu.addSeparator()
 
-    def _init_settings_menu(self, menu_bar):
+    def _init_settings_menu(self, menu_bar: Any) -> None:
         """Initialize the Settings menu."""
         settings_menu = menu_bar.addMenu("&Settings")
         view_settings_action = QAction("Settings...", self.host)
@@ -2044,7 +2053,7 @@ class MainInitManager:
         reset_settings_action.triggered.connect(self.reset_all_settings_menu)
         settings_menu.addAction(reset_settings_action)
 
-    def _init_help_menu(self, menu_bar):
+    def _init_help_menu(self, menu_bar: Any) -> None:
         """Initialize the Help menu."""
         help_menu = menu_bar.addMenu("&Help")
         about_action = QAction("About", self.host)

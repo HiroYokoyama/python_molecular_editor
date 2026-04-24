@@ -10,11 +10,12 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
+from __future__ import annotations
+
 """
 main_window_edit_3d.py
 Mixin class separated from main_window.py
 """
-from __future__ import annotations
 
 import logging  # [REPORT ERROR MISSING ATTRIBUTE]
 from typing import Any, List, Optional
