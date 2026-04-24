@@ -421,7 +421,9 @@ def is_problematic_valence(
 # ------------------------------------------------------------------
 
 
-def inject_ez_stereo_to_mol_block(mol_block, rdkit_mol, bonds_data):
+def inject_ez_stereo_to_mol_block(
+    mol_block: str, rdkit_mol: Any, bonds_data: Dict[Tuple[int, int], Any]
+) -> str:
     """Generate a modified MOL block with 'M CFG' lines for E/Z stereochemistry.
 
     Parameters
@@ -534,7 +536,9 @@ def optimize_2d_coords(mol: Any) -> Dict[int, Tuple[float, float]]:
     return new_positions
 
 
-def calculate_best_fit_plane_projection(centered_positions, normal, centroid):
+def calculate_best_fit_plane_projection(
+    centered_positions: np.ndarray, normal: np.ndarray, centroid: np.ndarray
+) -> np.ndarray:
     """Project centered points orthogonally onto the plane defined by normal and centroid."""
     projections = centered_positions - np.outer(
         np.dot(centered_positions, normal), normal
@@ -542,7 +546,12 @@ def calculate_best_fit_plane_projection(centered_positions, normal, centroid):
     return projections + centroid
 
 
-def rotate_2d_points(points_map, center_x, center_y, angle_degrees):
+def rotate_2d_points(
+    points_map: Dict[int, Tuple[float, float]],
+    center_x: float,
+    center_y: float,
+    angle_degrees: float,
+) -> Dict[int, Tuple[float, float]]:
     """Rotate 2D points (atom_id -> (x, y)) around a center."""
     rad = math.radians(angle_degrees)
     cos_a = math.cos(rad)
@@ -558,13 +567,13 @@ def rotate_2d_points(points_map, center_x, center_y, angle_degrees):
 
 
 def resolve_2d_overlaps(
-    atom_ids,
-    positions_map,
-    adjacency_list,
-    overlap_threshold=0.5,
-    move_distance=20,
-    has_bond_check_func=None,
-):
+    atom_ids: Iterable[int],
+    positions_map: Dict[int, Tuple[float, float]],
+    adjacency_list: Dict[int, List[int]],
+    overlap_threshold: float = 0.5,
+    move_distance: float = 20,
+    has_bond_check_func: Optional[Any] = None,
+) -> List[Tuple[Set[int], Tuple[float, float]]]:
     """Detect and resolve overlapping atom groups in 2D.
 
     Returns list of (atom_ids_set, translation_vector_tuple).

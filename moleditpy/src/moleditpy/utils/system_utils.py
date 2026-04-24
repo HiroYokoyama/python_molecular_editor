@@ -10,9 +10,12 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
+from __future__ import annotations
+
 import contextlib
 import platform
 import subprocess
+from typing import Optional
 
 try:
     import winreg
@@ -20,7 +23,7 @@ except ImportError:
     winreg = None
 
 
-def detect_system_dark_mode():
+def detect_system_dark_mode() -> Optional[bool]:
     """Return True if the OS prefers dark app theme, False if light, or None if unknown."""
     theme = detect_system_theme()
     if theme == "dark":
@@ -30,7 +33,7 @@ def detect_system_dark_mode():
     return None
 
 
-def detect_system_theme():
+def detect_system_theme() -> Optional[str]:
     """Return the OS's preferred theme setting as 'dark', 'light', or None."""
     with contextlib.suppress(AttributeError, RuntimeError, OSError, FileNotFoundError):
         # Windows
