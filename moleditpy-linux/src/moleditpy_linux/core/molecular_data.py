@@ -365,7 +365,8 @@ class MolecularData:
                 if key in self.bonds:
                     rdkit_bond_idx_to_item[bidx] = self.bonds[key].get("item")
 
-        # 5. Initialize/Reset all bond items
+        # 5. Initialize/Reset all bond items and track best ring size
+        bond_to_best_size = {}  # bond_item_id -> smallest_ring_size_found
         for bond_data in self.bonds.values():
             bond_item = bond_data.get("item")
             if bond_item:
@@ -374,6 +375,7 @@ class MolecularData:
 
         # 6. Apply ring information
         for a_ring, b_ring in zip(atom_rings, bond_rings):
+            ring_size = len(a_ring)
             # Calculate ring center (geometric mean of atom positions)
             positions = []
             for aidx in a_ring:
@@ -395,12 +397,15 @@ class MolecularData:
                 bond_item = rdkit_bond_idx_to_item.get(bidx)
                 if bond_item:
                     bond_item.is_in_ring = True
-                    # Note: Simplified; a bond might be part of multiple rings.
-                    # The inner-bond logic usually picks the smallest ring.
-                    # Since we iterate through all rings, the last one wins.
-                    # RDKit's AtomRings returns SSSR (Smallest Set of Smallest Rings),
-                    # so this is usually correct for 2D drawing.
-                    bond_item.ring_center = ring_center
+                    # Explicitly prioritize smaller rings for double bond shift logic.
+                    # This ensures the double bond is drawn inside the smaller ring in fused systems.
+                    item_id = id(bond_item)
+                    if (
+                        item_id not in bond_to_best_size
+                        or ring_size < bond_to_best_size[item_id]
+                    ):
+                        bond_item.ring_center = ring_center
+                        bond_to_best_size[item_id] = ring_size
 
     def to_mol_block(self) -> Optional[str]:
         mol = self.to_rdkit_mol()

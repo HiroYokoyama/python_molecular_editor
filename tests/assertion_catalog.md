@@ -2935,6 +2935,14 @@ _Test that nothing happens if no atoms are selected or at the cursor._
 - scene.window.edit_actions_manager.push_undo_state.assert_not_called()
 - event.accept.assert_not_called()
 
+## tests/unit/test_ring_priority.py
+
+### test_ring_priority_smaller_wins
+_Verify that smaller rings are prioritized for double bond shift logic._
+
+- assert shared_bond_item.is_in_ring is True
+- assert shared_bond_item.ring_center == five_center
+
 ## tests/unit/test_scene_advanced.py
 
 ### test_right_click_bond_deletion
