@@ -33,9 +33,9 @@ except ImportError:
 
 # RDKit imports (explicit to satisfy flake8 and used features)
 try:
-    from . import sip_isdeleted_safe
+    from ..utils.sip_isdeleted_safe import sip_isdeleted_safe
 except ImportError:
-    from moleditpy.utils import sip_isdeleted_safe
+    from moleditpy.utils.sip_isdeleted_safe import sip_isdeleted_safe
 
 # PyQt6 Modules
 import pyvista as pv

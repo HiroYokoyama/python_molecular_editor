@@ -112,11 +112,9 @@ except ImportError:
     from moleditpy.core.molecular_data import MolecularData
 
 try:
-    # Import the shared SIP helper used across the package. This is
-    # defined in modules/__init__.py and centralizes sip.isdeleted checks.
-    from . import sip_isdeleted_safe
+    from ..utils.sip_isdeleted_safe import sip_isdeleted_safe
 except ImportError:
-    from moleditpy.utils import sip_isdeleted_safe
+    from moleditpy.utils.sip_isdeleted_safe import sip_isdeleted_safe
 
 
 # --- Class Definition ---
