@@ -10,9 +10,13 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
+from __future__ import annotations
+
+from typing import Any, Optional
+
 from PyQt6.QtCore import QLineF, QPointF, QRectF, Qt
-from PyQt6.QtGui import QBrush, QColor, QFont, QPen, QPolygonF
-from PyQt6.QtWidgets import QGraphicsItem
+from PyQt6.QtGui import QBrush, QColor, QFont, QPainter, QPen, QPolygonF
+from PyQt6.QtWidgets import QGraphicsItem, QStyleOptionGraphicsItem, QWidget
 
 try:
     from ..utils.constants import CPK_COLORS
@@ -21,7 +25,7 @@ except ImportError:
 
 
 class TemplatePreviewItem(QGraphicsItem):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         self.setZValue(2)
         self.pen = QPen(QColor(80, 80, 80, 180), 2)
@@ -32,14 +36,19 @@ class TemplatePreviewItem(QGraphicsItem):
         self.user_template_atoms = []
         self.is_user_template = False
 
-    def set_geometry(self, points, is_aromatic=False):
+    def set_geometry(self, points: list[QPointF], is_aromatic: bool = False) -> None:
         self.prepareGeometryChange()
         self.polygon = QPolygonF(points)
         self.is_aromatic = is_aromatic
         self.is_user_template = False
         self.update()
 
-    def set_user_template_geometry(self, points, bonds_info, atoms_data):
+    def set_user_template_geometry(
+        self,
+        points: list[QPointF],
+        bonds_info: list[Any],
+        atoms_data: list[dict[str, Any]],
+    ) -> None:
         self.prepareGeometryChange()
         self.user_template_points = points
         self.user_template_bonds = bonds_info
@@ -49,7 +58,7 @@ class TemplatePreviewItem(QGraphicsItem):
         self.polygon = QPolygonF()
         self.update()
 
-    def boundingRect(self):
+    def boundingRect(self) -> QRectF:
         if self.is_user_template and self.user_template_points:
             # Calculate bounding rect for user template
             min_x = min(p.x() for p in self.user_template_points)
@@ -61,13 +70,18 @@ class TemplatePreviewItem(QGraphicsItem):
             )
         return self.polygon.boundingRect().adjusted(-5, -5, 5, 5)
 
-    def paint(self, painter, option, widget):
+    def paint(
+        self,
+        painter: QPainter,
+        option: QStyleOptionGraphicsItem,
+        widget: Optional[QWidget],
+    ) -> None:
         if self.is_user_template:
             self.paint_user_template(painter)
         else:
             self.paint_regular_template(painter)
 
-    def paint_regular_template(self, painter):
+    def paint_regular_template(self, painter: QPainter) -> None:
         painter.setPen(self.pen)
         painter.setBrush(Qt.BrushStyle.NoBrush)
         if not self.polygon.isEmpty():
@@ -77,7 +91,7 @@ class TemplatePreviewItem(QGraphicsItem):
                 radius = QLineF(center, self.polygon.first()).length() * 0.6
                 painter.drawEllipse(center, radius, radius)
 
-    def paint_user_template(self, painter):
+    def paint_user_template(self, painter: QPainter) -> None:
         if not self.user_template_points:
             return
 

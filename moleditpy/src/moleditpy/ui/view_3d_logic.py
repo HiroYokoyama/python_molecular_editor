@@ -319,21 +319,21 @@ class View3DManager:
 
     def _add_3d_atom_glyphs(
         self,
-        mol_to_draw,
-        conf,
-        sym,
-        col,
-        current_style,
-        is_lighting_enabled,
-        mesh_props,
-    ):
+        mol_to_draw: Chem.Mol,
+        conf: Any,
+        sym: List[str],
+        col: np.ndarray,
+        current_style: str,
+        is_lighting_enabled: bool,
+        mesh_props: Dict[str, Any],
+    ) -> None:
         # Set atom radii based on style
         if current_style == "cpk":
             atom_scale = self.host.init_manager.settings.get("cpk_atom_scale", 1.0)
             resolution = self.host.init_manager.settings.get("cpk_resolution", 32)
 
             # Safe VDW lookup to handle custom elements like 'Bq'
-            def get_safe_rvdw(s):
+            def get_safe_rvdw(s: str) -> float:
                 try:
                     r = pt.GetRvdw(pt.GetAtomicNumber(s))
                     return r if r > 0.1 else 1.5
