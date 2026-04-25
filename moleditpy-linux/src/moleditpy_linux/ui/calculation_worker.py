@@ -16,6 +16,7 @@ import re
 import numpy as np
 import sys
 import subprocess
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from PyQt6.QtCore import QObject, pyqtSignal, pyqtSlot
 
@@ -82,7 +83,11 @@ _OPT_METHOD_LABELS = {
 }
 
 
-def _adjust_collision_avoidance(rd_mol, check_halted_cb, safe_status_cb):
+def _adjust_collision_avoidance(
+    rd_mol: Any,
+    check_halted_cb: Callable[[], bool],
+    safe_status_cb: Callable[[str], None],
+) -> None:
     """Optimized collision avoidance using spatial partitioning (grid-based)."""
     try:
         frags = Chem.GetMolFrags(rd_mol, asMols=False, sanitizeFrags=False)
@@ -198,14 +203,14 @@ def _adjust_collision_avoidance(rd_mol, check_halted_cb, safe_status_cb):
 
 
 def _iterative_optimize(
-    mol,
-    method,
-    check_halted_cb,
-    safe_status_cb,
-    max_iters=4000,
-    chunk_size=100,
-    options=None,
-):
+    mol: Any,
+    method: str,
+    check_halted_cb: Callable[[], bool],
+    safe_status_cb: Callable[[str], None],
+    max_iters: int = 4000,
+    chunk_size: int = 100,
+    options: Optional[Dict[str, Any]] = None,
+) -> bool:
     """Iteratively optimize the molecule in chunks to allow for responsive halting."""
     safe_status_cb(f"Optimizing with {method}...")
     try:
@@ -255,14 +260,14 @@ def _iterative_optimize(
 
 
 def _iterative_optimize_obabel(
-    mol,
-    method,
-    check_halted_cb,
-    safe_status_cb,
-    max_iters=4000,
-    chunk_size=100,
-    options=None,
-):
+    mol: Any,
+    method: str,
+    check_halted_cb: Callable[[], bool],
+    safe_status_cb: Callable[[str], None],
+    max_iters: int = 4000,
+    chunk_size: int = 100,
+    options: Optional[Dict[str, Any]] = None,
+) -> bool:
     """Perform force field optimization using OpenBabel in chunks."""
     try:
         if not OBABEL_AVAILABLE or not pybel:
@@ -297,7 +302,7 @@ def _iterative_optimize_obabel(
         return False
 
 
-def _parse_explicit_stereo(mol_block):
+def _parse_explicit_stereo(mol_block: str) -> Dict[int, Any]:
     """Parse explicit stereochemistry from the MOL block."""
     explicit_stereo = {}
     mol_lines = mol_block.split("\n")
@@ -318,7 +323,7 @@ def _parse_explicit_stereo(mol_block):
     return explicit_stereo
 
 
-def _apply_explicit_stereo(mol, explicit_stereo):
+def _apply_explicit_stereo(mol: Any, explicit_stereo: Dict[int, Any]) -> None:
     """Apply explicit stereochemistry to the molecule."""
     for bond_idx, stereo_type in explicit_stereo.items():
         if bond_idx < mol.GetNumBonds():
@@ -356,7 +361,13 @@ def _apply_explicit_stereo(mol, explicit_stereo):
                     bond.SetStereo(stereo_type)
 
 
-def _perform_direct_conversion(mol_block, mol, options, _check_halted, _safe_status):
+def _perform_direct_conversion(
+    mol_block: str,
+    mol: Any,
+    options: Optional[Dict[str, Any]],
+    _check_halted: Callable[[], bool],
+    _safe_status: Callable[[str], None],
+) -> Optional[Any]:
     """Direct 3D conversion using 2D coordinates and adding missing H without embedding."""
     parsed_coords, stereo_dirs = [], []
     # Best-effort attempt to parse 2D coordinates from MOL block for direct conversion.
@@ -550,8 +561,13 @@ def _perform_direct_conversion(mol_block, mol, options, _check_halted, _safe_sta
 
 
 def _perform_optimize_only(
-    mol, options, worker_id, _check_halted, _safe_status, _safe_finished
-):
+    mol: Any,
+    options: Optional[Dict[str, Any]],
+    worker_id: Any,
+    _check_halted: Callable[[], bool],
+    _safe_status: Callable[[str], None],
+    _safe_finished: Callable[[Any], None],
+) -> None:
     """Perform optimization on an existing 3D structure."""
     _safe_status("Optimizing existing 3D structure...")
     opt_method = str((options or {}).get("optimization_method", "MMFF_RDKIT")).upper()
@@ -595,15 +611,15 @@ def _perform_optimize_only(
 
 
 def _perform_obabel_conversion(
-    mol_block,
-    mode,
-    opt_method,
-    worker_id,
-    options,
-    _check_halted,
-    _safe_status,
-    _safe_finished,
-):
+    mol_block: str,
+    mode: str,
+    opt_method: Optional[str],
+    worker_id: Any,
+    options: Optional[Dict[str, Any]],
+    _check_halted: Callable[[], bool],
+    _safe_status: Callable[[str], None],
+    _safe_finished: Callable[[Any], None],
+) -> bool:
     """Perform Open Babel 3D conversion and optimization."""
     _safe_status("Attempting Open Babel conversion...")
     try:
@@ -704,17 +720,19 @@ class CalculationWorker(QObject):
     error = pyqtSignal(object)
     start_work = pyqtSignal(str, object)
 
-    def __init__(self, parent=None):
+    def __init__(self, parent: Optional[QObject] = None) -> None:
         super().__init__(parent)
         self.start_work.connect(self.run_calculation)
 
     @pyqtSlot(str, object)
-    def run_calculation(self, mol_block, options=None):
+    def run_calculation(
+        self, mol_block: str, options: Optional[Dict[str, Any]] = None
+    ) -> None:
         """Main entry point for 3D coordinate generation and optimization."""
         options = options or {}
         w_id = options.get("worker_id")
 
-        def _check_halted():
+        def _check_halted() -> None:
             h_ids = getattr(self, "halt_ids", None)
             if getattr(self, "halt_all", False):
                 return True
@@ -726,19 +744,19 @@ class CalculationWorker(QObject):
                 or (w_id is not None and w_id in h_ids)
             )
 
-        def _safe_status(msg):
+        def _safe_status(msg: str) -> None:
             if _check_halted():
                 raise WorkerHaltError("Halted")
             with contextlib.suppress(AttributeError, RuntimeError):
                 self.status_update.emit(msg)
 
-        def _safe_finished(payload):
+        def _safe_finished(payload: Any) -> None:
             if _check_halted():
                 raise WorkerHaltError("Halted")
             with contextlib.suppress(AttributeError, RuntimeError, TypeError):
                 self.finished.emit(payload)
 
-        def _safe_error(msg):
+        def _safe_error(msg: str) -> None:
             # If we're already halting, don't raise another error
             if msg == "Halted":
                 with contextlib.suppress(AttributeError, RuntimeError, TypeError):
@@ -827,7 +845,9 @@ class CalculationWorker(QObject):
                 with contextlib.suppress(AttributeError, RuntimeError, TypeError):
                     self.error.emit((w_id, "Halted"))
 
-    def _prepare_molecule_for_calc(self, mol_block, helpers):
+    def _prepare_molecule_for_calc(
+        self, mol_block: str, helpers: Dict[str, Any]
+    ) -> Tuple[Any, Dict[int, Any]]:
         """Parse MOL block and extract explicit stereochemistry info."""
         mol = Chem.MolFromMolBlock(mol_block, removeHs=False)
         if not mol:
@@ -841,7 +861,13 @@ class CalculationWorker(QObject):
             raise WorkerHaltError("Halted")
         return mol, ex_stereo
 
-    def _run_rdkit_workflow(self, mol, ex_stereo, options, helpers):
+    def _run_rdkit_workflow(
+        self,
+        mol: Any,
+        ex_stereo: Dict[int, Any],
+        options: Dict[str, Any],
+        helpers: Dict[str, Any],
+    ) -> bool:
         """Execute RDKit ETKDG embedding and force-field optimization."""
         _check_halted = helpers["check_halted"]
         _safe_status = helpers["status"]
@@ -955,7 +981,9 @@ class CalculationWorker(QObject):
         _safe_finished((w_id, mol))
         return True
 
-    def _run_obabel_workflow(self, mol_block, options, helpers):
+    def _run_obabel_workflow(
+        self, mol_block: str, options: Dict[str, Any], helpers: Dict[str, Any]
+    ) -> bool:
         """Execute Open Babel 3D conversion."""
         return _perform_obabel_conversion(
             mol_block,
@@ -968,7 +996,9 @@ class CalculationWorker(QObject):
             helpers["finished"],
         )
 
-    def _run_direct_workflow(self, mol_block, mol, options, helpers):
+    def _run_direct_workflow(
+        self, mol_block: str, mol: Any, options: Dict[str, Any], helpers: Dict[str, Any]
+    ) -> None:
         """Execute direct 2D->3D conversion."""
         mol = _perform_direct_conversion(
             mol_block, mol, options, helpers["check_halted"], helpers["status"]

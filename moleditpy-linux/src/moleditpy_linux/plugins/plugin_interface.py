@@ -19,7 +19,7 @@ class PluginContext:
     It is passed to the `initialize(context)` function of the plugin.
     """
 
-    def __init__(self, manager, plugin_name: str):
+    def __init__(self, manager: Any, plugin_name: str) -> None:
         self._manager = manager
         self._plugin_name = plugin_name
 
@@ -30,7 +30,7 @@ class PluginContext:
         text: Optional[str] = None,
         icon: Optional[str] = None,
         shortcut: Optional[str] = None,
-    ):
+    ) -> None:
         """
         Register a menu action.
 
@@ -52,7 +52,7 @@ class PluginContext:
         callback: Optional[Callable] = None,
         icon: Optional[str] = None,
         shortcut: Optional[str] = None,
-    ):
+    ) -> None:
         """Backward-compatible alias for add_menu_action.
         Supports old 3-arg style: register_menu_action(path, text, callback).
         """
@@ -70,7 +70,7 @@ class PluginContext:
         text: Optional[str] = None,
         icon: Optional[str] = None,
         shortcut: Optional[str] = None,
-    ):
+    ) -> None:
         """
         Register an action nested inside the Plugin menu.
 
@@ -95,7 +95,7 @@ class PluginContext:
         text: str,
         icon: Optional[str] = None,
         tooltip: Optional[str] = None,
-    ):
+    ) -> None:
         """
         Register a toolbar action.
         """
@@ -103,7 +103,9 @@ class PluginContext:
             self._plugin_name, callback, text, icon, tooltip
         )
 
-    def register_drop_handler(self, callback: Callable[[str], bool], priority: int = 0):
+    def register_drop_handler(
+        self, callback: Callable[[str], bool], priority: int = 0
+    ) -> None:
         """
         Register a handler for file drops.
 
@@ -174,7 +176,7 @@ class PluginContext:
         )
 
     @current_mol.setter
-    def current_mol(self, mol: Any):
+    def current_mol(self, mol: Any) -> None:
         mw = self.get_main_window()
         if mw and hasattr(mw, "view_3d_manager"):
             mw.view_3d_manager.current_mol = mol
@@ -186,7 +188,7 @@ class PluginContext:
         return self.current_mol
 
     @current_molecule.setter
-    def current_molecule(self, mol: Any):
+    def current_molecule(self, mol: Any) -> None:
         self.current_mol = mol
 
     @property
@@ -236,7 +238,7 @@ class PluginContext:
         if mw and hasattr(mw, "view_3d_manager") and mw.view_3d_manager.plotter:
             mw.view_3d_manager.plotter.reset_camera()
 
-    def add_export_action(self, label: str, callback: Callable):
+    def add_export_action(self, label: str, callback: Callable) -> None:
         """
         Register a custom export action.
 
@@ -248,7 +250,7 @@ class PluginContext:
 
     def register_optimization_method(
         self, method_name: str, callback: Callable[[Any], bool]
-    ):
+    ) -> None:
         """
         Register a custom 3D optimization method.
 
@@ -263,7 +265,7 @@ class PluginContext:
 
     def register_file_opener(
         self, extension: str, callback: Callable[[str], None], priority: int = 0
-    ):
+    ) -> None:
         """
         Register a handler for opening a specific file extension.
 
@@ -277,7 +279,7 @@ class PluginContext:
             self._plugin_name, extension, callback, priority
         )
 
-    def add_analysis_tool(self, label: str, callback: Callable):
+    def add_analysis_tool(self, label: str, callback: Callable) -> None:
         """
         Register a tool in the Analysis menu.
 
@@ -287,7 +289,7 @@ class PluginContext:
         """
         self._manager.register_analysis_tool(self._plugin_name, label, callback)
 
-    def register_save_handler(self, callback: Callable[[], dict]):
+    def register_save_handler(self, callback: Callable[[], dict]) -> None:
         """
         Register a callback to save state into the project file.
 
@@ -296,7 +298,7 @@ class PluginContext:
         """
         self._manager.register_save_handler(self._plugin_name, callback)
 
-    def register_load_handler(self, callback: Callable[[dict], None]):
+    def register_load_handler(self, callback: Callable[[dict], None]) -> None:
         """
         Register a callback to restore state from the project file.
 
@@ -305,13 +307,15 @@ class PluginContext:
         """
         self._manager.register_load_handler(self._plugin_name, callback)
 
-    def register_3d_context_menu(self, callback: Callable, label: str):
+    def register_3d_context_menu(self, callback: Callable, label: str) -> None:
         """Deprecated: This method does nothing. Kept for backward compatibility."""
         print(
             f"Warning: Plugin '{self._plugin_name}' uses deprecated 'register_3d_context_menu'. This API has been removed."
         )
 
-    def register_3d_style(self, style_name: str, callback: Callable[[Any, Any], None]):
+    def register_3d_style(
+        self, style_name: str, callback: Callable[[Any, Any], None]
+    ) -> None:
         """
         Register a custom 3D rendering style.
 
@@ -322,7 +326,7 @@ class PluginContext:
         """
         self._manager.register_3d_style(self._plugin_name, style_name, callback)
 
-    def register_document_reset_handler(self, callback: Callable[[], None]):
+    def register_document_reset_handler(self, callback: Callable[[], None]) -> None:
         """
         Register a callback to be called when a new document is created (File→New).
 
@@ -370,14 +374,14 @@ class PluginContext:
 class Plugin3DController:
     """Helper to manipulate the 3D scene."""
 
-    def __init__(self, main_window):
+    def __init__(self, main_window: Any) -> None:
         self._mw = main_window
 
-    def _get_v3d(self):
+    def _get_v3d(self) -> Optional[Any]:
         """Helper to get the 3D manager."""
         return getattr(self._mw, "view_3d_manager", None)
 
-    def set_atom_color(self, atom_index: int, color_hex: str):
+    def set_atom_color(self, atom_index: int, color_hex: str) -> None:
         """
         Set the color of a specific atom in the 3D view.
         Args:
@@ -390,7 +394,7 @@ class Plugin3DController:
             if hasattr(self._mw, "plotter") and self._mw.plotter:
                 self._mw.plotter.render()
 
-    def set_bond_color(self, bond_index: int, color_hex: str):
+    def set_bond_color(self, bond_index: int, color_hex: str) -> None:
         """
         Set the color of a specific bond in the 3D view.
 
@@ -404,7 +408,9 @@ class Plugin3DController:
             if hasattr(self._mw, "plotter") and self._mw.plotter:
                 self._mw.plotter.render()
 
-    def set_bond_color_by_atoms(self, atom_idx1: int, atom_idx2: int, color_hex: str):
+    def set_bond_color_by_atoms(
+        self, atom_idx1: int, atom_idx2: int, color_hex: str
+    ) -> None:
         """
         Set the color of the bond between two atoms.
 

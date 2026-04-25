@@ -10,10 +10,14 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
+from __future__ import annotations
+
 import base64
 import copy
 import logging
 import os
+from typing import Any, Dict, Tuple
+
 import numpy as np
 
 # RDKit imports (explicit to satisfy flake8 and used features)
@@ -48,12 +52,12 @@ except ImportError:
 class StateManager:
     _cls = None
 
-    def __init__(self, host):
+    def __init__(self, host: Any) -> None:
         self.host = host
         self.has_unsaved_changes = False
         self._preserved_plugin_data = {}
 
-    def get_current_state(self):
+    def get_current_state(self) -> Dict[str, Any]:
         atoms = {
             atom_id: {
                 "symbol": data["symbol"],
@@ -110,7 +114,7 @@ class StateManager:
 
         return state
 
-    def set_state_from_data(self, state_data):
+    def set_state_from_data(self, state_data: Dict[str, Any]) -> None:
         self.dragged_atom_info = None
         self.host.edit_actions_manager.clear_2d_editor(push_to_undo=False)
 
@@ -119,7 +123,7 @@ class StateManager:
         # Get file version (default '0.0.0')
         file_version_str = loaded_data.get("version", "0.0.0")
 
-        def parse_v(v_str):
+        def parse_v(v_str: str) -> Tuple[int, ...]:
             if not v_str or not isinstance(v_str, str):
                 return (0, 0, 0)
             try:
@@ -321,10 +325,10 @@ class StateManager:
         # Update labels after undo/redo
         self.host.edit_3d_manager.update_2d_measurement_labels()
 
-    def push_undo_state(self):
+    def push_undo_state(self) -> None:
         self.host.edit_actions_manager.push_undo_state()
 
-    def update_window_title(self):
+    def update_window_title(self) -> None:
         """Update window title to reflect save state."""
         base_title = f"MoleditPy Ver. {VERSION}"
         if self.host.init_manager.current_file_path:
@@ -339,7 +343,7 @@ class StateManager:
                 title = f"*{title}"
         self.host.setWindowTitle(title)
 
-    def check_unsaved_changes(self):
+    def check_unsaved_changes(self) -> bool:
         """Check for unsaved changes and show warning."""
         if not self.host.state_manager.has_unsaved_changes:
             return True  # Saved or no changes
@@ -375,12 +379,12 @@ class StateManager:
         else:
             return False  # Cancel
 
-    def reset_undo_stack(self):
+    def reset_undo_stack(self) -> None:
         self.host.edit_actions_manager.undo_stack.clear()
         self.host.edit_actions_manager.redo_stack.clear()
         self.host.edit_actions_manager.push_undo_state()
 
-    def update_realtime_info(self):
+    def update_realtime_info(self) -> None:
         """Show molecular info in status bar."""
         if not self.data.atoms:
             self.host.init_manager.formula_label.setText("")  # Clear label if no atoms
@@ -410,7 +414,7 @@ class StateManager:
                 ):
                     self.host.init_manager.formula_label.setText("Invalid structure")
 
-    def create_json_data(self):
+    def create_json_data(self) -> Dict[str, Any]:
         """Convert current state to PMEJSON."""
         # Metadata
         json_data = {
@@ -613,7 +617,7 @@ class StateManager:
 
         return json_data
 
-    def load_from_json_data(self, json_data):
+    def load_from_json_data(self, json_data: Dict[str, Any]) -> None:
         """Restore state from JSON."""
         self.dragged_atom_info = None
         self.host.edit_actions_manager.clear_2d_editor(push_to_undo=False)

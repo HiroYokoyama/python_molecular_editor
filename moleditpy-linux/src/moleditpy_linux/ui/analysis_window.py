@@ -10,6 +10,10 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
+from __future__ import annotations
+
+from typing import Optional
+
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
     QApplication,
@@ -19,6 +23,7 @@ from PyQt6.QtWidgets import (
     QLineEdit,
     QPushButton,
     QVBoxLayout,
+    QWidget,
 )
 
 from rdkit import Chem
@@ -27,7 +32,12 @@ from rdkit.Chem import inchi as rd_inchi
 
 
 class AnalysisWindow(QDialog):
-    def __init__(self, mol, parent=None, is_xyz_derived=False):
+    def __init__(
+        self,
+        mol: Chem.Mol,
+        parent: Optional[QWidget] = None,
+        is_xyz_derived: bool = False,
+    ) -> None:
         super().__init__(parent)
         self.mol = mol
         self.is_xyz_derived = is_xyz_derived  # Flag indicating if derived from XYZ
@@ -35,7 +45,7 @@ class AnalysisWindow(QDialog):
         self.setMinimumWidth(400)
         self.init_ui()
 
-    def init_ui(self):
+    def init_ui(self) -> None:
         main_layout = QVBoxLayout(self)
         grid_layout = QGridLayout()
 
@@ -217,7 +227,7 @@ class AnalysisWindow(QDialog):
 
         self.setLayout(main_layout)
 
-    def copy_to_clipboard(self, text):
+    def copy_to_clipboard(self, text: str) -> None:
         clipboard = QApplication.clipboard()
         clipboard.setText(text)
         if self.parent() and hasattr(self.parent(), "statusBar"):

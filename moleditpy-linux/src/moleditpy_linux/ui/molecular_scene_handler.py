@@ -13,7 +13,7 @@ DOI: 10.5281/zenodo.17268532
 from __future__ import annotations
 import math
 import logging
-from typing import Any, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 from PyQt6.QtCore import Qt, QPointF, QLineF, QRectF
 from PyQt6.QtGui import QCursor
@@ -175,7 +175,7 @@ class TemplateMixin:
 
         return best_rot
 
-    def _should_overwrite_benzene_bond(self, exist_b):
+    def _should_overwrite_benzene_bond(self, exist_b: BondItem) -> bool:
         """
         Enforce policy for benzene template insertion.
         Overwrite existing single bonds only if they can participate in the template's aromatic system
@@ -215,7 +215,7 @@ class TemplateMixin:
 
         is_benzene_template = num_points == 6 and any(o == 2 for _, _, o in bonds_info)
 
-        def coords(p):
+        def coords(p: Any) -> Any:
             if hasattr(p, "x") and hasattr(p, "y"):
                 return (p.x(), p.y())
             try:
@@ -223,7 +223,7 @@ class TemplateMixin:
             except (AttributeError, RuntimeError, ValueError, TypeError):
                 raise ValueError("point has no x/y")
 
-        def dist_pts(a, b):
+        def dist_pts(a: Any, b: Any) -> Any:
             ax, ay = coords(a)
             bx, by = coords(b)
             return math.hypot(ax - bx, ay - by)
@@ -478,7 +478,7 @@ class TemplateMixin:
             points.append(current_p)
         return points
 
-    def add_user_template_fragment(self, context):
+    def add_user_template_fragment(self, context: Dict[str, Any]) -> None:
         """Place user template fragment"""
         points = context.get("points", [])
         bonds_info = context.get("bonds_info", [])
@@ -553,7 +553,7 @@ class TemplateMixin:
             if atom_id in self.data.atoms and self.data.atoms[atom_id]["item"]:
                 self.data.atoms[atom_id]["item"].update_style()
 
-    def update_user_template_preview(self, pos):
+    def update_user_template_preview(self, pos: QPointF) -> None:
         """Update user template preview"""
         # Robust preview: avoid self.data.atoms for preview-only atoms
         if not hasattr(self, "user_template_data") or not self.user_template_data:
@@ -642,7 +642,7 @@ class KeyboardMixin:
     Because this is a Mixin, `self` refers directly to the MoleculeScene instance.
     """
 
-    def _calculate_new_atom_position(self, start_atom, bond_length):
+    def _calculate_new_atom_position(self, start_atom: Any, bond_length: Any) -> Any:
         """
         Calculate the position for a new atom based on the surroundings of start_atom.
         Returns the offset QPointF.
@@ -1178,14 +1178,22 @@ class SceneQueryMixin:
     # -------------------------------------------------------------------------
     # CUT AND PASTE THE FOLLOWING METHODS FROM molecule_scene.py HERE:
     # -------------------------------------------------------------------------
-    def create_atom(self, symbol, pos, charge=0, radical=0):
+    def create_atom(
+        self, symbol: Any, pos: Any, charge: int = 0, radical: int = 0
+    ) -> Any:
         atom_id = self.data.add_atom(symbol, pos, charge=charge, radical=radical)
         atom_item = AtomItem(atom_id, symbol, pos, charge=charge, radical=radical)
         self.data.atoms[atom_id]["item"] = atom_item
         self.addItem(atom_item)
         return atom_id
 
-    def create_bond(self, start_atom, end_atom, bond_order=None, bond_stereo=None):
+    def create_bond(
+        self,
+        start_atom: Any,
+        end_atom: Any,
+        bond_order: Optional[Any] = None,
+        bond_stereo: Optional[Any] = None,
+    ) -> Any:
         if start_atom is None or end_atom is None:
             logging.error("Error: Cannot create bond with None atoms")
             return
@@ -1234,7 +1242,7 @@ class SceneQueryMixin:
             logging.error(f"Error creating bond: {e}", exc_info=True)
             self.update_all_items()
 
-    def delete_items(self, items_to_delete):
+    def delete_items(self, items_to_delete: Any) -> bool:
         """Safely delete specified items (atoms/bonds) in order"""
         if not items_to_delete:
             return False
@@ -1324,7 +1332,7 @@ class SceneQueryMixin:
             current_scene_items = set(self.items())
 
             # Helper to safely remove and hide items
-            def safe_remove_and_hide(item_set):
+            def safe_remove_and_hide(item_set: Any) -> None:
                 for item in list(item_set):
                     if sip_isdeleted_safe(item):
                         continue
@@ -1368,7 +1376,7 @@ class SceneQueryMixin:
             self.update_all_items()
             return False
 
-    def find_atom_near(self, pos, tol=14.0):
+    def find_atom_near(self, pos: Any, tol: float = 14.0) -> Any:
         # Create a small search rectangle around the position
         search_rect = QRectF(pos.x() - tol, pos.y() - tol, 2 * tol, 2 * tol)
         nearby_items = self.items(search_rect)
@@ -1380,7 +1388,7 @@ class SceneQueryMixin:
                     return it
         return None
 
-    def find_bond_between(self, atom1, atom2):
+    def find_bond_between(self, atom1: Any, atom2: Any) -> Any:
         for b in atom1.bonds:
             if (b.atom1 is atom1 and b.atom2 is atom2) or (
                 b.atom1 is atom2 and b.atom2 is atom1
@@ -1388,7 +1396,7 @@ class SceneQueryMixin:
                 return b
         return None
 
-    def update_bond_stereo(self, bond_item, new_stereo):
+    def update_bond_stereo(self, bond_item: Any, new_stereo: Any) -> None:
         """Update bond stereochemistry"""
         if bond_item is None:
             return

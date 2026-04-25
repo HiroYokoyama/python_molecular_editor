@@ -11,6 +11,7 @@ DOI: 10.5281/zenodo.17268532
 """
 
 import logging  # [REPORT ERROR MISSING ATTRIBUTE]
+from typing import Any, Optional
 
 from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import (
@@ -22,6 +23,7 @@ from PyQt6.QtWidgets import (
     QLabel,
     QPushButton,
     QVBoxLayout,
+    QWidget,
 )
 
 try:
@@ -37,7 +39,7 @@ class ColorSettingsDialog(QDialog):
     - Reset All button to restore defaults for everything.
     """
 
-    def __init__(self, current_settings, parent=None):
+    def __init__(self, current_settings: Any, parent: Optional[QWidget] = None) -> None:
         super().__init__(parent)
         self.setWindowTitle("CPK Colors")
         self.parent_window = parent
@@ -241,7 +243,7 @@ class ColorSettingsDialog(QDialog):
         h.addWidget(cancel_button)
         layout.addLayout(h)
 
-    def on_element_clicked(self):
+    def on_element_clicked(self) -> None:
         btn = self.sender()
         symbol = btn.text()
         cur = self.current_settings.get("cpk_colors", {}).get(symbol)
@@ -258,7 +260,7 @@ class ColorSettingsDialog(QDialog):
                 f"background-color: {color.name()}; color: {text_color}; border: 1px solid #555; font-weight: bold;"
             )
 
-    def reset_all(self):
+    def reset_all(self) -> None:
         self.changed_cpk = {}
         self._reset_all_flag = True
 
@@ -288,7 +290,7 @@ class ColorSettingsDialog(QDialog):
         else:  # [REPORT ERROR MISSING ATTRIBUTE]
             logging.error("REPORT ERROR: Missing attribute 'bs_button' on self")
 
-    def apply_changes(self):
+    def apply_changes(self) -> None:
         if not self.parent_window or not hasattr(self.parent_window, "init_manager"):
             return
 
@@ -427,11 +429,11 @@ class ColorSettingsDialog(QDialog):
             if mol and hasattr(self.parent_window.view_3d_manager, "draw_molecule_3d"):
                 self.parent_window.view_3d_manager.draw_molecule_3d(mol)
 
-    def accept(self):
+    def accept(self) -> None:
         self.apply_changes()
         super().accept()
 
-    def pick_bs_bond_color(self):
+    def pick_bs_bond_color(self) -> None:
         settings = self.current_settings or {}
         cur = getattr(self, "changed_bs_color", None) or settings.get(
             "ball_stick_bond_color"

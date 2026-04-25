@@ -10,11 +10,13 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
+from __future__ import annotations
+
 import logging
 import os
 import json
 import pickle
-from typing import Any, Optional
+from typing import Any, Optional, Tuple
 
 from PyQt6.QtCore import QPointF, QTimer
 from PyQt6.QtWidgets import (
@@ -143,7 +145,7 @@ class IOManager:
             settings = getattr(self.host.init_manager, "settings", {}) or {}
             skip_checks = bool(settings.get("skip_chemistry_checks", False))
 
-            def _set_prop(m, key, val):
+            def _set_prop(m: Any, key: str, val: Any) -> None:
                 try:
                     if isinstance(val, int):
                         m.SetIntProp(key, val)
@@ -152,7 +154,7 @@ class IOManager:
                 except (RuntimeError, TypeError, ValueError):
                     pass
 
-            def _process(charge_val, use_rd_determine=True):
+            def _process(charge_val: int, use_rd_determine: bool = True) -> Any:
                 if use_rd_determine:
                     try:
                         from rdkit.Chem import rdDetermineBonds
@@ -225,7 +227,7 @@ class IOManager:
             self.host.statusBar().showMessage(f"Error parsing XYZ file: {e}")
             return None
 
-    def prompt_for_charge(self):
+    def prompt_for_charge(self) -> Tuple[Optional[int], bool, bool]:
         """Show dialog to prompt user for molecular charge when loading XYZ files."""
         dialog = QDialog(self.host)
         dialog.setWindowTitle("Import XYZ Charge")
@@ -259,7 +261,7 @@ class IOManager:
         except ValueError:
             return 0, True, False
 
-    def estimate_bonds_from_distances(self, mol) -> int:
+    def estimate_bonds_from_distances(self, mol: Any) -> int:
         """Estimate bonds based on interatomic distances using covalent radii."""
         conf = mol.GetConformer()
         num_atoms = mol.GetNumAtoms()

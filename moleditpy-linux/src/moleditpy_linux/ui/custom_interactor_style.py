@@ -11,6 +11,7 @@ DOI: 10.5281/zenodo.17268532
 """
 
 import logging
+from typing import Any
 
 import numpy as np
 from PyQt6.QtCore import Qt
@@ -30,7 +31,7 @@ from rdkit import Geometry
 
 
 class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
-    def __init__(self, main_window=None, **kwargs):
+    def __init__(self, main_window: Any = None, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self.main_window = main_window
         # Custom state flags
@@ -46,7 +47,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
         self.AddObserver("LeftButtonReleaseEvent", self.on_left_button_up)
         self.AddObserver("RightButtonReleaseEvent", self.on_right_button_up)
 
-    def on_left_button_down(self, obj, event):
+    def on_left_button_down(self, obj: Any, event: Any) -> None:
         """
         Dispatch click events.
         Use custom action if atom handles, else camera rotation.
@@ -274,7 +275,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
         self._is_dragging_atom = False
         super().OnLeftButtonDown()
 
-    def on_right_button_down(self, obj, event):
+    def on_right_button_down(self, obj: Any, event: Any) -> None:
         """
         Right-click: Start group rotation if dialog open.
         """
@@ -355,7 +356,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
         # Standard right-click
         super().OnRightButtonDown()
 
-    def on_mouse_move(self, obj, event):
+    def on_mouse_move(self, obj: Any, event: Any) -> None:
         """
         Handle mouse move (drag vs camera/hover).
         """
@@ -440,7 +441,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
             else:
                 mw.view_3d_manager.plotter.setCursor(Qt.CursorShape.ArrowCursor)
 
-    def on_left_button_up(self, obj, event):
+    def on_left_button_up(self, obj: Any, event: Any) -> None:
         """
         Handle click release and reset state.
         """
@@ -705,7 +706,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
         if mw and mw.init_manager.view_2d:
             mw.init_manager.view_2d.setFocus()
 
-    def on_right_button_up(self, obj, event):
+    def on_right_button_up(self, obj: Any, event: Any) -> None:
         """
         Finalize group rotation on right-click release.
         """

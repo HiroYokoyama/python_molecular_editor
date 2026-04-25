@@ -11,6 +11,7 @@ DOI: 10.5281/zenodo.17268532
 """
 
 import logging  # [REPORT ERROR MISSING ATTRIBUTE]
+from typing import Any, Optional
 
 import vtk
 
@@ -21,6 +22,7 @@ from PyQt6.QtWidgets import (
     QGraphicsView,
     QMainWindow,
     QMessageBox,
+    QSplitter,
     QWidget,
 )
 
@@ -42,16 +44,16 @@ except ImportError:
 
 # --- Classes ---
 class UIManager(QObject):
-    def __init__(self, host=None):
+    def __init__(self, host: Any = None) -> None:
         super().__init__()
         if host is not None:
             self.host = host
 
-    def update_status_bar(self, message):
+    def update_status_bar(self, message: str) -> None:
         """Update status bar with worker messages."""
         self.host.statusBar().showMessage(message)
 
-    def set_mode(self, mode_str):
+    def set_mode(self, mode_str: str) -> None:
         if isinstance(mode_str, tuple):
             mode_str = (
                 f"bond_{mode_str[0]}_{mode_str[1]}"
@@ -145,7 +147,7 @@ class UIManager(QObject):
             self.host.init_manager.scene.bond_order = 1
             self.host.init_manager.scene.bond_stereo = 0
 
-    def set_mode_and_update_toolbar(self, mode_str):
+    def set_mode_and_update_toolbar(self, mode_str: str) -> None:
         self.set_mode(mode_str)
         # Map QAction to QToolButton
         toolbar = getattr(self.host.init_manager, "toolbar", None)
@@ -183,7 +185,7 @@ class UIManager(QObject):
                 else:
                     btn.setStyleSheet("")
 
-    def activate_select_mode(self):
+    def activate_select_mode(self) -> None:
         self.set_mode("select")
         if "select" in self.host.init_manager.mode_actions:
             self.host.init_manager.mode_actions["select"].setChecked(True)
@@ -192,7 +194,7 @@ class UIManager(QObject):
         """Helper to set the current mode from periodic table selection."""
         self.set_mode(f"atom_{symbol}")
 
-    def eventFilter(self, obj, event):
+    def eventFilter(self, obj: QObject, event: QEvent) -> bool:
         if (
             hasattr(self.host.view_3d_manager, "plotter")
             and obj is self.host.view_3d_manager.plotter
@@ -217,7 +219,7 @@ class UIManager(QObject):
 
         return super().eventFilter(obj, event)
 
-    def handle_close_event(self, event) -> bool:
+    def handle_close_event(self, event: QEvent) -> bool:
         """
         Handle application close logic.
         Returns True if close should proceed, False if it should be cancelled.
@@ -286,14 +288,14 @@ class UIManager(QObject):
 
         return True
 
-    def closeEvent(self, event):
+    def closeEvent(self, event: QEvent) -> None:
         """Deprecated: Use handle_close_event via eventFilter."""
         if self.handle_close_event(event):
             event.accept()
         else:
             event.ignore()
 
-    def toggle_3d_edit_mode(self, checked):
+    def toggle_3d_edit_mode(self, checked: bool) -> None:
         """Toggle 3D Drag mode."""
         if checked:
             # Disable measurement mode when 3D Drag is on
@@ -308,7 +310,7 @@ class UIManager(QObject):
             self.host.statusBar().showMessage("3D Drag Mode: OFF.")
         self.host.init_manager.view_2d.setFocus()
 
-    def _setup_3d_picker(self):
+    def _setup_3d_picker(self) -> None:
         self.host.view_3d_manager.plotter.picker = vtk.vtkCellPicker()
         self.host.view_3d_manager.plotter.picker.SetTolerance(0.025)
 
@@ -319,7 +321,7 @@ class UIManager(QObject):
         self.host.view_3d_manager.plotter.interactor.SetInteractorStyle(style)
         self.host.view_3d_manager.plotter.interactor.Initialize()
 
-    def handle_drag_enter_event(self, event):
+    def handle_drag_enter_event(self, event: QEvent) -> None:
         """Internal handler for drag enter event (bypasses PyQt type checks in tests)."""
         if not event.mimeData().hasUrls():
             event.ignore()
@@ -343,7 +345,7 @@ class UIManager(QObject):
 
         event.ignore()
 
-    def handle_drop_event(self, event):
+    def handle_drop_event(self, event: QEvent) -> None:
         """Internal handler for file drop event (bypasses PyQt type checks in tests)."""
         urls = event.mimeData().urls()
         file_path = next((u.toLocalFile() for u in urls if u.isLocalFile()), None)
@@ -406,7 +408,7 @@ class UIManager(QObject):
             self.host.statusBar().showMessage(f"Unsupported file type: {file_path}")
             event.ignore()
 
-    def _enable_3d_edit_actions(self, enabled=True):
+    def _enable_3d_edit_actions(self, enabled: bool = True) -> None:
         """Enable/disable 3D edit actions."""
         actions = [
             "translation_action",
@@ -444,7 +446,7 @@ class UIManager(QObject):
                     f"REPORT ERROR: Missing attribute {menu_name} on self.host"
                 )
 
-    def _enable_3d_features(self, enabled=True):
+    def _enable_3d_features(self, enabled: bool = True) -> None:
         """Enable/disable 3D features."""
         # Basic 3D features
         basic_3d_actions = ["optimize_3d_button", "export_button", "analysis_action"]
@@ -482,7 +484,7 @@ class UIManager(QObject):
 
         self._enable_3d_edit_actions(enabled)
 
-    def _enter_3d_viewer_ui_mode(self):
+    def _enter_3d_viewer_ui_mode(self) -> None:
         """Set UI mode to 3D viewer."""
         self.host.ui_manager.is_2d_editable = False
         self.host.init_manager.cleanup_button.setEnabled(False)
@@ -501,7 +503,7 @@ class UIManager(QObject):
         # Collectively enable 3D-related features
         self.host.ui_manager._enable_3d_features(True)
 
-    def restore_ui_for_editing(self):
+    def restore_ui_for_editing(self) -> None:
         """Enables all 2D editing UI elements."""
         self.host.ui_manager.is_2d_editable = True
         self.host.ui_manager.restore_2d_panel()
@@ -521,7 +523,7 @@ class UIManager(QObject):
         # Collectively disable 3D edit functions when returning to 2D mode
         self.host.ui_manager._enable_3d_edit_actions(False)
 
-    def minimize_2d_panel(self):
+    def minimize_2d_panel(self) -> None:
         """Minimize (hide) 2D panel."""
         sizes = self.host.init_manager.splitter.sizes()
         # Only if not already minimized
@@ -529,7 +531,7 @@ class UIManager(QObject):
             total_width = sum(sizes)
             self.host.init_manager.splitter.setSizes([0, total_width])
 
-    def restore_2d_panel(self):
+    def restore_2d_panel(self) -> None:
         """Restore 2D panel."""
         sizes = self.host.init_manager.splitter.sizes()
 
@@ -537,7 +539,7 @@ class UIManager(QObject):
         if sizes and sizes[0] == 0:
             self.host.init_manager.splitter.setSizes([600, 600])
 
-    def set_panel_layout(self, left_percent, right_percent):
+    def set_panel_layout(self, left_percent: int, right_percent: int) -> None:
         """Set panel layout ratio."""
         if left_percent + right_percent != 100:
             return
@@ -556,7 +558,7 @@ class UIManager(QObject):
             f"Panel layout set to {left_percent}% : {right_percent}%", 2000
         )
 
-    def toggle_2d_panel(self):
+    def toggle_2d_panel(self) -> None:
         """Toggle 2D panel visibility."""
         sizes = self.host.init_manager.splitter.sizes()
         if not sizes:
@@ -571,7 +573,7 @@ class UIManager(QObject):
             self.host.ui_manager.minimize_2d_panel()
             self.host.statusBar().showMessage("2D panel minimized", 1500)
 
-    def _get_live_splitter(self):
+    def _get_live_splitter(self) -> Optional[QSplitter]:
         """Return splitter only when wrapper and C++ object are still alive."""
         init_manager = getattr(self.host, "init_manager", None)
         splitter = getattr(init_manager, "splitter", None)
@@ -587,7 +589,7 @@ class UIManager(QObject):
 
         return splitter
 
-    def on_splitter_moved(self, pos, index):
+    def on_splitter_moved(self, pos: int, index: int) -> None:
         """Feedback for splitter movement."""
         splitter = self._get_live_splitter()
         if splitter is None:
@@ -620,7 +622,7 @@ class UIManager(QObject):
                 else:  # [REPORT ERROR MISSING ATTRIBUTE]
                     logging.error("REPORT ERROR: Missing attribute 'handle' on object")
 
-    def setup_splitter_tooltip(self):
+    def setup_splitter_tooltip(self) -> None:
         """Set initial splitter tooltip."""
         splitter = self._get_live_splitter()
         if splitter is None:

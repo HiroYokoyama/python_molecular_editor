@@ -10,6 +10,10 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
+from __future__ import annotations
+
+from typing import Any, Optional
+
 # PyQt6 Modules
 from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtWidgets import QMainWindow
@@ -52,7 +56,9 @@ class MainWindow(QMainWindow):
     # start_calculation carries the MOL block and an options object (second arg)
     start_calculation = pyqtSignal(str, object)
 
-    def __init__(self, initial_file=None, safe_mode=False):
+    def __init__(
+        self, initial_file: Optional[str] = None, safe_mode: bool = False
+    ) -> None:
         QMainWindow.__init__(self)
 
         # Initialize properties
@@ -75,31 +81,31 @@ class MainWindow(QMainWindow):
 
     # --- Core Proxy Properties (Legacy Plugin Support Only. Bypassed by Core Logics) ---
     @property
-    def current_mol(self):
+    def current_mol(self) -> Any:
         """Proxy for current molecule. Not for core logic use."""
         return self.view_3d_manager.current_mol
 
     @current_mol.setter
-    def current_mol(self, value):
+    def current_mol(self, value: Any) -> None:
         """Proxy for current molecule setter. Not for core logic use."""
         self.view_3d_manager.current_mol = value
 
     @property
-    def plotter(self):
+    def plotter(self) -> Any:
         """Proxy for 3D plotter. Not for core logic use."""
         return self.view_3d_manager.plotter
 
     @property
-    def data(self):
+    def data(self) -> Any:
         """Proxy for state data. Not for core logic use."""
         return self.state_manager.data
 
     @property
-    def scene(self):
+    def scene(self) -> Any:
         """Proxy for 2D scene. Not for core logic use."""
         return self.init_manager.scene
 
-    def draw_molecule_3d(self, mol):
+    def draw_molecule_3d(self, mol: Any) -> None:
         """Proxy for 3D rendering. Not for core logic use."""
         self.current_mol = mol
         self.view_3d_manager.draw_molecule_3d(mol)

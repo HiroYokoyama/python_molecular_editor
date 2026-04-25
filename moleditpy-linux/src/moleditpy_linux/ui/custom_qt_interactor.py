@@ -11,19 +11,25 @@ DOI: 10.5281/zenodo.17268532
 """
 
 import time
+from typing import Any, Optional
 
 from pyvistaqt import QtInteractor
 
 
 class CustomQtInteractor(QtInteractor):
-    def __init__(self, parent=None, main_window=None, **kwargs):
+    def __init__(
+        self,
+        parent: Optional[Any] = None,
+        main_window: Optional[Any] = None,
+        **kwargs: Any,
+    ) -> None:
         super().__init__(parent, **kwargs)
         self.main_window = main_window
         self._last_click_time = 0.0
         self._click_count = 0
         self._ignore_next_release = False
 
-    def wheelEvent(self, event):
+    def wheelEvent(self, event: Any) -> None:
         """
         Override the mouse wheel event.
         """
@@ -34,7 +40,7 @@ class CustomQtInteractor(QtInteractor):
         if self.main_window and hasattr(self.main_window.init_manager, "view_2d"):
             self.main_window.init_manager.view_2d.setFocus()
 
-    def mouseReleaseEvent(self, event):
+    def mouseReleaseEvent(self, event: Any) -> None:
         """
         Override the Qt mouse release event to return focus to the 2D view after
         all 3D view operations. Also filters out "Ghost Release" (release without
@@ -49,7 +55,7 @@ class CustomQtInteractor(QtInteractor):
         if self.main_window and hasattr(self.main_window.init_manager, "view_2d"):
             self.main_window.init_manager.view_2d.setFocus()
 
-    def mousePressEvent(self, event):
+    def mousePressEvent(self, event: Any) -> None:
         """
         Custom mouse press handling to track accumulated clicks and filter out
         triple-clicks.
@@ -71,7 +77,7 @@ class CustomQtInteractor(QtInteractor):
 
         super().mousePressEvent(event)
 
-    def mouseDoubleClickEvent(self, event):
+    def mouseDoubleClickEvent(self, event: Any) -> None:
         """Ignore mouse double-clicks on the 3D widget to avoid accidental actions.
 
         Swallow the double-click event so it doesn't trigger selection, editing,

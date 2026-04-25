@@ -11,24 +11,37 @@ DOI: 10.5281/zenodo.17268532
 """
 
 import numpy as np
+from typing import TYPE_CHECKING, Optional, Sequence
+
 from PyQt6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QMessageBox,
     QPushButton,
     QVBoxLayout,
+    QWidget,
 )
+from rdkit import Chem
 
 try:
     from .base_picking_dialog import BasePickingDialog
 except ImportError:
     from moleditpy_linux.ui.base_picking_dialog import BasePickingDialog
 
+if TYPE_CHECKING:
+    from .main_window import MainWindow
+
 
 class PlanarizeDialog(BasePickingDialog):
     """Dialog to planarize a selected set of atoms by projecting them onto a best-fit plane."""
 
-    def __init__(self, mol, main_window, preselected_atoms=None, parent=None):
+    def __init__(
+        self,
+        mol: Chem.Mol,
+        main_window: "MainWindow",
+        preselected_atoms: Optional[Sequence[int]] = None,
+        parent: Optional[QWidget] = None,
+    ) -> None:
         super().__init__(mol, main_window, parent)
         self.selected_atoms = set()
 
@@ -41,7 +54,7 @@ class PlanarizeDialog(BasePickingDialog):
             self.show_atom_labels()
             self.update_display()
 
-    def init_ui(self):
+    def init_ui(self) -> None:
         self.setWindowTitle("Planarize")
         self.setModal(False)
         layout = QVBoxLayout(self)
@@ -85,19 +98,19 @@ class PlanarizeDialog(BasePickingDialog):
         self.picker_connection = None
         self.enable_picking()
 
-    def on_atom_picked(self, atom_idx):
+    def on_atom_picked(self, atom_idx: int) -> None:
         if atom_idx in self.selected_atoms:
             self.selected_atoms.remove(atom_idx)
         else:
             self.selected_atoms.add(atom_idx)
         self.update_display()
 
-    def clear_selection(self):
+    def clear_selection(self) -> None:
         self.selected_atoms.clear()
         self.clear_atom_labels()
         self.update_display()
 
-    def update_display(self):
+    def update_display(self) -> None:
         count = len(self.selected_atoms)
         if count == 0:
             self.selection_label.setText(
@@ -109,7 +122,7 @@ class PlanarizeDialog(BasePickingDialog):
             self.selection_label.setText(f"Selected {count} atoms")
             self.apply_button.setEnabled(count >= 3)
 
-    def select_all_atoms(self):
+    def select_all_atoms(self) -> None:
         """Select all atoms in the current molecule."""
         try:
             if hasattr(self, "mol") and self.mol is not None:
@@ -128,7 +141,7 @@ class PlanarizeDialog(BasePickingDialog):
         except (AttributeError, RuntimeError, ValueError) as e:
             QMessageBox.warning(self, "Warning", f"Failed to select all atoms: {e}")
 
-    def show_atom_labels(self):
+    def show_atom_labels(self) -> None:
         if self.selected_atoms:
             sorted_atoms = sorted(self.selected_atoms)
             pairs = [(idx, f"#{i + 1}") for i, idx in enumerate(sorted_atoms)]
@@ -136,7 +149,7 @@ class PlanarizeDialog(BasePickingDialog):
         else:
             self.clear_atom_labels()
 
-    def apply_planarize(self):
+    def apply_planarize(self) -> None:
         if not self.selected_atoms or len(self.selected_atoms) < 3:
             QMessageBox.warning(
                 self, "Warning", "Please select at least 3 atoms for planarize."

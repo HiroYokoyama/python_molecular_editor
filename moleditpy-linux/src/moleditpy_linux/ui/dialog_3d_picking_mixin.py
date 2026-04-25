@@ -10,10 +10,12 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
-import logging  # [REPORT ERROR MISSING ATTRIBUTE]
+from __future__ import annotations
 
+import logging  # [REPORT ERROR MISSING ATTRIBUTE]
 import numpy as np
 from PyQt6.QtCore import QEvent, Qt
+from PyQt6.QtCore import QObject
 
 try:
     from ..utils.constants import pt
@@ -24,14 +26,14 @@ except ImportError:
 class Dialog3DPickingMixin:
     """Mixin providing common functionality for 3D atom selection."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the Mixin."""
         self.picking_enabled = False
         self._mouse_press_pos = None
         self._mouse_moved = False
         self.selection_labels = []
 
-    def eventFilter(self, obj, event):
+    def eventFilter(self, obj: QObject, event: QEvent) -> bool:
         """Capture mouse clicks in the 3D view (reproducibly mimicking the original 3D edit logic)."""
         if (
             obj == self.main_window.view_3d_manager.plotter.interactor
@@ -134,7 +136,7 @@ class Dialog3DPickingMixin:
 
         return super().eventFilter(obj, event)
 
-    def enable_picking(self):
+    def enable_picking(self) -> None:
         """Enable atom selection in the 3D view."""
         self.main_window.view_3d_manager.plotter.interactor.installEventFilter(self)
         self.picking_enabled = True
@@ -146,7 +148,7 @@ class Dialog3DPickingMixin:
                 "REPORT ERROR: Missing attribute '_picking_consumed' on self.main_window"
             )
 
-    def disable_picking(self):
+    def disable_picking(self) -> None:
         """Disable atom selection in the 3D view."""
         if self.picking_enabled:
             self.main_window.view_3d_manager.plotter.interactor.removeEventFilter(self)
@@ -158,14 +160,14 @@ class Dialog3DPickingMixin:
                 "REPORT ERROR: Missing attribute '_picking_consumed' on self.main_window"
             )
 
-    def try_alternative_picking(self, x, y):
+    def try_alternative_picking(self, x: int, y: int) -> None:
         """Alternative picking method (unused)."""
 
     # ------------------------------------------------------------------
     # Label management (shared across dialogs)
     # ------------------------------------------------------------------
 
-    def clear_atom_labels(self):
+    def clear_atom_labels(self) -> None:
         """Remove all label actors from the plotter."""
         for label_actor in self.selection_labels:
             try:
@@ -180,7 +182,9 @@ class Dialog3DPickingMixin:
     # Alias — some dialogs use this name instead.
     clear_selection_labels = clear_atom_labels
 
-    def add_selection_label(self, atom_idx, label_text, color="yellow"):
+    def add_selection_label(
+        self, atom_idx: int, label_text: str, color: str = "yellow"
+    ) -> None:
         """Add a point label at the position of *atom_idx*.
 
         Parameters
@@ -215,7 +219,9 @@ class Dialog3DPickingMixin:
             except (AttributeError, RuntimeError, TypeError):
                 pass
 
-    def show_atom_labels_for(self, atoms_and_labels, color="yellow"):
+    def show_atom_labels_for(
+        self, atoms_and_labels: list[tuple[int, str]], color: str = "yellow"
+    ) -> None:
         """Clear existing labels and add new ones for each *(idx, text)* pair.
 
         Parameters

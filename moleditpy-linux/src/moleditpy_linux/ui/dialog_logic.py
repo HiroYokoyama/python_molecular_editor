@@ -10,10 +10,14 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
+from __future__ import annotations
+
 import logging  # [REPORT ERROR MISSING ATTRIBUTE]
 
 import json
 import os
+from typing import Any, List, Optional
+
 from PyQt6.QtWidgets import QInputDialog, QMessageBox
 
 
@@ -66,10 +70,10 @@ except ImportError:
 class DialogManager:
     """Independent manager for UI dialogs, ported from MainWindowDialogManager mixin."""
 
-    def __init__(self, host):
+    def __init__(self, host: Any) -> None:
         self.host = host
 
-    def _get_preselected_atoms_3d(self):
+    def _get_preselected_atoms_3d(self) -> List[int]:
         """Helper to collect preselected atoms from measurement mode (3D Select)."""
         preselected_atoms = []
         if hasattr(self.host, "edit_3d_manager"):
@@ -83,12 +87,12 @@ class DialogManager:
             )
         return preselected_atoms
 
-    def show_about_dialog(self):
+    def show_about_dialog(self) -> None:
         """Show the custom About dialog with Easter egg functionality"""
         dialog = AboutDialog(self.host, self.host)
         dialog.exec()
 
-    def open_periodic_table_dialog(self):
+    def open_periodic_table_dialog(self) -> None:
         dialog = PeriodicTableDialog(self.host)
         dialog.element_selected.connect(
             self.host.ui_manager.set_atom_from_periodic_table
@@ -100,7 +104,7 @@ class DialogManager:
             self.host.init_manager.tool_group.setExclusive(True)
         dialog.exec()
 
-    def open_analysis_window(self):
+    def open_analysis_window(self) -> None:
         if self.host.view_3d_manager.current_mol:
             dialog = AnalysisWindow(
                 self.host.view_3d_manager.current_mol,
@@ -113,12 +117,12 @@ class DialogManager:
                 "Please generate a 3D structure first to show analysis."
             )
 
-    def open_template_dialog(self):
+    def open_template_dialog(self) -> None:
         """Open the template dialog"""
         dialog = UserTemplateDialog(self.host, self.host)
         dialog.exec()
 
-    def open_template_dialog_and_activate(self):
+    def open_template_dialog_and_activate(self) -> None:
         """Open the template dialog and activate the selected template for use in the main window"""
         # Check for existing dialog
         _template_dialog = getattr(self.host, "_template_dialog", None)
@@ -133,7 +137,7 @@ class DialogManager:
         self.host._template_dialog.show()
 
         # Activate if a template is selected after dialog is closed
-        def on_dialog_finished():
+        def on_dialog_finished() -> None:
             if (
                 hasattr(self.host._template_dialog, "selected_template")
                 and self.host._template_dialog.selected_template
@@ -154,7 +158,7 @@ class DialogManager:
 
         self.host._template_dialog.finished.connect(on_dialog_finished)
 
-    def save_2d_as_template(self):
+    def save_2d_as_template(self) -> None:
         """Save current 2D structure as a template"""
         if not self.host.state_manager.data.atoms:
             QMessageBox.warning(
@@ -209,7 +213,7 @@ class DialogManager:
                 self.host, "Error", f"Failed to save template: {str(e)}"
             )
 
-    def open_translation_dialog(self):
+    def open_translation_dialog(self) -> None:
         """Open the translation dialog"""
         # Get preselected atoms
         preselected_atoms = self._get_preselected_atoms_3d()
@@ -235,7 +239,7 @@ class DialogManager:
             lambda: self.host.edit_3d_manager.remove_dialog_from_list(dialog)
         )
 
-    def open_move_group_dialog(self):
+    def open_move_group_dialog(self) -> None:
         """Open Move Group dialog"""
         # Get preselected atoms
         preselected_atoms = self._get_preselected_atoms_3d()
@@ -261,7 +265,7 @@ class DialogManager:
             lambda: self.host.edit_3d_manager.remove_dialog_from_list(dialog)
         )
 
-    def open_align_plane_dialog(self, plane):
+    def open_align_plane_dialog(self, plane: str) -> None:
         """Open align dialog"""
         # Get pre-selected atoms
         preselected_atoms = self._get_preselected_atoms_3d()
@@ -290,7 +294,7 @@ class DialogManager:
             lambda: self.host.edit_3d_manager.remove_dialog_from_list(dialog)
         )
 
-    def open_planarize_dialog(self, plane=None):
+    def open_planarize_dialog(self, plane: Optional[str] = None) -> None:
         """Open dialog to project selected atoms to the best-fit plane"""
         # Get pre-selected atoms
         preselected_atoms = self._get_preselected_atoms_3d()
@@ -318,7 +322,7 @@ class DialogManager:
             lambda: self.host.edit_3d_manager.remove_dialog_from_list(dialog)
         )
 
-    def open_alignment_dialog(self, axis):
+    def open_alignment_dialog(self, axis: str) -> None:
         """Open alignment dialog"""
         # Get pre-selected atoms
         preselected_atoms = self._get_preselected_atoms_3d()
@@ -347,7 +351,7 @@ class DialogManager:
             lambda: self.host.edit_3d_manager.remove_dialog_from_list(dialog)
         )
 
-    def open_bond_length_dialog(self):
+    def open_bond_length_dialog(self) -> None:
         """Open bond length adjustment dialog"""
         # Get pre-selected atoms
         preselected_atoms = self._get_preselected_atoms_3d()
@@ -373,7 +377,7 @@ class DialogManager:
             lambda: self.host.edit_3d_manager.remove_dialog_from_list(dialog)
         )
 
-    def open_angle_dialog(self):
+    def open_angle_dialog(self) -> None:
         """Open angle adjustment dialog"""
         # Get pre-selected atoms
         preselected_atoms = self._get_preselected_atoms_3d()
@@ -399,7 +403,7 @@ class DialogManager:
             lambda: self.host.edit_3d_manager.remove_dialog_from_list(dialog)
         )
 
-    def open_dihedral_dialog(self):
+    def open_dihedral_dialog(self) -> None:
         """Open dihedral angle adjustment dialog"""
         # Get pre-selected atoms
         preselected_atoms = self._get_preselected_atoms_3d()
@@ -425,7 +429,7 @@ class DialogManager:
             lambda: self.host.edit_3d_manager.remove_dialog_from_list(dialog)
         )
 
-    def open_mirror_dialog(self):
+    def open_mirror_dialog(self) -> None:
         """Open mirror function dialog"""
         if not self.host.view_3d_manager.current_mol:
             self.host.statusBar().showMessage("No 3D molecule loaded.")
@@ -439,17 +443,17 @@ class DialogManager:
         dialog = MirrorDialog(self.host.view_3d_manager.current_mol, self.host)
         dialog.exec()
 
-    def open_settings_dialog(self):
+    def open_settings_dialog(self) -> None:
         """Open the application settings dialog."""
         dialog = SettingsDialog(self.host.init_manager.settings, parent=self.host)
         dialog.exec()
 
-    def open_color_settings_dialog(self):
+    def open_color_settings_dialog(self) -> None:
         """Open the CPK color settings dialog."""
         dialog = ColorSettingsDialog(self.host.init_manager.settings, parent=self.host)
         dialog.exec()
 
-    def open_constrained_optimization_dialog(self):
+    def open_constrained_optimization_dialog(self) -> None:
         """Open constrained optimization dialog"""
         if not self.host.view_3d_manager.current_mol:
             self.host.statusBar().showMessage("No 3D molecule loaded.")
