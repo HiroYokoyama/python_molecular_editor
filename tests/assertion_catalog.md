@@ -4186,6 +4186,458 @@ _Test the full mouse press -> move -> release sequence for creating a bond._
 - assert bond.order == 1
 - assert getattr(scene, 'start_atom', None) == a1
 
+## tests/unit/test_settings_2d_tab.py
+
+### test_init_uses_default_colors
+_No description provided._
+
+- assert tab.current_bg_color_2d == DEFAULT_SETTINGS['background_color_2d']
+- assert tab.current_bond_color_2d == DEFAULT_SETTINGS['bond_color_2d']
+
+### test_update_ui_sets_colors
+_No description provided._
+
+- assert tab.current_bg_color_2d == '#112233'
+- assert tab.current_bond_color_2d == '#aabbcc'
+
+### test_update_ui_sets_sliders
+_No description provided._
+
+- assert tab.bond_width_2d_slider.value() == 30
+- assert tab.bond_spacing_double_2d_slider.value() == 40
+- assert tab.bond_spacing_triple_2d_slider.value() == 50
+- assert tab.bond_wedge_width_2d_slider.value() == 80
+- assert tab.bond_dash_count_2d_slider.value() == 12
+- assert tab.atom_font_size_2d_slider.value() == 24
+
+### test_update_ui_sets_cap_style
+_No description provided._
+
+- assert tab.bond_cap_style_2d_combo.currentText() == 'Flat'
+
+### test_update_ui_sets_use_bond_color_checkbox
+_No description provided._
+
+- assert tab.atom_use_bond_color_2d_checkbox.isChecked() is True
+
+### test_get_settings_roundtrip
+_No description provided._
+
+- assert result['background_color_2d'] == DEFAULT_SETTINGS['background_color_2d']
+- assert result['bond_color_2d'] == DEFAULT_SETTINGS['bond_color_2d']
+- assert abs(result['bond_width_2d'] - DEFAULT_SETTINGS['bond_width_2d']) < 0.05
+- assert result['bond_cap_style_2d'] == DEFAULT_SETTINGS['bond_cap_style_2d']
+- assert result['bond_dash_count_2d'] == DEFAULT_SETTINGS['bond_dash_count_2d']
+- assert result['atom_font_size_2d'] == DEFAULT_SETTINGS['atom_font_size_2d']
+- assert result['atom_use_bond_color_2d'] == DEFAULT_SETTINGS['atom_use_bond_color_2d']
+
+### test_get_settings_returns_all_keys
+_No description provided._
+
+- assert expected_keys == set(result.keys())
+
+### test_pick_bg_color_updates_on_valid
+_No description provided._
+
+- assert tab.current_bg_color_2d == '#ff0000'
+
+### test_pick_bg_color_no_change_on_invalid
+_No description provided._
+
+- assert tab.current_bg_color_2d == original
+
+### test_pick_bond_color_updates_on_valid
+_No description provided._
+
+- assert tab.current_bond_color_2d == '#00ff00'
+
+### test_reset_to_defaults
+_No description provided._
+
+- assert tab.current_bg_color_2d == '#123456'
+- assert tab.current_bg_color_2d == DEFAULT_SETTINGS['background_color_2d']
+- assert tab.bond_cap_style_2d_combo.currentText() == DEFAULT_SETTINGS['bond_cap_style_2d']
+
+## tests/unit/test_settings_3d_tabs.py
+
+### test_scene_tab_init
+_No description provided._
+
+- assert tab.current_bg_color == DEFAULT_SETTINGS['background_color']
+
+### test_scene_tab_update_ui
+_No description provided._
+
+- assert tab.current_bg_color == '#112233'
+- assert tab.axes_checkbox.isChecked() is False
+- assert tab.light_checkbox.isChecked() is False
+- assert tab.intensity_slider.value() == 50
+- assert tab.specular_slider.value() == 10
+- assert tab.spec_power_slider.value() == 40
+- assert tab.projection_combo.currentText() == 'Orthographic'
+
+### test_scene_tab_get_settings_keys
+_No description provided._
+
+- assert expected_keys == set(result.keys())
+
+### test_scene_tab_roundtrip
+_No description provided._
+
+- assert result['background_color'] == DEFAULT_SETTINGS['background_color']
+- assert result['show_3d_axes'] == DEFAULT_SETTINGS['show_3d_axes']
+- assert result['projection_mode'] == DEFAULT_SETTINGS['projection_mode']
+- assert abs(result['light_intensity'] - DEFAULT_SETTINGS['light_intensity']) < 0.01
+- assert abs(result['specular'] - DEFAULT_SETTINGS['specular']) < 0.01
+- assert result['specular_power'] == DEFAULT_SETTINGS['specular_power']
+
+### test_scene_tab_pick_color_valid
+_No description provided._
+
+- assert tab.current_bg_color == '#abcdef'
+
+### test_scene_tab_pick_color_invalid_no_change
+_No description provided._
+
+- assert tab.current_bg_color == original
+
+### test_scene_tab_reset_to_defaults
+_No description provided._
+
+- assert tab.projection_combo.currentText() == 'Orthographic'
+- assert tab.projection_combo.currentText() == DEFAULT_SETTINGS['projection_mode']
+
+### test_model_tab_ball_stick_has_atom_scale
+_No description provided._
+
+- assert hasattr(tab, 'atom_scale_slider')
+
+### test_model_tab_ball_stick_has_bond_radius
+_No description provided._
+
+- assert hasattr(tab, 'bond_radius_slider')
+
+### test_model_tab_ball_stick_has_color_options
+_No description provided._
+
+- assert hasattr(tab, 'bond_color_button')
+- assert hasattr(tab, 'use_cpk_checkbox')
+
+### test_model_tab_ball_stick_update_ui
+_No description provided._
+
+- assert tab.atom_scale_slider.value() == 150
+- assert tab.bond_radius_slider.value() == 20
+- assert tab.res_slider.value() == 20
+- assert tab.use_cpk_checkbox.isChecked() is True
+
+### test_model_tab_ball_stick_get_settings_keys
+_No description provided._
+
+- assert expected_keys == set(result.keys())
+
+### test_model_tab_ball_stick_roundtrip
+_No description provided._
+
+- assert abs(result['ball_stick_atom_scale'] - DEFAULT_SETTINGS['ball_stick_atom_scale']) < 0.01
+- assert abs(result['ball_stick_bond_radius'] - DEFAULT_SETTINGS['ball_stick_bond_radius']) < 0.01
+- assert result['ball_stick_resolution'] == DEFAULT_SETTINGS['ball_stick_resolution']
+
+### test_model_tab_cpk_has_atom_scale_no_bond_radius
+_No description provided._
+
+- assert hasattr(tab, 'atom_scale_slider')
+- assert not hasattr(tab, 'bond_radius_slider')
+
+### test_model_tab_cpk_get_settings_keys
+_No description provided._
+
+- assert 'cpk_atom_scale' in result
+- assert 'cpk_resolution' in result
+- assert 'ball_stick_bond_color' not in result
+
+### test_model_tab_cpk_roundtrip
+_No description provided._
+
+- assert abs(result['cpk_atom_scale'] - DEFAULT_SETTINGS['cpk_atom_scale']) < 0.01
+- assert result['cpk_resolution'] == DEFAULT_SETTINGS['cpk_resolution']
+
+### test_model_tab_wireframe_no_atom_scale
+_No description provided._
+
+- assert not hasattr(tab, 'atom_scale_slider')
+- assert hasattr(tab, 'bond_radius_slider')
+
+### test_model_tab_wireframe_get_settings_keys
+_No description provided._
+
+- assert 'wireframe_bond_radius' in result
+- assert 'wireframe_resolution' in result
+- assert 'wireframe_double_bond_offset_factor' in result
+
+### test_model_tab_wireframe_roundtrip
+_No description provided._
+
+- assert abs(result['wireframe_bond_radius'] - DEFAULT_SETTINGS['wireframe_bond_radius']) < 0.01
+- assert result['wireframe_resolution'] == DEFAULT_SETTINGS['wireframe_resolution']
+
+### test_model_tab_stick_get_settings_keys
+_No description provided._
+
+- assert 'stick_bond_radius' in result
+- assert 'stick_resolution' in result
+- assert 'stick_double_bond_offset_factor' in result
+
+### test_model_tab_stick_roundtrip
+_No description provided._
+
+- assert abs(result['stick_bond_radius'] - DEFAULT_SETTINGS['stick_bond_radius']) < 0.01
+- assert result['stick_resolution'] == DEFAULT_SETTINGS['stick_resolution']
+
+### test_model_tab_ball_stick_pick_bond_color
+_No description provided._
+
+- assert tab.current_bond_color == '#ff00ff'
+
+## tests/unit/test_settings_dialog.py
+
+### test_init_creates_seven_tabs
+_No description provided._
+
+- assert dialog.tab_widget.count() == 7
+
+### test_init_tab_labels
+_No description provided._
+
+- assert '2D Settings' in tab_titles
+- assert '3D Scene' in tab_titles
+- assert 'Ball & Stick' in tab_titles
+- assert 'Other' in tab_titles
+
+### test_init_window_title
+_No description provided._
+
+- assert dialog.windowTitle() == 'Settings'
+
+### test_update_ui_from_settings_sets_all_tabs
+_No description provided._
+
+- assert dialog.tab_2d.current_bg_color_2d == '#aabbcc'
+
+### test_get_settings_aggregates_all_tabs
+_No description provided._
+
+- assert 'background_color_2d' in result
+- assert 'background_color' in result
+- assert 'ball_stick_atom_scale' in result
+- assert 'cpk_atom_scale' in result
+- assert 'wireframe_bond_radius' in result
+- assert 'stick_bond_radius' in result
+- assert 'skip_chemistry_checks' in result
+
+### test_reset_current_tab_calls_reset_on_active_tab
+_No description provided._
+
+- mock_reset.assert_called_once()
+
+### test_reset_current_tab_shows_info_message
+_No description provided._
+
+- mock_info.assert_called_once()
+- assert '2D Settings' in args[2]
+
+### test_reset_all_settings_yes_resets_and_applies
+_No description provided._
+
+- mock_update.assert_called_once_with(dialog.default_settings)
+- mock_apply.assert_called_once()
+
+### test_reset_all_settings_no_does_nothing
+_No description provided._
+
+- mock_update.assert_not_called()
+
+### test_apply_settings_no_parent_returns_early
+_No description provided._
+
+
+### test_apply_settings_updates_parent_settings
+_No description provided._
+
+- assert dialog.parent_window.init_manager.settings['background_color_2d'] == '#123456'
+
+### test_apply_settings_calls_save_settings
+_No description provided._
+
+- dialog.parent_window.init_manager.save_settings.assert_called()
+
+### test_apply_settings_calls_apply_3d_settings
+_No description provided._
+
+- dialog.parent_window.view_3d_manager.apply_3d_settings.assert_called()
+
+### test_apply_settings_calls_update_cpk_colors
+_No description provided._
+
+- dialog.parent_window.init_manager.update_cpk_colors_from_settings.assert_called()
+
+### test_apply_settings_shows_status_message
+_No description provided._
+
+- dialog.parent_window.statusBar.return_value.showMessage.assert_called_with('Settings applied successfully')
+
+### test_apply_settings_redraws_molecule_when_present
+_No description provided._
+
+- parent.view_3d_manager.draw_molecule_3d.assert_called_with(mol)
+
+### test_apply_settings_skips_redraw_when_no_molecule
+_No description provided._
+
+- parent.view_3d_manager.draw_molecule_3d.assert_not_called()
+
+### test_apply_settings_updates_2d_scene_background
+_No description provided._
+
+- scene.setBackgroundBrush.assert_called()
+
+### test_accept_applies_then_closes
+_No description provided._
+
+- mock_apply.assert_called_once()
+- mock_super_accept.assert_called_once()
+
+### test_get_settings_roundtrip_defaults
+_No description provided._
+
+- assert abs(result['ball_stick_atom_scale'] - DEFAULT_SETTINGS['ball_stick_atom_scale']) < 0.01
+- assert result['background_color'] == DEFAULT_SETTINGS['background_color']
+- assert result['skip_chemistry_checks'] == DEFAULT_SETTINGS['skip_chemistry_checks']
+
+## tests/unit/test_settings_other_tab.py
+
+### test_init_creates_all_controls
+_No description provided._
+
+- assert hasattr(tab, 'skip_chem_checks_checkbox')
+- assert hasattr(tab, 'always_ask_charge_checkbox')
+- assert hasattr(tab, 'kekule_3d_checkbox')
+- assert hasattr(tab, 'aromatic_circle_checkbox')
+- assert hasattr(tab, 'aromatic_torus_thickness_slider')
+
+### test_update_ui_sets_checkboxes
+_No description provided._
+
+- assert tab.skip_chem_checks_checkbox.isChecked() is True
+- assert tab.always_ask_charge_checkbox.isChecked() is True
+- assert tab.kekule_3d_checkbox.isChecked() is False
+- assert tab.aromatic_circle_checkbox.isChecked() is False
+
+### test_update_ui_sets_torus_thickness
+_No description provided._
+
+- assert tab.aromatic_torus_thickness_slider.value() == 120
+
+### test_get_settings_returns_correct_keys
+_No description provided._
+
+- assert expected_keys == set(result.keys())
+
+### test_get_settings_roundtrip_defaults
+_No description provided._
+
+- assert result['skip_chemistry_checks'] == DEFAULT_SETTINGS['skip_chemistry_checks']
+- assert result['display_kekule_3d'] == DEFAULT_SETTINGS['display_kekule_3d']
+- assert result['display_aromatic_circles_3d'] == DEFAULT_SETTINGS['display_aromatic_circles_3d']
+- assert abs(result['aromatic_torus_thickness_factor'] - DEFAULT_SETTINGS['aromatic_torus_thickness_factor']) < 0.01
+
+### test_kekule_toggled_disables_aromatic_circle
+_No description provided._
+
+- assert tab.aromatic_circle_checkbox.isEnabled() is False
+
+### test_kekule_untoggled_enables_aromatic_circle
+_No description provided._
+
+- assert tab.aromatic_circle_checkbox.isEnabled() is True
+
+### test_aromatic_toggled_disables_kekule
+_No description provided._
+
+- assert tab.kekule_3d_checkbox.isEnabled() is False
+
+### test_aromatic_untoggled_enables_kekule
+_No description provided._
+
+- assert tab.kekule_3d_checkbox.isEnabled() is True
+
+### test_update_ui_kekule_true_disables_aromatic
+_No description provided._
+
+- assert tab.kekule_3d_checkbox.isChecked() is True
+- assert tab.aromatic_circle_checkbox.isEnabled() is False
+
+### test_update_ui_aromatic_true_disables_kekule
+_No description provided._
+
+- assert tab.aromatic_circle_checkbox.isChecked() is True
+- assert tab.kekule_3d_checkbox.isEnabled() is False
+
+### test_reset_to_defaults
+_No description provided._
+
+- assert result['skip_chemistry_checks'] == DEFAULT_SETTINGS['skip_chemistry_checks']
+- assert abs(result['aromatic_torus_thickness_factor'] - DEFAULT_SETTINGS['aromatic_torus_thickness_factor']) < 0.01
+
+## tests/unit/test_settings_tab_base.py
+
+### test_init_stores_default_settings
+_No description provided._
+
+- assert tab.default_settings is DEFAULT_SETTINGS
+
+### test_create_separator_returns_hline
+_No description provided._
+
+- assert isinstance(sep, QFrame)
+- assert sep.frameShape() == QFrame.Shape.HLine
+- assert sep.frameShadow() == QFrame.Shadow.Sunken
+
+### test_create_slider_range
+_No description provided._
+
+- assert isinstance(slider, QSlider)
+- assert slider.minimum() == 10
+- assert slider.maximum() == 200
+
+### test_create_slider_float_label_updates
+_No description provided._
+
+- assert label.text() == '5.00'
+
+### test_create_slider_int_label_updates
+_No description provided._
+
+- assert label.text() == '10'
+
+### test_wrap_layout_returns_widget_with_children
+_No description provided._
+
+- assert isinstance(container, QWidget)
+
+### test_reset_to_defaults_calls_update_ui
+_No description provided._
+
+- tab.update_ui.assert_called_once_with(DEFAULT_SETTINGS)
+
+### test_update_ui_not_implemented
+_No description provided._
+
+
+### test_get_settings_not_implemented
+_No description provided._
+
+
 ## tests/unit/test_sip_isdeleted_safe.py
 
 ### TestSipIsDeletedSafe.test_none_is_treated_as_deleted
@@ -5542,5 +5994,3 @@ _Test that pressing 1, 2, 3 bonds to an existing atom if it's nearby._
 - assert len(data.atoms) == 2
 - assert len(data.bonds) == 1
 - assert bond_key in data.bonds
-
-## tests/gui/test_plugin_manager_redundant.py
