@@ -24,11 +24,6 @@ omit =
     moleditpy/src/moleditpy/ui/translation_dialog.py
     moleditpy/src/moleditpy/ui/constrained_optimization_dialog.py
     moleditpy/src/moleditpy/ui/periodic_table_dialog.py
-    moleditpy/src/moleditpy/ui/dialog_manager.py
-    moleditpy/src/moleditpy/ui/view_loaders.py
-    moleditpy/src/moleditpy/ui/edit_3d.py
-    moleditpy/src/moleditpy/ui/edit_actions.py
-    moleditpy/src/moleditpy/ui/view_3d.py
 
     # 3D hardware / PyVista — requires GPU/display, not unit-testable
     moleditpy/src/moleditpy/ui/custom_interactor_style.py
