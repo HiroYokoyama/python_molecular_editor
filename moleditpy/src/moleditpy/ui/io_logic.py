@@ -261,7 +261,7 @@ class IOManager:
         except ValueError:
             return 0, True, False
 
-    def estimate_bonds_from_distances(self, mol) -> int:
+    def estimate_bonds_from_distances(self, mol: Any) -> int:
         """Estimate bonds based on interatomic distances using covalent radii."""
         conf = mol.GetConformer()
         num_atoms = mol.GetNumAtoms()

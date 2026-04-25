@@ -35,7 +35,7 @@ except ImportError:
     from moleditpy.ui.main_window import MainWindow
 
 
-def setup_logging():
+def setup_logging() -> None:
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s [%(levelname)s] %(name)s (%(pathname)s:%(lineno)d): %(message)s",
@@ -57,7 +57,7 @@ def setup_logging():
     sys.excepthook = handle_exception
 
 
-def main():
+def main() -> None:
     # Setup logging as early as possible
     setup_logging()
 
