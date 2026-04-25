@@ -48,7 +48,7 @@ class AlignmentDialog(Dialog3DPickingMixin, QDialog):
         self.mol = mol
         self.main_window = main_window
         self.axis = axis
-        self.selected_atoms = set()
+        self.selected_atoms: set[int] = set()
 
         # Add preselected atoms (maximum 2)
         if preselected_atoms:
@@ -256,7 +256,7 @@ class AlignmentDialog(Dialog3DPickingMixin, QDialog):
         except (AttributeError, RuntimeError, ValueError, TypeError) as e:
             QMessageBox.critical(self, "Error", f"Failed to apply alignment: {str(e)}")
 
-    def closeEvent(self, event: QCloseEvent) -> None:
+    def closeEvent(self, event: Optional[QCloseEvent]) -> None:
         """Clean up when the dialog is closed."""
         self.clear_selection_labels()
         self.disable_picking()

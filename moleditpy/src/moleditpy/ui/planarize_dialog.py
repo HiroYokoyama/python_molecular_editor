@@ -10,6 +10,7 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
+import logging
 import numpy as np
 from typing import TYPE_CHECKING, Optional, Sequence
 
@@ -43,7 +44,7 @@ class PlanarizeDialog(BasePickingDialog):
         parent: Optional[QWidget] = None,
     ) -> None:
         super().__init__(mol, main_window, parent)
-        self.selected_atoms = set()
+        self.selected_atoms: set[int] = set()
 
         if preselected_atoms:
             self.selected_atoms.update(preselected_atoms)
@@ -159,6 +160,9 @@ class PlanarizeDialog(BasePickingDialog):
         try:
             # Get positions of selected atoms
             selected_indices = list(sorted(self.selected_atoms))
+            if self.main_window.view_3d_manager.atom_positions_3d is None:
+                logging.error("atom_positions_3d is None in apply_planarize")
+                return
             selected_positions = self.main_window.view_3d_manager.atom_positions_3d[
                 selected_indices
             ].copy()

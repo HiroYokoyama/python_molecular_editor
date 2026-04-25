@@ -381,10 +381,7 @@ class ComputeManager:
         self.next_conversion_id = run_id + 1
         options["worker_id"] = run_id
 
-        if hasattr(self.host, "active_worker_ids"):
-            self.host.compute_manager.active_worker_ids.add(run_id)
-        else:
-            self.host.compute_manager.active_worker_ids = {run_id}
+        self.active_worker_ids.add(run_id)
 
         if hasattr(self.host.init_manager, "optimize_3d_button"):
             self.host.init_manager.optimize_3d_button.setText("Halt optimize")

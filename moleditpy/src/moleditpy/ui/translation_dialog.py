@@ -222,11 +222,13 @@ class TranslationDialog(BasePickingDialog):
     # ------------------------------------------------------------------
 
     def _populate_abs_inputs_from_atom(self, atom_idx: int) -> None:
-        pos = (
-            self.main_window.view_3d_manager.current_mol.GetConformer().GetPositions()[
-                atom_idx
-            ]
-        )
+        mol = self.main_window.view_3d_manager.current_mol
+        if mol is None:
+            return
+        conf = mol.GetConformer()
+        if conf is None:
+            return
+        pos = conf.GetPositions()[atom_idx]
         self.abs_x_input.setText(f"{pos[0]:.4f}")
         self.abs_y_input.setText(f"{pos[1]:.4f}")
         self.abs_z_input.setText(f"{pos[2]:.4f}")

@@ -301,6 +301,8 @@ class AngleDialog(GeometryBaseDialog):
 
     def calculate_angle(self) -> float:
         """Calculate the current bond angle."""
+        if self.atom1_idx is None or self.atom2_idx is None or self.atom3_idx is None:
+            return 0.0
         conf = self.mol.GetConformer()
         pos1 = conf.GetAtomPosition(self.atom1_idx)
         pos2 = conf.GetAtomPosition(self.atom2_idx)  # vertex
@@ -356,9 +358,8 @@ class AngleDialog(GeometryBaseDialog):
         else:
             positions = conf.GetPositions()
 
-        assert self.atom1_idx is not None
-        assert self.atom2_idx is not None
-        assert self.atom3_idx is not None
+        if self.atom1_idx is None or self.atom2_idx is None or self.atom3_idx is None:
+            return
         idx_a: int = self.atom1_idx
         idx_b: int = self.atom2_idx  # vertex
         idx_c: int = self.atom3_idx

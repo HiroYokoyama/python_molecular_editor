@@ -43,7 +43,7 @@ class AlignPlaneDialog(BasePickingDialog):
     ) -> None:
         super().__init__(mol, main_window, parent)
         self.plane = plane
-        self.selected_atoms = set()
+        self.selected_atoms: set[int] = set()
 
         # Add preselected atoms
         if preselected_atoms:

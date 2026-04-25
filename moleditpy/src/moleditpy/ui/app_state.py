@@ -16,7 +16,7 @@ import base64
 import copy
 import logging
 import os
-from typing import Any, Dict, Tuple
+from typing import Any, Dict, Optional, Tuple, TYPE_CHECKING
 
 import numpy as np
 
@@ -28,23 +28,33 @@ from rdkit.Chem import Descriptors, rdMolDescriptors
 from PyQt6.QtCore import QDateTime, QPointF, Qt
 from PyQt6.QtWidgets import QMessageBox
 
-try:
-    from PyQt6 import sip as _sip  # type: ignore
-
-    _sip_isdeleted = getattr(_sip, "isdeleted", None)
-except ImportError:
-    _sip = None  # type: ignore[assignment]
-    _sip_isdeleted = None
+if TYPE_CHECKING:
+    try:
+        from .molecular_data import MolecularData
+    except ImportError:
+        from moleditpy.ui.molecular_data import MolecularData
 
 try:
     # package relative imports (preferred when running as `python -m moleditpy`)
     from .atom_item import AtomItem
     from .bond_item import BondItem
     from ..utils.constants import VERSION
-except ImportError:
+except (ImportError, AttributeError):
     # Fallback to absolute imports for script-style execution
     from moleditpy.ui.atom_item import AtomItem
     from moleditpy.ui.bond_item import BondItem
+    from moleditpy.utils.constants import VERSION
+
+try:
+    from .molecular_data import MolecularData
+    from .custom_qt_interactor import CustomQtInteractor
+except (AttributeError, RuntimeError, TypeError, ImportError):
+    # Fallback to absolute imports for script-style execution
+    from moleditpy.core.molecular_data import MolecularData
+    from moleditpy.ui.custom_qt_interactor import CustomQtInteractor
+
+if TYPE_CHECKING:
+    from .main_window import MainWindow
     from moleditpy.utils.constants import VERSION
 
 
@@ -54,8 +64,10 @@ class StateManager:
 
     def __init__(self, host: Any) -> None:
         self.host = host
+        self.data: MolecularData  # Dynamically assigned in main_window_init.py
         self.has_unsaved_changes = False
-        self._preserved_plugin_data = {}
+        self._preserved_plugin_data: Dict[str, Any] = {}
+        self.dragged_atom_info: Optional[Dict[str, Any]] = None
 
     def get_current_state(self) -> Dict[str, Any]:
         atoms = {
@@ -687,6 +699,7 @@ class StateManager:
                 self.host.init_manager.scene.addItem(atom_item)
 
             # Restore next_atom_id
+
             self.host.state_manager.data._next_atom_id = structure_2d.get(
                 "next_atom_id",
                 max([atom["id"] for atom in atoms_2d]) + 1 if atoms_2d else 0,

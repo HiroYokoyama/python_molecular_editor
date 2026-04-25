@@ -309,8 +309,8 @@ class BondLengthDialog(GeometryBaseDialog):
                 for i in range(self.mol.GetNumAtoms())
             }
 
-        assert self.atom1_idx is not None
-        assert self.atom2_idx is not None
+        if self.atom1_idx is None or self.atom2_idx is None:
+            return
         idx1: int = self.atom1_idx
         idx2: int = self.atom2_idx
         pos1 = positions[idx1]

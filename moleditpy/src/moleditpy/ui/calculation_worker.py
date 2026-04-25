@@ -16,7 +16,7 @@ import re
 import numpy as np
 import sys
 import subprocess
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union
 
 from PyQt6.QtCore import QObject, pyqtSignal, pyqtSlot
 
@@ -722,6 +722,7 @@ class CalculationWorker(QObject):
 
     def __init__(self, parent: Optional[QObject] = None) -> None:
         super().__init__(parent)
+        self.halt_ids: Optional[Set[int]] = None
         self.start_work.connect(self.run_calculation)
 
     @pyqtSlot(str, object)
