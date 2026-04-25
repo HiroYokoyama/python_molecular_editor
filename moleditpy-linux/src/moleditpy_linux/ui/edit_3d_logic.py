@@ -73,15 +73,15 @@ class Edit3DManager:
         self.host = host
         # State variables previously held by mixin
         self.measurement_mode = False
-        self.selected_atoms_for_measurement = []
-        self.measurement_labels = []
-        self.measurement_text_actor = None
-        self.measurement_label_items_2d = []
-        self.selected_atoms_3d = set()
-        self.active_3d_dialogs = []
+        self.selected_atoms_for_measurement: list[int] = []
+        self.measurement_labels: list[Any] = []
+        self.measurement_text_actor: Any = None
+        self.measurement_label_items_2d: list[Any] = []
+        self.selected_atoms_3d: set[int] = set()
+        self.active_3d_dialogs: list[Any] = []
         self.is_3d_edit_mode = False
         self.dragged_atom_info = None
-        self.constraints_3d = []
+        self.constraints_3d: list[Any] = []
 
     def toggle_measurement_mode(self, checked: bool) -> None:
         """Toggle measurement mode on/off."""
@@ -169,19 +169,24 @@ class Edit3DManager:
             return
 
         # Prepare label positions and text
-        pts, labels = [], []
-        for atom_idx, label_text in self.measurement_labels:
-            if atom_idx < len(self.host.view_3d_manager.atom_positions_3d):
-                coord = self.host.view_3d_manager.atom_positions_3d[atom_idx].copy()
-                # Place at atom center
-                pts.append(coord)
-                labels.append(label_text)
+        atom_indices = [l[0] for l in self.measurement_labels]
+        labels = [l[1] for l in self.measurement_labels]
+        positions = []
+        texts = []
+        positions_3d = self.host.view_3d_manager.atom_positions_3d
+        if positions_3d is None:
+            return
 
-        if pts and labels:
+        for i, atom_idx in enumerate(atom_indices):
+            if atom_idx < len(positions_3d):
+                positions.append(positions_3d[atom_idx])
+                texts.append(labels[i])
+
+        if positions and texts:
             # Use PyVista's point_labels
             self.host.view_3d_manager.plotter.add_point_labels(
-                np.array(pts),
-                labels,
+                np.array(positions),
+                texts,
                 font_size=16,
                 point_size=0,
                 text_color="red",  # Always red for measurement

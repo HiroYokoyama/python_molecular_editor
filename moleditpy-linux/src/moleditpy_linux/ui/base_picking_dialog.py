@@ -48,8 +48,10 @@ class BasePickingDialog(Dialog3DPickingMixin, QDialog):
             False  # Track if any modifications were made during this session
         )
 
-    def keyPressEvent(self, event: QKeyEvent) -> None:
+    def keyPressEvent(self, event: Optional[QKeyEvent]) -> None:
         """Standard keyboard handler: Enter/Return triggers 'Apply'."""
+        if event is None:
+            return
         if event.key() == Qt.Key.Key_Return or event.key() == Qt.Key.Key_Enter:
             if hasattr(self, "apply_button") and self.apply_button.isEnabled():
                 # Call the apply method (must be implemented by subclass or connected)
@@ -58,7 +60,7 @@ class BasePickingDialog(Dialog3DPickingMixin, QDialog):
         else:
             QDialog.keyPressEvent(self, event)
 
-    def closeEvent(self, event: QCloseEvent) -> None:
+    def closeEvent(self, event: Optional[QCloseEvent]) -> None:
         """Cleanup on window close."""
         self.clear_atom_labels()
         self.disable_picking()
@@ -101,11 +103,13 @@ class BasePickingDialog(Dialog3DPickingMixin, QDialog):
 
         # 2. Update 3D Visualization cache
         try:
-            if isinstance(positions, dict):
-                for i, p in positions.items():
-                    self.main_window.view_3d_manager.atom_positions_3d[i] = p
-            else:
-                self.main_window.view_3d_manager.atom_positions_3d[:] = positions[:]
+            cache = self.main_window.view_3d_manager.atom_positions_3d
+            if cache is not None:
+                if isinstance(positions, dict):
+                    for i, p in positions.items():
+                        cache[i] = p
+                else:
+                    cache[:] = positions[:]
         except (AttributeError, ValueError, TypeError, IndexError):
             # If for some reason the cache is incompatible, draw_molecule_3d below will rebuild it
             pass

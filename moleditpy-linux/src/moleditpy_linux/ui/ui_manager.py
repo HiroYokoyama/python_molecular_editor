@@ -27,6 +27,7 @@ from PyQt6.QtWidgets import (
     QSplitter,
     QWidget,
 )
+from PyQt6.QtGui import QDragEnterEvent, QDropEvent, QMouseEvent
 
 try:
     from PyQt6 import sip as _sip  # type: ignore
@@ -196,7 +197,9 @@ class UIManager(QObject):
         """Helper to set the current mode from periodic table selection."""
         self.set_mode(f"atom_{symbol}")
 
-    def eventFilter(self, obj: QObject, event: QEvent) -> bool:
+    def eventFilter(self, obj: Optional[QObject], event: Optional[QEvent]) -> bool:
+        if event is None:
+            return False
         if (
             hasattr(self.host.view_3d_manager, "plotter")
             and obj is self.host.view_3d_manager.plotter
@@ -206,10 +209,12 @@ class UIManager(QObject):
 
         if obj is self.host:
             # Handle Drag and Drop via event filter
-            if event.type() == QEvent.Type.DragEnter:
+            if event.type() == QEvent.Type.DragEnter and isinstance(
+                event, QDragEnterEvent
+            ):
                 self.handle_drag_enter_event(event)
                 return True
-            if event.type() == QEvent.Type.Drop:
+            if event.type() == QEvent.Type.Drop and isinstance(event, QDropEvent):
                 self.handle_drop_event(event)
                 return True
 
@@ -323,13 +328,14 @@ class UIManager(QObject):
         self.host.view_3d_manager.plotter.interactor.SetInteractorStyle(style)
         self.host.view_3d_manager.plotter.interactor.Initialize()
 
-    def handle_drag_enter_event(self, event: QEvent) -> None:
+    def handle_drag_enter_event(self, event: QDragEnterEvent) -> None:
         """Internal handler for drag enter event (bypasses PyQt type checks in tests)."""
-        if not event.mimeData().hasUrls():
+        mime_data = event.mimeData()
+        if mime_data is None or not mime_data.hasUrls():
             event.ignore()
             return
 
-        for url in event.mimeData().urls():
+        for url in mime_data.urls():
             if not url.isLocalFile():
                 continue
 
@@ -347,9 +353,13 @@ class UIManager(QObject):
 
         event.ignore()
 
-    def handle_drop_event(self, event: QEvent) -> None:
+    def handle_drop_event(self, event: QDropEvent) -> None:
         """Internal handler for file drop event (bypasses PyQt type checks in tests)."""
-        urls = event.mimeData().urls()
+        mime_data = event.mimeData()
+        if mime_data is None:
+            event.ignore()
+            return
+        urls = mime_data.urls()
         file_path = next((u.toLocalFile() for u in urls if u.isLocalFile()), None)
         if not file_path:
             event.ignore()

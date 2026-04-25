@@ -348,7 +348,9 @@ class EditActionsManager:
             # Set clipboard with custom MIME type
             mime_data = QMimeData()
             mime_data.setData(CLIPBOARD_MIME_TYPE, byte_array)
-            QApplication.clipboard().setMimeData(mime_data)
+            cb = QApplication.clipboard()
+            if cb is not None:
+                cb.setMimeData(mime_data)
             self.host.statusBar().showMessage(
                 f"Copied {len(fragment_atoms)} atoms and {len(fragment_bonds)} bonds."
             )
@@ -379,12 +381,14 @@ class EditActionsManager:
         """Paste molecular fragment from clipboard"""
         try:
             clipboard = QApplication.clipboard()
+            if clipboard is None:
+                return
             mime_data = clipboard.mimeData()
-            if not mime_data.hasFormat(CLIPBOARD_MIME_TYPE):
+            if mime_data is None or not mime_data.hasFormat(CLIPBOARD_MIME_TYPE):
                 return
 
             byte_array = mime_data.data(CLIPBOARD_MIME_TYPE)
-            buffer = io.BytesIO(bytes(byte_array))  # type: ignore[arg-type]
+            buffer = io.BytesIO(byte_array.data())
             try:
                 fragment_data = pickle.load(buffer)
             except pickle.UnpicklingError:
@@ -768,10 +772,13 @@ class EditActionsManager:
             self.host.init_manager.copy_action.setEnabled(has_selection)
 
             clipboard = QApplication.clipboard()
-            mime_data = clipboard.mimeData()
-            self.host.init_manager.paste_action.setEnabled(
-                mime_data is not None and mime_data.hasFormat(CLIPBOARD_MIME_TYPE)
-            )
+            if clipboard is not None:
+                mime_data = clipboard.mimeData()
+                self.host.init_manager.paste_action.setEnabled(
+                    mime_data is not None and mime_data.hasFormat(CLIPBOARD_MIME_TYPE)
+                )
+            else:
+                self.host.init_manager.paste_action.setEnabled(False)
         except RuntimeError:
             # Suppress non-critical error
             pass
@@ -1053,7 +1060,7 @@ class EditActionsManager:
 
                 # Suppress potential errors if the item is already destroyed by SIP during iteration
                 with contextlib.suppress(AttributeError, RuntimeError, TypeError):
-                    if is_deleted_func and is_deleted_func(item):
+                    if is_deleted_func is not None and is_deleted_func(item):
                         continue
 
                 # Check if the item is no longer in a scene: skip updating it to avoid

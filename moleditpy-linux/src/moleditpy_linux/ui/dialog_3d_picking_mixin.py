@@ -12,10 +12,15 @@ DOI: 10.5281/zenodo.17268532
 
 from __future__ import annotations
 
-import logging  # [REPORT ERROR MISSING ATTRIBUTE]
+import logging
 import numpy as np
-from PyQt6.QtCore import QEvent, Qt
-from PyQt6.QtCore import QObject
+from PyQt6.QtCore import QEvent, Qt, QObject, QPoint
+from PyQt6.QtGui import QMouseEvent
+from typing import Any, Optional, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .main_window import MainWindow
+    from rdkit import Chem
 
 try:
     from ..utils.constants import pt
@@ -26,18 +31,29 @@ except ImportError:
 class Dialog3DPickingMixin:
     """Mixin providing common functionality for 3D atom selection."""
 
+    main_window: MainWindow
+    mol: Chem.Mol
+
     def __init__(self) -> None:
         """Initialize the Mixin."""
         self.picking_enabled = False
-        self._mouse_press_pos = None
+        self._mouse_press_pos: Optional[QPoint] = None
         self._mouse_moved = False
-        self.selection_labels = []
+        self.selection_labels: list[Any] = []
 
-    def eventFilter(self, obj: QObject, event: QEvent) -> bool:
+    def eventFilter(self, obj: Optional[QObject], event: Optional[QEvent]) -> bool:
         """Capture mouse clicks in the 3D view (reproducibly mimicking the original 3D edit logic)."""
+        if event is None:
+            return False
+
+        plotter = self.main_window.view_3d_manager.plotter
+        if plotter is None or self.mol is None:
+            return False
+
         if (
-            obj == self.main_window.view_3d_manager.plotter.interactor
+            obj == plotter.interactor
             and event.type() == QEvent.Type.MouseButtonPress
+            and isinstance(event, QMouseEvent)
             and event.button() == Qt.MouseButton.LeftButton
         ):
             # Start tracking for smart selection (click vs drag)
@@ -46,67 +62,65 @@ class Dialog3DPickingMixin:
 
             try:
                 # Retrieve VTK event coordinates (matches original logic)
-                interactor = self.main_window.view_3d_manager.plotter.interactor
+                interactor = plotter.interactor
+                if interactor is None:
+                    return False
                 click_pos = interactor.GetEventPosition()
-                picker = self.main_window.view_3d_manager.plotter.picker
+                picker = plotter.picker
+                if picker is None:
+                    return False
                 picker.Pick(
                     click_pos[0],
                     click_pos[1],
                     0,
-                    self.main_window.view_3d_manager.plotter.renderer,
+                    plotter.renderer,
                 )
 
                 if picker.GetActor() is self.main_window.view_3d_manager.atom_actor:
                     picked_position = np.array(picker.GetPickPosition())
-                    distances = np.linalg.norm(
-                        self.main_window.view_3d_manager.atom_positions_3d
-                        - picked_position,
-                        axis=1,
-                    )
-                    closest_atom_idx = np.argmin(distances)
+                    if self.main_window.view_3d_manager.atom_positions_3d is not None:
+                        distances = np.linalg.norm(
+                            self.main_window.view_3d_manager.atom_positions_3d
+                            - picked_position,
+                            axis=1,
+                        )
+                        closest_atom_idx = np.argmin(distances)
 
-                    # Add range check
-                    if 0 <= closest_atom_idx < self.mol.GetNumAtoms():
-                        # Click threshold check (matches original logic)
-                        atom = self.mol.GetAtomWithIdx(int(closest_atom_idx))
-                        if atom:
-                            try:
-                                atomic_num = atom.GetAtomicNum()
-                                vdw_radius = pt.GetRvdw(atomic_num)
-                                if vdw_radius < 0.1:
+                        # Add range check
+                        if 0 <= closest_atom_idx < self.mol.GetNumAtoms():
+                            # Click threshold check (matches original logic)
+                            atom = self.mol.GetAtomWithIdx(int(closest_atom_idx))
+                            if atom:
+                                try:
+                                    atomic_num = atom.GetAtomicNum()
+                                    vdw_radius = pt.GetRvdw(atomic_num)
+                                    if vdw_radius < 0.1:
+                                        vdw_radius = 1.5
+                                except (AttributeError, RuntimeError, TypeError):
                                     vdw_radius = 1.5
-                            except (AttributeError, RuntimeError, TypeError):
-                                vdw_radius = 1.5
-                            click_threshold = vdw_radius * 1.5
+                                click_threshold = vdw_radius * 1.5
 
-                            if distances[closest_atom_idx] < click_threshold:
-                                if hasattr(self.main_window, "_picking_consumed"):
-                                    self.main_window._picking_consumed = True
-                                else:  # [REPORT ERROR MISSING ATTRIBUTE]
-                                    logging.error(
-                                        "REPORT ERROR: Missing attribute '_picking_consumed' on self.main_window"
-                                    )
-                                self.on_atom_picked(int(closest_atom_idx))
+                                if distances[closest_atom_idx] < click_threshold:
+                                    if hasattr(self.main_window, "_picking_consumed"):
+                                        self.main_window._picking_consumed = True
+                                    self.on_atom_picked(int(closest_atom_idx))
 
-                                # We picked an atom, so stop tracking for background click
-                                self._mouse_press_pos = None
-                                return True
+                                    # We picked an atom, so stop tracking for background click
+                                    self._mouse_press_pos = None
+                                    return True
 
                 # Clicked something other than an atom
-                # Permitting rotation (drag) without immediate selection clearing.
-                # Actual clearing is handled in the MouseButtonRelease event.
                 return False
 
             except (AttributeError, RuntimeError, ValueError, TypeError) as e:
                 print(f"Error in eventFilter: {e}")
-                # On exception, don't swallow the event either — let the normal
-                # event pipeline continue so the UI remains responsive.
                 return False
 
         # Add movement tracking for smart selection
         elif (
-            obj == self.main_window.view_3d_manager.plotter.interactor
+            obj == plotter.interactor
             and event.type() == QEvent.Type.MouseMove
+            and isinstance(event, QMouseEvent)
         ):
             if self._mouse_press_pos is not None:
                 # Check if moved significantly
@@ -116,8 +130,9 @@ class Dialog3DPickingMixin:
 
         # Add release handling for smart selection
         elif (
-            obj == self.main_window.view_3d_manager.plotter.interactor
+            obj == plotter.interactor
             and event.type() == QEvent.Type.MouseButtonRelease
+            and isinstance(event, QMouseEvent)
             and event.button() == Qt.MouseButton.LeftButton
         ):
             if self._mouse_press_pos is not None:
@@ -125,121 +140,64 @@ class Dialog3DPickingMixin:
                     # Pure click (no drag) on background -> Clear selection
                     if hasattr(self, "clear_selection"):
                         self.clear_selection()
-                    else:  # [REPORT ERROR MISSING ATTRIBUTE]
-                        logging.error(
-                            "REPORT ERROR: Missing attribute 'clear_selection' on self"
-                        )
 
                 # Reset state
                 self._mouse_press_pos = None
                 self._mouse_moved = False
 
-        return super().eventFilter(obj, event)
+        return False
+
+    def on_atom_picked(self, atom_idx: int) -> None:
+        """Handle atom picking. Must be implemented by the dialog."""
+        raise NotImplementedError("on_atom_picked must be implemented by subclasses")
 
     def enable_picking(self) -> None:
         """Enable atom selection in the 3D view."""
-        self.main_window.view_3d_manager.plotter.interactor.installEventFilter(self)
-        self.picking_enabled = True
-        # Ensure the main window flag exists
+        plotter = self.main_window.view_3d_manager.plotter
+        if plotter is not None and plotter.interactor is not None:
+            plotter.interactor.installEventFilter(self)
+            self.picking_enabled = True
         if hasattr(self.main_window, "_picking_consumed"):
             self.main_window._picking_consumed = False
-        else:  # [REPORT ERROR MISSING ATTRIBUTE]
-            logging.error(
-                "REPORT ERROR: Missing attribute '_picking_consumed' on self.main_window"
-            )
 
     def disable_picking(self) -> None:
         """Disable atom selection in the 3D view."""
         if self.picking_enabled:
-            self.main_window.view_3d_manager.plotter.interactor.removeEventFilter(self)
+            plotter = self.main_window.view_3d_manager.plotter
+            if plotter is not None and plotter.interactor is not None:
+                plotter.interactor.removeEventFilter(self)
             self.picking_enabled = False
         if hasattr(self.main_window, "_picking_consumed"):
             self.main_window._picking_consumed = False
-        else:  # [REPORT ERROR MISSING ATTRIBUTE]
-            logging.error(
-                "REPORT ERROR: Missing attribute '_picking_consumed' on self.main_window"
-            )
-
-    def try_alternative_picking(self, x: int, y: int) -> None:
-        """Alternative picking method (unused)."""
-
-    # ------------------------------------------------------------------
-    # Label management (shared across dialogs)
-    # ------------------------------------------------------------------
 
     def clear_atom_labels(self) -> None:
         """Remove all label actors from the plotter."""
-        for label_actor in self.selection_labels:
-            try:
-                if label_actor is not None:
-                    self.main_window.view_3d_manager.plotter.remove_actor(label_actor)
-            except (AttributeError, RuntimeError, TypeError):
-                # Ignore actor removal failure on stale plotter
-                pass
-
+        plotter = self.main_window.view_3d_manager.plotter
+        if plotter is not None:
+            for label_actor in self.selection_labels:
+                try:
+                    if label_actor is not None:
+                        plotter.remove_actor(label_actor)
+                except (AttributeError, RuntimeError, TypeError):
+                    pass
         self.selection_labels = []
 
-    # Alias — some dialogs use this name instead.
     clear_selection_labels = clear_atom_labels
 
     def add_selection_label(
         self, atom_idx: int, label_text: str, color: str = "yellow"
     ) -> None:
-        """Add a point label at the position of *atom_idx*.
-
-        Parameters
-        ----------
-        atom_idx : int
-            Index into ``self.main_window.view_3d_manager.atom_positions_3d``.
-        label_text : str
-            Text shown next to the atom.
-        color : str, optional
-            Label colour (default ``'yellow'``).
-        """
+        """Add a point label at the position of *atom_idx*."""
         plotter = self.main_window.view_3d_manager.plotter
+        if plotter is None:
+            return
+
         try:
             cam = plotter.camera_position
         except (AttributeError, RuntimeError, TypeError):
             cam = None
 
-        pos = self.main_window.view_3d_manager.atom_positions_3d[atom_idx]
-        label_actor = plotter.add_point_labels(
-            [pos],
-            [label_text],
-            point_size=20,
-            font_size=12,
-            text_color=color,
-            always_visible=True,
-        )
-        self.selection_labels.append(label_actor)
-
-        if cam is not None:
-            try:
-                plotter.camera_position = cam
-            except (AttributeError, RuntimeError, TypeError):
-                pass
-
-    def show_atom_labels_for(
-        self, atoms_and_labels: list[tuple[int, str]], color: str = "yellow"
-    ) -> None:
-        """Clear existing labels and add new ones for each *(idx, text)* pair.
-
-        Parameters
-        ----------
-        atoms_and_labels : list[tuple[int, str]]
-            Each element is ``(atom_idx, label_text)``.
-        color : str, optional
-            Label colour (default ``'yellow'``).
-        """
-        plotter = self.main_window.view_3d_manager.plotter
-        try:
-            cam = plotter.camera_position
-        except (AttributeError, RuntimeError, TypeError):
-            cam = None
-
-        self.clear_atom_labels()
-
-        for atom_idx, label_text in atoms_and_labels:
+        if self.main_window.view_3d_manager.atom_positions_3d is not None:
             pos = self.main_window.view_3d_manager.atom_positions_3d[atom_idx]
             label_actor = plotter.add_point_labels(
                 [pos],
@@ -250,6 +208,40 @@ class Dialog3DPickingMixin:
                 always_visible=True,
             )
             self.selection_labels.append(label_actor)
+
+            if cam is not None:
+                try:
+                    plotter.camera_position = cam
+                except (AttributeError, RuntimeError, TypeError):
+                    pass
+
+    def show_atom_labels_for(
+        self, atoms_and_labels: list[tuple[int, str]], color: str = "yellow"
+    ) -> None:
+        """Clear existing labels and add new ones for each *(idx, text)* pair."""
+        plotter = self.main_window.view_3d_manager.plotter
+        if plotter is None:
+            return
+
+        try:
+            cam = plotter.camera_position
+        except (AttributeError, RuntimeError, TypeError):
+            cam = None
+
+        self.clear_atom_labels()
+
+        if self.main_window.view_3d_manager.atom_positions_3d is not None:
+            for atom_idx, label_text in atoms_and_labels:
+                pos = self.main_window.view_3d_manager.atom_positions_3d[atom_idx]
+                label_actor = plotter.add_point_labels(
+                    [pos],
+                    [label_text],
+                    point_size=20,
+                    font_size=12,
+                    text_color=color,
+                    always_visible=True,
+                )
+                self.selection_labels.append(label_actor)
 
         if cam is not None:
             try:

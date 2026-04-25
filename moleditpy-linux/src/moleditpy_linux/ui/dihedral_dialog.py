@@ -302,10 +302,13 @@ class DihedralDialog(GeometryBaseDialog):
         """Calculate the current dihedral angle."""
         if not self._is_selection_complete():
             return 0.0
-        assert self.atom1_idx is not None
-        assert self.atom2_idx is not None
-        assert self.atom3_idx is not None
-        assert self.atom4_idx is not None
+        if (
+            self.atom1_idx is None
+            or self.atom2_idx is None
+            or self.atom3_idx is None
+            or self.atom4_idx is None
+        ):
+            return 0.0  # Return value will be ignored in apply_geometry_update
         return calculate_dihedral(
             self.mol.GetConformer().GetPositions(),
             self.atom1_idx,
@@ -367,10 +370,13 @@ class DihedralDialog(GeometryBaseDialog):
         else:
             positions = conf.GetPositions()
 
-        assert self.atom1_idx is not None
-        assert self.atom2_idx is not None
-        assert self.atom3_idx is not None
-        assert self.atom4_idx is not None
+        if (
+            self.atom1_idx is None
+            or self.atom2_idx is None
+            or self.atom3_idx is None
+            or self.atom4_idx is None
+        ):
+            return
         idx1: int = self.atom1_idx
         idx2: int = self.atom2_idx
         idx3: int = self.atom3_idx

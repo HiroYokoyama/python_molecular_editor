@@ -15,9 +15,9 @@ print("MoleditPy - A Python-based molecular editing software")
 print("-----------------------------------------------------\n")
 
 try:
-    from .main import main
+    from .main import main  # type: ignore
 except ImportError:
-    from main import main
+    from main import main  # type: ignore
 
 # --- Application Execution ---
 if __name__ == "__main__":

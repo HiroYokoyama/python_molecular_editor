@@ -12,7 +12,10 @@ DOI: 10.5281/zenodo.17268532
 
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any, Optional, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from rdkit import Chem
 
 # PyQt6 Modules
 from PyQt6.QtCore import pyqtSignal
@@ -39,9 +42,14 @@ try:
     from .string_importers import StringImporterManager
     from .ui_manager import UIManager
     from .view_3d_logic import View3DManager
-except (AttributeError, RuntimeError, TypeError):
+    from .molecule_scene import MoleculeScene
+    from ..core.molecular_data import MolecularData
+    from .custom_qt_interactor import CustomQtInteractor
+except (AttributeError, RuntimeError, TypeError, ImportError):
     # Fallback to absolute imports for script-style execution
     from moleditpy_linux.ui.app_state import StateManager
+    from moleditpy_linux.ui.compute_logic import ComputeManager
+    from moleditpy_linux.ui.dialog_logic import DialogManager
     from moleditpy_linux.ui.edit_3d_logic import Edit3DManager
     from moleditpy_linux.ui.edit_actions_logic import EditActionsManager
     from moleditpy_linux.ui.io_logic import IOManager
@@ -50,6 +58,9 @@ except (AttributeError, RuntimeError, TypeError):
     from moleditpy_linux.ui.string_importers import StringImporterManager
     from moleditpy_linux.ui.ui_manager import UIManager
     from moleditpy_linux.ui.view_3d_logic import View3DManager
+    from moleditpy_linux.ui.molecule_scene import MoleculeScene
+    from moleditpy_linux.core.molecular_data import MolecularData
+    from moleditpy_linux.ui.custom_qt_interactor import CustomQtInteractor
 
 
 class MainWindow(QMainWindow):
@@ -81,7 +92,7 @@ class MainWindow(QMainWindow):
 
     # --- Core Proxy Properties (Legacy Plugin Support Only. Bypassed by Core Logics) ---
     @property
-    def current_mol(self) -> Any:
+    def current_mol(self) -> Optional[Chem.Mol]:
         """Proxy for current molecule. Not for core logic use."""
         return self.view_3d_manager.current_mol
 
@@ -91,17 +102,17 @@ class MainWindow(QMainWindow):
         self.view_3d_manager.current_mol = value
 
     @property
-    def plotter(self) -> Any:
+    def plotter(self) -> Optional[CustomQtInteractor]:
         """Proxy for 3D plotter. Not for core logic use."""
         return self.view_3d_manager.plotter
 
     @property
-    def data(self) -> Any:
+    def data(self) -> MolecularData:
         """Proxy for state data. Not for core logic use."""
         return self.state_manager.data
 
     @property
-    def scene(self) -> Any:
+    def scene(self) -> Optional[MoleculeScene]:
         """Proxy for 2D scene. Not for core logic use."""
         return self.init_manager.scene
 

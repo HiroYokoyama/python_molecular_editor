@@ -658,7 +658,7 @@ def resolve_2d_overlaps(
                 rep_id1, rep_id2 = i1, i2
                 break
 
-        if rep_id1 is None:
+        if rep_id1 is None or rep_id2 is None:
             continue
 
         frag1 = next((f for f in fragments if rep_id1 in f), None)

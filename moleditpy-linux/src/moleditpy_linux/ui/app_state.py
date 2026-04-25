@@ -13,10 +13,11 @@ DOI: 10.5281/zenodo.17268532
 from __future__ import annotations
 
 import base64
+import binascii
 import copy
 import logging
 import os
-from typing import Any, Dict, Tuple
+from typing import Any, Dict, Optional, Tuple, TYPE_CHECKING
 
 import numpy as np
 
@@ -29,23 +30,23 @@ from PyQt6.QtCore import QDateTime, QPointF, Qt
 from PyQt6.QtWidgets import QMessageBox
 
 try:
-    from PyQt6 import sip as _sip  # type: ignore
-
-    _sip_isdeleted = getattr(_sip, "isdeleted", None)
-except ImportError:
-    _sip = None  # type: ignore[assignment]
-    _sip_isdeleted = None
-
-try:
     # package relative imports (preferred when running as `python -m moleditpy`)
     from .atom_item import AtomItem
     from .bond_item import BondItem
     from ..utils.constants import VERSION
-except ImportError:
+except (ImportError, AttributeError):
     # Fallback to absolute imports for script-style execution
     from moleditpy_linux.ui.atom_item import AtomItem
     from moleditpy_linux.ui.bond_item import BondItem
     from moleditpy_linux.utils.constants import VERSION
+
+try:
+    from .molecular_data import MolecularData
+except (AttributeError, RuntimeError, TypeError, ImportError):
+    from moleditpy_linux.core.molecular_data import MolecularData
+
+if TYPE_CHECKING:
+    from .main_window import MainWindow
 
 
 # --- Class Definition ---
@@ -54,8 +55,10 @@ class StateManager:
 
     def __init__(self, host: Any) -> None:
         self.host = host
+        self.data: MolecularData  # Dynamically assigned in main_window_init.py
         self.has_unsaved_changes = False
-        self._preserved_plugin_data = {}
+        self._preserved_plugin_data: Dict[str, Any] = {}
+        self.dragged_atom_info: Optional[Dict[str, Any]] = None
 
     def get_current_state(self) -> Dict[str, Any]:
         atoms = {
@@ -417,7 +420,7 @@ class StateManager:
     def create_json_data(self) -> Dict[str, Any]:
         """Convert current state to PMEJSON."""
         # Metadata
-        json_data = {
+        json_data: Dict[str, Any] = {
             "format": "PME Project",
             "version": "1.0",
             "application": "MoleditPy",
@@ -687,6 +690,7 @@ class StateManager:
                 self.host.init_manager.scene.addItem(atom_item)
 
             # Restore next_atom_id
+
             self.host.state_manager.data._next_atom_id = structure_2d.get(
                 "next_atom_id",
                 max([atom["id"] for atom in atoms_2d]) + 1 if atoms_2d else 0,
@@ -857,7 +861,7 @@ class StateManager:
                             self.host.ui_manager._enable_3d_features(True)
                         except (RuntimeError, TypeError, AttributeError):
                             pass
-            except (RuntimeError, ValueError, TypeError, base64.binascii.Error) as e:
+            except (RuntimeError, ValueError, TypeError, binascii.Error) as e:
                 logging.error(f"Could not restore 3D molecular data: {e}")
                 self.host.view_3d_manager.current_mol = None
 

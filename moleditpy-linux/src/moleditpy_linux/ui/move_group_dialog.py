@@ -10,13 +10,14 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
+from typing import TYPE_CHECKING, Optional, Union, Any
 import logging
-from typing import Any, Optional
-
 import numpy as np
 import pyvista as pv
-from PyQt6.QtCore import QEvent, Qt
+from PyQt6.QtCore import QEvent, Qt, QObject
+from PyQt6.QtGui import QMouseEvent
 from PyQt6.QtWidgets import (
+    QApplication,
     QGridLayout,
     QHBoxLayout,
     QLabel,
@@ -24,6 +25,7 @@ from PyQt6.QtWidgets import (
     QMessageBox,
     QPushButton,
     QVBoxLayout,
+    QWidget,
 )
 
 try:
@@ -45,19 +47,34 @@ class MoveGroupDialog(BasePickingDialog):
         parent: Any = None,
     ) -> None:
         super().__init__(mol, main_window, parent)
-        self.selected_atoms = set()
-        self.group_atoms = set()  # All atoms connected to selected atoms
+        self.selected_atoms: set[int] = set()
+        self.group_atoms: set[int] = set()  # All atoms connected to selected atoms
 
         # Add preselected atoms
         if preselected_atoms:
             # For MoveGroup, we pick the first atom and select its connected group
             self.on_atom_picked(preselected_atoms[0])
 
-        # State for group movement
         self.clicked_atom_for_toggle: Optional[int] = None
+        # State for group movement (used by CustomInteractorStyle)
         self._initial_positions: dict = {}
         self._is_dragging_group_vtk = False
         self._is_rotating_group_vtk = False
+        self._drag_atom_idx: Optional[int] = None
+        self._drag_start_pos: Optional[Any] = None
+        self._mouse_moved: bool = False
+        self._rotation_start_pos: Optional[Any] = None
+        self._rotation_mouse_moved: bool = False
+        self._rotation_atom_idx: Optional[int] = None
+        self._group_centroid: Optional[np.ndarray] = None
+
+        # State for group movement (used by dialog's own event filter)
+        self.drag_atom_idx: Optional[int] = None
+        self.potential_drag: bool = False
+        self.is_dragging_group: bool = False
+        self.drag_start_pos: Optional[Any] = None
+        self.mouse_moved_during_drag: bool = False
+        self.highlight_actor: Optional[pv.Actor] = None
 
         self.init_ui()
 
@@ -66,11 +83,6 @@ class MoveGroupDialog(BasePickingDialog):
         self.setModal(False)
         self.resize(300, 400)
         layout = QVBoxLayout(self)
-
-        # Drag state management
-        self.is_dragging_group = False
-        self.drag_start_pos = None
-        self.mouse_moved_during_drag = False
 
         # Instructions
         instruction_label = QLabel(
@@ -176,7 +188,11 @@ class MoveGroupDialog(BasePickingDialog):
 
     def eventFilter(self, obj: Any, event: Any) -> bool:
         """Mouse event handling in 3D view - delegate to CustomInteractorStyle if a group is selected."""
-        if obj == self.main_window.view_3d_manager.plotter.interactor:
+        plotter = self.main_window.view_3d_manager.plotter
+        if plotter is None or self.mol is None:
+            return False
+
+        if obj == plotter.interactor:
             # Prevent state confusion from double/triple clicks
             if event.type() == QEvent.Type.MouseButtonDblClick:
                 # Ignore double clicks and reset state
@@ -184,40 +200,45 @@ class MoveGroupDialog(BasePickingDialog):
                 self.drag_start_pos = None
                 self.mouse_moved_during_drag = False
                 self.potential_drag = False
-                if hasattr(self, "clicked_atom_for_toggle"):  # [SAFE]
-                    delattr(self, "clicked_atom_for_toggle")
+                self.clicked_atom_for_toggle = None
                 return False
 
             if (
                 event.type() == QEvent.Type.MouseButtonPress
+                and isinstance(event, QMouseEvent)
                 and event.button() == Qt.MouseButton.LeftButton
             ):
                 # Clean up previous state (triple-click countermeasure)
                 self.is_dragging_group = False
                 self.potential_drag = False
-                if hasattr(self, "clicked_atom_for_toggle"):  # [SAFE]
-                    delattr(self, "clicked_atom_for_toggle")
+                self.clicked_atom_for_toggle = None
                 # Delegate to CustomInteractorStyle if a group is already selected
                 if self.group_atoms:
                     return False
 
                 # Mouse press handling
                 try:
-                    interactor = self.main_window.view_3d_manager.plotter.interactor
+                    interactor = plotter.interactor
+                    if interactor is None:
+                        return False
                     click_pos = interactor.GetEventPosition()
 
                     # Pick via plotter
-                    picker = self.main_window.view_3d_manager.plotter.picker
+                    picker = plotter.picker
+                    if picker is None:
+                        return False
                     picker.Pick(
                         click_pos[0],
                         click_pos[1],
                         0,
-                        self.main_window.view_3d_manager.plotter.renderer,
+                        plotter.renderer,
                     )
 
                     clicked_atom_idx = None
                     if picker.GetActor() is self.main_window.view_3d_manager.atom_actor:
                         picked_position = np.array(picker.GetPickPosition())
+                        if self.main_window.view_3d_manager.atom_positions_3d is None:
+                            return False
                         distances = np.linalg.norm(
                             self.main_window.view_3d_manager.atom_positions_3d
                             - picked_position,
@@ -269,7 +290,9 @@ class MoveGroupDialog(BasePickingDialog):
                     logging.debug(f"Error in mouse press: {e}")
                     return False
 
-            elif event.type() == QEvent.Type.MouseMove:
+            elif event.type() == QEvent.Type.MouseMove and isinstance(
+                event, QMouseEvent
+            ):
                 # Mouse move handling
                 if (
                     getattr(self, "potential_drag", False)
@@ -277,7 +300,10 @@ class MoveGroupDialog(BasePickingDialog):
                     and not self.is_dragging_group
                 ):
                     try:
-                        interactor = self.main_window.view_3d_manager.plotter.interactor
+                        plotter_ref = self.main_window.view_3d_manager.plotter
+                        if plotter_ref is None or plotter_ref.interactor is None:
+                            return False
+                        interactor = plotter_ref.interactor
                         current_pos = interactor.GetEventPosition()
                         dx = current_pos[0] - self.drag_start_pos[0]
                         dy = current_pos[1] - self.drag_start_pos[1]
@@ -288,9 +314,11 @@ class MoveGroupDialog(BasePickingDialog):
                             self.is_dragging_group = True
                             self.potential_drag = False
                             try:
-                                self.main_window.view_3d_manager.plotter.setCursor(
-                                    Qt.CursorShape.ClosedHandCursor
-                                )
+                                plotter_ptr = self.main_window.view_3d_manager.plotter
+                                if plotter_ptr is not None:
+                                    plotter_ptr.setCursor(
+                                        Qt.CursorShape.ClosedHandCursor
+                                    )
                             except (
                                 AttributeError,
                                 RuntimeError,
@@ -306,7 +334,10 @@ class MoveGroupDialog(BasePickingDialog):
 
                 if self.is_dragging_group and self.drag_start_pos:
                     try:
-                        interactor = self.main_window.view_3d_manager.plotter.interactor
+                        plotter_ref = self.main_window.view_3d_manager.plotter
+                        if plotter_ref is None or plotter_ref.interactor is None:
+                            return False
+                        interactor = plotter_ref.interactor
                         current_pos = interactor.GetEventPosition()
                         dx = current_pos[0] - self.drag_start_pos[0]
                         dy = current_pos[1] - self.drag_start_pos[1]
@@ -319,14 +350,19 @@ class MoveGroupDialog(BasePickingDialog):
                 # Hover handling
                 if self.group_atoms:
                     try:
-                        interactor = self.main_window.view_3d_manager.plotter.interactor
+                        plotter_ref = self.main_window.view_3d_manager.plotter
+                        if plotter_ref is None or plotter_ref.interactor is None:
+                            return False
+                        interactor = plotter_ref.interactor
                         current_pos = interactor.GetEventPosition()
-                        picker = self.main_window.view_3d_manager.plotter.picker
+                        picker = plotter_ref.picker
+                        if picker is None:
+                            return False
                         picker.Pick(
                             current_pos[0],
                             current_pos[1],
                             0,
-                            self.main_window.view_3d_manager.plotter.renderer,
+                            plotter_ref.renderer,
                         )
 
                         if (
@@ -334,6 +370,11 @@ class MoveGroupDialog(BasePickingDialog):
                             is self.main_window.view_3d_manager.atom_actor
                         ):
                             picked_position = np.array(picker.GetPickPosition())
+                            if (
+                                self.main_window.view_3d_manager.atom_positions_3d
+                                is None
+                            ):
+                                return False
                             distances = np.linalg.norm(
                                 self.main_window.view_3d_manager.atom_positions_3d
                                 - picked_position,
@@ -342,17 +383,11 @@ class MoveGroupDialog(BasePickingDialog):
                             closest_atom_idx = np.argmin(distances)
 
                             if closest_atom_idx in self.group_atoms:
-                                self.main_window.view_3d_manager.plotter.setCursor(
-                                    Qt.CursorShape.OpenHandCursor
-                                )
+                                plotter_ref.setCursor(Qt.CursorShape.OpenHandCursor)
                             else:
-                                self.main_window.view_3d_manager.plotter.setCursor(
-                                    Qt.CursorShape.ArrowCursor
-                                )
+                                plotter_ref.setCursor(Qt.CursorShape.ArrowCursor)
                         else:
-                            self.main_window.view_3d_manager.plotter.setCursor(
-                                Qt.CursorShape.ArrowCursor
-                            )
+                            plotter_ref.setCursor(Qt.CursorShape.ArrowCursor)
                     except (AttributeError, RuntimeError, ValueError, TypeError):
                         pass
 
@@ -360,6 +395,7 @@ class MoveGroupDialog(BasePickingDialog):
 
             elif (
                 event.type() == QEvent.Type.MouseButtonRelease
+                and isinstance(event, QMouseEvent)
                 and event.button() == Qt.MouseButton.LeftButton
             ):
                 if getattr(self, "potential_drag", False) or (
@@ -370,9 +406,9 @@ class MoveGroupDialog(BasePickingDialog):
                             self.is_dragging_group and self.mouse_moved_during_drag
                         ):
                             # Mouse move below threshold = simple click (toggle)
-                            if hasattr(self, "clicked_atom_for_toggle"):
+                            if self.clicked_atom_for_toggle is not None:
                                 clicked_atom = self.clicked_atom_for_toggle
-                                delattr(self, "clicked_atom_for_toggle")
+                                self.clicked_atom_for_toggle = None
                                 self.is_dragging_group = False
                                 self.drag_start_pos = None
                                 self.mouse_moved_during_drag = False
@@ -380,9 +416,13 @@ class MoveGroupDialog(BasePickingDialog):
                                 if clicked_atom is not None:
                                     self.on_atom_picked(clicked_atom)
                                 try:
-                                    self.main_window.view_3d_manager.plotter.setCursor(
-                                        Qt.CursorShape.ArrowCursor
+                                    plotter_ptr = (
+                                        self.main_window.view_3d_manager.plotter
                                     )
+                                    if plotter_ptr is not None:
+                                        plotter_ptr.setCursor(
+                                            Qt.CursorShape.ArrowCursor
+                                        )
                                 except (
                                     AttributeError,
                                     RuntimeError,
@@ -404,9 +444,9 @@ class MoveGroupDialog(BasePickingDialog):
                         self.mouse_moved_during_drag = False
                         self.potential_drag = False
                         try:
-                            self.main_window.view_3d_manager.plotter.setCursor(
-                                Qt.CursorShape.ArrowCursor
-                            )
+                            plotter_ptr = self.main_window.view_3d_manager.plotter
+                            if plotter_ptr is not None:
+                                plotter_ptr.setCursor(Qt.CursorShape.ArrowCursor)
                         except (AttributeError, RuntimeError, ValueError, TypeError):
                             pass
 
@@ -471,6 +511,10 @@ class MoveGroupDialog(BasePickingDialog):
             return
 
         selected_indices = list(self.group_atoms)
+        plotter = self.main_window.view_3d_manager.plotter
+        if self.main_window.view_3d_manager.atom_positions_3d is None:
+            logging.error("atom_positions_3d is None in update_atom_labels")
+            return
         selected_positions = self.main_window.view_3d_manager.atom_positions_3d[
             selected_indices
         ]
@@ -489,7 +533,9 @@ class MoveGroupDialog(BasePickingDialog):
             orient=False,
         )
 
-        self.highlight_actor = self.main_window.view_3d_manager.plotter.add_mesh(
+        if plotter is None:
+            return
+        self.highlight_actor = plotter.add_mesh(
             highlight_glyphs,
             color="yellow",
             opacity=0.3,
@@ -497,7 +543,7 @@ class MoveGroupDialog(BasePickingDialog):
             pickable=False,
         )
 
-        self.main_window.view_3d_manager.plotter.render()
+        plotter.render()
 
     def clear_atom_labels(self) -> None:
         """Clear highlights."""
@@ -505,26 +551,26 @@ class MoveGroupDialog(BasePickingDialog):
         super().clear_atom_labels()
 
         # Clear MoveGroup specific highlight
-        try:
-            self.main_window.view_3d_manager.plotter.remove_actor(
-                "move_group_highlight"
-            )
-        except (AttributeError, RuntimeError, ValueError, TypeError):
-            pass
-
-        if hasattr(self, "highlight_actor") and self.highlight_actor:
+        plotter = self.main_window.view_3d_manager.plotter
+        if plotter is not None:
             try:
-                self.main_window.view_3d_manager.plotter.remove_actor(
-                    self.highlight_actor
-                )
+                plotter.remove_actor("move_group_highlight")
             except (AttributeError, RuntimeError, ValueError, TypeError):
                 pass
+
+        if self.highlight_actor:
+            if plotter is not None:
+                try:
+                    plotter.remove_actor(self.highlight_actor)
+                except (AttributeError, RuntimeError, ValueError, TypeError):
+                    pass
             self.highlight_actor = None
 
-        try:
-            self.main_window.view_3d_manager.plotter.render()
-        except (AttributeError, RuntimeError, ValueError, TypeError):
-            pass
+        if plotter is not None:
+            try:
+                plotter.render()
+            except (AttributeError, RuntimeError, ValueError, TypeError):
+                pass
 
     def reset_translation_inputs(self) -> None:
         self.x_trans_input.setText("0.0")
@@ -630,6 +676,3 @@ class MoveGroupDialog(BasePickingDialog):
         self.update_display()
         self.is_dragging_group = False
         self.drag_start_pos = None
-
-
-from typing import Any

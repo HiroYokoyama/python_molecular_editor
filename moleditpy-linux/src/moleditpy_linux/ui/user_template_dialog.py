@@ -10,7 +10,7 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
-from typing import Any, Optional
+from typing import Any
 
 from PyQt6.QtCore import QDateTime, QLineF, QPointF, QRectF, Qt, QTimer
 from PyQt6.QtGui import QBrush, QColor, QFont, QPainter, QPen
@@ -232,7 +232,7 @@ class UserTemplateDialog(QDialog):
             logging.error(f"Error loading template file {filepath}: {e}")
             return None
 
-    def save_template_file(self, filepath: str, template_data: Any) -> Optional[bool]:
+    def save_template_file(self, filepath: str, template_data: Any) -> bool:
         """Save template data to a JSON file."""
         try:
             with open(filepath, "w", encoding="utf-8") as f:

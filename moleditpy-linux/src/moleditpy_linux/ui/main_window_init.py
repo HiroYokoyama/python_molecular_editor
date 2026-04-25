@@ -107,6 +107,29 @@ class MainInitManager:
         self, host: Any, initial_file: Optional[str] = None, safe_mode: bool = False
     ) -> None:
         self.host = host
+        # Explicit declarations for Mypy
+        self.scene: Optional[MoleculeScene] = None
+        self.data: Optional[MolecularData] = None
+        self.formula_label: Optional[QLabel] = None
+        self.status_bar: Optional[Any] = None
+        self.undo_action: Optional[QAction] = None
+        self.redo_action: Optional[QAction] = None
+        self.cut_action: Optional[QAction] = None
+        self.copy_action: Optional[QAction] = None
+        self.import_menu: Optional[QMenu] = None
+        self.toolbar: Optional[QToolBar] = None
+        self.toolbar_bottom: Optional[QToolBar] = None
+        self.plugin_toolbar: Optional[QToolBar] = None
+        self.tool_group: Optional[QActionGroup] = None
+        self.other_atom_action: Optional[QAction] = None
+        self.splitter: Optional[QSplitter] = None
+        self.cleanup_button: Optional[QPushButton] = None
+        self.convert_button: Optional[QPushButton] = None
+        self.optimize_3d_button: Optional[QPushButton] = None
+        self.export_button: Optional[QToolButton] = None
+        self.style_button: Optional[QToolButton] = None
+        self.optimization_method: str = "MMFF_RDKIT"
+
         self.host.init_manager = self
         # This helper is not used as a mixin in this project; initialization
         # happens on the `QMainWindow` base class in
@@ -226,7 +249,12 @@ class MainInitManager:
         self._init_toolbars()
         self.init_menu_bar()
 
-        self._setup_action_groups(self.toolbar, self.toolbar_bottom)
+        if self.toolbar is not None and self.toolbar_bottom is not None:
+            self._setup_action_groups(self.toolbar, self.toolbar_bottom)
+        else:
+            logging.error(
+                "REPORT ERROR: Toolbars not initialized before setup_action_groups"
+            )
 
     def init_menu_bar(self) -> None:
         menu_bar = self.host.menuBar()
@@ -653,18 +681,12 @@ class MainInitManager:
             if top_action.menu():
                 clear_menu(top_action.menu())
 
-        if (
-            hasattr(self.host.init_manager, "export_button")
-            and self.host.init_manager.export_button.menu()
-        ):
-            clear_menu(self.host.init_manager.export_button.menu())
+        if self.export_button and self.export_button.menu():
+            clear_menu(self.export_button.menu())
 
     def _update_style_menu_with_plugins(self) -> None:
         """Update the 3D style menu with custom styles from plugins."""
-        if (
-            not hasattr(self.host, "style_button")
-            or not self.host.init_manager.style_button.menu()
-        ):
+        if not self.style_button or not self.style_button.menu():
             return
 
         style_menu = self.host.init_manager.style_button.menu()
@@ -1737,9 +1759,8 @@ class MainInitManager:
         layout_menu.addAction(toggle_2d_panel_action)
 
         view_menu.addSeparator()
-        self.toggle_chiral_action = QAction(
-            "Show Chiral Labels", self.host, checkable=True
-        )
+        self.toggle_chiral_action = QAction("Show Chiral Labels", self.host)
+        self.toggle_chiral_action.setCheckable(True)
         self.toggle_chiral_action.setChecked(
             self.host.view_3d_manager.show_chiral_labels
         )
@@ -1750,33 +1771,29 @@ class MainInitManager:
 
         view_menu.addSeparator()
         atom_info_menu = view_menu.addMenu("3D Atom Info Display")
-        self.show_atom_id_action = QAction(
-            "Show Original ID / Index", self.host, checkable=True
-        )
+        self.show_atom_id_action = QAction("Show Original ID / Index", self.host)
+        self.show_atom_id_action.setCheckable(True)
         self.show_atom_id_action.triggered.connect(
             lambda: self.host.view_3d_manager.toggle_atom_info_display("id")
         )
         atom_info_menu.addAction(self.show_atom_id_action)
 
-        self.show_rdkit_id_action = QAction(
-            "Show RDKit Index", self.host, checkable=True
-        )
+        self.show_rdkit_id_action = QAction("Show RDKit Index", self.host)
+        self.show_rdkit_id_action.setCheckable(True)
         self.show_rdkit_id_action.triggered.connect(
             lambda: self.host.view_3d_manager.toggle_atom_info_display("rdkit_id")
         )
         atom_info_menu.addAction(self.show_rdkit_id_action)
 
-        self.show_atom_coords_action = QAction(
-            "Show Coordinates (X,Y,Z)", self.host, checkable=True
-        )
+        self.show_atom_coords_action = QAction("Show Coordinates (X,Y,Z)", self.host)
+        self.show_atom_coords_action.setCheckable(True)
         self.show_atom_coords_action.triggered.connect(
             lambda: self.host.view_3d_manager.toggle_atom_info_display("coords")
         )
         atom_info_menu.addAction(self.show_atom_coords_action)
 
-        self.show_atom_symbol_action = QAction(
-            "Show Element Symbol", self.host, checkable=True
-        )
+        self.show_atom_symbol_action = QAction("Show Element Symbol", self.host)
+        self.show_atom_symbol_action.setCheckable(True)
         self.show_atom_symbol_action.triggered.connect(
             lambda: self.host.view_3d_manager.toggle_atom_info_display("symbol")
         )

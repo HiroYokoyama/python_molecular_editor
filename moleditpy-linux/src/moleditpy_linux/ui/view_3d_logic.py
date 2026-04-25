@@ -56,7 +56,7 @@ class View3DManager:
         self.host = host
         # State variables previously held by mixin
         self._drawing_3d: bool = False
-        self._3d_color_map: Dict[int, Any] = {}
+        self._3d_color_map: Dict[str, Any] = {}
         self.current_3d_style: str = "ball_and_stick"
         self.atom_positions_3d: Optional[np.ndarray] = None
         self.glyph_source: Optional[pv.PolyData] = None
@@ -70,6 +70,7 @@ class View3DManager:
         self._camera_initialized: bool = False
         self.atom_actor_original_opacity: float = 1.0
         self.current_mol: Optional[Chem.Mol] = None
+        self.plotter: Optional[Any] = None  # Initialized in main_window_init.py
 
     def cleanup(self) -> None:
         """Cleanup resources used by the 3D manager."""
@@ -320,7 +321,7 @@ class View3DManager:
     def _add_3d_atom_glyphs(
         self,
         mol_to_draw: Chem.Mol,
-        conf: Any,
+        conf: Chem.Conformer,
         sym: List[str],
         col: np.ndarray,
         current_style: str,
@@ -499,7 +500,11 @@ class View3DManager:
                     new_radii = []
 
                     # Add normal atoms (excluding skip list)
-                    assert self.atom_positions_3d is not None
+                    if self.atom_positions_3d is None:
+                        logging.error(
+                            "atom_positions_3d is None in _add_3d_atom_glyphs"
+                        )
+                        return
                     for i in range(len(self.atom_positions_3d)):
                         if i not in skip_atoms:
                             new_positions.append(self.atom_positions_3d[i])
@@ -918,6 +923,11 @@ class View3DManager:
                 # Draw circles for aromatic rings
                 for ring in aromatic_rings:
                     # Get atom positions
+                    if self.atom_positions_3d is None:
+                        logging.error(
+                            "atom_positions_3d is None in _update_atom_glyphs_internal"
+                        )
+                        continue
                     ring_positions = [self.atom_positions_3d[idx] for idx in ring]
                     ring_positions_np = np.array(ring_positions)
 
@@ -1064,6 +1074,9 @@ class View3DManager:
                     pts, labels = [], []
                     z_off = 0
                     for idx, lbl in chiral_centers:
+                        if self.atom_positions_3d is None:
+                            logging.error("atom_positions_3d is None in _add_3d_labels")
+                            continue
                         coord = self.atom_positions_3d[idx].copy()
                         coord[2] += z_off
                         pts.append(coord)
@@ -2004,7 +2017,7 @@ class View3DManager:
     ) -> None:
         """Plugin API helper to override bond color."""
         if not hasattr(self, "_plugin_bond_color_overrides"):
-            self._plugin_bond_color_overrides = {}
+            self._plugin_bond_color_overrides: Dict[int, Any] = {}
 
         if hex_color is None:
             if bond_idx in self._plugin_bond_color_overrides:
@@ -2020,7 +2033,7 @@ class View3DManager:
     ) -> None:
         """Plugin helper to update specific atom color override."""
         if not hasattr(self, "_plugin_color_overrides"):
-            self._plugin_color_overrides = {}
+            self._plugin_color_overrides: Dict[int, Any] = {}
 
         if color_hex is None:
             if atom_index in self._plugin_color_overrides:

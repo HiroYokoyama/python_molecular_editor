@@ -688,11 +688,11 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
                     text_color="yellow",
                     always_visible=True,
                 )
-            # Consider case where add_point_labels returns a list
-            if isinstance(label_actor, list):
-                self.selection_labels.extend(label_actor)
-            else:
-                self.selection_labels.append(label_actor)
+                # Consider case where add_point_labels returns a list
+                if isinstance(label_actor, list):
+                    self.selection_labels.extend(label_actor)
+                else:
+                    self.selection_labels.append(label_actor)
 
     def on_cell_changed(self, row: int, column: int) -> None:
         """Update internal data when a table cell is edited."""
