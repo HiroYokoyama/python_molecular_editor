@@ -10,7 +10,7 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
-from typing import Any
+from typing import Any, Optional
 
 from PyQt6.QtCore import QDateTime, QLineF, QPointF, QRectF, Qt, QTimer
 from PyQt6.QtGui import QBrush, QColor, QFont, QPainter, QPen
@@ -232,7 +232,7 @@ class UserTemplateDialog(QDialog):
             logging.error(f"Error loading template file {filepath}: {e}")
             return None
 
-    def save_template_file(self, filepath: str, template_data: Any) -> None:
+    def save_template_file(self, filepath: str, template_data: Any) -> Optional[bool]:
         """Save template data to a JSON file."""
         try:
             with open(filepath, "w", encoding="utf-8") as f:
@@ -308,7 +308,7 @@ class UserTemplateDialog(QDialog):
             preview_scene.setSceneRect(padded_rect)
 
             # Store original scene rect for proper fitting on resize
-            preview_view.original_scene_rect = padded_rect
+            preview_view.original_scene_rect = padded_rect  # type: ignore[assignment]
 
             # Use QTimer to ensure fitInView happens after widget is fully initialized
             QTimer.singleShot(
@@ -318,7 +318,7 @@ class UserTemplateDialog(QDialog):
             # Default view for empty or invalid content
             default_rect = QRectF(-50, -50, 100, 100)
             preview_scene.setSceneRect(default_rect)
-            preview_view.original_scene_rect = default_rect
+            preview_view.original_scene_rect = default_rect  # type: ignore[assignment]
             QTimer.singleShot(
                 0, lambda: self.fit_preview_view_safely(preview_view, default_rect)
             )
@@ -333,10 +333,10 @@ class UserTemplateDialog(QDialog):
         layout.addWidget(name_label)
 
         # Mouse events
-        widget.mousePressEvent = lambda event: self.select_template(
+        widget.mousePressEvent = lambda event: self.select_template(  # type: ignore[assignment]
             template_data, widget
         )
-        widget.mouseDoubleClickEvent = lambda event: self.use_template(template_data)
+        widget.mouseDoubleClickEvent = lambda event: self.use_template(template_data)  # type: ignore[assignment]
 
         return widget
 

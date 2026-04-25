@@ -61,7 +61,8 @@ class PluginContext:
             self.add_menu_action(path, text_or_callback, None, icon, shortcut)
         else:
             # Old style: (path, text, callback)
-            self.add_menu_action(path, callback, text_or_callback, icon, shortcut)
+            if callback is not None:
+                self.add_menu_action(path, callback, text_or_callback, icon, shortcut)
 
     def add_plugin_menu(
         self,

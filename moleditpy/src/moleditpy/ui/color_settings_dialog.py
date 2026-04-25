@@ -198,7 +198,7 @@ class ColorSettingsDialog(QDialog):
         layout.addLayout(grid)
 
         # Ball & Stick bond color (3D) picker
-        self.changed_bs_color = None
+        self.changed_bs_color: Optional[str] = None
         bs_h = QHBoxLayout()
         bs_label = QLabel("Ball & Stick bond color:")
         self.bs_button = QPushButton()
@@ -374,11 +374,12 @@ class ColorSettingsDialog(QDialog):
             )
 
         # Refresh SettingsDialog
+        SettingsDialog: Optional[type] = None
         try:
-            from .settings_dialog import SettingsDialog
+            from .settings_dialog import SettingsDialog  # type: ignore[assignment]
         except (ImportError, ValueError):
             try:
-                from moleditpy.ui.settings_dialog import SettingsDialog
+                from moleditpy.ui.settings_dialog import SettingsDialog  # type: ignore[assignment]
             except ImportError:
                 SettingsDialog = None
 

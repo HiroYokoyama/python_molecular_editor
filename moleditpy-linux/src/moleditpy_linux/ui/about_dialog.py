@@ -75,7 +75,7 @@ class AboutDialog(QDialog):
                 f"Suppressed exception: {e}"
             )  # Suppress cursor setting errors on about image
 
-        self.image_label.mousePressEvent = self.image_mouse_press_event
+        self.image_label.mousePressEvent = self.image_mouse_press_event  # type: ignore[assignment]
 
         layout.addWidget(self.image_label)
 

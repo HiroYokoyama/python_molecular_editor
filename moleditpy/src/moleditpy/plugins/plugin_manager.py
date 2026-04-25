@@ -703,25 +703,25 @@ class PluginManager:
 
                         if val is not None:
                             if target.id == "PLUGIN_NAME":
-                                info["name"] = val
+                                info["name"] = str(val)
                             elif target.id == "PLUGIN_VERSION":
-                                info["version"] = val
+                                info["version"] = str(val)
                             elif target.id == "PLUGIN_AUTHOR":
-                                info["author"] = val
+                                info["author"] = str(val)
                             elif target.id == "PLUGIN_DESCRIPTION":
-                                info["description"] = val
+                                info["description"] = str(val)
                             elif target.id == "PLUGIN_CATEGORY":
-                                info["category"] = val
+                                info["category"] = str(val)
                             elif (
                                 target.id == "__version__"
                                 and info["version"] == "Unknown"
                             ):
-                                info["version"] = val
+                                info["version"] = str(val)
                             elif (
                                 target.id == "__author__"
                                 and info["author"] == "Unknown"
                             ):
-                                info["author"] = val
+                                info["author"] = str(val)
 
                 # Docstring extraction
                 if isinstance(node, ast.Expr):

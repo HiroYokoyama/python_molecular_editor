@@ -20,7 +20,7 @@ except ImportError:
 
         _sip_isdeleted = getattr(_sip, "isdeleted", None)
     except ImportError:
-        _sip = None
+        _sip = None  # type: ignore[assignment]
         _sip_isdeleted = None
 
 

@@ -32,7 +32,7 @@ try:
 
     _sip_isdeleted = getattr(_sip, "isdeleted", None)
 except (ImportError, AttributeError, TypeError):
-    _sip = None
+    _sip = None  # type: ignore[assignment]
     _sip_isdeleted = None
 
 try:
@@ -499,6 +499,7 @@ class View3DManager:
                     new_radii = []
 
                     # Add normal atoms (excluding skip list)
+                    assert self.atom_positions_3d is not None
                     for i in range(len(self.atom_positions_3d)):
                         if i not in skip_atoms:
                             new_positions.append(self.atom_positions_3d[i])

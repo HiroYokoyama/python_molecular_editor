@@ -38,7 +38,7 @@ try:
 
     _sip_isdeleted = getattr(_sip, "isdeleted", None)
 except ImportError:
-    _sip = None
+    _sip = None  # type: ignore[assignment]
     _sip_isdeleted = None
 
 try:
@@ -64,9 +64,9 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
         self.current_atom_symbol: str = "C"
         self.bond_order: int = 1
         self.bond_stereo: int = 0
-        self.start_atom: Optional[AtomItem] = None
-        self.temp_line: Optional[QGraphicsLineItem] = None
-        self.start_pos: Optional[QPointF] = None
+        self.start_atom: Optional[AtomItem] = None  # type: ignore[assignment]
+        self.temp_line: Optional[QGraphicsLineItem] = None  # type: ignore[assignment]
+        self.start_pos: Optional[QPointF] = None  # type: ignore[assignment]
         self.press_pos: Optional[QPointF] = None
         self.mouse_moved_since_press: bool = False
         self.data_changed_in_event: bool = False
@@ -193,7 +193,9 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
             return
 
         if event.button() == Qt.MouseButton.RightButton:
-            item = self.itemAt(event.scenePos(), self.views()[0].transform())
+            item: Optional[QGraphicsItem] = self.itemAt(
+                event.scenePos(), self.views()[0].transform()
+            )
             if not isinstance(item, (AtomItem, BondItem)):
                 return  # Do nothing if something other than the target is clicked
             data_changed = False
@@ -302,7 +304,9 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
             self.clearSelection()
             event.accept()
 
-        item = self.itemAt(self.press_pos, self.views()[0].transform())
+        item: Optional[QGraphicsItem] = self.itemAt(
+            self.press_pos, self.views()[0].transform()
+        )
 
         if isinstance(item, AtomItem):
             self.start_atom = item

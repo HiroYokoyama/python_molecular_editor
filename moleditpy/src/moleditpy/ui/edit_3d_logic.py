@@ -52,7 +52,7 @@ try:
 
     _sip_isdeleted = getattr(_sip, "isdeleted", None)
 except ImportError:
-    _sip = None
+    _sip = None  # type: ignore[assignment]
     _sip_isdeleted = None
 
 try:
@@ -504,4 +504,4 @@ class Edit3DManager:
             self.active_3d_dialogs.remove(dialog)
 
 
-Edit3DManager._cls = Edit3DManager
+Edit3DManager._cls = Edit3DManager  # type: ignore[assignment]

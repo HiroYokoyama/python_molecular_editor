@@ -35,10 +35,10 @@ class MirrorDialog(QDialog):
         super().__init__(parent)
         self.mol = mol
         self.main_window = main_window
-        self.plane_group = None
-        self.xy_radio = None
-        self.xz_radio = None
-        self.yz_radio = None
+        self.plane_group: Optional[QButtonGroup] = None
+        self.xy_radio: Optional[QRadioButton] = None
+        self.xz_radio: Optional[QRadioButton] = None
+        self.yz_radio: Optional[QRadioButton] = None
         self.init_ui()
 
     def init_ui(self) -> None:

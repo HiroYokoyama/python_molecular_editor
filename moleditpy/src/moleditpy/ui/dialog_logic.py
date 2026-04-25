@@ -16,7 +16,7 @@ import logging  # [REPORT ERROR MISSING ATTRIBUTE]
 
 import json
 import os
-from typing import Any, List, Optional
+from typing import Any, List, Literal, Optional, cast
 
 from PyQt6.QtWidgets import QInputDialog, QMessageBox
 
@@ -278,7 +278,7 @@ class DialogManager:
         dialog = AlignPlaneDialog(
             self.host.view_3d_manager.current_mol,
             self.host,
-            plane,
+            cast(Literal["xy", "xz", "yz"], plane),
             preselected_atoms,
             parent=self.host,
         )
@@ -335,7 +335,7 @@ class DialogManager:
         dialog = AlignmentDialog(
             self.host.view_3d_manager.current_mol,
             self.host,
-            axis,
+            cast(Literal["x", "y", "z"], axis),
             preselected_atoms,
             parent=self.host,
         )

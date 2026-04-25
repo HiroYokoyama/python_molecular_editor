@@ -20,7 +20,7 @@ from typing import Optional
 try:
     import winreg
 except ImportError:
-    winreg = None
+    winreg = None  # type: ignore[assignment]
 
 
 def detect_system_dark_mode() -> Optional[bool]:

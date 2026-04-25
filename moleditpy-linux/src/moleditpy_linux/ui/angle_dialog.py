@@ -10,6 +10,8 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
+from __future__ import annotations
+
 from typing import TYPE_CHECKING, Optional, Sequence
 
 from PyQt6.QtCore import Qt
@@ -54,9 +56,9 @@ class AngleDialog(GeometryBaseDialog):
         parent: Optional[QWidget] = None,
     ) -> None:
         super().__init__(mol, main_window, parent)
-        self.atom1_idx = None
-        self.atom2_idx = None  # vertex atom
-        self.atom3_idx = None
+        self.atom1_idx: Optional[int] = None
+        self.atom2_idx: Optional[int] = None  # vertex atom
+        self.atom3_idx: Optional[int] = None
 
         # Set preselected atoms
         if preselected_atoms and len(preselected_atoms) >= 3:
@@ -354,9 +356,12 @@ class AngleDialog(GeometryBaseDialog):
         else:
             positions = conf.GetPositions()
 
-        idx_a = self.atom1_idx
-        idx_b = self.atom2_idx  # vertex
-        idx_c = self.atom3_idx
+        assert self.atom1_idx is not None
+        assert self.atom2_idx is not None
+        assert self.atom3_idx is not None
+        idx_a: int = self.atom1_idx
+        idx_b: int = self.atom2_idx  # vertex
+        idx_c: int = self.atom3_idx
 
         if self.both_groups_radio.isChecked():
             # Both arms rotate equally (half angle each)

@@ -33,7 +33,7 @@ try:
 
     _sip_isdeleted = getattr(_sip, "isdeleted", None)
 except ImportError:
-    _sip = None
+    _sip = None  # type: ignore[assignment]
     _sip_isdeleted = None
 
 try:
@@ -862,7 +862,7 @@ class StateManager:
                 self.host.view_3d_manager.current_mol = None
 
 
-StateManager._cls = StateManager
+StateManager._cls = StateManager  # type: ignore[assignment]
 
 
 # Backward-compat aliases

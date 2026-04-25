@@ -275,7 +275,7 @@ class MolecularData:
                 begin_atom_idx = bond.GetBeginAtomIdx()
                 end_atom_idx = bond.GetEndAtomIdx()
 
-                bond_data = info.get("bond_data", {}) or {}
+                bond_data: dict[str, Any] = info.get("bond_data") or {}  # type: ignore[assignment]
                 stereo_atoms_specified = bond_data.get("stereo_atoms")
 
                 if stereo_atoms_specified:

@@ -10,6 +10,8 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
+from __future__ import annotations
+
 from typing import TYPE_CHECKING, Optional, Sequence
 
 from PyQt6.QtCore import Qt
@@ -54,10 +56,10 @@ class DihedralDialog(GeometryBaseDialog):
         parent: Optional[QWidget] = None,
     ) -> None:
         super().__init__(mol, main_window, parent)
-        self.atom1_idx = None
-        self.atom2_idx = None
-        self.atom3_idx = None
-        self.atom4_idx = None
+        self.atom1_idx: Optional[int] = None
+        self.atom2_idx: Optional[int] = None
+        self.atom3_idx: Optional[int] = None
+        self.atom4_idx: Optional[int] = None
 
         # Set preselected atoms
         if preselected_atoms and len(preselected_atoms) >= 4:
@@ -300,6 +302,10 @@ class DihedralDialog(GeometryBaseDialog):
         """Calculate the current dihedral angle."""
         if not self._is_selection_complete():
             return 0.0
+        assert self.atom1_idx is not None
+        assert self.atom2_idx is not None
+        assert self.atom3_idx is not None
+        assert self.atom4_idx is not None
         return calculate_dihedral(
             self.mol.GetConformer().GetPositions(),
             self.atom1_idx,
@@ -361,12 +367,14 @@ class DihedralDialog(GeometryBaseDialog):
         else:
             positions = conf.GetPositions()
 
-        idx1, idx2, idx3, idx4 = (
-            self.atom1_idx,
-            self.atom2_idx,
-            self.atom3_idx,
-            self.atom4_idx,
-        )
+        assert self.atom1_idx is not None
+        assert self.atom2_idx is not None
+        assert self.atom3_idx is not None
+        assert self.atom4_idx is not None
+        idx1: int = self.atom1_idx
+        idx2: int = self.atom2_idx
+        idx3: int = self.atom3_idx
+        idx4: int = self.atom4_idx
 
         if self.both_groups_radio.isChecked():
             # Both ends rotate equally.

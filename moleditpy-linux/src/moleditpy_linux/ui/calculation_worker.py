@@ -503,7 +503,7 @@ def _perform_direct_conversion(
 
     # Best-effort application of stereo directions to Z-coordinates for direct conversion.
     with contextlib.suppress(AttributeError, RuntimeError, TypeError, IndexError):
-        for b, e, f in stereo_dirs:
+        for b, e, flag in stereo_dirs:
             if b < num_existing and e < num_existing:
                 pos = conf.GetAtomPosition(e)
                 conf.SetAtomPosition(
@@ -511,7 +511,7 @@ def _perform_direct_conversion(
                     rdGeometry.Point3D(
                         float(pos.x),
                         float(pos.y),
-                        float(pos.z) + (1.5 if f == 1 else -1.5),
+                        float(pos.z) + (1.5 if flag == 1 else -1.5),
                     ),
                 )
 
@@ -732,13 +732,13 @@ class CalculationWorker(QObject):
         options = options or {}
         w_id = options.get("worker_id")
 
-        def _check_halted() -> None:
+        def _check_halted() -> bool:
             h_ids = getattr(self, "halt_ids", None)
             if getattr(self, "halt_all", False):
-                return True
+                return True  # type: ignore[return-value]
             if h_ids is None:
                 return False
-            return (
+            return bool(
                 ("ALL" in h_ids)
                 or (None in h_ids)
                 or (w_id is not None and w_id in h_ids)

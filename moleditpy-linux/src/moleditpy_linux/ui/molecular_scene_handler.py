@@ -202,7 +202,7 @@ class TemplateMixin:
         bonds_info: List[Tuple[int, int, int]],
         existing_items: Optional[List[AtomItem]] = None,
         symbol: str = "C",
-    ) -> List[AtomItem]:
+    ) -> List[Optional[AtomItem]]:
         """Add a molecular fragment (e.g., benzene template) to the scene.
 
         - Enforce policy of not changing existing bond orders.
@@ -211,7 +211,7 @@ class TemplateMixin:
         """
 
         num_points = len(points)
-        atom_items = [None] * num_points
+        atom_items: List[Optional[AtomItem]] = [None] * num_points
 
         is_benzene_template = num_points == 6 and any(o == 2 for _, _, o in bonds_info)
 
@@ -1161,7 +1161,7 @@ class KeyboardMixin:
             # to avoid MRO issues in complex Mixin inheritance structures.
             from PyQt6.QtWidgets import QGraphicsScene
 
-            QGraphicsScene.keyPressEvent(self, event)
+            QGraphicsScene.keyPressEvent(self, event)  # type: ignore[arg-type]
 
         except (AttributeError, RuntimeError, ValueError, TypeError) as e:
             logging.error(

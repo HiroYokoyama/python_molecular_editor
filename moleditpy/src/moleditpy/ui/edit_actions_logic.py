@@ -60,14 +60,14 @@ class Rotate2DDialog(QDialog):
         input_layout.addWidget(QLabel("Angle (degrees):"))
         self.angle_spin = QSpinBox()
         self.angle_spin.setRange(-360, 360)
-        self.angle_spin.setValue(initial_angle)
+        self.angle_spin.setValue(int(initial_angle))
         input_layout.addWidget(self.angle_spin)
         layout.addLayout(input_layout)
 
         # Slider
         self.slider = QSlider(Qt.Orientation.Horizontal)
         self.slider.setRange(-180, 180)
-        self.slider.setValue(initial_angle)
+        self.slider.setValue(int(initial_angle))
         self.slider.setTickPosition(QSlider.TickPosition.TicksBelow)
         self.slider.setTickInterval(15)
         layout.addWidget(self.slider)
@@ -95,7 +95,7 @@ try:
 
     _sip_isdeleted = getattr(_sip, "isdeleted", None)
 except ImportError:
-    _sip = None
+    _sip = None  # type: ignore[assignment]
     _sip_isdeleted = None
 
 try:
@@ -384,7 +384,7 @@ class EditActionsManager:
                 return
 
             byte_array = mime_data.data(CLIPBOARD_MIME_TYPE)
-            buffer = io.BytesIO(byte_array)
+            buffer = io.BytesIO(bytes(byte_array))  # type: ignore[arg-type]
             try:
                 fragment_data = pickle.load(buffer)
             except pickle.UnpicklingError:
@@ -1562,4 +1562,4 @@ class EditActionsManager:
             )
 
 
-EditActionsManager._cls = EditActionsManager
+EditActionsManager._cls = EditActionsManager  # type: ignore[assignment]

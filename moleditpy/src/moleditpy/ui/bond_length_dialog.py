@@ -10,6 +10,8 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
+from __future__ import annotations
+
 import numpy as np
 from typing import TYPE_CHECKING, Optional, Sequence
 
@@ -47,8 +49,8 @@ class BondLengthDialog(GeometryBaseDialog):
         parent: Optional[QWidget] = None,
     ) -> None:
         super().__init__(mol, main_window, parent)
-        self.atom1_idx = None
-        self.atom2_idx = None
+        self.atom1_idx: Optional[int] = None
+        self.atom2_idx: Optional[int] = None
 
         # Set preselected atoms
         if preselected_atoms and len(preselected_atoms) >= 2:
@@ -307,7 +309,10 @@ class BondLengthDialog(GeometryBaseDialog):
                 for i in range(self.mol.GetNumAtoms())
             }
 
-        idx1, idx2 = self.atom1_idx, self.atom2_idx
+        assert self.atom1_idx is not None
+        assert self.atom2_idx is not None
+        idx1: int = self.atom1_idx
+        idx2: int = self.atom2_idx
         pos1 = positions[idx1]
         pos2 = positions[idx2]
 

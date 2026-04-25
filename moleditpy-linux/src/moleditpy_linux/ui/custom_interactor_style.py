@@ -10,8 +10,10 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
+from __future__ import annotations
+
 import logging
-from typing import Any
+from typing import Any, Optional
 
 import numpy as np
 from PyQt6.QtCore import Qt
@@ -38,14 +40,14 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
         self._is_dragging_atom = False
         self.is_dragging = False
         self._mouse_moved_during_drag = False
-        self._mouse_press_pos = None
+        self._mouse_press_pos: Optional[tuple[int, int]] = None
 
-        self.AddObserver("LeftButtonPressEvent", self.on_left_button_down)
+        self.AddObserver("LeftButtonPressEvent", self.on_left_button_down)  # type: ignore[arg-type]
         # self.AddObserver("LeftButtonDoubleClickEvent", self.on_left_button_down)
-        self.AddObserver("RightButtonPressEvent", self.on_right_button_down)
-        self.AddObserver("MouseMoveEvent", self.on_mouse_move)
-        self.AddObserver("LeftButtonReleaseEvent", self.on_left_button_up)
-        self.AddObserver("RightButtonReleaseEvent", self.on_right_button_up)
+        self.AddObserver("RightButtonPressEvent", self.on_right_button_down)  # type: ignore[arg-type]
+        self.AddObserver("MouseMoveEvent", self.on_mouse_move)  # type: ignore[arg-type]
+        self.AddObserver("LeftButtonReleaseEvent", self.on_left_button_up)  # type: ignore[arg-type]
+        self.AddObserver("RightButtonReleaseEvent", self.on_right_button_up)  # type: ignore[arg-type]
 
     def on_left_button_down(self, obj: Any, event: Any) -> None:
         """

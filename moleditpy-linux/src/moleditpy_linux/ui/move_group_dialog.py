@@ -11,7 +11,7 @@ DOI: 10.5281/zenodo.17268532
 """
 
 import logging
-from typing import Any
+from typing import Any, Optional
 
 import numpy as np
 import pyvista as pv
@@ -54,8 +54,8 @@ class MoveGroupDialog(BasePickingDialog):
             self.on_atom_picked(preselected_atoms[0])
 
         # State for group movement
-        self.clicked_atom_for_toggle = None
-        self._initial_positions = {}
+        self.clicked_atom_for_toggle: Optional[int] = None
+        self._initial_positions: dict = {}
         self._is_dragging_group_vtk = False
         self._is_rotating_group_vtk = False
 
@@ -377,7 +377,8 @@ class MoveGroupDialog(BasePickingDialog):
                                 self.drag_start_pos = None
                                 self.mouse_moved_during_drag = False
                                 self.potential_drag = False
-                                self.on_atom_picked(clicked_atom)
+                                if clicked_atom is not None:
+                                    self.on_atom_picked(clicked_atom)
                                 try:
                                     self.main_window.view_3d_manager.plotter.setCursor(
                                         Qt.CursorShape.ArrowCursor

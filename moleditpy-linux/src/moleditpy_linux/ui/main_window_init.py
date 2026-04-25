@@ -69,7 +69,7 @@ except ImportError:
 try:
     import winreg
 except ImportError:
-    winreg = None
+    winreg = None  # type: ignore[assignment]
 
 
 try:
@@ -77,7 +77,7 @@ try:
 
     _sip_isdeleted = getattr(_sip, "isdeleted", None)
 except (AttributeError, RuntimeError, TypeError):
-    _sip = None
+    _sip = None  # type: ignore[assignment]
     _sip_isdeleted = None
 
 try:
@@ -424,7 +424,9 @@ class MainInitManager:
                 self.host, "Reset Complete", "All settings have been reset to defaults."
             )
         except (AttributeError, RuntimeError, ValueError) as e:
-            QMessageBox.warning(self, "Reset Failed", f"Could not reset settings: {e}")
+            QMessageBox.warning(
+                self.host, "Reset Failed", f"Could not reset settings: {e}"
+            )
 
     def _confirm_settings_reset(self) -> bool:
         """Show a confirmation dialog for resetting settings."""
@@ -1346,7 +1348,7 @@ class MainInitManager:
                     style_menu.addAction(action)
                     style_group.addAction(action)
 
-    def _create_bond_icon(self, bond_type: int, size: int = 32) -> QIcon:
+    def _create_bond_icon(self, bond_type: str, size: int = 32) -> QIcon:
         """Generate a QIcon for a specific bond type."""
         fg = self._get_icon_foreground_color()
         pixmap = QPixmap(size, size)
