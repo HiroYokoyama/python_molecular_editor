@@ -13,6 +13,7 @@ DOI: 10.5281/zenodo.17268532
 from __future__ import annotations
 
 import base64
+import binascii
 import copy
 import logging
 import os
@@ -429,7 +430,7 @@ class StateManager:
     def create_json_data(self) -> Dict[str, Any]:
         """Convert current state to PMEJSON."""
         # Metadata
-        json_data = {
+        json_data: Dict[str, Any] = {
             "format": "PME Project",
             "version": "1.0",
             "application": "MoleditPy",
@@ -870,7 +871,7 @@ class StateManager:
                             self.host.ui_manager._enable_3d_features(True)
                         except (RuntimeError, TypeError, AttributeError):
                             pass
-            except (RuntimeError, ValueError, TypeError, base64.binascii.Error) as e:
+            except (RuntimeError, ValueError, TypeError, binascii.Error) as e:
                 logging.error(f"Could not restore 3D molecular data: {e}")
                 self.host.view_3d_manager.current_mol = None
 

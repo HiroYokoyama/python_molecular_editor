@@ -1759,9 +1759,8 @@ class MainInitManager:
         layout_menu.addAction(toggle_2d_panel_action)
 
         view_menu.addSeparator()
-        self.toggle_chiral_action = QAction(
-            "Show Chiral Labels", self.host, checkable=True
-        )
+        self.toggle_chiral_action = QAction("Show Chiral Labels", self.host)
+        self.toggle_chiral_action.setCheckable(True)
         self.toggle_chiral_action.setChecked(
             self.host.view_3d_manager.show_chiral_labels
         )
@@ -1772,33 +1771,29 @@ class MainInitManager:
 
         view_menu.addSeparator()
         atom_info_menu = view_menu.addMenu("3D Atom Info Display")
-        self.show_atom_id_action = QAction(
-            "Show Original ID / Index", self.host, checkable=True
-        )
+        self.show_atom_id_action = QAction("Show Original ID / Index", self.host)
+        self.show_atom_id_action.setCheckable(True)
         self.show_atom_id_action.triggered.connect(
             lambda: self.host.view_3d_manager.toggle_atom_info_display("id")
         )
         atom_info_menu.addAction(self.show_atom_id_action)
 
-        self.show_rdkit_id_action = QAction(
-            "Show RDKit Index", self.host, checkable=True
-        )
+        self.show_rdkit_id_action = QAction("Show RDKit Index", self.host)
+        self.show_rdkit_id_action.setCheckable(True)
         self.show_rdkit_id_action.triggered.connect(
             lambda: self.host.view_3d_manager.toggle_atom_info_display("rdkit_id")
         )
         atom_info_menu.addAction(self.show_rdkit_id_action)
 
-        self.show_atom_coords_action = QAction(
-            "Show Coordinates (X,Y,Z)", self.host, checkable=True
-        )
+        self.show_atom_coords_action = QAction("Show Coordinates (X,Y,Z)", self.host)
+        self.show_atom_coords_action.setCheckable(True)
         self.show_atom_coords_action.triggered.connect(
             lambda: self.host.view_3d_manager.toggle_atom_info_display("coords")
         )
         atom_info_menu.addAction(self.show_atom_coords_action)
 
-        self.show_atom_symbol_action = QAction(
-            "Show Element Symbol", self.host, checkable=True
-        )
+        self.show_atom_symbol_action = QAction("Show Element Symbol", self.host)
+        self.show_atom_symbol_action.setCheckable(True)
         self.show_atom_symbol_action.triggered.connect(
             lambda: self.host.view_3d_manager.toggle_atom_info_display("symbol")
         )

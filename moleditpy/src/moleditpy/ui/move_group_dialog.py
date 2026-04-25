@@ -189,7 +189,7 @@ class MoveGroupDialog(BasePickingDialog):
     def eventFilter(self, obj: Any, event: Any) -> bool:
         """Mouse event handling in 3D view - delegate to CustomInteractorStyle if a group is selected."""
         plotter = self.main_window.view_3d_manager.plotter
-        if plotter is None:
+        if plotter is None or self.mol is None:
             return False
 
         if obj == plotter.interactor:
@@ -200,19 +200,18 @@ class MoveGroupDialog(BasePickingDialog):
                 self.drag_start_pos = None
                 self.mouse_moved_during_drag = False
                 self.potential_drag = False
-                if hasattr(self, "clicked_atom_for_toggle"):  # [SAFE]
-                    delattr(self, "clicked_atom_for_toggle")
+                self.clicked_atom_for_toggle = None
                 return False
 
             if (
                 event.type() == QEvent.Type.MouseButtonPress
+                and isinstance(event, QMouseEvent)
                 and event.button() == Qt.MouseButton.LeftButton
             ):
                 # Clean up previous state (triple-click countermeasure)
                 self.is_dragging_group = False
                 self.potential_drag = False
-                if hasattr(self, "clicked_atom_for_toggle"):  # [SAFE]
-                    delattr(self, "clicked_atom_for_toggle")
+                self.clicked_atom_for_toggle = None
                 # Delegate to CustomInteractorStyle if a group is already selected
                 if self.group_atoms:
                     return False
@@ -291,7 +290,9 @@ class MoveGroupDialog(BasePickingDialog):
                     logging.debug(f"Error in mouse press: {e}")
                     return False
 
-            elif event.type() == QEvent.Type.MouseMove:
+            elif event.type() == QEvent.Type.MouseMove and isinstance(
+                event, QMouseEvent
+            ):
                 # Mouse move handling
                 if (
                     getattr(self, "potential_drag", False)
@@ -394,6 +395,7 @@ class MoveGroupDialog(BasePickingDialog):
 
             elif (
                 event.type() == QEvent.Type.MouseButtonRelease
+                and isinstance(event, QMouseEvent)
                 and event.button() == Qt.MouseButton.LeftButton
             ):
                 if getattr(self, "potential_drag", False) or (
@@ -404,9 +406,9 @@ class MoveGroupDialog(BasePickingDialog):
                             self.is_dragging_group and self.mouse_moved_during_drag
                         ):
                             # Mouse move below threshold = simple click (toggle)
-                            if hasattr(self, "clicked_atom_for_toggle"):
+                            if self.clicked_atom_for_toggle is not None:
                                 clicked_atom = self.clicked_atom_for_toggle
-                                delattr(self, "clicked_atom_for_toggle")
+                                self.clicked_atom_for_toggle = None
                                 self.is_dragging_group = False
                                 self.drag_start_pos = None
                                 self.mouse_moved_during_drag = False
@@ -556,7 +558,7 @@ class MoveGroupDialog(BasePickingDialog):
             except (AttributeError, RuntimeError, ValueError, TypeError):
                 pass
 
-        if hasattr(self, "highlight_actor") and self.highlight_actor:
+        if self.highlight_actor:
             if plotter is not None:
                 try:
                     plotter.remove_actor(self.highlight_actor)

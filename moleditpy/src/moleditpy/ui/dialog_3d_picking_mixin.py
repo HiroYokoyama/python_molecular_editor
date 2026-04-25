@@ -47,7 +47,7 @@ class Dialog3DPickingMixin:
             return False
 
         plotter = self.main_window.view_3d_manager.plotter
-        if plotter is None:
+        if plotter is None or self.mol is None:
             return False
 
         if (

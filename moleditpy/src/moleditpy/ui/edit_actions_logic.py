@@ -1060,7 +1060,7 @@ class EditActionsManager:
 
                 # Suppress potential errors if the item is already destroyed by SIP during iteration
                 with contextlib.suppress(AttributeError, RuntimeError, TypeError):
-                    if is_deleted_func and is_deleted_func(item):
+                    if is_deleted_func is not None and is_deleted_func(item):
                         continue
 
                 # Check if the item is no longer in a scene: skip updating it to avoid

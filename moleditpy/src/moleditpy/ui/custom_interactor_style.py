@@ -383,8 +383,8 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
             if move_group_dialog._drag_start_pos is None:
                 return
 
-            dx = current_pos[0] - move_group_dialog._drag_start_pos.x()
-            dy = current_pos[1] - move_group_dialog._drag_start_pos.y()
+            dx = current_pos[0] - move_group_dialog._drag_start_pos[0]
+            dy = current_pos[1] - move_group_dialog._drag_start_pos[1]
 
             if abs(dx) > 2 or abs(dy) > 2:
                 move_group_dialog._mouse_moved = True
@@ -401,8 +401,8 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
             if move_group_dialog._rotation_start_pos is None:
                 return
 
-            dx = current_pos[0] - move_group_dialog._rotation_start_pos.x()
-            dy = current_pos[1] - move_group_dialog._rotation_start_pos.y()
+            dx = current_pos[0] - move_group_dialog._rotation_start_pos[0]
+            dy = current_pos[1] - move_group_dialog._rotation_start_pos[1]
 
             if abs(dx) > 2 or abs(dy) > 2:
                 move_group_dialog._rotation_mouse_moved = True
