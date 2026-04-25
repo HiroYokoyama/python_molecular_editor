@@ -253,11 +253,11 @@ class BondItem(QGraphicsItem):
 
     def paint(
         self,
-        painter: QPainter,
+        painter: Optional[QPainter],
         option: Any,
         widget: Optional[QWidget] = None,
     ) -> None:
-        if self.atom1 is None or self.atom2 is None:
+        if painter is None or self.atom1 is None or self.atom2 is None:
             return
         line = self.get_line_in_local_coords()
         if line.length() == 0:

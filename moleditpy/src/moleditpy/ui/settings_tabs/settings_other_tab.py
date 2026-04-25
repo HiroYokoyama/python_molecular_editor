@@ -10,17 +10,30 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
+from collections.abc import Mapping
+from typing import Any, Optional
+
 from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QCheckBox, QSlider, QFormLayout, QHBoxLayout, QLabel, QFrame
+from PyQt6.QtWidgets import (
+    QCheckBox,
+    QFormLayout,
+    QFrame,
+    QHBoxLayout,
+    QLabel,
+    QSlider,
+    QWidget,
+)
 from .settings_tab_base import SettingsTabBase
 
 
 class SettingsOtherTab(SettingsTabBase):
-    def __init__(self, default_settings, parent=None):
+    def __init__(
+        self, default_settings: Mapping[str, Any], parent: Optional[QWidget] = None
+    ) -> None:
         super().__init__(default_settings, parent)
         self._setup_ui()
 
-    def _setup_ui(self):
+    def _setup_ui(self) -> None:
         form_layout = QFormLayout(self)
 
         self.skip_chem_checks_checkbox = QCheckBox()
@@ -73,13 +86,13 @@ class SettingsOtherTab(SettingsTabBase):
         atl.addWidget(self.aromatic_torus_thickness_label)
         form_layout.addRow("Aromatic torus thickness (× bond radius):", atl)
 
-    def _on_kekule_toggled(self, checked):
+    def _on_kekule_toggled(self, checked: bool) -> None:
         self.aromatic_circle_checkbox.setEnabled(not checked)
 
-    def _on_aromatic_toggled(self, checked):
+    def _on_aromatic_toggled(self, checked: bool) -> None:
         self.kekule_3d_checkbox.setEnabled(not checked)
 
-    def update_ui(self, settings_dict):
+    def update_ui(self, settings_dict: Mapping[str, Any]) -> None:
         self.skip_chem_checks_checkbox.setChecked(
             settings_dict.get("skip_chemistry_checks", False)
         )
@@ -100,7 +113,7 @@ class SettingsOtherTab(SettingsTabBase):
         thick = settings_dict.get("aromatic_torus_thickness_factor", 0.6)
         self.aromatic_torus_thickness_slider.setValue(int(thick * 100))
 
-    def get_settings(self):
+    def get_settings(self) -> dict[str, Any]:
         return {
             "skip_chemistry_checks": self.skip_chem_checks_checkbox.isChecked(),
             "always_ask_charge": self.always_ask_charge_checkbox.isChecked(),

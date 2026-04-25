@@ -13,7 +13,7 @@ DOI: 10.5281/zenodo.17268532
 from __future__ import annotations
 import logging
 import contextlib
-from typing import Any, List, Optional, Set, Tuple, Union
+from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
 from PyQt6.QtCore import QThread, QTimer, QPoint
 from PyQt6.QtGui import QAction, QColor
@@ -323,7 +323,7 @@ class ComputeManager:
         self.host.view_3d_manager.update_chiral_labels()
         self.host.init_manager.view_2d.setFocus()
 
-    def halt_conversion(self):
+    def halt_conversion(self) -> None:
         """Halt the in-progress conversion."""
         wids_to_halt = set(self.active_worker_ids)
         if wids_to_halt:
@@ -381,10 +381,7 @@ class ComputeManager:
         self.next_conversion_id = run_id + 1
         options["worker_id"] = run_id
 
-        if hasattr(self.host, "active_worker_ids"):
-            self.host.compute_manager.active_worker_ids.add(run_id)
-        else:
-            self.host.compute_manager.active_worker_ids = {run_id}
+        self.active_worker_ids.add(run_id)
 
         if hasattr(self.host.init_manager, "optimize_3d_button"):
             self.host.init_manager.optimize_3d_button.setText("Halt optimize")
@@ -408,7 +405,7 @@ class ComputeManager:
 
         self._start_calculation_worker(mol_block, options, run_id)
 
-    def _prepare_rdkit_mol_for_conversion(self):
+    def _prepare_rdkit_mol_for_conversion(self) -> Optional[Any]:
         mol = self.host.state_manager.data.to_rdkit_mol(use_2d_stereo=False)
         if not mol or mol.GetNumAtoms() == 0:
             self.check_chemistry_problems_fallback()
@@ -434,7 +431,7 @@ class ComputeManager:
             return None
         return mol
 
-    def _handle_chemistry_problems(self, mol, problems):
+    def _handle_chemistry_problems(self, mol: Any, problems: List[Any]) -> None:
         self.host.init_manager.scene.clear_all_problem_flags()
         msg = f"Error: {len(problems)} chemistry problem(s) found (e.g., hypervalency). Fix the 2D layout before converting."
         self.host.statusBar().showMessage(msg)
@@ -452,35 +449,37 @@ class ComputeManager:
                 item.update()
         self.host.init_manager.view_2d.setFocus()
 
-    def _setup_mol_block_for_worker(self, mol):
+    def _setup_mol_block_for_worker(self, mol: Any) -> str:
         mol_block = self.host.state_manager.data.to_mol_block()
         if not mol_block:
             mol_block = Chem.MolToMolBlock(mol, includeStereo=True)
-        return inject_ez_stereo_to_mol_block(
+        return inject_ez_stereo_to_mol_block(  # type: ignore[no-any-return]
             mol_block, mol, self.host.state_manager.data.bonds
         )
 
-    def _start_calculation_worker(self, mol_block, options, run_id):
+    def _start_calculation_worker(
+        self, mol_block: str, options: Dict[str, Any], run_id: int
+    ) -> None:
         thread = QThread()
         worker = CalculationWorker()
         worker.halt_ids = self.halt_ids
         worker.moveToThread(thread)
         worker.status_update.connect(self.host.ui_manager.update_status_bar)
 
-        def _cleanup():
+        def _cleanup() -> None:
             thread.quit()
             thread.finished.connect(thread.deleteLater)
             worker.deleteLater()
             with contextlib.suppress(ValueError, AttributeError):
                 self._active_calc_threads.remove(thread)
 
-        def _on_finished(result):
+        def _on_finished(result: Any) -> None:
             try:
                 self.on_calculation_finished(result)
             finally:
                 _cleanup()
 
-        def _on_error(msg):
+        def _on_error(msg: Any) -> None:
             try:
                 self.on_calculation_error(msg)
             finally:
@@ -595,7 +594,7 @@ class ComputeManager:
         with contextlib.suppress(TypeError, RuntimeError):
             QMessageBox.critical(self.host, "Calculation Error", msg)
 
-    def create_atom_id_mapping(self):
+    def create_atom_id_mapping(self) -> None:
         """Map 2D atom IDs to 3D RDKit indices."""
         if not self.host.view_3d_manager.current_mol:
             return
@@ -612,7 +611,7 @@ class ComputeManager:
                 # Skip if property missing
                 continue
 
-    def check_chemistry_problems_fallback(self):
+    def check_chemistry_problems_fallback(self) -> None:
         problem_atom_ids = identify_valence_problems(
             self.host.state_manager.data.atoms, self.host.state_manager.data.bonds
         )
@@ -627,7 +626,7 @@ class ComputeManager:
             )
         self.host.init_manager.view_2d.setFocus()
 
-    def update_aromatic_rings(self):
+    def update_aromatic_rings(self) -> None:
         """Update aromatic ring visualization."""
         try:
             mol = self.host.state_manager.data.to_rdkit_mol()
@@ -643,7 +642,7 @@ class ComputeManager:
         except Exception as e:
             logging.debug(f"Aromatic ring update failed: {e}")
 
-    def select_connected_atoms(self):
+    def select_connected_atoms(self) -> None:
         """Select all atoms connected to the current selection."""
         selected_items = self.host.init_manager.scene.selectedItems()
         if not selected_items:

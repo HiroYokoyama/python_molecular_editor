@@ -11,6 +11,7 @@ DOI: 10.5281/zenodo.17268532
 """
 
 import logging
+from typing import Any
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
@@ -35,14 +36,14 @@ from .dialog_3d_picking_mixin import Dialog3DPickingMixin
 class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
     """Dialog for constrained optimization."""
 
-    def __init__(self, mol, main_window, parent=None):
+    def __init__(self, mol: Any, main_window: Any, parent: Any = None) -> None:
         QDialog.__init__(self, parent)
         Dialog3DPickingMixin.__init__(self)
         self.mol = mol
         self.main_window = main_window
-        self.selected_atoms = []  # Using a list because order matters
-        self.constraints = []  # (type, atoms_indices, value)
-        self.constraint_labels = []  # 3D label actors
+        self.selected_atoms: list[int] = []  # Using a list because order matters
+        self.constraints: list[Any] = []  # (type, atoms_indices, value)
+        self.constraint_labels: list[Any] = []  # 3D label actors
         self.init_ui()
         self.enable_picking()
 
@@ -136,7 +137,7 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
         except (AttributeError, RuntimeError, ValueError, TypeError) as e:
             print(f"Could not set default force field: {e}")
 
-    def init_ui(self):
+    def init_ui(self) -> None:
         self.setWindowTitle("Constrained Optimization")
         self.setModal(False)
         self.resize(450, 500)
@@ -225,7 +226,7 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
         main_buttons.addWidget(close_button)
         layout.addLayout(main_buttons)
 
-    def on_atom_picked(self, atom_idx):
+    def on_atom_picked(self, atom_idx: int) -> None:
         if atom_idx in self.selected_atoms:
             self.selected_atoms.remove(atom_idx)
         else:
@@ -236,7 +237,7 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
         self.show_selection_labels()
         self.update_selection_display()
 
-    def update_selection_display(self):
+    def update_selection_display(self) -> None:
         self.show_selection_labels()
         n = len(self.selected_atoms)
 
@@ -272,7 +273,7 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
         # Set button enabled state
         self.add_button.setEnabled(can_add)
 
-    def add_constraint(self):
+    def add_constraint(self) -> None:
         n = len(self.selected_atoms)
         conf = self.mol.GetConformer()
 
@@ -348,7 +349,7 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
         self.selected_atoms.clear()
         self.update_selection_display()
 
-    def remove_constraint(self):
+    def remove_constraint(self) -> None:
         selected_rows = sorted(
             list(set(index.row() for index in self.constraint_table.selectedIndexes())),
             reverse=True,
@@ -366,7 +367,7 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
 
         self.clear_constraint_labels()
 
-    def remove_all_constraints(self):
+    def remove_all_constraints(self) -> None:
         """Clear all constraints."""
         if not self.constraints:
             return
@@ -385,7 +386,7 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
         # Disable selection-based button
         self.remove_button.setEnabled(False)
 
-    def show_constraint_labels(self):
+    def show_constraint_labels(self) -> None:
         self.clear_constraint_labels()
         selected_items = self.constraint_table.selectedItems()
         if not selected_items:
@@ -397,7 +398,7 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
         # Get the constraint from the selected row (first selection only)
         try:
             row = selected_items[0].row()
-            constraint_type, atom_indices, value, force_const = self.constraints[row]
+            constraint_type, atom_indices, _, __ = self.constraints[row]
         except (IndexError, TypeError, ValueError):
             # Unpack 3-element tuple for old format constraints
             try:
@@ -415,27 +416,33 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
 
         positions = []
         texts = []
+        positions_3d = self.main_window.view_3d_manager.atom_positions_3d
+        if positions_3d is None:
+            return
+
         for i, atom_idx in enumerate(atom_indices):
-            positions.append(
-                self.main_window.view_3d_manager.atom_positions_3d[atom_idx]
-            )
+            positions.append(positions_3d[atom_idx])
             texts.append(labels[i])
 
         if positions:
-            label_actor = self.main_window.view_3d_manager.plotter.add_point_labels(
-                positions,
-                texts,
-                point_size=20,
-                font_size=12,
-                text_color="cyan",
-                always_visible=True,
-            )
-            self.constraint_labels.append(label_actor)
+            plotter = self.main_window.view_3d_manager.plotter
+            if plotter is not None:
+                label_actor = plotter.add_point_labels(
+                    positions,
+                    texts,
+                    point_size=20,
+                    font_size=12,
+                    text_color="cyan",
+                    always_visible=True,
+                )
+                self.constraint_labels.append(label_actor)
 
-    def clear_constraint_labels(self):
+    def clear_constraint_labels(self) -> None:
         for label_actor in self.constraint_labels:
             try:
-                self.main_window.view_3d_manager.plotter.remove_actor(label_actor)
+                plotter = self.main_window.view_3d_manager.plotter
+                if plotter is not None:
+                    plotter.remove_actor(label_actor)
             except (AttributeError, RuntimeError, TypeError) as e:
                 logging.debug(
                     f"Suppressed exception: {e}"
@@ -443,7 +450,7 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
 
         self.constraint_labels = []
 
-    def apply_optimization(self):
+    def apply_optimization(self) -> None:
         if not self.mol or self.mol.GetNumConformers() == 0:
             QMessageBox.warning(self, "Error", "No valid 3D molecule found.")
             return
@@ -531,27 +538,28 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
 
         # Execute optimization
         try:
-            self.main_window.statusBar().showMessage(
-                f"Running constrained {ff_name} optimization..."
-            )
+            status_bar = self.main_window.statusBar()
+            if status_bar is not None:
+                status_bar.showMessage(f"Running constrained {ff_name} optimization...")
             ff.Minimize(maxIts=20000)
 
             # Apply optimized coordinates to the main window's numpy array
+            cache = self.main_window.view_3d_manager.atom_positions_3d
             for i in range(self.mol.GetNumAtoms()):
                 pos = conf.GetAtomPosition(i)
-                self.main_window.view_3d_manager.atom_positions_3d[i] = [
-                    pos.x,
-                    pos.y,
-                    pos.z,
-                ]
+                if cache is not None:
+                    cache[i] = [
+                        pos.x,
+                        pos.y,
+                        pos.z,
+                    ]
 
             # Update 3D view
             self.main_window.view_3d_manager.draw_molecule_3d(self.mol)
             self.main_window.view_3d_manager.update_chiral_labels()
             self.main_window.edit_actions_manager.push_undo_state()
-            self.main_window.statusBar().showMessage(
-                "Constrained optimization finished."
-            )
+            if status_bar is not None:
+                status_bar.showMessage("Constrained optimization finished.")
 
             try:
                 constrained_method_name = f"Constrained_{ff_name}"
@@ -596,11 +604,11 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
         except (AttributeError, RuntimeError, ValueError, TypeError) as e:
             QMessageBox.critical(self, "Error", f"Optimization failed: {e}")
 
-    def closeEvent(self, event):
+    def closeEvent(self, event: Any) -> None:
         self.reject()
         event.accept()
 
-    def reject(self):
+    def reject(self) -> None:
         self.clear_constraint_labels()
         self.clear_selection_labels()
         self.disable_picking()
@@ -634,13 +642,13 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
 
         super().reject()
 
-    def clear_selection(self):
+    def clear_selection(self) -> None:
         """Clear selection (called from Mixin when clicking outside an atom)"""
         self.selected_atoms.clear()
         self.clear_selection_labels()
         self.update_selection_display()
 
-    def show_selection_labels(self):
+    def show_selection_labels(self) -> None:
         """Display labels on selected atoms."""
         self.clear_selection_labels()
 
@@ -670,33 +678,34 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
                 )
 
         if positions:
-            label_actor = self.main_window.view_3d_manager.plotter.add_point_labels(
-                positions,
-                texts,
-                point_size=20,
-                font_size=12,
-                text_color="yellow",
-                always_visible=True,
-            )
-            # Consider case where add_point_labels returns a list
-            if isinstance(label_actor, list):
-                self.selection_labels.extend(label_actor)
-            else:
-                self.selection_labels.append(label_actor)
+            plotter = self.main_window.view_3d_manager.plotter
+            if plotter is not None:
+                label_actor = plotter.add_point_labels(
+                    positions,
+                    texts,
+                    point_size=20,
+                    font_size=12,
+                    text_color="yellow",
+                    always_visible=True,
+                )
+                # Consider case where add_point_labels returns a list
+                if isinstance(label_actor, list):
+                    self.selection_labels.extend(label_actor)
+                else:
+                    self.selection_labels.append(label_actor)
 
-    def on_cell_changed(self, row, column):
+    def on_cell_changed(self, row: int, column: int) -> None:
         """Update internal data when a table cell is edited."""
 
         # Handle only Value (col 2) and Force (col 3) columns
         if column not in [2, 3]:
             return
 
-        try:
-            # Retrieve text from the modified item
-            item = self.constraint_table.item(row, column)
-            if not item:
-                return
+        item = self.constraint_table.item(row, column)
+        if not item:
+            return
 
+        try:
             new_value_str = item.text()
             new_value = float(new_value_str)
 
@@ -766,7 +775,7 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
                 f"Suppressed exception: {e}"
             )  # Suppress sync errors between table and constraints list
 
-    def keyPressEvent(self, event):
+    def keyPressEvent(self, event: Any) -> None:
         """Handle keyboard events (Delete/Backspace to remove, Enter to optimize)."""
         key = event.key()
 
@@ -792,3 +801,6 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
 
         # Default processing for other keys
         QDialog.keyPressEvent(self, event)
+
+
+from typing import Any

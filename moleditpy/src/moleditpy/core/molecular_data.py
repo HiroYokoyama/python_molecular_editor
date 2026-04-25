@@ -25,10 +25,10 @@ class PointTuple(tuple):
     """Backward-compatible tuple that allows .x() and .y() access like QPointF."""
 
     def x(self) -> float:
-        return self[0]
+        return float(self[0])
 
     def y(self) -> float:
-        return self[1]
+        return float(self[1])
 
 
 class MolecularData:
@@ -248,10 +248,10 @@ class MolecularData:
                 if nbr.GetIdx() == exclude_idx:
                     continue
                 if nbr.GetAtomicNum() > 1:
-                    return nbr.GetIdx()
+                    return int(nbr.GetIdx())
             for nbr in atom.GetNeighbors():
                 if nbr.GetIdx() != exclude_idx:
-                    return nbr.GetIdx()
+                    return int(nbr.GetIdx())
             return None
 
         # Overwrite based on labels (E/Z has highest priority) ---
@@ -275,7 +275,7 @@ class MolecularData:
                 begin_atom_idx = bond.GetBeginAtomIdx()
                 end_atom_idx = bond.GetEndAtomIdx()
 
-                bond_data = info.get("bond_data", {}) or {}
+                bond_data: dict[str, Any] = info.get("bond_data") or {}  # type: ignore[assignment]
                 stereo_atoms_specified = bond_data.get("stereo_atoms")
 
                 if stereo_atoms_specified:
@@ -365,7 +365,10 @@ class MolecularData:
                 if key in self.bonds:
                     rdkit_bond_idx_to_item[bidx] = self.bonds[key].get("item")
 
-        # 5. Initialize/Reset all bond items
+        # 5. Initialize/Reset all bond items and track best ring size
+        bond_to_best_size: Dict[
+            int, int
+        ] = {}  # bond_item_id -> smallest_ring_size_found
         for bond_data in self.bonds.values():
             bond_item = bond_data.get("item")
             if bond_item:
@@ -374,6 +377,7 @@ class MolecularData:
 
         # 6. Apply ring information
         for a_ring, b_ring in zip(atom_rings, bond_rings):
+            ring_size = len(a_ring)
             # Calculate ring center (geometric mean of atom positions)
             positions = []
             for aidx in a_ring:
@@ -395,18 +399,21 @@ class MolecularData:
                 bond_item = rdkit_bond_idx_to_item.get(bidx)
                 if bond_item:
                     bond_item.is_in_ring = True
-                    # Note: Simplified; a bond might be part of multiple rings.
-                    # The inner-bond logic usually picks the smallest ring.
-                    # Since we iterate through all rings, the last one wins.
-                    # RDKit's AtomRings returns SSSR (Smallest Set of Smallest Rings),
-                    # so this is usually correct for 2D drawing.
-                    bond_item.ring_center = ring_center
+                    # Explicitly prioritize smaller rings for double bond shift logic.
+                    # This ensures the double bond is drawn inside the smaller ring in fused systems.
+                    item_id = id(bond_item)
+                    if (
+                        item_id not in bond_to_best_size
+                        or ring_size < bond_to_best_size[item_id]
+                    ):
+                        bond_item.ring_center = ring_center
+                        bond_to_best_size[item_id] = ring_size
 
     def to_mol_block(self) -> Optional[str]:
         mol = self.to_rdkit_mol()
         if mol:
             try:
-                return Chem.MolToMolBlock(mol, includeStereo=True)
+                return Chem.MolToMolBlock(mol, includeStereo=True)  # type: ignore[no-any-return]
             except (RuntimeError, ValueError, TypeError) as e:
                 logging.warning(
                     f"RDKit MolBlock generation failed: {e}"

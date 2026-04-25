@@ -32,7 +32,7 @@ try:
 
     _sip_isdeleted = getattr(_sip, "isdeleted", None)
 except (ImportError, AttributeError, TypeError):
-    _sip = None
+    _sip = None  # type: ignore[assignment]
     _sip_isdeleted = None
 
 try:
@@ -56,7 +56,7 @@ class View3DManager:
         self.host = host
         # State variables previously held by mixin
         self._drawing_3d: bool = False
-        self._3d_color_map: Dict[int, Any] = {}
+        self._3d_color_map: Dict[str, Any] = {}
         self.current_3d_style: str = "ball_and_stick"
         self.atom_positions_3d: Optional[np.ndarray] = None
         self.glyph_source: Optional[pv.PolyData] = None
@@ -69,6 +69,16 @@ class View3DManager:
         self.atom_label_legend_names: List[str] = []
         self._camera_initialized: bool = False
         self.atom_actor_original_opacity: float = 1.0
+        self.current_mol: Optional[Chem.Mol] = None
+        self.plotter: Optional[Any] = None  # Initialized in main_window_init.py
+
+    def cleanup(self) -> None:
+        """Cleanup resources used by the 3D manager."""
+        if hasattr(self, "plotter") and self.plotter:
+            with contextlib.suppress(Exception):
+                self.plotter.clear()
+                self.plotter.close()
+        self.current_mol = None
 
     def set_3d_style(self, style_name: str) -> None:
         """Set 3D display style and update view"""
@@ -310,21 +320,21 @@ class View3DManager:
 
     def _add_3d_atom_glyphs(
         self,
-        mol_to_draw,
-        conf,
-        sym,
-        col,
-        current_style,
-        is_lighting_enabled,
-        mesh_props,
-    ):
+        mol_to_draw: Chem.Mol,
+        conf: Chem.Conformer,
+        sym: List[str],
+        col: np.ndarray,
+        current_style: str,
+        is_lighting_enabled: bool,
+        mesh_props: Dict[str, Any],
+    ) -> None:
         # Set atom radii based on style
         if current_style == "cpk":
             atom_scale = self.host.init_manager.settings.get("cpk_atom_scale", 1.0)
             resolution = self.host.init_manager.settings.get("cpk_resolution", 32)
 
             # Safe VDW lookup to handle custom elements like 'Bq'
-            def get_safe_rvdw(s):
+            def get_safe_rvdw(s: str) -> float:
                 try:
                     r = pt.GetRvdw(pt.GetAtomicNumber(s))
                     return r if r > 0.1 else 1.5
@@ -490,6 +500,11 @@ class View3DManager:
                     new_radii = []
 
                     # Add normal atoms (excluding skip list)
+                    if self.atom_positions_3d is None:
+                        logging.error(
+                            "atom_positions_3d is None in _add_3d_atom_glyphs"
+                        )
+                        return
                     for i in range(len(self.atom_positions_3d)):
                         if i not in skip_atoms:
                             new_positions.append(self.atom_positions_3d[i])
@@ -544,7 +559,14 @@ class View3DManager:
                 atom_rgb = [int(c * 255) for c in atom_color]
                 self._3d_color_map[f"atom_{i}"] = atom_rgb
 
-    def _add_3d_bond_cylinders(self, mol_to_draw, conf, col, current_style, mesh_props):
+    def _add_3d_bond_cylinders(
+        self,
+        mol_to_draw: Any,
+        conf: Any,
+        col: Any,
+        current_style: str,
+        mesh_props: Dict[str, Any],
+    ) -> None:
         # Draw bonds (ball_and_stick, wireframe, stick)
         if current_style in ["ball_and_stick", "wireframe", "stick"]:
             # Set bond radius and resolution based on style
@@ -643,7 +665,7 @@ class View3DManager:
                 )
 
                 # Helper to add segments
-                def add_segment(p1, p2, radius, color_rgb):
+                def add_segment(p1: Any, p2: Any, radius: Any, color_rgb: Any) -> None:
                     nonlocal current_point_idx
                     all_points.append(p1)
                     all_points.append(p2)
@@ -873,7 +895,9 @@ class View3DManager:
                     tube, scalars="colors", rgb=True, **mesh_props
                 )
 
-    def _add_3d_aromatic_rings(self, mol_to_draw, current_style, mesh_props):
+    def _add_3d_aromatic_rings(
+        self, mol_to_draw: Any, current_style: str, mesh_props: Dict[str, Any]
+    ) -> None:
         # Aromatic ring circles display
         display_aromatic = self.host.init_manager.settings.get(
             "display_aromatic_circles_3d", False
@@ -899,6 +923,11 @@ class View3DManager:
                 # Draw circles for aromatic rings
                 for ring in aromatic_rings:
                     # Get atom positions
+                    if self.atom_positions_3d is None:
+                        logging.error(
+                            "atom_positions_3d is None in _update_atom_glyphs_internal"
+                        )
+                        continue
                     ring_positions = [self.atom_positions_3d[idx] for idx in ring]
                     ring_positions_np = np.array(ring_positions)
 
@@ -1036,7 +1065,7 @@ class View3DManager:
             except (AttributeError, RuntimeError, TypeError, ValueError) as e:
                 logging.error(f"Error rendering aromatic circles: {e}")
 
-    def _add_3d_labels(self, mol, mol_to_draw):
+    def _add_3d_labels(self, mol: Any, mol_to_draw: Any) -> None:
         if getattr(self, "show_chiral_labels", False):
             try:
                 # Calculate chiral centers from 3D coordinates
@@ -1045,6 +1074,9 @@ class View3DManager:
                     pts, labels = [], []
                     z_off = 0
                     for idx, lbl in chiral_centers:
+                        if self.atom_positions_3d is None:
+                            logging.error("atom_positions_3d is None in _add_3d_labels")
+                            continue
                         coord = self.atom_positions_3d[idx].copy()
                         coord[2] += z_off
                         pts.append(coord)
@@ -1079,7 +1111,9 @@ class View3DManager:
             except (AttributeError, RuntimeError, TypeError, ValueError) as e:
                 self.host.statusBar().showMessage(f"3D E/Z label drawing error: {e}")
 
-    def _calculate_double_bond_offset(self, mol, bond, conf):
+    def _calculate_double_bond_offset(
+        self, mol: Any, bond: Any, conf: Any
+    ) -> np.ndarray:
         """
         Calculate double bond offset direction.
         Consider other bonds of connected atoms to keep it planar.
@@ -1094,7 +1128,7 @@ class View3DManager:
         bond_length = np.linalg.norm(bond_vec)
         if bond_length == 0:
             # Fallback: Z-axis reference
-            return np.array([0, 0, 1])
+            return np.array([0, 0, 1])  # type: ignore[no-any-return]
 
         bond_unit = bond_vec / bond_length
 
@@ -1157,7 +1191,7 @@ class View3DManager:
                 offset_dir = np.cross(bond_unit, avg_normal)
                 offset_length = np.linalg.norm(offset_dir)
                 if offset_length > 1e-6:
-                    return offset_dir / offset_length
+                    return offset_dir / offset_length  # type: ignore[no-any-return]
 
         # Fallback: Arbitrary direction perpendicular to the bond vector
         v_arb = np.array([0, 0, 1])
@@ -1166,7 +1200,7 @@ class View3DManager:
 
         off_dir = np.cross(bond_unit, v_arb)
         off_dir /= np.linalg.norm(off_dir)
-        return off_dir
+        return off_dir  # type: ignore[no-any-return]
 
     def show_ez_labels_3d(self, mol: Chem.Mol) -> None:
         """Display E/Z labels in 3D view (using RDKit stereochemistry determination)"""
@@ -1268,7 +1302,7 @@ class View3DManager:
                 show_points=False,
             )
 
-    def toggle_chiral_labels_display(self, checked):
+    def toggle_chiral_labels_display(self, checked: bool) -> None:
         """Toggle chiral label display based on View menu action"""
         self.show_chiral_labels = checked
 
@@ -1282,7 +1316,7 @@ class View3DManager:
         else:
             self.host.statusBar().showMessage("Chiral labels disabled.")
 
-    def update_chiral_labels(self):
+    def update_chiral_labels(self) -> None:
         """Calculate chiral centers and set/clear R/S labels on 2D AtomItems.
         Prefer 3D (self.host.view_3d_manager.current_mol) if available; otherwise use RDKit mol from 2D.
         """
@@ -1347,7 +1381,7 @@ class View3DManager:
         # Finally redraw 2D scene
         self.host.init_manager.scene.update()
 
-    def toggle_atom_info_display(self, mode):
+    def toggle_atom_info_display(self, mode: str) -> None:
         """Toggle atom info display mode"""
         # Clear current display
         self.clear_all_atom_info_labels()
@@ -1428,7 +1462,7 @@ class View3DManager:
             self.show_all_atom_info()
             self.host.view_3d_manager.plotter.render()
 
-    def is_xyz_derived_molecule(self):
+    def is_xyz_derived_molecule(self) -> bool:
         """Determine if the current molecule is derived from an XYZ file"""
         if not self.host.view_3d_manager.current_mol:
             return False
@@ -1440,8 +1474,10 @@ class View3DManager:
 
         try:
             # Check if the first atom has xyz_unique_id property
-            return self.host.view_3d_manager.current_mol.GetAtomWithIdx(0).HasProp(
-                "xyz_unique_id"
+            return bool(
+                self.host.view_3d_manager.current_mol.GetAtomWithIdx(0).HasProp(
+                    "xyz_unique_id"
+                )
             )
         except (AttributeError, RuntimeError, TypeError, ValueError):
             # Suppress non-critical property access noise
@@ -1449,7 +1485,7 @@ class View3DManager:
 
         return False
 
-    def has_original_atom_ids(self):
+    def has_original_atom_ids(self) -> bool:
         """Determine if the current molecule has Original Atom IDs"""
         if (
             not self.host.view_3d_manager.current_mol
@@ -1466,7 +1502,7 @@ class View3DManager:
             logging.error(f"Failed to check original atom IDs: {e}")
         return False
 
-    def update_atom_id_menu_text(self):
+    def update_atom_id_menu_text(self) -> None:
         """Update Atom ID menu text based on molecule type"""
         if hasattr(self.host.init_manager, "show_atom_id_action"):
             if self.is_xyz_derived_molecule():
@@ -1480,7 +1516,7 @@ class View3DManager:
                 "REPORT ERROR: Missing attribute 'show_atom_id_action' on object"
             )
 
-    def update_atom_id_menu_state(self):
+    def update_atom_id_menu_state(self) -> None:
         """Update Atom ID menu enabled/disabled state"""
         if hasattr(self.host.init_manager, "show_atom_id_action"):
             has_original_ids = self.has_original_atom_ids()
@@ -1509,7 +1545,7 @@ class View3DManager:
                 "REPORT ERROR: Missing attribute 'show_atom_id_action' on object"
             )
 
-    def show_all_atom_info(self):
+    def show_all_atom_info(self) -> None:
         """Display info for all atoms"""
         if (
             self.atom_info_display_mode is None
@@ -1724,7 +1760,7 @@ class View3DManager:
                 f"Suppressed exception: {e}"
             )  # Suppress legend addition errors
 
-    def clear_all_atom_info_labels(self):
+    def clear_all_atom_info_labels(self) -> None:
         """Clear all atom info labels"""
         # Remove label actors (may be a single actor, a list, or None)
         try:
@@ -1774,26 +1810,26 @@ class View3DManager:
         finally:
             self.atom_label_legend_names = []
 
-    def setup_3d_hover(self):
+    def setup_3d_hover(self) -> None:
         """Configure 3D view display (changed to persistent)"""
         if self.atom_info_display_mode is not None:
             self.show_all_atom_info()
 
-    def zoom_in(self):
+    def zoom_in(self) -> None:
         """Zoom in by 20%"""
         self.host.init_manager.view_2d.scale(1.2, 1.2)
 
-    def zoom_out(self):
+    def zoom_out(self) -> None:
         """Zoom out by 20%"""
         self.host.init_manager.view_2d.scale(1 / 1.2, 1 / 1.2)
 
-    def reset_zoom(self):
+    def reset_zoom(self) -> None:
         """Reset zoom to default (75%)"""
         transform = QTransform()
         transform.scale(0.75, 0.75)
         self.host.init_manager.view_2d.setTransform(transform)
 
-    def fit_to_view(self):
+    def fit_to_view(self) -> None:
         """Fit all items in the scene into the view"""
         if not self.host.init_manager.scene.items():
             self.reset_zoom()
@@ -1851,7 +1887,7 @@ class View3DManager:
                     f"Suppressed exception: {e}"
                 )  # Suppress non-critical 3D view/actor cleanup errors
 
-    def apply_3d_settings(self, redraw=True):
+    def apply_3d_settings(self, redraw: bool = True) -> None:
         """Apply 3D view visual settings"""
         # Projection mode
         proj_mode = self.host.init_manager.settings.get(
@@ -1978,10 +2014,12 @@ class View3DManager:
                 f"Suppressed exception: {e}"
             )  # Suppress non-critical 3D state update errors
 
-    def update_bond_color_override(self, bond_idx, hex_color):
+    def update_bond_color_override(
+        self, bond_idx: int, hex_color: Optional[str]
+    ) -> None:
         """Plugin API helper to override bond color."""
         if not hasattr(self, "_plugin_bond_color_overrides"):
-            self._plugin_bond_color_overrides = {}
+            self._plugin_bond_color_overrides: Dict[int, Any] = {}
 
         if hex_color is None:
             if bond_idx in self._plugin_bond_color_overrides:
@@ -1992,10 +2030,12 @@ class View3DManager:
         if self.host.view_3d_manager.current_mol:
             self.draw_molecule_3d(self.host.view_3d_manager.current_mol)
 
-    def update_atom_color_override(self, atom_index, color_hex):
+    def update_atom_color_override(
+        self, atom_index: int, color_hex: Optional[str]
+    ) -> None:
         """Plugin helper to update specific atom color override."""
         if not hasattr(self, "_plugin_color_overrides"):
-            self._plugin_color_overrides = {}
+            self._plugin_color_overrides: Dict[int, Any] = {}
 
         if color_hex is None:
             if atom_index in self._plugin_color_overrides:

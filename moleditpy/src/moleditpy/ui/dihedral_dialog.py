@@ -10,18 +10,23 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Optional, Sequence
+
+from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QLineEdit,
+    QMessageBox,
     QPushButton,
     QRadioButton,
     QSlider,
     QVBoxLayout,
     QWidget,
-    QMessageBox,
 )
-from PyQt6.QtCore import Qt
+from rdkit import Chem
 
 try:
     from .geometry_base_dialog import GeometryBaseDialog
@@ -38,14 +43,23 @@ except ImportError:
         get_connected_group,
     )
 
+if TYPE_CHECKING:
+    from .main_window import MainWindow
+
 
 class DihedralDialog(GeometryBaseDialog):
-    def __init__(self, mol, main_window, preselected_atoms=None, parent=None):
+    def __init__(
+        self,
+        mol: Chem.Mol,
+        main_window: "MainWindow",
+        preselected_atoms: Optional[Sequence[int]] = None,
+        parent: Optional[QWidget] = None,
+    ) -> None:
         super().__init__(mol, main_window, parent)
-        self.atom1_idx = None
-        self.atom2_idx = None
-        self.atom3_idx = None
-        self.atom4_idx = None
+        self.atom1_idx: Optional[int] = None
+        self.atom2_idx: Optional[int] = None
+        self.atom3_idx: Optional[int] = None
+        self.atom4_idx: Optional[int] = None
 
         # Set preselected atoms
         if preselected_atoms and len(preselected_atoms) >= 4:
@@ -56,7 +70,7 @@ class DihedralDialog(GeometryBaseDialog):
 
         self.init_ui()
 
-    def init_ui(self):
+    def init_ui(self) -> None:
         self.setWindowTitle("Adjust Dihedral Angle")
         self.setModal(False)
         layout = QVBoxLayout(self)
@@ -156,7 +170,7 @@ class DihedralDialog(GeometryBaseDialog):
             self.show_atom_labels()
             self.update_display()
 
-    def on_atom_picked(self, atom_idx):
+    def on_atom_picked(self, atom_idx: int) -> None:
         """Handle atom picking event in the 3D view."""
         if self.atom1_idx is None:
             self.atom1_idx = atom_idx
@@ -178,7 +192,7 @@ class DihedralDialog(GeometryBaseDialog):
 
         self.update_display()
 
-    def clear_selection(self):
+    def clear_selection(self) -> None:
         """Clear the current atom selection."""
         self.atom1_idx = None
         self.atom2_idx = None
@@ -188,7 +202,7 @@ class DihedralDialog(GeometryBaseDialog):
         self.clear_selection_labels()
         self.update_display()
 
-    def show_atom_labels(self):
+    def show_atom_labels(self) -> None:
         """Display labels on the selected atoms."""
         selected_atoms = [
             self.atom1_idx,
@@ -202,7 +216,7 @@ class DihedralDialog(GeometryBaseDialog):
         ]
         self.show_atom_labels_for(pairs)
 
-    def update_display(self):
+    def update_display(self) -> None:
         """Update the UI display."""
         # Clear existing labels
         self.clear_selection_labels()
@@ -284,10 +298,17 @@ class DihedralDialog(GeometryBaseDialog):
             self.add_selection_label(self.atom3_idx, "3")
             self.add_selection_label(self.atom4_idx, "4")
 
-    def calculate_dihedral(self):
+    def calculate_dihedral(self) -> float:
         """Calculate the current dihedral angle."""
         if not self._is_selection_complete():
             return 0.0
+        if (
+            self.atom1_idx is None
+            or self.atom2_idx is None
+            or self.atom3_idx is None
+            or self.atom4_idx is None
+        ):
+            return 0.0  # Return value will be ignored in apply_geometry_update
         return calculate_dihedral(
             self.mol.GetConformer().GetPositions(),
             self.atom1_idx,
@@ -296,7 +317,7 @@ class DihedralDialog(GeometryBaseDialog):
             self.atom4_idx,
         )
 
-    def _is_selection_complete(self):
+    def _is_selection_complete(self) -> bool:
         """Check if all four atoms required for a dihedral are selected."""
         return (
             self.atom1_idx is not None
@@ -305,13 +326,13 @@ class DihedralDialog(GeometryBaseDialog):
             and self.atom4_idx is not None
         )
 
-    def on_dihedral_input_changed(self, text):
+    def on_dihedral_input_changed(self, text: str) -> None:
         """Line edit text changed, update slider."""
         if not self.dihedral_input.isEnabled() or not self.apply_button.isEnabled():
             return
         self._sync_input_to_slider(text, self.dihedral_slider, 1.0, wrap=True)
 
-    def apply_changes(self):
+    def apply_changes(self) -> None:
         """Apply the dihedral changes to the molecule."""
         if not self._is_selection_complete():
             return
@@ -335,7 +356,7 @@ class DihedralDialog(GeometryBaseDialog):
         # Push Undo state AFTER modification
         self._push_undo()
 
-    def apply_geometry_update(self, new_dihedral_deg):
+    def apply_geometry_update(self, new_dihedral_deg: float) -> None:  # pylint: disable=arguments-renamed
         """Adjust the dihedral angle."""
         if not self._is_selection_complete():
             return
@@ -349,12 +370,17 @@ class DihedralDialog(GeometryBaseDialog):
         else:
             positions = conf.GetPositions()
 
-        idx1, idx2, idx3, idx4 = (
-            self.atom1_idx,
-            self.atom2_idx,
-            self.atom3_idx,
-            self.atom4_idx,
-        )
+        if (
+            self.atom1_idx is None
+            or self.atom2_idx is None
+            or self.atom3_idx is None
+            or self.atom4_idx is None
+        ):
+            return
+        idx1: int = self.atom1_idx
+        idx2: int = self.atom2_idx
+        idx3: int = self.atom3_idx
+        idx4: int = self.atom4_idx
 
         if self.both_groups_radio.isChecked():
             # Both ends rotate equally.

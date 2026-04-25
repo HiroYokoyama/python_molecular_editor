@@ -30,7 +30,7 @@ try:
 
     _sip_isdeleted = getattr(_sip, "isdeleted", None)
 except ImportError:
-    _sip = None
+    _sip = None  # type: ignore[assignment]
     _sip_isdeleted = None
 
 try:
@@ -62,7 +62,7 @@ class ExportManager:
                 base = os.path.basename(self.host.init_manager.current_file_path)
                 name = os.path.splitext(base)[0]
                 if name:
-                    return name
+                    return str(name)
         except (AttributeError, RuntimeError, ValueError, TypeError):
             pass
         return "untitled"

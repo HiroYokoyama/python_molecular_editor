@@ -10,6 +10,8 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
+from typing import Any, List
+
 from PyQt6.QtCore import QDateTime, QLineF, QPointF, QRectF, Qt, QTimer
 from PyQt6.QtGui import QBrush, QColor, QFont, QPainter, QPen
 from PyQt6.QtWidgets import (
@@ -40,15 +42,15 @@ import os
 class UserTemplateDialog(QDialog):
     """Dialog for managing user-defined molecular templates."""
 
-    def __init__(self, main_window, parent=None):
+    def __init__(self, main_window: Any, parent: Any = None) -> None:
         super().__init__(parent)
         self.main_window = main_window
-        self.user_templates = []
+        self.user_templates: List[Any] = []
         self.selected_template = None
         self.init_ui()
         self.load_user_templates()
 
-    def init_ui(self):
+    def init_ui(self) -> None:
         self.setWindowTitle("User Templates")
         self.setModal(False)
         self.resize(800, 600)
@@ -100,12 +102,12 @@ class UserTemplateDialog(QDialog):
 
         layout.addLayout(button_layout)
 
-    def closeEvent(self, event):
+    def closeEvent(self, event: Any) -> None:
         """Reset mode when the dialog is closed."""
         self.cleanup_template_mode()
         super().closeEvent(event)
 
-    def cleanup_template_mode(self):
+    def cleanup_template_mode(self) -> None:
         """Exit template mode and revert to atom_C (Carbon) mode."""
         # 1. Reset Dialog State
         self.selected_template = None
@@ -160,13 +162,13 @@ class UserTemplateDialog(QDialog):
         except (AttributeError, RuntimeError, ValueError) as e:
             logging.error(f"Error cleaning up scene state: {e}")
 
-    def resizeEvent(self, event):
+    def resizeEvent(self, event: Any) -> None:
         """Refit template previews when the dialog is resized."""
         super().resizeEvent(event)
         # Delay the refit to ensure proper widget sizing
         QTimer.singleShot(100, self.refit_all_previews)
 
-    def refit_all_previews(self):
+    def refit_all_previews(self) -> None:
         """Refit all template preview widgets."""
         try:
             for i in range(self.template_layout.count()):
@@ -187,13 +189,13 @@ class UserTemplateDialog(QDialog):
         except (AttributeError, RuntimeError, ValueError) as e:
             logging.warning(f"Warning: Failed to refit template previews: {e}")
 
-    def showEvent(self, event):
+    def showEvent(self, event: Any) -> None:
         """Ensure previews are properly fitted when the dialog is shown."""
         super().showEvent(event)
         # Ensure all previews are properly fitted when dialog becomes visible
         QTimer.singleShot(300, self.refit_all_previews)
 
-    def get_template_directory(self):
+    def get_template_directory(self) -> str:
         """Get or create the user templates directory path."""
         template_dir = os.path.join(
             self.main_window.init_manager.settings_dir, "user-templates"
@@ -202,7 +204,7 @@ class UserTemplateDialog(QDialog):
             os.makedirs(template_dir)
         return template_dir
 
-    def load_user_templates(self):
+    def load_user_templates(self) -> None:
         """Load templates from the user template directory."""
         template_dir = self.get_template_directory()
         self.user_templates.clear()
@@ -221,7 +223,7 @@ class UserTemplateDialog(QDialog):
 
         self.update_template_grid()
 
-    def load_template_file(self, filepath):
+    def load_template_file(self, filepath: str) -> Any:
         """Load and parse a template JSON file."""
         try:
             with open(filepath, "r", encoding="utf-8") as f:
@@ -230,7 +232,7 @@ class UserTemplateDialog(QDialog):
             logging.error(f"Error loading template file {filepath}: {e}")
             return None
 
-    def save_template_file(self, filepath, template_data):
+    def save_template_file(self, filepath: str, template_data: Any) -> bool:
         """Save template data to a JSON file."""
         try:
             with open(filepath, "w", encoding="utf-8") as f:
@@ -240,7 +242,7 @@ class UserTemplateDialog(QDialog):
             logging.error(f"Error saving template file {filepath}: {e}")
             return False
 
-    def update_template_grid(self):
+    def update_template_grid(self) -> None:
         """Clear and rebuild the template grid display."""
         # Clear existing widgets
         for i in reversed(range(self.template_layout.count())):
@@ -258,7 +260,7 @@ class UserTemplateDialog(QDialog):
         # Ensure all previews are properly fitted after grid update
         QTimer.singleShot(200, self.refit_all_previews)
 
-    def create_template_preview(self, template_data):
+    def create_template_preview(self, template_data: Any) -> Any:
         """Create a widget containing a preview of the template."""
         widget = QWidget()
         widget.setFixedSize(180, 200)
@@ -306,7 +308,7 @@ class UserTemplateDialog(QDialog):
             preview_scene.setSceneRect(padded_rect)
 
             # Store original scene rect for proper fitting on resize
-            preview_view.original_scene_rect = padded_rect
+            preview_view.original_scene_rect = padded_rect  # type: ignore[assignment]
 
             # Use QTimer to ensure fitInView happens after widget is fully initialized
             QTimer.singleShot(
@@ -316,7 +318,7 @@ class UserTemplateDialog(QDialog):
             # Default view for empty or invalid content
             default_rect = QRectF(-50, -50, 100, 100)
             preview_scene.setSceneRect(default_rect)
-            preview_view.original_scene_rect = default_rect
+            preview_view.original_scene_rect = default_rect  # type: ignore[assignment]
             QTimer.singleShot(
                 0, lambda: self.fit_preview_view_safely(preview_view, default_rect)
             )
@@ -331,14 +333,14 @@ class UserTemplateDialog(QDialog):
         layout.addWidget(name_label)
 
         # Mouse events
-        widget.mousePressEvent = lambda event: self.select_template(
+        widget.mousePressEvent = lambda event: self.select_template(  # type: ignore[assignment]
             template_data, widget
         )
-        widget.mouseDoubleClickEvent = lambda event: self.use_template(template_data)
+        widget.mouseDoubleClickEvent = lambda event: self.use_template(template_data)  # type: ignore[assignment]
 
         return widget
 
-    def fit_preview_view_safely(self, view, rect):
+    def fit_preview_view_safely(self, view: Any, rect: QRectF) -> None:
         """Safely call fitInView for a preview."""
         try:
             if view and not rect.isEmpty():
@@ -346,7 +348,9 @@ class UserTemplateDialog(QDialog):
         except (AttributeError, RuntimeError, ValueError) as e:
             logging.warning(f"Warning: Failed to fit preview view: {e}")
 
-    def draw_template_preview(self, scene, template_data, view_size=None):
+    def draw_template_preview(
+        self, scene: Any, template_data: Any, view_size: Any = None
+    ) -> None:
         """Draw the molecular structure in the preview scene with dynamic scaling."""
         atoms = template_data.get("atoms", [])
         bonds = template_data.get("bonds", [])
@@ -525,7 +529,7 @@ class UserTemplateDialog(QDialog):
             except (AttributeError, RuntimeError, ValueError, TypeError):
                 continue
 
-    def _activate_template_mode(self, template_data):
+    def _activate_template_mode(self, template_data: Any) -> None:
         """Switch the main window into template placement mode for the given template."""
         template_name = template_data.get("name", "user_template")
         mode_name = f"template_user_{template_name}"
@@ -563,7 +567,7 @@ class UserTemplateDialog(QDialog):
         except (AttributeError, RuntimeError, ValueError) as e:
             logging.warning(f"Failed to switch main window to template mode: {e}")
 
-    def select_template(self, template_data, widget):
+    def select_template(self, template_data: Any, widget: Any) -> None:
         """Select a template and activate template placement mode."""
         # Clear previous selection styling
         for i in range(self.template_layout.count()):
@@ -594,7 +598,7 @@ class UserTemplateDialog(QDialog):
         self.delete_button.setEnabled(True)
         self._activate_template_mode(template_data)
 
-    def use_template(self, template_data):
+    def use_template(self, template_data: Any) -> None:
         """Apply the selected template to the main editor."""
         try:
             self._activate_template_mode(template_data)
@@ -602,7 +606,7 @@ class UserTemplateDialog(QDialog):
         except (AttributeError, RuntimeError, ValueError) as e:
             QMessageBox.critical(self, "Error", f"Failed to apply template: {str(e)}")
 
-    def save_current_as_template(self):
+    def save_current_as_template(self) -> None:
         """Save the current editor structure as a new user template."""
         if not self.main_window.state_manager.data.atoms:
             QMessageBox.warning(self, "Warning", "No structure to save as template.")
@@ -644,7 +648,7 @@ class UserTemplateDialog(QDialog):
         except (AttributeError, RuntimeError, ValueError) as e:
             QMessageBox.critical(self, "Error", f"Failed to save template: {str(e)}")
 
-    def convert_structure_to_template(self, name):
+    def convert_structure_to_template(self, name: str) -> Any:
         """Convert the internal molecular data to template format."""
         atoms_data = []
         bonds_data = []
@@ -691,7 +695,7 @@ class UserTemplateDialog(QDialog):
 
         return template_data
 
-    def delete_selected_template(self):
+    def delete_selected_template(self) -> None:
         """Delete the currently selected template file."""
         if not self.selected_template:
             return

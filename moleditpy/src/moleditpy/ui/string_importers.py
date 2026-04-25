@@ -12,6 +12,8 @@ DOI: 10.5281/zenodo.17268532
 
 from __future__ import annotations
 
+from typing import Any, Dict
+
 # RDKit imports (explicit to satisfy flake8 and used features)
 from rdkit import Chem
 from rdkit.Chem import AllChem
@@ -25,7 +27,7 @@ try:
 
     _sip_isdeleted = getattr(_sip, "isdeleted", None)
 except ImportError:
-    _sip = None
+    _sip = None  # type: ignore[assignment]
     _sip_isdeleted = None
 
 
@@ -33,7 +35,7 @@ except ImportError:
 class StringImporterManager:
     """Mixin for string-based molecular input (SMILES, InChI)."""
 
-    def __init__(self, host):
+    def __init__(self, host: Any) -> None:
         self.host = host
 
     def import_smiles_dialog(self) -> None:
@@ -62,21 +64,21 @@ class StringImporterManager:
         existing = self.host.state_manager.data.atoms
         if existing:
 
-            def _x(v):
-                return v["pos"].x() if hasattr(v["pos"], "x") else v["pos"][0]
+            def _x(v: Any) -> float:
+                return float(v["pos"].x() if hasattr(v["pos"], "x") else v["pos"][0])
 
-            def _y(v):
-                return v["pos"].y() if hasattr(v["pos"], "y") else v["pos"][1]
+            def _y(v: Any) -> float:
+                return float(v["pos"].y() if hasattr(v["pos"], "y") else v["pos"][1])
 
             max_x = max(_x(v) for v in existing.values())
             avg_y = sum(_y(v) for v in existing.values()) / len(existing)
             return QPointF(max_x + 80.0, avg_y)
 
-        return self.host.init_manager.view_2d.mapToScene(
+        return self.host.init_manager.view_2d.mapToScene(  # type: ignore[no-any-return]
             self.host.init_manager.view_2d.viewport().rect().center()
         )
 
-    def _place_mol_bonds(self, mol, rdkit_idx_to_my_id: dict) -> None:
+    def _place_mol_bonds(self, mol: Any, rdkit_idx_to_my_id: Dict[int, int]) -> None:
         """Create bonds in the 2D scene from an RDKit molecule."""
         for bond in mol.GetBonds():
             b_idx, e_idx = bond.GetBeginAtomIdx(), bond.GetEndAtomIdx()
@@ -102,7 +104,9 @@ class StringImporterManager:
                     a1_item, a2_item, bond_order=int(b_type), bond_stereo=stereo
                 )
 
-    def _place_mol_atoms(self, mol, conf, place_center: QPointF) -> dict:
+    def _place_mol_atoms(
+        self, mol: Any, conf: Any, place_center: QPointF
+    ) -> Dict[int, int]:
         """Create atoms in the 2D scene and return rdkit_idx → atom_id mapping."""
         SCALE_FACTOR = 50.0
         positions = [conf.GetAtomPosition(i) for i in range(mol.GetNumAtoms())]

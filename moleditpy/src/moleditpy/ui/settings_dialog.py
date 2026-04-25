@@ -11,6 +11,7 @@ DOI: 10.5281/zenodo.17268532
 """
 
 import logging  # [REPORT ERROR MISSING ATTRIBUTE]
+from typing import Any
 
 from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import (
@@ -33,7 +34,7 @@ except ImportError:
 
 
 class SettingsDialog(QDialog):
-    def __init__(self, current_settings, parent=None):
+    def __init__(self, current_settings: Any, parent: Any = None) -> None:
         super().__init__(parent)
         self.setWindowTitle("Settings")
         self.setMinimumSize(650, 750)
@@ -43,7 +44,7 @@ class SettingsDialog(QDialog):
 
         self._setup_ui(current_settings)
 
-    def _setup_ui(self, current_settings):
+    def _setup_ui(self, current_settings: Any) -> None:
         layout = QVBoxLayout(self)
         self.tab_widget = QTabWidget()
         layout.addWidget(self.tab_widget)
@@ -116,17 +117,17 @@ class SettingsDialog(QDialog):
         # Initialize UI from settings
         self.update_ui_from_settings(current_settings)
 
-    def update_ui_from_settings(self, settings):
+    def update_ui_from_settings(self, settings: Any) -> None:
         for i in range(self.tab_widget.count()):
             self.tab_widget.widget(i).update_ui(settings)
 
-    def get_settings(self):
+    def get_settings(self) -> Any:
         settings = {}
         for i in range(self.tab_widget.count()):
             settings.update(self.tab_widget.widget(i).get_settings())
         return settings
 
-    def reset_current_tab(self):
+    def reset_current_tab(self) -> None:
         self.tab_widget.currentWidget().reset_to_defaults()
         QMessageBox.information(
             self,
@@ -134,7 +135,7 @@ class SettingsDialog(QDialog):
             f"Settings for '{self.tab_widget.tabText(self.tab_widget.currentIndex())}' tab have been reset to defaults.",
         )
 
-    def reset_all_settings(self):
+    def reset_all_settings(self) -> None:
         reply = QMessageBox.question(
             self,
             "Reset All Settings",
@@ -145,7 +146,7 @@ class SettingsDialog(QDialog):
             self.update_ui_from_settings(self.default_settings)
             self.apply_settings()
 
-    def apply_settings(self):
+    def apply_settings(self) -> None:
         if not self.parent_window:
             return
 
@@ -202,6 +203,6 @@ class SettingsDialog(QDialog):
         if hasattr(self.parent_window, "statusBar") and self.parent_window.statusBar():
             self.parent_window.statusBar().showMessage("Settings applied successfully")
 
-    def accept(self):
+    def accept(self) -> None:
         self.apply_settings()
         super().accept()

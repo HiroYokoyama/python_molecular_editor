@@ -20,11 +20,11 @@ except ImportError:
 
         _sip_isdeleted = getattr(_sip, "isdeleted", None)
     except ImportError:
-        _sip = None
+        _sip = None  # type: ignore[assignment]
         _sip_isdeleted = None
 
 
-def sip_isdeleted_safe(obj) -> bool:
+def sip_isdeleted_safe(obj: object) -> bool:
     """Return True if sip reports the given wrapper object as deleted.
 
     This function is conservative: if SIP isn't available or any error

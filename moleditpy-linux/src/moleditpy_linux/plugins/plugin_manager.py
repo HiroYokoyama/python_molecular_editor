@@ -315,7 +315,7 @@ class PluginManager:
             spec = importlib.util.spec_from_file_location(
                 unique_module_name,
                 filepath,
-                submodule_search_locations=([pkg_dir] if is_package else None),
+                submodule_search_locations=([pkg_dir] if is_package else None),  # type: ignore[list-item]
             )
             if spec and spec.loader:
                 module = importlib.util.module_from_spec(spec)
@@ -482,12 +482,16 @@ class PluginManager:
         # Sort by priority desc
         self.drop_handlers.sort(key=lambda x: x["priority"], reverse=True)
 
-    def register_export_action(self, plugin_name, label, callback):
+    def register_export_action(
+        self, plugin_name: str, label: str, callback: Callable
+    ) -> None:
         self.export_actions.append(
             {"plugin": plugin_name, "label": label, "callback": callback}
         )
 
-    def register_optimization_method(self, plugin_name, method_name, callback):
+    def register_optimization_method(
+        self, plugin_name: str, method_name: str, callback: Callable
+    ) -> None:
         # Key by upper-case method name for consistency
         self.optimization_methods[method_name.upper()] = {
             "plugin": plugin_name,
@@ -495,7 +499,9 @@ class PluginManager:
             "label": method_name,
         }
 
-    def register_file_opener(self, plugin_name, extension, callback, priority=0):
+    def register_file_opener(
+        self, plugin_name: str, extension: str, callback: Callable, priority: int = 0
+    ) -> None:
         # Normalize extension to lowercase
         ext = extension.lower()
         if not ext.startswith("."):
@@ -512,25 +518,31 @@ class PluginManager:
         self.file_openers[ext].sort(key=lambda x: x["priority"], reverse=True)
 
     # Analysis Tools registration
-    def register_analysis_tool(self, plugin_name, label, callback):
+    def register_analysis_tool(
+        self, plugin_name: str, label: str, callback: Callable
+    ) -> None:
         self.analysis_tools.append(
             {"plugin": plugin_name, "label": label, "callback": callback}
         )
 
     # State Persistence registration
-    def register_save_handler(self, plugin_name, callback):
+    def register_save_handler(self, plugin_name: str, callback: Callable) -> None:
         self.save_handlers[plugin_name] = callback
 
-    def register_load_handler(self, plugin_name, callback):
+    def register_load_handler(self, plugin_name: str, callback: Callable) -> None:
         self.load_handlers[plugin_name] = callback
 
-    def register_3d_style(self, plugin_name, style_name, callback):
+    def register_3d_style(
+        self, plugin_name: str, style_name: str, callback: Callable
+    ) -> None:
         self.custom_3d_styles[style_name] = {
             "plugin": plugin_name,
             "callback": callback,
         }
 
-    def register_document_reset_handler(self, plugin_name, callback):
+    def register_document_reset_handler(
+        self, plugin_name: str, callback: Callable
+    ) -> None:
         """Register callback to be invoked when a new document is created."""
         self.document_reset_handlers.append(
             {"plugin": plugin_name, "callback": callback}
@@ -637,7 +649,7 @@ class PluginManager:
                     f"Error in document reset handler for {handler['plugin']}: {e}"
                 )
 
-    def get_plugin_info_safe(self, file_path):
+    def get_plugin_info_safe(self, file_path: str) -> Dict[str, str]:
         """Extracts plugin metadata using AST parsing (safe, no execution)."""
         info = {
             "name": os.path.basename(file_path),
@@ -691,25 +703,25 @@ class PluginManager:
 
                         if val is not None:
                             if target.id == "PLUGIN_NAME":
-                                info["name"] = val
+                                info["name"] = str(val)
                             elif target.id == "PLUGIN_VERSION":
-                                info["version"] = val
+                                info["version"] = str(val)
                             elif target.id == "PLUGIN_AUTHOR":
-                                info["author"] = val
+                                info["author"] = str(val)
                             elif target.id == "PLUGIN_DESCRIPTION":
-                                info["description"] = val
+                                info["description"] = str(val)
                             elif target.id == "PLUGIN_CATEGORY":
-                                info["category"] = val
+                                info["category"] = str(val)
                             elif (
                                 target.id == "__version__"
                                 and info["version"] == "Unknown"
                             ):
-                                info["version"] = val
+                                info["version"] = str(val)
                             elif (
                                 target.id == "__author__"
                                 and info["author"] == "Unknown"
                             ):
-                                info["author"] = val
+                                info["author"] = str(val)
 
                 # Docstring extraction
                 if isinstance(node, ast.Expr):

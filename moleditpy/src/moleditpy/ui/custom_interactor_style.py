@@ -10,7 +10,10 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
+from __future__ import annotations
+
 import logging
+from typing import Any, Optional
 
 import numpy as np
 from PyQt6.QtCore import Qt
@@ -30,23 +33,23 @@ from rdkit import Geometry
 
 
 class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
-    def __init__(self, main_window=None, **kwargs):
+    def __init__(self, main_window: Any = None, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self.main_window = main_window
         # Custom state flags
         self._is_dragging_atom = False
         self.is_dragging = False
         self._mouse_moved_during_drag = False
-        self._mouse_press_pos = None
+        self._mouse_press_pos: Optional[tuple[int, int]] = None
 
-        self.AddObserver("LeftButtonPressEvent", self.on_left_button_down)
+        self.AddObserver("LeftButtonPressEvent", self.on_left_button_down)  # type: ignore[arg-type]
         # self.AddObserver("LeftButtonDoubleClickEvent", self.on_left_button_down)
-        self.AddObserver("RightButtonPressEvent", self.on_right_button_down)
-        self.AddObserver("MouseMoveEvent", self.on_mouse_move)
-        self.AddObserver("LeftButtonReleaseEvent", self.on_left_button_up)
-        self.AddObserver("RightButtonReleaseEvent", self.on_right_button_up)
+        self.AddObserver("RightButtonPressEvent", self.on_right_button_down)  # type: ignore[arg-type]
+        self.AddObserver("MouseMoveEvent", self.on_mouse_move)  # type: ignore[arg-type]
+        self.AddObserver("LeftButtonReleaseEvent", self.on_left_button_up)  # type: ignore[arg-type]
+        self.AddObserver("RightButtonReleaseEvent", self.on_right_button_up)  # type: ignore[arg-type]
 
-    def on_left_button_down(self, obj, event):
+    def on_left_button_down(self, obj: Any, event: Any) -> None:
         """
         Dispatch click events.
         Use custom action if atom handles, else camera rotation.
@@ -274,7 +277,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
         self._is_dragging_atom = False
         super().OnLeftButtonDown()
 
-    def on_right_button_down(self, obj, event):
+    def on_right_button_down(self, obj: Any, event: Any) -> None:
         """
         Right-click: Start group rotation if dialog open.
         """
@@ -355,7 +358,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
         # Standard right-click
         super().OnRightButtonDown()
 
-    def on_mouse_move(self, obj, event):
+    def on_mouse_move(self, obj: Any, event: Any) -> None:
         """
         Handle mouse move (drag vs camera/hover).
         """
@@ -377,6 +380,9 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
             interactor = self.GetInteractor()
             current_pos = interactor.GetEventPosition()
 
+            if move_group_dialog._drag_start_pos is None:
+                return
+
             dx = current_pos[0] - move_group_dialog._drag_start_pos[0]
             dy = current_pos[1] - move_group_dialog._drag_start_pos[1]
 
@@ -391,6 +397,9 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
         ):
             interactor = self.GetInteractor()
             current_pos = interactor.GetEventPosition()
+
+            if move_group_dialog._rotation_start_pos is None:
+                return
 
             dx = current_pos[0] - move_group_dialog._rotation_start_pos[0]
             dy = current_pos[1] - move_group_dialog._rotation_start_pos[1]
@@ -440,7 +449,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
             else:
                 mw.view_3d_manager.plotter.setCursor(Qt.CursorShape.ArrowCursor)
 
-    def on_left_button_up(self, obj, event):
+    def on_left_button_up(self, obj: Any, event: Any) -> None:
         """
         Handle click release and reset state.
         """
@@ -534,8 +543,8 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                     print(f"Error finalizing group drag: {e}")
             else:
                 # No drag = click only -> toggle
-                if hasattr(move_group_dialog, "_drag_atom_idx"):  # [SAFE]
-                    clicked_atom = move_group_dialog._drag_atom_idx
+                clicked_atom = getattr(move_group_dialog, "_drag_atom_idx", None)
+                if clicked_atom is not None:
                     try:
                         move_group_dialog.on_atom_picked(clicked_atom)
                     except (AttributeError, RuntimeError, TypeError, ValueError) as e:
@@ -705,7 +714,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
         if mw and mw.init_manager.view_2d:
             mw.init_manager.view_2d.setFocus()
 
-    def on_right_button_up(self, obj, event):
+    def on_right_button_up(self, obj: Any, event: Any) -> None:
         """
         Finalize group rotation on right-click release.
         """

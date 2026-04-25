@@ -11,6 +11,9 @@ DOI: 10.5281/zenodo.17268532
 """
 
 import numpy as np
+from typing import TYPE_CHECKING, Literal, Optional, Sequence
+
+from PyQt6.QtGui import QCloseEvent
 from PyQt6.QtWidgets import (
     QDialog,
     QHBoxLayout,
@@ -18,23 +21,34 @@ from PyQt6.QtWidgets import (
     QMessageBox,
     QPushButton,
     QVBoxLayout,
+    QWidget,
 )
-from rdkit import Geometry
+from rdkit import Chem, Geometry
 
 try:
     from .dialog_3d_picking_mixin import Dialog3DPickingMixin
 except ImportError:
     from moleditpy_linux.ui.dialog_3d_picking_mixin import Dialog3DPickingMixin
 
+if TYPE_CHECKING:
+    from .main_window import MainWindow
+
 
 class AlignmentDialog(Dialog3DPickingMixin, QDialog):
-    def __init__(self, mol, main_window, axis, preselected_atoms=None, parent=None):
+    def __init__(
+        self,
+        mol: Chem.Mol,
+        main_window: "MainWindow",
+        axis: Literal["x", "y", "z"],
+        preselected_atoms: Optional[Sequence[int]] = None,
+        parent: Optional[QWidget] = None,
+    ) -> None:
         QDialog.__init__(self, parent)
         Dialog3DPickingMixin.__init__(self)
         self.mol = mol
         self.main_window = main_window
         self.axis = axis
-        self.selected_atoms = set()
+        self.selected_atoms: set[int] = set()
 
         # Add preselected atoms (maximum 2)
         if preselected_atoms:
@@ -48,7 +62,7 @@ class AlignmentDialog(Dialog3DPickingMixin, QDialog):
                 self.add_selection_label(atom_idx, f"Atom {i}")
             self.update_display()
 
-    def init_ui(self):
+    def init_ui(self) -> None:
         axis_names = {"x": "X-axis", "y": "Y-axis", "z": "Z-axis"}
         self.setWindowTitle(f"Align to {axis_names[self.axis]}")
         self.setModal(False)
@@ -88,17 +102,7 @@ class AlignmentDialog(Dialog3DPickingMixin, QDialog):
         self.picker_connection = None
         self.enable_picking()
 
-    def enable_picking(self):
-        """Enable atom selection in the 3D window."""
-        # Use functionality from Dialog3DPickingMixin
-        super().enable_picking()
-
-    def disable_picking(self):
-        """Disable atom selection in the 3D window."""
-        # Use functionality from Dialog3DPickingMixin
-        super().disable_picking()
-
-    def on_atom_picked(self, atom_idx):
+    def on_atom_picked(self, atom_idx: int) -> None:
         """Handle atom selection event."""
         if self.main_window.view_3d_manager.current_mol is None:
             return
@@ -117,7 +121,7 @@ class AlignmentDialog(Dialog3DPickingMixin, QDialog):
 
         self.update_display()
 
-    def update_display(self):
+    def update_display(self) -> None:
         """Update the UI based on current selection."""
         if len(self.selected_atoms) == 0:
             self.selection_label.setText(
@@ -138,13 +142,13 @@ class AlignmentDialog(Dialog3DPickingMixin, QDialog):
             )
             self.apply_button.setEnabled(True)
 
-    def clear_selection(self):
+    def clear_selection(self) -> None:
         """Clear the current selection and labels."""
         self.clear_selection_labels()
         self.selected_atoms.clear()
         self.update_display()
 
-    def remove_atom_label(self, atom_idx):
+    def remove_atom_label(self, atom_idx: int) -> None:
         """Remove a label for a specific atom."""
         # Re-draw all labels for simplicity
         self.clear_selection_labels()
@@ -152,7 +156,7 @@ class AlignmentDialog(Dialog3DPickingMixin, QDialog):
             if idx != atom_idx:
                 self.add_selection_label(idx, f"Atom {i}")
 
-    def apply_alignment(self):
+    def apply_alignment(self) -> None:
         """Apply the specific axial alignment to the molecule."""
         if len(self.selected_atoms) != 2:
             QMessageBox.warning(
@@ -205,10 +209,12 @@ class AlignmentDialog(Dialog3DPickingMixin, QDialog):
                     rotation_angle = np.arccos(cos_angle)
 
                     # Use Rodrigues' rotation formula
-                    def rodrigues_rotation(v, k, theta):
+                    def rodrigues_rotation(
+                        v: np.ndarray, k: np.ndarray, theta: float
+                    ) -> np.ndarray:
                         cos_theta = np.cos(theta)
                         sin_theta = np.sin(theta)
-                        return (
+                        return (  # type: ignore[no-any-return]
                             v * cos_theta
                             + np.cross(k, v) * sin_theta
                             + k * np.dot(k, v) * (1 - cos_theta)
@@ -250,19 +256,19 @@ class AlignmentDialog(Dialog3DPickingMixin, QDialog):
         except (AttributeError, RuntimeError, ValueError, TypeError) as e:
             QMessageBox.critical(self, "Error", f"Failed to apply alignment: {str(e)}")
 
-    def closeEvent(self, event):
+    def closeEvent(self, event: Optional[QCloseEvent]) -> None:
         """Clean up when the dialog is closed."""
         self.clear_selection_labels()
         self.disable_picking()
         super().closeEvent(event)
 
-    def reject(self):
+    def reject(self) -> None:
         """Handle dialog rejection/cancellation."""
         self.clear_selection_labels()
         self.disable_picking()
         super().reject()
 
-    def accept(self):
+    def accept(self) -> None:
         """Handle dialog acceptance (OK/Apply)."""
         self.clear_selection_labels()
         self.disable_picking()

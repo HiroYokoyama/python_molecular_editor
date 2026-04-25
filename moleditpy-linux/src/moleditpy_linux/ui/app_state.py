@@ -10,10 +10,15 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
+from __future__ import annotations
+
 import base64
+import binascii
 import copy
 import logging
 import os
+from typing import Any, Dict, Optional, Tuple, TYPE_CHECKING
+
 import numpy as np
 
 # RDKit imports (explicit to satisfy flake8 and used features)
@@ -25,35 +30,37 @@ from PyQt6.QtCore import QDateTime, QPointF, Qt
 from PyQt6.QtWidgets import QMessageBox
 
 try:
-    from PyQt6 import sip as _sip  # type: ignore
-
-    _sip_isdeleted = getattr(_sip, "isdeleted", None)
-except ImportError:
-    _sip = None
-    _sip_isdeleted = None
-
-try:
     # package relative imports (preferred when running as `python -m moleditpy`)
     from .atom_item import AtomItem
     from .bond_item import BondItem
     from ..utils.constants import VERSION
-except ImportError:
+except (ImportError, AttributeError):
     # Fallback to absolute imports for script-style execution
     from moleditpy_linux.ui.atom_item import AtomItem
     from moleditpy_linux.ui.bond_item import BondItem
     from moleditpy_linux.utils.constants import VERSION
+
+try:
+    from .molecular_data import MolecularData
+except (AttributeError, RuntimeError, TypeError, ImportError):
+    from moleditpy_linux.core.molecular_data import MolecularData
+
+if TYPE_CHECKING:
+    from .main_window import MainWindow
 
 
 # --- Class Definition ---
 class StateManager:
     _cls = None
 
-    def __init__(self, host):
+    def __init__(self, host: Any) -> None:
         self.host = host
+        self.data: MolecularData  # Dynamically assigned in main_window_init.py
         self.has_unsaved_changes = False
-        self._preserved_plugin_data = {}
+        self._preserved_plugin_data: Dict[str, Any] = {}
+        self.dragged_atom_info: Optional[Dict[str, Any]] = None
 
-    def get_current_state(self):
+    def get_current_state(self) -> Dict[str, Any]:
         atoms = {
             atom_id: {
                 "symbol": data["symbol"],
@@ -110,7 +117,7 @@ class StateManager:
 
         return state
 
-    def set_state_from_data(self, state_data):
+    def set_state_from_data(self, state_data: Dict[str, Any]) -> None:
         self.dragged_atom_info = None
         self.host.edit_actions_manager.clear_2d_editor(push_to_undo=False)
 
@@ -119,7 +126,7 @@ class StateManager:
         # Get file version (default '0.0.0')
         file_version_str = loaded_data.get("version", "0.0.0")
 
-        def parse_v(v_str):
+        def parse_v(v_str: str) -> Tuple[int, ...]:
             if not v_str or not isinstance(v_str, str):
                 return (0, 0, 0)
             try:
@@ -321,10 +328,10 @@ class StateManager:
         # Update labels after undo/redo
         self.host.edit_3d_manager.update_2d_measurement_labels()
 
-    def push_undo_state(self):
+    def push_undo_state(self) -> None:
         self.host.edit_actions_manager.push_undo_state()
 
-    def update_window_title(self):
+    def update_window_title(self) -> None:
         """Update window title to reflect save state."""
         base_title = f"MoleditPy Ver. {VERSION}"
         if self.host.init_manager.current_file_path:
@@ -339,7 +346,7 @@ class StateManager:
                 title = f"*{title}"
         self.host.setWindowTitle(title)
 
-    def check_unsaved_changes(self):
+    def check_unsaved_changes(self) -> bool:
         """Check for unsaved changes and show warning."""
         if not self.host.state_manager.has_unsaved_changes:
             return True  # Saved or no changes
@@ -375,12 +382,12 @@ class StateManager:
         else:
             return False  # Cancel
 
-    def reset_undo_stack(self):
+    def reset_undo_stack(self) -> None:
         self.host.edit_actions_manager.undo_stack.clear()
         self.host.edit_actions_manager.redo_stack.clear()
         self.host.edit_actions_manager.push_undo_state()
 
-    def update_realtime_info(self):
+    def update_realtime_info(self) -> None:
         """Show molecular info in status bar."""
         if not self.data.atoms:
             self.host.init_manager.formula_label.setText("")  # Clear label if no atoms
@@ -410,10 +417,10 @@ class StateManager:
                 ):
                     self.host.init_manager.formula_label.setText("Invalid structure")
 
-    def create_json_data(self):
+    def create_json_data(self) -> Dict[str, Any]:
         """Convert current state to PMEJSON."""
         # Metadata
-        json_data = {
+        json_data: Dict[str, Any] = {
             "format": "PME Project",
             "version": "1.0",
             "application": "MoleditPy",
@@ -613,7 +620,7 @@ class StateManager:
 
         return json_data
 
-    def load_from_json_data(self, json_data):
+    def load_from_json_data(self, json_data: Dict[str, Any]) -> None:
         """Restore state from JSON."""
         self.dragged_atom_info = None
         self.host.edit_actions_manager.clear_2d_editor(push_to_undo=False)
@@ -683,6 +690,7 @@ class StateManager:
                 self.host.init_manager.scene.addItem(atom_item)
 
             # Restore next_atom_id
+
             self.host.state_manager.data._next_atom_id = structure_2d.get(
                 "next_atom_id",
                 max([atom["id"] for atom in atoms_2d]) + 1 if atoms_2d else 0,
@@ -853,12 +861,12 @@ class StateManager:
                             self.host.ui_manager._enable_3d_features(True)
                         except (RuntimeError, TypeError, AttributeError):
                             pass
-            except (RuntimeError, ValueError, TypeError, base64.binascii.Error) as e:
+            except (RuntimeError, ValueError, TypeError, binascii.Error) as e:
                 logging.error(f"Could not restore 3D molecular data: {e}")
                 self.host.view_3d_manager.current_mol = None
 
 
-StateManager._cls = StateManager
+StateManager._cls = StateManager  # type: ignore[assignment]
 
 
 # Backward-compat aliases

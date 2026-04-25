@@ -20,6 +20,6 @@ except ImportError:
     OBABEL_AVAILABLE = importlib.util.find_spec("openbabel") is not None
 
 # Re-export core UI utilities
-from .sip_isdeleted_safe import sip_isdeleted_safe
+from ..utils.sip_isdeleted_safe import sip_isdeleted_safe
 
 __all__ = ["OBABEL_AVAILABLE", "sip_isdeleted_safe"]

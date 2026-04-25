@@ -60,14 +60,14 @@ class Rotate2DDialog(QDialog):
         input_layout.addWidget(QLabel("Angle (degrees):"))
         self.angle_spin = QSpinBox()
         self.angle_spin.setRange(-360, 360)
-        self.angle_spin.setValue(initial_angle)
+        self.angle_spin.setValue(int(initial_angle))
         input_layout.addWidget(self.angle_spin)
         layout.addLayout(input_layout)
 
         # Slider
         self.slider = QSlider(Qt.Orientation.Horizontal)
         self.slider.setRange(-180, 180)
-        self.slider.setValue(initial_angle)
+        self.slider.setValue(int(initial_angle))
         self.slider.setTickPosition(QSlider.TickPosition.TicksBelow)
         self.slider.setTickInterval(15)
         layout.addWidget(self.slider)
@@ -95,7 +95,7 @@ try:
 
     _sip_isdeleted = getattr(_sip, "isdeleted", None)
 except ImportError:
-    _sip = None
+    _sip = None  # type: ignore[assignment]
     _sip_isdeleted = None
 
 try:
@@ -112,11 +112,9 @@ except ImportError:
     from moleditpy_linux.core.molecular_data import MolecularData
 
 try:
-    # Import the shared SIP helper used across the package. This is
-    # defined in modules/__init__.py and centralizes sip.isdeleted checks.
-    from . import sip_isdeleted_safe
+    from ..utils.sip_isdeleted_safe import sip_isdeleted_safe
 except ImportError:
-    from moleditpy_linux.utils import sip_isdeleted_safe
+    from moleditpy_linux.utils.sip_isdeleted_safe import sip_isdeleted_safe
 
 
 # --- Class Definition ---
@@ -350,7 +348,9 @@ class EditActionsManager:
             # Set clipboard with custom MIME type
             mime_data = QMimeData()
             mime_data.setData(CLIPBOARD_MIME_TYPE, byte_array)
-            QApplication.clipboard().setMimeData(mime_data)
+            cb = QApplication.clipboard()
+            if cb is not None:
+                cb.setMimeData(mime_data)
             self.host.statusBar().showMessage(
                 f"Copied {len(fragment_atoms)} atoms and {len(fragment_bonds)} bonds."
             )
@@ -381,12 +381,14 @@ class EditActionsManager:
         """Paste molecular fragment from clipboard"""
         try:
             clipboard = QApplication.clipboard()
+            if clipboard is None:
+                return
             mime_data = clipboard.mimeData()
-            if not mime_data.hasFormat(CLIPBOARD_MIME_TYPE):
+            if mime_data is None or not mime_data.hasFormat(CLIPBOARD_MIME_TYPE):
                 return
 
             byte_array = mime_data.data(CLIPBOARD_MIME_TYPE)
-            buffer = io.BytesIO(byte_array)
+            buffer = io.BytesIO(byte_array.data())
             try:
                 fragment_data = pickle.load(buffer)
             except pickle.UnpicklingError:
@@ -628,7 +630,7 @@ class EditActionsManager:
                 # Determine angles based on neighbors to avoid collisions
                 neighbor_angles = []
                 try:
-                    for (a1, a2), bdata in self.host.state_manager.data.bonds.items():
+                    for (a1, a2), _ in self.host.state_manager.data.bonds.items():
                         # Collect neighboring atom angles (ignore H)
                         try:
                             if (
@@ -666,7 +668,7 @@ class EditActionsManager:
                 bond_length = 75
 
                 # Helper: determine bond_stereo for hydrogen
-                def _choose_stereo(i):
+                def _choose_stereo(i: Any) -> Any:
                     # 0: plain, 1: wedge, 2: dash, 3: plain, 4+: all plain
                     if i == 0:
                         return 0
@@ -709,7 +711,7 @@ class EditActionsManager:
 
                         # Select largest gap and space hydrogens evenly
                         gaps.sort(key=lambda x: x[0], reverse=True)
-                        max_gap, gstart, gend = gaps[0]
+                        max_gap, gstart, _ = gaps[0]
                         for i in range(implicit_h):
                             seg = max_gap / (implicit_h + 1)
                             angle = gstart + (i + 1) * seg
@@ -770,10 +772,13 @@ class EditActionsManager:
             self.host.init_manager.copy_action.setEnabled(has_selection)
 
             clipboard = QApplication.clipboard()
-            mime_data = clipboard.mimeData()
-            self.host.init_manager.paste_action.setEnabled(
-                mime_data is not None and mime_data.hasFormat(CLIPBOARD_MIME_TYPE)
-            )
+            if clipboard is not None:
+                mime_data = clipboard.mimeData()
+                self.host.init_manager.paste_action.setEnabled(
+                    mime_data is not None and mime_data.hasFormat(CLIPBOARD_MIME_TYPE)
+                )
+            else:
+                self.host.init_manager.paste_action.setEnabled(False)
         except RuntimeError:
             # Suppress non-critical error
             pass
@@ -1055,7 +1060,7 @@ class EditActionsManager:
 
                 # Suppress potential errors if the item is already destroyed by SIP during iteration
                 with contextlib.suppress(AttributeError, RuntimeError, TypeError):
-                    if is_deleted_func and is_deleted_func(item):
+                    if is_deleted_func is not None and is_deleted_func(item):
                         continue
 
                 # Check if the item is no longer in a scene: skip updating it to avoid
@@ -1110,7 +1115,7 @@ class EditActionsManager:
                 # Ignore any unexpected errors when touching the item
                 continue
 
-    def update_implicit_hydrogens(self):
+    def update_implicit_hydrogens(self) -> None:
         """Update implicit hydrogen counts on AtomItems."""
         # Quick guards: nothing to do if no atoms or no QApplication
         if not self.host.state_manager.data.atoms:
@@ -1135,7 +1140,7 @@ class EditActionsManager:
             h_count_map = self._compute_h_counts(mol)
             problem_map = self._detect_chemistry_problems(mol)
 
-            def _ui_closure():
+            def _ui_closure() -> None:
                 self._apply_ui_h_counts(h_count_map, problem_map, my_token)
 
             try:
@@ -1147,7 +1152,7 @@ class EditActionsManager:
         except (AttributeError, RuntimeError, TypeError, ValueError) as e:
             logging.exception(f"Unexpected error in update_implicit_hydrogens: {e}")
 
-    def clean_up_2d_structure(self):
+    def clean_up_2d_structure(self) -> None:
         self.host.statusBar().showMessage("Optimizing 2D structure...")
 
         # Clear existing problem flags
@@ -1237,7 +1242,7 @@ class EditActionsManager:
         finally:
             self.host.init_manager.view_2d.setFocus()
 
-    def redraw_molecule_3d(self):
+    def redraw_molecule_3d(self) -> None:
         """Manually trigger redraw of the 3D molecule."""
         if (
             hasattr(self.host, "view_3d_manager")
@@ -1250,7 +1255,7 @@ class EditActionsManager:
         else:
             self.host.statusBar().showMessage("No 3D molecule to redraw.")
 
-    def resolve_overlapping_groups(self):
+    def resolve_overlapping_groups(self) -> None:
         """Detect and resolve overlapping atom groups."""
 
         # --- Parameters ---
@@ -1274,7 +1279,7 @@ class EditActionsManager:
 
         from moleditpy_linux.core.mol_geometry import resolve_2d_overlaps
 
-        def has_bond_check(id1, id2):
+        def has_bond_check(id1: Any, id2: Any) -> Any:
             item1 = self.host.state_manager.data.atoms[id1]["item"]
             item2 = self.host.state_manager.data.atoms[id2]["item"]
             return (
@@ -1328,7 +1333,9 @@ class EditActionsManager:
         self.host.edit_actions_manager.push_undo_state()
         self.host.statusBar().showMessage("Resolved overlapping groups.", 2000)
 
-    def adjust_molecule_positions_to_avoid_collisions(self, mol, frags):
+    def adjust_molecule_positions_to_avoid_collisions(
+        self, mol: Any, frags: Any
+    ) -> None:
         """Adjust molecule positions to avoid collisions (BBox optimized)."""
         if len(frags) <= 1:
             return
@@ -1432,11 +1439,11 @@ class EditActionsManager:
                     vdw_i_all = frag_i["vdw_radii_np"]
                     vdw_j_all = frag_j["vdw_radii_np"]
 
-                    for k, idx_i in enumerate(frag_i["indices"]):
+                    for k, _ in enumerate(frag_i["indices"]):
                         pos_i = positions_i[k]
                         vdw_i = vdw_i_all[k]
 
-                        for l, idx_j in enumerate(frag_j["indices"]):
+                        for l, _ in enumerate(frag_j["indices"]):
                             pos_j = positions_j[l]
                             vdw_j = vdw_j_all[l]
 
@@ -1474,7 +1481,9 @@ class EditActionsManager:
 
                         moved = True
 
-    def _apply_chem_check_and_set_flags(self, mol, source_desc=None, force_skip=False):
+    def _apply_chem_check_and_set_flags(
+        self, mol: Any, source_desc: Optional[str] = None, force_skip: bool = False
+    ) -> None:
         """Central helper to apply chemical sanitization (or skip it) and set
         chem_check_tried / chem_check_failed flags consistently.
 
@@ -1513,7 +1522,7 @@ class EditActionsManager:
                     "REPORT ERROR: Missing attribute 'optimize_3d_button' on object"
                 )
 
-    def _clear_xyz_flags(self, mol=None):
+    def _clear_xyz_flags(self, mol: Optional[Any] = None) -> None:
         """Clear XYZ-derived markers from a molecule (or current_mol) and
         reset UI flags accordingly.
 
@@ -1560,4 +1569,4 @@ class EditActionsManager:
             )
 
 
-EditActionsManager._cls = EditActionsManager
+EditActionsManager._cls = EditActionsManager  # type: ignore[assignment]

@@ -15,6 +15,7 @@ import sys
 import argparse
 import logging
 import os
+from typing import Any
 
 try:
     from .utils.constants import VERSION
@@ -35,7 +36,7 @@ except ImportError:
     from moleditpy_linux.ui.main_window import MainWindow
 
 
-def setup_logging():
+def setup_logging() -> None:
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s [%(levelname)s] %(name)s (%(pathname)s:%(lineno)d): %(message)s",
@@ -43,7 +44,7 @@ def setup_logging():
         force=True,
     )
 
-    def handle_exception(exc_type, exc_value, exc_traceback):
+    def handle_exception(exc_type: Any, exc_value: Any, exc_traceback: Any) -> None:
         """Log unhandled exceptions using the configured logging system."""
         if issubclass(exc_type, KeyboardInterrupt):
             # Allow keyboard interrupt to exit normally
@@ -57,7 +58,7 @@ def setup_logging():
     sys.excepthook = handle_exception
 
 
-def main():
+def main() -> None:
     # Setup logging as early as possible
     setup_logging()
 

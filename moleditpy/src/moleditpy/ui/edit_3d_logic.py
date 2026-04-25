@@ -10,11 +10,15 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
+from __future__ import annotations
+
 """
 main_window_edit_3d.py
 Mixin class separated from main_window.py
 """
+
 import logging  # [REPORT ERROR MISSING ATTRIBUTE]
+from typing import Any, List, Optional
 
 import numpy as np
 
@@ -33,9 +37,9 @@ except ImportError:
 
 # RDKit imports (explicit to satisfy flake8 and used features)
 try:
-    from . import sip_isdeleted_safe
+    from ..utils.sip_isdeleted_safe import sip_isdeleted_safe
 except ImportError:
-    from moleditpy.utils import sip_isdeleted_safe
+    from moleditpy.utils.sip_isdeleted_safe import sip_isdeleted_safe
 
 # PyQt6 Modules
 import pyvista as pv
@@ -48,7 +52,7 @@ try:
 
     _sip_isdeleted = getattr(_sip, "isdeleted", None)
 except ImportError:
-    _sip = None
+    _sip = None  # type: ignore[assignment]
     _sip_isdeleted = None
 
 try:
@@ -65,21 +69,21 @@ class Edit3DManager:
 
     _cls = None
 
-    def __init__(self, host):
+    def __init__(self, host: Any) -> None:
         self.host = host
         # State variables previously held by mixin
         self.measurement_mode = False
-        self.selected_atoms_for_measurement = []
-        self.measurement_labels = []
-        self.measurement_text_actor = None
-        self.measurement_label_items_2d = []
-        self.selected_atoms_3d = set()
-        self.active_3d_dialogs = []
+        self.selected_atoms_for_measurement: list[int] = []
+        self.measurement_labels: list[Any] = []
+        self.measurement_text_actor: Any = None
+        self.measurement_label_items_2d: list[Any] = []
+        self.selected_atoms_3d: set[int] = set()
+        self.active_3d_dialogs: list[Any] = []
         self.is_3d_edit_mode = False
         self.dragged_atom_info = None
-        self.constraints_3d = []
+        self.constraints_3d: list[Any] = []
 
-    def toggle_measurement_mode(self, checked):
+    def toggle_measurement_mode(self, checked: bool) -> None:
         """Toggle measurement mode on/off."""
         if checked:
             # Disable 3D Drag mode when measurement mode is on
@@ -108,7 +112,7 @@ class Edit3DManager:
         else:
             self.host.statusBar().showMessage("Measurement mode disabled.")
 
-    def close_all_3d_edit_dialogs(self):
+    def close_all_3d_edit_dialogs(self) -> None:
         """Close all active 3D edit dialogs."""
         dialogs_to_close = self.active_3d_dialogs.copy()
         for dialog in dialogs_to_close:
@@ -121,7 +125,7 @@ class Edit3DManager:
 
         self.active_3d_dialogs.clear()
 
-    def handle_measurement_atom_selection(self, atom_idx):
+    def handle_measurement_atom_selection(self, atom_idx: int) -> None:
         """Handle atom selection for measurement."""
         # Skip if already selected
         if atom_idx in self.selected_atoms_for_measurement:
@@ -135,7 +139,7 @@ class Edit3DManager:
         # Calculate and display results
         self.calculate_and_display_measurements()
 
-    def add_measurement_label(self, atom_idx, label_number):
+    def add_measurement_label(self, atom_idx: int, label_number: int) -> None:
         """Add numeric labels to atoms."""
         if (
             not self.host.view_3d_manager.current_mol
@@ -152,7 +156,7 @@ class Edit3DManager:
         # Update 2D measurement labels
         self.update_2d_measurement_labels()
 
-    def update_measurement_labels_display(self):
+    def update_measurement_labels_display(self) -> None:
         """Draw measurement labels in 3D (atom centers)."""
         try:
             # Remove existing labels
@@ -165,19 +169,24 @@ class Edit3DManager:
             return
 
         # Prepare label positions and text
-        pts, labels = [], []
-        for atom_idx, label_text in self.measurement_labels:
-            if atom_idx < len(self.host.view_3d_manager.atom_positions_3d):
-                coord = self.host.view_3d_manager.atom_positions_3d[atom_idx].copy()
-                # Place at atom center
-                pts.append(coord)
-                labels.append(label_text)
+        atom_indices = [l[0] for l in self.measurement_labels]
+        labels = [l[1] for l in self.measurement_labels]
+        positions = []
+        texts = []
+        positions_3d = self.host.view_3d_manager.atom_positions_3d
+        if positions_3d is None:
+            return
 
-        if pts and labels:
+        for i, atom_idx in enumerate(atom_indices):
+            if atom_idx < len(positions_3d):
+                positions.append(positions_3d[atom_idx])
+                texts.append(labels[i])
+
+        if positions and texts:
             # Use PyVista's point_labels
             self.host.view_3d_manager.plotter.add_point_labels(
-                np.array(pts),
-                labels,
+                np.array(positions),
+                texts,
                 font_size=16,
                 point_size=0,
                 text_color="red",  # Always red for measurement
@@ -187,7 +196,7 @@ class Edit3DManager:
                 show_points=False,
             )
 
-    def clear_measurement_selection(self):
+    def clear_measurement_selection(self) -> None:
         """Clear measurement selection."""
         self.selected_atoms_for_measurement.clear()
 
@@ -215,7 +224,7 @@ class Edit3DManager:
 
         self.host.view_3d_manager.plotter.render()
 
-    def update_2d_measurement_labels(self):
+    def update_2d_measurement_labels(self) -> None:
         """Update 2D measurement labels."""
         # Remove existing 2D labels
         self.clear_2d_measurement_labels()
@@ -253,7 +262,7 @@ class Edit3DManager:
                 atom_item = atom_idx_to_item[atom_idx]
                 self.add_2d_measurement_label(atom_item, label_text)
 
-    def add_2d_measurement_label(self, atom_item, label_text):
+    def add_2d_measurement_label(self, atom_item: Any, label_text: str) -> None:
         """Add measurement label to specific AtomItem."""
         # Create label item
         label_item = QGraphicsTextItem(label_text)
@@ -276,7 +285,7 @@ class Edit3DManager:
         self.host.init_manager.scene.addItem(label_item)
         self.measurement_label_items_2d.append(label_item)
 
-    def clear_2d_measurement_labels(self):
+    def clear_2d_measurement_labels(self) -> None:
         """Remove all 2D measurement labels."""
         if hasattr(self, "measurement_label_items_2d"):
             for label_item in self.measurement_label_items_2d:
@@ -304,7 +313,7 @@ class Edit3DManager:
                 "REPORT ERROR: Missing attribute 'measurement_label_items_2d' on self"
             )
 
-    def find_rdkit_atom_index(self, atom_item):
+    def find_rdkit_atom_index(self, atom_item: Any) -> Optional[int]:
         """Find RDKit index from AtomItem."""
         if not self.host.view_3d_manager.current_mol or not atom_item:
             return None
@@ -314,12 +323,12 @@ class Edit3DManager:
             hasattr(self.host, "atom_id_to_rdkit_idx_map")
             and atom_item.atom_id in self.host.atom_id_to_rdkit_idx_map
         ):
-            return self.host.atom_id_to_rdkit_idx_map[atom_item.atom_id]
+            return int(self.host.atom_id_to_rdkit_idx_map[atom_item.atom_id])
 
         # Return None if no mapping exists
         return None
 
-    def calculate_and_display_measurements(self):
+    def calculate_and_display_measurements(self) -> None:
         """Calculate and display measurement values."""
         num_selected = len(self.selected_atoms_for_measurement)
         if num_selected < 2:
@@ -356,32 +365,40 @@ class Edit3DManager:
         # Display results on 3D view
         self.display_measurement_text(measurement_text)
 
-    def calculate_distance(self, atom1_idx, atom2_idx):
+    def calculate_distance(self, atom1_idx: int, atom2_idx: int) -> float:
         """Calculate distance between two atoms."""
-        return calc_distance(
-            self.host.view_3d_manager.atom_positions_3d[atom1_idx],
-            self.host.view_3d_manager.atom_positions_3d[atom2_idx],
+        return float(
+            calc_distance(
+                self.host.view_3d_manager.atom_positions_3d[atom1_idx],
+                self.host.view_3d_manager.atom_positions_3d[atom2_idx],
+            )
         )
 
-    def calculate_angle(self, atom1_idx, atom2_idx, atom3_idx):
+    def calculate_angle(self, atom1_idx: int, atom2_idx: int, atom3_idx: int) -> float:
         """Calculate angle (center is vertex)."""
-        return calc_angle_deg(
-            self.host.view_3d_manager.atom_positions_3d[atom1_idx],
-            self.host.view_3d_manager.atom_positions_3d[atom2_idx],  # vertex
-            self.host.view_3d_manager.atom_positions_3d[atom3_idx],
+        return float(
+            calc_angle_deg(
+                self.host.view_3d_manager.atom_positions_3d[atom1_idx],
+                self.host.view_3d_manager.atom_positions_3d[atom2_idx],  # vertex
+                self.host.view_3d_manager.atom_positions_3d[atom3_idx],
+            )
         )
 
-    def calculate_dihedral(self, atom1_idx, atom2_idx, atom3_idx, atom4_idx):
+    def calculate_dihedral(
+        self, atom1_idx: int, atom2_idx: int, atom3_idx: int, atom4_idx: int
+    ) -> float:
         """Calculate dihedral angle."""
-        return _calculate_dihedral(
-            self.host.view_3d_manager.atom_positions_3d,
-            atom1_idx,
-            atom2_idx,
-            atom3_idx,
-            atom4_idx,
+        return float(
+            _calculate_dihedral(
+                self.host.view_3d_manager.atom_positions_3d,
+                atom1_idx,
+                atom2_idx,
+                atom3_idx,
+                atom4_idx,
+            )
         )
 
-    def display_measurement_text(self, measurement_lines):
+    def display_measurement_text(self, measurement_lines: List[str]) -> None:
         """Display results text on 3D view."""
         # Remove existing text
         if self.measurement_text_actor:
@@ -427,7 +444,7 @@ class Edit3DManager:
 
         self.host.view_3d_manager.plotter.render()
 
-    def toggle_atom_selection_3d(self, atom_idx):
+    def toggle_atom_selection_3d(self, atom_idx: int) -> None:
         """Toggle atom selection in 3D."""
         if atom_idx in self.selected_atoms_3d:
             self.selected_atoms_3d.remove(atom_idx)
@@ -437,12 +454,12 @@ class Edit3DManager:
         # Update feedback
         self.update_3d_selection_display()
 
-    def clear_3d_selection(self):
+    def clear_3d_selection(self) -> None:
         """Clear 3D selection."""
         self.selected_atoms_3d.clear()
         self.update_3d_selection_display()
 
-    def update_3d_selection_display(self):
+    def update_3d_selection_display(self) -> None:
         """Update 3D selection highlight."""
         try:
             # Remove existing highlight
@@ -492,10 +509,10 @@ class Edit3DManager:
 
         self.host.view_3d_manager.plotter.render()
 
-    def remove_dialog_from_list(self, dialog):
+    def remove_dialog_from_list(self, dialog: Any) -> None:
         """Remove dialog from active list."""
         if dialog in self.active_3d_dialogs:
             self.active_3d_dialogs.remove(dialog)
 
 
-Edit3DManager._cls = Edit3DManager
+Edit3DManager._cls = Edit3DManager  # type: ignore[assignment]

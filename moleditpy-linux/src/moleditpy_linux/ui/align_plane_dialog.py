@@ -11,25 +11,39 @@ DOI: 10.5281/zenodo.17268532
 """
 
 import numpy as np
+from typing import TYPE_CHECKING, Literal, Optional, Sequence
+
 from PyQt6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QMessageBox,
     QPushButton,
     QVBoxLayout,
+    QWidget,
 )
+from rdkit import Chem
 
 try:
     from .base_picking_dialog import BasePickingDialog
 except ImportError:
     from moleditpy_linux.ui.base_picking_dialog import BasePickingDialog
 
+if TYPE_CHECKING:
+    from .main_window import MainWindow
+
 
 class AlignPlaneDialog(BasePickingDialog):
-    def __init__(self, mol, main_window, plane, preselected_atoms=None, parent=None):
+    def __init__(
+        self,
+        mol: Chem.Mol,
+        main_window: "MainWindow",
+        plane: Literal["xy", "xz", "yz"],
+        preselected_atoms: Optional[Sequence[int]] = None,
+        parent: Optional[QWidget] = None,
+    ) -> None:
         super().__init__(mol, main_window, parent)
         self.plane = plane
-        self.selected_atoms = set()
+        self.selected_atoms: set[int] = set()
 
         # Add preselected atoms
         if preselected_atoms:
@@ -42,7 +56,7 @@ class AlignPlaneDialog(BasePickingDialog):
             self.show_atom_labels()
             self.update_display()
 
-    def init_ui(self):
+    def init_ui(self) -> None:
         plane_names = {"xy": "XY", "xz": "XZ", "yz": "YZ"}
         self.setWindowTitle(f"Align to {plane_names[self.plane]} Plane")
         self.setModal(False)
@@ -90,7 +104,7 @@ class AlignPlaneDialog(BasePickingDialog):
         self.picker_connection = None
         self.enable_picking()
 
-    def on_atom_picked(self, atom_idx):
+    def on_atom_picked(self, atom_idx: int) -> None:
         """Handle the event when an atom is picked in the 3D view."""
         if atom_idx in self.selected_atoms:
             self.selected_atoms.remove(atom_idx)
@@ -99,13 +113,13 @@ class AlignPlaneDialog(BasePickingDialog):
 
         self.update_display()
 
-    def clear_selection(self):
+    def clear_selection(self) -> None:
         """Clear the current atom selection."""
         self.selected_atoms.clear()
         self.clear_atom_labels()
         self.update_display()
 
-    def select_all_atoms(self):
+    def select_all_atoms(self) -> None:
         """Select all atoms in the current molecule and update labels/UI."""
         try:
             # Prefer RDKit molecule if available
@@ -127,7 +141,7 @@ class AlignPlaneDialog(BasePickingDialog):
         except (AttributeError, RuntimeError, TypeError, KeyError) as e:
             QMessageBox.warning(self, "Warning", f"Failed to select all atoms: {e}")
 
-    def update_display(self):
+    def update_display(self) -> None:
         """Update the UI display with current selection info."""
         count = len(self.selected_atoms)
         if count == 0:
@@ -140,7 +154,7 @@ class AlignPlaneDialog(BasePickingDialog):
             self.selection_label.setText(f"Selected {count} atoms")
             self.apply_button.setEnabled(count >= 3)
 
-    def show_atom_labels(self):
+    def show_atom_labels(self) -> None:
         """Show numeric labels for the selected atoms in the 3D view."""
         if self.selected_atoms:
             sorted_atoms = sorted(self.selected_atoms)
@@ -149,7 +163,7 @@ class AlignPlaneDialog(BasePickingDialog):
         else:
             self.clear_atom_labels()
 
-    def apply_PlaneAlign(self):
+    def apply_PlaneAlign(self) -> None:
         """Apply plane alignment (rotation-based)."""
         if len(self.selected_atoms) < 3:
             QMessageBox.warning(
@@ -170,7 +184,7 @@ class AlignPlaneDialog(BasePickingDialog):
 
             # Find optimal plane using PCA
             cov_matrix = np.cov(centered_positions.T)
-            eigenvalues, eigenvectors = np.linalg.eigh(cov_matrix)
+            _, eigenvectors = np.linalg.eigh(cov_matrix)
 
             # Normal vector of the plane corresponds to the smallest eigenvalue
             normal_vector = eigenvectors[:, 0]
@@ -200,10 +214,12 @@ class AlignPlaneDialog(BasePickingDialog):
                 rotation_angle = np.arccos(cos_angle)
 
                 # Rodrigues' rotation formula
-                def rodrigues_rotation(v, axis, angle):
+                def rodrigues_rotation(
+                    v: np.ndarray, axis: np.ndarray, angle: float
+                ) -> np.ndarray:
                     cos_a = np.cos(angle)
                     sin_a = np.sin(angle)
-                    return (
+                    return (  # type: ignore[no-any-return]
                         v * cos_a
                         + np.cross(axis, v) * sin_a
                         + axis * np.dot(axis, v) * (1 - cos_a)

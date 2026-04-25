@@ -11,13 +11,21 @@ DOI: 10.5281/zenodo.17268532
 """
 
 import logging
-from PyQt6.QtWidgets import QDialog
+from typing import TYPE_CHECKING, Optional, Union
+
+import numpy as np
 from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QCloseEvent, QKeyEvent
+from PyQt6.QtWidgets import QDialog, QWidget
+from rdkit import Chem, Geometry
 
 try:
     from .dialog_3d_picking_mixin import Dialog3DPickingMixin
 except ImportError:
     from moleditpy.ui.dialog_3d_picking_mixin import Dialog3DPickingMixin
+
+if TYPE_CHECKING:
+    from .main_window import MainWindow
 
 
 class BasePickingDialog(Dialog3DPickingMixin, QDialog):
@@ -26,7 +34,12 @@ class BasePickingDialog(Dialog3DPickingMixin, QDialog):
     Provides standard cleanup and event handling for picking filters and labels.
     """
 
-    def __init__(self, mol, main_window, parent=None):
+    def __init__(
+        self,
+        mol: Chem.Mol,
+        main_window: "MainWindow",
+        parent: Optional[QWidget] = None,
+    ) -> None:
         QDialog.__init__(self, parent)
         Dialog3DPickingMixin.__init__(self)
         self.mol = mol
@@ -35,8 +48,10 @@ class BasePickingDialog(Dialog3DPickingMixin, QDialog):
             False  # Track if any modifications were made during this session
         )
 
-    def keyPressEvent(self, event):
+    def keyPressEvent(self, event: Optional[QKeyEvent]) -> None:
         """Standard keyboard handler: Enter/Return triggers 'Apply'."""
+        if event is None:
+            return
         if event.key() == Qt.Key.Key_Return or event.key() == Qt.Key.Key_Enter:
             if hasattr(self, "apply_button") and self.apply_button.isEnabled():
                 # Call the apply method (must be implemented by subclass or connected)
@@ -45,31 +60,31 @@ class BasePickingDialog(Dialog3DPickingMixin, QDialog):
         else:
             QDialog.keyPressEvent(self, event)
 
-    def closeEvent(self, event):
+    def closeEvent(self, event: Optional[QCloseEvent]) -> None:
         """Cleanup on window close."""
         self.clear_atom_labels()
         self.disable_picking()
         super().closeEvent(event)
 
-    def reject(self):
+    def reject(self) -> None:
         """Cleanup on cancel."""
         self.clear_atom_labels()
         self.disable_picking()
         super().reject()
 
-    def accept(self):
+    def accept(self) -> None:
         """Cleanup on OK."""
         self.clear_atom_labels()
         self.disable_picking()
         super().accept()
 
-    def _update_molecule_geometry(self, positions):
+    def _update_molecule_geometry(
+        self, positions: Union[np.ndarray, dict[int, np.ndarray]]
+    ) -> None:
         """
         Update the molecule's conformer and the 3D position cache, then redraw.
         :param positions: A numpy array or dictionary of all atom positions.
         """
-        from rdkit import Geometry
-
         conf = self.mol.GetConformer()
         num_atoms = conf.GetNumAtoms()
 
@@ -88,11 +103,13 @@ class BasePickingDialog(Dialog3DPickingMixin, QDialog):
 
         # 2. Update 3D Visualization cache
         try:
-            if isinstance(positions, dict):
-                for i, p in positions.items():
-                    self.main_window.view_3d_manager.atom_positions_3d[i] = p
-            else:
-                self.main_window.view_3d_manager.atom_positions_3d[:] = positions[:]
+            cache = self.main_window.view_3d_manager.atom_positions_3d
+            if cache is not None:
+                if isinstance(positions, dict):
+                    for i, p in positions.items():
+                        cache[i] = p
+                else:
+                    cache[:] = positions[:]
         except (AttributeError, ValueError, TypeError, IndexError):
             # If for some reason the cache is incompatible, draw_molecule_3d below will rebuild it
             pass
@@ -109,7 +126,7 @@ class BasePickingDialog(Dialog3DPickingMixin, QDialog):
                 "REPORT ERROR: Missing attribute 'update_chiral_labels' on object"
             )
 
-    def _push_undo(self):
+    def _push_undo(self) -> None:
         """Centralized undo logic to push current state to the undo stack."""
         if hasattr(self.main_window, "state_manager"):
             self.main_window.edit_actions_manager.push_undo_state()
@@ -119,7 +136,7 @@ class BasePickingDialog(Dialog3DPickingMixin, QDialog):
                 "REPORT ERROR: Missing attribute 'state_manager' on self.main_window"
             )
 
-    def done(self, result):
+    def done(self, result: int) -> None:
         """Override done to push a final undo state if the molecule was modified."""
         if self._molecule_modified:
             self._push_undo()

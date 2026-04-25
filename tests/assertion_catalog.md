@@ -20,6 +20,179 @@ _Verify left clicks do not trigger the easter egg._
 - mock_parser_host.clear_all.assert_not_called()
 - event.ignore.assert_called_once()
 
+## tests/unit/test_align_plane_dialog.py
+
+### TestOnAtomPicked.test_pick_adds_atom
+_No description provided._
+
+- assert 0 in dlg.selected_atoms
+
+### TestOnAtomPicked.test_repick_removes_atom
+_No description provided._
+
+- assert 0 not in dlg.selected_atoms
+
+### TestOnAtomPicked.test_multiple_picks_accumulate
+_No description provided._
+
+- assert dlg.selected_atoms == {0, 1, 2, 3}
+
+### TestPreselectedAtoms.test_preselected_atoms_loaded
+_No description provided._
+
+- assert dlg.selected_atoms == {0, 1, 2}
+
+### TestClearSelection.test_clear_empties_selection
+_No description provided._
+
+- assert len(dlg.selected_atoms) == 0
+- assert not dlg.apply_button.isEnabled()
+
+### TestSelectAllAtoms.test_select_all_selects_every_atom
+_No description provided._
+
+- assert dlg.selected_atoms == set(range(mol.GetNumAtoms()))
+
+### TestSelectAllAtoms.test_select_all_enables_apply
+_No description provided._
+
+- assert dlg.apply_button.isEnabled()
+
+### TestUpdateDisplay.test_zero_atoms_disables_apply
+_No description provided._
+
+- assert not dlg.apply_button.isEnabled()
+
+### TestUpdateDisplay.test_two_atoms_disables_apply
+_No description provided._
+
+- assert not dlg.apply_button.isEnabled()
+
+### TestUpdateDisplay.test_three_atoms_enables_apply
+_No description provided._
+
+- assert dlg.apply_button.isEnabled()
+
+### TestUpdateDisplay.test_count_shown_in_label
+_No description provided._
+
+- assert '4' in dlg.selection_label.text()
+
+### TestApplyPlaneAlignGuard.test_fewer_than_three_atoms_shows_warning
+_No description provided._
+
+- mb.warning.assert_called_once()
+
+### TestApplyPlaneAlignGuard.test_zero_atoms_shows_warning
+_No description provided._
+
+- mb.warning.assert_called_once()
+
+### TestApplyPlaneAlignMath.test_xy_align_reduces_z_variance
+_Atoms already in XY plane aligned to XY: z-coords should stay ~0._
+
+- assert abs(after[i][2]) < 0.5
+
+### TestApplyPlaneAlignMath.test_apply_calls_draw_molecule_3d
+_No description provided._
+
+- mw.view_3d_manager.draw_molecule_3d.assert_called()
+
+## tests/unit/test_alignment_dialog.py
+
+### TestOnAtomPicked.test_first_pick_adds_atom
+_No description provided._
+
+- assert 0 in dlg.selected_atoms
+
+### TestOnAtomPicked.test_second_pick_adds_atom
+_No description provided._
+
+- assert dlg.selected_atoms == {0, 1}
+
+### TestOnAtomPicked.test_third_pick_capped_at_two
+_No description provided._
+
+- assert len(dlg.selected_atoms) == 2
+- assert 2 not in dlg.selected_atoms
+
+### TestOnAtomPicked.test_repick_deselects
+_No description provided._
+
+- assert 0 not in dlg.selected_atoms
+
+### TestOnAtomPicked.test_enables_apply_when_two_atoms
+_No description provided._
+
+- assert dlg.apply_button.isEnabled()
+
+### TestPreselectedAtoms.test_preselected_loaded
+_No description provided._
+
+- assert dlg.selected_atoms == {0, 1}
+
+### TestPreselectedAtoms.test_preselected_capped_at_two
+_No description provided._
+
+- assert len(dlg.selected_atoms) == 2
+
+### TestClearSelection.test_clears_atoms_and_disables_apply
+_No description provided._
+
+- assert len(dlg.selected_atoms) == 0
+- assert not dlg.apply_button.isEnabled()
+
+### TestUpdateDisplay.test_zero_atoms_label
+_No description provided._
+
+- assert not dlg.apply_button.isEnabled()
+
+### TestUpdateDisplay.test_one_atom_label_contains_symbol
+_No description provided._
+
+- assert sym in dlg.selection_label.text()
+- assert not dlg.apply_button.isEnabled()
+
+### TestUpdateDisplay.test_two_atoms_enables_apply
+_No description provided._
+
+- assert dlg.apply_button.isEnabled()
+- assert '2' in dlg.selection_label.text()
+
+### TestApplyAlignmentGuard.test_fewer_than_two_atoms_shows_warning
+_No description provided._
+
+- mb.warning.assert_called_once()
+
+### TestApplyAlignmentGuard.test_zero_atoms_shows_warning
+_No description provided._
+
+- mb.warning.assert_called_once()
+
+### TestApplyAlignmentMath.test_x_axis_alignment_atom1_at_origin
+_After X-alignment, atom1 must be at origin._
+
+- assert pos[0] == pytest.approx([0.0, 0.0, 0.0], abs=1e-05)
+
+### TestApplyAlignmentMath.test_x_axis_alignment_atom2_on_x_axis
+_After X-alignment, atom2 must lie on positive X-axis (y=0, z=0)._
+
+- assert pos[1][1] == pytest.approx(0.0, abs=1e-05)
+- assert pos[1][2] == pytest.approx(0.0, abs=1e-05)
+- assert pos[1][0] > 0
+
+### TestApplyAlignmentMath.test_z_axis_alignment_atom2_on_z_axis
+_After Z-alignment, atom2 must lie on Z-axis (x=0, y=0)._
+
+- assert pos[1][0] == pytest.approx(0.0, abs=1e-05)
+- assert pos[1][1] == pytest.approx(0.0, abs=1e-05)
+- assert pos[1][2] > 0
+
+### TestApplyAlignmentMath.test_apply_pushes_undo
+_No description provided._
+
+- mw.edit_actions_manager.push_undo_state.assert_called()
+
 ## tests/unit/test_app_logic.py
 
 ### test_ez_preservation_logic
@@ -647,6 +820,213 @@ _Verify that UFF fallback uses _temp_optimization_method and doesn't change pers
 - assert compute._temp_optimization_method == 'UFF_RDKIT'
 - assert mock_optimize.called
 - assert compute.optimization_method == 'MMFF_RDKIT'
+
+## tests/unit/test_constrained_optimization_dialog.py
+
+### TestAtomSelection.test_pick_adds_atom
+_No description provided._
+
+- assert dlg.selected_atoms == [3]
+
+### TestAtomSelection.test_pick_same_atom_toggles_off
+_No description provided._
+
+- assert dlg.selected_atoms == []
+
+### TestAtomSelection.test_pick_four_atoms
+_No description provided._
+
+- assert dlg.selected_atoms == [0, 1, 2, 3]
+
+### TestAtomSelection.test_fifth_atom_evicts_first_fifo
+_Adding a 5th atom should drop the oldest (index 0)._
+
+- assert dlg.selected_atoms == [1, 2, 3, 4]
+
+### TestAtomSelection.test_display_zero_atoms
+_No description provided._
+
+- assert not dlg.add_button.isEnabled()
+- assert 'None' in dlg.selection_label.text()
+
+### TestAtomSelection.test_display_one_atom
+_No description provided._
+
+- assert not dlg.add_button.isEnabled()
+
+### TestAtomSelection.test_display_two_atoms_enables_add
+_No description provided._
+
+- assert dlg.add_button.isEnabled()
+- assert 'Distance' in dlg.selection_label.text()
+
+### TestAtomSelection.test_display_three_atoms
+_No description provided._
+
+- assert dlg.add_button.isEnabled()
+- assert 'Angle' in dlg.selection_label.text()
+
+### TestAtomSelection.test_display_four_atoms
+_No description provided._
+
+- assert dlg.add_button.isEnabled()
+- assert 'Torsion' in dlg.selection_label.text()
+
+### TestAddConstraint.test_distance_constraint_added
+_No description provided._
+
+- assert len(dlg.constraints) == 1
+- assert ctype == 'Distance'
+- assert cidx == (0, 1)
+- assert cval > 0.0
+- assert cforce == pytest.approx(100000.0)
+
+### TestAddConstraint.test_distance_constraint_clears_selection
+_No description provided._
+
+- assert dlg.selected_atoms == []
+
+### TestAddConstraint.test_angle_constraint_added
+_No description provided._
+
+- assert len(dlg.constraints) == 1
+- assert ctype == 'Angle'
+- assert cidx == (2, 0, 1)
+- assert 90.0 <= cval <= 130.0
+
+### TestAddConstraint.test_torsion_constraint_added
+_No description provided._
+
+- assert len(dlg.constraints) == 1
+- assert ctype == 'Torsion'
+- assert cidx == (2, 0, 1, 5)
+
+### TestAddConstraint.test_duplicate_constraint_rejected
+_Adding the same constraint twice should not append a second entry._
+
+- assert len(dlg.constraints) == 1
+
+### TestAddConstraint.test_table_row_added_on_constraint
+_No description provided._
+
+- assert dlg.constraint_table.rowCount() == 1
+
+### TestAddConstraint.test_custom_force_constant_used
+_No description provided._
+
+- assert cforce == pytest.approx(500.0)
+
+### TestAddConstraint.test_invalid_force_constant_defaults
+_Non-numeric force constant falls back to 1.0e5 (shows warning)._
+
+- assert cforce == pytest.approx(100000.0)
+
+### TestRemoveConstraint.test_remove_selected_row
+_No description provided._
+
+- assert len(dlg.constraints) == 1
+- assert dlg.constraint_table.rowCount() == 1
+- assert dlg.constraints[0][1] == (0, 2)
+
+### TestRemoveConstraint.test_remove_all
+_No description provided._
+
+- assert dlg.constraints == []
+- assert dlg.constraint_table.rowCount() == 0
+
+### TestRemoveConstraint.test_remove_all_on_empty_is_noop
+_No description provided._
+
+- assert dlg.constraints == []
+
+### TestRemoveConstraint.test_remove_button_disabled_after_remove_all
+_No description provided._
+
+- assert not dlg.remove_button.isEnabled()
+
+### TestCellChanged.test_edit_value_column_updates_constraint
+_No description provided._
+
+- assert dlg.constraints[0][2] == pytest.approx(2.0)
+- assert dlg.constraints[0][0] == original_type
+
+### TestCellChanged.test_edit_force_column_updates_constraint
+_No description provided._
+
+- assert dlg.constraints[0][3] == pytest.approx(25000.0)
+
+### TestCellChanged.test_invalid_value_reverts_to_original
+_No description provided._
+
+- assert dlg.constraints[0][2] == pytest.approx(original_val)
+
+### TestCellChanged.test_non_value_column_ignored
+_No description provided._
+
+- assert dlg.constraints[0] == original
+
+### TestCellChanged.test_3element_constraint_upgraded_on_edit
+_on_cell_changed must upgrade a legacy 3-element tuple to 4-element._
+
+- assert len(dlg.constraints[0]) == 4
+- assert dlg.constraints[0][2] == pytest.approx(1.8)
+- assert dlg.constraints[0][3] == pytest.approx(100000.0)
+
+### TestConstraintLoading.test_loads_4element_constraints
+_No description provided._
+
+- assert len(dlg.constraints) == 1
+- assert ctype == 'Distance'
+- assert cidx == (0, 1)
+- assert cval == pytest.approx(1.54)
+- assert cforce == pytest.approx(25000.0)
+
+### TestConstraintLoading.test_loads_3element_constraints_with_default_force
+_Legacy 3-element constraints should get default force 1.0e5._
+
+- assert len(dlg.constraints) == 1
+- assert ctype == 'Angle'
+- assert cval == pytest.approx(109.5)
+- assert cforce == pytest.approx(100000.0)
+
+### TestConstraintLoading.test_loads_multiple_constraint_types
+_No description provided._
+
+- assert len(dlg.constraints) == 3
+- assert dlg.constraint_table.rowCount() == 3
+
+### TestConstraintLoading.test_table_populated_on_load
+_No description provided._
+
+- assert dlg.constraint_table.rowCount() == 1
+- assert dlg.constraint_table.item(0, 0).text() == 'Distance'
+
+### TestForceFieldMapping.test_ff_combo_set_from_opt_method
+_No description provided._
+
+- assert dlg.ff_combo.currentText() == expected_text
+
+### TestForceFieldMapping.test_unknown_method_defaults_to_mmff94s
+_No description provided._
+
+- assert dlg.ff_combo.currentText() == 'MMFF94s'
+
+### TestReject.test_reject_converts_tuples_to_lists
+_No description provided._
+
+- assert isinstance(saved, list)
+- assert isinstance(saved[0], list)
+- assert isinstance(saved[0][1], list)
+
+### TestReject.test_reject_3element_constraint_gets_default_force
+_Legacy 3-element tuples in constraints list must be serialised with default force._
+
+- assert saved[0][3] == pytest.approx(100000.0)
+
+### TestReject.test_reject_no_change_skips_state_update
+_If saved constraints haven't changed, has_unsaved_changes must NOT be set._
+
+- dlg.main_window.state_manager.update_window_title.assert_not_called()
 
 ## tests/unit/test_custom_interactor_style.py
 
@@ -1407,6 +1787,337 @@ _Verify 2D overlap resolution logic handles collisions correctly._
 - assert len(moves) > 0
 - assert len(moves[0][0]) == 1
 
+## tests/unit/test_geometry_base_dialog.py
+
+### TestSyncInputToSlider.test_valid_float_sets_slider
+_No description provided._
+
+- assert s.value() == 250
+
+### TestSyncInputToSlider.test_invalid_text_is_ignored
+_No description provided._
+
+- assert s.value() == 123
+
+### TestSyncInputToSlider.test_wrap_true_normalises_into_range
+_No description provided._
+
+- assert s.value() == -90
+
+### TestSyncInputToSlider.test_wrap_false_uses_raw_value
+_No description provided._
+
+- assert s.value() == 90
+
+### TestOnSliderPressed.test_incomplete_selection_is_noop
+_No description provided._
+
+- assert not dlg._slider_dragging
+- assert dlg._snapshot_positions is None
+
+### TestOnSliderPressed.test_complete_selection_sets_dragging_and_snapshot
+_No description provided._
+
+- assert dlg._slider_dragging is True
+- assert dlg._snapshot_positions is not None
+- assert len(dlg._snapshot_positions) == dlg.mol.GetNumAtoms()
+
+### TestOnSliderReleased.test_clears_dragging_flag
+_No description provided._
+
+- assert dlg._slider_dragging is False
+
+### TestOnSliderReleased.test_calls_draw_molecule_3d
+_No description provided._
+
+- dlg.main_window.view_3d_manager.draw_molecule_3d.assert_called_once_with(dlg.mol)
+
+### TestOnSliderValueChangedClick.test_skips_when_dragging
+_No description provided._
+
+- assert dlg.applied_values == []
+
+### TestOnSliderValueChangedClick.test_skips_when_selection_incomplete
+_No description provided._
+
+- assert dlg.applied_values == []
+
+### TestOnSliderValueChangedClick.test_updates_input_and_calls_apply
+_No description provided._
+
+- assert inp.text() == '1.540'
+- assert dlg.applied_values == [pytest.approx(1.54)]
+
+### TestOnSliderMovedRealtime.test_skips_when_incomplete
+_No description provided._
+
+- assert dlg.applied_values == []
+
+### TestOnSliderMovedRealtime.test_updates_input_and_calls_apply
+_No description provided._
+
+- assert inp.text() == '2.000'
+- assert dlg.applied_values == [pytest.approx(2.0)]
+
+## tests/unit/test_geometry_dialogs.py
+
+### TestBondLengthPicking.test_first_pick_sets_atom1
+_No description provided._
+
+- assert dlg.atom1_idx == 0
+- assert dlg.atom2_idx is None
+
+### TestBondLengthPicking.test_second_pick_sets_atom2
+_No description provided._
+
+- assert dlg.atom1_idx == 0
+- assert dlg.atom2_idx == 1
+
+### TestBondLengthPicking.test_third_pick_resets_to_new_atom1
+_No description provided._
+
+- assert dlg.atom1_idx == 2
+- assert dlg.atom2_idx is None
+
+### TestBondLengthPicking.test_clear_selection
+_No description provided._
+
+- assert dlg.atom1_idx is None
+- assert dlg.atom2_idx is None
+
+### TestBondLengthPicking.test_preselected_atoms_loaded
+_No description provided._
+
+- assert dlg.atom1_idx == 0
+- assert dlg.atom2_idx == 1
+
+### TestBondLengthIsComplete.test_incomplete_with_one_atom
+_No description provided._
+
+- assert not dlg._is_selection_complete()
+
+### TestBondLengthIsComplete.test_complete_with_two_atoms
+_No description provided._
+
+- assert dlg._is_selection_complete()
+
+### TestBondLengthUpdateDisplay.test_no_atoms_disables_apply
+_No description provided._
+
+- assert not dlg.apply_button.isEnabled()
+- assert 'No atoms' in dlg.selection_label.text()
+
+### TestBondLengthUpdateDisplay.test_one_atom_shows_symbol
+_No description provided._
+
+- assert not dlg.apply_button.isEnabled()
+- assert mol.GetAtomWithIdx(0).GetSymbol() in dlg.selection_label.text()
+
+### TestBondLengthUpdateDisplay.test_two_atoms_enables_apply_and_shows_distance
+_No description provided._
+
+- assert dlg.apply_button.isEnabled()
+- assert 'Å' in dlg.distance_label.text()
+
+### TestBondLengthApplyChanges.test_incomplete_selection_is_noop
+_No description provided._
+
+
+### TestBondLengthApplyChanges.test_invalid_input_shows_warning
+_No description provided._
+
+- mb.warning.assert_called_once()
+
+### TestBondLengthApplyChanges.test_negative_distance_shows_warning
+_No description provided._
+
+- mb.warning.assert_called_once()
+
+### TestBondLengthApplyChanges.test_valid_apply_pushes_undo
+_No description provided._
+
+- mw.edit_actions_manager.push_undo_state.assert_called()
+
+### TestBondLengthGeometry.test_atom_only_mode_moves_atom2
+_No description provided._
+
+- assert after_pos1 == pytest.approx(before_pos1, abs=0.0001)
+- assert dist == pytest.approx(2.0, abs=0.0001)
+
+### TestBondLengthGeometry.test_default_mode_moves_group
+_No description provided._
+
+- assert after_pos1 == pytest.approx(before_pos1, abs=0.0001)
+- assert dist == pytest.approx(2.0, abs=0.0001)
+
+### TestBondLengthGeometry.test_both_groups_mode
+_No description provided._
+
+- assert dist == pytest.approx(2.0, abs=0.001)
+
+### TestBondLengthGeometry.test_on_distance_input_changed_syncs_slider
+_No description provided._
+
+- assert dlg.distance_slider.value() == 200
+
+### TestAngleDialogPicking.test_sequential_picking
+_No description provided._
+
+- assert dlg.atom1_idx == 2 and dlg.atom2_idx is None
+- assert dlg.atom2_idx == 0 and dlg.atom3_idx is None
+- assert dlg.atom3_idx == 1
+
+### TestAngleDialogPicking.test_fourth_pick_resets
+_No description provided._
+
+- assert dlg.atom1_idx == 5
+- assert dlg.atom2_idx is None
+- assert dlg.atom3_idx is None
+
+### TestAngleDialogPicking.test_clear_selection
+_No description provided._
+
+- assert dlg.atom1_idx is None
+- assert dlg._snapshot_positions is None
+
+### TestAngleDialogPicking.test_preselected_atoms
+_No description provided._
+
+- assert dlg.atom1_idx == 2
+- assert dlg.atom2_idx == 0
+- assert dlg.atom3_idx == 1
+
+### TestAngleDialogIsComplete.test_incomplete_with_two_atoms
+_No description provided._
+
+- assert not dlg._is_selection_complete()
+
+### TestAngleDialogIsComplete.test_complete_with_three_atoms
+_No description provided._
+
+- assert dlg._is_selection_complete()
+
+### TestAngleDialogUpdateDisplay.test_no_atoms_disables_apply
+_No description provided._
+
+- assert not dlg.apply_button.isEnabled()
+
+### TestAngleDialogUpdateDisplay.test_three_atoms_enables_apply
+_No description provided._
+
+- assert dlg.apply_button.isEnabled()
+- assert '°' in dlg.angle_label.text()
+
+### TestAngleDialogApplyChanges.test_invalid_input_shows_warning
+_No description provided._
+
+- mb.warning.assert_called_once()
+
+### TestAngleDialogApplyChanges.test_angle_wraps_over_180
+_270° input must wrap to -90°._
+
+- assert float(dlg.angle_input.text()) == pytest.approx(-90.0, abs=0.01)
+
+### TestAngleDialogApplyChanges.test_apply_changes_pushes_undo
+_No description provided._
+
+- mw.edit_actions_manager.push_undo_state.assert_called()
+
+### TestAngleDialogApplyChanges.test_on_angle_input_changed_syncs_slider
+_No description provided._
+
+- assert dlg.angle_slider.value() == 90
+
+### TestAngleDialogGeometry.test_rotate_atom_only_mode
+_No description provided._
+
+- assert new_angle == pytest.approx(120.0, abs=0.5)
+
+### TestDihedralDialogPicking.test_sequential_picking
+_No description provided._
+
+- assert getattr(dlg, attr) == expected
+
+### TestDihedralDialogPicking.test_fifth_pick_resets
+_No description provided._
+
+- assert dlg.atom1_idx == 3
+- assert dlg.atom2_idx is None
+- assert dlg.atom4_idx is None
+
+### TestDihedralDialogPicking.test_clear_selection
+_No description provided._
+
+- assert all((getattr(dlg, a) is None for a in ['atom1_idx', 'atom2_idx', 'atom3_idx', 'atom4_idx']))
+- assert dlg._snapshot_positions is None
+
+### TestDihedralDialogPicking.test_preselected_atoms
+_No description provided._
+
+- assert dlg.atom1_idx == 2
+- assert dlg.atom4_idx == 5
+
+### TestDihedralDialogIsComplete.test_incomplete_with_three_atoms
+_No description provided._
+
+- assert not dlg._is_selection_complete()
+
+### TestDihedralDialogIsComplete.test_complete_with_four_atoms
+_No description provided._
+
+- assert dlg._is_selection_complete()
+
+### TestDihedralDialogCalculate.test_calculate_dihedral_incomplete_returns_zero
+_No description provided._
+
+- assert dlg.calculate_dihedral() == pytest.approx(0.0)
+
+### TestDihedralDialogCalculate.test_calculate_dihedral_complete_returns_value
+_No description provided._
+
+- assert -180.0 <= val <= 180.0
+
+### TestDihedralDialogUpdateDisplay.test_no_atoms_disables_apply
+_No description provided._
+
+- assert not dlg.apply_button.isEnabled()
+
+### TestDihedralDialogUpdateDisplay.test_four_atoms_enables_apply
+_No description provided._
+
+- assert dlg.apply_button.isEnabled()
+- assert '°' in dlg.dihedral_label.text()
+
+### TestDihedralDialogApplyChanges.test_invalid_input_shows_warning
+_No description provided._
+
+- mb.warning.assert_called_once()
+
+### TestDihedralDialogApplyChanges.test_dihedral_wraps_over_180
+_270° input must wrap to -90°._
+
+- assert float(dlg.dihedral_input.text()) == pytest.approx(-90.0, abs=0.01)
+
+### TestDihedralDialogApplyChanges.test_apply_changes_pushes_undo
+_No description provided._
+
+- mw.edit_actions_manager.push_undo_state.assert_called()
+
+### TestDihedralDialogApplyChanges.test_on_dihedral_input_changed_syncs_slider
+_No description provided._
+
+- assert dlg.dihedral_slider.value() == 60
+
+### TestDihedralDialogGeometry.test_rotate_atom_only_sets_dihedral
+_No description provided._
+
+- assert result == pytest.approx(60.0, abs=1.0)
+
+### TestDihedralDialogGeometry.test_default_group_mode_sets_dihedral
+_No description provided._
+
+- assert result == pytest.approx(60.0, abs=1.0)
+
 ## tests/unit/test_hydrogen.py
 
 ### test_add_hydrogen_atoms_app_logic
@@ -1987,6 +2698,254 @@ _Verify E/Z stereo double bond maps to STEREOZ in RDKit._
 - assert double_bond.GetBondType() == Chem.BondType.DOUBLE
 - assert double_bond.GetStereo() == Chem.BondStereo.STEREOZ
 
+## tests/unit/test_molecule_scene_coverage.py
+
+### TestGetSetting.test_returns_value_from_settings
+_No description provided._
+
+- assert scene.get_setting('my_key') == 'my_value'
+
+### TestGetSetting.test_returns_default_when_key_missing
+_No description provided._
+
+- assert scene.get_setting('no_such_key', 'fallback') == 'fallback'
+
+### TestGetSetting.test_returns_default_when_window_is_none
+_No description provided._
+
+- assert scene.get_setting('any_key', 99) == 99
+
+### TestUpdateConnectedBonds.test_calls_update_position_on_bond
+_No description provided._
+
+- bond.update_position.assert_called_once()
+
+### TestUpdateConnectedBonds.test_skips_sip_deleted_bonds
+_No description provided._
+
+- bond.update_position.assert_not_called()
+
+### TestUpdateConnectedBonds.test_deduplicates_shared_bond
+_Bond shared by two atoms should only be updated once._
+
+- bond.update_position.assert_called_once()
+
+### TestUpdateConnectedBonds.test_handles_atom_without_bonds_attribute
+_No description provided._
+
+
+### TestClearAllProblemFlags.test_returns_true_when_flags_were_set
+_No description provided._
+
+- assert scene.clear_all_problem_flags() is True
+
+### TestClearAllProblemFlags.test_returns_false_when_no_flags_set
+_No description provided._
+
+- assert scene.clear_all_problem_flags() is False
+
+### TestClearAllProblemFlags.test_flag_is_reset_to_false
+_No description provided._
+
+- assert item.has_problem is False
+
+### TestPurgeDeletedItems.test_noop_on_empty_list
+_No description provided._
+
+
+### TestPurgeDeletedItems.test_clears_the_list
+_No description provided._
+
+- assert scene._deleted_items == []
+
+### TestPurgeDeletedItems.test_calls_hide_on_valid_objects
+_No description provided._
+
+- obj.hide.assert_called_once()
+
+### TestPurgeDeletedItems.test_skips_already_sip_deleted
+_No description provided._
+
+- obj.hide.assert_not_called()
+
+### TestSetHoveredItem.test_stores_item
+_No description provided._
+
+- assert scene.hovered_item is item
+
+### TestSetHoveredItem.test_accepts_none
+_No description provided._
+
+- assert scene.hovered_item is None
+
+### TestEZStereoCycling.test_none_to_z_on_first_click
+_No description provided._
+
+- mock_stereo.assert_called_once_with(bond_item, 3)
+
+### TestEZStereoCycling.test_z_to_e_on_click
+_No description provided._
+
+- mock_stereo.assert_called_once_with(bond_item, 4)
+
+### TestEZStereoCycling.test_e_to_none_on_click
+_No description provided._
+
+- mock_stereo.assert_called_once_with(bond_item, 0)
+
+### TestBondDirectionInversion.test_stereo_bond_click_inverts_atom_order
+_No description provided._
+
+- assert (a2_id, a1_id) in mock_parser_host.state_manager.data.bonds
+
+### TestDoubleClickSelectMode.test_selects_connected_atom
+_No description provided._
+
+- atom_item.setSelected.assert_called_with(True)
+
+### TestDoubleClickSelectMode.test_bond_2_5_mode_accepts_event
+_No description provided._
+
+- ev.accept.assert_called()
+
+### TestDoubleClickChargeRadical.test_radical_increments_on_double_click
+_No description provided._
+
+- assert item.radical == 1
+
+### TestDoubleClickChargeRadical.test_charge_plus_increments_on_double_click
+_No description provided._
+
+- assert item.charge == 1
+
+### TestDoubleClickChargeRadical.test_charge_minus_decrements_on_double_click
+_No description provided._
+
+- assert item.charge == -1
+
+## tests/unit/test_move_group_dialog.py
+
+### TestOnAtomPicked.test_picks_entire_connected_component
+_Picking any atom in ethane should BFS to all 8 atoms._
+
+- assert len(dlg.group_atoms) == mol.GetNumAtoms()
+
+### TestOnAtomPicked.test_picking_again_toggles_deselect
+_Re-picking any atom in the already-selected group deselects everything._
+
+- assert len(dlg.group_atoms) == 0
+
+### TestOnAtomPicked.test_bfs_stays_within_fragment
+_In a two-fragment system, BFS must not cross to the other fragment._
+
+- assert len(frags) == 2
+- assert len(dlg.group_atoms) == len(frag_a)
+- assert dlg.group_atoms == frag_a
+- assert dlg.group_atoms.isdisjoint(frag_b)
+
+### TestOnAtomPicked.test_selected_atoms_records_clicked_atom
+_No description provided._
+
+- assert 3 in dlg.selected_atoms
+
+### TestOnAtomPicked.test_skip_pick_when_dragging
+_on_atom_picked must be a no-op while dragging._
+
+- mock_labels.assert_not_called()
+- assert len(dlg.group_atoms) == 0
+
+### TestUpdateDisplay.test_no_group_shows_placeholder
+_No description provided._
+
+- assert 'No group' in dlg.selection_label.text()
+
+### TestUpdateDisplay.test_group_shows_count_and_symbols
+_No description provided._
+
+- assert '8' in text or 'atoms' in text.lower()
+
+### TestUpdateDisplay.test_more_than_5_atoms_appended_with_ellipsis
+_If >5 atoms selected, display must show '...' at the end._
+
+- assert '...' in dlg.selection_label.text()
+
+### TestApplyTranslation.test_no_group_shows_warning
+_No description provided._
+
+- mb.warning.assert_called_once()
+
+### TestApplyTranslation.test_invalid_input_shows_warning
+_No description provided._
+
+- mb.warning.assert_called_once()
+
+### TestApplyTranslation.test_translation_updates_conformer_positions
+_No description provided._
+
+- assert after[idx] == pytest.approx(before[idx] + [1.0, 2.0, 3.0], abs=0.0001)
+
+### TestApplyTranslation.test_translation_pushes_undo
+_No description provided._
+
+- mw.edit_actions_manager.push_undo_state.assert_called()
+
+### TestApplyRotation.test_no_group_shows_warning
+_No description provided._
+
+- mb.warning.assert_called_once()
+
+### TestApplyRotation.test_invalid_input_shows_warning
+_No description provided._
+
+- mb.warning.assert_called_once()
+
+### TestApplyRotation.test_zero_rotation_leaves_positions_unchanged
+_No description provided._
+
+- assert after == pytest.approx(before, abs=1e-05)
+
+### TestApplyRotation.test_90deg_z_rotation_around_centroid
+_90° rotation around Z maps (centroid+[1,0,0]) → (centroid+[0,1,0])._
+
+- assert after[0] == pytest.approx([0.0, 1.0, 0.0], abs=1e-05)
+- assert after[1] == pytest.approx([0.0, -1.0, 0.0], abs=1e-05)
+
+### TestApplyRotation.test_rotation_pushes_undo
+_No description provided._
+
+- mw.edit_actions_manager.push_undo_state.assert_called()
+
+### TestResetInputs.test_reset_translation_inputs
+_No description provided._
+
+- assert dlg.x_trans_input.text() == '0.0'
+- assert dlg.y_trans_input.text() == '0.0'
+- assert dlg.z_trans_input.text() == '0.0'
+
+### TestResetInputs.test_reset_rotation_inputs
+_No description provided._
+
+- assert dlg.x_rot_input.text() == '0.0'
+- assert dlg.y_rot_input.text() == '0.0'
+- assert dlg.z_rot_input.text() == '0.0'
+
+### TestClearSelection.test_clear_removes_group_and_selected_atoms
+_No description provided._
+
+- assert len(dlg.group_atoms) == 0
+- assert len(dlg.selected_atoms) == 0
+
+### TestClearSelection.test_clear_resets_drag_state
+_No description provided._
+
+- assert not dlg.is_dragging_group
+- assert dlg.drag_start_pos is None
+
+### TestClearSelection.test_clear_updates_display
+_No description provided._
+
+- assert 'No group' in dlg.selection_label.text()
+
 ## tests/unit/test_parser_robustness.py
 
 ### test_set_mol_prop_safe_robustness
@@ -2131,6 +3090,89 @@ _Verify skip chemistry check flag is set when user chooses to skip._
 
 - assert mol is not None
 - assert mol.HasProp('_xyz_skip_checks') or getattr(mol, '_xyz_skip_checks', False)
+
+## tests/unit/test_planarize_dialog.py
+
+### TestOnAtomPicked.test_pick_adds_atom
+_No description provided._
+
+- assert 0 in dlg.selected_atoms
+
+### TestOnAtomPicked.test_repick_removes_atom
+_No description provided._
+
+- assert 0 not in dlg.selected_atoms
+
+### TestOnAtomPicked.test_multiple_picks_accumulate
+_No description provided._
+
+- assert dlg.selected_atoms == {0, 1, 2, 3}
+
+### TestPreselectedAtoms.test_preselected_atoms_loaded
+_No description provided._
+
+- assert dlg.selected_atoms == {0, 1, 2}
+
+### TestClearSelection.test_clear_empties_and_disables
+_No description provided._
+
+- assert len(dlg.selected_atoms) == 0
+- assert not dlg.apply_button.isEnabled()
+
+### TestSelectAllAtoms.test_select_all_selects_every_atom
+_No description provided._
+
+- assert dlg.selected_atoms == set(range(mol.GetNumAtoms()))
+
+### TestSelectAllAtoms.test_select_all_enables_apply
+_No description provided._
+
+- assert dlg.apply_button.isEnabled()
+
+### TestUpdateDisplay.test_zero_atoms_disables_apply
+_No description provided._
+
+- assert not dlg.apply_button.isEnabled()
+
+### TestUpdateDisplay.test_two_atoms_disables_apply
+_No description provided._
+
+- assert not dlg.apply_button.isEnabled()
+
+### TestUpdateDisplay.test_three_atoms_enables_apply
+_No description provided._
+
+- assert dlg.apply_button.isEnabled()
+
+### TestUpdateDisplay.test_count_shown_in_label
+_No description provided._
+
+- assert '4' in dlg.selection_label.text()
+
+### TestApplyPlanarizeGuard.test_fewer_than_three_atoms_shows_warning
+_No description provided._
+
+- mb.warning.assert_called_once()
+
+### TestApplyPlanarizeGuard.test_zero_atoms_shows_warning
+_No description provided._
+
+- mb.warning.assert_called_once()
+
+### TestApplyPlanarizeGeometry.test_planarize_reduces_z_spread
+_No description provided._
+
+- assert after_z_var <= before_z_var + 1e-06
+
+### TestApplyPlanarizeGeometry.test_planarize_pushes_undo
+_No description provided._
+
+- mw.edit_actions_manager.push_undo_state.assert_called()
+
+### TestApplyPlanarizeGeometry.test_apply_calls_draw_molecule_3d
+_No description provided._
+
+- mw.view_3d_manager.draw_molecule_3d.assert_called()
 
 ## tests/unit/test_plugin_interface.py
 
@@ -2935,6 +3977,14 @@ _Test that nothing happens if no atoms are selected or at the cursor._
 - scene.window.edit_actions_manager.push_undo_state.assert_not_called()
 - event.accept.assert_not_called()
 
+## tests/unit/test_ring_priority.py
+
+### test_ring_priority_smaller_wins
+_Verify that smaller rings are prioritized for double bond shift logic._
+
+- assert shared_bond_item.is_in_ring is True
+- assert shared_bond_item.ring_center == five_center
+
 ## tests/unit/test_scene_advanced.py
 
 ### test_right_click_bond_deletion
@@ -3136,6 +4186,43 @@ _Test the full mouse press -> move -> release sequence for creating a bond._
 - assert bond.order == 1
 - assert getattr(scene, 'start_atom', None) == a1
 
+## tests/unit/test_sip_isdeleted_safe.py
+
+### TestSipIsDeletedSafe.test_none_is_treated_as_deleted
+_No description provided._
+
+- assert sip_isdeleted_safe(None) is True
+
+### TestSipIsDeletedSafe.test_returns_false_when_sip_unavailable
+_No description provided._
+
+- assert sip_isdeleted_safe(object()) is False
+
+### TestSipIsDeletedSafe.test_returns_true_when_sip_reports_deleted
+_No description provided._
+
+- assert sip_isdeleted_safe(object()) is True
+
+### TestSipIsDeletedSafe.test_returns_false_when_sip_reports_not_deleted
+_No description provided._
+
+- assert sip_isdeleted_safe(object()) is False
+
+### TestSipIsDeletedSafe.test_returns_false_on_runtime_error
+_No description provided._
+
+- assert sip_isdeleted_safe(object()) is False
+
+### TestSipIsDeletedSafe.test_returns_false_on_attribute_error
+_No description provided._
+
+- assert sip_isdeleted_safe(object()) is False
+
+### TestSipIsDeletedSafe.test_returns_false_on_type_error
+_No description provided._
+
+- assert sip_isdeleted_safe(object()) is False
+
 ## tests/unit/test_slider_logic.py
 
 ### test_angle_dialog_wrapping
@@ -3246,6 +4333,232 @@ _Invalid InChI should show error, not crash._
 
 - mock_parser_host.statusBar().showMessage.assert_called()
 - assert last_msg.startswith('Invalid InChI:')
+
+## tests/unit/test_system_utils.py
+
+### TestWindowsTheme.test_windows_dark_when_val_zero
+_No description provided._
+
+- assert detect_system_theme() == 'dark'
+
+### TestWindowsTheme.test_windows_light_when_val_one
+_No description provided._
+
+- assert detect_system_theme() == 'light'
+
+### TestWindowsTheme.test_windows_none_when_winreg_unavailable
+_If winreg is None (non-Windows build), Windows branch is skipped._
+
+- assert detect_system_theme() is None
+
+### TestWindowsTheme.test_windows_oserror_returns_none
+_OSError in winreg must be suppressed and return None._
+
+- assert detect_system_theme() is None
+
+### TestMacOSTheme.test_macos_always_light
+_No description provided._
+
+- assert detect_system_theme() == 'light'
+
+### TestLinuxTheme.test_linux_gnome_color_scheme_dark
+_No description provided._
+
+- assert detect_system_theme() == 'dark'
+
+### TestLinuxTheme.test_linux_gnome_color_scheme_light
+_No description provided._
+
+- assert detect_system_theme() == 'light'
+
+### TestLinuxTheme.test_linux_gtk_theme_dark_fallback
+_When color-scheme returns nothing useful, fall back to gtk-theme name._
+
+- assert detect_system_theme() == 'dark'
+
+### TestLinuxTheme.test_linux_gtk_theme_no_dark_keyword
+_gtk-theme without '-dark' should not return dark._
+
+- assert detect_system_theme() is None
+
+### TestLinuxTheme.test_linux_gsettings_not_found_returns_none
+_FileNotFoundError (gsettings not installed) is suppressed._
+
+- assert detect_system_theme() is None
+
+### TestLinuxTheme.test_linux_gsettings_both_fail_returns_none
+_No description provided._
+
+- assert detect_system_theme() is None
+
+### TestUnknownPlatform.test_unknown_os_returns_none
+_No description provided._
+
+- assert detect_system_theme() is None
+
+### TestDetectSystemDarkMode.test_dark_theme_returns_true
+_No description provided._
+
+- assert detect_system_dark_mode() is True
+
+### TestDetectSystemDarkMode.test_light_theme_returns_false
+_No description provided._
+
+- assert detect_system_dark_mode() is False
+
+### TestDetectSystemDarkMode.test_none_theme_returns_none
+_No description provided._
+
+- assert detect_system_dark_mode() is None
+
+## tests/unit/test_translation_dialog.py
+
+### TestTabSwitching.test_tab_change_clears_selection
+_No description provided._
+
+- assert len(dlg.selected_atoms) == 0
+
+### TestTabSwitching.test_tab_change_during_init_is_noop
+_No description provided._
+
+- assert 0 in dlg.selected_atoms
+
+### TestAbsolutePicking.test_abs_pick_enforces_single_atom
+_No description provided._
+
+- assert dlg.selected_atoms == {1}
+
+### TestAbsolutePicking.test_abs_pick_populates_inputs
+_No description provided._
+
+- assert dlg.abs_x_input.text() == f'{pos[0][0]:.4f}'
+- assert dlg.abs_y_input.text() == f'{pos[0][1]:.4f}'
+- assert dlg.abs_z_input.text() == f'{pos[0][2]:.4f}'
+
+### TestAbsoluteHelpers.test_abs_clear_resets_inputs
+_No description provided._
+
+- assert dlg.abs_x_input.text() == '0.000'
+- assert dlg.abs_y_input.text() == '0.000'
+- assert dlg.abs_z_input.text() == '0.000'
+- assert len(dlg.selected_atoms) == 0
+
+### TestAbsoluteHelpers.test_set_origin_fills_zeros
+_No description provided._
+
+- assert dlg.abs_x_input.text() == '0.0000'
+- assert dlg.abs_y_input.text() == '0.0000'
+- assert dlg.abs_z_input.text() == '0.0000'
+
+### TestAbsoluteHelpers.test_move_mol_toggled_changes_button_label
+_No description provided._
+
+- assert dlg.abs_apply_btn.text() == 'Move Atom'
+- assert dlg.abs_apply_btn.text() == 'Move Molecule'
+
+### TestApplyAbsolute.test_no_atom_shows_warning
+_No description provided._
+
+- mb.warning.assert_called_once()
+
+### TestApplyAbsolute.test_bad_input_shows_warning
+_No description provided._
+
+- mb.warning.assert_called_once()
+
+### TestApplyAbsolute.test_move_molecule_shifts_all_atoms
+_No description provided._
+
+- assert after[i] == pytest.approx(before[i] + delta, abs=0.0001)
+
+### TestApplyAbsolute.test_move_atom_only_shifts_one_atom
+_No description provided._
+
+- assert after[0] == pytest.approx([0.0, 0.0, 0.0], abs=0.0001)
+- assert after[i] == pytest.approx(before[i], abs=0.0001)
+
+### TestApplyAbsolute.test_apply_absolute_pushes_undo
+_No description provided._
+
+- mw.edit_actions_manager.push_undo_state.assert_called()
+
+### TestDeltaPicking.test_delta_pick_adds_atom
+_No description provided._
+
+- assert 0 in dlg.selected_atoms
+
+### TestDeltaPicking.test_delta_repick_removes_atom
+_No description provided._
+
+- assert 0 not in dlg.selected_atoms
+
+### TestDeltaPicking.test_delta_picks_accumulate
+_No description provided._
+
+- assert dlg.selected_atoms == {0, 1, 2}
+
+### TestSelectAllAtoms.test_select_all_selects_every_atom
+_No description provided._
+
+- assert dlg.selected_atoms == set(range(mol.GetNumAtoms()))
+
+### TestApplyTranslation.test_no_atoms_shows_warning
+_No description provided._
+
+- mb.warning.assert_called_once()
+
+### TestApplyTranslation.test_bad_input_shows_warning
+_No description provided._
+
+- mb.warning.assert_called_once()
+
+### TestApplyTranslation.test_zero_vector_is_noop
+_No description provided._
+
+- assert after == pytest.approx(before, abs=1e-06)
+
+### TestApplyTranslation.test_delta_shifts_selected_atoms
+_No description provided._
+
+- assert after[idx] == pytest.approx(before[idx] + [1.0, 2.0, 3.0], abs=0.0001)
+- assert after[idx] == pytest.approx(before[idx], abs=0.0001)
+
+### TestApplyTranslation.test_apply_translation_pushes_undo
+_No description provided._
+
+- mw.edit_actions_manager.push_undo_state.assert_called()
+
+### TestUpdateDisplay.test_abs_tab_no_atom_disables_button
+_No description provided._
+
+- assert not dlg.abs_apply_btn.isEnabled()
+
+### TestUpdateDisplay.test_abs_tab_one_atom_enables_button
+_No description provided._
+
+- assert dlg.abs_apply_btn.isEnabled()
+
+### TestUpdateDisplay.test_delta_tab_no_atom_disables_button
+_No description provided._
+
+- assert not dlg.apply_button.isEnabled()
+
+### TestUpdateDisplay.test_delta_tab_one_atom_enables_button
+_No description provided._
+
+- assert dlg.apply_button.isEnabled()
+
+### TestPreselectedAtoms.test_single_preselected_goes_to_abs_tab
+_No description provided._
+
+- assert dlg.tabs.currentIndex() == 0
+- assert dlg.selected_atoms == {0}
+
+### TestPreselectedAtoms.test_multiple_preselected_goes_to_delta_tab
+_No description provided._
+
+- assert dlg.tabs.currentIndex() == 1
+- assert {0, 1, 2}.issubset(dlg.selected_atoms)
 
 ## tests/unit/test_ui_manager_robustness.py
 

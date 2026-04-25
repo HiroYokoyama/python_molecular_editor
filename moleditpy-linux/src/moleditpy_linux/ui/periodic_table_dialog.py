@@ -10,6 +10,8 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
+from typing import Any, Optional
+
 from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import QDialog, QGridLayout, QPushButton
 
@@ -24,7 +26,7 @@ from PyQt6.QtCore import pyqtSignal
 class PeriodicTableDialog(QDialog):
     element_selected = pyqtSignal(str)
 
-    def __init__(self, parent=None):
+    def __init__(self, parent: Optional[Any] = None) -> None:
         super().__init__(parent)
         self.setWindowTitle("Select an Element")
         layout = QGridLayout(self)
@@ -190,7 +192,7 @@ class PeriodicTableDialog(QDialog):
             b.clicked.connect(self.on_button_clicked)
             layout.addWidget(b, row, col)
 
-    def on_button_clicked(self):
+    def on_button_clicked(self) -> None:
         b = self.sender()
         self.element_selected.emit(b.text())
         self.accept()

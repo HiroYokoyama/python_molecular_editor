@@ -10,6 +10,8 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
+from typing import Any, Optional
+
 from PyQt6.QtWidgets import (
     QButtonGroup,
     QDialog,
@@ -27,17 +29,19 @@ from rdkit.Geometry import Point3D
 class MirrorDialog(QDialog):
     """Dialog to create a mirror image of the molecule."""
 
-    def __init__(self, mol, main_window, parent=None):
+    def __init__(
+        self, mol: Any, main_window: Any, parent: Optional[Any] = None
+    ) -> None:
         super().__init__(parent)
         self.mol = mol
         self.main_window = main_window
-        self.plane_group = None
-        self.xy_radio = None
-        self.xz_radio = None
-        self.yz_radio = None
+        self.plane_group: Optional[QButtonGroup] = None
+        self.xy_radio: Optional[QRadioButton] = None
+        self.xz_radio: Optional[QRadioButton] = None
+        self.yz_radio: Optional[QRadioButton] = None
         self.init_ui()
 
-    def init_ui(self):
+    def init_ui(self) -> None:
         self.setWindowTitle("Mirror Molecule")
         self.setMinimumSize(300, 200)
 
@@ -80,7 +84,7 @@ class MirrorDialog(QDialog):
 
         layout.addLayout(button_layout)
 
-    def apply_mirror(self):
+    def apply_mirror(self) -> None:
         """Apply mirror transformation across the selected plane."""
         if not self.mol or self.mol.GetNumConformers() == 0:
             QMessageBox.warning(self, "Error", "No 3D coordinates available.")

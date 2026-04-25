@@ -12,6 +12,7 @@ DOI: 10.5281/zenodo.17268532
 
 import os
 import shutil
+from typing import Any, Optional
 
 
 from PyQt6.QtCore import Qt, QUrl
@@ -27,11 +28,12 @@ from PyQt6.QtWidgets import (
     QTableWidget,
     QTableWidgetItem,
     QVBoxLayout,
+    QWidget,
 )
 
 
 class PluginManagerWindow(QDialog):
-    def __init__(self, plugin_manager, parent=None):
+    def __init__(self, plugin_manager: Any, parent: Optional[QWidget] = None) -> None:
         super().__init__(parent)
         self.plugin_manager = plugin_manager
         self.setWindowTitle("Plugin Manager")
@@ -41,7 +43,7 @@ class PluginManagerWindow(QDialog):
         self.init_ui()
         self.refresh_plugin_list()
 
-    def init_ui(self):
+    def init_ui(self) -> None:
         layout = QVBoxLayout(self)
 
         lbl_info = QLabel("Drag & Drop .py or .zip files here to install plugins.")
@@ -101,7 +103,7 @@ class PluginManagerWindow(QDialog):
 
         layout.addLayout(btn_layout)
 
-    def refresh_plugin_list(self):
+    def refresh_plugin_list(self) -> None:
         self.table.setRowCount(0)
         plugins = self.plugin_manager.plugins
 
@@ -141,12 +143,12 @@ class PluginManagerWindow(QDialog):
             if color:
                 self.table.item(row, 0).setForeground(color)
 
-    def update_button_state(self):
+    def update_button_state(self) -> None:
         has_selection = self.table.currentRow() >= 0
         if hasattr(self, "btn_remove"):
             self.btn_remove.setEnabled(has_selection)
 
-    def on_reload(self, silent=False):
+    def on_reload(self, silent: bool = False) -> None:
         # Trigger reload in main manager
         if self.plugin_manager.main_window:
             self.plugin_manager.discover_plugins(self.plugin_manager.main_window)
@@ -159,7 +161,7 @@ class PluginManagerWindow(QDialog):
             self.plugin_manager.discover_plugins()
             self.refresh_plugin_list()
 
-    def on_remove_plugin(self):
+    def on_remove_plugin(self) -> None:
         row = self.table.currentRow()
         if row < 0:
             QMessageBox.warning(self, "Warning", "Please select a plugin to remove.")
@@ -211,7 +213,7 @@ class PluginManagerWindow(QDialog):
                     self, "Error", f"Plugin file not found:\n{filepath}"
                 )
 
-    def show_plugin_details(self, item):
+    def show_plugin_details(self, item: QTableWidgetItem) -> None:
         row = item.row()
         if row < len(self.plugin_manager.plugins):
             p = self.plugin_manager.plugins[row]
@@ -226,13 +228,17 @@ class PluginManagerWindow(QDialog):
             QMessageBox.information(self, "Plugin Details", msg)
 
     # --- Drag & Drop Support ---
-    def dragEnterEvent(self, event: QDragEnterEvent):
+    def dragEnterEvent(self, event: Optional[QDragEnterEvent]) -> None:
+        if event is None:
+            return
         if event.mimeData().hasUrls():
             event.accept()
         else:
             event.ignore()
 
-    def dropEvent(self, event: QDropEvent):
+    def dropEvent(self, event: Optional[QDropEvent]) -> None:
+        if event is None:
+            return
         files_installed = []
         errors = []
         for url in event.mimeData().urls():
