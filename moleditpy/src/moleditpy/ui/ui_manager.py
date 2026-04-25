@@ -589,7 +589,7 @@ class UIManager(QObject):
         """Return splitter only when wrapper and C++ object are still alive."""
         init_manager = getattr(self.host, "init_manager", None)
         splitter = getattr(init_manager, "splitter", None)
-        if splitter is None:
+        if not isinstance(splitter, QSplitter):
             return None
 
         if _sip_isdeleted is not None:

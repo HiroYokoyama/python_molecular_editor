@@ -64,7 +64,7 @@ class TemplateMixin:
                     # Best-effort: ignore removal errors during teardown if underlying C++ object is already gone
                     logging.debug(f"Could not remove template preview item: {e}")
                     pass
-        self.template_context = {}
+        self.template_context: Dict[str, Any] = {}
         if hasattr(self, "template_preview"):
             self.template_preview.hide()
         else:  # [REPORT ERROR MISSING ATTRIBUTE]
@@ -642,6 +642,8 @@ class KeyboardMixin:
     Because this is a Mixin, `self` refers directly to the MoleculeScene instance.
     """
 
+    temp_line: Optional[QGraphicsLineItem]
+
     def _calculate_new_atom_position(self, start_atom: Any, bond_length: Any) -> Any:
         """
         Calculate the position for a new atom based on the surroundings of start_atom.
@@ -1071,7 +1073,7 @@ class KeyboardMixin:
                     self.temp_line = None
                     self.start_atom = None
                     self.start_pos = None
-                    self.initial_positions_in_event = {}
+                    self.initial_positions_in_event: Dict[Any, QPointF] = {}
                     event.accept()
                     return
 
@@ -1097,7 +1099,7 @@ class KeyboardMixin:
                     self.temp_line = None
                     self.start_atom = None
                     self.start_pos = None
-                    self.initial_positions_in_event = {}
+                    self.initial_positions_in_event: Dict[Any, QPointF] = {}
 
                     # Event handled
                     event.accept()
@@ -1350,7 +1352,7 @@ class SceneQueryMixin:
                             not hasattr(self, "_deleted_items")
                             or self._deleted_items is None
                         ):
-                            self._deleted_items = []
+                            self._deleted_items: List[Any] = []
                         self._deleted_items.append(item)
                     except (AttributeError, RuntimeError, ValueError, TypeError) as e:
                         logging.debug(

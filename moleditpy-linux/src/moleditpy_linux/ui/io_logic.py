@@ -63,7 +63,7 @@ class IOManager:
                 base = os.path.basename(self.host.init_manager.current_file_path)
                 name = os.path.splitext(base)[0]
                 if name:
-                    return name
+                    return str(name)
         except (AttributeError, RuntimeError, ValueError, TypeError):
             pass
         return "untitled"
@@ -249,7 +249,7 @@ class IOManager:
         btn_box.accepted.connect(dialog.accept)
         btn_box.rejected.connect(dialog.reject)
         skip_btn.clicked.connect(
-            lambda: (result.update({"skip": True}), dialog.accept())
+            lambda: (result.update({"skip": True}), dialog.accept())  # type: ignore[func-returns-value]
         )
         if dialog.exec() != QDialog.DialogCode.Accepted:
             return None, False, False

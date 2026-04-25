@@ -10,7 +10,7 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
-from typing import Any
+from typing import Any, List
 
 from PyQt6.QtCore import QDateTime, QLineF, QPointF, QRectF, Qt, QTimer
 from PyQt6.QtGui import QBrush, QColor, QFont, QPainter, QPen
@@ -45,7 +45,7 @@ class UserTemplateDialog(QDialog):
     def __init__(self, main_window: Any, parent: Any = None) -> None:
         super().__init__(parent)
         self.main_window = main_window
-        self.user_templates = []
+        self.user_templates: List[Any] = []
         self.selected_template = None
         self.init_ui()
         self.load_user_templates()

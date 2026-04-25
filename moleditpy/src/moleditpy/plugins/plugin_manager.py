@@ -315,7 +315,7 @@ class PluginManager:
             spec = importlib.util.spec_from_file_location(
                 unique_module_name,
                 filepath,
-                submodule_search_locations=([pkg_dir] if is_package else None),
+                submodule_search_locations=([pkg_dir] if is_package else None),  # type: ignore[list-item]
             )
             if spec and spec.loader:
                 module = importlib.util.module_from_spec(spec)

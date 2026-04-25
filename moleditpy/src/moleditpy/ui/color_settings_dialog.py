@@ -11,7 +11,7 @@ DOI: 10.5281/zenodo.17268532
 """
 
 import logging  # [REPORT ERROR MISSING ATTRIBUTE]
-from typing import Any, Optional
+from typing import Any, Dict, Optional
 
 from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import (
@@ -45,7 +45,7 @@ class ColorSettingsDialog(QDialog):
         self.parent_window = parent
         self.current_settings = current_settings or {}
 
-        self.changed_cpk = {}  # symbol -> hex
+        self.changed_cpk: Dict[str, str] = {}  # symbol -> hex
         self._reset_all_flag = False
 
         layout = QVBoxLayout(self)

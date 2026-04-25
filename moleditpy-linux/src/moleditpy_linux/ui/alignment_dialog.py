@@ -214,7 +214,7 @@ class AlignmentDialog(Dialog3DPickingMixin, QDialog):
                     ) -> np.ndarray:
                         cos_theta = np.cos(theta)
                         sin_theta = np.sin(theta)
-                        return (
+                        return (  # type: ignore[no-any-return]
                             v * cos_theta
                             + np.cross(k, v) * sin_theta
                             + k * np.dot(k, v) * (1 - cos_theta)

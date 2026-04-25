@@ -12,7 +12,7 @@ DOI: 10.5281/zenodo.17268532
 
 from __future__ import annotations
 
-from typing import Optional
+from typing import Dict, Optional
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
@@ -67,7 +67,7 @@ class AnalysisWindow(QDialog):
                     ]
 
                 # Summarize atom counts and element types
-                atom_counts = {}
+                atom_counts: Dict[str, int] = {}
                 total_atoms = len(xyz_atoms)
                 num_heavy_atoms = 0
 

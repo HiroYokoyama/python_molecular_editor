@@ -135,7 +135,7 @@ class PluginContext:
         Returns a list of RDKit atom indices currently selected in the 2D or 3D view.
         Note: RDKit indices are returned, which map to the current_mol.
         """
-        return self._manager.get_selected_atom_indices()
+        return self._manager.get_selected_atom_indices()  # type: ignore[no-any-return]
 
     def register_window(self, window_id: str, window: Any) -> None:
         """

@@ -228,13 +228,17 @@ class PluginManagerWindow(QDialog):
             QMessageBox.information(self, "Plugin Details", msg)
 
     # --- Drag & Drop Support ---
-    def dragEnterEvent(self, event: QDragEnterEvent) -> None:
+    def dragEnterEvent(self, event: Optional[QDragEnterEvent]) -> None:
+        if event is None:
+            return
         if event.mimeData().hasUrls():
             event.accept()
         else:
             event.ignore()
 
-    def dropEvent(self, event: QDropEvent) -> None:
+    def dropEvent(self, event: Optional[QDropEvent]) -> None:
+        if event is None:
+            return
         files_installed = []
         errors = []
         for url in event.mimeData().urls():

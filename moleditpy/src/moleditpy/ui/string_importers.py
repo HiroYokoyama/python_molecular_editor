@@ -65,16 +65,16 @@ class StringImporterManager:
         if existing:
 
             def _x(v: Any) -> float:
-                return v["pos"].x() if hasattr(v["pos"], "x") else v["pos"][0]
+                return float(v["pos"].x() if hasattr(v["pos"], "x") else v["pos"][0])
 
             def _y(v: Any) -> float:
-                return v["pos"].y() if hasattr(v["pos"], "y") else v["pos"][1]
+                return float(v["pos"].y() if hasattr(v["pos"], "y") else v["pos"][1])
 
             max_x = max(_x(v) for v in existing.values())
             avg_y = sum(_y(v) for v in existing.values()) / len(existing)
             return QPointF(max_x + 80.0, avg_y)
 
-        return self.host.init_manager.view_2d.mapToScene(
+        return self.host.init_manager.view_2d.mapToScene(  # type: ignore[no-any-return]
             self.host.init_manager.view_2d.viewport().rect().center()
         )
 

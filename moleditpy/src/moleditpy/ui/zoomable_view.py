@@ -38,7 +38,7 @@ class ZoomableView(QGraphicsView):
         self._pan_start_scroll_h = 0
         self._pan_start_scroll_v = 0
 
-    def wheelEvent(self, event: QWheelEvent) -> None:
+    def wheelEvent(self, event: Optional[QWheelEvent]) -> None:
         """Event handler for mouse wheel rotation"""
         if event.modifiers() & Qt.KeyboardModifier.ControlModifier:
             zoom_in_factor = 1.1
@@ -59,8 +59,10 @@ class ZoomableView(QGraphicsView):
         else:
             super().wheelEvent(event)
 
-    def mousePressEvent(self, event: QMouseEvent) -> None:
+    def mousePressEvent(self, event: Optional[QMouseEvent]) -> None:
         """Start panning (view movement) mode if middle button or Shift+left button is pressed"""
+        if event is None:
+            return
         is_middle_button = event.button() == Qt.MouseButton.MiddleButton
         is_shift_left_button = (
             event.button() == Qt.MouseButton.LeftButton
@@ -80,18 +82,24 @@ class ZoomableView(QGraphicsView):
         else:
             super().mousePressEvent(event)
 
-    def mouseMoveEvent(self, event: QMouseEvent) -> None:
+    def mouseMoveEvent(self, event: Optional[QMouseEvent]) -> None:
         """Handle view movement by updating scrollbars during panning"""
+        if event is None:
+            return
         if self._is_panning:
-            delta = event.pos() - self._pan_start_pos  # Calculate mouse movement delta
+            delta = (
+                QPointF(event.pos()) - self._pan_start_pos
+            )  # Calculate mouse movement delta
             # Update scroll position by subtracting movement delta from start position
-            self.horizontalScrollBar().setValue(self._pan_start_scroll_h - delta.x())
-            self.verticalScrollBar().setValue(self._pan_start_scroll_v - delta.y())
+            self.horizontalScrollBar().setValue(
+                int(self._pan_start_scroll_h - delta.x())
+            )
+            self.verticalScrollBar().setValue(int(self._pan_start_scroll_v - delta.y()))
             event.accept()
         else:
             super().mouseMoveEvent(event)
 
-    def mouseReleaseEvent(self, event: QMouseEvent) -> None:
+    def mouseReleaseEvent(self, event: Optional[QMouseEvent]) -> None:
         """End panning mode and restore cursor when the relevant button is released"""
         # Check if the middle or left button used for panning was released
         is_middle_button_release = event.button() == Qt.MouseButton.MiddleButton
@@ -113,7 +121,7 @@ class ZoomableView(QGraphicsView):
         else:
             super().mouseReleaseEvent(event)
 
-    def viewportEvent(self, event: QEvent) -> bool:
+    def viewportEvent(self, event: Optional[QEvent]) -> bool:
         """Handle native gestures (like pinch zoom on trackpads)"""
         if event.type() == QEvent.Type.NativeGesture:
             # Detect pinch zoom gestures

@@ -152,7 +152,7 @@ def rodrigues_rotate(v: np.ndarray, axis: np.ndarray, angle: float) -> np.ndarra
     """
     cos_a = np.cos(angle)
     sin_a = np.sin(angle)
-    return v * cos_a + np.cross(axis, v) * sin_a + axis * np.dot(axis, v) * (1 - cos_a)
+    return v * cos_a + np.cross(axis, v) * sin_a + axis * np.dot(axis, v) * (1 - cos_a)  # type: ignore[no-any-return]
 
 
 def adjust_bond_angle(
@@ -504,7 +504,7 @@ def identify_valence_problems(
     problem_atom_ids = []
 
     # Pre-calculate bond orders per atom
-    bond_orders = {}
+    bond_orders: Dict[int, int] = {}
     for (id1, id2), bond in bonds_data.items():
         order = bond.get("order", 1)
         bond_orders[id1] = bond_orders.get(id1, 0) + order
@@ -543,7 +543,7 @@ def calculate_best_fit_plane_projection(
     projections = centered_positions - np.outer(
         np.dot(centered_positions, normal), normal
     )
-    return projections + centroid
+    return projections + centroid  # type: ignore[no-any-return]
 
 
 def rotate_2d_points(
@@ -616,7 +616,7 @@ def resolve_2d_overlaps(
     for id1, id2 in overlapping_pairs:
         unite_sets(id1, id2)
 
-    groups_by_root = {}
+    groups_by_root: Dict[int, List[int]] = {}
     for aid in atom_ids:
         root = find_set(aid)
         groups_by_root.setdefault(root, []).append(aid)

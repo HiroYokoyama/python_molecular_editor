@@ -109,7 +109,7 @@ class MainWindow(QMainWindow):
     @property
     def data(self) -> MolecularData:
         """Proxy for state data. Not for core logic use."""
-        return self.state_manager.data
+        return self.state_manager.data  # type: ignore[return-value, no-any-return]
 
     @property
     def scene(self) -> Optional[MoleculeScene]:

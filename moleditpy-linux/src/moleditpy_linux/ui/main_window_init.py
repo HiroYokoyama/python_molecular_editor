@@ -137,7 +137,7 @@ class MainInitManager:
         self.host.setAcceptDrops(True)
         self.settings_dir = os.path.join(os.path.expanduser("~"), ".moleditpy")
         self.settings_file = os.path.join(self.settings_dir, "settings.json")
-        self.settings = {}  # Will be populated by load_settings
+        self.settings: Dict[str, Any] = {}  # Will be populated by load_settings
         self.load_settings()
         self.host.initial_settings = self.settings.copy()
         self.host.setWindowTitle("MoleditPy Ver. " + VERSION)
@@ -153,7 +153,7 @@ class MainInitManager:
         self.host.chem_check_failed = False
         self.host._template_dialog = None
         self.host._picking_consumed = False
-        self.mode_actions = {}
+        self.mode_actions: Dict[str, Any] = {}
 
         # Variable tracking the saved state
         self.host.state_manager.has_unsaved_changes = False
@@ -174,7 +174,7 @@ class MainInitManager:
                 self.host.plugin_manager = None
 
         # Dictionary holding data for plugins that haven't been loaded
-        self._preserved_plugin_data = {}
+        self._preserved_plugin_data: Dict[str, Any] = {}
 
         self.init_ui()
         self.init_worker_thread()
@@ -276,9 +276,9 @@ class MainInitManager:
 
     def init_worker_thread(self) -> None:
         # Initialize shared state for calculation runs.
-        self.halt_ids = set()
+        self.halt_ids: set[Any] = set()
         self.next_conversion_id = 1
-        self.active_worker_ids = set()
+        self.active_worker_ids: set[int] = set()
         # Track active threads for diagnostics/cleanup (weak references ok)
         try:
             self.host.compute_manager._active_calc_threads = []
@@ -700,7 +700,8 @@ class MainInitManager:
 
             for style_name in self.host.plugin_manager.custom_3d_styles:
                 if not any(a.text() == style_name for a in style_menu.actions()):
-                    action = QAction(style_name, self.host, checkable=True)
+                    action = QAction(style_name, self.host)
+                    action.setCheckable(True)
                     action.triggered.connect(
                         lambda checked=False,
                         s=style_name: self.host.view_3d_manager.set_3d_style(s)
@@ -794,7 +795,7 @@ class MainInitManager:
             return
 
         # Categorize
-        categorized = {}
+        categorized: Dict[str, Any] = {}
         root = []
         for p in plugins:
             # If 'run' is detected, add it to the menu via the legacy scanner.
@@ -819,7 +820,9 @@ class MainInitManager:
                     ),
                     None,
                 )
-                current_parent = sub if sub else current_parent.addMenu(part)
+                current_parent = (
+                    sub if sub is not None else current_parent.addMenu(part)
+                )  # type: ignore[assignment]
 
             for p in sorted(categorized[cat], key=lambda x: x["name"]):
                 a = QAction(p["name"], self.host)
@@ -892,7 +895,7 @@ class MainInitManager:
         sep = import_menu.addSeparator()
         sep.setData(PLUGIN_ACTION_TAG)
 
-        plugin_map = {}
+        plugin_map: Dict[str, Any] = {}
         for ext, openers in self.host.plugin_manager.file_openers.items():
             for info in openers:
                 plugin_map.setdefault(info.get("plugin", "Plugin"), {})[ext] = info[
@@ -1215,7 +1218,9 @@ class MainInitManager:
         for text, mode, shortcut in actions_data:
             if text == "C":
                 toolbar.addSeparator()
-            action = QAction(text, self.host, checkable=(mode != "atom_other"))
+            action = QAction(text, self.host)
+            if mode != "atom_other":
+                action.setCheckable(True)
             if shortcut:
                 action.setToolTip(f"{text} ({shortcut})")
 
@@ -1266,7 +1271,8 @@ class MainInitManager:
         ]
 
         for text, mode, tooltip in ops:
-            action = QAction(text, self.host, checkable=True)
+            action = QAction(text, self.host)
+            action.setCheckable(True)
             action.setToolTip(tooltip)
             action.triggered.connect(lambda c, m=mode: self.host.ui_manager.set_mode(m))
             self.host.init_manager.mode_actions[mode] = action
@@ -1293,7 +1299,8 @@ class MainInitManager:
             toolbar_bottom.addAction(action)
             self.host.init_manager.tool_group.addAction(action)
 
-        user_action = QAction("USER", self.host, checkable=True)
+        user_action = QAction("USER", self.host)
+        user_action.setCheckable(True)
         user_action.setToolTip("Open User Templates Dialog")
         user_action.triggered.connect(
             self.host.dialog_manager.open_template_dialog_and_activate
@@ -1308,9 +1315,8 @@ class MainInitManager:
         spacer.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         toolbar.addWidget(spacer)
 
-        self.host.init_manager.measurement_action = QAction(
-            "3D Select", self.host, checkable=True
-        )
+        self.host.init_manager.measurement_action = QAction("3D Select", self.host)
+        self.host.init_manager.measurement_action.setCheckable(True)
         self.host.init_manager.measurement_action.setToolTip(
             "Enable distance, angle, and dihedral measurement in 3D view"
         )
@@ -1319,9 +1325,8 @@ class MainInitManager:
         )
         toolbar.addAction(self.host.init_manager.measurement_action)
 
-        self.host.init_manager.edit_3d_action = QAction(
-            "3D Drag", self.host, checkable=True
-        )
+        self.host.init_manager.edit_3d_action = QAction("3D Drag", self.host)
+        self.host.init_manager.edit_3d_action.setCheckable(True)
         self.host.init_manager.edit_3d_action.setToolTip(
             "Toggle 3D atom dragging mode (Hold Alt for temporary mode)"
         )
@@ -1348,7 +1353,8 @@ class MainInitManager:
             ("Wireframe", "wireframe"),
             ("Stick", "stick"),
         ]:
-            action = QAction(name, self.host, checkable=True)
+            action = QAction(name, self.host)
+            action.setCheckable(True)
             if key == "ball_and_stick":
                 action.setChecked(True)
             action.triggered.connect(
@@ -1361,7 +1367,8 @@ class MainInitManager:
             style_menu.addSeparator()
             for style_name in self.host.plugin_manager.custom_3d_styles:
                 if not any(a.text() == style_name for a in style_menu.actions()):
-                    action = QAction(style_name, self.host, checkable=True)
+                    action = QAction(style_name, self.host)
+                    action.setCheckable(True)
                     action.triggered.connect(
                         lambda checked=False, s=style_name: (
                             self.host.view_3d_manager.set_3d_style(s)

@@ -12,7 +12,7 @@ DOI: 10.5281/zenodo.17268532
 
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any, List, Optional
 
 from PyQt6.QtCore import QLineF, QPointF, QRectF, Qt
 from PyQt6.QtGui import QBrush, QColor, QFont, QPainter, QPen, QPolygonF
@@ -31,9 +31,9 @@ class TemplatePreviewItem(QGraphicsItem):
         self.pen = QPen(QColor(80, 80, 80, 180), 2)
         self.polygon = QPolygonF()
         self.is_aromatic = False
-        self.user_template_points = []
-        self.user_template_bonds = []
-        self.user_template_atoms = []
+        self.user_template_points: List[QPointF] = []
+        self.user_template_bonds: List[Any] = []
+        self.user_template_atoms: List[Any] = []
         self.is_user_template = False
 
     def set_geometry(self, points: list[QPointF], is_aromatic: bool = False) -> None:
@@ -72,10 +72,12 @@ class TemplatePreviewItem(QGraphicsItem):
 
     def paint(
         self,
-        painter: QPainter,
-        option: QStyleOptionGraphicsItem,
-        widget: Optional[QWidget],
+        painter: Optional[QPainter],
+        option: Optional[QStyleOptionGraphicsItem],
+        widget: Optional[QWidget] = None,
     ) -> None:
+        if painter is None:
+            return
         if self.is_user_template:
             self.paint_user_template(painter)
         else:

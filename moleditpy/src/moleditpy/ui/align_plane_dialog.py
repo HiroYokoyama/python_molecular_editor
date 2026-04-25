@@ -219,7 +219,7 @@ class AlignPlaneDialog(BasePickingDialog):
                 ) -> np.ndarray:
                     cos_a = np.cos(angle)
                     sin_a = np.sin(angle)
-                    return (
+                    return (  # type: ignore[no-any-return]
                         v * cos_a
                         + np.cross(axis, v) * sin_a
                         + axis * np.dot(axis, v) * (1 - cos_a)

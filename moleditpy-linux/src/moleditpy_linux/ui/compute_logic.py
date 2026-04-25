@@ -453,7 +453,7 @@ class ComputeManager:
         mol_block = self.host.state_manager.data.to_mol_block()
         if not mol_block:
             mol_block = Chem.MolToMolBlock(mol, includeStereo=True)
-        return inject_ez_stereo_to_mol_block(
+        return inject_ez_stereo_to_mol_block(  # type: ignore[no-any-return]
             mol_block, mol, self.host.state_manager.data.bonds
         )
 

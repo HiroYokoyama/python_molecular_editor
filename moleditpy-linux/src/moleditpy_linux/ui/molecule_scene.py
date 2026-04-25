@@ -12,7 +12,7 @@ DOI: 10.5281/zenodo.17268532
 
 from __future__ import annotations
 import logging
-from typing import Any, List, Optional
+from typing import Any, Dict, List, Optional
 
 from PyQt6.QtCore import QLineF, Qt, QPointF
 from PyQt6.QtGui import QPen
@@ -150,9 +150,9 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
         self.template_preview = TemplatePreviewItem()
         self.addItem(self.template_preview)
         self.template_preview.hide()
-        self.template_preview_points = []
-        self.template_context = {}
-        self._deleted_items = []
+        self.template_preview_points: List[Any] = []
+        self.template_context: Dict[str, Any] = {}
+        self._deleted_items: List[Any] = []
 
         app = QApplication.instance()
         if app is not None and hasattr(app, "aboutToQuit"):
@@ -180,7 +180,7 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
         self.data_changed_in_event = False
 
         # Record initial positions by safely checking for deleted objects
-        self.initial_positions_in_event = {}
+        self.initial_positions_in_event: Dict[Any, QPointF] = {}
         for item in self.items():
             if isinstance(item, AtomItem) and not sip_isdeleted_safe(item):
                 try:
@@ -203,7 +203,7 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
             # is part of that selection, delete all selected items (atoms/bonds).
             try:
                 # Use getattr safely for selectedItems if scene state is transitioning
-                raw_selected = getattr(self, "selectedItems", lambda: [])()
+                raw_selected: List[Any] = getattr(self, "selectedItems", lambda: [])()
                 selected_items = [
                     it
                     for it in raw_selected

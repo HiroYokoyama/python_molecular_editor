@@ -1128,7 +1128,7 @@ class View3DManager:
         bond_length = np.linalg.norm(bond_vec)
         if bond_length == 0:
             # Fallback: Z-axis reference
-            return np.array([0, 0, 1])
+            return np.array([0, 0, 1])  # type: ignore[no-any-return]
 
         bond_unit = bond_vec / bond_length
 
@@ -1191,7 +1191,7 @@ class View3DManager:
                 offset_dir = np.cross(bond_unit, avg_normal)
                 offset_length = np.linalg.norm(offset_dir)
                 if offset_length > 1e-6:
-                    return offset_dir / offset_length
+                    return offset_dir / offset_length  # type: ignore[no-any-return]
 
         # Fallback: Arbitrary direction perpendicular to the bond vector
         v_arb = np.array([0, 0, 1])
@@ -1200,7 +1200,7 @@ class View3DManager:
 
         off_dir = np.cross(bond_unit, v_arb)
         off_dir /= np.linalg.norm(off_dir)
-        return off_dir
+        return off_dir  # type: ignore[no-any-return]
 
     def show_ez_labels_3d(self, mol: Chem.Mol) -> None:
         """Display E/Z labels in 3D view (using RDKit stereochemistry determination)"""
@@ -1474,8 +1474,10 @@ class View3DManager:
 
         try:
             # Check if the first atom has xyz_unique_id property
-            return self.host.view_3d_manager.current_mol.GetAtomWithIdx(0).HasProp(
-                "xyz_unique_id"
+            return bool(
+                self.host.view_3d_manager.current_mol.GetAtomWithIdx(0).HasProp(
+                    "xyz_unique_id"
+                )
             )
         except (AttributeError, RuntimeError, TypeError, ValueError):
             # Suppress non-critical property access noise

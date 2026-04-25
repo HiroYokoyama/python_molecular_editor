@@ -245,11 +245,13 @@ class AtomItem(QGraphicsItem):
 
     def paint(
         self,
-        painter: QPainter,
+        painter: Optional[QPainter],
         option: Any,
         widget: Optional[QWidget] = None,
     ) -> None:
         """Paint the atom symbol and its associated labels (charge, radical)."""
+        if painter is None:
+            return
         # Color logic: check if we should use bond color (uniform) or CPK (element-specific)
         color = CPK_COLORS.get(self.symbol, CPK_COLORS["DEFAULT"])
         # Use bond color if specified in settings

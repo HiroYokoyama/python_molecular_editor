@@ -125,7 +125,8 @@ def _adjust_collision_avoidance(
             if check_halted_cb():
                 raise WorkerHaltError("Halted")
 
-            moved, grid = False, {}
+            moved: bool = False
+            grid: Dict[Any, Any] = {}
             for i, fd in enumerate(frag_data):
                 fd_min, fd_max = (
                     np.min(fd["positions"], axis=0),

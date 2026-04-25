@@ -323,7 +323,7 @@ class Edit3DManager:
             hasattr(self.host, "atom_id_to_rdkit_idx_map")
             and atom_item.atom_id in self.host.atom_id_to_rdkit_idx_map
         ):
-            return self.host.atom_id_to_rdkit_idx_map[atom_item.atom_id]
+            return int(self.host.atom_id_to_rdkit_idx_map[atom_item.atom_id])
 
         # Return None if no mapping exists
         return None
@@ -367,29 +367,35 @@ class Edit3DManager:
 
     def calculate_distance(self, atom1_idx: int, atom2_idx: int) -> float:
         """Calculate distance between two atoms."""
-        return calc_distance(
-            self.host.view_3d_manager.atom_positions_3d[atom1_idx],
-            self.host.view_3d_manager.atom_positions_3d[atom2_idx],
+        return float(
+            calc_distance(
+                self.host.view_3d_manager.atom_positions_3d[atom1_idx],
+                self.host.view_3d_manager.atom_positions_3d[atom2_idx],
+            )
         )
 
     def calculate_angle(self, atom1_idx: int, atom2_idx: int, atom3_idx: int) -> float:
         """Calculate angle (center is vertex)."""
-        return calc_angle_deg(
-            self.host.view_3d_manager.atom_positions_3d[atom1_idx],
-            self.host.view_3d_manager.atom_positions_3d[atom2_idx],  # vertex
-            self.host.view_3d_manager.atom_positions_3d[atom3_idx],
+        return float(
+            calc_angle_deg(
+                self.host.view_3d_manager.atom_positions_3d[atom1_idx],
+                self.host.view_3d_manager.atom_positions_3d[atom2_idx],  # vertex
+                self.host.view_3d_manager.atom_positions_3d[atom3_idx],
+            )
         )
 
     def calculate_dihedral(
         self, atom1_idx: int, atom2_idx: int, atom3_idx: int, atom4_idx: int
     ) -> float:
         """Calculate dihedral angle."""
-        return _calculate_dihedral(
-            self.host.view_3d_manager.atom_positions_3d,
-            atom1_idx,
-            atom2_idx,
-            atom3_idx,
-            atom4_idx,
+        return float(
+            _calculate_dihedral(
+                self.host.view_3d_manager.atom_positions_3d,
+                atom1_idx,
+                atom2_idx,
+                atom3_idx,
+                atom4_idx,
+            )
         )
 
     def display_measurement_text(self, measurement_lines: List[str]) -> None:

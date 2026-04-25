@@ -25,10 +25,10 @@ class PointTuple(tuple):
     """Backward-compatible tuple that allows .x() and .y() access like QPointF."""
 
     def x(self) -> float:
-        return self[0]
+        return float(self[0])
 
     def y(self) -> float:
-        return self[1]
+        return float(self[1])
 
 
 class MolecularData:
@@ -248,10 +248,10 @@ class MolecularData:
                 if nbr.GetIdx() == exclude_idx:
                     continue
                 if nbr.GetAtomicNum() > 1:
-                    return nbr.GetIdx()
+                    return int(nbr.GetIdx())
             for nbr in atom.GetNeighbors():
                 if nbr.GetIdx() != exclude_idx:
-                    return nbr.GetIdx()
+                    return int(nbr.GetIdx())
             return None
 
         # Overwrite based on labels (E/Z has highest priority) ---
@@ -366,7 +366,9 @@ class MolecularData:
                     rdkit_bond_idx_to_item[bidx] = self.bonds[key].get("item")
 
         # 5. Initialize/Reset all bond items and track best ring size
-        bond_to_best_size = {}  # bond_item_id -> smallest_ring_size_found
+        bond_to_best_size: Dict[
+            int, int
+        ] = {}  # bond_item_id -> smallest_ring_size_found
         for bond_data in self.bonds.values():
             bond_item = bond_data.get("item")
             if bond_item:
@@ -411,7 +413,7 @@ class MolecularData:
         mol = self.to_rdkit_mol()
         if mol:
             try:
-                return Chem.MolToMolBlock(mol, includeStereo=True)
+                return Chem.MolToMolBlock(mol, includeStereo=True)  # type: ignore[no-any-return]
             except (RuntimeError, ValueError, TypeError) as e:
                 logging.warning(
                     f"RDKit MolBlock generation failed: {e}"

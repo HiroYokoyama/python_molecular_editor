@@ -12,7 +12,7 @@ DOI: 10.5281/zenodo.17268532
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Optional
 
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QResizeEvent, QShowEvent
@@ -33,7 +33,7 @@ class TemplatePreviewView(QGraphicsView):
         self.template_data = template_data
         self.parent_dialog = parent_dialog
 
-    def resizeEvent(self, event: QResizeEvent) -> None:
+    def resizeEvent(self, event: Optional[QResizeEvent]) -> None:
         """Handle resize events to ensure the preview is properly fitted."""
         super().resizeEvent(event)
         if self.original_scene_rect and not self.original_scene_rect.isEmpty():
@@ -50,7 +50,7 @@ class TemplatePreviewView(QGraphicsView):
         except (AttributeError, RuntimeError, ValueError, TypeError) as e:
             print(f"Warning: Failed to refit template preview: {e}")
 
-    def showEvent(self, event: QShowEvent) -> None:
+    def showEvent(self, event: Optional[QShowEvent]) -> None:
         """Handle the show event to ensure the preview fits correctly upon display."""
         super().showEvent(event)
         # Ensure proper fitting when widget becomes visible
