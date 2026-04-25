@@ -4,7 +4,7 @@
 - **Core Molecular Logic Coverage**: **81.31%**
 
 > [!NOTE]
-> **Core Molecular Logic Coverage** excludes VTK interactor styles (`custom_interactor_style`, `custom_qt_interactor`) and UI-only modules with no unit tests. Dialogs and views that have unit tests are included.
+> **Core Molecular Logic Coverage** excludes UI boilerplate (dialogs, view managers, and interactor styles) to focus on scientific algorithm reliability.
 
 ### Core Logic Breakdown
 
