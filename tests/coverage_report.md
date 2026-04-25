@@ -1,6 +1,6 @@
 # MoleditPy Coverage Report
 
-- **Overall Project Coverage (Full)**: **74.42%**
+- **Overall Project Coverage (Full)**: **74.43%**
 - **Core Molecular Logic Coverage**: **80.49%**
 
 > [!NOTE]
@@ -38,12 +38,12 @@
 | moleditpy\src\moleditpy\ui\molecular_scene_handler.py   |    858 |    178 |   79.3% |
 | moleditpy\src\moleditpy\ui\molecule_scene.py            |    502 |    145 |   71.1% |
 | moleditpy\src\moleditpy\ui\string_importers.py          |    128 |     27 |   78.9% |
-| moleditpy\src\moleditpy\ui\ui_manager.py                |    372 |    112 |   69.9% |
+| moleditpy\src\moleditpy\ui\ui_manager.py                |    373 |    112 |   70.0% |
 | moleditpy\src\moleditpy\ui\view_3d_logic.py             |    992 |    246 |   75.2% |
 | moleditpy\src\moleditpy\utils\constants.py              |     31 |      0 |  100.0% |
 | moleditpy\src\moleditpy\utils\default_settings.py       |      1 |      0 |  100.0% |
 | moleditpy\src\moleditpy\utils\sip_isdeleted_safe.py     |     19 |      7 |   63.2% |
-| **TOTAL** | **10995** | **2145** | **80.49%** |
+| **TOTAL** | **10996** | **2145** | **80.49%** |
 
 ### Full Application Breakdown
 
@@ -94,7 +94,7 @@
 | moleditpy\src\moleditpy\ui\template_preview_item.py     |    101 |     77 |   23.8% |
 | moleditpy\src\moleditpy\ui\template_preview_view.py     |     42 |     14 |   66.7% |
 | moleditpy\src\moleditpy\ui\translation_dialog.py        |    236 |      9 |   96.2% |
-| moleditpy\src\moleditpy\ui\ui_manager.py                |    372 |    112 |   69.9% |
+| moleditpy\src\moleditpy\ui\ui_manager.py                |    373 |    112 |   70.0% |
 | moleditpy\src\moleditpy\ui\user_template_dialog.py      |    364 |    128 |   64.8% |
 | moleditpy\src\moleditpy\ui\view_3d_logic.py             |    992 |    246 |   75.2% |
 | moleditpy\src\moleditpy\ui\zoomable_view.py             |     70 |     37 |   47.1% |
@@ -106,7 +106,7 @@
 | moleditpy\src\moleditpy\utils\default_settings.py       |      1 |      0 |  100.0% |
 | moleditpy\src\moleditpy\utils\sip_isdeleted_safe.py     |     19 |      7 |   63.2% |
 | moleditpy\src\moleditpy\utils\system_utils.py           |     36 |      2 |   94.4% |
-| **TOTAL** | **14127** | **3613** | **74.42%** |
+| **TOTAL** | **14128** | **3613** | **74.43%** |
 
 ## Test Suite Status
 - **Unit tests**: PASSED
