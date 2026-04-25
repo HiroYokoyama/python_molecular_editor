@@ -18,18 +18,12 @@ omit =
     moleditpy/src/moleditpy/ui/__init__.py
     moleditpy/src/moleditpy/ui/main_window.py
     moleditpy/src/moleditpy/ui/analysis_window.py
-    moleditpy/src/moleditpy/ui/zoomable_view.py
-    moleditpy/src/moleditpy/ui/template_preview_item.py
-    moleditpy/src/moleditpy/ui/template_preview_view.py
-    moleditpy/src/moleditpy/ui/base_picking_dialog.py
     moleditpy/src/moleditpy/ui/geometry_base_dialog.py
-    moleditpy/src/moleditpy/ui/move_group_dialog.py
     moleditpy/src/moleditpy/ui/mirror_dialog.py
     moleditpy/src/moleditpy/ui/planarize_dialog.py
     moleditpy/src/moleditpy/ui/translation_dialog.py
     moleditpy/src/moleditpy/ui/constrained_optimization_dialog.py
     moleditpy/src/moleditpy/ui/periodic_table_dialog.py
-    moleditpy/src/moleditpy/ui/user_template_dialog.py
     moleditpy/src/moleditpy/ui/dialog_manager.py
     moleditpy/src/moleditpy/ui/view_loaders.py
     moleditpy/src/moleditpy/ui/edit_3d.py
@@ -39,11 +33,6 @@ omit =
     # 3D hardware / PyVista — requires GPU/display, not unit-testable
     moleditpy/src/moleditpy/ui/custom_interactor_style.py
     moleditpy/src/moleditpy/ui/custom_qt_interactor.py
-    moleditpy/src/moleditpy/ui/dialog_3d_picking_mixin.py
-
-    # Pure UI layout (settings tabs — no logic, ~12-19% coverage)
-    moleditpy/src/moleditpy/ui/settings_dialog.py
-    moleditpy/src/moleditpy/ui/settings_tabs/*
 
     # Platform/system utilities (OS detection, no unit tests)
     moleditpy/src/moleditpy/utils/system_utils.py
