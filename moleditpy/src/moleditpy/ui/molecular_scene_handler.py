@@ -13,7 +13,7 @@ DOI: 10.5281/zenodo.17268532
 from __future__ import annotations
 import math
 import logging
-from typing import Any, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 from PyQt6.QtCore import Qt, QPointF, QLineF, QRectF
 from PyQt6.QtGui import QCursor
@@ -175,7 +175,7 @@ class TemplateMixin:
 
         return best_rot
 
-    def _should_overwrite_benzene_bond(self, exist_b):
+    def _should_overwrite_benzene_bond(self, exist_b: BondItem) -> bool:
         """
         Enforce policy for benzene template insertion.
         Overwrite existing single bonds only if they can participate in the template's aromatic system
@@ -478,7 +478,7 @@ class TemplateMixin:
             points.append(current_p)
         return points
 
-    def add_user_template_fragment(self, context):
+    def add_user_template_fragment(self, context: Dict[str, Any]) -> None:
         """Place user template fragment"""
         points = context.get("points", [])
         bonds_info = context.get("bonds_info", [])
@@ -553,7 +553,7 @@ class TemplateMixin:
             if atom_id in self.data.atoms and self.data.atoms[atom_id]["item"]:
                 self.data.atoms[atom_id]["item"].update_style()
 
-    def update_user_template_preview(self, pos):
+    def update_user_template_preview(self, pos: QPointF) -> None:
         """Update user template preview"""
         # Robust preview: avoid self.data.atoms for preview-only atoms
         if not hasattr(self, "user_template_data") or not self.user_template_data:
